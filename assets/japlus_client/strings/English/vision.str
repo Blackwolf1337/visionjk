@@ -1049,6 +1049,18 @@ LANG_ENGLISH        "Check for Updates"
 REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 LANG_ENGLISH        "Ask at every start whether a newer version is out."
 
+REFERENCE           UPDATE_CHANNEL
+LANG_ENGLISH        "Update Channel"
+
+REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
+LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
+
+REFERENCE           STABLE
+LANG_ENGLISH        "Stable"
+
+REFERENCE           DEVELOPMENT
+LANG_ENGLISH        "Development"
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 
@@ -1153,6 +1165,27 @@ LANG_ENGLISH        "Click a player to tick it, or to take the tick away."
 
 REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
 LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
+
+REFERENCE           DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
+LANG_ENGLISH        "Development builds are early test versions."
+
+REFERENCE           THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
+LANG_ENGLISH        "They can crash, break configs or not work on all servers."
+
+REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
+LANG_ENGLISH        "You can switch back to Stable any time."
+
+REFERENCE           STAY_ON_STABLE
+LANG_ENGLISH        "Stay on Stable"
+
+REFERENCE           KEEP_THE_RELEASES
+LANG_ENGLISH        "Keep the releases."
+
+REFERENCE           SWITCH_TO_DEVELOPMENT
+LANG_ENGLISH        "Switch to Development"
+
+REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
+LANG_ENGLISH        "Update to the development builds from now on."
 
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"

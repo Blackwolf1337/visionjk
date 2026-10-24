@@ -409,6 +409,17 @@ MORE = {
     # network
     'Check for Updates': ('Rechercher les mises à jour', 'Buscar actualizaciones'),
     'Ask at every start whether a newer version is out.': ("Demander à chaque démarrage s'il existe une version plus récente.", 'Preguntar en cada inicio si hay una versión más nueva.'),
+    'Update Channel': ('Canal de mise à jour', 'Canal de actualización'),
+    'Stable': ('Stable', 'Estable'),
+    'Development': ('Développement', 'Desarrollo'),
+    'Stable: the releases. Development: early test builds, and the releases when they are newer.': ('Stable : les versions publiées. Développement : des versions de test précoces, et les versions publiées si elles sont plus récentes.', 'Estable: las versiones publicadas. Desarrollo: versiones de prueba tempranas, y las publicadas cuando son más nuevas.'),
+    'Development builds are early test versions.': ('Les versions de développement sont des versions de test précoces.', 'Las versiones de desarrollo son versiones de prueba tempranas.'),
+    'They can crash, break configs or not work on all servers.': ('Elles peuvent planter, abîmer les configs ou ne pas marcher sur tous les serveurs.', 'Pueden fallar, romper configuraciones o no funcionar en todos los servidores.'),
+    'You can switch back to Stable any time.': ('Vous pouvez revenir à Stable à tout moment.', 'Puedes volver a Estable en cualquier momento.'),
+    'Stay on Stable': ('Rester sur Stable', 'Quedarse en Estable'),
+    'Keep the releases.': ('Garder les versions publiées.', 'Seguir con las versiones publicadas.'),
+    'Switch to Development': ('Passer à Développement', 'Cambiar a Desarrollo'),
+    'Update to the development builds from now on.': ('Mettre à jour vers les versions de développement à partir de maintenant.', 'Actualizar a las versiones de desarrollo a partir de ahora.'),
     'Choose Downloads': ('Choisir les téléchargements', 'Elegir las descargas'),
     'Before a download choose the files of the server, and see what is in them before they are used.':
         ('Avant un téléchargement, choisir les fichiers du serveur et voir leur contenu avant leur utilisation.',

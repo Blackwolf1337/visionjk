@@ -101,8 +101,9 @@ static struct {
 	char			address[UPD_MAX_ADDRESS];	// where the lists and the files are asked for
 	qboolean		addressGiven;				//	which the command line named,
 	qboolean		addressRefused;				//	or tried to: it was no https address
-	int				own[3];
-	qboolean		release;					// this build is a release, so there can be a newer one of it
+	int				own[UPD_VERSION_PARTS];
+	qboolean		release;					// this build is a release or a development build, so there can be a newer one of it
+	qboolean		channelDev;					// v_updateChannel when the website was last asked: the development builds
 	qboolean		elsewhere;					// the game reads its files from another folder than the program's
 	char			home[MAX_OSPATH];			// the folder of the player (fs_homepath), "" if it is the program's
 
@@ -113,6 +114,7 @@ static struct {
 	volatile int	cancel;				// the game wants it to end
 	qboolean		quiet;				// the question at the start: it says nothing unless there is news
 	qboolean		thenFetch;			// "update" before a list was there: go on when it is
+	qboolean		dev;				// the thread asks for the list of the development builds
 
 	// The thread writes these and then done, the game reads them after it saw done. While a thread runs the
 	// game touches none of them but fetched.
@@ -120,22 +122,32 @@ static struct {
 	char			error[512];
 	updList_t		list;
 	qboolean		repair;						// the list is of the version that runs: what differs is damage, not news
+	qboolean		back;						// a development build runs, the channel is stable and the list older
 	byte			change[UPD_MAX_FILES];		// this file of the list has to be fetched
 	int				numChange;
 	byte			shadow[UPD_MAX_FILES];		// the folder of the player has another module of that name
 	int				numShadow;
 	long long		fetchBytes;					// all of those together
 	volatile long long	fetched;				// and how much of it came in so far
+	// Leaving a development build: files it had and the list does not. They are put aside with the swap.
+	char			left[UPD_MAX_FILES][UPD_MAX_PATH];
+	int				numLeft;
+	qboolean		leftUnknown;				// the list of the build that runs could not be fetched
 
 	int				textTime;
 } upd;
 
 static char			updListText[UPD_MAX_LIST];
 static int			updListLen;
+static updList_t	updOwnList;					// the list of the development build that runs, when it is left
 static const char	*updStartNote;				// what CL_UpdateResume() has to say, once there is a console
 static char			updStartVersion[UPD_MAX_PATH];	//	and the version or the file it is about
 
 static cvar_t	*v_updateCheck;
+static cvar_t	*v_updateChannel;
+
+#define UPDATE_DEV_WARNING	"Development builds are early test versions. They can crash, break configs or not work on all servers. " \
+	"You can switch back to stable any time."
 
 /*
 ===============================================================================
@@ -247,10 +259,12 @@ visionjk-update.txt in the folder of the game, while a swap is under way and unt
 	visionjk-update-journal 1
 	swap 0.1.1
 	<path>
-	<path>
+	gone <path>
 
 The second line: "swap", the files below are being moved. "done", every one of them is in place. "old", the
-same and the player was told, only old files are left to delete.
+same and the player was told, only old files are left to delete. "gone": a file of the development build that
+is left, which the new version does not have. It is put aside like an old file and deleted with them. (A build
+before the channels skips such a line, it is no path.)
 
 ===============================================================================
 */
@@ -260,7 +274,8 @@ typedef struct updateJournal_s {
 	qboolean	told;
 	char		version[32];
 	int			numPaths;
-	char		paths[UPD_MAX_FILES][UPD_MAX_PATH];
+	char		paths[UPD_MAX_FILES * 2][UPD_MAX_PATH];
+	byte		gone[UPD_MAX_FILES * 2];
 } updateJournal_t;
 
 static updateJournal_t updJournal;
@@ -295,11 +310,16 @@ static qboolean Update_ReadJournal( updateJournal_t *journal ) {
 		return qfalse;
 	}
 	Q_strncpyz( journal->version, strchr( line, ' ' ) + 1, sizeof( journal->version ) );
-	while ( journal->numPaths < UPD_MAX_FILES && fgets( line, sizeof( line ), f ) ) {
+	while ( journal->numPaths < (int)ARRAY_LEN( journal->paths ) && fgets( line, sizeof( line ), f ) ) {
+		const qboolean	gone = !strncmp( line, "gone ", 5 ) ? qtrue : qfalse;
+		const char		*path = gone ? line + 5 : line;
+
 		Update_Chomp( line );
 		// (the same rule as for a file list: the updater touches nothing else, whoever wrote this file)
-		if ( UPD_PathAllowed( line ) )
-			Q_strncpyz( journal->paths[journal->numPaths++], line, sizeof( journal->paths[0] ) );
+		if ( UPD_PathAllowed( path ) ) {
+			journal->gone[journal->numPaths] = (byte)gone;
+			Q_strncpyz( journal->paths[journal->numPaths++], path, sizeof( journal->paths[0] ) );
+		}
 	}
 	fclose( f );
 	return qtrue;
@@ -316,7 +336,7 @@ static qboolean Update_WriteJournal( const updateJournal_t *journal ) {
 		return qfalse;
 	fprintf( f, "%s\n%s %s\n", UPDATE_JOURNAL_HEAD, journal->told ? "old" : ( journal->done ? "done" : "swap" ), journal->version );
 	for ( i = 0; i < journal->numPaths; i++ )
-		fprintf( f, "%s\n", journal->paths[i] );
+		fprintf( f, "%s%s\n", journal->gone[i] ? "gone " : "", journal->paths[i] );
 	if ( fclose( f ) != 0 ) {
 		remove( osNew );
 		return qfalse;
@@ -366,7 +386,17 @@ static qboolean Update_SwapOne( const char *path, qboolean *hadOld ) {
 	return qtrue;
 }
 
-// and back, for a swap that did not get through
+// A file that is left (journal "gone"): put aside as an old one. qfalse: it is still in the way.
+static qboolean Update_PutAside( const char *path, qboolean *hadOld ) {
+	char osPath[UPDATE_PATH], osOld[UPDATE_PATH];
+
+	if ( !Update_Path( path, "", osPath, sizeof( osPath ) ) || !Update_Path( path, UPD_OLD_ENDING, osOld, sizeof( osOld ) ) )
+		return qfalse;
+	*hadOld = qtrue;
+	return Update_Move( osPath, osOld );
+}
+
+// and back, for a swap that did not get through (for a file that was put aside the same: there is no new one)
 static void Update_UnswapOne( const char *path, qboolean hadOld ) {
 	char osPath[UPDATE_PATH], osOld[UPDATE_PATH], osNew[UPDATE_PATH];
 
@@ -397,8 +427,8 @@ may still have it) stays until the next start, and the journal with it.
 =================
 */
 qboolean CL_UpdateResume( void ) {
-	static qboolean	hadOld[UPD_MAX_FILES];
-	static byte		waits[UPD_MAX_FILES];
+	static qboolean	hadOld[UPD_MAX_FILES * 2];
+	static byte		waits[UPD_MAX_FILES * 2];
 	char			osPath[UPDATE_PATH];
 	int				i, waiting = 0, left = 0;
 
@@ -409,11 +439,13 @@ qboolean CL_UpdateResume( void ) {
 	if ( !updJournal.done ) {
 		// which ones still wait. In a swap that starts here that is all of them.
 		for ( i = 0; i < updJournal.numPaths; i++ ) {
-			waits[i] = ( Update_Path( updJournal.paths[i], UPD_NEW_ENDING, osPath, sizeof( osPath ) ) && Update_Exists( osPath ) ) ? 1 : 0;
+			waits[i] = ( Update_Path( updJournal.paths[i], updJournal.gone[i] ? "" : UPD_NEW_ENDING, osPath, sizeof( osPath ) )
+				&& Update_Exists( osPath ) ) ? 1 : 0;
 			waiting += waits[i];
 		}
 		for ( i = 0; i < updJournal.numPaths; i++ ) {
-			if ( !waits[i] || Update_SwapOne( updJournal.paths[i], &hadOld[i] ) )
+			if ( !waits[i] || ( updJournal.gone[i] ? Update_PutAside( updJournal.paths[i], &hadOld[i] )
+				: Update_SwapOne( updJournal.paths[i], &hadOld[i] ) ) )
 				continue;
 			Q_strncpyz( updStartVersion, updJournal.paths[i], sizeof( updStartVersion ) );
 			while ( --i >= 0 ) {
@@ -466,10 +498,14 @@ static qboolean Update_Journal( void ) {
 	int i;
 
 	memset( &updJournal, 0, sizeof( updJournal ) );
-	Com_sprintf( updJournal.version, sizeof( updJournal.version ), "%i.%i.%i", upd.list.version[0], upd.list.version[1], upd.list.version[2] );
+	UPD_VersionText( upd.list.version, updJournal.version, sizeof( updJournal.version ) );
 	for ( i = 0; i < upd.list.numFiles; i++ ) {
 		if ( upd.change[i] )
 			Q_strncpyz( updJournal.paths[updJournal.numPaths++], upd.list.files[i].path, sizeof( updJournal.paths[0] ) );
+	}
+	for ( i = 0; i < upd.numLeft; i++ ) {
+		updJournal.gone[updJournal.numPaths] = 1;
+		Q_strncpyz( updJournal.paths[updJournal.numPaths++], upd.left[i], sizeof( updJournal.paths[0] ) );
 	}
 	return Update_WriteJournal( &updJournal );
 }
@@ -510,8 +546,39 @@ has to be fetched. A "keep" file that is here is left alone whatever is in it.
 If its version is the one of this build the same is done (upd.repair), with the big files taken by their size:
 the program can be of a version its files are not. Both times the modules in the folder of the player are
 looked at too (upd.shadow).
+
+The list is the one of the channel (v_updateChannel): <address>/<system>.txt for the releases,
+<address>/dev/<system>.txt for the development builds. A development build whose channel is stable takes an
+older release too (upd.back). Whenever a development build is left, the list of its own version
+(<address>/lists/<version>/<system>.txt) says which of its files the new one does not have (upd.left).
 =================
 */
+static void Update_FindLeft( void ) {
+	char		url[UPD_MAX_ADDRESS + 64], why[160], own[UPD_VERSION_TEXT], osPath[UPDATE_PATH];
+	int			i, j;
+
+	UPD_VersionText( upd.own, own, sizeof( own ) );
+	snprintf( url, sizeof( url ), "%s/lists/%s/%s.txt", upd.address, own, UPDATE_SYSTEM );
+	updListLen = 0;
+	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ) )
+		|| UPD_ParseList( updListText, (size_t)updListLen, &updOwnList ) != NULL || UPD_CompareVersion( updOwnList.version, upd.own ) ) {
+		upd.leftUnknown = qtrue;
+		return;
+	}
+	for ( i = 0; i < updOwnList.numFiles && upd.numLeft < UPD_MAX_FILES; i++ ) {
+		const updFile_t *file = &updOwnList.files[i];
+
+		// (a .cfg is the player's)
+		if ( file->keep )
+			continue;
+		for ( j = 0; j < upd.list.numFiles && Q_stricmp( upd.list.files[j].path, file->path ); j++ ) {
+		}
+		if ( j < upd.list.numFiles || !Update_Path( file->path, "", osPath, sizeof( osPath ) ) || !Update_Exists( osPath ) )
+			continue;
+		Q_strncpyz( upd.left[upd.numLeft++], file->path, sizeof( upd.left[0] ) );
+	}
+}
+
 static int Update_CheckThread( void *unused ) {
 	char		url[UPD_MAX_ADDRESS + 64], why[160], osPath[UPDATE_PATH];
 	const char	*wrong;
@@ -520,14 +587,17 @@ static int Update_CheckThread( void *unused ) {
 	(void)unused;
 	upd.ok = qfalse;
 	upd.repair = qfalse;
+	upd.back = qfalse;
 	upd.numChange = 0;
 	upd.numShadow = 0;
+	upd.numLeft = 0;
+	upd.leftUnknown = qfalse;
 	upd.fetchBytes = 0;
 	memset( upd.change, 0, sizeof( upd.change ) );
 	memset( upd.shadow, 0, sizeof( upd.shadow ) );
 	updListLen = 0;
 
-	snprintf( url, sizeof( url ), "%s/%s.txt", upd.address, UPDATE_SYSTEM );
+	snprintf( url, sizeof( url ), "%s/%s%s.txt", upd.address, upd.dev ? "dev/" : "", UPDATE_SYSTEM );
 	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ) ) ) {
 		Update_Error( "%s did not say whether there is a newer version: %s", upd.address, why );
 	} else if ( ( wrong = UPD_ParseList( updListText, (size_t)updListLen, &upd.list ) ) != NULL ) {
@@ -535,7 +605,8 @@ static int Update_CheckThread( void *unused ) {
 	} else {
 		upd.ok = qtrue;
 		newer = UPD_CompareVersion( upd.list.version, upd.own );
-		if ( newer >= 0 ) {
+		upd.back = ( newer < 0 && !upd.dev && UPD_IsDev( upd.own ) ) ? qtrue : qfalse;
+		if ( newer >= 0 || upd.back ) {
 			upd.repair = ( newer == 0 ) ? qtrue : qfalse;
 			for ( i = 0; i < upd.list.numFiles && !upd.cancel; i++ ) {
 				const updFile_t	*file = &upd.list.files[i];
@@ -555,6 +626,8 @@ static int Update_CheckThread( void *unused ) {
 					upd.numShadow++;
 				}
 			}
+			if ( newer != 0 && UPD_IsDev( upd.own ) && !upd.cancel )
+				Update_FindLeft();
 		}
 	}
 	upd.done = 1;
@@ -594,7 +667,7 @@ A file that came in wrong is deleted, and nothing was touched: the swap is the b
 =================
 */
 static int Update_FetchThread( void *unused ) {
-	char	url[UPD_MAX_ADDRESS + UPD_MAX_PATH + 96], why[160], osNew[UPDATE_PATH];
+	char	url[UPD_MAX_ADDRESS + UPD_MAX_PATH + 96], why[160], osNew[UPDATE_PATH], version[UPD_VERSION_TEXT];
 	int		i;
 
 	(void)unused;
@@ -631,8 +704,8 @@ static int Update_FetchThread( void *unused ) {
 			break;
 		}
 		Web_SHA256Init( &sink.sha );
-		snprintf( url, sizeof( url ), "%s/%i.%i.%i/%s/%s", upd.address, upd.list.version[0], upd.list.version[1], upd.list.version[2],
-			UPDATE_SYSTEM, file->path );
+		UPD_VersionText( upd.list.version, version, sizeof( version ) );
+		snprintf( url, sizeof( url ), "%s/%s/%s/%s", upd.address, version, UPDATE_SYSTEM, file->path );
 		got = Sys_HttpGet( url, Update_FileSink, &sink, &upd.cancel, why, sizeof( why ) );
 		if ( fclose( sink.f ) != 0 )
 			sink.disk = qtrue;
@@ -669,12 +742,21 @@ static void Update_Say( updateState_t state, const char *text ) {
 	Cvar_Set( "v_updateText", text );
 }
 
-static const char *Update_VersionText( const int version[3] ) {
-	return va( "%i.%i.%i", version[0], version[1], version[2] );
+static const char *Update_VersionText( const int version[UPD_VERSION_PARTS] ) {
+	static char	text[2][UPD_VERSION_TEXT];
+	static int	n;
+
+	n ^= 1;
+	UPD_VersionText( version, text[n], sizeof( text[n] ) );
+	return text[n];
 }
 
 static const char *Update_Verb( void ) {
-	return upd.repair ? "Repairing" : "Updating to";
+	return upd.repair ? "Repairing" : ( upd.back ? "Switching to" : "Updating to" );
+}
+
+static qboolean Update_ChannelDev( void ) {
+	return ( v_updateChannel && !Q_stricmp( v_updateChannel->string, "dev" ) ) ? qtrue : qfalse;
 }
 
 static void Update_Start( int job, qboolean quiet ) {
@@ -688,6 +770,8 @@ static void Update_Start( int job, qboolean quiet ) {
 	upd.quiet = quiet;
 	upd.done = 0;
 	upd.cancel = 0;
+	if ( job == JOB_CHECK )
+		upd.dev = upd.channelDev = Update_ChannelDev();
 	upd.thread = SDL_CreateThread( job == JOB_CHECK ? Update_CheckThread : Update_FetchThread, "update", NULL );
 	if ( !upd.thread ) {
 		upd.job = JOB_NONE;
@@ -704,7 +788,9 @@ static void Update_Start( int job, qboolean quiet ) {
 static void Update_Available( void ) {
 	const char *version = Update_VersionText( upd.list.version );
 
-	if ( !upd.repair )
+	if ( upd.back )
+		Update_Say( UPDATE_AVAILABLE, va( "Stable version %s. Click here to switch back (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
+	else if ( !upd.repair )
 		Update_Say( UPDATE_AVAILABLE, va( "Version %s is out. Click here to update (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
 	else if ( upd.numChange )
 		Update_Say( UPDATE_AVAILABLE, va( "Files of version %s are missing or changed. Click here to repair (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
@@ -744,9 +830,17 @@ static int Update_Unshadow( void ) {
 
 // what "update" does with what the list showed: the files that differ are fetched, and if there are none of
 // those, only modules in the folder of the player, they are moved aside and the game starts again
+static void Update_Fetched( void );
+
 static void Update_Go( void ) {
 	if ( upd.numChange ) {
 		Update_Start( JOB_FETCH, qfalse );
+		return;
+	}
+	if ( upd.numLeft ) {
+		// nothing to fetch, only files of the development build to put aside: that is the swap at the next start
+		upd.ok = qtrue;
+		Update_Fetched();
 		return;
 	}
 	if ( Update_Unshadow() ) {
@@ -771,14 +865,23 @@ static void Update_Checked( void ) {
 			Com_DPrintf( "%s\n", upd.error );
 		return;
 	}
-	if ( !upd.numChange && !upd.numShadow ) {
+	if ( !upd.numChange && !upd.numShadow && !upd.numLeft ) {
 		if ( !upd.quiet )
-			Com_Printf( "This is version %s, and the newest one is %s.\n", Update_VersionText( upd.own ), Update_VersionText( upd.list.version ) );
+			Com_Printf( "This is version %s, and the newest one%s is %s.\n", Update_VersionText( upd.own ),
+				upd.dev ? " of the development builds" : "", Update_VersionText( upd.list.version ) );
 		Update_Say( UPDATE_NONE, "" );
 		return;
 	}
 	Update_Available();
-	if ( !upd.repair ) {
+	if ( upd.leftUnknown ) {
+		Com_Printf( S_COLOR_YELLOW "The file list of version %s could not be fetched. Files that only it had may stay in the folder "
+			"of the game after the update.\n", Update_VersionText( upd.own ) );
+	}
+	if ( upd.back ) {
+		Com_Printf( S_COLOR_CYAN "This is the development build %s and the update channel is stable. To switch to the stable version %s, "
+			"type update here or click the line on the main menu (%.1f MB in %i files).\n", Update_VersionText( upd.own ),
+			Update_VersionText( upd.list.version ), upd.fetchBytes / 1048576.0, upd.numChange );
+	} else if ( !upd.repair ) {
 		Com_Printf( S_COLOR_CYAN "Version %s of the game is out, this is %s. To get it, type update here or click the line on the main menu "
 			"(%.1f MB in %i files).\n", Update_VersionText( upd.list.version ), Update_VersionText( upd.own ), upd.fetchBytes / 1048576.0, upd.numChange );
 	} else if ( upd.numChange ) {
@@ -834,10 +937,24 @@ static void Update_Fetched( void ) {
 =================
 CL_UpdateFrame
 
-Once a frame: is the thread through, and how far are the files.
+Once a frame: is the thread through, and how far are the files. And did the channel change: then the website is
+asked again, for the list of the other one.
 =================
 */
+static qboolean Update_Possible( void );
+
 void CL_UpdateFrame( void ) {
+	if ( !upd.thread && v_updateChannel && Update_ChannelDev() != upd.channelDev ) {
+		upd.channelDev = Update_ChannelDev();
+		if ( upd.channelDev )
+			Com_Printf( S_COLOR_YELLOW "Update channel: development. " UPDATE_DEV_WARNING "\n" );
+		else
+			Com_Printf( "Update channel: stable.\n" );
+		Update_Say( UPDATE_NONE, "" );
+		if ( Update_Possible() )
+			Update_Start( JOB_CHECK, qfalse );
+		return;
+	}
 	if ( !upd.thread )
 		return;
 	if ( upd.done ) {
@@ -944,6 +1061,9 @@ void CL_UpdateAddress( void ) {
 
 void CL_UpdateInit( void ) {
 	v_updateCheck = Cvar_Get( "v_updateCheck", "1", CVAR_ARCHIVE, "Ask the website at every start whether there is a newer version (0: never)" );
+	v_updateChannel = Cvar_Get( "v_updateChannel", "stable", CVAR_ARCHIVE, "Which builds the game updates to: stable (the releases) or "
+		"dev (the development builds, early test versions, and the releases when they are newer)" );
+	upd.channelDev = Update_ChannelDev();
 	Cvar_Get( "v_updateState", "0", CVAR_ROM, "What the updater is doing: 0 nothing, 1 a newer version is out, 2 fetching it, 3 failed, 4 starting again" );
 	Cvar_Get( "v_updateText", "", CVAR_ROM, "What the updater has to say, as the main menu shows it" );
 	Update_Say( UPDATE_NONE, "" );

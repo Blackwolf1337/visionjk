@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "upd_manifest.h"
 
+#include <stdio.h>
 #include <string.h>
 
 static qboolean UPD_IsDigit( char c ) {
@@ -56,16 +57,17 @@ static const char *UPD_Number( const char *text, const char *end, long long max,
 =================
 UPD_ParseVersion
 
-"0.1.1": three numbers with a dot between them and nothing before, between or after.
+"0.1.1": three numbers with a dot between them and nothing before, between or after. "0.1.1-dev.2": a
+development build before it, see upd_manifest.h.
 =================
 */
-qboolean UPD_ParseVersion( const char *text, int version[3] ) {
-	const char	*end = text + strlen( text );
-	int			i;
+qboolean UPD_ParseVersion( const char *text, int version[UPD_VERSION_PARTS] ) {
+	static const char	dev[] = "-dev.";
+	const char			*end = text + strlen( text );
+	long long			v;
+	int					i;
 
 	for ( i = 0; i < 3; i++ ) {
-		long long v;
-
 		text = UPD_Number( text, end, 9999, &v );
 		if ( !text )
 			return qfalse;
@@ -73,30 +75,52 @@ qboolean UPD_ParseVersion( const char *text, int version[3] ) {
 		if ( i < 2 && *text++ != '.' )
 			return qfalse;
 	}
-	return ( text == end ) ? qtrue : qfalse;
+	version[3] = UPD_STABLE;
+	if ( text == end )
+		return qtrue;
+	if ( (size_t)( end - text ) <= sizeof( dev ) - 1 || strncmp( text, dev, sizeof( dev ) - 1 ) )
+		return qfalse;
+	text = UPD_Number( text + sizeof( dev ) - 1, end, UPD_STABLE - 1, &v );
+	if ( !text || text != end )
+		return qfalse;
+	version[3] = (int)v;
+	return qtrue;
 }
 
 /*
 =================
 UPD_ParseRelease
 
-The version a build of the game was made from, as git describes it (GIT_TAG). Only the tag of a release is one,
-"v0.1.1". A build between two releases ("v0.1.1-3-gabc1234") is somebody's own and is never replaced.
+The version a build of the game was made from, as git describes it (GIT_TAG). Only the tag of a release or of
+a development build is one, "v0.1.1" or "v0.1.1-dev.2". A build between two tags ("v0.1.1-3-gabc1234",
+"v0.1.1-dev.2-3-gabc1234") is somebody's own and is never replaced.
 =================
 */
-qboolean UPD_ParseRelease( const char *tag, int version[3] ) {
+qboolean UPD_ParseRelease( const char *tag, int version[UPD_VERSION_PARTS] ) {
 	return ( tag[0] == 'v' && UPD_ParseVersion( tag + 1, version ) ) ? qtrue : qfalse;
 }
 
 // less than 0: a is the older one. 0: the same. More: a is the newer one.
-int UPD_CompareVersion( const int a[3], const int b[3] ) {
+int UPD_CompareVersion( const int a[UPD_VERSION_PARTS], const int b[UPD_VERSION_PARTS] ) {
 	int i;
 
-	for ( i = 0; i < 3; i++ ) {
+	for ( i = 0; i < UPD_VERSION_PARTS; i++ ) {
 		if ( a[i] != b[i] )
 			return a[i] - b[i];
 	}
 	return 0;
+}
+
+qboolean UPD_IsDev( const int version[UPD_VERSION_PARTS] ) {
+	return ( version[3] != UPD_STABLE ) ? qtrue : qfalse;
+}
+
+// as UPD_ParseVersion reads it, "0.1.1" or "0.1.1-dev.2"
+void UPD_VersionText( const int version[UPD_VERSION_PARTS], char *out, size_t outSize ) {
+	if ( UPD_IsDev( version ) )
+		snprintf( out, outSize, "%i.%i.%i-dev.%i", version[0], version[1], version[2], version[3] );
+	else
+		snprintf( out, outSize, "%i.%i.%i", version[0], version[1], version[2] );
 }
 
 static qboolean UPD_EndsWith( const char *text, const char *ending ) {

@@ -15,7 +15,7 @@
 # program. The game is called jptest.exe there.
 #
 # usage: [WIN=1] tools/test/updater/e2e.sh [names of scenarios, default all]
-# scenarios: update damaged cutshort undo off down address devbuild elsewhere repair shadow same
+# scenarios: update damaged cutshort undo off down address devbuild elsewhere repair shadow same channel back devstable
 # shellcheck source=tools/test/updater/lib.sh
 . "$(dirname "$0")/lib.sh"
 failed=0
@@ -58,6 +58,33 @@ make_game_2() {
 		cp "$tree/SDL2.dll" "$G/"
 	fi
 }
+
+# A release or a development build on the website after 0.0.2: its own program, the files of 0.0.2 with other
+# notes, and for a development build a file of its own (devonly.txt). Through fill_update like the others, so
+# the site has the lists of both channels as build-game.sh leaves them.
+make_version() {
+	local v=$1 stage=$R/stage/visionjk-$1 dir=$R/site/zips
+	rm -rf "$R/stage"
+	mkdir -p "$stage"
+	cp -a "$R/site/update/0.0.2/$sys-x86_64/." "$stage/"
+	cp "$X/v$v" "$stage/$prog"
+	echo "notes of $v" > "$stage/notes.txt"
+	if [[ $v == *-dev.* ]]; then
+		echo "only in the development build" > "$stage/devonly.txt"
+		dir=$dir/dev
+	fi
+	mkdir -p "$dir"
+	(cd "$R/stage" && bsdtar -a -cf "$dir/visionjk-$v-$sys-x86_64.zip" "visionjk-$v") || exit 1
+	site_update "$v"
+}
+
+# the folder of a player who has the development build 0.0.3-dev.1, every file as the website has it
+make_game_dev() {
+	make_game v0.0.3-dev.1
+	cp -a "$R/site/update/0.0.3-dev.1/$sys-x86_64/." "$G/"
+}
+
+dev_list_is() { [ "$(sed -n 2p "$R/site/update/dev/$sys-x86_64.txt")" = "version $1" ]; }
 
 # Windows does not let a file be deleted that a program still runs from, and the game that starts as the new
 # version comes up while the one before it is on its way out. So there the old files are gone one start later.
@@ -121,8 +148,10 @@ make_exe v0.0.1 "$X/v0.0.1"
 make_exe v0.0.2 "$X/v0.0.2"
 # (a name with a dot in it: the linker for Windows adds .exe to one without)
 make_exe v0.0.1-5-gabc1234 "$X/dev.0"
+make_exe v0.0.3-dev.1 "$X/v0.0.3-dev.1"
+make_exe v0.0.3 "$X/v0.0.3"
 make_release
-want=${*:-update damaged cutshort undo off down address devbuild elsewhere repair shadow same}
+want=${*:-update damaged cutshort undo off down address devbuild elsewhere repair shadow same channel back devstable}
 
 for scenario in $want; do
 	case "$scenario" in
@@ -412,6 +441,77 @@ for scenario in $want; do
 		check "the module of the player was left alone" test -e "$H/base/$(basename "${mods[1]}")"
 		check "the game ran its script to the end" has same "UPDTEST-END"
 		check "nothing was written into the folder of the game" no_leftovers
+		;;
+
+	channel)
+		echo "== channel: 0.0.2 switches to the development channel and gets 0.0.3-dev.1"
+		make_release
+		make_version 0.0.3-dev.1
+		make_game_2
+		server_start
+		run channel 'wait 600\nseta v_updateChannel dev\nwait 600\necho UPDTEST-ASKED\nv_updateText\nupdate\nwait 1500\necho UPDTEST-END\nquit\n'
+		server_stop
+		check "the stable list says nothing new at the start" asked /update/$sys-x86_64.txt
+		check "the console warns when the channel changes" has channel "Update channel: development. Development builds are early test versions."
+		check "the list of the development builds was asked for" asked /update/dev/$sys-x86_64.txt
+		check "the console says that 0.0.3-dev.1 is out" has channel "Version 0.0.3-dev.1 of the game is out, this is 0.0.2"
+		check "the next start says that it was updated" has channel "The game was updated to version 0.0.3-dev.1."
+		check "and the channel is still the development one" has channel "This is version 0.0.3-dev.1, and the newest one of the development builds is 0.0.3-dev.1."
+		check "the program is the one of 0.0.3-dev.1" same "$G/$prog" "$X/v0.0.3-dev.1"
+		check "the file of the development build is there" text_is "$G/devonly.txt" "only in the development build"
+		check "the file that changed is the new one" text_is "$G/notes.txt" "notes of 0.0.3-dev.1"
+		check "it was fetched from the tree of the development build" asked /update/0.0.3-dev.1/$sys-x86_64/devonly.txt
+		check "the game ran its script to the end" has channel "UPDTEST-END"
+		settle
+		check "no .vjknew, .vjkold or journal is left" no_leftovers
+		make_release
+		;;
+
+	back)
+		echo "== back: the development build 0.0.3-dev.1 on the stable channel goes back to 0.0.2, and its own file goes"
+		make_release
+		make_version 0.0.3-dev.1
+		make_game_dev
+		check "the player has the file of the development build before" test -f "$G/devonly.txt"
+		server_start
+		run back 'wait 600\necho UPDTEST-ASKED\nv_updateText\nupdate\nwait 1500\necho UPDTEST-END\nquit\n'
+		server_stop
+		check "the console offers the stable version" has back "This is the development build 0.0.3-dev.1 and the update channel is stable. To switch to the stable version 0.0.2"
+		check "the line for the menu offers to switch back" has back "Stable version 0.0.2. Click here to switch back"
+		check "the list of its own version was asked for" asked /update/lists/0.0.3-dev.1/$sys-x86_64.txt
+		check "the next start says that it is 0.0.2 now" has back "The game was updated to version 0.0.2."
+		check "with nothing newer" has back "This is version 0.0.2, and the newest one is 0.0.2."
+		check "the program is the one of 0.0.2" same "$G/$prog" "$X/v0.0.2"
+		check "the file that changed is the one of 0.0.2" text_is "$G/notes.txt" "notes of 0.0.2"
+		check "the file only the development build had is gone" test ! -e "$G/devonly.txt"
+		check "the game ran its script to the end" has back "UPDTEST-END"
+		settle
+		check "no .vjknew, .vjkold or journal is left" no_leftovers
+		make_release
+		;;
+
+	devstable)
+		echo "== devstable: on the development channel the release 0.0.3 comes over 0.0.3-dev.1"
+		make_release
+		make_version 0.0.3-dev.1
+		make_game_dev
+		make_version 0.0.3
+		check "the list of the dev channel on the site is the one of the release" dev_list_is 0.0.3
+		check "the tree of the development build is off the site" test ! -e "$R/site/update/0.0.3-dev.1"
+		check "its list is kept" test -f "$R/site/update/lists/0.0.3-dev.1/$sys-x86_64.txt"
+		check "the player has the file of the development build before" test -f "$G/devonly.txt"
+		server_start
+		run devstable 'seta v_updateChannel dev\nwait 600\necho UPDTEST-ASKED\nv_updateText\nupdate\nwait 1500\necho UPDTEST-END\nquit\n'
+		server_stop
+		check "the list of the development builds was asked for" asked /update/dev/$sys-x86_64.txt
+		check "the console says that 0.0.3 is out" has devstable "Version 0.0.3 of the game is out, this is 0.0.3-dev.1"
+		check "the next start says that it was updated" has devstable "The game was updated to version 0.0.3."
+		check "the program is the one of 0.0.3" same "$G/$prog" "$X/v0.0.3"
+		check "the file only the development build had is gone" test ! -e "$G/devonly.txt"
+		check "the game ran its script to the end" has devstable "UPDTEST-END"
+		settle
+		check "no .vjknew, .vjkold or journal is left" no_leftovers
+		make_release
 		;;
 
 	*) echo "no such scenario: $scenario" ;;

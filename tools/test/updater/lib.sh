@@ -142,9 +142,16 @@ make_release() {
 	echo "// a config that is new in 0.0.2" > "$stage/base/new.cfg"
 	echo "hello" > "$stage/newdir/hello.txt"
 	(cd "$R/stage" && bsdtar -a -cf "$R/site/zips/visionjk-0.0.2-$sys-x86_64.zip" visionjk-0.0.2) || exit 1
+	site_update 0.0.2
+	tree=$R/site/update/0.0.2/$sys-x86_64
+}
+
+# fill_update of tools/build-game.sh as it is, for version $1: the zips in $R/site/zips (a development build:
+# zips/dev), the lists and trees in $R/site/update, where the ones of earlier calls stay as on the website
+site_update() {
 	(
 		set -euo pipefail
-		version=0.0.2
+		version=$1
 		DOWNLOADS=$R/site/zips
 		notes=()
 		summary=()
@@ -156,10 +163,12 @@ make_release() {
 		}
 		# shellcheck disable=SC2329
 		zip_name() { echo "visionjk-$version-$1-x86_64.zip"; }
-		eval "$(sed -n '/^fill_update() {/,/^}/p' "$WEBSITE/tools/build-game.sh")"
+		eval "$(sed -n '/^\(channel_of\|version_key\|zip_dir\|fill_update\)() {/,/^}/p' "$WEBSITE/tools/build-game.sh")"
+		if [ -d "$R/site/update" ]; then
+			mv "$R/site/update" "$DOWNLOADS/update"
+		fi
 		fill_update
+		mv "$DOWNLOADS/update" "$R/site/update"
 	) || { echo "fill_update failed"; exit 1; }
-	mv "$R/site/zips/update" "$R/site/update"
-	tree=$R/site/update/0.0.2/$sys-x86_64
 }
 

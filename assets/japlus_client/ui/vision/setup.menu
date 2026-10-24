@@ -3669,6 +3669,25 @@
 
 		itemDef
 		{
+			name					vision_multistr_v_updatechannel
+			type					ITEM_TYPE_MULTI
+			text					@VISION_UPDATE_CHANNEL
+			descText				@VISION_STABLE_THE_RELEASES_DEVELOPMENT_EARL
+			cvar					"v_updateChannel"
+			cvarStrList { @VISION_STABLE "stable" @VISION_DEVELOPMENT "dev" }
+			action { play "sound/interface/button1.wav" ; uiScript updateChannel 11 ; }
+			rect					32 116 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					allowdownload
 			group					options
 			type					ITEM_TYPE_MULTI
@@ -3677,7 +3696,7 @@
 			cvar					"cl_allowDownload"
 			cvarFloatList { @MENUS_OFF 0 @MENUS_ON 1 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 116 384 22
+			rect					32 138 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3695,7 +3714,7 @@
 			descText				@VISION_BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
 			cvar					"v_downloadReview"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 138 384 22
+			rect					32 160 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3713,7 +3732,7 @@
 			descText				@VISION_KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 			cvar					"v_downloadKeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 160 384 22
+			rect					32 182 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3731,7 +3750,7 @@
 			descText				@VISION_FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 			cvar					"v_downloadHttp"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 182 384 22
+			rect					32 204 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3744,7 +3763,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					34 204 380 22
+			rect					34 226 380 22
 			visible					1
 			text					@VISION_CONNECTION
 			font					5
@@ -3760,7 +3779,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					32 225 384 0.67
+			rect					32 247 384 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -3778,7 +3797,7 @@
 			cvar					"v_netSmooth"
 			cvarFloatList { @VISION_OFF 0 @VISION_UP_TO_20_MS 20 @VISION_UP_TO_40_MS 40 @VISION_UP_TO_80_MS 80 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 226 384 22
+			rect					32 248 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3791,7 +3810,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					34 248 380 22
+			rect					34 270 380 22
 			visible					1
 			text					@VISION_SECURITY
 			font					5
@@ -3807,7 +3826,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					32 269 384 0.67
+			rect					32 291 384 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -3824,7 +3843,7 @@
 			descText				@VISION_WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 			cvar					"v_ids"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 270 384 22
+			rect					32 292 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3842,7 +3861,7 @@
 			descText				@VISION_THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
 			cvar					"v_authAgent"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 292 384 22
+			rect					32 314 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3862,7 +3881,7 @@
 			maxChars				120
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 314 384 22
+			rect					32 336 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3875,7 +3894,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					34 336 380 22
+			rect					34 358 380 22
 			visible					1
 			text					@VISION_TEXT
 			font					5
@@ -3891,7 +3910,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					32 357 384 0.67
+			rect					32 379 384 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -3908,7 +3927,7 @@
 			descText				@VISION_EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 			cvar					"v_utf8"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 358 384 22
+			rect					32 380 384 22
 			page					7
 			scroll					1
 			row						1
@@ -4288,6 +4307,104 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				55
 			textaligny				6.42
+		}
+
+		itemDef
+		{
+			name					vision_channel_title
+			rect					52 96 344 24
+			visible					1
+			text					@MENUS_WARNING
+			font					5
+			textscale				1.1
+			forecolor				1 0.74 0.30 1
+			decoration
+			page					11
+		}
+
+		itemDef
+		{
+			name					vision_channel1
+			rect					52 134 344 16
+			visible					1
+			text					@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			decoration
+			page					11
+		}
+
+		itemDef
+		{
+			name					vision_channel2
+			rect					52 152 344 16
+			visible					1
+			text					@VISION_THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			decoration
+			page					11
+		}
+
+		itemDef
+		{
+			name					vision_channel3
+			rect					52 170 344 16
+			visible					1
+			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
+			font					5
+			textscale				0.7
+			forecolor				0.60 0.69 0.78 1
+			decoration
+			page					11
+		}
+
+		itemDef
+		{
+			name					vision_channel_no
+			rect					52 242 150 24
+			visible					1
+			text					@VISION_STAY_ON_STABLE
+			font					5
+			textscale				0.64
+			forecolor				0.86 0.92 0.97 1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			radius					3
+			caps					1
+			page					11
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
+			descText				@VISION_KEEP_THE_RELEASES
+			action { play "sound/interface/button1.wav" ; setpage 7 ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				75
+			textaligny				6.24
+		}
+
+		itemDef
+		{
+			name					vision_channel_yes
+			rect					222 242 170 24
+			visible					1
+			text					@VISION_SWITCH_TO_DEVELOPMENT
+			font					5
+			textscale				0.64
+			forecolor				1 1 1 1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			radius					3
+			caps					1
+			page					11
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
+			descText				@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
+			action { play "sound/interface/button1.wav" ; setcvar v_updateChannel dev ; setpage 7 ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				85
+			textaligny				6.24
 		}
 		scrollRect				32 72 384 352
 		scrollStep				22

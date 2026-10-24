@@ -35,6 +35,10 @@ The first line is the format. A client does not read a list of another format th
 starts with a word it does not know is skipped, so a later release can say more without a new format.
 "keep" is a file a player or a server owner changes (the .cfg files): it is put there if it is missing and
 never replaced.
+
+A version is a release, "0.2.8", or a development build before it, "0.2.8-dev.2". The development builds of a
+release come before it, the release before the next development build: 0.2.8-dev.1 < 0.2.8-dev.2 < 0.2.8 <
+0.2.9-dev.1. As numbers that is a fourth part, the number of the development build or UPD_STABLE.
 */
 
 #pragma once
@@ -49,6 +53,9 @@ extern "C" {
 #endif
 
 #define UPD_FORMAT			1
+#define UPD_VERSION_PARTS	4
+#define UPD_STABLE			10000		// the fourth part of a release, above every development build (9999 at most)
+#define UPD_VERSION_TEXT	32
 #define UPD_MAX_FILES		256
 #define UPD_MAX_PATH		96
 #define UPD_MAX_ADDRESS		200
@@ -69,14 +76,16 @@ typedef struct updFile_s {
 } updFile_t;
 
 typedef struct updList_s {
-	int			version[3];
+	int			version[UPD_VERSION_PARTS];
 	int			numFiles;
 	updFile_t	files[UPD_MAX_FILES];
 } updList_t;
 
-qboolean	UPD_ParseVersion( const char *text, int version[3] );
-qboolean	UPD_ParseRelease( const char *tag, int version[3] );
-int			UPD_CompareVersion( const int a[3], const int b[3] );
+qboolean	UPD_ParseVersion( const char *text, int version[UPD_VERSION_PARTS] );
+qboolean	UPD_ParseRelease( const char *tag, int version[UPD_VERSION_PARTS] );
+int			UPD_CompareVersion( const int a[UPD_VERSION_PARTS], const int b[UPD_VERSION_PARTS] );
+qboolean	UPD_IsDev( const int version[UPD_VERSION_PARTS] );
+void		UPD_VersionText( const int version[UPD_VERSION_PARTS], char *out, size_t outSize );
 qboolean	UPD_PathAllowed( const char *path );
 qboolean	UPD_AddressAllowed( const char *address, qboolean plainToo );
 const char	*UPD_ParseList( const char *text, size_t length, updList_t *list );

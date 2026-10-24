@@ -28,12 +28,14 @@ BOOST_AUTO_TEST_SUITE( update )
 
 BOOST_AUTO_TEST_CASE( version )
 {
-	int v[3];
+	int v[UPD_VERSION_PARTS];
 
 	BOOST_CHECK( UPD_ParseVersion( "0.2.6", v ) );
 	BOOST_CHECK_EQUAL( v[0], 0 );
 	BOOST_CHECK_EQUAL( v[1], 2 );
 	BOOST_CHECK_EQUAL( v[2], 6 );
+	BOOST_CHECK_EQUAL( v[3], UPD_STABLE );
+	BOOST_CHECK( !UPD_IsDev( v ) );
 	BOOST_CHECK( UPD_ParseVersion( "9999.0.10", v ) );
 	BOOST_CHECK( UPD_ParseVersion( "12.345.6789", v ) && v[0] == 12 && v[1] == 345 && v[2] == 6789 );
 	BOOST_CHECK( !UPD_ParseVersion( "10000.0.0", v ) );
@@ -44,11 +46,37 @@ BOOST_AUTO_TEST_CASE( version )
 	BOOST_CHECK( !UPD_ParseVersion( "0..6", v ) );
 	BOOST_CHECK( !UPD_ParseVersion( "0.2.-6", v ) );
 	BOOST_CHECK( !UPD_ParseVersion( "", v ) );
+
+	// a development build
+	BOOST_CHECK( UPD_ParseVersion( "0.2.8-dev.2", v ) && v[0] == 0 && v[1] == 2 && v[2] == 8 && v[3] == 2 );
+	BOOST_CHECK( UPD_IsDev( v ) );
+	BOOST_CHECK( UPD_ParseVersion( "0.2.8-dev.9999", v ) && v[3] == 9999 );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-dev.10000", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-dev.", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-dev", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-dev.2 ", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-dev.-2", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-dev.2-3-gabc1234", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-DEV.2", v ) );
+	BOOST_CHECK( !UPD_ParseVersion( "0.2.8-rc.2", v ) );
+}
+
+BOOST_AUTO_TEST_CASE( version_text )
+{
+	const char	*texts[] = { "0.2.8", "0.2.8-dev.2", "9999.9999.9999-dev.9999", "0.0.0-dev.0" };
+	char		out[UPD_VERSION_TEXT];
+	int			v[UPD_VERSION_PARTS];
+
+	for ( const char *text : texts ) {
+		BOOST_REQUIRE( UPD_ParseVersion( text, v ) );
+		UPD_VersionText( v, out, sizeof( out ) );
+		BOOST_CHECK_EQUAL( std::string( out ), text );
+	}
 }
 
 BOOST_AUTO_TEST_CASE( release )
 {
-	int v[3];
+	int v[UPD_VERSION_PARTS];
 
 	BOOST_CHECK( UPD_ParseRelease( "v0.2.6", v ) );
 	BOOST_CHECK( UPD_ParseRelease( "v10.20.30", v ) && v[0] == 10 && v[1] == 20 && v[2] == 30 );
@@ -56,15 +84,31 @@ BOOST_AUTO_TEST_CASE( release )
 	BOOST_CHECK( !UPD_ParseRelease( "v0.2.6-1-g6b0be1b", v ) );
 	BOOST_CHECK( !UPD_ParseRelease( "0.2.6", v ) );
 	BOOST_CHECK( !UPD_ParseRelease( "v0.1.0-rc1", v ) );
+	// a development build is one, a build after it is somebody's own
+	BOOST_CHECK( UPD_ParseRelease( "v0.2.8-dev.1", v ) && v[3] == 1 );
+	BOOST_CHECK( !UPD_ParseRelease( "v0.2.8-dev.1-3-gabc1234", v ) );
 }
 
 BOOST_AUTO_TEST_CASE( compare )
 {
-	const int a[3] = { 0, 2, 6 }, b[3] = { 0, 10, 0 }, c[3] = { 1, 0, 0 };
+	const int a[UPD_VERSION_PARTS] = { 0, 2, 6, UPD_STABLE }, b[UPD_VERSION_PARTS] = { 0, 10, 0, UPD_STABLE },
+		c[UPD_VERSION_PARTS] = { 1, 0, 0, UPD_STABLE };
 
 	BOOST_CHECK_LT( UPD_CompareVersion( a, b ), 0 );
 	BOOST_CHECK_GT( UPD_CompareVersion( c, b ), 0 );
 	BOOST_CHECK_EQUAL( UPD_CompareVersion( a, a ), 0 );
+
+	// 0.2.8-dev.1 < 0.2.8-dev.2 < 0.2.8 < 0.2.9-dev.1, each one against every one after it
+	const char	*order[] = { "0.2.7", "0.2.8-dev.1", "0.2.8-dev.2", "0.2.8-dev.10", "0.2.8", "0.2.9-dev.1", "0.3.0" };
+	const int	n = (int)( sizeof( order ) / sizeof( order[0] ) );
+	int			x[UPD_VERSION_PARTS], y[UPD_VERSION_PARTS];
+
+	for ( int i = 0; i < n; i++ ) {
+		for ( int j = i + 1; j < n; j++ ) {
+			BOOST_REQUIRE( UPD_ParseVersion( order[i], x ) && UPD_ParseVersion( order[j], y ) );
+			BOOST_CHECK_MESSAGE( UPD_CompareVersion( x, y ) < 0 && UPD_CompareVersion( y, x ) > 0, order[i] << " < " << order[j] );
+		}
+	}
 }
 
 BOOST_AUTO_TEST_CASE( path )
@@ -186,12 +230,16 @@ BOOST_AUTO_TEST_CASE( list_edges )
 	BOOST_CHECK_EQUAL( list->numFiles, 1 );
 	// 1 GB is the most a file may have
 	BOOST_CHECK( Parse( List( FileLine( "a", "1073741824" ) ), list.get() ) == nullptr );
+	// the list of a development build
+	BOOST_CHECK( Parse( List( FileLine( "a" ), "version 0.2.8-dev.3\n" ), list.get() ) == nullptr );
+	BOOST_CHECK( list->version[2] == 8 && list->version[3] == 3 );
 
 	for ( const std::string &bad : {
 		"visionjk-update\nversion 0.1.1\n" + FileLine( "a" ),			// no number of the kind
 		"visionjk-update 1x\nversion 0.1.1\n" + FileLine( "a" ),
 		" visionjk-update 1\nversion 0.1.1\n" + FileLine( "a" ),
 		List( FileLine( "a" ), "version 0.1.1-rc1\n" ),
+		List( FileLine( "a" ), "version 0.1.1-dev.1-3-gabc1234\n" ),
 		List( FileLine( "a" ) + FileLine( "a", "3", "keep" ) ),				// the same file as file and as keep
 		List( FileLine( "a", "x" ) ),
 		List( "file 3  " + kHash + " a\n" ),									// two spaces

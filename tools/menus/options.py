@@ -227,6 +227,8 @@ SETUP = [
     ('Network', 'Updates, downloads and security.', [
         ('head', 'Updates and Downloads'),
         ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
+        ('multistr', 'Update Channel', 'v_updateChannel', (('Stable', 'stable'), ('Development', 'dev')),
+         'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
         ('old', 'options', ('cl_allowdownload',)),
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),
@@ -489,6 +491,9 @@ def new_row(spec):
     if cvar.lower() in SOUND_PRESET_CVARS:
         # the row "3D Sound" says which preset the cvars are (UI_GetSoundSetup), also after this one changed
         action += ['uiScript', 'getsoundsetup', ';']
+    if cvar == 'v_updateChannel':
+        # the development builds only after the warning of channel_page (UI_RunMenuScript sets it back and opens it)
+        action += ['uiScript', 'updateChannel', PAGE_MARK % 'updatechannel', ';']
     b.append(Entry('action', [], action))
     return b
 
@@ -542,6 +547,30 @@ def bar_button(name, x, w, text, desc, action, L, *more):
     rect = (x, L.bar_y, w, L.bar_h)
     return text_item(name, rect, text, 0.6, TEXT, ('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_EMPTY'), ('caps', 1),
                      ('descText', desc), ('action', action), *centered(rect, 0.6), *more)
+
+
+def channel_page(page, back, L):
+    """The warning before the development builds (the row "Update Channel" opens it). Its button sets the cvar."""
+    x, y, w, _ = L.list
+    rect_no, rect_yes = (x + 20, y + 170, 150, 24), (x + 190, y + 170, 170, 24)
+    pill = (('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 3), ('caps', 1), ('page', page))
+    lines = ('Development builds are early test versions.', 'They can crash, break configs or not work on all servers.',
+             'You can switch back to Stable any time.')
+    out = [text_item('vision_channel_title', (x + 20, y + 24, w - 40, 24), '@MENUS_WARNING', 1.1, WARM, ('decoration',), ('page', page))]
+    for n, line in enumerate(lines):
+        out.append(text_item('vision_channel%d' % (n + 1), (x + 20, y + 62 + n * 18, w - 40, 16), ref(line), 0.7, DIM if n == 2 else TEXT,
+                             ('decoration',), ('page', page)))
+    out += [
+        text_item('vision_channel_no', rect_no, ref('Stay on Stable'), 0.64, TEXT, *pill, ('backcolor', '1', '1', '1', '0.05'),
+                  ('bordercolor', *SOFT_EDGE), ('descText', ref('Keep the releases.')),
+                  ('action', list(CLICK) + ['setpage', str(back), ';']), *centered(rect_no, 0.64)),
+        text_item('vision_channel_yes', rect_yes, ref('Switch to Development'), 0.64, BRIGHT, *pill,
+                  ('backcolor', *(ACCENT[:3] + ['0.20'])), ('bordercolor', *(ACCENT[:3] + ['0.75'])),
+                  ('descText', ref('Update to the development builds from now on.')),
+                  ('action', list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(back), ';']),
+                  *centered(rect_yes, 0.64)),
+    ]
+    return out
 
 
 def defaults_page(m, page, L):
@@ -647,12 +676,14 @@ def build(m, name, ingame, nav):
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
+        network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
         new.extend(music_page(first, chat, L))
-        mark = PAGE_MARK % 'musicplayers'
+        new.extend(channel_page(first + 1, network, L))
+        marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
         for e in new:
             act = mf.find(e.block, 'action') if e.k == 'itemdef' else None
             if act and isinstance(act.block, list):
-                act.block = [str(first) if w == mark else w for w in act.block]
+                act.block = [marks.get(w, w) for w in act.block]
     m[:] = [e for e in m if e.k != 'itemdef'] + new
     for key in ('onopen', 'onclose', 'onesc'):
         e = mf.find(m, key)

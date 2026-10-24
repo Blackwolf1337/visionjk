@@ -6434,6 +6434,18 @@ static void UI_RunMenuScript(char **args)
 		{
 			UI_GetSoundSetup ( );
 		}
+		else if ( Q_stricmp( name, "updateChannel" ) == 0 )
+		{
+			// The row of the update channel just changed it. The development builds are only taken after the
+			// warning on the page of the argument (tools/menus/options.py), whose button sets the cvar itself.
+			int page;
+
+			if ( Int_Parse( args, &page ) && !Q_stricmp( UI_Cvar_VariableString( "v_updateChannel" ), "dev" ) && Menu_GetFocused() )
+			{
+				trap->Cvar_Set( "v_updateChannel", "stable" );
+				Menu_SetPage( Menu_GetFocused(), page );
+			}
+		}
 		else if (Q_stricmp(name, "getsaberhiltinfo") == 0)
 		{
 			WP_SaberGetHiltInfo(saberSingleHiltInfo, saberStaffHiltInfo);

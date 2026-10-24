@@ -1397,6 +1397,22 @@ REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 LANG_ENGLISH        "Ask at every start whether a newer version is out."
 LANG_SPANISH        "Preguntar en cada inicio si hay una versión más nueva."
 
+REFERENCE           UPDATE_CHANNEL
+LANG_ENGLISH        "Update Channel"
+LANG_SPANISH        "Canal de actualización"
+
+REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
+LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
+LANG_SPANISH        "Estable: las versiones publicadas. Desarrollo: versiones de prueba tempranas, y las publicadas cuando son más nuevas."
+
+REFERENCE           STABLE
+LANG_ENGLISH        "Stable"
+LANG_SPANISH        "Estable"
+
+REFERENCE           DEVELOPMENT
+LANG_ENGLISH        "Development"
+LANG_SPANISH        "Desarrollo"
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_SPANISH        "Elegir las descargas"
@@ -1536,6 +1552,34 @@ LANG_SPANISH        "Un clic marca un reproductor o lo desmarca."
 REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
 LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
 LANG_SPANISH        "Solo se muestran las canciones de los marcados."
+
+REFERENCE           DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
+LANG_ENGLISH        "Development builds are early test versions."
+LANG_SPANISH        "Las versiones de desarrollo son versiones de prueba tempranas."
+
+REFERENCE           THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
+LANG_ENGLISH        "They can crash, break configs or not work on all servers."
+LANG_SPANISH        "Pueden fallar, romper configuraciones o no funcionar en todos los servidores."
+
+REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
+LANG_ENGLISH        "You can switch back to Stable any time."
+LANG_SPANISH        "Puedes volver a Estable en cualquier momento."
+
+REFERENCE           STAY_ON_STABLE
+LANG_ENGLISH        "Stay on Stable"
+LANG_SPANISH        "Quedarse en Estable"
+
+REFERENCE           KEEP_THE_RELEASES
+LANG_ENGLISH        "Keep the releases."
+LANG_SPANISH        "Seguir con las versiones publicadas."
+
+REFERENCE           SWITCH_TO_DEVELOPMENT
+LANG_ENGLISH        "Switch to Development"
+LANG_SPANISH        "Cambiar a Desarrollo"
+
+REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
+LANG_ENGLISH        "Update to the development builds from now on."
+LANG_SPANISH        "Actualizar a las versiones de desarrollo a partir de ahora."
 
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"

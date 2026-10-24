@@ -422,6 +422,19 @@ TR = {
     # network
     'Check for Updates': 'Nach Updates suchen',
     'Ask at every start whether a newer version is out.': 'Bei jedem Start fragen, ob es eine neuere Version gibt.',
+    'Update Channel': 'Update-Kanal',
+    'Stable': 'Stabil',
+    'Development': 'Entwicklung',
+    'Stable: the releases. Development: early test builds, and the releases when they are newer.':
+        'Stabil: die Releases. Entwicklung: frühe Testversionen, und die Releases, wenn sie neuer sind.',
+    'Development builds are early test versions.': 'Entwicklungsversionen sind frühe Testversionen.',
+    'They can crash, break configs or not work on all servers.':
+        'Sie können abstürzen, Configs kaputt machen oder nicht auf allen Servern laufen.',
+    'You can switch back to Stable any time.': 'Du kannst jederzeit zurück zu Stabil wechseln.',
+    'Stay on Stable': 'Bei Stabil bleiben',
+    'Keep the releases.': 'Bei den Releases bleiben.',
+    'Switch to Development': 'Zu Entwicklung wechseln',
+    'Update to the development builds from now on.': 'Ab jetzt auf die Entwicklungsversionen updaten.',
     'Choose Downloads': 'Downloads auswählen',
     'Before a download choose the files of the server, and see what is in them before they are used.':
         'Vor einem Download die Dateien des Servers auswählen und ihren Inhalt sehen, bevor sie benutzt werden.',
