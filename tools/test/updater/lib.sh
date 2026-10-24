@@ -16,8 +16,14 @@
 src=$GAME_REPO
 # the folder of the original game, whose base assets the test game links and whose client assets it copies
 gamedata=$(dirname "$BASE_ASSETS")
-R=${UPD_ROOT:-$WORK/updater}
-port=${UPD_PORT:-8099}
+# Linux and Windows each in a folder and on a port of their own, so the two can run at the same time (all.sh)
+if [ -n "$WIN" ]; then
+	R=${UPD_ROOT:-$WORK/updater-win}
+	port=${UPD_PORT:-8098}
+else
+	R=${UPD_ROOT:-$WORK/updater}
+	port=${UPD_PORT:-8099}
+fi
 if [ -n "$WIN" ]; then
 	b=${UPD_BUILD:-$src/buildwin64}
 	sys=windows

@@ -23,7 +23,9 @@ set -euo pipefail
 # shellcheck source=tools/test/game-run.sh
 . "$(dirname "${BASH_SOURCE[0]}")/game-run.sh"
 
-SMOKE=$WORK/smoke
+# VJK_SMOKE_DIR and VJK_SMOKE_PORT: another folder and port of the server, for a second run at the same time
+SMOKE=${VJK_SMOKE_DIR:-$WORK/smoke}
+SERVER_PORT=${VJK_SMOKE_PORT:-29099}
 WINEPREFIX_SMOKE=$WORK/smoke-wine
 MAP=mp/ffa1
 # seconds a run may take before it counts as hung, the first start of a Wine prefix takes longer
@@ -75,7 +77,7 @@ test_linux() {
 	sanitizer_env "$SMOKE/linux-server.log"
 	set +e
 	(cd "$game" && timeout -k 10 "$TIMEOUT_GAME" ./visionjkded.x86_64 "${args[@]}" +set dedicated 1 \
-		+set net_port 29099 +set bot_enable 1 +map "$MAP" +wait 100 +addbot "$BOT" +wait 400 +quit) \
+		+set net_port "$SERVER_PORT" +set bot_enable 1 +map "$MAP" +wait 100 +addbot "$BOT" +wait 400 +quit) \
 		> "$SMOKE/linux-server.log.out" 2>&1
 	code=$?
 	set -e

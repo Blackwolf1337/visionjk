@@ -7,11 +7,11 @@
 #
 # usage: tools/test/sanitize-test.sh [options]
 #   --only sanitizers|valgrind   one of the two parts (the unit tests are part of sanitizers)
-#   --keep                       leave build-test/smoke as it is after the run
+#   --keep                       leave build-test/smoke-sanitize as it is after the run
 #
 # Build folders: build-sanitize and build-valgrind in the game repository, the installs in build-test/stage-sanitize
 # and build-test/stage-valgrind. Logs: build-test/logs/sanitize-*.log (the unit tests: sanitize-unit.log), the smoke test
-# in build-test/smoke, valgrind in build-test/smoke/valgrind-server.*. Exit code 0 when everything passed.
+# in build-test/smoke-sanitize, valgrind in build-test/valgrind/server.*. Exit code 0 when everything passed.
 set -euo pipefail
 
 # shellcheck source=tools/test/test-env.sh
@@ -80,13 +80,15 @@ test_sanitizers() {
 
 	game=$(game_dir "$stage" visionjk.x86_64)
 	[ "$keep" = 1 ] && args+=(--keep)
-	"$TEST_DIR/smoke-test.sh" "$version" --dir "$game" "${args[@]}" || failed=1
+	# a folder and a port of its own, so it can run beside smoke-test.sh of the release (all.sh)
+	VJK_SMOKE_DIR=$WORK/smoke-sanitize VJK_SMOKE_PORT=29096 \
+		"$TEST_DIR/smoke-test.sh" "$version" --dir "$game" "${args[@]}" || failed=1
 }
 
 # The server loads the level, takes a bot and quits under valgrind. Errors fail the run; leaks are only counted,
 # the engine keeps its hunks to the end on purpose.
 test_valgrind() {
-	local stage=$WORK/stage-valgrind game home=$WORK/smoke/home-valgrind-server log=$WORK/smoke/valgrind-server
+	local stage=$WORK/stage-valgrind game home=$WORK/valgrind/home log=$WORK/valgrind/server
 	local code pk3 errors
 	command -v valgrind > /dev/null || die "valgrind is missing"
 	build valgrind "$stage" -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPRdVulkanVision=OFF \
@@ -127,7 +129,7 @@ done
 case $only in ''|sanitizers|valgrind) ;; *) usage ;; esac
 [ -f "$BASE_ASSETS/assets0.pk3" ] || die "The base assets are not in $BASE_ASSETS"
 [ -d "$STEAMAUDIO_SDK" ] || die "The Steam Audio SDK is not in $STEAMAUDIO_SDK"
-mkdir -p "$LOGS" "$WORK/smoke"
+mkdir -p "$LOGS" "$WORK/valgrind"
 
 # what the game says it is: git describe of the game repository, as the build takes it
 version=$(git -C "$GAME_REPO" describe --tag)
