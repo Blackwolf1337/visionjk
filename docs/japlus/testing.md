@@ -80,10 +80,12 @@ about 45 seconds).
 Before the smoke test the script builds the unit tests in `build-sanitize` and runs them with the sanitizers
 and leak detection on. Their log is `build-test/logs/sanitize-unit.log`.
 
-`tools/test/sanitize-suppressions.txt` lists the undefined behaviour the game already had on 2026-10-24 (the
-zone allocator alignment, which also hits the bot structs, three integer shifts, a downcast in `FxTemplate.cpp`),
-so only a new case fails. A line comes out when its case is fixed. `smoke-test.sh` fails a run on any sanitizer
-report.
+`tools/test/sanitize-suppressions.txt` holds known cases of undefined behaviour that UndefinedBehaviorSanitizer
+lets pass, one line each (`<check>:<file>`), so that a run fails only on a new one. A line comes out when its case
+is fixed. When the tests came on 2026-10-24 they found the zone allocator and the pool of the game module handing
+out misaligned blocks (the bot structs among them), three integer shifts (`MSG_WriteBits`, the checksum feed of the
+server, the mp3 decoder) and a wrong downcast in `FxTemplate.cpp`. All of these are fixed and the file is empty.
+`smoke-test.sh` fails a run on any sanitizer report.
 
 ## Static checks
 

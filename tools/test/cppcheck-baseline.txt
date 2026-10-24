@@ -1,5 +1,5 @@
-# Findings of tools/lint.sh (cppcheck) that are known, as file:check:severity:message.
-# Written by tools/lint.sh --baseline, do not edit by hand.
+# Findings of tools/test/lint.sh (cppcheck) that are known, as file:check:severity:message.
+# Written by tools/test/lint.sh --baseline, do not edit by hand.
 codemp/botlib/be_aas_entity.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/botlib/be_aas_file.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/botlib/be_aas_main.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
@@ -124,7 +124,6 @@ codemp/client/FxSystem.cpp:dangerousTypeCast:warning:Potentially invalid type co
 codemp/client/FxSystem.cpp:uninitMemberVar:warning:Member variable 'SFxHelper::mRealTime' is not initialized in the constructor.
 codemp/client/FxSystem.h:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/client/FxSystem.h:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/FxTemplate.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/client/FxTemplate.cpp:invalidscanf:warning:sscanf() without field width limits can crash with huge input data.
 codemp/client/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mMatImpactFX' is not assigned a value in 'CPrimitiveTemplate::operator='.
 codemp/client/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not assigned a value in 'CPrimitiveTemplate::operator='.
