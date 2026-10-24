@@ -3118,13 +3118,24 @@ int BG_ModelCache(const char *modelName, const char *skinName)
 //with casted datatypes, which is why it is so large.
 
 
-static char		bg_pool[MAX_POOL_SIZE];
+// A block of the pool starts on 8 bytes, as a struct with pointers, doubles or 64 bit integers needs it (the
+// bot_state_t of the bots: 4 had them misaligned on 64 bit). The union puts the pool itself on such an address.
+#define BG_POOL_ALIGN	8
+#define BG_PoolRound( x )	( ( (x) + BG_POOL_ALIGN - 1 ) & ~( BG_POOL_ALIGN - 1 ) )
+
+static union {
+	char		c[MAX_POOL_SIZE];
+	double		d;
+	long long	ll;
+	void		*p;
+} bg_poolMem;
+static char		*const bg_pool = bg_poolMem.c;
 static int		bg_poolSize = 0;
 static int		bg_poolTail = MAX_POOL_SIZE;
 
 void *BG_Alloc ( int size )
 {
-	bg_poolSize = ((bg_poolSize + 0x00000003) & 0xfffffffc);
+	bg_poolSize = BG_PoolRound( bg_poolSize );
 
 	if (bg_poolSize + size > bg_poolTail)
 	{
@@ -3152,7 +3163,7 @@ void *BG_AllocUnaligned ( int size )
 
 void *BG_TempAlloc( int size )
 {
-	size = ((size + 0x00000003) & 0xfffffffc);
+	size = BG_PoolRound( size );
 
 	if (bg_poolTail - size < bg_poolSize)
 	{
@@ -3167,7 +3178,7 @@ void *BG_TempAlloc( int size )
 
 void BG_TempFree( int size )
 {
-	size = ((size + 0x00000003) & 0xfffffffc);
+	size = BG_PoolRound( size );
 
 	if (bg_poolTail+size > MAX_POOL_SIZE)
 	{

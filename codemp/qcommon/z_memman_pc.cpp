@@ -62,9 +62,21 @@ typedef struct
 
 } zoneTail_t;
 
-static inline zoneTail_t *ZoneTailFromHeader(zoneHeader_t *pHeader)
+// The tail sits right behind the block, which ends wherever its size says: its magic may be at any address and is
+// read and written as bytes.
+static inline int ZoneTailMagic(const zoneHeader_t *pHeader)
 {
-	return (zoneTail_t*) ( (char*)pHeader + sizeof(*pHeader) + pHeader->iSize );
+	int iMagic;
+
+	memcpy( &iMagic, (const char *)pHeader + sizeof(*pHeader) + pHeader->iSize, sizeof( iMagic ) );
+	return iMagic;
+}
+
+static inline void ZoneSetTailMagic(zoneHeader_t *pHeader)
+{
+	const int iMagic = ZONE_MAGIC;
+
+	memcpy( (char *)pHeader + sizeof(*pHeader) + pHeader->iSize, &iMagic, sizeof( iMagic ) );
 }
 
 #ifdef DETAILED_ZONE_DEBUG_CODE
@@ -125,7 +137,7 @@ void Z_Validate(void)
 			return;
 		}
 
-		if (ZoneTailFromHeader(pMemory)->iMagic != ZONE_MAGIC)
+		if (ZoneTailMagic(pMemory) != ZONE_MAGIC)
 		{
 			Com_Error(ERR_FATAL, "Z_Validate(): Corrupt zone tail!");
 			return;
@@ -139,20 +151,24 @@ void Z_Validate(void)
 
 // static mem blocks to reduce a lot of small zone overhead
 //
+// Packed, so the tail is right behind mem as for a block of Z_Malloc, but each one starts on the alignment of its
+// header: an array of them is read through zoneHeader_t (Z_Free, Z_Size).
 #pragma pack(push)
 #pragma pack(1)
-typedef struct StaticZeroMem_s {
+typedef struct alignas(zoneHeader_t) StaticZeroMem_s {
 	zoneHeader_t	Header;
 //	byte mem[0];
 	zoneTail_t		Tail;
 } StaticZeroMem_t;
 
-typedef struct StaticMem_s {
+typedef struct alignas(zoneHeader_t) StaticMem_s {
 	zoneHeader_t	Header;
 	byte mem[2];
 	zoneTail_t		Tail;
 } StaticMem_t;
 #pragma pack(pop)
+static_assert( offsetof( StaticMem_t, Tail ) == sizeof( zoneHeader_t ) + 2, "the tail of a static block is right behind mem" );
+static_assert( sizeof( StaticMem_t ) % alignof( zoneHeader_t ) == 0, "a static block starts on the alignment of its header" );
 
 StaticZeroMem_t gZeroMalloc  =
 	{ {ZONE_MAGIC, TAG_STATIC,0,NULL,NULL},{ZONE_MAGIC}};
@@ -297,7 +313,7 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit /* = qfalse */, int iU
 	//
 	// add tail...
 	//
-	ZoneTailFromHeader(pMemory)->iMagic = ZONE_MAGIC;
+	ZoneSetTailMagic(pMemory);
 
 	// Update stats...
 	//
@@ -463,7 +479,7 @@ void Z_Free(void *pvAddress)
 		Com_Error(ERR_FATAL, "Z_Free(): Corrupt zone header!");
 		return;
 	}
-	if (ZoneTailFromHeader(pMemory)->iMagic != ZONE_MAGIC)
+	if (ZoneTailMagic(pMemory) != ZONE_MAGIC)
 	{
 		Com_Error(ERR_FATAL, "Z_Free(): Corrupt zone tail!");
 		return;
