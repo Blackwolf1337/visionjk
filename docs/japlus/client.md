@@ -1011,6 +1011,7 @@ gated by the ROM cvar `v_cgameScreenFx`. rd-vanilla returns qfalse and the cgame
 |------|---------|---------|
 | `v_screenFx` | 1 | all screen effects. Saved |
 | `v_fxBlast` | 1 | the wave and the colour split of an explosion close by. Saved |
+| `v_soundTinnitus` | 1 | the dull sound and the ringing ears after an explosion close by. Saved. Does not need `v_screenFx` or `v_fxBlast`, works with any renderer |
 | `v_fxHeat` | 1 | heat haze. Saved |
 | `v_fxHit` | 1 | the look of a hit, of low health and the heartbeat. Saved |
 | `v_fxWater` | 1 | the look under water and the drops after surfacing. Saved |
@@ -1020,8 +1021,8 @@ gated by the ROM cvar `v_cgameScreenFx`. rd-vanilla returns qfalse and the cgame
 | `v_tinnitus` | 0 | engine, `CVAR_TEMP`, set by the cgame: 0 to 1, how strong the ringing is |
 | `v_dreamReverb` | 0 | engine, set by the cgame from Force Sight: 0 to 1, how strong the long reverb is |
 
-- Explosions: a wave runs out from a blast close by, the picture splits into colours at its edge, the sound is
-  muffled and the ears ring for a few seconds.
+- Explosions: a wave runs out from a blast close by and the picture splits into colours at its edge (`v_fxBlast`).
+  The sound is muffled and the ears ring for a few seconds (`v_soundTinnitus`, independent of the rest).
 - Heat: the air shimmers over the jetpack and the flamethrower. The barrel of the own repeater or blaster shimmers
   and smokes after long fire. A lit blade has heat around it.
 - Hits: the edge of the picture shows the side the hit came from. At low health the picture drains of colour and a
@@ -1037,8 +1038,8 @@ gated by the ROM cvar `v_cgameScreenFx`. rd-vanilla returns qfalse and the cgame
   as far as the game already shows players through walls, from Force Sight level 2.
 - Saber clash: a bright flash where the blades meet.
 
-- Sound: `v_muffle` has one owner in the cgame now: the menu in the level, under water, a blast close by and Force
-  Sight set it. `v_tinnitus` makes `S_TinnitusPaint()` in the mixer (`client/snd_mix.cpp`) add a ringing of two
+- Sound: `v_muffle` has one owner in the cgame now: the menu in the level, under water, a blast close by (`v_soundTinnitus`)
+  and Force Sight set it. `v_tinnitus`, set by the cgame from `v_soundTinnitus`, makes `S_TinnitusPaint()` in the mixer (`client/snd_mix.cpp`) add a ringing of two
   tones, 3700 and 3790 Hz, and lower the rest. `v_dreamReverb` adds a long parametric Steam Audio reverb, one per
   ear, in `S_SpatialRenderDream()` (`client/spatial/snd_spatial_render.cpp`). The reverb works only with Steam
   Audio (`v_spatial 1`).

@@ -2116,13 +2116,31 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_soundtinnitus
+			type					ITEM_TYPE_YESNO
+			text					@VISION_RINGING_EARS
+			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
+			cvar					"v_soundTinnitus"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 368 380 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_fxheat
 			type					ITEM_TYPE_YESNO
 			text					@VISION_HEAT_HAZE
 			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
 			cvar					"v_fxHeat"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					12 390 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2140,7 +2158,7 @@
 			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
 			cvar					"v_fxHit"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					12 412 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2158,7 +2176,7 @@
 			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
 			cvar					"v_fxWater"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					12 434 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2176,7 +2194,7 @@
 			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
 			cvar					"v_fxForce"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					12 456 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2194,7 +2212,7 @@
 			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
 			cvar					"v_fxSaber"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
+			rect					12 478 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2207,7 +2225,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 478 376 22
+			rect					14 500 376 22
 			visible					1
 			text					@VISION_DISRUPTOR
 			font					5
@@ -2223,7 +2241,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 499 380 0.67
+			rect					12 521 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2240,7 +2258,7 @@
 			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
 			cvar					"v_scope"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					12 522 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2258,7 +2276,7 @@
 			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
 			cvar					"v_scopeWheelZoom"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					12 544 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2276,7 +2294,7 @@
 			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
 			cvarfloat				"v_motionThreshold" 40 10 200
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 544 380 22
+			rect					12 566 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2289,7 +2307,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 566 376 22
+			rect					14 588 376 22
 			visible					1
 			text					@VISION_BINOCULARS_AND_ROCKETS
 			font					5
@@ -2305,7 +2323,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 587 380 0.67
+			rect					12 609 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2322,7 +2340,7 @@
 			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
 			cvar					"v_binoculars"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 588 380 22
+			rect					12 610 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2340,7 +2358,7 @@
 			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
 			cvar					"v_lockOn"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 610 380 22
+			rect					12 632 380 22
 			page					4
 			scroll					1
 			row						1

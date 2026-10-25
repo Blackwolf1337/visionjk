@@ -288,6 +288,8 @@ XCVAR_DEF( v_fxHit,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_fxWater,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_fxForce,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_fxSaber,							"1",					NULL,					CVAR_ARCHIVE )
+// the ears ring after an explosion close by (screenfx/cg_screenfx.c), not one of the looks: it is heard
+XCVAR_DEF( v_soundTinnitus,						"1",					NULL,					CVAR_ARCHIVE )
 // the voice chat (cg_voice.c)
 XCVAR_DEF( v_voice,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_voiceBackend,						"",						NULL,					CVAR_ARCHIVE )

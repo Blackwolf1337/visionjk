@@ -266,7 +266,7 @@ sound that has them keeps them while it plays and gives them up only to one 4 ti
 passes for a sound up as long as neither it nor the listener moves, and begins anew when a slot gets another
 sound. So the echo of a boombox changed while nobody moved, when far loops took the slots back and forth. Until
 then one that had them counted twice. A sound that gets them goes on through the room of the listener until a
-pass with it in it is done. When a sound loses them or ends, they ring out on their own. A slot is about 7 MB
+pass with it in it is done. When a sound loses them or ends, they ring out on their own. A box of the boombox keeps its slot: it gets one of the slots first and never loses it to a louder sound, so a shot close by does not change the loudness of the song. A slot is about 7 MB
 (its response, as Valve partitions it, and its convolution), so there are 16 at most.
 
 A pass takes 20 to 70 ms (less since 2026-10-21, see "Checked"), so it runs in a thread. The game asks for a pass

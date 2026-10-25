@@ -260,18 +260,16 @@ void CG_ScreenFxBlast( const vec3_t origin, float radius ) {
 	fxBlast_t	*blast;
 	float		near;
 
-	if ( !v_screenFx.integer || !v_fxBlast.integer ) {
-		return;
-	}
-	// close by the ears ring and the sound is dull for a while, with any renderer (CG_ScreenFxMuffle)
+	// close by the ears ring and the sound is dull for a while (CG_ScreenFxMuffle): a sound of its own
+	// (v_soundTinnitus), with any renderer and without the looks
 	near = 1.0f - Distance( origin, cg.refdef.vieworg ) / ( radius * 2.0f );
-	if ( near > 0.25f && CG_ScreenFxOwnPlayer() ) {
+	if ( v_soundTinnitus.integer && near > 0.25f && CG_ScreenFxOwnPlayer() ) {
 		const float	left = sfx.deaf * ( 1.0f - ( cg.time - sfx.deafTime ) / (float)DEAF_MSEC );
 
 		sfx.deaf = Q_max( near, left );
 		sfx.deafTime = cg.time;
 	}
-	if ( !sfx.has ) {
+	if ( !v_screenFx.integer || !v_fxBlast.integer || !sfx.has ) {
 		return;
 	}
 	blast = &sfx.blasts[sfx.nextBlast];

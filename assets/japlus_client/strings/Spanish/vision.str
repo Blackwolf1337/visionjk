@@ -682,8 +682,16 @@ LANG_ENGLISH        "Explosion Waves"
 LANG_SPANISH        "Ondas de explosión"
 
 REFERENCE           EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
-LANG_ENGLISH        "Explosions send a wave through the air that bends the picture. Close by, the colours split, the sound turns dull and your ears ring."
-LANG_SPANISH        "Las explosiones envían una onda por el aire que deforma la imagen. De cerca, los colores se separan, el sonido se apaga y te zumban los oídos."
+LANG_ENGLISH        "Explosions send a wave through the air that bends the picture. Close by, the colours split."
+LANG_SPANISH        "Las explosiones envían una onda por el aire que deforma la imagen. De cerca, los colores se separan."
+
+REFERENCE           RINGING_EARS
+LANG_ENGLISH        "Ringing Ears"
+LANG_SPANISH        "Zumbido de oídos"
+
+REFERENCE           AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
+LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer."
+LANG_SPANISH        "Tras una explosión cercana el sonido se apaga y te zumban los oídos un momento. Funciona con cualquier renderizador."
 
 REFERENCE           HEAT_HAZE
 LANG_ENGLISH        "Heat Haze"

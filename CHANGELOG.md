@@ -112,6 +112,8 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Rocket lock-on (`v_lockOn`, on): brackets around the target box close in over 8 steps, amber while locking, red and pulsing when locked, with 8 pips, a beep a step (`sound/vision/lock_1.wav` to `lock_8.wav`) and `lock_on.wav`. Vehicles and `v_lockOn 0` keep the old circle. Works with rd-vanilla.
 * [\*] rd-vulkan-vision: the light of a dynamic light uses the vertex normals and lights a floor it is just under (up to 12 units), which ended stripes on mp/ffa4.
 * [+] Photo mode (`v_photo`, also a button in the bar of the menu in the level and a key row under Controls, Extras): the HUD goes and the camera circles the own player. The mouse turns it, the wheel moves it, the left button sets the depth of field focus (rd-vulkan-vision only), keys 1 to 5 pick a colour filter, the right button or Enter saves a PNG to the screenshots folder, Esc leaves. It leaves by itself on death, spectator or a menu.
+* [+] `v_soundTinnitus` (on, saved, row "Ringing Ears" under Setup): the dull sound and the ringing ears after an explosion close by are a setting of their own. They no longer need `v_screenFx` or `v_fxBlast` and work with any renderer. `v_fxBlast` is only the wave and the colour split now.
+* [\*] A box of the boombox gets one of the reflection slots (`v_spatialSources`) first and never loses it to a louder sound. Before, a shot close by took the slot and the song jumped in loudness while shooting.
 
 # Features
 

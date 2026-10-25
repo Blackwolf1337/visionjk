@@ -118,8 +118,9 @@ Once a frame: v_spatialSources sounds have reflections of their own. Steam Audio
 as long as neither it nor the listener moves, and begins anew when it gets another sound: a sound that has them
 keeps them while it plays, and gives them up only to one SPATIAL_REFLECT_KEEP times as loud, and not in the first
 SPATIAL_REFLECT_HOLD. Before 2026-10-21 any sound twice as loud took them after a second: far loops with
-v_spatialPhysical took them from a boombox back and forth, and its echo changed while nobody moved. The free
-ones go to the loudest. A sound that gets them goes on through the reverb of the listener until a pass with it
+v_spatialPhysical took them from a boombox back and forth, and its echo changed while nobody moved. A box of the
+boombox gets them first and never gives them up: a shot close by took them from it, and its song jumped in loudness
+when it went through the reverb of the listener and again when it got them back. The free ones go to the loudest. A sound that gets them goes on through the reverb of the listener until a pass with it
 in it is done (S_SpatialReflectReady).
 ===============
 */
@@ -139,6 +140,14 @@ static void S_SpatialChooseReflects( void ) {
 		const spatialVoice_t *v = &spatial.voices[i];
 
 		if ( v->reflect && S_SpatialWantsReflect( v ) ) {
+			chosen[i] = qtrue;
+			count++;
+		}
+	}
+	for ( int i = 0; i < SPATIAL_VOICES && count < want; i++ ) {
+		const spatialVoice_t *v = &spatial.voices[i];
+
+		if ( !chosen[i] && S_SpatialBoxVoice( v ) && S_SpatialWantsReflect( v ) ) {
 			chosen[i] = qtrue;
 			count++;
 		}
@@ -168,7 +177,7 @@ static void S_SpatialChooseReflects( void ) {
 			if ( !chosen[i] && S_SpatialWantsReflect( v ) && ( loud < 0 || v->gain > spatial.voices[loud].gain ) ) {
 				loud = i;
 			}
-			if ( chosen[i] && v->reflect && now - v->reflectSince >= SPATIAL_REFLECT_HOLD
+			if ( chosen[i] && v->reflect && now - v->reflectSince >= SPATIAL_REFLECT_HOLD && !S_SpatialBoxVoice( v )
 				&& ( quiet < 0 || v->gain < spatial.voices[quiet].gain ) ) {
 				quiet = i;
 			}
