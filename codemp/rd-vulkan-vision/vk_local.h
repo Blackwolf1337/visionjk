@@ -70,6 +70,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	float		screen[4];			// x, y: size of the frame in pixels
 	float		screenFx[VK_SCREENFX_VEC4S][4];	// what VK_ScreenFxPass() was given
+	float		styles[MAX_LIGHT_STYLES][4];	// the colors of the light styles over 256 (styleColors), for vertex lit surfaces
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -96,7 +97,8 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_DLIGHT			0x00080000u		// the pass that adds one dynamic light, see generic.frag
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
-#define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector
+#define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
+											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
 typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
@@ -117,7 +119,9 @@ typedef struct vkDraw_s {		// once per draw
 	float		deformWave[4];		// along the normal by x + y * wave( z + dot( deformVec.xyz, position ) + deformVec.w * s ), w: genFunc_t
 	float		deformVec[4];		// for a move, xyz: by how much
 	uint32_t	bones;				// skinned: where the skeleton starts in the bones of the frame, in rows
-	uint32_t	unused[3];
+	float		fade;				// a saber mark that fades (RB_SurfaceGhoul): its alpha
+	uint32_t	fadeMode;			//	0: it does not, 1: the alpha, 2: the color is no brighter than that either
+	uint32_t	styles;				// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -129,11 +133,24 @@ typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on th
 	uint32_t	unused;
 } vkSkinVertex_t;
 
+typedef struct vkGrassVertex_s {	// a corner of a surface sprite of the level as it lies on the device, shaders/grass.vert
+	float		xyz[3];				// where the sprite stands
+	float		light;				// 0 to 255, from the blue of the vertex colors
+	float		width, height;		// width negative: the texture turned round
+	float		skew[2];
+	float		fade;				// the randomchart number of where its fade starts
+	float		spread;				// what the squared distance to the eye lacks to the one of the corners of its triangle
+	float		parm;				// corner (0 to 3) + 4 * which of the four right vectors
+	float		unused;
+} vkGrassVertex_t;
+
 // ------------------------------------------------------------------------------------------------------------
 
 typedef enum {
 	VKP_GENERIC,					// vertices in the layout of the tess arrays, one shader stage
 	VKP_SKINNED,					// vertices of a Ghoul2 surface, moved by their bones in the vertex shader
+	VKP_SPRITE,						// no vertices: sprites made in the vertex shader from records in the bone buffer
+	VKP_GRASS,						// surface sprites of the level, vkGrassVertex_t
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -299,11 +316,25 @@ void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
 qboolean	VK_BatchIsStatic( void );
-qboolean	VK_DeformOnDevice( const shader_t *shader );
+qboolean	VK_DeformOnDevice( const shader_t *shader, qboolean world );
 qboolean	VK_BatchIsSkinned( void );
+qboolean	VK_BatchIsSprites( void );
+qboolean	VK_BatchGore( float *scale, float *fade );
+// the records of shaders/sprite.vert, six rows a quad. One draw holds no more than the block of the OpenGL ES
+// device (768 rows) after the four rows of the view.
+#define VK_SPRITE_ROWS			6
+#define VK_MAX_BATCH_SPRITES	127
+void		VK_QuadRecord( vec4_t *row, int kind, const vec3_t a, float aw, const vec3_t b, float bw, const vec3_t c,
+				const float *st, const float *color, const vec3_t d );
+void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
+qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
+extern cvar_t	*v_vkSprites;
+extern cvar_t	*v_vkGrass;
+qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );
 void		VK_AddSurface( surfaceType_t *surface );
 qboolean	VK_UploadStaticBatch( uint32_t *bones );
 void		VK_StaticColorScale( float *scale );
+uint32_t	VK_StaticStyles( void );
 
 // vk_model.cpp
 void		VK_ModelsChanged( void );

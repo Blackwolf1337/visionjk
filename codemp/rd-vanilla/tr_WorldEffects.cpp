@@ -1240,6 +1240,45 @@ public:
 		qglPushMatrix();
 
 
+#ifdef RD_VULKAN_VISION
+		// rd-vulkan-vision: each particle as a record, the vertex shader makes its corners
+		if ( VK_GL_QuadsOn() )
+		{
+			static const float	quadST[4] = { 1.0f, 1.0f, 0.0f, 0.0f };
+			float				color[4];
+
+			for (particleNum=0; particleNum<mParticleCount; particleNum++)
+			{
+				part = &(mParticles[particleNum]);
+				if (!part->mFlags.get_bit(CWeatherParticle::FLAG_RENDER))
+				{
+					continue;
+				}
+				if (mBlendMode==0)
+				{
+					VectorSet4( color, mColor[0], mColor[1], mColor[2], part->mAlpha );
+				}
+				else
+				{
+					VectorSet4( color, mColor[0]*part->mAlpha, mColor[1]*part->mAlpha, mColor[2]*part->mAlpha, mColor[3]*part->mAlpha );
+				}
+				// a quad from down and left: its corners in the order of the glVertex3f calls below, turned to the
+				// order of sprite.vert. A triangle at the particle, left of it and left down of it.
+				if (mVertexCount==3)
+				{
+					VK_GL_Quad( 5, part->mPosition.v, mCameraLeft.v, mCameraLeftPlusUp.v, quadST, color );
+				}
+				else
+				{
+					VK_GL_Quad( 1, part->mPosition.v, mCameraDown.v, mCameraLeft.v, quadST, color );
+				}
+			}
+			VK_GL_QuadFlush();
+			qglPopMatrix();
+			mParticlesRendered += mParticleCountRender;
+			return;
+		}
+#endif
 		// Begin
 		//-------
 		qglBegin(mGLModeEnum);

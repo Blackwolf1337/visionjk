@@ -126,8 +126,10 @@ typedef struct vkDeviceFrame_s {	// see vkFrame_t
 #define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT	0x84FF
 
 typedef enum {
-	GLP_GENERIC = VKP_GENERIC,		// the two programs of geometry have the numbers the shared files know them by
+	GLP_GENERIC = VKP_GENERIC,		// the programs of geometry have the numbers the shared files know them by
 	GLP_SKINNED = VKP_SKINNED,
+	GLP_SPRITE = VKP_SPRITE,
+	GLP_GRASS = VKP_GRASS,
 	GLP_GAMMA,						// the passes over a whole target, shaders/post.vert with one fragment shader each
 	GLP_BLUR,
 	GLP_COPY,
@@ -153,7 +155,8 @@ typedef enum {
 typedef enum {						// what a vertex array object is set up for
 	GLV_GENERIC,					// the four streams of the tess arrays
 	GLV_SKINNED,					// vkSkinVertex_t
-	GLV_NONE,						// no vertices: the passes over a whole target
+	GLV_GRASS,						// vkGrassVertex_t
+	GLV_NONE,						// no vertices: the passes over a whole target, and sprites (shaders/sprite.vert)
 	GLV_NUM_LAYOUTS
 } glesLayout_t;
 

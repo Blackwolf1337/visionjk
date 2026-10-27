@@ -245,6 +245,75 @@ void VK_GL_End( void ) {
 	}
 }
 
+// the draw of what was specified, with the texture, fog and alpha test that are set
+static void VK_GL_InitDraw( vkDraw_t *draw ) {
+	const image_t *image = vk.boundImage;
+
+	memset( draw, 0, sizeof( *draw ) );
+	draw->transform = VK_CurrentTransform();
+	// the texture GL_Bind() chose, if it is one that is on the device
+	if ( gl_texture && image && image->texnum < VK_MAX_IMAGES && vk.images[image->texnum].owner == image && vk.images[image->texnum].uploaded ) {
+		draw->tex0 = image->texnum;
+	} else {
+		draw->tex0 = tr.whiteImage->texnum;
+	}
+	draw->tex1 = draw->tex0;
+	draw->flags = (uint32_t)TCGEN_TEXTURE << VKD_TCGEN0_SHIFT;
+	draw->vertColor[0] = draw->vertColor[1] = draw->vertColor[2] = draw->vertColor[3] = 1.0f;
+	draw->texMat0[0] = draw->texMat0[5] = 1.0f;
+	if ( gl_fog ) {
+		draw->flags |= 1u << VKD_FOG_SHIFT;
+		draw->fogParm[0] = gl_fogDensity;
+		VectorCopy( gl_fogColor, draw->fogColor );
+	}
+	draw->flags |= ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GT_0 ? 1u : ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_LT_80 ? 2u
+		: ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_80 ? 3u : ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_C0 ? 4u : 0u;
+}
+
+/*
+===============================================================================
+
+QUADS
+
+The particles of tr_WorldEffects.cpp (rain, snow, dust) as records of shaders/sprite.vert: what was built on the CPU
+corner by corner between glBegin and glEnd is made in the vertex shader. The state is the one that is set, as for
+the other draws of this file.
+
+===============================================================================
+*/
+
+static vec4_t		gl_quads[VK_MAX_BATCH_SPRITES * VK_SPRITE_ROWS];
+static glIndex_t	gl_quadIndexes[VK_MAX_BATCH_SPRITES * 6];
+static int			gl_numQuads;
+
+qboolean VK_GL_QuadsOn( void ) {
+	return (qboolean)( v_vkSprites->integer != 0 );
+}
+
+void VK_GL_QuadFlush( void ) {
+	const int numQuads = gl_numQuads;
+	uint32_t bones;
+	vkDraw_t draw;
+
+	gl_numQuads = 0;
+	if ( !numQuads || !VK_QuadView( gl_quads, numQuads, &bones )
+		|| !VK_UploadIndexes( NULL, NULL, 0, gl_quadIndexes, numQuads * 6 ) ) {
+		return;
+	}
+	VK_GL_InitDraw( &draw );
+	draw.bones = bones;
+	VK_DrawTess( &draw, VKP_SPRITE, gl_stateBits, VKC_NONE, qfalse );
+}
+
+void VK_GL_Quad( int kind, const float *a, const float *b, const float *c, const float *st, const float *color ) {
+	if ( gl_numQuads == VK_MAX_BATCH_SPRITES ) {
+		VK_GL_QuadFlush();
+	}
+	VK_QuadRecord( gl_quads + gl_numQuads * VK_SPRITE_ROWS, kind, a, 0.0f, b, 0.0f, c, st, color, vec3_origin );
+	VK_QuadIndexes( gl_quadIndexes + gl_numQuads * 6, (glIndex_t)( gl_numQuads * 4 ) );
+	gl_numQuads++;
+}
+
 /*
 ===============
 VK_GL_Flush
@@ -254,7 +323,6 @@ Draws the primitives that were specified
 */
 void VK_GL_Flush( void ) {
 	const int numVerts = gl_numVerts, numIndexes = gl_numIndexes;
-	const image_t *image = vk.boundImage;
 	uint32_t stateBits = gl_stateBits;
 	vkDraw_t draw;
 
@@ -263,25 +331,7 @@ void VK_GL_Flush( void ) {
 		return;
 	}
 
-	memset( &draw, 0, sizeof( draw ) );
-	draw.transform = VK_CurrentTransform();
-	// the texture GL_Bind() chose, if it is one that is on the device
-	if ( gl_texture && image && image->texnum < VK_MAX_IMAGES && vk.images[image->texnum].owner == image && vk.images[image->texnum].uploaded ) {
-		draw.tex0 = image->texnum;
-	} else {
-		draw.tex0 = tr.whiteImage->texnum;
-	}
-	draw.tex1 = draw.tex0;
-	draw.flags = (uint32_t)TCGEN_TEXTURE << VKD_TCGEN0_SHIFT;
-	draw.vertColor[0] = draw.vertColor[1] = draw.vertColor[2] = draw.vertColor[3] = 1.0f;
-	draw.texMat0[0] = draw.texMat0[5] = 1.0f;
-	if ( gl_fog ) {
-		draw.flags |= 1u << VKD_FOG_SHIFT;
-		draw.fogParm[0] = gl_fogDensity;
-		VectorCopy( gl_fogColor, draw.fogColor );
-	}
-	draw.flags |= ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GT_0 ? 1u : ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_LT_80 ? 2u
-		: ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_80 ? 3u : ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_C0 ? 4u : 0u;
+	VK_GL_InitDraw( &draw );
 	if ( !gl_colorMask ) {
 		// nothing is to reach the color: a blend that leaves what is there does it without another pipeline state
 		stateBits = ( stateBits & ~( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE;

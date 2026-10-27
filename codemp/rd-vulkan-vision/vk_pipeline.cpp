@@ -36,6 +36,12 @@ static const uint32_t vk_genericVert[] =
 static const uint32_t vk_skinnedVert[] =
 #include "shaders/skinned_vert.inc"
 ;
+static const uint32_t vk_spriteVert[] =
+#include "shaders/sprite_vert.inc"
+;
+static const uint32_t vk_grassVert[] =
+#include "shaders/grass_vert.inc"
+;
 static const uint32_t vk_genericFrag[] =
 #include "shaders/generic_frag.inc"
 ;
@@ -250,7 +256,7 @@ of the screen effects. 6 as 1 with the sets of their mist. 7 as 1 with the sets 
 smoke).
 ===============
 */
-VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, qboolean skinned ) {
+VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program ) {
 	VkPipelineShaderStageCreateInfo stages[2];
 	VkVertexInputBindingDescription bindings[4];
 	VkVertexInputAttributeDescription attributes[8];
@@ -282,7 +288,24 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	stages[1].module = fragment;
 	stages[1].pName = "main";
 
-	if ( skinned ) {
+	if ( !post && program == VKP_SPRITE ) {
+		// nothing comes from a vertex buffer, see shaders/sprite.vert
+	} else if ( !post && program == VKP_GRASS ) {
+		// vkGrassVertex_t, three vec4
+		memset( bindings, 0, sizeof( bindings ) );
+		memset( attributes, 0, sizeof( attributes ) );
+		bindings[0].stride = sizeof( vkGrassVertex_t );
+		bindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		for ( uint32_t i = 0; i < 3; i++ ) {
+			attributes[i].location = i;
+			attributes[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			attributes[i].offset = sizeof( vec4_t ) * i;
+		}
+		input.vertexBindingDescriptionCount = 1;
+		input.pVertexBindingDescriptions = bindings;
+		input.vertexAttributeDescriptionCount = 3;
+		input.pVertexAttributeDescriptions = attributes;
+	} else if ( !post && program == VKP_SKINNED ) {
 		// vkSkinVertex_t
 		memset( bindings, 0, sizeof( bindings ) );
 		memset( attributes, 0, sizeof( attributes ) );
@@ -417,7 +440,7 @@ VkPipeline VK_FindPipeline( vkProgram_t program, uint32_t stateBits ) {
 	vk.pipelines[vk.numPipelines].key = key;
 	ri.LoadPush( "pipeline", va( "state %08x", key ) );
 	vk.pipelines[vk.numPipelines].pipeline = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program],
-		stateBits, qfalse, (qboolean)( program == VKP_SKINNED ) );
+		stateBits, qfalse, program );
 	ri.LoadPop();
 	vk.lastPipelineKey = key;
 	return vk.lastPipeline = vk.pipelines[vk.numPipelines++].pipeline;
@@ -429,32 +452,36 @@ void VK_InitPipelines( void ) {
 	vk.fragmentShaders[VKP_GENERIC] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.vertexShaders[VKP_SKINNED] = VK_CreateShader( vk_skinnedVert, sizeof( vk_skinnedVert ) );
 	vk.fragmentShaders[VKP_SKINNED] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
+	vk.vertexShaders[VKP_SPRITE] = VK_CreateShader( vk_spriteVert, sizeof( vk_spriteVert ) );
+	vk.vertexShaders[VKP_GRASS] = VK_CreateShader( vk_grassVert, sizeof( vk_grassVert ) );
+	vk.fragmentShaders[VKP_GRASS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
+	vk.fragmentShaders[VKP_SPRITE] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
-	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, qfalse );
+	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );
 	vk.blurFragmentShader = VK_CreateShader( vk_blurFrag, sizeof( vk_blurFrag ) );
 	vk.copyFragmentShader = VK_CreateShader( vk_copyFrag, sizeof( vk_copyFrag ) );
-	vk.blurPipeline = VK_CreatePipeline( vk.postVertexShader, vk.blurFragmentShader, 0, 1, qfalse );
-	vk.glowPipelines[0] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 2, qfalse );
-	vk.glowPipelines[1] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR, 2, qfalse );
-	vk.glowPipelines[2] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 2, qfalse );
-	vk.scenePipeline = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, 0, 2, qfalse );
+	vk.blurPipeline = VK_CreatePipeline( vk.postVertexShader, vk.blurFragmentShader, 0, 1, VKP_GENERIC );
+	vk.glowPipelines[0] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 2, VKP_GENERIC );
+	vk.glowPipelines[1] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR, 2, VKP_GENERIC );
+	vk.glowPipelines[2] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 2, VKP_GENERIC );
+	vk.scenePipeline = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, 0, 2, VKP_GENERIC );
 	vk.focusFragmentShader = VK_CreateShader( vk_focusFrag, sizeof( vk_focusFrag ) );
-	vk.focusPipeline = VK_CreatePipeline( vk.postVertexShader, vk.focusFragmentShader, 0, 3, qfalse );
+	vk.focusPipeline = VK_CreatePipeline( vk.postVertexShader, vk.focusFragmentShader, 0, 3, VKP_GENERIC );
 	vk.scopePrepFragmentShader = VK_CreateShader( vk_scopePrepFrag, sizeof( vk_scopePrepFrag ) );
-	vk.scopePrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.scopePrepFragmentShader, 0, 3, qfalse );
+	vk.scopePrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.scopePrepFragmentShader, 0, 3, VKP_GENERIC );
 	vk.scopeFragmentShader = VK_CreateShader( vk_scopeFrag, sizeof( vk_scopeFrag ) );
 	vk.scopePipeline = VK_CreatePipeline( vk.postVertexShader, vk.scopeFragmentShader,
-		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 4, qfalse );
+		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 4, VKP_GENERIC );
 	vk.screenFxPrepFragmentShader = VK_CreateShader( vk_screenFxPrepFrag, sizeof( vk_screenFxPrepFrag ) );
-	vk.screenFxPrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxPrepFragmentShader, 0, 3, qfalse );
+	vk.screenFxPrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxPrepFragmentShader, 0, 3, VKP_GENERIC );
 	vk.screenFxFragmentShader = VK_CreateShader( vk_screenFxFrag, sizeof( vk_screenFxFrag ) );
 	vk.screenFxPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxFragmentShader,
-		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 5, qfalse );
+		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 5, VKP_GENERIC );
 	vk.screenFxFogFragmentShader = VK_CreateShader( vk_screenFxFogFrag, sizeof( vk_screenFxFogFrag ) );
-	vk.screenFxFogPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxFogFragmentShader, 0, 6, qfalse );
+	vk.screenFxFogPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxFogFragmentShader, 0, 6, VKP_GENERIC );
 	vk.screenFxSmokeFragmentShader = VK_CreateShader( vk_screenFxSmokeFrag, sizeof( vk_screenFxSmokeFrag ) );
-	vk.screenFxSmokePipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxSmokeFragmentShader, 0, 7, qfalse );
+	vk.screenFxSmokePipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxSmokeFragmentShader, 0, 7, VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {

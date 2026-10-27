@@ -36,13 +36,16 @@ struct Draw {
 	vec4	deformWave;		// deformVertexes along the normal: x + y * wave( z + dot( deformVec.xyz, position ) + deformVec.w * s ), w: which wave
 	vec4	deformVec;		// for a move, xyz: by how much
 	uint	bones;			// skinned: where the skeleton starts in the bones of the frame, in rows
-	uint	unused0, unused1, unused2;
+	float	fade;			// a saber mark that fades: its alpha
+	uint	fadeMode;		//	0: it does not, 1: the alpha, 2: the color is no brighter than that either
+	uint	styles;			// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 };
 
 BINDING( 0, 0 ) uniform Globals {
 	vec4	gamma;			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	vec4	screen;
 	vec4	screenFx[160];	// only screenfx.frag reads them (VK_SCREENFX_VEC4S)
+	vec4	styles[64];		// the colors of the light styles over 256 (MAX_LIGHT_STYLES)
 } globals;
 
 #ifdef VK_GLES
@@ -84,7 +87,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define DLIGHT( flags )		( ( ( flags ) & 0x80000u ) != 0u )
 #define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
-#define DEFORM( flags )		( ( ( flags ) >> 24 ) & 3u )
+#define DEFORM( flags )		( ( ( flags ) >> 24 ) & 7u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

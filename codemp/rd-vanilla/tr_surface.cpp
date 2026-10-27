@@ -570,6 +570,12 @@ static void DoLine2( const vec3_t start, const vec3_t end, const vec3_t up, floa
 {
 	int			vbase;
 
+#ifdef RD_VULKAN_VISION
+	// a segment of a bolt of electricity as a quad the vertex shader makes, when the batch is one of those
+	if ( VK_AddBoltSegment( start, end, up, spanWidth, spanWidth2 ) ) {
+		return;
+	}
+#endif
 	RB_CHECKOVERFLOW( 4, 6 );
 
 	vbase = tess.numVertexes;

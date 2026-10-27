@@ -617,7 +617,7 @@ static struct {
 	float		vec[4];
 } vk_deform;						// of the batch that is drawn
 
-qboolean VK_DeformOnDevice( const shader_t *shader ) {
+qboolean VK_DeformOnDevice( const shader_t *shader, qboolean world ) {
 	const deformStage_t *ds = shader->deforms[0];
 
 	if ( !shader->numDeforms ) {
@@ -630,6 +630,10 @@ qboolean VK_DeformOnDevice( const shader_t *shader ) {
 	case DEFORM_BULGE:
 	case DEFORM_MOVE:
 		return qtrue;
+	case DEFORM_AUTOSPRITE:
+	case DEFORM_AUTOSPRITE2:
+		// only the surfaces of the level have what the shader needs in their vertices
+		return world;
 	case DEFORM_WAVE:
 		// a wave that runs over the surface has to be one of the table functions
 		return (qboolean)( ds->deformationWave.frequency == 0
@@ -653,6 +657,40 @@ static void VK_BatchDeform( void ) {
 	memset( &vk_deform, 0, sizeof( vk_deform ) );
 	if ( !shader->numDeforms || !VK_BatchIsStatic() ) {
 		return;		// none, or RB_DeformTessGeometry() moved the vertices in the tess arrays
+	}
+	if ( ds->deformation == DEFORM_AUTOSPRITE || ds->deformation == DEFORM_AUTOSPRITE2 ) {
+		// the axes of the view in the space of the model (GlobalVectorToLocal of tr_shade_calc.cpp)
+		vec3_t dirs[3];
+
+		for ( int i = 0; i < 3; i++ ) {
+			const float *v = backEnd.viewParms.ori.axis[i];
+
+			if ( backEnd.currentEntity == &tr.worldEntity ) {
+				VectorCopy( v, dirs[i] );
+			} else {
+				VectorSet( dirs[i], DotProduct( v, backEnd.ori.axis[0] ), DotProduct( v, backEnd.ori.axis[1] ),
+					DotProduct( v, backEnd.ori.axis[2] ) );
+			}
+		}
+		if ( ds->deformation == DEFORM_AUTOSPRITE2 ) {
+			vk_deform.flags = 4u << VKD_DEFORM_SHIFT;
+			VectorCopy( dirs[0], vk_deform.vec );
+			return;
+		}
+		// compensate for scale in the axes if necessary
+		float scale = 1.0f;
+
+		if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
+			const float axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
+
+			scale = axisLength ? 1.0f / axisLength : 0.0f;
+		}
+		vk_deform.flags = 3u << VKD_DEFORM_SHIFT;
+		VectorCopy( dirs[1], vk_deform.wave );
+		vk_deform.wave[3] = backEnd.viewParms.isMirror ? -scale : scale;
+		VectorCopy( dirs[2], vk_deform.vec );
+		vk_deform.vec[3] = scale;
+		return;
 	}
 	if ( ds->deformation == DEFORM_WAVE && ds->deformationWave.frequency != 0 ) {
 		// a wave that runs over the surface
@@ -836,6 +874,84 @@ static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, u
 
 /*
 ===============
+VK_GoreDraw
+
+A saber mark from the device that grows or fades, as RB_SurfaceGhoul() of rd-vanilla does it to the vertices: its
+texture coordinates scaled around 0.5 0.5 under the tcMods of the stage, and its alpha (and how bright it may be)
+from how far its fade has come
+===============
+*/
+static void VK_GoreDraw( const shaderStage_t *pStage, vkDraw_t *draw ) {
+	float scale, fade;
+
+	if ( !VK_BatchGore( &scale, &fade ) ) {
+		return;
+	}
+	if ( scale != 1.0f ) {
+		const float k = 0.5f * ( 1.0f - scale );
+
+		for ( int b = 0; b < 2; b++ ) {
+			float *mat = b ? draw->texMat1 : draw->texMat0;
+
+			if ( pStage->bundle[b].tcGen != TCGEN_TEXTURE ) {
+				continue;
+			}
+			for ( int row = 0; row < 2; row++ ) {
+				float *r = mat + row * 4;
+
+				r[2] += ( r[0] + r[1] ) * k;
+				r[0] *= scale;
+				r[1] *= scale;
+			}
+		}
+	}
+	if ( fade > 0.0f && fade < 1.0f ) {
+		draw->fade = Q_ftol( 254.4f * fade ) / 255.0f;
+		draw->fadeMode = 1;
+	} else if ( fade > 2.0f && fade < 3.0f ) {
+		draw->fade = Q_ftol( 254.4f * ( fade - 2.0f ) ) / 255.0f;
+		draw->fadeMode = 2;
+	}
+}
+
+/*
+===============
+VK_DrawGrass
+
+The surface sprites of a batch of the level from the device: each stage that has them with its texture and blend,
+the colors of the sprites as the vertex colors and the texture over each sprite, no culling, as CQuickSpriteSystem
+of tr_quicksprite.cpp draws them. Then the fog volume over them.
+===============
+*/
+static void VK_DrawGrass( uint32_t transform ) {
+	const shader_t *shader = tess.shader;
+
+	for ( int stage = 1; stage < shader->numUnfoggedPasses; stage++ ) {
+		const shaderStage_t *pStage = &tess.xstages[stage];
+		uint32_t bones;
+		vkDraw_t draw;
+
+		if ( !pStage->active || !pStage->ss || !pStage->ss->surfaceSpriteType || !VK_BindGrass( pStage, stage, &bones ) ) {
+			continue;
+		}
+		memset( &draw, 0, sizeof( draw ) );
+		draw.transform = transform;
+		draw.bones = bones;
+		VK_IdentityTexCoords( &draw );
+		draw.tex0 = draw.tex1 = VK_BundleTexture( &pStage->bundle[0] );
+		draw.vertColor[0] = draw.vertColor[1] = draw.vertColor[2] = draw.vertColor[3] = 1.0f;
+		draw.flags |= VK_AlphaTest( pStage->stateBits );
+		VK_GlobalFog( &draw );
+		VK_DrawTess( &draw, VKP_GRASS, pStage->stateBits, VKC_NONE, qfalse );
+		if ( tess.fogNum && shader->fogPass && r_drawfog->value
+			&& ( r_drawfog->integer != 2 || tess.fogNum != tr.world->globalFog ) ) {
+			VK_FogPass( transform, VKC_NONE, VKP_GRASS, bones );
+		}
+	}
+}
+
+/*
+===============
 RB_StageIteratorGeneric
 
 The stages of tess.shader on the geometry in tess
@@ -856,7 +972,9 @@ void RB_StageIteratorGeneric( void ) {
 		if ( !VK_UploadStaticBatch( &bones ) ) {
 			return;
 		}
-		if ( VK_BatchIsSkinned() ) {
+		if ( VK_BatchIsSprites() ) {
+			program = VKP_SPRITE;
+		} else if ( VK_BatchIsSkinned() ) {
 			program = VKP_SKINNED;
 		} else {
 			VK_StaticColorScale( colorScale );
@@ -970,6 +1088,10 @@ void RB_StageIteratorGeneric( void ) {
 			}
 		}
 		draw.flags |= VK_AlphaTest( stateBits );
+		VK_GoreDraw( pStage, &draw );
+		if ( isStatic ) {
+			draw.styles = VK_StaticStyles();
+		}
 		if ( VK_GlobalFog( &draw ) && pStage->mGLFogColorOverride ) {
 			// some stages want to fade to black or white, not to the fog color
 			const float c = ( pStage->mGLFogColorOverride == GLFOGOVERRIDE_WHITE ) ? 1.0f : 0.0f;
@@ -1020,7 +1142,11 @@ void RB_StageIteratorGeneric( void ) {
 		VK_SetDepthRange( 0.0f, 1.0f );
 	}
 	// Now check for surfacesprites: grass and the like that tr_surfacesprites.cpp grows on the triangles of the
-	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp.
+	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp. Surfaces of the level have
+	// theirs in a buffer on the device (vk_world.cpp, shaders/grass.vert).
+	if ( r_surfaceSprites->integer && isStatic ) {
+		VK_DrawGrass( transform );
+	}
 	if ( r_surfaceSprites->integer && !isStatic ) {
 		for ( int stage = 1; stage < shader->numUnfoggedPasses; stage++ ) {
 			if ( tess.xstages[stage].ss && tess.xstages[stage].ss->surfaceSpriteType ) {

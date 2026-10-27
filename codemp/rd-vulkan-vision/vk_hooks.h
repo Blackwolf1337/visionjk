@@ -45,6 +45,22 @@ qboolean VK_HasScope( void );
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );
 void G2_SkinGore( CRenderableSurface *surf );
+// tr_surfacesprites.cpp, for the surface sprites vk_world.cpp draws on the device: the wind and the vectors of the
+// view of this frame, as RB_DrawSurfaceSprites() works them out before it draws
+void RB_SurfaceSpriteFrame( void );
+extern float	curWindSpeed, curWindPointForce, rangescalefactor;
+extern qboolean	curWindPointActive;
+extern vec3_t	curWindGrassDir, curWindPoint, ssrightvectors[4], ssfwdvector, ssViewOrigin, ssViewRight, ssViewUp;
+extern const float	randomchart[256];
+// vk_gl.cpp, for CWeatherParticleCloud::Render() of tr_WorldEffects.cpp: its particles as records of
+// shaders/sprite.vert with the GL state that is set, kind 1 (a quad of two vectors) or 5 (a triangle). qfalse from
+// VK_GL_QuadsOn(): they are built corner by corner as in rd-vanilla.
+qboolean VK_GL_QuadsOn( void );
+void VK_GL_Quad( int kind, const float *a, const float *b, const float *c, const float *st, const float *color );
+void VK_GL_QuadFlush( void );
+// vk_world.cpp, for DoLine2() of tr_surface.cpp: one segment of a bolt into a batch of quads (shaders/sprite.vert).
+// qfalse: the batch is not one, the segment goes into the tess arrays.
+qboolean VK_AddBoltSegment( const float *start, const float *end, const float *side, float startWidth, float endWidth );
 // vk_model.cpp, for G2_misc.cpp: the data of a saber mark on a model is freed
 void VK_GoreFreed( const void *goreData );
 

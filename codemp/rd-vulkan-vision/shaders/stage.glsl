@@ -46,9 +46,32 @@ float Wave( uint func, float x ) {
 }
 
 // deformVertexes of a shader that has one of them: wave and bulge move a vertex along its normal, move shifts
-// all of them (RB_CalcDeformVertexes, RB_CalcBulgeVertexes, RB_CalcMoveVertexes of rd-vanilla)
-vec3 Deform( Draw d, StageInput v ) {
+// all of them (RB_CalcDeformVertexes, RB_CalcBulgeVertexes, RB_CalcMoveVertexes of rd-vanilla). Autosprite and
+// autosprite2 turn the quads of a surface of the level to the eye (AutospriteDeform, Autosprite2Deform), from what
+// VK_PrepareAutosprites() of vk_world.cpp put into the vertices: the middle of the quad in the place of each corner
+// and the corner and radius in lightmap2, or the middle of its short edge and the long axis and half the width in
+// lightmap2 and lightmap3.
+vec3 Deform( Draw d, inout StageInput v ) {
 	uint kind = DEFORM( d.flags );
+
+	if ( kind == 3u ) {
+		// deformWave: the left of the view in model space, w: -1 in a mirror, times the scale of the axes.
+		// deformVec: up, w: that scale.
+		uint corner = uint( v.lightmap2.x );
+		float r = v.lightmap2.y;
+		vec3 left = d.deformWave.xyz * ( r * d.deformWave.w );
+		vec3 up = d.deformVec.xyz * ( r * d.deformVec.w );
+
+		v.normal = -cross( d.deformWave.xyz, d.deformVec.xyz );
+		return v.position + ( ( corner == 0u || corner == 3u ) ? left : -left ) + ( corner < 2u ? up : -up );
+	}
+	if ( kind == 4u ) {
+		// deformVec: forward of the view in model space
+		vec3 minor = cross( vec3( v.lightmap2, v.lightmap3.x ), d.deformVec.xyz );
+
+		minor = ( dot( minor, minor ) > 0.0 ) ? normalize( minor ) : vec3( 0.0 );
+		return v.position + minor * v.lightmap3.y;
+	}
 
 	if ( kind == 1u ) {
 		float scale = d.deformWave.x;
@@ -176,7 +199,27 @@ void StageVertex( StageInput v ) {
 
 		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * v.color.a, 0.0, 1.0 ) );
 	} else {
-		v_color = clamp( d.baseColor + d.vertColor * v.color, 0.0, 1.0 );
+		vec4 color = v.color;
+
+		if ( d.styles != 0u ) {
+			// ComputeFinalVertexColor() of rd-vanilla: the color of each light style of the vertex times the color of
+			// that style. The ones after the first are in lightmap1 and lightmap2, three bytes in a float each
+			// (VK_PackStyles in vk_world.cpp).
+			float packed[3] = float[3]( v.lightmap1.x, v.lightmap1.y, v.lightmap2.x );
+			vec3 sum = v.color.rgb * globals.styles[( d.styles & 255u ) - 1u].rgb;
+
+			for ( int k = 1; k < 4; k++ ) {
+				uint style = ( d.styles >> uint( 8 * k ) ) & 255u;
+
+				if ( style == 0u ) {
+					break;
+				}
+				uint p = uint( packed[k - 1] );
+				sum += vec3( uvec3( p, p >> 8, p >> 16 ) & 255u ) / 255.0 * globals.styles[style - 1u].rgb;
+			}
+			color.rgb = min( sum, vec3( 1.0 ) );
+		}
+		v_color = clamp( d.baseColor + d.vertColor * color, 0.0, 1.0 );
 	}
 
 	uint agen = AGEN( d.flags );
@@ -206,6 +249,13 @@ void StageVertex( StageInput v ) {
 			v_color *= f;
 		} else {
 			v_color.a *= f;
+		}
+	}
+	// a saber mark that fades out over all the stage gives it, as RB_SurfaceGhoul() of rd-vanilla sets its colors
+	if ( d.fadeMode != 0u ) {
+		v_color.a = d.fade;
+		if ( d.fadeMode == 2u ) {
+			v_color.rgb = min( v_color.rgb, vec3( d.fade ) );
 		}
 	}
 }

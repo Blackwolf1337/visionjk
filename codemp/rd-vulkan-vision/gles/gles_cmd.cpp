@@ -741,6 +741,18 @@ static qboolean GLES_Vertexes( glesLayout_t layout ) {
 	const qboolean other = (qboolean)( gles.arrays[layout].buffer != gles.vertexBuffer );
 	qboolean bound = qfalse;
 
+	if ( layout == GLV_NONE ) {
+		// sprites: indexes alone, the vertex shader makes the corners from their numbers
+		if ( !gles.indexBuffer ) {
+			return qfalse;
+		}
+		GLES_Layout( layout );
+		if ( gles.arrays[layout].indexBuffer != gles.indexBuffer ) {
+			gles.arrays[layout].indexBuffer = gles.indexBuffer;
+			glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, gles.indexBuffer );
+		}
+		return qtrue;
+	}
 	if ( !gles.vertexBuffer || !gles.indexBuffer || gles.numBindings != numBindings ) {
 		return qfalse;
 	}
@@ -756,6 +768,13 @@ static qboolean GLES_Vertexes( glesLayout_t layout ) {
 			bound = qtrue;
 		}
 		gles.arrays[layout].offsets[i] = offset;
+		if ( layout == GLV_GRASS ) {
+			// vkGrassVertex_t, three vec4
+			for ( GLuint a = 0; a < 3; a++ ) {
+				glVertexAttribPointer( a, 4, GL_FLOAT, GL_FALSE, sizeof( vkGrassVertex_t ), (const void *)(size_t)( offset + sizeof( vec4_t ) * a ) );
+			}
+			continue;
+		}
 		if ( layout == GLV_SKINNED ) {
 			// vkSkinVertex_t, as vk_pipeline.cpp describes it to Vulkan. The numbers of the bones are whole numbers
 			// for the shader, which OpenGL ES wants to be told with a call of its own.
@@ -932,7 +951,9 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 	const vkDraw_t *draw = (const vkDraw_t *)( frame->draws.mapped + (size_t)VK_DRAW_STRIDE * cmd->draw.drawIndex );
 	const GLenum mode = ( cmd->draw.stateBits & VK_GLS_LINES ) ? GL_LINES : GL_TRIANGLES;
 
-	if ( !GLES_Vertexes( cmd->draw.program == GLP_SKINNED ? GLV_SKINNED : GLV_GENERIC ) ) {
+	static const glesLayout_t layouts[] = { GLV_GENERIC, GLV_SKINNED, GLV_NONE, GLV_GRASS };	// by program
+
+	if ( !GLES_Vertexes( layouts[cmd->draw.program] ) ) {
 		return;
 	}
 	GLES_Program( (glesProgram_t)cmd->draw.program );
@@ -946,7 +967,7 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 		glBindBufferRange( GL_UNIFORM_BUFFER, GLES_BLOCK_TRANSFORMS, frame->transforms.buffer, (GLintptr)VK_TRANSFORM_STRIDE * draw->transform,
 			sizeof( vkTransform_t ) );
 	}
-	if ( cmd->draw.program == GLP_SKINNED && gles.bones != draw->bones ) {
+	if ( cmd->draw.program != GLP_GENERIC && gles.bones != draw->bones ) {
 		gles.bones = draw->bones;
 		glBindBufferRange( GL_UNIFORM_BUFFER, GLES_BLOCK_BONES, frame->bones.buffer, (GLintptr)draw->bones * sizeof( vec4_t ), GLES_BONES_BYTES );
 	}

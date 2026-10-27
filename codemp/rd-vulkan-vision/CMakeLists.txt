@@ -212,6 +212,8 @@ set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionCommonFiles} ${Sh
 set(MPVulkanVisionShaders
 	generic.vert
 	skinned.vert
+	sprite.vert
+	grass.vert
 	generic.frag
 	post.vert
 	gamma.frag

@@ -239,6 +239,12 @@ void VK_EndFrame( void ) {
 	if ( !frame ) {
 		return;
 	}
+	// the light styles as the cgame left them for this frame
+	vkGlobals_t *globals = (vkGlobals_t *)frame->globals.mapped;
+
+	for ( int i = 0; i < MAX_LIGHT_STYLES; i++ ) {
+		VectorSet4( globals->styles[i], styleColors[i][0] / 256.0f, styleColors[i][1] / 256.0f, styleColors[i][2] / 256.0f, 0.0f );
+	}
 	VK_LeaveScene();
 	VK_EndTarget();
 	vk.rendering = qfalse;
@@ -387,18 +393,21 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 VK_UploadIndexes
 
 Indexes into vertices that are in a buffer on the device already: offsets are where its vertex streams start
-(xyz, normal, texCoords and colors of the level, the one stream of the models)
+(xyz, normal, texCoords and colors of the level, the one stream of the models). vertexBuffer NULL: the draw reads
+no vertices, the vertex shader makes them from the number of each (shaders/sprite.vert)
 ===============
 */
 qboolean VK_UploadIndexes( const vkBuffer_t *vertexBuffer, const vkSize_t *offsets, int numBindings, const glIndex_t *indexes, int numIndexes ) {
 	vkFrame_t *frame = vk.frame;
 	const vkSize_t indexBytes = (vkSize_t)numIndexes * sizeof( glIndex_t );
 
-	if ( !frame || !numIndexes || !vertexBuffer->buffer || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
+	if ( !frame || !numIndexes || ( vertexBuffer && !vertexBuffer->buffer ) || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
 		return qfalse;
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
-	VK_BindVertexBuffer( vertexBuffer, offsets, numBindings );
+	if ( vertexBuffer ) {
+		VK_BindVertexBuffer( vertexBuffer, offsets, numBindings );
+	}
 	VK_BindIndexBuffer( &frame->indexes );
 	vk.firstIndex = (uint32_t)( frame->indexUsed / sizeof( glIndex_t ) );
 	vk.vertexOffset = 0;
