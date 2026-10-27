@@ -289,8 +289,8 @@ connectionless packets are dropped unread, and a player the event came from is d
   taken out: it means nothing to the game and is there for the terminal a console may be printed to), and
   all cvars a server may not set in one systeminfo, in one line (`cvars it may not set`, with key=value of
   each). The client keeps such a cvar as it is and warns on the console, as it did before. It does not leave
-  for them, because some mod servers (old JA+ ones) set client cvars that way. A protected cvar ends the
-  connection as before, and now there is a line in `ids.log` first.
+  for them, because some mod servers (old JA+ ones) set client cvars that way. A protected cvar (for example
+  `fs_basepath`) is refused and written down like every other cvar a server may not set, and the client stays.
 - Written down and thrown away: a list of servers (getserversResponse) that nobody asked for. A list is taken
   only from a master server the client asked, and only within 10 seconds of asking. From anybody else, or
   later, it is thrown away (with `v_ids 0` too), written down as `a list of servers nobody asked for`, and
@@ -347,9 +347,11 @@ showed a dot in its place. A client with a master server on this machine (a smal
 that master, and wrote down and threw away a list from another port of the same address and one from the
 master 12 seconds after it was asked. A client on a local server was made to leave it by a test command that was
 taken out again afterwards. The server was then marked, another address was not, the next connect was refused
-with the reason and the one after it went through to the game. Not run: a server that sends more of a download than it said, and a
-systeminfo with cvars the server may not set (the engine has no command that puts such a key into the
-systeminfo).
+with the reason and the one after it went through to the game.
+These now run with `tools/test/ids-test.sh` (see [testing.md](testing.md), "The intrusion detection of the
+client"). On 2026-10-27 all six scenarios passed: none, cvars, protected, gamedir, size, unasked. For size the
+client wrote down `135688 bytes said, 137216 sent`, left, was refused once on the next connect and left again on
+the one after it.
 
 ## Recommended server settings
 
