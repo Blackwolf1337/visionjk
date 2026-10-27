@@ -290,7 +290,11 @@ connectionless packets are dropped unread, and a player the event came from is d
   all cvars a server may not set in one systeminfo, in one line (`cvars it may not set`, with key=value of
   each). The client keeps such a cvar as it is and warns on the console, as it did before. It does not leave
   for them, because some mod servers (old JA+ ones) set client cvars that way. A protected cvar (for example
-  `fs_basepath`) is refused and written down like every other cvar a server may not set, and the client stays.
+  `fs_basepath`) is checked first. A server that sends one in its systeminfo is written down (`a cvar no server
+  may set`, with key=value) and the client leaves at once, so the server is remembered like the others (refused
+  once on the next connect). With `v_ids 0` the engine still ends the connection, without the line. Before, a
+  protected cvar was only refused as a cvar the server may not set, because that check came first, and the drop
+  for protected cvars in the engine could never be reached.
 - Written down and thrown away: a list of servers (getserversResponse) that nobody asked for. A list is taken
   only from a master server the client asked, and only within 10 seconds of asking. From anybody else, or
   later, it is thrown away (with `v_ids 0` too), written down as `a list of servers nobody asked for`, and
@@ -318,13 +322,23 @@ connectionless packets are dropped unread, and a player the event came from is d
   from any other address is not answered, because then anybody could send getinfo to such a server with the
   player's address as sender and the client would confirm it. Every other echo is refused and written down
   as before.
+- Changed besides: the client reads the whole download message of a server before it decides anything: the
+  block number, the size of the file in block zero (or -1 and the reason the server gives), the length of the
+  block and its data. Before, a download message nobody asked for (and one that came while a pak came from the
+  web address of the server) was left after its first byte, and the rest of it was taken for the next commands
+  of the server. So a server could hide commands in such a message, and the client ended the connection for a
+  message it could not read instead of writing down the download nobody asked for. Same for block zero coming
+  again after the client had it: the size in it was not read before. ioq3 and OpenJK read it the same old way.
 - A server the client left for the intrusion detection is remembered until the game ends (at most the last 16
   servers, by address and port; nothing is written to disk). The first connect to it again is refused with the
   reason: `You left <address> before: it sent <what>.` and that `ids.log` has the details. The next connect goes
   through, so the player can still join on purpose. If the intrusion detection makes the client leave that server
-  again, it is refused once more the next time. The server browser shows such a server with a red `IDS` in front
-  of its name. This is done in the engine, so it shows in the browser of every ui module (base, JA+ and
-  others). With `v_ids 0` none of this happens.
+  again, it is refused once more the next time. The server browser shows a red `IDS` in the column of the ping
+  instead of the number. It is not in front of the name: the name is chosen by the server, so any server could
+  put that mark there itself, while the ping is measured by the client. The engine gives the ui the mark as a
+  key of its own (`ids` 1 in the info of the server). The ui of VisionJK shows it. A ui module of another mod
+  that does not know the key shows the ping as before, and the refused connect works there too because the
+  engine does it. With `v_ids 0` none of this happens.
 
 Tested apart from the game (`japlus_port/tools/idstest`, 38 checks with a clock the test sets): how the
 weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
@@ -347,11 +361,15 @@ showed a dot in its place. A client with a master server on this machine (a smal
 that master, and wrote down and threw away a list from another port of the same address and one from the
 master 12 seconds after it was asked. A client on a local server was made to leave it by a test command that was
 taken out again afterwards. The server was then marked, another address was not, the next connect was refused
-with the reason and the one after it went through to the game.
+with the reason and the one after it went through to the game. The mark was looked at in the browser of a game
+on the desktop, against the test server with vs_idsTest 4, first in front of the name and then in the column of
+the ping.
 These now run with `tools/test/ids-test.sh` (see [testing.md](testing.md), "The intrusion detection of the
 client"). On 2026-10-27 all six scenarios passed: none, cvars, protected, gamedir, size, unasked. For size the
 client wrote down `135688 bytes said, 137216 sent`, left, was refused once on the next connect and left again on
-the one after it.
+the one after it. For protected the client left, was refused once on the next connect and left again. unasked
+was also run with the old way of reading the message: it failed there with `Illegible server message` (the
+client dropped at the first message), and it passes with the new one.
 
 ## Recommended server settings
 

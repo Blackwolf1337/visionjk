@@ -154,12 +154,13 @@ one more program, `visionjkded-idstest`: the dedicated server with `server/sv_id
 release dedicated server has none of this code. `vs_idsTest` is a sum: 1 cvars a server may not set in the
 systeminfo (`cl_allowDownload`, `rconPassword`), 2 a protected cvar (`fs_basepath`), 4 a path as the game folder
 (`fs_game ../idstest`), 8 a download whose first block says half of its size, 16 a download message in every
-snapshot of a client that asked for none. The script installs the build folder (default `build64`) into
+snapshot of a client that asked for none, with 16 bytes of data in its block. The script installs the build folder (default `build64`) into
 `build-test/ids/install`, runs the test server on 127.0.0.1 port 29097 for each scenario and a headless client
 that connects three times (about ten seconds each), so a server the client left is refused once and joined
 again. The scenarios: `none` (`vs_idsTest 0`: the client joins three times and `ids.log` stays empty), `cvars`
-and `protected` (both: written down, the client stays and joins three times), `gamedir` and `unasked` (the
-client leaves twice and is refused once in between), `size` (the same, on the level `mp/idstest`, a copy of
+(written down, the client stays and joins three times), `protected`, `gamedir` and `unasked` (the
+client leaves twice and is refused once in between; a client that does not read the whole download message
+fails `unasked`), `size` (the same, on the level `mp/idstest`, a copy of
 `mp/duel4` in a pak only the server has, so the client downloads it). It checks the client log and the `ids.log`
 of the client. The logs are `build-test/ids/<scenario>-server.log`, `-client.log` and `-ids.log`; `--keep` also
 keeps the install and the home folders. A full run takes about three minutes.
