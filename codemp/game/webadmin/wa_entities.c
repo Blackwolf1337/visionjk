@@ -266,6 +266,27 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 		}
 	}
 
+	// maglock_link() runs a moment after the spawn and ends the server when the lock starts inside a wall. Its
+	// trace, with the place and the angles the spawn will give it.
+	if ( !Q_stricmp( classname, "misc_maglock" ) ) {
+		vec3_t	origin, angles, forward, start, end;
+		float	yaw;
+		trace_t	trace;
+
+		G_SpawnVector( "origin", "0 0 0", origin );
+		if ( !G_SpawnVector( "angles", "0 0 0", angles ) && G_SpawnFloat( "angle", "0", &yaw ) )
+			VectorSet( angles, 0, yaw, 0 );
+		AngleVectors( angles, forward, NULL, NULL );
+		VectorMA( origin, 128, forward, end );
+		VectorMA( origin, -4, forward, start );
+		trap->Trace( &trace, start, vec3_origin, vec3_origin, end, ENTITYNUM_NONE, MASK_SHOT, qfalse, 0, 0 );
+		if ( trace.allsolid || trace.startsolid ) {
+			Q_strncpyz( err, "a misc_maglock that starts inside a wall ends the server: move it out, its front to the door", errSize );
+			refusedKey = "origin";
+			return qtrue;
+		}
+	}
+
 	for ( i = 0; i < ARRAY_LEN( needs ); i++ ) {
 		if ( Q_stricmp( classname, needs[i].classname ) )
 			continue;
@@ -742,6 +763,59 @@ static void WA_FreeEntity( gentity_t *ent ) {
 	G_FreeEntity( ent );
 }
 
+/*
+=================
+WA_FreeRefused
+
+Not in JKAdmin. Taking an entity away can end the server later: a trigger_shipboundary or trigger_hyperspace
+looks for its target when a player touches it and raises a game error when there is none, and a player who
+spawns where no spawn point of the game is left ends it too ("Couldn't find a spawn point"). For a delete, for
+the entities a clear takes away, and for the old one of an update (the new one stands already then).
+
+qtrue: it stays, err says why.
+=================
+*/
+static qboolean WA_FreeRefused( const gentity_t *ent, char *err, int errSize ) {
+	static const char *spawnClasses[] = {
+		"info_player_deathmatch", "team_CTF_redplayer", "team_CTF_blueplayer", "team_CTF_redspawn",
+		"team_CTF_bluespawn", "info_player_siegeteam1", "info_player_siegeteam2",
+	};
+	const gentity_t	*other;
+	size_t			i;
+
+	for ( i = 0; i < ARRAY_LEN( spawnClasses ); i++ ) {
+		if ( Q_stricmp( ent->classname, spawnClasses[i] ) )
+			continue;
+		for ( other = NULL; ( other = G_Find( (gentity_t *)other, FOFS( classname ), ent->classname ) ) != NULL; ) {
+			if ( other != ent )
+				break;
+		}
+		if ( !other ) {
+			Com_sprintf( err, errSize, "this is the last %s: a player who spawns without one ends the server, place another one first", ent->classname );
+			return qtrue;
+		}
+	}
+
+	if ( !VALIDSTRING( ent->targetname ) )
+		return qfalse;
+	for ( other = NULL; ( other = G_Find( (gentity_t *)other, FOFS( targetname ), ent->targetname ) ) != NULL; ) {
+		if ( other != ent )
+			return qfalse;		// another one answers to the name
+	}
+	for ( i = MAX_CLIENTS; i < (size_t)level.num_entities; i++ ) {
+		other = &g_entities[i];
+		if ( !other->inuse || !other->classname
+			|| ( Q_stricmp( other->classname, "trigger_shipboundary" ) && Q_stricmp( other->classname, "trigger_hyperspace" ) ) )
+			continue;
+		if ( ( VALIDSTRING( other->target ) && !Q_stricmp( other->target, ent->targetname ) )
+			|| ( VALIDSTRING( other->target2 ) && !Q_stricmp( other->target2, ent->targetname ) ) ) {
+			Com_sprintf( err, errSize, "the %s %i points at this entity (%s): without it the server ends when a player touches that trigger", other->classname, (int)i, ent->targetname );
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	char		op[16], idStr[16], ofMap[4], err[256], expected[MAX_QPATH];
 	static char	kv[WA_MAX_REQUEST];
@@ -777,17 +851,21 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 		// the keys are "classname=<class>": every entity of that class that was placed through the panel goes,
 		// the ones of the map stay
 		const char	*classname = Q_stricmpn( kv, "classname=", 10 ) ? "" : kv + 10;
-		int			i, count = 0;
+		int			i, count = 0, kept = 0;
 
 		for ( i = MAX_CLIENTS; classname[0] && i < level.num_entities; i++ ) {
 			gentity_t *ent = &g_entities[i];
 
 			if ( entityPlaced[i] && WA_ListedEntity( ent ) && !Q_stricmp( ent->classname, classname ) ) {
+				if ( WA_FreeRefused( ent, err, sizeof( err ) ) ) {
+					kept++;
+					continue;
+				}
 				WA_FreeEntity( ent );
 				count++;
 			}
 		}
-		WA_EntityResult( c, qtrue, va( "%i deleted", count ), -1 );
+		WA_EntityResult( c, qtrue, kept ? va( "%i deleted, %i kept: %s", count, kept, err ) : va( "%i deleted", count ), -1 );
 		return;
 	}
 
@@ -804,6 +882,10 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	}
 
 	if ( !strcmp( op, "delete" ) ) {
+		if ( WA_FreeRefused( &g_entities[id], err, sizeof( err ) ) ) {
+			WA_EntityResult( c, qfalse, err, id );
+			return;
+		}
 		WA_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "deleted", id );
 	} else if ( !strcmp( op, "use" ) ) {
@@ -839,6 +921,14 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 			originals[original - 1].gone = qtrue;
 		newId = WA_SpawnFromText( kv, err, sizeof( err ) );
 		if ( newId < 0 ) {
+			if ( original )
+				originals[original - 1].gone = qfalse;
+			WA_EntityResult( c, qfalse, err, id );
+			return;
+		}
+		if ( WA_FreeRefused( &g_entities[id], err, sizeof( err ) ) ) {
+			// the new one goes again, the old one stays as it was
+			WA_FreeEntity( &g_entities[newId] );
 			if ( original )
 				originals[original - 1].gone = qfalse;
 			WA_EntityResult( c, qfalse, err, id );
