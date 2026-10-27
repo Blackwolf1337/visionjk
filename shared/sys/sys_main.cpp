@@ -27,6 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#ifndef _WIN32
+	#include <unistd.h>		// _exit() in Sys_SigHandler
+#endif
 #include "qcommon/qcommon.h"
 #include "sys_local.h"
 #include "sys_loadlib.h"
@@ -973,7 +976,11 @@ void Sys_SigHandler( int signal )
 	static qboolean signalcaught = qfalse;
 
 #ifndef _WIN32
-	if ( signal == SIGHUP || signal == SIGQUIT ) {
+	if ( signal == SIGHUP || signal == SIGQUIT || signal == SIGTERM || signal == SIGINT ) {
+		if ( sys_quitSignal ) {
+			// a second one: the frame that was to quit does not come, so nothing is shut down
+			_exit( 1 );
+		}
 		sys_quitSignal = signal;
 		return;
 	}

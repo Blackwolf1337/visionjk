@@ -1054,7 +1054,12 @@ void NET_Sleep( int msec ) {
 
 	retval = select(highestfd + 1, &fdset, writeSet, NULL, &timeout);
 
-	if(retval == SOCKET_ERROR)
+	// (a signal that ends the server comes in while it sleeps here: Sys_SigHandler quits at the next frame)
+#ifdef _WIN32
+	if(retval == SOCKET_ERROR && socketError != WSAEINTR)
+#else
+	if(retval == SOCKET_ERROR && socketError != EINTR)
+#endif
 		Com_Printf("Warning: select() syscall failed: %s\n", NET_ErrorString());
 	else if(retval > 0)
 		NET_Event(&fdset);

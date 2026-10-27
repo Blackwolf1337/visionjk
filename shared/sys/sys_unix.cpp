@@ -138,6 +138,9 @@ void Sys_PlatformInit( int argc, char *argv[] )
 
 #ifdef DEDICATED
 	signal( SIGHUP, Sys_SigHandler );
+	// a service that is stopped: the players are told and the game module ends as on "quit"
+	signal( SIGTERM, Sys_SigHandler );
+	signal( SIGINT, Sys_SigHandler );
 #else
 	// the client has its window: it plays on when the terminal it was started from closes (CON_Input() lets go of it)
 	signal( SIGHUP, SIG_IGN );
