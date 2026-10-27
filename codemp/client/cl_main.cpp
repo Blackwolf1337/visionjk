@@ -153,6 +153,7 @@ void CL_ServerStatus_f(void);
 void CL_ServerStatusResponse( const netadr_t *from, msg_t *msg );
 static void CL_ShutdownRef( qboolean restarting );
 static qboolean CL_EchoAsked( const netadr_t *from, const char *text );
+static qboolean CL_MasterAsked( const netadr_t *from );
 
 // The renderer a client without a stored cl_renderer starts with, and the one that takes its place for a run
 // where the chosen one is not there or says that it can not run on this machine (CL_InitRenderer).
@@ -2218,8 +2219,13 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		return;
 	}
 
-	// list of servers sent back by a master server (classic)
+	// list of servers sent back by a master server (classic). From anybody else it would put made up servers into
+	// the browser, which then pings every address in it.
 	if ( !Q_strncmp(c, "getserversResponse", 18) ) {
+		if ( !CL_MasterAsked( from ) ) {
+			CL_IDS_Event( CLIDS_MASTER, from, NULL );
+			return;
+		}
 		CL_ServersResponsePacket( from, msg );
 		return;
 	}
@@ -3822,6 +3828,24 @@ OpenJK July 2017; made master 0 fetch all master servers and 1-5 request a singl
 
 ==================
 */
+#define MASTER_ANSWER_MSEC	10000		// a master answers in a packet or several, within a second or two
+
+static struct {
+	netadr_t	adr;
+	int			time;					// cls.realtime of the request, 0: none
+} cl_mastersAsked[MAX_MASTER_SERVERS];
+
+// a master the client asked for its list of servers a short while ago
+static qboolean CL_MasterAsked( const netadr_t *from ) {
+	for ( int i = 0; i < MAX_MASTER_SERVERS; i++ ) {
+		if ( cl_mastersAsked[i].time && cls.realtime - cl_mastersAsked[i].time <= MASTER_ANSWER_MSEC
+			&& NET_CompareAdr( from, &cl_mastersAsked[i].adr ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 void CL_GlobalServers_f( void ) {
 	netadr_t	to;
 	int			count, i, masterNum;
@@ -3882,6 +3906,9 @@ void CL_GlobalServers_f( void ) {
 
 	cls.numglobalservers = -1;
 	cls.pingUpdateSource = AS_GLOBAL;
+
+	cl_mastersAsked[masterNum - 1].adr = to;
+	cl_mastersAsked[masterNum - 1].time = cls.realtime ? cls.realtime : 1;
 
 	Com_sprintf(command, sizeof(command), "getservers %s", Cmd_Argv(2));
 

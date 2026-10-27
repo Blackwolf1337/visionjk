@@ -437,6 +437,7 @@ void CL_SystemInfoChanged( void ) {
 	const char		*s, *t;
 	char			key[BIG_INFO_KEY];
 	char			value[BIG_INFO_VALUE];
+	char			refused[256] = "";
 	qboolean		gameSet;
 
 	systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SYSTEMINFO ];
@@ -489,7 +490,21 @@ void CL_SystemInfoChanged( void ) {
 
 			gameSet = qtrue;
 		}
-		Cvar_Server_Set( key, value );
+		switch ( Cvar_Server_Set( key, value ) ) {
+		case CVAR_SERVER_SET:
+			break;
+		case CVAR_SERVER_REFUSED:
+			Q_strcat( refused, sizeof( refused ), va( "%s%s=%s", *refused ? ", " : "", key, value ) );
+			break;
+		case CVAR_SERVER_PROTECTED:
+			CL_IDS_Event( CLIDS_CVAR, NULL, va( "%s=%s", key, value ) );
+			Com_Error( ERR_DROP, "Server tried to set \"%s\" to \"%s\"", key, value );
+			break;
+		}
+	}
+	// one line for all of them: the IDS writes at most one line of an event in two seconds
+	if ( *refused ) {
+		CL_IDS_Event( CLIDS_CVAR, NULL, refused );
 	}
 	// if game folder should not be set and it is set at the client side
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
@@ -692,6 +707,14 @@ void CL_ParseDownload ( msg_t *msg ) {
 	if((clc.downloadBlock & 0xFFFF) != block)
 	{
 		Com_DPrintf( "CL_ParseDownload: Expected block %d, got %d\n", (clc.downloadBlock & 0xFFFF), block);
+		return;
+	}
+
+	// past the size of block zero the server would fill the disk
+	if ( (long long)clc.downloadCount + size > (long long)clc.downloadSize )
+	{
+		CL_IDS_Event( CLIDS_DOWNLOAD_SIZE, NULL, va( "%s, %i bytes said, %lld sent", clc.downloadName, clc.downloadSize, (long long)clc.downloadCount + size ) );
+		Com_Error( ERR_DROP, "CL_ParseDownload: %s is larger than the %i bytes the server said", clc.downloadName, clc.downloadSize );
 		return;
 	}
 

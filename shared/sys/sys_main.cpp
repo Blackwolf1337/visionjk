@@ -193,8 +193,15 @@ void Sys_Print( const char *msg ) {
 	if ( msg[0] == '*' ) {
 		msg += 1;
 	}
-	ConsoleLogAppend( msg );
-	CON_Print( msg );
+	// names, hostnames and prints of servers and players come through here: no control characters for the terminal
+	// and the log (the ANSI colours are made later by Sys_AnsiColorPrint)
+	while ( *msg ) {
+		char	safe[MAXPRINTMSG];
+
+		msg += Q_TermSafe( safe, sizeof( safe ), msg );
+		ConsoleLogAppend( safe );
+		CON_Print( safe );
+	}
 }
 
 /*

@@ -25,6 +25,34 @@ int Q_isLogChar( int c )
 	return ( c >= ' ' && c < 127 && c != '"' && c != '%' && c != '^' );
 }
 
+// in copied to out for a terminal: control characters but the line break and the tab, DEL and the C1 controls in
+// UTF-8 (C2 80..C2 9F, the CSI among them) become a dot, so text from others can not move the cursor, clear the
+// screen or talk to the terminal. Stops before out is full, never inside such a pair. Returns the bytes of in
+// that were taken (VisionJK)
+int Q_TermSafe( char *out, int outSize, const char *in )
+{
+	const unsigned char	*s = (const unsigned char *)in;
+	int					n = 0;
+
+	if ( outSize < 1 )
+		return 0;
+	while ( *s && n < outSize - 1 )
+	{
+		if ( s[0] == 0xC2 && s[1] >= 0x80 && s[1] <= 0x9F )
+		{
+			out[n++] = '.';
+			s += 2;
+		}
+		else
+		{
+			out[n++] = ( ( *s < 0x20 && *s != '\n' && *s != '\t' ) || *s == 0x7F ) ? '.' : (char)*s;
+			s++;
+		}
+	}
+	out[n] = '\0';
+	return (int)( (const char *)s - in );
+}
+
 int Q_isprintext( int c )
 {
 	if ( c >= 0x20 && c <= 0x7E )

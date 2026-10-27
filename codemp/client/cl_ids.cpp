@@ -52,6 +52,9 @@ static const struct {
 	{ "a path in the place of its game folder",										1 },	// CLIDS_GAMEDIR
 	{ "more commands in a second than a game sends",								0 },	// CLIDS_COMMAND_FLOOD
 	{ "an escape character in a command, which is for a terminal and not for a game",	0 },	// CLIDS_COMMAND_TEXT
+	{ "more data of a download than it said it has",								0 },	// CLIDS_DOWNLOAD_SIZE: the engine drops the connection itself
+	{ "cvars it may not set",														0 },	// CLIDS_CVAR: a protected one ends the connection itself
+	{ "a list of servers nobody asked for",											0 },	// CLIDS_MASTER
 };
 
 static cvar_t		*v_ids;

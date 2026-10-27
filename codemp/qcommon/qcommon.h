@@ -498,7 +498,12 @@ cvar_t	*Cvar_SetSafe( const char *var_name, const char *value );
 cvar_t	*Cvar_User_Set( const char *var_name, const char *value );
 // same as Cvar_SetSafe, but defaults to CVAR_USER_CREATED
 
-void	Cvar_Server_Set( const char *var_name, const char *value );
+typedef enum {
+	CVAR_SERVER_SET,
+	CVAR_SERVER_REFUSED,		// not a cvar a server may set, left as it is
+	CVAR_SERVER_PROTECTED		// never, the connection has to end
+} cvarServerSet_t;
+cvarServerSet_t	Cvar_Server_Set( const char *var_name, const char *value );
 void	Cvar_VM_Set( const char *var_name, const char *value, vmSlots_t vmslot );
 // sometimes we set variables from an untrusted source: fail if flags & CVAR_PROTECTED
 

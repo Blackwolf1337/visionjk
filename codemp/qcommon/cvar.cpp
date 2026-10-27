@@ -832,10 +832,11 @@ static const char *Cvar_CurrentName( const char *var_name ) {
 ============
 Cvar_Server_Set
 
-Set cvars from network server.
+Set cvars from network server. The caller ends the connection for CVAR_SERVER_PROTECTED (after the client
+intrusion detection wrote it down).
 ============
 */
-void Cvar_Server_Set( const char *var_name, const char *value )
+cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 {
 	uint32_t flags;
 
@@ -849,21 +850,18 @@ void Cvar_Server_Set( const char *var_name, const char *value )
 		{
 			if ( !FindLegacyCvar( var_name ) ) {
 				Com_Printf(S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", var_name, value);
-				return;
+				return CVAR_SERVER_REFUSED;
 			}
 		}
 
 		if((flags & CVAR_PROTECTED))
 		{
-			if( value )
-				Com_Error( ERR_DROP, "Server tried to set \"%s\" to \"%s\"", var_name, value );
-			else
-				Com_Error( ERR_DROP, "Server tried to modify \"%s\"", var_name );
-			return;
+			return CVAR_SERVER_PROTECTED;
 		}
 	}
 
 	Cvar_Set2( var_name, value, CVAR_SERVER_CREATED, qtrue );
+	return CVAR_SERVER_SET;
 }
 
 /*
