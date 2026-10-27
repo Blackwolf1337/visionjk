@@ -1172,6 +1172,9 @@ void CL_Connect_f( void ) {
 		clc.serverAddress.port = BigShort( PORT_SERVER );
 	}
 
+	// a server the client left for the intrusion detection: once refused with the reason
+	CL_IDS_CheckConnect( &clc.serverAddress );
+
 	serverString = NET_AdrToString(&clc.serverAddress);
 
 	Com_Printf( "%s resolved to %s\n", cls.servername, serverString );

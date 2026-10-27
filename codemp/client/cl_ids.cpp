@@ -52,7 +52,7 @@ static const struct {
 	{ "a path in the place of its game folder",										1 },	// CLIDS_GAMEDIR
 	{ "more commands in a second than a game sends",								0 },	// CLIDS_COMMAND_FLOOD
 	{ "an escape character in a command, which is for a terminal and not for a game",	0 },	// CLIDS_COMMAND_TEXT
-	{ "more data of a download than it said it has",								0 },	// CLIDS_DOWNLOAD_SIZE: the engine drops the connection itself
+	{ "more data of a download than it said it has",								1 },	// CLIDS_DOWNLOAD_SIZE: with v_ids 0 the engine drops the connection itself
 	{ "cvars it may not set",														0 },	// CLIDS_CVAR: a protected one ends the connection itself
 	{ "a list of servers nobody asked for",											0 },	// CLIDS_MASTER
 };
@@ -62,6 +62,63 @@ static fileHandle_t	clIds_file;
 static int			clIds_counts[CLIDS_NUM_EVENTS];		// of this connection
 static int			clIds_lineTime[CLIDS_NUM_EVENTS], clIds_skipped[CLIDS_NUM_EVENTS];
 static int			clIds_commandSecond, clIds_commands;
+
+// servers this client left for the intrusion detection, until the game ends. The first connect to one again is
+// refused with the reason, the next one goes through.
+#define CLIDS_LEFT			16
+static struct {
+	netadr_t	adr;
+	int			event;
+	qboolean	told;					// the player was told once, connects go through
+	qboolean	used;
+} clIds_left[CLIDS_LEFT];
+static int			clIds_nextLeft;		// the slot taken when the list is full, oldest first
+
+static int CL_IDS_FindLeft( const netadr_t *adr ) {
+	for ( int i = 0; i < CLIDS_LEFT; i++ ) {
+		if ( clIds_left[i].used && NET_CompareAdr( adr, &clIds_left[i].adr ) ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static void CL_IDS_RememberLeft( const netadr_t *adr, int event ) {
+	int i = CL_IDS_FindLeft( adr );
+
+	if ( i < 0 ) {
+		i = clIds_nextLeft;
+		clIds_nextLeft = ( clIds_nextLeft + 1 ) % CLIDS_LEFT;
+	}
+	clIds_left[i].adr = *adr;
+	clIds_left[i].event = event;
+	clIds_left[i].told = qfalse;
+	clIds_left[i].used = qtrue;
+}
+
+// for the server browser: a server the client left for the intrusion detection
+qboolean CL_IDS_Left( const netadr_t *adr ) {
+	return (qboolean)( v_ids && v_ids->integer && CL_IDS_FindLeft( adr ) >= 0 );
+}
+
+/*
+=================
+CL_IDS_CheckConnect
+
+Before a connect. May not return: the first connect to a server the client left for the intrusion detection
+ends here, with the reason.
+=================
+*/
+void CL_IDS_CheckConnect( const netadr_t *adr ) {
+	const int i = CL_IDS_FindLeft( adr );
+
+	if ( !v_ids || !v_ids->integer || i < 0 || clIds_left[i].told ) {
+		return;
+	}
+	clIds_left[i].told = qtrue;
+	Com_Error( ERR_DROP, "You left %s before: it sent %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details. Connect again to join anyway.",
+		NET_AdrToString( adr ), clIds_events[clIds_left[i].event].name );
+}
 
 void CL_IDS_Init( void ) {
 	v_ids = Cvar_Get( "v_ids", "1", CVAR_ARCHIVE, "Intrusion detection of the client: 1 what a server sends that no server of the game does is written to ids.log, and a server that keeps at it is left. 0 off" );
@@ -122,6 +179,7 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 	if ( !from && clIds_events[event].leaveAt && clIds_counts[event] >= clIds_events[event].leaveAt
 		&& cls.state >= CA_CONNECTED && !clc.demoplaying ) {
 		clIds_counts[event] = 0;
+		CL_IDS_RememberLeft( &clc.serverAddress, event );
 		Com_Error( ERR_DROP, "Left the server: it sent %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details.",
 			clIds_events[event].name );
 	}

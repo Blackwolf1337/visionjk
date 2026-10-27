@@ -301,7 +301,8 @@ void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 	}
 	if (server && buf) {
 		buf[0] = '\0';
-		Info_SetValueForKey( info, "hostname", server->hostName);
+		// marked in every browser, also of other ui modules: the client left it for the intrusion detection
+		Info_SetValueForKey( info, "hostname", CL_IDS_Left( &server->adr ) ? va( S_COLOR_RED "IDS " S_COLOR_WHITE "%s", server->hostName ) : server->hostName );
 		Info_SetValueForKey( info, "mapname", server->mapName);
 		Info_SetValueForKey( info, "clients", va("%i",server->clients));
 		Info_SetValueForKey( info, "sv_maxclients", va("%i",server->maxClients));

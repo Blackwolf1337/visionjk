@@ -501,6 +501,8 @@ void CL_IDS_Shutdown( void );
 void CL_IDS_Connect( void );
 void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail );
 void CL_IDS_ServerCommand( char *text );
+void CL_IDS_CheckConnect( const netadr_t *adr );
+qboolean CL_IDS_Left( const netadr_t *adr );
 
 void CL_StartHunkUsers( void );
 
