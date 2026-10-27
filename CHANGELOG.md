@@ -3,6 +3,7 @@ Key: [-] removed, [+] added, [\*] modified
 
 # VisionJK
 
+* [\*] Every loose folder of the search path is listed once, and a file that is not in the listing is not tried there before the paks: failed opens of a run of `join-test.sh` 39815 before, 3107 after (those of the sounds 4732 before, 0 after). A file put into a folder by another program is seen after the next level change or restart of the file system, a .cfg is always tried. `v_fsIndex 0` turns it off.
 * [+] The download of a pak from a web address (`jp_DlBaseURL`) has the rest of what the JA+ plugin does: two buttons in the overlay, Skip and Skip all (`v_downloadReview_do skip` and `skipall`, the script `abordURLRedirectCurrDownload`), a pak the web server answered 404 for is noted in `japlus/urlRedirect_cache.txt` and not asked there again for six days, bit 14 of `cp_pluginDisable` turns the web download off as `v_downloadHttp 0` does, and a `jp_DlBaseURL` that is not http or https is named in the console once.
 * [\*] A level of a server no longer restarts the file system of the client, nor of the server itself, when only the checksum feed changed: the pure checksums are made anew from what each pak kept (0 ms, it was 21 to 41 ms on the client).
 * [+] `tools/test/join-test.sh`: a dedicated server with bots and a headless client that joins three times and sees a level change, with the join and load reports.

@@ -168,6 +168,31 @@ report starts (in the gamestate), so the load table never showed it. Checked: `t
 (`sv_pure 1`, a level change, no unpure client), the compat test with stock OpenJK, and a server with a
 `ref_forcelist.txt` whose forced paks were still asked for after a level change.
 
+**The loose folders are listed once** (`qcommon/files.cpp`, `FS_DirMayHave()`, cvar `v_fsIndex`, on by default and
+archived, 2026-10-27). Every file the game looks for was first tried in the loose folders of the search path (home
+and game folder, japlus and base) before the paks, and each miss was a call of the system. Now every loose folder
+of the search path is listed once (`Sys_ListFiles`), a sub folder the first time a file below it is looked for, and
+a file that is not in the listing of its folder, or is below a folder that is not there, is not tried. The files
+the game writes go into the listings at once (every write passes `FS_CreatePath`, and the two renames do). Anything
+else that changes the folders (another program, the web panel of the server writing a file with plain `fopen`) is
+seen after the next level change, when all listings are made anew, or after the next restart of the file system. A
+.cfg is always tried, so a config put into the folder by hand can be exec'd at once. A folder with more files than
+`Sys_ListFiles` lists (4095) cannot say what is missing, below it everything is tried. `v_fsIndex 0` tries every
+file in every folder as before.
+
+Measured with `tools/test/join-test.sh --strace` (3 joins and a level change, filled caches), the failed opens of
+the whole run of the client:
+
+| | before | after |
+|---|---|---|
+| all failed opens | 39815 | 3107 |
+| sound/*.wav and sound/*.mp3 in the loose folders | 2328 and 2404 | 0 |
+
+On Linux a failed open costs about 1 microsecond (measured), so that is about 40 ms a run there. What is left is
+mostly the folder scans of `FS_GetFileList`. Checked: the kept textures (722) and sounds (272) of the caches are
+all found again on the next start, a demo recorded in a level plays in the same run, a demo copied into `demos/`
+before the start plays, a missing one still says it can not be opened, the compat test and `join-test.sh --pure`.
+
 ## Measured again, 2026-10-27
 
 With `tools/test/join-test.sh` (Radeon 610M, 30 bots, mp/ffa1, loopback, no lag proxy):
@@ -262,11 +287,8 @@ The 280 kept sounds were compared once with a fresh unpack of their MP3: all the
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
-- The .wav that is looked for before every .mp3: 2328 failed opens on a first join (four loose folders a
-  sound). On Linux a failed open takes 1 microsecond (measured), so that is about 2 ms. Every file the game
-  looks for is first tried in the four loose folders (home and game folder, japlus and base) before the paks:
-  39815 failed opens in one run of `join-test.sh`, about 40 ms on Linux. On Windows a failed open costs more,
-  not measured (no Windows here). An index of the loose folders would take them away.
+- Every folder scan of `FS_GetFileList` (models/players, strings, ext_data) still tries the loose folders
+  and does not go through the listings. On Windows the cost of a failed open was not measured (no Windows here).
 - The resampling of kept sounds: at most 15 ms, on the first join of a session only. The copy and the
   allocation would stay. Not done.
 - The ui is started anew on every load (48 ms). The screen draws nothing at all while the ui is not started
