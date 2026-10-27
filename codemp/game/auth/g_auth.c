@@ -38,6 +38,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "monocypher-ed25519.h"
 
 #define AUTH_KEYS_FILE		"admin_keys.txt"
+#define AUTH_HOST_FILE		"auth_host.key"		// the host key of the server (bg_auth.h), as base64
 #define AUTH_MAX_KEYS		64
 #define AUTH_MAX_CODES		8
 #define AUTH_CODE_LEN		8
@@ -68,6 +69,8 @@ typedef struct authCode_s {
 
 static authKey_t	authKeys[AUTH_MAX_KEYS];
 static int			numAuthKeys;
+static byte			authHost[AUTH_HOST_SIZE];
+static qboolean		authHaveHost;
 static authClient_t	authClients[MAX_CLIENTS];
 static authCode_t	authCodes[AUTH_MAX_CODES];
 
@@ -177,12 +180,62 @@ static void G_AuthLoadKeys( void ) {
 	}
 }
 
+/*
+=================
+G_AuthLoadHost
+
+The host key: read from its file, or made once and written there. A server whose file can not be written
+keeps the one it made for as long as it runs, and its clients find it changed after the next start.
+=================
+*/
+static void G_AuthLoadHost( void ) {
+	char			text[AUTH_BASE64_SIZE];
+	fileHandle_t	f;
+	int				len;
+
+	if ( authHaveHost ) {
+		return;		// once for the run of the server: a file that could not be written is not made again each map
+	}
+	len = trap->FS_Open( AUTH_HOST_FILE, &f, FS_READ );
+	if ( len > 0 && f ) {
+		if ( len >= (int)sizeof( text ) )
+			len = sizeof( text ) - 1;
+		trap->FS_Read( text, len, f );
+		trap->FS_Close( f );
+		text[len] = '\0';
+		while ( len && ( text[len - 1] == '\n' || text[len - 1] == '\r' || text[len - 1] == ' ' ) )
+			text[--len] = '\0';
+		if ( BG_AuthDecode( text, authHost, sizeof( authHost ) ) ) {
+			authHaveHost = qtrue;
+			return;
+		}
+		Com_Printf( S_COLOR_YELLOW AUTH_HOST_FILE " holds no host key, so a new one is made. Clients that logged in here before will refuse to sign until they use v_amkey trust.\n" );
+	} else if ( f ) {
+		trap->FS_Close( f );
+	}
+
+	if ( !BG_AuthRandom( authHost, sizeof( authHost ) ) ) {
+		return;		// nobody can log in with a key then (Cmd_JPAuth_f)
+	}
+	authHaveHost = qtrue;
+	BG_AuthEncode( authHost, sizeof( authHost ), text, sizeof( text ) );
+	Q_strcat( text, sizeof( text ), "\n" );
+	trap->FS_Open( AUTH_HOST_FILE, &f, FS_WRITE );
+	if ( !f ) {
+		Com_Printf( S_COLOR_YELLOW AUTH_HOST_FILE " could not be written, so the host key is new at every start of the server.\n" );
+		return;
+	}
+	trap->FS_Write( text, (int)strlen( text ), f );
+	trap->FS_Close( f );
+}
+
 void G_AuthInit( void ) {
 	memset( authClients, 0, sizeof( authClients ) );
 	memset( authCodes, 0, sizeof( authCodes ) );
 	G_AuthLoadKeys();
 	if ( numAuthKeys ) {
 		Com_Printf( "%i admin keys from " AUTH_KEYS_FILE "\n", numAuthKeys );
+		G_AuthLoadHost();
 	}
 }
 
@@ -251,6 +304,7 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 
 	if ( !Q_stricmp( what, "hello" ) ) {
 		byte pub[AUTH_PUBLIC_SIZE];
+		char host[AUTH_BASE64_SIZE];
 		int i;
 
 		ac->asked = qfalse;
@@ -286,7 +340,7 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 			trap->SendServerCommand( clientNum, va( "vs_auth ok %s kept", G_AuthRankName( authKeys[i].adminLevel ) ) );
 			return;
 		}
-		if ( !BG_AuthRandom( ac->nonce, sizeof( ac->nonce ) ) ) {
+		if ( !authHaveHost || !BG_AuthRandom( ac->nonce, sizeof( ac->nonce ) ) ) {
 			Com_Printf( S_COLOR_RED "vs_auth: the system gave no random bytes, nobody can log in with a key\n" );
 			trap->SendServerCommand( clientNum, "vs_auth fail server" );
 			return;
@@ -294,18 +348,23 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 		ac->asked = qtrue;
 		ac->key = i;
 		ac->time = now;
+		// a client of version 1 reads the nonce and nothing behind it
 		BG_AuthEncode( ac->nonce, sizeof( ac->nonce ), text, sizeof( text ) );
-		trap->SendServerCommand( clientNum, va( "vs_auth nonce %s", text ) );
+		BG_AuthEncode( authHost, sizeof( authHost ), host, sizeof( host ) );
+		trap->SendServerCommand( clientNum, va( "vs_auth nonce %s %s", text, host ) );
 		return;
 	}
 
 	if ( !Q_stricmp( what, "sign" ) ) {
 		byte		signature[AUTH_SIGNATURE_SIZE], message[AUTH_MESSAGE_SIZE];
-		char		address[AUTH_ADDRESS_SIZE], fingerprint[64], how[160];
+		char		address[AUTH_ADDRESS_SIZE], version[4], fingerprint[64], how[160];
 		const int	key = ac->key;
+		qboolean	withHost;
 		int			length;
 
 		trap->Argv( 3, address, sizeof( address ) );
+		trap->Argv( 4, version, sizeof( version ) );
+		withHost = (qboolean)( atoi( version ) >= 2 );
 		// a nonce is good for one answer, whatever the answer is
 		if ( !ac->asked || now - ac->time > AUTH_NONCE_MSEC || now < ac->time || key < 0 || key >= numAuthKeys ) {
 			ac->asked = qfalse;
@@ -317,12 +376,20 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 			trap->SendServerCommand( clientNum, "vs_auth fail blocked" );
 			return;
 		}
-		length = BG_AuthMessage( message, sizeof( message ), ac->nonce, address, clientNum );
+		length = BG_AuthMessage( message, sizeof( message ), ac->nonce, withHost ? authHost : NULL, address, clientNum );
 		memset( ac->nonce, 0, sizeof( ac->nonce ) );
 		if ( !length || !BG_AuthDecode( arg, signature, sizeof( signature ) )
 			|| !G_AuthCheck( signature, authKeys[key].pub, message, length ) ) {
 			G_AdminLoginFailed( ent, "bad signature" );
 			trap->SendServerCommand( clientNum, "vs_auth fail signature" );
+			return;
+		}
+		// A client of version 1 signed without the host key: only the address says which server it was for, and
+		// that only where vs_authHosts names the addresses of this one.
+		if ( !withHost && !vs_authHosts.string[0] ) {
+			G_SecurityLogPrintf( "vs_auth: %s [%s] signed without the host key, and vs_authHosts is empty\n",
+				ent->client->pers.netname, ent->client->sess.IP );
+			trap->SendServerCommand( clientNum, "vs_auth fail version" );
 			return;
 		}
 		// The signature is right, but it was made for a server of another address: somebody passes on what this

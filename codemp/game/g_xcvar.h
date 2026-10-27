@@ -178,8 +178,9 @@ XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									q
 // What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
 // chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
 // passes on what stands above the heads (status/g_status.c). Bit 2 the key login, bit 3 who plays with what,
-// bits 4 to 6 were Focus and the Vision Temple and stay unused, bit 7 hats and capes (status/g_status.c).
-XCVAR_DEF( vs_caps,				"143",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
+// bits 4 to 6 were Focus and the Vision Temple and stay unused, bit 7 hats and capes (status/g_status.c), bit 8
+// the key login with the host key of the server (auth/bg_auth.h).
+XCVAR_DEF( vs_caps,				"399",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 // The boombox (boombox/g_boombox.c), on the relay of the voice chat. vs_boombox is in the server info: the cgame of this
 // tree asks for boxes only where it reads it there. The programs that fetch the songs can only be named while the
 // server starts (CVAR_INIT: server.cfg or the command line), so nobody can make a running server start another one.

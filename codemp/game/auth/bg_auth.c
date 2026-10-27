@@ -39,6 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AUTH_KEY_TYPE_LEN	11
 #define AUTH_BLOB_SIZE		( 4 + AUTH_KEY_TYPE_LEN + 4 + AUTH_PUBLIC_SIZE )		// a public key as ssh passes it around
 #define AUTH_FIRST_LINE		"VisionJK admin login v1\n"
+#define AUTH_FIRST_LINE_2	"VisionJK admin login v2\n"
 #define AUTH_FILE_MAGIC		"openssh-key-v1"
 #define AUTH_FILE_BEGIN		"-----BEGIN OPENSSH PRIVATE KEY-----"
 #define AUTH_FILE_END		"-----END OPENSSH PRIVATE KEY-----"
@@ -78,23 +79,148 @@ qboolean BG_AuthRandom( byte *out, int size ) {
 BG_AuthMessage
 =================
 */
-int BG_AuthMessage( byte *out, int outSize, const byte *nonce, const char *address, int clientNum ) {
-	const int	first = (int)strlen( AUTH_FIRST_LINE );
+int BG_AuthMessage( byte *out, int outSize, const byte *nonce, const byte *host, const char *address, int clientNum ) {
+	const char	*line = host ? AUTH_FIRST_LINE_2 : AUTH_FIRST_LINE;
+	const int	first = (int)strlen( line ), hostLen = host ? AUTH_HOST_SIZE : 0;
 	char		tail[AUTH_ADDRESS_SIZE + 16];
-	int			tailLen;
+	int			tailLen, n;
 
 	if ( strlen( address ) >= AUTH_ADDRESS_SIZE ) {
 		return 0;
 	}
 	Com_sprintf( tail, sizeof( tail ), "%s\n%i", address, clientNum );
 	tailLen = (int)strlen( tail );
-	if ( first + AUTH_NONCE_SIZE + tailLen > outSize ) {
+	if ( first + AUTH_NONCE_SIZE + hostLen + tailLen > outSize ) {
 		return 0;
 	}
-	memcpy( out, AUTH_FIRST_LINE, first );
-	memcpy( out + first, nonce, AUTH_NONCE_SIZE );
-	memcpy( out + first + AUTH_NONCE_SIZE, tail, tailLen );
-	return first + AUTH_NONCE_SIZE + tailLen;
+	memcpy( out, line, first );
+	n = first;
+	memcpy( out + n, nonce, AUTH_NONCE_SIZE );
+	n += AUTH_NONCE_SIZE;
+	if ( host ) {
+		memcpy( out + n, host, AUTH_HOST_SIZE );
+		n += AUTH_HOST_SIZE;
+	}
+	memcpy( out + n, tail, tailLen );
+	return n + tailLen;
+}
+
+// One line of admin_hosts.txt: qfalse if it is none. *next is behind it.
+static qboolean Auth_HostLine( const char **text, char *address, int addressSize, byte *host ) {
+	const char	*p = *text, *end = strchr( p, '\n' );
+	char		line[AUTH_ADDRESS_SIZE + AUTH_BASE64_SIZE + 8], key[AUTH_BASE64_SIZE];
+	int			len = end ? (int)( end - p ) : (int)strlen( p );
+
+	*text = end ? end + 1 : p + len;
+	if ( len >= (int)sizeof( line ) ) {
+		return qfalse;
+	}
+	memcpy( line, p, len );
+	line[len] = '\0';
+	if ( len && line[len - 1] == '\r' ) {
+		line[len - 1] = '\0';
+	}
+	if ( sscanf( line, "%63s %95s", address, key ) != 2 || addressSize < AUTH_ADDRESS_SIZE ) {
+		return qfalse;
+	}
+	return BG_AuthDecode( key, host, AUTH_HOST_SIZE );
+}
+
+/*
+=================
+BG_AuthHostsFind
+=================
+*/
+authHostState_t BG_AuthHostsFind( const char *text, const char *address, const byte *host, char *other, int otherSize ) {
+	char			lineAddress[AUTH_ADDRESS_SIZE];
+	byte			lineHost[AUTH_HOST_SIZE];
+	authHostState_t	state = AUTH_HOST_NEW;
+
+	if ( other && otherSize > 0 ) {
+		other[0] = '\0';
+	}
+	while ( *text ) {
+		if ( !Auth_HostLine( &text, lineAddress, sizeof( lineAddress ), lineHost ) ) {
+			continue;
+		}
+		if ( !Q_stricmp( lineAddress, address ) ) {
+			// one address has one line, the last one if a hand put in more. What it says counts, not where
+			// else the key is.
+			state = memcmp( lineHost, host, AUTH_HOST_SIZE ) ? AUTH_HOST_CHANGED : AUTH_HOST_SAME;
+			if ( other && otherSize > 0 ) {
+				other[0] = '\0';
+			}
+		} else if ( ( state == AUTH_HOST_NEW || state == AUTH_HOST_ELSEWHERE ) && !memcmp( lineHost, host, AUTH_HOST_SIZE ) ) {
+			state = AUTH_HOST_ELSEWHERE;
+			if ( other ) {
+				Q_strncpyz( other, lineAddress, otherSize );
+			}
+		}
+	}
+	return state;
+}
+
+/*
+=================
+BG_AuthHostsSet
+=================
+*/
+int BG_AuthHostsSet( const char *text, const char *address, const byte *host, char *out, int outSize ) {
+	char		newLine[AUTH_ADDRESS_SIZE + AUTH_BASE64_SIZE + 8], key[AUTH_BASE64_SIZE];
+	const char	*p = text, *start;
+	int			len = 0, newLen = 0;
+
+	if ( outSize <= 0 ) {
+		return 0;
+	}
+	out[0] = '\0';
+	if ( host ) {
+		BG_AuthEncode( host, AUTH_HOST_SIZE, key, sizeof( key ) );
+		Com_sprintf( newLine, sizeof( newLine ), "%s %s\n", address, key );
+		newLen = (int)strlen( newLine );
+	}
+	// the other lines as they are, without the ones that are no line of this file
+	while ( *p ) {
+		char	lineAddress[AUTH_ADDRESS_SIZE];
+		byte	lineHost[AUTH_HOST_SIZE];
+		int		lineLen;
+
+		start = p;
+		if ( !Auth_HostLine( &p, lineAddress, sizeof( lineAddress ), lineHost ) || !Q_stricmp( lineAddress, address ) ) {
+			continue;
+		}
+		lineLen = (int)( p - start );
+		if ( start[lineLen - 1] != '\n' ) {
+			lineLen++;		// the last line of the file had no end
+		}
+		// the oldest ones are the first ones: they go when there is no room
+		while ( len && len + lineLen >= outSize ) {
+			const char	*second = strchr( out, '\n' ) + 1;
+			const int	drop = (int)( second - out );
+
+			memmove( out, second, len - drop + 1 );
+			len -= drop;
+		}
+		if ( len + lineLen >= outSize ) {
+			continue;
+		}
+		memcpy( out + len, start, lineLen );
+		out[len + lineLen - 1] = '\n';
+		len += lineLen;
+		out[len] = '\0';
+	}
+	while ( newLen && len && len + newLen >= outSize ) {
+		const char	*second = strchr( out, '\n' ) + 1;
+		const int	drop = (int)( second - out );
+
+		memmove( out, second, len - drop + 1 );
+		len -= drop;
+	}
+	if ( newLen && newLen < outSize ) {
+		memcpy( out + len, newLine, newLen + 1 );
+		len += newLen;
+	}
+	return len;
 }
 
 /*

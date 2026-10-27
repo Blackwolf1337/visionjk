@@ -35,6 +35,7 @@ set(TestFiles
 	"vjk/voice.cpp"
 	"vjk/boombox.cpp"
 	"vjk/sha256.cpp"
+	"vjk/auth.cpp"
 	)
 # The C code of the game the tests in vjk/ look at. The stub of Com_Error throws through it, so it is built with
 # the tables for that.
@@ -44,8 +45,10 @@ set(TestCFiles
 	"${SharedDir}/qcommon/q_color.c"
 	"${SharedDir}/update/upd_manifest.c"
 	"${SharedDir}/web/web_sha256.c"
+	"${SharedDir}/web/web_base64.c"
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/game/voice/bg_voice.c"
+	"${MPDir}/game/auth/bg_auth.c"
 	"${MPDir}/game/boombox/bg_boombox_core.c"
 	"${MPDir}/game/boombox/bg_boombox_fetch.c"
 	)

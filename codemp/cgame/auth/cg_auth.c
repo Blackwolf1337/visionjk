@@ -26,15 +26,20 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   v_amkey show            prints the public lines of the keys there are: the owner of a server puts one into
 //                         his admin_keys.txt
 //   v_amkey login           logs in on this server, and from then on by itself whenever the player joins it
-//   v_amkey forget          no longer by itself on this server
+//   v_amkey forget          no longer by itself on this server, and its host key is forgotten
+//   v_amkey trust           a login that keeps the host key the server sends now, even if it is another one
+//                         than before or one kept for another address
 //
 // Where the secret half of a key is: in the key file, or in an ssh-agent (v_authAgent 1), which signs without
 // handing it out. 1Password is such an agent. It may ask the player first, so everything here is a step that
 // is looked at once a frame (auth.step) and nothing waits.
 //
 // The client signs only for a server the player named with "v_amkey login" (v_authServers), and only right after
-// it asked itself: a server can not make it sign by sending a nonce nobody asked for. That and the address in
-// the signed message are against a server that passes on the question of another one.
+// it asked itself: a server can not make it sign by sending a nonce nobody asked for. That, the address in the
+// signed message and the host key the server sends with the nonce are against a server that passes on the
+// question of another one: the host key of each address is kept in admin_hosts.txt the first time, and a login
+// that comes with another one is not signed (bg_auth.h). A server without a host key (version 1) only gets a
+// signature when the player typed the login.
 //
 // Needs no engine of this tree: client commands, a file and a socket. Not in a browser.
 
@@ -63,6 +68,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AUTH_FLOOD_MARGIN		300			// on top of the gap of the server: packets do not arrive as evenly as they leave
 #define AUTH_AGENT_MSEC			120000		// the player may have to unlock his agent and say yes
 #define AUTH_KEY_NAME			"admin_ed25519"
+#define AUTH_HOSTS_NAME			"admin_hosts.txt"		// next to it in the home folder of the game
 
 typedef enum authStep_e {
 	AUTH_IDLE,
@@ -85,6 +91,8 @@ static struct {
 	qboolean		showOnly;			// "v_amkey show": the keys of the agent are listed, nobody logs in
 	qboolean		joined;				// the automatic login of this map was looked at
 	qboolean		again;				// the nonce ran out while the agent waited for the player: once more
+	qboolean		trust;				// "v_amkey trust": the host key the server sends is kept, whatever was before
+	qboolean		withHost;			// the server sent its host key, the signature is of version 2
 
 	authCandidate_t	keys[AUTH_MAX_CANDIDATES];
 	int				numKeys, current;
@@ -119,7 +127,7 @@ static void Auth_End( void ) {
 	crypto_wipe( auth.message, sizeof( auth.message ) );
 	auth.haveSecret = qfalse;
 	auth.step = AUTH_IDLE;
-	auth.quiet = auth.showOnly = auth.again = qfalse;
+	auth.quiet = auth.showOnly = auth.again = auth.trust = auth.withHost = qfalse;
 	auth.numKeys = auth.current = 0;
 }
 
@@ -193,6 +201,64 @@ static int Auth_ReadKey( byte *secret, char *comment, int commentSize, char *why
 	memcpy( seed, secret, sizeof( seed ) );
 	crypto_ed25519_key_pair( secret, pub, seed );
 	return 1;
+}
+
+/*
+===============================================================================
+
+admin_hosts.txt: the host key of every server address the client logged in on
+
+===============================================================================
+*/
+
+static void Auth_HostsPath( char *out, int outSize ) {
+	char home[MAX_OSPATH];
+
+	trap->Cvar_VariableStringBuffer( "fs_homepath", home, sizeof( home ) );
+	if ( home[0] ) {
+		Com_sprintf( out, outSize, "%s/" AUTH_HOSTS_NAME, home );
+	} else {
+		Q_strncpyz( out, AUTH_HOSTS_NAME, outSize );
+	}
+}
+
+// the file into text, "" when there is none
+static void Auth_ReadHosts( char *text, int textSize ) {
+	char	path[MAX_OSPATH];
+	FILE	*f;
+	size_t	n;
+
+	Auth_HostsPath( path, sizeof( path ) );
+	text[0] = '\0';
+	f = fopen( path, "rb" );
+	if ( !f ) {
+		return;
+	}
+	n = fread( text, 1, (size_t)textSize - 1, f );
+	fclose( f );
+	text[n] = '\0';
+}
+
+// the line of the address set to this host key, or taken away (host NULL)
+static qboolean Auth_SetHost( const char *address, const byte *host ) {
+	static char	text[AUTH_HOSTS_FILE_SIZE], out[AUTH_HOSTS_FILE_SIZE];
+	char		path[MAX_OSPATH];
+	int			len;
+	FILE		*f;
+
+	Auth_ReadHosts( text, sizeof( text ) );
+	len = BG_AuthHostsSet( text, address, host, out, sizeof( out ) );
+	Auth_HostsPath( path, sizeof( path ) );
+	f = fopen( path, "wb" );
+	if ( !f ) {
+		return qfalse;
+	}
+	if ( fwrite( out, 1, (size_t)len, f ) != (size_t)len ) {
+		fclose( f );
+		return qfalse;
+	}
+	fclose( f );
+	return qtrue;
 }
 
 static void Auth_PrintPublic( const byte *pub, const char *comment, const char *where ) {
@@ -406,7 +472,7 @@ static void Auth_SendSignature( const byte *signature ) {
 	char text[AUTH_BASE64_SIZE];
 
 	BG_AuthEncode( signature, AUTH_SIGNATURE_SIZE, text, sizeof( text ) );
-	Auth_Send( AUTH_SIGN, va( "vs_auth sign %s %s", text, auth.address ) );
+	Auth_Send( AUTH_SIGN, va( auth.withHost ? "vs_auth sign %s %s 2" : "vs_auth sign %s %s", text, auth.address ) );
 }
 
 // the keys of the agent join the one of the file, if v_authAgentKey lets them
@@ -532,12 +598,48 @@ void CG_AuthServerCommand( void ) {
 		byte					nonce[AUTH_NONCE_SIZE], signature[AUTH_SIGNATURE_SIZE];
 		char					why[256];
 
+		byte					host[AUTH_HOST_SIZE];
+
 		if ( !BG_AuthDecode( CG_Argv( 2 ), nonce, sizeof( nonce ) ) ) {
 			Auth_Say( "The server sent something that is no question for a key." );
 			Auth_End();
 			return;
 		}
-		auth.messageLen = BG_AuthMessage( auth.message, sizeof( auth.message ), nonce, auth.address, cg.clientNum );
+		auth.withHost = (qboolean)( trap->Cmd_Argc() > 3 && BG_AuthDecode( CG_Argv( 3 ), host, sizeof( host ) ) );
+		if ( !auth.withHost ) {
+			// version 1: by itself the client signs only where the server says who it is
+			if ( auth.quiet ) {
+				Auth_End();
+				return;
+			}
+		} else {
+			static char		text[AUTH_HOSTS_FILE_SIZE];
+			char			other[AUTH_ADDRESS_SIZE];
+			authHostState_t	state;
+
+			Auth_ReadHosts( text, sizeof( text ) );
+			state = BG_AuthHostsFind( text, auth.address, host, other, sizeof( other ) );
+			if ( state == AUTH_HOST_CHANGED && !auth.trust ) {
+				auth.quiet = qfalse;		// also after joining: the player has to know why he is no admin
+				Auth_Say( "Not signed: the server at %s has another host key than the last time you logged in there. It may be "
+					"a fake server. If its owner says it was set up again, \"v_amkey trust\" logs in and keeps the new key.", auth.address );
+				Auth_End();
+				return;
+			}
+			if ( state == AUTH_HOST_ELSEWHERE && !auth.trust ) {
+				auth.quiet = qfalse;
+				Auth_Say( "Not signed: the server at %s has the host key of the server at %s, where you logged in before. It may be "
+					"a fake server. If it is the same server with a second address, \"v_amkey trust\" logs in.", auth.address, other );
+				Auth_End();
+				return;
+			}
+			if ( state != AUTH_HOST_SAME && !Auth_SetHost( auth.address, host ) ) {
+				Auth_Say( "The host key of the server could not be saved to " AUTH_HOSTS_NAME ", so nothing was signed." );
+				Auth_End();
+				return;
+			}
+		}
+		auth.messageLen = BG_AuthMessage( auth.message, sizeof( auth.message ), nonce, auth.withHost ? host : NULL, auth.address, cg.clientNum );
 		auth.nonceTime = trap->Milliseconds();
 		if ( !auth.messageLen ) {
 			Auth_End();
@@ -583,6 +685,8 @@ void CG_AuthServerCommand( void ) {
 		}
 		if ( !Q_stricmp( why, "address" ) ) {
 			Auth_Say( "The server refused: it does not know itself by the address %s you reach it by (its vs_authHosts lacks it).", auth.address );
+		} else if ( !Q_stricmp( why, "version" ) ) {
+			Auth_Say( "The server refused: the signature has no host key in it, and this server takes that only when its addresses are set (vs_authHosts)." );
 		} else if ( !Q_stricmp( why, "blocked" ) ) {
 			Auth_Say( "The server refused: too many wrong tries, or admin-banned." );
 		} else if ( !Q_stricmp( why, "late" ) ) {
@@ -732,10 +836,11 @@ void CG_AuthCommand_f( void ) {
 	}
 	if ( !Q_stricmp( what, "forget" ) ) {
 		Auth_ServerSet( address, qfalse );
-		trap->Print( va( "No login by itself on %s any more.\n", address ) );
+		Auth_SetHost( address, NULL );
+		trap->Print( va( "No login by itself on %s any more, and its host key is forgotten.\n", address ) );
 		return;
 	}
-	if ( !Q_stricmp( what, "login" ) ) {
+	if ( !Q_stricmp( what, "login" ) || !Q_stricmp( what, "trust" ) ) {
 		if ( !cg.snap || !address[0] ) {
 			return;
 		}
@@ -751,6 +856,7 @@ void CG_AuthCommand_f( void ) {
 		Auth_ServerSet( address, qtrue );
 		Q_strncpyz( auth.address, address, sizeof( auth.address ) );
 		Auth_Start( qfalse, qfalse );
+		auth.trust = (qboolean)!Q_stricmp( what, "trust" );	// after Auth_Start, which clears it: the nonce comes later
 		return;
 	}
 
@@ -759,7 +865,8 @@ void CG_AuthCommand_f( void ) {
 		"  v_amkey new [comment]   make a key (file %s)\n"
 		"  v_amkey show            print the public lines of your keys, one of them goes into the admin_keys.txt of a server\n"
 		"  v_amkey login           log in on this server, and by itself from now on when you join it\n"
-		"  v_amkey forget          not by itself on this server any more\n"
+		"  v_amkey forget          no login by itself on this server any more, and forget its host key\n"
+		"  v_amkey trust           log in and keep the host key the server sends now, even if it is another one than before\n"
 		"v_authAgent %i (1: the keys of your ssh-agent are used too, 1Password is one), by itself on: %s\n",
 		path, v_authAgent.integer, v_authServers.string[0] ? v_authServers.string : "no server" ) );
 }

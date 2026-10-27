@@ -39,6 +39,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // this login to get a signature that is worth something elsewhere. The address is in it against a server that
 // passes the nonce of another server on: the real one can compare it with its own (vs_authHosts).
 //
+// Version 2 (vs_caps AUTH_CAPS_HOST) has the host key of the server in it as well: 32 random bytes the server
+// made once and sends with the nonce. The client keeps it for the address (admin_hosts.txt) the first time it
+// logs in there and from then on signs for that address only with that key. A server that passes on the nonce
+// of another one has to send the key of the other one with it, which the client does not have for the address
+// of the server it is on, or the real one finds its own key missing from what was signed. Nothing proves that a
+// server has its key: it does not need to, the protection is what the client kept. So it is no secret either.
+//
 // Sizes are the ones of Ed25519. A secret key is kept the way Monocypher and the key files of OpenSSH keep it:
 // the 32 bytes of the seed and behind them the 32 bytes of the public key.
 
@@ -54,12 +61,29 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AUTH_NONCE_MSEC			30000
 
 #define AUTH_CAPS_BIT			4		// in the serverinfo vs_caps: this server knows the login
+#define AUTH_CAPS_HOST			256		//	and version 2, with its host key
+#define AUTH_HOST_SIZE			32
+#define AUTH_HOSTS_FILE_SIZE	8192	// admin_hosts.txt of a client: an address and a key a line, about 70 bytes
 
 // bytes nobody can guess, from the system. qfalse: there are none, and nothing may be made from the buffer.
 qboolean	BG_AuthRandom( byte *out, int size );
 
-// The message a client signs and a server checks. Returns its length, 0: it does not fit.
-int			BG_AuthMessage( byte *out, int outSize, const byte *nonce, const char *address, int clientNum );
+// The message a client signs and a server checks. host NULL: version 1, without the host key. Returns its
+// length, 0: it does not fit.
+int			BG_AuthMessage( byte *out, int outSize, const byte *nonce, const byte *host, const char *address, int clientNum );
+
+// admin_hosts.txt of a client: "<address> <host key as base64>" a line. What the file says of this address
+// and this key:
+typedef enum authHostState_e {
+	AUTH_HOST_NEW,			// neither is in it
+	AUTH_HOST_SAME,			// the address with this key
+	AUTH_HOST_CHANGED,		// the address with another key
+	AUTH_HOST_ELSEWHERE		// the key, but for another address (in other)
+} authHostState_t;
+authHostState_t	BG_AuthHostsFind( const char *text, const char *address, const byte *host, char *other, int otherSize );
+// The text with the line of the address replaced by one with this key, at the end (host NULL: taken away).
+// The oldest lines go when it does not fit. Returns the length.
+int			BG_AuthHostsSet( const char *text, const char *address, const byte *host, char *out, int outSize );
 
 // "ssh-ed25519 AAAA... comment", as ssh-keygen writes it and authorized_keys has it. The line may start
 // anywhere in front of the "ssh-ed25519". qfalse: this is no such line.
