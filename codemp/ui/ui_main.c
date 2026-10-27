@@ -8856,6 +8856,11 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 
 					return needPass;
 				case SORT_PING :
+					// a server the client left for its intrusion detection: the engine says so, and this column is
+					// measured by the client, so no server can put the mark here itself
+					if ( atoi( Info_ValueForKey( info, "ids" ) ) ) {
+						return S_COLOR_RED "IDS";
+					}
 					if (ping <= 0) {
 						return "...";
 					} else {

@@ -11,10 +11,10 @@
 #   --keep              leave build-test/ids as it is after the run
 #
 # none: vs_idsTest 0, the client joins and ids.log stays empty. cvars: cvars the server may not set, written down,
-# the client stays. protected: a protected cvar, refused and written down like the others, the client stays. gamedir:
-# fs_game with a path, the client leaves, the next connect is refused, the one after it leaves again. size: a
+# the client stays. protected: a protected cvar, the client leaves, the next connect is refused, the one after it
+# leaves again. gamedir: fs_game with a path, the same. size: a
 # download whose first block says half of its size. unasked: download data nobody asked for (the client leaves at
-# the third). The download scenario runs the level mp/idstest, a copy of mp/duel4 in a pak only the server has. Logs: build-test/ids/<scenario>-server.log, <scenario>-client.log and <scenario>-ids.log.
+# the third; it reads the whole message, so nothing of it is taken for the next commands). The download scenario runs the level mp/idstest, a copy of mp/duel4 in a pak only the server has. Logs: build-test/ids/<scenario>-server.log, <scenario>-client.log and <scenario>-ids.log.
 set -euo pipefail
 # shellcheck source=tools/test/test-env.sh
 . "$(dirname "${BASH_SOURCE[0]}")/test-env.sh"
@@ -130,9 +130,9 @@ run() {
 				"-Left the server" "-You left"
 			check "$name: joined" "$slog" "=3:ClientBegin:" ;;
 		protected)
-			check "$name" "$clog" "+IDS: $from cvars it may not set: fs_basepath=/idstest" \
-				"-Left the server" "-You left"
-			check "$name: joined" "$slog" "=3:ClientBegin:" ;;
+			check "$name" "$clog" "+IDS: $from a cvar no server may set: fs_basepath=/idstest" \
+				"=2:Left the server: it sent a cvar no server may set" \
+				"=1:You left 127.0.0.1:$PORT before: it sent a cvar no server may set" ;;
 		gamedir)
 			check "$name" "$clog" "+IDS: $from a path in the place of its game folder: ../idstest" \
 				"=2:Left the server: it sent a path in the place of its game folder" \
@@ -143,7 +143,7 @@ run() {
 		unasked)
 			check "$name" "$clog" "+IDS: $from data of a download that was not asked for" \
 				"=2:Left the server: it sent data of a download that was not asked for" \
-				"=1:You left 127.0.0.1:$PORT before" ;;
+				"=1:You left 127.0.0.1:$PORT before" "-a message that can not be read" "-Illegible server message" ;;
 	esac
 	check "$name: ids.log" "$IDS/$name-ids.log" "$([ "$name" = none ] && echo "-sent" || echo "+sent")"
 }

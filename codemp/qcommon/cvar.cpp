@@ -844,6 +844,13 @@ cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 	flags = Cvar_Flags( var_name );
 
 	if ( flags != CVAR_NONEXISTENT ) {
+		// first: a protected cvar would otherwise only be refused as one the server may not set, and no server
+		// of the game sends one
+		if((flags & CVAR_PROTECTED))
+		{
+			return CVAR_SERVER_PROTECTED;
+		}
+
 		// If this cvar may not be modified by a server discard the value.
 		// But check for ones where the legacy gamecode might still need to be allowed
 		if(!(flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED | CVAR_USER_CREATED)))
@@ -852,11 +859,6 @@ cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 				Com_Printf(S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", var_name, value);
 				return CVAR_SERVER_REFUSED;
 			}
-		}
-
-		if((flags & CVAR_PROTECTED))
-		{
-			return CVAR_SERVER_PROTECTED;
 		}
 	}
 

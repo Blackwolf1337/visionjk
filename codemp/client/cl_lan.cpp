@@ -301,8 +301,7 @@ void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 	}
 	if (server && buf) {
 		buf[0] = '\0';
-		// marked in every browser, also of other ui modules: the client left it for the intrusion detection
-		Info_SetValueForKey( info, "hostname", CL_IDS_Left( &server->adr ) ? va( S_COLOR_RED "IDS " S_COLOR_WHITE "%s", server->hostName ) : server->hostName );
+		Info_SetValueForKey( info, "hostname", server->hostName);
 		Info_SetValueForKey( info, "mapname", server->mapName);
 		Info_SetValueForKey( info, "clients", va("%i",server->clients));
 		Info_SetValueForKey( info, "sv_maxclients", va("%i",server->maxClients));
@@ -321,6 +320,11 @@ void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 		Info_SetValueForKey( info, "g_humanplayers", va( "%i", ( server->humans == -1
 			&& ( !server->humansAskTime || cls.realtime - server->humansAskTime >= HUMANS_WAIT_MSEC ) ) ? -2 : server->humans ) );
 		Info_SetValueForKey( info, "bots", va( "%i", server->bots ) );
+		// the client left it for the intrusion detection. Not in the hostname: that one the server chooses, any
+		// server could put the mark there itself (the ui shows it in the column of the ping)
+		if ( CL_IDS_Left( &server->adr ) ) {
+			Info_SetValueForKey( info, "ids", "1" );
+		}
 //		Info_SetValueForKey( info, "sv_allowAnonymous", va("%i", server->allowAnonymous));
 //		Info_SetValueForKey( info, "pure", va("%i", server->pure ) );
 		Q_strncpyz(buf, info, buflen);

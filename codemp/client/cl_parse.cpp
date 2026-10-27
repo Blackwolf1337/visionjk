@@ -497,7 +497,7 @@ void CL_SystemInfoChanged( void ) {
 			Q_strcat( refused, sizeof( refused ), va( "%s%s=%s", *refused ? ", " : "", key, value ) );
 			break;
 		case CVAR_SERVER_PROTECTED:
-			CL_IDS_Event( CLIDS_CVAR, NULL, va( "%s=%s", key, value ) );
+			CL_IDS_Event( CLIDS_CVAR_PROTECTED, NULL, va( "%s=%s", key, value ) );
 			Com_Error( ERR_DROP, "Server tried to set \"%s\" to \"%s\"", key, value );
 			break;
 		}
@@ -658,51 +658,66 @@ A download message has been received from the server
 =====================
 */
 void CL_ParseDownload ( msg_t *msg ) {
-	int		size;
+	int		size, fileSize = 0;
 	unsigned char data[MAX_MSGLEN];
 	uint16_t block;
+	const char *why = NULL;
+	qboolean	asked;
+
+	// The whole message is read before anything is decided, also of a download nobody asked for: what is left
+	// unread would be taken for the next commands of the server (block zero again after it came is one too).
+	block = MSG_ReadShort ( msg );
+
+	if ( !block )
+	{
+		// block zero is special, contains file size, or -1 and why the server can not send the file
+		fileSize = MSG_ReadLong ( msg );
+		if ( fileSize < 0 ) {
+			why = MSG_ReadString( msg );
+		}
+	}
+
+	size = 0;
+	if ( !why ) {
+		size = /*(unsigned short)*/MSG_ReadShort ( msg );
+		if (size < 0 || size > (int)sizeof(data))
+		{
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "a block of a download of a wrong size" );
+			Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
+			return;
+		}
+
+		MSG_ReadData( msg, data, size );
+	}
 
 	// A pak that comes from the web address of the server was not asked from the server. What still comes of one
 	// that was (the last block again, while the acknowledgement is on its way) is no attack.
+	asked = (qboolean)( *clc.downloadTempName != '\0' );
 	if ( CL_DownloadWebBusy() ) {
 		Com_DPrintf( "Server sending download while a pak comes from its web address\n" );
 		CL_AddReliableCommand( "stopdl", qfalse );
 		return;
 	}
 
-	if (!*clc.downloadTempName) {
+	if ( !asked ) {
 		Com_Printf("Server sending download, but no download was requested\n");
 		CL_AddReliableCommand("stopdl", qfalse);
 		CL_IDS_Event( CLIDS_DOWNLOAD, NULL, NULL );
 		return;
 	}
 
-	// read the data
-	block = MSG_ReadShort ( msg );
-
 	if ( !block && !clc.downloadBlock )
 	{
-		// block zero is special, contains file size
-		clc.downloadSize = MSG_ReadLong ( msg );
+		clc.downloadSize = fileSize;
 
 		Cvar_SetValue( "cl_downloadSize", clc.downloadSize );
 
-		if (clc.downloadSize < 0)
+		if ( why )
 		{
-			Com_Error(ERR_DROP, "%s", MSG_ReadString( msg ) );
+			Com_Error(ERR_DROP, "%s", why );
 			return;
 		}
 	}
-
-	size = /*(unsigned short)*/MSG_ReadShort ( msg );
-	if (size < 0 || size > (int)sizeof(data))
-	{
-		CL_IDS_Event( CLIDS_MESSAGE, NULL, "a block of a download of a wrong size" );
-		Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
-		return;
-	}
-
-	MSG_ReadData( msg, data, size );
 
 	if((clc.downloadBlock & 0xFFFF) != block)
 	{

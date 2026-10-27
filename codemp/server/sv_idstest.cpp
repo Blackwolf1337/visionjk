@@ -24,8 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Only in visionjkded-idstest (BuildDevIdsTest), never in a release: the file is not part of any other program.
 // tools/test/ids-test.sh runs it. vs_idsTest is a sum of what the server does wrong:
 //   1   systeminfo: cvars a server may not set (cl_allowDownload, rconPassword)
-//   2   systeminfo: a protected cvar (fs_basepath). The client refuses it as one it may not set: the drop for a
-//       protected cvar in Cvar_Server_Set is only reached by one a server may set otherwise, and there is none
+//   2   systeminfo: a protected cvar (fs_basepath)
 //   4   systeminfo: a path in the place of the game folder (fs_game ../idstest)
 //   8   a download: block zero says half of the size of the file
 //   16  a download block in every snapshot of a client that asked for none
@@ -71,13 +70,18 @@ int SV_IDSTest_DownloadSize( int size ) {
 	return ( vs_idsTest->integer & IDSTEST_SIZE ) ? size / 2 : size;
 }
 
-// a download message for a client in the game that asked for none. Only the command: a client that asked for
-// nothing reads no further (CL_ParseDownload), so a block behind it would be taken for the next commands.
+// a block of a download, 16 bytes, for a client in the game that asked for none. A client that does not read the
+// whole message takes the rest for the next commands and ends the connection for a message it can not read.
 void SV_IDSTest_Unasked( client_t *cl, msg_t *msg ) {
+	static const byte	junk[16] = { 0 };
+
 	if ( !( vs_idsTest->integer & IDSTEST_UNASKED ) || *cl->downloadName || cl->state != CS_ACTIVE ) {
 		return;
 	}
 	MSG_WriteByte( msg, svc_download );
+	MSG_WriteShort( msg, 1 );
+	MSG_WriteShort( msg, (int)sizeof( junk ) );
+	MSG_WriteData( msg, junk, (int)sizeof( junk ) );
 }
 
 #endif // VISIONJK_IDS_TEST
