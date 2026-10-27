@@ -3,6 +3,7 @@ Key: [-] removed, [+] added, [\*] modified
 
 # VisionJK
 
+* [\*] A build between two tags (`git describe` gives `v0.2.9-dev.4-3-gabc1234`) takes the version of the tag it was made after and is offered a strictly newer version on its channel, so a self-built client updates when a new release or development build is out. Its own tag is not offered as a repair. A build with no version the updater can read (`vUNKNOWN`, `v0.1.0-rc1`) still gets no updates and says so in the console.
 * [\*] The project is named VisionJK: binaries `visionjk.<arch>` and `visionjkded.<arch>`, configs `visionjk.cfg` and `visionjk_server.cfg`, home folder `visionjk` (`VisionJK` on Windows and macOS). Everything below this section is the history of OpenJK, which VisionJK is based on.
 * [-] Removed the `ja_guid` userinfo field, the key file `jakey` it was made from, and the cvars `cl_enableGuid` and `cl_guidServerUniq`. The client no longer identifies itself to servers.
 * [\*] `cl_motd` is 0 by default: the client does not contact the update server on connect unless it is switched on.

@@ -61,7 +61,13 @@ the last development build. A development build is a version like `0.2.8-dev.2` 
 
 The order is `0.2.8-dev.1` < `0.2.8-dev.2` < `0.2.8` < `0.2.9-dev.1`. Inside, a version has a fourth part:
 the number of the development build, or `UPD_STABLE` (10000) for a release. A build between two tags
-(`v0.2.7-4-gc0e1c5a2`, `v0.2.8-dev.1-3-gabc1234`) has no such version and is never updated.
+(`v0.2.7-4-gc0e1c5a2`, `v0.2.8-dev.1-3-gabc1234`) takes the version of the tag it was made after. It has
+commits that tag does not have, so only a strictly newer version on its channel is offered (on `dev` newer
+development builds and releases, on `stable` newer releases). The version of its own tag is not offered as a
+repair, and a development based build on `stable` is not taken back to an older release. As always the update
+is only offered, the player starts it with `update` or a click. The console names such a build by its full
+version: "This is version 0.0.2-1-gabc1234. The newest version is 0.0.2." A build whose tag has no version
+the updater can read (`vUNKNOWN` without git, `v0.1.0-rc1`) gets no updates and the console says so.
 
 Changing `v_updateChannel` makes the client ask the website again at once. Switching to `dev` prints:
 
@@ -91,9 +97,9 @@ stable channel stays where it was, so they keep working.
 
 ## What is never replaced
 
-- A build that is not a release or a development build. The version of a build is the tag it was made from,
-  and only a tag like `v0.1.1` or `v0.2.8-dev.1` counts. A build between two tags (`v0.1.1-3-gabc1234`) is
-  somebody's own and is left alone.
+- A build whose tag is not a release or a development build. The version of a build is the tag it was made
+  from or after, and only a tag like `v0.1.1` or `v0.2.8-dev.1` counts. A build between two tags
+  (`v0.1.1-3-gabc1234`) is updated only to a newer version, see "The update channels".
 - A `.cfg` that is there (`japlus/server.cfg` and the others). A release can bring a new one, it never
   replaces one.
 - Anything outside the folder the program is in, and anything a file list names that is not a plain path
@@ -180,7 +186,7 @@ that lies there wins over every update. The check hashes the modules of the list
 (`upd.shadow`), with an update and with a repair, and `update` gives the ones that differ the ending
 `.vjkold`. It is the one thing the updater touches outside the folder of the game: a file with the path of a
 module of the list, renamed, never deleted. If nothing else has to be fetched the game starts again once.
-A build that is no release (somebody's own, with modules in a folder of its own on purpose) is not checked.
+A build that is no release (with modules in a folder of its own on purpose) is not checked.
 
 "Before any file is open" has to hold for the start the game makes of itself too, and up to version 0.1.2 it
 did not on Windows. Two things came together. The video of the main menu is read from the asset pack
@@ -281,8 +287,11 @@ next start asks again. A download that breaks off changes no file.
   - The address: without https on the command line it is refused and the address of the build is asked. A
     config file with `set` and `seta` can not change it, neither can the console. With https on the command
     line it is taken, and a server that speaks no TLS there gives no update ("SSL connect error").
-  - A build between two releases and a game with another `fs_basepath`: each says why it does not update,
-    and the server gets no request. The folder of the program under another spelling is not another folder.
+  - A build with no readable version (`vUNKNOWN`) and a game with another `fs_basepath`: each says why it
+    does not update, and the server gets no request. The folder of the program under another spelling is not
+    another folder.
+  - A build between two releases (`devbuild`): 0.0.1-5-gabc1234 updates to 0.0.2, 0.0.2-1-gabc1234 gets
+    nothing, `vUNKNOWN` gets the message that it has no version number.
 - The line on the menu was looked at in two screenshots, once offered and once failed, on the main menu of
   the client assets and on the one of the original game.
 - `check_update` of the website's `tools/deploy.sh`, by itself on a copy of that server: a true list
