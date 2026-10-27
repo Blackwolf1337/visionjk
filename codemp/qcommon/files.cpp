@@ -220,10 +220,15 @@ typedef struct pack_s {
 	int				numHeaderLongs;				//	without opening the pak again (FS_NewChecksumFeed)
 } pack_t;
 
+#define FS_LISTING_HASH		64
+
+typedef struct fsListing_s fsListing_t;
+
 typedef struct directory_s {
 	char		path[MAX_OSPATH];		// c:\jediacademy\gamedata
 	char		fullpath[MAX_OSPATH];	// c:\jediacademy\gamedata\base
 	char		gamedir[MAX_OSPATH];	// base
+	fsListing_t	*listings[FS_LISTING_HASH];	// of its folders, as far as they were looked into (FS_DirMayHave)
 } directory_t;
 
 typedef struct searchpath_s {
@@ -235,6 +240,7 @@ typedef struct searchpath_s {
 
 static char		fs_gamedir[MAX_OSPATH];	// this will be a single file name with no separators
 static cvar_t		*fs_debug;
+static cvar_t		*v_fsIndex;
 static cvar_t		*fs_homepath;
 
 #ifdef MACOS_X
@@ -548,6 +554,275 @@ FS_CreatePath
 Creates any directories needed to store the given filename
 ============
 */
+/*
+===============================================================================
+
+The listings of the loose folders
+
+Every file the game looks for is tried in the folders of the search path before it comes to the paks: the home
+folder and the game folder, japlus and base, four tries in all for a file of a pak, and one more for each .wav
+that is looked for before its .mp3. A try that finds nothing is a call of the system each time, 39815 in one run of
+tools/test/join-test.sh: on Linux 1 microsecond each, on Windows several times as much. So each folder of the search
+path is listed once, a folder of it the first time a file below it is looked for, and a file that is not in the
+listing of its folder, or below a folder that is not there, is not tried (FS_DirMayHave). Those listings are what
+the disk had when they were made:
+
+- a file the game writes (every write goes through FS_CreatePath(), and the renames) is put into them;
+- everything else that changes the folders, another program or the web panel of the server writing a file, is seen
+  after the next level, when all listings are made anew (FS_NewChecksumFeed()), or the next restart of the file
+  system;
+- a .cfg is always tried, so that a config put there by hand can be run at once;
+- a folder with more files than Sys_ListFiles() lists can not say what is missing: below it everything is tried.
+
+v_fsIndex 0: everything is tried, as before.
+
+===============================================================================
+*/
+
+#define FS_LISTING_MOST		( 0x1000 - 1 )		// what Sys_ListFiles() stops at (MAX_FOUND_FILES of sys_*.cpp)
+
+struct fsListing_s {
+	fsListing_t	*next;					// in the hash of its directory
+	char		*folder;				// below the directory, lower case, '/' at its end, "" for the directory itself
+	qboolean	full;					// Sys_ListFiles() stopped at its limit: it can not say what is missing
+	int			numNames, maxNames;
+	char		**names;				// sorted, lower case, a folder with '/' at its end
+};
+
+static unsigned int FS_ListingHash( const char *folder ) {
+	unsigned int hash = 2166136261u;
+
+	while ( *folder ) {
+		hash = ( hash ^ (byte)*folder++ ) * 16777619u;
+	}
+	return hash & ( FS_LISTING_HASH - 1 );
+}
+
+static int FS_ListingCompare( const void *a, const void *b ) {
+	return strcmp( *(char * const *)a, *(char * const *)b );
+}
+
+static void FS_ListingAddName( fsListing_t *listing, const char *name ) {
+	int lo = 0, hi = listing->numNames;
+
+	while ( lo < hi ) {
+		const int mid = ( lo + hi ) / 2, c = strcmp( listing->names[mid], name );
+
+		if ( !c ) {
+			return;
+		}
+		if ( c < 0 ) {
+			lo = mid + 1;
+		} else {
+			hi = mid;
+		}
+	}
+	if ( listing->numNames == listing->maxNames ) {
+		const int	most = listing->maxNames ? listing->maxNames * 2 : 16;
+		char		**names = (char **)Z_Malloc( most * sizeof( *names ), TAG_FILESYS, qfalse );
+
+		if ( listing->numNames ) {
+			memcpy( names, listing->names, listing->numNames * sizeof( *names ) );
+		}
+		if ( listing->names ) {
+			Z_Free( listing->names );
+		}
+		listing->names = names;
+		listing->maxNames = most;
+	}
+	memmove( listing->names + lo + 1, listing->names + lo, ( listing->numNames - lo ) * sizeof( *listing->names ) );
+	listing->names[lo] = CopyString( name );
+	listing->numNames++;
+}
+
+static qboolean FS_ListingHasName( const fsListing_t *listing, const char *name ) {
+	const char *key = name;
+
+	return bsearch( &key, listing->names, listing->numNames, sizeof( *listing->names ), FS_ListingCompare ) ? qtrue : qfalse;
+}
+
+static void FS_ListingTake( fsListing_t *listing, char **list, int count, qboolean folders ) {
+	char	name[MAX_OSPATH];
+	int		i;
+
+	if ( count >= FS_LISTING_MOST ) {
+		listing->full = qtrue;
+	}
+	for ( i = 0; i < count; i++ ) {
+		if ( !strcmp( list[i], "." ) || !strcmp( list[i], ".." ) ) {
+			continue;
+		}
+		Com_sprintf( name, sizeof( name ), "%s%s", list[i], folders ? "/" : "" );
+		Q_strlwr( name );
+		FS_ListingAddName( listing, name );
+	}
+}
+
+// the listing of folder below dir, made now if there is none
+static fsListing_t *FS_ListingOf( directory_t *dir, const char *folder ) {
+	const unsigned int	hash = FS_ListingHash( folder );
+	fsListing_t			*listing;
+	char				osFolder[MAX_OSPATH], **list;
+	int					count;
+
+	for ( listing = dir->listings[hash]; listing; listing = listing->next ) {
+		if ( !strcmp( listing->folder, folder ) ) {
+			return listing;
+		}
+	}
+	listing = (fsListing_t *)Z_Malloc( sizeof( *listing ), TAG_FILESYS, qtrue );
+	listing->folder = CopyString( folder );
+	listing->next = dir->listings[hash];
+	dir->listings[hash] = listing;
+
+	Com_sprintf( osFolder, sizeof( osFolder ), "%s%c%s", dir->fullpath, PATH_SEP, folder );
+	FS_ReplaceSeparators( osFolder );
+	list = Sys_ListFiles( osFolder, "", NULL, &count, qfalse );
+	FS_ListingTake( listing, list, count, qfalse );
+	Sys_FreeFileList( list );
+	list = Sys_ListFiles( osFolder, "/", NULL, &count, qfalse );
+	FS_ListingTake( listing, list, count, qtrue );
+	Sys_FreeFileList( list );
+	return listing;
+}
+
+static void FS_ListingsFree( directory_t *dir ) {
+	int i, n;
+
+	for ( i = 0; i < FS_LISTING_HASH; i++ ) {
+		while ( dir->listings[i] ) {
+			fsListing_t *listing = dir->listings[i];
+
+			dir->listings[i] = listing->next;
+			for ( n = 0; n < listing->numNames; n++ ) {
+				Z_Free( listing->names[n] );
+			}
+			if ( listing->names ) {
+				Z_Free( listing->names );
+			}
+			Z_Free( listing->folder );
+			Z_Free( listing );
+		}
+	}
+}
+
+static void FS_ListingsFreeAll( void ) {
+	searchpath_t *search;
+
+	for ( search = fs_searchpaths; search; search = search->next ) {
+		if ( search->dir ) {
+			FS_ListingsFree( search->dir );
+		}
+	}
+}
+
+// a path below a directory as the listings have it: lower case, '/' between the folders
+static qboolean FS_ListingPath( const char *path, char *out, int outSize ) {
+	int i;
+
+	for ( i = 0; path[i]; i++ ) {
+		if ( i >= outSize - 1 ) {
+			return qfalse;
+		}
+		out[i] = ( path[i] == '\\' ) ? '/' : (char)tolower( (unsigned char)path[i] );
+	}
+	out[i] = '\0';
+	return qtrue;
+}
+
+/*
+================
+FS_DirMayHave
+
+qfalse: filename is not in the folder dir, its listings say so. qtrue: it may be, it is tried.
+================
+*/
+static qboolean FS_DirMayHave( directory_t *dir, const char *filename ) {
+	char		path[MAX_OSPATH], folder[MAX_OSPATH], name[MAX_OSPATH];
+	const char	*part;
+
+	if ( !v_fsIndex ) {
+		return qtrue;
+	}
+	if ( v_fsIndex->modified ) {
+		// (what was written while it was off is in no listing)
+		v_fsIndex->modified = qfalse;
+		FS_ListingsFreeAll();
+	}
+	if ( !v_fsIndex->integer || COM_CompareExtension( filename, ".cfg" ) ) {
+		return qtrue;
+	}
+	if ( !FS_ListingPath( filename, path, sizeof( path ) ) ) {
+		return qtrue;
+	}
+	folder[0] = '\0';
+	for ( part = path; *part; ) {
+		const char			*slash = strchr( part, '/' );
+		const int			len = slash ? (int)( slash - part ) + 1 : (int)strlen( part );
+		const fsListing_t	*listing = FS_ListingOf( dir, folder );
+
+		if ( listing->full ) {
+			return qtrue;
+		}
+		if ( len == 1 && slash ) {
+			// (a doubled slash: the system takes it as one)
+			part++;
+			continue;
+		}
+		Q_strncpyz( name, part, Q_min( len + 1, (int)sizeof( name ) ) );
+		if ( !FS_ListingHasName( listing, name ) ) {
+			return qfalse;
+		}
+		Q_strcat( folder, sizeof( folder ), name );
+		part += len;
+	}
+	return qtrue;
+}
+
+// A file is written at osPath, or comes there by a rename: into the listings of the directory it is below.
+static void FS_DirAdded( const char *osPath ) {
+	searchpath_t	*search;
+	char			path[MAX_OSPATH], folder[MAX_OSPATH], name[MAX_OSPATH];
+
+	for ( search = fs_searchpaths; search; search = search->next ) {
+		directory_t	*dir = search->dir;
+		const char	*part;
+		size_t		len;
+
+		if ( !dir ) {
+			continue;
+		}
+		len = strlen( dir->fullpath );
+		if ( Q_stricmpn( osPath, dir->fullpath, (int)len ) || ( osPath[len] != '/' && osPath[len] != '\\' ) ) {
+			continue;
+		}
+		if ( !FS_ListingPath( osPath + len + 1, path, sizeof( path ) ) ) {
+			FS_ListingsFree( dir );
+			continue;
+		}
+		folder[0] = '\0';
+		for ( part = path; *part; ) {
+			const char	*slash = strchr( part, '/' );
+			const int	nameLen = slash ? (int)( slash - part ) + 1 : (int)strlen( part );
+			fsListing_t	*listing;
+
+			if ( nameLen == 1 && slash ) {
+				part++;
+				continue;
+			}
+			// only a listing that is there is told: one that is not is made from the disk when it is needed
+			for ( listing = dir->listings[FS_ListingHash( folder )]; listing && strcmp( listing->folder, folder ); listing = listing->next ) {
+			}
+			Q_strncpyz( name, part, Q_min( nameLen + 1, (int)sizeof( name ) ) );
+			if ( listing ) {
+				FS_ListingAddName( listing, name );
+			}
+			Q_strcat( folder, sizeof( folder ), name );
+			part += nameLen;
+		}
+	}
+}
+
 qboolean FS_CreatePath (char *OSPath) {
 	char	*ofs;
 	char	path[MAX_OSPATH];
@@ -579,6 +854,8 @@ qboolean FS_CreatePath (char *OSPath) {
 			*ofs = PATH_SEP;
 		}
 	}
+	// (every write of the file system comes here first, with the path of the file)
+	FS_DirAdded( OSPath );
 	return qfalse;
 }
 
@@ -989,6 +1266,8 @@ void FS_SV_Rename( const char *from, const char *to, qboolean safe ) {
 		// Failed, try copying it and deleting the original
 		FS_CopyFile ( from_ospath, to_ospath );
 		FS_Remove ( from_ospath );
+	} else {
+		FS_DirAdded( to_ospath );
 	}
 }
 
@@ -1019,6 +1298,8 @@ void FS_Rename( const char *from, const char *to ) {
 		// Failed, try copying it and deleting the original
 		FS_CopyFile ( from_ospath, to_ospath );
 		FS_Remove ( from_ospath );
+	} else {
+		FS_DirAdded( to_ospath );
 	}
 }
 
@@ -1530,6 +1811,9 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 				}
 
 				dir = search->dir;
+				if ( !FS_DirMayHave( dir, filename ) ) {
+					continue;
+				}
 
 				netpath = FS_BuildOSPath( dir->path, dir->gamedir, filename );
 				fsh[*file].handleFiles.file.o = fopen (netpath, "rb");
@@ -3777,6 +4061,7 @@ void FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles ) {
 			FS_FreePak( p->pack );
 		}
 		if ( p->dir ) {
+			FS_ListingsFree( p->dir );
 			Z_Free( p->dir );
 		}
 		Z_Free( p );
@@ -4029,6 +4314,8 @@ qboolean FS_NewChecksumFeed( int checksumFeed ) {
 		}
 	}
 	fs_checksumFeed = checksumFeed;
+	// what changed in the loose folders since is seen from now on (FS_DirMayHave)
+	FS_ListingsFreeAll();
 	// as FS_Restart: the references go, and those the lists force come again
 	FS_ClearPakReferences( 0 );
 	FS_ReorderPurePaks();
@@ -4045,6 +4332,7 @@ void FS_Startup( const char *gameName ) {
 	fs_packFiles = 0;
 
 	fs_debug = Cvar_Get( "fs_debug", "0", 0 );
+	v_fsIndex = Cvar_Get( "v_fsIndex", "1", CVAR_ARCHIVE_ND, "Files that are not in the loose folders of the search path are not looked for there: each folder is listed once. 0: every file is tried in every folder" );
 	fs_copyfiles = Cvar_Get( "fs_copyfiles", "0", CVAR_INIT );
 	fs_cdpath = Cvar_Get ("fs_cdpath", "", CVAR_INIT|CVAR_PROTECTED, "(Read Only) Location for development files" );
 	fs_basepath = Cvar_Get ("fs_basepath", Sys_DefaultInstallPath(), CVAR_INIT|CVAR_PROTECTED, "(Read Only) Location for game files" );
