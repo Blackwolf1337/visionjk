@@ -83,6 +83,7 @@ typedef struct updList_s {
 
 qboolean	UPD_ParseVersion( const char *text, int version[UPD_VERSION_PARTS] );
 qboolean	UPD_ParseRelease( const char *tag, int version[UPD_VERSION_PARTS] );
+qboolean	UPD_ParseBuild( const char *tag, int version[UPD_VERSION_PARTS] );
 int			UPD_CompareVersion( const int a[UPD_VERSION_PARTS], const int b[UPD_VERSION_PARTS] );
 qboolean	UPD_IsDev( const int version[UPD_VERSION_PARTS] );
 void		UPD_VersionText( const int version[UPD_VERSION_PARTS], char *out, size_t outSize );

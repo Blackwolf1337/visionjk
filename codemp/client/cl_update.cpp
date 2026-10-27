@@ -103,6 +103,7 @@ static struct {
 	qboolean		addressRefused;				//	or tried to: it was no https address
 	int				own[UPD_VERSION_PARTS];
 	qboolean		release;					// this build is a release or a development build, so there can be a newer one of it
+	qboolean		between;					// or a build after one of them (UPD_ParseBuild): own is that tag, only a newer version replaces it
 	qboolean		channelDev;					// v_updateChannel when the website was last asked: the development builds
 	qboolean		elsewhere;					// the game reads its files from another folder than the program's
 	char			home[MAX_OSPATH];			// the folder of the player (fs_homepath), "" if it is the program's
@@ -605,8 +606,9 @@ static int Update_CheckThread( void *unused ) {
 	} else {
 		upd.ok = qtrue;
 		newer = UPD_CompareVersion( upd.list.version, upd.own );
-		upd.back = ( newer < 0 && !upd.dev && UPD_IsDev( upd.own ) ) ? qtrue : qfalse;
-		if ( newer >= 0 || upd.back ) {
+		// a build after a tag has more than the tag: it is neither repaired to it nor taken back to a release
+		upd.back = ( newer < 0 && !upd.dev && UPD_IsDev( upd.own ) && !upd.between ) ? qtrue : qfalse;
+		if ( newer > 0 || ( !upd.between && ( newer == 0 || upd.back ) ) ) {
 			upd.repair = ( newer == 0 ) ? qtrue : qfalse;
 			for ( i = 0; i < upd.list.numFiles && !upd.cancel; i++ ) {
 				const updFile_t	*file = &upd.list.files[i];
@@ -751,6 +753,11 @@ static const char *Update_VersionText( const int version[UPD_VERSION_PARTS] ) {
 	return text[n];
 }
 
+// the version of this build as the console names it: a build after a tag by all git says of it
+static const char *Update_OwnText( void ) {
+	return upd.between ? UPDATE_VERSION + 1 : Update_VersionText( upd.own );
+}
+
 static const char *Update_Verb( void ) {
 	return upd.repair ? "Repairing" : ( upd.back ? "Switching to" : "Updating to" );
 }
@@ -867,7 +874,7 @@ static void Update_Checked( void ) {
 	}
 	if ( !upd.numChange && !upd.numShadow && !upd.numLeft ) {
 		if ( !upd.quiet )
-			Com_Printf( "This is version %s. The newest%s version is %s.\n", Update_VersionText( upd.own ),
+			Com_Printf( "This is version %s. The newest%s version is %s.\n", Update_OwnText(),
 				upd.dev ? " development" : "", Update_VersionText( upd.list.version ) );
 		Update_Say( UPDATE_NONE, "" );
 		return;
@@ -875,7 +882,7 @@ static void Update_Checked( void ) {
 	Update_Available();
 	if ( upd.leftUnknown ) {
 		Com_Printf( S_COLOR_YELLOW "Could not download the file list of version %s. Files that exist only in that version may be left in the "
-			"game folder after the update.\n", Update_VersionText( upd.own ) );
+			"game folder after the update.\n", Update_OwnText() );
 	}
 	if ( upd.back ) {
 		Com_Printf( S_COLOR_CYAN "You are on development build %s, but the update channel is set to stable. To switch to stable version %s, "
@@ -883,7 +890,7 @@ static void Update_Checked( void ) {
 			Update_VersionText( upd.list.version ), upd.fetchBytes / 1048576.0, upd.numChange );
 	} else if ( !upd.repair ) {
 		Com_Printf( S_COLOR_CYAN "Version %s is out (you have %s). To update, type update here or click the line on the main menu "
-			"(%.1f MB in %i files).\n", Update_VersionText( upd.list.version ), Update_VersionText( upd.own ), upd.fetchBytes / 1048576.0, upd.numChange );
+			"(%.1f MB in %i files).\n", Update_VersionText( upd.list.version ), Update_OwnText(), upd.fetchBytes / 1048576.0, upd.numChange );
 	} else if ( upd.numChange ) {
 		for ( i = 0; i < upd.list.numFiles && !upd.change[i]; i++ ) {
 		}
@@ -978,8 +985,8 @@ void CL_UpdateFrame( void ) {
 }
 
 static qboolean Update_Possible( void ) {
-	if ( !upd.release ) {
-		Com_Printf( "This is a build between two releases (%s). There are no updates for these.\n", UPDATE_VERSION );
+	if ( !upd.release && !upd.between ) {
+		Com_Printf( "This build has no version number the updater can read (%s), so it can not check for updates.\n", UPDATE_VERSION );
 		return qfalse;
 	}
 	if ( upd.elsewhere ) {
@@ -1081,6 +1088,7 @@ void CL_UpdateInit( void ) {
 		Com_Printf( "Checking for updates at %s, as given on the command line.\n", upd.address );
 
 	upd.release = UPD_ParseRelease( UPDATE_VERSION, upd.own );
+	upd.between = upd.release ? qfalse : UPD_ParseBuild( UPDATE_VERSION, upd.own );
 	// The files of a release are replaced where the program is. A game that reads its files from somewhere
 	// else (fs_basepath) is set up by hand, and is left to that hand.
 	upd.elsewhere = Sys_SameFolder( Cvar_VariableString( "fs_basepath" ), Sys_ProgramFolder() ) ? qfalse : qtrue;
@@ -1088,7 +1096,7 @@ void CL_UpdateInit( void ) {
 	Q_strncpyz( upd.home, Cvar_VariableString( "fs_homepath" ), sizeof( upd.home ) );
 	if ( Sys_SameFolder( upd.home, Sys_ProgramFolder() ) )
 		upd.home[0] = '\0';
-	if ( upd.release && !upd.elsewhere && upd.address[0] && v_updateCheck->integer )
+	if ( ( upd.release || upd.between ) && !upd.elsewhere && upd.address[0] && v_updateCheck->integer )
 		Update_Start( JOB_CHECK, qtrue );
 }
 

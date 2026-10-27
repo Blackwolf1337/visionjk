@@ -89,6 +89,26 @@ BOOST_AUTO_TEST_CASE( release )
 	BOOST_CHECK( !UPD_ParseRelease( "v0.2.8-dev.1-3-gabc1234", v ) );
 }
 
+BOOST_AUTO_TEST_CASE( build )
+{
+	int v[UPD_VERSION_PARTS];
+
+	// a build after a tag has the version of the tag
+	BOOST_CHECK( UPD_ParseBuild( "v0.2.6-1-g6b0be1b", v ) && v[0] == 0 && v[1] == 2 && v[2] == 6 && v[3] == UPD_STABLE );
+	BOOST_CHECK( UPD_ParseBuild( "v0.2.9-dev.4-13-gabc1234", v ) && v[2] == 9 && v[3] == 4 );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.2.6", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.2.8-dev.1", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "vUNKNOWN", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.1.0-rc1-3-gabc1234", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.2.6-gabc1234", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.2.6--gabc1234", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.2.6-3-g", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v0.2.6-3-gABC1234", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "-3-gabc1234", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "3-gabc1234", v ) );
+	BOOST_CHECK( !UPD_ParseBuild( "v9999.9999.9999-dev.9999-dev.9999-3-gabc1234", v ) );
+}
+
 BOOST_AUTO_TEST_CASE( compare )
 {
 	const int a[UPD_VERSION_PARTS] = { 0, 2, 6, UPD_STABLE }, b[UPD_VERSION_PARTS] = { 0, 10, 0, UPD_STABLE },

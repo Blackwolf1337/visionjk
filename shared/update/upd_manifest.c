@@ -93,11 +93,38 @@ UPD_ParseRelease
 
 The version a build of the game was made from, as git describes it (GIT_TAG). Only the tag of a release or of
 a development build is one, "v0.1.1" or "v0.1.1-dev.2". A build between two tags ("v0.1.1-3-gabc1234",
-"v0.1.1-dev.2-3-gabc1234") is somebody's own and is never replaced.
+"v0.1.1-dev.2-3-gabc1234") is somebody's own, see UPD_ParseBuild.
 =================
 */
 qboolean UPD_ParseRelease( const char *tag, int version[UPD_VERSION_PARTS] ) {
 	return ( tag[0] == 'v' && UPD_ParseVersion( tag + 1, version ) ) ? qtrue : qfalse;
+}
+
+/*
+=================
+UPD_ParseBuild
+
+A build between two tags as git describes it, "v0.1.1-3-gabc1234" or "v0.1.1-dev.2-3-gabc1234": the version of
+the tag it was made after. It has commits that tag does not have, so only a newer version may replace it.
+=================
+*/
+qboolean UPD_ParseBuild( const char *tag, int version[UPD_VERSION_PARTS] ) {
+	char		base[UPD_VERSION_TEXT + 1];
+	const char	*hash = strrchr( tag, '-' ), *count;
+	size_t		len;
+
+	if ( !hash || hash[1] != 'g' || !hash[2] || strspn( hash + 2, "0123456789abcdef" ) != strlen( hash + 2 ) )
+		return qfalse;
+	for ( count = hash; count > tag && count[-1] >= '0' && count[-1] <= '9'; count-- ) {
+	}
+	if ( count == hash || count - 1 <= tag || count[-1] != '-' )
+		return qfalse;
+	len = (size_t)( count - 1 - tag );
+	if ( len >= sizeof( base ) )
+		return qfalse;
+	memcpy( base, tag, len );
+	base[len] = '\0';
+	return UPD_ParseRelease( base, version );
 }
 
 // less than 0: a is the older one. 0: the same. More: a is the newer one.

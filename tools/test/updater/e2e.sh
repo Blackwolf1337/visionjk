@@ -148,6 +148,8 @@ make_exe v0.0.1 "$X/v0.0.1"
 make_exe v0.0.2 "$X/v0.0.2"
 # (a name with a dot in it: the linker for Windows adds .exe to one without)
 make_exe v0.0.1-5-gabc1234 "$X/dev.0"
+make_exe v0.0.2-1-gabc1234 "$X/dev.2"
+make_exe vUNKNOWN "$X/unknown.0"
 make_exe v0.0.3-dev.1 "$X/v0.0.3-dev.1"
 make_exe v0.0.3 "$X/v0.0.3"
 make_release
@@ -314,14 +316,31 @@ for scenario in $want; do
 		;;
 
 	devbuild)
-		echo "== devbuild: a build between two releases"
+		echo "== devbuild: a build between two tags takes a newer version, and nothing for its own tag"
 		make_game dev.0
 		server_start
-		run devbuild 'wait 400\nv_update_check\nupdate\nwait 300\necho UPDTEST-END\nquit\n'
+		run devbuild 'wait 600\nupdate\nwait 1500\necho UPDTEST-END\nquit\n'
 		server_stop
-		check "it says that there is no update for it" has devbuild "This is a build between two releases (v0.0.1-5-gabc1234). There are no updates for these."
+		check "the console says that 0.0.2 is out" has devbuild "Version 0.0.2 is out (you have 0.0.1-5-gabc1234)"
+		check "the next start says that it was updated" has devbuild "The game was updated to version 0.0.2."
+		check "the program is the one of 0.0.2" same "$G/$prog" "$X/v0.0.2"
+		settle
+		check "no .vjknew, .vjkold or journal is left" no_leftovers
+		make_game dev.2
+		server_start
+		run devbuild2 'wait 600\nv_update_check\nupdate\nwait 300\necho UPDTEST-END\nquit\n'
+		server_stop
+		check "a build after 0.0.2 is not repaired to 0.0.2" has devbuild2 "This is version 0.0.2-1-gabc1234. The newest version is 0.0.2."
+		check "nothing is offered" hasnot devbuild2 "Click here"
+		check "the program is its own still" same "$G/$prog" "$X/dev.2"
+		make_game unknown.0
+		: > "$R/server.log"
+		server_start
+		run unknown 'wait 400\nv_update_check\nupdate\nwait 300\necho UPDTEST-END\nquit\n'
+		server_stop
+		check "a build without a version says so" has unknown "This build has no version number the updater can read (vUNKNOWN), so it can not check for updates."
 		check "the server was not asked anything" test ! -s "$R/server.log"
-		check "the program is its own still" same "$G/$prog" "$X/dev.0"
+		check "the program is its own still" same "$G/$prog" "$X/unknown.0"
 		;;
 
 	elsewhere)
