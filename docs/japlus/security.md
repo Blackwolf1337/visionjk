@@ -282,7 +282,8 @@ connectionless packets are dropped unread, and a player the event came from is d
   leaves at once: more data of a download than it said it has (the name and both sizes are in the line). The
   download of a pak by UDP gave the size in the first block, and a server could go on sending data until the
   disk was full. This is a check of the engine: it happens with `v_ids 0` too, only the line in `ids.log` needs
-  `v_ids 1`. A download from the web address of a server stops at 512 MB, as before.
+  `v_ids 1`. With `v_ids 1` it is the intrusion detection that leaves, so the server is remembered (see below).
+  With `v_ids 0` the engine ends the connection itself. A download from the web address of a server stops at 512 MB, as before.
 - Written down: a message the engine ends the connection for (an index past its table, a message that ends
   early, an unknown command), more than 400 commands in a second, an escape character in a command (it is
   taken out: it means nothing to the game and is there for the terminal a console may be printed to), and
@@ -317,6 +318,13 @@ connectionless packets are dropped unread, and a player the event came from is d
   from any other address is not answered, because then anybody could send getinfo to such a server with the
   player's address as sender and the client would confirm it. Every other echo is refused and written down
   as before.
+- A server the client left for the intrusion detection is remembered until the game ends (at most the last 16
+  servers, by address and port; nothing is written to disk). The first connect to it again is refused with the
+  reason: `You left <address> before: it sent <what>.` and that `ids.log` has the details. The next connect goes
+  through, so the player can still join on purpose. If the intrusion detection makes the client leave that server
+  again, it is refused once more the next time. The server browser shows such a server with a red `IDS` in front
+  of its name. This is done in the engine, so it shows in the browser of every ui module (base, JA+ and
+  others). With `v_ids 0` none of this happens.
 
 Tested apart from the game (`japlus_port/tools/idstest`, 38 checks with a clock the test sets): how the
 weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
@@ -337,7 +345,9 @@ the CSI in UTF-8, the chat separator; Cyrillic text and a non-breaking space are
 the end of the buffer does not split a pair). A dedicated server that printed a text with a CSI in UTF-8
 showed a dot in its place. A client with a master server on this machine (a small script) took the list of
 that master, and wrote down and threw away a list from another port of the same address and one from the
-master 12 seconds after it was asked. Not run: a server that sends more of a download than it said, and a
+master 12 seconds after it was asked. A client on a local server was made to leave it by a test command that was
+taken out again afterwards. The server was then marked, another address was not, the next connect was refused
+with the reason and the one after it went through to the game. Not run: a server that sends more of a download than it said, and a
 systeminfo with cvars the server may not set (the engine has no command that puts such a key into the
 systeminfo).
 
