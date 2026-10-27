@@ -3,8 +3,10 @@
 # its log, and the check of a run. Sourced after test-env.sh. A script that uses check_run keeps results=() and
 # failed=0 itself.
 
-# lines that fail a run wherever they are in its log (a line starts with the time)
+# lines that fail a run wherever they are in its log (a line starts with the time), but the quit of a dedicated server
+# that stop_server ends with SIGTERM (sys_unix.cpp quits on it since 0.2.9)
 FAIL_PATTERNS='ERROR:|Sys_Error|Segmentation fault|Signal caught|Received signal|failed to load|assertion'
+FAIL_EXCEPT='Received signal 15, quitting'
 
 die() {
 	echo "$*" >&2
@@ -78,8 +80,8 @@ check_run() {
 	if [ ! -s "$log" ]; then
 		why+=("no log")
 	else
-		if grep -Eiq "$FAIL_PATTERNS" "$log"; then
-			why+=("$(grep -Ei -m 3 "$FAIL_PATTERNS" "$log" | tr "\n" " ")")
+		if grep -Ei "$FAIL_PATTERNS" "$log" | grep -Fqv "$FAIL_EXCEPT"; then
+			why+=("$(grep -Ei "$FAIL_PATTERNS" "$log" | grep -Fv "$FAIL_EXCEPT" | head -n 3 | tr "\n" " ")")
 		fi
 		for want_line in "$@"; do
 			grep -Fq -- "$want_line" "$log" || why+=("no line \"$want_line\"")
