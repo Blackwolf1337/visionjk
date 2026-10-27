@@ -42,6 +42,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_voice.h"
 
 #define VOICE_MAX_PER_CALL	64		// datagrams one call of G_VoiceFrame() takes at most
+#define VOICE_SELF_MISSES	20		// wrong tokens in a second from this machine, which is taken with the token alone,
+#define VOICE_SELF_QUIET	10000	//	before nothing from it is taken for this long (msec)
 
 typedef struct voiceClient_s {
 	unsigned int		token;		// what the server gave him for this connection, 0: he did not ask for voice
@@ -65,6 +67,8 @@ static int				voiceRefused;		// datagrams that were no voice of a client of this
 static int				voiceOutSecond, voiceOutBytes;	// what went out to the clients in this second (vs_voiceKbps)
 static int				voiceCapped;		//	and what was not sent for it
 static struct in_addr	voiceSelf;			// the address of this machine the web host of the server reaches the relay on
+static int				voiceSelfSecond, voiceSelfMisses;	// wrong tokens from it in this second
+static int				voiceSelfQuiet;		//	and until when it is not listened to after too many
 
 /*
 =================
@@ -121,6 +125,7 @@ void G_VoiceInit( qboolean restart ) {
 	trap->Cvar_Register( NULL, "vs_voiceSharedGame", "0", CVAR_ROM );
 	G_VoiceShutdown( qfalse );
 	voiceRefused = voiceCapped = 0;
+	voiceSelfSecond = voiceSelfMisses = voiceSelfQuiet = 0;
 	if ( !vs_voice.integer )
 		return;
 
@@ -376,8 +381,10 @@ port can not be used to flood somebody else.
 =================
 */
 static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *datagram, int len, qboolean viaGame ) {
+	const int		now = trap->Milliseconds();
 	voicePacket_t	p;
 	voiceClient_t	*vc;
+	qboolean		fromSelf;
 
 	// (a VOICE_STATE, a VOICE_STATUS and a VOICE_LOOK are for the masterserver: this relay knows from the game
 	// where everybody is, and the statuses and looks of a server with it go through the game connection,
@@ -390,13 +397,33 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 		return qfalse;
 	}
 	vc = &voiceClients[p.client];
-	if ( !vc->token || p.token != vc->token || !g_entities[p.client].inuse || !g_entities[p.client].client
-		|| g_entities[p.client].client->pers.connected == CON_DISCONNECTED
-		|| ( vc->gameAddrKnown && from->sin_addr.s_addr != vc->gameAddr.s_addr && ( viaGame || !G_VoiceFromWebHost( from ) ) ) ) {
+	// From this machine the token alone counts, so a program on it could try them all (32 bits). After too many
+	// wrong ones in a second nothing from the machine is taken for a while: that also stops the voice of the
+	// browser clients then, but a program that can do this on the server machine can do worse.
+	fromSelf = (qboolean)( !viaGame && G_VoiceFromWebHost( from ) );
+	if ( fromSelf && now - voiceSelfQuiet < 0 ) {
 		voiceRefused++;
 		return qfalse;
 	}
-	if ( !BG_VoiceLimit( &vc->limit, trap->Milliseconds(), len ) ) {
+	if ( !vc->token || p.token != vc->token || !g_entities[p.client].inuse || !g_entities[p.client].client
+		|| g_entities[p.client].client->pers.connected == CON_DISCONNECTED
+		|| ( vc->gameAddrKnown && from->sin_addr.s_addr != vc->gameAddr.s_addr && !fromSelf ) ) {
+		voiceRefused++;
+		if ( fromSelf && vc->token && p.token != vc->token ) {
+			if ( now - voiceSelfSecond >= 1000 || now - voiceSelfSecond < 0 ) {
+				voiceSelfSecond = now;
+				voiceSelfMisses = 0;
+			}
+			if ( ++voiceSelfMisses > VOICE_SELF_MISSES ) {
+				voiceSelfQuiet = now + VOICE_SELF_QUIET;
+				voiceSelfMisses = 0;
+				G_SecurityLogPrintf( "Voice chat: more than %i wrong tokens in a second from this machine, nothing from it is taken for %i s\n",
+					VOICE_SELF_MISSES, VOICE_SELF_QUIET / 1000 );
+			}
+		}
+		return qfalse;
+	}
+	if ( !BG_VoiceLimit( &vc->limit, now, len ) ) {
 		vc->dropped++;
 		return qtrue;
 	}
