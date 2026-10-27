@@ -602,6 +602,7 @@ void	FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles = qfalse );
 #define FS_DOWNLOADS_SESSION	"downloads/session"
 
 qboolean	FS_ConditionalRestart( int checksumFeed );
+qboolean	FS_NewChecksumFeed( int checksumFeed );
 void	FS_Restart( int checksumFeed, qboolean inPlace = qfalse );
 // shutdown and restart the filesystem so changes to fs_gamedir can take effect
 

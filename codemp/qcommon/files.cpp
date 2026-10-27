@@ -216,6 +216,8 @@ typedef struct pack_s {
 	int				hashSize;					// hash table size (power of 2)
 	fileInPack_t*	*hashTable;					// hash table
 	fileInPack_t*	buildBuffer;				// buffer with the filenames etc.
+	int				*headerLongs;				// the checksum feed and the CRCs of the files, for a new feed
+	int				numHeaderLongs;				//	without opening the pak again (FS_NewChecksumFeed)
 } pack_t;
 
 typedef struct directory_s {
@@ -2502,7 +2504,8 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 	pack->checksum = LittleLong( pack->checksum );
 	pack->pure_checksum = LittleLong( pack->pure_checksum );
 
-	Z_Free(fs_headerLongs);
+	pack->headerLongs = fs_headerLongs;
+	pack->numHeaderLongs = fs_numHeaderLongs;
 
 	pack->buildBuffer = buildBuffer;
 
@@ -2530,6 +2533,7 @@ void FS_FreePak(pack_t *thepak)
 {
 	unzClose(thepak->handle);
 	Z_Free(thepak->buildBuffer);
+	Z_Free(thepak->headerLongs);
 	Z_Free(thepak);
 }
 
@@ -3455,9 +3459,7 @@ static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, se
 
 			if (!found) {
 				// server has no interest in the file
-				unzClose(pak->handle);
-				Z_Free(pak->buildBuffer);
-				Z_Free(pak);
+				FS_FreePak(pak);
 				continue;
 			}
 		}
@@ -3968,6 +3970,73 @@ void FS_LoadReflists( void ) {
 	}
 }
 
+/*
+================
+FS_StartupKey
+
+What decides which paks FS_Startup loads and in which order, besides the folders on the disk: the game folders and
+the paks the server references and lists as pure. Equal keys give the same search paths.
+================
+*/
+static unsigned int FS_KeyBytes( unsigned int key, const void *data, size_t len ) {
+	const byte *b = (const byte *)data;
+
+	// FNV-1a
+	while ( len-- ) {
+		key = ( key ^ *b++ ) * 16777619u;
+	}
+	return key;
+}
+
+static unsigned int FS_StartupKey( void ) {
+	unsigned int key = 2166136261u;
+
+	key = FS_KeyBytes( key, fs_gamedirvar->string, strlen( fs_gamedirvar->string ) + 1 );
+	key = FS_KeyBytes( key, fs_basegame->string, strlen( fs_basegame->string ) + 1 );
+	key = FS_KeyBytes( key, fs_forcegame->string, strlen( fs_forcegame->string ) + 1 );
+	key = FS_KeyBytes( key, &fs_numServerReferencedPaks, sizeof( fs_numServerReferencedPaks ) );
+	key = FS_KeyBytes( key, fs_serverReferencedPaks, fs_numServerReferencedPaks * sizeof( fs_serverReferencedPaks[0] ) );
+	key = FS_KeyBytes( key, &fs_numServerPaks, sizeof( fs_numServerPaks ) );
+	key = FS_KeyBytes( key, fs_serverPaks, fs_numServerPaks * sizeof( fs_serverPaks[0] ) );
+	return key;
+}
+
+static unsigned int	fs_startupKey;		// FS_StartupKey() of the last FS_Startup
+
+/*
+================
+FS_NewChecksumFeed
+
+A new level of a server comes with a new checksum feed, and the feed goes into nothing but the pure checksum of
+every pak. When nothing else changed since the last FS_Startup, the paks stay open and only that checksum is made
+anew: the full restart reads the folders and the central directory of every pak again (27 ms on 2026-10-19).
+qfalse: something else changed, a full FS_Restart is needed. A pak put into a folder while the game runs comes in
+with the next full restart.
+================
+*/
+qboolean FS_NewChecksumFeed( int checksumFeed ) {
+	searchpath_t *search;
+
+	if ( !fs_searchpaths || fs_gamedirvar->modified || FS_StartupKey() != fs_startupKey ) {
+		return qfalse;
+	}
+	for ( search = fs_searchpaths ; search ; search = search->next ) {
+		pack_t *pak = search->pack;
+
+		if ( pak && pak->headerLongs ) {
+			pak->headerLongs[0] = LittleLong( checksumFeed );
+			pak->pure_checksum = LittleLong( Com_BlockChecksum( pak->headerLongs, sizeof( *pak->headerLongs ) * pak->numHeaderLongs ) );
+		}
+	}
+	fs_checksumFeed = checksumFeed;
+	// as FS_Restart: the references go, and those the lists force come again
+	FS_ClearPakReferences( 0 );
+	FS_ReorderPurePaks();
+	FS_LoadReflists();
+	Com_DPrintf( "FS_NewChecksumFeed: the paks were kept\n" );
+	return qtrue;
+}
+
 void FS_Startup( const char *gameName ) {
 	const char *homePath;
 
@@ -4095,6 +4164,7 @@ void FS_Startup( const char *gameName ) {
 	FS_Path_f();
 
 	fs_gamedirvar->modified = qfalse; // We just loaded, it's not modified
+	fs_startupKey = FS_StartupKey();
 
 	FS_LoadReflists();
 
@@ -4591,7 +4661,9 @@ restart if necessary
 */
 qboolean FS_ConditionalRestart( int checksumFeed ) {
 	if( fs_gamedirvar->modified || checksumFeed != fs_checksumFeed ) {
-		FS_Restart( checksumFeed );
+		if ( !FS_NewChecksumFeed( checksumFeed ) ) {
+			FS_Restart( checksumFeed );
+		}
 		return qtrue;
 	}
 #if 0

@@ -604,7 +604,9 @@ Ghoul2 Insert End
 	// in unsigned: rand() << 16 does not fit into an int
 	sv.checksumFeed = (int)( ( ( (unsigned int)rand() << 16 ) ^ (unsigned int)rand() ) ^ (unsigned int)Com_Milliseconds() );
 	Com_LoadPush( "server: file system", NULL );
-	FS_Restart( sv.checksumFeed );
+	if ( !FS_NewChecksumFeed( sv.checksumFeed ) ) {
+		FS_Restart( sv.checksumFeed );
+	}
 	Com_LoadPop();
 
 	Com_LoadPush( "server: collision map", server );
