@@ -1113,9 +1113,8 @@ static qboolean VK_AddDeviceSprites( surfaceType_t *surface ) {
 		const int start = e->uRefEnt.uMini.miniStart, count = e->uRefEnt.uMini.miniCount;
 
 		for ( int i = 0; i < count; i++ ) {
-			refEntity_t mini;
+			refEntity_t mini = {};
 
-			memset( &mini, 0, sizeof( mini ) );
 			memcpy( &mini, &backEnd.refdef.miniEntities[start + i].e, sizeof( backEnd.refdef.miniEntities[start + i].e ) );
 			VK_AddEntityQuads( &mini );
 		}
