@@ -40,7 +40,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Compressed textures, texture filter, anisotropic filter, picmip | done |
 | Screenshots, recording to AVI | done |
 | Automap | done |
-| `r_showtris`, `r_shownormals`, `r_showImages`, `v_vkStatic`, `gfxinfo`, `imagelist` | done |
+| `r_showtris`, `r_shownormals`, `r_showImages`, `v_vkStatic`, `v_vkSprites`, `v_vkGrass`, `gfxinfo`, `imagelist` | done |
 | Window: resized from outside (the frame is made again in the new size), `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done on the Vulkan device and run under sway (Wayland, headless) on Linux, see "Checked". Not run on Hyprland or on Windows. The OpenGL ES device restarts instead |
 | Windows DLL, 64 bit | started on Windows 11 on Mesa's software Vulkan and drew the menus (2026-10-11, [windows.md](windows.md)). Ran in a level (mp/ffa3) under Wine 10 with winevulkan on RADV (2026-10-27): the level, the HUD and a bot were drawn. Not run on Windows with a real graphics card |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
@@ -136,6 +136,8 @@ Linux side was run.
 | `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks, the cvar `rd-vanilla` uses for it (latched, the default is 1) |
 | `v_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
 | `v_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
+| `v_vkSprites 0` | cheat: sprites, lines, cylinders, bolts, sparks and the weather build their corners on the CPU as in `rd-vanilla`, not in `sprite.vert` (1 by default) |
+| `v_vkGrass 0` | cheat, latched: the surface sprites of the level (grass) are placed on the CPU every frame as in `rd-vanilla`, not once at load for `grass.vert` (1 by default) |
 | `v_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser |
 | `gfxinfo` | device, memory, how many textures are compressed and how long packing them took, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
 
@@ -311,15 +313,20 @@ joined into one.
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
 | A draw | arrays set up and `glDrawElements` per stage | one indexed draw per stage. Which draw it is comes as its instance number, the vertex streams of the frame are bound once and a batch names its first vertex, model triangles are runs in an index buffer on the device |
 | Effects (sparks, glows, lines: one entity for each) | a batch and a draw for every entity, unless the shader says `entityMergable` | one batch for all entities in a row that have the same shader, where the shader takes nothing from its entity but the vertices |
+| Sprites, lines, cylinders, bolts, sparks, saber glow | four vertices and six indexes built on the CPU for each | one record of six rows a quad in the bone buffer, `sprite.vert` makes the corners (see "Sprites and grass in vertex shaders") |
+| Weather (rain, snow, particle clouds) | `glBegin` and four `glVertex3f` a particle | the simulation stays on the CPU, each particle is a record for `sprite.vert` |
+| Surface sprites of the level (grass) | placed and built on the CPU every frame | placed once at load into buffers of their own, `grass.vert` does the fade, the wind and the sway |
+| deformVertexes autosprite, autosprite2 on the level | per vertex on the CPU | prepared at load, finished in `Deform()` of `stage.glsl` |
+| Saber marks that grow or fade | the CPU, from the surface | a batch of their own, growth in the texture matrix, fade in two fields of the draw |
+| Vertex lit surfaces with several light styles | per vertex on the CPU | the colors of the extra styles in the texture coordinates, added up in the shader |
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
 | Anti aliasing | a window with several samples a pixel | the scene and its glow go into targets with several samples, each pass ends by resolving them into the plain targets the other passes read |
 
-Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with the other kinds of
-`deformVertexes` (autosprite, text, normals) or with more than one of them,
-`alphaGen blend` (terrain), vertex lit surfaces with more than one light style, MD3 with several frames, the
-saber marks on models while they fade (the last tenth of their time, the color of every vertex changes then),
-all effects the game hands over as polygons, sprites, beams and lines, marks on walls, the weather,
-surface sprites, the HUD.
+Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with `deformVertexes` text or
+normals or with more than one deform, `alphaGen blend` (terrain), MD3 with several frames, the polygons the game
+hands over (marks on walls, effect polygons, the saber blur trail, `RE_AddPolyToScene`, they come finished from
+the cgame each frame), the HUD and 2D (`RE_StretchPic`, fonts), beams (`RT_BEAM`), the surface sprites of the
+effect and weather types (animated particles), brush models with surface sprites, the weather simulation itself.
 
 MD3 with several frames stay there on purpose. Of the 604 MD3 files of the base game and of JA+ 42 have more
 than one frame. 19 of those are the hand models of the weapons, which have tags and not a single vertex (the
@@ -337,6 +344,87 @@ buffers, 548 and 436 built on the CPU. While the fog pass still took its coordin
 and 4170 against 1108 and 1537. mp/ffa2, two views: 624 and 540 triangles from the CPU, 1701 and 1609 while
 `alphaGen lightingSpecular` still was CPU work (one weapon model with such a stage had 1077 of them). What is
 left in these views are the effects of the game (flames, smoke, light cones) and the HUD.
+
+## Sprites and grass in vertex shaders
+
+This is in both devices, the Vulkan device and the OpenGL ES device.
+
+A new program `VKP_SPRITE` (`shaders/sprite.vert`) has no vertex buffer. Each quad is a record of six rows
+(`vec4`) in the bone buffer of the frame, behind four rows of the view (forward, with -1 in a mirror, then left,
+up and the eye). The index buffer numbers four vertices a quad, and the number of a vertex says which quad and
+which corner. One draw takes at most 127 quads (the 768 rows of the uniform block of the OpenGL ES device). The
+kinds of a record:
+
+| Kind | What | Entity type |
+|------|------|-------------|
+| 0 | sprite | `RT_SPRITE`, and the glow of blades (`RT_SABER_GLOW`, a chain of sprites) |
+| 1 | quad of two vectors | `RT_ORIENTED_QUAD`, and the weather particles |
+| 2 | line across the line of sight | `RT_LINE` |
+| 3 | line along a vector with a width at each end | `RT_ORIENTEDLINE`, and every segment of the bolts of `RT_ELECTRICITY` (`DoLine2()` of `tr_surface.cpp` hands each one on through `VK_AddBoltSegment()`) |
+| 4 | one side of a cylinder | `RT_CYLINDER`, `RotatePointAroundVector` of `q_math.c` ported to the shader |
+| 5 | triangle | the weather particles of three vertices |
+
+A chain of small entities (`RT_ENT_CHAIN`, the sparks of the effects) goes this way when every small entity in it
+is a sprite, an oriented quad, a line or a cylinder. The CPU still works out where each one is and its random
+numbers (the fractal of a bolt, the radius of the blade glow). It only writes one record a quad instead of four
+vertices and six indexes. `v_vkSprites 0` builds the corners on the CPU as before.
+
+The weather (rain, snow, the particle clouds of `tr_WorldEffects.cpp`) keeps its simulation on the CPU: velocity,
+wind, respawn around the camera, the checks for being outside. Each particle is a record of `sprite.vert`
+through `vk_gl.cpp` (`VK_GL_Quad`, `VK_GL_QuadFlush`) instead of `glBegin` and four `glVertex3f`. The same cvar
+switches it.
+
+The surface sprites of the level (grass, the vertical, flattened and oriented types) have a program of their own,
+`VKP_GRASS` (`shaders/grass.vert`), with the vertex `vkGrassVertex_t` (48 bytes, four a sprite) and their own
+static vertex and index buffers. When the level is loaded `VK_BuildGrass()` places every sprite once, with the
+same steps and the same `randomchart` numbers that `RB_DrawVerticalSurfaceSprites()` and
+`RB_DrawOrientedSurfaceSprites()` of `tr_surfacesprites.cpp` use every frame. The vertex shader does the alpha from
+the distance, the four right vectors, the wind, the sway and the wind point, with twelve rows of view and wind in
+the bone buffer. The fade is exact: `rd-vanilla` interpolates the alpha from the corners of the triangle, which is
+linear in the squared distance, so each sprite keeps its "spread" (the sum of w times the squared distance of each
+corner to the sprite) and the shader adds it to its own squared distance. The ground under the grass is drawn
+from the buffer of the level now too (`VK_ShaderIsStatic` took every surface sprite stage to the CPU before).
+Only surfaces of the world entity go this way, brush models keep the CPU way. `v_vkGrass 0` (latched) places the
+sprites on the CPU every frame. One known difference: the wind point (`r_windPoint*`) is worked out at the sprite
+and not interpolated from the corners. On mp/ctf3 it is 1347 sprites on 24 surfaces, 284 KB.
+
+`deformVertexes autosprite` and `autosprite2` on surfaces of the level: `VK_PrepareAutosprites()` works out at load
+what `AutospriteDeform()` and `Autosprite2Deform()` of `tr_shade_calc.cpp` do each frame without the view.
+Autosprite puts every corner in the middle of its quad with its corner number and radius in lightmap2, the texture
+and the color of a quad stamp, and the surface is drawn with the indexes of quad stamps. Autosprite2 puts each
+corner in the middle of its short edge, with the long axis and its signed distance in lightmap2 and lightmap3.
+`Deform()` of `stage.glsl` does the rest (deform kinds 3 and 4, the deform field of `Draw.flags` is 3 bits now).
+The base game has 13 shaders with autosprite and 3 with autosprite2. `deformVertexes text` and `normal` are in no
+shader of the base game and stay on the CPU.
+
+Saber marks on models that grow or fade (`rs->scale` above 1, `rs->fade` below 1 or from 2 to 3) are drawn from
+the device. Each such mark gets a batch of its own. The growth goes into the texture matrix of the stage (scaled
+around 0.5 0.5), the fade into two new fields of `vkDraw_t` (`fade`, `fadeMode`) that `stage.glsl` applies last.
+There is one difference: `rd-vanilla` draws such a mark with whatever `tess.svars.colors` held before (it skips
+the colors of the stage), only the alpha is defined there. Here the colors of the stage stay, and the alpha (and
+for 2 to 3 a cap on the color) is the fade.
+
+Vertex lit surfaces of the level with more than one light style: `VK_PackStyles()` puts the colors of the styles
+after the first into the texture coordinates of lightmap1 and lightmap2 (three bytes in a float, exact up to
+2^24). The shader adds them up times the style colors as `ComputeFinalVertexColor()` does. The colors of all 64
+light styles are in the globals of the frame now (`vkGlobals_t.styles`, written at `VK_EndFrame`), `Draw.styles`
+has the styles of the shader. Not seen in a level: no base map with such a surface was found.
+
+Measured on 2026-10-27 (AMD Radeon 610M, RADV, Mesa 26.2.5, headless gamescope). The fight demo `clip_brawl1`
+(269 frames): triangles built on the CPU in a frame went from 5505 to 1264 with sprites, lines, sparks and bolts.
+What is left there: marks on walls, the saber blur trail, the font of the HUD, footsteps. Before, callgrind put
+sprites and saber glow at 0.36 % of all instructions of the run. On mp/ctf3, seven views: from 906 to 416
+triangles a frame built on the CPU, what is left is the font of the HUD. `light_cone` (cylinders), the grass and
+its ground and the flare (autosprite) left the CPU.
+
+Pictures: the fight demo recorded as video with the CPU way and the GPU way differs in 0.04 % of the pixels by more
+than 16 where there are no sparks and in 0.75 % with sparks, and two runs of the CPU way differ by the same 0.75 %
+(the sparks are random from run to run). The seven views of mp/ctf3 differ by 0.0 to 0.17 %, also with wind
+(`r_windSpeed 30`). OpenGL ES device (`rd-vision-gles` on the desktop): the same within 0.3 %. The lightning demo
+`clip_lightningc2`: the bolts look the same, their shapes are random each frame. Rain and snow with `r_we` look the
+same. With the validation layer on there is no message from the new ways (the one message is
+`VUID-vkCreateDevice-ppEnabledExtensionNames-01387` for `VK_EXT_swapchain_maintenance1`, which the WSI layer of
+gamescope adds, not the renderer).
 
 ## Differences to rd-vanilla
 
@@ -517,11 +605,12 @@ of the renderer (32 bit was built until then too and is gone from the tree). It 
 Wine 10 with winevulkan on RADV (see "Checked"), and never on Windows itself. macOS was not tried, it would need
 MoltenVK.
 
-Not moved to the device, with the numbers of the fight demo. Sprites, lines and saber glow: building them is
-6 % of the instructions of a frame for about 1360 entities. A vertex shader could make the four corners of a
-sprite, but not the lines and glows, it would need a third program with pipelines of its own, and the step
-before this one (the saber marks, 3 % of the instructions) came out as 2 % in the timedemo. `alphaGen blend`
-and `rgbGen blend` are for generated terrain: no shader of the base game or of JA+ has them.
+Not moved to the device: the polygons the game hands over (marks on walls, effect polygons, the saber blur
+trail), the HUD and 2D, MD3 with several frames (on purpose, see "What runs where"), shaders with
+`deformVertexes text` or `normal` or with more than one deform, the surface sprites of the effect and weather
+types, `RT_BEAM`, and the weather simulation itself. Sprites, lines and saber glow were here until 2026-10-27,
+they are in `sprite.vert` now (see "Sprites and grass in vertex shaders"). `alphaGen blend` and `rgbGen blend` are
+for generated terrain: no shader of the base game or of JA+ has them.
 
 ## Checked
 
@@ -815,7 +904,7 @@ with a `vid_restart`, no difference. The second and third are under `RD_VULKAN_V
 
 Looked at and left, with the numbers:
 
-- Sprites, lines and saber glow in a vertex shader: see "Not done". The three steps above are each larger.
+- Sprites, lines and saber glow in a vertex shader: done later, see "Sprites and grass in vertex shaders". It was left here first because the three steps above were each larger.
 - Only the bones a drawn surface names into the frame: 81 % of the bones that are uploaded are named by a
   surface that is drawn, so this would take a fifth off the 7 % the bones cost.
 - Link time optimization (`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`): 16.0 instead of 16.6 billion instructions
