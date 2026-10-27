@@ -26,7 +26,8 @@ Only the main thread may call them.
 script of `tools/clienttests` and writes a log into the profile `runtime_load`. It is run through
 `tools/hidden.sh`: the window is on the hidden workspace and the sound goes to a driver that plays nothing,
 which the script insists on (the sound system has to run, its loading is part of what is measured).
-`tools/loadstats.py <log>` prints the loads and the long frames of a log in a few lines.
+The log has the load tables and the long frames as the engine prints them; `loadstats.py`, which printed them
+in a few lines, is not in the tree any more.
 
 - `load_twice.cfg`: a level loaded, played five seconds, loaded again.
 - `load_play.cfg`: bots with different models join a second apart (a listen server has room for seven), then
@@ -136,7 +137,7 @@ second load (with the ui of below) 301 to 322 / 288 to 292 ms. The server named 
 build before and after, and `path` listed the same paks with the same number of files.
 
 A dedicated server saves the same at every change of the level, a client of another server at every gamestate
-(`FS_ConditionalRestart`). The pure checksums are made by the same code from the same entries: a client of this
+(`FS_ConditionalRestart`). From 2026-10-27 most of these restarts do not happen, see below. The pure checksums are made by the same code from the same entries: a client of this
 build joined a server of it with `sv_pure 1`, and the download test (`uitest/dltest.sh`) blocked the same files.
 
 **The ui makes its list of player models when a menu asks for it** (`ui/ui_main.c`, `UI_Q3HeadsNeeded()`,
@@ -150,6 +151,38 @@ it the first time (and `ui_cache 1`), so a player who opens the menu with the mo
 | before / after | 138 to 172 ms / 53 to 58 ms | 379 / 302 to 326 ms |
 
 The list has the same 165 models, and the player menu of the game looks the same in a picture.
+
+**The file system is kept on a new level** (`qcommon/files.cpp`, `FS_NewChecksumFeed()`, `FS_StartupKey()`,
+2026-10-27; called from `FS_ConditionalRestart()` and from `SV_SpawnServer()` in `server/sv_init.cpp`). Every
+level of a server has a new random checksum feed, which made the client, and the server on every level change,
+restart the whole file system. The feed only goes into the pure checksum of each pak. Now every pak keeps the
+CRCs of its header (`pack_t` `headerLongs`), and when nothing else changed since the last `FS_Startup()` only
+the pure checksums are made anew, the references are cleared, the reference lists (`ref_forcelist.txt` and the
+others) are read again and the pure order is redone. "Nothing else" is a key of `fs_game`, `fs_basegame`,
+`fs_forcegame`, the paks the server references and the paks it lists as pure (`FS_StartupKey()`). Anything
+else is the full restart as before. A pak put into a folder while the game runs comes in with the next full
+restart (`fs_restart`, a connect to another server; `vid_restart` is not needed).
+
+The full restart took 21 to 41 ms on the client at a level change, the kept one 0 ms. It happens before the load
+report starts (in the gamestate), so the load table never showed it. Checked: `tools/test/join-test.sh --pure`
+(`sv_pure 1`, a level change, no unpure client), the compat test with stock OpenJK, and a server with a
+`ref_forcelist.txt` whose forced paks were still asked for after a level change.
+
+## Measured again, 2026-10-27
+
+With `tools/test/join-test.sh` (Radeon 610M, 30 bots, mp/ffa1, loopback, no lag proxy):
+
+| | ms |
+|---|---|
+| rejoin in the same session (caches in memory), join | 614 to 670 |
+| the same, load report | 280 to 334 |
+| first join of a game started again, filled caches | 852 to 1365 |
+| level change, load | 218 to 229 |
+
+Of every load: the ui starts in 48 ms, the cgame in 36 to 39 ms, effects take 14 ms. The frame line of the
+client is about 70 ms: those are frames while the client waits for the server, not load work. The first join
+of a started again game varies with the disk: "sound file" took 37 to 76 ms for 598 files. A level change had
+the file system restart before its load, which is gone.
 
 ## What the numbers did not confirm
 
@@ -166,9 +199,12 @@ Read from the code, these looked like causes, and they are not, on this machine 
 `v_joinReport 1` prints one line when the game starts after a `connect`: how long each step of the join took
 (challenge, connect, the gamestate with its packets and bytes, downloads, the load, the first snapshot, the
 total). `v_joinReport 2` also prints every packet of the join, by the time since connectResponse.
-`japlus_port/tools/jointest.sh <address>` joins a server hidden and silent with both reports on (the player is
-named "VisionJK test client"), `tools/joinlocal.sh` does it against a server of the build on 127.0.0.1 with 31
-bots, through `lagproxy.py` with 13 ms.
+`tools/test/join-test.sh <game folder>` (see [testing.md](testing.md)) starts a dedicated server of the folder
+on 127.0.0.1 with bots and a hidden, silent client with both reports on, which joins three times, and then the
+server changes the level once. It prints the `v_joinReport` and `v_loadReport` lines. It replaces
+`japlus_port/tools/jointest.sh`, `tools/joinlocal.sh` and `loadstats.py`, which are not in the tree any more.
+The numbers of 2026-10-19 above were made with them (the server of the build behind `lagproxy.py` with 13 ms);
+the numbers of 2026-10-27 below with `join-test.sh`, which has no lag proxy.
 
 A public JA+ server on JAmp 1.01 (29 players, mp/ffa1, 13 ms away), filled texture cache, 2026-10-19:
 
@@ -224,13 +260,19 @@ The 280 kept sounds were compared once with a fresh unpack of their MP3: all the
 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
-- What every load does again: the ui is started anew (54 ms since the list of models waits for a menu, the menus
-  are 21 of it), the file system is restarted (27 ms since the buffered list and the one walk, it was 79 when
-  this was first measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
-- Sounds are still read when they are registered: 62 ms for 1413 files on the server above, half of them a .wav
-  that is looked for before the .mp3.
+- The .wav that is looked for before every .mp3: 2328 failed opens on a first join (four loose folders a
+  sound). On Linux a failed open takes 1 microsecond (measured), so that is about 2 ms. Every file the game
+  looks for is first tried in the four loose folders (home and game folder, japlus and base) before the paks:
+  39815 failed opens in one run of `join-test.sh`, about 40 ms on Linux. On Windows a failed open costs more,
+  not measured (no Windows here). An index of the loose folders would take them away.
+- The resampling of kept sounds: at most 15 ms, on the first join of a session only. The copy and the
+  allocation would stay. Not done.
+- The ui is started anew on every load (48 ms). The screen draws nothing at all while the ui is not started
+  (`SCR_DrawScreenField()`), so starting it after the load needs that changed, and the 48 ms then come when the
+  menu is first opened in the level. Open.
+- The sounds of the players are read only on the first join of a session, on a rejoin they are in memory.
 - `rd-vanilla` and the renderer for the browser have no cache: OpenGL packs in the driver, and the device for
   the browser takes no textures in blocks.
 - Measured on one level and one machine. Not played by a person with it.

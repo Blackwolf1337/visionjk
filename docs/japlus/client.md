@@ -33,7 +33,7 @@ Bits of `cp_pluginDisable` (the console command `pluginDisable <number>` toggles
 | 3 | seeBlackSabers | 11 | NewDFA_PrimAttack |
 | 4 | AutoReplier | 12 | NewDFA_AltAttack |
 | 5 | NewForceEffect | 13 | No_SP_Cartwheel |
-| 6 | No_NewDeathMessage | 14 | AllowDownloadURL_Redirect |
+| 6 | No_NewDeathMessage | 14 | AllowDownloadURL_Redirect (turns the web download off, as `v_downloadHttp 0`) |
 | 7 | NewForceSight_effect | | |
 
 ## Console commands
@@ -1256,9 +1256,9 @@ For the whole console up to the crash, also when it is longer than what the cras
 
 ## Not done
 
-- The download screen of the plugin for files from an URL, its cache file (`japlus/urlRedirect_cache.txt`, the
-  paks that were not at the address, for six days) and its three menu scripts. The download itself is in the
-  engine since 2026-10-19: a server's `jp_DlBaseURL` is used with the plugin's address and through the windows of
-  [downloads.md](downloads.md). `cp_pluginDisable` bit 14 belongs to the plugin's screen and does nothing here.
+- The look of the download screen of the plugin for files from an URL: it is the overlay of OpenJK with two
+  skip buttons, not the menu of the plugin. The rest (the cache file `japlus/urlRedirect_cache.txt`, the two
+  scripts of the menu, bit 14 of `cp_pluginDisable`) is in the engine, see [downloads.md](downloads.md). The
+  plugin's files hold two scripts (the two buttons) and a background menu with none.
 
 Where the port knowingly differs from the plugin is in [differences.md](differences.md).

@@ -124,7 +124,23 @@ frames after the connect). A full run takes about 20 seconds. `--dir <folder>` t
 the zip, `--keep` keeps `build-test/compat`. Logs are in `build-test/compat/<run>-server.log` and
 `build-test/compat/<run>-client.log`. The original JA+ server module is only 32 bit and there is no original
 `jamp.exe` on this machine, so neither is tested. `tools/test/game-run.sh` holds what `smoke-test.sh` and
-`compat-test.sh` share (a game in gamescope headless, its log, the checks).
+`compat-test.sh` share (a game in gamescope headless, its log, the checks). A server that `stop_server` ended
+no longer fails a run for its line "Received signal 15, quitting" (the dedicated server quits on SIGTERM since
+2026-10-27, the compat test had failed on it).
+
+## Joining a server
+
+```
+tools/test/join-test.sh <game folder> [--bots n] [--pure] [--strace] [--reuse] [--keep]
+```
+
+starts a dedicated server of the game folder on 127.0.0.1 with bots (`addbot` through the console fifo, up to
+31; one of them is often dropped again, so 30 stay), and a headless client that joins three times. Then the
+server changes the level once. The script prints the `v_joinReport` and `v_loadReport` lines, see
+[loading.md](loading.md) for the numbers. `--bots n` is the number of bots, `--pure` sets `sv_pure 1`,
+`--reuse` keeps the home of the client of the run before (filled caches: the first join is that of a game
+started again), `--strace` counts and times the failed file opens, `--keep` keeps what the run made. It
+replaces `jointest.sh`, `joinlocal.sh` and `loadstats.py` of the agent folder.
 
 ## The updater
 

@@ -15,6 +15,13 @@ anything is downloaded (`v_downloadReview 1`, the default):
 - **Download**, **Join without** (nothing is downloaded), **Disconnect**. A pure server may not let you play
   without its files.
 
+While a pak comes from the web address of the server (see below), the overlay of the download (`cl_downloadOverlay`,
+the "File Download" panel) has two buttons above Abort: **Skip** (this pak is not downloaded, the next one
+comes) and **Skip all** (this one and all after it). They are the Abort and Abort All of the menu
+`ui/jamp/UrlRedirectDownload.menu` of the JA+ plugin, and the script of that menu (`uiscript
+abordURLRedirectCurrDownload 0` or `1`) runs them too. Only a pak from the web address has them: of a pak from
+the server itself, what is still on the way would be taken for the next one.
+
 A pak is sent whole, so what is in it is known only when it is here. When the paks came, a second window shows
 what is in each, by kind: maps, models, textures and effects, sounds and music, shaders and scripts, menus and
 HUD, configs (they can run commands), other files, and programs, with the program files by name. Untick what you
@@ -33,8 +40,8 @@ that were downloaded into the game folder itself before 0.1.9 stay where they ar
 |-----------------|---------|---------|
 | `v_downloadReview` | 1 | the two windows. 0: everything is downloaded, programs in it stay blocked |
 | `v_downloadKeep` | 1 | where the paks go by default: `downloads` (1) or `downloads/session` (0) |
-| `v_downloadReview_do` | | what a click in the windows does, for a key or a script: `download`, `without`, `keep 0/1`, `pak <n>`, `kind <pak> <kind>`, `use` |
-| `v_downloadHttp` | 1 | paks of a server that names a web address for them come from there. 0: only from the server itself |
+| `v_downloadReview_do` | | what a click in the windows does, for a key or a script: `download`, `without`, `keep 0/1`, `pak <n>`, `kind <pak> <kind>`, `use`, `skip`, `skipall` |
+| `v_downloadHttp` | 1 | paks of a server that names a web address for them come from there. 0: only from the server itself. Bit 14 of `cp_pluginDisable` (AllowDownloadURL_Redirect) does the same |
 
 ## From a web address
 
@@ -62,7 +69,20 @@ For the player it is the same download as from the server, only faster:
 - a pak that does not come from the web address is asked from the server itself if that sends files
   (`sv_allowDownload` 1 and a `jp_DlBaseURL` set later), else the game goes on without it and says why;
 - the size is not known before a pak is here, the download overlay says "unknown";
-- a pak fetched over HTTP may have 512 MB at most (it was 2 GB), as the checksum is only tested at the end.
+- a pak fetched over HTTP may have 512 MB at most (it was 2 GB), as the checksum is only tested at the end;
+- the overlay has the two skip buttons named above.
+
+A pak the web server answers 404 for is noted in `japlus/urlRedirect_cache.txt` of the home folder, where the
+plugin kept the paks the web address did not have, and is not asked at that address again for six days: the
+connect goes straight to the server itself, or on without the pak. A line is `<unix time> <web address> <game
+folder>/<name>.pk3`. Only a 404 counts, not a timeout or a refused host. Old and broken lines are dropped when
+the file is written, and it is cut at 32 KB from the oldest lines. The format is this tree's own: the plugin's
+is not known (there is no decompile of that part). `Sys_HttpGet()` has an out parameter for the answer of the
+web server (404 and the rest), on Windows (WinHTTP) and elsewhere (libcurl).
+
+Bit 14 of `cp_pluginDisable` (AllowDownloadURL_Redirect) turns the web download off as `v_downloadHttp 0` does,
+so a JA+ config means the same here. A `jp_DlBaseURL` that is not http or https (the `server.cfg` of JA+ names
+ftp as possible) is not used, and the console says so once.
 
 A client of this tree does not use a `jp_DlBaseURL` whose host is this machine (`localhost`, `.local`,
 `.localhost`), a written-out address of a private network (10/8, 172.16/12, 192.168/16, 100.64/10), the link
@@ -124,6 +144,18 @@ its checksum while the other came (`wrong`), nobody at the address and the game 
 while a slow web server still sent, the web server seeing the client go away, and both paks after connecting
 again (`stop`). Not run: HTTPS (the same `Sys_HttpGet()` as the updater, which uses it), Windows, a real JA+
 server and the JA+ plugin side by side, large paks.
+
+The skip buttons and the cache file, 2026-10-27, hidden and silent on Linux (a script in the scratchpad, not in
+the tree): a server of the build with two test paks forced by `ref_forcelist.txt`, `jp_DlBaseURL` at a python web
+server on 127.0.0.1, reached as `127.0.0.1.nip.io` (a written out private address is refused by
+`DL_WebPublicHost()`), the web server having only one of the paks. The 404 was noted, and the second connect
+after a level change of the server did not ask the web server again. Skip during a slow transfer (4 KB a second)
+left the pak out and the web server saw the client go away. Skip all with three paks left out the one that came
+and the two after it. Bit 14 made no request. An ftp address gave its console line once. A screenshot of the
+overlay with the buttons was looked at. Not run: a click on the buttons (no mouse in the headless runs, the
+commands `v_downloadReview_do skip` and `skipall` were used), HTTPS, Windows, a real JA+ server. The parser of
+the cache file has unit tests in `tests/vjk/missing.cpp` (listed, expired, other address, a time after now,
+CRLF, names with blanks, a full file, refused names).
 
 The windows:
 
