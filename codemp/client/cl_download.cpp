@@ -247,6 +247,13 @@ static const char *DL_Path( const char *local ) {
 	return path;
 }
 
+// the .tmp of the pak that is downloaded now, of a download that does not go on
+void CL_DownloadRemoveTemp( void ) {
+	if ( *clc.downloadTempName ) {
+		FS_Remove( DL_Path( clc.downloadTempName ) );
+	}
+}
+
 // Goes through the files of a pak: counts them by kind (count), or writes those of the kinds the player does not
 // want to the list next to the pak (block). qfalse: it is no pak that can be read.
 static qboolean DL_Files( dlPak_t *pak, qboolean count, fileHandle_t block ) {
@@ -824,7 +831,7 @@ static void DL_WebElsewhere( void ) {
 
 static void DL_WebFailed( const char *why ) {
 	Com_Printf( S_COLOR_YELLOW "%s did not come from the web address of the server: %s\n", cl_downloadName->string, why );
-	FS_Remove( DL_Path( clc.downloadTempName ) );
+	CL_DownloadRemoveTemp();
 	clc.downloadCount = clc.downloadSize = 0;
 	Cvar_Set( "cl_downloadCount", "0" );
 	Cvar_Set( "cl_downloadSize", "0" );
@@ -997,7 +1004,7 @@ static void DL_WebSkip( qboolean all ) {
 	}
 	Com_Printf( all ? "%s and the paks after it are not downloaded.\n" : "%s is not downloaded.\n", cl_downloadName->string );
 	CL_DownloadWebStop();
-	FS_Remove( DL_Path( clc.downloadTempName ) );
+	CL_DownloadRemoveTemp();
 	clc.downloadCount = clc.downloadSize = 0;
 	Cvar_Set( "cl_downloadCount", "0" );
 	Cvar_Set( "cl_downloadSize", "0" );

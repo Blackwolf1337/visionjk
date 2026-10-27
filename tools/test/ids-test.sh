@@ -7,14 +7,16 @@
 # usage: tools/test/ids-test.sh [options] [scenario ...]
 #   scenario            none cvars protected gamedir size unasked, default all of them
 #   --build <folder>    the build folder with visionjkded-idstest (cmake -DBuildDevIdsTest=ON), default build64.
-#                       It is installed into build-test/ids/game for the run
+#                       It is installed into build-test/ids/install for the run
 #   --keep              leave build-test/ids as it is after the run
 #
 # none: vs_idsTest 0, the client joins and ids.log stays empty. cvars: cvars the server may not set, written down,
 # the client stays. protected: a protected cvar, the client leaves, the next connect is refused, the one after it
-# leaves again. gamedir: fs_game with a path, the same. size: a
-# download whose first block says half of its size. unasked: download data nobody asked for (the client leaves at
-# the third; it reads the whole message, so nothing of it is taken for the next commands). The download scenario runs the level mp/idstest, a copy of mp/duel4 in a pak only the server has. Logs: build-test/ids/<scenario>-server.log, <scenario>-client.log and <scenario>-ids.log.
+# leaves again. gamedir: fs_game with a path, the same. size: a download whose first block says half of its size,
+# the same, and no .tmp of it may be left. unasked: download data nobody asked for (the client leaves at the third;
+# it reads the whole message, so nothing of it is taken for the next commands). The size scenario runs the level
+# mp/idstest, a copy of mp/duel4 in a pak only the server has. Logs: build-test/ids/<scenario>-server.log,
+# <scenario>-client.log and <scenario>-ids.log.
 set -euo pipefail
 # shellcheck source=tools/test/test-env.sh
 . "$(dirname "${BASH_SOURCE[0]}")/test-env.sh"
@@ -27,7 +29,7 @@ FRAMES_IN=2400		# frames the client stays after a connect (about ten seconds: ro
 SCENARIOS=(none cvars protected gamedir size unasked)
 
 usage() {
-	sed -n '2,13s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
+	sed -n '2,19s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
 	exit "${1:-1}"
 }
 
@@ -139,7 +141,10 @@ run() {
 				"=1:You left 127.0.0.1:$PORT before: it sent a path in the place of its game folder" ;;
 		size)
 			check "$name" "$clog" "+IDS: $from more data of a download than it said it has" \
-				"=2:Left the server: it sent more data of a download" "=1:You left 127.0.0.1:$PORT before" ;;
+				"=2:Left the server: it sent more data of a download" "=1:You left 127.0.0.1:$PORT before"
+			# the client left in the middle of the download: nothing of it may be left
+			find "$home/client" -name '*.tmp' > "$IDS/$name-tmp.txt"
+			check "$name: no .tmp left" "$IDS/$name-tmp.txt" "-.tmp" ;;
 		unasked)
 			check "$name" "$clog" "+IDS: $from data of a download that was not asked for" \
 				"=2:Left the server: it sent data of a download that was not asked for" \

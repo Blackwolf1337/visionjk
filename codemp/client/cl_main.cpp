@@ -825,6 +825,9 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		clc.download = 0;
 	}
 	CL_DownloadWebStop();
+	// what came of a pak that did not finish (a fetch from the web address that was let go may still write into
+	// it: Linux takes the name away at once, Windows keeps it and the next download of the pak writes it anew)
+	CL_DownloadRemoveTemp();
 	*clc.downloadTempName = *clc.downloadName = 0;
 	Cvar_Set( "cl_downloadName", "" );
 
@@ -1592,8 +1595,11 @@ void CL_NextDownload(void) {
 		char *zippath = FS_BuildOSPath(Cvar_VariableString("fs_homepath"), clc.downloadName, "");
 		zippath[strlen(zippath)-1] = '\0';
 
-		if(!FS_CompareZipChecksum(zippath))
+		if(!FS_CompareZipChecksum(zippath)) {
+			// not the pak the server named: it would only lie in the folder of downloads under that name
+			FS_Remove( zippath );
 			Com_Error(ERR_DROP, "Incorrect checksum for file: %s", clc.downloadName);
+		}
 		// (the programs in it are blocked before anything can load it)
 		CL_DownloadArrived( clc.downloadName );
 	}

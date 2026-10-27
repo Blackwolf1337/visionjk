@@ -548,6 +548,7 @@ qboolean	CL_ServerSendsDownloads( void );
 qboolean	CL_DownloadWebStart( void );
 void		CL_DownloadWebFrame( void );
 void		CL_DownloadWebStop( void );
+void		CL_DownloadRemoveTemp( void );
 qboolean	CL_DownloadWebBusy( void );
 void		CL_DownloadWebSkip( void );
 void		CL_DownloadWebSkipAll( void );
