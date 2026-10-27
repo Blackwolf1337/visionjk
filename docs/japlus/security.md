@@ -278,10 +278,31 @@ connectionless packets are dropped unread, and a player the event came from is d
 | `v_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
 
 - Written down, and the client leaves: a path in the place of the game folder (at once), data of a download
-  that was not asked for and fragments that do not fit (at the third).
+  that was not asked for and fragments that do not fit (at the third). Also written down, and the client
+  leaves at once: more data of a download than it said it has (the name and both sizes are in the line). The
+  download of a pak by UDP gave the size in the first block, and a server could go on sending data until the
+  disk was full. This is a check of the engine: it happens with `v_ids 0` too, only the line in `ids.log` needs
+  `v_ids 1`. A download from the web address of a server stops at 512 MB, as before.
 - Written down: a message the engine ends the connection for (an index past its table, a message that ends
   early, an unknown command), more than 400 commands in a second, an escape character in a command (it is
-  taken out: it means nothing to the game and is there for the terminal a console may be printed to).
+  taken out: it means nothing to the game and is there for the terminal a console may be printed to), and
+  all cvars a server may not set in one systeminfo, in one line (`cvars it may not set`, with key=value of
+  each). The client keeps such a cvar as it is and warns on the console, as it did before. It does not leave
+  for them, because some mod servers (old JA+ ones) set client cvars that way. A protected cvar ends the
+  connection as before, and now there is a line in `ids.log` first.
+- Written down and thrown away: a list of servers (getserversResponse) that nobody asked for. A list is taken
+  only from a master server the client asked, and only within 10 seconds of asking. From anybody else, or
+  later, it is thrown away (with `v_ids 0` too), written down as `a list of servers nobody asked for`, and
+  never acted on. Anybody could put made up servers into the browser this way, and the browser pings every
+  address of such a list, so a forged list made clients ping third parties.
+- Changed besides: everything the engine prints to the terminal and to its console log file (client and
+  dedicated server, Linux and Windows) has control characters replaced by a dot: every character below 32
+  except line break and tab, DEL, and the C1 controls in UTF-8 (C2 80 to C2 9F, which includes the CSI). The
+  colours of the terminal are not affected, they are made after this from the ^ codes. Before, only server
+  commands were cleaned (that stays, with its line in `ids.log`). Now hostnames, player names of
+  serverstatus, OOB prints and anything else can not move the cursor or clear the screen either. A side
+  effect: the separator JKA puts into chat lines (character 0x19) shows as a dot on the terminal. The console
+  inside the game is not changed.
 - Written down and never acted on: a connectionless packet that claims to be from the server and comes from
   another address (print, disconnect, connectResponse, challengeResponse). Leaving for those would let
   anybody throw a player off any server.
@@ -310,6 +331,15 @@ the player next to it and not of one in the third room, and of both once the cva
 sends was listed with `cl_shownet 3`). A player in the second room was told also with the cvar on, and rightly:
 the portal of the first room looks into the second. The client side noted nothing about a server that does
 nothing wrong, and was not run against one that does.
+
+Run on 2026-10-27: a unit test of the filter of the terminal (escape, bell, carriage return, backspace, DEL,
+the CSI in UTF-8, the chat separator; Cyrillic text and a non-breaking space are left as they are; a cut at
+the end of the buffer does not split a pair). A dedicated server that printed a text with a CSI in UTF-8
+showed a dot in its place. A client with a master server on this machine (a small script) took the list of
+that master, and wrote down and threw away a list from another port of the same address and one from the
+master 12 seconds after it was asked. Not run: a server that sends more of a download than it said, and a
+systeminfo with cvars the server may not set (the engine has no command that puts such a key into the
+systeminfo).
 
 ## Recommended server settings
 
