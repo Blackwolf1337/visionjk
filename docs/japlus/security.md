@@ -287,6 +287,15 @@ connectionless packets are dropped unread, and a player the event came from is d
   anybody throw a player off any server.
 - Changed besides: the client answers an `echo` request only from its server. It answered anybody with
   whatever the packet asked for, to wherever the packet said it came from.
+  One more case is answered: an `echo` from a server the client asked for its info or status and still waits
+  for, when the text to send back is `echoResponse getinfo <random>` (a pending ping of the server browser or
+  of `ping`) or `echoResponse getstatus <random>` (a pending `serverstatus` or the bot/human check of the
+  browser). Some servers (the SkyMod mod, for example SkyTemple) answer getinfo and getstatus only after the
+  address that asked has echoed such a text back, so that a forged sender cannot use them for a reflection
+  flood. Without this answer these servers showed up in the browser with no info. An echo with that text
+  from any other address is not answered, because then anybody could send getinfo to such a server with the
+  player's address as sender and the client would confirm it. Every other echo is refused and written down
+  as before.
 
 Tested apart from the game (`japlus_port/tools/idstest`, 38 checks with a clock the test sets): how the
 weights add up and fall off, when an address is blocked and for how long, that connectionless events do not

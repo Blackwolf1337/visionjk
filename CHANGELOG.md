@@ -3,6 +3,7 @@ Key: [-] removed, [+] added, [\*] modified
 
 # VisionJK
 
+* [\*] The client also answers an `echo` request from a server it asked for its info or status and still waits for, when the text to send back is `echoResponse getinfo <random>` or `echoResponse getstatus <random>` (a pending ping of the server browser or of `ping`, a pending `serverstatus`, or the bot/human check of the browser). Servers like SkyMod (SkyTemple) answer getinfo and getstatus only after that echo, and showed up in the server browser with no info. Any other echo is still refused and logged by `v_ids`.
 * [\*] A build between two tags (`git describe` gives `v0.2.9-dev.4-3-gabc1234`) takes the version of the tag it was made after and is offered a strictly newer version on its channel, so a self-built client updates when a new release or development build is out. Its own tag is not offered as a repair. A build with no version the updater can read (`vUNKNOWN`, `v0.1.0-rc1`) still gets no updates and says so in the console.
 * [\*] The project is named VisionJK: binaries `visionjk.<arch>` and `visionjkded.<arch>`, configs `visionjk.cfg` and `visionjk_server.cfg`, home folder `visionjk` (`VisionJK` on Windows and macOS). Everything below this section is the history of OpenJK, which VisionJK is based on.
 * [-] Removed the `ja_guid` userinfo field, the key file `jakey` it was made from, and the cvars `cl_enableGuid` and `cl_guidServerUniq`. The client no longer identifies itself to servers.

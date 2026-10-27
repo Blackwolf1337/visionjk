@@ -152,6 +152,7 @@ void CL_ShowIP_f(void);
 void CL_ServerStatus_f(void);
 void CL_ServerStatusResponse( const netadr_t *from, msg_t *msg );
 static void CL_ShutdownRef( qboolean restarting );
+static qboolean CL_EchoAsked( const netadr_t *from, const char *text );
 
 // The renderer a client without a stored cl_renderer starts with, and the one that takes its place for a run
 // where the chosen one is not there or says that it can not run on this machine (CL_InitRenderer).
@@ -2174,9 +2175,9 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 
 	// Echo request from server. Only from the server: the answer is whatever the packet asks for, sent to
 	// wherever the packet says it came from, so anybody could have a client send a packet of his choice to an
-	// address of his choice.
+	// address of his choice. A server this client asked for its info or status may ask too (CL_EchoAsked).
 	if ( !Q_stricmp(c, "echo") ) {
-		if ( cls.state < CA_CONNECTING || !NET_CompareAdr( from, &clc.serverAddress ) ) {
+		if ( ( cls.state < CA_CONNECTING || !NET_CompareAdr( from, &clc.serverAddress ) ) && !CL_EchoAsked( from, Cmd_Argv(1) ) ) {
 			CL_IDS_Event( CLIDS_ECHO, from, Cmd_Argv(1) );
 			return;
 		}
@@ -3403,6 +3404,42 @@ static void CL_HumansFromStatus( const netadr_t *from, msg_t *msg ) {
 	msg->readcount = readcount;
 	msg->bit = bit;
 	CL_ForServersAt( from, CL_HumansAnswered, humans );
+}
+
+/*
+===================
+CL_EchoAsked
+
+Some servers (SkyMod) answer getinfo and getstatus only after an echo of "echoResponse <question> <random>" from
+the address that asked, so a question with a forged sender brings nobody a flood of answers. The echo is sent back
+only for a question this client asked that server and still waits for: getinfo of a ping, getstatus of a status
+request or of the browser. Answering any echo with that text would confirm questions somebody else asked in the
+name of this client.
+===================
+*/
+static qboolean CL_EchoAsked( const netadr_t *from, const char *text ) {
+	static const char	getinfo[] = "echoResponse getinfo ", getstatus[] = "echoResponse getstatus ";
+	int					i;
+
+	if ( !Q_strncmp( text, getinfo, sizeof( getinfo ) - 1 ) ) {
+		for ( i = 0; i < MAX_PINGREQUESTS; i++ ) {
+			if ( cl_pinglist[i].adr.port && !cl_pinglist[i].time && NET_CompareAdr( from, &cl_pinglist[i].adr ) ) {
+				return qtrue;
+			}
+		}
+		return qfalse;
+	}
+	if ( !Q_strncmp( text, getstatus, sizeof( getstatus ) - 1 ) ) {
+		for ( i = 0; i < MAX_SERVERSTATUSREQUESTS; i++ ) {
+			if ( cl_serverStatusList[i].pending && NET_CompareAdr( from, &cl_serverStatusList[i].address ) ) {
+				return qtrue;
+			}
+		}
+		cl_humansWaiting = 0;
+		CL_ForServersAt( from, CL_HumansWaiting, 0 );
+		return (qboolean)( cl_humansWaiting > 0 );
+	}
+	return qfalse;
 }
 
 static void CL_SetServerInfoByAddress(const netadr_t *from, const char *info, int ping) {
