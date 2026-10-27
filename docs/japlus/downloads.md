@@ -29,6 +29,11 @@ do not want: nothing of it is used. Programs are unticked from the start: a libr
 could run on your computer (on Windows the engine unpacks a game module it finds in a pak and loads it). **Use
 them** goes on into the game, **Disconnect** leaves.
 
+A download that does not finish (you leave the server, are dropped, disconnect or connect elsewhere in the
+middle of it) leaves nothing behind: the part that came, the `.tmp` file in `<game>/downloads`, is deleted. A
+pak that came whole but has not the checksum the server named is deleted too, before the connection ends
+("Incorrect checksum for file").
+
 Programs are blocked in every pak that arrives, with the window or without it (`v_downloadReview 0`, or a
 download the window did not list). Both switches are in Setup, Network.
 
@@ -109,6 +114,11 @@ Of the web address:
 - Only one question to a web server runs at a time: a fetch waits while the updater asks, and the updater does
   not start while a fetch runs, also one that was let go and has not ended yet.
 - Data of a download the server sends while a pak comes from the web address is not written (`stopdl`).
+- `CL_Disconnect()` deletes the `.tmp` of a download that is not finished. A fetch from the web address that was
+  let go may still write into it for a moment: on Linux the file is gone at once, on Windows it can stay, and
+  the next download of that pak writes it anew.
+- A finished pak with a wrong checksum from the server itself is deleted before the connection ends. Before, it
+  stayed in `downloads` under its name.
 
 Of the windows:
 

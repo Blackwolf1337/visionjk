@@ -283,6 +283,7 @@ connectionless packets are dropped unread, and a player the event came from is d
   download of a pak by UDP gave the size in the first block, and a server could go on sending data until the
   disk was full. This is a check of the engine: it happens with `v_ids 0` too, only the line in `ids.log` needs
   `v_ids 1`. With `v_ids 1` it is the intrusion detection that leaves, so the server is remembered (see below).
+  What came of that download is deleted now.
   With `v_ids 0` the engine ends the connection itself. A download from the web address of a server stops at 512 MB, as before.
 - Written down: a message the engine ends the connection for (an index past its table, a message that ends
   early, an unknown command), more than 400 commands in a second, an escape character in a command (it is

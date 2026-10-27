@@ -161,7 +161,8 @@ again. The scenarios: `none` (`vs_idsTest 0`: the client joins three times and `
 (written down, the client stays and joins three times), `protected`, `gamedir` and `unasked` (the
 client leaves twice and is refused once in between; a client that does not read the whole download message
 fails `unasked`), `size` (the same, on the level `mp/idstest`, a copy of
-`mp/duel4` in a pak only the server has, so the client downloads it). It checks the client log and the `ids.log`
+`mp/duel4` in a pak only the server has, so the client downloads it; it also checks that no `.tmp` of the download is left in the home folder of the
+client, and run with the deletion taken out it failed with the `.tmp` still there). It checks the client log and the `ids.log`
 of the client. The logs are `build-test/ids/<scenario>-server.log`, `-client.log` and `-ids.log`; `--keep` also
 keeps the install and the home folders. A full run takes about three minutes.
 
