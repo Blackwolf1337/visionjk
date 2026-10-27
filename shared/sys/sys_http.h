@@ -44,5 +44,6 @@ Asks for url and hands the answer to sink. qtrue: the server said 200 and all of
 A redirect is not followed and counts as failed, as does any other answer.
 cancel: looked at while it runs, anything but 0 there ends it (within some seconds if the line is silent).
 error: what went wrong, in words for the console.
+status: the answer of the server (404: it does not have it), 0 when there was none. NULL: not wanted.
 */
-qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize );
+qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status );

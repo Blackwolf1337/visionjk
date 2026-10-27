@@ -4486,6 +4486,16 @@ void CL_DrawDownloadRequest( void ) {
 		CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
 	}
 
+	// a pak from the web address of the server can be left out, or it and the rest (the Abort and Abort All of the
+	// client plugin of JA+, cl_download.cpp): above Abort, where the lines of the download leave room
+	if ( !clc.downloadWaitingOnUser && CL_DownloadWebBusy() ) {
+		button = CL_RegisterMenuButtonArea( SCREEN_WIDTH - width - 13 - 80, (height * 3) - 80, 80, 20, "Skip", cls.menuFont, scale, CL_DownloadWebSkip );
+		CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
+
+		button = CL_RegisterMenuButtonArea( SCREEN_WIDTH - width - 13 - 80, (height * 3) - 55, 80, 20, "Skip all", cls.menuFont, scale, CL_DownloadWebSkipAll );
+		CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
+	}
+
 	// The user can always abort if they change their mind
 	button = CL_RegisterMenuButtonArea( SCREEN_WIDTH - width - 13 - 80, (height * 3) - 30, 80, 20, "Abort", cls.menuFont, scale, CL_Disconnect_f );
 	CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );

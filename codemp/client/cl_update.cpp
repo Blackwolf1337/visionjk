@@ -561,7 +561,7 @@ static void Update_FindLeft( void ) {
 	UPD_VersionText( upd.own, own, sizeof( own ) );
 	snprintf( url, sizeof( url ), "%s/lists/%s/%s.txt", upd.address, own, UPDATE_SYSTEM );
 	updListLen = 0;
-	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ) )
+	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ), NULL )
 		|| UPD_ParseList( updListText, (size_t)updListLen, &updOwnList ) != NULL || UPD_CompareVersion( updOwnList.version, upd.own ) ) {
 		upd.leftUnknown = qtrue;
 		return;
@@ -599,7 +599,7 @@ static int Update_CheckThread( void *unused ) {
 	updListLen = 0;
 
 	snprintf( url, sizeof( url ), "%s/%s%s.txt", upd.address, upd.dev ? "dev/" : "", UPDATE_SYSTEM );
-	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ) ) ) {
+	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ), NULL ) ) {
 		Update_Error( "%s did not report whether a newer version exists: %s", upd.address, why );
 	} else if ( ( wrong = UPD_ParseList( updListText, (size_t)updListLen, &upd.list ) ) != NULL ) {
 		Update_Error( "The file list from %s is not usable: %s", upd.address, wrong );
@@ -708,7 +708,7 @@ static int Update_FetchThread( void *unused ) {
 		Web_SHA256Init( &sink.sha );
 		UPD_VersionText( upd.list.version, version, sizeof( version ) );
 		snprintf( url, sizeof( url ), "%s/%s/%s/%s", upd.address, version, UPDATE_SYSTEM, file->path );
-		got = Sys_HttpGet( url, Update_FileSink, &sink, &upd.cancel, why, sizeof( why ) );
+		got = Sys_HttpGet( url, Update_FileSink, &sink, &upd.cancel, why, sizeof( why ), NULL );
 		if ( fclose( sink.f ) != 0 )
 			sink.disk = qtrue;
 		Web_SHA256Final( &sink.sha, digest );

@@ -543,6 +543,8 @@ qboolean	CL_DownloadWebStart( void );
 void		CL_DownloadWebFrame( void );
 void		CL_DownloadWebStop( void );
 qboolean	CL_DownloadWebBusy( void );
+void		CL_DownloadWebSkip( void );
+void		CL_DownloadWebSkipAll( void );
 qboolean	CL_DownloadWebAsking( void );
 qboolean	CL_DownloadReviewDraw( void );
 qboolean	CL_DownloadReviewKey( int key );

@@ -58,15 +58,18 @@ static void Sys_HttpError( const char *step, char *error, int errorSize ) {
 	}
 }
 
-qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize ) {
+qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
 	wchar_t			wide[HTTP_MAX_URL], host[256], path[HTTP_MAX_URL];
 	URL_COMPONENTS	parts;
 	HINTERNET		session = NULL, connection = NULL, request = NULL;
-	DWORD			status = 0, size = sizeof( status ), off = WINHTTP_DISABLE_REDIRECTS;
+	DWORD			answer = 0, size = sizeof( answer ), off = WINHTTP_DISABLE_REDIRECTS;
 	qboolean		ok = qfalse;
 	size_t			i;
 
 	error[0] = '\0';
+	if ( status ) {
+		*status = 0;
+	}
 	// an address is plain letters here (UPD_AddressAllowed, UPD_PathAllowed), so each is one wide one
 	for ( i = 0; url[i] && i < HTTP_MAX_URL - 1; i++ )
 		wide[i] = (wchar_t)(unsigned char)url[i];
@@ -113,12 +116,15 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 			break;
 		}
 		if ( !WinHttpQueryHeaders( request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX,
-			&status, &size, WINHTTP_NO_HEADER_INDEX ) ) {
+			&answer, &size, WINHTTP_NO_HEADER_INDEX ) ) {
 			Sys_HttpError( "the answer", error, errorSize );
 			break;
 		}
-		if ( status != 200 ) {
-			Com_sprintf( error, errorSize, "the server answered %lu", (unsigned long)status );
+		if ( status ) {
+			*status = (int)answer;
+		}
+		if ( answer != 200 ) {
+			Com_sprintf( error, errorSize, "the server answered %lu", (unsigned long)answer );
 			break;
 		}
 		for ( ;; ) {

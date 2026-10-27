@@ -38,7 +38,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "qcommon/stringed_ingame.h"
+#include "web/web_missing.h"
 #include <minizip/unzip.h>
+#include <time.h>
 #if !defined( __EMSCRIPTEN__ )
 	#include <SDL.h>
 	#include "sys/sys_http.h"
@@ -128,8 +130,9 @@ static void	DL_Use( void );
 =================
 CL_DownloadReview_f
 
-v_downloadReview_do download | without | use | keep <0 or 1> | pak <n> | kind <pak> <kind>: what a click in the
-windows does, for a key or a script (pak and kind switch a box, counted from 0 in the order the window shows).
+v_downloadReview_do download | without | use | keep <0 or 1> | pak <n> | kind <pak> <kind> | skip | skipall: what a
+click in the windows does, for a key or a script (pak and kind switch a box, counted from 0 in the order the window
+shows; skip and skipall are the buttons of the overlay while a pak comes from a web address).
 =================
 */
 static void CL_DownloadReview_f( void ) {
@@ -148,8 +151,13 @@ static void CL_DownloadReview_f( void ) {
 		dl.paks[a].keep[k] = (qboolean)!dl.paks[a].keep[k];
 	} else if ( dl.stage == STAGE_REVIEW && !Q_stricmp( what, "use" ) ) {
 		DL_Use();
+	} else if ( CL_DownloadWebBusy() && !Q_stricmp( what, "skip" ) ) {
+		CL_DownloadWebSkip();
+	} else if ( CL_DownloadWebBusy() && !Q_stricmp( what, "skipall" ) ) {
+		CL_DownloadWebSkipAll();
 	} else {
-		Com_Printf( "v_downloadReview_do download | without | keep <0 or 1> | pak <n> (the first window), kind <pak> <kind> | use (the second)\n" );
+		Com_Printf( "v_downloadReview_do download | without | keep <0 or 1> | pak <n> (the first window), kind <pak> <kind> | use (the second),"
+			" skip | skipall (while a pak comes from a web address)\n" );
 	}
 }
 
@@ -569,11 +577,20 @@ static qboolean DL_WebBase( char *out, int outSize ) {
 	const char	*base;
 	int			i;
 
-	if ( !v_downloadHttp || !v_downloadHttp->integer || cls.state < CA_CONNECTED ) {
+	// (bit 14 of cp_pluginDisable is the plugin's AllowDownloadURL_Redirect: set, its web download is off)
+	if ( !v_downloadHttp || !v_downloadHttp->integer || ( Cvar_VariableIntegerValue( "cp_pluginDisable" ) & ( 1 << 14 ) )
+		|| cls.state < CA_CONNECTED ) {
 		return qfalse;
 	}
 	base = Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SYSTEMINFO], "jp_DlBaseURL" );
 	if ( Q_stricmpn( base, "http://", 7 ) && Q_stricmpn( base, "https://", 8 ) ) {
+		static char told[DL_WEB_BASE];
+
+		// an ftp address, which server.cfg of JA+ names as possible: said once, the paks come from the server
+		if ( base[0] && strcmp( told, base ) ) {
+			Q_strncpyz( told, base, sizeof( told ) );
+			Com_Printf( S_COLOR_YELLOW "The download address of this server is not an http or https address, it is not used: %s\n", base );
+		}
 		return qfalse;
 	}
 	if ( strlen( base ) >= DL_WEB_BASE || (int)strlen( base ) + 2 > outSize ) {
@@ -685,7 +702,11 @@ typedef struct dlWebJob_s {
 	// the thread writes these, the game reads them once the state is WEBJOB_DONE
 	FILE				*f;
 	qboolean			ok, disk;
+	int					status;					// the answer of the web server, 404: it does not have the pak
 	char				error[256];
+	// the game's: for the list of what the web address does not have
+	char				base[DL_WEB_BASE + 2];
+	char				remote[MAX_QPATH];
 } dlWebJob_t;
 
 static dlWebJob_t	dlJobs[DL_WEB_JOBS];
@@ -713,7 +734,7 @@ static int DL_WebThread( void *data ) {
 	if ( !job->f ) {
 		job->disk = qtrue;
 	} else {
-		job->ok = Sys_HttpGet( job->url, DL_WebSink, job, &job->cancel, job->error, sizeof( job->error ) );
+		job->ok = Sys_HttpGet( job->url, DL_WebSink, job, &job->cancel, job->error, sizeof( job->error ), &job->status );
 		if ( fclose( job->f ) != 0 ) {
 			job->disk = qtrue;
 		}
@@ -740,13 +761,58 @@ static qboolean DL_WebOthersAsking( const dlWebJob_t *job ) {
 	return qfalse;
 }
 
-// The pak did not come from the web address: from the server itself, if it sends files, else the next one.
-static void DL_WebFailed( const char *why ) {
-	Com_Printf( S_COLOR_YELLOW "%s did not come from the web address of the server: %s\n", cl_downloadName->string, why );
-	FS_Remove( DL_Path( clc.downloadTempName ) );
-	clc.downloadCount = clc.downloadSize = 0;
-	Cvar_Set( "cl_downloadCount", "0" );
-	Cvar_Set( "cl_downloadSize", "0" );
+/*
+=================
+The paks the web address does not have
+
+A pak the web server answered 404 for is noted in japlus/urlRedirect_cache.txt of the home folder, where the client
+plugin of JA+ kept them, and is not asked there again for six days (shared/web/web_missing.c). The next connect
+then goes straight to the server itself, or on without the pak, in place of a question that fails each time.
+=================
+*/
+#define DL_MISSING_FILE		"japlus/urlRedirect_cache.txt"
+#define DL_MISSING_MOST		32768
+
+static char dlMissing[DL_MISSING_MOST], dlMissingNew[DL_MISSING_MOST];
+
+static void DL_MissingRead( void ) {
+	fileHandle_t	f;
+	int				len = FS_SV_FOpenFileRead( DL_MISSING_FILE, &f );
+
+	dlMissing[0] = '\0';
+	if ( !f ) {
+		return;
+	}
+	if ( len > 0 ) {
+		len = FS_Read( dlMissing, Q_min( len, (int)sizeof( dlMissing ) - 1 ), f );
+		dlMissing[Q_max( len, 0 )] = '\0';
+	}
+	FS_FCloseFile( f );
+}
+
+static qboolean DL_MissingListed( const char *base, const char *remote ) {
+	DL_MissingRead();
+	return WEB_MissingListed( dlMissing, base, remote, (long long)time( NULL ) );
+}
+
+static void DL_MissingNote( const char *base, const char *remote ) {
+	fileHandle_t	f;
+	size_t			len;
+
+	DL_MissingRead();
+	len = WEB_MissingAdd( dlMissing, base, remote, (long long)time( NULL ), dlMissingNew, sizeof( dlMissingNew ) );
+	if ( !len ) {
+		return;
+	}
+	f = FS_SV_FOpenFileWrite( DL_MISSING_FILE );
+	if ( f ) {
+		FS_Write( dlMissingNew, (int)len, f );
+		FS_FCloseFile( f );
+	}
+}
+
+// The pak does not come from the web address: from the server itself, if it sends files, else the next one.
+static void DL_WebElsewhere( void ) {
 	if ( CL_ServerSendsDownloads() ) {
 		Com_Printf( "It is asked from the server itself.\n" );
 		CL_DownloadUdpStart();
@@ -754,6 +820,15 @@ static void DL_WebFailed( const char *why ) {
 	}
 	Com_Printf( S_COLOR_YELLOW "The server sends no files itself, the game goes on without it.\n" );
 	CL_NextDownload();
+}
+
+static void DL_WebFailed( const char *why ) {
+	Com_Printf( S_COLOR_YELLOW "%s did not come from the web address of the server: %s\n", cl_downloadName->string, why );
+	FS_Remove( DL_Path( clc.downloadTempName ) );
+	clc.downloadCount = clc.downloadSize = 0;
+	Cvar_Set( "cl_downloadCount", "0" );
+	Cvar_Set( "cl_downloadSize", "0" );
+	DL_WebElsewhere();
 }
 
 /*
@@ -786,6 +861,14 @@ qboolean CL_DownloadWebStart( void ) {
 	if ( !DL_WebUrl( base, cl_downloadName->string, job->url, sizeof( job->url ) ) ) {
 		return qfalse;
 	}
+	if ( DL_MissingListed( base, cl_downloadName->string ) ) {
+		Com_Printf( "%s was not at the web address of the server when it was last asked there, it is not asked again for "
+			"six days (%s).\n", cl_downloadName->string, DL_MISSING_FILE );
+		DL_WebElsewhere();
+		return qtrue;
+	}
+	Q_strncpyz( job->base, base, sizeof( job->base ) );
+	Q_strncpyz( job->remote, cl_downloadName->string, sizeof( job->remote ) );
 	// the folders and the file are made here, the thread calls nothing of the engine
 	f = FS_SV_FOpenFileWrite( clc.downloadTempName );
 	if ( !f ) {
@@ -848,6 +931,9 @@ void CL_DownloadWebFrame( void ) {
 	ok = job->ok;
 	disk = job->disk;
 	Q_strncpyz( why, job->error, sizeof( why ) );
+	if ( !ok && !disk && job->status == 404 ) {
+		DL_MissingNote( job->base, job->remote );
+	}
 	SDL_AtomicSet( &job->state, WEBJOB_FREE );
 
 	if ( disk ) {
@@ -896,6 +982,39 @@ qboolean CL_DownloadWebBusy( void ) {
 	return (qboolean)( dlJob != NULL );
 }
 
+/*
+=================
+CL_DownloadWebSkip
+
+The Abort and Abort All of the plugin, the buttons of the overlay while a pak comes from the web address: this pak,
+or it and every one after it, is not downloaded, and the game goes on as without them. (A pak from the server
+itself has no such button: what of it is still on the way would be taken for the next one.)
+=================
+*/
+static void DL_WebSkip( qboolean all ) {
+	if ( !dlJob ) {
+		return;
+	}
+	Com_Printf( all ? "%s and the paks after it are not downloaded.\n" : "%s is not downloaded.\n", cl_downloadName->string );
+	CL_DownloadWebStop();
+	FS_Remove( DL_Path( clc.downloadTempName ) );
+	clc.downloadCount = clc.downloadSize = 0;
+	Cvar_Set( "cl_downloadCount", "0" );
+	Cvar_Set( "cl_downloadSize", "0" );
+	if ( all ) {
+		clc.downloadList[0] = '\0';
+	}
+	CL_NextDownload();
+}
+
+void CL_DownloadWebSkip( void ) {
+	DL_WebSkip( qfalse );
+}
+
+void CL_DownloadWebSkipAll( void ) {
+	DL_WebSkip( qtrue );
+}
+
 // a thread of this file asks a web server now, also one that was let go (the updater waits for it)
 qboolean CL_DownloadWebAsking( void ) {
 	return (qboolean)( dlJob || DL_WebOthersAsking( NULL ) );
@@ -908,6 +1027,8 @@ void		CL_DownloadWebFrame( void ) {}
 void		CL_DownloadWebStop( void ) {}
 qboolean	CL_DownloadWebBusy( void ) { return qfalse; }
 qboolean	CL_DownloadWebAsking( void ) { return qfalse; }
+void		CL_DownloadWebSkip( void ) {}
+void		CL_DownloadWebSkipAll( void ) {}
 
 #endif
 

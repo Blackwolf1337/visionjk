@@ -532,6 +532,8 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_main.cpp"
 		"${MPDir}/client/cl_update.cpp"
 		"${MPDir}/client/cl_download.cpp"
+		"${SharedDir}/web/web_missing.c"
+		"${SharedDir}/web/web_missing.h"
 		"${MPDir}/client/cl_net_chan.cpp"
 		"${MPDir}/client/cl_parse.cpp"
 		"${MPDir}/client/cl_scrn.cpp"

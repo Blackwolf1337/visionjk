@@ -130,13 +130,16 @@ static int Sys_HttpProgress( void *user, long long dlTotal, long long dlNow, lon
 	return *( (httpRequest_t *)user )->cancel ? 1 : 0;
 }
 
-qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize ) {
+qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
 	httpRequest_t	request;
 	void			*handle;
-	long			status = 0;
+	long			answer = 0;
 	int				code;
 
 	error[0] = '\0';
+	if ( status ) {
+		*status = 0;
+	}
 	if ( !Sys_HttpLoad() ) {
 		Com_sprintf( error, errorSize, "this system has no %s", HTTP_LIBRARY );
 		return qfalse;
@@ -171,8 +174,11 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 	http.easySetopt( handle, HTTP_OPT_XFERINFODATA, &request );
 
 	code = http.easyPerform( handle );
-	http.easyGetinfo( handle, HTTP_INFO_RESPONSE_CODE, &status );
+	http.easyGetinfo( handle, HTTP_INFO_RESPONSE_CODE, &answer );
 	http.easyCleanup( handle );
+	if ( status ) {
+		*status = (int)answer;
+	}
 
 	if ( *cancel ) {
 		Q_strncpyz( error, "stopped", errorSize );
@@ -186,8 +192,8 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 		Q_strncpyz( error, http.easyStrerror( code ), errorSize );
 		return qfalse;
 	}
-	if ( status != 200 ) {
-		Com_sprintf( error, errorSize, "the server answered %li", status );
+	if ( answer != 200 ) {
+		Com_sprintf( error, errorSize, "the server answered %li", answer );
 		return qfalse;
 	}
 	return qtrue;

@@ -6455,6 +6455,15 @@ static void UI_RunMenuScript(char **args)
 				}
 			}
 		}
+		else if ( Q_stricmp( name, "abordURLRedirectCurrDownload" ) == 0 )
+		{
+			// the buttons of ui/jamp/UrlRedirectDownload.menu of the client plugin of JA+: 0 Abort, 1 Abort All of
+			// a pak from the web address. The engine downloads those, and its overlay has the same buttons.
+			int all = 0;
+
+			Int_Parse( args, &all );
+			trap->Cmd_ExecuteText( EXEC_APPEND, all ? "v_downloadReview_do skipall\n" : "v_downloadReview_do skip\n" );
+		}
 		else if (Q_stricmp(name, "getsaberhiltinfo") == 0)
 		{
 			WP_SaberGetHiltInfo(saberSingleHiltInfo, saberStaffHiltInfo);
