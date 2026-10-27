@@ -2179,13 +2179,22 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 
 	// Echo request from server. Only from the server: the answer is whatever the packet asks for, sent to
 	// wherever the packet says it came from, so anybody could have a client send a packet of his choice to an
-	// address of his choice. A server this client asked for its info or status may ask too (CL_EchoAsked).
+	// address of his choice. A server this client asked for its info or status may ask too (CL_EchoAsked). The
+	// engines echo the first word after "echo", which a server puts in quotes when it has blanks; the text of
+	// such a question is taken whole, so "echoResponse getinfo <random>" is the same with quotes or without.
 	if ( !Q_stricmp(c, "echo") ) {
-		if ( ( cls.state < CA_CONNECTING || !NET_CompareAdr( from, &clc.serverAddress ) ) && !CL_EchoAsked( from, Cmd_Argv(1) ) ) {
-			CL_IDS_Event( CLIDS_ECHO, from, Cmd_Argv(1) );
+		char text[MAX_STRING_CHARS];
+
+		Q_strncpyz( text, Cmd_ArgsFrom( 1 ), sizeof( text ) );
+		if ( cls.state >= CA_CONNECTING && NET_CompareAdr( from, &clc.serverAddress ) ) {
+			NET_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv(1) );
 			return;
 		}
-		NET_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv(1) );
+		if ( !CL_EchoAsked( from, text ) ) {
+			CL_IDS_Event( CLIDS_ECHO, from, text );
+			return;
+		}
+		NET_OutOfBandPrint( NS_CLIENT, from, "%s", text );
 		return;
 	}
 

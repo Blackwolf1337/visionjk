@@ -322,6 +322,10 @@ connectionless packets are dropped unread, and a player the event came from is d
   from any other address is not answered, because then anybody could send getinfo to such a server with the
   player's address as sender and the client would confirm it. Every other echo is refused and written down
   as before.
+  For such an asked echo the whole rest of the line counts as the text, so it is the same with or without
+  quotes (the engines only echo the first word when the server did not quote the text, and the client would
+  have refused it). The answer is that whole text. The `ids.log` line of a refused echo names the whole text.
+  An echo from the connected server is answered as before.
 - Changed besides: the client reads the whole download message of a server before it decides anything: the
   block number, the size of the file in block zero (or -1 and the reason the server gives), the length of the
   block and its data. Before, a download message nobody asked for (and one that came while a pak came from the
