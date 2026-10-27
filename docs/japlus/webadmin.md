@@ -2034,6 +2034,15 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   the spawn functions for `trap->Error`, which missed `misc_bsp` (the error comes from the engine). Since then
   every class the editor offers is placed bare by a check (`steps_guard.js`) and the server has to be there
   after it. What that does not cover: keys with values that are wrong, and other game types.
+- The editor also refuses these, because each one would end the server: a `misc_maglock` that starts inside a
+  wall (the same trace `maglock_link` makes a moment after the spawn), and deleting, clearing or editing away
+  the last entity of a spawn class (`info_player_deathmatch`, `team_CTF_redplayer`, `team_CTF_blueplayer`,
+  `team_CTF_redspawn`, `team_CTF_bluespawn`, `info_player_siegeteam1`, `info_player_siegeteam2`). A player who
+  spawns without one ends the server ("Couldn't find a spawn point"), so the message is "this is the last
+  <class>: a player who spawns without one ends the server, place another one first". The same goes for the
+  only entity with a targetname that a `trigger_shipboundary` or `trigger_hyperspace` names as `target` or
+  `target2`. A clear keeps such entities and says "n deleted, m kept: why". Tested through the panel API on
+  mp/ffa1.
 - The lights of a map can not be shown: the compiler takes them out of the map file.
 - Plain HTTP, and it listens on every interface unless `vs_webBind` says otherwise: the password of a login and
   the cookie of a session cross the network as they are. Where that network is not your own, put a reverse

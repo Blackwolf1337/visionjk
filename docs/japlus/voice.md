@@ -451,7 +451,11 @@ Nothing of the voice chat is in the game protocol.
   alone: that is how the voice of a browser arrives, and the web host has checked the address by then, see "In
   a browser". A packet with the address of the machine does not come in from a network, the system drops it.
   What is left is a program on the server machine: it can try tokens (32 random bits) for any client without
-  being at his address.
+  being at his address. More than 20 wrong tokens in a second from the machine make the relay take nothing
+  from it for 10 seconds, with one line in the security log ("Voice chat: more than 20 wrong tokens in a
+  second from this machine, nothing from it is taken for 10 s"). That stops the voice of browser clients for
+  that time too. With that limit 2^32 tokens take decades. Tested: 10 wrong ones in a second do nothing, 30 at
+  once give the line.
 - Whoever reaches the port of the web host and is no player gets no WebSocket for the voice chat (403). A player
   in a browser can send for the clients of his own address only, hears only what the relay sends for the token
   he spoke with, and nothing he sends changes where the web host sends: its UDP sockets are tied to the relay.
@@ -531,8 +535,9 @@ hardware, everything on one machine over 127.0.0.1:
 
 Not checked: voice of a client in a browser through the web host of a server with one port (the socket for it
 is there, nobody talked through it), Windows, how any of it sounds. (The masterserver on its real machine: see
-the lines of 2026-10-12 21:43 below.) Seen on the way and not changed: the dedicated server does not catch SIGTERM, so a
-service that is stopped ends without telling its players.
+the lines of 2026-10-12 21:43 below.) The dedicated server now catches SIGTERM and SIGINT (Linux, macOS) and
+quits as on "quit", so a service that is stopped tells its players. Tested with `kill -TERM` on a dedicated
+server with a bot: "Received signal 15, quitting", ShutdownGame, exit code 0.
 
 2026-10-11, the clan radio and the statuses through the relay for servers without the module (the "voice master"
 of then, a program of its own), Linux, without sound hardware:

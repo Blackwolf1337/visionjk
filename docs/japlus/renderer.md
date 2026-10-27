@@ -41,8 +41,8 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Screenshots, recording to AVI | done |
 | Automap | done |
 | `r_showtris`, `r_shownormals`, `r_showImages`, `v_vkStatic`, `gfxinfo`, `imagelist` | done |
-| Window: resized from outside (the frame is made again in the new size), `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done on the Vulkan device, not run in the game since the change (see "Checked"). The OpenGL ES device restarts instead |
-| Windows DLL, 64 bit | started on Windows 11 on Mesa's software Vulkan and drew the menus (2026-10-11, [windows.md](windows.md)). No level, no real graphics card |
+| Window: resized from outside (the frame is made again in the new size), `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done on the Vulkan device and run under sway (Wayland, headless) on Linux, see "Checked". Not run on Hyprland or on Windows. The OpenGL ES device restarts instead |
+| Windows DLL, 64 bit | started on Windows 11 on Mesa's software Vulkan and drew the menus (2026-10-11, [windows.md](windows.md)). Ran in a level (mp/ffa3) under Wine 10 with winevulkan on RADV (2026-10-27): the level, the HUD and a bot were drawn. Not run on Windows with a real graphics card |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
 | Videos: a `.roq` on the screen, `videoMap` in a shader | done |
 | Fullscreen, also at a size that is not the one of the desktop | done |
@@ -122,8 +122,12 @@ border for it (the Windows builds link libgcc statically).
 What that does not catch: a driver that crashes inside Vulkan instead of refusing. Then
 `+set cl_renderer rd-vanilla` on the command line is the way out.
 
-The fallback was built for Linux and not run: no start without Vulkan was tried, neither by taking the library
-away nor on a real machine. Windows was not built with it.
+The fallback was run on Linux on 2026-10-27 (AMD Radeon 610M, RADV, Mesa 26.2.5, headless gamescope). With no
+Vulkan driver (`VK_ICD_FILENAMES` pointing nowhere) the log says `rd-vulkan-vision can not run on this machine,
+going on with rd-vanilla` and the game runs. With the library `rd-vulkan-vision_x86_64.so` removed it says
+`failed: trying to load fallback renderer` and the game runs. The fallback is code of the client
+(`cl_main.cpp`) and is the same on Windows, so the Windows build has it. It was not run on Windows, only the
+Linux side was run.
 
 | Cvar | Meaning |
 |------|---------|
@@ -503,13 +507,14 @@ effects").
   ghosts of Force Sight are the exception: the game already shows them through walls from Force Sight level 2.
 - Noise: `shaders/noise.glsl` is shared by the three shaders. It is gradient noise on the `pcg3d` integer hash.
 
-Checked: built for Linux, Windows and the OpenGL ES device. Not run in the game in this form.
+Checked: built for Linux, Windows and the OpenGL ES device. The screen effects pass ran for Force Sight and photo mode (the paragraph on the window under "Checked"). The scope lens, the binoculars and the rocket lock-on were not run in the game.
 
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and
 libwinpthread. It was built on 2026-10-07 from the last state of the renderer, without a warning in the files
-of the renderer (32 bit was built until then too and is gone from the tree). It was never loaded into a game. macOS was not tried, it would need
+of the renderer (32 bit was built until then too and is gone from the tree). It was loaded into a level once, under
+Wine 10 with winevulkan on RADV (see "Checked"), and never on Windows itself. macOS was not tried, it would need
 MoltenVK.
 
 Not moved to the device, with the numbers of the fight demo. Sprites, lines and saber glow: building them is
@@ -709,9 +714,22 @@ because the pool has no room for more. The client then updates `cls.glconfig`, a
 their next frame (see "Wide screens" in [client.md](client.md)). The OpenGL ES device says no (a frame is played
 at its end, and its commands name the targets), as does rd-vanilla: the client does a `vid_restart` in the new
 size then, with a one-time size for the next window that is not written into `r_mode` or `r_custom*`. Built for
-Linux (Vulkan device, OpenGL ES device, rd-vanilla) and Windows (mingw x86_64). Not run in the game, not on
-Hyprland: the new way is unchecked, and so is `tay_renderScale` with a resize (its targets are made again in
-`VK_InitPost()`, but no picture was looked at). `r_swapInterval 1` in a window nobody sees: the images of the swapchain
+Linux (Vulkan device, OpenGL ES device, rd-vanilla) and Windows (mingw x86_64).
+
+Run on 2026-10-27 (AMD Radeon 610M, RADV, Mesa 26.2.5) under sway 1.x, headless (wlroots, Wayland). With
+rd-vulkan-vision the window was made floating and resized to 800x500 and then 1200x500: the frame followed each
+size without a `vid_restart` (screenshots of the game in those sizes), and the HUD sat at the edges. With
+rd-vanilla the client printed "The window is now 800 x 500, restarting the renderer" and restarted in that
+size. The new window of that `vid_restart` is a new window for the compositor, and sway tiled it again
+(1280x720), so the client restarted once more in that size. On a tiling desktop that is the size of the tile; a
+size dragged on a floating window does not survive the `vid_restart` path. Hyprland itself was not run.
+`tay_renderScale` 0.5 and 1.5 with `vid_restart`: the level was drawn at 640x360 and at 1920x1080 inside a
+1280x720 window, and the HUD was sharp. That was not tried together with a live resize. The Windows DLL
+(mingw build) ran in the level mp/ffa3 under Wine 10 with winevulkan on RADV: the level, the HUD and a bot were
+drawn. That is not Windows on a real graphics card. The screen effects pass was run for Force Sight (the tint and
+the streaks) and for photo mode (the HUD gone, the camera around the player, the help line, depth of field). The
+scope lens, the binoculars and the rocket lock-on could not be brought up by a script (the zoom did not start
+from a console `+altattack`) and are not checked. `r_swapInterval 1` in a window nobody sees: the images of the swapchain
 come back late or not at all, under Wayland and under X11. A frame waits 50 ms for one at most, and after a
 wait that ran out the frames of the next second do not wait at all and are shown when an image happens to be
 free, so the game and its connection go on at their speed (`gfxinfo` counts the frames that were not shown).

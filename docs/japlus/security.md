@@ -94,7 +94,9 @@ Off when a sanitizer build is configured.
   by deleting all spawn points. OpenJK makes every game error fatal on a dedicated server. Decided to leave as is.
   Later the panel got a guard for what can be told from the keys (`WA_SpawnRefused`, [webadmin.md](webadmin.md)).
   On 2026-10-08 a `misc_bsp` placed in the editor did end a server: that class is refused now and every class
-  the editor offers is placed bare by a check.
+  the editor offers is placed bare by a check. Since then it also refuses a `misc_maglock` that starts inside a
+  wall, deleting the last entity of a spawn class, and deleting the only entity that a `trigger_shipboundary` or
+  `trigger_hyperspace` names as target (see "Limits" in [webadmin.md](webadmin.md)).
 - JKA loads the client DLLs from pk3. Whoever plays on a server with `cl_allowDownload 1` trusts that server; the
   start script sets 0.
 - `getstatus`/`getinfo` stay usable as amplifiers for a spoofed sender, held down by the existing rate limits.
@@ -158,9 +160,23 @@ in `admin_keys.txt` or a one-time code.
 - A code has 40 bits, lives 60 seconds, works once, and wrong ones run into the wait of wrong passwords.
 - `admin_keys.txt` is read through the file system of the game, public keys are no secret. Comments from it
   and from key files are printed without `^`, `"` and `%`.
-- Open: a client that was told to log in on a server by itself (`v_amkey login`) signs for that server again
-  whenever it joins. If that server turns hostile it can pass the question of another server on, and only
-  `vs_authHosts` on the other server stops that. So set it on a public server.
+- The login is bound to the server by a host key (protocol version 2). The server makes 32 random bytes once and
+  keeps them as base64 in `auth_host.key` in its game folder, and sends them with the nonce. The signed message
+  has the host key in it. The client keeps the host key of every server address in `admin_hosts.txt` (the first
+  login on an address keeps it, like ssh `known_hosts`) and does not sign when a server sends another key than
+  the one kept for its address, or one kept for another address. A server that passes on the question of
+  another one has a key that is not the key of that other server, so the signature is no use there. The host
+  key is no secret on purpose: the protection is what the client kept. A server that proved it has a secret
+  would not help, a hostile server could pass that challenge on as well.
+- A server of this version takes a version 1 signature (older clients, no host key) only when `vs_authHosts` is
+  set. Without it the older client gets `vs_auth fail version`: those players have to update, or the owner sets
+  `vs_authHosts`. A client signs for a server without a host key (older game module) only when the player typed
+  `v_amkey login`, never by itself.
+- Open: the first manual login on a hostile server, one the client never logged in to and that has no
+  `vs_authHosts` on its side. Nothing is kept for that address yet. Tested with two local dedicated servers and
+  a headless client, and in `tests/vjk/auth.cpp` (the message in both versions, `admin_hosts.txt` find and
+  set). A key that was kept, a server at a kept address with another key, a key kept for another address and
+  `v_amkey trust` all behave as above.
 
 ## Added later: the web panel has accounts
 
@@ -331,8 +347,9 @@ DLLs at run time (they build and link), macOS. Their compatibility follows from 
 ## Audit of 2026-10-20
 
 An audit of master `c8bb609b` and of the website repository, eight areas. The report is
-`agent/reports/security-2026-10-20.md` in the project folder outside the repository. The fixes are on the branch
-`security/audit-2026-10-20`, built on Linux only and not run.
+`agent/reports/security-2026-10-20.md` in the project folder outside the repository. The fixes are on master
+since the merge `1290abdca` ("Merge branch 'feature/security'"). The releases since then were tested with
+`tools/test` (smoke, sanitizers, compat).
 
 | Where | Problem | Fix |
 |-------|---------|-----|

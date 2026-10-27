@@ -255,9 +255,22 @@ passwords are off unless the owner switches them on, and an admin logs in one of
   the console of the server, or the web panel, makes a code of eight letters and digits. It is typed as
   `amlogin <code>` within a minute and works once.
 
-`vs_caps` has bit 2 for the key login, a client only offers it where it reads the bit. Set `vs_authHosts`
-on a public server: without it the server can not tell a signature that was made for another server and
-passed on.
+`vs_caps` has bit 2 for the key login, a client only offers it where it reads the bit. Its default is 399 now
+(was 143): bit 8 (value 256, `AUTH_CAPS_HOST`) is the key login with the host key.
+
+The server makes a host key of 32 random bytes once and keeps it as base64 in `auth_host.key` in its game
+folder, the same place as `admin_keys.txt`, through the file system of the game. It is made only when
+`admin_keys.txt` has keys. If the file can not be written, the key is new at every start of the server. The
+key goes out with the nonce (`vs_auth nonce <nonce> <host key>`), clients of before read only the nonce. The
+signed text of version 2 is the line `VisionJK admin login v2`, the nonce, the host key, the address and the
+client number. A client keeps the host key of each address and does not sign for another one, see
+[client.md](client.md) and [security.md](security.md). The host key is no secret, the protection is what the
+client kept.
+
+A signature of version 1 (older clients, no host key) is taken only when `vs_authHosts` is set. Without it the
+older client gets `vs_auth fail version` and is not logged in. So players with an older client have to update,
+or the owner sets `vs_authHosts`. Set it on a public server anyway: it is what stops a signature that was made
+for another server and passed on, for those clients.
 
 Tested: `japlus_port/tools/authtest/run.sh` (66 checks: the three test vectors of RFC 8032 through the
 Monocypher of the tree, the signed message, the key lines, key files in both directions against `ssh-keygen`,

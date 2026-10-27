@@ -1081,7 +1081,8 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 | `v_amkey new [comment]` | makes a key and writes it to a file only the player can read, in the format of OpenSSH, with its `.pub` next to it |
 | `v_amkey show` | prints the public lines of the keys there are. The owner of a server puts one into his `admin_keys.txt` |
 | `v_amkey login` | logs in on this server, and from then on by itself whenever the player joins it |
-| `v_amkey forget` | not by itself on this server any more |
+| `v_amkey trust` | a login that keeps the host key the server sends now, whatever was kept for the address before. For a server that was set up again, or one with a second address |
+| `v_amkey forget` | not by itself on this server any more, and the host key of its address is forgotten |
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -1103,6 +1104,15 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
   vaults its `agent.toml` names, of whatever kind they are).
 - The client signs only for a server the player named with `v_amkey login`, and only right after it asked
   itself. A server that sends a question nobody asked for gets no answer.
+- The server sends a host key with its question (`vs_auth nonce <nonce> <host key>`), and the client keeps the
+  host key of each server address in `admin_hosts.txt` in the home folder of the game (always `fs_homepath`,
+  next to `admin_ed25519` by default). One line each: `<address> <host key as base64>`. The file holds at most
+  8192 bytes, the oldest lines go first. The first login on an address keeps the key, like ssh `known_hosts`.
+  After that a server at that address with another key is not signed for, and neither is a server whose key is
+  kept for another address. The player gets a message, also after the login by itself. `v_amkey trust` logs in
+  anyway and keeps the new key.
+- A server without a host key (version 1, an older game module) is signed for only when the player typed
+  `v_amkey login`, never by itself (`v_authServers`).
 - A server with flood protection (`sv_floodProtect`, on by default) drops a command that comes within a second
   of the one before and says nothing. So the commands of a login go out that far apart (the client reads the
   cvar from the serverinfo), and one that gets no answer within three seconds is sent again, twice at most.
@@ -1110,7 +1120,7 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
   `v_authAgentKey` names the right one. Until 2026-10-11 the commands went out at once, and on a server with
   flood protection the login ended with "The server did not answer the login." unless the first key was the
   right one and the agent took longer than a second to sign.
-- What is signed starts with the line `VisionJK admin login v1`. What ssh lets a key sign when it logs in
+- What is signed starts with the line `VisionJK admin login v2` (`v1` for a server without a host key; the host key is in the text of v2). What ssh lets a key sign when it logs in
   somewhere starts with four bytes of a length, so no server can use this login to get a signature that opens
   an ssh account.
 - Works in a jamp.exe too (client commands, a file and a socket are all it needs). Not in the browser client:
