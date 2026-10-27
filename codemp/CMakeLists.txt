@@ -929,4 +929,16 @@ if(BuildMPDed)
 		set_target_properties(${MasterServer} PROPERTIES PROJECT_LABEL "Masterserver")
 		target_link_libraries(${MasterServer} ${MasterServerLibraries})
 	endif(BuildMasterServer)
+
+	# The test server of the intrusion detection of the client: the same program, and with vs_idsTest it sends
+	# what no server of the game does (server/sv_idstest.cpp). For tools/test/ids-test.sh, never installed.
+	if(BuildDevIdsTest)
+		add_executable(${IdsTestServer} ${MPDedFiles} "${MPDir}/server/sv_idstest.cpp")
+		set_target_properties(${IdsTestServer} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines};VISIONJK_IDS_TEST")
+		set_property(TARGET ${IdsTestServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+		set_target_properties(${IdsTestServer} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
+		set_target_properties(${IdsTestServer} PROPERTIES PROJECT_LABEL "IDS Test Server")
+		target_link_libraries(${IdsTestServer} ${MPDedLibraries})
+		message(STATUS "BuildDevIdsTest is on: developer build, not for a release")
+	endif(BuildDevIdsTest)
 endif(BuildMPDed)

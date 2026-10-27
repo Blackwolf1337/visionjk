@@ -882,7 +882,11 @@ void SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
 
 		// block zero is special, contains file size
 		if ( cl->downloadXmitBlock == 0 )
+#ifdef VISIONJK_IDS_TEST
+			MSG_WriteLong( msg, SV_IDSTest_DownloadSize( cl->downloadSize ) );
+#else
 			MSG_WriteLong( msg, cl->downloadSize );
+#endif
 
 		MSG_WriteShort( msg, cl->downloadBlockSize[curindex] );
 

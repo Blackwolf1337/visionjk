@@ -1214,7 +1214,11 @@ void SV_Frame( int msec ) {
 		cvar_modifiedFlags &= ~CVAR_SERVERINFO;
 	}
 	if ( cvar_modifiedFlags & CVAR_SYSTEMINFO ) {
+#ifdef VISIONJK_IDS_TEST
+		SV_SetConfigstring( CS_SYSTEMINFO, SV_IDSTest_SystemInfo( Cvar_InfoString_Big( CVAR_SYSTEMINFO ) ) );
+#else
 		SV_SetConfigstring( CS_SYSTEMINFO, Cvar_InfoString_Big( CVAR_SYSTEMINFO ) );
+#endif
 		cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
 	}
 

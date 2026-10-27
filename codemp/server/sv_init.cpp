@@ -751,6 +751,9 @@ Ghoul2 Insert End
 
 	// save systeminfo and serverinfo strings
 	Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
+#ifdef VISIONJK_IDS_TEST
+	Q_strncpyz( systemInfo, SV_IDSTest_SystemInfo( systemInfo ), sizeof( systemInfo ) );
+#endif
 	cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
 	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo );
 
@@ -1000,6 +1003,9 @@ void SV_Init (void) {
 	sv_floodProtect = Cvar_Get ("sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Protect against flooding of server commands" );
 	sv_floodProtectSlow = Cvar_Get ("sv_floodProtectSlow", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Use original method of delaying commands with flood protection" );
 	SV_IDS_Init();
+#ifdef VISIONJK_IDS_TEST
+	SV_IDSTest_Init();
+#endif
 	SV_VoiceInit();
 	vs_antiWallhack = Cvar_Get( "vs_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
 	// systeminfo

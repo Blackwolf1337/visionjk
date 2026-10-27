@@ -472,6 +472,14 @@ qboolean	SV_IDS_Blocked( const netadr_t *from );
 void		SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const char *detail );
 void		SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo );
 
+#ifdef VISIONJK_IDS_TEST
+// sv_idstest.cpp: the test server that misbehaves on purpose (visionjkded-idstest only)
+void		SV_IDSTest_Init( void );
+const char	*SV_IDSTest_SystemInfo( const char *info );
+int			SV_IDSTest_DownloadSize( int size );
+void		SV_IDSTest_Unasked( client_t *cl, msg_t *msg );
+#endif
+
 // sv_voice.cpp: the voice chat on the UDP port of the game
 void		SV_VoiceInit( void );
 qboolean	SV_VoicePacket( const netadr_t *from, msg_t *msg );

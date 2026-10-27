@@ -932,6 +932,9 @@ void SV_SendClientSnapshot( client_t *client ) {
 
 	// Add any download data if the client is downloading
 	SV_WriteDownloadToClient( client, &msg );
+#ifdef VISIONJK_IDS_TEST
+	SV_IDSTest_Unasked( client, &msg );
+#endif
 
 	// check for overflow
 	if ( msg.overflowed ) {
