@@ -4198,6 +4198,138 @@ Bone  52:   "face_always_":
 */
 
 
+extern int r_modelFileLength;
+qboolean R_ModelSpan( int size, int ofs, int count, int stride );
+
+/*
+=================
+R_MDXMFits
+
+Every part of a GLM the loader and the renderer walk lies inside its size, the size inside the file
+(r_modelFileLength), and every index in it names something it has: surfaces, vertices, bone references, bones.
+base is the file as read, mdxm a copy of its header in host order. Checked before the model goes into the cache.
+=================
+*/
+static qboolean R_MDXMFits( byte *base, const mdxmHeader_t *mdxm, int size ) {
+	const int	childOfs = (int)(size_t)&( (mdxmSurfHierarchy_t *)0 )->childIndexes[0];
+	int			i, j, k, l, ofs;
+
+	if ( size < (int)sizeof( *mdxm ) || ( r_modelFileLength >= 0 && size > r_modelFileLength )
+		|| mdxm->numSurfaces < 0 || mdxm->numSurfaces > 4096 || mdxm->numLODs < 1 || mdxm->numLODs > 16
+		|| mdxm->numBones < 0 || !R_ModelSpan( size, sizeof( *mdxm ), mdxm->numSurfaces, sizeof( int ) ) ) {
+		return qfalse;
+	}
+	// the surface hierarchy, and the table of offsets to it right after the header
+	ofs = mdxm->ofsSurfHierarchy;
+	for ( i = 0; i < mdxm->numSurfaces; i++ ) {
+		mdxmSurfHierarchy_t	*surfInfo;
+		int					numChildren;
+
+		if ( !R_ModelSpan( size, ofs, 1, childOfs ) ) {
+			return qfalse;
+		}
+		surfInfo = (mdxmSurfHierarchy_t *)( base + ofs );
+		numChildren = LittleLong( surfInfo->numChildren );
+		if ( numChildren < 0 || numChildren > mdxm->numSurfaces || !R_ModelSpan( size, ofs + childOfs, numChildren, sizeof( int ) )
+			|| LittleLong( surfInfo->parentIndex ) < -1 || LittleLong( surfInfo->parentIndex ) >= mdxm->numSurfaces ) {
+			return qfalse;
+		}
+		for ( j = 0; j < numChildren; j++ ) {
+			if ( (unsigned)LittleLong( surfInfo->childIndexes[j] ) >= (unsigned)mdxm->numSurfaces ) {
+				return qfalse;
+			}
+		}
+		surfInfo->name[sizeof( surfInfo->name ) - 1] = '\0';
+		surfInfo->shader[sizeof( surfInfo->shader ) - 1] = '\0';
+		ofs += childOfs + numChildren * (int)sizeof( int );
+	}
+	{
+		const int *offsets = (const int *)( base + sizeof( *mdxm ) );
+
+		for ( i = 0; i < mdxm->numSurfaces; i++ ) {
+			if ( !R_ModelSpan( size, (int)sizeof( *mdxm ) + LittleLong( offsets[i] ), 1, childOfs ) ) {
+				return qfalse;
+			}
+		}
+	}
+	// the levels of detail, each with a table of offsets to its surfaces, and the surfaces
+	ofs = mdxm->ofsLODs;
+	for ( l = 0; l < mdxm->numLODs; l++ ) {
+		const int	lodStart = ofs;
+		int			lodSize, surfOfs;
+		const int	*surfOffsets;
+
+		if ( !R_ModelSpan( size, ofs, 1, sizeof( mdxmLOD_t ) + mdxm->numSurfaces * sizeof( int ) ) ) {
+			return qfalse;
+		}
+		lodSize = LittleLong( ( (mdxmLOD_t *)( base + ofs ) )->ofsEnd );
+		if ( lodSize < (int)( sizeof( mdxmLOD_t ) + mdxm->numSurfaces * sizeof( int ) ) || lodSize > size - ofs ) {
+			return qfalse;
+		}
+		surfOffsets = (const int *)( base + ofs + sizeof( mdxmLOD_t ) );
+		for ( i = 0; i < mdxm->numSurfaces; i++ ) {
+			if ( !R_ModelSpan( lodSize, (int)sizeof( mdxmLOD_t ) + LittleLong( surfOffsets[i] ), 1, sizeof( mdxmSurface_t ) ) ) {
+				return qfalse;
+			}
+		}
+		surfOfs = ofs + (int)( sizeof( mdxmLOD_t ) + mdxm->numSurfaces * sizeof( int ) );
+		for ( i = 0; i < mdxm->numSurfaces; i++ ) {
+			const mdxmSurface_t		*surf;
+			const mdxmTriangle_t	*tri;
+			const mdxmVertex_t		*v;
+			const int				*boneRefs;
+			int						surfSize, numVerts, numTriangles, numBoneRefs;
+
+			if ( !R_ModelSpan( lodStart + lodSize, surfOfs, 1, sizeof( mdxmSurface_t ) ) ) {
+				return qfalse;
+			}
+			surf = (const mdxmSurface_t *)( base + surfOfs );
+			surfSize = LittleLong( surf->ofsEnd );
+			numVerts = LittleLong( surf->numVerts );
+			numTriangles = LittleLong( surf->numTriangles );
+			numBoneRefs = LittleLong( surf->numBoneReferences );
+			if ( surfSize < (int)sizeof( mdxmSurface_t ) || surfSize > lodStart + lodSize - surfOfs
+				|| (unsigned)LittleLong( surf->thisSurfaceIndex ) >= (unsigned)mdxm->numSurfaces
+				|| !R_ModelSpan( size, surfOfs + LittleLong( surf->ofsHeader ), 1, sizeof( mdxmHeader_t ) )
+				|| !R_ModelSpan( surfSize, LittleLong( surf->ofsVerts ), numVerts, sizeof( mdxmVertex_t ) + sizeof( mdxmVertexTexCoord_t ) )
+				|| !R_ModelSpan( surfSize, LittleLong( surf->ofsTriangles ), numTriangles, sizeof( mdxmTriangle_t ) )
+				|| !R_ModelSpan( surfSize, LittleLong( surf->ofsBoneReferences ), numBoneRefs, sizeof( int ) ) ) {
+				return qfalse;
+			}
+			tri = (const mdxmTriangle_t *)( (const byte *)surf + LittleLong( surf->ofsTriangles ) );
+			for ( j = 0; j < numTriangles; j++, tri++ ) {
+				for ( k = 0; k < 3; k++ ) {
+					if ( (unsigned)LittleLong( tri->indexes[k] ) >= (unsigned)numVerts ) {
+						return qfalse;
+					}
+				}
+			}
+			boneRefs = (const int *)( (const byte *)surf + LittleLong( surf->ofsBoneReferences ) );
+			for ( j = 0; j < numBoneRefs; j++ ) {
+				if ( (unsigned)LittleLong( boneRefs[j] ) >= (unsigned)Q_max( mdxm->numBones, 72 ) ) {
+					return qfalse;
+				}
+			}
+			v = (const mdxmVertex_t *)( (const byte *)surf + LittleLong( surf->ofsVerts ) );
+			for ( j = 0; j < numVerts; j++, v++ ) {
+				mdxmVertex_t	vert = *v;
+				int				weights;
+
+				LL( vert.uiNmWeightsAndBoneIndexes );
+				weights = G2_GetVertWeights( &vert );
+				for ( k = 0; k < weights; k++ ) {
+					if ( G2_GetVertBoneIndex( &vert, k ) >= numBoneRefs ) {
+						return qfalse;
+					}
+				}
+			}
+			surfOfs += surfSize;
+		}
+		ofs += lodSize;
+	}
+	return qtrue;
+}
+
 qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean &bAlreadyCached ) {
 	int					i,l, j;
 	mdxmHeader_t		*pinmodel, *mdxm;
@@ -4218,6 +4350,10 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 #endif
 
 	pinmodel= (mdxmHeader_t *)buffer;
+	if ( !bAlreadyCached && r_modelFileLength >= 0 && r_modelFileLength < (int)sizeof( *pinmodel ) ) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "R_LoadMDXM: %s is shorter than its header\n", mod_name );
+		return qfalse;
+	}
 	//
 	// read some fields from the binary, but only LittleLong() them when we know this wasn't an already-cached model...
 	//
@@ -4234,6 +4370,23 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "R_LoadMDXM: %s has wrong version (%i should be %i)\n",
 				 mod_name, version, MDXM_VERSION);
 		return qfalse;
+	}
+
+	// (a model of a pak: the loader and the renderer take every offset and index of it as they are)
+	if ( !bAlreadyCached ) {
+		mdxmHeader_t header = *pinmodel;
+
+		LL( header.numBones );
+		LL( header.numLODs );
+		LL( header.ofsLODs );
+		LL( header.numSurfaces );
+		LL( header.ofsSurfHierarchy );
+		if ( !R_MDXMFits( (byte *)buffer, &header, size ) ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "R_LoadMDXM: %s has parts outside of its file\n", mod_name );
+			return qfalse;
+		}
+		pinmodel->name[sizeof( pinmodel->name ) - 1] = '\0';
+		pinmodel->animName[sizeof( pinmodel->animName ) - 1] = '\0';
 	}
 
 	mod->type	   = MOD_MDXM;
@@ -4646,6 +4799,60 @@ int BoneParentChildIndex(mdxaHeader_t *mdxa, mdxaSkelOffsets_t *offsets, mdxaSke
 R_LoadMDXA - load a Ghoul 2 animation file
 =================
 */
+/*
+=================
+R_MDXAFits
+
+Every part of a GLA the loader and the renderer walk lies inside its size, the size inside the file, the bones of
+the skeleton name bones of it, and every index of the frames names a bone of the compressed pool. base is the file
+as read, mdxa a copy of its header in host order. Checked before the model goes into the cache.
+=================
+*/
+static qboolean R_MDXAFits( byte *base, const mdxaHeader_t *mdxa, int size ) {
+	const int	childOfs = (int)(size_t)&( (mdxaSkel_t *)0 )->children[0];
+	const int	*offsets;
+	int			i, j, poolCount;
+
+	if ( size < (int)sizeof( *mdxa ) || ( r_modelFileLength >= 0 && size > r_modelFileLength )
+		|| mdxa->numBones < 0 || mdxa->numBones > 4096 || mdxa->numFrames < 0
+		|| !R_ModelSpan( size, sizeof( *mdxa ), mdxa->numBones, sizeof( int ) )
+		|| !R_ModelSpan( size, mdxa->ofsFrames, mdxa->numFrames, mdxa->numBones * 3 )
+		|| mdxa->ofsCompBonePool < 0 || mdxa->ofsCompBonePool > size ) {
+		return qfalse;
+	}
+	offsets = (const int *)( base + sizeof( *mdxa ) );
+	for ( i = 0; i < mdxa->numBones; i++ ) {
+		const int	ofs = (int)sizeof( *mdxa ) + LittleLong( offsets[i] );
+		mdxaSkel_t	*bone;
+		int			numChildren;
+
+		if ( !R_ModelSpan( size, ofs, 1, childOfs ) ) {
+			return qfalse;
+		}
+		bone = (mdxaSkel_t *)( base + ofs );
+		numChildren = LittleLong( bone->numChildren );
+		if ( numChildren < 0 || numChildren > mdxa->numBones || !R_ModelSpan( size, ofs + childOfs, numChildren, sizeof( int ) )
+			|| LittleLong( bone->parent ) < -1 || LittleLong( bone->parent ) >= mdxa->numBones ) {
+			return qfalse;
+		}
+		for ( j = 0; j < numChildren; j++ ) {
+			if ( (unsigned)LittleLong( bone->children[j] ) >= (unsigned)mdxa->numBones ) {
+				return qfalse;
+			}
+		}
+		bone->name[sizeof( bone->name ) - 1] = '\0';
+	}
+	poolCount = ( size - mdxa->ofsCompBonePool ) / (int)sizeof( mdxaCompQuatBone_t );
+	for ( i = 0; i < mdxa->numFrames * mdxa->numBones; i++ ) {
+		const byte *index = base + mdxa->ofsFrames + i * 3;
+
+		if ( ( index[2] << 16 ) + ( index[1] << 8 ) + index[0] >= poolCount ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean &bAlreadyCached ) {
 
 	mdxaHeader_t		*pinmodel, *mdxa;
@@ -4667,6 +4874,10 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 #endif
 
  	pinmodel = (mdxaHeader_t *)buffer;
+	if ( !bAlreadyCached && r_modelFileLength >= 0 && r_modelFileLength < (int)sizeof( *pinmodel ) ) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "R_LoadMDXA: %s is shorter than its header\n", mod_name );
+		return qfalse;
+	}
 	//
 	// read some fields from the binary, but only LittleLong() them when we know this wasn't an already-cached model...
 	//
@@ -4683,6 +4894,21 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "R_LoadMDXA: %s has wrong version (%i should be %i)\n",
 				 mod_name, version, MDXA_VERSION);
 		return qfalse;
+	}
+
+	// (a model of a pak: the loader and the renderer take every offset and index of it as they are)
+	if ( !bAlreadyCached ) {
+		mdxaHeader_t header = *pinmodel;
+
+		LL( header.numFrames );
+		LL( header.ofsFrames );
+		LL( header.numBones );
+		LL( header.ofsCompBonePool );
+		if ( !R_MDXAFits( (byte *)buffer, &header, size ) ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "R_LoadMDXA: %s has parts outside of its file\n", mod_name );
+			return qfalse;
+		}
+		pinmodel->name[sizeof( pinmodel->name ) - 1] = '\0';
 	}
 
 	mod->type		= MOD_MDXA;

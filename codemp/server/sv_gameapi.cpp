@@ -1559,7 +1559,7 @@ static void SV_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 
 	char *tmp = re->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
 	if ( tmp )
-		strcpy( fillBuf, tmp );
+		Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 	else
 		fillBuf[0] = '\0';
 }
@@ -1754,7 +1754,7 @@ static qboolean SV_G2API_OverrideServer( void *serverInstance ) {
 static void SV_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
 	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
-	strcpy( fillBuf, tmp );
+	Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 }
 
 static void GVM_Cvar_Set( const char *var_name, const char *value ) {

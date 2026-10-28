@@ -138,8 +138,13 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index );
 //
 // don't use ri->xxx functions in case running on dedicated...
 //
+// the length of the file RE_RegisterModels_GetDiskFile read last, -1 when it came from the cache (checked when it
+// was read) or is the built-in default GLA: the loaders check every offset and count of a model against it
+int r_modelFileLength = -1;
+
 qboolean RE_RegisterModels_GetDiskFile( const char *psModelFileName, void **ppvBuffer, qboolean *pqbAlreadyCached)
 {
+	r_modelFileLength = -1;
 	char sModelName[MAX_QPATH];
 
 	assert(CachedModels);
@@ -167,7 +172,7 @@ qboolean RE_RegisterModels_GetDiskFile( const char *psModelFileName, void **ppvB
 				return qtrue;
 			}
 
-		ri.FS_ReadFile( sModelName, ppvBuffer );
+		r_modelFileLength = (int)ri.FS_ReadFile( sModelName, ppvBuffer );
 		*pqbAlreadyCached = qfalse;
 		qboolean bSuccess = !!(*ppvBuffer)?qtrue:qfalse;
 
@@ -1121,6 +1126,12 @@ Ghoul2 Insert End
 		{
 			continue;
 		}
+		// (the loaders read a header from it: a file shorter than its ident is no model)
+		if ( !bAlreadyCached && r_modelFileLength >= 0 && r_modelFileLength < (int)sizeof( unsigned ) )
+		{
+			ri.FS_FreeFile( buf );
+			continue;
+		}
 
 		//loadmodel = mod;	// this seems to be fairly pointless
 
@@ -1264,10 +1275,24 @@ Ghoul2 Insert Start
 	if (name[0] == '#')
 	{
 		char		temp[MAX_QPATH];
+		char		bspName[MAX_QPATH];
+		int			bsp;
 
-		tr.numBSPModels++;
-		RE_LoadWorldMap_Actual(va("maps/%s.bsp", name + 1), tr.bspModels[tr.numBSPModels - 1], tr.numBSPModels);
-		Com_sprintf(temp, MAX_QPATH, "*%d-0", tr.numBSPModels);
+		// A sub BSP named by a configstring of the server: one that is loaded is taken again (each name used to load
+		// once more and count up), and there are MAX_SUB_BSP places for them (tr.bspModels).
+		Com_sprintf( bspName, sizeof( bspName ), "maps/%s.bsp", name + 1 );
+		for ( bsp = 0; bsp < tr.numBSPModels && Q_stricmp( tr.bspModels[bsp].name, bspName ); bsp++ ) {
+		}
+		if ( bsp == tr.numBSPModels ) {
+			if ( tr.numBSPModels >= MAX_SUB_BSP ) {
+				ri.Printf( PRINT_WARNING, "RE_RegisterModel: more than %i sub BSP models, %s is not loaded\n", MAX_SUB_BSP, bspName );
+				return 0;
+			}
+			tr.numBSPModels++;
+			RE_LoadWorldMap_Actual(bspName, tr.bspModels[tr.numBSPModels - 1], tr.numBSPModels);
+			bsp = tr.numBSPModels - 1;
+		}
+		Com_sprintf(temp, MAX_QPATH, "*%d-0", bsp + 1);
 		hash = generateHashValue(temp, FILE_HASH_SIZE);
 		for (mh=mhHashTable[hash]; mh; mh=mh->next)
 		{
@@ -1334,6 +1359,12 @@ Ghoul2 Insert End
 		qboolean bAlreadyCached = qfalse;
 		if (!RE_RegisterModels_GetDiskFile(filename, (void **)&buf, &bAlreadyCached))
 		{
+			continue;
+		}
+		// (the loaders read a header from it: a file shorter than its ident is no model)
+		if ( !bAlreadyCached && r_modelFileLength >= 0 && r_modelFileLength < (int)sizeof( unsigned ) )
+		{
+			ri.FS_FreeFile( buf );
 			continue;
 		}
 
@@ -1457,6 +1488,62 @@ qhandle_t RE_RegisterModel( const char *name )
 R_LoadMD3
 =================
 */
+// count things of stride bytes at ofs lie inside a model of size bytes
+qboolean R_ModelSpan( int size, int ofs, int count, int stride ) {
+	return ( ofs >= 0 && count >= 0 && ofs <= size && (long long)count * stride <= size - ofs ) ? qtrue : qfalse;
+}
+
+/*
+=================
+R_MD3Fits
+
+Every part of an MD3 the loader and the renderer walk lies inside its size, and the size inside the file
+(r_modelFileLength). base is the file as read, md3 a copy of its header in host order. Checked before the model
+goes into the cache of models, which would take it unchecked the next time.
+=================
+*/
+static qboolean R_MD3Fits( const byte *base, const md3Header_t *md3, int size ) {
+	int i, j, ofs;
+
+	if ( size < (int)sizeof( *md3 ) || ( r_modelFileLength >= 0 && size > r_modelFileLength )
+		|| !R_ModelSpan( size, md3->ofsFrames, md3->numFrames, sizeof( md3Frame_t ) )
+		|| md3->numTags < 0 || md3->numTags > MD3_MAX_TAGS
+		|| !R_ModelSpan( size, md3->ofsTags, md3->numTags * md3->numFrames, sizeof( md3Tag_t ) )
+		|| md3->numSurfaces < 0 || md3->numSurfaces > MD3_MAX_SURFACES ) {
+		return qfalse;
+	}
+	ofs = md3->ofsSurfaces;
+	for ( i = 0; i < md3->numSurfaces; i++ ) {
+		const md3Surface_t	*surf;
+		const md3Triangle_t	*tri;
+		int					numVerts, numTriangles, surfSize;
+
+		if ( !R_ModelSpan( size, ofs, 1, sizeof( md3Surface_t ) ) ) {
+			return qfalse;
+		}
+		surf = (const md3Surface_t *)( base + ofs );
+		surfSize = LittleLong( surf->ofsEnd );
+		numVerts = LittleLong( surf->numVerts );
+		numTriangles = LittleLong( surf->numTriangles );
+		if ( surfSize < (int)sizeof( md3Surface_t ) || surfSize > size - ofs || LittleLong( surf->numFrames ) != md3->numFrames
+			|| !R_ModelSpan( surfSize, LittleLong( surf->ofsShaders ), LittleLong( surf->numShaders ), sizeof( md3Shader_t ) )
+			|| !R_ModelSpan( surfSize, LittleLong( surf->ofsTriangles ), numTriangles, sizeof( md3Triangle_t ) )
+			|| !R_ModelSpan( surfSize, LittleLong( surf->ofsSt ), numVerts, sizeof( md3St_t ) )
+			|| !R_ModelSpan( surfSize, LittleLong( surf->ofsXyzNormals ), numVerts * md3->numFrames, sizeof( md3XyzNormal_t ) ) ) {
+			return qfalse;
+		}
+		tri = (const md3Triangle_t *)( (const byte *)surf + LittleLong( surf->ofsTriangles ) );
+		for ( j = 0; j < numTriangles; j++, tri++ ) {
+			if ( (unsigned)LittleLong( tri->indexes[0] ) >= (unsigned)numVerts || (unsigned)LittleLong( tri->indexes[1] ) >= (unsigned)numVerts
+				|| (unsigned)LittleLong( tri->indexes[2] ) >= (unsigned)numVerts ) {
+				return qfalse;
+			}
+		}
+		ofs += surfSize;
+	}
+	return qtrue;
+}
+
 static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name, qboolean &bAlreadyCached ) {
 	int					i, j;
 	md3Header_t			*pinmodel;
@@ -1474,6 +1561,10 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 
 
 	pinmodel= (md3Header_t *)buffer;
+	if ( !bAlreadyCached && r_modelFileLength >= 0 && r_modelFileLength < (int)sizeof( *pinmodel ) ) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "R_LoadMD3: %s is shorter than its header\n", mod_name );
+		return qfalse;
+	}
 	//
 	// read some fields from the binary, but only LittleLong() them when we know this wasn't an already-cached model...
 	//
@@ -1490,6 +1581,22 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "R_LoadMD3: %s has wrong version (%i should be %i)\n",
 				 mod_name, version, MD3_VERSION);
 		return qfalse;
+	}
+
+	// (a model of a pak: the loader and the renderer take every offset and count of it as they are)
+	if ( !bAlreadyCached ) {
+		md3Header_t header = *pinmodel;
+
+		LL( header.numFrames );
+		LL( header.numTags );
+		LL( header.numSurfaces );
+		LL( header.ofsFrames );
+		LL( header.ofsTags );
+		LL( header.ofsSurfaces );
+		if ( !R_MD3Fits( (const byte *)buffer, &header, size ) ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "R_LoadMD3: %s has parts outside of its file\n", mod_name );
+			return qfalse;
+		}
 	}
 
 	mod->type      = MOD_MESH;

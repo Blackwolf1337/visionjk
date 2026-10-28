@@ -658,7 +658,7 @@ static void CL_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 
 	char *tmp = re->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
 	if ( tmp )
-		strcpy( fillBuf, tmp );
+		Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 	else
 		fillBuf[0] = '\0';
 }
@@ -902,7 +902,7 @@ static void CL_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelInde
 	if ( !ghoul2 ) return;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
 	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
-	strcpy( fillBuf, tmp );
+	Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 }
 
 static void CL_Key_SetCatcher( int catcher ) {
