@@ -743,11 +743,25 @@ const char *Com_IDSDetail( const char *detail, int max ) {
 }
 
 // a line of the intrusion detection: into its log file, with the time in front, and onto the console
+// (bytes of ids.log a run writes at most: anybody can send the client a packet that gets a line, one every two
+// seconds an event, and the file had no end)
+#define IDS_LOG_MOST	( 4 * 1024 * 1024 )
+
 void Com_IDSLine( fileHandle_t *file, const char *path, const char *line ) {
+	static int written;
+
+	if ( written >= IDS_LOG_MOST ) {
+		Com_Printf( S_COLOR_YELLOW "IDS: %s\n", line );
+		return;
+	}
 	if ( !*file ) {
 		FS_FOpenFileByMode( path, file, FS_APPEND );
 	}
 	if ( *file ) {
+		written += (int)strlen( line ) + 21;
+		if ( written >= IDS_LOG_MOST ) {
+			line = "more lines than fit this run: the rest goes to the console only";
+		}
 		qtime_t	t = {};		// (zeros where the system has no local time)
 		char	stamp[32];
 

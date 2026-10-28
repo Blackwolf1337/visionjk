@@ -843,6 +843,14 @@ cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 	var_name = Cvar_CurrentName( var_name );
 	flags = Cvar_Flags( var_name );
 
+	// The cvars of this tree (v_) are the client's own: no server of the game sends one, and some of them are only
+	// registered by the cgame, after the first systeminfo (v_authKeyFile names a file to open). A server that
+	// created one before would keep its value, archived.
+	if ( !Q_stricmpn( var_name, "v_", 2 ) && !( flags != CVAR_NONEXISTENT && ( flags & CVAR_SYSTEMINFO ) ) ) {
+		Com_Printf( S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", var_name, value );
+		return CVAR_SERVER_REFUSED;
+	}
+
 	if ( flags != CVAR_NONEXISTENT ) {
 		// first: a protected cvar would otherwise only be refused as one the server may not set, and no server
 		// of the game sends one
@@ -853,7 +861,9 @@ cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 
 		// If this cvar may not be modified by a server discard the value.
 		// But check for ones where the legacy gamecode might still need to be allowed
-		if(!(flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED | CVAR_USER_CREATED)))
+		// (one the player made with set or seta is his: his vstr scripts run it, and seta keeps the server's value
+		// in his config. ioq3 lets a server set those.)
+		if(!(flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED)))
 		{
 			if ( !FindLegacyCvar( var_name ) ) {
 				Com_Printf(S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", var_name, value);

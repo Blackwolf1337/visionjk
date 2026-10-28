@@ -624,8 +624,12 @@ static void Cmd_StrSub_f( void ) {
 				const char	*v;
 
 				Q_strncpyz( name, r + 1, close - r );
-				for ( v = Cmd_ScriptCvar( name ); *v && w < word + sizeof( word ) - 1; ) {
-					*w++ = *v++;
+				// (a value can come from a server, ui_about_hostname for one: what would end the word or the
+				// command, a quote, a ';' or a line break, does not go in with it)
+				for ( v = Cmd_ScriptCvar( name ); *v && w < word + sizeof( word ) - 1; v++ ) {
+					if ( *v != '"' && *v != ';' && (unsigned char)*v >= ' ' ) {
+						*w++ = *v;
+					}
 				}
 				r = close + 1;
 			} else {
