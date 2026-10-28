@@ -120,8 +120,9 @@ gets as wide as the window: at 16:9 it is 853 wide, the old 640 sit in the middl
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `v_2dAspect` | 1 | 1 the 2D keeps its shape on a wide window, 0 the old stretch. Latched, `vid_restart` |
+| `v_2dAspect` | 1 | 1 the 2D keeps its shape on a window wider or narrower than 4:3, 0 the old stretch. Latched, `vid_restart` |
 | `v_2dBias` | set by the renderer | read only: the width beside the 640, in units of the grid. 0 on a 4:3 window, with `v_2dAspect 0` and on an engine that does not have this |
+| `v_2dBiasY` | set by the renderer | read only: the same above and below the 640 x 480, on a window narrower than 4:3, in units of the grid. 0 on a 4:3 window or a wider one, with `v_2dAspect 0` and on an engine that does not have this |
 | `r_mode` | -2 (was 4) | a new install starts in the size of the desktop, not in 800 x 600 |
 | `r_noborder` | 1 (was 0) | and as a window without a border. A stored config keeps what it has |
 
@@ -162,6 +163,15 @@ or ui of another tree the client does a `vid_restart` in the new size instead. T
 
 The modules read `v_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
 0 and they draw as they always did.
+
+On a window narrower than 4:3 (one the desktop tiled tall, 630 x 1090 for example) the grid keeps its width and
+gets taller: y runs from `-v_2dBiasY` to `480 + v_2dBiasY`, and the 640 x 480 of the menus and the HUD is a band
+across the middle of the window, in its own shape. Stretched over the whole window, a letter of the TrueType menu
+fonts was as high as the window made it and as wide as the 640 gave room for, and the words of the menus ran into
+each other (the flat menus and the menu in the level). The backgrounds of the menus reach above and below the
+band, the console of the engine comes down over the whole window, and cinematics get black above and below. The
+menu in the level (`v_immersiveMenu`) is no wider than the window there and stands in the middle in front of the
+player. `v_2dAspect 0` still stretches as before.
 
 Not looked at in the game: it was built for Linux and nothing more. The live resize was built for Linux (Vulkan
 device, OpenGL ES device, rd-vanilla) and Windows (mingw x86_64) and not run, not on Hyprland either. Open: the siege timer and the automap are

@@ -133,8 +133,20 @@ void S_SpatialInfo_f( void ) {
 	}
 	Com_Printf( "Steam Audio %i.%i.%i from %s\n", STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH,
 		spatial.libraryPath );
-	Com_Printf( "rays traced by %s, %i threads for a pass, %i for a bake\n", spatial.embree ? "Embree" : "Steam Audio", spatial.threads,
+	Com_Printf( "occlusion, paths and bakes traced by %s, %i threads for a pass, %i for a bake\n", spatial.embree ? "Embree" : "Steam Audio", spatial.threads,
 		spatial.bakeThreads );
+	if ( spatial.gpuSimulator && S_SpatialGpuName() ) {
+		Com_Printf( "the rays of the echo %s by %s (v_spatialGpu %i)\n", spatial.reflectGpu ? "are traced" : "can be traced",
+			S_SpatialGpuName(), v_spatialGpu->integer );
+		if ( spatial.reflectGpu ) {
+			int batches, usec, answered;
+
+			S_SpatialGpuBatchInfo( &batches, &usec, &answered );
+			Com_Printf( "  the last pass made %i trips to the card, %i us each, and %i of the sources were answered without one\n", batches, usec, answered );
+		}
+	} else {
+		Com_Printf( "the rays of the echo are traced by the CPU: %s\n", S_SpatialGpuWhyNot() );
+	}
 	Com_Printf( "%i samples a second, blocks of %i, direction for %s\n", spatial.audio.samplingRate, spatial.audio.frameSize,
 		v_spatialHrtf->integer ? "headphones (HRTF)" : "speakers (panning)" );
 	if ( spatial.sceneWaits ) {
@@ -680,7 +692,7 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 	}
 	out->active = qtrue;
 	VectorCopy( spatial.listenerOrigin, out->listener );
-	out->embree = spatial.embree ? qtrue : qfalse;
+	out->tracers = ( spatial.embree ? SPATIAL_DEBUG_TRACE_EMBREE : 0 ) | ( spatial.reflectGpu ? SPATIAL_DEBUG_TRACE_GPU : 0 );
 	out->threads = spatial.threads;
 	out->passRays = spatial.maxRays;
 	out->passBounces = S_SpatialBounces();

@@ -1671,10 +1671,15 @@ void CL_PlayCinematic_f(void) {
 
 void SCR_DrawCinematic (void) {
 	if (CL_handle >= 0 && CL_handle < MAX_VIDEO_HANDLES) {
-		// the video keeps its 4:3 in the middle of a wide window, black beside it
+		// the video keeps its 4:3 in the middle of a wide window, black beside it, and of a narrow one, black above and
+		// below it
 		if ( cls.bias2D > 0.0f ) {
 			SCR_FillRect( -cls.bias2D, 0, cls.bias2D, SCREEN_HEIGHT, g_color_table[0] );
 			SCR_FillRect( SCREEN_WIDTH, 0, cls.bias2D, SCREEN_HEIGHT, g_color_table[0] );
+		}
+		if ( cls.bias2DY > 0.0f ) {
+			SCR_FillRect( 0, -cls.bias2DY, SCREEN_WIDTH, cls.bias2DY, g_color_table[0] );
+			SCR_FillRect( 0, SCREEN_HEIGHT, SCREEN_WIDTH, cls.bias2DY, g_color_table[0] );
 		}
 		CIN_DrawCinematic(CL_handle);
 	}

@@ -170,6 +170,7 @@ enum {
 };
 
 extern const char		*spatialMaterialNames[SPATIAL_NUM_MATERIALS];
+extern const IPLMaterial	spatialMaterials[SPATIAL_NUM_MATERIALS];
 
 // Most surfaces of a level do not say what they are made of. For those there is a table in the assets: the
 // name of a shader and a material of the game, a line each. It is written from the shader scripts and from the
@@ -347,6 +348,7 @@ typedef struct spatialStream_s {
 typedef struct spatialReflect_s {
 	struct spatialVoice_s	*voice;		// whose reflections it renders, NULL: none
 	IPLSource				source;		// in the simulator, where the sound is
+	IPLSource				gpuSource;	//	and in the one of the graphics card, NULL: none (S_SpatialReflectSource)
 	IPLReflectionEffect		effect;
 	qboolean				ringing;	// the tail of a sound that let go of it
 	int						askedPass;	// spatialReflectPasses when the first pass with the sound in it was asked, -1: none yet
@@ -480,6 +482,7 @@ extern cvar_t	*v_spatialBudget;
 #endif
 extern cvar_t	*v_spatialDebug;
 extern cvar_t	*v_spatialEcho;
+extern cvar_t	*v_spatialGpu;
 
 // what v_spatialInfo says the sound of the level took of the thread of the game
 enum {
@@ -502,6 +505,10 @@ typedef struct {
 	IPLSimulator		simulator;
 	IPLEmbreeDevice		embree;				// NULL: Steam Audio traces the rays itself
 	IPLSceneType		sceneType;			//	of the levels and the simulator: the two must be alike
+	// The reflections traced on the graphics card (v_spatialGpu, snd_spatial_gpu.cpp): a simulator of their own, with a
+	// scene that asks the callbacks there, and sources of its own for the reverb and the slots. NULL: none here.
+	IPLSimulator		gpuSimulator;
+	IPLScene			gpuScene;
 	int					threads;			// Steam Audio shares a pass between this many
 	int					bakeThreads;		//	and a bake between this many
 
@@ -525,6 +532,10 @@ typedef struct {
 
 	// reflections
 	IPLSource					reverbSource;		// stands where the listener stands
+	IPLSource					gpuReverbSource;	//	and its twin in the simulator of the graphics card
+	qboolean					reflectGpu;			// the passes are traced on the graphics card now,
+	int							reflectGpuPass;		//	since the pass that spatialReflectPasses counted this at
+	qboolean					heardGpu;			//	and the reverb is heard from what that simulator found
 	IPLReflectionEffect			reverbEffect;
 	IPLAmbisonicsDecodeEffect	reverbDecode;
 	IPLReflectionEffect			dreamEffect[2];		// the reverb of a dream for each ear (v_dreamReverb, S_SpatialRenderDream)
@@ -640,6 +651,7 @@ extern spatialStream_t	spatialStreams[MAX_CLIENTS + 1 + SPATIAL_BOXES];
 typedef struct {
 	IPLCoordinateSpace3	listener;
 	int					rays, bounces;
+	qboolean			gpu;							// traced on the graphics card (spatial.gpuSimulator)
 	qboolean			reverb;							// the source where the listener stands
 	qboolean			echoBaked;						//	looked up at the probes (v_spatialEcho)
 	qboolean			own[SPATIAL_REFLECT_SLOTS];		// the slots that render a sound
@@ -753,11 +765,28 @@ void S_SpatialNameBakes( const char *mapname, unsigned checksum );
 qboolean S_SpatialEchoBaked( void );
 void S_SpatialThinkPaths( void );
 
+// snd_spatial_gpu.cpp
+qboolean S_SpatialGpuInit( void );
+void S_SpatialGpuShutdown( void );
+const char *S_SpatialGpuName( void );
+const char *S_SpatialGpuWhyNot( void );
+void S_SpatialGpuSceneSettings( IPLSceneSettings *settings );
+void S_SpatialGpuBeginLevel( void );
+void S_SpatialGpuMesh( int model, const IPLVector3 *vertices, const IPLint32 *materials, int count );
+void S_SpatialGpuPlace( qboolean next, int model, const IPLMatrix4x4 *transform );
+qboolean S_SpatialGpuIdle( void );
+void S_SpatialGpuTakeLevel( void );
+qboolean S_SpatialGpuReady( void );
+qboolean S_SpatialGpuBeginPass( void );
+void S_SpatialGpuBatchInfo( int *batches, int *usec, int *answered );
+
 // snd_spatial_sim.cpp
 int S_SpatialRays( void );
 void S_SpatialListener( IPLCoordinateSpace3 *listener );
 void S_SpatialLetGoReflect( spatialVoice_t *v );
 qboolean S_SpatialReflectReady( const spatialReflect_t *r );
+IPLSource S_SpatialHeardReverb( void );
+IPLSource S_SpatialReflectSource( const spatialReflect_t *r, qboolean gpu );
 void S_SpatialSimulate( void );
 void S_SpatialPassInputs( void );
 void S_SpatialPathInputs( void );

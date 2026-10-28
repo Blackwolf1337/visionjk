@@ -1,0 +1,115 @@
+// spatial_rays.comp -- the rays of a pass of the reflections on the GPU (v_spatialGpu), see snd_spatial_gpu.cpp.
+//
+// One invocation a ray, in Steam Audio's metres and axes. A batch is the closest walls for the rays of a bounce
+// (anyHit 0), or whether anything is between the walls and a source (anyHit 1), as Steam Audio asks for it
+// through the callbacks of a scene of its own (IPL_SCENETYPE_CUSTOM). Both sides of a wall are hit, as with Embree.
+//
+// A batch of closest walls also traces at once the way from each wall to each source of the pass, as Steam Audio
+// will ask for it next (BatchedReflectionSimulator::shade): from the hit point, moved off the wall towards where the
+// ray came from, to the source. The batches of the sources that follow are then answered from that without a trip
+// to the GPU, which takes far longer than the trace.
+
+#version 460
+#extension GL_EXT_ray_query : require
+
+layout( local_size_x = 64 ) in;
+
+#define HIT_OFFSET	1e-2		// IReflectionSimulator::kHitSurfaceOffset of Steam Audio, in metres
+#define MAX_SOURCES	32			// bits of Hit.blocked
+
+// tmin in origin.w, tmax in direction.w. A tmax below 0 is a ray Steam Audio counts as blocked without a trace
+struct Ray {
+	vec4	origin;
+	vec4	direction;
+};
+
+// distance -1: nothing was hit. The normal faces where the ray came from. point: where the ways to the sources
+// begin, bit k of blocked: something is between it and source k
+struct Hit {
+	float	distance;
+	int		triangle;
+	float	nx, ny, nz;
+	float	px, py, pz;
+	uint	blocked;
+};
+
+layout( set = 0, binding = 0 ) uniform accelerationStructureEXT level;
+layout( std430, set = 0, binding = 1 ) readonly buffer Rays { Ray rays[]; };
+layout( std430, set = 0, binding = 2 ) writeonly buffer Hits { Hit hits[]; };
+// for every triangle of the level: its normal where its mesh has it (w is not used)
+layout( std430, set = 0, binding = 3 ) readonly buffer Triangles { vec4 triangles[]; };
+// where the sources of the pass are (w is not used)
+layout( std430, set = 0, binding = 4 ) readonly buffer Sources { vec4 sources[]; };
+
+layout( push_constant ) uniform Batch {
+	uint	count;
+	uint	anyHit;
+	uint	numSources;
+};
+
+// qtrue: something is in the way between tmin and tmax
+bool Blocked( vec3 origin, float tmin, vec3 direction, float tmax ) {
+	rayQueryEXT query;
+
+	rayQueryInitializeEXT( query, level, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0xff, origin, tmin, direction, tmax );
+	while ( rayQueryProceedEXT( query ) ) {
+	}
+	return rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+void main() {
+	const uint i = gl_GlobalInvocationID.x;
+	rayQueryEXT query;
+
+	if ( i >= count ) {
+		return;
+	}
+	const Ray r = rays[i];
+
+	if ( r.direction.w < 0.0 || r.direction.w < r.origin.w ) {
+		hits[i].distance = anyHit != 0u ? 0.0 : -1.0;
+		return;
+	}
+	if ( anyHit != 0u ) {
+		hits[i].distance = Blocked( r.origin.xyz, r.origin.w, r.direction.xyz, r.direction.w ) ? 0.0 : -1.0;
+		return;
+	}
+
+	rayQueryInitializeEXT( query, level, gl_RayFlagsOpaqueEXT, 0xff, r.origin.xyz, r.origin.w, r.direction.xyz, r.direction.w );
+	while ( rayQueryProceedEXT( query ) ) {
+	}
+	if ( rayQueryGetIntersectionTypeEXT( query, true ) == gl_RayQueryCommittedIntersectionNoneEXT ) {
+		hits[i].distance = -1.0;
+		return;
+	}
+
+	// the instance says where its triangles begin, a brush model is turned and moved: its normal goes with it
+	const int triangle = rayQueryGetIntersectionInstanceCustomIndexEXT( query, true ) + rayQueryGetIntersectionPrimitiveIndexEXT( query, true );
+	const float t = rayQueryGetIntersectionTEXT( query, true );
+	vec3 n = normalize( mat3( rayQueryGetIntersectionObjectToWorldEXT( query, true ) ) * triangles[triangle].xyz );
+
+	if ( dot( n, r.direction.xyz ) > 0.0 ) {
+		n = -n;
+	}
+	const vec3 p = r.origin.xyz + r.direction.xyz * t + HIT_OFFSET * n;
+	uint blocked = 0u;
+
+	for ( uint k = 0u; k < numSources && k < MAX_SOURCES; k++ ) {
+		const vec3 v = sources[k].xyz - p;
+		const float d = length( v );
+
+		if ( d > 0.0 && Blocked( p, 0.0, v / d, d ) ) {
+			blocked |= 1u << k;
+		}
+	}
+
+	hits[i].distance = t;
+	hits[i].triangle = triangle;
+	hits[i].nx = n.x;
+	hits[i].ny = n.y;
+	hits[i].nz = n.z;
+	hits[i].px = p.x;
+	hits[i].py = p.y;
+	hits[i].pz = p.z;
+	hits[i].blocked = blocked;
+}

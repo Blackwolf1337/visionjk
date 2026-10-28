@@ -395,6 +395,30 @@ if(BuildMPEngine)
 			message(STATUS "Steam Audio ${SteamAudioVersion}: the header of lib/steamaudio, the library is loaded at run time")
 			set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
 			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
+			# The rays of the echo on the graphics card (client/spatial/snd_spatial_gpu.cpp, v_spatialGpu): the headers of
+			# Vulkan and glslc for its shader, as the renderer has them. The SPIR-V goes next to phonon.h. Without them,
+			# and in a browser, the CPU traces all the rays.
+			if(NOT EMSCRIPTEN)
+				include(VulkanHeaders)
+				jp_vulkan_headers(SpatialVulkanHeaders "${CMAKE_BINARY_DIR}/steamaudio/vulkan-headers")
+				find_program(GLSLC glslc)
+				if(SpatialVulkanHeaders AND GLSLC)
+					set(SpatialShaderIn "${MPDir}/client/spatial/shaders/spatial_rays.comp")
+					set(SpatialShaderOut "${CMAKE_BINARY_DIR}/steamaudio/spatial_rays_comp.inc")
+					add_custom_command(
+						OUTPUT ${SpatialShaderOut}
+						COMMAND ${GLSLC} --target-env=vulkan1.2 -O -mfmt=c -o ${SpatialShaderOut} ${SpatialShaderIn}
+						DEPENDS ${SpatialShaderIn}
+						COMMENT "glslc spatial_rays.comp"
+						VERBATIM)
+					set(MPEngineSpatialGpuFiles "${SpatialShaderIn}" "${SpatialShaderOut}")
+					set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL_GPU")
+					set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${SpatialVulkanHeaders}")
+					message(STATUS "Steam Audio: the rays of the echo can be traced on the graphics card (v_spatialGpu)")
+				else()
+					message(STATUS "Steam Audio: no Vulkan headers or no glslc, the CPU traces all the rays of the echo")
+				endif()
+			endif()
 			option(FetchSteamAudio "Download what the build needs of Steam Audio and does not find: the release zip when SteamAudioSDK does not have the library of this system (181 MB, once), for a browser the sources of FlatBuffers and PFFFT (1.3 MB, once)" ON)
 
 			if(EMSCRIPTEN)
@@ -574,12 +598,14 @@ if(BuildMPEngine)
 		"${MPDir}/client/spatial/snd_spatial.h"
 		"${MPDir}/client/spatial/snd_spatial_bake.cpp"
 		"${MPDir}/client/spatial/snd_spatial_debug.cpp"
+		"${MPDir}/client/spatial/snd_spatial_gpu.cpp"
 		"${MPDir}/client/spatial/snd_spatial_level.cpp"
 		"${MPDir}/client/spatial/snd_spatial_local.h"
 		"${MPDir}/client/spatial/snd_spatial_page.cpp"
 		"${MPDir}/client/spatial/snd_spatial_render.cpp"
 		"${MPDir}/client/spatial/snd_spatial_sim.cpp"
 		"${MPDir}/client/spatial/snd_spatial_voice.cpp"
+		${MPEngineSpatialGpuFiles}
 		)
 	source_group("client/spatial" FILES ${MPEngineClientSpatialFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientSpatialFiles})

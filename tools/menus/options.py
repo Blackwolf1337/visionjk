@@ -83,6 +83,8 @@ SETUP = [
         ('yesno', 'Room Reflections', 'v_spatialReflections', 'The room around you rings.'),
         ('multi', 'Echo', 'v_spatialEcho', (('Real Time', 0), ('Precalculated', 1)),
          'Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in.'),
+        ('multi', 'Echo Calculation', 'v_spatialGpu', (('Graphics Card', 1), ('CPU', 0)),
+         'Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo.'),
         ('multi', 'Echoes of Their Own', 'v_spatialSources', (('Off', 0), ('4', 4), ('8', 8), ('12', 12), ('16', 16)),
          'How many of the loudest sounds echo off the walls around them. More costs more time a frame.'),
         ('yesno', 'Sound Around Corners', 'v_spatialPaths', 'A sound finds its way around corners.'),

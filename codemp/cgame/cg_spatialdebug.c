@@ -231,7 +231,11 @@ static void SD_Panel( void ) {
 	char				text[160];
 	int					i;
 
-	SD_Text( x, y, va( "Steam Audio: rays by %s, %i threads", sd.embree ? "Embree" : "Steam Audio", sd.threads ), white );
+	SD_Text( x, y, va( "Steam Audio: occlusion, paths and bakes traced by %s, %i threads",
+		( sd.tracers & SPATIAL_DEBUG_TRACE_EMBREE ) ? "Embree" : "Steam Audio", sd.threads ), white );
+	y += SD_LINE;
+	SD_Text( x, y, va( "the rays of the echo are traced by %s", ( sd.tracers & SPATIAL_DEBUG_TRACE_GPU ) ? "the graphics card (v_spatialGpu 1)"
+		: ( sd.tracers & SPATIAL_DEBUG_TRACE_EMBREE ) ? "Embree" : "Steam Audio" ), white );
 	y += SD_LINE;
 	SD_Text( x, y, va( "pass: %i rays, %i bounces, %.1f ms, %i passes", sd.passRays, sd.passBounces, sd.passMsec, sd.passes ), white );
 	y += SD_LINE;

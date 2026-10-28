@@ -630,7 +630,7 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 			const int first = Field_CountChars( edit, prestep, Q_max( from, prestep ) );
 			const int count = Field_CountChars( edit, Q_max( from, prestep ), Q_min( to, prestep + drawLen ) );
 
-			SCR_FillRect( ( x + first * size ) * con.xadjust - cls.bias2D, y * con.yadjust,
+			SCR_FillRect( ( x + first * size ) * con.xadjust - cls.bias2D, y * con.yadjust - cls.bias2DY,
 				count * size * con.xadjust, con.charHeight * con.yadjust, selColor );
 		}
 	}

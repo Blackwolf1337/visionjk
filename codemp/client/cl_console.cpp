@@ -504,7 +504,7 @@ void Con_CheckResize (void)
 	con.charHeight = scale * SMALLCHAR_HEIGHT;
 	con.linewidth = width;
 	con.xadjust = ( SCREEN_WIDTH + 2.0f * cls.bias2D ) / cls.glconfig.vidWidth;
-	con.yadjust = ((float)SCREEN_HEIGHT) / cls.glconfig.vidHeight;
+	con.yadjust = ( SCREEN_HEIGHT + 2.0f * cls.bias2DY ) / cls.glconfig.vidHeight;
 	g_consoleField.widthInChars = width - 1; // Command prompt
 
 	if (con.rowwidth != rowwidth)
@@ -1160,7 +1160,7 @@ void Con_DrawNotify (void)
 			//
 			// and print...
 			//
-			re->Font_DrawString(cl_conXOffset->integer + con.xadjust * (con.xadjust + con.charWidth) - cls.bias2D, con.yadjust * v, sTemp,
+			re->Font_DrawString(cl_conXOffset->integer + con.xadjust * (con.xadjust + con.charWidth) - cls.bias2D, con.yadjust * v - cls.bias2DY, sTemp,
 				g_color_table[currentColor], iFontIndex, -1, fFontScale);
 
 			v +=  iPixelHeightToAdvance;
@@ -1245,8 +1245,9 @@ void Con_DrawSolidConsole( float frac ) {
 	const vec4_t	themeLine = { 0.43f, 0.83f, 1.0f, 0.9f };
 	qboolean		themed = qfalse;
 
-	y = (int) (frac * SCREEN_HEIGHT - 2);
-	if ( y < 1 ) {
+	// in units of the grid, which begins at -bias2DY on a narrow window: the console comes down over the window
+	y = (int) ( frac * ( SCREEN_HEIGHT + 2.0f * cls.bias2DY ) - cls.bias2DY - 2 );
+	if ( y < 1 - (int)cls.bias2DY ) {
 		y = 0;
 	}
 	else {
@@ -1256,7 +1257,7 @@ void Con_DrawSolidConsole( float frac ) {
 		{
 			const vec4_t glass = { 0.02f, 0.04f, 0.08f, 0.94f * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
 
-			SCR_FillRect( -cls.bias2D, 0, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y, glass );
+			SCR_FillRect( -cls.bias2D, -cls.bias2DY, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y + cls.bias2DY, glass );
 			themed = qtrue;
 		}
 		else
@@ -1272,7 +1273,7 @@ void Con_DrawSolidConsole( float frac ) {
 		{
 			re->SetColor(NULL);
 		}
-		SCR_DrawPic( -cls.bias2D, 0, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y, cls.consoleShader );
+		SCR_DrawPic( -cls.bias2D, -cls.bias2DY, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y + cls.bias2DY, cls.consoleShader );
 		}
 	}
 
@@ -1389,7 +1390,7 @@ void Con_DrawSolidConsole( float frac ) {
 			//
 			// and print...
 			//
-			re->Font_DrawString(con.xadjust*(con.xadjust + con.charWidth) - cls.bias2D, con.yadjust * y, sTemp, g_color_table[currentColor],
+			re->Font_DrawString(con.xadjust*(con.xadjust + con.charWidth) - cls.bias2D, con.yadjust * y - cls.bias2DY, sTemp, g_color_table[currentColor],
 				iFontIndex, -1, fFontScale);
 		}
 		else
@@ -1404,7 +1405,7 @@ void Con_DrawSolidConsole( float frac ) {
 					// up to the end of the text, and a cell at least so an empty line shows that it is marked
 					to = Q_max( Q_min( to, Con_LineLength( row ) ), from + 1 );
 				}
-				SCR_FillRect( ( from + shown + 1 ) * con.charWidth * con.xadjust - cls.bias2D, y * con.yadjust,
+				SCR_FillRect( ( from + shown + 1 ) * con.charWidth * con.xadjust - cls.bias2D, y * con.yadjust - cls.bias2DY,
 					( to - from ) * con.charWidth * con.xadjust, con.charHeight * con.yadjust, selColor );
 				re->SetColor( g_color_table[currentColor] );
 			}
@@ -1427,7 +1428,7 @@ void Con_DrawSolidConsole( float frac ) {
 
 	// the cursor of the console, where the system does not draw one
 	if ( conSel.ownCursor ) {
-		re->DrawStretchPic( conSel.mouseX * con.xadjust - cls.bias2D, conSel.mouseY * con.yadjust, 24, 24, 0, 0, 1, 1, cls.cursorShader );
+		re->DrawStretchPic( conSel.mouseX * con.xadjust - cls.bias2D, conSel.mouseY * con.yadjust - cls.bias2DY, 24, 24, 0, 0, 1, 1, cls.cursorShader );
 	}
 }
 

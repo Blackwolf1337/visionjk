@@ -42,6 +42,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SPATIAL_DEBUG_ECHO_BAKING	2		//	which are being worked out, live until then
 #define SPATIAL_DEBUG_ECHO_NONE		3		//	which the level does not have, live
 
+// spatialDebug_t.tracers: who traces the rays. It was a qboolean "embree" until 2026-10-28 and keeps its place, so
+// that a cgame and an engine of other versions still agree on the layout: an older cgame says Embree for any bit.
+#define SPATIAL_DEBUG_TRACE_EMBREE	1		// occlusion, paths and bakes by Embree, else by Steam Audio itself
+#define SPATIAL_DEBUG_TRACE_GPU		2		// the echo by the graphics card (v_spatialGpu), else as the rest
+
 // spatialDebugSound_t.flags
 #define SPATIAL_DEBUG_OWN			1		// it has reflections of its own (v_spatialSources)
 #define SPATIAL_DEBUG_STREAM		2		// a voice of the voice chat or a box of the boombox
@@ -88,7 +93,7 @@ typedef struct spatialMover_s {
 typedef struct spatialDebug_s {
 	qboolean				active;				// Steam Audio plays the sounds of a level
 	vec3_t					listener;			// where he hears from
-	qboolean				embree;
+	int						tracers;			// SPATIAL_DEBUG_TRACE_*
 	int						threads;
 	int						passRays, passBounces;	// of a pass of the reflections
 	float					passMsec;			// the last pass of the reflections

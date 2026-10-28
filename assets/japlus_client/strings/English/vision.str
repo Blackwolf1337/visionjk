@@ -251,6 +251,18 @@ LANG_ENGLISH        "Real Time"
 REFERENCE           PRECALCULATED
 LANG_ENGLISH        "Precalculated"
 
+REFERENCE           ECHO_CALCULATION
+LANG_ENGLISH        "Echo Calculation"
+
+REFERENCE           GRAPHICS_CARD_THE_RAYS_OF_THE_ECHO_A
+LANG_ENGLISH        "Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo."
+
+REFERENCE           GRAPHICS_CARD
+LANG_ENGLISH        "Graphics Card"
+
+REFERENCE           CPU
+LANG_ENGLISH        "CPU"
+
 REFERENCE           ECHOES_OF_THEIR_OWN
 LANG_ENGLISH        "Echoes of Their Own"
 

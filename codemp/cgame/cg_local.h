@@ -1561,6 +1561,7 @@ typedef struct cgs_s {
 	float			screenXScale;		// derived from glconfig
 	float			screenYScale;
 	float			bias2D;				// the grid of the 2D runs from -bias2D to 640 + bias2D on a wide window (cvar v_2dBias)
+	float			bias2DY;			//	and from -bias2DY to 480 + bias2DY on a window narrower than 4:3 (v_2dBiasY)
 	float			shift2D;			// what CG_Place2D() moves the 2D by right now
 	float			screenXBias;
 

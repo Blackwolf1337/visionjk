@@ -10495,19 +10495,19 @@ UI_ScreenSize
 
 The size of the window, for a 640x480 virtualized screen. A renderer of this tree makes the grid wider than 640 on
 a wide window instead of stretching it, and says by how much in the cvar v_2dBias: x then runs from -bias to
-640 + bias and the menus sit in the middle. Any other engine leaves the bias at 0. At the start, and every frame
+640 + bias and the menus sit in the middle. On a window narrower than 4:3 it makes the grid taller the same way
+(v_2dBiasY), and the 640 x 480 is a band across the middle. Any other engine leaves both at 0. At the start, and every frame
 the engine resized the frame with the window (CL_WindowSize()).
 =================
 */
 static void UI_ScreenSize( void ) {
 	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
-	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * (1.0/480.0);
-	uiInfo.uiDC.bias = trap->Cvar_VariableValue( "v_2dBias" );
-	if ( uiInfo.uiDC.bias < 0.0f ) {
-		uiInfo.uiDC.bias = 0.0f;
-	}
+	uiInfo.uiDC.bias = Q_max( 0.0f, trap->Cvar_VariableValue( "v_2dBias" ) );
+	uiInfo.uiDC.biasY = Q_max( 0.0f, trap->Cvar_VariableValue( "v_2dBiasY" ) );
+	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight / ( 480.0 + 2.0 * uiInfo.uiDC.biasY );
 	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth / ( 640.0 + 2.0 * uiInfo.uiDC.bias );
 	uiInfo.uiDC.wide = uiInfo.uiDC.bias;
+	uiInfo.uiDC.tall = uiInfo.uiDC.biasY;
 }
 
 static void UI_CheckScreenSize( void ) {
@@ -10735,6 +10735,7 @@ void UI_Refresh( int realtime )
 	// The cgame of this tree puts the menus of a running game onto a panel in the level, and the engine says so:
 	// the panel is as wide as a menu is, so nothing reaches past the 640 there, whatever the window is like.
 	uiInfo.uiDC.wide = trap->Cvar_VariableValue( "v_uiPlane" ) ? 0.0f : uiInfo.uiDC.bias;
+	uiInfo.uiDC.tall = trap->Cvar_VariableValue( "v_uiPlane" ) ? 0.0f : uiInfo.uiDC.biasY;
 	if ( uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.wide ) {
 		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.wide;
 	}

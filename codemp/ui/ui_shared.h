@@ -523,8 +523,10 @@ typedef struct displayContextDef_s {
 	float			yscale;
 	float			xscale;
 	float			bias;				// the grid of the 2D runs from -bias to 640 + bias on a wide screen (cvar v_2dBias)
+	float			biasY;				//	and from -biasY to 480 + biasY on one narrower than 4:3 (v_2dBiasY)
 	float			wide;				// how far a window over the whole 640 x 480 and the cursor reach into that: the bias, or 0
 										// while the menus stand on a plane in the level, which is 640 wide (cvar v_uiPlane)
+	float			tall;				//	and how far a background reaches above and below the 480: biasY, or 0 on the plane
 	int				realTime;
 	int				frameTime;
 	int				cursorx;

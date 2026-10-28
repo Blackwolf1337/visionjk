@@ -333,6 +333,22 @@ REFERENCE           PRECALCULATED
 LANG_ENGLISH        "Precalculated"
 LANG_GERMAN         "Vorberechnet"
 
+REFERENCE           ECHO_CALCULATION
+LANG_ENGLISH        "Echo Calculation"
+LANG_GERMAN         "Echo-Berechnung"
+
+REFERENCE           GRAPHICS_CARD_THE_RAYS_OF_THE_ECHO_A
+LANG_ENGLISH        "Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo."
+LANG_GERMAN         "Grafikkarte: die Strahlen des Echos werden auf der Grafikkarte verfolgt, die CPU bleibt frei. CPU: sie werden auf der CPU verfolgt. Wo die Karte das nicht kann, rechnet die CPU. Ohne Wirkung bei einem vorberechneten Echo."
+
+REFERENCE           GRAPHICS_CARD
+LANG_ENGLISH        "Graphics Card"
+LANG_GERMAN         "Grafikkarte"
+
+REFERENCE           CPU
+LANG_ENGLISH        "CPU"
+LANG_GERMAN         "#same"
+
 REFERENCE           ECHOES_OF_THEIR_OWN
 LANG_ENGLISH        "Echoes of Their Own"
 LANG_GERMAN         "Eigene Echos"

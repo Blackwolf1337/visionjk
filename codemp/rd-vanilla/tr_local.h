@@ -1276,6 +1276,7 @@ extern	cvar_t	*tay_bloomThreshold;
 extern	cvar_t	*tay_renderScale;
 
 float	R_2DBias( void );
+float	R_2DBiasY( void );
 void	RE_Set2DPlane( const float *matrix );
 void	RE_SetDepthOfField( float focus, float amount );
 qboolean	RE_SetScopeEffect( const scopeEffect_t *fx );

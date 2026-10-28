@@ -169,9 +169,9 @@ plane, in the size the plane has there. It stays upright: a viewport can not be 
 static void CL_UIRenderScene( const refdef_t *fd ) {
 	const float	*m = cls.uiPlane;
 	const float	toGridX = ( SCREEN_WIDTH + 2.0f * cls.bias2D ) / cls.glconfig.vidWidth;
-	const float	toGridY = (float)SCREEN_HEIGHT / cls.glconfig.vidHeight;
+	const float	toGridY = ( SCREEN_HEIGHT + 2.0f * cls.bias2DY ) / cls.glconfig.vidHeight;
 	const float	gx = ( fd->x + fd->width * 0.5f ) * toGridX - cls.bias2D;
-	const float	gy[3] = { fd->y * toGridY, ( fd->y + fd->height * 0.5f ) * toGridY, ( fd->y + fd->height ) * toGridY };
+	const float	gy[3] = { fd->y * toGridY - cls.bias2DY, ( fd->y + fd->height * 0.5f ) * toGridY - cls.bias2DY, ( fd->y + fd->height ) * toGridY - cls.bias2DY };
 	float		sx = 0.0f, sy[3], scale;
 	refdef_t	moved;
 	int			i;

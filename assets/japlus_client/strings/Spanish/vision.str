@@ -333,6 +333,22 @@ REFERENCE           PRECALCULATED
 LANG_ENGLISH        "Precalculated"
 LANG_SPANISH        "Precalculado"
 
+REFERENCE           ECHO_CALCULATION
+LANG_ENGLISH        "Echo Calculation"
+LANG_SPANISH        "Cálculo del eco"
+
+REFERENCE           GRAPHICS_CARD_THE_RAYS_OF_THE_ECHO_A
+LANG_ENGLISH        "Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo."
+LANG_SPANISH        "Tarjeta gráfica: los rayos del eco se trazan en la tarjeta gráfica y la CPU queda libre. CPU: se trazan en la CPU. Donde la tarjeta no puede, se usa la CPU. No hace nada con un eco precalculado."
+
+REFERENCE           GRAPHICS_CARD
+LANG_ENGLISH        "Graphics Card"
+LANG_SPANISH        "Tarjeta gráfica"
+
+REFERENCE           CPU
+LANG_ENGLISH        "CPU"
+LANG_SPANISH        "#same"
+
 REFERENCE           ECHOES_OF_THEIR_OWN
 LANG_ENGLISH        "Echoes of Their Own"
 LANG_SPANISH        "Ecos individuales"

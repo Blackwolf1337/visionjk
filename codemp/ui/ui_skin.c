@@ -110,7 +110,7 @@ static float Skin_ScaleX( void ) {
 }
 
 static float Skin_ScaleY( void ) {
-	return DC->glconfig.vidHeight / (float)SCREEN_HEIGHT;
+	return DC->glconfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * DC->biasY );
 }
 
 // a place of the 2D screen on the pixel of the window it is nearest to, as units again
@@ -123,7 +123,7 @@ static float Skin_SnapX( float x ) {
 static float Skin_SnapY( float y ) {
 	const float scale = Skin_ScaleY();
 
-	return floorf( y * scale + 0.5f ) / scale;
+	return floorf( ( y + DC->biasY ) * scale + 0.5f ) / scale - DC->biasY;
 }
 
 // toward 1 while on and toward 0 while not, all the way in msec
@@ -471,6 +471,7 @@ drift past at three depths and flicker a little. Over all of a wide window.
 */
 void Skin_Backdrop( void ) {
 	const float		left = -DC->wide, width = SCREEN_WIDTH + 2.0f * DC->wide;
+	const float		top = -DC->tall, height = SCREEN_HEIGHT + 2.0f * DC->tall;
 	const float		t = DC->realTime * 0.001f;
 	const vec4_t	blue = { 0.10f, 0.34f, 0.75f, 0.16f }, teal = { 0.05f, 0.55f, 0.62f, 0.10f };
 	unsigned int	seed = 0x9e3779b9u;
@@ -483,7 +484,7 @@ void Skin_Backdrop( void ) {
 	if ( skin.sky ) {
 		// (half a pixel of the picture in from its ends: its rim would be mixed with nothing)
 		DC->setColor( NULL );
-		DC->drawStretchPic( left, 0.0f, width, SCREEN_HEIGHT, 0.5f, 0.5f / 64.0f, 0.5f, 63.5f / 64.0f, skin.sky );
+		DC->drawStretchPic( left, top, width, height, 0.5f, 0.5f / 64.0f, 0.5f, 63.5f / 64.0f, skin.sky );
 	}
 	if ( !skin.soft ) {
 		return;
@@ -512,7 +513,7 @@ void Skin_Backdrop( void ) {
 		VectorSet( color, 0.75f + 0.25f * fy, 0.86f, 1.0f );
 		color[3] = ( 0.18f + 0.6f * depth * depth ) * twinkle;
 		DC->setColor( color );
-		DC->drawHandlePic( left + ( 1.0f - fx ) * ( width + 8.0f ) - 4.0f, fy * SCREEN_HEIGHT, size, size, skin.soft );
+		DC->drawHandlePic( left + ( 1.0f - fx ) * ( width + 8.0f ) - 4.0f, top + fy * height, size, size, skin.soft );
 	}
 	DC->setColor( NULL );
 }
@@ -749,7 +750,7 @@ void Skin_Cube( float x, float y, float w, float h ) {
 	// a square in the middle of the rectangle, on whole pixels
 	refdef.width = refdef.height = (int)( size * scaleY );
 	refdef.x = (int)( ( cx + DC->bias ) * scaleX ) - refdef.width / 2;
-	refdef.y = (int)( cyy * scaleY ) - refdef.height / 2;
+	refdef.y = (int)( ( cyy + DC->biasY ) * scaleY ) - refdef.height / 2;
 	if ( refdef.width < 8 ) {
 		return;
 	}

@@ -256,6 +256,11 @@ MORE = {
     'Echo': ('Écho', 'Eco'),
     'Real Time': ('Temps réel', 'Tiempo real'),
     'Precalculated': ('Précalculé', 'Precalculado'),
+    'Echo Calculation': ("Calcul de l'écho", 'Cálculo del eco'),
+    'Graphics Card': ('Carte graphique', 'Tarjeta gráfica'),
+    'CPU': ('CPU', 'CPU'),
+    'Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo.':
+        ("Carte graphique : les rayons de l'écho sont tracés sur la carte graphique, le CPU reste libre. CPU : ils sont tracés par le CPU. Là où la carte ne peut pas le faire, le CPU s'en charge. Sans effet avec un écho précalculé.", 'Tarjeta gráfica: los rayos del eco se trazan en la tarjeta gráfica y la CPU queda libre. CPU: se trazan en la CPU. Donde la tarjeta no puede, se usa la CPU. No hace nada con un eco precalculado.'),
     'Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in.':
         ('Temps réel : calculé en cours de jeu, les sons les plus forts ont leur propre écho. Précalculé : calculé une fois par niveau puis conservé, stable pendant les déplacements, tous les sons résonnent avec la pièce où vous êtes.', 'Tiempo real: se calcula mientras juegas y los sonidos más fuertes tienen su propio eco. Precalculado: se calcula una vez por nivel y se guarda, estable al moverte; todos los sonidos resuenan con la sala en la que estás.'),
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':

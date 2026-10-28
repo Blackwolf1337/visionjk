@@ -749,9 +749,14 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 	// than 640 by DC->wide on either side
 	// ("wide 1" says the same of a window that is not that high: the bar at the top of a page. With the menu on
 	// its panel in the level there is nothing beside the 640 units, DC->wide is 0 and the window ends with them.)
-	else if ( DC->wide > 0.0f && ( Window_IsBackground( w ) || w->wide ) ) {
+	// On a window narrower than 4:3 a background also reaches above and below the 480 by DC->tall.
+	else if ( ( DC->wide > 0.0f || DC->tall > 0.0f ) && ( Window_IsBackground( w ) || w->wide ) ) {
 		fillRect.x -= DC->wide;
 		fillRect.w += 2.0f * DC->wide;
+		if ( Window_IsBackground( w ) ) {
+			fillRect.y -= DC->tall;
+			fillRect.h += 2.0f * DC->tall;
+		}
 	}
 	// What lies under the left or the right edge of such a background and is seen through it (the columns of
 	// text of the main menus, under the holes of gfx/menus/main_background) is stretched as the background is.
@@ -6628,7 +6633,7 @@ void Item_Model_Paint(itemDef_t *item)
 	h = item->window.rect.h-2;
 
 	refdef.x = ( x + DC->bias ) * DC->xscale;
-	refdef.y = y * DC->yscale;
+	refdef.y = ( y + DC->biasY ) * DC->yscale;
 	refdef.width = w * DC->xscale;
 	refdef.height = h * DC->yscale;
 
@@ -8215,7 +8220,7 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 	} else if (menu->fullScreen) {
 		// implies a background shader
 		// FIXME: make sure we have a default shader if fullscreen is set with no background
-		DC->drawHandlePic( -DC->wide, 0, SCREEN_WIDTH + 2.0f * DC->wide, SCREEN_HEIGHT, menu->window.background );
+		DC->drawHandlePic( -DC->wide, -DC->tall, SCREEN_WIDTH + 2.0f * DC->wide, SCREEN_HEIGHT + 2.0f * DC->tall, menu->window.background );
 	} else if (menu->window.background) {
 		// this allows a background shader without being full screen
 		//UI_DrawHandlePic(menu->window.rect.x, menu->window.rect.y, menu->window.rect.w, menu->window.rect.h, menu->backgroundShader);
