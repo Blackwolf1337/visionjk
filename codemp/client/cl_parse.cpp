@@ -371,6 +371,12 @@ rww - Update fs_game, this message is so we can use the ext_data
 */
 void MSG_CheckNETFPSFOverrides(qboolean psfOverrides);
 void FS_UpdateGamedir(void);
+// An fs_game of a server is the name of one folder: no part of a path, no other folder, no drive (it was only
+// checked for "../", so ".." and "x/.." were folders above the game folders).
+static qboolean CL_BadGameDir( const char *dir ) {
+	return ( FS_CheckDirTraversal( dir ) || strpbrk( dir, "/\\:" ) || !strcmp( dir, "." ) ) ? qtrue : qfalse;
+}
+
 void CL_ParseSetGame( msg_t *msg )
 {
 	char newGameDir[MAX_QPATH];
@@ -394,7 +400,13 @@ void CL_ParseSetGame( msg_t *msg )
 	}
 	newGameDir[i] = 0;
 
-	if(FS_CheckDirTraversal(newGameDir))
+	// a demo does not change the game folder: CL_SystemInfoChanged leaves it alone in demos too, and it stayed
+	// after the demo
+	if ( clc.demoplaying ) {
+		return;
+	}
+
+	if(CL_BadGameDir(newGameDir))
 	{
 		Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", newGameDir);
 		CL_IDS_Event( CLIDS_GAMEDIR, NULL, newGameDir );
@@ -476,7 +488,7 @@ void CL_SystemInfoChanged( void ) {
 		}
 		// ehw!
 		if ( !Q_stricmp( key, "fs_game" ) ) {
-			if(FS_CheckDirTraversal(value))
+			if(CL_BadGameDir(value))
 			{
 				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", value);
 				CL_IDS_Event( CLIDS_GAMEDIR, NULL, value );

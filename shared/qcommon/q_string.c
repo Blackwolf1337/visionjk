@@ -248,6 +248,51 @@ void Q_strcat( char *dest, int size, const char *src ) {
 }
 
 /*
+=============
+Q_StringEdExpand
+
+The text of a server with every "@@@REF" in it replaced by lookup( "REF" ), into out of outSize bytes. A
+reference ends at a blank, ':', '.' or a line break, which stays. A replacement that does not fit is left out,
+as Q_strcat leaves it, and the rest of the text is cut at the end of out. The three copies of this that the
+game had (CG_CheckSVStringEdRef and two in the engine) took the cut for the replacement only and went on
+writing the text after it past the buffer.
+=============
+*/
+void Q_StringEdExpand( char *out, int outSize, const char *in, const char *( *lookup )( const char *ref ) ) {
+	int i = 0, b = 0;
+
+	if ( outSize <= 0 ) {
+		return;
+	}
+	out[0] = '\0';
+	while ( in[i] && b < outSize - 1 ) {
+		if ( in[i] == '@' && in[i + 1] == '@' && in[i + 2] == '@' && in[i + 3] ) {
+			char	ref[1024];
+			int		r = 0;
+
+			while ( in[i] == '@' ) {
+				i++;
+			}
+			while ( in[i] && in[i] != ' ' && in[i] != ':' && in[i] != '.' && in[i] != '\n' ) {
+				if ( r < (int)sizeof( ref ) - 1 ) {
+					ref[r++] = in[i];
+				}
+				i++;
+			}
+			ref[r] = '\0';
+			out[b] = '\0';
+			Q_strcat( out, outSize, lookup( ref ) );
+			b = (int)strlen( out );
+			if ( !in[i] || b >= outSize - 1 ) {
+				break;
+			}
+		}
+		out[b++] = in[i++];
+	}
+	out[b] = '\0';
+}
+
+/*
 * Find the first occurrence of find in s.
 */
 const char *Q_stristr( const char *s, const char *find )

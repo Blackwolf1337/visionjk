@@ -28,6 +28,7 @@ char *Q_strrchr( const char* string, int c );
 // buffer size safe library replacements
 void Q_strncpyz( char *dest, const char *src, int destsize );
 void Q_strcat( char *dest, int size, const char *src );
+void Q_StringEdExpand( char *out, int outSize, const char *in, const char *( *lookup )( const char *ref ) );
 
 const char *Q_stristr( const char *s, const char *find);
 

@@ -1990,9 +1990,14 @@ void MSG_CheckNETFPSFOverrides(qboolean psfOverrides)
 	{
 		if (overrideFile[i] == ';')
 		{ //parse to end of the line
-			while (overrideFile[i] != '\n')
+			// (a file of a pak: every loop here stops at its end, which they did not)
+			while (overrideFile[i] && overrideFile[i] != '\n')
 			{
 				i++;
+			}
+			if (!overrideFile[i])
+			{
+				break;
 			}
 		}
 
@@ -2004,8 +2009,10 @@ void MSG_CheckNETFPSFOverrides(qboolean psfOverrides)
 
 			while (overrideFile[i] && overrideFile[i] != ',')
 			{
-				entryName[j] = overrideFile[i];
-				j++;
+				if (j < (int)sizeof(entryName) - 1)
+				{
+					entryName[j++] = overrideFile[i];
+				}
 				i++;
 			}
 			entryName[j] = 0;
@@ -2022,10 +2029,12 @@ void MSG_CheckNETFPSFOverrides(qboolean psfOverrides)
 			}
 
 			j = 0;
-			while (overrideFile[i] != '\n' && overrideFile[i] != '\r')
+			while (overrideFile[i] && overrideFile[i] != '\n' && overrideFile[i] != '\r')
 			{ //now read the value in
-				bits[j] = overrideFile[i];
-				j++;
+				if (j < (int)sizeof(bits) - 1)
+				{
+					bits[j++] = overrideFile[i];
+				}
 				i++;
 			}
 			bits[j] = 0;
@@ -2039,6 +2048,15 @@ void MSG_CheckNETFPSFOverrides(qboolean psfOverrides)
 				else
 				{
 	                ibits = atoi(bits);
+				}
+				if (ibits < -32 || ibits > 32)
+				{ // (MSG_ReadBits takes 32 at most, negative for a signed field)
+					Com_Printf("WARNING: %i bits for '%s' in %s, ignored\n", ibits, entryName, fileName);
+					if (overrideFile[i])
+					{
+						i++;
+					}
+					continue;
 				}
 
 				j = 0;
@@ -2077,7 +2095,10 @@ void MSG_CheckNETFPSFOverrides(qboolean psfOverrides)
 			}
 		}
 
-		i++;
+		if (overrideFile[i])
+		{
+			i++;
+		}
 	}
 }
 

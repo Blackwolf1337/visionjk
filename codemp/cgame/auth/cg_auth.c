@@ -118,7 +118,7 @@ static void Auth_Say( const char *fmt, ... ) {
 	va_start( args, fmt );
 	Q_vsnprintf( text, sizeof( text ), fmt, args );
 	va_end( args );
-	trap->Print( va( "%s\n", text ) );
+	trap->Print( "%s\n", text );
 }
 
 static void Auth_End( void ) {
@@ -147,6 +147,11 @@ The key file
 static void Auth_KeyPath( char *out, int outSize ) {
 	char		home[MAX_OSPATH];
 	const char	*file = v_authKeyFile.string;
+
+	// (a network path is no key file: on Windows the open alone logs in to that host with the player's account)
+	if ( ( file[0] == '/' || file[0] == '\\' ) && ( file[1] == '/' || file[1] == '\\' ) ) {
+		file = "";
+	}
 
 	if ( file[0] == '~' && ( file[1] == '/' || file[1] == '\\' ) ) {
 #if defined(_WIN32)
@@ -266,7 +271,7 @@ static void Auth_PrintPublic( const byte *pub, const char *comment, const char *
 
 	BG_AuthPublicLine( pub, comment, line, sizeof( line ) );
 	BG_AuthFingerprint( pub, fingerprint, sizeof( fingerprint ) );
-	trap->Print( va( S_COLOR_CYAN "%s" S_COLOR_WHITE " (%s):\n%s\n", where, fingerprint, line ) );
+	trap->Print( S_COLOR_CYAN "%s" S_COLOR_WHITE " (%s):\n%s\n", where, fingerprint, line );
 }
 
 /*
@@ -317,9 +322,9 @@ static void Auth_New( void ) {
 	if ( fd < 0 ) {
 		crypto_wipe( text, sizeof( text ) );
 		if ( errno == EEXIST ) {
-			trap->Print( va( "There is a key file already: %s\nIt is kept. \"v_amkey show\" prints its public line, another file is named with v_authKeyFile.\n", path ) );
+			trap->Print( "There is a key file already: %s\nIt is kept. \"v_amkey show\" prints its public line, another file is named with v_authKeyFile.\n", path );
 		} else {
-			trap->Print( va( "The key file %s could not be made.\n", path ) );
+			trap->Print( "The key file %s could not be made.\n", path );
 		}
 		return;
 	}
@@ -332,7 +337,7 @@ static void Auth_New( void ) {
 #endif
 	crypto_wipe( text, sizeof( text ) );
 	if ( n != len ) {
-		trap->Print( va( "The key file %s could not be written, delete what is there of it.\n", path ) );
+		trap->Print( "The key file %s could not be written, delete what is there of it.\n", path );
 		return;
 	}
 
@@ -346,7 +351,7 @@ static void Auth_New( void ) {
 		fclose( f );
 	}
 
-	trap->Print( va( "A new key is in %s\nNobody else may read that file. Its public line is no secret, the owner of a server puts it into his admin_keys.txt behind your rank:\n", path ) );
+	trap->Print( "A new key is in %s\nNobody else may read that file. Its public line is no secret, the owner of a server puts it into his admin_keys.txt behind your rank:\n", path );
 	Auth_PrintPublic( pub, comment, "public line" );
 	trap->Print( "Then \"v_amkey login\" on that server.\n" );
 }
@@ -668,7 +673,7 @@ void CG_AuthServerCommand( void ) {
 		authIsAdmin = qtrue;
 		// said even after a login that ran by itself, but not after every map: "kept" is the rank from before
 		if ( !auth.quiet || Q_stricmp( CG_Argv( 3 ), "kept" ) ) {
-			trap->Print( va( "Logged in with your key as admin (%s).\n", CG_Argv( 2 ) ) );
+			trap->Print( "Logged in with your key as admin (%s).\n", CG_Argv( 2 ) );
 		}
 		Auth_End();
 		return;
@@ -837,7 +842,7 @@ void CG_AuthCommand_f( void ) {
 	if ( !Q_stricmp( what, "forget" ) ) {
 		Auth_ServerSet( address, qfalse );
 		Auth_SetHost( address, NULL );
-		trap->Print( va( "No login by itself on %s any more, and its host key is forgotten.\n", address ) );
+		trap->Print( "No login by itself on %s any more, and its host key is forgotten.\n", address );
 		return;
 	}
 	if ( !Q_stricmp( what, "login" ) || !Q_stricmp( what, "trust" ) ) {
@@ -861,14 +866,14 @@ void CG_AuthCommand_f( void ) {
 	}
 
 	Auth_KeyPath( path, sizeof( path ) );
-	trap->Print( va( "Admin login with a key instead of a password.\n"
+	trap->Print( "Admin login with a key instead of a password.\n"
 		"  v_amkey new [comment]   make a key (file %s)\n"
 		"  v_amkey show            print the public lines of your keys, one of them goes into the admin_keys.txt of a server\n"
 		"  v_amkey login           log in on this server, and by itself from now on when you join it\n"
 		"  v_amkey forget          no login by itself on this server any more, and forget its host key\n"
 		"  v_amkey trust           log in and keep the host key the server sends now, even if it is another one than before\n"
 		"v_authAgent %i (1: the keys of your ssh-agent are used too, 1Password is one), by itself on: %s\n",
-		path, v_authAgent.integer, v_authServers.string[0] ? v_authServers.string : "no server" ) );
+		path, v_authAgent.integer, v_authServers.string[0] ? v_authServers.string : "no server" );
 }
 
 #else	// __EMSCRIPTEN__

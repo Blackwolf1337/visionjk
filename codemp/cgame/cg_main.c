@@ -540,36 +540,17 @@ void CG_ParseWeatherEffect(const char *str)
 }
 
 extern int cgSiegeRoundBeganTime;
+// "<state>|<time>", a configstring of the server: read in place, the two copies into b[1024] had no bound
 void CG_ParseSiegeState(const char *str)
 {
-	int i = 0;
-	int j = 0;
-//	int prevState = cgSiegeRoundState;
-	char b[1024];
+	const char *bar = strchr( str, '|' );
 
-	while (str[i] && str[i] != '|')
-	{
-		b[j] = str[i];
-		i++;
-		j++;
-	}
-	b[j] = 0;
-	cgSiegeRoundState = atoi(b);
+	cgSiegeRoundState = atoi( str );
 
-	if (str[i] == '|')
+	if ( bar )
 	{
-		j = 0;
-		i++;
-		while (str[i])
-		{
-			b[j] = str[i];
-			i++;
-			j++;
-		}
-		b[j] = 0;
-//		if (cgSiegeRoundState != prevState)
 		{ //it changed
-			cgSiegeRoundTime = atoi(b);
+			cgSiegeRoundTime = atoi( bar + 1 );
 			if (cgSiegeRoundState == 0 || cgSiegeRoundState == 2)
 			{
 				cgSiegeRoundBeganTime = cgSiegeRoundTime;
@@ -1438,7 +1419,11 @@ Ghoul2 Insert End
 			break;
 		}
 
-		strcpy(modelName, cModelName);
+		// (a configstring of the server: a name that does not fit is no model)
+		if ( strlen( cModelName ) >= sizeof( modelName ) ) {
+			continue;
+		}
+		Q_strncpyz( modelName, cModelName, sizeof( modelName ) );
 		if (strstr(modelName, ".glm") || modelName[0] == '$')
 		{ //Check to see if it has a custom skin attached.
 			CG_HandleAppendedSkin(modelName);
@@ -2193,6 +2178,13 @@ CG_LoadMenus();
 
 =================
 */
+// "exec" of a menu the cgame draws (its HUD): nothing. The cgame never had it and called NULL for it, so a HUD
+// menu of a pak with an exec ended the game; the HUD of the game has none.
+static void CG_MenuExecuteText( int exec_when, const char *text ) {
+	(void)exec_when;
+	(void)text;
+}
+
 void CG_LoadMenus(const char *menuFile)
 {
 	const char	*token;
@@ -2372,7 +2364,7 @@ static void CG_DisplaySetup( void )
 	//cgDC.setBinding					= &trap->Key_SetBinding;
 	//cgDC.getBindingBuf				= &trap->Key_GetBindingBuf;
 	//cgDC.keynumToStringBuf			= &trap->Key_KeynumToStringBuf;
-	//cgDC.executeText					= &trap->Cmd_ExecuteText;
+	cgDC.executeText					= CG_MenuExecuteText;
 	cgDC.Error							= Com_Error;
 	cgDC.Print							= Com_Printf;
 	cgDC.ownerDrawWidth					= &CG_OwnerDrawWidth;

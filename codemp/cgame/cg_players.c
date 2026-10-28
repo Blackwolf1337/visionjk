@@ -715,7 +715,7 @@ retryModel:
 		char iconName[1024];
 		strcpy(iconName, "icon_");
 		j = strlen(iconName);
-		while (skinName[i] && skinName[i] != '|' && j < 1024)
+		while (skinName[i] && skinName[i] != '|' && j < (int)sizeof( iconName ) - 1)	// (room for the end)
 		{
             iconName[j] = skinName[i];
 			j++;
@@ -867,6 +867,8 @@ void CG_LoadCISounds(clientInfo_t *ci, qboolean modelloaded)
 
 	if (f)
 	{
+		// (the file of a model, from a pak: a sound folder and maybe an "f" fit, anything longer is cut)
+		fLen = Com_Clampi( 0, (int)sizeof( soundpath ) - 1, fLen );
 		trap->FS_Read(soundpath, fLen, f);
 		soundpath[fLen] = 0;
 
@@ -7292,7 +7294,6 @@ int CG_HandleAppendedSkin(char *modelName)
 	char skinName[MAX_QPATH];
 	char *p;
 	qhandle_t skinID = 0;
-	int i = 0;
 
 	//see if it has a skin name
 	p = Q_strrchr(modelName, '*');
@@ -7302,19 +7303,13 @@ int CG_HandleAppendedSkin(char *modelName)
 		*p = 0; //terminate the modelName string at this point, then go ahead and parse to the next 0 for the skin.
 		p++;
 
-		while (p && *p)
-		{
-			skinName[i] = *p;
-			i++;
-			p++;
-		}
-		skinName[i] = 0;
+		Q_strncpyz( skinName, p, sizeof( skinName ) );
 
 		if (skinName[0])
 		{ //got it, register the skin under the model path.
 			char baseFolder[MAX_QPATH];
 
-			strcpy(baseFolder, modelName);
+			Q_strncpyz( baseFolder, modelName, sizeof( baseFolder ) );
 			p = Q_strrchr(baseFolder, '/'); //go back to the first /, should be the path point
 
 			if (p)
@@ -7479,7 +7474,11 @@ void CG_G2AnimEntModelLoad(centity_t *cent)
 		int skinID;
 		char *slash;
 
-		strcpy(modelName, cModelName);
+		// (a configstring of the server: a name that does not fit is no model)
+		if ( strlen( cModelName ) >= sizeof( modelName ) ) {
+			return;
+		}
+		Q_strncpyz( modelName, cModelName, sizeof( modelName ) );
 
 		if (cent->currentState.NPC_class == CLASS_VEHICLE && modelName[0] == '$')
 		{ //vehicles pass their veh names over as model names, then we get the model name from the veh type
@@ -7529,7 +7528,7 @@ void CG_G2AnimEntModelLoad(centity_t *cent)
 			{
 				skinID = trap->R_RegisterSkin(va("models/players/%s/model_default.skin", modelName));
 			}
-			strcpy(modelName, va("models/players/%s/model.glm", modelName));
+			Q_strncpyz( modelName, va( "models/players/%s/model.glm", modelName ), sizeof( modelName ) );
 
 			//this sound is *only* used for vehicles now
 			cgs.media.noAmmoSound = trap->S_RegisterSound( "sound/weapons/noammo.wav" );

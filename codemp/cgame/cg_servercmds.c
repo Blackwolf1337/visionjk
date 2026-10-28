@@ -354,21 +354,28 @@ void CG_ShaderStateChanged(void) {
 	while (o && *o) {
 		n = strstr(o, "=");
 		if (n && *n) {
-			strncpy(originalShader, o, n-o);
-			originalShader[n-o] = 0;
+			// (the lengths are distances in a configstring of the server: what does not fit ends the list)
+			if ( n - o >= (int)sizeof( originalShader ) ) {
+				break;
+			}
+			Q_strncpyz( originalShader, o, (int)( n - o ) + 1 );
 			n++;
 			t = strstr(n, ":");
 			if (t && *t) {
-				strncpy(newShader, n, t-n);
-				newShader[t-n] = 0;
+				if ( t - n >= (int)sizeof( newShader ) ) {
+					break;
+				}
+				Q_strncpyz( newShader, n, (int)( t - n ) + 1 );
 			} else {
 				break;
 			}
 			t++;
 			o = strstr(t, "@");
 			if (o) {
-				strncpy(timeOffset, t, o-t);
-				timeOffset[o-t] = 0;
+				if ( o - t >= (int)sizeof( timeOffset ) ) {
+					break;
+				}
+				Q_strncpyz( timeOffset, t, (int)( o - t ) + 1 );
 				o++;
 				trap->R_RemapShader( originalShader, newShader, timeOffset );
 			}
@@ -479,7 +486,7 @@ static void CG_RegisterCustomSounds(clientInfo_t *ci, int setType, const char *p
 			char modifiedSound[MAX_QPATH];
 			char *p;
 
-			strcpy(modifiedSound, s);
+			Q_strncpyz( modifiedSound, s, sizeof( modifiedSound ) );
 			p = strchr(modifiedSound,'.');
 
 			if (p)
@@ -507,22 +514,19 @@ static void CG_RegisterCustomSounds(clientInfo_t *ci, int setType, const char *p
 	}
 }
 
+// The folder of an NPC sound set, the configstring "*$<folder>" without its two marks, cut at outSize.
+static void CG_NPCSoundDir( char *out, int outSize, const char *s ) {
+	Q_strncpyz( out, ( s[0] && s[1] ) ? s + 2 : "", outSize );
+}
+
 void CG_PrecacheNPCSounds(const char *str)
 {
 	char sEnd[MAX_QPATH];
 	char pEnd[MAX_QPATH];
 	int i = 0;
 	int j = 0;
-	int k = 0;
 
-	k = 2;
-
-	while (str[k])
-	{
-		pEnd[k-2] = str[k];
-		k++;
-	}
-	pEnd[k-2] = 0;
+	CG_NPCSoundDir( pEnd, sizeof( pEnd ), str );
 
 	while (i < 4) //4 types
 	{ //It would be better if we knew what type this actually was (extra, combat, jedi, etc).
@@ -534,13 +538,7 @@ void CG_PrecacheNPCSounds(const char *str)
 
 			if (s && s[0])
 			{ //whatever it is, try registering it under this folder.
-				k = 1;
-				while (s[k])
-				{
-					sEnd[k-1] = s[k];
-					k++;
-				}
-				sEnd[k-1] = 0;
+				Q_strncpyz( sEnd, s + 1, sizeof( sEnd ) );
 
 				trap->S_Shutup(qtrue);
 				trap->S_RegisterSound( va("sound/chars/%s/misc/%s", pEnd, sEnd) );
@@ -574,18 +572,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 1, sEnd);
 		}
@@ -603,18 +591,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 2, sEnd);
 		}
@@ -632,18 +610,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 3, sEnd);
 		}
@@ -661,18 +629,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 4, sEnd);
 		}
@@ -783,7 +741,12 @@ static void CG_ConfigStringModified( void ) {
 		cg.intermissionStarted = atoi( str );
 	} else if ( num >= CS_MODELS && num < CS_MODELS+MAX_MODELS ) {
 		char modelName[MAX_QPATH];
-		strcpy(modelName, str);
+
+		// (a name that does not fit is no model)
+		if ( strlen( str ) >= sizeof( modelName ) ) {
+			return;
+		}
+		Q_strncpyz( modelName, str, sizeof( modelName ) );
 		if (strstr(modelName, ".glm") || modelName[0] == '$')
 		{ //Check to see if it has a custom skin attached.
 			CG_HandleAppendedSkin(modelName);
@@ -1077,73 +1040,13 @@ static void CG_RemoveChatEscapeChar( char *text ) {
 
 #define MAX_STRINGED_SV_STRING 1024	// this is an quake-engine limit, not a StringEd limit
 
-void CG_CheckSVStringEdRef(char *buf, const char *str)
-{ //I don't really like doing this. But it utilizes the system that was already in place.
-	int i = 0;
-	int b = 0;
-	int strLen = 0;
-	qboolean gotStrip = qfalse;
+static const char *CG_SVStringEd( const char *ref ) {
+	return CG_GetStringEdString( "MP_SVGAME", (char *)ref );
+}
 
-	if (!str || !str[0])
-	{
-		if (str)
-		{
-			strcpy(buf, str);
-		}
-		return;
-	}
-
-	strcpy(buf, str);
-
-	strLen = strlen(str);
-
-	if (strLen >= MAX_STRINGED_SV_STRING)
-	{
-		return;
-	}
-
-	while (i < strLen && str[i])
-	{
-		gotStrip = qfalse;
-
-		if (str[i] == '@' && (i+1) < strLen)
-		{
-			if (str[i+1] == '@' && (i+2) < strLen)
-			{
-				if (str[i+2] == '@' && (i+3) < strLen)
-				{ //@@@ should mean to insert a StringEd reference here, so insert it into buf at the current place
-					char stringRef[MAX_STRINGED_SV_STRING];
-					int r = 0;
-
-					while (i < strLen && str[i] == '@')
-					{
-						i++;
-					}
-
-					while (i < strLen && str[i] && str[i] != ' ' && str[i] != ':' && str[i] != '.' && str[i] != '\n')
-					{
-						stringRef[r] = str[i];
-						r++;
-						i++;
-					}
-					stringRef[r] = 0;
-
-					buf[b] = 0;
-					Q_strcat(buf, MAX_STRINGED_SV_STRING, CG_GetStringEdString("MP_SVGAME", stringRef));
-					b = strlen(buf);
-				}
-			}
-		}
-
-		if (!gotStrip)
-		{
-			buf[b] = str[i];
-			b++;
-		}
-		i++;
-	}
-
-	buf[b] = 0;
+// buf has MAX_STRINGED_SV_STRING bytes
+void CG_CheckSVStringEdRef( char *buf, const char *str ) {
+	Q_StringEdExpand( buf, MAX_STRINGED_SV_STRING, str ? str : "", CG_SVStringEd );
 }
 
 static void CG_BodyQueueCopy(centity_t *cent, int clientNum, int knownWeapon)
@@ -1320,6 +1223,10 @@ static void CG_KillGhoul2_f( void ) {
 	for ( i=1; i<argNum; i++ ) {
 		indexNum = atoi( CG_Argv( i ) );
 
+		// (only the instances of entities that are no clients; the game sends no other number)
+		if ( indexNum < MAX_CLIENTS || indexNum >= MAX_GENTITIES ) {
+			continue;
+		}
 		if ( cg_entities[indexNum].ghoul2 && trap->G2_HaveWeGhoul2Models( cg_entities[indexNum].ghoul2 ) ) {
 			if ( indexNum < MAX_CLIENTS ) { //You try to do very bad thing!
 #ifdef _DEBUG
@@ -1406,6 +1313,14 @@ static void CG_RestoreClientGhoul_f( void ) {
 		bodyIndex = atoi( CG_Argv( 2 ) );
 		weaponIndex = atoi( CG_Argv( 3 ) );
 		side = atoi( CG_Argv( 4 ) );
+
+		// a body of the queue is an entity that is no client, its weapon one of the game (g_client.c BodySink)
+		if ( bodyIndex < MAX_CLIENTS || bodyIndex >= MAX_GENTITIES ) {
+			return;
+		}
+		if ( weaponIndex < 0 || weaponIndex >= WP_NUM_WEAPONS ) {
+			weaponIndex = WP_NONE;
+		}
 
 		body = &cg_entities[bodyIndex];
 

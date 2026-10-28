@@ -516,6 +516,11 @@ void CL_ReadDemoMessage( void ) {
 		CL_DemoCompleted ();
 		return;
 	}
+	// The netchan only ever goes up from 0, a demo sets the number itself: one that goes back made the snapshot
+	// code of CL_ParseSnapshot count across the whole range of an int. (clc is cleared by CL_Disconnect before.)
+	if ( LittleLong( s ) < clc.serverMessageSequence ) {
+		Com_Error( ERR_DROP, "CL_ReadDemoMessage: the messages of the demo go back (%d after %d)", LittleLong( s ), clc.serverMessageSequence );
+	}
 	clc.serverMessageSequence = LittleLong( s );
 
 	// init the message
@@ -532,8 +537,10 @@ void CL_ReadDemoMessage( void ) {
 		CL_DemoCompleted ();
 		return;
 	}
-	if ( buf.cursize > buf.maxsize ) {
-		Com_Error (ERR_DROP, "CL_ReadDemoMessage: demoMsglen > MAX_MSGLEN");
+	// (a negative length passed the check below and FS_Read took it as a huge one: the rest of the file went past
+	// bufData on the stack)
+	if ( buf.cursize < 0 || buf.cursize > buf.maxsize ) {
+		Com_Error (ERR_DROP, "CL_ReadDemoMessage: bad demo message length %d", buf.cursize);
 	}
 	r = FS_Read( buf.data, buf.cursize, clc.demofile );
 	if ( r != buf.cursize ) {
@@ -2006,73 +2013,13 @@ void CL_ServersResponsePacket( const netadr_t *from, msg_t *msg ) {
 #ifndef MAX_STRINGED_SV_STRING
 #define MAX_STRINGED_SV_STRING 1024
 #endif
-static void CL_CheckSVStringEdRef(char *buf, const char *str)
-{ //I don't really like doing this. But it utilizes the system that was already in place.
-	int i = 0;
-	int b = 0;
-	int strLen = 0;
-	qboolean gotStrip = qfalse;
+static const char *CL_SVStringEdOOB( const char *ref ) {
+	return SE_GetString( va( "MP_SVGAME_%s", ref ) );
+}
 
-	if (!str || !str[0])
-	{
-		if (str)
-		{
-			strcpy(buf, str);
-		}
-		return;
-	}
-
-	strcpy(buf, str);
-
-	strLen = strlen(str);
-
-	if (strLen >= MAX_STRINGED_SV_STRING)
-	{
-		return;
-	}
-
-	while (i < strLen && str[i])
-	{
-		gotStrip = qfalse;
-
-		if (str[i] == '@' && (i+1) < strLen)
-		{
-			if (str[i+1] == '@' && (i+2) < strLen)
-			{
-				if (str[i+2] == '@' && (i+3) < strLen)
-				{ //@@@ should mean to insert a stringed reference here, so insert it into buf at the current place
-					char stripRef[MAX_STRINGED_SV_STRING];
-					int r = 0;
-
-					while (i < strLen && str[i] == '@')
-					{
-						i++;
-					}
-
-					while (i < strLen && str[i] && str[i] != ' ' && str[i] != ':' && str[i] != '.' && str[i] != '\n')
-					{
-						stripRef[r] = str[i];
-						r++;
-						i++;
-					}
-					stripRef[r] = 0;
-
-					buf[b] = 0;
-					Q_strcat(buf, MAX_STRINGED_SV_STRING, SE_GetString(va("MP_SVGAME_%s", stripRef)));
-					b = strlen(buf);
-				}
-			}
-		}
-
-		if (!gotStrip)
-		{
-			buf[b] = str[i];
-			b++;
-		}
-		i++;
-	}
-
-	buf[b] = 0;
+// buf has MAX_STRINGED_SV_STRING bytes
+static void CL_CheckSVStringEdRef( char *buf, const char *str ) {
+	Q_StringEdExpand( buf, MAX_STRINGED_SV_STRING, str ? str : "", CL_SVStringEdOOB );
 }
 
 
@@ -2741,6 +2688,14 @@ void CL_InitRef( void ) {
 
 	cl_renderer = Cvar_Get( "cl_renderer", DEFAULT_RENDER_LIBRARY, CVAR_ARCHIVE|CVAR_LATCH, "Which renderer library to use" );
 
+	// The name of a library next to the program, never a path (the ui and menu scripts set it: Sys_LoadDll joined
+	// "../" and the like to the folders it looks in).
+	if ( !cl_renderer->string[0] || cl_renderer->string[strspn( cl_renderer->string,
+		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )] ) {
+		Com_Printf( S_COLOR_YELLOW "cl_renderer \"%s\" is no renderer name, using " FALLBACK_RENDER_LIBRARY "\n", cl_renderer->string );
+		cl_rendererFallback = qtrue;
+	}
+
 	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, cl_rendererFallback ? FALLBACK_RENDER_LIBRARY : cl_renderer->string );
 
 	if( !(rendererLib = Sys_LoadDll( dllName, qfalse )) && !cl_rendererFallback && strcmp( cl_renderer->string, FALLBACK_RENDER_LIBRARY ) )
@@ -3039,6 +2994,8 @@ void CL_Init( void ) {
 	cl_freezeDemo = Cvar_Get ("cl_freezeDemo", "0", CVAR_TEMP );
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP, "Password for remote console access" );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );
+	// what CL_NextDemo runs: registered so that a server can not make it (Cvar_Server_Set takes a cvar nobody has)
+	Cvar_Get( "nextdemo", "", CVAR_TEMP );
 
 	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
 	cl_aviFrameRate = Cvar_Get ("cl_aviFrameRate", "25", CVAR_ARCHIVE);
