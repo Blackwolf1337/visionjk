@@ -46,8 +46,8 @@ than 640 by the bias on either side, see R_2DBias()
 ===============
 */
 static void RB_SetGL2D( void ) {
-	const float	bias = R_2DBias();
-	const float	width = 640.0f + 2.0f * bias;
+	const float	bias = R_2DBias(), biasY = R_2DBiasY();
+	const float	width = 640.0f + 2.0f * bias, height = 480.0f + 2.0f * biasY;
 	float		ortho[16];
 
 	// tay_renderScale: the views of the level are done, the 2D is drawn in the size of the window
@@ -63,13 +63,13 @@ static void RB_SetGL2D( void ) {
 	// cut out in the shape of what stands between the camera and the plane: the player.
 	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, backEnd.plane2D ? 0.0f : 1.0f );
 
-	// glOrtho( -bias, 640 + bias, 480, 0, 0, 1 )
+	// glOrtho( -bias, 640 + bias, 480 + biasY, -biasY, 0, 1 )
 	memset( ortho, 0, sizeof( ortho ) );
 	ortho[0] = 2.0f / width;
-	ortho[5] = -2.0f / 480.0f;
+	ortho[5] = -2.0f / height;
 	ortho[10] = -2.0f;
 	ortho[12] = 2.0f * bias / width - 1.0f;
-	ortho[13] = 1.0f;
+	ortho[13] = 1.0f - 2.0f * biasY / height;
 	ortho[14] = -1.0f;
 	ortho[15] = 1.0f;
 	// or on a plane in the level, see RE_Set2DPlane()

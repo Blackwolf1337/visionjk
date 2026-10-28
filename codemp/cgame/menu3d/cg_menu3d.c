@@ -41,7 +41,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define MENU3D_IN_MSEC		350
 #define MENU3D_OUT_MSEC		250
-#define MENU3D_SCREEN_PART	0.72f		// how much of the height of the screen the menu takes
+#define MENU3D_SCREEN_PART	0.72f		// how much of the height of the screen the menu takes,
+#define MENU3D_SCREEN_WIDE	0.86f		//	and of the width at most, on a narrow window (its near edge, turned to the camera, takes more)
 #define MENU3D_PLAYER_X		-0.68f		// where the player is in the picture: -1 its left edge, 0 the middle, 1 the right edge
 #define MENU3D_PANEL_X		0.27f		// and the middle of the menu
 #define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands
@@ -217,7 +218,14 @@ void CG_Menu3DView( void ) {
 	depth = MENU3D_PANEL_DEPTH;
 	menu3d.unit = MENU3D_SCREEN_PART * 2.0f * depth * tanY / SCREEN_HEIGHT;
 	// on a narrow window it moves left as far as it has to for its right edge
-	panelX = Q_min( MENU3D_PANEL_X, 0.97f - MENU3D_SCREEN_PART * ( (float)SCREEN_WIDTH / SCREEN_HEIGHT ) * tanY / tanX );
+	panelX = Q_min( MENU3D_PANEL_X, 0.97f - SCREEN_WIDTH * 0.5f * menu3d.unit / ( depth * tanX ) );
+	// On a window narrower than 4:3 the 640 of it are no wider than the window, and it stands in the middle, in
+	// front of the player: sized by the height alone, a window the desktop tiled tall cut off its right half
+	// (2026-10-28).
+	if ( menu3d.unit > MENU3D_SCREEN_WIDE * 2.0f * depth * tanX / SCREEN_WIDTH ) {
+		menu3d.unit = MENU3D_SCREEN_WIDE * 2.0f * depth * tanX / SCREEN_WIDTH;
+		panelX = 0.0f;
+	}
 	VectorMA( camera, depth, look, menu3d.center );
 	VectorMA( menu3d.center, panelX * tanX * depth, camRight, menu3d.center );
 

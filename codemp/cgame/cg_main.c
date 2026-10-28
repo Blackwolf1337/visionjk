@@ -2266,9 +2266,11 @@ static qboolean cgDisplayReady;
 // the size of the window into what the menu code draws by
 static void CG_DisplaySize( void ) {
 	cgDC.bias		= cgs.bias2D;
+	cgDC.biasY		= cgs.bias2DY;
 	cgDC.wide		= cgs.bias2D;
+	cgDC.tall		= cgs.bias2DY;
 	cgDC.glconfig	= cgs.glconfig;
-	cgDC.yscale		= cgs.glconfig.vidHeight * ( 1.0f / 480.0f );
+	cgDC.yscale		= cgs.glconfig.vidHeight / ( 480.0f + 2.0f * cgs.bias2DY );
 	cgDC.xscale		= cgs.glconfig.vidWidth / ( 640.0f + 2.0f * cgs.bias2D );
 }
 
@@ -2289,8 +2291,10 @@ void CG_ScreenSize( void ) {
 	if ( cgs.bias2D < 0.0f ) {
 		cgs.bias2D = 0.0f;
 	}
+	trap->Cvar_VariableStringBuffer( "v_2dBiasY", bias, sizeof( bias ) );
+	cgs.bias2DY = Q_max( 0.0f, atof( bias ) );
 	cgs.screenXScale = cgs.glconfig.vidWidth / ( 640.0 + 2.0 * cgs.bias2D );
-	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
+	cgs.screenYScale = cgs.glconfig.vidHeight / ( 480.0 + 2.0 * cgs.bias2DY );
 	if ( cgDisplayReady ) {
 		CG_DisplaySize();
 	}

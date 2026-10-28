@@ -303,6 +303,24 @@ float R_2DBias( void ) {
 
 /*
 ===============
+R_2DBiasY
+
+The same for a window that is narrower than 4:3 (a window the desktop tiled tall): the grid keeps its width and gets
+taller, y runs from -bias to 480 + bias, and the 640 x 480 of the menus and the HUD is a band across the middle of
+the window in its own shape. Stretched, a letter was as high as the window made it and as wide as the 640 of the
+grid gave it room for, and the words of the menus ran into each other (2026-10-28). Read as the cvar v_2dBiasY.
+===============
+*/
+float R_2DBiasY( void ) {
+	if ( !v_2dAspect->integer || glConfig.vidWidth <= 0
+		|| glConfig.vidWidth * SCREEN_HEIGHT >= glConfig.vidHeight * SCREEN_WIDTH ) {
+		return 0.0f;
+	}
+	return 0.5f * ( (float)SCREEN_WIDTH * glConfig.vidHeight / glConfig.vidWidth - SCREEN_HEIGHT );
+}
+
+/*
+===============
 RE_WindowResized
 
 The window has that size now (the desktop resized it). rd-vulkan-vision makes its frame anew in it, without a
@@ -315,6 +333,7 @@ static qboolean RE_WindowResized( int width, int height ) {
 		return qfalse;
 	}
 	ri.Cvar_Set( "v_2dBias", va( "%f", R_2DBias() ) );
+	ri.Cvar_Set( "v_2dBiasY", va( "%f", R_2DBiasY() ) );
 	return qtrue;
 #else
 	return qfalse;
@@ -1869,6 +1888,8 @@ void R_Init( void ) {
 	// what the modules and the engine place their 2D by, see R_2DBias()
 	ri.Cvar_Get( "v_2dBias", "0", CVAR_ROM, "" );
 	ri.Cvar_Set( "v_2dBias", va( "%f", R_2DBias() ) );
+	ri.Cvar_Get( "v_2dBiasY", "0", CVAR_ROM, "" );
+	ri.Cvar_Set( "v_2dBiasY", va( "%f", R_2DBiasY() ) );
 
 	R_InitImages();
 	R_InitShaders(qfalse);

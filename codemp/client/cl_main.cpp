@@ -2404,6 +2404,7 @@ static void CL_WindowSize( void ) {
 		cls.glconfig.vidWidth = width;
 		cls.glconfig.vidHeight = height;
 		cls.bias2D = Cvar_VariableValue( "v_2dBias" );
+		cls.bias2DY = Cvar_VariableValue( "v_2dBiasY" );
 		g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 		g_consoleField.widthInChars = g_console_field_width;
 		return;
@@ -2583,9 +2584,12 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
-	// a renderer that widens the 2D grid on a wide window says by how much, any other leaves the 0
+	// a renderer that widens the 2D grid on a wide window, or makes it taller on a narrow one, says by how much, any
+	// other leaves the 0
 	Cvar_Get( "v_2dBias", "0", CVAR_ROM );
 	Cvar_Set( "v_2dBias", "0" );
+	Cvar_Get( "v_2dBiasY", "0", CVAR_ROM );
+	Cvar_Set( "v_2dBiasY", "0" );
 
 	// this sets up the renderer and calls R_Init
 	re->BeginRegistration( &cls.glconfig );
@@ -2603,6 +2607,7 @@ void CL_InitRenderer( void ) {
 		Com_Error( ERR_FATAL, "The renderer made no window" );
 	}
 	cls.bias2D = Cvar_VariableValue( "v_2dBias" );
+	cls.bias2DY = Cvar_VariableValue( "v_2dBiasY" );
 
 	// load character sets
 	cls.charSetShader = re->RegisterShaderNoMip("gfx/2d/charsgrid_med");

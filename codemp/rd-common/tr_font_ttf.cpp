@@ -383,7 +383,7 @@ qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsi
 	const ttfFont_t		*font;
 	const ttfGlyph_t	*glyph;
 	int					size, baseline, which;
-	float				scale, xScale, yScale, bias;
+	float				scale, xScale, yScale, bias, biasY;
 
 	if ( !mono->loaded || mono->advance <= 0.0f || cellWidth < 1 || cellHeight < 1 ) {
 		return qfalse;
@@ -399,11 +399,12 @@ qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsi
 	scale = stbtt_ScaleForMappingEmToPixels( &font->info, (float)size );
 	baseline = y + (int)( ( cellHeight - ( font->ascent - font->descent ) * scale ) * 0.5f + font->ascent * scale + 0.5f );
 
-	// from pixels of the window to the screen of the 2D, which is 480 high and as wide as R_2DBias() makes it
+	// from pixels of the window to the screen of the 2D, as wide and high as R_2DBias() and R_2DBiasY() make it
 	bias = R_2DBias();
+	biasY = R_2DBiasY();
 	xScale = ( SCREEN_WIDTH + 2.0f * bias ) / glConfig.vidWidth;
-	yScale = (float)SCREEN_HEIGHT / glConfig.vidHeight;
-	RE_StretchPic( ( x + glyph->info.horizOffset ) * xScale - bias, ( baseline - glyph->info.baseline ) * yScale,
+	yScale = ( SCREEN_HEIGHT + 2.0f * biasY ) / glConfig.vidHeight;
+	RE_StretchPic( ( x + glyph->info.horizOffset ) * xScale - bias, ( baseline - glyph->info.baseline ) * yScale - biasY,
 		glyph->info.width * xScale, glyph->info.height * yScale,
 		glyph->info.s, glyph->info.t, glyph->info.s2, glyph->info.t2, glyph->shader );
 	R_FontTTF_Flush();
@@ -445,7 +446,7 @@ static const float *R_FontTTF_CodeColor( int index ) {
 }
 
 static int R_FontTTF_MenuPixels( float size ) {
-	return Com_Clampi( 4, FONT_MAX_GLYPH, (int)( size * glConfig.vidHeight / SCREEN_HEIGHT + 0.5f ) );
+	return Com_Clampi( 4, FONT_MAX_GLYPH, (int)( size * glConfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * R_2DBiasY() ) + 0.5f ) );
 }
 
 // The next character of a text and its glyph. qfalse: the text is over. *glyph is NULL for a character that
@@ -485,18 +486,19 @@ static qboolean R_FontTTF_MenuChar( int font, const char **text, int pixels, con
 	return qtrue;
 }
 
-// units of the 2D screen for a pixel of the window, which is 480 high and as wide as R_2DBias() makes it
-static void R_FontTTF_MenuScale( float *xScale, float *yScale, float *bias ) {
+// units of the 2D screen for a pixel of the window, as wide and high as R_2DBias() and R_2DBiasY() make it
+static void R_FontTTF_MenuScale( float *xScale, float *yScale, float *bias, float *biasY ) {
 	*bias = R_2DBias();
+	*biasY = R_2DBiasY();
 	*xScale = ( SCREEN_WIDTH + 2.0f * *bias ) / glConfig.vidWidth;
-	*yScale = (float)SCREEN_HEIGHT / glConfig.vidHeight;
+	*yScale = ( SCREEN_HEIGHT + 2.0f * *biasY ) / glConfig.vidHeight;
 }
 
 // how wide a text of that size is, in units: its widest line
 float R_FontTTF_StringWidth( int font, const char *text, float size ) {
 	const int			pixels = R_FontTTF_MenuPixels( size );
 	const ttfGlyph_t	*glyph;
-	float				xScale, yScale, bias;
+	float				xScale, yScale, bias, biasY;
 	int					colour, width = 0, widest = 0;
 	qboolean			newLine;
 
@@ -510,7 +512,7 @@ float R_FontTTF_StringWidth( int font, const char *text, float size ) {
 			}
 		}
 	}
-	R_FontTTF_MenuScale( &xScale, &yScale, &bias );
+	R_FontTTF_MenuScale( &xScale, &yScale, &bias, &biasY );
 	return widest * xScale;
 }
 
@@ -525,13 +527,13 @@ A text of the menus, its first line with its top at y. maxWidth: units after whi
 void R_FontTTF_DrawString( int font, float x, float y, const char *text, const float *rgba, float size, int maxWidth, qboolean shadow ) {
 	const int			pixels = R_FontTTF_MenuPixels( size );
 	const ttfGlyph_t	*glyph;
-	float				xScale, yScale, bias;
+	float				xScale, yScale, bias, biasY;
 	int					colour, penX, startX, baseline, limit;
 	qboolean			newLine;
 
-	R_FontTTF_MenuScale( &xScale, &yScale, &bias );
+	R_FontTTF_MenuScale( &xScale, &yScale, &bias, &biasY );
 	startX = penX = (int)floorf( ( x + bias ) / xScale + 0.5f );
-	baseline = (int)floorf( ( y + size * TTF_MENU_BASELINE ) / yScale + 0.5f );
+	baseline = (int)floorf( ( y + biasY + size * TTF_MENU_BASELINE ) / yScale + 0.5f );
 	limit = ( maxWidth < 0 ) ? -1 : (int)( maxWidth / xScale );
 
 	RE_SetColor( rgba );
@@ -557,7 +559,7 @@ void R_FontTTF_DrawString( int font, float x, float y, const char *text, const f
 		if ( limit >= 0 && penX + glyph->info.horizAdvance - startX > limit ) {
 			break;
 		}
-		RE_StretchPic( ( penX + glyph->info.horizOffset ) * xScale - bias, ( baseline - glyph->info.baseline ) * yScale,
+		RE_StretchPic( ( penX + glyph->info.horizOffset ) * xScale - bias, ( baseline - glyph->info.baseline ) * yScale - biasY,
 			glyph->info.width * xScale, glyph->info.height * yScale,
 			glyph->info.s, glyph->info.t, glyph->info.s2, glyph->info.t2, glyph->shader );
 		penX += glyph->info.horizAdvance;

@@ -1217,7 +1217,7 @@ RB_SetGL2D
 ================
 */
 void	RB_SetGL2D (void) {
-	const float bias = R_2DBias();
+	const float bias = R_2DBias(), biasY = R_2DBiasY();
 
 	backEnd.projection2D = qtrue;
 
@@ -1233,7 +1233,7 @@ void	RB_SetGL2D (void) {
 		qglDepthRange( 0, 0 );
 	} else {
     qglLoadIdentity ();
-	qglOrtho (-bias, 640 + bias, 480, 0, 0, 1);
+	qglOrtho (-bias, 640 + bias, 480 + biasY, -biasY, 0, 1);
 		qglDepthRange( 0, 1 );
 	}
 	qglMatrixMode(GL_MODELVIEW);

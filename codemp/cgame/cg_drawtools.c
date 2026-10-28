@@ -55,7 +55,7 @@ From the grid of the 2D to pixels of the window, for a viewport, with the place 
 */
 void CG_AdjustFrom640( float *x, float *y, float *w, float *h ) {
 	*x = ( *x + cgs.bias2D + cgs.shift2D ) * cgs.screenXScale;
-	*y *= cgs.screenYScale;
+	*y = ( *y + cgs.bias2DY ) * cgs.screenYScale;
 	*w *= cgs.screenXScale;
 	*h *= cgs.screenYScale;
 }

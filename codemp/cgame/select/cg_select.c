@@ -1241,7 +1241,7 @@ static void Select_Tag( void ) {
 // What a unit of the card that has grown is on the screen, in units of the HUD: 1, the size it was made for. More
 // in a window of so few pixels that its rows would then be lower than the rows of a card that shrinks back.
 static float Select_FlatUnit( void ) {
-	const float row = SELECT_LINE * SELECT_SCALE * cgs.glconfig.vidHeight / SCREEN_HEIGHT;
+	const float row = SELECT_LINE * SELECT_SCALE * cgs.screenYScale;
 
 	return Q_max( 1.0f, SELECT_FLAT_MIN_PX / row );
 }
@@ -1290,7 +1290,7 @@ static void Select_Card( void ) {
 		// what a unit of the card is on the screen where it stands in the level, in units of the HUD (no more than
 		// SELECT_NEAR_MAX), and a row of it in pixels
 		const float	k = Q_min( SELECT_UNIT * perUnit, SELECT_NEAR_MAX );
-		const float	row = SELECT_LINE * SELECT_SCALE * k * cgs.glconfig.vidHeight / SCREEN_HEIGHT;
+		const float	row = SELECT_LINE * SELECT_SCALE * k * cgs.screenYScale;
 		int			age;
 
 		if ( !sel.flat && row < SELECT_FLAT_PX ) {
