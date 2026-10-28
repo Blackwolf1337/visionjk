@@ -447,6 +447,8 @@ MORE = {
     'Keep the releases.': ('Garder les versions publiées.', 'Seguir con las versiones publicadas.'),
     'Switch to Development': ('Passer à Développement', 'Cambiar a Desarrollo'),
     'Update to the development builds from now on.': ('Mettre à jour vers les versions de développement à partir de maintenant.', 'Actualizar a las versiones de desarrollo a partir de ahora.'),
+    'Changelog': ('Journal des modifications', 'Registro de cambios'),
+    'What changed in each version, and what a new version brings.': ("Ce qui a changé dans chaque version, et ce qu'une nouvelle version apporte.", 'Qué cambió en cada versión y qué trae una versión nueva.'),
     'Choose Downloads': ('Choisir les téléchargements', 'Elegir las descargas'),
     'Before a download choose the files of the server, and see what is in them before they are used.':
         ('Avant un téléchargement, choisir les fichiers du serveur et voir leur contenu avant leur utilisation.',
@@ -593,4 +595,14 @@ MORE = {
     'Intrusions': ('Intrusions', 'Intrusiones'),
     'What the intrusion detection noted about servers, newest first.': ("Ce que la détection d'intrusions a noté sur les serveurs, du plus récent au plus ancien.", 'Lo que la detección de intrusiones anotó sobre los servidores, lo más reciente primero.'),
     'All of it is in ids.log in the game folder.': ('Tout se trouve dans ids.log, dans le dossier du jeu.', 'Todo está en ids.log, en la carpeta del juego.'),
+    # the changelog (ui_changelog.c, ui_update.c)
+    "What's new": ('Nouveautés', 'Novedades'),
+    "What's new in": ('Nouveautés de la version', 'Novedades de la versión'),
+    'Update Now': ('Mettre à jour maintenant', 'Actualizar ahora'),
+    'Version': ('Version', 'Versión'),
+    'Development build': ('Version de développement', 'Versión de desarrollo'),
+    'Installed': ('Installée', 'Instalada'),
+    'Not installed yet': ('Pas encore installée', 'Aún no instalada'),
+    'Click the link again to open it in your browser:': ('Cliquez encore sur le lien pour l\'ouvrir dans votre navigateur :', 'Haz clic otra vez en el enlace para abrirlo en el navegador:'),
+    'The changelog is not there. It comes with the next update.': ('Le journal des modifications est absent. Il arrive avec la prochaine mise à jour.', 'Falta el registro de cambios. Llegará con la próxima actualización.'),
 }

@@ -15,6 +15,7 @@ extern "C" {
 #include "game/auth/bg_auth.h"
 #include "game/boombox/bg_boombox.h"
 #include "game/boombox/bg_boombox_core.h"
+#include "ui/ui_markdown.h"
 }
 
 // what the stub of Com_Error throws (stubs.cpp)

@@ -468,6 +468,8 @@ TR = {
     'Keep the releases.': 'Bei den Releases bleiben.',
     'Switch to Development': 'Zu Entwicklung wechseln',
     'Update to the development builds from now on.': 'Ab jetzt auf Entwicklungsversionen aktualisieren.',
+    'Changelog': 'Changelog',
+    'What changed in each version, and what a new version brings.': 'Was sich in jeder Version geändert hat und was eine neue Version bringt.',
     'Choose Downloads': 'Downloads auswählen',
     'Before a download choose the files of the server, and see what is in them before they are used.':
         'Vor einem Download die Dateien des Servers auswählen und ihren Inhalt ansehen, bevor sie verwendet werden.',
@@ -690,6 +692,16 @@ CGAME = {
     # the players of music in Setup (codemp/ui/ui_main.c)
     'No player of music runs right now': 'Gerade läuft kein Musikplayer',
     'not running': 'läuft nicht',
+    # the changelog (ui_changelog.c, ui_update.c)
+    "What's new": 'Neuigkeiten',
+    "What's new in": 'Neu in',
+    'Update Now': 'Jetzt aktualisieren',
+    'Version': 'Version',
+    'Development build': 'Entwicklungsversion',
+    'Installed': 'Installiert',
+    'Not installed yet': 'Noch nicht installiert',
+    'Click the link again to open it in your browser:': 'Klicke den Link noch einmal, um ihn im Browser zu öffnen:',
+    'The changelog is not there. It comes with the next update.': 'Der Changelog fehlt. Er kommt mit dem nächsten Update.',
 }
 
 # names that are the same in every language

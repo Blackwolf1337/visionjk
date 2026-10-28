@@ -431,6 +431,19 @@ int UI_IDSCount( void );
 const char *UI_IDSText( int index );
 
 //
+// ui_changelog.c
+//
+
+int UI_ChangelogOpen( void );
+int UI_ChangelogCount( void );
+const char *UI_ChangelogText( int index );
+const char *UI_ChangelogNewest( void );
+void UI_ChangelogSelect( int index );
+void UI_ChangelogDraw( rectDef_t *rect, float scale, int iMenuFont );
+qboolean UI_ChangelogKey( int key );
+int MenuFontToHandle( int iMenuFont );											// ui_main.c
+
+//
 // ui_update.c
 //
 

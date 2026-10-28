@@ -1508,6 +1508,7 @@ void CL_BindUI( void ) {
 		uii.ext.AddCommand						= CL_AddUICommand;
 		uii.ext.RemoveCommand					= UIVM_Cmd_RemoveCommand;
 		uii.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
+		uii.ext.OpenURL							= Sys_OpenURL;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

@@ -1533,6 +1533,14 @@ REFERENCE           DEVELOPMENT
 LANG_ENGLISH        "Development"
 LANG_GERMAN         "Entwicklung"
 
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_GERMAN         "#same"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_GERMAN         "Was sich in jeder Version geändert hat und was eine neue Version bringt."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_GERMAN         "Downloads auswählen"
@@ -2228,6 +2236,42 @@ LANG_GERMAN         "Was die Angriffserkennung über Server notiert hat, neueste 
 REFERENCE           ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
 LANG_ENGLISH        "All of it is in ids.log in the game folder."
 LANG_GERMAN         "Alles steht in ids.log im Spielordner."
+
+REFERENCE           WHAT_S_NEW
+LANG_ENGLISH        "What's new"
+LANG_GERMAN         "Neuigkeiten"
+
+REFERENCE           WHAT_S_NEW_IN
+LANG_ENGLISH        "What's new in"
+LANG_GERMAN         "Neu in"
+
+REFERENCE           UPDATE_NOW
+LANG_ENGLISH        "Update Now"
+LANG_GERMAN         "Jetzt aktualisieren"
+
+REFERENCE           VERSION
+LANG_ENGLISH        "Version"
+LANG_GERMAN         "#same"
+
+REFERENCE           DEVELOPMENT_BUILD
+LANG_ENGLISH        "Development build"
+LANG_GERMAN         "Entwicklungsversion"
+
+REFERENCE           INSTALLED
+LANG_ENGLISH        "Installed"
+LANG_GERMAN         "Installiert"
+
+REFERENCE           NOT_INSTALLED_YET
+LANG_ENGLISH        "Not installed yet"
+LANG_GERMAN         "Noch nicht installiert"
+
+REFERENCE           CLICK_THE_LINK_AGAIN_TO_OPEN_IT_IN_Y
+LANG_ENGLISH        "Click the link again to open it in your browser:"
+LANG_GERMAN         "Klicke den Link noch einmal, um ihn im Browser zu öffnen:"
+
+REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
+LANG_ENGLISH        "The changelog is not there. It comes with the next update."
+LANG_GERMAN         "Der Changelog fehlt. Er kommt mit dem nächsten Update."
 
 
 ENDMARKER

@@ -3395,6 +3395,11 @@ static void UI_OwnerDraw(float x, float y, float w, float h, float text_x, float
 		case UI_VERSION:
 			UI_Version(&rect, scale, color, iMenuFont);
 			break;
+		case UI_CHANGELOG:	// VisionJK: the window "What's new" (ui_changelog.c)
+			rect.x = x;
+			rect.y = y;
+			UI_ChangelogDraw( &rect, scale, iMenuFont );
+			break;
     default:
       break;
   }
@@ -4328,6 +4333,8 @@ static qboolean UI_OwnerDrawHandleKey(int ownerDraw, int flags, float *special, 
 	case UI_CHAT_MAIN:
 		return UI_Chat_Main_HandleKey(key);
 		break;
+	case UI_CHANGELOG:
+		return UI_ChangelogKey( key );
 	case UI_CHAT_ATTACK:
 		return UI_Chat_Attack_HandleKey(key);
 		break;
@@ -6412,6 +6419,8 @@ static void UI_RunMenuScript(char **args)
 		} else if (Q_stricmp(name, "IDSLog") == 0) {	// VisionJK: the window "Intrusions" (ui_ids.c)
 			UI_IDSLoad();
 			Menu_SetFeederSelection(NULL, FEEDER_IDSLOG, 0, NULL);
+		} else if (Q_stricmp(name, "Changelog") == 0) {	// VisionJK: the window "What's new" (ui_changelog.c)
+			Menu_SetFeederSelection(NULL, FEEDER_CHANGELOG, UI_ChangelogOpen(), NULL);
 		}
 		else if (Q_stricmp(name, "checkservername") == 0)
 		{
@@ -8492,6 +8501,9 @@ static int UI_FeederCount(float feederID)
 		case FEEDER_IDSLOG:
 			return UI_IDSCount();
 
+		case FEEDER_CHANGELOG:
+			return UI_ChangelogCount();
+
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
 
@@ -8921,6 +8933,8 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 		return UI_MusicText( index );
 	} else if (feederID == FEEDER_IDSLOG) {
 		return UI_IDSText( index );
+	} else if (feederID == FEEDER_CHANGELOG) {
+		return UI_ChangelogText( index );
 	} else if (feederID == FEEDER_MODS) {
 		if (index >= 0 && index < uiInfo.modCount) {
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr) {
@@ -9275,6 +9289,11 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 {
 	static char info[MAX_STRING_CHARS];
 	const int feederID = feederFloat;
+
+	if ( feederID == FEEDER_CHANGELOG ) {
+		UI_ChangelogSelect( index );
+		return qtrue;
+	}
 
 	// VisionJK: a click on a player of music (item is set for a click only, not for the keys that move the bar)
 	if ( feederID == FEEDER_MUSICPLAYERS ) {

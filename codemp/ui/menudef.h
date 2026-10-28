@@ -143,6 +143,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FEEDER_VIDEOMODES					0x2e			// list control: "Desktop" and the sizes the display offers
 #define FEEDER_MUSICPLAYERS					0x2f			// VisionJK: the players of music, ticked for v_shareMusicPlayers
 #define FEEDER_IDSLOG						0x30			// VisionJK: the last lines of ids.log, the newest first
+#define FEEDER_CHANGELOG					0x31			// VisionJK: the versions of the changelog, the newest first
 
 
 // Xbox specific, hope no one minds
@@ -382,6 +383,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define UI_CHAT_REPLY		295
 #define UI_CHAT_SPOT		296
 #define UI_CHAT_TACTICAL	297
+
+#define UI_CHANGELOG		298		// VisionJK: the entry of the changelog that is selected (ui_changelog.c)
 
 #define VOICECHAT_GETFLAG			"getflag"				// command someone to get the flag
 #define VOICECHAT_OFFENSE			"offense"				// command someone to go on offense

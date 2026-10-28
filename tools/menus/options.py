@@ -55,6 +55,7 @@ class Layout:
 #   ('edit' | 'secret', name, cvar, letters, what for)
 #   ('bind', name, command, what for)
 #   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
+#   ('menu', name, menu, what for)                a button that opens a window of its own (a menu of the lists)
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
@@ -245,6 +246,7 @@ SETUP = [
         ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
         ('multistr', 'Update Channel', 'v_updateChannel', (('Stable', 'stable'), ('Development', 'dev')),
          'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
+        ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
         ('old', 'options', ('cl_allowdownload',)),
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),
@@ -482,11 +484,20 @@ def music_page(page, back, L):
     ]
 
 
+def menu_row(spec):
+    """A button among the rows that opens a window (ui/jamp/changelog.menu and the like)."""
+    _, text, menu, about = spec
+    return [Entry('name', ['vision_menu_' + menu]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+            Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['open', menu, ';'])]
+
+
 def new_row(spec):
     """A setting the old menus did not have."""
     kind, text, cvar = spec[:3]
     if kind == 'open':
         return open_row(spec)
+    if kind == 'menu':
+        return menu_row(spec)
     b = [Entry('name', ['vision_%s_%s' % (kind, cvar.lower().replace(' ', '_').replace('+', ''))]), Entry('type', [TYPES[kind]]),
          Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])])]
     if kind == 'slider':

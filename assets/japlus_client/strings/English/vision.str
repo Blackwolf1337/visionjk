@@ -1151,6 +1151,12 @@ LANG_ENGLISH        "Stable"
 REFERENCE           DEVELOPMENT
 LANG_ENGLISH        "Development"
 
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 
@@ -1672,6 +1678,33 @@ LANG_ENGLISH        "What the intrusion detection noted about servers, newest fi
 
 REFERENCE           ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
 LANG_ENGLISH        "All of it is in ids.log in the game folder."
+
+REFERENCE           WHAT_S_NEW
+LANG_ENGLISH        "What's new"
+
+REFERENCE           WHAT_S_NEW_IN
+LANG_ENGLISH        "What's new in"
+
+REFERENCE           UPDATE_NOW
+LANG_ENGLISH        "Update Now"
+
+REFERENCE           VERSION
+LANG_ENGLISH        "Version"
+
+REFERENCE           DEVELOPMENT_BUILD
+LANG_ENGLISH        "Development build"
+
+REFERENCE           INSTALLED
+LANG_ENGLISH        "Installed"
+
+REFERENCE           NOT_INSTALLED_YET
+LANG_ENGLISH        "Not installed yet"
+
+REFERENCE           CLICK_THE_LINK_AGAIN_TO_OPEN_IT_IN_Y
+LANG_ENGLISH        "Click the link again to open it in your browser:"
+
+REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
+LANG_ENGLISH        "The changelog is not there. It comes with the next update."
 
 
 ENDMARKER

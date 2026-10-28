@@ -3104,6 +3104,8 @@ void CL_Init( void ) {
 	// tells the ui and the cgame that the engine can draw their new look: pictures the ui computes
 	// (ext.R_RegisterShaderRGBA of uiImport_t) and the fonts "vision_sans" and "vision_mono"
 	Cvar_Get( "v_uiSkin", "1", CVAR_ROM, "" );
+	// and that uiImport_t has ext.OpenURL, after ext.R_RegisterShaderRGBA
+	Cvar_Get( "v_uiURL", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

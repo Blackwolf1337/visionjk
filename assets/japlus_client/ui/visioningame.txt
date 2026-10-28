@@ -32,4 +32,5 @@
 	loadMenu { "ui/vision/findplayer.menu" }
 	loadMenu { "ui/vision/createfavorite.menu" }
 	loadMenu { "ui/vision/updatechannel.menu" }
+	loadMenu { "ui/vision/changelog.menu" }
 }

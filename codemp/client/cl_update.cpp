@@ -80,6 +80,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #define UPDATE_JOURNAL_HEAD		"visionjk-update-journal 1"
+// The changelog of the channel (tools/changelog.py of the website), fetched with the list and kept in the folder of
+// the player for the page "What's new" of the ui (ui/ui_changelog.c). The zip has one of its own version in
+// base/visionjk/changelog.md, which the ui reads when this one is older or missing.
+#define UPDATE_LOG_FILE			"base/visionjk/changelog-fetched.md"
+#define UPDATE_MAX_LOG			( 256 * 1024 )
 #define UPDATE_TEXT_MSEC		250		// how often the line on the menu is written anew while files come in
 #define UPDATE_PATH				( MAX_OSPATH + UPD_MAX_PATH + 16 )
 // The look at the files of the version that runs is made at every start. A file bigger than this (the asset
@@ -136,12 +141,16 @@ static struct {
 	qboolean		leftUnknown;				// the list of the build that runs could not be fetched
 
 	int				textTime;
+	qboolean		logOk;				// the thread fetched the changelog (updLogText)
 } upd;
 
 static char			updListText[UPD_MAX_LIST];
 static int			updListLen;
+static char			updLogText[UPDATE_MAX_LOG];
+static int			updLogLen;
 static updList_t	updOwnList;					// the list of the development build that runs, when it is left
 static const char	*updStartNote;				// what CL_UpdateResume() has to say, once there is a console
+static const char	updUpdatedNote[] = "The game was updated to version %s.\n";
 static char			updStartVersion[UPD_MAX_PATH];	//	and the version or the file it is about
 
 static cvar_t	*v_updateCheck;
@@ -477,7 +486,7 @@ qboolean CL_UpdateResume( void ) {
 			left++;
 	}
 	if ( !updJournal.told )
-		updStartNote = "The game was updated to version %s.\n";
+		updStartNote = updUpdatedNote;
 	if ( !left ) {
 		Update_RemoveJournal();
 	} else if ( !updJournal.told ) {
@@ -533,6 +542,15 @@ static qboolean Update_ListSink( void *ctx, const void *data, size_t len ) {
 		return qfalse;
 	memcpy( updListText + updListLen, data, len );
 	updListLen += (int)len;
+	return qtrue;
+}
+
+static qboolean Update_LogSink( void *ctx, const void *data, size_t len ) {
+	(void)ctx;
+	if ( (size_t)updLogLen + len > sizeof( updLogText ) )
+		return qfalse;
+	memcpy( updLogText + updLogLen, data, len );
+	updLogLen += (int)len;
 	return qtrue;
 }
 
@@ -597,6 +615,8 @@ static int Update_CheckThread( void *unused ) {
 	memset( upd.change, 0, sizeof( upd.change ) );
 	memset( upd.shadow, 0, sizeof( upd.shadow ) );
 	updListLen = 0;
+	upd.logOk = qfalse;
+	updLogLen = 0;
 
 	snprintf( url, sizeof( url ), "%s/%s%s.txt", upd.address, upd.dev ? "dev/" : "", UPDATE_SYSTEM );
 	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ), NULL ) ) {
@@ -631,6 +651,12 @@ static int Update_CheckThread( void *unused ) {
 			if ( newer != 0 && UPD_IsDev( upd.own ) && !upd.cancel )
 				Update_FindLeft();
 		}
+		// the changelog of the channel. Only a file of the website's form is kept (it starts with an entry):
+		// an error page of a proxy is no changelog.
+		snprintf( url, sizeof( url ), "%s/%schangelog.md", upd.address, upd.dev ? "dev/" : "" );
+		if ( !upd.cancel && Sys_HttpGet( url, Update_LogSink, NULL, &upd.cancel, why, sizeof( why ), NULL )
+			&& updLogLen > 16 && !strncmp( updLogText, "---\nversion:", 12 ) )
+			upd.logOk = qtrue;
 	}
 	upd.done = 1;
 	return 0;
@@ -861,9 +887,25 @@ static void Update_Go( void ) {
 }
 
 // the file list is there, or is not
+// The changelog the thread fetched goes into the folder of the player. v_changelog counts the times, so the ui knows
+// to read it again.
+static void Update_SaveLog( void ) {
+	const fileHandle_t f = FS_SV_FOpenFileWrite( UPDATE_LOG_FILE );
+
+	if ( !f ) {
+		Com_DPrintf( "Could not write %s\n", UPDATE_LOG_FILE );
+		return;
+	}
+	FS_Write( updLogText, updLogLen, f );
+	FS_FCloseFile( f );
+	Cvar_Set( "v_changelog", va( "%i", Cvar_VariableIntegerValue( "v_changelog" ) + 1 ) );
+}
+
 static void Update_Checked( void ) {
 	int i;
 
+	if ( upd.logOk )
+		Update_SaveLog();
 	if ( !upd.ok ) {
 		// The website is not there, or this machine has no line: not worth a word at every start
 		if ( !upd.quiet )
@@ -1073,6 +1115,10 @@ void CL_UpdateInit( void ) {
 	upd.channelDev = Update_ChannelDev();
 	Cvar_Get( "v_updateState", "0", CVAR_ROM, "Updater state: 0 idle, 1 update available, 2 downloading, 3 failed, 4 restarting" );
 	Cvar_Get( "v_updateText", "", CVAR_ROM, "Updater status text, as shown on the main menu" );
+	Cvar_Get( "v_changelog", "0", CVAR_ROM, "How often the changelog was fetched in this run (the ui reads it again then)" );
+	Cvar_Get( "v_version", "", CVAR_ROM, "The version of this build as the updater reads it, for the changelog of the ui" );
+	// what the ui opens the changelog for, once, after the start that finished an update
+	Cvar_Get( "v_updated", "", 0, "The version the game was just updated to (the ui shows its changelog once, then empties this)" );
 	Update_Say( UPDATE_NONE, "" );
 	Cmd_AddCommand( "update", CL_Update_f, "Fetches the newer version of the game, puts it in place and starts the game again" );
 	Cmd_AddCommand( "v_update_check", CL_UpdateCheck_f, "Asks the website whether there is a newer version" );
@@ -1080,6 +1126,8 @@ void CL_UpdateInit( void ) {
 
 	if ( updStartNote ) {
 		Com_Printf( updStartNote, updStartVersion );
+		if ( updStartNote == updUpdatedNote )
+			Cvar_Set( "v_updated", updStartVersion );
 		updStartNote = NULL;
 	}
 	if ( upd.addressRefused )
@@ -1089,6 +1137,9 @@ void CL_UpdateInit( void ) {
 
 	upd.release = UPD_ParseRelease( UPDATE_VERSION, upd.own );
 	upd.between = upd.release ? qfalse : UPD_ParseBuild( UPDATE_VERSION, upd.own );
+	// (a build after a tag is that version for the changelog: it has what the tag has)
+	if ( upd.release || upd.between )
+		Cvar_Set( "v_version", Update_VersionText( upd.own ) );
 	// The files of a release are replaced where the program is. A game that reads its files from somewhere
 	// else (fs_basepath) is set up by hand, and is left to that hand.
 	upd.elsewhere = Sys_SameFolder( Cvar_VariableString( "fs_basepath" ), Sys_ProgramFolder() ) ? qfalse : qtrue;

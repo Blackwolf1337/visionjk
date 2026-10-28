@@ -571,10 +571,19 @@ def leave_out(m):
                 set_rect(x.block, xr[0], xr[1] - pitch, xr[2], xr[3])
 
 
+# Windows of this tree whose frame is a picture of the game in the old menus: that item becomes the frame of the
+# window (window()), so the window hides what is behind it.
+FRAMES = {'changelog.menu': 'changelog_background'}
+
+
 def before(m, name, ingame):
     """What a page gets before the rules of theme.py."""
     if name in options.SCREENS:
         leave_out(m)
+    for e in items(m):
+        if name_of(e.block) == FRAMES.get(name):
+            mf.drop(e.block, 'background')
+            mf.put(e.block, 'style', 'WINDOW_STYLE_PANEL')
 
 
 LINE = 18.0                 # the height of a line of the new font at a scale of 1

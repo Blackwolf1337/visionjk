@@ -1533,6 +1533,14 @@ REFERENCE           DEVELOPMENT
 LANG_ENGLISH        "Development"
 LANG_SPANISH        "Desarrollo"
 
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_SPANISH        "Registro de cambios"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_SPANISH        "Qué cambió en cada versión y qué trae una versión nueva."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_SPANISH        "Elegir las descargas"
@@ -2228,6 +2236,42 @@ LANG_SPANISH        "Lo que la detección de intrusiones anotó sobre los servidor
 REFERENCE           ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
 LANG_ENGLISH        "All of it is in ids.log in the game folder."
 LANG_SPANISH        "Todo está en ids.log, en la carpeta del juego."
+
+REFERENCE           WHAT_S_NEW
+LANG_ENGLISH        "What's new"
+LANG_SPANISH        "Novedades"
+
+REFERENCE           WHAT_S_NEW_IN
+LANG_ENGLISH        "What's new in"
+LANG_SPANISH        "Novedades de la versión"
+
+REFERENCE           UPDATE_NOW
+LANG_ENGLISH        "Update Now"
+LANG_SPANISH        "Actualizar ahora"
+
+REFERENCE           VERSION
+LANG_ENGLISH        "Version"
+LANG_SPANISH        "Versión"
+
+REFERENCE           DEVELOPMENT_BUILD
+LANG_ENGLISH        "Development build"
+LANG_SPANISH        "Versión de desarrollo"
+
+REFERENCE           INSTALLED
+LANG_ENGLISH        "Installed"
+LANG_SPANISH        "Instalada"
+
+REFERENCE           NOT_INSTALLED_YET
+LANG_ENGLISH        "Not installed yet"
+LANG_SPANISH        "Aún no instalada"
+
+REFERENCE           CLICK_THE_LINK_AGAIN_TO_OPEN_IT_IN_Y
+LANG_ENGLISH        "Click the link again to open it in your browser:"
+LANG_SPANISH        "Haz clic otra vez en el enlace para abrirlo en el navegador:"
+
+REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
+LANG_ENGLISH        "The changelog is not there. It comes with the next update."
+LANG_SPANISH        "Falta el registro de cambios. Llegará con la próxima actualización."
 
 
 ENDMARKER

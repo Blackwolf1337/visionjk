@@ -1533,6 +1533,14 @@ REFERENCE           DEVELOPMENT
 LANG_ENGLISH        "Development"
 LANG_FRENCH         "Développement"
 
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_FRENCH         "Journal des modifications"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_FRENCH         "Ce qui a changé dans chaque version, et ce qu'une nouvelle version apporte."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_FRENCH         "Choisir les téléchargements"
@@ -2228,6 +2236,42 @@ LANG_FRENCH         "Ce que la détection d'intrusions a noté sur les serveurs, d
 REFERENCE           ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
 LANG_ENGLISH        "All of it is in ids.log in the game folder."
 LANG_FRENCH         "Tout se trouve dans ids.log, dans le dossier du jeu."
+
+REFERENCE           WHAT_S_NEW
+LANG_ENGLISH        "What's new"
+LANG_FRENCH         "Nouveautés"
+
+REFERENCE           WHAT_S_NEW_IN
+LANG_ENGLISH        "What's new in"
+LANG_FRENCH         "Nouveautés de la version"
+
+REFERENCE           UPDATE_NOW
+LANG_ENGLISH        "Update Now"
+LANG_FRENCH         "Mettre à jour maintenant"
+
+REFERENCE           VERSION
+LANG_ENGLISH        "Version"
+LANG_FRENCH         "#same"
+
+REFERENCE           DEVELOPMENT_BUILD
+LANG_ENGLISH        "Development build"
+LANG_FRENCH         "Version de développement"
+
+REFERENCE           INSTALLED
+LANG_ENGLISH        "Installed"
+LANG_FRENCH         "Installée"
+
+REFERENCE           NOT_INSTALLED_YET
+LANG_ENGLISH        "Not installed yet"
+LANG_FRENCH         "Pas encore installée"
+
+REFERENCE           CLICK_THE_LINK_AGAIN_TO_OPEN_IT_IN_Y
+LANG_ENGLISH        "Click the link again to open it in your browser:"
+LANG_FRENCH         "Cliquez encore sur le lien pour l'ouvrir dans votre navigateur :"
+
+REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
+LANG_ENGLISH        "The changelog is not there. It comes with the next update."
+LANG_FRENCH         "Le journal des modifications est absent. Il arrive avec la prochaine mise à jour."
 
 
 ENDMARKER

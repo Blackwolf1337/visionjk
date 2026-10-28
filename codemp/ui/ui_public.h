@@ -380,6 +380,9 @@ typedef struct uiImport_s {
 		// call of the same name for the cgame (cg_public.h); with RGBA_SHADER_OVER it is one for the 2D. Such an
 		// engine also knows the fonts "vision_sans" and "vision_mono" (R_RegisterFont).
 		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
+		// Only an engine that sets the cvar v_uiURL to 1 has this one: an address to the web browser of the system
+		// (the links of the changelog, ui_changelog.c).
+		qboolean		(*OpenURL)								( const char *url );
 	} ext;
 } uiImport_t;
 
