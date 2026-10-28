@@ -37,6 +37,11 @@ pak that came whole but has not the checksum the server named is deleted too, be
 Programs are blocked in every pak that arrives, with the window or without it (`v_downloadReview 0`, or a
 download the window did not list). Both switches are in Setup, Network.
 
+Files of the other kind are blocked together with the menus: when menus are unticked, so are they, because a menu
+list can name a file of any extension. Module names and bundle folders (macOS) count as programs. A pak entry
+larger than 512 MB, or with a name with control characters, quotes or `;`, is blocked as well, and a pak with
+more than about a million entries is refused.
+
 The paks of both folders are loaded only while a server references them, as the `dl_` paks of the engine were:
 what one server sends does not change the menus or the models on another server, nor when you play alone. Paks
 that were downloaded into the game folder itself before 0.1.9 stay where they are and load as before.
@@ -137,6 +142,12 @@ Of the windows:
 - `FS_AddGameDirectory()` adds the paks of `downloads` and `downloads/session` of the home folder after those of
   the game folder, with the rule of the `dl_` paks. The session folder is emptied once a game folder a run, before
   its first paks are loaded, and at quit (`FS_Shutdown( qtrue )`), only `.pk3`, `.tmp` and `.blocked` files.
+- A `.blocked` list that is larger than 16 MB or can not be read blocks the whole pak, where it blocked nothing
+  before. The names of the pak are classified with `/` for `\`.
+- `FS_LoadZipFile()` leaves an entry out of the hash tables and the lists like a blocked one (it still counts for
+  the pure checksum) when it is larger than 512 MB or has a name with control characters, quotes or `;`. A pak
+  with more than about a million entries is refused. `FS_ReadFile()` refuses a file larger than 512 MB.
+- On macOS a module bundle from a pak is loaded only with `com_unpackLibraries`.
 - Program files: `.dll .so .dylib .exe .bat .cmd .com .scr .msi .ps1 .sh .vbs .jar .app .bin .pif .qvm` and
   anything with `.so.` in its name.
 - The windows are drawn by the engine (`CL_DrawEngineMenus()`), in the colours of the new look and with its

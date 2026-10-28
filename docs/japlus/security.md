@@ -97,8 +97,10 @@ Off when a sanitizer build is configured.
   the editor offers is placed bare by a check. Since then it also refuses a `misc_maglock` that starts inside a
   wall, deleting the last entity of a spawn class, and deleting the only entity that a `trigger_shipboundary` or
   `trigger_hyperspace` names as target (see "Limits" in [webadmin.md](webadmin.md)).
-- JKA loads the client DLLs from pk3. Whoever plays on a server with `cl_allowDownload 1` trusts that server; the
-  start script sets 0.
+- In this tree no module is loaded from a pak on Linux and Windows unless `com_unpackLibraries 1` is given at
+  start, programs in downloaded paks are blocked, and on macOS a module bundle from a pak is loaded only with
+  `com_unpackLibraries`. Whoever plays on a server with `cl_allowDownload 1` still trusts that server; the start
+  script sets 0.
 - `getstatus`/`getinfo` stay usable as amplifiers for a spoofed sender, held down by the existing rate limits.
 - Two signed-shift notes from UBSan are stock OpenJK and were left: `sv_init.cpp` (a pk3 checksum feed) and, until
   this pass, the panel's base64 decoder (now fixed).
@@ -444,3 +446,36 @@ ten hours, error lines with paths not shown to players, and the master registers
 Left as it is: the updater files are served from the same container that runs the game server and the
 masterserver. With the accepted updater without a signature, a root on that host would reach every client. The room
 key of a server without the module stays known to a kicked player until the next map (see voice.md).
+
+## Audit of the client, 2026-10-28
+
+An audit of the client: the engine client, the cgame, the ui, both renderers and the `bg_` code the cgame runs. The
+report is `agent/visionjk/reports/security-2026-10-28-client.md` in the project folder outside the repository. Most
+of the places are stock OpenJK or JKA code. Every fix keeps legacy servers and clients working.
+
+| Where | Problem | Fix |
+|-------|---------|-----|
+| cgame configstring and server command copies (`cg_main.c`, `cg_servercmds.c`, `cg_players.c`: model names, shader state, NPC sound folders, siege state) | copied into fixed buffers without a bound | bounded; a model name that does not fit is no model |
+| the StringEd text of `print`, `cp` and `disconnect` (cgame and two engine copies) | the text after a replacement was written without a bound | one bounded function `Q_StringEdExpand` (`shared/qcommon/q_string.c`, unit test `tests/vjk/stringed.cpp`) for all three |
+| `kg2` and `ircg` server commands | entity and weapon numbers were not checked | only numbers the game sends are taken |
+| key login of the cgame (`cg_auth.c`) | server text was part of a format string | passed as text |
+| siege files (`bg_saga.c`, `cg_saga.c`, `g_saga.c`) | values copied without a bound, team texts used as a format | the two parser functions take the size of their buffer (all callers), `Q_strncpyz` for the texts, the file is ended after it is read |
+| demo playback (`cl_main.cpp`, `cl_parse.cpp`, `files.cpp` `FS_Read`) | a negative message length passed the check | refused; `FS_Read` refuses a negative length; message numbers that go back are refused; a demo does not change `fs_game` |
+| BSP loading in both renderers and the collision map (`tr_bsp.cpp`, `cm_load.cpp`, `qfiles.h` `BSP_LumpsInFile`) | counts and offsets of the file were trusted | lumps, surface counts and ranges, patch sizes, shader and fog numbers, visibility data, the entity lump, brush sides, nodes, leaves and submodels are checked against the file and each other; sub BSP models (`tr_model.cpp`) are taken again by name and limited to `MAX_SUB_BSP` |
+| model loading (`tr_model.cpp` `R_LoadMD3`, `tr_ghoul2.cpp` `R_LoadMDXM`, `R_LoadMDXA`) | offsets and counts were taken from the file | every part is checked against the real file length and every index against what it names, before the model goes into the model cache; names in the files are ended; the traps that copy the GLA and surface names use `Q_strncpyz` |
+| pictures (`tr_image_png.cpp`, `tr_image_tga.cpp`) | width times height could wrap | at most `IMAGE_MAX_SIDE` 16384 a side (`rd-common/tr_common.h`); PNG with 16 bits a channel are reduced to 8; the row length is checked; TGA reads stay inside the file |
+| pak entries (`files.cpp`) | no limit on the size, the name or the number of entries | an entry larger than 512 MB or with a name with control characters, quotes or `;` is left out of the hash and the lists as a blocked one is (it still counts for the pure checksum); paks with more than about a million entries are refused; `FS_ReadFile` refuses a file larger than 512 MB |
+| RoQ video sound (`cl_cin.cpp`) | a chunk larger than its buffer was decoded | skipped |
+| effect files (`FxTemplate.cpp`), saber files (`bg_saberLoad.c`, size parameter through `ui_saber.c`), vehicle files (`bg_vehicleLoad.c`), `sounds.cfg` of a model (`cg_players.c`), netf and psf override files (`msg.cpp`) | unbounded copies, unlimited override widths | bounded copies, override widths limited to -32..32 |
+| format strings from pak names in the ui (head names, force config names, the orders scripts accept one number only) and the font name formats (`tr_font.cpp`) | the names were used as a format | passed as text |
+| cvars a server may set (`cvar.cpp` `Cvar_Server_Set`) | a cvar the player made with `set` or `seta` could be set by a server, and any cvar of this tree (`v_`) | neither can be set by a server, unless the engine made it a systeminfo one; `nextdemo` is registered so a server can not create it; the key file path refuses a network path |
+| download review (`cl_download.cpp`, `files.cpp`) | a `.blocked` list that was too large or unreadable blocked nothing; names were classified with `\` not `/`; files of the "other" kind were not blocked with menus; module names and bundle folders were not programs | the whole pak is blocked when the list is larger than 16 MB or unreadable; names are classified with `/` for `\`; files of the "other" kind are blocked together with menus; module names and bundle folders count as programs; on macOS a module bundle from a pak is loaded only with `com_unpackLibraries` |
+| caches (`vk_texcache.cpp`, `snd_cache.cpp`, `snd_spatial_bake.cpp`) | read from a pak as well | read only from the profile folder; texture sizes bounded |
+| paths (`cl_parse.cpp`, `FS_CheckDirTraversal`, `cl_renderer`, library loading) | `fs_game` of a server and `cl_renderer` were taken as they came; libraries were searched outside the program folder | `fs_game` of a server must be one folder name, and `FS_CheckDirTraversal` refuses any `..` part; `cl_renderer` must be a plain name; libraries load from the folder of the program, and on Windows `SetDefaultDllDirectories` keeps the current folder out of the search |
+
+Smaller ones: `ids.log` is capped at 4 MB a run, the text scroll of the ui keeps its buffer, the species list of the
+ui is bounded, and `exec` in a HUD menu of the cgame does nothing (it called a NULL function).
+
+Left as it is: the DNS lookup thread of the voice chat is waited for when the cgame unloads, since its code is in
+the module (a slow lookup can hold a map change). The bundled libjpeg of the Windows build is 9a of 2014. The admin
+rows of the player menu follow the word of the server, the server decides.
