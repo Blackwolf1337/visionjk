@@ -33,4 +33,5 @@
 	loadMenu { "ui/vision/createfavorite.menu" }
 	loadMenu { "ui/vision/updatechannel.menu" }
 	loadMenu { "ui/vision/changelog.menu" }
+	loadMenu { "ui/vision/cvarclean.menu" }
 }

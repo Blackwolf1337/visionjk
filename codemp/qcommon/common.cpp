@@ -1264,6 +1264,8 @@ void Com_Init( char *commandLine ) {
 		NET_Init();
 
 		FS_InitFilesystem ();
+		// VisionJK: the day code last used each cvar, before a config sets any (cvar_cleanup.cpp)
+		Cvar_SeenLoad();
 
 		Com_InitJournaling();
 
@@ -1599,6 +1601,7 @@ void Com_Frame( void ) {
 
 		// write config file if anything changed
 		Com_WriteConfiguration();
+		Cvar_SeenFrame();
 
 		//
 		// main event loop
@@ -1786,6 +1789,7 @@ Com_Shutdown
 void MSG_shutdownHuffman();
 void Com_Shutdown (void)
 {
+	Cvar_SeenSave();
 	CM_ClearMap();
 
 	if (logfile) {

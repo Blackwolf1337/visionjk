@@ -41,6 +41,8 @@ set(TestFiles
 	"vjk/memwatch.cpp"
 	"vjk/reputation.cpp"
 	"vjk/markdown.cpp"
+	"vjk/cfgedit.cpp"
+	"vjk/cvarseen.cpp"
 	)
 # The C code of the game the tests in vjk/ look at. The stub of Com_Error throws through it, so it is built with
 # the tables for that.
@@ -60,6 +62,8 @@ set(TestCFiles
 	"${MPDir}/game/boombox/bg_boombox_core.c"
 	"${MPDir}/game/boombox/bg_boombox_fetch.c"
 	"${MPDir}/ui/ui_markdown.c"
+	"${MPDir}/game/webadmin/wa_cfgedit.c"
+	"${MPDir}/qcommon/cvar_seen.c"
 	)
 if(NOT MSVC)
 	set_source_files_properties(${TestCFiles} PROPERTIES COMPILE_OPTIONS "-fexceptions")

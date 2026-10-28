@@ -444,6 +444,16 @@ qboolean UI_ChangelogKey( int key );
 int MenuFontToHandle( int iMenuFont );											// ui_main.c
 
 //
+// ui_cvarclean.c
+//
+
+void UI_CvarCleanLoad( void );
+int UI_CvarCleanCount( void );
+const char *UI_CvarCleanText( int index, int column );
+void UI_CvarCleanSelect( int index );
+void UI_CvarCleanRemove( qboolean all );
+
+//
 // ui_update.c
 //
 

@@ -1854,10 +1854,10 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case G_CVAR_VARIABLE_INTEGER_VALUE:
-		return Cvar_VariableIntegerValue( (const char *)VMA(1) );
+		return Cvar_VM_VariableIntegerValue( (const char *)VMA(1) );
 
 	case G_CVAR_VARIABLE_STRING_BUFFER:
-		Cvar_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
+		Cvar_VM_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
 		return 0;
 
 	case G_ARGC:
@@ -2833,8 +2833,8 @@ void SV_BindGame( void ) {
 		gi.Cvar_Register						= Cvar_Register;
 		gi.Cvar_Set								= GVM_Cvar_Set;
 		gi.Cvar_Update							= Cvar_Update;
-		gi.Cvar_VariableIntegerValue			= Cvar_VariableIntegerValue;
-		gi.Cvar_VariableStringBuffer			= Cvar_VariableStringBuffer;
+		gi.Cvar_VariableIntegerValue			= Cvar_VM_VariableIntegerValue;
+		gi.Cvar_VariableStringBuffer			= Cvar_VM_VariableStringBuffer;
 		gi.Argc									= Cmd_Argc;
 		gi.Argv									= Cmd_ArgvBuffer;
 		gi.FS_Close								= FS_FCloseFile;
@@ -3130,6 +3130,11 @@ void SV_BindGame( void ) {
 		gi.G2API_OverrideServer					= SV_G2API_OverrideServer;
 		gi.G2API_GetSurfaceName					= SV_G2API_GetSurfaceName;
 		gi.ext.SendDatagram						= SV_GameSendDatagram;
+		gi.ext.Cvar_Flags						= Cvar_Flags;
+		gi.ext.Cvar_UnusedList					= Cvar_UnusedList;
+
+		// VisionJK: how far ext goes, for the module (g_public.h)
+		Cvar_Get( "vs_gameImportExt", "2", CVAR_ROM, "How many of the imports of the game module that are not from OpenJK this engine has" );
 
 		GetGameAPI = (GetGameAPI_t)gvm->GetModuleAPI;
 		ret = GetGameAPI( GAME_API_VERSION, &gi );

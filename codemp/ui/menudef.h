@@ -144,6 +144,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FEEDER_MUSICPLAYERS					0x2f			// VisionJK: the players of music, ticked for v_shareMusicPlayers
 #define FEEDER_IDSLOG						0x30			// VisionJK: the last lines of ids.log, the newest first
 #define FEEDER_CHANGELOG					0x31			// VisionJK: the versions of the changelog, the newest first
+#define FEEDER_CVARCLEAN					0x32			// VisionJK: the cvars no code used for a month (cvar_cleanup)
 
 
 // Xbox specific, hope no one minds

@@ -525,6 +525,17 @@ void	Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 uint32_t	Cvar_Flags(const char *var_name);
 // returns CVAR_NONEXISTENT if cvar doesn't exist or the flags of that particular CVAR.
 
+// VisionJK, cvar_cleanup.cpp: the day code last used a cvar, and the ones no code used for a month
+void	Cvar_Used( const char *name );
+void	Cvar_VM_VariableStringBuffer( const char *name, char *buffer, int bufsize );	// as the plain ones, for the
+int		Cvar_VM_VariableIntegerValue( const char *name );							// modules: a cvar a module
+float	Cvar_VM_VariableValue( const char *name );									// reads is used
+int		Cvar_UnusedList( char *buf, int size );
+void	Cvar_SeenLoad( void );
+void	Cvar_SeenSave( void );
+void	Cvar_SeenFrame( void );
+void	Cvar_CleanupInit( void );
+
 void	Cvar_CommandCompletion( callbackFunc_t callback );
 // callback with each valid string
 
@@ -966,6 +977,7 @@ void Com_Init( char *commandLine );
 void Com_Frame( void );
 int Com_MinFrameMsec( void );
 void Com_Shutdown( void );
+void Com_WriteConfiguration( void );	// the config, when an archived cvar changed
 
 
 /*

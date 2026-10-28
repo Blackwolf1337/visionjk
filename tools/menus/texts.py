@@ -560,6 +560,12 @@ TR = {
     'Intrusions': 'Angriffe',
     'What the intrusion detection noted about servers, newest first.': 'Was die Angriffserkennung über Server notiert hat, neueste zuerst.',
     'All of it is in ids.log in the game folder.': 'Alles steht in ids.log im Spielordner.',
+    # the window Clean Up Settings of Setup, Network (ui/jamp/cvarclean.menu, ui_cvarclean.c)
+    'Clean Up Settings': 'Einstellungen aufräumen',
+    'Settings no code used for a month, from older versions and other mods.': 'Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods.',
+    'Nothing to clean up.': 'Nichts aufzuräumen.',
+    'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': 'Einstellungen, die einen Monat lang kein Code benutzt hat: übrig aus älteren Versionen und anderen Mods. Entfernen nimmt eine aus der Config.',
+    'Remove All': 'Alle entfernen',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
@@ -707,6 +713,9 @@ CGAME = {
     'Not installed yet': 'Noch nicht installiert',
     'Click the link again to open it in your browser:': 'Klicke den Link noch einmal, um ihn im Browser zu öffnen:',
     'The changelog is not there. It comes with the next update.': 'Der Changelog fehlt. Er kommt mit dem nächsten Update.',
+    # the window Clean Up Settings (ui_cvarclean.c)
+    'Never used': 'Nie benutzt',
+    '%i days ago': 'vor %i Tagen',
 }
 
 # names that are the same in every language

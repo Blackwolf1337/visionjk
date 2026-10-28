@@ -218,6 +218,8 @@ XCVAR_DEF( ui_serverFilterType,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL 
 XCVAR_DEF( ui_serverStatusTimeOut,			"7000",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_screenshotType,				"jpg",					UI_UpdateScreenshot,	CVAR_ARCHIVE )
 XCVAR_DEF( ui_singlePlayerActive,			"0",					NULL,				CVAR_INTERNAL )
+// VisionJK: how many the window "Clean Up Settings" lists, for its line when there are none (ui_cvarclean.c)
+XCVAR_DEF( ui_cvarCleanCount,				"0",					NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_team_fraglimit,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_team_friendly,				"1",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_team_timelimit,				"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )

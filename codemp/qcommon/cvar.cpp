@@ -381,6 +381,11 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, uint32_t flags, c
 	}
 #endif
 
+	// VisionJK: code registers it, it is in use (cvar_cleanup.cpp). What a config or the console sets is not.
+	if ( !( flags & CVAR_USER_CREATED ) ) {
+		Cvar_Used( var_name );
+	}
+
 	var = Cvar_FindVar (var_name);
 	// VisionJK: a value stored or set under the name this cvar had before 2026-10-17 (cvar_renames.h)
 	if ( !var && Cvar_TakeOldName( var_name ) ) {
@@ -1689,6 +1694,7 @@ void Cvar_Init (void) {
 	Cmd_AddCommand( "cvar_usercreated", Cvar_ListUserCreated_f, "Show all user created cvars" );
 	Cmd_AddCommand( "cvar_modified", Cvar_ListModified_f, "Show all modified cvars" );
 	Cmd_AddCommand( "cvar_restart", Cvar_Restart_f, "Resetart the cvar sub-system" );
+	Cvar_CleanupInit();
 }
 
 static void Cvar_Realloc(char **string, char *memPool, int &memPoolUsed)

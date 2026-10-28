@@ -23,6 +23,7 @@
 	loadMenu { "ui/vision/findplayer.menu" }
 	loadMenu { "ui/vision/ids.menu" }
 	loadMenu { "ui/vision/changelog.menu" }
+	loadMenu { "ui/vision/cvarclean.menu" }
 	loadMenu { "ui/vision/createfavorite.menu" }
 	loadMenu { "ui/vision/multiplayer.menu" }
 	loadMenu { "ui/vision/advancedcreateserver.menu" }

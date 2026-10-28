@@ -74,6 +74,7 @@ set(MPUIUIFiles
 	"${MPDir}/ui/ui_force.c"
 	"${MPDir}/ui/ui_gameinfo.c"
 	"${MPDir}/ui/ui_changelog.c"
+	"${MPDir}/ui/ui_cvarclean.c"
 	"${MPDir}/ui/ui_ids.c"
 	"${MPDir}/ui/ui_markdown.c"
 	"${MPDir}/ui/ui_markdown.h"

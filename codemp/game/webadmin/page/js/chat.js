@@ -16,7 +16,7 @@ function chatLine(m) {
 }
 
 async function pollChat() {
-	if (chatBusy) return;
+	if (chatBusy || onMaster()) return;
 	// over the socket of the page when it is open (js/stream.js), pushed when something was said
 	if (streamGet('chat', 'api/chat?since=' + chatSeq + '&epoch=' + chatEpoch, chatTake, pollChat)) return;
 	chatBusy = true;

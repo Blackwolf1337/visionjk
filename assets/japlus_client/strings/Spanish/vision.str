@@ -1557,6 +1557,14 @@ REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
 LANG_ENGLISH        "What changed in each version, and what a new version brings."
 LANG_SPANISH        "Qué cambió en cada versión y qué trae una versión nueva."
 
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+LANG_SPANISH        "Limpiar ajustes"
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+LANG_SPANISH        "Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_SPANISH        "Elegir las descargas"
@@ -2288,6 +2296,26 @@ LANG_SPANISH        "Haz clic otra vez en el enlace para abrirlo en el navegador
 REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
 LANG_ENGLISH        "The changelog is not there. It comes with the next update."
 LANG_SPANISH        "Falta el registro de cambios. Llegará con la próxima actualización."
+
+REFERENCE           NOTHING_TO_CLEAN_UP
+LANG_ENGLISH        "Nothing to clean up."
+LANG_SPANISH        "Nada que limpiar."
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
+LANG_SPANISH        "Ajustes que ningún código ha usado en un mes: restos de versiones anteriores y de otros mods. Quitar saca uno de la configuración."
+
+REFERENCE           REMOVE_ALL
+LANG_ENGLISH        "Remove All"
+LANG_SPANISH        "Quitar todo"
+
+REFERENCE           NEVER_USED
+LANG_ENGLISH        "Never used"
+LANG_SPANISH        "Nunca usado"
+
+REFERENCE           I_DAYS_AGO
+LANG_ENGLISH        "%i days ago"
+LANG_SPANISH        "hace %i días"
 
 
 ENDMARKER

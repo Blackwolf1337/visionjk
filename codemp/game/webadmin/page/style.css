@@ -253,7 +253,48 @@ body.texOpen #view { bottom: var(--tex); }
 .cfg-n { color: #f0a45d; }
 .cfg-p, .cfg-code { color: var(--muted); }
 #pane-config .tools { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; }
+#pane-config .tools > input { width: 100%; }
 #pane-config .hint { padding: 0 10px; }
+#pane-config .cfgSide { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#pane-config .cfgSide[hidden], #cfgView .cfgMain[hidden] { display: none; }
+#pane-config .cfgSide .hint:last-child { padding-bottom: 8px; }
+/* Form | Text | Cleanup: one button is on */
+.seg { display: flex; margin: 0 10px 4px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg button { flex: 1; border: 0; border-radius: 0; background: transparent; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: #fff; }
+#setState, #cleanState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); }
+#setState.dirty { color: var(--accent2); }
+#setCats { border-top: 1px solid var(--line); }
+.setCat { display: flex; justify-content: space-between; gap: 8px; padding: 5px 10px; cursor: pointer; }
+.setCat:hover { background: var(--panel2); }
+.setCat .n { color: var(--muted); }
+.setCat .n b { color: var(--accent2); font-weight: 600; }
+#cfgView .cfgMain { position: absolute; inset: 0; }
+#setForm, #cleanView { overflow: auto; }
+#setForm, #cleanView, #setCats { color-scheme: dark; }
+#setForm section { padding: 0 16px 8px; }
+#setForm h3 { position: sticky; top: 0; z-index: 1; margin: 0 -16px; padding: 10px 16px 6px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+.setRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 320px); gap: 6px 16px; padding: 8px 0; border-bottom: 1px solid #1f1f24; }
+.setRow.changed { box-shadow: inset 3px 0 0 var(--accent2); padding-left: 8px; }
+.setName code { font: 12px ui-monospace, Menlo, Consolas, monospace; margin-right: 6px; }
+.setDesc { color: var(--muted); margin-top: 3px; }
+.setDef { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.setField input[type=text], .setField input[type=number], .setField input[type=password], .setField select { width: 100%; }
+.setField .inline input { flex: 1; min-width: 0; }
+.setBool { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.setBits { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 2px 8px; margin-top: 6px; font-size: 12px; }
+.setBits label { display: flex; gap: 4px; align-items: center; }
+.mk { display: inline-block; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; padding: 1px 5px; margin-right: 4px; border-radius: 3px; border: 1px solid var(--line); color: var(--text); }
+.mk.changed { border-color: var(--accent2); color: var(--accent2); }
+.mk.warn { border-color: #7a6a10; color: var(--yellow); }
+.mk.val { text-transform: none; }
+.mk.muted { color: var(--muted); }
+#cleanView { padding: 6px 12px; }
+#cleanView td.val { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 700px) {
+	.setRow { grid-template-columns: 1fr; }
+}
 #cfgState, #fsEditState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
 #cfgState.dirty, #fsEditState.dirty { color: var(--accent2); }
 
@@ -419,3 +460,16 @@ body.role-moderator #tabs button[data-tab="config"], body.role-moderator #tabs b
 body.role-admin #tabs button[data-tab="config"], body.role-admin #tabs button[data-tab="files"] { display: none !important; }
 /* the line that runs a command on the console is the owner's */
 body.role-moderator #logCmd, body.role-admin #logCmd { display: none !important; }
+
+/* the masterserver (js/master.js): no map, no players, no editor */
+#tabs button[data-tab="master"] { display: none; }
+body.master #tabs button[data-tab="master"] { display: inline-block; }
+body.master #view, body.master #appMode, body.master #botForm, body.master #mapForm, body.master #gravForm, body.master #topbar .meta,
+body.master #teamScores, body.master #chat, body.master #tabs button[data-tab="players"], body.master #tabs button[data-tab="bans"] { display: none !important; }
+#masterView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
+body.sideClosed #masterView { left: 0; }
+body.masterOpen #masterView { display: block; }
+.msTiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 16px; }
+.msTile { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; background: var(--panel2); display: flex; flex-direction: column; gap: 4px; }
+.msTile b { font-size: 26px; font-weight: 600; }
+.msTile span { color: var(--muted); font-size: 12px; }

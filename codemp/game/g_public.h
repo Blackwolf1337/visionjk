@@ -1100,6 +1100,13 @@ typedef struct gameImport_s {
 		// One datagram out of the UDP socket of the game: answers of the voice chat that came in there
 		// (ext.VoiceDatagram of the exports). ip: the four bytes of an IPv4 address as they go over the network.
 		void		(*SendDatagram)							( const byte *ip, int port, const byte *data, int length );
+		// Only an engine that sets the cvar vs_gameImportExt to 2 or more has these, any other ends the structure
+		// before them (WebAdmin_WrapImport leaves them NULL then). The flags of a cvar (CVAR_*, CVAR_NONEXISTENT
+		// for none), for the settings form of the web panel.
+		uint32_t	(*Cvar_Flags)							( const char *name );
+		// The cvars no code has used for a while (cvar_cleanup), one "name\tvalue\tday\n" a line, day in days since
+		// 1970, 0 for never. Returns the length, cut at a whole line where buf has no more room.
+		int			(*Cvar_UnusedList)						( char *buf, int size );
 	} ext;
 } gameImport_t;
 

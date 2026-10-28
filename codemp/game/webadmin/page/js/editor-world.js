@@ -59,11 +59,13 @@ function setMode(m) {
 	document.body.classList.toggle('cfgOpen', m === 'config');
 	document.body.classList.toggle('fsOpen', m === 'files');
 	document.body.classList.toggle('logOpen', m === 'log');
+	document.body.classList.toggle('masterOpen', m === 'master');
 	if (m === 'log') { select(-1); logPoll(); }
 	if (m === 'bans') banLoad();
 	if (m === 'account') { select(-1); accountLoad(); }
 	if (m === 'load') { select(-1); perfPoll(); }
-	if (m === 'config') { select(-1); if (!cfgLoaded) loadConfig(); }
+	if (m === 'config') { select(-1); cfgOpen(); }
+	if (m === 'master') masterPoll();
 	if (m === 'files') { select(-1); if (!fsEdit) fsList(); }
 	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
 	if (m === 'routes') { select(-1); wpLoad(); } else wpSetAdding(false);

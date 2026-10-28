@@ -86,6 +86,17 @@ static const cvarTable_t gameCvarTable[] = {
 };
 static const size_t gameCvarTableSize = ARRAY_LEN( gameCvarTable );
 
+// Not from OpenJK: an entry of the table, for the settings form of the web panel (webadmin/wa_settings.c).
+// qfalse past the last one.
+qboolean G_CvarTableEntry( int index, const char **name, const char **defaultString, uint32_t *flags ) {
+	if ( index < 0 || index >= (int)gameCvarTableSize )
+		return qfalse;
+	*name = gameCvarTable[index].cvarName;
+	*defaultString = gameCvarTable[index].defaultString;
+	*flags = gameCvarTable[index].cvarFlags;
+	return qtrue;
+}
+
 void G_RegisterCvars( void ) {
 	size_t i = 0;
 	const cvarTable_t *cv = NULL;

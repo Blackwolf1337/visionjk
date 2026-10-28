@@ -1653,5 +1653,6 @@ void Svcmd_ToggleAllowVote_f( void );
 #undef XCVAR_PROTO
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );
+qboolean G_CvarTableEntry( int index, const char **name, const char **defaultString, uint32_t *flags );
 
 extern gameImport_t *trap;

@@ -1012,7 +1012,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case CG_CVAR_VARIABLESTRINGBUFFER:
-		Cvar_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
+		Cvar_VM_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
 		return 0;
 
 	case CG_CVAR_GETHIDDENVALUE:
@@ -1808,7 +1808,7 @@ void CL_BindCGame( void ) {
 		cgi.Cvar_Register						= Cvar_Register;
 		cgi.Cvar_Set							= CGVM_Cvar_Set;
 		cgi.Cvar_Update							= Cvar_Update;
-		cgi.Cvar_VariableStringBuffer			= Cvar_VariableStringBuffer;
+		cgi.Cvar_VariableStringBuffer			= Cvar_VM_VariableStringBuffer;
 		cgi.AddCommand							= CL_AddCgameCommand;
 		cgi.Cmd_Argc							= Cmd_Argc;
 		cgi.Cmd_Args							= Cmd_ArgsBuffer;

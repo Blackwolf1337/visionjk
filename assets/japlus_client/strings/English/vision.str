@@ -1169,6 +1169,12 @@ LANG_ENGLISH        "Changelog"
 REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
 LANG_ENGLISH        "What changed in each version, and what a new version brings."
 
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 
@@ -1717,6 +1723,21 @@ LANG_ENGLISH        "Click the link again to open it in your browser:"
 
 REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
 LANG_ENGLISH        "The changelog is not there. It comes with the next update."
+
+REFERENCE           NOTHING_TO_CLEAN_UP
+LANG_ENGLISH        "Nothing to clean up."
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
+
+REFERENCE           REMOVE_ALL
+LANG_ENGLISH        "Remove All"
+
+REFERENCE           NEVER_USED
+LANG_ENGLISH        "Never used"
+
+REFERENCE           I_DAYS_AGO
+LANG_ENGLISH        "%i days ago"
 
 
 ENDMARKER

@@ -6421,6 +6421,12 @@ static void UI_RunMenuScript(char **args)
 			Menu_SetFeederSelection(NULL, FEEDER_IDSLOG, 0, NULL);
 		} else if (Q_stricmp(name, "Changelog") == 0) {	// VisionJK: the window "What's new" (ui_changelog.c)
 			Menu_SetFeederSelection(NULL, FEEDER_CHANGELOG, UI_ChangelogOpen(), NULL);
+		} else if (Q_stricmp(name, "CvarClean") == 0) {	// VisionJK: the window "Clean Up Settings" (ui_cvarclean.c)
+			UI_CvarCleanLoad();
+			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "CvarCleanRemove") == 0 || Q_stricmp(name, "CvarCleanRemoveAll") == 0) {
+			UI_CvarCleanRemove( (qboolean)!Q_stricmp( name, "CvarCleanRemoveAll" ) );
+			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
 		}
 		else if (Q_stricmp(name, "checkservername") == 0)
 		{
@@ -8504,6 +8510,9 @@ static int UI_FeederCount(float feederID)
 		case FEEDER_CHANGELOG:
 			return UI_ChangelogCount();
 
+		case FEEDER_CVARCLEAN:
+			return UI_CvarCleanCount();
+
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
 
@@ -8935,6 +8944,8 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 		return UI_IDSText( index );
 	} else if (feederID == FEEDER_CHANGELOG) {
 		return UI_ChangelogText( index );
+	} else if (feederID == FEEDER_CVARCLEAN) {
+		return UI_CvarCleanText( index, column );
 	} else if (feederID == FEEDER_MODS) {
 		if (index >= 0 && index < uiInfo.modCount) {
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr) {
@@ -9292,6 +9303,10 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 
 	if ( feederID == FEEDER_CHANGELOG ) {
 		UI_ChangelogSelect( index );
+		return qtrue;
+	}
+	if ( feederID == FEEDER_CVARCLEAN ) {
+		UI_CvarCleanSelect( index );
 		return qtrue;
 	}
 

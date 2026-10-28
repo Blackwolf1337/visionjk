@@ -899,10 +899,10 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_CVAR_VARIABLEVALUE:
-		return FloatAsInt( Cvar_VariableValue( (const char *)VMA(1) ) );
+		return FloatAsInt( Cvar_VM_VariableValue( (const char *)VMA(1) ) );
 
 	case UI_CVAR_VARIABLESTRINGBUFFER:
-		Cvar_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
+		Cvar_VM_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
 		return 0;
 
 	case UI_CVAR_SETVALUE:
@@ -1373,8 +1373,8 @@ void CL_BindUI( void ) {
 		uii.Cvar_Set							= UIVM_Cvar_Set;
 		uii.Cvar_SetValue						= UIVM_Cvar_SetValue;
 		uii.Cvar_Update							= Cvar_Update;
-		uii.Cvar_VariableStringBuffer			= Cvar_VariableStringBuffer;
-		uii.Cvar_VariableValue					= Cvar_VariableValue;
+		uii.Cvar_VariableStringBuffer			= Cvar_VM_VariableStringBuffer;
+		uii.Cvar_VariableValue					= Cvar_VM_VariableValue;
 
 		uii.Cmd_Argc							= Cmd_Argc;
 		uii.Cmd_Argv							= Cmd_ArgvBuffer;
@@ -1509,6 +1509,7 @@ void CL_BindUI( void ) {
 		uii.ext.RemoveCommand					= UIVM_Cmd_RemoveCommand;
 		uii.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
 		uii.ext.OpenURL							= Sys_OpenURL;
+		uii.ext.Cvar_UnusedList					= Cvar_UnusedList;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

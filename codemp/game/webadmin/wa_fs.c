@@ -38,7 +38,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 =================
 WA_ApiConfigGet, WA_ApiConfigSet
 
-Not in JKAdmin: the server config in the panel. It is this one file and no other, the request names none.
+Not in JKAdmin: the server config in the panel, the text editor of the settings tab. It is this one file and no
+other, the request names none: server.cfg, master.cfg on the masterserver (WA_ConfigFile, wa_settings.c).
 
 The engine looks for a file in the home path first (fs_homepath/<game>/server.cfg) and then in the base path,
 and it only ever writes to the home path. So the first save puts the edited text into the home path, and that
@@ -49,13 +50,10 @@ The file has one byte per character like everything in the game (Latin-1), the p
 The passwords in it are shown as they are: who can log into the panel can do everything on the server anyway.
 =================
 */
-#define WA_CONFIG_FILE		"server.cfg"
-#define WA_CONFIG_BACKUP	"server.cfg.bak"
-
 void WA_ApiConfigGet( waConnection_t *c ) {
 	waBuffer_t	b = { 0 };
 	int			len = 0;
-	char		*text = WA_ReadGameFile( WA_CONFIG_FILE, &len );
+	char		*text = WA_ReadGameFile( WA_ConfigFile(), &len );
 
 	WA_BufLatin1AsUtf8( &b, text, len );
 	free( text );
@@ -66,8 +64,7 @@ void WA_ApiConfigGet( waConnection_t *c ) {
 
 // text is the body of the request and is changed in place. run: also execute the file.
 void WA_ApiConfigSet( waConnection_t *c, char *text, qboolean run ) {
-	char		*old;
-	int			oldLen = 0;
+	const char	*file = WA_ConfigFile();
 	const int	len = WA_TextBody( text );
 
 	if ( !len ) {
@@ -75,20 +72,14 @@ void WA_ApiConfigSet( waConnection_t *c, char *text, qboolean run ) {
 		WA_ActionResult( c, qfalse, "an empty config is not saved" );
 		return;
 	}
-
-	old = WA_ReadGameFile( WA_CONFIG_FILE, &oldLen );
-	if ( old ) {
-		WA_WriteGameFile( WA_CONFIG_BACKUP, old, oldLen );
-		free( old );
-	}
-	if ( !WA_WriteGameFile( WA_CONFIG_FILE, text, len ) ) {
-		WA_ActionResult( c, qfalse, "could not write " WA_CONFIG_FILE );
+	if ( !WA_SaveConfig( text, len ) ) {
+		WA_ActionResult( c, qfalse, va( "could not write %s", file ) );
 		return;
 	}
 	// what is in it stays out of the log
 	WA_LogUse( c, va( "config saved, %d bytes%s", len, run ? ", executed" : "" ) );
 	if ( run )
-		trap->SendConsoleCommand( EXEC_APPEND, "exec " WA_CONFIG_FILE "\n" );
+		trap->SendConsoleCommand( EXEC_APPEND, va( "exec %s\n", file ) );
 	WA_ActionResult( c, qtrue, run ? "saved and executed" : "saved, not executed yet" );
 }
 

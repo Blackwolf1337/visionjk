@@ -383,6 +383,10 @@ typedef struct uiImport_s {
 		// Only an engine that sets the cvar v_uiURL to 1 has this one: an address to the web browser of the system
 		// (the links of the changelog, ui_changelog.c).
 		qboolean		(*OpenURL)								( const char *url );
+		// Only an engine that sets the cvar v_uiCvarClean to 1 has this one, after ext.OpenURL: the cvars no code
+		// used for a month (cvar_cleanup), one "name\tvalue\tday\n" a line, day in days since 1970, 0 for never.
+		// Returns the length, cut at a whole line where buf has no more room (ui_cvarclean.c).
+		int				(*Cvar_UnusedList)						( char *buf, int size );
 	} ext;
 } uiImport_t;
 

@@ -1557,6 +1557,14 @@ REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
 LANG_ENGLISH        "What changed in each version, and what a new version brings."
 LANG_FRENCH         "Ce qui a changé dans chaque version, et ce qu'une nouvelle version apporte."
 
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+LANG_FRENCH         "Nettoyer les paramètres"
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+LANG_FRENCH         "Paramètres qu'aucun code n'a utilisés depuis un mois, issus d'anciennes versions et d'autres mods."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_FRENCH         "Choisir les téléchargements"
@@ -2288,6 +2296,26 @@ LANG_FRENCH         "Cliquez encore sur le lien pour l'ouvrir dans votre navigat
 REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
 LANG_ENGLISH        "The changelog is not there. It comes with the next update."
 LANG_FRENCH         "Le journal des modifications est absent. Il arrive avec la prochaine mise à jour."
+
+REFERENCE           NOTHING_TO_CLEAN_UP
+LANG_ENGLISH        "Nothing to clean up."
+LANG_FRENCH         "Rien à nettoyer."
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
+LANG_FRENCH         "Paramètres qu'aucun code n'a utilisés depuis un mois : restes d'anciennes versions et d'autres mods. Enlever en retire un de la config."
+
+REFERENCE           REMOVE_ALL
+LANG_ENGLISH        "Remove All"
+LANG_FRENCH         "Tout enlever"
+
+REFERENCE           NEVER_USED
+LANG_ENGLISH        "Never used"
+LANG_FRENCH         "Jamais utilisé"
+
+REFERENCE           I_DAYS_AGO
+LANG_ENGLISH        "%i days ago"
+LANG_FRENCH         "il y a %i jours"
 
 
 ENDMARKER

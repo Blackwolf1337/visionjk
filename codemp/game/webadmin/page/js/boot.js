@@ -1,6 +1,9 @@
-if (!gl) {
-	$('loading').textContent = 'This browser has no WebGL 2.';
-} else {
+// the panel of a game server: the map and the state of the game
+function gameStart() {
+	if (!gl) {
+		$('loading').textContent = 'This browser has no WebGL 2.';
+		return;
+	}
 	resize();
 	requestAnimationFrame(frame);
 	// faster updates while watching through a player's eyes
@@ -27,5 +30,5 @@ if (!gl) {
 	try { wanted = localStorage.getItem('appMode') || 'admin'; } catch (e) { /* the administration then */ }
 	setAppMode(wanted);
 }
-// who is logged in: what his role may not use is taken off the page
-accountLoad();
+// who is logged in: what his role may not use is taken off the page. The masterserver has no map (js/master.js).
+accountLoad().then(() => { if (me.master) masterStart(); else gameStart(); });

@@ -39,6 +39,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_remaps.c     the texture swap: a shader of the map drawn as another one
 //   wa_live.c       the live view: /live/, the map view for everybody, read only
 //   wa_stream.c     the WebSocket of a page: the state pushed, and what it subscribed to
+//   wa_settings.c   the settings form: every cvar of the server with its type, saved into the config and set
+//   wa_cfgedit.c    a config as statements: the value of one cvar changed, a statement taken out (no trap)
 
 #pragma once
 
@@ -245,6 +247,63 @@ void WA_ApiRemaps( waConnection_t *c );
 
 // wa_live.c
 qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path, const char *query, const char *head );
+
+// wa_settings.c
+typedef enum waSetType_e {
+	WA_SET_TEXT,
+	WA_SET_INT,			// min and max, both 0: any
+	WA_SET_FLOAT,
+	WA_SET_BOOL,		// 0 or 1
+	WA_SET_ENUM,		// options "0=Free for all|1=Holocron|..."
+	WA_SET_BITS,		// options "0=Heal|1=Jump|...", the number is that of the bit
+	WA_SET_SECRET		// a password: a text field that does not show what it holds
+} waSetType_t;
+
+// the groups of the form, in the order the page lists them
+typedef enum waSetCat_e {
+	WA_CAT_SERVER,		// name, message of the day, slots, passwords
+	WA_CAT_NETWORK,		// rates, snapshots, the masters, downloads, flood protection
+	WA_CAT_GAMETYPE,	// the game type and its limits
+	WA_CAT_VOTES,		// votes and the map cycle
+	WA_CAT_FORCE,		// force powers, ranks, weapons and items
+	WA_CAT_SABER,
+	WA_CAT_GAMEPLAY,	// gravity, speed, knockback, damage, dismemberment
+	WA_CAT_DUEL,
+	WA_CAT_BOTS,
+	WA_CAT_JPADMIN,		// the admin system of JA+
+	WA_CAT_JPFEATURES,	// the rest of JA+
+	WA_CAT_PROTECTION,	// anti-cheat, names, spam, bans
+	WA_CAT_VISIONJK,	// voice, boombox, statuses, lag compensation and other things of this tree
+	WA_CAT_WEB,			// the web panel
+	WA_CAT_LOGGING,
+	WA_CAT_MASTER,		// the masterserver
+	WA_CAT_OTHER,		// a cvar of the game the table does not know
+	WA_CAT_COUNT
+} waSetCat_t;
+
+#define WA_SET_MASTER		1		// the masterserver shows it as well
+#define WA_SET_MASTERONLY	2		// only the masterserver shows it
+#define WA_SET_RESTART		4		// takes effect after a restart of the server (when the engine does not say so itself)
+#define WA_SET_LATCH		8		// takes effect with the next map (when the engine does not say so itself)
+
+typedef struct waSetting_s {
+	const char	*name;
+	waSetCat_t	cat;
+	waSetType_t	type;
+	float		min, max;
+	const char	*options;		// ENUM and BITS, else NULL
+	int			flags;			// WA_SET_*
+	const char	*desc;
+} waSetting_t;
+
+qboolean WA_MasterMode( void );
+const char *WA_ConfigFile( void );
+qboolean WA_SaveConfig( const char *text, int len );
+void WA_ApiSettingsGet( waConnection_t *c );
+void WA_ApiSettingsSet( waConnection_t *c, char *body );
+void WA_ApiCleanupGet( waConnection_t *c );
+void WA_ApiCleanupSet( waConnection_t *c, char *body );
+void WA_ApiMaster( waConnection_t *c );
 
 // wa_stream.c
 void WA_StreamUpgrade( waConnection_t *c, const char *head, qboolean live );

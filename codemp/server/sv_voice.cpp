@@ -95,6 +95,16 @@ static void SV_MasterDatagram( const netadr_t *from, const byte *data, int lengt
 	MS_Datagram( &addr, data, length, SV_MasterMsec() );
 }
 
+// what the web panel of the game module shows of the relay (webadmin/wa_settings.c), once a second
+static void SV_MasterStatus( void ) {
+	int sessions, rooms, kbps;
+
+	MS_Numbers( &sessions, &rooms, &kbps );
+	Cvar_Set( "ms_statSessions", va( "%i", sessions ) );
+	Cvar_Set( "ms_statRooms", va( "%i", rooms ) );
+	Cvar_Set( "ms_statKbps", va( "%i", kbps ) );
+}
+
 /*
 ===============
 SV_VoiceFrame
@@ -120,6 +130,7 @@ void SV_VoiceFrame( void ) {
 		MS_BoxSetup( vs_masterBoxes->integer, Cvar_VariableString( "vs_boomboxMaxSeconds" )[0] ? Cvar_VariableIntegerValue( "vs_boomboxMaxSeconds" ) : 600,
 			Cvar_VariableString( "vs_boomboxQueue" )[0] ? Cvar_VariableIntegerValue( "vs_boomboxQueue" ) : 10, ytdlp, ffmpeg, args, now );
 		boxSetTime = now;
+		SV_MasterStatus();
 	}
 	MS_Frame( now );
 }
@@ -164,6 +175,11 @@ qboolean SV_VoicePacket( const netadr_t *from, msg_t *msg ) {
 void SV_VoiceInit( void ) {
 #ifdef VISION_MASTER
 	vs_voiceShared = Cvar_Get( "vs_voiceShared", "1", CVAR_ROM, "The voice chat comes in on the UDP port of the game" );
+	// the game module runs its web panel as the one of the masterserver (webadmin/wa_settings.c)
+	Cvar_Get( "vs_master", "1", CVAR_ROM, "This is the masterserver" );
+	Cvar_Get( "ms_statSessions", "0", CVAR_ROM, "Sessions of the relay" );
+	Cvar_Get( "ms_statRooms", "0", CVAR_ROM, "Rooms of the relay" );
+	Cvar_Get( "ms_statKbps", "0", CVAR_ROM, "What the relay sent in the last minute, kbit/s on average" );
 	vs_masterKbps = Cvar_Get( "vs_masterKbps", va( "%i", MS_DEFAULT_KBPS ), CVAR_INIT, "What the relay of the masterserver may send, kbit/s. 0: anything" );
 	// The programs the boxes start. The game module registers them as CVAR_INIT; registered here too, the
 	// masterserver does not depend on which module it runs with to keep a console from setting them later.

@@ -3111,6 +3111,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_uiSkin", "1", CVAR_ROM, "" );
 	// and that uiImport_t has ext.OpenURL, after ext.R_RegisterShaderRGBA
 	Cvar_Get( "v_uiURL", "1", CVAR_ROM, "" );
+	// and ext.Cvar_UnusedList after that
+	Cvar_Get( "v_uiCvarClean", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

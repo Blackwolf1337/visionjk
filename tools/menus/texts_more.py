@@ -610,4 +610,12 @@ MORE = {
     'Not installed yet': ('Pas encore installée', 'Aún no instalada'),
     'Click the link again to open it in your browser:': ('Cliquez encore sur le lien pour l\'ouvrir dans votre navigateur :', 'Haz clic otra vez en el enlace para abrirlo en el navegador:'),
     'The changelog is not there. It comes with the next update.': ('Le journal des modifications est absent. Il arrive avec la prochaine mise à jour.', 'Falta el registro de cambios. Llegará con la próxima actualización.'),
+    # the window Clean Up Settings (ui_cvarclean.c)
+    'Clean Up Settings': ('Nettoyer les paramètres', 'Limpiar ajustes'),
+    'Settings no code used for a month, from older versions and other mods.': ("Paramètres qu'aucun code n'a utilisés depuis un mois, issus d'anciennes versions et d'autres mods.", 'Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods.'),
+    'Nothing to clean up.': ('Rien à nettoyer.', 'Nada que limpiar.'),
+    'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': ("Paramètres qu'aucun code n'a utilisés depuis un mois : restes d'anciennes versions et d'autres mods. Enlever en retire un de la config.", 'Ajustes que ningún código ha usado en un mes: restos de versiones anteriores y de otros mods. Quitar saca uno de la configuración.'),
+    'Remove All': ('Tout enlever', 'Quitar todo'),
+    'Never used': ('Jamais utilisé', 'Nunca usado'),
+    '%i days ago': ('il y a %i jours', 'hace %i días'),
 }

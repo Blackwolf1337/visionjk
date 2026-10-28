@@ -74,7 +74,7 @@ function cfgScroll() { codeScroll('cfgText', 'cfgHi'); }
 function cfgShowState() {
 	const text = $('cfgText').value, dirty = cfgLoaded && text !== cfgSaved;
 	cfgPaint();
-	$('cfgSize').textContent = cfgLoaded ? cfgBytes(text) + ' bytes' : '';
+	$('cfgSize').textContent = cfgLoaded && cfgView === 'text' ? cfgBytes(text) + ' bytes' : '';
 	$('cfgState').textContent = !cfgLoaded ? 'not loaded' : dirty ? 'changed, not saved' : 'as on the server';
 	$('cfgState').classList.toggle('dirty', dirty);
 }
@@ -94,10 +94,10 @@ async function saveConfig(run) {
 	const text = $('cfgText').value.replace(/\r/g, '');
 	if (!cfgLoaded) { toast('The config was never loaded, nothing to save', false); return; }
 	if (cfgBytes(text) > CFG_MAX_BYTES) { toast('The config is larger than ' + CFG_MAX_BYTES + ' bytes, the server does not take it', false); return; }
-	if (run && !confirm('Save server.cfg and run it on the server now?')) return;
+	if (run && !confirm('Save ' + $('cfgFileName').textContent + ' and run it on the server now?')) return;
 	const json = await apiPost('api/config' + (run ? '?exec=1' : ''), text);
 	toast(json.message, json.ok);
-	if (json.ok) cfgSaved = text;
+	if (json.ok) { cfgSaved = text; setStale(); }
 	cfgShowState();
 }
 $('cfgText').addEventListener('input', cfgShowState);

@@ -25,6 +25,7 @@
 	loadMenu { "ui/jamp/findplayer.menu" }
 	loadMenu { "ui/jamp/ids.menu" }
 	loadMenu { "ui/jamp/changelog.menu" }
+	loadMenu { "ui/jamp/cvarclean.menu" }
 	loadMenu { "ui/jamp/createfavorite.menu" }
  	loadMenu { "ui/jamp/multiplayer.menu" }
  	loadMenu { "ui/jamp/advancedcreateserver.menu" }

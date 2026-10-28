@@ -83,9 +83,16 @@ static void WA_SendServerCommand( int clientNum, const char *text ) {
 }
 
 gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
-	// (the table of an engine that does not say vs_voiceShared ends before ext, g_public.h)
+	// the table of an engine that does not say vs_voiceShared ends before ext, of one that does not say
+	// vs_gameImportExt 2 after ext.SendDatagram (g_public.h)
+	size_t size = offsetof( gameImport_t, ext );
+
+	if ( import->Cvar_VariableIntegerValue( "vs_gameImportExt" ) >= 2 )
+		size = sizeof( waImport );
+	else if ( import->Cvar_VariableIntegerValue( "vs_voiceShared" ) )
+		size = offsetof( gameImport_t, ext.Cvar_Flags );
 	memset( &waImport, 0, sizeof( waImport ) );
-	memcpy( &waImport, import, import->Cvar_VariableIntegerValue( "vs_voiceShared" ) ? sizeof( waImport ) : offsetof( gameImport_t, ext ) );
+	memcpy( &waImport, import, size );
 	waSendServerCommand = import->SendServerCommand;
 	waImport.SendServerCommand = WA_SendServerCommand;
 	return &waImport;
@@ -243,6 +250,8 @@ static void WA_Visitor( waConnection_t *c, const char *head ) {
 	}
 }
 
+static qboolean WA_MasterRoute( const char *path );
+
 /*
 =================
 WA_RouteRole
@@ -253,7 +262,8 @@ is nobody's business but the owner's, is said here and for the actions on player
 */
 waRole_t WA_RouteRole( const char *method, const char *path ) {
 	// the console runs anything, the config and the files hold the passwords of the server
-	if ( !strcmp( path, "/api/command" ) || !strcmp( path, "/api/config" ) || !strncmp( path, "/api/fs/", 8 ) ) {
+	if ( !strcmp( path, "/api/command" ) || !strcmp( path, "/api/config" ) || !strncmp( path, "/api/fs/", 8 )
+		|| !strncmp( path, "/api/settings", 13 ) ) {
 		return WA_ROLE_OWNER;
 	}
 	// what the console and the log print: addresses, and what the admins did
@@ -372,12 +382,38 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_AuthAnswer( c, 403, "Forbidden", "role" );
 		return;
 	}
+	if ( WA_MasterMode() && !WA_MasterRoute( path ) ) {
+		WA_RespondText( c, 404, "Not Found", "not on the masterserver" );
+		return;
+	}
 	// the socket of the page: the state and what it asks for besides it, pushed (wa_stream.c)
 	if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/stream" ) ) {
 		WA_StreamUpgrade( c, head, qfalse );
 		return;
 	}
 	WA_Route( c, method, path, query, body, bodyLen );
+}
+
+/*
+=================
+WA_MasterRoute
+
+What the panel of the masterserver has: the settings and the text of master.cfg, the log and the console, the
+files, how it keeps up, the relay. No map, no players, no editor: its level is only there to make the relay run.
+=================
+*/
+static qboolean WA_MasterRoute( const char *path ) {
+	static const char *const paths[] = { "/", "/index.html", "/api/config", "/api/log", "/api/console", "/api/command",
+		"/api/ids", "/api/perf", "/api/master", "/api/me" };
+	int i;
+
+	if ( !strncmp( path, "/api/settings", 13 ) || !strncmp( path, "/api/fs/", 8 ) )
+		return qtrue;
+	for ( i = 0; i < (int)ARRAY_LEN( paths ); i++ ) {
+		if ( !strcmp( path, paths[i] ) )
+			return qtrue;
+	}
+	return qfalse;
 }
 
 /*
@@ -429,6 +465,16 @@ void WA_Route( waConnection_t *c, const char *method, const char *path, const ch
 
 		WA_FormValue( query, "exec", run, sizeof( run ) );
 		WA_ApiConfigSet( c, body, (qboolean)( run[0] == '1' ) );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/settings" ) ) {
+		WA_ApiSettingsGet( c );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/settings" ) ) {
+		WA_ApiSettingsSet( c, body );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/settings/cleanup" ) ) {
+		WA_ApiCleanupGet( c );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/settings/cleanup" ) ) {
+		WA_ApiCleanupSet( c, body );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/master" ) ) {
+		WA_ApiMaster( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/models" ) ) {
 		WA_ApiModels( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/shaders" ) ) {
