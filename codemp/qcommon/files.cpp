@@ -241,6 +241,10 @@ typedef struct searchpath_s {
 static char		fs_gamedir[MAX_OSPATH];	// this will be a single file name with no separators
 static cvar_t		*fs_debug;
 static cvar_t		*v_fsIndex;
+
+// a file of a pak or a folder is read whole only up to this size (FS_ReadFile, FS_EntryUsable)
+#define FS_ENTRY_MOST		( 512 * 1024 * 1024 )
+#define FS_PAK_MOST_FILES	( 1 << 20 )		// entries of a pak: the largest of the game have a few ten thousand
 static cvar_t		*fs_homepath;
 
 #ifdef MACOS_X
@@ -638,6 +642,10 @@ static void FS_ListingAddName( fsListing_t *listing, const char *name ) {
 static qboolean FS_ListingHasName( const fsListing_t *listing, const char *name ) {
 	const char *key = name;
 
+	// (an empty listing has no array at all, and bsearch takes none)
+	if ( !listing->numNames ) {
+		return qfalse;
+	}
 	return bsearch( &key, listing->names, listing->numNames, sizeof( *listing->names ), FS_ListingCompare ) ? qtrue : qfalse;
 }
 
@@ -1969,7 +1977,7 @@ int FS_Read( void *buffer, int len, fileHandle_t f ) {
 
 	FS_AssertInitialised();
 
-	if ( !f ) {
+	if ( !f || len <= 0 ) {
 		return 0;
 	}
 
@@ -2365,6 +2373,14 @@ long FS_ReadFile( const char *qpath, void **buffer ) {
 
 	fs_loadCount++;
 
+	// (Z_Malloc takes an int: a size the pak claims near 4 GB gave a tiny block that the read below then filled)
+	if ( len < 0 || len > FS_ENTRY_MOST ) {
+		Com_Printf( S_COLOR_YELLOW "WARNING: %s is too large to read (%ld bytes)\n", qpath, len );
+		FS_FCloseFile( h );
+		*buffer = NULL;
+		return -1;
+	}
+
 	buf = (byte*)Z_Malloc( len+1, TAG_FILESYS, qfalse);
 	buf[len]='\0';	// because we're not calling Z_Malloc with optional trailing 'bZeroIt' bool
 	*buffer = buf;
@@ -2443,10 +2459,14 @@ FS_LoadBlocked
 The files of a downloaded pak that its player chose not to have (client/cl_download.cpp): "<pak>.blocked" next to
 the pak, a path a line. They still count for the checksum, so a pure server sees the pak it sent, but nothing can
 open or list them, and a program in the pak is never unpacked and run (Sys_UnpackDLL). Returns the list in lower
-case, every path between two line ends, for FS_IsBlocked(); NULL: there is none. Z_Free() it.
+case, every path between two line ends, for FS_IsBlocked(); NULL: there is none. Z_Free() it, unless it is
+fs_blockedAll: a list that is too large or can not be read blocks the whole pak (it was taken as none, and then
+nothing of the pak was blocked).
 =================
 */
-#define FS_BLOCKED_MAX	( 256 * 1024 )
+#define FS_BLOCKED_MAX	( 16 * 1024 * 1024 )
+
+static char fs_blockedAll[] = "";
 
 static char *FS_LoadBlocked( const char *zipfile ) {
 	char	path[MAX_OSPATH + 16];
@@ -2463,9 +2483,14 @@ static char *FS_LoadBlocked( const char *zipfile ) {
 	fseek( f, 0, SEEK_END );
 	len = ftell( f );
 	fseek( f, 0, SEEK_SET );
-	if ( len <= 0 || len > FS_BLOCKED_MAX ) {
+	if ( len == 0 ) {
 		fclose( f );
-		return NULL;
+		return NULL;		// (the player kept all of it)
+	}
+	if ( len < 0 || len > FS_BLOCKED_MAX ) {
+		fclose( f );
+		Com_Printf( S_COLOR_YELLOW "WARNING: %s can not be read, nothing of its pak is used\n", path );
+		return fs_blockedAll;
 	}
 	list = (char *)Z_Malloc( len + 3, TAG_FILESYS, qtrue );
 	list[0] = '\n';
@@ -2487,6 +2512,9 @@ static qboolean FS_IsBlocked( const char *list, const char *name ) {
 
 	if ( !list ) {
 		return qfalse;
+	}
+	if ( list == fs_blockedAll ) {
+		return qtrue;
 	}
 	Com_sprintf( line, sizeof( line ), "\n%s\n", name );
 	return strstr( list, line ) ? qtrue : qfalse;
@@ -2642,6 +2670,28 @@ Creates a new pak_t in the search chain for the contents
 of a zip file.
 =================
 */
+/*
+What of a pak is never used, whatever pak it is (a downloaded one or not): a name the console would take apart
+(a line break, a quote or a ';' in the name of a demo or a video goes into a command of the ui as it is), and an
+entry that says it is larger than FS_ENTRY_MOST unpacked (the size is the pak's word, Z_Malloc takes an int). Such
+an entry keeps its place in the checksum of the pak, which the server computes over all of them, and is left out
+of the hash and of every list as a blocked one is.
+*/
+
+static qboolean FS_EntryUsable( const char *name, unsigned long len ) {
+	const unsigned char *c;
+
+	if ( len > FS_ENTRY_MOST ) {
+		return qfalse;
+	}
+	for ( c = (const unsigned char *)name; *c; c++ ) {
+		if ( *c < ' ' || *c == 127 || *c == '"' || *c == ';' ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 {
 	fileInPack_t	*buildBuffer;
@@ -2675,6 +2725,12 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 		if ( uf ) {
 			unzClose( uf );		// (with its buffer)
 		}
+		return NULL;
+	}
+	// (the count is the pak's word: the arrays below are made for it, and their sizes go through an int)
+	if ( gi.number_entry > FS_PAK_MOST_FILES ) {
+		Com_Printf( S_COLOR_YELLOW "WARNING: %s says it has %lu files, more than any pak of the game: not used\n", zipfile, (unsigned long)gi.number_entry );
+		unzClose( uf );
 		return NULL;
 	}
 
@@ -2771,14 +2827,17 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 		// store the file position in the zip
 		buildBuffer[i].pos = entries[i].pos;
 		buildBuffer[i].len = entries[i].len;
-		buildBuffer[i].blocked = FS_IsBlocked( blocked, buildBuffer[i].name );
+		buildBuffer[i].blocked = (qboolean)( FS_IsBlocked( blocked, buildBuffer[i].name )
+			|| !FS_EntryUsable( buildBuffer[i].name, buildBuffer[i].len ) );
 		if ( !buildBuffer[i].blocked ) {
 			buildBuffer[i].next = pack->hashTable[hash];
 			pack->hashTable[hash] = &buildBuffer[i];
 		}
 	}
 	if ( blocked ) {
-		Z_Free( blocked );
+		if ( blocked != fs_blockedAll ) {
+			Z_Free( blocked );
+		}
 	}
 	free( names );
 	free( entries );
@@ -3864,9 +3923,21 @@ and return qtrue if it does.
 
 qboolean FS_CheckDirTraversal(const char *checkdir)
 {
-	if(strstr(checkdir, "../") || strstr(checkdir, "..\\"))
-		return qtrue;
+	const char *part = checkdir;
 
+	// a part of the path that is "..", wherever it is: also ".." by itself and "x/.." (fs_game of a server), which
+	// the test for "../" let through
+	while ( *part ) {
+		const size_t len = strcspn( part, "/\\" );
+
+		if ( len == 2 && part[0] == '.' && part[1] == '.' ) {
+			return qtrue;
+		}
+		part += len;
+		if ( *part ) {
+			part++;
+		}
+	}
 	return qfalse;
 }
 

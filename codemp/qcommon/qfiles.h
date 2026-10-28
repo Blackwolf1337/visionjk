@@ -380,6 +380,24 @@ typedef struct dheader_s {
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
+// Every lump of a BSP of fileLen bytes lies inside it (the header swapped already). A map comes from a pak the
+// server names: the loaders read each lump where the header says it is.
+static inline int BSP_LumpsInFile( const dheader_t *header, int fileLen ) {
+	int i;
+
+	if ( fileLen < (int)sizeof( dheader_t ) ) {
+		return 0;
+	}
+	for ( i = 0; i < HEADER_LUMPS; i++ ) {
+		const lump_t *l = &header->lumps[i];
+
+		if ( l->fileofs < 0 || l->filelen < 0 || l->fileofs > fileLen || l->filelen > fileLen - l->fileofs ) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 typedef struct dmodel_s {
 	float		mins[3], maxs[3];
 	int			firstSurface, numSurfaces;

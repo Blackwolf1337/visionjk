@@ -169,6 +169,13 @@ static void CMod_LoadSubmodels( const lump_t *l, clipMap_t &cm ) {
 		out->firstNode = -1;
 
 		// make a "leaf" just to hold the model's brushes and surfaces
+		// (the brushes are loaded, the surfaces come later: CM_CheckReferences)
+		if ( LittleLong( in->numBrushes ) < 0 || LittleLong( in->firstBrush ) < 0
+			|| LittleLong( in->firstBrush ) > cm.numBrushes - LittleLong( in->numBrushes )
+			|| LittleLong( in->numSurfaces ) < 0 || LittleLong( in->firstSurface ) < 0
+			|| LittleLong( in->numSurfaces ) > ( 1 << 20 ) ) {
+			Com_Error( ERR_DROP, "CMod_LoadSubmodels: bad brushes or surfaces of model %i", i );
+		}
 		out->leaf.numLeafBrushes = LittleLong( in->numBrushes );
 		indexes = (int *)Hunk_Alloc( out->leaf.numLeafBrushes * 4, h_high );
 		out->leaf.firstLeafBrush = indexes - cm.leafbrushes;
@@ -212,10 +219,17 @@ static void CMod_LoadNodes( const lump_t *l, clipMap_t &cm ) {
 
 	for (i=0 ; i<count ; i++, out++, in++)
 	{
+		// (a map of a pak: a node names a plane and nodes or leaves of the map, every trace walks them)
+		if ( LittleLong( in->planeNum ) < 0 || LittleLong( in->planeNum ) >= cm.numPlanes ) {
+			Com_Error( ERR_DROP, "CMod_LoadNodes: bad planeNum: %i", LittleLong( in->planeNum ) );
+		}
 		out->plane = cm.planes + LittleLong( in->planeNum );
 		for (j=0 ; j<2 ; j++)
 		{
 			child = LittleLong (in->children[j]);
+			if ( child >= count || ( child < 0 && -1 - child >= cm.numLeafs ) ) {
+				Com_Error( ERR_DROP, "CMod_LoadNodes: bad child: %i", child );
+			}
 			out->children[j] = child;
 		}
 	}
@@ -263,6 +277,11 @@ void CMod_LoadBrushes( const lump_t *l, clipMap_t &cm ) {
 	out = cm.brushes;
 
 	for ( i=0 ; i<count ; i++, out++, in++ ) {
+		// (CM_BoundBrush reads the first six sides at once, the traces all of them)
+		if ( LittleLong( in->numSides ) < 6 || LittleLong( in->firstSide ) < 0
+			|| LittleLong( in->firstSide ) > cm.numBrushSides - LittleLong( in->numSides ) ) {
+			Com_Error( ERR_DROP, "CMod_LoadBrushes: bad sides: %i from %i", LittleLong( in->numSides ), LittleLong( in->firstSide ) );
+		}
 		out->sides = cm.brushsides + LittleLong(in->firstSide);
 		out->numsides = LittleLong(in->numSides);
 
@@ -565,6 +584,9 @@ static void CMod_LoadBrushSides (const lump_t *l, clipMap_t &cm)
 
 	for ( i=0 ; i<count ; i++, in++, out++) {
 		num = LittleLong( in->planeNum );
+		if ( num < 0 || num >= cm.numPlanes ) {
+			Com_Error( ERR_DROP, "CMod_LoadBrushSides: bad planeNum: %i", num );
+		}
 		out->plane = &cm.planes[num];
 		out->shaderNum = LittleLong( in->shaderNum );
 		if ( out->shaderNum < 0 || out->shaderNum >= cm.numShaders ) {
@@ -617,13 +639,25 @@ static void CMod_LoadVisibility( const lump_t *l, clipMap_t &cm ) {
 	byte	*buf;
 
     len = l->filelen;
+	buf = cmod_base + l->fileofs;
+	// (a map of a pak: visibility data the lump can not hold, or for more clusters than the leaves have, is taken as
+	// none; len - VIS_HEADER was negative for a lump of less than 8 bytes)
+	if ( len ) {
+		const int numClusters = ( len >= VIS_HEADER ) ? LittleLong( ((int *)buf)[0] ) : -1;
+		const int clusterBytes = ( len >= VIS_HEADER ) ? LittleLong( ((int *)buf)[1] ) : -1;
+
+		if ( numClusters < 0 || numClusters > cm.numClusters || clusterBytes < ( numClusters + 7 ) / 8
+			|| (long long)numClusters * clusterBytes > len - VIS_HEADER ) {
+			Com_Printf( S_COLOR_YELLOW "WARNING: the visibility data of %s does not fit its lump, it is not used\n", cm.name );
+			len = 0;
+		}
+	}
 	if ( !len ) {
 		cm.clusterBytes = ( cm.numClusters + 31 ) & ~31;
 		cm.visibility = (unsigned char *)Hunk_Alloc( cm.clusterBytes, h_high );
 		Com_Memset( cm.visibility, 255, cm.clusterBytes );
 		return;
 	}
-	buf = cmod_base + l->fileofs;
 
 	cm.vised = qtrue;
 	cm.visibility = (unsigned char *)Hunk_Alloc( len, h_high );
@@ -634,6 +668,48 @@ static void CMod_LoadVisibility( const lump_t *l, clipMap_t &cm ) {
 
 //==================================================================
 
+
+/*
+=================
+CM_CheckReferences
+
+What the lumps of a map name of each other where the named lump comes later than the naming one: the brushes and
+surfaces of the leaves, those of the submodels. Every trace follows them. A map comes from a pak the server names.
+=================
+*/
+static void CM_CheckReferences( clipMap_t &cm ) {
+	int i, j;
+
+	for ( i = 0; i < cm.numLeafs; i++ ) {
+		const cLeaf_t *leaf = &cm.leafs[i];
+
+		if ( leaf->cluster < -1 || leaf->area < -1
+			|| leaf->numLeafBrushes < 0 || leaf->firstLeafBrush < 0 || leaf->firstLeafBrush > cm.numLeafBrushes - leaf->numLeafBrushes
+			|| leaf->numLeafSurfaces < 0 || leaf->firstLeafSurface < 0 || leaf->firstLeafSurface > cm.numLeafSurfaces - leaf->numLeafSurfaces ) {
+			Com_Error( ERR_DROP, "CM_LoadMap: leaf %i names brushes or surfaces the map does not have", i );
+		}
+	}
+	for ( i = 0; i < cm.numLeafBrushes; i++ ) {
+		if ( cm.leafbrushes[i] < 0 || cm.leafbrushes[i] >= cm.numBrushes ) {
+			Com_Error( ERR_DROP, "CM_LoadMap: bad leaf brush %i", cm.leafbrushes[i] );
+		}
+	}
+	for ( i = 0; i < cm.numLeafSurfaces; i++ ) {
+		if ( cm.leafsurfaces[i] < 0 || cm.leafsurfaces[i] >= cm.numSurfaces ) {
+			Com_Error( ERR_DROP, "CM_LoadMap: bad leaf surface %i", cm.leafsurfaces[i] );
+		}
+	}
+	for ( i = 0; i < cm.numSubModels; i++ ) {
+		const cLeaf_t	*leaf = &cm.cmodels[i].leaf;
+		const int		*surfaces = cm.leafsurfaces + leaf->firstLeafSurface;
+
+		for ( j = 0; j < leaf->numLeafSurfaces; j++ ) {
+			if ( surfaces[j] < 0 || surfaces[j] >= cm.numSurfaces ) {
+				Com_Error( ERR_DROP, "CM_LoadMap: model %i names surfaces the map does not have", i );
+			}
+		}
+	}
+}
 
 /*
 =================
@@ -675,9 +751,16 @@ static void CMod_LoadPatches( const lump_t *surfs, const lump_t *verts, clipMap_
 		// load the full drawverts onto the stack
 		width = LittleLong( in->patchWidth );
 		height = LittleLong( in->patchHeight );
+		// (a map of a pak: sides, vertices and shader as the brushes have them checked)
+		if ( width < 1 || height < 1 || width > 32 || height > 32 ) {
+			Com_Error( ERR_DROP, "ParseMesh: a patch of %i by %i points", width, height );
+		}
 		c = width * height;
 		if ( c > MAX_PATCH_VERTS ) {
 			Com_Error( ERR_DROP, "ParseMesh: MAX_PATCH_VERTS" );
+		}
+		if ( LittleLong( in->firstVert ) < 0 || LittleLong( in->firstVert ) > (int)( verts->filelen / sizeof( *dv ) ) - c ) {
+			Com_Error( ERR_DROP, "ParseMesh: the vertices of a patch lie outside of their lump" );
 		}
 
 		dv_p = dv + LittleLong( in->firstVert );
@@ -688,6 +771,9 @@ static void CMod_LoadPatches( const lump_t *surfs, const lump_t *verts, clipMap_
 		}
 
 		shaderNum = LittleLong( in->shaderNum );
+		if ( shaderNum < 0 || shaderNum >= cm.numShaders ) {
+			Com_Error( ERR_DROP, "CMod_LoadPatches: bad shaderNum: %i", shaderNum );
+		}
 		patch->contents = cm.shaders[shaderNum].contentFlags;
 		patch->surfaceFlags = cm.shaders[shaderNum].surfaceFlags;
 		patch->shaderNum = shaderNum;
@@ -839,6 +925,12 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	if ( checksum )
 		*checksum = last_checksum;
 
+	if ( iBSPLen < (int)sizeof( dheader_t ) ) {
+		Z_Free(	gpvCachedMapDiskImage);
+				gpvCachedMapDiskImage = NULL;
+
+		Com_Error (ERR_DROP, "CM_LoadMap: %s is too short for a map", name );
+	}
 	header = *(dheader_t *)buf;
 	for (size_t i=0 ; i<sizeof(dheader_t)/4 ; i++) {
 		((int *)&header)[i] = LittleLong ( ((int *)&header)[i]);
@@ -850,6 +942,13 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 
 		Com_Error (ERR_DROP, "CM_LoadMap: %s has wrong version number (%i should be %i)"
 		, name, header.version, BSP_VERSION );
+	}
+	// (the renderer takes this image too, gpvCachedMapDiskImage: it is checked here for both)
+	if ( !BSP_LumpsInFile( &header, iBSPLen ) ) {
+		Z_Free(	gpvCachedMapDiskImage);
+				gpvCachedMapDiskImage = NULL;
+
+		Com_Error (ERR_DROP, "CM_LoadMap: %s has a lump outside of the file", name );
 	}
 
 	cmod_base = (byte *)buf;
@@ -867,6 +966,7 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	CMod_LoadEntityString (&header.lumps[LUMP_ENTITIES], cm, name);
 	CMod_LoadVisibility( &header.lumps[LUMP_VISIBILITY], cm );
 	CMod_LoadPatches( &header.lumps[LUMP_SURFACES], &header.lumps[LUMP_DRAWVERTS], cm );
+	CM_CheckReferences( cm );
 
 	TotalSubModels += cm.numSubModels;
 

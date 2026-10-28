@@ -285,6 +285,18 @@ static	void R_LoadVisibility( lump_t *l, world_t &worldData ) {
 	}
 	buf = fileBase + l->fileofs;
 
+	// (a map of a pak: data the lump can not hold, or more clusters than the leaves have, is no data, the map is
+	// drawn as if it had none; len - 8 was negative for a lump of less than 8 bytes)
+	{
+		const int numClusters = ( len >= 8 ) ? LittleLong( ((int *)buf)[0] ) : -1;
+		const int clusterBytes = ( len >= 8 ) ? LittleLong( ((int *)buf)[1] ) : -1;
+
+		if ( numClusters < 0 || numClusters > worldData.numClusters || clusterBytes < ( numClusters + 7 ) / 8
+			|| (long long)numClusters * clusterBytes > len - 8 ) {
+			ri.Printf( PRINT_WARNING, "WARNING: the visibility data of %s does not fit its lump, it is not used\n", worldData.name );
+			return;
+		}
+	}
 	worldData.numClusters = LittleLong( ((int *)buf)[0] );
 	worldData.clusterBytes = LittleLong( ((int *)buf)[1] );
 
@@ -1332,6 +1344,53 @@ void R_MovePatchSurfacesToHunk(world_t &worldData) {
 }
 
 /*
+=================
+R_CheckSurface
+
+A surface of a map from a pak, before it is parsed: its counts are not negative, its vertices and indexes lie in
+their lumps, every index of it names one of its vertices, a patch fits the grid of ParseMesh, and its shader and fog
+are of the map. ParseFace, ParseTriSurf and ParseMesh took them as they were, and the Vulkan world builds from
+what they made.
+=================
+*/
+static void R_CheckSurface( const dsurface_t *in, int numDrawVerts, const int *indexes, int numDrawIndexes, const world_t &worldData ) {
+	const int	type = LittleLong( in->surfaceType ), firstVert = LittleLong( in->firstVert );
+	const int	numVerts = LittleLong( in->numVerts ), firstIndex = LittleLong( in->firstIndex );
+	const int	numIndexes = LittleLong( in->numIndexes ), shaderNum = LittleLong( in->shaderNum );
+	const int	fogNum = LittleLong( in->fogNum );
+	int			i;
+
+	if ( type == MST_FLARE ) {
+		return;
+	}
+	// (fog 0 is none: a surface has fogNum + 1, numfogs counts that one too)
+	if ( shaderNum < 0 || shaderNum >= worldData.numShaders || fogNum < -1 || fogNum + 1 >= worldData.numfogs ) {
+		Com_Error( ERR_DROP, "LoadMap: a surface of %s names a shader or fog it does not have", worldData.name );
+	}
+	if ( numVerts < 0 || firstVert < 0 || firstVert > numDrawVerts || numVerts > numDrawVerts - firstVert ) {
+		Com_Error( ERR_DROP, "LoadMap: a surface of %s has vertices outside of its lump", worldData.name );
+	}
+	if ( type == MST_PATCH ) {
+		const int width = LittleLong( in->patchWidth ), height = LittleLong( in->patchHeight );
+
+		if ( width < 1 || height < 1 || width > MAX_PATCH_SIZE || height > MAX_PATCH_SIZE || width * height > numVerts ) {
+			Com_Error( ERR_DROP, "LoadMap: a patch of %s is %i by %i points", worldData.name, width, height );
+		}
+		return;
+	}
+	if ( numIndexes < 0 || firstIndex < 0 || firstIndex > numDrawIndexes || numIndexes > numDrawIndexes - firstIndex ) {
+		Com_Error( ERR_DROP, "LoadMap: a surface of %s has indexes outside of its lump", worldData.name );
+	}
+	for ( i = 0; i < numIndexes; i++ ) {
+		const int v = LittleLong( indexes[firstIndex + i] );
+
+		if ( v < 0 || v >= numVerts ) {
+			Com_Error( ERR_DROP, "LoadMap: a surface of %s has an index past its vertices", worldData.name );
+		}
+	}
+}
+
+/*
 ===============
 R_LoadSurfaces
 ===============
@@ -1369,6 +1428,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 	worldData.numsurfaces = count;
 
 	for ( i = 0 ; i < count ; i++, in++, out++ ) {
+		R_CheckSurface( in, verts->filelen / sizeof( *dv ), indexes, indexLump->filelen / sizeof( *indexes ), worldData );
 		switch ( LittleLong( in->surfaceType ) ) {
 		case MST_PATCH:
 			ParseMesh ( in, dv, out, worldData, index );
@@ -1898,7 +1958,9 @@ void R_LoadEntities( lump_t *l, world_t &worldData ) {
 
 	// store for reference by the cgame
 	w->entityString = (char *)Hunk_Alloc( l->filelen + 1, h_low );
-	strcpy( w->entityString, p );
+	// (the lump of a map from a pak need not end in a zero: strcpy went on to the next one in the file)
+	memcpy( w->entityString, p, l->filelen );
+	w->entityString[l->filelen] = '\0';
 	w->entityParsePoint = w->entityString;
 
 	COM_BeginParseSession ("R_LoadEntities");
@@ -2036,6 +2098,7 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 
 	// check for cached disk file from the server first...
 	//
+	int fileLen = -1;	// -1: the image of the collision map, which CM_LoadMap checked
 	if (ri.CM_GetCachedMapDiskImage())
 	{
 		buffer = (byte *)ri.CM_GetCachedMapDiskImage();
@@ -2044,9 +2107,12 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 	{
 		// still needs loading...
 		//
-		ri.FS_ReadFile( name, (void **)&buffer );
+		fileLen = (int)ri.FS_ReadFile( name, (void **)&buffer );
 		if ( !buffer ) {
 			Com_Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
+		}
+		if ( fileLen < (int)sizeof( dheader_t ) ) {
+			Com_Error (ERR_DROP, "RE_LoadWorldMap: %s is too short for a map", name);
 		}
 	}
 
@@ -2073,6 +2139,9 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 	// swap all the lumps
 	for (size_t i=0 ; i<sizeof(dheader_t)/4 ; i++) {
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
+	}
+	if ( fileLen >= 0 && !BSP_LumpsInFile( header, fileLen ) ) {
+		Com_Error (ERR_DROP, "RE_LoadWorldMap: %s has a lump outside of the file", name);
 	}
 
 	// load into heap
