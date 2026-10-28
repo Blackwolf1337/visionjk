@@ -63,7 +63,7 @@ static struct {
 	qhandle_t	soft;				// a round light that fades to its rim
 	qhandle_t	sky;				// the colours behind the menus, top to bottom
 	qboolean	tried;
-	qhandle_t	fonts[2];			// SKIN_FONT_SANS and SKIN_FONT_MONO
+	qhandle_t	fonts[3];			// SKIN_FONT_SANS, SKIN_FONT_MONO and SKIN_FONT_BOLD
 	qboolean	fontsTried;
 	qhandle_t	pointer;			// the arrow of the mouse
 	qboolean	pointerTried;
@@ -89,13 +89,17 @@ qboolean Skin_Ready( void ) {
 // The font of "font 5" or "font 6" of a menu file, 0: this engine does not have it and the caller takes a font
 // of the game. An engine that makes the pictures also knows the two names.
 qhandle_t Skin_FontHandle( int iMenuFont ) {
-	if ( !Skin_Ready() || ( iMenuFont != SKIN_FONT_SANS && iMenuFont != SKIN_FONT_MONO ) ) {
+	if ( !Skin_Ready() || iMenuFont < SKIN_FONT_SANS || iMenuFont > SKIN_FONT_BOLD ) {
 		return 0;
 	}
 	if ( !skin.fontsTried ) {
 		skin.fontsTried = qtrue;
 		skin.fonts[0] = DC->RegisterFont( "vision_sans" );
 		skin.fonts[1] = DC->RegisterFont( "vision_mono" );
+		// (an engine from before the bold font has none: the bold words are in the plain one then)
+		skin.fonts[2] = DC->RegisterFont( "vision_sans_bold" );
+		if ( !skin.fonts[2] )
+			skin.fonts[2] = skin.fonts[0];
 	}
 	return skin.fonts[iMenuFont - SKIN_FONT_SANS];
 }

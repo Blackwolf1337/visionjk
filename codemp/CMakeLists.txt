@@ -697,8 +697,9 @@ if(BuildMPEngine)
 	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSans-Regular.ttf" MPEngineFontHash)
 	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/DejaVuSansMono.ttf" MPEngineFontMonoHash)
 	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSansCJKjp-Regular.otf" MPEngineFontCJKHash)
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSans-Bold.ttf" MPEngineFontBoldHash)
 	set_source_files_properties("${MPDir}/client/cl_font.cpp" PROPERTIES COMPILE_DEFINITIONS
-		"FONT_SHA256=\"${MPEngineFontHash}\";FONT_MONO_SHA256=\"${MPEngineFontMonoHash}\";FONT_CJK_SHA256=\"${MPEngineFontCJKHash}\"")
+		"FONT_SHA256=\"${MPEngineFontHash}\";FONT_MONO_SHA256=\"${MPEngineFontMonoHash}\";FONT_CJK_SHA256=\"${MPEngineFontCJKHash}\";FONT_BOLD_SHA256=\"${MPEngineFontBoldHash}\"")
 	if(EMSCRIPTEN)
 		# the updater below brings the checksum code where there is an updater
 		set(MPEngineFiles ${MPEngineFiles} "${SharedDir}/web/web_http.h" "${SharedDir}/web/web_sha256.c")

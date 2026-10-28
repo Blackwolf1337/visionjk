@@ -37,6 +37,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // TTF_CJK, Noto Sans CJK, for Chinese, Japanese and Korean, which the other two do not have: every lookup of a
 // character goes on to it (R_FontTTF_FindAny). No font of its own for the menus.
 //
+// TTF_BOLD, Noto Sans Bold, is only a font of the menus ("vision_sans_bold"): the bold words of the changelog.
+//
 // The first two are also fonts of the menus as a whole, under the names "vision_sans" and "vision_mono" (RE_RegisterFont
 // in tr_font.cpp, R_FontTTF_DrawString here): every letter of a text from the TrueType font, made in the size
 // the text has in pixels of the window, so it is sharp at every scale. The menus with the new look are set in
@@ -90,6 +92,7 @@ enum {
 	TTF_TEXT,							// for the characters the fonts of the game do not have
 	TTF_MONO,							// fixed width, for the console
 	TTF_CJK,							// Chinese, Japanese and Korean, after the other two
+	TTF_BOLD,							// Noto Sans Bold, a font of the menus only ("vision_sans_bold")
 	TTF_NUM_FONTS
 };
 
@@ -423,9 +426,10 @@ window and are placed on whole pixels.
 // capital letter (0.714 of the size in Noto Sans) stands in the middle of a line that is as high as the size
 #define TTF_MENU_BASELINE	0.857f
 
-// TTF_TEXT or TTF_MONO for the names the menus know the two fonts by, -1: no such font, or its file is not there
+// TTF_TEXT, TTF_MONO or TTF_BOLD for the names the menus know the fonts by, -1: no such font, or its file is not there
 int R_FontTTF_ByName( const char *name ) {
-	const int font = !Q_stricmp( name, "vision_sans" ) ? TTF_TEXT : !Q_stricmp( name, "vision_mono" ) ? TTF_MONO : -1;
+	const int font = !Q_stricmp( name, "vision_sans" ) ? TTF_TEXT : !Q_stricmp( name, "vision_mono" ) ? TTF_MONO
+		: !Q_stricmp( name, "vision_sans_bold" ) ? TTF_BOLD : -1;
 
 	return ( font >= 0 && ttf.fonts[font].loaded ) ? font : -1;
 }

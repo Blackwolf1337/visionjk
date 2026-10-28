@@ -31,6 +31,7 @@ drawn as it always was. The file is built into the ui module and into the cgame,
 
 #define SKIN_FONT_SANS		5		// "font 5" of a menu file: Noto Sans, every letter from the TrueType font
 #define SKIN_FONT_MONO		6		// "font 6": DejaVu Sans Mono
+#define SKIN_FONT_BOLD		7		// "font 7": Noto Sans Bold
 #define SKIN_EASE_MSEC		130		// how long a mark takes to come and to go
 
 qboolean	Skin_Ready( void );
