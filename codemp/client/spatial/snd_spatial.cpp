@@ -113,9 +113,17 @@ static void S_SpatialUnload( void ) {
 static qboolean S_SpatialLoad( void ) {
 	const char *missing = NULL;
 
-	Com_sprintf( spatial.libraryPath, sizeof( spatial.libraryPath ), "%s/" SPATIAL_LIBRARY, Sys_BinaryPath() );
+	// (the folder of the program as the system names it: with a bare program name Sys_BinaryPath() is "", which made
+	// "/" SPATIAL_LIBRARY the root of the drive, and the bare name below is looked for in the current folder too)
+#if defined(__EMSCRIPTEN__)
+	const char *folder = "";
+#else
+	const char *folder = Sys_ProgramFolder();
+#endif
+
+	Com_sprintf( spatial.libraryPath, sizeof( spatial.libraryPath ), "%s/" SPATIAL_LIBRARY, folder[0] ? folder : Sys_BinaryPath() );
 	spatial.library = Sys_LoadLibrary( spatial.libraryPath );
-	if ( !spatial.library ) {
+	if ( !spatial.library && !folder[0] ) {
 		Q_strncpyz( spatial.libraryPath, SPATIAL_LIBRARY, sizeof( spatial.libraryPath ) );
 		spatial.library = Sys_LoadLibrary( spatial.libraryPath );
 	}

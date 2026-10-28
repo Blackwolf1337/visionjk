@@ -201,7 +201,7 @@ static qboolean DL_Ext( const char *name, const char *const *exts ) {
 }
 
 // the kind of a file of a pak, by its folder and its extension
-static dlCat_t DL_Kind( const char *name ) {
+static dlCat_t DL_Kind( const char *entryName ) {
 	// what a system could run: libraries, executables, scripts of a shell, and the byte code of a game module
 	static const char *const programs[] = { "dll", "so", "dylib", "exe", "bat", "cmd", "com", "scr", "msi", "ps1", "sh", "vbs",
 		"jar", "app", "bin", "pif", "qvm", NULL };
@@ -210,9 +210,26 @@ static dlCat_t DL_Kind( const char *name ) {
 	static const char *const pictures[] = { "jpg", "jpeg", "tga", "png", "dds", "efx", NULL };
 	static const char *const sounds[] = { "wav", "mp3", "ogg", "roq", NULL };
 	static const char *const configs[] = { "cfg", NULL };
+	// the names a game module is looked for by in a pak besides those (a bundle of macOS is a folder)
+	static const char *const modules[] = { "cgame", "ui", "jampgame", "qagame", NULL };
+	char	name[DL_NAME];
+	int		i;
 
-	if ( DL_Ext( name, programs ) || Q_stristr( name, ".so." ) ) {
+	// (the file system takes '\' for '/', so a folder is the same with either)
+	Q_strncpyz( name, entryName, sizeof( name ) );
+	for ( i = 0; name[i]; i++ ) {
+		if ( name[i] == '\\' ) {
+			name[i] = '/';
+		}
+	}
+
+	if ( DL_Ext( name, programs ) || Q_stristr( name, ".so." ) || Q_stristr( name, ".bundle/" ) || Q_stristr( name, ".app/" ) ) {
 		return CAT_PROGRAMS;
+	}
+	for ( i = 0; modules[i]; i++ ) {
+		if ( !Q_stricmp( name, modules[i] ) ) {
+			return CAT_PROGRAMS;
+		}
 	}
 	if ( DL_Ext( name, configs ) ) {
 		return CAT_CONFIGS;
@@ -287,7 +304,8 @@ static qboolean DL_Files( dlPak_t *pak, qboolean count, fileHandle_t block ) {
 					Q_strncpyz( pak->programs[pak->numPrograms++], name, sizeof( pak->programs[0] ) );
 				}
 			}
-			if ( block && !pak->keep[kind] ) {
+			// (a menu list can name a file of any extension: without menus nothing of the other kind is used either)
+			if ( block && ( !pak->keep[kind] || ( kind == CAT_OTHER && !pak->keep[CAT_MENUS] ) ) ) {
 				Q_strlwr( name );
 				FS_Write( name, (int)strlen( name ), block );
 				FS_Write( "\n", 1, block );

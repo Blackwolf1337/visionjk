@@ -602,6 +602,12 @@ void *Sys_LoadDll( const char *name, qboolean useSystemLib )
 	const char *binarypath = Sys_BinaryPath();
 	const char *basepath = Cvar_VariableString( "fs_basepath" );
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	// the folder of the program file as the system names it: Sys_BinaryPath() is what the program was called with,
+	// "" or "." for a bare name, and then the current folder (of a download or a link) was searched first
+	if ( Sys_ProgramFolder()[0] )
+		binarypath = Sys_ProgramFolder();
+#endif
 	if ( !*binarypath )
 		binarypath = ".";
 
@@ -796,7 +802,7 @@ void *Sys_LoadLegacyGameDll( const char *name, VMMainProc **vmMain, SystemCallPr
 #if defined(MACOS_X) && !defined(_JK2EXE)
 			//First, look for the old-style mac .bundle that's inside a pk3
 			//It's actually zipped, and the zipfile has the same name as 'name'
-			libHandle = Sys_LoadMachOBundle( name );
+			libHandle = com_unpackLibraries->integer ? Sys_LoadMachOBundle( name ) : NULL;	// (from a pak: as the DLLs of Windows, only with com_unpackLibraries)
 #endif
 
 			if (!libHandle) {
@@ -854,7 +860,7 @@ void *Sys_LoadSPGameDll( const char *name, GetGameAPIProc **GetGameAPI )
 #if defined(MACOS_X) && !defined(_JK2EXE)
     //First, look for the old-style mac .bundle that's inside a pk3
     //It's actually zipped, and the zipfile has the same name as 'name'
-    libHandle = Sys_LoadMachOBundle( filename );
+    libHandle = com_unpackLibraries->integer ? Sys_LoadMachOBundle( filename ) : NULL;	// (from a pak: as the DLLs of Windows, only with com_unpackLibraries)
 #endif
 
 	if (!libHandle) {
@@ -929,7 +935,7 @@ void *Sys_LoadGameDll( const char *name, GetModuleAPIProc **moduleAPI )
 #if defined(MACOS_X) && !defined(_JK2EXE)
 			//First, look for the old-style mac .bundle that's inside a pk3
 			//It's actually zipped, and the zipfile has the same name as 'name'
-			libHandle = Sys_LoadMachOBundle( name );
+			libHandle = com_unpackLibraries->integer ? Sys_LoadMachOBundle( name ) : NULL;	// (from a pak: as the DLLs of Windows, only with com_unpackLibraries)
 #endif
 
 			if (!libHandle) {
@@ -1054,6 +1060,19 @@ char *Sys_StripAppBundle( char *dir )
 
 int main ( int argc, char* argv[] )
 {
+#ifdef _WIN32
+	// Libraries by bare name (libcurl, the backends of miniaudio) are looked for in the folder of the program and the
+	// system folders, not in the current folder. Looked up: Windows 7 has it only with KB2533623.
+	{
+		typedef BOOL ( WINAPI *setDirs_t )( DWORD );
+		const setDirs_t setDirs = (setDirs_t)(void *)GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "SetDefaultDllDirectories" );
+
+		if ( setDirs ) {
+			setDirs( 0x00001000 );	// LOAD_LIBRARY_SEARCH_DEFAULT_DIRS
+		}
+	}
+#endif
+
 	int		i;
 	char	commandLine[ MAX_STRING_CHARS ] = { 0 };
 
