@@ -21,10 +21,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/game_version.h"
 #include "sys_local.h"
+#include "sys_memwatch.h"
+#include "con_local.h"
 #include <direct.h>
 #include <io.h>
 #include <shlobj.h>
 #include <windows.h>
+#include <tlhelp32.h>
 
 #define MEM_THRESHOLD (128*1024*1024)
 
@@ -547,8 +550,55 @@ Platform-specific initialization
 // MAX_SEARCH_PATHS limit.
 #define MAX_OPEN_FILES	4096
 
+/*
+================
+Sys_CrashFilter
+
+An exception nothing caught: the crash log, as Sys_CrashHandler of sys_unix.cpp writes one, then Windows ends the
+program as it would have. Before 2026-10-28 such a crash left nothing. Not async safe, like the one of Linux: a
+crash in the allocator may end in here without a log.
+================
+*/
+static LONG WINAPI Sys_CrashFilter( EXCEPTION_POINTERS *info )
+{
+	static volatile LONG crashed;
+
+	if ( !InterlockedExchange( &crashed, 1 ) ) {
+		char path[MAX_OSPATH];
+		FILE *fp;
+
+		Sys_CrashLogPath( path, sizeof( path ) );
+		fp = fopen( path, "w" );
+		if ( fp ) {
+			const EXCEPTION_RECORD *rec = info ? info->ExceptionRecord : NULL;
+
+			fprintf( fp, "%s %s crashed: exception 0x%08lx, address %p", JK_VERSION, PLATFORM_STRING,
+				rec ? (unsigned long)rec->ExceptionCode : 0ul, rec ? rec->ExceptionAddress : NULL );
+			if ( rec && rec->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && rec->NumberParameters >= 2 ) {
+				fprintf( fp, ", %s %p", rec->ExceptionInformation[0] == 8 ? "executing" : rec->ExceptionInformation[0] ? "writing" : "reading",
+					(void *)rec->ExceptionInformation[1] );
+			}
+			if ( rec ) {
+				HMODULE mod = NULL;
+				char name[MAX_OSPATH] = "";
+
+				if ( GetModuleHandleExA( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+						(LPCSTR)rec->ExceptionAddress, &mod ) && GetModuleFileNameA( mod, name, sizeof( name ) ) ) {
+					fprintf( fp, " (%s + 0x%llx)", name, (unsigned long long)( (uintptr_t)rec->ExceptionAddress - (uintptr_t)mod ) );
+				}
+			}
+			fprintf( fp, "\n\nconsole:\n" );
+			ConsoleLogWriteOut( fp );
+			fclose( fp );
+		}
+	}
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
 void Sys_PlatformInit( int argc, char *argv[] ) {
 	TIMECAPS ptc;
+
+	SetUnhandledExceptionFilter( Sys_CrashFilter );
 	if ( timeGetDevCaps( &ptc, sizeof( ptc ) ) == MMSYSERR_NOERROR )
 	{
 		timerResolution = ptc.wPeriodMin;
@@ -611,3 +661,159 @@ void Sys_Sleep( int msec )
 	Sleep( msec );
 #endif
 }
+
+/*
+==============================================================
+
+The memory monitor of the client (client/cl_memwatch.cpp, sys_memwatch.h)
+
+==============================================================
+*/
+
+#ifndef DEDICATED
+
+static void Sys_MemWatchPath( HMODULE mod, char *path, int size )
+{
+	wchar_t wide[MAX_OSPATH];
+	const DWORD len = GetModuleFileNameW( mod, wide, ARRAY_LEN( wide ) );
+
+	path[0] = '\0';
+	if ( len && len < ARRAY_LEN( wide ) && !WideCharToMultiByte( CP_UTF8, 0, wide, -1, path, size, NULL, NULL ) )
+		path[0] = '\0';
+}
+
+// the Windows folder (System32, SysWOW64 and WinSxS are in it) and the temporary folder of the user
+void Sys_MemWatchPlaces( memwPlaces_t *places )
+{
+	static char windows[MAX_OSPATH], temp[MAX_OSPATH];
+	static const char * const system[] = { windows, NULL };
+	static const char * const temporary[] = { temp, NULL };
+	wchar_t wide[MAX_OSPATH];
+	DWORD len;
+
+	windows[0] = temp[0] = '\0';
+	len = GetWindowsDirectoryW( wide, ARRAY_LEN( wide ) );
+	if ( len && len < ARRAY_LEN( wide ) && !WideCharToMultiByte( CP_UTF8, 0, wide, -1, windows, sizeof( windows ), NULL, NULL ) )
+		windows[0] = '\0';
+	len = GetTempPathW( ARRAY_LEN( wide ), wide );
+	if ( len && len < ARRAY_LEN( wide ) && !WideCharToMultiByte( CP_UTF8, 0, wide, -1, temp, sizeof( temp ), NULL, NULL ) )
+		temp[0] = '\0';
+	places->program = Sys_ProgramFolder();
+	places->system = system;
+	places->temporary = temporary;
+	places->foldCase = qtrue;
+}
+
+// the committed executable memory, a module once (its sections are regions of their own)
+int Sys_MemWatchRegions( sysMemRegion_t *regions, int max )
+{
+	const DWORD exec = PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+	SYSTEM_INFO si;
+	MEMORY_BASIC_INFORMATION mbi;
+	uintptr_t addr, top;
+	void *lastImage = NULL;
+	int count = 0;
+
+	GetSystemInfo( &si );
+	addr = (uintptr_t)si.lpMinimumApplicationAddress;
+	top = (uintptr_t)si.lpMaximumApplicationAddress;
+	while ( addr < top && count < max && VirtualQuery( (LPCVOID)addr, &mbi, sizeof( mbi ) ) == sizeof( mbi ) )
+	{
+		const uintptr_t next = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
+
+		if ( mbi.State == MEM_COMMIT && ( mbi.Protect & exec ) && !( mbi.Protect & PAGE_GUARD )
+			&& !( mbi.Type == MEM_IMAGE && mbi.AllocationBase == lastImage ) )
+		{
+			sysMemRegion_t *r = &regions[count++];
+
+			memset( r, 0, sizeof( *r ) );
+			r->start = (uintptr_t)mbi.BaseAddress;
+			r->end = next;
+			// (PAGE_EXECUTE_WRITECOPY is how a section of a module may be mapped, and is no writable code)
+			r->write = (qboolean)( ( mbi.Protect & PAGE_EXECUTE_READWRITE ) != 0 );
+			if ( mbi.Type == MEM_IMAGE )
+			{
+				lastImage = mbi.AllocationBase;
+				r->image = qtrue;
+				Sys_MemWatchPath( (HMODULE)mbi.AllocationBase, r->path, sizeof( r->path ) );
+				if ( !r->path[0] )
+					Q_strncpyz( r->path, "(a module without a name)", sizeof( r->path ) );
+			}
+		}
+		if ( next <= addr )
+			break;
+		addr = next;
+	}
+	return count;
+}
+
+// the processes whose parent is this one and that started after it (a number of a process is used again)
+int Sys_MemWatchChildren( sysMemChild_t *children, int max )
+{
+	const DWORD self = GetCurrentProcessId();
+	HANDLE snap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
+	PROCESSENTRY32W entry;
+	FILETIME selfStart, unused;
+	int count = 0;
+
+	if ( snap == INVALID_HANDLE_VALUE )
+		return -1;
+	GetProcessTimes( GetCurrentProcess(), &selfStart, &unused, &unused, &unused );
+	entry.dwSize = sizeof( entry );
+	for ( BOOL more = Process32FirstW( snap, &entry ); more && count < max; more = Process32NextW( snap, &entry ) )
+	{
+		HANDLE proc;
+		FILETIME start;
+		qboolean after = qfalse;
+
+		if ( entry.th32ParentProcessID != self || entry.th32ProcessID == self )
+			continue;
+		proc = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION, FALSE, entry.th32ProcessID );
+		if ( proc )
+		{
+			if ( GetProcessTimes( proc, &start, &unused, &unused, &unused ) )
+				after = (qboolean)( CompareFileTime( &start, &selfStart ) >= 0 );
+			CloseHandle( proc );
+		}
+		if ( !after )
+			continue;
+		children[count].pid = (int)entry.th32ProcessID;
+		if ( !WideCharToMultiByte( CP_UTF8, 0, entry.szExeFile, -1, children[count].name, sizeof( children[count].name ), NULL, NULL ) )
+			children[count].name[0] = '\0';
+		count++;
+	}
+	CloseHandle( snap );
+	return count;
+}
+
+// the sections of the module with addr in it that hold code
+int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
+{
+	HMODULE mod = NULL;
+	const IMAGE_DOS_HEADER *dos;
+	const IMAGE_NT_HEADERS *nt;
+	const IMAGE_SECTION_HEADER *sec;
+	int count = 0;
+
+	if ( !addr || !GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			(LPCWSTR)addr, &mod ) )
+		return 0;
+	dos = (const IMAGE_DOS_HEADER *)mod;
+	if ( dos->e_magic != IMAGE_DOS_SIGNATURE )
+		return 0;
+	nt = (const IMAGE_NT_HEADERS *)( (const byte *)mod + dos->e_lfanew );
+	if ( nt->Signature != IMAGE_NT_SIGNATURE )
+		return 0;
+	sec = IMAGE_FIRST_SECTION( nt );
+	for ( int i = 0; i < nt->FileHeader.NumberOfSections && count < max; i++, sec++ )
+	{
+		if ( ( sec->Characteristics & IMAGE_SCN_MEM_EXECUTE ) && sec->Misc.VirtualSize )
+		{
+			code[count].start = (uintptr_t)mod + sec->VirtualAddress;
+			code[count].size = sec->Misc.VirtualSize;
+			count++;
+		}
+	}
+	return count;
+}
+#endif // !DEDICATED

@@ -34,6 +34,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "sys_local.h"
 #include "sys_loadlib.h"
 #include "sys_public.h"
+#include "sys_memwatch.h"
 #include "con_local.h"
 #if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
 	#ifdef _WIN32
@@ -152,6 +153,13 @@ an address without blanks, quotes and control characters: it comes from a chat l
 The caller asks the player first. qfalse: it was not handed on.
 ==================
 */
+static int sysOpenURLTime;
+
+// the memory monitor (client/cl_memwatch.cpp): the system starts a program for an address, which is no stranger
+int Sys_OpenURLTime( void ) {
+	return sysOpenURLTime;
+}
+
 qboolean Sys_OpenURL( const char *url ) {
 #ifdef DEDICATED
 	return qfalse;
@@ -168,6 +176,7 @@ qboolean Sys_OpenURL( const char *url ) {
 			return qfalse;
 		}
 	}
+	sysOpenURLTime = Sys_Milliseconds();
 	return (qboolean)( SDL_OpenURL( url ) == 0 );
 #endif
 }
@@ -558,6 +567,8 @@ time_t Sys_FileTime( const char *path )
 Sys_UnloadDll
 =================
 */
+static int sysLibraryGeneration;
+
 void Sys_UnloadDll( void *dllHandle )
 {
 	if( !dllHandle )
@@ -566,7 +577,14 @@ void Sys_UnloadDll( void *dllHandle )
 		return;
 	}
 
+	sysLibraryGeneration++;
 	Sys_UnloadLibrary(dllHandle);
+}
+
+// the memory monitor (client/cl_memwatch.cpp): its code ranges of a module are no good after an unload
+int Sys_LibraryGeneration( void )
+{
+	return sysLibraryGeneration;
 }
 
 /*

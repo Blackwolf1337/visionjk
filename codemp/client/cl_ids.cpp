@@ -47,6 +47,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static const struct {
 	const char	*name;
 	int			leaveAt;				// the client leaves the server at that many of them, 0: never
+	qboolean	local;					// found in this process (cl_memwatch.cpp), not sent by anybody
 } clIds_events[CLIDS_NUM_EVENTS] = {
 	{ "a connectionless packet that claims to be from the server and is not",	0 },	// CLIDS_OOB_SOURCE
 	{ "an echo request from somebody who is not the server",						0 },	// CLIDS_ECHO
@@ -60,6 +61,13 @@ static const struct {
 	{ "cvars it may not set",														0 },	// CLIDS_CVAR
 	{ "a cvar no server may set",													1 },	// CLIDS_CVAR_PROTECTED: with v_ids 0 the engine drops the connection itself
 	{ "a list of servers nobody asked for",											0 },	// CLIDS_MASTER
+	{ "code of the game that changed while it ran",								1, qtrue },	// CLIDS_MEM_CODE
+	{ "code from a deleted or temporary file",									1, qtrue },	// CLIDS_MEM_EXEC
+	{ "a program the game did not start",										1, qtrue },	// CLIDS_MEM_CHILD
+	{ "memory that is writable and executable",									0, qtrue },	// CLIDS_MEM_RWX
+	{ "new executable memory from no file",										0, qtrue },	// CLIDS_MEM_ANON: drivers and overlays make it too
+	{ "a library from outside the game and the system",							0, qtrue },	// CLIDS_MEM_LIBRARY: overlays and injected libraries
+	{ "a crash of the game while it was on a server",							0, qtrue },	// CLIDS_CRASH: at the next start
 };
 
 static cvar_t		*v_ids, *v_idsSeq;
@@ -131,8 +139,8 @@ void CL_IDS_CheckConnect( const netadr_t *adr ) {
 		return;
 	}
 	clIds_left[i].told = qtrue;
-	Com_Error( ERR_DROP, "You left %s before: it sent %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details. Connect again to join anyway.",
-		NET_AdrToString( adr ), clIds_events[clIds_left[i].event].name );
+	Com_Error( ERR_DROP, "You left %s before: %s %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details. Connect again to join anyway.",
+		NET_AdrToString( adr ), clIds_events[clIds_left[i].event].local ? "this client found" : "it sent", clIds_events[clIds_left[i].event].name );
 }
 
 /*
@@ -152,7 +160,7 @@ static void CL_IDS_Status_f( void ) {
 	for ( i = Q_max( 0, clIds_ringCount - CLIDS_RING ); i < clIds_ringCount; i++ ) {
 		const int n = i % CLIDS_RING;
 
-		Com_Printf( "  %s  %s sent %s", clIds_ring[n].time, clIds_ring[n].who, clIds_events[clIds_ring[n].event].name );
+		Com_Printf( "  %s  %s %s", clIds_ring[n].time, clIds_ring[n].who, clIds_events[clIds_ring[n].event].name );
 		Com_Printf( clIds_ring[n].detail[0] ? ": %s\n" : "%s\n", clIds_ring[n].detail );
 	}
 	for ( i = 0; i < CLIDS_LEFT; i++ ) {
@@ -162,7 +170,8 @@ static void CL_IDS_Status_f( void ) {
 		if ( !shown++ ) {
 			Com_Printf( "servers left this run:\n" );
 		}
-		Com_Printf( "  %s, it sent %s%s\n", NET_AdrToString( &clIds_left[i].adr ), clIds_events[clIds_left[i].event].name,
+		Com_Printf( "  %s, %s %s%s\n", NET_AdrToString( &clIds_left[i].adr ),
+			clIds_events[clIds_left[i].event].local ? "this client found" : "it sent", clIds_events[clIds_left[i].event].name,
 			clIds_left[i].told ? "" : " (the next connect is refused once)" );
 	}
 	Com_Printf( "v_idsforget <address|all> forgets a server that was left. The events are in " CLIDS_LOG " of the game folder.\n" );
@@ -220,11 +229,19 @@ static void CL_IDS_Remember( clIdsEvent_t event, const netadr_t *from, const cha
 
 	Com_RealTime( &t );
 	Com_sprintf( clIds_ring[n].time, sizeof( clIds_ring[n].time ), "%02i:%02i:%02i", t.tm_hour, t.tm_min, t.tm_sec );
-	Com_sprintf( clIds_ring[n].who, sizeof( clIds_ring[n].who ), from ? "%s" : "the server %s", adr );
+	if ( clIds_events[event].local ) {
+		Q_strncpyz( clIds_ring[n].who, "this client found", sizeof( clIds_ring[n].who ) );
+	} else {
+		Com_sprintf( clIds_ring[n].who, sizeof( clIds_ring[n].who ), from ? "%s sent" : "the server %s sent", adr );
+	}
 	clIds_ring[n].event = event;
 	Q_strncpyz( clIds_ring[n].detail, Com_IDSDetail( detail, CLIDS_DETAIL ), sizeof( clIds_ring[n].detail ) );
 
-	Cvar_Set( "v_idsLast", va( "IDS: %s sent %s", adr, clIds_events[event].name ) );
+	if ( clIds_events[event].local ) {
+		Cvar_Set( "v_idsLast", va( "IDS: %s", clIds_events[event].name ) );
+	} else {
+		Cvar_Set( "v_idsLast", va( "IDS: %s sent %s", adr, clIds_events[event].name ) );
+	}
 	Cvar_Set( "v_idsSeq", va( "%i", v_idsSeq->integer + 1 ) );
 }
 
@@ -252,10 +269,17 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 		return;
 	}
 
-	Com_sprintf( line, sizeof( line ), "%s sent %s", from ? NET_AdrToString( from ) : va( "the server %s", NET_AdrToString( &clc.serverAddress ) ),
-		clIds_events[event].name );
+	if ( clIds_events[event].local ) {
+		Com_sprintf( line, sizeof( line ), "this client: %s", clIds_events[event].name );
+	} else {
+		Com_sprintf( line, sizeof( line ), "%s sent %s", from ? NET_AdrToString( from ) : va( "the server %s", NET_AdrToString( &clc.serverAddress ) ),
+			clIds_events[event].name );
+	}
 	if ( detail && *detail ) {
 		Q_strcat( line, sizeof( line ), va( ": %s", Com_IDSDetail( detail, CLIDS_DETAIL ) ) );
+	}
+	if ( clIds_events[event].local && cls.state >= CA_CONNECTING && !clc.demoplaying ) {
+		Q_strcat( line, sizeof( line ), va( " (on the server %s)", NET_AdrToString( &clc.serverAddress ) ) );
 	}
 	if ( clIds_skipped[event] ) {
 		Q_strcat( line, sizeof( line ), va( " (and %i more of it)", clIds_skipped[event] ) );
@@ -271,9 +295,18 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 		&& cls.state >= CA_CONNECTED && !clc.demoplaying ) {
 		clIds_counts[event] = 0;
 		CL_IDS_RememberLeft( &clc.serverAddress, event );
-		Com_Error( ERR_DROP, "Left the server: it sent %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details.",
-			clIds_events[event].name );
+		Com_Error( ERR_DROP, "Left the server: %s %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details.",
+			clIds_events[event].local ? "this client found" : "it sent", clIds_events[event].name );
 	}
+}
+
+// the last run crashed on that server (cl_memwatch.cpp): written down, and the next connect to it is refused once
+void CL_IDS_Crashed( const netadr_t *adr, const char *detail ) {
+	if ( !v_ids || !v_ids->integer ) {
+		return;
+	}
+	CL_IDS_Event( CLIDS_CRASH, NULL, detail );
+	CL_IDS_RememberLeft( adr, CLIDS_CRASH );
 }
 
 /*

@@ -494,6 +494,14 @@ typedef enum clIdsEvent_e {
 	CLIDS_CVAR,
 	CLIDS_CVAR_PROTECTED,
 	CLIDS_MASTER,
+	// what the memory monitor (cl_memwatch.cpp) finds in this process, and a crash on a server
+	CLIDS_MEM_CODE,
+	CLIDS_MEM_EXEC,
+	CLIDS_MEM_CHILD,
+	CLIDS_MEM_RWX,
+	CLIDS_MEM_ANON,
+	CLIDS_MEM_LIBRARY,
+	CLIDS_CRASH,
 	CLIDS_NUM_EVENTS
 } clIdsEvent_t;
 
@@ -504,6 +512,16 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 void CL_IDS_ServerCommand( char *text );
 void CL_IDS_CheckConnect( const netadr_t *adr );
 qboolean CL_IDS_Left( const netadr_t *adr );
+void CL_IDS_Crashed( const netadr_t *adr, const char *detail );
+
+//
+// cl_memwatch.cpp: the memory monitor
+//
+void CL_MemWatchInit( void );
+void CL_MemWatchShutdown( void );
+void CL_MemWatchFrame( void );
+void CL_MemWatchConnect( void );
+void CL_MemWatchDisconnect( void );
 
 void CL_StartHunkUsers( void );
 

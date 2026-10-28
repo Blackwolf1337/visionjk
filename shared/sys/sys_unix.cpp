@@ -43,6 +43,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "con_local.h"
 #include "qcommon/game_version.h"
 #include <pthread.h>
+#include "sys_memwatch.h"
+#ifdef __linux__
+#include <link.h>
+#endif
 #if defined(__GLIBC__) || defined(__APPLE__)
 #include <execinfo.h>
 #define SYS_BACKTRACE
@@ -777,3 +781,186 @@ void Sys_AnsiColorPrint( const char *msg )
 		Sys_StderrPrint( buffer );
 	}
 }
+
+/*
+==============================================================
+
+The memory monitor of the client (client/cl_memwatch.cpp, sys_memwatch.h)
+
+==============================================================
+*/
+
+#ifndef DEDICATED
+
+#ifdef __linux__
+int Sys_MemWatchRegions( sysMemRegion_t *regions, int max )
+{
+	char line[MAX_OSPATH + 128];
+	FILE *f = fopen( "/proc/self/maps", "r" );
+	int count = 0;
+
+	if ( !f )
+		return -1;
+	while ( count < max && fgets( line, sizeof( line ), f ) )
+	{
+		const size_t len = strlen( line );
+
+		if ( MemW_ParseMapsLine( line, &regions[count] ) )
+			count++;
+		// the rest of a line longer than the buffer
+		if ( len && line[len - 1] != '\n' )
+		{
+			int c;
+
+			while ( ( c = fgetc( f ) ) != EOF && c != '\n' )
+				;
+		}
+	}
+	fclose( f );
+	return count;
+}
+
+// /proc/self/task/<thread>/children: the processes each thread started (the kernel has them with
+// CONFIG_PROC_CHILDREN, which the kernels of the distributions are built with)
+int Sys_MemWatchChildren( sysMemChild_t *children, int max )
+{
+	DIR *tasks = opendir( "/proc/self/task" );
+	struct dirent *task;
+	int count = 0;
+	qboolean any = qfalse;
+
+	if ( !tasks )
+		return -1;
+	while ( ( task = readdir( tasks ) ) != NULL )
+	{
+		char path[64], list[512];
+		FILE *f;
+		size_t len;
+
+		if ( task->d_name[0] < '0' || task->d_name[0] > '9' )
+			continue;
+		Com_sprintf( path, sizeof( path ), "/proc/self/task/%s/children", task->d_name );
+		f = fopen( path, "r" );
+		if ( !f )
+			continue;
+		any = qtrue;
+		len = fread( list, 1, sizeof( list ) - 1, f );
+		fclose( f );
+		list[len] = '\0';
+
+		for ( char *p = list; *p && count < max; )
+		{
+			const int pid = atoi( p );
+
+			if ( pid > 0 )
+			{
+				FILE *comm;
+
+				children[count].pid = pid;
+				children[count].name[0] = '\0';
+				Com_sprintf( path, sizeof( path ), "/proc/%d/comm", pid );
+				comm = fopen( path, "r" );
+				if ( comm )
+				{
+					if ( fgets( children[count].name, sizeof( children[count].name ), comm ) )
+						children[count].name[strcspn( children[count].name, "\n" )] = '\0';
+					fclose( comm );
+				}
+				count++;
+			}
+			while ( *p && *p != ' ' )
+				p++;
+			while ( *p == ' ' )
+				p++;
+		}
+	}
+	closedir( tasks );
+	return any ? count : -1;
+}
+
+typedef struct {
+	uintptr_t addr;
+	sysMemCode_t *code;
+	int max, count;
+} memWatchFind_t;
+
+static int Sys_MemWatchPhdr( struct dl_phdr_info *info, size_t size, void *data )
+{
+	memWatchFind_t *find = (memWatchFind_t *)data;
+	qboolean has = qfalse;
+	int i;
+
+	for ( i = 0; i < info->dlpi_phnum; i++ )
+	{
+		const ElfW(Phdr) *ph = &info->dlpi_phdr[i];
+		const uintptr_t start = info->dlpi_addr + ph->p_vaddr;
+
+		if ( ph->p_type == PT_LOAD && find->addr >= start && find->addr < start + ph->p_memsz )
+			has = qtrue;
+	}
+	if ( !has )
+		return 0;
+	for ( i = 0; i < info->dlpi_phnum && find->count < find->max; i++ )
+	{
+		const ElfW(Phdr) *ph = &info->dlpi_phdr[i];
+
+		if ( ph->p_type == PT_LOAD && ( ph->p_flags & PF_X ) && ph->p_memsz )
+		{
+			find->code[find->count].start = info->dlpi_addr + ph->p_vaddr;
+			find->code[find->count].size = ph->p_memsz;
+			find->count++;
+		}
+	}
+	return 1;
+}
+
+int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
+{
+	memWatchFind_t find = { (uintptr_t)addr, code, max, 0 };
+
+	if ( addr )
+		dl_iterate_phdr( Sys_MemWatchPhdr, &find );
+	return find.count;
+}
+
+void Sys_MemWatchPlaces( memwPlaces_t *places )
+{
+	static const char * const system[] = { "/usr", "/lib", "/lib32", "/lib64", "/opt", "/nix/store", "/gnu/store",
+		"/app", "/run/host", "/snap", NULL };
+	static char runtime[MAX_OSPATH];
+	static const char *temporary[] = { "/tmp", "/var/tmp", "/dev/shm", runtime, NULL };
+	const char *xdg = getenv( "XDG_RUNTIME_DIR" );
+
+	Q_strncpyz( runtime, xdg && xdg[0] == '/' ? xdg : "", sizeof( runtime ) );
+	places->program = Sys_ProgramFolder();
+	places->system = system;
+	places->temporary = temporary;
+	places->foldCase = qfalse;
+}
+#else
+void Sys_MemWatchPlaces( memwPlaces_t *places )
+{
+	static const char * const none[] = { NULL };
+
+	places->program = Sys_ProgramFolder();
+	places->system = none;
+	places->temporary = none;
+	places->foldCase = qfalse;
+}
+
+int Sys_MemWatchRegions( sysMemRegion_t *regions, int max )
+{
+	return -1;
+}
+
+int Sys_MemWatchChildren( sysMemChild_t *children, int max )
+{
+	return -1;
+}
+
+int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
+{
+	return 0;
+}
+#endif
+#endif // !DEDICATED

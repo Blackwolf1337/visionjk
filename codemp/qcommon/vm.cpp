@@ -194,6 +194,16 @@ vm_t *VM_Create( vmSlots_t vmSlot ) {
 	return NULL;
 }
 
+// an address inside the module of a slot, NULL when none is loaded (the memory monitor, client/cl_memwatch.cpp)
+void *VM_ModuleAddress( vmSlots_t vmSlot ) {
+	const vm_t *vm = vmSlot >= 0 && vmSlot < MAX_VM ? vmTable[vmSlot] : NULL;
+
+	if ( !vm || !vm->dllHandle ) {
+		return NULL;
+	}
+	return vm->isLegacy ? (void *)vm->legacy.main : (void *)vm->GetModuleAPI;
+}
+
 void VM_Free( vm_t *vm ) {
 	if ( !vm )
 		return;

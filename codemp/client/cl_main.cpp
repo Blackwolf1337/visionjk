@@ -835,6 +835,7 @@ void CL_Disconnect( qboolean showMainMenu ) {
 	// what came of a pak that did not finish (a fetch from the web address that was let go may still write into
 	// it: Linux takes the name away at once, Windows keeps it and the next download of the pak writes it anew)
 	CL_DownloadRemoveTemp();
+	CL_MemWatchDisconnect();
 	*clc.downloadTempName = *clc.downloadName = 0;
 	Cvar_Set( "cl_downloadName", "" );
 
@@ -1184,6 +1185,7 @@ void CL_Connect_f( void ) {
 
 	// a server the client left for the intrusion detection: once refused with the reason
 	CL_IDS_CheckConnect( &clc.serverAddress );
+	CL_MemWatchConnect();
 
 	serverString = NET_AdrToString(&clc.serverAddress);
 
@@ -2424,6 +2426,7 @@ void CL_Frame ( int msec ) {
 
 	CL_UpdateFrame();
 	CL_DownloadWebFrame();
+	CL_MemWatchFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
@@ -3067,6 +3070,7 @@ void CL_Init( void ) {
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60 0xb2", CVAR_ARCHIVE, "Which keys are used to toggle the console");
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
 	CL_IDS_Init();
+	CL_MemWatchInit();
 	v_utf8 = Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
 	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
@@ -3204,6 +3208,7 @@ void CL_Shutdown( void ) {
 
 	CL_UpdateShutdown();
 	CL_IDS_Shutdown();
+	CL_MemWatchShutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );

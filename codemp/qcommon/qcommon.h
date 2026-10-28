@@ -325,6 +325,7 @@ typedef enum {
 void			VM_Init( void );
 vm_t			*VM_CreateLegacy( vmSlots_t vmSlot, intptr_t (*systemCalls)(intptr_t *) );
 vm_t			*VM_Create( vmSlots_t vmSlot );
+void			*VM_ModuleAddress( vmSlots_t vmSlot );
 void			 VM_Free( vm_t *vm );
 void			 VM_Clear(void);
 vm_t			*VM_Restart( vm_t *vm );
