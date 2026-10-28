@@ -1185,6 +1185,7 @@ void CL_Connect_f( void ) {
 
 	// a server the client left for the intrusion detection: once refused with the reason
 	CL_IDS_CheckConnect( &clc.serverAddress );
+	CL_RepCheckConnect( &clc.serverAddress );
 	CL_MemWatchConnect();
 
 	serverString = NET_AdrToString(&clc.serverAddress);
@@ -2188,6 +2189,12 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 
 	// list of servers sent back by a master server (classic). From anybody else it would put made up servers into
 	// the browser, which then pings every address in it.
+	// the VisionJK masterserver about the intrusion detection (cl_reputation.cpp, which looks at the sender)
+	if ( !Q_stricmpn( c, "ids", 3 ) ) {
+		CL_RepPacket( from, c );
+		return;
+	}
+
 	if ( !Q_strncmp(c, "getserversResponse", 18) ) {
 		if ( !CL_MasterAsked( from ) ) {
 			CL_IDS_Event( CLIDS_MASTER, from, NULL );
@@ -2427,6 +2434,7 @@ void CL_Frame ( int msec ) {
 	CL_UpdateFrame();
 	CL_DownloadWebFrame();
 	CL_MemWatchFrame();
+	CL_RepFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
@@ -3071,6 +3079,7 @@ void CL_Init( void ) {
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
 	CL_IDS_Init();
 	CL_MemWatchInit();
+	CL_RepInit();
 	v_utf8 = Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
 	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
@@ -3209,6 +3218,7 @@ void CL_Shutdown( void ) {
 	CL_UpdateShutdown();
 	CL_IDS_Shutdown();
 	CL_MemWatchShutdown();
+	CL_RepShutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );
@@ -3830,6 +3840,8 @@ void CL_GlobalServers_f( void ) {
 	netadr_t	to;
 	int			count, i, masterNum;
 	char		command[1024], *masteraddress;
+
+	CL_RepRefresh();
 
 	if ((count = Cmd_Argc()) < 3 || (masterNum = atoi(Cmd_Argv(1))) < 0 || masterNum > MAX_MASTER_SERVERS)
 	{

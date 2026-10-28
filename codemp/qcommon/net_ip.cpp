@@ -177,6 +177,48 @@ static qboolean Sys_StringToSockaddr( const char *s, struct sockaddr_in *sadr )
 
 /*
 =============
+Sys_ResolveIPv4
+
+The IPv4 address of a name, for a thread of its own: it waits for the name server and may be called from any
+thread (getaddrinfo; on Windows gethostbyname, whose answer winsock keeps per thread). Sys_StringToSockaddr may
+not, gethostbyname of the C libraries of Linux has one answer for all threads.
+=============
+*/
+qboolean Sys_ResolveIPv4( const char *name, byte ip[4] )
+{
+	uint32_t addr = INADDR_NONE;
+
+	if ( name[0] >= '0' && name[0] <= '9' )
+	{
+		addr = inet_addr( name );
+	}
+	else
+	{
+#ifdef _WIN32
+		const struct hostent *h = gethostbyname( name );
+
+		if ( h && h->h_addrtype == AF_INET && h->h_addr_list[0] )
+			memcpy( &addr, h->h_addr_list[0], 4 );
+#else
+		struct addrinfo hints, *res = NULL;
+
+		memset( &hints, 0, sizeof( hints ) );
+		hints.ai_family = AF_INET;
+		hints.ai_socktype = SOCK_DGRAM;
+		if ( !getaddrinfo( name, NULL, &hints, &res ) && res )
+			addr = ( (const struct sockaddr_in *)res->ai_addr )->sin_addr.s_addr;
+		if ( res )
+			freeaddrinfo( res );
+#endif
+	}
+	if ( addr == INADDR_NONE || !addr )
+		return qfalse;
+	memcpy( ip, &addr, 4 );
+	return qtrue;
+}
+
+/*
+=============
 Sys_StringToAdr
 =============
 */

@@ -325,6 +325,10 @@ void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 		if ( CL_IDS_Left( &server->adr ) ) {
 			Info_SetValueForKey( info, "ids", "1" );
 		}
+		// players from that many networks left it (the list of the VisionJK masterserver, cl_reputation.cpp)
+		if ( CL_RepNetworks( &server->adr ) ) {
+			Info_SetValueForKey( info, "rep", va( "%i", CL_RepNetworks( &server->adr ) ) );
+		}
 //		Info_SetValueForKey( info, "sv_allowAnonymous", va("%i", server->allowAnonymous));
 //		Info_SetValueForKey( info, "pure", va("%i", server->pure ) );
 		Q_strncpyz(buf, info, buflen);

@@ -526,6 +526,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_font.cpp"
 		"${MPDir}/client/cl_ids.cpp"
 		"${MPDir}/client/cl_memwatch.cpp"
+		"${MPDir}/client/cl_reputation.cpp"
 		"${MPDir}/client/cl_input.cpp"
 		"${MPDir}/client/cl_keys.cpp"
 		"${MPDir}/client/cl_lan.cpp"
@@ -909,6 +910,9 @@ if(BuildMPDed)
 			${MPDedFiles}
 			"${MPDir}/master/ms_relay.c"
 			"${MPDir}/master/ms_relay.h"
+			"${MPDir}/master/ms_reputation.c"
+			"${MPDir}/master/ms_reputation.h"
+			"${MPDir}/server/sv_reputation.cpp"
 			"${MPDir}/master/ms_boombox.c"
 			"${MPDir}/master/ms_local.h"
 			"${MPDir}/game/boombox/bg_boombox.c"

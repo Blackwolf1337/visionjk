@@ -523,6 +523,18 @@ void CL_MemWatchFrame( void );
 void CL_MemWatchConnect( void );
 void CL_MemWatchDisconnect( void );
 
+//
+// cl_reputation.cpp: the reports of the intrusion detection to the VisionJK masterserver, and its list
+//
+void CL_RepInit( void );
+void CL_RepShutdown( void );
+void CL_RepFrame( void );
+void CL_RepQueue( const netadr_t *server, clIdsEvent_t event );
+void CL_RepRefresh( void );
+void CL_RepCheckConnect( const netadr_t *adr );
+void CL_RepPacket( const netadr_t *from, const char *command );
+int CL_RepNetworks( const netadr_t *adr );
+
 void CL_StartHunkUsers( void );
 
 qboolean CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot );

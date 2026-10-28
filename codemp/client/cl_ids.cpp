@@ -295,6 +295,7 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 		&& cls.state >= CA_CONNECTED && !clc.demoplaying ) {
 		clIds_counts[event] = 0;
 		CL_IDS_RememberLeft( &clc.serverAddress, event );
+		CL_RepQueue( &clc.serverAddress, event );
 		Com_Error( ERR_DROP, "Left the server: %s %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details.",
 			clIds_events[event].local ? "this client found" : "it sent", clIds_events[event].name );
 	}
@@ -307,6 +308,7 @@ void CL_IDS_Crashed( const netadr_t *adr, const char *detail ) {
 	}
 	CL_IDS_Event( CLIDS_CRASH, NULL, detail );
 	CL_IDS_RememberLeft( adr, CLIDS_CRASH );
+	CL_RepQueue( adr, CLIDS_CRASH );
 }
 
 /*

@@ -732,6 +732,10 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		// if a client starts up a local server, we may see some spurious
 		// server disconnect messages when their new server sees our final
 		// sequenced messages to the old client
+#ifdef VISION_MASTER
+	} else if ( SV_RepPacket( from, c ) ) {
+		// the reports of the intrusion detection of the clients (sv_reputation.cpp)
+#endif
 	} else {
 		if ( com_developer->integer ) {
 			Com_Printf( "bad connectionless packet from %s:\n%s\n",
@@ -1168,6 +1172,7 @@ void SV_Frame( int msec ) {
 
 #ifdef VISION_MASTER
 	SV_VoiceFrame();
+	SV_RepFrame();
 #endif
 
 	// if it isn't time for the next frame, do nothing

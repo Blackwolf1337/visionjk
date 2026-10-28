@@ -154,6 +154,7 @@ void		Sys_SendPacket( int length, const void *data, const netadr_t *to );
 //Does NOT parse port numbers, only base addresses.
 qboolean	Sys_StringToAdr( const char *s, netadr_t *a );
 qboolean	Sys_IsLANAddress (const netadr_t *adr);
+qboolean	Sys_ResolveIPv4( const char *name, byte ip[4] );	// may be called from any thread, waits for the name server
 void		Sys_ShowIP(void);
 
 

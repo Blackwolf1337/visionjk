@@ -8887,6 +8887,10 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 					if ( atoi( Info_ValueForKey( info, "ids" ) ) ) {
 						return S_COLOR_RED "IDS";
 					}
+					// players from other networks left it, by the list of the VisionJK masterserver
+					if ( atoi( Info_ValueForKey( info, "rep" ) ) ) {
+						return S_COLOR_ORANGE "IDS";
+					}
 					if (ping <= 0) {
 						return "...";
 					} else {

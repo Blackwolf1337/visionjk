@@ -39,6 +39,7 @@ set(TestFiles
 	"vjk/missing.cpp"
 	"vjk/stringed.cpp"
 	"vjk/memwatch.cpp"
+	"vjk/reputation.cpp"
 	)
 # The C code of the game the tests in vjk/ look at. The stub of Com_Error throws through it, so it is built with
 # the tables for that.
@@ -51,6 +52,7 @@ set(TestCFiles
 	"${SharedDir}/web/web_base64.c"
 	"${SharedDir}/web/web_missing.c"
 	"${SharedDir}/sys/sys_memwatch_rules.c"
+	"${MPDir}/master/ms_reputation.c"
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/game/voice/bg_voice.c"
 	"${MPDir}/game/auth/bg_auth.c"

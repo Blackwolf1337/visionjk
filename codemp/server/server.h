@@ -487,6 +487,12 @@ void		SV_GameSendDatagram( const byte *ip, int port, const byte *data, int lengt
 #ifdef VISION_MASTER
 void		SV_VoiceFrame( void );
 void		SV_VoiceShutdown( void );
+
+// sv_reputation.cpp: the reports of the intrusion detection of the clients
+void		SV_RepInit( void );
+void		SV_RepShutdown( void );
+void		SV_RepFrame( void );
+qboolean	SV_RepPacket( const netadr_t *from, const char *command );
 #endif
 
 extern	cvar_t	*vs_antiWallhack;		// sv_snapshot.cpp
