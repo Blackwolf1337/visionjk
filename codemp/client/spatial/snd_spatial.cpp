@@ -85,23 +85,24 @@ cvar_t	*v_spatialGpu;
 
 spatialState_t	spatial;
 
+// Steam Audio stays loaded from its first start to the end of the game, and so do its context and its Embree
+// device. Made anew with every start of the sound system, each Embree device left its pool of threads behind (23
+// on a CPU of 24 threads, made when the first level was built in it): a player who switched 3D Sound on and off
+// had 445 threads after 28 starts (2026-10-28), also before the rays went to the graphics card.
+static struct {
+	void			*library;
+	char			path[MAX_OSPATH];
+	IPLContext		context;
+	IPLEmbreeDevice	embree;
+	qboolean		embreeAsked;		// it was made, or the library has none: asked once
+} spatialKept;
+
 static void S_SpatialUnload( void ) {
-	// a bake that still runs calls into it: the library and its functions stay until S_SpatialReapBake()
+	// a bake that still runs calls into it: its functions stay until S_SpatialReapBake(). The library stays anyway.
+	spatial.library = NULL;
 	if ( spatialBake.thread && spatialBakeState.load() == BAKE_RUNNING ) {
-		if ( spatial.library ) {
-			if ( spatialBake.library ) {
-				Sys_UnloadLibrary( spatial.library );	// (it is the same one, loaded twice)
-			} else {
-				spatialBake.library = spatial.library;
-			}
-		}
-		spatial.library = NULL;
 		return;
 	}
-	if ( spatial.library ) {
-		Sys_UnloadLibrary( spatial.library );
-	}
-	spatial.library = NULL;
 #define X( name )	q##name = NULL;
 	SPATIAL_FUNCTIONS( X )
 #undef X
@@ -122,9 +123,16 @@ static qboolean S_SpatialLoad( void ) {
 	const char *folder = Sys_ProgramFolder();
 #endif
 
-	Com_sprintf( spatial.libraryPath, sizeof( spatial.libraryPath ), "%s/" SPATIAL_LIBRARY, folder[0] ? folder : Sys_BinaryPath() );
-	spatial.library = Sys_LoadLibrary( spatial.libraryPath );
-	if ( !spatial.library && !folder[0] ) {
+	if ( spatialKept.library ) {
+		spatial.library = spatialKept.library;
+		Q_strncpyz( spatial.libraryPath, spatialKept.path, sizeof( spatial.libraryPath ) );
+		folder = NULL;
+	}
+	if ( folder ) {
+		Com_sprintf( spatial.libraryPath, sizeof( spatial.libraryPath ), "%s/" SPATIAL_LIBRARY, folder[0] ? folder : Sys_BinaryPath() );
+		spatial.library = Sys_LoadLibrary( spatial.libraryPath );
+	}
+	if ( !spatial.library && folder && !folder[0] ) {
 		Q_strncpyz( spatial.libraryPath, SPATIAL_LIBRARY, sizeof( spatial.libraryPath ) );
 		spatial.library = Sys_LoadLibrary( spatial.libraryPath );
 	}
@@ -137,9 +145,14 @@ static qboolean S_SpatialLoad( void ) {
 #undef X
 	if ( missing ) {
 		Com_Printf( "v_spatial: %s has no %s, the sound stays as it is\n", spatial.libraryPath, missing );
+		if ( !spatialKept.library ) {
+			Sys_UnloadLibrary( spatial.library );
+		}
 		S_SpatialUnload();
 		return qfalse;
 	}
+	spatialKept.library = spatial.library;
+	Q_strncpyz( spatialKept.path, spatial.libraryPath, sizeof( spatialKept.path ) );
 #ifndef __EMSCRIPTEN__
 	qiplEmbreeDeviceCreate = (decltype( qiplEmbreeDeviceCreate ))Sys_LoadFunction( spatial.library, "iplEmbreeDeviceCreate" );
 	qiplEmbreeDeviceRelease = (decltype( qiplEmbreeDeviceRelease ))Sys_LoadFunction( spatial.library, "iplEmbreeDeviceRelease" );
@@ -257,13 +270,7 @@ static void S_SpatialRelease( void ) {
 	if ( spatial.hrtf ) {
 		qiplHRTFRelease( &spatial.hrtf );
 	}
-	// a scene that still holds it keeps it for as long as it is there (a bake that was left to run)
-	if ( spatial.embree ) {
-		qiplEmbreeDeviceRelease( &spatial.embree );
-	}
-	if ( spatial.context ) {
-		qiplContextRelease( &spatial.context );
-	}
+	// the context and the Embree device stay (spatialKept)
 	S_SpatialUnload();
 	memset( &spatial, 0, sizeof( spatial ) );
 }
@@ -533,7 +540,11 @@ void S_SpatialInit( void ) {
 	memset( &contextSettings, 0, sizeof( contextSettings ) );
 	contextSettings.version = STEAMAUDIO_VERSION;
 	contextSettings.simdLevel = IPL_SIMDLEVEL_AVX2;
-	if ( qiplContextCreate( &contextSettings, &spatial.context ) != IPL_STATUS_SUCCESS ) {
+	if ( !spatialKept.context && qiplContextCreate( &contextSettings, &spatialKept.context ) != IPL_STATUS_SUCCESS ) {
+		spatialKept.context = NULL;
+	}
+	spatial.context = spatialKept.context;
+	if ( !spatial.context ) {
 		Com_Printf( "v_spatial: %s does not go with version %i.%i.%i of the header, the sound stays as it is\n", spatial.libraryPath,
 			STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH );
 		spatial.context = NULL;
@@ -542,18 +553,19 @@ void S_SpatialInit( void ) {
 	}
 
 	// the rays by Embree where the library has it, and threads for them on the cores the game does not keep
-	spatial.sceneType = IPL_SCENETYPE_DEFAULT;
-	spatial.embree = NULL;
-	if ( qiplEmbreeDeviceCreate && qiplEmbreeDeviceRelease ) {
+	if ( !spatialKept.embreeAsked && qiplEmbreeDeviceCreate && qiplEmbreeDeviceRelease ) {
 		IPLEmbreeDeviceSettings embreeSettings;
 
+		spatialKept.embreeAsked = qtrue;
 		memset( &embreeSettings, 0, sizeof( embreeSettings ) );
-		if ( qiplEmbreeDeviceCreate( spatial.context, &embreeSettings, &spatial.embree ) == IPL_STATUS_SUCCESS ) {
-			spatial.sceneType = IPL_SCENETYPE_EMBREE;
-		} else {
-			spatial.embree = NULL;
-			Com_Printf( "v_spatial: no Embree, Steam Audio traces the rays itself\n" );
+		if ( qiplEmbreeDeviceCreate( spatial.context, &embreeSettings, &spatialKept.embree ) != IPL_STATUS_SUCCESS ) {
+			spatialKept.embree = NULL;
 		}
+	}
+	spatial.embree = spatialKept.embree;
+	spatial.sceneType = spatial.embree ? IPL_SCENETYPE_EMBREE : IPL_SCENETYPE_DEFAULT;
+	if ( !spatial.embree ) {
+		Com_Printf( "v_spatial: no Embree, Steam Audio traces the rays itself\n" );
 	}
 #ifdef __EMSCRIPTEN__
 	spatial.threads = spatial.bakeThreads = SPATIAL_THREADS;
