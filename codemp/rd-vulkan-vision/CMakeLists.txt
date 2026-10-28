@@ -44,32 +44,19 @@ else()
 	endif()
 endif()
 
-# Only the headers of Vulkan are needed: the library is loaded by the window code at run time (vk_funcs.h).
-# -DVulkanHeadersDir=<dir with vulkan/vulkan.h> names where they are if they are not found.
-# The renderer is built by default, so a machine without the headers or without glslc is told what is missing
-# and builds the rest, as with the other things this tree builds by default.
+# Only the headers of Vulkan are needed: the library is loaded by the window code at run time (vk_funcs.h), see
+# cmake/Modules/VulkanHeaders.cmake. The renderer is built by default, so a machine without the headers or
+# without glslc is told what is missing and builds the rest, as with the other things this tree builds by default.
 if(MPVulkanVisionVulkanTarget)
-	find_path(VulkanHeadersDir vulkan/vulkan.h)
-	if(NOT VulkanHeadersDir AND CMAKE_CROSSCOMPILING AND EXISTS "/usr/include/vulkan/vulkan.h")
-		set(VulkanHeadersDir "/usr/include" CACHE PATH "Vulkan headers" FORCE)
-	endif()
+	include(VulkanHeaders)
+	jp_vulkan_headers(MPVulkanVisionVulkanHeaders "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
 	find_program(GLSLC glslc)
-	if(NOT VulkanHeadersDir)
+	if(NOT MPVulkanVisionVulkanHeaders)
 		message(WARNING "rd-vulkan-vision is not built: it needs the Vulkan headers (vulkan/vulkan.h), set VulkanHeadersDir. -DBuildMPRdVulkanVision=OFF silences this.")
 		set(MPVulkanVisionVulkanTarget)
 	elseif(NOT GLSLC)
 		message(WARNING "rd-vulkan-vision is not built: it needs glslc (package shaderc) to compile its shaders. -DBuildMPRdVulkanVision=OFF silences this.")
 		set(MPVulkanVisionVulkanTarget)
-	elseif(CMAKE_CROSSCOMPILING)
-		# The headers are the same for every platform, so the ones of the host do. But their directory may be the
-		# include directory of the host, which a cross compiler must not see: it gets a copy of the two directories.
-		file(COPY "${VulkanHeadersDir}/vulkan" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
-		if(EXISTS "${VulkanHeadersDir}/vk_video")
-			file(COPY "${VulkanHeadersDir}/vk_video" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
-		endif()
-		set(MPVulkanVisionVulkanHeaders "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
-	else()
-		set(MPVulkanVisionVulkanHeaders "${VulkanHeadersDir}")
 	endif()
 endif()
 # The library for the desktop links the OpenGL ES of the system. A browser has it in the engine, see below.
