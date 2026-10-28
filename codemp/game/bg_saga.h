@@ -110,8 +110,9 @@ extern int bgNumSiegeClasses;
 extern siegeTeam_t bgSiegeTeams[MAX_SIEGE_TEAMS];
 extern int bgNumSiegeTeams;
 
-int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf);
-int BG_SiegeGetPairedValue(char *buf, char *key, char *outbuf);
+// outSize: the size of outbuf; a value or group that does not fit is cut
+int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf, int outSize);
+int BG_SiegeGetPairedValue(char *buf, char *key, char *outbuf, int outSize);
 void BG_SiegeStripTabs(char *buf);
 
 void BG_SiegeLoadClasses(siegeClassDesc_t *descBuffer);

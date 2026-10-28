@@ -203,7 +203,7 @@ void BG_SiegeStripTabs(char *buf)
 	buf[i_r] = '\0';
 }
 
-int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf)
+int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf, int outSize)
 {
 	int i = 0;
 	int j;
@@ -234,8 +234,10 @@ int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf)
 						break;
 					}
 
-					checkGroup[j] = buf[i];
-					j++;
+					// (the name and the group come from a .siege file of a pak: what does not fit is not stored)
+					if ( j < (int)sizeof( checkGroup ) - 1 ) {
+						checkGroup[j++] = buf[i];
+					}
 					i++;
 				}
 				checkGroup[j] = 0;
@@ -303,8 +305,9 @@ int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf)
 							if ((buf[i] != '{' || parseGroups > 1) &&
 								(buf[i] != '}' || parseGroups > 0))
 							{ //don't put the start and end brackets for this group into the output buffer
-								outbuf[j] = buf[i];
-								j++;
+								if ( j < outSize - 1 ) {
+									outbuf[j++] = buf[i];
+								}
 							}
 
 							if (buf[i] == '}' && !parseGroups)
@@ -420,7 +423,7 @@ int BG_SiegeGetValueGroup(char *buf, char *group, char *outbuf)
 	return 0; //guess we never found it.
 }
 
-int BG_SiegeGetPairedValue(char *buf, char *key, char *outbuf)
+int BG_SiegeGetPairedValue(char *buf, char *key, char *outbuf, int outSize)
 {
 	int i = 0;
 	int j;
@@ -450,8 +453,9 @@ int BG_SiegeGetPairedValue(char *buf, char *key, char *outbuf)
 						break;
 					}
 
-					checkKey[j] = buf[i];
-					j++;
+					if ( j < (int)sizeof( checkKey ) - 1 ) {
+						checkKey[j++] = buf[i];
+					}
 					i++;
 				}
 				checkKey[j] = 0;
@@ -525,8 +529,9 @@ int BG_SiegeGetPairedValue(char *buf, char *key, char *outbuf)
 									{ //hit a comment after the value? This isn't an ideal way to be writing things, but we'll support it anyway.
 										break;
 									}
-									outbuf[j] = buf[i];
-									j++;
+									if ( j < outSize - 1 ) {
+										outbuf[j++] = buf[i];
+									}
 									i++;
 
 									if (!buf[i])
@@ -797,7 +802,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	//first get the description if we have a buffer for it
 	if (descBuffer)
 	{
-		if (!BG_SiegeGetPairedValue(classInfo, "description", descBuffer->desc))
+		if (!BG_SiegeGetPairedValue(classInfo, "description", descBuffer->desc, sizeof( descBuffer->desc )))
 		{
 			Q_strncpyz(descBuffer->desc, "DESCRIPTION UNAVAILABLE", sizeof(descBuffer->desc));
 		}
@@ -807,10 +812,10 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 		assert(strlen(descBuffer->desc) < SIEGE_CLASS_DESC_LEN);
 	}
 
-	BG_SiegeGetValueGroup(classInfo, "ClassInfo", classInfo);
+	BG_SiegeGetValueGroup(classInfo, "ClassInfo", classInfo, sizeof( classInfo ));
 
 	//Parse name
-	if (BG_SiegeGetPairedValue(classInfo, "name", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "name", parseBuf, sizeof( parseBuf )))
 	{
 		Q_strncpyz(bgSiegeClasses[bgNumSiegeClasses].name, parseBuf, sizeof(bgSiegeClasses[0].name));
 	}
@@ -820,7 +825,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse forced model
-	if (BG_SiegeGetPairedValue(classInfo, "model", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "model", parseBuf, sizeof( parseBuf )))
 	{
 		Q_strncpyz(bgSiegeClasses[bgNumSiegeClasses].forcedModel, parseBuf, sizeof(bgSiegeClasses[0].forcedModel));
 	}
@@ -830,7 +835,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse forced skin
-	if (BG_SiegeGetPairedValue(classInfo, "skin", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "skin", parseBuf, sizeof( parseBuf )))
 	{
 		Q_strncpyz(bgSiegeClasses[bgNumSiegeClasses].forcedSkin, parseBuf, sizeof(bgSiegeClasses[0].forcedSkin));
 	}
@@ -840,7 +845,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse first saber
-	if (BG_SiegeGetPairedValue(classInfo, "saber1", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "saber1", parseBuf, sizeof( parseBuf )))
 	{
 		Q_strncpyz(bgSiegeClasses[bgNumSiegeClasses].saber1, parseBuf, sizeof(bgSiegeClasses[0].saber1));
 	}
@@ -850,7 +855,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse second saber
-	if (BG_SiegeGetPairedValue(classInfo, "saber2", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "saber2", parseBuf, sizeof( parseBuf )))
 	{
 		Q_strncpyz(bgSiegeClasses[bgNumSiegeClasses].saber2, parseBuf, sizeof(bgSiegeClasses[0].saber2));
 	}
@@ -860,7 +865,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse forced saber stance
-	if (BG_SiegeGetPairedValue(classInfo, "saberstyle", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "saberstyle", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].saberStance = BG_SiegeTranslateGenericTable(parseBuf, StanceTable, qtrue);
 	}
@@ -870,7 +875,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse forced saber color
-	if (BG_SiegeGetPairedValue(classInfo, "sabercolor", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "sabercolor", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].forcedSaberColor = atoi(parseBuf);
 		bgSiegeClasses[bgNumSiegeClasses].hasForcedSaberColor = qtrue;
@@ -881,7 +886,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse forced saber2 color
-	if (BG_SiegeGetPairedValue(classInfo, "saber2color", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "saber2color", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].forcedSaber2Color = atoi(parseBuf);
 		bgSiegeClasses[bgNumSiegeClasses].hasForcedSaber2Color = qtrue;
@@ -892,7 +897,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse weapons
-	if (BG_SiegeGetPairedValue(classInfo, "weapons", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "weapons", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].weapons = BG_SiegeTranslateGenericTable(parseBuf, WPTable, qtrue);
 	}
@@ -910,7 +915,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse forcepowers
-	if (BG_SiegeGetPairedValue(classInfo, "forcepowers", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "forcepowers", parseBuf, sizeof( parseBuf )))
 	{
 		BG_SiegeTranslateForcePowers(parseBuf, &bgSiegeClasses[bgNumSiegeClasses]);
 	}
@@ -925,7 +930,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse classflags
-	if (BG_SiegeGetPairedValue(classInfo, "classflags", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "classflags", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].classflags = BG_SiegeTranslateGenericTable(parseBuf, bgSiegeClassFlagNames, qtrue);
 	}
@@ -935,7 +940,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse maxhealth
-	if (BG_SiegeGetPairedValue(classInfo, "maxhealth", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "maxhealth", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].maxhealth = atoi(parseBuf);
 	}
@@ -945,7 +950,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse starthealth
-	if (BG_SiegeGetPairedValue(classInfo, "starthealth", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "starthealth", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].starthealth = atoi(parseBuf);
 	}
@@ -956,7 +961,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 
 
 	//Parse startarmor
-	if (BG_SiegeGetPairedValue(classInfo, "maxarmor", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "maxarmor", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].maxarmor = atoi(parseBuf);
 	}
@@ -966,7 +971,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse startarmor
-	if (BG_SiegeGetPairedValue(classInfo, "startarmor", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "startarmor", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].startarmor = atoi(parseBuf);
 		if (!bgSiegeClasses[bgNumSiegeClasses].maxarmor)
@@ -980,7 +985,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse speed (this is a multiplier value)
-	if (BG_SiegeGetPairedValue(classInfo, "speed", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "speed", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].speed = atof(parseBuf);
 	}
@@ -990,7 +995,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse shader for ui to use
-	if (BG_SiegeGetPairedValue(classInfo, "uishader", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "uishader", parseBuf, sizeof( parseBuf )))
 	{
 		#if defined(_GAME)
 			bgSiegeClasses[bgNumSiegeClasses].uiPortraitShader = 0;
@@ -1009,7 +1014,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse shader for ui to use
-	if (BG_SiegeGetPairedValue(classInfo, "class_shader", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "class_shader", parseBuf, sizeof( parseBuf )))
 	{
 	#ifdef _GAME
 		bgSiegeClasses[bgNumSiegeClasses].classShader = 0;
@@ -1065,7 +1070,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse holdable items to use
-	if (BG_SiegeGetPairedValue(classInfo, "holdables", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "holdables", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].invenItems = BG_SiegeTranslateGenericTable(parseBuf, HoldableTable, qtrue);
 	}
@@ -1075,7 +1080,7 @@ void BG_SiegeParseClassFile(const char *filename, siegeClassDesc_t *descBuffer)
 	}
 
 	//Parse powerups to use
-	if (BG_SiegeGetPairedValue(classInfo, "powerups", parseBuf))
+	if (BG_SiegeGetPairedValue(classInfo, "powerups", parseBuf, sizeof( parseBuf )))
 	{
 		bgSiegeClasses[bgNumSiegeClasses].powerups = BG_SiegeTranslateGenericTable(parseBuf, PowerupTable, qtrue);
 	}
@@ -1279,7 +1284,7 @@ void BG_SiegeParseTeamFile(const char *filename)
 
 	teamInfo[len] = 0;
 
-	if (BG_SiegeGetPairedValue(teamInfo, "name", parseBuf))
+	if (BG_SiegeGetPairedValue(teamInfo, "name", parseBuf, sizeof( parseBuf )))
 	{
 		Q_strncpyz(bgSiegeTeams[bgNumSiegeTeams].name, parseBuf, sizeof(bgSiegeTeams[0].name));
 	}
@@ -1290,7 +1295,7 @@ void BG_SiegeParseTeamFile(const char *filename)
 
 	//I don't entirely like doing things this way but it's the easiest way.
 	#ifdef _CGAME
-		if (BG_SiegeGetPairedValue(teamInfo, "FriendlyShader", parseBuf))
+		if (BG_SiegeGetPairedValue(teamInfo, "FriendlyShader", parseBuf, sizeof( parseBuf )))
 			bgSiegeTeams[bgNumSiegeTeams].friendlyShader = trap->R_RegisterShaderNoMip(parseBuf);
 	#else
 		bgSiegeTeams[bgNumSiegeTeams].friendlyShader = 0;
@@ -1298,13 +1303,13 @@ void BG_SiegeParseTeamFile(const char *filename)
 
 	bgSiegeTeams[bgNumSiegeTeams].numClasses = 0;
 
-	if (BG_SiegeGetValueGroup(teamInfo, "Classes", teamInfo))
+	if (BG_SiegeGetValueGroup(teamInfo, "Classes", teamInfo, sizeof( teamInfo )))
 	{
 		while (success && i < MAX_SIEGE_CLASSES)
 		{ //keep checking for group values named class# up to MAX_SIEGE_CLASSES until we can't find one.
 			Q_strncpyz(lookString, va("class%i", i), sizeof(lookString));
 
-			success = BG_SiegeGetPairedValue(teamInfo, lookString, parseBuf);
+			success = BG_SiegeGetPairedValue(teamInfo, lookString, parseBuf, sizeof( parseBuf ));
 
 			if (!success)
 			{

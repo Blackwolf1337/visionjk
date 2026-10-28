@@ -5532,7 +5532,7 @@ static void UI_SetSaberBoxesandHilts (void)
 	}
 }
 
-extern qboolean UI_SaberSkinForSaber( const char *saberName, char *saberSkin );
+extern qboolean UI_SaberSkinForSaber( const char *saberName, char *saberSkin, int saberSkinSize );
 extern qboolean ItemParse_asset_model_go( itemDef_t *item, const char *name,int *runTimeLength );
 extern qboolean ItemParse_model_g2skin_go( itemDef_t *item, const char *skinName );
 
@@ -5588,13 +5588,13 @@ static void UI_UpdateSaberHilt( qboolean secondSaber )
 
 	item->text = model;
 	//read this from the sabers.cfg
-	if ( UI_SaberModelForSaber( model, modelPath ) )
+	if ( UI_SaberModelForSaber( model, modelPath, sizeof( modelPath ) ) )
 	{//successfully found a model
 		ItemParse_asset_model_go( item, modelPath, &animRunLength );//set the model
 		//get the customSkin, if any
 		//COM_StripExtension( modelPath, skinPath );
 		//COM_DefaultExtension( skinPath, sizeof( skinPath ), ".skin" );
-		if ( UI_SaberSkinForSaber( model, skinPath ) )
+		if ( UI_SaberSkinForSaber( model, skinPath, sizeof( skinPath ) ) )
 		{
 			ItemParse_model_g2skin_go( item, skinPath );//apply the skin
 		}
@@ -6023,7 +6023,7 @@ void UI_SiegeSetCvarsForClass( siegeClass_t *scl ) {
 				else
 				{
 					char buf[1024];
-					if (scl->saber1[0] && UI_SaberTypeForSaber(scl->saber1, buf))
+					if (scl->saber1[0] && UI_SaberTypeForSaber(scl->saber1, buf, sizeof( buf )))
 					{
 						if ( !Q_stricmp( buf, "SABER_STAFF" ) )
 						{
@@ -6194,6 +6194,26 @@ void UI_UpdateSiegeStatusIcons( void ) {
 	}
 }
 
+// The text of a menu script that is a format for one player number ("orders", "voiceOrders"): at most one %i or %d
+// and no other conversion. A menu can come from a pak, and its text goes to va() and Com_sprintf() as the format.
+static qboolean UI_OneNumberFormat( const char *fmt ) {
+	int numbers = 0;
+
+	for ( ; *fmt; fmt++ ) {
+		if ( *fmt != '%' ) {
+			continue;
+		}
+		fmt++;
+		if ( *fmt == '%' ) {
+			continue;
+		}
+		if ( ( *fmt != 'i' && *fmt != 'd' ) || ++numbers > 1 ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 static void UI_RunMenuScript(char **args)
 {
 	const char *name, *name2;
@@ -6343,7 +6363,7 @@ static void UI_RunMenuScript(char **args)
 			if (uiInfo.previewMovie >= 0) {
 				trap->CIN_StopCinematic(uiInfo.previewMovie);
 			}
-			trap->Cmd_ExecuteText( EXEC_APPEND, va("cinematic %s.roq 2\n", uiInfo.movieList[uiInfo.movieIndex]));
+			trap->Cmd_ExecuteText( EXEC_APPEND, va("cinematic \"%s.roq\" 2\n", uiInfo.movieList[uiInfo.movieIndex]));
 		} else if (Q_stricmp(name, "RunMod") == 0) {
 			trap->Cvar_Set( "fs_game", uiInfo.modList[uiInfo.modIndex].modName);
 			trap->Cmd_ExecuteText( EXEC_APPEND, "vid_restart;" );
@@ -6632,7 +6652,7 @@ static void UI_RunMenuScript(char **args)
 			}
 		} else if (Q_stricmp(name, "orders") == 0) {
 			const char *orders;
-			if (String_Parse(args, &orders)) {
+			if (String_Parse(args, &orders) && UI_OneNumberFormat( orders )) {
 				int selectedPlayer = trap->Cvar_VariableValue("cg_selectedPlayer");
 				if (selectedPlayer < uiInfo.myTeamCount) {
 					Q_strncpyz( buff, orders, sizeof( buff ) );
@@ -6669,7 +6689,7 @@ static void UI_RunMenuScript(char **args)
 			}
 		} else if (Q_stricmp(name, "voiceOrders") == 0) {
 			const char *orders;
-			if (String_Parse(args, &orders)) {
+			if (String_Parse(args, &orders) && UI_OneNumberFormat( orders )) {
 				int selectedPlayer = trap->Cvar_VariableValue("cg_selectedPlayer");
 
 				if (selectedPlayer == uiInfo.myTeamCount)
@@ -7499,7 +7519,7 @@ void UI_SetSiegeTeams(void)
 
 	//Found the .siege file
 
-	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams))
+	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams, sizeof( teams )))
 	{
 		char buf[1024];
 
@@ -7510,7 +7530,7 @@ void UI_SetSiegeTeams(void)
 		}
 		else
 		{
-			BG_SiegeGetPairedValue(teams, "team1", team1);
+			BG_SiegeGetPairedValue(teams, "team1", team1, sizeof( team1 ));
 		}
 
 		trap->Cvar_VariableStringBuffer("cg_siegeTeam2", buf, 1024);
@@ -7520,7 +7540,7 @@ void UI_SetSiegeTeams(void)
 		}
 		else
 		{
-			BG_SiegeGetPairedValue(teams, "team2", team2);
+			BG_SiegeGetPairedValue(teams, "team2", team2, sizeof( team2 ));
 		}
 	}
 	else
@@ -7529,16 +7549,16 @@ void UI_SetSiegeTeams(void)
 	}
 
 	//Set the team themes so we know what classes to make available for selection
-	if (BG_SiegeGetValueGroup(siege_info, team1, teamInfo))
+	if (BG_SiegeGetValueGroup(siege_info, team1, teamInfo, sizeof( teamInfo )))
 	{
-		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime))
+		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime, sizeof( btime )))
 		{
 			BG_SiegeSetTeamTheme(SIEGETEAM_TEAM1, btime);
 		}
 	}
-	if (BG_SiegeGetValueGroup(siege_info, team2, teamInfo))
+	if (BG_SiegeGetValueGroup(siege_info, team2, teamInfo, sizeof( teamInfo )))
 	{
-		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime))
+		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime, sizeof( btime )))
 		{
 			BG_SiegeSetTeamTheme(SIEGETEAM_TEAM2, btime);
 		}
@@ -9027,16 +9047,13 @@ static qhandle_t UI_FeederItemImage(float feederID, int index) {
 				char iconNameFromSkinName[256];
 				int i = 0;
 				int skinPlace;
+				const char *skinSlash = strrchr( uiInfo.q3HeadNames[index], '/' );
 
-				i = strlen(uiInfo.q3HeadNames[index]);
-
-				while (uiInfo.q3HeadNames[index][i] != '/')
-				{
-					i--;
+				if ( !skinSlash )
+				{ // (UI_BuildQ3Model_List keeps only names with one)
+					return 0;
 				}
-
-				i++;
-				skinPlace = i; //remember that this is where the skin name begins
+				skinPlace = (int)( skinSlash - uiInfo.q3HeadNames[index] ) + 1; //remember that this is where the skin name begins
 
 				//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
 				Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
@@ -9053,15 +9070,7 @@ static qhandle_t UI_FeederItemImage(float feederID, int index) {
 				Q_strcat(iconNameFromSkinName, 256, "icon_");
 
 				//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
-				i = strlen(iconNameFromSkinName);
-
-				while (uiInfo.q3HeadNames[index][skinPlace])
-				{
-					iconNameFromSkinName[i] = uiInfo.q3HeadNames[index][skinPlace];
-					i++;
-					skinPlace++;
-				}
-				iconNameFromSkinName[i] = 0;
+				Q_strcat( iconNameFromSkinName, sizeof( iconNameFromSkinName ), uiInfo.q3HeadNames[index] + skinPlace );
 
 				//and now we are ready to register (thankfully this will only happen once)
 				uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
@@ -9897,7 +9906,7 @@ nextSearch:
 			uiInfo.forceConfigSide[uiInfo.forceConfigCount] = qfalse; //dark side config
 		}
 
-		Com_sprintf( uiInfo.forceConfigNames[uiInfo.forceConfigCount], sizeof(uiInfo.forceConfigNames[uiInfo.forceConfigCount]), configname);
+		Q_strncpyz( uiInfo.forceConfigNames[uiInfo.forceConfigCount], configname, sizeof(uiInfo.forceConfigNames[uiInfo.forceConfigCount]) );
 		uiInfo.forceConfigCount++;
 	}
 
@@ -10115,12 +10124,14 @@ static void UI_BuildQ3Model_List( void )
 					s++;
 				}
 
-				if (iconExists)
+				// a name that does not fit would lose its '/' (UI_FeederItemImage looks for it); folder and skin
+				// names come from paks, so they are text and not the format
+				if (iconExists || strlen( dirptr ) + strlen( skinname ) >= sizeof( uiInfo.q3HeadNames[0] ))
 				{
 					continue;
 				}
 
-				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), va("%s%s", dirptr, skinname));
+				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), "%s%s", dirptr, skinname );
 				uiInfo.q3HeadIcons[uiInfo.q3HeadCount++] = hasIcon ? 0 : uiInfo.q3HeadHiddenIcon;//trap->R_RegisterShaderNoMip(fpath);
 				//rww - we are now registering them as they are drawn like the TA feeder, so as to decrease UI load time.
 			}

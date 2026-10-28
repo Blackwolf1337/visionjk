@@ -2132,7 +2132,7 @@ qboolean WP_SaberParseParms( const char *saberName, saberInfo_t *saber ) {
 	return qtrue;
 }
 
-qboolean WP_SaberParseParm( const char *saberName, const char *parmname, char *saberData )
+qboolean WP_SaberParseParm( const char *saberName, const char *parmname, char *saberData, int saberDataSize )
 {
 	const char	*token;
 	const char	*value;
@@ -2194,7 +2194,7 @@ qboolean WP_SaberParseParm( const char *saberName, const char *parmname, char *s
 			{
 				continue;
 			}
-			strcpy( saberData, value );
+			Q_strncpyz( saberData, value, saberDataSize );	// (a value of a .sab file, the buffer of the caller can be 8 bytes)
 			return qtrue;
 		}
 
@@ -2208,7 +2208,7 @@ qboolean WP_SaberParseParm( const char *saberName, const char *parmname, char *s
 qboolean WP_SaberValidForPlayerInMP( const char *saberName )
 {
 	char allowed [8]={0};
-	if ( !WP_SaberParseParm( saberName, "notInMP", allowed ) )
+	if ( !WP_SaberParseParm( saberName, "notInMP", allowed, sizeof( allowed ) ) )
 	{//not defined, default is yes
 		return qtrue;
 	}
@@ -2277,18 +2277,18 @@ void WP_ScaleSaber( int clientNum, saberInfo_t *sabers, int saberNum, const char
 		saberName = DEFAULT_SABER;
 	}
 
-	if ( WP_SaberParseParm( saberName, "saberLength", value ) )		length = atof( value );
-	if ( WP_SaberParseParm( saberName, "damageScale", value ) )		damageScale = atof( value );
-	if ( WP_SaberParseParm( saberName, "damageScale2", value ) )		damageScale2 = atof( value );
-	if ( WP_SaberParseParm( saberName, "moveSpeedScale", value ) )	moveSpeedScale = atof( value );
-	if ( WP_SaberParseParm( saberName, "animSpeedScale", value ) )	animSpeedScale = atof( value );
+	if ( WP_SaberParseParm( saberName, "saberLength", value, sizeof( value ) ) )		length = atof( value );
+	if ( WP_SaberParseParm( saberName, "damageScale", value, sizeof( value ) ) )		damageScale = atof( value );
+	if ( WP_SaberParseParm( saberName, "damageScale2", value, sizeof( value ) ) )		damageScale2 = atof( value );
+	if ( WP_SaberParseParm( saberName, "moveSpeedScale", value, sizeof( value ) ) )	moveSpeedScale = atof( value );
+	if ( WP_SaberParseParm( saberName, "animSpeedScale", value, sizeof( value ) ) )	animSpeedScale = atof( value );
 
 	saber = &sabers[saberNum];
 	for ( i = 0; i < saber->numBlades; i++ )
 	{
 		int bladeLength = (int)length;
 
-		if ( WP_SaberParseParm( saberName, va( "saberLength%i", i + 1 ), value ) )
+		if ( WP_SaberParseParm( saberName, va( "saberLength%i", i + 1 ), value, sizeof( value ) ) )
 		{
 			bladeLength = (int)atof( value );
 		}
@@ -2422,7 +2422,7 @@ qboolean WP_IsSaberTwoHanded( const char *saberName )
 {
 	int twoHanded;
 	char	twoHandedString[8]={0};
-	WP_SaberParseParm( saberName, "twoHanded", twoHandedString );
+	WP_SaberParseParm( saberName, "twoHanded", twoHandedString, sizeof( twoHandedString ) );
 	if ( !twoHandedString[0] )
 	{//not defined defaults to "no"
 		return qfalse;

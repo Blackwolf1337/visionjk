@@ -418,8 +418,8 @@ char *UI_GetBotNameByNumber( int num );
 // ui_saber.c
 //
 
-qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel );
-qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType );
+qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel, int saberModelSize );
+qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType, int saberTypeSize );
 
 
 //

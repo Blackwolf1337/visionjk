@@ -160,7 +160,7 @@ static qboolean BG_ParseVehWeaponParm( vehWeaponInfo_t *vehWeapon, const char *p
 		if (!*(char **)(b+vehWeaponField->ofs))
 		{ //just use 1024 bytes in case we want to write over the string
 			*(char **)(b+vehWeaponField->ofs) = (char *)BG_Alloc(1024);//(char *)BG_Alloc(strlen(value));
-			strcpy(*(char **)(b+vehWeaponField->ofs), value);
+			Q_strncpyz(*(char **)(b+vehWeaponField->ofs), value, 1024);	// (a value of a file from a pak)
 		}
 
 		break;
@@ -796,7 +796,7 @@ static qboolean BG_ParseVehicleParm( vehicleInfo_t *vehicle, const char *parmNam
 		if (!*(char **)(b+vehField->ofs))
 		{ //just use 128 bytes in case we want to write over the string
 			*(char **)(b+vehField->ofs) = (char *)BG_Alloc(128);//(char *)BG_Alloc(strlen(value));
-			strcpy(*(char **)(b+vehField->ofs), value);
+			Q_strncpyz(*(char **)(b+vehField->ofs), value, 128);	// (a value of a file from a pak)
 		}
 
 		break;

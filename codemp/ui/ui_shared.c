@@ -6750,7 +6750,8 @@ void Item_Image_Paint(itemDef_t *item) {
 
 void Item_TextScroll_Paint(itemDef_t *item)
 {
-	char cvartext[1024];
+	// (static: item->text points at it after this returns, and Item_SetScreenCoords builds the lines from it again)
+	static char cvartext[1024];
 	float x, y, size, count, thumb;
 	int	  i;
 	textScrollDef_t *scrollPtr = item->typeData.textscroll;
@@ -9781,7 +9782,8 @@ qboolean ItemParse_cvarStrList( itemDef_t *item, int handle ) {
 	if (!Q_stricmp(token.string,"feeder") && item->special == FEEDER_PLAYER_SPECIES)
 	{
 #ifndef _CGAME
-		for (; multiPtr->count < uiInfo.playerSpeciesCount; multiPtr->count++)
+		// (the species are folders of paks: there are places for MAX_MULTI_CVARS of them)
+		for (; multiPtr->count < uiInfo.playerSpeciesCount && multiPtr->count < MAX_MULTI_CVARS; multiPtr->count++)
 		{
 			multiPtr->cvarList[multiPtr->count] = String_Alloc(Q_strupr(va("@MENUS_%s",uiInfo.playerSpecies[multiPtr->count].Name )));	//look up translation
 			multiPtr->cvarStr[multiPtr->count] = uiInfo.playerSpecies[multiPtr->count].Name;	//value
