@@ -92,6 +92,10 @@ const byte *S_SoundCacheFind( const char *file, wavinfo_t *info, void **kept ) {
 	sndCache.pending = qtrue;
 
 	S_SoundCachePath( path, sizeof( path ) );
+	// (only the file of the profile: a pak could have one under the same name, FS_ReadFile looks in paks too)
+	if ( FS_FileSource( path, &length, &checksum ) != FS_SOURCE_DIRECTORY ) {
+		return NULL;
+	}
 	Com_LoadPush( "sound kept", file );
 	size = FS_ReadFile( path, &buffer );
 	Com_LoadPop();
@@ -105,7 +109,7 @@ const byte *S_SoundCacheFind( const char *file, wavinfo_t *info, void **kept ) {
 		memcpy( &header, buffer, sizeof( header ) );
 		if ( header.magic == SNDCACHE_MAGIC && header.keyLength == keyLength && ( header.width == 1 || header.width == 2 )
 			&& header.rate > 0 && header.samples > 0
-			&& size == (long)sizeof( header ) + keyLength + (long)header.samples * header.width
+			&& (long long)size == (long long)sizeof( header ) + keyLength + (long long)header.samples * header.width
 			&& !memcmp( (const byte *)buffer + sizeof( header ), sndCache.key, keyLength ) ) {
 			Com_Memset( info, 0, sizeof( *info ) );
 			info->format = WAV_FORMAT_MP3;

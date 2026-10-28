@@ -29,6 +29,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern refimport_t ri;
 
+// The largest side of a picture the loaders take (tr_image_*.cpp): width * height * 4 of it still fits an int.
+// The pictures of a pak are the pak's word.
+#define IMAGE_MAX_SIDE	16384
+
 /*
 ================================================================================
  Noise Generation

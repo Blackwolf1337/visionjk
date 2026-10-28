@@ -1174,13 +1174,14 @@ redump:
 			decodeCodeBook( framedata, (unsigned short)cinTable[currentHandle].roq_flags );
 			break;
 		case	ZA_SOUND_MONO:
-			if (!cinTable[currentHandle].silent) {
+			// (a chunk of a video from a pak: mono gives two samples a byte, and sbuf has room for 32768)
+			if (!cinTable[currentHandle].silent && cinTable[currentHandle].RoQFrameSize <= ARRAY_LEN( sbuf ) / 2) {
 				ssize = RllDecodeMonoToStereo( framedata, sbuf, cinTable[currentHandle].RoQFrameSize, 0, (unsigned short)cinTable[currentHandle].roq_flags);
                 S_RawSamples( ssize, 22050, 2, 1, (byte *)sbuf, s_volume->value, 1 );
 			}
 			break;
 		case	ZA_SOUND_STEREO:
-			if (!cinTable[currentHandle].silent) {
+			if (!cinTable[currentHandle].silent && cinTable[currentHandle].RoQFrameSize <= ARRAY_LEN( sbuf )) {
 				if (cinTable[currentHandle].numQuads == -1) {
 					S_Update();
 					s_rawend = s_soundtime;

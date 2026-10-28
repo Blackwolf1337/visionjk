@@ -186,6 +186,8 @@ struct PNGFileReader
 		png_set_keep_unknown_chunks (png_ptr, PNG_HANDLE_CHUNK_NEVER, NULL, -1);
 #endif
 		png_set_sig_bytes (png_ptr, SIGNATURE_LEN);
+		// a picture of a pak: libpng refuses a larger one before it reads anything of it
+		png_set_user_limits (png_ptr, IMAGE_MAX_SIDE, IMAGE_MAX_SIDE);
 		png_read_info (png_ptr, info_ptr);
 
 		png_uint_32 width_;
@@ -200,6 +202,12 @@ struct PNGFileReader
 		if ( !IsPowerOfTwo (width_) || !IsPowerOfTwo (height_) )
 		{
 			ri.Printf (PRINT_ERROR, "Width or height is not a power-of-two.\n");
+			return 0;
+		}
+		// (width * height * 4 is an int below: the side limit keeps it at 1 GB at most)
+		if ( !width_ || !height_ || width_ > IMAGE_MAX_SIDE || height_ > IMAGE_MAX_SIDE )
+		{
+			ri.Printf (PRINT_ERROR, "The image is larger than %i pixels a side.\n", IMAGE_MAX_SIDE);
 			return 0;
 		}
 
@@ -220,7 +228,19 @@ struct PNGFileReader
 			png_set_add_alpha (png_ptr, 0xff, PNG_FILLER_AFTER);
 		}
 
+		// 16 bits a channel would be written as 8 bytes a pixel into the 4 of each pixel below
+		if ( depth == 16 )
+		{
+			png_set_strip_16 (png_ptr);
+		}
+
 		png_read_update_info (png_ptr, info_ptr);
+
+		if ( png_get_rowbytes (png_ptr, info_ptr) != (png_size_t)width_ * 4 )
+		{
+			ri.Printf (PRINT_ERROR, "Image is not 24-bit or 32-bit.");
+			return 0;
+		}
 
 		// We always assume there are 4 channels. RGB channels are expanded to RGBA when read.
 		byte *tempData = (byte *)ri.Z_Malloc (width_ * height_ * 4, TAG_TEMP_PNG, qfalse, 4);

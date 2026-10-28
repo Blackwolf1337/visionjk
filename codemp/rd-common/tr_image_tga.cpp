@@ -74,12 +74,18 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 	// load the file
 	//
 	byte *pTempLoadedBuffer = 0;
-	ri.FS_ReadFile ( ( char * ) name, (void **)&pTempLoadedBuffer);
+	const int iFileLen = (int)ri.FS_ReadFile ( ( char * ) name, (void **)&pTempLoadedBuffer);
 	if (!pTempLoadedBuffer) {
 		return;
 	}
+	// (a picture of a pak: the decoder below reads no further than the file, which it did before)
+	const byte *pEnd = pTempLoadedBuffer + Q_max( iFileLen, 0 );
 
 	TGAHeader_t *pHeader = (TGAHeader_t *) pTempLoadedBuffer;
+	if ( iFileLen < (int)sizeof( *pHeader ) )
+	{
+		TGA_FORMAT_ERROR("LoadTGA: the file is shorter than its header\n");
+	}
 
 	pHeader->wColourMapLength = LittleShort(pHeader->wColourMapLength);
 	pHeader->wImageWidth = LittleShort(pHeader->wImageWidth);
@@ -193,6 +199,12 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 			break;
 	}
 
+	// (width * height * 4 is an int: two 16 bit sides of the file wrapped it into a small block)
+	if ( !pHeader->wImageWidth || !pHeader->wImageHeight || pHeader->wImageWidth > IMAGE_MAX_SIDE || pHeader->wImageHeight > IMAGE_MAX_SIDE )
+	{
+		TGA_FORMAT_ERROR("LoadTGA: no size, or larger than the largest image\n");
+	}
+
 	// feed back the results...
 	//
 	if (width)
@@ -215,6 +227,10 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 
 	if ( pHeader->byImageType == 2 || pHeader->byImageType == 3 )	// RGB or greyscale
 	{
+		if ( pIn > pEnd || (size_t)( pEnd - pIn ) < (size_t)pHeader->wImageWidth * pHeader->wImageHeight * ( pHeader->byImagePlanes / 8 ) )
+		{
+			TGA_FORMAT_ERROR("LoadTGA: the file is shorter than its picture\n");
+		}
 		for (int y=iYStart, iYCount=0; iYCount<pHeader->wImageHeight; y+=iYStep, iYCount++)
 		{
 			pOut = pRGBA + y * pHeader->wImageWidth *4;
@@ -274,8 +290,16 @@ void LoadTGA ( const char *name, byte **pic, int *width, int *height)
 			pOut = pRGBA + y * pHeader->wImageWidth *4;
 			for (int x=0; x<pHeader->wImageWidth;)
 			{
+				if ( pIn >= pEnd )
+				{
+					TGA_FORMAT_ERROR("LoadTGA: the file is shorter than its picture\n");
+				}
 				packetHeader = *pIn++;
 				packetSize   = 1 + (packetHeader & 0x7f);
+				if ( pEnd - pIn < ( ( packetHeader & 0x80 ) ? 1 : packetSize ) * ( pHeader->byImagePlanes / 8 ) )
+				{
+					TGA_FORMAT_ERROR("LoadTGA: the file is shorter than its picture\n");
+				}
 				if (packetHeader & 0x80)         // run-length packet
 				{
 					switch (pHeader->byImagePlanes)

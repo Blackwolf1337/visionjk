@@ -168,6 +168,15 @@ qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmi
 
 	VK_TexCachePath( path, sizeof( path ) );
 	ri.LoadPush( "texture kept", name );
+	// (only the file of the profile: a pak could have one under the same name, FS_ReadFile looks in paks too)
+	{
+		int sourceLength, sourceChecksum;
+
+		if ( ri.FS_FileSource( path, &sourceLength, &sourceChecksum ) != FS_SOURCE_DIRECTORY ) {
+			ri.LoadPop();
+			return qfalse;
+		}
+	}
 	length = ri.FS_ReadFile( path, &texCache.file );
 	ri.LoadPop();
 	if ( length <= 0 || !texCache.file ) {
@@ -185,6 +194,7 @@ qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmi
 			&& ( texCache.header.format == VKF_BC1 || texCache.header.format == VKF_BC3 )
 			&& texCache.header.mipLevels > 0 && texCache.header.mipLevels <= TEXCACHE_MAX_LEVELS
 			&& texCache.header.width >= 4 && texCache.header.height >= 4
+			&& texCache.header.width <= glConfig.maxTextureSize && texCache.header.height <= glConfig.maxTextureSize
 			&& (vkSize_t)length >= need + keyLength
 			&& !memcmp( (const byte *)texCache.file + need, texCache.key, keyLength ) ) {
 			need += keyLength;
