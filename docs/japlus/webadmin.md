@@ -14,6 +14,8 @@ which is OpenJK 260c59c2 plus that one commit, the same base this tree starts fr
 | `codemp/game/webadmin/wa_entities.c` | the entity editor, the reload of placed entities |
 | `codemp/game/webadmin/wa_assets.c` | the map, the files of the game, the lists to pick from |
 | `codemp/game/webadmin/wa_fs.c` | the file manager and the server config |
+| `codemp/game/webadmin/wa_settings.c`, `wa_settings_table.h` | the tab Settings: the form of the cvars, saving them, the cleanup view. The table says group, kind, limits and one line of text for 336 cvars |
+| `codemp/game/webadmin/wa_cfgedit.c`, `wa_cfgedit.h` | reads a config file the way the console does and changes or takes out single statements (unit test `tests/vjk/cfgedit.cpp`) |
 | `codemp/game/webadmin/wa_perf.c` | `/api/perf` |
 | `codemp/game/webadmin/wa_log.c` | the chat lines and the log of the game |
 | `codemp/game/webadmin/wa_routes.c` | the route of the bots |
@@ -212,7 +214,7 @@ walls. Health and shield are not shown.
 
 ## What the page does
 
-- Two modes, switched in the top bar and kept by the browser. Administration: the tabs Players, Config and
+- Two modes, switched in the top bar and kept by the browser. Administration: the tabs Players, Settings and
   Files, and the map drawn the way the game draws it (see below). Editor: the tabs World and Physical props, the plain
   view of the map (an image times the light) and its debug views: a marker at every entity, the triangles of the
   map as lines, the light alone or the texture alone.
@@ -233,6 +235,7 @@ walls. Health and shield are not shown.
 - Gravity: a field in the top bar for everybody (`g_gravity`, 800 is normal, the field shows the current value),
   and a field in the player panel for a gravity only that player has. Empty there means the gravity of the server.
 - Top bar: add bots, change map.
+- Settings: every cvar of the server as a field, see "The tab Settings". On a masterserver the page is smaller, see "The masterserver mode".
 
 ## How it works
 
@@ -307,11 +310,81 @@ the answer tells the page that the numbers started over.
 | `POST /api/layout` | `op` save keeps the map as it stands for every start of it (`layouts/<map>.txt` in the game folder), `op` forget removes that file. `/api/entities` has `layout`: is one saved, is the map as it has it, and how many entities it would add and take away now |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
+| `GET /api/settings` | the Settings form, owner only: `master` (master mode), `file` (the config file it edits), `flags` (whether the flags come from the engine), `categories` and `cvars`, each `{name, cat, type, min?, max?, opts?, desc?, def, value, file?, local?, apply}` |
+| `POST /api/settings` | the body is lines `name<tab>value`. The answer has one result for each cvar: live, map, restart, or refused with the reason |
+| `GET /api/settings/cleanup` | the Cleanup view, owner only: `unused` (user made cvars no code used for a month, with the line of `server.cfg` or "only on the server"), `overridden` (every statement of a cvar but the last one in the file) and `rev` |
+| `POST /api/settings/cleanup` | `rev` and lines `line<tab>name<tab>unset`: takes those statements out of the file. A file that changed since the listing is refused |
+| `GET /api/master` | master mode only, the numbers of the Masterserver tab: `ms_statSessions`, `ms_statRooms`, `ms_statKbps`, `ms_statFlagged` |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
 | `GET /api/fs/list?root=&path=` | the files of a folder. `root` is `home` (the game folder in the home path of the server) or `install` (the one of the installation, read only) |
 | `GET /api/fs/get?root=&path=[&text=1]` | a file as a download, or as UTF-8 text for the editor |
 | `POST /api/fs/put?path=&offset=[&last=1][&text=1]` | the body is the next piece of a file (a request is 64 KB at most). `last=1` puts the file in its place |
 | `POST /api/fs/delete?path=`, `/api/fs/rename?path=&to=`, `/api/fs/mkdir?path=` | in the home path only |
+
+## The tab Settings
+
+`wa_settings.c`, `wa_settings_table.h`, `wa_cfgedit.c`, `page/js/settings.js`. The tab was "Config". It has a switch
+Form, Text and Cleanup, which the browser remembers. Text is the editor of `server.cfg` as it was (`/api/config`).
+Owner role only, as `/api/config`.
+
+Form: every cvar of the server is a field of its kind: text, a number with limits, on or off, a list to choose
+from, a set of bits with a box for each bit, or a password with a button Show. The fields are in groups (Server,
+Network, Game type and more), there is a search, and Save and Discard. The group, kind, limits and one line of text
+of a cvar are in `wa_settings_table.h`, written for 336 cvars. Every other cvar of the table of the game module
+shows under Other. Cvars that are read only are left out.
+
+Save sends `POST /api/settings` with a line `name<tab>value` for each changed cvar. The server checks every value:
+no quote, no control character, a number is clamped to its limits, a choice must be in the list, a switch is 0 or
+1. Then it changes `server.cfg`: the last statement that sets the cvar is changed in place (the comment and the rest
+of the line stay), and a cvar the file does not set gets a line `seta name "value"` in a block `// set by the web
+panel` at the end. The file is written once and the old one is kept as `server.cfg.bak`, as the text editor does.
+After that each cvar is set on the console as `set name "value"`, not through the Cvar_Set of the VM: that one skips
+the ROM and INIT checks and drops the server on a protected cvar like `sv_master1`. A `CVAR_INIT` cvar is only
+written to the file and answered "restart". A latched one takes effect with the next map and is answered "map". The
+answer of each cvar is live, map, restart, or refused with the reason (`g_gametype 99` and a value with a quote are
+refused). The log line names the cvars and never the values.
+
+Marks in the form: changed, next map, restart, not in file, `file: X` when the file has another value than the
+server now, `local.cfg: X` when `local.cfg` sets the cvar (the file of the owner the host service runs after
+`server.cfg`, `deploy/server-local.cfg` of the website) and will set it back at the next start, and the default.
+
+`wa_cfgedit.c` reads statements as the console does: `;` and a line break end one, quotes, `//` comments. Its unit
+test is `tests/vjk/cfgedit.cpp`.
+
+With an engine of this version the flags of every cvar come from the engine (`ext.Cvar_Flags`, used only when the
+ROM cvar `vs_gameImportExt` is 2). With an older engine the cvars of the engine get the marks of the table only.
+
+The view Cleanup lists two things. `unused`: the cvars the engine says no code used for a month (see client.md,
+"Cleaning up cvars"), with the line of `server.cfg` that sets them, or "only on the server" when they are not in the
+file. `overridden`: every statement of a cvar but the last one in the file, since only the last one counts. Marked
+lines are sent with `POST /api/settings/cleanup`, together with the `rev`, a hash of the file as it was listed. A
+file that changed since is refused and the page lists again. A line whose statements all go is removed with its
+comment, else only the statement and its `;` go. `server.cfg.bak` is kept, and for the unused ones the server runs
+`cvar_cleanup remove` as well. The unit test is `tests/vjk/cvarseen.cpp` and `cfgedit.cpp`.
+
+## The masterserver mode
+
+The masterserver (server.md, "The masterserver") loads the game module, so it runs this panel. The engine of the
+master build registers the ROM cvar `vs_master` 1 and the module then is in master mode: only the routes of
+`WA_MasterRoute` answer (the page, settings, config, log, console, command, ids, perf, fs, master and me), every
+other one is 404. `/api/me` has `master`, and the page then has no map, no players and no editor: the tabs are
+Settings, Files, Log, Performance, Account and Masterserver.
+
+Settings in master mode shows only the rows flagged `WA_SET_MASTER` or `WA_SET_MASTERONLY` (`sv_hostname`,
+`net_port`, `sv_fps`, the `vs_boombox` programs, the `vs_web` cvars, `vs_masterKbps`, `vs_masterBoxes`, `ms_rep`,
+`ms_repThreshold`, `ms_repLocal`), and the file it edits is `master.cfg`, saved into the home path, which `exec` then
+takes.
+
+The tab Masterserver (`page/js/master.js`, `GET /api/master`) shows sessions, rooms, the kbit/s of the last minute
+and the flagged servers. The numbers are ROM cvars of the engine: `ms_statSessions`, `ms_statRooms` and `ms_statKbps`
+once a second (`sv_voice.cpp`, `MS_Numbers` of `ms_relay.c`), `ms_statFlagged` every 10 seconds
+(`sv_reputation.cpp`). Two buttons run `ms_repstatus` and `ms_repclear all` over the console route. The answer is in
+the tab Log.
+
+`assets/configs/master.cfg` sets `vs_webBind 127.0.0.1` and `vs_webPort 8081`, so the panel is reached with
+`ssh -L 8081:127.0.0.1:8081 <host>`. The first account comes from `vs_webPassword` in `local.cfg` of the home of the
+master (`/var/lib/visionjk-master/japlus/local.cfg`), which `tools/deploy-master.sh` puts there once from
+`deploy/master-local.cfg` of the website. The service runs `+exec local.cfg` after `master.cfg`.
 
 ## Where it differs from JKAdmin
 
@@ -2368,3 +2441,12 @@ own, so that half is not tried).
 The page was looked at once in headless Chromium with software GL: the 3D map, the player list and the chat box
 with all kinds of lines show up. Not tested: using the page by hand (HUD view, dragging entities), the Windows DLL
 at run time (it builds and links with mingw-w64), macOS.
+
+The tab Settings and the masterserver mode (2026-10-28). A headless dedicated server on 127.0.0.1:18080 with curl:
+`GET` and `POST /api/settings`, the change of a statement in place, `server.cfg.bak`, the live values in `cvarlist`,
+`sv_maxclients` latched, `sv_master3` set without dropping the server, `g_gametype 99` and a value with a quote
+refused, the cleanup list and remove, a stale `rev` refused, the mark for `local.cfg`. A headless masterserver: 18
+settings, the map routes 404, the JSON of `/api/master`, `master.cfg` written. Headless Chromium over its
+debugging port: the three views of the tab on the server and the tab Masterserver, a change with its mark, a bit
+box, a save, no script error. The unit tests pass. Not tested: the panel in a real browser on the live host, the
+changes of the deploy on the host.

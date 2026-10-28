@@ -99,6 +99,9 @@ Both are in Setup under Interface.
 - The window "What's new" lists the changes of each version (see `update.md`, "The changelog"): the versions at
   the left, the entry at the right, with bold words, code and links. It opens from the pill "What's new" on the
   main menu, from the row "Changelog" in Setup and in Network, and once after an update.
+- The window "Clean Up Settings" lists the cvars no code used for a month, with Remove, Remove All and Done. It
+  opens from a row in Setup, Network (`ui/jamp/cvarclean.menu`, `ui_cvarclean.c`, see client.md, "Cleaning up
+  cvars").
 - The console is dark glass with a light blue line under it, in place of the picture of the game.
 
 It needs the engine of this tree (`v_uiSkin 1`). In another engine the ui module loads the menus of before by
@@ -195,7 +198,7 @@ are.
   script, without the commands that showed and marked the old tabs. The layout is the same for all four: in a
   game the screen is a window under the bar of the in-game menu.
 - `options.py` has one more kind of row, `('menu', name, menu, what for)`: it opens a window. The rows
-  "Changelog" of Setup and Network are of this kind.
+  "Changelog" and "Clean Up Settings" of Setup and Network are of this kind.
 - `FRAMES` in `pages.py`: a window of this tree whose frame was a picture of the game gets that item as a glass
   frame. It is only used for `changelog.menu`.
 - `profile.py`, the pages of the player (profile, character, lightsaber, force powers, outside a game and in

@@ -38,6 +38,9 @@ Bits of `cp_pluginDisable` (the console command `pluginDisable <number>` toggles
 
 ## Console commands
 
+`cvar_cleanup` lists the cvars you made that no code used for a month, `cvar_cleanup remove <name ...|all>` removes
+them (see "Cleaning up cvars").
+
 `pluginDisable`, `reloadReplier` (reads the auto replier file again), `showPlayerID` (list of players with their
 numbers) and the admin gun: `admCmdNext` and `admCmdPrev` choose one of 17 admin commands, `playerNext` and
 `playerPrev` a player, `admCmdEXE` runs the command on him, and the `gun...` commands run an admin command on the
@@ -1175,6 +1178,30 @@ detection" and the two sections after it.
 Each event is a notice with a red bar (`v_notify`). The button Intrusions of the server browser opens a window with
 the last 64 lines of `ids.log`, the newest first. A server flagged by the masterserver has an orange `IDS` in the
 ping column of the browser, one the client left itself a red one.
+
+### Cleaning up cvars
+
+`codemp/qcommon/cvar_cleanup.cpp`, `cvar_seen.c`, `codemp/ui/ui_cvarclean.c`, `assets/japlus_client/ui/jamp/cvarclean.menu`.
+Old configs leave cvars behind that nothing reads. The engine notes the day code last used each cvar: it was
+registered (`Cvar_Get` without `CVAR_USER_CREATED`), or a module read it by name. The traps `Cvar_VariableStringBuffer`,
+`Cvar_VariableIntegerValue` and `Cvar_VariableValue` of the game, cgame and ui count, and only for cvars the user made.
+The days are in `cvarseen.txt` in `fs_homepath`, for all mods together: `start <day>` and then `name day` a line. It is
+saved once a minute at most, when something changed, and at shutdown. It keeps 8192 names, and when it is full the
+oldest eighth is dropped.
+
+A cvar is unused when you made it and no code used it for 30 days, or when no code ever used it and the tracking has
+run 30 days. So nothing is offered in the first month. A name that stands behind `vstr` in any cvar value or key
+binding is never offered, it is a script.
+
+`cvar_cleanup` lists name, value and last used. `cvar_cleanup remove <name ...|all>` unsets them (cvars made by the
+user only) and writes `visionjk.cfg` again. `autoexec.cfg` and other files you wrote are not edited.
+
+Setup, Network has a row "Clean Up Settings" that opens a window, in the classic menus and in the new look
+(`ui/jamp/cvarclean.menu`, `ui_cvarclean.c`, `FEEDER_CVARCLEAN`). The list has name, value and last used, and the
+buttons are Remove (the selected row), Remove All and Done. The texts are in English, German, French and Spanish. It
+needs the import `ext.Cvar_UnusedList` of the engine (ROM cvar `v_uiCvarClean` 1). Tested headless: the command lists
+and removes, a name in a binding behind `vstr` is kept, the window opens, lists, and Remove takes the selected row
+out. Not tested in a window you can see.
 
 ### From the VisionJK of 2019
 

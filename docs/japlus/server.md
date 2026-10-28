@@ -196,7 +196,22 @@ Limits of the relay:
 29170 is the port the clients of 0.1.5 know for the voice chat on servers without the module
 (`v_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
 2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
-removed. Not run with master.cfg yet.
+removed. The service runs `master.cfg` since 0.1.8.
+
+The masterserver runs the web panel of the game module (docs/japlus/webadmin.md, "The masterserver mode"). The
+engine of the master build registers the ROM cvar `vs_master` 1, and the module then answers only the routes a
+masterserver needs. `master.cfg` sets `vs_webBind 127.0.0.1` and `vs_webPort 8081`, so the panel is reached with
+`ssh -L 8081:127.0.0.1:8081 <host>`. The first account is `vs_webPassword` in `local.cfg` of the home of the master
+(`/var/lib/visionjk-master/japlus/local.cfg`). `tools/deploy-master.sh` of the website puts it there once from
+`deploy/master-local.cfg`, and the service runs `+exec local.cfg` after `master.cfg`. The engine sets four ROM
+cvars for the tab Masterserver:
+
+| Cvar | Meaning |
+|------|---------|
+| `ms_statSessions` | sessions of the relay, once a second |
+| `ms_statRooms` | rooms of the relay, once a second |
+| `ms_statKbps` | what the relay sent in the last minute, kbit/s on average, once a second |
+| `ms_statFlagged` | flagged servers, every 10 seconds |
 
 #### Reputation of game servers
 
@@ -226,6 +241,14 @@ sees nothing of it.
 - Somebody with addresses in many /24 networks can still get a server flagged. The owner of the master clears it
   with `ms_repclear`.
 - Run on 2026-10-28 with a master and clients on one machine. Not run on the host of VisionJK.
+
+### Cleaning up cvars
+
+`qcommon/cvar_cleanup.cpp`, `qcommon/cvar_seen.c`. The engine of the server notes the day each cvar was last used,
+the same as the client does (client.md, "Cleaning up cvars"). The file is `cvarseen.txt` in `fs_homepath`. The
+console command `cvar_cleanup` lists the user made cvars no code used for 30 days, and `cvar_cleanup remove <name
+...|all>` unsets them and writes `visionjk_server.cfg` again. `server.cfg` and other files written by hand are not
+edited. The web panel does that in the view Cleanup of the tab Settings (webadmin.md, "The tab Settings").
 
 ### Lag compensation (from TaystJK's jaPRO)
 

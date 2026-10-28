@@ -36,7 +36,9 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/weather.js` | the weather of a map: snow, rain, dust |
 | `js/editor-world.js` | the entity list of the World tab |
 | `js/editor-props.js` | the tab Physical props |
-| `js/config.js` | the server config |
+| `js/config.js` | the text editor of the server config (the view Text of the tab Settings) |
+| `js/settings.js` | the tab Settings: the form of the cvars, saving, the marks, the view Cleanup |
+| `js/master.js` | the tab Masterserver, shown only when `/api/me` says `master` |
 | `js/files.js` | the file manager |
 | `js/editor-entities.js` | the entities of the World tab: the poll of the list, the list, the key table, every change to an entity, placing |
 | `js/editor-classes.js` | the entity definitions of the game code |
