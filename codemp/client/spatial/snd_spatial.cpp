@@ -81,6 +81,7 @@ cvar_t	*v_spatialBudget;
 #endif
 cvar_t	*v_spatialDebug;
 cvar_t	*v_spatialEcho;
+cvar_t	*v_spatialGpu;
 
 spatialState_t	spatial;
 
@@ -146,6 +147,26 @@ static qboolean S_SpatialLoad( void ) {
 	return qtrue;
 }
 
+// the simulator of the graphics card, its sources and its scene, and then the device they called into
+static void S_SpatialReleaseGpu( void ) {
+	for ( int i = 0; i < SPATIAL_REFLECT_SLOTS; i++ ) {
+		if ( spatial.reflects[i].gpuSource ) {
+			qiplSourceRelease( &spatial.reflects[i].gpuSource );
+		}
+	}
+	if ( spatial.gpuReverbSource ) {
+		qiplSourceRelease( &spatial.gpuReverbSource );
+	}
+	if ( spatial.gpuSimulator ) {
+		qiplSimulatorRelease( &spatial.gpuSimulator );
+	}
+	if ( spatial.gpuScene ) {
+		qiplSceneRelease( &spatial.gpuScene );
+	}
+	spatial.reflectGpu = spatial.heardGpu = qfalse;
+	S_SpatialGpuShutdown();
+}
+
 // lets go of everything of Steam Audio, in the order it depends on each other, and of the library
 static void S_SpatialRelease( void ) {
 	S_SpatialDebugFree();
@@ -184,6 +205,7 @@ static void S_SpatialRelease( void ) {
 		S_SpatialReleaseBaked( &spatial.echo );
 		S_SpatialReleaseLevel( &spatial.level );
 		S_SpatialReleaseLevel( &spatial.nextLevel );
+		S_SpatialReleaseGpu();
 		if ( spatial.reverbDecode ) {
 			qiplAmbisonicsDecodeEffectRelease( &spatial.reverbDecode );
 		}
@@ -246,6 +268,87 @@ static void S_SpatialRelease( void ) {
 	memset( &spatial, 0, sizeof( spatial ) );
 }
 
+// What a simulator is made with: the one of Embree for all of it, the one of the graphics card for the reflections
+static void S_SpatialSimulationSettings( IPLSimulationSettings *simulation, IPLSimulationFlags flags, IPLSceneType sceneType ) {
+	memset( simulation, 0, sizeof( *simulation ) );
+	simulation->flags = flags;
+	simulation->sceneType = sceneType;
+	simulation->reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
+	simulation->maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
+	simulation->maxNumRays = spatial.maxRays;
+	simulation->numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
+	simulation->maxDuration = SPATIAL_REVERB_SECONDS;
+	simulation->maxOrder = SPATIAL_REVERB_ORDER;
+	simulation->maxNumSources = 1 + SPATIAL_REFLECT_SLOTS;	// sources with reflections: the one at the listener and the slots
+	// threads Steam Audio shares a pass of the rays between, inside the one of S_SpatialWorker()
+	simulation->numThreads = spatial.threads;
+	simulation->numVisSamples = 4;
+	simulation->samplingRate = spatial.audio.samplingRate;
+	simulation->frameSize = spatial.audio.frameSize;
+}
+
+/*
+===============
+S_SpatialCreateGpu
+
+The simulator of the reflections on the graphics card (v_spatialGpu, snd_spatial_gpu.cpp), with a source of its own
+for the reverb and for each slot. Made whenever there is a device for it, so that v_spatialGpu can be switched while
+the game runs: the level is put onto the graphics card while it loads. Without one the CPU traces all the rays.
+===============
+*/
+static void S_SpatialCreateGpu( void ) {
+	IPLSimulationSettings simulation;
+	IPLSceneSettings sceneSettings;
+	IPLSourceSettings sourceSettings;
+	qboolean ok;
+
+#ifdef __EMSCRIPTEN__
+	return;
+#endif
+	if ( !S_SpatialGpuInit() ) {
+		if ( v_spatialGpu->integer ) {
+			Com_Printf( "v_spatialGpu: %s, the CPU traces the rays of the echo\n", S_SpatialGpuWhyNot() );
+		}
+		return;
+	}
+	S_SpatialGpuSceneSettings( &sceneSettings );
+	S_SpatialSimulationSettings( &simulation, IPL_SIMULATIONFLAGS_REFLECTIONS, IPL_SCENETYPE_CUSTOM );
+	// each thread of Steam Audio takes its share of the rays to the graphics card as one batch
+	simulation.rayBatchSize = ( spatial.maxRays + spatial.threads - 1 ) / spatial.threads;
+	memset( &sourceSettings, 0, sizeof( sourceSettings ) );
+	sourceSettings.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
+
+	ok = (qboolean)( qiplSceneCreate( spatial.context, &sceneSettings, &spatial.gpuScene ) == IPL_STATUS_SUCCESS );
+	if ( !ok ) {
+		spatial.gpuScene = NULL;
+	}
+	if ( ok && qiplSimulatorCreate( spatial.context, &simulation, &spatial.gpuSimulator ) != IPL_STATUS_SUCCESS ) {
+		spatial.gpuSimulator = NULL;
+		ok = qfalse;
+	}
+	if ( ok && qiplSourceCreate( spatial.gpuSimulator, &sourceSettings, &spatial.gpuReverbSource ) != IPL_STATUS_SUCCESS ) {
+		spatial.gpuReverbSource = NULL;
+		ok = qfalse;
+	}
+	for ( int i = 0; ok && i < spatial.numReflectSlots; i++ ) {
+		if ( qiplSourceCreate( spatial.gpuSimulator, &sourceSettings, &spatial.reflects[i].gpuSource ) != IPL_STATUS_SUCCESS ) {
+			spatial.reflects[i].gpuSource = NULL;
+			ok = qfalse;
+		}
+	}
+	if ( !ok ) {
+		Com_Printf( "v_spatialGpu: Steam Audio gives no simulator for the graphics card, the CPU traces the rays of the echo\n" );
+		S_SpatialReleaseGpu();
+		return;
+	}
+	qiplSimulatorSetScene( spatial.gpuSimulator, spatial.gpuScene );
+	qiplSourceAdd( spatial.gpuReverbSource, spatial.gpuSimulator );
+	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
+		qiplSourceAdd( spatial.reflects[i].gpuSource, spatial.gpuSimulator );
+	}
+	qiplSimulatorCommit( spatial.gpuSimulator );
+}
+
 // the simulator, and for every voice its source in it and its effects: all there is of them, made once
 static qboolean S_SpatialCreateVoices( void ) {
 	IPLSimulationSettings simulation;
@@ -257,25 +360,12 @@ static qboolean S_SpatialCreateVoices( void ) {
 	IPLAmbisonicsDecodeEffectSettings decodeSettings;
 	IPLPathEffectSettings pathSettings;
 
-	memset( &simulation, 0, sizeof( simulation ) );
-	simulation.flags = (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING );
-	simulation.sceneType = spatial.sceneType;
-	simulation.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
-	simulation.maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
 	// A pass traces the first rays of those the simulator has, which are not spread round the listener unless
 	// it traces them all (S_SpatialRays): the simulator is made for what it traces, and v_spatialRays is read here.
 	spatial.maxRays = S_SpatialRayCvar();
 	v_spatialRays->modified = qfalse;
-	simulation.maxNumRays = spatial.maxRays;
-	simulation.numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
-	simulation.maxDuration = SPATIAL_REVERB_SECONDS;
-	simulation.maxOrder = SPATIAL_REVERB_ORDER;
-	simulation.maxNumSources = 1 + SPATIAL_REFLECT_SLOTS;	// sources with reflections: the one at the listener and the slots
-	// threads Steam Audio shares a pass of the rays between, inside the one of S_SpatialWorker()
-	simulation.numThreads = spatial.threads;
-	simulation.numVisSamples = 4;
-	simulation.samplingRate = spatial.audio.samplingRate;
-	simulation.frameSize = spatial.audio.frameSize;
+	S_SpatialSimulationSettings( &simulation, (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING ),
+		spatial.sceneType );
 	if ( qiplSimulatorCreate( spatial.context, &simulation, &spatial.simulator ) != IPL_STATUS_SUCCESS ) {
 		spatial.simulator = NULL;
 		return qfalse;
@@ -367,6 +457,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 		return qfalse;
 	}
 	qiplSimulatorCommit( spatial.simulator );
+	S_SpatialCreateGpu();
 
 #ifdef __EMSCRIPTEN__
 	// no thread: S_SpatialSlice() does the passes
@@ -409,6 +500,7 @@ void S_SpatialInit( void ) {
 	v_spatialPhysical = Cvar_Get( "v_spatialPhysical", "0", CVAR_ARCHIVE, "v_spatial: 1 sounds fade with the distance as real ones do and not as the game fades them, lose their highs in the air, and arrive at the speed of sound" );
 	v_spatialShock = Cvar_Get( "v_spatialShock", "1", CVAR_ARCHIVE, "v_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
 	v_spatialEcho = Cvar_Get( "v_spatialEcho", "0", CVAR_ARCHIVE, "v_spatial: 0 the echo is worked out as you go, with the own echoes of the loudest sounds. 1 it is worked out once per level and kept in a file, and looked up where you stand: it does not flutter while you move, all sounds ring with the room you are in" );
+	v_spatialGpu = Cvar_Get( "v_spatialGpu", "1", CVAR_ARCHIVE, "v_spatial: 1 the rays of the echo are traced on the graphics card (Vulkan ray queries) where it has them, 0 on the CPU (Embree). From the next pass on" );
 	v_spatialDebug = Cvar_Get( "v_spatialDebug", "0", CVAR_NONE, "v_spatial: shows in the level what becomes of the sounds. 1 all, or the sum of 2 the sounds, 4 the ways round corners, 8 rays off the walls, 16 the numbers and the wall under the crosshair" );
 	Cmd_AddCommand( "v_spatialInfo", S_SpatialInfo_f, "What v_spatial is doing" );
 	Cmd_AddCommand( "v_spatialSaveScene", S_SpatialSaveScene_f, "v_spatial: the walls Steam Audio has, with the brush models where they are, into steamaudio/scene.obj" );

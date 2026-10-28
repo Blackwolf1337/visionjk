@@ -110,6 +110,23 @@ qboolean S_SpatialReflectReady( const spatialReflect_t *r ) {
 	return (qboolean)( r->askedPass >= 0 && spatialReflectPasses.load() > r->askedPass );
 }
 
+// The source of a slot in the simulator of the graphics card (v_spatialGpu) or in the one of Embree. A slot is
+// ready only after a pass of the simulator the passes are traced with now (S_SpatialFillPass), so the thread of
+// the game takes the one of spatial.reflectGpu, the thread of the pass the one of spatialPass.gpu.
+IPLSource S_SpatialReflectSource( const spatialReflect_t *r, qboolean gpu ) {
+	return gpu ? r->gpuSource : r->source;
+}
+
+// In the thread of the game: the source of the reverb where the listener stands, of the simulator that is heard.
+// After v_spatialGpu was switched that is the one before, until the other has done a pass: its source has nothing
+// yet, or a room of long ago.
+IPLSource S_SpatialHeardReverb( void ) {
+	if ( spatial.heardGpu != spatial.reflectGpu && spatialReflectPasses.load() > spatial.reflectGpuPass ) {
+		spatial.heardGpu = spatial.reflectGpu;
+	}
+	return spatial.heardGpu ? spatial.gpuReverbSource : spatial.reverbSource;
+}
+
 /*
 ===============
 S_SpatialChooseReflects
@@ -301,8 +318,10 @@ ring.
 ===============================================================================
 */
 
-// In the thread of the reflections, before a pass: what spatialPass says it is to start from.
+// In the thread of the reflections, before a pass: what spatialPass says it is to start from, into the simulator
+// that traces it
 void S_SpatialPassInputs( void ) {
+	const IPLSimulator simulator = spatialPass.gpu ? spatial.gpuSimulator : spatial.simulator;
 	IPLSimulationSharedInputs shared;
 	IPLSimulationInputs inputs;
 
@@ -313,7 +332,7 @@ void S_SpatialPassInputs( void ) {
 	shared.duration = SPATIAL_REVERB_SECONDS;
 	shared.order = SPATIAL_REVERB_ORDER;
 	shared.irradianceMinDistance = 1.0f;
-	qiplSimulatorSetSharedInputs( spatial.simulator, IPL_SIMULATIONFLAGS_REFLECTIONS, &shared );
+	qiplSimulatorSetSharedInputs( simulator, IPL_SIMULATIONFLAGS_REFLECTIONS, &shared );
 
 	memset( &inputs, 0, sizeof( inputs ) );
 	if ( spatialPass.reverb ) {
@@ -327,7 +346,7 @@ void S_SpatialPassInputs( void ) {
 			inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
 		}
 	}
-	qiplSourceSetInputs( spatial.reverbSource, IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs );
+	qiplSourceSetInputs( spatialPass.gpu ? spatial.gpuReverbSource : spatial.reverbSource, IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs );
 
 	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
 		memset( &inputs, 0, sizeof( inputs ) );
@@ -336,7 +355,7 @@ void S_SpatialPassInputs( void ) {
 			inputs.source = spatialPass.source[i];
 			inputs.reverbScale[0] = inputs.reverbScale[1] = inputs.reverbScale[2] = 1.0f;
 		}
-		qiplSourceSetInputs( spatial.reflects[i].source, IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs );
+		qiplSourceSetInputs( S_SpatialReflectSource( &spatial.reflects[i], spatialPass.gpu ), IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs );
 	}
 }
 
@@ -440,9 +459,16 @@ void S_SpatialTakePaths( void ) {
 #endif
 }
 
+// Which simulator traces the next pass: the one of the graphics card where v_spatialGpu asks for it and it can. Not
+// for the echo from the probes (v_spatialEcho 1), which traces no ray: the probes are in the simulator of Embree.
+static qboolean S_SpatialPassOnGpu( void ) {
+	return (qboolean)( v_spatialGpu->integer && spatial.gpuSimulator && !S_SpatialEchoBaked() && S_SpatialGpuReady() );
+}
+
 // In the thread of the game, while the thread of the reflections is idle: what the next pass is to start from.
 static void S_SpatialFillPass( void ) {
 	const int passes = spatialReflectPasses.load();
+	const qboolean gpu = S_SpatialPassOnGpu();
 
 	S_SpatialFillPaths();
 	// Steam Audio begins its sum anew when the listener moved by more than a tenth of a millimetre
@@ -457,6 +483,18 @@ static void S_SpatialFillPass( void ) {
 	spatialPass.bounces = S_SpatialBounces();
 	spatialPass.reverb = v_spatialReflections->integer ? qtrue : qfalse;
 	spatialPass.echoBaked = S_SpatialEchoBaked();
+	// The other simulator has found nothing here yet. The reverb stays with the one before until it has
+	// (S_SpatialHeardReverb), and a sound with reflections of its own waits for a pass with it in it.
+	if ( gpu != spatial.reflectGpu ) {
+		spatial.reflectGpu = gpu;
+		spatial.reflectGpuPass = passes;
+		for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
+			if ( spatial.reflects[i].voice ) {
+				spatial.reflects[i].askedPass = -1;
+			}
+		}
+	}
+	spatialPass.gpu = gpu;
 	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
 		spatialReflect_t *r = &spatial.reflects[i];
 		const spatialVoice_t *v = r->voice;
@@ -490,7 +528,11 @@ int SDLCALL S_SpatialWorker( void *unused ) {
 			spatialWorkerState.store( WORKER_RUNNING );
 			if ( spatialPassReflections.load() ) {
 				S_SpatialPassInputs();
-				qiplSimulatorRunReflections( spatial.simulator );
+				if ( !spatialPass.gpu ) {
+					qiplSimulatorRunReflections( spatial.simulator );
+				} else if ( S_SpatialGpuBeginPass() ) {
+					qiplSimulatorRunReflections( spatial.gpuSimulator );
+				}
 			}
 			if ( spatialPassPaths.load() ) {
 				S_SpatialPathInputs();

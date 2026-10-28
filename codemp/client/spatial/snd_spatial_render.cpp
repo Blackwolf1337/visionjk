@@ -426,7 +426,7 @@ static void S_SpatialRenderReverb( int c ) {
 		count = Q_min( SPATIAL_FRAME, v->rendered - v->dryRead );
 		memset( &outputs, 0, sizeof( outputs ) );
 		if ( v->reflect && S_SpatialReflectReady( v->reflect ) ) {
-			qiplSourceGetOutputs( v->reflect->source, IPL_SIMULATIONFLAGS_REFLECTIONS, &outputs );
+			qiplSourceGetOutputs( S_SpatialReflectSource( v->reflect, spatial.reflectGpu ), IPL_SIMULATIONFLAGS_REFLECTIONS, &outputs );
 		}
 		// From the one to the other within a block: a sound that begins in the middle of a convolution is a click.
 		// What a sound gave its own goes on ringing there when it goes back to the room of the listener.
@@ -465,7 +465,7 @@ static void S_SpatialRenderReverb( int c ) {
 	// the room where the listener stands, of what the last finished pass found. Before the first one there is
 	// nothing to ring.
 	memset( &outputs, 0, sizeof( outputs ) );
-	qiplSourceGetOutputs( spatial.reverbSource, IPL_SIMULATIONFLAGS_REFLECTIONS, &outputs );
+	qiplSourceGetOutputs( S_SpatialHeardReverb(), IPL_SIMULATIONFLAGS_REFLECTIONS, &outputs );
 	params = outputs.reflections;
 	if ( params.ir ) {
 		S_SpatialReflectionParams( &params );

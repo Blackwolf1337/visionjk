@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #ifdef JP_SPATIAL
 
-static const IPLMaterial spatialMaterials[SPATIAL_NUM_MATERIALS] = {
+const IPLMaterial spatialMaterials[SPATIAL_NUM_MATERIALS] = {
 	{ { 0.10f, 0.20f, 0.30f }, 0.05f, { 0.100f, 0.050f, 0.030f } },		// generic
 	{ { 0.03f, 0.04f, 0.07f }, 0.05f, { 0.015f, 0.015f, 0.015f } },		// brick
 	{ { 0.05f, 0.07f, 0.08f }, 0.05f, { 0.015f, 0.002f, 0.001f } },		// concrete
@@ -260,11 +260,12 @@ void S_SpatialReleaseLevel( spatialLevel_t *level ) {
 S_SpatialTakeScene
 
 Once a frame. A level that waits is given to the simulator when no pass of the reflections runs: that is the
-one moment it may be. Until then the level before it stays where it is, and S_SpatialActive() says no.
+one moment it may be. Until then the level before it stays where it is, and S_SpatialActive() says no. The
+graphics card may still be building the one before (v_spatialGpu): then it waits for that too.
 ===============
 */
 void S_SpatialTakeScene( void ) {
-	if ( !spatial.sceneWaits || spatialWorkerState.load() != WORKER_IDLE ) {
+	if ( !spatial.sceneWaits || spatialWorkerState.load() != WORKER_IDLE || !S_SpatialGpuIdle() ) {
 		return;
 	}
 	// the probes of the level before go with it, and a bake that still runs for it is told to stop
@@ -281,6 +282,7 @@ void S_SpatialTakeScene( void ) {
 	S_SpatialReleaseLevel( &spatial.level );
 	spatial.level = spatial.nextLevel;
 	memset( &spatial.nextLevel, 0, sizeof( spatial.nextLevel ) );
+	S_SpatialGpuTakeLevel();
 	spatial.numTriangles = spatial.nextTriangles;
 	spatial.mins = spatial.nextMins;
 	spatial.maxs = spatial.nextMaxs;
@@ -337,6 +339,7 @@ static int S_SpatialBuildMesh( int model, IPLScene *scene, IPLStaticMesh *mesh, 
 	if ( checksum ) {
 		*checksum = Com_BlockChecksum( build.vertices, build.count * 3 * (int)sizeof( IPLVector3 ) );
 	}
+	S_SpatialGpuMesh( model, build.vertices, build.materials, build.count );
 
 	memcpy( materials, spatialMaterials, sizeof( materials ) );
 	memset( &meshSettings, 0, sizeof( meshSettings ) );
@@ -434,6 +437,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 	}
 	// a level that still waits was never used
 	S_SpatialReleaseLevel( level );
+	S_SpatialGpuBeginLevel();
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qtrue;
 	memset( spatial.materialTriangles, 0, sizeof( spatial.materialTriangles ) );
@@ -472,6 +476,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 		return;
 	}
 	qiplInstancedMeshAdd( level->world, level->top );
+	S_SpatialGpuPlace( qtrue, 0, &instanceSettings.transform );
 
 	numModels = CM_ExportModelCount();
 	if ( numModels > 1 ) {
@@ -495,6 +500,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 			continue;
 		}
 		qiplInstancedMeshAdd( b->instance, level->top );
+		S_SpatialGpuPlace( qtrue, i, &instanceSettings.transform );
 		b->added = qtrue;
 		level->brushTriangles += b->triangles;
 	}
@@ -649,6 +655,7 @@ void S_SpatialApplyBrushes( void ) {
 		if ( b->gone ) {
 			if ( b->added ) {
 				qiplInstancedMeshRemove( b->instance, level->top );
+				S_SpatialGpuPlace( qfalse, i, NULL );
 				b->added = qfalse;
 			}
 			continue;
@@ -661,6 +668,7 @@ void S_SpatialApplyBrushes( void ) {
 
 		S_SpatialBrushTransform( b->origin, b->angles, &transform );
 		qiplInstancedMeshUpdateTransform( b->instance, level->top, transform );
+		S_SpatialGpuPlace( qfalse, i, &transform );
 	}
 	if ( moved ) {
 		qiplSceneCommit( level->top );

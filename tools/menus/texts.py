@@ -318,6 +318,11 @@ TR = {
     'Echo': 'Echo',
     'Real Time': 'Echtzeit',
     'Precalculated': 'Vorberechnet',
+    'Echo Calculation': 'Echo-Berechnung',
+    'Graphics Card': 'Grafikkarte',
+    'CPU': 'CPU',
+    'Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo.':
+        'Grafikkarte: die Strahlen des Echos werden auf der Grafikkarte verfolgt, die CPU bleibt frei. CPU: sie werden auf der CPU verfolgt. Wo die Karte das nicht kann, rechnet die CPU. Ohne Wirkung bei einem vorberechneten Echo.',
     'Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in.':
         'Echtzeit: wird laufend berechnet, die lautesten Geräusche haben ihr eigenes Echo. Vorberechnet: einmal pro Level berechnet und gespeichert, stabil beim Bewegen, alle Geräusche hallen mit dem Raum, in dem du stehst.',
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
