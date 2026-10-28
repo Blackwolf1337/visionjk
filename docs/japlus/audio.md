@@ -42,6 +42,7 @@ snd_restart
 | `v_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
 | `v_spatialBudget` | 0.75 | only in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8 |
 | `v_spatialEcho` | 0 | 0: the echo is worked out as you go, with echoes of their own for the loudest sounds. 1: it is worked out once per level and kept in a file, see below. Not in a browser |
+| `v_spatialGpu` | 1 | 1: the rays of the echo are traced on the graphics card with Vulkan ray queries where it has them. 0: on the CPU, with Embree. Read from the next pass on, no `snd_restart`. See "The echo on the graphics card" |
 | `v_spatialDebug` | 0 | shows in the level what becomes of the sounds, see below. 1: all, or the sum of 2 the sounds, 4 the ways round corners, 8 rays off the walls, 16 the numbers and the wall under the crosshair. Not stored |
 
 In a browser three defaults are others: `v_spatial` 1, `v_spatialRays` 1024, `v_spatialBounces` 8, and no sound
@@ -59,6 +60,44 @@ listened to it.
 Until 2026-10-21 the bake took the live `v_spatialRays` and 32 diffuse samples, and the file was `_v1`. On
 mp/ffa3 that was 3960 probes in 3.2 s at 2048 rays and 16 bounces, a file of the same size. The files of `_v1`
 stay in the profile and are not read, so every level is baked again.
+
+### The echo on the graphics card
+
+Until 2026-10-28 Embree traced the rays of the echo on the CPU, and with many rays that kept several cores busy.
+Now `v_spatialGpu` (the menu row "Echo Calculation") has the graphics card trace them with Vulkan ray queries
+(`VK_KHR_ray_query`, Vulkan 1.2), where the card has them. With 0 the CPU does it, as before. It can be switched
+while you play and counts from the next pass.
+
+Only the real-time echo and "Echoes of Their Own" (`v_spatialSources`) use it. What is in the way of a sound, the
+sound around corners (the paths) and the bakes stay on the CPU. With `v_spatialEcho 1` the echo is looked up at
+probes and no ray is traced, so the cvar changes nothing there.
+
+The client makes a Vulkan device of its own for this, apart from the renderer, so it works with the OpenGL renderer
+too. The Vulkan library is loaded at run time. Without a card that has ray queries, or in a build without the
+Vulkan headers and `glslc`, the CPU traces the rays and the console says why, once. `v_spatialInfo` names the card
+and, while it traces, how many trips to the card the last pass took and how long one took.
+
+How it works: Steam Audio hands every batch of rays to callbacks (a scene of type `IPL_SCENETYPE_CUSTOM`, in a
+second simulator for the reflections only; `codemp/client/spatial/snd_spatial_gpu.cpp`, the shader is
+`codemp/client/spatial/shaders/spatial_rays.comp`). Per bounce it asks for the closest walls, and then, for each
+source, whether the way from those walls to it is free. A trip to the card and back took about 600 us while the
+work on the card took 15 us. So the batch of the closest walls also traces the ways to all sources, and the
+following batches of the sources are answered from that without another trip: one trip per bounce.
+
+Measured on 2026-10-28 on mp/ffa3 with an RTX 4070 SUPER: 8192 rays, 32 bounces, 3000 frames, paths off. CPU time
+of the client:
+
+| What | CPU time of the client | A pass: CPU time, length |
+|------|------------------------|--------------------------|
+| Embree | 26.5 s | 94 ms, 24 ms |
+| Graphics card | 14.0 s | 35 ms, 20 ms |
+| Reflections off | 6.5 s | |
+
+The loudness of the echo was the same within the spread of two runs (60.1 to 60.2 dB both ways). The rest of the
+CPU time on the card path is Steam Audio adding up the echo between the batches and building the impulse response.
+
+Building it needs the Vulkan headers and `glslc`, as the renderer `rd-vulkan-vision` does (both use
+`cmake/Modules/VulkanHeaders.cmake`). Without them the client is built without this path.
 
 ### The menu
 
@@ -78,7 +117,7 @@ Very High are a choice inside what the engine clamps to, their cost was not meas
 when the cvars are none of the rows. Choosing a preset restarts the sound when it switches `v_spatial` or the
 rays, the rest is read while the game runs. "Output" is `v_spatialHrtf` (Headphones or Speakers), "Reverb" a
 slider on `v_spatialReverb`, "Echo" is `v_spatialEcho` (Real Time or Precalculated, not in a browser, and not
-part of a preset). "Room Reflections" (`v_spatialReflections`), "Echoes of Their Own"
+part of a preset). "Echo Calculation" is `v_spatialGpu` (Graphics Card or CPU, not part of a preset). "Room Reflections" (`v_spatialReflections`), "Echoes of Their Own"
 (`v_spatialSources`: Off, 4, 8, 12, 16) and "Sound Around Corners" (`v_spatialPaths`) are parts of the preset:
 changing one of them says at once which preset the cvars are now, or "Custom" (their action runs
 `uiScript getsoundsetup`). "Real Sound Travel" (`v_spatialPhysical`) and "Doppler Effect" (`s_doppler`) are
