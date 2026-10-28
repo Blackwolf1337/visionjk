@@ -135,7 +135,7 @@ void CL_RepQueue( const netadr_t *server, clIdsEvent_t event ) {
 	if ( !v_idsShareTold->integer ) {
 		Cvar_Set( "v_idsShareTold", "1" );
 		Com_Printf( S_COLOR_YELLOW "The intrusion detection reports this server to the VisionJK masterserver (%s), so other players are warned:"
-			" its address and what happened, nothing about you. The masterserver keeps the first three parts of your IP address with the report."
+			" its address and what happened, nothing about you. The masterserver keeps the first three numbers of your IP address with the report."
 			" v_idsShare 0 turns it off.\n", v_idsMaster->string );
 	}
 }
@@ -174,7 +174,7 @@ void CL_RepCheckConnect( const netadr_t *adr ) {
 	}
 	rep_told[rep_toldCount++ % REP_TOLD] = *adr;
 	rep_toldCount = Q_min( rep_toldCount, REP_TOLD );
-	Com_Error( ERR_DROP, "Players from %i networks left %s in the last 7 days: the intrusion detection of their clients found an attack.\nThe VisionJK masterserver has the reports (v_idsReputation). Connect again to join anyway.",
+	Com_Error( ERR_DROP, "Players from %i networks reported %s in the last 7 days: their clients left it for an attack or crashed on it.\nThe VisionJK masterserver has the reports (v_idsReputation). Connect again to join anyway.",
 		networks, NET_AdrToString( adr ) );
 }
 

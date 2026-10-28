@@ -342,7 +342,7 @@ static void MemW_LastSession( void ) {
 void CL_MemWatchInit( void ) {
 
 
-	v_memwatch = Cvar_Get( "v_memwatch", MEMW_DEFAULT, CVAR_ARCHIVE, "Memory monitor of the client (with v_ids): 1 the process is looked at for signs of an attacker (changed code, code from deleted or temporary files, programs it did not start) and a server is left for them. 0 off" );
+	v_memwatch = Cvar_Get( "v_memwatch", MEMW_DEFAULT, CVAR_ARCHIVE, "Memory monitor of the client (needs v_ids): 1 looks at the game for signs of an attacker: changed game code, code from deleted or temporary files, programs the game did not start (a server is left for these), and odd memory (only written down). 0 off" );
 	MemW_LastSession();
 }
 

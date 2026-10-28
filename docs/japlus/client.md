@@ -1134,6 +1134,33 @@ OpenSSH agent of Windows both logged in on 2026-10-11, see [windows.md](windows.
 `sv_floodProtect 0`, which is why the run did not show the dropped commands. The spacing of the commands is
 not run against any server yet.
 
+### Intrusion detection
+
+In the engine (`client/cl_ids.cpp`, `cl_memwatch.cpp`, `cl_reputation.cpp`), the notices in `cgame/hud/cg_notify.c`,
+the window in `ui/ui_ids.c`. What it finds and how is in [security.md](security.md), "Added later: intrusion
+detection" and the two sections after it.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_ids` | 1 | the intrusion detection. 0: off, and with it the monitor and the reports |
+| `v_memwatch` | 1 | the memory monitor (0 in the hotpatch and sanitizer builds). Needs `v_ids` |
+| `v_idsShare` | 1 | report a server the client left, or crashed on, to the masterserver |
+| `v_idsReputation` | 1 | fetch the servers the masterserver flagged, mark them in the browser, refuse the first connect |
+| `v_idsMaster` | `master.jka.vision:29170` | the masterserver for both |
+| `v_idsShareTold` | 0 | set to 1 after the first report, which prints one console line |
+| `v_idsShareLocal` | 0 | 1: report servers on the local network too (for tests) |
+| `v_idsSeq`, `v_idsLast` | | read only. The count of events and the last one, for the notices of the cgame |
+| `v_idsSeqShown` | 0 | the count the cgame has shown a notice for |
+
+| Command | Does |
+|---------|------|
+| `v_idsstatus` | the last 32 events of this run and the servers left this run |
+| `v_idsforget <address\|all>` | forgets a server that was left, so the next connect is not refused |
+
+Each event is a notice with a red bar (`v_notify`). The button Intrusions of the server browser opens a window with
+the last 64 lines of `ids.log`, the newest first. A server flagged by the masterserver has an orange `IDS` in the
+ping column of the browser, one the client left itself a red one.
+
 ### From the VisionJK of 2019
 
 `codemp/ui/ui_saberfx.c` and `.h`, `codemp/cgame/hud/cg_notify.c` (2026-10-22). Three things of the VisionJK client
@@ -1242,7 +1269,7 @@ Linux, or the `fs_homepath` a start gives it): the version, the signal, the addr
 its stack, and the last of the console. Then the crash goes on as before, so the system keeps its core
 (`coredumpctl list visionjk.x86_64`, `coredumpctl info <pid>` shows the stacks of all threads). On Linux since
 2026-10-19 for a bad address, a bad instruction, a division by zero and `abort()`; before, only a fatal error
-of the engine itself (the error window) wrote one, and a segfault left nothing. Windows: only the fatal error.
+of the engine itself (the error window) wrote one, and a segfault left nothing. Windows: only the fatal error until 2026-10-28; since then an unhandled exception writes one too (`SetUnhandledExceptionFilter`), with the exception, the address and the module.
 
 The stack names only what a file exports. The offset after a file is a function of that build:
 

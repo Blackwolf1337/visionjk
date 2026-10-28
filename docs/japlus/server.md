@@ -198,6 +198,35 @@ Limits of the relay:
 2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
 removed. Not run with master.cfg yet.
 
+#### Reputation of game servers
+
+`server/sv_reputation.cpp`, `master/ms_reputation.c`. Since 2026-10-28. Clients of this tree report a game server
+they left for an attack, or crashed on, and the masterserver hands the servers many networks reported to other
+clients (the protocol and the client side are in [security.md](security.md), "Added later: reports to the
+masterserver"). It is there in the build with `-DBuildMasterServer=ON` only. A game server that is not flagged
+sees nothing of it.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `ms_rep` | 1 | 1: reports are taken and the list is handed out. 0: off |
+| `ms_repThreshold` | 6 | the score a server is flagged at |
+| `ms_repLocal` | 0 | 1: reports of private and local server addresses are taken too (for tests) |
+
+| Command | Does |
+|---------|------|
+| `ms_repstatus` | the flagged servers (address, score, networks) |
+| `ms_repclear <address:port\|all>` | forgets the reports of a server, or of all |
+
+- A report of an attack weighs 2, a crash 1. A network (/24) counts once a server, with the larger weight. A
+  server keeps 32 networks, the master 4096 servers, and a report counts for 7 days. So 6 is three networks with
+  an attack.
+- An address may report 10 times an hour, and ask for the list once in 10 seconds.
+- `reputation.txt` in the home folder of the master: written every 10 minutes and when it ends, read when it
+  starts.
+- Somebody with addresses in many /24 networks can still get a server flagged. The owner of the master clears it
+  with `ms_repclear`.
+- Run on 2026-10-28 with a master and clients on one machine. Not run on the host of VisionJK.
+
 ### Lag compensation (from TaystJK's jaPRO)
 
 `game/unlagged/g_unlagged.c`, built 2026-10-19. jaPRO has it as `g_unlagged`, which goes back to the Unlagged mod

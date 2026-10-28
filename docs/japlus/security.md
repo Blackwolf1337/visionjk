@@ -278,6 +278,9 @@ connectionless packets are dropped unread, and a player the event came from is d
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `v_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
+| `v_memwatch` | 1 | the memory monitor, see "Added later: the memory monitor of the client" |
+| `v_idsShare`, `v_idsReputation`, `v_idsMaster` | 1, 1, `master.jka.vision:29170` | reports to the masterserver, see "Added later: reports to the masterserver" |
+| `v_idsSeq`, `v_idsLast`, `v_idsSeqShown` | | the events for the notices of the cgame, see below |
 
 - Written down, and the client leaves: a path in the place of the game folder (at once), data of a download
   that was not asked for and fragments that do not fit (at the third). Also written down, and the client
@@ -347,6 +350,23 @@ connectionless packets are dropped unread, and a player the event came from is d
   that does not know the key shows the ping as before, and the refused connect works there too because the
   engine does it. With `v_ids 0` none of this happens.
 
+The live view, since 2026-10-28:
+
+| What | Where |
+|------|-------|
+| `v_idsstatus` | prints the last 32 events of this run (time, address, what it was, what came with it) and the servers left this run, each with the reason |
+| `v_idsforget <address\|all>` | forgets a server that was left, so the next connect to it is not refused |
+| the notice | each event is a notice of the HUD with a red bar (`v_notify`) |
+| the window Intrusions | a button of the server browser; shows the last 64 lines of `ids.log`, the newest first |
+
+- The cgame learns of an event from three cvars of the engine. `v_idsSeq` (read only) counts the events of the run.
+  `v_idsLast` (read only) is the last event, made of the address and the fixed name of the event from the engine
+  table, never of text the server sent. `v_idsSeqShown` is the number the cgame has shown a notice for. An event
+  during the connect is shown after the loading, and a map change shows nothing twice.
+- The window cleans every line again (colour codes and control characters become dots), though the engine did it
+  when it wrote the line.
+- With `v_ids 0` there are no events, so there are no notices.
+
 Tested apart from the game (`japlus_port/tools/idstest`, 38 checks with a clock the test sets): how the
 weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
 count against an address with a player, `vs_ids 1`, the machine itself, what is taken for an attack in a
@@ -377,6 +397,135 @@ client wrote down `135688 bytes said, 137216 sent`, left, was refused once on th
 the one after it. For protected the client left, was refused once on the next connect and left again. unasked
 was also run with the old way of reading the message: it failed there with `Illegible server message` (the
 client dropped at the first message), and it passes with the new one.
+
+Run on 2026-10-28: `tools/test/ids-test.sh` passes all six scenarios again, now also with a check of
+`v_idsstatus` and of the notice (`v_idsSeqShown` is 3 in the scenario `cvars`), and a screenshot of the first
+connect for each scenario. The notice and the window Intrusions were not looked at by a person.
+
+## Added later: the memory monitor of the client
+
+Since 2026-10-28 (`client/cl_memwatch.cpp`, `shared/sys/sys_memwatch.h`, `sys_memwatch_rules.c`). The intrusion
+detection above looks at what a server sends. The monitor looks at the game itself, for what the code of an
+attacker that got in would leave behind: a payload for a hole nobody knows is found by what it does to the
+process, not by how it came.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_memwatch` | 1 | 1: the monitor runs. 0: off. It needs `v_ids 1`. The default is 0 in the hotpatch and the sanitizer builds, which write code or make executable memory themselves |
+
+Regions of memory and child processes are looked at every 2 seconds. The code of the game is hashed (SHA-256)
+64 KB a frame.
+
+| Sign | Linux | Windows | Kind |
+|------|-------|---------|------|
+| game code changed | the executable sections of the program, the renderer, the cgame and the ui (`dl_iterate_phdr`) are hashed when loaded and again while they run | the same, from the section headers of the module | strong |
+| code from a deleted file, a memfd or a temporary folder | `/proc/self/maps` | `VirtualQuery` | strong |
+| a child process the game did not start | `/proc/self/task/<tid>/children` | a snapshot of the processes | strong |
+| writable and executable memory | `/proc/self/maps` | `VirtualQuery` | weak |
+| new executable memory from no file | `/proc/self/maps` | `VirtualQuery` | weak |
+| a library outside the program folder and the folders of the system | `/proc/self/maps` | `VirtualQuery` and the name of the module | weak |
+
+- A child process is no finding within 5 seconds of `Sys_OpenURL` (the browser), and `pulseaudio` is no finding.
+- Strong: a line in `ids.log`, a notice, and on a server the client leaves it and remembers it like the other
+  servers it left (the first connect again is refused with the reason). The reason reads `this client found <what>`.
+- Weak: a line in `ids.log` and a notice, nothing more, at most 8 lines of a kind a run. Drivers, overlays (Steam,
+  Discord, RTSS) and injected libraries make these signs as well, so they are no ground to leave.
+- What existed at the first look counts as the start of the game and is not written down, except the strong signs.
+- macOS has none of this, only the crash part below.
+
+The crash part. On a server the file `ids_session` in the home folder holds the address of the server, from the
+connect to the disconnect. If it is still there at the next start, the last run ended on that server. That is
+written down as a `crash` event, and the first connect to that server is refused with the reason. It tells the
+player that the server may have been the cause. A bug of the game makes a crash too, which is why a crash weighs
+less than an attack in the reports below.
+
+Windows now writes a crash log too (`SetUnhandledExceptionFilter` in `sys_win32.cpp`). Before, an unhandled
+exception left nothing. It names the exception, the address and the module, like the one of Linux (see
+[client.md](client.md), "When the game crashes").
+
+The limit, stated plainly: code of an attacker that already runs in the process can switch the monitor off. What
+the monitor catches is a payload that does not know of it, and the line in `ids.log` is written before anything
+else is done about it.
+
+Tested apart from the game: `tests/vjk/memwatch.cpp` (the parser of the maps lines and the rules for Linux and
+Windows paths).
+
+Run on 2026-10-28 on Linux against a local server, with a temporary test command (taken out again): memory that
+is writable and executable was written down and the client stayed. Code from a memfd, changed code and a child
+process each made it leave, and the next connect was refused once. A crash that was forced was noted at the next
+start, and the server was refused once. In the normal play time on the AMD GPU (RADV) under gamescope there was no
+false finding. The same with the Windows build under Wine: rwx memory written down, a code change and a `cmd.exe`
+child made it leave, the crash log names the exception, the address and the module, and the crash was noted at the
+next start.
+
+Not tested: real Windows (only Wine), overlays like Steam, Discord and RTSS, the NVIDIA GPU, macOS.
+
+## Added later: reports to the masterserver
+
+Since 2026-10-28 (`client/cl_reputation.cpp`, `server/sv_reputation.cpp`, `master/ms_reputation.c`). A client that
+left a server for an attack tells the masterserver. The masterserver counts the networks that did and hands the
+list to other clients, which warn their players. A player that was thrown off once is no longer alone with it.
+With `v_ids 0` nothing is sent and nothing is fetched.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_idsShare` | 1 | 1: a server the client left, or crashed on, is reported to the masterserver. 0: off |
+| `v_idsReputation` | 1 | 1: the list of flagged servers is fetched, marked in the server browser and the first connect to one is refused. 0: off |
+| `v_idsMaster` | `master.jka.vision:29170` | the masterserver for both |
+| `v_idsShareTold` | 0 | set to 1 after the first report, which prints one console line that says what is sent |
+| `v_idsShareLocal` | 0 | 1: servers on the local network are reported too. For tests |
+
+What is reported:
+
+| Event | Name | Weight |
+|-------|------|--------|
+| a download nobody asked for, fragments that do not fit, a path as game folder, more download data than said, a protected cvar | `download`, `fragment`, `gamedir`, `size`, `protected` | 2 |
+| changed game code, code from a deleted or temporary file, a child process | `code`, `exec`, `child` | 2 |
+| a crash on the server | `crash` | 1 |
+
+- Only events that made the client leave over the connection, the strong signs of the memory monitor, and the
+  crash. Never connectionless events, escape characters or refused cvars.
+- The report has the address of the server and the name of the event, nothing about the player. The masterserver
+  sees the address the report comes from and keeps its first three numbers (the /24 network).
+- The first report prints a yellow line on the console that says so, and how to turn it off.
+
+Packets, on the port of the masterserver (`sv_reputation.cpp`):
+
+| Packet | Answer |
+|--------|--------|
+| `idsChallenge` | `idsChallengeResponse <c>` |
+| `idsReport <c> <address:port> <event>` | `idsReportResponse ok`, `wait` or `bad` |
+| `idsList <c>` | `idsListResponse <part> <parts> <address:port:networks> ...` |
+
+- `<c>` is a keyed hash of the address and port of the sender and of the minute. It proves that the sender gets
+  the packets of the address it writes from. Without it anybody could report in the name of another address, and
+  a list, which is longer than its question, could be sent to an address that never asked.
+- An address may report 10 times an hour and ask for the list once in 10 seconds.
+- A report of a private or local server address is refused, unless `ms_repLocal 1`.
+- A network (/24) counts once for a server, with the larger weight of its reports. A server keeps 32 networks, the
+  oldest goes, and the master keeps 4096 servers. A report counts for 7 days.
+- A server is flagged at a score of `ms_repThreshold` (6): three networks with an attack, or six with a crash.
+- `reputation.txt` in the home folder of the master is written every 10 minutes and when it ends, and read when
+  it starts. `ms_repstatus` lists the flagged servers, `ms_repclear <address:port|all>` forgets one or all.
+  `ms_rep 0` turns it off.
+
+The client looks the name of the master up on a thread of its own (`Sys_ResolveIPv4`), so the game does not wait
+for the lookup. It fetches the list at start and with the server browser, at most every 10 minutes. A flagged
+server has an orange `IDS` in the ping column of the browser. The red one is for a server the client left itself,
+also for its own memory finds. The first connect to a flagged server is refused with the reason: how many
+networks reported it in the last 7 days. The next connect goes through.
+
+The limit, stated plainly: somebody with addresses in many /24 networks can still get a server flagged. The owner
+of the masterserver can clear it with `ms_repclear`. A flag is a warning to players, nobody is blocked by it.
+
+Tested apart from the game: `tests/vjk/reputation.cpp` (networks, weights, the window, the limits).
+
+Run on 2026-10-28 on this machine: a master, the IDS test server (`vs_idsTest 2`) and two clients, with
+`ms_repLocal 1`, `ms_repThreshold 2` and `v_idsShareLocal 1`. Client 1 left and reported, the master logged it.
+Client 2 fetched the list, and its first connect was refused with the reason, and the second went through.
+`reputation.txt` was written and read back by a restarted master.
+
+Not tested: the orange mark and the window Intrusions looked at by a person, the master on the real host.
 
 ## Recommended server settings
 

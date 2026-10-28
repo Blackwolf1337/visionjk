@@ -166,6 +166,13 @@ client, and run with the deletion taken out it failed with the `.tmp` still ther
 of the client. The logs are `build-test/ids/<scenario>-server.log`, `-client.log` and `-ids.log`; `--keep` also
 keeps the install and the home folders. A full run takes about three minutes.
 
+Since 2026-10-28 the client also runs `v_idsstatus` and `v_idsSeqShown` at the end of each scenario, and the
+script checks them: `none` must print `nothing this run`, `cvars` must list the event in `v_idsstatus` and have
+`v_idsSeqShown` 3 (the cgame showed the notice for each event), and `protected` must list the server left. Right
+after the first connect the client takes a screenshot (`screenshot` after 500 frames, while the notice is up).
+The pictures are copied to `build-test/ids/<scenario>-shots/`. The script does not judge them: they are there for a
+person to look at the notice.
+
 ## The updater
 
 ```
