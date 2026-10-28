@@ -43,6 +43,10 @@ and deletes nothing. The console names the files.
 | `v_updateChannel` | stable | `stable` or `dev`, saved. Anything but `dev` is stable. See "The update channels" |
 | `v_updateURL` | https://jka.vision/downloads/update | where it asks. Only the command line can name another one, see "Who is trusted" |
 | `v_updateState`, `v_updateText` | | read only: what the updater is doing, and the line of the menu |
+| `v_version` | | read only: the version of this build, as the updater reads it |
+| `v_changelog` | 0 | read only: how many times the engine fetched the changelog, so the ui reads the files again |
+| `v_updated` | | set by the engine to the new version after a start that finished an update. The window "What's new" opens once and empties it |
+| `v_uiURL` | 0 | read only: 1 when the engine can open an address in the browser of the system (`ext.OpenURL`) |
 
 | Command | |
 |---------|---|
@@ -94,6 +98,37 @@ that build had may stay.
 
 Players on 0.2.7 and older have no channel setting. They get it by updating to 0.2.8, and a list for the
 stable channel stays where it was, so they keep working.
+
+## The changelog
+
+The window "What's new" lists what changed in each version. At the left are the versions, at the right the
+selected entry. A version has a tag: "Development build", "Installed" (the version of this build, `v_version`)
+or "Not installed yet". Bold words are in Noto Sans Bold, code is in the mono font on a dark inset, links are
+light blue. A first click on a link shows its address and asks for a second click, which opens it in the
+browser of the system (only when `v_uiURL` is 1). The text scrolls with the wheel, the page keys, Home and End,
+and a click on the bar. While a newer version is out (`v_updateState` 1) the window has a button "Update Now".
+It works in the classic menus too.
+
+It is opened from:
+
+- the pill "What's new" on the main menu, next to the update line. While an update is offered it says
+  "What's new in <version>"
+- the row "Changelog" in Setup and in Network (in a game too)
+- once by itself at the first start after an update (`v_updated`)
+
+The text comes from two files, both in the format of `changelog/<version>.md` of the website repository
+(front matter with `version:`, `date:` and `summary:`, then the entries):
+
+- `base/visionjk/changelog.md` came with the zip. `tools/build-game.sh` of the website puts it in.
+- `base/visionjk/changelog-fetched.md` in the folder of the player (`FS_SV_FOpenFileWrite`) is what the engine
+  fetched.
+
+The engine fetches `<v_updateURL>/changelog.md` on the stable channel and `<v_updateURL>/dev/changelog.md` on
+the dev channel, in the same thread as the file list and with the same checks. It takes at most 256 KB and keeps
+the answer only if it starts with `---\nversion:`. Each fetch counts up `v_changelog`. The window shows the
+file whose newest entry is the newer one, so an offered version can be read before it is fetched. The parser
+for the text is in `codemp/ui/ui_changelog.c` (the Markdown subset is the one of `ui_markdown.c`, tested by
+`tests/vjk/markdown.cpp`).
 
 ## What is never replaced
 
@@ -212,7 +247,11 @@ system trusts, follow no redirect, and take nothing but an answer of 200.
 | `shared/web/web_sha256.c` | SHA-256 in pieces |
 | `shared/sys/sys_http.h`, `sys_http_win32.cpp`, `sys_http_curl.cpp` | one question to a web server |
 | `shared/sys/sys_main.cpp` | `main()` calls `CL_UpdateResume`, and the program starts itself again when it has ended (`Sys_RestartOnExit`) |
-| `ui/ui_update.c` | the line on the main menu |
+| `ui/ui_update.c` | the line on the main menu, and the pill "What's new" |
+| `ui/ui_changelog.c`, `ui/ui_markdown.c` | the window "What's new" (`UI_CHANGELOG`, `FEEDER_CHANGELOG`) and the reader of its text |
+| `ui/jamp/changelog.menu`, `ui/vision/changelog.menu` | the menu of the window (the second one is made by `tools/menus`) |
+| `base/visionjk/changelog.md` | the changelog that came with the zip |
+| `base/visionjk/changelog-fetched.md` | the changelog the engine fetched, in the folder of the player |
 
 ## Who is trusted
 
@@ -246,6 +285,10 @@ next start asks again. A download that breaks off changes no file.
 - `tools/build-game.sh` of the website repository writes the lists and the files into
   `site/downloads/update`, `tools/deploy.sh --check` looks whether they are true. From the moment a list is
   published, every release build that is started offers that version.
+- Before `tools/build-game.sh <version>`, also of a development build, `changelog/<version>.md` of the website
+  has to exist, in the words of a player. The script stops without it. It puts `base/visionjk/changelog.md`
+  into each zip and writes `site/downloads/update/changelog.md` (on a release) and
+  `site/downloads/update/dev/changelog.md` (always) for the game to fetch.
 - A version with a suffix other than `-dev.N` (`0.1.0-rc1`) gets no list and never updates itself.
 - A development build (`tools/build-game.sh 0.2.8-dev.1`) gets lists in `dev/` and `lists/` and leaves the
   stable list alone. A release that is not older than the development build on the site makes the dev lists

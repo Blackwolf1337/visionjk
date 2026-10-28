@@ -198,6 +198,11 @@ western languages, and so do all legacy clients and servers. What follows from t
   that starts on a pure server can not read the pk3 of this tree. A file with another SHA-256 than the one the
   build shipped is refused: a server can send a pk3 with a file of that name. So another font can not be
   dropped in without building the client anew.
+- Noto Sans Bold (`fonts/visionjk/NotoSans-Bold.ttf` in the client assets, OFL) is the bold face of the window
+  "What's new". The engine reads and checks it like the other fonts (`FONT_BOLD_SHA256` from
+  `codemp/CMakeLists.txt`, `client/cl_font.cpp`). The renderer has it as `vision_sans_bold` (`TTF_BOLD` in
+  `rd-common/tr_font_ttf.cpp`), a menu file asks for it with `font 7`. An engine without the file gives the plain
+  font.
 - Sending: chat goes out as UTF-8 only to a server whose server info has `vs_caps` bit 0. To any other
   server every command is converted to Windows-1252 on the way out, with `?` for what that lacks. The userinfo
   (the name) goes out as Windows-1252 to every server, since a name is handed to all clients alike.

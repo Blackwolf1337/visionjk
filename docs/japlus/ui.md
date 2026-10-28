@@ -96,6 +96,9 @@ Both are in Setup under Interface.
   here, how fast it comes and how long it will take.
 - While a level loads, its picture fills the window and the same panel at the same place says the name of
   the level, the kind of game, the server, what is being loaded and how far it is.
+- The window "What's new" lists the changes of each version (see `update.md`, "The changelog"): the versions at
+  the left, the entry at the right, with bold words, code and links. It opens from the pill "What's new" on the
+  main menu, from the row "Changelog" in Setup and in Network, and once after an update.
 - The console is dark glass with a light blue line under it, in place of the picture of the game.
 
 It needs the engine of this tree (`v_uiSkin 1`). In another engine the ui module loads the menus of before by
@@ -130,7 +133,7 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | menuDef | `openSlide <units>` | the menu comes up from that far below when it opens |
 | menuDef, itemDef | `style WINDOW_STYLE_PANEL` | a panel with round corners: `backcolor` its fill, `bordercolor` its rim (one pixel, when its alpha is above 0) |
 | menuDef, itemDef | `radius <units>`, `shadow <units>`, `sheen <alpha>`, `glowcolor <r g b a>` | of such a panel: how round, how far its shadow reaches, a light line along its top, a light around it (blended, see below) |
-| itemDef | `font 5`, `font 6` | Noto Sans and DejaVu Sans Mono, every letter from the TrueType font and made for the size it has in the window. 18 units at `textscale 1` |
+| itemDef | `font 5`, `font 6`, `font 7` | Noto Sans, DejaVu Sans Mono and Noto Sans Bold (`SKIN_FONT_BOLD`; an engine without the file gives the plain font), every letter from the TrueType font and made for the size it has in the window. 18 units at `textscale 1` |
 | itemDef | `caps 1` | its text in capital letters |
 | itemDef | `type ITEM_TYPE_BAR`, `type ITEM_TYPE_VALUE`, `stat <name>` | a bar that is filled by a number of the game, or that number as text. `forecolor` on `backcolor`, or the colour of the first `addColorRange` the number is in. `align ITEM_ALIGN_RIGHT` fills a bar from the right |
 | itemDef | `showStat <name>` | the item is only there while that number is above 0 |
@@ -191,6 +194,10 @@ are.
   be given) and rows the old menus did not have. A row of the old menu keeps its cvar, its list and its
   script, without the commands that showed and marked the old tabs. The layout is the same for all four: in a
   game the screen is a window under the bar of the in-game menu.
+- `options.py` has one more kind of row, `('menu', name, menu, what for)`: it opens a window. The rows
+  "Changelog" of Setup and Network are of this kind.
+- `FRAMES` in `pages.py`: a window of this tree whose frame was a picture of the game gets that item as a glass
+  frame. It is only used for `changelog.menu`.
 - `profile.py`, the pages of the player (profile, character, lightsaber, force powers, outside a game and in
   one). They stay menus of their own and every item keeps its name, group, cvar, feeder, owner draw and
   script, because the code of the game finds, shows and hides them by name. The script puts them into one
@@ -227,13 +234,14 @@ is longer than that now gets a warning in the console when it is read.
 |------|---|
 | `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of polygons in a scene of its own, the panel of the connect and loading screens (`Skin_LoadPanel`). Built into ui and cgame |
 | `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number, and the options screens: pages (`Menu_SetPage`), the list of a page (`Menu_ScrollTo`, `Menu_ScrollFrame`), a setting as a row (`Item_Row_Paint`, `Item_Row_HandleKey`), the buttons of a row by the width of their words (`Menu_TabsLayout`), what the item in focus is for (`Item_Desc_Paint`) |
+| `ui/ui_changelog.c`, `ui_markdown.c` | the window "What's new" and the reader of its text |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
 | `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`v_showLoading 1`, a cheat, holds it over the game to look at it), whether the new look is the one drawn (`CG_HudNewLook`), texts in the language of the game (`CG_VisionText`) and cut to a width (`CG_TextCut`) |
 | `cgame/hud/cg_scores.c` | the scoreboard of the new look, its rows for the pointer, keeping it open |
 | `cgame/chat/cg_chat.c`, `cgame/select/cg_select.c` | the chat box and the card of a player, which draw with the same pieces |
 | `client/cl_console.cpp` | the background of the console, unless `v_classic 1` |
 | `shared/sdl/sdl_icon.h`, `shared/icons/VisionJK.ico` | the icon of the window and of the Windows program, made from `img/logo-512.png` of the website |
-| `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans` and `vision_mono` as whole fonts for `R_RegisterFont` |
+| `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans`, `vision_mono` and `vision_sans_bold` as whole fonts for `R_RegisterFont` |
 | `client/cl_uiapi.cpp`, `ui/ui_public.h` | `R_RegisterShaderRGBA` in the ext block of the ui, announced by the cvar `v_uiSkin` |
 
 A shape with a round corner is made for the pixels its radius has in the window and is put on whole pixels,
