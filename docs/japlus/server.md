@@ -163,7 +163,11 @@ One program on one UDP port for the players of servers without this game module:
 chat, their clan radio, their statuses and the boxes of their boombox. It is the dedicated server of this tree
 built with `-DBuildMasterServer=ON` (target `visionjk-master`, off unless asked for, with no install rule: it is
 for the hosts of VisionJK itself and no part of a release). Its relay only runs while a level runs, so it loads
-one that nobody plays on (`assets/configs/master.cfg`, one slot):
+one that nobody plays on (`assets/configs/master.cfg`, one slot). Nobody can join it either: it refuses every
+client connect with "This is the masterserver of VisionJK, not a game server." (the block `VISION_MASTER` at the top
+of `SV_DirectConnect`). `getinfo` and `getstatus` are still answered, and the relay is not affected, as its
+datagrams are taken before the client handling. Before, anyone who knew the address could take the slot and stand
+alone on `mp/duel1`.
 
 ```
 visionjk-master.x86_64 +set dedicated 1 +set net_port 29170 +exec master.cfg +map mp/duel1

@@ -158,6 +158,14 @@ void SV_DirectConnect( const netadr_t *from ) {
 
 	Com_DPrintf ("SVC_DirectConnect ()\n");
 
+#ifdef VISION_MASTER
+	// VisionJK: the level of the masterserver is only there to make its relay run (sv_voice.cpp), nobody plays on
+	// it. Its port answers getinfo and getstatus, a connect is refused.
+	NET_OutOfBandPrint( NS_SERVER, from, "print\nThis is the masterserver of VisionJK, not a game server.\n" );
+	Com_DPrintf( "    rejected connect from %s (masterserver)\n", NET_AdrToString( from ) );
+	return;
+#endif
+
 	// Check whether this client is banned.
 	if ( SV_IsBanned( from, qfalse ) )
 	{
