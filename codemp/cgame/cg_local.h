@@ -1144,6 +1144,7 @@ typedef struct cgMedia_s {
 	qhandle_t	purpleSaberGlowShader;
 	qhandle_t	purpleSaberCoreShader;
 	qhandle_t	saberBlurShader;
+	qhandle_t	sfxSaberTrailShader;	// the white of the swept place of v_saberStyle 1 (CG_SFXSaberTrailFill)
 	qhandle_t	swordTrailShader;
 	// JA+ saber colors: 6 to 10 are RGB blades, 11 is black
 	qhandle_t	RGBSaberGlowShader;

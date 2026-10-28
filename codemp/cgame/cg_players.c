@@ -5724,9 +5724,11 @@ static void CG_SaberTrailRGB( saber_colors_t color, vec3_t rgb )
 	}
 }
 
-// v_saberStyle 1: the place the blade swept since a moment ago, filled in the colour like the classic trail
-// (saberBlur fades from the blade to the old place). The SFX style of 2019 filled it too, its four edges alone
-// look hollow and dark.
+// v_saberStyle 1: the place the blade swept since a moment ago, filled white like the core of the blade, with the
+// shader of the SFX style of 2019 (gfx/sfx_sabers/saber_trail, white, added), and the edges of the four surfaces
+// round it in the colour of the saber. Its four edges alone look hollow and dark. Until 2026-10-28 it was filled
+// with saberBlur of the classic trail: its core fades from 40 % of the way to the old place on, and its picture is
+// dark at the tip and at the hilt, so the middle was darker than the edges and a piece at the top was missing.
 static void CG_SFXSaberTrailFill( const saberFX_t *fx, saber_colors_t color )
 {
 	static const float	st[4][2] = { { 0.0f, 1.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f } };
@@ -5750,7 +5752,7 @@ static void CG_SFXSaberTrailFill( const saberFX_t *fx, saber_colors_t color )
 			verts[i].modulate[j] = (byte)rgb[j];
 		verts[i].modulate[3] = 255;
 	}
-	trap->R_AddPolysToScene( cgs.media.saberBlurShader, 4, verts, 1 );
+	trap->R_AddPolysToScene( cgs.media.sfxSaberTrailShader, 4, verts, 1 );
 }
 
 // v_saberStyle 1 (ui/ui_saberfx.c). trail NULL: the blade without the place it was a moment ago.
