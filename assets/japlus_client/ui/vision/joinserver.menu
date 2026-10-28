@@ -933,6 +933,34 @@
 			}
 			mouseexit { hide button_glow }
 		}
+
+		itemDef
+		{
+			name					idsText
+			text					@VISION_INTRUSIONS
+			descText				@VISION_WHAT_THE_INTRUSION_DETECTION_NOTED_A
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				0.68
+			style					WINDOW_STYLE_EMPTY
+			rect					510 396 120 20
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				60
+			textaligny				1
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ids_popmenu
+			}
+			mouseenter
+			{
+				show button_glow
+				setitemrect button_glow 507 374 150 20
+			}
+			mouseexit { hide button_glow }
+		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		backdrop				1

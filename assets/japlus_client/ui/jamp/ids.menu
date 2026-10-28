@@ -1,0 +1,141 @@
+//----------------------------------------------------------------------------------------------
+//
+//	INTRUSIONS (VisionJK): the last lines of ids.log, the newest first (FEEDER_IDSLOG, ui/ui_ids.c).
+//	Opened by the button idsText of joinserver.menu. The texts are the ones of the new look
+//	(strings/<language>/vision.str).
+//
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name					"ids_popmenu"
+		visible					0
+		fullScreen				0
+		rect					0 0 640 480
+		focusColor				1 1 1 1
+		outOfBoundsClick
+		descX					320
+		descY					424
+		descScale				1
+		descColor				1 .682 0 .8
+		descAlignment			ITEM_ALIGN_CENTER
+		popup
+		onOpen
+		{
+			uiScript			IDSLog ;
+			setfocus			ids_list
+		}
+		onESC
+		{
+			play				"sound/interface/esc.wav" ;
+			close				ids_popmenu ;
+		}
+
+		itemDef
+		{
+			name				ids_background
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				30 60 580 340
+			background			"gfx/menus/main_centerblue"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				ids_title
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_INTRUSIONS
+			rect				30 74 580 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			290
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				ids_list
+			group				none
+			rect				50 102 540 230
+			type				ITEM_TYPE_LISTBOX
+			style				WINDOW_STYLE_FILLED
+			elementwidth		540
+			elementheight		16
+			font				2
+			textscale			0.6
+			backcolor			0 0 0 .5
+			border				1
+			bordersize			1
+			bordercolor			.5 .5 .5 1
+			forecolor			1 1 1 1
+			elementtype			LISTBOX_TEXT
+			feeder				FEEDER_IDSLOG
+			visible				1
+			textaligny			13
+		}
+
+		itemDef
+		{
+			name				ids_hint
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
+			rect				30 338 580 16
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			290
+			font				2
+			textscale			0.7
+			forecolor			.65 .65 1 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				ids_done_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				220 364 200 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef
+		{
+			name				ids_done
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				220 364 200 24
+			text				@MENUS_DONE_CAPS
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			100
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			ids_done_glow
+			}
+			mouseExit
+			{
+				hide			ids_done_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				close			ids_popmenu ;
+			}
+		}
+	}
+}

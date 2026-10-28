@@ -6409,6 +6409,9 @@ static void UI_RunMenuScript(char **args)
 			// clear the displayed server status info
 			uiInfo.serverStatusInfo.numLines = 0;
 			Menu_SetFeederSelection(NULL, FEEDER_FINDPLAYER, 0, NULL);
+		} else if (Q_stricmp(name, "IDSLog") == 0) {	// VisionJK: the window "Intrusions" (ui_ids.c)
+			UI_IDSLoad();
+			Menu_SetFeederSelection(NULL, FEEDER_IDSLOG, 0, NULL);
 		}
 		else if (Q_stricmp(name, "checkservername") == 0)
 		{
@@ -8486,6 +8489,9 @@ static int UI_FeederCount(float feederID)
 			UI_MusicList();
 			return uiMusic.count ? uiMusic.count : 1;
 
+		case FEEDER_IDSLOG:
+			return UI_IDSCount();
+
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
 
@@ -8909,6 +8915,8 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 		}
 	} else if (feederID == FEEDER_MUSICPLAYERS) {
 		return UI_MusicText( index );
+	} else if (feederID == FEEDER_IDSLOG) {
+		return UI_IDSText( index );
 	} else if (feederID == FEEDER_MODS) {
 		if (index >= 0 && index < uiInfo.modCount) {
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr) {

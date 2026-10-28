@@ -423,6 +423,14 @@ qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType, int saber
 
 
 //
+// ui_ids.c
+//
+
+void UI_IDSLoad( void );
+int UI_IDSCount( void );
+const char *UI_IDSText( int index );
+
+//
 // ui_update.c
 //
 

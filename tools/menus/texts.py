@@ -549,6 +549,10 @@ TR = {
     'How many milliseconds a notification stays.': 'Wie viele Millisekunden eine Benachrichtigung sichtbar bleibt.',
     'Notification Size': 'Größe der Benachrichtigungen',
     'How large the notifications are.': 'Wie groß die Benachrichtigungen sind.',
+    # the window Intrusions of the server browser
+    'Intrusions': 'Angriffe',
+    'What the intrusion detection noted about servers, newest first.': 'Was die Angriffserkennung über Server notiert hat, neueste zuerst.',
+    'All of it is in ids.log in the game folder.': 'Alles steht in ids.log im Spielordner.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.

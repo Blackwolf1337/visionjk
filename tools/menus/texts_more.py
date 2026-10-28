@@ -589,4 +589,8 @@ MORE = {
     'How many milliseconds a notification stays.': ("Durée d'affichage d'une notification, en millisecondes.", 'Cuántos milisegundos permanece visible una notificación.'),
     'Notification Size': ('Taille des notifications', 'Tamaño de las notificaciones'),
     'How large the notifications are.': ('La taille des notifications.', 'Tamaño de las notificaciones.'),
+    # the window Intrusions of the server browser
+    'Intrusions': ('Intrusions', 'Intrusiones'),
+    'What the intrusion detection noted about servers, newest first.': ("Ce que la détection d'intrusions a noté sur les serveurs, du plus récent au plus ancien.", 'Lo que la detección de intrusiones anotó sobre los servidores, lo más reciente primero.'),
+    'All of it is in ids.log in the game folder.': ('Tout se trouve dans ids.log, dans le dossier du jeu.', 'Todo está en ids.log, en la carpeta del juego.'),
 }

@@ -16,7 +16,8 @@
 # the same, and no .tmp of it may be left. unasked: download data nobody asked for (the client leaves at the third;
 # it reads the whole message, so nothing of it is taken for the next commands). The size scenario runs the level
 # mp/idstest, a copy of mp/duel4 in a pak only the server has. Logs: build-test/ids/<scenario>-server.log,
-# <scenario>-client.log and <scenario>-ids.log.
+# <scenario>-client.log, <scenario>-ids.log, and <scenario>-shots/ with a screenshot of the first connect (for
+# the notice of the IDS on the HUD, to look at).
 set -euo pipefail
 # shellcheck source=tools/test/test-env.sh
 . "$(dirname "${BASH_SOURCE[0]}")/test-env.sh"
@@ -26,6 +27,7 @@ IDS=$WORK/ids
 PORT=29097
 TIMEOUT_GAME=240
 FRAMES_IN=2400		# frames the client stays after a connect (about ten seconds: room for the download)
+FRAMES_SHOT=500		# frames after the first connect for the screenshot, while a notice of the IDS is up
 SCENARIOS=(none cvars protected gamedir size unasked)
 
 usage() {
@@ -106,11 +108,15 @@ run() {
 	# The engine takes 32 command line words at most: what the client does is a config of its home folder.
 	{
 		echo "connect 127.0.0.1:$PORT"
-		echo "wait $FRAMES_IN"
+		echo "wait $FRAMES_SHOT"
+		echo "screenshot"
+		echo "wait $(( FRAMES_IN - FRAMES_SHOT ))"
 		echo "connect 127.0.0.1:$PORT"
 		echo "wait $FRAMES_IN"
 		echo "connect 127.0.0.1:$PORT"
 		echo "wait $FRAMES_IN"
+		echo "v_idsstatus"
+		echo "v_idsSeqShown"
 		echo "quit"
 	} > "$home/client/base/idstest.cfg"
 	mapfile -t args < <(common_args "$home/client")
@@ -120,21 +126,25 @@ run() {
 	stop_server "$slog"
 	# (in the folder of the game the client runs, japlus by default)
 	find "$home/client" -name ids.log -exec cat {} + > "$IDS/$name-ids.log"
+	mkdir -p "$IDS/$name-shots"
+	find "$home/client" -path '*screenshots*' -type f -exec cp {} "$IDS/$name-shots/" \;
 	[ "$code" = 0 ] || { results+=("FAIL  $name: client exit code $code"); failed=1; return; }
 
 	local from="the server 127.0.0.1:$PORT sent"
 	case $name in
 		none)
-			check "$name" "$clog" "-IDS:" "-Left the server" "-You left"
+			check "$name" "$clog" "-IDS:" "-Left the server" "-You left" "+  nothing this run"
 			check "$name: joined" "$slog" "=3:ClientBegin:" ;;
 		cvars)
 			check "$name" "$clog" "+IDS: $from cvars it may not set: cl_allowDownload=0, rconPassword=idstest" \
-				"-Left the server" "-You left"
+				"-Left the server" "-You left" "+  the server 127.0.0.1:$PORT sent cvars it may not set" \
+				"-servers left this run:" '+Cvar v_idsSeqShown = "3"'
 			check "$name: joined" "$slog" "=3:ClientBegin:" ;;
 		protected)
 			check "$name" "$clog" "+IDS: $from a cvar no server may set: fs_basepath=/idstest" \
 				"=2:Left the server: it sent a cvar no server may set" \
-				"=1:You left 127.0.0.1:$PORT before: it sent a cvar no server may set" ;;
+				"=1:You left 127.0.0.1:$PORT before: it sent a cvar no server may set" \
+				"+servers left this run:" "+  127.0.0.1:$PORT, it sent a cvar no server may set (the next connect" ;;
 		gamedir)
 			check "$name" "$clog" "+IDS: $from a path in the place of its game folder: ../idstest" \
 				"=2:Left the server: it sent a path in the place of its game folder" \

@@ -73,6 +73,7 @@ set(MPUIUIFiles
 	"${MPDir}/ui/ui_cvar.c"
 	"${MPDir}/ui/ui_force.c"
 	"${MPDir}/ui/ui_gameinfo.c"
+	"${MPDir}/ui/ui_ids.c"
 	"${MPDir}/ui/ui_main.c"
 	"${MPDir}/ui/ui_saber.c"
 	"${MPDir}/ui/ui_shared.c"

@@ -1931,7 +1931,8 @@ float CG_KillfeedDraw( float y );
 typedef enum {
 	NOTIFY_EVENT,			// of VisionJK: a boombox, an update, the command v_notify_show
 	NOTIFY_TELL,			// a tell to this player
-	NOTIFY_MENTION			// a chat line with his name (tay_notify)
+	NOTIFY_MENTION,			// a chat line with his name (tay_notify)
+	NOTIFY_IDS				// an event of the intrusion detection of the engine (v_idsSeq)
 } notifyKind_t;
 
 void CG_NotifyAdd( notifyKind_t kind, const char *text );

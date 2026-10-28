@@ -2217,6 +2217,18 @@ REFERENCE           NOT_RUNNING
 LANG_ENGLISH        "not running"
 LANG_SPANISH        "cerrado"
 
+REFERENCE           INTRUSIONS
+LANG_ENGLISH        "Intrusions"
+LANG_SPANISH        "Intrusiones"
+
+REFERENCE           WHAT_THE_INTRUSION_DETECTION_NOTED_A
+LANG_ENGLISH        "What the intrusion detection noted about servers, newest first."
+LANG_SPANISH        "Lo que la detección de intrusiones anotó sobre los servidores, lo más reciente primero."
+
+REFERENCE           ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
+LANG_ENGLISH        "All of it is in ids.log in the game folder."
+LANG_SPANISH        "Todo está en ids.log, en la carpeta del juego."
+
 
 ENDMARKER
 

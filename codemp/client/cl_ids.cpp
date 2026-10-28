@@ -31,6 +31,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // fit is left. A connectionless packet can carry any address, so one that claims to be from the server and is
 // not is written down and never acted on: leaving for it would let anybody throw a player off any server.
 //
+// What happened this run is kept in a ring for v_idsstatus, and v_idsSeq/v_idsLast tell the cgame of each event,
+// which shows it as a notice (hud/cg_notify.c) and keeps the last it showed in v_idsSeqShown. v_idsLast is made of the address and the name of the event in the
+// table below, never of what the server sent.
+//
 // v_ids 0: nothing is written down and nobody is left for it (the checks of the engine stay).
 
 #include "client.h"
@@ -58,7 +62,7 @@ static const struct {
 	{ "a list of servers nobody asked for",											0 },	// CLIDS_MASTER
 };
 
-static cvar_t		*v_ids;
+static cvar_t		*v_ids, *v_idsSeq;
 static fileHandle_t	clIds_file;
 static int			clIds_counts[CLIDS_NUM_EVENTS];		// of this connection
 static int			clIds_lineTime[CLIDS_NUM_EVENTS], clIds_skipped[CLIDS_NUM_EVENTS];
@@ -74,6 +78,16 @@ static struct {
 	qboolean	used;
 } clIds_left[CLIDS_LEFT];
 static int			clIds_nextLeft;		// the slot taken when the list is full, oldest first
+
+// the events of this run, for v_idsstatus
+#define CLIDS_RING			32
+static struct {
+	char		time[12];				// hh:mm:ss
+	char		who[64];
+	int			event;
+	char		detail[CLIDS_DETAIL + 4];
+} clIds_ring[CLIDS_RING];
+static int			clIds_ringCount;	// all of this run, the ring keeps the last CLIDS_RING
 
 static int CL_IDS_FindLeft( const netadr_t *adr ) {
 	for ( int i = 0; i < CLIDS_LEFT; i++ ) {
@@ -121,8 +135,65 @@ void CL_IDS_CheckConnect( const netadr_t *adr ) {
 		NET_AdrToString( adr ), clIds_events[clIds_left[i].event].name );
 }
 
+/*
+=================
+CL_IDS_Status_f / CL_IDS_Forget_f
+=================
+*/
+static void CL_IDS_Status_f( void ) {
+	int i, shown = 0;
+
+	Com_Printf( "v_ids %i (1 on, 0 off)\n", v_ids->integer );
+	if ( !clIds_ringCount ) {
+		Com_Printf( "  nothing this run\n" );
+	} else if ( clIds_ringCount > CLIDS_RING ) {
+		Com_Printf( "  the last %i of %i events this run:\n", CLIDS_RING, clIds_ringCount );
+	}
+	for ( i = Q_max( 0, clIds_ringCount - CLIDS_RING ); i < clIds_ringCount; i++ ) {
+		const int n = i % CLIDS_RING;
+
+		Com_Printf( "  %s  %s sent %s", clIds_ring[n].time, clIds_ring[n].who, clIds_events[clIds_ring[n].event].name );
+		Com_Printf( clIds_ring[n].detail[0] ? ": %s\n" : "%s\n", clIds_ring[n].detail );
+	}
+	for ( i = 0; i < CLIDS_LEFT; i++ ) {
+		if ( !clIds_left[i].used ) {
+			continue;
+		}
+		if ( !shown++ ) {
+			Com_Printf( "servers left this run:\n" );
+		}
+		Com_Printf( "  %s, it sent %s%s\n", NET_AdrToString( &clIds_left[i].adr ), clIds_events[clIds_left[i].event].name,
+			clIds_left[i].told ? "" : " (the next connect is refused once)" );
+	}
+	Com_Printf( "v_idsforget <address|all> forgets a server that was left. The events are in " CLIDS_LOG " of the game folder.\n" );
+}
+
+static void CL_IDS_Forget_f( void ) {
+	const char		*arg = Cmd_Argv( 1 );
+	const qboolean	all = (qboolean)!Q_stricmp( arg, "all" );
+	netadr_t		adr;
+	int				i, count = 0;
+
+	if ( !arg[0] || ( !all && !NET_StringToAdr( arg, &adr ) ) ) {
+		Com_Printf( "usage: v_idsforget <address|all>\n" );
+		return;
+	}
+	for ( i = 0; i < CLIDS_LEFT; i++ ) {
+		if ( clIds_left[i].used && ( all || NET_CompareAdr( &adr, &clIds_left[i].adr ) ) ) {
+			clIds_left[i].used = qfalse;
+			count++;
+		}
+	}
+	Com_Printf( "%i servers forgotten\n", count );
+}
+
 void CL_IDS_Init( void ) {
 	v_ids = Cvar_Get( "v_ids", "1", CVAR_ARCHIVE, "Intrusion detection of the client: 1 what a server sends that no server of the game does is written to ids.log, and a server that keeps at it is left. 0 off" );
+	v_idsSeq = Cvar_Get( "v_idsSeq", "0", CVAR_ROM, "Intrusion detection: counts the events of this run, for the notices of the cgame" );
+	Cvar_Get( "v_idsLast", "", CVAR_ROM, "Intrusion detection: the last event, as the notice of the cgame shows it" );
+	Cvar_Get( "v_idsSeqShown", "0", 0, "Intrusion detection: the v_idsSeq the cgame has shown a notice for" );
+	Cmd_AddCommand( "v_idsstatus", CL_IDS_Status_f, "The events of the intrusion detection this run, and the servers it left" );
+	Cmd_AddCommand( "v_idsforget", CL_IDS_Forget_f, "Forgets a server the intrusion detection left, or all of them" );
 }
 
 // a new connection: what the last server did is not held against this one
@@ -133,10 +204,28 @@ void CL_IDS_Connect( void ) {
 }
 
 void CL_IDS_Shutdown( void ) {
+	Cmd_RemoveCommand( "v_idsstatus" );
+	Cmd_RemoveCommand( "v_idsforget" );
 	if ( clIds_file ) {
 		FS_FCloseFile( clIds_file );
 		clIds_file = 0;
 	}
+}
+
+// into the ring, and the notice of the cgame
+static void CL_IDS_Remember( clIdsEvent_t event, const netadr_t *from, const char *detail ) {
+	const int	n = clIds_ringCount++ % CLIDS_RING;
+	const char	*adr = NET_AdrToString( from ? from : &clc.serverAddress );
+	qtime_t		t;
+
+	Com_RealTime( &t );
+	Com_sprintf( clIds_ring[n].time, sizeof( clIds_ring[n].time ), "%02i:%02i:%02i", t.tm_hour, t.tm_min, t.tm_sec );
+	Com_sprintf( clIds_ring[n].who, sizeof( clIds_ring[n].who ), from ? "%s" : "the server %s", adr );
+	clIds_ring[n].event = event;
+	Q_strncpyz( clIds_ring[n].detail, Com_IDSDetail( detail, CLIDS_DETAIL ), sizeof( clIds_ring[n].detail ) );
+
+	Cvar_Set( "v_idsLast", va( "IDS: %s sent %s", adr, clIds_events[event].name ) );
+	Cvar_Set( "v_idsSeq", va( "%i", v_idsSeq->integer + 1 ) );
 }
 
 /*
@@ -175,6 +264,7 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 	clIds_skipped[event] = 0;
 
 	Com_IDSLine( &clIds_file, CLIDS_LOG, line );
+	CL_IDS_Remember( event, from, detail );
 
 	// only for what came over the connection: a connectionless packet can name any sender
 	if ( !from && clIds_events[event].leaveAt && clIds_counts[event] >= clIds_events[event].leaveAt

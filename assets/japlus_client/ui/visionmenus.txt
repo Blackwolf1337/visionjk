@@ -21,6 +21,7 @@
 	loadMenu { "ui/vision/error.menu" }
 	loadMenu { "ui/vision/serverinfo.menu" }
 	loadMenu { "ui/vision/findplayer.menu" }
+	loadMenu { "ui/vision/ids.menu" }
 	loadMenu { "ui/vision/createfavorite.menu" }
 	loadMenu { "ui/vision/multiplayer.menu" }
 	loadMenu { "ui/vision/advancedcreateserver.menu" }

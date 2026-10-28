@@ -21,7 +21,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Notifications (v_notify), after the ones of the VisionJK of 2019 (h_notification*): lines at the left edge that
 // slide in, stay a while and slide out again. What comes: a tell to you and a chat line with your name
 // (chat/cg_chat.c), a line of a boombox for you (boombox/cg_boombox.c), a newer version of the game (v_updateState
-// of the engine) and what the command v_notify_show is given. The chat box and the console keep their lines as before.
+// of the engine), an event of the intrusion detection (v_idsSeq of the engine) and what the command v_notify_show
+// is given. The chat box and the console keep their lines as before.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -29,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define NOTIFY_MAX			8			// lines at once, a new one pushes the oldest out
 #define NOTIFY_SLIDE		250			// ms to slide in and to slide out
-#define NOTIFY_UPDATE_POLL	1000		// ms between two looks at v_updateState
+#define NOTIFY_UPDATE_POLL	1000		// ms between two looks at v_updateState and v_idsSeq
 
 typedef struct {
 	notifyKind_t	kind;
@@ -86,9 +87,10 @@ void CG_Notify_f( void ) {
 	CG_NotifyAdd( NOTIFY_EVENT, text );
 }
 
-// v_updateState of the engine (client/cl_update.cpp): 1 a newer version is out, its line in v_updateText
-static void Notify_CheckUpdate( void ) {
-	char	value[16], text[128];
+// what the engine has for the player. v_updateState (client/cl_update.cpp): 1 a newer version is out, its line in
+// v_updateText
+static void Notify_CheckEngine( void ) {
+	char	value[16], text[192];
 	int		state;
 
 	if ( cg.time < notifyUpdatePoll ) {
@@ -102,16 +104,29 @@ static void Notify_CheckUpdate( void ) {
 		CG_NotifyAdd( NOTIFY_EVENT, text );
 	}
 	notifyUpdateState = state;
+
+	// v_idsSeq of the engine (client/cl_ids.cpp) counts the events, v_idsLast is the last one. Several between two
+	// looks show as the last one. What was shown is kept in a cvar and not here, so that an event of the connect,
+	// before this module was loaded, still shows, and a map change shows nothing twice.
+	trap->Cvar_VariableStringBuffer( "v_idsSeq", value, sizeof( value ) );
+	state = atoi( value );
+	trap->Cvar_VariableStringBuffer( "v_idsSeqShown", text, sizeof( text ) );
+	if ( state != atoi( text ) ) {
+		trap->Cvar_VariableStringBuffer( "v_idsLast", text, sizeof( text ) );
+		CG_NotifyAdd( NOTIFY_IDS, text );
+		trap->Cvar_Set( "v_idsSeqShown", value );
+	}
 }
 
 // the bar at the left of a line: what kind of line it is
 static const float *Notify_Accent( notifyKind_t kind ) {
 	static const vec4_t tell = { 0.85f, 0.45f, 1.0f, 1.0f }, mention = { 1.0f, 0.8f, 0.25f, 1.0f };
-	static const vec4_t event = { 0.43f, 0.83f, 1.0f, 1.0f };
+	static const vec4_t event = { 0.43f, 0.83f, 1.0f, 1.0f }, ids = { 1.0f, 0.25f, 0.2f, 1.0f };
 
 	switch ( kind ) {
 	case NOTIFY_TELL:		return tell;
 	case NOTIFY_MENTION:	return mention;
+	case NOTIFY_IDS:		return ids;
 	default:				return event;
 	}
 }
@@ -132,7 +147,7 @@ void CG_NotifyDraw( void ) {
 	vec4_t				color, box, edge, accent;
 	int					i, keep;
 
-	Notify_CheckUpdate();
+	Notify_CheckEngine();
 	if ( !v_notify.integer || !cg.snap ) {
 		return;
 	}

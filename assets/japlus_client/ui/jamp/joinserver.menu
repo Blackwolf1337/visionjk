@@ -1105,6 +1105,38 @@
 			}
 		}
 
+		// INTRUSIONS (VisionJK): what the intrusion detection of the client wrote down, ids.menu
+		itemDef 
+		{
+			name				idsText
+			text				@VISION_INTRUSIONS
+			descText			@VISION_WHAT_THE_INTRUSION_DETECTION_NOTED_A
+			type				ITEM_TYPE_BUTTON
+			font				4
+			textscale			1
+			style				WINDOW_STYLE_FILLED
+			rect				510 376 120 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			60
+			textaligny			0
+			forecolor			1 .682 0 1
+			visible				1 
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;  
+				open			ids_popmenu 
+			}
+			mouseenter 
+			{ 
+				show			button_glow 
+				setitemrect		button_glow	507 374 150 20
+			}
+			mouseexit 
+			{ 
+				hide			button_glow 
+			}
+		}
+
 //----------------------------------------------------------------------------------------------
 // VERY BOTTOM ROW BUTTONS
 //----------------------------------------------------------------------------------------------
