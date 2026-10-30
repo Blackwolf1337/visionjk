@@ -41,6 +41,7 @@ on purpose in the first version: compressed textures, threads. See "What is diff
 | `vs_clientWebPort` | 0 | TCP port of the web host, 0: off. Takes effect at once, also from the console |
 | `vs_clientWebBind` | 0.0.0.0 | the address it listens on, as `vs_webBind` of the web panel: empty is every address, 127.0.0.1 keeps it on the machine |
 | `vs_clientWebRoot` | web | the folder with the page and the WebAssembly files: a full path, or under `fs_basepath` |
+| `vs_clientWebTVOnly` | 0 | 1: the web host answers only `GET /tv`, everything else gets 404 (see below) |
 
 Only the dedicated server has it (`visionjkded`), a server started from the client does not.
 
@@ -54,6 +55,9 @@ The web host has no password. Whoever reaches the port gets:
   host. See [voice.md](voice.md), "In a browser".
 - `/tv`, a WebSocket that sends the TV of the server as demo records, for the client command `tv` and the page
   opened with `?tv`. See [server.md](server.md), "The TV of the server".
+
+With `vs_clientWebTVOnly 1` it answers `/tv` alone and sends 404 for all the rest, so a server can offer its TV
+without the files or the players.
 
 So opening the port to the internet hands the game data to everyone. The port has to be opened in the firewall
 by hand, the server does not do that.

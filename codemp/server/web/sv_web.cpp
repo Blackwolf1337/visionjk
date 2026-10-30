@@ -42,6 +42,7 @@ static_assert( SV_WEB_MAX_CONNECTIONS + 2 <= FD_SETSIZE, "the read set of NET_Sl
 static cvar_t	*vs_clientWebPort;
 static cvar_t	*vs_clientWebBind;
 cvar_t			*vs_clientWebRoot;
+cvar_t			*vs_clientWebTVOnly;
 
 static SOCKET			listenSocket = INVALID_SOCKET;
 static qboolean			listenFailed;			// accept() failed, the listener is left alone for a moment
@@ -621,6 +622,7 @@ void SV_WebInit( void ) {
 	vs_clientWebPort = Cvar_Get( "vs_clientWebPort", "0", 0, "TCP port of the web host: the page of the client that runs in a browser, its files and its packets. 0: off" );
 	vs_clientWebBind = Cvar_Get( "vs_clientWebBind", "0.0.0.0", 0, "Address the web host listens on" );
 	vs_clientWebRoot = Cvar_Get( "vs_clientWebRoot", "web", 0, "Folder of the page of the web host, under fs_basepath unless it is a full path" );
+	vs_clientWebTVOnly = Cvar_Get( "vs_clientWebTVOnly", "0", 0, "1: the web host answers only GET /tv (the TV of the server), no page, no game files, no players" );
 
 	vs_clientWebPort->modified = qtrue;
 }

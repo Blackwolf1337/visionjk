@@ -34,6 +34,8 @@ on a TCP port of its own (vs_clientWebPort) and is to a browser what it is to a 
   the TV           GET /tv             becomes a WebSocket that the server sends on: every binary message is one
                                        record of a demo of the TV of the server (sv_tv.cpp), it hears nothing.
 
+With vs_clientWebTVOnly 1 it answers /tv alone: a host for the TV that hands out no game files and takes no players.
+
 It is inside the server and no program in front of it, so the server knows the address a page plays from:
 the peer of a WebSocket is a netadr_t of the type NA_WEB with the address and the port of its connection, and
 its packets go where the ones of the UDP socket go (SV_PacketEvent). A connection that ends is a peer the
@@ -192,6 +194,7 @@ typedef struct webConnection_s {
 // the frames of a WebSocket (webFrame_t, WEB_OP_ and the rest) are in shared/web/web_http.h
 
 extern cvar_t	*vs_clientWebRoot;
+extern cvar_t	*vs_clientWebTVOnly;
 
 // sv_web.cpp
 qboolean SV_WebSocketFits( SOCKET s );

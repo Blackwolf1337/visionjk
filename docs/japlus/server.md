@@ -273,6 +273,10 @@ the TV as a demo that does not end. When the connection ends the client drops wi
 client watches it when its page is opened with `?tv` (`http://<host>:<vs_clientWebPort>/?tv`), over `wss` when the
 page came over https.
 
+A server that only wants to offer the TV sets `vs_clientWebTVOnly 1`. The web host then answers `GET /tv` alone and
+sends 404 for everything else (the page, `/manifest.json`, `/pk3/...`, `/net`, `/voice`), so it hands out no game
+files and takes no players.
+
 - `vs_tv` (default 1, archived): 0 turns the viewers off. `GET /tv` is then answered with 404, as it is when no
   level runs.
 - 32 viewers at once and 4 of them from one address. Past that the answer is 503 with `Retry-After: 5`.
