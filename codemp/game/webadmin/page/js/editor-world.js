@@ -23,6 +23,15 @@ function entKey(ent, key) {
 	const kv = ent.keys && ent.keys.find(k => k[0].toLowerCase() === key);
 	return kv ? kv[1] : '';
 }
+// #/<page> of the address: a page of the server, a tool of the editor (which opens the editor) or the players
+function modeFromHash() {
+	const m = location.hash.replace(/^#\/?/, '');
+	if (SERVER_PAGES.has(m)) { if (document.querySelector('#pages button[data-tab="' + m + '"]').offsetParent) setMode(m); return; }
+	if (EDITOR_TOOLS.has(m) && !$('appMode').hidden && $('appMode').offsetParent) { if (appMode !== 'editor') setAppMode('editor'); setMode(m); return; }
+	if (m === 'players' && appMode !== 'admin') setAppMode('admin');
+}
+window.addEventListener('hashchange', modeFromHash);
+
 function entMatches(ent, f) {
 	return !f || ent.classname.toLowerCase().includes(f) || entKey(ent, 'targetname').toLowerCase().includes(f) || String(ent.id) === f;
 }
@@ -32,6 +41,10 @@ function entVisible(ent) { return entMatches(ent, $('entFilter').value.trim().to
 // files of the server. Editor: placing entities and models, in the plain view with its debug views.
 let appMode = 'admin';
 const APP_TAB = { admin: 'players', editor: 'world' };
+// the pages of the server in the row under the top bar; the rest of the modes is the map with its side panel
+const SERVER_PAGES = new Set(['config', 'files', 'log', 'bans', 'load', 'account', 'master']);
+const EDITOR_TOOLS = new Set(['world', 'models', 'clips', 'remaps', 'routes', 'mapinfo']);
+let lastMapTool = 'players';		// the tool of the map that was open last, for the page Map
 
 function setAppMode(a) {
 	appMode = a === 'editor' ? 'editor' : 'admin';
@@ -39,9 +52,9 @@ function setAppMode(a) {
 	document.body.classList.toggle('app-editor', appMode === 'editor');
 	document.querySelectorAll('#appMode button').forEach(b => b.classList.toggle('on', b.dataset.app === appMode));
 	try { localStorage.setItem('appMode', appMode); } catch (e) { /* it is asked for again next time */ }
-	// a tab of the other mode is not there any more
+	// a tool of the other mode is not there any more; a page of the server is there in both (#pages)
 	const tab = document.querySelector('#tabs button[data-tab="' + mode + '"]');
-	if (!tab || tab.dataset.app !== appMode) setMode(APP_TAB[appMode]);
+	if (!SERVER_PAGES.has(mode) && (!tab || tab.dataset.app !== appMode)) setMode(APP_TAB[appMode]);
 	// the drafts of the texture swap are drawn in the editor only (js/editor-remaps.js)
 	if (remap.drafts.size) remapApply();
 	// the scripts: how the administration draws the map, and where the plain view finds the image of a shader
@@ -51,11 +64,18 @@ function setAppMode(a) {
 
 function setMode(m) {
 	mode = m;
+	if (!SERVER_PAGES.has(m)) lastMapTool = m;
 	if (m !== 'models') { mdlSetPlacing(false); hidePreview(); }
 	document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === m));
+	document.querySelectorAll('#pages button').forEach(b => b.classList.toggle('on', SERVER_PAGES.has(m) ? b.dataset.tab === m : b.dataset.tab === 'map'));
+	// (the address names the page, so a reload or a link comes back to it)
+	if (location.hash !== '#/' + m) history.replaceState(null, '', '#/' + m);
 	document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + m));
 	if (m === 'world') { select(-1); pollEntities(); loadClasses(); }
 	else { selectEnt(-1); setPlacing(false); }
+	// a page of the server: no chat beside it; the ones that are only a list take the whole width, the map steps aside
+	document.body.classList.toggle('serverPage', SERVER_PAGES.has(m));
+	document.body.classList.toggle('pageWide', m === 'bans' || m === 'load' || m === 'account');
 	document.body.classList.toggle('cfgOpen', m === 'config');
 	document.body.classList.toggle('fsOpen', m === 'files');
 	document.body.classList.toggle('logOpen', m === 'log');

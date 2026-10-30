@@ -11,7 +11,9 @@
 	--blue: #3e8ef7;
 	--green: #30a46c;
 	--yellow: #f5d90a;
-	--top: 44px;
+	--bar: 44px;
+	--nav: 30px;
+	--top: calc(var(--bar) + var(--nav));
 	--side: 300px;
 	--tex: 42vh;
 }
@@ -29,7 +31,7 @@ button.danger.armed { background: var(--accent); color: #fff; border-color: var(
 input, select { background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; padding: 3px 6px; }
 input:focus, select:focus { outline: none; border-color: var(--accent); }
 
-#topbar { position: fixed; inset: 0 0 auto 0; height: var(--top); background: var(--panel); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; padding: 0 12px; z-index: 20; }
+#topbar { position: fixed; inset: 0 0 auto 0; height: var(--bar); background: var(--panel); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; padding: 0 12px; z-index: 20; }
 #topbar .brand { font-weight: 700; letter-spacing: .3px; display: flex; align-items: center; gap: 8px; }
 #topbar .brand i { width: 10px; height: 10px; background: var(--accent); display: inline-block; border-radius: 2px; }
 #toggleSide { padding: 3px 7px; }
@@ -444,6 +446,8 @@ tr.ent.draft .tn { opacity: .7; }
 #dbg input { width: auto; }
 #dbg select { padding: 1px 4px; }
 body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
+/* the tab row of the side panel is the editor's: the administration has the players there, and nothing to choose */
+body.app-admin #tabs { display: none; }
 
 /* the tab Account, and what the role of an account does not show (js/account.js). The server refuses it anyway. */
 #pane-account h3 { margin: 0; padding: 8px 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
@@ -454,18 +458,18 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 #pane-account table { width: 100%; }
 #acctCode { font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace; min-height: 20px; user-select: all; }
 #acctTotpSecret { user-select: all; color: var(--text); }
-body.role-moderator #appMode, body.role-moderator #botForm, body.role-moderator #mapForm, body.role-moderator #gravForm,
-body.role-moderator #tabs button[data-tab="log"], body.role-moderator #tabs button[data-tab="load"] { display: none !important; }
-body.role-moderator #tabs button[data-tab="config"], body.role-moderator #tabs button[data-tab="files"],
-body.role-admin #tabs button[data-tab="config"], body.role-admin #tabs button[data-tab="files"] { display: none !important; }
+body.role-moderator #appMode,
+body.role-moderator #pages button[data-tab="log"], body.role-moderator #pages button[data-tab="load"] { display: none !important; }
+body.role-moderator #pages button[data-tab="config"], body.role-moderator #pages button[data-tab="files"],
+body.role-admin #pages button[data-tab="config"], body.role-admin #pages button[data-tab="files"] { display: none !important; }
 /* the line that runs a command on the console is the owner's */
 body.role-moderator #logCmd, body.role-admin #logCmd { display: none !important; }
 
 /* the masterserver (js/master.js): no map, no players, no editor */
-#tabs button[data-tab="master"] { display: none; }
-body.master #tabs button[data-tab="master"] { display: inline-block; }
-body.master #view, body.master #appMode, body.master #botForm, body.master #mapForm, body.master #gravForm, body.master #topbar .meta,
-body.master #teamScores, body.master #chat, body.master #tabs button[data-tab="players"], body.master #tabs button[data-tab="bans"] { display: none !important; }
+#pages button[data-tab="master"] { display: none; }
+body.master #pages button[data-tab="master"] { display: inline-block; }
+body.master #view, body.master #appMode, body.master #topbar .meta,
+body.master #teamScores, body.master #chat, body.master #pages button[data-tab="map"], body.master #pages button[data-tab="bans"] { display: none !important; }
 #masterView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
 body.sideClosed #masterView { left: 0; }
 body.masterOpen #masterView { display: block; }
@@ -473,3 +477,32 @@ body.masterOpen #masterView { display: block; }
 .msTile { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; background: var(--panel2); display: flex; flex-direction: column; gap: 4px; }
 .msTile b { font-size: 26px; font-weight: 600; }
 .msTile span { color: var(--muted); font-size: 12px; }
+
+/* the pages of the panel, in a row under the top bar (js/editor-world.js setMode, the address #/<page>) */
+#pages { position: fixed; top: var(--bar); left: 0; right: 0; height: var(--nav); background: var(--panel); border-bottom: 1px solid var(--line); display: flex; align-items: stretch; gap: 2px; padding: 0 8px; z-index: 19; }
+#pages button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 0 12px; border-bottom: 2px solid transparent; }
+#pages button:hover { color: var(--text); }
+#pages button.on { color: var(--text); border-bottom-color: var(--accent); }
+#paletteBtn kbd, .palHint kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; margin-left: 6px; }
+
+/* the command palette (js/palette.js) */
+#palette { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .45); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+#palette[hidden] { display: none; }
+.palBox { width: min(560px, 92vw); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, .6); overflow: hidden; }
+#palInput { width: 100%; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 12px 14px; font-size: 15px; background: transparent; }
+#palList { max-height: 50vh; overflow: auto; }
+.palItem { display: flex; justify-content: space-between; gap: 12px; padding: 7px 14px; cursor: pointer; }
+.palItem span { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.palItem.on { background: var(--panel2); box-shadow: inset 2px 0 0 var(--accent); }
+.palEmpty { padding: 10px 14px; color: var(--muted); }
+.palHint { padding: 7px 14px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+
+/* a page of the server (js/editor-world.js setMode): the chat is the map's; Bans, Performance and Account are only
+   their pane, as wide as it reads well, and the map is not shown behind them */
+body.serverPage #chat { display: none; }
+body.pageWide #side { width: auto; right: 0; transform: none; border-right: 0; }
+body.pageWide #side > .pane.on { width: 100%; max-width: 760px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+body.pageWide #sideGrip, body.pageWide #view, body.pageWide #texBrowser { display: none; }
+/* the tools of the editor in the side panel: as many lines as their names need */
+#tabs { flex-wrap: wrap; }
+#tabs button { flex: 1 0 auto; padding: 7px 8px; }

@@ -29,6 +29,8 @@ function gameStart() {
 	let wanted = 'admin';
 	try { wanted = localStorage.getItem('appMode') || 'admin'; } catch (e) { /* the administration then */ }
 	setAppMode(wanted);
+	// the page the address names (#/config, #/world, ...)
+	modeFromHash();
 }
 // who is logged in: what his role may not use is taken off the page. The masterserver has no map (js/master.js).
 accountLoad().then(() => { if (me.master) masterStart(); else gameStart(); });

@@ -147,10 +147,7 @@ $('fpBtn').addEventListener('click', () => setFirstPerson(view.id >= 0 ? -1 : se
 $('fpExit').addEventListener('click', () => setFirstPerson(-1));
 
 $('sayForm').addEventListener('submit', e => { e.preventDefault(); if ($('sayText').value) action({ action: 'say', value: $('sayText').value }).then(ok => { if (ok) { $('sayText').value = ''; pollChat(); } }); });
-$('botForm').addEventListener('submit', e => { e.preventDefault(); action({ action: 'addbot', value: $('botName').value }); });
-$('mapForm').addEventListener('submit', e => { e.preventDefault(); if ($('mapName').value) action({ action: 'map', value: $('mapName').value }); });
 // gravity for everybody (not in JKAdmin), the field shows the current one as its hint
-$('gravForm').addEventListener('submit', e => { e.preventDefault(); if ($('gravValue').value !== '') action({ action: 'gravity', value: $('gravValue').value }).then(ok => ok && ($('gravValue').value = '')); });
 $('toggleSide').addEventListener('click', () => {
 	document.body.classList.toggle('sideClosed');
 	try { localStorage.setItem('wa.sideClosed', document.body.classList.contains('sideClosed') ? '1' : ''); } catch (e) { /* no storage */ }
