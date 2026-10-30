@@ -20,17 +20,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cl_cgameapi.cpp  -- client system interaction with client game
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/RoffSystem.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/timing.h"
 #include "client.h"
 #include "cl_uiapi.h"
 #include "botlib/botlib.h"
-#include "snd_ambient.h"
-#include "client/spatial/snd_spatial.h"
-#include "FXExport.h"
-#include "FxUtil.h"
+#include "client/sound/snd_ambient.h"
+#include "client/sound/spatial/snd_spatial.h"
+#include "client/fx/FXExport.h"
+#include "client/fx/FxUtil.h"
 
 extern IHeapAllocator *G2VertSpaceClient;
 extern botlib_export_t *botlib_export;

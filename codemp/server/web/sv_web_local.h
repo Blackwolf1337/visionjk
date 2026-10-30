@@ -53,7 +53,7 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 #pragma once
 
 #include "server/server.h"
-#include "qcommon/net_local.h"
+#include "qcommon/net/net_local.h"
 #include "web/web_http.h"
 
 // the datagram of the voice chat (plain C of the game modules, built into the server for sv_web_voice.cpp)

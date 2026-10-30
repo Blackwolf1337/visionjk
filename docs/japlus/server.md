@@ -395,7 +395,7 @@ On a stream the end of a demo (a length of -1) never comes, the socket closes in
 
 ### Cleaning up cvars
 
-`qcommon/cvar_cleanup.cpp`, `qcommon/cvar_seen.c`. The engine of the server notes the day each cvar was last used,
+`qcommon/cvar/cvar_cleanup.cpp`, `qcommon/cvar/cvar_seen.c`. The engine of the server notes the day each cvar was last used,
 the same as the client does (client.md, "Cleaning up cvars"). The file is `cvarseen.txt` in `fs_homepath`. The
 console command `cvar_cleanup` lists the user made cvars no code used for 30 days, and `cvar_cleanup remove <name
 ...|all>` unsets them and writes `visionjk_server.cfg` again. `server.cfg` and other files written by hand are not

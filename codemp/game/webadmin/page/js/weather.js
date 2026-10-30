@@ -30,7 +30,7 @@ const weIrand = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 
 /* where the sky is open */
 
-// CM_PointContents of qcommon/cm_test.cpp for the map itself: what the brushes are made of that a point is in.
+// CM_PointContents of qcommon/cm/cm_test.cpp for the map itself: what the brushes are made of that a point is in.
 // A point on a plane of the tree is in front of it (CM_PointLeafnum_r), one on a side of a brush is in the brush.
 function wePointContents(x, y, z) {
 	const t = world.tree, N = t.nodes, P = t.planes, L = t.leafs, LB = t.leafBrushes, B = world.brushes.brushes, S = world.brushes.sides;

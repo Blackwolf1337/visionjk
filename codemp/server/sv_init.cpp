@@ -25,9 +25,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.h"
 #include "ghoul2/G2.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/MiniHeap.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "sv_gameapi.h"
 
 /*
@@ -845,7 +845,7 @@ qboolean Com_TheHunkMarkHasBeenMade(void);
 //qcommon/vm.cpp
 extern vm_t *currentVM;
 
-//qcommon/cm_load.cpp
+//qcommon/cm/cm_load.cpp
 extern void *gpvCachedMapDiskImage;
 extern qboolean gbUsingCachedMapDataRightNow;
 

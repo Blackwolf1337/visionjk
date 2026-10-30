@@ -34,16 +34,16 @@ endif(WIN32)
 set(MPUIDefines ${MPSharedDefines} "UI_BUILD")
 
 set(MPUIGameFiles
-	"${MPDir}/game/bg_misc.c"
-	"${MPDir}/game/bg_saberLoad.c"
-	"${MPDir}/game/bg_saga.c"
-	"${MPDir}/game/bg_vehicleLoad.c"
-	"${MPDir}/game/bg_weapons.c"
+	"${MPDir}/game/bg/bg_misc.c"
+	"${MPDir}/game/bg/bg_saberLoad.c"
+	"${MPDir}/game/bg/bg_saga.c"
+	"${MPDir}/game/bg/bg_vehicleLoad.c"
+	"${MPDir}/game/bg/bg_weapons.c"
 	"${MPDir}/game/anims.h"
-	"${MPDir}/game/bg_local.h"
-	"${MPDir}/game/bg_public.h"
-	"${MPDir}/game/bg_saga.h"
-	"${MPDir}/game/bg_weapons.h"
+	"${MPDir}/game/bg/bg_local.h"
+	"${MPDir}/game/bg/bg_public.h"
+	"${MPDir}/game/bg/bg_saga.h"
+	"${MPDir}/game/bg/bg_weapons.h"
 	"${MPDir}/game/surfaceflags.h"
 	)
 source_group("game" FILES ${MPUIGameFiles})

@@ -36,7 +36,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 #define SCORES_W			470.0f
 #define SCORES_CARD_GAP		6.0f		// between the board and the card of a player that was clicked on it,

@@ -14,7 +14,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 Since 2026-10-17 every cvar and command this tree added begins with `v_` (the client: cgame, ui, engine client,
 sound, renderer, and the console commands of the client) or `vs_` (the server: game module, dedicated server,
 masterserver, its console commands, and the commands client and server send each other). Stock OpenJK and JA+
-names keep theirs. `codemp/qcommon/cvar_renames.h` lists every old name with its new one. A value stored or set
+names keep theirs. `codemp/qcommon/cvar/cvar_renames.h` lists every old name with its new one. A value stored or set
 under an old name, and a bind with an old command, is taken over by the engine with a line on the console, so
 a config with the old names keeps working and says what to change. The commands between client and server are
 renamed too: a client or server of 0.1.7 or before does not understand them, so voice chat, statuses, boombox

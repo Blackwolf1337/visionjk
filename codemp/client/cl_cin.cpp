@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "cl_uiapi.h"
-#include "snd_local.h"
+#include "client/sound/snd_local.h"
 #ifndef _WIN32
 #include <cmath>
 #endif

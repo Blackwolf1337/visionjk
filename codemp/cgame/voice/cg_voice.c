@@ -35,7 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // a WebSocket to the web host of the server, which hands them to that port (cg_voice_web.c), and nothing is
 // looked up. Those are the places marked __EMSCRIPTEN__, everything else is the same code.
 
-#include "game/bg_net.h"		// the sockets, in front of everything else
+#include "game/bg/bg_net.h"		// the sockets, in front of everything else
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"

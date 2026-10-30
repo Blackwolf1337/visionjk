@@ -37,7 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // port. The socket of this file is then one on this machine only, for the web host. With any other engine, or
 // with a vs_voicePort, the socket is the relay: the port of the game plus one, or the one that cvar names.
 
-#include "game/bg_net.h"		// the sockets, in front of everything else
+#include "game/bg/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
 #include "bg_voice.h"
 

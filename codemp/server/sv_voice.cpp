@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.h"
 #include "sv_gameapi.h"
-#include "qcommon/net_local.h"
+#include "qcommon/net/net_local.h"
 #include "game/voice/bg_voice.h"
 
 static cvar_t	*vs_voiceShared;

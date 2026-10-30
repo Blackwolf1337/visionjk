@@ -42,7 +42,7 @@ USER INTERFACE MAIN
 #include "qcommon/game_version.h"
 #include "ui_force.h"
 #include "cgame/animtable.h" //we want this to be compiled into the module because we access it in the shared module.
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 #include "ui_shared.h"
 #include "ui_skin.h"
 #include "ui_saberfx.h"

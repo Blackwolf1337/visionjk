@@ -32,7 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The angles of the bars are where the view has to point: the middle of the screen is where it points now.
 
 #include "cgame/cg_local.h"
-#include "game/bg_local.h"
+#include "game/bg/bg_local.h"
 #include "ui/menudef.h"
 
 static struct {

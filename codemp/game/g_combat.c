@@ -24,8 +24,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // g_combat.c
 
-#include "b_local.h"
-#include "bg_saga.h"
+#include "game/npc/b_local.h"
+#include "game/bg/bg_saga.h"
 
 extern int G_ShipSurfaceForSurfName( const char *surfaceName );
 extern qboolean G_FlyVehicleDestroySurface( gentity_t *veh, int surface );

@@ -21,9 +21,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-#include "b_local.h"
+#include "game/npc/b_local.h"
 #include "w_saber.h"
-#include "ai_main.h"
+#include "game/bots/ai_main.h"
 #include "ghoul2/G2.h"
 
 #define METROID_JUMP 1

@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_spatialmovers.c -- where the brush models are (doors, lifts, func_static, glass), for the sound of the level
-// with Steam Audio (2026-10-21, client/spatial/snd_spatial.cpp): a closed door blocks the sound, an open one lets it
+// with Steam Audio (2026-10-21, client/sound/spatial/snd_spatial.cpp): a closed door blocks the sound, an open one lets it
 // through. Once a frame the engine gets every brush model this level has shown so far, where the snapshot has it
 // now (ext.S_SpatialMovers). One that is no longer in the snapshot is gone (broken, switched off) when the camera
 // would see where it was: the server would have sent it. One out of sight keeps its last place.

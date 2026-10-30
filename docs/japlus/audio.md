@@ -78,8 +78,8 @@ Vulkan headers and `glslc`, the CPU traces the rays and the console says why, on
 and, while it traces, how many trips to the card the last pass took and how long one took.
 
 How it works: Steam Audio hands every batch of rays to callbacks (a scene of type `IPL_SCENETYPE_CUSTOM`, in a
-second simulator for the reflections only; `codemp/client/spatial/snd_spatial_gpu.cpp`, the shader is
-`codemp/client/spatial/shaders/spatial_rays.comp`). Per bounce it asks for the closest walls, and then, for each
+second simulator for the reflections only; `codemp/client/sound/spatial/snd_spatial_gpu.cpp`, the shader is
+`codemp/client/sound/spatial/shaders/spatial_rays.comp`). Per bounce it asks for the closest walls, and then, for each
 source, whether the way from those walls to it is free. A trip to the card and back took about 600 us while the
 work on the card took 15 us. So the batch of the closest walls also traces the ways to all sources, and the
 following batches of the sources are answered from that without another trip: one trip per bounce.
@@ -212,7 +212,7 @@ submodule, see "In a browser".
 
 ## How it works
 
-**The level** (`qcommon/cm_export.cpp`). Steam Audio traces rays in threads of its own, and the collision code
+**The level** (`qcommon/cm/cm_export.cpp`). Steam Audio traces rays in threads of its own, and the collision code
 of the engine can not be called from a second thread. So it gets the level once, as triangles: every side of a
 solid brush of the world, every facet of a solid curve. Each triangle has a material of the game (the ones of
 the footsteps, `MATERIALS` in `game/surfaceflags.h`), mapped onto Valve's numbers for a few standard materials
@@ -466,20 +466,20 @@ The code of the sound system was one file, `client/snd_spatial.cpp`, until 2026-
 
 | File | Content |
 |------|---------|
-| `client/spatial/snd_spatial.cpp` | the library, the cvars, start and end of the sound system |
-| `client/spatial/snd_spatial_level.cpp` | the walls of the level and of its brush models, what they are made of, a level that waits to be taken over |
-| `client/spatial/snd_spatial_bake.cpp` | what is worked out once per level and kept in a file (paths, echo) |
-| `client/spatial/snd_spatial_sim.cpp` | what is in the way of each sound, the thread of the reflections and the paths |
-| `client/spatial/snd_spatial_voice.cpp` | which sound of the mixer is which voice, the voice chat and the boombox |
-| `client/spatial/snd_spatial_render.cpp` | the voices and the reverb rendered ahead into the ring the mixer adds from |
-| `client/spatial/snd_spatial_debug.cpp` | `v_spatialInfo`, `v_spatialCapture`, `v_spatialDebug` |
-| `client/spatial/snd_spatial_page.cpp` | the client in a browser (`__EMSCRIPTEN__`) |
-| `client/spatial/snd_spatial_local.h` | what these files share |
-| `client/spatial/snd_spatial.h` | what the rest of the engine calls |
-| `qcommon/cm_export.cpp` | the world as triangles |
+| `client/sound/spatial/snd_spatial.cpp` | the library, the cvars, start and end of the sound system |
+| `client/sound/spatial/snd_spatial_level.cpp` | the walls of the level and of its brush models, what they are made of, a level that waits to be taken over |
+| `client/sound/spatial/snd_spatial_bake.cpp` | what is worked out once per level and kept in a file (paths, echo) |
+| `client/sound/spatial/snd_spatial_sim.cpp` | what is in the way of each sound, the thread of the reflections and the paths |
+| `client/sound/spatial/snd_spatial_voice.cpp` | which sound of the mixer is which voice, the voice chat and the boombox |
+| `client/sound/spatial/snd_spatial_render.cpp` | the voices and the reverb rendered ahead into the ring the mixer adds from |
+| `client/sound/spatial/snd_spatial_debug.cpp` | `v_spatialInfo`, `v_spatialCapture`, `v_spatialDebug` |
+| `client/sound/spatial/snd_spatial_page.cpp` | the client in a browser (`__EMSCRIPTEN__`) |
+| `client/sound/spatial/snd_spatial_local.h` | what these files share |
+| `client/sound/spatial/snd_spatial.h` | what the rest of the engine calls |
+| `qcommon/cm/cm_export.cpp` | the world as triangles |
 | `qcommon/spatial_debug.h` | what the engine and the cgame share for `v_spatialDebug` |
-| `client/snd_dma.cpp` | `S_SpatialGather`: which sound is a voice in the level and which only goes into the reverb. `S_SpatialHearing`: where the sounds are heard from. The fade by distance as functions both paths use (`S_AttenuateDistance`) |
-| `client/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
+| `client/sound/snd_dma.cpp` | `S_SpatialGather`: which sound is a voice in the level and which only goes into the reverb. `S_SpatialHearing`: where the sounds are heard from. The fade by distance as functions both paths use (`S_AttenuateDistance`) |
+| `client/sound/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
 | `cgame/voice/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
 | `cgame/cg_spatialmovers.c` | where the brush models are, handed to the engine through `ext.S_SpatialMovers` |
 | `cgame/cg_spatialdebug.c` | draws what `v_spatialDebug` shows, through `ext.S_SpatialDebug` |
@@ -516,7 +516,7 @@ A pass traces fewer rays by default than on the desktop (1024 with 8 bounces, th
 the desktop the simulator is made for exactly the rays a pass traces, see "Reflections". A page has no
 reflections of a sound of its own: a pass there is spread over many frames already. The precalculated echo
 (`v_spatialEcho`) is not there either, and nor is Embree. What a page does itself is in
-`client/spatial/snd_spatial_page.cpp`. Nothing of the changes of 2026-10-17 and 2026-10-21 was built or run for
+`client/sound/spatial/snd_spatial_page.cpp`. Nothing of the changes of 2026-10-17 and 2026-10-21 was built or run for
 a page (the client in a browser is switched off).
 
 `v_spatial` is 1 by default there, so whether a page has it is a matter of the file: it is on where the server

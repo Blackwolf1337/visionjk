@@ -4,7 +4,7 @@
 // Not ported, each draws nothing: the radar (CG_DrawRadar), the lock of the rocket launcher on a target
 // (CG_DrawRocketLocking) and the brackets around entities (CG_DrawBracketedEntities, siege and vehicles).
 
-// WP_MuzzlePoint of game/bg_weapons.c: forward, right, up
+// WP_MuzzlePoint of game/bg/bg_weapons.c: forward, right, up
 const HUD_MUZZLE = [[0, 0, 0], [0, 8, 0], [0, 8, 0], [8, 16, 0], [12, 6, -6], [12, 6, -6], [12, 6, -6], [12, 2, -6], [12, 4.5, -6], [12, 6, -6], [12, 6, -6], [12, 8, -4], [12, 0, -4], [12, 0, -10], [12, 0, -4], [12, 6, -6], [12, 6, -6]];
 const HUD_PW_CLOAKED = 11, HUD_FADE_TIME = 200;
 

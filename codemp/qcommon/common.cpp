@@ -25,8 +25,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // common.c -- misc functions used in client and server
 
-#include "stringed_ingame.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/stringed/stringed_ingame.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/game_version.h"
 #include "../server/NPCNav/navigator.h"
 #include "../shared/sys/sys_local.h"

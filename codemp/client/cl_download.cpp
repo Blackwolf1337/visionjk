@@ -37,7 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (see "Over the web" below), through both windows the same way.
 
 #include "client.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "web/web_missing.h"
 #include <minizip/unzip.h>
 #include <time.h>

@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // wa_fs.c -- the file manager of the web admin panel and the server config: the real files of the game
 // folder in the home path and in the installation, listed, read, written, renamed and deleted within limits.
 
-#include "game/bg_net.h"		// the sockets, in front of everything else
+#include "game/bg/bg_net.h"		// the sockets, in front of everything else
 #ifdef _WIN32
 	#include <io.h>
 	#include <direct.h>

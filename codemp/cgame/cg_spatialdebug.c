@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_spatialdebug.c -- v_spatialDebug (2026-10-21): what the sound of the level with Steam Audio does, drawn into
-// the level and over it. The engine says what (ext.S_SpatialDebug, client/spatial/snd_spatial.cpp): over every sound
+// the level and over it. The engine says what (ext.S_SpatialDebug, client/sound/spatial/snd_spatial.cpp): over every sound
 // how loud it is and what the walls leave of it, the ways round the corners Steam Audio found, rays from the
 // listener off the walls in the colour of what they are made of, and the numbers of the passes. 1 all of it, or
 // the sum of the SPATIAL_DEBUG_* of qcommon/spatial_debug.h.

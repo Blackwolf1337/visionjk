@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // ui_cvarclean.c -- the window "Clean Up Settings" of Setup (ui/jamp/cvarclean.menu, FEEDER_CVARCLEAN): the cvars of
-// the config no code used for a month, as the engine notes them (qcommon/cvar_cleanup.cpp, ext.Cvar_UnusedList), with
+// the config no code used for a month, as the engine notes them (qcommon/cvar/cvar_cleanup.cpp, ext.Cvar_UnusedList), with
 // their value and when they were used last. Removing one runs cvar_cleanup of the engine, which also writes the
 // config again without it. Not from JA+.
 

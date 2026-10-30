@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 #include "ui/menudef.h"			// for the voice chats
 

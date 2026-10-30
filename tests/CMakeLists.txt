@@ -67,7 +67,7 @@ set(TestCFiles
 	"${MPDir}/game/boombox/bg_boombox_fetch.c"
 	"${MPDir}/ui/ui_markdown.c"
 	"${MPDir}/game/webadmin/wa_cfgedit.c"
-	"${MPDir}/qcommon/cvar_seen.c"
+	"${MPDir}/qcommon/cvar/cvar_seen.c"
 	)
 if(NOT MSVC)
 	set_source_files_properties(${TestCFiles} PROPERTIES COMPILE_OPTIONS "-fexceptions")

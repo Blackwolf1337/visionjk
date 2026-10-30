@@ -421,7 +421,7 @@ static qboolean Sys_Relaunch( void ) {
 #endif
 
 #if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
-qboolean S_SpatialBakeRunning( void );	// client/spatial/snd_spatial.h
+qboolean S_SpatialBakeRunning( void );	// client/sound/spatial/snd_spatial.h
 #endif
 
 static void NORETURN Sys_Exit( int ex ) {

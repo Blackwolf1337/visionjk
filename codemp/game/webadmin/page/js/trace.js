@@ -1,4 +1,4 @@
-// ---- a line through the map: where it hits first (CM_BoxTrace of the engine, qcommon/cm_trace.cpp)
+// ---- a line through the map: where it hits first (CM_BoxTrace of the engine, qcommon/cm/cm_trace.cpp)
 //
 // For what the client game traces: the shadow under a player, a mark on a wall, the camera behind a player.
 // The brushes of the map file are what the game collides with, and the tree of the file with the brushes of each

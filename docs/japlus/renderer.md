@@ -900,7 +900,7 @@ work for nothing, and none of them was drawing:
 Each of the three gives what the old code gave. That was checked with builds that ran both ways: 320000 slot
 searches, 800000 Ghoul2 calls and 2250 shader names over the fight demo, fights of bots and five level loads
 with a `vid_restart`, no difference. The second and third are under `RD_VULKAN_VISION` in `G2_API.cpp` and
-`tr_shader.cpp`, `rd-vanilla` is the same after the preprocessor. The first is in `codemp/client/FxUtil.cpp`.
+`tr_shader.cpp`, `rd-vanilla` is the same after the preprocessor. The first is in `codemp/client/fx/FxUtil.cpp`.
 
 Looked at and left, with the numbers:
 

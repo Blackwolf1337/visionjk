@@ -51,115 +51,115 @@ codemp/client/cl_net_chan.cpp:dangerousTypeCast:warning:Potentially invalid type
 codemp/client/cl_parse.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/client/cl_scrn.cpp:nullPointerArithmeticRedundantCheck:warning:Either the condition 's' is redundant or there is pointer arithmetic with NULL pointer.
 codemp/client/cl_scrn.cpp:nullPointerRedundantCheck:warning:Either the condition 's' is redundant or there is possible null pointer dereference: s.
-codemp/client/FxPrimitives.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2End' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2Parm' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2Start' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mDeathFxID' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mImpactFxID' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mMax' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mMin' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mNext' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mOrigin1' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mTimeEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mTimeStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CElectricity::mChaos' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mAngleDelta' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mAngles' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mDensity' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mEmitterFxID' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mLastOrigin' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mOldOrigin' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mOldTime' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mOldVelocity' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mVariance' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CLine::mOrigin2' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'COrientedParticle::mNormal' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLengthEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLength' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLengthParm' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLengthStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mOldOrigin' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl1' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl1Vel' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl2' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl2Vel' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mGhoul2' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mOrgOffset' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mRGBEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mRGBParm' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mRGBStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mSizeEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mSizeParm' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mSizeStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAccel' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAlphaEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAlphaParm' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAlphaStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mElasticity' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mGhoul2' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mOrgOffset' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRGBEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRGBParm' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRGBStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRotationDelta' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mSizeEnd' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mSizeParm' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mSizeStart' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mVel' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mCount' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mLastFrameTime' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mOrg' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mRotDelta' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mRot' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mST' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mTimeStamp' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CTrail::mShader' is not initialized in the constructor.
-codemp/client/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CTrail::mVerts' is not initialized in the constructor.
-codemp/client/FxScheduler.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/FxScheduler.cpp:operatorEqVarError:warning:Member variable 'SEffectTemplate::mRepeatDelay' is not assigned a value in 'SEffectTemplate::operator='.
-codemp/client/FxScheduler.h:noCopyConstructor:warning:Class 'PagedPoolAllocator < SScheduledEffect , 1024 >' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
-codemp/client/FxScheduler.h:noOperatorEq:warning:Class 'PagedPoolAllocator < SScheduledEffect , 1024 >' does not have a operator= which is recommended since it has dynamic memory/resource management.
-codemp/client/FxSystem.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/FxSystem.cpp:uninitMemberVar:warning:Member variable 'SFxHelper::mRealTime' is not initialized in the constructor.
-codemp/client/FxSystem.h:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/FxSystem.h:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/FxTemplate.cpp:invalidscanf:warning:sscanf() without field width limits can crash with huge input data.
-codemp/client/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mMatImpactFX' is not assigned a value in 'CPrimitiveTemplate::operator='.
-codemp/client/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not assigned a value in 'CPrimitiveTemplate::operator='.
-codemp/client/FxTemplate.cpp:uninitMemberVar:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not initialized in the constructor.
-codemp/client/FxTemplate.cpp:uninitMemberVar:warning:Member variable 'CPrimitiveTemplate::mType' is not initialized in the constructor.
-codemp/client/FxUtil.cpp:nullPointerRedundantCheck:warning:Either the condition 'fx' is redundant or there is possible null pointer dereference: fx.
-codemp/client/FxUtil.cpp:nullPointerRedundantCheck:warning:Either the condition 'fx' is redundant or there is possible null pointer dereference: pEffect.
-codemp/client/snd_ambient.cpp:invalidscanf:warning:sscanf() without field width limits can crash with huge input data.
-codemp/client/snd_ambient.cpp:noCopyConstructor:warning:Class 'CSetGroup' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
-codemp/client/snd_ambient.cpp:noOperatorEq:warning:Class 'CSetGroup' does not have a operator= which is recommended since it has dynamic memory/resource management.
-codemp/client/snd_dma.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/snd_dma.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/snd_dma.cpp:memsetClassFloat:portability:Using memset() on union which contains a floating point number.
-codemp/client/snd_mem.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/snd_mix.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/snd_mix.cpp:shiftNegativeLHS:portability:Shifting a negative value is technically undefined behaviour
-codemp/client/snd_mp3.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/snd_mp3.cpp:missingReturn:error:Found an exit path from function with non-void return type that has missing return statement
-codemp/client/spatial/snd_spatial_bake.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial_debug.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/client/spatial/snd_spatial_debug.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial_level.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial_local.h:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial_render.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial_sim.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/spatial/snd_spatial_voice.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/game/ai_main.c:identicalInnerCondition:warning:Identical inner 'if' condition is always true.
-codemp/game/ai_main.c:incorrectLogicOperator:warning:Logical disjunction always evaluates to true: !bs->currentEnemy || bs->currentEnemy.
-codemp/game/ai_main.c:nullPointerRedundantCheck:warning:Either the condition 'bs' is redundant or there is possible null pointer dereference: bs.
-codemp/game/ai_util.c:ctunullpointer:warning:Null pointer dereference: bs
-codemp/game/bg_pmove.c:nullPointerRedundantCheck:warning:Either the condition '!veh' is redundant or there is possible null pointer dereference: veh.
-codemp/game/bg_saber.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'clientNum<32' is redundant or the array 'cg_entities[1024]' is accessed at index 1025, which is out of bounds.
-codemp/game/bg_slidemove.c:nullPointerRedundantCheck:warning:Either the condition 'pSelfVeh' is redundant or there is possible null pointer dereference: pSelfVeh.
-codemp/game/bg_slidemove.c:nullPointerRedundantCheck:warning:Either the condition 'trace' is redundant or there is possible null pointer dereference: trace.
-codemp/game/bg_vehicleLoad.c:invalidPointerCast:portability:Casting between unsigned char * and float * which have an incompatible binary data representation.
+codemp/client/fx/FxPrimitives.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2End' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2Parm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2Start' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mDeathFxID' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mImpactFxID' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mMax' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mMin' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mNext' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mOrigin1' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mTimeEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEffect::mTimeStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CElectricity::mChaos' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mAngleDelta' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mAngles' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mDensity' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mEmitterFxID' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mLastOrigin' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mOldOrigin' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mOldTime' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mOldVelocity' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CEmitter::mVariance' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CLine::mOrigin2' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'COrientedParticle::mNormal' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLengthEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLength' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLengthParm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mLengthStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CTail::mOldOrigin' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl1' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl1Vel' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl2' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CBezier::mControl2Vel' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mGhoul2' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mOrgOffset' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mRGBEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mRGBParm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mRGBStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mSizeEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mSizeParm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CLight::mSizeStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAccel' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAlphaEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAlphaParm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mAlphaStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mElasticity' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mGhoul2' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mOrgOffset' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRGBEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRGBParm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRGBStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mRotationDelta' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mSizeEnd' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mSizeParm' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mSizeStart' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CParticle::mVel' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mCount' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mLastFrameTime' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mOrg' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mRotDelta' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mRot' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mST' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CPoly::mTimeStamp' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CTrail::mShader' is not initialized in the constructor.
+codemp/client/fx/FxPrimitives.h:uninitMemberVar:warning:Member variable 'CTrail::mVerts' is not initialized in the constructor.
+codemp/client/fx/FxScheduler.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/fx/FxScheduler.cpp:operatorEqVarError:warning:Member variable 'SEffectTemplate::mRepeatDelay' is not assigned a value in 'SEffectTemplate::operator='.
+codemp/client/fx/FxScheduler.h:noCopyConstructor:warning:Class 'PagedPoolAllocator < SScheduledEffect , 1024 >' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
+codemp/client/fx/FxScheduler.h:noOperatorEq:warning:Class 'PagedPoolAllocator < SScheduledEffect , 1024 >' does not have a operator= which is recommended since it has dynamic memory/resource management.
+codemp/client/fx/FxSystem.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/fx/FxSystem.cpp:uninitMemberVar:warning:Member variable 'SFxHelper::mRealTime' is not initialized in the constructor.
+codemp/client/fx/FxSystem.h:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/fx/FxSystem.h:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/fx/FxTemplate.cpp:invalidscanf:warning:sscanf() without field width limits can crash with huge input data.
+codemp/client/fx/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mMatImpactFX' is not assigned a value in 'CPrimitiveTemplate::operator='.
+codemp/client/fx/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not assigned a value in 'CPrimitiveTemplate::operator='.
+codemp/client/fx/FxTemplate.cpp:uninitMemberVar:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not initialized in the constructor.
+codemp/client/fx/FxTemplate.cpp:uninitMemberVar:warning:Member variable 'CPrimitiveTemplate::mType' is not initialized in the constructor.
+codemp/client/fx/FxUtil.cpp:nullPointerRedundantCheck:warning:Either the condition 'fx' is redundant or there is possible null pointer dereference: fx.
+codemp/client/fx/FxUtil.cpp:nullPointerRedundantCheck:warning:Either the condition 'fx' is redundant or there is possible null pointer dereference: pEffect.
+codemp/client/sound/snd_ambient.cpp:invalidscanf:warning:sscanf() without field width limits can crash with huge input data.
+codemp/client/sound/snd_ambient.cpp:noCopyConstructor:warning:Class 'CSetGroup' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
+codemp/client/sound/snd_ambient.cpp:noOperatorEq:warning:Class 'CSetGroup' does not have a operator= which is recommended since it has dynamic memory/resource management.
+codemp/client/sound/snd_dma.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/sound/snd_dma.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/snd_dma.cpp:memsetClassFloat:portability:Using memset() on union which contains a floating point number.
+codemp/client/sound/snd_mem.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/sound/snd_mix.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/sound/snd_mix.cpp:shiftNegativeLHS:portability:Shifting a negative value is technically undefined behaviour
+codemp/client/sound/snd_mp3.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/sound/snd_mp3.cpp:missingReturn:error:Found an exit path from function with non-void return type that has missing return statement
+codemp/client/sound/spatial/snd_spatial_bake.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial_debug.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/client/sound/spatial/snd_spatial_debug.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial_level.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial_local.h:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial_render.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial_sim.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/client/sound/spatial/snd_spatial_voice.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/game/bots/ai_main.c:identicalInnerCondition:warning:Identical inner 'if' condition is always true.
+codemp/game/bots/ai_main.c:incorrectLogicOperator:warning:Logical disjunction always evaluates to true: !bs->currentEnemy || bs->currentEnemy.
+codemp/game/bots/ai_main.c:nullPointerRedundantCheck:warning:Either the condition 'bs' is redundant or there is possible null pointer dereference: bs.
+codemp/game/bots/ai_util.c:ctunullpointer:warning:Null pointer dereference: bs
+codemp/game/bg/bg_pmove.c:nullPointerRedundantCheck:warning:Either the condition '!veh' is redundant or there is possible null pointer dereference: veh.
+codemp/game/bg/bg_saber.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'clientNum<32' is redundant or the array 'cg_entities[1024]' is accessed at index 1025, which is out of bounds.
+codemp/game/bg/bg_slidemove.c:nullPointerRedundantCheck:warning:Either the condition 'pSelfVeh' is redundant or there is possible null pointer dereference: pSelfVeh.
+codemp/game/bg/bg_slidemove.c:nullPointerRedundantCheck:warning:Either the condition 'trace' is redundant or there is possible null pointer dereference: trace.
+codemp/game/bg/bg_vehicleLoad.c:invalidPointerCast:portability:Casting between unsigned char * and float * which have an incompatible binary data representation.
 codemp/game/boombox/bg_boombox_core.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'index<1' is redundant or the array 'box->songs[16]' is accessed at index 17, which is out of bounds.
 codemp/game/g_cmds.c:nullPointerRedundantCheck:warning:Either the condition 'ent->client' is redundant or there is possible null pointer dereference: ent->client.
 codemp/game/g_cmds.c:nullPointerRedundantCheck:warning:Either the condition '!it_ent' is redundant or there is possible null pointer dereference: it_ent.
@@ -188,20 +188,20 @@ codemp/game/g_weapon.c:nullPointerRedundantCheck:warning:Either the condition 't
 codemp/game/japlus/g_japlus_admin.c:shiftTooManyBitsSigned:warning:Shifting signed 32-bit value by 31 bits is undefined behaviour. See condition at line 97.
 codemp/game/japlus/g_japlus_chat.c:legacyUninitvar:error:Uninitialized variable: word[0]
 codemp/game/japlus/g_japlus_hook.c:ctunullpointer:warning:Null pointer dereference: other
-codemp/game/NPC_AI_Jedi.c:nullPointerRedundantCheck:warning:Either the condition 'NPCS.NPC->enemy->client' is redundant or there is possible null pointer dereference: NPCS.NPC->enemy->client.
-codemp/game/NPC_AI_Jedi.c:nullPointerRedundantCheck:warning:Either the condition 'self->client' is redundant or there is possible null pointer dereference: self->client.
-codemp/game/NPC_AI_Rancor.c:nullPointerRedundantCheck:warning:Either the condition 'radiusEnt->client' is redundant or there is possible null pointer dereference: radiusEnt->client.
-codemp/game/NPC_AI_Sniper.c:arrayIndexOutOfBounds:error:Array 'NPCS.NPCInfo->enemyLaggedPos[24][3]' accessed at index 24, which is out of bounds.
-codemp/game/NPC_AI_Utils.c:nullPointerRedundantCheck:warning:Either the condition '!self' is redundant or there is possible null pointer dereference: self.
-codemp/game/NPC_AI_Utils.c:nullPointerRedundantCheck:warning:Either the condition '!self->NPC' is redundant or there is possible null pointer dereference: self->NPC.
-codemp/game/NPC_behavior.c:nullPointerRedundantCheck:warning:Either the condition 'owner' is redundant or there is possible null pointer dereference: owner.
-codemp/game/NPC_behavior.c:nullPointerRedundantCheck:warning:Either the condition 'traceEnt' is redundant or there is possible null pointer dereference: traceEnt.
-codemp/game/NPC_combat.c:nullPointerRedundantCheck:warning:Either the condition 'self' is redundant or there is possible null pointer dereference: self.
-codemp/game/NPC_combat.c:nullPointerRedundantCheck:warning:Either the condition 'self->NPC' is redundant or there is possible null pointer dereference: self->NPC.
-codemp/game/NPC_reactions.c:nullPointerRedundantCheck:warning:Either the condition 'other' is redundant or there is possible null pointer dereference: other.
-codemp/game/NPC_reactions.c:nullPointerRedundantCheck:warning:Either the condition 'self->client' is redundant or there is possible null pointer dereference: self->client.
-codemp/game/SpeederNPC.c:nullPointerRedundantCheck:warning:Either the condition 'parentPS' is redundant or there is possible null pointer dereference: parentPS.
-codemp/game/SpeederNPC.c:nullPointerRedundantCheck:warning:Either the condition 'parentPS' is redundant or there is possible null pointer dereference: riderPS.
+codemp/game/npc/NPC_AI_Jedi.c:nullPointerRedundantCheck:warning:Either the condition 'NPCS.NPC->enemy->client' is redundant or there is possible null pointer dereference: NPCS.NPC->enemy->client.
+codemp/game/npc/NPC_AI_Jedi.c:nullPointerRedundantCheck:warning:Either the condition 'self->client' is redundant or there is possible null pointer dereference: self->client.
+codemp/game/npc/NPC_AI_Rancor.c:nullPointerRedundantCheck:warning:Either the condition 'radiusEnt->client' is redundant or there is possible null pointer dereference: radiusEnt->client.
+codemp/game/npc/NPC_AI_Sniper.c:arrayIndexOutOfBounds:error:Array 'NPCS.NPCInfo->enemyLaggedPos[24][3]' accessed at index 24, which is out of bounds.
+codemp/game/npc/NPC_AI_Utils.c:nullPointerRedundantCheck:warning:Either the condition '!self' is redundant or there is possible null pointer dereference: self.
+codemp/game/npc/NPC_AI_Utils.c:nullPointerRedundantCheck:warning:Either the condition '!self->NPC' is redundant or there is possible null pointer dereference: self->NPC.
+codemp/game/npc/NPC_behavior.c:nullPointerRedundantCheck:warning:Either the condition 'owner' is redundant or there is possible null pointer dereference: owner.
+codemp/game/npc/NPC_behavior.c:nullPointerRedundantCheck:warning:Either the condition 'traceEnt' is redundant or there is possible null pointer dereference: traceEnt.
+codemp/game/npc/NPC_combat.c:nullPointerRedundantCheck:warning:Either the condition 'self' is redundant or there is possible null pointer dereference: self.
+codemp/game/npc/NPC_combat.c:nullPointerRedundantCheck:warning:Either the condition 'self->NPC' is redundant or there is possible null pointer dereference: self->NPC.
+codemp/game/npc/NPC_reactions.c:nullPointerRedundantCheck:warning:Either the condition 'other' is redundant or there is possible null pointer dereference: other.
+codemp/game/npc/NPC_reactions.c:nullPointerRedundantCheck:warning:Either the condition 'self->client' is redundant or there is possible null pointer dereference: self->client.
+codemp/game/vehicles/SpeederNPC.c:nullPointerRedundantCheck:warning:Either the condition 'parentPS' is redundant or there is possible null pointer dereference: parentPS.
+codemp/game/vehicles/SpeederNPC.c:nullPointerRedundantCheck:warning:Either the condition 'parentPS' is redundant or there is possible null pointer dereference: riderPS.
 codemp/game/w_force.c:nullPointerRedundantCheck:warning:Either the condition 'self' is redundant or there is possible null pointer dereference: self.
 codemp/game/w_saber.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'i<8' is redundant or the array 'faces[12]' is accessed at index 12, which is out of bounds.
 codemp/game/w_saber.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'i<8' is redundant or the array 'faces[12]' is accessed at index 13, which is out of bounds.
@@ -292,15 +292,15 @@ codemp/icarus/tokenizer.h:duplInheritedMember:warning:The class 'CDirectiveSymbo
 codemp/icarus/tokenizer.h:duplInheritedMember:warning:The class 'CParseBlock' defines member function with name 'Create' also defined in its parent class 'CParseMemory'.
 codemp/mp3code/cwinb.c:shiftNegativeLHS:portability:Shifting a negative value is technically undefined behaviour
 codemp/mp3code/upsf.c:negativeIndex:error:Array 'sf[0]' accessed at index -2, which is out of bounds.
-codemp/qcommon/cm_load.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/qcommon/cm_patch.cpp:oppositeInnerCondition:warning:Opposite inner 'if' condition leads to a dead code block.
-codemp/qcommon/cm_polylib.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/qcommon/cm_polylib.cpp:nullPointer:error:Null pointer dereference: (struct winding_t*)0
-codemp/qcommon/cm_test.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/qcommon/cm_trace.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/qcommon/cm/cm_load.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/qcommon/cm/cm_patch.cpp:oppositeInnerCondition:warning:Opposite inner 'if' condition leads to a dead code block.
+codemp/qcommon/cm/cm_polylib.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/qcommon/cm/cm_polylib.cpp:nullPointer:error:Null pointer dereference: (struct winding_t*)0
+codemp/qcommon/cm/cm_test.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/qcommon/cm/cm_trace.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/qcommon/common.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/common.cpp:nullPointer:error:Null pointer dereference: (volatile int*)0
-codemp/qcommon/cvar.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/qcommon/cvar/cvar.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/qcommon/files.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/files.cpp:nullPointerOutOfMemory:warning:If memory allocation fails, then there is a possible null pointer dereference: buf
 codemp/qcommon/files.cpp:nullPointerRedundantCheck:warning:Either the condition '!extension' is redundant or there is possible null pointer dereference: extension.
@@ -309,18 +309,18 @@ codemp/qcommon/GenericParser2.cpp:noOperatorEq:warning:Class 'CGPValue' does not
 codemp/qcommon/GenericParser2.h:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/GenericParser2.h:duplInheritedMember:warning:The class 'CGPGroup' defines member function with name 'GetNext' also defined in its parent class 'CGPObject'.
 codemp/qcommon/GenericParser2.h:duplInheritedMember:warning:The class 'CGPValue' defines member function with name 'GetNext' also defined in its parent class 'CGPObject'.
-codemp/qcommon/huffman.cpp:uninitvar:warning:Uninitialized variable: seq
+codemp/qcommon/net/huffman.cpp:uninitvar:warning:Uninitialized variable: seq
 codemp/qcommon/matcomp.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/md4.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/md5.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/MiniHeap.h:noCopyConstructor:warning:Class 'CMiniHeap' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
 codemp/qcommon/MiniHeap.h:noOperatorEq:warning:Class 'CMiniHeap' does not have a operator= which is recommended since it has dynamic memory/resource management.
-codemp/qcommon/msg.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/qcommon/msg.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
-codemp/qcommon/msg.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/qcommon/net_chan.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/qcommon/net_chan.cpp:shiftTooManyBitsSigned:error:Shifting signed 32-bit value by 31 bits is undefined behaviour
-codemp/qcommon/net_ip.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/qcommon/net/msg.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/qcommon/net/msg.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
+codemp/qcommon/net/msg.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/qcommon/net/net_chan.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/qcommon/net/net_chan.cpp:shiftTooManyBitsSigned:error:Shifting signed 32-bit value by 31 bits is undefined behaviour
+codemp/qcommon/net/net_ip.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/q_shared.c:nullPointerArithmeticRedundantCheck:warning:Either the condition 'in' is redundant or there is overflow in pointer subtraction.
 codemp/qcommon/q_shared.c:oppositeInnerCondition:warning:Opposite inner 'if' condition leads to a dead code block.
 codemp/qcommon/RoffSystem.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
@@ -338,8 +338,8 @@ codemp/qcommon/RoffSystem.h:uninitMemberVar:warning:Member variable 'CROFF::mNot
 codemp/qcommon/RoffSystem.h:uninitMemberVar:warning:Member variable 'CROFF::mNumNoteTracks' is not initialized in the constructor.
 codemp/qcommon/RoffSystem.h:uninitMemberVar:warning:Member variable 'CROFF::mROFFEntries' is not initialized in the constructor.
 codemp/qcommon/RoffSystem.h:uninitMemberVar:warning:Member variable 'CROFF::mROFFFilePath' is not initialized in the constructor.
-codemp/qcommon/stringed_ingame.cpp:uninitMemberVar:warning:Member variable 'CStringEdPackage::m_bLoadDebug' is not initialized in the constructor.
-codemp/qcommon/stringed_ingame.cpp:uninitMemberVar:warning:Member variable 'CStringEdPackage::m_bLoadingEnglish_ParseOnly' is not initialized in the constructor.
+codemp/qcommon/stringed/stringed_ingame.cpp:uninitMemberVar:warning:Member variable 'CStringEdPackage::m_bLoadDebug' is not initialized in the constructor.
+codemp/qcommon/stringed/stringed_ingame.cpp:uninitMemberVar:warning:Member variable 'CStringEdPackage::m_bLoadingEnglish_ParseOnly' is not initialized in the constructor.
 codemp/qcommon/timing.h:uninitMemberVar:warning:Member variable 'timing_c::end' is not initialized in the constructor.
 codemp/qcommon/timing.h:uninitMemberVar:warning:Member variable 'timing_c::start' is not initialized in the constructor.
 codemp/qcommon/z_memman_pc.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast

@@ -156,7 +156,7 @@ fresh, so with `r_fullscreen 1` from the stored config the start stays in the wi
 
 ### Network
 
-`codemp/qcommon/net_ws.cpp` stands in for `net_ip.cpp`. One WebSocket to `ws://<host of the page>/net` (`wss`
+`codemp/qcommon/net/net_ws.cpp` stands in for `net_ip.cpp`. One WebSocket to `ws://<host of the page>/net` (`wss`
 when the page came over https), one binary message a datagram, nothing added. What comes in between two frames
 is copied into a queue and handed to the client by `NET_Sleep()`. A packet to another address than the server's
 is dropped. A name can not be looked up from a page: `connect` takes numbers or the name of the host of the

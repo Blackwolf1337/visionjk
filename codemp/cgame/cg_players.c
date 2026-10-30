@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "ui/ui_saberfx.h"
 #include "ghoul2/G2.h"
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 extern vmCvar_t	cg_thirdPersonAlpha;
 

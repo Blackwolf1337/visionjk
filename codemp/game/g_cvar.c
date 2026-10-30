@@ -24,9 +24,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <inttypes.h>
 
-#include "bg_public.h"
+#include "game/bg/bg_public.h"
 #include "g_local.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "qcommon/game_version.h"
 
 //

@@ -44,7 +44,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "game/bg_net.h"		// the sockets, in front of everything else
+#include "game/bg/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
 #include "web/web_http.h"		// the headers of a request and base64, shared with the web host of the dedicated server
 #include "game/webadmin/wa_totp.h"

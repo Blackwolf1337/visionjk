@@ -27,9 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "g_ICARUScb.h"
 #include "g_nav.h"
-#include "bg_saga.h"
-#include "b_local.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_saga.h"
+#include "game/npc/b_local.h"
+#include "game/bg/bg_public.h"
 #include "qcommon/game_version.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );

@@ -299,7 +299,7 @@ function evDisruptorStart(e) {
 	return view.flashPoint ? view.flashPoint.slice() : e.org2;
 }
 
-// FX_AddBezier of the engine (client/FxUtil.cpp): a band along a curve from start to end with two control points
+// FX_AddBezier of the engine (client/fx/FxUtil.cpp): a band along a curve from start to end with two control points
 // that move, for killTime msec. The effects of the page have no such primitive (js/fx-draw.js), so these are kept
 // and drawn here (evDrawBeziers). The values go from the first to the second as the flags say, as for fxAddLine.
 function evAddBezier(start, end, control1, control1Vel, control2, control2Vel, size1, size2, sizeParm, alpha1, alpha2, alphaParm, sRGB, eRGB, rgbParm, killTime, shader, flags) {
@@ -309,7 +309,7 @@ function evAddBezier(start, end, control1, control1Vel, control2, control2Vel, s
 		shader, size: [size1, size2, parm(sizeParm, 8)], alpha: [alpha1, alpha2, parm(alphaParm, 0)], rgb: [sRGB.slice(), eRGB.slice(), parm(rgbParm, 4)], moved: fxTime });
 }
 
-// CBezier::Update, Cull, Draw and DrawSegment (client/FxPrimitives.cpp): the curve in 16 pieces (BEZIER_RESOLUTION),
+// CBezier::Update, Cull, Draw and DrawSegment (client/fx/FxPrimitives.cpp): the curve in 16 pieces (BEZIER_RESOLUTION),
 // each a quad that shows its flat side to the eye and is glued to the one before. The band is size wide from its
 // start to its end, and its colour fades to nothing along it: at its start it is black.
 function evBezierQuads(b, fwd) {

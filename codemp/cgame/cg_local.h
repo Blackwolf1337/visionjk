@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/q_shared.h"
 #include "rd-common/tr_types.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "cg_public.h"
 
 // The entire cgame module is unloaded and reloaded on each level change,

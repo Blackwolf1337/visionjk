@@ -1,8 +1,8 @@
-// codemp/qcommon/cvar_seen.c: the day code last used a cvar, and which ones cvar_cleanup offers
+// codemp/qcommon/cvar/cvar_seen.c: the day code last used a cvar, and which ones cvar_cleanup offers
 #include "c_api.h"
 
 extern "C" {
-#include "qcommon/cvar_seen.h"
+#include "qcommon/cvar/cvar_seen.h"
 }
 
 #include <boost/test/unit_test.hpp>

@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "ghoul2/G2.h"
 
-#include "ai_main.h" //for the g2animents
+#include "game/bots/ai_main.h" //for the g2animents
 
 #define HOLOCRON_RESPAWN_TIME 30000
 #define MAX_AMMO_GIVE 2

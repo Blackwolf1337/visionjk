@@ -266,7 +266,7 @@ does not answer a step for 30 s ends the connect with an error that names its la
 The loading screen is drawn after every item and every player of the level, 89 times on that server: 16 ms
 together, nothing to gain.
 
-**The unpacked sounds are kept** (`client/snd_cache.cpp`, cvar `v_soundCache`, on by default). An MP3 outside
+**The unpacked sounds are kept** (`client/sound/snd_cache.cpp`, cvar `v_soundCache`, on by default). An MP3 outside
 `sound/chars` is unpacked to samples when it is registered: weapons, effects, the sounds of the players. On the
 server above that was 182 of the 256 ms of sounds, 288 files. The samples are written to `soundcache/` of the
 profile, a file per sound, named as the textures of `vk_texcache.cpp` are (the path of the MP3, its length, the

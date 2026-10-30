@@ -28,7 +28,7 @@ set(MPDedWebFiles
 	"${MPDir}/server/web/sv_web_voice.cpp"
 	"${MPDir}/server/web/sv_web_tv.cpp"
 	# the sockets of the system, which net_ip.cpp and the web host name alike
-	"${MPDir}/qcommon/net_local.h"
+	"${MPDir}/qcommon/net/net_local.h"
 	)
 source_group("server/web" FILES ${MPDedWebFiles})
 set(MPDedFiles ${MPDedFiles} ${MPDedWebFiles})

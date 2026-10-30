@@ -29,14 +29,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <limits.h>
 #include "ghoul2/G2.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/MiniHeap.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/game_version.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
 #include "cl_lan.h"
-#include "snd_local.h"
+#include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
 cvar_t	*cl_renderer;
@@ -2684,7 +2684,7 @@ CL_InitRef
 */
 qboolean Com_TheHunkMarkHasBeenMade(void);
 
-//qcommon/cm_load.cpp
+//qcommon/cm/cm_load.cpp
 extern void *gpvCachedMapDiskImage;
 extern qboolean gbUsingCachedMapDataRightNow;
 

@@ -2,8 +2,8 @@
 
 // The page plays the effects as a client does. Which and where comes with the state feed (WA_StateEffects): the
 // entities that are effects and loop (CG_FX in cgame/cg_ents.c), and what the game played once (EV_PLAY_EFFECT
-// and EV_PLAY_EFFECT_ID in cgame/cg_event.c). What an effect does then is the engine's: client/FxScheduler.cpp
-// (PlayEffect, CreateEffect), client/FxUtil.cpp (FX_Add...) and client/FxPrimitives.cpp (Update, Die).
+// and EV_PLAY_EFFECT_ID in cgame/cg_event.c). What an effect does then is the engine's: client/fx/FxScheduler.cpp
+// (PlayEffect, CreateEffect), client/fx/FxUtil.cpp (FX_Add...) and client/fx/FxPrimitives.cpp (Update, Die).
 // A light of an effect is one of the lights of the frame (fxLights, js/dlights.js), and the trail of a saber blade
 // is a primitive cgame hands in by itself (fxAddTrail).
 // Not done: what a primitive runs into (usePhysics, impactFx: it goes through walls and floors), the models of

@@ -17,7 +17,7 @@
 #============================================================================
 
 # The headers of Vulkan, for what loads the library at run time and needs nothing else of it at build time: the
-# renderer rd-vulkan-vision and the sound of the client (client/spatial/snd_spatial_gpu.cpp).
+# renderer rd-vulkan-vision and the sound of the client (client/sound/spatial/snd_spatial_gpu.cpp).
 # -DVulkanHeadersDir=<dir with vulkan/vulkan.h> names where they are if they are not found.
 #
 # jp_vulkan_headers(<out> <copyDir>) sets <out> to the directory to put on the include path, or to "" when there

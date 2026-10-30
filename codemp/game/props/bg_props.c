@@ -32,7 +32,7 @@ with the outline of its top and its feet.
 */
 
 #include "qcommon/q_shared.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "bg_props.h"
 #include "bg_props_math.h"		// the vector functions, inline
 

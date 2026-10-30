@@ -25,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "tr_font.h"
 #include "tr_font_ttf.h"
 
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 
 cvar_t *r_fontSharpness;
 

@@ -28,8 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // g_local.h -- local definitions for game module
 
 #include "qcommon/q_shared.h"
-#include "bg_public.h"
-#include "bg_vehicles.h"
+#include "game/bg/bg_public.h"
+#include "game/bg/bg_vehicles.h"
 #include "g_public.h"
 
 typedef struct gentity_s gentity_t;
@@ -39,7 +39,7 @@ typedef struct gclient_s gclient_t;
 #include "game/unlagged/g_unlagged.h"
 
 //npc stuff
-#include "b_public.h"
+#include "game/npc/b_public.h"
 
 extern int gPainMOD;
 extern int gPainHitLoc;
@@ -103,7 +103,7 @@ extern vec3_t gPainPoint;
 #define DEBUG_SABER_BOX
 #endif
 
-// make sure this matches game/match.h for botlibs
+// make sure this matches game/bots/match.h for botlibs
 #define EC "\x19"
 
 #define	MAX_G_SHARED_BUFFER_SIZE		8192

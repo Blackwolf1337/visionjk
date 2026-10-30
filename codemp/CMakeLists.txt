@@ -134,7 +134,7 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPBotlibFiles ${MPBotlibFiles} ${MPBotlibGameFiles})
 
 	set(MPBotlibCommonFiles
-		"${MPDir}/qcommon/cm_public.h"
+		"${MPDir}/qcommon/cm/cm_public.h"
 		"${MPDir}/qcommon/disablewarnings.h"
 		"${MPDir}/qcommon/q_shared.h"
 		"${MPDir}/qcommon/qcommon.h"
@@ -204,15 +204,15 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPEngineAndDedClientFiles
 		"${MPDir}/client/client.h"
 		"${MPDir}/client/keys.h"
-		"${MPDir}/client/snd_public.h"
+		"${MPDir}/client/sound/snd_public.h"
 		)
 	source_group("client" FILES ${MPEngineAndDedClientFiles})
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedClientFiles})
 
 	set(MPEngineAndDedGameFiles
 		"${MPDir}/game/anims.h"
-		"${MPDir}/game/bg_public.h"
-		"${MPDir}/game/bg_weapons.h"
+		"${MPDir}/game/bg/bg_public.h"
+		"${MPDir}/game/bg/bg_weapons.h"
 		"${MPDir}/botlib/botlib.h"
 		"${MPDir}/game/g_public.h"
 		"${MPDir}/game/surfaceflags.h"
@@ -223,40 +223,40 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPEngineAndDedCommonFiles
 		"${MPDir}/qcommon/q_shared.h"
 		"${SharedDir}/qcommon/q_platform.h"
-		"${MPDir}/qcommon/cm_export.cpp"
-		"${MPDir}/qcommon/cm_load.cpp"
-		"${MPDir}/qcommon/cm_local.h"
-		"${MPDir}/qcommon/cm_patch.cpp"
-		"${MPDir}/qcommon/cm_patch.h"
-		"${MPDir}/qcommon/cm_polylib.cpp"
-		"${MPDir}/qcommon/cm_polylib.h"
-		"${MPDir}/qcommon/cm_public.h"
-		"${MPDir}/qcommon/cm_test.cpp"
-		"${MPDir}/qcommon/cm_trace.cpp"
+		"${MPDir}/qcommon/cm/cm_export.cpp"
+		"${MPDir}/qcommon/cm/cm_load.cpp"
+		"${MPDir}/qcommon/cm/cm_local.h"
+		"${MPDir}/qcommon/cm/cm_patch.cpp"
+		"${MPDir}/qcommon/cm/cm_patch.h"
+		"${MPDir}/qcommon/cm/cm_polylib.cpp"
+		"${MPDir}/qcommon/cm/cm_polylib.h"
+		"${MPDir}/qcommon/cm/cm_public.h"
+		"${MPDir}/qcommon/cm/cm_test.cpp"
+		"${MPDir}/qcommon/cm/cm_trace.cpp"
 		"${MPDir}/qcommon/cmd.cpp"
 		"${MPDir}/qcommon/common.cpp"
 		"${MPDir}/qcommon/com_load.cpp"
-		"${MPDir}/qcommon/cvar.cpp"
-		"${MPDir}/qcommon/cvar_cleanup.cpp"
-		"${MPDir}/qcommon/cvar_seen.c"
-		"${MPDir}/qcommon/cvar_seen.h"
-		"${MPDir}/qcommon/cvar_renames.cpp"
-		"${MPDir}/qcommon/cvar_renames.h"
+		"${MPDir}/qcommon/cvar/cvar.cpp"
+		"${MPDir}/qcommon/cvar/cvar_cleanup.cpp"
+		"${MPDir}/qcommon/cvar/cvar_seen.c"
+		"${MPDir}/qcommon/cvar/cvar_seen.h"
+		"${MPDir}/qcommon/cvar/cvar_renames.cpp"
+		"${MPDir}/qcommon/cvar/cvar_renames.h"
 		"${MPDir}/qcommon/disablewarnings.h"
 		"${MPDir}/qcommon/files.cpp"
 		"${MPDir}/qcommon/game_version.h"
 		"${MPDir}/qcommon/GenericParser2.cpp"
 		"${MPDir}/qcommon/GenericParser2.h"
-		"${MPDir}/qcommon/huffman.cpp"
+		"${MPDir}/qcommon/net/huffman.cpp"
 		"${MPDir}/qcommon/md4.cpp"
 		"${MPDir}/qcommon/md5.cpp"
 		"${MPDir}/qcommon/md5.h"
 		"${MPDir}/qcommon/MiniHeap.h"
-		"${MPDir}/qcommon/msg.cpp"
+		"${MPDir}/qcommon/net/msg.cpp"
 		"${MPDir}/qcommon/matcomp.h"
 		"${MPDir}/qcommon/matcomp.cpp"
-		"${MPDir}/qcommon/net_chan.cpp"
-		"${MPDir}/qcommon/net_ip.cpp"
+		"${MPDir}/qcommon/net/net_chan.cpp"
+		"${MPDir}/qcommon/net/net_ip.cpp"
 		"${MPDir}/qcommon/persistence.cpp"
 		"${MPDir}/qcommon/q_shared.cpp"
 		"${MPDir}/qcommon/qcommon.h"
@@ -264,10 +264,10 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/qcommon/RoffSystem.cpp"
 		"${MPDir}/qcommon/RoffSystem.h"
 		"${MPDir}/qcommon/sstring.h"
-		"${MPDir}/qcommon/stringed_ingame.cpp"
-		"${MPDir}/qcommon/stringed_ingame.h"
-		"${MPDir}/qcommon/stringed_interface.cpp"
-		"${MPDir}/qcommon/stringed_interface.h"
+		"${MPDir}/qcommon/stringed/stringed_ingame.cpp"
+		"${MPDir}/qcommon/stringed/stringed_ingame.h"
+		"${MPDir}/qcommon/stringed/stringed_interface.cpp"
+		"${MPDir}/qcommon/stringed/stringed_interface.h"
 		"${MPDir}/qcommon/tags.h"
 		"${MPDir}/qcommon/timing.h"
 		"${MPDir}/qcommon/vm.cpp"
@@ -371,7 +371,7 @@ if(BuildMPEngine)
 	set(MPEngineFiles ${MPEngineAndDedFiles})
 	set(MPEngineDefines ${MPSharedDefines})
 
-	# Steam Audio: sound that knows the level (client/spatial/snd_spatial.cpp). The engine is not linked against it, it
+	# Steam Audio: sound that knows the level (client/sound/spatial/snd_spatial.cpp). The engine is not linked against it, it
 	# loads the library when it runs. It needs the header of Valve's repository, the submodule lib/steamaudio:
 	# only that one file is put on the include path (in the build folder), the folder it comes from holds the
 	# whole of Steam Audio, with header names of its own that the engine must not pick up.
@@ -399,7 +399,7 @@ if(BuildMPEngine)
 			message(STATUS "Steam Audio ${SteamAudioVersion}: the header of lib/steamaudio, the library is loaded at run time")
 			set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
 			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
-			# The rays of the echo on the graphics card (client/spatial/snd_spatial_gpu.cpp, v_spatialGpu): the headers of
+			# The rays of the echo on the graphics card (client/sound/spatial/snd_spatial_gpu.cpp, v_spatialGpu): the headers of
 			# Vulkan and glslc for its shader, as the renderer has them. The SPIR-V goes next to phonon.h. Without them,
 			# and in a browser, the CPU traces all the rays.
 			if(NOT EMSCRIPTEN)
@@ -407,7 +407,7 @@ if(BuildMPEngine)
 				jp_vulkan_headers(SpatialVulkanHeaders "${CMAKE_BINARY_DIR}/steamaudio/vulkan-headers")
 				find_program(GLSLC glslc)
 				if(SpatialVulkanHeaders AND GLSLC)
-					set(SpatialShaderIn "${MPDir}/client/spatial/shaders/spatial_rays.comp")
+					set(SpatialShaderIn "${MPDir}/client/sound/spatial/shaders/spatial_rays.comp")
 					set(SpatialShaderOut "${CMAKE_BINARY_DIR}/steamaudio/spatial_rays_comp.inc")
 					add_custom_command(
 						OUTPUT ${SpatialShaderOut}
@@ -571,45 +571,45 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_ui.cpp"
 		"${MPDir}/client/cl_uiapi.cpp"
 		"${MPDir}/client/cl_uiapi.h"
-		"${MPDir}/client/FXExport.cpp"
-		"${MPDir}/client/FXExport.h"
-		"${MPDir}/client/FxPrimitives.cpp"
-		"${MPDir}/client/FxPrimitives.h"
-		"${MPDir}/client/FxScheduler.cpp"
-		"${MPDir}/client/FxScheduler.h"
-		"${MPDir}/client/FxSystem.cpp"
-		"${MPDir}/client/FxSystem.h"
-		"${MPDir}/client/FxTemplate.cpp"
-		"${MPDir}/client/FxUtil.cpp"
-		"${MPDir}/client/FxUtil.h"
-		"${MPDir}/client/snd_ambient.cpp"
-		"${MPDir}/client/snd_ambient.h"
-		"${MPDir}/client/snd_cache.cpp"
-		"${MPDir}/client/snd_dma.cpp"
-		"${MPDir}/client/snd_local.h"
-		"${MPDir}/client/snd_mem.cpp"
-		"${MPDir}/client/snd_mix.cpp"
-		"${MPDir}/client/snd_mp3.cpp"
-		"${MPDir}/client/snd_mp3.h"
-		"${MPDir}/client/snd_music.cpp"
-		"${MPDir}/client/snd_music.h"
+		"${MPDir}/client/fx/FXExport.cpp"
+		"${MPDir}/client/fx/FXExport.h"
+		"${MPDir}/client/fx/FxPrimitives.cpp"
+		"${MPDir}/client/fx/FxPrimitives.h"
+		"${MPDir}/client/fx/FxScheduler.cpp"
+		"${MPDir}/client/fx/FxScheduler.h"
+		"${MPDir}/client/fx/FxSystem.cpp"
+		"${MPDir}/client/fx/FxSystem.h"
+		"${MPDir}/client/fx/FxTemplate.cpp"
+		"${MPDir}/client/fx/FxUtil.cpp"
+		"${MPDir}/client/fx/FxUtil.h"
+		"${MPDir}/client/sound/snd_ambient.cpp"
+		"${MPDir}/client/sound/snd_ambient.h"
+		"${MPDir}/client/sound/snd_cache.cpp"
+		"${MPDir}/client/sound/snd_dma.cpp"
+		"${MPDir}/client/sound/snd_local.h"
+		"${MPDir}/client/sound/snd_mem.cpp"
+		"${MPDir}/client/sound/snd_mix.cpp"
+		"${MPDir}/client/sound/snd_mp3.cpp"
+		"${MPDir}/client/sound/snd_mp3.h"
+		"${MPDir}/client/sound/snd_music.cpp"
+		"${MPDir}/client/sound/snd_music.h"
 		)
 	source_group("client" FILES ${MPEngineClientFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientFiles})
 
 	# the sound that knows the level, with Steam Audio (docs/japlus/audio.md)
 	set(MPEngineClientSpatialFiles
-		"${MPDir}/client/spatial/snd_spatial.cpp"
-		"${MPDir}/client/spatial/snd_spatial.h"
-		"${MPDir}/client/spatial/snd_spatial_bake.cpp"
-		"${MPDir}/client/spatial/snd_spatial_debug.cpp"
-		"${MPDir}/client/spatial/snd_spatial_gpu.cpp"
-		"${MPDir}/client/spatial/snd_spatial_level.cpp"
-		"${MPDir}/client/spatial/snd_spatial_local.h"
-		"${MPDir}/client/spatial/snd_spatial_page.cpp"
-		"${MPDir}/client/spatial/snd_spatial_render.cpp"
-		"${MPDir}/client/spatial/snd_spatial_sim.cpp"
-		"${MPDir}/client/spatial/snd_spatial_voice.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial.h"
+		"${MPDir}/client/sound/spatial/snd_spatial_bake.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_debug.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_gpu.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_level.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_local.h"
+		"${MPDir}/client/sound/spatial/snd_spatial_page.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_render.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_sim.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_voice.cpp"
 		${MPEngineSpatialGpuFiles}
 		)
 	source_group("client/spatial" FILES ${MPEngineClientSpatialFiles})
@@ -708,8 +708,8 @@ if(BuildMPEngine)
 			"${SharedDir}/sys/web/sys_web.h"
 			"${SharedDir}/sys/web/sys_web.cpp"
 			)
-		list(REMOVE_ITEM MPEngineFiles "${MPDir}/qcommon/net_ip.cpp")
-		set(MPEngineFiles ${MPEngineFiles} "${MPDir}/qcommon/net_ws.cpp")
+		list(REMOVE_ITEM MPEngineFiles "${MPDir}/qcommon/net/net_ip.cpp")
+		set(MPEngineFiles ${MPEngineFiles} "${MPDir}/qcommon/net/net_ws.cpp")
 	else(WIN32)
 		set(MPEngineSysFiles
 			${MPEngineSysFiles}

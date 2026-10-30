@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/webadmin/wa_local.h"
 #include "botlib/botlib.h"
-#include "game/ai_main.h"
+#include "game/bots/ai_main.h"
 
 /*
 =================

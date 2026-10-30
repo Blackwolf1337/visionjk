@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "rd-common/tr_types.h"
 #include "ui_public.h"
 #include "keycodes.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "ui_shared.h"
 
 // ui_cvar.c

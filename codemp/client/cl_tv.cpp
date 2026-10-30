@@ -40,7 +40,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include <emscripten/websocket.h>
 #else
 	#include <SDL.h>
-	#include "qcommon/net_local.h"
+	#include "qcommon/net/net_local.h"
 	#include "sys/sys_http.h"
 #endif
 

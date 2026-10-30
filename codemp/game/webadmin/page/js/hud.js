@@ -357,7 +357,7 @@ const HUD_WEAPON_FIRING = 3, HUD_WEAPON_CHARGING_ALT = 5;
 const HUD_FP = { HEAL: 0, LEVITATION: 1, SPEED: 2, PUSH: 3, PULL: 4, TELEPATHY: 5, GRIP: 6, LIGHTNING: 7, RAGE: 8, PROTECT: 9, ABSORB: 10, TEAM_HEAL: 11, TEAM_FORCE: 12, DRAIN: 13, SEE: 14, SABER_OFFENSE: 15, SABER_DEFENSE: 16, SABERTHROW: 17, NUM: 18 };
 const HUD_PW = { REDFLAG: 4, BLUEFLAG: 5, NEUTRALFLAG: 6, YSALAMIRI: 15, NUM: 16 };
 const HUD_ENTITYNUM_NONE = 1023, HUD_ENTITYNUM_WORLD = 1022, HUD_MAX_CLIENTS = 32;
-// weaponData and ammoData of game/bg_weapons.c, by the number of the weapon: [ammoIndex, energyPerShot, altEnergyPerShot]
+// weaponData and ammoData of game/bg/bg_weapons.c, by the number of the weapon: [ammoIndex, energyPerShot, altEnergyPerShot]
 const HUD_WEAPON_DATA = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [2, 2, 3], [3, 5, 6], [3, 5, 5], [4, 1, 15], [3, 8, 6], [4, 10, 15], [5, 1, 2], [7, 1, 1], [8, 1, 1], [9, 1, 0], [4, 40, 50], [2, 2, 2], [0, 0, 0], [0, 0, 0]];
 const HUD_AMMO_MAX = [0, 100, 300, 300, 300, 25, 800, 10, 10, 10];
 // colorTable of q_color.c, the entries the 2D uses

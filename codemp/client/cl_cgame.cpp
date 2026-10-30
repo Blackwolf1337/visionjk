@@ -25,15 +25,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "botlib/botlib.h"
-#include "FXExport.h"
-#include "FxUtil.h"
+#include "client/fx/FXExport.h"
+#include "client/fx/FxUtil.h"
 #include "qcommon/RoffSystem.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "ghoul2/G2_gore.h"
 
 extern IHeapAllocator *G2VertSpaceClient;
 
-#include "snd_ambient.h"
+#include "client/sound/snd_ambient.h"
 #include "qcommon/timing.h"
 
 /*

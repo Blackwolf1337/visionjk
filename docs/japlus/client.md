@@ -507,7 +507,7 @@ Taken over from TaystJK on 2026-10-17. They only change what this player sees.
 | `tay_forceAllyModel` | empty | every team mate in this model |
 | `tay_saberTeamColors` | 1 | in team games every blade in its team's colour, as the game does. 0: a blade keeps its colour, unless that is the other team's colour or one past purple (RGB of JA+, black). Not in siege |
 | `tay_saberStaffColors` | 0 | the second blade of a staff in the player's second saber colour (also its RGB colour) |
-| `tay_jk2Effects` | 0 | engine (`client/FxScheduler.cpp`, TaystJK's `fx_jk2`): the parts of 30 shot effects (blaster, bryar, flechette, repeater, rocket, turrets, vehicles ...) live one millisecond where their file gives no life, so a shot is drawn where it is in this frame without the smear of the frames before, as in Jedi Outcast. Counts from the next level (the effects are read at a level's start). No files of Jedi Outcast are needed |
+| `tay_jk2Effects` | 0 | engine (`client/fx/FxScheduler.cpp`, TaystJK's `fx_jk2`): the parts of 30 shot effects (blaster, bryar, flechette, repeater, rocket, turrets, vehicles ...) live one millisecond where their file gives no life, so a shot is drawn where it is in this frame without the smear of the frames before, as in Jedi Outcast. Counts from the next level (the effects are read at a level's start). No files of Jedi Outcast are needed |
 | `tay_disruptorBeam` | 0 | the disruptor shot as a line with a glow, 1, or with a spiral of sparks around it as the rail of Quake 3, 2 (TaystJK's `cg_disruptorNew` and `cg_disruptorSpiral`). 0 the shot of the game |
 | `tay_disruptorColor` | empty | its colour, `r g b` from 0 to 1, empty cyan. In team games the team's colour |
 | `tay_strafeTrail` | 0 | strafe trails as jaPRO and TaystJK have them (`cg_strafetrail.c`): a glowing line on the ground along where a player ran, 1 oneself, 2 everybody. Oneself green, the teams in their colours, the others white. Only from the places this client sees anyway |
@@ -1059,9 +1059,9 @@ gated by the ROM cvar `v_cgameScreenFx`. rd-vanilla returns qfalse and the cgame
 - Saber clash: a bright flash where the blades meet.
 
 - Sound: `v_muffle` has one owner in the cgame now: the menu in the level, under water, a blast close by (`v_soundTinnitus`)
-  and Force Sight set it. `v_tinnitus`, set by the cgame from `v_soundTinnitus`, makes `S_TinnitusPaint()` in the mixer (`client/snd_mix.cpp`) add a ringing of two
+  and Force Sight set it. `v_tinnitus`, set by the cgame from `v_soundTinnitus`, makes `S_TinnitusPaint()` in the mixer (`client/sound/snd_mix.cpp`) add a ringing of two
   tones, 3700 and 3790 Hz, and lower the rest. `v_dreamReverb` adds a long parametric Steam Audio reverb, one per
-  ear, in `S_SpatialRenderDream()` (`client/spatial/snd_spatial_render.cpp`). The reverb works only with Steam
+  ear, in `S_SpatialRenderDream()` (`client/sound/spatial/snd_spatial_render.cpp`). The reverb works only with Steam
   Audio (`v_spatial 1`).
 - Dynamic lights: the light of a dynamic light now uses the vertex normals and also lights a floor it is just under
   (up to 12 units). That ended stripes on mp/ffa4 (`DynamicLight` in `shaders/generic.frag`, rd-vulkan-vision).
@@ -1183,7 +1183,7 @@ ping column of the browser, one the client left itself a red one.
 
 ### Cleaning up cvars
 
-`codemp/qcommon/cvar_cleanup.cpp`, `cvar_seen.c`, `codemp/ui/ui_cvarclean.c`, `assets/japlus_client/ui/jamp/cvarclean.menu`.
+`codemp/qcommon/cvar/cvar_cleanup.cpp`, `cvar_seen.c`, `codemp/ui/ui_cvarclean.c`, `assets/japlus_client/ui/jamp/cvarclean.menu`.
 Old configs leave cvars behind that nothing reads. The engine notes the day code last used each cvar: it was
 registered (`Cvar_Get` without `CVAR_USER_CREATED`), or a module read it by name. The traps `Cvar_VariableStringBuffer`,
 `Cvar_VariableIntegerValue` and `Cvar_VariableValue` of the game, cgame and ui count, and only for cvars the user made.
@@ -1212,7 +1212,7 @@ of 2019 are back: a blade style, a look for duels and notifications. The 2019 tr
 `h_saberTrailLength`, `h_saberWidth`, `h_saberBladeCoreMulti`, `h_saberBladeGlowMulti`, `h_duelEffect`,
 `h_duelColour`, `h_duelShowSabers` and `h_notification*`. The old names are not taken over, because their values
 meant other things (`h_saberWidth` was an absolute radius), so there is no entry for them in
-`codemp/qcommon/cvar_renames.h`.
+`codemp/qcommon/cvar/cvar_renames.h`.
 
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|

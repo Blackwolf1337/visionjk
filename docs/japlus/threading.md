@@ -33,7 +33,7 @@ The only second thread is the audio callback that SDL starts.
 So "switching" between server and client means: the same thread runs the server half, then the client half. A
 dedicated server has no client half. A client that is connected to another server returns from `SV_Frame` at
 once (`com_sv_running 0`). The server tick is already independent of the frame rate through `timeResidual`.
-The only link between the client and a local server are the loopback buffers in `qcommon/net_chan.cpp`
+The only link between the client and a local server are the loopback buffers in `qcommon/net/net_chan.cpp`
 (`loopbacks[2]`, 16 messages each, no lock, one reader).
 
 ## Why server and client do not go onto two threads
@@ -42,11 +42,11 @@ The loopback would be a clean seam. Nothing behind it is.
 
 | Shared | Where | Problem |
 |--------|-------|---------|
-| Cvars | `qcommon/cvar.cpp` | one hash table, `cvar_modifiedFlags`, `Cvar_VariableString` returns a pointer into the cvar. Both halves read and set them all the time. |
+| Cvars | `qcommon/cvar/cvar.cpp` | one hash table, `cvar_modifiedFlags`, `Cvar_VariableString` returns a pointer into the cvar. Both halves read and set them all the time. |
 | Command buffer and tokenizer | `qcommon/cmd.cpp` | `cmd_text`, static `cmd_argv`; `Cmd_Argv` returns pointers into it. |
 | Static return buffers | `qcommon/q_shared.c` | `va()` rotates 4 static buffers, `Info_ValueForKey` 2. `MSG_ReadString` and `COM_Parse` have one each. |
 | File system, zone and hunk memory, `Com_Printf` | `qcommon/` | file handles, search paths, allocator lists, the print redirect buffer: no lock anywhere. |
-| Collision model | `qcommon/cm_trace.cpp` | every trace does `cmg.checkcount++` and marks the brushes it visited with that value. Two traces at once (game module on the server, prediction in cgame) give wrong results, not just a race. A lock around the trace would serialise the hottest path. |
+| Collision model | `qcommon/cm/cm_trace.cpp` | every trace does `cmg.checkcount++` and marks the brushes it visited with that value. Two traces at once (game module on the server, prediction in cgame) give wrong results, not just a race. A lock around the trace would serialise the hottest path. |
 | Ghoul2 | `server/` | the server calls `re->G2API_*` at 60 places (collision, bolts), in the same renderer library instance the client draws with. |
 | Errors and cross calls | `common.cpp`, `sv_init.cpp` | `Com_Error` is a C++ `throw` up to the `catch` in `Com_Frame`; an `ERR_DROP` of the server calls `CL_Disconnect`. `SV_SpawnServer` calls `CL_MapLoading` and `CL_ShutdownAll`. |
 

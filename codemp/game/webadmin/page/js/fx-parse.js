@@ -2,7 +2,7 @@
 
 // An effect is a list of primitives: each says how many of a thing are made, when, where, how they move and how
 // their size, colour and alpha change while they live. What the engine makes of a file is in
-// client/FxScheduler.cpp (ParseEffect) and client/FxTemplate.cpp (ParsePrimitive), the names and the numbers
+// client/fx/FxScheduler.cpp (ParseEffect) and client/fx/FxTemplate.cpp (ParsePrimitive), the names and the numbers
 // here are taken from there.
 
 // the bits of "flags" (FxPrimitives.h). Bolting to a model (relative) is not there: the page has no bolts.

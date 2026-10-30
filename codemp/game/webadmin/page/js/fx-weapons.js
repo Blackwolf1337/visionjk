@@ -75,7 +75,7 @@ function cgMissileHitPlayer(weapon, origin, dir, altFire) {
 	for (const name of fxHitNames(weapon, altFire, true, 0)) fxPlay(name, origin, name === FX_PLAYS_UP ? [0, 0, 1] : dir);
 }
 
-// FX_AddLine of the engine (client/FxUtil.cpp) as cgame calls it: a line of the effects from start to end that
+// FX_AddLine of the engine (client/fx/FxUtil.cpp) as cgame calls it: a line of the effects from start to end that
 // lives for killTime msec. size, alpha and rgb each go from their first value to their second as the flags say
 // (FX_SIZE_LINEAR and so on: the flags of a group at its shift, as in an effect file), shader is a name.
 const FX_ALPHA_LINEAR = FX_LINEAR, FX_SIZE_LINEAR = FX_LINEAR << 8, FX_ALPHA_WAVE = FX_WAVE;

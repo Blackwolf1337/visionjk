@@ -30,8 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qcommon.h"
 #include "rd-common/tr_public.h"
 #include "keys.h"
-#include "snd_public.h"
-#include "game/bg_public.h"
+#include "client/sound/snd_public.h"
+#include "game/bg/bg_public.h"
 #include "cgame/cg_public.h"
 #include "ui/ui_public.h"
 

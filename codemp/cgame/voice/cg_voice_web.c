@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // A page can not send UDP. The datagrams of cg_voice.c go through a WebSocket to the web host of the server
 // the page came from (the address /voice, codemp/server/web/sv_web_voice.cpp), one binary message a datagram
 // with nothing added, and that host hands them to the UDP port of the relay and back. It is a socket of its
-// own next to the one of the game (codemp/qcommon/net_ws.cpp), which the engine does not hand to a module.
+// own next to the one of the game (codemp/qcommon/net/net_ws.cpp), which the engine does not hand to a module.
 //
 // Nothing here waits. The socket is asked for and is open some frames later, or never. Its callbacks run
 // between two frames of the game and only copy into a queue, which CG_VoiceWebReceive() empties.

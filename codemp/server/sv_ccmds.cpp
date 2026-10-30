@@ -24,10 +24,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "server.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/game_version.h"
 #include "server/sv_gameapi.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 
 /*
 ===============================================================================

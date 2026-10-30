@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // sv_client.c -- server code for dealing with clients
 
 #include "server.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 
 #ifdef USE_INTERNAL_ZLIB
 #include "zlib/zlib.h"
