@@ -333,6 +333,7 @@
 		<span class="adminOnly"><br>Control of a player: <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>C</kbd> / <kbd>Ctrl</kbd> crouch &nbsp; <kbd>Shift</kbd> walk &nbsp; <kbd>LMB</kbd> <kbd>RMB</kbd> attack, alternate &nbsp; <kbd>E</kbd> use &nbsp; <kbd>F</kbd> force power &nbsp; <kbd>Esc</kbd> gives him back</span>
 	</div>
 	</div>
+	<button id="helpBtn" title="The keys and the mouse on the map (?)">?</button>
 	<button id="shotBtn" title="Saves what the map view shows as a PNG file">Screenshot</button>
 	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
 	<div id="coords" class="editorOnly"></div>
@@ -351,47 +352,61 @@
 			<div class="stat">Health <span id="cmdHp"></span><div class="bar"><i id="cmdHpBar" style="background:var(--green)"></i></div></div>
 			<div class="stat">Armor <span id="cmdAr"></span><div class="bar"><i id="cmdArBar" style="background:#5aa9ff"></i></div></div>
 		</div>
-		<div class="grid">
-			<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
-			<label for="setAr">Armor</label><input type="number" id="setAr" min="0" max="999"><button data-set="armor" data-input="setAr">Set</button>
-			<label for="setScale">Size <span id="scaleVal"></span></label><input type="number" id="setScale" min="10" max="500" step="5"><button data-set="scale" data-input="setScale">Set</button>
-			<input type="range" id="setScaleBar" min="0" max="1000" tabindex="-1" data-wheel="setScale" title="The size in percent: the left half is 10 to 100, the right half 100 to 500. It stops at 100 in the middle, and a double click sets 100. Nothing is sent before Set, or Enter in the field.">
-			<div id="setScaleMarks"><span>10%</span><span>100%</span><span>500%</span></div>
-			<label for="setTeam">Team</label><select id="setTeam"><option>free</option><option>red</option><option>blue</option><option>spectator</option></select><button data-set="team" data-input="setTeam">Set</button>
-			<label for="setGrav" title="A gravity only for this player. Empty: the gravity of the server.">Gravity</label><input type="number" id="setGrav" min="-2000" max="5000" placeholder="server"><button data-set="playergravity" data-input="setGrav">Set</button>
-		</div>
-		<div>
+		<!-- what can be done to him, in groups that fold; the page keeps which are open (js/players.js) -->
+		<details class="sect" data-sect="change" open><summary>Change</summary>
+			<div class="grid">
+				<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
+				<label for="setAr">Armor</label><input type="number" id="setAr" min="0" max="999"><button data-set="armor" data-input="setAr">Set</button>
+				<label for="setScale">Size <span id="scaleVal"></span></label><input type="number" id="setScale" min="10" max="500" step="5"><button data-set="scale" data-input="setScale">Set</button>
+				<input type="range" id="setScaleBar" min="0" max="1000" tabindex="-1" data-wheel="setScale" title="The size in percent: the left half is 10 to 100, the right half 100 to 500. It stops at 100 in the middle, and a double click sets 100. Nothing is sent before Set, or Enter in the field.">
+				<div id="setScaleMarks"><span>10%</span><span>100%</span><span>500%</span></div>
+				<label for="setTeam">Team</label><select id="setTeam"><option>free</option><option>red</option><option>blue</option><option>spectator</option></select><button data-set="team" data-input="setTeam">Set</button>
+				<label for="setGrav" title="A gravity only for this player. Empty: the gravity of the server.">Gravity</label><input type="number" id="setGrav" min="-2000" max="5000" placeholder="server"><button data-set="playergravity" data-input="setGrav">Set</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="watch" open><summary>Watch and steer</summary>
+			<div class="actions">
+				<button id="followBtn">Follow</button>
+				<button id="fpBtn" title="Player view (V)">First person</button>
+				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back.">Control</button>
+			</div>
+			<div class="hint">Right-click on the map to teleport this player there.</div>
+			<div class="hint">Control steers him from this page until a second click or Esc gives him back: a right-click on the map then makes him walk there instead, and the views Third person and First person play him with the keys and the mouse. A human who is controlled sees his own view jitter.</div>
+		</details>
+		<details class="sect" data-sect="powers"><summary>Powers</summary>
 			<div class="actions">
 				<button data-act="god" id="godBtn">God mode</button>
 				<button data-act="noclip" id="noclipBtn" title="Fly through walls">Noclip</button>
+				<button data-jp="amprotect" data-jpstate="protect" title="amprotect">Protect</button>
+				<button data-jp="amempower" data-jpstate="empower" title="amempower">Empower</button>
+				<button data-jp="ammerc" data-jpstate="merc" title="ammerc">Merc</button>
+				<button data-jp="amghost" data-jpstate="ghost" title="amghost">Ghost</button>
+				<button data-jp="ammindtrick" data-jpstate="mindtrick" title="ammindtrick">Mindtrick</button>
+				<button data-jp="amForceAltDim" data-jpoff="amUnForceAltDim" data-jpstate="altForced" title="amForceAltDim / amUnForceAltDim">Force alt dim</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="punish" open><summary>Punish</summary>
+			<div class="actions">
+				<button data-jp="amslap" title="amslap">Slap</button>
+				<button data-act="kill">Kill</button>
+				<button data-jp="amsleep" data-jpoff="amwake" data-jpstate="sleep" title="amsleep / amwake">Sleep</button>
+				<button data-jp="freeze" data-jpstate="frozen" title="freeze">Freeze</button>
+				<button data-jp="amsilence" data-jpoff="amunsilence" data-jpstate="silence" title="amsilence / amunsilence">Silence</button>
+				<button data-jp="amdenyvote" data-jpstate="denyVote" title="amdenyvote">Deny vote</button>
+				<button class="danger" data-act="kick" data-confirm>Kick</button>
+				<button class="danger" data-act="ban" data-confirm>Ban</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="fun"><summary>Fun</summary>
+			<div class="actions">
 				<button data-act="poop" title="The emote ampoop for him: he sits down, moans and leaves a small rock. He has to stand still.">Poop</button>
 				<button data-act="flatulence" id="flatulenceBtn" title="He breaks wind every few seconds: a sound and a green cloud for everybody near him">Flatulence</button>
 				<button data-act="schizo" id="schizoBtn" title="He hears and sees things nobody else does: shots, steps, voices, chat lines">Schizophrenia</button>
 				<button data-act="disorient" id="disorientBtn" title="The view sways, every few seconds it is thrown around with a shake and a stumble, now and then the world turns">Disorient</button>
-				<button data-act="kill">Kill</button>
-				<button id="followBtn">Follow</button>
-				<button id="fpBtn" title="Player view (V)">First person</button>
-				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back.">Control</button>
-				<button class="danger" data-act="kick" data-confirm>Kick</button>
-				<button class="danger" data-act="ban" data-confirm>Ban</button>
 			</div>
-			<div class="hint">Right-click on the map to teleport this player there.</div>
-			<div class="hint">Control steers him from this page until a second click or Esc gives him back: a right-click on the map then makes him walk there instead, and the views Third person and First person play him with the keys and the mouse. A human who is controlled sees his own view jitter.</div>
-		</div>
-		<!-- JA+ admin commands on the selected player, not in JKAdmin -->
-		<div id="jpBox">
+		</details>
+		<details class="sect" data-sect="japlus"><summary>JA+ admin</summary>
 			<div class="actions">
-				<button data-jp="amsleep" data-jpoff="amwake" data-jpstate="sleep" title="amsleep / amwake">Sleep</button>
-				<button data-jp="amprotect" data-jpstate="protect" title="amprotect">Protect</button>
-				<button data-jp="amempower" data-jpstate="empower" title="amempower">Empower</button>
-				<button data-jp="ammerc" data-jpstate="merc" title="ammerc">Merc</button>
-				<button data-jp="ammindtrick" data-jpstate="mindtrick" title="ammindtrick">Mindtrick</button>
-				<button data-jp="amghost" data-jpstate="ghost" title="amghost">Ghost</button>
-				<button data-jp="amsilence" data-jpoff="amunsilence" data-jpstate="silence" title="amsilence / amunsilence">Silence</button>
-				<button data-jp="amForceAltDim" data-jpoff="amUnForceAltDim" data-jpstate="altForced" title="amForceAltDim / amUnForceAltDim">Force alt dim</button>
-				<button data-jp="amdenyvote" data-jpstate="denyVote" title="amdenyvote">Deny vote</button>
-				<button data-jp="freeze" data-jpstate="frozen" title="freeze">Freeze</button>
-				<button data-jp="amslap" title="amslap">Slap</button>
 				<button data-jp="amShowMotd" title="amShowMotd">Show MOTD</button>
 			</div>
 			<div class="grid">
@@ -399,7 +414,7 @@
 				<label for="jpMsg">Message</label><input id="jpMsg" maxlength="140" autocomplete="off"><button data-jptext="ampsay" data-input="jpMsg">Send</button>
 				<label for="jpRank">Admin</label><select id="jpRank"><option value="no">none</option><option>council</option><option>knight</option><option>instructor</option></select><button data-jptext="admgrant" data-input="jpRank">Set</button>
 			</div>
-		</div>
+		</details>
 		<button class="close" id="cmdClose" title="Deselect">&#10005;</button>
 	</div>
 	<div id="kvSuggest"></div>

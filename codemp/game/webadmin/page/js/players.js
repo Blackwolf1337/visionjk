@@ -155,3 +155,9 @@ $('toggleSide').addEventListener('click', () => {
 });
 try { if (localStorage.getItem('wa.sideClosed')) document.body.classList.add('sideClosed'); } catch (e) { /* no storage */ }
 
+
+// the groups of the panel of a player that fold: the page keeps which are open
+document.querySelectorAll('#command details.sect').forEach(d => {
+	try { const kept = localStorage.getItem('wa.sect.' + d.dataset.sect); if (kept) d.open = kept === '1'; } catch (e) { /* as the page has it */ }
+	d.addEventListener('toggle', () => { try { localStorage.setItem('wa.sect.' + d.dataset.sect, d.open ? '1' : '0'); } catch (e) { /* not kept */ } });
+});

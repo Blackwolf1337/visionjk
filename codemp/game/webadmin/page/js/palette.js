@@ -30,7 +30,17 @@ function palCommands() {
 		out.push({ name: 'Gravity', arg: 'number', about: 'g_gravity for everybody, 800 is normal' + (serverGravity !== '' ? ', now ' + serverGravity : '') +
 			'. The map sets it again when it starts.', run: v => action({ action: 'gravity', value: v }) });
 	}
+	// what can be done to the selected player, by the names of the buttons of his panel (not Kick and Ban, which want a
+	// second click to be sure)
+	if (selected >= 0 && $('command').classList.contains('open')) {
+		const who = $('cmdName').textContent;
+		document.querySelectorAll('#command .actions button').forEach(b => {
+			if (b.hasAttribute('data-confirm') || b.hidden || b.disabled) return;
+			out.push({ name: b.textContent.trim() + ' (' + who + ')', about: b.title || 'For the selected player.', run: () => b.click() });
+		});
+	}
 	out.push({ name: 'Side panel', about: 'Shows or hides the side panel.', run: () => $('toggleSide').click() });
+	out.push({ name: 'Keys of the map', about: 'Shows or hides what the keys and the mouse do on the map (?).', run: () => helpToggle() });
 	if (palShown($('flyBtn'))) out.push({ name: 'Fly', about: $('flyBtn').title || 'The camera flies.', run: () => $('flyBtn').click() });
 	if (palShown($('shotBtn'))) out.push({ name: 'Screenshot', about: $('shotBtn').title || 'A picture of the map view.', run: () => $('shotBtn').click() });
 	return out;
@@ -137,3 +147,13 @@ document.addEventListener('keydown', e => {
 		if ($('palette').hidden) palOpen(); else palClose();
 	}
 });
+
+// the keys of the map, behind the button ? (the page keeps whether they are shown)
+function helpToggle(on) {
+	const show = on === undefined ? !document.body.classList.contains('helpOpen') : on;
+	document.body.classList.toggle('helpOpen', show);
+	try { localStorage.setItem('wa.help', show ? '1' : ''); } catch (e) { /* not kept */ }
+}
+$('helpBtn').addEventListener('click', () => helpToggle());
+try { if (localStorage.getItem('wa.help')) document.body.classList.add('helpOpen'); } catch (e) { /* hidden then */ }
+document.addEventListener('keydown', e => { if (e.key === '?' && !uiKeyIsTyped(e) && $('palette').hidden) helpToggle(); });
