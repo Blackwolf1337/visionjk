@@ -292,6 +292,56 @@ commands were lost, the ones that show the team and the class of somebody who op
 (found 2026-10-12 by a run of siege in both looks; `ingame_objectives` was over too). A menu file of a mod that
 is longer than that now gets a warning in the console when it is read.
 
+## The command menu
+
+A menu like the one of Half-Life and the AG mod: numbered lists at the left of the screen, for what VisionJK can do
+(issue #2). `v_commandmenu` opens it, or closes it when it is open. Controls, Extras has a row "Command Menu" for
+its key, which is not bound by default.
+
+- The first list stands at the left of the screen. An entry that opens a list has an arrow at its right, and its list
+  stands beside it, at the height of that entry. A number key (the keypad too) picks the entry with that number in the
+  last list that is open.
+- The mouse: pointing at an entry that opens a list opens it, but only when the pointer moves, so a pointer that
+  stands still leaves what the number keys opened. A click does an entry.
+- Backspace goes back one list (and closes the menu from the first). Escape and the right mouse button close it.
+- An entry with a command runs it as if typed into the console, and the menu closes.
+- It is a mode of the pointer (`select/cg_select.c`), like the quick wheel: the pointer takes the keys and the mouse
+  while it is open, so the number keys do not change weapons then. It does not open while the chat box is open,
+  without a snapshot or in a demo. Opening it closes the quick wheel.
+
+The default lists: 1 Boombox (Play a song ..., Music Player, Pause, Resume, Skip, Place a Boombox, Place a Sound
+System), 2 Voice Chat (Mute Everybody, Hear Everybody Again, Voice Chat Status), 3 Emotes (Sit, Kneel, Hello,
+Victory, Come On, Surrender, Break Dance, Flip, 9 More with nine more), 4 Duel (Challenge to a Duel, Full Force Duel),
+5 Team (Join the Game, Join Red, Join Blue, Spectate), 6 Vote (Yes, No, Restart the Map), 7 Show (Frame Rate, Timer,
+Lagometer, Chat Bubbles, Speedometer: each toggles its cvar), 8 Photo Mode, 9 Screenshot.
+
+The lists come from `ui/vision/commandmenu.txt`, which is read each time the menu opens, so a change counts at once.
+The pk3 of VisionJK has the default. The same path in the japlus folder of the home folder comes first: copy the file
+there and change it. `"<key>" "<name>" "<command>"` is an entry, `"<key>" "<name>" { ... }` is a list with its
+entries between the braces. Comments start with `//`.
+
+```
+"1" "Boombox" {
+    "1" "Play a song ..." "v_boombox play"
+    "2" "Pause" "v_boombox pause"
+}
+"9" "Screenshot" "screenshot"
+```
+
+There are up to 512 entries, lists 6 deep, and the file is at most 32 KB. With a wrong file, what came before the
+error is used and the console says the line. A name is looked up by its English in the texts of VisionJK
+(`CG_VisionText`), so the names of the default file show in German, French and Spanish too (`tools/menus/texts.py`,
+`texts_more.py`).
+
+A downloaded pak can bring its own `ui/vision/commandmenu.txt`. It is a file of the kind "menus and HUD" of the
+window of downloads, which the player can untick (see [downloads.md](downloads.md)), as menus can already run
+commands.
+
+`v_boombox play` without words opens the chat box for a song (as "Play" of the quick wheel), which is what the entry
+"Play a song ..." runs.
+
+The code is in `cgame/cmdmenu/cg_cmdmenu.c`.
+
 ## In the code
 
 | File | |
@@ -303,6 +353,7 @@ is longer than that now gets a warning in the console when it is read.
 | `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`v_showLoading 1`, a cheat, holds it over the game to look at it), whether the new look is the one drawn (`CG_HudNewLook`), texts in the language of the game (`CG_VisionText`) and cut to a width (`CG_TextCut`) |
 | `cgame/hud/cg_scores.c` | the scoreboard of the new look, its rows for the pointer, keeping it open |
 | `cgame/chat/cg_chat.c`, `cgame/select/cg_select.c` | the chat box and the card of a player, which draw with the same pieces |
+| `cgame/cmdmenu/cg_cmdmenu.c` | the command menu: reading `commandmenu.txt`, the lists, the number keys, the mouse, running the command |
 | `client/cl_console.cpp` | the background of the console, unless `v_classic 1` |
 | `shared/sdl/sdl_icon.h`, `shared/icons/VisionJK.ico` | the icon of the window and of the Windows program, made from `img/logo-512.png` of the website |
 | `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans`, `vision_mono` and `vision_sans_bold` as whole fonts for `R_RegisterFont` |
@@ -460,3 +511,7 @@ video restart carried out, another size of window than 1280 x 720, Windows and t
 run). Of the pages of the player: the buttons that take over (apply, join a team, save a set of powers)
 carried out, a server without the force or with Jedi against mercenaries (the code hides and shows items
 there), siege, the colours of a blade set by the sliders in a fight, the moves list reached from the strip.
+
+2026-10-30, Linux, a headless client (`rd-vulkan-vision`, 1280 x 720) on `mp/duel1`, the command menu: it opened, 3
+opened Emotes beside its entry, 9 opened More beside it, Backspace went back, 1 ran Sit and closed the menu. Not
+checked: the mouse (pointing and clicking), the other languages on screen, a player's own file, Windows.

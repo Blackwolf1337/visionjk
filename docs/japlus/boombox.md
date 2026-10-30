@@ -51,6 +51,7 @@ The console command does the same without the pointer:
 ```
 boombox play "https://music.youtube.com/watch?v=..."    into the line of the box near you, or a new box in front of you
 boombox play synthwave mix                               looked up on YouTube
+boombox play                                             without words: opens the chat box for a song (as "Play" of the quick wheel)
 boombox place                                            a new box where the crosshair points
 boombox system                                           a new sound system where the crosshair points
 boombox pause | resume | skip | stop | remove [box]      the box near you, or that number

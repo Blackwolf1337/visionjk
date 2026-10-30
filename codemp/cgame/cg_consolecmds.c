@@ -359,6 +359,7 @@ static consoleCommand_t	commands[] = {
 	{ "tay_emoji",				CG_ChatEmoji_f },
 	{ "tay_cosmetics",			CG_Cosmetics_f },
 	{ "v_chatOpen",				CG_ChatOpen_f },
+	{ "v_commandmenu",				CG_CmdMenu_f },
 	{ "v_cgKey",						CG_Key_f },
 	{ "clientlist",					CG_ClientList_f },
 	{ "cursor",						CG_SelectCursor_f },
