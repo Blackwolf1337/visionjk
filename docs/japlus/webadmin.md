@@ -232,7 +232,8 @@ walls. Health and shield are not shown.
   says from which address the client comes and that it loads the game files first (more than a GB the first time,
   then from the storage of the browser), and the button Watch starts it. Leaving the page empties the frame, which
   stops the game in it. The tab is there only when `/api/me` has `"tv": {"port": N, "page": "..."}`: `port` is
-  `vs_clientWebPort`, 0 when the server has no web host or `vs_tv` is 0, and `page` is `vs_webTVPage`. Not on the
+  `vs_clientWebPort`, 0 when the server has no web host, `vs_tv` is 0, or the web host hands out the TV alone
+  (`vs_clientWebTVOnly 1`) and `vs_webTVPage` names no page of the client elsewhere, and `page` is `vs_webTVPage`. Not on the
   masterserver. Every role sees it.
 - Command palette: the button "Commands Ctrl K" in the top bar, or Ctrl+K (`js/palette.js`). It lists the pages, the
   two modes, the tools of the editor, Add bot, Change map, Gravity (with the current value), the side panel, the keys

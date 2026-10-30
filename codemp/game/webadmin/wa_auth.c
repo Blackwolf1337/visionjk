@@ -985,9 +985,9 @@ The own account
 ==============================================================================
 */
 
-// GET /api/me: who the page is logged in as and what he may see, for an owner also the accounts
-// the port of the web host of the engine for the page TV, 0: it has none (the server of a client, vs_clientWebPort 0)
-// or the TV is off (vs_tv 0; the engine makes that cvar only when it is first asked for /tv)
+// the port of the web host of the engine for the page TV, 0: it has none (the server of a client, vs_clientWebPort 0),
+// the TV is off (vs_tv 0; the engine makes that cvar only when it is first asked for /tv), or the host hands out the
+// TV alone (vs_clientWebTVOnly 1, jka.vision) and so no page of the client, and vs_webTVPage names none elsewhere
 static int WA_TVPort( void ) {
 	char on[16];
 
@@ -995,9 +995,13 @@ static int WA_TVPort( void ) {
 	if ( on[0] && !atoi( on ) ) {
 		return 0;
 	}
+	if ( trap->Cvar_VariableIntegerValue( "vs_clientWebTVOnly" ) && !vs_webTVPage.string[0] ) {
+		return 0;
+	}
 	return trap->Cvar_VariableIntegerValue( "vs_clientWebPort" );
 }
 
+// GET /api/me: who the page is logged in as and what he may see, for an owner also the accounts
 static void WA_ApiMe( waConnection_t *c ) {
 	const waUser_t	*user = WA_RequestUser( c );
 	waBuffer_t		b = { 0 };
