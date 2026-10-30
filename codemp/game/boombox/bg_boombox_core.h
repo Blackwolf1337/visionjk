@@ -91,7 +91,7 @@ typedef struct boxStream_s {
 	char		id[12];			// the video
 	int			from;			// fetched when the programs that run now began
 	boxTools_t	tools;			// (for the programs of a later stage)
-	char		resolved[BOX_URL + BOX_AGENT + 16];	// what yt-dlp printed of the address so far
+	char		resolved[BOX_URL + 1024];	// what yt-dlp printed of the address and its headers so far
 	int			resolvedLen;
 } boxStream_t;
 

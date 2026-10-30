@@ -116,7 +116,7 @@ struct Tools {
 
 		dir = mkdtemp( temp );
 		Script( "yt-dlp", "case \" $* \" in *' -o - '*) head -c " + std::to_string( kSamples * 2 ) + " /dev/zero ;;"
-			" *) printf '%s\\n%s\\n' \"$BOXTEST_URL\" 'TestAgent/1.0' ;; esac" );
+			" *) printf '%s\\n%s\\n' \"$BOXTEST_URL\" '{\"User-Agent\": \"TestAgent/1.0 (X11; Linux)\", \"Accept\": \"*/*\"}' ;; esac" );
 		Script( "ffmpeg", "case \" $* \" in *' -i pipe:0 '*) cat ;; *) [ \"$BOXTEST_DIRECT\" = ok ] && head -c "
 			+ std::to_string( kSamples * 2 ) + " /dev/zero ;; esac; exit 0" );
 		memset( &tools, 0, sizeof( tools ) );
@@ -172,9 +172,9 @@ BOOST_AUTO_TEST_CASE( stream_direct )
 	BOOST_CHECK_EQUAL( Play( "aaaaaaaaaaa", 0, t.tools ), kSamples );
 	BOOST_CHECK_EQUAL( stream.stage, BOX_STAGE_DIRECT );
 	const std::string log = t.Log();
-	BOOST_CHECK( log.find( "--print url" ) != std::string::npos );
+	BOOST_CHECK( log.find( "--print url --print %(http_headers)j" ) != std::string::npos );
 	BOOST_CHECK( log.find( "-protocol_whitelist https,tls,tcp" ) != std::string::npos );
-	BOOST_CHECK( log.find( "-user_agent TestAgent/1.0" ) != std::string::npos );
+	BOOST_CHECK( log.find( "-user_agent TestAgent/1.0 (X11; Linux) -i" ) != std::string::npos );
 	BOOST_CHECK( log.find( "-i https://rr1---sn-abc.googlevideo.com/videoplayback" ) != std::string::npos );
 	BOOST_CHECK( log.find( "-o -" ) == std::string::npos );
 

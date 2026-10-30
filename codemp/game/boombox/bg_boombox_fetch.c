@@ -62,7 +62,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BOX_LONGEST			36000		// seconds of a song at most, whatever vs_boomboxMaxSeconds says
 #define BOX_URLS			32			// addresses of songs that are kept
 #define BOX_URL_MSEC		( 2 * 60 * 60 * 1000 )	// for this long (YouTube makes them good for six hours)
-#define BOX_LOOKUP_LINES	6			// what yt-dlp prints of a video: id, length, live, title, address, User-Agent
+#define BOX_LOOKUP_LINES	6			// what yt-dlp prints of a video: id, length, live, title, address, headers
 
 /*
 ===============================================================================
@@ -466,8 +466,33 @@ static qboolean Box_Proxied( const boxTools_t *tools ) {
 	return Q_stristr( tools->ytdlpArgs, "--proxy" ) ? qtrue : qfalse;
 }
 
-static void Box_UrlKeep( const char *id, const char *url, const char *agent, int now ) {
-	int i, at = 0;
+// The User-Agent of the headers yt-dlp printed as JSON ("%(http_headers)j"; a name with a dash can not be asked for
+// alone): "" when there is none, or it has an escape in it
+static void Box_HeaderAgent( const char *json, char *out, int outSize ) {
+	const char	*s = strstr( json, "\"User-Agent\": \"" );
+	int			len;
+
+	out[0] = '\0';
+	if ( !s )
+		return;
+	s += 15;
+	len = (int)strcspn( s, "\"\\" );
+	if ( s[len] != '"' || len >= outSize )
+		return;
+	memcpy( out, s, len );
+	out[len] = '\0';
+	// (one argument of ffmpeg, no shell between: blanks are all right, nothing else but plain characters)
+	for ( s = out; *s; s++ ) {
+		if ( (unsigned char)*s < ' ' || (unsigned char)*s >= 127 ) {
+			out[0] = '\0';
+			return;
+		}
+	}
+}
+
+static void Box_UrlKeep( const char *id, const char *url, const char *headers, int now ) {
+	char	agent[BOX_AGENT];
+	int		i, at = 0;
 
 	if ( !Box_UrlOk( url ) )
 		return;
@@ -481,7 +506,8 @@ static void Box_UrlKeep( const char *id, const char *url, const char *agent, int
 	}
 	Q_strncpyz( boxUrls[at].id, id, sizeof( boxUrls[at].id ) );
 	Q_strncpyz( boxUrls[at].url, url, sizeof( boxUrls[at].url ) );
-	Q_strncpyz( boxUrls[at].agent, ( strlen( agent ) < BOX_AGENT && Box_PlainText( agent ) ) ? agent : "", sizeof( boxUrls[at].agent ) );
+	Box_HeaderAgent( headers, agent, sizeof( agent ) );
+	Q_strncpyz( boxUrls[at].agent, agent, sizeof( boxUrls[at].agent ) );
 	boxUrls[at].time = now ? now : 1;
 }
 
@@ -773,7 +799,7 @@ qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *t
 	Box_Arg( &a, "--print" );
 	Box_Arg( &a, "url" );
 	Box_Arg( &a, "--print" );
-	Box_Arg( &a, "%(http_headers.User-Agent)s" );
+	Box_Arg( &a, "%(http_headers)j" );
 	Box_Arg( &a, "--" );
 	Box_Arg( &a, target );
 	if ( a.full ) {
@@ -952,7 +978,7 @@ static qboolean Box_StreamResolve( boxStream_t *s, int now, char *why, int whySi
 	Box_Arg( &a, "--print" );
 	Box_Arg( &a, "url" );
 	Box_Arg( &a, "--print" );
-	Box_Arg( &a, "%(http_headers.User-Agent)s" );
+	Box_Arg( &a, "%(http_headers)j" );
 	Box_Arg( &a, "--" );
 	Box_Arg( &a, Box_Va( "https://www.youtube.com/watch?v=%s", s->id ) );
 	if ( a.full ) {
