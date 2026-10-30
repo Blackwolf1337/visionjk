@@ -353,6 +353,9 @@ typedef struct itemDef_s {
 	// listY is where the menu file put the item, listOut that it is not in the list now.
 	int			fold;
 	qboolean	hint;				// "hint 1": an edit field with its text dimmed inside its empty box
+	// "descPic <picture> <name a> <name b>": the pane (ITEM_TYPE_DESC) shows <picture>_a and <picture>_b by turns
+	// under the description, what the setting looks like at the two values named
+	const char	*descPic[3];
 	float		listY;
 	qboolean	listOut;
 } itemDef_t;

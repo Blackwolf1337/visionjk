@@ -293,6 +293,31 @@ CONTROLS = [
 
 SCREENS = {'setup.menu': SETUP, 'ingame_setup.menu': SETUP, 'controls.menu': CONTROLS, 'ingame_controls.menu': CONTROLS}
 
+# The before and after of a setting, in the pane while its row has the focus ("descPic" of the row, codemp/ui/ui_shared.c).
+# By the cvar of the row: the picture (gfx/menus/vision/setup/<picture>_a and _b), the names of the two values, and
+# for tools/menus/pictures.py, which takes them in the game: what it sets for a and for b, whether that needs a restart
+# of the video, the view (VIEWS of pictures.py) and the part of the frame that is kept (left, top, width as parts of
+# it; the height is 9/16 of the width).
+# Only settings whose difference shows at the size of the pane are here: geometric detail, the texture filters,
+# detailed shaders, anti-aliasing and the render scale were taken and looked the same on both sides (2026-10-30), and
+# the stencil shadows of cg_shadows 2 draw the player wrongly with the Vulkan renderer. The name of a value is a
+# reference to a text or a number without quotes: the reader of the menu files takes a string with % apart, and it
+# joins strings in quotes that stand next to each other into one.
+PICTURE_DIR = 'gfx/menus/vision/setup'
+PICTURE_STEPS = ('stairs', (0.3, 0.35, 0.55))         # close to steps that glow, where texture detail shows
+PICTURE_STAIRS = ('stairs', (0.0, 0.0, 0.7))          # the stairs and the wall above them, for glow and bloom
+PICTURE_ROOM = ('stairs', (0.0, 0.0, 1.0))
+PICTURES = {
+    'ui_r_picmip': ('textures', '@MENUS_LOW', '@MENUS_VERY_HIGH', (('r_picmip', 3, 0),), True, PICTURE_STEPS),
+    'r_gamma': ('brightness', '0.8', '1.4', (('r_gamma', 0.8, 1.4),), True, PICTURE_ROOM),
+    'r_dynamicglow': ('glow', '@MENUS_OFF', '@MENUS_ON', (('r_DynamicGlow', 0, 1),), True, PICTURE_STAIRS),
+    'tay_bloom': ('bloom', '@MENUS_OFF', '@MENUS_ON', (('tay_bloom', 0, 1),), False, PICTURE_STAIRS),
+    'tay_bloomintensity': ('bloomstrength', '0.3', '1.2', (('tay_bloom', 1, 1), ('tay_bloomIntensity', 0.3, 1.2)), False,
+                           PICTURE_STAIRS),
+    'tay_bloomthreshold': ('bloomthreshold', '0.8', '0.3', (('tay_bloom', 1, 1), ('tay_bloomThreshold', 0.8, 0.3)), False,
+                           PICTURE_STAIRS),
+}
+
 # what a row takes over from the item of the old menu: what it is and does, not how it looked
 KEEP = ('name', 'group', 'type', 'text', 'cvar', 'cvarfloat', 'cvarfloatlist', 'cvarstrlist', 'feeder', 'action', 'desctext',
         'cvartest', 'showcvar', 'hidecvar', 'enablecvar', 'disablecvar', 'maxchars', 'maxpaintchars', 'invertyesno')
@@ -419,8 +444,11 @@ def translated(block):
 def as_row(block, page, y, L):
     """The properties that make a setting a row of the list of a page."""
     x, _, w, _ = L.list
-    for key in ('rect', 'page', 'scroll', 'row', 'font', 'textscale', 'forecolor', 'visible'):
+    for key in ('rect', 'page', 'scroll', 'row', 'font', 'textscale', 'forecolor', 'visible', 'descpic'):
         mf.drop(block, key)
+    pic = PICTURES.get(cvar_of(block))
+    if pic:
+        block.append(Entry('descPic', [quoted('%s/%s' % (PICTURE_DIR, pic[0])), pic[1], pic[2]]))
     secret = name_of(block).startswith('vision_secret')
     block += [Entry('rect', [mf.fmt(v) for v in (x, y, w, ROW_H)]), Entry('page', [str(page)]), Entry('scroll', ['1']),
               Entry('row', ['2' if secret else '1']), Entry('font', [FONT]), Entry('textscale', [mf.fmt(ROW_SCALE)]),

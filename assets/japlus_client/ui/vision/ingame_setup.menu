@@ -411,6 +411,7 @@
 			cvarfloat				"r_gamma" 1 .5 3
 			descText				@MENUS_ADJUST_THE_BRIGHTNESS
 			action { play "sound/interface/button1" }
+			descPic					"gfx/menus/vision/setup/brightness" 0.8 1.4
 			rect					12 236 380 22
 			page					1
 			scroll					1
@@ -517,6 +518,7 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
+			descPic					"gfx/menus/vision/setup/textures" @MENUS_LOW @MENUS_VERY_HIGH
 			rect					12 324 380 22
 			page					1
 			scroll					1
@@ -657,6 +659,7 @@
 			descText				@VISION_LIGHTSABERS_AND_LIGHTS_GLOW
 			cvar					"r_DynamicGlow"
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/glow" @MENUS_OFF @MENUS_ON
 			rect					12 456 380 22
 			page					1
 			scroll					1
@@ -780,6 +783,7 @@
 			descText				@VISION_BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
 			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
 			rect					12 566 380 22
 			page					1
 			scroll					1
@@ -798,6 +802,7 @@
 			descText				@VISION_HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
 			cvarfloat				"tay_bloomIntensity" 0.6 0 2
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
 			rect					12 588 380 22
 			page					1
 			scroll					1
@@ -816,6 +821,7 @@
 			descText				@VISION_HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
 			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
 			rect					12 610 380 22
 			page					1
 			scroll					1

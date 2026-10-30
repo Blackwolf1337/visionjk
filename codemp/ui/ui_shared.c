@@ -6703,6 +6703,58 @@ short line and its descText. While nothing with a descText is in focus, the same
 tab). A change fades in.
 =================
 */
+#define DESCPIC_SHOW_MSEC	1400		// one picture of a pair stands this long,
+#define DESCPIC_FADE_MSEC	400			//	and goes over into the other in this
+
+// the two pictures of a setting ("descPic"), at the bottom of the pane, one after the other with a fade between
+static void Item_DescPic_Paint( const itemDef_t *item, const itemDef_t *about, float fade ) {
+	const rectDef_t	*r = &item->window.rect;
+	const float		h = r->w * 9.0f / 16.0f, y = r->y + r->h - h;
+	const int		cycle = 2 * ( DESCPIC_SHOW_MSEC + DESCPIC_FADE_MSEC ), t = DC->realTime % cycle;
+	const qhandle_t	pics[2] = { DC->registerShaderNoMip( va( "%s_a", about->descPic[0] ) ),
+								DC->registerShaderNoMip( va( "%s_b", about->descPic[0] ) ) };
+	float			second;
+	vec4_t			color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	char			name[64];
+	int				i;
+
+	if ( !pics[0] || !pics[1] ) {
+		return;
+	}
+	// how much of the second one shows: 0 for a while, up to 1, 1 for a while, down to 0
+	if ( t < DESCPIC_SHOW_MSEC ) {
+		second = 0.0f;
+	} else if ( t < DESCPIC_SHOW_MSEC + DESCPIC_FADE_MSEC ) {
+		second = ( t - DESCPIC_SHOW_MSEC ) / (float)DESCPIC_FADE_MSEC;
+	} else if ( t < 2 * DESCPIC_SHOW_MSEC + DESCPIC_FADE_MSEC ) {
+		second = 1.0f;
+	} else {
+		second = 1.0f - ( t - 2 * DESCPIC_SHOW_MSEC - DESCPIC_FADE_MSEC ) / (float)DESCPIC_FADE_MSEC;
+	}
+	color[3] = fade;
+	DC->setColor( color );
+	DC->drawHandlePic( r->x, y, r->w, h, pics[0] );
+	color[3] = fade * second;
+	DC->setColor( color );
+	DC->drawHandlePic( r->x, y, r->w, h, pics[1] );
+	DC->setColor( NULL );
+
+	// the value each one shows, on a dark band at its foot
+	for ( i = 0; i < 2; i++ ) {
+		const float a = fade * ( i ? second : 1.0f - second );
+		vec4_t		band = { 0.0f, 0.0f, 0.0f, 0.55f * a }, ink;
+
+		if ( a <= 0.0f ) {
+			continue;
+		}
+		VectorCopy4( item->window.foreColor, ink );
+		ink[3] *= a;
+		Text_Word( about->descPic[1 + i], name, sizeof( name ), qtrue, qfalse );
+		DC->fillRect( r->x, y + h - 13.0f, r->w, 13.0f, band );
+		DC->drawText( r->x + 4.0f, y + h - 12.0f, item->textscale * 0.8f, ink, name, 0, 0, 0, item->iMenuFont );
+	}
+}
+
 static void Item_Desc_Paint( itemDef_t *item ) {
 	menuDef_t		*parent = (menuDef_t *)item->parent;
 	const rectDef_t	*r = &item->window.rect;
@@ -6742,7 +6794,10 @@ static void Item_Desc_Paint( itemDef_t *item ) {
 	Skin_Color( color, parent->focusColor, item->skinValue );
 	Skin_Panel( r->x, y + 3.0f, 26.0f, 1.5f, 0.75f, color, NULL );
 	Skin_Color( color, parent->descColor, item->skinValue );
-	Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, 12 );
+	Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, about->descPic[0] ? 6 : 12 );
+	if ( about->descPic[0] ) {
+		Item_DescPic_Paint( item, about, item->skinValue );
+	}
 }
 
 static void Item_PageScroll_Paint( itemDef_t *item ) {
@@ -9620,6 +9675,18 @@ qboolean ItemParse_fold( itemDef_t *item, int handle ) {
 	return PC_Int_Parse( handle, &item->fold );
 }
 
+// descPic <picture> <name a> <name b>: before and after, in the pane of the menu (Item_DescPic_Paint)
+qboolean ItemParse_descPic( itemDef_t *item, int handle ) {
+	int i;
+
+	for ( i = 0; i < 3; i++ ) {
+		if ( !PC_String_Parse( handle, &item->descPic[i] ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 // hint 1: an edit field whose text stands dimmed in its empty box instead of in front of it (Item_HintField_Paint)
 qboolean ItemParse_hint( itemDef_t *item, int handle ) {
 	int i;
@@ -10508,6 +10575,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"row",				ItemParse_row,				NULL	},
 	{"fold",			ItemParse_fold,				NULL	},
 	{"hint",			ItemParse_hint,				NULL	},
+	{"descPic",			ItemParse_descPic,			NULL	},
 	{"flow",			ItemParse_flow,				NULL	},
 	{"wide",			ItemParse_wide,				NULL	},
 	{"style",			ItemParse_style,			NULL	},
