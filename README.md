@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://jka.vision"><img alt="Version 0.2.7" src="https://img.shields.io/badge/version-0.2.7-e3d75c?style=flat-square"></a>
+  <a href="https://jka.vision"><img alt="Version 0.2.8" src="https://img.shields.io/badge/version-0.2.8-e3d75c?style=flat-square"></a>
   <img alt="Linux, Windows, 64 bit" src="https://img.shields.io/badge/Linux%20%C2%B7%20Windows-24242a?style=flat-square">
   <a href="LICENSE.txt"><img alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-5aa64a?style=flat-square"></a>
 </p>
@@ -109,7 +109,7 @@ More is in the section "VisionJK" at the top of [CHANGELOG.md](CHANGELOG.md): ne
 
 ## Install
 
-Releases are on [jka.vision](https://jka.vision). The version now is 0.2.7.
+Releases are on [jka.vision](https://jka.vision). The version now is 0.2.8.
 
 | System | Needs | |
 |---|---|---|
@@ -128,7 +128,7 @@ cmake --build build64 -j"$(nproc)"
 cmake --install build64 --prefix release
 ```
 
-`release/JediAcademy` is then a complete game folder. More, also the Windows cross build with mingw-w64, is in [docs/japlus/README.md](docs/japlus/README.md).
+`release/JediAcademy` is then a complete game folder. More, also the Windows cross build with mingw-w64, is in [BUILDING.md](BUILDING.md).
 
 ## Getting started
 
@@ -212,13 +212,13 @@ The client has no `ja_guid`. OpenJK makes a key file (`jakey`) and sends an iden
 
 ## Documentation
 
-Everything is in [docs/](docs). Start with [docs/japlus/README.md](docs/japlus/README.md): it says where the JA+ code is, how the tree is built and released, and has the same list as below.
+Everything is in [docs/](docs). Building is in [BUILDING.md](BUILDING.md). For the code start with [docs/japlus/README.md](docs/japlus/README.md): it says where the JA+ code is and has the same list as below.
 
 What this tree adds, in [docs/japlus/](docs/japlus):
 
 | File | Content |
 |------|---------|
-| [README.md](docs/japlus/README.md) | Overview of the JA+ port: what it was rebuilt from, where the code is, building, the release folder |
+| [README.md](docs/japlus/README.md) | Overview of the JA+ port: what it was rebuilt from, where the code is, the files needed at run time |
 | [server.md](docs/japlus/server.md) | The game module: files, state, features, commands, what it tells the client |
 | [client.md](docs/japlus/client.md) | cgame and ui: the features of the JA+ client plugin, cvars, prediction |
 | [differences.md](docs/japlus/differences.md) | Where the port differs from the original JA+, and which OpenJK behaviour was kept or changed |

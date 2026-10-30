@@ -65,9 +65,6 @@ option(UseUndefinedSanitizer "Whether to enable runtime Undefined Behavior sanit
 option(BuildDevHotpatch "Developer builds only, never a release: the MP engine and dedicated server put patches of the game, cgame and ui modules into them while they run (v_devHotpatch, tools/hotpatch.py), and the modules are built for that (symbols not hidden, room for a jump at the start of every function). Linux x86_64 with GCC" OFF)
 option(BuildDevIdsTest "Developer builds only, never a release: also the dedicated server visionjkded-idstest, which does on purpose what no server of the game does toward its clients (vs_idsTest), to run the intrusion detection of the client against it (tools/test/ids-test.sh). It is not installed" OFF)
 
-include(CMakeDependentOption)
-cmake_dependent_option(BuildSymbolServer "Build WIP Windows Symbol Server (experimental and unused)" OFF "NOT WIN32 OR NOT MSVC" OFF)
-
 # Configure the use of bundled libraries.  By default, we assume the user is on
 # a platform that does not require any bundling.
 #
@@ -486,10 +483,6 @@ add_subdirectory(${MPDir})
 
 if(BuildJPAssets)
 	add_subdirectory(assets)
-endif()
-
-if(BuildSymbolServer)
-	add_subdirectory("tools/WinSymbol")
 endif()
 
 if(BuildTests)
