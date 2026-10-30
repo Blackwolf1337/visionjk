@@ -479,7 +479,7 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 	re->RegisterMedia_LevelLoadBegin(server, eForceReload);
 
 	// shut down the existing game if it is running
-	SV_TVStop( "the level ends" );
+	SV_TVLevelEnd();
 	SV_ShutdownGameProgs();
 	Com_LoadPop();
 	svs.gameStarted = qfalse;
@@ -1152,7 +1152,7 @@ void SV_Shutdown( char *finalmsg )
 	SV_VoiceShutdown();
 	SV_RepShutdown();
 #endif
-	SV_TVStop( "the level ends" );
+	SV_TVLevelEnd();
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;
 /*

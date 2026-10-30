@@ -142,7 +142,7 @@ void SV_WebVoiceUpgrade( webConnection_t *c, const char *head, int headLen, int 
 		return;
 	}
 
-	SV_WebUpgrade( c, head, headLen, minor );
+	SV_WebUpgrade( c, head, headLen, minor, qfalse );
 	if ( c->state != WEB_SOCKET ) {
 		closesocket( s );		// the request was none for a WebSocket, and is answered with why
 		return;

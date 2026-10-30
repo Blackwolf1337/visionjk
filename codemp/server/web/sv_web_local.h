@@ -31,6 +31,8 @@ on a TCP port of its own (vs_clientWebPort) and is to a browser what it is to a 
                                        datagram of the game as UDP carries it, nothing added, both ways.
   the voice chat   GET /voice          becomes a WebSocket too. Every binary message on it is one datagram of
                                        the voice chat, which goes to the relay of the game module and back.
+  the TV           GET /tv             becomes a WebSocket that the server sends on: every binary message is one
+                                       record of a demo of the TV of the server (sv_tv.cpp), it hears nothing.
 
 It is inside the server and no program in front of it, so the server knows the address a page plays from:
 the peer of a WebSocket is a netadr_t of the type NA_WEB with the address and the port of its connection, and
@@ -43,6 +45,7 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
   sv_web_http.cpp  a request, the files, the manifest
   sv_web_ws.cpp    the WebSocket: its handshake, its frames, the packets in and out
   sv_web_voice.cpp the voice chat of a client in a page, between its WebSocket and the relay
+  sv_web_tv.cpp    the viewers of the TV of the server (GET /tv): a demo that does not end, see sv_tv.cpp
 */
 
 #pragma once
@@ -170,6 +173,11 @@ typedef struct webConnection_s {
 	SOCKET		voiceSock;		// while voice is set: the UDP socket they go to the relay from, and what it answers comes on
 	unsigned int	voiceToken;	// the token of the last datagram that went out there, 0: none yet
 
+	// the WebSocket of a viewer of the TV of the server (GET /tv, sv_web_tv.cpp)
+	qboolean	tv;
+	qboolean	tvGreet;		// it is to get the gamestate first
+	qboolean	tvSynced;		// it has had a whole snapshot since, and every one after it
+
 	int			inLen;
 	int			inPos;			// WEB_SOCKET: the frames in front of this are done with
 	int			outLen;
@@ -195,6 +203,7 @@ int SV_WebTransfers( const netadr_t *adr );
 int SV_WebVoices( const netadr_t *adr );
 int SV_WebPlaces( void );
 webConnection_t *SV_WebSocketOf( const netadr_t *adr );
+webConnection_t *SV_WebConnection( int i );
 
 // sv_web_http.cpp
 int SV_WebParseRange( const char *value, int64_t size, int64_t *first, int64_t *last );
@@ -205,11 +214,15 @@ int SV_WebBodyMore( webConnection_t *c, int max );
 void SV_WebBodyEnd( webConnection_t *c );
 
 // sv_web_ws.cpp
-void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor );
+// anyOrigin: a page of another site may open it too (the TV, which only shows what any spectator sees)
+void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor, qboolean anyOrigin );
 qboolean SV_WebSocketSend( webConnection_t *c, int opcode, const void *payload, int len );
 void SV_WebSocketFrames( webConnection_t *c );
 void SV_WebSocketPing( webConnection_t *c );
 void SV_WebSocketEnd( webConnection_t *c, int code );
+
+// sv_web_tv.cpp
+void SV_WebTVUpgrade( webConnection_t *c, const char *head, int headLen, int minor );
 
 // sv_web_voice.cpp
 qboolean SV_WebVoiceIsClient( const netadr_t *adr );

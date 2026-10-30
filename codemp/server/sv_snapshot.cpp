@@ -624,16 +624,15 @@ currently doesn't.
 For viewing through other player's eyes, client can be something other than client->gentity
 =============
 */
-// What the player with the number viewNum sees, into frame. follow: as a spectator who follows him sees it (the TV of
-// the server, sv_tv.cpp): his playerState with PMF_FOLLOW.
-static void SV_BuildSnapshotFrom( clientSnapshot_t *frame, int viewNum, qboolean follow ) {
+// What is seen from the playerState ps (of a player, or of the TV of the server that stands somewhere, sv_tv.cpp),
+// into frame. follow: as a spectator who follows that player sees it, his playerState with PMF_FOLLOW.
+static void SV_BuildSnapshotFrom( clientSnapshot_t *frame, const playerState_t *ps, qboolean follow ) {
 	vec3_t						org;
 	snapshotEntityNumbers_t		entityNumbers;
 	int							i;
 	sharedEntity_t				*ent;
 	entityState_t				*state;
 	svEntity_t					*svEnt;
-	playerState_t				*ps;
 
 	// bump the counter used to prevent double adding
 	sv.snapshotCounter++;
@@ -644,8 +643,7 @@ static void SV_BuildSnapshotFrom( clientSnapshot_t *frame, int viewNum, qboolean
 
 	frame->num_entities = 0;
 
-	// grab the current playerState_t
-	ps = SV_GameClientNum( viewNum );
+	// the current playerState_t
 	frame->ps = *ps;
 	if ( follow ) {
 		frame->ps.pm_flags |= PMF_FOLLOW;
@@ -729,7 +727,7 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 		frame->num_entities = 0;
 		return;
 	}
-	SV_BuildSnapshotFrom( frame, client - svs.clients, qfalse );
+	SV_BuildSnapshotFrom( frame, SV_GameClientNum( client - svs.clients ), qfalse );
 }
 
 
@@ -959,29 +957,42 @@ void SV_SendClientSnapshot( client_t *client ) {
 SV_SendTVSnapshot
 
 The TV of the server (sv_tv.cpp): a client_t that is in no slot and has no connection, as a bot that records a
-demo has none. It sees what the player viewNum sees, as a spectator who follows him. Its reliable commands and its
-snapshot go into tv->demo.demofile, the snapshot against the one before (SV_WriteSnapshotToClient, demo.isBot), and
-the commands count as received (SV_SendMessageToClient).
+demo has none. It sees from ps: the player it follows (follow), or where it stands itself. Its reliable commands
+and its snapshot (against the one before, or whole with full) go into out, as a message of a demo is (svc_EOF at
+its end); the length is returned, and *sequence is its number. The commands count as received.
 =======================
 */
-void SV_SendTVSnapshot( client_t *tv, int viewNum ) {
-	byte	msg_buf[MAX_MSGLEN];
-	msg_t	msg;
+int SV_SendTVSnapshot( client_t *tv, const playerState_t *ps, qboolean follow, qboolean full, byte *out, int outSize, int *sequence ) {
+	clientSnapshot_t	*frame = &tv->frames[ tv->netchan.outgoingSequence & PACKET_MASK ];
+	msg_t				msg;
 
-	SV_BuildSnapshotFrom( &tv->frames[ tv->netchan.outgoingSequence & PACKET_MASK ], viewNum, qtrue );
+	SV_BuildSnapshotFrom( frame, ps, follow );
 
-	MSG_Init( &msg, msg_buf, sizeof( msg_buf ) );
+	// (SV_WriteSnapshotToClient sends it whole while a recording waits for that, and stops waiting)
+	if ( full ) {
+		tv->demo.demowaiting = qtrue;
+	}
+	MSG_Init( &msg, out, outSize );
 	msg.allowoverflow = qtrue;
 	MSG_WriteLong( &msg, tv->lastClientCommand );
 	SV_UpdateServerCommandsToClient( tv, &msg );
 	SV_WriteSnapshotToClient( tv, &msg );
+	MSG_WriteByte( &msg, svc_EOF );
 	if ( msg.overflowed ) {
 		Com_Printf( "WARNING: msg overflowed for the TV of the server\n" );
-		MSG_Clear( &msg );
+		return 0;
 	}
-	SV_SendMessageToClient( &msg, tv );
+
+	// what SV_SendMessageToClient keeps of a message, and what it does for a bot
+	frame->messageSize = msg.cursize;
+	frame->messageSent = svs.time;
+	frame->messageAcked = -1;
+	*sequence = tv->netchan.outgoingSequence;
+	tv->netchan.outgoingSequence++;
+	tv->demo.botReliableAcknowledge = tv->reliableSent;
 	// (what SV_AddServerCommand counts the commands that wait against)
 	tv->reliableAcknowledge = tv->reliableSent;
+	return msg.cursize;
 }
 
 

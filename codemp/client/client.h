@@ -236,6 +236,7 @@ typedef struct clientConnection_s {
 	qboolean	spDemoRecording;
 	qboolean	demorecording;
 	qboolean	demoplaying;
+	qboolean	tvLive;				// the demo is the TV of a server, live (cl_tv.cpp): it comes as packets do
 	qboolean	demowaiting;	// don't record until a non-delta message is received
 	qboolean	firstDemoFrameSkipped;
 	fileHandle_t	demofile;
@@ -551,6 +552,12 @@ void CL_Snd_Restart_f (void);
 void CL_StartDemoLoop( void );
 void CL_NextDemo( void );
 void CL_ReadDemoMessage( void );
+void CL_DemoMessage( int sequence, msg_t *buf );
+
+// cl_tv.cpp: the TV of a server, a demo that comes live (tv <address>)
+void CL_TVInit( void );
+void CL_TVFrame( void );
+void CL_TVClose( void );
 
 void CL_InitDownloads(void);
 void CL_NetStatsPacket( int bytes );

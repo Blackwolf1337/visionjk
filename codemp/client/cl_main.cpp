@@ -499,6 +499,19 @@ void CL_DemoCompleted( void ) {
 CL_ReadDemoMessage
 =================
 */
+// One message of a demo, from its file or from the TV of a server (cl_tv.cpp): its number and the message
+void CL_DemoMessage( int sequence, msg_t *buf ) {
+	// The netchan only ever goes up from 0, a demo sets the number itself: one that goes back made the snapshot
+	// code of CL_ParseSnapshot count across the whole range of an int. (clc is cleared by CL_Disconnect before.)
+	if ( sequence < clc.serverMessageSequence ) {
+		Com_Error( ERR_DROP, "CL_ReadDemoMessage: the messages of the demo go back (%d after %d)", sequence, clc.serverMessageSequence );
+	}
+	clc.serverMessageSequence = sequence;
+	clc.lastPacketTime = cls.realtime;
+	buf->readcount = 0;
+	CL_ParseServerMessage( buf );
+}
+
 void CL_ReadDemoMessage( void ) {
 	int			r;
 	msg_t		buf;
@@ -516,12 +529,6 @@ void CL_ReadDemoMessage( void ) {
 		CL_DemoCompleted ();
 		return;
 	}
-	// The netchan only ever goes up from 0, a demo sets the number itself: one that goes back made the snapshot
-	// code of CL_ParseSnapshot count across the whole range of an int. (clc is cleared by CL_Disconnect before.)
-	if ( LittleLong( s ) < clc.serverMessageSequence ) {
-		Com_Error( ERR_DROP, "CL_ReadDemoMessage: the messages of the demo go back (%d after %d)", LittleLong( s ), clc.serverMessageSequence );
-	}
-	clc.serverMessageSequence = LittleLong( s );
 
 	// init the message
 	MSG_Init( &buf, bufData, sizeof( bufData ) );
@@ -533,6 +540,7 @@ void CL_ReadDemoMessage( void ) {
 		return;
 	}
 	buf.cursize = LittleLong( buf.cursize );
+	// the end of a demo is a number and a length of -1 (the number is not looked at before: it goes back there)
 	if ( buf.cursize == -1 ) {
 		CL_DemoCompleted ();
 		return;
@@ -548,10 +556,7 @@ void CL_ReadDemoMessage( void ) {
 		CL_DemoCompleted ();
 		return;
 	}
-
-	clc.lastPacketTime = cls.realtime;
-	buf.readcount = 0;
-	CL_ParseServerMessage( &buf );
+	CL_DemoMessage( LittleLong( s ), &buf );
 }
 
 /*
@@ -826,6 +831,7 @@ void CL_Disconnect( qboolean showMainMenu ) {
 	if ( clc.demorecording ) {
 		CL_StopRecord_f ();
 	}
+	CL_TVClose();
 
 	if (clc.download) {
 		FS_FCloseFile( clc.download );
@@ -2494,6 +2500,9 @@ void CL_Frame ( int msec ) {
 	// resend a connection request if necessary
 	CL_CheckForResend();
 
+	// what the TV of a server sent (cl_tv.cpp), as packets are taken
+	CL_TVFrame();
+
 	// decide on the serverTime to render
 	CL_SetCGameTime();
 
@@ -3159,6 +3168,7 @@ void CL_Init( void ) {
 	Cmd_AddCommand( "addFavorite", CL_AddFavorite_f, "Add server to favorites" );
 	Cmd_AddCommand ("record", CL_Record_f, "Record a demo" );
 	Cmd_AddCommand ("demo", CL_PlayDemo_f, "Playback a demo" );
+	CL_TVInit();
 	Cmd_SetCommandCompletionFunc( "demo", CL_CompleteDemoName );
 	Cmd_AddCommand ("stoprecord", CL_StopRecord_f, "Stop recording a demo" );
 	Cmd_AddCommand ("configstrings", CL_Configstrings_f, "Prints the configstrings list" );

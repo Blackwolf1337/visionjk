@@ -235,13 +235,18 @@ SV_WebSocketOf
 The WebSocket a packet to that address goes out on, NULL if it is gone. Never one of the voice chat.
 ==================
 */
+// one place of the table, for the viewers of the TV (sv_web_tv.cpp)
+webConnection_t *SV_WebConnection( int i ) {
+	return &connections[i];
+}
+
 webConnection_t *SV_WebSocketOf( const netadr_t *adr ) {
 	int i;
 
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 		webConnection_t *c = &connections[i];
 
-		if ( c->state == WEB_SOCKET && !c->drop && !c->voice && c->adr.port == adr->port
+		if ( c->state == WEB_SOCKET && !c->drop && !c->voice && !c->tv && c->adr.port == adr->port
 			&& !memcmp( c->adr.ip, adr->ip, sizeof( c->adr.ip ) ) ) {
 			return c;
 		}
@@ -760,7 +765,8 @@ static void SV_WebTimeouts( void ) {
 		}
 
 		if ( c->state == WEB_SOCKET ) {
-			if ( c->voice ? SV_WebVoiceIsClient( &c->adr ) : SV_WebIsClient( &c->adr ) ) {
+			// (a viewer of the TV is one for as long as it watches)
+			if ( c->tv || ( c->voice ? SV_WebVoiceIsClient( &c->adr ) : SV_WebIsClient( &c->adr ) ) ) {
 				c->clientTime = now;
 			}
 			if ( now - c->lastHeard > SV_WEB_SILENT_MSEC ) {

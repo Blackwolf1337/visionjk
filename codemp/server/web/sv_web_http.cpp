@@ -835,7 +835,11 @@ void SV_WebHttpRequest( webConnection_t *c, int headLen ) {
 	}
 
 	if ( !strcmp( path, "/net" ) ) {
-		SV_WebUpgrade( c, head, headLen, minor );
+		SV_WebUpgrade( c, head, headLen, minor, qfalse );
+		return;
+	}
+	if ( !strcmp( path, "/tv" ) ) {
+		SV_WebTVUpgrade( c, head, headLen, minor );
 		return;
 	}
 	if ( !strcmp( path, "/voice" ) ) {

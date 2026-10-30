@@ -560,6 +560,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_lan.cpp"
 		"${MPDir}/client/cl_lan.h"
 		"${MPDir}/client/cl_main.cpp"
+		"${MPDir}/client/cl_tv.cpp"
 		"${MPDir}/client/cl_update.cpp"
 		"${MPDir}/client/cl_download.cpp"
 		"${SharedDir}/web/web_missing.c"
