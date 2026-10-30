@@ -155,96 +155,124 @@ written to the client command log. Not run.
 
 ### The masterserver (not from JA+)
 
-`server/sv_voice.cpp`, `master/ms_relay.c`, `master/ms_boombox.c`. Built 2026-10-12, run hidden on Linux on one
-machine (the checks are in [voice.md](voice.md), "Checked"), and on the host of VisionJK since 2026-10-12 21:43,
-where it took the place of the voice master, as its relay was called while it was a program of its own.
+`master/ms_main.c`, `master/ms_repnet.c`, `master/ms_relay.c`, `master/ms_boombox.c`, `master/ms_reputation.c`. A
+program of its own since 2026-10-30 (issue #5).
 
-One program on one UDP port for the players of servers without this game module: the relay of their voice
-chat, their clan radio, their statuses and the boxes of their boombox. It is the dedicated server of this tree
-built with `-DBuildMasterServer=ON` (target `visionjk-master`, off unless asked for, with no install rule: it is
-for the hosts of VisionJK itself and no part of a release). Its relay only runs while a level runs, so it loads
-one that nobody plays on (`assets/configs/master.cfg`, one slot). Nobody can join it either: it refuses every
-client connect with "This is the masterserver of VisionJK, not a game server." (the block `VISION_MASTER` at the top
-of `SV_DirectConnect`). `getinfo` and `getstatus` are still answered, and the relay is not affected, as its
-datagrams are taken before the client handling. Before, anyone who knew the address could take the slot and stand
-alone on `mp/duel1`.
+One program on one UDP port for the players of servers without this game module: the relay of their voice chat,
+their clan radio, their statuses and the boxes of their boombox, and the reputation of game servers. It is the target
+`visionjk-master` of the build with `-DBuildMasterServer=ON` (off unless asked for, with no install rule: it is for
+the hosts of VisionJK itself and no part of a release). It has no engine, no game module, no map, no client slot and
+no web panel. Nobody can join it, and it answers no server query.
 
 ```
-visionjk-master.x86_64 +set dedicated 1 +set net_port 29170 +exec master.cfg +map mp/duel1
+visionjk-master.x86_64 --bind 0.0.0.0 --port 29170 --kbps 4000 --home /var/lib/visionjk-master
 ```
 
-What comes in on its port:
+History: until 2026-10-12 the voice master was a small program of its own. From 2026-10-12 it was the dedicated
+server of this tree built with `VISION_MASTER`, with a level nobody played on (`master.cfg`), a web panel and cvars.
+Since 2026-10-30 it is a small program again, and all `VISION_MASTER` blocks are gone from the engine. The clients
+need no change: the host is still `master.jka.vision`, the port 29170 and the protocol the same.
 
-- a datagram of the voice chat of a player in its own level: the relay of its game module, as on any dedicated
-  server of this tree
-- any other datagram of the voice chat: its relay for the other servers. `vs_masterKbps` (4000, command line
-  only) is what that may send in a second, 0: anything
+It has one UDP socket. It takes only:
 
-Limits of the relay:
+- voice datagrams ("VO" and `VOICE_PROTOCOL`): the relay for the servers and clients
+- connectionless packets (four bytes 0xff) that start with `ids` (`idsChallenge`, `idsReport`, `idsList`): the
+  reputation
 
-- Token answers to a state without the right token are at most 10 per address and second and 4000 in all, and
-  they no longer count into `vs_masterKbps`. They used to fill the budget of every second, so a flood of made up
-  states silenced the relay for everybody.
-- The session token is made of the address without the port. A state without the token for a client number whose
-  session is alive on another port of the same address is answered "taken", so somebody else behind the same
-  router can not take that session over. The client that has the token moves to a new port with it.
-- There are 4096 sessions (was 1024), still 16 per address, and one address may be in 4 rooms at most.
-- Once half of the budget of a second (`vs_masterKbps`) is used, no room gets more than an equal share of it among
-  the rooms that were sent anything in that second.
-- A client may do something with a box other than ask for a song (place, move, volume, seek, skip, pause, stop,
-  remove) once a second at most, and change the box it watches four times a second. The line of a box is sent
-  only when the watched box changes.
-- The engine of the masterserver registers `vs_boomboxYtdlp`, `vs_boomboxFfmpeg` and `vs_boomboxYtdlpArgs` as
-  `CVAR_INIT` itself, so it does not depend on the game module for that.
+Everything else is dropped without an answer: `getinfo`, `getstatus`, `getchallenge`, `connect`, `rcon`,
+`getservers` and anything else. The dropped packets are counted, and once a minute, if there were any, the line
+"Masterserver: N packets dropped that were no voice and no reputation" is printed.
 
-29170 is the port the clients of 0.1.5 know for the voice chat on servers without the module
-(`v_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
-2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
-removed. The service runs `master.cfg` since 0.1.8.
+The loop waits in `select()` for 10 ms at most for a datagram or console input, then gives the relay its frame
+(`MS_Frame`) and the reputation its save check.
 
-The masterserver runs the web panel of the game module (docs/japlus/webadmin.md, "The masterserver mode"). The
-engine of the master build registers the ROM cvar `vs_master` 1, and the module then answers only the routes a
-masterserver needs. `master.cfg` sets `vs_webBind 127.0.0.1` and `vs_webPort 8081`, so the panel is reached with
-`ssh -L 8081:127.0.0.1:8081 <host>`. The first account is `vs_webPassword` in `local.cfg` of the home of the master
-(`/var/lib/visionjk-master/japlus/local.cfg`). `tools/deploy-master.sh` of the website puts it there once from
-`deploy/master-local.cfg`, and the service runs `+exec local.cfg` after `master.cfg`. The engine sets four ROM
-cvars for the tab Masterserver:
+| Option | Default | Was |
+|--------|---------|-----|
+| `--bind <address>` | 0.0.0.0 | `net_ip` |
+| `--port <port>` | 29170 | `net_port` |
+| `--kbps <n>` | 4000 (0: anything) | `vs_masterKbps` |
+| `--boxes <n>` | 8 (max 16, 0: no boxes) | `vs_masterBoxes` |
+| `--max-seconds <n>` | 600 | `vs_boomboxMaxSeconds` |
+| `--queue <n>` | 10 | `vs_boomboxQueue` |
+| `--ytdlp <program>` | yt-dlp | `vs_boomboxYtdlp` |
+| `--ffmpeg <program>` | ffmpeg | `vs_boomboxFfmpeg` |
+| `--ytdlp-args <words>` | | `vs_boomboxYtdlpArgs` |
+| `--rep <0\|1>` | 1 | `ms_rep` |
+| `--rep-threshold <n>` | 6 | `ms_repThreshold` |
+| `--rep-local <0\|1>` | 0 | `ms_repLocal` |
+| `--home <folder>` | . | `fs_homepath` |
+| `--help` | | |
 
-| Cvar | Meaning |
-|------|---------|
-| `ms_statSessions` | sessions of the relay, once a second |
-| `ms_statRooms` | rooms of the relay, once a second |
-| `ms_statKbps` | what the relay sent in the last minute, kbit/s on average, once a second |
-| `ms_statFlagged` | flagged servers, every 10 seconds |
+`--home` is where `reputation.txt` is kept. The old master kept it in `fs_homepath`, which on the host is the same
+`/var/lib/visionjk-master`, so the file is read on as it is.
 
-#### Reputation of game servers
-
-`server/sv_reputation.cpp`, `master/ms_reputation.c`. Since 2026-10-28. Clients of this tree report a game server
-they left for an attack, or crashed on, and the masterserver hands the servers many networks reported to other
-clients (the protocol and the client side are in [security.md](security.md), "Added later: reports to the
-masterserver"). It is there in the build with `-DBuildMasterServer=ON` only. A game server that is not flagged
-sees nothing of it.
-
-| Cvar | Default | Meaning |
-|------|---------|---------|
-| `ms_rep` | 1 | 1: reports are taken and the list is handed out. 0: off |
-| `ms_repThreshold` | 6 | the score a server is flagged at |
-| `ms_repLocal` | 0 | 1: reports of private and local server addresses are taken too (for tests) |
+The console is read from stdin (on Windows from the keyboard or a pipe):
 
 | Command | Does |
 |---------|------|
 | `ms_repstatus` | the flagged servers (address, score, networks) |
 | `ms_repclear <address:port\|all>` | forgets the reports of a server, or of all |
+| `quit` | ends the program |
+
+Under systemd stdin is `/dev/null`, and the console is simply not read.
+
+It ends cleanly on SIGINT, SIGTERM (on Windows Ctrl+C) and on `quit`: the relay prints its last line and
+`reputation.txt` is written. The file is written to `reputation.txt.new` and renamed over the old one.
+
+Limits of the relay:
+
+- Token answers to a state without the right token are at most 10 per address and second and 4000 in all, and
+  they do not count into `--kbps`. They used to fill the budget of every second, so a flood of made up
+  states silenced the relay for everybody.
+- The session token is made of the address without the port. A state without the token for a client number whose
+  session is alive on another port of the same address is answered "taken", so somebody else behind the same
+  router can not take that session over. The client that has the token moves to a new port with it.
+- There are 4096 sessions (was 1024), still 16 per address, and one address may be in 4 rooms at most.
+- Once half of the budget of a second (`--kbps`) is used, no room gets more than an equal share of it among
+  the rooms that were sent anything in that second.
+- A client may do something with a box other than ask for a song (place, move, volume, seek, skip, pause, stop,
+  remove) once a second at most, and change the box it watches four times a second. The line of a box is sent
+  only when the watched box changes.
+
+29170 is the port the clients of 0.1.5 know for the voice chat on servers without the module
+(`v_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
+2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
+removed.
+
+The web panel of the game module has no master any more, as there is no game module. Its code is still in the
+module (see [webadmin.md](webadmin.md), "The masterserver mode") until issue #7 decides about a panel for the
+standalone master. `MS_Numbers()` in `ms_relay.c` is kept for it and has no caller yet.
+
+Checked on 2026-10-30 on Linux: the build of the master, the dedicated server and the client, the unit tests (new
+`tests/vjk/repnet.cpp`: challenge, report, list, file round trip), and a local run on 127.0.0.1 with a UDP script.
+`getstatus`, `getinfo`, `getchallenge`, `connect`, `rcon`, `getservers`, a heartbeat and junk got no answer.
+`idsChallenge`, `idsReport` (good and bad) and `idsList` were answered, a `VOICE_STATE` got its token answer, an
+old `reputation.txt` was read, `ms_repstatus` and `quit` worked on stdin, and the exit code was 0 with the file
+written. The same run under valgrind had 0 errors. With SIGTERM and stdin from `/dev/null` it used 0% CPU while
+idle, ended, and wrote the file. The Windows build was cross compiled with mingw x86_64 and the packet part of the
+same test passed in wine. The console through a pipe could not be tested in wine (wine does not support
+`PeekNamedPipe` on such a pipe), so it is not tested on Windows. Not run on the host of VisionJK and not with real
+players.
+
+#### Reputation of game servers
+
+`master/ms_repnet.c` (the packets and `reputation.txt`), `master/ms_reputation.c`. Since 2026-10-28, in the
+standalone master since 2026-10-30 (the packets were in `server/sv_reputation.cpp` before). Clients of this tree
+report a game server they left for an attack, or crashed on, and the masterserver hands the servers many networks
+reported to other clients (the protocol and the client side are in [security.md](security.md), "Added later:
+reports to the masterserver"). It is there in the build with `-DBuildMasterServer=ON` only. A game server that is
+not flagged sees nothing of it. The options `--rep`, `--rep-threshold` and `--rep-local` and the console commands
+`ms_repstatus` and `ms_repclear` are in the tables above.
 
 - A report of an attack weighs 2, a crash 1. A network (/24) counts once a server, with the larger weight. A
   server keeps 32 networks, the master 4096 servers, and a report counts for 7 days. So 6 is three networks with
   an attack.
 - An address may report 10 times an hour, and ask for the list once in 10 seconds.
-- `reputation.txt` in the home folder of the master: written every 10 minutes and when it ends, read when it
-  starts.
+- `reputation.txt` in the folder of `--home`: written every 10 minutes and when it ends, read when it starts.
 - Somebody with addresses in many /24 networks can still get a server flagged. The owner of the master clears it
   with `ms_repclear`.
-- Run on 2026-10-28 with a master and clients on one machine. Not run on the host of VisionJK.
+- Run on 2026-10-28 with a master and clients on one machine, and again on 2026-10-30 as the standalone program
+  (above). Not run on the host of VisionJK.
 
 ### Cleaning up cvars
 
