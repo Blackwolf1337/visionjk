@@ -161,8 +161,9 @@ program of its own since 2026-10-30 (issue #5).
 One program on one UDP port for the players of servers without this game module: the relay of their voice chat,
 their clan radio, their statuses and the boxes of their boombox, and the reputation of game servers. It is the target
 `visionjk-master` of the build with `-DBuildMasterServer=ON` (off unless asked for, with no install rule: it is for
-the hosts of VisionJK itself and no part of a release). It has no engine, no game module, no map, no client slot and
-no web panel. Nobody can join it, and it answers no server query.
+the hosts of VisionJK itself and no part of a release). It has no engine, no game module, no map and no client slot.
+Nobody can join it, and it answers no server query. It has a small panel of its own, off unless asked for (see "The
+panel of the masterserver").
 
 ```
 visionjk-master.x86_64 --bind 0.0.0.0 --port 29170 --kbps 4000 --home /var/lib/visionjk-master
@@ -197,6 +198,7 @@ The loop waits in `select()` for 10 ms at most for a datagram or console input, 
 | `--ytdlp <program>` | yt-dlp | `vs_boomboxYtdlp` |
 | `--ffmpeg <program>` | ffmpeg | `vs_boomboxFfmpeg` |
 | `--ytdlp-args <words>` | | `vs_boomboxYtdlpArgs` |
+| `--http <port>` | 0 (no panel) | |
 | `--rep <0\|1>` | 1 | `ms_rep` |
 | `--rep-threshold <n>` | 6 | `ms_repThreshold` |
 | `--rep-local <0\|1>` | 0 | `ms_repLocal` |
@@ -240,8 +242,8 @@ Limits of the relay:
 removed.
 
 The web panel of the game module has no master any more, as there is no game module. Its code is still in the
-module (see [webadmin.md](webadmin.md), "The masterserver mode") until issue #7 decides about a panel for the
-standalone master. `MS_Numbers()` in `ms_relay.c` is kept for it and has no caller yet.
+module (see [webadmin.md](webadmin.md), "The masterserver mode") and can go, as the standalone master has a panel of
+its own now (next section).
 
 Checked on 2026-10-30 on Linux: the build of the master, the dedicated server and the client, the unit tests (new
 `tests/vjk/repnet.cpp`: challenge, report, list, file round trip), and a local run on 127.0.0.1 with a UDP script.
@@ -253,6 +255,49 @@ idle, ended, and wrote the file. The Windows build was cross compiled with mingw
 same test passed in wine. The console through a pipe could not be tested in wine (wine does not support
 `PeekNamedPipe` on such a pipe), so it is not tested on Windows. Not run on the host of VisionJK and not with real
 players.
+
+#### The panel of the masterserver
+
+`master/ms_http.c`, `MS_PanelStatus()` and `MS_Sample()` in `master/ms_main.c`, the page in `master/page/master.html`.
+Issue #7, first part. It is the panel the master had in the game module, made again for the program of its own.
+`--http <port>` turns it on (default 0: no panel). It listens on 127.0.0.1 only, TCP. On the host the service starts
+it with `--http 8081`. It is reached with a tunnel, and then the browser opens http://localhost:8081/:
+
+```
+ssh -L 8081:127.0.0.1:8081 <host>
+```
+
+`GET /` is the page. It is built into the program (`cmake/Modules/EmbedFile.cmake` turns `master.html` into
+`master_page.h`) and asks `/api/status` every two seconds. The cards are: sessions, rooms, kbit/s out (with the limit
+of `--kbps` and the bytes in all), kbit/s in, voice packets, reputation packets, dropped packets (since the start)
+and the boombox (how many songs play of how many may, and the rooms with boxes). Three graphs show the last hour:
+sessions, kbit/s in and out, and dropped packets per 10 seconds. Below them are the flagged game servers (score and
+networks), each with a button "Forget", and a button "Forget all reports" that asks first.
+
+`GET /api/status` is JSON with `uptime`, `port`, `sessions`, `rooms`, `kbpsMinute` (what the relay counts for its
+line of numbers), `capKbps`, `bytesIn`, `bytesOut`, `voice`, `repPackets`, `dropped`, `boxRooms`, `boxPlaying`,
+`boxPlayers`, `step` (10), `sessionsHistory`, `kbpsInHistory`, `kbpsOutHistory`, `droppedHistory` (a sample every
+10 seconds, up to 360, oldest first), `repOn`, `threshold` and `flagged` (`server`, `score`, `networks`; at most 64).
+
+`POST /api/forget` takes the body `a.b.c.d:port` or `all`. It does what `ms_repclear` does on the console, which a
+service has none of (its stdin is `/dev/null`).
+
+Protection: only a Host header of `127.0.0.1:<port>` or `localhost:<port>` is answered (421 otherwise), so a page of
+another site cannot reach the panel through a name that points at 127.0.0.1 (DNS rebinding). A POST needs the header
+`X-Vision-Panel: 1` (403 otherwise). A page of another site cannot send it without the browser asking first, and the
+panel never allows that. There is no login: whoever can reach 127.0.0.1 of the host can use the panel. It takes one
+request a connection and 8 connections at once, closes an idle one after 10 seconds, and accepts a request of 4 KB at
+most and a body of 256 bytes at most. It is non-blocking, in the `select()` of the program, with fixed buffers.
+
+Also new for it: `MS_BoxNumbers()` in `ms_boombox.c` (reads the counts without resetting those of the line of
+numbers), `MS_RepFlagged()` and `MS_RepThreshold()` in `ms_repnet.c`. `MS_Numbers()` of `ms_relay.c` has its caller
+now.
+
+Checked on 2026-10-30 on Linux: every route with curl (200, the 421 for another Host, 403 for a POST without the
+header, 404 and 405); a report from four /24 networks flagged a server and the page showed it, and its Forget took it
+away; 34 seconds of test traffic were drawn; the page was looked at in headless Chromium. The UDP test of the master
+(20 checks) passed with the panel on, under valgrind with 0 errors. Not checked: Windows, the host, and a real browser
+by a person.
 
 #### Reputation of game servers
 
