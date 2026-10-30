@@ -44,7 +44,8 @@ function(vjk_wasm_main_module target jsLibrary)
 		# the page calls main() when the game files are in place
 		-sINVOKE_RUN=0
 		-sENVIRONMENT=web
-		-sEXPORTED_RUNTIME_METHODS=callMain,FS,addRunDependency,removeRunDependency,ccall,cwrap,UTF8ToString
+		# IDBFS for the page: Emscripten 6.0.13 has no FS.filesystems any more
+		-sEXPORTED_RUNTIME_METHODS=callMain,FS,IDBFS,addRunDependency,removeRunDependency,ccall,cwrap,UTF8ToString
 		-sASSERTIONS=1
 		--js-library "${jsLibrary}"
 		)

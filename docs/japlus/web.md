@@ -52,7 +52,8 @@ The web host has no password. Whoever reaches the port gets:
 - `/net`, a WebSocket whose messages are the datagrams of a client.
 - `/voice`, a WebSocket for the voice chat, only for an address a client of the game plays from through this
   host. See [voice.md](voice.md), "In a browser".
-- `/tv`, a WebSocket that sends the TV of the server as demo records, for the client command `tv`. See
+- `/tv`, a WebSocket that sends the TV of the server as demo records, for the client command `tv` and the page
+  opened with `?tv`. See
   [server.md](server.md), "The TV of the server".
 
 So opening the port to the internet hands the game data to everyone. The port has to be opened in the firewall

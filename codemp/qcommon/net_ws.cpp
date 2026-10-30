@@ -203,6 +203,17 @@ qboolean Sys_StringToAdr( const char *s, netadr_t *a ) {
 
 /*
 ====================
+Sys_ResolveIPv4
+
+Numbers only: nothing can be looked up from a page
+====================
+*/
+qboolean Sys_ResolveIPv4( const char *name, byte ip[4] ) {
+	return (qboolean)( inet_pton( AF_INET, name, ip ) == 1 );
+}
+
+/*
+====================
 Sys_SendPacket
 ====================
 */
