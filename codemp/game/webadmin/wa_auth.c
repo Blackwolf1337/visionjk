@@ -986,6 +986,18 @@ The own account
 */
 
 // GET /api/me: who the page is logged in as and what he may see, for an owner also the accounts
+// the port of the web host of the engine for the page TV, 0: it has none (the server of a client, vs_clientWebPort 0)
+// or the TV is off (vs_tv 0; the engine makes that cvar only when it is first asked for /tv)
+static int WA_TVPort( void ) {
+	char on[16];
+
+	trap->Cvar_VariableStringBuffer( "vs_tv", on, sizeof( on ) );
+	if ( on[0] && !atoi( on ) ) {
+		return 0;
+	}
+	return trap->Cvar_VariableIntegerValue( "vs_clientWebPort" );
+}
+
 static void WA_ApiMe( waConnection_t *c ) {
 	const waUser_t	*user = WA_RequestUser( c );
 	waBuffer_t		b = { 0 };
@@ -997,6 +1009,9 @@ static void WA_ApiMe( waConnection_t *c ) {
 		WA_RoleName( c->role ), WA_BOOL( user ), WA_BOOL( user && user->hasTotp ), WA_BOOL( user && user->hasToken ),
 		user ? user->numRecovery : 0, G_AuthNumKeys(), WA_BOOL( vs_adminPasswords.integer ), WA_BOOL( c->proxied ),
 		WA_BOOL( WA_MasterMode() ) );
+	WA_BufPrintf( &b, ",\"tv\":{\"port\":%i,\"page\":", WA_TVPort() );
+	WA_BufJsonString( &b, vs_webTVPage.string );
+	WA_BufPrintf( &b, "}" );
 	if ( c->role == WA_ROLE_OWNER ) {
 		WA_BufPrintf( &b, ",\"users\":[" );
 		for ( i = 0; i < waNumUsers; i++ ) {

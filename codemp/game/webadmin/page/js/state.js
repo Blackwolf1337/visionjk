@@ -7,6 +7,7 @@ let selected = -1;
 const players = new Map();		// id -> { data, prev, draw, t }
 const labels = new Map();
 let lastPoll = 0, pollInterval = 100;
+let serverGravity = '';			// g_gravity as the state says it, for the palette (js/palette.js)
 
 let itemsRev = 0, itemsKept = [], itemsBefore = [];		// the number of the item list the server sent last, that list, and the one before it
 
@@ -203,7 +204,7 @@ function renderTopbar() {
 	$('map').textContent = state.map;
 	$('gametype').textContent = state.gametypeName || ('Gametype ' + state.gametype);
 	$('time').textContent = fmtTime(state.time) + (state.timelimit ? ' / ' + state.timelimit + ':00' : '');
-	if (state.gravity !== undefined) $('gravValue').placeholder = state.gravity;
+	if (state.gravity !== undefined) serverGravity = state.gravity;
 	const team = state.gametype >= 6;
 	$('teamScores').style.display = team ? '' : 'none';
 	$('scoreRed').textContent = state.scores.red;

@@ -295,5 +295,7 @@ $('fsSave').addEventListener('click', fsSave);
 $('fsClose').addEventListener('click', fsCloseEdit);
 fsTreeRender();
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab)));
+// the pages: Map goes back to the map and the tool that was open there
+document.querySelectorAll('#pages button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab === 'map' ? (EDITOR_TOOLS.has(lastMapTool) && appMode === 'editor' ? lastMapTool : APP_TAB[appMode]) : b.dataset.tab)));
 document.querySelectorAll('#appMode button').forEach(b => b.addEventListener('click', () => setAppMode(b.dataset.app)));
 

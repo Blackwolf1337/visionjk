@@ -198,6 +198,4 @@ $('kvRows').addEventListener('input', e => {
 	const key = kvValueField(e);
 	if (key !== null && key in PATH_KEYS) pickPath(e.target, key);
 });
-$('mapName').addEventListener('focus', () => pickFill('pickMaps'));
-$('botName').addEventListener('focus', () => pickFill('pickBots'));
 

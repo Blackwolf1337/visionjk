@@ -51,6 +51,7 @@ seta vs_webBind "0.0.0.0"
 | `vs_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
 | `vs_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
 | `vs_liveView` | 0 | 1: the live view below `/live/` is open to everybody without a login, see "The live view". It opens the port also without an account. Latched |
+| `vs_webTVPage` | empty | the address of the page of the browser client for the page TV, like `https://tv.example.org/?tv`. Empty: the host of the panel with the port `vs_clientWebPort` and `?tv`. Needed behind a reverse proxy, or when the panel comes over https (a page over https can not show a frame over plain http) |
 | `vs_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
 Port and bind are latched, they take effect at the next map start. Open `http://server:8080/` and log in.
@@ -214,12 +215,40 @@ walls. Health and shield are not shown.
 
 ## What the page does
 
-- Two modes, switched in the top bar and kept by the browser. Administration: the tabs Players, Settings and
-  Files, and the map drawn the way the game draws it (see below). Editor: the tabs World and Physical props, the plain
-  view of the map (an image times the light) and its debug views: a marker at every entity, the triangles of the
-  map as lines, the light alone or the texture alone.
+- Two modes, switched in the top bar and kept by the browser. Administration: the players in the side panel and the
+  map drawn the way the game draws it (see below). Editor: the tools World, Physical props, Clips, Textures, Routes
+  and Map info in the side panel, the plain view of the map (an image times the light) and its debug views: a marker
+  at every entity, the triangles of the map as lines, the light alone or the texture alone. The tools wrap onto as
+  many lines as they need.
+- Pages of the server: TV, Settings, Files, Log, Bans, Performance and Account (and Masterserver on a masterserver) are
+  in a row of their own under the top bar, with "Map" at its left to go back to the map. The address names the
+  page: `#/tv`, `#/config`, `#/files`, `#/log`, `#/bans`, `#/load`, `#/account`, `#/master`, and `#/players` or an editor
+  tool (`#/world`, `#/models`, `#/clips`, `#/remaps`, `#/routes`, `#/mapinfo`, which open the editor). A reload or a
+  link comes back to that page. A page of the server stays open when the mode is switched. Bans, Performance and
+  Account take the whole width (their pane is at most 760 px wide, in the middle) and the map is not shown behind
+  them.
+- Page TV: the TV of the server (a spectator in no slot who follows the players, see server.md, "The TV of the
+  server") in the client for the browser, in a frame (`js/tv.js`, `#/tv`). The page starts nothing by itself: it
+  says from which address the client comes and that it loads the game files first (more than a GB the first time,
+  then from the storage of the browser), and the button Watch starts it. Leaving the page empties the frame, which
+  stops the game in it. The tab is there only when `/api/me` has `"tv": {"port": N, "page": "..."}`: `port` is
+  `vs_clientWebPort`, 0 when the server has no web host or `vs_tv` is 0, and `page` is `vs_webTVPage`. Not on the
+  masterserver. Every role sees it.
+- Command palette: the button "Commands Ctrl K" in the top bar, or Ctrl+K (`js/palette.js`). It lists the pages, the
+  two modes, the tools of the editor, Add bot, Change map, Gravity (with the current value), the side panel, the keys
+  of the map, Fly, Screenshot and, while a player is selected, what his panel can do to him, named
+  "<button> (<player>)". Kick and Ban are not in it, they want a second click. A command that wants a value takes
+  the words after its name ("map mp/ffa3", "change map mp/ffa3", "bot jan", "gravity 600"). For maps and bots it
+  offers the names the server has (`/api/list`), those first, then the words as typed. Up and Down choose, Enter
+  does it, Escape or a click beside it closes it. What the role may not use is not offered, the server refuses it
+  anyway.
 - Players: list, health, armor, size, team, god mode, kill, kick, ban, follow, first person view with the HUD.
-  Right click on the map teleports the selected player.
+  Right click on the map teleports the selected player. The actions are in groups that fold: Change (health, armor,
+  size, team, gravity), Watch and steer (follow, first person, control), Powers (god mode, noclip, protect, empower,
+  merc, ghost, mindtrick, force alt dim), Punish (slap, kill, sleep, freeze, silence, deny vote, kick, ban), Fun
+  (poop, flatulence, schizophrenia, disorient) and JA+ admin (show MOTD, rename, message, admin rank). Change,
+  Watch and steer and Punish are open, the others folded, and the page keeps which are open
+  (`localStorage` `wa.sect.<name>`).
 - World: all entities with their spawn keys. Edit keys and apply, drag or right click to move, rotate, duplicate,
   delete, place new ones with a model preview, export the layout as `.ent`.
 - The tools of the editor on top of that: what a class is, with its keys and its spawnflags by name, read from
@@ -229,12 +258,16 @@ walls. Health and shield are not shown.
 - JA+ admin commands for the selected player: sleep and wake, protect, empower, merc, mindtrick, ghost, silence
   and unsilence, force and unforce the alternate dimension, deny vote, freeze, slap, show the MOTD, rename, a
   message on his screen (ampsay) and his admin rank (admGrant). A button is lit while its state is on.
-- Chat, at the bottom of the side bar: what the players say, with the time, the team of the speaker and a tag for
+- Chat, at the bottom of the side panel in the administration, beside the map (not on the pages of the server, not
+  in the editor): what the players say, with the time, the team of the speaker and a tag for
   team chat, tells (with the receiver), clan chat and admin chat. Below it the field for a message to all players.
   A click on the title folds it away, new lines are counted there meanwhile.
-- Gravity: a field in the top bar for everybody (`g_gravity`, 800 is normal, the field shows the current value),
-  and a field in the player panel for a gravity only that player has. Empty there means the gravity of the server.
-- Top bar: add bots, change map.
+- Gravity: a command of the palette for everybody (`g_gravity`, 800 is normal, the palette shows the current
+  value), and a field in the player panel for a gravity only that player has. Empty there means the gravity of the server.
+- Add bot and Change map are commands of the palette. The three forms they were in the top bar (Add bot, Change map,
+  Set gravity) are gone.
+- The box with the keys of the map is hidden. The button "?" at the bottom right of the map (beside Screenshot and
+  Fly) or the key ? shows it, and the page keeps that (`wa.help`).
 - Settings: every cvar of the server as a field, see "The tab Settings". On a masterserver the page is smaller, see "The masterserver mode".
 
 ## How it works
@@ -2455,3 +2488,10 @@ settings, the map routes 404, the JSON of `/api/master`, `master.cfg` written. H
 debugging port: the three views of the tab on the server and the tab Masterserver, a change with its mark, a bit
 box, a save, no script error. The unit tests pass. Not tested: the panel in a real browser on the live host, the
 changes of the deploy on the host.
+
+Checked 2026-10-30 (issue #7, the new layout of the page): a dedicated server of the build (mp/ffa3, one bot), headless
+Chromium at 1366 x 768, logged in with a token through a local proxy. Every page by its address, the palette by keys
+(Ctrl+K, "map ffa" listed mp/ffa1 to mp/ffa5, Escape, "gravity 600" and Enter set the gravity of the server, "slap"
+with a selected player ran amslap on him), the groups of the player panel and the button ?. The game module was built
+with the page bundled. Not checked: a real browser by a person, a phone, the roles moderator and admin on screen, a
+masterserver.

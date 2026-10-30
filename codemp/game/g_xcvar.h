@@ -216,6 +216,9 @@ XCVAR_DEF( vs_webPassword,				"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qf
 XCVAR_DEF( vs_webRoot,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_webPort,					"80",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( vs_webProxy,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_webTVPage: the address of the page of the browser client for the page TV of the panel, "": the host of the panel
+// with the port vs_clientWebPort (behind a proxy, or over https, that address may not be the one to open)
+XCVAR_DEF( vs_webTVPage,				"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_weaponDisable,				"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qtrue )
 XCVAR_DEF( g_weaponRespawn,				"5",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( gamedate,					SOURCE_DATE,	NULL,						CVAR_ROM,										qfalse )
