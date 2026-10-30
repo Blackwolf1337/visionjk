@@ -16,6 +16,8 @@ int Q_isupper( int c );
 int Q_isalpha( int c );
 qboolean Q_isanumber( const char *s );
 qboolean Q_isintegral( float f );
+// VisionJK: "a.b.c.d", four numbers 0 to 255 and nothing else, into the four bytes as they go over the network
+qboolean Q_ParseIPv4( const char *s, unsigned char out[4] );
 
 // portable case insensitive compare
 int Q_stricmp(const char *s1, const char *s2);

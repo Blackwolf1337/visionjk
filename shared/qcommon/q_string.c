@@ -113,6 +113,42 @@ qboolean Q_isintegral( float f )
 	return (qboolean)( (int)f == f );
 }
 
+/*
+=================
+Q_ParseIPv4
+
+VisionJK: a strict IPv4 address, for what inet_pton was used for. No name is looked up, and none of what
+inet_addr also takes ("0", "1", "0x7f.1", "127.1") counts. The engine has winsock.h on Windows, which has no
+inet_pton.
+=================
+*/
+qboolean Q_ParseIPv4( const char *s, unsigned char out[4] )
+{
+	unsigned char	ip[4];
+	int				part;
+
+	for ( part = 0; part < 4; part++ ) {
+		int value = 0, digits = 0;
+
+		if ( part > 0 && *s++ != '.' ) {
+			return qfalse;
+		}
+		while ( *s >= '0' && *s <= '9' && digits < 4 ) {
+			value = value * 10 + ( *s++ - '0' );
+			digits++;
+		}
+		if ( !digits || digits > 3 || value > 255 ) {
+			return qfalse;
+		}
+		ip[part] = (unsigned char)value;
+	}
+	if ( *s ) {
+		return qfalse;
+	}
+	memcpy( out, ip, sizeof( ip ) );
+	return qtrue;
+}
+
 char* Q_strrchr( const char* string, int c )
 {
 	char cc = c;

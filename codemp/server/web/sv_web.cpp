@@ -554,14 +554,14 @@ static void SV_WebListen( void ) {
 
 	// Every interface unless vs_clientWebBind names one address, as vs_webBind of the web admin panel has it: an
 	// empty one is every interface too, and a value that is no address opens nothing to the outside.
-	// (inet_pton and not Sys_StringToAdr, which asks the name service about what is no number and waits for it,
+	// (Q_ParseIPv4 and not Sys_StringToAdr, which asks the name service about what is no number and waits for it,
 	// nor inet_addr, which took "0" for every interface and "1" for 0.0.0.1)
 	memset( &address, 0, sizeof( address ) );
 	address.sin_family = AF_INET;
 	address.sin_port = htons( (unsigned short)port );
 	address.sin_addr.s_addr = INADDR_ANY;
 	if ( vs_clientWebBind->string[0] ) {
-		if ( inet_pton( AF_INET, vs_clientWebBind->string, &address.sin_addr ) == 1 ) {
+		if ( Q_ParseIPv4( vs_clientWebBind->string, (unsigned char *)&address.sin_addr ) ) {
 			bindTo = vs_clientWebBind->string;
 		} else {
 			bindTo = "127.0.0.1";
