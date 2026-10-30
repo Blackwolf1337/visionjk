@@ -117,6 +117,14 @@ REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 LANG_FRENCH         "Ouvre le tableau des scores, souris libre : un clic sur une ligne montre ce que vous pouvez faire avec ce joueur."
 
+REFERENCE           COMMAND_MENU
+LANG_ENGLISH        "Command Menu"
+LANG_FRENCH         "Menu de commandes"
+
+REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
+LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
+LANG_FRENCH         "Ouvre des listes de ce que VisionJK sait faire, de la boombox aux gestes et aux votes : une touche chiffre ou un clic choisit."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_FRENCH         "Mode photo"
@@ -2316,6 +2324,162 @@ LANG_FRENCH         "Jamais utilisé"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_FRENCH         "il y a %i jours"
+
+REFERENCE           PLACE_A_BOOMBOX
+LANG_ENGLISH        "Place a Boombox"
+LANG_FRENCH         "Poser une boombox"
+
+REFERENCE           PLACE_A_SOUND_SYSTEM
+LANG_ENGLISH        "Place a Sound System"
+LANG_FRENCH         "Poser une sono"
+
+REFERENCE           MUTE_EVERYBODY
+LANG_ENGLISH        "Mute Everybody"
+LANG_FRENCH         "Couper tout le monde"
+
+REFERENCE           HEAR_EVERYBODY_AGAIN
+LANG_ENGLISH        "Hear Everybody Again"
+LANG_FRENCH         "Réentendre tout le monde"
+
+REFERENCE           VOICE_CHAT_STATUS
+LANG_ENGLISH        "Voice Chat Status"
+LANG_FRENCH         "État du chat vocal"
+
+REFERENCE           EMOTES
+LANG_ENGLISH        "Emotes"
+LANG_FRENCH         "Gestes"
+
+REFERENCE           SIT
+LANG_ENGLISH        "Sit"
+LANG_FRENCH         "S'asseoir"
+
+REFERENCE           KNEEL
+LANG_ENGLISH        "Kneel"
+LANG_FRENCH         "S'agenouiller"
+
+REFERENCE           HELLO
+LANG_ENGLISH        "Hello"
+LANG_FRENCH         "Salut"
+
+REFERENCE           VICTORY
+LANG_ENGLISH        "Victory"
+LANG_FRENCH         "Victoire"
+
+REFERENCE           COME_ON
+LANG_ENGLISH        "Come On"
+LANG_FRENCH         "Viens"
+
+REFERENCE           SURRENDER
+LANG_ENGLISH        "Surrender"
+LANG_FRENCH         "Se rendre"
+
+REFERENCE           BREAK_DANCE
+LANG_ENGLISH        "Break Dance"
+LANG_FRENCH         "Breakdance"
+
+REFERENCE           FLIP
+LANG_ENGLISH        "Flip"
+LANG_FRENCH         "Salto"
+
+REFERENCE           MORE
+LANG_ENGLISH        "More"
+LANG_FRENCH         "Plus"
+
+REFERENCE           SIT_DIFFERENTLY
+LANG_ENGLISH        "Sit Differently"
+LANG_FRENCH         "S'asseoir autrement"
+
+REFERENCE           NOD
+LANG_ENGLISH        "Nod"
+LANG_FRENCH         "Hocher la tête"
+
+REFERENCE           SHAKE_HEAD
+LANG_ENGLISH        "Shake Head"
+LANG_FRENCH         "Secouer la tête"
+
+REFERENCE           AT_EASE
+LANG_ENGLISH        "At Ease"
+LANG_FRENCH         "Au repos"
+
+REFERENCE           BEG
+LANG_ENGLISH        "Beg"
+LANG_FRENCH         "Supplier"
+
+REFERENCE           WAIT
+LANG_ENGLISH        "Wait"
+LANG_FRENCH         "Attendre"
+
+REFERENCE           HANDS_ON_HIPS
+LANG_ENGLISH        "Hands on Hips"
+LANG_FRENCH         "Mains sur les hanches"
+
+REFERENCE           POWER
+LANG_ENGLISH        "Power"
+LANG_FRENCH         "Puissance"
+
+REFERENCE           NEO
+LANG_ENGLISH        "Neo"
+LANG_FRENCH         "Néo"
+
+REFERENCE           DUEL
+LANG_ENGLISH        "Duel"
+LANG_FRENCH         "#same"
+
+REFERENCE           CHALLENGE_TO_A_DUEL
+LANG_ENGLISH        "Challenge to a Duel"
+LANG_FRENCH         "Défier en duel"
+
+REFERENCE           JOIN_THE_GAME
+LANG_ENGLISH        "Join the Game"
+LANG_FRENCH         "Rejoindre la partie"
+
+REFERENCE           JOIN_RED
+LANG_ENGLISH        "Join Red"
+LANG_FRENCH         "Rejoindre les rouges"
+
+REFERENCE           JOIN_BLUE
+LANG_ENGLISH        "Join Blue"
+LANG_FRENCH         "Rejoindre les bleus"
+
+REFERENCE           SPECTATE
+LANG_ENGLISH        "Spectate"
+LANG_FRENCH         "Observer"
+
+REFERENCE           VOTE
+LANG_ENGLISH        "Vote"
+LANG_FRENCH         "#same"
+
+REFERENCE           YES
+LANG_ENGLISH        "Yes"
+LANG_FRENCH         "Oui"
+
+REFERENCE           NO
+LANG_ENGLISH        "No"
+LANG_FRENCH         "Non"
+
+REFERENCE           RESTART_THE_MAP
+LANG_ENGLISH        "Restart the Map"
+LANG_FRENCH         "Relancer la carte"
+
+REFERENCE           SHOW
+LANG_ENGLISH        "Show"
+LANG_FRENCH         "Afficher"
+
+REFERENCE           FRAME_RATE
+LANG_ENGLISH        "Frame Rate"
+LANG_FRENCH         "Images par seconde"
+
+REFERENCE           TIMER
+LANG_ENGLISH        "Timer"
+LANG_FRENCH         "Chrono"
+
+REFERENCE           LAGOMETER
+LANG_ENGLISH        "Lagometer"
+LANG_FRENCH         "Lagomètre"
+
+REFERENCE           SCREENSHOT
+LANG_ENGLISH        "Screenshot"
+LANG_FRENCH         "Capture d'écran"
 
 
 ENDMARKER

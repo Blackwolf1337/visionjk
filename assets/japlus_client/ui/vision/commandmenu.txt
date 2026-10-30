@@ -1,0 +1,78 @@
+// The command menu of VisionJK (v_commandmenu, Controls, Extras, "Command Menu"). A number key or a click picks an
+// entry. See docs/japlus/ui.md, "The command menu".
+//
+// Your own: copy this file to ui/vision/commandmenu.txt in the japlus folder of your home folder and change it
+// there. It is read each time the menu opens.
+//
+//   "<key>" "<name>" "<command>"     an entry: the key picks it, the command runs as if typed into the console
+//   "<key>" "<name>" { ... }         a list of its own, with the entries between the braces
+//
+// A name is looked up in the texts of VisionJK by its English, so these show in the language of the game.
+
+"1" "Boombox"
+{
+	"1" "Play a song ..."		"v_boombox play"
+	"2" "Music Player"			"v_boombox window"
+	"3" "Pause"					"v_boombox pause"
+	"4" "Resume"				"v_boombox resume"
+	"5" "Skip"					"v_boombox skip"
+	"6" "Place a Boombox"		"v_boombox place"
+	"7" "Place a Sound System"	"v_boombox system"
+}
+"2" "Voice Chat"
+{
+	"1" "Mute Everybody"		"v_voice_mute all"
+	"2" "Hear Everybody Again"	"v_voice_unmute all"
+	"3" "Voice Chat Status"		"v_voice_status"
+}
+"3" "Emotes"
+{
+	"1" "Sit"					"amsit"
+	"2" "Kneel"					"amkneel"
+	"3" "Hello"					"amhello"
+	"4" "Victory"				"amvictory"
+	"5" "Come On"				"amcomeon"
+	"6" "Surrender"				"amsurrender"
+	"7" "Break Dance"			"ambreakdance"
+	"8" "Flip"					"amflip"
+	"9" "More"
+	{
+		"1" "Sit Differently"	"amsit2"
+		"2" "Nod"				"amnod"
+		"3" "Shake Head"		"amshake"
+		"4" "At Ease"			"amatease"
+		"5" "Beg"				"ambeg"
+		"6" "Wait"				"amwait"
+		"7" "Hands on Hips"		"amhips"
+		"8" "Power"				"ampower"
+		"9" "Neo"				"amneo"
+	}
+}
+"4" "Duel"
+{
+	"1" "Challenge to a Duel"	"engage_duel"
+	"2" "Full Force Duel"		"engage_FullForceDuel"
+}
+"5" "Team"
+{
+	"1" "Join the Game"			"team free"
+	"2" "Join Red"				"team red"
+	"3" "Join Blue"				"team blue"
+	"4" "Spectate"				"team spectator"
+}
+"6" "Vote"
+{
+	"1" "Yes"					"vote yes"
+	"2" "No"					"vote no"
+	"3" "Restart the Map"		"callvote map_restart"
+}
+"7" "Show"
+{
+	"1" "Frame Rate"			"toggle cg_drawFPS"
+	"2" "Timer"					"toggle cg_drawTimer"
+	"3" "Lagometer"				"toggle cg_lagometer"
+	"4" "Chat Bubbles"			"toggle v_chatBubbles"
+	"5" "Speedometer"			"toggle tay_speedometer"
+}
+"8" "Photo Mode"				"v_photo"
+"9" "Screenshot"				"screenshot"

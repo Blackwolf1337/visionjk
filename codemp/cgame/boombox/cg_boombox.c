@@ -1729,8 +1729,9 @@ void CG_Boombox_f( void ) {
 		while ( *rest == ' ' )
 			rest++;
 		memmove( words, rest, strlen( rest ) + 1 );
+		// without words: the chat box opens for them, as "Play" of the quick wheel does (the command menu has it)
 		if ( !words[0] ) {
-			trap->Print( "usage: v_boombox play \"<link of YouTube or YouTube Music, or what to look for>\"\n" );
+			CG_BoomboxPrompt( CG_BoomboxNear() );
 			return;
 		}
 		// A link that was not in quotes was cut off by the console where it has "//": the rest is gone.

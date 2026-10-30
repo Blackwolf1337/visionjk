@@ -179,10 +179,10 @@ void CG_SelectInit( void ) {
 	sel.headH = SELECT_HEAD_NAME + SELECT_HEAD_END;
 }
 
-// Is the mouse free for pointing at players. Also for the quick wheel (radial/cg_radial.c) and a box that is
-// carried, without the selection of players.
+// Is the mouse free for pointing at players. Also for the quick wheel (radial/cg_radial.c), the command menu
+// (cmdmenu/cg_cmdmenu.c) and a box that is carried, without the selection of players.
 static qboolean Select_Free( void ) {
-	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || sel.carrying || ( v_selectPlayers.integer
+	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || CG_CmdMenuOpen() || sel.carrying || ( v_selectPlayers.integer
 		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() || CG_BoomboxWindowShown() ) ) ) );
 }
 
@@ -1425,6 +1425,7 @@ void CG_SelectDraw( void ) {
 		CG_ScoresLetGo();
 		CG_BoomboxWindowClose();
 		CG_RadialClose();
+		CG_CmdMenuClose();
 	}
 	// Who points does not type. An engine of this tree leaves the talk button out of his commands while this
 	// says so (CL_CmdButtons()): no dots over his head for anybody, and the server does not hold him still. In
@@ -1445,11 +1446,17 @@ void CG_SelectDraw( void ) {
 		}
 		return;
 	}
-	// the quick wheel takes the place of the pointer while it is open
+	// the quick wheel takes the place of the pointer while it is open, and so does the command menu
 	if ( CG_RadialOpen() ) {
 		sel.hover = -1;
 		CG_Place2D( PLACE_CENTER );
 		CG_RadialDraw();
+		return;
+	}
+	if ( CG_CmdMenuOpen() ) {
+		sel.hover = -1;
+		CG_Place2D( PLACE_CENTER );
+		CG_CmdMenuDraw();
 		return;
 	}
 	// he left, the box is gone, or the board his card stands beside is gone
@@ -1521,7 +1528,7 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 	if ( !Select_Free() ) {
 		return qfalse;
 	}
-	if ( CG_RadialKey( key, down ) ) {
+	if ( CG_RadialKey( key, down ) || CG_CmdMenuKey( key, down ) ) {
 		return qtrue;
 	}
 	// a box that was pressed on: dragged, it is put down where the button is let go, else its card opens
@@ -1633,6 +1640,7 @@ with the next frame.
 */
 void CG_SelectLetGo( void ) {
 	CG_RadialClose();
+	CG_CmdMenuClose();
 	sel.toggled = qfalse;
 	sel.hover = -1;
 	Select_Close();

@@ -288,6 +288,8 @@ CONTROLS = [
          'Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice.'),
         ('bind', 'Scoreboard with Mouse', 'v_scores_pick',
          'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.'),
+        ('bind', 'Command Menu', 'v_commandmenu',
+         'Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),

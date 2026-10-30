@@ -117,6 +117,14 @@ REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 LANG_GERMAN         "Öffnet das Scoreboard mit freier Maus: Ein Klick auf eine Zeile zeigt, was du mit dem Spieler tun kannst."
 
+REFERENCE           COMMAND_MENU
+LANG_ENGLISH        "Command Menu"
+LANG_GERMAN         "Befehlsmenü"
+
+REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
+LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
+LANG_GERMAN         "Öffnet Listen mit dem, was VisionJK kann, von der Boombox bis zu Gesten und Abstimmungen: Eine Zifferntaste oder ein Klick wählt aus."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_GERMAN         "Fotomodus"
@@ -2316,6 +2324,162 @@ LANG_GERMAN         "Nie benutzt"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_GERMAN         "vor %i Tagen"
+
+REFERENCE           PLACE_A_BOOMBOX
+LANG_ENGLISH        "Place a Boombox"
+LANG_GERMAN         "Boombox aufstellen"
+
+REFERENCE           PLACE_A_SOUND_SYSTEM
+LANG_ENGLISH        "Place a Sound System"
+LANG_GERMAN         "Soundanlage aufstellen"
+
+REFERENCE           MUTE_EVERYBODY
+LANG_ENGLISH        "Mute Everybody"
+LANG_GERMAN         "Alle stummschalten"
+
+REFERENCE           HEAR_EVERYBODY_AGAIN
+LANG_ENGLISH        "Hear Everybody Again"
+LANG_GERMAN         "Alle wieder hören"
+
+REFERENCE           VOICE_CHAT_STATUS
+LANG_ENGLISH        "Voice Chat Status"
+LANG_GERMAN         "Sprachchat-Status"
+
+REFERENCE           EMOTES
+LANG_ENGLISH        "Emotes"
+LANG_GERMAN         "Gesten"
+
+REFERENCE           SIT
+LANG_ENGLISH        "Sit"
+LANG_GERMAN         "Hinsetzen"
+
+REFERENCE           KNEEL
+LANG_ENGLISH        "Kneel"
+LANG_GERMAN         "Knien"
+
+REFERENCE           HELLO
+LANG_ENGLISH        "Hello"
+LANG_GERMAN         "Hallo"
+
+REFERENCE           VICTORY
+LANG_ENGLISH        "Victory"
+LANG_GERMAN         "Sieg"
+
+REFERENCE           COME_ON
+LANG_ENGLISH        "Come On"
+LANG_GERMAN         "Komm her"
+
+REFERENCE           SURRENDER
+LANG_ENGLISH        "Surrender"
+LANG_GERMAN         "Aufgeben"
+
+REFERENCE           BREAK_DANCE
+LANG_ENGLISH        "Break Dance"
+LANG_GERMAN         "Breakdance"
+
+REFERENCE           FLIP
+LANG_ENGLISH        "Flip"
+LANG_GERMAN         "Salto"
+
+REFERENCE           MORE
+LANG_ENGLISH        "More"
+LANG_GERMAN         "Mehr"
+
+REFERENCE           SIT_DIFFERENTLY
+LANG_ENGLISH        "Sit Differently"
+LANG_GERMAN         "Anders hinsetzen"
+
+REFERENCE           NOD
+LANG_ENGLISH        "Nod"
+LANG_GERMAN         "Nicken"
+
+REFERENCE           SHAKE_HEAD
+LANG_ENGLISH        "Shake Head"
+LANG_GERMAN         "Kopfschütteln"
+
+REFERENCE           AT_EASE
+LANG_ENGLISH        "At Ease"
+LANG_GERMAN         "Rührt euch"
+
+REFERENCE           BEG
+LANG_ENGLISH        "Beg"
+LANG_GERMAN         "Betteln"
+
+REFERENCE           WAIT
+LANG_ENGLISH        "Wait"
+LANG_GERMAN         "Warten"
+
+REFERENCE           HANDS_ON_HIPS
+LANG_ENGLISH        "Hands on Hips"
+LANG_GERMAN         "Hände in die Hüften"
+
+REFERENCE           POWER
+LANG_ENGLISH        "Power"
+LANG_GERMAN         "Kraft"
+
+REFERENCE           NEO
+LANG_ENGLISH        "Neo"
+LANG_GERMAN         "#same"
+
+REFERENCE           DUEL
+LANG_ENGLISH        "Duel"
+LANG_GERMAN         "Duell"
+
+REFERENCE           CHALLENGE_TO_A_DUEL
+LANG_ENGLISH        "Challenge to a Duel"
+LANG_GERMAN         "Zum Duell herausfordern"
+
+REFERENCE           JOIN_THE_GAME
+LANG_ENGLISH        "Join the Game"
+LANG_GERMAN         "Mitspielen"
+
+REFERENCE           JOIN_RED
+LANG_ENGLISH        "Join Red"
+LANG_GERMAN         "Zu Rot"
+
+REFERENCE           JOIN_BLUE
+LANG_ENGLISH        "Join Blue"
+LANG_GERMAN         "Zu Blau"
+
+REFERENCE           SPECTATE
+LANG_ENGLISH        "Spectate"
+LANG_GERMAN         "Zuschauen"
+
+REFERENCE           VOTE
+LANG_ENGLISH        "Vote"
+LANG_GERMAN         "Abstimmung"
+
+REFERENCE           YES
+LANG_ENGLISH        "Yes"
+LANG_GERMAN         "Ja"
+
+REFERENCE           NO
+LANG_ENGLISH        "No"
+LANG_GERMAN         "Nein"
+
+REFERENCE           RESTART_THE_MAP
+LANG_ENGLISH        "Restart the Map"
+LANG_GERMAN         "Karte neu starten"
+
+REFERENCE           SHOW
+LANG_ENGLISH        "Show"
+LANG_GERMAN         "Anzeigen"
+
+REFERENCE           FRAME_RATE
+LANG_ENGLISH        "Frame Rate"
+LANG_GERMAN         "Bildrate"
+
+REFERENCE           TIMER
+LANG_ENGLISH        "Timer"
+LANG_GERMAN         "Zeitanzeige"
+
+REFERENCE           LAGOMETER
+LANG_ENGLISH        "Lagometer"
+LANG_GERMAN         "#same"
+
+REFERENCE           SCREENSHOT
+LANG_ENGLISH        "Screenshot"
+LANG_GERMAN         "#same"
 
 
 ENDMARKER

@@ -117,6 +117,14 @@ REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 LANG_SPANISH        "Abre el marcador con el ratón libre: un clic en una fila muestra lo que puedes hacer con ese jugador."
 
+REFERENCE           COMMAND_MENU
+LANG_ENGLISH        "Command Menu"
+LANG_SPANISH        "Menú de comandos"
+
+REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
+LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
+LANG_SPANISH        "Abre listas de lo que sabe hacer VisionJK, desde la boombox hasta gestos y votaciones: una tecla numérica o un clic elige."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_SPANISH        "Modo foto"
@@ -2316,6 +2324,162 @@ LANG_SPANISH        "Nunca usado"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_SPANISH        "hace %i días"
+
+REFERENCE           PLACE_A_BOOMBOX
+LANG_ENGLISH        "Place a Boombox"
+LANG_SPANISH        "Colocar una boombox"
+
+REFERENCE           PLACE_A_SOUND_SYSTEM
+LANG_ENGLISH        "Place a Sound System"
+LANG_SPANISH        "Colocar un equipo de sonido"
+
+REFERENCE           MUTE_EVERYBODY
+LANG_ENGLISH        "Mute Everybody"
+LANG_SPANISH        "Silenciar a todos"
+
+REFERENCE           HEAR_EVERYBODY_AGAIN
+LANG_ENGLISH        "Hear Everybody Again"
+LANG_SPANISH        "Volver a oír a todos"
+
+REFERENCE           VOICE_CHAT_STATUS
+LANG_ENGLISH        "Voice Chat Status"
+LANG_SPANISH        "Estado del chat de voz"
+
+REFERENCE           EMOTES
+LANG_ENGLISH        "Emotes"
+LANG_SPANISH        "Gestos"
+
+REFERENCE           SIT
+LANG_ENGLISH        "Sit"
+LANG_SPANISH        "Sentarse"
+
+REFERENCE           KNEEL
+LANG_ENGLISH        "Kneel"
+LANG_SPANISH        "Arrodillarse"
+
+REFERENCE           HELLO
+LANG_ENGLISH        "Hello"
+LANG_SPANISH        "Hola"
+
+REFERENCE           VICTORY
+LANG_ENGLISH        "Victory"
+LANG_SPANISH        "Victoria"
+
+REFERENCE           COME_ON
+LANG_ENGLISH        "Come On"
+LANG_SPANISH        "Ven"
+
+REFERENCE           SURRENDER
+LANG_ENGLISH        "Surrender"
+LANG_SPANISH        "Rendirse"
+
+REFERENCE           BREAK_DANCE
+LANG_ENGLISH        "Break Dance"
+LANG_SPANISH        "Breakdance"
+
+REFERENCE           FLIP
+LANG_ENGLISH        "Flip"
+LANG_SPANISH        "Voltereta"
+
+REFERENCE           MORE
+LANG_ENGLISH        "More"
+LANG_SPANISH        "Más"
+
+REFERENCE           SIT_DIFFERENTLY
+LANG_ENGLISH        "Sit Differently"
+LANG_SPANISH        "Sentarse de otra forma"
+
+REFERENCE           NOD
+LANG_ENGLISH        "Nod"
+LANG_SPANISH        "Asentir"
+
+REFERENCE           SHAKE_HEAD
+LANG_ENGLISH        "Shake Head"
+LANG_SPANISH        "Negar con la cabeza"
+
+REFERENCE           AT_EASE
+LANG_ENGLISH        "At Ease"
+LANG_SPANISH        "Descanso"
+
+REFERENCE           BEG
+LANG_ENGLISH        "Beg"
+LANG_SPANISH        "Suplicar"
+
+REFERENCE           WAIT
+LANG_ENGLISH        "Wait"
+LANG_SPANISH        "Esperar"
+
+REFERENCE           HANDS_ON_HIPS
+LANG_ENGLISH        "Hands on Hips"
+LANG_SPANISH        "Manos en la cintura"
+
+REFERENCE           POWER
+LANG_ENGLISH        "Power"
+LANG_SPANISH        "Poder"
+
+REFERENCE           NEO
+LANG_ENGLISH        "Neo"
+LANG_SPANISH        "#same"
+
+REFERENCE           DUEL
+LANG_ENGLISH        "Duel"
+LANG_SPANISH        "Duelo"
+
+REFERENCE           CHALLENGE_TO_A_DUEL
+LANG_ENGLISH        "Challenge to a Duel"
+LANG_SPANISH        "Retar a un duelo"
+
+REFERENCE           JOIN_THE_GAME
+LANG_ENGLISH        "Join the Game"
+LANG_SPANISH        "Unirse a la partida"
+
+REFERENCE           JOIN_RED
+LANG_ENGLISH        "Join Red"
+LANG_SPANISH        "Unirse al rojo"
+
+REFERENCE           JOIN_BLUE
+LANG_ENGLISH        "Join Blue"
+LANG_SPANISH        "Unirse al azul"
+
+REFERENCE           SPECTATE
+LANG_ENGLISH        "Spectate"
+LANG_SPANISH        "Observar"
+
+REFERENCE           VOTE
+LANG_ENGLISH        "Vote"
+LANG_SPANISH        "Votación"
+
+REFERENCE           YES
+LANG_ENGLISH        "Yes"
+LANG_SPANISH        "Sí"
+
+REFERENCE           NO
+LANG_ENGLISH        "No"
+LANG_SPANISH        "#same"
+
+REFERENCE           RESTART_THE_MAP
+LANG_ENGLISH        "Restart the Map"
+LANG_SPANISH        "Reiniciar el mapa"
+
+REFERENCE           SHOW
+LANG_ENGLISH        "Show"
+LANG_SPANISH        "Mostrar"
+
+REFERENCE           FRAME_RATE
+LANG_ENGLISH        "Frame Rate"
+LANG_SPANISH        "Fotogramas por segundo"
+
+REFERENCE           TIMER
+LANG_ENGLISH        "Timer"
+LANG_SPANISH        "Cronómetro"
+
+REFERENCE           LAGOMETER
+LANG_ENGLISH        "Lagometer"
+LANG_SPANISH        "Lagómetro"
+
+REFERENCE           SCREENSHOT
+LANG_ENGLISH        "Screenshot"
+LANG_SPANISH        "Captura de pantalla"
 
 
 ENDMARKER

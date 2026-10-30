@@ -1851,6 +1851,13 @@ qboolean	CG_RadialOpen( void );
 void		CG_RadialClose( void );
 qboolean	CG_RadialKey( int key, qboolean down );
 void		CG_RadialDraw( void );
+
+// cmdmenu/cg_cmdmenu.c: the command menu (v_commandmenu), a mode of the pointer as the quick wheel is
+void		CG_CmdMenu_f( void );
+qboolean	CG_CmdMenuOpen( void );
+void		CG_CmdMenuClose( void );
+qboolean	CG_CmdMenuKey( int key, qboolean down );
+void		CG_CmdMenuDraw( void );
 void		CG_SelectCursor_f( void );
 // what the card of a player uses of the chat box, the voice chat and the key login
 qboolean	CG_ChatIsOpen( void );

@@ -89,6 +89,12 @@ LANG_ENGLISH        "Scoreboard with Mouse"
 REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 
+REFERENCE           COMMAND_MENU
+LANG_ENGLISH        "Command Menu"
+
+REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
+LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 
@@ -1738,6 +1744,123 @@ LANG_ENGLISH        "Never used"
 
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
+
+REFERENCE           PLACE_A_BOOMBOX
+LANG_ENGLISH        "Place a Boombox"
+
+REFERENCE           PLACE_A_SOUND_SYSTEM
+LANG_ENGLISH        "Place a Sound System"
+
+REFERENCE           MUTE_EVERYBODY
+LANG_ENGLISH        "Mute Everybody"
+
+REFERENCE           HEAR_EVERYBODY_AGAIN
+LANG_ENGLISH        "Hear Everybody Again"
+
+REFERENCE           VOICE_CHAT_STATUS
+LANG_ENGLISH        "Voice Chat Status"
+
+REFERENCE           EMOTES
+LANG_ENGLISH        "Emotes"
+
+REFERENCE           SIT
+LANG_ENGLISH        "Sit"
+
+REFERENCE           KNEEL
+LANG_ENGLISH        "Kneel"
+
+REFERENCE           HELLO
+LANG_ENGLISH        "Hello"
+
+REFERENCE           VICTORY
+LANG_ENGLISH        "Victory"
+
+REFERENCE           COME_ON
+LANG_ENGLISH        "Come On"
+
+REFERENCE           SURRENDER
+LANG_ENGLISH        "Surrender"
+
+REFERENCE           BREAK_DANCE
+LANG_ENGLISH        "Break Dance"
+
+REFERENCE           FLIP
+LANG_ENGLISH        "Flip"
+
+REFERENCE           MORE
+LANG_ENGLISH        "More"
+
+REFERENCE           SIT_DIFFERENTLY
+LANG_ENGLISH        "Sit Differently"
+
+REFERENCE           NOD
+LANG_ENGLISH        "Nod"
+
+REFERENCE           SHAKE_HEAD
+LANG_ENGLISH        "Shake Head"
+
+REFERENCE           AT_EASE
+LANG_ENGLISH        "At Ease"
+
+REFERENCE           BEG
+LANG_ENGLISH        "Beg"
+
+REFERENCE           WAIT
+LANG_ENGLISH        "Wait"
+
+REFERENCE           HANDS_ON_HIPS
+LANG_ENGLISH        "Hands on Hips"
+
+REFERENCE           POWER
+LANG_ENGLISH        "Power"
+
+REFERENCE           NEO
+LANG_ENGLISH        "Neo"
+
+REFERENCE           DUEL
+LANG_ENGLISH        "Duel"
+
+REFERENCE           CHALLENGE_TO_A_DUEL
+LANG_ENGLISH        "Challenge to a Duel"
+
+REFERENCE           JOIN_THE_GAME
+LANG_ENGLISH        "Join the Game"
+
+REFERENCE           JOIN_RED
+LANG_ENGLISH        "Join Red"
+
+REFERENCE           JOIN_BLUE
+LANG_ENGLISH        "Join Blue"
+
+REFERENCE           SPECTATE
+LANG_ENGLISH        "Spectate"
+
+REFERENCE           VOTE
+LANG_ENGLISH        "Vote"
+
+REFERENCE           YES
+LANG_ENGLISH        "Yes"
+
+REFERENCE           NO
+LANG_ENGLISH        "No"
+
+REFERENCE           RESTART_THE_MAP
+LANG_ENGLISH        "Restart the Map"
+
+REFERENCE           SHOW
+LANG_ENGLISH        "Show"
+
+REFERENCE           FRAME_RATE
+LANG_ENGLISH        "Frame Rate"
+
+REFERENCE           TIMER
+LANG_ENGLISH        "Timer"
+
+REFERENCE           LAGOMETER
+LANG_ENGLISH        "Lagometer"
+
+REFERENCE           SCREENSHOT
+LANG_ENGLISH        "Screenshot"
 
 
 ENDMARKER

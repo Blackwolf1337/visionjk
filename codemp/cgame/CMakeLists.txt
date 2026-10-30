@@ -222,6 +222,13 @@ set(MPCGameRadialFiles
 source_group("cgame/radial" FILES ${MPCGameRadialFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameRadialFiles})
 
+# the command menu (v_commandmenu), a mode of the pointer too
+set(MPCGameCmdMenuFiles
+	"${MPDir}/cgame/cmdmenu/cg_cmdmenu.c"
+	)
+source_group("cgame/cmdmenu" FILES ${MPCGameCmdMenuFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameCmdMenuFiles})
+
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
