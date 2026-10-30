@@ -29,7 +29,6 @@ codemp/cgame/cg_drawtools.c:nullPointerRedundantCheck:warning:Either the conditi
 codemp/cgame/cg_effects.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'customChunk>0' is redundant or the array 'cgs.gameModels[512]' is accessed at index 512, which is out of bounds.
 codemp/cgame/cg_main.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'index>=1700' is redundant or the array 'cgs.gameState.stringOffsets[1700]' is accessed at index 1700, which is out of bounds.
 codemp/cgame/cg_players.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'clientNum>=32' is redundant or the array 'cg_entities[1024]' is accessed at index 1024, which is out of bounds.
-codemp/cgame/cg_players.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'j<1024' is redundant or the array 'iconName[1024]' is accessed at index 1024, which is out of bounds.
 codemp/cgame/cg_players.c:nullPointerRedundantCheck:warning:Either the condition 'surfOff' is redundant or there is possible null pointer dereference: surfOff.
 codemp/cgame/cg_players.c:nullPointerRedundantCheck:warning:Either the condition 'surfOn' is redundant or there is possible null pointer dereference: surfOn.
 codemp/cgame/cg_players.c:uninitvar:error:Uninitialized variable: verts
@@ -51,6 +50,7 @@ codemp/client/cl_net_chan.cpp:dangerousTypeCast:warning:Potentially invalid type
 codemp/client/cl_parse.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/client/cl_scrn.cpp:nullPointerArithmeticRedundantCheck:warning:Either the condition 's' is redundant or there is pointer arithmetic with NULL pointer.
 codemp/client/cl_scrn.cpp:nullPointerRedundantCheck:warning:Either the condition 's' is redundant or there is possible null pointer dereference: s.
+codemp/client/cl_tv.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/client/fx/FxPrimitives.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2End' is not initialized in the constructor.
 codemp/client/fx/FxPrimitives.cpp:uninitMemberVar:warning:Member variable 'CCylinder::mSize2Parm' is not initialized in the constructor.
@@ -124,7 +124,6 @@ codemp/client/fx/FxSystem.cpp:dangerousTypeCast:warning:Potentially invalid type
 codemp/client/fx/FxSystem.cpp:uninitMemberVar:warning:Member variable 'SFxHelper::mRealTime' is not initialized in the constructor.
 codemp/client/fx/FxSystem.h:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/client/fx/FxSystem.h:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/client/fx/FxTemplate.cpp:invalidscanf:warning:sscanf() without field width limits can crash with huge input data.
 codemp/client/fx/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mMatImpactFX' is not assigned a value in 'CPrimitiveTemplate::operator='.
 codemp/client/fx/FxTemplate.cpp:operatorEqVarError:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not assigned a value in 'CPrimitiveTemplate::operator='.
 codemp/client/fx/FxTemplate.cpp:uninitMemberVar:warning:Member variable 'CPrimitiveTemplate::mRefCount' is not initialized in the constructor.
@@ -151,16 +150,16 @@ codemp/client/sound/spatial/snd_spatial_local.h:memsetClassFloat:portability:Usi
 codemp/client/sound/spatial/snd_spatial_render.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/client/sound/spatial/snd_spatial_sim.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/client/sound/spatial/snd_spatial_voice.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/game/bots/ai_main.c:identicalInnerCondition:warning:Identical inner 'if' condition is always true.
-codemp/game/bots/ai_main.c:incorrectLogicOperator:warning:Logical disjunction always evaluates to true: !bs->currentEnemy || bs->currentEnemy.
-codemp/game/bots/ai_main.c:nullPointerRedundantCheck:warning:Either the condition 'bs' is redundant or there is possible null pointer dereference: bs.
-codemp/game/bots/ai_util.c:ctunullpointer:warning:Null pointer dereference: bs
 codemp/game/bg/bg_pmove.c:nullPointerRedundantCheck:warning:Either the condition '!veh' is redundant or there is possible null pointer dereference: veh.
 codemp/game/bg/bg_saber.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'clientNum<32' is redundant or the array 'cg_entities[1024]' is accessed at index 1025, which is out of bounds.
 codemp/game/bg/bg_slidemove.c:nullPointerRedundantCheck:warning:Either the condition 'pSelfVeh' is redundant or there is possible null pointer dereference: pSelfVeh.
 codemp/game/bg/bg_slidemove.c:nullPointerRedundantCheck:warning:Either the condition 'trace' is redundant or there is possible null pointer dereference: trace.
 codemp/game/bg/bg_vehicleLoad.c:invalidPointerCast:portability:Casting between unsigned char * and float * which have an incompatible binary data representation.
 codemp/game/boombox/bg_boombox_core.c:arrayIndexOutOfBoundsCond:warning:Either the condition 'index<1' is redundant or the array 'box->songs[16]' is accessed at index 17, which is out of bounds.
+codemp/game/bots/ai_main.c:identicalInnerCondition:warning:Identical inner 'if' condition is always true.
+codemp/game/bots/ai_main.c:incorrectLogicOperator:warning:Logical disjunction always evaluates to true: !bs->currentEnemy || bs->currentEnemy.
+codemp/game/bots/ai_main.c:nullPointerRedundantCheck:warning:Either the condition 'bs' is redundant or there is possible null pointer dereference: bs.
+codemp/game/bots/ai_util.c:ctunullpointer:warning:Null pointer dereference: bs
 codemp/game/g_cmds.c:nullPointerRedundantCheck:warning:Either the condition 'ent->client' is redundant or there is possible null pointer dereference: ent->client.
 codemp/game/g_cmds.c:nullPointerRedundantCheck:warning:Either the condition '!it_ent' is redundant or there is possible null pointer dereference: it_ent.
 codemp/game/g_combat.c:identicalInnerCondition:warning:Identical inner 'if' condition is always true.
@@ -290,6 +289,7 @@ codemp/icarus/TaskManager.cpp:uninitMemberVar:warning:Member variable 'CTask::m_
 codemp/icarus/TaskManager.cpp:uninitMemberVar:warning:Member variable 'CTask::m_timeStamp' is not initialized in the constructor.
 codemp/icarus/tokenizer.h:duplInheritedMember:warning:The class 'CDirectiveSymbol' defines member function with name 'Create' also defined in its parent class 'CSymbol'.
 codemp/icarus/tokenizer.h:duplInheritedMember:warning:The class 'CParseBlock' defines member function with name 'Create' also defined in its parent class 'CParseMemory'.
+codemp/master/ms_repnet.c:uninitvar:warning:Uninitialized variable: argv
 codemp/mp3code/cwinb.c:shiftNegativeLHS:portability:Shifting a negative value is technically undefined behaviour
 codemp/mp3code/upsf.c:negativeIndex:error:Array 'sf[0]' accessed at index -2, which is out of bounds.
 codemp/qcommon/cm/cm_load.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
@@ -309,12 +309,12 @@ codemp/qcommon/GenericParser2.cpp:noOperatorEq:warning:Class 'CGPValue' does not
 codemp/qcommon/GenericParser2.h:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/GenericParser2.h:duplInheritedMember:warning:The class 'CGPGroup' defines member function with name 'GetNext' also defined in its parent class 'CGPObject'.
 codemp/qcommon/GenericParser2.h:duplInheritedMember:warning:The class 'CGPValue' defines member function with name 'GetNext' also defined in its parent class 'CGPObject'.
-codemp/qcommon/net/huffman.cpp:uninitvar:warning:Uninitialized variable: seq
 codemp/qcommon/matcomp.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/md4.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/md5.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/MiniHeap.h:noCopyConstructor:warning:Class 'CMiniHeap' does not have a copy constructor which is recommended since it has dynamic memory/resource management.
 codemp/qcommon/MiniHeap.h:noOperatorEq:warning:Class 'CMiniHeap' does not have a operator= which is recommended since it has dynamic memory/resource management.
+codemp/qcommon/net/huffman.cpp:uninitvar:warning:Uninitialized variable: seq
 codemp/qcommon/net/msg.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/qcommon/net/msg.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
 codemp/qcommon/net/msg.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
@@ -476,6 +476,7 @@ codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'C
 codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mSpawnSpeed' is not initialized in the constructor.
 codemp/rd-vulkan-vision/vk_backend.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/rd-vulkan-vision/vk_backend.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/vk_cmd.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/rd-vulkan-vision/vk_frame.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/rd-vulkan-vision/vk_frame.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/rd-vulkan-vision/vk_gl.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
@@ -508,10 +509,10 @@ codemp/server/sv_game.cpp:dangerousTypeCast:warning:Potentially invalid type con
 codemp/server/sv_init.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/server/sv_main.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/server/sv_snapshot.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/server/sv_tv.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/server/sv_world.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/server/web/sv_web.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/server/web/sv_web_voice.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/ui/ui_shared.c:autoVariables:error:Address of local auto-variable assigned to a function parameter.
 codemp/ui/ui_shared.c:nullPointerRedundantCheck:warning:Either the condition '!nextFree' is redundant or there is possible null pointer dereference: nextFree.
 shared/qcommon/q_math.c:assertWithSideEffect:warning:Assert statement calls a function which may have desired side effects: 'Q_fabs'.
 shared/qcommon/q_string.c:nullPointerArithmeticRedundantCheck:warning:Either the condition 'p' is redundant or there is pointer arithmetic with NULL pointer.
