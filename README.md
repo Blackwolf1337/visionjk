@@ -156,6 +156,7 @@ Keys are set under Controls, Extras. Commands go into the console.
 | Clan Radio (Talk), `+v_voiceclan` | talk to the clan with the same clan password |
 | Free the Mouse (Select Players), `+v_cursor` | free the mouse to click players, left Alt by default |
 | Quick Wheel (Boombox), `+v_radial` | a ring to place a boombox or a sound system, not bound by default |
+| Command Menu, `v_commandmenu` | lists of what VisionJK can do, a number key or a click picks one, not bound by default |
 | Scoreboard key twice | keep the scoreboard open with the mouse free |
 | `v_voice_mute <name>` | mute a player, `v_voice_unmute <name>` or `all` undoes it |
 | `v_voice_status` | show if the voice chat is connected |
