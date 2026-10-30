@@ -448,7 +448,8 @@ void SVC_Status( const netadr_t *from ) {
 	if(strlen(Cmd_Argv(1)) > 128)
 		return;
 
-	Q_strncpyz( infostring, Cvar_InfoString( CVAR_SERVERINFO ), sizeof( infostring ) );
+	// (with room for the challenge: a full server info had no room left for it, and the reply was thrown away)
+	Q_strncpyz( infostring, Cvar_InfoStringRoom( CVAR_SERVERINFO, (int)strlen( Cmd_Argv( 1 ) ) + 12 ), sizeof( infostring ) );
 
 	// echo back the parameter to status. so master servers can use it as a challenge
 	// to prevent timed spoofed reply packets that add ghost servers

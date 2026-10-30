@@ -564,6 +564,7 @@ qboolean Cvar_RenamedText( const char *in, char *out, int outSize );
 void	Cvar_Init( void );
 
 char	*Cvar_InfoString( int bit );
+char	*Cvar_InfoStringRoom( int bit, int room );	// VisionJK: room bytes left free for what is added behind it
 char	*Cvar_InfoString_Big( int bit );
 // returns an info string containing all the cvars that have the given bit set
 // in their flags ( CVAR_USERINFO, CVAR_SERVERINFO, CVAR_SYSTEMINFO, etc )

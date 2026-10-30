@@ -1504,24 +1504,71 @@ void Cvar_Restart_f( void ) {
 /*
 =====================
 Cvar_InfoString
+
+VisionJK: an info string has room for 1024 bytes. The server info of a JA+ server with the cvars of VisionJK
+and an owner's own "sets" has more, and what did not fit was whatever came last, fs_game among it (seen on
+jka.vision 2026-10-30). So the keys clients and server browsers go by are put in first, and what is left out is
+named once, not the whole string with every status query. Cvar_InfoStringRoom leaves room for what is added
+behind it: the challenge of a status reply, without which a master or server list throws the reply away.
 =====================
 */
-char	*Cvar_InfoString( int bit ) {
+static const char *const cvarInfoFirst[] = {
+	"sv_hostname", "mapname", "g_gametype", "fs_game", "protocol", "sv_maxclients", "g_needpass", "g_humanplayers",
+	"sv_privateClients", "version", "gamename", "vs_caps", "vs_voice", "vs_boombox", "g_maxForceRank",
+	"g_forceBasedTeams", "g_maxGameClients", "timelimit", "fraglimit", "duel_fraglimit", "capturelimit",
+	"g_teamsize", "g_doWarmup", "bot_minplayers", "dmflags", NULL
+};
+
+static qboolean Cvar_InfoAdd( char *info, int size, const cvar_t *var, int bit, char *dropped, int droppedSize ) {
+	if ( ( var->flags & CVAR_INTERNAL ) || !var->name || !( var->flags & bit ) || Info_ValueForKey( info, var->name )[0] ) {
+		return qfalse;
+	}
+	if ( var->string[0] && strlen( info ) + strlen( var->name ) + strlen( var->string ) + 2 >= (size_t)size ) {
+		if ( strlen( dropped ) + strlen( var->name ) + 2 < (size_t)droppedSize ) {
+			Q_strcat( dropped, droppedSize, dropped[0] ? " " : "" );
+			Q_strcat( dropped, droppedSize, var->name );
+		}
+		return qfalse;
+	}
+	Info_SetValueForKey( info, var->name, var->string );
+	return qtrue;
+}
+
+char	*Cvar_InfoStringRoom( int bit, int room ) {
 	static char	info[MAX_INFO_STRING];
-	cvar_t	*var;
+	const int	size = MAX_INFO_STRING - Com_Clampi( 0, MAX_INFO_STRING / 2, room );
+	static char	lastDropped[3][256];		// what was named before: the server info, with room behind it, the rest
+	char		dropped[256] = "";
+	char		*last = lastDropped[!( bit & CVAR_SERVERINFO ) ? 2 : room > 0 ? 1 : 0];
+	cvar_t		*var;
+	int			i;
 
 	info[0] = 0;
 
-	for (var = cvar_vars ; var ; var = var->next)
-	{
-		if (!(var->flags & CVAR_INTERNAL) && var->name &&
-			(var->flags & bit))
-		{
-			Info_SetValueForKey (info, var->name, var->string);
+	if ( bit & CVAR_SERVERINFO ) {
+		for ( i = 0; cvarInfoFirst[i]; i++ ) {
+			if ( ( var = Cvar_FindVar( cvarInfoFirst[i] ) ) != NULL ) {
+				Cvar_InfoAdd( info, size, var, bit, dropped, sizeof( dropped ) );
+			}
 		}
 	}
+	for (var = cvar_vars ; var ; var = var->next)
+	{
+		Cvar_InfoAdd( info, size, var, bit, dropped, sizeof( dropped ) );
+	}
 
+	if ( strcmp( dropped, last ) ) {
+		if ( dropped[0] ) {
+			Com_Printf( S_COLOR_YELLOW "%s info: no room for %s (%d bytes in all)\n", ( bit & CVAR_SERVERINFO ) ? "Server" : "Cvar",
+				dropped, MAX_INFO_STRING );
+		}
+		Q_strncpyz( last, dropped, sizeof( lastDropped[0] ) );
+	}
 	return info;
+}
+
+char	*Cvar_InfoString( int bit ) {
+	return Cvar_InfoStringRoom( bit, 0 );
 }
 
 /*
