@@ -149,6 +149,10 @@ void SV_SetConfigstring (int index, const char *val) {
 
 			SV_SendConfigstring(client, index);
 		}
+		// and the TV of the server (sv_tv.cpp)
+		if ( SV_TVClient() ) {
+			SV_SendConfigstring( SV_TVClient(), index );
+		}
 	}
 }
 
@@ -475,6 +479,7 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 	re->RegisterMedia_LevelLoadBegin(server, eForceReload);
 
 	// shut down the existing game if it is running
+	SV_TVStop( "the level ends" );
 	SV_ShutdownGameProgs();
 	Com_LoadPop();
 	svs.gameStarted = qfalse;
@@ -1007,6 +1012,7 @@ void SV_Init (void) {
 	SV_IDSTest_Init();
 #endif
 	SV_VoiceInit();
+	SV_TVInit();
 #ifdef VISION_MASTER
 	SV_RepInit();
 #endif
@@ -1146,6 +1152,7 @@ void SV_Shutdown( char *finalmsg )
 	SV_VoiceShutdown();
 	SV_RepShutdown();
 #endif
+	SV_TVStop( "the level ends" );
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;
 /*
