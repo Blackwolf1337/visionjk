@@ -929,44 +929,6 @@ if(BuildMPDed)
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")
 	target_link_libraries(${MPDed} ${MPDedLibraries})
 
-	# The masterserver: the same program with the relay for the servers without the game module of this
-	# tree inside (server/sv_voice.cpp, master/ms_relay.c), one UDP port for the voice chat, the clan radio,
-	# the statuses and the boombox of those servers. For the hosts of VisionJK itself: there
-	# is no install rule.
-	if(BuildMasterServer)
-		# It plays the boxes of the boombox of those servers with the core of the game module, and codes their
-		# songs with the Opus of the voice chat (BuildJPVoice).
-		set(MasterServerFiles
-			${MPDedFiles}
-			"${MPDir}/master/ms_relay.c"
-			"${MPDir}/master/ms_relay.h"
-			"${MPDir}/master/ms_reputation.c"
-			"${MPDir}/master/ms_reputation.h"
-			"${MPDir}/server/sv_reputation.cpp"
-			"${MPDir}/master/ms_boombox.c"
-			"${MPDir}/master/ms_local.h"
-			"${MPDir}/game/boombox/bg_boombox.c"
-			"${MPDir}/game/boombox/bg_boombox_core.c"
-			"${MPDir}/game/boombox/bg_boombox_fetch.c"
-			"${MPDir}/game/boombox/bg_boombox.h"
-			"${MPDir}/game/boombox/bg_boombox_core.h"
-			)
-		set(MasterServerDefines ${MPDedDefines} "VISION_MASTER")
-		set(MasterServerIncludes ${MPDedIncludeDirectories})
-		set(MasterServerLibraries ${MPDedLibraries})
-		if(TARGET bundled_opus)
-			set(MasterServerDefines ${MasterServerDefines} "JP_BOOMBOX")
-			set(MasterServerIncludes ${MasterServerIncludes} "${VisionJKLibDir}/opus/include")
-			set(MasterServerLibraries ${MasterServerLibraries} bundled_opus)
-		endif()
-		add_executable(${MasterServer} ${MasterServerFiles})
-		set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MasterServerDefines}")
-		set_property(TARGET ${MasterServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
-		set_target_properties(${MasterServer} PROPERTIES INCLUDE_DIRECTORIES "${MasterServerIncludes}")
-		set_target_properties(${MasterServer} PROPERTIES PROJECT_LABEL "Masterserver")
-		target_link_libraries(${MasterServer} ${MasterServerLibraries})
-	endif(BuildMasterServer)
-
 	# The test server of the intrusion detection of the client: the same program, and with vs_idsTest it sends
 	# what no server of the game does (server/sv_idstest.cpp). For tools/test/ids-test.sh, never installed.
 	if(BuildDevIdsTest)
@@ -979,3 +941,52 @@ if(BuildMPDed)
 		message(STATUS "BuildDevIdsTest is on: developer build, not for a release")
 	endif(BuildDevIdsTest)
 endif(BuildMPDed)
+
+# The masterserver: a program of its own (master/ms_main.c), one UDP port for the voice chat, the clan radio, the
+# statuses and the boombox of the servers without the game module of this tree, and for the reputation of game
+# servers. No engine and no game module in it. For the hosts of VisionJK itself: there is no install rule.
+if(BuildMasterServer)
+	# It plays the boxes of the boombox of those servers with the core of the game module, and codes their songs
+	# with the Opus of the voice chat (BuildJPVoice).
+	set(MasterServerFiles
+		"${MPDir}/master/ms_main.c"
+		"${MPDir}/master/ms_relay.c"
+		"${MPDir}/master/ms_relay.h"
+		"${MPDir}/master/ms_reputation.c"
+		"${MPDir}/master/ms_reputation.h"
+		"${MPDir}/master/ms_repnet.c"
+		"${MPDir}/master/ms_repnet.h"
+		"${MPDir}/master/ms_boombox.c"
+		"${MPDir}/master/ms_local.h"
+		"${MPDir}/game/voice/bg_voice.c"
+		"${MPDir}/game/boombox/bg_boombox.c"
+		"${MPDir}/game/boombox/bg_boombox_core.c"
+		"${MPDir}/game/boombox/bg_boombox_fetch.c"
+		"${MPDir}/game/boombox/bg_boombox.h"
+		"${MPDir}/game/boombox/bg_boombox_core.h"
+		"${MPDir}/qcommon/q_shared.c"
+		"${SharedDir}/qcommon/q_string.c"
+		"${SharedDir}/qcommon/q_math.c"
+		"${SharedDir}/qcommon/q_color.c"
+		"${SharedDir}/web/web_sha1.c"
+		)
+	set(MasterServerDefines ${MPSharedDefines})
+	set(MasterServerIncludes "${SharedDir}" "${MPDir}")
+	set(MasterServerLibraries "")
+	if(WIN32)
+		set(MasterServerLibraries ${MasterServerLibraries} ws2_32)
+	else()
+		set(MasterServerLibraries ${MasterServerLibraries} m)
+	endif()
+	if(TARGET bundled_opus)
+		set(MasterServerDefines ${MasterServerDefines} "JP_BOOMBOX")
+		set(MasterServerIncludes ${MasterServerIncludes} "${VisionJKLibDir}/opus/include")
+		set(MasterServerLibraries ${MasterServerLibraries} bundled_opus)
+	endif()
+	add_executable(${MasterServer} ${MasterServerFiles})
+	set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MasterServerDefines}")
+	set_property(TARGET ${MasterServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+	set_target_properties(${MasterServer} PROPERTIES INCLUDE_DIRECTORIES "${MasterServerIncludes}")
+	set_target_properties(${MasterServer} PROPERTIES PROJECT_LABEL "Masterserver")
+	target_link_libraries(${MasterServer} ${MasterServerLibraries})
+endif(BuildMasterServer)

@@ -40,6 +40,7 @@ set(TestFiles
 	"vjk/stringed.cpp"
 	"vjk/memwatch.cpp"
 	"vjk/reputation.cpp"
+	"vjk/repnet.cpp"
 	"vjk/markdown.cpp"
 	"vjk/cfgedit.cpp"
 	"vjk/cvarseen.cpp"
@@ -56,6 +57,8 @@ set(TestCFiles
 	"${SharedDir}/web/web_missing.c"
 	"${SharedDir}/sys/sys_memwatch_rules.c"
 	"${MPDir}/master/ms_reputation.c"
+	"${MPDir}/master/ms_repnet.c"
+	"${SharedDir}/web/web_sha1.c"
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/game/voice/bg_voice.c"
 	"${MPDir}/game/auth/bg_auth.c"
@@ -87,6 +90,9 @@ find_package( Boost COMPONENTS unit_test_framework REQUIRED )
 
 set(TestTarget "UnitTests")
 set(TestLibraries "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}")
+if(WIN32)
+	set(TestLibraries ${TestLibraries} ws2_32)	# the addresses of the reputation (vjk/repnet.cpp)
+endif()
 set(TestIncludeDirectories
 	"${Boost_INCLUDE_DIRS}"
 	"${SharedDir}"

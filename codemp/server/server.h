@@ -484,16 +484,6 @@ void		SV_IDSTest_Unasked( client_t *cl, msg_t *msg );
 void		SV_VoiceInit( void );
 qboolean	SV_VoicePacket( const netadr_t *from, msg_t *msg );
 void		SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length );
-#ifdef VISION_MASTER
-void		SV_VoiceFrame( void );
-void		SV_VoiceShutdown( void );
-
-// sv_reputation.cpp: the reports of the intrusion detection of the clients
-void		SV_RepInit( void );
-void		SV_RepShutdown( void );
-void		SV_RepFrame( void );
-qboolean	SV_RepPacket( const netadr_t *from, const char *command );
-#endif
 
 extern	cvar_t	*vs_antiWallhack;		// sv_snapshot.cpp
 
