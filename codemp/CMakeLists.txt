@@ -956,6 +956,9 @@ if(BuildMasterServer)
 		"${MPDir}/master/ms_reputation.h"
 		"${MPDir}/master/ms_repnet.c"
 		"${MPDir}/master/ms_repnet.h"
+		"${MPDir}/master/ms_http.c"
+		"${MPDir}/master/ms_http.h"
+		"${CMAKE_CURRENT_BINARY_DIR}/master_page.h"
 		"${MPDir}/master/ms_boombox.c"
 		"${MPDir}/master/ms_local.h"
 		"${MPDir}/game/voice/bg_voice.c"
@@ -969,9 +972,15 @@ if(BuildMasterServer)
 		"${SharedDir}/qcommon/q_math.c"
 		"${SharedDir}/qcommon/q_color.c"
 		"${SharedDir}/web/web_sha1.c"
+		"${SharedDir}/web/web_http.c"
 		)
+	# the page of its panel (ms_http.c), built in
+	add_custom_command(
+		OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/master_page.h"
+		COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/master/page/master.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/master_page.h" -DNAME=master_page -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+		DEPENDS "${MPDir}/master/page/master.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake")
 	set(MasterServerDefines ${MPSharedDefines})
-	set(MasterServerIncludes "${SharedDir}" "${MPDir}")
+	set(MasterServerIncludes "${SharedDir}" "${MPDir}" "${CMAKE_CURRENT_BINARY_DIR}")
 	set(MasterServerLibraries "")
 	if(WIN32)
 		set(MasterServerLibraries ${MasterServerLibraries} ws2_32)
