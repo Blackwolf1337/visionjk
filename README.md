@@ -138,7 +138,7 @@ Choose Play, then Join a Game, pick a server and join. VisionJK works with norma
 
 Open Controls, then Extras, and give keys to the grappling hook, the jetpack, the full force duel and the voice chat. The server decides what is allowed. If the hook or the jetpack do nothing, the server has switched them off.
 
-Setup has the video, sound, interface, chat and network options. Setup, Video has the renderer: Vulkan is the new one, OpenGL the classic one. Setup, Sound has 3D sound and the voice chat settings.
+Setup has the video, sound, game, HUD, chat and network options, in tabs by topic. Headings in the lists fold, and a search field at the top finds a setting by its name. Setup, Video has the renderer: Vulkan is the new one, OpenGL the classic one. Setup, Sound has 3D sound and the voice chat settings.
 
 The client tells you when a new version is out: a line appears at the bottom of the main menu, and a click updates the game. To do this it asks the website once at every start. `v_updateCheck 0` switches that off.
 

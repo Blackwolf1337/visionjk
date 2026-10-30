@@ -18,7 +18,7 @@ HUD of its own gets them drawn as it always did, see "For mods".
 | `v_hud` | 1 | 0: the HUD of the game |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 
-Both are in Setup under Interface.
+Both are in Setup, HUD, under Menus and HUD.
 
 - Outside a game every page has a bar at the top with the four sections (Play, Profile, Controls, Setup), a
   heading, the explanation of what the mouse is on under it, and a bar at the bottom with its buttons: what
@@ -69,8 +69,8 @@ Both are in Setup under Interface.
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
-- Setup has seven pages in place of eleven tabs: Video, Sound (with the 3D sound and the voice chat), Game
-  Options (with the language), Interface, Chat & Social, Network and Mods. Controls has
+- Setup has seven pages in place of eleven tabs, by topic: Video, Sound (with the 3D sound and the voice chat),
+  Game (with the language), HUD, Chat & Social, Network and Mods. See "The Setup screen" below. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
   (what JA+ and VisionJK add). The settings that only the console had are in them: see the table at the end.
 - The pages of the player are one screen too: Profile, Character, Lightsaber, and in a game Force and Moves, as
@@ -152,6 +152,11 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `type ITEM_TYPE_DESC` | in its rectangle: the `text` of the item in focus in capitals and its `descText` in lines that fit, or those of the tab of the open page. A menu that has one does not draw the line of `descX` |
 | itemDef | `type ITEM_TYPE_PAGESCROLL` | the bar of the list of the open page in its rectangle, to be dragged. Not there while the list fits its window |
 | script | `setpage <n>` | opens that page |
+| itemDef | `fold <n>` | a heading that is a button: a click folds the rows under it away or brings them back. n is unique in its menu. An arrow at its right end points down while it is open and right while it is folded |
+| menuDef | `foldCvar <cvar>` | the cvar that keeps which headings are folded, as a list of numbers. Saved |
+| menuDef | `searchCvar <cvar>` | the cvar of the search field of the menu. Not saved. Setting it shows the rows that match, see "The Setup screen" |
+| itemDef | `hint 1` | an edit field that shows its `text` dimmed while it is empty |
+| itemDef | `descPic <picture> <name a> <name b>` | a row: the pane shows `<picture>_a` and `<picture>_b` by turns under the description, with the name of the value on a dark band at the foot. The names are text references or numbers without quotes |
 | itemDef | `otherText <text>` | what a choice (`ITEM_TYPE_MULTI`) shows while its cvar has a value that is none of its settings, in place of "Custom" |
 
 The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
@@ -164,6 +169,60 @@ The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (n
 A filled window that is less than a unit high is drawn as a line of one pixel at any size of the window. While
 the menus stand on their panel in the level a line that thin would break into dashes, so there it is a strip
 with soft edges.
+
+## The Setup screen
+
+The tabs of Setup are by topic (`SETUP` in `tools/menus/options.py`, the same outside a game and in one). Every
+row has its cvar and its script as before, only its place changed.
+
+| Tab | Headings |
+|-----|----------|
+| Video | Screen (with Render Scale), Detail, Vulkan Renderer (Bloom, Bloom Strength, Bloom Threshold), Screen Effects |
+| Sound | Volume, 3D Sound, Hits (Hit Sounds, Kill Sound), Voice Chat, Boombox |
+| Game | Game, Language, Lightsabers (with Saber Team Colours, Two-Coloured Staff), Duels, Players (Enemy Model, Ally Model), Hats and Capes, Weapons (Jedi Outcast Shots, Disruptor Beam, Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, Binocular Lens, Rocket Lock-On) |
+| HUD | Menus and HUD, View (Field of View, Camera Distance, Smooth Camera), Crosshair (Crosshair Size, Crosshair Colour, Name Opacity, Lead Indicator), On Screen (Show Frame Rate, Show Timer, Timer Milliseconds, Timer Counts Down, Show Lagometer, Killfeed, Team Overlay Size, Scoreboard Clock, Spectator Map), Movement (the rows from TaystJK) |
+| Chat & Social | Players, Chat (with Chat Emoji, Chat Log, Name Alert), Notifications, Console (with Console Clock), Clan, Text (UTF-8 Text) |
+| Network | Updates and Downloads, Connection, Security |
+| Mods | unchanged |
+
+The tabs Interface and TaystJK of the days before are gone, and the tab Options is now Game.
+
+Folding: a heading of a list is a button (`fold <n>`). A click folds its rows away or brings them back, and the
+arrow at its right end points down while it is open and right while it is folded. Which headings are folded is
+kept in the saved cvar `v_setupFolds` (Setup) and `v_controlsFolds` (Controls, whose Extras page has headings), as
+a list of numbers (`foldCvar`).
+
+Search: the field at the top of the side pane of Setup has the word "Search" dimmed while it is empty (`hint 1`).
+From two letters on, the list shows the rows of all pages whose name or description has the words, with their
+headings, on page 0 (no tab is marked). When nothing matches it says "No setting has these words." A click on a tab
+ends the search, and so does opening the screen again (`Menus_Activate` empties the cvar). The cvar is
+`v_setupSearch`, not saved (`searchCvar`). In a menu of the new look a click beside an edit field that is being
+typed into also acts on what it hits, so one click on a tab is enough, not two.
+
+The layout is `Menu_ListLayout` in `codemp/ui/ui_shared.c`. A list is made of lines (items at the same height of
+the same page). Lines after a heading belong to it. Folded lines and lines the search does not match are out
+(`listOut`; `Item_OffPage` treats them as on no page) and the rest move up under each other, one step each.
+`Menu_ListCheck` lays the list out again once a frame when the search or the folds changed.
+
+Pictures: a row with `descPic` makes the pane show two pictures by turns, 1.4 s each with a fade of 0.4 s, so the
+change of the setting can be seen before it is made. Six settings have them: Texture Detail (Low and Very High),
+Brightness (0.8 and 1.4), Dynamic Glow (Off and On), Bloom (Off and On), Bloom Strength (0.3 and 1.2), Bloom
+Threshold (0.8 and 0.3). The table is `PICTURES` in `tools/menus/options.py`. The pictures are in
+`assets/japlus_client/gfx/menus/vision/setup`, 512 x 256 JPG (the engine takes no picture whose sides are not
+powers of two), drawn at 16:9, about 300 KB in all. `tools/menus/pictures.py <game folder> [<picture> ...]` takes
+them in the game: headless (`tools/test/headless.sh`), mp/duel1 by devmap, the player joins and stands at a spawn
+point facing stairs whose steps glow, in third person with the player not drawn (`cg_thirdPersonAlpha 0`, a player
+with a lightsaber is always in third person) and the camera lag off. For each picture it sets the cvars of a,
+restarts the video where needed, takes a screenshot, does the same for b, then crops and scales with Pillow.
+
+Taken and dropped, because they looked the same at the size of the pane: Geometric Detail, Texture Filter,
+Anisotropic Filter, Detailed Shaders, Anti-Aliasing, Render Scale. Shadows "More Realistic" (`cg_shadows 2`) drew
+the player as a purple, see-through figure with `rd-vulkan-vision`, so it has no picture (a possible renderer
+bug, not looked into).
+
+Two rules of the menu reader found on the way: a quoted string with a % in it is taken apart, and quoted strings
+that stand next to each other are joined into one. So the names of values are text references or numbers without
+quotes.
 
 ## How the menus are made
 
@@ -197,6 +256,8 @@ are.
   be given) and rows the old menus did not have. A row of the old menu keeps its cvar, its list and its
   script, without the commands that showed and marked the old tabs. The layout is the same for all four: in a
   game the screen is a window under the bar of the in-game menu.
+- `options.py` also has the table `PICTURES` (the before and after pictures of the rows, see "The Setup screen") and
+  `pictures.py` takes those pictures in the game.
 - `options.py` has one more kind of row, `('menu', name, menu, what for)`: it opens a window. The rows
   "Changelog" and "Clean Up Settings" of Setup and Network are of this kind.
 - `FRAMES` in `pages.py`: a window of this tree whose frame was a picture of the game gets that item as a glass
@@ -257,9 +318,10 @@ of the menus.
 |---------------|-------------------------------------|
 | Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`v_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
 | Sound | Room Reflections (`v_spatialReflections`), Sound Around Corners (`v_spatialPaths`), Doppler Effect (`s_doppler`) |
-| Interface | New HUD (`v_hud`), Classic Menus (`v_classic`), Menu in the Level (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`), under the heading Disruptor: Scope Lens (`v_scope`), Zoom with Mouse Wheel (`v_scopeWheelZoom`), Motion Tracker Speed (`v_motionThreshold`, the speed for the tracker, slider, 10 to 200, default 40) |
-| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
-| Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`), UTF-8 Text (`v_utf8`) |
+| HUD | New HUD (`v_hud`), Classic Menus (`v_classic`), Menu in the Level (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
+| Game | under the heading Weapons: Scope Lens (`v_scope`), Zoom with Mouse Wheel (`v_scopeWheelZoom`), Motion Tracker Speed (`v_motionThreshold`, the speed for the tracker, slider, 10 to 200, default 40) |
+| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars), UTF-8 Text (`v_utf8`, under the heading Text) |
+| Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`) |
 | Controls, Extras | Free the Mouse (`+v_cursor`), Scoreboard with Mouse (`v_scores_pick`) |
 
 The classic menus have none of the three disruptor rows, by design. The tracker of the scope has no row and no command: it is turned on and off with the key bound to `saberAttackCycle` while zoomed (see "The disruptor scope" in [client.md](client.md)).
@@ -269,7 +331,7 @@ can not list them), addresses (`v_voiceMasterHost`, `v_authAgentPath`, `v_update
 of the spatial sound and of the renderers, and what the game had no entry for either. The classic menus do
 not have the new entries.
 
-A setting of the cgame (most of Interface and Chat & Social) does not exist before the first level of a
+A setting of the cgame (most of HUD and Chat & Social) does not exist before the first level of a
 session was loaded unless the stored config has it. Outside a game its row then shows it as off, whatever
 its default is, and a click sets it.
 
@@ -382,6 +444,10 @@ mark of the chosen row is, and does not read that number. The same code draws al
 that have one (hilts, maps, servers, demos, mods, players to vote on, sets of force powers, moves). Seen at
 2560 x 1440: the hilts, the maps of a new game, the sets of force powers, the maps of a vote.
 
+2026-10-30, Setup by topic, headings that fold, the search and the pictures (#10), by screenshots of a headless
+client (`rd-vulkan-vision`, 1280 x 720): every tab, a fold by click and its saved cvar, a search typed letter by
+letter ("bloom", "chat", a word with no match), a tab clicked during a search, and the pane with the pictures.
+
 French and Spanish (2026-10-12): the options screens were looked at in both, at 1920 x 1080 (`clienttests/ui_lang.cfg`).
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
@@ -389,7 +455,7 @@ windows standing in the level (`v_immersiveMenu 1`, the default: Setup and the v
 that way, at 2560 x 1440), a mouse in a hand, the icon of the window
 and of the program on a desktop, a real download, the connect screen when a server refuses, another language
 than English and German, a mod's menus next to the new look, how it feels to use. Of the options screens:
-a line typed into (the clan password, the key file), the Mods page with a mod in it, the defaults and the
+the in-game Setup window after #10 (built only), the new texts in other languages on screen, Windows, a line typed into (the clan password, the key file), the Mods page with a mod in it, the defaults and the
 video restart carried out, another size of window than 1280 x 720, Windows and the browser (built, not
 run). Of the pages of the player: the buttons that take over (apply, join a team, save a set of powers)
 carried out, a server without the force or with Jedi against mercenaries (the code hides and shows items

@@ -60,6 +60,8 @@ TR = {
     # pages and the parts of a page
     'Interface': 'Oberfläche',
     'How menus, HUD and camera look.': 'Aussehen von Menüs, HUD und Kamera.',
+    'The game, lightsabers, duels and what players and weapons look like.': 'Das Spiel, Lichtschwerter, Duelle und das Aussehen von Spielern und Waffen.',
+    'What the screen shows around the level, the view and the crosshair.': 'Was der Bildschirm um den Level herum zeigt, die Sicht und das Fadenkreuz.',
     'Chat & Social': 'Chat & Community',
     'The chat box, bubbles and what stands above the heads.': 'Chatfenster, Sprechblasen und Anzeigen über den Köpfen.',
     'Network': 'Netzwerk',
@@ -84,6 +86,10 @@ TR = {
     'Menus and HUD': 'Menüs und HUD',
     'View': 'Sicht',
     'Players': 'Spieler',
+    'Crosshair': 'Fadenkreuz',
+    'Hits': 'Treffer',
+    'On Screen': 'Auf dem Bildschirm',
+    'Weapons': 'Waffen',
     'Chat': 'Chat',
     'Console': 'Konsole',
     'Clan': 'Clan',
@@ -566,6 +572,9 @@ TR = {
     'Nothing to clean up.': 'Nichts aufzuräumen.',
     'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': 'Einstellungen, die einen Monat lang kein Code benutzt hat: übrig aus älteren Versionen und anderen Mods. Entfernen nimmt eine aus der Config.',
     'Remove All': 'Alle entfernen',
+    # the search of Setup
+    'Search': 'Suchen',
+    'Shows the settings of all pages whose name or description has these words.': 'Zeigt die Einstellungen aller Seiten, in deren Name oder Beschreibung diese Wörter vorkommen.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
@@ -716,6 +725,8 @@ CGAME = {
     # the window Clean Up Settings (ui_cvarclean.c)
     'Never used': 'Nie benutzt',
     '%i days ago': 'vor %i Tagen',
+    # the search of Setup
+    'No setting has these words.': 'Keine Einstellung hat diese Wörter.',
 }
 
 # names that are the same in every language

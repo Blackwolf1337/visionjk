@@ -2482,10 +2482,21 @@ static void Menu_ListWindow( const menuDef_t *menu, rectDef_t *out ) {
 	}
 }
 
+// Is this item on a page that is not open. A row the list has folded away or that is no match of the search is
+// on none (Menu_ListLayout), and while the search is on, the rows of every page are in its list.
 static qboolean Item_OffPage( const itemDef_t *item ) {
 	const menuDef_t *menu = (const menuDef_t *)item->parent;
 
-	return (qboolean)( menu && item->page && item->page != menu->page );
+	if ( !menu ) {
+		return qfalse;
+	}
+	if ( item->listOut ) {
+		return qtrue;
+	}
+	if ( item->scroll && menu->searching ) {
+		return qfalse;
+	}
+	return (qboolean)( item->page && item->page != menu->page );
 }
 
 // how long the list of the open page is: from the top of its window to the end of its last row
@@ -2641,12 +2652,10 @@ static void Scroll_PageScroll_ThumbFunc( void *p ) {
 }
 
 // Opens a page of a menu. What had the mouse or the focus on the page that goes loses it.
-void Menu_SetPage( menuDef_t *menu, int page ) {
+// page 0: the one of the search (Menu_ListLayout), which no item names
+static void Menu_OpenPage( menuDef_t *menu, int page ) {
 	int i;
 
-	if ( !menu || page <= 0 || page >= MENU_PAGES || menu->page == page ) {
-		return;
-	}
 	menu->page = page;
 	for ( i = 0; i < menu->itemCount; i++ ) {
 		itemDef_t *item = menu->items[i];
@@ -2669,6 +2678,14 @@ void Menu_SetPage( menuDef_t *menu, int page ) {
 	menu->scrollShown = -1.0f;
 	Menu_ScrollTo( menu, menu->scrollTo[page], qtrue );
 	Menu_HandleMouseMove( menu, DC->cursorx, DC->cursory );
+}
+
+void Menu_SetPage( menuDef_t *menu, int page ) {
+	if ( !menu || page <= 0 || page >= MENU_PAGES || menu->page == page ) {
+		return;
+	}
+	// (a button of a page ends the search, Item_Action)
+	Menu_OpenPage( menu, page );
 }
 
 static qboolean Item_IsRow( const itemDef_t *item ) {
@@ -2755,6 +2772,224 @@ static void Text_Word( const char *text, char *out, int size, qboolean caps, qbo
 	if ( caps ) {
 		Text_Caps( out );
 	}
+}
+
+/*
+=================
+Menu_ListLayout
+
+The lists of a menu with "searchCvar" or "foldCvar", laid out anew. A list is made of lines: the items the menu
+file put at the same height of the same page (a row, or a heading with its line). The lines after a heading, up
+to the next one, are its own. Folded, they are out of the list. While a search is on, a row is in the list when
+its name or its description has the words, a heading when one of its rows is, and the lines of all pages make
+one list on page 0. The lines that stay move up under each other, a step of the list each.
+=================
+*/
+#define LIST_SEARCH_MIN		2		// letters a search needs before it begins
+
+static qboolean Menu_FoldIs( const char *folds, int fold ) {
+	const char *p = folds;
+
+	while ( *p ) {
+		while ( *p == ' ' ) {
+			p++;
+		}
+		if ( *p && atoi( p ) == fold ) {
+			return qtrue;
+		}
+		while ( *p && *p != ' ' ) {
+			p++;
+		}
+	}
+	return qfalse;
+}
+
+// the name of a row or its description has the words, as the player reads them
+static qboolean Item_ListMatch( const itemDef_t *item, const char *search ) {
+	char text[1024];
+
+	if ( !item->row ) {
+		return qfalse;
+	}
+	Text_Word( item->text, text, sizeof( text ), qfalse, qtrue );
+	if ( Q_stristr( text, search ) ) {
+		return qtrue;
+	}
+	if ( item->descText ) {
+		Text_Word( item->descText, text, sizeof( text ), qfalse, qfalse );
+		if ( Q_stristr( text, search ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+static void Menu_ListLayout( menuDef_t *menu, const char *search, const char *folds, qboolean newSearch ) {
+	static struct {
+		int		page;
+		float	y;			// where the menu file put it
+		int		fold;		// a heading: its number
+		int		head;		// the line of the heading it is under, -1: none
+		qboolean match;		// the search: one of its rows has the words, or for a heading one of its lines
+		qboolean in;
+	} lines[MAX_MENUITEMS];
+	static int	lineOf[MAX_MENUITEMS];
+	const float	step = Menu_ListStep( menu );
+	const qboolean searching = (qboolean)( strlen( search ) >= LIST_SEARCH_MIN );
+	float		cursor = 0.0f;
+	int			i, count = 0, head = -1, page = -1;
+
+	menu->searchFound = 0;
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		itemDef_t *item = menu->items[i];
+
+		lineOf[i] = -1;
+		if ( !item->scroll ) {
+			continue;
+		}
+		if ( !menu->listKnown ) {
+			item->listY = item->window.rectClient.y;
+		}
+		if ( !count || item->page != lines[count - 1].page || item->listY < lines[count - 1].y - 0.5f
+			|| item->listY >= lines[count - 1].y + step - 0.5f ) {
+			if ( count && item->page != lines[count - 1].page ) {
+				head = -1;
+			}
+			lines[count].page = item->page;
+			lines[count].y = item->listY;
+			lines[count].fold = 0;
+			lines[count].head = head;
+			lines[count].match = qfalse;
+			count++;
+		}
+		lineOf[i] = count - 1;
+		if ( item->fold ) {
+			lines[count - 1].fold = item->fold;
+			lines[count - 1].head = -1;
+			head = count - 1;
+		}
+		if ( searching && Item_ListMatch( item, search ) ) {
+			lines[count - 1].match = qtrue;
+			menu->searchFound++;
+		}
+	}
+	for ( i = 0; i < count; i++ ) {
+		if ( searching && lines[i].match && lines[i].head >= 0 ) {
+			lines[lines[i].head].match = qtrue;
+		}
+	}
+	for ( i = 0; i < count; i++ ) {
+		if ( searching ) {
+			lines[i].in = lines[i].match;
+		} else {
+			lines[i].in = (qboolean)( lines[i].head < 0 || !Menu_FoldIs( folds, lines[lines[i].head].fold ) );
+		}
+	}
+
+	// each page from where its list began, or all of them one after the other for the search
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		itemDef_t	*item = menu->items[i];
+		const int	n = lineOf[i];
+
+		if ( n < 0 ) {
+			continue;
+		}
+		if ( n == 0 || ( !searching && lines[n].page != lines[n - 1].page ) ) {
+			if ( lines[n].page != page ) {
+				cursor = lines[n].y;
+				page = lines[n].page;
+			}
+		}
+		item->listOut = (qboolean)!lines[n].in;
+		item->window.rectClient.y = item->listY - lines[n].y + cursor;
+		if ( i + 1 >= menu->itemCount || lineOf[i + 1] != n ) {
+			if ( lines[n].in ) {
+				cursor += step;
+			}
+		}
+	}
+	menu->listKnown = qtrue;
+
+	if ( searching != menu->searching ) {
+		menu->searching = searching;
+		if ( searching ) {
+			menu->searchPage = menu->page > 0 ? menu->page : 1;
+			menu->scrollTo[0] = 0.0f;
+			Menu_OpenPage( menu, 0 );
+		} else if ( menu->page == 0 ) {
+			Menu_OpenPage( menu, menu->searchPage > 0 ? menu->searchPage : 1 );
+		}
+	} else if ( searching && newSearch ) {
+		menu->scrollTo[0] = 0.0f;
+	}
+	menu->scrollShown = -1.0f;
+	Menu_ScrollTo( menu, menu->scrollTo[menu->page], qtrue );
+}
+
+// Once a frame: the list is laid out again when the search or the folded headings changed
+static void Menu_ListCheck( menuDef_t *menu ) {
+	char	search[64], folds[256];
+	char	*p;
+
+	if ( !menu->searchCvar && !menu->foldCvar ) {
+		return;
+	}
+	search[0] = folds[0] = '\0';
+	if ( menu->searchCvar ) {
+		DC->getCVarString( menu->searchCvar, search, sizeof( search ) );
+	}
+	if ( menu->foldCvar ) {
+		DC->getCVarString( menu->foldCvar, folds, sizeof( folds ) );
+	}
+	for ( p = search; *p == ' '; p++ ) {
+	}
+	memmove( search, p, strlen( p ) + 1 );
+	for ( p = search + strlen( search ); p > search && p[-1] == ' '; p-- ) {
+		p[-1] = '\0';
+	}
+	if ( menu->listKnown && !strcmp( search, menu->listSearch ) && !strcmp( folds, menu->listFolds ) ) {
+		return;
+	}
+	Menu_ListLayout( menu, search, folds, (qboolean)strcmp( search, menu->listSearch ) );
+	Q_strncpyz( menu->listSearch, search, sizeof( menu->listSearch ) );
+	Q_strncpyz( menu->listFolds, folds, sizeof( menu->listFolds ) );
+}
+
+// a click on a heading: its rows fold away, or come back
+static void Menu_ToggleFold( menuDef_t *menu, int fold ) {
+	char		folds[256], out[256];
+	const char	*p;
+	qboolean	was = qfalse;
+
+	if ( !menu->foldCvar || menu->searching ) {
+		return;
+	}
+	DC->getCVarString( menu->foldCvar, folds, sizeof( folds ) );
+	out[0] = '\0';
+	for ( p = folds; *p; ) {
+		char word[16];
+		int len;
+
+		while ( *p == ' ' ) {
+			p++;
+		}
+		len = (int)strcspn( p, " " );
+		if ( !len ) {
+			break;
+		}
+		Q_strncpyz( word, p, Q_min( len + 1, (int)sizeof( word ) ) );
+		p += len;
+		if ( atoi( word ) == fold ) {
+			was = qtrue;
+			continue;
+		}
+		Q_strcat( out, sizeof( out ), va( "%s%s", out[0] ? " " : "", word ) );
+	}
+	if ( !was ) {
+		Q_strcat( out, sizeof( out ), va( "%s%i", out[0] ? " " : "", fold ) );
+	}
+	DC->setCVar( menu->foldCvar, out );
+	Menu_ListCheck( menu );
 }
 
 // will optionaly set focus to this item
@@ -4776,9 +5011,21 @@ qboolean Item_HandleAccept(itemDef_t * item)
 
 void Item_Action(itemDef_t *item) {
   if (item) {
-    // "tab <n>": the button opens that page of its menu
+    menuDef_t *menu = (menuDef_t *)item->parent;
+
+    // "fold <n>": a heading of a list folds its rows away, or brings them back
+    if ( item->fold && menu ) {
+      Menu_ToggleFold( menu, item->fold );
+      Item_RunScript( item, item->action );
+      return;
+    }
+    // "tab <n>": the button opens that page of its menu, and ends a search
     if ( item->tab ) {
-      Menu_SetPage( (menuDef_t *)item->parent, item->tab );
+      if ( menu && menu->searchCvar && menu->searching ) {
+        DC->setCVar( menu->searchCvar, "" );
+        Menu_ListCheck( menu );
+      }
+      Menu_SetPage( menu, item->tab );
     }
     Item_RunScript(item, item->action);
   }
@@ -4876,6 +5123,10 @@ static void Display_CloseCinematics() {
 void  Menus_Activate(menuDef_t *menu) {
 
 	menu->window.flags |= (WINDOW_HASFOCUS | WINDOW_VISIBLE);
+	// a search is over when its menu opens again ("searchCvar")
+	if ( menu->searchCvar ) {
+		DC->setCVar( menu->searchCvar, "" );
+	}
 	if (menu->onOpen) {
 		itemDef_t item;
 		item.parent = menu;
@@ -4948,9 +5199,17 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 	{
 		if (!Item_TextField_HandleKey(g_editItem, key))
 		{
+			// (in a menu with the new look a click beside the field also does what it was aimed at, a tab or a
+			// heading: one click, not two)
+			const qboolean goOn = (qboolean)( key == A_MOUSE1 && menu && menu->skin );
+
 			g_editingField = qfalse;
 			g_editItem = NULL;
-			return;
+			if ( !goOn ) {
+				return;
+			}
+			// (what is under the pointer was not looked at while the field took the keys)
+			Display_MouseMove( NULL, DC->cursorx, DC->cursory );
 		}
 		else if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_MOUSE3)
 		{
@@ -5512,6 +5771,52 @@ void Item_Text_Paint(itemDef_t *item) {
 	}
 }
 
+// An edit field with "hint 1" in a menu with the new look: the box over the whole item, and while it is empty and
+// nobody types into it, its text dimmed inside it (the search of Setup)
+static void Item_HintField_Paint( itemDef_t *item ) {
+	const editFieldDef_t	*editPtr = item->typeData.edit;
+	const qboolean			editing = (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && g_editingField );
+	const float				lineH = DC->textHeight( "A", item->textscale, item->iMenuFont );
+	const float				x = item->window.rect.x + 5.0f;
+	const float				y = item->window.rect.y + ( item->window.rect.h - lineH ) * 0.5f;
+	const float				w = item->window.rect.w - 10.0f;
+	char					buff[1024];
+	vec4_t					color;
+	int						paintOffset;
+
+	buff[0] = '\0';
+	if ( item->cvar ) {
+		DC->getCVarString( item->cvar, buff, sizeof( buff ) );
+	}
+	item->textRect.x = x;
+	item->textRect.y = y;
+	item->textRect.w = 0.0f;
+	item->textRect.h = lineH;
+	Skin_Field( item, item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, editing );
+	VectorCopy4( item->window.foreColor, color );
+	if ( !buff[0] && !editing ) {
+		char hint[256];
+
+		Text_Word( item->text, hint, sizeof( hint ), qfalse, qfalse );
+		color[3] *= 0.7f;
+		DC->drawText( x, y, item->textscale, color, hint, 0, (int)w, item->textStyle, item->iMenuFont );
+		return;
+	}
+	Item_TextColor( item, &color );
+	paintOffset = Com_Clampi( 0, (int)strlen( buff ), editPtr->paintOffset );
+	if ( DC->getCVarValue( "v_utf8Text" ) ) {
+		while ( ( buff[paintOffset] & 0xC0 ) == 0x80 ) {
+			paintOffset++;
+		}
+	}
+	if ( editing ) {
+		DC->drawTextWithCursor( x, y, item->textscale, color, buff + paintOffset, Q_max( 0, item->cursorPos - paintOffset ),
+			DC->getOverstrikeMode() ? '_' : '|', (int)w, item->textStyle, item->iMenuFont );
+	} else {
+		DC->drawText( x, y, item->textscale, color, buff + paintOffset, 0, (int)w, item->textStyle, item->iMenuFont );
+	}
+}
+
 void Item_TextField_Paint(itemDef_t *item) {
 	char buff[1024];
 	int paintOffset;
@@ -5520,6 +5825,10 @@ void Item_TextField_Paint(itemDef_t *item) {
 	menuDef_t *parent = (menuDef_t*)item->parent;
 	editFieldDef_t *editPtr = item->typeData.edit;
 
+	if ( item->hint && Item_Skinned( item ) ) {
+		Item_HintField_Paint( item );
+		return;
+	}
 	Item_Text_Paint(item);
 
 	buff[0] = '\0';
@@ -6342,6 +6651,49 @@ static float Text_PaintWrapped( float x, float y, float width, float scale, vec4
 	return y;
 }
 
+
+// at the right end of a heading of a list ("fold"): down while its rows are there, to the right when they are
+// folded away. While a search is on the headings fold nothing and have none.
+static void Item_Fold_Paint( itemDef_t *item ) {
+	const menuDef_t	*menu = (const menuDef_t *)item->parent;
+	const float		h = ROW_ARROW, mid = item->window.rect.y + item->window.rect.h * 0.5f;
+	vec4_t			ink;
+
+	if ( !menu || menu->searching ) {
+		return;
+	}
+	VectorCopy4( item->window.foreColor, ink );
+	if ( item->window.flags & WINDOW_HASFOCUS ) {
+		ink[3] = 1.0f;
+	}
+	if ( Menu_FoldIs( menu->listFolds, item->fold ) ) {
+		Skin_Arrow( item->window.rect.x + item->window.rect.w - ROW_PAD - h * 0.62f, mid - h * 0.5f, h * 0.62f, h, qfalse, ink );
+	} else {
+		Skin_ArrowDown( item->window.rect.x + item->window.rect.w - ROW_PAD - h, mid - h * 0.31f, h, h * 0.62f, ink );
+	}
+}
+
+// in the window of the list, while a search found nothing
+static void Menu_SearchEmpty_Paint( menuDef_t *menu ) {
+	vec4_t		color = { 0.60f, 0.69f, 0.78f, 1.0f };
+	rectDef_t	list;
+	int			i;
+
+	if ( !menu->searching || menu->searchFound ) {
+		return;
+	}
+	Menu_ListWindow( menu, &list );
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		const itemDef_t *item = menu->items[i];
+
+		if ( item->row ) {
+			Text_PaintWrapped( list.x + ROW_PAD, list.y + ROW_PAD, list.w - 2.0f * ROW_PAD, item->textscale, color,
+				Vision_Text( "No setting has these words." ), item->iMenuFont, 2 );
+			return;
+		}
+	}
+}
+
 /*
 =================
 Item_Desc_Paint
@@ -6351,6 +6703,58 @@ short line and its descText. While nothing with a descText is in focus, the same
 tab). A change fades in.
 =================
 */
+#define DESCPIC_SHOW_MSEC	1400		// one picture of a pair stands this long,
+#define DESCPIC_FADE_MSEC	400			//	and goes over into the other in this
+
+// the two pictures of a setting ("descPic"), at the bottom of the pane, one after the other with a fade between
+static void Item_DescPic_Paint( const itemDef_t *item, const itemDef_t *about, float fade ) {
+	const rectDef_t	*r = &item->window.rect;
+	const float		h = r->w * 9.0f / 16.0f, y = r->y + r->h - h;
+	const int		cycle = 2 * ( DESCPIC_SHOW_MSEC + DESCPIC_FADE_MSEC ), t = DC->realTime % cycle;
+	const qhandle_t	pics[2] = { DC->registerShaderNoMip( va( "%s_a", about->descPic[0] ) ),
+								DC->registerShaderNoMip( va( "%s_b", about->descPic[0] ) ) };
+	float			second;
+	vec4_t			color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	char			name[64];
+	int				i;
+
+	if ( !pics[0] || !pics[1] ) {
+		return;
+	}
+	// how much of the second one shows: 0 for a while, up to 1, 1 for a while, down to 0
+	if ( t < DESCPIC_SHOW_MSEC ) {
+		second = 0.0f;
+	} else if ( t < DESCPIC_SHOW_MSEC + DESCPIC_FADE_MSEC ) {
+		second = ( t - DESCPIC_SHOW_MSEC ) / (float)DESCPIC_FADE_MSEC;
+	} else if ( t < 2 * DESCPIC_SHOW_MSEC + DESCPIC_FADE_MSEC ) {
+		second = 1.0f;
+	} else {
+		second = 1.0f - ( t - 2 * DESCPIC_SHOW_MSEC - DESCPIC_FADE_MSEC ) / (float)DESCPIC_FADE_MSEC;
+	}
+	color[3] = fade;
+	DC->setColor( color );
+	DC->drawHandlePic( r->x, y, r->w, h, pics[0] );
+	color[3] = fade * second;
+	DC->setColor( color );
+	DC->drawHandlePic( r->x, y, r->w, h, pics[1] );
+	DC->setColor( NULL );
+
+	// the value each one shows, on a dark band at its foot
+	for ( i = 0; i < 2; i++ ) {
+		const float a = fade * ( i ? second : 1.0f - second );
+		vec4_t		band = { 0.0f, 0.0f, 0.0f, 0.55f * a }, ink;
+
+		if ( a <= 0.0f ) {
+			continue;
+		}
+		VectorCopy4( item->window.foreColor, ink );
+		ink[3] *= a;
+		Text_Word( about->descPic[1 + i], name, sizeof( name ), qtrue, qfalse );
+		DC->fillRect( r->x, y + h - 13.0f, r->w, 13.0f, band );
+		DC->drawText( r->x + 4.0f, y + h - 12.0f, item->textscale * 0.8f, ink, name, 0, 0, 0, item->iMenuFont );
+	}
+}
+
 static void Item_Desc_Paint( itemDef_t *item ) {
 	menuDef_t		*parent = (menuDef_t *)item->parent;
 	const rectDef_t	*r = &item->window.rect;
@@ -6390,7 +6794,10 @@ static void Item_Desc_Paint( itemDef_t *item ) {
 	Skin_Color( color, parent->focusColor, item->skinValue );
 	Skin_Panel( r->x, y + 3.0f, 26.0f, 1.5f, 0.75f, color, NULL );
 	Skin_Color( color, parent->descColor, item->skinValue );
-	Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, 12 );
+	Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, about->descPic[0] ? 6 : 12 );
+	if ( about->descPic[0] ) {
+		Item_DescPic_Paint( item, about, item->skinValue );
+	}
 }
 
 static void Item_PageScroll_Paint( itemDef_t *item ) {
@@ -7942,6 +8349,9 @@ void Item_Paint(itemDef_t *item)
 	case ITEM_TYPE_TEXT:
 	case ITEM_TYPE_BUTTON:
 		Item_Text_Paint(item);
+		if ( item->fold ) {
+			Item_Fold_Paint( item );
+		}
 		break;
 	case ITEM_TYPE_RADIOBUTTON:
 		break;
@@ -8229,8 +8639,9 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 	// paint the background and or border
 	Window_Paint(&menu->window, menu->fadeAmount, menu->fadeClamp, menu->fadeCycle );
 
-	// the list of the open page glides to where the wheel sent it, and the buttons of the pages are as wide as
-	// their words are in the language of this frame
+	// the list of the open page glides to where the wheel sent it, after the search or a fold laid it out anew,
+	// and the buttons of the pages are as wide as their words are in the language of this frame
+	Menu_ListCheck( menu );
 	Menu_ScrollFrame( menu );
 	Menu_TabsLayout( menu );
 
@@ -8268,6 +8679,7 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 		}
 	}
 	window_underBackground = qfalse;
+	Menu_SearchEmpty_Paint( menu );
 
 	if (debugMode) {
 		vec4_t color;
@@ -9258,6 +9670,34 @@ qboolean ItemParse_row( itemDef_t *item, int handle ) {
 	return PC_Int_Parse( handle, &item->row );
 }
 
+// fold <n>: a heading of a list that folds the rows under it away when it is clicked (Menu_ListLayout)
+qboolean ItemParse_fold( itemDef_t *item, int handle ) {
+	return PC_Int_Parse( handle, &item->fold );
+}
+
+// descPic <picture> <name a> <name b>: before and after, in the pane of the menu (Item_DescPic_Paint)
+qboolean ItemParse_descPic( itemDef_t *item, int handle ) {
+	int i;
+
+	for ( i = 0; i < 3; i++ ) {
+		if ( !PC_String_Parse( handle, &item->descPic[i] ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
+// hint 1: an edit field whose text stands dimmed in its empty box instead of in front of it (Item_HintField_Paint)
+qboolean ItemParse_hint( itemDef_t *item, int handle ) {
+	int i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	item->hint = (qboolean)( i != 0 );
+	return qtrue;
+}
+
 // flow 1: a button of a bar. The buttons of a row are as wide as their words and follow each other, with a
 // short line between them (Menu_TabsLayout). flow 2: a button of a strip that leads to other menus, laid out the
 // same way and drawn as the button of a page is. flow 3: the entry of that strip for the menu that is open.
@@ -10133,6 +10573,9 @@ keywordHash_t itemParseKeywords[] = {
 	{"tab",				ItemParse_tab,				NULL	},
 	{"scroll",			ItemParse_scroll,			NULL	},
 	{"row",				ItemParse_row,				NULL	},
+	{"fold",			ItemParse_fold,				NULL	},
+	{"hint",			ItemParse_hint,				NULL	},
+	{"descPic",			ItemParse_descPic,			NULL	},
 	{"flow",			ItemParse_flow,				NULL	},
 	{"wide",			ItemParse_wide,				NULL	},
 	{"style",			ItemParse_style,			NULL	},
@@ -10588,6 +11031,14 @@ qboolean MenuParse_scrollStep( itemDef_t *item, int handle ) {
 	return PC_Float_Parse( handle, &( (menuDef_t *)item )->scrollStep );
 }
 
+qboolean MenuParse_searchCvar( itemDef_t *item, int handle ) {
+	return PC_String_Parse( handle, &( (menuDef_t *)item )->searchCvar );
+}
+
+qboolean MenuParse_foldCvar( itemDef_t *item, int handle ) {
+	return PC_String_Parse( handle, &( (menuDef_t *)item )->foldCvar );
+}
+
 qboolean MenuParse_fullscreen( itemDef_t *item, int handle ) {
 	menuDef_t *menu = (menuDef_t*)item;
 	byteAlias_t fullscreen;
@@ -11034,6 +11485,8 @@ keywordHash_t menuParseKeywords[] = {
 	{"backdrop",			MenuParse_backdrop,		NULL	},
 	{"openSlide",			MenuParse_openSlide,	NULL	},
 	{"scrollRect",			MenuParse_scrollRect,	NULL	},
+	{"searchCvar",			MenuParse_searchCvar,	NULL	},
+	{"foldCvar",			MenuParse_foldCvar,		NULL	},
 	{"scrollStep",			MenuParse_scrollStep,	NULL	},
 	{"radius",				ItemParse_radius,		NULL	},
 	{"shadow",				ItemParse_shadow,		NULL	},

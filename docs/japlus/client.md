@@ -110,7 +110,7 @@ nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores
 cache. The menus of the base game, which a client shows while it plays as base, still have the EAX and Sound
 Quality entries: the ui hides them (`Item_ApplyHacks`).
 
-The rows of the disruptor scope (Interface, heading Disruptor: Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, the speed for the tracker) are described under "The disruptor scope". The classic menus do not have them.
+The rows of the disruptor scope (Setup, Game, heading Weapons: Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, the speed for the tracker) are described under "The disruptor scope". The classic menus do not have them.
 
 None of the pages was looked at in the game after these changes: the rows were placed by their numbers.
 
@@ -475,17 +475,19 @@ the timer counting down with milliseconds, forward and left lit while held, the 
 200, the two lines of the second client that named the first one on the gold strip, the clock on the scoreboard.
 The click pass of the new rows set every cvar (`clienttests/ui_tay2_rows.cfg`).
 
-### The tab TaystJK
+### The rows from TaystJK
 
 Everything that came from TaystJK has a name that begins with `tay_` (cvars and commands, also the commands
-`tay_look` between client and server) and its rows in Setup, tab TaystJK (2026-10-17, `tools/menus/options.py`,
-texts in four languages): HUD (Killfeed, Team Overlay Size, Crosshair Colour, Name Opacity, Scoreboard Clock,
-Timer Milliseconds, Timer Counts Down, Hit Sounds, Kill Sound, Spectator Map, Lead Indicator), Movement (Speedometer, Strafe Helper, Snap HUD,
-Pitch HUD, Strafe Trails, Movement Keys, Start Goal, Jump Goal), Hats and Capes (Hat, Cape, Show Them, Seasonal
-Hats), Looks (Enemy Model, Ally Model, Saber Team Colours, Two-Coloured Staff, Jedi Outcast Shots, Disruptor Beam,
-Smooth Camera), Vulkan Renderer (Bloom, Bloom Strength, Bloom Threshold, Render Scale, see renderer.md) and Chat
-and Console (Chat Emoji, Chat Log, Name Alert, Console Clock). The binds with modifiers, word delete, `.oshader` and
-the 16:9 pictures have no cvar.
+`tay_look` between client and server). Its rows in Setup (2026-10-17, `tools/menus/options.py`, texts in four
+languages) were a tab TaystJK at first. Since #10 (2026-10-30) that tab is gone and each row stands under the topic it
+belongs to, with the other rows of that topic: Video (Bloom, Bloom Strength, Bloom Threshold, Render Scale, see
+renderer.md), Sound, Hits (Hit Sounds, Kill Sound), Game (Saber Team Colours, Two-Coloured Staff, Enemy Model, Ally
+Model, Hats and Capes with Hat, Cape, Show Them and Seasonal Hats, Jedi Outcast Shots, Disruptor Beam), HUD (View with
+Smooth Camera, Crosshair with Crosshair Colour, Name Opacity and Lead Indicator, On Screen with Killfeed, Team Overlay
+Size, Scoreboard Clock, Timer Milliseconds, Timer Counts Down and Spectator Map, and Movement with Speedometer, Strafe
+Helper, Snap HUD, Pitch HUD, Strafe Trails, Movement Keys, Start Goal and Jump Goal) and Chat & Social (Chat Emoji,
+Chat Log, Name Alert, Console Clock). The binds with modifiers, word delete, `.oshader` and the 16:9 pictures have no
+cvar.
 
 For one evening the cvars began with `v_` and the script commands had TaystJK's names. `cvar_renames.h` has those
 old names, so a value or a bind stored with one goes to the new name, with a line in the console.
@@ -532,7 +534,7 @@ This tree ships all 24 hats and 8 capes of jaPRO and TaystJK, with permission fo
 afro, beard, bucket, cap, cringe (a propeller cap), crown, fedora to fedora4, glasses, gradcap, headcrab, horns,
 mario, mask, metalhelm, plaguemask, predatorhelm, pumpkin, santahat, sombrero, supersaiyan, tophat, and the
 capes ak47, crowbar, goose, grogucape, royalcape, rpg, vadercape, yodacape (`assets/japlus_client/models/cosmetics`,
-with a README of where they come from, and `shaders/vision_cosmetics.shader`). Setup, Interface, Looks has the
+with a README of where they come from, and `shaders/vision_cosmetics.shader`). Setup, Game, Hats and Capes has the
 rows Hat and Cape with these names. With the pumpkin there, Seasonal Hats has its Halloween hat too.
 
 | Cvar or command | Default | Meaning |
@@ -942,10 +944,10 @@ lens, and the light of the mode under it.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `v_scope` | 1 | 1 the lens of the renderer, 0 the old mask. Saved. Setup, Interface, "Scope Lens" |
-| `v_scopeWheelZoom` | 1 | the mouse wheel zooms while the zoom is locked. Saved. Setup, Interface, "Zoom with Mouse Wheel" |
+| `v_scope` | 1 | 1 the lens of the renderer, 0 the old mask. Saved. Setup, Game, Weapons, "Scope Lens" |
+| `v_scopeWheelZoom` | 1 | the mouse wheel zooms while the zoom is locked. Saved. Setup, Game, Weapons, "Zoom with Mouse Wheel" |
 | `v_scopeMode` | 0 | the tracker: 0 off, 1 on (an old saved 2 counts as 1). Saved, no menu row. The mode key turns it on and off (see below) |
-| `v_motionThreshold` | 40 | units a second a player must be faster than to get a box of the tracker. Saved. Setup, Interface, "Motion Tracker Speed" (10 to 200) |
+| `v_motionThreshold` | 40 | units a second a player must be faster than to get a box of the tracker. Saved. Setup, Game, Weapons, "Motion Tracker Speed" (10 to 200) |
 | `v_cgameScope` | 1 | set by the engine: it has the scope call (`re->ext.SetScopeEffect`). Read only |
 | `v_scopeWheel` | 0 | set by the cgame while the wheel is taken for the zoom. The engine resets it when the cgame ends. Read only |
 

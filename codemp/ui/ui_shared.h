@@ -348,6 +348,16 @@ typedef struct itemDef_s {
 	int			row;
 	int			flow;				// "flow 1": in a row of buttons it is as wide as its word, with a line in front of it.
 									//	2 and 3: an entry of a strip of menus, 3 the one of the menu that is open
+	// a heading of a list: "fold <n>" (n unique in its menu), a click folds the rows under it away. Menu_ListLayout
+	// moves the rows of a list up under each other when some are folded away or are no match of the search:
+	// listY is where the menu file put the item, listOut that it is not in the list now.
+	int			fold;
+	qboolean	hint;				// "hint 1": an edit field with its text dimmed inside its empty box
+	// "descPic <picture> <name a> <name b>": the pane (ITEM_TYPE_DESC) shows <picture>_a and <picture>_b by turns
+	// under the description, what the setting looks like at the two values named
+	const char	*descPic[3];
+	float		listY;
+	qboolean	listOut;
 } itemDef_t;
 
 #define MENU_PAGES		16					// pages of a menu, counted from 1
@@ -393,6 +403,17 @@ typedef struct menuDef_s {
 	float		scrollTo[MENU_PAGES];		// where the list of a page is going,
 	float		scrollShown;				//	and where the one of the open page is drawn in this frame
 	qboolean	descPane;					// an ITEM_TYPE_DESC is in it: it says what the item in focus is for
+	// "searchCvar <cvar>": while it holds a text the list shows the rows of all pages whose name or description has
+	// it, on page 0 (searchPage: the page that was open before). "foldCvar <cvar>": the numbers of the headings
+	// ("fold <n>") that are folded. Menu_ListLayout lays the list out again when one of the two changed.
+	const char	*searchCvar;
+	const char	*foldCvar;
+	qboolean	searching;
+	int			searchPage;
+	int			searchFound;				// rows the search has found
+	qboolean	listKnown;
+	char		listSearch[64];
+	char		listFolds[256];
 } menuDef_t;
 
 typedef struct cachedAssets_s {

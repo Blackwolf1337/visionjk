@@ -8,6 +8,8 @@ MORE = {
     # the pages of Setup and Controls
     'Interface': ('Interface', 'Interfaz'),
     'How menus, HUD and camera look.': ("L'apparence des menus, du HUD et de la caméra.", 'El aspecto de los menús, el HUD y la cámara.'),
+    'The game, lightsabers, duels and what players and weapons look like.': ('Le jeu, les sabres laser, les duels et l\'apparence des joueurs et des armes.', 'El juego, los sables de luz, los duelos y el aspecto de los jugadores y las armas.'),
+    'What the screen shows around the level, the view and the crosshair.': ('Ce que l\'écran affiche autour du niveau, la vue et le viseur.', 'Lo que muestra la pantalla alrededor del nivel, la vista y la mira.'),
     'Chat & Social': ('Chat et social', 'Chat y social'),
     'The chat box, bubbles and what stands above the heads.': ('Chat, bulles et infos au-dessus des têtes.', 'Chat, bocadillos e información sobre las cabezas.'),
     'Network': ('Réseau', 'Red'),
@@ -33,6 +35,10 @@ MORE = {
     'Menus and HUD': ('Menus et HUD', 'Menús y HUD'),
     'View': ('Vue', 'Vista'),
     'Players': ('Joueurs', 'Jugadores'),
+    'Crosshair': ('Viseur', 'Mira'),
+    'Hits': ('Impacts', 'Impactos'),
+    'On Screen': ('À l\'écran', 'En pantalla'),
+    'Weapons': ('Armes', 'Armas'),
     'Chat': ('Chat', 'Chat'),
     'Console': ('Console', 'Consola'),
     'Clan': ('Clan', 'Clan'),
@@ -618,4 +624,8 @@ MORE = {
     'Remove All': ('Tout enlever', 'Quitar todo'),
     'Never used': ('Jamais utilisé', 'Nunca usado'),
     '%i days ago': ('il y a %i jours', 'hace %i días'),
+    # the search of Setup
+    'Search': ('Rechercher', 'Buscar'),
+    'Shows the settings of all pages whose name or description has these words.': ("Affiche les paramètres de toutes les pages dont le nom ou la description contient ces mots.", 'Muestra los ajustes de todas las páginas cuyo nombre o descripción tiene estas palabras.'),
+    'No setting has these words.': ("Aucun paramètre ne contient ces mots.", 'Ningún ajuste tiene estas palabras.'),
 }
