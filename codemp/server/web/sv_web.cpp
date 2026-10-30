@@ -42,6 +42,8 @@ static_assert( SV_WEB_MAX_CONNECTIONS + 2 <= FD_SETSIZE, "the read set of NET_Sl
 static cvar_t	*vs_clientWebPort;
 static cvar_t	*vs_clientWebBind;
 cvar_t			*vs_clientWebRoot;
+cvar_t			*vs_clientWebTVOnly;
+cvar_t			*vs_clientWebProxy;
 
 static SOCKET			listenSocket = INVALID_SOCKET;
 static qboolean			listenFailed;			// accept() failed, the listener is left alone for a moment
@@ -235,13 +237,18 @@ SV_WebSocketOf
 The WebSocket a packet to that address goes out on, NULL if it is gone. Never one of the voice chat.
 ==================
 */
+// one place of the table, for the viewers of the TV (sv_web_tv.cpp)
+webConnection_t *SV_WebConnection( int i ) {
+	return &connections[i];
+}
+
 webConnection_t *SV_WebSocketOf( const netadr_t *adr ) {
 	int i;
 
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 		webConnection_t *c = &connections[i];
 
-		if ( c->state == WEB_SOCKET && !c->drop && !c->voice && c->adr.port == adr->port
+		if ( c->state == WEB_SOCKET && !c->drop && !c->voice && !c->tv && c->adr.port == adr->port
 			&& !memcmp( c->adr.ip, adr->ip, sizeof( c->adr.ip ) ) ) {
 			return c;
 		}
@@ -548,14 +555,14 @@ static void SV_WebListen( void ) {
 
 	// Every interface unless vs_clientWebBind names one address, as vs_webBind of the web admin panel has it: an
 	// empty one is every interface too, and a value that is no address opens nothing to the outside.
-	// (inet_pton and not Sys_StringToAdr, which asks the name service about what is no number and waits for it,
+	// (Q_ParseIPv4 and not Sys_StringToAdr, which asks the name service about what is no number and waits for it,
 	// nor inet_addr, which took "0" for every interface and "1" for 0.0.0.1)
 	memset( &address, 0, sizeof( address ) );
 	address.sin_family = AF_INET;
 	address.sin_port = htons( (unsigned short)port );
 	address.sin_addr.s_addr = INADDR_ANY;
 	if ( vs_clientWebBind->string[0] ) {
-		if ( inet_pton( AF_INET, vs_clientWebBind->string, &address.sin_addr ) == 1 ) {
+		if ( Q_ParseIPv4( vs_clientWebBind->string, (unsigned char *)&address.sin_addr ) ) {
 			bindTo = vs_clientWebBind->string;
 		} else {
 			bindTo = "127.0.0.1";
@@ -616,6 +623,8 @@ void SV_WebInit( void ) {
 	vs_clientWebPort = Cvar_Get( "vs_clientWebPort", "0", 0, "TCP port of the web host: the page of the client that runs in a browser, its files and its packets. 0: off" );
 	vs_clientWebBind = Cvar_Get( "vs_clientWebBind", "0.0.0.0", 0, "Address the web host listens on" );
 	vs_clientWebRoot = Cvar_Get( "vs_clientWebRoot", "web", 0, "Folder of the page of the web host, under fs_basepath unless it is a full path" );
+	vs_clientWebTVOnly = Cvar_Get( "vs_clientWebTVOnly", "0", 0, "1: the web host answers only GET /tv (the TV of the server), no page, no game files, no players" );
+	vs_clientWebProxy = Cvar_Get( "vs_clientWebProxy", "", 0, "IPv4 addresses of reverse proxies in front of the web host, split by blanks: their X-Real-IP names the viewer of the TV" );
 
 	vs_clientWebPort->modified = qtrue;
 }
@@ -760,7 +769,8 @@ static void SV_WebTimeouts( void ) {
 		}
 
 		if ( c->state == WEB_SOCKET ) {
-			if ( c->voice ? SV_WebVoiceIsClient( &c->adr ) : SV_WebIsClient( &c->adr ) ) {
+			// (a viewer of the TV is one for as long as it watches)
+			if ( c->tv || ( c->voice ? SV_WebVoiceIsClient( &c->adr ) : SV_WebIsClient( &c->adr ) ) ) {
 				c->clientTime = now;
 			}
 			if ( now - c->lastHeard > SV_WEB_SILENT_MSEC ) {

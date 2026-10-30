@@ -40,6 +40,7 @@ set(TestFiles
 	"vjk/stringed.cpp"
 	"vjk/memwatch.cpp"
 	"vjk/reputation.cpp"
+	"vjk/ipv4.cpp"
 	"vjk/markdown.cpp"
 	"vjk/cfgedit.cpp"
 	"vjk/cvarseen.cpp"

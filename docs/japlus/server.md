@@ -246,6 +246,80 @@ sees nothing of it.
   with `ms_repclear`.
 - Run on 2026-10-28 with a master and clients on one machine. Not run on the host of VisionJK.
 
+### The TV of the server (not from JA+)
+
+`server/sv_tv.cpp`, `server/web/sv_web_tv.cpp`, `client/cl_tv.cpp`. Issue #7. Built 2026-10-30.
+
+The TV is a spectator that stands in no slot of the server and has no connection, as a bot that records a server
+side demo has none. It follows a player who plays and goes on to the next one after `sv_tvSwitch` seconds (20), or
+at once when its player stops playing. While nobody plays it stands as a spectator of its own, where the last
+player it followed was, else where a spectator is, else in the middle of the level, so a viewer still gets a
+picture. No player sees it, the game module knows nothing of it, and its client number in the demo is a free slot
+from the top (`MAX_CLIENTS - 1` down).
+
+`tvrecord <name>` writes `demos/<name>.dm_26`, a normal demo that any client plays with `demo`, until `tvstop` or
+the end of the level. A new `tvrecord` ends the old file. `sv_tvSwitch` is archived.
+
+The same stream goes live to the viewers of the web host (`vs_clientWebPort`, which is 0, off, until set; the port
+is the one the browser client uses for `/net` and the voice chat for `/voice`, see [web.md](web.md)). The client
+watches it with
+
+```
+tv <address:port>
+tv <name>
+tv "wss://<name>/<path>"
+```
+
+`tv <address:port>` is the web host of the server itself over plain TCP, for example `tv 1.2.3.4:29071` when
+`vs_clientWebPort` is 29071. `tv <name>`, a name with no port (`tv jka.vision`), goes over https to
+`wss://<name>/tv`, through a web server in front of the game server (see below). `tv "wss://name/path"` or
+`tv "ws://..."` takes that address, and `/tv` when there is no path. An address with `://` has to be in quotes
+in the console, because the console takes `//` as the start of a comment. The `ws` and `wss` forms go through
+libcurl of the system (Linux and macOS, it needs libcurl 7.86 or newer built with WebSockets, which every libcurl
+since 8.11 is) or WinHTTP (Windows 8 or newer), in a thread, so the game never waits. The command leaves a game
+first, as `demo` does, and plays the TV as a demo that does not end. When the connection ends the client drops
+with "TV: <reason>". The browser client watches it when its page is opened with `?tv`
+(`http://<host>:<vs_clientWebPort>/?tv`), over `wss` when the page came over https.
+
+A server that only wants to offer the TV sets `vs_clientWebTVOnly 1`. The web host then answers `GET /tv` alone and
+sends 404 for everything else (the page, `/manifest.json`, `/pk3/...`, `/net`, `/voice`), so it hands out no game
+files and takes no players.
+
+- `vs_tv` (default 1, archived): 0 turns the viewers off. `GET /tv` is then answered with 404, as it is when no
+  level runs.
+- 32 viewers at once and 4 of them from one address. Past that the answer is 503 with `Retry-After: 5`.
+- No login, and any `Origin` is accepted: what the TV shows is what any spectator of the server sees.
+- The viewer only listens, what it sends is ignored.
+
+A server with a website behind https can hand the TV out on its own address. The TV host stays on the machine
+(`vs_clientWebBind 127.0.0.1`, `vs_clientWebTVOnly 1`), the web server passes `/tv` on to it, and
+`vs_clientWebProxy` names the address of that web server (IPv4 addresses, split by blanks or commas, empty by
+default). For a viewer that comes from one of them, the address in its `X-Real-IP` header counts for the limit of 4
+per address, and the log line says "(through a proxy)". Without it every viewer has the address of the web server
+and 4 of them fill the limit. Players then type `tv <name>`. For nginx:
+
+```
+location = /tv {
+	proxy_pass http://127.0.0.1:29071;
+	proxy_http_version 1.1;
+	proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection "upgrade";
+	proxy_set_header X-Real-IP $remote_addr;
+	proxy_set_header Host $host;
+	proxy_read_timeout 1h;
+}
+```
+- Nothing is built while nobody watches or records, so a server without viewers pays nothing for it.
+
+For somebody who writes a viewer: `GET /tv` becomes a WebSocket and every binary message on it is one record of a
+demo, `[int32 number][int32 length][message]`, both integers little endian, the message ending with `svc_EOF`.
+The first record is the gamestate, then comes one snapshot per frame of the server, each against the one before.
+When the level changes the gamestate comes again, and the message numbers go on (a client refuses numbers that
+go back). A viewer whose send buffer was full gets nothing until the next whole snapshot, which the TV then makes
+for it. The file has the same records, so one reader does for both.
+
+On a stream the end of a demo (a length of -1) never comes, the socket closes instead.
+
 ### Cleaning up cvars
 
 `qcommon/cvar_cleanup.cpp`, `qcommon/cvar_seen.c`. The engine of the server notes the day each cvar was last used,

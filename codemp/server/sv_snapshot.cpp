@@ -624,22 +624,18 @@ currently doesn't.
 For viewing through other player's eyes, client can be something other than client->gentity
 =============
 */
-static void SV_BuildClientSnapshot( client_t *client ) {
+// What is seen from the playerState ps (of a player, or of the TV of the server that stands somewhere, sv_tv.cpp),
+// into frame. follow: as a spectator who follows that player sees it, his playerState with PMF_FOLLOW.
+static void SV_BuildSnapshotFrom( clientSnapshot_t *frame, const playerState_t *ps, qboolean follow ) {
 	vec3_t						org;
-	clientSnapshot_t			*frame;
 	snapshotEntityNumbers_t		entityNumbers;
 	int							i;
 	sharedEntity_t				*ent;
 	entityState_t				*state;
 	svEntity_t					*svEnt;
-	sharedEntity_t				*clent;
-	playerState_t				*ps;
 
 	// bump the counter used to prevent double adding
 	sv.snapshotCounter++;
-
-	// this is the frame we are creating
-	frame = &client->frames[ client->netchan.outgoingSequence & PACKET_MASK ];
 
 	// clear everything in this snapshot
 	entityNumbers.numSnapshotEntities = 0;
@@ -647,14 +643,11 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 
 	frame->num_entities = 0;
 
-	clent = client->gentity;
-	if ( !clent || client->state == CS_ZOMBIE ) {
-		return;
-	}
-
-	// grab the current playerState_t
-	ps = SV_GameClientNum( client - svs.clients );
+	// the current playerState_t
 	frame->ps = *ps;
+	if ( follow ) {
+		frame->ps.pm_flags |= PMF_FOLLOW;
+	}
 #ifdef _ONEBIT_COMBO
 	frame->pDeltaOneBit = &ps->deltaOneBits;
 	frame->pDeltaNumBit = &ps->deltaNumBits;
@@ -722,6 +715,19 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 		}
 		frame->num_entities++;
 	}
+}
+
+static void SV_BuildClientSnapshot( client_t *client ) {
+	clientSnapshot_t *frame = &client->frames[ client->netchan.outgoingSequence & PACKET_MASK ];
+
+	if ( !client->gentity || client->state == CS_ZOMBIE ) {
+		// (nothing in it)
+		sv.snapshotCounter++;
+		Com_Memset( frame->areabits, 0, sizeof( frame->areabits ) );
+		frame->num_entities = 0;
+		return;
+	}
+	SV_BuildSnapshotFrom( frame, SV_GameClientNum( client - svs.clients ), qfalse );
 }
 
 
@@ -948,6 +954,50 @@ void SV_SendClientSnapshot( client_t *client ) {
 
 /*
 =======================
+SV_SendTVSnapshot
+
+The TV of the server (sv_tv.cpp): a client_t that is in no slot and has no connection, as a bot that records a
+demo has none. It sees from ps: the player it follows (follow), or where it stands itself. Its reliable commands
+and its snapshot (against the one before, or whole with full) go into out, as a message of a demo is (svc_EOF at
+its end); the length is returned, and *sequence is its number. The commands count as received.
+=======================
+*/
+int SV_SendTVSnapshot( client_t *tv, const playerState_t *ps, qboolean follow, qboolean full, byte *out, int outSize, int *sequence ) {
+	clientSnapshot_t	*frame = &tv->frames[ tv->netchan.outgoingSequence & PACKET_MASK ];
+	msg_t				msg;
+
+	SV_BuildSnapshotFrom( frame, ps, follow );
+
+	// (SV_WriteSnapshotToClient sends it whole while a recording waits for that, and stops waiting)
+	if ( full ) {
+		tv->demo.demowaiting = qtrue;
+	}
+	MSG_Init( &msg, out, outSize );
+	msg.allowoverflow = qtrue;
+	MSG_WriteLong( &msg, tv->lastClientCommand );
+	SV_UpdateServerCommandsToClient( tv, &msg );
+	SV_WriteSnapshotToClient( tv, &msg );
+	MSG_WriteByte( &msg, svc_EOF );
+	if ( msg.overflowed ) {
+		Com_Printf( "WARNING: msg overflowed for the TV of the server\n" );
+		return 0;
+	}
+
+	// what SV_SendMessageToClient keeps of a message, and what it does for a bot
+	frame->messageSize = msg.cursize;
+	frame->messageSent = svs.time;
+	frame->messageAcked = -1;
+	*sequence = tv->netchan.outgoingSequence;
+	tv->netchan.outgoingSequence++;
+	tv->demo.botReliableAcknowledge = tv->reliableSent;
+	// (what SV_AddServerCommand counts the commands that wait against)
+	tv->reliableAcknowledge = tv->reliableSent;
+	return msg.cursize;
+}
+
+
+/*
+=======================
 SV_SendClientMessages
 =======================
 */
@@ -977,5 +1027,7 @@ void SV_SendClientMessages( void ) {
 		// generate and send a new message
 		SV_SendClientSnapshot( c );
 	}
+	// the TV of the server (sv_tv.cpp)
+	SV_TVFrame();
 }
 

@@ -132,6 +132,11 @@ void SV_AddServerCommand( client_t *client, const char *cmd ) {
 	// we check == instead of >= so a broadcast print added by SV_DropClient()
 	// doesn't cause a recursive drop client
 	if ( client->reliableSequence - client->reliableAcknowledge == MAX_RELIABLE_COMMANDS + 1 ) {
+		// (the TV of the server is in no slot: it ends, nobody is dropped, sv_tv.cpp)
+		if ( client == SV_TVClient() ) {
+			SV_TVStop( "server command overflow" );
+			return;
+		}
 		Com_Printf( "===== pending server commands =====\n" );
 		for ( i = client->reliableAcknowledge + 1 ; i <= client->reliableSequence ; i++ ) {
 			Com_Printf( "cmd %5d: %s\n", i, client->reliableCommands[ i & (MAX_RELIABLE_COMMANDS-1) ] );
@@ -185,6 +190,10 @@ void QDECL SV_SendServerCommand(client_t *cl, const char *fmt, ...) {
 	// send the data to all relevent clients
 	for (j = 0, client = svs.clients; j < sv_maxclients->integer ; j++, client++) {
 		SV_AddServerCommand( client, (char *)message );
+	}
+	// and to the TV of the server (sv_tv.cpp)
+	if ( SV_TVClient() ) {
+		SV_AddServerCommand( SV_TVClient(), (char *)message );
 	}
 }
 

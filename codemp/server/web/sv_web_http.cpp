@@ -834,8 +834,17 @@ void SV_WebHttpRequest( webConnection_t *c, int headLen ) {
 		return;
 	}
 
+	// (a host for the TV alone hands out none of the game files, and takes no players)
+	if ( vs_clientWebTVOnly->integer && strcmp( path, "/tv" ) ) {
+		SV_WebError( c, 404, "Not Found", "" );
+		return;
+	}
 	if ( !strcmp( path, "/net" ) ) {
-		SV_WebUpgrade( c, head, headLen, minor );
+		SV_WebUpgrade( c, head, headLen, minor, qfalse );
+		return;
+	}
+	if ( !strcmp( path, "/tv" ) ) {
+		SV_WebTVUpgrade( c, head, headLen, minor );
 		return;
 	}
 	if ( !strcmp( path, "/voice" ) ) {

@@ -26,12 +26,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client/snd_local.h"
 #include "snd_spatial.h"
+#include "qcommon/spatial_debug.h"	// also for the stub of S_SpatialDebug when built without Steam Audio
 
 #ifdef JP_SPATIAL
 
 #include "sys/sys_loadlib.h"
 #include "qcommon/cm_public.h"
-#include "qcommon/spatial_debug.h"
 #include <phonon.h>
 #include <SDL.h>
 #include <atomic>

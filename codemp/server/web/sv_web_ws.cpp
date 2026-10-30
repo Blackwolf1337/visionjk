@@ -144,6 +144,10 @@ A message of a peer that is whole
 ==================
 */
 static void SV_WebMessage( webConnection_t *c, const byte *data, int length ) {
+	// (a viewer of the TV only listens: what it sends is nothing)
+	if ( c->tv ) {
+		return;
+	}
 	if ( c->voice ) {
 		SV_WebVoiceDatagram( c, data, length );
 	} else {
@@ -247,7 +251,7 @@ out: a page of another site that opens a socket to here would play from the addr
 The browser names the site in Origin, which no page can leave out or change, and it has to be this host.
 ==================
 */
-void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor ) {
+void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor, qboolean anyOrigin ) {
 	char	key[64], raw[32], accept[32], value[128], answer[256];
 	byte	*out;
 	int		len;
@@ -272,7 +276,7 @@ void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor
 		SV_WebError( c, 400, "Bad Request", "" );
 		return;
 	}
-	if ( !Web_FindHeader( head, "Origin" ) || !Web_SameOrigin( head ) ) {
+	if ( !anyOrigin && ( !Web_FindHeader( head, "Origin" ) || !Web_SameOrigin( head ) ) ) {
 		SV_WebError( c, 403, "Forbidden", "" );
 		return;
 	}

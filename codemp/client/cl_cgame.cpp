@@ -672,8 +672,8 @@ void CL_AdjustTimeDelta( void ) {
 
 	cl.newSnapshots = qfalse;
 
-	// the delta never drifts when replaying a demo
-	if ( clc.demoplaying ) {
+	// the delta never drifts when replaying a demo (but on the TV of a server, which comes live, cl_tv.cpp)
+	if ( clc.demoplaying && !clc.tvLive ) {
 		return;
 	}
 
@@ -765,7 +765,8 @@ void CL_SetCGameTime( void ) {
 		if ( cls.state != CA_PRIMED ) {
 			return;
 		}
-		if ( clc.demoplaying ) {
+		// (the TV of a server, cl_tv.cpp, hands its messages over as they come, as packets are)
+		if ( clc.demoplaying && !clc.tvLive ) {
 			// we shouldn't get the first snapshot on the same frame
 			// as the gamestate, because it causes a bad time skip
 			if ( !clc.firstDemoFrameSkipped ) {
@@ -852,7 +853,7 @@ void CL_SetCGameTime( void ) {
 		CL_AdjustTimeDelta();
 	}
 
-	if ( !clc.demoplaying ) {
+	if ( !clc.demoplaying || clc.tvLive ) {
 		return;
 	}
 

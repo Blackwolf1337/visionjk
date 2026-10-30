@@ -441,7 +441,9 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 	}
 }
 
-void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
+// clientNum: the number the receiver has of itself; a client of a slot has the one of its slot, the TV of the server
+// (sv_tv.cpp) one that no player uses
+void SV_CreateGameStateMessage( client_t *client, msg_t *msg, int clientNum ) {
 	int			start;
 	entityState_t	*base, nullstate;
 
@@ -481,13 +483,17 @@ void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
 
 	MSG_WriteByte( msg, svc_EOF );
 
-	MSG_WriteLong( msg, client - svs.clients);
+	MSG_WriteLong( msg, clientNum );
 
 	// write the checksum feed
 	MSG_WriteLong( msg, sv.checksumFeed);
 
 	// For old RMG system.
 	MSG_WriteShort ( msg, 0 );
+}
+
+void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
+	SV_CreateGameStateMessage( client, msg, client - svs.clients );
 }
 
 /*

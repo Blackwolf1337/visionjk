@@ -480,6 +480,22 @@ int			SV_IDSTest_DownloadSize( int size );
 void		SV_IDSTest_Unasked( client_t *cl, msg_t *msg );
 #endif
 
+// sv_tv.cpp: the TV of the server, a spectator in no slot that records what it sees
+void		SV_TVInit( void );
+void		SV_TVFrame( void );
+void		SV_TVStop( const char *why );
+void		SV_TVLevelEnd( void );
+client_t	*SV_TVClient( void );
+int			SV_TVGamestate( byte *out, int outSize );
+// server/web/sv_web_tv.cpp: the viewers of the TV on the web host (GET /tv)
+int			SV_WebTVViewers( void );
+qboolean	SV_WebTVWaiting( void );
+void		SV_WebTVSend( const byte *record, int len, qboolean full );
+void		SV_WebTVResync( void );
+void		SV_WebTVGreet( void );
+int			SV_SendTVSnapshot( client_t *tv, const playerState_t *ps, qboolean follow, qboolean full, byte *out, int outSize, int *sequence );	// sv_snapshot.cpp
+void		SV_CreateGameStateMessage( client_t *client, msg_t *msg, int clientNum );	// sv_client.cpp
+
 // sv_voice.cpp: the voice chat on the UDP port of the game
 void		SV_VoiceInit( void );
 qboolean	SV_VoicePacket( const netadr_t *from, msg_t *msg );

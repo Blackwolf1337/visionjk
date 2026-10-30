@@ -672,6 +672,7 @@ void S_SpatialUpdate( void ) {
 void		S_SpatialInit( void ) {}
 void		S_SpatialShutdown( void ) {}
 qboolean	S_SpatialActive( void ) { return qfalse; }
+qboolean	S_SpatialBakeRunning( void ) { return qfalse; }
 void		S_SpatialLoadMap( const char *mapname ) {}
 void		S_SpatialUpdate( void ) {}
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {}

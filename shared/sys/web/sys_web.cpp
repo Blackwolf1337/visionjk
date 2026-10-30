@@ -55,6 +55,17 @@ void Sys_WebMainLoop( void ) {
 
 /*
 =================
+Sys_ProgramFolder
+
+A page has no folder of its own (shared/sys/sys_main.cpp has the one of the other systems)
+=================
+*/
+const char *Sys_ProgramFolder( void ) {
+	return "";
+}
+
+/*
+=================
 Web_ClientState
 
 For the page: connstate_t, CA_ACTIVE is "in the game"

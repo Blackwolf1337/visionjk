@@ -465,7 +465,7 @@ const Module = window.Module = {
 			}
 			// the files the game writes (its config). autoPersist: Emscripten stores every write by itself.
 			Module.addRunDependency('home');
-			fs.mount(fs.filesystems.IDBFS, { autoPersist: true }, '/home');
+			fs.mount(Module.IDBFS || fs.filesystems.IDBFS, { autoPersist: true }, '/home');
 			fs.syncfs(true, error => {
 				if (error) note('the stored settings of the game could not be read (' + words(error) + ')');
 				Module.removeRunDependency('home');
@@ -515,6 +515,7 @@ async function start(manifest) {
 		'+set', 'r_customwidth', String(frameWidth), '+set', 'r_customheight', String(frameHeight)];
 	const query = new URLSearchParams(location.search);
 	if (query.has('connect')) args.push('+connect', location.hostname);
+	else if (query.has('tv')) args.push('+tv', location.host);
 	args.push(...(query.get('args') || '').split(' ').filter(Boolean));
 	note('the engine starts with: ' + args.join(' '));
 	canvas.focus({ preventScroll: true });
