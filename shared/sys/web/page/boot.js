@@ -515,6 +515,7 @@ async function start(manifest) {
 		'+set', 'r_customwidth', String(frameWidth), '+set', 'r_customheight', String(frameHeight)];
 	const query = new URLSearchParams(location.search);
 	if (query.has('connect')) args.push('+connect', location.hostname);
+	else if (query.has('tv')) args.push('+tv', location.host);
 	args.push(...(query.get('args') || '').split(' ').filter(Boolean));
 	note('the engine starts with: ' + args.join(' '));
 	canvas.focus({ preventScroll: true });

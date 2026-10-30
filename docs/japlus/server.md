@@ -246,6 +246,49 @@ sees nothing of it.
   with `ms_repclear`.
 - Run on 2026-10-28 with a master and clients on one machine. Not run on the host of VisionJK.
 
+### The TV of the server (not from JA+)
+
+`server/sv_tv.cpp`, `server/web/sv_web_tv.cpp`, `client/cl_tv.cpp`. Issue #7. Built 2026-10-30.
+
+The TV is a spectator that stands in no slot of the server and has no connection, as a bot that records a server
+side demo has none. It follows a player who plays and goes on to the next one after `sv_tvSwitch` seconds (20), or
+at once when its player stops playing. While nobody plays it stands as a spectator of its own, where the last
+player it followed was, else where a spectator is, else in the middle of the level, so a viewer still gets a
+picture. No player sees it, the game module knows nothing of it, and its client number in the demo is a free slot
+from the top (`MAX_CLIENTS - 1` down).
+
+`tvrecord <name>` writes `demos/<name>.dm_26`, a normal demo that any client plays with `demo`, until `tvstop` or
+the end of the level. A new `tvrecord` ends the old file. `sv_tvSwitch` is archived.
+
+The same stream goes live to the viewers of the web host (`vs_clientWebPort`, which is 0, off, until set; the port
+is the one the browser client uses for `/net` and the voice chat for `/voice`, see [web.md](web.md)). The client
+watches it with
+
+```
+tv <address:port of the web host>
+```
+
+for example `tv 1.2.3.4:29071` when `vs_clientWebPort` is 29071. It leaves a game first, as `demo` does, and plays
+the TV as a demo that does not end. When the connection ends the client drops with "TV: <reason>". The browser
+client watches it when its page is opened with `?tv` (`http://<host>:<vs_clientWebPort>/?tv`), over `wss` when the
+page came over https.
+
+- `vs_tv` (default 1, archived): 0 turns the viewers off. `GET /tv` is then answered with 404, as it is when no
+  level runs.
+- 32 viewers at once and 4 of them from one address. Past that the answer is 503 with `Retry-After: 5`.
+- No login, and any `Origin` is accepted: what the TV shows is what any spectator of the server sees.
+- The viewer only listens, what it sends is ignored.
+- Nothing is built while nobody watches or records, so a server without viewers pays nothing for it.
+
+For somebody who writes a viewer: `GET /tv` becomes a WebSocket and every binary message on it is one record of a
+demo, `[int32 number][int32 length][message]`, both integers little endian, the message ending with `svc_EOF`.
+The first record is the gamestate, then comes one snapshot per frame of the server, each against the one before.
+When the level changes the gamestate comes again, and the message numbers go on (a client refuses numbers that
+go back). A viewer whose send buffer was full gets nothing until the next whole snapshot, which the TV then makes
+for it. The file has the same records, so one reader does for both.
+
+On a stream the end of a demo (a length of -1) never comes, the socket closes instead.
+
 ### Cleaning up cvars
 
 `qcommon/cvar_cleanup.cpp`, `qcommon/cvar_seen.c`. The engine of the server notes the day each cvar was last used,

@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client/client.h"
 
 #ifdef __EMSCRIPTEN__
+	#include <emscripten.h>
 	#include <emscripten/websocket.h>
 #else
 	#include "qcommon/net_local.h"
@@ -90,7 +91,9 @@ static qboolean CL_TVOpen( const char *address ) {
 	if ( !Q_stricmpn( address, "ws://", 5 ) || !Q_stricmpn( address, "wss://", 6 ) ) {
 		Q_strncpyz( url, address, sizeof( url ) );
 	} else {
-		Com_sprintf( url, sizeof( url ), "ws://%s/tv", address );
+		// (a page that came over https may only open a socket that is encrypted too)
+		Com_sprintf( url, sizeof( url ), "%s://%s/tv",
+			EM_ASM_INT( { return location.protocol == 'https:'; } ) ? "wss" : "ws", address );
 	}
 	emscripten_websocket_init_create_attributes( &attr );
 	attr.url = url;
