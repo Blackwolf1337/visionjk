@@ -26,15 +26,16 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/stream.js` | the WebSocket of the page: the state pushed, the chat, the entities, the clips and the log as subscriptions, HTTP when there is no socket |
 | `js/players.js` | the panel of a player with its actions |
 | `js/chat.js` | the chat |
+| `js/palette.js` | the command palette (Ctrl+K) and the button ? with the keys of the map |
 | `js/input.js` | mouse and keyboard on the map |
 | `js/ui-inputs.js` | the fields of the page: which keys are theirs, who keeps the focus, the wheel on a number, the width of the side panel |
-| `js/frame.js` | what a frame draws, the two modes and the tabs |
+| `js/frame.js` | what a frame draws, the two modes and the tabs of the side panel |
 | `js/items.js` | the items of a map as the client draws them |
 | `js/movers.js` | the model a mover draws besides its brushes |
 | `js/trace.js` | a line through the map: where it hits first |
 | `js/marks.js` | marks on the map: shadows, what a shot or a blade leaves |
 | `js/weather.js` | the weather of a map: snow, rain, dust |
-| `js/editor-world.js` | the entity list of the World tab |
+| `js/editor-world.js` | the entity list of the World tab, the modes and the pages of the server (`setMode` writes the address, `modeFromHash` reads it) |
 | `js/editor-props.js` | the tab Physical props |
 | `js/config.js` | the text editor of the server config (the view Text of the tab Settings) |
 | `js/settings.js` | the tab Settings: the form of the cvars, saving, the marks, the view Cleanup |
