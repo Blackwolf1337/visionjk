@@ -35,6 +35,7 @@ async function accountLoad() {
 		return;
 	}
 	accountApplyRole();
+	tvApply();
 	$('acctWho').textContent = me.name + ' (' + me.role + (me.account ? '' : ', by key') + ')';
 	$('acctOwn').hidden = !me.account;
 	$('acctTotpState').textContent = me.totp ? 'On. ' + me.recovery + ' recovery codes are left.' : 'Off: the password alone opens this account.';

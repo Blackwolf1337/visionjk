@@ -51,6 +51,7 @@ seta vs_webBind "0.0.0.0"
 | `vs_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
 | `vs_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
 | `vs_liveView` | 0 | 1: the live view below `/live/` is open to everybody without a login, see "The live view". It opens the port also without an account. Latched |
+| `vs_webTVPage` | empty | the address of the page of the browser client for the page TV, like `https://tv.example.org/?tv`. Empty: the host of the panel with the port `vs_clientWebPort` and `?tv`. Needed behind a reverse proxy, or when the panel comes over https (a page over https can not show a frame over plain http) |
 | `vs_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
 Port and bind are latched, they take effect at the next map start. Open `http://server:8080/` and log in.
@@ -219,13 +220,20 @@ walls. Health and shield are not shown.
   and Map info in the side panel, the plain view of the map (an image times the light) and its debug views: a marker
   at every entity, the triangles of the map as lines, the light alone or the texture alone. The tools wrap onto as
   many lines as they need.
-- Pages of the server: Settings, Files, Log, Bans, Performance and Account (and Masterserver on a masterserver) are
+- Pages of the server: TV, Settings, Files, Log, Bans, Performance and Account (and Masterserver on a masterserver) are
   in a row of their own under the top bar, with "Map" at its left to go back to the map. The address names the
-  page: `#/config`, `#/files`, `#/log`, `#/bans`, `#/load`, `#/account`, `#/master`, and `#/players` or an editor
+  page: `#/tv`, `#/config`, `#/files`, `#/log`, `#/bans`, `#/load`, `#/account`, `#/master`, and `#/players` or an editor
   tool (`#/world`, `#/models`, `#/clips`, `#/remaps`, `#/routes`, `#/mapinfo`, which open the editor). A reload or a
   link comes back to that page. A page of the server stays open when the mode is switched. Bans, Performance and
   Account take the whole width (their pane is at most 760 px wide, in the middle) and the map is not shown behind
   them.
+- Page TV: the TV of the server (a spectator in no slot who follows the players, see server.md, "The TV of the
+  server") in the client for the browser, in a frame (`js/tv.js`, `#/tv`). The page starts nothing by itself: it
+  says from which address the client comes and that it loads the game files first (more than a GB the first time,
+  then from the storage of the browser), and the button Watch starts it. Leaving the page empties the frame, which
+  stops the game in it. The tab is there only when `/api/me` has `"tv": {"port": N, "page": "..."}`: `port` is
+  `vs_clientWebPort`, 0 when the server has no web host or `vs_tv` is 0, and `page` is `vs_webTVPage`. Not on the
+  masterserver. Every role sees it.
 - Command palette: the button "Commands Ctrl K" in the top bar, or Ctrl+K (`js/palette.js`). It lists the pages, the
   two modes, the tools of the editor, Add bot, Change map, Gravity (with the current value), the side panel, the keys
   of the map, Fly, Screenshot and, while a player is selected, what his panel can do to him, named

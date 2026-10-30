@@ -42,7 +42,7 @@ function entVisible(ent) { return entMatches(ent, $('entFilter').value.trim().to
 let appMode = 'admin';
 const APP_TAB = { admin: 'players', editor: 'world' };
 // the pages of the server in the row under the top bar; the rest of the modes is the map with its side panel
-const SERVER_PAGES = new Set(['config', 'files', 'log', 'bans', 'load', 'account', 'master']);
+const SERVER_PAGES = new Set(['tv', 'config', 'files', 'log', 'bans', 'load', 'account', 'master']);
 const EDITOR_TOOLS = new Set(['world', 'models', 'clips', 'remaps', 'routes', 'mapinfo']);
 let lastMapTool = 'players';		// the tool of the map that was open last, for the page Map
 
@@ -80,6 +80,8 @@ function setMode(m) {
 	document.body.classList.toggle('fsOpen', m === 'files');
 	document.body.classList.toggle('logOpen', m === 'log');
 	document.body.classList.toggle('masterOpen', m === 'master');
+	document.body.classList.toggle('tvOpen', m === 'tv');
+	if (m === 'tv') { select(-1); tvOpen(); } else tvLeave();
 	if (m === 'log') { select(-1); logPoll(); }
 	if (m === 'bans') banLoad();
 	if (m === 'account') { select(-1); accountLoad(); }

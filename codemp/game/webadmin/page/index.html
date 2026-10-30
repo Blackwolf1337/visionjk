@@ -23,7 +23,7 @@
 	<span id="status" title="Connection"></span>
 </div>
 <!-- the pages of the panel: the map with its players (or the tools of the editor), and the pages of the server -->
-<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)">Map</button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses">Settings</button><button data-tab="files" title="The files of the server">Files</button><button data-tab="log" title="The log of the game, the console of the server, the intrusions">Log</button><button data-tab="bans" title="Who is banned">Bans</button><button data-tab="load" title="How long a frame of the server takes">Performance</button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts">Account</button><button data-tab="master" title="The relay of the masterserver">Masterserver</button></div>
+<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)">Map</button><button data-tab="tv" title="The game as a spectator sees it, in the client for the browser">TV</button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses">Settings</button><button data-tab="files" title="The files of the server">Files</button><button data-tab="log" title="The log of the game, the console of the server, the intrusions">Log</button><button data-tab="bans" title="Who is banned">Bans</button><button data-tab="load" title="How long a frame of the server takes">Performance</button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts">Account</button><button data-tab="master" title="The relay of the masterserver">Masterserver</button></div>
 </div>
 
 <div id="side">
@@ -453,6 +453,10 @@
 	<div id="cfgEditor" class="cfgMain" data-view="text" hidden><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
 	<div id="cleanView" class="cfgMain" data-view="cleanup" hidden><table><thead><tr><th></th><th>Cvar</th><th>Value</th><th>Last used</th><th>Where</th><th></th></tr></thead><tbody id="cleanRows"></tbody></table></div>
 </div>
+<div id="tvView">
+	<div id="tvStart"><p id="tvNote"></p><button id="tvGo" class="primary">Watch</button></div>
+	<iframe id="tvFrame" title="The TV of the server" allow="fullscreen; autoplay" hidden></iframe>
+</div>
 <div id="masterView">
 	<div class="msTiles">
 		<div class="msTile"><b id="msSessions">-</b><span>sessions</span></div>
@@ -500,6 +504,7 @@
 <!--#include js/config.js -->
 <!--#include js/settings.js -->
 <!--#include js/master.js -->
+<!--#include js/tv.js -->
 <!--#include js/files.js -->
 <!--#include js/editor-entities.js -->
 <!--#include js/editor-classes.js -->

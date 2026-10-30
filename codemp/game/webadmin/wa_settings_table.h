@@ -377,6 +377,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	{ "vs_webBasicAuth",				WA_CAT_WEB,			WA_SET_BOOL,	0, 0,	NULL,	WA_SET_MASTER,	"1: a script may send the token of its account as the password of basic auth." },
 	{ "vs_webPassword",					WA_CAT_WEB,			WA_SET_SECRET,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_LATCH,	"The password of the first owner account, taken once when there is no account yet. Remove it after that." },
 	{ "vs_liveView",					WA_CAT_WEB,			WA_SET_BOOL,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_LATCH,	"1: the live view below /live/ is open to everybody without a login. It opens the port without an account." },
+	{ "vs_webTVPage",					WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	0,		"The address of the browser client for the page TV, like https://tv.example.org/?tv. Empty: this host, port vs_clientWebPort." },
 	{ "vs_webRoot",						WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER,	"A folder with the files of the panel page, served in place of the built in page. For working on the page." },
 
 	// Logging
