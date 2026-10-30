@@ -19,8 +19,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cl_tv.cpp -- the TV of a server, live (issue #7): tv <address:port> opens GET /tv of the web host of the server
-// (codemp/server/web/sv_web_tv.cpp) and plays what comes there as a demo that does not end. Not from OpenJK, see
-// docs/japlus/server.md, "The TV of the server".
+// (codemp/server/web/sv_web_tv.cpp) and plays what comes there as a demo that does not end. tv <name> (no port) or
+// a ws:// or wss:// address asks a web server that hands /tv on to the server (nginx in front of jka.vision).
+// Not from OpenJK, see docs/japlus/server.md, "The TV of the server".
 //
 // Every binary message on that WebSocket is a record of a demo: its number and its length (4 bytes each, little
 // endian) and the message. They go into a queue as they come, and each frame of the client hands every one that
@@ -28,7 +29,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // them as it follows a server (CL_AdjustTimeDelta), it does not read the file ahead as a demo does.
 //
 // In a browser the socket is the WebSocket of the page (Emscripten), elsewhere a TCP socket with the handshake of
-// RFC 6455 done here. Nothing waits: the socket does not block and is looked at once a frame.
+// RFC 6455 done here. Nothing waits: the socket does not block and is looked at once a frame. Over https the
+// engine has no TLS of its own: a thread asks libcurl or WinHTTP (Sys_HttpWebSocket, sys/sys_http.h), and each
+// frame takes what that thread put into its inbox.
 
 #include "client/client.h"
 
@@ -36,7 +39,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include <emscripten.h>
 	#include <emscripten/websocket.h>
 #else
+	#include <SDL.h>
 	#include "qcommon/net_local.h"
+	#include "sys/sys_http.h"
 #endif
 
 #define TV_QUEUE_BYTES		( 1 << 20 )			// the records that came and wait for the next frame
@@ -137,6 +142,130 @@ static char			tvRequest[512];
 static byte			tvIn[65536];
 static int			tvInLen;
 
+/*
+The stream through the library (ws:// or wss://), in a thread. The thread writes into inbox (under lock), the game takes it out each frame;
+when the stream ends the thread writes why into ended and sets done last. A TV that is closed sets cancel and
+leaves the thread, which ends within a second or so by itself (libcurl looks at cancel once a second, WinHTTP with
+the next message, and the server sends one each frame of its own).
+*/
+static struct {
+	qboolean		on;					// this TV goes through the library
+	qboolean		started;			// a thread was started, and is through when done is set
+	SDL_Thread		*thread;			// NULL also for one that was left behind
+	SDL_mutex		*lock;
+	char			url[MAX_OSPATH];
+	volatile int	cancel;
+	SDL_atomic_t	done;
+	byte			inbox[TV_QUEUE_BYTES];
+	int				inboxLen;
+	char			ended[128];
+} tvLib;
+
+// (the thread)
+static qboolean CL_TVLibSink( void *ctx, const void *data, size_t len ) {
+	qboolean fits;
+
+	SDL_LockMutex( tvLib.lock );
+	fits = (qboolean)( len <= (size_t)( TV_QUEUE_BYTES - tvLib.inboxLen ) );
+	if ( fits ) {
+		Com_Memcpy( tvLib.inbox + tvLib.inboxLen, data, len );
+		tvLib.inboxLen += (int)len;
+	}
+	SDL_UnlockMutex( tvLib.lock );
+	return fits;
+}
+
+static int CL_TVLibThread( void *unused ) {
+	char	error[128];
+	int		status;
+
+	Sys_HttpWebSocket( tvLib.url, CL_TVLibSink, NULL, &tvLib.cancel, error, sizeof( error ), &status );
+	SDL_LockMutex( tvLib.lock );
+	if ( status == 404 ) {
+		Q_strncpyz( tvLib.ended, "the server has no TV", sizeof( tvLib.ended ) );
+	} else {
+		Q_strncpyz( tvLib.ended, error, sizeof( tvLib.ended ) );
+	}
+	SDL_UnlockMutex( tvLib.lock );
+	SDL_AtomicSet( &tvLib.done, 1 );
+	return 0;
+}
+
+// ws:// or wss:// with a host and maybe a path, or a name with no port (https then): through the web server in
+// front of the game server, with the library. Only address:port is the socket of the web host of the server itself.
+static qboolean CL_TVLib( const char *address ) {
+	return (qboolean)( strstr( address, "://" ) || !strchr( address, ':' ) );
+}
+
+static qboolean CL_TVLibOpen( const char *address ) {
+	const char *scheme = "wss", *host = address;
+
+	if ( !Q_stricmpn( address, "wss://", 6 ) ) {
+		host = address + 6;
+	} else if ( !Q_stricmpn( address, "ws://", 5 ) ) {
+		scheme = "ws";
+		host = address + 5;
+	} else if ( strstr( address, "://" ) ) {
+		Com_Printf( "TV: %s is no ws:// or wss:// address\n", address );
+		return qfalse;
+	}
+
+	if ( tvLib.started && !SDL_AtomicGet( &tvLib.done ) ) {
+		Com_Printf( "TV: the one before still closes, ask again in a moment\n" );
+		return qfalse;
+	}
+	if ( !tvLib.lock && !( tvLib.lock = SDL_CreateMutex() ) ) {
+		return qfalse;
+	}
+	// (an address goes to WinHTTP as plain letters, one wide letter each: nothing else is let through)
+	for ( const char *c = host; *c; c++ ) {
+		if ( *c <= ' ' || *c >= 127 || *c == '"' || *c == '\\' ) {
+			Com_Printf( "TV: %s is no address\n", address );
+			return qfalse;
+		}
+	}
+	Com_sprintf( tvLib.url, sizeof( tvLib.url ), "%s://%s%s", scheme, host, strchr( host, '/' ) ? "" : "/tv" );
+	tvLib.cancel = 0;
+	tvLib.inboxLen = 0;
+	tvLib.ended[0] = '\0';
+	SDL_AtomicSet( &tvLib.done, 0 );
+	tvLib.thread = SDL_CreateThread( CL_TVLibThread, "tv", NULL );
+	tvLib.started = tvLib.on = (qboolean)( tvLib.thread != NULL );
+	return tvLib.on;
+}
+
+// what the thread brought, into the queue; a thread that is through is left behind
+static void CL_TVLibPump( void ) {
+	const qboolean done = (qboolean)( SDL_AtomicGet( &tvLib.done ) != 0 );
+
+	SDL_LockMutex( tvLib.lock );
+	CL_TVQueue( tvLib.inbox, tvLib.inboxLen );
+	tvLib.inboxLen = 0;
+	if ( done && !tvEnded[0] ) {
+		Q_strncpyz( tvEnded, tvLib.ended, sizeof( tvEnded ) );
+	}
+	SDL_UnlockMutex( tvLib.lock );
+	if ( done && tvLib.thread ) {
+		SDL_WaitThread( tvLib.thread, NULL );		// (it is through, this does not wait)
+		tvLib.thread = NULL;
+	}
+}
+
+static void CL_TVLibShut( void ) {
+	tvLib.on = qfalse;
+	if ( !tvLib.thread ) {
+		return;
+	}
+	if ( SDL_AtomicGet( &tvLib.done ) ) {
+		SDL_WaitThread( tvLib.thread, NULL );		// (it is through, this does not wait)
+	} else {
+		// it ends by itself and touches nothing after done; the next tv through the library waits for that (CL_TVLibOpen)
+		tvLib.cancel = 1;
+		SDL_DetachThread( tvLib.thread );
+	}
+	tvLib.thread = NULL;
+}
+
 static qboolean CL_TVOpen( const char *address ) {
 	struct sockaddr_in	sa;
 	netadr_t			adr;
@@ -147,11 +276,10 @@ static qboolean CL_TVOpen( const char *address ) {
 	int					on = 1;
 #endif
 
-	Q_strncpyz( host, address, sizeof( host ) );
-	if ( !Q_stricmpn( host, "ws://", 5 ) ) {
-		memmove( host, host + 5, strlen( host + 5 ) + 1 );
-		host[strcspn( host, "/" )] = '\0';
+	if ( CL_TVLib( address ) ) {
+		return CL_TVLibOpen( address );
 	}
+	Q_strncpyz( host, address, sizeof( host ) );
 	if ( !NET_StringToAdr( host, &adr ) || adr.type != NA_IP || !adr.port ) {
 		Com_Printf( "TV: %s is no address with a port\n", host );
 		return qfalse;
@@ -250,6 +378,10 @@ static void CL_TVFrames( void ) {
 }
 
 static void CL_TVPump( void ) {
+	if ( tvLib.on ) {
+		CL_TVLibPump();
+		return;
+	}
 	if ( tvSock == INVALID_SOCKET || tvEnded[0] ) {
 		return;
 	}
@@ -320,6 +452,7 @@ static void CL_TVPump( void ) {
 }
 
 static void CL_TVShut( void ) {
+	CL_TVLibShut();
 	if ( tvSock != INVALID_SOCKET ) {
 		closesocket( tvSock );
 		tvSock = INVALID_SOCKET;
@@ -381,13 +514,14 @@ void CL_TVFrame( void ) {
 CL_TV_f
 
 tv <address:port>: the TV of that server, at the port of its web host (vs_clientWebPort)
+tv <name>, tv wss://<name>[/path] or ws://...: through the web server in front of it (/tv when no path is given)
 ====================
 */
 static void CL_TV_f( void ) {
 	char address[MAX_OSPATH];
 
 	if ( Cmd_Argc() != 2 ) {
-		Com_Printf( "usage: tv <address:port of the web host of the server>\n" );
+		Com_Printf( "usage: tv <address:port of the web host of the server>, or tv <name> for one behind https\n" );
 		return;
 	}
 	Q_strncpyz( address, Cmd_Argv( 1 ), sizeof( address ) );
@@ -416,5 +550,5 @@ static void CL_TV_f( void ) {
 }
 
 void CL_TVInit( void ) {
-	Cmd_AddCommand( "tv", CL_TV_f, "Watch the TV of a server live: tv <address:port of its web host>" );
+	Cmd_AddCommand( "tv", CL_TV_f, "Watch the TV of a server live: tv <address:port of its web host>, or tv <name> over https" );
 }

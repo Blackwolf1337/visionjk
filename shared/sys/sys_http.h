@@ -28,6 +28,9 @@ has no code for that of its own and brings none: on Windows it asks WinHTTP, whi
 
 Sys_HttpGet() waits until the answer is there or has failed. It is only ever called from a thread of its
 own, never from the thread of the game, and one at a time: the two callers never ask at once.
+
+Sys_HttpWebSocket() is the stream of the TV of a server (client/cl_tv.cpp) behind a web server that speaks https:
+it waits as long as the stream runs, in a thread of its own too, and may run while Sys_HttpGet() does.
 */
 
 #pragma once
@@ -47,3 +50,10 @@ error: what went wrong, in words for the console.
 status: the answer of the server (404: it does not have it), 0 when there was none. NULL: not wanted.
 */
 qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status );
+
+/*
+Opens a WebSocket at url (ws:// or wss://) and hands what each binary message carries to sink, in order, until
+the server ends it, the sink does not want more or cancel is set. A ping of the server is answered here. It always
+ends with a reason in error. status: the answer of a server that did not take the socket (404), else 0.
+*/
+qboolean Sys_HttpWebSocket( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status );

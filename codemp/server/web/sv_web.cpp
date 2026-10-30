@@ -43,6 +43,7 @@ static cvar_t	*vs_clientWebPort;
 static cvar_t	*vs_clientWebBind;
 cvar_t			*vs_clientWebRoot;
 cvar_t			*vs_clientWebTVOnly;
+cvar_t			*vs_clientWebProxy;
 
 static SOCKET			listenSocket = INVALID_SOCKET;
 static qboolean			listenFailed;			// accept() failed, the listener is left alone for a moment
@@ -623,6 +624,7 @@ void SV_WebInit( void ) {
 	vs_clientWebBind = Cvar_Get( "vs_clientWebBind", "0.0.0.0", 0, "Address the web host listens on" );
 	vs_clientWebRoot = Cvar_Get( "vs_clientWebRoot", "web", 0, "Folder of the page of the web host, under fs_basepath unless it is a full path" );
 	vs_clientWebTVOnly = Cvar_Get( "vs_clientWebTVOnly", "0", 0, "1: the web host answers only GET /tv (the TV of the server), no page, no game files, no players" );
+	vs_clientWebProxy = Cvar_Get( "vs_clientWebProxy", "", 0, "IPv4 addresses of reverse proxies in front of the web host, split by blanks: their X-Real-IP names the viewer of the TV" );
 
 	vs_clientWebPort->modified = qtrue;
 }

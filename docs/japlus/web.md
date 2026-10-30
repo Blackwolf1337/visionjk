@@ -42,6 +42,7 @@ on purpose in the first version: compressed textures, threads. See "What is diff
 | `vs_clientWebBind` | 0.0.0.0 | the address it listens on, as `vs_webBind` of the web panel: empty is every address, 127.0.0.1 keeps it on the machine |
 | `vs_clientWebRoot` | web | the folder with the page and the WebAssembly files: a full path, or under `fs_basepath` |
 | `vs_clientWebTVOnly` | 0 | 1: the web host answers only `GET /tv`, everything else gets 404 (see below) |
+| `vs_clientWebProxy` | | IPv4 addresses of reverse proxies in front of the web host, split by blanks or commas. For a TV viewer that comes from one of them, its `X-Real-IP` header counts as its address |
 
 Only the dedicated server has it (`visionjkded`), a server started from the client does not.
 
@@ -65,7 +66,8 @@ by hand, the server does not do that.
 A player who comes through the page is a client like any other: the same slot, the same commands, the same
 bans. The server knows them by their real address (the type `NA_WEB`, printed like an address of UDP), so the
 limit of connections per address and a ban by address hold for both ways in. Behind a reverse proxy every such
-player has the address of the proxy.
+player has the address of the proxy. The TV is the exception: with `vs_clientWebProxy` set, it counts its viewers by
+the `X-Real-IP` header of the proxy (see [server.md](server.md), "The TV of the server").
 
 Limits of the web host: 60 connections, 16 from one address, 32 files being sent at once and 6 of them to one
 address, 256 KB of file data each time the server wakes up for the network, a request head of 16 KB, a WebSocket

@@ -24,7 +24,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // snapshots from the first whole one on; one that could not take a snapshot (its buffer was full) waits for the
 // next whole one, which the TV then makes. Not from OpenJK, see docs/japlus/server.md, "The TV of the server".
 //
-// No login: what the TV shows is what any spectator of the server sees. vs_tv 0 turns it off.
+// No login: what the TV shows is what any spectator of the server sees. vs_tv 0 turns it off. Behind a reverse
+// proxy (nginx in front of jka.vision, vs_clientWebProxy) every viewer comes from the proxy, which names the real
+// one in X-Real-IP: the limit per address counts that one.
 
 #include "server/web/sv_web_local.h"
 
@@ -37,14 +39,14 @@ static qboolean SV_WebTVViewer( const webConnection_t *c ) {
 	return (qboolean)( c->tv && c->state == WEB_SOCKET && !c->drop );
 }
 
-// viewers, of one address or of all (adr NULL)
-static int SV_WebTVCount( const netadr_t *adr ) {
+// viewers, of one address or of all (ip NULL)
+static int SV_WebTVCount( const byte *ip ) {
 	int i, n = 0;
 
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 		const webConnection_t *c = SV_WebConnection( i );
 
-		if ( SV_WebTVViewer( c ) && ( !adr || !memcmp( c->adr.ip, adr->ip, sizeof( adr->ip ) ) ) ) {
+		if ( SV_WebTVViewer( c ) && ( !ip || !memcmp( c->tvIp, ip, sizeof( c->tvIp ) ) ) ) {
 			n++;
 		}
 	}
@@ -127,6 +129,38 @@ void SV_WebTVSend( const byte *record, int len, qboolean full ) {
 	}
 }
 
+// is the peer one of the proxies of vs_clientWebProxy (addresses split by blanks or commas)?
+static qboolean SV_WebTVProxy( const netadr_t *adr ) {
+	const char	*s = vs_clientWebProxy->string;
+	char		word[16];
+	byte		ip[4];
+
+	while ( *s ) {
+		const size_t len = strcspn( s, " ,\t" );
+
+		if ( len && len < sizeof( word ) ) {
+			Q_strncpyz( word, s, (int)len + 1 );
+			if ( Q_ParseIPv4( word, ip ) && !memcmp( ip, adr->ip, sizeof( ip ) ) ) {
+				return qtrue;
+			}
+		}
+		s += len;
+		s += strspn( s, " ,\t" );
+	}
+	return qfalse;
+}
+
+// who watches: the peer, or the viewer a proxy names. A proxy that names none (or none that is an IPv4 address)
+// counts as the viewer itself.
+static void SV_WebTVFrom( webConnection_t *c, const char *head ) {
+	char value[64];
+
+	memcpy( c->tvIp, c->adr.ip, sizeof( c->tvIp ) );
+	if ( SV_WebTVProxy( &c->adr ) && Web_HeaderValue( head, "X-Real-IP", value, sizeof( value ) ) ) {
+		Q_ParseIPv4( value, c->tvIp );
+	}
+}
+
 /*
 ==================
 SV_WebTVUpgrade
@@ -143,7 +177,8 @@ void SV_WebTVUpgrade( webConnection_t *c, const char *head, int headLen, int min
 		SV_WebError( c, 404, "Not Found", "" );
 		return;
 	}
-	if ( SV_WebTVCount( NULL ) >= SV_WEB_MAX_TV || SV_WebTVCount( &c->adr ) >= SV_WEB_MAX_ADDRESS_TV ) {
+	SV_WebTVFrom( c, head );
+	if ( SV_WebTVCount( NULL ) >= SV_WEB_MAX_TV || SV_WebTVCount( c->tvIp ) >= SV_WEB_MAX_ADDRESS_TV ) {
 		SV_WebError( c, 503, "Service Unavailable", "Retry-After: 5\r\n" );
 		return;
 	}
@@ -154,5 +189,6 @@ void SV_WebTVUpgrade( webConnection_t *c, const char *head, int headLen, int min
 	c->tv = qtrue;
 	c->tvGreet = qtrue;
 	c->tvSynced = qfalse;
-	Com_Printf( "TV: a viewer from %s\n", NET_AdrToString( &c->adr ) );
+	Com_Printf( "TV: a viewer from %i.%i.%i.%i%s\n", c->tvIp[0], c->tvIp[1], c->tvIp[2], c->tvIp[3],
+		memcmp( c->tvIp, c->adr.ip, sizeof( c->tvIp ) ) ? " (through a proxy)" : "" );
 }

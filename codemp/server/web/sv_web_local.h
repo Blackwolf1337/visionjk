@@ -179,6 +179,7 @@ typedef struct webConnection_s {
 	qboolean	tv;
 	qboolean	tvGreet;		// it is to get the gamestate first
 	qboolean	tvSynced;		// it has had a whole snapshot since, and every one after it
+	byte		tvIp[4];		// who watches: the address of the peer, or the one a proxy of vs_clientWebProxy names
 
 	int			inLen;
 	int			inPos;			// WEB_SOCKET: the frames in front of this are done with
@@ -195,6 +196,7 @@ typedef struct webConnection_s {
 
 extern cvar_t	*vs_clientWebRoot;
 extern cvar_t	*vs_clientWebTVOnly;
+extern cvar_t	*vs_clientWebProxy;
 
 // sv_web.cpp
 qboolean SV_WebSocketFits( SOCKET s );

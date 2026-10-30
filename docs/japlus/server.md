@@ -265,13 +265,21 @@ is the one the browser client uses for `/net` and the voice chat for `/voice`, s
 watches it with
 
 ```
-tv <address:port of the web host>
+tv <address:port>
+tv <name>
+tv "wss://<name>/<path>"
 ```
 
-for example `tv 1.2.3.4:29071` when `vs_clientWebPort` is 29071. It leaves a game first, as `demo` does, and plays
-the TV as a demo that does not end. When the connection ends the client drops with "TV: <reason>". The browser
-client watches it when its page is opened with `?tv` (`http://<host>:<vs_clientWebPort>/?tv`), over `wss` when the
-page came over https.
+`tv <address:port>` is the web host of the server itself over plain TCP, for example `tv 1.2.3.4:29071` when
+`vs_clientWebPort` is 29071. `tv <name>`, a name with no port (`tv jka.vision`), goes over https to
+`wss://<name>/tv`, through a web server in front of the game server (see below). `tv "wss://name/path"` or
+`tv "ws://..."` takes that address, and `/tv` when there is no path. An address with `://` has to be in quotes
+in the console, because the console takes `//` as the start of a comment. The `ws` and `wss` forms go through
+libcurl of the system (Linux and macOS, it needs libcurl 7.86 or newer built with WebSockets, which every libcurl
+since 8.11 is) or WinHTTP (Windows 8 or newer), in a thread, so the game never waits. The command leaves a game
+first, as `demo` does, and plays the TV as a demo that does not end. When the connection ends the client drops
+with "TV: <reason>". The browser client watches it when its page is opened with `?tv`
+(`http://<host>:<vs_clientWebPort>/?tv`), over `wss` when the page came over https.
 
 A server that only wants to offer the TV sets `vs_clientWebTVOnly 1`. The web host then answers `GET /tv` alone and
 sends 404 for everything else (the page, `/manifest.json`, `/pk3/...`, `/net`, `/voice`), so it hands out no game
@@ -282,6 +290,25 @@ files and takes no players.
 - 32 viewers at once and 4 of them from one address. Past that the answer is 503 with `Retry-After: 5`.
 - No login, and any `Origin` is accepted: what the TV shows is what any spectator of the server sees.
 - The viewer only listens, what it sends is ignored.
+
+A server with a website behind https can hand the TV out on its own address. The TV host stays on the machine
+(`vs_clientWebBind 127.0.0.1`, `vs_clientWebTVOnly 1`), the web server passes `/tv` on to it, and
+`vs_clientWebProxy` names the address of that web server (IPv4 addresses, split by blanks or commas, empty by
+default). For a viewer that comes from one of them, the address in its `X-Real-IP` header counts for the limit of 4
+per address, and the log line says "(through a proxy)". Without it every viewer has the address of the web server
+and 4 of them fill the limit. Players then type `tv <name>`. For nginx:
+
+```
+location = /tv {
+	proxy_pass http://127.0.0.1:29071;
+	proxy_http_version 1.1;
+	proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection "upgrade";
+	proxy_set_header X-Real-IP $remote_addr;
+	proxy_set_header Host $host;
+	proxy_read_timeout 1h;
+}
+```
 - Nothing is built while nobody watches or records, so a server without viewers pays nothing for it.
 
 For somebody who writes a viewer: `GET /tv` becomes a WebSocket and every binary message on it is one record of a
