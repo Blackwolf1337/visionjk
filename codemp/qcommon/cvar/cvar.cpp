@@ -1230,9 +1230,35 @@ Appends lines containing "set variable value" for all variables
 with the archive flag set to qtrue.
 ============
 */
+// VisionJK: a value as it can stand between quotes in a config: a line break of it would end the line, and what
+// came after it ran as commands at the next start (the JA+ messages, "%s\n has been slapped", 29 unknown commands).
+// A line break becomes "\n", which is how a config writes them and what JA+ turns into one (JP_NewLines), a quote
+// becomes ' (the parser has no escape for it). qfalse: it does not fit.
+static qboolean Cvar_ConfigValue( const char *value, char *out, int outSize ) {
+	int len = 0;
+
+	for ( ; *value; value++ ) {
+		if ( *value == '\r' ) {
+			continue;
+		}
+		if ( len + 3 > outSize ) {
+			return qfalse;
+		}
+		if ( *value == '\n' ) {
+			out[len++] = '\\';
+			out[len++] = 'n';
+		} else {
+			out[len++] = ( *value == '"' ) ? '\'' : *value;
+		}
+	}
+	out[len] = '\0';
+	return qtrue;
+}
+
 void Cvar_WriteVariables( fileHandle_t f ) {
 	cvar_t	*var;
 	char buffer[1024];
+	char value[1024];
 
 	if ( cvar_sort ) {
 		Com_DPrintf( "Cvar_Sort: sort cvars\n" );
@@ -1256,7 +1282,11 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 				if ( (var->flags & CVAR_NODEFAULT) && !strcmp( var->latchedString, var->resetString ) ) {
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->latchedString);
+				if ( !Cvar_ConfigValue( var->latchedString, value, sizeof( value ) - strlen( var->name ) - 10 ) ) {
+					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable \"%s\" too long to write to file\n", var->name );
+					continue;
+				}
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, value);
 			} else {
 				if( strlen( var->name ) + strlen( var->string ) + 10 > sizeof( buffer ) ) {
 					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable "
@@ -1266,7 +1296,11 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 				if ( (var->flags & CVAR_NODEFAULT) && !strcmp( var->string, var->resetString ) ) {
 					continue;
 				}
-				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, var->string);
+				if ( !Cvar_ConfigValue( var->string, value, sizeof( value ) - strlen( var->name ) - 10 ) ) {
+					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable \"%s\" too long to write to file\n", var->name );
+					continue;
+				}
+				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, value);
 			}
 			FS_Write( buffer, strlen( buffer ), f );
 		}
