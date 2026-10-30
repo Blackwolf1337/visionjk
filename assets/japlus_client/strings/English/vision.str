@@ -1262,6 +1262,12 @@ LANG_ENGLISH        "Updates, downloads and security."
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
 
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+
+REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
+LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
+
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 
@@ -1756,6 +1762,9 @@ LANG_ENGLISH        "Never used"
 
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
+
+REFERENCE           NO_SETTING_HAS_THESE_WORDS
+LANG_ENGLISH        "No setting has these words."
 
 
 ENDMARKER

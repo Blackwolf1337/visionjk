@@ -1546,7 +1546,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					1
+			action { play "sound/interface/button1.wav" ; }
 			page					7
 			scroll					1
 		}
@@ -1650,7 +1653,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					2
+			action { play "sound/interface/button1.wav" ; }
 			page					7
 			scroll					1
 		}
@@ -1870,5 +1876,6 @@
 		}
 		scrollRect				12 38 380 352
 		scrollStep				22
+		foldCvar				v_controlsFolds
 	}
 }

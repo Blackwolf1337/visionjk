@@ -1681,6 +1681,14 @@ REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
 LANG_FRENCH         "Dossiers de jeu contenant d'autres mods."
 
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+LANG_FRENCH         "Rechercher"
+
+REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
+LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
+LANG_FRENCH         "Affiche les paramètres de toutes les pages dont le nom ou la description contient ces mots."
+
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_FRENCH         "Redémarrer l'affichage avec ces réglages."
@@ -2340,6 +2348,10 @@ LANG_FRENCH         "Jamais utilisé"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_FRENCH         "il y a %i jours"
+
+REFERENCE           NO_SETTING_HAS_THESE_WORDS
+LANG_ENGLISH        "No setting has these words."
+LANG_FRENCH         "Aucun paramètre ne contient ces mots."
 
 
 ENDMARKER

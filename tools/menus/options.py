@@ -528,15 +528,18 @@ def new_row(spec):
     return b
 
 
-def page_items(m, page, content, L):
-    """The items of one page: its rows one under the other."""
+def page_items(m, page, content, L, folds):
+    """The items of one page: its rows one under the other. folds: the numbers the headings of the screen have so far,
+    a click on a heading folds its rows away ("fold", Menu_ListLayout in codemp/ui/ui_shared.c)."""
     out = []
     x, y, w, h = L.list
     for entry in content:
         kind = entry[0]
         if kind == 'head':
+            folds.append(len(folds) + 1)
             out.append(text_item('vision_head', (x + 2, y, w - 4, ROW_H), word(entry[1]), 0.54, DIM, ('textaligny', 9), ('caps', 1),
-                                 ('decoration',), ('page', page), ('scroll', 1)))
+                                 ('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_EMPTY'), ('fold', folds[-1]),
+                                 ('action', CLICK), ('page', page), ('scroll', 1)))
             out.append(fill('vision_headline', (x, y + ROW_H - 1, w, 0.67), ACCENT[:3] + ['0.32'], ('page', page), ('scroll', 1)))
             y += ROW_H
         elif kind == 'old':
@@ -639,8 +642,9 @@ def build(m, name, ingame, nav):
     back = clean(list(esc.block)) if esc and isinstance(esc.block, list) else list(CLICK)
 
     pages = []
+    folds = []
     for title, about, content in screen:
-        made = page_items(old, len(pages) + 1, content, L)
+        made = page_items(old, len(pages) + 1, content, L, folds)
         if made:
             pages.append((title, about, made))
     new = list(nav)
@@ -668,8 +672,15 @@ def build(m, name, ingame, nav):
     new.append(item('vision_scroll', (x + w + 3, y, 6, h), ('type', 'ITEM_TYPE_PAGESCROLL')))
     px, py, pw, ph = L.pane
     new.append(panel_item('vision_pane', L.pane, SOFT, SOFT_EDGE, 4))
-    new.append(text_item('vision_about', (px + 12, py + 14, pw - 24, ph - 28), '""', 0.6, BRIGHT, ('type', 'ITEM_TYPE_DESC'),
+    top = 34 if setup else 0        # (under the search)
+    new.append(text_item('vision_about', (px + 12, py + 14 + top, pw - 24, ph - 28 - top), '""', 0.6, BRIGHT, ('type', 'ITEM_TYPE_DESC'),
                          ('decoration',)))
+    # the search: at the top of the pane, above what the row under the mouse is for. While it has words the list
+    # shows the rows of all pages that have them (searchCvar, Menu_ListLayout)
+    if setup:
+        new.append(text_item('vision_search', (px + 8, py + 8, pw - 16, 20), ref('Search'), 0.56, DIM,
+                             ('type', 'ITEM_TYPE_EDITFIELD'), ('hint', 1), ('cvar', quoted('v_setupSearch')), ('maxChars', 40),
+                             ('maxPaintChars', 18), ('descText', ref('Shows the settings of all pages whose name or description has these words.'))))
 
     # the bar at the bottom: back at the left, and what else the screen has to offer
     new.append(fill('vision_foot', (0, L.bar_y, L.width, L.bar_h), BAND, *((('wide', 1),) if not ingame else ())))
@@ -729,6 +740,11 @@ def build(m, name, ingame, nav):
             e.block = ['uiScript', 'getsoundsetup', mf.NL] + e.block
     mf.put(m, 'scrollRect', *[mf.fmt(v) for v in L.list])
     mf.put(m, 'scrollStep', ROW_H)
+    if folds:
+        mf.put(m, 'foldCvar', 'v_setupFolds' if setup else 'v_controlsFolds')
+    if setup:
+        # (Menus_Activate empties it when the screen opens: a search is over then)
+        mf.put(m, 'searchCvar', 'v_setupSearch')
     if ingame:
         window_frame(m, L)
 

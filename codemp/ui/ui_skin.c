@@ -71,6 +71,7 @@ static struct {
 	qhandle_t	solid;				// a white picture for polygons in a scene
 	qboolean	logoTried;
 	qhandle_t	arrow;				// a triangle that points to the right
+	qhandle_t	arrowDown;			//	and the same that points down
 	qhandle_t	noPicture;			// the tile of somebody who has no picture
 	qboolean	noPictureTried;
 } skin;
@@ -243,6 +244,19 @@ static void Skin_Pictures( void ) {
 		}
 	}
 	skin.arrow = DC->registerShaderRGBA( "skin_arrow", skinPic, SKIN_ARROW_SIZE, SKIN_ARROW_SIZE, RGBA_SHADER_OVER );
+
+	// the same turned to point down (the heading of a list that is open): its tip in the middle of the bottom edge
+	for ( y = 0; y < SKIN_ARROW_SIZE; y++ ) {
+		for ( x = 0; x < SKIN_ARROW_SIZE; x++ ) {
+			const float	py = y + 0.5f, px = fabsf( x + 0.5f - SKIN_ARROW_SIZE * 0.5f );
+			const float	inside = ( ( SKIN_ARROW_SIZE - 1.0f - py ) * 0.5f - px ) * 0.894f;
+			byte		*out = &skinPic[( y * SKIN_ARROW_SIZE + x ) * 4];
+
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( Com_Clamp( 0.0f, 1.0f, Q_min( inside + 0.5f, py ) ) * 255.0f + 0.5f );
+		}
+	}
+	skin.arrowDown = DC->registerShaderRGBA( "skin_arrowdown", skinPic, SKIN_ARROW_SIZE, SKIN_ARROW_SIZE, RGBA_SHADER_OVER );
 }
 
 /*
@@ -458,6 +472,19 @@ void Skin_Arrow( float x, float y, float w, float h, qboolean left, const vec4_t
 	}
 	DC->setColor( color );
 	DC->drawStretchPic( Skin_SnapX( x ), Skin_SnapY( y ), w, h, left ? 1.0f : 0.0f, 0.0f, left ? 0.0f : 1.0f, 1.0f, skin.arrow );
+	DC->setColor( NULL );
+}
+
+void Skin_ArrowDown( float x, float y, float w, float h, const vec4_t color ) {
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Pictures();
+	if ( !skin.arrowDown || color[3] <= 0.0f ) {
+		return;
+	}
+	DC->setColor( color );
+	DC->drawStretchPic( Skin_SnapX( x ), Skin_SnapY( y ), w, h, 0.0f, 0.0f, 1.0f, 1.0f, skin.arrowDown );
 	DC->setColor( NULL );
 }
 

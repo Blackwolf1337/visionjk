@@ -1681,6 +1681,14 @@ REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
 LANG_SPANISH        "Carpetas del juego con otros mods."
 
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+LANG_SPANISH        "Buscar"
+
+REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
+LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
+LANG_SPANISH        "Muestra los ajustes de todas las páginas cuyo nombre o descripción tiene estas palabras."
+
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_SPANISH        "Reiniciar los gráficos con estos ajustes."
@@ -2340,6 +2348,10 @@ LANG_SPANISH        "Nunca usado"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_SPANISH        "hace %i días"
+
+REFERENCE           NO_SETTING_HAS_THESE_WORDS
+LANG_ENGLISH        "No setting has these words."
+LANG_SPANISH        "Ningún ajuste tiene estas palabras."
 
 
 ENDMARKER

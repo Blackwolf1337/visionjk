@@ -624,4 +624,8 @@ MORE = {
     'Remove All': ('Tout enlever', 'Quitar todo'),
     'Never used': ('Jamais utilisé', 'Nunca usado'),
     '%i days ago': ('il y a %i jours', 'hace %i días'),
+    # the search of Setup
+    'Search': ('Rechercher', 'Buscar'),
+    'Shows the settings of all pages whose name or description has these words.': ("Affiche les paramètres de toutes les pages dont le nom ou la description contient ces mots.", 'Muestra los ajustes de todas las páginas cuyo nombre o descripción tiene estas palabras.'),
+    'No setting has these words.': ("Aucun paramètre ne contient ces mots.", 'Ningún ajuste tiene estas palabras.'),
 }

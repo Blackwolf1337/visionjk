@@ -187,7 +187,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					1
+			action { play "sound/interface/button1.wav" ; }
 			page					1
 			scroll					1
 		}
@@ -451,7 +454,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					2
+			action { play "sound/interface/button1.wav" ; }
 			page					1
 			scroll					1
 		}
@@ -746,7 +752,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					3
+			action { play "sound/interface/button1.wav" ; }
 			page					1
 			scroll					1
 		}
@@ -828,7 +837,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					4
+			action { play "sound/interface/button1.wav" ; }
 			page					1
 			scroll					1
 		}
@@ -1000,7 +1012,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					5
+			action { play "sound/interface/button1.wav" ; }
 			page					2
 			scroll					1
 		}
@@ -1103,7 +1118,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					6
+			action { play "sound/interface/button1.wav" ; }
 			page					2
 			scroll					1
 		}
@@ -1323,7 +1341,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					7
+			action { play "sound/interface/button1.wav" ; }
 			page					2
 			scroll					1
 		}
@@ -1387,7 +1408,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					8
+			action { play "sound/interface/button1.wav" ; }
 			page					2
 			scroll					1
 		}
@@ -1606,7 +1630,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					9
+			action { play "sound/interface/button1.wav" ; }
 			page					2
 			scroll					1
 		}
@@ -1670,7 +1697,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					10
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -1892,7 +1922,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					11
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -1995,7 +2028,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					12
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -2132,7 +2168,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					13
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -2200,7 +2239,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					14
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -2268,7 +2310,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					15
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -2377,7 +2422,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					16
+			action { play "sound/interface/button1.wav" ; }
 			page					3
 			scroll					1
 		}
@@ -2532,7 +2580,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					17
+			action { play "sound/interface/button1.wav" ; }
 			page					4
 			scroll					1
 		}
@@ -2632,7 +2683,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					18
+			action { play "sound/interface/button1.wav" ; }
 			page					4
 			scroll					1
 		}
@@ -2714,7 +2768,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					19
+			action { play "sound/interface/button1.wav" ; }
 			page					4
 			scroll					1
 		}
@@ -2819,7 +2876,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					20
+			action { play "sound/interface/button1.wav" ; }
 			page					4
 			scroll					1
 		}
@@ -3009,7 +3069,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					21
+			action { play "sound/interface/button1.wav" ; }
 			page					4
 			scroll					1
 		}
@@ -3182,7 +3245,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					22
+			action { play "sound/interface/button1.wav" ; }
 			page					5
 			scroll					1
 		}
@@ -3353,7 +3419,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					23
+			action { play "sound/interface/button1.wav" ; }
 			page					5
 			scroll					1
 		}
@@ -3526,7 +3595,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					24
+			action { play "sound/interface/button1.wav" ; }
 			page					5
 			scroll					1
 		}
@@ -3609,7 +3681,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					25
+			action { play "sound/interface/button1.wav" ; }
 			page					5
 			scroll					1
 		}
@@ -3710,7 +3785,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					26
+			action { play "sound/interface/button1.wav" ; }
 			page					5
 			scroll					1
 		}
@@ -3758,7 +3836,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					27
+			action { play "sound/interface/button1.wav" ; }
 			page					5
 			scroll					1
 		}
@@ -3804,7 +3885,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					28
+			action { play "sound/interface/button1.wav" ; }
 			page					6
 			scroll					1
 		}
@@ -3957,7 +4041,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					29
+			action { play "sound/interface/button1.wav" ; }
 			page					6
 			scroll					1
 		}
@@ -4004,7 +4091,10 @@
 			forecolor				0.60 0.69 0.78 1
 			textaligny				9
 			caps					1
-			decoration
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			fold					30
+			action { play "sound/interface/button1.wav" ; }
 			page					6
 			scroll					1
 		}
@@ -4100,7 +4190,7 @@
 		itemDef
 		{
 			name					vision_about
-			rect					420 52 164 324
+			rect					420 86 164 290
 			visible					1
 			text					""
 			font					5
@@ -4108,6 +4198,23 @@
 			forecolor				1 1 1 1
 			type					ITEM_TYPE_DESC
 			decoration
+		}
+
+		itemDef
+		{
+			name					vision_search
+			rect					416 46 172 20
+			visible					1
+			text					@VISION_SEARCH
+			font					5
+			textscale				0.56
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_EDITFIELD
+			hint					1
+			cvar					"v_setupSearch"
+			maxChars				40
+			maxPaintChars			18
+			descText				@VISION_SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
 		}
 
 		itemDef
@@ -4491,5 +4598,7 @@
 		}
 		scrollRect				12 38 380 352
 		scrollStep				22
+		foldCvar				v_setupFolds
+		searchCvar				v_setupSearch
 	}
 }

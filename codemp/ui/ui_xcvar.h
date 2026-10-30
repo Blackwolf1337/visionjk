@@ -38,13 +38,17 @@ XCVAR_DEF( capturelimit,					"0",					NULL,				CVAR_ARCHIVE|CVAR_NORESTART|CVAR_
 XCVAR_DEF( cg_drawCrosshair,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_drawCrosshairNames,			"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_marks,						"1",					NULL,				CVAR_ARCHIVE )
+// Setup and Controls: the headings that are folded ("foldCvar" of the menu), and the words of its search ("searchCvar")
+XCVAR_DEF( v_setupFolds,					"",						NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( v_controlsFolds,				"",						NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( v_setupSearch,					"",						NULL,				CVAR_INTERNAL )
 XCVAR_DEF( cg_selectedPlayer,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( cg_selectedPlayerName,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 // the voice chat of the cgame, for the setup menu: there they have to be there before a level was loaded.
 // The defaults are the ones of cg_xcvar.h.
 // the two of the chat that the voice chat tab of the setup menus has as well (bubble/cg_bubble.c, status/cg_status.c)
 XCVAR_DEF( v_chatBubbles,					"1",					NULL,				CVAR_ARCHIVE )
-// and what the tabs Interface, Chat & Social and Network of the setup menus offer of the cgame, the same way
+// and what the tabs Video, Game, HUD, Chat & Social and Network of the setup menus offer of the cgame, the same way
 XCVAR_DEF( v_hud,							"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_immersiveMenu,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_drawFPS,						"0",					NULL,				CVAR_ARCHIVE )
