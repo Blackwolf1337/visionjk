@@ -1013,9 +1013,6 @@ void SV_Init (void) {
 #endif
 	SV_VoiceInit();
 	SV_TVInit();
-#ifdef VISION_MASTER
-	SV_RepInit();
-#endif
 	vs_antiWallhack = Cvar_Get( "vs_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM, "Allow cheats on server if set to 1" );
@@ -1148,10 +1145,6 @@ void SV_Shutdown( char *finalmsg )
 	SV_MasterShutdown();
 	SV_ChallengeShutdown();
 	SV_IDS_Shutdown();
-#ifdef VISION_MASTER
-	SV_VoiceShutdown();
-	SV_RepShutdown();
-#endif
 	SV_TVLevelEnd();
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;

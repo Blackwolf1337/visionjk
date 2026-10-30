@@ -462,7 +462,7 @@ Not tested: real Windows (only Wine), overlays like Steam, Discord and RTSS, the
 
 ## Added later: reports to the masterserver
 
-Since 2026-10-28 (`client/cl_reputation.cpp`, `server/sv_reputation.cpp`, `master/ms_reputation.c`). A client that
+Since 2026-10-28 (`client/cl_reputation.cpp`, `master/ms_repnet.c`, `master/ms_reputation.c`; the packets were in `server/sv_reputation.cpp` until 2026-10-30). A client that
 left a server for an attack tells the masterserver. The masterserver counts the networks that did and hands the
 list to other clients, which warn their players. A player that was thrown off once is no longer alone with it.
 With `v_ids 0` nothing is sent and nothing is fetched.
@@ -489,7 +489,7 @@ What is reported:
   sees the address the report comes from and keeps its first three numbers (the /24 network).
 - The first report prints a yellow line on the console that says so, and how to turn it off.
 
-Packets, on the port of the masterserver (`sv_reputation.cpp`):
+Packets, on the port of the masterserver (`ms_repnet.c`):
 
 | Packet | Answer |
 |--------|--------|
@@ -501,13 +501,19 @@ Packets, on the port of the masterserver (`sv_reputation.cpp`):
   the packets of the address it writes from. Without it anybody could report in the name of another address, and
   a list, which is longer than its question, could be sent to an address that never asked.
 - An address may report 10 times an hour and ask for the list once in 10 seconds.
-- A report of a private or local server address is refused, unless `ms_repLocal 1`.
+- A report of a private or local server address is refused, unless `--rep-local 1`.
 - A network (/24) counts once for a server, with the larger weight of its reports. A server keeps 32 networks, the
   oldest goes, and the master keeps 4096 servers. A report counts for 7 days.
-- A server is flagged at a score of `ms_repThreshold` (6): three networks with an attack, or six with a crash.
-- `reputation.txt` in the home folder of the master is written every 10 minutes and when it ends, and read when
-  it starts. `ms_repstatus` lists the flagged servers, `ms_repclear <address:port|all>` forgets one or all.
-  `ms_rep 0` turns it off.
+- A server is flagged at a score of `--rep-threshold` (6): three networks with an attack, or six with a crash.
+- `reputation.txt` in the folder of `--home` of the master is written every 10 minutes and when it ends (to
+  `reputation.txt.new`, then renamed over the old one), and read when it starts. `ms_repstatus` on the console
+  of the master lists the flagged servers, `ms_repclear <address:port|all>` forgets one or all. `--rep 0` turns it
+  off.
+
+Since 2026-10-30 the masterserver is a small program of its own, and its one UDP port answers nothing but the voice
+datagrams and the `ids` packets above. `getinfo`, `getstatus`, `getchallenge`, `connect`, `rcon`, `getservers` and
+anything else are dropped without an answer, so the port has no game server query to ask, no rcon and no client
+slot. It has no game module and no web panel either (server.md, "The masterserver").
 
 The client looks the name of the master up on a thread of its own (`Sys_ResolveIPv4`), so the game does not wait
 for the lookup. It fetches the list at start and with the server browser, at most every 10 minutes. A flagged
@@ -520,8 +526,9 @@ of the masterserver can clear it with `ms_repclear`. A flag is a warning to play
 
 Tested apart from the game: `tests/vjk/reputation.cpp` (networks, weights, the window, the limits).
 
-Run on 2026-10-28 on this machine: a master, the IDS test server (`vs_idsTest 2`) and two clients, with
-`ms_repLocal 1`, `ms_repThreshold 2` and `v_idsShareLocal 1`. Client 1 left and reported, the master logged it.
+Run on 2026-10-28 on this machine: a master (then the dedicated server of this tree), the IDS test server
+(`vs_idsTest 2`) and two clients, with `ms_repLocal 1`, `ms_repThreshold 2` and `v_idsShareLocal 1` (now
+`--rep-local 1` and `--rep-threshold 2` of the master). Client 1 left and reported, the master logged it.
 Client 2 fetched the list, and its first connect was refused with the reason, and the second went through.
 `reputation.txt` was written and read back by a restarted master.
 

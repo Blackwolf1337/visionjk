@@ -364,6 +364,11 @@ comment, else only the statement and its `;` go. `server.cfg.bak` is kept, and f
 
 ## The masterserver mode
 
+Since 2026-10-30 the masterserver has no game module (it is a small program of its own, server.md, "The
+masterserver"), so this mode is not reached any more: the engine no longer sets `vs_master`, and nothing else turns it
+on. The standalone master has a panel of its own now (server.md, "The panel of the masterserver"), so the master mode
+of this panel is left over and can go. What follows describes that code as it is, and not how the master runs now.
+
 The masterserver (server.md, "The masterserver") loads the game module, so it runs this panel. The engine of the
 master build registers the ROM cvar `vs_master` 1 and the module then is in master mode: only the routes of
 `WA_MasterRoute` answer (the page, settings, config, log, console, command, ids, perf, fs, master and me), every

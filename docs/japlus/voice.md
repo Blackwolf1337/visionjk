@@ -210,8 +210,8 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 | `cgame/voice/cg_voice_web.c` | in a browser: the WebSocket to the web host in place of the UDP socket |
 | `server/web/sv_web_voice.cpp` | in the dedicated server: `/voice` of the web host, between that WebSocket and the relay |
-| `server/sv_voice.cpp` | in the engine: the voice chat on the UDP port of the game, and in the masterserver what hands its relay the rest |
-| `master/ms_relay.c` | the relay of the masterserver: sessions, rooms, what is handed on. No socket of its own |
+| `server/sv_voice.cpp` | in the engine: the voice chat on the UDP port of the game |
+| `master/ms_relay.c` | the relay of the masterserver: sessions, rooms, what is handed on. No socket of its own (the socket is in `master/ms_main.c`) |
 | `cgame/status/cg_status.c` | the statuses above the heads, which go through the masterserver where the server passes none on |
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
@@ -314,13 +314,14 @@ both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   fl
 
 **The relay of the masterserver** is `master/ms_relay.c` ("the master" in what follows). It never decodes
 sound and writes no address and no room into its log, only one line a minute with numbers while something
-happens, and one when it is stopped. The masterserver (`visionjk-master`, `-DBuildMasterServer=ON`) is a
-dedicated server, and it hands this relay what comes in on its game port and is none of its own players', see [server.md](server.md), "The masterserver". `vs_masterKbps` (4000, command line only)
-is what the relay may send in a second. It is no part of a release.
+happens, and one when it is stopped. The masterserver (`visionjk-master`, `-DBuildMasterServer=ON`) is a small
+program of its own since 2026-10-30 (`master/ms_main.c`), and it hands this relay the voice datagrams that come in on
+its one UDP port, see [server.md](server.md), "The masterserver". `--kbps` (4000, command line) is what the relay
+may send in a second. It is no part of a release.
 
 Until 2026-10-12 this relay was called the voice master and was a program of its own as well
-(`visionjk-voicemaster`). That name and that program are gone from the tree: the masterserver runs in its place
-on the host since that day. The checks of the relay build the small program around it from a copy in the test
+(`visionjk-voicemaster`). That name and that program are gone from the tree: from 2026-10-12 the masterserver ran in
+its place as a dedicated server of this tree, and since 2026-10-30 as a small program of its own again. The checks of the relay build the small program around it from a copy in the test
 tools (`tools/voicetest/relay_main.c`, with the sanitizers). Where the checks below say "the master by itself",
 that program is meant.
 
@@ -468,7 +469,7 @@ Nothing of the voice chat is in the game protocol.
 - Nothing is encrypted, like the game itself. Somebody on the line can listen.
 - The relay of the masterserver is a port open to everybody. It answers a datagram without a token with a
   shorter one and keeps nothing for it. It sends sound only to addresses that came back with their token, one
-  datagram out for one in per member of a room, so it can not be used to flood somebody else. `vs_masterKbps`
+  datagram out for one in per member of a room, so it can not be used to flood somebody else. `--kbps`
   caps what leaves it.
 - Through the master nobody checks who is who: see the list in "On a server without it".
 - A status that came through the master is text somebody else wrote. The master refuses control characters,
