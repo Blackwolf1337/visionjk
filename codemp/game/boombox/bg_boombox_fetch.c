@@ -19,7 +19,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // bg_boombox_fetch.c -- the programs that find and fetch the songs of the boombox: yt-dlp, which looks a song up on
-// YouTube and fetches it, and ffmpeg, which decodes it. Not from JA+, see docs/japlus/boombox.md and bg_boombox.h.
+// YouTube and finds the address of its sound, and ffmpeg, which fetches and decodes it from there. Not from JA+,
+// see docs/japlus/boombox.md and bg_boombox.h.
+//
+// ffmpeg that reads the address itself starts at any second of a song with a request for that part (a seek, a fetch
+// that broke off), where yt-dlp that hands the whole file to ffmpeg made it decode everything before it. The address
+// is kept for some time (Box_UrlKeep), so the lookup of a song already has it and its start needs no yt-dlp at all.
+// When there is none (a proxy for yt-dlp: the address is only good for the network that asked for it), or ffmpeg
+// gets nothing from it, yt-dlp fetches the song and hands it to ffmpeg as it always did. An address only goes to
+// ffmpeg when it is https on googlevideo.com, the hosts of YouTube for the files of videos, and ffmpeg is allowed no
+// other protocol than https for it: yt-dlp prints what it is told, and ffmpeg opens files and any address it is given.
 //
 // They run beside the server and never in its way: what they say comes through pipes that do not block, and
 // nothing here waits for them. No program is started through a shell. Of what a player typed only the address
@@ -51,6 +60,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BOX_ORPHANS			16			// go-betweens that ended and wait to be reaped
 #define BOX_TERM_MSEC		2000		// a group that was asked to end is killed after this
 #define BOX_LONGEST			36000		// seconds of a song at most, whatever vs_boomboxMaxSeconds says
+#define BOX_URLS			32			// addresses of songs that are kept
+#define BOX_URL_MSEC		( 2 * 60 * 60 * 1000 )	// for this long (YouTube makes them good for six hours)
+#define BOX_LOOKUP_LINES	6			// what yt-dlp prints of a video: id, length, live, title, address, User-Agent
 
 /*
 ===============================================================================
@@ -73,7 +85,7 @@ can not be given to another process, and the kill can not reach anything else.
 typedef struct boxArgs_s {
 	char		*argv[BOX_MAX_ARGS + 1];
 	int			argc;
-	char		store[2048];
+	char		store[2048 + BOX_URL + BOX_AGENT];
 	int			used;
 	qboolean	full;			// something did not fit: the program is not started
 } boxArgs_t;
@@ -407,6 +419,100 @@ void		Box_ReapAll( void ) { }
 /*
 ===============================================================================
 
+The addresses of the sound of songs
+
+===============================================================================
+*/
+
+#ifndef _WIN32
+
+static struct {
+	char	id[12];
+	int		time;			// when yt-dlp found it, on the clock of the host. 0: free
+	char	url[BOX_URL];
+	char	agent[BOX_AGENT];
+} boxUrls[BOX_URLS];
+
+// what is all right to hand to ffmpeg as an argument: no control characters, no quotes, nothing beyond ASCII
+static qboolean Box_PlainText( const char *s ) {
+	for ( ; *s; s++ ) {
+		if ( (unsigned char)*s <= ' ' || (unsigned char)*s >= 127 || *s == '"' || *s == '\\' )
+			return qfalse;
+	}
+	return qtrue;
+}
+
+// https on a host of googlevideo.com, and nothing in it ffmpeg could take for something else
+static qboolean Box_UrlOk( const char *url ) {
+	const char	*host = url + 8, *end;
+	const char	suffix[] = ".googlevideo.com";
+	int			len;
+
+	if ( strncmp( url, "https://", 8 ) || strlen( url ) >= BOX_URL || !Box_PlainText( url ) )
+		return qfalse;
+	end = host + strcspn( host, "/?#" );
+	len = (int)( end - host );
+	if ( len <= (int)sizeof( suffix ) - 1 || *end != '/' || Q_stricmpn( end - ( sizeof( suffix ) - 1 ), suffix, sizeof( suffix ) - 1 ) )
+		return qfalse;
+	for ( ; host < end; host++ ) {
+		if ( !( ( *host >= 'a' && *host <= 'z' ) || ( *host >= 'A' && *host <= 'Z' ) || ( *host >= '0' && *host <= '9' ) || *host == '-' || *host == '.' ) )
+			return qfalse;
+	}
+	return qtrue;
+}
+
+// (a proxy of yt-dlp: the address is good only for the network that asked for it, and ffmpeg would not use the proxy)
+static qboolean Box_Proxied( const boxTools_t *tools ) {
+	return Q_stristr( tools->ytdlpArgs, "--proxy" ) ? qtrue : qfalse;
+}
+
+static void Box_UrlKeep( const char *id, const char *url, const char *agent, int now ) {
+	int i, at = 0;
+
+	if ( !Box_UrlOk( url ) )
+		return;
+	for ( i = 0; i < BOX_URLS; i++ ) {
+		if ( !strcmp( boxUrls[i].id, id ) || !boxUrls[i].time ) {
+			at = i;
+			break;
+		}
+		if ( boxUrls[i].time - boxUrls[at].time < 0 )
+			at = i;
+	}
+	Q_strncpyz( boxUrls[at].id, id, sizeof( boxUrls[at].id ) );
+	Q_strncpyz( boxUrls[at].url, url, sizeof( boxUrls[at].url ) );
+	Q_strncpyz( boxUrls[at].agent, ( strlen( agent ) < BOX_AGENT && Box_PlainText( agent ) ) ? agent : "", sizeof( boxUrls[at].agent ) );
+	boxUrls[at].time = now ? now : 1;
+}
+
+// the address of a song that is still good, -1: none
+static int Box_UrlFind( const char *id, int now ) {
+	int i;
+
+	for ( i = 0; i < BOX_URLS; i++ ) {
+		if ( boxUrls[i].time && !strcmp( boxUrls[i].id, id ) ) {
+			if ( now - boxUrls[i].time < BOX_URL_MSEC )
+				return i;
+			boxUrls[i].time = 0;
+		}
+	}
+	return -1;
+}
+
+static void Box_UrlForget( const char *id ) {
+	int i;
+
+	for ( i = 0; i < BOX_URLS; i++ ) {
+		if ( !strcmp( boxUrls[i].id, id ) )
+			boxUrls[i].time = 0;
+	}
+}
+
+#endif // _WIN32
+
+/*
+===============================================================================
+
 What a player asks for
 
 ===============================================================================
@@ -626,10 +732,11 @@ static void Box_Why( const boxProc_t *p, const char *otherwise, char *why, int w
 =================
 Box_LookupStart
 
-yt-dlp looks up what a player asked for (a target of Box_Target()) and prints four lines: the video, its length in
-seconds, whether it is live, its title. Nothing is fetched yet. For a playlist it prints them for each of its
-first BOX_LIST videos, as the page of the playlist has them (--flat-playlist: no video is opened), and
-l->start is the video of the link, where it begins.
+yt-dlp looks up what a player asked for (a target of Box_Target()) and prints six lines: the video, its length in
+seconds, whether it is live, its title, the address of its sound and the User-Agent that address wants. Nothing
+is fetched yet. For a playlist it prints them for each of its first BOX_LIST videos, as the page of the playlist
+has them (--flat-playlist: no video is opened, and there is no address), and l->start is the video of the link,
+where it begins.
 =================
 */
 qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *target, int now, char *why, int whySize ) {
@@ -647,6 +754,7 @@ qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *t
 	l->start[0] = '\0';
 	if ( l->list && v )
 		Q_strncpyz( l->start, v + 8, Q_min( 12, (int)sizeof( l->start ) ) );
+	l->direct = (qboolean)( !l->list && !Box_Proxied( tools ) );
 	Box_ArgsBegin( &a );
 	Box_ArgsYtdlp( &a, path, tools, l->list );
 	if ( l->list ) {
@@ -662,6 +770,10 @@ qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *t
 	Box_Arg( &a, "live_status" );
 	Box_Arg( &a, "--print" );
 	Box_Arg( &a, "title" );
+	Box_Arg( &a, "--print" );
+	Box_Arg( &a, "url" );
+	Box_Arg( &a, "--print" );
+	Box_Arg( &a, "%(http_headers.User-Agent)s" );
 	Box_Arg( &a, "--" );
 	Box_Arg( &a, target );
 	if ( a.full ) {
@@ -707,7 +819,7 @@ was, why says what.
 */
 int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, char *why, int whySize ) {
 #ifndef _WIN32
-	char		*line[4], *s;
+	char		*line[BOX_LOOKUP_LINES], *s;
 	int			n, lines, found = 0;
 	qboolean	full = qfalse;
 	const char	*notPlayed = NULL;	// why the videos that were found are not played
@@ -720,7 +832,7 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, ch
 			l->text[l->len] = '\0';
 			if ( l->len < (int)sizeof( l->text ) - 1 )
 				continue;
-			n = -1;		// the rest does not matter: four lines of a video, as many videos as fit of a playlist
+			n = -1;		// the rest does not matter: six lines of a video, as many videos as fit of a playlist
 			full = qtrue;
 		}
 		if ( n == 0 ) {
@@ -740,11 +852,11 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, ch
 	if ( full && ( s = strrchr( l->text, '\n' ) ) != NULL )
 		s[1] = '\0';
 
-	// four lines a video
+	// six lines a video
 	for ( s = l->text; *s && found < maxSongs; ) {
 		boxSong_t *song = &songs[found];
 
-		for ( lines = 0; lines < 4 && *s; lines++ ) {
+		for ( lines = 0; lines < BOX_LOOKUP_LINES && *s; lines++ ) {
 			line[lines] = s;
 			s += strcspn( s, "\r\n" );
 			if ( *s ) {
@@ -753,7 +865,7 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, ch
 					s++;
 			}
 		}
-		if ( lines < 4 || !Box_VideoId( line[0], (int)strlen( line[0] ) ) ) {
+		if ( lines < BOX_LOOKUP_LINES || !Box_VideoId( line[0], (int)strlen( line[0] ) ) ) {
 			break;
 		}
 		if ( !Q_stricmp( line[2], "is_live" ) || !Q_stricmp( line[2], "is_upcoming" ) || !Q_stricmp( line[2], "post_live" ) ) {
@@ -777,6 +889,9 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, ch
 		Box_CleanTitle( line[3], song->title, sizeof( song->title ) );
 		if ( !song->title[0] )
 			Q_strncpyz( song->title, song->id, sizeof( song->title ) );
+		// (not for a proxy, see Box_Proxied: the lookup does not know the tools, l->direct says it)
+		if ( l->direct )
+			Box_UrlKeep( song->id, line[4], line[5], now );
 		found++;
 		if ( !l->list )
 			break;
@@ -809,47 +924,122 @@ int Box_StreamQueued( const boxStream_t *s ) {
 	return (int)( s->write - s->read );
 }
 
-/*
-=================
-Box_StreamStart
-
-yt-dlp fetches the video and hands it to ffmpeg, which makes channels (one, or two for a sound system) of 16 bit
-at BOX_RATE of it. fromSample: where in the song to begin (ffmpeg decodes what is before and drops it), for a song
-whose fetch broke off. keepRing: what was fetched before stays, and what comes is put behind it (with the same
-channels).
-=================
-*/
-qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int channels,
-	int now, char *why, int whySize ) {
 #ifndef _WIN32
-	boxArgs_t	fetch, decode;
-	char		ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH];
 
-	Box_ProcStop( &s->proc );
-	if ( !keepRing ) {
-		s->read = s->write = 0;
-		s->channels = ( channels == 2 ) ? 2 : 1;
-	}
-	s->fetched = fromSample;
-	s->partLen = 0;
-	s->ended = qtrue;
-	if ( !Box_ToolPath( tools->ytdlp, ytdlp, sizeof( ytdlp ) ) ) {
+// what ffmpeg makes of a song, after where it reads it from: channels of 16 bit at BOX_RATE
+static void Box_ArgsDecode( boxArgs_t *a, const boxStream_t *s ) {
+	Box_Arg( a, "-vn" );
+	Box_Arg( a, "-ac" );
+	Box_Arg( a, ( s->channels == 2 ) ? "2" : "1" );
+	Box_Arg( a, "-ar" );
+	Box_Arg( a, Box_Va( "%i", BOX_RATE ) );
+	Box_Arg( a, "-f" );
+	Box_Arg( a, "s16le" );
+	Box_Arg( a, "pipe:1" );
+}
+
+// yt-dlp looks up the address of the sound (and the User-Agent it wants), which Box_StreamFill then hands to ffmpeg
+static qboolean Box_StreamResolve( boxStream_t *s, int now, char *why, int whySize ) {
+	boxArgs_t	a;
+	char		ytdlp[MAX_OSPATH];
+
+	if ( !Box_ToolPath( s->tools.ytdlp, ytdlp, sizeof( ytdlp ) ) ) {
 		Q_strncpyz( why, "this server can not fetch songs: it has no yt-dlp", whySize );
 		return qfalse;
 	}
-	if ( !Box_ToolPath( tools->ffmpeg, ffmpeg, sizeof( ffmpeg ) ) ) {
+	Box_ArgsBegin( &a );
+	Box_ArgsYtdlp( &a, ytdlp, &s->tools, qfalse );
+	Box_Arg( &a, "--print" );
+	Box_Arg( &a, "url" );
+	Box_Arg( &a, "--print" );
+	Box_Arg( &a, "%(http_headers.User-Agent)s" );
+	Box_Arg( &a, "--" );
+	Box_Arg( &a, Box_Va( "https://www.youtube.com/watch?v=%s", s->id ) );
+	if ( a.full ) {
+		Q_strncpyz( why, "the words for yt-dlp are too many (vs_boomboxYtdlpArgs)", whySize );
+		return qfalse;
+	}
+	s->resolvedLen = 0;
+	s->resolved[0] = '\0';
+	if ( !Box_ProcStart( &s->proc, a.argv, NULL, now ) ) {
+		Q_strncpyz( why, "this server could not start yt-dlp", whySize );
+		return qfalse;
+	}
+	s->stage = BOX_STAGE_RESOLVE;
+	return qtrue;
+}
+
+// ffmpeg fetches the song from the address of boxUrls[url] itself, from s->fetched on (a request for that part)
+static qboolean Box_StreamDirect( boxStream_t *s, int url, int now, char *why, int whySize ) {
+	boxArgs_t	a;
+	char		ffmpeg[MAX_OSPATH];
+
+	if ( !Box_ToolPath( s->tools.ffmpeg, ffmpeg, sizeof( ffmpeg ) ) ) {
+		Q_strncpyz( why, "this server can not play songs: it has no ffmpeg", whySize );
+		return qfalse;
+	}
+	Box_ArgsBegin( &a );
+	Box_Arg( &a, ffmpeg );
+	Box_Arg( &a, "-nostdin" );
+	Box_Arg( &a, "-hide_banner" );
+	Box_Arg( &a, "-loglevel" );
+	Box_Arg( &a, "error" );
+	Box_Arg( &a, "-protocol_whitelist" );
+	Box_Arg( &a, "https,tls,tcp" );
+	// (a line that breaks off for a moment: ffmpeg asks again for the rest, Box_Run starts it anew only after that)
+	Box_Arg( &a, "-reconnect" );
+	Box_Arg( &a, "1" );
+	Box_Arg( &a, "-reconnect_streamed" );
+	Box_Arg( &a, "1" );
+	Box_Arg( &a, "-reconnect_delay_max" );
+	Box_Arg( &a, "4" );
+	if ( boxUrls[url].agent[0] ) {
+		Box_Arg( &a, "-user_agent" );
+		Box_Arg( &a, boxUrls[url].agent );
+	}
+	if ( s->fetched > 0 ) {
+		// (in front of -i: ffmpeg asks for the part of the file there, and decodes from there to the sample)
+		Box_Arg( &a, "-ss" );
+		Box_Arg( &a, Box_Va( "%.3f", (double)s->fetched / BOX_RATE ) );
+	}
+	Box_Arg( &a, "-i" );
+	Box_Arg( &a, boxUrls[url].url );
+	Box_ArgsDecode( &a, s );
+	if ( a.full ) {
+		Q_strncpyz( why, "the address of the song is too long", whySize );
+		return qfalse;
+	}
+	if ( !Box_ProcStart( &s->proc, a.argv, NULL, now ) ) {
+		Q_strncpyz( why, "this server could not start ffmpeg", whySize );
+		return qfalse;
+	}
+	s->stage = BOX_STAGE_DIRECT;
+	s->from = s->fetched;
+	return qtrue;
+}
+
+// yt-dlp fetches the video and hands it to ffmpeg, which decodes what is before s->fetched and drops it
+static qboolean Box_StreamPipe( boxStream_t *s, int now, char *why, int whySize ) {
+	boxArgs_t	fetch, decode;
+	char		ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH];
+
+	if ( !Box_ToolPath( s->tools.ytdlp, ytdlp, sizeof( ytdlp ) ) ) {
+		Q_strncpyz( why, "this server can not fetch songs: it has no yt-dlp", whySize );
+		return qfalse;
+	}
+	if ( !Box_ToolPath( s->tools.ffmpeg, ffmpeg, sizeof( ffmpeg ) ) ) {
 		Q_strncpyz( why, "this server can not play songs: it has no ffmpeg", whySize );
 		return qfalse;
 	}
 
 	Box_ArgsBegin( &fetch );
-	Box_ArgsYtdlp( &fetch, ytdlp, tools, qfalse );
+	Box_ArgsYtdlp( &fetch, ytdlp, &s->tools, qfalse );
 	Box_Arg( &fetch, "--quiet" );
 	Box_Arg( &fetch, "--no-progress" );
 	Box_Arg( &fetch, "-o" );
 	Box_Arg( &fetch, "-" );
 	Box_Arg( &fetch, "--" );
-	Box_Arg( &fetch, Box_Va( "https://www.youtube.com/watch?v=%s", id ) );
+	Box_Arg( &fetch, Box_Va( "https://www.youtube.com/watch?v=%s", s->id ) );
 
 	Box_ArgsBegin( &decode );
 	Box_Arg( &decode, ffmpeg );
@@ -859,19 +1049,12 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	Box_Arg( &decode, "error" );
 	Box_Arg( &decode, "-i" );
 	Box_Arg( &decode, "pipe:0" );
-	if ( fromSample > 0 ) {
+	if ( s->fetched > 0 ) {
 		// (behind -i: decoded and dropped, which a pipe allows, and to the sample)
 		Box_Arg( &decode, "-ss" );
-		Box_Arg( &decode, Box_Va( "%.3f", (double)fromSample / BOX_RATE ) );
+		Box_Arg( &decode, Box_Va( "%.3f", (double)s->fetched / BOX_RATE ) );
 	}
-	Box_Arg( &decode, "-vn" );
-	Box_Arg( &decode, "-ac" );
-	Box_Arg( &decode, ( s->channels == 2 ) ? "2" : "1" );
-	Box_Arg( &decode, "-ar" );
-	Box_Arg( &decode, Box_Va( "%i", BOX_RATE ) );
-	Box_Arg( &decode, "-f" );
-	Box_Arg( &decode, "s16le" );
-	Box_Arg( &decode, "pipe:1" );
+	Box_ArgsDecode( &decode, s );
 
 	if ( fetch.full || decode.full ) {
 		Q_strncpyz( why, "the words for yt-dlp are too many (vs_boomboxYtdlpArgs)", whySize );
@@ -881,23 +1064,121 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 		Q_strncpyz( why, "this server could not start yt-dlp and ffmpeg", whySize );
 		return qfalse;
 	}
+	s->stage = BOX_STAGE_PIPE;
+	s->from = s->fetched;
+	return qtrue;
+}
+
+// what yt-dlp printed for Box_StreamResolve: the address goes to ffmpeg, without one (or a good one) the pipe begins
+static void Box_StreamResolved( boxStream_t *s, int now ) {
+	char	*url = s->resolved, *agent, why[128];
+	int		u;
+
+	url[strcspn( url, "\r\n" )] = '\0';
+	agent = url + strlen( url ) + 1;
+	if ( agent - s->resolved >= s->resolvedLen )
+		agent = url + strlen( url );		// (no second line)
+	while ( *agent == '\r' || *agent == '\n' )
+		agent++;
+	agent[strcspn( agent, "\r\n" )] = '\0';
+	Box_ProcErrors( &s->proc );
+	Box_ProcStop( &s->proc );
+	// (yt-dlp found nothing and said why: the video is gone, private, not for this country. The pipe would only ask again)
+	if ( !*url && !Q_strncmp( s->proc.errLine, "ERROR:", 6 ) ) {
+		s->ended = qtrue;
+		return;
+	}
+	Box_UrlKeep( s->id, url, agent, now );
+	if ( ( u = Box_UrlFind( s->id, now ) ) >= 0 && Box_StreamDirect( s, u, now, why, sizeof( why ) ) )
+		return;
+	if ( !Box_StreamPipe( s, now, why, sizeof( why ) ) ) {
+		Q_strncpyz( s->proc.errLine, why, sizeof( s->proc.errLine ) );
+		s->ended = qtrue;
+	}
+}
+
+// ffmpeg got nothing from the address (it was no good any more, or this ffmpeg has no https): the pipe instead
+static void Box_StreamFallBack( boxStream_t *s, int now ) {
+	char why[128];
+
+	Box_UrlForget( s->id );
+	Box_ProcStop( &s->proc );
+	s->partLen = 0;
+	if ( !Box_StreamPipe( s, now, why, sizeof( why ) ) ) {
+		Q_strncpyz( s->proc.errLine, why, sizeof( s->proc.errLine ) );
+		s->ended = qtrue;
+	}
+}
+
+#endif // _WIN32
+
+/*
+=================
+Box_StreamStart
+
+The sound of the video comes as channels (one, or two for a sound system) of 16 bit at BOX_RATE: from the address
+of its sound where there is one that is still good, else after yt-dlp looked it up, else through yt-dlp itself
+(see the head of this file). fromSample: where in the song to begin, for a seek or a song whose fetch broke off.
+keepRing: what was fetched before stays, and what comes is put behind it (with the same channels).
+=================
+*/
+qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int channels,
+	int now, char *why, int whySize ) {
+#ifndef _WIN32
+	int url;
+
+	Box_ProcStop( &s->proc );
+	if ( !keepRing ) {
+		s->read = s->write = 0;
+		s->channels = ( channels == 2 ) ? 2 : 1;
+	}
+	s->fetched = s->from = fromSample;
+	s->partLen = 0;
+	s->ended = qtrue;
+	s->tools = *tools;
+	Q_strncpyz( s->id, id, sizeof( s->id ) );
+	if ( Box_Proxied( tools ) ) {
+		if ( !Box_StreamPipe( s, now, why, whySize ) )
+			return qfalse;
+	} else if ( ( url = Box_UrlFind( id, now ) ) >= 0 ) {
+		if ( !Box_StreamDirect( s, url, now, why, whySize ) )
+			return qfalse;
+	} else if ( !Box_StreamResolve( s, now, why, whySize ) ) {
+		return qfalse;
+	}
 	s->ended = qfalse;
 	return qtrue;
 #else
-	(void)tools; (void)id; (void)keepRing; (void)channels; (void)now;
+	(void)s; (void)tools; (void)id; (void)fromSample; (void)keepRing; (void)channels; (void)now;
 	Q_strncpyz( why, "a server on Windows can not fetch songs yet", whySize );
 	return qfalse;
 #endif
 }
 
 // takes what ffmpeg made since the last call, as far as the ring has room. When it is full the programs wait.
-void Box_StreamFill( boxStream_t *s ) {
+void Box_StreamFill( boxStream_t *s, int now ) {
 #ifndef _WIN32
 	const int	sampleBytes = 2 * s->channels;
 	byte		buffer[16384];
 	int			want, n, i, k;
 
 	Box_ProcErrors( &s->proc );
+	if ( s->stage == BOX_STAGE_RESOLVE && !s->ended ) {
+		for ( ;; ) {
+			n = Box_ProcRead( &s->proc, s->resolved + s->resolvedLen, (int)sizeof( s->resolved ) - 1 - s->resolvedLen );
+			if ( n > 0 ) {
+				s->resolvedLen += n;
+				s->resolved[s->resolvedLen] = '\0';
+				if ( s->resolvedLen < (int)sizeof( s->resolved ) - 1 )
+					continue;
+			}
+			if ( n == 0 )
+				return;
+			break;
+		}
+		Box_StreamResolved( s, now );
+		return;
+	}
 	while ( !s->ended ) {
 		want = ( BOX_RING - Box_StreamQueued( s ) ) * sampleBytes - s->partLen;
 		if ( want <= 0 )
@@ -908,8 +1189,12 @@ void Box_StreamFill( boxStream_t *s ) {
 		if ( n == 0 )
 			break;
 		if ( n < 0 ) {
-			s->ended = qtrue;
 			Box_ProcErrors( &s->proc );
+			if ( s->stage == BOX_STAGE_DIRECT && s->fetched == s->from ) {
+				Box_StreamFallBack( s, now );
+				break;
+			}
+			s->ended = qtrue;
 			break;
 		}
 		// the low byte of a sample first, the left channel before the right one
@@ -924,6 +1209,8 @@ void Box_StreamFill( boxStream_t *s ) {
 			s->partLen = 0;
 		}
 	}
+#else
+	(void)s; (void)now;
 #endif
 }
 

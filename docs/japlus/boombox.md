@@ -152,7 +152,8 @@ the cvars below:
   the release binary of yt-dlp updates itself (`yt-dlp -U`).
 - a JavaScript runtime for yt-dlp: `deno` (what yt-dlp looks for by default), or another one named in
   `vs_boomboxYtdlpArgs` (`--js-runtimes node`).
-- `ffmpeg`.
+- `ffmpeg`, with https support (the packages of Debian, Ubuntu and Arch have it): it reads a song from its address
+  itself.
 
 ```
 apt install ffmpeg            # Debian
@@ -172,7 +173,7 @@ fetch songs yet.
 | `vs_boomboxQueue` | 10 | songs in the line of one box (16 at most) |
 | `vs_boomboxYtdlp` | yt-dlp | the program, a name in the `PATH` or a path |
 | `vs_boomboxFfmpeg` | ffmpeg | the same |
-| `vs_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>`. With `--cookies` mind that a playlist id must have 12 characters at least and may not begin with `RDMM`: the lists of an account (`WL`, `LL`, `LM`, `RDMM`) would be reachable for every player |
+| `vs_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>` (a song then always goes through the pipe of yt-dlp). With `--cookies` mind that a playlist id must have 12 characters at least and may not begin with `RDMM`: the lists of an account (`WL`, `LL`, `LM`, `RDMM`) would be reachable for every player |
 
 The last three can only be set while the server starts (`CVAR_INIT`: in `server.cfg` or on the command line):
 whoever can set a cvar later (rcon, an admin of the panel) can not make the server start a program of his choice.
@@ -219,9 +220,22 @@ changes. `vs_boxaction seek` and `drop` jump in the song and take a waiting one 
 `vs_boxaction`, of which the cgame sends one a second at most (the flood protection of the server drops a command
 that comes within a second of another one); five clicks on Louder go out as one.
 
-A song: `yt-dlp` looks it up first (`--print` of its id, length, whether it is live, and title: nothing is
-fetched), and when its turn comes `yt-dlp -o -` fetches the audio and hands it to `ffmpeg`, which makes one
-channel of 16 bit at 48 kHz of it (`game/boombox/bg_boombox_fetch.c`). The programs run in a process group of
+A song: `yt-dlp` looks it up first (`--print` of its id, length, whether it is live, title, the address of the
+sound of the video and the User-Agent it wants: nothing is fetched). The address is kept for 2 hours (32 songs at
+most). When the turn of the song comes, `ffmpeg` reads it from that address itself, with `-ss` in front of `-i`
+and `-reconnect`, and makes one channel of 16 bit at 48 kHz of it (`game/boombox/bg_boombox_fetch.c`). So the
+start of a song after its lookup usually needs no yt-dlp at all. Without a kept address (a song of a playlist,
+more than 2 hours after the lookup) yt-dlp looks up only the address (`--print url`) first. An error of yt-dlp
+there (video gone, private) ends the song with that reason.
+
+An address only goes to ffmpeg when it is https on a host of `googlevideo.com` and made of plain characters, and
+ffmpeg gets `-protocol_whitelist https,tls,tcp`, so it can open nothing else (no files, no other protocol).
+yt-dlp prints whatever it is told, and ffmpeg would open files or any address.
+
+The old way stays as the fallback: `yt-dlp -o -` fetches the audio and hands it to `ffmpeg`. It is used when there
+is no usable address, when ffmpeg got nothing from the address (it expired, or this ffmpeg has no https), and
+always when `vs_boomboxYtdlpArgs` has `--proxy` (an address is only good for the network that asked for it, and
+ffmpeg would not use the proxy). The programs run in a process group of
 their own, started by a go-between that ends at once, never through a shell, and with pipes that do not block:
 nothing of the server waits for them. A stopped song gets `SIGTERM` to that group first and `SIGKILL` 2 seconds later
 to what is still there (the one-file build of yt-dlp removes the folder it unpacks itself into in `/tmp` only when
@@ -255,10 +269,10 @@ byte and drops what it does not know), and the line of a watched box as `BOX_SAY
 every two seconds. `BOX_DO_SEEK`, `BOX_DO_DROP` and `BOX_DO_WATCH` come from the client. The bytes are in
 `game/boombox/bg_boombox.h`, packed and checked in `bg_boombox.c`.
 
-A jump (`Box_Seek()`) begins the programs of the song again at that second: `ffmpeg` decodes what is before and
-drops it, so the further in, the longer the song waits for its start (the wait it is given before it is skipped
-grows with the jump). In the hidden run of 2026-10-17 a jump to 3:23 of a song of 6:46 played again within a few
-seconds.
+A jump (`Box_Seek()`) begins the programs of the song again at that second: `ffmpeg` asks the address only for
+that part of the file (an HTTP range), so a jump far into a song waits no longer than one to its start, and so
+does the restart of a fetch that broke off. Through the pipe (the fallback) `ffmpeg` still decodes what is
+before and drops it, and the wait it is given before the song is skipped grows with the jump.
 
 ## Not done, not checked
 
@@ -267,6 +281,10 @@ seconds.
   jump into the middle of the song, pause. Nobody has heard a song (the runs have no sound), the masterserver
   path of the window (watch, list, seek, drop) was never run, nor two clients at one box, nor a cross in the
   line clicked.
+- 2026-10-30, the fetch from the address of the sound (#8): unit tests with scripts in place of yt-dlp and ffmpeg
+  (tests/vjk/boombox.cpp), and the real ffmpeg 5.1 with the same arguments against a local https server, which
+  it asked for the middle of the file for a start at 60 s. Never run against YouTube itself (no yt-dlp here), and
+  no song was heard that way.
 - Before 2026-10-17 nothing of it was run. The model was looked at in a picture the files were drawn into by a
   small script, never in the game.
 - Windows: the server can not fetch songs (no process code for it yet), the client is not built for it.

@@ -40,7 +40,14 @@ extern "C" {
 #define BOX_ENCODER_BYTES	40960				// room for the state of the encoder of one player. What it needs is asked and checked
 #define BOX_NAME			36					// who asked for a song, with the end (MAX_NETNAME)
 #define BOX_LIST			100					// songs of playlists that wait behind the line of a box, at most
-#define BOX_LOOKUP_TEXT		16384				// what yt-dlp prints for a lookup: four lines a video, BOX_LIST of a playlist
+#define BOX_LOOKUP_TEXT		16384				// what yt-dlp prints for a lookup: six lines a video, BOX_LIST of a playlist
+#define BOX_URL				4096				// the address of the sound of a video, with the end
+#define BOX_AGENT			256					// the User-Agent yt-dlp asked it with, with the end
+
+// how the sound of a song comes (bg_boombox_fetch.c)
+#define BOX_STAGE_RESOLVE	1					// yt-dlp looks up the address of the sound
+#define BOX_STAGE_DIRECT	2					// ffmpeg fetches it from there
+#define BOX_STAGE_PIPE		3					// yt-dlp fetches it and hands it to ffmpeg: when there is no address
 
 // the programs a host names, as the owner of the server set them
 typedef struct boxTools_s {
@@ -80,6 +87,12 @@ typedef struct boxStream_s {
 	byte		part[4];		// the bytes of a sample whose other bytes have not come yet,
 	int			partLen;		//	how many
 	qboolean	ended;			// the programs are through: what is in the ring is the rest
+	int			stage;			// BOX_STAGE_*
+	char		id[12];			// the video
+	int			from;			// fetched when the programs that run now began
+	boxTools_t	tools;			// (for the programs of a later stage)
+	char		resolved[BOX_URL + BOX_AGENT + 16];	// what yt-dlp printed of the address so far
+	int			resolvedLen;
 } boxStream_t;
 
 // a block of memory for the state of an encoder, as well aligned as anything can ask for
@@ -155,6 +168,7 @@ typedef struct boxLookup_s {
 	char		by[BOX_NAME];	//	who was called that
 	qboolean	list;			// a playlist,
 	char		start[12];		//	that begins with this video, "": with its first
+	qboolean	direct;			// the address of the sound it finds is kept (Box_UrlKeep of bg_boombox_fetch.c)
 	boxProc_t	proc;
 	char		text[BOX_LOOKUP_TEXT];	// what yt-dlp printed so far
 	int			len;
@@ -170,7 +184,7 @@ qboolean	Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *t
 int			Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, char *why, int whySize );
 qboolean	Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int channels,
 				int now, char *why, int whySize );
-void		Box_StreamFill( boxStream_t *s );
+void		Box_StreamFill( boxStream_t *s, int now );
 int			Box_StreamQueued( const boxStream_t *s );
 int			Box_StreamTake( boxStream_t *s, short *out, int count );
 void		Box_StreamStop( boxStream_t *s );

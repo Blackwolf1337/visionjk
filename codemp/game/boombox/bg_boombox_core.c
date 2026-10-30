@@ -391,7 +391,7 @@ void Box_Run( boxHost_t *host, int b, int now ) {
 		return;
 	}
 	s = &box->player->stream;
-	Box_StreamFill( s );
+	Box_StreamFill( s, now );
 	if ( s->ended && box->restarts < BOX_RESTARTS && s->fetched < box->songs[0].seconds * BOX_RATE - BOX_RESTART_SLACK
 		&& ( box->started || s->fetched > 0 ) ) {
 		box->restarts++;
