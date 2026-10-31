@@ -708,6 +708,35 @@ static void SV_WebManifestBuild( void ) {
 
 /*
 ==================
+SV_WebSendTVInfo
+
+/tvinfo: the map that runs, for the page of the TV (boot.js), which loads the pack of that map before it watches
+(issue #7). A name with anything but letters, digits and _-./ is sent as "".
+==================
+*/
+static void SV_WebSendTVInfo( webConnection_t *c ) {
+	char	map[MAX_QPATH], body[MAX_QPATH + 16];
+	byte	*out;
+	int		len;
+
+	Q_strncpyz( map, sv_mapname->string, sizeof( map ) );
+	for ( const char *p = map; *p; p++ ) {
+		if ( !( ( *p >= 'a' && *p <= 'z' ) || ( *p >= 'A' && *p <= 'Z' ) || ( *p >= '0' && *p <= '9' ) || strchr( "_-./", *p ) ) ) {
+			map[0] = '\0';
+			break;
+		}
+	}
+	Com_sprintf( body, sizeof( body ), "{\"map\":\"%s\"}", map );
+	len = (int)strlen( body );
+	SV_WebHead( c, 200, "OK", "application/json", len, "Cache-Control: no-cache\r\n" );
+	if ( !c->headOnly && ( out = SV_WebOutRoom( c, len ) ) != NULL ) {
+		memcpy( out, body, len );
+		c->outLen += len;
+	}
+}
+
+/*
+==================
 SV_WebSendManifest
 ==================
 */
@@ -835,7 +864,7 @@ void SV_WebHttpRequest( webConnection_t *c, int headLen ) {
 	}
 
 	// (a host for the TV alone hands out none of the game files, and takes no players)
-	if ( vs_clientWebTVOnly->integer && strcmp( path, "/tv" ) ) {
+	if ( vs_clientWebTVOnly->integer && strcmp( path, "/tv" ) && strcmp( path, "/tvinfo" ) ) {
 		SV_WebError( c, 404, "Not Found", "" );
 		return;
 	}
@@ -858,7 +887,9 @@ void SV_WebHttpRequest( webConnection_t *c, int headLen ) {
 	c->keepAlive = (qboolean)( minor >= 1 && !behind
 		&& !( Web_HeaderValue( head, "Connection", value, sizeof( value ) ) && Q_stristr( value, "close" ) ) );
 
-	if ( !strcmp( path, "/manifest.json" ) ) {
+	if ( !strcmp( path, "/tvinfo" ) ) {
+		SV_WebSendTVInfo( c );
+	} else if ( !strcmp( path, "/manifest.json" ) ) {
 		SV_WebSendManifest( c );
 	} else if ( !strncmp( path, "/pk3/", 5 ) ) {
 		SV_WebSendPak( c, head, path + 5 );

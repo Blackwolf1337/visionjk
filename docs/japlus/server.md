@@ -334,29 +334,18 @@ from the top (`MAX_CLIENTS - 1` down).
 the end of the level. A new `tvrecord` ends the old file. `sv_tvSwitch` is archived.
 
 The same stream goes live to the viewers of the web host (`vs_clientWebPort`, which is 0, off, until set; the port
-is the one the browser client uses for `/net` and the voice chat for `/voice`, see [web.md](web.md)). The client
-watches it with
+is the one the browser client uses for `/net` and the voice chat for `/voice`, see [web.md](web.md)). The TV is
+watched in the browser, with the page of the browser client opened with `?tv`
+(`http://<host>:<vs_clientWebPort>/?tv`, over `wss` when the page came over https), and in demos written with
+`tvrecord`. The desktop client has no `tv` command (`client/cl_tv.cpp` is compiled for the browser client only).
+What the page loads in this mode is in [web.md](web.md), "The TV in the page".
 
-```
-tv <address:port>
-tv <name>
-tv "wss://<name>/<path>"
-```
+`GET /tvinfo` answers `{"map":"<map name>"}`, the map that runs. A name with characters other than letters, digits
+and `_-./` is sent as `""`. The page asks it which pack of files to load.
 
-`tv <address:port>` is the web host of the server itself over plain TCP, for example `tv 1.2.3.4:29071` when
-`vs_clientWebPort` is 29071. `tv <name>`, a name with no port (`tv jka.vision`), goes over https to
-`wss://<name>/tv`, through a web server in front of the game server (see below). `tv "wss://name/path"` or
-`tv "ws://..."` takes that address, and `/tv` when there is no path. An address with `://` has to be in quotes
-in the console, because the console takes `//` as the start of a comment. The `ws` and `wss` forms go through
-libcurl of the system (Linux and macOS, it needs libcurl 7.86 or newer built with WebSockets, which every libcurl
-since 8.11 is) or WinHTTP (Windows 8 or newer), in a thread, so the game never waits. The command leaves a game
-first, as `demo` does, and plays the TV as a demo that does not end. When the connection ends the client drops
-with "TV: <reason>". The browser client watches it when its page is opened with `?tv`
-(`http://<host>:<vs_clientWebPort>/?tv`), over `wss` when the page came over https.
-
-A server that only wants to offer the TV sets `vs_clientWebTVOnly 1`. The web host then answers `GET /tv` alone and
-sends 404 for everything else (the page, `/manifest.json`, `/pk3/...`, `/net`, `/voice`), so it hands out no game
-files and takes no players.
+A server that only wants to offer the TV sets `vs_clientWebTVOnly 1`. The web host then answers `GET /tv` and
+`GET /tvinfo` and sends 404 for everything else (the page, `/manifest.json`, `/pk3/...`, `/net`, `/voice`), so it
+hands out no game files and takes no players.
 
 - `vs_tv` (default 1, archived): 0 turns the viewers off. `GET /tv` is then answered with 404, as it is when no
   level runs.
@@ -365,14 +354,15 @@ files and takes no players.
 - The viewer only listens, what it sends is ignored.
 
 A server with a website behind https can hand the TV out on its own address. The TV host stays on the machine
-(`vs_clientWebBind 127.0.0.1`, `vs_clientWebTVOnly 1`), the web server passes `/tv` on to it, and
+(`vs_clientWebBind 127.0.0.1`, `vs_clientWebTVOnly 1`), the web server passes `/tv` and `/tvinfo` on to it, and
 `vs_clientWebProxy` names the address of that web server (IPv4 addresses, split by blanks or commas, empty by
 default). For a viewer that comes from one of them, the address in its `X-Real-IP` header counts for the limit of 4
 per address, and the log line says "(through a proxy)". Without it every viewer has the address of the web server
-and 4 of them fill the limit. Players then type `tv <name>`. For nginx:
+and 4 of them fill the limit. The browser client and its packs can be served by the same web server, under
+`/watch/` on jka.vision (see [web.md](web.md), "The TV in the page"). For nginx:
 
 ```
-location = /tv {
+location ~ ^/(tv|tvinfo)$ {
 	proxy_pass http://127.0.0.1:29071;
 	proxy_http_version 1.1;
 	proxy_set_header Upgrade $http_upgrade;

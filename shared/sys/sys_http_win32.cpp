@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 
-// sys_http_win32.cpp -- Sys_HttpGet() and Sys_HttpWebSocket() with WinHTTP, which is part of Windows, see
+// sys_http_win32.cpp -- Sys_HttpGet() with WinHTTP, which is part of Windows, see
 // sys_http.h.
 // WinHTTP checks the certificate of a server against what the system trusts unless it is told not to, and
 // nothing here tells it.
@@ -73,9 +73,8 @@ static void Sys_HttpClose( httpHandles_t *h ) {
 	memset( h, 0, sizeof( *h ) );
 }
 
-// sends the request for url (http:// or https://), with socket as one that asks to become a WebSocket, and reads
-// the head of the answer. qfalse: no answer, error says why.
-static qboolean Sys_HttpRequest( const char *url, qboolean socket, httpHandles_t *h, DWORD *answer, char *error, int errorSize ) {
+// sends the request for url (http:// or https://) and reads the head of the answer. qfalse: no answer, error says why.
+static qboolean Sys_HttpRequest( const char *url, httpHandles_t *h, DWORD *answer, char *error, int errorSize ) {
 	wchar_t			wide[HTTP_MAX_URL], host[256], path[HTTP_MAX_URL];
 	URL_COMPONENTS	parts;
 	DWORD			size = sizeof( *answer ), off = WINHTTP_DISABLE_REDIRECTS;
@@ -83,7 +82,7 @@ static qboolean Sys_HttpRequest( const char *url, qboolean socket, httpHandles_t
 
 	memset( h, 0, sizeof( *h ) );
 	*answer = 0;
-	// an address is plain letters here (UPD_AddressAllowed, UPD_PathAllowed, CL_TV_f), so each is one wide one
+	// an address is plain letters here (UPD_AddressAllowed, UPD_PathAllowed), so each is one wide one
 	for ( i = 0; url[i] && i < HTTP_MAX_URL - 1; i++ )
 		wide[i] = (wchar_t)(unsigned char)url[i];
 	wide[i] = L'\0';
@@ -122,10 +121,6 @@ static qboolean Sys_HttpRequest( const char *url, qboolean socket, httpHandles_t
 	}
 	// a redirect is not followed: its answer is not the one asked for and so counts as failed
 	WinHttpSetOption( h->request, WINHTTP_OPTION_DISABLE_FEATURE, &off, sizeof( off ) );
-	if ( socket && !WinHttpSetOption( h->request, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, NULL, 0 ) ) {
-		Sys_HttpError( "the WebSocket", error, errorSize );
-		return qfalse;
-	}
 	if ( !WinHttpSendRequest( h->request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0 )
 		|| !WinHttpReceiveResponse( h->request, NULL ) ) {
 		Sys_HttpError( "the request", error, errorSize );
@@ -148,7 +143,7 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 	if ( status ) {
 		*status = 0;
 	}
-	if ( !Sys_HttpRequest( url, qfalse, &h, &answer, error, errorSize ) ) {
+	if ( !Sys_HttpRequest( url, &h, &answer, error, errorSize ) ) {
 		Sys_HttpClose( &h );
 		return qfalse;
 	}
@@ -183,85 +178,4 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 	}
 	Sys_HttpClose( &h );
 	return ok;
-}
-
-// The WebSocket calls of WinHTTP came with Windows 8. They are looked up when the TV asks, so that the game still
-// starts on a system without them.
-typedef HINTERNET ( WINAPI *httpWsUpgrade_t )( HINTERNET, DWORD_PTR );
-typedef DWORD ( WINAPI *httpWsReceive_t )( HINTERNET, void *, DWORD, DWORD *, WINHTTP_WEB_SOCKET_BUFFER_TYPE * );
-
-qboolean Sys_HttpWebSocket( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
-	static char		buffer[65536];		// (one TV at a time)
-	const HMODULE	module = GetModuleHandleA( "winhttp.dll" );
-	httpWsUpgrade_t	upgrade = module ? (httpWsUpgrade_t)(void *)GetProcAddress( module, "WinHttpWebSocketCompleteUpgrade" ) : NULL;
-	httpWsReceive_t	receive = module ? (httpWsReceive_t)(void *)GetProcAddress( module, "WinHttpWebSocketReceive" ) : NULL;
-	char			address[HTTP_MAX_URL];
-	httpHandles_t	h;
-	HINTERNET		socket;
-	DWORD			answer;
-
-	error[0] = '\0';
-	if ( status ) {
-		*status = 0;
-	}
-	if ( !upgrade || !receive ) {
-		Q_strncpyz( error, "WinHTTP of this Windows has no WebSocket (Windows 8 or newer)", errorSize );
-		return qfalse;
-	}
-	// (WinHttpCrackUrl knows http and https only: the request that becomes a WebSocket is one of those)
-	if ( !Q_stricmpn( url, "wss://", 6 ) ) {
-		Com_sprintf( address, sizeof( address ), "https://%s", url + 6 );
-	} else if ( !Q_stricmpn( url, "ws://", 5 ) ) {
-		Com_sprintf( address, sizeof( address ), "http://%s", url + 5 );
-	} else {
-		Q_strncpyz( error, "the address is not one", errorSize );
-		return qfalse;
-	}
-	if ( !Sys_HttpRequest( address, qtrue, &h, &answer, error, errorSize ) ) {
-		Sys_HttpClose( &h );
-		return qfalse;
-	}
-	if ( answer != 101 ) {
-		if ( status ) {
-			*status = (int)answer;
-		}
-		Com_sprintf( error, errorSize, "the server answered %lu", (unsigned long)answer );
-		Sys_HttpClose( &h );
-		return qfalse;
-	}
-	socket = upgrade( h.request, 0 );
-	if ( !socket ) {
-		Sys_HttpError( "the WebSocket", error, errorSize );
-		Sys_HttpClose( &h );
-		return qfalse;
-	}
-	WinHttpCloseHandle( h.request );
-	h.request = socket;
-
-	for ( ;; ) {
-		WINHTTP_WEB_SOCKET_BUFFER_TYPE	type;
-		DWORD							got = 0, code;
-
-		if ( *cancel ) {
-			Q_strncpyz( error, "stopped", errorSize );
-			break;
-		}
-		code = receive( socket, buffer, sizeof( buffer ), &got, &type );
-		if ( code != NO_ERROR ) {
-			SetLastError( code );
-			Sys_HttpError( "reading", error, errorSize );
-			break;
-		}
-		if ( type == WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE ) {
-			Q_strncpyz( error, "the server ended the stream", errorSize );
-			break;
-		}
-		if ( ( type == WINHTTP_WEB_SOCKET_BINARY_MESSAGE_BUFFER_TYPE || type == WINHTTP_WEB_SOCKET_BINARY_FRAGMENT_BUFFER_TYPE )
-			&& got && !sink( ctx, buffer, got ) ) {
-			Q_strncpyz( error, "it was ended on this side", errorSize );
-			break;
-		}
-	}
-	Sys_HttpClose( &h );
-	return qfalse;
 }

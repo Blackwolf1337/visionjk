@@ -23,6 +23,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the game and starts the engine (visionjk.wasm32.js), which then draws and reads keys and mouse by itself.
 // What the engine expects of the page is on the Module object below, see shared/sys/web/sys_web.h for its side.
 // window.vjk is for whoever drives the page from outside (the test driver).
+//
+// Opened with ?tv the page watches the TV of the server (issue #7). It then loads, in place of the pk3 files of the
+// server, the packs that tools/tvpack/tvpack.py made of them: tv-index.json next to the page names them,
+// /tvinfo of the server says which map runs, and the common pack and the pack of that map are loaded. A pack is
+// kept encrypted and decrypted before it goes to the engine. When the map changes the page loads again. A server
+// with no tv-index.json gets the TV with its pk3 files, as a game would.
 
 (() => {
 'use strict';
@@ -39,6 +45,13 @@ const BUSY_TRIES = 40;
 const LOG_KEPT = 2000, LOG_SHOWN = 10;
 // how long the window has to keep a new size before the renderer is started again for it
 const RESIZE_WAIT = 600;
+// the TV: the key of the packs (the one of tvpack.py), what a pack begins with, how often the map is asked for
+const TV_PACK_KEY = '5a1c9e3b07d24f68a1b2c3d4e5f60718';
+const TV_PACK_MAGIC = 'VJKTV1';
+const TV_CHECK_MSEC = 5000;
+const tvMode = new URLSearchParams(location.search).has('tv');
+// map: the map whose pack was loaded. all: the packs of every map, which the storage keeps
+const tv = { map: '', all: [] };
 
 const $ = id => document.getElementById(id);
 const canvas = $('canvas');
@@ -188,7 +201,8 @@ function haveIndexedDB() {
 function openStore() {
 	return new Promise((ok, bad) => {
 		if (!haveIndexedDB()) throw new Error('no IndexedDB');
-		const open = indexedDB.open('visionjk', 2);
+		// (the packs of the TV are kept apart from the pk3 files of the game, which a page of the same server may have)
+		const open = indexedDB.open(tvMode ? 'visionjk-tv' : 'visionjk', 2);
 		let blocked = false;
 		open.onupgradeneeded = () => {
 			// version 1 kept a pack as one Blob: nothing of it is read any more
@@ -337,6 +351,16 @@ async function readAll(stream, size) {
 	return bytes;
 }
 
+// A pack of the TV: "VJKTV1" and two zero bytes, the counter it starts with (16 bytes), then the zip in AES-128-CTR
+// (tools/tvpack/tvpack.py). The key is in this file: it keeps the files of the game from being taken off the site
+// as they are, nothing more.
+async function decryptPack(bytes) {
+	if (!window.crypto || !crypto.subtle) throw new Error('the TV needs a page that came over https or from this machine');
+	if (bytes.length < 24 || String.fromCharCode(...bytes.subarray(0, 6)) !== TV_PACK_MAGIC) throw new Error('this is not a pack of the TV');
+	const key = await crypto.subtle.importKey('raw', Uint8Array.from(TV_PACK_KEY.match(/../g), hex => parseInt(hex, 16)), 'AES-CTR', false, ['decrypt']);
+	return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-CTR', counter: bytes.slice(8, 24), length: 128 }, key, bytes.subarray(24)));
+}
+
 // The array becomes the file of the engine's file system as it is (canOwn): no copy is made, and the page must
 // not keep or touch it afterwards.
 function toFS(path, bytes) {
@@ -362,7 +386,7 @@ async function loadPack(pack) {
 	} else {
 		begin('Downloading ' + pack.path);
 		// no-store: the cache of the browser is not to hold a second copy of a pack
-		const answer = await ask('pk3/' + pack.path.split('/').map(encodeURIComponent).join('/'), { cache: 'no-store' });
+		const answer = await ask(pack.url || 'pk3/' + pack.path.split('/').map(encodeURIComponent).join('/'), { cache: 'no-store' });
 		bytes = await readAll(answer.body, pack.size);
 		pack.source = 'network';
 		note(pack.path + ': downloaded after ' + seconds());
@@ -382,7 +406,7 @@ async function loadPack(pack) {
 			}
 		}
 	}
-	toFS(pack.path, bytes);
+	toFS(pack.path, pack.encrypted ? await decryptPack(bytes) : bytes);
 }
 
 // A pack that fails stops here with its error and a button that calls this again: the packs before it are in
@@ -414,6 +438,39 @@ async function getManifest() {
 		Number.isSafeInteger(pack.size) && pack.size >= 0 && Number.isSafeInteger(pack.checksum);
 	if (!manifest || typeof manifest.game !== 'string' || !Array.isArray(manifest.packs) || !manifest.packs.every(plain)) throw new Error('the list of game files is not in the form this page knows');
 	return manifest;
+}
+
+// The packs of the TV for the map the server plays, in the form of a manifest. null: the server has no packs.
+async function getTVPacks() {
+	const found = await fetch('tv-index.json', { cache: 'no-store' }).catch(() => null);
+	if (!found || found.status === 404) return null;
+	if (!found.ok) throw new Error('the server answered ' + found.status + ' ' + found.statusText);
+	const index = await found.json();
+	const info = await (await ask('/tvinfo', { cache: 'no-store' })).json();
+	const entry = p => !!p && typeof p.file === 'string' && /^[A-Za-z0-9_-]+\.vpk$/.test(p.file) && Number.isSafeInteger(p.size) && p.size > 0 &&
+		typeof p.sha256 === 'string';
+	if (!index || !entry(index.common) || !index.maps || typeof index.maps !== 'object') throw new Error('the list of the packs of the TV is not in the form this page knows');
+	const pack = p => ({ path: 'base/' + p.file.replace(/\.vpk$/, '.pk3'), url: p.file, size: p.size, checksum: p.sha256, encrypted: true });
+	tv.map = String(info && info.map || '').toLowerCase();
+	tv.all = [index.common, ...Object.values(index.maps)].filter(entry).map(pack);
+	if (!entry(index.maps[tv.map])) throw new Error('the server plays ' + (tv.map || 'no map') + ', and the TV has no pack of it yet');
+	return { game: 'japlus', packs: [pack(index.common), pack(index.maps[tv.map])] };
+}
+
+// While the TV runs: when the server plays another map, the page loads again, with the pack of that one.
+function watchMap() {
+	setInterval(async () => {
+		try {
+			const info = await (await fetch('/tvinfo', { cache: 'no-store' })).json();
+			const map = String(info && info.map || '').toLowerCase();
+			if (map && map !== tv.map) {
+				note('the server plays ' + map + ' now: the page loads again');
+				location.reload();
+			}
+		} catch (e) {
+			// a server that does not answer for a moment: asked again next time
+		}
+	}, TV_CHECK_MSEC);
 }
 
 // ---- the engine
@@ -515,7 +572,8 @@ async function start(manifest) {
 		'+set', 'r_customwidth', String(frameWidth), '+set', 'r_customheight', String(frameHeight)];
 	const query = new URLSearchParams(location.search);
 	if (query.has('connect')) args.push('+connect', location.hostname);
-	else if (query.has('tv')) args.push('+tv', location.host);
+	// (the packs of the TV have no sounds)
+	else if (tvMode) args.push(...(tv.map ? ['+set', 's_initsound', '0'] : []), '+tv', location.host);
 	args.push(...(query.get('args') || '').split(' ').filter(Boolean));
 	note('the engine starts with: ' + args.join(' '));
 	canvas.focus({ preventScroll: true });
@@ -529,6 +587,7 @@ async function start(manifest) {
 	setPhase('running');
 	document.body.classList.add('running');
 	showLog(false);
+	if (tv.map) watchMap();
 
 	// The frame keeps the size the renderer was started with, a canvas of another size only stretches it. So
 	// when the window has had a new size for a moment, the renderer is started again with that size (the two
@@ -568,7 +627,7 @@ async function main() {
 	loadEngine();
 
 	say('Asking the server which game files there are');
-	const manifest = await named('manifest.json', getManifest());
+	const manifest = (tvMode && await named('tv-index.json', getTVPacks())) || await named('manifest.json', getManifest());
 	vjk.packs = manifest.packs;
 	load.order = [...manifest.packs].sort((a, b) => a.size - b.size);
 	load.total = manifest.packs.reduce((sum, pack) => sum + pack.size, 0);
@@ -576,7 +635,7 @@ async function main() {
 	say('Looking what this browser has kept of the game files');
 	try {
 		db = await openStore();
-		await pruneStore(manifest.packs);
+		await pruneStore(tv.map ? tv.all : manifest.packs);
 	} catch (e) {
 		note('this browser keeps no files for the page (' + words(e) + '): the game files are downloaded at every visit');
 		if (db) db.close();

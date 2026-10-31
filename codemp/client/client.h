@@ -554,10 +554,16 @@ void CL_NextDemo( void );
 void CL_ReadDemoMessage( void );
 void CL_DemoMessage( int sequence, msg_t *buf );
 
-// cl_tv.cpp: the TV of a server, a demo that comes live (tv <address>)
+// cl_tv.cpp: the TV of a server, a demo that comes live, in the browser client only (issue #7)
+#ifdef __EMSCRIPTEN__
 void CL_TVInit( void );
 void CL_TVFrame( void );
 void CL_TVClose( void );
+#else
+static inline void CL_TVInit( void ) {}
+static inline void CL_TVFrame( void ) {}
+static inline void CL_TVClose( void ) {}
+#endif
 
 void CL_InitDownloads(void);
 void CL_NetStatsPacket( int bytes );

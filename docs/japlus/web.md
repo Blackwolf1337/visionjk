@@ -41,7 +41,7 @@ on purpose in the first version: compressed textures, threads. See "What is diff
 | `vs_clientWebPort` | 0 | TCP port of the web host, 0: off. Takes effect at once, also from the console |
 | `vs_clientWebBind` | 0.0.0.0 | the address it listens on, as `vs_webBind` of the web panel: empty is every address, 127.0.0.1 keeps it on the machine |
 | `vs_clientWebRoot` | web | the folder with the page and the WebAssembly files: a full path, or under `fs_basepath` |
-| `vs_clientWebTVOnly` | 0 | 1: the web host answers only `GET /tv`, everything else gets 404 (see below) |
+| `vs_clientWebTVOnly` | 0 | 1: the web host answers only `GET /tv` and `GET /tvinfo`, everything else gets 404 (see below) |
 | `vs_clientWebProxy` | | IPv4 addresses of reverse proxies in front of the web host, split by blanks or commas. For a TV viewer that comes from one of them, its `X-Real-IP` header counts as its address |
 
 Only the dedicated server has it (`visionjkded`), a server started from the client does not.
@@ -54,11 +54,13 @@ The web host has no password. Whoever reaches the port gets:
 - `/net`, a WebSocket whose messages are the datagrams of a client.
 - `/voice`, a WebSocket for the voice chat, only for an address a client of the game plays from through this
   host. See [voice.md](voice.md), "In a browser".
-- `/tv`, a WebSocket that sends the TV of the server as demo records, for the client command `tv` and the page
-  opened with `?tv`. See [server.md](server.md), "The TV of the server".
+- `/tv`, a WebSocket that sends the TV of the server as demo records, for the page opened with `?tv`. See
+  [server.md](server.md), "The TV of the server".
+- `/tvinfo`, `{"map":"<map name>"}`, the map that runs (a name with characters other than letters, digits and
+  `_-./` is sent as `""`).
 
-With `vs_clientWebTVOnly 1` it answers `/tv` alone and sends 404 for all the rest, so a server can offer its TV
-without the files or the players.
+With `vs_clientWebTVOnly 1` it answers `/tv` and `/tvinfo` and sends 404 for all the rest, so a server can offer its
+TV without the files or the players.
 
 So opening the port to the internet hands the game data to everyone. The port has to be opened in the firewall
 by hand, the server does not do that.
@@ -93,6 +95,48 @@ drops a client that is silent for too long.
 
 Only the server the page came from can be joined: a page can not send UDP, its packets go through the WebSocket
 of that server.
+
+## The TV in the page
+
+The desktop client has no `tv` command. The TV of a server (see [server.md](server.md), "The TV of the server") is
+watched in the page opened with `?tv`. `client/cl_tv.cpp` is compiled for the browser client only, the desktop gets
+empty stubs (`client/client.h`).
+
+With `?tv`, and a `tv-index.json` next to the page, `boot.js` does not load the pk3 files of the server but only the
+packs of the TV:
+
+- it asks `/tvinfo` which map runs, and loads `tv-common.vpk` and the pack of that map,
+- it keeps them in the browser, in their own IndexedDB database `visionjk-tv`, encrypted as they were downloaded,
+- it decrypts them with WebCrypto (AES-128-CTR) and gives them to the engine as `base/tv-common.pk3` and
+  `base/tv-<map>.pk3`,
+- it starts the engine with `+set s_initsound 0 +tv <host>` (the packs have no sounds).
+
+While it runs it asks `/tvinfo` every 5 seconds and loads the page again when the map changed, the packs then come
+from the storage of the browser. Without `tv-index.json` (404) the page falls back to the old way, `manifest.json`
+and all the pk3 files. WebCrypto needs a page that came over https or from the machine itself (localhost), else the
+page says so. A map with no pack: the page says the TV has no pack of it yet.
+
+### Making the packs
+
+```
+tools/tvpack/tvpack.py --game <folder of a Linux build> --out <folder> [--maps mp|all|mp/ffa1,mp/ffa3]
+```
+
+`tvpack.py` plays every map under `maps/mp` (`--maps mp`, the default, `all` or a list also work) on a dedicated
+server of a Linux build with 8 bots and records it with `tvrecord`, then plays each demo in its own headless client
+(gamescope) with `fs_debug 1` and notes every file read from a pk3 (or from the game's own `base` and `japlus`
+folders) and for which map. Files read before the first map, or for two maps or more, go into `tv-common.vpk`, the
+others into the pack of their map. Sounds, music and videos are left out. A player whose model is not in the packs
+is drawn with the default model.
+
+A pack is a pk3 (zip) encrypted with AES-128-CTR: `VJKTV1`, two zero bytes, the 16 byte counter, then the zip. The
+key is in `tvpack.py` and in `boot.js`. This only keeps the files of the game from being taken off the site as they
+are. Whoever reads the page finds the key. `tv-index.json` lists the file name, size, SHA-256 and number of files of
+each pack.
+
+Measured on the 23 maps under maps/mp: the common pack is 102 MB, the map packs 0.9 MB (mp/duel7) to 13.4 MB
+(mp/ffa3). The full pk3 set of the game is 1.2 GB. The website builds the packs with its `tools/build-tv.sh` and
+serves them under `/watch/`.
 
 ## Building it
 
