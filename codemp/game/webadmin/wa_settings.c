@@ -273,8 +273,8 @@ static qboolean WA_SettingValue( const waField_t *f, const char *in, char *out, 
 	case WA_SET_BITS:
 	case WA_SET_FLOAT: {
 		char		*end;
-		const float	v = (float)strtod( in, &end );
-		float		clamped = v;
+		// a double: a float holds 24 bits, so a set of bits above 1 << 24 (jp_councilAllowedCMD) lost its low bits
+		double		clamped = strtod( in, &end );
 
 		if ( !in[0] || *end ) {
 			*why = "not a number";
@@ -286,6 +286,12 @@ static qboolean WA_SettingValue( const waField_t *f, const char *in, char *out, 
 				clamped = s->min;
 			if ( s->max > s->min && clamped > s->max )
 				clamped = s->max;
+		}
+		if ( s->type != WA_SET_FLOAT ) {
+			if ( clamped > INT_MAX )
+				clamped = INT_MAX;
+			if ( clamped < INT_MIN )
+				clamped = INT_MIN;
 		}
 		if ( s->type == WA_SET_FLOAT )
 			Com_sprintf( out, outSize, "%g", clamped );
