@@ -292,6 +292,8 @@ CONTROLS = [
          'Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties.'),
         ('bind', 'Model Store', 'v_modelbrowser',
          'Opens the model store of jka.vision: get player models others uploaded, and use them at once.'),
+        ('bind', 'Throw Snowball', '+v_snowball',
+         'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),

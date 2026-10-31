@@ -1821,13 +1821,31 @@
 
 		itemDef
 		{
+			name					vision_bind_v_snowball
+			type					ITEM_TYPE_BIND
+			text					@VISION_THROW_SNOWBALL
+			descText				@VISION_HOLD_TO_WIND_UP_LET_GO_TO_THROW_THE
+			cvar					"+v_snowball"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 346 380 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_bind_v_photo
 			type					ITEM_TYPE_BIND
 			text					@VISION_PHOTO_MODE
 			descText				@VISION_THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
 			cvar					"v_photo"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					12 368 380 22
 			page					7
 			scroll					1
 			row						1

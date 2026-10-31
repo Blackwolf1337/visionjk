@@ -12,6 +12,7 @@ extern "C" {
 #include "update/upd_manifest.h"
 #include "web/web_missing.h"
 #include "web/web_models.h"
+#include "game/toys/bg_toys.h"
 #include "game/voice/bg_voice.h"
 #include "game/auth/bg_auth.h"
 #include "game/boombox/bg_boombox.h"

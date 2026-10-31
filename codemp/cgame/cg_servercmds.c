@@ -1516,6 +1516,7 @@ static serverCommand_t	commands[] = {
 	{ "vs_status",			CG_StatusServerCommand },
 	{ "vs_tool",			CG_ToolServerCommand },
 	{ "tay_look",			CG_LookServerCommand },
+	{ "vs_toy",				CG_ToyServerCommand },
 	{ "vs_voiceLink",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },

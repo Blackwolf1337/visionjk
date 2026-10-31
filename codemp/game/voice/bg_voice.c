@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/q_shared.h"
 #include "bg_voice.h"
+#include "game/toys/bg_toys.h"
 
 /*
 ===============================================================================
@@ -65,6 +66,9 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	case VOICE_LOOK:
 		// a text, both ways: "<hat> <cape>"
 		return ( bodyLen >= 1 && bodyLen < VOICE_STATUS_TEXT ) ? qtrue : qfalse;
+	case VOICE_TOY:
+		// a throw, both ways, or to the master the hello of a cgame that draws toys
+		return ( bodyLen == TOY_BYTES || ( !toClient && bodyLen == TOY_HELLO_BYTES ) ) ? qtrue : qfalse;
 	default:
 		return qfalse;
 	}

@@ -1986,6 +1986,17 @@ void CG_SpatialMovers( void );
 void CG_LookInit( void );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );
+// toys/cg_toys.c: the snowball and the other toys of issue #9
+void		CG_ToysInit( void );
+void		CG_ToysFrame( void );
+void		CG_ToysScene( void );
+void		CG_ToysDraw( void );
+void		CG_ToyServerCommand( void );			// vs_toy
+void		CG_ToyFromMaster( int client, const byte *data, int len );
+void		CG_SnowballDown_f( void );				// +v_snowball
+void		CG_SnowballUp_f( void );
+qboolean	CG_VoiceToys( void );					// voice/cg_voice.c
+void		CG_VoiceSendToy( const byte *data, int len );
 void CG_LookFromMaster( int client, const char *text );
 void CG_LookClear( int client );
 void CG_LookPlayerInfo( int client, const char *c1, const char *c2, const char *c5 );

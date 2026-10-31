@@ -1061,6 +1061,12 @@ static void Voice_Receive( int now ) {
 					CG_LookFromMaster( p.client, text );
 				continue;
 			}
+			if ( p.type == VOICE_TOY ) {
+				// a snowball somebody threw, handed on by the masterserver (toys/cg_toys.c)
+				if ( voice.master )
+					CG_ToyFromMaster( p.client, p.data, p.dataLen );
+				continue;
+			}
 		}
 		sp = &voiceSpeakers[p.client];
 		if ( sp->muted || !sp->decoderOk )
@@ -1971,6 +1977,18 @@ qboolean CG_VoiceLooks( void ) {
 #endif
 }
 
+// Does the masterserver hand on the throws of toys for this client? A master that does not know VOICE_TOY drops
+// it, so this asks only for the way there: the one hats take.
+qboolean CG_VoiceToys( void ) {
+	return CG_VoiceLooks();
+}
+
+// A throw of a toy, or the hello of this cgame, goes to the others of the room (game/toys/bg_toys.h)
+void CG_VoiceSendToy( const byte *data, int len ) {
+	if ( CG_VoiceToys() && len > 0 )
+		Voice_Send( VOICE_TOY, data, len );
+}
+
 // What this player wears goes to the others of the room: "<hat> <cape>". The master takes one a second.
 void CG_VoiceSendLook( const char *text ) {
 	const int len = Q_min( (int)strlen( text ), VOICE_STATUS_TEXT - 1 );
@@ -2186,5 +2204,7 @@ int CG_VoiceLouder( int clientNum, int steps ) { (void)clientNum; (void)steps; r
 void CG_VoiceSendStatus( qboolean away, const char *text ) { (void)away; (void)text; }
 qboolean CG_VoiceLooks( void ) { return qfalse; }
 void CG_VoiceSendLook( const char *text ) { (void)text; }
+qboolean CG_VoiceToys( void ) { return qfalse; }
+void CG_VoiceSendToy( const byte *data, int len ) { (void)data; (void)len; }
 
 #endif // JP_VOICE

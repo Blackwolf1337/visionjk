@@ -182,6 +182,7 @@ set(MPGameFiles ${MPGameFiles} ${MPGameUnlaggedFiles})
 # what stands above the head of a player: away, music
 set(MPGameStatusFiles
 	"${MPDir}/game/status/g_status.c"
+	"${MPDir}/game/toys/g_toys.c"
 	)
 source_group("game/status" FILES ${MPGameStatusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})
@@ -210,6 +211,8 @@ endif()
 # the relay of the voice chat, bg_voice.c is built into the cgame too
 set(MPGameVoiceFiles
 	"${MPDir}/game/voice/bg_voice.c"
+	"${MPDir}/game/toys/bg_toys.c"
+	"${MPDir}/game/toys/bg_toys.h"
 	"${MPDir}/game/voice/g_voice.c"
 	"${MPDir}/game/voice/bg_voice.h"
 	)

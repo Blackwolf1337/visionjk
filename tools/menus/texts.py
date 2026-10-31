@@ -537,6 +537,8 @@ TR = {
         'Öffnet das Fenster der Toolgun (nach amsandbox): Werkzeug wählen und Farbe, Material oder Eigenschaften einstellen.',
     'Model Store': 'Modell-Store',
     'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': 'Öffnet den Modell-Store von jka.vision: hole Spielermodelle, die andere hochgeladen haben, und nutze sie sofort.',
+    'Throw Snowball': 'Schneeball werfen',
+    'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.': 'Halten zum Ausholen, loslassen zum Werfen: je länger du hältst, desto weiter fliegt er. Nur Spieler von VisionJK sehen ihn.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',
     'Blade Look': 'Klingenoptik',

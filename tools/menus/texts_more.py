@@ -699,6 +699,8 @@ MORE = {
     'Left click freezes the prop in place, right click frees it, R frees all.': ("Le clic gauche fige l'objet sur place, le clic droit le libère, R libère tout.", 'El clic izquierdo congela el objeto en su sitio, el clic derecho lo libera, R libera todos.'),
     'Left click: use   Right click: take   R: reset': ('Clic gauche : utiliser   Clic droit : prendre   R : réinitialiser', 'Clic izquierdo: usar   Clic derecho: tomar   R: restablecer'),
     'Model Store': ('Boutique de modèles', 'Tienda de modelos'),
+    'Throw Snowball': ('Lancer une boule de neige', 'Lanzar bola de nieve'),
+    'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.': ("Maintenez pour prendre son élan, relâchez pour lancer : plus vous maintenez, plus elle va loin. Seuls les joueurs de VisionJK la voient.", 'Mantén para tomar impulso, suelta para lanzar: cuanto más mantengas, más lejos vuela. Solo los jugadores de VisionJK la ven.'),
     'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': ("Ouvre la boutique de modèles de jka.vision : récupérez les modèles de joueur envoyés par d'autres et utilisez-les aussitôt.", 'Abre la tienda de modelos de jka.vision: consigue modelos de jugador que otros subieron y úsalos al instante.'),
     '%s models': ('%s modèles', '%s modelos'),
     'The store has no models yet.': ("La boutique n'a pas encore de modèles.", 'La tienda aún no tiene modelos.'),

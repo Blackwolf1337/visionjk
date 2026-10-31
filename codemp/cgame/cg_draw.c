@@ -8293,6 +8293,8 @@ static void CG_Draw2D( void ) {
 	CG_BoomboxDraw();
 	// the tool of the toolgun under the crosshair (sandbox/cg_tools.c)
 	CG_ToolsDraw();
+	// snow on the screen of who was hit by a snowball (toys/cg_toys.c)
+	CG_ToysDraw();
 
 	// speedometer, strafe helper, snap and pitch HUD (hud/cg_movehud.c)
 	CG_MoveHudDraw();

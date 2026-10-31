@@ -1,0 +1,88 @@
+Particle
+{
+	name				powder
+
+	flags				useAlpha
+
+	count				10 14
+
+	life				700 1200
+
+	origin				2 -4 -4 6 4 4
+
+	velocity			30 -70 -70 110 70 70
+
+	gravity				-140 -220
+
+	rotation			0 360
+
+	rotationDelta		-40 40
+
+	alpha
+	{
+		start			0.45 0.65
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			3 6
+		end				9 14
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/vision/toys/snowpuff
+	]
+}
+
+Particle
+{
+	name				chunks
+
+	flags				usePhysics useAlpha
+
+	count				6 9
+
+	life				900 1400
+
+	bounce				0.2 0.35
+
+	velocity			60 -120 -120 220 120 120
+
+	gravity				-600 -750
+
+	alpha
+	{
+		start			1
+		end				0
+		parm			70
+		flags			nonlinear
+	}
+
+	size
+	{
+		start			0.9 1.8
+		end				0.5 1.1
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/vision/toys/snowball
+	]
+}
+
+Sound
+{
+	cullrange			900
+
+	sounds
+	[
+		sound/player/footsteps/snow_step1.mp3
+		sound/player/footsteps/snow_step2.mp3
+		sound/player/footsteps/snow_step3.mp3
+	]
+}

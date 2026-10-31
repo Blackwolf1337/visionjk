@@ -107,6 +107,12 @@ LANG_ENGLISH        "Model Store"
 REFERENCE           OPENS_THE_MODEL_STORE_OF_JKA_VISION
 LANG_ENGLISH        "Opens the model store of jka.vision: get player models others uploaded, and use them at once."
 
+REFERENCE           THROW_SNOWBALL
+LANG_ENGLISH        "Throw Snowball"
+
+REFERENCE           HOLD_TO_WIND_UP_LET_GO_TO_THROW_THE
+LANG_ENGLISH        "Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 

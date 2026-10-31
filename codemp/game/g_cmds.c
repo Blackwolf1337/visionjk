@@ -3777,6 +3777,7 @@ command_t commands[] = {
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
+	{ "vs_toy",				Cmd_Toy_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
@@ -3795,7 +3796,8 @@ static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
 	// vs_status: what the cgame of a client sends by itself with every new song, see status/g_status.c
 	// vs_box: what it sends when it starts, see boombox/g_boombox.c
 	// tay_look: what it sends when it starts and with every new hat, see status/g_status.c
-	static const char *const skip[] = { "say", "say_team", "tell", "score", "vs_status", "vs_box", "tay_look" };
+	// vs_toy: a snowball and the like, see toys/g_toys.c
+	static const char *const skip[] = { "say", "say_team", "tell", "score", "vs_status", "vs_box", "tay_look", "vs_toy" };
 	static const char *const secret[] = { "amlogin", "clanpass" };
 	char	name[64], args[200];
 	size_t	i;

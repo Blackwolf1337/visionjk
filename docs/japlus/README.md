@@ -44,6 +44,7 @@ and the key login only work between versions from after the change.
 | [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`vs_clientWebPort`), packets through a WebSocket. What runs and what never ran |
 | [testing.md](testing.md) | The test scripts of `tools/test/`: smoke test of the zips, sanitizers and valgrind, unit tests, static checks, other games, the environment variables, the release flow |
 | [models.md](models.md) | Player models from the model store of the site (not a JA+ feature): fetched in the background and shown at once, the checks, the cvars |
+| [toys.md](toys.md) | Toys that only VisionJK players see, the snowball first (not a JA+ feature): thrown with a held key, sent through the game module or the masterserver, flown by every client on its own. How it works, what was tested |
 
 ## Where the code is
 

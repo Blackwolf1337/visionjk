@@ -64,6 +64,8 @@ set(MPCGameGameFiles
 	"${MPDir}/game/bg/bg_pmove.c"
 	"${MPDir}/game/props/bg_props.c"
 	"${MPDir}/game/voice/bg_voice.c"
+	"${MPDir}/game/toys/bg_toys.c"
+	"${MPDir}/game/toys/bg_toys.h"
 	"${MPDir}/game/bg/bg_saber.c"
 	"${MPDir}/game/bg/bg_saberLoad.c"
 	"${MPDir}/game/bg/bg_saga.c"
@@ -249,6 +251,13 @@ set(MPCGameModelStoreFiles
 	)
 source_group("cgame/modelstore" FILES ${MPCGameModelStoreFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameModelStoreFiles})
+
+# the toys of issue #9 that only players of this tree see: the snowball
+set(MPCGameToysFiles
+	"${MPDir}/cgame/toys/cg_toys.c"
+	)
+source_group("cgame/toys" FILES ${MPCGameToysFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameToysFiles})
 
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles

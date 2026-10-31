@@ -290,7 +290,9 @@ void CG_AddMarks( void ) {
 			}
 			else
 			{
-				float f = (float)t / MARK_FADE_TIME;
+				// (VisionJK: the colour is kept as 0 to 1, a byte of the vertex is 0 to 255. Every mark with rgbGen
+				// vertex was black, which only the black burn marks of the game hid.)
+				float f = 255.0f * t / MARK_FADE_TIME;
 				for ( j = 0 ; j < mp->poly.numVerts ; j++ ) {
 					mp->verts[j].modulate[0] = mp->color[0] * f;
 					mp->verts[j].modulate[1] = mp->color[1] * f;
@@ -301,9 +303,9 @@ void CG_AddMarks( void ) {
 		else
 		{
 			for ( j = 0 ; j < mp->poly.numVerts ; j++ ) {
-				mp->verts[j].modulate[0] = mp->color[0];
-				mp->verts[j].modulate[1] = mp->color[1];
-				mp->verts[j].modulate[2] = mp->color[2];
+				mp->verts[j].modulate[0] = mp->color[0] * 255.0f;
+				mp->verts[j].modulate[1] = mp->color[1] * 255.0f;
+				mp->verts[j].modulate[2] = mp->color[2] * 255.0f;
 			}
 		}
 

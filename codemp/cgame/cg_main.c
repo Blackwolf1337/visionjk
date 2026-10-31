@@ -2722,6 +2722,7 @@ Ghoul2 Insert End
 	CG_Menu3DInit();
 	CG_ScopeInit();
 	CG_ScreenFxInit();
+	CG_ToysInit();
 	CG_ParseServerinfo();
 	CG_JPAutoReplierInit();
 

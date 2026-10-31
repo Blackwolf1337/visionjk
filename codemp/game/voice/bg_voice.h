@@ -112,6 +112,7 @@ to a client		"VO" version 7 client token[4] sequence[2] flags distance			text
 // 5: the Vision Temple of 0.1.6 and 0.1.7, removed. Not to be used again.
 #define VOICE_BOX				6		// through the masterserver only: a box of the boombox (bg_boombox.h)
 #define VOICE_LOOK				7		// through the masterserver only: the hat and the cape of a player
+#define VOICE_TOY				8		// through the masterserver only: a toy is thrown (game/toys/bg_toys.h)
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head

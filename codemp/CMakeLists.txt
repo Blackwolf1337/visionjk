@@ -967,6 +967,8 @@ if(BuildMasterServer)
 		"${MPDir}/master/ms_boombox.c"
 		"${MPDir}/master/ms_local.h"
 		"${MPDir}/game/voice/bg_voice.c"
+		"${MPDir}/game/toys/bg_toys.c"
+		"${MPDir}/game/toys/bg_toys.h"
 		"${MPDir}/game/boombox/bg_boombox.c"
 		"${MPDir}/game/boombox/bg_boombox_core.c"
 		"${MPDir}/game/boombox/bg_boombox_fetch.c"
