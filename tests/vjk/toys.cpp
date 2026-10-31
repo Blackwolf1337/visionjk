@@ -76,6 +76,16 @@ BOOST_AUTO_TEST_CASE( spray )
 	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 0, TOY_SPRAY_MOST ) ) );
 }
 
+BOOST_AUTO_TEST_CASE( emoji )
+{
+	BOOST_CHECK( Valid( Throw( TOY_EMOJI, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_EMOJI, 100, 200, 300, MAX_CLIENTS - 1, TOY_SPRAY_MOST - 1, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, -1, 5, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, MAX_CLIENTS, 5, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, 3, TOY_SPRAY_MOST, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, 3, 5, 1 ) ) );
+}
+
 BOOST_AUTO_TEST_CASE( hello )
 {
 	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );

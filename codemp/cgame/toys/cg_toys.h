@@ -18,17 +18,28 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cg_toys.h -- what the toys of issue #9 share inside cgame/toys: cg_toys.c (the snowball and the way to the
-// others) and cg_water.c (the water gun).
+// cg_toys.h -- what the toys of issue #9 share inside cgame/toys: cg_toys.c (the snowball, the way to the others,
+// the pictures) and the files of the other toys.
 
 #pragma once
 
 #include "game/toys/bg_toys.h"
 
+#define TOY_PICTURE_NAME	64		// a line of gfx/vision/sprays.txt
+
 // cg_toys.c
 qboolean	CG_ToyCanUse( void );
+int			CG_ToyPictures( void );
+const char	*CG_ToyPictureName( int picture );
+int			CG_ToyPicture( const char *name );
 void		CG_ToySend( const toyThrow_t *toy );
 void		CG_ToyLight( const vec3_t point, vec3_t out );
+
+// cg_emote.c
+void		CG_EmoteInit( void );
+void		CG_EmoteScene( void );
+void		CG_EmoteDraw( void );
+void		CG_EmoteHeard( int client, const vec3_t origin, const vec3_t velocity );
 
 // cg_rccar.c
 void		CG_RcInit( void );

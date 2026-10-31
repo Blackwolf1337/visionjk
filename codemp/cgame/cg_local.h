@@ -313,6 +313,8 @@ typedef struct clientInfo_s {
 	sfxHandle_t		jediSounds[MAX_CUSTOM_JEDI_SOUNDS];
 	sfxHandle_t		siegeSounds[MAX_CUSTOM_SIEGE_SOUNDS];
 	sfxHandle_t		duelSounds[MAX_CUSTOM_DUEL_SOUNDS];
+	char			soundDir[MAX_QPATH];	// sound/chars/<soundDir>/misc holds the voice, "" none (CG_CharacterSound)
+	qboolean		soundFemale;
 
 	int				legsAnim;
 	int				torsoAnim;
@@ -2001,6 +2003,7 @@ void		CG_WaterDown_f( void );					// +v_water (toys/cg_water.c)
 void		CG_WaterUp_f( void );
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
+void		CG_Emote_f( void );						// v_emote (toys/cg_emote.c)
 qboolean	CG_RcDriving( void );
 qboolean	CG_RcFrame( void );
 void		CG_RcView( void );
@@ -2110,6 +2113,7 @@ void CG_ResetPlayerEntity( centity_t *cent );
 void CG_AddRefEntityWithPowerups( refEntity_t *ent, entityState_t *state, int team );
 void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized );
 sfxHandle_t	CG_CustomSound( int clientNum, const char *soundName );
+sfxHandle_t	CG_CharacterSound( int clientNum, const char *name );
 void CG_PlayerShieldHit(int entitynum, vec3_t angles, int amount);
 
 

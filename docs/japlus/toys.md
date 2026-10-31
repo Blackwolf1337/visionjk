@@ -1,11 +1,11 @@
 # Toys
 
-Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `tools/toys/sprays.py`,
+Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `tools/toys/sprays.py`, `tools/toys/sounds.py`,
 `MS_Toy()` in `codemp/master/ms_relay.c`, `tools/toys/textures.py`, issue #9, 2026-10-31.
 
 ## For players
 
-The first toy is the snowball. The second is the water gun, the third is the RC car and the fourth is the spray, all described below.
+The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray and the fifth is the interactive emoji, all described below.
 
 To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
@@ -40,6 +40,22 @@ there. It is cut off where the surface ends. A player has one spray, and a new o
 stays for the level. You can spray once every 2 seconds at most, with the sound of a burst of air. Animated sprays and
 pictures of your own are not there yet.
 
+To send an emoji, use `v_emote` (Controls, Extras, "Send Emoji"). It sends the emoji of `v_emoteImage` (default
+`laughing`) to the player under your crosshair: the visible player nearest to it, up to 2048 units away. You can also
+name the emoji after the command, such as `v_emote thumbsup`. The names are the ones of the chat, without the colons.
+You can send one emoji a second at most.
+
+The emoji flies in an arc from your eyes to the head of the other player and follows them, at about 700 units a second
+(0.35 to 2.2 s in all). Then it pops above the head: it grows, bobs, 10 small copies of it burst out, and it fades after
+1.8 s. A soft whoosh plays when it leaves and a pop with a little chime when it arrives. For the player who gets it, in
+first person the emoji pops on their screen (top centre) and the one flying at them fades near their eyes. In third
+person the pop over their own head is drawn smaller.
+
+An emoji with a mood also lets the voice of your model say a line, if that voice has one. Laughing ones say a gloat (or
+a victory or taunt line). Thumbs up, clap, trophy and fire say a victory line, angry ones an anger line, thinking ones
+a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt. Emoji of your own, made on the
+masterserver with a preview, are not there yet.
+
 Only players of VisionJK see the toys. Others see nothing. It works on any server: on a VisionJK server through the game
 module, on any other through the masterserver. `v_toys 0` hides the toys of others.
 
@@ -50,7 +66,9 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_rccar` | | puts the RC car down, or away again |
 | `v_spray` | | sprays the picture on the wall you look at |
 | `v_sprayImage` | heart | the emoji of the chat that is sprayed, without the colons |
-| `v_toys` | 1 | 0: the toys of other players are not drawn |
+| `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one |
+| `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
+| `v_toys` | 1 | 0: the toys and emoji of other players are not drawn |
 
 ## How it works
 
@@ -96,6 +114,16 @@ The own spray is said again every 45 seconds, so a player who came later sees it
 goes. It is drawn as a temporary mark each frame. The master and the game module have to know `TOY_SPRAY` (0.2.9-dev.27
 and later).
 
+An emoji is not a throw either. `TOY_EMOJI` (6) carries the point of the eyes of the sender, and the fields of the speed
+carry the client number of the target, the line number of the picture in `gfx/vision/sprays.txt` and 0. `bg_toys.c`
+checks that the client is below `MAX_CLIENTS`, the picture below `TOY_SPRAY_MOST` and the third value is 0. Every cgame
+that hears of it lets the emoji fly on its own and follow the head of the target, so nothing about it is on the server
+but the relay. The master and the game module have to know `TOY_EMOJI` (0.2.9-dev.28 and later). `tools/toys/sprays.py`
+now also writes a sprite shader `gfx/vision/emote/<number>` for each picture (without `polygonOffset`), and the list of
+pictures moved into `cg_toys.c`, shared with the sprays. The sounds are made by `tools/toys/sounds.py` and use no audio of
+anybody else. The voice lines come from `CG_CharacterSound` in `cg_players.c`, which reads them through the new field
+`soundDir` of `clientInfo_t`, for lines the game did not load for the gametype.
+
 The snowball is drawn from these files:
 
 - the textures are drawn by `tools/toys/textures.py` (`snowball`, `snowpuff`, `snowsplat`);
@@ -127,4 +155,8 @@ For the spray, a spray on the floor and on a wall (upright, not mirrored, cut of
 room). Two clients: the other client received the `TOY_SPRAY` server command with the right picture. There is a unit
 test for the `TOY_SPRAY` ranges.
 
-Not run: sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+For the emoji, two clients on a local server, and both received the emoji (the server command `vs_toy` with kind 6). The
+flight, the pop, the burst, the 2D pop in first person and the fading near the eyes were seen. There is a unit test
+`emoji` in `tests/vjk/toys.cpp`.
+
+Not run: emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

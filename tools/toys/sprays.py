@@ -2,8 +2,10 @@
 """Writes the sprays of issue #9 (cgame/toys/cg_spray.c) from the emoji of the chat (assets/japlus_client/gfx/emoji):
 
   gfx/vision/sprays.txt         the pictures, one file name a line: a spray goes to the others as its line number
-  shaders/vision_sprays.shader  a shader for each line, gfx/vision/spray/<number>: the picture on a wall, with its
-                                alpha, lifted off the wall (polygonOffset) and as bright as the light there
+  shaders/vision_sprays.shader  two shaders for each line: gfx/vision/spray/<number>, the picture on a wall, with its
+                                alpha, lifted off the wall (polygonOffset) and as bright as the light there, and
+                                gfx/vision/emote/<number>, the picture as a sprite in the air (an emoji sent to a
+                                player, cgame/toys/cg_emote.c), coloured and faded by the sprite
 
 Run it again when pictures are added to gfx/emoji: the numbers follow the sorted names, so a picture added in the
 middle moves the ones after it, which only matters between clients of different versions.
@@ -24,9 +26,12 @@ def main():
 	with open( os.path.join( ASSETS, 'gfx', 'vision', 'sprays.txt' ), 'w', newline='\n' ) as f:
 		f.write( ''.join( n + '\n' for n in pictures ) )
 	with open( os.path.join( ASSETS, 'shaders', 'vision_sprays.shader' ), 'w', newline='\n' ) as f:
-		f.write( '// the sprays of issue #9 (cgame/toys/cg_spray.c), written by tools/toys/sprays.py from gfx/vision/sprays.txt\n' )
+		f.write( '// the sprays and emoji of issue #9 (cgame/toys/cg_spray.c, cg_emote.c), written by tools/toys/sprays.py from gfx/vision/sprays.txt\n' )
 		for i, name in enumerate( pictures ):
 			f.write( '\ngfx/vision/spray/%d\n{\n\tnopicmip\n\tpolygonOffset\n\t{\n\t\tclampmap gfx/emoji/%s\n'
+				'\t\tblendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA\n\t\trgbGen vertex\n\t\talphaGen vertex\n\t}\n}\n' % ( i, name ) )
+		for i, name in enumerate( pictures ):
+			f.write( '\ngfx/vision/emote/%d\n{\n\tnopicmip\n\t{\n\t\tclampmap gfx/emoji/%s\n'
 				'\t\tblendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA\n\t\trgbGen vertex\n\t\talphaGen vertex\n\t}\n}\n' % ( i, name ) )
 	print( '%d sprays' % len( pictures ) )
 

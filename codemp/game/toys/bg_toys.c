@@ -41,6 +41,11 @@ qboolean BG_ToyValid( const toyThrow_t *toy ) {
 		|| toy->velocity[1] > 180 || toy->velocity[2] < 0 || toy->velocity[2] >= TOY_SPRAY_MOST ) ) {
 		return qfalse;
 	}
+	// an emoji carries who it flies to and the number of its picture
+	if ( toy->kind == TOY_EMOJI && ( toy->velocity[0] < 0 || toy->velocity[0] >= MAX_CLIENTS || toy->velocity[1] < 0
+		|| toy->velocity[1] >= TOY_SPRAY_MOST || toy->velocity[2] ) ) {
+		return qfalse;
+	}
 	return (qboolean)( speed <= (double)TOY_MAX_SPEED * TOY_MAX_SPEED );
 }
 

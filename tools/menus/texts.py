@@ -544,6 +544,8 @@ TR = {
     'RC Car': 'RC-Auto',
     'Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it.': 'Setzt einen ferngesteuerten Droiden vor dich und du fährst ihn: W und S fahren, A und D lenken, Leertaste hüpft, die Maus schaut, Esc räumt ihn weg. Nur Spieler von VisionJK sehen ihn.',
     'Spray': 'Spray',
+    'Send Emoji': 'Emoji senden',
+    'Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it.': 'Schickt das Emoji von v_emoteImage (ein Name aus dem Chat, zum Beispiel laughing) an den Spieler unter deinem Fadenkreuz: es fliegt zu seinem Kopf und platzt darüber auf. Nur Spieler von VisionJK sehen es.',
     'Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it.': 'Setzt dein Bild auf die Wand, auf die du schaust (wähle es mit v_sprayImage, ein Emoji des Chats wie heart), und nur Spieler von VisionJK sehen es.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',

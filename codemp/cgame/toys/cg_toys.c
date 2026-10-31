@@ -19,7 +19,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_toys.c -- the toys of issue #9 that only players of this tree see: the snowball here, the water gun in
-// cg_water.c, the remote controlled car in cg_rccar.c, the sprays in cg_spray.c. Hold +v_snowball
+// cg_water.c, the remote controlled car in cg_rccar.c, the sprays in cg_spray.c, the emoji sent to a player in
+// cg_emote.c. Hold +v_snowball
 // (Controls, Extras) and let go: the longer it was held, the further it flies. The ball is no entity of the server:
 // this cgame lets it fly, and tells the others where it left the hand and how fast (game/toys/bg_toys.h). On a
 // server of this tree that goes through the game module (vs_caps bit 9, toys/g_toys.c), on any other through the
@@ -73,6 +74,67 @@ static struct {
 	qboolean	registered;
 } toys;
 
+// the pictures of sprays and emoji, gfx/vision/sprays.txt (tools/toys/sprays.py): the others hear of one as its line
+static struct {
+	qboolean	listed;
+	int			count;
+	char		names[TOY_SPRAY_MOST][TOY_PICTURE_NAME];
+} toyPictures;
+
+static void Toys_ListPictures( void ) {
+	static char		text[TOY_SPRAY_MOST * 24];
+	fileHandle_t	f;
+	char			*p, *line;
+	int				len;
+
+	if ( toyPictures.listed )
+		return;
+	toyPictures.listed = qtrue;
+	len = trap->FS_Open( "gfx/vision/sprays.txt", &f, FS_READ );
+	if ( !f )
+		return;
+	len = trap->FS_Read( text, Q_min( len, (int)sizeof( text ) - 1 ), f );
+	trap->FS_Close( f );
+	text[Q_max( len, 0 )] = '\0';
+	for ( line = text; *line && toyPictures.count < TOY_SPRAY_MOST; line = p ) {
+		p = strchr( line, '\n' );
+		if ( p )
+			*p++ = '\0';
+		else
+			p = line + strlen( line );
+		if ( strlen( line ) > 4 )
+			Q_strncpyz( toyPictures.names[toyPictures.count++], line, sizeof( toyPictures.names[0] ) );
+	}
+}
+
+int CG_ToyPictures( void ) {
+	Toys_ListPictures();
+	return toyPictures.count;
+}
+
+const char *CG_ToyPictureName( int picture ) {
+	Toys_ListPictures();
+	return picture >= 0 && picture < toyPictures.count ? toyPictures.names[picture] : "";
+}
+
+// the number of the picture a name names (with or without ".png"), -1: none
+int CG_ToyPicture( const char *name ) {
+	char	want[TOY_PICTURE_NAME];
+	int		i;
+
+	Toys_ListPictures();
+	Q_strncpyz( want, name, sizeof( want ) - 4 );
+	if ( !want[0] )
+		return -1;
+	if ( Q_stricmp( want + Q_max( 0, (int)strlen( want ) - 4 ), ".png" ) )
+		Q_strcat( want, sizeof( want ), ".png" );
+	for ( i = 0; i < toyPictures.count; i++ ) {
+		if ( !Q_stricmp( toyPictures.names[i], want ) )
+			return i;
+	}
+	return -1;
+}
+
 static void Toys_Register( void ) {
 	if ( toys.registered )
 		return;
@@ -109,7 +171,7 @@ static void Toys_Spawn( int owner, const vec3_t origin, const vec3_t velocity ) 
 	VectorCopy( velocity, ball->velocity );
 }
 
-// a throw of somebody else, from the game module or the masterserver: a snowball, or the jet of a water gun
+// a throw of somebody else, from the game module or the masterserver: a snowball, the jet of a water gun, ...
 static void Toys_Heard( int client, const toyThrow_t *toy ) {
 	vec3_t origin, velocity;
 
@@ -125,6 +187,8 @@ static void Toys_Heard( int client, const toyThrow_t *toy ) {
 		CG_RcHeard( client, toy->kind, origin, velocity );
 	else if ( toy->kind == TOY_SPRAY )
 		CG_SprayHeard( client, origin, velocity );
+	else if ( toy->kind == TOY_EMOJI )
+		CG_EmoteHeard( client, origin, velocity );
 }
 
 /*
@@ -324,6 +388,7 @@ void CG_ToysScene( void ) {
 	CG_WaterScene();
 	CG_RcScene();
 	CG_SprayScene();
+	CG_EmoteScene();
 	for ( i = 0; i < TOY_BALLS; i++ ) {
 		toyBall_t	*ball = &toys.balls[i];
 		refEntity_t	ent;
@@ -393,6 +458,7 @@ void CG_ToysDraw( void ) {
 		CG_DrawRotatePic2( splat->x, splat->y + slide, splat->size, splat->size, splat->angle, toys.screenShader );
 	}
 	trap->R_SetColor( NULL );
+	CG_EmoteDraw();
 }
 
 // a new level or a new start of the cgame: nothing flies, nothing sticks
@@ -401,4 +467,5 @@ void CG_ToysInit( void ) {
 	CG_WaterInit();
 	CG_RcInit();
 	CG_SprayInit();
+	CG_EmoteInit();
 }

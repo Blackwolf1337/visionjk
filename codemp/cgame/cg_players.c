@@ -833,6 +833,28 @@ int CG_G2EvIndexForModel(void *g2, int animIndex)
 
 #define DEFAULT_FEMALE_SOUNDPATH "chars/mp_generic_female/misc"//"chars/tavion/misc"
 #define DEFAULT_MALE_SOUNDPATH "chars/mp_generic_male/misc"//"chars/kyle/misc"
+
+/*
+=================
+CG_CharacterSound
+
+A sound of the voice of a player that is not among the ones loaded for this gametype ("gloat1", "victory2"):
+sound/chars/<sound folder of the model>/misc/<name>, registered when first asked for. 0: the voice has none.
+=================
+*/
+sfxHandle_t CG_CharacterSound( int clientNum, const char *name ) {
+	const clientInfo_t	*ci;
+	sfxHandle_t			sfx = 0;
+
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
+		return 0;
+	ci = &cgs.clientinfo[clientNum];
+	if ( ci->soundDir[0] )
+		sfx = trap->S_RegisterSound( va( "sound/chars/%s/misc/%s", ci->soundDir, name ) );
+	if ( !sfx )
+		sfx = trap->S_RegisterSound( va( "sound/%s/%s", ci->soundFemale ? DEFAULT_FEMALE_SOUNDPATH : DEFAULT_MALE_SOUNDPATH, name ) );
+	return sfx;
+}
 void CG_LoadCISounds(clientInfo_t *ci, qboolean modelloaded)
 {
 	fileHandle_t f;
@@ -907,6 +929,9 @@ void CG_LoadCISounds(clientInfo_t *ci, qboolean modelloaded)
 		else
 			isFemale = qfalse;
 	}
+
+	Q_strncpyz( ci->soundDir, soundpath[0] ? soundpath : ( modelloaded ? dir : "" ), sizeof( ci->soundDir ) );
+	ci->soundFemale = isFemale;
 
 	trap->S_Shutup(qtrue);
 

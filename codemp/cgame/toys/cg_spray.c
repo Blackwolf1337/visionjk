@@ -35,7 +35,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SPRAY_RADIUS		24.0f
 #define SPRAY_GAP_MSEC		2000		// between two own sprays at least
 #define SPRAY_AGAIN_MSEC	45000		// the own spray is said again this often, for those who came later
-#define SPRAY_NAME			64
 
 typedef struct {
 	qboolean	active;
@@ -47,8 +46,6 @@ typedef struct {
 
 static struct {
 	spray_t		sprays[MAX_CLIENTS];
-	char		names[TOY_SPRAY_MOST][SPRAY_NAME];
-	int			numNames;		// -1: gfx/vision/sprays.txt not read yet
 	qhandle_t	shaders[TOY_SPRAY_MOST];
 	int			lastSpray;
 	int			againTime;
@@ -57,53 +54,6 @@ static struct {
 
 void CG_SprayInit( void ) {
 	memset( &spray, 0, sizeof( spray ) );
-	spray.numNames = -1;
-}
-
-// the pictures, as tools/toys/sprays.py listed them
-static void Spray_List( void ) {
-	static char		text[TOY_SPRAY_MOST * 24];
-	fileHandle_t	f;
-	char			*p, *line;
-	int				len;
-
-	if ( spray.numNames >= 0 )
-		return;
-	spray.numNames = 0;
-	spray.hiss = trap->S_RegisterSound( "sound/effects/air_burst.mp3" );
-	len = trap->FS_Open( "gfx/vision/sprays.txt", &f, FS_READ );
-	if ( !f )
-		return;
-	len = trap->FS_Read( text, Q_min( len, (int)sizeof( text ) - 1 ), f );
-	trap->FS_Close( f );
-	text[Q_max( len, 0 )] = '\0';
-	for ( line = text; *line && spray.numNames < TOY_SPRAY_MOST; line = p ) {
-		p = strchr( line, '\n' );
-		if ( p )
-			*p++ = '\0';
-		else
-			p = line + strlen( line );
-		if ( *line && strlen( line ) > 4 )
-			Q_strncpyz( spray.names[spray.numNames++], line, sizeof( spray.names[0] ) );
-	}
-}
-
-// the number of the picture v_sprayImage names (with or without ".png"), -1: none
-static int Spray_Picture( void ) {
-	char	want[SPRAY_NAME];
-	int		i;
-
-	Spray_List();
-	trap->Cvar_VariableStringBuffer( "v_sprayImage", want, sizeof( want ) - 4 );
-	if ( !want[0] )
-		return -1;
-	if ( Q_stricmp( want + Q_max( 0, (int)strlen( want ) - 4 ), ".png" ) )
-		Q_strcat( want, sizeof( want ), ".png" );
-	for ( i = 0; i < spray.numNames; i++ ) {
-		if ( !Q_stricmp( spray.names[i], want ) )
-			return i;
-	}
-	return -1;
 }
 
 /*
@@ -145,6 +95,8 @@ static void Spray_Put( int client, int picture, const vec3_t origin, const vec3_
 	s->orientation = Spray_Orientation( normal, yaw );
 	if ( !spray.shaders[picture] )
 		spray.shaders[picture] = trap->R_RegisterShader( va( "gfx/vision/spray/%i", picture ) );
+	if ( !spray.hiss )
+		spray.hiss = trap->S_RegisterSound( "sound/effects/air_burst.mp3" );
 }
 
 static void Spray_Send( void ) {
@@ -177,7 +129,7 @@ void CG_Spray_f( void ) {
 
 	if ( !CG_ToyCanUse() || ( spray.lastSpray && cg.time - spray.lastSpray < SPRAY_GAP_MSEC && cg.time >= spray.lastSpray ) )
 		return;
-	picture = Spray_Picture();
+	picture = CG_ToyPicture( v_sprayImage.string );
 	if ( picture < 0 ) {
 		Com_Printf( "v_sprayImage names no picture of gfx/vision/sprays.txt (an emoji of the chat, as heart)\n" );
 		return;
@@ -197,17 +149,18 @@ void CG_Spray_f( void ) {
 
 // a spray of somebody else, from the game module or the masterserver
 void CG_SprayHeard( int client, const vec3_t origin, const vec3_t velocity ) {
-	vec3_t	angles, normal;
-	int		picture = (int)velocity[2];
+	vec3_t		angles, normal;
+	int			picture = (int)velocity[2];
+	qboolean	moved;
 
-	Spray_List();
-	if ( picture < 0 || picture >= spray.numNames )
+	if ( picture < 0 || picture >= CG_ToyPictures() )
 		return;
 	VectorSet( angles, velocity[0], velocity[1], 0.0f );
 	AngleVectors( angles, normal, NULL, NULL );
-	if ( !spray.sprays[client].active || !VectorCompare( spray.sprays[client].origin, origin ) )
-		trap->S_StartSound( (float *)origin, client, CHAN_AUTO, spray.hiss );
+	moved = (qboolean)( !spray.sprays[client].active || !VectorCompare( spray.sprays[client].origin, origin ) );
 	Spray_Put( client, picture, origin, normal, velocity[1] );
+	if ( moved )
+		trap->S_StartSound( (float *)origin, client, CHAN_AUTO, spray.hiss );
 }
 
 // once a frame: the own spray is said again now and then, a spray of a player who left goes

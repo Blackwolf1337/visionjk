@@ -45,7 +45,9 @@ extern "C" {
 #define TOY_RC_GONE			4		// that car is put away (the point says where, the speed is 0)
 #define TOY_SPRAY			5		// a picture sprayed on a wall: the point, and in the speed the pitch and the yaw of the
 									//	wall's normal (degrees) and the number of the picture (gfx/vision/sprays.txt)
-#define TOY_KINDS			6
+#define TOY_EMOJI			6		// an emoji sent to a player: the point it leaves (the eyes), and in the speed the client
+									//	number of the player it flies to, the number of the picture (gfx/vision/sprays.txt), 0
+#define TOY_KINDS			7
 #define TOY_SPRAY_MOST		1400	// pictures a spray can be (so the "speed" of TOY_SPRAY stays under TOY_MAX_SPEED)
 
 #define TOY_BYTES			19		// a throw as bytes: 1 + 3 * 4 + 3 * 2
