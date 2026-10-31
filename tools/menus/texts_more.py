@@ -703,6 +703,8 @@ MORE = {
     'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.': ("Maintenez pour prendre son élan, relâchez pour lancer : plus vous maintenez, plus elle va loin. Seuls les joueurs de VisionJK la voient.", 'Mantén para tomar impulso, suelta para lanzar: cuanto más mantengas, más lejos vuela. Solo los jugadores de VisionJK la ven.'),
     'Water Gun': ('Pistolet à eau', 'Pistola de agua'),
     'Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it.': ("Maintenez pour projeter de l'eau là où vous regardez : elle éclabousse, laisse des flaques qui sèchent, et celui qui est touché voit des gouttes couler sur sa vue. Seuls les joueurs de VisionJK la voient.", 'Mantén para lanzar agua adonde miras: salpica, deja charcos que se secan, y quien es alcanzado ve gotas correr por la vista. Solo los jugadores de VisionJK la ven.'),
+    'RC Car': ('Voiture RC', 'Coche RC'),
+    'Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it.': ("Place un droïde télécommandé devant vous et vous le conduisez : W et S pour rouler, A et D pour tourner, Espace pour sauter, la souris pour regarder, Échap pour le ranger. Seuls les joueurs de VisionJK le voient.", 'Pone un droide teledirigido delante de ti y lo conduces: W y S para avanzar, A y D para girar, Espacio para saltar, el ratón para mirar, Esc para guardarlo. Solo los jugadores de VisionJK lo ven.'),
     'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': ("Ouvre la boutique de modèles de jka.vision : récupérez les modèles de joueur envoyés par d'autres et utilisez-les aussitôt.", 'Abre la tienda de modelos de jka.vision: consigue modelos de jugador que otros subieron y úsalos al instante.'),
     '%s models': ('%s modèles', '%s modelos'),
     'The store has no models yet.': ("La boutique n'a pas encore de modèles.", 'La tienda aún no tiene modelos.'),
@@ -711,4 +713,5 @@ MORE = {
     'Coming...': ('Arrive...', 'Llegando...'),
     'Get (%s)': ('Obtenir (%s)', 'Obtener (%s)'),
     'Upload your own at jka.vision/models.html': ('Envoyez les vôtres sur jka.vision/models.html', 'Sube los tuyos en jka.vision/models.html'),
+    'W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away.': ('W/S : rouler. A/D : tourner. Espace : sauter. Souris : regarder. Échap : le ranger.', 'W/S: avanzar. A/D: girar. Espacio: saltar. Ratón: mirar. Esc: guardarlo.'),
 }

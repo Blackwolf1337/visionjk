@@ -257,6 +257,7 @@ set(MPCGameToysFiles
 	"${MPDir}/cgame/toys/cg_toys.c"
 	"${MPDir}/cgame/toys/cg_toys.h"
 	"${MPDir}/cgame/toys/cg_water.c"
+	"${MPDir}/cgame/toys/cg_rccar.c"
 	)
 source_group("cgame/toys" FILES ${MPCGameToysFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameToysFiles})

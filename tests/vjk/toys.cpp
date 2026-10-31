@@ -52,6 +52,20 @@ BOOST_AUTO_TEST_CASE( water )
 	BOOST_CHECK_EQUAL( out.velocity[0], -720 );
 }
 
+BOOST_AUTO_TEST_CASE( rc_car )
+{
+	// the speed over the ground in x and y, the yaw in z
+	const toyThrow_t in = Throw( TOY_RC, 3440, 1592, 1792, 300, -250, -179 );
+	byte buf[TOY_BYTES];
+	toyThrow_t out;
+
+	BOOST_REQUIRE_EQUAL( BG_ToyPack( &in, buf ), TOY_BYTES );
+	BOOST_REQUIRE( BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+	BOOST_CHECK_EQUAL( out.kind, TOY_RC );
+	BOOST_CHECK_EQUAL( out.velocity[2], -179 );
+	BOOST_CHECK( Valid( Throw( TOY_RC_GONE, 3440, 1592, 1792, 0, 0, 0 ) ) );
+}
+
 BOOST_AUTO_TEST_CASE( hello )
 {
 	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );

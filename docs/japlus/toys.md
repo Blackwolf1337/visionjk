@@ -5,7 +5,7 @@ Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, 
 
 ## For players
 
-The first toy is the snowball. The second is the water gun, described below.
+The first toy is the snowball. The second is the water gun, the third is the RC car, both described below.
 
 To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
@@ -22,6 +22,15 @@ Who is hit in the face sees drops run down the view. These are the drops of rd-v
 the water, and they need `v_fxWater`. The OpenGL renderer has no such effect. On rd-vulkan-vision the jet also bends
 the picture behind it (`v_fxWater`). `v_toys 0` hides the water of others too.
 
+To drive the car, use `v_rccar` (Controls, Extras, "RC Car"). It puts the mouse droid of the game in front of you. W and S
+or the arrow keys drive (420 units a second forwards at most, 200 backwards), A and D steer, Space hops. The mouse turns
+the camera around the car, and the right mouse button puts the camera behind it again. Esc or `v_rccar` puts the car
+away. The camera follows the car.
+
+While you drive, your player stands still and shows the dots of talking, so on a JA+ server nobody can hurt you. The car
+rolls up steps and slopes, slides along walls, falls and lands, and stops at players. The keys are the keys W, A, S, D
+and the arrows, whatever they are bound to.
+
 Only players of VisionJK see the toys. Others see nothing. It works on any server: on a VisionJK server through the game
 module, on any other through the masterserver. `v_toys 0` hides the toys of others.
 
@@ -29,6 +38,7 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 |-----------------|---------|---------|
 | `+v_snowball` | | hold to wind up, let go to throw |
 | `+v_water` | | hold to spray water |
+| `v_rccar` | | puts the RC car down, or away again |
 | `v_toys` | 1 | 0: the toys of other players are not drawn |
 
 ## How it works
@@ -57,6 +67,13 @@ textures come from `tools/toys/textures.py` (`waterstream`, `waterdrop`, `wet`, 
 masked to the puddle shape, so the added light stays inside it. The splash is `effects/vision/water_splash.efx`. The
 masterserver and the game module have to know `TOY_WATER` (0.2.9-dev.25 and later).
 
+The RC car is not a throw either. Your own cgame drives it with traces against the level and the players. The others
+get `TOY_RC` (where it is, its speed over the ground in x and y, and its yaw in the z of the speed) six times a second
+and let it roll on from there between two of them. `TOY_RC_GONE` puts it away, and a car not heard of for 1.5 s is gone.
+The relays now take 10 toys a second from a player (`TOY_PER_SECOND`), so the master and the game module have to be
+0.2.9-dev.26 or later. The motor is the loop of the mouse droid, and it beeps when it is put down. The level far from
+the player can lack what the server does not send him (other players, doors).
+
 The snowball is drawn from these files:
 
 - the textures are drawn by `tools/toys/textures.py` (`snowball`, `snowpuff`, `snowsplat`);
@@ -80,4 +97,8 @@ the drops run down its view. There is a unit test for `TOY_WATER` in `tests/vjk/
 The masterserver relay was tested with a UDP script: hello, a throw handed on, four of six in a second, a too fast
 one refused. The unit tests are in `tests/vjk/toys.cpp`.
 
-Not run: a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+For the RC car, one client drove the car (forwards, a turn, a hop, against a wall, back to the player with Esc). Two
+clients on a local server: the driver showed the dots of talking, the other client received the `TOY_RC` server
+commands, and the car stopped at the other player. There is a unit test for `TOY_RC`.
+
+Not run: the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

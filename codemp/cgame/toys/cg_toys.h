@@ -30,6 +30,11 @@ qboolean	CG_ToyCanUse( void );
 void		CG_ToySend( const toyThrow_t *toy );
 void		CG_ToyLight( const vec3_t point, vec3_t out );
 
+// cg_rccar.c
+void		CG_RcInit( void );
+void		CG_RcScene( void );
+void		CG_RcHeard( int client, int kind, const vec3_t origin, const vec3_t velocity );
+
 // cg_water.c
 void		CG_WaterInit( void );
 void		CG_WaterFrame( void );

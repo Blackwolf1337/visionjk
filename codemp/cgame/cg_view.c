@@ -2657,6 +2657,11 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	{
 		cg.renderingThirdPerson = 1;
 	}
+	// the remote controlled car: the camera follows it, the own player is seen standing (toys/cg_rccar.c)
+	if ( CG_RcFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
 
 	// the zoom of the wheel and the motion view of the disruptor (scope/cg_scope.c), before the fov is worked out
 	CG_ScopeFrame();
@@ -2665,6 +2670,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	inwater = CG_CalcViewValues();
 	CG_Menu3DView();
 	CG_PhotoView();
+	CG_RcView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)

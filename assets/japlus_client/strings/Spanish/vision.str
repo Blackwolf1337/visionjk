@@ -157,6 +157,14 @@ REFERENCE           HOLD_TO_SPRAY_WATER_WHERE_YOU_LOOK_I
 LANG_ENGLISH        "Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it."
 LANG_SPANISH        "Mantén para lanzar agua adonde miras: salpica, deja charcos que se secan, y quien es alcanzado ve gotas correr por la vista. Solo los jugadores de VisionJK la ven."
 
+REFERENCE           RC_CAR
+LANG_ENGLISH        "RC Car"
+LANG_SPANISH        "Coche RC"
+
+REFERENCE           PUTS_A_REMOTE_CONTROLLED_DROID_IN_FR
+LANG_ENGLISH        "Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it."
+LANG_SPANISH        "Pone un droide teledirigido delante de ti y lo conduces: W y S para avanzar, A y D para girar, Espacio para saltar, el ratón para mirar, Esc para guardarlo. Solo los jugadores de VisionJK lo ven."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_SPANISH        "Modo foto"
@@ -2676,6 +2684,10 @@ LANG_SPANISH        "Obtener (%s)"
 REFERENCE           UPLOAD_YOUR_OWN_AT_JKA_VISION_MODELS
 LANG_ENGLISH        "Upload your own at jka.vision/models.html"
 LANG_SPANISH        "Sube los tuyos en jka.vision/models.html"
+
+REFERENCE           W_S_DRIVE_A_D_STEER_SPACE_HOP_MOUSE
+LANG_ENGLISH        "W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away."
+LANG_SPANISH        "W/S: avanzar. A/D: girar. Espacio: saltar. Ratón: mirar. Esc: guardarlo."
 
 
 ENDMARKER

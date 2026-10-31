@@ -40,13 +40,17 @@ extern "C" {
 #define TOY_HELLO			0		// to the masterserver only: this cgame wants the throws of the others
 #define TOY_SNOWBALL		1
 #define TOY_WATER			2		// the jet of a water gun: where it leaves the gun and how fast, again and again while it sprays
-#define TOY_KINDS			3
+#define TOY_RC				3		// a remote controlled car: where it is, its speed over the ground (x, y) and its yaw (z,
+									//	degrees from -180 to 180), again and again while it drives
+#define TOY_RC_GONE			4		// that car is put away (the point says where, the speed is 0)
+#define TOY_KINDS			5
 
 #define TOY_BYTES			19		// a throw as bytes: 1 + 3 * 4 + 3 * 2
 #define TOY_HELLO_BYTES		1
 #define TOY_MAX_SPEED		1600	// units a second, more is refused
 #define TOY_MAX_COORD		65536	// a point further out than this is in no level
-#define TOY_PER_SECOND		4		// throws of one player a second, more are dropped by the relays
+#define TOY_PER_SECOND		10		// throws of one player a second, more are dropped by the relays (a car says where it is
+									//	six times a second)
 
 typedef struct {
 	int		kind;					// TOY_*

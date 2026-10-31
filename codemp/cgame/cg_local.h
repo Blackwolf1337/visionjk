@@ -1999,6 +1999,13 @@ void		CG_SnowballDown_f( void );				// +v_snowball
 void		CG_SnowballUp_f( void );
 void		CG_WaterDown_f( void );					// +v_water (toys/cg_water.c)
 void		CG_WaterUp_f( void );
+void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
+qboolean	CG_RcDriving( void );
+qboolean	CG_RcFrame( void );
+void		CG_RcView( void );
+qboolean	CG_RcMouseEvent( int x, int y );
+qboolean	CG_RcKeyEvent( int key, qboolean down );
+void		CG_RcDraw( void );
 qboolean	CG_VoiceToys( void );					// voice/cg_voice.c
 void		CG_VoiceSendToy( const byte *data, int len );
 void CG_LookFromMaster( int client, const char *text );

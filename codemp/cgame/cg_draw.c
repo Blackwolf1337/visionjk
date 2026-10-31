@@ -8295,6 +8295,8 @@ static void CG_Draw2D( void ) {
 	CG_ToolsDraw();
 	// snow on the screen of who was hit by a snowball (toys/cg_toys.c)
 	CG_ToysDraw();
+	// what the keys of the remote controlled car do (toys/cg_rccar.c)
+	CG_RcDraw();
 
 	// speedometer, strafe helper, snap and pitch HUD (hud/cg_movehud.c)
 	CG_MoveHudDraw();

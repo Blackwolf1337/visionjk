@@ -541,6 +541,8 @@ TR = {
     'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.': 'Halten zum Ausholen, loslassen zum Werfen: je länger du hältst, desto weiter fliegt er. Nur Spieler von VisionJK sehen ihn.',
     'Water Gun': 'Wasserpistole',
     'Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it.': 'Halten, um Wasser dorthin zu spritzen, wohin du schaust: es spritzt, hinterlässt Pfützen, die trocknen, und wer getroffen wird, sieht Tropfen über die Sicht laufen. Nur Spieler von VisionJK sehen es.',
+    'RC Car': 'RC-Auto',
+    'Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it.': 'Setzt einen ferngesteuerten Droiden vor dich und du fährst ihn: W und S fahren, A und D lenken, Leertaste hüpft, die Maus schaut, Esc räumt ihn weg. Nur Spieler von VisionJK sehen ihn.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',
     'Blade Look': 'Klingenoptik',
@@ -812,6 +814,7 @@ CGAME = {
     'Coming...': 'Kommt...',
     'Get (%s)': 'Holen (%s)',
     'Upload your own at jka.vision/models.html': 'Lade eigene hoch auf jka.vision/models.html',
+    'W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away.': 'W/S: fahren. A/D: lenken. Leertaste: hüpfen. Maus: schauen. Esc: wegräumen.',
 }
 
 # names that are the same in every language

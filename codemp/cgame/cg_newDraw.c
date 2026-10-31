@@ -753,6 +753,10 @@ void CG_MouseEvent(int x, int y) {
 	if ( CG_PhotoMouseEvent( x, y ) ) {
 		return;
 	}
+	// the remote controlled car turns its camera (toys/cg_rccar.c)
+	if ( CG_RcMouseEvent( x, y ) ) {
+		return;
+	}
 
 	/*
 	if ( (cg.predictedPlayerState.pm_type == PM_NORMAL || cg.predictedPlayerState.pm_type == PM_JETPACK || cg.predictedPlayerState.pm_type == PM_FLOAT || cg.predictedPlayerState.pm_type == PM_SPECTATOR) && cg.showScores == qfalse) {
@@ -840,6 +844,10 @@ void CG_KeyEvent(int key, qboolean down) {
 
 	// the photo mode takes every key while it is on (photo/cg_photo.c)
 	if ( CG_PhotoKeyEvent( key, down ) ) {
+		return;
+	}
+	// the remote controlled car takes every key while it drives (toys/cg_rccar.c)
+	if ( CG_RcKeyEvent( key, down ) ) {
 		return;
 	}
 

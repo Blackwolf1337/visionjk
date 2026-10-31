@@ -119,6 +119,12 @@ LANG_ENGLISH        "Water Gun"
 REFERENCE           HOLD_TO_SPRAY_WATER_WHERE_YOU_LOOK_I
 LANG_ENGLISH        "Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it."
 
+REFERENCE           RC_CAR
+LANG_ENGLISH        "RC Car"
+
+REFERENCE           PUTS_A_REMOTE_CONTROLLED_DROID_IN_FR
+LANG_ENGLISH        "Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 
@@ -2008,6 +2014,9 @@ LANG_ENGLISH        "Get (%s)"
 
 REFERENCE           UPLOAD_YOUR_OWN_AT_JKA_VISION_MODELS
 LANG_ENGLISH        "Upload your own at jka.vision/models.html"
+
+REFERENCE           W_S_DRIVE_A_D_STEER_SPACE_HOP_MOUSE
+LANG_ENGLISH        "W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away."
 
 
 ENDMARKER
