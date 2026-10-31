@@ -202,6 +202,10 @@ def main():
 		record( game, home, maps, bots, args.seconds )
 	lines = play( game, home, maps, args.seconds, os.path.join( work, 'client.log' ) )
 	startup, per_map = sort_files( lines, maps, game )
+	if not startup:
+		# the clients did not run (gamescope needs XDG_RUNTIME_DIR, sudo drops it), see the log
+		print( f"no file was read, see {os.path.join( work, 'client.log' )}", file=sys.stderr )
+		return 1
 
 	seen = {}
 	for files in per_map.values():
