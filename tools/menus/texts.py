@@ -535,6 +535,8 @@ TR = {
     'Tool Window (Sandbox)': 'Werkzeugfenster (Sandbox)',
     'Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties.':
         'Öffnet das Fenster der Toolgun (nach amsandbox): Werkzeug wählen und Farbe, Material oder Eigenschaften einstellen.',
+    'Model Store': 'Modell-Store',
+    'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': 'Öffnet den Modell-Store von jka.vision: hole Spielermodelle, die andere hochgeladen haben, und nutze sie sofort.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',
     'Blade Look': 'Klingenoptik',
@@ -799,6 +801,13 @@ CGAME = {
     'Left click gives the prop these properties, right click takes them.': 'Linksklick gibt dem Objekt diese Eigenschaften, Rechtsklick übernimmt sie.',
     'Left click freezes the prop in place, right click frees it, R frees all.': 'Linksklick friert das Objekt an Ort und Stelle ein, Rechtsklick löst es, R löst alle.',
     'Left click: use   Right click: take   R: reset': 'Linksklick: benutzen   Rechtsklick: übernehmen   R: zurücksetzen',
+    '%s models': '%s Modelle',
+    'The store has no models yet.': 'Der Store hat noch keine Modelle.',
+    'The list of the store is on its way.': 'Die Liste des Stores ist unterwegs.',
+    'In the game': 'Im Spiel',
+    'Coming...': 'Kommt...',
+    'Get (%s)': 'Holen (%s)',
+    'Upload your own at jka.vision/models.html': 'Lade eigene hoch auf jka.vision/models.html',
 }
 
 # names that are the same in every language

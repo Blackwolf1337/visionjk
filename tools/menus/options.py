@@ -290,6 +290,8 @@ CONTROLS = [
          'Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one.'),
         ('bind', 'Tool Window (Sandbox)', 'v_tools',
          'Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties.'),
+        ('bind', 'Model Store', 'v_modelbrowser',
+         'Opens the model store of jka.vision: get player models others uploaded, and use them at once.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),

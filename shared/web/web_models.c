@@ -142,6 +142,35 @@ static int WEB_ModelHex( int c ) {
 	return -1;
 }
 
+const char *WEB_ModelIndexNext( const char *text, char *name, char *icon, long long *bytes ) {
+	unsigned char sha[WEB_SHA256_SIZE];
+
+	while ( *text ) {
+		const char	*end = strchr( text, '\n' ), *p = text;
+		const char	*next = end ? end + 1 : text + strlen( text );
+		size_t		len = 0;
+
+		while ( WEB_ModelNameChar( (unsigned char)*p ) && len < WEB_MODEL_NAME - 1 ) {
+			name[len++] = *p++;
+		}
+		name[len] = '\0';
+		if ( *p == ' ' && WEB_ModelIndexFind( text, name, bytes, sha ) ) {
+			// the fourth field: <name> <bytes> <64 hex> <icon>
+			for ( len = 0; *p && *p != '\n' && len < 3; p++ ) {
+				len += ( *p == ' ' );
+			}
+			icon[0] = '\0';
+			if ( len == 3 && ( !strncmp( p, "jpg", 3 ) || !strncmp( p, "png", 3 ) ) ) {
+				memcpy( icon, p, 3 );
+				icon[3] = '\0';
+			}
+			return next;
+		}
+		text = next;
+	}
+	return NULL;
+}
+
 qboolean WEB_ModelIndexFind( const char *text, const char *model, long long *bytes, unsigned char sha256[WEB_SHA256_SIZE] ) {
 	const size_t	nameLen = strlen( model );
 	const char		*line;
@@ -171,7 +200,8 @@ qboolean WEB_ModelIndexFind( const char *text, const char *model, long long *byt
 			}
 			sha256[i] = (unsigned char)( hi << 4 | lo );
 		}
-		if ( *p && *p != '\n' && *p != '\r' ) {
+		// (after it the type of the icon, which the cgame reads, cgame/modelstore/cg_modelstore.c)
+		if ( *p && *p != '\n' && *p != '\r' && *p != ' ' ) {
 			return qfalse;
 		}
 		*bytes = size;

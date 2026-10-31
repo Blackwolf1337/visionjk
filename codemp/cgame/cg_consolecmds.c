@@ -387,6 +387,7 @@ static consoleCommand_t	commands[] = {
 	{ "invprev",					CG_PrevInventory_f },
 	{ "loaddeferred",				CG_LoadDeferredPlayers },
 	{ "v_modelArrived",				CG_ModelArrived_f },
+	{ "v_modelbrowser",			CG_ModelStore_f },
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },

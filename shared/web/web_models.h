@@ -24,7 +24,8 @@ index.txt, and which files a pak of one model may have. The store (deploy/models
 takes an upload only by the same rules, the client looks again before it loads one (client/cl_models.cpp). Plain
 text work, the files themselves are fetched and read by the caller.
 
-index.txt has a line for each model, "<name> <bytes> <sha256, 64 hex digits>", lines with # are none.
+index.txt has a line for each model, "<name> <bytes> <sha256, 64 hex digits> <icon>", the icon "jpg", "png" or "-"
+(none), lines with # are none.
 */
 
 #pragma once
@@ -54,6 +55,10 @@ qboolean	WEB_ModelEntryAllowed( const char *entry, const char *model );
 // The line of model in the text of index.txt: its size and SHA-256. qfalse: not listed, or a line that is broken
 // or larger than WEB_MODEL_MOST.
 qboolean	WEB_ModelIndexFind( const char *text, const char *model, long long *bytes, unsigned char sha256[WEB_SHA256_SIZE] );
+// The models of index.txt one after the other: text the start of a line, name (WEB_MODEL_NAME) the model of the
+// next good line from there, icon (4) the type of its icon ("jpg", "png", "" for none), bytes its size. Returns
+// where the line after it begins, NULL at the end.
+const char	*WEB_ModelIndexNext( const char *text, char *name, char *icon, long long *bytes );
 
 #if defined(__cplusplus)
 } // extern "C"

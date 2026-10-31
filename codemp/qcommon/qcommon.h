@@ -644,6 +644,7 @@ void FS_Rmdir( const char *osPath, qboolean recursive );
 void FS_HomeRmdir( const char *homePath, qboolean recursive );
 
 qboolean FS_FileExists( const char *file );
+qboolean FS_SV_FileExists( const char *file );		// a path of the home folder
 
 char   *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 qboolean FS_CompareZipChecksum(const char *zipfile);

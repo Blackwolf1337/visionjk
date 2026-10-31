@@ -87,6 +87,34 @@ const vjk = window.vjk = {
 	},
 };
 
+// ---- the models of the model store of the site (client/cl_models.cpp): the engine names a model a player here
+// uses that the game does not have, the page fetches it from /models/ of this host, takes it only with the size and
+// the SHA-256 of the list there (index.txt), puts it into base/modelstore of the home folder and tells the engine.
+// The engine and its file system take only a pak with files of that one model.
+
+const MODEL_MOST = 100 * 1024 * 1024;
+let storeList = null;
+
+async function wantModel(name) {
+	if (!/^[a-z0-9_]{2,32}$/.test(name) || !fs) return;
+	if (!storeList) storeList = ask('/models/index.txt', { cache: 'no-cache' }).then(answer => answer.text()).catch(() => '');
+	const line = (await storeList).split('\n').map(l => l.trim().split(' ')).find(l => l[0] === name);
+	if (!line || !(Number(line[1]) > 0 && Number(line[1]) <= MODEL_MOST) || !/^[0-9a-f]{64}$/.test(line[2] || '')) return;
+	const answer = await ask('/models/files/' + name + '.pk3', { cache: 'no-store' });
+	// (not readAll: that moves the bar of the loading, which is gone while the game runs)
+	const bytes = new Uint8Array(await answer.arrayBuffer());
+	if (bytes.length !== Number(line[1])) throw new Error('it is not as large as the list says');
+	const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
+	if (digest !== line[2]) throw new Error('it is not the file of the list');
+	fs.mkdirTree('/home/base/modelstore');
+	fs.writeFile('/home/base/modelstore/' + name + '.pk3', bytes, { canOwn: true });
+	vjk.command('v_modelPak ' + name);
+}
+
+vjk.wantModel = name => {
+	wantModel(String(name)).catch(e => note('the model ' + name + ' did not come from the model store: ' + words(e)));
+};
+
 // ---- the log: what the engine prints to its console, and what the page has to say ("page: ...")
 
 let logShown = true, logQueued = false;

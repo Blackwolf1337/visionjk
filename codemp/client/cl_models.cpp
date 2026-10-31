@@ -30,6 +30,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // model (shared/web/web_models.h), the file system looks at every one again when it loads it. On a pure server
 // such a pak is not used, so nothing is fetched there.
 //
+// The window of the store in the game (cgame/modelstore/cg_modelstore.c, v_modelbrowser) reads the list this file
+// keeps in base/modelstore/index.txt and the icons in base/modelstore/icons/, which this file fetches when the
+// window asks (v_models icons). v_modelStoreChanged counts up whenever one of them, or a model, came;
+// v_modelStoreFetching names the model that is fetched now. What the player asks for himself (the window, v_models
+// get) is fetched also with v_modelStore 0, which only stops fetching the models of others by itself.
+//
 // One question to a web server runs at a time in the client (sys/sys_http.h): this file, the updater
 // (cl_update.cpp) and the paks of a server (cl_download.cpp) wait for each other. The fetch runs in a thread of its
 // own, the game looks at it once a frame and never waits for it.
@@ -38,6 +44,96 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_cgameapi.h"
 #include "web/web_http.h"
 #include "web/web_models.h"
+
+#define MDL_SCAN_MSEC		1000				// the players are looked at once a second
+#define MDL_SEEN			256					// models that were looked at this run
+
+typedef struct {
+	char	name[MDL_SEEN][WEB_MODEL_NAME];
+	int		num;
+} mdlNames_t;
+
+static cvar_t		*v_modelStore;
+static cvar_t		*v_modelStoreChanged;
+static int			mdlScanTime;
+static mdlNames_t	mdlSeen;				// fetched, failed, not in the store or here already
+
+static qboolean MDL_Has( const mdlNames_t *list, const char *model ) {
+	int i;
+
+	for ( i = 0; i < list->num; i++ ) {
+		if ( !strcmp( list->name[i], model ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+static void MDL_Add( mdlNames_t *list, const char *model ) {
+	if ( !MDL_Has( list, model ) && list->num < MDL_SEEN ) {
+		Q_strncpyz( list->name[list->num++], model, sizeof( list->name[0] ) );
+	}
+}
+
+static void MDL_See( const char *model ) {
+	MDL_Add( &mdlSeen, model );
+}
+
+// the window of the cgame and the menus look at the list, the icons and the models again
+static void MDL_Changed( void ) {
+	Cvar_SetValue( "v_modelStoreChanged", v_modelStoreChanged->value + 1.0f );
+}
+
+// The next model a player here uses that this game does not have. qfalse: none.
+static qboolean MDL_NextOfPlayers( char *out, size_t outSize ) {
+	int i;
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		const char *cs = cl.gameState.stringData + cl.gameState.stringOffsets[CS_PLAYERS + i];
+		char		model[WEB_MODEL_NAME];
+
+		if ( !cs[0] || !WEB_ModelFromInfo( Info_ValueForKey( cs, "model" ), model, sizeof( model ) ) || MDL_Has( &mdlSeen, model ) ) {
+			continue;
+		}
+		// (a model of the game, of a pak of the server, or one the player put in himself)
+		if ( FS_ReadFile( va( "models/players/%s/model.glm", model ), NULL ) > 0 ) {
+			Com_DPrintf( "model store: the game has %s\n", model );
+			MDL_See( model );
+			continue;
+		}
+		Q_strncpyz( out, model, outSize );
+		return qtrue;
+	}
+	return qfalse;
+}
+
+/*
+=================
+MDL_Use
+
+The pak of model is in base/modelstore of the home folder: it goes to the head of the path, the renderer looks
+again for what it did not find under the model, and the cgame loads the players with it again. qfalse: the file
+system does not take it (no pak, or files of something else).
+=================
+*/
+static qboolean MDL_Use( const char *model ) {
+	char why[128];
+
+	if ( !FS_AddModelPak( model, why, sizeof( why ) ) ) {
+		Com_Printf( S_COLOR_YELLOW "The model %s of the model store is not used: %s\n", model, why );
+		return qfalse;
+	}
+	Com_Printf( "The model %s came from the model store\n", model );
+	if ( re && re->ext.ForgetMissing ) {
+		re->ext.ForgetMissing( va( "models/players/%s/", model ) );
+	}
+	MDL_Changed();
+	if ( cls.cgameStarted ) {
+		Cmd_TokenizeString( va( "v_modelArrived %s", model ) );
+		CGVM_ConsoleCommand();
+	}
+	return qtrue;
+}
 
 #if !defined( __EMSCRIPTEN__ )
 
@@ -48,8 +144,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MDL_URL				256
 #define MDL_INDEX_MOST		( 256 * 1024 )		// bytes of index.txt at most
 #define MDL_INDEX_MSEC		( 10 * 60 * 1000 )	// index.txt is fetched again after this long, when a model is wanted
-#define MDL_SCAN_MSEC		1000				// the players are looked at once a second
-#define MDL_SEEN			256					// models that were looked at this run
+#define MDL_ICON_MOST		( 256 * 1024 )		// bytes of an icon at most
 
 enum {
 	MDLJOB_FREE,
@@ -75,39 +170,26 @@ typedef struct {
 	char				error[256];
 	// the game's
 	char				model[WEB_MODEL_NAME];	// empty: the job fetches index.txt
+	char				icon[4];				// "jpg", "png": the job fetches the icon of model
 } mdlJob_t;
 
-static cvar_t	*v_modelStore;
 static cvar_t	*v_modelStoreURL;
 
 static mdlJob_t	mdlJob;
 static char		mdlIndex[MDL_INDEX_MOST + 1];
 static int		mdlIndexTime = -1;			// cls.realtime of the list, -1: none yet
-static int		mdlScanTime;
-static char		mdlSeen[MDL_SEEN][WEB_MODEL_NAME];	// fetched, failed, not in the store or here already
-static int		mdlNumSeen;
+static mdlNames_t	mdlIconsTried;			// icons that came or failed this run
 static char		mdlWanted[WEB_MODEL_NAME];	// the model that is fetched next (v_models get, or a player)
-
-static qboolean MDL_Seen( const char *model ) {
-	int i;
-
-	for ( i = 0; i < mdlNumSeen; i++ ) {
-		if ( !strcmp( mdlSeen[i], model ) ) {
-			return qtrue;
-		}
-	}
-	return qfalse;
-}
-
-static void MDL_See( const char *model ) {
-	if ( !MDL_Seen( model ) && mdlNumSeen < MDL_SEEN ) {
-		Q_strncpyz( mdlSeen[mdlNumSeen++], model, sizeof( mdlSeen[0] ) );
-	}
-}
+static qboolean	mdlIconsWanted;				// the window is open: its icons are fetched
 
 // the home path of the pak of a model, or of the part of it that comes in
 static const char *MDL_Local( const char *model, qboolean temp ) {
 	return va( "%s/%s/%s.%s", BASEGAME, FS_MODELSTORE, model, temp ? "tmp" : "pk3" );
+}
+
+// the home path of the icon of a model (the cgame reads it as modelstore/icons/<model>), or of the part that comes in
+static const char *MDL_IconLocal( const char *model, const char *icon, qboolean temp ) {
+	return va( "%s/%s/icons/%s.%s", BASEGAME, FS_MODELSTORE, model, temp ? "tmp" : icon );
 }
 
 static const char *MDL_OSPath( const char *local ) {
@@ -182,16 +264,30 @@ static qboolean MDL_Url( const char *path, char *out, int outSize ) {
 	return qtrue;
 }
 
-static void MDL_Start( const char *model ) {
+// Starts the fetch of the pak of model, of its icon (icon "jpg" or "png"), or with model NULL of the list.
+static void MDL_Start( const char *model, const char *icon ) {
 	mdlJob_t *job = &mdlJob;
 
 	memset( job, 0, sizeof( *job ) );
-	if ( !MDL_Url( model ? va( "files/%s.pk3", model ) : "index.txt", job->url, sizeof( job->url ) ) ) {
+	if ( !MDL_Url( !model ? "index.txt" : icon ? va( "files/%s.%s", model, icon ) : va( "files/%s.pk3", model ), job->url, sizeof( job->url ) ) ) {
 		Com_Printf( S_COLOR_YELLOW "v_modelStoreURL is no https address, the model store is not asked\n" );
 		Cvar_Set( "v_modelStore", "0" );
 		return;
 	}
-	if ( model ) {
+	if ( model && icon ) {
+		fileHandle_t f = FS_SV_FOpenFileWrite( MDL_IconLocal( model, icon, qtrue ) );
+
+		MDL_Add( &mdlIconsTried, model );
+		if ( !f ) {
+			return;
+		}
+		FS_FCloseFile( f );
+		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_IconLocal( model, icon, qtrue ) ), sizeof( job->osTemp ) );
+		Q_strncpyz( job->model, model, sizeof( job->model ) );
+		Q_strncpyz( job->icon, icon, sizeof( job->icon ) );
+		job->most = MDL_ICON_MOST;
+		Web_SHA256Init( &job->sha );
+	} else if ( model ) {
 		unsigned char	sha[WEB_SHA256_SIZE];
 		fileHandle_t	f;
 
@@ -213,35 +309,51 @@ static void MDL_Start( const char *model ) {
 		job->index = mdlIndex;
 		mdlIndex[0] = '\0';
 	}
+	if ( model && !icon ) {
+		Cvar_Set( "v_modelStoreFetching", model );
+	}
 	SDL_AtomicSet( &job->state, MDLJOB_RUNNING );
 	job->thread = SDL_CreateThread( MDL_Thread, "models", job );
 	if ( !job->thread ) {
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
-		if ( model ) {
+		Cvar_Set( "v_modelStoreFetching", "" );
+		if ( model && !icon ) {
 			MDL_See( model );
 		}
 	}
 }
 
-// The model that came is shown: its pak goes to the head of the path, the renderer looks again for what it did not
-// find, and the cgame loads the players with it again.
+// The model that came is shown (MDL_Use), from the part that came in.
 static void MDL_Arrived( const char *model ) {
-	char why[128];
-
 	FS_SV_Rename( MDL_Local( model, qtrue ), MDL_Local( model, qfalse ), qfalse );
-	if ( !FS_AddModelPak( model, why, sizeof( why ) ) ) {
-		Com_Printf( S_COLOR_YELLOW "The model %s of the model store is not used: %s\n", model, why );
+	if ( !MDL_Use( model ) ) {
 		remove( MDL_OSPath( MDL_Local( model, qfalse ) ) );
+	}
+}
+
+// An icon that came is kept when it is a picture of the type the list says, and the renderer looks for it again.
+static void MDL_IconDone( const mdlJob_t *job ) {
+	static const byte	jpg[] = { 0xff, 0xd8, 0xff }, png[] = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n' };
+	byte				head[8] = { 0 };
+	FILE				*f;
+	qboolean			good;
+
+	if ( !job->ok || job->disk || !( f = fopen( job->osTemp, "rb" ) ) ) {
+		remove( job->osTemp );
 		return;
 	}
-	Com_Printf( "The model %s came from the model store\n", model );
+	good = (qboolean)( fread( head, 1, sizeof( head ), f ) == sizeof( head ) );
+	fclose( f );
+	good = (qboolean)( good && ( !strcmp( job->icon, "jpg" ) ? !memcmp( head, jpg, sizeof( jpg ) ) : !memcmp( head, png, sizeof( png ) ) ) );
+	if ( !good ) {
+		remove( job->osTemp );
+		return;
+	}
+	FS_SV_Rename( MDL_IconLocal( job->model, job->icon, qtrue ), MDL_IconLocal( job->model, job->icon, qfalse ), qfalse );
 	if ( re && re->ext.ForgetMissing ) {
-		re->ext.ForgetMissing( va( "models/players/%s/", model ) );
+		re->ext.ForgetMissing( va( "%s/icons/", FS_MODELSTORE ) );
 	}
-	if ( cls.cgameStarted ) {
-		Cmd_TokenizeString( va( "v_modelArrived %s", model ) );
-		CGVM_ConsoleCommand();
-	}
+	MDL_Changed();
 }
 
 static void MDL_Done( void ) {
@@ -251,16 +363,29 @@ static void MDL_Done( void ) {
 	char			model[WEB_MODEL_NAME];
 
 	SDL_WaitThread( job->thread, NULL );		// (it is through, this does not wait)
+	Cvar_Set( "v_modelStoreFetching", "" );
 	Q_strncpyz( model, job->model, sizeof( model ) );
 	if ( !model[0] ) {
 		mdlIndex[job->ok ? job->bytes : 0] = '\0';
 		mdlIndexTime = cls.realtime;
+		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		if ( job->ok ) {
+			fileHandle_t f = FS_SV_FOpenFileWrite( va( "%s/%s/index.txt", BASEGAME, FS_MODELSTORE ) );
+
 			// (what was not in the store, or did not come, is looked at again with the new list)
-			mdlNumSeen = 0;
+			mdlSeen.num = 0;
+			if ( f ) {
+				FS_Write( mdlIndex, (int)job->bytes, f );
+				FS_FCloseFile( f );
+			}
+			MDL_Changed();
 		} else {
 			Com_DPrintf( "The list of the model store did not come: %s\n", job->error );
 		}
+		return;
+	}
+	if ( job->icon[0] ) {
+		MDL_IconDone( job );
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		return;
 	}
@@ -278,25 +403,15 @@ static void MDL_Done( void ) {
 	MDL_Arrived( model );
 }
 
-// The next model a player here uses that this game does not have. qfalse: none.
-static qboolean MDL_NextOfPlayers( char *out, size_t outSize ) {
-	int i;
+// The next icon of the list that is not here yet, for the window. qfalse: none.
+static qboolean MDL_NextIcon( char *model, char *icon ) {
+	const char	*p;
+	long long	size;
 
-	for ( i = 0; i < MAX_CLIENTS; i++ ) {
-		const char *cs = cl.gameState.stringData + cl.gameState.stringOffsets[CS_PLAYERS + i];
-		char		model[WEB_MODEL_NAME];
-
-		if ( !cs[0] || !WEB_ModelFromInfo( Info_ValueForKey( cs, "model" ), model, sizeof( model ) ) || MDL_Seen( model ) ) {
-			continue;
+	for ( p = WEB_ModelIndexNext( mdlIndex, model, icon, &size ); p; p = WEB_ModelIndexNext( p, model, icon, &size ) ) {
+		if ( icon[0] && !MDL_Has( &mdlIconsTried, model ) && !FS_SV_FileExists( MDL_IconLocal( model, icon, qfalse ) ) ) {
+			return qtrue;
 		}
-		// (a model of the game, of a pak of the server, or one the player put in himself)
-		if ( FS_ReadFile( va( "models/players/%s/model.glm", model ), NULL ) > 0 ) {
-			Com_DPrintf( "model store: the game has %s\n", model );
-			MDL_See( model );
-			continue;
-		}
-		Q_strncpyz( out, model, outSize );
-		return qtrue;
 	}
 	return qfalse;
 }
@@ -305,12 +420,13 @@ static qboolean MDL_NextOfPlayers( char *out, size_t outSize ) {
 =================
 CL_ModelsFrame
 
-Once a frame: a fetch that is through is taken, and once a second, while nothing else asks a web server, the next
-model a player here uses and the store has is fetched (after the list of the store, when that is old).
+Once a frame: a fetch that is through is taken. While nothing else asks a web server, the model the player asked
+for is fetched, else the next model a player here uses and the store has (looked for once a second), else the
+next icon for the window, each after the list of the store when that is old.
 =================
 */
 void CL_ModelsFrame( void ) {
-	char			model[WEB_MODEL_NAME];
+	char			model[WEB_MODEL_NAME], icon[4];
 	long long		size;
 	unsigned char	sha[WEB_SHA256_SIZE];
 
@@ -323,36 +439,47 @@ void CL_ModelsFrame( void ) {
 	default:
 		return;
 	}
-	if ( !v_modelStore->integer || cls.realtime - mdlScanTime < MDL_SCAN_MSEC ) {
-		return;
-	}
-	mdlScanTime = cls.realtime;
-	if ( !mdlWanted[0] ) {
-		if ( cls.state != CA_ACTIVE || cl_connectedToPureServer || clc.demoplaying || !MDL_NextOfPlayers( model, sizeof( model ) ) ) {
-			return;
+	if ( !mdlWanted[0] && v_modelStore->integer && cls.realtime - mdlScanTime >= MDL_SCAN_MSEC ) {
+		mdlScanTime = cls.realtime;
+		if ( cls.state == CA_ACTIVE && !cl_connectedToPureServer && !clc.demoplaying && MDL_NextOfPlayers( model, sizeof( model ) ) ) {
+			Q_strncpyz( mdlWanted, model, sizeof( mdlWanted ) );
 		}
-		Q_strncpyz( mdlWanted, model, sizeof( mdlWanted ) );
 	}
-	if ( CL_UpdateBusy() || CL_DownloadWebAsking() ) {
+	if ( ( !mdlWanted[0] && !mdlIconsWanted ) || CL_UpdateBusy() || CL_DownloadWebAsking() ) {
 		return;
 	}
 	if ( mdlIndexTime < 0 || cls.realtime - mdlIndexTime > MDL_INDEX_MSEC ) {
-		MDL_Start( NULL );
+		MDL_Start( NULL, NULL );
 		return;
 	}
-	Q_strncpyz( model, mdlWanted, sizeof( model ) );
-	mdlWanted[0] = '\0';
-	if ( !WEB_ModelIndexFind( mdlIndex, model, &size, sha ) ) {
-		MDL_See( model );
+	if ( mdlWanted[0] ) {
+		Q_strncpyz( model, mdlWanted, sizeof( model ) );
+		mdlWanted[0] = '\0';
+		if ( !WEB_ModelIndexFind( mdlIndex, model, &size, sha ) ) {
+			Com_DPrintf( "model store: it has no %s\n", model );
+			MDL_See( model );
+			return;
+		}
+		MDL_Start( model, NULL );
 		return;
 	}
-	MDL_Start( model );
+	if ( MDL_NextIcon( model, icon ) ) {
+		MDL_Start( model, icon );
+	} else {
+		mdlIconsWanted = qfalse;
+	}
 }
 
-// v_models: what the store has and what came; v_models get <name>: fetches a model whether a player uses it or not
+// v_models: what the store has and what came; v_models get <name>: fetches a model whether a player uses it or not;
+// v_models icons: the list and the icons for the window of the cgame
 static void CL_Models_f( void ) {
 	char model[WEB_MODEL_NAME];
 
+	if ( Cmd_Argc() == 2 && !Q_stricmp( Cmd_Argv( 1 ), "icons" ) ) {
+		mdlIconsWanted = qtrue;
+		mdlIconsTried.num = 0;
+		return;
+	}
 	if ( Cmd_Argc() == 3 && !Q_stricmp( Cmd_Argv( 1 ), "get" ) ) {
 		if ( !WEB_ModelFromInfo( Cmd_Argv( 2 ), model, sizeof( model ) ) ) {
 			Com_Printf( "A model name is 2 to 32 of a-z, 0-9 and _\n" );
@@ -363,24 +490,25 @@ static void CL_Models_f( void ) {
 			return;
 		}
 		Q_strncpyz( mdlWanted, model, sizeof( mdlWanted ) );
-		mdlScanTime = cls.realtime - MDL_SCAN_MSEC;
-		Com_Printf( "%s is fetched from the model store%s\n", model, v_modelStore->integer ? "" : " when v_modelStore is 1" );
+		Com_Printf( "%s is fetched from the model store\n", model );
 		return;
 	}
 	if ( Cmd_Argc() != 1 ) {
-		Com_Printf( "usage: v_models [get <name>]\n" );
+		Com_Printf( "usage: v_models [get <name> | icons]\n" );
 		return;
 	}
 	Com_Printf( "model store: %s, %s\n", v_modelStoreURL->string, v_modelStore->integer ? "on" : "off (v_modelStore 0)" );
-	Com_Printf( "list: %s, %d models looked at this run%s\n", mdlIndexTime < 0 ? "not fetched yet" : "fetched", mdlNumSeen,
+	Com_Printf( "list: %s, %d models looked at this run%s\n", mdlIndexTime < 0 ? "not fetched yet" : "fetched", mdlSeen.num,
 		CL_ModelsAsking() ? ", a fetch runs" : "" );
 }
 
 void CL_ModelsInit( void ) {
-	v_modelStore = Cvar_Get( "v_modelStore", "1", CVAR_ARCHIVE, "Fetch the models of players that the game does not have from the model store of the site (0: never)" );
+	v_modelStore = Cvar_Get( "v_modelStore", "1", CVAR_ARCHIVE, "Fetch the models of players that the game does not have from the model store of the site (0: only what you ask for)" );
+	v_modelStoreChanged = Cvar_Get( "v_modelStoreChanged", "0", CVAR_ROM, "Counts up when the list, an icon or a model of the model store came" );
+	Cvar_Get( "v_modelStoreFetching", "", CVAR_ROM, "The model that is fetched from the model store now" );
 	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED,
 		"Address of the model store (https). Can only be changed on the command line" );
-	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, or v_models get <name>" );
+	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, v_models get <name>, v_models icons" );
 }
 
 // The game ends. A thread that is still asking is told to stop and left to itself.
@@ -400,11 +528,51 @@ void CL_ModelsShutdown( void ) {
 	Cmd_RemoveCommand( "v_models" );
 }
 
-#else // __EMSCRIPTEN__: the page of the TV gets the models another way
+#else // __EMSCRIPTEN__
 
-void		CL_ModelsInit( void ) {}
-void		CL_ModelsFrame( void ) {}
-void		CL_ModelsShutdown( void ) {}
-qboolean	CL_ModelsAsking( void ) { return qfalse; }
+/*
+In a page (the TV of the site, shared/sys/web/page/boot.js) the page fetches: once a second the next model a
+player here uses that the game does not have goes to vjk.wantModel() of the page, which fetches it from the store
+of its own host, checks it against index.txt there, puts it into base/modelstore of the home folder and says so
+with v_modelPak <model>. The TV plays as a demo, so a demo is no reason not to.
+*/
+#include <emscripten.h>
+
+// v_modelPak <model>: the page put the pak of model in place
+static void CL_ModelPak_f( void ) {
+	char model[WEB_MODEL_NAME];
+
+	if ( Cmd_Argc() != 2 || !WEB_ModelFromInfo( Cmd_Argv( 1 ), model, sizeof( model ) ) ) {
+		Com_Printf( "usage: v_modelPak <model>\n" );
+		return;
+	}
+	MDL_See( model );
+	MDL_Use( model );
+}
+
+void CL_ModelsInit( void ) {
+	v_modelStore = Cvar_Get( "v_modelStore", "1", CVAR_ARCHIVE, "Fetch the models of players that the game does not have from the model store of the site (0: never)" );
+	v_modelStoreChanged = Cvar_Get( "v_modelStoreChanged", "0", CVAR_ROM, "Counts up when a model of the model store came" );
+	Cmd_AddCommand( "v_modelPak", CL_ModelPak_f, "For the page: the pak of a model of the model store is in place" );
+}
+
+void CL_ModelsFrame( void ) {
+	char model[WEB_MODEL_NAME];
+
+	if ( !v_modelStore->integer || cls.state != CA_ACTIVE || cls.realtime - mdlScanTime < MDL_SCAN_MSEC ) {
+		return;
+	}
+	mdlScanTime = cls.realtime;
+	if ( MDL_NextOfPlayers( model, sizeof( model ) ) ) {
+		MDL_See( model );
+		EM_ASM( { if ( window.vjk && vjk.wantModel ) vjk.wantModel( UTF8ToString( $0 ) ); }, model );
+	}
+}
+
+void CL_ModelsShutdown( void ) {
+	Cmd_RemoveCommand( "v_modelPak" );
+}
+
+qboolean CL_ModelsAsking( void ) { return qfalse; }
 
 #endif

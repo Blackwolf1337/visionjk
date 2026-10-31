@@ -182,7 +182,7 @@ void CG_SelectInit( void ) {
 // Is the mouse free for pointing at players. Also for the quick wheel (radial/cg_radial.c), the command menu
 // (cmdmenu/cg_cmdmenu.c) and a box that is carried, without the selection of players.
 static qboolean Select_Free( void ) {
-	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || CG_CmdMenuOpen() || CG_ToolWindowShown() || sel.carrying || ( v_selectPlayers.integer
+	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || CG_CmdMenuOpen() || CG_ToolWindowShown() || CG_ModelStoreShown() || sel.carrying || ( v_selectPlayers.integer
 		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() || CG_BoomboxWindowShown() ) ) ) );
 }
 
@@ -1425,6 +1425,7 @@ void CG_SelectDraw( void ) {
 		CG_ScoresLetGo();
 		CG_BoomboxWindowClose();
 		CG_ToolWindowClose();
+		CG_ModelStoreClose();
 		CG_RadialClose();
 		CG_CmdMenuClose();
 	}
@@ -1487,7 +1488,7 @@ void CG_SelectDraw( void ) {
 	}
 	// (nobody is picked in the level through the card, the scoreboard or the window of a box, or while a box is carried)
 	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || CG_BoomboxWindowPointerOver() || CG_ToolWindowPointerOver()
-		|| Select_Held() >= 0 ) ? -1 : Select_Pick();
+		|| CG_ModelStorePointerOver() || Select_Held() >= 0 ) ? -1 : Select_Pick();
 	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
 		Select_Hull();
 		if ( !sel.hull[0] || !v_selectOutline.integer ) {
@@ -1517,6 +1518,7 @@ void CG_SelectDraw( void ) {
 	// the window of a box and the tool window, and the pointer on everything, on the card and the windows as well
 	CG_BoomboxWindowDraw();
 	CG_ToolWindowDraw();
+	CG_ModelStoreDraw();
 	CG_SelectDrawCursor();
 }
 
@@ -1547,7 +1549,7 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 		return qtrue;
 	}
 	// the window of a box, while it is open: what is on it, and Escape and the right button for it
-	if ( CG_BoomboxWindowKey( key, down ) || CG_ToolWindowKey( key, down ) ) {
+	if ( CG_BoomboxWindowKey( key, down ) || CG_ToolWindowKey( key, down ) || CG_ModelStoreKey( key, down ) ) {
 		return qtrue;
 	}
 	if ( !down ) {
@@ -1651,6 +1653,7 @@ void CG_SelectLetGo( void ) {
 	CG_ScoresLetGo();
 	CG_BoomboxWindowClose();
 	CG_ToolWindowClose();
+	CG_ModelStoreClose();
 }
 
 // "Move it" of the card or the window of a box: the piece hangs in the pointer until the next click puts it down

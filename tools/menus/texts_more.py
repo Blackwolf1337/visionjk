@@ -698,4 +698,13 @@ MORE = {
     'Left click gives the prop these properties, right click takes them.': ("Le clic gauche donne ces propriétés à l'objet, le clic droit les prend.", 'El clic izquierdo da estas propiedades al objeto, el clic derecho las toma.'),
     'Left click freezes the prop in place, right click frees it, R frees all.': ("Le clic gauche fige l'objet sur place, le clic droit le libère, R libère tout.", 'El clic izquierdo congela el objeto en su sitio, el clic derecho lo libera, R libera todos.'),
     'Left click: use   Right click: take   R: reset': ('Clic gauche : utiliser   Clic droit : prendre   R : réinitialiser', 'Clic izquierdo: usar   Clic derecho: tomar   R: restablecer'),
+    'Model Store': ('Boutique de modèles', 'Tienda de modelos'),
+    'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': ("Ouvre la boutique de modèles de jka.vision : récupérez les modèles de joueur envoyés par d'autres et utilisez-les aussitôt.", 'Abre la tienda de modelos de jka.vision: consigue modelos de jugador que otros subieron y úsalos al instante.'),
+    '%s models': ('%s modèles', '%s modelos'),
+    'The store has no models yet.': ("La boutique n'a pas encore de modèles.", 'La tienda aún no tiene modelos.'),
+    'The list of the store is on its way.': ('La liste de la boutique arrive.', 'La lista de la tienda está en camino.'),
+    'In the game': ('Dans le jeu', 'En el juego'),
+    'Coming...': ('Arrive...', 'Llegando...'),
+    'Get (%s)': ('Obtenir (%s)', 'Obtener (%s)'),
+    'Upload your own at jka.vision/models.html': ('Envoyez les vôtres sur jka.vision/models.html', 'Sube los tuyos en jka.vision/models.html'),
 }

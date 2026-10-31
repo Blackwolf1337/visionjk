@@ -1891,6 +1891,13 @@ qboolean	CG_ToolWindowShown( void );
 qboolean	CG_ToolWindowPointerOver( void );
 void		CG_ToolWindowDraw( void );
 qboolean	CG_ToolWindowKey( int key, qboolean down );
+// modelstore/cg_modelstore.c: the window of the model store of the site
+void		CG_ModelStore_f( void );				// v_modelbrowser
+void		CG_ModelStoreClose( void );
+qboolean	CG_ModelStoreShown( void );
+qboolean	CG_ModelStorePointerOver( void );
+void		CG_ModelStoreDraw( void );
+qboolean	CG_ModelStoreKey( int key, qboolean down );
 const char	*CG_KeyLabel( int key );
 void		CG_TextCut( const char *text, float most, float (*width)( const char *text, void *arg ), void *arg, char *out, int outSize );
 qboolean	CG_ScoresDraw( void );											// hud/cg_scores.c

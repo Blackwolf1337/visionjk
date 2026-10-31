@@ -10198,12 +10198,17 @@ UI_Q3HeadsNeeded
 The list of the player models and skins for the menus (FEEDER_Q3HEADS), made when it is first asked for and not at
 every start of the ui: the start is every level, and the list was the most of it (87 of 140 ms on mp/ffa3,
 2026-10-19): a list of the files of every model folder, each a walk over all files of all paks, and up to three
-icons opened per skin. Now a menu that shows the models costs that once per level, when it is opened.
+icons opened per skin. Now a menu that shows the models costs that once per level, when it is opened, and again
+when a model came from the model store of the site (client/cl_models.cpp counts v_modelStoreChanged up).
 =================
 */
 void UI_Q3HeadsNeeded( void ) {
-	if ( !uiInfo.q3HeadsListed ) {
+	static int	store = -1;
+	const int	changed = (int)trap->Cvar_VariableValue( "v_modelStoreChanged" );
+
+	if ( !uiInfo.q3HeadsListed || changed != store ) {
 		uiInfo.q3HeadsListed = qtrue;
+		store = changed;
 		UI_BuildQ3Model_List();
 	}
 }

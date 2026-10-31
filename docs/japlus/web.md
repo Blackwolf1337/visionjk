@@ -116,6 +116,9 @@ from the storage of the browser. Without `tv-index.json` (404) the page falls ba
 and all the pk3 files. WebCrypto needs a page that came over https or from the machine itself (localhost), else the
 page says so. A map with no pack: the page says the TV has no pack of it yet.
 
+A player whose model is in the model store is drawn with it: the page fetches the pak of the store, see
+[models.md](models.md), "In the browser". Models that are not in the store still fall back to the default model.
+
 ### Making the packs
 
 ```
@@ -127,7 +130,7 @@ server of a Linux build with 8 bots and records it with `tvrecord`, then plays e
 (gamescope) with `fs_debug 1` and notes every file read from a pk3 (or from the game's own `base` and `japlus`
 folders) and for which map. Files read before the first map, or for two maps or more, go into `tv-common.vpk`, the
 others into the pack of their map. Sounds, music and videos are left out. A player whose model is not in the packs
-is drawn with the default model.
+is drawn with the default model, unless the model store has it (see [models.md](models.md)).
 
 A pack is a pk3 (zip) encrypted with AES-128-CTR: `VJKTV1`, two zero bytes, the 16 byte counter, then the zip. The
 key is in `tvpack.py` and in `boot.js`. This only keeps the files of the game from being taken off the site as they

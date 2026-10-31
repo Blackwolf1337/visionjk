@@ -72,7 +72,8 @@ BOOST_AUTO_TEST_CASE( index )
 {
 	const std::string text = std::string( "# the model store\n" )
 		+ "jan 1276771 " + kSha + "\n"
-		+ "jantest 5 " + kSha + "\r\n"
+		+ "jantest 5 " + kSha + " jpg\r\n"
+		+ "glued 5 " + kSha + "jpg\n"
 		+ "big 104857601 " + kSha + "\n"
 		+ "short 10 abcd\n"
 		+ "zero 0 " + kSha + "\n"
@@ -89,12 +90,35 @@ BOOST_AUTO_TEST_CASE( index )
 	BOOST_CHECK_EQUAL( bytes, 5 );
 	BOOST_REQUIRE( WEB_ModelIndexFind( text.c_str(), "last", &bytes, sha ) );
 	BOOST_CHECK_EQUAL( bytes, 7 );
+	BOOST_CHECK( !WEB_ModelIndexFind( text.c_str(), "glued", &bytes, sha ) );
 	BOOST_CHECK( !WEB_ModelIndexFind( text.c_str(), "big", &bytes, sha ) );
 	BOOST_CHECK( !WEB_ModelIndexFind( text.c_str(), "short", &bytes, sha ) );
 	BOOST_CHECK( !WEB_ModelIndexFind( text.c_str(), "zero", &bytes, sha ) );
 	BOOST_CHECK( !WEB_ModelIndexFind( text.c_str(), "ja", &bytes, sha ) );
 	BOOST_CHECK( !WEB_ModelIndexFind( text.c_str(), "nope", &bytes, sha ) );
 	BOOST_CHECK( !WEB_ModelIndexFind( "", "jan", &bytes, sha ) );
+}
+
+BOOST_AUTO_TEST_CASE( index_next )
+{
+	const std::string text = std::string( "# the model store\n" )
+		+ "jan 1276771 " + kSha + " jpg\n"
+		+ "short 10 abcd\n"
+		+ "noicon 5 " + kSha + " -\r\n"
+		+ "Bad 5 " + kSha + " jpg\n"
+		+ "pic 7 " + kSha + " png";
+	std::vector<std::string> seen;
+	char name[WEB_MODEL_NAME], icon[4];
+	long long bytes = 0;
+
+	for ( const char *p = WEB_ModelIndexNext( text.c_str(), name, icon, &bytes ); p; p = WEB_ModelIndexNext( p, name, icon, &bytes ) ) {
+		seen.push_back( std::string( name ) + ":" + icon + ":" + std::to_string( bytes ) );
+	}
+	BOOST_REQUIRE_EQUAL( seen.size(), 3u );
+	BOOST_CHECK_EQUAL( seen[0], "jan:jpg:1276771" );
+	BOOST_CHECK_EQUAL( seen[1], "noicon::5" );
+	BOOST_CHECK_EQUAL( seen[2], "pic:png:7" );
+	BOOST_CHECK( !WEB_ModelIndexNext( "", name, icon, &bytes ) );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -133,6 +133,14 @@ REFERENCE           OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
 LANG_ENGLISH        "Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties."
 LANG_FRENCH         "Ouvre la fenêtre du toolgun (après amsandbox) : choisissez un outil et réglez sa couleur, son matériau ou ses propriétés."
 
+REFERENCE           MODEL_STORE
+LANG_ENGLISH        "Model Store"
+LANG_FRENCH         "Boutique de modèles"
+
+REFERENCE           OPENS_THE_MODEL_STORE_OF_JKA_VISION
+LANG_ENGLISH        "Opens the model store of jka.vision: get player models others uploaded, and use them at once."
+LANG_FRENCH         "Ouvre la boutique de modèles de jka.vision : récupérez les modèles de joueur envoyés par d'autres et utilisez-les aussitôt."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_FRENCH         "Mode photo"
@@ -2624,6 +2632,34 @@ LANG_FRENCH         "Le clic gauche fige l'objet sur place, le clic droit le lib
 REFERENCE           LEFT_CLICK_USE_RIGHT_CLICK_TAKE_R_RE
 LANG_ENGLISH        "Left click: use   Right click: take   R: reset"
 LANG_FRENCH         "Clic gauche : utiliser   Clic droit : prendre   R : réinitialiser"
+
+REFERENCE           S_MODELS
+LANG_ENGLISH        "%s models"
+LANG_FRENCH         "%s modèles"
+
+REFERENCE           THE_STORE_HAS_NO_MODELS_YET
+LANG_ENGLISH        "The store has no models yet."
+LANG_FRENCH         "La boutique n'a pas encore de modèles."
+
+REFERENCE           THE_LIST_OF_THE_STORE_IS_ON_ITS_WAY
+LANG_ENGLISH        "The list of the store is on its way."
+LANG_FRENCH         "La liste de la boutique arrive."
+
+REFERENCE           IN_THE_GAME
+LANG_ENGLISH        "In the game"
+LANG_FRENCH         "Dans le jeu"
+
+REFERENCE           COMING
+LANG_ENGLISH        "Coming..."
+LANG_FRENCH         "Arrive..."
+
+REFERENCE           GET_S
+LANG_ENGLISH        "Get (%s)"
+LANG_FRENCH         "Obtenir (%s)"
+
+REFERENCE           UPLOAD_YOUR_OWN_AT_JKA_VISION_MODELS
+LANG_ENGLISH        "Upload your own at jka.vision/models.html"
+LANG_FRENCH         "Envoyez les vôtres sur jka.vision/models.html"
 
 
 ENDMARKER

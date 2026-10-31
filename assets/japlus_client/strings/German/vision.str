@@ -133,6 +133,14 @@ REFERENCE           OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
 LANG_ENGLISH        "Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties."
 LANG_GERMAN         "Öffnet das Fenster der Toolgun (nach amsandbox): Werkzeug wählen und Farbe, Material oder Eigenschaften einstellen."
 
+REFERENCE           MODEL_STORE
+LANG_ENGLISH        "Model Store"
+LANG_GERMAN         "Modell-Store"
+
+REFERENCE           OPENS_THE_MODEL_STORE_OF_JKA_VISION
+LANG_ENGLISH        "Opens the model store of jka.vision: get player models others uploaded, and use them at once."
+LANG_GERMAN         "Öffnet den Modell-Store von jka.vision: hole Spielermodelle, die andere hochgeladen haben, und nutze sie sofort."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_GERMAN         "Fotomodus"
@@ -2624,6 +2632,34 @@ LANG_GERMAN         "Linksklick friert das Objekt an Ort und Stelle ein, Rechtsk
 REFERENCE           LEFT_CLICK_USE_RIGHT_CLICK_TAKE_R_RE
 LANG_ENGLISH        "Left click: use   Right click: take   R: reset"
 LANG_GERMAN         "Linksklick: benutzen   Rechtsklick: übernehmen   R: zurücksetzen"
+
+REFERENCE           S_MODELS
+LANG_ENGLISH        "%s models"
+LANG_GERMAN         "%s Modelle"
+
+REFERENCE           THE_STORE_HAS_NO_MODELS_YET
+LANG_ENGLISH        "The store has no models yet."
+LANG_GERMAN         "Der Store hat noch keine Modelle."
+
+REFERENCE           THE_LIST_OF_THE_STORE_IS_ON_ITS_WAY
+LANG_ENGLISH        "The list of the store is on its way."
+LANG_GERMAN         "Die Liste des Stores ist unterwegs."
+
+REFERENCE           IN_THE_GAME
+LANG_ENGLISH        "In the game"
+LANG_GERMAN         "Im Spiel"
+
+REFERENCE           COMING
+LANG_ENGLISH        "Coming..."
+LANG_GERMAN         "Kommt..."
+
+REFERENCE           GET_S
+LANG_ENGLISH        "Get (%s)"
+LANG_GERMAN         "Holen (%s)"
+
+REFERENCE           UPLOAD_YOUR_OWN_AT_JKA_VISION_MODELS
+LANG_ENGLISH        "Upload your own at jka.vision/models.html"
+LANG_GERMAN         "Lade eigene hoch auf jka.vision/models.html"
 
 
 ENDMARKER

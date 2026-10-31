@@ -240,6 +240,16 @@ set(MPCGameSandboxFiles
 source_group("cgame/sandbox" FILES ${MPCGameSandboxFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSandboxFiles})
 
+# the window of the model store of the site (v_modelbrowser), the list as the engine reads it (client/cl_models.cpp)
+set(MPCGameModelStoreFiles
+	"${MPDir}/cgame/modelstore/cg_modelstore.c"
+	"${SharedDir}/web/web_models.c"
+	"${SharedDir}/web/web_models.h"
+	"${SharedDir}/web/web_http.h"
+	)
+source_group("cgame/modelstore" FILES ${MPCGameModelStoreFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameModelStoreFiles})
+
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
