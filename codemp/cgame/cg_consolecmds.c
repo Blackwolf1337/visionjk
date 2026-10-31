@@ -170,6 +170,22 @@ static void CG_Key_f( void ) {
 	CG_KeyEvent( key, (qboolean)( Q_stricmp( CG_Argv( 2 ), "up" ) != 0 ) );
 }
 
+/*
+=================
+CG_Mouse_f
+
+v_cgMouse <x> <y>: the pointer of the cgame to that place of the 640 x 480 of the HUD, while the cgame has the
+keys. For a script, with v_cgKey mouse1 for the click, as v_uiMouse is for the menus.
+=================
+*/
+static void CG_Mouse_f( void ) {
+	if ( trap->Cmd_Argc() < 3 || !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
+		return;
+	}
+	cgs.cursorX = atoi( CG_Argv( 1 ) );
+	cgs.cursorY = atoi( CG_Argv( 2 ) );
+}
+
 void CG_ClientList_f( void )
 {
 	clientInfo_t *ci;
@@ -360,7 +376,9 @@ static consoleCommand_t	commands[] = {
 	{ "tay_cosmetics",			CG_Cosmetics_f },
 	{ "v_chatOpen",				CG_ChatOpen_f },
 	{ "v_commandmenu",				CG_CmdMenu_f },
+	{ "v_tools",						CG_ToolWindow_f },
 	{ "v_cgKey",						CG_Key_f },
+	{ "v_cgMouse",					CG_Mouse_f },
 	{ "clientlist",					CG_ClientList_f },
 	{ "cursor",						CG_SelectCursor_f },
 	{ "forcenext",					CG_NextForcePower_f },

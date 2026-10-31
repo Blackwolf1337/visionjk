@@ -1563,8 +1563,8 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
-- New: the physgun, as in Garry's Mod (`g_props.c`, the section "The physgun"). An admin of JA+ types
-  `/amphysgun` and has it: it is the stun baton, which he gets with the command and keeps over a death. The
+- New: the physgun, as in Garry's Mod (`g_props.c`, the section "The sandbox (amsandbox)"). An admin of JA+ types
+  `/amsandbox` (was `/amphysgun`, see [sandbox.md](sandbox.md)) and has it: it is the stun baton, which he gets with the command and keeps over a death. The
   command again takes it away. The client of the port takes the baton out by itself, on another client it is
   reached with the next and previous weapon keys (it has no number).
   - Attack takes the prop he looks at into the beam, from up to 2048 units away (what a shot would hit: the box

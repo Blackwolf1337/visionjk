@@ -283,13 +283,16 @@ set(MPGameSharedWebFiles
 source_group("shared/web" FILES ${MPGameSharedWebFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameSharedWebFiles})
 
-# the props with physics and the black hole that pulls them, bg_props.c is built into the cgame too
+# the props with physics, the black hole that pulls them and the sandbox (amsandbox, the toolgun of g_tools.c),
+# bg_props.c is built into the cgame too, bg_tools.h is known there
 set(MPGamePropsFiles
 	"${MPDir}/game/props/bg_props.c"
 	"${MPDir}/game/props/g_blackhole.c"
 	"${MPDir}/game/props/g_props.c"
+	"${MPDir}/game/props/g_tools.c"
 	"${MPDir}/game/props/bg_props.h"
 	"${MPDir}/game/props/bg_props_math.h"
+	"${MPDir}/game/props/bg_tools.h"
 	)
 source_group("game/props" FILES ${MPGamePropsFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})

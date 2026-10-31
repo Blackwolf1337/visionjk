@@ -1879,6 +1879,18 @@ qboolean	CG_HudDraw( void );
 qboolean	CG_HudNewLook( void );
 const char	*CG_VisionText( const char *english );
 const char	*CG_VisionTextWith( const char *english, const char *value );
+// sandbox/cg_tools.c: the toolgun of the sandbox
+void		CG_ToolsInit( void );
+void		CG_ToolsFrame( void );
+void		CG_ToolsDraw( void );
+void		CG_ToolServerCommand( void );			// vs_tool
+// sandbox/cg_tools_ui.c: its window
+void		CG_ToolWindow_f( void );				// v_tools
+void		CG_ToolWindowClose( void );
+qboolean	CG_ToolWindowShown( void );
+qboolean	CG_ToolWindowPointerOver( void );
+void		CG_ToolWindowDraw( void );
+qboolean	CG_ToolWindowKey( int key, qboolean down );
 const char	*CG_KeyLabel( int key );
 void		CG_TextCut( const char *text, float most, float (*width)( const char *text, void *arg ), void *arg, char *out, int outSize );
 qboolean	CG_ScoresDraw( void );											// hud/cg_scores.c

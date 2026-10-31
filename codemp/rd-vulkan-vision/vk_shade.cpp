@@ -1026,7 +1026,9 @@ void RB_StageIteratorGeneric( void ) {
 			stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
 		}
 		if ( ent->e.renderfx & RF_RGB_TINT ) {
-			forceRGBGen = CGEN_ENTITY;
+			// VisionJK: a lit stage stays lit, with the colour of the entity on it (a prop the toolgun coloured,
+			// game/props/g_tools.c); the stages of effects have no light and take the colour as it is
+			forceRGBGen = ( pStage->rgbGen == CGEN_LIGHTING_DIFFUSE ) ? CGEN_LIGHTING_DIFFUSE_ENTITY : CGEN_ENTITY;
 		}
 
 		VK_InitDraw( &draw, transform, bones );

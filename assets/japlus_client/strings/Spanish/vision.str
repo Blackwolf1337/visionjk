@@ -125,6 +125,14 @@ REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
 LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
 LANG_SPANISH        "Abre listas de lo que sabe hacer VisionJK, desde la boombox hasta gestos y votaciones: una tecla numérica o un clic elige."
 
+REFERENCE           TOOL_WINDOW_SANDBOX
+LANG_ENGLISH        "Tool Window (Sandbox)"
+LANG_SPANISH        "Ventana de herramientas (Sandbox)"
+
+REFERENCE           OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
+LANG_ENGLISH        "Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties."
+LANG_SPANISH        "Abre la ventana de la toolgun (tras amsandbox): elige una herramienta y ajusta su color, material o propiedades."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_SPANISH        "Modo foto"
@@ -2516,6 +2524,106 @@ LANG_SPANISH        "Lagómetro"
 REFERENCE           SCREENSHOT
 LANG_ENGLISH        "Screenshot"
 LANG_SPANISH        "Captura de pantalla"
+
+REFERENCE           TOOLS
+LANG_ENGLISH        "Tools"
+LANG_SPANISH        "Herramientas"
+
+REFERENCE           REMOVER
+LANG_ENGLISH        "Remover"
+LANG_SPANISH        "Eliminar"
+
+REFERENCE           COLOR
+LANG_ENGLISH        "Color"
+LANG_SPANISH        "#same"
+
+REFERENCE           MATERIAL
+LANG_ENGLISH        "Material"
+LANG_SPANISH        "#same"
+
+REFERENCE           PHYSICAL_PROPERTIES
+LANG_ENGLISH        "Physical Properties"
+LANG_SPANISH        "Propiedades físicas"
+
+REFERENCE           FREEZE
+LANG_ENGLISH        "Freeze"
+LANG_SPANISH        "Congelar"
+
+REFERENCE           PLAIN
+LANG_ENGLISH        "Plain"
+LANG_SPANISH        "Liso"
+
+REFERENCE           CHROME
+LANG_ENGLISH        "Chrome"
+LANG_SPANISH        "Cromo"
+
+REFERENCE           GOLD
+LANG_ENGLISH        "Gold"
+LANG_SPANISH        "Oro"
+
+REFERENCE           GLASS
+LANG_ENGLISH        "Glass"
+LANG_SPANISH        "Cristal"
+
+REFERENCE           ICE
+LANG_ENGLISH        "Ice"
+LANG_SPANISH        "Hielo"
+
+REFERENCE           LAVA
+LANG_ENGLISH        "Lava"
+LANG_SPANISH        "#same"
+
+REFERENCE           MASS
+LANG_ENGLISH        "Mass"
+LANG_SPANISH        "Masa"
+
+REFERENCE           BOUNCE
+LANG_ENGLISH        "Bounce"
+LANG_SPANISH        "Rebote"
+
+REFERENCE           GRIP
+LANG_ENGLISH        "Grip"
+LANG_SPANISH        "Agarre"
+
+REFERENCE           LIGHT
+LANG_ENGLISH        "Light"
+LANG_SPANISH        "Ligero"
+
+REFERENCE           HEAVY
+LANG_ENGLISH        "Heavy"
+LANG_SPANISH        "Pesado"
+
+REFERENCE           BOUNCY
+LANG_ENGLISH        "Bouncy"
+LANG_SPANISH        "Rebotante"
+
+REFERENCE           SLIPPERY
+LANG_ENGLISH        "Slippery"
+LANG_SPANISH        "Resbaladizo"
+
+REFERENCE           LEFT_CLICK_REMOVES_THE_PROP_YOU_LOOK
+LANG_ENGLISH        "Left click removes the prop you look at."
+LANG_SPANISH        "El clic izquierdo elimina el objeto que miras."
+
+REFERENCE           LEFT_CLICK_PAINTS_THE_PROP_RIGHT_CLI
+LANG_ENGLISH        "Left click paints the prop, right click takes its color."
+LANG_SPANISH        "El clic izquierdo pinta el objeto, el clic derecho toma su color."
+
+REFERENCE           LEFT_CLICK_PUTS_THE_MATERIAL_ON_THE
+LANG_ENGLISH        "Left click puts the material on the prop, right click takes it."
+LANG_SPANISH        "El clic izquierdo aplica el material al objeto, el clic derecho lo toma."
+
+REFERENCE           LEFT_CLICK_GIVES_THE_PROP_THESE_PROP
+LANG_ENGLISH        "Left click gives the prop these properties, right click takes them."
+LANG_SPANISH        "El clic izquierdo da estas propiedades al objeto, el clic derecho las toma."
+
+REFERENCE           LEFT_CLICK_FREEZES_THE_PROP_IN_PLACE
+LANG_ENGLISH        "Left click freezes the prop in place, right click frees it, R frees all."
+LANG_SPANISH        "El clic izquierdo congela el objeto en su sitio, el clic derecho lo libera, R libera todos."
+
+REFERENCE           LEFT_CLICK_USE_RIGHT_CLICK_TAKE_R_RE
+LANG_ENGLISH        "Left click: use   Right click: take   R: reset"
+LANG_SPANISH        "Clic izquierdo: usar   Clic derecho: tomar   R: restablecer"
 
 
 ENDMARKER

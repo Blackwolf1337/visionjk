@@ -77,6 +77,7 @@ set(MPCGameGameFiles
 	"${MPDir}/game/bg/bg_local.h"
 	"${MPDir}/game/props/bg_props.h"
 	"${MPDir}/game/props/bg_props_math.h"
+	"${MPDir}/game/props/bg_tools.h"
 	"${MPDir}/game/voice/bg_voice.h"
 	"${MPDir}/game/bg/bg_net.h"
 	"${MPDir}/game/bg/bg_public.h"
@@ -118,6 +119,8 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_view.c"
 	"${MPDir}/cgame/cg_weaponinit.c"
 	"${MPDir}/cgame/cg_weapons.c"
+	"${MPDir}/cgame/cg_window.c"
+	"${MPDir}/cgame/cg_window.h"
 	"${MPDir}/cgame/fx_blaster.c"
 	"${MPDir}/cgame/fx_bowcaster.c"
 	"${MPDir}/cgame/fx_bryarpistol.c"
@@ -228,6 +231,14 @@ set(MPCGameCmdMenuFiles
 	)
 source_group("cgame/cmdmenu" FILES ${MPCGameCmdMenuFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameCmdMenuFiles})
+
+# the toolgun of the sandbox (amsandbox): its tool as cvars for the server, the line under the crosshair
+set(MPCGameSandboxFiles
+	"${MPDir}/cgame/sandbox/cg_tools.c"
+	"${MPDir}/cgame/sandbox/cg_tools_ui.c"
+	)
+source_group("cgame/sandbox" FILES ${MPCGameSandboxFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameSandboxFiles})
 
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles

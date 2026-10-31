@@ -353,6 +353,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 	// VisionJK
 	{ "vs_afkTime",						WA_CAT_VISIONJK,	WA_SET_INT,		0, 0,	NULL,	0,		"Seconds without a key or a turn after which a player counts as away. 0: never." },
+	{ "vs_sandbox",						WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: every player may use amsandbox (physgun, toolgun, gravity gun). 0: only the admins." },
 	{ "tay_unlagged",					WA_CAT_VISIONJK,	WA_SET_BITS,	0, 0,	"0=Hitscan weapons|1=Projectiles|2=Force push and pull",	0,		"Lag compensation: the others are moved back to the time of the shooter for these." },
 	{ "tay_unlaggedMax",				WA_CAT_VISIONJK,	WA_SET_INT,		0, 0,	NULL,	0,		"The most milliseconds lag compensation goes back." },
 	{ "vs_boombox",						WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: players can place boomboxes that play songs. 0: no boxes." },

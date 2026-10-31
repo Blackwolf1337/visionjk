@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cg_local.h"
 #include "game/props/bg_props.h"
+#include "game/props/bg_tools.h"
 /*
 Ghoul2 Insert Start
 */
@@ -1466,6 +1467,26 @@ Ghoul2 Insert End
 	else
 	{
 		VectorClear(cent->modelScale);
+	}
+
+	// Not from JA+: a prop the toolgun of the sandbox gave a colour (lit, RF_RGB_TINT) or a material
+	// (game/props/bg_tools.h)
+	if ( s1->eType == ET_GENERAL && ( s1->customRGBA[3] & TOOL_MARK ) )
+	{
+		static qhandle_t materials[NUM_TOOL_MATERIALS];
+		const int material = s1->genericenemyindex - 1;
+
+		ent.shaderRGBA[3] = 255;
+		if ( s1->customRGBA[3] & TOOL_MARK_COLOR ) {
+			ent.renderfx |= RF_RGB_TINT;
+		} else {
+			ent.shaderRGBA[0] = ent.shaderRGBA[1] = ent.shaderRGBA[2] = 255;
+		}
+		if ( ( s1->customRGBA[3] & TOOL_MARK_MATERIAL ) && material >= 0 && material < NUM_TOOL_MATERIALS ) {
+			if ( !materials[material] )
+				materials[material] = trap->R_RegisterShader( toolMaterials[material].shader );
+			ent.customShader = materials[material];
+		}
 	}
 
 	if ( cent->currentState.time > cg.time && cent->currentState.weapon == WP_EMPLACED_GUN )
@@ -3277,20 +3298,26 @@ who looks through his own eyes it starts a bit to the right under them.
 ===============
 */
 static void CG_PhysgunBeam( centity_t *cent ) {
-	static qhandle_t	shader;
+	static qhandle_t	shader, gravShader, rayShader;
 	const int			holderNum = cent->currentState.otherEntityNum, targetNum = cent->currentState.otherEntityNum2;
 	centity_t			*holder, *target;
 	refEntity_t			beam;
 	vec3_t				angles, fwd;
 
-	if ( holderNum < 0 || holderNum >= MAX_CLIENTS || targetNum < 0 || targetNum >= ENTITYNUM_WORLD )
+	// (the shot of the toolgun is a ray to a point, origin2, for a moment)
+	const qboolean		ray = (qboolean)( cent->currentState.weapon == WP_BRYAR_PISTOL );
+
+	if ( holderNum < 0 || holderNum >= MAX_CLIENTS || ( !ray && ( targetNum < 0 || targetNum >= ENTITYNUM_WORLD ) ) )
 		return;
 	holder = &cg_entities[holderNum];
-	target = &cg_entities[targetNum];
-	if ( !target->currentValid && targetNum != cg.predictedPlayerState.clientNum )
+	target = ray ? NULL : &cg_entities[targetNum];
+	if ( target && !target->currentValid && targetNum != cg.predictedPlayerState.clientNum )
 		return;
-	if ( !shader )
+	if ( !shader ) {
 		shader = trap->R_RegisterShader( "gfx/effects/blueLine" );
+		gravShader = trap->R_RegisterShader( "gfx/effects/redLine" );
+		rayShader = trap->R_RegisterShader( "vision/tools/ray" );
+	}
 
 	memset( &beam, 0, sizeof( beam ) );
 	if ( holderNum == cg.predictedPlayerState.clientNum && !cg.renderingThirdPerson ) {
@@ -3307,22 +3334,33 @@ static void CG_PhysgunBeam( centity_t *cent ) {
 	}
 
 	// where the other end is drawn in this frame, whichever of the two entities comes first in the list
-	if ( targetNum != cg.predictedPlayerState.clientNum ) {
-		CG_CalcEntityLerpPositions( target );
-		CG_CarriedLerp( target );
-	}
-	if ( targetNum < MAX_CLIENTS ) {
-		VectorCopy( target->lerpOrigin, beam.oldorigin );
-		beam.oldorigin[2] += 8.0f;
+	if ( ray ) {
+		VectorCopy( cent->currentState.origin2, beam.oldorigin );
 	} else {
-		CG_PropMiddle( target, beam.oldorigin );
+		if ( targetNum != cg.predictedPlayerState.clientNum ) {
+			CG_CalcEntityLerpPositions( target );
+			CG_CarriedLerp( target );
+		}
+		if ( targetNum < MAX_CLIENTS ) {
+			VectorCopy( target->lerpOrigin, beam.oldorigin );
+			beam.oldorigin[2] += 8.0f;
+		} else {
+			CG_PropMiddle( target, beam.oldorigin );
+		}
 	}
 
 	beam.reType = RT_LINE;
 	beam.radius = 2.5f;
-	beam.customShader = shader;
+	// (the gravity gun of the sandbox has a beam of another colour, the server names the gun in weapon)
+	beam.customShader = ray ? rayShader : ( cent->currentState.weapon == WP_CONCUSSION ) ? gravShader : shader;
 	beam.shaderTexCoord[0] = beam.shaderTexCoord[1] = 1.0f;
 	beam.shaderRGBA[0] = beam.shaderRGBA[1] = beam.shaderRGBA[2] = beam.shaderRGBA[3] = 0xff;
+	if ( ray ) {
+		// (a white line, green by its vertex colour)
+		beam.radius = 1.5f;
+		beam.shaderRGBA[0] = 90;
+		beam.shaderRGBA[2] = 120;
+	}
 	trap->R_AddRefEntityToScene( &beam );
 }
 

@@ -33,18 +33,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "cg_boombox.h"
+#include "cgame/cg_window.h"
 
 #define WIN_W				300.0f
 #define WIN_TOP				60.0f		// of the window
 #define WIN_PAD				10.0f
-#define WIN_LINE			18.0f		// a line of text is this high at a scale of 1
 #define WIN_ROWS			6			// songs of the line that are shown at once
 #define WIN_ROW_H			14.0f
-#define WIN_BUTTON_H		17.0f
-#define WIN_BAR_H			6.0f		// the bar of the song and the one of the volume
-#define WIN_GRAB			6.0f		// how far beside a bar it can still be taken
 #define WIN_CONFIRM_MSEC	4000		// "Take it away" has to be clicked twice within this time
-#define WIN_MAX_PARTS		32
 
 typedef enum {
 	PART_CLOSE,
@@ -71,19 +67,9 @@ static struct {
 	float		dragFraction;
 	// what was drawn this frame, for the pointer
 	float		x, y, h;
-	struct {
-		winPart_t	part;
-		int			arg;
-		float		x, y, w, h;
-	} parts[WIN_MAX_PARTS];
-	int			numParts;
+	winHits_t	hits;
 	float		seekX, seekW, volumeX, volumeW;
 } win = { -1 };
-
-static const vec4_t winFill = { 0.035f, 0.07f, 0.12f, 0.9f }, winEdge = { 0.43f, 0.83f, 1.0f, 0.35f };
-static const vec4_t winText = { 0.86f, 0.92f, 0.97f, 1.0f }, winDim = { 0.60f, 0.69f, 0.78f, 1.0f };
-static const vec4_t winAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, winGold = { 0.89f, 0.84f, 0.36f, 1.0f };
-static const vec4_t winRed = { 1.0f, 0.42f, 0.36f, 1.0f };
 
 /*
 ===============================================================================
@@ -136,123 +122,8 @@ Drawing
 ===============================================================================
 */
 
-static int Win_Font( void ) {
-	return Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
-}
-
-static float Win_Width( const char *text, float scale ) {
-	return (float)CG_Text_Width( text, scale, Win_Font() );
-}
-
-static float Win_FitWidth( const char *text, void *arg ) {
-	return Win_Width( text, *(const float *)arg );
-}
-
-// a line of text with its top at y. align: 0 from x on, 1 ending at x, 2 with its middle at x. Cut with three dots
-// where it is wider than most (0: as wide as it is).
-static void Win_Text( float x, float y, float scale, const vec4_t color, int align, const char *text, float most ) {
-	char line[160];
-
-	if ( most > 0.0f && Win_Width( text, scale ) > most ) {
-		scale = Q_max( scale * 0.85f, scale * most / Win_Width( text, scale ) * 0.98f );
-		CG_TextCut( text, most, Win_FitWidth, &scale, line, sizeof( line ) );
-		text = line;
-	}
-	if ( align ) {
-		x -= Win_Width( text, scale ) * ( align == 2 ? 0.5f : 1.0f );
-	}
-	CG_Text_Paint( x, y, scale, (float *)color, text, 0, 0, 0, Win_Font() );
-}
-
-static void Win_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge ) {
-	if ( Skin_Ready() ) {
-		Skin_Panel( x, y, w, h, radius, fill, edge );
-		return;
-	}
-	if ( fill ) {
-		CG_FillRect( x, y, w, h, (float *)fill );
-	}
-	if ( edge ) {
-		CG_DrawRect( x, y, w, h, 1.0f, (float *)edge );
-	}
-}
-
-static void Win_Line( float x, float y, float w ) {
-	if ( Skin_Ready() ) {
-		Skin_Line( x, y, w, winEdge );
-	} else {
-		CG_FillRect( x, y, w, 1.0f, (float *)winEdge );
-	}
-}
-
-// something that can be pointed at, as it was drawn this frame
-static void Win_Part( winPart_t part, int arg, float x, float y, float w, float h ) {
-	if ( win.numParts < WIN_MAX_PARTS ) {
-		win.parts[win.numParts].part = part;
-		win.parts[win.numParts].arg = arg;
-		win.parts[win.numParts].x = x;
-		win.parts[win.numParts].y = y;
-		win.parts[win.numParts].w = w;
-		win.parts[win.numParts].h = h;
-		win.numParts++;
-	}
-}
-
-// the part the pointer is on, -1: none
-static int Win_PartAt( void ) {
-	int i;
-
-	for ( i = win.numParts - 1; i >= 0; i-- ) {
-		if ( cgs.cursorX >= win.parts[i].x && cgs.cursorX < win.parts[i].x + win.parts[i].w
-			&& cgs.cursorY >= win.parts[i].y && cgs.cursorY < win.parts[i].y + win.parts[i].h ) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-static qboolean Win_Over( float x, float y, float w, float h ) {
-	return ( cgs.cursorX >= x && cgs.cursorX < x + w && cgs.cursorY >= y && cgs.cursorY < y + h ) ? qtrue : qfalse;
-}
-
-// a button: a pill with its text in the middle, lit under the pointer. Not usable: dim and nothing to click.
-static void Win_Button( winPart_t part, int arg, float x, float y, float w, const char *text, const vec4_t color, qboolean usable ) {
-	const vec4_t	back = { 1.0f, 1.0f, 1.0f, 0.06f }, lit = { 0.43f, 0.83f, 1.0f, 0.22f };
-	const qboolean	over = (qboolean)( usable && Win_Over( x, y, w, WIN_BUTTON_H ) );
-
-	Win_Panel( x, y, w, WIN_BUTTON_H, WIN_BUTTON_H * 0.5f, over ? lit : back, over ? winEdge : NULL );
-	Win_Text( x + w * 0.5f, y + ( WIN_BUTTON_H - WIN_LINE * 0.52f ) * 0.5f, 0.52f, usable ? color : winDim, 2, text, w - 8.0f );
-	if ( usable ) {
-		Win_Part( part, arg, x, y, w, WIN_BUTTON_H );
-	}
-}
-
-// a bar that can be taken: a track, what is filled of it, and a knob at its end
-static void Win_Bar( winPart_t part, float x, float y, float w, float fraction, qboolean usable ) {
-	const vec4_t back = { 1.0f, 1.0f, 1.0f, 0.1f };
-
-	fraction = Com_Clamp( 0.0f, 1.0f, fraction );
-	if ( Skin_Ready() ) {
-		Skin_Bar( x, y, w, WIN_BAR_H, fraction, usable ? winAccent : winDim, back );
-		if ( usable ) {
-			Skin_Disc( x + w * fraction, y + WIN_BAR_H * 0.5f, ( win.dragging && win.drag == part ) ? 5.0f : 4.0f, colorWhite );
-		}
-	} else {
-		CG_FillRect( x, y, w, WIN_BAR_H, (float *)back );
-		CG_FillRect( x, y, w * fraction, WIN_BAR_H, (float *)( usable ? winAccent : winDim ) );
-	}
-	if ( usable ) {
-		Win_Part( part, 0, x - WIN_GRAB, y - WIN_GRAB, w + 2.0f * WIN_GRAB, WIN_BAR_H + 2.0f * WIN_GRAB );
-	}
-}
-
 static const char *Win_Time( int seconds ) {
 	return va( "%i:%02i", seconds / 60, seconds % 60 );
-}
-
-// the place of the pointer on a bar, 0 to 1
-static float Win_BarFraction( float x, float w ) {
-	return Com_Clamp( 0.0f, 1.0f, ( cgs.cursorX - x ) / Q_max( 1.0f, w ) );
 }
 
 /*
@@ -271,7 +142,7 @@ void CG_BoomboxWindowDraw( void ) {
 	int				songs, i, shown;
 	qboolean		playing;
 
-	win.numParts = 0;
+	win.hits.num = 0;
 	if ( !CG_BoomboxWindowShown() || !CG_BoomboxInfo( win.box, &info ) ) {
 		return;
 	}
@@ -293,12 +164,12 @@ void CG_BoomboxWindowDraw( void ) {
 		Skin_Soft( x, y + 4.0f, WIN_W, h, 14.0f, dark );
 	}
 	Win_Panel( x, y, WIN_W, h, 8.0f, winFill, winEdge );
-	Win_Part( PART_LINE, -1, x, y, WIN_W, h );
+	Win_Hit( &win.hits, PART_LINE, -1, x, y, WIN_W, h );
 
 	// the head: what it is, who put it down, and the cross
 	y += WIN_PAD;
 	Win_Text( x + WIN_PAD, y, 0.78f, colorWhite, 0, CG_BoomboxName( win.box ), inner - 30.0f );
-	Win_Button( PART_CLOSE, 0, x + WIN_W - WIN_PAD - 18.0f, y, 18.0f, "x", winText, qtrue );
+	Win_Button( &win.hits, PART_CLOSE, 0, x + WIN_W - WIN_PAD - 18.0f, y, 18.0f, "x", winText, qtrue );
 	if ( info.owner[0] ) {
 		Win_Text( x + WIN_PAD, y + 17.0f, 0.5f, winDim, 0, CG_VisionTextWith( "Put down by %s", info.owner ), inner );
 	}
@@ -331,7 +202,8 @@ void CG_BoomboxWindowDraw( void ) {
 	if ( win.dragging && win.drag == PART_SEEK ) {
 		fraction = win.dragFraction = Win_BarFraction( win.seekX, win.seekW );
 	}
-	Win_Bar( PART_SEEK, win.seekX, y + 4.0f, win.seekW, fraction, (qboolean)( more && playing && info.length > 0 ) );
+	Win_Bar( &win.hits, PART_SEEK, win.seekX, y + 4.0f, win.seekW, fraction, (qboolean)( more && playing && info.length > 0 ),
+		(qboolean)( win.dragging && win.drag == PART_SEEK ) );
 	if ( playing ) {
 		Win_Text( x + WIN_PAD, y + 13.0f, 0.46f, winDim, 0, Win_Time( (int)( fraction * info.length ) ), 0.0f );
 		Win_Text( x + WIN_W - WIN_PAD, y + 13.0f, 0.46f, winDim, 1, Win_Time( info.length ), 0.0f );
@@ -343,13 +215,13 @@ void CG_BoomboxWindowDraw( void ) {
 		const float gap = 5.0f, w = ( inner - 3.0f * gap ) / 4.0f;
 		float		bx = x + WIN_PAD;
 
-		Win_Button( PART_PAUSE, 0, bx, y, w, CG_VisionText( ( info.flags & BOX_PAUSED ) ? "Resume" : "Pause" ), winText, playing );
+		Win_Button( &win.hits, PART_PAUSE, 0, bx, y, w, CG_VisionText( ( info.flags & BOX_PAUSED ) ? "Resume" : "Pause" ), winText, playing );
 		bx += w + gap;
-		Win_Button( PART_SKIP, 0, bx, y, w, CG_VisionText( "Skip" ), winText, playing );
+		Win_Button( &win.hits, PART_SKIP, 0, bx, y, w, CG_VisionText( "Skip" ), winText, playing );
 		bx += w + gap;
-		Win_Button( PART_STOP, 0, bx, y, w, CG_VisionText( "Stop" ), winText, playing );
+		Win_Button( &win.hits, PART_STOP, 0, bx, y, w, CG_VisionText( "Stop" ), winText, playing );
 		bx += w + gap;
-		Win_Button( PART_MUTE, 0, bx, y, w, CG_VisionText( info.muted ? "Unmute" : "Mute" ), info.muted ? winGold : winText, qtrue );
+		Win_Button( &win.hits, PART_MUTE, 0, bx, y, w, CG_VisionText( info.muted ? "Unmute" : "Mute" ), info.muted ? winGold : winText, qtrue );
 	}
 	y += WIN_BUTTON_H + 8.0f;
 
@@ -365,7 +237,7 @@ void CG_BoomboxWindowDraw( void ) {
 			volume = (int)( win.dragFraction * 100.0f + 0.5f );
 		}
 		Win_Text( x + WIN_PAD, y, 0.5f, winDim, 0, CG_VisionText( "Volume" ), label - 6.0f );
-		Win_Bar( PART_VOLUME, win.volumeX, y + 3.0f, win.volumeW, volume / 100.0f, qtrue );
+		Win_Bar( &win.hits, PART_VOLUME, win.volumeX, y + 3.0f, win.volumeW, volume / 100.0f, qtrue, (qboolean)( win.dragging && win.drag == PART_VOLUME ) );
 		Win_Text( x + WIN_W - WIN_PAD, y, 0.5f, winText, 1, va( "%i %%", volume ), 0.0f );
 	}
 	y += 18.0f;
@@ -407,7 +279,7 @@ void CG_BoomboxWindowDraw( void ) {
 				const qboolean	over = Win_Over( cx, rowY, cross, WIN_ROW_H );
 
 				Win_Text( cx + cross * 0.5f, rowY + 1.0f, 0.5f, over ? winRed : winDim, 2, "x", 0.0f );
-				Win_Part( PART_DROP, place, cx, rowY, cross, WIN_ROW_H );
+				Win_Hit( &win.hits, PART_DROP, place, cx, rowY, cross, WIN_ROW_H );
 			}
 		}
 		if ( songs - 1 > WIN_ROWS && Skin_Ready() ) {
@@ -423,11 +295,11 @@ void CG_BoomboxWindowDraw( void ) {
 		const qboolean	confirm = (qboolean)( win.confirmTime && cg.time - win.confirmTime < WIN_CONFIRM_MSEC );
 		float			bx = x + WIN_PAD;
 
-		Win_Button( PART_ADD, 0, bx, y, w, CG_VisionText( playing ? "Add a song ..." : "Play a song ..." ), winAccent, qtrue );
+		Win_Button( &win.hits, PART_ADD, 0, bx, y, w, CG_VisionText( playing ? "Add a song ..." : "Play a song ..." ), winAccent, qtrue );
 		bx += w + gap;
-		Win_Button( PART_MOVE, 0, bx, y, w, CG_VisionText( "Move it" ), winText, qtrue );
+		Win_Button( &win.hits, PART_MOVE, 0, bx, y, w, CG_VisionText( "Move it" ), winText, qtrue );
 		bx += w + gap;
-		Win_Button( PART_REMOVE, 0, bx, y, w, CG_VisionText( confirm ? "Click again to take it away" : "Take it away" ), confirm ? winRed : winText, qtrue );
+		Win_Button( &win.hits, PART_REMOVE, 0, bx, y, w, CG_VisionText( confirm ? "Click again to take it away" : "Take it away" ), confirm ? winRed : winText, qtrue );
 	}
 	y += WIN_BUTTON_H;
 
@@ -545,10 +417,10 @@ qboolean CG_BoomboxWindowKey( int key, qboolean down ) {
 		// (every other key is swallowed while the mouse is free, as without the window)
 		return qfalse;
 	}
-	at = Win_PartAt();
+	at = Win_HitAt( &win.hits );
 	if ( at < 0 ) {
 		return qfalse;
 	}
-	Win_Run( win.parts[at].part, win.parts[at].arg );
+	Win_Run( (winPart_t)win.hits.hit[at].part, win.hits.hit[at].arg );
 	return qtrue;
 }
