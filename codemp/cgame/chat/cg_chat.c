@@ -305,14 +305,30 @@ static void Chat_ListEmoji( void ) {
 	}
 }
 
+// The list of the emojis, made when it is wanted first, and again when the engine fetched an emoji that players
+// uploaded to the site or deleted one the site took down (v_emojiStoreChanged, client/cl_models.cpp)
+static void Chat_EmojiReady( void ) {
+	static int	seen = -1;
+	char		value[16];
+	int			changed;
+
+	trap->Cvar_VariableStringBuffer( "v_emojiStoreChanged", value, sizeof( value ) );
+	changed = atoi( value );
+	if ( changed != seen ) {
+		seen = changed;
+		chatNumEmoji = -1;
+	}
+	if ( chatNumEmoji < 0 ) {
+		Chat_ListEmoji();
+	}
+}
+
 // the emoji of a name: ":name:"
 static int Chat_FindEmoji( const char *name ) {
 	char	code[CHAT_EMOJI_NAME + 2];
 	int		i;
 
-	if ( chatNumEmoji < 0 ) {
-		Chat_ListEmoji();
-	}
+	Chat_EmojiReady();
 	Com_sprintf( code, sizeof( code ), ":%s:", name );
 	for ( i = 0; i < chatNumEmoji; i++ ) {
 		if ( !Q_stricmp( chatEmoji[i].code, code ) ) {
@@ -331,9 +347,7 @@ static int Chat_EmojiAt( const char *s, int *len ) {
 		return -1;
 	}
 	if ( s[0] == ':' || s[0] == '#' ) {
-		if ( chatNumEmoji < 0 ) {
-			Chat_ListEmoji();
-		}
+		Chat_EmojiReady();
 		// the longest code that stands here
 		for ( n = 0; n < chatNumEmoji; n++ ) {
 			if ( chatEmoji[n].code[0] == s[0] && ( best < 0 || chatEmoji[n].codeLen > chatEmoji[best].codeLen )
@@ -391,9 +405,7 @@ static qhandle_t Chat_EmojiShader( int index ) {
 void CG_ChatEmoji_f( void ) {
 	int i;
 
-	if ( chatNumEmoji < 0 ) {
-		Chat_ListEmoji();
-	}
+	Chat_EmojiReady();
 	for ( i = 0; i < chatNumEmoji; i++ ) {
 		trap->Print( "%s%s", chatEmoji[i].code, ( i % 6 == 5 || i == chatNumEmoji - 1 ) ? "\n" : "  " );
 	}
@@ -1139,9 +1151,7 @@ static void Chat_Suggest( void ) {
 		return;
 	}
 	Q_strncpyz( word, chat.input + start, len + 1 );
-	if ( chatNumEmoji < 0 ) {
-		Chat_ListEmoji();
-	}
+	Chat_EmojiReady();
 	if ( strcmp( word, chat.suggestWord ) ) {
 		Q_strncpyz( chat.suggestWord, word, sizeof( chat.suggestWord ) );
 		chat.suggestSel = 0;

@@ -96,6 +96,53 @@ the cgame loads the players again. The TV plays as a demo, and in the page a dem
 The page needs nothing new in the CSP. The request goes to its own host (`connect-src 'self'`), and `EM_ASM` is
 already allowed on `/watch/` (`'unsafe-eval'`).
 
+## Chat emojis of the store
+
+Not a JA+ feature. `codemp/client/cl_models.cpp` (the part "The chat emojis of the store"), `Chat_EmojiReady()` in
+`codemp/cgame/chat/cg_chat.c`, issue #9.
+
+### For players
+
+On jka.vision/models.html the section "Chat emojis" takes uploads. Anyone can upload a PNG, 16 to 256 pixels each way
+and 64 KB at most, with a name of 2 to 24 characters of a-z, 0-9 and `_`. The name may not be the name of an emoji of
+the game or of another upload. One address can upload 10 emojis an hour and 30 a day, and the store holds 300 at
+most. The upload answers a delete key. It is shown once, so they should write it down: with it they can delete the
+emoji later. Anyone can report an emoji, and the reports go to the owner.
+
+In the chat a player writes `:name:`. Other players see the picture if their VisionJK has fetched it, else they see
+the text. The emojis of the store are for the chat only. Sprays and the interactive emoji (`v_emote`) use only the
+emojis of the game.
+
+### For the owner
+
+On the host the owner lists the emojis with `modelstore.py emoji` and takes one down with
+`modelstore.py remove-emoji <name>`. With `--block` the name can not come back. `modelstore.py reports` shows the
+reports. The moderation is the same as for the models: anyone uploads, the service checks only type and size, and the
+owner deletes afterwards. The service is the one of the model store (`deploy/visionjk-models.service`, with the new
+`--base-emoji`), and nginx passes `/models/emoji/api/(upload|delete|report)` with a body limit of 64 KB. The files are
+`/models/emoji/index.json`, `/models/emoji/index.txt` (like the one of the models, with the icon "png") and
+`/models/emoji/files/<name>.png`. That part lives in the repository of the website.
+
+### How it works
+
+The engine fetches the list of the emojis, again after 10 minutes when it is old, and then every emoji of it in the
+background, after the models. It does this only while the player is in a game that is not on a pure server and is not
+a demo. The picture is saved as `base/gfx/emoji/<name>.png` in the home folder, and only when its size and its SHA-256
+match the list.
+
+`base/emojistore.txt` in the home folder records which emojis came from the store. When the next list comes, an emoji
+the store no longer has (it was taken down) is deleted. `v_emojiStoreChanged` counts up when one came or went, and
+the chat then lists its emojis again.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_emojiStore` | 1 | fetch the emojis of the store. 0 stops it |
+| `v_emojiStoreChanged` | 0 | read only. Counts up when an emoji came or went |
+
+The unit tests of the service are in `deploy/models/test_modelstore.py` of the website (`test_emoji`: upload, the
+name rules, a name of the game, no PNG, too large, broken, too many pixels, delete with the key). The game side
+builds. A test against the live store follows the deploy.
+
 ## Tested
 
 The window was tested on a local server against the live store with two test models. It showed both with their

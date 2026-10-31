@@ -552,6 +552,21 @@ a line and a byte past the end of a frame, so every block it allocates gets 4096
 (`client/cl_video.cpp`, `lib/pl_mpeg/README.txt`). After that 300 damaged streams decoded without an error. Not
 tested: nginx on the host, and the service with real YouTube videos.
 
+## Added later: the chat emojis of the store
+
+The service of the model store also takes emoji uploads (issue #9, `/models/emoji/api/upload`). It checks the type and
+the size: the file must be a PNG that decodes, 16 to 256 pixels each way, 64 KB at most, and the name has 2 to 24
+characters of a-z, 0-9 and `_` and is not a name of the game or of another upload. Nothing else is checked, the owner
+takes an emoji down afterwards (`modelstore.py remove-emoji <name> [--block]`). The limits are 10 uploads an hour and
+30 a day per address, 300 emojis in the store, and nginx allows a body of 64 KB on the three POSTs. The upload
+answers a delete key, shown once.
+
+The client takes an emoji only from the list of the store, and only when the file has the size and the SHA-256 of the
+list. Otherwise it does not keep the file. It fetches nothing on a pure server or in a demo, and `v_emojiStore 0`
+stops it. `base/emojistore.txt` records which files came from the store. When a new list lacks one of them, the client
+deletes it, so an emoji the owner took down goes from the players too. Files that did not come from the store are
+never deleted. Not tested: the store on the host.
+
 ## Recommended server settings
 
 ```
