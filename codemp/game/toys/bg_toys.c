@@ -36,6 +36,11 @@ qboolean BG_ToyValid( const toyThrow_t *toy ) {
 		}
 		speed += (double)toy->velocity[i] * toy->velocity[i];
 	}
+	// a spray carries angles and the number of its picture in place of a speed
+	if ( toy->kind == TOY_SPRAY && ( toy->velocity[0] < -90 || toy->velocity[0] > 90 || toy->velocity[1] < -180
+		|| toy->velocity[1] > 180 || toy->velocity[2] < 0 || toy->velocity[2] >= TOY_SPRAY_MOST ) ) {
+		return qfalse;
+	}
 	return (qboolean)( speed <= (double)TOY_MAX_SPEED * TOY_MAX_SPEED );
 }
 

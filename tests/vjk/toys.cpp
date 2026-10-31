@@ -66,6 +66,16 @@ BOOST_AUTO_TEST_CASE( rc_car )
 	BOOST_CHECK( Valid( Throw( TOY_RC_GONE, 3440, 1592, 1792, 0, 0, 0 ) ) );
 }
 
+BOOST_AUTO_TEST_CASE( spray )
+{
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY, 100, 200, 300, -90, 180, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY, 100, 200, 300, 45, -180, TOY_SPRAY_MOST - 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 91, 0, 5 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 181, 5 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 0, -1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 0, TOY_SPRAY_MOST ) ) );
+}
+
 BOOST_AUTO_TEST_CASE( hello )
 {
 	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );

@@ -393,6 +393,7 @@ static consoleCommand_t	commands[] = {
 	{ "v_modelArrived",				CG_ModelArrived_f },
 	{ "v_modelbrowser",			CG_ModelStore_f },
 	{ "v_rccar",					CG_RcCar_f },
+	{ "v_spray",					CG_Spray_f },
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },

@@ -165,6 +165,14 @@ REFERENCE           PUTS_A_REMOTE_CONTROLLED_DROID_IN_FR
 LANG_ENGLISH        "Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it."
 LANG_FRENCH         "Place un droïde télécommandé devant vous et vous le conduisez : W et S pour rouler, A et D pour tourner, Espace pour sauter, la souris pour regarder, Échap pour le ranger. Seuls les joueurs de VisionJK le voient."
 
+REFERENCE           SPRAY
+LANG_ENGLISH        "Spray"
+LANG_FRENCH         "#same"
+
+REFERENCE           PUTS_YOUR_PICTURE_ON_THE_WALL_YOU_LO
+LANG_ENGLISH        "Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it."
+LANG_FRENCH         "Place votre image sur le mur que vous regardez (choisissez-la avec v_sprayImage, un emoji du chat comme heart), et seuls les joueurs de VisionJK la voient."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_FRENCH         "Mode photo"

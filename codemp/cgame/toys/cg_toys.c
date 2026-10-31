@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_toys.c -- the toys of issue #9 that only players of this tree see: the snowball here, the water gun in
-// cg_water.c, the remote controlled car in cg_rccar.c. Hold +v_snowball
+// cg_water.c, the remote controlled car in cg_rccar.c, the sprays in cg_spray.c. Hold +v_snowball
 // (Controls, Extras) and let go: the longer it was held, the further it flies. The ball is no entity of the server:
 // this cgame lets it fly, and tells the others where it left the hand and how fast (game/toys/bg_toys.h). On a
 // server of this tree that goes through the game module (vs_caps bit 9, toys/g_toys.c), on any other through the
@@ -123,6 +123,8 @@ static void Toys_Heard( int client, const toyThrow_t *toy ) {
 		CG_WaterHeard( client, origin, velocity );
 	else if ( toy->kind == TOY_RC || toy->kind == TOY_RC_GONE )
 		CG_RcHeard( client, toy->kind, origin, velocity );
+	else if ( toy->kind == TOY_SPRAY )
+		CG_SprayHeard( client, origin, velocity );
 }
 
 /*
@@ -321,6 +323,7 @@ void CG_ToysScene( void ) {
 
 	CG_WaterScene();
 	CG_RcScene();
+	CG_SprayScene();
 	for ( i = 0; i < TOY_BALLS; i++ ) {
 		toyBall_t	*ball = &toys.balls[i];
 		refEntity_t	ent;
@@ -351,6 +354,7 @@ void CG_ToysScene( void ) {
 void CG_ToysFrame( void ) {
 	trap->Cvar_Update( &v_toys );
 	CG_WaterFrame();
+	CG_SprayFrame();
 	if ( toys.chargeStart && !CG_ToyCanUse() )
 		toys.chargeStart = 0;
 	if ( v_toys.integer && CG_VoiceToys() && ( !toys.helloTime || cg.time - toys.helloTime >= TOY_HELLO_MSEC || cg.time < toys.helloTime ) ) {
@@ -396,4 +400,5 @@ void CG_ToysInit( void ) {
 	memset( &toys, 0, sizeof( toys ) );
 	CG_WaterInit();
 	CG_RcInit();
+	CG_SprayInit();
 }

@@ -2000,6 +2000,7 @@ void		CG_SnowballUp_f( void );
 void		CG_WaterDown_f( void );					// +v_water (toys/cg_water.c)
 void		CG_WaterUp_f( void );
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
+void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
 qboolean	CG_RcDriving( void );
 qboolean	CG_RcFrame( void );
 void		CG_RcView( void );

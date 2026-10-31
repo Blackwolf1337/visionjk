@@ -1,11 +1,11 @@
 # Toys
 
-Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`,
+Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `tools/toys/sprays.py`,
 `MS_Toy()` in `codemp/master/ms_relay.c`, `tools/toys/textures.py`, issue #9, 2026-10-31.
 
 ## For players
 
-The first toy is the snowball. The second is the water gun, the third is the RC car, both described below.
+The first toy is the snowball. The second is the water gun, the third is the RC car and the fourth is the spray, all described below.
 
 To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
@@ -31,6 +31,15 @@ While you drive, your player stands still and shows the dots of talking, so on a
 rolls up steps and slopes, slides along walls, falls and lands, and stops at players. The keys are the keys W, A, S, D
 and the arrows, whatever they are bound to.
 
+To spray a picture, use `v_spray` (Controls, Extras, "Spray"). It puts the picture of `v_sprayImage` on the wall or floor
+you look at, up to 128 units away. The default is `heart`. Any emoji of the chat will do: write its name without the
+colons, such as `thumbsup` or `fire`. The list is `gfx/vision/sprays.txt`.
+
+The picture stands upright (on a floor the top points away from you), is 48 units across and is as bright as the light
+there. It is cut off where the surface ends. A player has one spray, and a new one takes the place of the old one. It
+stays for the level. You can spray once every 2 seconds at most, with the sound of a burst of air. Animated sprays and
+pictures of your own are not there yet.
+
 Only players of VisionJK see the toys. Others see nothing. It works on any server: on a VisionJK server through the game
 module, on any other through the masterserver. `v_toys 0` hides the toys of others.
 
@@ -39,6 +48,8 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `+v_snowball` | | hold to wind up, let go to throw |
 | `+v_water` | | hold to spray water |
 | `v_rccar` | | puts the RC car down, or away again |
+| `v_spray` | | sprays the picture on the wall you look at |
+| `v_sprayImage` | heart | the emoji of the chat that is sprayed, without the colons |
 | `v_toys` | 1 | 0: the toys of other players are not drawn |
 
 ## How it works
@@ -74,6 +85,17 @@ The relays now take 10 toys a second from a player (`TOY_PER_SECOND`), so the ma
 0.2.9-dev.26 or later. The motor is the loop of the mouse droid, and it beeps when it is put down. The level far from
 the player can lack what the server does not send him (other players, doors).
 
+A spray is not a throw either. `TOY_SPRAY` carries the point, the pitch and the yaw of the surface (for a floor or
+ceiling the yaw of the player instead, for the top of the picture) and the line number of the picture in
+`gfx/vision/sprays.txt`, all in the fields of the speed. `bg_toys.c` checks that the angles and the number are in
+range (`TOY_SPRAY_MOST`, 1400). `tools/toys/sprays.py` writes `sprays.txt` and `shaders/vision_sprays.shader`, which
+has a shader `gfx/vision/spray/<number>` for each picture, with `polygonOffset`. A picture added to `gfx/emoji` moves
+the numbers after it, which only matters between different versions.
+
+The own spray is said again every 45 seconds, so a player who came later sees it too. The spray of a player who left
+goes. It is drawn as a temporary mark each frame. The master and the game module have to know `TOY_SPRAY` (0.2.9-dev.27
+and later).
+
 The snowball is drawn from these files:
 
 - the textures are drawn by `tools/toys/textures.py` (`snowball`, `snowpuff`, `snowsplat`);
@@ -101,4 +123,8 @@ For the RC car, one client drove the car (forwards, a turn, a hop, against a wal
 clients on a local server: the driver showed the dots of talking, the other client received the `TOY_RC` server
 commands, and the car stopped at the other player. There is a unit test for `TOY_RC`.
 
-Not run: the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+For the spray, a spray on the floor and on a wall (upright, not mirrored, cut off at the edge of the wall, dim in a dark
+room). Two clients: the other client received the `TOY_SPRAY` server command with the right picture. There is a unit
+test for the `TOY_SPRAY` ranges.
+
+Not run: sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

@@ -298,6 +298,8 @@ CONTROLS = [
          'Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it.'),
         ('bind', 'RC Car', 'v_rccar',
          'Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it.'),
+        ('bind', 'Spray', 'v_spray',
+         'Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),
