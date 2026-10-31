@@ -302,6 +302,8 @@ CONTROLS = [
          'Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it.'),
         ('bind', 'Send Emoji', 'v_emote',
          'Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it.'),
+        ('bind', 'Table Tennis', 'v_pingpong',
+         'Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),

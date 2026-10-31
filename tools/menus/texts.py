@@ -546,6 +546,8 @@ TR = {
     'Spray': 'Spray',
     'Send Emoji': 'Emoji senden',
     'Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it.': 'Schickt das Emoji von v_emoteImage (ein Name aus dem Chat, zum Beispiel laughing) an den Spieler unter deinem Fadenkreuz: es fliegt zu seinem Kopf und platzt darüber auf. Nur Spieler von VisionJK sehen es.',
+    'Table Tennis': 'Tischtennis',
+    'Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it.': 'Stellt einen Tischtennistisch vor dich und du spielst vom nahen Ende aus: die Maus bewegt den Schläger, ein Klick schlägt auf, Esc verlässt das Spiel. Wer am anderen Ende steht und es dort benutzt, spielt gegen dich. Nur Spieler von VisionJK sehen es.',
     'Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it.': 'Setzt dein Bild auf die Wand, auf die du schaust (wähle es mit v_sprayImage, ein Emoji des Chats wie heart), und nur Spieler von VisionJK sehen es.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',

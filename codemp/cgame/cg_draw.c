@@ -8297,6 +8297,8 @@ static void CG_Draw2D( void ) {
 	CG_ToysDraw();
 	// what the keys of the remote controlled car do (toys/cg_rccar.c)
 	CG_RcDraw();
+	// the points of table tennis (toys/cg_pong.c)
+	CG_PongDraw();
 
 	// speedometer, strafe helper, snap and pitch HUD (hud/cg_movehud.c)
 	CG_MoveHudDraw();

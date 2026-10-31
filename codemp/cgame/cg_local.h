@@ -2004,6 +2004,13 @@ void		CG_WaterUp_f( void );
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
 void		CG_Emote_f( void );						// v_emote (toys/cg_emote.c)
+void		CG_PingPong_f( void );					// v_pingpong (toys/cg_pong.c)
+qboolean	CG_PongPlaying( void );
+qboolean	CG_PongFrame( void );
+void		CG_PongView( void );
+qboolean	CG_PongMouseEvent( int x, int y );
+qboolean	CG_PongKeyEvent( int key, qboolean down );
+void		CG_PongDraw( void );
 qboolean	CG_RcDriving( void );
 qboolean	CG_RcFrame( void );
 void		CG_RcView( void );

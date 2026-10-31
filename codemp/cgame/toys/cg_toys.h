@@ -41,6 +41,11 @@ void		CG_EmoteScene( void );
 void		CG_EmoteDraw( void );
 void		CG_EmoteHeard( int client, const vec3_t origin, const vec3_t velocity );
 
+// cg_pong.c
+void		CG_PongInit( void );
+void		CG_PongScene( void );
+void		CG_PongHeard( int client, int kind, const vec3_t origin, const vec3_t velocity );
+
 // cg_rccar.c
 void		CG_RcInit( void );
 void		CG_RcScene( void );

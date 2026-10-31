@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-# The sounds of the emoji sent to a player (issue #9, codemp/cgame/toys/cg_emote.c), made here so no audio of
-# anybody else ships: emote_send.wav (a soft rising whoosh where it leaves) and emote_pop.wav (a bubbly pop with a
-# little chime where it arrives). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
+# The sounds of the toys of issue #9, made here so no audio of anybody else ships: emote_send.wav (a soft rising
+# whoosh where an emoji leaves, codemp/cgame/toys/cg_emote.c) and emote_pop.wav (a bubbly pop with a little chime
+# where it arrives), pong_hit.wav (the knock of a paddle on the ball, cg_pong.c) and pong_bounce.wav (the higher,
+# shorter tick of the ball on the table). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
 # files come out the same every time. Writes into assets/japlus_client/sound/vision/toys/.
 # usage: tools/toys/sounds.py
 import math
@@ -73,6 +74,22 @@ def pop():
 	return out
 
 
+def knock( freq, decay, length, seed ):
+	"""A hollow knock: a click of noise and two partials of a small wooden body that die away fast."""
+	rnd = random.Random( seed )
+	out = []
+	for i in range( int( length * RATE ) ):
+		t = i / RATE
+		v = math.sin( 2.0 * math.pi * freq * t ) + 0.5 * math.sin( 2.0 * math.pi * freq * 2.7 * t )
+		v *= math.exp( -t / decay ) * min( 1.0, t / 0.0005 )
+		if t < 0.003:
+			v += rnd.uniform( -0.8, 0.8 ) * ( 1.0 - t / 0.003 )
+		out.append( v )
+	return out
+
+
 os.makedirs( OUT, exist_ok=True )
 write( 'emote_send.wav', send() )
 write( 'emote_pop.wav', pop() )
+write( 'pong_hit.wav', knock( 1150.0, 0.018, 0.12, 7 ) )
+write( 'pong_bounce.wav', knock( 1900.0, 0.010, 0.08, 8 ) )

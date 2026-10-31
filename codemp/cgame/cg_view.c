@@ -2662,6 +2662,11 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	{
 		cg.renderingThirdPerson = 1;
 	}
+	// table tennis: the camera stands behind the own end of the table (toys/cg_pong.c)
+	if ( CG_PongFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
 
 	// the zoom of the wheel and the motion view of the disruptor (scope/cg_scope.c), before the fov is worked out
 	CG_ScopeFrame();
@@ -2671,6 +2676,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_Menu3DView();
 	CG_PhotoView();
 	CG_RcView();
+	CG_PongView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)

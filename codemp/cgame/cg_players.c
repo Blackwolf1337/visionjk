@@ -9688,6 +9688,10 @@ void CG_Player( centity_t *cent ) {
 		ci = &cgs.clientinfo[ clientNum ];
 		if ( ci->infoValid )
 			CG_JPModelScale( cent, ci );
+		// at a table of table tennis the camera stands where the own player is: he is not drawn for himself
+		// (toys/cg_pong.c), the others see him
+		if ( cent->currentState.number == cg.clientNum && CG_PongPlaying() )
+			return;
 	}
 	else
 	{

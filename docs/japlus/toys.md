@@ -1,11 +1,11 @@
 # Toys
 
-Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `tools/toys/sprays.py`, `tools/toys/sounds.py`,
+Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `codemp/cgame/toys/cg_pong.c`, `tools/toys/sprays.py`, `tools/toys/pingpong.py`, `tools/toys/sounds.py`,
 `MS_Toy()` in `codemp/master/ms_relay.c`, `tools/toys/textures.py`, issue #9, 2026-10-31.
 
 ## For players
 
-The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray and the fifth is the interactive emoji, all described below.
+The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray, the fifth is the interactive emoji and the seventh is table tennis, all described below.
 
 To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
@@ -56,6 +56,21 @@ a victory or taunt line). Thumbs up, clap, trophy and fire say a victory line, a
 a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt. Emoji of your own, made on the
 masterserver with a preview, are not there yet.
 
+To play table tennis, use `v_pingpong` (Controls, Extras, "Table Tennis"). It puts a table in front of you and you play
+from its near end. It needs a flat floor and room. Another player who stands near the far end (within 90 units) and uses
+`v_pingpong` there plays against you. `v_pingpong` again or Esc leaves. When the owner of the table leaves, the table goes.
+
+While you play, the camera stands behind your end of the table and your player is not drawn for you (the others see
+them). The mouse moves the paddle, sideways and up and down. A click serves when it is your serve. The players stand
+still and show the dots of talking, like the RC car, so on a JA+ server nobody can hurt them.
+
+A game goes to 11 points and you need 2 ahead. The serve changes every 2 points, and at 10 all every point. A hit aims
+for the other half: where the ball meets the paddle and how fast the mouse moves sideways steer it. A ball that bounces
+on the half of the hitter, lands off the table or does not get over the net gives the point to the other player. A ball
+that bounces twice on the half of the receiver, or is not returned, gives the point to the hitter.
+
+Everybody near sees the table, the paddles, the ball and the points over the net.
+
 Only players of VisionJK see the toys. Others see nothing. It works on any server: on a VisionJK server through the game
 module, on any other through the masterserver. `v_toys 0` hides the toys of others.
 
@@ -67,6 +82,7 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_spray` | | sprays the picture on the wall you look at |
 | `v_sprayImage` | heart | the emoji of the chat that is sprayed, without the colons |
 | `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one |
+| `v_pingpong` | | puts a table down and plays, or joins the player at the far end, or leaves |
 | `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
 | `v_toys` | 1 | 0: the toys and emoji of other players are not drawn |
 
@@ -124,6 +140,15 @@ pictures moved into `cg_toys.c`, shared with the sprays. The sounds are made by 
 anybody else. The voice lines come from `CG_CharacterSound` in `cg_players.c`, which reads them through the new field
 `soundDir` of `clientInfo_t`, for lines the game did not load for the gametype.
 
+Table tennis is not a throw either. No server keeps the game. The owner says where the table is and who plays the far
+end (`TOY_TABLE`, every 5 s). The paddles say where they are six times a second (`TOY_PONG_PADDLE`). A hit says where
+the ball is and how fast, and every cgame lets it fly (gravity, bounces on the table, the net). The player the ball flies
+to judges the point and sends the score (`TOY_PONG_SCORE`). A table not heard of for 16 s is gone. A ball message is
+moved on by half the ping when it arrives. The new kinds are `TOY_TABLE` (7) to `TOY_PONG_PADDLE` (12) in
+`bg_toys.h`, checked by `bg_toys.c`, so the master and the game module have to be 0.2.9-dev.30 or later. The code is
+`cg_pong.c`. `tools/toys/pingpong.py` makes the assets and `tools/toys/sounds.py` the sounds `pong_hit.wav` and
+`pong_bounce.wav`.
+
 The snowball is drawn from these files:
 
 - the textures are drawn by `tools/toys/textures.py` (`snowball`, `snowpuff`, `snowsplat`);
@@ -159,4 +184,9 @@ For the emoji, two clients on a local server, and both received the emoji (the s
 flight, the pop, the burst, the 2D pop in first person and the fading near the eyes were seen. There is a unit test
 `emoji` in `tests/vjk/toys.cpp`.
 
-Not run: emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+For table tennis, two clients on a local server: a table put down, the second player joined at the far end, a serve, a
+rally of three hits, a point judged by the receiver and the score sent (1 : 0). Both views were seen: the camera behind
+the own end, the paddle of the other player, the ball and the score over the net. There is a unit test `table_tennis`
+in `tests/vjk/toys.cpp`.
+
+Not run: table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

@@ -113,3 +113,27 @@ gfx/vision/toys/puddle
 		tcMod turb 0 0.008 0 0.2
 	}
 }
+
+// table tennis (cgame/toys/cg_pong.c, tools/toys/pingpong.py): the ball, a sprite, and the net of the table, seen from
+// both sides, its holes cut out
+gfx/vision/toys/pingball
+{
+	nopicmip
+	{
+		map gfx/vision/toys/pingball
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+models/map_objects/vision/pingpong_net
+{
+	cull none
+	{
+		map models/map_objects/vision/pingpong_net
+		alphaFunc GE128
+		rgbGen lightingDiffuse
+		depthWrite
+	}
+}

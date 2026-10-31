@@ -181,6 +181,14 @@ REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_A_NA
 LANG_ENGLISH        "Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it."
 LANG_GERMAN         "Schickt das Emoji von v_emoteImage (ein Name aus dem Chat, zum Beispiel laughing) an den Spieler unter deinem Fadenkreuz: es fliegt zu seinem Kopf und platzt darüber auf. Nur Spieler von VisionJK sehen es."
 
+REFERENCE           TABLE_TENNIS
+LANG_ENGLISH        "Table Tennis"
+LANG_GERMAN         "Tischtennis"
+
+REFERENCE           PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
+LANG_ENGLISH        "Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it."
+LANG_GERMAN         "Stellt einen Tischtennistisch vor dich und du spielst vom nahen Ende aus: die Maus bewegt den Schläger, ein Klick schlägt auf, Esc verlässt das Spiel. Wer am anderen Ende steht und es dort benutzt, spielt gegen dich. Nur Spieler von VisionJK sehen es."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_GERMAN         "Fotomodus"

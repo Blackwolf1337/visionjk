@@ -86,6 +86,25 @@ BOOST_AUTO_TEST_CASE( emoji )
 	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, 3, 5, 1 ) ) );
 }
 
+BOOST_AUTO_TEST_CASE( table_tennis )
+{
+	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, -180, MAX_CLIENTS, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, 90, 3, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 181, 3, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 0, MAX_CLIENTS + 1, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_TABLE_GONE, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE_GONE, 100, 200, 300, 1, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, 5, 1, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, MAX_CLIENTS, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, 5, 2, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_BALL, 100, 200, 300, 400, -50, 120 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_BALL, 100, 200, 300, TOY_MAX_SPEED + 1, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, 11, 9, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, TOY_PONG_MOST + 1, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, 3, 4, 2 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_PADDLE, 100, 200, 300, 0, 0, 0 ) ) );
+}
+
 BOOST_AUTO_TEST_CASE( hello )
 {
 	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );

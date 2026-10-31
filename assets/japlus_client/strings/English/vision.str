@@ -137,6 +137,12 @@ LANG_ENGLISH        "Send Emoji"
 REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_A_NA
 LANG_ENGLISH        "Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it."
 
+REFERENCE           TABLE_TENNIS
+LANG_ENGLISH        "Table Tennis"
+
+REFERENCE           PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
+LANG_ENGLISH        "Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 

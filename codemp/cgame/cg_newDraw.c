@@ -757,6 +757,10 @@ void CG_MouseEvent(int x, int y) {
 	if ( CG_RcMouseEvent( x, y ) ) {
 		return;
 	}
+	// table tennis moves the paddle (toys/cg_pong.c)
+	if ( CG_PongMouseEvent( x, y ) ) {
+		return;
+	}
 
 	/*
 	if ( (cg.predictedPlayerState.pm_type == PM_NORMAL || cg.predictedPlayerState.pm_type == PM_JETPACK || cg.predictedPlayerState.pm_type == PM_FLOAT || cg.predictedPlayerState.pm_type == PM_SPECTATOR) && cg.showScores == qfalse) {
@@ -848,6 +852,10 @@ void CG_KeyEvent(int key, qboolean down) {
 	}
 	// the remote controlled car takes every key while it drives (toys/cg_rccar.c)
 	if ( CG_RcKeyEvent( key, down ) ) {
+		return;
+	}
+	// table tennis takes every key while it is played (toys/cg_pong.c)
+	if ( CG_PongKeyEvent( key, down ) ) {
 		return;
 	}
 

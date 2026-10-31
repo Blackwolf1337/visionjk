@@ -46,6 +46,29 @@ qboolean BG_ToyValid( const toyThrow_t *toy ) {
 		|| toy->velocity[1] >= TOY_SPRAY_MOST || toy->velocity[2] ) ) {
 		return qfalse;
 	}
+	// table tennis: angles, client numbers and points in place of a speed
+	switch ( toy->kind ) {
+	case TOY_TABLE:
+		if ( toy->velocity[0] < -180 || toy->velocity[0] > 180 || toy->velocity[1] < 0 || toy->velocity[1] > MAX_CLIENTS || toy->velocity[2] )
+			return qfalse;
+		break;
+	case TOY_TABLE_GONE:
+	case TOY_PONG_PADDLE:
+		if ( toy->velocity[0] || toy->velocity[1] || toy->velocity[2] )
+			return qfalse;
+		break;
+	case TOY_PONG_JOIN:
+		if ( toy->velocity[0] < 0 || toy->velocity[0] >= MAX_CLIENTS || toy->velocity[1] < 0 || toy->velocity[1] > 1 || toy->velocity[2] )
+			return qfalse;
+		break;
+	case TOY_PONG_SCORE:
+		if ( toy->velocity[0] < 0 || toy->velocity[0] > TOY_PONG_MOST || toy->velocity[1] < 0 || toy->velocity[1] > TOY_PONG_MOST
+			|| toy->velocity[2] < 0 || toy->velocity[2] > 1 )
+			return qfalse;
+		break;
+	default:
+		break;
+	}
 	return (qboolean)( speed <= (double)TOY_MAX_SPEED * TOY_MAX_SPEED );
 }
 
