@@ -54,6 +54,7 @@ boombox play synthwave mix                               looked up on YouTube
 boombox play                                             without words: opens the chat box for a song (as "Play" of the quick wheel)
 boombox place                                            a new box where the crosshair points
 boombox system                                           a new sound system where the crosshair points
+boombox tv                                               a new TV where the crosshair points (see "The TV")
 boombox pause | resume | skip | stop | remove [box]      the box near you, or that number
 boombox volume <0 to 100> [box]                          for everybody
 boombox window [box]                                     the window of the box near you, or of that number
@@ -125,7 +126,7 @@ the right speaker is played on the voice device, by side and distance.
 
 ## The quick wheel
 
-Hold the key of `+v_radial`: a dark ring of eight slices stands in the middle of the screen. Move the mouse
+Hold the key of `+v_radial`: a dark ring of nine slices stands in the middle of the screen. Move the mouse
 toward a slice and let the key go, or click it. The picked slice is lit, the box it is about is named in the
 middle, and what the slice does stands under the ring. The slice stays picked when the mouse comes back toward
 the middle. A short tap of the key keeps the ring open until a click, or until the key is pressed again. Escape
@@ -136,12 +137,93 @@ Resume, Skip, Louder, Player (opens the player window), Quieter. The two slices 
 crosshair (or the pointer, while the mouse is free) was on when the ring opened. On a boombox or any part of a
 sound system they are "Move it" (that part) and "Remove" (takes it away, needs a second click, and the ring
 stays open for it). Anywhere else they are "Boombox" and "Sound System", which put one down where the crosshair
-points (Sound System only where the server or the master has them).
+points (Sound System only where the server or the master has them). The ninth slice, "TV", is after them. Anywhere else it puts a
+TV down (see "The TV", only where the server or the master has them), on a box it is dark and does nothing.
 
 The other choices are about the box the crosshair was on, or else the box near you. Louder and Quieter change
 the volume for everybody, 10 a step.
 
 No key is bound by default. Controls, Extras has the row "Quick Wheel (Boombox)".
+
+## The TV
+
+A third kind of box: an Imperial monitor of the game (`models/map_objects/imperial/monitor.md3`, drawn 1.25 times
+its size). A TV plays songs as a boombox does, and shows the video of the song on its middle screen, in step with
+the song. The side screens keep their Imperial displays. The colour of the screen lights the room around it.
+
+### For players
+
+Put a TV down with the quick wheel (the slice "Put a TV here") or with the console:
+
+```
+boombox tv            a TV where the crosshair points
+```
+
+Everything else is as with a boombox. Ask for a song with "Play a song", the card or the window, and the TV
+plays it and shows its picture. Pause, Skip, a jump in the song, the volume, Move it and Take it away work the
+same, and the picture follows them. It counts as one box against `vs_boomboxMax` (and against the 4 boxes of a
+room of the masterserver).
+
+The 4 TVs nearest to you that play get a picture. The others show a dark screen. A picture is only drawn up to
+2048 units from your eye. If the picture is lost, it is fetched again after 10 seconds.
+
+Only clients of version 0.2.9-dev.29 or later see a TV. An older client of this tree does not see it at all. It
+works on any server: a server with the game module of this tree keeps the TV itself, on every other one the
+masterserver keeps it. The game module and the masterserver must be dev.29 or later too. The browser
+page (/watch/) does not show TV pictures.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_tvService` | `https://jka.vision/tv/` | where the pictures come from. Protected: only a config of the home folder or the console sets it, a server can not. It takes https, or http to 127.0.0.1 for tests |
+
+### For masterserver owners
+
+The picture is made by the TV service of the masterserver (`codemp/master/ms_tv.c`). It is an HTTP server on
+127.0.0.1, and the web server of the site hands `/tv/` to it over HTTPS (nginx: 30 requests a minute and 4
+connections per address). It needs `yt-dlp` and `ffmpeg` like the songs do.
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `--tv-port <port>` | 0 (no TV service) | the port on 127.0.0.1 |
+| `--tv-sessions <n>` | 4 (16 at most) | videos made at once |
+
+### How it works
+
+`codemp/cgame/boombox/cg_tv.c` (the box), `codemp/client/cl_video.cpp` (fetch and decode),
+`codemp/master/ms_tv.c` (the service), the protocol in `game/boombox/bg_boombox.h`.
+
+The request is `GET /tv/<video id>?t=<second>`. The answer is an MPEG-1 stream (video only) of 426x240 at 25 fps
+and about 700 kbit/s, which `yt-dlp` and `ffmpeg` make as it is read (`Box_VideoStart()` in
+`game/boombox/bg_boombox_fetch.c`). A bad request is answered 400, an unknown path 404. The sound is not in it: it
+is the song of the box, which plays as it plays for any boombox.
+
+A session is one video from one second on. Viewers of the same video and second share one session. One address
+may have 4 connections, a session nobody watches ends after 15 seconds, and the stream is read no more than 12
+seconds ahead of the clock, so a session holds a few seconds and not the whole video. At most `--tv-sessions`
+sessions run at once. Nothing there waits: the sockets do not block and are in the `select()` of the program.
+
+The client fetches the stream in a background thread (`v_tvService`) and decodes it with pl_mpeg (`lib/pl_mpeg`,
+MIT). It refuses a picture larger than 640x360 and more than 4 MB waiting. The picture is drawn into the middle
+screen of the model, one of 4 streams (one per TV that gets a picture). A picture starts 2 seconds ahead of the
+song and is shown when the song reaches it. After a jump in the song, a stall, or when the picture falls 3 seconds
+behind, it is opened again further in. After a failure it tries again after 10 seconds. The light is a dynamic
+light in front of the screen, in the colour of the picture and as strong as the picture is bright.
+
+On a server with the game module the TV is a box of the kind 2 (`BOX_KIND_TV`): `vs_boxaction tv x y z yaw`
+puts it down, and `vs_box set` ends with the kind 2, eight zeros and the video id. Through the masterserver
+the client sends `BOX_DO_TV`, the master tells the video id with `BOX_SAY_VIDEO` after `BOX_SAY_SET` and says that
+a box is a TV in the state byte (`BOX_STATE_TVS`), and it says `BOX_CAP_TV` in its hello.
+
+### Tested, not tested
+
+2026-10-31, hidden and silent, on Linux: a local server with the game module, one client, a TV put down with
+`v_boombox tv`, a song asked for with fake `yt-dlp` and `ffmpeg` programs, and the local master serving `/tv/`.
+The middle screen showed the moving test picture in step with the song. The `/tv/` server was run with a script:
+errors for bad requests (400, 404), and two viewers of the same video and second shared one session. The new
+packets have unit tests (`tv_packets` in `tests/vjk/boombox.cpp`).
+
+Not tested: the masterserver path in a real game (a server without the game module), real YouTube videos (this
+machine has no yt-dlp), Windows, the light in a real game, and nginx on the host before the deploy.
 
 ## For server owners
 

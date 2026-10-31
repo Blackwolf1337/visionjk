@@ -48,6 +48,52 @@ BOOST_AUTO_TEST_CASE( video )
 	BOOST_CHECK_EQUAL( Target( "  ^1https://youtu.be/" + id + "  " ), kWatch + id );
 }
 
+// the TV through the masterserver: a new one, and the video of its song
+BOOST_AUTO_TEST_CASE( tv_packets )
+{
+	boxDo_t		d, back;
+	boxSay_t	say, got;
+	byte		buf[512];
+	int			len;
+
+	memset( &d, 0, sizeof( d ) );
+	d.what = BOX_DO_TV;
+	d.box = 0;
+	strcpy( d.name, "Watcher" );
+	d.origin[0] = 100; d.origin[1] = -200; d.origin[2] = 64;
+	d.yaw = 90.0f;
+	len = BG_BoxDoPack( buf, sizeof( buf ), &d );
+	BOOST_REQUIRE( len > 0 );
+	BOOST_REQUIRE( BG_BoxDoUnpack( buf, len, &back ) );
+	BOOST_CHECK_EQUAL( back.what, BOX_DO_TV );
+	BOOST_CHECK_EQUAL( back.origin[1], -200 );
+
+	memset( &say, 0, sizeof( say ) );
+	say.what = BOX_SAY_VIDEO;
+	say.box = 2;
+	strcpy( say.video, "dQw4w9WgXcQ" );
+	len = BG_BoxSayPack( buf, sizeof( buf ), &say );
+	BOOST_REQUIRE_EQUAL( len, 3 + 11 );
+	BOOST_REQUIRE( BG_BoxSayUnpack( buf, len, &got ) );
+	BOOST_CHECK_EQUAL( std::string( got.video ), "dQw4w9WgXcQ" );
+	BOOST_CHECK_EQUAL( got.box, 2 );
+
+	// none, and what is no video
+	say.video[0] = '\0';
+	len = BG_BoxSayPack( buf, sizeof( buf ), &say );
+	BOOST_REQUIRE( BG_BoxSayUnpack( buf, len, &got ) );
+	BOOST_CHECK_EQUAL( got.video[0], '\0' );
+	buf[2] = 11;
+	memcpy( buf + 3, "dQw4w9Wg/cQ", 11 );
+	BOOST_CHECK( !BG_BoxSayUnpack( buf, 3 + 11, &got ) );
+	BOOST_CHECK( !BG_BoxSayUnpack( buf, 3 + 5, &got ) );
+
+	BOOST_CHECK( Box_VideoIdOk( "dQw4w9WgXcQ" ) );
+	BOOST_CHECK( !Box_VideoIdOk( "dQw4w9WgXc" ) );
+	BOOST_CHECK( !Box_VideoIdOk( "dQw4w9WgXcQQ" ) );
+	BOOST_CHECK( !Box_VideoIdOk( "../etc/pass" ) );
+}
+
 BOOST_AUTO_TEST_CASE( playlist )
 {
 	const std::string list = "PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG", id = "dQw4w9WgXcQ";

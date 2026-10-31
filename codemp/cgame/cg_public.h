@@ -28,6 +28,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define	CGAME_API_VERSION		2
 
+// the videos on surfaces of the level (ext.Video_*, client/cl_video.cpp): streams, and what one does
+#define VIDEO_STREAMS		4
+#define VIDEO_NONE			0
+#define VIDEO_FETCHING		1		// opened, nothing to show yet
+#define VIDEO_PLAYING		2
+#define VIDEO_ENDED			3		// all of it came and was shown
+#define VIDEO_FAILED		4		// nothing came, or what came was refused
+
 #define	CMD_BACKUP			64
 #define	CMD_MASK			(CMD_BACKUP - 1)
 // allow a lot of command backups for very fast systems
@@ -774,6 +782,17 @@ typedef struct cgameImport_s {
 		// of this frame bends and is coloured as screenEffect_t says, called before R_RenderScene every frame it is
 		// wanted. NULL only asks. qfalse: the renderer does not have it (rd-vanilla).
 		qboolean		(*R_SetScreenEffect)					( const screenEffect_t *fx );
+		// Only an engine that sets the cvar v_cgameVideo to 1 has these, the same way. Videos on surfaces of the level
+		// (client/cl_video.cpp): one of VIDEO_STREAMS streams shows the picture of a video of YouTube (its eleven
+		// characters) from a second on, fetched by the engine from the TV of the masterserver. It plays on to msec
+		// (from that second) when Video_Advance is called, once a frame, and a shader stage "videoMap *tv<stream>"
+		// shows it. Video_Open qfalse: nothing is fetched now, ask again later. Video_Advance returns the time of the
+		// frame shown, -1 none. Video_State: VIDEO_*. Video_Color: the mean colour of that frame.
+		qboolean		(*Video_Open)							( int stream, const char *video, int second );
+		int				(*Video_Advance)						( int stream, int msec );
+		int				(*Video_State)							( int stream );
+		qboolean		(*Video_Color)							( int stream, vec3_t out );
+		void			(*Video_Reset)							( int stream );
 	} ext;
 } cgameImport_t;
 

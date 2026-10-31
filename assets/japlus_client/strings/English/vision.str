@@ -1727,6 +1727,12 @@ LANG_ENGLISH        "Put a boombox here"
 REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
 
+REFERENCE           TV
+LANG_ENGLISH        "TV"
+
+REFERENCE           PUT_A_TV_HERE
+LANG_ENGLISH        "Put a TV here"
+
 REFERENCE           PLAY
 LANG_ENGLISH        "Play"
 

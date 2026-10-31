@@ -199,11 +199,19 @@ The loop waits in `select()` for 10 ms at most for a datagram or console input, 
 | `--ffmpeg <program>` | ffmpeg | `vs_boomboxFfmpeg` |
 | `--ytdlp-args <words>` | | `vs_boomboxYtdlpArgs` |
 | `--http <port>` | 0 (no panel) | |
+| `--tv-port <port>` | 0 (no TV service) | |
+| `--tv-sessions <n>` | 4 (max 16) | |
 | `--rep <0\|1>` | 1 | `ms_rep` |
 | `--rep-threshold <n>` | 6 | `ms_repThreshold` |
 | `--rep-local <0\|1>` | 0 | `ms_repLocal` |
 | `--home <folder>` | . | `fs_homepath` |
 | `--help` | | |
+
+`--tv-port` starts the TV service (`master/ms_tv.c`): the picture of the TV of the boombox, see
+[boombox.md](boombox.md), "The TV". It is an HTTP server on 127.0.0.1 that answers `GET /tv/<video id>?t=<second>`
+with an MPEG-1 stream of 426x240 at 25 fps, made by yt-dlp and ffmpeg.
+The web server of the site hands `/tv/` to it over HTTPS. `--tv-sessions` is how many videos it makes at once.
+Viewers of the same video from the same second share one session.
 
 `--home` is where `reputation.txt` is kept. The old master kept it in `fs_homepath`, which on the host is the same
 `/var/lib/visionjk-master`, so the file is read on as it is.

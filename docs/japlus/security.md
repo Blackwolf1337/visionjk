@@ -534,6 +534,24 @@ Client 2 fetched the list, and its first connect was refused with the reason, an
 
 Not tested: the orange mark and the window Intrusions looked at by a person, the master on the real host.
 
+## Added later: the TV of the boombox
+
+The TV service of the masterserver (`master/ms_tv.c`, `--tv-port`) is an HTTP server on 127.0.0.1 that only nginx
+reaches. It answers `GET /tv/<video id>?t=<second>`: the id must be 11 characters and the
+second a number from 0 to 36000, only `t` is taken as a parameter, anything else gets 400 or 404. The limits are
+`--tv-sessions` sessions at once (4 by default, 16 at most), 4 connections per address (the one nginx names in
+`X-Real-IP`), a request that is not whole after 10 seconds is dropped, a session nobody watches ends after 15
+seconds, and the stream is read 12 seconds ahead at most, with 2 MB kept. nginx adds 30 requests a minute and 4
+connections per address. Viewers of one video and second share one session, so many players cost one.
+
+On the client the picture is fetched by a background thread from `v_tvService`. The cvar is protected, so a server
+can not point it elsewhere, and the engine takes only https, or http to 127.0.0.1 for tests. The stream is decoded
+with pl_mpeg (`lib/pl_mpeg`, MIT). A picture larger than 640x360 is refused and so is more than 4 MB of waiting
+data. Damaged copies of a stream were decoded under AddressSanitizer: with a broken motion vector pl_mpeg reads up to
+a line and a byte past the end of a frame, so every block it allocates gets 4096 zeroed bytes more
+(`client/cl_video.cpp`, `lib/pl_mpeg/README.txt`). After that 300 damaged streams decoded without an error. Not
+tested: nginx on the host, and the service with real YouTube videos.
+
 ## Recommended server settings
 
 ```

@@ -95,6 +95,26 @@ typedef struct boxStream_s {
 	int			resolvedLen;
 } boxStream_t;
 
+// The picture of a video for the TV (master/ms_tv.c): ffmpeg makes MPEG-1 of it (an elementary stream, a sequence
+// header at every group of pictures) at BOX_VIDEO_WIDTH x BOX_VIDEO_HEIGHT, BOX_VIDEO_FPS, from a second on.
+#define BOX_VIDEO_WIDTH		426
+#define BOX_VIDEO_HEIGHT	240
+#define BOX_VIDEO_FPS		25
+#define BOX_VIDEO_KBPS		700
+#define BOX_VIDEO_GOP		25					// pictures from one group to the next: a client that comes in waits a second at most
+
+typedef struct boxVideo_s {
+	boxProc_t	proc;
+	int			stage;			// BOX_STAGE_*
+	qboolean	ended;			// the programs are through
+	qboolean	gotData;		// something came from the programs that run now
+	char		id[12];			// the video
+	int			fromSecond;
+	boxTools_t	tools;
+	char		resolved[BOX_URL + 1024];	// what yt-dlp printed of the address and its headers so far
+	int			resolvedLen;
+} boxVideo_t;
+
 // a block of memory for the state of an encoder, as well aligned as anything can ask for
 typedef union boxEncoder_u {
 	double	align;
@@ -189,6 +209,11 @@ int			Box_StreamQueued( const boxStream_t *s );
 int			Box_StreamTake( boxStream_t *s, short *out, int count );
 void		Box_StreamStop( boxStream_t *s );
 void		Box_StreamWhy( const boxStream_t *s, const char *otherwise, char *why, int whySize );
+qboolean	Box_VideoStart( boxVideo_t *v, const boxTools_t *tools, const char *id, int fromSecond, int now, char *why, int whySize );
+int			Box_VideoRead( boxVideo_t *v, byte *out, int size, int now );
+void		Box_VideoStop( boxVideo_t *v );
+void		Box_VideoWhy( const boxVideo_t *v, const char *otherwise, char *why, int whySize );
+qboolean	Box_VideoIdOk( const char *id );
 
 // bg_boombox_core.c
 const char	*Box_Va( const char *format, ... );

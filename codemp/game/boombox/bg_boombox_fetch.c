@@ -427,7 +427,7 @@ The addresses of the sound of songs
 #ifndef _WIN32
 
 static struct {
-	char	id[12];
+	char	id[16];			// the video, with a v behind it for the address of its picture (Box_VideoStart)
 	int		time;			// when yt-dlp found it, on the clock of the host. 0: free
 	char	url[BOX_URL];
 	char	agent[BOX_AGENT];
@@ -710,8 +710,9 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 
 #ifndef _WIN32
 
-// the words of yt-dlp for a lookup and for a fetch alike, after its name. list: the lookup of a playlist
-static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *tools, qboolean list ) {
+// the words of yt-dlp for a lookup and for a fetch alike, after its name. list: the lookup of a playlist. format:
+// what of the video, "bestaudio" for the sound
+static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *tools, qboolean list, const char *format ) {
 	Box_Arg( a, path );
 	Box_Arg( a, "--ignore-config" );
 	// (and no plugins from the home folder or next to the program: code nobody here put there on purpose)
@@ -723,7 +724,7 @@ static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *too
 	Box_Arg( a, "--socket-timeout" );
 	Box_Arg( a, "15" );
 	Box_Arg( a, "-f" );
-	Box_Arg( a, "bestaudio" );
+	Box_Arg( a, format );
 	// what the owner of the server adds (a JavaScript program other than deno, cookies, a proxy)
 	Box_ArgWords( a, tools->ytdlpArgs );
 }
@@ -782,7 +783,7 @@ qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *t
 		Q_strncpyz( l->start, v + 8, Q_min( 12, (int)sizeof( l->start ) ) );
 	l->direct = (qboolean)( !l->list && !Box_Proxied( tools ) );
 	Box_ArgsBegin( &a );
-	Box_ArgsYtdlp( &a, path, tools, l->list );
+	Box_ArgsYtdlp( &a, path, tools, l->list, "bestaudio" );
 	if ( l->list ) {
 		Box_Arg( &a, "--flat-playlist" );
 		Box_Arg( &a, "--playlist-items" );
@@ -974,7 +975,7 @@ static qboolean Box_StreamResolve( boxStream_t *s, int now, char *why, int whySi
 		return qfalse;
 	}
 	Box_ArgsBegin( &a );
-	Box_ArgsYtdlp( &a, ytdlp, &s->tools, qfalse );
+	Box_ArgsYtdlp( &a, ytdlp, &s->tools, qfalse, "bestaudio" );
 	Box_Arg( &a, "--print" );
 	Box_Arg( &a, "url" );
 	Box_Arg( &a, "--print" );
@@ -1059,7 +1060,7 @@ static qboolean Box_StreamPipe( boxStream_t *s, int now, char *why, int whySize 
 	}
 
 	Box_ArgsBegin( &fetch );
-	Box_ArgsYtdlp( &fetch, ytdlp, &s->tools, qfalse );
+	Box_ArgsYtdlp( &fetch, ytdlp, &s->tools, qfalse, "bestaudio" );
 	Box_Arg( &fetch, "--quiet" );
 	Box_Arg( &fetch, "--no-progress" );
 	Box_Arg( &fetch, "-o" );
@@ -1265,4 +1266,285 @@ void Box_StreamStop( boxStream_t *s ) {
 // (for Box_Why() of the programs of a song that broke off)
 void Box_StreamWhy( const boxStream_t *s, const char *otherwise, char *why, int whySize ) {
 	Box_Why( &s->proc, otherwise, why, whySize );
+}
+
+/*
+===============================================================================
+
+The picture of a video, for the TV (master/ms_tv.c)
+
+As the sound of a song: yt-dlp looks up the address of a picture of the video no higher than 360 lines (and
+without sound), ffmpeg fetches it from there and makes MPEG-1 of it (bg_boombox_core.h, BOX_VIDEO_*); without an
+address that is good, yt-dlp fetches it and hands it to ffmpeg. The address is kept as the one of the sound is,
+under the video with a v behind it.
+
+===============================================================================
+*/
+
+#define BOX_VIDEO_FORMAT	"bv*[height<=360]/wv*"
+
+// the eleven characters of a video, and nothing after them
+qboolean Box_VideoIdOk( const char *id ) {
+	return (qboolean)( strlen( id ) == 11 && Box_VideoId( id, 11 ) );
+}
+
+#ifndef _WIN32
+
+// what ffmpeg makes of the picture, after where it reads it from
+static void Box_ArgsPicture( boxArgs_t *a ) {
+	Box_Arg( a, "-an" );
+	Box_Arg( a, "-sn" );
+	Box_Arg( a, "-vf" );
+	Box_Arg( a, Box_Va( "scale=%i:%i:force_original_aspect_ratio=decrease,pad=%i:%i:(ow-iw)/2:(oh-ih)/2,fps=%i", BOX_VIDEO_WIDTH,
+		BOX_VIDEO_HEIGHT, BOX_VIDEO_WIDTH, BOX_VIDEO_HEIGHT, BOX_VIDEO_FPS ) );
+	Box_Arg( a, "-c:v" );
+	Box_Arg( a, "mpeg1video" );
+	Box_Arg( a, "-b:v" );
+	Box_Arg( a, Box_Va( "%ik", BOX_VIDEO_KBPS ) );
+	Box_Arg( a, "-g" );
+	Box_Arg( a, Box_Va( "%i", BOX_VIDEO_GOP ) );
+	// (no B pictures: the decoder of the client shows each one as it comes, cl_video.cpp)
+	Box_Arg( a, "-bf" );
+	Box_Arg( a, "0" );
+	Box_Arg( a, "-f" );
+	Box_Arg( a, "mpeg1video" );
+	Box_Arg( a, "pipe:1" );
+}
+
+static qboolean Box_VideoResolve( boxVideo_t *v, int now, char *why, int whySize ) {
+	boxArgs_t	a;
+	char		ytdlp[MAX_OSPATH];
+
+	if ( !Box_ToolPath( v->tools.ytdlp, ytdlp, sizeof( ytdlp ) ) ) {
+		Q_strncpyz( why, "no yt-dlp", whySize );
+		return qfalse;
+	}
+	Box_ArgsBegin( &a );
+	Box_ArgsYtdlp( &a, ytdlp, &v->tools, qfalse, BOX_VIDEO_FORMAT );
+	Box_Arg( &a, "--print" );
+	Box_Arg( &a, "url" );
+	Box_Arg( &a, "--print" );
+	Box_Arg( &a, "%(http_headers)j" );
+	Box_Arg( &a, "--" );
+	Box_Arg( &a, Box_Va( "https://www.youtube.com/watch?v=%s", v->id ) );
+	if ( a.full ) {
+		Q_strncpyz( why, "the words for yt-dlp are too many", whySize );
+		return qfalse;
+	}
+	v->resolvedLen = 0;
+	v->resolved[0] = '\0';
+	if ( !Box_ProcStart( &v->proc, a.argv, NULL, now ) ) {
+		Q_strncpyz( why, "yt-dlp could not be started", whySize );
+		return qfalse;
+	}
+	v->stage = BOX_STAGE_RESOLVE;
+	return qtrue;
+}
+
+static qboolean Box_VideoDirect( boxVideo_t *v, int url, int now, char *why, int whySize ) {
+	boxArgs_t	a;
+	char		ffmpeg[MAX_OSPATH];
+
+	if ( !Box_ToolPath( v->tools.ffmpeg, ffmpeg, sizeof( ffmpeg ) ) ) {
+		Q_strncpyz( why, "no ffmpeg", whySize );
+		return qfalse;
+	}
+	Box_ArgsBegin( &a );
+	Box_Arg( &a, ffmpeg );
+	Box_Arg( &a, "-nostdin" );
+	Box_Arg( &a, "-hide_banner" );
+	Box_Arg( &a, "-loglevel" );
+	Box_Arg( &a, "error" );
+	Box_Arg( &a, "-protocol_whitelist" );
+	Box_Arg( &a, "https,tls,tcp" );
+	Box_Arg( &a, "-reconnect" );
+	Box_Arg( &a, "1" );
+	Box_Arg( &a, "-reconnect_streamed" );
+	Box_Arg( &a, "1" );
+	Box_Arg( &a, "-reconnect_delay_max" );
+	Box_Arg( &a, "4" );
+	if ( boxUrls[url].agent[0] ) {
+		Box_Arg( &a, "-user_agent" );
+		Box_Arg( &a, boxUrls[url].agent );
+	}
+	if ( v->fromSecond > 0 ) {
+		Box_Arg( &a, "-ss" );
+		Box_Arg( &a, Box_Va( "%i", v->fromSecond ) );
+	}
+	Box_Arg( &a, "-i" );
+	Box_Arg( &a, boxUrls[url].url );
+	Box_ArgsPicture( &a );
+	if ( a.full ) {
+		Q_strncpyz( why, "the address of the video is too long", whySize );
+		return qfalse;
+	}
+	if ( !Box_ProcStart( &v->proc, a.argv, NULL, now ) ) {
+		Q_strncpyz( why, "ffmpeg could not be started", whySize );
+		return qfalse;
+	}
+	v->stage = BOX_STAGE_DIRECT;
+	v->gotData = qfalse;
+	return qtrue;
+}
+
+static qboolean Box_VideoPipe( boxVideo_t *v, int now, char *why, int whySize ) {
+	boxArgs_t	fetch, decode;
+	char		ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH];
+
+	if ( !Box_ToolPath( v->tools.ytdlp, ytdlp, sizeof( ytdlp ) ) || !Box_ToolPath( v->tools.ffmpeg, ffmpeg, sizeof( ffmpeg ) ) ) {
+		Q_strncpyz( why, "no yt-dlp or no ffmpeg", whySize );
+		return qfalse;
+	}
+	Box_ArgsBegin( &fetch );
+	Box_ArgsYtdlp( &fetch, ytdlp, &v->tools, qfalse, BOX_VIDEO_FORMAT );
+	Box_Arg( &fetch, "--quiet" );
+	Box_Arg( &fetch, "--no-progress" );
+	Box_Arg( &fetch, "-o" );
+	Box_Arg( &fetch, "-" );
+	Box_Arg( &fetch, "--" );
+	Box_Arg( &fetch, Box_Va( "https://www.youtube.com/watch?v=%s", v->id ) );
+
+	Box_ArgsBegin( &decode );
+	Box_Arg( &decode, ffmpeg );
+	Box_Arg( &decode, "-nostdin" );
+	Box_Arg( &decode, "-hide_banner" );
+	Box_Arg( &decode, "-loglevel" );
+	Box_Arg( &decode, "error" );
+	Box_Arg( &decode, "-i" );
+	Box_Arg( &decode, "pipe:0" );
+	if ( v->fromSecond > 0 ) {
+		Box_Arg( &decode, "-ss" );
+		Box_Arg( &decode, Box_Va( "%i", v->fromSecond ) );
+	}
+	Box_ArgsPicture( &decode );
+	if ( fetch.full || decode.full ) {
+		Q_strncpyz( why, "the words for yt-dlp are too many", whySize );
+		return qfalse;
+	}
+	if ( !Box_ProcStart( &v->proc, fetch.argv, decode.argv, now ) ) {
+		Q_strncpyz( why, "yt-dlp and ffmpeg could not be started", whySize );
+		return qfalse;
+	}
+	v->stage = BOX_STAGE_PIPE;
+	v->gotData = qfalse;
+	return qtrue;
+}
+
+static void Box_VideoResolved( boxVideo_t *v, int now ) {
+	char	*url = v->resolved, *agent, why[128];
+	int		u;
+
+	url[strcspn( url, "\r\n" )] = '\0';
+	agent = url + strlen( url ) + 1;
+	if ( agent - v->resolved >= v->resolvedLen )
+		agent = url + strlen( url );
+	while ( *agent == '\r' || *agent == '\n' )
+		agent++;
+	agent[strcspn( agent, "\r\n" )] = '\0';
+	Box_ProcErrors( &v->proc );
+	Box_ProcStop( &v->proc );
+	if ( !*url && !Q_strncmp( v->proc.errLine, "ERROR:", 6 ) ) {
+		v->ended = qtrue;
+		return;
+	}
+	Box_UrlKeep( Box_Va( "%sv", v->id ), url, agent, now );
+	if ( ( u = Box_UrlFind( Box_Va( "%sv", v->id ), now ) ) >= 0 && Box_VideoDirect( v, u, now, why, sizeof( why ) ) )
+		return;
+	if ( !Box_VideoPipe( v, now, why, sizeof( why ) ) ) {
+		Q_strncpyz( v->proc.errLine, why, sizeof( v->proc.errLine ) );
+		v->ended = qtrue;
+	}
+}
+
+#endif // _WIN32
+
+// The picture of a video from a second on. qfalse: nothing is fetched, why says why.
+qboolean Box_VideoStart( boxVideo_t *v, const boxTools_t *tools, const char *id, int fromSecond, int now, char *why, int whySize ) {
+#ifndef _WIN32
+	int url;
+
+	Box_ProcStop( &v->proc );
+	v->ended = qtrue;
+	v->gotData = qfalse;
+	v->fromSecond = Com_Clampi( 0, BOX_LONGEST, fromSecond );
+	v->tools = *tools;
+	if ( !Box_VideoIdOk( id ) ) {
+		Q_strncpyz( why, "no video", whySize );
+		return qfalse;
+	}
+	Q_strncpyz( v->id, id, sizeof( v->id ) );
+	if ( Box_Proxied( tools ) ) {
+		if ( !Box_VideoPipe( v, now, why, whySize ) )
+			return qfalse;
+	} else if ( ( url = Box_UrlFind( Box_Va( "%sv", id ), now ) ) >= 0 ) {
+		if ( !Box_VideoDirect( v, url, now, why, whySize ) )
+			return qfalse;
+	} else if ( !Box_VideoResolve( v, now, why, whySize ) ) {
+		return qfalse;
+	}
+	v->ended = qfalse;
+	return qtrue;
+#else
+	(void)v; (void)tools; (void)id; (void)fromSecond; (void)now;
+	Q_strncpyz( why, "a server on Windows can not fetch videos", whySize );
+	return qfalse;
+#endif
+}
+
+// What ffmpeg made since the last call, up to size bytes. 0: nothing now, -1: the programs are through.
+int Box_VideoRead( boxVideo_t *v, byte *out, int size, int now ) {
+#ifndef _WIN32
+	char	why[128];
+	int		n;
+
+	if ( v->ended )
+		return -1;
+	Box_ProcErrors( &v->proc );
+	if ( v->stage == BOX_STAGE_RESOLVE ) {
+		for ( ;; ) {
+			n = Box_ProcRead( &v->proc, v->resolved + v->resolvedLen, (int)sizeof( v->resolved ) - 1 - v->resolvedLen );
+			if ( n > 0 ) {
+				v->resolvedLen += n;
+				v->resolved[v->resolvedLen] = '\0';
+				if ( v->resolvedLen < (int)sizeof( v->resolved ) - 1 )
+					continue;
+			}
+			if ( n == 0 )
+				return 0;
+			break;
+		}
+		Box_VideoResolved( v, now );
+		return v->ended ? -1 : 0;
+	}
+	n = Box_ProcRead( &v->proc, out, size );
+	if ( n > 0 ) {
+		v->gotData = qtrue;
+		return n;
+	}
+	if ( n == 0 )
+		return 0;
+	Box_ProcErrors( &v->proc );
+	// (ffmpeg got nothing from the address: yt-dlp fetches it instead)
+	if ( v->stage == BOX_STAGE_DIRECT && !v->gotData ) {
+		Box_UrlForget( Box_Va( "%sv", v->id ) );
+		Box_ProcStop( &v->proc );
+		if ( Box_VideoPipe( v, now, why, sizeof( why ) ) )
+			return 0;
+		Q_strncpyz( v->proc.errLine, why, sizeof( v->proc.errLine ) );
+	}
+	v->ended = qtrue;
+	return -1;
+#else
+	(void)v; (void)out; (void)size; (void)now;
+	return -1;
+#endif
+}
+
+void Box_VideoStop( boxVideo_t *v ) {
+	Box_ProcStop( &v->proc );
+	v->ended = qtrue;
+}
+
+void Box_VideoWhy( const boxVideo_t *v, const char *otherwise, char *why, int whySize ) {
+	Box_Why( &v->proc, otherwise, why, whySize );
 }

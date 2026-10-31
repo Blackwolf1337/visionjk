@@ -750,6 +750,18 @@ void CIN_DrawCinematic (int handle);
 void CIN_SetExtents (int handle, int x, int y, int w, int h);
 void CIN_SetLooping (int handle, qboolean loop);
 void CIN_UploadCinematic(int handle);
+
+//
+// cl_video.cpp: videos the cgame streams onto surfaces, "videoMap *tv<n>"
+//
+qboolean CL_VideoOpen( int stream, const char *video, int second );
+qboolean CL_VideoFeed( int stream, const byte *data, int len );
+int CL_VideoAdvance( int stream, int msec );
+int CL_VideoState( int stream );
+qboolean CL_VideoColor( int stream, vec3_t out );
+void CL_VideoReset( int stream );
+void CL_VideoShutdown( void );
+void CL_VideoUpload( int stream, int handle );
 void CIN_CloseAllVideos(void);
 
 //

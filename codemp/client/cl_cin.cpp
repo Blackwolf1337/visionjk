@@ -134,6 +134,7 @@ typedef struct cin_cache_s {
 	int					playonwalls;
 	byte*				buf;
 	long				drawX, drawY;
+	int					stream;							// a stream of cl_video.cpp + 1, 0: a file
 } cin_cache_t;
 
 static cinematics_t		cin;
@@ -1338,6 +1339,11 @@ CIN_StopCinematic
 e_status CIN_StopCinematic(int handle) {
 
 	if (handle < 0 || handle>= MAX_VIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return FMV_EOF;
+	if ( cinTable[handle].stream ) {
+		Com_Memset( &cinTable[handle], 0, sizeof( cinTable[handle] ) );
+		cinTable[handle].status = FMV_EOF;
+		return FMV_EOF;
+	}
 	currentHandle = handle;
 
 	Com_DPrintf("trFMV::stop(), closing %s\n", cinTable[currentHandle].fileName);
@@ -1372,6 +1378,11 @@ e_status CIN_RunCinematic (int handle)
 	int     thisTime = 0;
 
 	if (handle < 0 || handle>= MAX_VIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return FMV_EOF;
+
+	// a stream is decoded when the cgame says how far it plays (CL_VideoAdvance)
+	if ( cinTable[handle].stream ) {
+		return FMV_PLAY;
+	}
 
 	if (cin.currentHandle != handle) {
 		currentHandle = handle;
@@ -1437,10 +1448,42 @@ e_status CIN_RunCinematic (int handle)
 CIN_PlayCinematic
 ==================
 */
+/*
+==================
+CIN_PlayVideoStream
+
+"*tv<n>", the name of stream n of cl_video.cpp in a videoMap stage: a handle whose frames come from there
+==================
+*/
+static int CIN_PlayVideoStream( const char *arg ) {
+	const int	stream = atoi( arg + 3 );
+	int			i, handle;
+
+	if ( stream < 0 || stream >= VIDEO_STREAMS || arg[3] < '0' || arg[3] > '9' ) {
+		return -1;
+	}
+	for ( i = 0 ; i < MAX_VIDEO_HANDLES ; i++ ) {
+		if ( !Q_stricmp( cinTable[i].fileName, arg ) ) {
+			return i;
+		}
+	}
+	handle = CIN_HandleForVideo();
+	Com_Memset( &cinTable[handle], 0, sizeof( cinTable[handle] ) );
+	Q_strncpyz( cinTable[handle].fileName, arg, sizeof( cinTable[handle].fileName ) );
+	cinTable[handle].stream = stream + 1;
+	cinTable[handle].status = FMV_PLAY;
+	cinTable[handle].shader = qtrue;
+	return handle;
+}
+
 int CIN_PlayCinematic( const char *arg, int x, int y, int w, int h, int systemBits ) {
 	unsigned short RoQID;
 	char	name[MAX_OSPATH];
 	int		i;
+
+	if ( !Q_stricmpn( arg, "*tv", 3 ) ) {
+		return CIN_PlayVideoStream( arg );
+	}
 
 	if (strstr(arg, "/") == NULL && strstr(arg, "\\") == NULL) {
 		Com_sprintf (name, sizeof(name), "video/%s", arg);
@@ -1702,6 +1745,10 @@ void SCR_StopCinematic(void) {
 
 void CIN_UploadCinematic(int handle) {
 	if (handle >= 0 && handle < MAX_VIDEO_HANDLES) {
+		if ( cinTable[handle].stream ) {
+			CL_VideoUpload( cinTable[handle].stream - 1, handle );
+			return;
+		}
 		if (!cinTable[handle].buf) {
 			return;
 		}

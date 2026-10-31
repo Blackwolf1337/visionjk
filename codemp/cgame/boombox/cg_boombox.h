@@ -56,8 +56,10 @@ void		CG_BoomboxAsk( int box, const char *text );		// a song for that box (-1: t
 
 void		CG_BoomboxPlace( void );						// a boombox where the cross hair points
 void		CG_BoomboxPlaceSystem( void );					// a sound system there, its speakers beside it
+void		CG_BoomboxPlaceTv( void );
 qboolean	CG_BoomboxOn( void );							// the server or the master has boxes
 qboolean	CG_BoomboxSystems( void );						// and sound systems
+qboolean	CG_BoomboxTvs( void );
 int			CG_BoomboxNear( void );							// the box near the player, -1: none
 int			CG_BoomboxAimed( float range );					// the piece under the cross hair, -1: none
 
@@ -105,6 +107,13 @@ void		CG_BoomboxCarry( const vec3_t start, const vec3_t dir );
 void		CG_BoomboxDrop( qboolean place );
 int			CG_BoomboxHeld( void );
 qboolean	CG_BoomboxHeldBad( void );
+
+// cg_tv.c: the TV
+void		CG_TvInit( void );
+void		CG_TvAdd( int key, const vec3_t origin, float yaw, const char *video, int msec, qboolean playing );
+void		CG_TvScene( void );
+qboolean	CG_TvBody( const vec3_t origin, float yaw, refEntity_t *ent );
+void		CG_TvSize( float *halfDepth, float *halfWidth, float *height );
 
 // voice/cg_voice.c: the songs as they are played, and the way to the masterserver
 float		CG_VoiceBoxBeat( int channel );

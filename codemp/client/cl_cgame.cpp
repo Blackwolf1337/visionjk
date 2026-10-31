@@ -440,6 +440,7 @@ void CL_ShutdownCGame( void ) {
 	Cvar_Set( "v_dreamReverb", "0" );		// see S_SpatialRenderDream(), the same
 	Cvar_Set( "v_cgameResize", "0" );		// see CL_WindowSize()
 	Cvar_Set( "v_scopeWheel", "0" );		// see CL_ParseBinding()
+	CL_VideoShutdown();						// the streams of the screens are the cgame's (cl_video.cpp)
 
 	if ( !cls.cgameStarted )
 		return;

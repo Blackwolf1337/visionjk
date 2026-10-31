@@ -108,6 +108,7 @@ int BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d ) {
 	switch ( d->what ) {
 	case BOX_DO_PLACE:
 	case BOX_DO_MOVE:
+	case BOX_DO_TV:
 		if ( len + 14 > outSize )
 			return 0;
 		Box_PutPlace( out + len, d->origin, d->yaw );
@@ -178,6 +179,7 @@ qboolean BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d ) {
 	switch ( d->what ) {
 	case BOX_DO_PLACE:
 	case BOX_DO_MOVE:
+	case BOX_DO_TV:
 		return ( len == at + 14 && Box_GetPlace( in + at, d->origin, &d->yaw ) ) ? qtrue : qfalse;
 	case BOX_DO_SYSTEM:
 		return ( len == at + 3 * 14 && Box_GetPlace( in + at, d->origin, &d->yaw ) && Box_GetPlace( in + at + 14, d->parts[0], &d->partYaw[0] )
@@ -303,6 +305,13 @@ int BG_BoxSayPack( byte *out, int outSize, const boxSay_t *s ) {
 	case BOX_SAY_HELLO:
 		out[2] = (byte)s->caps;
 		return 3;
+	case BOX_SAY_VIDEO:
+		n = (int)strlen( s->video );
+		if ( outSize < 3 + 11 || ( n != 0 && n != 11 ) )
+			return 0;
+		out[2] = (byte)n;
+		memcpy( out + 3, s->video, n );
+		return 3 + n;
 	}
 	return 0;
 }
@@ -375,6 +384,12 @@ qboolean BG_BoxSayUnpack( const byte *in, int len, boxSay_t *s ) {
 			return qfalse;
 		s->caps = in[2];
 		return qtrue;
+	case BOX_SAY_VIDEO:
+		if ( len < 3 || ( in[2] != 0 && in[2] != 11 ) || len != 3 + in[2] )
+			return qfalse;
+		memcpy( s->video, in + 3, in[2] );
+		s->video[in[2]] = '\0';
+		return ( !in[2] || strspn( s->video, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" ) == 11 ) ? qtrue : qfalse;
 	}
 	return qfalse;
 }

@@ -2301,6 +2301,14 @@ REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
 LANG_GERMAN         "Soundanlage hier aufstellen"
 
+REFERENCE           TV
+LANG_ENGLISH        "TV"
+LANG_GERMAN         "Fernseher"
+
+REFERENCE           PUT_A_TV_HERE
+LANG_ENGLISH        "Put a TV here"
+LANG_GERMAN         "Fernseher hier aufstellen"
+
 REFERENCE           PLAY
 LANG_ENGLISH        "Play"
 LANG_GERMAN         "Abspielen"

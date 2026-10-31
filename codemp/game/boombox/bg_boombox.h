@@ -91,6 +91,12 @@ to a client		BOX_SAY_LIST box lineRev[2] place total seconds[2] titleLen title b
 to a client		BOX_SAY_RIG box kind left[14] right[14]	after the BOX_SAY_SET of a sound system: where its
 													speakers stand (x[4] y[4] z[4] yaw[2] each), since 0.2.4
 to a client		BOX_SAY_HELLO 255 caps				the master knows BOX_CAP_SYSTEM, since 0.2.4
+to a client		BOX_SAY_VIDEO box idLen id			after the BOX_SAY_SET of a TV: the video of its song, since 0.2.9
+
+A TV (BOX_KIND_TV, since 0.2.9) is placed as a boombox is, with "vs_boxaction tv <x y z yaw>" or BOX_DO_TV, and is
+there only for a client that said BOX_CAP_TV in its hello (or BOX_STATE_TVS in its state to the master). Its "vs_box
+set" ends as the one of a sound system, with the kind and eight zeros, and then the video of its song (11
+characters, or - for none). Its picture comes from the TV of the masterserver over HTTPS (master/ms_tv.c).
 
 The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
 know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
@@ -127,6 +133,7 @@ looks at the bits of its four boxes only.
 // the sound system (BOX_KIND_SYSTEM): a DJ table where the box stands, and two big speakers. Origins on the floor.
 #define BOX_KIND_BOOMBOX	0
 #define BOX_KIND_SYSTEM		1
+#define BOX_KIND_TV			2			// the TV (since 0.2.9): a box that shows the video of its song (master/ms_tv.c)
 #define BOX_PARTS			3			// what of a box stands somewhere: the box or the table, and the two speakers
 #define BOX_PART_BODY		0
 #define BOX_PART_LEFT		1
@@ -143,6 +150,9 @@ looks at the bits of its four boxes only.
 #define SYS_FOOT_SPK		10.0f		//	and where a speaker goes
 #define SYS_APART			40.0f		// a part of a sound system stands at least this far from any other part
 #define SYS_RANGE_SCALE		2.0f		// a sound system is heard this many times as far as a boombox (vs_boomboxRange)
+#define TV_FOOT				24.0f		// the TV: what has to fit on the floor where it goes, from its middle,
+#define TV_MOUTH			40.0f		//	where its sound comes from, above its origin,
+#define TV_APART			48.0f		//	and how far it stands from any other part at least
 
 #define BOX_MASTER_MAX		4			// boxes a room of the masterserver has at most
 #define BOX_NAME_MAX		35			// bytes of the name in a VOICE_BOX to the master at most
@@ -162,6 +172,7 @@ looks at the bits of its four boxes only.
 #define BOX_DO_WATCH		12
 #define BOX_DO_SYSTEM		13			// since 0.2.4
 #define BOX_DO_PART			14
+#define BOX_DO_TV			15			// since 0.2.9, to a master that said BOX_CAP_TV: a new TV, as BOX_DO_PLACE
 
 // what the masterserver says to a client
 #define BOX_SAY_SET			1
@@ -171,12 +182,15 @@ looks at the bits of its four boxes only.
 #define BOX_SAY_LIST		5
 #define BOX_SAY_RIG			6			// since 0.2.4
 #define BOX_SAY_HELLO		7
+#define BOX_SAY_VIDEO		8			// since 0.2.9: after the BOX_SAY_SET of a TV, the video of its song
 
 #define BOX_STATE_SYSTEMS	0x80		// in the byte of the boxes a client hears: it draws sound systems
+#define BOX_STATE_TVS		0x40		//	and TVs
 
 // what the server can do of what came after 0.1.8, in "vs_box on"
 #define BOX_CAP_MORE		1			// who put a box down, its line, seek, drop, watch
 #define BOX_CAP_SYSTEM		2			// the sound system (since 0.2.4). Also what a client says in its hello
+#define BOX_CAP_TV			4			// the TV (since 0.2.9), the same
 
 // the flags of "vs_box set"
 #define BOX_PLAYING			1			// a song plays, or is about to
@@ -206,6 +220,7 @@ typedef struct boxSay_s {
 	int		volume, flags, msec, length, waiting;
 	char	title[BOX_TITLE], next[BOX_TITLE];
 	char	text[256];			// of a note
+	char	video[12];			// of a BOX_SAY_VIDEO: the eleven characters, "" none
 	char	owner[BOX_NAME_MAX + 1], by[BOX_NAME_MAX + 1];	// of an info, and by of a song of the line
 	int		place, total;		// of a song of the line: its place (0 plays) and how many there are; its title and
 								//	seconds are title and length

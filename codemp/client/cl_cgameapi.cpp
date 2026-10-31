@@ -2014,6 +2014,11 @@ void CL_BindCGame( void ) {
 		cgi.ext.S_SpatialMovers					= S_SpatialMovers;
 		cgi.ext.R_SetScopeEffect				= re->ext.SetScopeEffect;
 		cgi.ext.R_SetScreenEffect				= re->ext.SetScreenEffect;
+		cgi.ext.Video_Open						= CL_VideoOpen;
+		cgi.ext.Video_Advance					= CL_VideoAdvance;
+		cgi.ext.Video_State						= CL_VideoState;
+		cgi.ext.Video_Color						= CL_VideoColor;
+		cgi.ext.Video_Reset						= CL_VideoReset;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

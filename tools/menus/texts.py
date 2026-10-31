@@ -718,6 +718,8 @@ CGAME = {
     'Sound System': 'Soundanlage',
     'Put a boombox here': 'Boombox hier aufstellen',
     'Put a sound system here': 'Soundanlage hier aufstellen',
+    'TV': 'Fernseher',
+    'Put a TV here': 'Fernseher hier aufstellen',
     'Play': 'Abspielen',
     'Music Player': 'Musikplayer',
     'Louder': 'Lauter',

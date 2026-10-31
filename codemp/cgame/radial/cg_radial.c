@@ -37,7 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "cgame/boombox/cg_boombox.h"
 
-#define RADIAL_SLICES		8
+#define RADIAL_SLICES		9
 #define RADIAL_OUTER		124.0f		// the ring, from the middle, in units of the HUD
 #define RADIAL_INNER		48.0f		//	and its hole
 #define RADIAL_DEAD			20.0f		// the pointer nearer to the middle than this picks nothing new
@@ -58,7 +58,8 @@ typedef enum {
 	RAD_PLACE_BOX,				// the left slice: or RAD_MOVE on a box
 	RAD_PLACE_SYSTEM,			// the slice above it: or RAD_REMOVE on a box
 	RAD_MOVE,
-	RAD_REMOVE
+	RAD_REMOVE,
+	RAD_PLACE_TV				// the slice after it, with nothing on a box
 } radialAct_t;
 
 static struct {
@@ -100,9 +101,11 @@ static void Radial_Build( void ) {
 	if ( rad.piece >= 0 ) {
 		rad.acts[6] = RAD_MOVE;		rad.usable[6] = qtrue;
 		rad.acts[7] = RAD_REMOVE;	rad.usable[7] = qtrue;
+		rad.acts[8] = RAD_PLACE_TV;	rad.usable[8] = qfalse;
 	} else {
 		rad.acts[6] = RAD_PLACE_BOX;	rad.usable[6] = on;
 		rad.acts[7] = RAD_PLACE_SYSTEM;	rad.usable[7] = CG_BoomboxSystems();
+		rad.acts[8] = RAD_PLACE_TV;		rad.usable[8] = CG_BoomboxTvs();
 	}
 }
 
@@ -122,6 +125,7 @@ static const char *Radial_Short( radialAct_t act ) {
 	case RAD_QUIETER:		return CG_VisionText( "Quieter" );
 	case RAD_PLACE_BOX:		return CG_VisionText( "Boombox" );
 	case RAD_PLACE_SYSTEM:	return CG_VisionText( "Sound System" );
+	case RAD_PLACE_TV:		return CG_VisionText( "TV" );
 	case RAD_MOVE:			return CG_VisionText( "Move it" );
 	case RAD_REMOVE:		return CG_VisionText( "Remove" );
 	}
@@ -144,6 +148,7 @@ static const char *Radial_Long( radialAct_t act ) {
 	case RAD_QUIETER:		return CG_VisionTextWith( "Quieter for everybody (%i %%)", va( "%i", info.volume ) );
 	case RAD_PLACE_BOX:		return CG_VisionText( "Put a boombox here" );
 	case RAD_PLACE_SYSTEM:	return CG_VisionText( "Put a sound system here" );
+	case RAD_PLACE_TV:		return CG_VisionText( "Put a TV here" );
 	case RAD_MOVE:			return CG_VisionText( "Move it" );
 	case RAD_REMOVE:		return CG_VisionText( ( rad.confirmTime && cg.time - rad.confirmTime < RADIAL_CONFIRM_MSEC )
 								? "Click again to take it away" : "Take it away" );
@@ -192,6 +197,9 @@ static qboolean Radial_Run( radialAct_t act ) {
 		break;
 	case RAD_PLACE_SYSTEM:
 		CG_BoomboxPlaceSystem();
+		break;
+	case RAD_PLACE_TV:
+		CG_BoomboxPlaceTv();
 		break;
 	case RAD_PLAY:
 		CG_BoomboxPrompt( box );

@@ -368,6 +368,8 @@ endif(BuildMPEngine OR BuildMPDed)
 if(BuildMPEngine)
 	set(MPEngineLibraries ${MPEngineAndDedLibraries})
 	set(MPEngineIncludeDirectories ${MPEngineAndDedIncludeDirectories})
+	# lib/pl_mpeg for the video of the screens (client/cl_video.cpp)
+	set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${VisionJKLibDir})
 	set(MPEngineFiles ${MPEngineAndDedFiles})
 	set(MPEngineDefines ${MPSharedDefines})
 
@@ -550,6 +552,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_cgameapi.cpp"
 		"${MPDir}/client/cl_cgameapi.h"
 		"${MPDir}/client/cl_cin.cpp"
+		"${MPDir}/client/cl_video.cpp"
 		"${MPDir}/client/cl_console.cpp"
 		"${MPDir}/client/cl_font.cpp"
 		"${MPDir}/client/cl_ids.cpp"
@@ -963,6 +966,8 @@ if(BuildMasterServer)
 		"${MPDir}/master/ms_repnet.h"
 		"${MPDir}/master/ms_http.c"
 		"${MPDir}/master/ms_http.h"
+		"${MPDir}/master/ms_tv.c"
+		"${MPDir}/master/ms_tv.h"
 		"${CMAKE_CURRENT_BINARY_DIR}/master_page.h"
 		"${MPDir}/master/ms_boombox.c"
 		"${MPDir}/master/ms_local.h"

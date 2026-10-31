@@ -123,7 +123,7 @@ qboolean Box_Crowded( const box_t *boxes, int numBoxes, const vec3_t spot, qbool
 		for ( part = 0; part < BOX_PARTS; part++ ) {
 			if ( ( i == self && part == selfPart ) || !Box_PartAt( &boxes[i], part, at, &yaw ) )
 				continue;
-			if ( Distance( at, spot ) < ( ( big || boxes[i].kind == BOX_KIND_SYSTEM ) ? SYS_APART : BOX_APART ) )
+			if ( Distance( at, spot ) < ( ( big || boxes[i].kind == BOX_KIND_SYSTEM ) ? SYS_APART : ( boxes[i].kind == BOX_KIND_TV ) ? TV_APART : BOX_APART ) )
 				return qtrue;
 		}
 	}

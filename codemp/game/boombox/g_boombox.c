@@ -48,6 +48,7 @@ char *ConcatArgs( int start );		// g_cmds.c
 typedef struct boxClient_s {
 	qboolean	hears;			// his cgame said "vs_box hello": it draws boxes, and he wants to hear them,
 	qboolean	systems;		//	sound systems too (BOX_CAP_SYSTEM)
+	qboolean	tvs;			//	and TVs (BOX_CAP_TV)
 	int			askTime;		// when he last asked for a song
 	int			watch;			// the box whose line he is sent whenever it changes, plus one. 0: none
 	int			watchRev;		//	the lineRev of it he was sent last
@@ -89,7 +90,7 @@ static void Box_Mouth( const box_t *box, int channel, vec3_t mouth ) {
 		return;
 	}
 	VectorCopy( box->origin, mouth );
-	mouth[2] += ( box->kind == BOX_KIND_SYSTEM ) ? SYS_DESK_HEIGHT : BOX_SPEAKER_HEIGHT;
+	mouth[2] += ( box->kind == BOX_KIND_SYSTEM ) ? SYS_DESK_HEIGHT : ( box->kind == BOX_KIND_TV ) ? TV_MOUTH : BOX_SPEAKER_HEIGHT;
 }
 
 // is this player one the boxes are for, and is he there
@@ -99,9 +100,13 @@ static qboolean Box_Hears( int clientNum ) {
 	return ( boxClients[clientNum].hears && ent->inuse && ent->client && ent->client->pers.connected == CON_CONNECTED ) ? qtrue : qfalse;
 }
 
-// is this box there for this player: a sound system only for a cgame that draws them
+// is this box there for this player: a sound system or a TV only for a cgame that draws them
 static qboolean Box_For( int b, int clientNum ) {
-	return ( boxes[b].kind != BOX_KIND_SYSTEM || boxClients[clientNum].systems ) ? qtrue : qfalse;
+	if ( boxes[b].kind == BOX_KIND_SYSTEM )
+		return boxClients[clientNum].systems;
+	if ( boxes[b].kind == BOX_KIND_TV )
+		return boxClients[clientNum].tvs;
+	return qtrue;
 }
 
 /*
@@ -174,7 +179,9 @@ static void Box_TellTo( int b, int clientNum ) {
 		// (the speakers of a sound system after them, which only a cgame that draws them is sent)
 		( box->kind == BOX_KIND_SYSTEM ) ? va( " %i %i %i %i %i %i %i %i %i", box->kind, (int)box->parts[0][0], (int)box->parts[0][1],
 			(int)box->parts[0][2], (int)box->partYaw[0], (int)box->parts[1][0], (int)box->parts[1][1], (int)box->parts[1][2],
-			(int)box->partYaw[1] ) : "" ) );
+			(int)box->partYaw[1] ) :
+		// (and of a TV its kind and the video of its song)
+		( box->kind == BOX_KIND_TV ) ? va( " %i 0 0 0 0 0 0 0 0 %s", box->kind, box->numSongs ? box->songs[0].id : "-" ) : "" ) );
 	if ( boxClients[clientNum].watch == b + 1 && boxClients[clientNum].watchRev != box->lineRev )
 		Box_LineTo( b, clientNum );
 }
@@ -391,7 +398,8 @@ void Cmd_JPBox_f( gentity_t *ent ) {
 	boxClients[clientNum].hears = qtrue;
 	trap->Argv( 3, arg, sizeof( arg ) );
 	boxClients[clientNum].systems = ( atoi( arg ) & BOX_CAP_SYSTEM ) ? qtrue : qfalse;
-	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE | BOX_CAP_SYSTEM ) );
+	boxClients[clientNum].tvs = ( atoi( arg ) & BOX_CAP_TV ) ? qtrue : qfalse;
+	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE | BOX_CAP_SYSTEM | BOX_CAP_TV ) );
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		if ( boxes[i].inuse )
 			Box_TellTo( i, clientNum );
@@ -400,6 +408,8 @@ void Cmd_JPBox_f( gentity_t *ent ) {
 
 // how much floor a part of a box needs round its middle
 static float Box_Foot( int kind, int part ) {
+	if ( kind == BOX_KIND_TV )
+		return TV_FOOT;
 	if ( kind != BOX_KIND_SYSTEM )
 		return BOX_FOOT;
 	return ( part == BOX_PART_BODY ) ? SYS_FOOT_DESK : SYS_FOOT_SPK;
@@ -470,8 +480,8 @@ static int Box_Free( int clientNum ) {
 	return i;
 }
 
-// a new box, -1: none, the player is told why
-static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
+// a new box (or TV), -1: none, the player is told why
+static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw, int kind ) {
 	const int	clientNum = ent - g_entities;
 	vec3_t		spot;
 	char		why[64];
@@ -479,12 +489,13 @@ static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
 
 	if ( i < 0 )
 		return -1;
-	if ( !Box_Spot( ent, wanted, BOX_FOOT, qfalse, -1, -1, spot, why, sizeof( why ) ) ) {
+	if ( !Box_Spot( ent, wanted, Box_Foot( kind, BOX_PART_BODY ), (qboolean)( kind == BOX_KIND_TV ), -1, -1, spot, why, sizeof( why ) ) ) {
 		Box_Note( clientNum, va( "^5Boombox^7: not put there, %s", why ) );
 		return -1;
 	}
 	memset( &boxes[i], 0, sizeof( boxes[i] ) );
 	boxes[i].inuse = qtrue;
+	boxes[i].kind = kind;
 	VectorCopy( spot, boxes[i].origin );
 	boxes[i].yaw = AngleNormalize360( yaw );
 	boxes[i].volume = BOX_VOLUME;
@@ -547,7 +558,7 @@ static int Box_PlaceInFront( gentity_t *ent ) {
 	AngleVectors( tv( 0.0f, ent->client->ps.viewangles[YAW], 0.0f ), forward, NULL, NULL );
 	VectorMA( ent->client->ps.origin, 48.0f, forward, wanted );
 	wanted[2] += 8.0f;
-	return Box_Place( ent, wanted, ent->client->ps.viewangles[YAW] + 180.0f );
+	return Box_Place( ent, wanted, ent->client->ps.viewangles[YAW] + 180.0f, BOX_KIND_BOOMBOX );
 }
 
 // the box nearest to a player within twice his reach, -1: none
@@ -619,7 +630,7 @@ static void Box_List( int clientNum ) {
 		if ( !box->inuse || !Box_For( i, clientNum ) )
 			continue;
 		count++;
-		trap->SendServerCommand( clientNum, va( "print \"%s %i, volume %i%s%s\n\"", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : "Boombox", i, box->volume,
+		trap->SendServerCommand( clientNum, va( "print \"%s %i, volume %i%s%s\n\"", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : ( box->kind == BOX_KIND_TV ) ? "TV" : "Boombox", i, box->volume,
 			box->paused ? ", paused" : "", box->looking ? ", looking a song up" : "" ) );
 		for ( k = 0; k < box->numSongs; k++ ) {
 			Box_TextFor( clientNum, box->songs[k].title, line, sizeof( line ) );
@@ -686,8 +697,9 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		Box_Usage( clientNum );
 		return;
 	}
-	if ( !Q_stricmp( what, "place" ) ) {
-		Box_Place( ent, tv( Box_ArgFloat( 2 ), Box_ArgFloat( 3 ), Box_ArgFloat( 4 ) ), Box_ArgFloat( 5 ) );
+	if ( !Q_stricmp( what, "place" ) || !Q_stricmp( what, "tv" ) ) {
+		Box_Place( ent, tv( Box_ArgFloat( 2 ), Box_ArgFloat( 3 ), Box_ArgFloat( 4 ) ), Box_ArgFloat( 5 ),
+			!Q_stricmp( what, "tv" ) ? BOX_KIND_TV : BOX_KIND_BOOMBOX );
 		return;
 	}
 	if ( !Q_stricmp( what, "system" ) ) {
@@ -747,7 +759,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 			return;
 		}
 		VectorSet( at, Box_ArgFloat( first ), Box_ArgFloat( first + 1 ), Box_ArgFloat( first + 2 ) );
-		if ( !Box_Spot( ent, at, Box_Foot( box->kind, part ), (qboolean)( box->kind == BOX_KIND_SYSTEM ), b, part, spot, why, sizeof( why ) ) ) {
+		if ( !Box_Spot( ent, at, Box_Foot( box->kind, part ), (qboolean)( box->kind != BOX_KIND_BOOMBOX ), b, part, spot, why, sizeof( why ) ) ) {
 			Box_Note( clientNum, va( "^5Boombox^7: not moved there, %s", why ) );
 			// (his cgame shows it where it was again)
 			Box_TellTo( b, clientNum );
@@ -790,7 +802,7 @@ void Svcmd_Boombox_f( void ) {
 
 		if ( !box->inuse )
 			continue;
-		trap->Print( "%s %i at %i %i %i, volume %i%s%s%s\n", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : "Boombox", i,
+		trap->Print( "%s %i at %i %i %i, volume %i%s%s%s\n", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : ( box->kind == BOX_KIND_TV ) ? "TV" : "Boombox", i,
 			(int)box->origin[0], (int)box->origin[1], (int)box->origin[2],
 			box->volume, box->paused ? ", paused" : "", box->streaming && !box->started ? ", fetching" : "",
 			box->looking ? ", looking a song up" : "" );

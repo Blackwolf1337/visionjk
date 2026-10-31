@@ -3109,6 +3109,10 @@ void CL_Init( void ) {
 	// and the view through the scope of a weapon (R_SetScopeEffect), and the screen effects (R_SetScreenEffect)
 	Cvar_Get( "v_cgameScope", "1", CVAR_ROM, "" );
 	Cvar_Get( "v_cgameScreenFx", "1", CVAR_ROM, "" );
+	// and the videos on the screens of the level (ext.Video_*, cl_video.cpp)
+	Cvar_Get( "v_cgameVideo", "1", CVAR_ROM, "" );
+	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test
+	Cvar_Get( "v_tvService", "https://jka.vision/tv/", CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
 	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())
 	Cvar_Get( "v_scopeWheel", "0", 0, "" );
 	// set by a cgame and a ui of this tree, which follow a new size of the window without a vid_restart

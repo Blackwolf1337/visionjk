@@ -68,6 +68,7 @@ set(TestCFiles
 	"${MPDir}/game/toys/bg_toys.c"
 	"${MPDir}/game/toys/bg_toys.h"
 	"${MPDir}/game/auth/bg_auth.c"
+	"${MPDir}/game/boombox/bg_boombox.c"
 	"${MPDir}/game/boombox/bg_boombox_core.c"
 	"${MPDir}/game/boombox/bg_boombox_fetch.c"
 	"${MPDir}/ui/ui_markdown.c"
