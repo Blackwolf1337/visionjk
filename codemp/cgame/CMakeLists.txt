@@ -252,9 +252,11 @@ set(MPCGameModelStoreFiles
 source_group("cgame/modelstore" FILES ${MPCGameModelStoreFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameModelStoreFiles})
 
-# the toys of issue #9 that only players of this tree see: the snowball
+# the toys of issue #9 that only players of this tree see: the snowball, the water gun
 set(MPCGameToysFiles
 	"${MPDir}/cgame/toys/cg_toys.c"
+	"${MPDir}/cgame/toys/cg_toys.h"
+	"${MPDir}/cgame/toys/cg_water.c"
 	)
 source_group("cgame/toys" FILES ${MPCGameToysFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameToysFiles})

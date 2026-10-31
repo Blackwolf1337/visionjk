@@ -18,7 +18,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cg_toys.c -- the toys of issue #9 that only players of this tree see, the snowball first. Hold +v_snowball
+// cg_toys.c -- the toys of issue #9 that only players of this tree see: the snowball here, the water gun in
+// cg_water.c. Hold +v_snowball
 // (Controls, Extras) and let go: the longer it was held, the further it flies. The ball is no entity of the server:
 // this cgame lets it fly, and tells the others where it left the hand and how fast (game/toys/bg_toys.h). On a
 // server of this tree that goes through the game module (vs_caps bit 9, toys/g_toys.c), on any other through the
@@ -30,7 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // moment. v_toys 0: the toys of the others are not drawn. Not from JA+, see docs/japlus/toys.md.
 
 #include "cgame/cg_local.h"
-#include "game/toys/bg_toys.h"
+#include "cgame/toys/cg_toys.h"
 
 #define TOY_BALLS			32			// balls in the air at once
 #define TOY_SPLATS			4			// snow on the own screen at once
@@ -108,15 +109,18 @@ static void Toys_Spawn( int owner, const vec3_t origin, const vec3_t velocity ) 
 	VectorCopy( velocity, ball->velocity );
 }
 
-// a throw of somebody else, from the game module or the masterserver
+// a throw of somebody else, from the game module or the masterserver: a snowball, or the jet of a water gun
 static void Toys_Heard( int client, const toyThrow_t *toy ) {
 	vec3_t origin, velocity;
 
-	if ( !v_toys.integer || client < 0 || client >= MAX_CLIENTS || client == cg.clientNum || toy->kind != TOY_SNOWBALL )
+	if ( !v_toys.integer || client < 0 || client >= MAX_CLIENTS || client == cg.clientNum )
 		return;
 	VectorSet( origin, (float)toy->origin[0], (float)toy->origin[1], (float)toy->origin[2] );
 	VectorSet( velocity, (float)toy->velocity[0], (float)toy->velocity[1], (float)toy->velocity[2] );
-	Toys_Spawn( client, origin, velocity );
+	if ( toy->kind == TOY_SNOWBALL )
+		Toys_Spawn( client, origin, velocity );
+	else if ( toy->kind == TOY_WATER )
+		CG_WaterHeard( client, origin, velocity );
 }
 
 /*
@@ -149,8 +153,8 @@ void CG_ToyFromMaster( int client, const byte *data, int len ) {
 		Toys_Heard( client, &toy );
 }
 
-// the own player can throw now: in the game, alive, playing
-static qboolean Toys_CanThrow( void ) {
+// the own player can use a toy now: in the game, alive, playing
+qboolean CG_ToyCanUse( void ) {
 	const playerState_t *ps = &cg.predictedPlayerState;
 
 	return (qboolean)( cg.snap && !cg.demoPlayback && cg.snap->ps.clientNum == cg.clientNum && ps->pm_type != PM_SPECTATOR
@@ -158,7 +162,7 @@ static qboolean Toys_CanThrow( void ) {
 }
 
 void CG_SnowballDown_f( void ) {
-	if ( Toys_CanThrow() && !toys.chargeStart )
+	if ( CG_ToyCanUse() && !toys.chargeStart )
 		toys.chargeStart = cg.time ? cg.time : 1;
 }
 
@@ -172,7 +176,7 @@ void CG_SnowballUp_f( void ) {
 	int					i;
 
 	toys.chargeStart = 0;
-	if ( !held || !Toys_CanThrow() || cg.time - toys.lastThrow < TOY_GAP_MSEC )
+	if ( !held || !CG_ToyCanUse() || cg.time - toys.lastThrow < TOY_GAP_MSEC )
 		return;
 	toys.lastThrow = cg.time;
 	power = Com_Clamp( 0.25f, 1.0f, (float)held / TOY_CHARGE_MSEC );
@@ -200,13 +204,19 @@ void CG_SnowballUp_f( void ) {
 	// the others get the same numbers this cgame flies with
 	VectorSet( origin, (float)toy.origin[0], (float)toy.origin[1], (float)toy.origin[2] );
 	Toys_Spawn( cg.clientNum, origin, velocity );
+	CG_ToySend( &toy );
+}
+
+// A toy of the own player goes to the others: through the game module of a server of this tree, else through the
+// masterserver
+void CG_ToySend( const toyThrow_t *toy ) {
 	if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & 512 ) {
-		trap->SendClientCommand( va( "vs_toy %i %i %i %i %i %i %i", toy.kind, toy.origin[0], toy.origin[1], toy.origin[2],
-			toy.velocity[0], toy.velocity[1], toy.velocity[2] ) );
+		trap->SendClientCommand( va( "vs_toy %i %i %i %i %i %i %i", toy->kind, toy->origin[0], toy->origin[1], toy->origin[2],
+			toy->velocity[0], toy->velocity[1], toy->velocity[2] ) );
 	} else if ( CG_VoiceToys() ) {
 		byte buf[TOY_BYTES];
 
-		CG_VoiceSendToy( buf, BG_ToyPack( &toy, buf ) );
+		CG_VoiceSendToy( buf, BG_ToyPack( toy, buf ) );
 	}
 }
 
@@ -226,9 +236,9 @@ static void Toys_SplatScreen( void ) {
 	splat->angle = Q_flrand( 0.0f, 360.0f );
 }
 
-// How bright snow is at point, 0 to 1 for red, green and blue: the light of the level there (its light grid), so
-// a ball and a splat in the dark are not white
-static void Toys_Light( const vec3_t point, vec3_t out ) {
+// How bright a toy is at point, 0 to 1 for red, green and blue: the light of the level there (its light grid), so
+// a ball, a splat or a jet of water in the dark are not white
+void CG_ToyLight( const vec3_t point, vec3_t out ) {
 	vec3_t	ambient, directed, dir, at;
 	int		i;
 
@@ -263,7 +273,7 @@ static void Toys_Burst( const toyBall_t *ball, const trace_t *tr ) {
 	if ( tr->entityNum == ENTITYNUM_WORLD && !( tr->surfaceFlags & SURF_SKY ) ) {
 		vec3_t light;
 
-		Toys_Light( tr->endpos, light );
+		CG_ToyLight( tr->endpos, light );
 		CG_ImpactMark( toys.splatShader, tr->endpos, normal, Q_flrand( 0.0f, 360.0f ), light[0], light[1], light[2], 1.0f, qtrue,
 			Q_flrand( 7.0f, 11.0f ), qfalse );
 	}
@@ -307,6 +317,7 @@ While the scene of the frame is built: the balls fly on and are drawn
 void CG_ToysScene( void ) {
 	int i;
 
+	CG_WaterScene();
 	for ( i = 0; i < TOY_BALLS; i++ ) {
 		toyBall_t	*ball = &toys.balls[i];
 		refEntity_t	ent;
@@ -324,7 +335,7 @@ void CG_ToysScene( void ) {
 		ent.radius = TOY_RADIUS + 0.5f;
 		ent.rotation = ball->spin;
 		ent.customShader = toys.ballShader;
-		Toys_Light( ball->origin, light );
+		CG_ToyLight( ball->origin, light );
 		ent.shaderRGBA[0] = (byte)( light[0] * 255.0f );
 		ent.shaderRGBA[1] = (byte)( light[1] * 255.0f );
 		ent.shaderRGBA[2] = (byte)( light[2] * 255.0f );
@@ -336,7 +347,8 @@ void CG_ToysScene( void ) {
 // once a frame: the masterserver hears now and then that this cgame draws toys
 void CG_ToysFrame( void ) {
 	trap->Cvar_Update( &v_toys );
-	if ( toys.chargeStart && !Toys_CanThrow() )
+	CG_WaterFrame();
+	if ( toys.chargeStart && !CG_ToyCanUse() )
 		toys.chargeStart = 0;
 	if ( v_toys.integer && CG_VoiceToys() && ( !toys.helloTime || cg.time - toys.helloTime >= TOY_HELLO_MSEC || cg.time < toys.helloTime ) ) {
 		toyThrow_t	hello;
@@ -379,4 +391,5 @@ void CG_ToysDraw( void ) {
 // a new level or a new start of the cgame: nothing flies, nothing sticks
 void CG_ToysInit( void ) {
 	memset( &toys, 0, sizeof( toys ) );
+	CG_WaterInit();
 }

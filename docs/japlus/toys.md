@@ -5,19 +5,30 @@ Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, 
 
 ## For players
 
-The first toy is the snowball. Hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go to
-throw. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
+The first toy is the snowball. The second is the water gun, described below.
+
+To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
 
 The ball bursts on what it hits: powder, chunks and the crunch of snow. It leaves a splat on walls and floors that
 melts away like other marks. Whoever is hit gets snow on the screen for 3 seconds. It hurts nobody.
 
-Only players of VisionJK see it. Others see nothing. It works on any server: on a VisionJK server through the game
+To spray water, hold `+v_water` (Controls, Extras, "Water Gun"). A jet of water leaves where you look, at 720 units a
+second, a drop every 18 ms, and it falls with gravity. It splashes where it hits: drops, mist and the sound of water
+steps. On a floor a puddle grows while the water comes (up to 36 units) and dries after 20 seconds, fading in the
+second half. On a wall it leaves a wet patch (up to 18 units).
+
+Who is hit in the face sees drops run down the view. These are the drops of rd-vulkan-vision when you come up out of
+the water, and they need `v_fxWater`. The OpenGL renderer has no such effect. On rd-vulkan-vision the jet also bends
+the picture behind it (`v_fxWater`). `v_toys 0` hides the water of others too.
+
+Only players of VisionJK see the toys. Others see nothing. It works on any server: on a VisionJK server through the game
 module, on any other through the masterserver. `v_toys 0` hides the toys of others.
 
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|
 | `+v_snowball` | | hold to wind up, let go to throw |
+| `+v_water` | | hold to spray water |
 | `v_toys` | 1 | 0: the toys of other players are not drawn |
 
 ## How it works
@@ -36,7 +47,17 @@ On any other server it goes through the masterserver (`VOICE_TOY`). The master h
 room that said `TOY_HELLO` or threw, 4 a second at most. It refuses broken or too fast throws. The cgame says hello
 every 20 s.
 
-The look:
+The water gun is not a throw. The jet is drops that fly on their own, each drawn as a piece of water (`RT_LINE`) to
+the drop before it, so the jet bends as it falls. The others get `TOY_WATER` (the same 19 bytes as a snowball: where
+the water leaves the gun and how fast) every 260 ms while it sprays, and their cgame sprays from there for 340 ms, so
+the jet of somebody else turns in steps. The limits of the relays (4 a second) count snowballs and water together.
+
+Puddles and wet patches are temporary marks drawn anew every frame with their size and wetness (24 at once). The
+textures come from `tools/toys/textures.py` (`waterstream`, `waterdrop`, `wet`, `puddle`, `puddleshine`). The shine is
+masked to the puddle shape, so the added light stays inside it. The splash is `effects/vision/water_splash.efx`. The
+masterserver and the game module have to know `TOY_WATER` (0.2.9-dev.25 and later).
+
+The snowball is drawn from these files:
 
 - the textures are drawn by `tools/toys/textures.py` (`snowball`, `snowpuff`, `snowsplat`);
 - `shaders/vision_toys.shader` holds their shaders;
@@ -52,7 +73,11 @@ are black.
 A local server with two clients placed in front of each other. The ball of the thrower flew, the other client was hit
 and got snow on its screen. A throw at the floor showed the burst and the splat.
 
+For the water gun, one client sprayed the floor (jet, splash, and a puddle that stays after). Two clients on a local
+server, where the thrower sprayed the other: the target received the `TOY_WATER` server commands, drew the jet and saw
+the drops run down its view. There is a unit test for `TOY_WATER` in `tests/vjk/toys.cpp`.
+
 The masterserver relay was tested with a UDP script: hello, a throw handed on, four of six in a second, a too fast
 one refused. The unit tests are in `tests/vjk/toys.cpp`.
 
-Not run: a real game with people, Windows, a server without the game module of VisionJK in a real game.
+Not run: a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

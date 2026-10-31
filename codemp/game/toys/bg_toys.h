@@ -39,7 +39,8 @@ extern "C" {
 
 #define TOY_HELLO			0		// to the masterserver only: this cgame wants the throws of the others
 #define TOY_SNOWBALL		1
-#define TOY_KINDS			2
+#define TOY_WATER			2		// the jet of a water gun: where it leaves the gun and how fast, again and again while it sprays
+#define TOY_KINDS			3
 
 #define TOY_BYTES			19		// a throw as bytes: 1 + 3 * 4 + 3 * 2
 #define TOY_HELLO_BYTES		1

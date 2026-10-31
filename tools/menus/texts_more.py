@@ -701,6 +701,8 @@ MORE = {
     'Model Store': ('Boutique de modèles', 'Tienda de modelos'),
     'Throw Snowball': ('Lancer une boule de neige', 'Lanzar bola de nieve'),
     'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.': ("Maintenez pour prendre son élan, relâchez pour lancer : plus vous maintenez, plus elle va loin. Seuls les joueurs de VisionJK la voient.", 'Mantén para tomar impulso, suelta para lanzar: cuanto más mantengas, más lejos vuela. Solo los jugadores de VisionJK la ven.'),
+    'Water Gun': ('Pistolet à eau', 'Pistola de agua'),
+    'Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it.': ("Maintenez pour projeter de l'eau là où vous regardez : elle éclabousse, laisse des flaques qui sèchent, et celui qui est touché voit des gouttes couler sur sa vue. Seuls les joueurs de VisionJK la voient.", 'Mantén para lanzar agua adonde miras: salpica, deja charcos que se secan, y quien es alcanzado ve gotas correr por la vista. Solo los jugadores de VisionJK la ven.'),
     'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': ("Ouvre la boutique de modèles de jka.vision : récupérez les modèles de joueur envoyés par d'autres et utilisez-les aussitôt.", 'Abre la tienda de modelos de jka.vision: consigue modelos de jugador que otros subieron y úsalos al instante.'),
     '%s models': ('%s modèles', '%s modelos'),
     'The store has no models yet.': ("La boutique n'a pas encore de modèles.", 'La tienda aún no tiene modelos.'),

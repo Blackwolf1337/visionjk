@@ -1815,6 +1815,8 @@ qboolean	CG_ScreenFxForceDrawn( void );
 void		CG_ScreenFxPlayer( centity_t *cent );
 void		CG_ScreenFxFlash( const vec3_t origin, float size, float strength );
 void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
+void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength );
+void		CG_ScreenFxWet( void );
 qboolean	CG_ScreenFxSightDrawn( void );
 void		CG_ScreenFxGhostBody( refEntity_t *body );
 void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );
@@ -1995,6 +1997,8 @@ void		CG_ToyServerCommand( void );			// vs_toy
 void		CG_ToyFromMaster( int client, const byte *data, int len );
 void		CG_SnowballDown_f( void );				// +v_snowball
 void		CG_SnowballUp_f( void );
+void		CG_WaterDown_f( void );					// +v_water (toys/cg_water.c)
+void		CG_WaterUp_f( void );
 qboolean	CG_VoiceToys( void );					// voice/cg_voice.c
 void		CG_VoiceSendToy( const byte *data, int len );
 void CG_LookFromMaster( int client, const char *text );

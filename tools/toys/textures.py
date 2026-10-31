@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Draws the pictures of the snowball (issue #9, cgame/toys/cg_toys.c) into assets/japlus_client/gfx/vision/toys:
+"""Draws the pictures of the toys of issue #9 (cgame/toys/cg_toys.c) into assets/japlus_client/gfx/vision/toys:
 
   snowball.png    the ball in flight, a sprite: a lit sphere of packed snow, soft at its rim
-  snowpuff.png    a puff of powder for the burst (effects/vision/snowball_hit.efx)
+  snowpuff.png    a puff of powder for the burst (effects/vision/snowball_hit.efx), and of mist for the water
   snowsplat.png   what stays: on a wall as a mark that melts away, and on the screen of the one who is hit
+  waterstream.png the jet of the water gun, along its length: clear water with a bright core and dark rims
+  waterdrop.png   a drop for the splash (effects/vision/water_splash.efx)
+  wet.png         a wet patch on a wall: darker, soft and uneven at its rim
+  puddle.png      a puddle on the floor, and puddleshine.png the light that plays on it
 
 Made from noise with a fixed seed, so the pictures come out the same every time. usage: tools/toys/textures.py
 """
@@ -108,9 +112,82 @@ def snowsplat( size=256 ):
 	return img.filter( ImageFilter.GaussianBlur( 0.6 ) )
 
 
+def waterstream( w=64, h=32 ):
+	"""Across the height the profile of a jet of water: the core lets the light through and shines, the rims are
+	darker where the jet bends what is behind it. Along the width it wobbles a little, so it can be scrolled."""
+	n = noise( max( w, h ), 8, 41 )
+	img = Image.new( 'RGBA', ( w, h ) )
+	for y in range( h ):
+		v = ( y + 0.5 ) / h * 2 - 1
+		for x in range( w ):
+			wob = 0.12 * ( n[y % len( n )][x] - 0.5 )
+			r = abs( v + wob )
+			if r >= 1:
+				img.putpixel( ( x, y ), ( 0, 0, 0, 0 ) )
+				continue
+			core = max( 0.0, 1 - r / 0.35 ) ** 2
+			rim = max( 0.0, ( r - 0.55 ) / 0.45 ) * ( 1 - r ) * 4
+			body = ( 1 - r * r )
+			col = ( int( 150 + 105 * core ), int( 190 + 65 * core ), int( 225 + 30 * core ) )
+			alpha = 0.22 * body + 0.55 * core + 0.35 * rim
+			img.putpixel( ( x, y ), col + ( int( 255 * min( 1.0, alpha ) ), ) )
+	return img
+
+
+def waterdrop( size=32 ):
+	img = Image.new( 'RGBA', ( size, size ) )
+	for y in range( size ):
+		for x in range( size ):
+			dx, dy = ( x + 0.5 ) / size * 2 - 1, ( y + 0.5 ) / size * 2 - 1
+			r = math.hypot( dx, dy )
+			if r >= 1:
+				img.putpixel( ( x, y ), ( 0, 0, 0, 0 ) )
+				continue
+			glint = max( 0.0, 1 - math.hypot( dx + 0.35, dy + 0.35 ) / 0.3 )
+			rim = r ** 3
+			v = 0.55 + 0.45 * glint
+			img.putpixel( ( x, y ), ( int( 170 * v + 85 * glint ), int( 205 * v + 50 * glint ), int( 240 * v + 15 * glint ),
+				int( 255 * min( 1.0, 0.35 + 0.5 * rim + 0.6 * glint ) * min( 1.0, ( 1 - r ) * 6 ) ) ) )
+	return img
+
+
+def patch( size, seed, lumps, edge, dark ):
+	"""A dark patch, black with an alpha that is soft and uneven at the rim: the colour of the surface under it
+	gets darker, as it does when it is wet."""
+	rnd = random.Random( seed )
+	n = octaves( size, seed, ( 32, 16, 8, 4 ) )
+	blobs = [ ( 0.0, 0.0, 0.5 ) ] + [ ( rnd.uniform( -0.4, 0.4 ), rnd.uniform( -0.4, 0.4 ), rnd.uniform( 0.15, 0.3 ) ) for _ in range( lumps ) ]
+	img = Image.new( 'RGBA', ( size, size ) )
+	for y in range( size ):
+		for x in range( size ):
+			dx, dy = ( x + 0.5 ) / size * 2 - 1, ( y + 0.5 ) / size * 2 - 1
+			field = sum( br * br / ( ( dx - bx ) ** 2 + ( dy - by ) ** 2 + 1e-4 ) for bx, by, br in blobs )
+			field *= 0.75 + 0.5 * n[y][x]
+			a = max( 0.0, min( 1.0, ( field - 1.0 ) * edge ) )
+			img.putpixel( ( x, y ), ( 0, 0, 0, int( 255 * dark * a * ( 0.85 + 0.15 * n[y][x] ) ) ) )
+	return img.filter( ImageFilter.GaussianBlur( 1.2 ) )
+
+
+def puddleshine( size=256 ):
+	"""What a puddle mirrors of the light: soft bright streaks on black, added on top, only inside the puddle (its
+	shape, a little smaller, so the light wobbling with tcMod turb stays in it)"""
+	n = octaves( size, 61, ( 32, 16, 8 ) )
+	mask = patch( size, 83, 6, 6.0, 1.0 ).filter( ImageFilter.GaussianBlur( 6 ) )
+	img = Image.new( 'RGBA', ( size, size ) )
+	for y in range( size ):
+		for x in range( size ):
+			v = max( 0.0, n[y][x] - 0.55 ) * 3.5
+			v = min( 1.0, v * v ) * ( mask.getpixel( ( x, y ) )[3] / 255.0 ) ** 2
+			img.putpixel( ( x, y ), ( int( 180 * v ), int( 200 * v ), int( 220 * v ), 255 ) )
+	return img
+
+
 def main():
 	os.makedirs( OUT, exist_ok=True )
-	for name, make in ( ( 'snowball', snowball ), ( 'snowpuff', snowpuff ), ( 'snowsplat', snowsplat ) ):
+	makers = ( ( 'snowball', snowball ), ( 'snowpuff', snowpuff ), ( 'snowsplat', snowsplat ), ( 'waterstream', waterstream ),
+		( 'waterdrop', waterdrop ), ( 'wet', lambda: patch( 128, 71, 4, 3.0, 0.4 ) ), ( 'puddle', lambda: patch( 256, 83, 6, 6.0, 0.55 ) ),
+		( 'puddleshine', puddleshine ) )
+	for name, make in makers:
 		path = os.path.join( OUT, name + '.png' )
 		make().save( path, optimize=True )
 		print( os.path.normpath( path ) )

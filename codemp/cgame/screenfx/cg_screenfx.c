@@ -421,6 +421,35 @@ void CG_ScreenFxEmit( int id, const vec3_t origin, const vec3_t dir, float radiu
 	}
 }
 
+/*
+=================
+CG_ScreenFxRefract
+
+Clear water along the line from a to b, radius units around it, for this frame: it bends what is behind it the
+way hot air does (the jet of the water gun, toys/cg_water.c). With v_fxWater.
+=================
+*/
+void CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength ) {
+	if ( CG_ScreenFxOn() && v_fxWater.integer ) {
+		CG_ScreenFxHeatLine( a, b, radius, 0.0f, strength );
+	}
+}
+
+/*
+=================
+CG_ScreenFxWet
+
+The own face got wet (the water gun of somebody, toys/cg_water.c): drops run down the view as after coming up out
+of the water
+=================
+*/
+void CG_ScreenFxWet( void ) {
+	if ( !( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+		sfx.surfaceTime = cg.time ? cg.time : 1;
+		sfx.waterContents = CONTENTS_WATER;
+	}
+}
+
 // the own weapon was fired: a repeater or a blaster gets hot
 void CG_ScreenFxFired( int weapon ) {
 	if ( weapon != WP_REPEATER && weapon != WP_BLASTER ) {

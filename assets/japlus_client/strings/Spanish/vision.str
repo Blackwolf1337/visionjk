@@ -149,6 +149,14 @@ REFERENCE           HOLD_TO_WIND_UP_LET_GO_TO_THROW_THE
 LANG_ENGLISH        "Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it."
 LANG_SPANISH        "Mantén para tomar impulso, suelta para lanzar: cuanto más mantengas, más lejos vuela. Solo los jugadores de VisionJK la ven."
 
+REFERENCE           WATER_GUN
+LANG_ENGLISH        "Water Gun"
+LANG_SPANISH        "Pistola de agua"
+
+REFERENCE           HOLD_TO_SPRAY_WATER_WHERE_YOU_LOOK_I
+LANG_ENGLISH        "Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it."
+LANG_SPANISH        "Mantén para lanzar agua adonde miras: salpica, deja charcos que se secan, y quien es alcanzado ve gotas correr por la vista. Solo los jugadores de VisionJK la ven."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_SPANISH        "Modo foto"

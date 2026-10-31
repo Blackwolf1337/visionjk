@@ -539,6 +539,8 @@ TR = {
     'Opens the model store of jka.vision: get player models others uploaded, and use them at once.': 'Öffnet den Modell-Store von jka.vision: hole Spielermodelle, die andere hochgeladen haben, und nutze sie sofort.',
     'Throw Snowball': 'Schneeball werfen',
     'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.': 'Halten zum Ausholen, loslassen zum Werfen: je länger du hältst, desto weiter fliegt er. Nur Spieler von VisionJK sehen ihn.',
+    'Water Gun': 'Wasserpistole',
+    'Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it.': 'Halten, um Wasser dorthin zu spritzen, wohin du schaust: es spritzt, hinterlässt Pfützen, die trocknen, und wer getroffen wird, sieht Tropfen über die Sicht laufen. Nur Spieler von VisionJK sehen es.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',
     'Blade Look': 'Klingenoptik',

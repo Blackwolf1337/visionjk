@@ -40,6 +40,18 @@ BOOST_AUTO_TEST_CASE( round_trip )
 	BOOST_CHECK( !BG_ToyUnpack( buf, 0, &out ) );
 }
 
+BOOST_AUTO_TEST_CASE( water )
+{
+	const toyThrow_t in = Throw( TOY_WATER, 3476, 1599, 1846, -720, 0, 0 );
+	byte buf[TOY_BYTES];
+	toyThrow_t out;
+
+	BOOST_REQUIRE_EQUAL( BG_ToyPack( &in, buf ), TOY_BYTES );
+	BOOST_REQUIRE( BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+	BOOST_CHECK_EQUAL( out.kind, TOY_WATER );
+	BOOST_CHECK_EQUAL( out.velocity[0], -720 );
+}
+
 BOOST_AUTO_TEST_CASE( hello )
 {
 	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );

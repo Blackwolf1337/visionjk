@@ -294,6 +294,8 @@ CONTROLS = [
          'Opens the model store of jka.vision: get player models others uploaded, and use them at once.'),
         ('bind', 'Throw Snowball', '+v_snowball',
          'Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it.'),
+        ('bind', 'Water Gun', '+v_water',
+         'Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),
