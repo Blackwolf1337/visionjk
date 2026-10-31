@@ -7138,9 +7138,11 @@ static void PM_Weapon( void )
 	bgEntity_t *veh = NULL;
 	qboolean vehicleRocketLock = qfalse;
 
-	// Not from JA+: as the physgun the stun baton does not fire, its buttons take and freeze props (g_props.c,
-	// which reads them from the command itself)
-	if ( pm->ps->weapon == WP_STUN_BATON && (pm->ps->stats[STAT_CARRY] & CARRY_PHYSGUN) )
+	// Not from JA+: in the sandbox (amsandbox) the stun baton, the Bryar pistol and the concussion rifle do not
+	// fire, their buttons work the physgun, the toolgun and the gravity gun (g_props.c and g_tools.c, which read
+	// them from the command itself)
+	if ( (pm->ps->stats[STAT_CARRY] & CARRY_PHYSGUN)
+		&& ( pm->ps->weapon == WP_STUN_BATON || pm->ps->weapon == WP_BRYAR_PISTOL || pm->ps->weapon == WP_CONCUSSION ) )
 	{
 		pm->cmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK);
 	}

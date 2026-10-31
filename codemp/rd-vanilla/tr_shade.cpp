@@ -1662,7 +1662,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 			if ( backEnd.currentEntity->e.renderfx & RF_RGB_TINT )
 			{//want to use RGBGen from ent
-				forceRGBGen = CGEN_ENTITY;
+				// VisionJK: a lit stage stays lit, with the colour of the entity on it (game/props/g_tools.c)
+				forceRGBGen = ( pStage->rgbGen == CGEN_LIGHTING_DIFFUSE ) ? CGEN_LIGHTING_DIFFUSE_ENTITY : CGEN_ENTITY;
 			}
 		}
 

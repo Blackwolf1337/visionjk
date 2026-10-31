@@ -2443,6 +2443,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	//CG_JPMacroScanFrame();
 	CG_VoiceFrame();
 	CG_BoomboxFrame();
+	CG_ToolsFrame();
 	CG_StatusFrame();
 	CG_LookFrame();
 	CG_AuthFrame();

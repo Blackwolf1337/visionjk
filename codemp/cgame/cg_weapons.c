@@ -1388,7 +1388,9 @@ and the previous weapon do not change the weapon, they move the prop along the b
 ===============
 */
 static qboolean CG_PhysgunWheel( qboolean away ) {
-	if ( !cg.snap || !(cg.predictedPlayerState.stats[STAT_CARRY] & CARRY_GUNHOLD) || cg.predictedPlayerState.weapon != WP_STUN_BATON )
+	const int weapon = cg.predictedPlayerState.weapon;
+
+	if ( !cg.snap || !(cg.predictedPlayerState.stats[STAT_CARRY] & CARRY_GUNHOLD) || ( weapon != WP_STUN_BATON && weapon != WP_CONCUSSION ) )
 		return qfalse;
 	trap->SendConsoleCommand( away ? "+button14\n-button14\n" : "+button15\n-button15\n" );
 	return qtrue;

@@ -8291,6 +8291,8 @@ static void CG_Draw2D( void ) {
 	CG_Place2D( PLACE_CENTER );
 	// what the boxes of the boombox play, over them (boombox/cg_boombox.c)
 	CG_BoomboxDraw();
+	// the tool of the toolgun under the crosshair (sandbox/cg_tools.c)
+	CG_ToolsDraw();
 
 	// speedometer, strafe helper, snap and pitch HUD (hud/cg_movehud.c)
 	CG_MoveHudDraw();
