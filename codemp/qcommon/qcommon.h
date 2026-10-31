@@ -619,6 +619,10 @@ void	FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles = qfalse );
 // session only (client/cl_download.cpp). Their paks are loaded only while a server references them.
 #define FS_DOWNLOADS			"downloads"
 #define FS_DOWNLOADS_SESSION	"downloads/session"
+// The player models of the model store of the site (client/cl_models.cpp), in base of the home folder, one pak a
+// model. Always loaded, but only with files of their model.
+#define FS_MODELSTORE			"modelstore"
+qboolean	FS_AddModelPak( const char *model, char *why, int whySize );
 
 qboolean	FS_ConditionalRestart( int checksumFeed );
 qboolean	FS_NewChecksumFeed( int checksumFeed );

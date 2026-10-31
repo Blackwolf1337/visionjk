@@ -928,7 +928,7 @@ void CL_DownloadWebFrame( void ) {
 	}
 	switch ( SDL_AtomicGet( &job->state ) ) {
 	case WEBJOB_WAITING:
-		if ( CL_UpdateBusy() || DL_WebOthersAsking( job ) ) {
+		if ( CL_UpdateBusy() || CL_ModelsAsking() || DL_WebOthersAsking( job ) ) {
 			return;
 		}
 		SDL_AtomicSet( &job->state, WEBJOB_RUNNING );

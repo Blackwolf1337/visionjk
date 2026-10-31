@@ -793,10 +793,11 @@ static qboolean Update_ChannelDev( void ) {
 }
 
 static void Update_Start( int job, qboolean quiet ) {
-	// (one question to a web server at a time, sys/sys_http.h: a pak of a server comes from its web address)
-	if ( CL_DownloadWebAsking() ) {
+	// (one question to a web server at a time, sys/sys_http.h: a pak of a server comes from its web address, or a
+	// model from the model store, cl_models.cpp)
+	if ( CL_DownloadWebAsking() || CL_ModelsAsking() ) {
 		if ( !quiet )
-			Com_Printf( "A server pak is still downloading. Try again when it has finished.\n" );
+			Com_Printf( "A server pak or a model is still downloading. Try again when it has finished.\n" );
 		return;
 	}
 	upd.job = job;

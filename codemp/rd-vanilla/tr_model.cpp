@@ -644,6 +644,41 @@ static long generateHashValue( const char *fname, const int size ) {
 	return hash;
 }
 
+/*
+================
+RE_ForgetMissing
+
+What was looked for under prefix (a path ending with /) and not found is looked for again the next time it is
+asked for: a model that was not there, a skin without surfaces, a shader made up because its image was not there.
+The file system has a pak more now (the model store, client/cl_models.cpp). The places they took stay used
+until the next level; a hash entry of a model is unlinked, the hunk frees it with the rest.
+================
+*/
+void RE_ForgetMissing( const char *prefix )
+{
+	const size_t	len = strlen( prefix );
+	int				hash;
+
+	if ( !len ) {
+		return;
+	}
+	for ( hash = 0; hash < FILE_HASH_SIZE; hash++ ) {
+		modelHash_t **link = &mhHashTable[hash];
+
+		while ( *link ) {
+			model_t *mod = R_GetModelByHandle( (*link)->handle );
+
+			if ( !Q_stricmpn( (*link)->name, prefix, len ) && ( !mod || mod->type == MOD_BAD ) ) {
+				*link = (*link)->next;
+				continue;
+			}
+			link = &(*link)->next;
+		}
+	}
+	R_ForgetMissingSkins( prefix );
+	R_ForgetMissingShaders( prefix );
+}
+
 void RE_InsertModelIntoHash(const char *name, model_t *mod)
 {
 	int			hash;

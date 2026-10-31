@@ -43,6 +43,7 @@ and the key login only work between versions from after the change.
 | [downloads.md](downloads.md) | Downloads from a server (not a JA+ feature): a window to choose the paks, kept or for one session, what is in them before they are used, programs blocked |
 | [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`vs_clientWebPort`), packets through a WebSocket. What runs and what never ran |
 | [testing.md](testing.md) | The test scripts of `tools/test/`: smoke test of the zips, sanitizers and valgrind, unit tests, static checks, other games, the environment variables, the release flow |
+| [models.md](models.md) | Player models from the model store of the site (not a JA+ feature): fetched in the background and shown at once, the checks, the cvars |
 
 ## Where the code is
 

@@ -274,6 +274,9 @@ typedef struct refexport_s {
 		// The view of the level of this frame bends, flashes and is coloured as screenEffect_t says, until the next
 		// frame. NULL only asks. qfalse: this renderer does not have it (rd-vanilla).
 		qboolean			(*SetScreenEffect)						( const screenEffect_t *fx );
+		// What was looked for under prefix (a path ending with /) and not found is looked for again: models,
+		// skins, shaders whose image was missing. The file system has a pak more (client/cl_models.cpp).
+		void				(*ForgetMissing)						( const char *prefix );
 	} ext;
 
 } refexport_t;

@@ -37,6 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #ifndef FINAL_BUILD
 #include "client/client.h"
 #endif
+#include "web/web_models.h"
 #endif
 #include <minizip/unzip.h>
 
@@ -3752,12 +3753,41 @@ static void FS_ClearSessionDownloads( const char *dir ) {
 	FS_ClearSessionDir( dir );
 }
 
+#ifndef DEDICATED
+/*
+================
+FS_ModelPakFits
+
+A pak of the model store (client/cl_models.cpp) has only files of its own model, the one its name says
+(shared/web/web_models.h). A pak put into the folder by hand that has others is not loaded.
+================
+*/
+static qboolean FS_ModelPakFits( const pack_t *pak, const char *model ) {
+	int i;
+
+	for ( i = 0; i < pak->numfiles; i++ ) {
+		const char		*name = pak->buildBuffer[i].name;
+		const size_t	len = strlen( name );
+
+		// (a folder of the zip is no file)
+		if ( len && name[len - 1] == '/' ) {
+			continue;
+		}
+		if ( !WEB_ModelEntryAllowed( name, model ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+#endif
+
 /*
 ================
 FS_AddPaksOf
 
 The paks of a game folder, or of a folder in it (sub, NULL: the game folder itself), at the head of the path.
 Those of the folders of downloads, and those whose names begin with "dl_", only while the server references them.
+Those of the model store always, when they have only files of their model.
 ================
 */
 static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, searchpath_t *thedir ) {
@@ -3787,6 +3817,15 @@ static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, se
 		if ( ( pak = FS_LoadZipFile( pakfile, pakfiles[i] ) ) == 0 )
 			continue;
 
+#ifndef DEDICATED
+		if ( sub && !strcmp( sub, FS_MODELSTORE ) ) {
+			if ( !FS_ModelPakFits( pak, pak->pakBasename ) ) {
+				Com_Printf( S_COLOR_YELLOW "%s has files that are not of the model %s, it is not loaded\n", pakfile, pak->pakBasename );
+				FS_FreePak( pak );
+				continue;
+			}
+		} else
+#endif
 		// files beginning with "dl_" are only loaded when referenced by the server, and so is all that was downloaded
 		if (sub || !Q_stricmpn(filename, "dl_", 3)) {
 			int j;
@@ -3890,8 +3929,60 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 		FS_ClearSessionDownloads( dir );
 		FS_AddPaksOf( path, dir, FS_DOWNLOADS, search );
 		FS_AddPaksOf( path, dir, FS_DOWNLOADS_SESSION, search );
+#ifndef DEDICATED
+		if ( !Q_stricmp( dir, BASEGAME ) ) {
+			FS_AddPaksOf( path, dir, FS_MODELSTORE, search );
+		}
+#endif
 	}
 }
+
+#ifndef DEDICATED
+/*
+================
+FS_AddModelPak
+
+The pak of model that the model store just sent (<home>/base/modelstore/<model>.pk3, client/cl_models.cpp), at the
+head of the path while the game runs, so its files can be read at once. qfalse: it is no pak, or it has files of
+anything else than its model (why says so).
+================
+*/
+qboolean FS_AddModelPak( const char *model, char *why, int whySize ) {
+	char			pakfile[MAX_OSPATH];
+	searchpath_t	*search;
+	pack_t			*pak;
+
+	if ( !fs_searchpaths || !fs_homepath || !WEB_ModelName( model ) ) {
+		Q_strncpyz( why, "the file system is not running", whySize );
+		return qfalse;
+	}
+	Q_strncpyz( pakfile, FS_BuildOSPath( fs_homepath->string, BASEGAME, va( "%s/%s.pk3", FS_MODELSTORE, model ) ), sizeof( pakfile ) );
+	for ( search = fs_searchpaths; search; search = search->next ) {
+		if ( search->pack && Sys_PathCmp( search->pack->pakFilename, pakfile ) ) {
+			return qtrue;
+		}
+	}
+	pak = FS_LoadZipFile( pakfile, va( "%s.pk3", model ) );
+	if ( !pak ) {
+		Q_strncpyz( why, "it is no pak", whySize );
+		return qfalse;
+	}
+	if ( !FS_ModelPakFits( pak, model ) ) {
+		FS_FreePak( pak );
+		Q_strncpyz( why, "it has files that are not of the model", whySize );
+		return qfalse;
+	}
+	Q_strncpyz( pak->pakPathname, FS_BuildOSPath( fs_homepath->string, BASEGAME, FS_MODELSTORE ), sizeof( pak->pakPathname ) );
+	Q_strncpyz( pak->pakGamename, BASEGAME, sizeof( pak->pakGamename ) );
+	fs_packFiles += pak->numfiles;
+
+	search = (searchpath_s *)Z_Malloc( sizeof( searchpath_t ), TAG_FILESYS, qtrue );
+	search->pack = pak;
+	search->next = fs_searchpaths;
+	fs_searchpaths = search;
+	return qtrue;
+}
+#endif
 
 /*
 ================

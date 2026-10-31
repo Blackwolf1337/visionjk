@@ -103,6 +103,8 @@ server could otherwise make it ask a router, a printer or a service on the machi
 
 `cl_allowDownload 0` still means no download at all, `v_downloadHttp 0` only from the server itself.
 
+Player models that a server does not send come from the model store of the site, see [models.md](models.md).
+
 ## How it works
 
 Of the web address:

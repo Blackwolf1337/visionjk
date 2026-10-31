@@ -3425,6 +3425,21 @@ most world construction surfaces.
 
 ===============
 */
+// the shaders under prefix that were made up because their image was not there are made again (RE_ForgetMissing).
+// A shader file the new pak brings is read with the next start of the renderer only.
+void R_ForgetMissingShaders( const char *prefix ) {
+	const size_t	len = strlen( prefix );
+	int				i;
+
+	for ( i = 0; i < tr.numShaders; i++ ) {
+		shader_t *sh = tr.shaders[i];
+
+		if ( sh->defaultShader && !Q_stricmpn( sh->name, prefix, len ) ) {
+			sh->name[0] = '\0';
+		}
+	}
+}
+
 shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *styles, qboolean mipRawImage )
 {
 	char		strippedName[MAX_QPATH];

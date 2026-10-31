@@ -180,6 +180,20 @@ qhandle_t RE_RegisterIndividualSkin( const char *name , qhandle_t hSkin)
 	return hSkin;
 }
 
+// the skins under prefix that were not found are looked for again (RE_ForgetMissing)
+void R_ForgetMissingSkins( const char *prefix ) {
+	const size_t	len = strlen( prefix );
+	int				hSkin;
+
+	for ( hSkin = 1; hSkin < tr.numSkins; hSkin++ ) {
+		skin_t *skin = tr.skins[hSkin];
+
+		if ( skin->numSurfaces == 0 && !Q_stricmpn( skin->name, prefix, len ) ) {
+			skin->name[0] = '\0';
+		}
+	}
+}
+
 qhandle_t RE_RegisterSkin( const char *name ) {
 	qhandle_t	hSkin;
 	skin_t		*skin;

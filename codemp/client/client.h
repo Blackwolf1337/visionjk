@@ -608,6 +608,13 @@ void CL_UpdateFrame( void );
 qboolean CL_UpdateBusy( void );
 void CL_UpdateShutdown( void );
 
+// cl_models.cpp: the player models of the model store of the site
+//
+void		CL_ModelsInit( void );
+void		CL_ModelsFrame( void );
+void		CL_ModelsShutdown( void );
+qboolean	CL_ModelsAsking( void );
+
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);

@@ -2098,6 +2098,30 @@ void CG_LoadDeferredPlayers( void ) {
 }
 
 /*
+======================
+CG_ModelArrived_f
+
+v_modelArrived <model>, from the engine: the model came from the model store of the site (client/cl_models.cpp)
+and its files can be read now. The players who use it had the default model and are loaded again.
+======================
+*/
+void CG_ModelArrived_f( void ) {
+	clientInfo_t	*ci;
+	char			model[MAX_QPATH];
+	int				i;
+
+	trap->Cmd_Argv( 1, model, sizeof( model ) );
+	if ( !model[0] ) {
+		return;
+	}
+	for ( i = 0, ci = cgs.clientinfo; i < cgs.maxclients; i++, ci++ ) {
+		if ( ci->infoValid && !Q_stricmp( ci->modelName, model ) ) {
+			CG_LoadClientInfo( ci );
+		}
+	}
+}
+
+/*
 =============================================================================
 
 PLAYER ANIMATION
