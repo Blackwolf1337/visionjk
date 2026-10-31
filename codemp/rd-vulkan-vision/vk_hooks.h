@@ -113,6 +113,8 @@ void VK_GL_ClientState( int which, int on );
 void VK_GL_DrawArrays( int mode, int first, int count );
 void VK_GL_Enable( int cap, int on );
 void VK_GL_Flush( void );
+// triangles of vertices that come once (the shadow volumes of tr_shadows.cpp)
+void VK_GL_DrawIndexed( const vec4_t *xyz, int numVerts, const glIndex_t *indexes, int numIndexes );
 void VK_GL_Collect( qboolean on );
 void VK_GL_StencilFunc( int func, int ref );
 void VK_GL_StencilOp( int face, int fail, int zfail, int zpass );

@@ -51,6 +51,13 @@ static	int			numEdgeDefs[SHADER_MAX_VERTEXES];
 static	int			facing[SHADER_MAX_INDEXES/3];
 static	vec3_t		shadowXyz[SHADER_MAX_VERTEXES];
 
+#ifdef RD_VULKAN_VISION
+// rd-vulkan-vision draws the volume as one indexed batch (VK_GL_DrawIndexed): the vertices of the model, then
+// shadowXyz, and per facing triangle 3 edges of 6 indexes and 2 caps of 3
+static	vec4_t		shadowVerts[SHADER_MAX_VERTEXES * 2];
+static	glIndex_t	shadowIndexes[SHADER_MAX_INDEXES * 8];
+#endif
+
 void R_AddEdgeDef( int i1, int i2, int facing ) {
 	int		c;
 
@@ -78,6 +85,16 @@ void R_RenderShadowEdges( void ) {
 	int		numTris;
 	int		o1, o2, o3;
 #endif
+#ifdef RD_VULKAN_VISION
+	const int	n = tess.numVertexes;
+	int			numIndexes = 0;
+
+	for ( i = 0 ; i < n ; i++ ) {
+		VectorCopy( tess.xyz[ i ], shadowVerts[ i ] );
+		VectorCopy( shadowXyz[ i ], shadowVerts[ n + i ] );
+		shadowVerts[ i ][3] = shadowVerts[ n + i ][3] = 0.0f;
+	}
+#endif
 
 	// an edge is NOT a silhouette edge if its face doesn't face the light,
 	// or if it has a reverse paired edge that also faces the light.
@@ -100,6 +117,16 @@ void R_RenderShadowEdges( void ) {
 			//we are going to render all edges even though it is a tiny bit slower. -rww
 #if 1
 			i2 = edgeDefs[ i ][ j ].i2;
+#ifdef RD_VULKAN_VISION
+			// the two triangles of the strip below
+			shadowIndexes[ numIndexes++ ] = i;
+			shadowIndexes[ numIndexes++ ] = n + i;
+			shadowIndexes[ numIndexes++ ] = i2;
+			shadowIndexes[ numIndexes++ ] = i2;
+			shadowIndexes[ numIndexes++ ] = n + i;
+			shadowIndexes[ numIndexes++ ] = n + i2;
+			continue;
+#endif
 			qglBegin( GL_TRIANGLE_STRIP );
 				qglVertex3fv( tess.xyz[ i ] );
 				qglVertex3fv( shadowXyz[ i ] );
@@ -152,6 +179,15 @@ void R_RenderShadowEdges( void ) {
 		o2 = tess.indexes[ i*3 + 1 ];
 		o3 = tess.indexes[ i*3 + 2 ];
 
+#ifdef RD_VULKAN_VISION
+		shadowIndexes[ numIndexes++ ] = o1;
+		shadowIndexes[ numIndexes++ ] = o2;
+		shadowIndexes[ numIndexes++ ] = o3;
+		shadowIndexes[ numIndexes++ ] = n + o3;
+		shadowIndexes[ numIndexes++ ] = n + o2;
+		shadowIndexes[ numIndexes++ ] = n + o1;
+		continue;
+#endif
 		qglBegin(GL_TRIANGLES);
 			qglVertex3fv(tess.xyz[o1]);
 			qglVertex3fv(tess.xyz[o2]);
@@ -163,6 +199,9 @@ void R_RenderShadowEdges( void ) {
 			qglVertex3fv(shadowXyz[o1]);
 		qglEnd();
 	}
+#endif
+#ifdef RD_VULKAN_VISION
+	VK_GL_DrawIndexed( shadowVerts, n * 2, shadowIndexes, numIndexes );
 #endif
 }
 

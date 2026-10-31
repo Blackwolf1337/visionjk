@@ -314,22 +314,10 @@ void VK_GL_Quad( int kind, const float *a, const float *b, const float *c, const
 	gl_numQuads++;
 }
 
-/*
-===============
-VK_GL_Flush
-
-Draws the primitives that were specified
-===============
-*/
-void VK_GL_Flush( void ) {
-	const int numVerts = gl_numVerts, numIndexes = gl_numIndexes;
+// the geometry that was uploaded last, with the state that is set
+static void VK_GL_DrawUploaded( void ) {
 	uint32_t stateBits = gl_stateBits;
 	vkDraw_t draw;
-
-	gl_numVerts = gl_primStart = gl_numIndexes = 0;
-	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, NULL, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes ) ) {
-		return;
-	}
 
 	VK_GL_InitDraw( &draw );
 	if ( !gl_colorMask ) {
@@ -339,6 +327,41 @@ void VK_GL_Flush( void ) {
 	vk.stencil = ( gl_stencil.test || gl_stencil.depthLess ) ? &gl_stencil : NULL;
 	VK_DrawTess( &draw, VKP_GENERIC, stateBits, VKC_NONE, qfalse );
 	vk.stencil = NULL;
+}
+
+/*
+===============
+VK_GL_Flush
+
+Draws the primitives that were specified
+===============
+*/
+void VK_GL_Flush( void ) {
+	const int numVerts = gl_numVerts, numIndexes = gl_numIndexes;
+
+	gl_numVerts = gl_primStart = gl_numIndexes = 0;
+	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, NULL, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes ) ) {
+		return;
+	}
+	VK_GL_DrawUploaded();
+}
+
+/*
+===============
+VK_GL_DrawIndexed
+
+Triangles of vertices that come once, with the state that is set. For the shadow volumes (tr_shadows.cpp): as
+glBegin() to glEnd() a vertex of the model came up to 18 times, and 32 players filled the vertices of the frame so
+far that the 2D had no room left (issue #11). Only the positions are uploaded: the volume is drawn with the color
+off and the white texture.
+===============
+*/
+void VK_GL_DrawIndexed( const vec4_t *xyz, int numVerts, const glIndex_t *indexes, int numIndexes ) {
+	VK_GL_Flush();
+	if ( !numIndexes || !VK_UploadGeometry( xyz, NULL, NULL, NULL, numVerts, indexes, numIndexes ) ) {
+		return;
+	}
+	VK_GL_DrawUploaded();
 }
 
 /*

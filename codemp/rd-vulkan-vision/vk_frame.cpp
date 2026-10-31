@@ -42,6 +42,12 @@ static const vkSize_t	vk_streamStride[4] = { sizeof( vec4_t ), sizeof( vec4_t ),
 static const vkSize_t	vk_streamOffset[4] = { 0, VK_STREAM_VERTEXES * sizeof( vec4_t ), VK_STREAM_VERTEXES * sizeof( vec4_t ) * 2,
 	VK_STREAM_VERTEXES * ( sizeof( vec4_t ) * 2 + sizeof( vec2_t ) * NUM_TEX_COORDS ) };
 
+// The 2D comes last in a frame. A sixteenth of what a frame has is kept for it: a level that brings more than fits
+// loses some of its own draws, not the HUD (issue #11, 32 players with stencil shadows).
+static int VK_FrameRoom( int total ) {
+	return backEnd.projection2D ? total : total - total / 16;
+}
+
 // x, y, width, height in the coordinates of OpenGL: y counts from the lower edge, in pixels of the window
 void VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth ) {
 	if ( !vk.frame ) {
@@ -279,6 +285,7 @@ void VK_FrameInfo_f( void ) {
 	}
 	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
 		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
+	ri.Printf( PRINT_ALL, "  room in a frame: %i draws, %i vertices built on the CPU\n", VK_MAX_DRAWS, (int)VK_STREAM_VERTEXES );
 	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );
 	// the shaders with the most triangles from the CPU
 	for ( int n = 0; n < 8; n++ ) {
@@ -318,8 +325,8 @@ int VK_AddTransform( const vkTransform_t *transform ) {
 	if ( lastIndex >= 0 && lastIndex < frame->numTransforms && !memcmp( transform, &last, sizeof( last ) ) ) {
 		return lastIndex;
 	}
-	if ( frame->numTransforms == VK_MAX_TRANSFORMS ) {
-		return VK_MAX_TRANSFORMS - 1;
+	if ( frame->numTransforms >= VK_FrameRoom( VK_MAX_TRANSFORMS ) ) {
+		return frame->numTransforms - 1;
 	}
 	memcpy( frame->transforms.mapped + VK_TRANSFORM_STRIDE * frame->numTransforms, transform, sizeof( *transform ) );
 	last = *transform;
@@ -351,7 +358,8 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 	if ( !frame || !numIndexes || !numVerts ) {
 		return qfalse;
 	}
-	if ( frame->numVertexes + numVerts > (int)VK_STREAM_VERTEXES || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
+	if ( frame->numVertexes + numVerts > VK_FrameRoom( (int)VK_STREAM_VERTEXES )
+		|| frame->indexUsed + indexBytes > (vkSize_t)VK_FrameRoom( (int)VK_INDEX_BYTES ) ) {
 		if ( !vk.overflowed ) {
 			vk.overflowed = qtrue;
 			ri.Printf( PRINT_DEVELOPER, "VK_UploadGeometry: the frame has more geometry than fits, the rest is not drawn\n" );
@@ -401,7 +409,8 @@ qboolean VK_UploadIndexes( const vkBuffer_t *vertexBuffer, const vkSize_t *offse
 	vkFrame_t *frame = vk.frame;
 	const vkSize_t indexBytes = (vkSize_t)numIndexes * sizeof( glIndex_t );
 
-	if ( !frame || !numIndexes || ( vertexBuffer && !vertexBuffer->buffer ) || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
+	if ( !frame || !numIndexes || ( vertexBuffer && !vertexBuffer->buffer )
+		|| frame->indexUsed + indexBytes > (vkSize_t)VK_FrameRoom( (int)VK_INDEX_BYTES ) ) {
 		return qfalse;
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
@@ -465,7 +474,7 @@ void VK_TessColors( const color4ub_t *colors ) {
 		return;
 	}
 	if ( colors ) {
-		if ( frame->numVertexes + tess.numVertexes > (int)VK_STREAM_VERTEXES ) {
+		if ( frame->numVertexes + tess.numVertexes > VK_FrameRoom( (int)VK_STREAM_VERTEXES ) ) {
 			return;
 		}
 		// the colors take a run of vertices of their own. The draws of the batch count from its first vertex, so
@@ -488,7 +497,7 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	vkFrame_t *frame = vk.frame;
 	uint32_t state, changed, drawIndex;
 
-	if ( !frame || frame->numDraws == VK_MAX_DRAWS ) {
+	if ( !frame || frame->numDraws >= VK_FrameRoom( VK_MAX_DRAWS ) ) {
 		return;
 	}
 
