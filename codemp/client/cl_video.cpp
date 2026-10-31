@@ -405,6 +405,26 @@ int CL_VideoState( int stream ) {
 	return v->rgba ? VIDEO_PLAYING : VIDEO_FETCHING;
 }
 
+// A picture of the cgame in place of a video (the drawing boards, cgame/toys/cg_board.c): copied, shown from now on
+void CL_VideoPicture( int stream, const byte *rgba, int width, int height ) {
+	videoStream_t *v = CL_VideoStream( stream );
+
+	if ( !v || !rgba || width < 16 || height < 16 || width > 512 || height > 512 )
+		return;
+	if ( v->video || v->job >= 0 || v->broken )
+		CL_VideoReset( stream );
+	if ( !v->rgba || v->width != width || v->height != height ) {
+		if ( v->rgba )
+			Z_Free( v->rgba );
+		v->width = width;
+		v->height = height;
+		v->rgba = (byte *)Z_Malloc( width * height * 4, TAG_CLIENTS, qfalse );
+	}
+	Com_Memcpy( v->rgba, rgba, width * height * 4 );
+	v->dirty = qtrue;
+	CL_VideoMeanColor( v );
+}
+
 // qfalse: no frame yet
 qboolean CL_VideoColor( int stream, vec3_t out ) {
 	const videoStream_t *v = CL_VideoStream( stream );

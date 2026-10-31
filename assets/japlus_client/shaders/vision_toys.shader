@@ -137,3 +137,51 @@ models/map_objects/vision/pingpong_net
 		depthWrite
 	}
 }
+
+// the drawing board (cgame/toys/cg_board.c): board/<n> shows stream n of the engine (client/cl_video.cpp, the picture
+// the cgame made), frame is its back and edge
+
+gfx/vision/board/4
+{
+	nopicmip
+	{
+		videoMap *tv4
+		rgbGen vertex
+	}
+}
+
+gfx/vision/board/5
+{
+	nopicmip
+	{
+		videoMap *tv5
+		rgbGen vertex
+	}
+}
+
+gfx/vision/board/6
+{
+	nopicmip
+	{
+		videoMap *tv6
+		rgbGen vertex
+	}
+}
+
+gfx/vision/board/7
+{
+	nopicmip
+	{
+		videoMap *tv7
+		rgbGen vertex
+	}
+}
+
+gfx/vision/board/frame
+{
+	nopicmip
+	{
+		map models/map_objects/vision/pingpong_frame
+		rgbGen vertex
+	}
+}

@@ -44,6 +44,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define HTTP_GLOBAL_DEFAULT		3L
 #define HTTP_OPT_WRITEDATA		10001
 #define HTTP_OPT_URL			10002
+#define HTTP_OPT_POSTFIELDS		10015
+#define HTTP_OPT_POSTFIELDSIZE	60
 #define HTTP_OPT_USERAGENT		10018
 #define HTTP_OPT_XFERINFODATA	10057
 #define HTTP_OPT_WRITEFUNCTION	20011
@@ -135,7 +137,8 @@ static int Sys_HttpProgress( void *user, long long dlTotal, long long dlNow, lon
 	return *( (httpRequest_t *)user )->cancel ? 1 : 0;
 }
 
-qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
+static qboolean Sys_HttpFetch( const char *url, const void *body, int bodyLen, sysHttpSink_t sink, void *ctx, const volatile int *cancel,
+	char *error, int errorSize, int *status ) {
 	httpRequest_t	request;
 	void			*handle;
 	long			answer = 0;
@@ -160,6 +163,10 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 	request.refused = qfalse;
 
 	http.easySetopt( handle, HTTP_OPT_URL, url );
+	if ( body ) {
+		http.easySetopt( handle, HTTP_OPT_POSTFIELDSIZE, (long)bodyLen );
+		http.easySetopt( handle, HTTP_OPT_POSTFIELDS, body );
+	}
 	http.easySetopt( handle, HTTP_OPT_USERAGENT, "VisionJK" );
 	http.easySetopt( handle, HTTP_OPT_PROTOCOLS, HTTP_PROTO_WEB );
 	http.easySetopt( handle, HTTP_OPT_FOLLOWLOCATION, 0L );
@@ -202,4 +209,13 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 		return qfalse;
 	}
 	return qtrue;
+}
+
+qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
+	return Sys_HttpFetch( url, NULL, 0, sink, ctx, cancel, error, errorSize, status );
+}
+
+qboolean Sys_HttpPost( const char *url, const void *body, int bodyLen, sysHttpSink_t sink, void *ctx, const volatile int *cancel,
+	char *error, int errorSize, int *status ) {
+	return Sys_HttpFetch( url, body ? body : "", body ? bodyLen : 0, sink, ctx, cancel, error, errorSize, status );
 }

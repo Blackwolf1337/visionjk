@@ -396,6 +396,8 @@ static consoleCommand_t	commands[] = {
 	{ "v_spray",					CG_Spray_f },
 	{ "v_emote",					CG_Emote_f },
 	{ "v_pingpong",					CG_PingPong_f },
+	{ "v_board",					CG_Board_f },
+	{ "v_boardPicture",				CG_BoardPicture_f },
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },

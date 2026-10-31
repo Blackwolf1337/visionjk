@@ -189,6 +189,14 @@ REFERENCE           PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
 LANG_ENGLISH        "Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it."
 LANG_FRENCH         "Place une table de ping-pong devant vous et vous jouez depuis son extrémité proche : la souris déplace la raquette, un clic sert, Échap quitte la partie. Un joueur qui se tient à l'autre bout et l'utilise là joue contre vous. Seuls les joueurs de VisionJK le voient."
 
+REFERENCE           DRAWING_BOARD
+LANG_ENGLISH        "Drawing Board"
+LANG_FRENCH         "Tableau à dessin"
+
+REFERENCE           OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
+LANG_ENGLISH        "Opens the drawing board: paint a small picture with the mouse (32 colours) and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it."
+LANG_FRENCH         "Ouvre le tableau à dessin : peignez une petite image à la souris (32 couleurs) et tenez-la devant vous ou au-dessus de votre tête, ou rangez-la. Seuls les joueurs de VisionJK la voient."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_FRENCH         "Mode photo"

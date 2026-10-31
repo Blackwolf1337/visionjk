@@ -148,6 +148,9 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_ICON_MOST		( 256 * 1024 )		// bytes of an icon at most
 #define MDL_EMOJI_MOST		( 64 * 1024 )		// bytes of a chat emoji at most (MAX_EMOJI of modelstore.py)
 #define MDL_EMOJI_RECORD	"emojistore.txt"	// in base of the home folder: the emojis of the store that came, a name a line
+#define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
+#define MDL_DRAWING_MOST	( 1500 * 1500 )		// numbers of pictures (TOY_BOARD_SPLIT squared)
+#define MDL_DRAWING_ASKS	8					// pictures the cgame asked for that wait
 
 enum {
 	MDLJOB_FREE,
@@ -176,6 +179,9 @@ typedef struct {
 	char				icon[4];				// "jpg", "png": the job fetches the icon of model
 	char				emoji[WEB_MODEL_NAME];	// a chat emoji of the store (issue #9 of the game)
 	qboolean			emojiIndex;				//	or the list of them
+	int					drawing;				// a picture of a drawing board that is fetched
+	const byte			*body;					// what is sent with a POST (the own picture), NULL: a GET
+	int					bodyLen;
 } mdlJob_t;
 
 static cvar_t	*v_modelStoreURL;
@@ -192,6 +198,10 @@ static int		mdlEmojiIndexTime = -1;
 static mdlNames_t	mdlEmojiTried;			// emojis that came or failed this run
 static mdlNames_t	mdlEmojiHere;			// the emojis of the store in the home folder (MDL_EMOJI_RECORD)
 static qboolean	mdlEmojiRead;
+static byte		mdlDrawingBody[MDL_DRAWING_BYTES];
+static char		mdlAnswer[512];				// what the store answered to an upload
+static qboolean	mdlDrawingUpload;			// the own picture waits to go to the store
+static int		mdlDrawingGets[MDL_DRAWING_ASKS], mdlNumDrawingGets;
 
 // the home path of the pak of a model, or of the part of it that comes in
 static const char *MDL_Local( const char *model, qboolean temp ) {
@@ -241,7 +251,8 @@ static int MDL_Thread( void *data ) {
 		}
 	}
 	if ( !job->disk ) {
-		job->ok = Sys_HttpGet( job->url, MDL_Sink, job, &job->cancel, job->error, sizeof( job->error ), &job->status );
+		job->ok = job->body ? Sys_HttpPost( job->url, job->body, job->bodyLen, MDL_Sink, job, &job->cancel, job->error, sizeof( job->error ), &job->status )
+			: Sys_HttpGet( job->url, MDL_Sink, job, &job->cancel, job->error, sizeof( job->error ), &job->status );
 	}
 	if ( job->f ) {
 		if ( fclose( job->f ) != 0 ) {
@@ -524,6 +535,123 @@ static void MDL_NextEmoji( void ) {
 	}
 }
 
+/*
+===============================================================================
+
+The pictures of the drawing boards (cgame/toys/cg_board.c, issue #9 of the game): the own one goes to the store of
+the site when it is held up (v_drawings upload, from drawings/upload.vjd, which the cgame wrote), and its number
+goes back to the cgame (v_boardPicture), which says it to the others. The picture of a number another player holds
+is fetched into base/drawings/<number>.vjd of the home folder (v_drawings get), where the cgame reads it.
+
+===============================================================================
+*/
+
+static const char *MDL_DrawingLocal( int number, qboolean temp ) {
+	return va( "%s/drawings/%i.%s", BASEGAME, number, temp ? "tmp" : "vjd" );
+}
+
+// Starts the fetch of picture get, or with get 0 the upload of the own one.
+static void MDL_StartDrawing( int get ) {
+	mdlJob_t *job = &mdlJob;
+
+	memset( job, 0, sizeof( *job ) );
+	if ( get ) {
+		fileHandle_t f;
+
+		if ( !MDL_Url( va( "drawings/files/%i.vjd", get ), job->url, sizeof( job->url ) ) ) {
+			return;
+		}
+		f = FS_SV_FOpenFileWrite( MDL_DrawingLocal( get, qtrue ) );
+		if ( !f ) {
+			return;
+		}
+		FS_FCloseFile( f );
+		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_DrawingLocal( get, qtrue ) ), sizeof( job->osTemp ) );
+		job->drawing = get;
+		job->most = MDL_DRAWING_BYTES;
+		Web_SHA256Init( &job->sha );
+	} else {
+		void	*data;
+		int		len = FS_ReadFile( "drawings/upload.vjd", &data );
+
+		if ( len != MDL_DRAWING_BYTES || memcmp( data, "VJD1", 4 ) || !MDL_Url( "drawings/api/upload", job->url, sizeof( job->url ) ) ) {
+			if ( len > 0 ) {
+				FS_FreeFile( data );
+			}
+			return;
+		}
+		Com_Memcpy( mdlDrawingBody, data, MDL_DRAWING_BYTES );
+		FS_FreeFile( data );
+		job->body = mdlDrawingBody;
+		job->bodyLen = MDL_DRAWING_BYTES;
+		job->index = mdlAnswer;
+		job->most = sizeof( mdlAnswer ) - 1;
+	}
+	MDL_Launch( job );
+}
+
+// The store answered the upload ({"id": <number>, "key": ..}), or a picture came.
+static void MDL_DrawingDone( mdlJob_t *job ) {
+	if ( job->body ) {
+		const char	*id;
+		int			number;
+
+		mdlAnswer[job->bytes] = '\0';
+		id = strstr( mdlAnswer, "\"id\":" );
+		number = id ? atoi( id + 5 ) : 0;
+		if ( !job->ok || number <= 0 || number >= MDL_DRAWING_MOST ) {
+			Com_Printf( S_COLOR_YELLOW "The drawing did not go to the store of the site: %s\n", job->status == 429 ? "too many at once, it goes again later" : job->error );
+			return;
+		}
+		if ( cls.cgameStarted ) {
+			Cmd_TokenizeString( va( "v_boardPicture %i", number ) );
+			CGVM_ConsoleCommand();
+		}
+		return;
+	}
+	if ( !job->ok || job->disk || job->bytes != MDL_DRAWING_BYTES ) {
+		remove( job->osTemp );
+		return;
+	}
+	{
+		FILE		*f = fopen( job->osTemp, "rb" );
+		char		head[4] = { 0 };
+		qboolean	good = (qboolean)( f && fread( head, 1, 4, f ) == 4 && !memcmp( head, "VJD1", 4 ) );
+
+		if ( f ) {
+			fclose( f );
+		}
+		if ( !good ) {
+			remove( job->osTemp );
+			return;
+		}
+	}
+	FS_SV_Rename( MDL_DrawingLocal( job->drawing, qtrue ), MDL_DrawingLocal( job->drawing, qfalse ), qfalse );
+}
+
+// v_drawings upload: the own picture to the store; v_drawings get <number>: a picture of another board
+static void CL_Drawings_f( void ) {
+	const char	*what = Cmd_Argv( 1 );
+	int			number, i;
+
+	if ( !Q_stricmp( what, "upload" ) ) {
+		mdlDrawingUpload = qtrue;
+		return;
+	}
+	if ( Q_stricmp( what, "get" ) || ( number = atoi( Cmd_Argv( 2 ) ) ) <= 0 || number >= MDL_DRAWING_MOST ) {
+		Com_Printf( "usage: v_drawings upload | get <number>\n" );
+		return;
+	}
+	for ( i = 0; i < mdlNumDrawingGets; i++ ) {
+		if ( mdlDrawingGets[i] == number ) {
+			return;
+		}
+	}
+	if ( mdlNumDrawingGets < MDL_DRAWING_ASKS ) {
+		mdlDrawingGets[mdlNumDrawingGets++] = number;
+	}
+}
+
 static void MDL_Done( void ) {
 	mdlJob_t		*job = &mdlJob;
 	unsigned char	sha[WEB_SHA256_SIZE], want[WEB_SHA256_SIZE];
@@ -531,6 +659,11 @@ static void MDL_Done( void ) {
 	char			model[WEB_MODEL_NAME];
 
 	SDL_WaitThread( job->thread, NULL );		// (it is through, this does not wait)
+	if ( job->body || job->drawing ) {
+		MDL_DrawingDone( job );
+		SDL_AtomicSet( &job->state, MDLJOB_FREE );
+		return;
+	}
 	if ( job->emojiIndex || job->emoji[0] ) {
 		MDL_EmojiDone( job );
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
@@ -621,6 +754,16 @@ void CL_ModelsFrame( void ) {
 	if ( CL_UpdateBusy() || CL_DownloadWebAsking() ) {
 		return;
 	}
+	// the pictures of the drawing boards first: somebody holds one up now
+	if ( mdlDrawingUpload ) {
+		mdlDrawingUpload = qfalse;
+		MDL_StartDrawing( 0 );
+		return;
+	}
+	if ( mdlNumDrawingGets > 0 ) {
+		MDL_StartDrawing( mdlDrawingGets[--mdlNumDrawingGets] );
+		return;
+	}
 	// with nothing of the models to do: the chat emojis of the store, in the game (not on a pure server)
 	if ( !mdlWanted[0] && !mdlIconsWanted ) {
 		if ( v_emojiStore->integer && cls.state == CA_ACTIVE && !cl_connectedToPureServer && !clc.demoplaying ) {
@@ -691,6 +834,7 @@ void CL_ModelsInit( void ) {
 	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED,
 		"Address of the model store (https). Can only be changed on the command line" );
 	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, v_models get <name>, v_models icons" );
+	Cmd_AddCommand( "v_drawings", CL_Drawings_f, "The pictures of the drawing boards in the store of the site: v_drawings upload, v_drawings get <number>" );
 }
 
 // The game ends. A thread that is still asking is told to stop and left to itself.
@@ -708,6 +852,7 @@ void CL_ModelsShutdown( void ) {
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 	}
 	Cmd_RemoveCommand( "v_models" );
+	Cmd_RemoveCommand( "v_drawings" );
 }
 
 #else // __EMSCRIPTEN__

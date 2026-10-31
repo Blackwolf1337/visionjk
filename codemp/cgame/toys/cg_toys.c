@@ -191,6 +191,8 @@ static void Toys_Heard( int client, const toyThrow_t *toy ) {
 		CG_EmoteHeard( client, origin, velocity );
 	else if ( toy->kind >= TOY_TABLE && toy->kind <= TOY_PONG_PADDLE )
 		CG_PongHeard( client, toy->kind, origin, velocity );
+	else if ( toy->kind == TOY_BOARD )
+		CG_BoardHeard( client, velocity );
 }
 
 /*
@@ -392,6 +394,7 @@ void CG_ToysScene( void ) {
 	CG_SprayScene();
 	CG_EmoteScene();
 	CG_PongScene();
+	CG_BoardScene();
 	for ( i = 0; i < TOY_BALLS; i++ ) {
 		toyBall_t	*ball = &toys.balls[i];
 		refEntity_t	ent;
@@ -472,4 +475,5 @@ void CG_ToysInit( void ) {
 	CG_SprayInit();
 	CG_EmoteInit();
 	CG_PongInit();
+	CG_BoardInit();
 }

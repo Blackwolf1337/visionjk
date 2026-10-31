@@ -143,6 +143,12 @@ LANG_ENGLISH        "Table Tennis"
 REFERENCE           PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
 LANG_ENGLISH        "Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it."
 
+REFERENCE           DRAWING_BOARD
+LANG_ENGLISH        "Drawing Board"
+
+REFERENCE           OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
+LANG_ENGLISH        "Opens the drawing board: paint a small picture with the mouse (32 colours) and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 

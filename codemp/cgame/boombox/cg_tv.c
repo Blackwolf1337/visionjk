@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (models/map_objects/imperial/monitor.md3) whose middle screen shows the video of the song it plays, in step with
 // the song, and whose light falls on the room around it in the colours of the picture. The sound is the song of
 // the box as cg_boombox.c plays any song. The picture is fetched by the engine from the TV of the masterserver
-// (client/cl_video.cpp, master/ms_tv.c) into one of its VIDEO_STREAMS streams: the nearest TVs that play get one,
+// (client/cl_video.cpp, master/ms_tv.c) into one of its first TV_STREAMS streams: the nearest TVs that play get one,
 // a TV further away shows its screen dark. Not from JA+, see docs/japlus/boombox.md, "The TV".
 //
 // A picture starts TV_LEAD_SEC ahead of the song, so the first second of it is there before the song gets to it.
@@ -32,6 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "cgame/boombox/cg_boombox.h"
 
+#define TV_STREAMS			4			// the streams of the engine 0 to 3 are the TVs' (the drawing boards have the others)
 #define TV_MODEL			"models/map_objects/imperial/monitor.md3"
 #define TV_SCALE			1.25f		// the monitor of the game is drawn this much larger
 #define TV_LIFT				27.0f		// the lowest point of the model is this far below its origin (unscaled)
@@ -68,17 +69,17 @@ static struct {
 	qboolean	registered;
 	qboolean	has;				// the engine has the videos (v_cgameVideo)
 	qhandle_t	model;
-	qhandle_t	skins[VIDEO_STREAMS], skinOff;
+	qhandle_t	skins[TV_STREAMS], skinOff;
 	tvShown_t	shown[BOX_MAX + 1];
 	int			numShown;
-	tvStream_t	streams[VIDEO_STREAMS];
+	tvStream_t	streams[TV_STREAMS];
 } tv;
 
 void CG_TvInit( void ) {
 	int i;
 
 	memset( &tv, 0, sizeof( tv ) );
-	for ( i = 0; i < VIDEO_STREAMS; i++ )
+	for ( i = 0; i < TV_STREAMS; i++ )
 		tv.streams[i].key = -1;
 }
 
@@ -92,7 +93,7 @@ static void Tv_Register( void ) {
 	trap->Cvar_VariableStringBuffer( "v_cgameVideo", value, sizeof( value ) );
 	tv.has = (qboolean)( atoi( value ) == 1 );
 	tv.model = trap->R_RegisterModel( TV_MODEL );
-	for ( i = 0; i < VIDEO_STREAMS; i++ )
+	for ( i = 0; i < TV_STREAMS; i++ )
 		tv.skins[i] = trap->R_RegisterSkin( va( "models/vision/tv/screen_%i.skin", i ) );
 	tv.skinOff = trap->R_RegisterSkin( "models/vision/tv/screen_off.skin" );
 }
@@ -115,7 +116,7 @@ void CG_TvAdd( int key, const vec3_t origin, float yaw, const char *video, int m
 static int Tv_StreamOf( int key ) {
 	int i;
 
-	for ( i = 0; i < VIDEO_STREAMS; i++ ) {
+	for ( i = 0; i < TV_STREAMS; i++ ) {
 		if ( tv.streams[i].key == key )
 			return i;
 	}
@@ -234,7 +235,7 @@ stream, every TV is drawn, the screens that show a picture light the room.
 =================
 */
 void CG_TvScene( void ) {
-	qboolean	wanted[VIDEO_STREAMS] = { qfalse };
+	qboolean	wanted[TV_STREAMS] = { qfalse };
 	int			order[BOX_MAX + 1], count = 0, i, k;
 
 	Tv_Register();
@@ -255,14 +256,14 @@ void CG_TvScene( void ) {
 		order[k] = i;
 		count++;
 	}
-	count = Q_min( count, VIDEO_STREAMS );
+	count = Q_min( count, TV_STREAMS );
 	for ( i = 0; i < count; i++ ) {
 		const int stream = Tv_StreamOf( tv.shown[order[i]].key );
 
 		if ( stream >= 0 )
 			wanted[stream] = qtrue;
 	}
-	for ( i = 0; i < VIDEO_STREAMS; i++ ) {
+	for ( i = 0; i < TV_STREAMS; i++ ) {
 		if ( !wanted[i] && tv.streams[i].key >= 0 )
 			Tv_Free( i );
 	}

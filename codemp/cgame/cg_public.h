@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define	CGAME_API_VERSION		2
 
 // the videos on surfaces of the level (ext.Video_*, client/cl_video.cpp): streams, and what one does
-#define VIDEO_STREAMS		4
+#define VIDEO_STREAMS		8		// 0 to 3 for the TVs of the boombox, 4 to 7 for the drawing boards (Video_Picture)
 #define VIDEO_NONE			0
 #define VIDEO_FETCHING		1		// opened, nothing to show yet
 #define VIDEO_PLAYING		2
@@ -793,6 +793,9 @@ typedef struct cgameImport_s {
 		int				(*Video_State)							( int stream );
 		qboolean		(*Video_Color)							( int stream, vec3_t out );
 		void			(*Video_Reset)							( int stream );
+		// A picture the cgame made in place of a video: the stream shows it until the next one or a reset. width and
+		// height 16 to 512, rgba width * height * 4 bytes, copied.
+		void			(*Video_Picture)						( int stream, const byte *rgba, int width, int height );
 	} ext;
 } cgameImport_t;
 

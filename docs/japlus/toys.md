@@ -1,11 +1,11 @@
 # Toys
 
-Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `codemp/cgame/toys/cg_pong.c`, `tools/toys/sprays.py`, `tools/toys/pingpong.py`, `tools/toys/sounds.py`,
+Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `codemp/cgame/toys/cg_pong.c`, `codemp/cgame/toys/cg_board.c`, `tools/toys/sprays.py`, `tools/toys/pingpong.py`, `tools/toys/sounds.py`,
 `MS_Toy()` in `codemp/master/ms_relay.c`, `tools/toys/textures.py`, issue #9, 2026-10-31.
 
 ## For players
 
-The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray, the fifth is the interactive emoji and the seventh is table tennis, all described below.
+The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray, the fifth is the interactive emoji, the seventh is table tennis and the eighth is the drawing board, all described below.
 
 To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
@@ -71,6 +71,17 @@ that bounces twice on the half of the receiver, or is not returned, gives the po
 
 Everybody near sees the table, the paddles, the ball and the points over the net.
 
+To draw, bind `v_board` (Controls, Extras, "Drawing Board") and press it. A window opens with a picture of 256 x 128
+pixels and 32 colours, which you paint with the mouse. There are brush sizes 1 to 4, Fill, Undo and Clear. Save 1 to 4
+and Load 1 to 4 keep four presets in `drawings/preset<n>.vjd` of the home folder. Three buttons hold the board up in
+front of you, hold it over your head, or put it away. Esc or Close shuts the window, and the board stays where it is.
+Without the window, `v_board hold <0|1|2>`, `v_board save <1-4>` and `v_board load <1-4>` work from a bind.
+
+Other players of VisionJK see the board in front of your chest or over your head, with the picture, wherever you go. A
+picture that changed goes to the store of jka.vision at most every 8 seconds. Until the others have it, they see the
+previous picture or a white board. The picture is public: anybody can upload one, so draw nothing you want to keep to
+yourself.
+
 Only players of VisionJK see the toys. Others see nothing. It works on any server: on a VisionJK server through the game
 module, on any other through the masterserver. `v_toys 0` hides the toys of others.
 
@@ -83,6 +94,10 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_sprayImage` | heart | the emoji of the chat that is sprayed, without the colons |
 | `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one |
 | `v_pingpong` | | puts a table down and plays, or joins the player at the far end, or leaves |
+| `v_board` | | opens the drawing board window, or shuts it |
+| `v_board hold <0\|1\|2>` | | 0 puts the board away, 1 holds it in front of you, 2 over your head |
+| `v_board save <1-4>` | | keeps the picture as a preset |
+| `v_board load <1-4>` | | loads a preset |
 | `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
 | `v_toys` | 1 | 0: the toys and emoji of other players are not drawn |
 
@@ -149,6 +164,21 @@ moved on by half the ping when it arrives. The new kinds are `TOY_TABLE` (7) to 
 `cg_pong.c`. `tools/toys/pingpong.py` makes the assets and `tools/toys/sounds.py` the sounds `pong_hit.wav` and
 `pong_bounce.wav`.
 
+The drawing board is not a throw either. The picture is 256 x 128 pixels, a byte a pixel, each one of 32 colours. Your
+own cgame draws the board on the player and shows the picture through a stream of the engine (`ext.Video_Picture`, the
+streams 4 to 7, the TVs use 0 to 3). A held picture that changed goes to the store of jka.vision at most every 8
+seconds (`Sys_HttpPost`, `POST /models/drawings/api/upload`). The store gives it a number and the board says the number
+to the others as `TOY_BOARD` (13), through the game module or the masterserver, with how it is held. Their engine
+fetches `GET /models/drawings/files/<number>.vjd` into `base/drawings/` of the home folder and shows it. The code is
+`cg_board.c`, and `CL_VideoPicture` and the drawing part of `cl_models.cpp` in the engine. The store checks only the
+format: the exact size and that every pixel is one of the 32 colours. The limits are 60 uploads an hour and 300 a day
+per address, and the store keeps the newest 5000. `files/<number>.png` is the same picture to look at. The master and
+the game module have to be 0.2.9-dev.32 or later.
+
+The engine got three changes for it: `Sys_HttpPost` for curl and WinHTTP, a WinHTTP reader that no longer shares one
+static buffer between requests (it was wrong since the TV streams run beside other requests), and 8 video streams
+instead of 4.
+
 The snowball is drawn from these files:
 
 - the textures are drawn by `tools/toys/textures.py` (`snowball`, `snowpuff`, `snowsplat`);
@@ -189,4 +219,9 @@ rally of three hits, a point judged by the receiver and the score sent (1 : 0). 
 the own end, the paddle of the other player, the ball and the score over the net. There is a unit test `table_tennis`
 in `tests/vjk/toys.cpp`.
 
-Not run: table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+For the drawing board, there are unit tests (the board in `tests/vjk/toys.cpp`, `test_drawing` in
+`deploy/models/test_modelstore.py`). Then two clients headless with the live store: a preset was loaded and held up,
+uploaded (the store gave it a number), and the other client fetched the picture and showed the board on the holder with
+that picture. The window was drawn with all its parts.
+
+Not run: painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

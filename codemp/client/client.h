@@ -758,6 +758,7 @@ qboolean CL_VideoOpen( int stream, const char *video, int second );
 qboolean CL_VideoFeed( int stream, const byte *data, int len );
 int CL_VideoAdvance( int stream, int msec );
 int CL_VideoState( int stream );
+void CL_VideoPicture( int stream, const byte *rgba, int width, int height );
 qboolean CL_VideoColor( int stream, vec3_t out );
 void CL_VideoReset( int stream );
 void CL_VideoShutdown( void );

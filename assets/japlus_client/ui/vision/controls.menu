@@ -2093,13 +2093,31 @@
 
 		itemDef
 		{
+			name					vision_bind_v_board
+			type					ITEM_TYPE_BIND
+			text					@VISION_DRAWING_BOARD
+			descText				@VISION_OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
+			cvar					"v_board"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 512 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_bind_v_photo
 			type					ITEM_TYPE_BIND
 			text					@VISION_PHOTO_MODE
 			descText				@VISION_THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
 			cvar					"v_photo"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 512 384 22
+			rect					32 534 384 22
 			page					7
 			scroll					1
 			row						1

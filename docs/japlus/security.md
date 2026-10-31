@@ -567,6 +567,15 @@ stops it. `base/emojistore.txt` records which files came from the store. When a 
 deletes it, so an emoji the owner took down goes from the players too. Files that did not come from the store are
 never deleted. Not tested: the store on the host.
 
+## Added later: the drawings of the board
+
+The drawing board of issue #9 uploads its picture to the same store (`/models/drawings/api/upload`). The engine got
+`Sys_HttpPost` for it (curl, and WinHTTP on Windows). Anyone can upload, as with the emojis. The service checks only the
+format: the exact size (`VJD1` and 256 x 128 bytes) and that every pixel is one of the 32 colours. The limits are 60
+uploads an hour and 300 a day per address, and the store keeps the newest 5000. The owner takes one down with
+`modelstore.py remove-drawing <number>`. The client fetches a picture only by a number below the limit and keeps the
+file only when it has exactly the size of a drawing. Not tested: the POST on Windows.
+
 ## Recommended server settings
 
 ```

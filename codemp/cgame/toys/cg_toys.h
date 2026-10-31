@@ -35,6 +35,12 @@ int			CG_ToyPicture( const char *name );
 void		CG_ToySend( const toyThrow_t *toy );
 void		CG_ToyLight( const vec3_t point, vec3_t out );
 
+// cg_board.c
+void		CG_BoardInit( void );
+void		CG_BoardScene( void );
+void		CG_BoardHeard( int client, const vec3_t velocity );
+qboolean	CG_BoardFetch( int picture, byte *pixels );
+
 // cg_emote.c
 void		CG_EmoteInit( void );
 void		CG_EmoteScene( void );

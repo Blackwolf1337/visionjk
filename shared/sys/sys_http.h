@@ -26,8 +26,9 @@ has no code for that of its own and brings none: on Windows it asks WinHTTP, whi
 (sys_http_win32.cpp), anywhere else the libcurl the system has, loaded when it is first needed
 (sys_http_curl.cpp). Either one knows the certificates the system trusts, and checks them.
 
-Sys_HttpGet() waits until the answer is there or has failed. It is only ever called from a thread of its
-own, never from the thread of the game, and one at a time: the two callers never ask at once.
+Sys_HttpGet() waits until the answer is there or has failed. It is only ever called from threads of their own,
+never from the thread of the game. Several can run at once: the pictures of the TV (client/cl_video.cpp) are
+fetched beside the updater, the paks and the model store, so nothing here is shared between requests.
 */
 
 #pragma once
@@ -47,3 +48,7 @@ error: what went wrong, in words for the console.
 status: the answer of the server (404: it does not have it), 0 when there was none. NULL: not wanted.
 */
 qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status );
+
+// The same with a POST of body (bodyLen bytes) in place of the GET: an upload (client/cl_models.cpp, the drawings).
+qboolean Sys_HttpPost( const char *url, const void *body, int bodyLen, sysHttpSink_t sink, void *ctx, const volatile int *cancel,
+	char *error, int errorSize, int *status );

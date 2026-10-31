@@ -2017,6 +2017,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.Video_Open						= CL_VideoOpen;
 		cgi.ext.Video_Advance					= CL_VideoAdvance;
 		cgi.ext.Video_State						= CL_VideoState;
+		cgi.ext.Video_Picture					= CL_VideoPicture;
 		cgi.ext.Video_Color						= CL_VideoColor;
 		cgi.ext.Video_Reset						= CL_VideoReset;
 

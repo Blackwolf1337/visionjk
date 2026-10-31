@@ -55,7 +55,13 @@ extern "C" {
 #define TOY_PONG_SCORE		11		// the points of the owner of the table and of the other one (x, y) and who serves (z 0 the
 									//	owner, 1 the other one), from who lost the last point
 #define TOY_PONG_PADDLE		12		// where the paddle of who sends it is, six times a second while he plays
-#define TOY_KINDS			13
+#define TOY_BOARD			13		// a drawing board is held (z: 0 put away, 1 in front, 2 over the head) with the picture of
+									//	the store of the site x * TOY_BOARD_SPLIT + y (0: none yet), again and again
+#define TOY_KINDS			14
+#define TOY_BOARD_SPLIT		1500	// the number of a picture in two fields of the speed
+#define BOARD_W				256		// a picture of a drawing board: pixels across and down, colours of the palette
+#define BOARD_H				128		//	(cgame/toys/cg_board.c, drawings of modelstore.py of the site)
+#define BOARD_COLORS		32
 #define TOY_PONG_MOST		99		// points of one player in a game at most
 #define TOY_SPRAY_MOST		1400	// pictures a spray can be (so the "speed" of TOY_SPRAY stays under TOY_MAX_SPEED)
 

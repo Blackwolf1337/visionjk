@@ -74,7 +74,7 @@ static void Sys_HttpClose( httpHandles_t *h ) {
 }
 
 // sends the request for url (http:// or https://) and reads the head of the answer. qfalse: no answer, error says why.
-static qboolean Sys_HttpRequest( const char *url, httpHandles_t *h, DWORD *answer, char *error, int errorSize ) {
+static qboolean Sys_HttpRequest( const char *url, const void *body, int bodyLen, httpHandles_t *h, DWORD *answer, char *error, int errorSize ) {
 	wchar_t			wide[HTTP_MAX_URL], host[256], path[HTTP_MAX_URL];
 	URL_COMPONENTS	parts;
 	DWORD			size = sizeof( *answer ), off = WINHTTP_DISABLE_REDIRECTS;
@@ -113,7 +113,7 @@ static qboolean Sys_HttpRequest( const char *url, httpHandles_t *h, DWORD *answe
 		Sys_HttpError( "WinHttpConnect", error, errorSize );
 		return qfalse;
 	}
-	h->request = WinHttpOpenRequest( h->connection, L"GET", path, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+	h->request = WinHttpOpenRequest( h->connection, body ? L"POST" : L"GET", path, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
 		parts.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0 );
 	if ( !h->request ) {
 		Sys_HttpError( "WinHttpOpenRequest", error, errorSize );
@@ -121,7 +121,8 @@ static qboolean Sys_HttpRequest( const char *url, httpHandles_t *h, DWORD *answe
 	}
 	// a redirect is not followed: its answer is not the one asked for and so counts as failed
 	WinHttpSetOption( h->request, WINHTTP_OPTION_DISABLE_FEATURE, &off, sizeof( off ) );
-	if ( !WinHttpSendRequest( h->request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0 )
+	if ( !WinHttpSendRequest( h->request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, body ? (LPVOID)body : WINHTTP_NO_REQUEST_DATA,
+			body ? (DWORD)bodyLen : 0, body ? (DWORD)bodyLen : 0, 0 )
 		|| !WinHttpReceiveResponse( h->request, NULL ) ) {
 		Sys_HttpError( "the request", error, errorSize );
 		return qfalse;
@@ -134,7 +135,8 @@ static qboolean Sys_HttpRequest( const char *url, httpHandles_t *h, DWORD *answe
 	return qtrue;
 }
 
-qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
+static qboolean Sys_HttpFetch( const char *url, const void *body, int bodyLen, sysHttpSink_t sink, void *ctx, const volatile int *cancel,
+	char *error, int errorSize, int *status ) {
 	httpHandles_t	h;
 	DWORD			answer;
 	qboolean		ok = qfalse;
@@ -143,7 +145,7 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 	if ( status ) {
 		*status = 0;
 	}
-	if ( !Sys_HttpRequest( url, &h, &answer, error, errorSize ) ) {
+	if ( !Sys_HttpRequest( url, body, bodyLen, &h, &answer, error, errorSize ) ) {
 		Sys_HttpClose( &h );
 		return qfalse;
 	}
@@ -156,7 +158,8 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 		return qfalse;
 	}
 	for ( ;; ) {
-		static char	buffer[65536];		// (one request at a time in the whole client: cl_update.cpp, cl_download.cpp)
+		// (on the stack of the thread: the pictures of the TV are fetched beside the other requests, cl_video.cpp)
+		char		buffer[16384];
 		DWORD		got = 0;
 
 		if ( *cancel ) {
@@ -178,4 +181,13 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 	}
 	Sys_HttpClose( &h );
 	return ok;
+}
+
+qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const volatile int *cancel, char *error, int errorSize, int *status ) {
+	return Sys_HttpFetch( url, NULL, 0, sink, ctx, cancel, error, errorSize, status );
+}
+
+qboolean Sys_HttpPost( const char *url, const void *body, int bodyLen, sysHttpSink_t sink, void *ctx, const volatile int *cancel,
+	char *error, int errorSize, int *status ) {
+	return Sys_HttpFetch( url, body ? body : "", body ? bodyLen : 0, sink, ctx, cancel, error, errorSize, status );
 }

@@ -2005,6 +2005,15 @@ void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
 void		CG_Emote_f( void );						// v_emote (toys/cg_emote.c)
 void		CG_PingPong_f( void );					// v_pingpong (toys/cg_pong.c)
+void		CG_Board_f( void );						// v_board (toys/cg_board.c)
+void		CG_BoardPicture_f( void );				// v_boardPicture, from the engine
+void		CG_BoardPublish( void );
+void		CG_BoardOpen( void );
+void		CG_BoardClose( void );
+qboolean	CG_BoardShown( void );
+qboolean	CG_BoardPointerOver( void );
+void		CG_BoardDraw( void );
+qboolean	CG_BoardKey( int key, qboolean down );
 qboolean	CG_PongPlaying( void );
 qboolean	CG_PongFrame( void );
 void		CG_PongView( void );
