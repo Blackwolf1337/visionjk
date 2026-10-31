@@ -532,6 +532,9 @@ TR = {
     'Command Menu': 'Befehlsmenü',
     'Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one.':
         'Öffnet Listen mit dem, was VisionJK kann, von der Boombox bis zu Gesten und Abstimmungen: Eine Zifferntaste oder ein Klick wählt aus.',
+    'Tool Window (Sandbox)': 'Werkzeugfenster (Sandbox)',
+    'Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties.':
+        'Öffnet das Fenster der Toolgun (nach amsandbox): Werkzeug wählen und Farbe, Material oder Eigenschaften einstellen.',
     # from the VisionJK of 2019: blade look, duels, notifications
     'Lightsabers': 'Lichtschwerter',
     'Blade Look': 'Klingenoptik',
@@ -770,6 +773,32 @@ CGAME = {
     'Timer': 'Zeitanzeige',
     'Lagometer': 'Lagometer',
     'Screenshot': 'Screenshot',
+    # the sandbox: the toolgun, its window and the line under the crosshair
+    'Tools': 'Werkzeuge',
+    'Remover': 'Entfernen',
+    'Color': 'Farbe',
+    'Material': 'Material',
+    'Physical Properties': 'Physikalische Eigenschaften',
+    'Freeze': 'Einfrieren',
+    'Plain': 'Schlicht',
+    'Chrome': 'Chrom',
+    'Gold': 'Gold',
+    'Glass': 'Glas',
+    'Ice': 'Eis',
+    'Lava': 'Lava',
+    'Mass': 'Masse',
+    'Bounce': 'Elastizität',
+    'Grip': 'Haftung',
+    'Light': 'Leicht',
+    'Heavy': 'Schwer',
+    'Bouncy': 'Springend',
+    'Slippery': 'Rutschig',
+    'Left click removes the prop you look at.': 'Linksklick entfernt das Objekt, auf das du schaust.',
+    'Left click paints the prop, right click takes its color.': 'Linksklick färbt das Objekt, Rechtsklick übernimmt seine Farbe.',
+    'Left click puts the material on the prop, right click takes it.': 'Linksklick setzt das Material auf das Objekt, Rechtsklick übernimmt es.',
+    'Left click gives the prop these properties, right click takes them.': 'Linksklick gibt dem Objekt diese Eigenschaften, Rechtsklick übernimmt sie.',
+    'Left click freezes the prop in place, right click frees it, R frees all.': 'Linksklick friert das Objekt an Ort und Stelle ein, Rechtsklick löst es, R löst alle.',
+    'Left click: use   Right click: take   R: reset': 'Linksklick: benutzen   Rechtsklick: übernehmen   R: zurücksetzen',
 }
 
 # names that are the same in every language

@@ -125,6 +125,14 @@ REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
 LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
 LANG_GERMAN         "Öffnet Listen mit dem, was VisionJK kann, von der Boombox bis zu Gesten und Abstimmungen: Eine Zifferntaste oder ein Klick wählt aus."
 
+REFERENCE           TOOL_WINDOW_SANDBOX
+LANG_ENGLISH        "Tool Window (Sandbox)"
+LANG_GERMAN         "Werkzeugfenster (Sandbox)"
+
+REFERENCE           OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
+LANG_ENGLISH        "Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties."
+LANG_GERMAN         "Öffnet das Fenster der Toolgun (nach amsandbox): Werkzeug wählen und Farbe, Material oder Eigenschaften einstellen."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_GERMAN         "Fotomodus"
@@ -2516,6 +2524,106 @@ LANG_GERMAN         "#same"
 REFERENCE           SCREENSHOT
 LANG_ENGLISH        "Screenshot"
 LANG_GERMAN         "#same"
+
+REFERENCE           TOOLS
+LANG_ENGLISH        "Tools"
+LANG_GERMAN         "Werkzeuge"
+
+REFERENCE           REMOVER
+LANG_ENGLISH        "Remover"
+LANG_GERMAN         "Entfernen"
+
+REFERENCE           COLOR
+LANG_ENGLISH        "Color"
+LANG_GERMAN         "Farbe"
+
+REFERENCE           MATERIAL
+LANG_ENGLISH        "Material"
+LANG_GERMAN         "#same"
+
+REFERENCE           PHYSICAL_PROPERTIES
+LANG_ENGLISH        "Physical Properties"
+LANG_GERMAN         "Physikalische Eigenschaften"
+
+REFERENCE           FREEZE
+LANG_ENGLISH        "Freeze"
+LANG_GERMAN         "Einfrieren"
+
+REFERENCE           PLAIN
+LANG_ENGLISH        "Plain"
+LANG_GERMAN         "Schlicht"
+
+REFERENCE           CHROME
+LANG_ENGLISH        "Chrome"
+LANG_GERMAN         "Chrom"
+
+REFERENCE           GOLD
+LANG_ENGLISH        "Gold"
+LANG_GERMAN         "#same"
+
+REFERENCE           GLASS
+LANG_ENGLISH        "Glass"
+LANG_GERMAN         "Glas"
+
+REFERENCE           ICE
+LANG_ENGLISH        "Ice"
+LANG_GERMAN         "Eis"
+
+REFERENCE           LAVA
+LANG_ENGLISH        "Lava"
+LANG_GERMAN         "#same"
+
+REFERENCE           MASS
+LANG_ENGLISH        "Mass"
+LANG_GERMAN         "Masse"
+
+REFERENCE           BOUNCE
+LANG_ENGLISH        "Bounce"
+LANG_GERMAN         "Elastizität"
+
+REFERENCE           GRIP
+LANG_ENGLISH        "Grip"
+LANG_GERMAN         "Haftung"
+
+REFERENCE           LIGHT
+LANG_ENGLISH        "Light"
+LANG_GERMAN         "Leicht"
+
+REFERENCE           HEAVY
+LANG_ENGLISH        "Heavy"
+LANG_GERMAN         "Schwer"
+
+REFERENCE           BOUNCY
+LANG_ENGLISH        "Bouncy"
+LANG_GERMAN         "Springend"
+
+REFERENCE           SLIPPERY
+LANG_ENGLISH        "Slippery"
+LANG_GERMAN         "Rutschig"
+
+REFERENCE           LEFT_CLICK_REMOVES_THE_PROP_YOU_LOOK
+LANG_ENGLISH        "Left click removes the prop you look at."
+LANG_GERMAN         "Linksklick entfernt das Objekt, auf das du schaust."
+
+REFERENCE           LEFT_CLICK_PAINTS_THE_PROP_RIGHT_CLI
+LANG_ENGLISH        "Left click paints the prop, right click takes its color."
+LANG_GERMAN         "Linksklick färbt das Objekt, Rechtsklick übernimmt seine Farbe."
+
+REFERENCE           LEFT_CLICK_PUTS_THE_MATERIAL_ON_THE
+LANG_ENGLISH        "Left click puts the material on the prop, right click takes it."
+LANG_GERMAN         "Linksklick setzt das Material auf das Objekt, Rechtsklick übernimmt es."
+
+REFERENCE           LEFT_CLICK_GIVES_THE_PROP_THESE_PROP
+LANG_ENGLISH        "Left click gives the prop these properties, right click takes them."
+LANG_GERMAN         "Linksklick gibt dem Objekt diese Eigenschaften, Rechtsklick übernimmt sie."
+
+REFERENCE           LEFT_CLICK_FREEZES_THE_PROP_IN_PLACE
+LANG_ENGLISH        "Left click freezes the prop in place, right click frees it, R frees all."
+LANG_GERMAN         "Linksklick friert das Objekt an Ort und Stelle ein, Rechtsklick löst es, R löst alle."
+
+REFERENCE           LEFT_CLICK_USE_RIGHT_CLICK_TAKE_R_RE
+LANG_ENGLISH        "Left click: use   Right click: take   R: reset"
+LANG_GERMAN         "Linksklick: benutzen   Rechtsklick: übernehmen   R: zurücksetzen"
 
 
 ENDMARKER

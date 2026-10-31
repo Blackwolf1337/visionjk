@@ -125,6 +125,14 @@ REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
 LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
 LANG_FRENCH         "Ouvre des listes de ce que VisionJK sait faire, de la boombox aux gestes et aux votes : une touche chiffre ou un clic choisit."
 
+REFERENCE           TOOL_WINDOW_SANDBOX
+LANG_ENGLISH        "Tool Window (Sandbox)"
+LANG_FRENCH         "Fenêtre des outils (Sandbox)"
+
+REFERENCE           OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
+LANG_ENGLISH        "Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties."
+LANG_FRENCH         "Ouvre la fenêtre du toolgun (après amsandbox) : choisissez un outil et réglez sa couleur, son matériau ou ses propriétés."
+
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"
 LANG_FRENCH         "Mode photo"
@@ -2516,6 +2524,106 @@ LANG_FRENCH         "Lagomètre"
 REFERENCE           SCREENSHOT
 LANG_ENGLISH        "Screenshot"
 LANG_FRENCH         "Capture d'écran"
+
+REFERENCE           TOOLS
+LANG_ENGLISH        "Tools"
+LANG_FRENCH         "Outils"
+
+REFERENCE           REMOVER
+LANG_ENGLISH        "Remover"
+LANG_FRENCH         "Supprimer"
+
+REFERENCE           COLOR
+LANG_ENGLISH        "Color"
+LANG_FRENCH         "Couleur"
+
+REFERENCE           MATERIAL
+LANG_ENGLISH        "Material"
+LANG_FRENCH         "Matériau"
+
+REFERENCE           PHYSICAL_PROPERTIES
+LANG_ENGLISH        "Physical Properties"
+LANG_FRENCH         "Propriétés physiques"
+
+REFERENCE           FREEZE
+LANG_ENGLISH        "Freeze"
+LANG_FRENCH         "Geler"
+
+REFERENCE           PLAIN
+LANG_ENGLISH        "Plain"
+LANG_FRENCH         "Simple"
+
+REFERENCE           CHROME
+LANG_ENGLISH        "Chrome"
+LANG_FRENCH         "#same"
+
+REFERENCE           GOLD
+LANG_ENGLISH        "Gold"
+LANG_FRENCH         "Or"
+
+REFERENCE           GLASS
+LANG_ENGLISH        "Glass"
+LANG_FRENCH         "Verre"
+
+REFERENCE           ICE
+LANG_ENGLISH        "Ice"
+LANG_FRENCH         "Glace"
+
+REFERENCE           LAVA
+LANG_ENGLISH        "Lava"
+LANG_FRENCH         "Lave"
+
+REFERENCE           MASS
+LANG_ENGLISH        "Mass"
+LANG_FRENCH         "Masse"
+
+REFERENCE           BOUNCE
+LANG_ENGLISH        "Bounce"
+LANG_FRENCH         "Rebond"
+
+REFERENCE           GRIP
+LANG_ENGLISH        "Grip"
+LANG_FRENCH         "Adhérence"
+
+REFERENCE           LIGHT
+LANG_ENGLISH        "Light"
+LANG_FRENCH         "Léger"
+
+REFERENCE           HEAVY
+LANG_ENGLISH        "Heavy"
+LANG_FRENCH         "Lourd"
+
+REFERENCE           BOUNCY
+LANG_ENGLISH        "Bouncy"
+LANG_FRENCH         "Rebondissant"
+
+REFERENCE           SLIPPERY
+LANG_ENGLISH        "Slippery"
+LANG_FRENCH         "Glissant"
+
+REFERENCE           LEFT_CLICK_REMOVES_THE_PROP_YOU_LOOK
+LANG_ENGLISH        "Left click removes the prop you look at."
+LANG_FRENCH         "Le clic gauche supprime l'objet que vous regardez."
+
+REFERENCE           LEFT_CLICK_PAINTS_THE_PROP_RIGHT_CLI
+LANG_ENGLISH        "Left click paints the prop, right click takes its color."
+LANG_FRENCH         "Le clic gauche colore l'objet, le clic droit prend sa couleur."
+
+REFERENCE           LEFT_CLICK_PUTS_THE_MATERIAL_ON_THE
+LANG_ENGLISH        "Left click puts the material on the prop, right click takes it."
+LANG_FRENCH         "Le clic gauche applique le matériau à l'objet, le clic droit le prend."
+
+REFERENCE           LEFT_CLICK_GIVES_THE_PROP_THESE_PROP
+LANG_ENGLISH        "Left click gives the prop these properties, right click takes them."
+LANG_FRENCH         "Le clic gauche donne ces propriétés à l'objet, le clic droit les prend."
+
+REFERENCE           LEFT_CLICK_FREEZES_THE_PROP_IN_PLACE
+LANG_ENGLISH        "Left click freezes the prop in place, right click frees it, R frees all."
+LANG_FRENCH         "Le clic gauche fige l'objet sur place, le clic droit le libère, R libère tout."
+
+REFERENCE           LEFT_CLICK_USE_RIGHT_CLICK_TAKE_R_RE
+LANG_ENGLISH        "Left click: use   Right click: take   R: reset"
+LANG_FRENCH         "Clic gauche : utiliser   Clic droit : prendre   R : réinitialiser"
 
 
 ENDMARKER

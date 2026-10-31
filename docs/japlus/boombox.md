@@ -16,7 +16,7 @@ Hold the key of the pointer (`+v_cursor`, the left Alt key by default) and:
   Play a song (Add a song while one plays), Pause or Resume, Skip this song, Stop the music, Quieter and Louder
   for everybody, Mute it for me, Move it, Take it away (click twice). The rows also go by their number keys.
 - **Open the player** (the first row of the card, or `boombox window` near a box) opens the window of the box in
-  the middle of the screen (2026-10-17, `cgame/boombox/cg_boombox_ui.c`): who put it down, the song and who asked
+  the middle of the screen (2026-10-17, `cgame/boombox/cg_boombox_ui.c`, its drawing helpers are in `cgame/cg_window.c` now, shared with the tool window of [sandbox.md](sandbox.md)): who put it down, the song and who asked
   for it, a bar to jump in the song (click or drag it, for everybody), Pause or Resume, Skip, Stop, Mute (for you),
   the volume for everybody as a bar, the line of songs with a cross to take one out, Add a song, Move it and
   Take it away (click twice), and the last line the server had for you. The wheel moves a long line. Esc, the

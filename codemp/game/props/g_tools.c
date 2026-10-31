@@ -33,8 +33,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   vs_tool material <name>               bg_tools.h
 //   vs_tool physprop <mass> <bounce> <grip>
 //
-// What the server holds is sent back to him the same way (a server command vs_tool with all of it), after a
-// change and when alt attack took something from a prop, so his window and his crosshair show it.
+// What the server holds is sent back to him the same way, a server command vs_tool with all of it: "set" after a
+// vs_tool, so his client knows it arrived (the flood protection drops a command that comes too soon after the
+// last one), and "take" when alt attack took something from a prop, which his window then shows.
 
 #include "game/g_local.h"
 #include "bg_props.h"		// PROP_BEAM
@@ -68,12 +69,12 @@ static toolState_t *Tool_State( const gentity_t *ent ) {
 	return t;
 }
 
-// what the server holds, to his cgame (cg_servercmds.c), which shows it
-static void Tool_Tell( const gentity_t *ent ) {
+// what the server holds, to his cgame (sandbox/cg_tools.c). taken: alt attack took it from a prop.
+static void Tool_Tell( const gentity_t *ent, qboolean taken ) {
 	const toolState_t *t = Tool_State( ent );
 
-	trap->SendServerCommand( ent->s.number, va( "vs_tool %s %i %i %i %s %g %g %g", toolNames[t->tool], t->color[0], t->color[1],
-		t->color[2], toolMaterials[t->material].name, t->mass, t->bounce, t->grip ) );
+	trap->SendServerCommand( ent->s.number, va( "vs_tool %s %s %i %i %i %s %g %g %g", taken ? "take" : "set", toolNames[t->tool],
+		t->color[0], t->color[1], t->color[2], toolMaterials[t->material].name, t->mass, t->bounce, t->grip ) );
 }
 
 // the green ray of a shot of the toolgun, from his weapon to where it hit: a beam entity of g_props.c whose end
@@ -185,7 +186,7 @@ static void Tool_Take( gentity_t *ent ) {
 		G_PropFreeze( prop, qfalse );
 		return;
 	}
-	Tool_Tell( ent );
+	Tool_Tell( ent, qtrue );
 }
 
 /*
@@ -221,7 +222,7 @@ void G_ToolReload( gentity_t *ent ) {
 		const int count = G_PropThawAll();
 
 		if ( count )
-			trap->SendServerCommand( ent->s.number, va( "print \"^7Toolgun: %i frozen props are free again.\n\"", count ) );
+			trap->SendServerCommand( ent->s.number, va( "print \"^7Toolgun: %i frozen props freed.\n\"", count ) );
 		return;
 	}
 	if ( !( prop = Tool_Aim( ent ) ) )
@@ -262,7 +263,7 @@ void Cmd_Tool_f( gentity_t *ent ) {
 		;
 	if ( tool == NUM_TOOLS ) {
 		// without a tool he is told what he has
-		Tool_Tell( ent );
+		Tool_Tell( ent, qfalse );
 		return;
 	}
 	t->tool = tool;
@@ -298,7 +299,7 @@ void Cmd_Tool_f( gentity_t *ent ) {
 		}
 		break;
 	}
-	Tool_Tell( ent );
+	Tool_Tell( ent, qfalse );
 }
 
 // a player who leaves: the next one in his slot has the default tool

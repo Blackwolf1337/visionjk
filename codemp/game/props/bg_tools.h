@@ -47,16 +47,17 @@ static const char *const toolNames[NUM_TOOLS] = { "remover", "color", "material"
 
 typedef struct toolMaterial_s {
 	const char	*name;		// in vs_tool material <name>
+	const char	*title;		// in the tool window and under the crosshair (in English, cgame: CG_VisionText)
 	const char	*shader;	// shaders/vision_tools.shader of the client assets, lava the one of the base game
 } toolMaterial_t;
 
 static const toolMaterial_t toolMaterials[] = {
-	{ "plain",		"vision/tools/plain" },
-	{ "chrome",		"vision/tools/chrome" },
-	{ "gold",		"vision/tools/gold" },
-	{ "glass",		"vision/tools/glass" },
-	{ "ice",		"vision/tools/ice" },
-	{ "shield",		"vision/tools/shield" },
-	{ "lava",		"gfx/effects/lava" },
+	{ "plain",		"Plain",	"vision/tools/plain" },
+	{ "chrome",		"Chrome",	"vision/tools/chrome" },
+	{ "gold",		"Gold",		"vision/tools/gold" },
+	{ "glass",		"Glass",	"vision/tools/glass" },
+	{ "ice",		"Ice",		"vision/tools/ice" },
+	{ "shield",		"Shield",	"vision/tools/shield" },
+	{ "lava",		"Lava",		"gfx/effects/lava" },
 };
 #define NUM_TOOL_MATERIALS	( (int)( sizeof( toolMaterials ) / sizeof( toolMaterials[0] ) ) )

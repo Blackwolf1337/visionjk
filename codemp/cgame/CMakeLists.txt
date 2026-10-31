@@ -119,6 +119,8 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_view.c"
 	"${MPDir}/cgame/cg_weaponinit.c"
 	"${MPDir}/cgame/cg_weapons.c"
+	"${MPDir}/cgame/cg_window.c"
+	"${MPDir}/cgame/cg_window.h"
 	"${MPDir}/cgame/fx_blaster.c"
 	"${MPDir}/cgame/fx_bowcaster.c"
 	"${MPDir}/cgame/fx_bryarpistol.c"
@@ -233,6 +235,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCmdMenuFiles})
 # the toolgun of the sandbox (amsandbox): its tool as cvars for the server, the line under the crosshair
 set(MPCGameSandboxFiles
 	"${MPDir}/cgame/sandbox/cg_tools.c"
+	"${MPDir}/cgame/sandbox/cg_tools_ui.c"
 	)
 source_group("cgame/sandbox" FILES ${MPCGameSandboxFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSandboxFiles})

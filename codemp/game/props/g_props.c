@@ -1189,7 +1189,7 @@ static void Prop_GunThaw( gentity_t *ent ) {
 	const int count = Prop_ThawAll();
 
 	if ( count )
-		trap->SendServerCommand( ent->s.number, va( "print \"^7Physgun: %i frozen props are free again.\n\"", count ) );
+		trap->SendServerCommand( ent->s.number, va( "print \"^7Physgun: %i frozen props freed.\n\"", count ) );
 }
 
 // alt attack with a prop in the beam: it stays where it is
@@ -1522,8 +1522,8 @@ void G_SandboxToggle( gentity_t *ent ) {
 			if ( !( *have & ( 1 << weapons[i] ) ) )
 				gunGave[n] |= ( 1 << weapons[i] );
 		}
-		trap->SendServerCommand( n, "print \"^7Sandbox ^2on^7: the stun baton is the physgun, the Bryar pistol the toolgun, the "
-			"concussion rifle the gravity gun.\n\"" );
+		trap->SendServerCommand( n, "print \"^7Sandbox ^2on^7: physgun (stun baton), toolgun (Bryar pistol), gravity gun (concussion rifle). "
+			"Tool window: Controls > Extras.\n\"" );
 		return;
 	}
 	// what is in the beam finds out in its next frame that nobody holds it

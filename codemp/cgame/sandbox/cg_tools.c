@@ -27,17 +27,21 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   v_toolMaterial  a name of bg_tools.h
 //   v_toolPhys      "<mass> <bounce> <grip>"
 //
-// The server answers every vs_tool with what it holds (a server command vs_tool with all of it), also when alt
-// attack took a colour, a material or properties from a prop. That comes into the cvars here, and is not sent
-// back: lastSent is what the server holds as far as this client knows.
+// The server answers every vs_tool with what it holds (the server command vs_tool set ...). Its flood protection
+// drops a command that comes too soon after the last one, so what the cvars say is sent until the server holds
+// it. When alt attack took a colour, a material or properties from a prop (vs_tool take ...), that comes into
+// the cvars. Both sides are compared as the command that would set them, in one form (CG_ToolCommand).
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "game/props/bg_tools.h"
 
+#define TOOL_SEND_MSEC	1100		// not more often: the flood protection of the server takes one command a second
+
 static vmCvar_t	v_tool, v_toolColor, v_toolMaterial, v_toolPhys;
-static char		lastSent[MAX_STRING_CHARS];
+static char		held[MAX_STRING_CHARS];		// what the server said it holds, "": nothing yet
+static int		sentTime;					// cg.time when the last one went
 
 static const vec4_t toolName = { 0.43f, 0.83f, 1.0f, 1.0f }, toolDim = { 0.86f, 0.92f, 0.97f, 0.85f };
 static const vec4_t toolShade = { 0.035f, 0.07f, 0.12f, 0.6f };
@@ -47,7 +51,8 @@ void CG_ToolsInit( void ) {
 	trap->Cvar_Register( &v_toolColor, "v_toolColor", "255 255 255", 0 );
 	trap->Cvar_Register( &v_toolMaterial, "v_toolMaterial", "plain", 0 );
 	trap->Cvar_Register( &v_toolPhys, "v_toolPhys", "1 0.25 0.7", 0 );
-	lastSent[0] = '\0';
+	held[0] = '\0';
+	sentTime = 0;
 }
 
 // the number of the tool v_tool names, the remover for anything else
@@ -61,17 +66,25 @@ static int CG_ToolOf( const char *name ) {
 	return TOOL_REMOVER;
 }
 
-// the command that tells the server the tool of these cvars, with what it needs of them
+// the command that tells the server the tool of these values, with what it needs of them, the numbers always in
+// the same form
 static void CG_ToolCommand( char *out, int outSize, const char *tool, const char *color, const char *material, const char *phys ) {
+	int		rgb[3] = { 255, 255, 255 };
+	float	p[3] = { 1.0f, 0.25f, 0.7f };
+
 	switch ( CG_ToolOf( tool ) ) {
 	case TOOL_COLOR:
-		Com_sprintf( out, outSize, "vs_tool color %s", color );
+		sscanf( color, "%3i %3i %3i", &rgb[0], &rgb[1], &rgb[2] );
+		Com_sprintf( out, outSize, "vs_tool color %i %i %i", Com_Clampi( 0, 255, rgb[0] ), Com_Clampi( 0, 255, rgb[1] ),
+			Com_Clampi( 0, 255, rgb[2] ) );
 		break;
 	case TOOL_MATERIAL:
 		Com_sprintf( out, outSize, "vs_tool material %s", material );
+		Q_strlwr( out );
 		break;
 	case TOOL_PHYSPROP:
-		Com_sprintf( out, outSize, "vs_tool physprop %s", phys );
+		sscanf( phys, "%15f %15f %15f", &p[0], &p[1], &p[2] );
+		Com_sprintf( out, outSize, "vs_tool physprop %.2f %.2f %.2f", p[0], p[1], p[2] );
 		break;
 	default:
 		Com_sprintf( out, outSize, "vs_tool %s", toolNames[CG_ToolOf( tool )] );
@@ -87,8 +100,9 @@ static qboolean CG_ToolSandbox( void ) {
 =================
 CG_ToolsFrame
 
-Once a frame: a tool or a setting the window changed goes to the server, while he has the sandbox. When he gets
-it, the server learns his tool that way too.
+Once a frame while he has the sandbox: what the cvars say goes to the server until it holds it, at most once in
+TOOL_SEND_MSEC. When he gets the sandbox the server learns his tool that way too. A bar of the window that is
+dragged changes a cvar every frame: that goes now and then, and the last of it when the drag ends.
 =================
 */
 void CG_ToolsFrame( void ) {
@@ -99,12 +113,12 @@ void CG_ToolsFrame( void ) {
 	trap->Cvar_Update( &v_toolMaterial );
 	trap->Cvar_Update( &v_toolPhys );
 	if ( !CG_ToolSandbox() ) {
-		lastSent[0] = '\0';
+		held[0] = '\0';
 		return;
 	}
 	CG_ToolCommand( cmd, sizeof( cmd ), v_tool.string, v_toolColor.string, v_toolMaterial.string, v_toolPhys.string );
-	if ( strcmp( cmd, lastSent ) ) {
-		Q_strncpyz( lastSent, cmd, sizeof( lastSent ) );
+	if ( strcmp( cmd, held ) && ( !sentTime || cg.time - sentTime >= TOOL_SEND_MSEC || cg.time < sentTime ) ) {
+		sentTime = cg.time;
 		trap->SendClientCommand( cmd );
 	}
 }
@@ -113,23 +127,26 @@ void CG_ToolsFrame( void ) {
 =================
 CG_ToolServerCommand
 
-vs_tool <tool> <r> <g> <b> <material> <mass> <bounce> <grip>: what the server holds
+vs_tool set|take <tool> <r> <g> <b> <material> <mass> <bounce> <grip>: what the server holds, and with take what
+alt attack took from a prop, for the window
 =================
 */
 void CG_ToolServerCommand( void ) {
 	char tool[MAX_QPATH], color[64], material[MAX_QPATH], phys[64];
 
-	if ( trap->Cmd_Argc() < 9 )
+	if ( trap->Cmd_Argc() < 10 )
 		return;
-	Q_strncpyz( tool, CG_Argv( 1 ), sizeof( tool ) );
-	Com_sprintf( color, sizeof( color ), "%i %i %i", atoi( CG_Argv( 2 ) ), atoi( CG_Argv( 3 ) ), atoi( CG_Argv( 4 ) ) );
-	Q_strncpyz( material, CG_Argv( 5 ), sizeof( material ) );
-	Com_sprintf( phys, sizeof( phys ), "%g %g %g", atof( CG_Argv( 6 ) ), atof( CG_Argv( 7 ) ), atof( CG_Argv( 8 ) ) );
-	trap->Cvar_Set( "v_tool", tool );
-	trap->Cvar_Set( "v_toolColor", color );
-	trap->Cvar_Set( "v_toolMaterial", material );
-	trap->Cvar_Set( "v_toolPhys", phys );
-	CG_ToolCommand( lastSent, sizeof( lastSent ), tool, color, material, phys );
+	Q_strncpyz( tool, CG_Argv( 2 ), sizeof( tool ) );
+	Com_sprintf( color, sizeof( color ), "%i %i %i", atoi( CG_Argv( 3 ) ), atoi( CG_Argv( 4 ) ), atoi( CG_Argv( 5 ) ) );
+	Q_strncpyz( material, CG_Argv( 6 ), sizeof( material ) );
+	Com_sprintf( phys, sizeof( phys ), "%.2f %.2f %.2f", atof( CG_Argv( 7 ) ), atof( CG_Argv( 8 ) ), atof( CG_Argv( 9 ) ) );
+	CG_ToolCommand( held, sizeof( held ), tool, color, material, phys );
+	if ( !Q_stricmp( CG_Argv( 1 ), "take" ) ) {
+		trap->Cvar_Set( "v_tool", tool );
+		trap->Cvar_Set( "v_toolColor", color );
+		trap->Cvar_Set( "v_toolMaterial", material );
+		trap->Cvar_Set( "v_toolPhys", phys );
+	}
 }
 
 // the name of a tool in the language of the game
@@ -149,13 +166,14 @@ Under the crosshair while the toolgun is in hand: the tool and what it does now
 void CG_ToolsDraw( void ) {
 	const int	font = Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
 	const float	scale = 0.55f, x = 320.0f, y = 262.0f;
-	int			tool, rgb[3] = { 255, 255, 255 };
+	int			tool, i, rgb[3] = { 255, 255, 255 };
 	float		mass = 1.0f, bounce = 0.25f, grip = 0.7f;
 	const char	*title, *detail = "";
 	vec4_t		swatch;
 	float		w;
 
-	if ( !CG_ToolSandbox() || cg.predictedPlayerState.weapon != WP_BRYAR_PISTOL || cg.showScores || ( trap->Key_GetCatcher() & KEYCATCH_UI ) )
+	if ( !CG_ToolSandbox() || cg.predictedPlayerState.weapon != WP_BRYAR_PISTOL || cg.showScores || ( trap->Key_GetCatcher() & KEYCATCH_UI )
+		|| CG_ToolWindowShown() )
 		return;
 	tool = CG_ToolOf( v_tool.string );
 	title = CG_ToolTitle( tool );
@@ -164,7 +182,10 @@ void CG_ToolsDraw( void ) {
 		sscanf( v_toolColor.string, "%3i %3i %3i", &rgb[0], &rgb[1], &rgb[2] );
 		break;
 	case TOOL_MATERIAL:
-		detail = CG_VisionText( v_toolMaterial.string );
+		for ( i = 0; i < NUM_TOOL_MATERIALS; i++ ) {
+			if ( !Q_stricmp( v_toolMaterial.string, toolMaterials[i].name ) )
+				detail = CG_VisionText( toolMaterials[i].title );
+		}
 		break;
 	case TOOL_PHYSPROP:
 		sscanf( v_toolPhys.string, "%15f %15f %15f", &mass, &bounce, &grip );
