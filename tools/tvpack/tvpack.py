@@ -2,7 +2,8 @@
 """Makes the packs of the TV in the browser (issue #7): the files of the game a viewer needs, per map, encrypted.
 
 usage: tools/tvpack/tvpack.py --game <folder of a Linux build> --out <folder> [--maps mp|all|mp/ffa1,mp/ffa3]
-                               [--bots "Kyle Katarn,Jan Ors"] [--seconds 20] [--work <folder>] [--no-record]
+                               [--bots "Kyle Katarn,Jan Ors"] [--seconds 20] [--jobs 4] [--work <folder>]
+                               [--no-record]
 
 The page of the browser client in TV mode (shared/sys/web/page/boot.js, ?tv) does not load the pk3 files of the
 server: it loads tv-common.vpk and the pack of the map that runs, both made here. Which files go in is not worked
@@ -29,6 +30,7 @@ import subprocess
 import sys
 import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 
 TV_PACK_KEY = '5a1c9e3b07d24f68a1b2c3d4e5f60718'
 PACK_MAGIC = b'VJKTV1\0\0'
@@ -65,12 +67,12 @@ def demo_name( mapname ):
 	return 'tvpack_' + re.sub( r'[^a-z0-9]', '_', mapname )
 
 
-def record( game, home, maps, bots, seconds ):
-	"""Every map with the bots, recorded by the TV of the server into <home>/japlus/demos."""
+def record( game, home, maps, bots, seconds, port ):
+	"""The maps with the bots, one after the other on one server, recorded by its TV into <home>/japlus/demos."""
 	server = subprocess.Popen( [ './visionjkded.x86_64', '+set', 'fs_homepath', home, '+set', 'fs_game', 'japlus',
-		'+set', 'dedicated', '1', '+set', 'net_port', '29591', '+set', 'sv_maxclients', '16', '+set', 'g_gametype', '0',
-		'+set', 'fraglimit', '0', '+set', 'timelimit', '0', '+set', 'bot_enable', '1' ], cwd=game,
-		stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True )
+		'+set', 'dedicated', '1', '+set', 'net_port', str( port ), '+set', 'vs_clientWebPort', '0', '+set', 'sv_maxclients',
+		'16', '+set', 'g_gametype', '0', '+set', 'fraglimit', '0', '+set', 'timelimit', '0', '+set', 'bot_enable', '1' ],
+		cwd=game, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True )
 
 	def say( line, wait ):
 		server.stdin.write( line + '\n' )
@@ -78,8 +80,8 @@ def record( game, home, maps, bots, seconds ):
 		time.sleep( wait )
 
 	try:
-		for i, mapname in enumerate( maps ):
-			print( f'record {i + 1}/{len( maps )}: {mapname}', flush=True )
+		for mapname in maps:
+			print( f'record: {mapname}', flush=True )
 			say( 'map ' + mapname, 8 )
 			for bot in bots:
 				say( f'addbot "{bot}" 2', 0.5 )
@@ -91,27 +93,21 @@ def record( game, home, maps, bots, seconds ):
 			server.kill()
 
 
-def play( game, home, maps, seconds, log ):
-	"""Each demo in a client of its own with fs_debug 1, so nothing a map before loaded is still in memory (the
-	models stay from one level to the next), with a mark before it. Returns the lines of their consoles, each
-	client beginning with START. What the client prints is read from its output: its log file opens only after
-	mpdefault.cfg was read."""
-	env = dict( os.environ, SDL_AUDIODRIVER='dummy' )
-	lines = []
-	with open( log, 'w', encoding='latin-1' ) as out:
-		for i, mapname in enumerate( maps ):
-			print( f'play {i + 1}/{len( maps )}: {mapname}', flush=True )
-			with open( os.path.join( home, 'japlus', 'tvpack.cfg' ), 'w' ) as f:
-				f.write( f'wait 120; echo {MARK}{mapname}; demo {demo_name( mapname )}; wait {( seconds + 10 ) * 60}; quit\n' )
-			result = subprocess.run( [ 'timeout', '-k', '3', str( seconds + 60 ), 'gamescope', '--backend', 'headless', '-W', '1280',
-				'-H', '720', '--', './visionjk.x86_64', '+set', 'fs_homepath', home, '+set', 'fs_game', 'japlus',
-				'+set', 'fs_debug', '1', '+set', 'logfile', '2', '+set', 'cl_updateCheck', '0', '+set', 'com_maxfps', '60',
-				'+set', 'r_fullscreen', '0', '+set', 'r_mode', '-1', '+set', 'r_customwidth', '1280', '+set', 'r_customheight',
-				'720', '+exec', 'tvpack.cfg' ], cwd=game, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT )
-			lines.append( START )
-			lines += result.stdout.decode( 'latin-1' ).splitlines()
-		out.write( '\n'.join( lines ) + '\n' )
-	return lines
+def play_one( game, home, mapname, seconds ):
+	"""One demo in a client of its own with fs_debug 1, so nothing a map before loaded is still in memory (the
+	models stay from one level to the next), with a mark before it. Returns the lines of its console, beginning
+	with START. What the client prints is read from its output: its log file opens only after mpdefault.cfg was
+	read, and the clients that run at once share the home path."""
+	print( f'play: {mapname}', flush=True )
+	cfg = demo_name( mapname ) + '.cfg'
+	with open( os.path.join( home, 'japlus', cfg ), 'w' ) as f:
+		f.write( f'wait 120; echo {MARK}{mapname}; demo {demo_name( mapname )}; wait {( seconds + 10 ) * 60}; quit\n' )
+	result = subprocess.run( [ 'timeout', '-k', '3', str( seconds + 120 ), 'gamescope', '--backend', 'headless', '-W', '1280',
+		'-H', '720', '--', './visionjk.x86_64', '+set', 'fs_homepath', home, '+set', 'fs_game', 'japlus',
+		'+set', 'fs_debug', '1', '+set', 'cl_updateCheck', '0', '+set', 'com_maxfps', '60', '+set', 'r_fullscreen', '0',
+		'+set', 'r_mode', '-1', '+set', 'r_customwidth', '1280', '+set', 'r_customheight', '720', '+exec', cfg ],
+		cwd=game, env=dict( os.environ, SDL_AUDIODRIVER='dummy' ), stdout=subprocess.PIPE, stderr=subprocess.STDOUT )
+	return [ START ] + result.stdout.decode( 'latin-1' ).splitlines()
 
 
 def sort_files( lines, maps, game ):
@@ -186,6 +182,7 @@ def main():
 	ap.add_argument( '--maps', default='mp', help='mp: every map under maps/mp, all: every map, or a list' )
 	ap.add_argument( '--bots', default=DEFAULT_BOTS )
 	ap.add_argument( '--seconds', type=int, default=20, help='how long each map is recorded' )
+	ap.add_argument( '--jobs', type=int, default=4, help='servers that record and clients that play at once' )
 	ap.add_argument( '--work', help='folder for the home path, the demos and the log (default: <out>/work)' )
 	ap.add_argument( '--no-record', action='store_true', help='play the demos of an earlier run of the same work folder' )
 	args = ap.parse_args()
@@ -198,9 +195,14 @@ def main():
 	maps = all_maps( game, args.maps == 'mp' ) if args.maps in ( 'mp', 'all' ) else [ m.strip().lower() for m in args.maps.split( ',' ) if m.strip() ]
 	bots = [ b.strip() for b in args.bots.split( ',' ) if b.strip() ]
 
-	if not args.no_record:
-		record( game, home, maps, bots, args.seconds )
-	lines = play( game, home, maps, args.seconds, os.path.join( work, 'client.log' ) )
+	jobs = max( 1, min( args.jobs, len( maps ) ) )
+	with ThreadPoolExecutor( jobs ) as pool:
+		if not args.no_record:
+			# each server its own share of the maps and its own ports (the voice chat takes the one after net_port)
+			list( pool.map( lambda i: record( game, home, maps[i::jobs], bots, args.seconds, 29591 + 2 * i ), range( jobs ) ) )
+		lines = [ line for part in pool.map( lambda m: play_one( game, home, m, args.seconds ), maps ) for line in part ]
+	with open( os.path.join( work, 'client.log' ), 'w', encoding='latin-1' ) as log:
+		log.write( '\n'.join( lines ) + '\n' )
 	startup, per_map = sort_files( lines, maps, game )
 	if not startup:
 		# the clients did not run (gamescope needs XDG_RUNTIME_DIR, sudo drops it), see the log
