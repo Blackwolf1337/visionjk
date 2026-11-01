@@ -5988,6 +5988,8 @@ static const char *g_bindCommands[] = {
 	"+useforce",
 	"+v_voice",
 	"+v_voiceclan",
+	"+v_snowball",				// VisionJK: the toys of #9, held to throw or spray
+	"+v_water",
 	"automap_button",
 	"automap_toggle",
 	"bow",
@@ -6020,6 +6022,16 @@ static const char *g_bindCommands[] = {
 	"messagemode4",
 	"saberAttackCycle",
 	"v_scores_pick",				// VisionJK: the scoreboard kept open with the mouse free
+	"v_commandmenu",				// VisionJK: Controls, Extras; a bind item whose command is missing here takes no key
+	"v_tools",
+	"v_modelbrowser",
+	"v_photo",
+	"v_rccar",
+	"v_spray",
+	"v_emote",
+	"v_pingpong",
+	"v_tennis",
+	"v_board",
 	"taunt",
 	"ui_openmenu modsay",		// JA+: the message menu
 	"use_bacta",
