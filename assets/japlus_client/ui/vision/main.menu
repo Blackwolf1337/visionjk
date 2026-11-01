@@ -16,7 +16,7 @@
 		moveRollSound			"sound/player/roll1"
 		moveJumpSound			"sound/weapons/force/jump"
 		shadowColor				0.1 0.1 0.1 0.25
-		focuscolor				0.43 0.83 1 1
+		focuscolor				0.36 0.78 0.96 1
 		precacheSound
 		{
 			"sound/interface/choose_color.wav" ;
@@ -37,13 +37,17 @@
 		fullScreen				1
 		rect					0 0 640 480
 		visible					1
-		focusColor				0.43 0.83 1 1
-		descX					58
-		descY					404
-		descScale				0.8
-		descColor				0.60 0.69 0.78 1
+		focusColor				0.36 0.78 0.96 1
+		descX					40
+		descY					316
+		descScale				0.7
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_LEFT
-		onOpen { exec "music music/t2_dpred/ImpBaseB_Action" ; }
+		onOpen
+		{
+			uiScript homeModel ;
+			exec "music music/t2_dpred/ImpBaseB_Action" ;
+		}
 		onESC
 		{
 			play "sound/interface/esc.wav"
@@ -52,17 +56,49 @@
 		}
 		onClose {  }
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		backdrop				1
 
 		itemDef
 		{
+			name					vision_bar
+			rect					0 0 640 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.55
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					0 34 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_logo
+			rect					22 6 22 22
+			visible					1
+			type					ITEM_TYPE_LOGO
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
 			name					vision_mark
-			rect					56 96 400 50
+			rect					50 7 120 20
 			visible					1
 			text					"VISIONJK"
 			font					5
-			textscale				2.6
+			textscale				1
 			forecolor				1 1 1 1
 			decoration
 		}
@@ -70,100 +106,12 @@
 		itemDef
 		{
 			name					vision_mark2
-			rect					58 146 400 16
+			rect					138 12 160 14
 			visible					1
-			text					"JEDI ACADEMY  MULTIPLAYER"
-			font					5
-			textscale				0.62
-			forecolor				0.60 0.69 0.78 1
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_rule
-			rect					58 172 64 2
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 1
-			radius					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_rail
-			rect					48 196 220 196
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.80
-			bordercolor				0.43 0.83 1 0.28
-			radius					8
-			shadow					12
-			sheen					0.08
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_hero
-			rect					336 96 256 296
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.28
-			radius					10
-			shadow					14
-			sheen					0.10
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_cube
-			rect					364 102 200 200
-			visible					1
-			type					ITEM_TYPE_CUBE
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_hero1
-			rect					336 312 256 18
-			visible					1
-			text					"Jedi Academy, rebuilt"
-			font					5
-			textscale				0.86
-			forecolor				1 1 1 1
-			decoration
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				128
-		}
-
-		itemDef
-		{
-			name					vision_hero2
-			rect					336 334 256 14
-			visible					1
-			text					"jka.vision"
-			font					5
-			textscale				0.66
-			forecolor				0.43 0.83 1 1
-			decoration
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				128
-		}
-
-		itemDef
-		{
-			name					vision_version
-			rect					584 372 0 12
-			visible					1
-			ownerdraw				UI_VERSION
+			text					"JEDI ACADEMY"
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 		}
 
@@ -173,16 +121,16 @@
 			group					main_button
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					58 205 200 30
+			rect					330 7 72 20
 			text					@MENUS_PLAY
 			descText				@MENUS_START_PLAYING_NOW
 			font					5
-			textscale				1
-			textaligny				6
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				16
-			forecolor				1 1 1 1
+			textalignx				36
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -212,14 +160,14 @@
 			descText				@MENUS_PROFILE_DESC
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					58 236 200 30
-			textaligny				6
+			rect					404 7 72 20
+			textaligny				4
 			font					5
-			textscale				1
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				16
-			forecolor				0.86 0.92 0.97 1
+			textalignx				36
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -249,15 +197,15 @@
 			descText				@MENUS_CONFIGURE_GAME_CONTROLS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 267 200 30
+			rect					478 7 72 20
 			font					5
-			textscale				1
-			textaligny				6
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				16
+			textalignx				36
 			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -287,15 +235,15 @@
 			descText				@MENUS_CONFIGURE_GAME_SETTINGS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 298 200 30
+			rect					552 7 72 20
 			font					5
-			textscale				1
-			textaligny				6
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				16
+			textalignx				36
 			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -319,20 +267,264 @@
 
 		itemDef
 		{
+			name					vision_mark
+			rect					40 56 300 46
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				2.35
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					42 102 300 16
+			visible					1
+			text					"Jedi Academy, rebuilt"
+			font					5
+			textscale				0.84
+			forecolor				0.56 0.64 0.74 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_rule
+			rect					42 126 30 1.6
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.36 0.78 0.96 1
+			radius					0.8
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_join
+			rect					40 140 268 58
+			visible					1
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_JOIN_SERVER_CAPS
+			descText				@MENUS_SEARCH_FOR_SERVERS_TO
+			font					5
+			textscale				1.05
+			caps					1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				16
+			textaligny				19.55
+			style					WINDOW_STYLE_PANEL
+			radius					5.3
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			forecolor				0.016 0.071 0.122 1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_create
+			rect					40 208 131 44
+			visible					1
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_CREATE_SERVER_CAPS
+			descText				@MENUS_CREATE_YOUR_OWN_SERVER
+			font					5
+			textscale				0.66
+			caps					1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				11
+			textaligny				16.06
+			style					WINDOW_STYLE_PANEL
+			radius					5.3
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				1 1 1 1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_solo
+			rect					177 208 131 44
+			visible					1
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_SOLO_GAME
+			descText				@MENUS_QUICKSTART_DESC
+			font					5
+			textscale				0.66
+			caps					1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				11
+			textaligny				16.06
+			style					WINDOW_STYLE_PANEL
+			radius					5.3
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				1 1 1 1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_demo
+			rect					40 258 131 44
+			visible					1
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_PLAY_DEMO_CAPS
+			descText				@MENUS_PLAY_BACK_A_RECORDED
+			font					5
+			textscale				0.66
+			caps					1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				11
+			textaligny				16.06
+			style					WINDOW_STYLE_PANEL
+			radius					5.3
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				1 1 1 1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_rules
+			rect					177 258 131 44
+			visible					1
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_RULES
+			descText				@MENUS_RULES_DESC
+			font					5
+			textscale				0.66
+			caps					1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				11
+			textaligny				16.06
+			style					WINDOW_STYLE_PANEL
+			radius					5.3
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				1 1 1 1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_glow
+			rect					343 378 100 14
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.36 0.78 0.96 0.07
+			radius					7
+			glowcolor				0.36 0.78 0.96 0.14
+			decoration
+		}
+
+		itemDef
+		{
+			name					character
+			rect					318 46 150 352
+			visible					1
+			type					ITEM_TYPE_MODEL
+			asset_model				"models/players/jedi_hm/model.glm"
+			model_g2anim			"BOTH_STAND1"
+			model_angle				160
+			model_rotation			0
+			model_g2mins			-30 -15 -14
+			model_g2maxs			20 15 30
+			model_fovx				50
+			model_fovy				50
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_hero
+			rect					476 46 140 134
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					5.3
+			shadow					12
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_cube
+			rect					496 52 100 100
+			visible					1
+			type					ITEM_TYPE_CUBE
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_hero2
+			rect					476 154 140 14
+			visible					1
+			text					"jka.vision"
+			font					5
+			textscale				0.66
+			forecolor				0.36 0.78 0.96 1
+			decoration
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				70
+		}
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 446 640 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 446 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_version
+			rect					612 459 0 12
+			visible					1
+			ownerdraw				UI_VERSION
+			font					5
+			textscale				0.48
+			forecolor				0.56 0.64 0.74 1
+			decoration
+		}
+
+		itemDef
+		{
 			name					exitgamebutton
 			group					othermain
 			text					@MENUS_EXIT
 			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 329 200 30
+			rect					29 446 90 34
 			font					5
-			textscale				1
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.6
+			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				16
-			textaligny				6
-			forecolor				0.86 0.92 0.97 1
+			textalignx				45
+			textaligny				11.6
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -347,6 +539,7 @@
 				open quitMenu
 			}
 			caps					1
+			flow					1
 		}
 	}
 }

@@ -8,12 +8,12 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					16 30 608 436
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
 		descX					305
 		descY					360
 		descScale				1
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onClose { uiScript saveControls }
 		onESC
@@ -26,172 +26,163 @@
 			uiScript loadControls
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.94
-		bordercolor				0.43 0.83 1 0.28
+		backcolor				0.031 0.055 0.11 0.97
+		bordercolor				0.11 0.18 0.29 1
 		radius					6
 		shadow					14
-		sheen					0.08
 
 		itemDef
 		{
-			name					vision_strip
-			rect					0 0 608 26
+			name					vision_rail
+			rect					8 8 122 388
 			visible					1
-			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.50
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_strip_line
-			rect					0 26 608 0.67
-			visible					1
-			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_tab1
-			rect					9 0 83.43 26
+			rect					14 42 110 22
 			visible					1
 			text					@MENUS_MOVEMENT
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						1
 			descText				@VISION_THE_KEYS_YOU_MOVE_WITH
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab2
-			rect					92.43 0 83.43 26
+			rect					14 66 110 22
 			visible					1
 			text					@MENUS_INTERACTION
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						2
 			descText				@VISION_ATTACK_USE_AND_LOOK
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab3
-			rect					175.86 0 83.43 26
+			rect					14 90 110 22
 			visible					1
 			text					@MENUS_WEAPONS
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						3
 			descText				@VISION_THE_KEYS_OF_THE_WEAPONS
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab4
-			rect					259.29 0 83.43 26
+			rect					14 114 110 22
 			visible					1
 			text					@VISION_FORCE_POWERS
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						4
 			descText				@VISION_THE_KEYS_OF_THE_FORCE_POWERS
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab5
-			rect					342.71 0 83.43 26
+			rect					14 138 110 22
 			visible					1
 			text					@MENUS_MOUSE_JOYSTICK
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						5
 			descText				@VISION_MOUSE_AND_JOYSTICK
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab6
-			rect					426.14 0 83.43 26
+			rect					14 162 110 22
 			visible					1
 			text					@MENUS_OTHER
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						6
 			descText				@VISION_CHAT_SCORES_AND_GESTURES
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab7
-			rect					509.57 0 83.43 26
+			rect					14 186 110 22
 			visible					1
 			text					@VISION_EXTRAS
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						7
 			descText				@VISION_KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				41.71
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
@@ -203,13 +194,13 @@
 			cvar					"+forward"
 			descText				@MENUS_MOVES_PLAYER_FORWARD
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 38 380 22
+			rect					144 12 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -222,13 +213,13 @@
 			cvar					"+back"
 			descText				@MENUS_MOVES_PLAYER_BACKWARD
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -241,13 +232,13 @@
 			cvar					"+left"
 			descText				@MENUS_ROTATES_PLAYER_LEFT
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -260,13 +251,13 @@
 			cvar					"+right"
 			descText				@MENUS_ROTATES_PLAYER_RIGHT
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -279,13 +270,13 @@
 			cvar					"+speed"
 			descText				@MENUS_IF_HELD_TOGGLES_BETWEEN
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -298,13 +289,13 @@
 			cvar					"+moveleft"
 			descText				@MENUS_STEPS_PLAYER_TO_THE_LEFT
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -317,13 +308,13 @@
 			cvar					"+moveright"
 			descText				@MENUS_STEPS_PLAYER_TO_THE_RIGHT
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -336,13 +327,13 @@
 			cvar					"+strafe"
 			descText				@MENUS_HELD_ALLOWS_PLAYER_TO
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -355,13 +346,13 @@
 			cvar					"+moveup"
 			descText				@MENUS_MAKES_PLAYER_JUMP_IF
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -374,13 +365,13 @@
 			cvar					"+movedown"
 			descText				@MENUS_MAKES_PLAYER_CROUCH_TO
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -393,13 +384,13 @@
 			cvar					"+attack"
 			descText				@MENUS_ATTACKS_WITH_READIED
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 38 380 22
+			rect					144 12 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -412,13 +403,13 @@
 			cvar					"+altattack"
 			descText				@MENUS_ATTACKS_WITH_ALTERNATE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -431,13 +422,13 @@
 			cvar					"saberAttackCycle"
 			descText				@MENUS_CYCLES_BETWEEN_AVAILABLE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -450,13 +441,13 @@
 			cvar					"+use"
 			descText				@MENUS_ACTIVATES_WORLD_DEVICES
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -469,13 +460,13 @@
 			cvar					"+button2"
 			descText				@MENUS_ACTIVATES_CURRENTLY_SELECTED
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -488,13 +479,13 @@
 			cvar					"invnext"
 			descText				@MENUS_SELECTS_NEXT_USABLE_ITEM
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -507,13 +498,13 @@
 			cvar					"invprev"
 			descText				@MENUS_SELECTS_PREVIOUS_USABLE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -526,13 +517,13 @@
 			cvar					"+lookup"
 			descText				@MENUS_TILTS_VIEW_UPWARDS
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -545,13 +536,13 @@
 			cvar					"+lookdown"
 			descText				@MENUS_TILTS_VIEW_DOWNWARDS
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -564,13 +555,13 @@
 			cvar					"+mlook"
 			descText				@MENUS_IF_HELD_ALLOWS_PLAYER
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -583,13 +574,13 @@
 			cvar					"centerview"
 			descText				@MENUS_RETURNS_VIEW_TO_HORIZONTAL
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -602,13 +593,13 @@
 			cvar					"weapon 1"
 			descText				@MENUS_READIES_LIGHTSABER
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 38 380 22
+			rect					144 12 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -621,13 +612,13 @@
 			cvar					"weapon 2"
 			descText				@MENUS_READIES_THE_BLASTER_PISTOL
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -640,13 +631,13 @@
 			cvar					"weapon 3"
 			descText				@MENUS_READIES_THE_E_11_BLASTER
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -659,13 +650,13 @@
 			cvar					"weapon 4"
 			descText				@MENUS_READIES_THE_TENLOSS_DXR_6
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -678,13 +669,13 @@
 			cvar					"weapon 5"
 			descText				@MENUS_READIES_THE_WOOKIEE_BOWCASTER
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -697,13 +688,13 @@
 			cvar					"weapon 6"
 			descText				@MENUS_READIES_THE_IMPERIAL
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -716,13 +707,13 @@
 			cvar					"weapon 7"
 			descText				@MENUS_READIES_THE_DEMP2_GUN
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -735,13 +726,13 @@
 			cvar					"weapon 8"
 			descText				@MENUS_READIES_THE_GOLAN_ARMS
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -754,13 +745,13 @@
 			cvar					"weapon 13"
 			descText				@MENUS_READIES_THE_CONC_RIFLE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -773,13 +764,13 @@
 			cvar					"weapon 9"
 			descText				@MENUS_READIES_THE_MERR_SONN
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -792,13 +783,13 @@
 			cvar					"weapon 10"
 			descText				@MENUS_TOGGLES_BETWEEN_DETONATORS
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -811,13 +802,13 @@
 			cvar					"weapnext"
 			descText				@MENUS_SELECTS_THE_NEXT_WEAPON
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -830,13 +821,13 @@
 			cvar					"weapprev"
 			descText				@MENUS_SELECTS_THE_PREVIOUS
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -849,13 +840,13 @@
 			cvar					"force_throw"
 			descText				@MENUS_USES_FORCE_PUSH_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 38 380 22
+			rect					144 12 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -868,13 +859,13 @@
 			cvar					"force_pull"
 			descText				@MENUS_USES_FORCE_PULL_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -887,13 +878,13 @@
 			cvar					"force_speed"
 			descText				@MENUS_USES_FORCE_SPEED_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -906,13 +897,13 @@
 			cvar					"force_seeing"
 			descText				@MENUS_USES_FORCE_SIGHT_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -925,13 +916,13 @@
 			cvar					"+useforce"
 			descText				@MENUS_USES_CURRENTLY_SELECTED
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -944,13 +935,13 @@
 			cvar					"forcenext"
 			descText				@MENUS_SELECTS_NEXT_AVAILABLE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -963,13 +954,13 @@
 			cvar					"forceprev"
 			descText				@MENUS_SELECTS_PREVIOUS_AVAILABLE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -981,13 +972,13 @@
 			cvar					"force_protect"
 			descText				@MENUS_USES_FORCE_PROTECT_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -999,13 +990,13 @@
 			cvar					"force_absorb"
 			descText				@MENUS_USE_ABSORB
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1017,13 +1008,13 @@
 			cvar					"force_heal"
 			descText				@MENUS_USES_FORCE_HEAL_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1035,13 +1026,13 @@
 			cvar					"force_healother"
 			descText				@MENUS_USE_HEAL_OTHER
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1053,13 +1044,13 @@
 			cvar					"force_distract"
 			descText				@MENUS_USES_MIND_TRICK_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1071,13 +1062,13 @@
 			cvar					"+force_grip"
 			descText				@MENUS_USES_GRIP_FORCE_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1089,13 +1080,13 @@
 			cvar					"+force_drain"
 			descText				@MENUS_USES_DRAIN_FORCE_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1107,13 +1098,13 @@
 			cvar					"+force_lightning"
 			descText				@MENUS_USES_LIGHTNING_FORCE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					144 320 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1125,13 +1116,13 @@
 			cvar					"force_rage"
 			descText				@MENUS_USES_RAGE_FORCE_ABILITY
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1143,13 +1134,13 @@
 			cvar					"force_forcepowerother"
 			descText				@MENUS_USES_TEAM_POWER_FORCE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					144 364 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1162,13 +1153,13 @@
 			cvar					"cl_freelook"
 			descText				@MENUS_TOGGLE_TO_ALLOW_PLAYER
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 38 380 22
+			rect					144 12 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1181,13 +1172,13 @@
 			cvarfloat				"sensitivity" 5 2 30
 			descText				@MENUS_ADJUSTS_CHARACTER_REACTION
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1204,13 +1195,13 @@
 				uiScript update ui_mousePitch ;
 				play "sound/interface/button1.wav" ;
 			}
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1223,13 +1214,13 @@
 			cvar					"m_filter"
 			descText				@MENUS_WHEN_TURNED_ON_MOUSE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1246,13 +1237,13 @@
 				play "sound/interface/button1.wav" ;
 				exec in_restart
 			}
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1265,13 +1256,13 @@
 			cvarfloat				"joy_threshold" .15 .05 .75
 			descText				@MENUS_ADJUSTS_THE_SIZE_OF_THE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1284,13 +1275,13 @@
 			cvar					"cl_run"
 			descText				@MENUS_WHEN_ON_PLAYER_ALWAYS
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 38 380 22
+			rect					144 12 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1309,13 +1300,13 @@
 			}
 			descText				@MENUS_CHOOSE_WHETHER_TO_SWITCH
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1327,13 +1318,13 @@
 			cvar					"messagemode"
 			descText				@MENUS_SENDS_A_CHAT_MESSAGE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1345,13 +1336,13 @@
 			cvar					"messagemode2"
 			descText				@MENUS_A_CHAT_MESSAGE_TO_EVERYONE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1363,13 +1354,13 @@
 			cvar					"voicechat"
 			descText				@MENUS_VC_CONTROLS_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1381,13 +1372,13 @@
 			cvar					"automap_toggle"
 			descText				@MENUS_AUTOMAP_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1399,13 +1390,13 @@
 			cvar					"+scores"
 			descText				@MENUS_SHOWS_THE_CURRENT_SCORES
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1417,13 +1408,13 @@
 			cvar					"engage_duel"
 			descText				@MENUS_INFO_SABER_CHALLENGE
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1435,13 +1426,13 @@
 			cvar					"cg_thirdperson !"
 			descText				@MENUS_CHANGES_VIEW_BETWEEN
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1453,13 +1444,13 @@
 			cvar					"taunt"
 			descText				@MENUS_TAUNT_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1471,13 +1462,13 @@
 			cvar					"bow"
 			descText				@MENUS_BOW_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1489,13 +1480,13 @@
 			cvar					"meditate"
 			descText				@MENUS_MEDITATE_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1507,13 +1498,13 @@
 			cvar					"flourish"
 			descText				@MENUS_FLOURISH_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1525,25 +1516,25 @@
 			cvar					"gloat"
 			descText				@MENUS_GLOAT_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_JA
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1557,10 +1548,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					7
 			scroll					1
@@ -1575,13 +1566,13 @@
 			cvar					"+button12"
 			descText				@VISION_A_HOOK_ON_A_ROPE_THAT_PULLS_YOU_TO_W
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1594,13 +1585,13 @@
 			cvar					"jetpack"
 			descText				@VISION_TURNS_THE_JETPACK_ON_AND_OFF
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1613,13 +1604,13 @@
 			cvar					"engage_FullForceDuel"
 			descText				@VISION_CHALLENGES_TO_A_DUEL_WITH_EVERY_FORC
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1632,25 +1623,25 @@
 			cvar					"ui_openmenu modsay"
 			descText				@VISION_A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 148 376 22
+			rect					146 122 274 22
 			visible					1
 			text					@VISION_VISIONJK
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1664,10 +1655,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 169 380 0.67
+			rect					144 143 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					7
 			scroll					1
@@ -1682,13 +1673,13 @@
 			cvar					"+v_voice"
 			descText				@VISION_HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1701,13 +1692,13 @@
 			cvar					"+v_voiceclan"
 			descText				@VISION_HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1719,13 +1710,13 @@
 			descText				@VISION_HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 			cvar					"+v_cursor"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1737,13 +1728,13 @@
 			descText				@VISION_HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
 			cvar					"+v_radial"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1755,13 +1746,13 @@
 			descText				@VISION_OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 			cvar					"v_scores_pick"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1773,13 +1764,13 @@
 			descText				@VISION_OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
 			cvar					"v_commandmenu"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1791,13 +1782,13 @@
 			descText				@VISION_OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
 			cvar					"v_tools"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1809,13 +1800,13 @@
 			descText				@VISION_OPENS_THE_MODEL_STORE_OF_JKA_VISION
 			cvar					"v_modelbrowser"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1827,13 +1818,13 @@
 			descText				@VISION_HOLD_TO_WIND_UP_LET_GO_TO_THROW_THE
 			cvar					"+v_snowball"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					144 320 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1845,13 +1836,13 @@
 			descText				@VISION_HOLD_TO_SPRAY_WATER_WHERE_YOU_LOOK_I
 			cvar					"+v_water"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1863,13 +1854,13 @@
 			descText				@VISION_PUTS_A_REMOTE_CONTROLLED_DROID_IN_FR
 			cvar					"v_rccar"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					144 364 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1881,13 +1872,13 @@
 			descText				@VISION_PUTS_YOUR_PICTURE_ON_THE_WALL_YOU_LO
 			cvar					"v_spray"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					144 386 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1899,13 +1890,13 @@
 			descText				@VISION_SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_A_NA
 			cvar					"v_emote"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					144 408 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1917,13 +1908,13 @@
 			descText				@VISION_PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
 			cvar					"v_pingpong"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
+			rect					144 430 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1935,13 +1926,13 @@
 			descText				@VISION_PUTS_A_TENNIS_COURT_ON_THE_FLOOR_IN
 			cvar					"v_tennis"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
+			rect					144 452 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1953,13 +1944,13 @@
 			descText				@VISION_OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
 			cvar					"v_board"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					144 474 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1971,20 +1962,20 @@
 			descText				@VISION_THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
 			cvar					"v_photo"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					144 496 278 22
 			page					7
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_scroll
-			rect					395 38 6 352
+			rect					425 12 6 374
 			visible					1
 			type					ITEM_TYPE_PAGESCROLL
 		}
@@ -1992,19 +1983,19 @@
 		itemDef
 		{
 			name					vision_pane
-			rect					408 38 188 352
+			rect					436 8 164 388
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					4
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_about
-			rect					420 52 164 324
+			rect					448 22 140 360
 			visible					1
 			text					""
 			font					5
@@ -2030,7 +2021,7 @@
 			rect					0 404 608 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			decoration
 		}
 
@@ -2042,7 +2033,7 @@
 			text					@MENUS_BACK
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			caps					1
@@ -2066,13 +2057,13 @@
 			text					@VISION_ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				300
 			textaligny				11.5
 		}
-		scrollRect				12 38 380 352
+		scrollRect				144 12 278 374
 		scrollStep				22
 		foldCvar				v_controlsFolds
 	}

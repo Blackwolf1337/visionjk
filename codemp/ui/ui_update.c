@@ -69,8 +69,8 @@ static float UI_UpdateNoticeWidth( const char *text ) {
 	return (float)uiInfo.uiDC.textWidth( text, NOTICE_SCALE, NOTICE_FONT ) + NOTICE_PAD_X * 2.0f;
 }
 
-// One box at x. With the menus of the new look: a pill of its glass under its two panels, with its letters, lit
-// while the mouse is on it. With the old ones: a dark box with a rim.
+// One box at x. With the menus of the new look: a box like an outlined button, with its letters, lit while the
+// mouse is on it. With the old ones: a dark box with a rim.
 static void UI_UpdateNoticeBox( noticeBox_t *box, float x, const char *text, qboolean failed ) {
 	qboolean over;
 
@@ -81,12 +81,13 @@ static void UI_UpdateNoticeBox( noticeBox_t *box, float x, const char *text, qbo
 	over = (qboolean)( box->clickable && UI_UpdateNoticeHover( box ) );
 
 	if ( UI_NewLook() ) {
-		const vec4_t	glass = { 0.035f, 0.07f, 0.12f, 0.86f }, rim = { 0.43f, 0.83f, 1.0f, 0.45f };
-		const vec4_t	litGlass = { 0.1f, 0.2f, 0.3f, 0.92f }, litRim = { 0.43f, 0.83f, 1.0f, 0.95f };
-		vec4_t			bright = { 0.86f, 0.92f, 0.97f, 1.0f }, lit = { 1.0f, 1.0f, 1.0f, 1.0f }, amber = { 1.0f, 0.72f, 0.3f, 1.0f };
+		// (the colours of an outlined button of the redesign, lit with the accent while the mouse is on it)
+		const vec4_t	glass = { 0.031f, 0.055f, 0.11f, 0.86f }, litGlass = { 0.07f, 0.14f, 0.24f, 0.92f };
+		const vec4_t	litRim = { 0.36f, 0.78f, 0.96f, 1.0f };
+		vec4_t			bright = { 0.86f, 0.90f, 0.945f, 1.0f }, lit = { 1.0f, 1.0f, 1.0f, 1.0f }, amber = { 0.91f, 0.77f, 0.42f, 1.0f };
 
 		box->h = 18.0f;
-		Skin_Panel( box->x, box->y, box->w, box->h, box->h * 0.5f, over ? litGlass : glass, over ? litRim : rim );
+		Skin_Panel( box->x, box->y, box->w, box->h, SKIN_RADIUS, over ? litGlass : glass, over ? litRim : skinEdge );
 		uiInfo.uiDC.drawText( box->x + 14.0f, box->y + 3.4f, 0.62f, failed ? amber : ( over ? lit : bright ), text, 0.0f, 0, 0,
 			SKIN_FONT_SANS );
 	} else {

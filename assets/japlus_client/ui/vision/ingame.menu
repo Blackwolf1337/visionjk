@@ -26,7 +26,7 @@
 			"sound/interface/esc.wav" ;
 			"sound/interface/sub_select.wav" ;
 		}
-		focuscolor				0.43 0.83 1 1
+		focuscolor				0.36 0.78 0.96 1
 	}
 
 	menuDef
@@ -36,9 +36,11 @@
 		fullScreen				0
 		outOfBoundsClick
 		rect					0 0 640 480
-		focusColor				0.43 0.83 1 1
-		disableColor			0.36 0.42 0.50 1
+		focusColor				0.36 0.78 0.96 1
+		disableColor			0.40 0.47 0.56 1
 		onOpen { uiScript setBotButton }
+		skin					1
+		openSlide				8
 
 		itemDef
 		{
@@ -46,7 +48,7 @@
 			rect					0 0 640 26
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.72
+			backcolor				0.016 0.031 0.063 0.8
 			wide					1
 			decoration
 		}
@@ -57,35 +59,9 @@
 			rect					0 26 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.22
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
-		}
-
-		itemdef
-		{
-			name					about
-			text					@MENUS_ABOUT
-			rect					5 0 57.27 26
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			font					5
-			textscale				0.58
-			textstyle				0
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
-			textaligny				7
-			forecolor				0.86 0.92 0.97 1
-			backcolor				0 0 0 0
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				open ingame_about
-			}
-			mouseenter { show aboutButton }
-			mouseexit { hide aboutButton }
-			caps					1
 		}
 
 		itemDef
@@ -94,16 +70,16 @@
 			text					@MENUS_JOIN
 			cvarTest				"ui_singleplayeractive"
 			disableCvar { "1" }
-			rect					62.27 0 57.27 26
+			rect					8 0 52 26
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			cvartest				"g_gametype"
@@ -116,6 +92,7 @@
 			mouseenter { show joinButton }
 			mouseexit { hide joinButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -124,14 +101,14 @@
 			text					@MENUS_JOIN
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					62.27 0 57.27 26
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			cvartest				"g_gametype"
@@ -144,62 +121,65 @@
 			mouseenter { show joinButton }
 			mouseexit { hide joinButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
 		{
-			name					player
-			text					@MENUS_PROFILE_LOWER
+			name					vote
+			text					@MENUS_VOTE
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					119.55 0 57.27 26
+			cvarTest				"ui_singleplayeractive"
+			disableCvar { "1" }
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
-			cvartest				"g_gametype"
-			showcvar { "0" , "1" , "2" , "3" , "4" , "5" , "6" , "8" }
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				open ingame_player
+				open ingame_vote
 			}
-			mouseenter { show playerButton }
-			mouseexit { hide playerButton }
+			mouseenter { show voteButton }
+			mouseexit { hide voteButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
 		{
-			name					objectives
-			text					@MENUS_OBJECTIVES
+			name					callvote
+			text					@MENUS_CALL_VOTE
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					119.55 0 57.27 26
+			cvarTest				"ui_singleplayeractive"
+			disableCvar { "1" }
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
-			cvartest				"g_gametype"
-			showcvar { "7" }
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				open ingame_objectives
+				open ingame_callvote
 			}
-			mouseenter { show objectivesButton }
-			mouseexit { hide objectivesButton }
+			mouseenter { show callvoteButton }
+			mouseexit { hide callvoteButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -208,14 +188,14 @@
 			text					@MENUS_VOICE_CHAT
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					176.82 0 57.27 26
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			cvartest				"g_gametype"
@@ -228,6 +208,7 @@
 			mouseenter { show chatButton }
 			mouseexit { hide chatButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -236,14 +217,14 @@
 			text					@MENUS_ADD_BOT
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					176.82 0 57.27 26
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			cvarTest				"sv_running"
@@ -256,6 +237,65 @@
 			mouseenter { show addBotButton }
 			mouseexit { hide addBotButton }
 			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					player
+			text					@MENUS_PROFILE_LOWER
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					8 0 52 26
+			font					5
+			textscale				0.56
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				26
+			textaligny				7
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "0" , "1" , "2" , "3" , "4" , "5" , "6" , "8" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_player
+			}
+			mouseenter { show playerButton }
+			mouseexit { hide playerButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					objectives
+			text					@MENUS_OBJECTIVES
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					8 0 52 26
+			font					5
+			textscale				0.56
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				26
+			textaligny				7
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "7" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_objectives
+			}
+			mouseenter { show objectivesButton }
+			mouseexit { hide objectivesButton }
+			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -264,14 +304,14 @@
 			text					@MENUS_CONTROLS2
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					234.09 0 57.27 26
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			action
@@ -282,6 +322,7 @@
 			mouseenter { show controlsButton }
 			mouseexit { hide controlsButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -290,14 +331,14 @@
 			text					@MENUS_SETUP_INGAME
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					291.36 0 57.27 26
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			action
@@ -308,12 +349,13 @@
 			mouseenter { show setupButton }
 			mouseexit { hide setupButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
 		{
 			name					photo
-			rect					348.64 0 57.27 26
+			rect					8 0 52 26
 			visible					1
 			text					@VISION_PHOTO
 			type					ITEM_TYPE_BUTTON
@@ -324,84 +366,56 @@
 				exec "v_photo" ;
 			}
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
 			caps					1
 			style					WINDOW_STYLE_EMPTY
+			flow					1
 		}
 
-		itemDef
+		itemdef
 		{
-			name					vote
-			text					@MENUS_VOTE
-			type					1
+			name					about
+			text					@MENUS_ABOUT
+			rect					8 0 52 26
+			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			cvarTest				"ui_singleplayeractive"
-			disableCvar { "1" }
-			rect					405.91 0 57.27 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				open ingame_vote
+				open ingame_about
 			}
-			mouseenter { show voteButton }
-			mouseexit { hide voteButton }
+			mouseenter { show aboutButton }
+			mouseexit { hide aboutButton }
 			caps					1
-		}
-
-		itemDef
-		{
-			name					callvote
-			text					@MENUS_CALL_VOTE
-			type					1
-			style					WINDOW_STYLE_EMPTY
-			cvarTest				"ui_singleplayeractive"
-			disableCvar { "1" }
-			rect					463.18 0 57.27 26
-			font					5
-			textscale				0.58
-			textstyle				0
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
-			textaligny				7
-			forecolor				0.86 0.92 0.97 1
-			backcolor				0 0 0 0
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				open ingame_callvote
-			}
-			mouseenter { show callvoteButton }
-			mouseexit { hide callvoteButton }
-			caps					1
+			flow					1
 		}
 
 		itemDef
 		{
 			name					servers
 			text					"SERVERS"
-			rect					520.45 0 57.27 26
+			rect					8 0 52 26
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
 			action
@@ -413,6 +427,7 @@
 			mouseenter { show serversButton }
 			mouseexit { hide serversButton }
 			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -421,14 +436,14 @@
 			text					@MENUS_EXIT_INGAME
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					577.73 0 57.27 26
+			rect					8 0 52 26
 			font					5
-			textscale				0.58
+			textscale				0.56
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				28.64
+			textalignx				26
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				1 0.54 0.50 1
 			backcolor				0 0 0 0
 			visible					1
 			action
@@ -439,8 +454,7 @@
 			mouseenter { show leaveButton }
 			mouseexit { hide leaveButton }
 			caps					1
+			flow					1
 		}
-		skin					1
-		openSlide				8
 	}
 }

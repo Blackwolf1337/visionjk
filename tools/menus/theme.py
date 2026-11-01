@@ -2,21 +2,25 @@
 becomes a panel, which font and which colour a text gets. What an item does is not touched."""
 import menufile as mf
 
-# the colours of the theme, as a menu file has them
-TEXT = ['0.86', '0.92', '0.97', '1']            # what can be clicked, and what is said
+# the colours of the theme, as a menu file has them (the redesign of 2026-11-01: the canvas "VisionJK Settings",
+# the new-* tokens of the design system VisionJK)
+TEXT = ['0.86', '0.90', '0.945', '1']           # what can be clicked, and what is said (#dbe5f1)
 BRIGHT = ['1', '1', '1', '1']
-DIM = ['0.60', '0.69', '0.78', '1']             # labels and what is less important
-OFF = ['0.36', '0.42', '0.50', '1']             # what can not be used right now
-ACCENT = ['0.43', '0.83', '1', '1']             # what is chosen, switched on or in focus
-WARM = ['1', '0.74', '0.30', '1']               # what asks for attention
-RED = ['1', '0.45', '0.42', '1']                # the red team, and what went wrong
+DIM = ['0.56', '0.64', '0.74', '1']             # labels and what is less important (#8fa3bd)
+OFF = ['0.40', '0.47', '0.56', '1']             # what can not be used right now
+ACCENT = ['0.36', '0.78', '0.96', '1']          # what is chosen, switched on or in focus (#5cc8f5)
+WARM = ['0.91', '0.77', '0.42', '1']            # what asks for attention (#e9c46a)
+RED = ['1', '0.54', '0.50', '1']                # the red team, and what went wrong (#ff8a80)
 BLUE = ['0.45', '0.66', '1', '1']               # the blue team
-PANEL = ['0.035', '0.07', '0.12', '0.80']       # a panel on the sky or on the level
-PANEL_EDGE = ['0.43', '0.83', '1', '0.28']
-SOFT = ['0.035', '0.07', '0.12', '0.55']        # a panel on a panel
-SOFT_EDGE = ['0.43', '0.83', '1', '0.16']
-INSET = ['0', '0', '0', '0.30']                 # a list, a field
-HEAD = ['0.43', '0.83', '1', '0.14']            # the bar of a heading
+PANEL = ['0.031', '0.055', '0.11', '0.86']      # a panel on the sky or on the level (#080e1c)
+PANEL_EDGE = ['0.11', '0.18', '0.29', '1']      # (#1c2e4a)
+SOFT = ['0.016', '0.031', '0.063', '0.45']      # a panel on a panel
+SOFT_EDGE = ['0.086', '0.149', '0.247', '1']    # (#16263f)
+INSET = ['0.027', '0.051', '0.102', '0.9']      # a list, a field (#070d1a)
+HEAD = ['0.11', '0.18', '0.29', '0.45']         # the bar of a heading
+ON_ACCENT = ['0.016', '0.071', '0.122', '1']  # words on a button filled with the accent (#04121f)
+CONTROL_EDGE = ['0.153', '0.251', '0.373', '1']  # the outline of a field or a button that is not filled (#27405f)
+BAR_LINE = ['0.086', '0.149', '0.247', '1']   # the line between a bar and the page (#16263f)
 NONE = ['0', '0', '0', '0']
 
 FONT = '5'                                      # SKIN_FONT_SANS
@@ -265,8 +269,7 @@ def restyle(m, name, ingame):
         # a window with a frame of its own: a panel that stands on the level
         style, border = mf.get(m, 'style'), mf.get(m, 'border')
         if (style and style[0] in ('1', 'WINDOW_STYLE_FILLED')) or (border and border[0] != '0'):
-            panel(m, PANEL, PANEL_EDGE, 8, 14)
-            mf.put(m, 'sheen', '0.08')
+            panel(m, PANEL, PANEL_EDGE, 6.4, 14)
     for e in m:
         if e.k in SCRIPTS and isinstance(e.block, list):
             script_colors(e.block)

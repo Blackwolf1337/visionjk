@@ -7,18 +7,18 @@
 		fullScreen				MENU_TRUE
 		rect					0 0 640 480
 		visible					0
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					40
 		descY					80
 		descScale				0.8
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_LEFT
 		onOpen
 		{
 			hide gamedesc ;
 			show stun_desc ;
-			setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor stunmenubutton forecolor 0.43 0.83 1 1 ;
+			setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+			setitemcolor stunmenubutton forecolor 0.36 0.78 0.96 1 ;
 		}
 		onESC
 		{
@@ -44,7 +44,7 @@
 			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.22
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -79,7 +79,7 @@
 			text					"JEDI ACADEMY"
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 		}
 
@@ -89,7 +89,7 @@
 			rect					340 31 52 2
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 1
+			backcolor				0.36 0.78 0.96 1
 			radius					1
 			decoration
 		}
@@ -109,7 +109,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				36
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 			visible					1
 			mouseEnter { show newgamebutton_glow }
 			mouseExit { hide newgamebutton_glow }
@@ -137,7 +137,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				36
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show profilebutton_glow }
 			mouseExit { hide profilebutton_glow }
@@ -166,7 +166,7 @@
 			textstyle				0
 			textalignx				36
 			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show controlsbutton_glow }
 			mouseExit { hide controlsbutton_glow }
@@ -195,7 +195,7 @@
 			textstyle				0
 			textalignx				36
 			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show setupbutton_glow }
 			mouseExit { hide setupbutton_glow }
@@ -246,7 +246,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				225
 			textaligny				0.75
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
@@ -258,9 +258,9 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					230 116 370 233
-			backcolor				0.035 0.07 0.12 0.55
+			backcolor				0.016 0.031 0.063 0.45
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			radius					5
@@ -272,11 +272,11 @@
 			rect					40 116 180 233
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			shadow					8
-			sheen					0.06
+			sheen					0
 			decoration
 		}
 
@@ -294,7 +294,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight1 }
@@ -302,8 +302,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor sabermenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor sabermenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show saber_desc ;
 			}
@@ -335,10 +335,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -355,7 +355,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight2 }
@@ -363,8 +363,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor pistolmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor pistolmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show pistol_desc ;
 			}
@@ -396,10 +396,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -416,7 +416,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight3 }
@@ -424,8 +424,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor briflemenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor briflemenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show brifle_desc ;
 			}
@@ -457,10 +457,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -477,7 +477,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			visible					1
 			mouseEnter { show smallhighlight4 }
@@ -485,8 +485,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor driflemenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor driflemenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show drifle_desc ;
 			}
@@ -516,10 +516,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -536,7 +536,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			visible					1
 			mouseEnter { show smallhighlight5 }
@@ -544,8 +544,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor bowcastmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor bowcastmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show bowcast_desc ;
 			}
@@ -577,10 +577,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -597,7 +597,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			visible					1
 			mouseEnter { show smallhighlight6 }
@@ -605,8 +605,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor repeatermenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor repeatermenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show repeater_desc ;
 			}
@@ -638,10 +638,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -658,7 +658,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight7 }
@@ -666,8 +666,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor demp2menubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor demp2menubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show demp2_desc ;
 			}
@@ -699,10 +699,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -719,7 +719,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight8 }
@@ -727,8 +727,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor flechmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor flechmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show flechette_desc ;
 			}
@@ -760,10 +760,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -780,7 +780,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight9 }
@@ -788,8 +788,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor concmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor concmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show conc_desc ;
 			}
@@ -821,10 +821,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -841,7 +841,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight10 }
@@ -849,8 +849,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor merrmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor merrmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show merr_desc ;
 			}
@@ -882,10 +882,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -902,7 +902,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight11 }
@@ -910,8 +910,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor thermmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor thermmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show therm_desc ;
 			}
@@ -943,10 +943,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -963,7 +963,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight12 }
@@ -971,8 +971,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor tripmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor tripmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show trip_desc ;
 			}
@@ -1004,10 +1004,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -1024,7 +1024,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_WEAPON
 			mouseEnter { show smallhighlight13 }
@@ -1032,8 +1032,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor weapon_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor detpackmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor detpackmenubutton forecolor 0.36 0.78 0.96 1 ;
 				hide gamedesc ;
 				show detpack_desc ;
 			}
@@ -1065,13 +1065,13 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		backdrop				1
 
 		itemDef
@@ -1091,7 +1091,7 @@
 			rect					0 446 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -1111,7 +1111,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -1144,7 +1144,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show exitgamebutton_glow }
 			mouseExit { hide exitgamebutton_glow }

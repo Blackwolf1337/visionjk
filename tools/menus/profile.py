@@ -16,8 +16,10 @@ import texts
 from options import ROW_H, CLICK, item, fill, panel_item, text_item, centered, name_of, group_of, cvar_of, items
 from texts import ref
 
-COLUMN = 316                # the settings of a page, at its left. The rest of the width shows what they make.
+COLUMN = 316                # the settings of the force powers, at the left of their page
 GAP = 12
+LEFT_W = 250                # the redesign of 2026-11-01: what is set at the left, the figure in the middle, the rest
+MIDDLE_W = 140              #	at the right, each on a panel of its own
 STRIP_SCALE = 0.58
 
 # the entries of the strip: (key, text, what for). The key says which menu an entry opens, by the table below.
@@ -88,7 +90,7 @@ def heading(e, x, y, w, text=None):
     rect(e, x + 2, y, w - 4, ROW_H)
     props(e, ('font', FONT), ('textscale', '0.54'), ('forecolor', *DIM), ('caps', 1), ('textalign', 'ITEM_ALIGN_LEFT'),
           ('textalignx', 0), ('textaligny', 9), ('decoration',), ('visible', 1))
-    line = fill(name_of(e.block), (x, y + ROW_H - 1, w, 0.67), ACCENT[:3] + ['0.32'])
+    line = fill(name_of(e.block), (x, y + ROW_H - 1, w, 0.67), PANEL_EDGE)
     for key in ('group', 'cvartest', 'showcvar', 'hidecvar'):
         t = mf.find(e.block, key)
         if t:
@@ -135,15 +137,21 @@ class Frame:
         self.L = L = options.Layout(ingame)
         self.x, self.y, self.h = L.list[0], L.list[1], L.list[3]
         self.w = L.right - L.left
-        self.px = self.x + COLUMN + GAP          # the pane beside the column
+        self.px = self.x + COLUMN + GAP          # the pane beside the column (the force powers)
         self.pw = self.w - COLUMN - GAP
+        # the three columns of the other pages
+        self.lx, self.lw = self.x, LEFT_W
+        self.cx, self.cw = self.x + LEFT_W + GAP, MIDDLE_W
+        self.rx = self.cx + MIDDLE_W + GAP
+        self.rw = self.x + self.w - self.rx
         self.here, self.targets = SCREENS[name]
         self.menu = mf.unquote(mf.get(m, 'name')[0])
         self.old = list(m)
         self.new = list(nav)
+        self.last = []              # items that have to come after all others
         wide = (('wide', 1),) if not ingame else ()
         self.new += [fill('vision_strip', (0, L.strip_y, L.width, 26), options.BAND, *wide),
-                     fill('vision_strip_line', (0, L.strip_y + 26, L.width, 0.67), ACCENT[:3] + ['0.18'], *wide)]
+                     fill('vision_strip_line', (0, L.strip_y + 26, L.width, 0.67), BAR_LINE, *wide)]
         self.strip()
 
     def leave(self, target):
@@ -184,12 +192,28 @@ class Frame:
             shown(e)
             self.new.append(e)
 
+    def columns(self):
+        """The panels of the three columns, and the character standing in the middle one on a soft light."""
+        x, y, h = self.x, self.y, self.h
+        self.new += [panel_item('vision_left', (self.lx - 6, y - 6, self.lw + 12, h + 12), PANEL, PANEL_EDGE, 5.3),
+                     panel_item('vision_middle', (self.cx, y - 6, self.cw, h + 12), SOFT, SOFT_EDGE, 5.3),
+                     panel_item('vision_right', (self.rx - 6, y - 6, self.rw + 12, h + 12), PANEL, PANEL_EDGE, 5.3),
+                     item('vision_glow', (self.cx + 20, y + h - 22, self.cw - 40, 12), ('style', 'WINDOW_STYLE_PANEL'),
+                          ('backcolor', *(ACCENT[:3] + ['0.07'])), ('radius', 6), ('glowcolor', *(ACCENT[:3] + ['0.14'])),
+                          ('decoration',))]
+        # (the figure is put after everything else, as the old page had it: drawn before the panels it would lie under
+        # them, and it shows the model the list of heads chose in the same frame)
+        for e in named(self.old, 'character'):
+            rect(e, self.cx + 2, y, self.cw - 4, h - 8)
+            shown(e)
+            self.last.append(e)
+
     def foot(self, left, right, back=None):
         """The bar at the bottom: words at the left (a way back first, if the page gets one), blocks at the right."""
         L = self.L
         wide = (('wide', 1),) if not self.ingame else ()
         self.new += [fill('vision_foot', (0, L.bar_y, L.width, L.bar_h), options.BAND, *wide),
-                     fill('vision_foot_line', (0, L.bar_y, L.width, 0.67), ACCENT[:3] + ['0.18'], *wide)]
+                     fill('vision_foot_line', (0, L.bar_y, L.width, 0.67), BAR_LINE, *wide)]
         x = L.left - 3
         if back:
             self.new.append(options.bar_button('vision_back', x, 72, '@MENUS_BACK', '@MENUS_BACK', back, L, ('flow', 1)))
@@ -204,14 +228,14 @@ class Frame:
             plain(e)
             r = (L.right - 132, L.bar_y + 6, 132, L.bar_h - 12)
             rect(e, *r)
-            props(e, ('font', FONT), ('textscale', '0.6'), ('forecolor', *BRIGHT), ('caps', 1), ('style', 'WINDOW_STYLE_PANEL'),
-                  ('backcolor', *(ACCENT[:3] + ['0.22'])), ('bordercolor', *(ACCENT[:3] + ['0.8'])), ('radius', 3),
+            props(e, ('font', FONT), ('textscale', '0.6'), ('forecolor', *ON_ACCENT), ('caps', 1), ('style', 'WINDOW_STYLE_PANEL'),
+                  ('backcolor', *ACCENT), ('bordercolor', *ACCENT), ('radius', 3.2),
                   *centered(r, 0.6))
             self.new.append(e)
 
     def done(self):
         m, L = self.m, self.L
-        m[:] = [e for e in m if e.k != 'itemdef'] + self.new
+        m[:] = [e for e in m if e.k != 'itemdef'] + self.new + self.last
         # what the mouse is on is said in the bar at the bottom, between its buttons
         mf.put(m, 'descX', mf.fmt(L.width / 2))
         mf.put(m, 'descY', mf.fmt(L.bar_y + (L.bar_h - 10) / 2))
@@ -245,37 +269,38 @@ def esc_words(m, fallback):
 
 
 def profile(f):
-    """Name, team colour and the model, with the figure beside them."""
-    old, x, y, w = f.old, f.x, f.y, COLUMN
-    f.pane()
-    f.new += new_heading('vision_player', ref('Player'), x, y, w)
-    for e in named(old, 'namefield'):
-        f.new.append(row(e, x, y + 22, w, 3))
-    # the team colour, and beside it the choice between Jedi and mercenary where a server has it
-    half = w / 2 if named(old, 'jedinonjedi') else w
-    for e in named(old, 'setcolor'):
-        f.new.append(text_row(e, x, y + 44, half))
-    for e in named(old, 'jedinonjedi'):
-        f.new.append(text_row(e, x + half, y + 44, half))
-    f.new.append(rule(x, y + 44, w))
+    """The models to choose from at the left, the figure in the middle, the name, the team colour and the holsters at
+    the right."""
+    old, x, y, w = f.old, f.lx, f.y, f.lw
+    f.columns()
     for e in named(old, 'modeltitle')[:1]:
-        f.new += heading(e, x, y + 66, w)
-    holsters = named(old, 'holsterlist')
-    rows = 3 if holsters else 5
+        f.new += heading(e, x, y, w)
     for e in named(old, 'headlist'):
-        rect(plain(e), x, y + 90, w, rows * 48 + 4)
-        props(e, ('elementwidth', 48), ('elementheight', 48), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *INSET),
-              ('bordercolor', *SOFT_EDGE), ('radius', 4))
+        rect(plain(e), x, y + 24, w, f.h - 24)
+        props(e, ('elementwidth', 56), ('elementheight', 56), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *INSET),
+              ('bordercolor', *SOFT_EDGE), ('radius', 3.2))
         f.new.append(shown(e))
+    rx, rw = f.rx, f.rw
+    f.new += new_heading('vision_player', ref('Player'), rx, y, rw)
+    for e in named(old, 'namefield'):
+        f.new.append(row(e, rx, y + 22, rw, 3))
+    for e in named(old, 'setcolor'):
+        f.new.append(text_row(e, rx, y + 44, rw))
+    f.new.append(rule(rx, y + 44, rw))
+    top = y + 66
+    for e in named(old, 'jedinonjedi'):
+        f.new.append(text_row(e, rx, top, rw))
+        f.new.append(rule(rx, top, rw))
+        top += ROW_H
+    holsters = named(old, 'holsterlist')
     if holsters:
-        top = y + 90 + rows * 48 + 6
+        top += 6
         for e in named(old, 'title_holster')[:1]:
-            f.new += heading(translate(e), x, top, w)
+            f.new += heading(translate(e), rx, top, rw)
         for e in holsters:
-            rect(plain(e), x, top + 24, w, 63)
-            props(e, ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *INSET), ('bordercolor', *SOFT_EDGE), ('radius', 4))
+            rect(plain(e), rx, top + 24, rw, 130)
+            props(e, ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *INSET), ('bordercolor', *SOFT_EDGE), ('radius', 3.2))
             f.new.append(shown(e))
-    f.figure()
     if f.ingame:
         # the buttons that take what was set into the game: the code shows the ones that fit (apply, or join)
         f.foot(named(old, 'applyspectate', 'applyred', 'applyblue'), named(old, 'applycurrent', 'applyjoin'))
@@ -284,29 +309,32 @@ def profile(f):
 
 
 def character(f):
-    """The custom character: species, colour and the three parts of its look, with the figure beside them."""
-    old, x, y, w = f.old, f.x, f.y, COLUMN
-    f.pane()
+    """The custom character: species and colour at the left, the figure in the middle, the three parts of its look at
+    the right."""
+    old, x, y, w = f.old, f.lx, f.y, f.lw
+    f.columns()
     for e in named(old, 'speciesbut'):
         mf.put(e.block, 'text', '@MENUS_SPECIES')
         f.new.append(row(e, x, y, w, 3))
     for e in named(old, 'color')[:1]:
-        f.new += heading(e, x, y + 22, w)
+        f.new += heading(e, x, y + 26, w)
     for e in named(old, 'colorbox'):
-        rect(e, x, y + 46, w, 48)
+        rect(e, x, y + 50, w, 48)
         f.new.append(shown(e))
     # the three parts of the colour: rows that are always there, in place of a second page behind a button
     for n, name in enumerate(('barrerouge', 'barrevert', 'barrebleu')):
         for e in named(old, name):
-            f.new.append(row(e, x, y + 96 + n * ROW_H, w))
+            f.new.append(row(e, x, y + 104 + n * ROW_H, w))
+    rx, rw = f.rx, f.rw
     for e in named(old, 'appear')[:1]:
-        f.new += heading(e, x, y + 164, w)
+        f.new += heading(e, rx, y, rw)
     # head, torso and legs: three pages of this menu with a tab each (the old buttons showed and hid three groups
     # and moved the figure near and far, which it does not need in a pane of its own)
+    tw = rw / 3
     for n, (but, box) in enumerate((('headbut', 'headlistbox'), ('torsobut', 'torsolistbox'), ('legsbut', 'lowerlistbox'))):
         for e in named(old, but):
             plain(e)
-            r = (x - 3 + n * 70, y + 188, 70, ROW_H)
+            r = (rx + n * tw, y + 24, tw, ROW_H)
             rect(e, *r)
             act = mf.find(e.block, 'action')
             act.block = [w_ for w_ in act.block if w_ == mf.NL or w_.lower().startswith(('play', '"sound'))]
@@ -314,10 +342,9 @@ def character(f):
                   ('visible', 1), *centered(r, STRIP_SCALE))
             f.new.append(e)
         for e in named(old, box):
-            rect(e, x, y + 214, w, 93)
+            rect(e, rx, y + 52, rw, f.h - 52)
             props(e, ('page', n + 1), ('visible', 1))
             f.new.append(e)
-    f.figure()
     if f.ingame:
         f.foot(named(old, 'backmenu_button'), named(old, 'applycurrent'))
     else:
@@ -340,6 +367,9 @@ def saber(f):
     for e in named(old, 'typebut_single', 'typebut_dual', 'typebut_staff'):
         act = mf.find(e.block, 'action')
         act.block = without(act.block, gone)
+    # (the columns on panels as the other pages have them; the saber lies under both)
+    f.new += [panel_item('vision_left', (x - 6, y - 6, lw + 12, 254), PANEL, PANEL_EDGE, 5.3),
+              panel_item('vision_right', (rx - 6, y - 6, rw + 12, 296), PANEL, PANEL_EDGE, 5.3)]
     for e in named(old, 'typebut')[:1]:
         f.new += heading(e, x, y, lw)
     for n, name in enumerate(('typebut_single', 'typebut_dual', 'typebut_staff')):

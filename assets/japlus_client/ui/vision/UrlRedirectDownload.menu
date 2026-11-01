@@ -15,7 +15,7 @@
 		moveRollSound			"sound/player/roll1"
 		moveJumpSound			"sound/weapons/force/jump"
 		shadowColor				0.1 0.1 0.1 0.25
-		focuscolor				0.43 0.83 1 1
+		focuscolor				0.36 0.78 0.96 1
 		precacheSound
 		{
 			"sound/interface/choose_color.wav" ;
@@ -36,11 +36,11 @@
 		rect					0 0 640 480
 		fullScreen				0
 		visible					0
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					300
 		descY					240
 		descScale				0.7
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 
 		itemDef
@@ -57,7 +57,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			descText				"It will abort the current download."
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -87,7 +87,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			descText				"It will abort All the downloading process for the needed Files."
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -103,7 +103,7 @@
 			caps					1
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 	}
 }

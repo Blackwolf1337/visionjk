@@ -8,12 +8,12 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					16 30 608 436
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
 		descX					304
 		descY					415
 		descScale				0.55
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
@@ -22,9 +22,9 @@
 			uiScript "saber_color"
 			uiScript "saber2_hilt"
 			uiScript "saber2_color"
-			setitemcolor typebut_single forecolor 0.60 0.69 0.78 1
-			setitemcolor typebut_dual forecolor 0.60 0.69 0.78 1
-			setitemcolor typebut_staff forecolor 0.60 0.69 0.78 1
+			setitemcolor typebut_single forecolor 0.56 0.64 0.74 1
+			setitemcolor typebut_dual forecolor 0.56 0.64 0.74 1
+			setitemcolor typebut_staff forecolor 0.56 0.64 0.74 1
 			uiScript getsaberhiltinfo
 		}
 		onClose
@@ -43,13 +43,12 @@
 			show rgbsetupbutton
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.94
-		bordercolor				0.43 0.83 1 0.28
+		backcolor				0.031 0.055 0.11 0.97
+		bordercolor				0.11 0.18 0.29 1
 		radius					6
 		shadow					14
-		sheen					0.08
 
 		itemDef
 		{
@@ -67,7 +66,7 @@
 			rect					0 26 608 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			decoration
 		}
 
@@ -79,7 +78,7 @@
 			text					@MENUS_PROFILE
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_NAME_MODEL_AND_TEAM_COLOUR
@@ -99,7 +98,7 @@
 			text					@VISION_CHARACTER
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_BUILD_A_CHARACTER_OF_YOUR_OWN
@@ -119,7 +118,7 @@
 			text					@MENUS_LIGHTSABER_CAPS
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			flow					3
 			decoration
 			caps					1
@@ -137,7 +136,7 @@
 			text					@MENUS_DP_FORCE
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_YOUR_FORCE_POWERS
@@ -148,6 +147,30 @@
 			textalignx				40
 			textaligny				7.78
 			group					yesforce
+		}
+
+		itemDef
+		{
+			name					vision_left
+			rect					6 32 282 254
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					5.3
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_right
+			rect					296 32 306 296
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					5.3
+			decoration
 		}
 
 		itemDef
@@ -164,7 +187,7 @@
 			textalignx				0
 			textaligny				9
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
@@ -176,7 +199,7 @@
 			rect					12 59 270 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			group					none
 		}
@@ -193,7 +216,7 @@
 			font					5
 			textscale				0.7
 			textstyle				0
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 			visible					1
 			action
 			{
@@ -206,9 +229,9 @@
 				uiScript "saber_color"
 				uiScript "saber2_hilt"
 				uiScript "saber2_color"
-				setitemcolor typebut_single forecolor 0.43 0.83 1 1
-				setitemcolor typebut_dual forecolor 0.60 0.69 0.78 1
-				setitemcolor typebut_staff forecolor 0.60 0.69 0.78 1
+				setitemcolor typebut_single forecolor 0.36 0.78 0.96 1
+				setitemcolor typebut_dual forecolor 0.56 0.64 0.74 1
+				setitemcolor typebut_staff forecolor 0.56 0.64 0.74 1
 			}
 			row						1
 		}
@@ -225,7 +248,7 @@
 			font					5
 			textscale				0.7
 			textstyle				0
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 			visible					1
 			action
 			{
@@ -238,9 +261,9 @@
 				uiScript "saber_color"
 				uiScript "saber2_hilt"
 				uiScript "saber2_color"
-				setitemcolor typebut_single forecolor 0.60 0.69 0.78 1
-				setitemcolor typebut_dual forecolor 0.43 0.83 1 1
-				setitemcolor typebut_staff forecolor 0.60 0.69 0.78 1
+				setitemcolor typebut_single forecolor 0.56 0.64 0.74 1
+				setitemcolor typebut_dual forecolor 0.36 0.78 0.96 1
+				setitemcolor typebut_staff forecolor 0.56 0.64 0.74 1
 			}
 			row						1
 		}
@@ -257,7 +280,7 @@
 			font					5
 			textscale				0.7
 			textstyle				0
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 			visible					1
 			action
 			{
@@ -270,9 +293,9 @@
 				uiScript "saber_color"
 				uiScript "saber2_hilt"
 				uiScript "saber2_color"
-				setitemcolor typebut_single forecolor 0.60 0.69 0.78 1
-				setitemcolor typebut_dual forecolor 0.60 0.69 0.78 1
-				setitemcolor typebut_staff forecolor 0.43 0.83 1 1
+				setitemcolor typebut_single forecolor 0.56 0.64 0.74 1
+				setitemcolor typebut_dual forecolor 0.56 0.64 0.74 1
+				setitemcolor typebut_staff forecolor 0.36 0.78 0.96 1
 			}
 			row						1
 		}
@@ -291,7 +314,7 @@
 			textalignx				0
 			textaligny				9
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "dual" }
@@ -305,7 +328,7 @@
 			rect					12 153 270 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			group					none
 			cvarTest				ui_saber_type
@@ -326,7 +349,7 @@
 			textalignx				0
 			textaligny				9
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "staff" ; "single" }
@@ -340,7 +363,7 @@
 			rect					12 153 270 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			group					none
 			cvarTest				ui_saber_type
@@ -361,7 +384,7 @@
 			textalignx				0
 			textaligny				9
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "staff" ; "single" }
@@ -375,7 +398,7 @@
 			rect					12 235 270 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			group					none
 			cvarTest				ui_saber_type
@@ -394,10 +417,10 @@
 			font					5
 			textaligny				17
 			textscale				0.68
-			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.60 0.69 0.78 1
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SABER_SINGLE_INFO
 			descText				@MENUS_HILT1_DESC
@@ -427,10 +450,10 @@
 			font					5
 			textaligny				17
 			textscale				0.68
-			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.60 0.69 0.78 1
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SABER_STAFF_INFO
 			descText				@MENUS_HILT1_DESC
@@ -458,10 +481,10 @@
 			font					5
 			textaligny				17
 			textscale				0.68
-			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.60 0.69 0.78 1
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SABER_SINGLE_INFO
 			descText				@MENUS_HILT1_DESC
@@ -491,13 +514,13 @@
 			font					5
 			textaligny				17
 			textscale				0.68
-			bordercolor				0.43 0.83 1 0.16
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SABER_SINGLE_INFO
 			descText				@MENUS_HILT2_DESC
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			visible					1
@@ -518,7 +541,7 @@
 			text					@MENUS_BLADE_COLOR
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			style					WINDOW_STYLE_EMPTY
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
@@ -533,7 +556,7 @@
 			rect					302 59 294 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 		}
 
@@ -546,7 +569,7 @@
 			rect					302 88 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			cvarStrList
 			{
 				"Normal" , "rgb" , "Flame" , "rgb2" , "Electric" , "rgb3" , "Flame2" , "rgb4" , "Electric2" , "rgb5"
@@ -570,7 +593,7 @@
 			rect					302 110 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			style					WINDOW_STYLE_EMPTY
@@ -587,7 +610,7 @@
 			rect					302 132 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			style					WINDOW_STYLE_EMPTY
@@ -604,7 +627,7 @@
 			rect					302 154 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			style					WINDOW_STYLE_EMPTY
@@ -623,7 +646,7 @@
 			descText				@MENUS_BLADE_COLOR_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -644,7 +667,7 @@
 			descText				@MENUS_BLADE_COLOR_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -665,7 +688,7 @@
 			descText				@MENUS_BLADE_COLOR_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -686,7 +709,7 @@
 			descText				@MENUS_BLADE_COLOR_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -707,7 +730,7 @@
 			descText				@MENUS_BLADE_COLOR_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -728,7 +751,7 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -749,7 +772,7 @@
 			descText				"black blade"
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
 			{
@@ -766,7 +789,7 @@
 			text					@MENUS_COLOR2
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			cvarTest				ui_saber_type
 			style					WINDOW_STYLE_EMPTY
 			caps					1
@@ -783,7 +806,7 @@
 			rect					302 201 294 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -798,7 +821,7 @@
 			rect					302 230 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			cvarStrList
 			{
 				"Normal" , "rgb" , "Flame" , "rgb2" , "Electric" , "rgb3" , "Flame2" , "rgb4" , "Electric2" , "rgb5"
@@ -824,7 +847,7 @@
 			rect					302 252 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -843,7 +866,7 @@
 			rect					302 274 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -862,7 +885,7 @@
 			rect					302 296 294 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -883,7 +906,7 @@
 			descText				@MENUS_COLOR2_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -906,7 +929,7 @@
 			descText				@MENUS_COLOR2_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -929,7 +952,7 @@
 			descText				@MENUS_COLOR2_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -952,7 +975,7 @@
 			descText				@MENUS_COLOR2_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -975,7 +998,7 @@
 			descText				@MENUS_COLOR2_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -998,7 +1021,7 @@
 			descText				@MENUS_COLOR2_DESC
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -1021,7 +1044,7 @@
 			descText				"black blade"
 			border					1
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
@@ -1086,7 +1109,7 @@
 			rect					0 404 608 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			decoration
 		}
 
@@ -1098,7 +1121,7 @@
 			text					@MENUS_BACK
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			caps					1
@@ -1123,7 +1146,7 @@
 			textaligny				4.6
 			font					5
 			textscale				0.6
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
 			action
@@ -1136,9 +1159,9 @@
 				close ingame_saber
 			}
 			caps					1
-			backcolor				0.43 0.83 1 0.22
-			bordercolor				0.43 0.83 1 0.8
-			radius					3
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					3.2
 		}
 	}
 }

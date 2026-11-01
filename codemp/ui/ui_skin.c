@@ -76,6 +76,19 @@ static struct {
 	qboolean	noPictureTried;
 } skin;
 
+// the colours of the widgets, see ui_skin.h
+const vec4_t skinField = { 0.027f, 0.051f, 0.102f, 1.0f };			// #070d1a
+const vec4_t skinEdge = { 0.153f, 0.251f, 0.373f, 1.0f };			// #27405f
+const vec4_t skinKeyFill = { 0.043f, 0.086f, 0.157f, 1.0f };		// #0b1628
+const vec4_t skinKeyEdge = { 0.184f, 0.294f, 0.431f, 1.0f };		// #2f4b6e
+const vec4_t skinOnAccent = { 0.016f, 0.071f, 0.122f, 1.0f };		// #04121f
+const vec4_t skinMuted = { 0.639f, 0.710f, 0.796f, 1.0f };			// #a3b5cb
+const vec4_t skinFaint = { 0.455f, 0.537f, 0.647f, 1.0f };			// #7489a5
+const vec4_t skinRule = { 0.110f, 0.180f, 0.290f, 0.6f };			// #1c2e4a
+const vec4_t skinTrack = { 0.133f, 0.212f, 0.310f, 1.0f };			// #22364f
+const vec4_t skinThumb = { 0.918f, 0.969f, 0.996f, 1.0f };			// #eaf7fe
+const vec4_t skinScrollThumb = { 0.165f, 0.271f, 0.400f, 1.0f };	// #2a4566
+
 static byte skinPic[256 * 256 * 4];
 
 // the renderer was started anew (or the module was): every handle is gone
@@ -890,7 +903,7 @@ static qboolean Skin_HasFocus( const itemDef_t *item ) {
 	return (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && !item->disabled );
 }
 
-// The mark behind an item the mouse is on or the keys are at: a light fill and a bar at its left. It comes and
+// The mark behind an item the mouse is on or the keys are at: a light fill with round corners. It comes and
 // goes in SKIN_EASE_MSEC. Called once a frame for every item that can have the focus.
 void Skin_ItemBack( itemDef_t *item ) {
 	const float	*accent = Skin_Accent( item );
@@ -900,10 +913,8 @@ void Skin_ItemBack( itemDef_t *item ) {
 	if ( item->skinFocus <= 0.0f || ( item->window.flags & WINDOW_DECORATION ) ) {
 		return;
 	}
-	Skin_Color( color, accent, 0.13f * item->skinFocus );
-	Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, 3.0f, color, NULL );
-	Skin_Color( color, accent, 0.9f * item->skinFocus );
-	Skin_Panel( item->window.rect.x, item->window.rect.y + 2.0f, 1.5f, item->window.rect.h - 4.0f, 0.75f, color, NULL );
+	Skin_Color( color, accent, 0.12f * item->skinFocus );
+	Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, SKIN_RADIUS, color, NULL );
 }
 
 // the colour of the text of an item: its own, brighter the more it is in focus, and that of its menu when off
@@ -915,55 +926,77 @@ void Skin_TextColor( itemDef_t *item, vec4_t out ) {
 		VectorCopy4( parent->disableColor, out );
 		return;
 	}
+	// dark words stand on a button filled with the accent: white would not be read there
+	if ( 0.3f * item->window.foreColor[0] + 0.59f * item->window.foreColor[1] + 0.11f * item->window.foreColor[2] < 0.3f ) {
+		VectorCopy4( item->window.foreColor, out );
+		return;
+	}
 	out[0] = item->window.foreColor[0] + ( bright[0] - item->window.foreColor[0] ) * item->skinFocus;
 	out[1] = item->window.foreColor[1] + ( bright[1] - item->window.foreColor[1] ) * item->skinFocus;
 	out[2] = item->window.foreColor[2] + ( bright[2] - item->window.foreColor[2] ) * item->skinFocus;
 	out[3] = item->window.foreColor[3];
 }
 
-// A switch in place of the words yes and no: a track with a knob that slides to the right when it is on
+// A switch in place of the words yes and no: a track with a knob that slides to the right when it is on. On, the
+// track has the accent and the knob is dark; off, it is the dark of a field with a grey knob.
 void Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on ) {
 	const float		*accent = Skin_Accent( item );
-	const float		h = Q_min( height, 10.0f ), w = h * 2.0f, top = y + ( height - h ) * 0.5f;
-	const vec4_t	off = { 0.30f, 0.37f, 0.46f, 0.9f }, knob = { 0.94f, 0.97f, 1.0f, 1.0f };
-	vec4_t			track;
+	const float		h = Q_min( height, 12.0f ), w = h * 1.75f, top = y + ( height - h ) * 0.5f;
+	vec4_t			track, edge, knob;
 	float			at;
+	int				i;
 
 	item->skinValue = Skin_Ease( item->skinValue, on, SKIN_EASE_MSEC );
 	at = item->skinValue;
-	track[0] = off[0] + ( accent[0] - off[0] ) * at;
-	track[1] = off[1] + ( accent[1] - off[1] ) * at;
-	track[2] = off[2] + ( accent[2] - off[2] ) * at;
-	track[3] = item->disabled ? 0.4f : 0.9f;
-	Skin_Panel( x, top, w, h, h * 0.5f, track, NULL );
-	Skin_Disc( x + h * 0.5f + ( w - h ) * at, top + h * 0.5f, h * 0.5f - 1.0f, knob );
+	for ( i = 0; i < 3; i++ ) {
+		track[i] = skinField[i] + ( accent[i] - skinField[i] ) * at;
+		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * at;
+		knob[i] = skinFaint[i] + ( skinOnAccent[i] - skinFaint[i] ) * at;
+	}
+	track[3] = edge[3] = knob[3] = item->disabled ? 0.4f : 1.0f;
+	Skin_Panel( x, top, w, h, h * 0.5f, track, edge );
+	Skin_Disc( x + h * 0.5f + ( w - h ) * at, top + h * 0.5f, h * 0.5f - 1.6f, knob );
 }
 
-// A slider: a thin track, filled up to the knob
-void Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction ) {
-	const float		*accent = Skin_Accent( item );
-	const float		mid = y + height * 0.5f, knobR = 3.0f + 1.0f * item->skinFocus;
-	const vec4_t	back = { 0.30f, 0.37f, 0.46f, 0.8f }, knob = { 0.94f, 0.97f, 1.0f, 1.0f };
-	vec4_t			glow;
+// The track of a slider and its knob: filled with the accent up to the knob, a light knob with a ring of the
+// accent. Also used for the rows of a list (ui_shared.c).
+void Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha ) {
+	vec4_t color;
 
 	fraction = Com_Clamp( 0.0f, 1.0f, fraction );
-	Skin_Panel( x, mid - 1.0f, width, 2.0f, 1.0f, back, NULL );
-	Skin_Panel( x, mid - 1.0f, width * fraction, 2.0f, 1.0f, accent, NULL );
-	if ( item->skinFocus > 0.0f ) {
-		Skin_Color( glow, accent, 0.35f * item->skinFocus );
+	Skin_Color( color, skinTrack, alpha );
+	Skin_Panel( x, mid - 1.05f, width, 2.1f, 1.05f, color, NULL );
+	Skin_Color( color, accent, alpha );
+	if ( width * fraction > 0.5f ) {
+		Skin_Panel( x, mid - 1.05f, width * fraction, 2.1f, 1.05f, color, NULL );
+	}
+	if ( focus > 0.0f ) {
+		vec4_t glow;
+
+		Skin_Color( glow, accent, 0.3f * focus * alpha );
 		Skin_Soft( x + width * fraction - 1.0f, mid - 1.0f, 2.0f, 2.0f, 7.0f, glow );
 	}
-	Skin_Disc( x + width * fraction, mid, knobR, knob );
+	Skin_Disc( x + width * fraction, mid, 4.3f, color );
+	Skin_Color( color, skinThumb, alpha );
+	Skin_Disc( x + width * fraction, mid, 3.2f, color );
 }
 
-// The box of a line that can be typed in, or of the key a command is bound to
-void Skin_Field( itemDef_t *item, float x, float y, float width, float height, qboolean editing ) {
-	const float		*accent = Skin_Accent( item );
-	const vec4_t	fill = { 0.0f, 0.0f, 0.0f, 0.35f };
-	vec4_t			edge;
+void Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction ) {
+	Skin_SliderTrack( x, y + height * 0.5f, width, fraction, Skin_Accent( item ), item->skinFocus, item->disabled ? 0.4f : 1.0f );
+}
 
-	Skin_Color( edge, accent, editing ? 0.95f : 0.22f + 0.4f * item->skinFocus );
-	Skin_Panel( x, y, width, height, 2.5f, fill, edge );
+// The box of a line that can be typed in, or of the key a command is bound to: the dark of a field with an
+// outline that takes the accent while it is typed in
+void Skin_Field( itemDef_t *item, float x, float y, float width, float height, qboolean editing ) {
+	const float	*accent = Skin_Accent( item );
+	vec4_t		edge;
+	int			i;
+
+	for ( i = 0; i < 3; i++ ) {
+		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * ( editing ? 1.0f : 0.35f * item->skinFocus );
+	}
+	edge[3] = 1.0f;
+	Skin_Panel( x, y, width, height, SKIN_RADIUS, skinField, edge );
 }
 
 // A bar that is filled to a part of its length, for the HUD: health, shield, force
@@ -979,20 +1012,24 @@ void Skin_Bar( float x, float y, float w, float h, float fraction, const vec4_t 
 	}
 }
 
-// The bar at the side of a list: a faint track, and a thumb that is `part` of it long and starts at `start` (0 to 1)
+// The bar at the side of a list: a thumb with round ends that is `part` of it long and starts at `start` (0 to 1),
+// in the middle of a w (or h) wide strip. It takes the accent while the mouse is over the strip.
 void Skin_ScrollBar( float x, float y, float w, float h, float start, float part, qboolean horizontal, const vec4_t accent ) {
-	const vec4_t	track = { 1.0f, 1.0f, 1.0f, 0.06f };
+	const float		thick = 3.2f;
+	const qboolean	over = (qboolean)( DC->cursorx >= x && DC->cursorx < x + w && DC->cursory >= y && DC->cursory < y + h );
 	vec4_t			thumb;
 
-	Skin_Color( thumb, accent, 0.65f );
+	if ( over ) {
+		Skin_Color( thumb, accent, 0.85f );
+	} else {
+		VectorCopy4( skinScrollThumb, thumb );
+	}
 	part = Com_Clamp( 0.08f, 1.0f, part );
 	start = Com_Clamp( 0.0f, 1.0f - part, start );
 	if ( horizontal ) {
-		Skin_Panel( x, y + h * 0.5f - 1.5f, w, 3.0f, 1.5f, track, NULL );
-		Skin_Panel( x + w * start, y + h * 0.5f - 1.5f, w * part, 3.0f, 1.5f, thumb, NULL );
+		Skin_Panel( x + w * start, y + ( h - thick ) * 0.5f, w * part, thick, thick * 0.5f, thumb, NULL );
 	} else {
-		Skin_Panel( x + w * 0.5f - 1.5f, y, 3.0f, h, 1.5f, track, NULL );
-		Skin_Panel( x + w * 0.5f - 1.5f, y + h * start, 3.0f, h * part, 1.5f, thumb, NULL );
+		Skin_Panel( x + ( w - thick ) * 0.5f, y + h * start, thick, h * part, thick * 0.5f, thumb, NULL );
 	}
 }
 
@@ -1001,12 +1038,12 @@ void Skin_Row( float x, float y, float w, float h, const vec4_t accent, qboolean
 	vec4_t color;
 
 	if ( selected ) {
-		Skin_Color( color, accent, 0.22f );
-		Skin_Panel( x, y, w, h, 2.0f, color, NULL );
-		Skin_Color( color, accent, 0.9f );
-		Skin_Panel( x, y + 1.0f, 1.5f, h - 2.0f, 0.75f, color, NULL );
+		Skin_Color( color, accent, 0.16f );
+		Skin_Panel( x, y, w, h, SKIN_RADIUS, color, NULL );
+		Skin_Color( color, accent, 1.0f );
+		Skin_Panel( x, y + 1.0f, 1.6f, h - 2.0f, 0.8f, color, NULL );
 	} else if ( hover > 0.0f ) {
-		Skin_Color( color, accent, 0.09f * hover );
-		Skin_Panel( x, y, w, h, 2.0f, color, NULL );
+		Skin_Color( color, accent, 0.08f * hover );
+		Skin_Panel( x, y, w, h, SKIN_RADIUS, color, NULL );
 	}
 }

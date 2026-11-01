@@ -8,12 +8,12 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					16 30 608 436
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
 		descX					304
 		descY					415
 		descScale				0.55
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
@@ -28,13 +28,12 @@
 			hide highlights
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.94
-		bordercolor				0.43 0.83 1 0.28
+		backcolor				0.031 0.055 0.11 0.97
+		bordercolor				0.11 0.18 0.29 1
 		radius					6
 		shadow					14
-		sheen					0.08
 
 		itemDef
 		{
@@ -52,7 +51,7 @@
 			rect					0 26 608 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			decoration
 		}
 
@@ -64,7 +63,7 @@
 			text					@MENUS_PROFILE
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			flow					3
 			decoration
 			caps					1
@@ -82,7 +81,7 @@
 			text					@VISION_CHARACTER
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_BUILD_A_CHARACTER_OF_YOUR_OWN
@@ -102,7 +101,7 @@
 			text					@MENUS_LIGHTSABER_CAPS
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_HILT_AND_BLADE_OF_YOUR_LIGHTSABER
@@ -122,7 +121,7 @@
 			text					@MENUS_DP_FORCE
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_YOUR_FORCE_POWERS
@@ -143,7 +142,7 @@
 			text					@MENUS_MOVES
 			font					5
 			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
 			descText				@VISION_THE_LIST_OF_MOVES
@@ -157,25 +156,111 @@
 
 		itemDef
 		{
-			name					vision_pane
-			rect					340 38 256 352
+			name					vision_left
+			rect					6 32 262 364
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					4
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					5.3
 			decoration
 		}
 
 		itemDef
 		{
+			name					vision_middle
+			rect					274 32 140 364
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_right
+			rect					420 32 182 364
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					5.3
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_glow
+			rect					294 368 100 12
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.36 0.78 0.96 0.07
+			radius					6
+			glowcolor				0.36 0.78 0.96 0.14
+			decoration
+		}
+
+		itemDef
+		{
+			name					modeltitle
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_CHARACTER_MODEL
+			rect					14 38 246 22
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			outlinecolor			1 .5 .5 .5
+			font					5
+			textscale				0.54
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			textaligny				9
+			caps					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					modeltitle
+			rect					12 59 250 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.11 0.18 0.29 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					headlist
+			rect					12 62 250 328
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			56
+			elementheight			56
+			elementtype				LISTBOX_IMAGE
+			feeder					FEEDER_Q3HEADS
+			forecolor				0.36 0.78 0.96 1
+			descText				@MENUS_CHOOSE_THE_MODEL_FOR
+			visible					1
+			textscale				0.6
+			action { play "sound/interface/button1" }
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			radius					3.2
+		}
+
+		itemDef
+		{
 			name					vision_player
-			rect					14 38 312 22
+			rect					428 38 166 22
 			visible					1
 			text					@VISION_PLAYER
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			style					WINDOW_STYLE_EMPTY
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
@@ -187,10 +272,10 @@
 		itemDef
 		{
 			name					vision_player
-			rect					12 59 316 0.67
+			rect					426 59 170 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 		}
 
@@ -202,10 +287,10 @@
 			text					@MENUS_NAME1
 			cvar					"ui_Name"
 			maxchars				26
-			rect					12 60 316 22
+			rect					426 60 170 22
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			outlinecolor			1 .5 .5 .5
 			descText				@MENUS_ENTER_YOUR_NAME_HERE
 			visible					1
@@ -219,14 +304,14 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_TEAM_COLOR
 			ownerdraw				UI_SKIN_COLOR
-			rect					12 82 158 22
+			rect					426 82 170 22
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				8
 			textaligny				4.2
 			outlinecolor			1 .5 .5 .5
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -246,14 +331,14 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_TEAM_COLOR
 			ownerdraw				UI_SKIN_COLOR
-			rect					12 82 158 22
+			rect					426 82 170 22
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				8
 			textaligny				4.2
 			outlinecolor			1 .5 .5 .5
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -270,28 +355,8 @@
 
 		itemDef
 		{
-			name					jedinonjedi
-			group					jedinonjedi
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_JEDI_NONJEDI
-			ownerdraw				UI_JEDI_NONJEDI
-			rect					170 82 158 22
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			outlinecolor			1 .5 .5 .5
-			textaligny				4.2
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			descText				@MENUS_CHOOSE_JEDI_NONJEDI
-			visible					1
-			action { uiScript updateForceStatus }
-		}
-
-		itemDef
-		{
 			name					vision_rule
-			rect					12 103 316 0.67
+			rect					426 103 170 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
@@ -300,52 +365,32 @@
 
 		itemDef
 		{
-			name					modeltitle
+			name					jedinonjedi
+			group					jedinonjedi
 			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_CHARACTER_MODEL
-			rect					14 104 312 22
+			text					@MENUS_JEDI_NONJEDI
+			ownerdraw				UI_JEDI_NONJEDI
+			rect					426 104 170 22
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
+			textalignx				8
 			outlinecolor			1 .5 .5 .5
+			textaligny				4.2
 			font					5
-			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.7
+			forecolor				0.86 0.90 0.945 1
+			descText				@MENUS_CHOOSE_JEDI_NONJEDI
 			visible					1
-			textaligny				9
-			caps					1
-			decoration
+			action { uiScript updateForceStatus }
 		}
 
 		itemDef
 		{
-			name					modeltitle
-			rect					12 125 316 0.67
+			name					vision_rule
+			rect					426 125 170 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				1 1 1 0.07
 			decoration
-		}
-
-		itemDef
-		{
-			name					headlist
-			rect					12 128 316 148
-			type					ITEM_TYPE_LISTBOX
-			style					WINDOW_STYLE_PANEL
-			elementwidth			48
-			elementheight			48
-			elementtype				LISTBOX_IMAGE
-			feeder					FEEDER_Q3HEADS
-			forecolor				0.43 0.83 1 1
-			descText				@MENUS_CHOOSE_THE_MODEL_FOR
-			visible					1
-			textscale				0.6
-			action { play "sound/interface/button1" }
-			outlinecolor			0.43 0.83 1 0.22
-			font					5
-			backcolor				0 0 0 0.30
-			bordercolor				0.43 0.83 1 0.16
-			radius					4
 		}
 
 		itemDef
@@ -353,14 +398,14 @@
 			name					title_holster
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_HOLSTERS
-			rect					14 278 312 22
+			rect					428 132 166 22
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				9
 			outlinecolor			1 .5 .5 .5
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
@@ -369,17 +414,17 @@
 		itemDef
 		{
 			name					title_holster
-			rect					12 299 316 0.67
+			rect					426 153 170 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 		}
 
 		itemDef
 		{
 			name					holsterlist
-			rect					12 302 316 63
+			rect					426 156 170 130
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			45
@@ -387,36 +432,16 @@
 			elementtype				LISTBOX_IMAGE
 			feeder					FEEDER_HOLSTERS
 			horizontalscroll
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 			descText				"Choose a model for your holster (used for holstered swords)"
 			visible					1
 			textscale				0.6
 			action { play "sound/interface/button1" }
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			backcolor				0 0 0 0.30
-			bordercolor				0.43 0.83 1 0.16
-			radius					4
-		}
-
-		itemDef
-		{
-			name					character
-			group					models
-			type					ITEM_TYPE_MODEL
-			rect					311.56 38 312.89 352
-			model_g2anim			"BOTH_WALK1"
-			asset_model				"models/players/jedi_hm/model.glm"
-			model_g2skin			"models/players/jedi_hm/|head_b1|torso_f1|lower_a1"
-			model_angle				180
-			model_g2mins			-30 -15 -14
-			model_g2maxs			20 15 30
-			model_rotation			50
-			model_fovx				50
-			model_fovy				50
-			isCharacter				1
-			visible					1
-			decoration
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			radius					3.2
 		}
 
 		itemDef
@@ -435,7 +460,7 @@
 			rect					0 404 608 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			decoration
 		}
 
@@ -452,7 +477,7 @@
 			textaligny				10.6
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
 			{
@@ -488,7 +513,7 @@
 			textaligny				10.6
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
 			{
@@ -524,7 +549,7 @@
 			textaligny				10.6
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_APPLY_CHANGES_BUT_REMAIN
 			visible					1
 			action
@@ -551,7 +576,7 @@
 			textaligny				4.6
 			font					5
 			textscale				0.6
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
 			action
@@ -562,9 +587,9 @@
 				uiScript closeingame
 			}
 			caps					1
-			backcolor				0.43 0.83 1 0.22
-			bordercolor				0.43 0.83 1 0.8
-			radius					3
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					3.2
 		}
 
 		itemDef
@@ -580,7 +605,7 @@
 			textaligny				4.6
 			font					5
 			textscale				0.6
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
 			action
@@ -591,9 +616,29 @@
 				uiScript closeingame
 			}
 			caps					1
-			backcolor				0.43 0.83 1 0.22
-			bordercolor				0.43 0.83 1 0.8
-			radius					3
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					3.2
+		}
+
+		itemDef
+		{
+			name					character
+			group					models
+			type					ITEM_TYPE_MODEL
+			rect					276 38 136 344
+			model_g2anim			"BOTH_WALK1"
+			asset_model				"models/players/jedi_hm/model.glm"
+			model_g2skin			"models/players/jedi_hm/|head_b1|torso_f1|lower_a1"
+			model_angle				180
+			model_g2mins			-30 -15 -14
+			model_g2maxs			20 15 30
+			model_rotation			50
+			model_fovx				50
+			model_fovy				50
+			isCharacter				1
+			visible					1
+			decoration
 		}
 	}
 }

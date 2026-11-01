@@ -7,11 +7,11 @@
 		fullScreen				1
 		rect					0 0 640 480
 		visible					1
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					363.5
 		descY					458
 		descScale				0.55
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onESC
 		{
@@ -44,7 +44,7 @@
 			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.22
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -79,7 +79,7 @@
 			text					@MENUS_MOVES
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 			caps					1
 		}
@@ -90,7 +90,7 @@
 			rect					340 31 52 2
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 1
+			backcolor				0.36 0.78 0.96 1
 			radius					1
 			decoration
 		}
@@ -101,10 +101,10 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					25 51 255 23
-			backcolor				0.43 0.83 1 0.14
+			backcolor				0.11 0.18 0.29 0.45
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			radius					3
 		}
 
@@ -114,7 +114,7 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					24 72 255 30
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			backcolor				0 0 0 0
@@ -128,7 +128,7 @@
 			rect					25 51 255 23
 			text					@MENUS_MOVE_TYPES
 			font					5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textscale				0.74
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				125
@@ -154,7 +154,7 @@
 			textstyle				.8
 			textalignx				0
 			backcolor				0 0 0 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			feeder					42
 			cvar					"ui_move_title"
 			cvarFloatList
@@ -187,10 +187,10 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					26 114 253 23
-			backcolor				0.43 0.83 1 0.14
+			backcolor				0.11 0.18 0.29 0.45
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			radius					3
 		}
 
@@ -201,7 +201,7 @@
 			rect					35 112 253 26
 			text					@MENUS_MOVES
 			font					5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textscale				0.74
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				125
@@ -222,18 +222,18 @@
 			elementheight			16
 			font					5
 			textscale				0.6
-			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.60 0.69 0.78 1
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					41
 			desctext				@MENUS_MOVE_DESC2
 			notselectable
 			visible					1
 			columns					1 2 55 225
-			mouseEnter { setitemcolor moveslist bordercolor 0.43 0.83 1 0.6 }
-			mouseExit { setitemcolor moveslist bordercolor 0.43 0.83 1 0.16 }
+			mouseEnter { setitemcolor moveslist bordercolor 0.36 0.78 0.96 0.6 }
+			mouseExit { setitemcolor moveslist bordercolor 0.086 0.149 0.247 1 }
 			doubleclick { play sound/interface/button1.wav }
 			radius					4
 		}
@@ -244,7 +244,7 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					285 42 330 370
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			backcolor				0 0 0 0
@@ -279,13 +279,13 @@
 			text					"  "
 			cvar					ui_move_desc
 			font					5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				7
 			visible					1
 			lineHeight				13
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -314,7 +314,7 @@
 			}
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		backdrop				1
 
 		itemDef
@@ -339,7 +339,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -364,7 +364,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -389,7 +389,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -414,7 +414,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -434,7 +434,7 @@
 			rect					0 446 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -454,7 +454,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{

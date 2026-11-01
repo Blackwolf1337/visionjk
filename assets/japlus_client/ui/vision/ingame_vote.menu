@@ -8,7 +8,7 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					430 40 82 74
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 
 		itemDef
@@ -20,11 +20,10 @@
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.94
-			bordercolor				0.43 0.83 1 0.28
-			radius					8
+			backcolor				0.031 0.055 0.11 0.97
+			bordercolor				0.11 0.18 0.29 1
+			radius					6.4
 			shadow					14
-			sheen					0.08
 		}
 
 		itemDef
@@ -39,7 +38,7 @@
 			textaligny				1.5
 			font					5
 			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -63,7 +62,7 @@
 			textaligny				1.5
 			font					5
 			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -75,12 +74,12 @@
 			mouseExit { hide button2 }
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 		descX					471
 		descY					119
 		descAlignment			ITEM_ALIGN_CENTER
 		descScale				0.7
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 	}
 }

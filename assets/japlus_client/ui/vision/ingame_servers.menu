@@ -8,11 +8,11 @@
 		fullscreen				0
 		rect					0 0 659 486
 		outOfBoundsClick
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					329.5
 		descY					-15
 		descScale				0.7
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { uiScript UpdateFilter }
 		onEsc
@@ -29,14 +29,13 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					0 0 659 486
-			backcolor				0.035 0.07 0.12 0.94
+			backcolor				0.031 0.055 0.11 0.97
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.28
-			radius					8
+			bordercolor				0.11 0.18 0.29 1
+			radius					6.4
 			shadow					14
-			sheen					0.08
 		}
 
 		itemDef
@@ -45,9 +44,9 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					240 22 384 68
-			backcolor				0.035 0.07 0.12 0.55
+			backcolor				0.016 0.031 0.063 0.45
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			radius					5
@@ -61,7 +60,7 @@
 			rect					5 398 630 22
 			backcolor				1 1 1 0.03
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 		}
@@ -78,7 +77,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				270
 			textaligny				0.75
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
@@ -97,7 +96,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -125,7 +124,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -154,7 +153,7 @@
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseEnter
@@ -178,7 +177,7 @@
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseEnter
@@ -203,7 +202,7 @@
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseEnter
@@ -227,7 +226,7 @@
 			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -255,7 +254,7 @@
 			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -283,7 +282,7 @@
 			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -317,7 +316,7 @@
 			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -345,7 +344,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				4
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -353,8 +352,8 @@
 				uiScript ServerSort 0
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor server backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
-				setitemcolor server forecolor 0.43 0.83 1 1
+				setitemcolor grpTabs forecolor 0.86 0.90 0.945 1
+				setitemcolor server forecolor 0.36 0.78 0.96 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor serverColumn backcolor 0.1 0.1 0.5 0.5
 			}
@@ -362,12 +361,12 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 7 90 265 24
-				setitemcolor serverColumn bordercolor 0.43 0.83 1 0.6
+				setitemcolor serverColumn bordercolor 0.36 0.78 0.96 0.6
 			}
 			mouseExit
 			{
 				hide button_glow2
-				setitemcolor serverColumn bordercolor 0.43 0.83 1 0.16
+				setitemcolor serverColumn bordercolor 0.086 0.149 0.247 1
 			}
 			font					5
 		}
@@ -385,7 +384,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				4
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -393,8 +392,8 @@
 				uiScript ServerSort 1
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor map backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
-				setitemcolor map forecolor 0.43 0.83 1 1
+				setitemcolor grpTabs forecolor 0.86 0.90 0.945 1
+				setitemcolor map forecolor 0.36 0.78 0.96 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor mapColumn backcolor 0.1 0.1 0.5 0.5
 			}
@@ -402,9 +401,9 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 272 90 134 24
-				setitemcolor mapColumn bordercolor 0.43 0.83 1 0.6
+				setitemcolor mapColumn bordercolor 0.36 0.78 0.96 0.6
 			}
-			mouseExit { setitemcolor mapColumn bordercolor 0.43 0.83 1 0.16 }
+			mouseExit { setitemcolor mapColumn bordercolor 0.086 0.149 0.247 1 }
 			font					5
 		}
 
@@ -421,7 +420,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				4
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -429,8 +428,8 @@
 				uiScript ServerSort 2
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor Players backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
-				setitemcolor Players forecolor 0.43 0.83 1 1
+				setitemcolor grpTabs forecolor 0.86 0.90 0.945 1
+				setitemcolor Players forecolor 0.36 0.78 0.96 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor playerColumn backcolor 0.1 0.1 0.5 0.5
 			}
@@ -438,9 +437,9 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 397 90 68 24
-				setitemcolor playerColumn bordercolor 0.43 0.83 1 0.6
+				setitemcolor playerColumn bordercolor 0.36 0.78 0.96 0.6
 			}
-			mouseExit { setitemcolor playerColumn bordercolor 0.43 0.83 1 0.16 }
+			mouseExit { setitemcolor playerColumn bordercolor 0.086 0.149 0.247 1 }
 			font					5
 		}
 
@@ -457,7 +456,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				4
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -465,8 +464,8 @@
 				uiScript ServerSort 3
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor Type backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
-				setitemcolor Type forecolor 0.43 0.83 1 1
+				setitemcolor grpTabs forecolor 0.86 0.90 0.945 1
+				setitemcolor Type forecolor 0.36 0.78 0.96 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor typeColumn backcolor 0.1 0.1 0.5 0.5
 			}
@@ -474,12 +473,12 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 457 90 110 24
-				setitemcolor typeColumn bordercolor 0.43 0.83 1 0.6
+				setitemcolor typeColumn bordercolor 0.36 0.78 0.96 0.6
 			}
 			mouseExit
 			{
 				hide button_glow2
-				setitemcolor typeColumn bordercolor 0.43 0.83 1 0.16
+				setitemcolor typeColumn bordercolor 0.086 0.149 0.247 1
 			}
 			font					5
 		}
@@ -497,7 +496,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				4
 			textaligny				1.5
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -505,8 +504,8 @@
 				uiScript ServerSort 4
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor Ping backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
-				setitemcolor Ping forecolor 0.43 0.83 1 1
+				setitemcolor grpTabs forecolor 0.86 0.90 0.945 1
+				setitemcolor Ping forecolor 0.36 0.78 0.96 1
 				setitemcolor grpColumn backcolor 0 0 0 0 ;
 				setitemcolor pingColumn backcolor 0.1 0.1 0.5 0.5
 			}
@@ -514,12 +513,12 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 557 90 60 24
-				setitemcolor pingColumn bordercolor 0.43 0.83 1 0.6
+				setitemcolor pingColumn bordercolor 0.36 0.78 0.96 0.6
 			}
 			mouseExit
 			{
 				hide button_glow2
-				setitemcolor pingColumn bordercolor 0.43 0.83 1 0.16
+				setitemcolor pingColumn bordercolor 0.086 0.149 0.247 1
 			}
 			font					5
 		}
@@ -632,7 +631,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 		}
@@ -645,7 +644,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 		}
@@ -658,7 +657,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 		}
@@ -671,7 +670,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 		}
@@ -684,7 +683,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 		}
@@ -702,14 +701,14 @@
 			textaligny				7
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SERVERS
-			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.86 0.92 0.97 1
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			visible					1
 			columns					5 2 40 258 270 40 104 388 5 64 450 20 100 560 20 47
-			mouseenter { setitemcolor serverlist bordercolor 0.43 0.83 1 0.6 }
-			mouseexit { setitemcolor serverlist bordercolor 0.43 0.83 1 0.16 }
+			mouseenter { setitemcolor serverlist bordercolor 0.36 0.78 0.96 0.6 }
+			mouseexit { setitemcolor serverlist bordercolor 0.086 0.149 0.247 1 }
 			doubleClick { open ingame_servers_confirm }
 			radius					4
 		}
@@ -724,7 +723,7 @@
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				1
-			forecolor				1 0.74 0.30 0.7
+			forecolor				0.91 0.77 0.42 0.7
 			visible					1
 			decoration
 		}
@@ -742,7 +741,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				60
 			textaligny				1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -770,7 +769,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				60
 			textaligny				1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -799,7 +798,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				60
 			textaligny				1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -828,7 +827,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				60
 			textaligny				1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -857,7 +856,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				60
 			textaligny				1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -885,7 +884,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				60
 			textaligny				1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -916,7 +915,7 @@
 			textaligny				4
 			textalign				ITEM_ALIGN_CENTER
 			visible					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			action
 			{
 				play "sound/interface/esc.wav" ;
@@ -931,9 +930,9 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					10
-			backcolor				1 1 1 0.05
-			bordercolor				0.43 0.83 1 0.16
+			radius					3.2
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
@@ -950,7 +949,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				55
 			textaligny				4
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -964,12 +963,12 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			radius					3.2
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 		style					WINDOW_STYLE_EMPTY
 	}
@@ -981,7 +980,7 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					190 170 260 130
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		popup
 		onESC
@@ -996,14 +995,13 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					0 4 260 124
-			backcolor				0.035 0.07 0.12 0.94
+			backcolor				0.031 0.055 0.11 0.97
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.28
+			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					8
+			radius					6.4
 			shadow					14
-			sheen					0.08
 		}
 
 		itemDef
@@ -1016,7 +1014,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				120
 			textaligny				1
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 		}
@@ -1033,7 +1031,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				100
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -1062,7 +1060,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				100
 			textaligny				7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -1078,12 +1076,12 @@
 			caps					1
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 		descX					320
 		descY					303
 		descAlignment			ITEM_ALIGN_CENTER
 		descScale				0.7
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 	}
 }

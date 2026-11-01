@@ -7,11 +7,11 @@
 		fullScreen				MENU_TRUE
 		rect					0 0 640 480
 		visible					1
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					15
 		descY					80
 		descScale				0.8
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_LEFT
 		onEsc
 		{
@@ -45,7 +45,7 @@
 			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.22
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -80,7 +80,7 @@
 			text					"JEDI ACADEMY"
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 		}
 
@@ -90,7 +90,7 @@
 			rect					340 31 52 2
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 1
+			backcolor				0.36 0.78 0.96 1
 			radius					1
 			decoration
 		}
@@ -115,19 +115,34 @@
 
 		itemDef
 		{
+			name					vision_rules
+			rect					40 84 236 294
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					5.3
+			shadow					0
+			sheen					0
+			decoration
+		}
+
+		itemDef
+		{
 			name					rules_title
 			group					none
 			text					@MENUS_GENERAL_RULES
-			rect					13 106 240 20
+			rect					46 92 224 22
 			font					5
-			textscale				0.59
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				0
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.52
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				2
+			textaligny				5
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
+			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -138,13 +153,11 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_weaponDisable"
-			rect					13 126 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 110.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				"ui_netGameType"
 			hideCvar
@@ -159,6 +172,7 @@
 				setitemrect button_glow 0 127 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -169,13 +183,11 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_duelWeaponDisable"
-			rect					13 126 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 110.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				"ui_netGameType"
 			showCvar
@@ -190,6 +202,7 @@
 				setitemrect button_glow 0 127 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -202,13 +215,11 @@
 			cvar					"g_forcePowerDisable"
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					13 146 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 132.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -221,6 +232,7 @@
 				setitemrect button_glow 0 147 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -232,13 +244,13 @@
 			ownerdraw				UI_FORCE_MASTERY_SET
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					13 166 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1.35
+			rect					46 158 224 22
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				8
+			textaligny				5.06
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -254,16 +266,17 @@
 			name					end_game_title
 			group					none
 			text					@MENUS_ENDGAME_RULES
-			rect					13 196 240 20
+			rect					46 188 224 22
 			font					5
-			textscale				0.59
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				0
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.52
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				2
+			textaligny				5
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
+			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -273,14 +286,12 @@
 			type					ITEM_TYPE_NUMERICFIELD
 			text					@MENUS_TIME_LIMIT
 			cvar					"timelimit"
-			rect					13 216 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 206.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
+			textscale				0.66
 			maxchars				4
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_THIS_VALUE_ADJUSTS_THE
 			action { play "sound/interface/button1.wav" }
@@ -290,6 +301,7 @@
 				setitemrect button_glow 0 217 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -305,14 +317,12 @@
 				"0" ;
 				"3" ;
 			}
-			rect					13 236 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 228.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
+			textscale				0.66
 			maxchars				4
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_ESTABLISH_THE_NUMBER
 			action { play "sound/interface/button1.wav" }
@@ -322,6 +332,7 @@
 				setitemrect button_glow 0 237 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -333,14 +344,12 @@
 			cvar					"capturelimit"
 			cvarTest				"ui_netGameType"
 			showCvar { "5" ; }
-			rect					13 236 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 228.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
+			textscale				0.66
 			maxchars				8
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_THIS_IS_THE_NUMBER_OF
 			action { play "sound/interface/button1.wav" }
@@ -350,6 +359,7 @@
 				setitemrect button_glow 0 237 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -368,14 +378,12 @@
 				"4" ;
 				"5" ;
 			}
-			rect					13 236 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 228.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
+			textscale				0.66
 			maxchars				8
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -384,6 +392,7 @@
 				setitemrect button_glow 0 237 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -391,16 +400,17 @@
 			name					bots_title
 			group					none
 			text					@MENUS_BOTS
-			rect					13 276 240 20
+			rect					46 262 224 22
 			font					5
-			textscale				0.59
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				0
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.52
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				2
+			textaligny				5
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
+			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -412,13 +422,11 @@
 			text					@MENUS_PLAYERS
 			descText				@MENUS_PLAYERS_INFO
 			cvar					"bot_minplayers"
-			rect					13 296 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 280.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -427,6 +435,7 @@
 				setitemrect button_glow 0 297 260 30
 			}
 			mouseExit { hide button_glow }
+			row						1
 		}
 
 		itemDef
@@ -436,13 +445,11 @@
 			type					ITEM_TYPE_NUMERICFIELD
 			text					@MENUS_MAXIMUM_PLAYERS
 			cvar					"sv_maxclients"
-			rect					13 316 240 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			rect					46 302.35 224 17.88
+			textaligny				3
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.86 0.90 0.945 1
 			maxchars				6
 			visible					1
 			descText				@MENUS_SETS_THE_MAXIMUM_NUMBER
@@ -453,6 +460,7 @@
 				hide settingsButton1
 				uiscript clampmaxplayers
 			}
+			row						1
 		}
 
 		itemDef
@@ -462,14 +470,14 @@
 			ownerdraw				UI_SKILL
 			text					@MENUS_SKILL
 			descText				@MENUS_ADJUSTS_THE_DIFFICULTY
-			rect					13 336 240 20
+			rect					46 328 224 22
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				-0.65
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				8
+			textaligny				5.06
 			font					5
-			textscale				0.77
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.66
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -487,40 +495,24 @@
 			descText				@MENUS_SELECT_BOTS_DESC
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.77
+			textscale				0.58
 			textstyle				0
-			style					WINDOW_STYLE_EMPTY
-			rect					13 356 240 20
-			textalignx				120
-			textaligny				-0.65
+			style					WINDOW_STYLE_PANEL
+			rect					48 352 220 18
+			textalignx				110
+			textaligny				3.78
 			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				open quickbots
 			}
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 0 357 260 30
-			}
-			mouseExit { hide button_glow }
-		}
-
-		itemDef
-		{
-			name					setup_background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					288 100 340 280
-			backcolor				0.035 0.07 0.12 0.55
-			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			decoration
-			radius					5
+			radius					3.2
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -528,8 +520,8 @@
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_STARTMAPCINEMATIC
-			rect					298 120 320 240
-			bordercolor				0.43 0.83 1 0.16
+			rect					296 90 298 224
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			backcolor				0 0 0 0
 			radius					5
@@ -541,14 +533,15 @@
 		{
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
-			rect					297 119 322 242
-			bordercolor				0.43 0.83 1 0.16
+			rect					290 84 310 236
+			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			backcolor				0 0 0 0
-			radius					5
+			radius					5.3
+			decoration
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		backdrop				1
 
 		itemDef
@@ -573,7 +566,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -598,7 +591,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -623,7 +616,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -648,7 +641,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -668,7 +661,7 @@
 			rect					0 446 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -688,7 +681,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -721,7 +714,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -753,7 +746,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				61
 			textaligny				5.6
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			mouseEnter
 			{
@@ -770,9 +763,9 @@
 				close quickgame2 ;
 			}
 			caps					1
-			backcolor				0.43 0.83 1 0.22
-			bordercolor				0.43 0.83 1 0.8
-			radius					3
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					3.2
 		}
 	}
 }

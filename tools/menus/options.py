@@ -15,17 +15,20 @@ from texts import ref
 
 ROW_H = 22                  # a row of a list, and a heading in it
 ROWS = 16                   # rows the window of a list shows
+RAIL_ROWS = 17              #	and with the pages at the left
 ROW_SCALE = 0.7
 CLICK = ['play', '"sound/interface/button1.wav"', ';']
-WINDOW = ['0.035', '0.07', '0.12', '0.94']
+WINDOW = ['0.031', '0.055', '0.11', '0.97']
 BAND = ['0.02', '0.04', '0.08', '0.50']         # the row of tabs and the bar at the bottom, as pages.FOOT
 
 
 class Layout:
-    """Where the parts of the screen are, in the units of its menu."""
+    """Where the parts of the screen are, in the units of its menu. rail: the pages are a list at the left (Setup and
+    Controls), not a row of tabs at the top (the pages of the player, profile.py)."""
 
-    def __init__(self, ingame):
+    def __init__(self, ingame, rail=False):
         self.ingame = ingame
+        self.rail = None
         if ingame:
             # a window under the bar of the menu of a game
             self.menu = (16, 30, 608, 436)
@@ -42,6 +45,19 @@ class Layout:
             self.pane = (432, 72, 176, ROWS * ROW_H)
             self.bar_y, self.bar_h = 446, 34
         self.right = self.width - self.left
+        if rail:
+            # (the redesign of 2026-11-01: the search and the pages at the left, the list in the middle, what the row
+            # under the mouse is for at the right)
+            top = 8 if ingame else 46
+            bottom = self.bar_y - (8 if ingame else 6)
+            x0 = 8 if ingame else 10
+            self.rail = (x0, top, 122, bottom - top)
+            self.search = (x0 + 6, top + 6, 110, 20)
+            self.tab_x, self.tab_y, self.tab_w, self.tab_h = x0 + 6, top + 34, 110, 22
+            lx = x0 + 136
+            self.list = (lx, top + 4, 296 if not ingame else 278, RAIL_ROWS * ROW_H)
+            px = self.list[0] + self.list[2] + 14
+            self.pane = (px, top, self.width - px - x0, bottom - top)
 
 
 # ---- the pages. An entry of a page:
@@ -528,8 +544,8 @@ def music_page(page, back, L):
              ('feeder', 'FEEDER_MUSICPLAYERS'), ('textalign', 3), ('textaligny', 24), ('bordercolor', *(ACCENT[:3] + ['0.16'])),
              ('outlinecolor', *(ACCENT[:3] + ['0.22'])), ('forecolor', *TEXT), ('backcolor', '0', '0', '0', '0.30'), ('radius', 4),
              ('page', page)),
-        text_item('vision_music_back', rect_back, '@MENUS_BACK', 0.62, BRIGHT, ('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'),
-                  ('radius', 3), ('caps', 1), ('backcolor', *(ACCENT[:3] + ['0.20'])), ('bordercolor', *(ACCENT[:3] + ['0.75'])),
+        text_item('vision_music_back', rect_back, '@MENUS_BACK', 0.62, ON_ACCENT, ('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'),
+                  ('radius', 3.2), ('caps', 1), ('backcolor', *ACCENT), ('bordercolor', *ACCENT),
                   ('descText', '@MENUS_BACK'), ('action', list(CLICK) + ['setpage', str(back), ';']), ('page', page),
                   *centered(rect_back, 0.62)),
     ]
@@ -590,7 +606,7 @@ def page_items(m, page, content, L, folds):
             out.append(text_item('vision_head', (x + 2, y, w - 4, ROW_H), word(entry[1]), 0.54, DIM, ('textaligny', 9), ('caps', 1),
                                  ('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_EMPTY'), ('fold', folds[-1]),
                                  ('action', CLICK), ('page', page), ('scroll', 1)))
-            out.append(fill('vision_headline', (x, y + ROW_H - 1, w, 0.67), ACCENT[:3] + ['0.32'], ('page', page), ('scroll', 1)))
+            out.append(fill('vision_headline', (x, y + ROW_H - 1, w, 0.67), PANEL_EDGE, ('page', page), ('scroll', 1)))
             y += ROW_H
         elif kind == 'old':
             for b in old_rows(m, entry[1], entry[2] if len(entry) > 2 else None, entry[3] if len(entry) > 3 else ()):
@@ -611,9 +627,9 @@ def page_items(m, page, content, L, folds):
             b = load[0].block
             rect = (x, y + h - 24, 130, 22)
             mf.put(b, 'rect', *[mf.fmt(v) for v in rect])
-            for key, *args in (('visible', 1), ('page', page), ('font', FONT), ('textscale', '0.62'), ('caps', 1), ('forecolor', *BRIGHT),
-                               ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *(ACCENT[:3] + ['0.20'])),
-                               ('bordercolor', *(ACCENT[:3] + ['0.75'])), ('radius', 3)) + centered(rect, 0.62):
+            for key, *args in (('visible', 1), ('page', page), ('font', FONT), ('textscale', '0.62'), ('caps', 1), ('forecolor', *ON_ACCENT),
+                               ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT),
+                               ('bordercolor', *ACCENT), ('radius', 3.2)) + centered(rect, 0.62):
                 mf.put(b, key, *args)
             act = mf.find(b, 'action')
             act.block = clean(act.block)
@@ -636,7 +652,7 @@ def channel_page(page, back, L):
     """The warning before the development builds (the row "Update Channel" opens it). Its button sets the cvar."""
     x, y, w, _ = L.list
     rect_no, rect_yes = (x + 20, y + 170, 150, 24), (x + 190, y + 170, 170, 24)
-    pill = (('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 3), ('caps', 1), ('page', page))
+    pill = (('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 3.2), ('caps', 1), ('page', page))
     lines = ('Development builds are early test versions.', 'They can crash, corrupt your configs or not work on some servers.',
              'You can switch back to Stable at any time.')
     out = [text_item('vision_channel_title', (x + 20, y + 24, w - 40, 24), '@MENUS_WARNING', 1.1, WARM, ('decoration',), ('page', page))]
@@ -644,11 +660,11 @@ def channel_page(page, back, L):
         out.append(text_item('vision_channel%d' % (n + 1), (x + 20, y + 62 + n * 18, w - 40, 16), ref(line), 0.7, DIM if n == 2 else TEXT,
                              ('decoration',), ('page', page)))
     out += [
-        text_item('vision_channel_no', rect_no, ref('Stay on Stable'), 0.64, TEXT, *pill, ('backcolor', '1', '1', '1', '0.05'),
-                  ('bordercolor', *SOFT_EDGE), ('descText', ref('Keep the releases.')),
+        text_item('vision_channel_no', rect_no, ref('Stay on Stable'), 0.64, TEXT, *pill, ('backcolor', *NONE),
+                  ('bordercolor', *CONTROL_EDGE), ('descText', ref('Keep the releases.')),
                   ('action', list(CLICK) + ['setpage', str(back), ';']), *centered(rect_no, 0.64)),
-        text_item('vision_channel_yes', rect_yes, ref('Switch to Development'), 0.64, BRIGHT, *pill,
-                  ('backcolor', *(ACCENT[:3] + ['0.20'])), ('bordercolor', *(ACCENT[:3] + ['0.75'])),
+        text_item('vision_channel_yes', rect_yes, ref('Switch to Development'), 0.64, ON_ACCENT, *pill,
+                  ('backcolor', *ACCENT), ('bordercolor', *ACCENT),
                   ('descText', ref('Update to the development builds from now on.')),
                   ('action', list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(back), ';']),
                   *centered(rect_yes, 0.64)),
@@ -664,7 +680,7 @@ def defaults_page(m, page, L):
     x, y, w, _ = L.list
     act = clean(mf.find(yes.block, 'action').block)
     rect_yes, rect_no = (x + 150, y + 150, 110, 24), (x + 20, y + 150, 110, 24)
-    pill = (('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 3), ('caps', 1), ('page', page))
+    pill = (('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 3.2), ('caps', 1), ('page', page))
     return [
         text_item('vision_warning', (x + 20, y + 24, w - 40, 24), '@MENUS_WARNING', 1.1, WARM, ('decoration',), ('page', page)),
         text_item('vision_warning1', (x + 20, y + 62, w - 40, 16), '@MENUS_THIS_WILL_SET_ALL_GAME', 0.7, TEXT, ('decoration',),
@@ -672,11 +688,11 @@ def defaults_page(m, page, L):
         text_item('vision_warning2', (x + 20, y + 80, w - 40, 16), '@MENUS_TO_THEIR_FACTORY_SETTINGS', 0.7, TEXT, ('decoration',),
                   ('page', page)),
         text_item('vision_warning3', (x + 20, y + 110, w - 40, 16), '@MENUS_VID_RESTART3', 0.7, DIM, ('decoration',), ('page', page)),
-        text_item('default_no', rect_no, '@MENUS_NO', 0.64, TEXT, *pill, ('backcolor', '1', '1', '1', '0.05'),
-                  ('bordercolor', *SOFT_EDGE), ('descText', '@MENUS_DO_NOT_RESET_DEFAULT'), ('tab', 1), ('action', CLICK),
+        text_item('default_no', rect_no, '@MENUS_NO', 0.64, TEXT, *pill, ('backcolor', *NONE),
+                  ('bordercolor', *CONTROL_EDGE), ('descText', '@MENUS_DO_NOT_RESET_DEFAULT'), ('tab', 1), ('action', CLICK),
                   *centered(rect_no, 0.64)),
-        text_item('default_yes', rect_yes, '@MENUS_YES', 0.64, BRIGHT, *pill, ('backcolor', *(ACCENT[:3] + ['0.20'])),
-                  ('bordercolor', *(ACCENT[:3] + ['0.75'])), ('descText', '@MENUS_USE_DEFAULT_SETTINGS'), ('action', act),
+        text_item('default_yes', rect_yes, '@MENUS_YES', 0.64, ON_ACCENT, *pill, ('backcolor', *ACCENT),
+                  ('bordercolor', *ACCENT), ('descText', '@MENUS_USE_DEFAULT_SETTINGS'), ('action', act),
                   *centered(rect_yes, 0.64)),
     ]
 
@@ -684,7 +700,7 @@ def defaults_page(m, page, L):
 def build(m, name, ingame, nav):
     """Makes the menu `m` (after the rules of theme.py) the options screen of the table that belongs to its file.
     nav: what the caller has for the top of a page outside a game (the bar with the sections)."""
-    L = Layout(ingame)
+    L = Layout(ingame, rail=True)
     screen = SCREENS[name]
     setup = screen is SETUP
     old = list(m)
@@ -699,21 +715,17 @@ def build(m, name, ingame, nav):
             pages.append((title, about, made))
     new = list(nav)
 
-    # the row of tabs
-    new.append(fill('vision_strip', (0, L.strip_y, L.width, 26), BAND, *((('wide', 1),) if not ingame else ())))
-    new.append(fill('vision_strip_line', (0, L.strip_y + 26, L.width, 0.67), ACCENT[:3] + ['0.18'],
-                    *((('wide', 1),) if not ingame else ())))
-    # (as wide as their words are in the language of the player: the code moves them together, Menu_TabsLayout.
-    # The word of the first one begins where the names of the rows do.)
-    tab_w = min(92.0, (L.right - L.left) / len(pages))
+    # the pages as a list at the left, under the search (Item_Tab_Paint draws a tab with its word at the left as a row)
+    new.append(panel_item('vision_rail', L.rail, SOFT, SOFT_EDGE, 5.3))
     for n, (title, about, made) in enumerate(pages):
-        rect = (L.left - 3 + n * tab_w, L.strip_y, tab_w, 26)
+        rect = (L.tab_x, L.tab_y + n * (L.tab_h + 2), L.tab_w, L.tab_h)
         act = list(CLICK)
         if title == '@MENUS_MODS':
             act += ['uiScript', 'loadMods', ';']
-        new.append(text_item('vision_tab%d' % (n + 1), rect, word(title), 0.58, DIM, ('type', 'ITEM_TYPE_BUTTON'), ('caps', 1),
+        new.append(text_item('vision_tab%d' % (n + 1), rect, word(title), 0.62, TEXT, ('type', 'ITEM_TYPE_BUTTON'), ('caps', 1),
                              ('style', 'WINDOW_STYLE_EMPTY'), ('tab', n + 1), ('descText', word(about)), ('action', act),
-                             *centered(rect, 0.58)))
+                             ('textalign', 'ITEM_ALIGN_LEFT'), ('textalignx', 9),
+                             ('textaligny', mf.fmt((L.tab_h - 18.0 * 0.62) / 2))))
 
     # the lists, the bar beside them, and what the row under the mouse is for
     for _, _, made in pages:
@@ -721,20 +733,19 @@ def build(m, name, ingame, nav):
     x, y, w, h = L.list
     new.append(item('vision_scroll', (x + w + 3, y, 6, h), ('type', 'ITEM_TYPE_PAGESCROLL')))
     px, py, pw, ph = L.pane
-    new.append(panel_item('vision_pane', L.pane, SOFT, SOFT_EDGE, 4))
-    top = 34 if setup else 0        # (under the search)
-    new.append(text_item('vision_about', (px + 12, py + 14 + top, pw - 24, ph - 28 - top), '""', 0.6, BRIGHT, ('type', 'ITEM_TYPE_DESC'),
+    new.append(panel_item('vision_pane', L.pane, SOFT, SOFT_EDGE, 5.3))
+    new.append(text_item('vision_about', (px + 12, py + 14, pw - 24, ph - 28), '""', 0.6, BRIGHT, ('type', 'ITEM_TYPE_DESC'),
                          ('decoration',)))
-    # the search: at the top of the pane, above what the row under the mouse is for. While it has words the list
-    # shows the rows of all pages that have them (searchCvar, Menu_ListLayout)
+    # the search: at the top of the list of pages. While it has words the list shows the rows of all pages that
+    # have them (searchCvar, Menu_ListLayout)
     if setup:
-        new.append(text_item('vision_search', (px + 8, py + 8, pw - 16, 20), ref('Search'), 0.56, DIM,
+        new.append(text_item('vision_search', L.search, ref('Search'), 0.56, DIM,
                              ('type', 'ITEM_TYPE_EDITFIELD'), ('hint', 1), ('cvar', quoted('v_setupSearch')), ('maxChars', 40),
-                             ('maxPaintChars', 18), ('descText', ref('Shows the settings of all pages whose name or description has these words.'))))
+                             ('maxPaintChars', 16), ('descText', ref('Shows the settings of all pages whose name or description has these words.'))))
 
     # the bar at the bottom: back at the left, and what else the screen has to offer
     new.append(fill('vision_foot', (0, L.bar_y, L.width, L.bar_h), BAND, *((('wide', 1),) if not ingame else ())))
-    new.append(fill('vision_foot_line', (0, L.bar_y, L.width, 0.67), ACCENT[:3] + ['0.18'], *((('wide', 1),) if not ingame else ())))
+    new.append(fill('vision_foot_line', (0, L.bar_y, L.width, 0.67), BAR_LINE, *((('wide', 1),) if not ingame else ())))
     # (as wide as their words and one after the other: "flow", Menu_TabsLayout in ui_shared.c)
     bx = L.left - 3
     new.append(bar_button('vision_back', bx, 72, '@MENUS_BACK', '@MENUS_BACK', back, L, ('flow', 1)))
@@ -751,9 +762,9 @@ def build(m, name, ingame, nav):
             # (it does what the "yes" of the old menu did after its question)
             yes = next((e for e in items(old) if name_of(e.block) == 'vidrestart_yes'), None)
             act = clean(list(mf.find(yes.block, 'action').block)) if yes else CLICK + ['uiScript', 'updatevideosetup', ';']
-            new.append(text_item('applyChanges', rect, '@MENUS_APPLY_CHANGES', 0.6, BRIGHT, ('type', 'ITEM_TYPE_BUTTON'),
-                                 ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
-                                 ('bordercolor', *(ACCENT[:3] + ['0.8'])), ('radius', 3), ('caps', 1),
+            new.append(text_item('applyChanges', rect, '@MENUS_APPLY_CHANGES', 0.6, ON_ACCENT, ('type', 'ITEM_TYPE_BUTTON'),
+                                 ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT),
+                                 ('bordercolor', *ACCENT), ('radius', 3), ('caps', 1),
                                  ('descText', ref('Restart the video with these settings.')),
                                  ('action', act), *centered(rect, 0.6)))
             mf.put(new[-1].block, 'visible', 0)

@@ -8,12 +8,12 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					270 40 361 228
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		descX					450.5
 		descY					273
 		descScale				0.7
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onopen
 		{
@@ -26,8 +26,8 @@
 			hide grpcallVote ;
 			show misc ;
 			uiScript loadArenas ;
-			setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor miscbutton forecolor 0.43 0.83 1 1 ;
+			setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+			setitemcolor miscbutton forecolor 0.36 0.78 0.96 1 ;
 			uiscript resetmaplist ;
 		}
 
@@ -40,11 +40,10 @@
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.94
-			bordercolor				0.43 0.83 1 0.28
-			radius					8
+			backcolor				0.031 0.055 0.11 0.97
+			bordercolor				0.11 0.18 0.29 1
+			radius					6.4
 			shadow					14
-			sheen					0.08
 		}
 
 		itemDef
@@ -60,9 +59,9 @@
 			backcolor				0 0 0 0
 			font					5
 			textscale				0.59
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			border					0
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			caps					1
 		}
@@ -73,9 +72,9 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					120 32 235 186
-			backcolor				0.035 0.07 0.12 0.55
+			backcolor				0.016 0.031 0.063 0.45
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			radius					5
@@ -87,11 +86,11 @@
 			rect					7 32 109 186
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			shadow					8
-			sheen					0.06
+			sheen					0
 			decoration
 		}
 
@@ -110,15 +109,15 @@
 			textaligny				7.25
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				hide grpCallVote ;
 				show misc ;
-				setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor miscbutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor miscbutton forecolor 0.36 0.78 0.96 1 ;
 			}
 			mouseEnter { show misc_glow }
 			mouseExit { hide misc_glow }
@@ -146,10 +145,10 @@
 				play "sound/interface/button1.wav" ;
 				hide grpCallVote ;
 				show type ;
-				setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor gametypebutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor gametypebutton forecolor 0.36 0.78 0.96 1 ;
 			}
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			mouseEnter { show gametype_glow }
 			mouseExit { hide gametype_glow }
 			caps					1
@@ -170,7 +169,7 @@
 			textaligny				7.25
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -178,8 +177,8 @@
 				hide grpCallVote ;
 				show maplist ;
 				show map ;
-				setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor changemapbutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor changemapbutton forecolor 0.36 0.78 0.96 1 ;
 			}
 			mouseEnter { show changemap_glow }
 			mouseExit { hide changemap_glow }
@@ -201,15 +200,15 @@
 			textaligny				7.25
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				hide grpCallVote ;
 				show kick ;
-				setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor kickbutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor kickbutton forecolor 0.36 0.78 0.96 1 ;
 			}
 			mouseEnter { show kick_glow }
 			mouseExit { hide kick_glow }
@@ -231,15 +230,15 @@
 			textaligny				7.25
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				hide grpCallVote ;
 				show silence ;
-				setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor silencebutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor silencebutton forecolor 0.36 0.78 0.96 1 ;
 			}
 			mouseEnter { show silence_glow }
 			mouseExit { hide silence_glow }
@@ -261,15 +260,15 @@
 			textaligny				7.25
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				hide grpCallVote ;
 				show sleep ;
-				setitemcolor grpbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor sleepbutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor grpbutton forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor sleepbutton forecolor 0.36 0.78 0.96 1 ;
 			}
 			mouseEnter { show sleep_glow }
 			mouseExit { hide sleep_glow }
@@ -289,7 +288,7 @@
 			textaligny				3.5
 			font					5
 			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					0
 			action
 			{
@@ -312,7 +311,7 @@
 			textaligny				3.5
 			font					5
 			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					0
 			action
 			{
@@ -335,7 +334,7 @@
 			textaligny				3.5
 			font					5
 			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					0
 			action
 			{
@@ -359,7 +358,7 @@
 			textaligny				3.5
 			font					5
 			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					0
 		}
 
@@ -377,7 +376,7 @@
 			textaligny				4
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -388,9 +387,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			radius					3.2
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -405,7 +404,7 @@
 			textaligny				-0.8
 			font					5
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 			visible					0
 			action { play "sound/interface/button1.wav" ; }
@@ -423,23 +422,23 @@
 			elementheight			15
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_ALLMAPS
-			bordercolor				0.43 0.83 1 0.16
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			visible					0
 			font					5
 			textaligny				13.2
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			mouseEnter
 			{
 				fadein message_arena ;
-				setitemcolor map bordercolor 0.43 0.83 1 0.16
+				setitemcolor map bordercolor 0.086 0.149 0.247 1
 			}
 			mouseExit
 			{
 				fadeout message_arena ;
-				setitemcolor map bordercolor 0.43 0.83 1 0.16
+				setitemcolor map bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
 			radius					4
@@ -459,7 +458,7 @@
 			textaligny				4
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -470,9 +469,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			radius					3.2
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -486,7 +485,7 @@
 			textaligny				-0.8
 			font					5
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
 			action { play "sound/interface/button1.wav" ; }
@@ -504,23 +503,23 @@
 			elementheight			15
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
-			bordercolor				0.43 0.83 1 0.16
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textaligny				13.2
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					0
 			mouseEnter
 			{
 				fadein message_arena ;
-				setitemcolor kick bordercolor 0.43 0.83 1 0.16
+				setitemcolor kick bordercolor 0.086 0.149 0.247 1
 			}
 			mouseExit
 			{
 				fadeout message_arena ;
-				setitemcolor kick bordercolor 0.43 0.83 1 0.16
+				setitemcolor kick bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
 			radius					4
@@ -540,7 +539,7 @@
 			textaligny				4
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -551,9 +550,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			radius					3.2
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -567,7 +566,7 @@
 			textaligny				-0.8
 			font					5
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
 			action { play "sound/interface/button1.wav" ; }
@@ -585,23 +584,23 @@
 			elementheight			15
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
-			bordercolor				0.43 0.83 1 0.16
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textaligny				13.2
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					0
 			mouseEnter
 			{
 				fadein message_arena ;
-				setitemcolor silence bordercolor 0.43 0.83 1 0.16
+				setitemcolor silence bordercolor 0.086 0.149 0.247 1
 			}
 			mouseExit
 			{
 				fadeout message_arena ;
-				setitemcolor silence bordercolor 0.43 0.83 1 0.16
+				setitemcolor silence bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
 			radius					4
@@ -621,7 +620,7 @@
 			textaligny				4
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -632,9 +631,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			radius					3.2
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -648,7 +647,7 @@
 			textaligny				-0.8
 			font					5
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
 			action { play "sound/interface/button1.wav" ; }
@@ -666,23 +665,23 @@
 			elementheight			15
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
-			bordercolor				0.43 0.83 1 0.16
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textaligny				13.2
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					0
 			mouseEnter
 			{
 				fadein message_arena ;
-				setitemcolor sleep bordercolor 0.43 0.83 1 0.16
+				setitemcolor sleep bordercolor 0.086 0.149 0.247 1
 			}
 			mouseExit
 			{
 				fadeout message_arena ;
-				setitemcolor sleep bordercolor 0.43 0.83 1 0.16
+				setitemcolor sleep bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
 			radius					4
@@ -702,7 +701,7 @@
 			textaligny				4
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -713,12 +712,12 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			radius					3.2
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 	}
 }

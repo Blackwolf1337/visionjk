@@ -8,12 +8,12 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					16 30 608 436
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
 		descX					305
 		descY					347
 		descScale				1
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
@@ -28,163 +28,154 @@
 			close ingame_setup
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.94
-		bordercolor				0.43 0.83 1 0.28
+		backcolor				0.031 0.055 0.11 0.97
+		bordercolor				0.11 0.18 0.29 1
 		radius					6
 		shadow					14
-		sheen					0.08
 
 		itemDef
 		{
-			name					vision_strip
-			rect					0 0 608 26
+			name					vision_rail
+			rect					8 8 122 388
 			visible					1
-			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.50
-			decoration
-		}
-
-		itemDef
-		{
-			name					vision_strip_line
-			rect					0 26 608 0.67
-			visible					1
-			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_tab1
-			rect					9 0 92 26
+			rect					14 42 110 22
 			visible					1
 			text					@MENUS_VIDEO
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						1
 			descText				@MENUS_CONFIGURE_VIDEO_SETTINGS
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab2
-			rect					101 0 92 26
+			rect					14 66 110 22
 			visible					1
 			text					@MENUS_SOUND
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						2
 			descText				@MENUS_CONFIGURE_SOUND_SETTINGS
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab3
-			rect					193 0 92 26
+			rect					14 90 110 22
 			visible					1
 			text					@VISION_GAME
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						3
 			descText				@VISION_THE_GAME_LIGHTSABERS_DUELS_AND_WHAT
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab4
-			rect					285 0 92 26
+			rect					14 114 110 22
 			visible					1
 			text					@VISION_HUD
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						4
 			descText				@VISION_WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab5
-			rect					377 0 92 26
+			rect					14 138 110 22
 			visible					1
 			text					@VISION_CHAT_SOCIAL
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						5
 			descText				@VISION_THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_tab6
-			rect					469 0 92 26
+			rect					14 162 110 22
 			visible					1
 			text					@VISION_NETWORK
 			font					5
-			textscale				0.58
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.62
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			tab						6
 			descText				@VISION_UPDATES_DOWNLOADS_AND_SECURITY
 			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			textaligny				7.78
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				9
+			textaligny				5.42
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_SCREEN
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -198,10 +189,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					1
 			scroll					1
@@ -230,13 +221,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -256,13 +247,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -281,13 +272,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -306,13 +297,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -331,13 +322,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -355,13 +346,13 @@
 			}
 			descText				@MENUS_VIDEO_SYNC_DESC
 			action { play "sound/interface/button1" }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -374,13 +365,13 @@
 			cvar					"com_maxfps"
 			cvarFloatList { "60" 60 "90" 90 "125" 125 "144" 144 "165" 165 "240" 240 @VISION_NONE 0 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -392,13 +383,13 @@
 			descText				@VISION_MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
 			cvar					"v_2dAspect"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -412,13 +403,13 @@
 			descText				@MENUS_ADJUST_THE_BRIGHTNESS
 			action { play "sound/interface/button1" }
 			descPic					"gfx/menus/vision/setup/brightness" 0.8 1.4
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -434,25 +425,25 @@
 				@VISION_HALF 0.5 @VISION_THREE_QUARTERS 0.75 @VISION_FULL 1 @VISION_ONE_AND_A_HALF 1.5 @VISION_DOUBLE 2
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 280 376 22
+			rect					146 254 274 22
 			visible					1
 			text					@VISION_DETAIL
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -466,10 +457,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 301 380 0.67
+			rect					144 275 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					1
 			scroll					1
@@ -492,13 +483,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -519,13 +510,13 @@
 				show applyChanges
 			}
 			descPic					"gfx/menus/vision/setup/textures" @MENUS_LOW @MENUS_VERY_HIGH
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -545,13 +536,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 346 380 22
+			rect					144 320 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -571,13 +562,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -596,13 +587,13 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					12 390 380 22
+			rect					144 364 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -617,13 +608,13 @@
 			cvarfloat				r_ext_texture_filter_anisotropic 1 .5 16
 			descText				@MENUS_TOGGLE_ADVANCED_TEXTURE
 			action { play "sound/interface/button1" }
-			rect					12 412 380 22
+			rect					144 386 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -641,13 +632,13 @@
 			}
 			descText				@MENUS_TOGGLE_TO_TURN_ON_MOVING
 			action { play "sound/interface/button1" }
-			rect					12 434 380 22
+			rect					144 408 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -660,13 +651,13 @@
 			cvar					"r_DynamicGlow"
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/glow" @MENUS_OFF @MENUS_ON
-			rect					12 456 380 22
+			rect					144 430 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -684,13 +675,13 @@
 			}
 			descText				@MENUS_TOGGLE_TO_DISPLAY_SCORCH
 			action { play "sound/interface/button1" }
-			rect					12 478 380 22
+			rect					144 452 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -710,13 +701,13 @@
 			}
 			descText				@VISION_HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					144 474 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -734,25 +725,25 @@
 			}
 			descText				@VISION_OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					144 496 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 544 376 22
+			rect					146 518 274 22
 			visible					1
 			text					@VISION_VULKAN_RENDERER
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -766,10 +757,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 565 380 0.67
+			rect					144 539 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					1
 			scroll					1
@@ -784,13 +775,13 @@
 			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
-			rect					12 566 380 22
+			rect					144 540 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -803,13 +794,13 @@
 			cvarfloat				"tay_bloomIntensity" 0.6 0 2
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
-			rect					12 588 380 22
+			rect					144 562 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -822,25 +813,25 @@
 			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
-			rect					12 610 380 22
+			rect					144 584 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 632 376 22
+			rect					146 606 274 22
 			visible					1
 			text					@VISION_SCREEN_EFFECTS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -854,10 +845,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 653 380 0.67
+			rect					144 627 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					1
 			scroll					1
@@ -871,13 +862,13 @@
 			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
 			cvar					"v_screenFx"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 654 380 22
+			rect					144 628 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -889,13 +880,13 @@
 			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
 			cvar					"v_fxBlast"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 676 380 22
+			rect					144 650 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -907,13 +898,13 @@
 			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
 			cvar					"v_soundTinnitus"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 698 380 22
+			rect					144 672 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -925,13 +916,13 @@
 			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
 			cvar					"v_fxHeat"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 720 380 22
+			rect					144 694 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -943,13 +934,13 @@
 			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
 			cvar					"v_fxHit"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 742 380 22
+			rect					144 716 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -961,13 +952,13 @@
 			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
 			cvar					"v_fxWater"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 764 380 22
+			rect					144 738 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -979,13 +970,13 @@
 			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
 			cvar					"v_fxForce"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 786 380 22
+			rect					144 760 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -997,25 +988,25 @@
 			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
 			cvar					"v_fxSaber"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 808 380 22
+			rect					144 782 278 22
 			page					1
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_VOLUME
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1029,10 +1020,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					2
 			scroll					1
@@ -1047,13 +1038,13 @@
 			cvarfloat				"s_volume" 0 0 1
 			descText				@MENUS_ADJUST_VOLUME_FOR_SOUND
 			action { play "sound/interface/button1" }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1066,13 +1057,13 @@
 			cvarfloat				"s_musicvolume" 0 0 1
 			descText				@MENUS_ADJUST_VOLUME_FOR_MUSIC
 			action { play "sound/interface/button1" }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1085,13 +1076,13 @@
 			cvarfloat				"s_volumeVoice" 0 0 1
 			descText				@MENUS_VOICE_VOLUME_DESC
 			action { play "sound/interface/button1" }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1103,25 +1094,25 @@
 			descText				@VISION_THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
 			cvar					"v_soundUnfocused"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 148 376 22
+			rect					146 122 274 22
 			visible					1
 			text					@VISION_3D_SOUND
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1135,10 +1126,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 169 380 0.67
+			rect					144 143 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					2
 			scroll					1
@@ -1158,13 +1149,13 @@
 				play "sound/interface/button1"
 				uiScript update v_spatialQuality
 			}
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1178,13 +1169,13 @@
 			cvarFloatList { @VISION_HEADPHONES 1 @VISION_SPEAKERS 0 }
 			descText				@VISION_3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
 			action { play "sound/interface/button1" }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1197,13 +1188,13 @@
 			cvarfloat				"v_spatialReverb" 1 0 2
 			descText				@VISION_3D_SOUND_HOW_LOUD_THE_ROOMS_RING
 			action { play "sound/interface/button1" }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1215,13 +1206,13 @@
 			descText				@VISION_THE_ROOM_AROUND_YOU_RINGS
 			cvar					"v_spatialReflections"
 			action { play "sound/interface/button1.wav" ; uiScript getsoundsetup ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1234,13 +1225,13 @@
 			cvar					"v_spatialEcho"
 			cvarFloatList { @VISION_REAL_TIME 0 @VISION_PRECALCULATED 1 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1253,13 +1244,13 @@
 			cvar					"v_spatialGpu"
 			cvarFloatList { @VISION_GRAPHICS_CARD 1 @VISION_CPU 0 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1272,13 +1263,13 @@
 			cvar					"v_spatialSources"
 			cvarFloatList { @VISION_OFF 0 "4" 4 "8" 8 "12" 12 "16" 16 }
 			action { play "sound/interface/button1.wav" ; uiScript getsoundsetup ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1290,13 +1281,13 @@
 			descText				@VISION_A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 			cvar					"v_spatialPaths"
 			action { play "sound/interface/button1.wav" ; uiScript getsoundsetup ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1308,13 +1299,13 @@
 			descText				@VISION_SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 			cvar					"v_spatialPhysical"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					144 320 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1326,25 +1317,25 @@
 			descText				@VISION_WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 			cvar					"s_doppler"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 390 376 22
+			rect					146 364 274 22
 			visible					1
 			text					@VISION_HITS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1358,10 +1349,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 411 380 0.67
+			rect					144 385 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					2
 			scroll					1
@@ -1375,13 +1366,13 @@
 			descText				@VISION_A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
 			cvar					"tay_hitSounds"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					144 386 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1393,25 +1384,25 @@
 			descText				@VISION_TWO_NOTES_WHEN_YOU_KILL_SOMEONE
 			cvar					"tay_killSound"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					144 408 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 456 376 22
+			rect					146 430 274 22
 			visible					1
 			text					@VISION_VOICE_CHAT
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1425,10 +1416,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 477 380 0.67
+			rect					144 451 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					2
 			scroll					1
@@ -1443,13 +1434,13 @@
 			cvar					"v_voice"
 			descText				@VISION_TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
 			action { play "sound/interface/button1" }
-			rect					12 478 380 22
+			rect					144 452 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1463,13 +1454,13 @@
 			cvarFloatList { @VISION_PUSH_TO_TALK 1 @VISION_VOICE_ACTIVATION 2 }
 			descText				@VISION_PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
 			action { play "sound/interface/button1" }
-			rect					12 500 380 22
+			rect					144 474 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1482,13 +1473,13 @@
 			cvarfloat				"v_voiceVolume" 1 0 2
 			descText				@VISION_HOW_LOUD_THE_OTHER_PLAYERS_ARE
 			action { play "sound/interface/button1" }
-			rect					12 522 380 22
+			rect					144 496 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1501,13 +1492,13 @@
 			cvarfloat				"v_voiceMicGain" 1 0 3
 			descText				@VISION_HOW_LOUD_YOUR_MICROPHONE_IS_SENT
 			action { play "sound/interface/button1" }
-			rect					12 544 380 22
+			rect					144 518 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1520,13 +1511,13 @@
 			cvarfloat				"v_voiceThreshold" 0.02 0 0.2
 			descText				@VISION_VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
 			action { play "sound/interface/button1" }
-			rect					12 566 380 22
+			rect					144 540 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1539,13 +1530,13 @@
 			cvar					"v_voiceMuffle"
 			descText				@VISION_VOICES_BEHIND_WALLS_AND_UNDER_WATER
 			action { play "sound/interface/button1" }
-			rect					12 588 380 22
+			rect					144 562 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1558,13 +1549,13 @@
 			cvar					"v_voiceDrawTalkers"
 			descText				@VISION_A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 			action { play "sound/interface/button1" }
-			rect					12 610 380 22
+			rect					144 584 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1577,13 +1568,13 @@
 			cvar					"v_voiceMaster"
 			descText				@VISION_SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 			action { play "sound/interface/button1" }
-			rect					12 632 380 22
+			rect					144 606 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1596,13 +1587,13 @@
 			cvarfloat				"v_voiceOwnReverb" 1 0 2
 			descText				@VISION_WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
 			action { play "sound/interface/button1" }
-			rect					12 654 380 22
+			rect					144 628 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1615,25 +1606,25 @@
 			cvar					"v_voiceRadioFX"
 			descText				@VISION_THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 			action { play "sound/interface/button1" }
-			rect					12 676 380 22
+			rect					144 650 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 698 376 22
+			rect					146 672 274 22
 			visible					1
 			text					@VISION_BOOMBOX
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1647,10 +1638,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 719 380 0.67
+			rect					144 693 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					2
 			scroll					1
@@ -1664,13 +1655,13 @@
 			descText				@VISION_SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
 			cvar					"v_boomboxes"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 720 380 22
+			rect					144 694 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1682,25 +1673,25 @@
 			descText				@VISION_HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
 			cvarfloat				"v_boomboxVolume" 0.6 0 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 742 380 22
+			rect					144 716 278 22
 			page					2
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_GAME
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1714,10 +1705,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -1737,13 +1728,13 @@
 			}
 			descText				@MENUS_TOGGLE_TO_SHOW_OR_HIDE
 			action { play "sound/interface/button1" }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1761,13 +1752,13 @@
 			}
 			descText				@MENUS_TOGGLE_TO_HAVE_THE_CROSSHAIR
 			action { play "sound/interface/button1" }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1785,13 +1776,13 @@
 			}
 			descText				@MENUS_FORCE_ALL_PLAYER_MODELS
 			action { play "sound/interface/button1" }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1809,13 +1800,13 @@
 			}
 			descText				@MENUS_DEFERS_LOADING_OF_NEW
 			action { play "sound/interface/button1" }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1833,13 +1824,13 @@
 			}
 			descText				@MENUS_IGNORE_NON_TEAM_CHATS
 			action { play "sound/interface/button1" }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1857,13 +1848,13 @@
 			}
 			descText				@MENUS_RENDER_ICONS_FOR_ITEMS
 			action { play "sound/interface/button1" }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1881,13 +1872,13 @@
 			}
 			descText				@MENUS_DRAW_OVERLAY_SHOWING
 			action { play "sound/interface/button1" }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1907,25 +1898,25 @@
 				@MENUS_SOUNDS_EFFECTS_GRAPHICS 3
 			}
 			action { play "sound/interface/button1.wav" }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 236 376 22
+			rect					146 210 274 22
 			visible					1
 			text					@VISION_LANGUAGE
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -1939,10 +1930,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 257 380 0.67
+			rect					144 231 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -1962,13 +1953,13 @@
 			{
 				play "sound/interface/button1.wav"
 			}
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -1991,13 +1982,13 @@
 			{
 				play "sound/interface/button1.wav"
 			}
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2013,25 +2004,25 @@
 				play "sound/interface/button1"
 				exec "ui_load ; snd_restart"
 			}
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 324 376 22
+			rect					146 298 274 22
 			visible					1
 			text					@VISION_LIGHTSABERS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2045,10 +2036,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 345 380 0.67
+			rect					144 319 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -2063,13 +2054,13 @@
 			cvar					"v_saberStyle"
 			cvarFloatList { @VISION_CLASSIC 0 @VISION_SFX 1 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					144 320 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2081,13 +2072,13 @@
 			descText				@VISION_HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
 			cvarfloat				"v_saberTrailLength" 1 0 4
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2099,13 +2090,13 @@
 			descText				@VISION_HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
 			cvarfloat				"v_saberCoreScale" 1 0.25 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					144 364 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2117,13 +2108,13 @@
 			descText				@VISION_HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 			cvarfloat				"v_saberGlowScale" 1 0.25 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					144 386 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2135,13 +2126,13 @@
 			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 			cvar					"tay_saberTeamColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					144 408 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2153,25 +2144,25 @@
 			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 			cvar					"tay_saberStaffColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
+			rect					144 430 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 478 376 22
+			rect					146 452 274 22
 			visible					1
 			text					@VISION_DUELS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2185,10 +2176,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 499 380 0.67
+			rect					144 473 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -2206,13 +2197,13 @@
 				@VISION_GAME 0 @VISION_TINTED 1 @VISION_SHIELD 2 @VISION_DAMAGED_SHIELD 3 @VISION_FORCE_SHELL 4 @VISION_SIGHT_SHELL 5 @VISION_HALF_SHIELD 6 @VISION_CLOAKED 7 @VISION_SIGHT_BUBBLE 8
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					144 474 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2224,25 +2215,25 @@
 			descText				@VISION_THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
 			cvar					"v_duelShowSabers"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					144 496 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 544 376 22
+			rect					146 518 274 22
 			visible					1
 			text					@VISION_PLAYERS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2256,10 +2247,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 565 380 0.67
+			rect					144 539 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -2275,13 +2266,13 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 566 380 22
+			rect					144 540 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2295,25 +2286,25 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 588 380 22
+			rect					144 562 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 610 376 22
+			rect					146 584 274 22
 			visible					1
 			text					@VISION_HATS_AND_CAPES
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2327,10 +2318,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 631 380 0.67
+			rect					144 605 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -2348,13 +2339,13 @@
 				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 632 380 22
+			rect					144 606 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2370,13 +2361,13 @@
 				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 654 380 22
+			rect					144 628 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2389,13 +2380,13 @@
 			cvar					"tay_showCosmetics"
 			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 676 380 22
+			rect					144 650 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2407,25 +2398,25 @@
 			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 			cvar					"tay_seasonalCosmetics"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 698 380 22
+			rect					144 672 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 720 376 22
+			rect					146 694 274 22
 			visible					1
 			text					@VISION_WEAPONS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2439,10 +2430,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 741 380 0.67
+			rect					144 715 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					3
 			scroll					1
@@ -2456,13 +2447,13 @@
 			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
 			cvar					"tay_jk2Effects"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 742 380 22
+			rect					144 716 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2475,13 +2466,13 @@
 			cvar					"tay_disruptorBeam"
 			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 764 380 22
+			rect					144 738 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2493,13 +2484,13 @@
 			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
 			cvar					"v_scope"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 786 380 22
+			rect					144 760 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2511,13 +2502,13 @@
 			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
 			cvar					"v_scopeWheelZoom"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 808 380 22
+			rect					144 782 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2529,13 +2520,13 @@
 			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
 			cvarfloat				"v_motionThreshold" 40 10 200
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 830 380 22
+			rect					144 804 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2547,13 +2538,13 @@
 			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
 			cvar					"v_binoculars"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 852 380 22
+			rect					144 826 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2565,25 +2556,25 @@
 			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
 			cvar					"v_lockOn"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 874 380 22
+			rect					144 848 278 22
 			page					3
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_MENUS_AND_HUD
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2597,10 +2588,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					4
 			scroll					1
@@ -2614,13 +2605,13 @@
 			descText				@VISION_THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 			cvar					"v_hud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2632,13 +2623,13 @@
 			descText				@VISION_THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 			cvar					"v_classic"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2650,13 +2641,13 @@
 			descText				@VISION_IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 			cvar					"v_immersiveMenu"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2668,25 +2659,25 @@
 			descText				@VISION_HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
 			cvarfloat				"v_menuBlur" 1 0 4
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 148 376 22
+			rect					146 122 274 22
 			visible					1
 			text					@VISION_VIEW
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2700,10 +2691,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 169 380 0.67
+			rect					144 143 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					4
 			scroll					1
@@ -2717,13 +2708,13 @@
 			descText				@VISION_HOW_WIDE_YOU_SEE
 			cvarfloat				"cg_fov" 80 60 130
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2735,13 +2726,13 @@
 			descText				@VISION_HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
 			cvarfloat				"cg_thirdPersonRange" 80 40 200
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2753,25 +2744,25 @@
 			descText				@VISION_THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
 			cvar					"cg_smoothCamera"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 236 376 22
+			rect					146 210 274 22
 			visible					1
 			text					@VISION_CROSSHAIR
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2785,10 +2776,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 257 380 0.67
+			rect					144 231 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					4
 			scroll					1
@@ -2802,13 +2793,13 @@
 			descText				@VISION_THE_SIZE_OF_THE_CROSSHAIR
 			cvarfloat				"cg_crosshairSize" 24 12 64
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2824,13 +2815,13 @@
 				@VISION_WHITE "" @VISION_GREEN "0.2 1 0.3 1" @VISION_CYAN "0.2 0.9 1 1" @VISION_YELLOW "1 0.9 0.2 1" @VISION_ORANGE "1 0.5 0 1" @VISION_RED "1 0.2 0.2 1" @VISION_PINK "1 0.4 0.9 1"
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2842,13 +2833,13 @@
 			descText				@VISION_HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
 			cvarfloat				"tay_crosshairNamesOpacity" 0.5 0 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2861,25 +2852,25 @@
 			cvar					"tay_leadIndicator"
 			cvarFloatList { @VISION_OFF 0 "On" 1 @VISION_WITH_OWN_PING 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 346 376 22
+			rect					146 320 274 22
 			visible					1
 			text					@VISION_ON_SCREEN
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -2893,10 +2884,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 367 380 0.67
+			rect					144 341 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					4
 			scroll					1
@@ -2910,13 +2901,13 @@
 			descText				@VISION_FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
 			cvar					"cg_drawFPS"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2928,13 +2919,13 @@
 			descText				@VISION_THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 			cvar					"cg_drawTimer"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					144 364 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2946,13 +2937,13 @@
 			descText				@VISION_THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
 			cvar					"tay_timerMsec"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					144 386 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2964,13 +2955,13 @@
 			descText				@VISION_THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
 			cvar					"tay_timerCountdown"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					144 408 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -2982,13 +2973,13 @@
 			descText				@VISION_A_GRAPH_OF_YOUR_CONNECTION
 			cvar					"cg_lagometer"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
+			rect					144 430 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3000,13 +2991,13 @@
 			descText				@VISION_WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
 			cvar					"tay_killfeed"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
+			rect					144 452 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3018,13 +3009,13 @@
 			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 			cvarfloat				"tay_teamOverlayScale" 1 0.5 2.5
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					144 474 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3036,13 +3027,13 @@
 			descText				@VISION_THE_TIME_OF_DAY_ON_THE_SCOREBOARD
 			cvar					"tay_scoreboardClock"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					144 496 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3054,25 +3045,25 @@
 			descText				@VISION_WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
 			cvar					"tay_specHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 544 380 22
+			rect					144 518 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 566 376 22
+			rect					146 540 274 22
 			visible					1
 			text					@VISION_MOVEMENT
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3086,10 +3077,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 587 380 0.67
+			rect					144 561 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					4
 			scroll					1
@@ -3103,13 +3094,13 @@
 			descText				@VISION_YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
 			cvar					"tay_speedometer"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 588 380 22
+			rect					144 562 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3121,13 +3112,13 @@
 			descText				@VISION_A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
 			cvar					"tay_strafeHelper"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 610 380 22
+			rect					144 584 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3139,13 +3130,13 @@
 			descText				@VISION_IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
 			cvar					"tay_snapHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 632 380 22
+			rect					144 606 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3157,13 +3148,13 @@
 			descText				@VISION_A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
 			cvar					"tay_pitchHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 654 380 22
+			rect					144 628 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3176,13 +3167,13 @@
 			cvar					"tay_strafeTrail"
 			cvarFloatList { @VISION_OFF 0 @VISION_MINE 1 @VISION_EVERYBODY 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 676 380 22
+			rect					144 650 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3194,13 +3185,13 @@
 			descText				@VISION_THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
 			cvar					"tay_movementKeys"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 698 380 22
+			rect					144 672 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3212,13 +3203,13 @@
 			descText				@VISION_THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
 			cvarfloat				"tay_startGoal" 0 0 1500
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 720 380 22
+			rect					144 694 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3230,25 +3221,25 @@
 			descText				@VISION_JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
 			cvarfloat				"tay_jumpGoal" 0 0 1500
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 742 380 22
+			rect					144 716 278 22
 			page					4
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_PLAYERS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3262,10 +3253,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					5
 			scroll					1
@@ -3279,13 +3270,13 @@
 			descText				@VISION_WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
 			cvar					"v_chatBubbles"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3297,13 +3288,13 @@
 			descText				@VISION_HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
 			cvarfloat				"v_bubbleRange" 1200 300 3000
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3315,13 +3306,13 @@
 			descText				@VISION_AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 			cvar					"v_playerStatuses"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3333,13 +3324,13 @@
 			descText				@VISION_TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 			cvar					"v_shareMusic"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3350,13 +3341,13 @@
 			text					@VISION_CHOOSE_PLAYERS_OF_MY_MUSIC
 			descText				@VISION_WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
 			action { play "sound/interface/button1.wav" ; setpage 8 ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3368,13 +3359,13 @@
 			descText				@VISION_WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
 			cvar					"v_selectPlayers"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3386,13 +3377,13 @@
 			descText				@VISION_A_GLOWING_OUTLINE_AROUND_THE_PLAYER
 			cvar					"v_selectOutline"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3404,25 +3395,25 @@
 			descText				@VISION_THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 			cvar					"v_scoresPick"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			rect					144 188 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 236 376 22
+			rect					146 210 274 22
 			visible					1
 			text					@VISION_CHAT
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3436,10 +3427,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 257 380 0.67
+			rect					144 231 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					5
 			scroll					1
@@ -3453,13 +3444,13 @@
 			descText				@VISION_TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 			cvar					"v_chatInput"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					144 232 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3471,13 +3462,13 @@
 			descText				@VISION_HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
 			cvarfloat				"v_chatBoxScale" 0.85 0.6 1.6
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3489,13 +3480,13 @@
 			descText				@VISION_HOW_WIDE_THE_CHAT_BOX_IS
 			cvarfloat				"v_chatBoxWidth" 380 200 600
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3507,13 +3498,13 @@
 			descText				@VISION_HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
 			cvarfloat				"v_chatBoxRows" 10 4 24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3525,13 +3516,13 @@
 			descText				@VISION_A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 			cvar					"cg_chatBeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					144 320 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3543,13 +3534,13 @@
 			descText				@VISION_CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
 			cvar					"tay_chatEmoji"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					144 342 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3561,13 +3552,13 @@
 			descText				@VISION_EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 			cvar					"tay_chatLog"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					144 364 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3580,25 +3571,25 @@
 			cvar					"tay_notify"
 			cvarFloatList { @VISION_OFF 0 @VISION_MARKED 1 @VISION_MARKED_AND_SOUND 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					144 386 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 434 376 22
+			rect					146 408 274 22
 			visible					1
 			text					@VISION_NOTIFICATIONS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3612,10 +3603,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 455 380 0.67
+			rect					144 429 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					5
 			scroll					1
@@ -3630,13 +3621,13 @@
 			cvar					"v_notify"
 			cvarFloatList { @VISION_OFF 0 @VISION_SHOWN 1 @VISION_SHOWN_AND_SOUND 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
+			rect					144 430 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3648,13 +3639,13 @@
 			descText				@VISION_HOW_MANY_MILLISECONDS_A_NOTIFICATION
 			cvarfloat				"v_notifyTime" 6000 2000 20000
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
+			rect					144 452 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3666,25 +3657,25 @@
 			descText				@VISION_HOW_LARGE_THE_NOTIFICATIONS_ARE
 			cvarfloat				"v_notifyScale" 1 0.5 2
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					144 474 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 522 376 22
+			rect					146 496 274 22
 			visible					1
 			text					@VISION_CONSOLE
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3698,10 +3689,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 543 380 0.67
+			rect					144 517 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					5
 			scroll					1
@@ -3715,13 +3706,13 @@
 			descText				@VISION_THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
 			cvar					"con_font"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 544 380 22
+			rect					144 518 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3733,13 +3724,13 @@
 			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 566 380 22
+			rect					144 540 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3751,13 +3742,13 @@
 			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 			cvarfloat				"con_opacity" 1 0.2 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 588 380 22
+			rect					144 562 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3770,25 +3761,25 @@
 			cvar					"tay_consoleClock"
 			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 610 380 22
+			rect					144 584 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 632 376 22
+			rect					146 606 274 22
 			visible					1
 			text					@VISION_CLAN
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3802,10 +3793,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 653 380 0.67
+			rect					144 627 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					5
 			scroll					1
@@ -3821,25 +3812,25 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 654 380 22
+			rect					144 628 278 22
 			page					5
 			scroll					1
 			row						2
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 676 376 22
+			rect					146 650 274 22
 			visible					1
 			text					@VISION_TEXT
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3853,10 +3844,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 697 380 0.67
+			rect					144 671 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					5
 			scroll					1
@@ -3870,25 +3861,25 @@
 			descText				@VISION_EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 			cvar					"v_utf8"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 698 380 22
+			rect					144 672 278 22
 			page					5
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 38 376 22
+			rect					146 12 274 22
 			visible					1
 			text					@VISION_UPDATES_AND_DOWNLOADS
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -3902,10 +3893,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 59 380 0.67
+			rect					144 33 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					6
 			scroll					1
@@ -3919,13 +3910,13 @@
 			descText				@VISION_ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 			cvar					"v_updateCheck"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 60 380 22
+			rect					144 34 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3938,13 +3929,13 @@
 			cvar					"v_updateChannel"
 			cvarStrList { @VISION_STABLE "stable" @VISION_DEVELOPMENT "dev" }
 			action { play "sound/interface/button1.wav" ; uiScript updateChannel 9 ; }
-			rect					12 82 380 22
+			rect					144 56 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3955,13 +3946,13 @@
 			text					@VISION_CHANGELOG
 			descText				@VISION_WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
 			action { play "sound/interface/button1.wav" ; open changelog_popmenu ; }
-			rect					12 104 380 22
+			rect					144 78 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3972,13 +3963,13 @@
 			text					@VISION_CLEAN_UP_SETTINGS
 			descText				@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
 			action { play "sound/interface/button1.wav" ; open cvarclean_popmenu ; }
-			rect					12 126 380 22
+			rect					144 100 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -3990,13 +3981,13 @@
 			descText				@VISION_BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
 			cvar					"v_downloadReview"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					144 122 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -4008,13 +3999,13 @@
 			descText				@VISION_KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 			cvar					"v_downloadKeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					144 144 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -4026,25 +4017,25 @@
 			descText				@VISION_FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 			cvar					"v_downloadHttp"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					144 166 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 214 376 22
+			rect					146 188 274 22
 			visible					1
 			text					@VISION_CONNECTION
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -4058,10 +4049,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 235 380 0.67
+			rect					144 209 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					6
 			scroll					1
@@ -4076,25 +4067,25 @@
 			cvar					"v_netSmooth"
 			cvarFloatList { @VISION_OFF 0 @VISION_UP_TO_20_MS 20 @VISION_UP_TO_40_MS 40 @VISION_UP_TO_80_MS 80 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					144 210 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					14 258 376 22
+			rect					146 232 274 22
 			visible					1
 			text					@VISION_SECURITY
 			font					5
 			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			textaligny				9
 			caps					1
 			type					ITEM_TYPE_BUTTON
@@ -4108,10 +4099,10 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 279 380 0.67
+			rect					144 253 278 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
+			backcolor				0.11 0.18 0.29 1
 			decoration
 			page					6
 			scroll					1
@@ -4125,13 +4116,13 @@
 			descText				@VISION_WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 			cvar					"v_ids"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					144 254 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -4143,13 +4134,13 @@
 			descText				@VISION_THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
 			cvar					"v_authAgent"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					144 276 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
@@ -4163,20 +4154,20 @@
 			maxChars				120
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					144 298 278 22
 			page					6
 			scroll					1
 			row						1
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 		}
 
 		itemDef
 		{
 			name					vision_scroll
-			rect					395 38 6 352
+			rect					425 12 6 374
 			visible					1
 			type					ITEM_TYPE_PAGESCROLL
 		}
@@ -4184,19 +4175,19 @@
 		itemDef
 		{
 			name					vision_pane
-			rect					408 38 188 352
+			rect					436 8 164 388
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					4
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_about
-			rect					420 86 164 290
+			rect					448 22 140 360
 			visible					1
 			text					""
 			font					5
@@ -4209,17 +4200,17 @@
 		itemDef
 		{
 			name					vision_search
-			rect					416 46 172 20
+			rect					14 14 110 20
 			visible					1
 			text					@VISION_SEARCH
 			font					5
 			textscale				0.56
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_EDITFIELD
 			hint					1
 			cvar					"v_setupSearch"
 			maxChars				40
-			maxPaintChars			18
+			maxPaintChars			16
 			descText				@VISION_SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
 		}
 
@@ -4239,7 +4230,7 @@
 			rect					0 404 608 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			decoration
 		}
 
@@ -4251,7 +4242,7 @@
 			text					@MENUS_BACK
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			caps					1
@@ -4276,7 +4267,7 @@
 			text					@MENUS_DEFAULTS
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			caps					1
@@ -4292,12 +4283,12 @@
 		itemDef
 		{
 			name					vision_warning
-			rect					32 62 340 24
+			rect					164 36 238 24
 			visible					1
 			text					@MENUS_WARNING
 			font					5
 			textscale				1.1
-			forecolor				1 0.74 0.30 1
+			forecolor				0.91 0.77 0.42 1
 			decoration
 			page					7
 		}
@@ -4305,12 +4296,12 @@
 		itemDef
 		{
 			name					vision_warning1
-			rect					32 100 340 16
+			rect					164 74 238 16
 			visible					1
 			text					@MENUS_THIS_WILL_SET_ALL_GAME
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			decoration
 			page					7
 		}
@@ -4318,12 +4309,12 @@
 		itemDef
 		{
 			name					vision_warning2
-			rect					32 118 340 16
+			rect					164 92 238 16
 			visible					1
 			text					@MENUS_TO_THEIR_FACTORY_SETTINGS
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			decoration
 			page					7
 		}
@@ -4331,12 +4322,12 @@
 		itemDef
 		{
 			name					vision_warning3
-			rect					32 148 340 16
+			rect					164 122 238 16
 			visible					1
 			text					@MENUS_VID_RESTART3
 			font					5
 			textscale				0.7
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 			page					7
 		}
@@ -4344,19 +4335,19 @@
 		itemDef
 		{
 			name					default_no
-			rect					32 188 110 24
+			rect					164 162 110 24
 			visible					1
 			text					@MENUS_NO
 			font					5
 			textscale				0.64
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			radius					3
+			radius					3.2
 			caps					1
 			page					7
-			backcolor				1 1 1 0.05
-			bordercolor				0.43 0.83 1 0.16
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
 			descText				@MENUS_DO_NOT_RESET_DEFAULT
 			tab						1
 			action { play "sound/interface/button1.wav" ; }
@@ -4368,19 +4359,19 @@
 		itemDef
 		{
 			name					default_yes
-			rect					162 188 110 24
+			rect					294 162 110 24
 			visible					1
 			text					@MENUS_YES
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			radius					3
+			radius					3.2
 			caps					1
 			page					7
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 			descText				@MENUS_USE_DEFAULT_SETTINGS
 			action
 			{
@@ -4401,11 +4392,11 @@
 			text					@MENUS_APPLY_CHANGES
 			font					5
 			textscale				0.6
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 0.22
-			bordercolor				0.43 0.83 1 0.8
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 			radius					3
 			caps					1
 			descText				@VISION_RESTART_THE_VIDEO_WITH_THESE_SETTING
@@ -4423,7 +4414,7 @@
 		itemDef
 		{
 			name					vision_music_title
-			rect					14 40 376 22
+			rect					146 14 274 22
 			visible					1
 			text					@VISION_PLAYERS_OF_MY_MUSIC
 			font					5
@@ -4436,12 +4427,12 @@
 		itemDef
 		{
 			name					vision_music_about1
-			rect					14 68 376 16
+			rect					146 42 274 16
 			visible					1
 			text					@VISION_CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
 			font					5
 			textscale				0.56
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			decoration
 			page					8
 		}
@@ -4449,12 +4440,12 @@
 		itemDef
 		{
 			name					vision_music_about2
-			rect					14 84 376 16
+			rect					146 58 274 16
 			visible					1
 			text					@VISION_ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
 			font					5
 			textscale				0.56
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 			page					8
 		}
@@ -4462,7 +4453,7 @@
 		itemDef
 		{
 			name					vision_music_list
-			rect					12 108 380 248
+			rect					144 82 278 270
 			visible					1
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
@@ -4474,9 +4465,9 @@
 			feeder					FEEDER_MUSICPLAYERS
 			textalign				3
 			textaligny				24
-			bordercolor				0.43 0.83 1 0.16
-			outlinecolor			0.43 0.83 1 0.22
-			forecolor				0.86 0.92 0.97 1
+			bordercolor				0.36 0.78 0.96 0.16
+			outlinecolor			0.36 0.78 0.96 0.22
+			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0.30
 			radius					4
 			page					8
@@ -4485,18 +4476,18 @@
 		itemDef
 		{
 			name					vision_music_back
-			rect					12 364 110 24
+			rect					144 360 110 24
 			visible					1
 			text					@MENUS_BACK
 			font					5
 			textscale				0.62
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			radius					3
+			radius					3.2
 			caps					1
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 			descText				@MENUS_BACK
 			action { play "sound/interface/button1.wav" ; setpage 5 ; }
 			page					8
@@ -4508,12 +4499,12 @@
 		itemDef
 		{
 			name					vision_channel_title
-			rect					32 62 340 24
+			rect					164 36 238 24
 			visible					1
 			text					@MENUS_WARNING
 			font					5
 			textscale				1.1
-			forecolor				1 0.74 0.30 1
+			forecolor				0.91 0.77 0.42 1
 			decoration
 			page					9
 		}
@@ -4521,12 +4512,12 @@
 		itemDef
 		{
 			name					vision_channel1
-			rect					32 100 340 16
+			rect					164 74 238 16
 			visible					1
 			text					@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			decoration
 			page					9
 		}
@@ -4534,12 +4525,12 @@
 		itemDef
 		{
 			name					vision_channel2
-			rect					32 118 340 16
+			rect					164 92 238 16
 			visible					1
 			text					@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
 			font					5
 			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			decoration
 			page					9
 		}
@@ -4547,12 +4538,12 @@
 		itemDef
 		{
 			name					vision_channel3
-			rect					32 136 340 16
+			rect					164 110 238 16
 			visible					1
 			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
 			font					5
 			textscale				0.7
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 			page					9
 		}
@@ -4560,19 +4551,19 @@
 		itemDef
 		{
 			name					vision_channel_no
-			rect					32 208 150 24
+			rect					164 182 150 24
 			visible					1
 			text					@VISION_STAY_ON_STABLE
 			font					5
 			textscale				0.64
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			radius					3
+			radius					3.2
 			caps					1
 			page					9
-			backcolor				1 1 1 0.05
-			bordercolor				0.43 0.83 1 0.16
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
 			descText				@VISION_KEEP_THE_RELEASES
 			action { play "sound/interface/button1.wav" ; setpage 6 ; }
 			textalign				ITEM_ALIGN_CENTER
@@ -4583,26 +4574,26 @@
 		itemDef
 		{
 			name					vision_channel_yes
-			rect					202 208 170 24
+			rect					334 182 170 24
 			visible					1
 			text					@VISION_SWITCH_TO_DEVELOPMENT
 			font					5
 			textscale				0.64
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			radius					3
+			radius					3.2
 			caps					1
 			page					9
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 			descText				@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
 			action { play "sound/interface/button1.wav" ; setcvar v_updateChannel dev ; setpage 6 ; }
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				85
 			textaligny				6.24
 		}
-		scrollRect				12 38 380 352
+		scrollRect				144 12 278 374
 		scrollStep				22
 		foldCvar				v_setupFolds
 		searchCvar				v_setupSearch

@@ -8,12 +8,12 @@
 		fullscreen				0
 		outOfBoundsClick
 		rect					20 25 604 440
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		descX					322
 		descY					218
 		descScale				0.7
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 
 		itemDef
@@ -27,11 +27,10 @@
 			cvarTest				"ui_modsay"
 			showCvar { "1" ; "3" }
 			decoration
-			backcolor				0.035 0.07 0.12 0.94
-			bordercolor				0.43 0.83 1 0.28
-			radius					8
+			backcolor				0.031 0.055 0.11 0.97
+			bordercolor				0.11 0.18 0.29 1
+			radius					6.4
 			shadow					14
-			sheen					0.08
 		}
 
 		itemDef
@@ -45,8 +44,8 @@
 			cvarTest				"ui_modsay"
 			hideCvar { "1" ; "3" }
 			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
 			radius					5
 		}
 
@@ -63,9 +62,9 @@
 			backcolor				0 0 0 0
 			font					5
 			textscale				0.59
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			border					0
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			caps					1
 		}
@@ -91,7 +90,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { show highlight1 }
@@ -117,7 +116,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				"ui_modsay"
 			showCvar { "3" }
@@ -140,7 +139,7 @@
 			textaligny				2.5
 			font					5
 			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
 			{
@@ -167,22 +166,22 @@
 			textaligny				3
 			font					5
 			textscale				0.32
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			descText				"Write your Text here"
 			visible					1
 			action { play "sound/interface/button1" }
 			mouseenter
 			{
 				hide highlight2
-				setitemcolor textToSend bordercolor 0.43 0.83 1 0.16
+				setitemcolor textToSend bordercolor 0.086 0.149 0.247 1
 			}
 			mouseexit
 			{
 				show highlight2
-				setitemcolor textToSend bordercolor 0.43 0.83 1 0.16
+				setitemcolor textToSend bordercolor 0.086 0.149 0.247 1
 			}
 			radius					5
 		}
@@ -199,31 +198,31 @@
 			elementheight			15
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
-			bordercolor				0.43 0.83 1 0.16
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.027 0.051 0.102 0.9
+			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textaligny				13.2
 			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				"ui_modsay"
 			showCvar { "1" ; "3" }
 			mouseEnter
 			{
 				fadein message_arena ;
-				setitemcolor playerList bordercolor 0.43 0.83 1 0.16
+				setitemcolor playerList bordercolor 0.086 0.149 0.247 1
 			}
 			mouseExit
 			{
 				fadeout message_arena ;
-				setitemcolor playerList bordercolor 0.43 0.83 1 0.16
+				setitemcolor playerList bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
 			radius					4
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 	}
 }

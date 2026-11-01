@@ -48,7 +48,7 @@ def label(name, rect, text, scale, color, *more):
                 ('decoration',), *more)
 
 
-def box(name, rect, fill=PANEL, edge=PANEL_EDGE, radius=8, shadow=12, sheen='0.08'):
+def box(name, rect, fill=PANEL, edge=PANEL_EDGE, radius=5.3, shadow=12, sheen='0'):
     return item(name, rect, ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *fill), ('bordercolor', *edge),
                 ('radius', radius), ('shadow', shadow), ('sheen', sheen), ('decoration',))
 
@@ -76,7 +76,7 @@ def top_bar(m, here):
     new = [
         item('vision_bar', (0, 0, 640, 34), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.55'),
              ('wide', 1), ('decoration',)),
-        item('vision_bar_line', (0, 34, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
+        item('vision_bar_line', (0, 34, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *BAR_LINE),
              ('wide', 1), ('decoration',)),
         item('vision_logo', (22, 6, 22, 22), ('type', 'ITEM_TYPE_LOGO'), ('forecolor', '1', '1', '1', '1'), ('decoration',)),
         label('vision_mark', (50, 7, 120, 20), '"VISIONJK"', 1.0, BRIGHT),
@@ -112,10 +112,10 @@ def bottom_button(b, primary=False):
     mf.put(b, 'caps', 1)
     if primary:
         mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
-        mf.put(b, 'backcolor', *(ACCENT[:3] + ['0.22']))
-        mf.put(b, 'bordercolor', *(ACCENT[:3] + ['0.8']))
-        mf.put(b, 'radius', 3)
-        mf.put(b, 'forecolor', *BRIGHT)
+        mf.put(b, 'backcolor', *ACCENT)
+        mf.put(b, 'bordercolor', *ACCENT)
+        mf.put(b, 'radius', 3.2)
+        mf.put(b, 'forecolor', *ON_ACCENT)
     else:
         mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
         mf.put(b, 'forecolor', *TEXT)
@@ -150,7 +150,7 @@ NAV_MAKE = (('newgamebutton', '@MENUS_PLAY', '@MENUS_START_PLAYING_NOW', 'multip
 TOP = 100                   # where the content of a page begins under its heading,
 TOP_DENSE = 42              #	and on a page that needs all of the height: right under the bar
 FLOOR = 438                 # and where it ends, over the buttons at the bottom
-WINDOW = ['0.035', '0.07', '0.12', '0.94']      # a window on a page or on the level: nearly solid, its text has to be read
+WINDOW = ['0.031', '0.055', '0.11', '0.97']      # a window on a page or on the level: nearly solid, its text has to be read
 
 
 def group_of(b):
@@ -211,7 +211,7 @@ def rail(m, col, pad=5):
         mf.put(b, 'textalignx', 12)
         mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
     at = next(i for i, e in enumerate(m) if e is col[0])
-    mine = box('vision_rail_%d' % round(y0), (x - pad, y0 - pad, w + 2 * pad, y1 - y0 + 2 * pad), SOFT, SOFT_EDGE, 6, 8, '0.06')
+    mine = box('vision_rail_%d' % round(y0), (x - pad, y0 - pad, w + 2 * pad, y1 - y0 + 2 * pad), SOFT, SOFT_EDGE, 5.3, 8, '0')
     m.insert(at, mine)
     # the panel beside the list begins and ends where the list does
     rx, ry, rw, rh = rect_of(mine.block)
@@ -333,7 +333,7 @@ def shell(m, menu, had_logo):
     foot = [item('vision_foot', (0, row_y, 640, row_h), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *FOOT), ('wide', 1),
                  ('decoration',)),
             item('vision_foot_line', (0, row_y, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'),
-                 ('backcolor', *(ACCENT[:3] + ['0.18'])), ('wide', 1), ('decoration',))]
+                 ('backcolor', *BAR_LINE), ('wide', 1), ('decoration',))]
     # (The words at the left are as wide as they are in the language of the player and follow each other: "flow",
     # Menu_TabsLayout in ui_shared.c. The first begins where the content of a page does. Buttons that lie on each
     # other take turns: the one that is hidden takes no room.)
@@ -365,21 +365,21 @@ def shell(m, menu, had_logo):
 
 
 def window_button(b, primary):
-    """A button at the bottom of a window: a pill around its text."""
+    """A button at the bottom of a window: filled with the accent where it goes on, an outline where it does not."""
     r = rect_of(b)
     w = max(70, min(r[2], 110))
     set_rect(b, r[0] + r[2] / 2 - w / 2, r[1] + r[3] / 2 - 10, w, 20)
     text_center(b, 0.64, 4)
     mf.put(b, 'caps', 1)
     mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
-    mf.put(b, 'radius', 10)
+    mf.put(b, 'radius', 3.2)
     if primary:
-        mf.put(b, 'backcolor', *(ACCENT[:3] + ['0.20']))
-        mf.put(b, 'bordercolor', *(ACCENT[:3] + ['0.75']))
-        mf.put(b, 'forecolor', *BRIGHT)
+        mf.put(b, 'backcolor', *ACCENT)
+        mf.put(b, 'bordercolor', *ACCENT)
+        mf.put(b, 'forecolor', *ON_ACCENT)
     else:
-        mf.put(b, 'backcolor', '1', '1', '1', '0.05')
-        mf.put(b, 'bordercolor', *SOFT_EDGE)
+        mf.put(b, 'backcolor', *NONE)
+        mf.put(b, 'bordercolor', *CONTROL_EDGE)
         mf.put(b, 'forecolor', *TEXT)
 
 
@@ -446,8 +446,7 @@ def window(m, menu, ingame):
                 y1 = max(y1, rect_of(e.block)[1] + 20 + 9)
     if frame:
         set_rect(frame.block, x0, y0, x1 - x0, y1 - y0)
-        panel(frame.block, WINDOW, PANEL_EDGE, 8, 14)
-        mf.put(frame.block, 'sheen', '0.08')
+        panel(frame.block, WINDOW, PANEL_EDGE, 6.4, 14)
         mf.put(frame.block, 'decoration')
         for key in ('backcolor', 'bordercolor', 'radius', 'shadow', 'sheen', 'border', 'bordersize'):
             mf.drop(m, key)
@@ -468,54 +467,377 @@ def window(m, menu, ingame):
                              ('backcolor', '0', '0.01', '0.03', '0.6'), ('wide', 1), ('decoration',)))
 
 
+def card(name, rect, text, target, desc, primary=False):
+    """A button of the first page as a card: filled with the accent for the way into a game, a panel for the others.
+    Its word at the left, on the middle of its height."""
+    x, y, w, h = rect
+    scale = 1.05 if primary else 0.66
+    e = item(name, rect, ('type', 'ITEM_TYPE_BUTTON'), ('text', text), ('descText', desc), ('font', FONT),
+             ('textscale', mf.fmt(scale)), ('caps', 1), ('textalign', 'ITEM_ALIGN_LEFT'), ('textalignx', 16 if primary else 11),
+             ('textaligny', mf.fmt((h - 18.0 * scale) / 2)), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 5.3),
+             ('backcolor', *(ACCENT if primary else PANEL)), ('bordercolor', *(ACCENT if primary else PANEL_EDGE)),
+             ('forecolor', *(ON_ACCENT if primary else BRIGHT)))
+    e.block.append(Entry('action', [], ['play', '"sound/interface/button1.wav"', ';', 'close', 'all', ';', 'open', target, ';']))
+    return e
+
+
 def main_page(m):
-    """The first page: the name of the game, the sections as a list at the left, and a line about this version."""
+    """The first page (the redesign of 2026-11-01): the bar of the sections at the top, at the left the name of the game
+    and the ways into a game as cards, in the middle the player's model, at the right the box of the icon and what is
+    new, the way out at the bottom."""
     keep = {}
     for e in items(m):
         keep[name_of(e.block)] = e
     m[:] = [e for e in m if e.k != 'itemdef']
-    new = [
-        label('vision_mark', (56, 96, 400, 50), '"VISIONJK"', 2.6, BRIGHT),
-        label('vision_mark2', (58, 146, 400, 16), '"JEDI ACADEMY  MULTIPLAYER"', 0.62, DIM),
-        item('vision_rule', (58, 172, 64, 2), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 1), ('decoration',)),
-        box('vision_rail', (48, 196, 220, 196)),
-        # the box of the icon, turning, on a panel of its own with a light around it
-        item('vision_hero', (336, 96, 256, 296), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', '0.035', '0.07', '0.12', '0.55'),
-             ('bordercolor', *PANEL_EDGE), ('radius', 10), ('shadow', 14), ('sheen', '0.10'), ('decoration',)),
-        item('vision_cube', (364, 102, 200, 200), ('type', 'ITEM_TYPE_CUBE'), ('decoration',)),
-        label('vision_hero1', (336, 312, 256, 18), '"Jedi Academy, rebuilt"', 0.86, BRIGHT, ('textalign', 'ITEM_ALIGN_CENTER'),
-              ('textalignx', 128)),
-        label('vision_hero2', (336, 334, 256, 14), '"jka.vision"', 0.66, ACCENT, ('textalign', 'ITEM_ALIGN_CENTER'),
-              ('textalignx', 128)),
-        item('vision_version', (584, 372, 0, 12), ('ownerdraw', 'UI_VERSION'), ('font', FONT), ('textscale', '0.5'),
-             ('forecolor', *DIM), ('decoration',)),
+    nav = [keep[n] for n in NAV if n in keep]
+    m.extend(nav)
+    new = top_bar(m, None)
+    for e in nav:
+        m.remove(e)
+    new += nav
+    new += [
+        label('vision_mark', (40, 56, 300, 46), '"VISIONJK"', 2.35, BRIGHT),
+        label('vision_mark2', (42, 102, 300, 16), '"Jedi Academy, rebuilt"', 0.84, DIM),
+        item('vision_rule', (42, 126, 30, 1.6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 0.8),
+             ('decoration',)),
+        card('vision_join', (40, 140, 268, 58), '@MENUS_JOIN_SERVER_CAPS', 'joinserver', '@MENUS_SEARCH_FOR_SERVERS_TO', True),
+        card('vision_create', (40, 208, 131, 44), '@MENUS_CREATE_SERVER_CAPS', 'createserver', '@MENUS_CREATE_YOUR_OWN_SERVER'),
+        card('vision_solo', (177, 208, 131, 44), '@MENUS_SOLO_GAME', 'quickgame', '@MENUS_QUICKSTART_DESC'),
+        card('vision_demo', (40, 258, 131, 44), '@MENUS_PLAY_DEMO_CAPS', 'demo', '@MENUS_PLAY_BACK_A_RECORDED'),
+        card('vision_rules', (177, 258, 131, 44), '@MENUS_RULES', 'rulesMenu', '@MENUS_RULES_DESC'),
+        # the player's model, put on the item by uiScript homeModel (codemp/ui/ui_main.c)
+        item('vision_glow', (343, 378, 100, 14), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *(ACCENT[:3] + ['0.07'])),
+             ('radius', 7), ('glowcolor', *(ACCENT[:3] + ['0.14'])), ('decoration',)),
+        item('character', (318, 46, 150, 352), ('type', 'ITEM_TYPE_MODEL'), ('asset_model', '"models/players/jedi_hm/model.glm"'),
+             ('model_g2anim', '"BOTH_STAND1"'), ('model_angle', 160), ('model_rotation', 0), ('model_g2mins', -30, -15, -14),
+             ('model_g2maxs', 20, 15, 30), ('model_fovx', 50), ('model_fovy', 50), ('decoration',)),
+        # the box of the icon, turning, and the site
+        item('vision_hero', (476, 46, 140, 134), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *PANEL), ('bordercolor', *PANEL_EDGE),
+             ('radius', 5.3), ('shadow', 12), ('decoration',)),
+        item('vision_cube', (496, 52, 100, 100), ('type', 'ITEM_TYPE_CUBE'), ('decoration',)),
+        label('vision_hero2', (476, 154, 140, 14), '"jka.vision"', 0.66, ACCENT, ('textalign', 'ITEM_ALIGN_CENTER'), ('textalignx', 70)),
     ]
-    y = 205
-    for n in ('playbutton', 'profilebutton', 'controlsbutton', 'setupbutton', 'exitgamebutton'):
-        e = keep.get(n)
-        if not e:
-            continue
-        b = e.block
-        set_rect(b, 58, y, 200, 30)
-        text_left(b, 16, 1.0, 6)
-        mf.put(b, 'caps', 1)
-        mf.put(b, 'forecolor', *(BRIGHT if n == 'playbutton' else TEXT))
-        mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
-        new.append(e)
-        y += 31
-    mf.put(m, 'descX', 58)
-    mf.put(m, 'descY', 404)
+    # the bar at the bottom: the way out at the left
+    new += [item('vision_foot', (0, 446, 640, 34), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *FOOT), ('wide', 1),
+                 ('decoration',)),
+            item('vision_foot_line', (0, 446, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *BAR_LINE), ('wide', 1),
+                 ('decoration',))]
+    # (UI_VERSION ends its text at the left edge of its rectangle)
+    new.append(item('vision_version', (612, 459, 0, 12), ('ownerdraw', 'UI_VERSION'), ('font', FONT), ('textscale', '0.48'),
+                    ('forecolor', *DIM), ('decoration',)))
+    out = keep.get('exitgamebutton')
+    if out:
+        set_rect(out.block, 29, 446, 90, 34)
+        bottom_button(out.block)
+        mf.put(out.block, 'flow', 1)
+        new.append(out)
+    mf.put(m, 'descX', 40)
+    mf.put(m, 'descY', 316)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
-    mf.put(m, 'descScale', '0.8')
+    mf.put(m, 'descScale', '0.7')
+    e = mf.find(m, 'onopen')
+    if e and isinstance(e.block, list):
+        e.block = ['uiScript', 'homeModel', ';', mf.NL] + e.block
+    else:
+        m.append(Entry('onOpen', [], ['uiScript', 'homeModel', ';']))
     m.extend(new)
 
 
+def control(b, rect, scale=0.6, align='center', primary=False, field=False):
+    """An item as a control of the redesign: an outlined button (or a filled one, or a dark field around an owner draw)
+    with its word in the middle or at the left."""
+    x, y, w, h = rect
+    set_rect(b, x, y, w, h)
+    mf.put(b, 'font', FONT)
+    mf.put(b, 'textscale', mf.fmt(scale))
+    mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
+    mf.put(b, 'radius', 3.2)
+    mf.put(b, 'backcolor', *(ACCENT if primary else INSET if field else NONE))
+    mf.put(b, 'bordercolor', *(ACCENT if primary else CONTROL_EDGE))
+    mf.put(b, 'forecolor', *(ON_ACCENT if primary else TEXT))
+    for key in ('border', 'bordersize', 'background', 'mouseenter', 'mouseexit'):
+        mf.drop(b, key)
+    if align == 'center':
+        mf.put(b, 'textalign', 'ITEM_ALIGN_CENTER')
+        mf.put(b, 'textalignx', mf.fmt(w / 2))
+    else:
+        mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+        mf.put(b, 'textalignx', 8)
+    mf.put(b, 'textaligny', mf.fmt((h - 18.0 * scale) / 2))
+    if not field:
+        mf.put(b, 'caps', 1)
+
+
+def join_page(m):
+    """The server browser (the redesign of 2026-11-01): the filters in two rows at the top, the list at the left, at the
+    right the level of the server that is chosen and what can be done with it."""
+    by = {}
+    for e in items(m):
+        by.setdefault(name_of(e.block), []).append(e)
+
+    def one(n):
+        return [e.block for e in by.get(n.lower(), [])]
+
+    # what goes: the boxes behind the filters and the buttons, the frames of the columns, the lines between the rows
+    gone = {'setup_background', 'secondary_background', 'horizontalseparators', 'servercolumn', 'mapcolumn', 'playercolumn',
+            'typecolumn', 'pingcolumn'}
+    m[:] = [e for e in m if not (e.k == 'itemdef' and name_of(e.block) in gone)]
+    for b in one('getnewlist_button'):
+        control(b, (14, 42, 112, 22))
+    for b in one('refreshFilter_button'):
+        control(b, (130, 42, 112, 22))
+    for n, rect in (('netsource', (250, 42, 122, 22)), ('netfilter', (376, 42, 124, 22)), ('gametypefilter', (504, 42, 122, 22))):
+        for b in one(n):
+            control(b, rect, 0.58, 'left', field=True)
+    for n, rect in (('viewEmpty', (14, 68, 140, 16)), ('viewFull', (160, 68, 140, 16)), ('viewBotsOnly', (306, 68, 150, 16)),
+                    ('datarate', (462, 68, 164, 16))):
+        for b in one(n):
+            r = rect_of(b)
+            set_rect(b, *rect)
+            mf.put(b, 'textscale', '0.58')
+    # the heads of the columns, and where the columns of the list are
+    cols = (('server', 10, 190), ('map', 206, 100), ('Players', 310, 44), ('Type', 354, 56), ('Ping', 414, 38))
+    for n, x, w in cols:
+        for b in one(n):
+            set_rect(b, x, 88, w, 18)
+            mf.put(b, 'font', FONT)
+            mf.put(b, 'textscale', '0.5')
+            mf.put(b, 'caps', 1)
+            mf.put(b, 'forecolor', *DIM)
+            mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+            mf.put(b, 'textalignx', 4)
+            mf.put(b, 'textaligny', mf.fmt((18 - 9.0) / 2))
+            mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+            mf.drop(b, 'background')
+    for b in one('serverlist'):
+        set_rect(b, 10, 106, 442, 298)
+        mf.put(b, 'elementheight', 22)
+        mf.put(b, 'textscale', '0.62')
+        mf.put(b, 'textaligny', 5)
+        mf.put(b, 'columns', 5, 4, 40, 186, 200, 40, 100, 304, 5, 40, 348, 20, 54, 408, 20, 34)
+        mf.put(b, 'radius', 5.3)
+        mf.put(b, 'bordercolor', *PANEL_EDGE)
+        mf.put(b, 'backcolor', *PANEL)
+        mf.drop(b, 'mouseenter')
+        mf.drop(b, 'mouseexit')
+    for b in one('refreshdate'):
+        set_rect(b, 12, 408, 300, 14)
+        mf.put(b, 'textscale', '0.5')
+        mf.put(b, 'forecolor', *DIM)
+    # the right: the level of the server under the mouse or chosen, and the buttons under it
+    pane = [box('vision_pane', (462, 88, 166, 334), PANEL, PANEL_EDGE, 5.3, 0),
+            item('vision_netmap', (470, 96, 150, 112), ('ownerdraw', 'UI_NETMAPPREVIEW'), ('decoration',))]
+    at = next(i for i, e in enumerate(m) if e.k == 'itemdef' and name_of(e.block) == 'serverlist')
+    m[at:at] = pane
+    y = 218
+    for n in ('serverinfoText', 'addFavorite', 'passwordText', 'createFavoriteText', 'findplayerText', 'idsText'):
+        for b in one(n):
+            control(b, (470, y, 150, 22), 0.58)
+        y += 26
+    for b in one('delfavorite'):
+        control(b, (470, 218 + 26, 150, 22), 0.58)
+    mf.put(m, 'descX', 12)
+    mf.put(m, 'descY', 428)
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
+    mf.put(m, 'descScale', '0.6')
+
+
+SETTING_KINDS = ('editfield', 'numericfield', 'yesno', 'multi', 'slider', '4', '9', '10', '11', '12', '13')
+
+
+def as_rows(blocks, x, y0, w, pitch=22, gap=8):
+    """Settings and their headings in a column, one under the other in the order they stood: a setting becomes a row
+    (its name at the left, its widget at the right, "row 1"), a heading a small word in capitals. Items that stood
+    in the same place (the menu shows one of them) stay in the same place. Returns where the column ends."""
+    rows = sorted(blocks, key=lambda b: rect_of(b)[1])
+    y, last = y0, None
+    for b in rows:
+        oy = round(rect_of(b)[1])
+        k = kind_of(b)
+        owner = mf.get(b, 'ownerdraw') is not None
+        heading = k not in SETTING_KINDS and not owner and k not in ('button', '1')
+        if last is not None and oy != last:
+            y += pitch + (gap if heading else 0)
+        last = oy
+        set_rect(b, x, y, w, pitch)
+        mf.put(b, 'font', FONT)
+        if heading:
+            mf.put(b, 'textscale', '0.52')
+            mf.put(b, 'caps', 1)
+            mf.put(b, 'forecolor', *DIM)
+            mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+            mf.put(b, 'textalignx', 2)
+            mf.put(b, 'textaligny', 5)
+            mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+            mf.drop(b, 'background')
+        elif k in ('button', '1'):
+            control(b, (x + 2, y + 2, w - 4, pitch - 4), 0.58)
+        elif owner:
+            # (an owner draw writes its name and what it is set to itself: it stays a line of text)
+            mf.put(b, 'textscale', '0.66')
+            mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+            mf.put(b, 'textalignx', 8)
+            mf.put(b, 'textaligny', mf.fmt((pitch - 18.0 * 0.66) / 2))
+        else:
+            mf.put(b, 'row', 3 if k == 'editfield' else 1)
+            mf.put(b, 'textscale', '0.66')
+            mf.put(b, 'forecolor', *TEXT)
+            mf.drop(b, 'textalign')
+            mf.drop(b, 'textalignx')
+    return y + pitch
+
+
+def by_text(m):
+    """The items of a menu by the reference of their text (or owner draw), in their order."""
+    out = {}
+    for e in items(m):
+        k = (mf.get(e.block, 'text') or mf.get(e.block, 'ownerdraw') or [''])[0].upper()
+        out.setdefault(k, []).append(e.block)
+    return out
+
+
+def drop_named(m, names):
+    m[:] = [e for e in m if not (e.k == 'itemdef' and name_of(e.block) in names)]
+
+
+def preview(m, rect):
+    """The picture of the level that is chosen (UI_STARTMAPCINEMATIC) in a frame of the redesign."""
+    x, y, w, h = rect
+    for e in items(m):
+        b = e.block
+        if name_of(b) != 'mappreview':
+            continue
+        if mf.get(b, 'ownerdraw'):
+            set_rect(b, x + 6, y + 6, w - 12, h - 12)
+        else:
+            set_rect(b, x, y, w, h)
+            panel(b, NONE, PANEL_EDGE, 5.3)
+            mf.put(b, 'decoration')
+
+
+def create_page(m):
+    """Create a game (the redesign of 2026-11-01): the kind of game and the levels at the left, the level that is chosen
+    and the places of the players in the middle, the server and its rules at the right."""
+    t = by_text(m)
+    drop_named(m, {'setup_background'})
+    for b in t.get('@MENUS_GAME_TYPE', []):
+        control(b, (10, 44, 170, 22), 0.6, 'left', field=True)
+    for e in items(m):
+        b = e.block
+        if name_of(b) == 'maplist':
+            set_rect(b, 10, 72, 170, 330)
+            panel(b, PANEL, PANEL_EDGE, 5.3)
+            mf.put(b, 'elementheight', 20)
+            mf.put(b, 'textscale', '0.62')
+    preview(m, (190, 44, 230, 170))
+    # the server and its rules: rows on a panel under the picture
+    rules = [e.block for e in items(m) if name_of(e.block) in ('expert', 'normal', 'rules_title') and rect_of(e.block)
+             and kind_of(e.block) != 'list']
+    at = next(i for i, e in enumerate(m) if e.k == 'itemdef' and e.block in rules)
+    end = as_rows(rules, 196, 226, 218, pitch=20, gap=4)
+    m.insert(at, box('vision_rules', (190, 222, 230, min(max(end, 396), 436) - 222 + 4), PANEL, PANEL_EDGE, 5.3, 0))
+    # the places of the players: two columns of eight at the right
+    slots = [e.block for e in items(m) if name_of(e.block) in ('humanbotfield', 'humanbotnonfield')]
+    at = next(i for i, e in enumerate(m) if e.k == 'itemdef' and e.block in slots)
+    m.insert(at, box('vision_slots', (430, 44, 198, 214), PANEL, PANEL_EDGE, 5.3, 0))
+    top = min(rect_of(x)[1] for x in slots)
+    for b in slots:
+        r = rect_of(b)
+        col = 0 if r[0] < 300 else 1
+        row = round((r[1] - top) / 20)
+        set_rect(b, 438 + col * 92, 54 + row * 20, 90, 20)
+        mf.put(b, 'textscale', '0.6')
+    for b in by_text(m).get('@MENUS_SKILL', []):
+        set_rect(b, 438, 54 + 8 * 20 + 10, 180, 20)
+        mf.put(b, 'textscale', '0.6')
+        mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+        mf.put(b, 'textalignx', 4)
+    mf.put(m, 'descX', 12)
+    mf.put(m, 'descY', 428)
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
+    mf.put(m, 'descScale', '0.6')
+
+
+def solo_page(m, menu):
+    """The two pages of a game against bots: the levels at the left and the picture of the chosen one beside them
+    (quickgame), then the rules as rows at the left with the picture beside them (quickgame2)."""
+    t = by_text(m)
+    drop_named(m, {'setup_background'})
+    for e in items(m):
+        b = e.block
+        if name_of(b) == 'maplist':
+            set_rect(b, 40, 132, 190, 270)
+            panel(b, PANEL, PANEL_EDGE, 5.3)
+            mf.put(b, 'elementheight', 20)
+            mf.put(b, 'textscale', '0.62')
+    for b in t.get('@MENUS_MAP_LISTING', []):
+        set_rect(b, 40, 112, 190, 18)
+        mf.put(b, 'textscale', '0.52')
+        mf.put(b, 'caps', 1)
+        mf.put(b, 'forecolor', *DIM)
+        mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+        mf.put(b, 'textalignx', 2)
+    for b in t.get('@MENUS_GAME_TYPE', []):
+        control(b, (40, 84, 190, 22), 0.6, 'left', field=True)
+    if menu == 'quickgame':
+        preview(m, (244, 84, 356, 318))
+        return
+    rules = [e.block for e in items(m) if name_of(e.block) in ('options', 'normal', 'expert_button', 'difficulty_button',
+                                                                  'custombots_button', 'rules_title', 'end_game_title', 'bots_title')]
+    at = next(i for i, e in enumerate(m) if e.k == 'itemdef' and e.block in rules)
+    end = as_rows(rules, 46, 92, 224)
+    m.insert(at, box('vision_rules', (40, 84, 236, end - 84 + 6), PANEL, PANEL_EDGE, 5.3, 0))
+    preview(m, (290, 84, 310, 236))
+
+
+# the buttons of the bar in a game, in the order of the redesign: the match, the player, the settings; the ways
+# out at the right. Buttons that share a place (join and the class of a siege, the profile and the objectives,
+# voice chat and adding a bot) stay together.
+INGAME_LEFT = ('join', 'class', 'vote', 'callvote', 'chat', 'addbot', 'player', 'objectives', 'controls', 'setup', 'photo')
+INGAME_RIGHT = ('about', 'servers', 'leave')
+
+
+def quit_page(m):
+    """Leaving the game (the redesign of 2026-11-01): a dialog in the middle of the page, no at the left, quitting at the
+    right in red."""
+    t = {name_of(e.block): e.block for e in items(m)}
+    at = next(i for i, e in enumerate(m) if e.k == 'itemdef' and name_of(e.block) == 'quit_title')
+    m.insert(at, box('vision_dialog', (180, 150, 280, 140), WINDOW, CONTROL_EDGE, 6.4, 14))
+    if 'quit_title' in t:
+        b = t['quit_title']
+        set_rect(b, 196, 164, 248, 14)
+        text_left(b, 0, 0.52, 2)
+        mf.put(b, 'forecolor', *DIM)
+    if 'confirm' in t:
+        b = t['confirm']
+        set_rect(b, 196, 184, 248, 30)
+        text_left(b, 0, 1.0, 6)
+        mf.put(b, 'forecolor', *BRIGHT)
+        mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+    if 'quitgame_cancel' in t:
+        b = t['quitgame_cancel']
+        control(b, (298, 254, 70, 24), 0.62)
+        mf.drop(b, 'flow')
+    if 'quitgame_yes' in t:
+        b = t['quitgame_yes']
+        control(b, (374, 254, 70, 24), 0.62)
+        mf.put(b, 'backcolor', *RED)
+        mf.put(b, 'bordercolor', *RED)
+        mf.put(b, 'forecolor', '0.16', '0.03', '0.02', '1')
+    # (the old page had an invisible button over its middle that opened the credits: it stays, on the heading of the
+    # dialog, so it does not lie over the buttons)
+    if 'creditsbutton' in t:
+        set_rect(t['creditsbutton'], 196, 160, 248, 20)
+    m[:] = [e for e in m if not (e.k == 'itemdef' and name_of(e.block) in ('vision_foot', 'vision_foot_line'))]
+
+
 def ingame_bar(m):
-    """The row of buttons at the top of the screen in a game: a bar behind it, its texts in one line."""
+    """The row of buttons at the top of the screen in a game: a bar behind it, its buttons as wide as their words, the
+    match first, then the player and the settings, the ways out last with leaving in red."""
     new = [
-        item('vision_bar', (0, 0, 640, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.72'),
+        item('vision_bar', (0, 0, 640, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.016', '0.031', '0.063', '0.8'),
              ('wide', 1), ('decoration',)),
-        item('vision_bar_line', (0, 26, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
+        item('vision_bar_line', (0, 26, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *BAR_LINE),
              ('wide', 1), ('decoration',)),
     ]
     # the photo mode (v_photo, codemp/cgame/photo/cg_photo.c) after Setup. The menu closes first, so the keys are
@@ -524,23 +846,26 @@ def ingame_bar(m):
     photo = item('photo', rect_of(setup.block), ('text', texts.ref('Photo')), ('type', 'ITEM_TYPE_BUTTON'))
     photo.block.append(Entry('action', [], options.CLICK + [mf.NL, 'close', 'all', ';', mf.NL, 'exec', '"v_photo"', ';']))
     m.insert(m.index(setup) + 1, photo)
-    # the buttons in one row across the bar, one place more than the old menu had. Buttons that stood in the same
-    # place (the menu shows one or the other) stay together.
-    places = sorted({rect_of(e.block)[0] for e in items(m) if e is not photo and rect_of(e.block)
-                     and mf.get(e.block, 'text') is not None})
-    left, right = places[0], places[-1] + rect_of(setup.block)[2]
-    places.insert(places.index(rect_of(setup.block)[0]) + 1, 'photo')
-    width = (right - left) / len(places)
-    for e in items(m):
+    buttons = {name_of(e.block): e for e in items(m) if mf.get(e.block, 'text') is not None}
+    left = [buttons[n] for n in INGAME_LEFT if n in buttons]
+    right = [buttons[n] for n in INGAME_RIGHT if n in buttons]
+    rest = [e for e in buttons.values() if e not in left and e not in right]
+    left += rest
+    for e in left + right:
+        m.remove(e)
+    # (one row that Menu_TabsLayout fits into the width of the bar or of the panel in the level: two rows of
+    # words side by side would run into each other on a narrow panel)
+    for e in left + right:
         b = e.block
-        r = rect_of(b)
-        if r and mf.get(b, 'text') is not None:
-            set_rect(b, left + places.index('photo' if e is photo else r[0]) * width, 0, width, 26)
-            text_center(b, 0.58, 7)
-            mf.put(b, 'caps', 1)
-            mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+        set_rect(b, 8, 0, 52, 26)
+        text_center(b, 0.56, 7)
+        mf.put(b, 'caps', 1)
+        mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+        mf.put(b, 'flow', 1)
+        if name_of(b) == 'leave':
+            mf.put(b, 'forecolor', *RED)
     first = next((i for i, e in enumerate(m) if e.k == 'itemdef'), len(m))
-    m[first:first] = new
+    m[first:first] = new + left + right
 
 
 # Rows the new look leaves out, by group and cvar. Twice in Setup: bubbles and music are with the chat (Chat &
@@ -674,6 +999,14 @@ def page(m, name, ingame):
         ingame_bar(m)
     elif full and not ingame:
         shell(m, menu, HAD_LOGO.get(name, False))
+        if menu == 'joinserver':
+            join_page(m)
+        elif menu == 'createserver':
+            create_page(m)
+        elif menu in ('quickgame', 'quickgame2'):
+            solo_page(m, menu)
+        elif menu == 'quitmenu':
+            quit_page(m)
     elif not full:
         window(m, menu, ingame)
     if menu == 'ingame_siegeclass':

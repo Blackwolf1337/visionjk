@@ -7,12 +7,12 @@
 		visible					0
 		fullScreen				0
 		rect					0 0 640 480
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
 		descX					320
 		descY					424
 		descScale				1
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
 		onOpen { setfocus updatechannel_no }
@@ -33,7 +33,7 @@
 			textalignx				220
 			font					5
 			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			caps					1
@@ -51,7 +51,7 @@
 			textalignx				220
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			textaligny				1.05
@@ -68,7 +68,7 @@
 			textalignx				220
 			font					5
 			textscale				0.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			textaligny				1.05
@@ -85,7 +85,7 @@
 			textalignx				220
 			font					5
 			textscale				0.6
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			textaligny				1.05
@@ -104,7 +104,7 @@
 			textscale				0.55
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				100
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show updatechannel_no_glow }
 			mouseExit { hide updatechannel_no_glow }
@@ -130,7 +130,7 @@
 			textscale				0.55
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				100
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show updatechannel_yes_glow }
 			mouseExit { hide updatechannel_yes_glow }
@@ -144,7 +144,7 @@
 			textaligny				1.88
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		openSlide				8
 	}
 }

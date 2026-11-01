@@ -1079,6 +1079,7 @@ _UI_Shutdown
 =================
 */
 void UI_CleanupGhoul2(void);
+void UI_FreeDeferredGhoul2( void );
 void UI_FreeAllSpecies(void);
 
 void UI_Shutdown( void ) {
@@ -5818,17 +5819,23 @@ JA+: puts the model and skin of the "model" cvar on the item "character" of the 
 the player menu. qfalse if the model can not be shown.
 ==================
 */
+static qboolean UI_MenuCharacter( menuDef_t *menu );
+
 static qboolean UI_UpdateNormalMenuCharacter( void )
 {
-	menuDef_t *menu;
+	return UI_MenuCharacter( Menu_GetFocused() );
+}
+
+// the same for a menu that is named, not the focused one (VisionJK: the first page shows the player's model,
+// uiScript homeModel in its onOpen, when it may not have the focus yet)
+static qboolean UI_MenuCharacter( menuDef_t *menu )
+{
 	itemDef_t *item;
 	char model[MAX_QPATH];
 	char modelPath[MAX_QPATH];
 	char skinPath[MAX_QPATH];
 	char *skin;
 	int	animRunLength;
-
-	menu = Menu_GetFocused();
 
 	if (!menu)
 	{
@@ -6888,6 +6895,11 @@ static void UI_RunMenuScript(char **args)
 		else if (Q_stricmp(name, "characterchanged") == 0)
 		{
 			UI_UpdateCharacter( qtrue );
+		}
+		else if ( Q_stricmp( name, "homeModel" ) == 0 )
+		{
+			// VisionJK: the player's model on the first page (its item "character")
+			UI_MenuCharacter( Menus_FindByName( "main" ) );
 		}
 		else if (Q_stricmp(name, "updatecharcvars") == 0
 			|| (Q_stricmp(name, "updatecharmodel") == 0) )
@@ -10741,6 +10753,9 @@ void UI_Refresh( int realtime )
 	//}
 
 	UI_CheckScreenSize();
+
+	// models that menu items gave up in the frame before, now that it has been rendered (ui_shared.c)
+	UI_FreeDeferredGhoul2();
 
 	trap->G2API_SetTime(realtime, 0);
 	trap->G2API_SetTime(realtime, 1);

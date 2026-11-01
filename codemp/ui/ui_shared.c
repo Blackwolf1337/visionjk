@@ -2703,7 +2703,7 @@ static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
 	const rectDef_t *r = &item->window.rect;
 
 	out->w = floorf( r->w * ( item->row == 3 ? ROW_WIDGET_WIDE : ROW_WIDGET ) );
-	out->h = Q_min( 14.0f, r->h - 6.0f );
+	out->h = Q_min( 16.0f, r->h - 6.0f );
 	out->x = r->x + r->w - ROW_PAD - out->w;
 	out->y = r->y + ( r->h - out->h ) * 0.5f;
 }
@@ -2713,9 +2713,10 @@ static float Item_Slider_Track( itemDef_t *item, float *width ) {
 	if ( Item_IsRow( item ) ) {
 		rectDef_t widget;
 
+		// (the track first, what it stands at after it, as in the other widgets the value is at the right)
 		Item_Row_Widget( item, &widget );
-		*width = widget.w - ROW_NUMBER - 3.0f;
-		return widget.x + ROW_NUMBER;
+		*width = widget.w - ROW_NUMBER - 8.0f;
+		return widget.x + 4.5f;
 	}
 	*width = SLIDER_WIDTH;
 	return item->text ? item->textRect.x + item->textRect.w + 8 : item->window.rect.x;
@@ -6343,7 +6344,7 @@ is filled with the colour of the menu, and what stands on it is drawn dark.
 =================
 */
 static void Item_Row_Paint( itemDef_t *item ) {
-	static const vec4_t	dark = { 0.02f, 0.05f, 0.10f, 1.0f }, rule = { 1.0f, 1.0f, 1.0f, 0.07f }, white = { 0.95f, 0.98f, 1.0f, 1.0f };
+	static const vec4_t	white = { 1.0f, 1.0f, 1.0f, 1.0f };
 	menuDef_t			*parent = (menuDef_t *)item->parent;
 	const rectDef_t		*r = &item->window.rect;
 	const float			*accent = parent->focusColor;
@@ -6361,21 +6362,24 @@ static void Item_Row_Paint( itemDef_t *item ) {
 	mid = widget.y + widget.h * 0.5f;
 	small = item->textscale * ROW_SMALL;
 
+	// the row in focus is lit, its name turns white; the widgets keep their colours
 	if ( f > 0.0f ) {
-		Skin_Color( color, accent, 0.94f * f );
-		Skin_Panel( r->x, r->y, r->w, r->h - 1.0f, 1.5f, color, NULL );
+		Skin_Color( color, accent, 0.10f * f );
+		Skin_Panel( r->x, r->y + 0.5f, r->w, r->h - 1.5f, SKIN_RADIUS, color, NULL );
 	}
-	Skin_Line( r->x, r->y + r->h - 1.0f, r->w, rule );
+	Skin_Line( r->x, r->y + r->h - 1.0f, r->w, skinRule );
 
-	// what is drawn on the row: in the colour of the menu, dark on the row in focus
-	Color_Mix( ink, accent, dark, f );
-	ink[3] = off ? 0.35f : 1.0f;
+	VectorCopy4( accent, ink );
+	ink[3] = off ? 0.4f : 1.0f;
 	if ( off ) {
 		VectorCopy4( parent->disableColor, text );
 	} else {
-		Color_Mix( text, item->window.foreColor, dark, f );
+		Color_Mix( text, item->window.foreColor, white, f );
 		text[3] = item->window.foreColor[3];
 	}
+	// the outline of a widget: that of a field, a little of the accent in it while the row is in focus
+	Color_Mix( edge, skinEdge, accent, 0.4f * f );
+	edge[3] = off ? 0.5f : 1.0f;
 	Text_Word( item->text, word, sizeof( word ), qfalse, qtrue );
 	Row_Text( r->x + ROW_PAD, r->y, r->h - 1.0f, widget.x - 10.0f - ( r->x + ROW_PAD ), ITEM_ALIGN_LEFT, item->textscale, text, word, font );
 
@@ -6383,24 +6387,21 @@ static void Item_Row_Paint( itemDef_t *item ) {
 	case ITEM_TYPE_YESNO:
 	case ITEM_TYPE_MULTI:
 		if ( Item_Row_Toggle( item, &widget, names, &sel, &small ) ) {
-			// a frame with two halves: the one that is set is filled, the other is dark on the row in focus
-			const float	in = 1.2f, half = ( widget.w - 2.0f * in ) * 0.5f;
+			// two settings side by side in a dark field: the one that is set has the accent, its word is dark
+			const float	in = 1.6f, half = ( widget.w - 2.0f * in ) * 0.5f;
 			int			i;
 
 			item->skinValue = Skin_Ease( item->skinValue, (qboolean)( sel != 0 ), SKIN_EASE_MSEC );
-			Skin_Color( color, dark, 0.40f + 0.60f * f );
-			Skin_Color( edge, ink, 0.85f );
-			Skin_Panel( widget.x, widget.y, widget.w, widget.h, 1.5f, color, edge );
-			Skin_Color( color, accent, off ? 0.35f : 1.0f );
-			Skin_Panel( widget.x + in + item->skinValue * half, widget.y + in, half, widget.h - 2.0f * in, 1.0f, color, NULL );
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, SKIN_RADIUS, skinField, edge );
+			Skin_Panel( widget.x + in + item->skinValue * half, widget.y + in, half, widget.h - 2.0f * in, SKIN_RADIUS_INNER, ink, NULL );
 			for ( i = 0; i < 2; i++ ) {
-				Color_Mix( color, accent, dark, i ? item->skinValue : 1.0f - item->skinValue );
+				Color_Mix( color, skinMuted, skinOnAccent, i ? item->skinValue : 1.0f - item->skinValue );
 				color[3] = off ? 0.5f : 1.0f;
-				Row_Text( widget.x + in + half * ( i + 0.5f ), widget.y, widget.h, 0.0f, ITEM_ALIGN_CENTER, small, color, names[i], font );
+				Row_Text( widget.x + in + half * ( i + 0.5f ), widget.y, widget.h, half - 2.0f, ITEM_ALIGN_CENTER, small, color, names[i], font );
 			}
 		} else {
-			// one of several: its name between two arrows
-			const float aw = ROW_ARROW * 0.62f;
+			// one of several: its name between two arrows, in a dark field
+			const float aw = ROW_ARROW * 0.55f, pad = 5.0f;
 
 			Text_Word( Item_Multi_Setting( item ), word, sizeof( word ), qfalse, qfalse );
 			if ( word[0] == '*' ) {
@@ -6412,43 +6413,42 @@ static void Item_Row_Paint( itemDef_t *item ) {
 			if ( !strpbrk( word, "0123456789" ) ) {
 				Text_Caps( word );
 			}
-			Skin_Arrow( widget.x + 1.0f, mid - ROW_ARROW * 0.5f, aw, ROW_ARROW, qtrue, ink );
-			Skin_Arrow( widget.x + widget.w - 1.0f - aw, mid - ROW_ARROW * 0.5f, aw, ROW_ARROW, qfalse, ink );
-			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, widget.w - 2.0f * aw - 10.0f, ITEM_ALIGN_CENTER, small, ink, word, font );
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, SKIN_RADIUS, skinField, edge );
+			Skin_Arrow( widget.x + pad, mid - ROW_ARROW * 0.4f, aw, ROW_ARROW * 0.8f, qtrue, ink );
+			Skin_Arrow( widget.x + widget.w - pad - aw, mid - ROW_ARROW * 0.4f, aw, ROW_ARROW * 0.8f, qfalse, ink );
+			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, widget.w - 2.0f * ( aw + pad ) - 6.0f, ITEM_ALIGN_CENTER, small, ink, word, font );
 		}
 		break;
 
 	case ITEM_TYPE_SLIDER: {
-		// what it stands at, and a track that is filled up to a handle
+		// a track filled up to its knob, what it stands at after it
 		float w, x = Item_Slider_Track( item, &w );
 		const float part = Com_Clamp( 0.0f, 1.0f, ( Item_Slider_ThumbPosition( item ) - x ) / w );
 
-		Row_Text( widget.x + 1.0f, widget.y, widget.h, ROW_NUMBER - 5.0f, ITEM_ALIGN_LEFT, small, ink, Item_Slider_Shown( item ), font );
-		Skin_Color( color, ink, 0.35f );
-		Skin_Panel( x, mid - 0.75f, w, 1.5f, 0.75f, color, NULL );
-		Skin_Panel( x, mid - 0.75f, w * part, 1.5f, 0.75f, ink, NULL );
-		Color_Mix( color, white, dark, f );
-		color[3] = ink[3];
-		Skin_Panel( x + w * part - 1.5f, mid - 5.0f, 3.0f, 10.0f, 1.2f, color, NULL );
+		Skin_SliderTrack( x, mid, w, part, accent, f, off ? 0.4f : 1.0f );
+		Row_Text( widget.x + widget.w - 1.0f, widget.y, widget.h, ROW_NUMBER, ITEM_ALIGN_RIGHT, small, ink, Item_Slider_Shown( item ), font );
 		break;
 	}
 
 	case ITEM_TYPE_BIND: {
-		// the keys in a box, which is lit while the next key that is pressed will be taken
+		// the keys in a box like a key of the keyboard, which takes the accent while the next key that is pressed
+		// will be taken
 		const qboolean waiting = (qboolean)( g_bindItem == item && g_waitingForKey );
 
 		BindingFromName( item->cvar );
-		Skin_Color( color, dark, waiting ? 1.0f : 0.35f + 0.65f * f );
-		Skin_Color( edge, waiting ? white : ink, waiting ? 1.0f : 0.45f );
-		Skin_Panel( widget.x, widget.y, widget.w, widget.h, 1.5f, color, edge );
 		if ( waiting ) {
-			Skin_Color( color, white, ( ( DC->realTime / BLINK_DIVISOR ) & 1 ) ? 1.0f : 0.35f );
+			Color_Mix( color, skinKeyFill, accent, 0.12f );
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, SKIN_RADIUS, color, accent );
+			Skin_Color( color, white, ( ( DC->realTime / BLINK_DIVISOR ) & 1 ) ? 1.0f : 0.45f );
 			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, 0.0f, ITEM_ALIGN_CENTER, small, color, "? ? ?", font );
 		} else if ( !Q_stricmp( g_nameBind, "???" ) ) {
-			Skin_Color( color, ink, 0.45f );
-			Skin_Panel( widget.x + widget.w * 0.5f - 4.0f, mid - 0.5f, 8.0f, 1.0f, 0.5f, f > 0.5f ? accent : color, NULL );
+			// nothing bound: an empty field with a dash
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, SKIN_RADIUS, NULL, skinRule );
+			Skin_Panel( widget.x + widget.w * 0.5f - 4.0f, mid - 0.5f, 8.0f, 1.0f, 0.5f, f > 0.5f ? accent : skinFaint, NULL );
 		} else {
-			Color_Mix( color, item->window.foreColor, accent, f );
+			Color_Mix( edge, skinKeyEdge, accent, 0.5f * f );
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, SKIN_RADIUS, skinKeyFill, edge );
+			Color_Mix( color, item->window.foreColor, white, f );
 			color[3] = off ? 0.5f : 1.0f;
 			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, widget.w - 8.0f, ITEM_ALIGN_CENTER, small, color, g_nameBind, font );
 		}
@@ -6457,7 +6457,7 @@ static void Item_Row_Paint( itemDef_t *item ) {
 
 	case ITEM_TYPE_EDITFIELD:
 	case ITEM_TYPE_NUMERICFIELD: {
-		// what was typed, in a box. "row 2": it is not shown unless it is being typed (a password)
+		// what was typed, in a dark field. "row 2": it is not shown unless it is being typed (a password)
 		const qboolean			editing = (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && g_editingField );
 		const editFieldDef_t	*editPtr = item->typeData.edit;
 		// (what the text calls take as a limit is a width: what does not fit into the box is not drawn)
@@ -6482,10 +6482,8 @@ static void Item_Row_Paint( itemDef_t *item ) {
 				}
 			}
 		}
-		Skin_Color( color, dark, editing ? 1.0f : 0.35f + 0.65f * f );
-		Skin_Color( edge, editing ? white : ink, editing ? 1.0f : 0.45f );
-		Skin_Panel( widget.x, widget.y, widget.w, widget.h, 1.5f, color, edge );
-		Color_Mix( color, item->window.foreColor, accent, f );
+		Skin_Panel( widget.x, widget.y, widget.w, widget.h, SKIN_RADIUS, skinField, editing ? accent : edge );
+		Color_Mix( color, item->window.foreColor, white, editing ? 1.0f : f );
 		color[3] = off ? 0.5f : 1.0f;
 		mid = widget.y + ( widget.h - DC->textHeight( "A", small, font ) ) * 0.5f;
 		if ( editing ) {
@@ -6499,7 +6497,7 @@ static void Item_Row_Paint( itemDef_t *item ) {
 
 	default:
 		// something to click: an arrow says so
-		Skin_Arrow( widget.x + widget.w - 1.0f - ROW_ARROW * 0.62f, mid - ROW_ARROW * 0.5f, ROW_ARROW * 0.62f, ROW_ARROW, qfalse, ink );
+		Skin_Arrow( widget.x + widget.w - 1.0f - ROW_ARROW * 0.55f, mid - ROW_ARROW * 0.4f, ROW_ARROW * 0.55f, ROW_ARROW * 0.8f, qfalse, ink );
 		break;
 	}
 }
@@ -6523,8 +6521,19 @@ static void Item_Tab_Paint( itemDef_t *item ) {
 	if ( ( item->window.flags & WINDOW_DECORATION ) && item->flow != 3 ) {
 		return;
 	}
+	if ( item->tab && item->textalignment == ITEM_ALIGN_LEFT ) {
+		// a tab of a list of pages one under the other (the categories of Setup): the open one is filled and has a
+		// bar at its left, the one under the mouse is lit
+		Skin_Color( color, parent->focusColor, 0.16f * item->skinValue + 0.08f * item->skinFocus * ( 1.0f - item->skinValue ) );
+		Skin_Panel( r->x, r->y, r->w, r->h, SKIN_RADIUS, color, NULL );
+		if ( item->skinValue > 0.0f ) {
+			Skin_Color( color, parent->focusColor, item->skinValue );
+			Skin_Panel( r->x, r->y + 2.0f, 1.6f, r->h - 4.0f, 0.8f, color, NULL );
+		}
+		return;
+	}
 	Skin_Color( color, parent->focusColor, Q_max( item->skinValue, 0.35f * item->skinFocus ) );
-	Skin_Panel( r->x + TAB_PAD - 3.0f, r->y + r->h - 2.0f, r->w - 2.0f * ( TAB_PAD - 3.0f ), 2.0f, 1.0f, color, NULL );
+	Skin_Panel( r->x + TAB_PAD - 3.0f, r->y + r->h - 1.6f, r->w - 2.0f * ( TAB_PAD - 3.0f ), 1.6f, 0.8f, color, NULL );
 }
 
 // "flow 1": a short line between this button of a bar and the one in front of it (Menu_TabsLayout says whether
@@ -8983,6 +8992,48 @@ void UI_ClearG2Pointer(void *ghoul2)
 	}
 }
 
+#ifdef UI_BUILD
+/*
+A model item that gets another model frees its old ghoul2 instance only in the next frame of the ui. A model item
+painted earlier in the same frame has handed that instance to the renderer, which draws it at the end of the frame:
+freed at once, its bone cache was read after it was gone, and both renderers crashed (signal 11 in
+CBoneCache::EvalRender or G2_BoneMatrices). That happened on the profile page when the list of heads came after the
+figure in the menu file and chose a head while it was painted. The instance stays in the tracking list until it is
+freed, so UI_CleanupGhoul2 frees it if the ui shuts down first. (VisionJK)
+*/
+#define UI_G2_DEFERRED	32
+
+static void	*uiG2Deferred[UI_G2_DEFERRED];
+static int	uiNumG2Deferred;
+
+static void UI_FreeGhoul2Now( void *ghoul2 ) {
+	UI_ClearG2Pointer( ghoul2 );
+	if ( trap->G2_HaveWeGhoul2Models( ghoul2 ) ) {
+		trap->G2API_CleanGhoul2Models( &ghoul2 );
+	}
+}
+
+static void UI_FreeGhoul2Later( void *ghoul2 ) {
+	if ( uiNumG2Deferred >= UI_G2_DEFERRED ) {
+		// (more than a frame can draw: the oldest one is surely done with)
+		UI_FreeGhoul2Now( uiG2Deferred[0] );
+		memmove( uiG2Deferred, uiG2Deferred + 1, sizeof( uiG2Deferred[0] ) * ( UI_G2_DEFERRED - 1 ) );
+		uiNumG2Deferred--;
+	}
+	uiG2Deferred[uiNumG2Deferred++] = ghoul2;
+}
+
+// once a frame, before anything of the menus is drawn: the frame before has been rendered
+void UI_FreeDeferredGhoul2( void ) {
+	int i;
+
+	for ( i = 0; i < uiNumG2Deferred; i++ ) {
+		UI_FreeGhoul2Now( uiG2Deferred[i] );
+	}
+	uiNumG2Deferred = 0;
+}
+#endif
+
 //Called on shutdown, cleans up all the ghoul2 instances laying around.
 void UI_CleanupGhoul2(void)
 {
@@ -8995,6 +9046,9 @@ void UI_CleanupGhoul2(void)
 
 		next = next->next;
 	}
+#ifdef UI_BUILD
+	uiNumG2Deferred = 0;	// (those were in the list and are freed now)
+#endif
 }
 
 // asset_model <string>
@@ -9019,8 +9073,9 @@ qboolean ItemParse_asset_model_go( itemDef_t *item, const char *name,int *runTim
 	{ //it's a ghoul2 model then
 		if ( item->ghoul2 )
 		{
-			UI_ClearG2Pointer(item->ghoul2);	//remove from tracking list
-			trap->G2API_CleanGhoul2Models(&item->ghoul2);	//remove ghoul info
+			// (freed in the next frame, see UI_FreeGhoul2Later)
+			UI_FreeGhoul2Later( item->ghoul2 );
+			item->ghoul2 = NULL;
 			item->flags &= ~ITF_G2VALID;
 		}
 

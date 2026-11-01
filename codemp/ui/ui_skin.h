@@ -33,6 +33,22 @@ drawn as it always was. The file is built into the ui module and into the cgame,
 #define SKIN_FONT_MONO		6		// "font 6": DejaVu Sans Mono
 #define SKIN_FONT_BOLD		7		// "font 7": Noto Sans Bold
 #define SKIN_EASE_MSEC		130		// how long a mark takes to come and to go
+#define SKIN_RADIUS			3.2f	// the corners of a field, a choice, a row: 6 pixels of a window 900 high
+#define SKIN_RADIUS_INNER	2.1f	// the corners of the part of a choice that is chosen
+
+// The colours of the widgets (docs/japlus/ui.md, "The look"). The accent is not among them: it is the
+// focusColor of the menu, so a menu file can change it.
+extern const vec4_t skinField;			// inside of a field, a choice, a switch that is off
+extern const vec4_t skinEdge;			// their outline
+extern const vec4_t skinKeyFill;		// a key a command is bound to
+extern const vec4_t skinKeyEdge;
+extern const vec4_t skinOnAccent;		// words on the accent: the setting that is chosen
+extern const vec4_t skinMuted;			// words of a setting that is not chosen
+extern const vec4_t skinFaint;			// a key that is not bound, the knob of a switch that is off
+extern const vec4_t skinRule;			// the line under a row
+extern const vec4_t skinTrack;			// the part of a slider above what it stands at
+extern const vec4_t skinThumb;			// the knob of a slider
+extern const vec4_t skinScrollThumb;	// the bar beside a list
 
 qboolean	Skin_Ready( void );
 void		Skin_Reset( void );
@@ -58,6 +74,7 @@ void		Skin_ItemBack( itemDef_t *item );
 void		Skin_TextColor( itemDef_t *item, vec4_t out );
 void		Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on );
 void		Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction );
+void		Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha );
 void		Skin_Field( itemDef_t *item, float x, float y, float width, float height, qboolean editing );
 void		Skin_Bar( float x, float y, float w, float h, float fraction, const vec4_t fill, const vec4_t back );
 void		Skin_ScrollBar( float x, float y, float w, float h, float start, float part, qboolean horizontal, const vec4_t accent );

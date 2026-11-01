@@ -7,18 +7,18 @@
 		fullScreen				MENU_TRUE
 		rect					0 0 640 480
 		visible					0
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					40
 		descY					80
 		descScale				0.8
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_LEFT
 		onOpen
 		{
 			hide gamedesc ;
 			show jump_desc ;
-			setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor jumpmenubutton forecolor 0.43 0.83 1 1 ;
+			setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+			setitemcolor jumpmenubutton forecolor 0.36 0.78 0.96 1 ;
 		}
 		onESC
 		{
@@ -44,7 +44,7 @@
 			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.22
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -79,7 +79,7 @@
 			text					"JEDI ACADEMY"
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 		}
 
@@ -89,7 +89,7 @@
 			rect					340 31 52 2
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 1
+			backcolor				0.36 0.78 0.96 1
 			radius					1
 			decoration
 		}
@@ -109,7 +109,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				36
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 			visible					1
 			mouseEnter { show newgamebutton_glow }
 			mouseExit { hide newgamebutton_glow }
@@ -137,7 +137,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				36
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show profilebutton_glow }
 			mouseExit { hide profilebutton_glow }
@@ -166,7 +166,7 @@
 			textstyle				0
 			textalignx				36
 			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show controlsbutton_glow }
 			mouseExit { hide controlsbutton_glow }
@@ -195,7 +195,7 @@
 			textstyle				0
 			textalignx				36
 			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show setupbutton_glow }
 			mouseExit { hide setupbutton_glow }
@@ -258,9 +258,9 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			rect					230 100 370 235
-			backcolor				0.035 0.07 0.12 0.55
+			backcolor				0.016 0.031 0.063 0.45
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			radius					5
@@ -272,11 +272,11 @@
 			rect					40 100 180 235
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					5.3
 			shadow					8
-			sheen					0.06
+			sheen					0
 			decoration
 		}
 
@@ -294,7 +294,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight1 }
@@ -302,8 +302,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor jumpmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor jumpmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show jump_desc ;
@@ -336,10 +336,10 @@
 			textalign				ITEM_ALIGN_LEFT
 			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
@@ -356,7 +356,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight2 }
@@ -364,8 +364,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor speedmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor speedmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show speed_desc ;
@@ -397,10 +397,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -418,7 +418,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight3 }
@@ -426,8 +426,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor pushmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor pushmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show push_desc ;
@@ -459,10 +459,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -480,7 +480,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight4 }
@@ -488,8 +488,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor pullmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor pullmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show pull_desc ;
@@ -521,10 +521,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -542,7 +542,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight5 }
@@ -550,8 +550,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor sightmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor sightmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show sight_desc ;
@@ -583,10 +583,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -604,7 +604,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight6 }
@@ -612,8 +612,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor protectmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor protectmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show protect_desc ;
@@ -645,10 +645,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -666,7 +666,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight7 }
@@ -674,8 +674,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor absorbmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor absorbmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show absorb_desc ;
@@ -707,10 +707,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -728,7 +728,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight8 }
@@ -736,8 +736,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor healmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor healmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show heal_desc ;
@@ -769,10 +769,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -790,7 +790,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight9 }
@@ -798,8 +798,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor trickmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor trickmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show mindtrick_desc ;
@@ -831,10 +831,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -852,7 +852,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight10 }
@@ -860,8 +860,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor thealmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor thealmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show theal_desc ;
@@ -893,10 +893,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -914,7 +914,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight11 }
@@ -922,8 +922,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor gripmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor gripmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show grip_desc ;
@@ -955,10 +955,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -976,7 +976,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight12 }
@@ -984,8 +984,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor drainmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor drainmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show drain_desc ;
@@ -1017,10 +1017,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -1038,7 +1038,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight13 }
@@ -1046,8 +1046,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor lightmenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor lightmenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show light_desc ;
@@ -1079,10 +1079,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -1100,7 +1100,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight14 }
@@ -1108,8 +1108,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor ragemenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor ragemenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show rage_desc ;
@@ -1141,10 +1141,10 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 
@@ -1162,7 +1162,7 @@
 			textaligny				-3.8
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
 			mouseEnter { show smallhighlight15 }
@@ -1170,8 +1170,8 @@
 			action
 			{
 				play "sound/interface/button1.wav" ;
-				setitemcolor force_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor powermenubutton forecolor 0.43 0.83 1 1 ;
+				setitemcolor force_submenu forecolor 0.86 0.90 0.945 1 ;
+				setitemcolor powermenubutton forecolor 0.36 0.78 0.96 1 ;
 				show setup_background;
 				hide gamedesc ;
 				show power_desc ;
@@ -1203,14 +1203,14 @@
 			textscale				0.68
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
+			outlinecolor			0.36 0.78 0.96 0.22
 			textaligny				1
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		backdrop				1
 
 		itemDef
@@ -1230,7 +1230,7 @@
 			rect					0 446 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -1250,7 +1250,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -1283,7 +1283,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show exitgamebutton_glow }
 			mouseExit { hide exitgamebutton_glow }

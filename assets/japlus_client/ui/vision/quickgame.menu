@@ -7,11 +7,11 @@
 		fullScreen				MENU_TRUE
 		rect					0 0 640 480
 		visible					1
-		focusColor				0.43 0.83 1 1
+		focusColor				0.36 0.78 0.96 1
 		descX					27
 		descY					80
 		descScale				0.8
-		descColor				0.60 0.69 0.78 1
+		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_LEFT
 		onEsc
 		{
@@ -47,7 +47,7 @@
 			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.22
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -82,7 +82,7 @@
 			text					"JEDI ACADEMY"
 			font					5
 			textscale				0.5
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			decoration
 		}
 
@@ -92,7 +92,7 @@
 			rect					340 31 52 2
 			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 1
+			backcolor				0.36 0.78 0.96 1
 			radius					1
 			decoration
 		}
@@ -118,28 +118,23 @@
 		itemDef
 		{
 			name					solo_gametypefield
-			style					WINDOW_STYLE_EMPTY
+			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_NETGAMETYPE
 			text					@MENUS_GAME_TYPE
 			descText				@MENUS_ALLOWS_YOU_TO_SELECT
 			textstyle				0
-			rect					165 100 300 32
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				85
-			textaligny				0.5
+			rect					40 84 190 22
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				8
+			textaligny				5.6
 			font					5
-			textscale				0.86
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.6
+			forecolor				0.86 0.90 0.945 1
 			visible					1
-			border					0
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.153 0.251 0.373 1
 			action { play "sound/interface/button1.wav" }
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 125 57 400 38
-			}
-			mouseExit { hide button_glow }
+			radius					3.2
+			backcolor				0.027 0.051 0.102 0.9
 		}
 
 		itemDef
@@ -148,13 +143,13 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_MAP_LISTING
-			rect					25 145 200 24
+			rect					40 112 190 18
 			font					5
-			textscale				0.67
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				100
+			textscale				0.52
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				2
 			textaligny				1.25
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 			caps					1
@@ -163,43 +158,29 @@
 		itemDef
 		{
 			name					maplist
-			rect					30 165 194 250
+			rect					40 132 190 270
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
 			elementheight			20
 			font					5
-			textscale				0.68
+			textscale				0.62
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_ALLMAPS
 			textstyle				0
 			textalign				3
 			textaligny				3
-			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.60 0.69 0.78 1
-			backcolor				0 0 0 0.30
-			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.031 0.055 0.11 0.86
+			outlinecolor			0.36 0.78 0.96 0.22
 			descText				@MENUS_CHOOSE_YOUR_GAME
 			visible					1
 			columns					1 2 190 172
 			action { play "sound/interface/button1.wav" ; }
-			mouseEnter { setitemcolor maplist bordercolor 0.43 0.83 1 0.6 }
-			mouseExit { setitemcolor maplist bordercolor 0.43 0.83 1 0.6 }
-			radius					4
-		}
-
-		itemDef
-		{
-			name					setup_background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					275 144 340 280
-			backcolor				0.035 0.07 0.12 0.55
-			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			decoration
-			radius					5
+			mouseEnter { setitemcolor maplist bordercolor 0.36 0.78 0.96 0.6 }
+			mouseExit { setitemcolor maplist bordercolor 0.36 0.78 0.96 0.6 }
+			radius					5.3
 		}
 
 		itemDef
@@ -207,8 +188,8 @@
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_STARTMAPCINEMATIC
-			rect					285 164 320 240
-			bordercolor				0.43 0.83 1 0.16
+			rect					250 90 344 306
+			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			backcolor				0 0 0 0
 			radius					5
@@ -220,14 +201,15 @@
 		{
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
-			rect					284 163 322 242
-			bordercolor				0.43 0.83 1 0.16
+			rect					244 84 356 318
+			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			backcolor				0 0 0 0
-			radius					5
+			radius					5.3
+			decoration
 		}
 		skin					1
-		disableColor			0.36 0.42 0.50 1
+		disableColor			0.40 0.47 0.56 1
 		backdrop				1
 
 		itemDef
@@ -252,7 +234,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.43 0.83 1 1
+			forecolor				0.36 0.78 0.96 1
 		}
 
 		itemDef
@@ -277,7 +259,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -302,7 +284,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -327,7 +309,7 @@
 			textalignx				36
 			textaligny				4
 			caps					1
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 		}
 
 		itemDef
@@ -347,7 +329,7 @@
 			rect					0 446 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.18
+			backcolor				0.086 0.149 0.247 1
 			wide					1
 			decoration
 		}
@@ -367,7 +349,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -400,7 +382,7 @@
 			textstyle				0
 			textalignx				45
 			textaligny				11.6
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
 			{
@@ -432,7 +414,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				61
 			textaligny				5.6
-			forecolor				1 1 1 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -447,9 +429,9 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			backcolor				0.43 0.83 1 0.22
-			bordercolor				0.43 0.83 1 0.8
-			radius					3
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					3.2
 		}
 	}
 }
