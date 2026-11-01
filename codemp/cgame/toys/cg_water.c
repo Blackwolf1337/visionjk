@@ -63,7 +63,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WATER_SPLASHES		256			// droplets of the splashes in the air at once (drawn by the renderer)
 #define WATER_POOL			0.3f		// of the water for standing water, from which a hit splashes as into water
 #define WATER_STANDING		0.25f		// of the standing water of the puddles added up, where it stands (POOL of wet.frag)
-#define WATER_PRINTS		32			// wet footprints at once
+#define WATER_PRINTS		32			// wet footprints and pieces of the tracks of wet tires at once
 #define WATER_PRINT_MSEC	20000		// a footprint dries in this time
 #define WATER_FOOT			5.5f		// half the length of a foot
 #define WATER_FEET_STEPS	8			// steps out of standing water that leave wet prints
@@ -109,9 +109,11 @@ typedef struct {
 typedef struct {
 	qboolean	active;
 	qboolean	right;			// the right foot
+	qboolean	track;			// a piece of the track of a wet tire (CG_WaterTrack), from origin to end
 	int			time;			// cg.time it was made
 	float		yaw, wet;		// which way the foot pointed, how wet it was
-	vec3_t		origin, normal;
+	float		width;			// of the tire
+	vec3_t		origin, normal, end;
 } waterPrint_t;
 
 typedef struct {
@@ -626,6 +628,51 @@ void CG_WaterImpact( const vec3_t at, float strength ) {
 	trap->S_StartSound( (float *)at, ENTITYNUM_WORLD, CHAN_AUTO, water.poolSound[rand() % 3] );
 }
 
+/*
+=================
+CG_WaterWheel
+
+A wheel of an RC car (cg_rccar.c) rolls at "at" with "velocity". In standing water it sprays (effects: droplets and a
+ring, now and then the sound of it). How wet the tire comes out: 1 from standing water, 0.5 from wet ground, 0 dry.
+=================
+*/
+float CG_WaterWheel( const vec3_t at, const vec3_t normal, const vec3_t velocity, qboolean effects ) {
+	if ( !water.registered || normal[2] < 0.7f )
+		return 0.0f;
+	if ( Water_Standing( at ) > WATER_STANDING ) {
+		const float speed = VectorLength( velocity );
+
+		if ( effects && speed > 40.0f ) {
+			Water_IntoPool( at, normal, Com_Clamp( 0.1f, 0.6f, speed / 800.0f ) );
+			if ( Water_Liquid() )
+				Water_Splash( at, normal, velocity, qtrue );
+			if ( !( rand() & 3 ) )
+				trap->S_StartSound( (float *)at, ENTITYNUM_WORLD, CHAN_AUTO, water.poolSound[rand() % 3] );
+		}
+		return 1.0f;
+	}
+	return Water_WetAt( at ) ? 0.5f : 0.0f;
+}
+
+// a piece of the track of a wet tire from "from" to "to", as wet as "wet" (cg_rccar.c); it dries as a footprint does
+void CG_WaterTrack( const vec3_t from, const vec3_t to, const vec3_t normal, float width, float wet ) {
+	waterPrint_t *print;
+
+	if ( !water.registered || wet <= 0.0f )
+		return;
+	print = &water.prints[water.nextPrint];
+	water.nextPrint = ( water.nextPrint + 1 ) % WATER_PRINTS;
+	memset( print, 0, sizeof( *print ) );
+	print->active = qtrue;
+	print->track = qtrue;
+	print->time = cg.time;
+	print->wet = wet;
+	print->width = width;
+	VectorCopy( from, print->origin );
+	VectorCopy( to, print->end );
+	VectorCopy( normal, print->normal );
+}
+
 // the droplets of the splashes fly on to cg.time; one that hits something is gone
 static void Water_MoveSplashes( void ) {
 	int i;
@@ -942,6 +989,15 @@ static void Water_AddWet( void ) {
 		spot->wet = p->wet * ( 1.0f - Water_Smooth( 0.25f, 1.0f, (float)age / WATER_PRINT_MSEC ) );
 		spot->seed = AngleNormalize360( p->yaw ) / 360.0f;
 		spot->kind = p->right ? WET_FOOT_RIGHT : WET_FOOT_LEFT;
+		if ( p->track ) {
+			// (the middle, one end, half the length and the width round it, and half the width)
+			VectorAdd( p->origin, p->end, spot->origin );
+			VectorScale( spot->origin, 0.5f, spot->origin );
+			VectorCopy( p->end, spot->hit );
+			spot->radius = Distance( p->origin, p->end ) * 0.5f + p->width;
+			spot->seed = p->width;
+			spot->kind = WET_TRACK;
+		}
 	}
 	// the rings on standing water
 	for ( i = 0; i < WATER_RINGS && count < WET_MAX_SPOTS; i++ ) {

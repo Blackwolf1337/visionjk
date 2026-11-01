@@ -3117,6 +3117,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameLiquid", "1", CVAR_ROM, "" );
 	// and the puddles and wet patches of the toys drawn by the renderer (ext.R_AddWet)
 	Cvar_Get( "v_cgameWet", "1", CVAR_ROM, "" );
+	// and looping sounds at a volume of their own (ext.S_AddLoopingSoundVolume, the motor of the RC car)
+	Cvar_Get( "v_cgameLoopVolume", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test

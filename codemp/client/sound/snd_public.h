@@ -30,6 +30,8 @@ void S_Shutdown( void );
 
 // if origin is NULL, the sound will be dynamically sourced from the entity
 void S_AddAmbientLoopingSound( const vec3_t origin, unsigned char volume, sfxHandle_t sfxHandle );
+// VisionJK: a looping sound of an entity as loud as volume (0 to 255) of the full volume, for the cgame (ext.S_AddLoopingSoundVolume)
+void S_AddLoopingSoundVolume( int entityNum, const vec3_t origin, const vec3_t velocity, sfxHandle_t sfxHandle, int volume );
 void S_StartAmbientSound( const vec3_t origin, int entityNum, unsigned char volume, sfxHandle_t sfxHandle );
 void S_MuteSound(int entityNum, int entchannel);
 void S_StartSound( const vec3_t origin, int entnum, int entchannel, sfxHandle_t sfx );

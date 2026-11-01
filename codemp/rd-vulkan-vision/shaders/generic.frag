@@ -67,6 +67,48 @@ vec4 DynamicLight( Draw d ) {
 	return vec4( texture( TEX0( d ), v_texCoord0 ).rgb * light, 1.0 );
 }
 
+// The tangent frame of a pixel from how its position and its texture coordinates change to the next pixel (Schüler,
+// "Followup: Normal mapping without precomputed tangents", 2013): the vertices carry no tangents
+mat3 CotangentFrame( vec3 n, vec3 p, vec2 uv ) {
+	vec3 dp1 = dFdx( p ), dp2 = dFdy( p );
+	vec2 duv1 = dFdx( uv ), duv2 = dFdy( uv );
+	vec3 dp2perp = cross( dp2, n ), dp1perp = cross( n, dp1 );
+	vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+	vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+	float invmax = inversesqrt( max( max( dot( t, t ), dot( b, b ) ), 1e-20 ) );
+
+	return mat3( t * invmax, b * invmax, n );
+}
+
+// A stage of a model with a material (shader keywords normalMap and specular): lit per pixel by the light of its
+// entity as the vertices are lit otherwise (ambient, directed and its direction in model space), with a broad
+// shine of the surface, a sharp one of a clear coat over it that is smooth over the bumps, and the light of the
+// room the coat throws back at a flat angle (Fresnel with F0 0.04)
+vec3 MaterialLight( Draw d, vec3 albedo ) {
+	Transform t = TRANSFORMS( d.transform );
+	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
+	vec3 smooth_ = normalize( v_normal );
+	vec3 n = smooth_;
+
+	if ( d.material.w > 0.0 ) {
+		vec3 bump = texture( TEX1( d ), v_texCoord0 ).xyz * 2.0 - 1.0;
+		n = normalize( CotangentFrame( smooth_, v_position, v_texCoord0 ) * bump );
+	}
+	vec3 l = normalize( t.lightDir.xyz );
+	vec3 h = normalize( l + toEye );
+	float facing = max( dot( n, l ), 0.0 );
+	vec3 color = albedo * min( t.ambientLight.rgb + facing * t.directedLight.rgb, vec3( 1.0 ) );
+
+	color += t.directedLight.rgb * d.material.x * pow( max( dot( n, h ), 0.0 ), max( d.material.y, 1.0 ) ) * step( 0.0001, facing );
+	if ( d.material.z > 0.0 ) {
+		float fresnel = 0.04 + 0.96 * pow( 1.0 - max( dot( smooth_, toEye ), 0.0 ), 5.0 );
+
+		color += t.directedLight.rgb * d.material.z * 2.0 * pow( max( dot( smooth_, h ), 0.0 ), 300.0 ) * step( 0.0001, dot( smooth_, l ) );
+		color += ( t.ambientLight.rgb + t.directedLight.rgb * 0.3 ) * d.material.z * fresnel * 0.6;
+	}
+	return color;
+}
+
 void main() {
 	Draw d = DRAWS( v_draw );
 
@@ -82,6 +124,9 @@ void main() {
 	}
 
 	vec4 color = texture( TEX0( d ), ( TCGEN0( d.flags ) == TCGEN_REST ) ? v_screenCoord0 : v_texCoord0 ) * v_color;
+	if ( MATERIAL( d.flags ) ) {
+		color.rgb = MaterialLight( d, color.rgb );
+	}
 
 	// the second texture of a stage, combined the way glTexEnv did it
 	uint env = TEXENV( d.flags );

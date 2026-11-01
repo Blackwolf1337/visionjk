@@ -2007,6 +2007,8 @@ qboolean	CG_WaterViewGun( void );				// the own one in first person, in place of
 qboolean	CG_WaterStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right, qboolean heavy );
 void		CG_WaterLand( centity_t *cent, float strength );	// a jump or a landing into standing water
 void		CG_WaterImpact( const vec3_t at, float strength );	// a shot into standing water
+float		CG_WaterWheel( const vec3_t at, const vec3_t normal, const vec3_t velocity, qboolean effects );	// RC car
+void		CG_WaterTrack( const vec3_t from, const vec3_t to, const vec3_t normal, float width, float wet );
 int			CG_WaterTorsoAnim( centity_t *cent, int anim );	// a rifle held up while it is in the hand
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)

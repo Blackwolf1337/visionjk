@@ -1351,6 +1351,26 @@ void S_AddLoopingSound( int entityNum, const vec3_t origin, const vec3_t velocit
 
 /*
 ==================
+S_AddLoopingSoundVolume
+
+VisionJK: S_AddLoopingSound at a volume of its own (0 to 255 of the full one): the motor of the RC car crossfades
+loops of its speeds by it (cgame/toys/cg_rccar.c). Both the mixer and the voices of v_spatial take loop volume.
+==================
+*/
+void S_AddLoopingSoundVolume( int entityNum, const vec3_t origin, const vec3_t velocity, sfxHandle_t sfxHandle, int volume ) {
+	const int before = numLoopSounds;
+
+	if ( volume <= 0 ) {
+		return;
+	}
+	S_AddLoopingSound( entityNum, origin, velocity, sfxHandle );
+	if ( numLoopSounds > before ) {
+		loopSounds[numLoopSounds - 1].volume = Com_Clampi( 0, SOUND_MAXVOL, volume );
+	}
+}
+
+/*
+==================
 S_AddAmbientLoopingSound
 ==================
 */

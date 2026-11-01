@@ -809,6 +809,9 @@ typedef struct cgameImport_s {
 		// this frame (wetSpot_t: puddles and wet patches), between R_ClearScene and R_RenderScene. NULL only asks.
 		// qfalse: the renderer does not draw them (rd-vanilla): the cgame draws marks.
 		qboolean		(*R_AddWet)								( const wetSpot_t *spots, int count );
+		// Only an engine that sets the cvar v_cgameLoopVolume to 1 has this one. S_AddLoopingSound at a volume of
+		// its own, 0 to 255 of the full one: several loops of one entity crossfade by it.
+		void			(*S_AddLoopingSoundVolume)				( int entityNum, const vec3_t origin, const vec3_t velocity, sfxHandle_t sfx, int volume );
 	} ext;
 } cgameImport_t;
 

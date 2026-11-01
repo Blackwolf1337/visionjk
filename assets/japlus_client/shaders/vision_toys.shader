@@ -223,3 +223,123 @@ models/vision/toys/watergun
 		alphaGen lightingSpecular
 	}
 }
+
+// The RC car (models/vision/toys/rccar/, made by tools/toys/rccar.py from Kenney's Toy Car Kit, CC0). rd-vulkan-vision
+// lights its materials per pixel with their normal maps and their shine (normalMap, specular): candy paint under a
+// clear coat, black plastic, rubber with knobs, anodized rims. Other renderers light the pictures by the vertices.
+models/vision/toys/rccar/paint
+{
+	{
+		map models/vision/toys/rccar/paint
+		normalMap models/vision/toys/rccar/paint_n
+		specular 0.6 48 1.0
+		rgbGen lightingDiffuse
+	}
+}
+
+models/vision/toys/rccar/trim
+{
+	{
+		map models/vision/toys/rccar/trim
+		normalMap models/vision/toys/rccar/trim_n
+		specular 0.25 20 0
+		rgbGen lightingDiffuse
+	}
+}
+
+models/vision/toys/rccar/tire
+{
+	{
+		map models/vision/toys/rccar/tire
+		normalMap models/vision/toys/rccar/tire_n
+		specular 0.06 10 0
+		rgbGen lightingDiffuse
+	}
+}
+
+models/vision/toys/rccar/rim
+{
+	{
+		map models/vision/toys/rccar/rim
+		normalMap models/vision/toys/rccar/rim_n
+		specular 1.4 90 0.5
+		rgbGen lightingDiffuse
+	}
+}
+
+// its windows: dark glass under a clear coat
+models/vision/toys/rccar/glass
+{
+	{
+		map models/vision/toys/rccar/glass
+		specular 1.2 160 1.0
+		rgbGen lightingDiffuse
+	}
+}
+
+// its lamps, sprites the cgame puts where they shine (cg_rccar.c): a warm white at the front, red at the back,
+// brighter while it brakes
+models/vision/toys/rccar/lamp
+{
+	cull none
+	{
+		map models/vision/toys/rccar/lamp
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+// a fast wheel (wheel_blur.skin, cg_rccar.c): the tread smeared along by the turn, the rim round its axle
+models/vision/toys/rccar/tire_blur
+{
+	{
+		map models/vision/toys/rccar/tire_blur
+		normalMap models/vision/toys/rccar/tire_blur_n
+		specular 0.06 10 0
+		rgbGen lightingDiffuse
+	}
+}
+
+models/vision/toys/rccar/rim_blur
+{
+	{
+		map models/vision/toys/rccar/rim_blur
+		specular 1.0 40 0.3
+		rgbGen lightingDiffuse
+	}
+}
+
+// the marks of its tires (cg_rccar.c): the tread pressed into soft ground and rubber on hard ground. The picture is
+// how much darker the ground gets, the colour of the vertices fades it out.
+models/vision/toys/rccar/track
+{
+	polygonOffset
+	{
+		map models/vision/toys/rccar/track
+		blendFunc GL_ZERO GL_ONE_MINUS_SRC_COLOR
+		rgbGen vertex
+	}
+}
+
+models/vision/toys/rccar/skid
+{
+	polygonOffset
+	{
+		map models/vision/toys/rccar/skid
+		blendFunc GL_ZERO GL_ONE_MINUS_SRC_COLOR
+		rgbGen vertex
+	}
+}
+
+// the smoke of its tires (effects/vision/tire_smoke.efx)
+models/vision/toys/rccar/smoke
+{
+	nopicmip
+	{
+		map models/vision/toys/rccar/smoke
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}

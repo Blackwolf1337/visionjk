@@ -193,9 +193,10 @@ void StageVertex( StageInput v ) {
 	v_texCoord1 = ModTexCoord( GenTexCoord( TCGEN1( d.flags ), d.tcGenVec1, t.viewOrigin.xyz, v ), d.texMat1, d.texTurb1, v );
 	if ( RGBGEN( d.flags ) != 0u ) {
 		// rgbGen lightingDiffuse: the light of the entity on the normal, times the color of the entity for
-		// lightingDiffuseEntity (RB_CalcDiffuseColor and RB_CalcDiffuseEntityColor of rd-vanilla)
+		// lightingDiffuseEntity (RB_CalcDiffuseColor and RB_CalcDiffuseEntityColor of rd-vanilla). A stage with a
+		// material is lit per pixel instead (generic.frag).
 		float incoming = max( dot( v.normal, t.lightDir.xyz ), 0.0 );
-		vec3 light = min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
+		vec3 light = MATERIAL( d.flags ) ? vec3( 1.0 ) : min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
 
 		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * v.color.a, 0.0, 1.0 ) );
 	} else {

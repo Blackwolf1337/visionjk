@@ -1089,6 +1089,17 @@ void RB_StageIteratorGeneric( void ) {
 				stateBits |= GLS_DEPTHMASK_TRUE;
 			}
 		}
+		// VisionJK: a lit stage with a normal map or a shine (shader keywords normalMap and specular) is lit per
+		// pixel, see generic.frag; the second texture is the normal map then
+		if ( ( pStage->normalMap || pStage->specular[0] > 0.0f || pStage->specular[2] > 0.0f ) && !pStage->bundle[1].image
+			&& ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
+			draw.flags |= VKD_MATERIAL;
+			VectorCopy( pStage->specular, draw.material );
+			if ( pStage->normalMap ) {
+				draw.tex1 = pStage->normalMap->texnum;
+				draw.material[3] = 1.0f;
+			}
+		}
 		draw.flags |= VK_AlphaTest( stateBits );
 		VK_GoreDraw( pStage, &draw );
 		if ( isStatic ) {

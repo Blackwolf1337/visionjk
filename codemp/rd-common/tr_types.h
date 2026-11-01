@@ -199,13 +199,15 @@ typedef struct liquidSegment_s {
 // A wet place on the level the cgame puts into the scene (re.ext.AddWet): where water came to a floor or a wall. The
 // renderer darkens the ground there as wet ground is, makes it shine, and where water stands it mirrors the room
 // (rd-vulkan-vision, shaders/wet.frag). Its edge is ragged, a wall gets streaks that run down. Other kinds: the
-// print of a wet foot, and a ring that runs over standing water from where something came into it.
+// print of a wet foot or a piece of the track of a wet tire, and a ring that runs over standing water from where
+// something came into it.
 #define WET_MAX_SPOTS	112		// in one frame
 
 #define WET_PLACE		0
 #define WET_FOOT_LEFT	1		// radius: half the length of the foot, wet: how wet the print still is, seed: yaw / 360
 #define WET_FOOT_RIGHT	2
 #define WET_RING		3		// radius: how far it runs out, wet: how strong, flow: 0 to 1 of its life
+#define WET_TRACK		4		// a piece of the track of a wet tire from 2 origin - hit to hit, seed: half its width
 
 typedef struct wetSpot_s {
 	vec3_t		origin;

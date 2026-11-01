@@ -53,6 +53,7 @@ layout( location = 0 ) out vec4 o_color;
 #define WET_RING		3		// the kinds of places of tr_types.h
 #define WET_FOOT_LEFT	1
 #define WET_FOOT_RIGHT	2
+#define WET_TRACK		4
 
 // how far in front of the eye the scene is at a pixel of the target
 float SceneDistance( vec2 pixel ) {
@@ -258,6 +259,26 @@ void main() {
 			float width = 2.5 + 5.0 * flow;
 			vec2 out_ = vec2( dot( planar, t ), dot( planar, b ) ) / max( r, 1e-3 );
 			slope += out_ * cos( d * 1.3 ) * exp( -d * d / ( width * width ) ) * wet * ( 1.0 - flow ) * ( 1.0 - flow ) * 0.9;
+			continue;
+		}
+		if ( kind == WET_TRACK ) {
+			// a piece of the track of a wet tire, from 2 centre - hit to hit, half as wide as seed: the knobs of the
+			// tread wetter than between them, drying from the edge in
+			if ( !wall ) {
+				vec3 b_ = hit - nj * dot( hit - centre, nj );
+				vec3 a_ = centre * 2.0 - b_;
+				vec3 ab = b_ - a_;
+				float len = length( ab );
+				vec3 dir = ab / max( len, 1e-3 );
+				vec3 ap = rel + centre - a_;
+				ap -= nj * dot( ap, nj );
+				float along = dot( ap, dir );
+				float side = dot( ap, cross( nj, dir ) );
+				float d = length( ap - dir * clamp( along, 0.0, len ) ) - seed;
+				float knob = step( 0.32, fract( along / 3.1 + ( side > 0.0 ? 0.5 : 0.0 ) ) );
+				d += ( Noise( uv * 1.2 ) - 0.5 ) * 0.3 * seed + ( 1.0 - wet ) * 0.6 * seed;
+				prints = max( prints, ( 1.0 - smoothstep( -0.15 * seed, 0.1 * seed, d ) ) * smoothstep( 0.0, 0.15, wet ) * ( 0.55 + 0.45 * knob ) );
+			}
 			continue;
 		}
 		if ( kind == WET_FOOT_LEFT || kind == WET_FOOT_RIGHT ) {

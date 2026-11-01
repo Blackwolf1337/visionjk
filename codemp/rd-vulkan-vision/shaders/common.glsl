@@ -39,6 +39,7 @@ struct Draw {
 	float	fade;			// a saber mark that fades: its alpha
 	uint	fadeMode;		//	0: it does not, 1: the alpha, 2: the color is no brighter than that either
 	uint	styles;			// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
+	vec4	material;		// MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
 };
 
 BINDING( 0, 0 ) uniform Globals {
@@ -88,6 +89,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
 #define DEFORM( flags )		( ( ( flags ) >> 24 ) & 7u )
+#define MATERIAL( flags )	( ( ( flags ) & 0x08000000u ) != 0u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

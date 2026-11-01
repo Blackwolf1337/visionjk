@@ -2765,9 +2765,9 @@ REFERENCE           UPLOAD_YOUR_OWN_AT_JKA_VISION_MODELS
 LANG_ENGLISH        "Upload your own at jka.vision/models.html"
 LANG_SPANISH        "Sube los tuyos en jka.vision/models.html"
 
-REFERENCE           W_S_DRIVE_A_D_STEER_SPACE_HOP_MOUSE
-LANG_ENGLISH        "W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away."
-LANG_SPANISH        "W/S: avanzar. A/D: girar. Espacio: saltar. Ratón: mirar. Esc: guardarlo."
+REFERENCE           W_S_DRIVE_A_D_STEER_SHIFT_HANDBRAKE
+LANG_ENGLISH        "W/S: drive. A/D: steer. Shift: handbrake. Space: hop. Mouse: look. Esc: put it away."
+LANG_SPANISH        "W/S: avanzar. A/D: girar. Mayús: freno de mano. Espacio: saltar. Ratón: mirar. Esc: guardarlo."
 
 REFERENCE           CHANGED_SETTINGS
 LANG_ENGLISH        "Changed settings"

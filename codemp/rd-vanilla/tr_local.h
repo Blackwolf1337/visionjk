@@ -430,6 +430,12 @@ typedef struct shaderStage_s {
 	bool			glow;
 	// and whether it is drawn in the pass of the dynamic glow only (RGBA_SHADER_BLUR)
 	bool			glowOnly;
+
+	// VisionJK: a stage of a model lit per pixel by rd-vulkan-vision, rd-vanilla draws it as before. normalMap: the
+	// bumps of the surface (normalMap <image>), specular: strength, exponent and clear coat of its shine
+	// (specular <strength> <exponent> <coat>)
+	image_t			*normalMap;
+	float			specular[3];
 } shaderStage_t;
 
 struct shaderCommands_s;

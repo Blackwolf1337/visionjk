@@ -6,7 +6,10 @@
 # thud of the ball on the court), and the water gun (cg_water.c): water_spray.wav (the loop of the jet leaving the
 # nozzle), water_hit1-3.wav (the jet breaking on a hard surface), water_pool1-3.wav (into standing water: the
 # bubbles it drags under ring), water_face.wav (a face full of it) and water_pump.wav (the trigger and the pump of a
-# plastic gun). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
+# plastic gun), and the RC car (cg_rccar.c): rc_motor1-4.wav (loops of its electric motor at four speeds, which the
+# cgame crossfades), rc_scrub.wav (the loop of tires sliding on hard ground), rc_crunch.wav (the loop of tires rolling
+# over dirt and gravel), rc_servo.wav (the buzz of the steering servo), rc_land1-2.wav (the thump of a landing) and
+# rc_on.wav (the chirp of its receiver). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
 # files come out the same every time. Writes into assets/japlus_client/sound/vision/toys/.
 # usage: tools/toys/sounds.py
 import math
@@ -235,6 +238,131 @@ def pump():
 	return out
 
 
+def seamless( render, length, over=0.2 ):
+	"""A loop of length seconds: render( seconds ) made longer, its end laid over its start, so there is no seam."""
+	raw = render( length + over + 2.0 / RATE )
+	m = int( length * RATE )
+	k = int( over * RATE )
+	out = raw[:m]
+	for i in range( k ):
+		w = i / k
+		out[i] = raw[m + i] * ( 1.0 - w ) + raw[i] * w
+	return out
+
+
+def motor( freq, seed ):
+	"""The electric motor of the RC car at one speed, a loop of a second. Its whine: the turn of the rotor (freq,
+	a whole number of Hz, so the tones fit the loop) with the strong second harmonic of the windings, a third and the
+	sixth of its magnets; the gears it drives buzz at 1.7 times that (narrow noise around the mesh of their teeth);
+	the bearings hiss; and the speed controller whines faintly high above it all, at every speed the same."""
+	rnd = random.Random( seed )
+	gear = round( freq * 1.7 )
+
+	def render( length ):
+		n = int( length * RATE )
+		noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+		mesh = bandpass( noise, lambda t: gear, 18.0 )
+		hiss = bandpass( noise, lambda t: 1500.0 + freq, 1.2 )
+		out = []
+		for i in range( n ):
+			t = i / RATE
+			w = 2.0 * math.pi * freq * t
+			warble = 1.0 + 0.06 * math.sin( 2.0 * math.pi * 7.0 * t )
+			whine = ( 0.55 * math.sin( w ) + 0.9 * math.sin( 2.0 * w + 0.3 ) + 0.3 * math.sin( 3.0 * w + 1.1 )
+				+ 0.18 * math.sin( 6.0 * w + 0.7 ) ) * warble
+			esc = 0.05 * math.sin( 2.0 * math.pi * 3150.0 * t )
+			out.append( whine + 1.6 * mesh[i] + ( 0.12 + freq / 4000.0 ) * hiss[i] + esc )
+		return out
+
+	return seamless( render, 1.0 )
+
+
+def scrub():
+	"""Tires sliding on hard ground, a loop: rubber dragged over stone (noise around 1.4 kHz) in grains that come and
+	go, and the thin squeal of it (a tone near 2.1 kHz that wavers)."""
+	rnd = random.Random( 71 )
+
+	def render( length ):
+		n = int( length * RATE )
+		noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+		drag = bandpass( noise, lambda t: 1400.0, 2.0 )
+		grains = bandpass( [rnd.uniform( -1.0, 1.0 ) for _ in range( n )], lambda t: 18.0, 0.7 )
+		out = []
+		phase = 0.0
+		for i in range( n ):
+			t = i / RATE
+			phase += 2.0 * math.pi * ( 2100.0 + 60.0 * math.sin( 2.0 * math.pi * 3.0 * t ) ) / RATE
+			level = 0.6 + 4.0 * abs( grains[i] )
+			out.append( drag[i] * level + 0.25 * math.sin( phase ) * ( 0.5 + 0.5 * math.sin( 2.0 * math.pi * 5.0 * t ) ) )
+		return out
+
+	return seamless( render, 1.2 )
+
+
+def crunch():
+	"""Tires rolling over dirt and gravel, a loop: small stones ticking under the knobs and the low rumble of the
+	ground."""
+	rnd = random.Random( 81 )
+
+	def render( length ):
+		n = int( length * RATE )
+		out = [0.0] * n
+		ticks( out, 0.0, length, 420.0, rnd, 0.8 )
+		noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+		rumble = bandpass( noise, lambda t: 260.0, 1.0 )
+		for i in range( n ):
+			out[i] += 1.4 * rumble[i]
+		return out
+
+	return seamless( render, 1.5 )
+
+
+def servo():
+	"""The steering servo turning the front wheels: the buzz of its small motor rising as it goes, and the grind of
+	its plastic gears: a fifth of a second."""
+	rnd = random.Random( 91 )
+	n = int( 0.2 * RATE )
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+	grind = bandpass( noise, lambda t: 900.0 + 600.0 * t / 0.2, 6.0 )
+	out = []
+	phase = 0.0
+	for i in range( n ):
+		t = i / RATE
+		phase += 2.0 * math.pi * ( 130.0 + 200.0 * t ) / RATE
+		buzz = math.sin( phase ) + 0.5 * math.sin( 3.0 * phase ) + 0.3 * math.sin( 5.0 * phase )
+		out.append( 0.6 * buzz + 1.2 * grind[i] )
+	return fade( out, 0.008, 0.05 )
+
+
+def land( seed ):
+	"""The car landing: the low thump of its body and tires, the knock of its plastic, and its springs ringing
+	out: four tenths of a second."""
+	rnd = random.Random( seed )
+	n = int( 0.4 * RATE )
+	out = [0.0] * n
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+	thud = bandpass( noise, lambda t: 140.0, 1.2 )
+	spring = 300.0 + rnd.uniform( -30.0, 30.0 )
+	for i in range( n ):
+		t = i / RATE
+		out[i] += ( 1.2 * math.sin( 2.0 * math.pi * 62.0 * t ) + 2.0 * thud[i] ) * math.exp( -t / 0.06 ) * min( 1.0, t / 0.002 )
+		out[i] += 0.25 * math.sin( 2.0 * math.pi * spring * t * ( 1.0 - 0.15 * t ) ) * math.exp( -t / 0.12 )
+	click = knock( 950.0, 0.012, 0.08, seed )
+	for k, v in enumerate( click ):
+		out[k] += 0.6 * v
+	return fade( out, 0.0, 0.08 )
+
+
+def power():
+	"""The receiver of the car coming on: two short rising beeps."""
+	out = []
+	for freq, length in ( ( 1500.0, 0.06 ), ( 0.0, 0.03 ), ( 2000.0, 0.08 ) ):
+		for i in range( int( length * RATE ) ):
+			t = i / RATE
+			out.append( math.sin( 2.0 * math.pi * freq * t ) * min( 1.0, t / 0.004, ( length - t ) / 0.01 ) if freq else 0.0 )
+	return out
+
+
 os.makedirs( OUT, exist_ok=True )
 write( 'emote_send.wav', send() )
 write( 'emote_pop.wav', pop() )
@@ -248,3 +376,11 @@ for n in range( 3 ):
 	write( 'water_pool%d.wav' % ( n + 1 ), pool( 61 + n ), 0.7 )
 write( 'water_face.wav', face() )
 write( 'water_pump.wav', pump(), 0.6 )
+for n, freq in enumerate( ( 160, 330, 560, 820 ) ):
+	write( 'rc_motor%d.wav' % ( n + 1 ), motor( freq, 101 + n ), 0.55 )
+write( 'rc_scrub.wav', scrub(), 0.5 )
+write( 'rc_crunch.wav', crunch(), 0.5 )
+write( 'rc_servo.wav', servo(), 0.45 )
+write( 'rc_land1.wav', land( 111 ), 0.8 )
+write( 'rc_land2.wav', land( 112 ), 0.8 )
+write( 'rc_on.wav', power(), 0.35 )

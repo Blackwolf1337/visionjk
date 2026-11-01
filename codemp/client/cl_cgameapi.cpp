@@ -2044,6 +2044,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_LoadImageFit					= CL_LoadImageFit;
 		cgi.ext.R_AddLiquid						= CL_AddLiquid;
 		cgi.ext.R_AddWet						= CL_AddWet;
+		cgi.ext.S_AddLoopingSoundVolume			= S_AddLoopingSoundVolume;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

@@ -101,6 +101,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_DLIGHT			0x00080000u		// the pass that adds one dynamic light, see generic.frag
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
+#define VKD_MATERIAL		0x08000000u		// lit per pixel with material (normal map in tex1, shine), see generic.frag
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
@@ -126,6 +127,7 @@ typedef struct vkDraw_s {		// once per draw
 	float		fade;				// a saber mark that fades (RB_SurfaceGhoul): its alpha
 	uint32_t	fadeMode;			//	0: it does not, 1: the alpha, 2: the color is no brighter than that either
 	uint32_t	styles;				// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
+	float		material[4];		// VKD_MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert

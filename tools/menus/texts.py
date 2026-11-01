@@ -835,7 +835,7 @@ CGAME = {
     'Coming...': 'Kommt...',
     'Get (%s)': 'Holen (%s)',
     'Upload your own at jka.vision/models.html': 'Lade eigene hoch auf jka.vision/models.html',
-    'W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away.': 'W/S: fahren. A/D: lenken. Leertaste: hüpfen. Maus: schauen. Esc: wegräumen.',
+    'W/S: drive. A/D: steer. Shift: handbrake. Space: hop. Mouse: look. Esc: put it away.': 'W/S: fahren. A/D: lenken. Umschalt: Handbremse. Leertaste: hüpfen. Maus: schauen. Esc: wegräumen.',
     # the list of changed settings
     'Changed settings': 'Geänderte Einstellungen',
     'Nothing changed yet.': 'Noch nichts geändert.',

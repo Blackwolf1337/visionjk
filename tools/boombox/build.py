@@ -382,7 +382,8 @@ def encode_normal(n):
 	return (lat << 8) | lng
 
 
-def write_md3(path, name, surfaces):
+def write_md3(path, name, surfaces, tags=()):
+	"""tags: (name, origin) each, with the axes of the model"""
 	for s in surfaces:
 		s.check()
 	points = [v[0] for s in surfaces for v in s.verts]
@@ -413,11 +414,13 @@ def write_md3(path, name, surfaces):
 
 	ofs_frames = 108
 	ofs_tags = ofs_frames + 56
-	ofs_surfaces = ofs_tags
+	ofs_surfaces = ofs_tags + 112 * len(tags)
 	ofs_end = ofs_surfaces + sum(len(b) for b in blobs)
-	data = struct.pack("<4si64siiiiiiiii", b"IDP3", 15, name.encode(), 0, 1, 0, len(surfaces), 0,
+	data = struct.pack("<4si64siiiiiiiii", b"IDP3", 15, name.encode(), 0, 1, len(tags), len(surfaces), 0,
 		ofs_frames, ofs_tags, ofs_surfaces, ofs_end)
 	data += struct.pack("<3f3f3ff16s", *lo, *hi, 0.0, 0.0, 0.0, radius, b"frame0")
+	for tag, origin in tags:
+		data += struct.pack("<64s3f9f", tag.encode(), *origin, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
 	data += b"".join(blobs)
 	assert len(data) == ofs_end
 	with open(path, "wb") as f:

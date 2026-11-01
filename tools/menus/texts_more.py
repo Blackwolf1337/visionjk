@@ -733,7 +733,7 @@ MORE = {
     'Coming...': ('Arrive...', 'Llegando...'),
     'Get (%s)': ('Obtenir (%s)', 'Obtener (%s)'),
     'Upload your own at jka.vision/models.html': ('Envoyez les vôtres sur jka.vision/models.html', 'Sube los tuyos en jka.vision/models.html'),
-    'W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away.': ('W/S : rouler. A/D : tourner. Espace : sauter. Souris : regarder. Échap : le ranger.', 'W/S: avanzar. A/D: girar. Espacio: saltar. Ratón: mirar. Esc: guardarlo.'),
+    'W/S: drive. A/D: steer. Shift: handbrake. Space: hop. Mouse: look. Esc: put it away.': ('W/S : rouler. A/D : tourner. Maj : frein à main. Espace : sauter. Souris : regarder. Échap : le ranger.', 'W/S: avanzar. A/D: girar. Mayús: freno de mano. Espacio: saltar. Ratón: mirar. Esc: guardarlo.'),
     'Changed settings': ('Réglages modifiés', 'Ajustes cambiados'),
     'Nothing changed yet.': ("Rien de modifié pour l'instant.", 'Aún no has cambiado nada.'),
     'Current': ('Actuel', 'Actual'),

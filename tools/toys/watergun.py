@@ -23,9 +23,11 @@ SHARP = math.cos( math.radians( 35.0 ) )	# faces that meet at more than this ang
 MAX_VERTS = 999
 
 
-def read_obj( path ):
-	"""Positions, texture coordinates and triangles (index of position, index of coordinate, three each)."""
+def read_obj( path, groups=None ):
+	"""Positions, texture coordinates and triangles (index of position, index of coordinate, three each). groups:
+	a list that gets the name of the group (g) of each triangle."""
 	positions, coords, tris = [], [], []
+	group = ''
 	for line in open( path ):
 		p = line.split()
 		if not p:
@@ -34,6 +36,8 @@ def read_obj( path ):
 			positions.append( tuple( map( float, p[1:4] ) ) )
 		elif p[0] == 'vt':
 			coords.append( tuple( map( float, p[1:3] ) ) )
+		elif p[0] == 'g':
+			group = p[1] if len( p ) > 1 else ''
 		elif p[0] == 'f':
 			corners = []
 			for c in p[1:]:
@@ -41,6 +45,8 @@ def read_obj( path ):
 				corners.append( ( int( parts[0] ) - 1, int( parts[1] ) - 1 if len( parts ) > 1 and parts[1] else 0 ) )
 			for i in range( 1, len( corners ) - 1 ):
 				tris.append( ( corners[0], corners[i], corners[i + 1] ) )
+				if groups is not None:
+					groups.append( group )
 	return positions, coords, tris
 
 

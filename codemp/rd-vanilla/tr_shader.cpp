@@ -1244,6 +1244,34 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 		}
 		//
+		// VisionJK: normalMap <name>, the bumps of a model stage lit per pixel (rd-vulkan-vision); never compressed
+		//
+		else if ( !Q_stricmp( token, "normalMap" ) )
+		{
+			token = COM_ParseExt( text, qfalse );
+			if ( !token[0] )
+			{
+				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'normalMap' keyword in shader '%s'\n", shader.name );
+				return qfalse;
+			}
+			stage->normalMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+			if ( !stage->normalMap )
+			{
+				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+			}
+		}
+		//
+		// VisionJK: specular <strength> <exponent> <coat>, the shine of a model stage lit per pixel
+		//
+		else if ( !Q_stricmp( token, "specular" ) )
+		{
+			for ( int i = 0; i < 3; i++ )
+			{
+				token = COM_ParseExt( text, qfalse );
+				stage->specular[i] = token[0] ? atof( token ) : 0.0f;
+			}
+		}
+		//
 		// clampmap <name>
 		//
 		else if ( !Q_stricmp( token, "clampmap" ) )
