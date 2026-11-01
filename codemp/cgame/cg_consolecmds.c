@@ -86,6 +86,88 @@ static void CG_Viewpos_f (void) {
 
 /*
 =================
+CG_LevelDump_f
+
+For tools that test the game (the jka MCP server): "v_levelDump [radius]" prints the time of the game, the own
+player, the view and every entity of the snapshot within radius of the view (2048 without one). One line each,
+"leveldump <kind> key=value ...", the last one "leveldump end". Rectangles are in pixels of the window.
+=================
+*/
+static const char *CG_EntityTypeName( int type ) {
+	static const char *names[] = { "general", "player", "item", "missile", "special", "holocron", "mover", "beam", "portal",
+		"speaker", "push_trigger", "teleport_trigger", "invisible", "npc", "team", "body", "terrain", "fx" };
+
+	return ( type >= 0 && type < (int)ARRAY_LEN( names ) ) ? names[type] : "event";
+}
+
+static void CG_LevelDump_f( void ) {
+	const float			radius = trap->Cmd_Argc() > 1 ? atof( CG_Argv( 1 ) ) : 2048.0f;
+	const playerState_t	*ps = &cg.predictedPlayerState;
+	const refdef_t		*rd = &cg.refdef;
+	int					i;
+
+	trap->Print( "leveldump time cg=%d server=%d frame=%d map=%s\n", cg.time, cg.snap ? cg.snap->serverTime : 0, cg.frametime,
+		cgs.mapname );
+	trap->Print( "leveldump player client=%d team=%d origin=%.1f,%.1f,%.1f velocity=%.1f,%.1f,%.1f angles=%.1f,%.1f,%.1f health=%d "
+		"weapon=%d holstered=%d pmtype=%d third=%d spectating=%d\n", ps->clientNum, ps->persistant[PERS_TEAM],
+		ps->origin[0], ps->origin[1], ps->origin[2], ps->velocity[0], ps->velocity[1], ps->velocity[2],
+		ps->viewangles[0], ps->viewangles[1], ps->viewangles[2], ps->stats[STAT_HEALTH], ps->weapon, ps->saberHolstered,
+		ps->pm_type, cg.renderingThirdPerson, ( ps->pm_flags & PMF_FOLLOW ) ? 2 : ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR ) );
+	trap->Print( "leveldump view origin=%.1f,%.1f,%.1f angles=%.1f,%.1f,%.1f fov=%.1f,%.1f rect=%d,%d,%d,%d\n",
+		rd->vieworg[0], rd->vieworg[1], rd->vieworg[2], rd->viewangles[0], rd->viewangles[1], rd->viewangles[2],
+		rd->fov_x, rd->fov_y, rd->x, rd->y, rd->width, rd->height );
+	for ( i = 0; cg.snap && i < cg.snap->numEntities; i++ ) {
+		const entityState_t	*es = &cg.snap->entities[i];
+		const centity_t		*cent = &cg_entities[es->number];
+		const char			*model = "";
+		float				dist;
+
+		dist = Distance( cent->lerpOrigin, rd->vieworg );
+		if ( dist > radius ) {
+			continue;
+		}
+		if ( es->eType == ET_PLAYER && es->clientNum >= 0 && es->clientNum < MAX_CLIENTS ) {
+			model = cgs.clientinfo[es->clientNum].modelName;
+		} else if ( es->modelindex > 0 && es->modelindex < MAX_MODELS ) {
+			model = CG_ConfigString( CS_MODELS + es->modelindex );
+		}
+		trap->Print( "leveldump entity num=%d type=%s origin=%.1f,%.1f,%.1f dist=%.0f weapon=%d model=%s\n", es->number,
+			CG_EntityTypeName( es->eType ), cent->lerpOrigin[0], cent->lerpOrigin[1], cent->lerpOrigin[2], dist, es->weapon,
+			model && model[0] ? model : "-" );
+	}
+	trap->Print( "leveldump end\n" );
+}
+
+/*
+=================
+CG_Project_f
+
+"v_project x y z": where a point of the level is drawn, in pixels of the window (the jka MCP server crops
+screenshots around it). "project x y" or "project behind".
+=================
+*/
+static void CG_Project_f( void ) {
+	const refdef_t	*rd = &cg.refdef;
+	vec3_t			point, d;
+	float			z;
+	int				i;
+
+	for ( i = 0; i < 3; i++ ) {
+		point[i] = atof( CG_Argv( i + 1 ) );
+	}
+	VectorSubtract( point, rd->vieworg, d );
+	z = DotProduct( d, rd->viewaxis[0] );
+	if ( z <= 0.001f || rd->fov_x <= 0.0f || rd->fov_y <= 0.0f ) {
+		trap->Print( "project behind\n" );
+		return;
+	}
+	trap->Print( "project %.1f %.1f\n",
+		rd->x + rd->width * 0.5f * ( 1.0f - DotProduct( d, rd->viewaxis[1] ) / ( z * tanf( DEG2RAD( rd->fov_x * 0.5f ) ) ) ),
+		rd->y + rd->height * 0.5f * ( 1.0f - DotProduct( d, rd->viewaxis[2] ) / ( z * tanf( DEG2RAD( rd->fov_y * 0.5f ) ) ) ) );
+}
+
+/*
+=================
 CG_ScoresDown_f
 
 =================
@@ -427,6 +509,8 @@ static consoleCommand_t	commands[] = {
 	{ "testgun",					CG_TestGun_f },
 	{ "testmodel",					CG_TestModel_f },
 	{ "viewpos",					CG_Viewpos_f },
+	{ "v_levelDump",				CG_LevelDump_f },
+	{ "v_project",					CG_Project_f },
 	{ "v_voice_devices",				CG_VoiceDevices_f },
 	{ "v_voice_mute",					CG_VoiceMute_f },
 	{ "v_voice_status",				CG_VoiceStatus_f },

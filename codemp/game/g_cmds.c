@@ -2698,8 +2698,10 @@ void Cmd_SetViewpos_f( gentity_t *ent ) {
 	char		buffer[MAX_TOKEN_CHARS];
 	int			i;
 
-	if ( trap->Argc() != 5 ) {
-		trap->SendServerCommand( ent-g_entities, va("print \"usage: setviewpos x y z yaw\n\""));
+	// VisionJK: "setviewpos x y z yaw [pitch [still]]": with a pitch, and "still" puts the player there without the
+	// push forward of a teleport (for tools that test the game)
+	if ( trap->Argc() < 5 || trap->Argc() > 7 ) {
+		trap->SendServerCommand( ent-g_entities, va("print \"usage: setviewpos x y z yaw [pitch [still]]\n\""));
 		return;
 	}
 
@@ -2711,8 +2713,20 @@ void Cmd_SetViewpos_f( gentity_t *ent ) {
 
 	trap->Argv( 4, buffer, sizeof( buffer ) );
 	angles[YAW] = atof( buffer );
+	if ( trap->Argc() > 5 ) {
+		trap->Argv( 5, buffer, sizeof( buffer ) );
+		angles[PITCH] = atof( buffer );
+	}
 
 	TeleportPlayer( ent, origin, angles );
+	if ( trap->Argc() > 6 ) {
+		trap->Argv( 6, buffer, sizeof( buffer ) );
+		if ( !Q_stricmp( buffer, "still" ) ) {
+			VectorClear( ent->client->ps.velocity );
+			ent->client->ps.pm_time = 0;
+			ent->client->ps.pm_flags &= ~PMF_TIME_KNOCKBACK;
+		}
+	}
 }
 
 void G_LeaveVehicle( gentity_t* ent, qboolean ConCheck ) {
