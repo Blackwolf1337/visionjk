@@ -796,6 +796,10 @@ typedef struct cgameImport_s {
 		// A picture the cgame made in place of a video: the stream shows it until the next one or a reset. width and
 		// height 16 to 512, rgba width * height * 4 bytes, copied.
 		void			(*Video_Picture)						( int stream, const byte *rgba, int width, int height );
+		// Only an engine that sets the cvar v_cgameImage to 1 has this one, the same way. A picture file of the game
+		// (tga, png, jpg) in width x height RGBA (up to 512 each), its sides kept and centred: where it does not reach
+		// the alpha is 0. qfalse: there is no such picture.
+		qboolean		(*R_LoadImageFit)						( const char *name, byte *rgba, int width, int height );
 	} ext;
 } cgameImport_t;
 

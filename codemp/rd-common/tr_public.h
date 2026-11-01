@@ -277,6 +277,9 @@ typedef struct refexport_s {
 		// What was looked for under prefix (a path ending with /) and not found is looked for again: models,
 		// skins, shaders whose image was missing. The file system has a pak more (client/cl_models.cpp).
 		void				(*ForgetMissing)						( const char *prefix );
+		// A picture file of the game (tga, png, jpg) for a module, in width x height RGBA, its sides kept and centred:
+		// where it does not reach the alpha is 0. qfalse: there is no such picture.
+		qboolean			(*LoadImageFit)							( const char *name, byte *rgba, int width, int height );
 	} ext;
 
 } refexport_t;

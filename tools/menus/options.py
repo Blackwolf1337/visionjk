@@ -307,7 +307,7 @@ CONTROLS = [
         ('bind', 'Tennis', 'v_tennis',
          'Puts a tennis court on the floor in front of you and you play on your half: you run with the movement keys, the racket hits the ball by itself toward where you look, Use serves. A player who stands on the far half and uses it there plays against you. Only players of VisionJK see it.'),
         ('bind', 'Drawing Board', 'v_board',
-         'Opens the drawing board: paint a small picture with the mouse (32 colours) and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it.'),
+         'Opens the drawing board: paint a small picture with the mouse (32 colours) or bring in a picture file, and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it.'),
         ('bind', 'Photo Mode', 'v_photo',
          'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.'),
     ]),

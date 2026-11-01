@@ -202,8 +202,8 @@ LANG_ENGLISH        "Drawing Board"
 LANG_SPANISH        "Pizarra de dibujo"
 
 REFERENCE           OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
-LANG_ENGLISH        "Opens the drawing board: paint a small picture with the mouse (32 colours) and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it."
-LANG_SPANISH        "Abre la pizarra de dibujo: pinta con el ratón una imagen pequeña (32 colores) y sostenla delante de ti o sobre tu cabeza, o guárdala. Solo los jugadores de VisionJK la ven."
+LANG_ENGLISH        "Opens the drawing board: paint a small picture with the mouse (32 colours) or bring in a picture file, and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it."
+LANG_SPANISH        "Abre la pizarra de dibujo: pinta con el ratón una imagen pequeña (32 colores) o trae un archivo de imagen, y sostenla delante de ti o sobre tu cabeza, o guárdala. Solo los jugadores de VisionJK la ven."
 
 REFERENCE           PHOTO_MODE
 LANG_ENGLISH        "Photo Mode"

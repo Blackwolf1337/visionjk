@@ -1493,6 +1493,22 @@ qboolean FS_IsExt(const char *filename, const char *ext, int namelen)
 
 /*
 ===========
+FS_IsDrawing
+
+The files of the drawing board (cgame/toys/cg_board.c, client/cl_models.cpp) in drawings/: its pictures and those it
+imports. No pak has them, so they come from the folder on a pure server too.
+===========
+*/
+static qboolean FS_IsDrawing( const char *filename, int namelen )
+{
+	if ( Q_stricmpn( filename, "drawings/", 9 ) || strchr( filename + 9, '/' ) )
+		return qfalse;
+	return (qboolean)( FS_IsExt( filename, ".vjd", namelen ) || FS_IsExt( filename, ".png", namelen )
+		|| FS_IsExt( filename, ".jpg", namelen ) || FS_IsExt( filename, ".jpeg", namelen ) || FS_IsExt( filename, ".tga", namelen ) );
+}
+
+/*
+===========
 FS_IsDemoExt
 
 Return qtrue if filename has a demo extension
@@ -1814,7 +1830,8 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					    !FS_IsExt( filename, ".menu", l ) &&		// menu files
 					    !FS_IsExt( filename, ".game", l ) &&		// menu files
 					    !FS_IsExt( filename, ".dat", l ) &&		// for journal files
-					    !FS_IsDemoExt( filename, l ) ) {			// demos
+					    !FS_IsDemoExt( filename, l ) &&			// demos
+					    !FS_IsDrawing( filename, l ) ) {
 						continue;
 					}
 				}
@@ -1835,7 +1852,8 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					!FS_IsExt( filename, ".menu", l ) &&		// menu files
 					!FS_IsExt( filename, ".game", l ) &&		// menu files
 					!FS_IsExt( filename, ".dat", l ) &&		// for journal files
-					!FS_IsDemoExt( filename, l ) ) {			// demos
+					!FS_IsDemoExt( filename, l ) &&			// demos
+					!FS_IsDrawing( filename, l ) ) {
 					fs_fakeChkSum = Q_flrand(0.0f, 1.0f);
 				}
 #ifdef _WIN32
@@ -3073,9 +3091,10 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 
 			// don't scan directories for files if we are pure or restricted
 			if ( fs_numServerPaks &&
-				 (!extension || Q_stricmp(extension, "fcf")) )
+				 (!extension || Q_stricmp(extension, "fcf")) && Q_stricmp( path, "drawings" ) )
 			{
 				//rww - allow scanning for fcf files outside of pak even if pure
+				// (and the pictures of the drawing board, FS_IsDrawing)
 			    continue;
 		    }
 			else

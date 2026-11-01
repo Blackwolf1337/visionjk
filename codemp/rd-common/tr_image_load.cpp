@@ -138,3 +138,63 @@ void R_LoadImage( const char *shortname, byte **pic, int *width, int *height ) {
 		}
 	}
 }
+
+/*
+=================
+R_LoadImageFit
+
+The picture of a file (any type R_LoadImage takes, a png of any size) in width x height RGBA for a module, its sides kept: it fills
+one side and is centred on the other, where the pixels keep an alpha of 0. A pixel is the mean of the pixels of the
+file it covers, weighted by their alpha. qfalse: there is no such picture.
+=================
+*/
+qboolean R_LoadImageFit( const char *name, byte *rgba, int width, int height ) {
+	byte	*pic = NULL;
+	int		w, h, fw, fh, ox, oy, x, y;
+
+	if ( !Q_stricmp( COM_GetExtension( name ), "png" ) )
+		LoadPNGPicture( name, &pic, &w, &h );
+	else
+		R_LoadImage( name, &pic, &w, &h );
+	if ( !pic )
+		return qfalse;
+	memset( rgba, 0, width * height * 4 );
+	if ( w * height >= h * width ) {
+		fw = width;
+		fh = Q_max( 1, h * width / w );
+	} else {
+		fh = height;
+		fw = Q_max( 1, w * height / h );
+	}
+	ox = ( width - fw ) / 2;
+	oy = ( height - fh ) / 2;
+	for ( y = 0; y < fh; y++ ) {
+		const int y0 = y * h / fh, y1 = Q_max( y0 + 1, ( y + 1 ) * h / fh );
+
+		for ( x = 0; x < fw; x++ ) {
+			const int	x0 = x * w / fw, x1 = Q_max( x0 + 1, ( x + 1 ) * w / fw );
+			byte		*out = rgba + ( ( oy + y ) * width + ox + x ) * 4;
+			unsigned	sum[4] = { 0, 0, 0, 0 };
+			int			sx, sy;
+
+			for ( sy = y0; sy < y1; sy++ ) {
+				for ( sx = x0; sx < x1; sx++ ) {
+					const byte *in = pic + ( sy * w + sx ) * 4;
+
+					sum[0] += in[0] * in[3];
+					sum[1] += in[1] * in[3];
+					sum[2] += in[2] * in[3];
+					sum[3] += in[3];
+				}
+			}
+			if ( sum[3] ) {
+				out[0] = (byte)( sum[0] / sum[3] );
+				out[1] = (byte)( sum[1] / sum[3] );
+				out[2] = (byte)( sum[2] / sum[3] );
+			}
+			out[3] = (byte)( sum[3] / ( ( y1 - y0 ) * ( x1 - x0 ) ) );
+		}
+	}
+	ri.Z_Free( pic );
+	return qtrue;
+}

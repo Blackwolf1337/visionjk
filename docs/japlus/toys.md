@@ -99,9 +99,23 @@ To draw, bind `v_board` (Controls, Extras, "Drawing Board") and press it. A wind
 pixels and 32 colours, which you paint with the mouse. There are brush sizes 1 to 4, Fill, Undo and Clear. Save 1 to 4
 and Load 1 to 4 keep four presets in `drawings/preset<n>.vjd` of the home folder. Three buttons hold the board up in
 front of you, hold it over your head, or put it away. Esc or Close shuts the window, and the board stays where it is.
-Without the window, `v_board hold <0|1|2>`, `v_board save <1-4>` and `v_board load <1-4>` work from a bind.
+Without the window, `v_board hold <0|1|2>`, `v_board save <1-4>`, `v_board load <1-4>` and `v_board import <file>` work
+from a bind.
 
-Other players of VisionJK see the board in front of your chest or over your head, with the picture, wherever you go. A
+The Picture button, right of the brush sizes, lists the picture files (png, jpg, jpeg, tga) of the `drawings` folder:
+`japlus/drawings` of the home folder, and `base/drawings` and the paks. It shows up to 64 files, 10 to a page, with `<`
+and `>` when there are more. Click one and it goes on the board: fitted with its sides kept and centred, the rest white,
+transparent parts white, turned into the 32 colours with dithering. Undo takes it back. Click Picture again to close the
+list. When the folder has no pictures, the list shows the full path to put them in. `v_board import <file>` takes a file
+name of `drawings/`, no subfolders, and prints a line on the console when there is no such file. Like any drawing, the
+picture goes to the store when the board is held up.
+
+Holding the board in front, both arms are stretched forward and the hands hold its top edge, the board hangs in front of
+them and the head stays visible. Over the head, the arms are up and the hands hold its bottom edge. The arms move into
+the pose in 250 ms and follow the body again at once when the board is put away. A model that is not humanoid keeps the
+old place of the board and has no pose, and a dead player has no pose.
+
+Other players of VisionJK see the board and the pose, with the picture, wherever you go. A
 picture that changed goes to the store of jka.vision at most every 8 seconds. Until the others have it, they see the
 previous picture or a white board. The picture is public: anybody can upload one, so draw nothing you want to keep to
 yourself.
@@ -123,6 +137,7 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_board hold <0\|1\|2>` | | 0 puts the board away, 1 holds it in front of you, 2 over your head |
 | `v_board save <1-4>` | | keeps the picture as a preset |
 | `v_board load <1-4>` | | loads a preset |
+| `v_board import <file>` | | puts a picture file of `drawings/` on the board |
 | `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
 | `v_toys` | 1 | 0: the toys and emoji of other players are not drawn |
 
@@ -209,6 +224,20 @@ format: the exact size and that every pixel is one of the 32 colours. The limits
 per address, and the store keeps the newest 5000. `files/<number>.png` is the same picture to look at. The master and
 the game module have to be 0.2.9-dev.32 or later.
 
+Pictures are brought in with a new call of the renderer, `re.ext.LoadImageFit` (`R_LoadImageFit` in
+`rd-common/tr_image_load.cpp`), which the cgame gets as `ext.R_LoadImageFit` when `v_cgameImage` is 1. For these
+pictures the PNG loader takes any size and palette and grey PNGs; textures still need power-of-two sizes and 24 or 32
+bits, as before. The cgame fits the picture into 256 x 128 and dithers it with Floyd-Steinberg.
+
+The poses are made by each client from what it already hears (`TOY_BOARD`), nothing new goes over the network. In front,
+the arms take a frame of `BOTH_FORCE_2HANDEDLIGHTNING_HOLD`, over the head the end of `TORSO_SURRENDER_START`.
+
+On a pure server (`sv_pure 1`) the engine read only a few file types from folders (.cfg, .menu and similar). So the
+presets, the pictures of the boards of others (`drawings/<number>.vjd`) and the upload file could not be read there, and
+the drawing board did not work on pure servers since it came (0.2.9-dev.32). Now files directly in `drawings/` with
+.vjd, .png, .jpg, .jpeg or .tga are read from the folder and listed on a pure server too (`FS_IsDrawing` in
+`qcommon/files.cpp`).
+
 The engine got three changes for it: `Sys_HttpPost` for curl and WinHTTP, a WinHTTP reader that no longer shares one
 static buffer between requests (it was wrong since the TV streams run beside other requests), and 8 video streams
 instead of 4.
@@ -263,4 +292,8 @@ For the drawing board, there are unit tests (the board in `tests/vjk/toys.cpp`, 
 uploaded (the store gave it a number), and the other client fetched the picture and showed the board on the holder with
 that picture. The window was drawn with all its parts.
 
-Not run: painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+For the pictures and poses, headless: an RGBA PNG of 400 x 300, a palette PNG, a grey PNG and a JPG were imported on a
+listen server with `sv_pure 1`. Then two clients on a dedicated server with `sv_pure 1`: the holder was seen from the
+front and the side in both poses, and the other client saw the pose.
+
+Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

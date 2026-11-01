@@ -905,6 +905,13 @@ static void CL_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelInde
 	Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 }
 
+// ext.R_LoadImageFit: a picture file for the cgame (the drawing board, cgame/toys/cg_board.c)
+static qboolean CL_LoadImageFit( const char *name, byte *rgba, int width, int height ) {
+	if ( !re || !re->ext.LoadImageFit || !name || !rgba || width < 1 || height < 1 || width > 512 || height > 512 )
+		return qfalse;
+	return re->ext.LoadImageFit( name, rgba, width, height );
+}
+
 static void CL_Key_SetCatcher( int catcher ) {
 	// Don't allow the cgame module to close the console
 	Key_SetCatcher( catcher | ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) );
@@ -2020,6 +2027,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.Video_Picture					= CL_VideoPicture;
 		cgi.ext.Video_Color						= CL_VideoColor;
 		cgi.ext.Video_Reset						= CL_VideoReset;
+		cgi.ext.R_LoadImageFit					= CL_LoadImageFit;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

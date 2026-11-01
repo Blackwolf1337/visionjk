@@ -20,8 +20,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_board.c -- the drawing board, a toy of issue #9 that only players of this tree see: v_board (Controls, Extras)
 // opens a window where the player paints a picture of BOARD_W x BOARD_H with the mouse in BOARD_COLORS colours
-// (brushes, fill, undo, clear, four presets in drawings/ of the home folder), and holds it up in front of him or
-// over his head for the others to see.
+// (brushes, fill, undo, clear, four presets in drawings/ of the home folder, a picture file of drawings/ brought in),
+// and holds it up in front of him or over his head for the others to see, his arms posed to hold it.
 //
 // The picture is shown through a stream of the engine (ext.Video_Picture, client/cl_video.cpp, "videoMap *tv<n>"):
 // the own board in BOARD_STREAM, the boards of the nearest others in the ones after it. The others hear of a board
@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/toys/cg_toys.h"
 #include "cgame/cg_window.h"
 #include "ui/ui_shared.h"
+#include "ghoul2/G2.h"
 
 #define BOARD_STREAM		4			// the own board; the others take BOARD_STREAM + 1 on (VIDEO_STREAMS of cg_public.h)
 #define BOARD_OTHERS		( VIDEO_STREAMS - BOARD_STREAM - 1 )
@@ -47,6 +48,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BOARD_WIN_W			560.0f
 #define BOARD_WIN_H			400.0f
 #define BOARD_SCALE			2.0f		// a pixel of the picture is this many of the 2D screen in the window
+#define BOARD_IMPORTS		64			// picture files of drawings/ listed to bring in
+#define BOARD_IMPORT_ROWS	10
+#define BOARD_POSE_BLEND	250			// msec the arms take to their pose
 
 typedef enum {
 	BOARD_PART_CLOSE,
@@ -58,13 +62,28 @@ typedef enum {
 	BOARD_PART_CLEAR,
 	BOARD_PART_HOLD,			// arg: BOARD_HOLD_*
 	BOARD_PART_SAVE,			// arg: the preset
-	BOARD_PART_LOAD
+	BOARD_PART_LOAD,
+	BOARD_PART_IMPORT,
+	BOARD_PART_PICK,			// arg: the file in the list
+	BOARD_PART_PAGE				// arg: -1, 1
 } boardPart_t;
 
 // how a board is held
 #define BOARD_HOLD_NONE		0
 #define BOARD_HOLD_FRONT	1
 #define BOARD_HOLD_HIGH		2
+
+// the pose of the arms for a way to hold: a frame of an animation of the humanoid (_humanoid/animation.cfg), the
+// fraction of the way through it, on both upper arms and what hangs on them
+static const struct {
+	animNumber_t	anim;
+	float			at;
+} boardPoses[3] = {
+	{ BOTH_STAND1, 0.0f },
+	{ BOTH_FORCE_2HANDEDLIGHTNING_HOLD, 0.5f },
+	{ TORSO_SURRENDER_START, 1.0f },
+};
+static const char *boardArms[2] = { "lhumerus", "rhumerus" };
 
 static const byte boardPalette[BOARD_COLORS][3] = {
 	{ 255, 255, 255 }, { 20, 20, 24 }, { 90, 90, 96 }, { 170, 170, 176 },
@@ -107,6 +126,13 @@ static struct {
 	int			sendTime;
 	boardOther_t others[MAX_CLIENTS];
 	qhandle_t	shaders[VIDEO_STREAMS], frameShader;
+	qboolean	importing;			// the list of the files to bring in is shown
+	char		imports[BOARD_IMPORTS][MAX_QPATH];
+	int			numImports, importPage;
+	struct {
+		int		frame;				// the frame the arms of the player are frozen in, -1: their own
+		void	*ghoul2;			//	on this model
+	} poses[MAX_CLIENTS];
 } board;
 
 void CG_BoardInit( void ) {
@@ -117,8 +143,10 @@ void CG_BoardInit( void ) {
 	board.size = 2;
 	board.dirty = qtrue;
 	board.unpublished = qtrue;
-	for ( i = 0; i < MAX_CLIENTS; i++ )
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		board.others[i].stream = -1;
+		board.poses[i].frame = -1;
+	}
 }
 
 static void Board_Register( void ) {
@@ -249,6 +277,97 @@ static void Board_KeepUndo( void ) {
 	memcpy( board.undo, board.pixels, sizeof( board.undo ) );
 }
 
+// the colour of the palette nearest to one, weighted roughly as the eye sees
+static int Board_Nearest( int r, int g, int b ) {
+	int i, best = 0, bestDist = INT_MAX;
+
+	for ( i = 0; i < BOARD_COLORS; i++ ) {
+		const int	dr = r - boardPalette[i][0], dg = g - boardPalette[i][1], db = b - boardPalette[i][2];
+		const int	dist = 3 * dr * dr + 4 * dg * dg + 2 * db * db;
+
+		if ( dist < bestDist ) {
+			bestDist = dist;
+			best = i;
+		}
+	}
+	return best;
+}
+
+// a picture in RGBA into the palette, the error of each pixel spread to the ones after it (Floyd-Steinberg); what is
+// clear (where the picture did not reach) stays white, the rest is laid over white
+static void Board_Quantize( const byte *rgba, byte pixels[BOARD_H][BOARD_W] ) {
+	static int	err[2][BOARD_W + 2][3];		// sixteenths, a pixel at x is at x + 1
+	int			x, y, k;
+
+	memset( err, 0, sizeof( err ) );
+	for ( y = 0; y < BOARD_H; y++ ) {
+		int ( *cur )[3] = err[y & 1], ( *next )[3] = err[( y + 1 ) & 1];
+
+		memset( next, 0, sizeof( err[0] ) );
+		for ( x = 0; x < BOARD_W; x++ ) {
+			const byte	*in = rgba + ( y * BOARD_W + x ) * 4;
+			int			c[3], i;
+
+			if ( in[3] < 128 ) {
+				pixels[y][x] = 0;
+				continue;
+			}
+			for ( k = 0; k < 3; k++ )
+				c[k] = Com_Clampi( 0, 255, ( in[k] * in[3] + 255 * ( 255 - in[3] ) ) / 255 + cur[x + 1][k] / 16 );
+			i = Board_Nearest( c[0], c[1], c[2] );
+			pixels[y][x] = (byte)i;
+			for ( k = 0; k < 3; k++ ) {
+				const int e = c[k] - boardPalette[i][k];
+
+				cur[x + 2][k] += e * 7;
+				next[x][k] += e * 3;
+				next[x + 1][k] += e * 5;
+				next[x + 2][k] += e;
+			}
+		}
+	}
+}
+
+// the picture files of drawings/ (in the home folder or the game folder) that can be brought in
+static void Board_ListImports( void ) {
+	static const char	*types[] = { ".png", ".jpg", ".jpeg", ".tga" };
+	char				list[8192];
+	int					t, i, count;
+
+	board.numImports = 0;
+	board.importPage = 0;
+	for ( t = 0; t < (int)ARRAY_LEN( types ); t++ ) {
+		const char *name = list;
+
+		count = trap->FS_GetFileList( "drawings", types[t], list, sizeof( list ) );
+		for ( i = 0; i < count && board.numImports < BOARD_IMPORTS; i++, name += strlen( name ) + 1 ) {
+			if ( name[0] && strlen( name ) < MAX_QPATH && !strchr( name, '/' ) && !strchr( name, '\\' ) )
+				Q_strncpyz( board.imports[board.numImports++], name, MAX_QPATH );
+		}
+	}
+}
+
+// a picture file of drawings/ onto the board, in its colours (ext.R_LoadImageFit, the engine loads it)
+static void Board_Import( const char *name ) {
+	static byte	rgba[BOARD_W * BOARD_H * 4];
+	char		value[8];
+
+	trap->Cvar_VariableStringBuffer( "v_cgameImage", value, sizeof( value ) );
+	if ( atoi( value ) != 1 )
+		return;
+	if ( !name[0] || strchr( name, '/' ) || strchr( name, '\\' ) || strstr( name, ".." ) )
+		return;
+	if ( !trap->ext.R_LoadImageFit( va( "drawings/%s", name ), rgba, BOARD_W, BOARD_H ) ) {
+		Com_Printf( "No picture named %s in the drawings folder\n", name );
+		return;
+	}
+	Board_KeepUndo();
+	Board_Quantize( rgba, board.pixels );
+	board.dirty = qtrue;
+	Board_Show( qtrue );
+	CG_BoardPublish();
+}
+
 // drawings/preset<n>.vjd of the home folder: "VJD1" and a byte a pixel
 static void Board_Save( int preset ) {
 	fileHandle_t f;
@@ -338,6 +457,7 @@ void CG_BoardOpen( void ) {
 	board.x = ( SCREEN_WIDTH - BOARD_WIN_W ) * 0.5f;
 	board.y = ( SCREEN_HEIGHT - BOARD_WIN_H ) * 0.5f;
 	board.painting = qfalse;
+	board.importing = qfalse;
 	Board_Show( qtrue );
 }
 
@@ -350,14 +470,15 @@ void CG_BoardClose( void ) {
 }
 
 // v_board: the window opens and closes. v_board hold <0 away, 1 in front, 2 over the head>, v_board save <1-4>,
-// v_board load <1-4>: the same without the window, for a bind
+// v_board load <1-4>, v_board import <file of drawings/>: the same without the window, for a bind
 void CG_Board_f( void ) {
-	char		what[16];
+	char		what[16], arg[MAX_QPATH];
 	int			n;
 
 	// (CG_Argv has one buffer)
 	Q_strncpyz( what, CG_Argv( 1 ), sizeof( what ) );
-	n = atoi( CG_Argv( 2 ) );
+	Q_strncpyz( arg, CG_Argv( 2 ), sizeof( arg ) );
+	n = atoi( arg );
 
 	if ( !Q_stricmp( what, "hold" ) ) {
 		if ( CG_ToyCanUse() || n == BOARD_HOLD_NONE )
@@ -366,8 +487,10 @@ void CG_Board_f( void ) {
 		Board_Save( n - 1 );
 	} else if ( !Q_stricmp( what, "load" ) && n >= 1 && n <= BOARD_PRESETS ) {
 		Board_Load( n - 1 );
+	} else if ( !Q_stricmp( what, "import" ) && arg[0] ) {
+		Board_Import( arg );
 	} else if ( what[0] ) {
-		Com_Printf( "usage: v_board [hold <0-2> | save <1-%i> | load <1-%i>]\n", BOARD_PRESETS, BOARD_PRESETS );
+		Com_Printf( "usage: v_board [hold <0-2> | save <1-%i> | load <1-%i> | import <file>]\n", BOARD_PRESETS, BOARD_PRESETS );
 	} else if ( board.open ) {
 		CG_BoardClose();
 	} else if ( CG_ToyCanUse() || !cg.snap ) {
@@ -387,6 +510,38 @@ qboolean CG_BoardPointerOver( void ) {
 static void Board_PointerPixel( float *px, float *py ) {
 	*px = ( cgs.cursorX - ( board.x + 12.0f ) ) / BOARD_SCALE;
 	*py = ( cgs.cursorY - ( board.y + 34.0f ) ) / BOARD_SCALE;
+}
+
+// over the picture: the picture files of drawings/ to bring in, a page of them
+static void Board_DrawImports( float cx, float cy ) {
+	const float	w = BOARD_W * BOARD_SCALE, h = BOARD_H * BOARD_SCALE;
+	const int	pages = ( board.numImports + BOARD_IMPORT_ROWS - 1 ) / BOARD_IMPORT_ROWS;
+	int			i;
+
+	Win_Panel( cx + 8.0f, cy + 8.0f, w - 16.0f, h - 16.0f, 4.0f, winFill, winEdge );
+	Win_Hit( &board.hits, BOARD_PART_PICK, -1, cx, cy, w, h );
+	if ( !board.numImports ) {
+		char home[MAX_OSPATH], game[MAX_QPATH];
+
+		trap->Cvar_VariableStringBuffer( "fs_homepath", home, sizeof( home ) );
+		trap->Cvar_VariableStringBuffer( "fs_game", game, sizeof( game ) );
+		Win_Text( cx + 20.0f, cy + 20.0f, 0.5f, winText, ITEM_ALIGN_LEFT, "Put a picture (png, jpg or tga) into this folder:", w - 40.0f );
+		Win_Text( cx + 20.0f, cy + 42.0f, 0.5f, winDim, ITEM_ALIGN_LEFT, va( "%s/%s/drawings", home, game[0] ? game : "base" ), w - 40.0f );
+		Win_Text( cx + 20.0f, cy + 64.0f, 0.5f, winText, ITEM_ALIGN_LEFT, "Then click Picture again.", w - 40.0f );
+		return;
+	}
+	Win_Text( cx + 20.0f, cy + 14.0f, 0.5f, winDim, ITEM_ALIGN_LEFT, "Click a picture to put it on the board (Undo takes it back):", w - 40.0f );
+	for ( i = 0; i < BOARD_IMPORT_ROWS; i++ ) {
+		const int n = board.importPage * BOARD_IMPORT_ROWS + i;
+
+		if ( n >= board.numImports )
+			break;
+		Win_Button( &board.hits, BOARD_PART_PICK, n, cx + 20.0f, cy + 36.0f + i * 20.0f, w - 40.0f, board.imports[n], winText, qtrue );
+	}
+	if ( pages > 1 ) {
+		Win_Button( &board.hits, BOARD_PART_PAGE, -1, cx + w - 112.0f, cy + h - 34.0f, 40.0f, "<", winText, board.importPage > 0 );
+		Win_Button( &board.hits, BOARD_PART_PAGE, 1, cx + w - 64.0f, cy + h - 34.0f, 40.0f, ">", winText, board.importPage < pages - 1 );
+	}
 }
 
 /*
@@ -421,7 +576,10 @@ void CG_BoardDraw( void ) {
 	// the picture itself, as the stream of the engine shows it
 	CG_FillRect( cx - 1.0f, cy - 1.0f, BOARD_W * BOARD_SCALE + 2.0f, BOARD_H * BOARD_SCALE + 2.0f, winEdge );
 	CG_DrawPic( cx, cy, BOARD_W * BOARD_SCALE, BOARD_H * BOARD_SCALE, board.shaders[BOARD_STREAM] );
-	Win_Hit( &board.hits, BOARD_PART_CANVAS, 0, cx, cy, BOARD_W * BOARD_SCALE, BOARD_H * BOARD_SCALE );
+	if ( board.importing )
+		Board_DrawImports( cx, cy );
+	else
+		Win_Hit( &board.hits, BOARD_PART_CANVAS, 0, cx, cy, BOARD_W * BOARD_SCALE, BOARD_H * BOARD_SCALE );
 	// the colours, two rows
 	y = cy + BOARD_H * BOARD_SCALE + 10.0f;
 	for ( i = 0; i < BOARD_COLORS; i++ ) {
@@ -437,6 +595,7 @@ void CG_BoardDraw( void ) {
 	x = cx + 16 * 21.0f + 8.0f;
 	for ( i = 1; i <= 4; i++ )
 		Win_Button( &board.hits, BOARD_PART_SIZE, i, x + ( i - 1 ) * 31.0f, y, 28.0f, va( "%i", i ), ( i == board.size && !board.fill ) ? winAccent : winText, qtrue );
+	Win_Button( &board.hits, BOARD_PART_IMPORT, 0, x + 126.0f, y, 52.0f, "Picture", board.importing ? winAccent : winText, qtrue );
 	Win_Button( &board.hits, BOARD_PART_FILL, 0, x, y + 21.0f, 52.0f, "Fill", board.fill ? winAccent : winText, qtrue );
 	Win_Button( &board.hits, BOARD_PART_UNDO, 0, x + 56.0f, y + 21.0f, 52.0f, "Undo", winText, qtrue );
 	Win_Button( &board.hits, BOARD_PART_CLEAR, 0, x + 112.0f, y + 21.0f, 52.0f, "Clear", winRed, qtrue );
@@ -525,6 +684,20 @@ qboolean CG_BoardKey( int key, qboolean down ) {
 	case BOARD_PART_LOAD:
 		Board_Load( board.hits.hit[at].arg );
 		break;
+	case BOARD_PART_IMPORT:
+		board.importing = !board.importing;
+		if ( board.importing )
+			Board_ListImports();
+		break;
+	case BOARD_PART_PICK:
+		if ( board.hits.hit[at].arg >= 0 && board.hits.hit[at].arg < board.numImports ) {
+			board.importing = qfalse;
+			Board_Import( board.imports[board.hits.hit[at].arg] );
+		}
+		break;
+	case BOARD_PART_PAGE:
+		board.importPage = Com_Clampi( 0, Q_max( 0, ( board.numImports - 1 ) / BOARD_IMPORT_ROWS ), board.importPage + board.hits.hit[at].arg );
+		break;
 	}
 	return qtrue;
 }
@@ -538,17 +711,76 @@ void CG_BoardHeard( int client, const vec3_t velocity ) {
 	o->heard = cg.time;
 }
 
-// the board of a player where he holds it: in front of his chest or over his head, its face to where he looks
-static void Board_Draw( const vec3_t origin, float yaw, int holding, qhandle_t shader ) {
+/*
+=================
+Board_Pose
+
+The arms of a player who holds a board up: a frame of an animation (boardPoses) frozen on both upper arms, until the
+board is put away and they follow the body again. Not for a model that is no humanoid, nor for one who is dead.
+=================
+*/
+static void Board_Pose( centity_t *cent, int holding ) {
+	const int	num = cent->currentState.number;
+	int			frame = -1, i;
+
+	if ( holding != BOARD_HOLD_NONE && cent->ghoul2 && cent->localAnimIndex <= 1 && !( cent->currentState.eFlags & EF_DEAD ) ) {
+		const animation_t *anim = &bgAllAnims[cent->localAnimIndex].anims[boardPoses[holding].anim];
+
+		frame = anim->firstFrame + (int)( ( anim->numFrames - 1 ) * boardPoses[holding].at );
+	}
+	if ( board.poses[num].frame == frame && board.poses[num].ghoul2 == cent->ghoul2 )
+		return;
+	for ( i = 0; i < 2 && cent->ghoul2; i++ ) {
+		if ( frame >= 0 ) {
+			trap->G2API_SetBoneAnim( cent->ghoul2, 0, boardArms[i], frame, frame + 1, BONE_ANIM_OVERRIDE_FREEZE | BONE_ANIM_BLEND,
+				1.0f, cg.time, (float)frame, BOARD_POSE_BLEND );
+		} else if ( board.poses[num].frame >= 0 && board.poses[num].ghoul2 == cent->ghoul2 ) {
+			// (as cg_players.c lets a broken arm go: its flags to 0 first, else the bone stays)
+			trap->G2API_SetBoneAnim( cent->ghoul2, 0, boardArms[i], 0, 1, 0, 0, cg.time, -1, 0 );
+			trap->G2API_RemoveBone( cent->ghoul2, boardArms[i], 0 );
+		}
+	}
+	board.poses[num].frame = frame;
+	board.poses[num].ghoul2 = cent->ghoul2;
+}
+
+// where the middle of a board is held: between the hands of a posed player, else in front of the chest or over
+// the head
+static void Board_Middle( centity_t *cent, int holding, const vec3_t forward, vec3_t mid ) {
+	const clientInfo_t	*ci = &cgs.clientinfo[cent->currentState.number];
+	mdxaBone_t			matrix;
+	vec3_t				left, right;
+
+	if ( board.poses[cent->currentState.number].frame >= 0 && ci->bolt_lhand >= 0 && ci->bolt_rhand >= 0
+		&& trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_lhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time,
+			cgs.gameModels, cent->modelScale ) ) {
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, left );
+		if ( trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_rhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time,
+			cgs.gameModels, cent->modelScale ) ) {
+			BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, right );
+			VectorAdd( left, right, mid );
+			VectorScale( mid, 0.5f, mid );
+			// (over the head the hands hold its lower edge, in front its upper edge, the board a little before them
+			// so what they hold does not show through)
+			VectorMA( mid, 4.0f, forward, mid );
+			mid[2] += holding == BOARD_HOLD_HIGH ? BOARD_WORLD_H * 0.5f - 1.0f : -( BOARD_WORLD_H * 0.5f - 2.0f );
+			return;
+		}
+	}
+	VectorMA( cent->lerpOrigin, holding == BOARD_HOLD_HIGH ? 4.0f : 16.0f, forward, mid );
+	mid[2] += holding == BOARD_HOLD_HIGH ? 58.0f : 26.0f;
+}
+
+// the board of a player where he holds it, its face to where he looks
+static void Board_Draw( centity_t *cent, int holding, qhandle_t shader ) {
 	vec3_t		forward, right, mid, angles;
 	polyVert_t	front[4], back[4];
 	const float	hw = BOARD_WORLD_W * 0.5f, hh = BOARD_WORLD_H * 0.5f;
 	int			i;
 
-	VectorSet( angles, 0.0f, yaw, 0.0f );
+	VectorSet( angles, 0.0f, cent->lerpAngles[YAW], 0.0f );
 	AngleVectors( angles, forward, right, NULL );
-	VectorMA( origin, holding == BOARD_HOLD_HIGH ? 4.0f : 16.0f, forward, mid );
-	mid[2] += holding == BOARD_HOLD_HIGH ? 58.0f : 26.0f;
+	Board_Middle( cent, holding, forward, mid );
 	for ( i = 0; i < 4; i++ ) {
 		const float	sx = ( i == 0 || i == 3 ) ? -1.0f : 1.0f, sy = ( i < 2 ) ? 1.0f : -1.0f;
 		vec3_t		p;
@@ -595,11 +827,10 @@ void CG_BoardScene( void ) {
 	int i, k, used = 0;
 
 	Board_Register();
-	if ( board.holding && cg.snap && cg.renderingThirdPerson ) {
-		const centity_t *cent = &cg_entities[cg.clientNum];
-
-		Board_Draw( cent->lerpOrigin, cent->lerpAngles[YAW], board.holding, board.shaders[BOARD_STREAM] );
-	}
+	if ( cg.snap )
+		Board_Pose( &cg_entities[cg.clientNum], board.holding );
+	if ( board.holding && cg.snap && cg.renderingThirdPerson )
+		Board_Draw( &cg_entities[cg.clientNum], board.holding, board.shaders[BOARD_STREAM] );
 	if ( board.holding && board.unpublished && !board.painting
 		&& ( !board.publishTime || cg.time - board.publishTime >= BOARD_UPLOAD_MSEC || cg.time < board.publishTime ) )
 		Board_Upload();
@@ -607,13 +838,14 @@ void CG_BoardScene( void ) {
 		Board_Send();
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		boardOther_t		*o = &board.others[i];
-		const centity_t		*cent = &cg_entities[i];
+		centity_t			*cent = &cg_entities[i];
 
 		if ( i == cg.clientNum )
 			continue;
 		if ( o->holding && ( cg.time - o->heard > BOARD_LOST_MSEC || !cgs.clientinfo[i].infoValid ) )
 			o->holding = BOARD_HOLD_NONE;
 		if ( !o->holding || !v_toys.integer || !cent->currentValid || used >= BOARD_OTHERS ) {
+			Board_Pose( cent, BOARD_HOLD_NONE );
 			o->stream = -1;
 			o->uploaded = qfalse;
 			continue;
@@ -638,7 +870,8 @@ void CG_BoardScene( void ) {
 				o->uploaded = qtrue;
 			}
 		}
-		Board_Draw( cent->lerpOrigin, cent->lerpAngles[YAW], o->holding, board.shaders[o->stream] );
+		Board_Pose( cent, o->holding );
+		Board_Draw( cent, o->holding, board.shaders[o->stream] );
 	}
 }
 
