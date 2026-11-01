@@ -70,35 +70,72 @@ and where, then the crash goes on as it would have, so the system still gets its
 2026-10-19 only Sys_Error() wrote one, and a segfault left nothing.
 The names in the stack are the exported ones only: an offset in a file is turned into a function with
 addr2line -f -C -e <file> <offset>, on the same build.
+Nothing in here may allocate or take a lock of libc: a crash inside malloc (abort() on a broken heap) holds the
+lock of the heap, and until 2026-10-30 fopen() waited for it here forever, so the game hung instead of crashing.
+So open()/write(), snprintf() into the stack, and no strsignal().
 =================
 */
+static void Sys_CrashWrite( int fd, const char *text, int length )
+{
+	while ( length > 0 ) {
+		const ssize_t written = write( fd, text, length );
+
+		if ( written <= 0 ) {
+			if ( written < 0 && errno == EINTR )
+				continue;
+			return;
+		}
+		text += written;
+		length -= (int)written;
+	}
+}
+
+static const char *Sys_CrashSignalName( int sig )
+{
+	switch ( sig ) {
+	case SIGSEGV:	return "Segmentation fault";
+	case SIGBUS:	return "Bus error";
+	case SIGILL:	return "Illegal instruction";
+	case SIGFPE:	return "Floating point exception";
+	case SIGABRT:	return "Aborted";
+	default:		return "?";
+	}
+}
+
 static void Sys_CrashHandler( int sig, siginfo_t *info, void *context )
 {
 	static volatile sig_atomic_t crashed;
 
 	if ( !crashed ) {
-		char path[MAX_OSPATH], thread[32] = "";
-		FILE *fp;
+		char path[MAX_OSPATH], thread[32] = "", line[MAX_OSPATH + 128];
+		const char *first, *second;
+		int fd, length, firstLen, secondLen;
 
 		crashed = 1;
 		Sys_CrashLogPath( path, sizeof( path ) );
-		fp = fopen( path, "w" );
-		if ( fp ) {
+		fd = open( path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644 );
+		if ( fd >= 0 ) {
 			pthread_getname_np( pthread_self(), thread, sizeof( thread ) );
-			fprintf( fp, "%s %s crashed: signal %d (%s), address %p, thread \"%s\"\n\n", JK_VERSION, PLATFORM_STRING, sig,
-				strsignal( sig ), info ? info->si_addr : NULL, thread );
+			length = snprintf( line, sizeof( line ), "%s %s crashed: signal %d (%s), address %p, thread \"%s\"\n\n", JK_VERSION,
+				PLATFORM_STRING, sig, Sys_CrashSignalName( sig ), info ? info->si_addr : NULL, thread );
+			Sys_CrashWrite( fd, line, Q_min( length, (int)sizeof( line ) - 1 ) );
 #ifdef SYS_BACKTRACE
 			void *frames[64];
 			const int numFrames = backtrace( frames, ARRAY_LEN( frames ) );
+			static const char stackHead[] = "stack (a function of an offset: addr2line -f -C -e <file> <offset>):\n";
 
-			fprintf( fp, "stack (a function of an offset: addr2line -f -C -e <file> <offset>):\n" );
-			fflush( fp );
-			backtrace_symbols_fd( frames, numFrames, fileno( fp ) );
+			Sys_CrashWrite( fd, stackHead, sizeof( stackHead ) - 1 );
+			backtrace_symbols_fd( frames, numFrames, fd );
 #endif
-			fprintf( fp, "\nconsole:\n" );
-			ConsoleLogWriteOut( fp );
-			fclose( fp );
-			fprintf( stderr, "\nCrashed (signal %d), the crash log was written to %s\n", sig, path );
+			static const char consoleHead[] = "\nconsole:\n";
+
+			Sys_CrashWrite( fd, consoleHead, sizeof( consoleHead ) - 1 );
+			ConsoleLogParts( &first, &firstLen, &second, &secondLen );
+			Sys_CrashWrite( fd, first, firstLen );
+			Sys_CrashWrite( fd, second, secondLen );
+			close( fd );
+			length = snprintf( line, sizeof( line ), "\nCrashed (signal %d), the crash log was written to %s\n", sig, path );
+			Sys_CrashWrite( STDERR_FILENO, line, Q_min( length, (int)sizeof( line ) - 1 ) );
 		}
 	}
 

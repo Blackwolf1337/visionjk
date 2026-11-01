@@ -31,4 +31,5 @@ void CON_Print( const char *msg );
 
 /* con_log.cpp */
 void ConsoleLogAppend( const char *string );
+void ConsoleLogParts( const char **first, int *firstLen, const char **second, int *secondLen );
 void ConsoleLogWriteOut( FILE *fp );
