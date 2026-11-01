@@ -80,9 +80,20 @@ void UI_KeyEvent( int key, qboolean down );
 // "release" lets it go. v_uiKey <number> presses and lets go a key (its number in keycodes.h), v_uiKey <number> char
 // types a letter.
 static void UI_Mouse_f( void ) {
-	const char *what = UI_Argv( 3 );
+	char		what[16];
+	int			x = atoi( UI_Argv( 1 ) ), y = atoi( UI_Argv( 2 ) );
 
-	UI_MouseEvent( atoi( UI_Argv( 1 ) ) - uiInfo.uiDC.cursorx, atoi( UI_Argv( 2 ) ) - uiInfo.uiDC.cursory );
+	// (UI_Argv returns one static buffer: keep the word before reading the next one)
+	Q_strncpyz( what, UI_Argv( 3 ), sizeof( what ) );
+	// "px" after the place: it is in pixels of the window, as a screenshot has them (the jka MCP server)
+	if ( !Q_stricmp( UI_Argv( 4 ), "px" ) || !Q_stricmp( what, "px" ) ) {
+		x = (int)( atof( UI_Argv( 1 ) ) / uiInfo.uiDC.xscale - uiInfo.uiDC.bias + 0.5f );
+		y = (int)( atof( UI_Argv( 2 ) ) / uiInfo.uiDC.yscale - uiInfo.uiDC.biasY + 0.5f );
+		if ( !Q_stricmp( what, "px" ) ) {
+			what[0] = '\0';
+		}
+	}
+	UI_MouseEvent( x - uiInfo.uiDC.cursorx, y - uiInfo.uiDC.cursory );
 	if ( !Q_stricmp( what, "click" ) ) {
 		UI_KeyEvent( A_MOUSE1, qtrue );
 		UI_KeyEvent( A_MOUSE1, qfalse );
@@ -356,6 +367,7 @@ static consoleCommand_t	commands[] = {
 	{ "ui_openmenu",		UI_OpenMenu_f },
 	{ "ui_opensiegemenu",	UI_OpenSiegeMenu_f },
 	{ "v_uiPage",			UI_Page_f },
+	{ "v_uiDump",			Menus_Dump },
 	{ "ui_report",			UI_Report },
 };
 

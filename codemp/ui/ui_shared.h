@@ -613,6 +613,7 @@ void Item_Init(itemDef_t *item);
 void Menu_PostParse(menuDef_t *menu);
 void Menu_CanvasLayout( menuDef_t *menu );
 void Menu_ChangesRevert( void );
+void Menus_Dump( void );
 void Menu_ChangesApply( void );
 float Menu_Unit( const menuDef_t *menu );
 void Menu_SetPage( menuDef_t *menu, int page );
