@@ -206,3 +206,20 @@ gfx/vision/board/frame
 		rgbGen vertex
 	}
 }
+
+// the water gun (models/vision/toys/watergun.md3, made by tools/toys/watergun.py from Kenney's Blaster Kit, CC0):
+// the colours of the kit lit as a model, and the shine of glossy plastic where the light reflects towards the eye
+models/vision/toys/watergun
+{
+	{
+		map models/vision/toys/watergun
+		rgbGen lightingDiffuse
+	}
+	{
+		map textures/common/env_chrome
+		tcGen environment
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen const ( 0.3 0.3 0.3 )
+		alphaGen lightingSpecular
+	}
+}

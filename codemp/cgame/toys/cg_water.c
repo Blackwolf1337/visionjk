@@ -51,6 +51,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WATER_PUDDLE_MAX	36.0f		// the radius a puddle grows to at most
 #define WATER_PATCH_MAX		18.0f		//	and a wet patch on a wall
 #define WATER_REFRACTS		12			// pieces of the jets that bend the picture, in one frame
+#define WATER_RADIUS		0.75f		// of the jet where it leaves the gun, drawn by the renderer
+#define WATER_TEAR_MSEC		170			// a jet starts to fall apart into drops this long after it left
+#define WATER_TORN_MSEC		650			//	and is all drops by then
+#define WATER_HOLD_MSEC		450			// the gun stays in the hand this long after the last water
 
 typedef struct {
 	qboolean	active;
@@ -88,6 +92,12 @@ static struct {
 	int				sendTime;
 	int				wetTime;
 	qhandle_t		streamShader, dropShader, wetShader, puddleShader;
+	int				liquid;			// the renderer draws the water (ext.R_AddLiquid): 1 yes, -1 no, 0 not asked yet
+	qhandle_t		gunModel;		// models/vision/toys/watergun.md3, its grip at the origin
+	vec3_t			flash;			//	and where the water leaves it (tag_flash)
+	int				holdUntil[MAX_CLIENTS];		// cg.time the gun is in his hand until
+	vec3_t			muzzle[MAX_CLIENTS];		// where the water left the gun drawn last
+	int				muzzleTime[MAX_CLIENTS];	//	and its cg.time
 	int				splashFx;
 	sfxHandle_t		splashSound[3], faceSound;
 	qboolean		registered;
@@ -106,6 +116,14 @@ static void Water_Register( void ) {
 	water.splashSound[1] = trap->S_RegisterSound( "sound/player/footsteps/water_run2.mp3" );
 	water.splashSound[2] = trap->S_RegisterSound( "sound/player/footsteps/water_run3.mp3" );
 	water.faceSound = trap->S_RegisterSound( "sound/player/bodyfall_water1.mp3" );
+	water.gunModel = trap->R_RegisterModel( "models/vision/toys/watergun.md3" );
+	VectorSet( water.flash, 21.0f, 0.0f, 3.0f );
+	if ( water.gunModel ) {
+		orientation_t tag;
+
+		if ( trap->R_LerpTag( &tag, water.gunModel, 0, 0, 1.0f, "tag_flash" ) )
+			VectorCopy( tag.origin, water.flash );
+	}
 }
 
 void CG_WaterInit( void ) {
@@ -124,6 +142,7 @@ void CG_WaterHeard( int client, const vec3_t origin, const vec3_t velocity ) {
 	if ( !jet->until || cg.time >= jet->until )
 		jet->nextDrop = cg.time;
 	jet->until = cg.time + WATER_JET_MSEC;
+	water.holdUntil[client] = jet->until + WATER_HOLD_MSEC;
 	VectorCopy( origin, jet->origin );
 	VectorCopy( velocity, jet->velocity );
 }
@@ -136,19 +155,139 @@ void CG_WaterUp_f( void ) {
 	water.spraying = qfalse;
 }
 
-// where the water of the own gun leaves the hand and how fast: from the right hand where the player looks
+// Where the water of the own gun leaves the hand and how fast: from the right hand where the player looks. The
+// angles of the player, not of the view: a camera turned around him in third person does not aim the gun.
 static void Water_Own( vec3_t origin, vec3_t velocity ) {
 	const playerState_t	*ps = &cg.predictedPlayerState;
 	vec3_t				forward, right, up;
 
-	AngleVectors( cg.refdef.viewangles, forward, right, up );
-	VectorCopy( ps->origin, origin );
-	origin[2] += ps->viewheight;
-	VectorMA( origin, 12.0f, forward, origin );
-	VectorMA( origin, 7.0f, right, origin );
-	VectorMA( origin, -6.0f, up, origin );
+	AngleVectors( ps->viewangles, forward, right, up );
+	if ( cg.clientNum >= 0 && cg.clientNum < MAX_CLIENTS && water.muzzleTime[cg.clientNum]
+		&& cg.time - water.muzzleTime[cg.clientNum] < 100 && cg.time >= water.muzzleTime[cg.clientNum] ) {
+		// the muzzle of the gun as it was drawn the frame before: in the hand, or in the view
+		VectorCopy( water.muzzle[cg.clientNum], origin );
+	} else {
+		VectorCopy( ps->origin, origin );
+		origin[2] += ps->viewheight;
+		VectorMA( origin, 12.0f, forward, origin );
+		VectorMA( origin, 7.0f, right, origin );
+		VectorMA( origin, -6.0f, up, origin );
+	}
 	VectorScale( forward, WATER_SPEED, velocity );
 	VectorMA( velocity, 0.5f, ps->velocity, velocity );
+}
+
+// the water gun is in his hand: while he sprays and a moment after
+qboolean CG_WaterHolding( int client ) {
+	if ( client < 0 || client >= MAX_CLIENTS || !water.registered || !water.gunModel )
+		return qfalse;
+	if ( client != cg.clientNum && !v_toys.integer )
+		return qfalse;
+	return (qboolean)( water.holdUntil[client] > cg.time && water.holdUntil[client] - cg.time <= WATER_JET_MSEC + WATER_HOLD_MSEC );
+}
+
+// the way the gun of a player points: where he looks, upright
+static void Water_GunAxis( centity_t *cent, vec3_t axis[3] ) {
+	vec3_t angles;
+
+	if ( cent->currentState.number == cg.clientNum )
+		VectorCopy( cg.predictedPlayerState.viewangles, angles );
+	else
+		VectorCopy( cent->lerpAngles, angles );
+	angles[ROLL] = 0.0f;
+	AnglesToAxis( angles, axis );
+}
+
+// where the water leaves a gun whose grip is at origin
+static void Water_Muzzle( int client, const vec3_t origin, vec3_t axis[3] ) {
+	VectorMA( origin, water.flash[0], axis[0], water.muzzle[client] );
+	VectorMA( water.muzzle[client], water.flash[1], axis[1], water.muzzle[client] );
+	VectorMA( water.muzzle[client], water.flash[2], axis[2], water.muzzle[client] );
+	water.muzzleTime[client] = cg.time ? cg.time : 1;
+}
+
+/*
+=================
+CG_WaterGun
+
+The gun in the right hand of a player who sprays, his grip on its grip, pointing where he looks (his torso holds a
+rifle up, CG_WaterTorsoAnim). cg_players.c has put his weapon away. Also for the own player, in third person and in
+mirrors.
+=================
+*/
+qboolean CG_WaterGun( centity_t *cent ) {
+	const int		client = cent->currentState.number;
+	clientInfo_t	*ci;
+	mdxaBone_t		bolt;
+	refEntity_t		re;
+
+	if ( !CG_WaterHolding( client ) || !cent->ghoul2 )
+		return qfalse;
+	ci = &cgs.clientinfo[client];
+	if ( ci->bolt_rhand < 0 )
+		return qfalse;
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_rhand, &bolt, cent->turAngles, cent->lerpOrigin, cg.time,
+		cgs.gameModels, cent->modelScale );
+	memset( &re, 0, sizeof( re ) );
+	re.hModel = water.gunModel;
+	BG_GiveMeVectorFromMatrix( &bolt, ORIGIN, re.origin );
+	VectorCopy( re.origin, re.lightingOrigin );
+	Water_GunAxis( cent, re.axis );
+	if ( client == cg.clientNum && !cg.renderingThirdPerson )
+		re.renderfx |= RF_THIRD_PERSON;
+	trap->R_AddRefEntityToScene( &re );
+	if ( client != cg.clientNum || cg.renderingThirdPerson )
+		Water_Muzzle( client, re.origin, re.axis );
+	return qtrue;
+}
+
+/*
+=================
+CG_WaterViewGun
+
+The own gun in first person, low at the right as a weapon is held, in place of the view weapon
+=================
+*/
+#define WATER_VIEW_FORWARD	11.0f
+#define WATER_VIEW_RIGHT	6.0f
+#define WATER_VIEW_UP		-8.5f
+#define WATER_VIEW_SCALE	0.7f		// smaller than in the hand of a player: it is held close to the eye
+
+qboolean CG_WaterViewGun( void ) {
+	refEntity_t re;
+
+	if ( !CG_WaterHolding( cg.clientNum ) )
+		return qfalse;
+	memset( &re, 0, sizeof( re ) );
+	re.hModel = water.gunModel;
+	VectorCopy( cg.refdef.vieworg, re.origin );
+	VectorMA( re.origin, WATER_VIEW_FORWARD, cg.refdef.viewaxis[0], re.origin );
+	VectorMA( re.origin, -WATER_VIEW_RIGHT, cg.refdef.viewaxis[1], re.origin );
+	VectorMA( re.origin, WATER_VIEW_UP, cg.refdef.viewaxis[2], re.origin );
+	// a little up and in, so the muzzle points at the crosshair
+	{
+		vec3_t angles;
+
+		VectorCopy( cg.refdef.viewangles, angles );
+		angles[PITCH] -= 3.0f;
+		angles[YAW] += 2.0f;
+		AnglesToAxis( angles, re.axis );
+	}
+	VectorSet( re.modelScale, WATER_VIEW_SCALE, WATER_VIEW_SCALE, WATER_VIEW_SCALE );
+	ScaleModelAxis( &re );
+	VectorCopy( cg.refdef.vieworg, re.lightingOrigin );
+	re.renderfx = RF_DEPTHHACK | RF_FIRST_PERSON | RF_MINLIGHT;
+	trap->R_AddRefEntityToScene( &re );
+	// (the axes are scaled: the muzzle comes out where it is drawn)
+	Water_Muzzle( cg.clientNum, re.origin, re.axis );
+	return qtrue;
+}
+
+// the torso of a player who holds the gun holds a rifle up, whatever his weapon
+int CG_WaterTorsoAnim( centity_t *cent, int anim ) {
+	if ( cent->currentState.eType == ET_PLAYER && CG_WaterHolding( cent->currentState.number ) )
+		return TORSO_WEAPONREADY3;
+	return anim;
 }
 
 /*
@@ -172,6 +311,7 @@ void CG_WaterFrame( void ) {
 	if ( !jet->until || cg.time >= jet->until )
 		jet->nextDrop = cg.time;
 	jet->until = cg.time + 50;
+	water.holdUntil[cg.clientNum] = cg.time + WATER_HOLD_MSEC;
 	VectorCopy( origin, jet->origin );
 	VectorCopy( velocity, jet->velocity );
 	if ( water.sendTime && cg.time - water.sendTime < WATER_SEND_MSEC && cg.time >= water.sendTime )
@@ -316,6 +456,116 @@ static const waterDrop_t *Water_Prev( const waterDrop_t *drop ) {
 	return prev;
 }
 
+// the renderer draws clear water itself (rd-vulkan-vision): asked once
+static qboolean Water_Liquid( void ) {
+	if ( !water.liquid ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameLiquid", value, sizeof( value ) );
+		water.liquid = ( atoi( value ) && trap->ext.R_AddLiquid && trap->ext.R_AddLiquid( NULL, 0 ) ) ? 1 : -1;
+	}
+	return (qboolean)( water.liquid > 0 );
+}
+
+// 0 to 1 for a drop, the same every frame
+static float Water_Random( const waterDrop_t *drop, int salt ) {
+	unsigned int h = (unsigned int)drop->born * 2654435761u ^ (unsigned int)( drop - water.drops ) * 40503u ^ (unsigned int)salt * 97u;
+
+	h ^= h >> 15;
+	h *= 2246822519u;
+	h ^= h >> 13;
+	return ( h & 0xffffu ) / 65535.0f;
+}
+
+// how far the water of a drop has fallen apart, 0 a smooth jet to 1 drops
+static float Water_Breakup( const waterDrop_t *drop ) {
+	const float t = (float)( cg.time - drop->born - WATER_TEAR_MSEC ) / ( WATER_TORN_MSEC - WATER_TEAR_MSEC );
+
+	return Com_Clamp( 0.0f, 1.0f, t );
+}
+
+// where the water of a drop is on the water itself, in units: what rides on its surface moves with it
+static float Water_Flow( const waterDrop_t *drop ) {
+	return (float)( drop->born % 60000 ) * 0.001f * WATER_SPEED;
+}
+
+// The radius of the water at a drop: thinner as the jet stretches, a little uneven from the start (the pump does
+// not push evenly), and once it tears every drop pulls itself into a bead of its own, some larger, some smaller
+// (as a real jet does, Plateau and Rayleigh)
+static float Water_Radius( const waterDrop_t *drop, float breakup ) {
+	const float age = ( cg.time - drop->born ) / (float)WATER_LIFE_MSEC;
+	const float uneven = Water_Random( drop, 1 ) - 0.5f;
+
+	return WATER_RADIUS * ( 1.0f - 0.35f * age ) * ( 1.0f + uneven * 0.14f + breakup * ( uneven + 0.15f ) * 0.9f );
+}
+
+/*
+=================
+Water_AddLiquid
+
+The jets as the renderer draws water: a piece of round water from each drop to the one before it while the jet
+is whole, one from the gun to the newest drop, and where it has torn a drop by itself, stretched along the way it
+flies. A drop lets go of the one before it once the jet tears, the later the more it has fallen apart.
+=================
+*/
+static void Water_AddLiquid( void ) {
+	static liquidSegment_t	segs[WATER_DROPS + MAX_CLIENTS];
+	int						count = 0, i;
+
+	for ( i = 0; i < WATER_DROPS; i++ ) {
+		const waterDrop_t	*drop = &water.drops[i];
+		const waterDrop_t	*prev;
+		liquidSegment_t		*seg;
+		float				breakup;
+
+		if ( !drop->active )
+			continue;
+		breakup = Water_Breakup( drop );
+		prev = Water_Prev( drop );
+		if ( prev && Water_Random( drop, 2 ) < breakup * 1.15f )
+			prev = NULL;
+		seg = &segs[count++];
+		VectorCopy( drop->origin, seg->b );
+		seg->radius[1] = Water_Radius( drop, breakup );
+		seg->flow[1] = Water_Flow( drop );
+		seg->breakup = breakup;
+		if ( prev ) {
+			const float prevBreakup = Water_Breakup( prev );
+
+			VectorCopy( prev->origin, seg->a );
+			seg->radius[0] = Water_Radius( prev, prevBreakup );
+			seg->flow[0] = Water_Flow( prev );
+		} else {
+			// a drop alone: a little longer than round along the way it flies
+			VectorMA( drop->origin, -0.007f - 0.007f * Water_Random( drop, 3 ), drop->velocity, seg->a );
+			seg->radius[0] = seg->radius[1] * 0.8f;
+			seg->flow[0] = seg->flow[1] - 3.0f;
+		}
+	}
+	// the piece from the gun to the drop it let go of last
+	for ( i = 0; i < MAX_CLIENTS && count < WATER_DROPS + MAX_CLIENTS; i++ ) {
+		const waterJet_t	*jet = &water.jets[i];
+		const waterDrop_t	*last;
+		liquidSegment_t		*seg;
+
+		if ( !jet->until || jet->lastDrop < 0 )
+			continue;
+		last = &water.drops[jet->lastDrop];
+		if ( !last->active || last->owner != i || DistanceSquared( last->origin, jet->origin ) > WATER_LINK * WATER_LINK )
+			continue;
+		seg = &segs[count++];
+		VectorCopy( jet->origin, seg->a );
+		VectorCopy( last->origin, seg->b );
+		seg->radius[0] = WATER_RADIUS * 0.85f;
+		seg->radius[1] = Water_Radius( last, 0.0f );
+		seg->flow[1] = Water_Flow( last );
+		seg->flow[0] = seg->flow[1] + ( cg.time - last->born ) * 0.001f * WATER_SPEED;
+		seg->breakup = 0.0f;
+	}
+	if ( count )
+		trap->ext.R_AddLiquid( segs, count );
+}
+
 // the puddles and wet patches, drawn anew each frame with the size they have and as wet as they still are
 static void Water_DrawPuddles( void ) {
 	int i;
@@ -362,6 +612,9 @@ void CG_WaterScene( void ) {
 			jet->lastDrop = -1;
 			continue;
 		}
+		// the jet of somebody else leaves the gun this cgame drew in his hand this frame
+		if ( i != cg.clientNum && water.muzzleTime[i] == cg.time )
+			VectorCopy( water.muzzle[i], jet->origin );
 		// (at most a tenth of a second at once: a long frame is no flood)
 		if ( jet->nextDrop < cg.time - 100 )
 			jet->nextDrop = cg.time - 100;
@@ -369,6 +622,16 @@ void CG_WaterScene( void ) {
 			Water_Drop( i, jet, cg.time - jet->nextDrop );
 			jet->nextDrop += WATER_DROP_MSEC;
 		}
+	}
+
+	if ( Water_Liquid() ) {
+		for ( i = 0; i < WATER_DROPS; i++ ) {
+			if ( water.drops[i].active && !Water_Move( &water.drops[i] ) )
+				water.drops[i].active = qfalse;
+		}
+		Water_AddLiquid();
+		Water_DrawPuddles();
+		return;
 	}
 
 	memset( &re, 0, sizeof( re ) );

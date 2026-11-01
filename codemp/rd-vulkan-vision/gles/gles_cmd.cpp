@@ -951,7 +951,7 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 	const vkDraw_t *draw = (const vkDraw_t *)( frame->draws.mapped + (size_t)VK_DRAW_STRIDE * cmd->draw.drawIndex );
 	const GLenum mode = ( cmd->draw.stateBits & VK_GLS_LINES ) ? GL_LINES : GL_TRIANGLES;
 
-	static const glesLayout_t layouts[] = { GLV_GENERIC, GLV_SKINNED, GLV_NONE, GLV_GRASS };	// by program
+	static const glesLayout_t layouts[] = { GLV_GENERIC, GLV_SKINNED, GLV_NONE, GLV_GRASS, GLV_NONE };	// by program
 
 	if ( !GLES_Vertexes( layouts[cmd->draw.program] ) ) {
 		return;

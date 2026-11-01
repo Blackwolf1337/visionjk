@@ -181,6 +181,18 @@ typedef struct screenEffect_s {
 	screenFxSource_t	sources[SCREENFX_MAX_SOURCES];
 } screenEffect_t;
 
+// A piece of clear water the cgame puts into the scene (re.ext.AddLiquid): a round body from a to b, as thick as the
+// two radii, with the ends rounded. A jet is a chain of them, a drop one whose a and b are close. The renderer
+// draws them after the scene, bending what lies behind them (rd-vulkan-vision, shaders/liquid.frag).
+#define LIQUID_MAX_SEGMENTS	1024	// in one frame, all of them together
+
+typedef struct liquidSegment_s {
+	vec3_t		a, b;
+	float		radius[2];			// at a and at b
+	float		flow[2];			// where the water at a and at b is on the water itself, units: the surface moves with it
+	float		breakup;			// 0 a smooth jet, 1 one that is falling apart into drops
+} liquidSegment_t;
+
 extern int	skyboxportal;
 extern int	drawskyboxportal;
 

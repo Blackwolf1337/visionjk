@@ -18,6 +18,20 @@ second, a drop every 18 ms, and it falls with gravity. It splashes where it hits
 steps. On a floor a puddle grows while the water comes (up to 36 units) and dries after 20 seconds, fading in the
 second half. On a wall it leaves a wet patch (up to 18 units).
 
+The jet leaves the muzzle of a water gun. While you spray, and for 450 ms after, you hold it in your right hand: your
+weapon (also the saber, its blades are not drawn) is put away until then, your body takes the pose of a rifle held up
+(`TORSO_WEAPONREADY3`), and the gun points where you look. The same goes for the other players of VisionJK, each client
+poses them itself. In first person the water gun replaces the weapon you see, 0.7 times as large, low at the right; with
+a saber selected the game is in third person anyway. In third person with `cg_thirdPersonAngle` the jet goes where the
+player looks, not where the camera looks.
+
+On rd-vulkan-vision the jet is drawn as real water: it bends the picture behind it with a little colour fringing,
+mirrors the scene at a flat angle, has a highlight along the jet, darker edges and a brighter middle, small waves that
+travel with the water, and white foam where it tears. It cuts into the level where they really meet. The jet is whole
+for 170 ms after it leaves the gun, then falls apart into drops that become round beads of their own size, up to 650 ms,
+and loose drops are stretched along their flight. The OpenGL renderer and rd-vulkan have no such water and keep the
+old jet of sprites.
+
 Who is hit in the face sees drops run down the view. These are the drops of rd-vulkan-vision when you come up out of
 the water, and they need `v_fxWater`. The OpenGL renderer has no such effect. On rd-vulkan-vision the jet also bends
 the picture behind it (`v_fxWater`). `v_toys 0` hides the water of others too.
@@ -139,6 +153,7 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_board load <1-4>` | | loads a preset |
 | `v_board import <file>` | | puts a picture file of `drawings/` on the board |
 | `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
+| `v_cgameLiquid` | 1 | 1: the cgame draws the jet of the water gun as real water when the renderer can (rd-vulkan-vision), 0: always the sprites |
 | `v_toys` | 1 | 0: the toys and emoji of other players are not drawn |
 
 ## How it works
@@ -158,15 +173,51 @@ On any other server it goes through the masterserver (`VOICE_TOY`). The master h
 room that said `TOY_HELLO` or threw, 4 a second at most. It refuses broken or too fast throws. The cgame says hello
 every 20 s.
 
-The water gun is not a throw. The jet is drops that fly on their own, each drawn as a piece of water (`RT_LINE`) to
-the drop before it, so the jet bends as it falls. The others get `TOY_WATER` (the same 19 bytes as a snowball: where
+The water gun is not a throw. The jet is drops that fly on their own, each linked to the drop before it, so the jet
+bends as it falls. With rd-vulkan-vision each link is a piece of water for the renderer (see below), with any other
+renderer it is a sprite line (`RT_LINE`). The others get `TOY_WATER` (the same 19 bytes as a snowball: where
 the water leaves the gun and how fast) every 260 ms while it sprays, and their cgame sprays from there for 340 ms, so
-the jet of somebody else turns in steps. The limits of the relays (4 a second) count snowballs and water together.
+the jet of somebody else turns in steps. A player who sprays holds the water gun for `WATER_HOLD_MSEC` (450 ms) after
+the last spray. In that time `cg_players.c` removes his weapon model and does not put it back, `CG_WaterTorsoAnim` plays
+`TORSO_WEAPONREADY3` on his torso on every client (client side only, nothing new on the network), and `CG_WaterGun`
+draws the gun at the `*r_hand` bolt pointing where he looks. The jets of others start at the muzzle (`tag_flash`) of the
+gun this cgame draws in their hand, the own jet at the muzzle of the own gun. In first person `CG_WaterViewGun` (called
+from `CG_AddViewWeapon` in `cg_weapons.c`) draws it as the view weapon. The aim is the `viewangles` of the player state,
+not `cg.refdef.viewangles`, which follow the camera in third person. The limits of the relays (4 a second) count snowballs and water together.
 
 Puddles and wet patches are temporary marks drawn anew every frame with their size and wetness (24 at once). The
 textures come from `tools/toys/textures.py` (`waterstream`, `waterdrop`, `wet`, `puddle`, `puddleshine`). The shine is
 masked to the puddle shape, so the added light stays inside it. The splash is `effects/vision/water_splash.efx`. The
 masterserver and the game module have to know `TOY_WATER` (0.2.9-dev.25 and later).
+
+The shape of the jet is in `cgame/toys/cg_water.c`. The jet stays whole for `WATER_TEAR_MSEC` (170 ms) after it leaves
+the gun, then falls apart until `WATER_TORN_MSEC` (650 ms): the links between drops break with a growing breakup, each
+drop becomes a bead of its own size (Plateau-Rayleigh) and loose drops are stretched along their flight. The radius at
+the gun is 0.75 units, a little uneven along the jet. A coordinate that moves with the water (flow) lets the waves
+travel with it.
+
+The renderer call is `re.ext.AddLiquid` (`RE_AddLiquid` in `rd-vanilla/tr_cmds.cpp`, a shared front end). It takes
+pieces of water, `liquidSegment_t` in `rd-common/tr_types.h`: the points a and b, two radii, the flow at both ends and
+a breakup from 0 to 1, up to `LIQUID_MAX_SEGMENTS` (1024) a frame. The engine passes it to the cgame as
+`ext.R_AddLiquid` when `v_cgameLiquid` is 1. rd-vanilla returns `qfalse`, and then the cgame draws the old sprite jet.
+
+rd-vulkan-vision draws the pieces in `VK_DrawLiquids` (`vk_post.cpp`), right after the main view of the level and before
+its glow. The frame is copied (`vk.screen`), then each piece is a quad made in the vertex shader (`shaders/liquid.vert`,
+program `VKP_LIQUID`, records in the bone buffer like `sprite.vert`, batches of 127 for the OpenGL ES uniform block).
+`shaders/liquid.frag` casts the ray of every pixel against the capsule (a round body with rounded ends, the radius going
+from one end to the other) and writes the depth of the hit, so water and level cut each other where they meet. It then
+shades it: what lies behind, bent by refraction (Snell, limited to a few jet widths on the screen) with slight colour
+fringing and absorption; the mirrored scene by Fresnel's law (Schlick) from the frame copy; an anisotropic highlight
+along the jet (Ashikhmin-Shirley) from the light grid of the level and a light from above; a lens effect (darker edges,
+brighter middle); small waves riding with the water; milkiness and white foam where the jet tears. The light of the
+level is taken at both ends of each piece and blended along it. The edge is soft over one pixel. It works on the OpenGL
+ES device too (the shaders pass the ES check, not tested in a browser yet).
+
+The model is `models/vision/toys/watergun.md3` with `watergun.png`, made by `tools/toys/watergun.py` from `blaster-e` of
+Kenney's Blaster Kit 2.1 (CC0, www.kenney.nl): the grip is at the origin, the barrel along +x, 30 units long, `tag_flash`
+at the muzzle. It is split into two surfaces because the renderers take at most 999 vertices a surface. The shader
+`models/vision/toys/watergun` in `shaders/vision_toys.shader` lights the colours as a model and adds the shine of glossy
+plastic (`env_chrome` by `tcGen environment`, `alphaGen lightingSpecular`).
 
 The RC car is not a throw either. Your own cgame drives it with traces against the level and the players. The others
 get `TOY_RC` (where it is, its speed over the ground in x and y, and its yaw in the z of the speed) six times a second
@@ -261,6 +312,9 @@ and got snow on its screen. A throw at the floor showed the burst and the splat.
 For the water gun, one client sprayed the floor (jet, splash, and a puddle that stays after). Two clients on a local
 server, where the thrower sprayed the other: the target received the `TOY_WATER` server commands, drew the jet and saw
 the drops run down its view. There is a unit test for `TOY_WATER` in `tests/vjk/toys.cpp`.
+
+The real water, the water gun in the hand and the view weapon were run in headless test runs only. Not tested yet in a
+real game with players.
 
 The masterserver relay was tested with a UDP script: hello, a throw handed on, four of six in a second, a too fast
 one refused. The unit tests are in `tests/vjk/toys.cpp`.

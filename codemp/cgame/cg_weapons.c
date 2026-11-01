@@ -826,6 +826,11 @@ void CG_AddViewWeapon( playerState_t *ps ) {
 		return;
 	}
 
+	// VisionJK: the water gun in place of the weapon while it sprays (toys/cg_water.c)
+	if ( CG_WaterViewGun() ) {
+		return;
+	}
+
 	// drop gun lower at higher fov
 	if ( cg_fovViewmodelAdjust.integer && cgFov > 90 )
 		fovOffset = -0.2f * ( cgFov - 90 );
@@ -2613,7 +2618,8 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 	}
 
 	if (cent->ghoul2 && cent->ghoul2weapon != CG_G2WeaponInstance(cent, ps->weapon) &&
-		ps->clientNum == cent->currentState.number) //don't want spectator mode forcing one client's weapon instance over another's
+		ps->clientNum == cent->currentState.number && //don't want spectator mode forcing one client's weapon instance over another's
+		!CG_WaterHolding(ps->clientNum)) // VisionJK: not while the water gun is in the hand
 	{
 		CG_CopyG2WeaponInstance(cent, ps->weapon, cent->ghoul2);
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, ps->weapon);

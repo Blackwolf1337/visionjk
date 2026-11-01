@@ -800,6 +800,11 @@ typedef struct cgameImport_s {
 		// (tga, png, jpg) in width x height RGBA (up to 512 each), its sides kept and centred: where it does not reach
 		// the alpha is 0. qfalse: there is no such picture.
 		qboolean		(*R_LoadImageFit)						( const char *name, byte *rgba, int width, int height );
+		// Only an engine that sets the cvar v_cgameLiquid to 1 has this one, the same way. Pieces of clear water for
+		// the scene of this frame (liquidSegment_t: a jet is a chain of them, a drop one short piece), between
+		// R_ClearScene and R_RenderScene; they bend what lies behind them. NULL only asks. qfalse: the renderer does
+		// not draw them (rd-vanilla): the cgame draws its water itself.
+		qboolean		(*R_AddLiquid)							( const liquidSegment_t *segments, int count );
 	} ext;
 } cgameImport_t;
 

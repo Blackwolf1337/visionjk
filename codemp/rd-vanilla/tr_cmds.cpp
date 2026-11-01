@@ -291,6 +291,34 @@ qboolean	RE_SetScreenEffect( const screenEffect_t *fx ) {
 #endif
 }
 
+/*
+=============
+RE_AddLiquid
+
+Pieces of water for the scene of this frame (liquidSegment_t), added to the ones it has. They hold for one frame.
+NULL: only the question whether this renderer draws them. rd-vulkan-vision draws them after the scene
+(VK_DrawLiquids), rd-vanilla says qfalse and the cgame draws its water with sprites as it always did.
+=============
+*/
+liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];
+int				r_numLiquids;
+
+qboolean	RE_AddLiquid( const liquidSegment_t *segments, int count ) {
+#ifdef RD_VULKAN_VISION
+	if ( !VK_HasScope() ) {
+		return qfalse;
+	}
+	if ( segments && count > 0 ) {
+		count = Q_min( count, LIQUID_MAX_SEGMENTS - r_numLiquids );
+		memcpy( r_liquids + r_numLiquids, segments, sizeof( *segments ) * count );
+		r_numLiquids += count;
+	}
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -444,11 +472,12 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 		return;
 	}
 
-	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect() and RE_SetScreenEffect() was for the
-	// frame before
+	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect(), RE_SetScreenEffect() and
+	// RE_AddLiquid() was for the frame before
 	r_dofAmount = 0.0f;
 	r_scopeFx.flags = 0;
 	r_screenFxSet = qfalse;
+	r_numLiquids = 0;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

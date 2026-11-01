@@ -45,6 +45,12 @@ static const uint32_t vk_grassVert[] =
 static const uint32_t vk_genericFrag[] =
 #include "shaders/generic_frag.inc"
 ;
+static const uint32_t vk_liquidVert[] =
+#include "shaders/liquid_vert.inc"
+;
+static const uint32_t vk_liquidFrag[] =
+#include "shaders/liquid_frag.inc"
+;
 static const uint32_t vk_postVert[] =
 #include "shaders/post_vert.inc"
 ;
@@ -288,8 +294,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	stages[1].module = fragment;
 	stages[1].pName = "main";
 
-	if ( !post && program == VKP_SPRITE ) {
-		// nothing comes from a vertex buffer, see shaders/sprite.vert
+	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID ) ) {
+		// nothing comes from a vertex buffer, see shaders/sprite.vert and liquid.vert
 	} else if ( !post && program == VKP_GRASS ) {
 		// vkGrassVertex_t, three vec4
 		memset( bindings, 0, sizeof( bindings ) );
@@ -456,6 +462,8 @@ void VK_InitPipelines( void ) {
 	vk.vertexShaders[VKP_GRASS] = VK_CreateShader( vk_grassVert, sizeof( vk_grassVert ) );
 	vk.fragmentShaders[VKP_GRASS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.fragmentShaders[VKP_SPRITE] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
+	vk.vertexShaders[VKP_LIQUID] = VK_CreateShader( vk_liquidVert, sizeof( vk_liquidVert ) );
+	vk.fragmentShaders[VKP_LIQUID] = VK_CreateShader( vk_liquidFrag, sizeof( vk_liquidFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );

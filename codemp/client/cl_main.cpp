@@ -3113,6 +3113,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameVideo", "1", CVAR_ROM, "" );
 	// and picture files for the cgame (ext.R_LoadImageFit, the drawing board)
 	Cvar_Get( "v_cgameImage", "1", CVAR_ROM, "" );
+	// and the water of the toys drawn by the renderer (ext.R_AddLiquid)
+	Cvar_Get( "v_cgameLiquid", "1", CVAR_ROM, "" );
 	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test
 	Cvar_Get( "v_tvService", "https://jka.vision/tv/", CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
 	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())

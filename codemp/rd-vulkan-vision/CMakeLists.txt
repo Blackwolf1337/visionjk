@@ -201,7 +201,9 @@ set(MPVulkanVisionShaders
 	skinned.vert
 	sprite.vert
 	grass.vert
+	liquid.vert
 	generic.frag
+	liquid.frag
 	post.vert
 	gamma.frag
 	blur.frag

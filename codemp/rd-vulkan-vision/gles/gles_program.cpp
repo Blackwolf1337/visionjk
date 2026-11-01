@@ -35,7 +35,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "shaders/skinned_vert_es.inc"
 #include "shaders/sprite_vert_es.inc"
 #include "shaders/grass_vert_es.inc"
+#include "shaders/liquid_vert_es.inc"
 #include "shaders/generic_frag_es.inc"
+#include "shaders/liquid_frag_es.inc"
 #include "shaders/post_vert_es.inc"
 #include "shaders/gamma_frag_es.inc"
 #include "shaders/blur_frag_es.inc"
@@ -57,6 +59,7 @@ static const struct {
 	{ "skinned", vk_es_skinned_vert, vk_es_generic_frag, "" },
 	{ "sprite", vk_es_sprite_vert, vk_es_generic_frag, "" },
 	{ "grass", vk_es_grass_vert, vk_es_generic_frag, "" },
+	{ "liquid", vk_es_liquid_vert, vk_es_liquid_frag, "" },
 	{ "gamma", vk_es_post_vert, vk_es_gamma_frag, "" },
 	{ "blur", vk_es_post_vert, vk_es_blur_frag, "" },
 	{ "copy", vk_es_post_vert, vk_es_copy_frag, "" },

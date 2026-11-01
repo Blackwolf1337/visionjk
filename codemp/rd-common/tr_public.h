@@ -280,6 +280,9 @@ typedef struct refexport_s {
 		// A picture file of the game (tga, png, jpg) for a module, in width x height RGBA, its sides kept and centred:
 		// where it does not reach the alpha is 0. qfalse: there is no such picture.
 		qboolean			(*LoadImageFit)							( const char *name, byte *rgba, int width, int height );
+		// Pieces of water for the scene of this frame (liquidSegment_t), between ClearScene and RenderScene. NULL
+		// only asks. qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its water itself.
+		qboolean			(*AddLiquid)							( const liquidSegment_t *segments, int count );
 	} ext;
 
 } refexport_t;

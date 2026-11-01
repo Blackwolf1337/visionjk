@@ -509,6 +509,94 @@ void VK_CaptureFrame( void ) {
 }
 
 /*
+===============
+VK_DrawLiquids
+
+The pieces of water of RE_AddLiquid over the view of the level that was just drawn, before its glow
+(shaders/liquid.vert and liquid.frag). The frame is copied into vk.screen first: the water shows what lies behind
+it and mirrors what lies in front of it from there. Then the pieces are drawn against the depth of the scene and
+write the depth of where the rays hit them, in batches as large as the sprites of sprite.vert may be (the block of
+bones of OpenGL ES). Each piece takes the light of the level at its two ends, blended along it, so a jet has no
+steps where one piece meets the next.
+===============
+*/
+#define LIQUID_BEND		8.0f		// how far behind the water what it shows bent is taken to be, units
+#define LIQUID_ABSORB	0.035f		// how much it darkens per unit of the way through it, red first
+#define LIQUID_WAVES	1.0f		// how strongly its surface ripples
+
+// the light of the level at a point, the light of a lamp lit room where the level has no grid
+static void VK_LiquidLight( const vec3_t point, vec3_t ambient, vec3_t directed, vec3_t dir ) {
+	if ( !tr.world || !R_LightForPoint( (float *)point, ambient, directed, dir ) ) {
+		VectorSet( ambient, 96.0f, 96.0f, 96.0f );
+		VectorSet( directed, 160.0f, 160.0f, 160.0f );
+		VectorSet( dir, 0.3f, 0.2f, 0.93f );
+	}
+}
+
+void VK_DrawLiquids( void ) {
+	static vec4_t		records[VK_MAX_BATCH_SPRITES * VK_SPRITE_ROWS];
+	static glIndex_t	indexes[VK_MAX_BATCH_SPRITES * 6];
+	const float			time = (float)fmod( backEnd.refdef.floatTime, 1000.0 );
+
+	if ( !vk.frame || !r_numLiquids || !tr.screenImage || !vk.depthReadable ) {
+		return;
+	}
+	VK_CaptureFrame();
+	backEnd.currentEntity = &tr.worldEntity;
+	backEnd.ori = backEnd.viewParms.world;
+	VK_InvalidateTransform();
+
+	for ( int first = 0; first < r_numLiquids; first += VK_MAX_BATCH_SPRITES ) {
+		const int	count = Q_min( r_numLiquids - first, VK_MAX_BATCH_SPRITES );
+		uint32_t	bones;
+		vkDraw_t	draw;
+
+		for ( int i = 0; i < count; i++ ) {
+			const liquidSegment_t	*seg = &r_liquids[first + i];
+			vec4_t					*row = records + i * VK_SPRITE_ROWS;
+			vec3_t					ambient, directed, dir, ambientB, directedB, dirB;
+			float					ratio[2];
+
+			VK_LiquidLight( seg->a, ambient, directed, dir );
+			VK_LiquidLight( seg->b, ambientB, directedB, dirB );
+			// the light at b as a part of the one at a, the direction of the two together
+			ratio[0] = ( ambientB[0] + ambientB[1] + ambientB[2] + 1.0f ) / ( ambient[0] + ambient[1] + ambient[2] + 1.0f );
+			ratio[1] = ( directedB[0] + directedB[1] + directedB[2] + 1.0f ) / ( directed[0] + directed[1] + directed[2] + 1.0f );
+			VectorAdd( dir, dirB, dir );
+			VectorSet4( row[0], seg->a[0], seg->a[1], seg->a[2], seg->radius[0] );
+			VectorSet4( row[1], seg->b[0], seg->b[1], seg->b[2], seg->radius[1] );
+			VectorSet4( row[2], seg->flow[0], seg->flow[1], Com_Clamp( 0.0f, 1.0f, seg->breakup ), 0.0f );
+			VectorSet4( row[3], dir[0], dir[1], dir[2], time );
+			VectorSet4( row[4], ambient[0] / 255.0f, ambient[1] / 255.0f, ambient[2] / 255.0f, Com_Clamp( 0.25f, 4.0f, ratio[0] ) );
+			VectorSet4( row[5], directed[0] / 255.0f, directed[1] / 255.0f, directed[2] / 255.0f, Com_Clamp( 0.25f, 4.0f, ratio[1] ) );
+			VK_QuadIndexes( indexes + i * 6, (glIndex_t)( i * 4 ) );
+		}
+		if ( !VK_QuadView( records, count, &bones ) || !VK_UploadIndexes( NULL, NULL, 0, indexes, count * 6 ) ) {
+			break;
+		}
+		memset( &draw, 0, sizeof( draw ) );
+		draw.transform = VK_CurrentTransform();
+		draw.tex0 = draw.tex1 = (uint32_t)vk.screenSlot;
+		draw.bones = bones;
+		draw.texMat0[0] = 1.0f / (float)vk.screen.width;
+		draw.texMat0[1] = 1.0f / (float)vk.screen.height;
+		draw.texMat0[2] = (float)vk.color.width / (float)vk.screen.width;
+		draw.texMat0[3] = (float)vk.color.height / (float)vk.screen.height;
+		draw.texMat0[4] = LIQUID_BEND;
+		draw.texMat0[5] = LIQUID_ABSORB;
+		draw.texMat0[6] = LIQUID_WAVES;
+		// the distance in front of the eye to the depth, as VK_BlurFrame() has it the other way round
+		draw.texMat1[0] = backEnd.viewParms.projectionMatrix[14] * 0.5f;
+		draw.texMat1[1] = ( backEnd.viewParms.projectionMatrix[10] - 1.0f ) * 0.5f;
+		// and a slope from the line of sight to a part of the picture
+		draw.texMat1[2] = backEnd.viewParms.projectionMatrix[0] * 0.5f;
+		draw.texMat1[3] = backEnd.viewParms.projectionMatrix[5] * 0.5f;
+		VK_DrawTess( &draw, VKP_LIQUID, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE,
+			VKC_NONE, qfalse );
+	}
+}
+
+/*
 ===============================================================================
 
 FLARES

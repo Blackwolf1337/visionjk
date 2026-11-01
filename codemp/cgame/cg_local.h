@@ -2001,6 +2001,10 @@ void		CG_SnowballDown_f( void );				// +v_snowball
 void		CG_SnowballUp_f( void );
 void		CG_WaterDown_f( void );					// +v_water (toys/cg_water.c)
 void		CG_WaterUp_f( void );
+qboolean	CG_WaterHolding( int client );			// the water gun is in his hand: his weapon is put away
+qboolean	CG_WaterGun( centity_t *cent );			// draws it there, qtrue: it is in the hand
+qboolean	CG_WaterViewGun( void );				// the own one in first person, in place of the view weapon
+int			CG_WaterTorsoAnim( centity_t *cent, int anim );	// a rifle held up while it is in the hand
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
 void		CG_Emote_f( void );						// v_emote (toys/cg_emote.c)

@@ -912,6 +912,13 @@ static qboolean CL_LoadImageFit( const char *name, byte *rgba, int width, int he
 	return re->ext.LoadImageFit( name, rgba, width, height );
 }
 
+// ext.R_AddLiquid: the water of the toys (cgame/toys/cg_water.c), a renderer without it says qfalse
+static qboolean CL_AddLiquid( const liquidSegment_t *segments, int count ) {
+	if ( !re || !re->ext.AddLiquid )
+		return qfalse;
+	return re->ext.AddLiquid( segments, count );
+}
+
 static void CL_Key_SetCatcher( int catcher ) {
 	// Don't allow the cgame module to close the console
 	Key_SetCatcher( catcher | ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) );
@@ -2028,6 +2035,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.Video_Color						= CL_VideoColor;
 		cgi.ext.Video_Reset						= CL_VideoReset;
 		cgi.ext.R_LoadImageFit					= CL_LoadImageFit;
+		cgi.ext.R_AddLiquid						= CL_AddLiquid;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

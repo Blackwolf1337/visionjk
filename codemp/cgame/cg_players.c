@@ -3488,7 +3488,7 @@ static void CG_PlayerAnimation( centity_t *cent, int *legsOld, int *legs, float 
 	// If this is not a vehicle, you may lerm the frame (since vehicles never have a torso anim). -AReis
 	if ( cent->currentState.NPC_class != CLASS_VEHICLE )
 	{
-		CG_RunLerpFrame( cent, ci, &cent->pe.torso, cent->currentState.torsoFlip, cent->currentState.torsoAnim, speedScale, qtrue );
+		CG_RunLerpFrame( cent, ci, &cent->pe.torso, cent->currentState.torsoFlip, CG_WaterTorsoAnim( cent, cent->currentState.torsoAnim ), speedScale, qtrue );
 
 		*torsoOld = cent->pe.torso.oldFrame;
 		*torso = cent->pe.torso.frame;
@@ -9941,6 +9941,12 @@ void CG_Player( centity_t *cent ) {
 		g2HasWeapon = qfalse;
 	}
 
+	if (g2HasWeapon && CG_WaterHolding(cent->currentState.number))
+	{ // VisionJK: the weapon is put away while the water gun is in the hand (toys/cg_water.c)
+		trap->G2API_RemoveGhoul2Model(&(cent->ghoul2), 1);
+		g2HasWeapon = qfalse;
+	}
+
 	if (!cent->trickAlphaTime || (cg.time - cent->trickAlphaTime) > 1000)
 	{ //things got out of sync, perhaps a new client is trying to fill in this slot
 		cent->trickAlpha = 255;
@@ -10059,7 +10065,7 @@ void CG_Player( centity_t *cent ) {
 	if (cent->ghoul2 &&
 		(cent->currentState.eType != ET_NPC || (cent->currentState.NPC_class != CLASS_VEHICLE&&cent->currentState.NPC_class != CLASS_REMOTE&&cent->currentState.NPC_class != CLASS_SEEKER)) && //don't add weapon models to NPCs that have no bolt for them!
 		cent->ghoul2weapon != CG_G2WeaponInstance(cent, cent->currentState.weapon) &&
-		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt &&
+		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt && !CG_WaterHolding(cent->currentState.number) &&
 		cg.snap && (cent->currentState.number != cg.snap->ps.clientNum || (cg.snap->ps.pm_flags & PMF_FOLLOW)))
 	{
 		if (ci->team == TEAM_SPECTATOR)
@@ -11566,6 +11572,11 @@ stillDoSaber:
 	{
 		BG_SI_SetLengthGradual(&ci->saber[0], cg.time);
 		BG_SI_SetLengthGradual(&ci->saber[1], cg.time);
+	}
+
+	if (CG_WaterGun(cent))
+	{ // VisionJK: the water gun is in the hand (toys/cg_water.c), the saber is put away meanwhile
+		drawPlayerSaber = qfalse;
 	}
 
 	if (drawPlayerSaber)

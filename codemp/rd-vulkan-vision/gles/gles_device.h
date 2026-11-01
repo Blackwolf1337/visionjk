@@ -130,6 +130,7 @@ typedef enum {
 	GLP_SKINNED = VKP_SKINNED,
 	GLP_SPRITE = VKP_SPRITE,
 	GLP_GRASS = VKP_GRASS,
+	GLP_LIQUID = VKP_LIQUID,
 	GLP_GAMMA,						// the passes over a whole target, shaders/post.vert with one fragment shader each
 	GLP_BLUR,
 	GLP_COPY,

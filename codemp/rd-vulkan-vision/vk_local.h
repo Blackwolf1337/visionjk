@@ -151,6 +151,7 @@ typedef enum {
 	VKP_SKINNED,					// vertices of a Ghoul2 surface, moved by their bones in the vertex shader
 	VKP_SPRITE,						// no vertices: sprites made in the vertex shader from records in the bone buffer
 	VKP_GRASS,						// surface sprites of the level, vkGrassVertex_t
+	VKP_LIQUID,						// no vertices: the pieces of water of RE_AddLiquid, from records in the bone buffer
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -375,6 +376,7 @@ void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
 void		VK_ScreenFx( const screenEffect_t *fx );
 void		VK_CaptureFrame( void );
+void		VK_DrawLiquids( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );
