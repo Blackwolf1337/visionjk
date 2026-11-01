@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					0
 		focusColor				0.36 0.78 0.96 1
-		descX					380
-		descY					212
-		descScale				1.2
+		descX					800.0
+		descY					856
+		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
 			hide gamedesc ;
@@ -26,9 +26,6 @@
 			close "rulesMenu_force" ;
 			open "rulesMenu" ;
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		backdrop				1
 
 		itemDef
 		{
@@ -177,28 +174,119 @@
 
 		itemDef
 		{
-			name					creditsbutton
-			group					othermain
-			descText				@MENUS_SHOW_GAME_CREDITS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					620 308 384 384
-			font					2
-			textscale				1.5
-			textaligny				0
+			name					vision_sub
+			rect					0 72 1600 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_line
+			rect					0 123 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_join
+			rect					36 72 190 52
+			visible					1
+			text					@MENUS_JOIN_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				69
-			backcolor				0 0 0 0
-			forecolor				1 .682 0 1
-			visible					0
-			mouseEnter {  }
-			mouseExit {  }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open creditsMenu
-			}
+			textalignx				95
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create
+			rect					230 72 210 52
+			visible					1
+			text					@MENUS_CREATE_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				105
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo
+			rect					444 72 160 52
+			visible					1
+			text					@MENUS_SOLO_GAME
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo
+			rect					608 72 160 52
+			visible					1
+			text					@MENUS_PLAY_DEMO_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules
+			rect					772 72 110 52
+			visible					1
+			text					@MENUS_RULES
+			font					5
+			textscale				0.83
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules_line
+			rect					788 122 78 2
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
 		}
 
 		itemDef
@@ -207,12 +295,12 @@
 			group					rulesheader
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_FORCE_RULES_TITLE
-			rect					380 161 600 42
+			rect					36 148 1000 41
 			font					5
-			textscale				2.17
+			textscale				1.67
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				3
+			textaligny				5.5
 			forecolor				1 1 1 1
 			visible					1
 			decoration
@@ -224,27 +312,13 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					665 242 555 352.5
-			backcolor				0.016 0.031 0.063 0.45
+			rect					420 212 1144 596
+			backcolor				0.031 0.055 0.11 0.78
 			forecolor				1 1 1 1
-			bordercolor				0.086 0.149 0.247 1
+			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					7.5
-		}
-
-		itemDef
-		{
-			name					vision_rail_185
-			rect					380 242 270 352.5
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.016 0.031 0.063 0.45
-			bordercolor				0.086 0.149 0.247 1
-			radius					7.95
-			shadow					12
-			sheen					0
-			decoration
+			radius					10
 		}
 
 		itemDef
@@ -254,18 +328,16 @@
 			text					@MENUS_JUMP
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 249.5 255 22.5
+			rect					20 212 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight1 }
-			mouseExit { hide smallhighlight1 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -275,6 +347,7 @@
 				hide gamedesc ;
 				show jump_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -282,7 +355,7 @@
 			name					jump_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_jump"
 			forecolor				1 1 1 1
 			visible					1
@@ -297,13 +370,13 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				19.5
+			textaligny				13
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
@@ -316,18 +389,16 @@
 			text					@MENUS_SPEED
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 272 255 22.5
+			rect					20 252.27 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight2 }
-			mouseExit { hide smallhighlight2 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -337,6 +408,7 @@
 				hide gamedesc ;
 				show speed_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -344,7 +416,7 @@
 			name					speed_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_speed"
 			forecolor				1 1 1 1
 			visible					1
@@ -359,16 +431,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -378,18 +450,16 @@
 			text					@MENUS_PUSH
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 294.5 255 22.5
+			rect					20 292.53 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight3 }
-			mouseExit { hide smallhighlight3 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -399,6 +469,7 @@
 				hide gamedesc ;
 				show push_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -406,7 +477,7 @@
 			name					push_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_push"
 			forecolor				1 1 1 1
 			visible					1
@@ -421,16 +492,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -440,18 +511,16 @@
 			text					@MENUS_PULL
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 317 255 22.5
+			rect					20 332.8 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight4 }
-			mouseExit { hide smallhighlight4 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -461,6 +530,7 @@
 				hide gamedesc ;
 				show pull_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -468,7 +538,7 @@
 			name					pull_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_pull"
 			forecolor				1 1 1 1
 			visible					1
@@ -483,16 +553,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -502,18 +572,16 @@
 			text					@MENUS_SIGHT
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 339.5 255 22.5
+			rect					20 373.07 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight5 }
-			mouseExit { hide smallhighlight5 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -523,6 +591,7 @@
 				hide gamedesc ;
 				show sight_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -530,7 +599,7 @@
 			name					sight_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_sight"
 			forecolor				1 1 1 1
 			visible					1
@@ -545,16 +614,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -564,18 +633,16 @@
 			text					@MENUS_PROTECT
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 362 255 22.5
+			rect					20 413.33 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight6 }
-			mouseExit { hide smallhighlight6 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -585,6 +652,7 @@
 				hide gamedesc ;
 				show protect_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -592,7 +660,7 @@
 			name					protect_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_lt_protect"
 			forecolor				1 1 1 1
 			visible					1
@@ -607,16 +675,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -626,18 +694,16 @@
 			text					@MENUS_ABSORB
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 384.5 255 22.5
+			rect					20 453.6 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight7 }
-			mouseExit { hide smallhighlight7 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -647,6 +713,7 @@
 				hide gamedesc ;
 				show absorb_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -654,7 +721,7 @@
 			name					absorb_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_lt_absorb"
 			forecolor				1 1 1 1
 			visible					1
@@ -669,16 +736,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					1
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -688,18 +755,16 @@
 			text					@MENUS_HEAL
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 407 255 22.5
+			rect					20 493.87 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight8 }
-			mouseExit { hide smallhighlight8 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -709,6 +774,7 @@
 				hide gamedesc ;
 				show heal_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -716,7 +782,7 @@
 			name					heal_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_lt_heal"
 			forecolor				1 1 1 1
 			visible					1
@@ -731,16 +797,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					1
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -750,18 +816,16 @@
 			text					@MENUS_MIND_TRICK
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 429.5 255 22.5
+			rect					20 534.13 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight9 }
-			mouseExit { hide smallhighlight9 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -771,6 +835,7 @@
 				hide gamedesc ;
 				show mindtrick_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -778,7 +843,7 @@
 			name					mindtrick_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_lt_mind_trick"
 			forecolor				1 1 1 1
 			visible					1
@@ -793,16 +858,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					1
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -812,18 +877,16 @@
 			text					@MENUS_TEAM_HEAL
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 452 255 22.5
+			rect					20 574.4 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight10 }
-			mouseExit { hide smallhighlight10 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -833,6 +896,7 @@
 				hide gamedesc ;
 				show theal_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -840,7 +904,7 @@
 			name					theal_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_lt_healother"
 			forecolor				1 1 1 1
 			visible					1
@@ -855,16 +919,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -874,18 +938,16 @@
 			text					@MENUS_GRIP
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 474.5 255 22.5
+			rect					20 614.67 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight11 }
-			mouseExit { hide smallhighlight11 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -895,6 +957,7 @@
 				hide gamedesc ;
 				show grip_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -902,7 +965,7 @@
 			name					grip_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_dk_grip"
 			forecolor				1 1 1 1
 			visible					1
@@ -917,16 +980,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -936,18 +999,16 @@
 			text					@MENUS_DRAIN
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 497 255 22.5
+			rect					20 654.93 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight12 }
-			mouseExit { hide smallhighlight12 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -957,6 +1018,7 @@
 				hide gamedesc ;
 				show drain_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -964,7 +1026,7 @@
 			name					drain_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_dk_drain"
 			forecolor				1 1 1 1
 			visible					1
@@ -979,16 +1041,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -998,18 +1060,16 @@
 			text					@MENUS_LIGHTNING
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 519.5 255 22.5
+			rect					20 695.2 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight13 }
-			mouseExit { hide smallhighlight13 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -1019,6 +1079,7 @@
 				hide gamedesc ;
 				show light_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -1026,7 +1087,7 @@
 			name					light_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_dk_l1"
 			forecolor				1 1 1 1
 			visible					0
@@ -1041,16 +1102,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -1060,18 +1121,16 @@
 			text					@MENUS_RAGE_1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 542 255 22.5
+			rect					20 735.47 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight14 }
-			mouseExit { hide smallhighlight14 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -1081,6 +1140,7 @@
 				hide gamedesc ;
 				show rage_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -1088,7 +1148,7 @@
 			name					rage_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_dk_rage"
 			forecolor				1 1 1 1
 			visible					0
@@ -1103,16 +1163,16 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
 
 		itemDef
@@ -1122,18 +1182,16 @@
 			text					@MENUS_TEAM_POWER_1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 564.5 255 22.5
+			rect					20 775.73 380 38.27
 			font					5
-			textscale				1.03
-			textalignx				18
-			textaligny				-5.7
+			textscale				0.83
+			textalignx				16
+			textaligny				11.63
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.706 0.765 0.839 1
 			visible					1
 			descText				@MENUS_DESCRIPTION_OF_A_FORCE
-			mouseEnter { show smallhighlight15 }
-			mouseExit { hide smallhighlight15 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -1143,6 +1201,7 @@
 				hide gamedesc ;
 				show power_desc ;
 			}
+			caps					1
 		}
 
 		itemDef
@@ -1150,7 +1209,7 @@
 			name					power_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					900.5 249.5 84 84
+			rect					943 240 98 98
 			background				"gfx/mp/NEW_f_icon_dk_forceother"
 			forecolor				1 1 1 1
 			visible					0
@@ -1165,17 +1224,20 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					680 353 540 222
+			rect					452 343.22 1080 440.78
 			font					5
-			textscale				1.02
+			textscale				0.94
 			textalign				ITEM_ALIGN_LEFT
 			backcolor				0 0 1 0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
-			textaligny				1.5
+			textaligny				1
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
 
 		itemDef
 		{
@@ -1198,6 +1260,7 @@
 			decoration
 			wide					1
 		}
+		canvas					1600 900
 
 		itemDef
 		{
@@ -1207,21 +1270,15 @@
 			descText				@MENUS_BACKTORULES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					48 844 135 44
+			rect					32 844 110 44
 			font					5
-			textscale				0.9
+			textscale				1
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				67.5
-			textaligny				13.9
+			textalignx				55
+			textaligny				13
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 30 441 190 30
-			}
-			mouseExit { hide button_glow }
 			action
 			{
 				play "sound/interface/esc.wav" ;
@@ -1229,37 +1286,6 @@
 				open rulesMenu
 			}
 			caps					1
-			flow					1
 		}
-
-		itemDef
-		{
-			name					exitgamebutton
-			group					othermain
-			text					@MENUS_EXIT
-			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					280.58 844 135 44
-			font					5
-			textscale				0.9
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				67.5
-			textaligny				13.9
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter { show exitgamebutton_glow }
-			mouseExit { hide exitgamebutton_glow }
-			action
-			{
-				play "sound/weapons/saber/saberoff.mp3" ;
-				close all ;
-				open quitMenu
-			}
-			caps					1
-			flow					1
-		}
-		canvas					1600 900
 	}
 }

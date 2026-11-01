@@ -9,11 +9,11 @@
 		rect					0 0 640 480
 		focusColor				0.36 0.78 0.96 1
 		appearanceIncrement		100
-		descX					180
+		descX					800.0
 		descY					856
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		appearanceIncrement		100
 		onESC
 		{
@@ -269,7 +269,7 @@
 		{
 			name					quitgame_yes
 			group					none
-			text					@MENUS_YES
+			text					@MENUS_QUIT
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			rect					892 478 120 44

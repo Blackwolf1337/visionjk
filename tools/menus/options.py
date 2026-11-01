@@ -872,6 +872,44 @@ def canvas_row(block, page, rect, column, advanced):
     return Entry('itemDef', [], block)
 
 
+def card_page(page, where, kicker, title, lines, body, buttons):
+    """A page of a screen with a canvas that a button opens (the defaults, the players of music, the update channel), as
+    the board "Dialogs" draws a dialog: on a card, a small heading in capitals, a title, lines of words (muted: True
+    for the dimmer one), optionally an item under them (item, height), the buttons at the bottom right of the card
+    (name, words, action, desc, primary, more props)."""
+    import canvas as cv
+    x, y, w = where
+    out = []
+    ty = y + 24
+    if kicker:
+        out.append(cv.text('vision_card_kicker', (x + 28, ty, w - 56, 18), kicker, 12, cv.MUTED, 'left', 0, canvas.BOLD, ('caps', 1),
+                           ('decoration',), ('page', page)))
+        ty += 26
+    out.append(cv.text('vision_card_title', (x + 28, ty, w - 56, 34), title, 24, BRIGHT, 'left', 0, FONT, ('decoration',), ('page', page)))
+    ty += 46
+    for words, muted in lines:
+        out.append(cv.text('vision_card_line', (x + 28, ty, w - 56, 22), words, 15, cv.MUTED if muted else TEXT, 'left', 0, FONT,
+                           ('decoration',), ('page', page)))
+        ty += 26
+    if body:
+        e, high = body
+        ty += 8
+        mf.put(e.block, 'rect', *[mf.fmt(v) for v in (x + 28, ty, w - 56, high)])
+        mf.put(e.block, 'page', page)
+        out.append(e)
+        ty += high
+    ty += 24
+    bx = x + w - 28
+    for name, words, action, desc, primary, more in reversed(buttons):
+        bw = 220 if primary else 180
+        bx -= bw
+        out.append(cv.button(name, (bx, ty, bw, 44), words, action, 15, 'primary' if primary else 'outline', desc, ('page', page), *more))
+        bx -= 12
+    h = ty + 44 + 28 - y
+    out.insert(0, cv.panel('vision_card', (x, y, w, h), cv.CARD, cv.CARD_EDGE, 10, ('page', page)))
+    return out
+
+
 def build_canvas(m, name, ingame):
     """Makes the menu `m` the options screen of its table as the board draws it: the pages and the search at the left,
     the title of the page and the switch Essentials / All Settings over the settings, the parts of a page as cards in
@@ -1041,7 +1079,12 @@ def build_canvas(m, name, ingame):
             new.append(cv.fill('vision_foot_sep', (136, fy + 9, 1, 26), cv.EDGE))
             new.append(cv.button('vision_defaults', (140, fy, 140, 44), '@MENUS_DEFAULTS', list(CLICK), 18, 'plain',
                                  '@MENUS_RESTORE_DEFAULT_SETTINGS', ('tab', len(pages) + 1)))
-            new += cv.regrid(made, Layout(ingame).list[:2], (list_x, list_y))
+            yes = next((e for e in made if name_of(e.block) == 'default_yes'), None)
+            new += card_page(len(pages) + 1, (list_x, list_y, 720), '@MENUS_DEFAULTS', '@MENUS_WARNING',
+                             [('@MENUS_THIS_WILL_SET_ALL_GAME', False), ('@MENUS_TO_THEIR_FACTORY_SETTINGS', False), ('@MENUS_VID_RESTART3', True)],
+                             None, [('default_no', '@MENUS_NO', list(CLICK), '@MENUS_DO_NOT_RESET_DEFAULT', False, (('tab', 1),)),
+                                    ('default_yes', '@MENUS_YES', clean(mf.find(yes.block, 'action').block) if yes else list(CLICK),
+                                     '@MENUS_USE_DEFAULT_SETTINGS', True, ())])
         new.append(cv.item('vision_dot', (310, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 3),
                            ('decoration',)))
         new.append(cv.text('vision_dot_text', (324, fy, 300, 44), ref('Changed from default'), 13, cv.MUTED, 'left', 0, FONT,
@@ -1077,8 +1120,26 @@ def build_canvas(m, name, ingame):
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
         network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
         L0 = Layout(ingame)
-        new += cv.regrid(music_page(first, chat, L0), L0.list[:2], (list_x, list_y))
-        new += cv.regrid(channel_page(first + 1, network, L0), L0.list[:2], (list_x, list_y))
+        music = cv.item('vision_music_list', (0, 0, 1, 1), ('type', 'ITEM_TYPE_LISTBOX'), ('style', 'WINDOW_STYLE_PANEL'),
+                        ('elementwidth', 120), ('elementheight', 40), ('font', FONT), ('textscale', cv.scale(16)),
+                        ('elementtype', 'LISTBOX_TEXT'), ('feeder', 'FEEDER_MUSICPLAYERS'), ('textalign', 3), ('textaligny', 10),
+                        ('textalignx', 14), ('bordercolor', *cv.EDGE), ('outlinecolor', *(ACCENT[:3] + ['0.22'])),
+                        ('forecolor', *TEXT), ('backcolor', *cv.FIELD), ('radius', 6))
+        new += card_page(first, (list_x, list_y, list_w - 6), None, ref('Players of My Music'),
+                         [(ref('Click a player to tick it, or to take the tick away.'), False),
+                          (ref('Only the songs of ticked players are shown to the others.'), True)],
+                         (music, list_h - 260),
+                         [('vision_music_back', '@MENUS_BACK', list(CLICK) + ['setpage', str(chat), ';'], '@MENUS_BACK', False, ())])
+        new += card_page(first + 1, (list_x, list_y, 720), ref('Update Channel'), '@MENUS_WARNING',
+                         [(ref('Development builds are early test versions.'), False),
+                          (ref('They can crash, corrupt your configs or not work on some servers.'), False),
+                          (ref('You can switch back to Stable at any time.'), True)],
+                         None,
+                         [('vision_channel_no', ref('Stay on Stable'), list(CLICK) + ['setpage', str(network), ';'], ref('Keep the releases.'),
+                           False, ()),
+                          ('vision_channel_yes', ref('Switch to Development'),
+                           list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(network), ';'],
+                           ref('Update to the development builds from now on.'), True, ())])
         marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
         for e in new:
             act = mf.find(e.block, 'action') if e.k == 'itemdef' else None

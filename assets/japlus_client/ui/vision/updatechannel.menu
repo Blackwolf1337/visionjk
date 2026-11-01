@@ -6,14 +6,10 @@
 		name					"updateChannelMenu"
 		visible					0
 		fullScreen				0
-		rect					320 92 960 720
+		rect					520 300 560 300
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
-		descX					800
-		descY					728
-		descScale				1.5
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_CENTER
 		popup
 		onOpen { setfocus updatechannel_no }
 		onESC
@@ -27,20 +23,59 @@
 
 		itemDef
 		{
+			name					vision_veil
+			rect					-520 -300 1600 900
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0 0 0.55
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_dialog
+			rect					0 0 560 300
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.039 0.071 0.133 0.96
+			bordercolor				0.153 0.251 0.373 1
+			radius					12
+			decoration
+			shadow					40
+		}
+
+		itemDef
+		{
+			name					vision_kicker
+			rect					28 24 504 18
+			visible					1
+			text					@VISION_UPDATE_CHANNEL
+			font					7
+			textscale				0.67
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3
+			caps					1
+			decoration
+		}
+
+		itemDef
+		{
 			name					updatechannel_title
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_WARNING
-			rect					150 249 660 30
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				330
+			rect					28 50 504 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			font					5
-			textscale				1.11
-			forecolor				0.86 0.90 0.945 1
+			textscale				1.33
+			forecolor				1 1 1 1
 			visible					1
 			decoration
-			caps					1
-			textaligny				3.75
+			textaligny				5
 		}
 
 		itemDef
@@ -49,15 +84,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
-			rect					150 315 660 24
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				330
+			rect					28 96 504 23
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			font					5
-			textscale				0.9
-			forecolor				0.86 0.90 0.945 1
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
-			textaligny				1.58
+			textaligny				4
 		}
 
 		itemDef
@@ -66,15 +101,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
-			rect					150 342 660 24
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				330
+			rect					28 121 504 23
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			font					5
-			textscale				0.9
-			forecolor				0.86 0.90 0.945 1
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
-			textaligny				1.58
+			textaligny				4
 		}
 
 		itemDef
@@ -83,60 +118,59 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
-			rect					150 369 660 24
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				330
+			rect					28 146 504 23
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			font					5
-			textscale				0.9
+			textscale				0.83
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
-			textaligny				1.58
+			textaligny				4
 		}
 
 		itemDef
 		{
 			name					updatechannel_no
 			group					none
-			style					WINDOW_STYLE_EMPTY
+			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					172.5 450 300 36
+			rect					120 228 180 44
 			text					@VISION_STAY_ON_STABLE
 			descText				@VISION_KEEP_THE_RELEASES
 			font					5
 			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				150
+			textalignx				90
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			mouseEnter { show updatechannel_no_glow }
-			mouseExit { hide updatechannel_no_glow }
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				close updateChannelMenu ;
 			}
 			caps					1
-			textaligny				2.82
+			textaligny				14.5
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
 		{
 			name					updatechannel_yes
 			group					none
-			style					WINDOW_STYLE_EMPTY
+			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					487.5 450 300 36
+			rect					312 228 220 44
 			text					@VISION_SWITCH_TO_DEVELOPMENT
 			descText				@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
-			font					5
+			font					7
 			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				150
-			forecolor				0.86 0.90 0.945 1
+			textalignx				110
+			forecolor				0.016 0.071 0.122 1
 			visible					1
-			mouseEnter { show updatechannel_yes_glow }
-			mouseExit { hide updatechannel_yes_glow }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -144,8 +178,12 @@
 				close updateChannelMenu ;
 			}
 			caps					1
-			textaligny				2.82
+			textaligny				14.5
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
 		canvas					1600 900
+		style					WINDOW_STYLE_EMPTY
 	}
 }

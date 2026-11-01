@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					0
 		focusColor				0.36 0.78 0.96 1
-		descX					380
-		descY					212
-		descScale				1.2
+		descX					800.0
+		descY					856
+		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { setcvar "ui_rules_backout" 0 ; }
 		onESC
 		{
@@ -20,9 +20,6 @@
 			close rulesMenu ;
 			open multiplayerMenu ;
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		backdrop				1
 
 		itemDef
 		{
@@ -171,34 +168,137 @@
 
 		itemDef
 		{
-			name					default_rulesheader
-			group					rulesheader
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_RULES
-			rect					380 161 600 42
-			font					5
-			textscale				2.17
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				3
-			forecolor				1 1 1 1
+			name					vision_sub
+			rect					0 72 1600 52
 			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
 			decoration
-			caps					1
+			wide					1
 		}
 
 		itemDef
 		{
-			name					vision_rail_190
-			rect					380 242 300 315
+			name					vision_sub_line
+			rect					0 123 1600 1
 			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.016 0.031 0.063 0.45
-			bordercolor				0.086 0.149 0.247 1
-			radius					7.95
-			shadow					12
-			sheen					0
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
 			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_join
+			rect					36 72 190 52
+			visible					1
+			text					@MENUS_JOIN_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				95
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create
+			rect					230 72 210 52
+			visible					1
+			text					@MENUS_CREATE_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				105
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo
+			rect					444 72 160 52
+			visible					1
+			text					@MENUS_SOLO_GAME
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo
+			rect					608 72 160 52
+			visible					1
+			text					@MENUS_PLAY_DEMO_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules
+			rect					772 72 110 52
+			visible					1
+			text					@MENUS_RULES
+			font					5
+			textscale				0.83
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules_line
+			rect					788 122 78 2
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					default_rulesheader
+			group					rulesheader
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_RULES
+			rect					36 148 800 41
+			font					5
+			textscale				1.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5.5
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			caps					1
 		}
 
 		itemDef
@@ -208,22 +308,16 @@
 			text					@MENUS_GAMES
 			descText				@MENUS_GAME_RULES
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					387.5 249.5 285 60
+			style					WINDOW_STYLE_PANEL
+			rect					36 212 498.67 96
 			font					5
-			textscale				1.11
+			textscale				1.06
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			textalignx				18
-			textaligny				15.75
+			textalignx				22
+			textaligny				38.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 175 196 300 30
-			}
-			mouseExit { hide button_glow }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -231,6 +325,9 @@
 				open "rulesMenu_games" ;
 			}
 			caps					1
+			radius					10
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
 		}
 
 		itemDef
@@ -240,22 +337,16 @@
 			text					@MENUS_FORCE_POWERS
 			descText				@MENUS_FORCE_RULES
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					387.5 309.5 285 60
+			style					WINDOW_STYLE_PANEL
+			rect					550.67 212 498.67 96
 			font					5
-			textscale				1.11
+			textscale				1.06
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			textalignx				18
-			textaligny				15.75
+			textalignx				22
+			textaligny				38.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 175 236 300 30
-			}
-			mouseExit { hide button_glow }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -263,6 +354,9 @@
 				open "rulesMenu_force" ;
 			}
 			caps					1
+			radius					10
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
 		}
 
 		itemDef
@@ -272,14 +366,14 @@
 			text					@MENUS_WEAPONS
 			descText				@MENUS_WEAPON_RULES
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					387.5 369.5 285 60
+			style					WINDOW_STYLE_PANEL
+			rect					1065.33 212 498.67 96
 			font					5
-			textscale				1.11
+			textscale				1.06
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			textalignx				18
-			textaligny				15.75
+			textalignx				22
+			textaligny				38.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -288,13 +382,10 @@
 				close "rulesMenu" ;
 				open "rulesMenu_weapons" ;
 			}
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 175 276 300 30
-			}
-			mouseExit { hide button_glow }
 			caps					1
+			radius					10
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
 		}
 
 		itemDef
@@ -304,14 +395,14 @@
 			text					@MENUS_ITEMS
 			descText				@MENUS_ITEM_RULES
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					387.5 429.5 285 60
+			style					WINDOW_STYLE_PANEL
+			rect					36 324 498.67 96
 			font					5
-			textscale				1.11
+			textscale				1.06
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			textalignx				18
-			textaligny				15.75
+			textalignx				22
+			textaligny				38.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -320,13 +411,10 @@
 				close "rulesMenu" ;
 				open "rulesMenu_items" ;
 			}
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 175 316 300 30
-			}
-			mouseExit { hide button_glow }
 			caps					1
+			radius					10
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
 		}
 
 		itemDef
@@ -336,14 +424,14 @@
 			text					@MENUS_MOVES
 			descText				@MENUS_MOVE_RULES
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					387.5 489.5 285 60
+			style					WINDOW_STYLE_PANEL
+			rect					550.67 324 498.67 96
 			font					5
-			textscale				1.11
+			textscale				1.06
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			textalignx				18
-			textaligny				15.75
+			textalignx				22
+			textaligny				38.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -352,14 +440,14 @@
 				close "rulesMenu" ;
 				open "rulesMenu_moves" ;
 			}
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 175 356 300 30
-			}
-			mouseExit { hide button_glow }
 			caps					1
+			radius					10
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
 
 		itemDef
 		{
@@ -382,6 +470,7 @@
 			decoration
 			wide					1
 		}
+		canvas					1600 900
 
 		itemDef
 		{
@@ -391,21 +480,15 @@
 			descText				@MENUS_BACKTOMAIN
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					48 844 135 44
+			rect					32 844 110 44
 			font					5
-			textscale				0.9
+			textscale				1
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				67.5
-			textaligny				13.9
+			textalignx				55
+			textaligny				13
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 30 441 190 30
-			}
-			mouseExit { hide button_glow }
 			action
 			{
 				play "sound/interface/esc.wav" ;
@@ -413,41 +496,6 @@
 				open mainMenu
 			}
 			caps					1
-			flow					1
 		}
-
-		itemDef
-		{
-			name					exitgamebutton
-			group					othermain
-			text					@MENUS_EXIT
-			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					280.58 844 135 44
-			font					5
-			textscale				0.9
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				67.5
-			textaligny				13.9
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 225 441 190 30
-			}
-			mouseExit { hide button_glow }
-			action
-			{
-				play "sound/weapons/saber/saberoff.mp3" ;
-				close all ;
-				open quitMenu
-			}
-			caps					1
-			flow					1
-		}
-		canvas					1600 900
 	}
 }

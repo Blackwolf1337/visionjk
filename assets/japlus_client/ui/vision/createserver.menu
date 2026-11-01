@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.36 0.78 0.96 1
-		descX					180
+		descX					800.0
 		descY					856
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onEsc
 		{
 			setcvartocvar password g_password

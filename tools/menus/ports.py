@@ -100,10 +100,10 @@ def frame(m, here, subnav=None):
     m[first:first] = new
     m.extend(cv.footer(FOOT_Y))
     mf.put(m, 'canvas', cv.W, cv.H)
-    # (the line about the item under the mouse stands after Back, not under it)
-    mf.put(m, 'descX', 180)
+    # (the line about the item under the mouse stands in the middle of the bar, clear of its buttons)
+    mf.put(m, 'descX', cv.W / 2.0)
     mf.put(m, 'descY', FOOT_Y + 24)
-    mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', cv.scale(13))
 
 
@@ -234,9 +234,11 @@ def join(m):
     drop(m, ('vision_pane',))
     m.append(cv.fill('vision_pane2', (px, TOP + SUB_H, cv.W - px, FOOT_Y - TOP - SUB_H), cv.RAIL))
     for e in its.get('vision_netmap', []):
-        place(e, (px + 28, y0, cv.W - px - 56, 210))
+        # (4:3, as the level shot is)
+        place(e, (px + 28, y0, cv.W - px - 56, (cv.W - px - 56) * 3 / 4.0))
         m.remove(e)
         m.append(e)
+    y0 += (cv.W - px - 56) * 3 / 4.0 - 210
     # two buttons to a row, as the board: what the chosen server is, and what can be done with it
     bw = (cv.W - px - 56 - 10) / 2.0
     for k, n in enumerate(('serverinfotext', 'addfavorite', 'passwordtext', 'idstext')):
@@ -346,29 +348,25 @@ def solo(m, menu):
         mf.put(b, 'textaligny', 11)
         mf.put(b, 'radius', 10)
     drop(m, ('vision_rules',))
+    # (leaving the game is on Home: not a button of a page of Play)
+    drop(m, ('exitgamebutton', 'exitgame_button'))
     if menu == 'quickgame':
-        for e in its.get('mappreview', []):
-            if mf.get(e.block, 'ownerdraw'):
-                place(e, (446, y0 + 102, 1106 - 12, FOOT_Y - y0 - 126 - 12))
-            else:
-                place(e, (440, y0 + 96, 1112, FOOT_Y - y0 - 120))
-                mf.put(e.block, 'radius', 10)
-        footer_buttons(m, ('backbutton', 'exitgamebutton'), ('next_button',))
+        map_preview(its, (446, y0 + 102, 1100, FOOT_Y - y0 - 138))
+        footer_buttons(m, ('backbutton',), ('next_button',))
         return
     rule_items = [e for n in ('options', 'normal', 'expert_button', 'difficulty_button', 'custombots_button', 'rules_title',
                               'end_game_title', 'bots_title') for e in its.get(n, [])]
     m.append(cv.panel('vision_rules2', (36, y0 + 90, 600, FOOT_Y - y0 - 114), cv.CARD, cv.CARD_EDGE, 10))
-    rows(rule_items, 58, y0 + 100, 556, 48, 10)
+    rows(rule_items, 58, y0 + 100, 556, 44, 8)
     for e in rule_items:
+        if mf.get(e.block, 'ownerdraw') and mf.get(e.block, 'rect'):
+            # (an owner draw writes its name and value itself: in a dark field like Type at the left)
+            x, y, w, h = (mf.num(v) or 0 for v in mf.get(e.block, 'rect')[:4])
+            control(e, (x, y + 2, w, 40), 15, 'field', 'left', 14)
         m.remove(e)
         m.append(e)
-    for e in its.get('mappreview', []):
-        if mf.get(e.block, 'ownerdraw'):
-            place(e, (678, y0 + 102, 868, 548))
-        else:
-            place(e, (672, y0 + 96, 880, 560))
-            mf.put(e.block, 'radius', 10)
-    footer_buttons(m, ('back_button', 'exitgame_button'), ('next_button',))
+    map_preview(its, (678, y0 + 102, 868, FOOT_Y - y0 - 138))
+    footer_buttons(m, ('back_button',), ('next_button',))
 
 
 def quit_page(m):
@@ -389,6 +387,7 @@ def quit_page(m):
     for e in its.get('quitgame_cancel', []):
         control(e, (762, 478, 120, 44), 15)
     for e in its.get('quitgame_yes', []):
+        mf.put(e.block, 'text', '@MENUS_QUIT')
         control(e, (892, 478, 120, 44), 15, 'primary')
         mf.put(e.block, 'backcolor', *RED)
         mf.put(e.block, 'bordercolor', *RED)
@@ -401,6 +400,27 @@ def glow(e, cx, y, w):
     mf.put(e.block, 'backcolor', *(ACCENT[:3] + ['0']))
     mf.put(e.block, 'glowcolor', *(ACCENT[:3] + ['0.3']))
     mf.put(e.block, 'radius', 2)
+
+
+def fit43(x, y, w, h):
+    """The largest 4:3 rectangle in the middle of x, y, w, h: a level shot of the game is 4:3 and must not be
+    stretched."""
+    if w * 3 > h * 4:
+        nw = h * 4 / 3.0
+        return (x + (w - nw) / 2.0, y, nw, h)
+    nh = w * 3 / 4.0
+    return (x, y + (h - nh) / 2.0, w, nh)
+
+
+def map_preview(its, area):
+    """The picture of a level (owner draw) at 4:3 in the area, its frame 6 pixels around it."""
+    x, y, w, h = fit43(*area)
+    for e in its.get('mappreview', []):
+        if mf.get(e.block, 'ownerdraw'):
+            place(e, (x, y, w, h))
+        else:
+            place(e, (x - 6, y - 6, w + 12, h + 12))
+            mf.put(e.block, 'radius', 10)
 
 
 def _script(e, key):
@@ -593,3 +613,266 @@ def profile_all(m, extra):
     mf.put(m, 'descY', FOOT_Y + 24)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', cv.scale(13))
+
+
+def _drop_rails(m):
+    """The side panel the old frame of a page put in (pages.shell): the boards have none."""
+    m[:] = [e for e in m if not (e.k == 'itemdef' and (mf.get(e.block, 'name') or [''])[0].strip('"').lower().startswith('vision_rail'))]
+
+
+def demo(m):
+    """Play a demo: the list of demos over the width of the page, Play at the right of the bar at the bottom."""
+    its = by_name(m)
+    drop(m, ('exitgamebutton', 'creditsbutton'))
+    _drop_rails(m)
+    frame(m, 'joinserver', 'demo')
+    y0 = TOP + SUB_H + 24
+    for e in its.get('default_rulesheader', []):
+        middle(e, (36, y0, 800, 41), 30, 'left')
+        mf.put(e.block, 'forecolor', *BRIGHT)
+    for e in its.get('demolist', []):
+        b = e.block
+        box = (36, y0 + 64, cv.W - 72, FOOT_Y - y0 - 88)
+        place(e, box)
+        mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
+        mf.put(b, 'backcolor', *cv.CARD)
+        mf.put(b, 'bordercolor', *cv.CARD_EDGE)
+        mf.put(b, 'radius', 10)
+        mf.put(b, 'elementheight', 44)
+        sized(e, 16)
+        mf.put(b, 'textaligny', 12)
+        mf.put(b, 'textalignx', 22)
+    footer_buttons(m, ('back',), ('begin',))
+
+
+def rules(m):
+    """The rules: one card for each part, three to a row."""
+    its = by_name(m)
+    drop(m, ('exitgamebutton',))
+    _drop_rails(m)
+    frame(m, 'joinserver', 'rulesMenu')
+    y0 = TOP + SUB_H + 24
+    for e in its.get('default_rulesheader', []):
+        middle(e, (36, y0, 800, 41), 30, 'left')
+        mf.put(e.block, 'forecolor', *BRIGHT)
+    cards = [e for e in m if e.k == 'itemdef' and (mf.get(e.block, 'name') or [''])[0].strip('"').lower() in
+             ('gamesmenubutton', 'forcemenubutton', 'weaponmenubutton', 'itemmenubutton')]
+    w = (cv.W - 72 - 2 * 16) / 3.0
+    for k, e in enumerate(cards):
+        control(e, (36 + (k % 3) * (w + 16), y0 + 64 + (k // 3) * 112, w, 96), 19, 'outline', 'left', 22)
+        mf.put(e.block, 'radius', 10)
+        mf.put(e.block, 'backcolor', *cv.CARD)
+        mf.put(e.block, 'bordercolor', *cv.CARD_EDGE)
+    footer_buttons(m, ('backbutton',), ())
+
+
+def _rect_of(e):
+    r = mf.get(e.block, 'rect')
+    return tuple(mf.num(v) or 0.0 for v in r[:4]) if r else None
+
+
+def rules_page(m):
+    """A part of the rules (games, force powers, weapons, items): its entries as a list at the left as the pages of
+    Setup, what the chosen one is on a card at the right: its picture at the top, its text under it."""
+    drop(m, ('exitgamebutton', 'creditsbutton'))
+    _drop_rails(m)
+    its = [e for e in m if e.k == 'itemdef']
+    names = lambda e: (mf.get(e.block, 'name') or [''])[0].strip('"').lower()  # noqa: E731
+    bg = next((e for e in its if names(e) == 'setup_background'), None)
+    old_bg = _rect_of(bg) if bg else None
+    frame(m, 'joinserver', 'rulesMenu')
+    y0 = TOP + SUB_H + 24
+    card = (420, y0 + 64, cv.W - 456, FOOT_Y - y0 - 88)
+    cx, cy, cw, ch = card
+    for e in its:
+        n = names(e)
+        r = _rect_of(e)
+        if n.endswith('header') or n == 'rules_title':
+            middle(e, (36, y0, 1000, 41), 30, 'left')
+            mf.put(e.block, 'forecolor', *BRIGHT)
+    buttons = [e for e in its if names(e).endswith('menubutton')]
+    pitch = min(44.0, (FOOT_Y - 16 - (y0 + 64)) / max(1, len(buttons)))
+    for k, e in enumerate(buttons):
+        control(e, (20, y0 + 64 + k * pitch, 380, pitch - 2), 15, 'plain', 'left', 16)
+        mf.put(e.block, 'forecolor', *cv.SOFT_TEXT)
+    if bg:
+        place(bg, card)
+        for key in ('background', 'border', 'bordersize'):
+            mf.drop(bg.block, key)
+        mf.put(bg.block, 'style', 'WINDOW_STYLE_PANEL')
+        mf.put(bg.block, 'backcolor', *cv.CARD)
+        mf.put(bg.block, 'bordercolor', *cv.CARD_EDGE)
+        mf.put(bg.block, 'radius', 10)
+    if not old_bg:
+        footer_buttons(m, ('backbutton',), ())
+        return
+    bx, by, bw, bh = old_bg
+    for e in its:
+        n = names(e)
+        r = _rect_of(e)
+        if not n.endswith('_desc') or not r:
+            continue
+        if (mf.get(e.block, 'type') or [''])[0] == 'ITEM_TYPE_TEXTSCROLL':
+            # the text: from where it began on the old panel to the foot of the card
+            top = cy + 28 + max(0.0, (r[1] - by) / bh * ch * 0.55)
+            place(e, (cx + 32, top, cw - 64, cy + ch - 24 - top))
+            sized(e, 17)
+            mf.put(e.block, 'forecolor', *cv.NAV_TEXT)
+        else:
+            # a picture: as large as before a little more, across the card where it stood on the old panel
+            k = 1.4
+            w, h = r[2] * k * 1.25, r[3] * k * 1.25
+            mid = cx + (r[0] + r[2] / 2.0 - bx) / bw * cw
+            place(e, (mid - w / 2.0, cy + 28, w, h))
+    footer_buttons(m, ('backbutton',), ())
+
+
+def rules_moves(m):
+    """The list of moves: the type of moves and the moves at the left, the figure that shows the chosen one on a card
+    at the right with what it is under it."""
+    its = by_name(m)
+    drop(m, ('exitgamebutton', 'creditsbutton', 'move_titles_box', 'move_titles_outline', 'moveslist_title_box'))
+    _drop_rails(m)
+    frame(m, 'joinserver', 'rulesMenu')
+    y0 = TOP + SUB_H + 24
+    m.append(cv.text('vision_moves_title', (36, y0, 800, 41), '@MENUS_MOVES', 30, BRIGHT, 'left', 0, FONT, ('caps', 1), ('decoration',)))
+    y = y0 + 64
+    for e in its.get('move_titles_title', []):
+        middle(e, (36, y, 400, 18), 12, 'left')
+        mf.put(e.block, 'font', cv.BOLD)
+        mf.put(e.block, 'forecolor', *cv.MUTED)
+    for e in its.get('move_titles', []):
+        # (a row without a name is its widget alone: the arrows and the type)
+        mf.put(e.block, 'text', '""')
+        mf.put(e.block, 'row', 1)
+        place(e, (36, y + 24, 400, 44))
+        sized(e, 15)
+    y += 24 + 44 + 24
+    for e in its.get('moveslist_title', []):
+        middle(e, (36, y, 400, 18), 12, 'left')
+        mf.put(e.block, 'font', cv.BOLD)
+        mf.put(e.block, 'forecolor', *cv.MUTED)
+    for e in its.get('moveslist', []):
+        _listbox(e, (36, y + 24, 400, FOOT_Y - 24 - (y + 24)), 40)
+        mf.drop(e.block, 'elementwidth')
+        mf.put(e.block, 'elementheight', 40)
+        sized(e, 16)
+        mf.put(e.block, 'textaligny', 10)
+        mf.put(e.block, 'textalignx', 14)
+    card = (468, y0 + 64, cv.W - 504, FOOT_Y - 24 - (y0 + 64))
+    cx, cy, cw, ch = card
+    for e in its.get('character_box', []):
+        place(e, card)
+        for key in ('background', 'border', 'bordersize'):
+            mf.drop(e.block, key)
+        mf.put(e.block, 'style', 'WINDOW_STYLE_PANEL')
+        mf.put(e.block, 'backcolor', *cv.CARD)
+        mf.put(e.block, 'bordercolor', *cv.CARD_EDGE)
+        mf.put(e.block, 'radius', 10)
+    for e in its.get('character', []):
+        place(e, (cx + cw / 2.0 - 260, cy - 60, 520, ch - 70))
+    for e in its.get('item_desc', []):
+        place(e, (cx + 32, cy + ch - 150, cw - 64, 130))
+        sized(e, 16)
+        mf.put(e.block, 'forecolor', *cv.NAV_TEXT)
+    footer_buttons(m, ('backbutton',), ())
+
+
+DIALOG = ['0.039', '0.071', '0.133', '0.96']       # the card of a dialog (as the quit dialog)
+
+
+def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None):
+    """A window as the board "Dialogs" draws one: the page dimmed, a card in the middle with a small heading in
+    capitals, a title, its content, the buttons at the bottom right (primary: filled with the accent, at the
+    right). kicker, title: words, or an item of the menu. body: (item, height, px) from the top down, an item of
+    height 0 is a line of words. buttons: items, from the left. Items of the menu that are not named go."""
+    x0, y0 = (cv.W - w) / 2.0, (cv.H - h) / 2.0
+    keep = {id(e) for e in [kicker, title] + [b[0] for b in body] + list(buttons) + [primary] if e is not None and not isinstance(e, str)}
+    m[:] = [e for e in m if e.k != 'itemdef' or id(e) in keep]
+    new = [cv.fill('vision_veil', (-x0, -y0, cv.W, cv.H), ['0', '0', '0', '0.55'], ('wide', 1)),
+           cv.panel('vision_dialog', (0, 0, w, h), DIALOG, cv.EDGE, 12, ('shadow', 40))]
+    y = 24
+    if kicker is not None:
+        if isinstance(kicker, str):
+            new.append(cv.text('vision_kicker', (28, y, w - 56, 18), kicker, 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1), ('decoration',)))
+        else:
+            middle(kicker, (28, y, w - 56, 18), 12, 'left')
+            mf.put(kicker.block, 'font', cv.BOLD)
+            mf.put(kicker.block, 'forecolor', *cv.MUTED)
+            mf.put(kicker.block, 'caps', 1)
+            new.append(kicker)
+        y += 26
+    if title is not None:
+        if isinstance(title, str):
+            new.append(cv.text('vision_title', (28, y, w - 56, 34), title, 24, BRIGHT, 'left', 0, FONT, ('decoration',)))
+        else:
+            middle(title, (28, y, w - 56, 34), 24, 'left')
+            mf.put(title.block, 'forecolor', *BRIGHT)
+            mf.drop(title.block, 'caps')
+            new.append(title)
+        y += 46
+    for e, high, px in body:
+        if high == 0:
+            middle(e, (28, y, w - 56, px + 8), px, 'left')
+            mf.put(e.block, 'forecolor', *cv.MUTED)
+            y += px + 10
+        else:
+            place(e, (28, y, w - 56, high))
+            if px:
+                sized(e, px)
+            y += high + 12
+        new.append(e)
+    x = w - 28
+    if primary is not None:
+        x -= 220
+        control(primary, (x, h - 28 - 44, 220, 44), 15, 'primary')
+    for e in reversed(list(buttons)):
+        x -= 12 + 180
+        control(e, (x, h - 28 - 44, 180, 44), 15)
+    new += [e for e in buttons] + ([primary] if primary is not None else [])
+    m[:] = [e for e in m if e.k != 'itemdef'] + new
+    mf.put(m, 'canvas', cv.W, cv.H)
+    mf.put(m, 'rect', mf.fmt(x0), mf.fmt(y0), w, h)
+    mf.put(m, 'style', 'WINDOW_STYLE_EMPTY')
+    for key in ('descx', 'descy', 'descalignment', 'descscale', 'border', 'bordersize', 'background'):
+        mf.drop(m, key)
+
+
+def popups(m, menu):
+    """The windows outside a game that the board "Dialogs" draws, as dialogs (dialog()). True if it was one."""
+    import texts
+    its = by_name(m)
+    one = lambda n: (its.get(n) or [None])[0]  # noqa: E731
+    if menu == 'updatechannelmenu':
+        dialog(m, 560, 300, texts.ref('Update Channel'), one('updatechannel_title'),
+               [(one(n), 0, 15) for n in ('updatechannel_line1', 'updatechannel_line2', 'updatechannel_line3') if one(n)],
+               [one('updatechannel_no')], one('updatechannel_yes'))
+        return True
+    if menu == 'ids_popmenu':
+        lst = one('ids_list')
+        dialog(m, 900, 560, None, one('ids_title'), [(lst, 320, 14), (one('ids_hint'), 0, 14)], [], one('ids_done'))
+        mf.put(lst.block, 'backcolor', *cv.FIELD)
+        mf.put(lst.block, 'bordercolor', *cv.EDGE)
+        mf.put(lst.block, 'radius', 6)
+        return True
+    if menu == 'password_popmenu':
+        field = one('passwordentry')
+        dialog(m, 480, 230, None, one('passwordtitle'), [(field, 44, 16)], [], one('donetext'))
+        # (a row without a name is its widget alone: one field, not a field in a box)
+        mf.put(field.block, 'style', 'WINDOW_STYLE_EMPTY')
+        mf.put(field.block, 'text', '""')
+        mf.put(field.block, 'row', 3)
+        return True
+    if menu == 'error_popmenu':
+        labels = its.get('errorinfo', [])
+        label = next((e for e in labels if not mf.get(e.block, 'cvar')), None)
+        text = next((e for e in labels if mf.get(e.block, 'cvar')), None)
+        dialog(m, 560, 320, label, None, [(text, 180, 17)] if text else [], [], one('exit'))
+        if text:
+            mf.put(text.block, 'autowrapped')
+            mf.put(text.block, 'forecolor', *BRIGHT)
+            mf.put(text.block, 'textalignx', 0)
+            mf.put(text.block, 'textaligny', 0)
+            mf.put(text.block, 'textalign', 'ITEM_ALIGN_LEFT')
+        return True
+    return False

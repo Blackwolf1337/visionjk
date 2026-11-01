@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					MENU_TRUE
 		focusColor				0.36 0.78 0.96 1
-		descX					380
-		descY					212
-		descScale				1.2
+		descX					800.0
+		descY					856
+		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { uiScript LoadDemos ; }
 		onESC
 		{
@@ -20,9 +20,6 @@
 			close all ;
 			open main ;
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		backdrop				1
 
 		itemDef
 		{
@@ -171,28 +168,119 @@
 
 		itemDef
 		{
-			name					creditsbutton
-			group					othermain
-			descText				@MENUS_SHOW_GAME_CREDITS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					620 308 384 384
-			font					2
-			textscale				1.5
-			textaligny				0
+			name					vision_sub
+			rect					0 72 1600 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_line
+			rect					0 123 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_join
+			rect					36 72 190 52
+			visible					1
+			text					@MENUS_JOIN_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				69
-			backcolor				0 0 0 0
-			forecolor				0.65 0.65 1 1
-			visible					0
-			mouseEnter {  }
-			mouseExit {  }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open creditsMenu
-			}
+			textalignx				95
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create
+			rect					230 72 210 52
+			visible					1
+			text					@MENUS_CREATE_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				105
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo
+			rect					444 72 160 52
+			visible					1
+			text					@MENUS_SOLO_GAME
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo
+			rect					608 72 160 52
+			visible					1
+			text					@MENUS_PLAY_DEMO_CAPS
+			font					5
+			textscale				0.83
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo_line
+			rect					624 122 128 2
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules
+			rect					772 72 110 52
+			visible					1
+			text					@MENUS_RULES
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
 		}
 
 		itemDef
@@ -201,12 +289,12 @@
 			group					rulesheader
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_DEMOS
-			rect					380 161 600 42
+			rect					36 148 800 41
 			font					5
-			textscale				2.17
+			textscale				1.67
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				3
+			textaligny				5.5
 			forecolor				1 1 1 1
 			visible					1
 			decoration
@@ -216,21 +304,21 @@
 		itemDef
 		{
 			name					demolist
-			rect					380 242 840 300
+			rect					36 212 1528 596
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			180
-			elementheight			30
+			elementwidth			120
+			elementheight			44
 			font					5
 			textscale				0.89
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_DEMOS
 			textalign				3
-			textaligny				36
-			bordercolor				0.086 0.149 0.247 1
+			textaligny				12
+			bordercolor				0.11 0.18 0.29 1
 			outlinecolor			0.36 0.78 0.96 0.22
 			forecolor				0.56 0.64 0.74 1
-			backcolor				0.027 0.051 0.102 0.9
+			backcolor				0.031 0.055 0.11 0.78
 			visible					1
 			doubleclick
 			{
@@ -238,35 +326,13 @@
 				close demo ;
 				uiScript RunDemo
 			}
-			radius					6
+			radius					10
 			caps					1
+			textalignx				22
 		}
-
-		itemDef
-		{
-			name					begin
-			text					@MENUS_PLAY_DEMO
-			descText				@MENUS_BEGIN_PLAYING_THE_DEMO
-			type					ITEM_TYPE_BUTTON
-			font					5
-			textscale				1.11
-			style					WINDOW_STYLE_EMPTY
-			rect					687.5 552.5 225 45
-			textalignx				112.5
-			textaligny				5.25
-			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close demo ;
-				uiScript RunDemo
-			}
-			mouseEnter { show beginButton }
-			mouseExit { hide beginButton }
-			caps					1
-		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
 
 		itemDef
 		{
@@ -289,6 +355,7 @@
 			decoration
 			wide					1
 		}
+		canvas					1600 900
 
 		itemDef
 		{
@@ -297,12 +364,12 @@
 			descText				@MENUS_EXIT_TO_MAIN_MENU
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.9
+			textscale				1
 			textstyle				0
 			style					WINDOW_STYLE_EMPTY
-			rect					48 844 135 44
-			textalignx				67.5
-			textaligny				13.9
+			rect					32 844 110 44
+			textalignx				55
+			textaligny				13
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -312,40 +379,34 @@
 				close all ;
 				open multiplayermenu
 			}
-			mouseenter { show backButton }
-			mouseexit { hide backButton }
 			caps					1
-			flow					1
 		}
 
 		itemDef
 		{
-			name					exitgamebutton
-			group					othermain
-			text					@MENUS_EXIT
-			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
+			name					begin
+			text					@MENUS_PLAY_DEMO
+			descText				@MENUS_BEGIN_PLAYING_THE_DEMO
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					280.58 844 135 44
-			font					5
-			textscale				0.9
+			font					7
+			textscale				0.83
+			style					WINDOW_STYLE_PANEL
+			rect					1352 844 200 44
+			textalignx				100
+			textaligny				14.5
 			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				67.5
-			textaligny				13.9
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
-			mouseEnter { show exitgamebutton_glow }
-			mouseExit { hide exitgamebutton_glow }
 			action
 			{
-				play "sound/weapons/saber/saberoff.mp3" ;
-				close all ;
-				open quitMenu
+				play "sound/interface/button1.wav" ;
+				close demo ;
+				uiScript RunDemo
 			}
 			caps					1
-			flow					1
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
 		}
-		canvas					1600 900
 	}
 }

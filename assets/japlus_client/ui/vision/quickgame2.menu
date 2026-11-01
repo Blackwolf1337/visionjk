@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.36 0.78 0.96 1
-		descX					180
+		descX					800.0
 		descY					856
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onEsc
 		{
 			play "sound/interface/esc.wav" ;
@@ -313,7 +313,7 @@
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_STARTMAPCINEMATIC
-			rect					678 226 868 548
+			rect					732 226 760 570
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			backcolor				0 0 0 0
@@ -326,7 +326,7 @@
 		{
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
-			rect					672 220 880 560
+			rect					726 220 772 582
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			backcolor				0 0 0 0
@@ -380,7 +380,7 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_weaponDisable"
-			rect					58 272 556 48
+			rect					58 268 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -410,7 +410,7 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_duelWeaponDisable"
-			rect					58 272 556 48
+			rect					58 268 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -442,7 +442,7 @@
 			cvar					"g_forcePowerDisable"
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					58 320 556 48
+			rect					58 312 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -471,21 +471,19 @@
 			ownerdraw				UI_FORCE_MASTERY_SET
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					58 368 556 48
+			rect					58 358 556 40
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				15.5
+			textalignx				14
+			textaligny				12.5
 			font					5
-			textscale				0.94
-			forecolor				0.56 0.64 0.74 1
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 0 167 260 30
-			}
-			mouseExit { hide button_glow }
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
@@ -495,7 +493,7 @@
 			type					ITEM_TYPE_NUMERICFIELD
 			text					@MENUS_TIME_LIMIT
 			cvar					"timelimit"
-			rect					58 474 556 48
+			rect					58 452 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -526,7 +524,7 @@
 				"0" ;
 				"3" ;
 			}
-			rect					58 522 556 48
+			rect					58 496 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -553,7 +551,7 @@
 			cvar					"capturelimit"
 			cvarTest				"ui_netGameType"
 			showCvar { "5" ; }
-			rect					58 522 556 48
+			rect					58 496 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -587,7 +585,7 @@
 				"4" ;
 				"5" ;
 			}
-			rect					58 522 556 48
+			rect					58 496 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -613,7 +611,7 @@
 			text					@MENUS_PLAYERS
 			descText				@MENUS_PLAYERS_INFO
 			cvar					"bot_minplayers"
-			rect					58 628 556 48
+			rect					58 592 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -636,7 +634,7 @@
 			type					ITEM_TYPE_NUMERICFIELD
 			text					@MENUS_MAXIMUM_PLAYERS
 			cvar					"sv_maxclients"
-			rect					58 676 556 48
+			rect					58 636 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -657,26 +655,23 @@
 		itemDef
 		{
 			name					difficulty_button
-			style					0
+			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_SKILL
 			text					@MENUS_SKILL
 			descText				@MENUS_ADJUSTS_THE_DIFFICULTY
-			rect					58 724 556 48
+			rect					58 682 556 40
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				15.5
+			textalignx				14
+			textaligny				12.5
 			font					5
-			textscale				0.94
-			forecolor				0.56 0.64 0.74 1
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 0 337 260 30
-			}
-			mouseExit { hide button_glow }
+			radius					6
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
@@ -689,9 +684,9 @@
 			textscale				0.83
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					58 776 556 40
+			rect					58 728 556 36
 			textalignx				278
-			textaligny				12.5
+			textaligny				10.5
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -711,12 +706,12 @@
 			name					rules_title
 			group					none
 			text					@MENUS_GENERAL_RULES
-			rect					58 224 556 48
+			rect					58 224 556 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				2
-			textaligny				30
+			textaligny				26
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -729,12 +724,12 @@
 			name					end_game_title
 			group					none
 			text					@MENUS_ENDGAME_RULES
-			rect					58 426 556 48
+			rect					58 408 556 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				2
-			textaligny				30
+			textaligny				26
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -747,12 +742,12 @@
 			name					bots_title
 			group					none
 			text					@MENUS_BOTS
-			rect					58 580 556 48
+			rect					58 548 556 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				2
-			textaligny				30
+			textaligny				26
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -782,32 +777,6 @@
 				play "sound/interface/esc.wav" ;
 				close quickgame2 ;
 				open quickgame
-			}
-			caps					1
-		}
-
-		itemDef
-		{
-			name					exitgame_button
-			group					othermain
-			text					@MENUS_EXIT
-			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					148 844 110 44
-			font					5
-			textscale				1
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				55
-			textaligny				13
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			action
-			{
-				play "sound/weapons/saber/saberoff.mp3" ;
-				close all ;
-				open quitMenu
 			}
 			caps					1
 		}

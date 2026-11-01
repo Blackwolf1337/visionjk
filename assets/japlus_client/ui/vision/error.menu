@@ -6,7 +6,7 @@
 		name					"error_popmenu"
 		visible					0
 		fullscreen				0
-		rect					557 212 486 496.5
+		rect					520 290 560 320
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		popup
@@ -21,69 +21,69 @@
 		skin					1
 		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		descX					800
-		descY					716
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				1.05
-		descColor				0.56 0.64 0.74 1
+		backcolor				0.031 0.055 0.11 0.86
+		bordercolor				0.11 0.18 0.29 1
+		radius					6.4
+		shadow					14
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-237 -120 960 720
+			rect					-520 -290 1600 900
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0 0.01 0.03 0.6
+			backcolor				0 0 0 0.55
+			decoration
 			wide					1
-			decoration
 		}
 
 		itemDef
 		{
-			name					window
-			rect					0 60 486 436.5
+			name					vision_dialog
+			rect					0 0 560 320
+			visible					1
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.031 0.055 0.11 0.97
-			forecolor				0 0 0 1
-			bordercolor				0.11 0.18 0.29 1
-			visible					1
+			backcolor				0.039 0.071 0.133 0.96
+			bordercolor				0.153 0.251 0.373 1
+			radius					12
 			decoration
-			radius					9.6
-			shadow					21
+			shadow					40
 		}
 
 		itemDef
 		{
 			name					errorinfo
-			rect					0 75 480 30
+			rect					28 24 504 18
 			text					@MENUS_ERROR
-			textalign				ITEM_ALIGN_CENTER
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			textscale				1.29
-			textalignx				240
-			forecolor				0.86 0.90 0.945 1
+			textscale				0.67
+			textalignx				0
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
-			font					5
-			textaligny				2.25
+			font					7
+			textaligny				3
+			caps					1
 		}
 
 		itemDef
 		{
 			name					errorinfo
-			rect					90 120 300 405
+			rect					28 50 504 180
 			type					ITEM_TYPE_TEXT
 			style					WINDOW_STYLE_EMPTY
 			textstyle				0
 			autowrapped
 			cvar					"com_errorMessage"
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				135
-			textscale				1.29
-			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textscale				0.94
+			forecolor				1 1 1 1
 			visible					1
 			decoration
 			font					5
+			textaligny				0
 		}
 
 		itemDef
@@ -92,11 +92,11 @@
 			group					grpControlbutton
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					188.25 447 105 30
+			rect					312 248 220 44
 			text					@MENUS_OKAY
-			textscale				0.96
+			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				52.5
+			textalignx				110
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -105,14 +105,12 @@
 				close error_popmenu
 				open main
 			}
-			mouseEnter { show button_glow }
-			mouseExit { hide button_glow }
-			font					5
-			textaligny				6
-			caps					1
-			radius					4.8
+			font					7
+			textaligny				14.5
+			radius					6
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
+			caps					1
 		}
 		canvas					1600 900
 	}

@@ -8,9 +8,9 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.36 0.78 0.96 1
-		descX					800
+		descX					800.0
 		descY					856
-		descScale				0.83
+		descScale				0.72
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onESC
@@ -26,9 +26,6 @@
 			uiScript setMoveCharacter
 			uiScript setMovesListDefault
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		backdrop				1
 
 		itemDef
 		{
@@ -177,59 +174,150 @@
 
 		itemDef
 		{
-			name					move_titles_box
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					357.5 168.5 382.5 34.5
-			backcolor				0.11 0.18 0.29 0.45
+			name					vision_sub
+			rect					0 72 1600 52
 			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
 			decoration
-			bordercolor				0.086 0.149 0.247 1
-			radius					4.5
+			wide					1
 		}
 
 		itemDef
 		{
-			name					move_titles_outline
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					356 200 382.5 45
-			bordercolor				0.086 0.149 0.247 1
+			name					vision_sub_line
+			rect					0 123 1600 1
 			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
 			decoration
-			backcolor				0 0 0 0
-			radius					7.5
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_join
+			rect					36 72 190 52
+			visible					1
+			text					@MENUS_JOIN_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				95
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create
+			rect					230 72 210 52
+			visible					1
+			text					@MENUS_CREATE_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				105
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo
+			rect					444 72 160 52
+			visible					1
+			text					@MENUS_SOLO_GAME
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo
+			rect					608 72 160 52
+			visible					1
+			text					@MENUS_PLAY_DEMO_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules
+			rect					772 72 110 52
+			visible					1
+			text					@MENUS_RULES
+			font					5
+			textscale				0.83
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules_line
+			rect					788 122 78 2
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
 		}
 
 		itemDef
 		{
 			name					move_titles_title
 			type					ITEM_TYPE_TEXT
-			rect					357.5 168.5 382.5 34.5
+			rect					36 212 400 18
 			text					@MENUS_MOVE_TYPES
-			font					5
+			font					7
 			forecolor				0.56 0.64 0.74 1
-			textscale				1.11
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				187.5
+			textscale				0.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			visible					1
 			decoration
 			caps					1
-			textaligny				7.26
+			textaligny				3
 		}
 
 		itemDef
 		{
 			name					move_titles
 			group					none
-			text					" "
+			text					""
 			descText				@MENUS_CHOOSE_MOVE_DESC
 			type					ITEM_TYPE_MULTI
 			style					WINDOW_STYLE_EMPTY
-			rect					357.5 213.5 510 21
+			rect					36 236 400 44
 			font					5
-			textscale				1.03
-			textaligny				-5.7
+			textscale				0.83
+			textaligny				-3.8
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				.8
 			textalignx				0
@@ -259,63 +347,51 @@
 				uiScript resetMovesList
 				play "sound/interface/button1.wav"
 			}
-		}
-
-		itemDef
-		{
-			name					moveslist_title_box
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					359 263 379.5 34.5
-			backcolor				0.11 0.18 0.29 0.45
-			visible					1
-			decoration
-			bordercolor				0.086 0.149 0.247 1
-			radius					4.5
+			row						1
 		}
 
 		itemDef
 		{
 			name					moveslist_title
 			type					ITEM_TYPE_TEXT
-			rect					372.5 260 379.5 39
+			rect					36 304 400 18
 			text					@MENUS_MOVES
-			font					5
+			font					7
 			forecolor				0.56 0.64 0.74 1
-			textscale				1.11
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				187.5
+			textscale				0.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			visible					1
 			decoration
 			caps					1
-			textaligny				10.26
+			textaligny				3
 		}
 
 		itemDef
 		{
 			name					moveslist
-			group					none
-			rect					357.5 293 379.5 375
+			rect					36 328 400 480
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			180
-			elementheight			24
+			elementheight			40
 			font					5
-			textscale				0.9
-			bordercolor				0.086 0.149 0.247 1
+			textscale				0.89
+			bordercolor				0.153 0.251 0.373 1
 			forecolor				0.56 0.64 0.74 1
-			backcolor				0.027 0.051 0.102 0.9
+			backcolor				0.027 0.051 0.102 1
 			outlinecolor			0.36 0.78 0.96 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					41
 			desctext				@MENUS_MOVE_DESC2
 			notselectable
 			visible					1
-			columns					1 3 55 337.5
+			columns					1 2 55 225
 			mouseEnter { setitemcolor moveslist bordercolor 0.36 0.78 0.96 0.6 }
 			mouseExit { setitemcolor moveslist bordercolor 0.086 0.149 0.247 1 }
 			doubleclick { play sound/interface/button1.wav }
 			radius					6
+			textaligny				10
+			textalignx				14
 		}
 
 		itemDef
@@ -323,12 +399,12 @@
 			name					character_box
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					747.5 155 495 555
-			bordercolor				0.086 0.149 0.247 1
+			rect					468 212 1096 596
+			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			backcolor				0 0 0 0
-			radius					7.5
+			backcolor				0.031 0.055 0.11 0.78
+			radius					10
 		}
 
 		itemDef
@@ -336,7 +412,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					762.5 53 450 510
+			rect					756 152 520 526
 			model_g2anim			"BOTH_ROLL_F"
 			asset_model				"ui_char_model"
 			model_angle				180
@@ -355,44 +431,21 @@
 		{
 			name					item_desc
 			type					ITEM_TYPE_TEXTSCROLL
-			rect					762.5 548 480 135
+			rect					500 658 1032 130
 			text					"  "
 			cvar					ui_move_desc
 			font					5
-			forecolor				0.56 0.64 0.74 1
-			textscale				1.02
+			forecolor				0.86 0.90 0.945 1
+			textscale				0.89
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				10.5
+			textaligny				7
 			visible					1
 			lineHeight				13
 			outlinecolor			0.36 0.78 0.96 0.22
 		}
-
-		itemDef
-		{
-			name					creditsbutton
-			group					othermain
-			descText				@MENUS_SHOW_GAME_CREDITS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					620 308 384 384
-			font					2
-			textscale				1.5
-			textaligny				0
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				69
-			backcolor				0 0 0 0
-			forecolor				1 .682 0 1
-			visible					0
-			mouseEnter {  }
-			mouseExit {  }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open creditsMenu
-			}
-		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
 
 		itemDef
 		{
@@ -415,6 +468,23 @@
 			decoration
 			wide					1
 		}
+		canvas					1600 900
+
+		itemDef
+		{
+			name					vision_moves_title
+			rect					36 148 800 41
+			visible					1
+			text					@MENUS_MOVES
+			font					5
+			textscale				1.67
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5.5
+			caps					1
+			decoration
+		}
 
 		itemDef
 		{
@@ -424,21 +494,15 @@
 			descText				@MENUS_BACKTORULES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					48 844 135 44
+			rect					32 844 110 44
 			font					5
-			textscale				0.9
+			textscale				1
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				67.5
-			textaligny				13.9
+			textalignx				55
+			textaligny				13
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 30 441 190 30
-			}
-			mouseExit { hide button_glow }
 			action
 			{
 				play "sound/interface/esc.wav" ;
@@ -446,8 +510,6 @@
 				open rulesMenu
 			}
 			caps					1
-			flow					1
 		}
-		canvas					1600 900
 	}
 }

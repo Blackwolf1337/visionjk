@@ -4557,106 +4557,148 @@
 
 		itemDef
 		{
-			name					vision_warning
-			rect					333.5 165 637.5 45
+			name					vision_card
+			rect					296 120 720 270
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					10
+			decoration
+			page					8
+		}
+
+		itemDef
+		{
+			name					vision_card_kicker
+			rect					324 144 664 18
+			visible					1
+			text					@MENUS_DEFAULTS
+			font					7
+			textscale				0.67
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3
+			caps					1
+			decoration
+			page					8
+		}
+
+		itemDef
+		{
+			name					vision_card_title
+			rect					324 170 664 34
 			visible					1
 			text					@MENUS_WARNING
 			font					5
-			textscale				2.06
-			forecolor				0.91 0.77 0.42 1
+			textscale				1.33
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
 			decoration
 			page					8
 		}
 
 		itemDef
 		{
-			name					vision_warning1
-			rect					333.5 236.25 637.5 30
+			name					vision_card_line
+			rect					324 216 664 22
 			visible					1
 			text					@MENUS_THIS_WILL_SET_ALL_GAME
 			font					5
-			textscale				1.31
+			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					8
 		}
 
 		itemDef
 		{
-			name					vision_warning2
-			rect					333.5 270 637.5 30
+			name					vision_card_line
+			rect					324 242 664 22
 			visible					1
 			text					@MENUS_TO_THEIR_FACTORY_SETTINGS
 			font					5
-			textscale				1.31
+			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					8
 		}
 
 		itemDef
 		{
-			name					vision_warning3
-			rect					333.5 326.25 637.5 30
+			name					vision_card_line
+			rect					324 268 664 22
 			visible					1
 			text					@MENUS_VID_RESTART3
 			font					5
-			textscale				1.31
+			textscale				0.83
 			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					8
-		}
-
-		itemDef
-		{
-			name					default_no
-			rect					333.5 401.25 206.25 45
-			visible					1
-			text					@MENUS_NO
-			font					5
-			textscale				1.2
-			forecolor				0.86 0.90 0.945 1
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			radius					6
-			caps					1
-			page					8
-			backcolor				0 0 0 0
-			bordercolor				0.153 0.251 0.373 1
-			descText				@MENUS_DO_NOT_RESET_DEFAULT
-			tab						1
-			action { play "sound/interface/button1.wav" ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				103.12
-			textaligny				11.7
 		}
 
 		itemDef
 		{
 			name					default_yes
-			rect					577.25 401.25 206.25 45
+			rect					768 318 220 44
 			visible					1
 			text					@MENUS_YES
-			font					5
-			textscale				1.2
+			font					7
+			textscale				0.83
 			forecolor				0.016 0.071 0.122 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				110
+			textaligny				14.5
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			radius					6
 			caps					1
-			page					8
-			backcolor				0.36 0.78 0.96 1
-			bordercolor				0.36 0.78 0.96 1
-			descText				@MENUS_USE_DEFAULT_SETTINGS
 			action
 			{
 				play "sound/interface/button1"
 				close all
 				uiscript resetdefaults
 			}
+			descText				@MENUS_USE_DEFAULT_SETTINGS
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					6
+			page					8
+		}
+
+		itemDef
+		{
+			name					default_no
+			rect					576 318 180 44
+			visible					1
+			text					@MENUS_NO
+			font					5
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				103.12
-			textaligny				11.7
+			textalignx				90
+			textaligny				14.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; }
+			descText				@MENUS_DO_NOT_RESET_DEFAULT
+			style					WINDOW_STYLE_PANEL
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			radius					6
+			page					8
+			tab						1
 		}
 
 		itemDef
@@ -4802,39 +4844,61 @@
 
 		itemDef
 		{
-			name					vision_music_title
-			rect					299.75 123.75 705 41.25
+			name					vision_card
+			rect					296 120 842 868
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					10
+			decoration
+			page					9
+		}
+
+		itemDef
+		{
+			name					vision_card_title
+			rect					324 144 786 34
 			visible					1
 			text					@VISION_PLAYERS_OF_MY_MUSIC
 			font					5
-			textscale				1.5
+			textscale				1.33
 			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
 			decoration
 			page					9
 		}
 
 		itemDef
 		{
-			name					vision_music_about1
-			rect					299.75 176.25 705 30
+			name					vision_card_line
+			rect					324 190 786 22
 			visible					1
 			text					@VISION_CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
 			font					5
-			textscale				1.05
+			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					9
 		}
 
 		itemDef
 		{
-			name					vision_music_about2
-			rect					299.75 206.25 705 30
+			name					vision_card_line
+			rect					324 216 786 22
 			visible					1
 			text					@VISION_ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
 			font					5
-			textscale				1.05
+			textscale				0.83
 			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					9
 		}
@@ -4842,145 +4906,188 @@
 		itemDef
 		{
 			name					vision_music_list
-			rect					296 251.25 712.5 465
+			rect					324 250 786 642
 			visible					1
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			225
-			elementheight			37.5
+			elementwidth			120
+			elementheight			40
 			font					5
-			textscale				1.11
+			textscale				0.89
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_MUSICPLAYERS
 			textalign				3
-			textaligny				45
-			bordercolor				0.36 0.78 0.96 0.16
+			textaligny				10
+			textalignx				14
+			bordercolor				0.153 0.251 0.373 1
 			outlinecolor			0.36 0.78 0.96 0.22
 			forecolor				0.86 0.90 0.945 1
-			backcolor				0 0 0 0.30
-			radius					7.5
+			backcolor				0.027 0.051 0.102 1
+			radius					6
 			page					9
 		}
 
 		itemDef
 		{
 			name					vision_music_back
-			rect					296 731.25 206.25 45
+			rect					930 916 180 44
 			visible					1
 			text					@MENUS_BACK
 			font					5
-			textscale				1.16
-			forecolor				0.016 0.071 0.122 1
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			radius					6
-			caps					1
-			backcolor				0.36 0.78 0.96 1
-			bordercolor				0.36 0.78 0.96 1
-			descText				@MENUS_BACK
-			action { play "sound/interface/button1.wav" ; setpage 5 ; }
-			page					9
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				103.12
-			textaligny				12.04
+			textalignx				90
+			textaligny				14.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; setpage 5 ; }
+			descText				@MENUS_BACK
+			style					WINDOW_STYLE_PANEL
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			radius					6
+			page					9
 		}
 
 		itemDef
 		{
-			name					vision_channel_title
-			rect					333.5 165 637.5 45
+			name					vision_card
+			rect					296 120 720 270
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					10
+			decoration
+			page					10
+		}
+
+		itemDef
+		{
+			name					vision_card_kicker
+			rect					324 144 664 18
+			visible					1
+			text					@VISION_UPDATE_CHANNEL
+			font					7
+			textscale				0.67
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3
+			caps					1
+			decoration
+			page					10
+		}
+
+		itemDef
+		{
+			name					vision_card_title
+			rect					324 170 664 34
 			visible					1
 			text					@MENUS_WARNING
 			font					5
-			textscale				2.06
-			forecolor				0.91 0.77 0.42 1
+			textscale				1.33
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
 			decoration
 			page					10
 		}
 
 		itemDef
 		{
-			name					vision_channel1
-			rect					333.5 236.25 637.5 30
+			name					vision_card_line
+			rect					324 216 664 22
 			visible					1
 			text					@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
 			font					5
-			textscale				1.31
+			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					10
 		}
 
 		itemDef
 		{
-			name					vision_channel2
-			rect					333.5 270 637.5 30
+			name					vision_card_line
+			rect					324 242 664 22
 			visible					1
 			text					@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
 			font					5
-			textscale				1.31
+			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
 			page					10
 		}
 
 		itemDef
 		{
-			name					vision_channel3
-			rect					333.5 303.75 637.5 30
+			name					vision_card_line
+			rect					324 268 664 22
 			visible					1
 			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
 			font					5
-			textscale				1.31
+			textscale				0.83
 			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3.5
 			decoration
+			page					10
+		}
+
+		itemDef
+		{
+			name					vision_channel_yes
+			rect					768 318 220 44
+			visible					1
+			text					@VISION_SWITCH_TO_DEVELOPMENT
+			font					7
+			textscale				0.83
+			forecolor				0.016 0.071 0.122 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				110
+			textaligny				14.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; setcvar v_updateChannel dev ; setpage 6 ; }
+			descText				@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					6
 			page					10
 		}
 
 		itemDef
 		{
 			name					vision_channel_no
-			rect					333.5 438.75 281.25 45
+			rect					576 318 180 44
 			visible					1
 			text					@VISION_STAY_ON_STABLE
 			font					5
-			textscale				1.2
+			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				90
+			textaligny				14.5
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			radius					6
 			caps					1
-			page					10
+			action { play "sound/interface/button1.wav" ; setpage 6 ; }
+			descText				@VISION_KEEP_THE_RELEASES
+			style					WINDOW_STYLE_PANEL
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
-			descText				@VISION_KEEP_THE_RELEASES
-			action { play "sound/interface/button1.wav" ; setpage 6 ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				140.62
-			textaligny				11.7
-		}
-
-		itemDef
-		{
-			name					vision_channel_yes
-			rect					652.25 438.75 318.75 45
-			visible					1
-			text					@VISION_SWITCH_TO_DEVELOPMENT
-			font					5
-			textscale				1.2
-			forecolor				0.016 0.071 0.122 1
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
 			radius					6
-			caps					1
 			page					10
-			backcolor				0.36 0.78 0.96 1
-			bordercolor				0.36 0.78 0.96 1
-			descText				@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
-			action { play "sound/interface/button1.wav" ; setcvar v_updateChannel dev ; setpage 6 ; }
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				159.38
-			textaligny				11.7
 		}
 		canvas					1600 1200
 		scrollRect				296 120 848 902

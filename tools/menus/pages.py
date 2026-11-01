@@ -1022,6 +1022,16 @@ def page(m, name, ingame):
         elif menu == 'quitmenu':
             quit_page(m)
             ports.quit_page(m)
+        elif menu == 'demo':
+            ports.demo(m)
+        elif menu == 'rulesmenu':
+            ports.rules(m)
+        elif menu in ('rulesmenu_games', 'rulesmenu_force', 'rulesmenu_weapons', 'rulesmenu_items'):
+            ports.rules_page(m)
+        elif menu == 'rulesmenu_moves':
+            ports.rules_moves(m)
+    elif not full and not ingame and ports.popups(m, menu):
+        return
     elif not full:
         window(m, menu, ingame)
     if menu == 'ingame_siegeclass':

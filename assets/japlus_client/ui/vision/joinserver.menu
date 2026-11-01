@@ -9,11 +9,11 @@
 		rect					0 0 640 480
 		outOfBoundsClick
 		focusColor				0.36 0.78 0.96 1
-		descX					180
+		descX					800.0
 		descY					856
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { uiScript UpdateFilter }
 		onEsc
 		{
@@ -825,7 +825,7 @@
 		itemDef
 		{
 			name					vision_netmap
-			rect					1228 148 344 210
+			rect					1228 148 344 258
 			visible					1
 			ownerdraw				UI_NETMAPPREVIEW
 			decoration
@@ -840,7 +840,7 @@
 			font					5
 			textscale				0.72
 			style					WINDOW_STYLE_PANEL
-			rect					1228 382 167 44
+			rect					1228 430 167 44
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				83.5
 			textaligny				15.5
@@ -867,7 +867,7 @@
 			textscale				0.72
 			style					WINDOW_STYLE_PANEL
 			ownerdrawFlag			UI_SHOW_NOTFAVORITESERVERS
-			rect					1405 382 167 44
+			rect					1405 430 167 44
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				83.5
 			textaligny				15.5
@@ -893,7 +893,7 @@
 			font					5
 			textscale				0.72
 			style					WINDOW_STYLE_PANEL
-			rect					1228 436 167 44
+			rect					1228 484 167 44
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				83.5
 			textaligny				15.5
@@ -919,7 +919,7 @@
 			font					5
 			textscale				0.72
 			style					WINDOW_STYLE_PANEL
-			rect					1405 436 167 44
+			rect					1405 484 167 44
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				83.5
 			textaligny				15.5
@@ -946,7 +946,7 @@
 			textscale				0.72
 			style					WINDOW_STYLE_PANEL
 			ownerdrawFlag			UI_SHOW_FAVORITESERVERS
-			rect					1405 382 167 44
+			rect					1405 430 167 44
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				83.5
 			textaligny				15.5
