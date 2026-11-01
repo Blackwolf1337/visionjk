@@ -12,12 +12,15 @@
 //   7    up
 //   8    the view on the target in pixels: left, top, width, height
 //   9    1 / the size of the copy of the frame, the time in seconds, how many places
-//   10+  six rows a place: origin, radius / normal, wet / hit, puddle / ambient, flow / directed, seed / light dir
+//   10   the height of the floor of the puddle view, 1 if it was drawn this frame (VK_BeginPuddle)
+//   11+  six rows a place: origin, radius / normal, wet / hit, puddle / ambient, flow / directed, seed / light
+//        dir, kind (WET_PLACE, ... of tr_types.h)
 
 #include "dialect.glsl"
 
+// VK_WET_VEC4S of vk_local.h
 #ifdef VK_GLES
-uniform vec4 u_wet[202];
+uniform vec4 u_wet[683];
 #define W			u_wet
 #define INSTANCE	uint( gl_InstanceID )
 #else
@@ -26,7 +29,7 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	screen;
 	vec4	screenFx[160];
 	vec4	styles[64];
-	vec4	wet[202];
+	vec4	wet[683];
 } globals;
 #define W			globals.wet
 #define INSTANCE	uint( gl_InstanceIndex )
@@ -39,7 +42,7 @@ const vec2 CORNERS[6] = vec2[6]( vec2( -1.0, -1.0 ), vec2( 1.0, -1.0 ), vec2( -1
 
 void main() {
 	uint spot = INSTANCE;
-	uint row = 10u + spot * 6u;
+	uint row = 11u + spot * 6u;
 	vec2 corner = CORNERS[int( VERTEX_INDEX ) % 6];
 	vec3 eye = W[4].xyz;
 	vec3 forward = W[5].xyz;

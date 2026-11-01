@@ -37,7 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/toys/cg_toys.h"
 
 #define WATER_DROPS			384			// drops in the air at once
-#define WATER_PUDDLES		24			// puddles and wet patches at once
+#define WATER_PUDDLES		64			// puddles and wet patches at once
 #define WATER_DROP_MSEC		18			// a jet lets go of a drop this often
 #define WATER_SPEED			720.0f		// units a second the water leaves the gun with
 #define WATER_SPREAD		0.012f		// of the speed, each drop a little to one side
@@ -50,7 +50,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WATER_SPLASH_MSEC	60			// a jet splashes this often at most,
 #define WATER_SOUND_MSEC	200			//	and makes a sound this often
 #define WATER_WET_MSEC		700			// the own face gets wet again at most this often
-#define WATER_DRY_MSEC		20000		// a puddle dries in this time, the second half of it it fades
+#define WATER_DRY_MSEC		45000		// a puddle dries in this time, the second half of it it fades
 #define WATER_PUDDLE_MAX	36.0f		// the radius a puddle grows to at most
 #define WATER_PATCH_MAX		18.0f		//	and a wet patch on a wall
 #define WATER_POOL_HIT		0.008f		// of the water for standing water, one drop brings
@@ -62,6 +62,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WATER_HOLD_MSEC		450			// the gun stays in the hand this long after the last water
 #define WATER_SPLASHES		256			// droplets of the splashes in the air at once (drawn by the renderer)
 #define WATER_POOL			0.3f		// of the water for standing water, from which a hit splashes as into water
+#define WATER_STANDING		0.25f		// of the standing water of the puddles added up, where it stands (POOL of wet.frag)
+#define WATER_PRINTS		32			// wet footprints at once
+#define WATER_PRINT_MSEC	20000		// a footprint dries in this time
+#define WATER_FOOT			5.5f		// half the length of a foot
+#define WATER_FEET_STEPS	8			// steps out of standing water that leave wet prints
+#define WATER_RINGS			16			// rings on standing water at once: steps, jumps and shots
 
 typedef struct {
 	qboolean	active;
@@ -100,12 +106,30 @@ typedef struct {
 	vec3_t		hit;			// where it came last
 } waterPuddle_t;
 
+typedef struct {
+	qboolean	active;
+	qboolean	right;			// the right foot
+	int			time;			// cg.time it was made
+	float		yaw, wet;		// which way the foot pointed, how wet it was
+	vec3_t		origin, normal;
+} waterPrint_t;
+
+typedef struct {
+	qboolean	active;
+	int			time, life;		// cg.time it started, msec it runs
+	float		radius, strength, seed;
+	vec3_t		origin, normal;
+} waterRing_t;
+
 static struct {
 	waterDrop_t		drops[WATER_DROPS];
 	waterJet_t		jets[MAX_CLIENTS];
 	waterPuddle_t	puddles[WATER_PUDDLES];
 	waterSplash_t	splashes[WATER_SPLASHES];
-	int				nextSlot, nextSplash;
+	waterPrint_t	prints[WATER_PRINTS];
+	waterRing_t		rings[WATER_RINGS];
+	float			feet[MAX_GENTITIES];		// how wet the feet of an entity are, from 1 out of standing water
+	int				nextSlot, nextSplash, nextPrint, nextRing;
 	qboolean		spraying;		// +v_water is down
 	int				sendTime;
 	int				wetTime;
@@ -124,6 +148,7 @@ static struct {
 } water;
 
 static qboolean Water_Liquid( void );
+static float Water_Smooth( float edge0, float edge1, float x );
 
 static void Water_Register( void ) {
 	int i;
@@ -414,10 +439,10 @@ static waterPuddle_t *Water_Puddle( const vec3_t origin, const vec3_t normal ) {
 	}
 	VectorCopy( origin, p->hit );
 	p->water = Q_min( 1.0f, p->water + WATER_POOL_HIT );
-	return p;
 	// (a puddle grows slower the larger it is)
 	p->size = Q_min( floor ? WATER_PUDDLE_MAX : WATER_PATCH_MAX, p->size + 0.6f * 12.0f / p->size );
 	p->wetTime = cg.time ? cg.time : 1;
+	return p;
 }
 
 // whether standing water is at a point a drop came to: it splashes into water there
@@ -470,6 +495,135 @@ static void Water_Splash( const vec3_t at, const vec3_t normal, const vec3_t vel
 		VectorMA( s->velocity, out * cosf( angle ), side, s->velocity );
 		VectorMA( s->velocity, out * sinf( angle ), up, s->velocity );
 	}
+}
+
+// The standing water of the floor puddles at a point, added up as the renderer does (wet.frag): above WATER_STANDING
+// the water stands there
+static float Water_Standing( const vec3_t point ) {
+	float	standing = 0.0f;
+	int		i;
+
+	for ( i = 0; i < WATER_PUDDLES; i++ ) {
+		const waterPuddle_t	*p = &water.puddles[i];
+		const int			age = cg.time - p->wetTime;
+		float				puddle, x;
+
+		if ( !p->active || !p->floor || age < 0 || age >= WATER_DRY_MSEC || fabsf( point[2] - p->origin[2] ) > 6.0f )
+			continue;
+		puddle = 0.85f * p->water * ( 1.0f - Water_Smooth( 0.15f, 0.7f, (float)age / WATER_DRY_MSEC ) );
+		x = Distance( point, p->origin ) / p->size;
+		if ( x < 1.0f )
+			standing += puddle * ( 1.0f - x * x ) * ( 1.0f - x * x );
+	}
+	return standing;
+}
+
+// whether a point of a floor is wet ground
+static qboolean Water_WetAt( const vec3_t point ) {
+	int i;
+
+	for ( i = 0; i < WATER_PUDDLES; i++ ) {
+		const waterPuddle_t	*p = &water.puddles[i];
+		const int			age = cg.time - p->wetTime;
+
+		if ( !p->active || !p->floor || age < 0 || age >= WATER_DRY_MSEC || fabsf( point[2] - p->origin[2] ) > 6.0f )
+			continue;
+		if ( Distance( point, p->origin ) < p->size * 0.8f * ( 1.0f - Water_Smooth( 0.33f, 1.0f, (float)age / WATER_DRY_MSEC ) ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+// Something came into standing water at "at", strength 0 to 1: a ring runs out over it and droplets fly up
+static void Water_IntoPool( const vec3_t at, const vec3_t normal, float strength ) {
+	waterRing_t	*r = &water.rings[water.nextRing];
+	vec3_t		down;
+	int			i;
+
+	water.nextRing = ( water.nextRing + 1 ) % WATER_RINGS;
+	memset( r, 0, sizeof( *r ) );
+	r->active = qtrue;
+	r->time = cg.time;
+	r->life = (int)( 700.0f + 800.0f * strength );
+	r->radius = 10.0f + 34.0f * strength;
+	r->strength = Com_Clamp( 0.0f, 1.0f, 0.4f + strength );
+	r->seed = Q_flrand( 0.0f, 1.0f );
+	VectorCopy( at, r->origin );
+	VectorCopy( normal, r->normal );
+	if ( Water_Liquid() ) {
+		VectorScale( normal, -( 120.0f + 200.0f * strength ), down );
+		for ( i = 0; i < 1 + (int)( strength * 3.0f ); i++ )
+			Water_Splash( at, normal, down, qtrue );
+	}
+}
+
+/*
+=================
+CG_WaterStep
+
+A foot of an entity came down at "at" (_PlayerFootStep of cg_players.c). Into standing water it splashes and the
+feet get wet: qtrue, the step sounds of water. Out of it a wet foot leaves a print for WATER_FEET_STEPS steps,
+fainter with each.
+=================
+*/
+qboolean CG_WaterStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right, qboolean heavy ) {
+	const int		num = (int)( cent - cg_entities );
+	waterPrint_t	*print;
+
+	if ( !water.registered || normal[2] < 0.7f || num < 0 || num >= MAX_GENTITIES )
+		return qfalse;
+	if ( Water_Standing( at ) > WATER_STANDING ) {
+		water.feet[num] = 1.0f;
+		Water_IntoPool( at, normal, heavy ? 0.4f : 0.25f );
+		return qtrue;
+	}
+	if ( Water_WetAt( at ) ) {
+		water.feet[num] = Q_max( water.feet[num], 0.5f );
+		return qfalse;
+	}
+	if ( water.feet[num] <= 0.0f )
+		return qfalse;
+	print = &water.prints[water.nextPrint];
+	water.nextPrint = ( water.nextPrint + 1 ) % WATER_PRINTS;
+	memset( print, 0, sizeof( *print ) );
+	print->active = qtrue;
+	print->right = right;
+	print->time = cg.time;
+	print->yaw = yaw;
+	print->wet = water.feet[num];
+	VectorCopy( at, print->origin );
+	VectorCopy( normal, print->normal );
+	water.feet[num] -= 1.0f / WATER_FEET_STEPS;
+	return qfalse;
+}
+
+// a jump or a landing of an entity (cg_event.c): into standing water at its feet
+void CG_WaterLand( centity_t *cent, float strength ) {
+	const int	num = (int)( cent - cg_entities );
+	vec3_t		end;
+	trace_t		tr;
+
+	if ( !water.registered )
+		return;
+	VectorCopy( cent->lerpOrigin, end );
+	end[2] -= 64.0f;
+	CG_Trace( &tr, cent->lerpOrigin, vec3_origin, vec3_origin, end, cent->currentState.number, MASK_SOLID );
+	if ( tr.fraction >= 1.0f || tr.plane.normal[2] < 0.7f || Water_Standing( tr.endpos ) <= WATER_STANDING )
+		return;
+	if ( num >= 0 && num < MAX_GENTITIES )
+		water.feet[num] = 1.0f;
+	Water_IntoPool( tr.endpos, tr.plane.normal, strength );
+	trap->S_StartSound( NULL, cent->currentState.number, CHAN_AUTO, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3] );
+}
+
+// a shot hit at "at" (cg_weapons.c, cg_event.c): into standing water there
+void CG_WaterImpact( const vec3_t at, float strength ) {
+	const vec3_t up = { 0.0f, 0.0f, 1.0f };
+
+	if ( !water.registered || Water_Standing( at ) <= WATER_STANDING )
+		return;
+	Water_IntoPool( at, up, strength );
+	trap->S_StartSound( (float *)at, ENTITYNUM_WORLD, CHAN_AUTO, water.poolSound[rand() % 3] );
 }
 
 // the droplets of the splashes fly on to cg.time; one that hits something is gone
@@ -740,7 +894,7 @@ static qboolean Water_Wet( void ) {
 // The puddles as the renderer draws them: wet as far as they reach while the water comes and for a third of the
 // time to dry, then the edge goes in; standing water as far as the water that came makes it, which goes faster.
 static void Water_AddWet( void ) {
-	wetSpot_t	spots[WATER_PUDDLES];
+	wetSpot_t	spots[WET_MAX_SPOTS];
 	int			i, count = 0;
 
 	for ( i = 0; i < WATER_PUDDLES; i++ ) {
@@ -764,7 +918,53 @@ static void Water_AddWet( void ) {
 		spot->puddle = p->floor ? 0.85f * p->water * ( 1.0f - Water_Smooth( 0.15f, 0.7f, dry ) ) : 0.0f;
 		spot->flow = age < WATER_FLOW_MSEC ? 1.0f - (float)age / WATER_FLOW_MSEC : 0.0f;
 		spot->seed = p->angle / 360.0f;
+		spot->kind = WET_PLACE;
 		count++;
+	}
+	// the prints of wet feet, drying
+	for ( i = 0; i < WATER_PRINTS && count < WET_MAX_SPOTS; i++ ) {
+		waterPrint_t	*p = &water.prints[i];
+		const int		age = cg.time - p->time;
+		wetSpot_t		*spot;
+
+		if ( !p->active )
+			continue;
+		if ( age >= WATER_PRINT_MSEC || age < 0 ) {
+			p->active = qfalse;
+			continue;
+		}
+		spot = &spots[count++];
+		memset( spot, 0, sizeof( *spot ) );
+		VectorCopy( p->origin, spot->origin );
+		VectorCopy( p->normal, spot->normal );
+		VectorCopy( p->origin, spot->hit );
+		spot->radius = WATER_FOOT;
+		spot->wet = p->wet * ( 1.0f - Water_Smooth( 0.25f, 1.0f, (float)age / WATER_PRINT_MSEC ) );
+		spot->seed = AngleNormalize360( p->yaw ) / 360.0f;
+		spot->kind = p->right ? WET_FOOT_RIGHT : WET_FOOT_LEFT;
+	}
+	// the rings on standing water
+	for ( i = 0; i < WATER_RINGS && count < WET_MAX_SPOTS; i++ ) {
+		waterRing_t	*r = &water.rings[i];
+		const int	age = cg.time - r->time;
+		wetSpot_t	*spot;
+
+		if ( !r->active )
+			continue;
+		if ( age >= r->life || age < 0 ) {
+			r->active = qfalse;
+			continue;
+		}
+		spot = &spots[count++];
+		memset( spot, 0, sizeof( *spot ) );
+		VectorCopy( r->origin, spot->origin );
+		VectorCopy( r->normal, spot->normal );
+		VectorCopy( r->origin, spot->hit );
+		spot->radius = r->radius;
+		spot->wet = r->strength;
+		spot->flow = (float)age / r->life;
+		spot->seed = r->seed;
+		spot->kind = WET_RING;
 	}
 	if ( count )
 		trap->ext.R_AddWet( spots, count );
@@ -795,6 +995,24 @@ static void Water_DrawPuddles( void ) {
 		CG_ToyLight( p->origin, light );
 		CG_ImpactMark( p->floor ? water.puddleShader : water.wetShader, p->origin, p->normal, p->angle,
 			light[0] * wet, light[1] * wet, light[2] * wet, wet, qfalse, p->size * ( 0.85f + 0.15f * wet ), qtrue );
+	}
+	// the prints of wet feet as small wet marks
+	for ( i = 0; i < WATER_PRINTS; i++ ) {
+		waterPrint_t	*p = &water.prints[i];
+		const int		age = cg.time - p->time;
+		float			wet;
+		vec3_t			light;
+
+		if ( !p->active )
+			continue;
+		if ( age >= WATER_PRINT_MSEC || age < 0 ) {
+			p->active = qfalse;
+			continue;
+		}
+		wet = p->wet * ( 1.0f - Water_Smooth( 0.25f, 1.0f, (float)age / WATER_PRINT_MSEC ) );
+		CG_ToyLight( p->origin, light );
+		CG_ImpactMark( water.wetShader, p->origin, p->normal, p->yaw, light[0] * wet, light[1] * wet, light[2] * wet, wet, qfalse,
+			WATER_FOOT * 0.8f, qtrue );
 	}
 }
 

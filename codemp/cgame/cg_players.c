@@ -2180,6 +2180,15 @@ static void _PlayerFootStep( const vec3_t origin,
 		return;
 	}
 
+	// VisionJK: into standing water of the water gun a foot splashes, out of it a wet foot leaves prints
+	if ( CG_WaterStep( cent, trace.endpos, trace.plane.normal, orientation,
+		(qboolean)( footStepType == FOOTSTEP_R || footStepType == FOOTSTEP_HEAVY_R ),
+		(qboolean)( footStepType == FOOTSTEP_HEAVY_R || footStepType == FOOTSTEP_HEAVY_L ) ) )
+	{
+		trap->S_StartSound( NULL, cent->currentState.clientNum, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand()&3] );
+		return;
+	}
+
 	//check for foot-steppable surface flag
 	switch( trace.surfaceFlags & MATERIAL_MASK )
 	{
@@ -6029,7 +6038,8 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal )
 			mark->alphaFade = qtrue;
 			mark->markShader = cgs.media.rivetMarkShader;
 			mark->poly.numVerts = mf->numPoints;
-			mark->color[0] = mark->color[1] = mark->color[2] = mark->color[3] = 255;
+			// (VisionJK: the colour of a mark is 0 to 1, see CG_AddMarks)
+			mark->color[0] = mark->color[1] = mark->color[2] = mark->color[3] = 1.0f;
 			memcpy( mark->verts, verts, mf->numPoints * sizeof( verts[0] ) );
 
 			// And now do a glow pass
@@ -6039,9 +6049,9 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal )
 			mark->alphaFade = qfalse;
 			mark->markShader = cgs.media.mSaberDamageGlow;
 			mark->poly.numVerts = mf->numPoints;
-			mark->color[0] = 215 + Q_flrand(0.0f, 1.0f) * 40.0f;
-			mark->color[1] = 96 + Q_flrand(0.0f, 1.0f) * 32.0f;
-			mark->color[2] = mark->color[3] = Q_flrand(0.0f, 1.0f)*15.0f;
+			mark->color[0] = ( 215 + Q_flrand(0.0f, 1.0f) * 40.0f ) / 255.0f;
+			mark->color[1] = ( 96 + Q_flrand(0.0f, 1.0f) * 32.0f ) / 255.0f;
+			mark->color[2] = mark->color[3] = Q_flrand(0.0f, 1.0f)*15.0f / 255.0f;
 			memcpy( mark->verts, verts, mf->numPoints * sizeof( verts[0] ) );
 		}
 	}

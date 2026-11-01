@@ -65,7 +65,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // ------------------------------------------------------------------------------------------------------------
 
 #define VK_SCREENFX_VEC4S	160		// the numbers of shaders/screenfx.frag, see VK_ScreenFx()
-#define VK_WET_HEADER		10		// the numbers of shaders/wet.vert and wet.frag: the view (VK_DrawWet()),
+#define VK_WET_HEADER		11		// the numbers of shaders/wet.vert and wet.frag: the view (VK_DrawWet()),
 #define VK_WET_ROWS			6		//	then this many for each wet place
 #define VK_WET_VEC4S		( VK_WET_HEADER + WET_MAX_SPOTS * VK_WET_ROWS )
 
@@ -317,6 +317,7 @@ void		VK_GL_ResetMatrix( void );
 // vk_world.cpp
 extern cvar_t	*v_vkStatic;
 extern cvar_t	*v_vkMerge;
+extern cvar_t	*v_wetMirror;		// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -383,6 +384,8 @@ void		VK_CaptureFrame( void );
 void		VK_DrawLiquids( void );
 qboolean	VK_HasWet( void );
 void		VK_DrawWet( void );
+qboolean	VK_BeginPuddle( void );
+void		VK_EndPuddle( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );

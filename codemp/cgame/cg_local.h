@@ -2004,6 +2004,9 @@ void		CG_WaterUp_f( void );
 qboolean	CG_WaterHolding( int client );			// the water gun is in his hand: his weapon is put away
 qboolean	CG_WaterGun( centity_t *cent );			// draws it there, qtrue: it is in the hand
 qboolean	CG_WaterViewGun( void );				// the own one in first person, in place of the view weapon
+qboolean	CG_WaterStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right, qboolean heavy );
+void		CG_WaterLand( centity_t *cent, float strength );	// a jump or a landing into standing water
+void		CG_WaterImpact( const vec3_t at, float strength );	// a shot into standing water
 int			CG_WaterTorsoAnim( centity_t *cent, int anim );	// a rifle held up while it is in the hand
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)

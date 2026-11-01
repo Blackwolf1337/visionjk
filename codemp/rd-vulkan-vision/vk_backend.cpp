@@ -728,6 +728,23 @@ static void RB_CaptureForEntity( const trRefEntity_t *ent ) {
 // sharp as the menu on it. rb_sawOver: the list had such surfaces.
 static qboolean	rb_overLater, rb_sawOver;
 
+// The wet places of RE_AddWet are found by the depth of the scene, so they go onto the level before anything
+// transparent is drawn, which leaves no depth: a cloaked or faded player and effects stay on top of the wet ground.
+// rb_wetLater: this run of the list still has to draw them.
+static qboolean	rb_wetLater;
+
+static void RB_DrawWet( int depthRange ) {
+	if ( !rb_wetLater ) {
+		return;
+	}
+	rb_wetLater = qfalse;
+	VK_DrawWet();
+	// it leaves the viewport with the whole depth
+	if ( depthRange ) {
+		RB_SetDepthRange( depthRange );
+	}
+}
+
 /*
 ===============
 RB_RenderDrawSurfList
@@ -844,6 +861,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 					RB_ShadowFinish();
 					didShadowPass = qtrue;
 				}
+				if ( shader->sort > SS_BANNER ) {
+					RB_DrawWet( oldDepthRange );
+				}
 			}
 			RB_BeginSurface( shader, fogNum );
 			oldShader = shader;
@@ -876,6 +896,8 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	if ( oldShader != NULL ) {
 		RB_EndSurface();
 	}
+	// the list had nothing transparent: before what was put off to the end
+	RB_DrawWet( oldDepthRange );
 
 	if ( tr_stencilled && tr_distortionPrePost ) {
 		// ok, cap it now: without what is drawn after everything else
@@ -992,6 +1014,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	}
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
+	// the view mirrored at the floor of the puddles goes into targets of its own, which the wet places read
+	const qboolean puddle = backEnd.viewParms.isPuddle;
+	if ( puddle && !VK_BeginPuddle() ) {
+		return (const void *)( cmd + 1 );
+	}
 	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
 	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
 	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && v_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
@@ -1005,16 +1032,15 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_sawOver = qfalse;
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
 	rb_sawLate = qfalse;
+	// the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the level itself, before its glow. The
+	// wet ground in the list before what is transparent (RB_DrawWet), the water over what was drawn.
+	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+	rb_wetLater = (qboolean)( levelView && r_numWet );
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
-	// the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the level itself, over what was drawn
-	// and before its glow, the water over the wet ground
-	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
-		if ( r_numWet ) {
-			VK_DrawWet();
-		}
-		if ( r_numLiquids ) {
-			VK_DrawLiquids();
-		}
+	rb_wetLater = qfalse;
+	if ( levelView && r_numLiquids ) {
+		VK_DrawLiquids();
 	}
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();
@@ -1033,6 +1059,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 		}
 	}
 	rb_glowView = false;
+	if ( puddle ) {
+		VK_EndPuddle();
+		tess.shader = NULL;
+		return (const void *)( cmd + 1 );
+	}
 	// tay_bloom: the view of the level itself, as the focus below
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		VK_Bloom();

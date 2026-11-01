@@ -529,6 +529,26 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_PostSetOnce( &vk.screenSet );
 	VK_WritePostSet( vk.screenSet, vk.screen.view );
 
+	// v_wetMirror: the view mirrored at the floor of the puddles, with the formats and the samples of the frame, so
+	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all.
+	if ( v_wetMirror->integer && vk.depthReadable ) {
+		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		VK_CreateTarget( &vk.reflect, vk.width, vk.height, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_SAMPLE_COUNT_1_BIT );
+		VK_CreateTarget( &vk.reflectDepth, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+			| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthAspect, VK_SAMPLE_COUNT_1_BIT );
+		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+			VK_CreateTarget( &vk.reflectMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+				vk.samples );
+			VK_CreateTarget( &vk.reflectDepthMS, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+				vk.samples );
+		}
+		VK_PostSetOnce( &vk.reflectSet );
+		VK_WritePostSet( vk.reflectSet, vk.reflect.view );
+	}
+	vk.reflectFrame = -1;
+
 	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
 	// pixel (not every device filters a depth format) while nothing draws into it.
 	if ( vk.depthReadable ) {
@@ -542,6 +562,10 @@ void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.glow );
 	VK_DestroyTarget( &vk.glowMS );
 	VK_DestroyTarget( &vk.screen );
+	VK_DestroyTarget( &vk.reflect );
+	VK_DestroyTarget( &vk.reflectMS );
+	VK_DestroyTarget( &vk.reflectDepth );
+	VK_DestroyTarget( &vk.reflectDepthMS );
 	VK_DestroyTarget( &vk.blur[0] );
 	VK_DestroyTarget( &vk.blur[1] );
 	VK_DestroyTarget( &vk.soft[0] );

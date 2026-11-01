@@ -2053,6 +2053,9 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
+	// VisionJK: into standing water of the water gun (toys/cg_water.c), explosives harder
+	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
+		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
 
 	switch( weapon )
 	{

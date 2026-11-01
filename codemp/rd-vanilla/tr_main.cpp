@@ -992,6 +992,68 @@ qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
 	return qtrue;
 }
 
+#ifdef RD_VULKAN_VISION
+/*
+========================
+R_PuddleView
+
+VisionJK: standing water of RE_AddWet mirrors the room. The level is drawn once more for the view, mirrored at the
+floor of the puddle that matters most (in view, large and near), and clipped there; rd-vulkan-vision draws that
+view into targets of its own (VK_BeginPuddle) and the puddles at that height read it. Before the portals of the
+level, whose view stays in the frame.
+========================
+*/
+static void R_PuddleView( void ) {
+	const wetSpot_t	*best = NULL;
+	float			bestScore = 0.0f;
+	viewParms_t		newParms, oldParms;
+	float			height;
+	int				i;
+
+	if ( tr.viewParms.isPortal || ( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) || r_noportals->integer
+		|| !VK_PuddleMirror() ) {
+		return;
+	}
+	for ( i = 0; i < r_numWet; i++ ) {
+		const wetSpot_t *spot = &r_wet[i];
+		float score;
+
+		if ( spot->puddle < 0.05f || spot->normal[2] < 0.9f || spot->radius <= 0.0f
+			|| R_CullPointAndRadius( spot->origin, spot->radius ) == CULL_OUT ) {
+			continue;
+		}
+		score = spot->puddle * spot->radius * spot->radius / Q_max( Distance( spot->origin, tr.viewParms.ori.origin ), 32.0f );
+		if ( score > bestScore ) {
+			bestScore = score;
+			best = spot;
+		}
+	}
+	// (an eye under the floor sees no mirror in it)
+	if ( !best || tr.viewParms.ori.origin[2] <= best->origin[2] + 1.0f ) {
+		return;
+	}
+	height = best->origin[2];
+
+	oldParms = tr.viewParms;
+	newParms = tr.viewParms;
+	newParms.isPortal = qtrue;
+	newParms.isMirror = qtrue;
+	newParms.isPuddle = qtrue;
+	VectorCopy( best->origin, newParms.pvsOrigin );
+	newParms.pvsOrigin[2] += 8.0f;
+	VectorSet( newParms.portalPlane.normal, 0.0f, 0.0f, 1.0f );
+	newParms.portalPlane.dist = height;
+	newParms.ori.origin[2] = 2.0f * height - oldParms.ori.origin[2];
+	for ( i = 0; i < 3; i++ ) {
+		newParms.ori.axis[i][2] = -oldParms.ori.axis[i][2];
+	}
+
+	R_RenderView( &newParms );
+
+	tr.viewParms = oldParms;
+}
+#endif
+
 /*
 =================
 R_SpriteFogNum
@@ -1158,6 +1220,10 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	// sort the drawsurfs by sort type, then orientation, then shader
 	R_RadixSort( drawSurfs, numDrawSurfs );
+
+#ifdef RD_VULKAN_VISION
+	R_PuddleView();
+#endif
 
 	// check for any pass through drawing, which
 	// may cause another view to be rendered first

@@ -34,6 +34,7 @@ models/map_objects/vision/boombox
 // its handle, knobs and antenna: chrome, which shows what it reflects
 models/map_objects/vision/boombox_chrome
 {
+	nopicmip
 	{
 		map models/map_objects/vision/boombox_env
 		tcGen environment

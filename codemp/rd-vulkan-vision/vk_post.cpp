@@ -34,12 +34,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 void myGlMultMatrix( const float *a, const float *b, float *out );
 
+cvar_t	*v_wetMirror;
+
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
 	// tay_renderScale: the views of the level in a size of their own (vk_frame.cpp)
 	const float scale = Com_Clamp( 0.5f, 2.0f, tay_renderScale->value );
 
+	v_wetMirror = ri.Cvar_Get( "v_wetMirror", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"Puddles of the water gun mirror the room: the level is drawn once more, mirrored at their floor. 0: they mirror only what is on the screen" );
 	vk.inScene = qfalse;
 	vk.sceneWidth = vk.sceneHeight = 0;
 	if ( scale != 1.0f ) {
@@ -618,10 +622,11 @@ qboolean VK_HasWet( void ) {
 ===============
 VK_DrawWet
 
-The wet places of RE_AddWet over the view of the level that was just drawn, before its water (shaders/wet.vert and
-wet.frag). The frame is copied into vk.screen first: a place is drawn from there, darker and shining, and mirrors
-what the copy shows. The numbers of the view and of every place go into the globals of the frame; each place gets
-the light of the level at its middle.
+The wet places of RE_AddWet over the view of the level as far as it is drawn: in the draw list before what is
+transparent (RB_DrawWet), before its water (shaders/wet.vert and wet.frag). The frame is copied into vk.screen
+first: a place is drawn from there, darker and shining. Standing water at the floor of the puddle view of this
+frame mirrors what that view shows (vk.reflect), other water what the copy shows. The numbers of the view and of
+every place go into the globals of the frame; each place gets the light of the level at its middle.
 ===============
 */
 void VK_DrawWet( void ) {
@@ -654,6 +659,7 @@ void VK_DrawWet( void ) {
 	VectorSet4( wet[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
 	VectorSet4( wet[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
 		(float)count );
+	VectorSet4( wet[10], vk.reflectHeight, vk.reflectFrame == backEnd.viewParms.frameCount ? 1.0f : 0.0f, 0.0f, 0.0f );
 
 	for ( int i = 0; i < count; i++ ) {
 		const wetSpot_t	*spot = &r_wet[i];
@@ -671,7 +677,7 @@ void VK_DrawWet( void ) {
 		VectorSet4( row[2], spot->hit[0], spot->hit[1], spot->hit[2], Com_Clamp( 0.0f, 1.0f, spot->puddle ) );
 		VectorSet4( row[3], ambient[0] / 255.0f, ambient[1] / 255.0f, ambient[2] / 255.0f, Com_Clamp( 0.0f, 1.0f, spot->flow ) );
 		VectorSet4( row[4], directed[0] / 255.0f, directed[1] / 255.0f, directed[2] / 255.0f, spot->seed );
-		VectorSet4( row[5], dir[0], dir[1], dir[2], 0.0f );
+		VectorSet4( row[5], dir[0], dir[1], dir[2], (float)spot->kind );
 	}
 
 	VK_EndTarget();
@@ -685,6 +691,63 @@ void VK_DrawWet( void ) {
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
 	VK_InvalidateTransform();
 #endif
+}
+
+/*
+===============
+VK_PuddleMirror
+
+Whether the front end draws the view mirrored at the floor of the puddles (R_PuddleView of tr_main.cpp): its
+targets are there, and the views of the level are not drawn in targets of another size (tay_renderScale)
+===============
+*/
+qboolean VK_PuddleMirror( void ) {
+	return (qboolean)( VK_HasWet() && vk.reflect.image && !vk.sceneWidth );
+}
+
+// the targets of the puddle view take the places of color, depth and their samples, or give them back
+static void VK_SwapPuddleTargets( void ) {
+	vkTarget_t target;
+
+#define VK_SWAP( a, b )	( target = a, a = b, b = target )
+	VK_SWAP( vk.color, vk.reflect );
+	VK_SWAP( vk.colorMS, vk.reflectMS );
+	VK_SWAP( vk.depth, vk.reflectDepth );
+	VK_SWAP( vk.depthMS, vk.reflectDepthMS );
+#undef VK_SWAP
+}
+
+/*
+===============
+VK_BeginPuddle
+
+The view mirrored at the floor of the puddles is drawn into targets of its own, begun empty: the frame keeps what
+it has (the sky of a portal, a mirror of the level). Its picture has the shape of the main view, so the wet places
+read it at their own pixel. qfalse: it is not drawn.
+===============
+*/
+qboolean VK_BeginPuddle( void ) {
+	if ( !vk.frame || !VK_PuddleMirror() ) {
+		return qfalse;
+	}
+	VK_EndTarget();
+	VK_SwapPuddleTargets();
+	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	vk.reflectFrame = backEnd.viewParms.frameCount;
+	vk.reflectHeight = backEnd.viewParms.portalPlane.dist;
+	return qtrue;
+}
+
+void VK_EndPuddle( void ) {
+	VK_EndTarget();
+	VK_SwapPuddleTargets();
+	VK_TargetLayout( vk.frame->cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_InvalidateTransform();
 }
 
 /*
@@ -730,6 +793,11 @@ x, y: the pixel of the flare as OpenGL counts, y up. eyeZ: how far in front of t
 qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ ) {
 	vkFrame_t *frame = vk.frame;
 	vkFlare_t *flare = NULL;
+
+	// the puddle view has no flares: it would ask for the same ones at other pixels
+	if ( backEnd.viewParms.isPuddle ) {
+		return qfalse;
+	}
 
 	for ( int i = 0; i < vk_numFlares; i++ ) {
 		if ( vk_flares[i].key == point ) {

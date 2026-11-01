@@ -1403,6 +1403,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_FOOTSTEP:
 		DEBUGNAME("EV_FOOTSTEP");
+		// (this one only comes with a soft landing, the steps come from the animations)
+		CG_WaterLand( cent, 0.35f );
 		if (cg_footsteps.integer) {
 			footstep_t	soundType;
 			switch( es->eventParm )
@@ -1489,6 +1491,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		}
 		DoFall(cent, es, clientNum);
+		CG_WaterLand( cent, Com_Clamp( 0.6f, 1.0f, 0.6f + es->eventParm / 60.0f ) );
 		break;
 	case EV_STEP_4:
 	case EV_STEP_8:
@@ -1583,6 +1586,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_JUMP:
 		DEBUGNAME("EV_JUMP");
+		CG_WaterLand( cent, 0.5f );
 		if (cg_jumpSounds.integer)
 		{
 			trap->S_StartSound (NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*jump1.wav" ) );
@@ -1590,6 +1594,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 	case EV_ROLL:
 		DEBUGNAME("EV_ROLL");
+		CG_WaterLand( cent, 0.6f );
 		if (es->number == cg.snap->ps.clientNum && cg.snap->ps.fallingToDeath)
 		{
 			break;
@@ -2484,6 +2489,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		}
 		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qfalse ) )
 			FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
+		CG_WaterImpact( cent->lerpOrigin, 0.7f );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_SHOT:
@@ -2502,6 +2508,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		}
 		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qtrue ) )
 			FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
+		CG_WaterImpact( cent->lerpOrigin, 0.9f );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_MISS:

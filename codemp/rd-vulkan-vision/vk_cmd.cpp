@@ -715,7 +715,8 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 // scene ended.
 void VK_WetPass( const float *wet, int count, const int *viewport ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkDescriptorSet sets[3] = { vk.frame->set, vk.screenSet, vk.depthSet };
+	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
+	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.reflect.image ? vk.reflectSet : vk.screenSet };
 	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
@@ -724,6 +725,9 @@ void VK_WetPass( const float *wet, int count, const int *viewport ) {
 
 	memcpy( globals->wet, wet, sizeof( globals->wet ) );
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	if ( vk.reflect.image ) {
+		VK_TargetLayout( cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	}
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	if ( multi ) {
@@ -755,7 +759,7 @@ void VK_WetPass( const float *wet, int count, const int *viewport ) {
 
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.wetPipeline );
 	vk.boundPipeline = vk.wetPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 0, NULL );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
 	qvkCmdEndRendering( cmd );
