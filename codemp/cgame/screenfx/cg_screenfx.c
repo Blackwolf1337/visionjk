@@ -59,6 +59,7 @@ qboolean CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle );		// cg_weapons.c
 #define FX_DROPS			24			// drops a water gun left on the view (SCREENFX_DROP)
 #define DROP_SLIDE			0.013f		// a drop larger than this (of the height of the view) runs down
 #define DROP_DRY_MSEC		1500		// the last of its life it dries
+#define FX_SNOWS			8			// clumps of snow a snowball left on the view (SCREENFX_SNOW)
 #define FX_SMOKES			128
 #define PROTECT_HIT_MSEC	600
 #define ABSORB_PULSE_MSEC	500
@@ -131,10 +132,21 @@ typedef struct {
 	int			stopUntil;		// a running drop that sticks for a moment, until then
 } fxDrop_t;
 
+typedef struct {
+	qboolean	active;
+	qboolean	dripped;		// it melted into drops
+	int			born, life;		// cg.time it landed, msec it takes to melt
+	float		x, y, radius;	// as a drop
+	float		speed;			// it slides down slowly, heavy and wet
+	float		seed;
+} fxSnow_t;
+
 static struct {
 	qboolean			has;			// the engine and the renderer have R_SetScreenEffect
 	qboolean			hasDrops;		//	and draw SCREENFX_DROP
+	qboolean			hasSnow;		//	and SCREENFX_SNOW
 	fxDrop_t			drops[FX_DROPS];
+	fxSnow_t			snows[FX_SNOWS];
 	fxBlast_t			blasts[FX_BLASTS];
 	int					nextBlast;
 	float				split;			// the colours part, 0 to 1, from splitTime on
@@ -190,6 +202,8 @@ void CG_ScreenFxInit( void ) {
 
 		trap->Cvar_VariableStringBuffer( "v_screenFxDrops", value, sizeof( value ) );
 		sfx.hasDrops = (qboolean)( sfx.has && atoi( value ) == 1 );
+		trap->Cvar_VariableStringBuffer( "v_screenFxSnow", value, sizeof( value ) );
+		sfx.hasSnow = (qboolean)( sfx.hasDrops && atoi( value ) == 1 );
 	}
 	sfx.beatSound = trap->S_RegisterSound( "sound/vision/heartbeat.wav" );
 	sfx.rageSound = trap->S_RegisterSound( "sound/vision/rage_hum.wav" );
@@ -457,6 +471,28 @@ void CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float str
 	}
 }
 
+// a drop of water on the view at x, y (fractions of the view) of radius (of its height), for life msec
+static void ScreenFx_AddDrop( float x, float y, float radius, int life ) {
+	int i;
+
+	for ( i = 0; i < FX_DROPS; i++ ) {
+		fxDrop_t *d = &sfx.drops[i];
+
+		if ( d->active ) {
+			continue;
+		}
+		memset( d, 0, sizeof( *d ) );
+		d->active = qtrue;
+		d->born = cg.time;
+		d->life = life;
+		d->x = x;
+		d->y = y;
+		d->radius = radius;
+		d->seed = Q_flrand( 0.0f, 1.0f );
+		return;
+	}
+}
+
 /*
 =================
 CG_ScreenFxWet
@@ -485,26 +521,113 @@ void CG_ScreenFxWet( const vec3_t velocity ) {
 	VectorNormalize( dir );
 	cx = Com_Clamp( 0.15f, 0.85f, 0.5f - 0.3f * DotProduct( dir, cg.refdef.viewaxis[1] ) + Q_flrand( -0.08f, 0.08f ) );
 	cy = Com_Clamp( 0.15f, 0.8f, 0.45f + 0.3f * DotProduct( dir, cg.refdef.viewaxis[2] ) + Q_flrand( -0.08f, 0.08f ) );
-	// a few large ones, and around them the fine spray
+	// a few large ones, and around them the fine spray (the last ones the largest and in the middle of the splash)
 	count = 12 + rand() % 5;
-	for ( i = 0; i < FX_DROPS && count > 0; i++ ) {
-		fxDrop_t	*d = &sfx.drops[i];
-		float		spread;
+	for ( i = count - 1; i >= 0; i-- ) {
+		const float spread = i > 4 ? 0.2f : 0.09f;
 
-		if ( d->active ) {
+		ScreenFx_AddDrop( cx + Q_flrand( -1.0f, 1.0f ) * spread * 0.7f, cy + Q_flrand( -1.0f, 1.0f ) * spread,
+			i > 4 ? Q_flrand( 0.003f, 0.008f ) : Q_flrand( 0.016f, 0.04f ), (int)Q_flrand( 3000.0f, 6000.0f ) );
+	}
+}
+
+/*
+=================
+CG_ScreenFxSnow
+
+A snowball hit the own face (toys/cg_toys.c), flying with velocity: clumps of snow stick on the view where it came
+from, one to three large ones and some small bits; they slide down a little, melt from the edges in and turn into
+drops of water that run down and dry (CG_ScreenFxSnows). qfalse: the renderer has no snow on the view, the cgame
+draws its picture instead.
+=================
+*/
+qboolean CG_ScreenFxSnow( const vec3_t velocity ) {
+	vec3_t	dir;
+	float	cx, cy;
+	int		i, count;
+
+	if ( !sfx.hasSnow || ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+		return qfalse;
+	}
+	VectorCopy( velocity, dir );
+	VectorNormalize( dir );
+	cx = Com_Clamp( 0.2f, 0.8f, 0.5f - 0.3f * DotProduct( dir, cg.refdef.viewaxis[1] ) + Q_flrand( -0.1f, 0.1f ) );
+	cy = Com_Clamp( 0.2f, 0.75f, 0.45f + 0.3f * DotProduct( dir, cg.refdef.viewaxis[2] ) + Q_flrand( -0.1f, 0.1f ) );
+	count = 4 + rand() % 3;
+	for ( i = 0; i < count; i++ ) {
+		fxSnow_t	*s = &sfx.snows[0];
+		const int	large = i < 1 + rand() % 3;
+		int			k;
+
+		// a free one, else the oldest
+		for ( k = 0; k < FX_SNOWS; k++ ) {
+			if ( !sfx.snows[k].active ) {
+				s = &sfx.snows[k];
+				break;
+			}
+			if ( sfx.snows[k].born < s->born ) {
+				s = &sfx.snows[k];
+			}
+		}
+		memset( s, 0, sizeof( *s ) );
+		s->active = qtrue;
+		s->born = cg.time;
+		s->life = (int)Q_flrand( 3000.0f, 4500.0f );
+		s->x = cx + Q_flrand( -1.0f, 1.0f ) * ( large ? 0.06f : 0.16f );
+		s->y = cy + Q_flrand( -1.0f, 1.0f ) * ( large ? 0.06f : 0.14f );
+		s->radius = large ? Q_flrand( 0.07f, 0.12f ) : Q_flrand( 0.015f, 0.035f );
+		s->seed = Q_flrand( 0.0f, 1.0f );
+	}
+	return qtrue;
+}
+
+// The clumps of snow on the view: they slide down slowly, melt, and when little is left turn into drops where they are
+static void CG_ScreenFxSnows( void ) {
+	const float	dt = Com_Clamp( 0.0f, 0.1f, cg.frametime * 0.001f );
+	int			i;
+
+	for ( i = 0; i < FX_SNOWS; i++ ) {
+		fxSnow_t			*s = &sfx.snows[i];
+		screenFxSource_t	*src;
+		const int			age = cg.time - s->born;
+		float				left;
+
+		if ( !s->active ) {
 			continue;
 		}
-		count--;
-		memset( d, 0, sizeof( *d ) );
-		d->active = qtrue;
-		d->born = cg.time;
-		d->life = (int)Q_flrand( 3000.0f, 6000.0f );
-		// the last ones the largest and in the middle of the splash
-		spread = count > 4 ? 0.2f : 0.09f;
-		d->x = cx + Q_flrand( -1.0f, 1.0f ) * spread * 0.7f;
-		d->y = cy + Q_flrand( -1.0f, 1.0f ) * spread;
-		d->radius = count > 4 ? Q_flrand( 0.003f, 0.008f ) : Q_flrand( 0.016f, 0.04f );
-		d->seed = Q_flrand( 0.0f, 1.0f );
+		if ( age >= s->life || age < 0 || ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+			s->active = qfalse;
+			continue;
+		}
+		left = 1.0f - (float)age / s->life;
+		// (it holds a moment, then the weight of the wet snow pulls it down)
+		if ( age > 600 ) {
+			s->speed = Q_min( s->radius * 0.5f, s->speed + s->radius * 0.6f * dt );
+			s->y += s->speed * dt;
+		}
+		if ( !s->dripped && left < 0.35f ) {
+			const int drops = s->radius > 0.05f ? 3 + rand() % 3 : 1;
+			int k;
+
+			s->dripped = qtrue;
+			for ( k = 0; k < drops; k++ ) {
+				ScreenFx_AddDrop( s->x + Q_flrand( -0.6f, 0.6f ) * s->radius * cgs.glconfig.vidHeight / Q_max( cgs.glconfig.vidWidth, 1 ),
+					s->y + Q_flrand( -0.4f, 0.6f ) * s->radius, s->radius * ( k ? Q_flrand( 0.12f, 0.3f ) : Q_flrand( 0.3f, 0.45f ) ),
+					(int)Q_flrand( 2500.0f, 5000.0f ) );
+			}
+		}
+		src = CG_ScreenFxSource();
+		if ( !src ) {
+			break;
+		}
+		src->kind = SCREENFX_SNOW;
+		src->a[0] = src->b[0] = s->x;
+		src->a[1] = src->b[1] = s->y;
+		src->radius = s->radius;
+		src->width = 0.0f;
+		src->strength = Com_Clamp( 0.0f, 1.0f, left * 1.15f );
+		src->distance = 0.0f;
+		src->seed = s->seed;
 	}
 }
 
@@ -1061,6 +1184,7 @@ void CG_ScreenFxScene( void ) {
 	CG_ScreenFxRipples();
 	CG_ScreenFxFlashes();
 	if ( v_fxWater.integer ) {
+		CG_ScreenFxSnows();
 		CG_ScreenFxDrops();
 	}
 	split = sfx.split * ( 1.0f - ( cg.time - sfx.splitTime ) / (float)SPLIT_MSEC );

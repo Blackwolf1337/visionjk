@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Draws the pictures of the toys of issue #9 (cgame/toys/cg_toys.c) into assets/japlus_client/gfx/vision/toys:
 
-  snowball.png    the ball in flight, a sprite: a lit sphere of packed snow, soft at its rim
   snowpuff.png    a puff of powder for the burst (effects/vision/snowball_hit.efx), and of mist for the water
   snowsplat.png   what stays: on a wall as a mark that melts away, and on the screen of the one who is hit
   waterstream.png the jet of the water gun, along its length: clear water with a bright core and dark rims
@@ -43,29 +42,6 @@ def octaves( size, seed, scales=( 16, 8, 4, 2 ) ):
 	weights = [ 0.5 ** i for i in range( len( scales ) ) ]
 	total = sum( weights )
 	return [ [ sum( w * l[y][x] for w, l in zip( weights, layers ) ) / total for x in range( size ) ] for y in range( size ) ]
-
-
-def snowball( size=64 ):
-	n = octaves( size, 11, ( 8, 4, 2 ) )
-	img = Image.new( 'RGBA', ( size, size ) )
-	light = ( -0.45, -0.55, 0.7 )
-	for y in range( size ):
-		for x in range( size ):
-			dx, dy = ( x + 0.5 ) / size * 2 - 1, ( y + 0.5 ) / size * 2 - 1
-			r = math.hypot( dx, dy )
-			edge = 0.86 + 0.08 * ( n[y][x] - 0.5 )
-			if r > edge:
-				img.putpixel( ( x, y ), ( 255, 255, 255, 0 ) )
-				continue
-			nz = math.sqrt( max( 0.0, 1 - ( r / edge ) ** 2 ) )
-			lit = max( 0.0, dx / edge * light[0] + dy / edge * light[1] + nz * light[2] )
-			grain = 0.82 + 0.3 * ( n[y][x] - 0.5 )
-			v = ( 0.55 + 0.45 * lit ) * grain
-			# a cold blue in the shade, white where the light falls
-			col = ( int( min( 255, 225 * v + 40 * lit ) ), int( min( 255, 235 * v + 30 * lit ) ), int( min( 255, 255 * v + 10 ) ) )
-			alpha = int( 255 * min( 1.0, ( edge - r ) / 0.08 ) )
-			img.putpixel( ( x, y ), col + ( alpha, ) )
-	return img
 
 
 def snowpuff( size=64 ):
@@ -184,7 +160,7 @@ def puddleshine( size=256 ):
 
 def main():
 	os.makedirs( OUT, exist_ok=True )
-	makers = ( ( 'snowball', snowball ), ( 'snowpuff', snowpuff ), ( 'snowsplat', snowsplat ), ( 'waterstream', waterstream ),
+	makers = ( ( 'snowpuff', snowpuff ), ( 'snowsplat', snowsplat ), ( 'waterstream', waterstream ),
 		( 'waterdrop', waterdrop ), ( 'wet', lambda: patch( 128, 71, 4, 3.0, 0.4 ) ), ( 'puddle', lambda: patch( 256, 83, 6, 6.0, 0.55 ) ),
 		( 'puddleshine', puddleshine ) )
 	for name, make in makers:

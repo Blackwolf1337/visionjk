@@ -150,6 +150,7 @@ static struct {
 } water;
 
 static qboolean Water_Liquid( void );
+static qboolean Water_Wet( void );
 static float Water_Smooth( float edge0, float edge1, float x );
 
 static void Water_Register( void ) {
@@ -652,6 +653,22 @@ float CG_WaterWheel( const vec3_t at, const vec3_t normal, const vec3_t velocity
 		return 1.0f;
 	}
 	return Water_WetAt( at ) ? 0.5f : 0.0f;
+}
+
+// whether the renderer draws the wet places (ext.R_AddWet) for the other toys (the snow of a snowball, cg_toys.c)
+qboolean CG_WaterWetDrawn( void ) {
+	Water_Register();
+	return Water_Wet();
+}
+
+// Ground made wet by something else that melts there (a splat of snow, cg_toys.c): a wet patch of at least size, which
+// dries as the ones of the water gun do
+void CG_WaterSoak( const vec3_t origin, const vec3_t normal, float size ) {
+	waterPuddle_t *p;
+
+	Water_Register();
+	p = Water_Puddle( origin, normal );
+	p->size = Q_max( p->size, Q_min( size, p->floor ? WATER_PUDDLE_MAX : WATER_PATCH_MAX ) );
 }
 
 // a piece of the track of a wet tire from "from" to "to", as wet as "wet" (cg_rccar.c); it dries as a footprint does

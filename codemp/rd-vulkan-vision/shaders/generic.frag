@@ -1,6 +1,7 @@
 #version 460
 
 #include "common.glsl"
+#include "noise.glsl"
 
 #ifdef VK_GLES
 // the two textures of the draw, the device binds them for every draw call
@@ -80,10 +81,28 @@ mat3 CotangentFrame( vec3 n, vec3 p, vec2 uv ) {
 	return mat3( t * invmax, b * invmax, n );
 }
 
-// A stage of a model with a material (shader keywords normalMap and specular): lit per pixel by the light of its
-// entity as the vertices are lit otherwise (ambient, directed and its direction in model space), with a broad
-// shine of the surface, a sharp one of a clear coat over it that is smooth over the bumps, and the light of the
-// room the coat throws back at a flat angle (Fresnel with F0 0.04)
+// Crystals that glint, as in snow (Shopf 2012, Wang and Bowles 2016): a point on a grid in the space of the model in
+// each cell, at a place of its own, with a facet turned at random; where the surface passes one and its facet throws
+// the light at the eye, it flashes. Fainter where a cell is smaller than a pixel, so far off they do not shimmer.
+float Sparkle( vec3 p, vec3 n, vec3 l, vec3 toEye ) {
+	const float DENSITY = 4.0;		// cells a unit
+	vec3 q = p * DENSITY;
+	vec3 cell = floor( q );
+	uvec3 h = Pcg3( uvec3( ivec3( cell ) + 4096 ) );
+	vec3 r = vec3( h & 0xffffu ) / 65535.0;
+	float near = 1.0 - smoothstep( 0.08, 0.17, length( q - ( cell + 0.2 + 0.6 * r ) ) );
+	vec3 facet = normalize( n + ( vec3( Pcg3( h ) & 0xffffu ) / 65535.0 - 0.5 ) * 1.6 );
+	float mirror = max( dot( reflect( -l, facet ), toEye ), 0.0 );
+
+	return near * pow( mirror, 120.0 ) * ( 1.0 - smoothstep( 0.3, 0.9, length( fwidth( q ) ) ) );
+}
+
+// A stage of a model with a material (shader keywords normalMap, specular, wrapLight and sparkle): lit per pixel by
+// the light of its entity as the vertices are lit otherwise (ambient, directed and its direction in model space),
+// with a broad shine of the surface, a sharp one of a clear coat over it that is smooth over the bumps, and the
+// light of the room the coat throws back at a flat angle (Fresnel with F0 0.04). Light that wraps into the shadow,
+// as it scatters through snow (GPU Gems 1, chapter 16: N.L + wrap over 1 + wrap), with the cool of the sky where it
+// does (as the snow of Batman: Arkham Origins), and the glints of its crystals.
 vec3 MaterialLight( Draw d, vec3 albedo ) {
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
@@ -97,7 +116,17 @@ vec3 MaterialLight( Draw d, vec3 albedo ) {
 	vec3 l = normalize( t.lightDir.xyz );
 	vec3 h = normalize( l + toEye );
 	float facing = max( dot( n, l ), 0.0 );
-	vec3 color = albedo * min( t.ambientLight.rgb + facing * t.directedLight.rgb, vec3( 1.0 ) );
+	float wrap = d.material2.x;
+	float wrapped = max( ( dot( n, l ) + wrap ) / ( 1.0 + wrap ), 0.0 );
+	vec3 color = albedo * min( t.ambientLight.rgb + wrapped * t.directedLight.rgb, vec3( 1.0 ) );
+
+	if ( wrap > 0.0 ) {
+		color += albedo * t.ambientLight.rgb * wrap * 0.3 * vec3( 0.55, 0.75, 1.0 ) * ( 1.0 - facing );
+	}
+	if ( d.material2.y > 0.0 ) {
+		// (the glitter of snow shows in the shade too, a little)
+		color += max( t.directedLight.rgb, t.ambientLight.rgb * 0.5 ) * d.material2.y * 4.0 * Sparkle( v_position, n, l, toEye );
+	}
 
 	color += t.directedLight.rgb * d.material.x * pow( max( dot( n, h ), 0.0 ), max( d.material.y, 1.0 ) ) * step( 0.0001, facing );
 	if ( d.material.z > 0.0 ) {

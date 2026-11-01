@@ -40,6 +40,7 @@ BINDING( 0, 0 ) uniform Globals {
 #define FLASH		5.0
 #define GHOSTSMOKE	7.0
 #define DROP		8.0
+#define SNOW		9.0
 
 VARYING( 0 ) in vec2 v_texCoord;
 layout( location = 0 ) out vec4 o_color;
@@ -179,6 +180,8 @@ void main() {
 	float flash = 0.0;		// light of the clashing blades, added
 	float film = 0.0;		// the thin water around the drops on the view, which makes the picture soft there
 	float clear = 0.0;		//	but not through a drop, which is a clear lens
+	float snow = 0.0;		// a clump of snow on the view: how much of the pixel it covers,
+	vec3 snowColor = vec3( 0.0 );	//	and its colour
 
 	for ( int i = 0; i < SOURCES; i++ ) {
 		if ( i >= count ) {
@@ -199,6 +202,42 @@ void main() {
 		// picture behind it turned around and smaller, darker at its rim, where it turns the light away, with a
 		// bright spot of the light from above. Above it the trail it left: a thin wet line that wanders a little
 		// and holds a bead here and there. Around it a film of water.
+		// A clump of snow on the view (cgame/screenfx/cg_screenfx.c): a lump with a ragged edge and clumps in it,
+		// thick in the middle; it melts from the thin parts in as its strength goes, and its thin rim is slush that
+		// bends the picture. Lit from above as much as the picture around it is bright, so it is not white in the dark.
+		if ( abs( kind - SNOW ) < 0.5 ) {
+			vec2 d = ( v_texCoord - ends.xy ) * aspect;
+			float rad = max( size.x, 0.001 );
+			vec2 q = d / rad + vec2( more.y * 53.0, more.y * 29.0 );
+			float r = length( d / rad );
+			if ( r > 1.6 ) {
+				continue;
+			}
+			float height = ( 1.0 - r ) * 1.3 + ( Fbm( q * 1.6 ) - 0.5 ) * 0.9 + ( Noise( q * 6.0 ) - 0.5 ) * 0.1;
+			float melt = ( 1.0 - size.z ) * 1.2;
+			float cover = smoothstep( melt, melt + 0.06, height );
+			float rim = smoothstep( melt - 0.12, melt, height ) * ( 1.0 - cover );
+			// the slush at its edge
+			offset -= d / aspect * rim * 0.5;
+			film += rim * 0.6;
+			if ( cover > snow ) {
+				const float E = 0.04;
+				float h = Fbm( q * 1.6 );
+				vec2 grad = vec2( Fbm( ( q + vec2( E, 0.0 ) ) * 1.6 ) - h, Fbm( ( q + vec2( 0.0, E ) ) * 1.6 ) - h ) / E;
+				vec3 n = normalize( vec3( -grad * 0.35 - d / rad * 0.6, 1.0 ) );
+				float lit = max( dot( n, normalize( vec3( -0.35, -0.6, 0.72 ) ) ), 0.0 );
+				// (how bright it is around: the picture there, wide)
+				vec3 around = ( Frame( ends.xy + vec2( 0.06, 0.0 ) ) + Frame( ends.xy - vec2( 0.06, 0.0 ) ) + Frame( ends.xy + vec2( 0.0, 0.08 ) )
+					+ Frame( ends.xy - vec2( 0.0, 0.08 ) ) ) * 0.25;
+				float level = clamp( dot( around, vec3( 0.3, 0.55, 0.15 ) ) * 1.6 + 0.25, 0.3, 1.1 );
+				vec3 albedo = mix( vec3( 0.72, 0.8, 0.93 ), vec3( 0.95, 0.96, 0.98 ), clamp( h * 1.5 - 0.25, 0.0, 1.0 ) );
+				float glint = step( 0.985, Noise( q * 22.0 ) ) * lit;
+				snow = cover;
+				snowColor = albedo * ( 0.45 + 0.65 * lit ) * level + vec3( glint * 0.8 );
+			}
+			continue;
+		}
+
 		if ( abs( kind - DROP ) < 0.5 ) {
 			vec2 d = ( v_texCoord - ends.xy ) * aspect;
 			float rad = max( size.x, 0.0005 );
@@ -386,6 +425,8 @@ void main() {
 		}
 		color = mix( color, soft / 7.0, film * 0.85 );
 	}
+	// the snow on the view over it
+	color = mix( color, snowColor, snow );
 
 	// streaks towards the middle of the view, longer towards its edges
 	if ( FX[4].y > 0.0 ) {

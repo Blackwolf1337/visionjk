@@ -1272,6 +1272,19 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 		}
 		//
+		// VisionJK: wrapLight <amount> and sparkle <strength>, more of the material of a model stage lit per pixel
+		//
+		else if ( !Q_stricmp( token, "wrapLight" ) )
+		{
+			token = COM_ParseExt( text, qfalse );
+			stage->wrapLight = token[0] ? atof( token ) : 0.0f;
+		}
+		else if ( !Q_stricmp( token, "sparkle" ) )
+		{
+			token = COM_ParseExt( text, qfalse );
+			stage->sparkle = token[0] ? atof( token ) : 0.0f;
+		}
+		//
 		// clampmap <name>
 		//
 		else if ( !Q_stricmp( token, "clampmap" ) )

@@ -1819,6 +1819,7 @@ void		CG_ScreenFxFlash( const vec3_t origin, float size, float strength );
 void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
 void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength );
 void		CG_ScreenFxWet( const vec3_t velocity );
+qboolean	CG_ScreenFxSnow( const vec3_t velocity );	// a snowball in the face, qfalse: draw the picture instead
 qboolean	CG_ScreenFxSightDrawn( void );
 void		CG_ScreenFxGhostBody( refEntity_t *body );
 void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );
@@ -2004,11 +2005,17 @@ void		CG_WaterUp_f( void );
 qboolean	CG_WaterHolding( int client );			// the water gun is in his hand: his weapon is put away
 qboolean	CG_WaterGun( centity_t *cent );			// draws it there, qtrue: it is in the hand
 qboolean	CG_WaterViewGun( void );				// the own one in first person, in place of the view weapon
+int			CG_SnowballTorsoAnim( centity_t *cent, int anim );	// pulled back to throw, the throw (toys/cg_toys.c)
+void		CG_SnowballHand( centity_t *cent );		// the own ball in the hand while it is held
+qboolean	CG_SnowballHolding( int client );		//	which puts the weapon away meanwhile
+qboolean	CG_SnowballViewBall( void );			//	and in the view in first person, in place of the weapon
 qboolean	CG_WaterStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right, qboolean heavy );
 void		CG_WaterLand( centity_t *cent, float strength );	// a jump or a landing into standing water
 void		CG_WaterImpact( const vec3_t at, float strength );	// a shot into standing water
 float		CG_WaterWheel( const vec3_t at, const vec3_t normal, const vec3_t velocity, qboolean effects );	// RC car
 void		CG_WaterTrack( const vec3_t from, const vec3_t to, const vec3_t normal, float width, float wet );
+qboolean	CG_WaterWetDrawn( void );				// the renderer draws wet places (ext.R_AddWet)
+void		CG_WaterSoak( const vec3_t origin, const vec3_t normal, float size );	// melted snow makes the ground wet
 int			CG_WaterTorsoAnim( centity_t *cent, int anim );	// a rifle held up while it is in the hand
 void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)

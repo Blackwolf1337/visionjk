@@ -9,7 +9,9 @@
 # plastic gun), and the RC car (cg_rccar.c): rc_motor1-4.wav (loops of its electric motor at four speeds, which the
 # cgame crossfades), rc_scrub.wav (the loop of tires sliding on hard ground), rc_crunch.wav (the loop of tires rolling
 # over dirt and gravel), rc_servo.wav (the buzz of the steering servo), rc_land1-2.wav (the thump of a landing) and
-# rc_on.wav (the chirp of its receiver). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
+# rc_on.wav (the chirp of its receiver), and the snowball (cg_toys.c): snow_pack.wav (packing it in the hands),
+# snow_throw.wav (it leaves the hand), snow_hard1-3.wav (it bursts on stone or metal), snow_soft1-2.wav (on soft ground),
+# snow_body.wav (on a player) and snow_face.wav (in the own face). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
 # files come out the same every time. Writes into assets/japlus_client/sound/vision/toys/.
 # usage: tools/toys/sounds.py
 import math
@@ -363,6 +365,129 @@ def power():
 	return out
 
 
+def lowpass( samples, cutoff, passes=2 ):
+	"""A one pole lowpass at cutoff Hz, passes times over: 6 dB an octave each"""
+	a = 1.0 - math.exp( -2.0 * math.pi * cutoff / RATE )
+	for _ in range( passes ):
+		low = 0.0
+		out = []
+		for x in samples:
+			low += a * ( x - low )
+			out.append( low )
+		samples = out
+	return samples
+
+
+def snow_grains( out, start, length, rate, rnd, gain=1.0, compress=1.0, crush=1.0 ):
+	"""Snow breaking, added into out from start on, rate grains a second: each grain a short burst of noise (13 to 40
+	ms) with a sharp start, louder ones rarer. The sum goes through the two bands of snow of footstep synthesis: the
+	compression of the snow (around 1.6 kHz) and the crunch of its crystals breaking (higher, around 4 kHz), with
+	compress and crush as their shares (the model of Turchet et al., two components of grains)."""
+	raw = [0.0] * len( out )
+	t = start
+	while True:
+		t += rnd.expovariate( rate )
+		if t >= start + length:
+			break
+		a = min( 3.0, rnd.paretovariate( 2.0 ) ) * 0.5
+		dur = rnd.uniform( 0.013, 0.04 )
+		first = int( t * RATE )
+		for k in range( min( int( dur * RATE ), len( raw ) - first ) ):
+			tt = k / RATE
+			raw[first + k] += a * rnd.uniform( -1.0, 1.0 ) * math.exp( -tt / ( dur * 0.3 ) ) * min( 1.0, tt / 0.0008 )
+	low = lowpass( bandpass( raw, lambda t: 1300.0, 1.6 ), 2500.0 )
+	high = lowpass( bandpass( raw, lambda t: 3200.0, 1.2 ), 5000.0 )
+	for i in range( len( out ) ):
+		out[i] += gain * ( compress * low[i] + crush * 0.6 * high[i] )
+
+
+def thump( out, start, freq, decay, gain, rnd ):
+	"""The dull blow of a soft mass: a low tone falling a little and a band of noise under it, gone in decay"""
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( len( out ) )]
+	body = bandpass( noise, lambda t: freq * 2.0, 1.0 )
+	first = int( start * RATE )
+	phase = 0.0
+	for k in range( len( out ) - first ):
+		t = k / RATE
+		phase += 2.0 * math.pi * freq * ( 1.0 - 0.3 * min( 1.0, t / decay ) ) / RATE
+		env = math.exp( -t / decay ) * min( 1.0, t / 0.002 )
+		out[first + k] += gain * env * ( math.sin( phase ) + 1.4 * body[first + k] )
+
+
+def powder( out, start, decay, gain, rnd, centre=3200.0 ):
+	"""The hiss of fine snow thrown into the air by a burst"""
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( len( out ) )]
+	hiss = lowpass( bandpass( noise, lambda t: centre, 0.8 ), centre * 1.4 )
+	first = int( start * RATE )
+	for k in range( len( out ) - first ):
+		t = k / RATE
+		out[first + k] += gain * hiss[first + k] * math.exp( -t / decay ) * min( 1.0, t / 0.003 )
+
+
+def snow_pack():
+	"""Snow pressed into a ball by two hands: two squeezes of dense crunch, the compression stronger: 0.45 s"""
+	rnd = random.Random( 121 )
+	out = [0.0] * int( 0.45 * RATE )
+	snow_grains( out, 0.0, 0.16, 260.0, rnd, 1.0, 1.4, 0.6 )
+	snow_grains( out, 0.22, 0.17, 300.0, rnd, 1.1, 1.5, 0.7 )
+	return fade( out, 0.005, 0.06 )
+
+
+def snow_throw():
+	"""The ball leaving the hand: the swish of the arm and of a small ball through the air, rising and falling in
+	pitch as it passes: 0.32 s"""
+	rnd = random.Random( 122 )
+	length = 0.32
+	n = int( length * RATE )
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+	air = lowpass( bandpass( noise, lambda t: 400.0 + 900.0 * math.sin( math.pi * min( 1.0, t / length ) ) ** 2, 2.5 ), 1800.0 )
+	out = []
+	for i, v in enumerate( air ):
+		t = i / RATE
+		out.append( v * math.sin( math.pi * min( 1.0, t / length ) ) ** 1.8 )
+	return out
+
+
+def snow_hard( seed ):
+	"""A snowball bursting on stone or metal: a short dull blow, the hiss of the powder and a quick crunch: 0.35 s"""
+	rnd = random.Random( seed )
+	out = [0.0] * int( 0.35 * RATE )
+	thump( out, 0.0, rnd.uniform( 120.0, 150.0 ), 0.03, 2.2, rnd )
+	powder( out, 0.0, 0.05, 0.7, rnd, 2600.0 )
+	snow_grains( out, 0.0, 0.07, 420.0, rnd, 0.9, 0.8, 1.2 )
+	return fade( out, 0.0, 0.08 )
+
+
+def snow_soft( seed ):
+	"""On soft ground: a deeper, longer blow and more crunch, little hiss: 0.4 s"""
+	rnd = random.Random( seed )
+	out = [0.0] * int( 0.4 * RATE )
+	thump( out, 0.0, rnd.uniform( 80.0, 100.0 ), 0.06, 3.0, rnd )
+	powder( out, 0.0, 0.04, 0.4, rnd, 2600.0 )
+	snow_grains( out, 0.005, 0.13, 320.0, rnd, 1.0, 1.3, 0.8 )
+	return fade( out, 0.0, 0.1 )
+
+
+def snow_body():
+	"""On a player: the soft slap on cloth, low and muffled, a little crunch: 0.3 s"""
+	rnd = random.Random( 131 )
+	out = [0.0] * int( 0.3 * RATE )
+	thump( out, 0.0, 95.0, 0.04, 3.2, rnd )
+	snow_grains( out, 0.0, 0.06, 300.0, rnd, 0.6, 1.2, 0.3 )
+	return fade( out, 0.0, 0.08 )
+
+
+def snow_face():
+	"""In the own face, close by: a louder slap, the crunch of it right at the ear, and the powder falling off: 0.6 s"""
+	rnd = random.Random( 132 )
+	out = [0.0] * int( 0.6 * RATE )
+	thump( out, 0.0, 110.0, 0.045, 3.0, rnd )
+	powder( out, 0.0, 0.08, 0.8, rnd, 2800.0 )
+	snow_grains( out, 0.0, 0.12, 380.0, rnd, 1.1, 1.0, 1.0 )
+	snow_grains( out, 0.15, 0.35, 40.0, rnd, 0.5, 0.6, 1.0 )
+	return fade( out, 0.0, 0.12 )
+
+
 os.makedirs( OUT, exist_ok=True )
 write( 'emote_send.wav', send() )
 write( 'emote_pop.wav', pop() )
@@ -384,3 +509,11 @@ write( 'rc_servo.wav', servo(), 0.45 )
 write( 'rc_land1.wav', land( 111 ), 0.8 )
 write( 'rc_land2.wav', land( 112 ), 0.8 )
 write( 'rc_on.wav', power(), 0.35 )
+write( 'snow_pack.wav', snow_pack(), 0.5 )
+write( 'snow_throw.wav', snow_throw(), 0.45 )
+for n in range( 3 ):
+	write( 'snow_hard%d.wav' % ( n + 1 ), snow_hard( 141 + n ), 0.75 )
+for n in range( 2 ):
+	write( 'snow_soft%d.wav' % ( n + 1 ), snow_soft( 151 + n ), 0.75 )
+write( 'snow_body.wav', snow_body(), 0.75 )
+write( 'snow_face.wav', snow_face(), 0.8 )

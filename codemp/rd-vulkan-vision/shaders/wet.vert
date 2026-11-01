@@ -20,7 +20,7 @@
 
 // VK_WET_VEC4S of vk_local.h
 #ifdef VK_GLES
-uniform vec4 u_wet[683];
+uniform vec4 u_wet[779];
 #define W			u_wet
 #define INSTANCE	uint( gl_InstanceID )
 #else
@@ -29,7 +29,7 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	screen;
 	vec4	screenFx[160];
 	vec4	styles[64];
-	vec4	wet[683];
+	vec4	wet[779];
 } globals;
 #define W			globals.wet
 #define INSTANCE	uint( gl_InstanceIndex )

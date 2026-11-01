@@ -1,14 +1,17 @@
 // the snowball of issue #9 (cgame/toys/cg_toys.c), pictures from tools/toys/textures.py
 
-// the ball in flight, a sprite lit by the light around it
-gfx/vision/toys/snowball
+// The ball itself and the lumps of a burst (models/vision/toys/snowball/, tools/toys/snowball.py): packed snow lit
+// per pixel by rd-vulkan-vision, the light wrapping into its shadow as it scatters through snow, its crystals
+// glinting; other renderers light the picture by the vertices
+models/vision/toys/snowball/snow
 {
-	nopicmip
 	{
-		map gfx/vision/toys/snowball
-		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
-		rgbGen vertex
-		alphaGen vertex
+		map models/vision/toys/snowball/snow
+		normalMap models/vision/toys/snowball/snow_n
+		specular 0.12 16 0
+		wrapLight 0.6
+		sparkle 1.0
+		rgbGen lightingDiffuse
 	}
 }
 

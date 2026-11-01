@@ -3121,6 +3121,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameLoopVolume", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
+	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)
+	Cvar_Get( "v_screenFxSnow", "1", CVAR_ROM, "" );
 	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test
 	Cvar_Get( "v_tvService", "https://jka.vision/tv/", CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
 	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())

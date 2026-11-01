@@ -826,8 +826,8 @@ void CG_AddViewWeapon( playerState_t *ps ) {
 		return;
 	}
 
-	// VisionJK: the water gun in place of the weapon while it sprays (toys/cg_water.c)
-	if ( CG_WaterViewGun() ) {
+	// VisionJK: the water gun in place of the weapon while it sprays (toys/cg_water.c), the snowball while it is held
+	if ( CG_WaterViewGun() || CG_SnowballViewBall() ) {
 		return;
 	}
 
@@ -2622,7 +2622,7 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 
 	if (cent->ghoul2 && cent->ghoul2weapon != CG_G2WeaponInstance(cent, ps->weapon) &&
 		ps->clientNum == cent->currentState.number && //don't want spectator mode forcing one client's weapon instance over another's
-		!CG_WaterHolding(ps->clientNum)) // VisionJK: not while the water gun is in the hand
+		!CG_WaterHolding(ps->clientNum) && !CG_SnowballHolding(ps->clientNum)) // VisionJK: not while a toy is in the hand
 	{
 		CG_CopyG2WeaponInstance(cent, ps->weapon, cent->ghoul2);
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, ps->weapon);

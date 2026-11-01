@@ -40,6 +40,7 @@ struct Draw {
 	uint	fadeMode;		//	0: it does not, 1: the alpha, 2: the color is no brighter than that either
 	uint	styles;			// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 	vec4	material;		// MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
+	vec4	material2;		//	and light wrapped into the shadow, glints of crystals
 };
 
 BINDING( 0, 0 ) uniform Globals {

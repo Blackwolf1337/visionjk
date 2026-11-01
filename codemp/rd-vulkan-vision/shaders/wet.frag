@@ -25,7 +25,7 @@ BINDING( 3, 0 ) uniform sampler2D u_reflect;	// the view mirrored at the floor o
 
 // VK_WET_VEC4S of vk_local.h
 #ifdef VK_GLES
-uniform vec4 u_wet[683];
+uniform vec4 u_wet[779];
 #define W	u_wet
 #else
 BINDING( 0, 0 ) uniform Globals {
@@ -33,7 +33,7 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	screen;
 	vec4	screenFx[160];
 	vec4	styles[64];
-	vec4	wet[683];
+	vec4	wet[779];
 } globals;
 #define W	globals.wet
 #endif
@@ -54,6 +54,9 @@ layout( location = 0 ) out vec4 o_color;
 #define WET_FOOT_LEFT	1
 #define WET_FOOT_RIGHT	2
 #define WET_TRACK		4
+#define WET_SNOW		5
+#define SNOW_ALBEDO		vec3( 0.93, 0.95, 0.98 )
+#define SNOW_HOLLOW		vec3( 0.72, 0.81, 0.95 )
 
 // how far in front of the eye the scene is at a pixel of the target
 float SceneDistance( vec2 pixel ) {
@@ -221,7 +224,9 @@ void main() {
 
 	// all places here: their edges joined, their light and size by how near they are, the slopes of their water
 	float edgeWet = FAR, sizeWet = 0.0, placeWeights = 0.0, weights = 0.0, water = 0.0, fade = 0.0, streak = 0.0, prints = 0.0;
-	float flowNear = 0.0;
+	float flowNear = 0.0, snow = 0.0, snowHeight = 0.0, snowMelt = 0.0;
+	vec2 snowAt = vec2( 0.0 );
+	vec3 snowN = vec3( 0.0, 0.0, 1.0 ), snowT = vec3( 1.0, 0.0, 0.0 ), snowB = vec3( 0.0, 1.0, 0.0 );
 	vec3 ambient = vec3( 0.0 ), directed = vec3( 0.0 ), lightDir = vec3( 0.0 );
 	vec2 slope = vec2( 0.0 );
 	for ( uint j = 0u; j < count; j++ ) {
@@ -259,6 +264,34 @@ void main() {
 			float width = 2.5 + 5.0 * flow;
 			vec2 out_ = vec2( dot( planar, t ), dot( planar, b ) ) / max( r, 1e-3 );
 			slope += out_ * cos( d * 1.3 ) * exp( -d * d / ( width * width ) ) * wet * ( 1.0 - flow ) * ( 1.0 - flow ) * 0.9;
+			continue;
+		}
+		if ( kind == WET_SNOW ) {
+			// A splat of snow: a lump where it is now and, on a wall, a smear above it from where it hit and slid down
+			// from (hit). Thick in the middle and in clumps, ragged at the edge; it melts from the thin parts in as wet
+			// goes from 1 to 0. The splat that is thickest here draws the pixel.
+			vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
+			vec3 h0 = hit - centre;
+			h0 -= nj * dot( h0, nj );
+			vec2 from = vec2( dot( h0, t ), dot( h0, b ) );
+			vec2 seg = -from;
+			float len2 = dot( seg, seg );
+			float k = len2 > 1e-4 ? clamp( dot( local - from, seg ) / len2, 0.0, 1.0 ) : 1.0;
+			float dSmear = length( local - from - seg * k ) / ( radius * ( 0.3 + 0.45 * k ) );
+			float d = min( length( local * vec2( 1.0, 0.85 ) ) / radius, dSmear );
+			vec2 q = local + seed * 97.0;
+			float height = ( 1.0 - d ) * 1.25 + ( Fbm( q * 0.45 ) - 0.5 ) * 0.9 + ( Noise( q * 1.7 ) - 0.5 ) * 0.12;
+			float melt = ( 1.0 - wet ) * 1.15;
+			float cover = smoothstep( melt, melt + 0.08, height );
+			if ( cover > snow ) {
+				snow = cover;
+				snowHeight = height;
+				snowMelt = melt;
+				snowAt = q;
+				snowN = nj;
+				snowT = t;
+				snowB = b;
+			}
 			continue;
 		}
 		if ( kind == WET_TRACK ) {
@@ -347,7 +380,8 @@ void main() {
 	float mask = 1.0 - smoothstep( -0.1 * sizeWet, 0.02 * sizeWet, edge );
 	mask = max( max( mask, streak ), prints * 0.85 );
 	mask *= fade;
-	if ( mask <= 0.002 ) {
+	snow *= fade;
+	if ( max( mask, snow ) <= 0.002 ) {
 		discard;
 	}
 
@@ -403,6 +437,34 @@ void main() {
 		// the mirror of a real one is seen against ground that is darker than the floors of most levels)
 		vec3 pond = mix( under, seen, clamp( wFresnel * 2.0 + mirror, 0.0, 0.92 ) ) + glint;
 		color = mix( color, pond, pool );
+	}
+
+	// Snow over all of it: its clumps as bumps (the slope of their noise), lit as the snow of the ball is (light
+	// wrapping into the shade with the blue of the sky, generic.frag), bluer in the hollows and where it is thin, and
+	// its crystals glinting
+	if ( snow > 0.002 ) {
+		const float E = 0.35;
+		float h = Fbm( snowAt * 0.45 );
+		vec2 grad = vec2( Fbm( ( snowAt + vec2( E, 0.0 ) ) * 0.45 ) - h, Fbm( ( snowAt + vec2( 0.0, E ) ) * 0.45 ) - h ) / E;
+		vec3 sn = normalize( snowN - ( snowT * grad.x + snowB * grad.y ) * 1.6 );
+		float wrapped = max( ( dot( sn, l ) + 0.6 ) / 1.6, 0.0 );
+		float lit = max( dot( sn, l ), 0.0 );
+		float depth = smoothstep( 0.0, 0.7, snowHeight - snowMelt );
+		vec3 albedo = mix( SNOW_HOLLOW, SNOW_ALBEDO, clamp( h * 1.4 - 0.2, 0.0, 1.0 ) * ( 0.6 + 0.4 * depth ) );
+		vec3 lightOn = min( ambient + directed * wrapped, vec3( 1.2 ) ) + ambient * 0.18 * vec3( 0.55, 0.75, 1.0 ) * ( 1.0 - lit );
+		vec3 snowColor = albedo * lightOn;
+
+		vec2 g = snowAt * 1.6;
+		vec2 cell = floor( g );
+		uvec3 hs = Pcg3( uvec3( ivec3( ivec2( cell ) + 4096, 77 ) ) );
+		vec3 rs = vec3( hs & 0xffffu ) / 65535.0;
+		float near = 1.0 - smoothstep( 0.06, 0.14, length( g - cell - 0.2 - 0.6 * rs.xy ) );
+		vec3 facet = normalize( sn + ( vec3( Pcg3( hs ) & 0xffffu ) / 65535.0 - 0.5 ) * 1.6 );
+		float glint = near * pow( max( dot( reflect( -l, facet ), -view ), 0.0 ), 120.0 ) * ( 1.0 - smoothstep( 0.3, 0.9, length( fwidth( g ) ) ) );
+		snowColor += max( directed, ambient * 0.5 ) * 4.0 * glint;
+
+		color = mix( color, snowColor, snow );
+		mask = max( mask, snow );
 	}
 
 	o_color = vec4( color, mask );

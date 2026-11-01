@@ -436,6 +436,9 @@ typedef struct shaderStage_s {
 	// (specular <strength> <exponent> <coat>)
 	image_t			*normalMap;
 	float			specular[3];
+	// and a light that wraps round the surface into its shadow, as through snow (wrapLight <amount>), and crystals
+	// that glint in it (sparkle <strength>)
+	float			wrapLight, sparkle;
 } shaderStage_t;
 
 struct shaderCommands_s;

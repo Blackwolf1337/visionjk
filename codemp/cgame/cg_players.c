@@ -30,6 +30,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern vmCvar_t	cg_thirdPersonAlpha;
 
+// VisionJK: the weapon of that entity was put away by a toy in the hand (the water gun, a snowball), see CG_Player
+static qboolean cg_toyHidWeapon[MAX_GENTITIES];
+
 extern int			cgSiegeTeam1PlShader;
 extern int			cgSiegeTeam2PlShader;
 
@@ -3497,7 +3500,7 @@ static void CG_PlayerAnimation( centity_t *cent, int *legsOld, int *legs, float 
 	// If this is not a vehicle, you may lerm the frame (since vehicles never have a torso anim). -AReis
 	if ( cent->currentState.NPC_class != CLASS_VEHICLE )
 	{
-		CG_RunLerpFrame( cent, ci, &cent->pe.torso, cent->currentState.torsoFlip, CG_WaterTorsoAnim( cent, cent->currentState.torsoAnim ), speedScale, qtrue );
+		CG_RunLerpFrame( cent, ci, &cent->pe.torso, cent->currentState.torsoFlip, CG_SnowballTorsoAnim( cent, CG_WaterTorsoAnim( cent, cent->currentState.torsoAnim ) ), speedScale, qtrue );
 
 		*torsoOld = cent->pe.torso.oldFrame;
 		*torso = cent->pe.torso.frame;
@@ -9928,10 +9931,19 @@ void CG_Player( centity_t *cent ) {
 
 	g2HasWeapon = trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 1);
 
+	if (g2HasWeapon)
+	{
+		cg_toyHidWeapon[cent->currentState.number] = qfalse;
+	}
 	if (!g2HasWeapon && !CG_JPSaberOffHand( cent ))	// JA+ client plugin: not while the saber hangs on the back
 	{ //force a redup of the weapon instance onto the client instance
 		cent->ghoul2weapon = NULL;
-		cent->weapon = 0;
+		// VisionJK: a weapon a toy put away is the same weapon when it comes back, no switch to it (the saber would
+		// ignite with its sound every time)
+		if (!cg_toyHidWeapon[cent->currentState.number])
+		{
+			cent->weapon = 0;
+		}
 	}
 
 	if (cent->torsoBolt && !(cent->currentState.eFlags & EF_DEAD))
@@ -9951,10 +9963,11 @@ void CG_Player( centity_t *cent ) {
 		g2HasWeapon = qfalse;
 	}
 
-	if (g2HasWeapon && CG_WaterHolding(cent->currentState.number))
-	{ // VisionJK: the weapon is put away while the water gun is in the hand (toys/cg_water.c)
+	if (g2HasWeapon && (CG_WaterHolding(cent->currentState.number) || CG_SnowballHolding(cent->currentState.number)))
+	{ // VisionJK: the weapon is put away while the water gun or a snowball is in the hand (toys/cg_water.c, cg_toys.c)
 		trap->G2API_RemoveGhoul2Model(&(cent->ghoul2), 1);
 		g2HasWeapon = qfalse;
+		cg_toyHidWeapon[cent->currentState.number] = qtrue;
 	}
 
 	if (!cent->trickAlphaTime || (cg.time - cent->trickAlphaTime) > 1000)
@@ -10075,7 +10088,7 @@ void CG_Player( centity_t *cent ) {
 	if (cent->ghoul2 &&
 		(cent->currentState.eType != ET_NPC || (cent->currentState.NPC_class != CLASS_VEHICLE&&cent->currentState.NPC_class != CLASS_REMOTE&&cent->currentState.NPC_class != CLASS_SEEKER)) && //don't add weapon models to NPCs that have no bolt for them!
 		cent->ghoul2weapon != CG_G2WeaponInstance(cent, cent->currentState.weapon) &&
-		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt && !CG_WaterHolding(cent->currentState.number) &&
+		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt && !CG_WaterHolding(cent->currentState.number) && !CG_SnowballHolding(cent->currentState.number) &&
 		cg.snap && (cent->currentState.number != cg.snap->ps.clientNum || (cg.snap->ps.pm_flags & PMF_FOLLOW)))
 	{
 		if (ci->team == TEAM_SPECTATOR)
@@ -11584,8 +11597,9 @@ stillDoSaber:
 		BG_SI_SetLengthGradual(&ci->saber[1], cg.time);
 	}
 
-	if (CG_WaterGun(cent))
-	{ // VisionJK: the water gun is in the hand (toys/cg_water.c), the saber is put away meanwhile
+	CG_SnowballHand(cent);	// VisionJK: the own snowball in the hand while it is held (toys/cg_toys.c)
+	if (CG_WaterGun(cent) || CG_SnowballHolding(cent->currentState.number))
+	{ // VisionJK: the water gun or a snowball is in the hand (toys/cg_water.c, cg_toys.c), the saber is put away meanwhile
 		drawPlayerSaber = qfalse;
 	}
 
