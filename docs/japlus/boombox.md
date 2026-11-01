@@ -114,7 +114,7 @@ boombox system        the table where the crosshair points, turned to you, the l
                       closer to the table where there is no floor
 ```
 
-It counts as one box against `vs_boomboxMax` (and against the 4 boxes of a room of the masterserver).
+It counts as one box against `vs_boomboxMax` (and against the 4 boxes of a room on a server without the game module).
 
 Only clients of version 0.2.4 or later are told of a sound system. An older client of this tree is not told of it
 at all and does not hear it. It works on a server with the game module of this tree and through the
@@ -162,7 +162,7 @@ boombox tv            a TV where the crosshair points
 Everything else is as with a boombox. Ask for a song with "Play a song", the card or the window, and the TV
 plays it and shows its picture. Pause, Skip, a jump in the song, the volume, Move it and Take it away work the
 same, and the picture follows them. It counts as one box against `vs_boomboxMax` (and against the 4 boxes of a
-room of the masterserver).
+room on a server without the game module).
 
 The 4 TVs nearest to you that play get a picture. The others show a dark screen. A picture is only drawn up to
 2048 units from your eye. If the picture is lost, it is fetched again after 10 seconds.
@@ -176,31 +176,24 @@ page (/watch/) does not show TV pictures.
 |------|---------|---------|
 | `v_tvService` | `https://jka.vision/tv/` | where the pictures come from. Protected: only a config of the home folder or the console sets it, a server can not. It takes https, or http to 127.0.0.1 for tests |
 
-### For masterserver owners
+### Where the picture is made
 
-The picture is made by the TV service of the masterserver (`codemp/master/ms_tv.c`). It is an HTTP server on
-127.0.0.1, and the web server of the site hands `/tv/` to it over HTTPS (nginx: 30 requests a minute and 4
-connections per address). It needs `yt-dlp` and `ffmpeg` like the songs do.
-
-| Option | Default | Meaning |
-|--------|---------|---------|
-| `--tv-port <port>` | 0 (no TV service) | the port on 127.0.0.1 |
-| `--tv-sessions <n>` | 4 (16 at most) | videos made at once |
+The picture is made by a TV service that the VisionJK hosts run next to the masterserver, and the web server of the
+site hands `/tv/` to it over HTTPS. It is not part of this repository. It needs `yt-dlp` and `ffmpeg` like the songs
+do. A server owner does nothing for it.
 
 ### How it works
 
-`codemp/cgame/boombox/cg_tv.c` (the box), `codemp/client/cl_video.cpp` (fetch and decode),
-`codemp/master/ms_tv.c` (the service), the protocol in `game/boombox/bg_boombox.h`.
+`codemp/cgame/boombox/cg_tv.c` (the box), `codemp/client/cl_video.cpp` (fetch and decode), the protocol in
+`game/boombox/bg_boombox.h`.
 
 The request is `GET /tv/<video id>?t=<second>`. The answer is an MPEG-1 stream (video only) of 426x240 at 25 fps
 and about 700 kbit/s, which `yt-dlp` and `ffmpeg` make as it is read (`Box_VideoStart()` in
 `game/boombox/bg_boombox_fetch.c`). A bad request is answered 400, an unknown path 404. The sound is not in it: it
 is the song of the box, which plays as it plays for any boombox.
 
-A session is one video from one second on. Viewers of the same video and second share one session. One address
-may have 4 connections, a session nobody watches ends after 15 seconds, and the stream is read no more than 12
-seconds ahead of the clock, so a session holds a few seconds and not the whole video. At most `--tv-sessions`
-sessions run at once. Nothing there waits: the sockets do not block and are in the `select()` of the program.
+The service makes one stream for all viewers of the same video from the same second, and limits how many it makes
+at once and how many connections an address may have.
 
 The client fetches the stream in a background thread (`v_tvService`) and decodes it with pl_mpeg (`lib/pl_mpeg`,
 MIT). It refuses a picture larger than 640x360 and more than 4 MB waiting. The picture is drawn into the middle
@@ -218,8 +211,7 @@ a box is a TV in the state byte (`BOX_STATE_TVS`), and it says `BOX_CAP_TV` in i
 
 2026-10-31, hidden and silent, on Linux: a local server with the game module, one client, a TV put down with
 `v_boombox tv`, a song asked for with fake `yt-dlp` and `ffmpeg` programs, and the local master serving `/tv/`.
-The middle screen showed the moving test picture in step with the song. The `/tv/` server was run with a script:
-errors for bad requests (400, 404), and two viewers of the same video and second shared one session. The new
+The middle screen showed the moving test picture in step with the song. The new
 packets have unit tests (`tv_packets` in `tests/vjk/boombox.cpp`).
 
 Not tested: the masterserver path in a real game (a server without the game module), real YouTube videos (this
@@ -271,23 +263,15 @@ music played to the public can need the rights for it.
 
 ## Through the masterserver
 
-On a server without the game module of this tree the masterserver keeps the boxes of that server
-(`codemp/master/ms_boombox.c`), up to four, and plays their songs. A player sees no difference, but for three:
+On a server without the game module of this tree the masterserver keeps the boxes of that server, up to four,
+and plays their songs. The masterserver is not part of this repository. A player sees no difference, but for three:
 what is put on is announced only to the players near the box, the masterserver plays a few songs at once for all
 servers together (a song waits when they all play), and it does not know the level, so a box stands where the
 client of the player found a floor. It needs the voice link to the masterserver (`v_voiceMaster 1`, the
 default), also with the voice chat switched off.
 
-| Cvar of the masterserver | Default | Meaning |
-|------|---------|---------|
-| `vs_masterBoxes` | 8 | songs it plays at once for all servers, 16 at most. 0: no boxes |
-
 The names on the card of a box there (who placed it, who asked for a song) are what the client sends: the master
-has no other source.
-
-It starts the programs the owner named for its game module (`vs_boomboxYtdlp`, `vs_boomboxFfmpeg`,
-`vs_boomboxYtdlpArgs`) and takes its limits (`vs_boomboxMaxSeconds`, `vs_boomboxQueue`), once a second. Its line of
-numbers says once a minute how many rooms have boxes and how many songs play.
+has no other source. The programs it starts for the songs and its limits are set by its hosts.
 
 ## How it works
 

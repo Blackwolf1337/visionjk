@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cl_reputation.cpp -- what the intrusion detection of one client learns about a server, for the others. Not from
-// OpenJK, see docs/japlus/security.md. The masterserver side is master/ms_repnet.c, which has the packets.
+// OpenJK, see docs/japlus/security.md, which also lists the packets the masterserver answers.
 //
 // v_idsShare 1: a server the client leaves for the intrusion detection (cl_ids.cpp), or one the game crashed on
 // (cl_memwatch.cpp), is reported to the masterserver of v_idsMaster: its address and a word for what happened.

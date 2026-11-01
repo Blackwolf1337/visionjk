@@ -20,8 +20,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cl_video.cpp -- videos the cgame shows on surfaces of the level: the screens of the TV of the boombox (issue #9,
 // cgame/boombox). The cgame opens one of VIDEO_STREAMS streams on a video of YouTube from a second on
-// (ext.Video_Open): a thread of its own fetches its picture from the TV of the masterserver (v_tvService,
-// master/ms_tv.c) as MPEG-1 (an elementary stream, as ffmpeg writes it with -f mpeg1video), and the cgame says once
+// (ext.Video_Open): a thread of its own fetches its picture from the TV of the masterserver (v_tvService)
+// as MPEG-1 (an elementary stream, as ffmpeg writes it with -f mpeg1video), and the cgame says once
 // a frame how far it is to play (ext.Video_Advance). It is decoded here with pl_mpeg (lib/pl_mpeg), and a shader
 // stage "videoMap *tv<n>" shows stream n: for that name CIN_PlayCinematic (cl_cin.cpp) hands out a handle whose
 // frames come from here, so both renderers show it as they show any cinematic. The sound is the song of the box.

@@ -33,7 +33,7 @@ The page is compiled into `jampgame`, the server needs no extra files and no ext
 The panel starts when it has an account and a port. On the console of the server:
 
 ```
-webuser add emir owner
+webuser add admin owner
 ```
 
 prints a password once. In the server config:
@@ -111,14 +111,14 @@ network in the clear can be taken along.
 
 ```
 seta vs_webBind "0.0.0.0"          // or the address of the interface the proxy reaches
-seta vs_webProxy "192.168.20.20"   // the address the proxy connects from
+seta vs_webProxy "192.168.0.20"   // the address the proxy connects from
 ```
 
 `vs_webProxy` is a list of IPv4 addresses, separated by blanks or commas. A host whose own nginx hands out the
 live view and whose panel sits behind another proxy names both:
 
 ```
-seta vs_webProxy "127.0.0.1 192.168.20.20"
+seta vs_webProxy "127.0.0.1 192.168.0.20"
 ```
 
 With `vs_webProxy` set only those addresses are let in, every other connection is closed at once. Each of them
@@ -2451,18 +2451,16 @@ The page was looked at once in headless Chromium with software GL: the 3D map, t
 with all kinds of lines show up. Not tested: using the page by hand (HUD view, dragging entities), the Windows DLL
 at run time (it builds and links with mingw-w64), macOS.
 
-The tab Settings and the masterserver mode (2026-10-28). A headless dedicated server on 127.0.0.1:18080 with curl:
+The tab Settings (2026-10-28). A headless dedicated server on 127.0.0.1:18080 with curl:
 `GET` and `POST /api/settings`, the change of a statement in place, `server.cfg.bak`, the live values in `cvarlist`,
 `sv_maxclients` latched, `sv_master3` set without dropping the server, `g_gametype 99` and a value with a quote
-refused, the cleanup list and remove, a stale `rev` refused, the mark for `local.cfg`. A headless masterserver: 18
-settings, the map routes 404, the JSON of `/api/master`, `master.cfg` written. Headless Chromium over its
-debugging port: the three views of the tab on the server and the tab Masterserver, a change with its mark, a bit
-box, a save, no script error. The unit tests pass. Not tested: the panel in a real browser on the live host, the
+refused, the cleanup list and remove, a stale `rev` refused, the mark for `local.cfg`. Headless Chromium over its
+debugging port: the three views of the tab on the server, a change with its mark, a bit box, a save, no script
+error. The unit tests pass. Not tested: the panel in a real browser on the live host, the
 changes of the deploy on the host.
 
 Checked 2026-10-30 (issue #7, the new layout of the page): a dedicated server of the build (mp/ffa3, one bot), headless
 Chromium at 1366 x 768, logged in with a token through a local proxy. Every page by its address, the palette by keys
 (Ctrl+K, "map ffa" listed mp/ffa1 to mp/ffa5, Escape, "gravity 600" and Enter set the gravity of the server, "slap"
 with a selected player ran amslap on him), the groups of the player panel and the button ?. The game module was built
-with the page bundled. Not checked: a real browser by a person, a phone, the roles moderator and admin on screen, a
-masterserver.
+with the page bundled. Not checked: a real browser by a person, a phone, the roles moderator and admin on screen.

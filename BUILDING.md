@@ -122,7 +122,7 @@ What is built:
 | `BuildJPVoice` | ON | the cgame gets the voice chat (Opus and miniaudio from `lib/`), the game code gets the boombox (Opus) |
 | `BuildJPAssets` | ON | packs the directories of `assets/` into pk3 files. Needs Python 3 |
 | `BuildJPSpatialAudio` | ON | the client can use Steam Audio for its sound. Needs the submodule `lib/steamaudio`, the library is loaded at run time |
-| `BuildMasterServer` | OFF | the masterserver, see below |
+| `BuildMasterServer` | OFF | the masterserver (its code is private, see below) |
 | `BuildTests` | OFF | the unit tests. Needs Boost |
 | `BuildPortableVersion` | OFF | a portable version: does not read or write files from your user or home directory |
 | `MakeApplicationBundles` | ON | macOS only: builds `.app` bundles for the engines |
@@ -191,10 +191,9 @@ cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildMasterServer=ON
 cmake --build build64 -j"$(nproc)" --target visionjk-master.x86_64
 ```
 
-This builds `visionjk-master.<arch>`, the relay for servers that do not have the game code of this tree (voice chat,
-clan radio, statuses, boombox) and the reputation of game servers. It is for the hosts of VisionJK itself, it is never
-part of a release, and it has no install rule. How it runs is in [docs/japlus/server.md](docs/japlus/server.md), the
-section "The masterserver".
+This builds `visionjk-master.<arch>`. It is for the hosts of VisionJK itself, it is never part of a release, and it has
+no install rule. How it works and runs is described in the private repository, not here. What it does for players is
+in [docs/japlus/server.md](docs/japlus/server.md), the section "The masterserver".
 
 ## Unit tests
 

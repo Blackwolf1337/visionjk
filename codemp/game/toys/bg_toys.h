@@ -24,7 +24,7 @@ toy leaves the hand and how fast, and every cgame that hears of it lets it fly o
 the game state of the server, so legacy clients see nothing and no server has to know the toys.
 
 A throw goes to the others the way hats do: on a server of this tree through the game module (game/toys/g_toys.c,
-the commands vs_toy), on any other through the masterserver (VOICE_TOY, master/ms_relay.c). There it is these
+the commands vs_toy), on any other through the masterserver (VOICE_TOY). There it is these
 bytes after the head of the datagram: the kind, the point (three int32, units), the speed (three int16, units a
 second), all little endian. TOY_HELLO alone, without the rest, tells the masterserver that this cgame draws toys.
 */

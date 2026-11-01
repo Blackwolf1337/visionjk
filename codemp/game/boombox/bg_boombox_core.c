@@ -21,7 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // bg_boombox_core.c -- what plays the songs of boxes: the line of songs of a box, its lookups, and the frames that
 // are due by the clock, coded with Opus and handed to the host of the box (bg_boombox_core.h). The game module of
 // a server of this tree (game/boombox/g_boombox.c) and the masterserver for every other server
-// (master/ms_boombox.c) are its hosts. Not from JA+, see docs/japlus/boombox.md.
+// are its hosts. Not from JA+, see docs/japlus/boombox.md.
 //
 // A song plays for everybody at once: 20 ms of it are coded when they are due and go to whoever the host lets
 // hear the box. A song that is fetched too slowly waits, and everybody hears it wait. One whose fetch broke off in

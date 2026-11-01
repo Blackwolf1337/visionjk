@@ -211,7 +211,6 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 | `cgame/voice/cg_voice_web.c` | in a browser: the WebSocket to the web host in place of the UDP socket |
 | `server/web/sv_web_voice.cpp` | in the dedicated server: `/voice` of the web host, between that WebSocket and the relay |
 | `server/sv_voice.cpp` | in the engine: the voice chat on the UDP port of the game |
-| `master/ms_relay.c` | the relay of the masterserver: sessions, rooms, what is handed on. No socket of its own (the socket is in `master/ms_main.c`) |
 | `cgame/status/cg_status.c` | the statuses above the heads, which go through the masterserver where the server passes none on |
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
@@ -312,26 +311,16 @@ both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   fl
 - Away is not found out by anybody there, so every client says it of itself: no key and no turn of the view
   for a minute. A legacy player on such a server never shows as away.
 
-**The relay of the masterserver** is `master/ms_relay.c` ("the master" in what follows). It never decodes
-sound and writes no address and no room into its log, only one line a minute with numbers while something
-happens, and one when it is stopped. The masterserver (`visionjk-master`, `-DBuildMasterServer=ON`) is a small
-program of its own since 2026-10-30 (`master/ms_main.c`), and it hands this relay the voice datagrams that come in on
-its one UDP port, see [server.md](server.md), "The masterserver". `--kbps` (4000, command line) is what the relay
-may send in a second. It is no part of a release.
+**The relay of the masterserver** is the program that runs the master (the masterserver is not part of this
+repository, see [server.md](server.md), "The masterserver"). It never decodes sound and writes no address and no
+room into its log, only one line a minute with numbers while something happens, and one when it is stopped. It
+limits a speaker to 60 datagrams and 14000 bytes a second, as the relay of a game server does, a room to one
+session for each client number (32), and what it sends out in a second, and a session is over after 5 seconds
+without a datagram.
 
-Until 2026-10-12 this relay was called the voice master and was a program of its own as well
-(`visionjk-voicemaster`). That name and that program are gone from the tree: from 2026-10-12 the masterserver ran in
-its place as a dedicated server of this tree, and since 2026-10-30 as a small program of its own again. The checks of the relay build the small program around it from a copy in the test
-tools (`tools/voicetest/relay_main.c`, with the sanitizers). Where the checks below say "the master by itself",
-that program is meant.
-
-| Limit | |
-|-------|---|
-| from one speaker | 60 datagrams and 14000 bytes a second, as the relay of a game server |
-| sessions | 1024 in all, 16 from one address |
-| a room | one session for each client number, 32 |
-| a session | over after 5 seconds without a datagram |
-| `-maxkbps` | what goes out in a second at most, with the 28 bytes in front of every datagram. Sound over it is dropped and counted, 0: no limit |
+Until 2026-10-12 this relay was called the voice master and was a program of its own as well. From 2026-10-12 the
+masterserver ran in its place as a dedicated server of this tree, and since 2026-10-30 as a small program of its
+own again. Where the checks below say "the master by itself", that program is meant.
 
 What is different from a server with its own relay:
 
@@ -469,8 +458,8 @@ Nothing of the voice chat is in the game protocol.
 - Nothing is encrypted, like the game itself. Somebody on the line can listen.
 - The relay of the masterserver is a port open to everybody. It answers a datagram without a token with a
   shorter one and keeps nothing for it. It sends sound only to addresses that came back with their token, one
-  datagram out for one in per member of a room, so it can not be used to flood somebody else. `--kbps`
-  caps what leaves it.
+  datagram out for one in per member of a room, so it can not be used to flood somebody else. What leaves it
+  in a second is capped.
 - Through the master nobody checks who is who: see the list in "On a server without it".
 - A status that came through the master is text somebody else wrote. The master refuses control characters,
   the cgame refuses them again, strips colour codes, and draws at most 63 bytes of it.
@@ -483,7 +472,7 @@ A client sends a frame for its clan as `VOICE_RADIO` (type 3) in place of `VOICE
 said it knows the radio: the answer to `vs_voiceLink hello` has a fifth number for that (`VOICE_CAP_RADIO`), which a
 cgame from before does not read. The relay (`G_VoiceRadio`) hands the frame to the clients whose clan password
 is the one of the speaker, as a `VOICE_AUDIO` with `VOICE_FLAG_RADIO`, `VOICE_FLAG_UNSEEN` and a distance of 0.
-The masterserver does the same for the members of a room that named the clan of the speaker (`MS_Radio`), so a
+The masterserver does the same for the members of a room that named the clan of the speaker, so a
 client plays the radio the same from either. A cgame that knows the first flag plays it without a place through `BG_VoiceRadio()`. One from before the radio
 (release 0.1.1) knows the second: for it the frame is a voice close by that it is not shown, which it plays
 muffled and at full loudness. So nobody of the clan is left out, some hear it duller. The limits of a speaker

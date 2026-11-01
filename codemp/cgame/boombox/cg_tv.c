@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (models/map_objects/imperial/monitor.md3) whose middle screen shows the video of the song it plays, in step with
 // the song, and whose light falls on the room around it in the colours of the picture. The sound is the song of
 // the box as cg_boombox.c plays any song. The picture is fetched by the engine from the TV of the masterserver
-// (client/cl_video.cpp, master/ms_tv.c) into one of its first TV_STREAMS streams: the nearest TVs that play get one,
+// (client/cl_video.cpp) into one of its first TV_STREAMS streams: the nearest TVs that play get one,
 // a TV further away shows its screen dark. Not from JA+, see docs/japlus/boombox.md, "The TV".
 //
 // A picture starts TV_LEAD_SEC ahead of the song, so the first second of it is there before the song gets to it.

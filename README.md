@@ -256,7 +256,7 @@ The repository on GitHub, [github.com/Blackwolf1337/visionjk](https://github.com
 
 Issues are welcome on GitHub. Pull requests are welcome too, but they are not merged on GitHub itself, because the mirror would overwrite the merge at the next sync. The change is applied in the main repository with the author kept, it shows up on GitHub with the next sync, and then the pull request is closed.
 
-The code of the masterserver that jka.vision runs is not in this repository. [BUILDING.md](BUILDING.md), section "The masterserver", says how it is built.
+The code of the masterserver that jka.vision runs is not in this repository. [BUILDING.md](BUILDING.md), section "The masterserver", says how it is checked out and built.
 
 ## Credits
 

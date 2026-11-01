@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 /*
 bg_boombox_core.h -- what plays the songs of boxes, for whoever keeps the boxes: the game module of a server of this
-tree (game/boombox/g_boombox.c) and the masterserver for every other server (master/ms_boombox.c). Not from JA+,
+tree (game/boombox/g_boombox.c) and the masterserver for every other server. Not from JA+,
 see docs/japlus/boombox.md.
 
 bg_boombox_fetch.c starts the programs that find and fetch a song (yt-dlp, ffmpeg), bg_boombox_core.c keeps the
@@ -95,7 +95,7 @@ typedef struct boxStream_s {
 	int			resolvedLen;
 } boxStream_t;
 
-// The picture of a video for the TV (master/ms_tv.c): ffmpeg makes MPEG-1 of it (an elementary stream, a sequence
+// The picture of a video for the TV of the masterserver: ffmpeg makes MPEG-1 of it (an elementary stream, a sequence
 // header at every group of pictures) at BOX_VIDEO_WIDTH x BOX_VIDEO_HEIGHT, BOX_VIDEO_FPS, from a second on.
 #define BOX_VIDEO_WIDTH		426
 #define BOX_VIDEO_HEIGHT	240

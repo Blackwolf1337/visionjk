@@ -1552,7 +1552,7 @@ void CG_VoiceDraw( void ) {
 The masterserver
 
 A game server without the game module of this tree has no relay, hands out no token and tells nobody who is
-near whom. There the voice goes through one relay for all such servers (codemp/master), which knows no
+near whom. There the voice goes through one relay for all such servers (the masterserver), which knows no
 game server. So this client tells it what a relay of a game server knows by itself, in a VOICE_STATE: which
 room it is in, and who is near it.
 

@@ -1,7 +1,7 @@
 # Toys
 
 Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `codemp/cgame/toys/cg_pong.c`, `codemp/cgame/toys/cg_board.c`, `tools/toys/sprays.py`, `tools/toys/pingpong.py`, `tools/toys/sounds.py`,
-`MS_Toy()` in `codemp/master/ms_relay.c`, `tools/toys/textures.py`, issue #9, 2026-10-31.
+`tools/toys/textures.py`, issue #9, 2026-10-31.
 
 ## For players
 
@@ -65,10 +65,12 @@ The emoji flies in an arc from your eyes to the head of the other player and fol
 first person the emoji pops on their screen (top centre) and the one flying at them fades near their eyes. In third
 person the pop over their own head is drawn smaller.
 
-An emoji with a mood also lets the voice of your model say a line, if that voice has one. Laughing ones say a gloat (or
-a victory or taunt line). Thumbs up, clap, trophy and fire say a victory line, angry ones an anger line, thinking ones
-a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt. Emoji of your own, made on the
-masterserver with a preview, are not there yet.
+An emoji with a mood also lets the voice of your model say a line, if that voice has one. Laughing ones say a gloat
+(or a victory or taunt line). Thumbs up, clap, trophy and fire say a victory line, angry ones an anger line, thinking
+ones a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt. Players can also upload chat
+emojis of their own on jka.vision/models.html (section "Chat emojis"). The game fetches them in the background into
+`base/gfx/emoji/` of the home folder, so they can be thrown like the emojis of the game; the upload is described in
+[models.md](models.md#chat-emojis-of-the-store).
 
 To play table tennis, use `v_pingpong` (Controls, Extras, "Table Tennis"). It puts a table in front of you and you play
 from its near end. It needs a flat floor and room for the table at any angle. Another player who stands in a box at the far end (from 30 units inside the
@@ -316,8 +318,8 @@ the drops run down its view. There is a unit test for `TOY_WATER` in `tests/vjk/
 The real water, the water gun in the hand and the view weapon were run in headless test runs only. Not tested yet in a
 real game with players.
 
-The masterserver relay was tested with a UDP script: hello, a throw handed on, four of six in a second, a too fast
-one refused. The unit tests are in `tests/vjk/toys.cpp`.
+The masterserver relay was tested with a UDP script: hello, a throw handed on, a too fast one refused. The unit tests
+are in `tests/vjk/toys.cpp`.
 
 For the RC car, one client drove the car (forwards, a turn, a hop, against a wall, back to the player with Esc). Two
 clients on a local server: the driver showed the dots of talking, the other client received the `TOY_RC` server

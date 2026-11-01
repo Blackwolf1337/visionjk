@@ -68,7 +68,7 @@ new sound system, its table and its two speakers, and part <box> <part> <x y z y
 box moved.
 
 On a server without the game module of this tree the masterserver keeps the boxes of its room (all clients of one
-game server, codemp/master/ms_boombox.c), and everything goes through the datagrams of the voice chat:
+game server), and everything goes through the datagrams of the voice chat:
 VOICE_BOX of bg_voice.h, after the head, every number with its low byte first:
 
 to the master	what box nameLen name[nameLen]		and for BOX_DO_PLACE and BOX_DO_MOVE x[4] y[4] z[4] yaw[2],
@@ -96,7 +96,7 @@ to a client		BOX_SAY_VIDEO box idLen id			after the BOX_SAY_SET of a TV: the vid
 A TV (BOX_KIND_TV, since 0.2.9) is placed as a boombox is, with "vs_boxaction tv <x y z yaw>" or BOX_DO_TV, and is
 there only for a client that said BOX_CAP_TV in its hello (or BOX_STATE_TVS in its state to the master). Its "vs_box
 set" ends as the one of a sound system, with the kind and eight zeros, and then the video of its song (11
-characters, or - for none). Its picture comes from the TV of the masterserver over HTTPS (master/ms_tv.c).
+characters, or - for none). Its picture comes from the TV of the masterserver over HTTPS.
 
 The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
 know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
@@ -133,7 +133,7 @@ looks at the bits of its four boxes only.
 // the sound system (BOX_KIND_SYSTEM): a DJ table where the box stands, and two big speakers. Origins on the floor.
 #define BOX_KIND_BOOMBOX	0
 #define BOX_KIND_SYSTEM		1
-#define BOX_KIND_TV			2			// the TV (since 0.2.9): a box that shows the video of its song (master/ms_tv.c)
+#define BOX_KIND_TV			2			// the TV (since 0.2.9): a box that shows the video of its song
 #define BOX_PARTS			3			// what of a box stands somewhere: the box or the table, and the two speakers
 #define BOX_PART_BODY		0
 #define BOX_PART_LEFT		1

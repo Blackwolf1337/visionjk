@@ -519,7 +519,7 @@ is looked at again (`CG_ForcedModelsCheck`).
 
 ### Hats and capes
 
-`cgame/look/cg_look.c`, `game/status/g_status.c`, `master/ms_relay.c` (2026-10-17), after the cosmetics of TaystJK
+`cgame/look/cg_look.c`, `game/status/g_status.c` (2026-10-17), after the cosmetics of TaystJK
 and jaPRO. Their files are laid out the same way, so their paks work:
 
 - A hat is `models/cosmetics/hats/<name>.md3`. It sits on the bolt `*head_top` of the player.

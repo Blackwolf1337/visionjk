@@ -9,8 +9,8 @@ BOOST_AUTO_TEST_CASE( good )
 {
 	unsigned char ip[4] = {};
 
-	BOOST_CHECK( Q_ParseIPv4( "192.168.20.180", ip ) );
-	BOOST_CHECK( ip[0] == 192 && ip[1] == 168 && ip[2] == 20 && ip[3] == 180 );
+	BOOST_CHECK( Q_ParseIPv4( "192.168.0.180", ip ) );
+	BOOST_CHECK( ip[0] == 192 && ip[1] == 168 && ip[2] == 0 && ip[3] == 180 );
 	BOOST_CHECK( Q_ParseIPv4( "0.0.0.0", ip ) );
 	BOOST_CHECK( ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0 );
 	BOOST_CHECK( Q_ParseIPv4( "255.255.255.255", ip ) );

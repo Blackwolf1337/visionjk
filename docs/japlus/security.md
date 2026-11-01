@@ -462,10 +462,10 @@ Not tested: real Windows (only Wine), overlays like Steam, Discord and RTSS, the
 
 ## Added later: reports to the masterserver
 
-Since 2026-10-28 (`client/cl_reputation.cpp`, `master/ms_repnet.c`, `master/ms_reputation.c`; the packets were in `server/sv_reputation.cpp` until 2026-10-30). A client that
+Since 2026-10-28 (`client/cl_reputation.cpp`; the packets were in `server/sv_reputation.cpp` until 2026-10-30). A client that
 left a server for an attack tells the masterserver. The masterserver counts the networks that did and hands the
 list to other clients, which warn their players. A player that was thrown off once is no longer alone with it.
-With `v_ids 0` nothing is sent and nothing is fetched.
+With `v_ids 0` nothing is sent and nothing is fetched. The masterserver is not part of this repository.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -489,7 +489,7 @@ What is reported:
   sees the address the report comes from and keeps its first three numbers (the /24 network).
 - The first report prints a yellow line on the console that says so, and how to turn it off.
 
-Packets, on the port of the masterserver (`ms_repnet.c`):
+Packets, on the port of the masterserver:
 
 | Packet | Answer |
 |--------|--------|
@@ -500,20 +500,13 @@ Packets, on the port of the masterserver (`ms_repnet.c`):
 - `<c>` is a keyed hash of the address and port of the sender and of the minute. It proves that the sender gets
   the packets of the address it writes from. Without it anybody could report in the name of another address, and
   a list, which is longer than its question, could be sent to an address that never asked.
-- An address may report 10 times an hour and ask for the list once in 10 seconds.
-- A report of a private or local server address is refused, unless `--rep-local 1`.
-- A network (/24) counts once for a server, with the larger weight of its reports. A server keeps 32 networks, the
-  oldest goes, and the master keeps 4096 servers. A report counts for 7 days.
-- A server is flagged at a score of `--rep-threshold` (6): three networks with an attack, or six with a crash.
-- `reputation.txt` in the folder of `--home` of the master is written every 10 minutes and when it ends (to
-  `reputation.txt.new`, then renamed over the old one), and read when it starts. `ms_repstatus` on the console
-  of the master lists the flagged servers, `ms_repclear <address:port|all>` forgets one or all. `--rep 0` turns it
-  off.
+- A server is flagged when networks reported it in the last 7 days: three with an attack, or six with a crash. The
+  masterserver counts a network (/24) once for a server, limits how often an address may report and ask for the
+  list, refuses reports of private or local server addresses, and keeps what it counted in a file of its own.
 
-Since 2026-10-30 the masterserver is a small program of its own, and its one UDP port answers nothing but the voice
-datagrams and the `ids` packets above. `getinfo`, `getstatus`, `getchallenge`, `connect`, `rcon`, `getservers` and
-anything else are dropped without an answer, so the port has no game server query to ask, no rcon and no client
-slot. It has no game module and no web panel either (server.md, "The masterserver").
+The masterserver is a small program of its own, and its one UDP port answers nothing but the voice datagrams and
+the `ids` packets above. `getinfo`, `getstatus`, `getchallenge`, `connect`, `rcon`, `getservers` and anything else
+are dropped without an answer, so the port has no game server query to ask, no rcon and no client slot.
 
 The client looks the name of the master up on a thread of its own (`Sys_ResolveIPv4`), so the game does not wait
 for the lookup. It fetches the list at start and with the server browser, at most every 10 minutes. A flagged
@@ -522,27 +515,20 @@ also for its own memory finds. The first connect to a flagged server is refused 
 networks reported it in the last 7 days. The next connect goes through.
 
 The limit, stated plainly: somebody with addresses in many /24 networks can still get a server flagged. The owner
-of the masterserver can clear it with `ms_repclear`. A flag is a warning to players, nobody is blocked by it.
+of the masterserver can clear it. A flag is a warning to players, nobody is blocked by it.
 
-Tested apart from the game: `tests/vjk/reputation.cpp` (networks, weights, the window, the limits).
-
-Run on 2026-10-28 on this machine: a master (then the dedicated server of this tree), the IDS test server
-(`vs_idsTest 2`) and two clients, with `ms_repLocal 1`, `ms_repThreshold 2` and `v_idsShareLocal 1` (now
-`--rep-local 1` and `--rep-threshold 2` of the master). Client 1 left and reported, the master logged it.
-Client 2 fetched the list, and its first connect was refused with the reason, and the second went through.
-`reputation.txt` was written and read back by a restarted master.
+Run on 2026-10-28 on one machine: a master, the IDS test server (`vs_idsTest 2`) and two clients, with
+`v_idsShareLocal 1`. Client 1 left and reported. Client 2 fetched the list, and its first connect was refused with
+the reason, and the second went through.
 
 Not tested: the orange mark and the window Intrusions looked at by a person, the master on the real host.
 
 ## Added later: the TV of the boombox
 
-The TV service of the masterserver (`master/ms_tv.c`, `--tv-port`) is an HTTP server on 127.0.0.1 that only nginx
-reaches. It answers `GET /tv/<video id>?t=<second>`: the id must be 11 characters and the
-second a number from 0 to 36000, only `t` is taken as a parameter, anything else gets 400 or 404. The limits are
-`--tv-sessions` sessions at once (4 by default, 16 at most), 4 connections per address (the one nginx names in
-`X-Real-IP`), a request that is not whole after 10 seconds is dropped, a session nobody watches ends after 15
-seconds, and the stream is read 12 seconds ahead at most, with 2 MB kept. nginx adds 30 requests a minute and 4
-connections per address. Viewers of one video and second share one session, so many players cost one.
+The TV service of the masterserver is an HTTP server that only the web server of the site reaches. It answers
+`GET /tv/<video id>?t=<second>` and nothing else: a bad id or second, any other parameter or any other path gets 400
+or 404, and it limits sessions, connections per address and the time a request may take. Viewers of one video and
+second share one session, so many players cost one.
 
 On the client the picture is fetched by a background thread from `v_tvService`. The cvar is protected, so a server
 can not point it elsewhere, and the engine takes only https, or http to 127.0.0.1 for tests. The stream is decoded
@@ -629,17 +615,18 @@ since the merge `1290abdca` ("Merge branch 'feature/security'"). The releases si
 |-------|---------|-----|
 | `cgame/cg_servercmds.c` `CG_DuelField` | the duelist configstrings (30, 31) were copied into a 64 byte stack buffer without a bound (stock JKA), so a server could write past it, on Windows without a stack protector | one bounded field reader; the duel winner and the duelist numbers outside 0..31 become -1 |
 | `qcommon/cvar/cvar.cpp` `Cvar_CurrentName` | a server (or a module) that set a cvar by its old name (`cvar_renames.h`) passed the checks of `Cvar_Server_Set` and `Cvar_VM_Set`, which saw a name nobody has, and the rename forwarded the set with force: protected and archived cvars such as `v_voiceMasterHost` and `v_authServers` could be set by any server | old names are mapped to the new one before the flags are read |
-| `master/ms_boombox.c` | seek, skip, move, volume and the rest were taken 60 times a second from any session, and every seek forked yt-dlp, deno and ffmpeg | once a second per session, watch changes four times a second, one restart per box and second (`Box_Touch`), also on the game server |
-| `master/ms_relay.c` | token answers counted into `vs_masterKbps`, so a flood of made up states silenced the relay | not counted, limited per address and in all; plus the port check, 4096 sessions, 4 rooms per address, and a fair share per room once half the budget is used |
 | webadmin | behind a proxy without `vs_webProxy` every visitor was one address, so five wrong logins of anybody locked everybody out, and the live view came after that wait | `vs_webProxy` takes a list, the live routes come first, a wrong password no longer makes the account wait, Argon2id runs on a thread of its own, the pages carry a script hash CSP |
 | `client/cl_download.cpp` | `jp_DlBaseURL` could point at the network of the player; a pak entry name of 256 bytes or more was read without its end (also in `FS_LoadZipFile`); 2 GB per pak | no private hosts, terminated names, 512 MB |
+
+Two more fixes of the audit were in the masterserver (the limits of what a session may ask of a box, and of the
+token answers of the relay). It is not part of this repository.
 
 Smaller ones: the score count is clamped from below (`cg_servercmds.c`), the disruptor beam length is capped,
 the dots of the lead indicator are capped, chat log lines have no control characters, lag compensation is capped at
 the measured ping plus a frame (`unlagged/g_unlagged.c`), the relay of a game server takes only HELLO, AUDIO and
 RADIO and has `vs_voiceKbps`, the client keeps its master token against made up answers, and for the boombox:
 `SIGTERM` before `SIGKILL`, `--no-plugin-dirs`, playlist ids of 12 characters or more and not `RDMM`, songs up to
-ten hours, error lines with paths not shown to players, and the master registers the boombox program cvars itself.
+ten hours, error lines with paths not shown to players.
 
 Left as it is: the updater files are served from the same container that runs the game server and the
 masterserver. With the accepted updater without a signature, a root on that host would reach every client. The room

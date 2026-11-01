@@ -32,7 +32,7 @@ to a client		"VO" version type speaker token[4] sequence[2] flags distance			fra
 The token is the one the server gave that client over the game connection, in both directions: it is what
 tells the server who sends and tells the client that it is the server that sends.
 
-On a server without this game module the cgame goes through the masterserver (codemp/master), one relay
+On a server without this game module the cgame goes through the masterserver, one relay
 for all such servers. There nobody hands out a token over a game connection and nobody knows where a player
 stands, so the client says both in a datagram of its own, VOICE_STATE:
 
@@ -70,7 +70,7 @@ Type 5 was the Vision Temple of versions 0.1.6 and 0.1.7 (removed 2026-10-17): s
 answers it, and the number is not given to anything else.
 
 The boombox (2026-10-15, game/boombox/bg_boombox.h): on a server without the game module of this tree the
-masterserver keeps the boxes of a room and plays their songs (master/ms_boombox.c). A master that does says so in
+masterserver keeps the boxes of a room and plays their songs. A master that does says so in
 every answer (VOICE_FLAG_BOXES), and only a client that saw that flag sends it the state with one byte more, the
 boxes it hears (a bit for every box, as near as its game shows them), and what its player does with a box:
 

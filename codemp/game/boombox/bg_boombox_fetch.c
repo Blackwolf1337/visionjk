@@ -1271,7 +1271,7 @@ void Box_StreamWhy( const boxStream_t *s, const char *otherwise, char *why, int 
 /*
 ===============================================================================
 
-The picture of a video, for the TV (master/ms_tv.c)
+The picture of a video, for the TV of the masterserver
 
 As the sound of a song: yt-dlp looks up the address of a picture of the video no higher than 360 lines (and
 without sound), ffmpeg fetches it from there and makes MPEG-1 of it (bg_boombox_core.h, BOX_VIDEO_*); without an

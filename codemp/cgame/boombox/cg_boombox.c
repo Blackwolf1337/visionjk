@@ -33,8 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // player does is a client command, of which this file sends one a second at most: the flood protection of the
 // server drops a command that comes within a second of another one.
 //
-// On a server without the game module of this tree the masterserver keeps the boxes of the server (codemp/master,
-// ms_boombox.c), when it says it plays boxes (VOICE_FLAG_BOXES). Then all of it goes through the way of the voice
+// On a server without the game module of this tree the masterserver keeps the boxes of the server, when it says it plays boxes (VOICE_FLAG_BOXES). Then all of it goes through the way of the voice
 // chat to the master (voice/cg_voice.c): what the player does as a VOICE_BOX, what a box is now back the same way,
 // and the boxes this client hears in its state, since the master does not know where anybody stands.
 
