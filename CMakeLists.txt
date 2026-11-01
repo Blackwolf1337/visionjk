@@ -43,7 +43,7 @@ option(BuildMPGame "Whether to create projects for the MP server-side gamecode (
 option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86_64.dll)" ON)
 option(BuildMPUI "Whether to create projects for the MP UI code (uix86_64.dll)" ON)
 option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it), and the MP server-side gamecode the boombox (Opus)" ON)
-option(BuildMasterServer "Whether to create projects for the masterserver (visionjk-master.exe): a small program of its own with the relay for servers without the MP server-side gamecode of this tree (voice chat, clan radio, statuses, boombox) and the reputation of game servers, for the hosts of VisionJK itself. Never part of a release, it is not installed" OFF)
+option(BuildMasterServer "Whether to create projects for the masterserver (visionjk-master.exe): a small program of its own with the relay for servers without the MP server-side gamecode of this tree (voice chat, clan radio, statuses, boombox) and the reputation of game servers, for the hosts of VisionJK itself. Needs its private repository checked out at codemp/master. Never part of a release, it is not installed" OFF)
 set(UpdateURL "https://jka.vision/downloads/update" CACHE STRING "Where the MP client asks for a newer version of itself (docs/japlus/update.md)")
 set(UpdateVersion "" CACHE STRING "For a test of the updater: the version the MP client takes itself for, as a tag (v0.0.1). Empty: the tag the build was made from")
 option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files (needs Python 3)" ON)

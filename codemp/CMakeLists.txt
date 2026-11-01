@@ -950,64 +950,12 @@ if(BuildMPDed)
 	endif(BuildDevIdsTest)
 endif(BuildMPDed)
 
-# The masterserver: a program of its own (master/ms_main.c), one UDP port for the voice chat, the clan radio, the
-# statuses and the boombox of the servers without the game module of this tree, and for the reputation of game
-# servers. No engine and no game module in it. For the hosts of VisionJK itself: there is no install rule.
+# The masterserver: a program of its own for the hosts of VisionJK, its code is in a private repository checked out
+# at codemp/master (git-ignored). Its master.cmake builds it from there with the shared code of this tree.
 if(BuildMasterServer)
-	# It plays the boxes of the boombox of those servers with the core of the game module, and codes their songs
-	# with the Opus of the voice chat (BuildJPVoice).
-	set(MasterServerFiles
-		"${MPDir}/master/ms_main.c"
-		"${MPDir}/master/ms_relay.c"
-		"${MPDir}/master/ms_relay.h"
-		"${MPDir}/master/ms_reputation.c"
-		"${MPDir}/master/ms_reputation.h"
-		"${MPDir}/master/ms_repnet.c"
-		"${MPDir}/master/ms_repnet.h"
-		"${MPDir}/master/ms_http.c"
-		"${MPDir}/master/ms_http.h"
-		"${MPDir}/master/ms_tv.c"
-		"${MPDir}/master/ms_tv.h"
-		"${CMAKE_CURRENT_BINARY_DIR}/master_page.h"
-		"${MPDir}/master/ms_boombox.c"
-		"${MPDir}/master/ms_local.h"
-		"${MPDir}/game/voice/bg_voice.c"
-		"${MPDir}/game/toys/bg_toys.c"
-		"${MPDir}/game/toys/bg_toys.h"
-		"${MPDir}/game/boombox/bg_boombox.c"
-		"${MPDir}/game/boombox/bg_boombox_core.c"
-		"${MPDir}/game/boombox/bg_boombox_fetch.c"
-		"${MPDir}/game/boombox/bg_boombox.h"
-		"${MPDir}/game/boombox/bg_boombox_core.h"
-		"${MPDir}/qcommon/q_shared.c"
-		"${SharedDir}/qcommon/q_string.c"
-		"${SharedDir}/qcommon/q_math.c"
-		"${SharedDir}/qcommon/q_color.c"
-		"${SharedDir}/web/web_sha1.c"
-		"${SharedDir}/web/web_http.c"
-		)
-	# the page of its panel (ms_http.c), built in
-	add_custom_command(
-		OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/master_page.h"
-		COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/master/page/master.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/master_page.h" -DNAME=master_page -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
-		DEPENDS "${MPDir}/master/page/master.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake")
-	set(MasterServerDefines ${MPSharedDefines})
-	set(MasterServerIncludes "${SharedDir}" "${MPDir}" "${CMAKE_CURRENT_BINARY_DIR}")
-	set(MasterServerLibraries "")
-	if(WIN32)
-		set(MasterServerLibraries ${MasterServerLibraries} ws2_32)
+	if(EXISTS "${MPDir}/master/master.cmake")
+		include("${MPDir}/master/master.cmake")
 	else()
-		set(MasterServerLibraries ${MasterServerLibraries} m)
+		message(FATAL_ERROR "BuildMasterServer needs the private masterserver repository checked out at ${MPDir}/master")
 	endif()
-	if(TARGET bundled_opus)
-		set(MasterServerDefines ${MasterServerDefines} "JP_BOOMBOX")
-		set(MasterServerIncludes ${MasterServerIncludes} "${VisionJKLibDir}/opus/include")
-		set(MasterServerLibraries ${MasterServerLibraries} bundled_opus)
-	endif()
-	add_executable(${MasterServer} ${MasterServerFiles})
-	set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MasterServerDefines}")
-	set_property(TARGET ${MasterServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
-	set_target_properties(${MasterServer} PROPERTIES INCLUDE_DIRECTORIES "${MasterServerIncludes}")
-	set_target_properties(${MasterServer} PROPERTIES PROJECT_LABEL "Masterserver")
-	target_link_libraries(${MasterServer} ${MasterServerLibraries})
 endif(BuildMasterServer)

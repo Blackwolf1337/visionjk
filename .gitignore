@@ -199,3 +199,6 @@ cmake-build-*
 ## Steam Audio: the unpacked release zip of Valve, where the build takes the library from (SteamAudioSDK)
 #############
 /lib/steamaudio-sdk
+
+# the private repository of the masterserver (BUILDING.md, "The masterserver")
+/codemp/master/

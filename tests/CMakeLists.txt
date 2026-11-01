@@ -41,9 +41,7 @@ set(TestFiles
 	"vjk/toys.cpp"
 	"vjk/stringed.cpp"
 	"vjk/memwatch.cpp"
-	"vjk/reputation.cpp"
 	"vjk/ipv4.cpp"
-	"vjk/repnet.cpp"
 	"vjk/markdown.cpp"
 	"vjk/cfgedit.cpp"
 	"vjk/cvarseen.cpp"
@@ -60,8 +58,6 @@ set(TestCFiles
 	"${SharedDir}/web/web_missing.c"
 	"${SharedDir}/web/web_models.c"
 	"${SharedDir}/sys/sys_memwatch_rules.c"
-	"${MPDir}/master/ms_reputation.c"
-	"${MPDir}/master/ms_repnet.c"
 	"${SharedDir}/web/web_sha1.c"
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/game/voice/bg_voice.c"
@@ -97,9 +93,6 @@ find_package( Boost COMPONENTS unit_test_framework REQUIRED )
 
 set(TestTarget "UnitTests")
 set(TestLibraries "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}")
-if(WIN32)
-	set(TestLibraries ${TestLibraries} ws2_32)	# the addresses of the reputation (vjk/repnet.cpp)
-endif()
 set(TestIncludeDirectories
 	"${Boost_INCLUDE_DIRS}"
 	"${SharedDir}"
@@ -107,6 +100,11 @@ set(TestIncludeDirectories
 	"${GSLIncludeDirectory}"
 	)
 set(TestDefines "${SharedDefines}")
+
+# the tests of the masterserver, when its private repository is checked out at codemp/master
+if(EXISTS "${MPDir}/master/tests.cmake")
+	include("${MPDir}/master/tests.cmake")
+endif()
 
 add_executable(${TestTarget} ${TestFiles})
 set_target_properties(${TestTarget} PROPERTIES COMPILE_DEFINITIONS "${TestDefines}")

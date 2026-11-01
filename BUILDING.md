@@ -183,6 +183,9 @@ does the work. In a browser the CPU does it as well.
 
 ## The masterserver
 
+The code of the masterserver is not in this repository. The hosts of VisionJK check its private repository out at
+`codemp/master` (git-ignored), then:
+
 ```
 cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildMasterServer=ON
 cmake --build build64 -j"$(nproc)" --target visionjk-master.x86_64
