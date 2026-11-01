@@ -1510,6 +1510,7 @@ void CL_BindUI( void ) {
 		uii.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
 		uii.ext.OpenURL							= Sys_OpenURL;
 		uii.ext.Cvar_UnusedList					= Cvar_UnusedList;
+		uii.ext.Cvar_Info						= Cvar_Info;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

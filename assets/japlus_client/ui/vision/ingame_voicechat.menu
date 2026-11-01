@@ -7,7 +7,7 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					10 100 184 265
+		rect					180 200 368 530
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		onESC
@@ -43,34 +43,42 @@
 			setFocus attack
 			show main
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		descX					364
+		descY					740
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 184 265
+			rect					0 0 368 530
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
 		{
 			name					title
-			rect					0 6.25 180 18.06
+			rect					0 12.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_VC_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -81,15 +89,15 @@
 		{
 			name					attack
 			group					main
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_ATT
 			textalign				ITEM_ALIGN_LEFT
 			ownerdraw				UI_CHAT_MAIN
-			textalignx				4
-			textaligny				-0.5
+			textalignx				8
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -111,15 +119,15 @@
 		{
 			name					defend
 			group					main
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_DEF
 			textalign				ITEM_ALIGN_LEFT
 			ownerdraw				UI_CHAT_MAIN
-			textalignx				4
-			textaligny				-0.5
+			textalignx				8
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -142,15 +150,15 @@
 		{
 			name					request
 			group					main
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ
 			textalign				ITEM_ALIGN_LEFT
 			ownerdraw				UI_CHAT_MAIN
-			textalignx				4
-			textaligny				-0.5
+			textalignx				8
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -173,15 +181,15 @@
 		{
 			name					reply
 			group					main
-			rect					10 135 160 20
+			rect					20 270 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REPLY
 			textalign				ITEM_ALIGN_LEFT
 			ownerdraw				UI_CHAT_MAIN
-			textalignx				4
-			textaligny				-0.5
+			textalignx				8
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -204,15 +212,15 @@
 		{
 			name					spot
 			group					main
-			rect					10 165 160 20
+			rect					20 330 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_SPOT
 			textalign				ITEM_ALIGN_LEFT
 			ownerdraw				UI_CHAT_MAIN
-			textalignx				4
-			textaligny				-0.5
+			textalignx				8
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -235,15 +243,15 @@
 		{
 			name					tactics
 			group					main
-			rect					10 195 160 20
+			rect					20 390 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TACTIC
 			textalign				ITEM_ALIGN_LEFT
 			ownerdraw				UI_CHAT_MAIN
-			textalignx				4
-			textaligny				-0.5
+			textalignx				8
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -266,14 +274,14 @@
 		{
 			name					cancel
 			group					none
-			rect					10 235 160 20
+			rect					20 470 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_CANCEL
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				80
-			textaligny				-0.5
+			textalignx				160
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -293,15 +301,15 @@
 		{
 			name					title
 			group					att_grp
-			rect					0 26.25 180 18.06
+			rect					0 52.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_ATTACK_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -312,14 +320,14 @@
 		{
 			name					att_01
 			group					att_grp
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_ATT_PRIMARY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_ATTACK
@@ -337,14 +345,14 @@
 		{
 			name					att_02
 			group					att_grp
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_ATT_SECONDARY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_ATTACK
@@ -362,14 +370,14 @@
 		{
 			name					att_03
 			group					att_grp
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_ATT_POSITION
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_ATTACK
@@ -387,15 +395,15 @@
 		{
 			name					title
 			group					def_grp
-			rect					0 26.25 180 18.06
+			rect					0 52.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_DEFEND_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -406,14 +414,14 @@
 		{
 			name					def_01
 			group					def_grp
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_DEF_PRIMARY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_DEFEND
@@ -431,14 +439,14 @@
 		{
 			name					def_02
 			group					def_grp
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_DEF_SECONDARY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_DEFEND
@@ -456,14 +464,14 @@
 		{
 			name					def_03
 			group					def_grp
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_DEF_POSITION
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_DEFEND
@@ -481,14 +489,14 @@
 		{
 			name					def_04
 			group					def_grp
-			rect					10 135 160 20
+			rect					20 270 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_DEF_GUNS
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_DEFEND
@@ -506,15 +514,15 @@
 		{
 			name					title
 			group					req_grp
-			rect					0 26.25 180 18.06
+			rect					0 52.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_REQUEST_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -525,14 +533,14 @@
 		{
 			name					req_01
 			group					req_grp
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ_ASSIST
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REQUEST
@@ -550,14 +558,14 @@
 		{
 			name					req_02
 			group					req_grp
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ_MEDIC
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REQUEST
@@ -575,14 +583,14 @@
 		{
 			name					req_03
 			group					req_grp
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ_SUPPLY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REQUEST
@@ -600,14 +608,14 @@
 		{
 			name					req_04
 			group					req_grp
-			rect					10 135 160 20
+			rect					20 270 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ_TECH
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REQUEST
@@ -625,14 +633,14 @@
 		{
 			name					req_05
 			group					req_grp
-			rect					10 165 160 20
+			rect					20 330 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ_HVY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REQUEST
@@ -650,14 +658,14 @@
 		{
 			name					req_06
 			group					req_grp
-			rect					10 195 160 20
+			rect					20 390 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REQ_DEMO
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REQUEST
@@ -675,15 +683,15 @@
 		{
 			name					title
 			group					rep_grp
-			rect					0 26.25 180 18.06
+			rect					0 52.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_REPLY_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -694,14 +702,14 @@
 		{
 			name					rep_01
 			group					rep_grp
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REPLY_YES
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REPLY
@@ -719,14 +727,14 @@
 		{
 			name					rep_02
 			group					rep_grp
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REPLY_NO
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REPLY
@@ -744,14 +752,14 @@
 		{
 			name					rep_03
 			group					rep_grp
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REPLY_COMING
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REPLY
@@ -769,14 +777,14 @@
 		{
 			name					rep_04
 			group					rep_grp
-			rect					10 135 160 20
+			rect					20 270 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REPLY_GO
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REPLY
@@ -794,14 +802,14 @@
 		{
 			name					rep_05
 			group					rep_grp
-			rect					10 165 160 20
+			rect					20 330 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_REPLY_STAY
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_REPLY
@@ -819,15 +827,15 @@
 		{
 			name					title
 			group					spot_grp
-			rect					0 26.25 180 18.06
+			rect					0 52.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_SPOTTED_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -838,14 +846,14 @@
 		{
 			name					spot_01
 			group					spot_grp
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_SPOT_DEF
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_SPOT
@@ -863,14 +871,14 @@
 		{
 			name					spot_02
 			group					spot_grp
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_SPOT_TROOP
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_SPOT
@@ -888,14 +896,14 @@
 		{
 			name					spot_03
 			group					spot_grp
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_SPOT_SNIPER
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_SPOT
@@ -913,14 +921,14 @@
 		{
 			name					spot_04
 			group					spot_grp
-			rect					10 135 160 20
+			rect					20 270 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_SPOT_EMPLACED
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_SPOT
@@ -938,15 +946,15 @@
 		{
 			name					title
 			group					tac_grp
-			rect					0 26.25 180 18.06
+			rect					0 52.5 360 36.12
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_TACTICS_TITLE
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textaligny				3
+			textalignx				180
+			textaligny				6
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -957,14 +965,14 @@
 		{
 			name					tac_01
 			group					tac_grp
-			rect					10 45 160 20
+			rect					20 90 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TAC_COVER
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_TACTICAL
@@ -982,14 +990,14 @@
 		{
 			name					tac_02
 			group					tac_grp
-			rect					10 75 160 20
+			rect					20 150 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TAC_HOLD
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_TACTICAL
@@ -1007,14 +1015,14 @@
 		{
 			name					tac_03
 			group					tac_grp
-			rect					10 105 160 20
+			rect					20 210 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TAC_FOLLOW
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_TACTICAL
@@ -1032,14 +1040,14 @@
 		{
 			name					tac_04
 			group					tac_grp
-			rect					10 135 160 20
+			rect					20 270 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TAC_FALLBACK
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_TACTICAL
@@ -1057,14 +1065,14 @@
 		{
 			name					tac_05
 			group					tac_grp
-			rect					10 165 160 20
+			rect					20 330 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TAC_TOGETHER
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_TACTICAL
@@ -1082,14 +1090,14 @@
 		{
 			name					tac_06
 			group					tac_grp
-			rect					10 195 160 20
+			rect					20 390 320 40
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_VC_TAC_SPLIT
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				4
-			textaligny				13
+			textalignx				8
+			textaligny				26
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			ownerdraw				UI_CHAT_TACTICAL
@@ -1102,13 +1110,6 @@
 				close all
 			}
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		descX					102
-		descY					370
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

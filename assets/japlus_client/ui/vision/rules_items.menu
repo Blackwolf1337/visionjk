@@ -8,9 +8,9 @@
 		rect					0 0 640 480
 		visible					0
 		focusColor				0.36 0.78 0.96 1
-		descX					40
-		descY					80
-		descScale				0.8
+		descX					380
+		descY					212
+		descScale				1.2
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_LEFT
 		onOpen
@@ -26,33 +26,36 @@
 			close "rulesMenu_items" ;
 			open "rulesMenu" ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
 
 		itemDef
 		{
 			name					vision_bar
-			rect					0 0 640 34
+			rect					0 0 1600 72
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.55
-			wide					1
+			backcolor				0.016 0.031 0.063 0.55
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					0 34 640 0.67
+			rect					0 71 1600 1
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
-			wide					1
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
 			name					vision_logo
-			rect					22 6 22 22
+			rect					48 19 34 34
 			visible					1
 			type					ITEM_TYPE_LOGO
 			forecolor				1 1 1 1
@@ -62,150 +65,114 @@
 		itemDef
 		{
 			name					vision_mark
-			rect					50 7 120 20
+			rect					96 16 180 40
 			visible					1
 			text					"VISIONJK"
 			font					5
-			textscale				1
+			textscale				1.67
 			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_mark2
-			rect					138 12 160 14
+			rect					268 22 300 32
 			visible					1
 			text					"JEDI ACADEMY"
 			font					5
-			textscale				0.5
+			textscale				0.83
 			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				8.5
 			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_nav_play
+			rect					1090 0 86 72
+			visible					1
+			text					@MENUS_PLAY
+			font					5
+			textscale				1.06
+			forecolor				0.36 0.78 0.96 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				43
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_START_PLAYING_NOW
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
 		}
 
 		itemDef
 		{
 			name					vision_here
-			rect					340 31 52 2
+			rect					1090 69 86 3
 			visible					1
-			style					WINDOW_STYLE_PANEL
+			style					WINDOW_STYLE_FILLED
 			backcolor				0.36 0.78 0.96 1
-			radius					1
 			decoration
 		}
 
 		itemDef
 		{
-			name					newgamebutton
-			group					toprow
-			style					WINDOW_STYLE_EMPTY
-			type					ITEM_TYPE_BUTTON
-			rect					330 7 72 20
-			text					@MENUS_PLAY
-			descText				@MENUS_START_PLAYING_NOW
-			font					5
-			textscale				0.66
-			textaligny				4
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			forecolor				0.36 0.78 0.96 1
+			name					vision_nav_profile
+			rect					1184 0 116 72
 			visible					1
-			mouseEnter { show newgamebutton_glow }
-			mouseExit { hide newgamebutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open multiplayermenu
-			}
-			caps					1
-		}
-
-		itemDef
-		{
-			name					profilebutton
-			group					toprow
 			text					@MENUS_PROFILE
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				58
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
 			descText				@MENUS_PROFILE_DESC
-			style					WINDOW_STYLE_EMPTY
-			type					ITEM_TYPE_BUTTON
-			rect					404 7 72 20
-			textaligny				4
-			font					5
-			textscale				0.66
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter { show profilebutton_glow }
-			mouseExit { hide profilebutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open playerMenu
-			}
-			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open playerMenu ; }
 		}
 
 		itemDef
 		{
-			name					controlsbutton
-			group					toprow
+			name					vision_nav_controls
+			rect					1308 0 136 72
+			visible					1
 			text					@MENUS_CONTROLS2
-			descText				@MENUS_CONFIGURE_GAME_CONTROLS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					478 7 72 20
 			font					5
-			textscale				0.66
-			textaligny				4
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			backcolor				0 0 0 0
+			textscale				1.06
 			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter { show controlsbutton_glow }
-			mouseExit { hide controlsbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open controlsMenu ;
-			}
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				68
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			action { play "sound/interface/button1.wav" ; close all ; open controlsMenu ; }
 		}
 
 		itemDef
 		{
-			name					setupbutton
-			group					toprow
-			text					@MENUS_SETUP
-			descText				@MENUS_CONFIGURE_GAME_SETTINGS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					552 7 72 20
-			font					5
-			textscale				0.66
-			textaligny				4
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			backcolor				0 0 0 0
-			forecolor				0.86 0.90 0.945 1
+			name					vision_nav_setup
+			rect					1452 0 100 72
 			visible					1
-			mouseEnter { show setupbutton_glow }
-			mouseExit { hide setupbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open setup_menu
-			}
+			text					@MENUS_SETUP
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				50
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			action { play "sound/interface/button1.wav" ; close all ; open setup_menu ; }
 		}
 
 		itemDef
@@ -215,12 +182,12 @@
 			descText				@MENUS_SHOW_GAME_CREDITS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					200 144 256 256
+			rect					620 308 384 384
 			font					2
-			textscale				1
+			textscale				1.5
 			textaligny				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				69
 			backcolor				0 0 0 0
 			forecolor				1 .682 0 1
 			visible					0
@@ -240,12 +207,12 @@
 			group					rulesheader
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_ITEM_RULES_TITLE
-			rect					105 100 440 16
+			rect					477.5 242 660 24
 			font					5
-			textscale				0.52
+			textscale				0.78
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				225
-			textaligny				0.75
+			textalignx				337.5
+			textaligny				1.12
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -255,13 +222,13 @@
 		itemDef
 		{
 			name					vision_rail_185
-			rect					40 116 180 233
+			rect					380 266 270 349.5
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5.3
-			shadow					8
+			radius					7.95
+			shadow					12
 			sheen					0
 			decoration
 		}
@@ -273,11 +240,11 @@
 			text					@MENUS_MEDPAC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 121 170 20
+			rect					387.5 273.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -302,11 +269,11 @@
 			text					@MENUS_BACTA_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 141 170 20
+			rect					387.5 303.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -331,11 +298,11 @@
 			text					@MENUS_SEEKER_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 161 170 20
+			rect					387.5 333.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -360,11 +327,11 @@
 			text					@MENUS_SENTRY_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 181 170 20
+			rect					387.5 363.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -389,11 +356,11 @@
 			text					@MENUS_EWEB_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 201 170 20
+			rect					387.5 393.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -418,11 +385,11 @@
 			text					@MENUS_STATIONARY_SHIELD_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 221 170 20
+			rect					387.5 423.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -447,11 +414,11 @@
 			text					@MENUS_PERSONAL_SHIELD_ARMOR
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 241 170 20
+			rect					387.5 453.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -476,11 +443,11 @@
 			text					@MENUS_CLOAK_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 261 170 20
+			rect					387.5 483.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -505,11 +472,11 @@
 			text					@MENUS_JETPACK_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					45 281 170 20
+			rect					387.5 513.5 255 30
 			font					5
-			textscale				0.69
-			textalignx				12
-			textaligny				0.2
+			textscale				1.03
+			textalignx				18
+			textaligny				0.3
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
@@ -532,13 +499,13 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					230 116 370 233
+			rect					665 266 555 349.5
 			backcolor				0.016 0.031 0.063 0.45
 			forecolor				1 1 1 1
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
-			radius					5
+			radius					7.5
 		}
 
 		itemDef
@@ -546,7 +513,7 @@
 			name					medpac_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_medkit"
 			forecolor				1 1 1 1
 			visible					1
@@ -561,11 +528,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -578,7 +545,7 @@
 			name					bacta_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					359 121 56 56
+			rect					858.5 273.5 84 84
 			background				"gfx/hud/i_icon_bacta"
 			forecolor				1 1 1 1
 			visible					1
@@ -590,7 +557,7 @@
 			name					bacta_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					415 121 56 56
+			rect					942.5 273.5 84 84
 			background				"gfx/hud/i_icon_big_bacta"
 			forecolor				1 1 1 1
 			visible					1
@@ -605,11 +572,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -622,7 +589,7 @@
 			name					seeker_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_seeker"
 			forecolor				1 1 1 1
 			visible					1
@@ -637,11 +604,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -654,7 +621,7 @@
 			name					sentry_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_sentrygun"
 			forecolor				1 1 1 1
 			visible					1
@@ -669,11 +636,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -686,7 +653,7 @@
 			name					eweb_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_eweb"
 			forecolor				1 1 1 1
 			visible					1
@@ -701,11 +668,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -718,7 +685,7 @@
 			name					stationary_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_shieldwall"
 			forecolor				1 1 1 1
 			visible					1
@@ -733,11 +700,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -750,7 +717,7 @@
 			name					personal_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					365 121 120 56
+			rect					867.5 273.5 180 84
 			background				"gfx/hud/i_icon_psd"
 			forecolor				1 1 1 1
 			visible					1
@@ -765,11 +732,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -782,7 +749,7 @@
 			name					cloak_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_cloak"
 			forecolor				1 1 1 1
 			visible					1
@@ -797,11 +764,11 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
@@ -814,7 +781,7 @@
 			name					jetpack_desc
 			group					gamedesc
 			style					WINDOW_STYLE_SHADER
-			rect					387 121 56 56
+			rect					900.5 273.5 84 84
 			background				"gfx/hud/i_icon_jetpack"
 			forecolor				1 1 1 1
 			visible					1
@@ -829,41 +796,38 @@
 			type					ITEM_TYPE_TEXTSCROLL
 			style					WINDOW_STYLE_EMPTY
 			visible					0
-			rect					240 190 360 148
+			rect					680 377 540 222
 			font					5
-			textscale				0.68
+			textscale				1.02
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
+			textaligny				19.5
 			backcolor				0 0 1 0
 			forecolor				0.56 0.64 0.74 1
 			lineHeight				15
 			maxLineChars			45
 			outlinecolor			0.36 0.78 0.96 0.22
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		backdrop				1
 
 		itemDef
 		{
 			name					vision_foot
-			rect					0 446 640 34
+			rect					0 832 1600 68
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.50
-			wide					1
+			backcolor				0.016 0.031 0.063 0.6
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
 			name					vision_foot_line
-			rect					0 446 640 0.67
+			rect					0 832 1600 1
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
-			wide					1
 			decoration
+			wide					1
 		}
 
 		itemDef
@@ -874,13 +838,13 @@
 			descText				@MENUS_BACKTORULES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					29 446 90 34
+			rect					48 844 135 44
 			font					5
-			textscale				0.6
+			textscale				0.9
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				45
-			textaligny				11.6
+			textalignx				67.5
+			textaligny				13.9
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
@@ -907,13 +871,13 @@
 			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					119 446 90 34
+			rect					280.58 844 135 44
 			font					5
-			textscale				0.6
+			textscale				0.9
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				45
-			textaligny				11.6
+			textalignx				67.5
+			textaligny				13.9
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show exitgamebutton_glow }
@@ -927,5 +891,6 @@
 			caps					1
 			flow					1
 		}
+		canvas					1600 900
 	}
 }

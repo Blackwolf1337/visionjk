@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					125 60 399 400
+		rect					507.5 182 598.5 600
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					324.5
-		descY					45
-		descScale				0.7
+		descX					806.75
+		descY					159.5
+		descScale				1.05
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -26,11 +26,14 @@
 			play "sound/interface/esc.wav" ;
 			close findplayer_popmenu
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-125 -60 640 480
+			rect					-187.5 -90 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -43,14 +46,14 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 399 400
+			rect					0 0 598.5 600
 			backcolor				0.031 0.055 0.11 0.97
 			forecolor				1 1 1 1
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -58,12 +61,12 @@
 			name					screenTitle
 			text					@MENUS_FIND_PLAYER
 			style					WINDOW_STYLE_EMPTY
-			rect					25 5 340 20
+			rect					37.5 7.5 510 30
 			font					5
-			textscale				0.52
+			textscale				0.78
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				170
-			textaligny				2.75
+			textalignx				255
+			textaligny				4.12
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -77,11 +80,11 @@
 			style					0
 			decoration
 			font					5
-			textscale				0.77
-			rect					25 30 90 25
+			textscale				1.16
+			rect					37.5 45 135 37.5
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				85
-			textaligny				1.35
+			textalignx				127.5
+			textaligny				2.03
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 		}
@@ -94,13 +97,13 @@
 			text					@MENUS_BLANK_1
 			maxchars				15
 			font					5
-			textscale				0.77
+			textscale				1.16
 			type					ITEM_TYPE_EDITFIELD
 			cvar					"ui_findplayer"
-			rect					115 28.35 250 19.86
+			rect					172.5 42.53 375 29.79
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				5
-			textaligny				3
+			textalignx				7.5
+			textaligny				4.5
 			forecolor				0.56 0.64 0.74 1
 			backcolor				0.11 0.18 0.29 0.45
 			bordercolor				0.086 0.149 0.247 1
@@ -108,42 +111,42 @@
 			action { ui_script FindPlayer }
 			mouseenter { setitemcolor nameEntry backcolor .25 .25 .25 .75 }
 			mouseexit { setitemcolor nameEntry backcolor .25 .25 .25 .5 }
-			radius					3
+			radius					4.5
 		}
 
 		itemDef
 		{
 			name					serverNameList
-			rect					25 60 340 90
+			rect					37.5 90 510 135
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			180
+			elementheight			24
 			font					5
-			textscale				0.69
+			textscale				1.03
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			bordercolor				0.086 0.149 0.247 1
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_FINDPLAYER
 			visible					1
-			textaligny				13.2
+			textaligny				19.8
 			mouseenter { setitemcolor serverNameWindow bordercolor 0.086 0.149 0.247 1 }
 			mouseexit { setitemcolor serverNameWindow bordercolor 0.086 0.149 0.247 1 }
-			radius					4
+			radius					6
 		}
 
 		itemDef
 		{
 			name					serverNameWindow
-			rect					25 60 340 90
+			rect					37.5 90 510 135
 			style					WINDOW_STYLE_PANEL
 			backcolor				0 0 0 0
 			forecolor				0 0 0 0
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
-			radius					5
+			radius					7.5
 		}
 
 		itemDef
@@ -152,12 +155,12 @@
 			cvar					"ui_playerServersFound"
 			type					0
 			style					WINDOW_STYLE_EMPTY
-			rect					5 360 390 30
+			rect					7.5 540 585 45
 			font					5
-			textscale				0.44
+			textscale				0.66
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				2.5
+			textaligny				3.75
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -167,37 +170,37 @@
 		itemDef
 		{
 			name					serverInfoList
-			rect					25 160 340 150
+			rect					37.5 240 510 225
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			180
+			elementheight			24
 			font					5
-			textscale				0.6
+			textscale				0.9
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SERVERSTATUS
 			notselectable
 			visible					1
-			columns					4 2 40 120 40 40 180 90 40 180 135 40 180
+			columns					4 3 40 180 60 40 270 135 40 270 202.5 40 270
 			mouseenter { setitemcolor serverInfowindow bordercolor 0.086 0.149 0.247 1 }
 			mouseexit { setitemcolor serverInfowindow bordercolor 0.086 0.149 0.247 1 }
-			radius					4
+			radius					6
 			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
 		itemDef
 		{
 			name					serverInfowindow
-			rect					25 160 340 150
+			rect					37.5 240 510 225
 			style					WINDOW_STYLE_PANEL
 			backcolor				0 0 0 0
 			forecolor				0 0 0 0
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
-			radius					5
+			radius					7.5
 		}
 
 		itemDef
@@ -207,12 +210,12 @@
 			descText				@MENUS_SEARCH_DESC
 			type					1
 			font					5
-			textscale				0.64
+			textscale				0.96
 			style					WINDOW_STYLE_PANEL
-			rect					20 315 110 20
+			rect					30 472.5 165 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -227,7 +230,7 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -239,12 +242,12 @@
 			descText				@MENUS_DONE_DESC
 			type					1
 			font					5
-			textscale				0.64
+			textscale				0.96
 			style					WINDOW_STYLE_PANEL
-			rect					140 315 110 20
+			rect					210 472.5 165 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -259,7 +262,7 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -271,12 +274,12 @@
 			descText				@MENUS_JOIN_PLAYER_DESC
 			type					1
 			font					5
-			textscale				0.64
+			textscale				0.96
 			style					WINDOW_STYLE_PANEL
-			rect					260 315 110 20
+			rect					390 472.5 165 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -291,12 +294,10 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 900
 	}
 }

@@ -6,12 +6,12 @@
 		name					"ids_popmenu"
 		visible					0
 		fullScreen				0
-		rect					0 0 640 480
+		rect					320 92 960 720
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
-		descX					320
-		descY					424
-		descScale				1
+		descX					800
+		descY					728
+		descScale				1.5
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -25,6 +25,9 @@
 			play "sound/interface/esc.wav" ;
 			close ids_popmenu ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
@@ -32,37 +35,37 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_INTRUSIONS
-			rect					30 74 580 20
+			rect					45 111 870 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				290
+			textalignx				435
 			font					5
-			textscale				0.74
+			textscale				1.11
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			caps					1
-			textaligny				2.5
+			textaligny				3.75
 		}
 
 		itemDef
 		{
 			name					ids_list
 			group					none
-			rect					50 102 540 230
+			rect					75 153 810 345
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			540
-			elementheight			16
+			elementwidth			810
+			elementheight			24
 			font					5
-			textscale				0.52
+			textscale				0.78
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.86 0.90 0.945 1
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_IDSLOG
 			visible					1
-			textaligny				13.9
-			radius					4
+			textaligny				20.85
+			radius					6
 			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
@@ -72,15 +75,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
-			rect					30 338 580 16
+			rect					45 507 870 24
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				290
+			textalignx				435
 			font					5
-			textscale				0.6
+			textscale				0.9
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
-			textaligny				1.05
+			textaligny				1.58
 		}
 
 		itemDef
@@ -89,12 +92,12 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					220 364 200 24
+			rect					330 546 300 36
 			text					@MENUS_DONE_CAPS
 			font					5
-			textscale				0.55
+			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				100
+			textalignx				150
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show ids_done_glow }
@@ -105,10 +108,8 @@
 				close ids_popmenu ;
 			}
 			caps					1
-			textaligny				1.88
+			textaligny				2.82
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 900
 	}
 }

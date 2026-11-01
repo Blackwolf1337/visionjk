@@ -387,6 +387,9 @@ typedef struct uiImport_s {
 		// used for a month (cvar_cleanup), one "name\tvalue\tday\n" a line, day in days since 1970, 0 for never.
 		// Returns the length, cut at a whole line where buf has no more room (ui_cvarclean.c).
 		int				(*Cvar_UnusedList)						( char *buf, int size );
+		// Only an engine that sets the cvar v_uiCvarInfo to 1 has this one, after ext.Cvar_UnusedList: the value a
+		// cvar starts with (its reset string) and its flags. qfalse for a cvar that does not exist.
+		qboolean		(*Cvar_Info)							( const char *var_name, char *defaultValue, int size, uint32_t *flags );
 	} ext;
 } uiImport_t;
 

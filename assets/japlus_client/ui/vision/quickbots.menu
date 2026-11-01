@@ -5,12 +5,12 @@
 	{
 		name					"quickbots"
 		fullScreen				MENU_FALSE
-		rect					100 50 440 392
+		rect					470 167 660 588
 		visible					MENU_FALSE
 		focusColor				0.36 0.78 0.96 1
-		descX					318
-		descY					447
-		descScale				0.7
+		descX					797
+		descY					762.5
+		descScale				1.05
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -21,11 +21,15 @@
 			close quickbots ;
 			open quickgame2 ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-100 -50 640 480
+			rect					-150 -75 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -38,14 +42,14 @@
 			name					frame_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					10 0 416 392
+			rect					15 0 624 588
 			forecolor				1 1 1 1
 			decoration
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			backcolor				0.031 0.055 0.11 0.97
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -54,12 +58,12 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_BOTS
-			rect					55 5 330 16
+			rect					82.5 7.5 495 24
 			font					5
-			textscale				0.52
+			textscale				0.78
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				165
-			textaligny				0.75
+			textalignx				247.5
+			textaligny				1.12
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -73,12 +77,12 @@
 			text					@MENUS_1_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM1
-			rect					20 55 196 20
+			rect					30 82.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -99,12 +103,12 @@
 			text					@MENUS_2_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM1
-			rect					20 75 196 20
+			rect					30 112.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -125,12 +129,12 @@
 			text					@MENUS_3_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM2
-			rect					20 95 196 20
+			rect					30 142.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -151,12 +155,12 @@
 			text					@MENUS_4_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM2
-			rect					20 115 196 20
+			rect					30 172.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -177,12 +181,12 @@
 			text					@MENUS_5_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM3
-			rect					20 135 196 20
+			rect					30 202.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -203,12 +207,12 @@
 			text					@MENUS_6_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM3
-			rect					20 155 196 20
+			rect					30 232.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -229,12 +233,12 @@
 			text					@MENUS_7_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM4
-			rect					20 175 196 20
+			rect					30 262.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -255,12 +259,12 @@
 			text					@MENUS_8_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM4
-			rect					20 195 196 20
+			rect					30 292.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -281,12 +285,12 @@
 			text					@MENUS_9
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM5
-			rect					220 55 196 20
+			rect					330 82.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
-			textaligny				-2.5
+			textalignx				30
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -307,12 +311,12 @@
 			text					@MENUS_10
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM5
-			rect					220 75 196 20
+			rect					330 112.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -333,12 +337,12 @@
 			text					@MENUS_11
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM6
-			rect					220 95 196 20
+			rect					330 142.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -359,12 +363,12 @@
 			text					@MENUS_12
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM6
-			rect					220 115 196 20
+			rect					330 172.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -385,12 +389,12 @@
 			text					@MENUS_13
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM7
-			rect					220 135 196 20
+			rect					330 202.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -411,12 +415,12 @@
 			text					@MENUS_14
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM7
-			rect					220 155 196 20
+			rect					330 232.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -437,12 +441,12 @@
 			text					@MENUS_15
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM8
-			rect					220 175 196 20
+			rect					330 262.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -463,12 +467,12 @@
 			text					@MENUS_16
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM8
-			rect					220 195 196 20
+			rect					330 292.5 294 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
-			textaligny				-2.5
+			textalignx				15
+			textaligny				-3.75
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				1 0.54 0.50 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -489,11 +493,11 @@
 			descText				@MENUS_RETURN_PREVIOUS
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.64
+			textscale				0.96
 			style					WINDOW_STYLE_PANEL
-			rect					165 357 110 20
-			textalignx				55
-			textaligny				4
+			rect					247.5 535.5 165 30
+			textalignx				82.5
+			textaligny				6
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -509,13 +513,10 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
+		canvas					1600 900
 	}
 }

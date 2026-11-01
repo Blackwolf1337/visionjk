@@ -531,6 +531,7 @@ void	Cvar_VM_VariableStringBuffer( const char *name, char *buffer, int bufsize )
 int		Cvar_VM_VariableIntegerValue( const char *name );							// modules: a cvar a module
 float	Cvar_VM_VariableValue( const char *name );									// reads is used
 int		Cvar_UnusedList( char *buf, int size );
+qboolean	Cvar_Info( const char *var_name, char *defaultValue, int size, uint32_t *flags );
 void	Cvar_SeenLoad( void );
 void	Cvar_SeenSave( void );
 void	Cvar_SeenFrame( void );

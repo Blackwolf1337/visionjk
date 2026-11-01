@@ -5,12 +5,12 @@
 	{
 		name					"advancedcreateserver"
 		fullScreen				MENU_FALSE
-		rect					40 50 569 392
+		rect					380 167 853.5 588
 		visible					MENU_FALSE
 		focusColor				0.36 0.78 0.96 1
-		descX					324.5
-		descY					447
-		descScale				0.7
+		descX					806.75
+		descY					762.5
+		descScale				1.05
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -22,11 +22,15 @@
 			close advancedcreateserver ;
 			open createserver ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-40 -50 640 480
+			rect					-60 -75 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -39,14 +43,14 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 569 392
+			rect					0 0 853.5 588
 			backcolor				0.031 0.055 0.11 0.97
 			forecolor				1 1 1 1
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -55,12 +59,12 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_SERVER_RULES
-			rect					115 5 330 16
+			rect					172.5 7.5 495 24
 			font					5
-			textscale				0.52
+			textscale				0.78
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				165
-			textaligny				0.75
+			textalignx				247.5
+			textaligny				1.12
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -72,11 +76,11 @@
 			name					rules_title
 			group					none
 			text					@MENUS_COMBAT_RULES
-			rect					5 35 280 20
+			rect					7.5 52.5 420 30
 			font					5
-			textscale				0.59
+			textscale				0.89
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				140
+			textalignx				210
 			textaligny				0
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -100,12 +104,12 @@
 				"4" ;
 				"5"
 			}
-			rect					5 55 280 20
+			rect					7.5 82.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -121,12 +125,12 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_weaponDisable"
-			rect					5 75 280 20
+			rect					7.5 112.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				"ui_netGameType"
@@ -149,12 +153,12 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_duelWeaponDisable"
-			rect					5 75 280 20
+			rect					7.5 112.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				"ui_netGameType"
@@ -182,12 +186,12 @@
 				"0" ;
 				"3"
 			}
-			rect					5 95 280 20
+			rect					7.5 142.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -204,12 +208,12 @@
 			ownerdraw				UI_FORCE_MASTERY_SET
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					5 115 280 20
+			rect					7.5 172.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -232,12 +236,12 @@
 				"2" ;
 				"4"
 			}
-			rect					5 135 280 20
+			rect					7.5 202.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
@@ -270,12 +274,12 @@
 				@MENUS_NO 1
 				@MENUS_LIMITED 2
 			}
-			rect					5 135 280 20
+			rect					7.5 202.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
@@ -295,12 +299,12 @@
 			text					@MENUS_SABERLOCKING
 			descText				@MENUS_SABERLOCKING_DESC
 			cvar					"g_saberLocking"
-			rect					5 175 280 20
+			rect					7.5 262.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				3
+			textalignx				247.5
+			textaligny				4.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -313,11 +317,11 @@
 			name					rules_title
 			group					none
 			text					@MENUS_ADV_GAME_RULES
-			rect					5 205 280 20
+			rect					7.5 307.5 420 30
 			font					5
-			textscale				0.59
+			textscale				0.89
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				140
+			textalignx				210
 			textaligny				0
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -333,12 +337,12 @@
 			text					@MENUS_AUTO_JOIN
 			descText				@MENUS_SET_TO_ON_TO_HAVE_PLAYERS
 			cvar					"g_teamautojoin"
-			rect					5 225 280 20
+			rect					7.5 337.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				3
+			textalignx				247.5
+			textaligny				4.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -360,12 +364,12 @@
 				"3" ;
 				"5"
 			}
-			rect					5 285 280 20
+			rect					7.5 427.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -378,11 +382,11 @@
 			name					rules_title
 			group					none
 			text					@MENUS_SERVER_RULES
-			rect					285 35 280 20
+			rect					427.5 52.5 420 30
 			font					5
-			textscale				0.59
+			textscale				0.89
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				140
+			textalignx				210
 			textaligny				0
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -397,12 +401,12 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_AUTO_MAP_CYCLE
 			cvar					"g_autoMapCycle"
-			rect					285 55 280 20
+			rect					427.5 82.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			descText				@MENUS_AUTO_MAP_CYCLE_DESC
@@ -418,12 +422,12 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_ENABLE_VOTING
 			cvar					"g_allowvote"
-			rect					285 75 280 20
+			rect					427.5 112.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			descText				@MENUS_THIS_ALLOWS_PLAYERS_TO
@@ -440,12 +444,12 @@
 			text					@MENUS_DEDICATED_SERVER
 			cvar					"ui_dedicated"
 			cvarFloatList { @MENUS_NO 0 @MENUS_LAN 1 @MENUS_INTERNET 2 }
-			rect					285 95 280 20
+			rect					427.5 142.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			descText				@MENUS_A_DEDICATED_SERVER_IS
@@ -461,12 +465,12 @@
 			type					4
 			text					@MENUS_PASSWORD_1
 			cvar					"g_password"
-			rect					285 115 280 20
+			rect					427.5 172.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				130
-			textaligny				1
+			textalignx				195
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			maxchars				8
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -481,11 +485,11 @@
 			name					rules_title
 			group					none
 			text					@MENUS_CONNECTION_RULES
-			rect					285 205 280 20
+			rect					427.5 307.5 420 30
 			font					5
-			textscale				0.59
+			textscale				0.89
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				140
+			textalignx				210
 			textaligny				0
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -501,12 +505,12 @@
 			text					@MENUS_PURE_SERVER
 			descText				@MENUS_CLIENT_MUST_HAVE_EXACT
 			cvar					"sv_pure"
-			rect					285 225 280 20
+			rect					427.5 337.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -522,12 +526,12 @@
 			text					@MENUS_AUTO_DOWNLOAD
 			descText				@MENUS_CLIENTS_CAN_DOWNLOAD
 			cvar					"sv_allowdownload"
-			rect					285 245 280 20
+			rect					427.5 367.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -544,12 +548,12 @@
 			text					@MENUS_MINIMUM_PING
 			descText				@MENUS_FASTEST_CLIENT_ALLOWED
 			cvar					"sv_minping"
-			rect					285 265 280 20
+			rect					427.5 397.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -566,12 +570,12 @@
 			text					@MENUS_MAXIMUM_PING
 			descText				@MENUS_SLOWEST_CLIENT_ALLOWED
 			cvar					"sv_maxping"
-			rect					285 285 280 20
+			rect					427.5 427.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -587,12 +591,12 @@
 			text					@MENUS_MAX_RATE
 			descText				@MENUS_DATA_TRANSFER_RATE_TO
 			cvar					"sv_maxrate"
-			rect					285 305 280 20
+			rect					427.5 457.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -609,12 +613,12 @@
 			descText				@MENUS_MINIMUM_TIME_ALLOWED
 			cvar					"sv_reconnectlimit"
 			maxchars				4
-			rect					285 325 280 20
+			rect					427.5 487.5 420 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				165
-			textaligny				1
+			textalignx				247.5
+			textaligny				1.5
 			font					5
-			textscale				0.68
+			textscale				1.02
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -629,11 +633,11 @@
 			descText				@MENUS_GO_BACK_TO_STANDARD_SETTINGS
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.64
+			textscale				0.96
 			style					WINDOW_STYLE_PANEL
-			rect					225 357 110 20
-			textalignx				55
-			textaligny				4
+			rect					337.5 535.5 165 30
+			textalignx				82.5
+			textaligny				6
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -646,13 +650,10 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
+		canvas					1600 900
 	}
 }

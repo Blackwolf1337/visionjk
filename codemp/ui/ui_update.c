@@ -39,6 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define NOTICE_FONT		4		// the small font of the menus
 #define NOTICE_SCALE	1.0f
 #define NOTICE_Y		414.0f
+#define NOTICE_Y_NEW	453.0f		// the new look: in the middle of the bar at the bottom of the first page (canvas.py)
 #define NOTICE_PAD_X	10.0f
 #define NOTICE_PAD_Y	4.0f
 #define NOTICE_GAP		8.0f	// between the line and the pill
@@ -76,7 +77,7 @@ static void UI_UpdateNoticeBox( noticeBox_t *box, float x, const char *text, qbo
 
 	box->shown = qtrue;
 	box->x = x;
-	box->y = NOTICE_Y;
+	box->y = UI_NewLook() ? NOTICE_Y_NEW : NOTICE_Y;
 	box->w = UI_UpdateNoticeWidth( text );
 	over = (qboolean)( box->clickable && UI_UpdateNoticeHover( box ) );
 

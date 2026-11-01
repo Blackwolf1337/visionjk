@@ -7,39 +7,47 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					10 40 380 280
+		rect					180 80 760 560
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		descX					560
+		descY					570
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 380 240
+			rect					0 0 760 480
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
 		{
 			name					about
-			rect					10 5 360 20
+			rect					20 10 720 40
 			style					WINDOW_STYLE_EMPTY
 			type					4
 			text					@MENUS_HOST_NAME
 			cvar					"ui_about_hostname"
 			maxPaintChars			40
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-0.5
+			textalignx				300
+			textaligny				-1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -48,18 +56,18 @@
 		itemDef
 		{
 			name					about
-			rect					10 40 360 20
+			rect					20 80 720 40
 			style					0
 			type					4
 			text					@MENUS_ADDRESS
 			cvar					"cl_currentServerAddress"
 			maxPaintChars			24
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			forecolor				0.86 0.90 0.945 1
 			font					5
-			textscale				0.86
+			textscale				1.72
 			visible					1
 			decoration
 		}
@@ -67,17 +75,17 @@
 		itemDef
 		{
 			name					about
-			rect					10 60 360 20
+			rect					20 120 720 40
 			type					4
 			style					0
 			text					@MENUS_MAP_NAME
 			cvar					"ui_about_mapname"
 			maxPaintChars			20
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -86,7 +94,7 @@
 		itemDef
 		{
 			name					about
-			rect					10 80 360 20
+			rect					20 160 720 40
 			style					0
 			textalign				ITEM_ALIGN_RIGHT
 			text					@MENUS_TYPE
@@ -104,10 +112,10 @@
 				@MENUS_CAPTURE_THE_FLAG 8
 				@MENUS_CAPTURE_THE_YSALIMARI 9
 			}
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 .75 .25
 			visible					1
@@ -117,17 +125,17 @@
 		itemDef
 		{
 			name					about
-			rect					10 100 360 20
+			rect					20 200 720 40
 			type					4
 			style					0
 			text					@MENUS_MAXIMUM_PLAYERS
 			cvar					"ui_about_maxclients"
 			maxPaintChars			12
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -136,17 +144,17 @@
 		itemDef
 		{
 			name					about
-			rect					10 120 360 20
+			rect					20 240 720 40
 			type					4
 			style					0
 			text					@MENUS_TIME_LIMIT
 			maxPaintChars			12
 			cvar					"ui_about_timelimit"
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -155,7 +163,7 @@
 		itemDef
 		{
 			name					about
-			rect					10 140 360 20
+			rect					20 280 720 40
 			type					4
 			style					0
 			text					@MENUS_FRAG_LIMIT
@@ -173,10 +181,10 @@
 			maxPaintChars			12
 			cvar					"ui_about_fraglimit"
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -185,7 +193,7 @@
 		itemDef
 		{
 			name					about
-			rect					10 140 360 20
+			rect					20 280 720 40
 			type					4
 			style					0
 			text					@MENUS_CAPTURE_LIMIT
@@ -198,10 +206,10 @@
 			maxPaintChars			12
 			cvar					"ui_about_capturelimit"
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -210,7 +218,7 @@
 		itemDef
 		{
 			name					about
-			rect					10 160 360 20
+			rect					20 320 720 40
 			type					4
 			style					0
 			text					@MENUS_DUEL_LIMIT
@@ -223,10 +231,10 @@
 			maxPaintChars			12
 			cvar					"ui_about_duellimit"
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -235,17 +243,17 @@
 		itemDef
 		{
 			name					about
-			rect					10 180 360 20
+			rect					20 360 720 40
 			type					4
 			maxPaintChars			4
 			style					0
 			text					@MENUS_MINIMUM_PLAYERS
 			cvar					"ui_about_botminplayers"
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				150
-			textaligny				-1.5
+			textalignx				300
+			textaligny				-3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -254,28 +262,21 @@
 		itemDef
 		{
 			name					about
-			rect					10 210 360 20
+			rect					20 420 720 40
 			type					4
 			style					0
 			text					@MENUS_VERSION
 			cvar					version
 			maxPaintChars			40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				180
-			textaligny				15
+			textalignx				360
+			textaligny				30
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		descX					200
-		descY					285
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

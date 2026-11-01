@@ -632,6 +632,14 @@ MORE = {
     '%i days ago': ('il y a %i jours', 'hace %i días'),
     # the search of Setup
     'Search': ('Rechercher', 'Buscar'),
+    'Essentials': ('Essentiel', 'Esenciales'),
+    'Shows the settings that matter, or all of them.': ('Affiche les réglages importants, ou tous.', 'Muestra los ajustes importantes o todos.'),
+    'All Settings': ('Tous les réglages', 'Todos los ajustes'),
+    'Search all settings': ('Rechercher dans tous les réglages', 'Buscar en todos los ajustes'),
+    'Changed from default': ('Modifié par rapport à la valeur par défaut', 'Cambiado respecto al valor predeterminado'),
+    'Some changes apply after a restart': ("Certains changements s'appliquent après un redémarrage", 'Algunos cambios se aplican al reiniciar'),
+    'Revert': ('Annuler', 'Revertir'),
+    'Apply': ('Appliquer', 'Aplicar'),
     'Shows the settings of all pages whose name or description has these words.': ("Affiche les paramètres de toutes les pages dont le nom ou la description contient ces mots.", 'Muestra los ajustes de todas las páginas cuyo nombre o descripción tiene estas palabras.'),
     'No setting has these words.': ("Aucun paramètre ne contient ces mots.", 'Ningún ajuste tiene estas palabras.'),
     # the command menu (cmdmenu/cg_cmdmenu.c, ui/vision/commandmenu.txt)
@@ -726,4 +734,11 @@ MORE = {
     'Get (%s)': ('Obtenir (%s)', 'Obtener (%s)'),
     'Upload your own at jka.vision/models.html': ('Envoyez les vôtres sur jka.vision/models.html', 'Sube los tuyos en jka.vision/models.html'),
     'W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away.': ('W/S : rouler. A/D : tourner. Espace : sauter. Souris : regarder. Échap : le ranger.', 'W/S: avanzar. A/D: girar. Espacio: saltar. Ratón: mirar. Esc: guardarlo.'),
+    'Changed settings': ('Réglages modifiés', 'Ajustes cambiados'),
+    'Nothing changed yet.': ("Rien de modifié pour l'instant.", 'Aún no has cambiado nada.'),
+    'Current': ('Actuel', 'Actual'),
+    'Takes effect': ("Prise d'effet", 'Se aplica'),
+    'After restart': ('Après redémarrage', 'Al reiniciar'),
+    'Instantly': ('Immédiat', 'Al instante'),
+    'On': ('Activé', 'Activado'),
 }

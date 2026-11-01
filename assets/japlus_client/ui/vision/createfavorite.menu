@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					200 150 240 180
+		rect					620 317 360 270
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					320
-		descY					305
-		descScale				0.7
+		descX					800
+		descY					549.5
+		descScale				1.05
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -22,11 +22,14 @@
 			play "sound/interface/esc.wav" ;
 			close createfavorite_popmenu
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-200 -150 640 480
+			rect					-300 -225 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -39,14 +42,14 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 240 150
+			rect					0 0 360 225
 			backcolor				0.031 0.055 0.11 0.97
 			forecolor				1 1 1 1
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -54,12 +57,12 @@
 			name					title
 			text					@MENUS_FAVORITE_SERVER_INFO
 			style					WINDOW_STYLE_EMPTY
-			rect					5 5 220 20
+			rect					7.5 7.5 330 30
 			font					5
-			textscale				0.52
+			textscale				0.78
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				110
-			textaligny				2.75
+			textalignx				165
+			textaligny				4.12
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -73,11 +76,11 @@
 			style					0
 			decoration
 			font					5
-			textscale				0.69
-			rect					10 35 220 20
+			textscale				1.03
+			rect					15 52.5 330 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				110
-			textaligny				4.2
+			textalignx				165
+			textaligny				6.3
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 		}
@@ -90,21 +93,21 @@
 			text					" "
 			descText				@MENUS_INPUT_IP_ADDRESS_OF_SERVER
 			font					5
-			textscale				0.69
+			textscale				1.03
 			TYPE					4
 			maxchars				21
 			cvar					"ui_favoriteAddress"
-			rect					10 59 220 20
+			rect					15 88.5 330 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				42
-			textaligny				-0.8
+			textalignx				63
+			textaligny				-1.2
 			forecolor				0.56 0.64 0.74 1
 			bordercolor				0.086 0.149 0.247 1
 			backcolor				0.11 0.18 0.29 0.45
 			visible					1
 			mouseenter { setitemcolor addressEntry backcolor .25 .25 .25 .75 }
 			mouseexit { setitemcolor addressEntry backcolor .25 .25 .25 .5 }
-			radius					3
+			radius					4.5
 		}
 
 		itemDef
@@ -114,12 +117,12 @@
 			descText				@MENUS_FINISHED_INPUTTING_INFO
 			type					1
 			font					5
-			textscale				0.64
+			textscale				0.96
 			style					WINDOW_STYLE_PANEL
-			rect					65 115 110 20
+			rect					97.5 172.5 165 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -135,12 +138,10 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 900
 	}
 }

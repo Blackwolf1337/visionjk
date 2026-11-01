@@ -6,7 +6,7 @@
 		name					"siege_popmenu"
 		visible					0
 		fullscreen				0
-		rect					158 80 324 331
+		rect					476 160 648 662
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		popup
@@ -17,49 +17,57 @@
 			close siege_popmenu
 			open main
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		descX					800
+		descY					832
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					window
-			rect					0 40 324 291
+			rect					0 80 648 582
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.97
 			forecolor				0 0 0 1
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
 		{
 			name					siegeinfo
-			rect					0 50 320 20
+			rect					0 100 640 40
 			text					@MENUS_DATAPAD
 			textalign				1
 			textstyle				0
-			textscale				0.86
-			textalignx				160
+			textscale				1.72
+			textalignx				320
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			font					5
-			textaligny				1.5
+			textaligny				3
 		}
 
 		itemDef
 		{
 			name					siegeinfo
-			rect					60 80 200 270
+			rect					120 160 400 540
 			type					ITEM_TYPE_TEXT
 			style					WINDOW_STYLE_EMPTY
 			textstyle				0
 			autowrapped
 			cvar					"cg_siegeMessage"
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				100
-			textscale				0.86
+			textalignx				200
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -72,12 +80,12 @@
 			group					grpControlbutton
 			text					@MENUS_OKAY
 			type					1
-			textscale				0.64
+			textscale				1.28
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					125.5 298 70 20
+			rect					251 596 140 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				35
+			textalignx				70
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -88,19 +96,12 @@
 			mouseEnter { show button_glow }
 			mouseExit { hide button_glow }
 			font					5
-			textaligny				4
+			textaligny				8
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		descX					320
-		descY					416
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

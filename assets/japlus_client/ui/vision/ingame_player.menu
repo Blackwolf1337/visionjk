@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					16 30 608 436
+		rect					192 60 1216 872
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
-		descX					304
-		descY					415
-		descScale				0.55
+		descX					768
+		descY					830
+		descScale				1.1
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
@@ -38,7 +38,7 @@
 		itemDef
 		{
 			name					vision_strip
-			rect					0 0 608 26
+			rect					0 0 1216 52
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
@@ -48,7 +48,7 @@
 		itemDef
 		{
 			name					vision_strip_line
-			rect					0 26 608 0.67
+			rect					0 52 1216 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -57,30 +57,30 @@
 
 		itemDef
 		{
-			name					vision_here
-			rect					9 0 80 26
+			name					vision_strip_here
+			rect					18 0 160 52
 			visible					1
 			text					@MENUS_PROFILE
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			flow					3
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_character
-			rect					89 0 80 26
+			rect					178 0 160 52
 			visible					1
 			text					@VISION_CHARACTER
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -89,18 +89,18 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_saber
-			rect					169 0 80 26
+			rect					338 0 160 52
 			visible					1
 			text					@MENUS_LIGHTSABER_CAPS
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -109,18 +109,18 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_force
-			rect					249 0 80 26
+			rect					498 0 160 52
 			visible					1
 			text					@MENUS_DP_FORCE
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -129,19 +129,19 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 			group					yesforce
 		}
 
 		itemDef
 		{
 			name					vision_to_moves
-			rect					329 0 80 26
+			rect					658 0 160 52
 			visible					1
 			text					@MENUS_MOVES
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -150,54 +150,54 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_left
-			rect					6 32 262 364
+			rect					12 64 524 728
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
 			bordercolor				0.11 0.18 0.29 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_middle
-			rect					274 32 140 364
+			rect					548 64 280 728
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_right
-			rect					420 32 182 364
+			rect					840 64 364 728
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
 			bordercolor				0.11 0.18 0.29 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_glow
-			rect					294 368 100 12
+			rect					588 736 200 24
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.36 0.78 0.96 0.07
-			radius					6
+			radius					12
 			glowcolor				0.36 0.78 0.96 0.14
 			decoration
 		}
@@ -207,15 +207,15 @@
 			name					modeltitle
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_CHARACTER_MODEL
-			rect					14 38 246 22
+			rect					28 76 492 44
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.54
+			textscale				1.08
 			forecolor				0.56 0.64 0.74 1
 			visible					1
-			textaligny				9
+			textaligny				18
 			caps					1
 			decoration
 		}
@@ -223,7 +223,7 @@
 		itemDef
 		{
 			name					modeltitle
-			rect					12 59 250 0.67
+			rect					24 118 500 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -233,46 +233,46 @@
 		itemDef
 		{
 			name					headlist
-			rect					12 62 250 328
+			rect					24 124 500 656
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			56
-			elementheight			56
+			elementwidth			112
+			elementheight			112
 			elementtype				LISTBOX_IMAGE
 			feeder					FEEDER_Q3HEADS
 			forecolor				0.36 0.78 0.96 1
 			descText				@MENUS_CHOOSE_THE_MODEL_FOR
 			visible					1
-			textscale				0.6
+			textscale				1.2
 			action { play "sound/interface/button1" }
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
-			radius					3.2
+			radius					6.4
 		}
 
 		itemDef
 		{
 			name					vision_player
-			rect					428 38 166 22
+			rect					856 76 332 44
 			visible					1
 			text					@VISION_PLAYER
 			font					5
-			textscale				0.54
+			textscale				1.08
 			forecolor				0.56 0.64 0.74 1
 			style					WINDOW_STYLE_EMPTY
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_player
-			rect					426 59 170 0.67
+			rect					852 118 340 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -287,9 +287,9 @@
 			text					@MENUS_NAME1
 			cvar					"ui_Name"
 			maxchars				26
-			rect					426 60 170 22
+			rect					852 120 340 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			outlinecolor			1 .5 .5 .5
 			descText				@MENUS_ENTER_YOUR_NAME_HERE
@@ -304,13 +304,13 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_TEAM_COLOR
 			ownerdraw				UI_SKIN_COLOR
-			rect					426 82 170 22
+			rect					852 164 340 44
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				4.2
+			textalignx				16
+			textaligny				8.4
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			cvarTest				"ui_about_gametype"
@@ -331,13 +331,13 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_TEAM_COLOR
 			ownerdraw				UI_SKIN_COLOR
-			rect					426 82 170 22
+			rect					852 164 340 44
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				4.2
+			textalignx				16
+			textaligny				8.4
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			cvarTest				"ui_about_gametype"
@@ -356,7 +356,7 @@
 		itemDef
 		{
 			name					vision_rule
-			rect					426 103 170 0.67
+			rect					852 206 340 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
@@ -370,13 +370,13 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_JEDI_NONJEDI
 			ownerdraw				UI_JEDI_NONJEDI
-			rect					426 104 170 22
+			rect					852 208 340 44
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
+			textalignx				16
 			outlinecolor			1 .5 .5 .5
-			textaligny				4.2
+			textaligny				8.4
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_JEDI_NONJEDI
 			visible					1
@@ -386,7 +386,7 @@
 		itemDef
 		{
 			name					vision_rule
-			rect					426 125 170 0.67
+			rect					852 250 340 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
@@ -398,13 +398,13 @@
 			name					title_holster
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_HOLSTERS
-			rect					428 132 166 22
+			rect					856 264 332 44
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.54
+			textscale				1.08
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -414,7 +414,7 @@
 		itemDef
 		{
 			name					title_holster
-			rect					426 153 170 0.67
+			rect					852 306 340 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -424,30 +424,30 @@
 		itemDef
 		{
 			name					holsterlist
-			rect					426 156 170 130
+			rect					852 312 340 260
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			45
-			elementheight			45
+			elementwidth			90
+			elementheight			90
 			elementtype				LISTBOX_IMAGE
 			feeder					FEEDER_HOLSTERS
 			horizontalscroll
 			forecolor				0.36 0.78 0.96 1
 			descText				"Choose a model for your holster (used for holstered swords)"
 			visible					1
-			textscale				0.6
+			textscale				1.2
 			action { play "sound/interface/button1" }
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
-			radius					3.2
+			radius					6.4
 		}
 
 		itemDef
 		{
 			name					vision_foot
-			rect					0 404 608 32
+			rect					0 808 1216 64
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
@@ -457,7 +457,7 @@
 		itemDef
 		{
 			name					vision_foot_line
-			rect					0 404 608 0.67
+			rect					0 808 1216 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -471,12 +471,12 @@
 			text					@MENUS_JOIN_RED
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					9 404 72 32
+			rect					18 808 144 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				36
-			textaligny				10.6
+			textalignx				72
+			textaligny				21.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -507,12 +507,12 @@
 			text					@MENUS_JOIN_BLUE
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					81 404 72 32
+			rect					162 808 144 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				36
-			textaligny				10.6
+			textalignx				72
+			textaligny				21.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -543,12 +543,12 @@
 			text					@MENUS_SPECTATE
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					153 404 72 32
+			rect					306 808 144 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				36
-			textaligny				10.6
+			textalignx				72
+			textaligny				21.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_APPLY_CHANGES_BUT_REMAIN
 			visible					1
@@ -570,12 +570,12 @@
 			text					@MENUS_APPLY
 			type					1
 			style					WINDOW_STYLE_PANEL
-			rect					464 410 132 20
+			rect					928 820 264 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				66
-			textaligny				4.6
+			textalignx				132
+			textaligny				9.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
@@ -589,7 +589,7 @@
 			caps					1
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
-			radius					3.2
+			radius					6.4
 		}
 
 		itemDef
@@ -599,12 +599,12 @@
 			text					@MENUS_JOIN_GAME
 			type					1
 			style					WINDOW_STYLE_PANEL
-			rect					464 410 132 20
+			rect					928 820 264 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				66
-			textaligny				4.6
+			textalignx				132
+			textaligny				9.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
@@ -618,7 +618,7 @@
 			caps					1
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
-			radius					3.2
+			radius					6.4
 		}
 
 		itemDef
@@ -626,7 +626,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					276 38 136 344
+			rect					552 76 272 688
 			model_g2anim			"BOTH_WALK1"
 			asset_model				"models/players/jedi_hm/model.glm"
 			model_g2skin			"models/players/jedi_hm/|head_b1|torso_f1|lower_a1"
@@ -640,5 +640,6 @@
 			visible					1
 			decoration
 		}
+		canvas					1600 1200
 	}
 }

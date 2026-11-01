@@ -9,6 +9,13 @@ round corners (a radius of 5.3 for a card, 6.4 for a window and for a window in 
 palette of a dark blue and one light blue accent (`tools/menus/theme.py`), and widgets that are drawn as in that
 design: a segmented switch, a slider with a light knob, keys of a keyboard, a thin scroll thumb.
 
+Since 2026-11-02 the menus follow the boards of that design page for page. The first pass of 2026-11-01 looked too
+big and stretched in the game, and what was wanted was a game that follows the Setup board ("Setup, decluttered" on
+the canvas VisionJK Settings) on every page, with the VisionJK design system. So the menu files are written in the
+pixels of a design canvas now (the menu word `canvas <w> <h>`), and the ui puts that picture on the screen as large as
+it fits, with the same scale across and down, in the middle. Setup and Controls have the layout of the board, the
+pages of Play have the layout of theirs, and a screen can say which of its settings were changed.
+
 Nothing of it is painted. Every shape is a picture the code computes (`codemp/ui/ui_skin.c`) and hands to the
 renderer, so no file of a pk3 is involved and a pure server takes nothing away.
 
@@ -25,44 +32,63 @@ HUD of its own gets them drawn as it always did, see "For mods".
 
 Both are in Setup, HUD, under Menus and HUD.
 
-- Outside a game every page has a bar at the top with the four sections (Play, Profile, Controls, Setup), a
-  heading, the explanation of what the mouse is on under it, and a bar at the bottom with its buttons: what
-  goes back as words at the left, the button that goes on (Apply, Join, Begin, Next, Yes) as a block filled
-  with the accent and dark words at the right. The other buttons of a window are outlined.
-- The first page has no heading. At the left stand the name of the game, "Jedi Academy, rebuilt", a short
-  accent line, a large card JOIN A GAME (filled with the accent, it opens the server browser) and four cards
-  under it: CREATE A GAME, SOLO GAME, PLAY DEMO and RULES. Each card has the description of the old Play page as
-  its text. In the middle stands the model of the player (`homeModel`, see the table of new words), and at the
-  right a panel with the turning box of the icon and "jka.vision". The button for what is new is the one the code draws
-  under the model (`ui_update.c`). EXIT is at the
-  bottom left and the version at the bottom right.
-- Setup and Controls are options screens, outside a game and in one, with three columns: the pages of the
-  screen as a list at the left (the rail: a panel with the search of Setup at its top and one tab for each
-  page under it, the open one filled with an accent bar at its left), the settings of the open page as one
-  list of 17 rows in the middle, and at the right the name of the row under the mouse with what it is for. A
-  row has its name at the left and its widget at the right: a switch with both of its states as two halves
-  in a dark field, the chosen one filled with the accent (a click on a half sets it), a choice between two
-  accent arrows with its value in the accent, a slider that shows its track first and what it stands at at
-  its right, the keys of a command drawn as keys of a keyboard (a key that is not bound is an empty outline
-  with a dash), a dark field to type in. The row under the mouse is lit and its name turns white. A list
-  that is longer than its window moves with the wheel, the page keys, the bar at its right or the arrow
-  keys, which walk through every row. Left and right change the row in focus from the keyboard. The bar at
-  the bottom has the way back, the defaults, and the button that restarts the video once a video setting
-  was changed.
-- In a game the menus are panels over the level, which is out of focus behind them (`v_menuBlur`). Where the
-  menu stands in the level (`v_immersiveMenu 1`) the panel behind it is as large as what is open: the bar
-  at the top alone is a bar. The bar of a game is one row of buttons as wide as their words: JOIN, VOTE, CALL
-  VOTE, VOICE CHAT (where there is one), ADD BOT, PROFILE, CONTROLS, SETUP, PHOTO, ABOUT, SERVERS and EXIT,
-  with EXIT in red. It fits into the bar, or into the panel in the level.
-- The server browser has its filters in two rows at the top (Get New List and Refresh List as outlined
-  buttons, the source, the filter and the game type in dark fields, then the switches of the view and the data
-  rate), the list at the left, and at the right a panel with the picture of the level of the chosen server and
-  under it the outlined buttons Server Info, Add and Delete Favorite, Password, New Favorite, Find Player and
-  Intrusions. Create a game has the game type and the list of levels at the left, the picture of the level in
-  the middle with the name of the server and the rules as rows under it, and the 16 places of players in two
-  columns at the right with the skill under them. Solo game has the list of levels and the picture side by side,
-  and on its second page the rules as rows on a panel with the picture beside it. Leaving the game is a dialog
-  in the middle of the page with NO outlined and YES filled red.
+- Outside a game every page is laid out on a canvas of 1600 x 900 (the board of the design) and has a bar at the
+  top (72 high) with the name of the game and the four sections (Play, Profile, Controls, Setup), the content
+  under it, and a bar at the bottom (68 high) with its buttons: what goes back as words at the left, the button
+  that goes on (Apply, Join, Begin, Next, Yes) as a block filled with the accent and dark words at the right. The
+  other buttons of a window are outlined. PLAY in the bar opens the server browser. The pages of Play (Join a
+  game, Create a game, Solo game, Play Demo, Rules) have a strip under the top bar that leads from one to the
+  other. A page that was not laid out by hand for the canvas is put on it by `convert()`: the bars of the board
+  and its old content at 80 % of its old size in the middle.
+- The first page has the name of the game at the left, "Jedi Academy, rebuilt", a short accent line, a large card
+  JOIN A GAME (filled with the accent, it opens the server browser) and four cards under it: CREATE A GAME, SOLO
+  GAME, PLAY DEMO and RULES. Each card has the description of the old Play page as its text. In the middle
+  stands the model of the player (`homeModel`, see the table of new words) with the name of the player under it
+  (an item that writes the cvar `name` while it is typed in) and a Profile button under that. At the right
+  stand a box with the turning icon and "What's new". The line that says a new version is out stands in the middle
+  of the bar at the bottom (`NOTICE_Y_NEW` in `ui_update.c`). EXIT is at the bottom left and the version at the
+  bottom right.
+- Setup and Controls are options screens, outside a game and in one, laid out as the Setup board of the design
+  (`tools/menus/options.py`, `build_canvas`). At the top is the bar of the sections. At the left (260 wide) stand
+  the search ("Search all settings", Setup only) and the pages of the screen as a list, the open one filled with an
+  accent bar at its left. In the middle stand the title and the description of the page, at their right the switch
+  Essentials / All Settings, and under them the parts of the page as cards in two columns: each part goes into the
+  shorter column, and a page of Controls that has one part has its rows halved into two cards. Each card has its
+  heading as its head with a line under it. At the right (340 wide) stand what the row under the mouse is for and the
+  list of changed settings (see below). The bar at the bottom has Back, Defaults, the legend "Changed from default"
+  (the dot before a row), "Some changes apply after a restart", Revert and Apply. Essentials hides the settings
+  that are marked `advanced 1`, All Settings shows them (the cvar `v_setupAll`). A row has its name at the left
+  and its widget at the right: a switch with both of its states as two halves in a dark field, the chosen one filled
+  with the accent (a click on a half sets it), a choice between two accent arrows with its value in the accent, a
+  slider that shows its track first and what it stands at at its right, the keys of a command drawn as keys of a
+  keyboard (a key that is not bound is an empty outline with a dash), a dark field to type in. A row is 52 high, its
+  widgets 220 x 40. The row under the mouse is lit and its name turns white. A list that is longer than its window
+  moves with the wheel, the page keys or the arrow keys, which walk through every row. Left and right change the
+  row in focus from the keyboard. In a game it is the same layout on the canvas of the window (see below).
+- What a screen changed (Setup and Controls, `changesCvar`): while the screen is open it keeps what its settings were
+  when it opened. A row whose setting is not what it was gets a pill on the button of its page that counts the
+  changes of the page, and the pane at the right lists each changed setting with the old and the new value (the
+  name of a choice, On or Off, the number of a slider) and a button that sets that one back. Revert sets all of them
+  back, Apply keeps them (and runs the video restart when one of the changes needs it). Settings that take effect
+  only after a restart (a cvar with `CVAR_LATCH`, the `ui_r_*` cvars and `ui_cl_renderer`) mark the legend "Some
+  changes apply after a restart".
+- Defaults: with this engine a row has a dot before its name while its setting is not what it is by default, and the
+  pane shows for the setting in focus its Default, its Current value and when it Takes effect (Instantly or After
+  restart).
+- In a game the menus are panels over the level, which is out of focus behind them (`v_menuBlur`). Menus in a
+  game are laid out on a canvas of 1600 x 1200 (4:3, the panel in the level has the 640 x 480 of a menu): the old
+  menus are made smaller (`IN_K` 2.0 from the top) so that they do not look stretched, and Setup and Controls
+  have the layout of the board on that canvas. Where the menu stands in the level (`v_immersiveMenu 1`) the panel
+  behind it is as large as what is open: the bar at the top alone is a bar. The bar of a game is one row of buttons
+  as wide as their words: JOIN, VOTE, CALL VOTE, VOICE CHAT (where there is one), ADD BOT, PROFILE, CONTROLS, SETUP,
+  PHOTO, ABOUT, SERVERS and EXIT, with EXIT in red. It fits into the bar, or into the panel in the level.
+- The server browser (Join a game) has the filters (the source, the game type, the search and the switches of the
+  view) over a table of servers, and at the right a column with the picture of the level of the chosen server and
+  the buttons Server Info, Add and Delete Favorite, Password, New Favorite, Find Player and Intrusions. Create a game
+  has the kinds of game and the levels at the left, the picture of the level and the 16 places of players (four
+  columns, by their number) in the middle, and the rules as rows at the right. Solo game has two pages, the levels
+  with the picture and the rules as rows. Leaving the game is a dialog in the middle of the page with NO outlined
+  and YES filled red. These pages are laid out by hand in the pixels of the boards (`tools/menus/ports.py`).
 - A skin without an icon has a tile with the outline of a head in the list of models, in place of the red
   question mark of JA+ (`Skin_NoPicture`).
 - A blade in one of the seven fixed colours has no style: its row says "Fixed Color". The moment one of its
@@ -89,7 +115,7 @@ Both are in Setup, HUD, under Menus and HUD.
 - A vote is a panel at the left edge: what it is about, how it stands, how to answer, and a bar that empties
   with the time it still runs. The team vote is a line in the new letters.
 - The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do.
-- The line on the first page that says a new version is out, and the button for what is new beside it, are boxes like the outlined buttons, lit with the accent under the mouse (`ui_update.c`), under the model of the player.
+- The line on the first page that says a new version is out, and the button for what is new beside it, are boxes like the outlined buttons, lit with the accent under the mouse (`ui_update.c`), in the middle of the bar at the bottom.
 - Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
 - The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `v_classic` off
@@ -111,6 +137,8 @@ Both are in Setup, HUD, under Menus and HUD.
   columns on panels, type and hilt at the left and for each blade its seven colours, the style of its core and
   red, green and blue at the right, with the saber under both: the page of sliders that was behind a button is
   gone. The force powers page in a game keeps its layout (settings at the left, the powers in the pane). The bar at the bottom has the way back and the button that takes over.
+  Outside a game these pages take the whole width of the canvas (`profile_page()` in `tools/menus/canvas.py`: the
+  three columns are laid out 752 units wide and put on the canvas at twice that, with texts of 17 pixels for a row).
 - What this tree added to the menus, and what its cgame writes by itself, is in the language of the game:
   English, German (`tools/menus/texts.py`), and since 2026-10-12 French and Spanish
   (`tools/menus/texts_more.py`). Nobody who speaks French or Spanish as a first language has read those two.
@@ -163,6 +191,13 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 |-------|------|---|
 | menuDef | `skin 1` | its items are drawn in the new form: yes/no is a switch (accent track and dark knob when on, dark track and grey knob when off), a slider a track of 4 pixels filled with the accent and a light knob with an accent ring, an edit field is a dark field whose outline takes the accent while it is typed in, lists have one thin scroll thumb that takes the accent while the mouse is over its strip, a chosen row is filled lightly with an accent bar at its left and a row under the mouse is lit, and the item in focus has a light round fill behind it (no bar) in place of text that pulses. Dark words (on a button filled with the accent) stay dark in focus. `focusColor` is the accent and the colour of all that |
 | menuDef | `backdrop 1` | the sky with stars behind the menu |
+| menuDef | `canvas <w> <h>` | the menu file gives rectangles, text sizes (a text scale is pixels / 18), alignments, corners, list rows and columns in pixels of a picture of that size. The ui puts the picture on the screen as large as it fits with the same scale across and down, in the middle, and lays it out again when the window, the 2D of the game (`v_2dAspect`) or the panel in the level (`v_uiPlane`) change (`Menu_CanvasLayout`, `Menu_CanvasKeep`, `Menu_CanvasCheck` in `ui_shared.c`; menu fields `canvasW`, `canvasH`, `canvasUnit`, item field `canvas`). `Menu_Unit()` gives the sizes of the widgets of a row for a canvas (`Item_RowSize`: rows 52 high, widgets 220 x 40, 12 from the edge, corners 6). Round corners and knobs keep their shape where the 2D is stretched (`v_2dAspect 0`) because `Skin_NineSlice` and `Skin_Disc` take the pixels across and down separately |
+| itemDef | `column <n>` | in a menu with a list of a page (`Menu_ListLayout`): the row stands in column n of the list, each column from the top |
+| itemDef | `advanced 1` | a setting that is shown only with all settings |
+| menuDef | `advancedCvar <cvar>` | the cvar that is the switch for `advanced 1` (`v_setupAll`, the toggle Essentials / All Settings). In a menu with a canvas a line of a list is as high as its item, and items share a line only at the same height. `Menu_ListCards` draws each heading (`fold`) of such a list as the top of a card that reaches to the end of its rows (`cardBottom`) with the line under its head. A heading that is not the first of its column has the gap of 24 pixels above its card in it |
+| menuDef | `changesCvar <cvar>` | what a screen changed. When the menu opens it keeps what its settings are (`Menu_ChangesStart`, after `onOpen`). Each frame it counts those that differ (`Menu_ChangesFrame`) and sets `<cvar>` to the number, `<cvar>Restart` to 1 while one of them takes effect only after a restart (a cvar with `CVAR_LATCH`, or `ui_r_*` and `ui_cl_renderer`, which the video restart hands to the renderer), and `<cvar>State` to 0 (nothing), 1 (changed) or 2 (changed and a restart needed) for the buttons of the menu file. `v_setupChanges` is the one of Setup and Controls. The tabs of a page carry the number of their changed settings as a pill (`Menu_ChangesOnPage`, `Item_Tab_Paint`) |
+| itemDef | `type ITEM_TYPE_CHANGES` | lists the changed settings with the old and the new value (`Item_ValueText`: the name of a choice, On or Off, the number of a slider) and a button that sets each one back |
+| script | `changesRevert`, `changesApply` | `uiScript changesRevert` sets all changed settings back, `uiScript changesApply` keeps them. The Apply button of Setup also runs the video restart of the old menu when `<cvar>State` is 2 |
 | menuDef | `openSlide <units>` | the menu comes up from that far below when it opens |
 | menuDef, itemDef | `style WINDOW_STYLE_PANEL` | a panel with round corners: `backcolor` its fill, `bordercolor` its rim (one pixel, when its alpha is above 0) |
 | menuDef, itemDef | `radius <units>`, `shadow <units>`, `sheen <alpha>`, `glowcolor <r g b a>` | of such a panel: how round, how far its shadow reaches, a light line along its top, a light around it (blended, see below). The menus of the look use no sheen since the redesign |
@@ -195,7 +230,7 @@ The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (n
 `duel`, `altdim`. Only the cgame has them: in a menu of the ui such an item draws nothing.
 
 `ui/jamp/menudef.h` has the new numbers (`WINDOW_STYLE_PANEL` 6, `ITEM_TYPE_BAR` 16, `ITEM_TYPE_VALUE` 17,
-`ITEM_TYPE_CUBE` 18, `ITEM_TYPE_LOGO` 19, `ITEM_TYPE_DESC` 20, `ITEM_TYPE_PAGESCROLL` 21).
+`ITEM_TYPE_CUBE` 18, `ITEM_TYPE_LOGO` 19, `ITEM_TYPE_DESC` 20, `ITEM_TYPE_PAGESCROLL` 21, `ITEM_TYPE_CHANGES` 22; the last is also in `codemp/ui/menudef.h`).
 
 A filled window that is less than a unit high is drawn as a line of one pixel at any size of the window. While
 the menus stand on their panel in the level a line that thin would break into dashes, so there it is a strip
@@ -218,7 +253,7 @@ row has its cvar and its script as before, only its place changed.
 
 The tabs Interface and TaystJK of the days before are gone, and the tab Options is now Game.
 
-Folding: a heading of a list is a button (`fold <n>`). A click folds its rows away or brings them back, and the
+Folding: a heading of a list is a button (`fold <n>`). In the layout of the board (since 2026-11-02) the headings are the heads of cards and `advanced 1` settings (`ADVANCED_HEADS` and `ADVANCED_CVARS` in `options.py` say which) are only there with All Settings. A click folds its rows away or brings them back, and the
 arrow at its right end points down while it is open and right while it is folded. Which headings are folded is
 kept in the saved cvar `v_setupFolds` (Setup) and `v_controlsFolds` (Controls, whose Extras page has headings), as
 a list of numbers (`foldCvar`).
@@ -300,10 +335,21 @@ are.
 - `options.py`, the options screens (Setup and Controls, outside a game and in one): two tables say which
   pages a screen has and what is on each, as headings, rows of the old menu (by group, in an order that can
   be given) and rows the old menus did not have. A row of the old menu keeps its cvar, its list and its
-  script, without the commands that showed and marked the old tabs. The layout is the same for all four
-  (`Layout(ingame, rail=True)`): the rail at the left, the list in the middle, the description at the right,
-  and in a game the screen is a window under the bar of the in-game menu. The pages of the player
-  (`profile.py`) keep their strip of entries at the top and have three columns on panels (see below).
+  script, without the commands that showed and marked the old tabs. The layout is the same for all four and is
+  made by `build_canvas` (the board: the bar of the sections, the search and the pages at the left, the title,
+  description and switch, the cards in two columns, the pane and the list of changes at the right, the bar at the
+  bottom). `page_sections` puts the parts of a page into the shorter column (a page of Controls with one part has
+  its rows halved) and `canvas_row` makes a row. In a game the screen is on the canvas of the window under the bar
+  of the in-game menu. The pages of the player (`profile.py`) keep their strip of entries at the top and have three
+  columns on panels (see below).
+- `canvas.py`, the canvas (since 2026-11-02): the sizes and colours of the board (bars 72 and 68 high, columns 260
+  and 340, rows 52, cards with a head of 64), `header()` (the bar of the sections, PLAY opens the server browser),
+  `footer()`, `regrid()`, and `convert()`: every menu that is still made in the units of the game is put onto the
+  canvas. A page gets the bars of the board and its content at 80 % of its old size in the middle (`CONTENT_K` 1.5), a
+  window is made smaller around the middle the same way, and a menu in a game goes at `IN_K` 2.0 from the top on the
+  canvas of 1600 x 1200. `profile_page()` lays out the pages of the player outside a game over the width of the canvas.
+- `ports.py`, Home, Join a game, Create a game, the two pages of Solo game and Quit in the pixels of the boards (see
+  "For players"). `pages.as_rows` takes `px` for rows in pixels.
 - `options.py` also has the table `PICTURES` (the before and after pictures of the rows, see "The Setup screen") and
   `pictures.py` takes those pictures in the game.
 - `options.py` has one more kind of row, `('menu', name, menu, what for)`: it opens a window. The rows
@@ -426,7 +472,7 @@ The code is in `cgame/cmdmenu/cg_cmdmenu.c`.
 | File | |
 |------|---|
 | `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets (their colours are named constants: `skinField`, `skinEdge`, `skinKeyFill`, `skinKeyEdge`, `skinOnAccent`, `skinMuted`, `skinFaint`, `skinRule`, `skinTrack`, `skinThumb`, `skinScrollThumb`; their corners `SKIN_RADIUS` 3.2 and `SKIN_RADIUS_INNER` 2.1, which are 6 and 4 pixels in a window 900 high; `Skin_ItemBack`, `Skin_TextColor`, `Skin_Switch`, `Skin_SliderTrack`, `Skin_Slider`, `Skin_Field`, `Skin_ScrollBar`, `Skin_Row`), the pointer of the mouse, the icon as a picture and as a box of polygons in a scene of its own, the panel of the connect and loading screens (`Skin_LoadPanel`). Built into ui and cgame |
-| `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number, and the options screens: pages (`Menu_SetPage`), the list of a page (`Menu_ScrollTo`, `Menu_ScrollFrame`), a setting as a row (`Item_Row_Paint`, `Item_Row_HandleKey`), the buttons of a row by the width of their words (`Menu_TabsLayout`), what the item in focus is for (`Item_Desc_Paint`) |
+| `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number, and the options screens: pages (`Menu_SetPage`), the list of a page (`Menu_ScrollTo`, `Menu_ScrollFrame`), a setting as a row (`Item_Row_Paint`, `Item_Row_HandleKey`), the buttons of a row by the width of their words (`Menu_TabsLayout`), what the item in focus is for (`Item_Desc_Paint`), the canvas (`Menu_CanvasLayout`, `Menu_CanvasKeep`, `Menu_CanvasCheck`), the lists with columns and cards (`Menu_ListLayout`, `Menu_ListCards`) and what a screen changed (`Menu_ChangesStart`, `Menu_ChangesFrame`, `Menu_ChangesOnPage`, `Item_ValueText`) |
 | `ui/ui_changelog.c`, `ui_markdown.c` | the window "What's new" and the reader of its text |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer, the model of the first page (`UI_MenuCharacter`, the script `homeModel`) |
 | `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`v_showLoading 1`, a cheat, holds it over the game to look at it), whether the new look is the one drawn (`CG_HudNewLook`), texts in the language of the game (`CG_VisionText`) and cut to a width (`CG_TextCut`) |
@@ -437,6 +483,7 @@ The code is in `cgame/cmdmenu/cg_cmdmenu.c`.
 | `shared/sdl/sdl_icon.h`, `shared/icons/VisionJK.ico` | the icon of the window and of the Windows program, made from `img/logo-512.png` of the website |
 | `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans`, `vision_mono` and `vision_sans_bold` as whole fonts for `R_RegisterFont` |
 | `client/cl_uiapi.cpp`, `ui/ui_public.h` | `R_RegisterShaderRGBA` in the ext block of the ui, announced by the cvar `v_uiSkin` |
+| `qcommon/cvar/cvar.cpp`, `client/cl_main.cpp`, `client/cl_uiapi.cpp` | `Cvar_Info` (the reset string and the flags of a cvar), handed to the ui as `ext.Cvar_Info` and announced by the cvar `v_uiCvarInfo 1`. The ui uses it as `DC->getCVarInfo` for the dots and the pane of a menu with a canvas |
 
 A shape with a round corner is made for the pixels its radius has in the window and is put on whole pixels,
 so its edge is as sharp at any size of the window. Nothing keeps time by itself: what moves goes by the clock
@@ -611,3 +658,5 @@ Also 2026-11-01, the same way, after the pages of the player got three columns: 
 outside a game, and profile, character, lightsaber and force powers in a game standing in the level, headless at
 1920 x 1080 on `rd-vulkan-vision` with the AMD Radeon 610M (`VK_DRIVER_FILES` set to the RADV driver, because the
 shared NVIDIA card had too little free memory). Built for Linux and for Windows with mingw, with no new warnings.
+
+2026-11-02, Linux, headless gamescope at 1920 x 1080, `rd-vulkan-vision` on the AMD Radeon 610M (`VK_DRIVER_FILES` set to the RADV driver), the second pass of the redesign (the canvas): every page and window outside a game; Setup with changed settings (the list, the pills, Revert and Apply shown, Default, Current and Takes effect in the pane), Essentials and All Settings, and Controls; in a game on mp/duel1 the bar and join flat as a spectator, and the bar, Setup, the player page and call vote standing in the level. Built for Linux and for Windows with mingw, with no warnings in the changed files. Not checked: the mouse and the keyboard by hand (clicking Revert, Apply, the undo buttons of the list, the toggle), another shape of window than 16:9 (4:3 and 21:9 should work by the uniform scale, but were not looked at), `v_2dAspect 0`, Windows in a game, `rd-vanilla`, other languages on screen.

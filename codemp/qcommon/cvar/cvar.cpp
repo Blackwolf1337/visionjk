@@ -115,6 +115,31 @@ static cvar_t *Cvar_FindVar( const char *var_name ) {
 
 /*
 ============
+Cvar_Info
+
+For the ui of this tree (ext.Cvar_Info): the value a cvar starts with and its flags, so Setup can say what a
+setting was set to by default, whether it is changed and whether it takes effect only after a restart
+(CVAR_LATCH). qfalse for a cvar that does not exist.
+============
+*/
+qboolean Cvar_Info( const char *var_name, char *defaultValue, int size, uint32_t *flags ) {
+	const cvar_t *var = Cvar_FindVar( var_name );
+
+	if ( size > 0 )
+		defaultValue[0] = '\0';
+	if ( flags )
+		*flags = 0;
+	if ( !var )
+		return qfalse;
+	if ( size > 0 && var->resetString )
+		Q_strncpyz( defaultValue, var->resetString, size );
+	if ( flags )
+		*flags = var->flags;
+	return qtrue;
+}
+
+/*
+============
 Cvar_VariableValue
 ============
 */

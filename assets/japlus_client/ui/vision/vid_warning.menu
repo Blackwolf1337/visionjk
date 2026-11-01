@@ -6,12 +6,12 @@
 		name					"videowarningMenu"
 		visible					0
 		fullScreen				0
-		rect					0 0 640 480
+		rect					320 92 960 720
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
-		descX					320
-		descY					425
-		descScale				0.7
+		descX					800
+		descY					729.5
+		descScale				1.05
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -23,11 +23,15 @@
 			rundeferred ;
 		}
 		onClose { play "sound/interface/button1.wav" ; }
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 
 		itemDef
 		{
 			name					vision_veil
-			rect					0 0 640 480
+			rect					0 0 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -40,14 +44,14 @@
 			name					warn_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					110 119 420 301
+			rect					165 178.5 630 451.5
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -56,12 +60,12 @@
 			group					vidwarn
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_UNAPPLIED_VIDEO_CHANGES
-			rect					120 129 400 20
+			rect					180 193.5 600 30
 			font					5
-			textscale				0.74
+			textscale				1.11
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				200
-			textaligny				-0.5
+			textalignx				300
+			textaligny				-0.75
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -73,16 +77,16 @@
 			name					vidwarn_text1
 			group					vidwarn
 			text					@MENUS_YOU_HAVE_MADE_CHANGES
-			rect					210 230 220 20
+			rect					315 345 330 30
 			textalign				ITEM_ALIGN_CENTER
-			text2aligny				18
-			textalignx				110
+			text2aligny				27
+			textalignx				165
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.91 0.77 0.42 1
 			visible					1
 			decoration
-			textaligny				1.5
+			textaligny				2.25
 		}
 
 		itemDef
@@ -90,14 +94,14 @@
 			name					vidwarn_text2
 			group					vidwarn
 			text					@MENUS_APPLY_THESE_CHANGES_OR
-			rect					210 250 220 20
+			rect					315 375 330 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				110
+			textalignx				165
 			font					5
-			textscale				0.86
+			textscale				1.29
 			forecolor				0.91 0.77 0.42 1
 			visible					1
-			textaligny				1.5
+			textaligny				2.25
 		}
 
 		itemDef
@@ -107,12 +111,12 @@
 			text					@MENUS_DISCARD
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					185 388 110 20
+			rect					277.5 582 165 30
 			font					5
-			textscale				0.64
+			textscale				0.96
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			descText				@MENUS_DO_NOT_APPLY_CHANGES
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -126,7 +130,7 @@
 			mouseEnter { show vidwarn_no_button }
 			mouseExit { hide vidwarn_no_button }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -138,12 +142,12 @@
 			text					@MENUS_APPLY
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					345 388 110 20
+			rect					517.5 582 165 30
 			font					5
-			textscale				0.64
+			textscale				0.96
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			descText				@MENUS_APPLY_CHANGES_AND_THEN
 			forecolor				0.016 0.071 0.122 1
 			visible					1
@@ -156,13 +160,10 @@
 			mouseEnter { show vidwarn_yes_button }
 			mouseExit { hide vidwarn_yes_button }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
+		canvas					1600 900
 	}
 }

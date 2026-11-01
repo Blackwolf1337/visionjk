@@ -599,6 +599,15 @@ TR = {
     # the search of Setup
     'Search': 'Suchen',
     'Shows the settings of all pages whose name or description has these words.': 'Zeigt die Einstellungen aller Seiten, in deren Name oder Beschreibung diese Wörter vorkommen.',
+    # the switch, search and bottom bar of the settings screen
+    'Essentials': 'Wichtig',
+    'Shows the settings that matter, or all of them.': 'Zeigt die wichtigen Einstellungen oder alle.',
+    'All Settings': 'Alle Einstellungen',
+    'Search all settings': 'Alle Einstellungen durchsuchen',
+    'Changed from default': 'Vom Standard geändert',
+    'Some changes apply after a restart': 'Einige Änderungen gelten nach einem Neustart',
+    'Revert': 'Zurücksetzen',
+    'Apply': 'Übernehmen',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
@@ -827,6 +836,14 @@ CGAME = {
     'Get (%s)': 'Holen (%s)',
     'Upload your own at jka.vision/models.html': 'Lade eigene hoch auf jka.vision/models.html',
     'W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away.': 'W/S: fahren. A/D: lenken. Leertaste: hüpfen. Maus: schauen. Esc: wegräumen.',
+    # the list of changed settings
+    'Changed settings': 'Geänderte Einstellungen',
+    'Nothing changed yet.': 'Noch nichts geändert.',
+    'Current': 'Aktuell',
+    'Takes effect': 'Gilt',
+    'After restart': 'Nach Neustart',
+    'Instantly': 'Sofort',
+    'On': 'An',
 }
 
 # names that are the same in every language

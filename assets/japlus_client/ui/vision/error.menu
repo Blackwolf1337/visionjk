@@ -6,7 +6,7 @@
 		name					"error_popmenu"
 		visible					0
 		fullscreen				0
-		rect					158 80 324 331
+		rect					557 212 486 496.5
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		popup
@@ -18,11 +18,19 @@
 			close error_popmenu ;
 			open main
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		descX					800
+		descY					716
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.05
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-158 -80 640 480
+			rect					-237 -120 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -33,45 +41,45 @@
 		itemDef
 		{
 			name					window
-			rect					0 40 324 291
+			rect					0 60 486 436.5
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.97
 			forecolor				0 0 0 1
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			decoration
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
 		{
 			name					errorinfo
-			rect					0 50 320 20
+			rect					0 75 480 30
 			text					@MENUS_ERROR
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textscale				0.86
-			textalignx				160
+			textscale				1.29
+			textalignx				240
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			font					5
-			textaligny				1.5
+			textaligny				2.25
 		}
 
 		itemDef
 		{
 			name					errorinfo
-			rect					60 80 200 270
+			rect					90 120 300 405
 			type					ITEM_TYPE_TEXT
 			style					WINDOW_STYLE_EMPTY
 			textstyle				0
 			autowrapped
 			cvar					"com_errorMessage"
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
-			textscale				0.86
+			textalignx				135
+			textscale				1.29
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -84,11 +92,11 @@
 			group					grpControlbutton
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					125.5 298 70 20
+			rect					188.25 447 105 30
 			text					@MENUS_OKAY
-			textscale				0.64
+			textscale				0.96
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				35
+			textalignx				52.5
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -100,19 +108,12 @@
 			mouseEnter { show button_glow }
 			mouseExit { hide button_glow }
 			font					5
-			textaligny				4
+			textaligny				6
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		descX					320
-		descY					416
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 900
 	}
 }

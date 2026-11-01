@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					16 30 608 436
+		rect					192 60 1216 872
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
-		descX					304
-		descY					415
-		descScale				0.55
+		descX					768
+		descY					830
+		descScale				1.1
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
@@ -38,7 +38,7 @@
 		itemDef
 		{
 			name					vision_strip
-			rect					0 0 608 26
+			rect					0 0 1216 52
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
@@ -48,7 +48,7 @@
 		itemDef
 		{
 			name					vision_strip_line
-			rect					0 26 608 0.67
+			rect					0 52 1216 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -58,11 +58,11 @@
 		itemDef
 		{
 			name					vision_to_profile
-			rect					9 0 80 26
+			rect					18 0 160 52
 			visible					1
 			text					@MENUS_PROFILE
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -71,36 +71,36 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
-			name					vision_here
-			rect					89 0 80 26
+			name					vision_strip_here
+			rect					178 0 160 52
 			visible					1
 			text					@VISION_CHARACTER
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			flow					3
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_saber
-			rect					169 0 80 26
+			rect					338 0 160 52
 			visible					1
 			text					@MENUS_LIGHTSABER_CAPS
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -109,18 +109,18 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_force
-			rect					249 0 80 26
+			rect					498 0 160 52
 			visible					1
 			text					@MENUS_DP_FORCE
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -129,55 +129,55 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 			group					yesforce
 		}
 
 		itemDef
 		{
 			name					vision_left
-			rect					6 32 262 364
+			rect					12 64 524 728
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
 			bordercolor				0.11 0.18 0.29 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_middle
-			rect					274 32 140 364
+			rect					548 64 280 728
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_right
-			rect					420 32 182 364
+			rect					840 64 364 728
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
 			bordercolor				0.11 0.18 0.29 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_glow
-			rect					294 368 100 12
+			rect					588 736 200 24
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.36 0.78 0.96 0.07
-			radius					6
+			radius					12
 			glowcolor				0.36 0.78 0.96 0.14
 			decoration
 		}
@@ -190,9 +190,9 @@
 			descText				@MENUS_CHOOSE_SPECIES
 			type					ITEM_TYPE_MULTI
 			style					WINDOW_STYLE_EMPTY
-			rect					12 38 250 22
+			rect					24 76 500 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			textstyle				0
 			forecolor				0.86 0.90 0.945 1
 			feeder					19
@@ -213,14 +213,14 @@
 			name					color
 			group					none
 			style					WINDOW_STYLE_EMPTY
-			rect					14 64 246 22
+			rect					28 128 492 44
 			forecolor				0.56 0.64 0.74 1
 			text					@MENUS_COLOR
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			font					5
-			textscale				0.54
+			textscale				1.08
 			visible					1
 			decoration
 			caps					1
@@ -229,7 +229,7 @@
 		itemDef
 		{
 			name					color
-			rect					12 85 250 0.67
+			rect					24 170 500 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -243,20 +243,20 @@
 			group					tints
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			32
-			elementheight			32
+			elementwidth			64
+			elementheight			64
 			elementtype				1
 			feeder					23
 			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
-			rect					12 88 250 48
+			rect					24 176 500 96
 			visible					1
 			action { play "sound/interface/choose_color.wav" }
-			radius					4
+			radius					8
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textscale				0.47
+			textscale				0.94
 		}
 
 		itemDef
@@ -266,9 +266,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_RED
 			cvarfloat				"ui_char_color_red" 50 0 255
-			rect					12 142 250 22
+			rect					24 284 500 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				"Red component in RGB colors"
@@ -284,9 +284,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_GREEN
 			cvarfloat				"ui_char_color_green" 50 0 255
-			rect					12 164 250 22
+			rect					24 328 500 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				"Green component in RGB colors"
@@ -302,9 +302,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_BLUE
 			cvarfloat				"ui_char_color_blue" 50 0 255
-			rect					12 186 250 22
+			rect					24 372 500 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			descText				"Blue component in RGB colors"
@@ -318,14 +318,14 @@
 			name					appear
 			group					none
 			style					WINDOW_STYLE_EMPTY
-			rect					428 38 166 22
+			rect					856 76 332 44
 			forecolor				0.56 0.64 0.74 1
 			text					@MENUS_APPEARANCE
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			font					5
-			textscale				0.54
+			textscale				1.08
 			visible					1
 			decoration
 			caps					1
@@ -334,7 +334,7 @@
 		itemDef
 		{
 			name					appear
-			rect					426 59 170 0.67
+			rect					852 118 340 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -350,13 +350,13 @@
 			descText				@MENUS_SELECT_HEAD
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					426 62 56.67 22
+			rect					852 124 113.34 44
 			font					5
-			textscale				0.58
-			textaligny				5.78
+			textscale				1.16
+			textaligny				11.56
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				28.33
+			textalignx				56.66
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
@@ -373,25 +373,25 @@
 			group					heads
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			72
-			elementheight			72
+			elementwidth			144
+			elementheight			144
 			elementtype				1
 			feeder					20
 			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
-			rect					426 90 170 300
+			rect					852 180 340 600
 			visible					1
 			action
 			{
 				play "sound/interface/choose_head.wav"
 				uiScript "char_skin"
 			}
-			radius					4
+			radius					8
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textscale				0.47
+			textscale				0.94
 			page					1
 		}
 
@@ -403,13 +403,13 @@
 			descText				@MENUS_SELECT_TORSO
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					482.67 62 56.67 22
+			rect					965.34 124 113.34 44
 			font					5
-			textscale				0.58
-			textaligny				5.78
+			textscale				1.16
+			textaligny				11.56
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				28.33
+			textalignx				56.66
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
@@ -426,25 +426,25 @@
 			group					torso
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			72
-			elementheight			72
+			elementwidth			144
+			elementheight			144
 			elementtype				1
 			feeder					21
 			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
-			rect					426 90 170 300
+			rect					852 180 340 600
 			visible					1
 			action
 			{
 				play "sound/interface/choose_torso.wav"
 				uiScript "char_skin"
 			}
-			radius					4
+			radius					8
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textscale				0.47
+			textscale				0.94
 			page					2
 		}
 
@@ -456,13 +456,13 @@
 			descText				@MENUS_SELECT_LEGS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					539.33 62 56.67 22
+			rect					1078.66 124 113.34 44
 			font					5
-			textscale				0.58
-			textaligny				5.78
+			textscale				1.16
+			textaligny				11.56
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				28.33
+			textalignx				56.66
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
@@ -479,32 +479,32 @@
 			group					lower
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			72
-			elementheight			72
+			elementwidth			144
+			elementheight			144
 			elementtype				1
 			feeder					22
 			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
-			rect					426 90 170 300
+			rect					852 180 340 600
 			visible					1
 			action
 			{
 				play "sound/interface/choose_head.wav"
 				uiScript "char_skin"
 			}
-			radius					4
+			radius					8
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textscale				0.47
+			textscale				0.94
 			page					3
 		}
 
 		itemDef
 		{
 			name					vision_foot
-			rect					0 404 608 32
+			rect					0 808 1216 64
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
@@ -514,7 +514,7 @@
 		itemDef
 		{
 			name					vision_foot_line
-			rect					0 404 608 0.67
+			rect					0 808 1216 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -528,13 +528,13 @@
 			descText				@MENUS_RETURN_PREVIOUS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					9 404 72 32
+			rect					18 808 144 64
 			font					5
-			textscale				0.6
+			textscale				1.2
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				36
-			textaligny				10.6
+			textalignx				72
+			textaligny				21.2
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -554,12 +554,12 @@
 			text					@MENUS_APPLY
 			type					1
 			style					WINDOW_STYLE_PANEL
-			rect					464 410 132 20
+			rect					928 820 264 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				66
-			textaligny				4.6
+			textalignx				132
+			textaligny				9.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
@@ -574,7 +574,7 @@
 			caps					1
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
-			radius					3.2
+			radius					6.4
 		}
 
 		itemDef
@@ -582,7 +582,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					276 38 136 344
+			rect					552 76 272 688
 			model_g2anim			"BOTH_WALK1"
 			asset_model				"ui_char_model"
 			model_angle				180
@@ -595,5 +595,6 @@
 			visible					1
 			decoration
 		}
+		canvas					1600 1200
 	}
 }

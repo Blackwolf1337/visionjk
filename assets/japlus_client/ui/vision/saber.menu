@@ -8,9 +8,9 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.36 0.78 0.96 1
-		descX					320
-		descY					458
-		descScale				0.55
+		descX					800.0
+		descY					856
+		descScale				0.72
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
@@ -44,29 +44,29 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					0 0 640 34
+			rect					0 0 1600 72
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.55
-			wide					1
+			backcolor				0.016 0.031 0.063 0.55
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					0 34 640 0.67
+			rect					0 71 1600 1
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
-			wide					1
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
 			name					vision_logo
-			rect					22 6 22 22
+			rect					48 19 34 34
 			visible					1
 			type					ITEM_TYPE_LOGO
 			forecolor				1 1 1 1
@@ -76,175 +76,131 @@
 		itemDef
 		{
 			name					vision_mark
-			rect					50 7 120 20
+			rect					96 16 180 40
 			visible					1
 			text					"VISIONJK"
 			font					5
-			textscale				1
+			textscale				1.67
 			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_mark2
-			rect					138 12 160 14
+			rect					268 22 300 32
 			visible					1
 			text					"JEDI ACADEMY"
 			font					5
-			textscale				0.5
+			textscale				0.83
 			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				8.5
 			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_nav_play
+			rect					1090 0 86 72
+			visible					1
+			text					@MENUS_PLAY
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				43
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_START_PLAYING_NOW
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_profile
+			rect					1184 0 116 72
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.06
+			forecolor				0.36 0.78 0.96 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				58
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_PROFILE_DESC
+			action { play "sound/interface/button1.wav" ; close all ; open playerMenu ; }
 		}
 
 		itemDef
 		{
 			name					vision_here
-			rect					414 31 52 2
+			rect					1184 69 116 3
 			visible					1
-			style					WINDOW_STYLE_PANEL
+			style					WINDOW_STYLE_FILLED
 			backcolor				0.36 0.78 0.96 1
-			radius					1
 			decoration
 		}
 
 		itemDef
 		{
-			name					newgamebutton
-			group					nbut
-			style					WINDOW_STYLE_EMPTY
-			type					ITEM_TYPE_BUTTON
-			rect					330 7 72 20
-			text					@MENUS_PLAY
-			descText				@MENUS_START_PLAYING_NOW
+			name					vision_nav_controls
+			rect					1308 0 136 72
+			visible					1
+			text					@MENUS_CONTROLS2
 			font					5
-			textscale				0.66
-			textaligny				4
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
+			textscale				1.06
 			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 7 14 130 30
-			}
-			mouseExit { hide button_glow }
-			action
-			{
-				close all ;
-				open multiplayermenu
-			}
-			caps					1
-		}
-
-		itemDef
-		{
-			name					profilebutton
-			group					lbut
-			text					@MENUS_PROFILE
-			descText				@MENUS_PROFILE_DESC
-			style					WINDOW_STYLE_EMPTY
-			type					ITEM_TYPE_BUTTON
-			rect					404 7 72 20
-			textaligny				4
-			font					5
-			textscale				0.66
 			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			forecolor				0.36 0.78 0.96 1
-			visible					1
-			mouseEnter {  }
-			mouseExit {  }
-			action {  }
+			textalignx				68
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
 			caps					1
-		}
-
-		itemDef
-		{
-			name					controlsbutton
-			group					cbut
-			text					@MENUS_CONTROLS
 			descText				@MENUS_CONFIGURE_GAME_CONTROLS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					478 7 72 20
-			font					5
-			textscale				0.66
-			textaligny				4
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			backcolor				0 0 0 0
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 340 14 130 30
-			}
-			mouseExit { hide button_glow }
-			action
-			{
-				play "sound/interface/button1.wav"
-				uiScript "updatesabercvars"
-				close all
-				open controlsMenu
-			}
-			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open controlsMenu ; }
 		}
 
 		itemDef
 		{
-			name					setupbutton
-			group					sbut
+			name					vision_nav_setup
+			rect					1452 0 100 72
+			visible					1
 			text					@MENUS_SETUP
-			descText				@MENUS_CONFIGURE_GAME_SETTINGS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					552 7 72 20
 			font					5
-			textscale				0.66
-			textaligny				4
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				36
-			backcolor				0 0 0 0
+			textscale				1.06
 			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 502 14 130 30
-			}
-			mouseExit { hide button_glow }
-			action
-			{
-				play "sound/interface/button1.wav"
-				uiScript "updatesabercvars"
-				close all
-				open setupMenu
-			}
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				50
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			action { play "sound/interface/button1.wav" ; close all ; open setup_menu ; }
 		}
 
 		itemDef
 		{
-			name					vision_strip
-			rect					0 34 640 26
+			name					vision_sub
+			rect					0 72 1600 52
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.50
+			backcolor				0.016 0.031 0.063 0.35
 			decoration
 			wide					1
 		}
 
 		itemDef
 		{
-			name					vision_strip_line
-			rect					0 60 640 0.67
+			name					vision_sub_line
+			rect					0 123 1600 1
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -255,11 +211,11 @@
 		itemDef
 		{
 			name					vision_to_profile
-			rect					29 34 80 26
+			rect					36 72 160 52
 			visible					1
 			text					@MENUS_PROFILE
 			font					5
-			textscale				0.58
+			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -271,18 +227,18 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				18.98
 		}
 
 		itemDef
 		{
 			name					vision_to_character
-			rect					109 34 80 26
+			rect					196 72 160 52
 			visible					1
 			text					@VISION_CHARACTER
 			font					5
-			textscale				0.58
+			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -294,49 +250,49 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				18.98
 		}
 
 		itemDef
 		{
-			name					vision_here
-			rect					189 34 80 26
+			name					vision_strip_here
+			rect					356 72 160 52
 			visible					1
 			text					@MENUS_LIGHTSABER_CAPS
 			font					5
-			textscale				0.58
+			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
 			flow					3
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				18.98
 		}
 
 		itemDef
 		{
 			name					vision_left
-			rect					26 66 282 254
+			rect					36 136 564 508
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
 			bordercolor				0.11 0.18 0.29 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_right
-			rect					316 66 298 296
+			rect					616 136 948 592
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
 			bordercolor				0.11 0.18 0.29 1
-			radius					5.3
+			radius					10.6
 			decoration
 		}
 
@@ -347,12 +303,12 @@
 			text					@MENUS_SABER_TYPE
 			descText				@MENUS_SABER_TYPE_DESC
 			style					WINDOW_STYLE_EMPTY
-			rect					34 72 266 22
+			rect					52 148 532 44
 			font					5
-			textscale				0.54
+			textscale				0.73
 			textstyle				0
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -363,7 +319,7 @@
 		itemDef
 		{
 			name					typebut
-			rect					32 93 270 0.67
+			rect					48 190 540 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -379,9 +335,9 @@
 			descText				@MENUS_SINGLESABER_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					32 94 270 22
+			rect					48 192 540 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			textstyle				0
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -411,9 +367,9 @@
 			descText				@MENUS_DUALSABERS_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					32 116 270 22
+			rect					48 236 540 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			textstyle				0
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -443,9 +399,9 @@
 			descText				@MENUS_SABERSTAFF_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					32 138 270 22
+			rect					48 280 540 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			textstyle				0
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -474,12 +430,12 @@
 			text					@MENUS_HILT1
 			descText				@MENUS_HILT1_DESC
 			style					WINDOW_STYLE_EMPTY
-			rect					34 166 266 22
+			rect					52 336 532 44
 			font					5
-			textscale				0.54
+			textscale				0.73
 			textstyle				0
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -490,7 +446,7 @@
 		itemDef
 		{
 			name					hilttype
-			rect					32 187 270 0.67
+			rect					48 378 540 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -505,12 +461,12 @@
 			text					@MENUS_HILT2
 			descText				@MENUS_HILT2_DESC
 			style					WINDOW_STYLE_EMPTY
-			rect					34 248 266 22
+			rect					52 500 532 44
 			font					5
-			textscale				0.54
+			textscale				0.73
 			textstyle				0
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			cvarTest				ui_saber_type
@@ -523,7 +479,7 @@
 		itemDef
 		{
 			name					hilttype
-			rect					32 269 270 0.67
+			rect					48 542 540 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -537,14 +493,14 @@
 		{
 			name					hiltbut
 			group					none
-			rect					32 190 270 116
+			rect					48 384 540 232
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			240
+			elementheight			32
 			font					5
-			textaligny				17
-			textscale				0.68
+			textaligny				34
+			textscale				0.92
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.56 0.64 0.74 1
 			backcolor				0.027 0.051 0.102 0.9
@@ -563,21 +519,21 @@
 				uiScript "setscreensaberhilt"
 				uiScript "saber_hilt"
 			}
-			radius					4
+			radius					8
 		}
 
 		itemDef
 		{
 			name					hiltbut_staves
 			group					none
-			rect					32 190 270 116
+			rect					48 384 540 232
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			240
+			elementheight			32
 			font					5
-			textaligny				17
-			textscale				0.68
+			textaligny				34
+			textscale				0.92
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.56 0.64 0.74 1
 			backcolor				0.027 0.051 0.102 0.9
@@ -594,21 +550,21 @@
 				uiScript "setscreensaberstaff"
 				uiScript "saber_hilt"
 			}
-			radius					4
+			radius					8
 		}
 
 		itemDef
 		{
 			name					hiltbut1
 			group					none
-			rect					32 190 270 54
+			rect					48 384 540 108
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			240
+			elementheight			32
 			font					5
-			textaligny				17
-			textscale				0.68
+			textaligny				34
+			textscale				0.92
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.56 0.64 0.74 1
 			backcolor				0.027 0.051 0.102 0.9
@@ -627,21 +583,21 @@
 				uiScript "setscreensaberhilt1"
 				uiScript "saber_hilt"
 			}
-			radius					4
+			radius					8
 		}
 
 		itemDef
 		{
 			name					hiltbut2
 			group					none
-			rect					32 272 270 54
+			rect					48 548 540 108
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			240
+			elementheight			32
 			font					5
-			textaligny				17
-			textscale				0.68
+			textaligny				34
+			textscale				0.92
 			bordercolor				0.086 0.149 0.247 1
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
@@ -658,30 +614,30 @@
 				uiScript "setscreensaberhilt2"
 				uiScript "saber2_hilt"
 			}
-			radius					4
+			radius					8
 		}
 
 		itemDef
 		{
 			name					vision_blade
-			rect					324 72 282 22
+			rect					632 148 916 44
 			visible					1
 			text					@MENUS_BLADE_COLOR
 			font					5
-			textscale				0.54
+			textscale				0.73
 			forecolor				0.56 0.64 0.74 1
 			style					WINDOW_STYLE_EMPTY
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_blade
-			rect					322 93 286 0.67
+			rect					628 190 924 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -695,11 +651,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					486 96 22 22
+			rect					956 196 44 44
 			background				"gfx/menus/saber_icon_black"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -716,11 +672,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					324 96 22 22
+			rect					632 196 44 44
 			background				"gfx/menus/saber_icon_blue"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -737,11 +693,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					351 96 22 22
+			rect					686 196 44 44
 			background				"gfx/menus/saber_icon_green"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -758,11 +714,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					378 96 22 22
+			rect					740 196 44 44
 			background				"gfx/menus/saber_icon_orange"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -779,11 +735,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					405 96 22 22
+			rect					794 196 44 44
 			background				"gfx/menus/saber_icon_purple"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -800,11 +756,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					432 96 22 22
+			rect					848 196 44 44
 			background				"gfx/menus/saber_icon_yellow"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -821,11 +777,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					459 96 22 22
+			rect					902 196 44 44
 			background				"gfx/menus/saber_icon_red"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action
@@ -842,11 +798,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					486 96 22 22
+			rect					956 196 44 44
 			background				"gfx/menus/saber_icon_black"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -865,11 +821,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					324 96 22 22
+			rect					632 196 44 44
 			background				"gfx/menus/saber_icon_blue"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -888,11 +844,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					351 96 22 22
+			rect					686 196 44 44
 			background				"gfx/menus/saber_icon_green"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -911,11 +867,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					378 96 22 22
+			rect					740 196 44 44
 			background				"gfx/menus/saber_icon_orange"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -934,11 +890,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					405 96 22 22
+			rect					794 196 44 44
 			background				"gfx/menus/saber_icon_purple"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -957,11 +913,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					432 96 22 22
+			rect					848 196 44 44
 			background				"gfx/menus/saber_icon_yellow"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -980,11 +936,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					459 96 22 22
+			rect					902 196 44 44
 			background				"gfx/menus/saber_icon_red"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1002,9 +958,9 @@
 			group					vision_rgb
 			type					ITEM_TYPE_MULTI
 			text					@VISION_BLADE_STYLE
-			rect					322 122 286 22
+			rect					628 248 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			cvarStrList
 			{
@@ -1026,9 +982,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_RED
 			cvarfloat				"ui_sbRed1" 255 1 255
-			rect					322 144 286 22
+			rect					628 292 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -1043,9 +999,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_GREEN
 			cvarfloat				"ui_sbGreen1" 255 1 255
-			rect					322 166 286 22
+			rect					628 336 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -1060,9 +1016,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_BLUE
 			cvarfloat				"ui_sbBlue1" 255 1 255
-			rect					322 188 286 22
+			rect					628 380 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -1073,18 +1029,18 @@
 		itemDef
 		{
 			name					vision_blade2
-			rect					324 214 282 22
+			rect					632 432 916 44
 			visible					1
 			text					@MENUS_COLOR2
 			font					5
-			textscale				0.54
+			textscale				0.73
 			forecolor				0.56 0.64 0.74 1
 			cvarTest				ui_saber_type
 			style					WINDOW_STYLE_EMPTY
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			decoration
 			hideCvar { "single" ; "staff" }
 		}
@@ -1092,7 +1048,7 @@
 		itemDef
 		{
 			name					vision_blade2
-			rect					322 235 286 0.67
+			rect					628 474 924 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -1108,11 +1064,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					486 238 22 22
+			rect					956 480 44 44
 			background				"gfx/menus/saber_icon_black"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1131,11 +1087,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					324 238 22 22
+			rect					632 480 44 44
 			background				"gfx/menus/saber_icon_blue"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1154,11 +1110,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					351 238 22 22
+			rect					686 480 44 44
 			background				"gfx/menus/saber_icon_green"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1177,11 +1133,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					378 238 22 22
+			rect					740 480 44 44
 			background				"gfx/menus/saber_icon_orange"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1200,11 +1156,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					405 238 22 22
+			rect					794 480 44 44
 			background				"gfx/menus/saber_icon_purple"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1223,11 +1179,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					432 238 22 22
+			rect					848 480 44 44
 			background				"gfx/menus/saber_icon_yellow"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1246,11 +1202,11 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					459 238 22 22
+			rect					902 480 44 44
 			background				"gfx/menus/saber_icon_red"
 			forecolor				.75 .75 .75 1
 			border					1
-			bordersize				1
+			bordersize				2
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1268,9 +1224,9 @@
 			group					vision_rgb
 			type					ITEM_TYPE_MULTI
 			text					@VISION_BLADE_STYLE
-			rect					322 264 286 22
+			rect					628 532 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			cvarStrList
 			{
@@ -1294,9 +1250,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_RED
 			cvarfloat				"ui_sbRed2" 255 1 255
-			rect					322 286 286 22
+			rect					628 576 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1313,9 +1269,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_GREEN
 			cvarfloat				"ui_sbGreen2" 255 1 255
-			rect					322 308 286 22
+			rect					628 620 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1332,9 +1288,9 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_BLUE
 			cvarfloat				"ui_sbBlue2" 255 1 255
-			rect					322 330 286 22
+			rect					628 664 924 44
 			font					5
-			textscale				0.7
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				ui_saber_type
@@ -1349,7 +1305,7 @@
 			name					saber
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					32 -9.68 576 576
+			rect					48 -254.72 1504 1504
 			asset_model				"models/weapons2/saber_reborn/saber_w.glm"
 			isSaber					1
 			model_angle				180
@@ -1367,7 +1323,7 @@
 			name					saber2
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					32 18.32 576 576
+			rect					48 -198.72 1504 1504
 			asset_model				"models/weapons2/saber_reborn/saber_w.glm"
 			isSaber2				1
 			model_angle				180
@@ -1385,10 +1341,10 @@
 		itemDef
 		{
 			name					vision_foot
-			rect					0 446 640 34
+			rect					0 832 1600 68
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0.02 0.04 0.08 0.50
+			backcolor				0.016 0.031 0.063 0.6
 			decoration
 			wide					1
 		}
@@ -1396,7 +1352,7 @@
 		itemDef
 		{
 			name					vision_foot_line
-			rect					0 446 640 0.67
+			rect					0 832 1600 1
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -1407,11 +1363,11 @@
 		itemDef
 		{
 			name					vision_back
-			rect					29 446 72 34
+			rect					48 844 144 44
 			visible					1
 			text					@MENUS_BACK
 			font					5
-			textscale				0.6
+			textscale				0.81
 			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
@@ -1419,8 +1375,8 @@
 			descText				@MENUS_BACK
 			action { play "sound/interface/menuroam.wav" uiScript "updatesabercvars" close saberMenu open playerMenu }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				36
-			textaligny				11.6
+			textalignx				72
+			textaligny				14.71
 			flow					1
 		}
 
@@ -1432,11 +1388,11 @@
 			descText				@MENUS_APPLY_SABER_CHANGES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					476 452 132 22
+			rect					1352 844 200 44
 			font					5
-			textscale				0.6
-			textalignx				66
-			textaligny				5.6
+			textscale				0.81
+			textalignx				100
+			textaligny				14.71
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			forecolor				0.016 0.071 0.122 1
@@ -1450,7 +1406,8 @@
 			caps					1
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
-			radius					3.2
+			radius					4.32
 		}
+		canvas					1600 900
 	}
 }

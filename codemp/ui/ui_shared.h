@@ -358,6 +358,20 @@ typedef struct itemDef_s {
 	const char	*descPic[3];
 	float		listY;
 	qboolean	listOut;
+	// "column <n>": the column of the list of its page it stands in (0, 1). "advanced 1": a setting that is shown
+	// only with all settings (advancedCvar of the menu) or found by the search. cardBottom: for a heading, where the
+	// card of its part ends (Menu_ListLayout, Menu_ListCards).
+	int			column;
+	qboolean	advanced;
+	float		cardBottom;
+	// "canvas <w> <h>" of its menu: what the menu file gave, in the pixels of that canvas (Menu_CanvasLayout)
+	struct {
+		rectDef_t	rect;
+		float		textscale, textalignx, textaligny, text2alignx, text2aligny;
+		float		radius, shadow, borderSize;
+		float		elementWidth, elementHeight;
+		int			columnPos[MAX_LB_COLUMNS], columnWidth[MAX_LB_COLUMNS];
+	} canvas;
 } itemDef_t;
 
 #define MENU_PAGES		16					// pages of a menu, counted from 1
@@ -414,6 +428,24 @@ typedef struct menuDef_s {
 	qboolean	listKnown;
 	char		listSearch[64];
 	char		listFolds[256];
+	// "canvas <w> <h>": the menu file is written for a picture of that many pixels, which is put on the screen as
+	// large as it fits, with the same scale across and down, in the middle (Menu_CanvasLayout). canvasUnit is the
+	// units of the 640 x 480 grid one of its pixels has now, the rest what the layout was made for.
+	float		canvasW, canvasH;
+	float		canvasUnit;
+	// "advancedCvar <cvar>": while it is 0 the settings marked "advanced 1" are not in the list. listAll: what it
+	// was when the list was laid out. "changesCvar <cvar>": the screen keeps what its settings were and sets the
+	// cvar to the number that differ now (Menu_Changes*), and <cvar>Restart to 1 while one of them takes effect
+	// only after a restart.
+	const char	*advancedCvar;
+	qboolean	listAll;
+	const char	*changesCvar;
+	float		canvasFor[4];
+	rectDef_t	canvasRect;
+	rectDef_t	canvasScroll;
+	float		canvasScrollStep;
+	int			canvasDescX, canvasDescY;
+	float		canvasDescScale;
 } menuDef_t;
 
 typedef struct cachedAssets_s {
@@ -509,6 +541,8 @@ typedef struct displayContextDef_s {
 	void			(*getTeamColor)						( vec4_t *color );
 	void			(*getCVarString)					( const char *cvar, char *buffer, int bufsize );
 	float			(*getCVarValue)						( const char *cvar );
+	// the value a cvar starts with and its flags (VisionJK, ext.Cvar_Info of the engine); NULL without it
+	qboolean		(*getCVarInfo)						( const char *cvar, char *defaultValue, int size, uint32_t *flags );
 	void			(*setCVar)							( const char *cvar, const char *value );
 	void			(*drawTextWithCursor)				( float x, float y, float scale, vec4_t color, const char *text, int cursorPos, char cursor, int limit, int style, int iFontIndex );
 	void			(*setOverstrikeMode)				( qboolean b );
@@ -577,6 +611,10 @@ void Display_ExpandMacros(char * buff);
 void Menu_Init(menuDef_t *menu);
 void Item_Init(itemDef_t *item);
 void Menu_PostParse(menuDef_t *menu);
+void Menu_CanvasLayout( menuDef_t *menu );
+void Menu_ChangesRevert( void );
+void Menu_ChangesApply( void );
+float Menu_Unit( const menuDef_t *menu );
 void Menu_SetPage( menuDef_t *menu, int page );
 menuDef_t *Menu_GetFocused();
 void Menu_HandleKey(menuDef_t *menu, int key, qboolean down);

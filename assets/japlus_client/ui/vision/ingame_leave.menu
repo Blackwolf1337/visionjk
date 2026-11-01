@@ -7,27 +7,36 @@
 		visible					1
 		fullScreen				0
 		outOfBoundsClick
-		rect					474 40 158 105
+		rect					1108 80 316 210
 		focusColor				0.36 0.78 0.96 1
 		onOpen
 		{
 			show grpMenu ;
 			hide grpConfirm
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
+		descX					1266
+		descY					300
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 158 105
+			rect					0 0 316 210
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -37,12 +46,12 @@
 			group					grpMenu
 			style					2
 			type					1
-			rect					2 5 152 30
+			rect					4 10 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -63,12 +72,12 @@
 			text					@MENUS_RESTART_MATCH
 			style					2
 			type					1
-			rect					2 35 152 30
+			rect					4 70 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"cl_currentServerAddress"
 			enableCvar { "Localhost" }
@@ -91,12 +100,12 @@
 			type					1
 			text					@MENUS_QUIT_PROGRAM
 			style					2
-			rect					2 65 152 30
+			rect					4 130 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -116,12 +125,12 @@
 			text					@MENUS_GO_TO_MAIN_MENU
 			group					grpConfirm
 			style					2
-			rect					2 5 152 30
+			rect					4 10 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.56 0.64 0.74 1
 			decoration
 			visible					1
@@ -134,12 +143,12 @@
 			group					grpConfirm
 			type					1
 			style					0
-			rect					2 35 152 30
+			rect					4 70 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -158,12 +167,12 @@
 			group					grpConfirm
 			type					1
 			style					0
-			rect					2 65 152 30
+			rect					4 130 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -182,12 +191,12 @@
 			text					@MENUS_MATCH
 			group					grpConfirm
 			style					2
-			rect					2 5 152 30
+			rect					4 10 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.56 0.64 0.74 1
 			decoration
 			visible					1
@@ -199,12 +208,12 @@
 			text					@MENUS_YES
 			group					grpConfirm
 			type					1
-			rect					2 35 152 30
+			rect					4 70 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -224,12 +233,12 @@
 			text					@MENUS_NO
 			group					grpConfirm
 			type					1
-			rect					2 65 152 30
+			rect					4 130 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -248,12 +257,12 @@
 			text					@MENUS_PROGRAM
 			group					grpConfirm
 			style					2
-			rect					2 5 152 30
+			rect					4 10 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.56 0.64 0.74 1
 			decoration
 			visible					1
@@ -265,12 +274,12 @@
 			text					@MENUS_YES
 			group					grpConfirm
 			type					1
-			rect					2 35 152 30
+			rect					4 70 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -288,12 +297,12 @@
 			text					@MENUS_NO
 			group					grpConfirm
 			type					1
-			rect					2 65 152 30
+			rect					4 130 304 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				1.5
+			textalignx				152
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -305,14 +314,6 @@
 			mouseEnter { show button3 }
 			mouseExit { hide button3 }
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
-		descX					553
-		descY					150
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

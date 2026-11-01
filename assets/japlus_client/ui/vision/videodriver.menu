@@ -6,12 +6,12 @@
 		name					"videodriverMenu"
 		visible					0
 		fullScreen				0
-		rect					100 120 444 327
+		rect					470 272 666 490.5
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
-		descX					322
-		descY					452
-		descScale				0.7
+		descX					803
+		descY					770
+		descScale				1.05
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -22,11 +22,15 @@
 			open setupMenu
 		}
 		onClose { play "sound/interface/button1.wav" ; }
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 
 		itemDef
 		{
 			name					vision_veil
-			rect					-100 -120 640 480
+			rect					-150 -180 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -39,14 +43,14 @@
 			name					driver_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 444 327
+			rect					0 0 666 490.5
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -56,20 +60,20 @@
 			text					@MENUS_DONE_CAPS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					165 295 110 20
+			rect					247.5 442.5 165 30
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				55
-			textaligny				4
+			textalignx				82.5
+			textaligny				6
 			font					5
-			textscale				0.64
+			textscale				0.96
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show driver_done_button }
 			mouseExit { hide driver_done_button }
 			action { close videodriverMenu }
 			caps					1
-			radius					3.2
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -80,18 +84,15 @@
 			group					none
 			ownerdraw				UI_GLINFO
 			font					5
-			textscale				0.68
-			rect					10 3 430 280
+			textscale				1.02
+			rect					15 4.5 645 420
 			forecolor				0.91 0.77 0.42 1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				15
+			textaligny				22.5
 			visible					1
 			decoration
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
+		canvas					1600 900
 	}
 }

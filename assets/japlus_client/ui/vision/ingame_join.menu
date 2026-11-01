@@ -7,22 +7,31 @@
 		visible					1
 		fullScreen				0
 		outOfBoundsClick
-		rect					55 40 136 134
+		rect					270 80 272 268
 		focusColor				0.36 0.78 0.96 1
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
+		descX					406
+		descY					358
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 136 134
+			rect					0 0 272 268
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -31,12 +40,12 @@
 			text					@MENUS_AUTO_TEAM
 			type					1
 			style					2
-			rect					2 4 124 30
+			rect					4 8 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -63,12 +72,12 @@
 			text					@MENUS_TEAM_RED
 			type					1
 			style					2
-			rect					2 34 124 30
+			rect					4 68 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				1 0.54 0.50 1
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -95,12 +104,12 @@
 			text					@MENUS_TEAM_BLUE
 			type					1
 			style					2
-			rect					2 64 124 30
+			rect					4 128 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.45 0.66 1 1
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -127,12 +136,12 @@
 			text					@MP_INGAME_JOIN_SINGLE
 			type					1
 			style					2
-			rect					2 34 124 30
+			rect					4 68 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				1 0.54 0.50 1
 			cvarTest				"ui_about_gametype"
 			showCvar { "4" }
@@ -153,12 +162,12 @@
 			text					@MP_INGAME_JOIN_DOUBLE
 			type					1
 			style					2
-			rect					2 64 124 30
+			rect					4 128 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.45 0.66 1 1
 			cvarTest				"ui_about_gametype"
 			showCvar { "4" }
@@ -179,12 +188,12 @@
 			text					@MENUS_SPECTATE
 			type					1
 			style					2
-			rect					2 94 124 30
+			rect					4 188 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -211,12 +220,12 @@
 			text					@MENUS_JOIN_GAME
 			type					1
 			style					2
-			rect					2 34 124 30
+			rect					4 68 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -244,12 +253,12 @@
 			text					@MENUS_SPECTATE
 			type					1
 			style					2
-			rect					2 64 124 30
+			rect					4 128 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -277,12 +286,12 @@
 			text					"Switch Dimension"
 			type					1
 			style					2
-			rect					2 94 124 30
+			rect					4 188 248 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				62
-			textaligny				1.5
+			textalignx				124
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -303,14 +312,6 @@
 			mouseEnter { show button4 }
 			mouseExit { hide button4 }
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
-		descX					123
-		descY					179
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

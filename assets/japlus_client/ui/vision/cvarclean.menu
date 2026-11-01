@@ -6,7 +6,7 @@
 		name					"cvarclean_popmenu"
 		visible					0
 		fullScreen				0
-		rect					0 0 640 480
+		rect					320 92 960 720
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
 		popup
@@ -20,11 +20,20 @@
 			play "sound/interface/esc.wav" ;
 			close cvarclean_popmenu ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
+		descX					800
+		descY					750.5
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.05
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					vision_veil
-			rect					0 0 640 480
+			rect					0 0 960 720
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
@@ -37,14 +46,14 @@
 			name					cvarclean_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					16 42 608 392
+			rect					24 63 912 588
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					9.6
+			shadow					21
 		}
 
 		itemDef
@@ -53,38 +62,38 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_CLEAN_UP_SETTINGS
-			rect					20 52 600 20
+			rect					30 78 900 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				300
+			textalignx				450
 			font					5
-			textscale				0.74
+			textscale				1.11
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			caps					1
-			textaligny				2.5
+			textaligny				3.75
 		}
 
 		itemDef
 		{
 			name					cvarclean_list
 			group					none
-			rect					36 82 568 270
+			rect					54 123 852 405
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			568
-			elementheight			18
+			elementwidth			852
+			elementheight			27
 			font					5
-			textscale				0.52
+			textscale				0.78
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.86 0.90 0.945 1
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_CVARCLEAN
-			columns					3 4 20 216 230 20 216 456 20 104
+			columns					3 6 20 324 345 20 324 684 20 156
 			visible					1
-			textaligny				14.9
-			radius					4
+			textaligny				22.35
+			radius					6
 			outlinecolor			0.36 0.78 0.96 0.22
 		}
 
@@ -94,17 +103,17 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_NOTHING_TO_CLEAN_UP
-			rect					36 200 568 20
+			rect					54 300 852 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				284
+			textalignx				426
 			font					5
-			textscale				0.6
+			textscale				0.9
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"ui_cvarCleanCount"
 			showCvar { "0" }
 			visible					1
 			decoration
-			textaligny				1.05
+			textaligny				1.58
 		}
 
 		itemDef
@@ -113,15 +122,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-			rect					36 360 568 30
+			rect					54 540 852 45
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				284
+			textalignx				426
 			font					5
-			textscale				0.52
+			textscale				0.78
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
-			textaligny				0.9
+			textaligny				1.35
 		}
 
 		itemDef
@@ -130,12 +139,12 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					75 402 110 20
+			rect					112.5 603 165 30
 			text					@VISION_REMOVE
 			font					5
-			textscale				0.64
+			textscale				0.96
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
+			textalignx				82.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show cvarclean_remove_glow }
@@ -146,8 +155,8 @@
 				uiScript CvarCleanRemove ;
 			}
 			caps					1
-			textaligny				4
-			radius					3.2
+			textaligny				6
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -158,12 +167,12 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					265 402 110 20
+			rect					397.5 603 165 30
 			text					@VISION_REMOVE_ALL
 			font					5
-			textscale				0.64
+			textscale				0.96
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
+			textalignx				82.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show cvarclean_removeall_glow }
@@ -174,8 +183,8 @@
 				uiScript CvarCleanRemoveAll ;
 			}
 			caps					1
-			textaligny				4
-			radius					3.2
+			textaligny				6
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -186,12 +195,12 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					455 402 110 20
+			rect					682.5 603 165 30
 			text					@MENUS_DONE_CAPS
 			font					5
-			textscale				0.64
+			textscale				0.96
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
+			textalignx				82.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show cvarclean_done_glow }
@@ -202,19 +211,11 @@
 				close cvarclean_popmenu ;
 			}
 			caps					1
-			textaligny				4
-			radius					3.2
+			textaligny				6
+			radius					4.8
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		style					WINDOW_STYLE_EMPTY
-		descX					320
-		descY					439
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 900
 	}
 }

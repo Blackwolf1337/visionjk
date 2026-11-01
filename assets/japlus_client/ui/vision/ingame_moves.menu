@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					20 25 604 450
+		rect					200 50 1208 900
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					322
-		descY					10
-		descScale				0.7
+		descX					804
+		descY					20
+		descScale				1.4
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onESC
@@ -28,20 +28,23 @@
 			uiScript setMoveCharacter
 			uiScript setMovesListDefault
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 604 450
+			rect					0 0 1208 900
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -49,13 +52,13 @@
 			name					background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 420 600 20
+			rect					0 840 1200 40
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				.549 .854 1 1
 			visible					1
 			decoration
 			bordercolor				0.086 0.149 0.247 1
-			radius					3
+			radius					6
 		}
 
 		itemDef
@@ -64,12 +67,12 @@
 			group					rulesheader
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_MOVES
-			rect					100 5 440 24
+			rect					200 10 880 48
 			font					5
-			textscale				0.74
+			textscale				1.48
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				225
-			textaligny				1.5
+			textalignx				450
+			textaligny				3
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -81,12 +84,12 @@
 			name					move_titles_box
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					5 47 255 23
+			rect					10 94 510 46
 			backcolor				0.11 0.18 0.29 0.45
 			visible					1
 			decoration
 			bordercolor				0.086 0.149 0.247 1
-			radius					3
+			radius					6
 		}
 
 		itemDef
@@ -94,29 +97,29 @@
 			name					move_titles_outline
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					4 68 255 30
+			rect					8 136 510 60
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			backcolor				0 0 0 0
-			radius					5
+			radius					10
 		}
 
 		itemDef
 		{
 			name					move_titles_title
 			type					ITEM_TYPE_TEXT
-			rect					5 47 255 23
+			rect					10 94 510 46
 			text					@MENUS_MOVE_TYPES
 			font					5
 			forecolor				0.56 0.64 0.74 1
-			textscale				0.74
+			textscale				1.48
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				125
+			textalignx				250
 			visible					1
 			decoration
 			caps					1
-			textaligny				4.84
+			textaligny				9.68
 		}
 
 		itemDef
@@ -127,10 +130,10 @@
 			descText				@MENUS_CHOOSE_MOVE_DESC
 			type					ITEM_TYPE_MULTI
 			style					WINDOW_STYLE_EMPTY
-			rect					5 77 340 14
+			rect					10 154 680 28
 			font					5
-			textscale				0.69
-			textaligny				-3.8
+			textscale				1.38
+			textaligny				-7.6
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				.8
 			textalignx				0
@@ -167,42 +170,42 @@
 			name					moveslist_title_box
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					6 110 253 23
+			rect					12 220 506 46
 			backcolor				0.11 0.18 0.29 0.45
 			visible					1
 			decoration
 			bordercolor				0.086 0.149 0.247 1
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					moveslist_title
 			type					ITEM_TYPE_TEXT
-			rect					15 108 253 26
+			rect					30 216 506 52
 			text					@MENUS_MOVES
 			font					5
 			forecolor				0.56 0.64 0.74 1
-			textscale				0.74
+			textscale				1.48
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				125
+			textalignx				250
 			visible					1
 			decoration
 			caps					1
-			textaligny				6.84
+			textaligny				13.68
 		}
 
 		itemDef
 		{
 			name					moveslist
 			group					none
-			rect					5 130 253 250
+			rect					10 260 506 500
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			16
+			elementwidth			240
+			elementheight			32
 			font					5
-			textscale				0.6
+			textscale				1.2
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.56 0.64 0.74 1
 			backcolor				0.027 0.051 0.102 0.9
@@ -212,11 +215,11 @@
 			desctext				@MENUS_MOVE_DESC2
 			notselectable
 			visible					1
-			columns					1 2 55 225
+			columns					1 4 55 450
 			mouseEnter { setitemcolor moveslist bordercolor 0.36 0.78 0.96 0.6 }
 			mouseExit { setitemcolor moveslist bordercolor 0.086 0.149 0.247 1 }
 			doubleclick { play sound/interface/button1.wav }
-			radius					4
+			radius					8
 		}
 
 		itemDef
@@ -224,12 +227,12 @@
 			name					character_box
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					265 38 330 370
+			rect					530 76 660 740
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
 			backcolor				0 0 0 0
-			radius					5
+			radius					10
 		}
 
 		itemDef
@@ -237,7 +240,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					275 -30 300 340
+			rect					550 -60 600 680
 			model_g2anim			"BOTH_ROLL_F"
 			asset_model				"ui_char_model"
 			model_angle				180
@@ -256,14 +259,14 @@
 		{
 			name					item_desc
 			type					ITEM_TYPE_TEXTSCROLL
-			rect					275 300 320 90
+			rect					550 600 640 180
 			text					"  "
 			cvar					ui_move_desc
 			font					5
 			forecolor				0.56 0.64 0.74 1
-			textscale				0.68
+			textscale				1.36
 			textalign				ITEM_ALIGN_LEFT
-			textaligny				7
+			textaligny				14
 			visible					1
 			lineHeight				13
 			outlinecolor			0.36 0.78 0.96 0.22
@@ -277,13 +280,13 @@
 			descText				"Back to player config"
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					49 416 110 20
+			rect					98 832 220 40
 			font					5
-			textscale				0.64
+			textscale				1.28
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				55
-			textaligny				4
+			textalignx				110
+			textaligny				8
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
@@ -299,7 +302,7 @@
 				open ingame_player
 			}
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -312,13 +315,13 @@
 			descText				"Quit this menu"
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					245 416 110 20
+			rect					490 832 220 40
 			font					5
-			textscale				0.64
+			textscale				1.28
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				55
-			textaligny				4
+			textalignx				110
+			textaligny				8
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show exitgamebutton_glow }
@@ -329,12 +332,10 @@
 				close all ;
 			}
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 1200
 	}
 }

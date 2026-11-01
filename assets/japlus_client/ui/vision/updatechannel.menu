@@ -6,12 +6,12 @@
 		name					"updateChannelMenu"
 		visible					0
 		fullScreen				0
-		rect					0 0 640 480
+		rect					320 92 960 720
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
-		descX					320
-		descY					424
-		descScale				1
+		descX					800
+		descY					728
+		descScale				1.5
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -21,6 +21,9 @@
 			play "sound/interface/button1.wav" ;
 			close updateChannelMenu ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
@@ -28,16 +31,16 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_WARNING
-			rect					100 166 440 20
+			rect					150 249 660 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				220
+			textalignx				330
 			font					5
-			textscale				0.74
+			textscale				1.11
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			caps					1
-			textaligny				2.5
+			textaligny				3.75
 		}
 
 		itemDef
@@ -46,15 +49,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
-			rect					100 210 440 16
+			rect					150 315 660 24
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				220
+			textalignx				330
 			font					5
-			textscale				0.6
+			textscale				0.9
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
-			textaligny				1.05
+			textaligny				1.58
 		}
 
 		itemDef
@@ -63,15 +66,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
-			rect					100 228 440 16
+			rect					150 342 660 24
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				220
+			textalignx				330
 			font					5
-			textscale				0.6
+			textscale				0.9
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
-			textaligny				1.05
+			textaligny				1.58
 		}
 
 		itemDef
@@ -80,15 +83,15 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
-			rect					100 246 440 16
+			rect					150 369 660 24
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				220
+			textalignx				330
 			font					5
-			textscale				0.6
+			textscale				0.9
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
-			textaligny				1.05
+			textaligny				1.58
 		}
 
 		itemDef
@@ -97,13 +100,13 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					115 300 200 24
+			rect					172.5 450 300 36
 			text					@VISION_STAY_ON_STABLE
 			descText				@VISION_KEEP_THE_RELEASES
 			font					5
-			textscale				0.55
+			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				100
+			textalignx				150
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show updatechannel_no_glow }
@@ -114,7 +117,7 @@
 				close updateChannelMenu ;
 			}
 			caps					1
-			textaligny				1.88
+			textaligny				2.82
 		}
 
 		itemDef
@@ -123,13 +126,13 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					325 300 200 24
+			rect					487.5 450 300 36
 			text					@VISION_SWITCH_TO_DEVELOPMENT
 			descText				@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
 			font					5
-			textscale				0.55
+			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				100
+			textalignx				150
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter { show updatechannel_yes_glow }
@@ -141,10 +144,8 @@
 				close updateChannelMenu ;
 			}
 			caps					1
-			textaligny				1.88
+			textaligny				2.82
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 900
 	}
 }

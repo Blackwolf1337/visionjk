@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					15 40 610 428
+		rect					190 80 1220 856
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					320
-		descY					25
-		descScale				0.7
+		descX					800
+		descY					50
+		descScale				1.4
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onClose
@@ -98,20 +98,23 @@
 			hide missionpics
 			close all;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 610 428
+			rect					0 0 1220 856
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -119,7 +122,7 @@
 			name					mappic
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					420 42 180 348
+			rect					840 84 360 696
 			forecolor				1 1 1 .6
 			visible					1
 			border					1
@@ -133,13 +136,13 @@
 			name					objectivetitle
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_MISSION_OBJECTIVES
-			rect					120 5 390 28
+			rect					240 10 780 56
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				195
-			textaligny				4.25
+			textalignx				390
+			textaligny				8.5
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -149,35 +152,35 @@
 		itemDef
 		{
 			name					primaryobj
-			rect					10 42 200 24
+			rect					20 84 400 48
 			type					ITEM_TYPE_TEXT
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_PRIMARY_OBJECTIVES
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				5
-			textaligny				-0.8
+			textalignx				10
+			textaligny				-1.6
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			bordercolor				0.086 0.149 0.247 1
 			decoration
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					primedesc
-			rect					10 68 402 76
+			rect					20 136 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_primobj_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			autowrapped
@@ -187,37 +190,37 @@
 		itemDef
 		{
 			name					secondobj
-			rect					10 150 200 24
+			rect					20 300 400 48
 			type					ITEM_TYPE_TEXT
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_SECONDARY_OBJECTIVES
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				5
-			textaligny				-0.8
+			textalignx				10
+			textaligny				-1.6
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			bordercolor				0.086 0.149 0.247 1
 			decoration
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjA
-			rect					215 150 24 24
+			rect					430 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_1
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -249,22 +252,22 @@
 				hide secondiconF
 				hide secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjB
-			rect					244 150 24 24
+			rect					488 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_2
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -296,22 +299,22 @@
 				hide secondiconF
 				hide secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjC
-			rect					273 150 24 24
+			rect					546 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_3
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -343,22 +346,22 @@
 				hide secondiconF
 				hide secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjD
-			rect					302 150 24 24
+			rect					604 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_4
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -390,22 +393,22 @@
 				hide secondiconF
 				hide secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjE
-			rect					331 150 24 24
+			rect					662 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_5
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -437,22 +440,22 @@
 				hide secondiconF
 				hide secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjF
-			rect					360 150 24 24
+			rect					720 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -484,22 +487,22 @@
 				show secondiconF
 				hide secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					secondobjG
-			rect					389 150 24 24
+			rect					778 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
 			text					@MENUS_7
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -531,20 +534,20 @@
 				hide secondiconF
 				show secondiconG
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					seconddescA
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective1_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -554,14 +557,14 @@
 		itemDef
 		{
 			name					seconddescB
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective2_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -571,14 +574,14 @@
 		itemDef
 		{
 			name					seconddescC
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective3_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -588,14 +591,14 @@
 		itemDef
 		{
 			name					seconddescD
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective4_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -605,14 +608,14 @@
 		itemDef
 		{
 			name					seconddescE
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective5_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -622,14 +625,14 @@
 		itemDef
 		{
 			name					seconddescF
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective6_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -639,14 +642,14 @@
 		itemDef
 		{
 			name					seconddescG
-			rect					10 176 402 76
+			rect					20 352 804 152
 			type					ITEM_TYPE_TEXT
 			cvar					"siege_objective7_desc"
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				6
+			textalignx				12
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			autowrapped
@@ -744,44 +747,44 @@
 		itemDef
 		{
 			name					primepic_text
-			rect					10 382 192 14
+			rect					20 764 384 28
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_PRIMARY_OBJECTIVES
 			font					5
-			textscale				0.52
+			textscale				1.04
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				2
+			textalignx				4
 			forecolor				0.91 0.77 0.42 1
 			visible					1
 			autowrapped
 			decoration
-			textaligny				0.9
+			textaligny				1.8
 		}
 
 		itemDef
 		{
 			name					secondpic_text
-			rect					212 382 192 14
+			rect					424 764 384 28
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_SECONDARY_OBJECTIVES
 			font					5
-			textscale				0.52
+			textscale				1.04
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				2
+			textalignx				4
 			forecolor				0.91 0.77 0.42 1
 			visible					0
 			autowrapped
 			decoration
-			textaligny				0.9
+			textaligny				1.8
 		}
 
 		itemDef
 		{
 			name					primepic
 			group					primepic
-			rect					10 254 192 128
+			rect					20 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -795,7 +798,7 @@
 		{
 			name					secondpicA
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -809,7 +812,7 @@
 		{
 			name					secondpicB
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -823,7 +826,7 @@
 		{
 			name					secondpicC
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -837,7 +840,7 @@
 		{
 			name					secondpicD
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -851,7 +854,7 @@
 		{
 			name					secondpicE
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -865,7 +868,7 @@
 		{
 			name					secondpicF
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -879,7 +882,7 @@
 		{
 			name					secondpicG
 			group					missionpics
-			rect					212 254 192 128
+			rect					424 508 384 256
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -894,12 +897,12 @@
 			name					exit
 			text					@MENUS_OKAY
 			type					1
-			textscale				0.86
+			textscale				1.72
 			group					grpControlbutton
 			type					ITEM_TYPE_BUTTON
-			rect					160 392 300 26
+			rect					320 784 600 52
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				150
+			textalignx				300
 			forecolor				0.91 0.77 0.42 1
 			backcolor				.37 .1 .1 1
 			visible					1
@@ -912,10 +915,8 @@
 			mouseEnter { setitemcolor 1 1 1 1 }
 			mouseExit { setitemcolor .79 .64 .22 1 }
 			font					5
-			textaligny				1.5
+			textaligny				3
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 1200
 	}
 }

@@ -6,7 +6,7 @@
 		name					"ingame_orders"
 		visible					0
 		fullscreen				0
-		rect					45 30 214 240
+		rect					250 60 428 480
 		outOfBoundsClick
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
@@ -16,18 +16,25 @@
 			hide grpicon ;
 			show attack
 		}
+		skin					1
+		openSlide				8
+		descX					464
+		descY					490
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					window
-			rect					0 10 214 200
+			rect					0 20 428 400
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.97
 			visible					1
 			decoration
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -37,11 +44,11 @@
 			text					@MENUS_NAME
 			style					0
 			ownerdraw				UI_SELECTEDPLAYER
-			rect					10 20 200 20
+			rect					20 40 400 40
 			textalign				0
-			textalignx				10
-			textaligny				2.38
-			textscale				0.21
+			textalignx				20
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			font					5
@@ -52,12 +59,12 @@
 			name					orders
 			group					grporders
 			text					@MENUS_YOU_DECIDE
-			rect					0 80 200 20
+			rect					0 160 400 40
 			type					1
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			mouseenter { hide grpicon }
@@ -72,11 +79,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_ATTACK_THE_ENEMY_S_BASE
-			rect					0 100 200 20
+			rect					0 200 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -97,11 +104,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_DEFEND_OUR_BASE
-			rect					0 120 200 20
+			rect					0 240 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -122,11 +129,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_GET_OUR_FLAG_BACK
-			rect					0 140 200 20
+			rect					0 280 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -147,11 +154,11 @@
 			group					grporders
 			text					@MENUS_GUARD_OUR_FLAG_CARRIER
 			type					1
-			rect					0 160 200 20
+			rect					0 320 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -172,11 +179,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_GET_ENEMY_FLAG_BACK_TO
-			rect					0 180 200 20
+			rect					0 360 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -197,11 +204,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_COMPLETE_THE_CURRENT
-			rect					0 100 200 20
+			rect					0 200 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -222,11 +229,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_PREVENT_THE_ENEMY_FROM
-			rect					0 120 200 20
+			rect					0 240 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -247,11 +254,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_FOLLOW_ME
-			rect					0 100 200 20
+			rect					0 200 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -272,11 +279,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_ASSIST_ME
-			rect					0 120 200 20
+			rect					0 240 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -297,11 +304,11 @@
 			group					grporders
 			type					1
 			text					@MENUS_REGROUP
-			rect					0 140 200 20
+			rect					0 280 400 40
 			textalign				1
-			textalignx				100
-			textaligny				2.38
-			textscale				0.21
+			textalignx				200
+			textaligny				4.76
+			textscale				0.42
 			forecolor				0.36 0.78 0.96 1
 			visible					1
 			cvarTest				"g_gametype"
@@ -315,12 +322,6 @@
 			ownerdrawflag			UI_SHOW_LEADER
 			font					5
 		}
-		skin					1
-		openSlide				8
-		descX					152
-		descY					245
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

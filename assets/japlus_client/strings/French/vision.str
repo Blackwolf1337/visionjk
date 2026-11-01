@@ -37,10 +37,6 @@ REFERENCE           BLUE
 LANG_ENGLISH        "Blue"
 LANG_FRENCH         "Bleu"
 
-REFERENCE           JA
-LANG_ENGLISH        "JA+"
-LANG_FRENCH         "#same"
-
 REFERENCE           GRAPPLE_HOOK
 LANG_ENGLISH        "Grapple Hook"
 LANG_FRENCH         "Grappin"
@@ -72,10 +68,6 @@ LANG_FRENCH         "Menu des messages"
 REFERENCE           A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
 LANG_ENGLISH        "A menu for clan chat, private and admin messages."
 LANG_FRENCH         "Un menu pour le chat de clan, les messages privés et admin."
-
-REFERENCE           VISIONJK
-LANG_ENGLISH        "VisionJK"
-LANG_FRENCH         "#same"
 
 REFERENCE           VOICE_CHAT_TALK
 LANG_ENGLISH        "Voice Chat (Talk)"
@@ -249,13 +241,25 @@ REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
 LANG_FRENCH         "Touches des ajouts de VisionJK et JA+."
 
+REFERENCE           JA
+LANG_ENGLISH        "JA+"
+LANG_FRENCH         "#same"
+
+REFERENCE           VISIONJK
+LANG_ENGLISH        "VisionJK"
+LANG_FRENCH         "#same"
+
 REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
 LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
 LANG_FRENCH         "Entrée ou clic : changer la touche. Retour arrière : effacer."
 
-REFERENCE           SCREEN
-LANG_ENGLISH        "Screen"
-LANG_FRENCH         "Écran"
+REFERENCE           SEARCH_ALL_SETTINGS
+LANG_ENGLISH        "Search all settings"
+LANG_FRENCH         "Rechercher dans tous les réglages"
+
+REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
+LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
+LANG_FRENCH         "Affiche les paramètres de toutes les pages dont le nom ou la description contient ces mots."
 
 REFERENCE           DISPLAY_MODE
 LANG_ENGLISH        "Display Mode"
@@ -341,10 +345,6 @@ REFERENCE           DOUBLE
 LANG_ENGLISH        "Double"
 LANG_FRENCH         "#same"
 
-REFERENCE           DETAIL
-LANG_ENGLISH        "Detail"
-LANG_FRENCH         "Détails"
-
 REFERENCE           DYNAMIC_GLOW
 LANG_ENGLISH        "Dynamic Glow"
 LANG_FRENCH         "Lueur dynamique"
@@ -380,10 +380,6 @@ LANG_FRENCH         "Effets de rendu sur texture"
 REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
 LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
 LANG_FRENCH         "Désactivé : pas d'effets lents (camouflage, flou de poussée, sphères de protection) sur les cartes graphiques qui les gèrent mal."
-
-REFERENCE           VULKAN_RENDERER
-LANG_ENGLISH        "Vulkan Renderer"
-LANG_FRENCH         "Rendu Vulkan"
 
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
@@ -472,10 +468,6 @@ LANG_FRENCH         "Choc et chaleur des sabres"
 REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
 LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
 LANG_FRENCH         "Les lames qui s'entrechoquent jettent un éclair. L'air autour d'une lame allumée est brûlant."
-
-REFERENCE           VOLUME
-LANG_ENGLISH        "Volume"
-LANG_FRENCH         "#same"
 
 REFERENCE           SOUND_IN_THE_BACKGROUND
 LANG_ENGLISH        "Sound in the Background"
@@ -593,10 +585,6 @@ REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 LANG_FRENCH         "Ce qui s'approche ou s'éloigne change de hauteur."
 
-REFERENCE           HITS
-LANG_ENGLISH        "Hits"
-LANG_FRENCH         "Impacts"
-
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
 LANG_FRENCH         "Son d'impact"
@@ -701,10 +689,6 @@ REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
 LANG_FRENCH         "La radio du clan sonne comme une vraie radio : étroite, un peu rêche, avec un clic."
 
-REFERENCE           BOOMBOX
-LANG_ENGLISH        "Boombox"
-LANG_FRENCH         "#same"
-
 REFERENCE           BOOMBOXES
 LANG_ENGLISH        "Boomboxes"
 LANG_FRENCH         "#same"
@@ -720,18 +704,6 @@ LANG_FRENCH         "Volume des boomboxes"
 REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
 LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
 LANG_FRENCH         "Volume des morceaux des boomboxes pour vous."
-
-REFERENCE           GAME
-LANG_ENGLISH        "Game"
-LANG_FRENCH         "Jeu"
-
-REFERENCE           LANGUAGE
-LANG_ENGLISH        "Language"
-LANG_FRENCH         "Langue"
-
-REFERENCE           LIGHTSABERS
-LANG_ENGLISH        "Lightsabers"
-LANG_FRENCH         "Sabres laser"
 
 REFERENCE           BLADE_LOOK
 LANG_ENGLISH        "Blade Look"
@@ -789,10 +761,6 @@ REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 LANG_ENGLISH        "The second blade of a staff in the second saber colour."
 LANG_FRENCH         "La seconde lame du bâton dans la seconde couleur de sabre."
 
-REFERENCE           DUELS
-LANG_ENGLISH        "Duels"
-LANG_FRENCH         "#same"
-
 REFERENCE           OTHERS_IN_A_DUEL
 LANG_ENGLISH        "Others in a Duel"
 LANG_FRENCH         "Autres en duel"
@@ -800,6 +768,10 @@ LANG_FRENCH         "Autres en duel"
 REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
 LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
 LANG_FRENCH         "L'apparence des joueurs dans un duel dont vous ne faites pas partie. Leur couleur est v_duelColour dans la console."
+
+REFERENCE           GAME
+LANG_ENGLISH        "Game"
+LANG_FRENCH         "Jeu"
 
 REFERENCE           TINTED
 LANG_ENGLISH        "Tinted"
@@ -841,10 +813,6 @@ REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
 LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
 LANG_FRENCH         "Les lames des joueurs dans un duel dont vous ne faites pas partie."
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_FRENCH         "Joueurs"
-
 REFERENCE           ENEMY_MODEL
 LANG_ENGLISH        "Enemy Model"
 LANG_FRENCH         "Modèle des ennemis"
@@ -860,10 +828,6 @@ LANG_FRENCH         "Modèle des alliés"
 REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
 LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
 LANG_FRENCH         "Tous les coéquipiers avec ce modèle (modèle/skin). Vide : selon leur choix."
-
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_FRENCH         "Chapeaux et capes"
 
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
@@ -1033,10 +997,6 @@ REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 LANG_FRENCH         "Un bonnet de Noël à Noël et une citrouille à Halloween pour ceux qui n'ont pas de chapeau."
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_FRENCH         "Armes"
-
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 LANG_FRENCH         "Tirs comme dans Jedi Outcast"
@@ -1101,10 +1061,6 @@ REFERENCE           THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
 LANG_ENGLISH        "The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step."
 LANG_FRENCH         "Le verrouillage du lance-roquettes dessine des crochets qui se resserrent sur la cible et bipe plus aigu à chaque étape."
 
-REFERENCE           MENUS_AND_HUD
-LANG_ENGLISH        "Menus and HUD"
-LANG_FRENCH         "Menus et HUD"
-
 REFERENCE           NEW_HUD
 LANG_ENGLISH        "New HUD"
 LANG_FRENCH         "Nouveau HUD"
@@ -1137,10 +1093,6 @@ REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
 LANG_ENGLISH        "How far the level behind an open menu is out of focus."
 LANG_FRENCH         "Flou du niveau derrière un menu ouvert."
 
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_FRENCH         "Vue"
-
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
 LANG_FRENCH         "Champ de vision"
@@ -1164,10 +1116,6 @@ LANG_FRENCH         "Caméra lissée"
 REFERENCE           THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
 LANG_ENGLISH        "The camera behind you follows the same at every frame rate. It trails a little further behind."
 LANG_FRENCH         "La caméra derrière vous se comporte pareil quelle que soit la fréquence d'images. Elle traîne un peu plus loin derrière."
-
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-LANG_FRENCH         "Viseur"
 
 REFERENCE           CROSSHAIR_SIZE
 LANG_ENGLISH        "Crosshair Size"
@@ -1224,10 +1172,6 @@ LANG_FRENCH         "Où viser pour qu'un tir touche un adversaire en mouvement. 
 REFERENCE           WITH_OWN_PING
 LANG_ENGLISH        "With Own Ping"
 LANG_FRENCH         "Avec son propre ping"
-
-REFERENCE           ON_SCREEN
-LANG_ENGLISH        "On Screen"
-LANG_FRENCH         "À l'écran"
 
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
@@ -1300,10 +1244,6 @@ LANG_FRENCH         "Carte du spectateur"
 REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
 LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
 LANG_FRENCH         "En spectateur, affiche en haut à droite une carte des joueurs proches."
-
-REFERENCE           MOVEMENT
-LANG_ENGLISH        "Movement"
-LANG_FRENCH         "Mouvement"
 
 REFERENCE           SPEEDOMETER
 LANG_ENGLISH        "Speedometer"
@@ -1441,10 +1381,6 @@ REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 LANG_FRENCH         "Appuyer deux fois vite sur la touche du tableau des scores le garde ouvert, souris libre pour cliquer sur un joueur."
 
-REFERENCE           CHAT
-LANG_ENGLISH        "Chat"
-LANG_FRENCH         "#same"
-
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
 LANG_FRENCH         "Saisie de chat propre"
@@ -1549,10 +1485,6 @@ REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
 LANG_ENGLISH        "How large the notifications are."
 LANG_FRENCH         "La taille des notifications."
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_FRENCH         "#same"
-
 REFERENCE           SHARP_CONSOLE_FONT
 LANG_ENGLISH        "Sharp Console Font"
 LANG_FRENCH         "Police de console nette"
@@ -1593,10 +1525,6 @@ REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
 LANG_FRENCH         "Date et heure"
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
-LANG_FRENCH         "#same"
-
 REFERENCE           CLAN_PASSWORD
 LANG_ENGLISH        "Clan Password"
 LANG_FRENCH         "Mot de passe du clan"
@@ -1605,10 +1533,6 @@ REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même mot de passe. Le serveur le voit."
 
-REFERENCE           TEXT
-LANG_ENGLISH        "Text"
-LANG_FRENCH         "Texte"
-
 REFERENCE           UTF_8_TEXT
 LANG_ENGLISH        "UTF-8 Text"
 LANG_FRENCH         "Texte UTF-8"
@@ -1616,10 +1540,6 @@ LANG_FRENCH         "Texte UTF-8"
 REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
 LANG_FRENCH         "Tous les caractères dans les noms et le chat. Désactivé pour une langue avec sa propre page de codes."
-
-REFERENCE           UPDATES_AND_DOWNLOADS
-LANG_ENGLISH        "Updates and Downloads"
-LANG_FRENCH         "Mises à jour et téléchargements"
 
 REFERENCE           CHECK_FOR_UPDATES
 LANG_ENGLISH        "Check for Updates"
@@ -1685,10 +1605,6 @@ REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
 LANG_FRENCH         "Si un serveur indique une adresse web pour ses fichiers, ils sont téléchargés de là, bien plus vite. Désactivé : depuis le serveur lui-même."
 
-REFERENCE           CONNECTION
-LANG_ENGLISH        "Connection"
-LANG_FRENCH         "Connexion"
-
 REFERENCE           SMOOTH_JITTERY_LINES
 LANG_ENGLISH        "Smooth Jittery Lines"
 LANG_FRENCH         "Compenser le jitter"
@@ -1708,10 +1624,6 @@ LANG_FRENCH         "Jusqu'à 40 ms"
 REFERENCE           UP_TO_80_MS
 LANG_ENGLISH        "Up to 80 ms"
 LANG_FRENCH         "Jusqu'à 80 ms"
-
-REFERENCE           SECURITY
-LANG_ENGLISH        "Security"
-LANG_FRENCH         "Sécurité"
 
 REFERENCE           INTRUSION_LOG
 LANG_ENGLISH        "Intrusion Log"
@@ -1737,9 +1649,57 @@ REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
 LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
 LANG_FRENCH         "Le fichier contenant la clé de connexion admin, si aucun agent ne l'a."
 
+REFERENCE           SCREEN
+LANG_ENGLISH        "Screen"
+LANG_FRENCH         "Écran"
+
+REFERENCE           VULKAN_RENDERER
+LANG_ENGLISH        "Vulkan Renderer"
+LANG_FRENCH         "Rendu Vulkan"
+
+REFERENCE           DETAIL
+LANG_ENGLISH        "Detail"
+LANG_FRENCH         "Détails"
+
+REFERENCE           VOLUME
+LANG_ENGLISH        "Volume"
+LANG_FRENCH         "#same"
+
+REFERENCE           HITS
+LANG_ENGLISH        "Hits"
+LANG_FRENCH         "Impacts"
+
+REFERENCE           BOOMBOX
+LANG_ENGLISH        "Boombox"
+LANG_FRENCH         "#same"
+
 REFERENCE           THE_GAME_LIGHTSABERS_DUELS_AND_WHAT
 LANG_ENGLISH        "The game, lightsabers, duels and what players and weapons look like."
 LANG_FRENCH         "Le jeu, les sabres laser, les duels et l'apparence des joueurs et des armes."
+
+REFERENCE           DUELS
+LANG_ENGLISH        "Duels"
+LANG_FRENCH         "#same"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_FRENCH         "Chapeaux et capes"
+
+REFERENCE           LANGUAGE
+LANG_ENGLISH        "Language"
+LANG_FRENCH         "Langue"
+
+REFERENCE           LIGHTSABERS
+LANG_ENGLISH        "Lightsabers"
+LANG_FRENCH         "Sabres laser"
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_FRENCH         "Joueurs"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_FRENCH         "Armes"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1749,6 +1709,26 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_FRENCH         "Ce que l'écran affiche autour du niveau, la vue et le viseur."
 
+REFERENCE           MENUS_AND_HUD
+LANG_ENGLISH        "Menus and HUD"
+LANG_FRENCH         "Menus et HUD"
+
+REFERENCE           ON_SCREEN
+LANG_ENGLISH        "On Screen"
+LANG_FRENCH         "À l'écran"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_FRENCH         "Vue"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_FRENCH         "Viseur"
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+LANG_FRENCH         "Mouvement"
+
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
 LANG_FRENCH         "Chat et social"
@@ -1756,6 +1736,22 @@ LANG_FRENCH         "Chat et social"
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_FRENCH         "Chat, bulles et infos au-dessus des têtes."
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_FRENCH         "#same"
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+LANG_FRENCH         "#same"
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_FRENCH         "#same"
+
+REFERENCE           TEXT
+LANG_ENGLISH        "Text"
+LANG_FRENCH         "Texte"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1765,21 +1761,49 @@ REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
 LANG_ENGLISH        "Updates, downloads and security."
 LANG_FRENCH         "Mises à jour, téléchargements et sécurité."
 
+REFERENCE           UPDATES_AND_DOWNLOADS
+LANG_ENGLISH        "Updates and Downloads"
+LANG_FRENCH         "Mises à jour et téléchargements"
+
+REFERENCE           CONNECTION
+LANG_ENGLISH        "Connection"
+LANG_FRENCH         "Connexion"
+
+REFERENCE           SECURITY
+LANG_ENGLISH        "Security"
+LANG_FRENCH         "Sécurité"
+
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
 LANG_FRENCH         "Dossiers de jeu contenant d'autres mods."
 
-REFERENCE           SEARCH
-LANG_ENGLISH        "Search"
-LANG_FRENCH         "Rechercher"
+REFERENCE           ESSENTIALS
+LANG_ENGLISH        "Essentials"
+LANG_FRENCH         "Essentiel"
 
-REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
-LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
-LANG_FRENCH         "Affiche les paramètres de toutes les pages dont le nom ou la description contient ces mots."
+REFERENCE           ALL_SETTINGS
+LANG_ENGLISH        "All Settings"
+LANG_FRENCH         "Tous les réglages"
 
-REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
-LANG_ENGLISH        "Restart the video with these settings."
-LANG_FRENCH         "Redémarrer l'affichage avec ces réglages."
+REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
+LANG_ENGLISH        "Shows the settings that matter, or all of them."
+LANG_FRENCH         "Affiche les réglages importants, ou tous."
+
+REFERENCE           CHANGED_FROM_DEFAULT
+LANG_ENGLISH        "Changed from default"
+LANG_FRENCH         "Modifié par rapport à la valeur par défaut"
+
+REFERENCE           SOME_CHANGES_APPLY_AFTER_A_RESTART
+LANG_ENGLISH        "Some changes apply after a restart"
+LANG_FRENCH         "Certains changements s'appliquent après un redémarrage"
+
+REFERENCE           REVERT
+LANG_ENGLISH        "Revert"
+LANG_FRENCH         "Annuler"
+
+REFERENCE           APPLY
+LANG_ENGLISH        "Apply"
+LANG_FRENCH         "Appliquer"
 
 REFERENCE           PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Players of My Music"
@@ -1864,6 +1888,10 @@ LANG_FRENCH         "Côté obscur"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_FRENCH         "Les deux côtés"
+
+REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
+LANG_ENGLISH        "Restart the video with these settings."
+LANG_FRENCH         "Redémarrer l'affichage avec ces réglages."
 
 REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
 LANG_ENGLISH        "Picture saved to the screenshots folder."
@@ -2445,6 +2473,10 @@ REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_FRENCH         "il y a %i jours"
 
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+LANG_FRENCH         "Rechercher"
+
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
 LANG_FRENCH         "Aucun paramètre ne contient ces mots."
@@ -2736,6 +2768,34 @@ LANG_FRENCH         "Envoyez les vôtres sur jka.vision/models.html"
 REFERENCE           W_S_DRIVE_A_D_STEER_SPACE_HOP_MOUSE
 LANG_ENGLISH        "W/S: drive. A/D: steer. Space: hop. Mouse: look. Esc: put it away."
 LANG_FRENCH         "W/S : rouler. A/D : tourner. Espace : sauter. Souris : regarder. Échap : le ranger."
+
+REFERENCE           CHANGED_SETTINGS
+LANG_ENGLISH        "Changed settings"
+LANG_FRENCH         "Réglages modifiés"
+
+REFERENCE           NOTHING_CHANGED_YET
+LANG_ENGLISH        "Nothing changed yet."
+LANG_FRENCH         "Rien de modifié pour l'instant."
+
+REFERENCE           CURRENT
+LANG_ENGLISH        "Current"
+LANG_FRENCH         "Actuel"
+
+REFERENCE           TAKES_EFFECT
+LANG_ENGLISH        "Takes effect"
+LANG_FRENCH         "Prise d'effet"
+
+REFERENCE           AFTER_RESTART
+LANG_ENGLISH        "After restart"
+LANG_FRENCH         "Après redémarrage"
+
+REFERENCE           INSTANTLY
+LANG_ENGLISH        "Instantly"
+LANG_FRENCH         "Immédiat"
+
+REFERENCE           ON
+LANG_ENGLISH        "On"
+LANG_FRENCH         "Activé"
 
 
 ENDMARKER

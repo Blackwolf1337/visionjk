@@ -74,7 +74,7 @@ void		Skin_ItemBack( itemDef_t *item );
 void		Skin_TextColor( itemDef_t *item, vec4_t out );
 void		Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on );
 void		Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction );
-void		Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha );
+void		Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha, float unit );
 void		Skin_Field( itemDef_t *item, float x, float y, float width, float height, qboolean editing );
 void		Skin_Bar( float x, float y, float w, float h, float fraction, const vec4_t fill, const vec4_t back );
 void		Skin_ScrollBar( float x, float y, float w, float h, float start, float part, qboolean horizontal, const vec4_t accent );

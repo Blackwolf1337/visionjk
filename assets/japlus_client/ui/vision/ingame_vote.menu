@@ -7,23 +7,31 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					430 40 82 74
+		rect					1020 80 164 148
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		descX					1102
+		descY					238
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 82 74
+			rect					0 0 164 148
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -32,12 +40,12 @@
 			text					@MENUS_YES
 			type					1
 			style					2
-			rect					2 4 76 30
+			rect					4 8 152 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				38
-			textaligny				1.5
+			textalignx				76
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -56,12 +64,12 @@
 			text					@MENUS_NO
 			type					1
 			style					2
-			rect					2 34 76 30
+			rect					4 68 152 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				38
-			textaligny				1.5
+			textalignx				76
+			textaligny				3
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -73,13 +81,6 @@
 			mouseEnter { show button2 }
 			mouseExit { hide button2 }
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
-		descX					471
-		descY					119
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

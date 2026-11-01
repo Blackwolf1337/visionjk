@@ -329,11 +329,13 @@ A shape with round corners over a rectangle: the four quarters of the disc at th
 column through its middle along the sides, its middle over the rest. corner: the size of a corner in units.
 =================
 */
-static void Skin_NineSlice( float x, float y, float w, float h, float corner, const skinShape_t *shape, qboolean middle ) {
+// (cornerX and cornerY are the same number of pixels: where the 2D of the game is stretched, v_2dAspect 0, they are not
+// the same number of units, and a corner of the same units would be stretched with it)
+static void Skin_NineSlice( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle ) {
 	const float	half = 0.5f, c = (float)shape->radius / shape->size;
 	const float	s0 = half - c, s1 = half, s2 = half + c;
-	const float	xs[4] = { x, x + corner, x + w - corner, x + w };
-	const float	ys[4] = { y, y + corner, y + h - corner, y + h };
+	const float	xs[4] = { x, x + cornerX, x + w - cornerX, x + w };
+	const float	ys[4] = { y, y + cornerY, y + h - cornerY, y + h };
 	const float	ss[4] = { s0, s1, s1, s2 };
 	int			i, j;
 
@@ -377,20 +379,18 @@ void Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t 
 		return;
 	}
 	corner = pixels / sy;
-	// (a pixel is as wide as it is high wherever the 2D keeps its shape, which is where this look is used)
-	(void)sx;
 	if ( fill && fill[3] > 0.0f ) {
 		shape = Skin_Shape( SKIN_FILL, pixels, 0 );
 		if ( shape ) {
 			DC->setColor( fill );
-			Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, corner, shape, qtrue );
+			Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), corner, shape, qtrue );
 		}
 	}
 	if ( edge && edge[3] > 0.0f ) {
 		shape = Skin_Shape( SKIN_RING, pixels, Q_max( 1, (int)( sy * 0.7f ) ) );
 		if ( shape ) {
 			DC->setColor( edge );
-			Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, corner, shape, qfalse );
+			Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), corner, shape, qfalse );
 		}
 	}
 	DC->setColor( NULL );
@@ -439,8 +439,13 @@ void Skin_Disc( float cx, float cy, float radius, const vec4_t color ) {
 		return;
 	}
 	c = (float)shape->radius / shape->size;
-	DC->setColor( color );
-	DC->drawStretchPic( Skin_SnapX( cx - r ), Skin_SnapY( cy - r ), 2.0f * r, 2.0f * r, 0.5f - c, 0.5f - c, 0.5f + c, 0.5f + c, shape->shader );
+	{
+		// (as many pixels across as down, see Skin_NineSlice)
+		const float rx = pixels / Skin_ScaleX();
+
+		DC->setColor( color );
+		DC->drawStretchPic( Skin_SnapX( cx - rx ), Skin_SnapY( cy - r ), 2.0f * rx, 2.0f * r, 0.5f - c, 0.5f - c, 0.5f + c, 0.5f + c, shape->shader );
+	}
 	DC->setColor( NULL );
 }
 
@@ -960,15 +965,15 @@ void Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on )
 
 // The track of a slider and its knob: filled with the accent up to the knob, a light knob with a ring of the
 // accent. Also used for the rows of a list (ui_shared.c).
-void Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha ) {
+void Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha, float unit ) {
 	vec4_t color;
 
 	fraction = Com_Clamp( 0.0f, 1.0f, fraction );
 	Skin_Color( color, skinTrack, alpha );
-	Skin_Panel( x, mid - 1.05f, width, 2.1f, 1.05f, color, NULL );
+	Skin_Panel( x, mid - 1.05f * unit, width, 2.1f * unit, 1.05f * unit, color, NULL );
 	Skin_Color( color, accent, alpha );
 	if ( width * fraction > 0.5f ) {
-		Skin_Panel( x, mid - 1.05f, width * fraction, 2.1f, 1.05f, color, NULL );
+		Skin_Panel( x, mid - 1.05f * unit, width * fraction, 2.1f * unit, 1.05f * unit, color, NULL );
 	}
 	if ( focus > 0.0f ) {
 		vec4_t glow;
@@ -976,13 +981,14 @@ void Skin_SliderTrack( float x, float mid, float width, float fraction, const ve
 		Skin_Color( glow, accent, 0.3f * focus * alpha );
 		Skin_Soft( x + width * fraction - 1.0f, mid - 1.0f, 2.0f, 2.0f, 7.0f, glow );
 	}
-	Skin_Disc( x + width * fraction, mid, 4.3f, color );
+	Skin_Disc( x + width * fraction, mid, 4.3f * unit, color );
 	Skin_Color( color, skinThumb, alpha );
-	Skin_Disc( x + width * fraction, mid, 3.2f, color );
+	Skin_Disc( x + width * fraction, mid, 3.2f * unit, color );
 }
 
 void Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction ) {
-	Skin_SliderTrack( x, y + height * 0.5f, width, fraction, Skin_Accent( item ), item->skinFocus, item->disabled ? 0.4f : 1.0f );
+	Skin_SliderTrack( x, y + height * 0.5f, width, fraction, Skin_Accent( item ), item->skinFocus, item->disabled ? 0.4f : 1.0f,
+		Menu_Unit( (const menuDef_t *)item->parent ) );
 }
 
 // The box of a line that can be typed in, or of the key a command is bound to: the dark of a field with an

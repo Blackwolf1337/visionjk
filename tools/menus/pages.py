@@ -5,6 +5,8 @@ import os
 
 import menufile as mf
 import options
+import canvas
+import ports
 import profile
 import texts
 from menufile import Entry
@@ -496,8 +498,8 @@ def main_page(m):
         m.remove(e)
     new += nav
     new += [
-        label('vision_mark', (40, 56, 300, 46), '"VISIONJK"', 2.35, BRIGHT),
-        label('vision_mark2', (42, 102, 300, 16), '"Jedi Academy, rebuilt"', 0.84, DIM),
+        label('vision_home_mark', (40, 56, 300, 46), '"VISIONJK"', 2.35, BRIGHT),
+        label('vision_home_tagline', (42, 102, 300, 16), '"Jedi Academy, rebuilt"', 0.84, DIM),
         item('vision_rule', (42, 126, 30, 1.6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 0.8),
              ('decoration',)),
         card('vision_join', (40, 140, 268, 58), '@MENUS_JOIN_SERVER_CAPS', 'joinserver', '@MENUS_SEARCH_FOR_SERVERS_TO', True),
@@ -645,7 +647,7 @@ def join_page(m):
 SETTING_KINDS = ('editfield', 'numericfield', 'yesno', 'multi', 'slider', '4', '9', '10', '11', '12', '13')
 
 
-def as_rows(blocks, x, y0, w, pitch=22, gap=8):
+def as_rows(blocks, x, y0, w, pitch=22, gap=8, px=None):
     """Settings and their headings in a column, one under the other in the order they stood: a setting becomes a row
     (its name at the left, its widget at the right, "row 1"), a heading a small word in capitals. Items that stood
     in the same place (the menu shows one of them) stay in the same place. Returns where the column ends."""
@@ -662,25 +664,31 @@ def as_rows(blocks, x, y0, w, pitch=22, gap=8):
         set_rect(b, x, y, w, pitch)
         mf.put(b, 'font', FONT)
         if heading:
-            mf.put(b, 'textscale', '0.52')
+            mf.put(b, 'textscale', mf.fmt(12 / 18.0) if px else '0.52')
             mf.put(b, 'caps', 1)
             mf.put(b, 'forecolor', *DIM)
             mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
             mf.put(b, 'textalignx', 2)
-            mf.put(b, 'textaligny', 5)
+            mf.put(b, 'textaligny', mf.fmt(pitch - 18) if px else 5)
             mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+            if px:
+                mf.put(b, 'font', '7')
             mf.drop(b, 'background')
         elif k in ('button', '1'):
-            control(b, (x + 2, y + 2, w - 4, pitch - 4), 0.58)
+            if px:
+                import ports
+                ports.control(Entry('itemDef', [], b), (x, y + 4, w, pitch - 8), 15)
+            else:
+                control(b, (x + 2, y + 2, w - 4, pitch - 4), 0.58)
         elif owner:
             # (an owner draw writes its name and what it is set to itself: it stays a line of text)
-            mf.put(b, 'textscale', '0.66')
+            mf.put(b, 'textscale', mf.fmt(px / 18.0) if px else '0.66')
             mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
-            mf.put(b, 'textalignx', 8)
-            mf.put(b, 'textaligny', mf.fmt((pitch - 18.0 * 0.66) / 2))
+            mf.put(b, 'textalignx', 12 if px else 8)
+            mf.put(b, 'textaligny', mf.fmt((pitch - px) / 2.0) if px else mf.fmt((pitch - 18.0 * 0.66) / 2))
         else:
             mf.put(b, 'row', 3 if k == 'editfield' else 1)
-            mf.put(b, 'textscale', '0.66')
+            mf.put(b, 'textscale', mf.fmt(px / 18.0) if px else '0.66')
             mf.put(b, 'forecolor', *TEXT)
             mf.drop(b, 'textalign')
             mf.drop(b, 'textalignx')
@@ -975,19 +983,18 @@ def page(m, name, ingame):
             nav = top_bar(m, 'profilebutton')
             nav += [e for e in items(m) if name_of(e.block) in NAV]
         profile.build(m, name, ingame, nav)
+        if ingame:
+            canvas.convert(m, ingame)
+        else:
+            canvas.profile_page(m)
         return
     if name in options.SCREENS:
-        # Setup and Controls: one screen of tabs and lists (options.py), under the bar of the sections
-        nav = []
-        if not ingame:
-            if not {name_of(e.block) for e in items(m)} & set(NAV):
-                m.extend(nav_button(*n) for n in NAV_MAKE)
-            nav = top_bar(m, SECTION.get(menu))
-            nav += [e for e in items(m) if name_of(e.block) in NAV]
-        options.build(m, name, ingame, nav)
+        # Setup and Controls: the board "Setup, decluttered" in the pixels of the design canvas (options.build_canvas)
+        options.build_canvas(m, name, ingame)
         return
     if menu == 'main':
         main_page(m)
+        ports.home(m)
     elif menu == 'connect':
         # the sky of the menus (backdrop) under the panel the code draws (UI_ConnectPanel), no picture of the game.
         # (The window of the menu was a picture frame as well: left without a picture it draws the engine's
@@ -1001,12 +1008,16 @@ def page(m, name, ingame):
         shell(m, menu, HAD_LOGO.get(name, False))
         if menu == 'joinserver':
             join_page(m)
+            ports.join(m)
         elif menu == 'createserver':
             create_page(m)
+            ports.create(m)
         elif menu in ('quickgame', 'quickgame2'):
             solo_page(m, menu)
+            ports.solo(m, menu)
         elif menu == 'quitmenu':
             quit_page(m)
+            ports.quit_page(m)
     elif not full:
         window(m, menu, ingame)
     if menu == 'ingame_siegeclass':
@@ -1014,7 +1025,11 @@ def page(m, name, ingame):
         # size it had it reached into their row
         mf.put(m, 'descScale', '0.6')
         mf.put(m, 'descY', '447')
-    tidy(m)
+    if not mf.get(m, 'canvas'):
+        # (a page in the pixels of the canvas, ports.py, has its texts and rows where it wants them)
+        tidy(m)
+    # everything onto the design canvas (canvas.py): the bars of the board, the content smaller and in the middle
+    canvas.convert(m, ingame)
 
 
 # pages whose content began under the logo of the game, by file: noted before the rules took the logo away

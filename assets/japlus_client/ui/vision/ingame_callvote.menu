@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					270 40 361 228
+		rect					700 80 722 456
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					450.5
-		descY					273
-		descScale				0.7
+		descX					1061
+		descY					546
+		descScale				1.4
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onopen
@@ -30,20 +30,23 @@
 			setitemcolor miscbutton forecolor 0.36 0.78 0.96 1 ;
 			uiscript resetmaplist ;
 		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 361 228
+			rect					0 0 722 456
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -51,14 +54,14 @@
 			name					playerconfigtitle
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_CALL_FOR_VOTES
-			rect					10 5 340 15
+			rect					20 10 680 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				170
+			textalignx				340
 			textaligny				0
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			font					5
-			textscale				0.59
+			textscale				1.18
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -71,25 +74,25 @@
 			name					setup_background2
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					120 32 235 186
+			rect					240 64 470 372
 			backcolor				0.016 0.031 0.063 0.45
 			forecolor				1 1 1 1
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			decoration
-			radius					5
+			radius					10
 		}
 
 		itemDef
 		{
 			name					vision_rail_35
-			rect					7 32 109 186
+			rect					14 64 218 372
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5.3
-			shadow					8
+			radius					10.6
+			shadow					16
 			sheen					0
 			decoration
 		}
@@ -102,11 +105,11 @@
 			descText				@MENUS_ADJUST_GAME_OPTIONS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					10 35 103 30
+			rect					20 70 206 60
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				7.25
+			textscale				1.34
+			textalignx				24
+			textaligny				14.5
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -132,11 +135,11 @@
 			descText				@MENUS_START_A_DIFFERENT_TYPE
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					10 65 103 30
+			rect					20 130 206 60
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				7.25
+			textscale				1.34
+			textalignx				24
+			textaligny				14.5
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			visible					1
@@ -162,11 +165,11 @@
 			group					grpbutton
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					10 95 103 30
+			rect					20 190 206 60
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				7.25
+			textscale				1.34
+			textalignx				24
+			textaligny				14.5
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -193,11 +196,11 @@
 			descText				@MENUS_BANISH_A_PLAYER_FROM
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					10 125 103 30
+			rect					20 250 206 60
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				7.25
+			textscale				1.34
+			textalignx				24
+			textaligny				14.5
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -223,11 +226,11 @@
 			descText				"Silence a player"
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					10 155 103 30
+			rect					20 310 206 60
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				7.25
+			textscale				1.34
+			textalignx				24
+			textaligny				14.5
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -253,11 +256,11 @@
 			descText				"Sleep a player"
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					10 185 103 30
+			rect					20 370 206 60
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				7.25
+			textscale				1.34
+			textalignx				24
+			textaligny				14.5
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.90 0.945 1
@@ -281,13 +284,13 @@
 			text					@MENUS_RESTART_MAP
 			descText				@MENUS_BEGIN_VOTE_TO_RESTART
 			group					grpCallVote
-			rect					112 35 245 30
+			rect					224 70 490 60
 			type					1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				122
-			textaligny				3.5
+			textalignx				244
+			textaligny				7
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			action
@@ -304,13 +307,13 @@
 			group					grpCallVote
 			text					@MENUS_NEXT_MAP
 			descText				@MENUS_BEGIN_VOTE_TO_CYCLE_TO
-			rect					112 65 245 30
+			rect					224 130 490 60
 			type					1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				122
-			textaligny				3.5
+			textalignx				244
+			textaligny				7
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			action
@@ -327,13 +330,13 @@
 			group					grpCallVote
 			text					@MENUS_WARMUP
 			descText				@MENUS_BEGIN_VOTE_TO_DO_A_WARMUP
-			rect					112 95 245 30
+			rect					224 190 490 60
 			type					1
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				122
-			textaligny				3.5
+			textalignx				244
+			textaligny				7
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			action
@@ -352,12 +355,12 @@
 			descText				@MENUS_SELECT_A_NEW_GAME_TYPE
 			style					0
 			ownerdraw				UI_NETGAMETYPE
-			rect					120 65 230 30
+			rect					240 130 460 60
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				50
-			textaligny				3.5
+			textalignx				100
+			textaligny				7
 			font					5
-			textscale				0.86
+			textscale				1.72
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 		}
@@ -370,12 +373,12 @@
 			descText				@MENUS_BEGIN_VOTE_FOR_THIS_GAME
 			type					1
 			style					WINDOW_STYLE_PANEL
-			rect					140 191 80 20
+			rect					280 382 160 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				4
+			textalignx				80
+			textaligny				8
 			font					5
-			textscale				0.64
+			textscale				1.28
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -387,7 +390,7 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
@@ -398,12 +401,12 @@
 			group					grpCallVote
 			text					@MENUS_NEW_MAP
 			ownerdraw				UI_ALLMAPS_SELECTION
-			rect					120 35 230 20
+			rect					240 70 460 40
 			textalign				0
-			textalignx				5
-			textaligny				-0.8
+			textalignx				10
+			textaligny				-1.6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			decoration
 			visible					0
@@ -415,11 +418,11 @@
 			name					maplist
 			group					grpCallVote
 			descText				@MENUS_SELECT_DESIRED_MAP
-			rect					120 55 230 108
+			rect					240 110 460 216
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			120
-			elementheight			15
+			elementwidth			240
+			elementheight			30
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_ALLMAPS
 			bordercolor				0.086 0.149 0.247 1
@@ -427,8 +430,8 @@
 			outlinecolor			0.36 0.78 0.96 0.22
 			visible					0
 			font					5
-			textaligny				13.2
-			textscale				0.69
+			textaligny				26.4
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			mouseEnter
 			{
@@ -441,7 +444,7 @@
 				setitemcolor map bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
-			radius					4
+			radius					8
 		}
 
 		itemDef
@@ -452,12 +455,12 @@
 			type					1
 			group					grpCallVote
 			style					WINDOW_STYLE_PANEL
-			rect					140 191 80 20
+			rect					280 382 160 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				4
+			textalignx				80
+			textaligny				8
 			font					5
-			textscale				0.64
+			textscale				1.28
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -469,7 +472,7 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
@@ -479,12 +482,12 @@
 			name					kick
 			group					grpCallVote
 			text					@MENUS_KICK_PLAYER
-			rect					120 35 230 20
+			rect					240 70 460 40
 			textalign				0
-			textalignx				5
-			textaligny				-0.8
+			textalignx				10
+			textaligny				-1.6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -496,19 +499,19 @@
 			name					kick
 			group					grpCallVote
 			descText				@MENUS_SELECT_PLAYER_TO_KICK
-			rect					120 55 230 108
+			rect					240 110 460 216
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_LISTBOX
-			elementwidth			120
-			elementheight			15
+			elementwidth			240
+			elementheight			30
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
 			bordercolor				0.086 0.149 0.247 1
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textaligny				13.2
-			textscale				0.69
+			textaligny				26.4
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			mouseEnter
@@ -522,7 +525,7 @@
 				setitemcolor kick bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
-			radius					4
+			radius					8
 		}
 
 		itemDef
@@ -533,12 +536,12 @@
 			type					1
 			group					grpCallVote
 			style					WINDOW_STYLE_PANEL
-			rect					140 191 80 20
+			rect					280 382 160 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				4
+			textalignx				80
+			textaligny				8
 			font					5
-			textscale				0.64
+			textscale				1.28
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -550,7 +553,7 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
@@ -560,12 +563,12 @@
 			name					silence
 			group					grpCallVote
 			text					"Silence"
-			rect					120 35 230 20
+			rect					240 70 460 40
 			textalign				0
-			textalignx				5
-			textaligny				-0.8
+			textalignx				10
+			textaligny				-1.6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -577,19 +580,19 @@
 			name					silence
 			group					grpCallVote
 			descText				"Select a player to silence"
-			rect					120 55 230 108
+			rect					240 110 460 216
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_LISTBOX
-			elementwidth			120
-			elementheight			15
+			elementwidth			240
+			elementheight			30
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
 			bordercolor				0.086 0.149 0.247 1
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textaligny				13.2
-			textscale				0.69
+			textaligny				26.4
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			mouseEnter
@@ -603,7 +606,7 @@
 				setitemcolor silence bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
-			radius					4
+			radius					8
 		}
 
 		itemDef
@@ -614,12 +617,12 @@
 			type					1
 			group					grpCallVote
 			style					WINDOW_STYLE_PANEL
-			rect					140 191 80 20
+			rect					280 382 160 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				4
+			textalignx				80
+			textaligny				8
 			font					5
-			textscale				0.64
+			textscale				1.28
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -631,7 +634,7 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
@@ -641,12 +644,12 @@
 			name					sleep
 			group					grpCallVote
 			text					"Sleep"
-			rect					120 35 230 20
+			rect					240 70 460 40
 			textalign				0
-			textalignx				5
-			textaligny				-0.8
+			textalignx				10
+			textaligny				-1.6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			decoration
@@ -658,19 +661,19 @@
 			name					sleep
 			group					grpCallVote
 			descText				"Select a player to sleep"
-			rect					120 55 230 108
+			rect					240 110 460 216
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_LISTBOX
-			elementwidth			120
-			elementheight			15
+			elementwidth			240
+			elementheight			30
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
 			bordercolor				0.086 0.149 0.247 1
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textaligny				13.2
-			textscale				0.69
+			textaligny				26.4
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					0
 			mouseEnter
@@ -684,7 +687,7 @@
 				setitemcolor sleep bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
-			radius					4
+			radius					8
 		}
 
 		itemDef
@@ -695,12 +698,12 @@
 			type					1
 			group					grpCallVote
 			style					WINDOW_STYLE_PANEL
-			rect					140 191 80 20
+			rect					280 382 160 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				4
+			textalignx				80
+			textaligny				8
 			font					5
-			textscale				0.64
+			textscale				1.28
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -712,12 +715,10 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
-			radius					3.2
+			radius					6.4
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 1200
 	}
 }

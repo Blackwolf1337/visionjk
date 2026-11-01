@@ -11,6 +11,7 @@ import menufile as mf
 from menufile import Entry
 from theme import *         # noqa: F401,F403
 import texts
+import canvas
 from texts import ref
 
 ROW_H = 22                  # a row of a list, and a heading in it
@@ -821,3 +822,261 @@ def window_frame(m, L):
     mf.drop(m, 'border')
     mf.drop(m, 'bordersize')
     mf.drop(m, 'background')
+
+
+# ---- the redesign of 2026-11-02: Setup and Controls as the board "Setup, decluttered" of the canvas VisionJK Settings,
+# in the pixels of the canvas (canvas.py, "canvas" of the menu)
+
+# parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
+ADVANCED_HEADS = {'Vulkan Renderer', 'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
+                  'Text', 'Connection', 'Security'}
+ADVANCED_CVARS = {'tay_renderscale', 'v_2daspect', 'r_ext_texture_filter_anisotropic', 'cg_rendertotexturefx', 'ui_r_detailtextures',
+                  'ui_r_ext_compress_textures'}
+
+
+def page_sections(m, content, folds):
+    """The parts of one page: [(heading or None, advanced, [setting blocks])], or ('mods', list, button) for the page
+    of the mods. folds: the numbers the headings of the screen have so far."""
+    out = []
+    for entry in content:
+        kind = entry[0]
+        if kind == 'head':
+            out.append([entry[1], entry[1] in ADVANCED_HEADS, []])
+            continue
+        if kind == 'mods':
+            lists = [e for e in items(m) if group_of(e.block) == 'mods' and (mf.get(e.block, 'type') or [''])[0] == 'ITEM_TYPE_LISTBOX']
+            load = [e for e in items(m) if name_of(e.block) == 'loadmod']
+            return ('mods', lists[0] if lists else None, load[0] if load else None)
+        if not out:
+            out.append([None, False, []])
+        if kind == 'old':
+            out[-1][2] += old_rows(m, entry[1], entry[2] if len(entry) > 2 else None, entry[3] if len(entry) > 3 else ())
+        else:
+            out[-1][2].append(new_row(entry))
+    return [s for s in out if s[2]]
+
+
+def canvas_row(block, page, rect, column, advanced):
+    """A setting as a row of a card ("row 1", "scroll 1", "column <n>"), at the sizes of the board."""
+    for key in ('rect', 'page', 'scroll', 'row', 'font', 'textscale', 'forecolor', 'visible', 'descpic', 'column', 'advanced'):
+        mf.drop(block, key)
+    pic = PICTURES.get(cvar_of(block))
+    if pic:
+        block.append(Entry('descPic', [quoted('%s/%s' % (PICTURE_DIR, pic[0])), pic[1], pic[2]]))
+    secret = name_of(block).startswith('vision_secret')
+    block += [Entry('rect', [mf.fmt(v) for v in rect]), Entry('page', [str(page)]), Entry('scroll', ['1']),
+              Entry('row', ['2' if secret else '1']), Entry('font', [FONT]), Entry('textscale', [canvas.scale(17)]),
+              Entry('forecolor', list(TEXT)), Entry('visible', ['1']), Entry('column', [str(column)])]
+    if advanced or cvar_of(block) in ADVANCED_CVARS:
+        block.append(Entry('advanced', ['1']))
+    return Entry('itemDef', [], block)
+
+
+def build_canvas(m, name, ingame):
+    """Makes the menu `m` the options screen of its table as the board draws it: the pages and the search at the left,
+    the title of the page and the switch Essentials / All Settings over the settings, the parts of a page as cards in
+    two columns, what the row under the mouse is for and the settings the screen changed at the right, and the bar at
+    the bottom with Back, Defaults, Revert and Apply."""
+    import canvas as cv
+    screen = SCREENS[name]
+    setup = screen is SETUP
+    old = list(m)
+    esc = mf.find(m, 'onesc')
+    back = clean(list(esc.block)) if esc and isinstance(esc.block, list) else list(CLICK)
+    w = cv.IN_W - 80 if ingame else cv.W
+    top = 0 if ingame else cv.HEAD_H
+    bottom = (cv.IN_H - 110 - cv.FOOT_H) if ingame else cv.H - cv.FOOT_H
+    main_x, main_w = cv.RAIL_W, w - cv.RAIL_W - cv.PANE_W
+    list_x, list_y = main_x + 36, top + 120
+    list_w, list_h = main_w - 72, bottom - list_y
+    col_w = (list_w - 6 - cv.CARD_GAP) / 2.0
+    pane_x = w - cv.PANE_W
+    wide = () if ingame else (('wide', 1),)
+
+    new = []
+    if not ingame:
+        new += cv.header('setup_menu' if setup else 'controlsMenu')
+
+    # the pages as a list at the left, under the search
+    new += [cv.fill('vision_rail', (0, top, cv.RAIL_W, bottom - top), cv.RAIL),
+            cv.fill('vision_rail_line', (cv.RAIL_W - 1, top, 1, bottom - top), cv.LINE)]
+    if setup:
+        new.append(cv.item('vision_search', (20, top + 28, 220, 44), ('type', 'ITEM_TYPE_EDITFIELD'), ('text', ref('Search all settings')),
+                           ('font', FONT), ('textscale', cv.scale(15)), ('forecolor', *cv.NAV_TEXT), ('textalignx', 16),
+                           ('textaligny', mf.fmt((44 - 15) / 2.0)), ('hint', 1), ('cvar', quoted('v_setupSearch')), ('maxChars', 40),
+                           ('maxPaintChars', 22), ('descText', ref('Shows the settings of all pages whose name or description has these words.'))))
+    tabs_y = top + (92 if setup else 28)
+
+    pages, folds, made_pages = [], [], []
+    for title, about, content in screen:
+        secs = page_sections(old, content, folds)
+        if secs:
+            pages.append((title, about, secs))
+    for n, (title, about, secs) in enumerate(pages):
+        page = n + 1
+        act = list(CLICK)
+        if title == '@MENUS_MODS':
+            act += ['uiScript', 'loadMods', ';']
+        new.append(cv.text('vision_tab%d' % page, (20, tabs_y + n * 50, 220, 46), word(title), 16, cv.SOFT_TEXT, 'left', 16, FONT,
+                           ('type', 'ITEM_TYPE_BUTTON'), ('caps', 1), ('style', 'WINDOW_STYLE_EMPTY'), ('tab', page),
+                           ('descText', word(about)), ('action', act)))
+        # the title of the page over its settings
+        new.append(cv.text('vision_title%d' % page, (main_x + 36, top + 28, main_w - 380, 41), word(title), 30, BRIGHT, 'left', 0, FONT,
+                           ('caps', 1), ('decoration',), ('page', page)))
+        new.append(cv.text('vision_subtitle%d' % page, (main_x + 36, top + 75, main_w - 380, 22), word(about), 16, cv.MUTED, 'left', 0,
+                           FONT, ('decoration',), ('page', page)))
+
+        if isinstance(secs, tuple):
+            # the mods: a list of folders and a button, over the width of the settings
+            _, lst, load = secs
+            if lst:
+                b = lst.block
+                mf.put(b, 'rect', mf.fmt(list_x), mf.fmt(list_y), mf.fmt(list_w), mf.fmt(list_h - 64))
+                for key, *args in (('visible', 1), ('page', page), ('textscale', cv.scale(16)), ('elementheight', 40),
+                                   ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *cv.CARD), ('bordercolor', *cv.CARD_EDGE), ('radius', 10)):
+                    mf.put(b, key, *args)
+                made_pages.append(lst)
+            if load:
+                b = load.block
+                r = (list_x, list_y + list_h - 52, 200, 44)
+                act2 = mf.find(b, 'action')
+                made_pages.append(cv.button('loadMod', r, '@MENUS_LOAD_MOD', clean(act2.block) if act2 else list(CLICK), 15, 'primary',
+                                            None, ('page', page)))
+            continue
+
+        # the parts as cards in two columns: each into the column that is shorter so far
+        heights = [0.0, 0.0]
+        placed = []
+        for head, adv, rows in secs:
+            col = 0 if heights[0] <= heights[1] else 1
+            placed.append((col, head, adv, rows))
+            heights[col] += (cv.CARD_GAP if heights[col] else 0) + cv.CARD_HEAD + cv.ROW * len(rows) + 12
+        # a page with one part and no heading (Controls): its rows are halved into two cards
+        if len(placed) == 1 and placed[0][1] is None and len(placed[0][3]) > 8:
+            col, head, adv, rows = placed[0]
+            half = (len(rows) + 1) // 2
+            placed = [(0, title, adv, rows[:half]), (1, None, adv, rows[half:])]
+        cursor = [list_y, list_y]
+        for col, head, adv, rows in sorted(placed, key=lambda p: p[0]):
+            x = list_x + col * (col_w + cv.CARD_GAP)
+            gap = cv.CARD_GAP if cursor[col] > list_y else 0
+            h = cv.CARD_HEAD + gap
+            folds.append(len(folds) + 1)
+            words = word(head) if head else '""'
+            props = [('caps', 1), ('fold', folds[-1]), ('page', page), ('scroll', 1), ('column', col)]
+            if head:
+                props += [('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_EMPTY'), ('action', list(CLICK))]
+            else:
+                props += [('decoration',)]
+            if adv:
+                props.append(('advanced', 1))
+            e = cv.text('vision_head', (x, cursor[col], col_w, h), words, 14, cv.MUTED, 'left', cv.CARD_PAD, canvas.BOLD, *props)
+            # (the words stand in the head of the card, under the gap)
+            mf.put(e.block, 'textaligny', mf.fmt(gap + (56 - 14) / 2.0))
+            made_pages.append(e)
+            cursor[col] += h
+            for b in rows:
+                made_pages.append(canvas_row(b, page, (x + cv.CARD_PAD - 12, cursor[col], col_w - 2 * (cv.CARD_PAD - 12), cv.ROW), col, adv))
+                cursor[col] += cv.ROW
+
+    # the switch between the settings that matter and all of them, over the list (a row without a name is its widget)
+    if setup:
+        new.append(cv.item('vision_all', (main_x + main_w - 36 - 270, top + 36, 270, 40), ('type', 'ITEM_TYPE_MULTI'),
+                           ('text', '""'), ('cvar', quoted('v_setupAll')), ('row', 1), ('font', FONT), ('textscale', cv.scale(17)),
+                           ('forecolor', *TEXT), ('cvarFloatList', [ref('Essentials'), '0', ref('All Settings'), '1']),
+                           ('descText', ref('Shows the settings that matter, or all of them.')), ('action', list(CLICK))))
+    new += made_pages
+    new.append(cv.item('vision_scroll', (list_x + list_w - 6, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
+
+    # at the right: what the row under the mouse is for, and the settings the screen changed
+    new += [cv.fill('vision_pane', (pane_x, top, cv.PANE_W, bottom - top), cv.RAIL),
+            cv.fill('vision_pane_line', (pane_x, top, 1, bottom - top), cv.LINE),
+            cv.item('vision_about', (pane_x + 28, top + 28, cv.PANE_W - 56, 360), ('type', 'ITEM_TYPE_DESC'), ('text', '""'),
+                    ('font', FONT), ('textscale', cv.scale(17)), ('forecolor', *BRIGHT), ('decoration',))]
+    if setup:
+        new += [cv.fill('vision_changes_line', (pane_x + 28, top + 400, cv.PANE_W - 56, 1), cv.CARD_EDGE),
+                cv.item('vision_changes', (pane_x + 28, top + 422, cv.PANE_W - 56, bottom - top - 450), ('type', 'ITEM_TYPE_CHANGES'),
+                        ('font', FONT), ('textscale', cv.scale(15)))]
+
+    # the bar at the bottom
+    new += cv.footer(bottom, w, not ingame)
+    fy = bottom + 12
+    new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK'))
+    made = defaults_page(old, len(pages) + 1, Layout(ingame)) if setup else []
+    if setup:
+        if made:
+            new.append(cv.fill('vision_foot_sep', (136, fy + 9, 1, 26), cv.EDGE))
+            new.append(cv.button('vision_defaults', (140, fy, 140, 44), '@MENUS_DEFAULTS', list(CLICK), 18, 'plain',
+                                 '@MENUS_RESTORE_DEFAULT_SETTINGS', ('tab', len(pages) + 1)))
+            new += cv.regrid(made, Layout(ingame).list[:2], (list_x, list_y))
+        new.append(cv.item('vision_dot', (310, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 3),
+                           ('decoration',)))
+        new.append(cv.text('vision_dot_text', (324, fy, 300, 44), ref('Changed from default'), 13, cv.MUTED, 'left', 0, FONT,
+                           ('decoration',)))
+        # Revert and Apply, which the state of the changes shows and hides (changesCvar: v_setupChangesState 0 none,
+        # 1 changed, 2 changed and a restart needed)
+        apply_x, revert_x = w - 48 - 150, w - 48 - 150 - 14 - 120
+        state = (('cvarTest', 'v_setupChangesState'),)
+        new.append(cv.text('vision_restart', (revert_x - 420, fy, 400, 44), ref('Some changes apply after a restart'), 14, cv.WARN,
+                           'right', 0, FONT, ('decoration',), *state, ('showCvar', [], ['"2"'])))
+        new.append(cv.button('vision_revert', (revert_x, fy, 120, 44), ref('Revert'), list(CLICK) + ['uiScript', 'changesRevert', ';'],
+                             15, 'outline', None, *state, ('hideCvar', [], ['"0"'])))
+        yes = next((e for e in items(old) if name_of(e.block) == 'vidrestart_yes'), None)
+        restart = clean(list(mf.find(yes.block, 'action').block)) if yes else CLICK + ['uiScript', 'updatevideosetup', ';']
+        new.append(cv.button('vision_apply', (apply_x, fy, 150, 44), ref('Apply'), list(CLICK) + ['uiScript', 'changesApply', ';'], 15,
+                             'primary', None, *state, ('showCvar', [], ['"1"'])))
+        new.append(cv.button('vision_apply_restart', (apply_x, fy, 150, 44), ref('Apply'),
+                             ['uiScript', 'changesApply', ';'] + restart, 15, 'primary', None, *state, ('showCvar', [], ['"2"'])))
+        off = cv.button('vision_apply_off', (apply_x, fy, 150, 44), ref('Apply'), list(CLICK), 15, 'outline', None, *state,
+                        ('showCvar', [], ['"0"']), ('decoration',))
+        mf.put(off.block, 'forecolor', *cv.MUTED)
+        new.append(off)
+    else:
+        new.append(cv.text('vision_hint', (w - 48 - 600, fy, 600, 44), ref('Enter or click: change the key. Backspace: clear it.'), 14,
+                           cv.MUTED, 'right', 0, FONT, ('decoration',)))
+
+    # the pages of their own that buttons among the rows open, after the tabs and the page of the defaults
+    if setup:
+        first = len(pages) + 1 + (1 if made else 0)
+        chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
+        network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
+        L0 = Layout(ingame)
+        new += cv.regrid(music_page(first, chat, L0), L0.list[:2], (list_x, list_y))
+        new += cv.regrid(channel_page(first + 1, network, L0), L0.list[:2], (list_x, list_y))
+        marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
+        for e in new:
+            act = mf.find(e.block, 'action') if e.k == 'itemdef' else None
+            if act and isinstance(act.block, list):
+                act.block = [marks.get(w_, w_) for w_ in act.block]
+
+    m[:] = [e for e in m if e.k != 'itemdef'] + new
+    for key in ('onopen', 'onclose', 'onesc'):
+        e = mf.find(m, key)
+        if e and isinstance(e.block, list):
+            e.block = clean(e.block)
+    if setup:
+        e = mf.find(m, 'onopen')
+        if e and isinstance(e.block, list):
+            e.block = ['uiScript', 'getsoundsetup', mf.NL] + e.block
+    for key in ('descx', 'descy', 'descalignment', 'descscale'):
+        mf.drop(m, key)
+    if ingame:
+        mf.put(m, 'canvas', cv.IN_W, cv.IN_H)
+        mf.put(m, 'rect', 40, 75, w, cv.IN_H - 110)
+        mf.put(m, 'style', 'WINDOW_STYLE_PANEL')
+        mf.put(m, 'backcolor', *WINDOW)
+        mf.put(m, 'bordercolor', *PANEL_EDGE)
+        mf.put(m, 'radius', 12)
+        mf.put(m, 'shadow', 30)
+        for key in ('border', 'bordersize', 'background'):
+            mf.drop(m, key)
+    else:
+        mf.put(m, 'canvas', cv.W, cv.H)
+    mf.put(m, 'scrollRect', mf.fmt(list_x), mf.fmt(list_y), mf.fmt(list_w), mf.fmt(list_h))
+    mf.put(m, 'scrollStep', cv.ROW)
+    if folds:
+        mf.put(m, 'foldCvar', 'v_setupFolds' if setup else 'v_controlsFolds')
+    if setup:
+        mf.put(m, 'searchCvar', 'v_setupSearch')
+        mf.put(m, 'advancedCvar', 'v_setupAll')
+        mf.put(m, 'changesCvar', 'v_setupChanges')

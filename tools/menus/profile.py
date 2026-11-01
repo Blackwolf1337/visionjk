@@ -137,6 +137,10 @@ class Frame:
         self.L = L = options.Layout(ingame)
         self.x, self.y, self.h = L.list[0], L.list[1], L.list[3]
         self.w = L.right - L.left
+        if not ingame:
+            # (outside a game the page is put onto the canvas at twice its units, canvas.profile_page: the columns are
+            # laid out for a width of 752 units from 24, 1504 pixels from 48, and a height of 352 units)
+            self.x, self.w = 24, 752
         self.px = self.x + COLUMN + GAP          # the pane beside the column (the force powers)
         self.pw = self.w - COLUMN - GAP
         # the three columns of the other pages
@@ -170,7 +174,7 @@ class Frame:
             r = (L.left - 3 + n * 80, L.strip_y, 80, 26)
             common = (('caps', 1), ('style', 'WINDOW_STYLE_EMPTY'), *centered(r, STRIP_SCALE))
             if key == self.here:
-                e = text_item('vision_here', r, options.word(text), STRIP_SCALE, DIM, ('flow', 3), ('decoration',), *common)
+                e = text_item('vision_strip_here', r, options.word(text), STRIP_SCALE, DIM, ('flow', 3), ('decoration',), *common)
             else:
                 e = text_item('vision_to_' + key, r, options.word(text), STRIP_SCALE, DIM, ('type', 'ITEM_TYPE_BUTTON'), ('flow', 2),
                               ('descText', ref(about)), ('action', self.leave(self.targets[key])), *common)

@@ -7,12 +7,12 @@
 		fullScreen				0
 		visible					0
 		outOfBoundsClick
-		rect					0 0 327 557
+		rect					160 0 654 1114
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					163.5
-		descY					-15
-		descScale				0.7
+		descX					487
+		descY					-30
+		descScale				1.4
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		disablecolor			0.40 0.47 0.56 1
@@ -74,20 +74,22 @@
 			hide objective_pic
 			close all;
 		}
+		skin					1
+		openSlide				8
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 327 557
+			rect					0 0 654 1114
 			forecolor				1 1 1 1
 			visible					0
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -96,17 +98,17 @@
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.11 0.18 0.29 0.45
 			text					@MENUS_MISSION_OBJECTIVES
-			rect					7 7 308 20
+			rect					14 14 616 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				160
-			textaligny				1.25
+			textalignx				320
+			textaligny				2.5
 			font					5
-			textscale				0.67
+			textscale				1.34
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
 			bordercolor				0.086 0.149 0.247 1
-			radius					3
+			radius					6
 			caps					1
 		}
 
@@ -115,13 +117,13 @@
 			name					border
 			group					none
 			type					ITEM_TYPE_TEXT
-			rect					5 5 310 370
+			rect					10 10 620 740
 			visible					1
 			bordercolor				0.086 0.149 0.247 1
 			decoration
 			style					WINDOW_STYLE_PANEL
 			backcolor				0 0 0 0
-			radius					5
+			radius					10
 		}
 
 		itemDef
@@ -131,11 +133,11 @@
 			style					WINDOW_STYLE_EMPTY
 			cvar					siege_missionname
 			maxChars				0
-			rect					70 28 180 18
+			rect					140 56 360 36
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				90
+			textalignx				180
 			font					5
-			textscale				0.52
+			textscale				1.04
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -147,7 +149,7 @@
 			name					mappic
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					70 46 180 320
+			rect					140 92 360 640
 			forecolor				1 1 1 1
 			visible					1
 			border					1
@@ -160,7 +162,7 @@
 		{
 			name					team1_symbol
 			style					WINDOW_STYLE_SHADER
-			rect					12 60 45 45
+			rect					24 120 90 90
 			forecolor				1 1 1 1
 			visible					1
 			decoration
@@ -170,7 +172,7 @@
 		{
 			name					team2_symbol
 			style					WINDOW_STYLE_SHADER
-			rect					265 60 45 45
+			rect					530 120 90 90
 			forecolor				1 1 1 1
 			visible					1
 			decoration
@@ -179,13 +181,13 @@
 		itemDef
 		{
 			name					vision_rail_120
-			rect					19 117 30 240
+			rect					38 234 60 480
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5.3
-			shadow					8
+			radius					10.6
+			shadow					16
 			sheen					0
 			decoration
 		}
@@ -194,16 +196,16 @@
 		{
 			name					team1obj1_button
 			group					team1obj_buttons
-			rect					22 120 24 24
+			rect					44 240 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_1
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -239,23 +241,23 @@
 				show text_tm1_obj1
 				uiscript setsiegeobjbuttons tm1_icon1 team1_objective1_mapicon team1_objective1_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj2_button
 			group					team1obj_buttons
-			rect					22 150 24 24
+			rect					44 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_2
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -293,23 +295,23 @@
 				show text_tm1_obj2
 				uiscript setsiegeobjbuttons tm1_icon2 team1_objective2_mapicon team1_objective2_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj3_button
 			group					team1obj_buttons
-			rect					22 180 24 24
+			rect					44 360 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_3
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -347,23 +349,23 @@
 				show text_tm1_obj3
 				uiscript setsiegeobjbuttons tm1_icon3 team1_objective3_mapicon team1_objective3_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj4_button
 			group					team1obj_buttons
-			rect					22 210 24 24
+			rect					44 420 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_4
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -401,23 +403,23 @@
 				show text_tm1_obj4
 				uiscript setsiegeobjbuttons tm1_icon4 team1_objective4_mapicon team1_objective4_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj5_button
 			group					team1obj_buttons
-			rect					22 240 24 24
+			rect					44 480 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_5
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -455,23 +457,23 @@
 				show text_tm1_obj5
 				uiscript setsiegeobjbuttons tm1_icon5 team1_objective5_mapicon team1_objective5_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj6_button
 			group					team1obj_buttons
-			rect					22 270 24 24
+			rect					44 540 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -509,23 +511,23 @@
 				show text_tm1_obj6
 				uiscript setsiegeobjbuttons tm1_icon6 team1_objective6_mapicon team1_objective6_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj7_button
 			group					team1obj_buttons
-			rect					22 300 24 24
+			rect					44 600 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_7
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -563,23 +565,23 @@
 				show text_tm1_obj7
 				uiscript setsiegeobjbuttons tm1_icon7 team1_objective7_mapicon team1_objective7_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team1obj8_button
 			group					team1obj_buttons
-			rect					22 330 24 24
+			rect					44 660 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_8
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -617,7 +619,7 @@
 				show text_tm1_obj8
 				uiscript setsiegeobjbuttons tm1_icon8 team1_objective8_mapicon team1_objective8_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
@@ -625,7 +627,7 @@
 			name					team1_met_obj1
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 120 24 24
+			rect					44 240 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -641,7 +643,7 @@
 			name					team1_met_obj2
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 150 24 24
+			rect					44 300 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -657,7 +659,7 @@
 			name					team1_met_obj3
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 180 24 24
+			rect					44 360 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -673,7 +675,7 @@
 			name					team1_met_obj4
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 210 24 24
+			rect					44 420 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -689,7 +691,7 @@
 			name					team1_met_obj5
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 240 24 24
+			rect					44 480 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -705,7 +707,7 @@
 			name					team1_met_obj6
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 270 24 24
+			rect					44 540 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -721,7 +723,7 @@
 			name					team1_met_obj7
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 300 24 24
+			rect					44 600 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -737,7 +739,7 @@
 			name					team1_met_obj8
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					22 330 24 24
+			rect					44 660 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -751,13 +753,13 @@
 		itemDef
 		{
 			name					vision_rail_120
-			rect					270 117 30 240
+			rect					540 234 60 480
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5.3
-			shadow					8
+			radius					10.6
+			shadow					16
 			sheen					0
 			decoration
 		}
@@ -766,16 +768,16 @@
 		{
 			name					team2obj1_button
 			group					team2obj_buttons
-			rect					273 120 24 24
+			rect					546 240 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_1
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -811,23 +813,23 @@
 				show text_tm2_obj1
 				uiscript setsiegeobjbuttons tm2_icon1 team2_objective1_mapicon team2_objective1_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj2_button
 			group					team2obj_buttons
-			rect					273 150 24 24
+			rect					546 300 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_2
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -865,23 +867,23 @@
 				show text_tm2_obj2
 				uiscript setsiegeobjbuttons tm2_icon2 team2_objective2_mapicon team2_objective2_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj3_button
 			group					team2obj_buttons
-			rect					273 180 24 24
+			rect					546 360 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_3
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -919,23 +921,23 @@
 				show text_tm2_obj3
 				uiscript setsiegeobjbuttons tm2_icon3 team2_objective3_mapicon team2_objective3_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj4_button
 			group					team2obj_buttons
-			rect					273 210 24 24
+			rect					546 420 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_4
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -973,23 +975,23 @@
 				show text_tm2_obj4
 				uiscript setsiegeobjbuttons tm2_icon4 team2_objective4_mapicon team2_objective4_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj5_button
 			group					team2obj_buttons
-			rect					273 240 24 24
+			rect					546 480 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_5
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -1027,23 +1029,23 @@
 				show text_tm2_obj5
 				uiscript setsiegeobjbuttons tm2_icon5 team2_objective5_mapicon team2_objective5_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj6_button
 			group					team2obj_buttons
-			rect					273 270 24 24
+			rect					546 540 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_6
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -1081,23 +1083,23 @@
 				show text_tm2_obj6
 				uiscript setsiegeobjbuttons tm2_icon6 team2_objective6_mapicon team2_objective6_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj7_button
 			group					team2obj_buttons
-			rect					273 300 24 24
+			rect					546 600 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_7
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -1135,23 +1137,23 @@
 				show text_tm2_obj7
 				uiscript setsiegeobjbuttons tm2_icon7 team2_objective7_mapicon team2_objective7_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
 		{
 			name					team2obj8_button
 			group					team2obj_buttons
-			rect					273 330 24 24
+			rect					546 660 48 48
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_8
 			font					5
-			textscale				0.69
+			textscale				1.38
 			textstyle				0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
-			textaligny				0.2
+			textalignx				24
+			textaligny				0.4
 			backcolor				0.11 0.18 0.29 0.45
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -1189,7 +1191,7 @@
 				show text_tm2_obj8
 				uiscript setsiegeobjbuttons tm2_icon8 team2_objective8_mapicon team2_objective8_litmapicon
 			}
-			radius					3
+			radius					6
 		}
 
 		itemDef
@@ -1197,7 +1199,7 @@
 			name					team2_met_obj1
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 120 24 24
+			rect					546 240 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1213,7 +1215,7 @@
 			name					team2_met_obj2
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 150 24 24
+			rect					546 300 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1229,7 +1231,7 @@
 			name					team2_met_obj3
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 180 24 24
+			rect					546 360 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1245,7 +1247,7 @@
 			name					team2_met_obj4
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 210 24 24
+			rect					546 420 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1261,7 +1263,7 @@
 			name					team2_met_obj5
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 240 24 24
+			rect					546 480 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1277,7 +1279,7 @@
 			name					team2_met_obj6
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 270 24 24
+			rect					546 540 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1293,7 +1295,7 @@
 			name					team2_met_obj7
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 300 24 24
+			rect					546 600 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1309,7 +1311,7 @@
 			name					team2_met_obj8
 			group					none
 			style					WINDOW_STYLE_SHADER
-			rect					273 330 24 24
+			rect					546 660 48 48
 			forecolor				1 1 1 1
 			border					1
 			bordercolor				0.086 0.149 0.247 1
@@ -1755,29 +1757,29 @@
 		itemDef
 		{
 			name					obj_minidesc
-			rect					7 378 308 20
+			rect					14 756 616 40
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.11 0.18 0.29 0.45
 			text					@MENUS_PRIMARY_OBJECTIVES
 			font					5
-			textscale				0.6
+			textscale				1.2
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
+			textalignx				600
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
 			bordercolor				0.086 0.149 0.247 1
-			radius					3
-			textaligny				1.05
+			radius					6
+			textaligny				2.1
 		}
 
 		itemDef
 		{
 			name					obj_longdesc
-			rect					16 403 270 76
+			rect					32 806 540 152
 			type					ITEM_TYPE_TEXT
 			font					4
-			textscale				.8
+			textscale				1.6
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				1 1 1 1
 			visible					1
@@ -1788,7 +1790,7 @@
 		itemDef
 		{
 			name					objective_pic
-			rect					208 398 107 78
+			rect					416 796 214 156
 			style					WINDOW_STYLE_SHADER
 			background				"gfx/2d/select"
 			forecolor				1 1 1 1
@@ -1800,14 +1802,14 @@
 		{
 			name					text_tm1_obj1
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1819,14 +1821,14 @@
 		{
 			name					text_tm1_obj2
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1838,14 +1840,14 @@
 		{
 			name					text_tm1_obj3
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1857,14 +1859,14 @@
 		{
 			name					text_tm1_obj4
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1876,14 +1878,14 @@
 		{
 			name					text_tm1_obj5
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1895,14 +1897,14 @@
 		{
 			name					text_tm1_obj6
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1914,14 +1916,14 @@
 		{
 			name					text_tm1_obj7
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1933,14 +1935,14 @@
 		{
 			name					text_tm1_obj8
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1952,14 +1954,14 @@
 		{
 			name					text_tm2_obj1
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1971,14 +1973,14 @@
 		{
 			name					text_tm2_obj2
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -1990,14 +1992,14 @@
 		{
 			name					text_tm2_obj3
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -2009,14 +2011,14 @@
 		{
 			name					text_tm2_obj4
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -2028,14 +2030,14 @@
 		{
 			name					text_tm2_obj5
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -2047,14 +2049,14 @@
 		{
 			name					text_tm2_obj6
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -2066,14 +2068,14 @@
 		{
 			name					text_tm2_obj7
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -2085,14 +2087,14 @@
 		{
 			name					text_tm2_obj8
 			group					completed_text
-			rect					210 427 107 78
+			rect					420 854 214 156
 			type					ITEM_TYPE_TEXT
 			text					@MENUS_OBJECTIVE_COMPLETED
 			textalign				ITEM_ALIGN_CENTER
 			font					5
-			textscale				0.6
-			textalignx				53
-			textaligny				1.05
+			textscale				1.2
+			textalignx				106
+			textaligny				2.1
 			forecolor				0.86 0.90 0.945 1
 			visible					0
 			decoration
@@ -2105,13 +2107,13 @@
 			name					objtext_border
 			group					none
 			type					ITEM_TYPE_TEXT
-			rect					5 378 310 98
+			rect					10 756 620 196
 			visible					1
 			bordercolor				0.086 0.149 0.247 1
 			decoration
 			style					WINDOW_STYLE_PANEL
 			backcolor				0 0 0 0
-			radius					5
+			radius					10
 		}
 
 		itemDef
@@ -2327,12 +2329,12 @@
 			name					okay
 			text					@MENUS_DONE
 			type					1
-			textscale				0.64
+			textscale				1.28
 			group					grpControlbutton
 			type					ITEM_TYPE_BUTTON
-			rect					125 459 110 20
+			rect					250 918 220 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
+			textalignx				110
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -2342,13 +2344,12 @@
 				close all
 			}
 			font					5
-			textaligny				4
+			textaligny				8
 			caps					1
 			style					WINDOW_STYLE_PANEL
-			radius					3.2
+			radius					6.4
 			bordercolor				0.153 0.251 0.373 1
 		}
-		skin					1
-		openSlide				8
+		canvas					1600 1200
 	}
 }

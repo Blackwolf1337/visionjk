@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					16 30 608 436
+		rect					192 60 1216 872
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
-		descX					304
-		descY					415
-		descScale				0.55
+		descX					768
+		descY					830
+		descScale				1.1
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { uiScript setForce "none" }
@@ -29,7 +29,7 @@
 		itemDef
 		{
 			name					vision_strip
-			rect					0 0 608 26
+			rect					0 0 1216 52
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
@@ -39,7 +39,7 @@
 		itemDef
 		{
 			name					vision_strip_line
-			rect					0 26 608 0.67
+			rect					0 52 1216 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -49,11 +49,11 @@
 		itemDef
 		{
 			name					vision_to_profile
-			rect					9 0 80 26
+			rect					18 0 160 52
 			visible					1
 			text					@MENUS_PROFILE
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -62,18 +62,18 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_character
-			rect					89 0 80 26
+			rect					178 0 160 52
 			visible					1
 			text					@VISION_CHARACTER
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -82,18 +82,18 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_to_saber
-			rect					169 0 80 26
+			rect					338 0 160 52
 			visible					1
 			text					@MENUS_LIGHTSABER_CAPS
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			type					ITEM_TYPE_BUTTON
 			flow					2
@@ -102,37 +102,37 @@
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
-			name					vision_here
-			rect					249 0 80 26
+			name					vision_strip_here
+			rect					498 0 160 52
 			visible					1
 			text					@MENUS_DP_FORCE
 			font					5
-			textscale				0.58
+			textscale				1.16
 			forecolor				0.56 0.64 0.74 1
 			flow					3
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				7.78
+			textalignx				80
+			textaligny				15.56
 		}
 
 		itemDef
 		{
 			name					vision_pane
-			rect					340 38 256 352
+			rect					680 76 512 704
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					4
+			radius					8
 			decoration
 		}
 
@@ -143,12 +143,12 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_FORCE_MASTERY
 			ownerdraw				UI_FORCE_RANK
-			rect					12 38 316 22
+			rect					24 76 632 44
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				4.2
+			textalignx				16
+			textaligny				8.4
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
@@ -157,7 +157,7 @@
 		itemDef
 		{
 			name					vision_rule
-			rect					12 59 316 0.67
+			rect					24 118 632 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
@@ -171,13 +171,13 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_FORCE_SIDE
 			ownerdraw				UI_FORCE_SIDE
-			rect					12 60 316 22
+			rect					24 120 632 44
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				4.2
+			textalignx				16
+			textaligny				8.4
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_THE_PATH_OF_THE
 			visible					1
@@ -187,7 +187,7 @@
 		itemDef
 		{
 			name					vision_rule
-			rect					12 81 316 0.67
+			rect					24 162 632 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
@@ -201,12 +201,12 @@
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_POINTS_REMAINING
 			ownerdraw				UI_FORCE_POINTS
-			rect					12 82 316 22
+			rect					24 164 632 44
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				4.2
+			textalignx				16
+			textaligny				8.4
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			outlinecolor			1 .5 .5 .5
 			visible					1
@@ -216,7 +216,7 @@
 		itemDef
 		{
 			name					vision_rule
-			rect					12 103 316 0.67
+			rect					24 206 632 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
@@ -229,13 +229,13 @@
 			group					"playersettingforcegroup"
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_FORCE_TEMPLATES
-			rect					14 108 312 22
+			rect					28 216 624 44
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				9
+			textaligny				18
 			outlinecolor			1 .5 .5 .5
 			font					5
-			textscale				0.54
+			textscale				1.08
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
@@ -245,7 +245,7 @@
 		itemDef
 		{
 			name					fcflist
-			rect					12 129 316 0.67
+			rect					24 258 632 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.11 0.18 0.29 1
@@ -256,29 +256,29 @@
 		itemDef
 		{
 			name					fcflist
-			rect					12 132 316 140
+			rect					24 264 632 280
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			155
-			elementheight			17
+			elementwidth			310
+			elementheight			34
 			font					5
-			textscale				0.65
+			textscale				1.3
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_FORCECFG
 			textstyle				0
 			textalign				3
-			textaligny				3.12
+			textaligny				6.24
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				0.56 0.64 0.74 1
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			descText				@MENUS_CHOOSE_A_PRE_MADE_ALLOCATION
 			visible					1
-			columns					1 2 190 250
+			columns					1 4 190 500
 			mouseenter { setitemcolor fcflist bordercolor 0.086 0.149 0.247 1 }
 			mouseexit { setitemcolor fcflist bordercolor 0.086 0.149 0.247 1 }
 			action { play "sound/interface/button1.wav" ; }
-			radius					4
+			radius					8
 		}
 
 		itemDef
@@ -289,9 +289,9 @@
 			text					@MENUS_FILENAME
 			cvar					"ui_SaveFCF"
 			maxchars				12
-			rect					12 278 316 22
+			rect					24 556 632 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			outlinecolor			1 .5 .5 .5
 			descText				@MENUS_ENTER_THE_TITLE_FOR_YOUR
@@ -306,9 +306,9 @@
 			text					@MENUS_SAVE_FILE
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					12 300 316 22
+			rect					24 600 632 44
 			font					5
-			textscale				0.7
+			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_SAVE_CURRENT_FORCE_SETUP
 			visible					1
@@ -326,14 +326,14 @@
 			group					"playerforcetemplatesave"
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_LEFT
-			rect					20 326 300 16
+			rect					40 652 600 32
 			forecolor				0.91 0.77 0.42 1
 			font					5
-			textscale				0.55
+			textscale				1.1
 			text					@MENUS_MATCHING_NAMES
 			decoration
 			visible					0
-			textaligny				2
+			textaligny				4
 			textalignx				0
 		}
 
@@ -343,14 +343,14 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_POWER
-			rect					380.5 50 0 0
+			rect					761 100 0 0
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				104
-			textaligny				1
+			textalignx				208
+			textaligny				2
 			outlinecolor			1 .5 .5 .5
 			backcolor				0.3 0.3 0.3 1
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -364,14 +364,14 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_1_2_3
-			rect					380.5 50 0 0
+			rect					761 100 0 0
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				1
+			textalignx				230
+			textaligny				2
 			outlinecolor			1 .5 .5 .5
 			backcolor				0.3 0.3 0.3 1
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -385,12 +385,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_FORCE_JUMP
-			rect					380.5 71.96 110 15
+			rect					761 143.92 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -406,11 +406,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_LEVITATION
-			rect					380.5 71.96 175 15
+			rect					761 143.92 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -430,12 +430,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_FORCE_PUSH
-			rect					380.5 92.7 110 15
+			rect					761 185.4 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -451,11 +451,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_PUSH
-			rect					380.5 92.7 175 15
+			rect					761 185.4 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -475,12 +475,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_FORCE_PULL
-			rect					380.5 113.44 110 15
+			rect					761 226.88 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -496,11 +496,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_PULL
-			rect					380.5 113.44 175 15
+			rect					761 226.88 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -520,12 +520,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_FORCE_SPEED
-			rect					380.5 134.18 110 15
+			rect					761 268.36 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -541,11 +541,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_SPEED
-			rect					380.5 134.18 175 15
+			rect					761 268.36 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -565,12 +565,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_FORCE_SIGHT
-			rect					380.5 154.92 110 15
+			rect					761 309.84 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -586,11 +586,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_SEE
-			rect					380.5 154.92 175 15
+			rect					761 309.84 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -610,12 +610,12 @@
 			group					lightpowers
 			style					0
 			text					@MENUS_FORCE_ABSORB
-			rect					380.5 185.42 110 15
+			rect					761 370.84 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -631,10 +631,10 @@
 			group					lightpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_ABSORB
-			rect					380.5 185.42 175 15
+			rect					761 370.84 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.17
+			textalignx				230
+			textaligny				-10.34
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -646,7 +646,7 @@
 			mouseenter { setitemcolor setfp_absorb forecolor 0.56 0.64 0.74 1 }
 			mouseexit { setitemcolor setfp_absorb forecolor 0.56 0.64 0.74 1 }
 			font					5
-			textscale				0.47
+			textscale				0.94
 		}
 
 		itemDef
@@ -655,12 +655,12 @@
 			group					lightpowers
 			style					0
 			text					@MENUS_FORCE_HEAL
-			rect					380.5 206.16 110 15
+			rect					761 412.32 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -676,11 +676,11 @@
 			group					lightpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_HEAL
-			rect					380.5 206.16 175 15
+			rect					761 412.32 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-4.65
-			textscale				0.77
+			textalignx				230
+			textaligny				-9.3
+			textscale				1.54
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -700,14 +700,14 @@
 			group					lightpowers
 			style					0
 			text					@MENUS_FORCE_PROTECT
-			rect					380.5 226.9 110 15
+			rect					761 453.8 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
+			textalignx				210
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			textaligny				1
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -721,11 +721,11 @@
 			group					lightpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_PROTECT
-			rect					380.5 226.9 175 15
+			rect					761 453.8 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -745,12 +745,12 @@
 			group					lightpowers
 			style					0
 			text					@MENUS_FORCE_MINDTRICK
-			rect					380.5 247.64 110 15
+			rect					761 495.28 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -766,11 +766,11 @@
 			group					lightpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_TELEPATHY
-			rect					380.5 247.64 175 15
+			rect					761 495.28 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-4.65
-			textscale				0.77
+			textalignx				230
+			textaligny				-9.3
+			textscale				1.54
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -790,14 +790,14 @@
 			group					lightpowers_team
 			style					0
 			text					@MENUS_FORCE_TEAM_HEAL
-			rect					380.5 268.38 110 15
+			rect					761 536.76 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
+			textalignx				210
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			textaligny				1
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -820,11 +820,11 @@
 			group					lightpowers_team
 			style					0
 			ownerdraw				UI_FORCE_RANK_TEAM_HEAL
-			rect					380.5 268.38 175 15
+			rect					761 536.76 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -853,12 +853,12 @@
 			group					darkpowers
 			style					0
 			text					@MENUS_FORCE_GRIP
-			rect					380.5 185.42 110 15
+			rect					761 370.84 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				1 0.54 0.50 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -874,11 +874,11 @@
 			group					darkpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_GRIP
-			rect					380.5 185.42 175 15
+			rect					761 370.84 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				1 0.54 0.50 1
@@ -898,12 +898,12 @@
 			group					darkpowers
 			style					0
 			text					@MENUS_FORCE_DRAIN
-			rect					380.5 206.16 110 15
+			rect					761 412.32 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				1 0.54 0.50 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -919,10 +919,10 @@
 			group					darkpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_DRAIN
-			rect					380.5 206.16 175 15
+			rect					761 412.32 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.17
+			textalignx				230
+			textaligny				-10.34
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				1 0.54 0.50 1
@@ -934,7 +934,7 @@
 			mouseenter { setitemcolor setfp_drain forecolor 1 0.7 0.7 1 }
 			mouseexit { setitemcolor setfp_drain forecolor 1 0.54 0.50 1 }
 			font					5
-			textscale				0.47
+			textscale				0.94
 		}
 
 		itemDef
@@ -943,12 +943,12 @@
 			group					darkpowers
 			style					0
 			text					@MENUS_FORCE_LIGHTNING
-			rect					380.5 226.9 110 15
+			rect					761 453.8 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				1 0.54 0.50 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -964,11 +964,11 @@
 			group					darkpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_LIGHTNING
-			rect					380.5 226.9 175 15
+			rect					761 453.8 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				1 0.54 0.50 1
@@ -988,12 +988,12 @@
 			group					darkpowers
 			style					0
 			text					@MENUS_DARK_RAGE
-			rect					380.5 247.64 110 15
+			rect					761 495.28 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				1 0.54 0.50 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -1009,11 +1009,11 @@
 			group					darkpowers
 			style					0
 			ownerdraw				UI_FORCE_RANK_RAGE
-			rect					380.5 247.64 175 15
+			rect					761 495.28 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				1 0.54 0.50 1
@@ -1033,12 +1033,12 @@
 			group					darkpowers_team
 			style					0
 			text					@MENUS_FORCE_TEAM_REPLENISH
-			rect					380.5 268.38 110 15
+			rect					761 536.76 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				1 0.54 0.50 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -1063,11 +1063,11 @@
 			group					darkpowers_team
 			style					0
 			ownerdraw				UI_FORCE_RANK_TEAM_FORCE
-			rect					380.5 268.38 175 15
+			rect					761 536.76 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				1 0.54 0.50 1
@@ -1096,12 +1096,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_SABER_ATTACK
-			rect					380.5 298.88 110 15
+			rect					761 597.76 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -1117,11 +1117,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_SABERATTACK
-			rect					380.5 298.88 175 15
+			rect					761 597.76 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -1141,12 +1141,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_SABER_DEFEND
-			rect					380.5 319.62 110 15
+			rect					761 639.24 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -1162,11 +1162,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_SABERDEFEND
-			rect					380.5 319.62 175 15
+			rect					761 639.24 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			forecolor				0.56 0.64 0.74 1
@@ -1186,12 +1186,12 @@
 			group					"playersettingforcegroup"
 			style					0
 			text					@MENUS_SABER_THROW
-			rect					380.5 340.36 110 15
+			rect					761 680.72 220 30
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				105
-			textaligny				1
+			textalignx				210
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -1207,11 +1207,11 @@
 			group					"playersettingforcegroup"
 			style					0
 			ownerdraw				UI_FORCE_RANK_SABERTHROW
-			rect					380.5 340.36 175 15
+			rect					761 680.72 350 30
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				115
-			textaligny				-5.62
-			textscale				0.21
+			textalignx				230
+			textaligny				-11.24
+			textscale				0.42
 			outlinecolor			1 .5 .5 .5
 			background				"forcecirclegray"
 			backcolor				0 0 0 0
@@ -1233,12 +1233,12 @@
 			text					@MENUS_NO_LIGHTSABER
 			type					1
 			style					0
-			rect					403.5 325.72 0 0
+			rect					807 651.44 0 0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				65
-			textaligny				1
+			textalignx				130
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.40 0.47 0.56 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -1256,14 +1256,14 @@
 			text					@MENUS__REQUIRES_SABER_ATTACK
 			type					1
 			style					0
-			rect					403.5 346.46 0 0
+			rect					807 692.92 0 0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				65
+			textalignx				130
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			textaligny				1
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.40 0.47 0.56 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -1277,7 +1277,7 @@
 			name					nosaber
 			group					"playersettinggroup"
 			style					0
-			rect					380.5 325.72 175 34
+			rect					761 651.44 350 68
 			forecolor				.7 .7 .7 1
 			decoration
 			descText				@MENUS_MUST_ACQUIRE_A_MINIMUM
@@ -1287,7 +1287,7 @@
 		itemDef
 		{
 			name					vision_foot
-			rect					0 404 608 32
+			rect					0 808 1216 64
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
@@ -1297,7 +1297,7 @@
 		itemDef
 		{
 			name					vision_foot_line
-			rect					0 404 608 0.67
+			rect					0 808 1216 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -1307,11 +1307,11 @@
 		itemDef
 		{
 			name					vision_back
-			rect					9 404 72 32
+			rect					18 808 144 64
 			visible					1
 			text					@MENUS_BACK
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.86 0.90 0.945 1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
@@ -1319,8 +1319,8 @@
 			descText				@MENUS_BACK
 			action { play "sound/interface/button1.wav" ; close ingame_playerforce ; open ingame_player ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				36
-			textaligny				10.6
+			textalignx				72
+			textaligny				21.2
 			flow					1
 		}
 
@@ -1331,12 +1331,12 @@
 			text					@MENUS_APPLY_POWERS
 			type					1
 			style					WINDOW_STYLE_PANEL
-			rect					464 410 132 20
+			rect					928 820 264 40
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				66
-			textaligny				4.6
+			textalignx				132
+			textaligny				9.2
 			font					5
-			textscale				0.6
+			textscale				1.2
 			forecolor				0.016 0.071 0.122 1
 			descText				@MENUS_MAKE_THESE_CHANGES_TO
 			visible					1
@@ -1350,7 +1350,8 @@
 			caps					1
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
-			radius					3.2
+			radius					6.4
 		}
+		canvas					1600 1200
 	}
 }

@@ -7,24 +7,31 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					105 40 242 134
+		rect					370 80 484 268
 		disableColor			0.40 0.47 0.56 1
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
+		skin					1
+		openSlide				8
+		descX					612
+		descY					358
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 242 134
+			rect					0 0 484 268
 			forecolor				1 1 1 1
 			visible					1
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -33,12 +40,12 @@
 			style					0
 			text					@MENUS_NAME1
 			ownerdraw				UI_BOTNAME
-			rect					2 4 236 30
+			rect					4 8 472 60
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				80
-			textaligny				1.35
+			textalignx				160
+			textaligny				2.7
 			font					5
-			textscale				0.77
+			textscale				1.54
 			forecolor				0.86 0.90 0.945 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -52,12 +59,12 @@
 			style					0
 			text					@MENUS_TEAM
 			ownerdraw				UI_REDBLUE
-			rect					2 34 236 30
+			rect					4 68 472 60
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				80
-			textaligny				1.35
+			textalignx				160
+			textaligny				2.7
 			font					5
-			textscale				0.77
+			textscale				1.54
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"g_gametype"
 			disableCvar
@@ -81,12 +88,12 @@
 			style					0
 			text					@MENUS_SKILL1
 			ownerdraw				UI_BOTSKILL
-			rect					2 64 236 30
+			rect					4 128 472 60
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				80
-			textaligny				1.35
+			textalignx				160
+			textaligny				2.7
 			font					5
-			textscale				0.77
+			textscale				1.54
 			forecolor				0.86 0.90 0.945 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -100,11 +107,11 @@
 			text					@MENUS_ADD_BOT
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					20 94 200 30
-			textalignx				80
-			textaligny				3.5
+			rect					40 188 400 60
+			textalignx				160
+			textaligny				7
 			font					5
-			textscale				0.86
+			textscale				1.72
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.90 0.945 1
 			visible					1
@@ -117,12 +124,6 @@
 			mouseEnter { show okButton }
 			mouseExit { hide okButton }
 		}
-		skin					1
-		openSlide				8
-		descX					226
-		descY					179
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				0.7
-		descColor				0.56 0.64 0.74 1
+		canvas					1600 1200
 	}
 }

@@ -35,7 +35,7 @@
 		visible					0
 		fullScreen				0
 		outOfBoundsClick
-		rect					0 0 640 480
+		rect					160 0 1280 960
 		focusColor				0.36 0.78 0.96 1
 		disableColor			0.40 0.47 0.56 1
 		onOpen { uiScript setBotButton }
@@ -45,7 +45,7 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					0 0 640 26
+			rect					0 0 1280 52
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.016 0.031 0.063 0.8
@@ -56,7 +56,7 @@
 		itemDef
 		{
 			name					vision_bar_line
-			rect					0 26 640 0.67
+			rect					0 52 1280 1.34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
@@ -70,15 +70,15 @@
 			text					@MENUS_JOIN
 			cvarTest				"ui_singleplayeractive"
 			disableCvar { "1" }
-			rect					8 0 52 26
+			rect					16 0 104 52
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -101,13 +101,13 @@
 			text					@MENUS_JOIN
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -132,13 +132,13 @@
 			style					WINDOW_STYLE_EMPTY
 			cvarTest				"ui_singleplayeractive"
 			disableCvar { "1" }
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -161,13 +161,13 @@
 			style					WINDOW_STYLE_EMPTY
 			cvarTest				"ui_singleplayeractive"
 			disableCvar { "1" }
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -188,13 +188,13 @@
 			text					@MENUS_VOICE_CHAT
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -217,13 +217,13 @@
 			text					@MENUS_ADD_BOT
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -246,13 +246,13 @@
 			text					@MENUS_PROFILE_LOWER
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -275,13 +275,13 @@
 			text					@MENUS_OBJECTIVES
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -304,13 +304,13 @@
 			text					@MENUS_CONTROLS2
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -331,13 +331,13 @@
 			text					@MENUS_SETUP_INGAME
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -355,7 +355,7 @@
 		itemDef
 		{
 			name					photo
-			rect					8 0 52 26
+			rect					16 0 104 52
 			visible					1
 			text					@VISION_PHOTO
 			type					ITEM_TYPE_BUTTON
@@ -366,10 +366,10 @@
 				exec "v_photo" ;
 			}
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			caps					1
 			style					WINDOW_STYLE_EMPTY
 			flow					1
@@ -379,15 +379,15 @@
 		{
 			name					about
 			text					@MENUS_ABOUT
-			rect					8 0 52 26
+			rect					16 0 104 52
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -406,15 +406,15 @@
 		{
 			name					servers
 			text					"SERVERS"
-			rect					8 0 52 26
+			rect					16 0 104 52
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				0.86 0.90 0.945 1
 			backcolor				0 0 0 0
 			visible					1
@@ -436,13 +436,13 @@
 			text					@MENUS_EXIT_INGAME
 			type					1
 			style					WINDOW_STYLE_EMPTY
-			rect					8 0 52 26
+			rect					16 0 104 52
 			font					5
-			textscale				0.56
+			textscale				1.12
 			textstyle				0
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				26
-			textaligny				7
+			textalignx				52
+			textaligny				14
 			forecolor				1 0.54 0.50 1
 			backcolor				0 0 0 0
 			visible					1
@@ -456,5 +456,6 @@
 			caps					1
 			flow					1
 		}
+		canvas					1600 1200
 	}
 }

@@ -27,6 +27,7 @@
 #define ITEM_TYPE_LOGO			19		// VisionJK: that icon as a flat picture
 #define ITEM_TYPE_DESC			20		// VisionJK: what the item in focus is for: its name and its descText, in the rectangle of the item
 #define ITEM_TYPE_PAGESCROLL	21		// VisionJK: the bar of the list of a page ("scroll 1"), in the rectangle of the item
+#define ITEM_TYPE_CHANGES		22		// VisionJK: the settings the screen changed since it opened ("changesCvar" of the menu), each with a button that undoes it
     
 #define ITEM_ALIGN_LEFT 0                 // left alignment
 #define ITEM_ALIGN_CENTER 1               // center alignment

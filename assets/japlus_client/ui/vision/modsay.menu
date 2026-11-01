@@ -7,21 +7,24 @@
 		visible					1
 		fullscreen				0
 		outOfBoundsClick
-		rect					20 25 604 440
+		rect					200 50 1208 880
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
-		descX					322
-		descY					218
-		descScale				0.7
+		descX					804
+		descY					436
+		descScale				1.4
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
 
 		itemDef
 		{
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 604 188
+			rect					0 0 1208 376
 			forecolor				1 1 1 1
 			visible					1
 			cvarTest				"ui_modsay"
@@ -29,8 +32,8 @@
 			decoration
 			backcolor				0.031 0.055 0.11 0.97
 			bordercolor				0.11 0.18 0.29 1
-			radius					6.4
-			shadow					14
+			radius					12.8
+			shadow					28
 		}
 
 		itemDef
@@ -38,7 +41,7 @@
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 600 80
+			rect					0 0 1200 160
 			forecolor				1 1 1 1
 			visible					1
 			cvarTest				"ui_modsay"
@@ -46,7 +49,7 @@
 			decoration
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
-			radius					5
+			radius					10
 		}
 
 		itemDef
@@ -54,14 +57,14 @@
 			name					modsaytitle
 			style					WINDOW_STYLE_EMPTY
 			text					"Say Mod"
-			rect					20 5 340 15
+			rect					40 10 680 30
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				170
+			textalignx				340
 			textaligny				0
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			font					5
-			textscale				0.59
+			textscale				1.18
 			forecolor				0.56 0.64 0.74 1
 			border					0
 			bordercolor				0.086 0.149 0.247 1
@@ -84,12 +87,12 @@
 				"Admin Say (amsay)" 2
 				"Admin Print (ampsay)" 3
 			}
-			rect					10 30 150 14
+			rect					20 60 300 28
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				0
-			textaligny				1
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -110,12 +113,12 @@
 				"selected player" 0
 				"all players" 1
 			}
-			rect					165 30 150 14
+			rect					330 60 300 28
 			textalign				ITEM_ALIGN_RIGHT
-			textalignx				20
-			textaligny				1
+			textalignx				40
+			textaligny				2
 			font					5
-			textscale				0.68
+			textscale				1.36
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				"ui_modsay"
@@ -133,12 +136,12 @@
 			type					1
 			group					none
 			style					WINDOW_STYLE_EMPTY
-			rect					320 20 80 30
+			rect					640 40 160 60
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				40
-			textaligny				2.5
+			textalignx				80
+			textaligny				5
 			font					5
-			textscale				0.74
+			textscale				1.48
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -160,12 +163,12 @@
 			text					"Text:"
 			cvar					"ui_modSayText"
 			maxchars				133
-			rect					10 50.6 570 11.76
+			rect					20 101.2 1140 23.52
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				3
+			textaligny				6
 			font					5
-			textscale				0.32
+			textscale				0.64
 			forecolor				0.86 0.90 0.945 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
@@ -183,7 +186,7 @@
 				show highlight2
 				setitemcolor textToSend bordercolor 0.086 0.149 0.247 1
 			}
-			radius					5
+			radius					10
 		}
 
 		itemDef
@@ -191,19 +194,19 @@
 			name					playerList
 			group					none
 			descText				"Select a player"
-			rect					10 70 230 108
+			rect					20 140 460 216
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_LISTBOX
-			elementwidth			120
-			elementheight			15
+			elementwidth			240
+			elementheight			30
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_PLAYER_LIST
 			bordercolor				0.086 0.149 0.247 1
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
-			textaligny				13.2
-			textscale				0.69
+			textaligny				26.4
+			textscale				1.38
 			forecolor				0.56 0.64 0.74 1
 			visible					1
 			cvarTest				"ui_modsay"
@@ -219,10 +222,8 @@
 				setitemcolor playerList bordercolor 0.086 0.149 0.247 1
 			}
 			action { play "sound/interface/button1.wav" ; }
-			radius					4
+			radius					8
 		}
-		skin					1
-		disableColor			0.40 0.47 0.56 1
-		openSlide				8
+		canvas					1600 1200
 	}
 }

@@ -6896,6 +6896,16 @@ static void UI_RunMenuScript(char **args)
 		{
 			UI_UpdateCharacter( qtrue );
 		}
+		else if ( Q_stricmp( name, "changesRevert" ) == 0 )
+		{
+			// VisionJK: the settings the screen changed back to what they were when it opened (changesCvar)
+			Menu_ChangesRevert();
+		}
+		else if ( Q_stricmp( name, "changesApply" ) == 0 )
+		{
+			// and kept: what they are now is what the list compares with from here on
+			Menu_ChangesApply();
+		}
 		else if ( Q_stricmp( name, "homeModel" ) == 0 )
 		{
 			// VisionJK: the player's model on the first page (its item "character")
@@ -10611,6 +10621,7 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.setCVar							= trap->Cvar_Set;
 	uiInfo.uiDC.getCVarString					= trap->Cvar_VariableStringBuffer;
 	uiInfo.uiDC.getCVarValue					= trap->Cvar_VariableValue;
+	uiInfo.uiDC.getCVarInfo						= ( trap->Cvar_VariableValue( "v_uiCvarInfo" ) == 1.0f ) ? trap->ext.Cvar_Info : NULL;
 	uiInfo.uiDC.drawTextWithCursor				= &Text_PaintWithCursor;
 	uiInfo.uiDC.setOverstrikeMode				= trap->Key_SetOverstrikeMode;
 	uiInfo.uiDC.getOverstrikeMode				= trap->Key_GetOverstrikeMode;
