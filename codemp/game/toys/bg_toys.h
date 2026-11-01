@@ -47,8 +47,9 @@ extern "C" {
 									//	wall's normal (degrees) and the number of the picture (gfx/vision/sprays.txt)
 #define TOY_EMOJI			6		// an emoji sent to a player: the point it leaves (the eyes), and in the speed the client
 									//	number of the player it flies to, the number of the picture (gfx/vision/sprays.txt), 0
-#define TOY_TABLE			7		// a table of table tennis: where it stands (its middle on the floor), and in the speed its
-									//	yaw and the client who plays its other end (MAX_CLIENTS: nobody), again and again
+#define TOY_TABLE			7		// a table of table tennis or (z 1) a tennis court: where it stands (its middle on the floor),
+									//	and in the speed its yaw and the client who plays its other end (MAX_CLIENTS: nobody),
+									//	again and again. TOY_TABLE_GONE to TOY_PONG_PADDLE are the same for a court.
 #define TOY_TABLE_GONE		8		// the table of who sends it is put away
 #define TOY_PONG_JOIN		9		// to play at the other end of the table of the client in the speed (x), or (y 1) to stop
 #define TOY_PONG_BALL		10		// the ball of table tennis was hit: where it is and how fast

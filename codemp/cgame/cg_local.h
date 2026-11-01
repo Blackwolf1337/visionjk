@@ -2005,6 +2005,7 @@ void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
 void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
 void		CG_Emote_f( void );						// v_emote (toys/cg_emote.c)
 void		CG_PingPong_f( void );					// v_pingpong (toys/cg_pong.c)
+void		CG_Tennis_f( void );					// v_tennis (toys/cg_pong.c)
 void		CG_Board_f( void );						// v_board (toys/cg_board.c)
 void		CG_BoardPicture_f( void );				// v_boardPicture, from the engine
 void		CG_BoardPublish( void );

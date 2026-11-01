@@ -49,7 +49,8 @@ qboolean BG_ToyValid( const toyThrow_t *toy ) {
 	// table tennis: angles, client numbers and points in place of a speed
 	switch ( toy->kind ) {
 	case TOY_TABLE:
-		if ( toy->velocity[0] < -180 || toy->velocity[0] > 180 || toy->velocity[1] < 0 || toy->velocity[1] > MAX_CLIENTS || toy->velocity[2] )
+		if ( toy->velocity[0] < -180 || toy->velocity[0] > 180 || toy->velocity[1] < 0 || toy->velocity[1] > MAX_CLIENTS
+			|| toy->velocity[2] < 0 || toy->velocity[2] > 1 )
 			return qfalse;
 		break;
 	case TOY_TABLE_GONE:

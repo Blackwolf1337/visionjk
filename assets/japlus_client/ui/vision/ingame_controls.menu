@@ -1929,13 +1929,31 @@
 
 		itemDef
 		{
+			name					vision_bind_v_tennis
+			type					ITEM_TYPE_BIND
+			text					@VISION_TENNIS
+			descText				@VISION_PUTS_A_TENNIS_COURT_ON_THE_FLOOR_IN
+			cvar					"v_tennis"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 478 380 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_bind_v_board
 			type					ITEM_TYPE_BIND
 			text					@VISION_DRAWING_BOARD
 			descText				@VISION_OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
 			cvar					"v_board"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
+			rect					12 500 380 22
 			page					7
 			scroll					1
 			row						1
@@ -1953,7 +1971,7 @@
 			descText				@VISION_THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
 			cvar					"v_photo"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					12 522 380 22
 			page					7
 			scroll					1
 			row						1

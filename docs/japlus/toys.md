@@ -5,7 +5,7 @@ Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, 
 
 ## For players
 
-The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray, the fifth is the interactive emoji, the seventh is table tennis and the eighth is the drawing board, all described below.
+The first toy is the snowball. The second is the water gun, the third is the RC car, the fourth is the spray, the fifth is the interactive emoji, the seventh is table tennis (with tennis on a court next to it) and the eighth is the drawing board, all described below.
 
 To throw a snowball, hold the key (Controls, Extras, "Throw Snowball", or bind `+v_snowball`) and let go. The longer you hold, the further it flies: from 450 to 1150 units a second, full power after 0.8 s. You can
 throw once every 0.3 s at most.
@@ -57,8 +57,8 @@ a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt
 masterserver with a preview, are not there yet.
 
 To play table tennis, use `v_pingpong` (Controls, Extras, "Table Tennis"). It puts a table in front of you and you play
-from its near end. It needs a flat floor and room. Another player who stands near the far end (within 90 units) and uses
-`v_pingpong` there plays against you. `v_pingpong` again or Esc leaves. When the owner of the table leaves, the table goes.
+from its near end. It needs a flat floor and room for the table at any angle. Another player who stands in a box at the far end (from 30 units inside the
+table's far end to 90 units behind it, and up to 30 units beside the table) and uses `v_pingpong` there plays against you. `v_pingpong` again or Esc leaves. When the owner of the table leaves, the table goes.
 
 While you play, the camera stands behind your end of the table and your player is not drawn for you (the others see
 them). The mouse moves the paddle, sideways and up and down. A click serves when it is your serve. The players stand
@@ -70,6 +70,30 @@ on the half of the hitter, lands off the table or does not get over the net give
 that bounces twice on the half of the receiver, or is not returned, gives the point to the hitter.
 
 Everybody near sees the table, the paddles, the ball and the points over the net.
+
+To play tennis, use `v_tennis` (Controls, Extras, "Tennis"). It puts a court on the floor in front of you: 440 x 200
+units inside the lines (about half a real court), a net 24 units high and green ground round the lines. It needs a flat
+floor and room for the area inside the lines. If the court does not fit in the direction you look, it turns round you in
+steps of 15 degrees until it fits. If it fits nowhere, the screen says "No room for a court here". Another player who
+stands on the far half of the court, or up to 220 units behind it (and not more than 120 units beside its lines), and
+uses `v_tennis` there plays against you. `v_tennis` again, dying, or walking more than 600 units from the middle of the
+court leaves. When the owner of the court leaves, the court goes.
+
+While you play, you run about your half with the normal movement keys and the view is forced to third person, from
+behind. Each player has a racket in the right hand. A ball that comes within 34 units of the racket (it is to the right
+of the player, and the ball counts from the feet to a little above the head) is hit back by itself, toward where you
+look: left and right by where you look, long or short by how high you look. Looking up goes longer, and too far goes
+out. The Use key serves, from your own half. The screen says "Press Use to serve", or "Go back to your half to serve"
+when you are on the other half.
+
+A hit has to bounce in the other half inside the lines. Hitting the ball before it bounces (a volley) is allowed. Two
+bounces on your half lose the point, a ball that lands outside the lines gives the point to the other player, and a ball
+in the net falls back on the side it came from. The points count as in tennis: 0, 15, 30, 40, deuce, advantage. A game
+needs 4 points and 2 ahead, and the serve changes every game. The first to 3 games wins. The winner is shown for 4
+seconds, then a new match starts.
+
+Everybody near (up to 1600 units) sees "name games points : points games name" over the net. `v_toys 0` hides the courts
+of others, as for tables.
 
 To draw, bind `v_board` (Controls, Extras, "Drawing Board") and press it. A window opens with a picture of 256 x 128
 pixels and 32 colours, which you paint with the mouse. There are brush sizes 1 to 4, Fill, Undo and Clear. Save 1 to 4
@@ -94,6 +118,7 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_sprayImage` | heart | the emoji of the chat that is sprayed, without the colons |
 | `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one |
 | `v_pingpong` | | puts a table down and plays, or joins the player at the far end, or leaves |
+| `v_tennis` | | puts a tennis court down and plays, or joins a player on the far half, or leaves |
 | `v_board` | | opens the drawing board window, or shuts it |
 | `v_board hold <0\|1\|2>` | | 0 puts the board away, 1 holds it in front of you, 2 over your head |
 | `v_board save <1-4>` | | keeps the picture as a preset |
@@ -110,8 +135,9 @@ lands can differ a little from one player to the next.
 
 On a VisionJK server the throw goes through the game module. The cgame sends the client command `vs_toy`, and the
 server sends the server command `vs_toy` to the clients with `v_caps` bit 3. The server says it does this in
-`vs_caps` bit 9. It takes a throw only from a living player who plays, from within 160 units of his eyes, and 4 a
-second at most.
+`vs_caps` bit 9. It takes a throw only from a living player who plays, from within 160 units of his eyes (640 for `TOY_TABLE`,
+`TOY_TABLE_GONE`, `TOY_PONG_JOIN` and `TOY_PONG_SCORE`, because they carry the middle of the table or court and a court
+player can be far from it), and 4 a second at most.
 
 On any other server it goes through the masterserver (`VOICE_TOY`). The master hands a throw to the sessions of the
 room that said `TOY_HELLO` or threw, 4 a second at most. It refuses broken or too fast throws. The cgame says hello
@@ -163,6 +189,14 @@ moved on by half the ping when it arrives. The new kinds are `TOY_TABLE` (7) to 
 `bg_toys.h`, checked by `bg_toys.c`, so the master and the game module have to be 0.2.9-dev.30 or later. The code is
 `cg_pong.c`. `tools/toys/pingpong.py` makes the assets and `tools/toys/sounds.py` the sounds `pong_hit.wav` and
 `pong_bounce.wav`.
+
+Tennis is a table with `z` 1. The court goes as `TOY_TABLE` with z 1, so older builds refuse it and see nothing.
+`TOY_TABLE_GONE`, `TOY_PONG_JOIN`, `TOY_PONG_BALL` and `TOY_PONG_SCORE` are shared with the table. A court sends no paddle
+positions (`TOY_PONG_PADDLE`), the rackets are drawn in the hands of the players. The score of a court player goes as
+games * 8 + points. The game module and the masterserver have to be 0.2.9-dev.33 or later for courts. The code is in
+`cg_pong.c`. `tools/toys/pingpong.py` now also writes `tennis_court.md3` and `tennis_racket.md3` with their pictures
+(`tennis_court.png`, `tennis_strings.png`, `tennis_frame.png`) in `assets/japlus_client/models/map_objects/vision/`. The
+ball is the table tennis ball sprite, yellow. `tools/toys/sounds.py` writes `tennis_hit.wav` and `tennis_bounce.wav`.
 
 The drawing board is not a throw either. The picture is 256 x 128 pixels, a byte a pixel, each one of 32 colours. Your
 own cgame draws the board on the player and shows the picture through a stream of the engine (`ext.Video_Picture`, the
@@ -219,9 +253,14 @@ rally of three hits, a point judged by the receiver and the score sent (1 : 0). 
 the own end, the paddle of the other player, the ball and the score over the net. There is a unit test `table_tennis`
 in `tests/vjk/toys.cpp`.
 
+For tennis, two clients headless on mp/ctf4: the court was put down (it turned to fit), the second player joined, the
+serve, a point judged and counted (15:0), and with a test build with a longer reach a rally of several returns between
+both players. At the spawn points of 12 stock maps a court fitted on 3 (mp/ctf1, mp/ctf4, mp/siege_desert): courts need
+big open rooms.
+
 For the drawing board, there are unit tests (the board in `tests/vjk/toys.cpp`, `test_drawing` in
 `deploy/models/test_modelstore.py`). Then two clients headless with the live store: a preset was loaded and held up,
 uploaded (the store gave it a number), and the other client fetched the picture and showed the board on the holder with
 that picture. The window was drawn with all its parts.
 
-Not run: painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+Not run: painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

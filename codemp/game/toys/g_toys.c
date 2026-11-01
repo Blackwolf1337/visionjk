@@ -36,6 +36,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/toys/bg_toys.h"
 
 #define TOY_REACH		160		// how far from the eyes of the thrower a toy may leave the hand
+#define TOY_TABLE_REACH	640		// a table of table tennis or a tennis court, its points, joining it and putting it away
+								//	carry its middle, and a player of a court may be far from that (cgame/toys/cg_pong.c)
 
 /*
 =================
@@ -77,7 +79,8 @@ void Cmd_Toy_f( gentity_t *ent ) {
 	VectorCopy( client->ps.origin, eyes );
 	eyes[2] += client->ps.viewheight;
 	VectorSet( from, (float)toy.origin[0], (float)toy.origin[1], (float)toy.origin[2] );
-	if ( Distance( eyes, from ) > TOY_REACH ) {
+	if ( Distance( eyes, from ) > ( ( toy.kind == TOY_TABLE || toy.kind == TOY_TABLE_GONE || toy.kind == TOY_PONG_JOIN
+		|| toy.kind == TOY_PONG_SCORE ) ? TOY_TABLE_REACH : TOY_REACH ) ) {
 		return;
 	}
 	for ( i = 0; i < level.maxclients; i++ ) {

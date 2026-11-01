@@ -138,6 +138,27 @@ models/map_objects/vision/pingpong_net
 	}
 }
 
+// the tennis court lies half a unit over the floor, the offset keeps the floor from showing through it far away
+models/map_objects/vision/tennis_court
+{
+	polygonOffset
+	{
+		map models/map_objects/vision/tennis_court
+		rgbGen lightingDiffuse
+	}
+}
+
+models/map_objects/vision/tennis_strings
+{
+	cull none
+	{
+		map models/map_objects/vision/tennis_strings
+		alphaFunc GE128
+		rgbGen lightingDiffuse
+		depthWrite
+	}
+}
+
 // the drawing board (cgame/toys/cg_board.c): board/<n> shows stream n of the engine (client/cl_video.cpp, the picture
 // the cgame made), frame is its back and edge
 

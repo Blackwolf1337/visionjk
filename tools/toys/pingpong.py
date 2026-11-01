@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Writes the table tennis of issue #9 (codemp/cgame/toys/cg_pong.c): the table and the paddle as MD3, made from
-boxes and cylinders with the geometry and the MD3 writer of tools/boombox/build.py, and their pictures:
+"""Writes the table tennis and the tennis of issue #9 (codemp/cgame/toys/cg_pong.c): the table, the paddle, the court
+and the racket as MD3, made from boxes, cylinders and flat polygons with the geometry and the MD3 writer of
+tools/boombox/build.py, and their pictures:
 
   models/map_objects/vision/pingpong_table.md3   the table, its middle on the floor, its length along x, the net at x 0
   models/map_objects/vision/pingpong_paddle.md3  a paddle, the middle of its blade at the origin, its faces to +x and -x
   pingpong_top.png, pingpong_frame.png, pingpong_net.png, paddle_rubber.png, paddle_wood.png   next to them
-  gfx/vision/toys/pingball.png                   the ball, a sprite
+  models/map_objects/vision/tennis_court.md3     the court, its middle on the floor, its length along x, the net at x 0
+  models/map_objects/vision/tennis_racket.md3    a racket, the end of its grip at the origin, its head up, faces to +x and -x
+  tennis_court.png, tennis_strings.png, tennis_frame.png   next to them
+  gfx/vision/toys/pingball.png                   the ball of both, a sprite (yellow on the court)
 
-The sizes are those of cg_pong.c (PONG_LENGTH, PONG_WIDTH, PONG_HEIGHT, PONG_NET): a real table a third larger, so
-the small ball can be seen. The net and the ball have shader scripts in assets/japlus_client/shaders/vision_toys.shader.
+The sizes are those of cg_pong.c (PONG_LENGTH, PONG_WIDTH, PONG_HEIGHT, PONG_NET, COURT_*): a real table a third
+larger, so the small ball can be seen, and a court about half the real one, so it fits on the floors of the levels.
+The nets, the court, the strings and the ball have shader scripts in assets/japlus_client/shaders/vision_toys.shader.
 usage: tools/toys/pingpong.py
 """
 import math
@@ -20,7 +25,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "boombox"))
-from build import Surface, plain_box, cylinder, write_md3  # noqa: E402
+from build import Surface, cylinder, norm, plain_box, write_md3  # noqa: E402
 
 ASSETS = os.path.join(HERE, "..", "..", "assets", "japlus_client")
 OUT = os.path.join(ASSETS, "models", "map_objects", "vision")
@@ -29,6 +34,9 @@ SHADERS = "models/map_objects/vision/"
 LENGTH, WIDTH, HEIGHT, NET = 124.0, 70.0, 31.0, 7.0		# PONG_LENGTH, PONG_WIDTH, PONG_HEIGHT, PONG_NET of cg_pong.c
 BOARD = 1.5
 BLADE = 5.0												# PONG_BLADE of cg_pong.c
+COURT_LENGTH, COURT_WIDTH, COURT_NET = 440.0, 200.0, 24.0	# COURT_LENGTH, COURT_WIDTH, COURT_NET of cg_pong.c
+COURT_RUN_X, COURT_RUN_Y = 60.0, 40.0					# the ground drawn round the lines, behind the ends and beside the sides
+COURT_LIFT = 0.5										# over the floor
 
 
 def flat_uv(p, normal):
@@ -66,6 +74,61 @@ def build_paddle():
 	cylinder(rubber, (-0.4, 0.0, 0.0), 0, BLADE, 0.8)
 	plain_box(wood, (-0.5, -0.7, -BLADE - 4.5), (0.5, 0.7, -BLADE + 0.6), flat_uv)
 	return [rubber, wood]
+
+
+def build_court():
+	court = Surface("court", SHADERS + "tennis_court")
+	frame = Surface("frame", SHADERS + "pingpong_frame")
+	net = Surface("net", SHADERS + "pingpong_net")
+	hl, hw = COURT_LENGTH / 2 + COURT_RUN_X, COURT_WIDTH / 2 + COURT_RUN_Y
+	corners = [(-hl, -hw, COURT_LIFT), (hl, -hw, COURT_LIFT), (hl, hw, COURT_LIFT), (-hl, hw, COURT_LIFT)]
+	court.poly(corners, (0.0, 0.0, 1.0), [((p[0] + hl) / (2 * hl), (p[1] + hw) / (2 * hw)) for p in corners])
+	# the net reaches past the lines to its posts, both faces, and a white band along its top
+	post = COURT_WIDTH / 2 + 12
+	for normal, x in (((1.0, 0.0, 0.0), 0.1), ((-1.0, 0.0, 0.0), -0.1)):
+		pts = [(x, -post, 1.0), (x, post, 1.0), (x, post, COURT_NET), (x, -post, COURT_NET)]
+		net.poly(pts, normal, [((p[1] + post) / (2 * post) * 40.0, (p[2] - 1.0) / (COURT_NET - 1.0) * 3.0) for p in pts])
+	plain_box(frame, (-0.4, -post, COURT_NET - 0.3), (0.4, post, COURT_NET + 0.9), flat_uv)
+	for sy in (-1, 1):
+		cylinder(frame, (0.0, sy * post, 0.0), 2, 1.3, COURT_NET + 2.0)
+	return [court, frame, net]
+
+
+def build_racket():
+	strings = Surface("strings", SHADERS + "tennis_strings")
+	frame = Surface("frame", SHADERS + "tennis_frame")
+	grip, throat, rw, rh = 7.0, 11.0, 5.0, 6.5		# the head: an ellipse over the throat, half widths along y and z
+	cz = throat + rh
+	plain_box(frame, (-0.55, -0.55, 0.0), (0.55, 0.55, grip), flat_uv)
+	# the throat: two bars from the grip to the head
+	for sy in (-1, 1):
+		a, b = (0.0, sy * 0.4, grip), (0.0, sy * rw * 0.55, throat + 1.0)
+		for nx in (1.0, -1.0):
+			x = nx * 0.35
+			pts = [(x, a[1] - 0.35, a[2]), (x, a[1] + 0.35, a[2]), (x, b[1] + 0.35, b[2]), (x, b[1] - 0.35, b[2])]
+			frame.poly(pts, (nx, 0.0, 0.0), [(p[1] / 8.0, p[2] / 8.0) for p in pts])
+	# the rim, a band round the ellipse: its outside, its inside and its two faces
+	steps = 24
+	ring = [(rw * math.cos(2 * math.pi * k / steps), rh * math.sin(2 * math.pi * k / steps)) for k in range(steps + 1)]
+	for k in range(steps):
+		(y0, z0), (y1, z1) = ring[k], ring[k + 1]
+		n0, n1 = (y0 / rw, z0 / rh), (y1 / rw, z1 / rh)
+		o0 = (y0 + n0[0] * 0.7, z0 + n0[1] * 0.7)
+		o1 = (y1 + n1[0] * 0.7, z1 + n1[1] * 0.7)
+		mid = norm((0.0, (n0[0] + n1[0]) * 0.5, (n0[1] + n1[1]) * 0.5))
+		for inner, sign, (a0, a1) in ((False, 1.0, (o0, o1)), (True, -1.0, ((y0, z0), (y1, z1)))):
+			pts = [(-0.45, a0[0], cz + a0[1]), (0.45, a0[0], cz + a0[1]), (0.45, a1[0], cz + a1[1]), (-0.45, a1[0], cz + a1[1])]
+			frame.poly(pts, (0.0, mid[1] * sign, mid[2] * sign), [(k / 4.0, 0.0), (k / 4.0, 0.2), ((k + 1) / 4.0, 0.2), ((k + 1) / 4.0, 0.0)])
+		for nx in (1.0, -1.0):
+			x = nx * 0.45
+			pts = [(x, y0, cz + z0), (x, o0[0], cz + o0[1]), (x, o1[0], cz + o1[1]), (x, y1, cz + z1)]
+			frame.poly(pts, (nx, 0.0, 0.0), [(k / 4.0, 0.0), (k / 4.0, 0.2), ((k + 1) / 4.0, 0.2), ((k + 1) / 4.0, 0.0)])
+	# the strings: one face each way over the ellipse, the picture is clear outside it
+	for nx in (1.0, -1.0):
+		x = nx * 0.05
+		pts = [(x, -rw, cz - rh), (x, rw, cz - rh), (x, rw, cz + rh), (x, -rw, cz + rh)]
+		strings.poly(pts, (nx, 0.0, 0.0), [((p[1] + rw) / (2 * rw), (p[2] - cz + rh) / (2 * rh)) for p in pts])
+	return [strings, frame]
 
 
 def grain(img, amount, seed):
@@ -110,6 +173,51 @@ def paint():
 		d.line((0, k, 63, k + 2), fill=(128, 86, 50), width=1)
 	wood.save(os.path.join(OUT, "paddle_wood.png"))
 
+	# the court: blue inside the lines, green round them, the lines white (the picture covers the ground round them too)
+	w, h = 1024, 512
+	hl, hw = COURT_LENGTH / 2 + COURT_RUN_X, COURT_WIDTH / 2 + COURT_RUN_Y
+	court = Image.new("RGB", (w, h), (52, 112, 70))
+	grain(court, 5, 4)
+	d = ImageDraw.Draw(court)
+
+	def at(x, y):
+		return ((x + hl) / (2 * hl) * w, (y + hw) / (2 * hw) * h)
+
+	def line(x0, y0, x1, y1):
+		d.rectangle(at(x0, y0) + at(x1, y1), fill=(238, 238, 232))
+
+	inner = Image.new("RGB", (w, h), (40, 84, 150))
+	grain(inner, 5, 5)
+	box = tuple(int(v) for v in at(-COURT_LENGTH / 2, -COURT_WIDTH / 2) + at(COURT_LENGTH / 2, COURT_WIDTH / 2))
+	court.paste(inner.crop(box), box[:2])
+	cl, cw, lw, service = COURT_LENGTH / 2, COURT_WIDTH / 2, 1.6, COURT_LENGTH / 2 * 0.54
+	line(-cl, -cw, cl, -cw + lw)
+	line(-cl, cw - lw, cl, cw)
+	line(-cl, -cw, -cl + lw, cw)
+	line(cl - lw, -cw, cl, cw)
+	line(-service, -cw, -service + lw, cw)
+	line(service - lw, -cw, service, cw)
+	line(-service, -lw / 2, service, lw / 2)
+	line(-cl, -lw / 2, -cl + 5, lw / 2)
+	line(cl - 5, -lw / 2, cl, lw / 2)
+	court.save(os.path.join(OUT, "tennis_court.png"))
+
+	# (a square: the face of the strings stretches it to the ellipse of the head)
+	strings = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+	px = strings.load()
+	for y in range(128):
+		for x in range(128):
+			nx, ny = (x + 0.5) / 64.0 - 1.0, (y + 0.5) / 64.0 - 1.0
+			if nx * nx + ny * ny <= 1.0 and (x % 8 < 2 or y % 8 < 2):
+				px[x, y] = (232, 232, 214, 255)
+	strings.save(os.path.join(OUT, "tennis_strings.png"))
+
+	frame = Image.new("RGB", (64, 64), (36, 38, 44))
+	d = ImageDraw.Draw(frame)
+	d.rectangle((0, 0, 63, 12), fill=(196, 40, 36))
+	grain(frame, 6, 6)
+	frame.save(os.path.join(OUT, "tennis_frame.png"))
+
 	# the ball: a lit white sphere, soft at its rim
 	size = 32
 	ball = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -132,6 +240,8 @@ def main():
 	os.makedirs(OUT, exist_ok=True)
 	print("table: %i vertices, %i triangles" % write_md3(os.path.join(OUT, "pingpong_table.md3"), "pingpong_table", build_table()))
 	print("paddle: %i vertices, %i triangles" % write_md3(os.path.join(OUT, "pingpong_paddle.md3"), "pingpong_paddle", build_paddle()))
+	print("court: %i vertices, %i triangles" % write_md3(os.path.join(OUT, "tennis_court.md3"), "tennis_court", build_court()))
+	print("racket: %i vertices, %i triangles" % write_md3(os.path.join(OUT, "tennis_racket.md3"), "tennis_racket", build_racket()))
 	paint()
 
 

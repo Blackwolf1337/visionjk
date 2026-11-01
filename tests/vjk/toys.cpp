@@ -92,6 +92,12 @@ BOOST_AUTO_TEST_CASE( table_tennis )
 	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, 90, 3, 0 ) ) );
 	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 181, 3, 0 ) ) );
 	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 0, MAX_CLIENTS + 1, 0 ) ) );
+	// a tennis court is a table with z 1
+	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, 45, MAX_CLIENTS, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 45, 3, 2 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 45, 3, -1 ) ) );
+	// the points of a court: games * 8 + points, three games and advantage at most
+	BOOST_CHECK( Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, 3 * 8 + 4, 2 * 8 + 3, 0 ) ) );
 	BOOST_CHECK( Valid( Throw( TOY_TABLE_GONE, 100, 200, 300, 0, 0, 0 ) ) );
 	BOOST_CHECK( !Valid( Throw( TOY_TABLE_GONE, 100, 200, 300, 1, 0, 0 ) ) );
 	BOOST_CHECK( Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, 5, 1, 0 ) ) );

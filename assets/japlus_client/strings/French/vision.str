@@ -189,6 +189,14 @@ REFERENCE           PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
 LANG_ENGLISH        "Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it."
 LANG_FRENCH         "Place une table de ping-pong devant vous et vous jouez depuis son extrémité proche : la souris déplace la raquette, un clic sert, Échap quitte la partie. Un joueur qui se tient à l'autre bout et l'utilise là joue contre vous. Seuls les joueurs de VisionJK le voient."
 
+REFERENCE           TENNIS
+LANG_ENGLISH        "Tennis"
+LANG_FRENCH         "#same"
+
+REFERENCE           PUTS_A_TENNIS_COURT_ON_THE_FLOOR_IN
+LANG_ENGLISH        "Puts a tennis court on the floor in front of you and you play on your half: you run with the movement keys, the racket hits the ball by itself toward where you look, Use serves. A player who stands on the far half and uses it there plays against you. Only players of VisionJK see it."
+LANG_FRENCH         "Place un court de tennis au sol devant vous et vous jouez sur votre moitié : vous courez avec les touches de déplacement, la raquette renvoie la balle toute seule vers où vous regardez, Utiliser sert. Un joueur qui se tient sur l'autre moitié et l'utilise là joue contre vous. Seuls les joueurs de VisionJK le voient."
+
 REFERENCE           DRAWING_BOARD
 LANG_ENGLISH        "Drawing Board"
 LANG_FRENCH         "Tableau à dessin"
