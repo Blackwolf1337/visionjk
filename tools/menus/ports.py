@@ -6,6 +6,7 @@ import menufile as mf
 from menufile import Entry
 from theme import *         # noqa: F401,F403
 import canvas as cv
+import texts
 
 TOP = cv.HEAD_H
 FOOT_Y = cv.H - cv.FOOT_H
@@ -99,7 +100,8 @@ def frame(m, here, subnav=None):
     m[first:first] = new
     m.extend(cv.footer(FOOT_Y))
     mf.put(m, 'canvas', cv.W, cv.H)
-    mf.put(m, 'descX', 48)
+    # (the line about the item under the mouse stands after Back, not under it)
+    mf.put(m, 'descX', 180)
     mf.put(m, 'descY', FOOT_Y + 24)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
     mf.put(m, 'descScale', cv.scale(13))
@@ -137,23 +139,33 @@ def home(m):
     cards = (('vision_join', (48, 283, 560, 104), 28, 'primary'),
              ('vision_create', (48, 415, 272, 96), 19, 'card'), ('vision_solo', (336, 415, 272, 96), 19, 'card'),
              ('vision_demo', (48, 527, 272, 96), 19, 'card'), ('vision_rules', (336, 527, 272, 96), 19, 'card'))
+    lines = {'vision_join': 'Browse servers and jump in', 'vision_create': 'Host a server for others', 'vision_solo': 'Play against bots',
+             'vision_demo': 'Watch a recorded game', 'vision_rules': 'Game types, force, weapons'}
     for n, rect, px, kind in cards:
         for e in its.get(n, []):
             b = e.block
-            middle(e, rect, px, 'left', 28 if kind == 'primary' else 22)
+            pad = 28 if kind == 'primary' else 22
+            middle(e, rect, px, 'left', pad)
             mf.put(b, 'radius', 10)
             mf.put(b, 'font', cv.BOLD if kind == 'primary' else FONT)
+            # the name a little above the middle, a line about it under it (as the board)
+            x, y, w, h = rect
+            sub = 16 if kind == 'primary' else 14
+            mf.put(b, 'textaligny', mf.fmt((h - px - sub - 4) / 2.0))
+            m.append(cv.text(n + '_line', (x + pad, y + (h - px - sub - 4) / 2.0 + px + 4, w - 2 * pad, sub + 4), texts.ref(lines[n]), sub,
+                             ['0.043', '0.165', '0.251', '1'] if kind == 'primary' else cv.MUTED, 'left', 0, FONT, ('decoration',)))
+            if kind == 'primary':
+                m.append(cv.text(n + '_arrow', (x + w - 60, y, 40, h), '">"', 30, ON_ACCENT, 'center', 0, cv.BOLD, ('decoration',)))
     # the player's model in the middle, on a soft light, and the way to the profile under it
     for e in its.get('character', []):
         place(e, (760, 140, 300, 600))
     for e in its.get('vision_glow', []):
-        place(e, (800, 714, 220, 28))
-        mf.put(e.block, 'radius', 14)
+        glow(e, 910, 724, 300)
     # (an item without a text writes the value of its cvar: the name of the player)
     m.append(cv.item('vision_name', (660, 748, 500, 36), ('cvar', '"name"'), ('font', FONT), ('textscale', cv.scale(26)),
                      ('forecolor', *BRIGHT), ('textalign', 'ITEM_ALIGN_CENTER'), ('textalignx', 250), ('textaligny', 5), ('decoration',)))
-    m.append(cv.button('vision_profile', (835, 786, 150, 40), '@MENUS_PROFILE', list(cv.CLICK) + ['close', 'all', ';', 'open', 'playerMenu', ';'],
-                       14, 'outline', '@MENUS_PROFILE_DESC'))
+    m.append(cv.button('vision_profile', (820, 786, 180, 44), texts.ref('Edit profile'),
+                       list(cv.CLICK) + ['close', 'all', ';', 'open', 'playerMenu', ';'], 14, 'outline', '@MENUS_PROFILE_DESC'))
     # the box of the icon at the right, and what is new
     for e in its.get('vision_hero', []):
         place(e, (1172, 120, 380, 330))
@@ -225,18 +237,30 @@ def join(m):
         place(e, (px + 28, y0, cv.W - px - 56, 210))
         m.remove(e)
         m.append(e)
-    y = y0 + 234
-    for n in ('serverinfotext', 'addfavorite', 'passwordtext', 'createfavoritetext', 'findplayertext', 'idstext'):
+    # two buttons to a row, as the board: what the chosen server is, and what can be done with it
+    bw = (cv.W - px - 56 - 10) / 2.0
+    for k, n in enumerate(('serverinfotext', 'addfavorite', 'passwordtext', 'idstext')):
         for e in its.get(n, []):
-            control(e, (px + 28, y, cv.W - px - 56, 44), 14)
+            control(e, (px + 28 + (k % 2) * (bw + 10), y0 + 234 + (k // 2) * 54, bw, 44), 13)
             m.remove(e)
             m.append(e)
-        y += 54
     for e in its.get('delfavorite', []):
-        control(e, (px + 28, y0 + 234 + 54, cv.W - px - 56, 44), 14)
+        control(e, (px + 28 + bw + 10, y0 + 234, bw, 44), 13)
         m.remove(e)
         m.append(e)
+    # finding a player and a server by its address: words in the accent in the foot of the list
+    x = tx + tw - 22
+    for n in ('createfavoritetext', 'findplayertext'):
+        for e in its.get(n, []):
+            control(e, (x - 170, ty + th - 44, 170, 44), 13, 'plain', 'right', 0)
+            mf.put(e.block, 'forecolor', *ACCENT)
+            m.remove(e)
+            m.append(e)
+        x -= 190
+    m.append(cv.fill('vision_table_foot', (tx, ty + th - 44, tw, 1), cv.CARD_EDGE))
     footer_buttons(m, ('back',), ('join_button',))
+    m.append(cv.text('vision_join_hint', (cv.W - 48 - 200 - 16 - 400, FOOT_Y, 400, cv.FOOT_H), texts.ref('Double-click a server to join'), 14,
+                     cv.MUTED, 'right', 0, FONT, ('decoration',)))
 
 
 def rows(entries, x, y, w, pitch=52, gap=12):
@@ -369,3 +393,203 @@ def quit_page(m):
         mf.put(e.block, 'backcolor', *RED)
         mf.put(e.block, 'bordercolor', *RED)
         mf.put(e.block, 'forecolor', '0.16', '0.03', '0.02', '1')
+
+
+def glow(e, cx, y, w):
+    """The soft light under a figure: only the glow around a thin line (Skin_Soft), no pill."""
+    place(e, (cx - w / 2.0, y, w, 4))
+    mf.put(e.block, 'backcolor', *(ACCENT[:3] + ['0']))
+    mf.put(e.block, 'glowcolor', *(ACCENT[:3] + ['0.3']))
+    mf.put(e.block, 'radius', 2)
+
+
+def _script(e, key):
+    s = mf.find(e.block, key) if hasattr(e, 'block') else mf.find(e, key)
+    return list(s.block) if s and isinstance(s.block, list) else []
+
+
+def _label(name, x, y, w, words):
+    """A small heading in capitals over a group: NAME, CHARACTER, STYLE, ..."""
+    return cv.text(name, (x, y, w, 18), words, 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1), ('decoration',))
+
+
+def _listbox(e, rect, cell, horizontal=False):
+    b = e.block
+    place(e, rect)
+    for key in ('page', 'tab', 'group', 'border', 'bordersize', 'background'):
+        mf.drop(b, key)
+    mf.put(b, 'elementwidth', mf.fmt(cell))
+    mf.put(b, 'elementheight', mf.fmt(cell))
+    mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
+    mf.put(b, 'backcolor', *cv.FIELD)
+    mf.put(b, 'bordercolor', *cv.EDGE)
+    mf.put(b, 'radius', 6)
+    mf.put(b, 'visible', 1)
+    if horizontal:
+        mf.put(b, 'horizontalscroll')
+
+
+def profile_all(m, extra):
+    """The player outside a game as the board "Profile": one page instead of three. At the left the name, the models to
+    choose from, the colour and the parts of a character of your own (from player2.menu), in the middle the figure,
+    at the right the lightsaber (from saber.menu): its type, the colour of the blade(s) and the hilt. extra: the menus
+    player2.menu and saber.menu as theme.py made them."""
+    import profile as pr
+    import texts
+    its = by_name(m)
+    two, sab = by_name(extra['player2.menu']), by_name(extra['saber.menu'])
+    get = lambda table, n: list(table.get(n, []))  # noqa: E731
+    new = []
+    LX, LW = 48, 384            # the column at the left (460 wide with its margins)
+    MX, MW = 460, 700           # the middle
+    RX, RW = 1188, 364          # the column at the right (440 wide)
+    bottom = FOOT_Y
+
+    new += [cv.fill('vision_left', (0, TOP, 460, bottom - TOP), cv.RAIL), cv.fill('vision_left_line', (459, TOP, 1, bottom - TOP), cv.LINE),
+            cv.fill('vision_right', (1160, TOP, 440, bottom - TOP), cv.RAIL), cv.fill('vision_right_line', (1160, TOP, 1, bottom - TOP), cv.LINE)]
+
+    # the left: name, models, colour, the parts of your own character
+    y = TOP + 28
+    new.append(_label('vision_l_name', LX, y, LW, '@MENUS_NAME'))
+    for e in get(its, 'namefield'):
+        # (a row without a name is its widget alone: the field over the whole width)
+        mf.put(e.block, 'text', '""')
+        mf.put(e.block, 'row', 3)
+        place(e, (LX, y + 24, LW, 48))
+        sized(e, 18)
+        mf.put(e.block, 'forecolor', *BRIGHT)
+        mf.put(e.block, 'maxPaintChars', 24)
+        new.append(e)
+    y += 96
+    new.append(_label('vision_l_model', LX, y, LW, texts.ref('Character')))
+    for e in get(its, 'headlist'):
+        # six to a row, as the board
+        _listbox(e, (LX, y + 24, LW, 3 * 61 + 6), 61)
+        new.append(e)
+    y += 24 + 3 * 61 + 6 + 24
+    new.append(_label('vision_l_color', LX, y, LW, '@MENUS_COLOR'))
+    for e in get(two, 'colorbox'):
+        _listbox(e, (LX, y + 24, LW, 52), 44, True)
+        act = mf.find(e.block, 'action')
+        act.block = list(act.block) + ['uiScript', 'character', ';', 'uiScript', 'updatecharmodel', ';']
+        new.append(e)
+    y += 24 + 52 + 24
+    new.append(_label('vision_l_look', LX, y, LW, '@MENUS_APPEARANCE'))
+    y += 22
+    for e in get(two, 'speciesbut'):
+        mf.put(e.block, 'text', '@MENUS_SPECIES')
+        for key in ('group', 'page'):
+            mf.drop(e.block, key)
+        mf.put(e.block, 'row', 1)
+        # (a row has its name 28 pixels in, room for the dot of a changed setting: its name under the others)
+        place(e, (LX - 28, y, LW + 40, cv.ROW))
+        sized(e, 16)
+        act = mf.find(e.block, 'action')
+        act.block = list(act.block) + ['uiScript', 'updatecharmodel', ';']
+        new.append(e)
+    y += cv.ROW
+    for n, (box, words) in enumerate((('headlistbox', '@MENUS_HEAD'), ('torsolistbox', '@MENUS_TORSO'), ('lowerlistbox', '@MENUS_LEGS'))):
+        new.append(cv.text('vision_l_part%d' % n, (LX, y, 150, cv.ROW), words, 16, cv.NAV_TEXT, 'left', 0, FONT, ('decoration',)))
+        for e in get(two, box):
+            _listbox(e, (LX + LW - 220, y + 4, 220, cv.ROW - 8), cv.ROW - 12, True)
+            act = mf.find(e.block, 'action')
+            act.block = ['uiScript', 'character', ';'] + list(act.block) + ['uiScript', 'updatecharmodel', ';']
+            new.append(e)
+        new.append(cv.fill('vision_l_rule%d' % n, (LX, y + cv.ROW - 1, LW, 1), cv.CARD_EDGE))
+        y += cv.ROW
+
+    # the middle: the figure on its glow, the name under it
+    for e in get(its, 'vision_glow') + get(its, 'character'):
+        if pr.name_of(e.block) == 'character':
+            place(e, (MX + 150, TOP + 40, MW - 300, 640))
+        new.append(e)
+    halo = cv.panel('vision_glow2', (0, 0, 1, 1), NONE, NONE, 2)
+    glow(halo, MX + MW / 2.0, TOP + 662, 340)
+    new.append(halo)
+    new.append(cv.item('vision_who', (MX, TOP + 690, MW, 40), ('type', 'ITEM_TYPE_TEXT'), ('cvar', '"ui_Name"'), ('font', FONT),
+                       ('textscale', cv.scale(30)), ('forecolor', *BRIGHT), ('textalign', 'ITEM_ALIGN_CENTER'),
+                       ('textalignx', mf.fmt(MW / 2)), ('textaligny', 5), ('decoration',)))
+
+    # the right: the saber, its type, the colour of its blade(s), its hilt
+    gone = {'show': 1, 'hide': 1, 'transition2': 7}
+    y = TOP + 28
+    new.append(cv.panel('vision_saberbox', (RX, y, RW, 92), cv.FIELD, cv.CARD_EDGE, 10, ('decoration',)))
+    for n, name in enumerate(('saber', 'saber2')):
+        for e in get(sab, name):
+            # (the model is drawn in a square: the blade lies across the middle of the box)
+            # (the saber lies at about two thirds of the height of its square, measured)
+            side = 330
+            place(e, (RX + (RW - side) / 2.0, y + 46 - 0.68 * side + n * 18, side, side))
+            new.append(e)
+    y += 92 + 22
+    new.append(_label('vision_r_style', RX, y, RW, texts.ref('Style')))
+    new.append(cv.panel('vision_r_seg', (RX, y + 24, RW, 44), cv.FIELD, cv.EDGE, 6, ('decoration',)))
+    seg_w = (RW - 6) / 3.0
+    for n, name in enumerate(('typebut_single', 'typebut_dual', 'typebut_staff')):
+        for e in get(sab, name):
+            act = mf.find(e.block, 'action')
+            act.block = pr.without(act.block, gone)
+            control(e, (RX + 3 + n * seg_w, y + 27, seg_w, 38), 12, 'plain')
+            # (the scripts of the menu colour the type that is set: setitemcolor in onOpen and the actions)
+            new.append(e)
+    y += 24 + 44 + 22
+    new.append(_label('vision_r_blade', RX, y, RW, '@MENUS_BLADE_COLOR'))
+    second_y = y + 24 + 44 + 16
+    for table_name, entries in sab.items():
+        for e in entries:
+            n = pr.name_of(e.block)
+            color = n[:-5] if n.endswith('icon2') else n[:-4] if n.endswith('icon') else None
+            if color not in pr.ICONS:
+                continue
+            second = n.endswith('icon2')
+            k = pr.ICONS.index(color)
+            place(e, (RX + k * 52, (second_y + 24 if second else y + 24), 44, 44))
+            for key in ('mouseenter', 'mouseexit'):
+                mf.drop(e.block, key)
+            if second:
+                mf.put(e.block, 'cvarTest', 'ui_saber_type')
+                mf.drop(e.block, 'showcvar')
+                e.block.append(Entry('showCvar', [], ['"dual"']))
+            new.append(e)
+    new.append(cv.text('vision_r_blade2', (RX, second_y, RW, 18), '@MENUS_COLOR2', 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1),
+                       ('decoration',), ('cvarTest', 'ui_saber_type'), ('showCvar', [], ['"dual"'])))
+    # the hilt: right under the colour of the blade, or under the second colour for two sabers
+    y1, y2 = second_y, second_y + 24 + 44 + 22
+    dual = (('cvarTest', 'ui_saber_type'), ('showCvar', [], ['"dual"']))
+    new.append(cv.text('vision_r_hilt', (RX, y1, RW, 18), texts.ref('Hilt'), 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1), ('decoration',),
+                       ('cvarTest', 'ui_saber_type'), ('hideCvar', [], ['"dual"'])))
+    new.append(cv.text('vision_r_hilt2', (RX, y2, RW, 18), texts.ref('Hilt'), 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1), ('decoration',),
+                       *dual))
+    for name, top, high in (('hiltbut', y1 + 24, bottom - y1 - 52), ('hiltbut_staves', y1 + 24, bottom - y1 - 52),
+                            ('hiltbut1', y2 + 24, (bottom - y2 - 64) / 2), ('hiltbut2', y2 + 36 + (bottom - y2 - 64) / 2, (bottom - y2 - 64) / 2)):
+        for e in get(sab, name):
+            b = e.block
+            place(e, (RX, top, RW, high))
+            for key in ('border', 'bordersize', 'background'):
+                mf.drop(b, key)
+            mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
+            mf.put(b, 'backcolor', *cv.FIELD)
+            mf.put(b, 'bordercolor', *cv.EDGE)
+            mf.put(b, 'radius', 6)
+            mf.put(b, 'elementheight', 40)
+            sized(e, 16)
+            new.append(e)
+
+    # the bars, the scripts of the three menus as one
+    m[:] = [e for e in m if e.k != 'itemdef']
+    m.extend(cv.header('playerMenu'))
+    m.extend(new)
+    m.extend(cv.footer(FOOT_Y))
+    esc = _script(m, 'onesc') or ['close', 'playerMenu', ';', 'open', 'main', ';']
+    back = list(cv.CLICK) + [w for w in esc if w != mf.NL and not w.lower().startswith(('play', '"sound'))]
+    m.append(cv.button('vision_back', (32, FOOT_Y + 12, 110, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK'))
+    opens = _script(m, 'onopen') + ['uiScript', 'getcharcvars', ';'] + pr.without(_script(extra['saber.menu'], 'onopen'), gone)
+    closes = _script(m, 'onclose') + ['uiScript', 'updatesabercvars', ';']
+    for key, words in (('onOpen', opens), ('onClose', closes)):
+        mf.drop(m, key.lower())
+        m.append(Entry(key, [], words))
+    mf.put(m, 'canvas', cv.W, cv.H)
+    mf.put(m, 'descX', cv.W / 2.0)
+    mf.put(m, 'descY', FOOT_Y + 24)
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', cv.scale(13))

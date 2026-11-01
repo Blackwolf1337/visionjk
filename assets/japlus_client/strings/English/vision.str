@@ -5,20 +5,41 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
+REFERENCE           BROWSE_SERVERS_AND_JUMP_IN
+LANG_ENGLISH        "Browse servers and jump in"
+
+REFERENCE           HOST_A_SERVER_FOR_OTHERS
+LANG_ENGLISH        "Host a server for others"
+
+REFERENCE           PLAY_AGAINST_BOTS
+LANG_ENGLISH        "Play against bots"
+
+REFERENCE           WATCH_A_RECORDED_GAME
+LANG_ENGLISH        "Watch a recorded game"
+
+REFERENCE           GAME_TYPES_FORCE_WEAPONS
+LANG_ENGLISH        "Game types, force, weapons"
+
+REFERENCE           EDIT_PROFILE
+LANG_ENGLISH        "Edit profile"
+
+REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
+LANG_ENGLISH        "Double-click a server to join"
+
 REFERENCE           CHARACTER
 LANG_ENGLISH        "Character"
 
-REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
-LANG_ENGLISH        "Build a character of your own."
+REFERENCE           STYLE
+LANG_ENGLISH        "Style"
 
-REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
-LANG_ENGLISH        "Hilt and blade of your lightsaber."
-
-REFERENCE           PLAYER
-LANG_ENGLISH        "Player"
+REFERENCE           HILT
+LANG_ENGLISH        "Hilt"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
+
+REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+LANG_ENGLISH        "Hilt and blade of your lightsaber."
 
 REFERENCE           RED
 LANG_ENGLISH        "Red"
@@ -28,6 +49,15 @@ LANG_ENGLISH        "Green"
 
 REFERENCE           BLUE
 LANG_ENGLISH        "Blue"
+
+REFERENCE           SEARCH_ACTIONS_OR_KEYS
+LANG_ENGLISH        "Search actions or keys"
+
+REFERENCE           SHOWS_THE_ACTIONS_OF_ALL_PAGES_WHOSE
+LANG_ENGLISH        "Shows the actions of all pages whose name or key has these words."
+
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
 
 REFERENCE           GRAPPLE_HOOK
 LANG_ENGLISH        "Grapple Hook"
@@ -158,6 +188,15 @@ LANG_ENGLISH        "The camera circles you for a picture: mouse turns, wheel mo
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 
+REFERENCE           ACTION
+LANG_ENGLISH        "Action"
+
+REFERENCE           KEY
+LANG_ENGLISH        "Key"
+
+REFERENCE           SECOND_KEY
+LANG_ENGLISH        "Second key"
+
 REFERENCE           ATTACK_USE_AND_LOOK
 LANG_ENGLISH        "Attack, use and look."
 
@@ -182,14 +221,14 @@ LANG_ENGLISH        "Extras"
 REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
 
-REFERENCE           JA
-LANG_ENGLISH        "JA+"
+REFERENCE           CLICK_A_KEY_THEN_PRESS_THE_NEW_ONE_B
+LANG_ENGLISH        "Click a key, then press the new one. Backspace clears it, Esc keeps the old key."
 
-REFERENCE           VISIONJK
-LANG_ENGLISH        "VisionJK"
+REFERENCE           GIVES_EVERY_ACTION_THE_KEYS_IT_HAS_I
+LANG_ENGLISH        "Gives every action the keys it has in the defaults of the game. Other binds stay."
 
-REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
-LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
+REFERENCE           KEYS_ARE_SAVED_AS_SOON_AS_YOU_SET_TH
+LANG_ENGLISH        "Keys are saved as soon as you set them"
 
 REFERENCE           SEARCH_ALL_SETTINGS
 LANG_ENGLISH        "Search all settings"
@@ -1385,6 +1424,9 @@ LANG_ENGLISH        "Switch to Development"
 REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
 LANG_ENGLISH        "Update to the development builds from now on."
 
+REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
+LANG_ENGLISH        "Build a character of your own."
+
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
 
@@ -1399,6 +1441,9 @@ LANG_ENGLISH        "Your force powers."
 
 REFERENCE           THE_LIST_OF_MOVES
 LANG_ENGLISH        "The list of moves."
+
+REFERENCE           PLAYER
+LANG_ENGLISH        "Player"
 
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
@@ -1417,6 +1462,9 @@ LANG_ENGLISH        "Dark Side"
 
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
+
+REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
+LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
@@ -1856,9 +1904,6 @@ LANG_ENGLISH        "Never used"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 
-REFERENCE           SEARCH
-LANG_ENGLISH        "Search"
-
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
 
@@ -2098,6 +2143,18 @@ LANG_ENGLISH        "Instantly"
 
 REFERENCE           ON
 LANG_ENGLISH        "On"
+
+REFERENCE           PRESS_A_KEY
+LANG_ENGLISH        "PRESS A KEY"
+
+REFERENCE           NOT_BOUND
+LANG_ENGLISH        "NOT BOUND"
+
+REFERENCE           KEYS
+LANG_ENGLISH        "Keys"
+
+REFERENCE           COMMAND
+LANG_ENGLISH        "Command"
 
 
 ENDMARKER

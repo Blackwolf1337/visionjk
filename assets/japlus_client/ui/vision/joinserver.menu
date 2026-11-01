@@ -9,7 +9,7 @@
 		rect					0 0 640 480
 		outOfBoundsClick
 		focusColor				0.36 0.78 0.96 1
-		descX					48
+		descX					180
 		descY					856
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1
@@ -838,12 +838,12 @@
 			descText				@MENUS_DISPLAY_SERVER_INFORMATION
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.78
+			textscale				0.72
 			style					WINDOW_STYLE_PANEL
-			rect					1228 382 344 44
+			rect					1228 382 167 44
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
+			textalignx				83.5
+			textaligny				15.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -864,13 +864,13 @@
 			descText				@MENUS_ADD_SELECTED_SERVER_TO
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.78
+			textscale				0.72
 			style					WINDOW_STYLE_PANEL
 			ownerdrawFlag			UI_SHOW_NOTFAVORITESERVERS
-			rect					1228 436 344 44
+			rect					1405 382 167 44
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
+			textalignx				83.5
+			textaligny				15.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -891,12 +891,12 @@
 			descText				@MENUS_INPUT_PASSWORD
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.78
+			textscale				0.72
 			style					WINDOW_STYLE_PANEL
-			rect					1228 490 344 44
+			rect					1228 436 167 44
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
+			textalignx				83.5
+			textaligny				15.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -912,70 +912,17 @@
 
 		itemDef
 		{
-			name					createFavoriteText
-			text					@MENUS_NEW_FAVORITE
-			descText				@MENUS_ENTER_IP_ADDRESS_OF_FAVORITE
-			type					ITEM_TYPE_BUTTON
-			font					5
-			textscale				0.78
-			style					WINDOW_STYLE_PANEL
-			rect					1228 544 344 44
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				open createfavorite_popmenu
-			}
-			radius					6
-			backcolor				0 0 0 0
-			bordercolor				0.153 0.251 0.373 1
-			caps					1
-		}
-
-		itemDef
-		{
-			name					findplayerText
-			text					@MENUS_FIND_PLAYER
-			descText				@MENUS_SEARCH_CURRENT_SERVER
-			type					ITEM_TYPE_BUTTON
-			font					5
-			textscale				0.78
-			style					WINDOW_STYLE_PANEL
-			rect					1228 598 344 44
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				open findplayer_popmenu
-				hide findPlayerButton
-			}
-			radius					6
-			backcolor				0 0 0 0
-			bordercolor				0.153 0.251 0.373 1
-			caps					1
-		}
-
-		itemDef
-		{
 			name					idsText
 			text					@VISION_INTRUSIONS
 			descText				@VISION_WHAT_THE_INTRUSION_DETECTION_NOTED_A
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.78
+			textscale				0.72
 			style					WINDOW_STYLE_PANEL
-			rect					1228 652 344 44
+			rect					1405 436 167 44
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
+			textalignx				83.5
+			textaligny				15.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -996,13 +943,13 @@
 			descText				@MENUS_DELETE_SELECTED_SERVER
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.78
+			textscale				0.72
 			style					WINDOW_STYLE_PANEL
 			ownerdrawFlag			UI_SHOW_FAVORITESERVERS
-			rect					1228 436 344 44
+			rect					1405 382 167 44
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				172
-			textaligny				15
+			textalignx				83.5
+			textaligny				15.5
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -1015,6 +962,69 @@
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 			caps					1
+		}
+
+		itemDef
+		{
+			name					createFavoriteText
+			text					@MENUS_NEW_FAVORITE
+			descText				@MENUS_ENTER_IP_ADDRESS_OF_FAVORITE
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				0.72
+			style					WINDOW_STYLE_EMPTY
+			rect					972 764 170 44
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				170
+			textaligny				15.5
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open createfavorite_popmenu
+			}
+			radius					3.2
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
+		}
+
+		itemDef
+		{
+			name					findplayerText
+			text					@MENUS_FIND_PLAYER
+			descText				@MENUS_SEARCH_CURRENT_SERVER
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				0.72
+			style					WINDOW_STYLE_EMPTY
+			rect					782 764 170 44
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				170
+			textaligny				15.5
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open findplayer_popmenu
+				hide findPlayerButton
+			}
+			radius					3.2
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_table_foot
+			rect					36 764 1128 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.11 0.18 0.29 1
+			decoration
 		}
 
 		itemDef
@@ -1067,6 +1077,21 @@
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 			radius					6
+		}
+
+		itemDef
+		{
+			name					vision_join_hint
+			rect					936 832 400 68
+			visible					1
+			text					@VISION_DOUBLE_CLICK_A_SERVER_TO_JOIN
+			font					5
+			textscale				0.78
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				400
+			textaligny				27
+			decoration
 		}
 	}
 }

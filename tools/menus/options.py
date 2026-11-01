@@ -900,12 +900,19 @@ def build_canvas(m, name, ingame):
     # the pages as a list at the left, under the search
     new += [cv.fill('vision_rail', (0, top, cv.RAIL_W, bottom - top), cv.RAIL),
             cv.fill('vision_rail_line', (cv.RAIL_W - 1, top, 1, bottom - top), cv.LINE)]
+    search_cvar = 'v_setupSearch' if setup else 'v_controlsSearch'
     if setup:
-        new.append(cv.item('vision_search', (20, top + 28, 220, 44), ('type', 'ITEM_TYPE_EDITFIELD'), ('text', ref('Search all settings')),
-                           ('font', FONT), ('textscale', cv.scale(15)), ('forecolor', *cv.NAV_TEXT), ('textalignx', 16),
-                           ('textaligny', mf.fmt((44 - 15) / 2.0)), ('hint', 1), ('cvar', quoted('v_setupSearch')), ('maxChars', 40),
-                           ('maxPaintChars', 22), ('descText', ref('Shows the settings of all pages whose name or description has these words.'))))
-    tabs_y = top + (92 if setup else 28)
+        hint, about_search = ref('Search all settings'), ref('Shows the settings of all pages whose name or description has these words.')
+    else:
+        hint, about_search = ref('Search actions or keys'), ref('Shows the actions of all pages whose name or key has these words.')
+    new.append(cv.item('vision_search', (20, top + 28, 220, 44), ('type', 'ITEM_TYPE_EDITFIELD'), ('text', hint),
+                       ('font', FONT), ('textscale', cv.scale(15)), ('forecolor', *cv.NAV_TEXT), ('textalignx', 16),
+                       ('textaligny', mf.fmt((44 - 15) / 2.0)), ('hint', 1), ('cvar', quoted(search_cvar)), ('maxChars', 40),
+                       ('maxPaintChars', 22), ('descText', about_search)))
+    tabs_y = top + 92
+    # over the list while a search is on: "Search" (the titles of the pages are on their pages, which a search leaves)
+    new.append(cv.text('vision_search_title', (main_x + 36, top + 28, main_w - 380, 41), ref('Search'), 30, BRIGHT, 'left', 0, FONT,
+                       ('caps', 1), ('decoration',), ('page', 15)))  # (PAGE_SEARCH of ui_shared.h)
 
     pages, folds, made_pages = [], [], []
     for title, about, content in screen:
@@ -920,6 +927,11 @@ def build_canvas(m, name, ingame):
         new.append(cv.text('vision_tab%d' % page, (20, tabs_y + n * 50, 220, 46), word(title), 16, cv.SOFT_TEXT, 'left', 16, FONT,
                            ('type', 'ITEM_TYPE_BUTTON'), ('caps', 1), ('style', 'WINDOW_STYLE_EMPTY'), ('tab', page),
                            ('descText', word(about)), ('action', act)))
+        if not setup and not isinstance(secs, tuple):
+            # how many actions the page has, at the right of its tab
+            count = sum(len(rows) for _, _, rows in secs)
+            new.append(cv.text('vision_tabcount%d' % page, (20, tabs_y + n * 50, 220, 46), '"%d"' % count, 12, cv.MUTED, 'right', 14,
+                               FONT, ('decoration',)))
         # the title of the page over its settings
         new.append(cv.text('vision_title%d' % page, (main_x + 36, top + 28, main_w - 380, 41), word(title), 30, BRIGHT, 'left', 0, FONT,
                            ('caps', 1), ('decoration',), ('page', page)))
@@ -951,11 +963,27 @@ def build_canvas(m, name, ingame):
             col = 0 if heights[0] <= heights[1] else 1
             placed.append((col, head, adv, rows))
             heights[col] += (cv.CARD_GAP if heights[col] else 0) + cv.CARD_HEAD + cv.ROW * len(rows) + 12
-        # a page with one part and no heading (Controls): its rows are halved into two cards
-        if len(placed) == 1 and placed[0][1] is None and len(placed[0][3]) > 8:
-            col, head, adv, rows = placed[0]
-            half = (len(rows) + 1) // 2
-            placed = [(0, title, adv, rows[:half]), (1, None, adv, rows[half:])]
+        if not setup:
+            # the keys: one card over the whole width, ACTION, KEY and SECOND KEY over its columns
+            x, cw = list_x, list_w - 6
+            folds.append(len(folds) + 1)
+            e = cv.text('vision_head', (x, list_y, cw, cv.CARD_HEAD), ref('Action'), 12, cv.MUTED, 'left', cv.CARD_PAD, canvas.BOLD,
+                        ('caps', 1), ('fold', folds[-1]), ('page', page), ('scroll', 1), ('column', 0), ('decoration',))
+            mf.put(e.block, 'textaligny', mf.fmt((56 - 12) / 2.0))
+            made_pages.append(e)
+            row_x, row_w = x + cv.CARD_PAD - 12, cw - 2 * (cv.CARD_PAD - 12)
+            slot_x = row_x + row_w - 12 - (2 * 190 + 16)
+            for k, label in enumerate((ref('Key'), ref('Second key'))):
+                e = cv.text('vision_keyhead', (slot_x + k * 206, list_y, 190, 56), label, 12, cv.MUTED, 'left', 0, canvas.BOLD,
+                            ('caps', 1), ('page', page), ('scroll', 1), ('column', 0), ('decoration',))
+                mf.put(e.block, 'textaligny', mf.fmt((56 - 12) / 2.0))
+                made_pages.append(e)
+            y = list_y + cv.CARD_HEAD
+            for _, _, rows in secs:
+                for b in rows:
+                    made_pages.append(canvas_row(b, page, (row_x, y, row_w, cv.ROW), 0, False))
+                    y += cv.ROW
+            continue
         cursor = [list_y, list_y]
         for col, head, adv, rows in sorted(placed, key=lambda p: p[0]):
             x = list_x + col * (col_w + cv.CARD_GAP)
@@ -993,6 +1021,11 @@ def build_canvas(m, name, ingame):
             cv.fill('vision_pane_line', (pane_x, top, 1, bottom - top), cv.LINE),
             cv.item('vision_about', (pane_x + 28, top + 28, cv.PANE_W - 56, 360), ('type', 'ITEM_TYPE_DESC'), ('text', '""'),
                     ('font', FONT), ('textscale', cv.scale(17)), ('forecolor', *BRIGHT), ('decoration',))]
+    if not setup:
+        new += [cv.fill('vision_help_line', (pane_x + 28, bottom - 110, cv.PANE_W - 56, 1), cv.CARD_EDGE),
+                cv.item('vision_help', (pane_x + 28, bottom - 92, cv.PANE_W - 56, 70), ('type', 'ITEM_TYPE_TEXT'), ('decoration',),
+                        ('text', ref('Click a key, then press the new one. Backspace clears it, Esc keeps the old key.')),
+                        ('font', FONT), ('textscale', cv.scale(14)), ('forecolor', *cv.MUTED), ('autowrapped',))]
     if setup:
         new += [cv.fill('vision_changes_line', (pane_x + 28, top + 400, cv.PANE_W - 56, 1), cv.CARD_EDGE),
                 cv.item('vision_changes', (pane_x + 28, top + 422, cv.PANE_W - 56, bottom - top - 450), ('type', 'ITEM_TYPE_CHANGES'),
@@ -1032,7 +1065,10 @@ def build_canvas(m, name, ingame):
         mf.put(off.block, 'forecolor', *cv.MUTED)
         new.append(off)
     else:
-        new.append(cv.text('vision_hint', (w - 48 - 600, fy, 600, 44), ref('Enter or click: change the key. Backspace: clear it.'), 14,
+        new.append(cv.fill('vision_foot_sep', (136, fy + 9, 1, 26), cv.EDGE))
+        new.append(cv.button('vision_defaults', (140, fy, 140, 44), '@MENUS_DEFAULTS', list(CLICK) + ['uiScript', 'keysDefaults', ';'],
+                             18, 'plain', ref('Gives every action the keys it has in the defaults of the game. Other binds stay.')))
+        new.append(cv.text('vision_hint', (w - 48 - 600, fy, 600, 44), ref('Keys are saved as soon as you set them'), 14,
                            cv.MUTED, 'right', 0, FONT, ('decoration',)))
 
     # the pages of their own that buttons among the rows open, after the tabs and the page of the defaults
@@ -1076,7 +1112,7 @@ def build_canvas(m, name, ingame):
     mf.put(m, 'scrollStep', cv.ROW)
     if folds:
         mf.put(m, 'foldCvar', 'v_setupFolds' if setup else 'v_controlsFolds')
+    mf.put(m, 'searchCvar', search_cvar)
     if setup:
-        mf.put(m, 'searchCvar', 'v_setupSearch')
         mf.put(m, 'advancedCvar', 'v_setupAll')
         mf.put(m, 'changesCvar', 'v_setupChanges')

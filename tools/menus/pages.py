@@ -974,6 +974,10 @@ def page(m, name, ingame):
             elif g in ('video', 'vidrestart'):
                 mf.put(e.block, 'visible', 0)
     full = mf.truth(mf.get(m, 'fullscreen'))
+    if name == 'player.menu' and not ingame and EXTRA:
+        # the player outside a game: profile, character and lightsaber on one page, as the board (ports.profile_all)
+        ports.profile_all(m, EXTRA)
+        return
     if name in profile.SCREENS:
         # the pages of the player: one frame for profile, character, lightsaber and force powers (profile.py)
         nav = []
@@ -1034,3 +1038,5 @@ def page(m, name, ingame):
 
 # pages whose content began under the logo of the game, by file: noted before the rules took the logo away
 HAD_LOGO = {}
+# menus another page takes items from, as theme.py made them, by file (build.py: player2.menu and saber.menu)
+EXTRA = {}

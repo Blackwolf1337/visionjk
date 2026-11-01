@@ -5,25 +5,53 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
+REFERENCE           BROWSE_SERVERS_AND_JUMP_IN
+LANG_ENGLISH        "Browse servers and jump in"
+LANG_GERMAN         "Server durchsuchen und einsteigen"
+
+REFERENCE           HOST_A_SERVER_FOR_OTHERS
+LANG_ENGLISH        "Host a server for others"
+LANG_GERMAN         "Einen Server für andere hosten"
+
+REFERENCE           PLAY_AGAINST_BOTS
+LANG_ENGLISH        "Play against bots"
+LANG_GERMAN         "Gegen Bots spielen"
+
+REFERENCE           WATCH_A_RECORDED_GAME
+LANG_ENGLISH        "Watch a recorded game"
+LANG_GERMAN         "Ein aufgezeichnetes Spiel ansehen"
+
+REFERENCE           GAME_TYPES_FORCE_WEAPONS
+LANG_ENGLISH        "Game types, force, weapons"
+LANG_GERMAN         "Spielmodi, Macht, Waffen"
+
+REFERENCE           EDIT_PROFILE
+LANG_ENGLISH        "Edit profile"
+LANG_GERMAN         "Profil bearbeiten"
+
+REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
+LANG_ENGLISH        "Double-click a server to join"
+LANG_GERMAN         "Doppelklick auf einen Server zum Beitreten"
+
 REFERENCE           CHARACTER
 LANG_ENGLISH        "Character"
 LANG_GERMAN         "Charakter"
 
-REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
-LANG_ENGLISH        "Build a character of your own."
-LANG_GERMAN         "Eigenen Charakter erstellen."
+REFERENCE           STYLE
+LANG_ENGLISH        "Style"
+LANG_GERMAN         "Stil"
 
-REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
-LANG_ENGLISH        "Hilt and blade of your lightsaber."
-LANG_GERMAN         "Griff und Klinge deines Lichtschwerts."
-
-REFERENCE           PLAYER
-LANG_ENGLISH        "Player"
-LANG_GERMAN         "Spieler"
+REFERENCE           HILT
+LANG_ENGLISH        "Hilt"
+LANG_GERMAN         "Griff"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
 LANG_GERMAN         "Name, Modell und Teamfarbe."
+
+REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+LANG_ENGLISH        "Hilt and blade of your lightsaber."
+LANG_GERMAN         "Griff und Klinge deines Lichtschwerts."
 
 REFERENCE           RED
 LANG_ENGLISH        "Red"
@@ -36,6 +64,18 @@ LANG_GERMAN         "Grün"
 REFERENCE           BLUE
 LANG_ENGLISH        "Blue"
 LANG_GERMAN         "Blau"
+
+REFERENCE           SEARCH_ACTIONS_OR_KEYS
+LANG_ENGLISH        "Search actions or keys"
+LANG_GERMAN         "Aktionen oder Tasten suchen"
+
+REFERENCE           SHOWS_THE_ACTIONS_OF_ALL_PAGES_WHOSE
+LANG_ENGLISH        "Shows the actions of all pages whose name or key has these words."
+LANG_GERMAN         "Zeigt die Aktionen aller Seiten, deren Name oder Taste diese Wörter enthält."
+
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+LANG_GERMAN         "Suchen"
 
 REFERENCE           GRAPPLE_HOOK
 LANG_ENGLISH        "Grapple Hook"
@@ -209,6 +249,18 @@ REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_GERMAN         "Tasten für die Bewegung."
 
+REFERENCE           ACTION
+LANG_ENGLISH        "Action"
+LANG_GERMAN         "Aktion"
+
+REFERENCE           KEY
+LANG_ENGLISH        "Key"
+LANG_GERMAN         "Taste"
+
+REFERENCE           SECOND_KEY
+LANG_ENGLISH        "Second key"
+LANG_GERMAN         "Zweite Taste"
+
 REFERENCE           ATTACK_USE_AND_LOOK
 LANG_ENGLISH        "Attack, use and look."
 LANG_GERMAN         "Angreifen, benutzen und umsehen."
@@ -241,17 +293,17 @@ REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
 LANG_GERMAN         "Tasten für die Extras von VisionJK und JA+."
 
-REFERENCE           JA
-LANG_ENGLISH        "JA+"
-LANG_GERMAN         "#same"
+REFERENCE           CLICK_A_KEY_THEN_PRESS_THE_NEW_ONE_B
+LANG_ENGLISH        "Click a key, then press the new one. Backspace clears it, Esc keeps the old key."
+LANG_GERMAN         "Klicke eine Taste, dann drücke die neue. Rücktaste löscht sie, Esc behält die alte Taste."
 
-REFERENCE           VISIONJK
-LANG_ENGLISH        "VisionJK"
-LANG_GERMAN         "#same"
+REFERENCE           GIVES_EVERY_ACTION_THE_KEYS_IT_HAS_I
+LANG_ENGLISH        "Gives every action the keys it has in the defaults of the game. Other binds stay."
+LANG_GERMAN         "Gibt jeder Aktion die Tasten der Spielstandards. Andere Belegungen bleiben."
 
-REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
-LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
-LANG_GERMAN         "Enter oder Klick: Taste ändern. Rücktaste: Zuweisung löschen."
+REFERENCE           KEYS_ARE_SAVED_AS_SOON_AS_YOU_SET_TH
+LANG_ENGLISH        "Keys are saved as soon as you set them"
+LANG_GERMAN         "Tasten werden gespeichert, sobald du sie setzt"
 
 REFERENCE           SEARCH_ALL_SETTINGS
 LANG_ENGLISH        "Search all settings"
@@ -1845,6 +1897,10 @@ REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
 LANG_ENGLISH        "Update to the development builds from now on."
 LANG_GERMAN         "Ab jetzt auf Entwicklungsversionen aktualisieren."
 
+REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
+LANG_ENGLISH        "Build a character of your own."
+LANG_GERMAN         "Eigenen Charakter erstellen."
+
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
 LANG_GERMAN         "Feste Farbe"
@@ -1864,6 +1920,10 @@ LANG_GERMAN         "Deine Machtkräfte."
 REFERENCE           THE_LIST_OF_MOVES
 LANG_ENGLISH        "The list of moves."
 LANG_GERMAN         "Liste der Bewegungen."
+
+REFERENCE           PLAYER
+LANG_ENGLISH        "Player"
+LANG_GERMAN         "Spieler"
 
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
@@ -1888,6 +1948,10 @@ LANG_GERMAN         "Dunkle Seite"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_GERMAN         "Beide Seiten"
+
+REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
+LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
+LANG_GERMAN         "Enter oder Klick: Taste ändern. Rücktaste: Zuweisung löschen."
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
@@ -2473,10 +2537,6 @@ REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_GERMAN         "vor %i Tagen"
 
-REFERENCE           SEARCH
-LANG_ENGLISH        "Search"
-LANG_GERMAN         "Suchen"
-
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
 LANG_GERMAN         "Keine Einstellung hat diese Wörter."
@@ -2796,6 +2856,22 @@ LANG_GERMAN         "Sofort"
 REFERENCE           ON
 LANG_ENGLISH        "On"
 LANG_GERMAN         "An"
+
+REFERENCE           PRESS_A_KEY
+LANG_ENGLISH        "PRESS A KEY"
+LANG_GERMAN         "TASTE DRÜCKEN"
+
+REFERENCE           NOT_BOUND
+LANG_ENGLISH        "NOT BOUND"
+LANG_GERMAN         "NICHT BELEGT"
+
+REFERENCE           KEYS
+LANG_ENGLISH        "Keys"
+LANG_GERMAN         "Tasten"
+
+REFERENCE           COMMAND
+LANG_ENGLISH        "Command"
+LANG_GERMAN         "Befehl"
 
 
 ENDMARKER

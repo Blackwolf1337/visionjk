@@ -79,6 +79,17 @@ def check_scripts(name, text, limit):
                      % (name, line, m.group(1), kept, limit - 1))
 
 
+def prepared(path, base, ingame):
+    """A menu as the rules of theme.py make it, for a page that takes items from it (pages.EXTRA)."""
+    tree = mf.parse(source(path, base))
+    for top in tree:
+        if top.k == 'menudef':
+            pages.before(top.block, os.path.basename(path), ingame)
+            theme.restyle(top.block, os.path.basename(path), ingame)
+            return top.block
+    return []
+
+
 def build(path, base, ingame):
     name = os.path.basename(path)
     tree = mf.parse(source(path, base))
@@ -114,6 +125,9 @@ def main():
         sys.exit('the menus of the game are read from its assets1.pk3, which is not at %s' % pk3)
     with zipfile.ZipFile(pk3) as base:
         outside, inside = read_list('jampmenus.txt'), read_list('jampingame.txt')
+        for path in outside:
+            if os.path.basename(path) in ('player2.menu', 'saber.menu'):
+                pages.EXTRA[os.path.basename(path)] = prepared(path, base, False)
         for path in outside:
             build(path, base, False)
         for path in inside:

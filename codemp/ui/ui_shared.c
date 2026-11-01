@@ -101,6 +101,7 @@ static qboolean g_waitingForKey = qfalse;
 static qboolean g_editingField = qfalse;
 
 static itemDef_t *g_bindItem = NULL;
+static int g_bindSlot = 0;		// the key of the two of a row in a menu with a canvas that the next key pressed replaces
 static itemDef_t *g_editItem = NULL;
 
 menuDef_t Menus[MAX_MENUS];      // defined menus
@@ -2659,6 +2660,7 @@ static void Menu_ListWindow( const menuDef_t *menu, rectDef_t *out ) {
 
 // Is this item on a page that is not open. A row the list has folded away or that is no match of the search is
 // on none (Menu_ListLayout), and while the search is on, the rows of every page are in its list.
+
 static qboolean Item_OffPage( const itemDef_t *item ) {
 	const menuDef_t *menu = (const menuDef_t *)item->parent;
 
@@ -2670,6 +2672,10 @@ static qboolean Item_OffPage( const itemDef_t *item ) {
 	}
 	if ( item->scroll && menu->searching ) {
 		return qfalse;
+	}
+	if ( item->page == PAGE_SEARCH ) {
+		// "page 15", the last one: only while a search is on (its title)
+		return (qboolean)!menu->searching;
 	}
 	return (qboolean)( item->page && item->page != menu->page );
 }
@@ -2882,6 +2888,9 @@ static float Item_RowSize( const itemDef_t *item, float pixels, float units ) {
 	return ( menu && menu->canvasW > 0.0f ) ? pixels * menu->canvasUnit : units;
 }
 
+#define BIND_SLOT_W		190.0f		// a key of a row of keys in a menu with a canvas, in pixels of the canvas
+#define BIND_SLOT_GAP	16.0f
+
 static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
 	const rectDef_t *r = &item->window.rect;
 	const menuDef_t *menu = (const menuDef_t *)item->parent;
@@ -2891,7 +2900,11 @@ static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
 		*out = *r;
 		return;
 	}
-	if ( menu && menu->canvasW > 0.0f ) {
+	if ( menu && menu->canvasW > 0.0f && item->type == ITEM_TYPE_BIND ) {
+		// (two keys side by side, KEY and SECOND KEY, see Item_Bind_Slot)
+		out->w = floorf( Q_min( ( 2.0f * BIND_SLOT_W + BIND_SLOT_GAP ) * menu->canvasUnit, r->w * 0.6f ) );
+		out->h = Q_min( 38.0f * menu->canvasUnit, r->h - 4.0f * menu->canvasUnit );
+	} else if ( menu && menu->canvasW > 0.0f ) {
 		out->w = floorf( item->row == 3 ? r->w * ROW_WIDGET_WIDE : Q_min( 220.0f * menu->canvasUnit, r->w * 0.5f ) );
 		out->h = Q_min( 40.0f * menu->canvasUnit, r->h - 4.0f * menu->canvasUnit );
 	} else {
@@ -2900,6 +2913,27 @@ static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
 	}
 	out->x = r->x + r->w - Item_RowSize( item, 12.0f, ROW_PAD ) - out->w;
 	out->y = r->y + ( r->h - out->h ) * 0.5f;
+}
+
+// A row of keys in a menu with a canvas shows the two keys of its command in two fields, KEY and SECOND KEY, and
+// each of them is set on its own.
+static qboolean Item_Bind_Slots( const itemDef_t *item ) {
+	const menuDef_t *menu = (const menuDef_t *)item->parent;
+
+	return (qboolean)( item->type == ITEM_TYPE_BIND && menu && menu->canvasW > 0.0f && item->text && item->text[0] );
+}
+
+// the field of the first (0) or the second key (1) of such a row
+static void Item_Bind_Slot( const itemDef_t *item, int slot, rectDef_t *out ) {
+	const menuDef_t	*menu = (const menuDef_t *)item->parent;
+	const float		gap = BIND_SLOT_GAP * menu->canvasUnit;
+	rectDef_t		widget;
+
+	Item_Row_Widget( item, &widget );
+	out->w = ( widget.w - gap ) * 0.5f;
+	out->h = widget.h;
+	out->x = widget.x + slot * ( out->w + gap );
+	out->y = widget.y;
 }
 
 // where the track of a slider starts and how long it is: behind its label, or in the widget of a row
@@ -2999,7 +3033,9 @@ static qboolean Menu_FoldIs( const char *folds, int fold ) {
 	return qfalse;
 }
 
-// the name of a row or its description has the words, as the player reads them
+static qboolean Item_Bind_HasKey( const itemDef_t *item, const char *search );
+
+// the name of a row or its description has the words, as the player reads them; or a row of keys has that key
 static qboolean Item_ListMatch( const itemDef_t *item, const char *search ) {
 	char text[1024];
 
@@ -3016,7 +3052,7 @@ static qboolean Item_ListMatch( const itemDef_t *item, const char *search ) {
 			return qtrue;
 		}
 	}
-	return qfalse;
+	return Item_Bind_HasKey( item, search );
 }
 
 #define LIST_COLUMNS	4		// "column <n>": the columns of the list of a page, counted from 0
@@ -3033,12 +3069,15 @@ static void Menu_ListLayout( menuDef_t *menu, const char *search, const char *fo
 		qboolean in;
 		float	bottom;		// a heading: where the last of its lines ends, the end of its card
 		float	h;			// in a menu with a canvas: as high as its highest item (else every line is a step high)
+		int		dst;		// the column it is shown in: its own, or for a search the one with room (canvas)
 	} lines[MAX_MENUITEMS];
 	static int	lineOf[MAX_MENUITEMS];
 	const float	step = Menu_ListStep( menu );
 	const qboolean searching = (qboolean)( strlen( search ) >= LIST_SEARCH_MIN );
 	const qboolean all = (qboolean)( !menu->advancedCvar || DC->getCVarValue( menu->advancedCvar ) != 0.0f );
 	float		cursor[LIST_COLUMNS] = { 0 };
+	float		colX[LIST_COLUMNS];
+	qboolean	colSeen[LIST_COLUMNS] = { qfalse };
 	int			page[LIST_COLUMNS];
 	int			head[LIST_COLUMNS];
 	int			i, count = 0;
@@ -3059,6 +3098,11 @@ static void Menu_ListLayout( menuDef_t *menu, const char *search, const char *fo
 		}
 		if ( !menu->listKnown ) {
 			item->listY = item->window.rectClient.y;
+			item->listX = item->window.rectClient.x;
+		}
+		if ( !colSeen[col] || item->listX < colX[col] ) {
+			colX[col] = item->listX;
+			colSeen[col] = qtrue;
 		}
 		// (a line: the items of a step, or in a menu with a canvas the items at the same height, which may be of
 		// different heights: rows, the headings of cards)
@@ -3114,6 +3158,18 @@ static void Menu_ListLayout( menuDef_t *menu, const char *search, const char *fo
 
 	// each page from where its list began, or all of them one after the other for the search; every column of
 	// its own from the top
+	if ( searching && menu->canvasW > 0.0f && colSeen[0] && colSeen[1] ) {
+		// (the cards of a search go into the column with room: both columns start at the top of the list)
+		float top = count ? lines[0].y : 0.0f;
+
+		for ( i = 1; i < count; i++ ) {
+			top = Q_min( top, lines[i].y );
+		}
+		for ( i = 0; i < LIST_COLUMNS; i++ ) {
+			cursor[i] = top;
+			page[i] = 0;
+		}
+	}
 	for ( i = 0; i < menu->itemCount; i++ ) {
 		itemDef_t	*item = menu->items[i];
 		const int	n = lineOf[i];
@@ -3123,6 +3179,25 @@ static void Menu_ListLayout( menuDef_t *menu, const char *search, const char *fo
 			continue;
 		}
 		col = lines[n].column;
+		if ( i == 0 || lineOf[i - 1] != n ) {
+			// (a search in a menu with a canvas: each card into the column that is shorter, its lines after it)
+			lines[n].dst = col;
+			if ( searching && menu->canvasW > 0.0f && colSeen[0] && colSeen[1] && col < 2 && lines[n].in ) {
+				if ( lines[n].fold ) {
+					lines[n].dst = cursor[1] < cursor[0] ? 1 : 0;
+				} else if ( lines[n].head >= 0 ) {
+					lines[n].dst = lines[lines[n].head].dst;
+				}
+			}
+		}
+		if ( lines[n].dst != col ) {
+			const int from = col;
+
+			col = lines[n].dst;
+			item->window.rectClient.x = item->listX + colX[col] - colX[from];
+		} else {
+			item->window.rectClient.x = item->listX;
+		}
 		if ( page[col] < 0 || ( !searching && lines[n].page != page[col] ) ) {
 			cursor[col] = lines[n].y;
 			page[col] = lines[n].page;
@@ -4894,7 +4969,13 @@ static struct {
 // a setting of a screen of settings: an item that sets a cvar by itself
 static qboolean Item_IsSetting( const itemDef_t *item ) {
 	// (a row without a name is a switch of the screen itself: Essentials / All Settings)
+	const menuDef_t *menu = (const menuDef_t *)item->parent;
+
 	if ( !item->cvar || !item->cvar[0] || !item->text || !item->text[0] ) {
+		return qfalse;
+	}
+	// (nor is the search of the screen)
+	if ( menu && menu->searchCvar && !Q_stricmp( item->cvar, menu->searchCvar ) ) {
 		return qfalse;
 	}
 	switch ( item->type ) {
@@ -6141,6 +6222,8 @@ void Item_TextColor(itemDef_t *item, vec4_t *newColor) {
 	}
 }
 
+static float Text_PaintWrapped( float x, float y, float width, float scale, vec4_t color, const char *text, int font, int maxLines );
+
 void Item_Text_AutoWrapped_Paint(itemDef_t *item) {
 	char text[2048];
 	const char *p, *textPtr, *newLinePtr;
@@ -6173,6 +6256,12 @@ void Item_Text_AutoWrapped_Paint(itemDef_t *item) {
 		return;
 	}
 	Item_TextColor(item, &color);
+	if ( item->parent && ( (menuDef_t *)item->parent )->canvasW > 0.0f ) {
+		// in a menu with a canvas: in the font of the item, broken where the rectangle ends
+		Text_PaintWrapped( item->window.rect.x + item->textalignx, item->window.rect.y + item->textaligny, item->window.rect.w - item->textalignx,
+			item->textscale, color, textPtr, item->iMenuFont, 12 );
+		return;
+	}
 	//Item_SetTextExtents(item, &width, &height, textPtr);
 	//if (item->value == 0)
 	//{
@@ -6631,6 +6720,7 @@ static const char *g_bindCommands[] = {
 #define g_bindCount ARRAY_LEN(g_bindCommands)
 
 static int g_bindKeys[g_bindCount][2];
+static char g_bindDefault[g_bindCount][48];	// the keys of a command in the defaults of the game (Controls_SetDefaultKeys)
 
 /*
 =================
@@ -6698,6 +6788,62 @@ void Controls_SetDefaults( void )
 	for ( i=0; i<g_bindCount; i++ ) {
 		g_bindKeys[i][0] = -1;
 		g_bindKeys[i][1] = -1;
+	}
+}
+
+// a row of keys has a key of this name (the whole name: "shift", "mouse1")
+static qboolean Item_Bind_HasKey( const itemDef_t *item, const char *search ) {
+	char	name[64];
+	int		id, j;
+
+	if ( item->type != ITEM_TYPE_BIND || ( id = BindingIDFromName( item->cvar ) ) < 0 ) {
+		return qfalse;
+	}
+	for ( j = 0; j < 2; j++ ) {
+		if ( g_bindKeys[id][j] != -1 ) {
+			DC->keynumToStringBuf( g_bindKeys[id][j], name, sizeof( name ) );
+			if ( !Q_stricmp( name, search ) ) {
+				return qtrue;
+			}
+		}
+	}
+	return qfalse;
+}
+
+/*
+=================
+Controls_SetDefaultKeys
+
+The keys a command has in the defaults of the game, as words to show ("W or UP"); the ui reads them from
+mpdefault.cfg. Shown beside "Default" for a row of keys in a menu with a canvas.
+=================
+*/
+void Controls_SetDefaultKeys( const char *command, const char *keys ) {
+	const int id = BindingIDFromName( command );
+
+	if ( id >= 0 ) {
+		Q_strncpyz( g_bindDefault[id], keys, sizeof( g_bindDefault[id] ) );
+	}
+}
+
+/*
+=================
+Controls_ClearAll
+
+Takes every key off the commands of the menus, other binds stay (the defaults of the keys, see UI_KeysDefaults).
+=================
+*/
+void Controls_ClearAll( void ) {
+	size_t	i;
+	int		j;
+
+	for ( i = 0; i < g_bindCount; i++ ) {
+		for ( j = 0; j < 2; j++ ) {
+			if ( g_bindKeys[i][j] != -1 ) {
+				DC->setBinding( g_bindKeys[i][j], "" );
+			}
+			g_bindKeys[i][j] = -1;
+		}
 	}
 }
 
@@ -7025,6 +7171,39 @@ static void Item_Row_Paint( itemDef_t *item ) {
 		// will be taken
 		const qboolean waiting = (qboolean)( g_bindItem == item && g_waitingForKey );
 
+		if ( Item_Bind_Slots( item ) ) {
+			// in a menu with a canvas: the first and the second key, each in its own field
+			const int	id = BindingIDFromName( item->cvar );
+			int			slot;
+
+			for ( slot = 0; slot < 2; slot++ ) {
+				const int	key = id >= 0 ? g_bindKeys[id][slot] : -1;
+				rectDef_t	box;
+				char		name[64];
+
+				Item_Bind_Slot( item, slot, &box );
+				if ( waiting && g_bindSlot == slot ) {
+					Color_Mix( color, skinKeyFill, accent, 0.12f );
+					Skin_Panel( box.x, box.y, box.w, box.h, rad, color, accent );
+					Skin_Color( color, white, ( ( DC->realTime / BLINK_DIVISOR ) & 1 ) ? 1.0f : 0.6f );
+					Row_Text( box.x + box.w * 0.5f, box.y, box.h, box.w - 8.0f, ITEM_ALIGN_CENTER, small, color,
+						Vision_Text( "PRESS A KEY" ), font );
+				} else if ( key == -1 ) {
+					Skin_Panel( box.x, box.y, box.w, box.h, rad, NULL, skinRule );
+					VectorCopy4( skinFaint, color );
+					Row_Text( box.x + box.w * 0.5f, box.y, box.h, box.w - 8.0f, ITEM_ALIGN_CENTER, small, color,
+						Vision_Text( "NOT BOUND" ), font );
+				} else {
+					Color_Mix( edge, skinKeyEdge, accent, 0.5f * f );
+					Skin_Panel( box.x, box.y, box.w, box.h, rad, skinKeyFill, edge );
+					Color_Mix( color, item->window.foreColor, white, f );
+					color[3] = off ? 0.5f : 1.0f;
+					DC->keynumToStringBuf( key, name, sizeof( name ) );
+					Row_Text( box.x + box.w * 0.5f, box.y, box.h, box.w - 8.0f, ITEM_ALIGN_CENTER, small, color, name, font );
+				}
+			}
+			break;
+		}
 		BindingFromName( item->cvar );
 		if ( waiting ) {
 			Color_Mix( color, skinKeyFill, accent, 0.12f );
@@ -7427,20 +7606,37 @@ static void Item_Desc_Paint( itemDef_t *item ) {
 	y = Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, about->descPic[0] ? 6 : 12 );
 	if ( about->descPic[0] ) {
 		Item_DescPic_Paint( item, about, item->skinValue );
-	} else if ( parent->canvasW > 0.0f && Item_IsSetting( about ) && DC->getCVarInfo ) {
-		// in a menu with a canvas: what the setting is by default, what it is now and when a change takes effect
+	} else if ( parent->canvasW > 0.0f && ( about->type == ITEM_TYPE_BIND || ( Item_IsSetting( about ) && DC->getCVarInfo ) ) ) {
+		// in a menu with a canvas: what the setting is by default, what it is now and when a change takes effect;
+		// for a key, the keys it has, the keys it has by default and its command
 		const float	u = parent->canvasUnit, line = 26.0f * u, scale = Item_Pixels( item, 15.0f );
 		const char	*names[3] = { Vision_Text( "Default" ), Vision_Text( "Current" ), Vision_Text( "Takes effect" ) };
 		char		def[MENU_CHANGE_VALUE], now[MENU_CHANGE_VALUE], values[3][128];
 		uint32_t	flags;
 		float		labelW = 0.0f;
-		int			k;
+		int			k, current = 1;
+		qboolean	have = qfalse;
 
-		if ( DC->getCVarInfo( about->cvar, def, sizeof( def ), &flags ) ) {
+		if ( about->type == ITEM_TYPE_BIND ) {
+			const int id = BindingIDFromName( about->cvar );
+
+			names[0] = Vision_Text( "Keys" );
+			names[1] = Vision_Text( "Default" );
+			names[2] = Vision_Text( "Command" );
+			current = 0;
+			BindingFromName( about->cvar );
+			Q_strncpyz( values[0], Q_stricmp( g_nameBind, "???" ) ? g_nameBind : Vision_Text( "None" ), sizeof( values[0] ) );
+			Q_strncpyz( values[1], id >= 0 && g_bindDefault[id][0] ? g_bindDefault[id] : Vision_Text( "None" ), sizeof( values[1] ) );
+			Q_strncpyz( values[2], about->cvar ? about->cvar : "", sizeof( values[2] ) );
+			have = qtrue;
+		} else if ( DC->getCVarInfo( about->cvar, def, sizeof( def ), &flags ) ) {
 			DC->getCVarString( about->cvar, now, sizeof( now ) );
 			Item_ValueText( about, def, values[0], sizeof( values[0] ) );
 			Item_ValueText( about, now, values[1], sizeof( values[1] ) );
 			Q_strncpyz( values[2], Vision_Text( Cvar_NeedsRestart( about->cvar ) ? "After restart" : "Instantly" ), sizeof( values[2] ) );
+			have = qtrue;
+		}
+		if ( have ) {
 			for ( k = 0; k < 3; k++ ) {
 				labelW = Q_max( labelW, DC->textWidth( names[k], scale, item->iMenuFont ) );
 			}
@@ -7450,7 +7646,7 @@ static void Item_Desc_Paint( itemDef_t *item ) {
 
 				Skin_Color( color, parent->descColor, item->skinValue );
 				Row_Text( r->x, y, line, 0.0f, ITEM_ALIGN_LEFT, scale, color, names[k], item->iMenuFont );
-				if ( k == 1 ) {
+				if ( k == current ) {
 					Skin_Color( value, parent->focusColor, item->skinValue );
 				} else {
 					Skin_Color( value, item->window.foreColor, item->skinValue );
@@ -7484,6 +7680,14 @@ qboolean Item_Bind_HandleKey(itemDef_t *item, int key, qboolean down) {
 		if (down) {
 			g_waitingForKey = qtrue;
 			g_bindItem = item;
+			g_bindSlot = 0;
+			if ( Item_Bind_Slots( item ) ) {
+				rectDef_t second;
+
+				// (the field that was clicked; a click on the name takes the first key)
+				Item_Bind_Slot( item, 1, &second );
+				g_bindSlot = DC->cursorx >= second.x ? 1 : 0;
+			}
 		}
 		return qtrue;
 	}
@@ -7491,6 +7695,7 @@ qboolean Item_Bind_HandleKey(itemDef_t *item, int key, qboolean down) {
 		if ( down ) {
 			g_waitingForKey = qtrue;
 			g_bindItem = item;
+			g_bindSlot = 0;
 		}
 		return qtrue;
 	}
@@ -7510,7 +7715,17 @@ qboolean Item_Bind_HandleKey(itemDef_t *item, int key, qboolean down) {
 
 			case A_BACKSPACE:
 				id = BindingIDFromName(item->cvar);
-				if (id != -1)
+				if ( id != -1 && Item_Bind_Slots( item ) ) {
+					// only the key of the field, the other one moves to the front
+					if ( g_bindKeys[id][g_bindSlot] != -1 ) {
+						DC->setBinding( g_bindKeys[id][g_bindSlot], "" );
+					}
+					if ( g_bindSlot == 0 ) {
+						g_bindKeys[id][0] = g_bindKeys[id][1];
+					}
+					g_bindKeys[id][1] = -1;
+				}
+				else if (id != -1)
 				{
 					if ( g_bindKeys[id][0] != -1 )
 						DC->setBinding(g_bindKeys[id][0], "");
@@ -7529,6 +7744,47 @@ qboolean Item_Bind_HandleKey(itemDef_t *item, int key, qboolean down) {
 			case '`':
 				return qtrue;
 		}
+	}
+
+	id = BindingIDFromName( item->cvar );
+	if ( id != -1 && key != -1 && Item_Bind_Slots( item ) ) {
+		// the key of the field that was clicked is replaced, the other one stays
+		const int	old = g_bindKeys[id][g_bindSlot];
+		int			keep = -1, j;
+		size_t		i;
+
+		for ( j = 0; j < 2; j++ ) {
+			if ( g_bindKeys[id][j] != -1 && g_bindKeys[id][j] != old && g_bindKeys[id][j] != key ) {
+				keep = g_bindKeys[id][j];
+			}
+		}
+		// (a key does one thing: it leaves the commands it had)
+		for ( i = 0; i < g_bindCount; i++ ) {
+			if ( (int)i == id ) {
+				continue;
+			}
+			if ( g_bindKeys[i][1] == key ) {
+				g_bindKeys[i][1] = -1;
+			}
+			if ( g_bindKeys[i][0] == key ) {
+				g_bindKeys[i][0] = g_bindKeys[i][1];
+				g_bindKeys[i][1] = -1;
+			}
+		}
+		if ( old != -1 && old != key ) {
+			DC->setBinding( old, "" );
+		}
+		// (a second key without a first one becomes the first)
+		if ( g_bindSlot == 0 || keep == -1 ) {
+			g_bindKeys[id][0] = key;
+			g_bindKeys[id][1] = g_bindSlot == 0 ? keep : -1;
+		} else {
+			g_bindKeys[id][0] = keep;
+			g_bindKeys[id][1] = key;
+		}
+		Controls_SetConfig();
+		g_waitingForKey = qfalse;
+		return qtrue;
 	}
 
 	if ( key != -1 ) {

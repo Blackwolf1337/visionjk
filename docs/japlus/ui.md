@@ -208,6 +208,7 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `type ITEM_TYPE_CUBE`, `type ITEM_TYPE_LOGO` | the box of the icon in the rectangle of the item: as a body in the pose of the icon that sways and opens its lid, or as a flat picture (its `forecolor` gives the alpha) |
 | itemDef | `wide 1` | its window reaches the sides of a screen that is wider than the 640 units of a menu, as the background of a menu does: the bar at the top of a page. With the menu on its panel in the level it ends with the panel |
 | itemDef | `page <n>` | the item is only there while page n of its menu is open (1 to 15). An item without it is on every page |
+| itemDef | `page 15` | `PAGE_SEARCH`: the item is only shown while a search of the menu is on (`searchCvar` is not empty). The Search title of Setup uses it |
 | itemDef | `tab <n>` | a button that opens page n when it is clicked, before its `action` runs. The one whose page is open is bright and has a line under it. The menu opens on the lowest page a tab names. Tabs that follow each other in the file at the same height are as wide as their words and stand in a row from where the first one is. A tab with `textalign ITEM_ALIGN_LEFT` is drawn as a row of a vertical list instead (the open one filled with an accent bar at its left): the rail of Setup and Controls. Tab underlines are thinner |
 | itemDef | `flow 1` | a button of a bar: laid out with its neighbours like tabs, with a short line between two of them. A hidden one takes no room |
 | itemDef | `flow 2`, `flow 3` | an entry of a strip that leads to other menus, laid out the same way and drawn as a tab is: 2 a button, 3 the entry of the menu that is open (bright, a line under it) |
@@ -221,6 +222,9 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `fold <n>` | a heading that is a button: a click folds the rows under it away or brings them back. n is unique in its menu. An arrow at its right end points down while it is open and right while it is folded |
 | menuDef | `foldCvar <cvar>` | the cvar that keeps which headings are folded, as a list of numbers. Saved |
 | menuDef | `searchCvar <cvar>` | the cvar of the search field of the menu. Not saved. Setting it shows the rows that match, see "The Setup screen" |
+| itemDef | `type ITEM_TYPE_BIND` | in a menu with `canvas` a row of keys shows two key boxes, KEY and SECOND KEY, and each is set on its own: a click on the box, then a key. Backspace clears that box, Esc keeps the old key |
+| script | `keysDefaults` | `uiScript keysDefaults` gives the commands of the menus the keys of `mpdefault.cfg`. Other binds stay |
+| menuDef | `searchCvar <cvar>` (canvas) | in a menu with `canvas` a search moves each card that has a match into the shorter column |
 | itemDef | `hint 1` | an edit field that shows its `text` dimmed while it is empty |
 | itemDef | `descPic <picture> <name a> <name b>` | a row: the pane shows `<picture>_a` and `<picture>_b` by turns under the description, with the name of the value on a dark band at the foot. The names are text references or numbers without quotes |
 | itemDef | `otherText <text>` | what a choice (`ITEM_TYPE_MULTI`) shows while its cvar has a value that is none of its settings, in place of "Custom" |
@@ -546,8 +550,9 @@ proper layout. Not centered etc."), with two pictures: Setup with its sections i
 and the window of an error as two frames that did not fit each other, see-through, over the first page. Every
 picture before had been of a page a console command had opened, never of one after a click. So:
 
-- The ui has a command for scripts, `v_uiMouse <x> <y> [click]`: the pointer goes to a place in the 640 x 480
-  units of the menus and the left button is pressed there. `ui_openmenu <menu> over` opens a menu on top of
+- The ui has a command for scripts, `v_uiMouse <x> <y> [click|hold|release|wheelup|wheeldown] [px]`: the pointer goes
+  to a place in the 640 x 480 units of the menus (with `px`, in window pixels) and the action is done there, a click
+  presses the left button. `v_uiDump` lists the open menus and their items in window pixels. `ui_openmenu <menu> over` opens a menu on top of
   what is open, as a button of a page does.
 - `agent/japlus_port/tools/uitest/plan.py` writes a script that opens every menu of both lists, clicks every
   button of it that shows a group (the sections and tabs) and every button that opens a window, and takes a

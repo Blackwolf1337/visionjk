@@ -5,25 +5,53 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
+REFERENCE           BROWSE_SERVERS_AND_JUMP_IN
+LANG_ENGLISH        "Browse servers and jump in"
+LANG_FRENCH         "Parcourir les serveurs et jouer"
+
+REFERENCE           HOST_A_SERVER_FOR_OTHERS
+LANG_ENGLISH        "Host a server for others"
+LANG_FRENCH         "Héberger un serveur pour les autres"
+
+REFERENCE           PLAY_AGAINST_BOTS
+LANG_ENGLISH        "Play against bots"
+LANG_FRENCH         "Jouer contre des bots"
+
+REFERENCE           WATCH_A_RECORDED_GAME
+LANG_ENGLISH        "Watch a recorded game"
+LANG_FRENCH         "Regarder une partie enregistrée"
+
+REFERENCE           GAME_TYPES_FORCE_WEAPONS
+LANG_ENGLISH        "Game types, force, weapons"
+LANG_FRENCH         "Modes de jeu, Force, armes"
+
+REFERENCE           EDIT_PROFILE
+LANG_ENGLISH        "Edit profile"
+LANG_FRENCH         "Modifier le profil"
+
+REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
+LANG_ENGLISH        "Double-click a server to join"
+LANG_FRENCH         "Double-cliquez sur un serveur pour le rejoindre"
+
 REFERENCE           CHARACTER
 LANG_ENGLISH        "Character"
 LANG_FRENCH         "Personnage"
 
-REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
-LANG_ENGLISH        "Build a character of your own."
-LANG_FRENCH         "Créer votre propre personnage."
+REFERENCE           STYLE
+LANG_ENGLISH        "Style"
+LANG_FRENCH         "#same"
 
-REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
-LANG_ENGLISH        "Hilt and blade of your lightsaber."
-LANG_FRENCH         "Poignée et lame de votre sabre laser."
-
-REFERENCE           PLAYER
-LANG_ENGLISH        "Player"
-LANG_FRENCH         "Joueur"
+REFERENCE           HILT
+LANG_ENGLISH        "Hilt"
+LANG_FRENCH         "Poignée"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
 LANG_FRENCH         "Nom, modèle et couleur d'équipe."
+
+REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+LANG_ENGLISH        "Hilt and blade of your lightsaber."
+LANG_FRENCH         "Poignée et lame de votre sabre laser."
 
 REFERENCE           RED
 LANG_ENGLISH        "Red"
@@ -36,6 +64,18 @@ LANG_FRENCH         "Vert"
 REFERENCE           BLUE
 LANG_ENGLISH        "Blue"
 LANG_FRENCH         "Bleu"
+
+REFERENCE           SEARCH_ACTIONS_OR_KEYS
+LANG_ENGLISH        "Search actions or keys"
+LANG_FRENCH         "Rechercher des actions ou touches"
+
+REFERENCE           SHOWS_THE_ACTIONS_OF_ALL_PAGES_WHOSE
+LANG_ENGLISH        "Shows the actions of all pages whose name or key has these words."
+LANG_FRENCH         "Affiche les actions de toutes les pages dont le nom ou la touche contient ces mots."
+
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+LANG_FRENCH         "Rechercher"
 
 REFERENCE           GRAPPLE_HOOK
 LANG_ENGLISH        "Grapple Hook"
@@ -209,6 +249,18 @@ REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_FRENCH         "Les touches de déplacement."
 
+REFERENCE           ACTION
+LANG_ENGLISH        "Action"
+LANG_FRENCH         "#same"
+
+REFERENCE           KEY
+LANG_ENGLISH        "Key"
+LANG_FRENCH         "Touche"
+
+REFERENCE           SECOND_KEY
+LANG_ENGLISH        "Second key"
+LANG_FRENCH         "Seconde touche"
+
 REFERENCE           ATTACK_USE_AND_LOOK
 LANG_ENGLISH        "Attack, use and look."
 LANG_FRENCH         "Attaquer, utiliser et regarder."
@@ -241,17 +293,17 @@ REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
 LANG_FRENCH         "Touches des ajouts de VisionJK et JA+."
 
-REFERENCE           JA
-LANG_ENGLISH        "JA+"
-LANG_FRENCH         "#same"
+REFERENCE           CLICK_A_KEY_THEN_PRESS_THE_NEW_ONE_B
+LANG_ENGLISH        "Click a key, then press the new one. Backspace clears it, Esc keeps the old key."
+LANG_FRENCH         "Cliquez sur une touche, puis appuyez sur la nouvelle. Retour arrière l'efface, Échap garde l'ancienne."
 
-REFERENCE           VISIONJK
-LANG_ENGLISH        "VisionJK"
-LANG_FRENCH         "#same"
+REFERENCE           GIVES_EVERY_ACTION_THE_KEYS_IT_HAS_I
+LANG_ENGLISH        "Gives every action the keys it has in the defaults of the game. Other binds stay."
+LANG_FRENCH         "Donne à chaque action ses touches par défaut du jeu. Les autres assignations restent."
 
-REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
-LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
-LANG_FRENCH         "Entrée ou clic : changer la touche. Retour arrière : effacer."
+REFERENCE           KEYS_ARE_SAVED_AS_SOON_AS_YOU_SET_TH
+LANG_ENGLISH        "Keys are saved as soon as you set them"
+LANG_FRENCH         "Les touches sont enregistrées dès que vous les définissez"
 
 REFERENCE           SEARCH_ALL_SETTINGS
 LANG_ENGLISH        "Search all settings"
@@ -1845,6 +1897,10 @@ REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
 LANG_ENGLISH        "Update to the development builds from now on."
 LANG_FRENCH         "Mettre à jour vers les versions de développement à partir de maintenant."
 
+REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
+LANG_ENGLISH        "Build a character of your own."
+LANG_FRENCH         "Créer votre propre personnage."
+
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
 LANG_FRENCH         "Couleur fixe"
@@ -1864,6 +1920,10 @@ LANG_FRENCH         "Vos pouvoirs de la Force."
 REFERENCE           THE_LIST_OF_MOVES
 LANG_ENGLISH        "The list of moves."
 LANG_FRENCH         "La liste des mouvements."
+
+REFERENCE           PLAYER
+LANG_ENGLISH        "Player"
+LANG_FRENCH         "Joueur"
 
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
@@ -1888,6 +1948,10 @@ LANG_FRENCH         "Côté obscur"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_FRENCH         "Les deux côtés"
+
+REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
+LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
+LANG_FRENCH         "Entrée ou clic : changer la touche. Retour arrière : effacer."
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
@@ -2473,10 +2537,6 @@ REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_FRENCH         "il y a %i jours"
 
-REFERENCE           SEARCH
-LANG_ENGLISH        "Search"
-LANG_FRENCH         "Rechercher"
-
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
 LANG_FRENCH         "Aucun paramètre ne contient ces mots."
@@ -2796,6 +2856,22 @@ LANG_FRENCH         "Immédiat"
 REFERENCE           ON
 LANG_ENGLISH        "On"
 LANG_FRENCH         "Activé"
+
+REFERENCE           PRESS_A_KEY
+LANG_ENGLISH        "PRESS A KEY"
+LANG_FRENCH         "APPUYEZ"
+
+REFERENCE           NOT_BOUND
+LANG_ENGLISH        "NOT BOUND"
+LANG_FRENCH         "LIBRE"
+
+REFERENCE           KEYS
+LANG_ENGLISH        "Keys"
+LANG_FRENCH         "Touches"
+
+REFERENCE           COMMAND
+LANG_ENGLISH        "Command"
+LANG_FRENCH         "Commande"
 
 
 ENDMARKER

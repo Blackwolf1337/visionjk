@@ -1467,6 +1467,113 @@ without that a new install had no key for it at all. Any other bind on Alt is so
 takes the bind away afterwards keeps it away.
 =================
 */
+/*
+=================
+UI_ReadDefaultKeys
+
+The binds of mpdefault.cfg, the defaults of the game: for "Default" beside a row of keys and for the button
+Defaults of the keys (UI_KeysDefaults).
+=================
+*/
+#define UI_DEFAULT_BINDS	160
+
+static struct {
+	char	key[32];
+	char	command[64];
+} uiDefaultBinds[UI_DEFAULT_BINDS];
+static int uiDefaultBindCount;
+static int uiKeysReload;			// frames until the keys of the menus are read again from the binds of the engine
+
+static void UI_ReadDefaultKeys( void ) {
+	static char		text[8192];
+	char			words[UI_DEFAULT_BINDS][48], sOR[32], name[32];
+	const char		*p, *token;
+	fileHandle_t	f;
+	int				len, i, j;
+
+	uiDefaultBindCount = 0;
+	len = trap->FS_Open( "mpdefault.cfg", &f, FS_READ );
+	if ( !f ) {
+		return;
+	}
+	if ( len <= 0 || len >= (int)sizeof( text ) ) {
+		trap->FS_Close( f );
+		return;
+	}
+	trap->FS_Read( text, len, f );
+	trap->FS_Close( f );
+	text[len] = '\0';
+
+	p = text;
+	while ( uiDefaultBindCount < UI_DEFAULT_BINDS ) {
+		token = COM_ParseExt( &p, qtrue );
+		if ( !token[0] ) {
+			break;
+		}
+		if ( Q_stricmp( token, "bind" ) ) {
+			continue;
+		}
+		Q_strncpyz( uiDefaultBinds[uiDefaultBindCount].key, COM_ParseExt( &p, qfalse ), sizeof( uiDefaultBinds[0].key ) );
+		Q_strncpyz( uiDefaultBinds[uiDefaultBindCount].command, COM_ParseExt( &p, qfalse ), sizeof( uiDefaultBinds[0].command ) );
+		if ( uiDefaultBinds[uiDefaultBindCount].key[0] && uiDefaultBinds[uiDefaultBindCount].command[0] ) {
+			uiDefaultBindCount++;
+		}
+	}
+
+	// the words to show: "W or UPARROW" as the menus write it, "W or UP"
+	trap->SE_GetStringTextString( "MENUS_KEYBIND_OR", sOR, sizeof( sOR ) );
+	for ( i = 0; i < uiDefaultBindCount; i++ ) {
+		char *arrow;
+
+		words[i][0] = '\0';
+		for ( j = 0; j < i; j++ ) {
+			if ( !Q_stricmp( uiDefaultBinds[j].command, uiDefaultBinds[i].command ) ) {
+				break;
+			}
+		}
+		Q_strncpyz( name, uiDefaultBinds[i].key, sizeof( name ) );
+		Q_strupr( name );
+		arrow = strstr( name, "ARROW" );
+		if ( arrow && arrow != name ) {
+			*arrow = '\0';
+		}
+		if ( j < i ) {
+			// a second key of a command that came before
+			if ( !strstr( words[j], sOR ) ) {
+				Q_strcat( words[j], sizeof( words[j] ), va( " %s %s", sOR, name ) );
+			}
+			continue;
+		}
+		Q_strncpyz( words[i], name, sizeof( words[i] ) );
+	}
+	for ( i = 0; i < uiDefaultBindCount; i++ ) {
+		if ( words[i][0] ) {
+			Controls_SetDefaultKeys( uiDefaultBinds[i].command, words[i] );
+		}
+	}
+}
+
+/*
+=================
+UI_KeysDefaults
+
+The button Defaults of the keys: the commands of the menus get the keys of the defaults of the game, and lose the
+ones they had; binds of other commands stay.
+=================
+*/
+static void UI_KeysDefaults( void ) {
+	int i;
+
+	Controls_ClearAll();
+	for ( i = 0; i < uiDefaultBindCount; i++ ) {
+		if ( BindingIDFromName( uiDefaultBinds[i].command ) >= 0 ) {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "bind %s \"%s\"\n", uiDefaultBinds[i].key, uiDefaultBinds[i].command ) );
+		}
+	}
+	// (the binds are made when the commands run, before the next frame of the menus is drawn)
+	uiKeysReload = 2;
+}
+
 static void UI_OfferCursorKey( void ) {
 	char		bound[MAX_STRING_CHARS], alt[MAX_STRING_CHARS];
 	int			key;
@@ -6357,6 +6464,8 @@ static void UI_RunMenuScript(char **args)
 			Controls_SetConfig();
 		} else if (Q_stricmp(name, "loadControls") == 0) {
 			Controls_GetConfig();
+		} else if ( !Q_stricmp( name, "keysDefaults" ) ) {
+			UI_KeysDefaults();
 		} else if (Q_stricmp(name, "clearError") == 0) {
 			trap->Cvar_Set("com_errorMessage", "");
 		} else if (Q_stricmp(name, "loadGameInfo") == 0) {
@@ -10656,6 +10765,7 @@ void UI_Init( qboolean inGameLoad ) {
 	Skin_Reset();
 	SaberFX_Reset();
 	UI_OfferCursorKey();
+	UI_ReadDefaultKeys();
 
 	UI_BuildPlayerModel_List(inGameLoad);
 
@@ -10767,6 +10877,9 @@ void UI_Refresh( int realtime )
 
 	// models that menu items gave up in the frame before, now that it has been rendered (ui_shared.c)
 	UI_FreeDeferredGhoul2();
+	if ( uiKeysReload && !--uiKeysReload ) {
+		Controls_GetConfig();
+	}
 
 	trap->G2API_SetTime(realtime, 0);
 	trap->G2API_SetTime(realtime, 1);

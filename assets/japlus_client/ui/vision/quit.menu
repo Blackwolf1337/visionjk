@@ -9,7 +9,7 @@
 		rect					0 0 640 480
 		focusColor				0.36 0.78 0.96 1
 		appearanceIncrement		100
-		descX					48
+		descX					180
 		descY					856
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1

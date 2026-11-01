@@ -213,6 +213,23 @@
 
 		itemDef
 		{
+			name					vision_search_title
+			rect					296 100 620 41
+			visible					1
+			text					@VISION_SEARCH
+			font					5
+			textscale				1.67
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5.5
+			caps					1
+			decoration
+			page					15
+		}
+
+		itemDef
+		{
 			name					vision_tab1
 			rect					20 164 220 46
 			visible					1

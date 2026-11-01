@@ -608,6 +608,25 @@ TR = {
     'Some changes apply after a restart': 'Einige Änderungen gelten nach einem Neustart',
     'Revert': 'Zurücksetzen',
     'Apply': 'Übernehmen',
+    # the screen of the keys as its board draws it
+    'Search actions or keys': 'Aktionen oder Tasten suchen',
+    'Shows the actions of all pages whose name or key has these words.': 'Zeigt die Aktionen aller Seiten, deren Name oder Taste diese Wörter enthält.',
+    'Action': 'Aktion',
+    'Key': 'Taste',
+    'Second key': 'Zweite Taste',
+    'Click a key, then press the new one. Backspace clears it, Esc keeps the old key.': 'Klicke eine Taste, dann drücke die neue. Rücktaste löscht sie, Esc behält die alte Taste.',
+    'Gives every action the keys it has in the defaults of the game. Other binds stay.': 'Gibt jeder Aktion die Tasten der Spielstandards. Andere Belegungen bleiben.',
+    'Keys are saved as soon as you set them': 'Tasten werden gespeichert, sobald du sie setzt',
+    # the player on one page
+    'Style': 'Stil',
+    'Hilt': 'Griff',
+    'Double-click a server to join': 'Doppelklick auf einen Server zum Beitreten',
+    'Browse servers and jump in': 'Server durchsuchen und einsteigen',
+    'Host a server for others': 'Einen Server für andere hosten',
+    'Play against bots': 'Gegen Bots spielen',
+    'Watch a recorded game': 'Ein aufgezeichnetes Spiel ansehen',
+    'Game types, force, weapons': 'Spielmodi, Macht, Waffen',
+    'Edit profile': 'Profil bearbeiten',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
@@ -844,6 +863,11 @@ CGAME = {
     'After restart': 'Nach Neustart',
     'Instantly': 'Sofort',
     'On': 'An',
+    # the keys of a row of the screen of the keys
+    'PRESS A KEY': 'TASTE DRÜCKEN',
+    'NOT BOUND': 'NICHT BELEGT',
+    'Keys': 'Tasten',
+    'Command': 'Befehl',
 }
 
 # names that are the same in every language

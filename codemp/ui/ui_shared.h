@@ -357,6 +357,7 @@ typedef struct itemDef_s {
 	// under the description, what the setting looks like at the two values named
 	const char	*descPic[3];
 	float		listY;
+	float		listX;		// and its x (a card of a search moves into the column with room, Menu_ListLayout)
 	qboolean	listOut;
 	// "column <n>": the column of the list of its page it stands in (0, 1). "advanced 1": a setting that is shown
 	// only with all settings (advancedCvar of the menu) or found by the search. cardBottom: for a heading, where the
@@ -375,6 +376,7 @@ typedef struct itemDef_s {
 } itemDef_t;
 
 #define MENU_PAGES		16					// pages of a menu, counted from 1
+#define PAGE_SEARCH		( MENU_PAGES - 1 )	// "page 15": an item that shows while a search of the menu is on
 
 typedef struct menuDef_s {
 	windowDef_t window;
@@ -671,6 +673,9 @@ qboolean UI_OutOfMemory();
 void Controls_GetConfig( void );
 void Controls_SetConfig( void );
 void Controls_SetDefaults( void );
+void Controls_SetDefaultKeys( const char *command, const char *keys );
+void Controls_ClearAll( void );
+int BindingIDFromName( const char *name );
 
 /*
 Ghoul2 Insert End
