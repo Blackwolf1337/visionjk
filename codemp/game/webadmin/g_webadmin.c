@@ -250,8 +250,6 @@ static void WA_Visitor( waConnection_t *c, const char *head ) {
 	}
 }
 
-static qboolean WA_MasterRoute( const char *path );
-
 /*
 =================
 WA_RouteRole
@@ -382,38 +380,12 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_AuthAnswer( c, 403, "Forbidden", "role" );
 		return;
 	}
-	if ( WA_MasterMode() && !WA_MasterRoute( path ) ) {
-		WA_RespondText( c, 404, "Not Found", "not on the masterserver" );
-		return;
-	}
 	// the socket of the page: the state and what it asks for besides it, pushed (wa_stream.c)
 	if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/stream" ) ) {
 		WA_StreamUpgrade( c, head, qfalse );
 		return;
 	}
 	WA_Route( c, method, path, query, body, bodyLen );
-}
-
-/*
-=================
-WA_MasterRoute
-
-What the panel of the masterserver has: the settings and the text of master.cfg, the log and the console, the
-files, how it keeps up, the relay. No map, no players, no editor: its level is only there to make the relay run.
-=================
-*/
-static qboolean WA_MasterRoute( const char *path ) {
-	static const char *const paths[] = { "/", "/index.html", "/api/config", "/api/log", "/api/console", "/api/command",
-		"/api/ids", "/api/perf", "/api/master", "/api/me" };
-	int i;
-
-	if ( !strncmp( path, "/api/settings", 13 ) || !strncmp( path, "/api/fs/", 8 ) )
-		return qtrue;
-	for ( i = 0; i < (int)ARRAY_LEN( paths ); i++ ) {
-		if ( !strcmp( path, paths[i] ) )
-			return qtrue;
-	}
-	return qfalse;
 }
 
 /*
@@ -473,8 +445,6 @@ void WA_Route( waConnection_t *c, const char *method, const char *path, const ch
 		WA_ApiCleanupGet( c );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/settings/cleanup" ) ) {
 		WA_ApiCleanupSet( c, body );
-	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/master" ) ) {
-		WA_ApiMaster( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/models" ) ) {
 		WA_ApiModels( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/shaders" ) ) {

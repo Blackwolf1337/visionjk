@@ -23,7 +23,7 @@ function palCommands() {
 	if (appMode === 'editor') document.querySelectorAll('#tabs button[data-app="editor"]').forEach(b => {
 		out.push({ name: b.textContent, about: 'A tool of the editor', run: () => setMode(b.dataset.tab) });
 	});
-	if (roleAtLeast('admin') && !me.master) {
+	if (roleAtLeast('admin')) {
 		out.push({ name: 'Add bot', arg: 'name', pick: 'pickBots', about: 'A bot joins the game.', run: v => action({ action: 'addbot', value: v }) });
 		out.push({ name: 'Change map', arg: 'map', pick: 'pickMaps', about: 'Ends the running game and starts this map for everybody.',
 			run: v => action({ action: 'map', value: v }) });

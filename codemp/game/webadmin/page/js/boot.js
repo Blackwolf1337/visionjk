@@ -32,5 +32,5 @@ function gameStart() {
 	// the page the address names (#/config, #/world, ...)
 	modeFromHash();
 }
-// who is logged in: what his role may not use is taken off the page. The masterserver has no map (js/master.js).
-accountLoad().then(() => { if (me.master) masterStart(); else gameStart(); });
+// who is logged in: what his role may not use is taken off the page
+accountLoad().then(gameStart);

@@ -278,7 +278,6 @@ function remapLookAt() {
 // ---- what the server has. Asked in every tab and mode: a swap changes what the map looks like.
 
 async function remapPoll() {
-	if (onMaster()) return;
 	// Over the socket of the page when it is open (js/stream.js), pushed when the swaps changed. A map that was
 	// loaded since has the last answer put to it: the server says nothing new then.
 	if (streamGet('remaps', 'api/remaps', (json, status) => remapTake(status === 200, json), () => {})) {

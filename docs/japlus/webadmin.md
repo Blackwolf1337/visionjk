@@ -220,9 +220,9 @@ walls. Health and shield are not shown.
   and Map info in the side panel, the plain view of the map (an image times the light) and its debug views: a marker
   at every entity, the triangles of the map as lines, the light alone or the texture alone. The tools wrap onto as
   many lines as they need.
-- Pages of the server: TV, Settings, Files, Log, Bans, Performance and Account (and Masterserver on a masterserver) are
+- Pages of the server: TV, Settings, Files, Log, Bans, Performance and Account are
   in a row of their own under the top bar, with "Map" at its left to go back to the map. The address names the
-  page: `#/tv`, `#/config`, `#/files`, `#/log`, `#/bans`, `#/load`, `#/account`, `#/master`, and `#/players` or an editor
+  page: `#/tv`, `#/config`, `#/files`, `#/log`, `#/bans`, `#/load`, `#/account`, and `#/players` or an editor
   tool (`#/world`, `#/models`, `#/clips`, `#/remaps`, `#/routes`, `#/mapinfo`, which open the editor). A reload or a
   link comes back to that page. A page of the server stays open when the mode is switched. Bans, Performance and
   Account take the whole width (their pane is at most 760 px wide, in the middle) and the map is not shown behind
@@ -233,8 +233,8 @@ walls. Health and shield are not shown.
   then from the storage of the browser), and the button Watch starts it. Leaving the page empties the frame, which
   stops the game in it. The tab is there only when `/api/me` has `"tv": {"port": N, "page": "..."}`: `port` is
   `vs_clientWebPort`, 0 when the server has no web host, `vs_tv` is 0, or the web host hands out the TV alone
-  (`vs_clientWebTVOnly 1`) and `vs_webTVPage` names no page of the client elsewhere, and `page` is `vs_webTVPage`. Not on the
-  masterserver. Every role sees it.
+  (`vs_clientWebTVOnly 1`) and `vs_webTVPage` names no page of the client elsewhere, and `page` is `vs_webTVPage`.
+  Every role sees it.
 - Command palette: the button "Commands Ctrl K" in the top bar, or Ctrl+K (`js/palette.js`). It lists the pages, the
   two modes, the tools of the editor, Add bot, Change map, Gravity (with the current value), the side panel, the keys
   of the map, Fly, Screenshot and, while a player is selected, what his panel can do to him, named
@@ -269,7 +269,7 @@ walls. Health and shield are not shown.
   Set gravity) are gone.
 - The box with the keys of the map is hidden. The button "?" at the bottom right of the map (beside Screenshot and
   Fly) or the key ? shows it, and the page keeps that (`wa.help`).
-- Settings: every cvar of the server as a field, see "The tab Settings". On a masterserver the page is smaller, see "The masterserver mode".
+- Settings: every cvar of the server as a field, see "The tab Settings".
 
 ## How it works
 
@@ -344,11 +344,10 @@ the answer tells the page that the numbers started over.
 | `POST /api/layout` | `op` save keeps the map as it stands for every start of it (`layouts/<map>.txt` in the game folder), `op` forget removes that file. `/api/entities` has `layout`: is one saved, is the map as it has it, and how many entities it would add and take away now |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
-| `GET /api/settings` | the Settings form, owner only: `master` (master mode), `file` (the config file it edits), `flags` (whether the flags come from the engine), `categories` and `cvars`, each `{name, cat, type, min?, max?, opts?, desc?, def, value, file?, local?, apply}` |
+| `GET /api/settings` | the Settings form, owner only: `file` (the config file it edits), `flags` (whether the flags come from the engine), `categories` and `cvars`, each `{name, cat, type, min?, max?, opts?, desc?, def, value, file?, local?, apply}` |
 | `POST /api/settings` | the body is lines `name<tab>value`. The answer has one result for each cvar: live, map, restart, or refused with the reason |
 | `GET /api/settings/cleanup` | the Cleanup view, owner only: `unused` (user made cvars no code used for a month, with the line of `server.cfg` or "only on the server"), `overridden` (every statement of a cvar but the last one in the file) and `rev` |
 | `POST /api/settings/cleanup` | `rev` and lines `line<tab>name<tab>unset`: takes those statements out of the file. A file that changed since the listing is refused |
-| `GET /api/master` | master mode only, the numbers of the Masterserver tab: `ms_statSessions`, `ms_statRooms`, `ms_statKbps`, `ms_statFlagged` |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
 | `GET /api/fs/list?root=&path=` | the files of a folder. `root` is `home` (the game folder in the home path of the server) or `install` (the one of the installation, read only) |
 | `GET /api/fs/get?root=&path=[&text=1]` | a file as a download, or as UTF-8 text for the editor |
@@ -395,35 +394,6 @@ lines are sent with `POST /api/settings/cleanup`, together with the `rev`, a has
 file that changed since is refused and the page lists again. A line whose statements all go is removed with its
 comment, else only the statement and its `;` go. `server.cfg.bak` is kept, and for the unused ones the server runs
 `cvar_cleanup remove` as well. The unit test is `tests/vjk/cvarseen.cpp` and `cfgedit.cpp`.
-
-## The masterserver mode
-
-Since 2026-10-30 the masterserver has no game module (it is a small program of its own, server.md, "The
-masterserver"), so this mode is not reached any more: the engine no longer sets `vs_master`, and nothing else turns it
-on. The standalone master has a panel of its own now (server.md, "The panel of the masterserver"), so the master mode
-of this panel is left over and can go. What follows describes that code as it is, and not how the master runs now.
-
-The masterserver (server.md, "The masterserver") loads the game module, so it runs this panel. The engine of the
-master build registers the ROM cvar `vs_master` 1 and the module then is in master mode: only the routes of
-`WA_MasterRoute` answer (the page, settings, config, log, console, command, ids, perf, fs, master and me), every
-other one is 404. `/api/me` has `master`, and the page then has no map, no players and no editor: the tabs are
-Settings, Files, Log, Performance, Account and Masterserver.
-
-Settings in master mode shows only the rows flagged `WA_SET_MASTER` or `WA_SET_MASTERONLY` (`sv_hostname`,
-`net_port`, `sv_fps`, the `vs_boombox` programs, the `vs_web` cvars, `vs_masterKbps`, `vs_masterBoxes`, `ms_rep`,
-`ms_repThreshold`, `ms_repLocal`), and the file it edits is `master.cfg`, saved into the home path, which `exec` then
-takes.
-
-The tab Masterserver (`page/js/master.js`, `GET /api/master`) shows sessions, rooms, the kbit/s of the last minute
-and the flagged servers. The numbers are ROM cvars of the engine: `ms_statSessions`, `ms_statRooms` and `ms_statKbps`
-once a second (`sv_voice.cpp`, `MS_Numbers` of `ms_relay.c`), `ms_statFlagged` every 10 seconds
-(`sv_reputation.cpp`). Two buttons run `ms_repstatus` and `ms_repclear all` over the console route. The answer is in
-the tab Log.
-
-`assets/configs/master.cfg` sets `vs_webBind 127.0.0.1` and `vs_webPort 8081`, so the panel is reached with
-`ssh -L 8081:127.0.0.1:8081 <host>`. The first account comes from `vs_webPassword` in `local.cfg` of the home of the
-master (`/var/lib/visionjk-master/japlus/local.cfg`), which `tools/deploy-master.sh` puts there once from
-`deploy/master-local.cfg` of the website. The service runs `+exec local.cfg` after `master.cfg`.
 
 ## Where it differs from JKAdmin
 

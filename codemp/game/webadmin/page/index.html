@@ -23,7 +23,7 @@
 	<span id="status" title="Connection"></span>
 </div>
 <!-- the pages of the panel: the map with its players (or the tools of the editor), and the pages of the server -->
-<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)">Map</button><button data-tab="tv" title="The game as a spectator sees it, in the client for the browser">TV</button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses">Settings</button><button data-tab="files" title="The files of the server">Files</button><button data-tab="log" title="The log of the game, the console of the server, the intrusions">Log</button><button data-tab="bans" title="Who is banned">Bans</button><button data-tab="load" title="How long a frame of the server takes">Performance</button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts">Account</button><button data-tab="master" title="The relay of the masterserver">Masterserver</button></div>
+<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)">Map</button><button data-tab="tv" title="The game as a spectator sees it, in the client for the browser">TV</button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses">Settings</button><button data-tab="files" title="The files of the server">Files</button><button data-tab="log" title="The log of the game, the console of the server, the intrusions">Log</button><button data-tab="bans" title="Who is banned">Bans</button><button data-tab="load" title="How long a frame of the server takes">Performance</button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts">Account</button></div>
 </div>
 
 <div id="side">
@@ -149,15 +149,6 @@
 			<div class="hint">Overridden: a line of a cvar that a later line of the same cvar sets again. Only the last one counts.</div>
 			<div class="hint">The server notes the use of each cvar from this version on. Until it did so for 30 days, a cvar never used is not listed.</div>
 		</div>
-	</div>
-	<div class="pane" id="pane-master">
-		<h2><span>Masterserver</span></h2>
-		<div class="tools">
-			<button id="msRepStatus" title="Prints the servers the clients reported in the last seven days on the console: ms_repstatus">List reported servers</button>
-			<button id="msRepClear" class="danger" title="Forgets every report: ms_repclear all">Forget all reports</button>
-		</div>
-		<div class="hint" style="padding:0 10px">What the two buttons print is in the tab Log, under Console.</div>
-		<div class="hint" style="padding:0 10px">The settings of the relay are in the tab Settings, its file is master.cfg.</div>
 	</div>
 	<div class="pane" id="pane-bans">
 		<h2><span>Bans</span><span id="banCount"></span></h2>
@@ -457,15 +448,6 @@
 	<div id="tvStart"><p id="tvNote"></p><button id="tvGo" class="primary">Watch</button></div>
 	<iframe id="tvFrame" title="The TV of the server" allow="fullscreen; autoplay" hidden></iframe>
 </div>
-<div id="masterView">
-	<div class="msTiles">
-		<div class="msTile"><b id="msSessions">-</b><span>sessions</span></div>
-		<div class="msTile"><b id="msRooms">-</b><span>rooms</span></div>
-		<div class="msTile"><b id="msKbps">-</b><span>kbit/s, last minute</span></div>
-		<div class="msTile"><b id="msFlagged">-</b><span>flagged servers</span></div>
-	</div>
-	<div class="hint" id="msRep" style="padding:0 16px"></div>
-</div>
 <div id="fsView">
 	<div id="fsList"><table><thead><tr><th>Name</th><th class="num">Size</th><th>Changed</th><th></th></tr></thead><tbody id="fsRows"></tbody></table></div>
 	<div id="fsEditor" hidden><pre id="fsHi" class="codeHi" aria-hidden="true"></pre><textarea id="fsText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
@@ -503,7 +485,6 @@
 <!--#include js/editor-props.js -->
 <!--#include js/config.js -->
 <!--#include js/settings.js -->
-<!--#include js/master.js -->
 <!--#include js/tv.js -->
 <!--#include js/files.js -->
 <!--#include js/editor-entities.js -->

@@ -1009,10 +1009,9 @@ static void WA_ApiMe( waConnection_t *c ) {
 
 	WA_BufPrintf( &b, "{\"name\":" );
 	WA_BufJsonString( &b, c->user );
-	WA_BufPrintf( &b, ",\"role\":\"%s\",\"account\":%s,\"totp\":%s,\"token\":%s,\"recovery\":%i,\"keys\":%i,\"passwords\":%s,\"proxy\":%s,\"master\":%s",
+	WA_BufPrintf( &b, ",\"role\":\"%s\",\"account\":%s,\"totp\":%s,\"token\":%s,\"recovery\":%i,\"keys\":%i,\"passwords\":%s,\"proxy\":%s",
 		WA_RoleName( c->role ), WA_BOOL( user ), WA_BOOL( user && user->hasTotp ), WA_BOOL( user && user->hasToken ),
-		user ? user->numRecovery : 0, G_AuthNumKeys(), WA_BOOL( vs_adminPasswords.integer ), WA_BOOL( c->proxied ),
-		WA_BOOL( WA_MasterMode() ) );
+		user ? user->numRecovery : 0, G_AuthNumKeys(), WA_BOOL( vs_adminPasswords.integer ), WA_BOOL( c->proxied ) );
 	WA_BufPrintf( &b, ",\"tv\":{\"port\":%i,\"page\":", WA_TVPort() );
 	WA_BufJsonString( &b, vs_webTVPage.string );
 	WA_BufPrintf( &b, "}" );

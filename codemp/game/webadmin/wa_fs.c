@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 WA_ApiConfigGet, WA_ApiConfigSet
 
 Not in JKAdmin: the server config in the panel, the text editor of the settings tab. It is this one file and no
-other, the request names none: server.cfg, master.cfg on the masterserver (WA_ConfigFile, wa_settings.c).
+other, the request names none: server.cfg (WA_ConfigFile, wa_settings.c).
 
 The engine looks for a file in the home path first (fs_homepath/<game>/server.cfg) and then in the base path,
 and it only ever writes to the home path. So the first save puts the edited text into the home path, and that

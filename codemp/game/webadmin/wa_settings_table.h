@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //	name, group, kind, min, max, options, flags, what it does
 
 	// Server
-	{ "sv_hostname",					WA_CAT_SERVER,		WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER,	"The name of the server in the server list. Color codes (^1 to ^9) work." },
+	{ "sv_hostname",					WA_CAT_SERVER,		WA_SET_TEXT,	0, 0,	NULL,	0,		"The name of the server in the server list. Color codes (^1 to ^9) work." },
 	{ "sv_maxclients",					WA_CAT_SERVER,		WA_SET_INT,		1, 32,	NULL,	WA_SET_LATCH,	"How many players and spectators fit on the server, bots included." },
 	{ "g_password",						WA_CAT_SERVER,		WA_SET_SECRET,	0, 0,	NULL,	0,		"A password to join the server. Empty: anybody may join." },
 	{ "sv_privateClients",				WA_CAT_SERVER,		WA_SET_INT,		0, 32,	NULL,	0,		"How many of the slots are kept for players who give sv_privatePassword. 0: none." },
@@ -41,9 +41,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	{ "g_timeouttospec",				WA_CAT_SERVER,		WA_SET_INT,		0, 0,	NULL,	0,		"Seconds without a command from a client after which it is moved to spectators. 0: off." },
 
 	// Network
-	{ "net_port",						WA_CAT_NETWORK,		WA_SET_INT,		1, 65535,	NULL,	WA_SET_MASTER|WA_SET_RESTART,	"The UDP port of the server. Players connect to it. Takes effect after a restart of the server." },
+	{ "net_port",						WA_CAT_NETWORK,		WA_SET_INT,		1, 65535,	NULL,	WA_SET_RESTART,	"The UDP port of the server. Players connect to it. Takes effect after a restart of the server." },
 	{ "net_ip",							WA_CAT_NETWORK,		WA_SET_TEXT,	0, 0,	NULL,	WA_SET_RESTART,	"The IPv4 address the server binds to. Takes effect after a restart of the server." },
-	{ "sv_fps",							WA_CAT_NETWORK,		WA_SET_INT,		0, 0,	NULL,	WA_SET_MASTER,	"Server frames per second, and the highest snapshot rate clients get. 40 is the usual value." },
+	{ "sv_fps",							WA_CAT_NETWORK,		WA_SET_INT,		0, 0,	NULL,	0,		"Server frames per second, and the highest snapshot rate clients get. 40 is the usual value." },
 	{ "sv_ratePolicy",					WA_CAT_NETWORK,		WA_SET_ENUM,	0, 0,	"1=Server sets the rate (sv_clientRate)|2=Client rate between sv_minRate and sv_maxRate",	0,		"Which rate clients get. 1: sv_clientRate for everybody. 2: the rate the client asks for, within the limits." },
 	{ "sv_clientRate",					WA_CAT_NETWORK,		WA_SET_INT,		0, 0,	NULL,	0,		"The rate in bytes per second every client gets when sv_ratePolicy is 1." },
 	{ "sv_minRate",						WA_CAT_NETWORK,		WA_SET_INT,		0, 0,	NULL,	0,		"The lowest rate a client may use, in bytes per second. 0: no limit. Used with sv_ratePolicy 2." },
@@ -367,19 +367,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	{ "vs_voiceTeamOnly",				WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: in team games only a player's own team hears him." },
 	{ "vs_voiceRadio",					WA_CAT_VISIONJK,	WA_SET_BOOL,	0, 0,	NULL,	0,		"1: players with the same clan password hear each other anywhere over the clan radio." },
 	{ "vs_voiceKbps",					WA_CAT_VISIONJK,	WA_SET_INT,		0, 0,	NULL,	0,		"What the voice relay may send a second, in kbit/s. 0: no limit. 6000 is the default." },
-	{ "vs_boomboxYtdlp",				WA_CAT_VISIONJK,	WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_RESTART,	"The yt-dlp program of the boombox, a name in the PATH or a path. Set it before the server starts." },
-	{ "vs_boomboxFfmpeg",				WA_CAT_VISIONJK,	WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_RESTART,	"The ffmpeg program of the boombox, a name in the PATH or a path. Set it before the server starts." },
-	{ "vs_boomboxYtdlpArgs",			WA_CAT_VISIONJK,	WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_RESTART,	"Words yt-dlp is started with in addition, split at spaces, like --proxy or --cookies. Set before the server starts." },
+	{ "vs_boomboxYtdlp",				WA_CAT_VISIONJK,	WA_SET_TEXT,	0, 0,	NULL,	WA_SET_RESTART,	"The yt-dlp program of the boombox, a name in the PATH or a path. Set it before the server starts." },
+	{ "vs_boomboxFfmpeg",				WA_CAT_VISIONJK,	WA_SET_TEXT,	0, 0,	NULL,	WA_SET_RESTART,	"The ffmpeg program of the boombox, a name in the PATH or a path. Set it before the server starts." },
+	{ "vs_boomboxYtdlpArgs",			WA_CAT_VISIONJK,	WA_SET_TEXT,	0, 0,	NULL,	WA_SET_RESTART,	"Words yt-dlp is started with in addition, split at spaces, like --proxy or --cookies. Set before the server starts." },
 
 	// Web panel
-	{ "vs_webPort",						WA_CAT_WEB,			WA_SET_INT,		1, 65535,	NULL,	WA_SET_MASTER|WA_SET_LATCH,	"The TCP port of the web panel. A port below 1024 needs root on Linux." },
-	{ "vs_webBind",						WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_LATCH,	"The IPv4 address the panel listens on. 0.0.0.0: every interface. 127.0.0.1: this machine only." },
-	{ "vs_webProxy",					WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER,	"The IPv4 addresses of the reverse proxies in front of the panel, split by blanks. Others are not let in." },
-	{ "vs_webBasicAuth",				WA_CAT_WEB,			WA_SET_BOOL,	0, 0,	NULL,	WA_SET_MASTER,	"1: a script may send the token of its account as the password of basic auth." },
-	{ "vs_webPassword",					WA_CAT_WEB,			WA_SET_SECRET,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_LATCH,	"The password of the first owner account, taken once when there is no account yet. Remove it after that." },
-	{ "vs_liveView",					WA_CAT_WEB,			WA_SET_BOOL,	0, 0,	NULL,	WA_SET_MASTER|WA_SET_LATCH,	"1: the live view below /live/ is open to everybody without a login. It opens the port without an account." },
+	{ "vs_webPort",						WA_CAT_WEB,			WA_SET_INT,		1, 65535,	NULL,	WA_SET_LATCH,	"The TCP port of the web panel. A port below 1024 needs root on Linux." },
+	{ "vs_webBind",						WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	WA_SET_LATCH,	"The IPv4 address the panel listens on. 0.0.0.0: every interface. 127.0.0.1: this machine only." },
+	{ "vs_webProxy",					WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	0,		"The IPv4 addresses of the reverse proxies in front of the panel, split by blanks. Others are not let in." },
+	{ "vs_webBasicAuth",				WA_CAT_WEB,			WA_SET_BOOL,	0, 0,	NULL,	0,		"1: a script may send the token of its account as the password of basic auth." },
+	{ "vs_webPassword",					WA_CAT_WEB,			WA_SET_SECRET,	0, 0,	NULL,	WA_SET_LATCH,	"The password of the first owner account, taken once when there is no account yet. Remove it after that." },
+	{ "vs_liveView",					WA_CAT_WEB,			WA_SET_BOOL,	0, 0,	NULL,	WA_SET_LATCH,	"1: the live view below /live/ is open to everybody without a login. It opens the port without an account." },
 	{ "vs_webTVPage",					WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	0,		"The address of the browser client for the page TV, like https://tv.example.org/?tv. Empty: this host, port vs_clientWebPort." },
-	{ "vs_webRoot",						WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	WA_SET_MASTER,	"A folder with the files of the panel page, served in place of the built in page. For working on the page." },
+	{ "vs_webRoot",						WA_CAT_WEB,			WA_SET_TEXT,	0, 0,	NULL,	0,		"A folder with the files of the panel page, served in place of the built in page. For working on the page." },
 
 	// Logging
 	{ "g_log",							WA_CAT_LOGGING,		WA_SET_TEXT,	0, 0,	NULL,	0,		"The file name of the game log. Empty: no game log." },
@@ -390,9 +390,3 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	{ "vs_logClientCmds",				WA_CAT_LOGGING,		WA_SET_BOOL,	0, 0,	NULL,	0,		"1: the commands clients send are written to a log. Passwords are left out. 0: off." },
 	{ "g_securityLog",					WA_CAT_LOGGING,		WA_SET_ENUM,	0, 2,	"0=Off|1=On|2=On, written at once",	0,		"The security log of the game. 2 writes every line to disk at once." },
 
-	// Masterserver
-	{ "vs_masterKbps",					WA_CAT_MASTER,		WA_SET_INT,		0, 0,	NULL,	WA_SET_MASTERONLY|WA_SET_RESTART,	"What the voice relay of the masterserver may send a second, in kbit/s. 4000 is the default. 0: anything." },
-	{ "vs_masterBoxes",					WA_CAT_MASTER,		WA_SET_INT,		0, 16,	NULL,	WA_SET_MASTERONLY,	"Songs the masterserver plays at once for servers without this game module. 0: no boxes." },
-	{ "ms_rep",							WA_CAT_MASTER,		WA_SET_BOOL,	0, 0,	NULL,	WA_SET_MASTERONLY,	"1: the masterserver takes reports of attacks and crashes and hands out the flagged servers. 0: off." },
-	{ "ms_repThreshold",				WA_CAT_MASTER,		WA_SET_INT,		1, 0,	NULL,	WA_SET_MASTERONLY,	"The score a server is flagged at. An attack report weighs 2, a crash 1, a network counts once." },
-	{ "ms_repLocal",					WA_CAT_MASTER,		WA_SET_BOOL,	0, 0,	NULL,	WA_SET_MASTERONLY,	"1: reports about private and local server addresses are taken too. For tests." },

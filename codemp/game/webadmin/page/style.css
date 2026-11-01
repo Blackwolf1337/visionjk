@@ -471,25 +471,13 @@ body.role-admin #pages button[data-tab="config"], body.role-admin #pages button[
 /* the line that runs a command on the console is the owner's */
 body.role-moderator #logCmd, body.role-admin #logCmd { display: none !important; }
 
-/* the masterserver (js/master.js): no map, no players, no editor */
-#pages button[data-tab="master"] { display: none; }
-body.master #pages button[data-tab="master"] { display: inline-block; }
-body.master #view, body.master #appMode, body.master #topbar .meta,
-body.master #teamScores, body.master #chat, body.master #pages button[data-tab="map"], body.master #pages button[data-tab="bans"] { display: none !important; }
 #tvView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: #000; transition: left .15s; }
 body.sideClosed #tvView { left: 0; }
 body.tvOpen #tvView { display: block; }
 #tvStart { max-width: 520px; margin: 15vh auto 0; padding: 0 16px; color: var(--muted); }
 #tvFrame { width: 100%; height: 100%; border: 0; display: block; }
 #pages button[data-tab="tv"] { display: none; }
-body.hasTV:not(.master) #pages button[data-tab="tv"] { display: inline-block; }
-#masterView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
-body.sideClosed #masterView { left: 0; }
-body.masterOpen #masterView { display: block; }
-.msTiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 16px; }
-.msTile { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; background: var(--panel2); display: flex; flex-direction: column; gap: 4px; }
-.msTile b { font-size: 26px; font-weight: 600; }
-.msTile span { color: var(--muted); font-size: 12px; }
+body.hasTV #pages button[data-tab="tv"] { display: inline-block; }
 
 /* the pages of the panel, in a row under the top bar (js/editor-world.js setMode, the address #/<page>) */
 #pages { position: fixed; top: var(--bar); left: 0; right: 0; height: var(--nav); background: var(--panel); border-bottom: 1px solid var(--line); display: flex; align-items: stretch; gap: 2px; padding: 0 8px; z-index: 19; }

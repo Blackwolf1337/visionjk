@@ -276,13 +276,10 @@ typedef enum waSetCat_e {
 	WA_CAT_VISIONJK,	// voice, boombox, statuses, lag compensation and other things of this tree
 	WA_CAT_WEB,			// the web panel
 	WA_CAT_LOGGING,
-	WA_CAT_MASTER,		// the masterserver
 	WA_CAT_OTHER,		// a cvar of the game the table does not know
 	WA_CAT_COUNT
 } waSetCat_t;
 
-#define WA_SET_MASTER		1		// the masterserver shows it as well
-#define WA_SET_MASTERONLY	2		// only the masterserver shows it
 #define WA_SET_RESTART		4		// takes effect after a restart of the server (when the engine does not say so itself)
 #define WA_SET_LATCH		8		// takes effect with the next map (when the engine does not say so itself)
 
@@ -296,14 +293,12 @@ typedef struct waSetting_s {
 	const char	*desc;
 } waSetting_t;
 
-qboolean WA_MasterMode( void );
 const char *WA_ConfigFile( void );
 qboolean WA_SaveConfig( const char *text, int len );
 void WA_ApiSettingsGet( waConnection_t *c );
 void WA_ApiSettingsSet( waConnection_t *c, char *body );
 void WA_ApiCleanupGet( waConnection_t *c );
 void WA_ApiCleanupSet( waConnection_t *c, char *body );
-void WA_ApiMaster( waConnection_t *c );
 
 // wa_stream.c
 void WA_StreamUpgrade( waConnection_t *c, const char *head, qboolean live );

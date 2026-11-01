@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The form has every cvar of the server: those of wa_settings_table.h with a group, a kind of field and a line of
 // what it does, and every other one of the game module under Other. A change goes into the config in place
 // (wa_cfgedit.c), which keeps its comments and its order, and is set on the server at once as the console would
-// set it. The masterserver runs the same panel with its own few settings and master.cfg.
+// set it.
 
 #include "game/webadmin/wa_local.h"
 #include "game/webadmin/wa_cfgedit.h"
@@ -40,7 +40,7 @@ static const waSetting_t waSettings[] = {
 
 static const char *const waCatNames[WA_CAT_COUNT] = {
 	"Server", "Network", "Game type", "Votes and map cycle", "Force powers, weapons and items", "Saber", "Gameplay",
-	"Duel", "Bots", "JA+ admin", "JA+ features", "Protection", "VisionJK", "Web panel", "Logging", "Masterserver",
+	"Duel", "Bots", "JA+ admin", "JA+ features", "Protection", "VisionJK", "Web panel", "Logging",
 	"Other"
 };
 
@@ -58,13 +58,9 @@ typedef struct waField_s {
 enum { WA_APPLY_LIVE, WA_APPLY_MAP, WA_APPLY_RESTART };
 static const char *const waApplyNames[] = { "live", "map", "restart" };
 
-qboolean WA_MasterMode( void ) {
-	return (qboolean)( trap->Cvar_VariableIntegerValue( "vs_master" ) == 1 );
-}
-
-// the masterserver starts with +exec master.cfg, a game server with server.cfg
+// the server starts with +exec server.cfg
 const char *WA_ConfigFile( void ) {
-	return WA_MasterMode() ? "master.cfg" : "server.cfg";
+	return "server.cfg";
 }
 
 // The config written, what was there before kept as <name>.bak. The engine writes only into the home path, so the
@@ -91,9 +87,8 @@ static const waSetting_t *WA_SettingFind( const char *name ) {
 	return NULL;
 }
 
-// The field of a cvar, qfalse when the form does not have it: read only, not there, not for this kind of server.
+// The field of a cvar, qfalse when the form does not have it: read only or not there.
 static qboolean WA_FieldGet( const char *name, waField_t *f ) {
-	const qboolean	master = WA_MasterMode();
 	const char		*gameName, *gameDef;
 	uint32_t		gameFlags;
 	qboolean		inGame = qfalse;
@@ -115,11 +110,6 @@ static qboolean WA_FieldGet( const char *name, waField_t *f ) {
 	if ( f->setting )
 		f->name = f->setting->name;
 	else if ( !inGame )
-		return qfalse;
-
-	if ( master && ( !f->setting || !( f->setting->flags & ( WA_SET_MASTER | WA_SET_MASTERONLY ) ) ) )
-		return qfalse;
-	if ( !master && f->setting && ( f->setting->flags & WA_SET_MASTERONLY ) )
 		return qfalse;
 
 	// an engine that says what the flags are (g_public.h, ext.Cvar_Flags)
@@ -202,7 +192,7 @@ static void WA_FieldJson( waBuffer_t *b, const waField_t *f, const char *config,
 =================
 WA_ApiSettingsGet
 
-GET /api/settings: { master, file, categories, cvars: [ { name, cat, type, min?, max?, opts?, desc?, def, value,
+GET /api/settings: { file, categories, cvars: [ { name, cat, type, min?, max?, opts?, desc?, def, value,
 file?, local?, apply } ] }. file of a cvar is what the config gives it, missing when it does not set it. local is
 what local.cfg gives it: the file of the owner that the service of the host runs after the config
 (deploy/server-local.cfg of the website), which sets it again at the next start.
@@ -217,8 +207,8 @@ void WA_ApiSettingsGet( waConnection_t *c ) {
 	const char	*name, *def;
 	uint32_t	flags;
 
-	WA_BufPrintf( &b, "{\"master\":%s,\"file\":\"%s\",\"flags\":%s,\"categories\":[", WA_BOOL( WA_MasterMode() ),
-		WA_ConfigFile(), WA_BOOL( trap->ext.Cvar_Flags != NULL ) );
+	WA_BufPrintf( &b, "{\"file\":\"%s\",\"flags\":%s,\"categories\":[", WA_ConfigFile(),
+		 WA_BOOL( trap->ext.Cvar_Flags != NULL ) );
 	for ( i = 0; i < WA_CAT_COUNT; i++ ) {
 		if ( i )
 			WA_BufAppend( &b, ",", 1 );
@@ -416,21 +406,6 @@ void WA_ApiSettingsSet( waConnection_t *c, char *body ) {
 	WA_BufFree( &b );
 	WA_BufFree( &names );
 	free( config );
-}
-
-/*
-=================
-WA_ApiMaster
-
-GET /api/master: what the relay of the masterserver does now, as the engine puts it into cvars once a second
-(sv_voice.cpp, sv_reputation.cpp): { sessions, rooms, kbps, flagged, rep, threshold }.
-=================
-*/
-void WA_ApiMaster( waConnection_t *c ) {
-	WA_RespondJsonText( c, va( "{\"sessions\":%d,\"rooms\":%d,\"kbps\":%d,\"flagged\":%d,\"rep\":%d,\"threshold\":%d}",
-		trap->Cvar_VariableIntegerValue( "ms_statSessions" ), trap->Cvar_VariableIntegerValue( "ms_statRooms" ),
-		trap->Cvar_VariableIntegerValue( "ms_statKbps" ), trap->Cvar_VariableIntegerValue( "ms_statFlagged" ),
-		trap->Cvar_VariableIntegerValue( "ms_rep" ), trap->Cvar_VariableIntegerValue( "ms_repThreshold" ) ) );
 }
 
 /*
