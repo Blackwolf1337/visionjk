@@ -80,6 +80,11 @@ function(jp_add_pk3 name directory)
 	else()
 		file(GLOB_RECURSE files CONFIGURE_DEPENDS "${source}/*")
 	endif()
+	# A [ in an element keeps the ; after it from splitting the list until a ] (the emoji #`[ and #`] of gfx/emoji,
+	# names of TaystJK), and the build then wants one file named "...#`[.png;...#`].png". Taken out of the
+	# dependencies with string(), which knows no lists; the packer still packs them, a change to only such a file is
+	# packed with the next change of another one.
+	string(REGEX REPLACE "[^;]*[][][^;]*(;|$)" "" files "${files}")
 
 	add_custom_command(OUTPUT "${output}"
 		COMMAND "${JPAssetsPython}" "${packer}" "${source}" "${order}" "${output}"
