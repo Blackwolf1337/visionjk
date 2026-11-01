@@ -248,9 +248,19 @@ Notes on the engine that come from OpenJK, in [docs/](docs):
 | [save games.md](docs/save%20games.md) | Layout of a single player save game |
 | [sound-code-declutter.md](docs/sound-code-declutter.md) | Notes on the state of the sound code and ideas for tidying it |
 
+## Source code and contributing
+
+The repository on GitHub, [github.com/Blackwolf1337/visionjk](https://github.com/Blackwolf1337/visionjk), is a mirror of the main repository, which is hosted privately. The mirror is updated automatically on every push to the main repository and has all of its branches and tags.
+
+`master` is the line the releases are built from. Branches named `feature/...` and `fix/...` are work in progress and may change or disappear. Every release is a tag `vX.Y.Z` (development builds `vX.Y.Z-dev.N`), so the source of any release can be checked out by its tag.
+
+Issues are welcome on GitHub. Pull requests are welcome too, but they are not merged on GitHub itself, because the mirror would overwrite the merge at the next sync. The change is applied in the main repository with the author kept, it shows up on GitHub with the next sync, and then the pull request is closed.
+
+The code of the masterserver that jka.vision runs is not in this repository. [BUILDING.md](BUILDING.md), section "The masterserver", says how it is built.
+
 ## Credits
 
-VisionJK is OpenJK plus the changes of this repository. The engine is the work of the [OpenJK maintainers and contributors](https://github.com/JACoders/OpenJK/graphs/contributors), of the ioquake3 contributors, Raven Software and id Software. The 3D sound comes from Steam Audio by Valve. The source is hosted at [github.com/Blackwolf1337/visionjk](https://github.com/Blackwolf1337/visionjk).
+VisionJK is OpenJK plus the changes of this repository. The engine is the work of the [OpenJK maintainers and contributors](https://github.com/JACoders/OpenJK/graphs/contributors), of the ioquake3 contributors, Raven Software and id Software. The 3D sound comes from Steam Audio by Valve.
 
 ## License
 
