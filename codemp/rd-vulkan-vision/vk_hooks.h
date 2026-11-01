@@ -41,6 +41,8 @@ const void *RB_TakeVideoFrameCmd( const void *data );
 qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ );
 // and whether RE_SetScopeEffect() of tr_cmds.cpp is drawn
 qboolean VK_HasScope( void );
+// whether RE_AddWet() is drawn
+qboolean VK_HasWet( void );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );

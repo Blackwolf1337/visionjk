@@ -2280,6 +2280,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.ForgetMissing					= RE_ForgetMissing;
 	re.ext.LoadImageFit						= R_LoadImageFit;
 	re.ext.AddLiquid						= RE_AddLiquid;
+	re.ext.AddWet							= RE_AddWet;
 
 	return &re;
 }

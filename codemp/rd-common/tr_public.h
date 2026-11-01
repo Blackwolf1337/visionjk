@@ -283,6 +283,9 @@ typedef struct refexport_s {
 		// Pieces of water for the scene of this frame (liquidSegment_t), between ClearScene and RenderScene. NULL
 		// only asks. qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its water itself.
 		qboolean			(*AddLiquid)							( const liquidSegment_t *segments, int count );
+		// Wet places for the scene of this frame (wetSpot_t), between ClearScene and RenderScene. NULL only asks.
+		// qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its puddles as marks.
+		qboolean			(*AddWet)								( const wetSpot_t *spots, int count );
 	} ext;
 
 } refexport_t;

@@ -14,9 +14,21 @@ The ball bursts on what it hits: powder, chunks and the crunch of snow. It leave
 melts away like other marks. Whoever is hit gets snow on the screen for 3 seconds. It hurts nobody.
 
 To spray water, hold `+v_water` (Controls, Extras, "Water Gun"). A jet of water leaves where you look, at 720 units a
-second, a drop every 18 ms, and it falls with gravity. It splashes where it hits: drops, mist and the sound of water
-steps. On a floor a puddle grows while the water comes (up to 36 units) and dries after 20 seconds, fading in the
+second, a drop every 18 ms, and it falls with gravity. It splashes where it hits: drops, mist and the sound of water.
+On a floor a puddle grows while the water comes (up to 36 units) and dries after 20 seconds, fading in the
 second half. On a wall it leaves a wet patch (up to 18 units).
+
+On rd-vulkan-vision the ground gets wet where the water lands: darker, a little shiny, with a ragged edge. On a floor
+standing water forms as more water comes. It mirrors the room, is choppy where the jet lands, and drops that fall back
+make small rings. On a wall the water runs down in a few rivulets that end in a drop. The sizes are as before (puddle
+up to 36 units, wet patch up to 18 units). Everything dries from the thin edges in: it stays wet for the first third of
+the 20 seconds, then the edge goes in, and standing water goes first. The splash throws droplets of water, stretched
+along their flight, forward and to the sides, and a soft mist. Into standing water there are more droplets, they fly
+higher, and they go all round. rd-vanilla and the browser build keep the old marks and the sprite splash.
+
+The sounds are a hissing loop at the gun while it sprays, a click of the trigger and pump when it starts, the jet
+breaking on a hard surface, the bubbling of the jet into standing water, and a face full of water. They replace the
+footstep and body fall sounds used before. None of them is recorded audio.
 
 The jet leaves the muzzle of a water gun. While you spray, and for 450 ms after, you hold it in your right hand: your
 weapon (also the saber, its blades are not drawn) is put away until then, your body takes the pose of a rifle held up
@@ -32,9 +44,12 @@ for 170 ms after it leaves the gun, then falls apart into drops that become roun
 and loose drops are stretched along their flight. The OpenGL renderer and rd-vulkan have no such water and keep the
 old jet of sprites.
 
-Who is hit in the face sees drops run down the view. These are the drops of rd-vulkan-vision when you come up out of
-the water, and they need `v_fxWater`. The OpenGL renderer has no such effect. On rd-vulkan-vision the jet also bends
-the picture behind it (`v_fxWater`). `v_toys 0` hides the water of others too.
+Who is hit in the face by a water gun sees drops land on the view, on the side the water came from: large ones and fine
+spray. The large ones run down in fits and leave a trail with small beads. Each drop shows a small upside-down picture
+of what is behind it, and the view is soft in the film of water around them. They dry after 3 to 6 seconds. They need
+`v_fxWater`, like the other water looks. An older engine shows the drops of coming up out of water instead. The OpenGL
+renderer has no such effect. On rd-vulkan-vision the jet also bends the picture behind it (`v_fxWater`). `v_toys 0`
+hides the water of others too.
 
 To drive the car, use `v_rccar` (Controls, Extras, "RC Car"). It puts the mouse droid of the game in front of you. W and S
 or the arrow keys drive (420 units a second forwards at most, 200 backwards), A and D steer, Space hops. The mouse turns
@@ -156,6 +171,8 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_board import <file>` | | puts a picture file of `drawings/` on the board |
 | `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
 | `v_cgameLiquid` | 1 | 1: the cgame draws the jet of the water gun as real water when the renderer can (rd-vulkan-vision), 0: always the sprites |
+| `v_cgameWet` | 1 | set by the engine: 1 when the cgame can hand wet spots to the renderer (`ext.R_AddWet`) |
+| `v_screenFxDrops` | 1 | set by the engine: 1 when the screen effect can draw the drops of the water gun on the view |
 | `v_toys` | 1 | 0: the toys and emoji of other players are not drawn |
 
 ## How it works
@@ -191,6 +208,26 @@ Puddles and wet patches are temporary marks drawn anew every frame with their si
 textures come from `tools/toys/textures.py` (`waterstream`, `waterdrop`, `wet`, `puddle`, `puddleshine`). The shine is
 masked to the puddle shape, so the added light stays inside it. The splash is `effects/vision/water_splash.efx`. The
 masterserver and the game module have to know `TOY_WATER` (0.2.9-dev.25 and later).
+
+On rd-vulkan-vision the marks are wet spots for the renderer. The call is `re.ext.AddWet` (`wetSpot_t` in
+`rd-common/tr_types.h`, up to `WET_MAX_SPOTS` (32) a frame). The cgame gets it as `ext.R_AddWet` when the engine sets
+the ROM cvar `v_cgameWet` to 1. `cg_water.c` hands over each puddle and wet patch every frame (`Water_AddWet`): the
+wetness, the puddle amount from the water that came, the flow while water lands, the hit point and a seed.
+rd-vulkan-vision draws them in `VK_DrawWet` / `VK_WetPass` with `shaders/wet.vert` and `wet.frag`. The level under each
+pixel comes from the depth buffer. Wet ground is darkened by 0.55 at full wetness, after Lagarde's physically based wet
+surfaces, with Fresnel at F0 0.02. The mirror of standing water is a march of the mirrored ray through the depth (32
+steps), with more mirror than Fresnel alone gives, so a puddle reads as water. Without this pass (rd-vanilla, OpenGL ES)
+the marks with the textures of `tools/toys/textures.py` stay as before.
+
+The splash droplets are simulated in `cg_water.c` (`Water_Splash`, 256 at once, 2 to 4 per landing drop, 3 to 5 into
+standing water from `WATER_POOL` (0.3) of the water on) and drawn as pieces of `re.ext.AddLiquid`. With the renderer
+water the splash effect is `effects/vision/water_mist.efx` (mist only), otherwise `water_splash.efx`.
+
+The drops on the view are sources of kind `SCREENFX_DROP` (8) of the screen effect. They are simulated in
+`cg_screenfx.c` (`CG_ScreenFxWet` takes the velocity of the water, `CG_ScreenFxDrops`, 24 at once) and drawn by
+`screenfx.frag`. This only runs when the engine sets the ROM cvar `v_screenFxDrops` to 1.
+
+The sounds are all made by `tools/toys/sounds.py`.
 
 The shape of the jet is in `cgame/toys/cg_water.c`. The jet stays whole for `WATER_TEAR_MSEC` (170 ms) after it leaves
 the gun, then falls apart until `WATER_TORN_MSEC` (650 ms): the links between drops break with a growing breakup, each
@@ -317,6 +354,11 @@ the drops run down its view. There is a unit test for `TOY_WATER` in `tests/vjk/
 
 The real water, the water gun in the hand and the view weapon were run in headless test runs only. Not tested yet in a
 real game with players.
+
+The wet ground was run in headless test runs on mp/ffa3: a puddle on the floor while spraying and while drying, a wet
+wall with rivulets, the drops on the view and the splash droplets. The game audio was recorded to a file to check that
+the sounds play. The Vulkan validation layers showed no error from the new pass. The Windows build compiles, it was not
+run.
 
 The masterserver relay was tested with a UDP script: hello, a throw handed on, a too fast one refused. The unit tests
 are in `tests/vjk/toys.cpp`.

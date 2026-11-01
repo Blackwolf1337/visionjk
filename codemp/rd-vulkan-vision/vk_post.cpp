@@ -32,6 +32,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
+void myGlMultMatrix( const float *a, const float *b, float *out );
+
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
@@ -594,6 +596,95 @@ void VK_DrawLiquids( void ) {
 		VK_DrawTess( &draw, VKP_LIQUID, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE,
 			VKC_NONE, qfalse );
 	}
+}
+
+/*
+===============
+VK_HasWet
+
+Whether RE_AddWet() is drawn: it reads the depth of the scene while the frame is a target, which the OpenGL ES
+device does not do
+===============
+*/
+qboolean VK_HasWet( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	return vk.depthReadable;
+#endif
+}
+
+/*
+===============
+VK_DrawWet
+
+The wet places of RE_AddWet over the view of the level that was just drawn, before its water (shaders/wet.vert and
+wet.frag). The frame is copied into vk.screen first: a place is drawn from there, darker and shining, and mirrors
+what the copy shows. The numbers of the view and of every place go into the globals of the frame; each place gets
+the light of the level at its middle.
+===============
+*/
+void VK_DrawWet( void ) {
+#ifndef RD_VISION_GLES
+	static float	wet[VK_WET_VEC4S][4];
+	const float		*projection = backEnd.viewParms.projectionMatrix;
+	const int		count = Q_min( r_numWet, WET_MAX_SPOTS );
+	int				viewport[4], x, y, width, height;
+
+	if ( !vk.frame || count <= 0 || !tr.screenImage || !VK_HasWet() ) {
+		return;
+	}
+	memset( wet, 0, sizeof( wet ) );
+	myGlMultMatrix( backEnd.viewParms.world.modelMatrix, projection, wet[0] );
+	VectorCopy( backEnd.viewParms.ori.origin, wet[4] );
+	wet[4][3] = tanf( DEG2RAD( backEnd.viewParms.fovX * 0.5f ) );
+	VectorCopy( backEnd.viewParms.ori.axis[0], wet[5] );
+	wet[5][3] = tanf( DEG2RAD( backEnd.viewParms.fovY * 0.5f ) );
+	// the distance in front of the eye to the depth, as VK_BlurFrame() has it
+	VectorCopy( backEnd.viewParms.ori.axis[1], wet[6] );
+	wet[6][3] = projection[14] * 0.5f;
+	VectorCopy( backEnd.viewParms.ori.axis[2], wet[7] );
+	wet[7][3] = ( projection[10] - 1.0f ) * 0.5f;
+	// the view in pixels of the target from the upper left corner, as VK_ViewportAndScissor() puts it there
+	viewport[0] = x = backEnd.viewParms.viewportX;
+	viewport[1] = y = backEnd.viewParms.viewportY;
+	viewport[2] = width = backEnd.viewParms.viewportWidth;
+	viewport[3] = height = backEnd.viewParms.viewportHeight;
+	VK_SceneRect( &x, &y, &width, &height );
+	VectorSet4( wet[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
+	VectorSet4( wet[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
+		(float)count );
+
+	for ( int i = 0; i < count; i++ ) {
+		const wetSpot_t	*spot = &r_wet[i];
+		float			( *row )[4] = wet + VK_WET_HEADER + i * VK_WET_ROWS;
+		vec3_t			normal, ambient, directed, dir;
+
+		VectorCopy( spot->normal, normal );
+		if ( VectorNormalize( normal ) < 0.5f ) {
+			VectorSet( normal, 0.0f, 0.0f, 1.0f );
+		}
+		VK_LiquidLight( spot->origin, ambient, directed, dir );
+		VectorNormalize( dir );
+		VectorSet4( row[0], spot->origin[0], spot->origin[1], spot->origin[2], Com_Clamp( 1.0f, 512.0f, spot->radius ) );
+		VectorSet4( row[1], normal[0], normal[1], normal[2], Com_Clamp( 0.0f, 1.0f, spot->wet ) );
+		VectorSet4( row[2], spot->hit[0], spot->hit[1], spot->hit[2], Com_Clamp( 0.0f, 1.0f, spot->puddle ) );
+		VectorSet4( row[3], ambient[0] / 255.0f, ambient[1] / 255.0f, ambient[2] / 255.0f, Com_Clamp( 0.0f, 1.0f, spot->flow ) );
+		VectorSet4( row[4], directed[0] / 255.0f, directed[1] / 255.0f, directed[2] / 255.0f, spot->seed );
+		VectorSet4( row[5], dir[0], dir[1], dir[2], 0.0f );
+	}
+
+	VK_EndTarget();
+	VK_CopyTarget( &vk.color, &vk.screen );
+	VK_WetPass( wet[0], count, viewport );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_InvalidateTransform();
+#endif
 }
 
 /*

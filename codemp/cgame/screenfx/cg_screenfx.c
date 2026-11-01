@@ -56,6 +56,9 @@ qboolean CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle );		// cg_weapons.c
 #define LOW_HEALTH			30			// below that the colours drain and the heart beats
 #define WATER_MSEC			250			// into the water and out of it
 #define DROPS_MSEC			3500		// drops run down the view after surfacing
+#define FX_DROPS			24			// drops a water gun left on the view (SCREENFX_DROP)
+#define DROP_SLIDE			0.013f		// a drop larger than this (of the height of the view) runs down
+#define DROP_DRY_MSEC		1500		// the last of its life it dries
 #define FX_SMOKES			128
 #define PROTECT_HIT_MSEC	600
 #define ABSORB_PULSE_MSEC	500
@@ -117,8 +120,21 @@ typedef struct {
 	float		strength;
 } fxFlash_t;
 
+typedef struct {
+	qboolean	active;
+	int			born, life;		// cg.time it landed, msec it lasts
+	float		x, y;			// fractions of the view from its upper left corner
+	float		radius;			// a fraction of the height of the view
+	float		speed;			// down, heights of the view a second
+	float		trail;			// how far above it its trail reaches
+	float		seed;
+	int			stopUntil;		// a running drop that sticks for a moment, until then
+} fxDrop_t;
+
 static struct {
 	qboolean			has;			// the engine and the renderer have R_SetScreenEffect
+	qboolean			hasDrops;		//	and draw SCREENFX_DROP
+	fxDrop_t			drops[FX_DROPS];
 	fxBlast_t			blasts[FX_BLASTS];
 	int					nextBlast;
 	float				split;			// the colours part, 0 to 1, from splitTime on
@@ -169,6 +185,12 @@ void CG_ScreenFxInit( void ) {
 	memset( &sfx, 0, sizeof( sfx ) );
 	// an engine without the cvar has no such entry in trap->ext, it may not be read
 	sfx.has = (qboolean)( ScreenFx_Engine() && trap->ext.R_SetScreenEffect && trap->ext.R_SetScreenEffect( NULL ) );
+	{
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_screenFxDrops", value, sizeof( value ) );
+		sfx.hasDrops = (qboolean)( sfx.has && atoi( value ) == 1 );
+	}
 	sfx.beatSound = trap->S_RegisterSound( "sound/vision/heartbeat.wav" );
 	sfx.rageSound = trap->S_RegisterSound( "sound/vision/rage_hum.wav" );
 	sfx.ghostShader = trap->R_RegisterShader( "gfx/vision/ghost" );
@@ -439,14 +461,100 @@ void CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float str
 =================
 CG_ScreenFxWet
 
-The own face got wet (the water gun of somebody, toys/cg_water.c): drops run down the view as after coming up out
-of the water
+The own face got wet (the water gun of somebody, toys/cg_water.c), the water flying with velocity: drops land on
+the view where it came from (water from the right on the right side, from above on the upper part), a few large
+ones in the middle of the splash and smaller ones around them. The large ones run down, stopping now and then, and
+leave a trail; all of them dry after some seconds (CG_ScreenFxDrops). A renderer without SCREENFX_DROP shows the
+drops of coming up out of the water instead.
 =================
 */
-void CG_ScreenFxWet( void ) {
-	if ( !( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+void CG_ScreenFxWet( const vec3_t velocity ) {
+	vec3_t	dir;
+	float	cx, cy;
+	int		i, count;
+
+	if ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) {
+		return;
+	}
+	if ( !sfx.hasDrops ) {
 		sfx.surfaceTime = cg.time ? cg.time : 1;
 		sfx.waterContents = CONTENTS_WATER;
+		return;
+	}
+	VectorCopy( velocity, dir );
+	VectorNormalize( dir );
+	cx = Com_Clamp( 0.15f, 0.85f, 0.5f - 0.3f * DotProduct( dir, cg.refdef.viewaxis[1] ) + Q_flrand( -0.08f, 0.08f ) );
+	cy = Com_Clamp( 0.15f, 0.8f, 0.45f + 0.3f * DotProduct( dir, cg.refdef.viewaxis[2] ) + Q_flrand( -0.08f, 0.08f ) );
+	// a few large ones, and around them the fine spray
+	count = 12 + rand() % 5;
+	for ( i = 0; i < FX_DROPS && count > 0; i++ ) {
+		fxDrop_t	*d = &sfx.drops[i];
+		float		spread;
+
+		if ( d->active ) {
+			continue;
+		}
+		count--;
+		memset( d, 0, sizeof( *d ) );
+		d->active = qtrue;
+		d->born = cg.time;
+		d->life = (int)Q_flrand( 3000.0f, 6000.0f );
+		// the last ones the largest and in the middle of the splash
+		spread = count > 4 ? 0.2f : 0.09f;
+		d->x = cx + Q_flrand( -1.0f, 1.0f ) * spread * 0.7f;
+		d->y = cy + Q_flrand( -1.0f, 1.0f ) * spread;
+		d->radius = count > 4 ? Q_flrand( 0.003f, 0.008f ) : Q_flrand( 0.016f, 0.04f );
+		d->seed = Q_flrand( 0.0f, 1.0f );
+	}
+}
+
+// The drops on the view move on: a large one runs down, faster the larger it is, and sticks for a moment now and
+// then; its trail grows behind it. They shrink a little as they dry. Each is a source of the frame.
+static void CG_ScreenFxDrops( void ) {
+	const float	dt = Com_Clamp( 0.0f, 0.1f, cg.frametime * 0.001f );
+	int			i;
+
+	for ( i = 0; i < FX_DROPS; i++ ) {
+		fxDrop_t			*d = &sfx.drops[i];
+		screenFxSource_t	*src;
+		int					age = cg.time - d->born;
+		float				wet;
+
+		if ( !d->active ) {
+			continue;
+		}
+		if ( age >= d->life || age < 0 || d->y - d->radius > 1.05f
+			|| ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+			d->active = qfalse;
+			continue;
+		}
+		wet = age > d->life - DROP_DRY_MSEC ? (float)( d->life - age ) / DROP_DRY_MSEC : 1.0f;
+		if ( d->radius > DROP_SLIDE && cg.time >= d->stopUntil ) {
+			const float top = ( d->radius - DROP_SLIDE ) * 9.0f;
+
+			d->speed = Q_min( top, d->speed + top * 3.0f * dt );
+			d->y += d->speed * dt;
+			d->trail = Q_min( 0.35f, d->trail + d->speed * dt );
+			// (water runs in fits: it stops where the glass holds it a moment)
+			if ( Q_flrand( 0.0f, 1.0f ) < dt * 1.5f ) {
+				d->stopUntil = cg.time + (int)Q_flrand( 150.0f, 600.0f );
+				d->speed = 0.0f;
+			}
+			// it loses water into its trail
+			d->radius -= d->speed * dt * 0.012f;
+		}
+		src = CG_ScreenFxSource();
+		if ( !src ) {
+			break;
+		}
+		src->kind = SCREENFX_DROP;
+		src->a[0] = src->b[0] = d->x;
+		src->a[1] = src->b[1] = d->y;
+		src->radius = d->radius * ( 0.75f + 0.25f * wet );
+		src->width = d->trail * wet;
+		src->strength = wet * wet * ( 3.0f - 2.0f * wet );
+		src->distance = 0.0f;
+		src->seed = d->seed;
 	}
 }
 
@@ -952,6 +1060,9 @@ void CG_ScreenFxScene( void ) {
 	CG_ScreenFxBlasts();
 	CG_ScreenFxRipples();
 	CG_ScreenFxFlashes();
+	if ( v_fxWater.integer ) {
+		CG_ScreenFxDrops();
+	}
 	split = sfx.split * ( 1.0f - ( cg.time - sfx.splitTime ) / (float)SPLIT_MSEC );
 
 	memset( &fx, 0, sizeof( fx ) );

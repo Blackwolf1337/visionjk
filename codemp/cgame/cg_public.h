@@ -805,6 +805,10 @@ typedef struct cgameImport_s {
 		// R_ClearScene and R_RenderScene; they bend what lies behind them. NULL only asks. qfalse: the renderer does
 		// not draw them (rd-vanilla): the cgame draws its water itself.
 		qboolean		(*R_AddLiquid)							( const liquidSegment_t *segments, int count );
+		// Only an engine that sets the cvar v_cgameWet to 1 has this one, the same way. Wet places for the scene of
+		// this frame (wetSpot_t: puddles and wet patches), between R_ClearScene and R_RenderScene. NULL only asks.
+		// qfalse: the renderer does not draw them (rd-vanilla): the cgame draws marks.
+		qboolean		(*R_AddWet)								( const wetSpot_t *spots, int count );
 	} ext;
 } cgameImport_t;
 

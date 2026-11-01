@@ -919,6 +919,13 @@ static qboolean CL_AddLiquid( const liquidSegment_t *segments, int count ) {
 	return re->ext.AddLiquid( segments, count );
 }
 
+// ext.R_AddWet: the puddles and wet patches of the toys (cgame/toys/cg_water.c), a renderer without it says qfalse
+static qboolean CL_AddWet( const wetSpot_t *spots, int count ) {
+	if ( !re || !re->ext.AddWet )
+		return qfalse;
+	return re->ext.AddWet( spots, count );
+}
+
 static void CL_Key_SetCatcher( int catcher ) {
 	// Don't allow the cgame module to close the console
 	Key_SetCatcher( catcher | ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) );
@@ -2036,6 +2043,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.Video_Reset						= CL_VideoReset;
 		cgi.ext.R_LoadImageFit					= CL_LoadImageFit;
 		cgi.ext.R_AddLiquid						= CL_AddLiquid;
+		cgi.ext.R_AddWet						= CL_AddWet;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

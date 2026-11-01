@@ -182,6 +182,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					scopePrepPipeline, scopePipeline;
 	VkShaderModule				screenFxPrepFragmentShader, screenFxFragmentShader, screenFxFogFragmentShader, screenFxSmokeFragmentShader;
 	VkPipeline					screenFxPrepPipeline, screenFxPipeline, screenFxFogPipeline, screenFxSmokePipeline;
+	VkShaderModule				wetVertexShader, wetFragmentShader;
+	VkPipeline					wetPipeline;		// the wet places of RE_AddWet (VK_WetPass)
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered

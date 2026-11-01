@@ -39,6 +39,7 @@ BINDING( 0, 0 ) uniform Globals {
 #define RIPPLE		4.0
 #define FLASH		5.0
 #define GHOSTSMOKE	7.0
+#define DROP		8.0
 
 VARYING( 0 ) in vec2 v_texCoord;
 layout( location = 0 ) out vec4 o_color;
@@ -176,6 +177,8 @@ void main() {
 	float light = 0.0;
 	float smoke = 0.0;		// how much of the picture the smoke hides, 0 to 1
 	float flash = 0.0;		// light of the clashing blades, added
+	float film = 0.0;		// the thin water around the drops on the view, which makes the picture soft there
+	float clear = 0.0;		//	but not through a drop, which is a clear lens
 
 	for ( int i = 0; i < SOURCES; i++ ) {
 		if ( i >= count ) {
@@ -188,6 +191,46 @@ void main() {
 
 		// screenfxsmoke.frag has those
 		if ( abs( kind - GHOSTSMOKE ) < 0.5 ) {
+			continue;
+		}
+
+		// A drop of water on the view (cgame/screenfx/cg_screenfx.c), always in front of the level. Its body is a
+		// lens: a cap of a ball, a little flatter on top where its trail meets it and heavier below, which shows the
+		// picture behind it turned around and smaller, darker at its rim, where it turns the light away, with a
+		// bright spot of the light from above. Above it the trail it left: a thin wet line that wanders a little
+		// and holds a bead here and there. Around it a film of water.
+		if ( abs( kind - DROP ) < 0.5 ) {
+			vec2 d = ( v_texCoord - ends.xy ) * aspect;
+			float rad = max( size.x, 0.0005 );
+			vec2 q = d / rad;
+			q.y *= q.y < 0.0 ? 1.25 : 1.05;
+			// (no drop is round: its edge goes where the glass let it)
+			float r = length( q ) * ( 1.0 + ( Noise( q * 1.1 + vec2( more.y * 41.0, more.y * 13.0 ) ) - 0.5 ) * 0.2 );
+
+			film += size.z * exp( -dot( d, d ) / ( rad * rad * 40.0 ) );
+			if ( r < 1.15 ) {
+				float body = 1.0 - smoothstep( 0.88, 1.0, r );
+				float cap = sqrt( max( 1.0 - r * r, 0.0 ) );
+
+				// (a drop on glass shows a small picture of much of the view, upside down: what lies about four of
+				// its sizes away, the more the thicker it is there)
+				offset -= d / aspect * body * ( 2.2 + 2.2 * cap ) * size.z;
+				clear = max( clear, body * size.z );
+				light -= body * smoothstep( 0.78, 0.99, r ) * 0.16 * size.z;
+				light += body * exp( -dot( q - vec2( -0.28, -0.45 ), q - vec2( -0.28, -0.45 ) ) * 70.0 ) * 0.9 * size.z;
+				light += body * smoothstep( 0.7, 0.97, r ) * smoothstep( 0.4, 0.95, q.y / max( r, 1e-3 ) ) * 0.1 * size.z;
+			}
+			if ( size.y > 0.0 && d.y < 0.0 && -d.y < size.y ) {
+				float up = -d.y;
+				float x = d.x - ( Noise( vec2( up / rad * 0.35, more.y * 31.0 ) ) - 0.5 ) * rad * 0.7;
+				float width = rad * ( 0.32 - 0.14 * up / size.y );
+				float bead = smoothstep( 0.82, 0.95, Noise( vec2( up / rad * 0.6, more.y * 17.0 + 5.0 ) ) );
+				width *= 1.0 + bead * 0.8;
+				float line = ( 1.0 - smoothstep( width * 0.6, width, abs( x ) ) ) * ( 1.0 - smoothstep( size.y * 0.7, size.y, up ) ) * size.z;
+
+				offset -= vec2( x / max( width, 1e-4 ), 0.0 ) / aspect * width * line * ( 1.2 + 2.0 * bead );
+				light += line * ( 0.03 + bead * 0.12 );
+			}
 			continue;
 		}
 
@@ -330,6 +373,19 @@ void main() {
 	vec2 fromMiddle = at - 0.5;
 	vec2 split = fromMiddle * dot( fromMiddle, fromMiddle ) * FX[1].w * 0.05;
 	vec3 color = vec3( Frame( at + split ).r, Frame( at ).g, Frame( at - split ).b ) * ( 1.0 + light );
+
+	// the film of water around the drops on the view: the picture soft behind it, six samples around
+	film = clamp( film, 0.0, 1.0 ) * ( 1.0 - clear );
+	if ( film > 0.01 ) {
+		vec3 soft = color;
+		float reach = 0.006 * film;
+
+		for ( int k = 0; k < 6; k++ ) {
+			float a = float( k ) * 1.0471976 + 0.5;
+			soft += Frame( at + vec2( cos( a ), sin( a ) ) / aspect * reach ) * ( 1.0 + light );
+		}
+		color = mix( color, soft / 7.0, film * 0.85 );
+	}
 
 	// streaks towards the middle of the view, longer towards its edges
 	if ( FX[4].y > 0.0 ) {

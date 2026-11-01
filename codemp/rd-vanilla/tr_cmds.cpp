@@ -319,6 +319,34 @@ qboolean	RE_AddLiquid( const liquidSegment_t *segments, int count ) {
 #endif
 }
 
+/*
+=============
+RE_AddWet
+
+Wet places for the scene of this frame (wetSpot_t), added to the ones it has. They hold for one frame. NULL: only
+the question whether this renderer draws them. rd-vulkan-vision draws them over the scene before its water
+(VK_DrawWet), rd-vanilla says qfalse and the cgame draws its puddles as marks.
+=============
+*/
+wetSpot_t	r_wet[WET_MAX_SPOTS];
+int			r_numWet;
+
+qboolean	RE_AddWet( const wetSpot_t *spots, int count ) {
+#ifdef RD_VULKAN_VISION
+	if ( !VK_HasWet() ) {
+		return qfalse;
+	}
+	if ( spots && count > 0 ) {
+		count = Q_min( count, WET_MAX_SPOTS - r_numWet );
+		memcpy( r_wet + r_numWet, spots, sizeof( *spots ) * count );
+		r_numWet += count;
+	}
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -473,11 +501,12 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	}
 
 	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect(), RE_SetScreenEffect() and
-	// RE_AddLiquid() was for the frame before
+	// RE_AddLiquid() and RE_AddWet() was for the frame before
 	r_dofAmount = 0.0f;
 	r_scopeFx.flags = 0;
 	r_screenFxSet = qfalse;
 	r_numLiquids = 0;
+	r_numWet = 0;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

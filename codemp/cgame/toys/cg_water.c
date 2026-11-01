@@ -23,7 +23,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // own, each drawn as a piece of clear water to the drop before it, so it bends as it falls; on rd-vulkan-vision
 // it bends the picture behind it too (screenfx/cg_screenfx.c). Where it hits it splashes
 // (effects/vision/water_splash.efx); on a floor it makes a puddle that grows while the water comes and dries
-// after a while, on a wall a wet patch. Who is hit in the face sees drops run down his view.
+// after a while, on a wall a wet patch. On rd-vulkan-vision the renderer draws them (ext.R_AddWet,
+// shaders/wet.frag): the ground goes dark and shines, standing water mirrors the room and rings run over it, the
+// water runs down a wall in streaks, and it dries from the edges in; elsewhere they are marks. Who is hit in the
+// face sees drops run down his view.
 //
 // The others hear of the jet the way they hear of a snowball (toys/cg_toys.c): a TOY_WATER with where the water
 // leaves the gun and how fast, every WATER_SEND_MSEC while it sprays, and their cgame sprays from there for
@@ -50,11 +53,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WATER_DRY_MSEC		20000		// a puddle dries in this time, the second half of it it fades
 #define WATER_PUDDLE_MAX	36.0f		// the radius a puddle grows to at most
 #define WATER_PATCH_MAX		18.0f		//	and a wet patch on a wall
+#define WATER_POOL_HIT		0.008f		// of the water for standing water, one drop brings
+#define WATER_FLOW_MSEC		400			// rings run from where the water lands so long after the last drop
 #define WATER_REFRACTS		12			// pieces of the jets that bend the picture, in one frame
 #define WATER_RADIUS		0.75f		// of the jet where it leaves the gun, drawn by the renderer
 #define WATER_TEAR_MSEC		170			// a jet starts to fall apart into drops this long after it left
 #define WATER_TORN_MSEC		650			//	and is all drops by then
 #define WATER_HOLD_MSEC		450			// the gun stays in the hand this long after the last water
+#define WATER_SPLASHES		256			// droplets of the splashes in the air at once (drawn by the renderer)
+#define WATER_POOL			0.3f		// of the water for standing water, from which a hit splashes as into water
 
 typedef struct {
 	qboolean	active;
@@ -77,33 +84,50 @@ typedef struct {
 
 typedef struct {
 	qboolean	active;
+	int			born, time;		// cg.time it flew off, and it was moved to last
+	int			life;			// msec it lasts at most
+	float		radius, flow;
+	vec3_t		origin, velocity;
+} waterSplash_t;
+
+typedef struct {
+	qboolean	active;
 	qboolean	floor;			// a puddle; else a wet patch on a wall
 	int			wetTime;		// cg.time water came last
 	float		size, angle;
+	float		water;			// how much came, 1: enough for standing water as far as it reaches
 	vec3_t		origin, normal;
+	vec3_t		hit;			// where it came last
 } waterPuddle_t;
 
 static struct {
 	waterDrop_t		drops[WATER_DROPS];
 	waterJet_t		jets[MAX_CLIENTS];
 	waterPuddle_t	puddles[WATER_PUDDLES];
-	int				nextSlot;
+	waterSplash_t	splashes[WATER_SPLASHES];
+	int				nextSlot, nextSplash;
 	qboolean		spraying;		// +v_water is down
 	int				sendTime;
 	int				wetTime;
 	qhandle_t		streamShader, dropShader, wetShader, puddleShader;
 	int				liquid;			// the renderer draws the water (ext.R_AddLiquid): 1 yes, -1 no, 0 not asked yet
+	int				wet;			//	and the puddles (ext.R_AddWet), the same
 	qhandle_t		gunModel;		// models/vision/toys/watergun.md3, its grip at the origin
 	vec3_t			flash;			//	and where the water leaves it (tag_flash)
 	int				holdUntil[MAX_CLIENTS];		// cg.time the gun is in his hand until
 	vec3_t			muzzle[MAX_CLIENTS];		// where the water left the gun drawn last
 	int				muzzleTime[MAX_CLIENTS];	//	and its cg.time
-	int				splashFx;
-	sfxHandle_t		splashSound[3], faceSound;
+	int				splashFx, mistFx;	// with sprites for drops; only the mist, where the renderer draws the drops
+	sfxHandle_t		splashSound[3], poolSound[3], faceSound;
+	sfxHandle_t		spraySound, pumpSound;	// the loop of a jet at the gun, and the trigger when it starts
 	qboolean		registered;
 } water;
 
+static qboolean Water_Liquid( void );
+
 static void Water_Register( void ) {
+	int i;
+
 	if ( water.registered )
 		return;
 	water.registered = qtrue;
@@ -112,10 +136,15 @@ static void Water_Register( void ) {
 	water.wetShader = trap->R_RegisterShader( "gfx/vision/toys/wet" );
 	water.puddleShader = trap->R_RegisterShader( "gfx/vision/toys/puddle" );
 	water.splashFx = trap->FX_RegisterEffect( "effects/vision/water_splash.efx" );
-	water.splashSound[0] = trap->S_RegisterSound( "sound/player/footsteps/water_run1.mp3" );
-	water.splashSound[1] = trap->S_RegisterSound( "sound/player/footsteps/water_run2.mp3" );
-	water.splashSound[2] = trap->S_RegisterSound( "sound/player/footsteps/water_run3.mp3" );
-	water.faceSound = trap->S_RegisterSound( "sound/player/bodyfall_water1.mp3" );
+	water.mistFx = trap->FX_RegisterEffect( "effects/vision/water_mist.efx" );
+	// (the sounds are made by tools/toys/sounds.py)
+	for ( i = 0; i < 3; i++ ) {
+		water.splashSound[i] = trap->S_RegisterSound( va( "sound/vision/toys/water_hit%i.wav", i + 1 ) );
+		water.poolSound[i] = trap->S_RegisterSound( va( "sound/vision/toys/water_pool%i.wav", i + 1 ) );
+	}
+	water.faceSound = trap->S_RegisterSound( "sound/vision/toys/water_face.wav" );
+	water.spraySound = trap->S_RegisterSound( "sound/vision/toys/water_spray.wav" );
+	water.pumpSound = trap->S_RegisterSound( "sound/vision/toys/water_pump.wav" );
 	water.gunModel = trap->R_RegisterModel( "models/vision/toys/watergun.md3" );
 	VectorSet( water.flash, 21.0f, 0.0f, 3.0f );
 	if ( water.gunModel ) {
@@ -139,8 +168,10 @@ void CG_WaterHeard( int client, const vec3_t origin, const vec3_t velocity ) {
 	waterJet_t *jet = &water.jets[client];
 
 	Water_Register();
-	if ( !jet->until || cg.time >= jet->until )
+	if ( !jet->until || cg.time >= jet->until ) {
 		jet->nextDrop = cg.time;
+		trap->S_StartSound( (float *)origin, client, CHAN_AUTO, water.pumpSound );
+	}
 	jet->until = cg.time + WATER_JET_MSEC;
 	water.holdUntil[client] = jet->until + WATER_HOLD_MSEC;
 	VectorCopy( origin, jet->origin );
@@ -308,8 +339,10 @@ void CG_WaterFrame( void ) {
 	Water_Register();
 	Water_Own( origin, velocity );
 	jet = &water.jets[cg.clientNum];
-	if ( !jet->until || cg.time >= jet->until )
+	if ( !jet->until || cg.time >= jet->until ) {
 		jet->nextDrop = cg.time;
+		trap->S_StartSound( origin, cg.clientNum, CHAN_AUTO, water.pumpSound );
+	}
 	jet->until = cg.time + 50;
 	water.holdUntil[cg.clientNum] = cg.time + WATER_HOLD_MSEC;
 	VectorCopy( origin, jet->origin );
@@ -354,7 +387,7 @@ static void Water_Drop( int owner, waterJet_t *jet, int age ) {
 }
 
 // water came to a floor (a puddle) or a wall (a wet patch) here: the one near grows, else there is a new one
-static void Water_Puddle( const vec3_t origin, const vec3_t normal ) {
+static waterPuddle_t *Water_Puddle( const vec3_t origin, const vec3_t normal ) {
 	const qboolean	floor = (qboolean)( normal[2] > 0.7f );
 	waterPuddle_t	*p = NULL, *oldest = &water.puddles[0];
 	int				i;
@@ -379,9 +412,122 @@ static void Water_Puddle( const vec3_t origin, const vec3_t normal ) {
 		VectorCopy( origin, p->origin );
 		VectorCopy( normal, p->normal );
 	}
+	VectorCopy( origin, p->hit );
+	p->water = Q_min( 1.0f, p->water + WATER_POOL_HIT );
+	return p;
 	// (a puddle grows slower the larger it is)
 	p->size = Q_min( floor ? WATER_PUDDLE_MAX : WATER_PATCH_MAX, p->size + 0.6f * 12.0f / p->size );
 	p->wetTime = cg.time ? cg.time : 1;
+}
+
+// whether standing water is at a point a drop came to: it splashes into water there
+static qboolean Water_PoolAt( const vec3_t point ) {
+	int i;
+
+	for ( i = 0; i < WATER_PUDDLES; i++ ) {
+		const waterPuddle_t *p = &water.puddles[i];
+
+		if ( p->active && p->floor && p->water >= WATER_POOL && DistanceSquared( p->origin, point ) < p->size * p->size * 0.5f )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+/*
+=================
+Water_Splash
+
+A drop of the jet came to a surface at "at" with "velocity": a few droplets fly off. Most of them keep going the
+way the jet went, along the surface and a little off it (a slanted jet throws its spray forward), the others fly
+out round about. Into standing water more of them, higher, and all round: the crown.
+=================
+*/
+static void Water_Splash( const vec3_t at, const vec3_t normal, const vec3_t velocity, qboolean pool ) {
+	const float	in = DotProduct( velocity, normal );
+	const int	count = pool ? 3 + rand() % 3 : 2 + rand() % 2;
+	vec3_t		along, side, up;
+	int			i;
+
+	// the part of the speed along the surface, and two directions on it
+	VectorMA( velocity, -in, normal, along );
+	PerpendicularVector( side, normal );
+	CrossProduct( normal, side, up );
+	for ( i = 0; i < count; i++ ) {
+		waterSplash_t	*s = &water.splashes[water.nextSplash];
+		const float		angle = Q_flrand( 0.0f, 2.0f * M_PI );
+		const float		out = pool ? Q_flrand( 50.0f, 130.0f ) : Q_flrand( 25.0f, 110.0f );
+
+		water.nextSplash = ( water.nextSplash + 1 ) % WATER_SPLASHES;
+		memset( s, 0, sizeof( *s ) );
+		s->active = qtrue;
+		s->born = s->time = cg.time;
+		s->life = (int)Q_flrand( 350.0f, 850.0f );
+		s->radius = Q_flrand( 0.15f, 0.5f ) * ( ( rand() & 7 ) ? 1.0f : 1.6f );
+		s->flow = Q_flrand( 0.0f, 500.0f );
+		VectorMA( at, 0.6f, normal, s->origin );
+		VectorScale( along, pool ? Q_flrand( 0.05f, 0.25f ) : Q_flrand( 0.15f, 0.45f ), s->velocity );
+		VectorMA( s->velocity, -in * ( pool ? Q_flrand( 0.2f, 0.45f ) : Q_flrand( 0.08f, 0.3f ) ), normal, s->velocity );
+		VectorMA( s->velocity, out * cosf( angle ), side, s->velocity );
+		VectorMA( s->velocity, out * sinf( angle ), up, s->velocity );
+	}
+}
+
+// the droplets of the splashes fly on to cg.time; one that hits something is gone
+static void Water_MoveSplashes( void ) {
+	int i;
+
+	for ( i = 0; i < WATER_SPLASHES; i++ ) {
+		waterSplash_t	*s = &water.splashes[i];
+		float			dt;
+		vec3_t			end;
+		trace_t			tr;
+
+		if ( !s->active )
+			continue;
+		if ( cg.time - s->born > s->life || cg.time < s->born ) {
+			s->active = qfalse;
+			continue;
+		}
+		dt = Q_min( ( cg.time - s->time ) * 0.001f, 0.1f );
+		if ( dt <= 0.0f )
+			continue;
+		s->time = cg.time;
+		VectorMA( s->origin, dt, s->velocity, end );
+		end[2] -= 0.5f * WATER_GRAVITY * dt * dt;
+		s->velocity[2] -= WATER_GRAVITY * dt;
+		CG_Trace( &tr, s->origin, vec3_origin, vec3_origin, end, ENTITYNUM_NONE, MASK_SOLID | CONTENTS_WATER );
+		if ( tr.startsolid || tr.fraction < 1.0f ) {
+			s->active = qfalse;
+			continue;
+		}
+		VectorCopy( end, s->origin );
+	}
+}
+
+// the droplets as the renderer draws water: each stretched along the way it flies, as the eye sees a fast drop
+static void Water_AddSplashes( void ) {
+	static liquidSegment_t	segs[WATER_SPLASHES];
+	int						count = 0, i;
+
+	for ( i = 0; i < WATER_SPLASHES; i++ ) {
+		const waterSplash_t	*s = &water.splashes[i];
+		liquidSegment_t		*seg;
+		float				age;
+
+		if ( !s->active )
+			continue;
+		age = (float)( cg.time - s->born ) / s->life;
+		seg = &segs[count++];
+		VectorCopy( s->origin, seg->b );
+		VectorMA( s->origin, -0.012f, s->velocity, seg->a );
+		seg->radius[1] = s->radius * ( 1.0f - 0.4f * age );
+		seg->radius[0] = seg->radius[1] * 0.6f;
+		seg->flow[1] = s->flow;
+		seg->flow[0] = s->flow - 4.0f;
+		seg->breakup = 0.35f;
+	}
+	if ( count )
+		trap->ext.R_AddLiquid( segs, count );
 }
 
 // a drop hit something at tr
@@ -396,24 +542,31 @@ static void Water_Hit( const waterDrop_t *drop, const trace_t *tr ) {
 	}
 	if ( !jet->splashTime || cg.time - jet->splashTime >= WATER_SPLASH_MSEC || cg.time < jet->splashTime ) {
 		jet->splashTime = cg.time ? cg.time : 1;
-		trap->FX_PlayEffectID( water.splashFx, (float *)tr->endpos, normal, -1, -1, qfalse );
+		trap->FX_PlayEffectID( Water_Liquid() ? water.mistFx : water.splashFx, (float *)tr->endpos, normal, -1, -1, qfalse );
 	}
 	if ( !jet->soundTime || cg.time - jet->soundTime >= WATER_SOUND_MSEC || cg.time < jet->soundTime ) {
 		jet->soundTime = cg.time ? cg.time : 1;
-		trap->S_StartSound( (float *)tr->endpos, ENTITYNUM_WORLD, CHAN_AUTO, water.splashSound[rand() % 3] );
+		trap->S_StartSound( (float *)tr->endpos, ENTITYNUM_WORLD, CHAN_AUTO,
+			Water_PoolAt( tr->endpos ) ? water.poolSound[rand() % 3] : water.splashSound[rand() % 3] );
 	}
 	if ( tr->entityNum < MAX_CLIENTS ) {
 		// the own face: drops run down the view
 		if ( tr->entityNum == cg.clientNum && cg.snap && cg.snap->ps.clientNum == cg.clientNum
 			&& ( !water.wetTime || cg.time - water.wetTime >= WATER_WET_MSEC || cg.time < water.wetTime ) ) {
 			water.wetTime = cg.time ? cg.time : 1;
-			CG_ScreenFxWet();
+			CG_ScreenFxWet( drop->velocity );
 			trap->S_StartLocalSound( water.faceSound, CHAN_LOCAL_SOUND );
 		}
 		return;
 	}
-	if ( tr->entityNum == ENTITYNUM_WORLD && !( tr->surfaceFlags & SURF_SKY ) )
-		Water_Puddle( tr->endpos, normal );
+	if ( tr->entityNum == ENTITYNUM_WORLD && !( tr->surfaceFlags & SURF_SKY ) ) {
+		const waterPuddle_t *p = Water_Puddle( tr->endpos, normal );
+
+		if ( Water_Liquid() )
+			Water_Splash( tr->endpos, normal, drop->velocity, (qboolean)( p->floor && p->water >= WATER_POOL ) );
+	} else if ( Water_Liquid() ) {
+		Water_Splash( tr->endpos, normal, drop->velocity, qfalse );
+	}
 }
 
 // moves a drop to cg.time: qfalse, it is gone
@@ -566,9 +719,65 @@ static void Water_AddLiquid( void ) {
 		trap->ext.R_AddLiquid( segs, count );
 }
 
+// 0 below edge0, 1 above edge1, eased in between (smoothstep of GLSL)
+static float Water_Smooth( float edge0, float edge1, float x ) {
+	const float t = Com_Clamp( 0.0f, 1.0f, ( x - edge0 ) / ( edge1 - edge0 ) );
+
+	return t * t * ( 3.0f - 2.0f * t );
+}
+
+// the renderer draws the puddles itself (rd-vulkan-vision): asked once
+static qboolean Water_Wet( void ) {
+	if ( !water.wet ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameWet", value, sizeof( value ) );
+		water.wet = ( atoi( value ) && trap->ext.R_AddWet && trap->ext.R_AddWet( NULL, 0 ) ) ? 1 : -1;
+	}
+	return (qboolean)( water.wet > 0 );
+}
+
+// The puddles as the renderer draws them: wet as far as they reach while the water comes and for a third of the
+// time to dry, then the edge goes in; standing water as far as the water that came makes it, which goes faster.
+static void Water_AddWet( void ) {
+	wetSpot_t	spots[WATER_PUDDLES];
+	int			i, count = 0;
+
+	for ( i = 0; i < WATER_PUDDLES; i++ ) {
+		waterPuddle_t	*p = &water.puddles[i];
+		wetSpot_t		*spot = &spots[count];
+		const int		age = cg.time - p->wetTime;
+		float			dry;
+
+		if ( !p->active )
+			continue;
+		if ( age >= WATER_DRY_MSEC || age < 0 ) {
+			p->active = qfalse;
+			continue;
+		}
+		dry = (float)age / WATER_DRY_MSEC;
+		VectorCopy( p->origin, spot->origin );
+		VectorCopy( p->normal, spot->normal );
+		VectorCopy( p->hit, spot->hit );
+		spot->radius = p->size;
+		spot->wet = 1.0f - Water_Smooth( 0.33f, 1.0f, dry );
+		spot->puddle = p->floor ? 0.85f * p->water * ( 1.0f - Water_Smooth( 0.15f, 0.7f, dry ) ) : 0.0f;
+		spot->flow = age < WATER_FLOW_MSEC ? 1.0f - (float)age / WATER_FLOW_MSEC : 0.0f;
+		spot->seed = p->angle / 360.0f;
+		count++;
+	}
+	if ( count )
+		trap->ext.R_AddWet( spots, count );
+}
+
 // the puddles and wet patches, drawn anew each frame with the size they have and as wet as they still are
 static void Water_DrawPuddles( void ) {
 	int i;
+
+	if ( Water_Wet() ) {
+		Water_AddWet();
+		return;
+	}
 
 	for ( i = 0; i < WATER_PUDDLES; i++ ) {
 		waterPuddle_t	*p = &water.puddles[i];
@@ -615,6 +824,7 @@ void CG_WaterScene( void ) {
 		// the jet of somebody else leaves the gun this cgame drew in his hand this frame
 		if ( i != cg.clientNum && water.muzzleTime[i] == cg.time )
 			VectorCopy( water.muzzle[i], jet->origin );
+		trap->S_AddLoopingSound( i, jet->origin, vec3_origin, water.spraySound );
 		// (at most a tenth of a second at once: a long frame is no flood)
 		if ( jet->nextDrop < cg.time - 100 )
 			jet->nextDrop = cg.time - 100;
@@ -629,7 +839,9 @@ void CG_WaterScene( void ) {
 			if ( water.drops[i].active && !Water_Move( &water.drops[i] ) )
 				water.drops[i].active = qfalse;
 		}
+		Water_MoveSplashes();
 		Water_AddLiquid();
+		Water_AddSplashes();
 		Water_DrawPuddles();
 		return;
 	}

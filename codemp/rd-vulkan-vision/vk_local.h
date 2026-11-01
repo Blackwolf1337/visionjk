@@ -65,12 +65,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // ------------------------------------------------------------------------------------------------------------
 
 #define VK_SCREENFX_VEC4S	160		// the numbers of shaders/screenfx.frag, see VK_ScreenFx()
+#define VK_WET_HEADER		10		// the numbers of shaders/wet.vert and wet.frag: the view (VK_DrawWet()),
+#define VK_WET_ROWS			6		//	then this many for each wet place
+#define VK_WET_VEC4S		( VK_WET_HEADER + WET_MAX_SPOTS * VK_WET_ROWS )
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	float		screen[4];			// x, y: size of the frame in pixels
 	float		screenFx[VK_SCREENFX_VEC4S][4];	// what VK_ScreenFxPass() was given
 	float		styles[MAX_LIGHT_STYLES][4];	// the colors of the light styles over 256 (styleColors), for vertex lit surfaces
+	float		wet[VK_WET_VEC4S][4];		// what VK_WetPass() was given
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -377,6 +381,8 @@ void		VK_ScopeBoxes( const scopeEffect_t *fx );
 void		VK_ScreenFx( const screenEffect_t *fx );
 void		VK_CaptureFrame( void );
 void		VK_DrawLiquids( void );
+qboolean	VK_HasWet( void );
+void		VK_DrawWet( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );
@@ -510,6 +516,10 @@ void		VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *pr
 // shaders/screenfxfog.frag into target, the mist: the same numbers, the depth of the scene. No target is begun
 // before and after.
 void		VK_ScreenFxFogPass( vkTarget_t *target, const float *fx );
+// shaders/wet.vert and wet.frag: a quad for each of count wet places over the view of the level (viewport as OpenGL
+// counts it), with the VK_WET_VEC4S numbers of wet; they read vk.screen and the depth of the scene, which is begun
+// with the frame but only read. Not on the OpenGL ES device. vk.color must not be begun, it is not begun after.
+void		VK_WetPass( const float *wet, int count, const int *viewport );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

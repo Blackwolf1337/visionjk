@@ -709,6 +709,58 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
+// The depth is a target of the frame while the wet places read it, but in the layout for reading: no test, nothing
+// written (the stencil goes with it). With several samples a pixel the frame is drawn into the targets that stand in
+// for color and depth, and the depth the shader reads is the plain one, which has their first sample since the
+// scene ended.
+void VK_WetPass( const float *wet, int count, const int *viewport ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[3] = { vk.frame->set, vk.screenSet, vk.depthSet };
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
+	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+
+	memcpy( globals->wet, wet, sizeof( globals->wet ) );
+	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+	if ( multi ) {
+		VK_TargetLayout( cmd, &vk.colorMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+		VK_TargetLayout( cmd, &vk.depthMS, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+	}
+
+	colorInfo.imageView = multi ? vk.colorMS.view : vk.color.view;
+	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	if ( multi ) {
+		colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+		colorInfo.resolveImageView = vk.color.view;
+		colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
+	colorInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depthInfo.imageView = multi ? vk.depthMS.view : vk.depth.view;
+	depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	depthInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
+	info.renderArea.extent.width = (uint32_t)vk.color.width;
+	info.renderArea.extent.height = (uint32_t)vk.color.height;
+	info.layerCount = 1;
+	info.colorAttachmentCount = 1;
+	info.pColorAttachments = &colorInfo;
+	info.pDepthAttachment = &depthInfo;
+	info.pStencilAttachment = &depthInfo;
+	qvkCmdBeginRendering( cmd, &info );
+
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.wetPipeline );
+	vk.boundPipeline = vk.wetPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
+	qvkCmdEndRendering( cmd );
+}
+
 // The targets it reads are made ready to be read before the frame is begun, the mask also when nothing was drawn
 // into it this frame (the shader does not read it then).
 void VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const float *parm ) {

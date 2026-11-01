@@ -1006,9 +1006,15 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
 	rb_sawLate = qfalse;
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
-	// the water of RE_AddLiquid: the view of the level itself, over what was drawn and before its glow
-	if ( r_numLiquids && !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
-		VK_DrawLiquids();
+	// the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the level itself, over what was drawn
+	// and before its glow, the water over the wet ground
+	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		if ( r_numWet ) {
+			VK_DrawWet();
+		}
+		if ( r_numLiquids ) {
+			VK_DrawLiquids();
+		}
 	}
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();

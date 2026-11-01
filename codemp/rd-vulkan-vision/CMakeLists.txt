@@ -215,6 +215,8 @@ set(MPVulkanVisionShaders
 	screenfx.frag
 	screenfxfog.frag
 	screenfxsmoke.frag
+	wet.vert
+	wet.frag
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"

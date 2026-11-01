@@ -142,6 +142,9 @@ typedef struct scopeEffect_s {
 #define SCREENFX_FLASH		5		// a bright star of light at a: blades that clash
 #define SCREENFX_GHOSTSMOKE	7		// a ghost of Force Sight from a (feet) to b (head): he puts smoke into the smoke of
 										// the view, which rises and smears as the eye moves
+#define SCREENFX_DROP		8		// a drop of water on the view at a, radius its size, width the trail it left above
+										// it as it ran down, strength how wet. Only with an engine that sets the cvar
+										// v_screenFxDrops to 1: the renderer of an older one draws it as a flash.
 #define SCREENFX_MAX_SOURCES	48
 
 typedef struct screenFxSource_s {
@@ -192,6 +195,22 @@ typedef struct liquidSegment_s {
 	float		flow[2];			// where the water at a and at b is on the water itself, units: the surface moves with it
 	float		breakup;			// 0 a smooth jet, 1 one that is falling apart into drops
 } liquidSegment_t;
+
+// A wet place on the level the cgame puts into the scene (re.ext.AddWet): where water came to a floor or a wall. The
+// renderer darkens the ground there as wet ground is, makes it shine, and where water stands it mirrors the room
+// (rd-vulkan-vision, shaders/wet.frag). Its edge is ragged, a wall gets streaks that run down.
+#define WET_MAX_SPOTS	32		// in one frame
+
+typedef struct wetSpot_s {
+	vec3_t		origin;
+	vec3_t		normal;				// of the surface, away from it
+	vec3_t		hit;				// where the water lands now: the rings of a puddle run out from there
+	float		radius;				// units, the most the water reaches
+	float		wet;				// 0 to 1: how far towards radius it is wet, it dries from the edge in
+	float		puddle;				// 0 to 1: how far towards radius water stands (a floor only)
+	float		flow;				// 0 to 1: how much water lands at hit right now
+	float		seed;				// 0 to 1, the shape of its edge
+} wetSpot_t;
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;

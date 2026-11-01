@@ -1818,7 +1818,7 @@ void		CG_ScreenFxPlayer( centity_t *cent );
 void		CG_ScreenFxFlash( const vec3_t origin, float size, float strength );
 void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
 void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength );
-void		CG_ScreenFxWet( void );
+void		CG_ScreenFxWet( const vec3_t velocity );
 qboolean	CG_ScreenFxSightDrawn( void );
 void		CG_ScreenFxGhostBody( refEntity_t *body );
 void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );

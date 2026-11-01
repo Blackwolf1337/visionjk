@@ -51,6 +51,12 @@ static const uint32_t vk_liquidVert[] =
 static const uint32_t vk_liquidFrag[] =
 #include "shaders/liquid_frag.inc"
 ;
+static const uint32_t vk_wetVert[] =
+#include "shaders/wet_vert.inc"
+;
+static const uint32_t vk_wetFrag[] =
+#include "shaders/wet_frag.inc"
+;
 static const uint32_t vk_postVert[] =
 #include "shaders/post_vert.inc"
 ;
@@ -259,7 +265,7 @@ post: 0 geometry. 1 a pass over a whole target of its own without vertices (gamm
 frame while it is being drawn, blended as the state bits say (the glow). 3 as 1, and it reads the depth of the
 scene too (the depth of field). 4 as 2 with the four sets and sixteen numbers of the scope. 5 as 2 with the sets
 of the screen effects. 6 as 1 with the sets of their mist. 7 as 1 with the sets of the screen effects (their
-smoke).
+smoke). 8 as 5, quads of its own over the view of the level (the wet places).
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program ) {
@@ -411,7 +417,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	info.pDynamicState = &dynamic;
 	if ( post == 4 ) {
 		info.layout = vk.scopePipelineLayout;
-	} else if ( post == 5 || post == 7 ) {
+	} else if ( post == 5 || post == 7 || post == 8 ) {
 		info.layout = vk.screenFxPipelineLayout;
 	} else if ( post == 6 ) {
 		info.layout = vk.fogPipelineLayout;
@@ -490,6 +496,12 @@ void VK_InitPipelines( void ) {
 	vk.screenFxFogPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxFogFragmentShader, 0, 6, VKP_GENERIC );
 	vk.screenFxSmokeFragmentShader = VK_CreateShader( vk_screenFxSmokeFrag, sizeof( vk_screenFxSmokeFrag ) );
 	vk.screenFxSmokePipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxSmokeFragmentShader, 0, 7, VKP_GENERIC );
+	// the wet places: quads of their own over the frame, with the layout of the screen effects (the globals, then
+	// the copy of the frame and the depth in the places of two targets)
+	vk.wetVertexShader = VK_CreateShader( vk_wetVert, sizeof( vk_wetVert ) );
+	vk.wetFragmentShader = VK_CreateShader( vk_wetFrag, sizeof( vk_wetFrag ) );
+	vk.wetPipeline = VK_CreatePipeline( vk.wetVertexShader, vk.wetFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 8,
+		VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -518,6 +530,9 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.screenFxFogFragmentShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.screenFxSmokePipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.screenFxSmokeFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.wetPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.wetVertexShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.wetFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {

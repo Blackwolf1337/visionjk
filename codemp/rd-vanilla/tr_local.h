@@ -1284,6 +1284,7 @@ extern	float	r_dofFocus, r_dofAmount;		// what RE_SetDepthOfField asked for, for
 extern	scopeEffect_t	r_scopeFx;				// what RE_SetScopeEffect asked for, flags 0: nothing
 qboolean	RE_SetScreenEffect( const screenEffect_t *fx );
 qboolean	RE_AddLiquid( const liquidSegment_t *segments, int count );
+qboolean	RE_AddWet( const wetSpot_t *spots, int count );
 void		RE_ForgetMissing( const char *prefix );
 void		R_ForgetMissingSkins( const char *prefix );
 void		R_ForgetMissingShaders( const char *prefix );
@@ -1291,6 +1292,8 @@ extern	screenEffect_t	r_screenFx;				// what RE_SetScreenEffect asked for
 extern	qboolean		r_screenFxSet;			// whether it asked this frame
 extern	liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];	// what RE_AddLiquid was given this frame
 extern	int				r_numLiquids;
+extern	wetSpot_t		r_wet[WET_MAX_SPOTS];		// what RE_AddWet was given this frame
+extern	int				r_numWet;
 
 /*
 Ghoul2 Insert Start
