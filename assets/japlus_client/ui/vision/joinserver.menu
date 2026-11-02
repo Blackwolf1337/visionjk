@@ -10,7 +10,7 @@
 		outOfBoundsClick
 		focusColor				0.36 0.78 0.96 1
 		descX					800.0
-		descY					856
+		descY					866.0
 		descScale				0.72
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
@@ -791,6 +791,7 @@
 			wide					1
 		}
 		canvas					1600 900
+		descMiddle				1
 
 		itemDef
 		{

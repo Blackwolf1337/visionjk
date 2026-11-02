@@ -3247,7 +3247,13 @@ UI_Version
 static void UI_Version(rectDef_t *rect, float scale, vec4_t color, int iMenuFont)
 {
 	int width;
+	float tx, ty;
 
+	// (VisionJK: ending at x by its letters, its capitals on the middle of its rectangle, as the texts of the items)
+	if ( rect->h > 0.0f && Text_InkAt( JK_VERSION, scale, iMenuFont, ITEM_ALIGN_RIGHT, rect->x, rect->y, rect->h, &tx, &ty ) ) {
+		uiInfo.uiDC.drawText( tx, ty, scale, color, JK_VERSION, 0, 0, 0, iMenuFont );
+		return;
+	}
 	width = uiInfo.uiDC.textWidth(JK_VERSION, scale, iMenuFont);
 
 	uiInfo.uiDC.drawText(rect->x - width, rect->y, scale, color, JK_VERSION, 0, 0, 0, iMenuFont);

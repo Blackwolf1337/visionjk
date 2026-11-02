@@ -261,8 +261,10 @@ def convert(m, ingame):
     dx, dy = mf.get(m, 'descx'), mf.get(m, 'descy')
     if dx and dy and mf.num(dx[0]) is not None and mf.num(dy[0]) is not None:
         if page and mf.num(dy[0]) >= 440:
+            # (the capitals on the middle of the bar at the bottom)
             mf.put(m, 'descX', mf.fmt(W / 2.0))
-            mf.put(m, 'descY', mf.fmt(H - FOOT_H + 24))
+            mf.put(m, 'descY', mf.fmt(H - FOOT_H / 2.0))
+            mf.put(m, 'descMiddle', 1)
         else:
             mf.put(m, 'descX', mf.fmt(cx + (mf.num(dx[0]) - 320) * k))
             mf.put(m, 'descY', mf.fmt(map_y(mf.num(dy[0]))))
@@ -328,5 +330,6 @@ def profile_page(m):
     m[first_foot:first_foot] = footer(H - FOOT_H)
     mf.put(m, 'canvas', W, H)
     mf.put(m, 'descX', W / 2.0)
-    mf.put(m, 'descY', H - FOOT_H + 24)
+    mf.put(m, 'descY', H - FOOT_H / 2.0)
+    mf.put(m, 'descMiddle', 1)
     mf.put(m, 'descScale', scale(13))
