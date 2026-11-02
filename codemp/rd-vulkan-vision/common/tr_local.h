@@ -1127,7 +1127,6 @@ extern window_t		window;
 //
 // cvars
 //
-extern cvar_t	*r_ignore;				// used for debugging anything
 extern cvar_t	*r_verbose;				// used for verbose debug spew
 
 extern cvar_t	*r_znear;				// near Z clip plane
@@ -1150,11 +1149,9 @@ extern cvar_t	*r_primitives;			// "0" = based on compiled vertex array existance
 										// "2" = glDrawElements triangles
 										// "-1" = no drawing
 
-extern cvar_t	*r_inGameVideo;				// controls whether in game video should be draw
 extern cvar_t	*r_fastsky;				// controls whether sky should be cleared or drawn
 extern cvar_t	*r_drawSun;				// controls drawing of sun quad
 extern cvar_t	*r_dynamiclight;		// dynamic lights enabled/disabled
-// rjr - removed for hacking extern cvar_t	*r_dlightBacks;			// dlight non-facing surfaces for continuity
 
 extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
 extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
@@ -1167,15 +1164,12 @@ extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_facePlaneCull;		// enables culling of planar surfaces with back side test
 extern	cvar_t	*r_cullRoofFaces; //attempted smart method of culling out upwards facing surfaces on roofs for automap shots -rww
 extern	cvar_t	*r_roofCullCeilDist; //ceiling distance cull tolerance -rww
-extern	cvar_t	*r_roofCullFloorDist; //floor distance cull tolerance -rww
 extern	cvar_t	*r_nocurves;
 extern	cvar_t	*r_showcluster;
 
 extern	cvar_t	*r_autoMap; //automap renderside toggle for debugging -rww
-extern	cvar_t	*r_autoMapBackAlpha; //alpha of automap bg -rww
 extern	cvar_t	*r_autoMapDisable;
 
-extern cvar_t	*r_dlightStyle;
 extern cvar_t	*r_surfaceSprites;
 extern cvar_t	*r_surfaceWeather;
 
@@ -1194,15 +1188,9 @@ extern cvar_t	*r_centerWindow;		// override vid_x/ypos and center the window
 extern cvar_t	*r_gamma;
 extern cvar_t	*r_displayRefresh;		// optional display refresh option
 
-extern cvar_t	*r_allowExtensions;				// global enable/disable of OpenGL extensions
 extern cvar_t	*r_ext_compressed_textures;		// these control use of specific extensions
 extern cvar_t	*r_ext_compressed_lightmaps;	// turns on compression of lightmaps, off by default
-extern cvar_t	*r_ext_preferred_tc_method;
-extern cvar_t	*r_ext_gamma_control;
 extern cvar_t	*r_ext_texenv_op;
-extern cvar_t	*r_ext_multitexture;
-extern cvar_t	*r_ext_compiled_vertex_array;
-extern cvar_t	*r_ext_texture_env_add;
 extern cvar_t	*r_ext_texture_filter_anisotropic;
 
 extern cvar_t	*r_environmentMapping;
@@ -1215,11 +1203,9 @@ extern cvar_t	*r_DynamicGlowSoft;
 extern cvar_t	*r_DynamicGlowWidth;
 extern cvar_t	*r_DynamicGlowHeight;
 
-extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
 extern	cvar_t	*r_colorMipLevels;				// development aid to see texture mip usage
 extern	cvar_t	*r_picmip;						// controls picmip values
-extern	cvar_t	*r_finish;
 extern	cvar_t	*r_swapInterval;
 extern	cvar_t	*r_markcount;
 extern	cvar_t	*r_textureMode;
@@ -1231,7 +1217,6 @@ extern	cvar_t	*r_lightmap;					// render lightmaps only
 extern	cvar_t	*r_vertexLight;					// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;				// ui is running fullscreen
 
-extern	cvar_t	*r_logFile;						// number of frames to emit GL logs
 extern	cvar_t	*r_showtris;					// enables wireframe rendering of the world
 extern	cvar_t	*r_showsky;						// forces sky in front of all surfaces
 extern	cvar_t	*r_shownormals;					// draws wireframe normals

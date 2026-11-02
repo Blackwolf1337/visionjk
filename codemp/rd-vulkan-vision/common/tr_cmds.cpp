@@ -598,25 +598,11 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	}
 	cmd->commandId = RC_DRAW_BUFFER;
 
-	if ( glConfig.stereoEnabled ) {
-		if ( stereoFrame == STEREO_LEFT ) {
-			cmd->buffer = (int)GL_BACK_LEFT;
-		} else if ( stereoFrame == STEREO_RIGHT ) {
-			cmd->buffer = (int)GL_BACK_RIGHT;
-		} else {
-			Com_Error( ERR_FATAL, "RE_BeginFrame: Stereo is enabled, but stereoFrame was %i", stereoFrame );
-		}
-	} else {
-		if ( stereoFrame != STEREO_CENTER ) {
-			Com_Error( ERR_FATAL, "RE_BeginFrame: Stereo is disabled, but stereoFrame was %i", stereoFrame );
-		}
-//		if ( !Q_stricmp( r_drawBuffer->string, "GL_FRONT" ) ) {
-//			cmd->buffer = (int)GL_FRONT;
-//		} else
-		{
-			cmd->buffer = (int)GL_BACK;
-		}
+	// no stereo: one frame in the back buffer
+	if ( stereoFrame != STEREO_CENTER ) {
+		Com_Error( ERR_FATAL, "RE_BeginFrame: stereoFrame was %i", stereoFrame );
 	}
+	cmd->buffer = (int)GL_BACK;
 }
 
 

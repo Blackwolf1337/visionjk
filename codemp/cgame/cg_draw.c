@@ -8566,6 +8566,9 @@ CG_DrawActive
 Perform all drawing needed to completely fill the screen
 =====================
 */
+// the eyes apart in a stereo frame, for an engine that draws one (VisionJK does not)
+#define CG_STEREO_SEPARATION	0.4f
+
 void CG_DrawActive( stereoFrame_t stereoView ) {
 	float		separation;
 	vec3_t		baseOrg;
@@ -8588,10 +8591,10 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 		separation = 0;
 		break;
 	case STEREO_LEFT:
-		separation = -cg_stereoSeparation.value / 2;
+		separation = -CG_STEREO_SEPARATION / 2;
 		break;
 	case STEREO_RIGHT:
-		separation = cg_stereoSeparation.value / 2;
+		separation = CG_STEREO_SEPARATION / 2;
 		break;
 	default:
 		separation = 0;
