@@ -130,8 +130,8 @@ To draw, bind `v_board` (Controls, Extras, "Drawing Board") and press it. A wind
 pixels and 32 colours, which you paint with the mouse. There are brush sizes 1 to 4, Fill, Undo and Clear. Save 1 to 4
 and Load 1 to 4 keep four presets in `drawings/preset<n>.vjd` of the home folder. Three buttons hold the board up in
 front of you, hold it over your head, or put it away. Esc or Close shuts the window, and the board stays where it is.
-Without the window, `v_board hold <0|1|2>`, `v_board save <1-4>`, `v_board load <1-4>` and `v_board import <file>` work
-from a bind.
+Without the window, `v_board hold <0|1|2>`, `v_board save <1-4>`, `v_board load <1-4>`, `v_board import <file>` and
+`v_board paste` work from a bind.
 
 The Picture button, right of the brush sizes, lists the picture files (png, jpg, jpeg, tga) of the `drawings` folder:
 `japlus/drawings` of the home folder, and `base/drawings` and the paks. It shows up to 64 files, 10 to a page, with `<`
@@ -140,6 +140,17 @@ transparent parts white, turned into the 32 colours with dithering. Undo takes i
 list. When the folder has no pictures, the list shows the full path to put them in. `v_board import <file>` takes a file
 name of `drawings/`, no subfolders, and prints a line on the console when there is no such file. Like any drawing, the
 picture goes to the store when the board is held up.
+
+The Paste button and Ctrl+V put the picture of the system clipboard on the board. When the clipboard holds no picture,
+nothing happens. Windows gives a PNG or a bitmap, Linux gives image/png or image/jpeg (X11 and XWayland), macOS gives a
+PNG. A picture can be 32 MB at most.
+
+A picture brought in (Picture button) or pasted is placed first. It lies over the board in the colours of the board.
+Drag it to move it. Drag a corner to scale it, the sides stay as they are, hold Shift to scale freely. The mouse wheel
+zooms about the pointer. Fit lays it inside the board, Fill covers the whole board. Enter or Done puts it on (Undo takes
+it back). Esc or Cancel takes it away. While you place, these buttons stand where the colour swatches are. The colours
+are found in OKLab with error diffusion in rows that turn at each end, and only over the picture, so the rest of the board
+stays. Without the window open, `v_board import` and `v_board paste` put the picture on, fitted, at once.
 
 Holding the board in front, both arms are stretched forward and the hands hold its top edge, the board hangs in front of
 them and the head stays visible. Over the head, the arms are up and the hands hold its bottom edge. The arms move into
@@ -169,6 +180,8 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_board save <1-4>` | | keeps the picture as a preset |
 | `v_board load <1-4>` | | loads a preset |
 | `v_board import <file>` | | puts a picture file of `drawings/` on the board |
+| `v_board paste` | | puts the picture of the system clipboard on the board (Ctrl+V in the window) |
+| `v_clipboardImage <path> <cgame command>` | | engine command: writes the picture of the system clipboard to `<path>.png`, `.jpg` or `.tga` in the home folder, then runs the cgame command with the file name, or with `""` when there is no picture (the board uses `v_boardPasted`) |
 | `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
 | `v_cgameLiquid` | 1 | 1: the cgame draws the jet of the water gun as real water when the renderer can (rd-vulkan-vision), 0: always the sprites |
 | `v_cgameWet` | 1 | set by the engine: 1 when the cgame can hand wet spots to the renderer (`ext.R_AddWet`) |
@@ -317,7 +330,15 @@ the game module have to be 0.2.9-dev.32 or later.
 Pictures are brought in with a new call of the renderer, `re.ext.LoadImageFit` (`R_LoadImageFit` in
 `rd-common/tr_image_load.cpp`), which the cgame gets as `ext.R_LoadImageFit` when `v_cgameImage` is 1. For these
 pictures the PNG loader takes any size and palette and grey PNGs; textures still need power-of-two sizes and 24 or 32
-bits, as before. The cgame fits the picture into 256 x 128 and dithers it with Floyd-Steinberg.
+bits, as before. The cgame fits the picture into 256 x 128 and dithers it with Floyd-Steinberg in OKLab (Ottosson 2020),
+in rows that turn at each end, with the error clamped.
+
+The clipboard is read by the engine (`codemp/client/cl_clipboard.cpp`, `v_clipboardImage`). Nothing blocks, it is polled
+once a frame. Windows: the registered format PNG, else CF_DIBV5 or CF_DIB, written as a 32 bit TGA. X11 and XWayland: a
+connection of its own (libX11 is looked up at run time with `dlopen`), TARGETS, then image/png or image/jpeg, large ones
+by INCR, with a time-out of 3 s. macOS: `public.png` of the general pasteboard through the Objective-C runtime (not built
+or run). The file goes to `drawings/clipboard.png`, `.jpg` or `.tga`, and the cgame command `v_boardPasted` gets its
+name, or `""`. The cgame then loads it as it does an imported picture.
 
 The poses are made by each client from what it already hears (`TOY_BOARD`), nothing new goes over the network. In front,
 the arms take a frame of `BOTH_FORCE_2HANDEDLIGHTNING_HOLD`, over the head the end of `TORSO_SURRENDER_START`.
@@ -390,8 +411,12 @@ For the drawing board, there are unit tests (the board in `tests/vjk/toys.cpp`, 
 uploaded (the store gave it a number), and the other client fetched the picture and showed the board on the holder with
 that picture. The window was drawn with all its parts.
 
+For the clipboard and the placing, headless on Linux: a 640x360 PNG was put on the X11 clipboard of the own X server of
+the test game by a small test owner (python-xlib) and pasted, coming in three INCR parts. A corner was scaled and the
+picture moved with real mouse input (XTEST), and Enter put it on, seen in screenshots. The Windows build compiles.
+
 For the pictures and poses, headless: an RGBA PNG of 400 x 300, a palette PNG, a grey PNG and a JPG were imported on a
 listen server with `sv_pure 1`. Then two clients on a dedicated server with `sv_pure 1`: the holder was seen from the
 front and the side in both poses, and the other client saw the pose.
 
-Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, pasting on Windows and macOS (macOS is not even built), pasting on native Wayland without XWayland, the mouse wheel and Shift while placing, the Fit and Fill buttons by click, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
