@@ -107,7 +107,7 @@
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
-			elementheight			16
+			elementheight			28
 			font					5
 			textscale				0.78
 			backcolor				0.027 0.051 0.102 1

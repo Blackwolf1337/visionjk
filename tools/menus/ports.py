@@ -910,11 +910,16 @@ def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None, 
 def info_list(e, w):
     """The facts of a server and its players (FEEDER_SERVERSTATUS) in a dialog: a name and its value (columns 0 and 3),
     for a player number, score, ping and name; rows high enough to read, the value clear of the longest name."""
+    text_list(e)
+    # (each column: where it begins, how wide, and a limit the engine takes as a width: none, the ui fits the text)
+    mf.put(e.block, 'columns', 4, 14, 250, 0, 110, 70, 0, 190, 70, 0, 280, w - 280 - 40, 0)
+
+
+def text_list(e):
+    """A list of text in a dialog: in its field, letters of 14 pixels on rows high enough to read and to mark."""
     inset(e)
     sized(e, 14)
     mf.put(e.block, 'elementheight', 28)
-    # (each column: where it begins, how wide, and a limit the engine takes as a width: none, the ui fits the text)
-    mf.put(e.block, 'columns', 4, 14, 250, 0, 110, 70, 0, 190, 70, 0, 280, w - 280 - 40, 0)
 
 
 def inset(e):
@@ -1346,9 +1351,7 @@ def popups(m, menu):
     if menu == 'ids_popmenu':
         lst = one('ids_list')
         dialog(m, 900, 560, None, one('ids_title'), [(lst, 320, 14), (one('ids_hint'), 0, 14)], [], one('ids_done'))
-        mf.put(lst.block, 'backcolor', *cv.FIELD)
-        mf.put(lst.block, 'bordercolor', *cv.EDGE)
-        mf.put(lst.block, 'radius', 6)
+        text_list(lst)
         return True
     if menu == 'password_popmenu':
         field = one('passwordentry')
@@ -1374,7 +1377,7 @@ def popups(m, menu):
                [(name, 44, 16), (found, 140, 14), (info, 230, 14), (one('serversfoundmsg'), 0, 13)],
                [one('search'), one('donetext')], one('join'))
         entry(name, one('nametitle') and (mf.get(one('nametitle').block, 'text') or ['""'])[0])
-        inset(found)
+        text_list(found)
         info_list(info, 680 - 56)
         return True
     if menu == 'createfavorite_popmenu':
@@ -1398,7 +1401,7 @@ def popups(m, menu):
         # (Update now shows only when there is an update: Done keeps the place at the right)
         y = dialog(m, 1040, 680, None, one('changelog_title'), [], [one('changelog_update')], one('changelog_done'), [lst, page])
         place(lst, (28, y, 260, 680 - y - 28 - 44 - 20))
-        inset(lst)
+        text_list(lst)
         place(page, (28 + 260 + 20, y, 1040 - 56 - 280, 680 - y - 28 - 44 - 20))
         sized(page, 16)
         return True
@@ -1406,7 +1409,7 @@ def popups(m, menu):
         lst = one('cvarclean_list')
         y = dialog(m, 900, 620, None, one('cvarclean_title'), [(lst, 380, 14), (one('cvarclean_about'), 0, 14)],
                    [one('cvarclean_remove'), one('cvarclean_removeall')], one('cvarclean_done'), [one('cvarclean_none')])
-        inset(lst)
+        text_list(lst)
         middle(one('cvarclean_none'), (28, 24 + 46 + 160, 900 - 56, 40), 16, 'center')
         mf.put(one('cvarclean_none').block, 'forecolor', *cv.MUTED)
         return True
