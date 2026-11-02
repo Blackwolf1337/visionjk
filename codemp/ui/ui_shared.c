@@ -984,7 +984,7 @@ A menu file with a canvas is written in the pixels of a picture of that size, th
 not in the 640 x 480 units of the game. The picture is put on the screen as large as it fits with the same
 scale across and down, in the middle: on a wide window it fills the height, on a window of 4:3 it fills the
 width. So a page keeps the proportions it was drawn with on every window, also where the 2D of the game is
-stretched (v_2dAspect 0), and on the panel in the level, where it is put on the 640 x 480 of the panel.
+stretched (an engine without v_2dBias), and on the panel in the level, where it is put on the 640 x 480 of the panel.
 
 What the file gave is kept in item->canvas and the rectangles, the sizes of text and the rows of lists are
 worked out from it again whenever the window or the panel is not the one the layout was made for.
@@ -5055,8 +5055,8 @@ What a screen of settings changed (VisionJK, "changesCvar <cvar>" of a menu)
 
 When such a menu opens it keeps what each of its settings is. Every frame it counts the settings that differ from
 that and sets <cvar> to the number and <cvar>Restart to 1 while one of them takes effect only after a restart (a
-cvar with CVAR_LATCH, or one of the video settings the ui hands to the renderer with the restart: ui_r_*,
-ui_cl_renderer). An ITEM_TYPE_CHANGES lists them with a button to undo each; uiScript changesRevert sets them all
+cvar with CVAR_LATCH, or one of the video settings the ui hands to the renderer with the restart: ui_r_*).
+An ITEM_TYPE_CHANGES lists them with a button to undo each; uiScript changesRevert sets them all
 back, uiScript changesApply keeps them (the menu file restarts the video in the same click where needed).
 
 ===============================================================================
@@ -5122,7 +5122,7 @@ static qboolean Cvar_NeedsRestart( const char *cvar ) {
 	char		value[8];
 	uint32_t	flags = 0;
 
-	if ( !Q_stricmpn( cvar, "ui_r_", 5 ) || !Q_stricmp( cvar, "ui_cl_renderer" ) ) {
+	if ( !Q_stricmpn( cvar, "ui_r_", 5 ) ) {
 		return qtrue;
 	}
 	if ( DC->getCVarInfo && DC->getCVarInfo( cvar, value, sizeof( value ), &flags ) ) {
@@ -7506,10 +7506,12 @@ static void Item_Row_Paint( itemDef_t *item ) {
 			}
 			x += 16.0f * parent->canvasUnit;
 		}
-		// (the name has the room up to the widget; a row that is a button has only an arrow at its end)
+		// (the name has the room up to the widget; a row that is a button has only an arrow at its end, unless it
+		// picks a value for a cvar, which it shows)
 		const qboolean	arrowOnly = (qboolean)( item->type != ITEM_TYPE_YESNO && item->type != ITEM_TYPE_MULTI
 							&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_SLIDER && item->type != ITEM_TYPE_BIND
-							&& item->type != ITEM_TYPE_EDITFIELD && item->type != ITEM_TYPE_NUMERICFIELD );
+							&& item->type != ITEM_TYPE_EDITFIELD && item->type != ITEM_TYPE_NUMERICFIELD
+							&& !( item->type == ITEM_TYPE_BUTTON && item->cvar ) );
 		const float		end = arrowOnly ? widget.x + widget.w - arrow : widget.x;
 
 		Row_Name( x, r->y, r->h - 1.0f, end - pad - x, item->textscale, text, word, font );
@@ -7716,7 +7718,15 @@ static void Item_Row_Paint( itemDef_t *item ) {
 	}
 
 	default:
-		// something to click: an arrow says so
+		// something to click: an arrow says so. A button that opens a picker for a cvar (the model rows of Setup,
+		// modelpick.menu) shows the value before it, empty is "As They Chose".
+		if ( item->type == ITEM_TYPE_BUTTON && item->cvar ) {
+			DC->getCVarString( item->cvar, word, sizeof( word ) );
+			Color_Mix( color, item->window.foreColor, white, f );
+			color[3] = off ? 0.5f : 1.0f;
+			Row_Text( widget.x + widget.w - arrow - 4.0f, widget.y, widget.h, widget.w - arrow - 4.0f, ITEM_ALIGN_RIGHT, small, color,
+				word[0] ? word : Vision_Text( "As They Chose" ), font );
+		}
 		Skin_Arrow( widget.x + widget.w - 1.0f - arrow * 0.55f, mid - arrow * 0.4f, arrow * 0.55f, arrow * 0.8f, qfalse, ink );
 		break;
 	}

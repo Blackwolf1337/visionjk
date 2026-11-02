@@ -30,13 +30,13 @@ cvar_t		*v_glesDebug;		// 1: glGetError() after every frame. It waits for the de
 static cvar_t	*r_multisampleGles;	// r_ext_multisample of the engine
 
 /*
-A machine or a browser that can not run this device is no error of the game, as with the Vulkan device (see
-VK_CanNotRun() in vk_main.cpp): VK_InitVulkan() says why in the console and returns qfalse, with an empty glconfig.
-On the desktop the engine goes on with rd-vanilla then.
+A machine or a browser that can not run this device is told why, as with the Vulkan device (see
+VK_CanNotRun() in vk_main.cpp): VK_InitVulkan() says why in the console and returns qfalse, with an empty glconfig
+but for the reason as its renderer_string.
 */
 static qboolean VK_CanNotRun( const char *fmt, ... ) {
+	static char reason[256];
 	va_list args;
-	char reason[256];
 
 	va_start( args, fmt );
 	Q_vsnprintf( reason, sizeof( reason ), fmt, args );
@@ -44,6 +44,7 @@ static qboolean VK_CanNotRun( const char *fmt, ... ) {
 	ri.Printf( PRINT_ALL, "rd-vulkan-vision can not run here with OpenGL ES: %s\n", reason );
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
+	glConfig.renderer_string = reason;
 	return qfalse;
 }
 
@@ -89,7 +90,7 @@ qboolean VK_InitVulkan( void ) {
 	GLint major = 0, align = 1, maxTextureSize = 0;
 	const char *extensions;
 
-	v_glesDebug = ri.Cvar_Get( "v_glesDebug", "0", CVAR_ARCHIVE_ND, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
+	v_glesDebug = ri.Cvar_Get( "v_glesDebug", "0", CVAR_NONE, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
 	r_multisampleGles = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	// The flares of another level are about to get the numbers of the ones the device answered for: what it said and
 	// what it has not said yet is about those.
@@ -109,7 +110,6 @@ qboolean VK_InitVulkan( void ) {
 	windowDesc.gl.minorVersion = 0;
 	windowDesc.gl.profile = GLPROFILE_ES;
 	memset( &glConfig, 0, sizeof( glConfig ) );
-	memset( &glConfigExt, 0, sizeof( glConfigExt ) );
 	memset( &vk, 0, sizeof( vk ) );
 	window = ri.WIN_Init( &windowDesc, &glConfig );
 	if ( !glConfig.vidWidth ) {
@@ -210,8 +210,8 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
 
-// The targets are named by the commands of a frame that is written down and played at its end (see
-// VK_CreateSceneTargets()), and a page restarts the renderer when its size settles anyway: no live resize here.
+// The targets are named by the commands of a frame that is written down and played at its end, and a page restarts
+// the renderer when its size settles anyway: no live resize here.
 qboolean VK_ResizeFrame( int width, int height ) {
 	return qfalse;
 }

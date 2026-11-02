@@ -43,20 +43,21 @@ void VK_WaitIdle( void ) {
 }
 
 /*
-A machine that can not run this renderer (no Vulkan, an older one, no device that fits) is no error of the game:
-VK_InitVulkan() says why in the console and returns qfalse, and the engine goes on with rd-vanilla
-(CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the Windows
-builds link libgcc statically, an exception does not get out of this library there. What fails once a device
-was found is an error as before.
+A machine that can not run this renderer (no Vulkan, an older one, no device that fits): VK_InitVulkan() says why
+in the console and returns qfalse, with the reason as glConfig.renderer_string and no window size, and the engine
+stops with it (CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the
+Windows builds link libgcc statically, an exception does not get out of this library there. What fails once a
+device was found is an error as before.
 */
 static qboolean VK_CanNotRun( const char *fmt, ... ) {
+	static char reason[256];
 	va_list args;
-	char reason[256];
 
 	va_start( args, fmt );
 	Q_vsnprintf( reason, sizeof( reason ), fmt, args );
 	va_end( args );
 	ri.Printf( PRINT_ALL, "rd-vulkan-vision can not run here: %s\n", reason );
+	glConfig.renderer_string = reason;
 	return qfalse;
 }
 
@@ -96,7 +97,7 @@ PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;
 
 static void VK_MissingFunction( const char *name ) {
-	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nSet cl_renderer to rd-vanilla.", name );
+	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nYour graphics driver is too old or incomplete for this game. Update your graphics driver.", name );
 }
 
 // the window is there, so its library of Vulkan is loaded
@@ -509,7 +510,7 @@ textures, the level and the models stay. The sets that show the targets stay too
 ===============
 */
 qboolean VK_ResizeFrame( int width, int height ) {
-	if ( !vk.device || vk.frame || vk.inScene ) {
+	if ( !vk.device || vk.frame ) {
 		return qfalse;
 	}
 	qvkDeviceWaitIdle( vk.device );
@@ -541,7 +542,7 @@ engine knows. A window that was made stays until RE_Shutdown() destroys it.
 static void VK_DestroyInstance( void );
 
 qboolean VK_InitVulkan( void ) {
-	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
+	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	if ( VK_InitShared() ) {
@@ -551,7 +552,6 @@ qboolean VK_InitVulkan( void ) {
 	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
 
 	memset( &glConfig, 0, sizeof( glConfig ) );
-	memset( &glConfigExt, 0, sizeof( glConfigExt ) );
 	memset( &vk, 0, sizeof( vk ) );
 	window = ri.WIN_Init( &windowDesc, &glConfig );
 	if ( !glConfig.vidWidth ) {
@@ -664,7 +664,7 @@ static void VK_DestroyInstance( void ) {
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
-int G2API_SlotsInUse( void );		// rd-vanilla/G2_API.cpp
+int G2API_SlotsInUse( void );		// common/G2_API.cpp
 int G2API_ListSlots( qboolean print );
 
 
@@ -683,9 +683,6 @@ void VK_GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "driver: %s\n", vk_driverString );
 	ri.Printf( PRINT_ALL, "frame: %i x %i with %i samples a pixel, window surface: %i x %i, %i images, swap interval %i\n", vk.width, vk.height,
 		(int)vk.samples, (int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
-	if ( vk.sceneWidth ) {
-		ri.Printf( PRINT_ALL, "views of the level: %i x %i (tay_renderScale)\n", vk.sceneWidth, vk.sceneHeight );
-	}
 	ri.Printf( PRINT_ALL, "swapchains made: %i, frames that were not shown: %i\n", vk.statSwapchains, vk.statFramesNotShown );
 	// they are kept over a restart of the renderer: a number that grows with every map is a leak
 	ri.Printf( PRINT_ALL, "ghoul2 instances: %i of 1024 slots in use, %i of them without a model\n", G2API_SlotsInUse(),

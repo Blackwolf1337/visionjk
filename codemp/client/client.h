@@ -326,11 +326,6 @@ typedef struct clientStatic_s {
 
 	int pingUpdateSource;		// source currently pinging or updating
 
-	// update server info
-	netadr_t	updateServer;
-	char		updateChallenge[MAX_TOKEN_CHARS];
-	char		updateInfoString[MAX_INFO_STRING];
-
 	netadr_t	authorizeServer;
 
 	// rendering info
@@ -455,7 +450,6 @@ extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_consoleKeys;
 extern	cvar_t	*cl_consoleUseScanCode;
-extern	cvar_t	*v_utf8;
 extern	cvar_t	*cl_consoleShiftRequirement;
 
 extern  cvar_t  *cl_lanForcePackets;
@@ -725,7 +719,6 @@ void Con_RunConsole (void);
 void Con_DrawConsole (void);
 void Con_PageUp( void );
 // the mouse of the console and its selection (cl_console.cpp)
-extern cvar_t *con_font;
 void Con_MouseEvent( int dx, int dy );
 void Con_MouseDown( void );
 void Con_SelectAll( void );

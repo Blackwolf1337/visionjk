@@ -42,7 +42,6 @@ cvar_t		*con_autoclear;
 cvar_t		*con_height;
 cvar_t		*con_scale;
 cvar_t		*con_timestamps;
-cvar_t		*con_font;
 cvar_t		*tay_consoleClock;
 
 #define	DEFAULT_CONSOLE_WIDTH	78
@@ -542,7 +541,6 @@ void Con_Init (void) {
 
 	con_scale = Cvar_Get ("con_scale", "1", CVAR_ARCHIVE_ND, "Scale console font");
 	con_timestamps = Cvar_Get ("con_timestamps", "0", CVAR_ARCHIVE_ND, "Display timestamps infront of console lines");
-	con_font = Cvar_Get ("con_font", "1", CVAR_ARCHIVE_ND, "1 the console is drawn with a TrueType font (sharp, every character), 0 with the letters of the game");
 	tay_consoleClock = Cvar_Get ("tay_consoleClock", "0", CVAR_ARCHIVE_ND, "A clock left of the version in the console: 0 none, 1 the time, 2 the date and the time");
 
 	Field_Clear( &g_consoleField );

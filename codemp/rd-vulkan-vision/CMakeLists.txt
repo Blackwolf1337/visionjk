@@ -76,7 +76,7 @@ set(MPVulkanVisionIncludeDirectories
 	${MPDir}
 	${SharedDir}
 	"${MPDir}/rd-vulkan-vision"
-	"${MPDir}/rd-vanilla"
+	"${MPDir}/rd-vulkan-vision/common"
 	"${GSLIncludeDirectory}"
 	"${CMAKE_CURRENT_BINARY_DIR}"
 	)
@@ -122,44 +122,42 @@ set(MPVulkanVisionGLESFiles
 	)
 source_group("gles" FILES ${MPVulkanVisionGLESFiles})
 
-# the files of rd-vanilla without graphics code: loaders, shader parser, Ghoul2, scene. Built from where they
-# are, with RD_VULKAN_VISION defined, so that there is one copy of them.
-set(MPVulkanVisionVanillaFiles
-	"${MPDir}/rd-vanilla/G2_API.cpp"
-	"${MPDir}/rd-vanilla/G2_bolts.cpp"
-	"${MPDir}/rd-vanilla/G2_bones.cpp"
-	"${MPDir}/rd-vanilla/G2_misc.cpp"
-	"${MPDir}/rd-vanilla/G2_surfaces.cpp"
-	"${MPDir}/rd-vanilla/tr_bsp.cpp"
-	"${MPDir}/rd-vanilla/tr_cmds.cpp"
-	"${MPDir}/rd-vanilla/tr_curve.cpp"
-	"${MPDir}/rd-vanilla/tr_decals.cpp"
-	"${MPDir}/rd-vanilla/tr_ghoul2.cpp"
-	"${MPDir}/rd-vanilla/tr_image.cpp"
-	"${MPDir}/rd-vanilla/tr_init.cpp"
-	"${MPDir}/rd-vanilla/tr_light.cpp"
-	"${MPDir}/rd-vanilla/tr_local.h"
-	"${MPDir}/rd-vanilla/tr_main.cpp"
-	"${MPDir}/rd-vanilla/tr_marks.cpp"
-	"${MPDir}/rd-vanilla/tr_mesh.cpp"
-	"${MPDir}/rd-vanilla/tr_model.cpp"
-	"${MPDir}/rd-vanilla/tr_scene.cpp"
-	"${MPDir}/rd-vanilla/tr_shade_calc.cpp"
-	"${MPDir}/rd-vanilla/tr_shader.cpp"
-	"${MPDir}/rd-vanilla/tr_skin.cpp"
-	"${MPDir}/rd-vanilla/tr_sky.cpp"
-	"${MPDir}/rd-vanilla/tr_quicksprite.cpp"
-	"${MPDir}/rd-vanilla/tr_quicksprite.h"
-	"${MPDir}/rd-vanilla/tr_subs.cpp"
-	"${MPDir}/rd-vanilla/tr_surface.cpp"
-	"${MPDir}/rd-vanilla/tr_shadows.cpp"
-	"${MPDir}/rd-vanilla/tr_surfacesprites.cpp"
-	"${MPDir}/rd-vanilla/tr_world.cpp"
-	"${MPDir}/rd-vanilla/tr_WorldEffects.cpp"
-	"${MPDir}/rd-vanilla/tr_WorldEffects.h"
+# the parts both devices take from the renderer of the game: loaders, shader parser, Ghoul2, scene (common/)
+set(MPVulkanVisionSceneFiles
+	"${MPDir}/rd-vulkan-vision/common/G2_API.cpp"
+	"${MPDir}/rd-vulkan-vision/common/G2_bolts.cpp"
+	"${MPDir}/rd-vulkan-vision/common/G2_bones.cpp"
+	"${MPDir}/rd-vulkan-vision/common/G2_misc.cpp"
+	"${MPDir}/rd-vulkan-vision/common/G2_surfaces.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_bsp.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_cmds.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_curve.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_decals.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_ghoul2.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_image.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_init.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_light.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_local.h"
+	"${MPDir}/rd-vulkan-vision/common/tr_main.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_marks.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_mesh.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_model.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_scene.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_shade_calc.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_shader.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_skin.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_sky.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_quicksprite.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_quicksprite.h"
+	"${MPDir}/rd-vulkan-vision/common/tr_subs.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_surface.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_surfacesprites.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_world.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_WorldEffects.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_WorldEffects.h"
 	)
-source_group("rd-vanilla" FILES ${MPVulkanVisionVanillaFiles})
-set(MPVulkanVisionFiles ${MPVulkanVisionSharedFiles} ${MPVulkanVisionVanillaFiles})
+source_group("scene" FILES ${MPVulkanVisionSceneFiles})
+set(MPVulkanVisionFiles ${MPVulkanVisionSharedFiles} ${MPVulkanVisionSceneFiles})
 
 set(MPVulkanVisionGhoul2Files
 	"${MPDir}/ghoul2/g2_local.h"
@@ -314,7 +312,7 @@ if(GLSLANG_VALIDATOR)
 endif()
 add_custom_target(rd-vulkan-vision-shaders DEPENDS ${MPVulkanVisionShaderOutputs})
 
-# Transparently use either bundled or system libjpeg, libpng, zlib and our bundled minizip, as rd-vanilla does.
+# Transparently use either bundled or system libjpeg, libpng, zlib and our bundled minizip, as the renderer of the game did.
 set(MPVulkanVisionImageIncludeDirectories)
 set(MPVulkanVisionLibraries)
 list(APPEND MPVulkanVisionImageIncludeDirectories ${JPEG_INCLUDE_DIR})
@@ -376,7 +374,7 @@ if(MPVulkanVisionVulkanTarget)
 
 	# the worker threads that pack textures into blocks (vk_bc.cpp)
 	find_package(Threads REQUIRED)
-	# tr_local.h of rd-vanilla pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
+	# common/tr_local.h pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
 	find_package(OpenGL REQUIRED)
 	set_target_properties(${MPVulkanVisionVulkanTarget} PROPERTIES INCLUDE_DIRECTORIES
 		"${MPVulkanVisionIncludeDirectories};${MPVulkanVisionVulkanHeaders};${MPVulkanVisionImageIncludeDirectories};${OPENGL_INCLUDE_DIR};${VisionJKLibDir}")
@@ -384,7 +382,7 @@ if(MPVulkanVisionVulkanTarget)
 endif()
 
 if(MPVulkanVisionGLESTarget)
-	# RD_VISION_GLES: vk_local.h takes the header of this device, and rd-vanilla/qgl.h the names of OpenGL ES
+	# RD_VISION_GLES: vk_local.h takes the header of this device, and common/qgl.h the names of OpenGL ES
 	vision_renderer(${MPVulkanVisionGLESTarget} "MP Vision Renderer with OpenGL ES" "RD_VULKAN_VISION;RD_VISION_GLES" ${MPVulkanVisionGLESFiles})
 
 	if(EMSCRIPTEN)

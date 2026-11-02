@@ -82,8 +82,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // With RF_DISTORTION, in rd-vulkan-vision: the model may lie at any angle, it need not face the view. Its texture
 // coordinates say where a vertex lies when nothing bends it, (0, (s - 0.5) * 2r, (t - 0.5) * 2r) in the model,
 // r = shaderTexCoord[0], and it shows what the screen has there: where a vertex was moved, the picture under it
-// moves with it (the shockwave of the boombox, sound_wave.md3). shaderTexCoord[1]: how many times as far, 0 is 1. rd-vanilla does not know it: a model that faces
-// the view is right there too.
+// moves with it (the shockwave of the boombox, sound_wave.md3). shaderTexCoord[1]: how many times as far, 0 is 1.
 #define RF_REFRACT_REST		0x800000
 
 // refdef flags
@@ -229,8 +228,8 @@ typedef struct wetSpot_s {
 // A picture sprayed onto the level (re.ext.AddPaint, cgame/toys/cg_spray.c). The renderer keeps a sheet of pictures
 // for each of PAINT_SLOTS slots (re.ext.PaintImage): a still picture, or the frames of an animated one in a grid.
 // rd-vulkan-vision lays a decal as paint onto the surface (shaders/paint.frag): the relief of the wall shows through,
-// the edge is overspray, fresh paint shines and runs down a wall in drips until it dries. rd-vanilla says qfalse
-// and the cgame draws a mark with the shader that PaintImage returned.
+// the edge is overspray, fresh paint shines and runs down a wall in drips until it dries. A renderer
+// that can not says qfalse and the cgame draws a mark with the shader that PaintImage returned.
 #define PAINT_MAX_DECALS	64		// in one frame
 #define PAINT_SLOTS			40		// pictures the renderer keeps: one a player and some over
 #define PAINT_SHEET			512		// a sheet is this many pixels each way at most

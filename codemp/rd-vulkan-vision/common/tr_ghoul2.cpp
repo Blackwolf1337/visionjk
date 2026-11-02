@@ -2450,42 +2450,6 @@ void RenderSurfaces(CRenderSurface &RS) //also ended up just ripping right from 
 		//rww - catch surfaces with bad shaders
 		//assert(shader != tr.defaultShader);
 		//Alright, this is starting to annoy me because of the state of the assets. Disabling for now.
-		// we will add shadows even if the main object isn't visible in the view
-		// stencil shadows can't do personal models unless I polyhedron clip
-		//using z-fail now so can do personal models -rww
-		if ( /*!RS.personalModel
-			&& */r_shadows->integer == 2
-//			&& RS.fogNum == 0
-			&& (RS.renderfx & RF_SHADOW_PLANE )
-			&& !(RS.renderfx & ( RF_NOSHADOW | RF_DEPTHHACK ) )
-			&& shader->sort == SS_OPAQUE )
-		{		// set the surface info to point at the where the transformed bone list is going to be for when the surface gets rendered out
-			CRenderableSurface *newSurf = new CRenderableSurface;
-			if (surface->numVerts >= SHADER_MAX_VERTEXES/2)
-			{ //we need numVerts*2 xyz slots free in tess to do shadow, if this surf is going to exceed that then let's try the lowest lod -rww
-				mdxmSurface_t *lowsurface = (mdxmSurface_t *)G2_FindSurface(RS.currentModel, RS.surfaceNum, RS.currentModel->numLods-1);
-				newSurf->surfaceData = lowsurface;
-			}
-			else
-			{
-				newSurf->surfaceData = surface;
-			}
-			newSurf->boneCache = RS.boneCache;
-			R_AddDrawSurf( (surfaceType_t *)newSurf, tr.shadowShader, 0, qfalse );
-		}
-
-		// projection shadows work fine with personal models
-		if ( r_shadows->integer == 3
-//			&& RS.fogNum == 0
-			&& (RS.renderfx & RF_SHADOW_PLANE )
-			&& shader->sort == SS_OPAQUE )
-		{		// set the surface info to point at the where the transformed bone list is going to be for when the surface gets rendered out
-			CRenderableSurface *newSurf = new CRenderableSurface;
-			newSurf->surfaceData = surface;
-			newSurf->boneCache = RS.boneCache;
-			R_AddDrawSurf( (surfaceType_t *)newSurf, tr.projectionShadowShader, 0, qfalse );
-		}
-
 		// don't add third_person objects if not viewing through a portal
 		if ( !RS.personalModel )
 		{		// set the surface info to point at the where the transformed bone list is going to be for when the surface gets rendered out
@@ -3190,16 +3154,6 @@ static void RootMatrix(CGhoul2Info_v &ghoul2,int time,const vec3_t scale,mdxaBon
 	retMatrix=identityMatrix;
 }
 
-extern cvar_t	*r_shadowRange;
-static inline bool bInShadowRange(vec3_t location)
-{
-	const float c = DotProduct( tr.viewParms.ori.axis[0], tr.viewParms.ori.origin );
-	const float dist = DotProduct( tr.viewParms.ori.axis[0], location ) - c;
-
-//	return (dist < tr.distanceCull/1.5f);
-	return (dist < r_shadowRange->value);
-}
-
 /*
 ==============
 R_AddGHOULSurfaces
@@ -3258,7 +3212,7 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 	modelList[255]=548;
 
 	// set up lighting now that we know we aren't culled
-	if ( !personalModel || r_shadows->integer > 1 ) {
+	if ( !personalModel ) {
 		R_SetupEntityLighting( &tr.refdef, ent );
 	}
 
@@ -3341,10 +3295,6 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 #else
 			CRenderSurface RS(ghoul2[i].mSurfaceRoot, ghoul2[i].mSlist, cust_shader, fogNum, personalModel, ghoul2[i].mBoneCache, ent->e.renderfx, skin, (model_t *)ghoul2[i].currentModel, whichLod, ghoul2[i].mBltlist);
 #endif
-			if (!personalModel && (RS.renderfx & RF_SHADOW_PLANE) && !bInShadowRange(ent->e.origin))
-			{
-				RS.renderfx |= RF_NOSHADOW;
-			}
 			RenderSurfaces(RS);
 		}
 	}
@@ -5145,7 +5095,6 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 
 
 
-#ifdef RD_VULKAN_VISION
 /*
 ==============
 G2_BoneMatrices
@@ -5211,4 +5160,3 @@ void G2_SkinGore( CRenderableSurface *surf )
 		}
 	}
 }
-#endif

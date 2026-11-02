@@ -50,13 +50,6 @@ static void RB_SetGL2D( void ) {
 	const float	width = 640.0f + 2.0f * bias, height = 480.0f + 2.0f * biasY;
 	float		ortho[16];
 
-	// tay_renderScale: the views of the level are done, the 2D is drawn in the size of the window
-	if ( vk.inScene ) {
-		if ( tess.numIndexes ) {
-			RB_EndSurface();
-		}
-		VK_LeaveScene();
-	}
 	backEnd.projection2D = qtrue;
 	// On a plane in the level the 2D still lands at the front of the depth buffer, where the flat 2D is. With the
 	// depth of the plane, the stages that test it (most shader scripts of the menus do, their text does not) were
@@ -123,7 +116,6 @@ has said who it is, how large a texture may be and how much anisotropic filter t
 */
 void VK_InitConfig( void ) {
 	glConfig.extensions_string = "";
-	glConfigExt.originalExtensionString = "";
 	glConfig.maxActiveTextures = NUM_TEXTURE_BUNDLES;
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
@@ -135,8 +127,6 @@ void VK_InitConfig( void ) {
 	glConfig.stereoEnabled = qfalse;
 	// gamma and overbright are one pass over the finished frame (shaders/gamma.frag), not a ramp of the display
 	glConfig.deviceSupportsGamma = qfalse;
-	glConfigExt.doGammaCorrectionWithShaders = qtrue;
-	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
 
 	// the setup menus offer the anisotropic filter only if this cvar says how much of it there is
 	ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
@@ -392,7 +382,7 @@ RB_DistortionFill
 Surfaces with the shader internal_distortion have marked their shape in the stencil buffer (RB_StageIteratorGeneric).
 That shape is filled with a copy of the screen that is stretched a little, more and less with the time, so that
 what lies behind seems to bend: a cloaked player, the trail of cg_saberTrail 2. This is RB_DistortionFill() of
-rd-vanilla (tr_shadows.cpp) with its numbers.
+rd-vanilla with its numbers.
 
 rd-vanilla copies a part of the screen into a texture for this, a centered rectangle whose sides are the largest
 powers of two that fit, and puts that over the whole view. The copy here is the whole frame, so the texture
@@ -572,7 +562,7 @@ cvar_t	*v_lodPixels;	// 0: models choose their detail by the share of the screen
 static int VK_ShaderMergesEntities( const shader_t *shader ) {
 	int result = 1;
 
-	if ( shader->sky || shader == tr.shadowShader || shader == tr.projectionShadowShader ) {
+	if ( shader->sky ) {
 		return 0;
 	}
 	for ( int i = 0; i < shader->numDeforms; i++ ) {
@@ -583,8 +573,6 @@ static int VK_ShaderMergesEntities( const shader_t *shader ) {
 		case DEFORM_MOVE:
 			result = 2;
 			break;
-		case DEFORM_PROJECTION_SHADOW:
-			return 0;
 		default:
 			// the sprites and the texts are made vertex by vertex from the view
 			break;
@@ -759,8 +747,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	uint64_t oldSort = (uint64_t)-1;
 	const float originalTime = backEnd.refdef.floatTime;	// save original time for entity shader offsets
 	drawSurf_t *drawSurf = drawSurfs;
-	// the stencil shadows are darkened once, and not in the glow pass
-	qboolean didShadowPass = (qboolean)RB_KEEPS_FRAME();
 	// what VK_ShaderMergesEntities() says about a shader, asked once for a run of surfaces
 	const shader_t *mergeShader = NULL;
 	int shaderMerges = 0;
@@ -855,12 +841,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
-				// the shadow volumes come with the sort of banners: when they are through, darken the frame
-				// where they left a mark in the stencil buffer, before anything transparent is drawn
-				if ( !didShadowPass && shader->sort > SS_BANNER ) {
-					RB_ShadowFinish();
-					didShadowPass = qtrue;
-				}
 				if ( shader->sort > SS_BANNER ) {
 					RB_DrawWet( oldDepthRange );
 				}
@@ -936,10 +916,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		// draw in the stencil buffer's cutout
 		RB_DistortionFill();
 	}
-	if ( !didShadowPass ) {
-		// darken down any stencil shadows
-		RB_ShadowFinish();
-	}
 }
 
 /*
@@ -1004,13 +980,6 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
-	}
-	// tay_renderScale: a view of the level (with its mirrors and the sky of a portal) in the targets of its size, a
-	// model of the HUD in the window's
-	if ( cmd->refdef.rdflags & RDF_NOWORLDMODEL ) {
-		VK_LeaveScene();
-	} else {
-		VK_EnterScene();
 	}
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;

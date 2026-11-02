@@ -11,7 +11,7 @@ anything is downloaded (`v_downloadReview 1`, the default):
 - every pak the server offers, ticked: untick what you do not want;
 - **Keep them (downloads folder)**: the paks go into `<game>/downloads` of your home folder and stay there;
 - **This session only**: they go into `<game>/downloads/session`, which is emptied when the game starts and
-  when it ends (`v_downloadKeep 0` makes that the default);
+  when it ends (the default since 2026-11-02, `v_downloadKeep 0`);
 - **Download**, **Join without** (nothing is downloaded), **Disconnect**. A pure server may not let you play
   without its files.
 
@@ -49,7 +49,7 @@ that were downloaded into the game folder itself before 0.1.9 stay where they ar
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|
 | `v_downloadReview` | 1 | the two windows. 0: everything is downloaded, programs in it stay blocked |
-| `v_downloadKeep` | 1 | where the paks go by default: `downloads` (1) or `downloads/session` (0) |
+| `v_downloadKeep` | 0 (1 before 2026-11-02) | where the paks go by default: `downloads` (1) or `downloads/session` (0) |
 | `v_downloadReview_do` | | what a click in the windows does, for a key or a script: `download`, `without`, `keep 0/1`, `pak <n>`, `kind <pak> <kind>`, `use`, `skip`, `skipall` |
 | `v_downloadHttp` | 1 | paks of a server that names a web address for them come from there. 0: only from the server itself. Bit 14 of `cp_pluginDisable` (AllowDownloadURL_Redirect) does the same |
 

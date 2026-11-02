@@ -34,4 +34,5 @@
 	loadMenu { "ui/vision/updatechannel.menu" }
 	loadMenu { "ui/vision/changelog.menu" }
 	loadMenu { "ui/vision/cvarclean.menu" }
+	loadMenu { "ui/vision/modelpick.menu" }
 }

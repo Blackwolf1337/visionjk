@@ -919,7 +919,8 @@ def leave_out(m):
 
 # Windows of this tree whose frame is a picture of the game in the old menus: that item becomes the frame of the
 # window (window()), so the window hides what is behind it.
-FRAMES = {'changelog.menu': 'changelog_background', 'cvarclean.menu': 'cvarclean_background'}
+FRAMES = {'changelog.menu': 'changelog_background', 'cvarclean.menu': 'cvarclean_background',
+          'modelpick.menu': 'modelpick_background'}
 
 
 def before(m, name, ingame):

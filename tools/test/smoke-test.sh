@@ -14,7 +14,7 @@
 # The clients run in gamescope without an output (no window on the desktop) and with SDL_AUDIODRIVER=dummy,
 # Windows under Wine in a prefix of its own (build-test/smoke-wine). No run contacts a server of the project or a
 # masterserver.
-# Logs: build-test/smoke/<run>.log (linux-client-rd-vanilla.log and so on). A report of AddressSanitizer or
+# Logs: build-test/smoke/<run>.log (linux-client.log and so on). A report of AddressSanitizer or
 # UndefinedBehaviorSanitizer (build-test/smoke/<run>.san.*) fails a run. Exit code 0 when every run passed.
 set -euo pipefail
 
@@ -47,29 +47,27 @@ want() {
 	[ -z "$only" ] || [ "$only" = "$1" ]
 }
 
-# one client run: loads the level with a renderer, takes a screenshot and quits
+# one client run: loads the level, takes a screenshot and quits
 client_run() {
-	local system=$1 renderer=$2 timeout_s=$3 dir=$4 name home log code
-	shift 4
-	name=$system-client-$renderer
+	local system=$1 timeout_s=$2 dir=$3 name home log code
+	shift 3
+	name=$system-client
 	home=$SMOKE/home-$name
 	log=$SMOKE/$name.log
 	mapfile -t args < <(common_args "${HOME_PREFIX:-}$home")
 	mkdir -p "$home"
 	sanitizer_env "$log"
-	code=$(run_client "$log" "$timeout_s" "$dir" "$@" "${args[@]}" +set cl_renderer "$renderer" \
+	code=$(run_client "$log" "$timeout_s" "$dir" "$@" "${args[@]}" \
 		+set r_mode 4 +set r_fullscreen 0 +devmap "$MAP" +wait "$FRAMES" +screenshot smoke +wait 10 +quit)
-	check_run "$system client $renderer" "$code" "$log" "${CLIENT_LINES[@]}"
-	[ -f "$home/japlus/screenshots/smoke.jpg" ] || { results+=("FAIL  $system client $renderer: no screenshot"); failed=1; }
+	check_run "$system client" "$code" "$log" "${CLIENT_LINES[@]}"
+	[ -f "$home/japlus/screenshots/smoke.jpg" ] || { results+=("FAIL  $system client: no screenshot"); failed=1; }
 }
 
 test_linux() {
-	local game home code renderer
+	local game home code
 	game=$(unpack "$SMOKE" linux visionjk.x86_64)
 
-	for renderer in rd-vulkan-vision rd-vanilla; do
-		client_run linux "$renderer" "$TIMEOUT_GAME" "$game" "$game/visionjk.x86_64"
-	done
+	client_run linux "$TIMEOUT_GAME" "$game" "$game/visionjk.x86_64"
 
 	home=$SMOKE/home-linux-server
 	mkdir -p "$home"
@@ -92,7 +90,7 @@ stop_wine() {
 }
 
 test_windows() {
-	local game renderer
+	local game
 	command -v wine > /dev/null || die "wine is missing"
 	game=$(unpack "$SMOKE" windows visionjk.x86_64.exe)
 	# A new prefix is made without a display and without Mono and Gecko, so no dialog of Wine shows up. A run
@@ -106,11 +104,9 @@ test_windows() {
 			> "$SMOKE/wineboot.log" 2>&1 || die "wineboot failed, see $SMOKE/wineboot.log"
 		stop_wine
 	fi
-	for renderer in rd-vulkan-vision rd-vanilla; do
-		# shellcheck disable=SC2016 # expanded by the shell inside gamescope
-		HOME_PREFIX=Z: client_run windows "$renderer" "$TIMEOUT_WINE" "$game" \
-			sh -c 'wine "$@"; code=$?; wineserver -k; wineserver -w; exit $code' sh "$game/visionjk.x86_64.exe"
-	done
+	# shellcheck disable=SC2016 # expanded by the shell inside gamescope
+	HOME_PREFIX=Z: client_run windows "$TIMEOUT_WINE" "$game" \
+		sh -c 'wine "$@"; code=$?; wineserver -k; wineserver -w; exit $code' sh "$game/visionjk.x86_64.exe"
 }
 
 version=

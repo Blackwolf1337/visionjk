@@ -120,13 +120,13 @@ slider on `v_spatialReverb`, "Echo" is `v_spatialEcho` (Real Time or Precalculat
 part of a preset). "Echo Calculation" is `v_spatialGpu` (Graphics Card or CPU, not part of a preset). "Room Reflections" (`v_spatialReflections`), "Echoes of Their Own"
 (`v_spatialSources`: Off, 4, 8, 12, 16) and "Sound Around Corners" (`v_spatialPaths`) are parts of the preset:
 changing one of them says at once which preset the cvars are now, or "Custom" (their action runs
-`uiScript getsoundsetup`). "Real Sound Travel" (`v_spatialPhysical`) and "Doppler Effect" (`s_doppler`) are
+`uiScript getsoundsetup`). "Physically Based Sound" (`v_spatialPhysical`, "Real Sound Travel" until 2026-11-02) and "Doppler Effect" (`s_doppler`) are
 not in any preset: they are a matter of taste, not of what a frame costs. The menu does not know whether the
 library is there: without it the console says so and the sound stays as it is.
 
 Operated by mouse on 2026-10-17 in a hidden client (`v_uiMouse`, clienttests `ui_sound_rows.cfg` and
 `ui_sound_preset.cfg` of the port): the left arrow of "Echoes of Their Own" from 8 to 4, the right one to 12,
-OFF and ON of "Real Sound Travel", the preset row then "Custom", and High to Very High set 16 echoes, 8192 rays
+OFF and ON of "Real Sound Travel" (now "Physically Based Sound"), the preset row then "Custom", and High to Very High set 16 echoes, 8192 rays
 and 32 bounces. The entries were seen in a picture at 1280x720 in English only.
 
 The entry is a cvar of the ui (`v_spatialQuality`) that is worked out from the cvars of the engine by

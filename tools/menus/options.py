@@ -73,32 +73,28 @@ class Layout:
 #   ('bind', name, command, what for)
 #   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
 #   ('menu', name, menu, what for)                a button that opens a window of its own (a menu of the lists)
+#   ('pick', name, cvar, what for)                a button that shows a model the cvar holds and opens the model picker
+#                                               (modelpick.menu), which writes the model it is given into that cvar
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
-        ('old', 'video', ('ui_r_glcustom', 'ui_r_resolution', 'ui_r_displaymode', 'ui_cl_renderer', 'ui_r_ext_multisample',
+        ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample',
                           'r_swapinterval')),
         ('multi', 'Frame Limit', 'com_maxfps', (('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240),
                                                 ('None', 0)), 'The most frames a second the game draws.'),
-        ('yesno', 'Wide Screen Layout', 'v_2dAspect',
-         'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.'),
         ('old', 'video2', ('r_gamma',)),
-        ('multi', 'Render Scale', 'tay_renderScale', (('Half', 0.5), ('Three Quarters', 0.75), ('Full', 1), ('One and a Half', 1.5), ('Double', 2)),
-         'The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart.'),
         ('head', 'Detail'),
-        ('old', 'video', ('ui_r_lodbias', 'ui_r_picmip', 'ui_r_texturemode', 'ui_r_detailtextures',
-                          'ui_r_ext_compress_textures')),
-        ('old', 'video2', ('r_ext_texture_filter_anisotropic', 'r_dynamiclight')),
+        ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
-        ('old', 'video2', ('cg_marks', 'cg_shadows', 'cg_rendertotexturefx', 'advancedvideo')),
-        ('head', 'Vulkan Renderer'),
-        ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings. Vulkan renderer only.'),
+        ('old', 'video2', ('advancedvideo',)),
+        ('head', 'Bloom'),
+        ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
         ('slider', 'Bloom Threshold', 'tay_bloomThreshold', 0.5, 0, 0.95, 'How bright a part has to be to shine.'),
         ('head', 'Screen Effects'),
-        ('yesno', 'Screen Effects', 'v_screenFx', 'Master switch for all screen effects. Only with the Vulkan renderer.'),
+        ('yesno', 'Screen Effects', 'v_screenFx', 'Master switch for all screen effects.'),
         ('yesno', 'Explosion Waves', 'v_fxBlast', 'Explosions send a wave through the air that bends the picture. Close by, the colours split.'),
-        ('yesno', 'Ringing Ears', 'v_soundTinnitus', 'After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer.'),
+        ('yesno', 'Ringing Ears', 'v_soundTinnitus', 'After an explosion close by the sound turns dull and your ears ring for a moment.'),
         ('yesno', 'Heat Haze', 'v_fxHeat', 'The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes.'),
         ('yesno', 'Hit Feedback', 'v_fxHit', 'A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays.'),
         ('yesno', 'Under Water', 'v_fxWater', 'Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface.'),
@@ -120,7 +116,7 @@ SETUP = [
         ('multi', 'Echoes of Their Own', 'v_spatialSources', (('Off', 0), ('4', 4), ('8', 8), ('12', 12), ('16', 16)),
          'How many of the loudest sounds echo off the walls around them. More costs more time a frame.'),
         ('yesno', 'Sound Around Corners', 'v_spatialPaths', 'A sound finds its way around corners.'),
-        ('yesno', 'Real Sound Travel', 'v_spatialPhysical',
+        ('yesno', 'Physically Based Sound', 'v_spatialPhysical',
          'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.'),
         ('yesno', 'Doppler Effect', 's_doppler', 'What comes closer or goes away changes its pitch.'),
         ('head', 'Hits'),
@@ -152,38 +148,22 @@ SETUP = [
          'How players look who are in a duel you are not part of. Their colour is v_duelColour in the console.'),
         ('yesno', 'Their Blades', 'v_duelShowSabers', 'The blades of players who are in a duel you are not part of.'),
         ('head', 'Players'),
-        ('edit', 'Enemy Model', 'tay_forceEnemyModel', 32, 'Every opponent in this model, as model/skin. Empty: as they chose.'),
-        ('edit', 'Ally Model', 'tay_forceAllyModel', 32, 'Every team mate in this model, as model/skin. Empty: as they chose.'),
-        ('head', 'Hats and Capes'),
-        ('multistr', 'Hat', 'tay_hat',
-         (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),
-          ('Crown', 'crown'), ('Fedora', 'fedora'), ('Fedora 2', 'fedora2'), ('Fedora 3', 'fedora3'), ('Fedora 4', 'fedora4'),
-          ('Glasses', 'glasses'), ('Graduation Cap', 'gradcap'), ('Headcrab', 'headcrab'), ('Horns', 'horns'),
-          ('Mario Cap', 'mario'), ('Mask', 'mask'), ('Metal Helmet', 'metalhelm'), ('Plague Mask', 'plaguemask'),
-          ('Predator Helmet', 'predatorhelm'), ('Pumpkin', 'pumpkin'), ('Santa Hat', 'santahat'), ('Sombrero', 'sombrero'),
-          ('Super Saiyan Hair', 'supersaiyan'), ('Top Hat', 'tophat')),
-         'What you wear on your head. Other players of VisionJK see it.'),
-        ('multistr', 'Cape', 'tay_cape',
-         (('None', ''), ('Royal Cape', 'royalcape'), ('Vader Cape', 'vadercape'), ('Yoda', 'yodacape'), ('Grogu', 'grogucape'),
-          ('Goose', 'goose'), ('Crowbar', 'crowbar'), ('AK-47', 'ak47'), ('Rocket Launcher', 'rpg')),
-         'What you wear on your back. Other players of VisionJK see it.'),
-        ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
-         'What players wear on their heads and backs. Only players of VisionJK wear them.'),
-        ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
+        ('pick', 'Enemy Model', 'tay_forceEnemyModel', 'Every opponent is shown in the model you pick. As They Chose: each keeps his own.'),
+        ('pick', 'Ally Model', 'tay_forceAllyModel', 'Every team mate is shown in the model you pick. As They Chose: each keeps his own.'),
         ('head', 'Weapons'),
         ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
         ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
-        ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer.'),
+        ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask.'),
         ('yesno', 'Zoom with Mouse Wheel', 'v_scopeWheelZoom', 'While the disruptor zoom is locked, the mouse wheel zooms in and out.'),
         ('slider', 'Motion Tracker Speed', 'v_motionThreshold', 40, 10, 200, 'The speed a player needs before the tracker of the disruptor scope picks him up.'),
-        ('yesno', 'Binocular Lens', 'v_binoculars', 'The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer.'),
+        ('yesno', 'Binocular Lens', 'v_binoculars', 'The binoculars look through a lens with mouse wheel zoom, the distance and a compass.'),
         ('yesno', 'Rocket Lock-On', 'v_lockOn', 'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.'),
     ]),
     ('HUD', 'What the screen shows around the level, the view and the crosshair.', [
         ('head', 'Menus and HUD'),
         ('yesno', 'New HUD', 'v_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
         ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
-        ('yesno', 'Menu in the Level', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
+        ('yesno', '3D Menu', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
         ('slider', 'Menu Blur', 'v_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
         ('head', 'View'),
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
@@ -206,7 +186,6 @@ SETUP = [
         ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
         ('yesno', 'Killfeed', 'tay_killfeed', 'Who killed whom with what, at the upper right.'),
         ('slider', 'Team Overlay Size', 'tay_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
-        ('yesno', 'Scoreboard Clock', 'tay_scoreboardClock', 'The time of day on the scoreboard.'),
         ('yesno', 'Spectator Map', 'tay_specHud', 'While you watch, a map of the players around at the upper right.'),
         ('head', 'Movement'),
         ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
@@ -232,6 +211,22 @@ SETUP = [
         ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
         ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
          'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
+        ('head', 'Hats and Capes'),
+        ('multistr', 'Hat', 'tay_hat',
+         (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),
+          ('Crown', 'crown'), ('Fedora', 'fedora'), ('Fedora 2', 'fedora2'), ('Fedora 3', 'fedora3'), ('Fedora 4', 'fedora4'),
+          ('Glasses', 'glasses'), ('Graduation Cap', 'gradcap'), ('Headcrab', 'headcrab'), ('Horns', 'horns'),
+          ('Mario Cap', 'mario'), ('Mask', 'mask'), ('Metal Helmet', 'metalhelm'), ('Plague Mask', 'plaguemask'),
+          ('Predator Helmet', 'predatorhelm'), ('Pumpkin', 'pumpkin'), ('Santa Hat', 'santahat'), ('Sombrero', 'sombrero'),
+          ('Super Saiyan Hair', 'supersaiyan'), ('Top Hat', 'tophat')),
+         'What you wear on your head. Other players of VisionJK see it.'),
+        ('multistr', 'Cape', 'tay_cape',
+         (('None', ''), ('Royal Cape', 'royalcape'), ('Vader Cape', 'vadercape'), ('Yoda', 'yodacape'), ('Grogu', 'grogucape'),
+          ('Goose', 'goose'), ('Crowbar', 'crowbar'), ('AK-47', 'ak47'), ('Rocket Launcher', 'rpg')),
+         'What you wear on your back. Other players of VisionJK see it.'),
+        ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
+         'What players wear on their heads and backs. Only players of VisionJK wear them.'),
+        ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
         ('head', 'Chat'),
         ('yesno', 'Own Chat Line', 'v_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
         ('slider', 'Chat Box Size', 'v_chatBoxScale', 0.85, 0.6, 1.6,
@@ -250,15 +245,12 @@ SETUP = [
         ('slider', 'Notification Time', 'v_notifyTime', 6000, 2000, 20000, 'How many milliseconds a notification stays.'),
         ('slider', 'Notification Size', 'v_notifyScale', 1, 0.5, 2, 'How large the notifications are.'),
         ('head', 'Console'),
-        ('yesno', 'Sharp Console Font', 'con_font', 'The console in a font with every character.'),
         ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
         ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
         ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
         ('head', 'Clan'),
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
-        ('head', 'Text'),
-        ('yesno', 'UTF-8 Text', 'v_utf8', 'Every character in names and chat. Off for a language with a code page of its own.'),
     ]),
     ('Network', 'Updates, downloads and security.', [
         ('head', 'Updates and Downloads'),
@@ -337,17 +329,14 @@ SCREENS = {'setup.menu': SETUP, 'ingame_setup.menu': SETUP, 'controls.menu': CON
 # for tools/menus/pictures.py, which takes them in the game: what it sets for a and for b, whether that needs a restart
 # of the video, the view (VIEWS of pictures.py) and the part of the frame that is kept (left, top, width as parts of
 # it; the height is 9/16 of the width).
-# Only settings whose difference shows at the size of the pane are here: geometric detail, the texture filters,
-# detailed shaders, anti-aliasing and the render scale were taken and looked the same on both sides (2026-10-30), and
-# the stencil shadows of cg_shadows 2 draw the player wrongly with the Vulkan renderer. The name of a value is a
+# Only settings whose difference shows at the size of the pane are here: anti-aliasing was taken and looked the same
+# on both sides (2026-10-30). The name of a value is a
 # reference to a text or a number without quotes: the reader of the menu files takes a string with % apart, and it
 # joins strings in quotes that stand next to each other into one.
 PICTURE_DIR = 'gfx/menus/vision/setup'
-PICTURE_STEPS = ('stairs', (0.3, 0.35, 0.55))         # close to steps that glow, where texture detail shows
 PICTURE_STAIRS = ('stairs', (0.0, 0.0, 0.7))          # the stairs and the wall above them, for glow and bloom
 PICTURE_ROOM = ('stairs', (0.0, 0.0, 1.0))
 PICTURES = {
-    'ui_r_picmip': ('textures', '@MENUS_LOW', '@MENUS_VERY_HIGH', (('r_picmip', 3, 0),), True, PICTURE_STEPS),
     'r_gamma': ('brightness', '0.8', '1.4', (('r_gamma', 0.8, 1.4),), True, PICTURE_ROOM),
     'r_dynamicglow': ('glow', '@MENUS_OFF', '@MENUS_ON', (('r_DynamicGlow', 0, 1),), True, PICTURE_STAIRS),
     'tay_bloom': ('bloom', '@MENUS_OFF', '@MENUS_ON', (('tay_bloom', 0, 1),), False, PICTURE_STAIRS),
@@ -559,6 +548,14 @@ def menu_row(spec):
             Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['open', menu, ';'])]
 
 
+def pick_row(spec):
+    """A button among the rows that shows the model its cvar holds and opens the model picker for that cvar."""
+    _, text, cvar, about = spec
+    return [Entry('name', ['vision_pick_' + cvar.lower()]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+            Entry('descText', [ref(about)]), Entry('cvar', [quoted(cvar)]),
+            Entry('action', [], list(CLICK) + ['setcvar', 'ui_modelPickTarget', cvar, ';', 'open', 'modelpick_popmenu', ';'])]
+
+
 def new_row(spec):
     """A setting the old menus did not have."""
     kind, text, cvar = spec[:3]
@@ -566,6 +563,8 @@ def new_row(spec):
         return open_row(spec)
     if kind == 'menu':
         return menu_row(spec)
+    if kind == 'pick':
+        return pick_row(spec)
     b = [Entry('name', ['vision_%s_%s' % (kind, cvar.lower().replace(' ', '_').replace('+', ''))]), Entry('type', [TYPES[kind]]),
          Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])])]
     if kind == 'slider':
@@ -828,10 +827,8 @@ def window_frame(m, L):
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'Vulkan Renderer', 'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
-                  'Text', 'Connection', 'Security'}
-ADVANCED_CVARS = {'tay_renderscale', 'v_2daspect', 'r_ext_texture_filter_anisotropic', 'cg_rendertotexturefx', 'ui_r_detailtextures',
-                  'ui_r_ext_compress_textures'}
+ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
+ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold'}
 
 
 def page_sections(m, content, folds):

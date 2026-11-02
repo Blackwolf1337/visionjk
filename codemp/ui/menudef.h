@@ -146,6 +146,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FEEDER_IDSLOG						0x30			// VisionJK: the last lines of ids.log, the newest first
 #define FEEDER_CHANGELOG					0x31			// VisionJK: the versions of the changelog, the newest first
 #define FEEDER_CVARCLEAN					0x32			// VisionJK: the cvars no code used for a month (cvar_cleanup)
+#define FEEDER_FORCEMODEL					0x33			// VisionJK: the models for tay_forceEnemyModel and tay_forceAllyModel
 
 
 // Xbox specific, hope no one minds

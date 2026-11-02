@@ -32,7 +32,7 @@ if [ -n "$WIN" ]; then
 	H=$R/winhome
 	X=$R/winexe
 	mods=("$b/uix86_64.dll" "$b/cgamex86_64.dll" "$b/jampgamex86_64.dll")
-	libs=("$b/rd-vanilla_x86_64.dll" "$src/lib/SDL2/bin/x64/SDL2.dll" /usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll)
+	libs=("$b/rd-vulkan-vision_x86_64.dll" "$src/lib/SDL2/bin/x64/SDL2.dll" /usr/x86_64-w64-mingw32/bin/libwinpthread-1.dll)
 	export WINEPREFIX=$R/wine WINEDLLOVERRIDES="mscoree,mshtml=" WINEDEBUG=-all
 else
 	b=${UPD_BUILD:-$src/build64}
@@ -42,7 +42,7 @@ else
 	H=$R/home
 	X=$R/exe
 	mods=("$b/codemp/ui/uix86_64.so" "$b/codemp/cgame/cgamex86_64.so" "$b/codemp/game/jampgamex86_64.so")
-	libs=("$b/codemp/rd-vanilla/rd-vanilla_x86_64.so")
+	libs=("$b/codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so")
 fi
 url=${UPD_URL:-http://127.0.0.1:$port/update}
 

@@ -1,0 +1,173 @@
+//----------------------------------------------------------------------------------------------
+//
+//	MODEL PICKER (VisionJK): the models a player can see every opponent or every team mate in
+//	(FEEDER_FORCEMODEL of ui/ui_main.c, tay_forceEnemyModel and tay_forceAllyModel). Opened by
+//	the rows Enemy Model and Ally Model of Setup, Game, which name their cvar in
+//	ui_modelPickTarget. The texts are the ones of the new look (strings/<language>/vision.str).
+//
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name					"modelpick_popmenu"
+		visible					0
+		fullScreen				0
+		rect					0 0 640 480
+		focusColor				1 1 1 1
+		outOfBoundsClick
+		popup
+		onOpen
+		{
+			uiScript			ModelPickOpen ;
+			setfocus			modelpick_list
+		}
+		onESC
+		{
+			play				"sound/interface/esc.wav" ;
+			close				modelpick_popmenu ;
+		}
+		itemDef
+		{
+			name				modelpick_background
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				20 40 600 400
+			background			"gfx/menus/main_centerblue"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				modelpick_title
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_PICK_A_MODEL
+			rect				20 52 600 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			300
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				modelpick_list
+			group				none
+			rect				36 82 568 270
+			type				ITEM_TYPE_LISTBOX
+			style				WINDOW_STYLE_FILLED
+			elementwidth		48
+			elementheight		48
+			elementtype			LISTBOX_IMAGE
+			feeder				FEEDER_FORCEMODEL
+			backcolor			0 0 0 .5
+			border				1
+			bordersize			1
+			bordercolor			.5 .5 .5 1
+			forecolor			1 1 1 1
+			visible				1
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+		}
+		// the model the cvar holds, or "As They Chose"
+		itemDef
+		{
+			name				modelpick_name
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			cvar				"ui_modelPickName"
+			rect				36 360 568 24
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			284
+			font				2
+			textscale			0.8
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				modelpick_clear_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				40 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				modelpick_clear
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				40 400 180 24
+			text				@VISION_AS_THEY_CHOSE
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			modelpick_clear_glow
+			}
+			mouseExit
+			{
+				hide			modelpick_clear_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				uiScript		ModelPickClear ;
+				close			modelpick_popmenu ;
+			}
+		}
+		itemDef
+		{
+			name				modelpick_done_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				420 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				modelpick_done
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				420 400 180 24
+			text				@MENUS_DONE_CAPS
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			modelpick_done_glow
+			}
+			mouseExit
+			{
+				hide			modelpick_done_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				close			modelpick_popmenu ;
+			}
+		}
+	}
+}

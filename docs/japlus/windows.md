@@ -24,11 +24,11 @@ scenarios in the VM and sends back logs and pictures.
 | | Result |
 |---|---|
 | Start | from an unpacked folder, no installer. Windows asks once whether the game may be reached from the network (the firewall question), and the game runs without an answer |
-| `rd-vanilla` | starts on Mesa's OpenGL 4.6, draws menus and levels |
+| `rd-vanilla` (gone since 2026-11-02) | started on Mesa's OpenGL 4.6, drew menus and levels |
 | `rd-vulkan-vision` | starts on lavapipe (Vulkan 1.4), draws the menus. The first time this DLL ran on Windows at all. A level was not loaded with it here |
-| The new menus | the first page, Play, Setup with its new tabs, Controls, the profile page and the server browser look as on Linux, on both renderers. The fonts `vision_sans` and `vision_mono` are there |
+| The new menus | the first page, Play, Setup with its new tabs, Controls, the profile page and the server browser look as on Linux, with both renderers. The fonts `vision_sans` and `vision_mono` are there |
 | The new HUD | health, shield, force, saber, score, as on Linux |
-| The menu in the level | the panel stands beside the player with the in-game bar and Setup on it (rd-vanilla) |
+| The menu in the level | the panel stands beside the player with the in-game bar and Setup on it (seen with rd-vanilla) |
 | Sound | SDL opens the device through WASAPI |
 | Spatial sound (`v_spatial 1`) | `phonon.dll` is loaded (Steam Audio 4.8.1), the level is handed over (50749 triangles of mp/ffa3 in 96 ms) and its paths are worked out in the background (740 probes) and stored. It is off by default on Windows |
 | Voice chat, devices | `v_voice_devices` lists the microphone and the speakers of Windows by name |

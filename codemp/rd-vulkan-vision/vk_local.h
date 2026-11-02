@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 // rd-vulkan-vision: everything that touches the GPU. The front end (loaders, shader parser, Ghoul2, scene) is
-// built from rd-vanilla, see vk_hooks.h.
+// in common/, see vk_hooks.h.
 //
 // The renderer is a shared part and a device. The shared part decides what is drawn and in which order, and names
 // no type and no function of a graphics library: vk_backend.cpp, vk_shade.cpp, vk_gl.cpp, vk_world.cpp,
@@ -171,7 +171,6 @@ typedef enum {
 #define VKS_DEPTH_WRITE		0x02u
 #define VKS_DEPTH_EQUAL		0x04u
 #define VKS_OFFSET			0x08u
-#define VKS_DEPTH_LESS		0x40u
 #define VKS_STENCIL			0x80u
 #define VKS_CULL_SHIFT		4		// VKC_*, 2 bits
 
@@ -191,11 +190,10 @@ typedef struct vkImage_s : vkDeviceImage_t {	// one entry of the texture table
 	qboolean		uploaded;		// all levels are there and the layout is the one for sampling
 } vkImage_t;
 
-typedef struct vkStencil_s {	// what the draws of stencil shadows need beyond the state bits, in the words of OpenGL
+typedef struct vkStencil_s {	// what a draw with a stencil test needs beyond the state bits, in the words of OpenGL
 	qboolean	test;				// GL_STENCIL_TEST
 	int			func, ref;			// glStencilFunc
 	int			ops[2][3];			// front and back: when the stencil test fails, when the depth test fails, when both pass
-	qboolean	depthLess;			// glDepthFunc( GL_LESS )
 } vkStencil_t;
 
 typedef struct vkIndexRange_s {	// a run of indexes in a buffer on the device
@@ -267,12 +265,6 @@ typedef struct vkState_s : vkDeviceState_t {
 	const vkIndexRange_t		*ranges;			// or, for surfaces of models, the runs of indexes to draw
 	int							numRanges;			// 0: numBoundIndexes from firstIndex
 	int							viewport[4];		// x, y, width, height as OpenGL counts them, in pixels of the window
-	// tay_renderScale (VK_EnterScene): the size the views of the level are drawn at, 0 0: at the size of the window.
-	// While they are drawn (inScene) color, depth and glow are the targets of that size and width and height
-	// are theirs, sceneWidth and sceneHeight hold the window's, and sceneRect is what of the window the views covered.
-	int							sceneWidth, sceneHeight;
-	qboolean					inScene;
-	int							sceneRect[4];
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
 	// what the frame was made of, for gfxinfo: [0] the frame being recorded, [1] the last finished one
@@ -404,13 +396,6 @@ void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float
 void		VK_FrameInfo_f( void );
 int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
-// tay_renderScale: the views of the level go into the targets of their size, or are copied into the frame and
-// drawing goes on in the window's size. A rectangle or point in pixels of the window becomes one in pixels of the
-// target drawn into (unchanged outside the views).
-void		VK_EnterScene( void );
-void		VK_LeaveScene( void );
-void		VK_SceneRect( int *x, int *y, int *width, int *height );
-void		VK_ScenePoint( int *x, int *y );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
 				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadIndexes( const vkBuffer_t *vertexBuffer, const vkSize_t *offsets, int numBindings, const glIndex_t *indexes, int numIndexes );
@@ -464,10 +449,6 @@ void		VK_ShowTarget( int slot, const vkTarget_t *target );
 // frame. vk.color, vk.depth and vk.final are
 // made when the device starts.
 void		VK_CreatePostTargets( int blurWidth, int blurHeight );
-// tay_renderScale: the targets of the views of the level in that size, qfalse when the device can not have them.
-// VK_SwapSceneTargets() trades them with color, depth, glow and their sets, either way. No target is begun.
-qboolean	VK_CreateSceneTargets( int width, int height );
-void		VK_SwapSceneTargets( void );
 
 // vk_cmd.cpp
 // The device is through with what this frame recorded the last time: its buffers can be written and VK_ProbeDepth()
@@ -536,9 +517,6 @@ typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;
 void		VK_AddTarget( vkTarget_t *source, vkAdd_t how );
 // all of source into dest, which is at least as large, to its upper left corner. No target is begun.
 void		VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest );
-// tay_renderScale: the color the views of the level were drawn into (while it is not traded in) over the rectangle
-// to of vk.color, filtered (x, y, width, height as OpenGL counts them). Begins vk.color with vk.depth, which stays begun.
-void		VK_DrawScene( const int *to );
 // The depth of vk.depth at the pixels of count probes of the frame, from probe[first] on (x and y count from the
 // upper left corner). No target is begun. VK_ProbeDepth() has it when VK_BeginCommands() gets this frame again:
 // what the depth buffer holds, 0 to 1.

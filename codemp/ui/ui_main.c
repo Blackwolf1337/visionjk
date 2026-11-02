@@ -511,6 +511,8 @@ static void UI_BuildFindPlayerList(qboolean force);
 static int QDECL UI_ServersQsortCompare( const void *arg1, const void *arg2 );
 static int UI_MapCountByGameType(qboolean singlePlayer);
 static int UI_HeadCountByColor( void );
+static void UI_ModelPickSet( const char *model );
+static void UI_ModelPickOpen( void );
 static void UI_ParseGameInfo(const char *teamFile);
 static const char *UI_SelectedMap(int index, int *actual);
 static int UI_GetIndexFromSelection(int actual);
@@ -1807,17 +1809,9 @@ static void UI_DrawClanName(rectDef_t *rect, float scale, vec4_t color, int text
 	Text_Paint(rect->x, rect->y, scale, color, UI_Cvar_VariableString("ui_teamName"), 0, 0, textStyle, iMenuFont);
 }
 
-static void UI_SetCapFragLimits(qboolean uiVars) {
-	int cap = 5;
-	int frag = 10;
-
-	if (uiVars) {
-		trap->Cvar_Set("ui_captureLimit", va("%d", cap));
-		trap->Cvar_Set("ui_fragLimit", va("%d", frag));
-	} else {
-		trap->Cvar_Set("capturelimit", va("%d", cap));
-		trap->Cvar_Set("fraglimit", va("%d", frag));
-	}
+static void UI_SetCapFragLimits( void ) {
+	trap->Cvar_Set( "capturelimit", "5" );
+	trap->Cvar_Set( "fraglimit", "10" );
 }
 
 static const char* UI_GetGameTypeName(int gtEnum)
@@ -3996,7 +3990,6 @@ static qboolean UI_GameType_HandleKey(int flags, float *special, int key, qboole
 
 		trap->Cvar_Set("ui_gametype", va("%d", value));
 		trap->Cvar_Update(&ui_gametype);
-		UI_SetCapFragLimits(qtrue);
 		if (resetMap && oldCount != UI_MapCountByGameType(qtrue)) {
 			trap->Cvar_Set( "ui_currentMap", "0");
 			trap->Cvar_Update(&ui_currentMap);
@@ -4888,7 +4881,7 @@ static void UI_StartSkirmish(qboolean next) {
 	temp = trap->Cvar_VariableValue( "fraglimit" );		trap->Cvar_Set("ui_saveFragLimit", va("%i", temp));
 	temp = trap->Cvar_VariableValue( "duel_fraglimit" );	trap->Cvar_Set("ui_saveDuelLimit", va("%i", temp));
 
-	UI_SetCapFragLimits(qfalse);
+	UI_SetCapFragLimits();
 
 	temp = trap->Cvar_VariableValue( "cg_drawTimer" );	trap->Cvar_Set("ui_drawTimer", va("%i", temp));
 	temp = trap->Cvar_VariableValue( "g_doWarmup" );		trap->Cvar_Set("ui_doWarmup", va("%i", temp));
@@ -5053,71 +5046,6 @@ static void UI_Update(const char *name) {
 		Q_strncpyz( buf, UI_Cvar_VariableString( "name" ), sizeof( buf ) );
 		trap->Cvar_Set( "ui_Name", buf );
 	}
-	else if (Q_stricmp(name, "ui_r_lodbias") == 0)
-	{
-		switch (val)
-		{
-			case 0:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-				break;
-			case 1:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
-				break;
-
-			case 2:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
-				break;
-		}
-	}
-	else if (Q_stricmp(name, "ui_r_glCustom") == 0)
-	{
-		// the detail of the picture. The size of the window, fullscreen and the renderer are not part of a preset
-		switch (val)
-		{
-		case 0:	// high quality
-
-			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_picmip", 0 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );//stencil
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
-			break;
-
-		case 1: // normal
-			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_picmip", 1 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
-			break;
-
-		case 2: // fast
-
-			trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 1 );
-			trap->Cvar_SetValue( "ui_r_picmip", 2 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 1 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-			break;
-
-		case 3: // fastest
-
-			trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 2 );
-			trap->Cvar_SetValue( "ui_r_picmip", 3 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 0 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-			break;
-		}
-	}
 	else if (Q_stricmp(name, "ui_mousePitch") == 0)
 	{
 		if (val == 0)	trap->Cvar_SetValue( "m_pitch", 0.022f );
@@ -5197,7 +5125,7 @@ you to discard your changes if you did something you didnt want
 */
 void UI_UpdateVideoSetup ( void )
 {
-	char	resolution[32], renderer[MAX_QPATH];
+	char	resolution[32];
 	int		width, height, displayMode;
 
 	// "desktop" is the size of the screen, "<width>x<height>" one of the sizes of the list (Item_Multi_FeedVideoModes)
@@ -5213,21 +5141,7 @@ void UI_UpdateVideoSetup ( void )
 	displayMode = (int)trap->Cvar_VariableValue( "ui_r_displaymode" );
 	trap->Cvar_Set( "r_fullscreen", displayMode == 1 ? "1" : "0" );
 	trap->Cvar_Set( "r_noborder", displayMode == 2 ? "1" : "0" );
-	Q_strncpyz( renderer, UI_Cvar_VariableString( "ui_cl_renderer" ), sizeof( renderer ) );
-	if ( renderer[0] ) {
-		trap->Cvar_Set( "cl_renderer", renderer );
-	}
 	trap->Cvar_Set ( "r_ext_multisample", UI_Cvar_VariableString ( "ui_r_ext_multisample" ) );
-	trap->Cvar_Set ( "r_lodbias", UI_Cvar_VariableString ( "ui_r_lodbias" ) );
-	trap->Cvar_Set ( "r_picmip", UI_Cvar_VariableString ( "ui_r_picmip" ) );
-	trap->Cvar_Set ( "r_texturemode", UI_Cvar_VariableString ( "ui_r_texturemode" ) );
-	trap->Cvar_Set ( "r_detailtextures", UI_Cvar_VariableString ( "ui_r_detailtextures" ) );
-	trap->Cvar_Set ( "r_ext_compress_textures", UI_Cvar_VariableString ( "ui_r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "r_subdivisions", UI_Cvar_VariableString ( "ui_r_subdivisions" ) );
-	trap->Cvar_Set ( "r_fastSky", UI_Cvar_VariableString ( "ui_r_fastSky" ) );
-	trap->Cvar_Set ( "r_inGameVideo", UI_Cvar_VariableString ( "ui_r_inGameVideo" ) );
-	trap->Cvar_Set ( "r_allowExtensions", UI_Cvar_VariableString ( "ui_r_allowExtensions" ) );
-	trap->Cvar_Set ( "cg_shadows", UI_Cvar_VariableString ( "ui_cg_shadows" ) );
 	trap->Cvar_Set ( "ui_r_modified", "0" );
 
 	trap->Cmd_ExecuteText( EXEC_APPEND, "vid_restart;" );
@@ -5243,23 +5157,10 @@ interface versions of the cvars.
 */
 void UI_GetVideoSetup ( void )
 {
-	trap->Cvar_Register ( NULL, "ui_r_glCustom",				"4", CVAR_INTERNAL|CVAR_ARCHIVE );
-
 	// Make sure the cvars are registered as read only.
 	trap->Cvar_Register ( NULL, "ui_r_resolution",			"desktop", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_displaymode",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_cl_renderer",				"", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_ext_multisample",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_lodbias",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_picmip",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_texturemode",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_detailtextures",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_ext_compress_textures",	"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_subdivisions",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_fastSky",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_inGameVideo",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_allowExtensions",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_cg_shadows",				"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_modified",				"0", CVAR_ROM|CVAR_INTERNAL );
 
 	// Copy over the real video cvars into their temporary counterparts
@@ -5270,18 +5171,7 @@ void UI_GetVideoSetup ( void )
 		trap->Cvar_Set ( "ui_r_resolution",			va( "%ix%i", uiInfo.uiDC.glconfig.vidWidth, uiInfo.uiDC.glconfig.vidHeight ) );
 	}
 	trap->Cvar_Set ( "ui_r_displaymode",				trap->Cvar_VariableValue( "r_fullscreen" ) ? "1" : ( trap->Cvar_VariableValue( "r_noborder" ) ? "2" : "0" ) );
-	trap->Cvar_Set ( "ui_cl_renderer",				UI_Cvar_VariableString ( "cl_renderer" ) );
 	trap->Cvar_Set ( "ui_r_ext_multisample",			UI_Cvar_VariableString ( "r_ext_multisample" ) );
-	trap->Cvar_Set ( "ui_r_lodbias",					UI_Cvar_VariableString ( "r_lodbias" ) );
-	trap->Cvar_Set ( "ui_r_picmip",					UI_Cvar_VariableString ( "r_picmip" ) );
-	trap->Cvar_Set ( "ui_r_texturemode",				UI_Cvar_VariableString ( "r_texturemode" ) );
-	trap->Cvar_Set ( "ui_r_detailtextures",			UI_Cvar_VariableString ( "r_detailtextures" ) );
-	trap->Cvar_Set ( "ui_r_ext_compress_textures",	UI_Cvar_VariableString ( "r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "ui_r_subdivisions",				UI_Cvar_VariableString ( "r_subdivisions" ) );
-	trap->Cvar_Set ( "ui_r_fastSky",					UI_Cvar_VariableString ( "r_fastSky" ) );
-	trap->Cvar_Set ( "ui_r_inGameVideo",				UI_Cvar_VariableString ( "r_inGameVideo" ) );
-	trap->Cvar_Set ( "ui_r_allowExtensions",			UI_Cvar_VariableString ( "r_allowExtensions" ) );
-	trap->Cvar_Set ( "ui_cg_shadows",					UI_Cvar_VariableString ( "cg_shadows" ) );
 	trap->Cvar_Set ( "ui_r_modified",					"0" );
 }
 
@@ -6470,7 +6360,6 @@ static void UI_RunMenuScript(char **args)
 				}
 			}
 		} else if (Q_stricmp(name, "updateSPMenu") == 0) {
-			UI_SetCapFragLimits(qtrue);
 			UI_MapCountByGameType(qtrue);
 			trap->Cvar_SetValue("ui_mapIndex", UI_GetIndexFromSelection(ui_currentMap.integer));
 			trap->Cvar_Update(&ui_mapIndex);
@@ -6571,6 +6460,10 @@ static void UI_RunMenuScript(char **args)
 		} else if (Q_stricmp(name, "CvarCleanRemove") == 0 || Q_stricmp(name, "CvarCleanRemoveAll") == 0) {
 			UI_CvarCleanRemove( (qboolean)!Q_stricmp( name, "CvarCleanRemoveAll" ) );
 			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "ModelPickOpen") == 0) {	// VisionJK: the window of the model picker
+			UI_ModelPickOpen();
+		} else if (Q_stricmp(name, "ModelPickClear") == 0) {
+			UI_ModelPickSet( "" );
 		}
 		else if (Q_stricmp(name, "checkservername") == 0)
 		{
@@ -6962,8 +6855,6 @@ static void UI_RunMenuScript(char **args)
 			UI_SaveForceTemplate();
 		} else if (Q_stricmp(name, "refreshForce") == 0) {
 			UI_UpdateForcePowers();
-		} else if (Q_stricmp(name, "glCustom") == 0) {
-			trap->Cvar_Set("ui_r_glCustom", "4");
 		}
 		else if (Q_stricmp(name, "setMovesListDefault") == 0)
 		{
@@ -7996,13 +7887,9 @@ static void UI_BuildServerDisplayList(int force) {
 		force = 0;
 	}
 
-	// do motd updates here too
-	trap->Cvar_VariableStringBuffer( "cl_motdString", uiInfo.serverStatus.motd, sizeof(uiInfo.serverStatus.motd) );
+	// the text that runs through the bar of the server list
+	Q_strncpyz( uiInfo.serverStatus.motd, "Welcome to Jedi Academy MP!", sizeof( uiInfo.serverStatus.motd ) );
 	len = strlen(uiInfo.serverStatus.motd);
-	if (len == 0) {
-		Q_strncpyz( uiInfo.serverStatus.motd, "Welcome to Jedi Academy MP!", sizeof( uiInfo.serverStatus.motd ) );
-		len = strlen(uiInfo.serverStatus.motd);
-	}
 	if (len != uiInfo.serverStatus.motdLen) {
 		uiInfo.serverStatus.motdLen = len;
 		uiInfo.serverStatus.motdWidth = -1;
@@ -8592,6 +8479,10 @@ static int UI_FeederCount(float feederID)
 		case FEEDER_Q3HEADS:
 			return UI_HeadCountByColor();
 
+		case FEEDER_FORCEMODEL:
+			UI_Q3HeadsNeeded();
+			return uiInfo.q3HeadCount;
+
 		case FEEDER_SIEGE_TEAM1:
 			if (!siegeTeam1)
 			{
@@ -8863,6 +8754,9 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	else if (feederID == FEEDER_Q3HEADS) {
 		int actual;
 		return UI_SelectedTeamHead(index, &actual);
+	}
+	else if (feederID == FEEDER_FORCEMODEL) {
+		return ( index >= 0 && index < uiInfo.q3HeadCount ) ? uiInfo.q3HeadNames[index] : "";
 	}
 	else if (feederID == FEEDER_SIEGE_TEAM1)
 	{
@@ -9187,6 +9081,87 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	return "";
 }
 
+/*
+=================
+UI_HeadIcon
+
+The picture of a model of the list (uiInfo.q3HeadNames), registered when it is first drawn
+=================
+*/
+static qhandle_t UI_HeadIcon( int index ) {
+	if (!uiInfo.q3HeadIcons[index])
+	{ //this isn't the best way of doing this I guess, but I didn't want a whole seperate string array
+	  //for storing shader names. I can't just replace q3HeadNames with the shader name, because we
+	  //print what's in q3HeadNames and the icon name would look funny.
+		char iconNameFromSkinName[256];
+		int i = 0;
+		int skinPlace;
+		const char *skinSlash = strrchr( uiInfo.q3HeadNames[index], '/' );
+
+		if ( !skinSlash )
+		{ // (UI_BuildQ3Model_List keeps only names with one)
+			return 0;
+		}
+		skinPlace = (int)( skinSlash - uiInfo.q3HeadNames[index] ) + 1; //remember that this is where the skin name begins
+
+		//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
+		Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
+
+		i = strlen(iconNameFromSkinName);
+
+		while (iconNameFromSkinName[i] != '/')
+		{
+			i--;
+		}
+
+		i++;
+		iconNameFromSkinName[i] = 0; //terminate, and append..
+		Q_strcat(iconNameFromSkinName, 256, "icon_");
+
+		//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
+		Q_strcat( iconNameFromSkinName, sizeof( iconNameFromSkinName ), uiInfo.q3HeadNames[index] + skinPlace );
+
+		//and now we are ready to register (thankfully this will only happen once)
+		uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
+	}
+	return uiInfo.q3HeadIcons[index];
+}
+
+/*
+=================
+UI_ModelPickSet / UI_ModelPickOpen
+
+The window of the model picker (ui/jamp/modelpick.menu), opened by a row of Setup that names its cvar in
+ui_modelPickTarget (tay_forceEnemyModel, tay_forceAllyModel): the models of the list as pictures, a click writes
+model/skin into that cvar, "As They Chose" empties it. ui_modelPickName is what the window shows under the list.
+=================
+*/
+static void UI_ModelPickSet( const char *model ) {
+	const char *target = UI_Cvar_VariableString( "ui_modelPickTarget" );
+
+	if ( Q_stricmp( target, "tay_forceEnemyModel" ) && Q_stricmp( target, "tay_forceAllyModel" ) ) {
+		return;
+	}
+	trap->Cvar_Set( target, model );
+	trap->Cvar_Set( "ui_modelPickName", model[0] ? model : Vision_Text( "As They Chose" ) );
+}
+
+static void UI_ModelPickOpen( void ) {
+	char	now[MAX_QPATH];
+	int		i;
+
+	UI_Q3HeadsNeeded();
+	Q_strncpyz( now, UI_Cvar_VariableString( UI_Cvar_VariableString( "ui_modelPickTarget" ) ), sizeof( now ) );
+	trap->Cvar_Set( "ui_modelPickName", now[0] ? now : Vision_Text( "As They Chose" ) );
+	for ( i = 0; i < uiInfo.q3HeadCount; i++ ) {
+		if ( now[0] && !Q_stricmp( uiInfo.q3HeadNames[i], now ) ) {
+			break;
+		}
+	}
+	// nothing marked while every player keeps his own model
+	Menu_SetFeederSelection( NULL, FEEDER_FORCEMODEL, i < uiInfo.q3HeadCount ? i : -1, NULL );
+}
+
 static qhandle_t UI_FeederItemImage(float feederID, int index) {
 	int	validCnt,i;
 	static char info[MAX_STRING_CHARS];
@@ -9239,44 +9214,13 @@ static qhandle_t UI_FeederItemImage(float feederID, int index) {
 				}
 			}
 
-			if (!uiInfo.q3HeadIcons[index])
-			{ //this isn't the best way of doing this I guess, but I didn't want a whole seperate string array
-			  //for storing shader names. I can't just replace q3HeadNames with the shader name, because we
-			  //print what's in q3HeadNames and the icon name would look funny.
-				char iconNameFromSkinName[256];
-				int i = 0;
-				int skinPlace;
-				const char *skinSlash = strrchr( uiInfo.q3HeadNames[index], '/' );
-
-				if ( !skinSlash )
-				{ // (UI_BuildQ3Model_List keeps only names with one)
-					return 0;
-				}
-				skinPlace = (int)( skinSlash - uiInfo.q3HeadNames[index] ) + 1; //remember that this is where the skin name begins
-
-				//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
-				Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
-
-				i = strlen(iconNameFromSkinName);
-
-				while (iconNameFromSkinName[i] != '/')
-				{
-					i--;
-				}
-
-				i++;
-				iconNameFromSkinName[i] = 0; //terminate, and append..
-				Q_strcat(iconNameFromSkinName, 256, "icon_");
-
-				//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
-				Q_strcat( iconNameFromSkinName, sizeof( iconNameFromSkinName ), uiInfo.q3HeadNames[index] + skinPlace );
-
-				//and now we are ready to register (thankfully this will only happen once)
-				uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
-			}
-			return uiInfo.q3HeadIcons[index];
+			return UI_HeadIcon( index );
 		}
     }
+	else if (feederID == FEEDER_FORCEMODEL)
+	{
+		return ( index >= 0 && index < uiInfo.q3HeadCount && uiInfo.q3HeadNames[index][0] ) ? UI_HeadIcon( index ) : 0;
+	}
 	else if (feederID == FEEDER_SIEGE_TEAM1)
 	{
 		if (!siegeTeam1)
@@ -9469,6 +9413,15 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 	}
 	if ( feederID == FEEDER_CVARCLEAN ) {
 		UI_CvarCleanSelect( index );
+		return qtrue;
+	}
+
+	// VisionJK: a click on a model of the window of the model picker writes it into the cvar the row named
+	// (ui_modelPickTarget); the selection that only shows what the cvar holds (UI_ModelPickOpen) does not
+	if ( feederID == FEEDER_FORCEMODEL ) {
+		if ( item && index >= 0 && index < uiInfo.q3HeadCount && uiInfo.q3HeadNames[index][0] ) {
+			UI_ModelPickSet( uiInfo.q3HeadNames[index] );
+		}
 		return qtrue;
 	}
 
@@ -11337,9 +11290,6 @@ static void UI_ConnectPanel( const uiClientState_t *cstate ) {
 		// what the server said (server full, bad version, etc)
 		Q_strncpyz( now, cstate->messageString, sizeof( now ) );
 	}
-	if ( !now[0] ) {
-		Q_strncpyz( now, Info_ValueForKey( cstate->updateInfoString, "motd" ), sizeof( now ) );
-	}
 	Skin_LoadPanel( title, about, now, fraction );
 }
 
@@ -11401,8 +11351,6 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
 	}
 
-	// display global MOTD at bottom
-	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, FONT_MEDIUM);
 	// print any server info (server full, bad version, etc)
 	if ( cstate.connState < CA_CONNECTED ) {
 		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, FONT_MEDIUM);

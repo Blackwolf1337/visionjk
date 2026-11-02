@@ -235,7 +235,7 @@ well: the headers of a request, base64, SHA-1.
 
 | | Desktop | Page |
 |---|---------|------|
-| Renderer | Vulkan device | OpenGL ES 3 device (WebGL2), the same renderer otherwise |
+| Renderer | Vulkan device | OpenGL ES 3 device (WebGL2), the same renderer otherwise. A browser without WebGL 2 gets an error dialog that says to use a current browser with hardware acceleration, there is no fallback |
 | Voice chat | yes | yes, through `/voice` of the web host. Talking needs https or the machine of the server itself, hearing does not. See [voice.md](voice.md) |
 | `v_spatial` (Steam Audio) | the library is loaded when the sound system starts, two threads work for it, off by default | the library is loaded the same way, as `phonon.wasm`, when the server has that file, and `v_spatial` is on by default. The page's one thread does the work, so the reverb follows the listener twice a second and not seven times, and a level of more than 2000 probes has no sound round corners. See [audio.md](audio.md) |
 | Compressed textures | `r_ext_compress_textures` | no |

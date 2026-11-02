@@ -164,7 +164,7 @@ static void CL_DownloadReview_f( void ) {
 void CL_DownloadInit( void ) {
 	Cmd_AddCommand( "v_downloadReview_do", CL_DownloadReview_f, "What a click in the windows of a download does, for a key or a script" );
 	v_downloadReview = Cvar_Get( "v_downloadReview", "1", CVAR_ARCHIVE_ND, "Before a download: choose the paks of the server, and after it what of them is used. 0: all of them, programs in them stay blocked" );
-	v_downloadKeep = Cvar_Get( "v_downloadKeep", "1", CVAR_ARCHIVE_ND, "Downloaded paks are kept in <game>/downloads. 0: in downloads/session, for this session only" );
+	v_downloadKeep = Cvar_Get( "v_downloadKeep", "0", CVAR_ARCHIVE_ND, "1: downloaded paks are kept in <game>/downloads. 0: in downloads/session, for this session only" );
 	v_downloadHttp = Cvar_Get( "v_downloadHttp", "1", CVAR_ARCHIVE_ND, "Paks of a server that names a web address for them (jp_DlBaseURL) come from there. 0: only from the server itself" );
 }
 

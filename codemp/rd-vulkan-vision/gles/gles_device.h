@@ -40,7 +40,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   turned again when it is copied to the window. The shared files then need to know nothing about it.
 // - WebGL reads no depth back. Whether a flare is covered is asked with a query: is a point at its place and
 //   depth seen. The answer comes some frames later, as the depth of the Vulkan device does.
-// The names of OpenGL ES come from gles_gl.h, which rd-vanilla/qgl.h includes.
+// The names of OpenGL ES come from gles_gl.h, which common/qgl.h includes.
 
 // ------------------------------------------------------------------------------------------------------------
 // what the shared files take from a device

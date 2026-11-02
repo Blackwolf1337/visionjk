@@ -401,16 +401,6 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 		// FIXME: bmodel fog?
 	}
 
-	/*
-	if (r_shadows->integer == 2)
-	{
-		dlightBits = R_DlightSurface( surf, dlightBits );
-		//dlightBits = ( dlightBits != 0 );
-		R_AddDrawSurf( surf->data, tr.shadowShader, surf->fogIndex, dlightBits );
-	}
-	*/
-	//world shadows?
-
 	// try to cull before dlighting or adding
 #ifdef _ALT_AUTOMAP_METHOD
 	if (!tr_drawingAutoMap && R_CullSurface( surf->data, surf->shader ) )

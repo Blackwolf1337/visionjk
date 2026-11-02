@@ -1128,6 +1128,45 @@ void Com_ExecuteCfg(void)
 }
 
 /*
+==================
+Com_ConfigSteps
+
+Changes to the config of a player that a version makes once, counted in v_configStep. Runs after the config and
+before the command line, so a +set still wins.
+1 (2026-11-02): the detail settings that left the video menu go back to their defaults, a low preset of the old
+  menu can not be seen or undone there any more
+2 (2026-11-02): cg_shadows 2 and 3 (stencil volumes, flattened copies of the model) went, they become the blob (1)
+==================
+*/
+static void Com_ConfigSteps( void ) {
+#ifndef DEDICATED
+	static const char *step1[][2] = {
+		{ "r_picmip", "0" }, { "r_lodbias", "0" }, { "r_textureMode", "GL_LINEAR_MIPMAP_LINEAR" },
+		{ "r_ext_texture_filter_anisotropic", "16" }, { "r_ext_compress_textures", "1" }, { "r_dynamiclight", "1" },
+		{ "cg_marks", "1" }, { "cg_renderToTextureFX", "1" }, { "r_subdivisions", "4" }, { "r_fastsky", "0" },
+		{ "r_inGameVideo", "1" },
+	};
+	cvar_t	*step = Cvar_Get( "v_configStep", "0", CVAR_ARCHIVE_ND, "Changes a version made to the config once" );
+
+	if ( step->integer < 1 ) {
+		// only what the config has: the rest gets its default when it is registered
+		for ( size_t i = 0; i < ARRAY_LEN( step1 ); i++ ) {
+			if ( !( Cvar_Flags( step1[i][0] ) & CVAR_NONEXISTENT ) ) {
+				Cvar_Set( step1[i][0], step1[i][1] );
+			}
+		}
+		Cvar_Set( "v_configStep", "1" );
+	}
+	if ( step->integer < 2 ) {
+		if ( Cvar_VariableIntegerValue( "cg_shadows" ) > 1 ) {
+			Cvar_Set( "cg_shadows", "1" );
+		}
+		Cvar_Set( "v_configStep", "2" );
+	}
+#endif
+}
+
+/*
 =================
 Com_InitRand
 Seed the random number generator, if possible with an OS supplied random seed.
@@ -1283,6 +1322,7 @@ void Com_Init( char *commandLine ) {
 		Cmd_SetCommandCompletionFunc( "writeconfig", Cmd_CompleteCfgName );
 
 		Com_ExecuteCfg();
+		Com_ConfigSteps();
 
 		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );

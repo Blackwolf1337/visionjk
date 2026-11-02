@@ -12,16 +12,8 @@ from texts_more import MORE
 
 # what an old menu file of this tree says in English, where the new menus say it better
 OLD = {
-    'Shadows Type': 'Shadows',
-    'select the player Shadow type': 'How the shadows of the players are drawn.',
-    'No Shadow': 'None',
-    'Render To TextureFX': 'Render To Texture Effects',
-    'Reduce some laggy effects(cloak, push blur, protected spheres ...) on some ATI video cards':
-        'Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them.',
     'Display Mode:': 'Display Mode',
     'A window, the whole screen, or a window without a border': 'A window, the whole screen, or a window without a border.',
-    'Renderer:': 'Renderer',
-    'Draw with Vulkan or with OpenGL': 'Draw with Vulkan or with OpenGL.',
     'Anti-Aliasing:': 'Anti-Aliasing',
     'Smooths the edges, costs speed': 'Smooths the edges, costs speed.',
     '3D Sound:': '3D Sound',
@@ -39,8 +31,8 @@ OLD = {
     'Microphone Gain:': 'Microphone Gain',
     'Activation Level:': 'Activation Level',
     'Muffle Behind Walls:': 'Muffle Behind Walls',
-    'Show Who Talks:': 'Show Who Talks',
-    'On Other Servers:': 'On Other Servers',
+    'Talking Players List:': 'Talking Players List',
+    'Voice via Masterserver:': 'Voice via Masterserver',
     'Own Voice In The Room:': 'Own Voice In The Room',
     'Radio Sound:': 'Radio Sound',
     'JetPack': 'Jetpack',
@@ -141,26 +133,14 @@ TR = {
     'Window': 'Fenster',
     'Fullscreen': 'Vollbild',
     'Borderless': 'Rahmenlos',
-    'Renderer': 'Renderer',
-    'Draw with Vulkan or with OpenGL.': 'Mit Vulkan oder OpenGL rendern.',
     'Anti-Aliasing': 'Kantenglättung',
     'Smooths the edges, costs speed.': 'Glättet Kanten, kostet Leistung.',
     'Frame Limit': 'FPS-Limit',
     'The most frames a second the game draws.': 'Maximale Bilder pro Sekunde.',
     'None': 'Keine',
-    'Wide Screen Layout': 'Breitbild-Layout',
-    'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.':
-        'Menüs und HUD behalten bei einem breiten Fenster ihre Proportionen. Gilt nach einem Neustart der Grafik.',
     'Dynamic Glow': 'Dynamisches Leuchten',
     'Lightsabers and lights glow.': 'Lichtschwerter und Lichtquellen leuchten.',
-    'Shadows': 'Schatten',
-    'How the shadows of the players are drawn.': 'Wie Spielerschatten dargestellt werden.',
     'Default': 'Standard',
-    'More Realistic': 'Realistischer',
-    'Realistic': 'Realistisch',
-    'Render To Texture Effects': 'Render-to-Texture-Effekte',
-    'Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them.':
-        'Aus: keine langsamen Effekte (Tarnung, Machtstoß-Unschärfe, Schutzsphären) auf Grafikkarten, die damit Probleme haben.',
 
     # sound
     'Steam Audio: sound that knows the level. Needs its library next to the game.':
@@ -258,9 +238,9 @@ TR = {
     'Seasonal Hats': 'Saisonale Hüte',
     'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.': 'Weihnachtsmütze an Weihnachten, Kürbis an Halloween, für alle ohne Hut.',
     'Enemy Model': 'Gegnermodell',
-    'Every opponent in this model, as model/skin. Empty: as they chose.': 'Jeder Gegner erscheint mit diesem Modell (Modell/Skin). Leer: wie vom Spieler gewählt.',
     'Ally Model': 'Teammodell',
-    'Every team mate in this model, as model/skin. Empty: as they chose.': 'Jeder Teamkamerad erscheint mit diesem Modell (Modell/Skin). Leer: wie gewählt.',
+    'Every opponent is shown in the model you pick. As They Chose: each keeps his own.': 'Jeder Gegner wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes.',
+    'Every team mate is shown in the model you pick. As They Chose: each keeps his own.': 'Jeder Mitspieler wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes.',
     'Saber Team Colours': 'Teamfarben für Klingen',
     'In team games every blade in the colour of its team. Off: blades keep their colour.': 'In Teamspielen hat jede Klinge die Farbe ihres Teams. Aus: Klingen behalten ihre Farbe.',
     'Two-Coloured Staff': 'Zweifarbiger Stab',
@@ -279,8 +259,6 @@ TR = {
     'Time': 'Uhrzeit',
     'Date and Time': 'Datum und Uhrzeit',
     'A clock in the corner of the console.': 'Eine Uhr in der Ecke der Konsole.',
-    'Scoreboard Clock': 'Uhr im Scoreboard',
-    'The time of day on the scoreboard.': 'Die Uhrzeit im Scoreboard.',
     'Timer Milliseconds': 'Timer mit Millisekunden',
     'The timer of the level with milliseconds.': 'Zeigt den Timer des Levels mit Millisekunden.',
     'Timer Counts Down': 'Timer als Countdown',
@@ -296,7 +274,6 @@ TR = {
     'Jump Goal': 'Sprungziel',
     'Jumps at least this fast are gold in the list of jumps. 0: off.': 'Sprünge ab dieser Geschwindigkeit erscheinen in der Sprungliste golden. 0: aus.',
     'Smooth Camera': 'Kamera glätten',
-    'Vulkan Renderer': 'Vulkan-Renderer',
     'Spectator Map': 'Zuschauerkarte',
     'While you watch, a map of the players around at the upper right.': 'Zeigt beim Zuschauen oben rechts eine Karte der Spieler in der Nähe.',
     'Lead Indicator': 'Vorhalteanzeige',
@@ -304,18 +281,11 @@ TR = {
     'Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid.': 'Zeigt, wohin du zielen musst, damit ein fliegender Schuss einen bewegten Gegner trifft. Viele Server werten das als Zielhilfe.',
     'The camera behind you follows the same at every frame rate. It trails a little further behind.': 'Die Kamera hinter dir folgt bei jeder Bildrate gleich. Sie hängt etwas weiter hinterher.',
     'Bloom': 'Bloom',
-    'Bright parts of the level shine over their surroundings. Vulkan renderer only.': 'Helle Stellen des Levels strahlen auf ihre Umgebung aus. Nur mit dem Vulkan-Renderer.',
+    'Bright parts of the level shine over their surroundings.': 'Helle Stellen des Levels strahlen auf ihre Umgebung aus.',
     'Bloom Strength': 'Bloom-Stärke',
     'How strongly the bright parts shine.': 'Wie stark die hellen Stellen strahlen.',
     'Bloom Threshold': 'Bloom-Schwelle',
     'How bright a part has to be to shine.': 'Wie hell eine Stelle sein muss, um zu strahlen.',
-    'Render Scale': 'Renderskalierung',
-    'Half': 'Halb',
-    'Three Quarters': 'Drei Viertel',
-    'Full': 'Voll',
-    'One and a Half': '1,5-fach',
-    'Double': 'Doppelt',
-    'The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart.': 'Auflösung, in der das Level gezeichnet wird. Das HUD bleibt scharf. Nur mit dem Vulkan-Renderer, gilt nach einem Neustart der Grafik.',
     'Name Alert': 'Namenshinweis',
     'Marked': 'Markiert',
     'Marked and Sound': 'Markiert mit Ton',
@@ -333,7 +303,7 @@ TR = {
         'Echtzeit: wird laufend berechnet, die lautesten Geräusche haben ihr eigenes Echo. Vorberechnet: einmal pro Level berechnet und gespeichert, stabil beim Bewegen, alle Geräusche hallen mit dem Raum, in dem du stehst.',
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
         'Wie viele der lautesten Geräusche von den Wänden widerhallen. Mehr kostet mehr Leistung pro Bild.',
-    'Real Sound Travel': 'Echte Schallausbreitung',
+    'Physically Based Sound': 'Physikalischer Klang',
     'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.':
         'Geräusche werden mit der Entfernung leiser wie in echt, verlieren in der Ferne ihre Höhen und erreichen dich mit Schallgeschwindigkeit.',
     'Talk to and hear other players with your microphone.': 'Mit dem Mikrofon andere Spieler hören und mit ihnen sprechen.',
@@ -356,9 +326,9 @@ TR = {
         'Sprachaktivierung: wie laut du sein musst, damit gesendet wird.',
     'Muffle Behind Walls': 'Hinter Wänden dämpfen',
     'Voices behind walls and under water sound muffled.': 'Stimmen hinter Wänden und unter Wasser klingen gedämpft.',
-    'Show Who Talks': 'Sprecher anzeigen',
+    'Talking Players List': 'Liste sprechender Spieler',
     'A list of the players who are talking on the HUD.': 'Zeigt im HUD eine Liste der Spieler, die gerade sprechen.',
-    'On Other Servers': 'Auf anderen Servern',
+    'Voice via Masterserver': 'Sprache über Masterserver',
     'Servers without voice: use master.jka.vision, which sees your address.':
         'Server ohne Sprachchat: master.jka.vision verwenden, der deine Adresse sieht.',
     'Own Voice In The Room': 'Eigene Stimme im Raum',
@@ -381,7 +351,7 @@ TR = {
     'Classic Menus': 'Klassische Menüs',
     'The menus of the game as they were. Counts from the next start of the game.':
         'Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart.',
-    'Menu in the Level': 'Menü im Level',
+    '3D Menu': '3D-Menü',
     'In a game an open menu stands in the level next to you.': 'Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir.',
     'Menu Blur': 'Menü-Unschärfe',
     'How far the level behind an open menu is out of focus.': 'Wie unscharf das Level hinter einem offenen Menü ist.',
@@ -392,11 +362,11 @@ TR = {
     'Crosshair Size': 'Fadenkreuzgröße',
     'Disruptor': 'Disruptor',
     'Screen Effects': 'Bildschirmeffekte',
-    'Master switch for all screen effects. Only with the Vulkan renderer.': 'Hauptschalter für alle Bildschirmeffekte. Nur mit dem Vulkan-Renderer.',
+    'Master switch for all screen effects.': 'Hauptschalter für alle Bildschirmeffekte.',
     'Explosion Waves': 'Explosionswellen',
     'Ringing Ears': 'Ohrenklingeln',
     'Explosions send a wave through the air that bends the picture. Close by, the colours split.': 'Explosionen schicken eine Welle durch die Luft, die das Bild verbiegt. In der Nähe spalten sich die Farben.',
-    'After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer.': 'Nach einer Explosion in der Nähe wird der Ton dumpf und deine Ohren klingeln kurz. Funktioniert mit jedem Renderer.',
+    'After an explosion close by the sound turns dull and your ears ring for a moment.': 'Nach einer Explosion in der Nähe wird der Ton dumpf und deine Ohren klingeln kurz.',
     'Heat Haze': 'Hitzeflimmern',
     'The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes.': 'Die Luft flimmert über Jetpack-Flammen, dem Flammenwerfer und dem Lauf deines Repetierers oder Blasters nach einer langen Salve, der dann auch raucht.',
     'Hit Feedback': 'Trefferrückmeldung',
@@ -409,13 +379,13 @@ TR = {
     'Clashing blades flash. The air around a lit blade is hot.': 'Aufeinandertreffende Klingen blitzen auf. Die Luft um eine eingeschaltete Klinge ist heiß.',
     'Binoculars and Rockets': 'Fernglas und Raketen',
     'Binocular Lens': 'Fernglas-Linse',
-    'The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer.': 'Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass. Nur mit dem Vulkan-Renderer.',
+    'The binoculars look through a lens with mouse wheel zoom, the distance and a compass.': 'Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass.',
     'Rocket Lock-On': 'Raketen-Zielerfassung',
     'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.': 'Die Zielerfassung des Raketenwerfers zeichnet Klammern, die sich auf das Ziel zuziehen, und piept mit jedem Schritt höher.',
     'Scope Lens': 'Zielfernrohr-Linse',
     'Zoom with Mouse Wheel': 'Zoom mit Mausrad',
     'Motion Tracker Speed': 'Tempo Bewegungsmelder',
-    'The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer.': 'Der gezoomte Disruptor zeigt den Level durch eine Linse. Aus: die flache schwarze Maske. Nur mit dem Vulkan-Renderer.',
+    'The zoomed disruptor shows the level through a lens. Off: the flat black mask.': 'Der gezoomte Disruptor zeigt den Level durch eine Linse. Aus: die flache schwarze Maske.',
     'While the disruptor zoom is locked, the mouse wheel zooms in and out.': 'Solange der Disruptor-Zoom eingerastet ist, zoomt das Mausrad rein und raus.',
     'The speed a player needs before the tracker of the disruptor scope picks him up.': 'Das Tempo, ab dem der Bewegungsmelder des Disruptor-Zielfernrohrs einen Spieler erfasst.',
     'The size of the crosshair.': 'Die Größe des Fadenkreuzes.',
@@ -453,8 +423,6 @@ TR = {
     'How wide the chat box is.': 'Wie breit die Chatbox ist.',
     'Chat Beep': 'Chat-Ton',
     'A sound when somebody says something.': 'Ein Ton, wenn jemand etwas schreibt.',
-    'Sharp Console Font': 'Scharfe Konsolenschrift',
-    'The console in a font with every character.': 'Konsole mit einer Schrift, die alle Zeichen enthält.',
     'Console Text Size': 'Konsolen-Textgröße',
     'The size of the text of the console.': 'Größe des Konsolentextes.',
     'Console Opacity': 'Konsolen-Deckkraft',
@@ -506,9 +474,6 @@ TR = {
     'Key File': 'Schlüsseldatei',
     'The file with the key for the admin login, where no agent has it.':
         'Datei mit dem Schlüssel für den Admin-Login, falls kein Agent ihn hat.',
-    'UTF-8 Text': 'UTF-8-Text',
-    'Every character in names and chat. Off for a language with a code page of its own.':
-        'Alle Zeichen in Namen und Chat. Für Sprachen mit eigener Codepage ausschalten.',
 
     # controls
     'Grapple Hook': 'Enterhaken',
@@ -766,6 +731,9 @@ CGAME = {
     'Left speaker': 'Linker Lautsprecher',
     'Right speaker': 'Rechter Lautsprecher',
     'No boombox here': 'Keine Boombox hier',
+    # the model picker of Setup (codemp/ui/ui_main.c, ui/jamp/modelpick.menu)
+    'As They Chose': 'Wie gewählt',
+    'Pick a Model': 'Modell wählen',
     # the players of music in Setup (codemp/ui/ui_main.c)
     'No player of music runs right now': 'Gerade läuft kein Musikplayer',
     'not running': 'läuft nicht',
@@ -904,7 +872,7 @@ CGAME = {
 }
 
 # names that are the same in every language
-SAME = {'2x', '4x', '8x', 'Vulkan', 'OpenGL', 'Español'}
+SAME = {'2x', '4x', '8x', 'Español'}
 
 LANGUAGES = (('English', None), ('German', 'LANG_GERMAN'), ('French', 'LANG_FRENCH'), ('Spanish', 'LANG_SPANISH'))
 

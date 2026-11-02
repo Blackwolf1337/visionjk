@@ -468,8 +468,8 @@ qboolean CG_DrawOldScoreboard( void ) {
 		CG_Text_Paint ( x - CG_Text_Width ( s, 1.0f, FONT_MEDIUM ) / 2, y, 1.0f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_MEDIUM );
 	}
 
-	// tay_scoreboardClock: the local time in the upper right corner
-	if ( tay_scoreboardClock.integer ) {
+	// the local time in the upper right corner
+	{
 		qtime_t now;
 
 		trap->RealTime( &now );

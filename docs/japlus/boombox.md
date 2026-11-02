@@ -88,7 +88,7 @@ It is a ring that runs out from the cone and bends what is behind it, like the a
 middle and the edge of the ring show the level as it is. It gets weaker as it grows and is gone in less than
 half a second. The ring of a speaker of a sound system grows to about 60 units, the one of a boombox to about
 half of that. This needs `cg_renderToTextureFX 1`, the game's own setting for such effects (on by default). It is
-drawn right with the Vulkan renderer (rd-vulkan-vision). With rd-vanilla the ring can show the level a little
+drawn right with the Vulkan renderer (rd-vulkan-vision). With the old rd-vanilla (gone since 2026-11-02) the ring could show the level a little
 shifted.
 
 A speaker is heard by the way it faces. In front of it you hear all of it, beside it about half. Behind a

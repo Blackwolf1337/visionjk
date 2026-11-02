@@ -396,84 +396,80 @@ codemp/rd-dedicated/tr_model.cpp:dangerousTypeCast:warning:Potentially invalid t
 codemp/rd-dedicated/tr_shader.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/rd-dedicated/tr_shader.cpp:uninitvar:error:Uninitialized variable: images
 codemp/rd-dedicated/tr_skin.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/G2_API.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/G2_bolts.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/G2_bones.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/G2_bones.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/G2_bones.cpp:negativeContainerIndex:warning:Either the condition 'index!=-1' is redundant, otherwise there is negative array index -1.
-codemp/rd-vanilla/G2_misc.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/G2_misc.cpp:invalidPointerCast:portability:Casting between char * and float * which have an incompatible binary data representation.
-codemp/rd-vanilla/G2_misc.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
-codemp/rd-vanilla/G2_misc.cpp:invalidPointerCast:portability:Casting from float * to signed int * is not portable due to different binary data representations on different platforms.
-codemp/rd-vanilla/G2_misc.cpp:uninitMemberVar:warning:Member variable 'SVertexTemp::flags' is not initialized in the constructor.
-codemp/rd-vanilla/G2_misc.cpp:uninitMemberVar:warning:Member variable 'SVertexTemp::newindex' is not initialized in the constructor.
-codemp/rd-vanilla/G2_misc.cpp:uninitMemberVar:warning:Member variable 'SVertexTemp::tex' is not initialized in the constructor.
-codemp/rd-vanilla/G2_surfaces.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/G2_surfaces.cpp:nullPointerArithmeticRedundantCheck:warning:Either the condition '!mod->mdxm' is redundant or there is pointer arithmetic with NULL pointer.
-codemp/rd-vanilla/tr_backend.cpp:ctuOneDefinitionRuleViolation:error:The one definition rule is violated, different classes/structs have the same name 'postRender_s'
-codemp/rd-vanilla/tr_backend.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_bsp.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_bsp.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_cmds.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_curve.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_decals.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_ghoul2.cpp:ctunullpointer:warning:Null pointer dereference: out
-codemp/rd-vanilla/tr_ghoul2.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_ghoul2.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
-codemp/rd-vanilla/tr_ghoul2.cpp:invalidPointerCast:portability:Casting from float * to signed int * is not portable due to different binary data representations on different platforms.
-codemp/rd-vanilla/tr_ghoul2.cpp:nullPointerArithmetic:error:Pointer addition with NULL pointer.
-codemp/rd-vanilla/tr_ghoul2.cpp:nullPointer:warning:Possible null pointer dereference: surface
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::frameSize' is not initialized in the constructor.
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::incomingTime' is not initialized in the constructor.
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::mCurrentTouchRender' is not initialized in the constructor.
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::rootBoneList' is not initialized in the constructor.
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::rootMatrix' is not initialized in the constructor.
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CTransformBone::boneMatrix' is not initialized in the constructor.
-codemp/rd-vanilla/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CTransformBone::parent' is not initialized in the constructor.
-codemp/rd-vanilla/tr_image.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_init.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_init.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_light.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_light.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_local.h:operatorEqVarError:warning:Member variable 'CRenderableSurface::fade' is not assigned a value in 'CRenderableSurface::operator='.
-codemp/rd-vanilla/tr_local.h:operatorEqVarError:warning:Member variable 'CRenderableSurface::impactTime' is not assigned a value in 'CRenderableSurface::operator='.
-codemp/rd-vanilla/tr_local.h:operatorEqVarError:warning:Member variable 'CRenderableSurface::scale' is not assigned a value in 'CRenderableSurface::operator='.
-codemp/rd-vanilla/tr_local.h:uninitMemberVar:warning:Member variable 'CRenderableSurface::fade' is not initialized in the constructor.
-codemp/rd-vanilla/tr_local.h:uninitMemberVar:warning:Member variable 'CRenderableSurface::impactTime' is not initialized in the constructor.
-codemp/rd-vanilla/tr_local.h:uninitMemberVar:warning:Member variable 'CRenderableSurface::scale' is not initialized in the constructor.
-codemp/rd-vanilla/tr_main.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_main.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_marks.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_mesh.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_model.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_quicksprite.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_scene.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_scene.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_shade_calc.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_shade.cpp:ctunullpointer:warning:Null pointer dereference: shader
-codemp/rd-vanilla/tr_shade.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_shader.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
-codemp/rd-vanilla/tr_shader.cpp:nullPointerArithmeticRedundantCheck:warning:Either the condition 'in' is redundant or there is overflow in pointer subtraction.
-codemp/rd-vanilla/tr_skin.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_sky.cpp:negativeIndex:warning:Either the condition 'k<0' is redundant or the array 'b[3]' is accessed at index -1, which is out of bounds.
-codemp/rd-vanilla/tr_surface.cpp:arrayIndexOutOfBoundsCond:warning:Either the condition 'tess.shader->styles[k]<0xfe' is redundant or the array 'styleColors[64][4]' is accessed at index 253, which is out of bounds.
-codemp/rd-vanilla/tr_surface.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_surface.cpp:invalidPointerCast:portability:Casting between unsigned char * and float * which have an incompatible binary data representation.
-codemp/rd-vanilla/tr_world.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
-codemp/rd-vanilla/tr_world.cpp:nullPointerRedundantCheck:warning:Either the condition '!tr.world' is redundant or there is possible null pointer dereference: tr.world.
-codemp/rd-vanilla/tr_WorldEffects.cpp:shiftTooManyBitsSigned:error:Shifting signed 32-bit value by 31 bits is undefined behaviour
-codemp/rd-vanilla/tr_WorldEffects.cpp:shiftTooManyBitsSigned:warning:Shifting signed 32-bit value by 31 bits is undefined behaviour. See condition at line 426.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mHCells' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mWCells' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mXCell' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mXMax' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mYCell' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mYMax' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mZBit' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mZMax' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mGLModeEnum' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mParticleCountRender' is not initialized in the constructor.
-codemp/rd-vanilla/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mSpawnSpeed' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/G2_API.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/G2_bolts.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/G2_bones.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/G2_bones.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/G2_bones.cpp:negativeContainerIndex:warning:Either the condition 'index!=-1' is redundant, otherwise there is negative array index -1.
+codemp/rd-vulkan-vision/common/G2_misc.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/G2_misc.cpp:invalidPointerCast:portability:Casting between char * and float * which have an incompatible binary data representation.
+codemp/rd-vulkan-vision/common/G2_misc.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
+codemp/rd-vulkan-vision/common/G2_misc.cpp:invalidPointerCast:portability:Casting from float * to signed int * is not portable due to different binary data representations on different platforms.
+codemp/rd-vulkan-vision/common/G2_misc.cpp:uninitMemberVar:warning:Member variable 'SVertexTemp::flags' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/G2_misc.cpp:uninitMemberVar:warning:Member variable 'SVertexTemp::newindex' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/G2_misc.cpp:uninitMemberVar:warning:Member variable 'SVertexTemp::tex' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/G2_surfaces.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/G2_surfaces.cpp:nullPointerArithmeticRedundantCheck:warning:Either the condition '!mod->mdxm' is redundant or there is pointer arithmetic with NULL pointer.
+codemp/rd-vulkan-vision/common/tr_bsp.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_bsp.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_cmds.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_curve.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_decals.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:ctunullpointer:warning:Null pointer dereference: out
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:invalidPointerCast:portability:Casting between signed int * and float * which have an incompatible binary data representation.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:invalidPointerCast:portability:Casting from float * to signed int * is not portable due to different binary data representations on different platforms.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:nullPointerArithmetic:error:Pointer addition with NULL pointer.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:nullPointer:warning:Possible null pointer dereference: surface
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::frameSize' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::incomingTime' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::mCurrentTouchRender' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::rootBoneList' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CBoneCache::rootMatrix' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CTransformBone::boneMatrix' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_ghoul2.cpp:uninitMemberVar:warning:Member variable 'CTransformBone::parent' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_image.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_init.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_init.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_light.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_light.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_local.h:operatorEqVarError:warning:Member variable 'CRenderableSurface::fade' is not assigned a value in 'CRenderableSurface::operator='.
+codemp/rd-vulkan-vision/common/tr_local.h:operatorEqVarError:warning:Member variable 'CRenderableSurface::impactTime' is not assigned a value in 'CRenderableSurface::operator='.
+codemp/rd-vulkan-vision/common/tr_local.h:operatorEqVarError:warning:Member variable 'CRenderableSurface::scale' is not assigned a value in 'CRenderableSurface::operator='.
+codemp/rd-vulkan-vision/common/tr_local.h:uninitMemberVar:warning:Member variable 'CRenderableSurface::fade' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_local.h:uninitMemberVar:warning:Member variable 'CRenderableSurface::impactTime' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_local.h:uninitMemberVar:warning:Member variable 'CRenderableSurface::scale' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_main.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_main.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_marks.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_mesh.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_model.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_quicksprite.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_scene.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_scene.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_shade_calc.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_shader.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
+codemp/rd-vulkan-vision/common/tr_shader.cpp:nullPointerArithmeticRedundantCheck:warning:Either the condition 'in' is redundant or there is overflow in pointer subtraction.
+codemp/rd-vulkan-vision/common/tr_skin.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_sky.cpp:negativeIndex:warning:Either the condition 'k<0' is redundant or the array 'b[3]' is accessed at index -1, which is out of bounds.
+codemp/rd-vulkan-vision/common/tr_surface.cpp:arrayIndexOutOfBoundsCond:warning:Either the condition 'tess.shader->styles[k]<0xfe' is redundant or the array 'styleColors[64][4]' is accessed at index 253, which is out of bounds.
+codemp/rd-vulkan-vision/common/tr_surface.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_surface.cpp:invalidPointerCast:portability:Casting between unsigned char * and float * which have an incompatible binary data representation.
+codemp/rd-vulkan-vision/common/tr_world.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
+codemp/rd-vulkan-vision/common/tr_world.cpp:nullPointerRedundantCheck:warning:Either the condition '!tr.world' is redundant or there is possible null pointer dereference: tr.world.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:shiftTooManyBitsSigned:error:Shifting signed 32-bit value by 31 bits is undefined behaviour
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:shiftTooManyBitsSigned:warning:Shifting signed 32-bit value by 31 bits is undefined behaviour. See condition at line 426.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mHCells' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mWCells' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mXCell' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mXMax' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mYCell' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mYMax' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mZBit' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'COutside::mZMax' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mGLModeEnum' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mParticleCountRender' is not initialized in the constructor.
+codemp/rd-vulkan-vision/common/tr_WorldEffects.cpp:uninitMemberVar:warning:Member variable 'CWeatherParticleCloud::mSpawnSpeed' is not initialized in the constructor.
 codemp/rd-vulkan-vision/vk_backend.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast
 codemp/rd-vulkan-vision/vk_backend.cpp:memsetClassFloat:portability:Using memset() on struct which contains a floating point number.
 codemp/rd-vulkan-vision/vk_cmd.cpp:dangerousTypeCast:warning:Potentially invalid type conversion in old-style C cast, clarify/fix with C++ cast

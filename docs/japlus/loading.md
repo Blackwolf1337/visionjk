@@ -295,6 +295,6 @@ The 280 kept sounds were compared once with a fresh unpack of their MP3: all the
   (`SCR_DrawScreenField()`), so starting it after the load needs that changed, and the 48 ms then come when the
   menu is first opened in the level. Open.
 - The sounds of the players are read only on the first join of a session, on a rejoin they are in memory.
-- `rd-vanilla` and the renderer for the browser have no cache: OpenGL packs in the driver, and the device for
+- The renderer for the browser has no cache: OpenGL packs in the driver, and the device for
   the browser takes no textures in blocks.
 - Measured on one level and one machine. Not played by a person with it.

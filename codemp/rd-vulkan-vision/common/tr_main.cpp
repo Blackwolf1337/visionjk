@@ -473,13 +473,6 @@ static void SetFarClip( void )
 	// The sky renders at zFar so need to move it out a little
 	// ...and make sure there is a minimum zfar to prevent problems
 	tr.viewParms.zFar = Com_Clamp(2048.0f, tr.distanceCull * (1.732), sqrtf( farthestCornerDistance ));
-
-	/*
-	if (r_shadows->integer == 2)
-	{ //volume caps need an "infinite" far clipping plane. So I'm using this semi-arbitrary massive number.
-		tr.viewParms.zFar = 524288.0f;
-	}
-	*/
 }
 
 
@@ -992,7 +985,6 @@ qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
 	return qtrue;
 }
 
-#ifdef RD_VULKAN_VISION
 /*
 ========================
 R_PuddleView
@@ -1052,7 +1044,6 @@ static void R_PuddleView( void ) {
 
 	tr.viewParms = oldParms;
 }
-#endif
 
 /*
 =================
@@ -1221,9 +1212,7 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// sort the drawsurfs by sort type, then orientation, then shader
 	R_RadixSort( drawSurfs, numDrawSurfs );
 
-#ifdef RD_VULKAN_VISION
 	R_PuddleView();
-#endif
 
 	// check for any pass through drawing, which
 	// may cause another view to be rendered first
@@ -1336,10 +1325,7 @@ Ghoul2 Insert Start
 				case MOD_BAD:		// null model axis
 					if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
 					{
-						if (!(ent->e.renderfx & RF_SHADOW_ONLY))
-						{
-							break;
-						}
+						break;
 					}
 
   					if (ent->e.ghoul2 && G2API_HaveWeGhoul2Models(*((CGhoul2Info_v *)ent->e.ghoul2)))

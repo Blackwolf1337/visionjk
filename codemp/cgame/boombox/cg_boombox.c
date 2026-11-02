@@ -913,10 +913,12 @@ static void Box_Register( void ) {
 	bx.wave = trap->R_RegisterModel( BOX_WAVE_MODEL );
 	bx.waveShader = trap->R_RegisterShader( BOX_WAVE_SHADER );
 	{
-		char renderer[MAX_QPATH];
+		// the renderer of this tree shows on the disc what the screen has where it rests (RF_REFRACT_REST), and its
+		// engine says that it is this tree with the screen effects it has
+		char value[8];
 
-		trap->Cvar_VariableStringBuffer( "cl_renderer", renderer, sizeof( renderer ) );
-		bx.waveTurns = Q_stristr( renderer, "vulkan" ) ? qtrue : qfalse;
+		trap->Cvar_VariableStringBuffer( "v_cgameScreenFx", value, sizeof( value ) );
+		bx.waveTurns = atoi( value ) ? qtrue : qfalse;
 	}
 }
 
@@ -944,9 +946,9 @@ static void Box_AddCone( const refEntity_t *body, float x, float y, float z, flo
 //
 // The renderer bends with the square of the screen around the origin of a distortion, ent.radius pixels across
 // (RB_CaptureForEntity). rd-vulkan-vision shows on each point of the disc what the screen has where that point
-// rests (RF_REFRACT_REST), so the disc can face any way. rd-vanilla draws the square onto the model by the texture
-// coordinates of the model, which are that square: there the disc is turned to the camera and made exactly that
-// large on the screen, and shows what is behind it as it is but for the ring.
+// rests (RF_REFRACT_REST), so the disc can face any way. The renderer of another engine draws the square onto the
+// model by the texture coordinates of the model, which are that square: there the disc is turned to the camera and
+// made exactly that large on the screen, and shows what is behind it as it is but for the ring.
 static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y, float z, float size, float bend ) {
 	vec3_t	at, to;
 	float	ahead, perUnit, pixels;

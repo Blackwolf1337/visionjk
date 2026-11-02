@@ -1252,33 +1252,26 @@
 //	VIDEO 1 MENU BUTTONS
 //
 //----------------------------------------------------------------------------------------------
+
+
 		itemDef 
-		{
-		   	name 			graphics				
-			group 			video
-			text			@MENUS_VIDEO_QUALITY
-	   		type 			ITEM_TYPE_MULTI	
-			rect			260 188 340 14
-	   		textalign		ITEM_ALIGN_RIGHT
-			textalignx		174
-			textaligny		0
-			font 			4
-			textscale 		1
-			style			WINDOW_STYLE_FILLED
+		{	
+			name				video_mode
+			group				video
+      			type				ITEM_TYPE_MULTI
+			text				@MENUS_VIDEO_MODE
+			feeder				46
+			cvarStrList			feeder
+			cvar				"ui_r_resolution"
+			rect				260 188 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font 				4
+			textscale 			1
 			forecolor			.615 .615 .956 1
-			descText		@MENUS_SELECT_PRESET_GRAPHIC
-
-	   		visible 		1
-
-			cvar 			"ui_r_glCustom"
-			cvarFloatList 
-			{ 
-				@MENUS_HIGH_QUALITY	0 
-				@MENUS_NORMAL		1 
-				@MENUS_FAST		2 
-				@MENUS_FASTEST		3 
-				@MENUS_CUSTOM		4 
-			}
+			descText			@MENUS_CHANGE_THE_DISPLAY_RESOLUTION
+			visible				1
 
 			mouseenter 
 			{ 
@@ -1291,22 +1284,17 @@
 			action 
 			{ 
 				play			"sound/interface/button1.wav" ; 
-				uiScript 		update "ui_r_glCustom" ;
 				setcvar			ui_r_modified	1 ;
 				show			applyChanges
 			}
 		}
 
-
 		itemDef 
 		{	
-			name				video_mode
+			name				fullscreen
 			group				video
-      			type				ITEM_TYPE_MULTI
-			text				@MENUS_VIDEO_MODE
-			feeder				46
-			cvarStrList			feeder
-			cvar				"ui_r_resolution"
+			type				ITEM_TYPE_MULTI
+			text				"Display Mode:"
 			rect				260 202 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -1314,7 +1302,9 @@
 			font 				4
 			textscale 			1
 			forecolor			.615 .615 .956 1
-			descText			@MENUS_CHANGE_THE_DISPLAY_RESOLUTION
+			cvarFloatList		{  "Window" 0 "Fullscreen" 1 "Borderless" 2 }
+			descText			"A window, the whole screen, or a window without a border"
+			cvar				"ui_r_displaymode"
 			visible				1
 
 			mouseenter 
@@ -1333,215 +1323,6 @@
 			}
 		}
 
-		itemDef 
-		{	
-			name				fullscreen
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				"Display Mode:"
-			rect				260 216 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarFloatList		{  "Window" 0 "Fullscreen" 1 "Borderless" 2 }
-			descText			"A window, the whole screen, or a window without a border"
-			cvar				"ui_r_displaymode"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight3
-			}
-			mouseexit 
-			{ 
-				hide			highlight3
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				renderer
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				"Renderer:"
-			rect				260 230 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarStrList			{  "Vulkan" , "rd-vulkan-vision" , "OpenGL" , "rd-vanilla" }
-			descText			"Draw with Vulkan or with OpenGL"
-			cvar				"ui_cl_renderer"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight4
-			}
-			mouseexit 
-			{ 
-				hide			highlight4
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				geometric_detail
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_GEOMETRIC_DETAIL
-			rect				260 244 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarFloatList			{  @MENUS_LOW 2 @MENUS_MEDIUM 1 @MENUS_HIGH 0 }
-			descText			@MENUS_ADJUST_THE_NUMBER_OF
-			cvar				"ui_r_lodbias"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight5
-			}
-			mouseexit 
-			{ 
-				hide			highlight5
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				uiScript		glCustom ;
-				uiScript update 	"ui_r_lodbias" ;
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_detail
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_DETAIL
-			rect				260 258 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarFloatList			{  @MENUS_LOW 3 @MENUS_MEDIUM 2 @MENUS_HIGH 1 @MENUS_VERY_HIGH 0 }
-			descText			@MENUS_SELECT_THE_RESOLUTION
-			cvar				"ui_r_picmip"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight6
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				uiScript		glCustom ;
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_filter
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_FILTER
-			rect				260 272 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarStrList			{  @MENUS_BILINEAR , "GL_LINEAR_MIPMAP_NEAREST" , @MENUS_TRILINEAR , "GL_LINEAR_MIPMAP_LINEAR" }
-			descText			@MENUS_ADJUST_HOW_WELL_THE_TEXTURES
-			cvar				"ui_r_texturemode"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight7
-			}
-			mouseexit 
-			{ 
-				hide			highlight7
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				uiScript		glCustom ;
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				simple_shaders
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_DETAILED_SHADERS
-			rect				260 286 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarFloatList			{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_HIDE_OR_UNHIDE_TEXTURES
-			cvar				"ui_r_detailtextures"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				uiScript		glCustom ;
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
 
 		itemDef 
 		{	
@@ -1555,7 +1336,7 @@
 				@MENUS_OFF 	0 
 				@MENUS_ON 	1 
 			}
-			rect				260 328 340 14
+			rect				260 230 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -1570,46 +1351,12 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight4
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight4
 			} 
-		}
-
-		itemDef 
-		{	
-			name				compress_textures
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_COMPRESSED_TEXTURES
-			rect				260 300 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarFloatList			{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_TAKE_ADVANTAGE_OF_3D
-			cvar				"ui_r_ext_compress_textures"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight9
-			}
-			mouseexit 
-			{ 
-				hide			highlight9
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav"
-				setcvar			ui_r_modified 1
-				show			applyChanges
-			}
 		}
 
 		itemDef 
@@ -1618,7 +1365,7 @@
 			group				video
 			type				ITEM_TYPE_MULTI
 			text				"Anti-Aliasing:"
-			rect				260 314 340 14
+			rect				260 216 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -1632,11 +1379,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight3
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight3
 			} 
 			action 
 			{ 
@@ -1912,99 +1659,6 @@
 			} 
 		}
 
-		
-		itemDef 
-		{	
- 			name				dynamic_light
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				@MENUS_DYNAMIC_LIGHTS
-			cvar				"r_dynamiclight"
-			cvarFloatList		
-			{  
-				@MENUS_OFF 	0 
-				@MENUS_ON 	1 
-			}
-			rect				260 290 340 14
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			@MENUS_TOGGLE_TO_TURN_ON_MOVING
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			dynamic_light_glow
-			}
-			mouseexit 
-			{ 
-				hide			dynamic_light_glow
-			} 
-		}
-		itemDef
-		{
-			name				dynamic_light_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				260 292 340 14
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-
-		itemDef 
-		{	
-			name				wall_marks
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				@MENUS_WALL_MARKS
-			cvar				cg_marks
-			cvarFloatList		
-			{  
-				@MENUS_OFF 	0 
-				@MENUS_ON 	1 
-			}
-			rect				260 304 340 14
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			@MENUS_TOGGLE_TO_DISPLAY_SCORCH
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			wall_marks_glow
-			}
-			mouseexit 
-			{ 
-				hide			wall_marks_glow
-			} 
-		}
-		itemDef
-		{
-			name				wall_marks_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				260 306 340 14
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-
 		itemDef 
 		{	
 			name				anisotropic_filter
@@ -2014,7 +1668,7 @@
 			cvarTest			r_ext_texture_filter_anisotropic_avail
 			disableCvar			{ 0 }     
 			cvarfloat				r_ext_texture_filter_anisotropic 1 .5 16
-			rect				260 321 340 14
+			rect				260 290 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2053,107 +1707,13 @@
 		JA+ new vido option
 		////////////////////
 		*/
-		itemDef 
-		{	
-			name				cg_shadows
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				"Shadows Type"
-			cvar				cg_shadows
-			cvarFloatList		
-			{  
-				"No Shadow" 	0 
-				"Default" 	1 
-				"More Realistic" 	2
-				"Realistic" 	3
-			}
-			rect				260 340 340 14
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			"select the player Shadow type"
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			cg_shadows_glow
-			}
-			mouseexit 
-			{ 
-				hide			cg_shadows_glow
-			} 
-		}
-		itemDef
-		{
-			name				cg_shadows_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				260 342 340 14
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-		
-		itemDef 
-		{	
-			name				cg_renderToTextureFX
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				"Render To TextureFX"
-			cvar				cg_renderToTextureFX
-			cvarFloatList		
-			{  
-				@MENUS_OFF 	0 
-				@MENUS_ON 	1
-				
-			}
-			rect				260 360 340 14
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			"Reduce some laggy effects(cloak, push blur, protected spheres ...) on some ATI video cards"
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			cg_renderToTextureFX_glow
-			}
-			mouseexit 
-			{ 
-				hide			cg_renderToTextureFX_glow
-			} 
-		}
-		itemDef
-		{
-			name				cg_renderToTextureFX_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				260 362 340 14
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
 
 		itemDef 
 		{
 			name				advancedvideobutton_glow
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 384 340 14
+			rect				260 314 340 14
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			visible				0
@@ -2166,7 +1726,7 @@
 			group				video2
       		type					ITEM_TYPE_BUTTON
 			text				@MENUS_SHOW_DRIVER_INFO
-			rect				260 384 340 14
+			rect				260 314 340 14
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			170
 			textaligny			0
@@ -2577,7 +2137,7 @@
 			name				voicechat7
 			group				voicechat
 			type				ITEM_TYPE_YESNO
-			text				"Show Who Talks:"
+			text				"Talking Players List:"
 			cvar				"v_voiceDrawTalkers"
 			rect				260 296 340 14
 			textalign			ITEM_ALIGN_RIGHT
@@ -2607,7 +2167,7 @@
 			name				voicechat8
 			group				voicechat
 			type				ITEM_TYPE_YESNO
-			text				"On Other Servers:"
+			text				"Voice via Masterserver:"
 			cvar				"v_voiceMaster"
 			rect				260 314 340 14
 			textalign			ITEM_ALIGN_RIGHT
@@ -2854,12 +2414,16 @@
 
 		itemDef 
 		{	
-			name				defermodels
+			name				teamchatsonly
 			group				options
       			type				ITEM_TYPE_MULTI
-			text				@MENUS_DEFER_PLAYER_MODELS
-			cvar				"cg_deferPlayers"
-			cvarFloatList			{  @MENUS_OFF 0 @MENUS_ON 1 }
+			text				@MENUS_TEAM_CHATS_ONLY
+			cvar				"cg_teamChatsOnly"
+			cvarFloatList		
+			{ 
+				@MENUS_NO	0
+				@MENUS_YES	1
+			}
 			rect				260 230 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2868,12 +2432,11 @@
 			textscale 			1
 			forecolor			0.65 0.65 1 1
 			visible				0
-			descText			@MENUS_DEFERS_LOADING_OF_NEW
+			descText			@MENUS_IGNORE_NON_TEAM_CHATS
 			action
 			{
 				play			"sound/interface/button1.wav" ; 
 			}
-
 			mouseenter 
 			{ 
 				show			highlight4
@@ -2886,16 +2449,12 @@
 
 		itemDef 
 		{	
-			name				teamchatsonly
+			name				simpleitems
 			group				options
       			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEAM_CHATS_ONLY
-			cvar				"cg_teamChatsOnly"
-			cvarFloatList		
-			{ 
-				@MENUS_NO	0
-				@MENUS_YES	1
-			}
+			text				@MENUS_SIMPLE_ITEMS
+			cvar				"cg_simpleItems"
+			cvarFloatList			{  @MENUS_OFF 0 @MENUS_ON 1 }
 			rect				260 244 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2904,7 +2463,7 @@
 			textscale 			1
 			forecolor			0.65 0.65 1 1
 			visible				0
-			descText			@MENUS_IGNORE_NON_TEAM_CHATS
+			descText			@MENUS_RENDER_ICONS_FOR_ITEMS
 			action
 			{
 				play			"sound/interface/button1.wav" ; 
@@ -2921,44 +2480,13 @@
 
 		itemDef 
 		{	
-			name				simpleitems
-			group				options
-      			type				ITEM_TYPE_MULTI
-			text				@MENUS_SIMPLE_ITEMS
-			cvar				"cg_simpleItems"
-			cvarFloatList			{  @MENUS_OFF 0 @MENUS_ON 1 }
-			rect				260 258 340 14
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			@MENUS_RENDER_ICONS_FOR_ITEMS
-			action
-			{
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			highlight6
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-			} 
-		}
-
-		itemDef 
-		{	
 			name				teamoverlay
 			group				options
       			type				ITEM_TYPE_MULTI
 			text				@MENUS_TEAM_OVERLAY
 			cvar				"cg_drawTeamOverlay"
 			cvarFloatList			{  @MENUS_OFF 0 @MENUS_ON 1 }
-			rect				260 272 340 14
+			rect				260 258 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2973,11 +2501,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight7
+				show			highlight6
 			}
 			mouseexit 
 			{ 
-				hide			highlight7
+				hide			highlight6
 			} 
 		}
 
@@ -3000,7 +2528,7 @@
 			{
 				"0"
 			}
-			rect				260 286 340 14
+			rect				260 272 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3018,11 +2546,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight8
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight8
+				hide			highlight7
 			} 
 		}
 
@@ -3044,7 +2572,7 @@
 			{
 				"0"
 			}
-			rect				260 286 340 14
+			rect				260 272 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3062,11 +2590,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight8
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight8
+				hide			highlight7
 			} 
 		}
 
@@ -3080,7 +2608,7 @@
 			descText			@MENUS_ALLOW_DOWNLOADS_INFO
 			cvar				"cl_allowDownload"
 			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			rect				260 300 340 14
+			rect				260 286 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3094,11 +2622,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight9
+				show			highlight8
 			}
 			mouseexit 
 			{ 
-				hide			highlight9
+				hide			highlight8
 			} 
 		}
 
@@ -3117,7 +2645,7 @@
 				@MENUS_SOUNDS_AND_EFFECTS	2
 				@MENUS_SOUNDS_EFFECTS_GRAPHICS	3
 			}
-			rect				260 314 340 14
+			rect				260 300 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3131,11 +2659,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight9
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight9
 			} 
 		}
 
@@ -3148,7 +2676,7 @@
 			cvar				"se_language"
 			feeder				40
 			cvarStrList			feeder
-			rect				260 328 340 14
+			rect				260 314 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3164,11 +2692,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight10
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight10
 			} 
 		}
 		itemDef 
@@ -3185,7 +2713,7 @@
 				Deutsch   deutsch
 				"Español"   espanol
 			}
-			rect				260 342 340 14
+			rect				260 328 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3201,11 +2729,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight12
+				show			highlight11
 			}
 			mouseexit 
 			{ 
-				hide			highlight12
+				hide			highlight11
 			} 
 		}
 
@@ -3217,7 +2745,7 @@
 			text				@MENUS_SET_LANGUAGE
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				260 356 340 14 
+			rect				260 342 340 14 
 			textaligny			0
 			font 				4
 			textscale 			1       
@@ -3235,11 +2763,11 @@
 			}
 			mouseEnter 
 			{ 
-				show			highlight13
+				show			highlight12
 			}
 			mouseExit 
 			{ 
-				hide			highlight13
+				hide			highlight12
 			}	  	  
 
 		}
@@ -3254,7 +2782,7 @@
 			descText			@VISION_STABLE_THE_RELEASES_DEVELOPMENT_EARL
 			cvar				"v_updateChannel"
 			cvarStrList			{ @VISION_STABLE "stable" @VISION_DEVELOPMENT "dev" }
-			rect				260 370 340 14
+			rect				260 356 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3269,11 +2797,11 @@
 			}
 			mouseenter
 			{
-				show			highlight14
+				show			highlight13
 			}
 			mouseexit
 			{
-				hide			highlight14
+				hide			highlight13
 			}
 		}
 

@@ -47,7 +47,7 @@ The build directory is not meant to be looked into. The install collects what th
 
 ```
 JediAcademy/
-  visionjk.x86_64  visionjkded.x86_64  rd-vanilla_x86_64.so  rd-vulkan-vision_x86_64.so
+  visionjk.x86_64  visionjkded.x86_64  rd-vulkan-vision_x86_64.so
   japlus/
     jampgamex86_64.so  cgamex86_64.so  uix86_64.so
     zz_japlus_client_assets.pk3
@@ -112,8 +112,7 @@ What is built:
 | Option | Default | What it does |
 |--------|---------|--------------|
 | `BuildMPEngine` | ON | the client (`visionjk`) |
-| `BuildMPRdVanilla` | ON | the default renderer, `rd-vanilla` |
-| `BuildMPRdVulkanVision` | ON | the Vulkan renderer, `rd-vulkan-vision`. Needs the Vulkan headers and `glslc` |
+| `BuildMPRdVulkanVision` | ON | the renderer, `rd-vulkan-vision`, with its Vulkan device. Needs the Vulkan headers and `glslc` |
 | `BuildMPRdVisionGLES` | OFF | `rd-vulkan-vision` with its OpenGL ES 3 device as a library for the desktop. That device is what the client for the browser draws with |
 | `BuildMPDed` | ON | the dedicated server (`visionjkded`) |
 | `BuildMPGame` | ON | the server-side game code (`jampgamex86_64`) |
@@ -173,9 +172,9 @@ Both need only the headers of Vulkan at build time, the library is loaded at run
 `cmake/Modules/VulkanHeaders.cmake`, `-DVulkanHeadersDir=<dir with vulkan/vulkan.h>` names them if they are not found.
 The shaders are compiled with `glslc` (package shaderc).
 
-The renderer `rd-vulkan-vision` is built by default. Without the headers, or without `glslc`, the configure gives a
-warning, the renderer is not built and the rest is. `-DBuildMPRdVulkanVision=OFF` silences the warning. The classic
-renderer stays, and the game switches to it by itself when the Vulkan one can not run.
+The renderer `rd-vulkan-vision` is built by default. It is the only renderer of the client. Without the headers, or
+without `glslc`, the configure gives a warning, the renderer is not built and the rest is, so the client has no renderer
+and stops at start. `-DBuildMPRdVulkanVision=OFF` silences the warning.
 
 The rays of the echo of Steam Audio can be traced on the graphics card (`v_spatialGpu`). That needs the same two things.
 Without them the configure says "no Vulkan headers or no glslc, the CPU traces all the rays of the echo", and the CPU

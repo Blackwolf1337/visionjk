@@ -39,14 +39,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
-cvar_t	*cl_renderer;
 
 cvar_t	*cl_nodelta;
 cvar_t	*cl_debugMove;
 
 cvar_t	*cl_noprint;
-cvar_t	*cl_motd;
-cvar_t	*cl_motdServer[MAX_MASTER_SERVERS];
 
 cvar_t	*rcon_client_password;
 cvar_t	*rconAddress;
@@ -86,7 +83,6 @@ cvar_t	*m_filter;
 
 cvar_t	*cl_activeAction;
 
-cvar_t	*cl_motdString;
 
 cvar_t	*cl_allowDownload;
 cvar_t	*cl_allowAltEnter;
@@ -100,7 +96,6 @@ cvar_t	*cl_autolodscale;
 
 cvar_t	*cl_consoleKeys;
 cvar_t	*cl_consoleUseScanCode;
-cvar_t	*v_utf8;
 static cvar_t	*v_utf8Text;
 cvar_t	*cl_consoleShiftRequirement;
 
@@ -155,19 +150,15 @@ static void CL_ShutdownRef( qboolean restarting );
 static qboolean CL_EchoAsked( const netadr_t *from, const char *text );
 static qboolean CL_MasterAsked( const netadr_t *from );
 
-// The renderer a client without a stored cl_renderer starts with, and the one that takes its place for a run
-// where the chosen one is not there or says that it can not run on this machine (CL_InitRenderer).
-// macOS: nobody has seen rd-vulkan-vision run there yet.
-#ifdef MACOS_X
-#define DEFAULT_RENDER_LIBRARY "rd-vanilla"
+// The renderer, a library next to the program. Where it can not run (no Vulkan 1.3, a browser without WebGL 2) it
+// comes back without a window and with the reason as renderer_string, and the game stops with that and this text
+// (CL_InitRenderer).
+#define RENDER_LIBRARY "rd-vulkan-vision"
+#ifdef __EMSCRIPTEN__
+#define RENDER_MISSING_TEXT "Your browser can not draw with WebGL 2. Use a current browser and turn on hardware acceleration in its settings."
 #else
-#define DEFAULT_RENDER_LIBRARY "rd-vulkan-vision"
+#define RENDER_MISSING_TEXT "This computer can not run Vulkan 1.3, which the game needs to draw. Update your graphics driver; graphics cards without Vulkan 1.3 support can not run VisionJK."
 #endif
-#define FALLBACK_RENDER_LIBRARY "rd-vanilla"
-
-// This run goes on with the fallback renderer, whatever cl_renderer says. The cvar is left alone, so the next
-// start and a vid_restart try the chosen renderer again (a new driver may have come).
-static qboolean cl_rendererFallback;
 
 /*
 =======================================================================
@@ -188,16 +179,15 @@ userinfo as v_utf8Text, by which a server of this tree knows what a client sends
 ======================
 */
 qboolean CL_UTF8( void ) {
-	static int		utf8Count = -1, languageCount = -1;
+	static int		languageCount = -1;
 	static qboolean	active = qfalse;
 
-	if ( !v_utf8 || !se_language ) {
+	if ( !se_language ) {
 		return qfalse;
 	}
-	if ( v_utf8->modificationCount != utf8Count || se_language->modificationCount != languageCount ) {
-		utf8Count = v_utf8->modificationCount;
+	if ( se_language->modificationCount != languageCount ) {
 		languageCount = se_language->modificationCount;
-		active = (qboolean)( v_utf8->integer && !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
+		active = (qboolean)( !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
 			&& !Language_IsTaiwanese() && !Language_IsJapanese() && !Language_IsChinese() && !Language_IsThai() );
 		Cvar_Set( "v_utf8Text", active ? "1" : "0" );
 	}
@@ -776,7 +766,6 @@ void CL_MapLoading( void ) {
 	// if we are already connected to the local host, stay connected
 	if ( cls.state >= CA_CONNECTED && !Q_stricmp( cls.servername, "localhost" ) ) {
 		cls.state = CA_CONNECTED;		// so the connect screen is drawn
-		Com_Memset( cls.updateInfoString, 0, sizeof( cls.updateInfoString ) );
 		Com_Memset( clc.serverMessage, 0, sizeof( clc.serverMessage ) );
 		Com_Memset( &cl.gameState, 0, sizeof( cl.gameState ) );
 		clc.lastPacketSentTime = -9999;
@@ -923,76 +912,6 @@ void CL_ForwardCommandToServer( const char *string ) {
 		CL_AddReliableCommand( cmd, qfalse );
 	}
 }
-
-/*
-===================
-CL_RequestMotd
-
-===================
-*/
-void CL_RequestMotd( void ) {
-	netadr_t	to;
-	int			i;
-	char		command[MAX_STRING_CHARS], info[MAX_INFO_STRING];
-	char		*motdaddress;
-
-	if ( !cl_motd->integer ) {
-		return;
-	}
-
-	if ( cl_motd->integer < 1 || cl_motd->integer > MAX_MASTER_SERVERS ) {
-		Com_Printf( "CL_RequestMotd: Invalid motd server num. Valid values are 1-%d or 0 to disable\n", MAX_MASTER_SERVERS );
-		return;
-	}
-
-	Com_sprintf( command, sizeof(command), "cl_motdServer%d", cl_motd->integer );
-	motdaddress = Cvar_VariableString( command );
-
-	if ( !*motdaddress )
-	{
-		Com_Printf( "CL_RequestMotd: Error: No motd server address given.\n" );
-		return;
-	}
-
-	i = NET_StringToAdr( motdaddress, &to );
-
-	if ( !i )
-	{
-		Com_Printf( "CL_RequestMotd: Error: could not resolve address of motd server %s\n", motdaddress );
-		return;
-	}
-	to.type = NA_IP;
-	to.port = BigShort( PORT_UPDATE );
-
-	Com_Printf( "Requesting motd from update %s (%s)...\n", motdaddress, NET_AdrToString( &to ) );
-
-	cls.updateServer = to;
-
-	info[0] = 0;
-  // NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a true randomization
-  // only srand I could catch before here is tr_noise.c l:26 srand(1001)
-  // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=382
-  // NOTE: the Com_Milliseconds xoring only affects the lower 16-bit word,
-  //   but I decided it was enough randomization
-	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ), "%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
-
-	Info_SetValueForKey( info, "challenge", cls.updateChallenge );
-	Info_SetValueForKey( info, "renderer", cls.glconfig.renderer_string );
-	Info_SetValueForKey( info, "rvendor", cls.glconfig.vendor_string );
-	Info_SetValueForKey( info, "version", JK_VERSION_OLD " " PLATFORM_STRING " " SOURCE_DATE );
-
-	//If raven starts filtering for this, add this code back in
-#if 0
-	Info_SetValueForKey( info, "cputype", "Intel Pentium IV");
-	Info_SetValueForKey( info, "mhz", "3000" );
-	Info_SetValueForKey( info, "memory", "4096" );
-#endif
-	Info_SetValueForKey( info, "joystick", Cvar_VariableString("in_joystick") );
-	Info_SetValueForKey( info, "colorbits", va("%d",cls.glconfig.colorBits) );
-
-	NET_OutOfBandPrint( NS_CLIENT, &cls.updateServer, "getmotd \"%s\"\n", info );
-}
-
 
 /*
 ======================================================================
@@ -1157,9 +1076,6 @@ void CL_Connect_f( void ) {
 	CL_IDS_Connect();
 
 	Cvar_Set("ui_singlePlayerActive", "0");
-
-	// fire a message off to the motd server
-	CL_RequestMotd();
 
 	// clear any previous "server full" type messages
 	clc.serverMessage[0] = 0;
@@ -1367,8 +1283,7 @@ void CL_Vid_Restart_f( void ) {
 		Hunk_ClearToMark();
 	}
 
-	// initialize the renderer interface, with the renderer cl_renderer names: a run on the fallback tries again
-	cl_rendererFallback = qfalse;
+	// initialize the renderer interface
 	CL_InitRef();
 
 	// startup all the client stuff
@@ -1858,35 +1773,6 @@ void CL_DisconnectPacket( const netadr_t *from ) {
 
 /*
 ===================
-CL_MotdPacket
-
-===================
-*/
-void CL_MotdPacket( const netadr_t *from ) {
-	char	*challenge;
-	char	*info;
-
-	// if not from our server, ignore it
-	if ( !NET_CompareAdr( from, &cls.updateServer ) ) {
-		return;
-	}
-
-	info = Cmd_Argv(1);
-
-	// check challenge
-	challenge = Info_ValueForKey( info, "challenge" );
-	if ( strcmp( challenge, cls.updateChallenge ) ) {
-		return;
-	}
-
-	challenge = Info_ValueForKey( info, "motd" );
-
-	Q_strncpyz( cls.updateInfoString, info, sizeof( cls.updateInfoString ) );
-	Cvar_Set( "cl_motdString", challenge );
-}
-
-/*
-===================
 CL_InitServerInfo
 ===================
 */
@@ -2163,12 +2049,6 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 	// cd check
 	if ( !Q_stricmp(c, "keyAuthorize") ) {
 		// we don't use these now, so dump them on the floor
-		return;
-	}
-
-	// global MOTD from id
-	if ( !Q_stricmp(c, "motd") ) {
-		CL_MotdPacket( from );
 		return;
 	}
 
@@ -2601,27 +2481,12 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
-	// a renderer that widens the 2D grid on a wide window, or makes it taller on a narrow one, says by how much, any
-	// other leaves the 0
-	Cvar_Get( "v_2dBias", "0", CVAR_ROM );
-	Cvar_Set( "v_2dBias", "0" );
-	Cvar_Get( "v_2dBiasY", "0", CVAR_ROM );
-	Cvar_Set( "v_2dBiasY", "0" );
-
-	// this sets up the renderer and calls R_Init
+	// this sets up the renderer and calls R_Init, which says in v_2dBias and v_2dBiasY how far the 2D grid is widened
 	re->BeginRegistration( &cls.glconfig );
 
-	// A renderer that can not run on this machine comes back without a window: rd-vulkan-vision where there is no
-	// Vulkan 1.3 (VK_InitVulkan() says why in the console). The game goes on with the fallback renderer.
-	if ( !cls.glconfig.vidWidth && !cl_rendererFallback ) {
-		Com_Printf( "%s can not run on this machine, going on with " FALLBACK_RENDER_LIBRARY "\n", cl_renderer->string );
-		cl_rendererFallback = qtrue;
-		CL_ShutdownRef( qfalse );
-		CL_InitRef();
-		re->BeginRegistration( &cls.glconfig );
-	}
+	// the renderer can not run on this machine, VK_InitVulkan() said why
 	if ( !cls.glconfig.vidWidth ) {
-		Com_Error( ERR_FATAL, "The renderer made no window" );
+		Com_Error( ERR_FATAL, RENDER_MISSING_TEXT "\n\n%s", cls.glconfig.renderer_string ? cls.glconfig.renderer_string : "" );
 	}
 	cls.bias2D = Cvar_VariableValue( "v_2dBias" );
 	cls.bias2DY = Cvar_VariableValue( "v_2dBiasY" );
@@ -2719,29 +2584,10 @@ void CL_InitRef( void ) {
 
 	Com_Printf( "----- Initializing Renderer ----\n" );
 
-	cl_renderer = Cvar_Get( "cl_renderer", DEFAULT_RENDER_LIBRARY, CVAR_ARCHIVE|CVAR_LATCH, "Which renderer library to use" );
-
-	// The name of a library next to the program, never a path (the ui and menu scripts set it: Sys_LoadDll joined
-	// "../" and the like to the folders it looks in).
-	if ( !cl_renderer->string[0] || cl_renderer->string[strspn( cl_renderer->string,
-		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )] ) {
-		Com_Printf( S_COLOR_YELLOW "cl_renderer \"%s\" is no renderer name, using " FALLBACK_RENDER_LIBRARY "\n", cl_renderer->string );
-		cl_rendererFallback = qtrue;
-	}
-
-	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, cl_rendererFallback ? FALLBACK_RENDER_LIBRARY : cl_renderer->string );
-
-	if( !(rendererLib = Sys_LoadDll( dllName, qfalse )) && !cl_rendererFallback && strcmp( cl_renderer->string, FALLBACK_RENDER_LIBRARY ) )
-	{
-		Com_Printf( "failed: trying to load fallback renderer\n" );
-		cl_rendererFallback = qtrue;
-
-		Com_sprintf( dllName, sizeof( dllName ), FALLBACK_RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
-		rendererLib = Sys_LoadDll( dllName, qfalse );
-	}
-
+	Com_sprintf( dllName, sizeof( dllName ), RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
+	rendererLib = Sys_LoadDll( dllName, qfalse );
 	if ( !rendererLib ) {
-		Com_Error( ERR_FATAL, "Failed to load renderer\n" );
+		Com_Error( ERR_FATAL, "Failed to load %s\n", dllName );
 	}
 
 	memset( &ri, 0, sizeof( ri ) );
@@ -2817,14 +2663,11 @@ void CL_InitRef( void ) {
 	ri.CGVM_RagCallback = CGVM_RagCallback;
 
     ri.WIN_Init = WIN_Init;
-	ri.WIN_SetGamma = WIN_SetGamma;
     ri.WIN_Shutdown = WIN_Shutdown;
     ri.WIN_Present = WIN_Present;
 	ri.WIN_VK_InstanceExtensions = WIN_VK_InstanceExtensions;
 	ri.WIN_VK_CreateSurface = WIN_VK_CreateSurface;
 	ri.WIN_VK_GetInstanceProcAddr = WIN_VK_GetInstanceProcAddr;
-	ri.GL_GetProcAddress = WIN_GL_GetProcAddress;
-	ri.GL_ExtensionSupported = WIN_GL_ExtensionSupported;
 
 	ri.CM_GetCachedMapDiskImage = CM_GetCachedMapDiskImage;
 	ri.CM_SetCachedMapDiskImage = CM_SetCachedMapDiskImage;
@@ -3007,14 +2850,6 @@ void CL_Init( void ) {
 	// register our variables
 	//
 	cl_noprint = Cvar_Get( "cl_noprint", "0", 0 );
-	// off by default: the request tells the update server the graphics card, its vendor, version and platform of
-	// the client, the joystick setting and the color depth, on every connect
-	cl_motd = Cvar_Get ("cl_motd", "0", CVAR_ARCHIVE_ND, "Ask the update server for a welcome message on every connect (sends graphics card, version and platform), shown on the bottom of connection screen" );
-	cl_motdServer[0] = Cvar_Get( "cl_motdServer1", UPDATE_SERVER_NAME, 0 );
-	cl_motdServer[1] = Cvar_Get( "cl_motdServer2", JKHUB_UPDATE_SERVER_NAME, 0 );
-	for ( int index = 2; index < MAX_MASTER_SERVERS; index++ )
-		cl_motdServer[index] = Cvar_Get( va( "cl_motdServer%d", index + 1 ), "", CVAR_ARCHIVE_ND );
-
 	cl_timeout = Cvar_Get ("cl_timeout", "200", 0);
 
 	cl_timeNudge = Cvar_Get ("cl_timeNudge", "0", CVAR_TEMP );
@@ -3087,7 +2922,6 @@ void CL_Init( void ) {
 	m_filter = Cvar_Get ("m_filter", "0", CVAR_ARCHIVE_ND);
 #endif
 
-	cl_motdString = Cvar_Get( "cl_motdString", "", CVAR_ROM );
 
 	Cvar_Get( "cl_maxPing", "800", CVAR_ARCHIVE_ND, "Max. ping for servers when searching the serverlist" );
 
@@ -3103,7 +2937,6 @@ void CL_Init( void ) {
 	CL_MemWatchInit();
 	CL_MasterInit();
 	CL_RepInit();
-	v_utf8 = Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
 	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
 	Cvar_Get( "v_cgameChat", "1", CVAR_ROM, "" );

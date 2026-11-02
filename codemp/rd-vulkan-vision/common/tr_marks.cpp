@@ -254,7 +254,6 @@ R_MarkFragments
 
 =================
 */
-#ifdef RD_VULKAN_VISION
 /*
 =================
 R_MarkCornersBehind
@@ -286,7 +285,6 @@ static qboolean R_MarkCornersBehind( int numCorners, vec3_t *corners, int numPla
 	}
 	return qfalse;
 }
-#endif
 
 int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projection,
 				   int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer ) {
@@ -384,7 +382,6 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 
 					dv = cv->verts + m * cv->width + n;
 
-#ifdef RD_VULKAN_VISION
 					{
 						// the four corners of the cell as its two triangles have them below
 						vec3_t corners[4];
@@ -397,7 +394,6 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 							continue;
 						}
 					}
-#endif
 					VectorCopy(dv[0].xyz, clipPoints[0][0]);
 					VectorMA(clipPoints[0][0], MARKER_OFFSET, dv[0].normal, clipPoints[0][0]);
 					VectorCopy(dv[cv->width].xyz, clipPoints[0][1]);
@@ -462,11 +458,9 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					v = surf->points[0] + VERTEXSIZE * indexes[k+j];;
 					VectorMA( v, MARKER_OFFSET, surf->plane.normal, clipPoints[0][j] );
 				}
-#ifdef RD_VULKAN_VISION
 				if ( R_MarkCornersBehind( 3, clipPoints[0], numPlanes, normals, dists ) ) {
 					continue;
 				}
-#endif
 				// add the fragments of this face
 				R_AddMarkFragments( 3 , clipPoints,
 								   numPlanes, normals, dists,
@@ -490,11 +484,9 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					v = surf->verts[surf->indexes[k + j]].xyz;
 					VectorMA(v, MARKER_OFFSET, surf->verts[surf->indexes[k + j]].normal, clipPoints[0][j]);
 				}
-#ifdef RD_VULKAN_VISION
 				if ( R_MarkCornersBehind( 3, clipPoints[0], numPlanes, normals, dists ) ) {
 					continue;
 				}
-#endif
 
 				// add the fragments of this face
 				R_AddMarkFragments(3, clipPoints,

@@ -219,7 +219,6 @@ typedef enum {
 	DEFORM_NORMALS,
 	DEFORM_BULGE,
 	DEFORM_MOVE,
-	DEFORM_PROJECTION_SHADOW,
 	DEFORM_AUTOSPRITE,
 	DEFORM_AUTOSPRITE2,
 	DEFORM_TEXT0,
@@ -431,7 +430,7 @@ typedef struct shaderStage_s {
 	// and whether it is drawn in the pass of the dynamic glow only (RGBA_SHADER_BLUR)
 	bool			glowOnly;
 
-	// VisionJK: a stage of a model lit per pixel by rd-vulkan-vision, rd-vanilla draws it as before. normalMap: the
+	// VisionJK: a stage of a model lit per pixel. normalMap: the
 	// bumps of the surface (normalMap <image>), specular: strength, exponent and clear coat of its shine
 	// (specular <strength> <exponent> <coat>)
 	image_t			*normalMap;
@@ -1044,9 +1043,7 @@ typedef struct trGlobals_s {
 	GLuint					gammaCorrectPxShader;
 
 	shader_t				*defaultShader;
-	shader_t				*shadowShader;
 	shader_t				*distortionShader;
-	shader_t				*projectionShadowShader;
 
 	shader_t				*sunShader;
 
@@ -1110,15 +1107,6 @@ typedef struct trGlobals_s {
 	float					distanceCull;
 } trGlobals_t;
 
-struct glconfigExt_t
-{
-	glconfig_t *glConfig;
-
-	qboolean doGammaCorrectionWithShaders;
-	qboolean doStencilShadowsInOneDrawcall;
-	const char *originalExtensionString;
-};
-
 int		 R_Images_StartIteration(void);
 image_t *R_Images_GetNextIteration(void);
 void	 R_Images_Clear(void);
@@ -1129,7 +1117,6 @@ void	 R_Images_DeleteImage(image_t *pImage);
 extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
-extern glconfigExt_t glConfigExt;
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 extern window_t		window;
 
@@ -1137,15 +1124,10 @@ extern window_t		window;
 //
 // cvars
 //
-extern cvar_t	*r_ignore;				// used for debugging anything
 extern cvar_t	*r_verbose;				// used for verbose debug spew
 
 extern cvar_t	*r_znear;				// near Z clip plane
 
-extern cvar_t	*r_stencilbits;			// number of desired stencil bits
-extern cvar_t	*r_depthbits;			// number of desired depth bits
-extern cvar_t	*r_colorbits;			// number of desired color bits, only relevant for fullscreen
-extern cvar_t	*r_stereo;				// desired pixelformat stereo flag
 extern cvar_t	*r_texturebits;			// number of desired texture bits
 										// 0 = use framebuffer depth
 										// 16 = use 16-bit textures
@@ -1164,42 +1146,29 @@ extern cvar_t	*r_primitives;			// "0" = based on compiled vertex array existance
 										// "2" = glDrawElements triangles
 										// "-1" = no drawing
 
-extern cvar_t	*r_inGameVideo;				// controls whether in game video should be draw
 extern cvar_t	*r_fastsky;				// controls whether sky should be cleared or drawn
 extern cvar_t	*r_drawSun;				// controls drawing of sun quad
 extern cvar_t	*r_dynamiclight;		// dynamic lights enabled/disabled
-// rjr - removed for hacking extern cvar_t	*r_dlightBacks;			// dlight non-facing surfaces for continuity
 
 extern	cvar_t	*r_norefresh;			// bypasses the ref rendering
 extern	cvar_t	*r_drawentities;		// disable/enable entity rendering
 extern	cvar_t	*r_drawworld;			// disable/enable world rendering
 extern	cvar_t	*r_drawfog;				// disable/enable fog rendering
 extern	cvar_t	*r_speeds;				// various levels of information display
-extern  cvar_t	*r_detailTextures;		// enables/disables detail texturing stages
 extern	cvar_t	*r_novis;				// disable/enable usage of PVS
 extern	cvar_t	*r_nocull;
 extern	cvar_t	*r_facePlaneCull;		// enables culling of planar surfaces with back side test
 extern	cvar_t	*r_cullRoofFaces; //attempted smart method of culling out upwards facing surfaces on roofs for automap shots -rww
 extern	cvar_t	*r_roofCullCeilDist; //ceiling distance cull tolerance -rww
-extern	cvar_t	*r_roofCullFloorDist; //floor distance cull tolerance -rww
 extern	cvar_t	*r_nocurves;
 extern	cvar_t	*r_showcluster;
 
 extern	cvar_t	*r_autoMap; //automap renderside toggle for debugging -rww
-extern	cvar_t	*r_autoMapBackAlpha; //alpha of automap bg -rww
 extern	cvar_t	*r_autoMapDisable;
 
-extern cvar_t	*r_dlightStyle;
 extern cvar_t	*r_surfaceSprites;
 extern cvar_t	*r_surfaceWeather;
 
-extern cvar_t	*r_windSpeed;
-extern cvar_t	*r_windAngle;
-extern cvar_t	*r_windGust;
-extern cvar_t	*r_windDampFactor;
-extern cvar_t	*r_windPointForce;
-extern cvar_t	*r_windPointX;
-extern cvar_t	*r_windPointY;
 
 extern cvar_t	*r_mode;				// video mode
 extern cvar_t	*r_fullscreen;
@@ -1207,17 +1176,10 @@ extern cvar_t	*r_noborder;			// disable border in windowed mode
 extern cvar_t	*r_centerWindow;		// override vid_x/ypos and center the window
 extern cvar_t	*r_gamma;
 extern cvar_t	*r_displayRefresh;		// optional display refresh option
-extern cvar_t	*r_ignorehwgamma;		// overrides hardware gamma capabilities
 
-extern cvar_t	*r_allowExtensions;				// global enable/disable of OpenGL extensions
 extern cvar_t	*r_ext_compressed_textures;		// these control use of specific extensions
 extern cvar_t	*r_ext_compressed_lightmaps;	// turns on compression of lightmaps, off by default
-extern cvar_t	*r_ext_preferred_tc_method;
-extern cvar_t	*r_ext_gamma_control;
 extern cvar_t	*r_ext_texenv_op;
-extern cvar_t	*r_ext_multitexture;
-extern cvar_t	*r_ext_compiled_vertex_array;
-extern cvar_t	*r_ext_texture_env_add;
 extern cvar_t	*r_ext_texture_filter_anisotropic;
 
 extern cvar_t	*r_environmentMapping;
@@ -1230,11 +1192,9 @@ extern cvar_t	*r_DynamicGlowSoft;
 extern cvar_t	*r_DynamicGlowWidth;
 extern cvar_t	*r_DynamicGlowHeight;
 
-extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
 extern	cvar_t	*r_colorMipLevels;				// development aid to see texture mip usage
 extern	cvar_t	*r_picmip;						// controls picmip values
-extern	cvar_t	*r_finish;
 extern	cvar_t	*r_swapInterval;
 extern	cvar_t	*r_markcount;
 extern	cvar_t	*r_textureMode;
@@ -1246,13 +1206,11 @@ extern	cvar_t	*r_lightmap;					// render lightmaps only
 extern	cvar_t	*r_vertexLight;					// vertex lighting mode for better performance
 extern	cvar_t	*r_uiFullScreen;				// ui is running fullscreen
 
-extern	cvar_t	*r_logFile;						// number of frames to emit GL logs
 extern	cvar_t	*r_showtris;					// enables wireframe rendering of the world
 extern	cvar_t	*r_showsky;						// forces sky in front of all surfaces
 extern	cvar_t	*r_shownormals;					// draws wireframe normals
 extern	cvar_t	*r_clear;						// force screen clear every frame
 
-extern	cvar_t	*r_shadows;						// controls shadows: 0 = none, 1 = blur, 2 = stencil, 3 = black planar projection
 extern	cvar_t	*r_flares;						// light flares
 
 extern	cvar_t	*r_intensity;
@@ -1279,12 +1237,10 @@ extern	cvar_t	*r_debugSort;
 extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
-extern	cvar_t	*v_2dAspect;
 extern	cvar_t	*v_menuBlur;
 extern	cvar_t	*tay_bloom;
 extern	cvar_t	*tay_bloomIntensity;
 extern	cvar_t	*tay_bloomThreshold;
-extern	cvar_t	*tay_renderScale;
 
 float	R_2DBias( void );
 float	R_2DBiasY( void );
@@ -1326,15 +1282,9 @@ extern	cvar_t	*r_patchStitching;
 
 //====================================================================
 
-void R_SwapBuffers( int );
-
 void R_RenderView( viewParms_t *parms );
 
 void R_AddMD3Surfaces( trRefEntity_t *e );
-void R_AddNullModelSurfaces( trRefEntity_t *e );
-void R_AddBeamSurfaces( trRefEntity_t *e );
-void R_AddRailSurfaces( trRefEntity_t *e, qboolean isUnderwater );
-void R_AddLightningBoltSurfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces( void );
 
@@ -1364,7 +1314,6 @@ void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
 void	GL_State( uint32_t stateVector );
-void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
 
 #define GLS_SRCBLEND_ZERO						0x00000001
@@ -1440,11 +1389,9 @@ image_t		*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicm
 
 image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
 
-qboolean	R_GetModeInfo( int *width, int *height, int mode );
 
 void		R_SetColorMappings( void );
 void		R_SetGammaCorrectionLUT();
-void		R_GammaCorrect( byte *buffer, int bufSize );
 
 void	R_ImageList_f( void );
 void	R_SkinList_f( void );
@@ -1479,7 +1426,6 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, f
 
 shader_t	*R_FindShader( const char *name, const int *lightmapIndex, const byte *styles, qboolean mipRawImage );
 shader_t	*R_GetShaderByHandle( qhandle_t hShader );
-shader_t	*R_GetShaderByState( int index, long *cycleTime );
 shader_t *R_FindShaderByName( const char *name );
 void		R_InitShaders(qboolean server);
 void		R_ShaderList_f( void );
@@ -1591,20 +1537,6 @@ qboolean R_inPVS( const vec3_t p1, const vec3_t p2, byte *mask );
 /*
 ============================================================
 
-FLARES
-
-============================================================
-*/
-
-void R_ClearFlares( void );
-
-void RB_AddFlare( void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal );
-void RB_AddDlightFlares( void );
-void RB_RenderFlares (void);
-
-/*
-============================================================
-
 LIGHTS
 
 ============================================================
@@ -1624,9 +1556,6 @@ SHADOWS
 ============================================================
 */
 
-void RB_ShadowTessEnd( void );
-void RB_ShadowFinish( void );
-void RB_ProjectionShadowDeform( void );
 
 /*
 ============================================================
@@ -1637,7 +1566,6 @@ SKIES
 */
 void R_BuildCloudData( shaderCommands_t *shader );
 void R_InitSkyTexCoords( float cloudLayerHeight );
-void R_DrawSkyBox( shaderCommands_t *shader );
 void RB_DrawSun( void );
 void RB_ClipSkyPolygons( shaderCommands_t *shader );
 /*
@@ -1660,9 +1588,7 @@ Ghoul2 Insert Start
 
 float ProjectRadius( float r, vec3_t location );
 float R_LodScale( void );
-#ifdef RD_VULKAN_VISION
 extern cvar_t	*v_lodPixels;		// vk_backend.cpp
-#endif
 /*
 Ghoul2 Insert End
 */
@@ -1969,8 +1895,6 @@ void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input);
 
 qboolean ShaderHashTableExists(void);
 
-#ifdef RD_VULKAN_VISION
 // rd-vulkan-vision compiles the files of this renderer that hold no graphics code. This is what they call where
 // this renderer calls OpenGL.
 #include "../rd-vulkan-vision/vk_hooks.h"
-#endif

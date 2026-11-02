@@ -30,10 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <set>
 #include <list>
-#ifdef RD_VULKAN_VISION
 #include <map>
 #include <string>
-#endif
 
 #ifdef _FULL_G2_LEAK_CHECKING
 int g_Ghoul2Allocations = 0;
@@ -558,7 +556,6 @@ public:
 		}
 	}
 #endif
-#ifdef RD_VULKAN_VISION
 	// how many of the slots are taken, for gfxinfo
 	int InUse() const
 	{
@@ -608,16 +605,13 @@ public:
 		}
 		return noModel;
 	}
-#endif
 	int New()
 	{
 		if (mFreeIndecies.empty())
 		{
 			assert(0);
-#ifdef RD_VULKAN_VISION
 			ri.Printf( PRINT_ALL, "Out of ghoul2 info slots, they hold:\n" );
 			ListInUse( true );
-#endif
 			Com_Error(ERR_FATAL, "Out of ghoul2 info slots");
 
 		}
@@ -707,7 +701,6 @@ IGhoul2InfoArray &TheGhoul2InfoArray()
 	return *singleton;
 }
 
-#ifdef RD_VULKAN_VISION
 // The Ghoul2 instances that are alive, of MAX_G2_MODELS. They outlive the renderer (PD_Store below), so what a map
 // change does not give back is still taken after it, and with enough changes the client is out of them.
 int G2API_SlotsInUse( void )
@@ -720,7 +713,6 @@ int G2API_ListSlots( qboolean print )
 {
 	return singleton ? singleton->ListInUse( print != qfalse ) : 0;
 }
-#endif
 
 #define PERSISTENT_G2DATA "g2infoarray"
 
@@ -921,10 +913,8 @@ int G2API_InitGhoul2Model(CGhoul2Info_v **ghoul2Ptr, const char *fileName, int m
 	ghoul2[model].mModelindex = model;
 	if (!G2_TestModelPointers(&ghoul2[model]))
 	{
-#ifdef RD_VULKAN_VISION
 		// (the instance keeps its slot: who made it has to give it back although it holds nothing)
 		ri.Printf( PRINT_DEVELOPER, S_COLOR_YELLOW "G2API_InitGhoul2Model: no model %s\n", fileName );
-#endif
 		ghoul2[model].mFileName[0]=0;
 		ghoul2[model].mModelindex = -1;
 	}
@@ -2991,7 +2981,6 @@ qboolean G2_SetupModelPointers(CGhoul2Info *ghlInfo) // returns true if the mode
 		// RJ - experimental optimization!
 		if (!ghlInfo->mModel || 1)
 		{
-#ifdef RD_VULKAN_VISION
 			// This function runs in front of nearly every Ghoul2 call, some 380 times a frame in a fight, and each
 			// time it found the cvar by its name and the model by its name (5 % of the instructions of a frame).
 			// The cvar is asked for once. The model is only looked up when the handle this instance has no longer
@@ -3012,17 +3001,6 @@ qboolean G2_SetupModelPointers(CGhoul2Info *ghlInfo) // returns true if the mode
 			{
 				ghlInfo->mModel = RE_RegisterModel(ghlInfo->mFileName);
 			}
-#else
-			if (ri.Cvar_VariableIntegerValue( "dedicated" ) ||
-				(G2_ShouldRegisterServer())) //supreme hackery!
-			{
-				ghlInfo->mModel = RE_RegisterServerModel(ghlInfo->mFileName);
-			}
-			else
-			{
-				ghlInfo->mModel = RE_RegisterModel(ghlInfo->mFileName);
-			}
-#endif
 			ghlInfo->currentModel = R_GetModelByHandle(ghlInfo->mModel);
 		}
 

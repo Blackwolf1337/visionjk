@@ -43,10 +43,8 @@ static float		gl_texCoord[2];
 static float		gl_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 static uint32_t		gl_stateBits;
 
-// Stencil shadows (tr_shadows.cpp). While the color mask is off, glEnd() does not draw but collects: the volume
-// of a model comes as one glBegin() to glEnd() per edge, and it becomes one draw.
+// the stencil test of the overdraw measurement (tr_cmds.cpp)
 static vkStencil_t	gl_stencil;
-static qboolean		gl_colorMask = qtrue;
 static qboolean		gl_collect;				// the automap is one glBegin() to glEnd() per surface of the level: collected as well
 static qboolean		gl_texture = qtrue;		// GL_TEXTURE_2D: off means no texture, which is the white one
 
@@ -240,7 +238,7 @@ void VK_GL_End( void ) {
 	}
 	gl_numIndexes = numIndexes;
 	gl_primStart = gl_numVerts;
-	if ( gl_colorMask && !gl_collect ) {
+	if ( !gl_collect ) {
 		VK_GL_Flush();
 	}
 }
@@ -320,11 +318,7 @@ static void VK_GL_DrawUploaded( void ) {
 	vkDraw_t draw;
 
 	VK_GL_InitDraw( &draw );
-	if ( !gl_colorMask ) {
-		// nothing is to reach the color: a blend that leaves what is there does it without another pipeline state
-		stateBits = ( stateBits & ~( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE;
-	}
-	vk.stencil = ( gl_stencil.test || gl_stencil.depthLess ) ? &gl_stencil : NULL;
+	vk.stencil = gl_stencil.test ? &gl_stencil : NULL;
 	VK_DrawTess( &draw, VKP_GENERIC, stateBits, VKC_NONE, qfalse );
 	vk.stencil = NULL;
 }
@@ -347,29 +341,11 @@ void VK_GL_Flush( void ) {
 }
 
 /*
-===============
-VK_GL_DrawIndexed
-
-Triangles of vertices that come once, with the state that is set. For the shadow volumes (tr_shadows.cpp): as
-glBegin() to glEnd() a vertex of the model came up to 18 times, and 32 players filled the vertices of the frame so
-far that the 2D had no room left (issue #11). Only the positions are uploaded: the volume is drawn with the color
-off and the white texture.
-===============
-*/
-void VK_GL_DrawIndexed( const vec4_t *xyz, int numVerts, const glIndex_t *indexes, int numIndexes ) {
-	VK_GL_Flush();
-	if ( !numIndexes || !VK_UploadGeometry( xyz, NULL, NULL, NULL, numVerts, indexes, numIndexes ) ) {
-		return;
-	}
-	VK_GL_DrawUploaded();
-}
-
-/*
 ===============================================================================
 
 STENCIL
 
-What tr_shadows.cpp sets before it draws. A change draws first what was collected with the state before it.
+What the overdraw measurement (tr_cmds.cpp) sets. A change draws first what was collected with the state before it.
 
 ===============================================================================
 */
@@ -389,16 +365,6 @@ void VK_GL_StencilOp( int face, int fail, int zfail, int zpass ) {
 			gl_stencil.ops[i][2] = zpass;
 		}
 	}
-}
-
-void VK_GL_ColorMask( int on ) {
-	VK_GL_Flush();
-	gl_colorMask = (qboolean)( on != 0 );
-}
-
-void VK_GL_DepthFunc( int func ) {
-	VK_GL_Flush();
-	gl_stencil.depthLess = (qboolean)( func == GL_LESS );
 }
 
 /*

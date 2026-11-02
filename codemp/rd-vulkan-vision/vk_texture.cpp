@@ -489,8 +489,7 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		// the glowing stages are drawn over the depth of the scene, so with as many samples
 		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 	}
-	// as large as the frame and as the views of the level with tay_renderScale, whichever is copied into it
-	VK_CreateTarget( &vk.screen, Q_max( vk.width, vk.sceneWidth ), Q_max( vk.height, vk.sceneHeight ), VK_FORMAT_R8G8B8A8_UNORM,
+	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
 		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
@@ -576,86 +575,6 @@ void VK_DestroyPostTargets( void ) {
 		qvkDestroyImageView( vk.device, vk.depthView, NULL );
 		vk.depthView = VK_NULL_HANDLE;
 	}
-	VK_DestroyTarget( &vk.sceneColor );
-	VK_DestroyTarget( &vk.sceneColorMS );
-	VK_DestroyTarget( &vk.sceneDepth );
-	VK_DestroyTarget( &vk.sceneDepthMS );
-	VK_DestroyTarget( &vk.sceneGlow );
-	VK_DestroyTarget( &vk.sceneGlowMS );
-	if ( vk.sceneDepthView ) {
-		qvkDestroyImageView( vk.device, vk.sceneDepthView, NULL );
-		vk.sceneDepthView = VK_NULL_HANDLE;
-	}
 	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
 }
 
-/*
-===============
-VK_CreateSceneTargets
-
-tay_renderScale: the targets the views of the level are drawn into at their own size, with the formats and the
-samples of the ones of the frame, so every pipeline fits both. After VK_CreatePostTargets(), whose sampler the
-glow set takes. qfalse: the device has no images that large.
-===============
-*/
-qboolean VK_CreateSceneTargets( int width, int height ) {
-	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-	const int largest = (int)vk.properties.limits.maxImageDimension2D;
-
-	if ( width > largest || height > largest ) {
-		ri.Printf( PRINT_WARNING, "tay_renderScale: %i x %i is larger than the device draws (%i), the level is drawn at the size of the window\n",
-			width, height, largest );
-		return qfalse;
-	}
-	VK_CreateTarget( &vk.sceneColor, width, height, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
-		VK_SAMPLE_COUNT_1_BIT );
-	VK_CreateTarget( &vk.sceneDepth, width, height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-		| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ), depthAspect, VK_SAMPLE_COUNT_1_BIT );
-	VK_CreateTarget( &vk.sceneGlow, width, height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		VK_CreateTarget( &vk.sceneColorMS, width, height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
-		VK_CreateTarget( &vk.sceneDepthMS, width, height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect, vk.samples );
-		VK_CreateTarget( &vk.sceneGlowMS, width, height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
-	}
-
-	// the frame is read pixel for pixel as the set of the gamma pass does, the glow filtered as the other one
-	VK_PostSetOnce( &vk.scenePostSet );
-	VK_WriteSet( vk.scenePostSet, vk.postSampler, vk.sceneColor.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_PostSetOnce( &vk.sceneGlowSet );
-	VK_WritePostSet( vk.sceneGlowSet, vk.sceneGlow.view );
-	VK_PostSetOnce( &vk.sceneCopySet );
-	VK_WritePostSet( vk.sceneCopySet, vk.sceneColor.view );
-	if ( vk.depthReadable ) {
-		vk.sceneDepthView = VK_DepthOnlyView( &vk.sceneDepth );
-		VK_PostSetOnce( &vk.sceneDepthSet );
-		VK_WriteSet( vk.sceneDepthSet, vk.postSampler, vk.sceneDepthView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
-	}
-	return qtrue;
-}
-
-/*
-===============
-VK_SwapSceneTargets
-
-The targets of the views of the level take the places of color, depth and glow, or give them back
-===============
-*/
-void VK_SwapSceneTargets( void ) {
-	vkTarget_t		target;
-	VkDescriptorSet	set;
-	VkImageView		view;
-
-#define VK_SWAP( a, b, t )	( t = a, a = b, b = t )
-	VK_SWAP( vk.color, vk.sceneColor, target );
-	VK_SWAP( vk.colorMS, vk.sceneColorMS, target );
-	VK_SWAP( vk.depth, vk.sceneDepth, target );
-	VK_SWAP( vk.depthMS, vk.sceneDepthMS, target );
-	VK_SWAP( vk.glow, vk.sceneGlow, target );
-	VK_SWAP( vk.glowMS, vk.sceneGlowMS, target );
-	VK_SWAP( vk.postSet, vk.scenePostSet, set );
-	VK_SWAP( vk.glowSet, vk.sceneGlowSet, set );
-	VK_SWAP( vk.depthSet, vk.sceneDepthSet, set );
-	VK_SWAP( vk.depthView, vk.sceneDepthView, view );
-#undef VK_SWAP
-}

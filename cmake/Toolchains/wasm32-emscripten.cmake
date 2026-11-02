@@ -16,7 +16,6 @@ include("$ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 # what a browser can not run or does not need
 set(BuildMPDed OFF CACHE BOOL "" FORCE)
 set(BuildMPGame OFF CACHE BOOL "" FORCE)
-set(BuildMPRdVanilla OFF CACHE BOOL "" FORCE)
 set(BuildJPAssets OFF CACHE BOOL "" FORCE)
 
 # there are no system libraries to find

@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The lens: while the disruptor is zoomed the renderer draws the view through a lens (trap->ext.R_SetScopeEffect,
 // rd-vulkan-vision): large and clear, bent and coloured a little towards its rim, sharp around what the crosshair is
 // on, a fine reticle with a lit dot, the ammo, the zoom and the charge as arcs around the rim, the level soft and
-// dimmed outside. The mask of the game and its art are left out then (CG_DrawZoomMask). v_scope 0, or rd-vanilla:
+// dimmed outside. The mask of the game and its art are left out then (CG_DrawZoomMask). v_scope 0, or a renderer without it:
 // the mask as it always was.
 //
 // The wheel: while the zoom is locked the mouse wheel zooms in and out in steps (v_scopezoom). The engine sends
@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tracked, faster the nearer it is, and every ping leaves the boxes behind as echoes that fade where they were. A
 // mover counts for a second after he stopped. Only what can be seen: nothing through walls, cloaked, dead and the
 // own player never. Now and then the tracker takes an edge or a corner of the level for a mover for a moment, as a
-// real one would. rd-vanilla: the boxes without the tint.
+// real one would. A renderer without the scope: the boxes without the tint.
 //
 // The binoculars (the item, zoomMode 2) look through the same lens, two of them side by side and without a reticle
 // (v_binoculars). Once they zoomed in by themselves the wheel zooms further. Over them the distance to what is in

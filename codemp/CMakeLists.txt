@@ -39,11 +39,6 @@ if(BuildMPUI)
 	add_subdirectory("${MPDir}/ui")
 endif(BuildMPUI)
 
-#	 Add Vanilla JKA Renderer Project
-if(BuildMPRdVanilla)
-	add_subdirectory("${MPDir}/rd-vanilla")
-endif(BuildMPRdVanilla)
-
 if(BuildMPRdVulkanVision OR BuildMPRdVisionGLES)
 	add_subdirectory("${MPDir}/rd-vulkan-vision")
 endif()

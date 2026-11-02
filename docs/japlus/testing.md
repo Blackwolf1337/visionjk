@@ -46,7 +46,7 @@ tools/test/smoke-test.sh 0.2.6
 ```
 
 unpacks the zips of `VJK_DOWNLOADS` into `build-test/smoke`, links the base assets (`VJK_BASE_ASSETS`) in, and
-starts the Linux client (Vulkan and vanilla renderer), the Linux dedicated server with a bot (Desann) and the
+starts the Linux client (Vulkan, one client per system), the Linux dedicated server with a bot (Desann) and the
 Windows client under Wine (both renderers) once each. A client loads `mp/ffa1`, takes a screenshot and quits. The
 clients run in gamescope without an output (`--backend headless`), so no window shows up on the desktop, and
 without sound. It needs gamescope and wine. Windows runs in a Wine prefix of its own, `build-test/smoke-wine`.
@@ -116,7 +116,7 @@ tools/test/compat-test.sh 0.2.6
 ```
 
 builds stock OpenJK once from the source in `VJK_STOCK_SRC` into `build-test/openjk-stock` (Release, client,
-dedicated server, modules and rd-vanilla; most other clients and servers are made from it). Then it makes two
+dedicated server, modules and its renderer; most other clients and servers are made from it). Then it makes two
 runs on 127.0.0.1: the stock client (named Legacy) joins the dedicated server of the release (`fs_game japlus`),
 and the client of the release (named Vision) joins a stock dedicated server. A run passes when the server logs
 the ClientBegin of the client, neither log has an error and the client ends by itself (it stays about 1500

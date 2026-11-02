@@ -358,7 +358,7 @@ A shape with round corners over a rectangle: the four quarters of the disc at th
 column through its middle along the sides, its middle over the rest. corner: the size of a corner in units.
 =================
 */
-// (cornerX and cornerY are the same number of pixels: where the 2D of the game is stretched, v_2dAspect 0, they are not
+// (cornerX and cornerY are the same number of pixels: where the 2D of the game is stretched (an engine without v_2dBias) they are not
 // the same number of units, and a corner of the same units would be stretched with it)
 static void Skin_NineSliceTop( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle,
 	qboolean squareBottom );

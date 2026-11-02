@@ -154,19 +154,12 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	qboolean					depthReadable;		// the device lets its format be read in a shader
 	VkImageView					depthView;			// of the depth alone, without the stencil
 	VkDescriptorSet				depthSet;
-	// tay_renderScale: the targets the views of the level are drawn into at their own size (VK_CreateSceneTargets),
-	// traded with color, colorMS, depth, depthMS, glow, glowMS and their sets while those views are drawn
-	vkTarget_t					sceneColor, sceneColorMS, sceneDepth, sceneDepthMS, sceneGlow, sceneGlowMS;
-	VkImageView					sceneDepthView;
-	VkDescriptorSet				scenePostSet, sceneGlowSet, sceneDepthSet;
-	VkDescriptorSet				sceneCopySet;		// the color of those views, filtered, for VK_DrawScene()
 	// v_wetMirror: the view mirrored at the floor of the puddles (VK_BeginPuddle), traded with color, colorMS, depth
 	// and depthMS while it is drawn; the wet places read reflect through reflectSet
 	vkTarget_t					reflect, reflectMS, reflectDepth, reflectDepthMS;
 	VkDescriptorSet				reflectSet;
 	int							reflectFrame;		// frameCount of the view that was drawn last
 	float						reflectHeight;		// the height of its floor
-	VkPipeline					scenePipeline;		// it over a rectangle of the frame as it is
 	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
 	VkPipelineLayout			scopePipelineLayout;	// four sets of that kind and sixteen numbers (VK_ScopePass)
 	VkDescriptorSet				screenSet;			// vk.screen for it

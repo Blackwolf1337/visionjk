@@ -1,0 +1,173 @@
+// modelpick.menu in the new look. Made by tools/menus/build.py from ui/jamp/modelpick.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"modelpick_popmenu"
+		visible					0
+		fullScreen				0
+		rect					320 92 960 720
+		focusColor				0.36 0.78 0.96 1
+		outOfBoundsClick
+		popup
+		onOpen
+		{
+			uiScript ModelPickOpen ;
+			setfocus modelpick_list
+		}
+		onESC
+		{
+			play "sound/interface/esc.wav" ;
+			close modelpick_popmenu ;
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
+		descX					800
+		descY					750.5
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.05
+		descColor				0.56 0.64 0.74 1
+
+		itemDef
+		{
+			name					vision_veil
+			rect					-320 -92 1600 900
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0.01 0.03 0.6
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					modelpick_background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					24 63 912 588
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			backcolor				0.031 0.055 0.11 0.97
+			bordercolor				0.11 0.18 0.29 1
+			radius					9.6
+			shadow					21
+		}
+
+		itemDef
+		{
+			name					modelpick_title
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			text					@VISION_PICK_A_MODEL
+			rect					30 78 900 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				450
+			font					5
+			textscale				1.11
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			decoration
+			caps					1
+			textaligny				3.75
+		}
+
+		itemDef
+		{
+			name					modelpick_list
+			group					none
+			rect					54 123 852 405
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			72
+			elementheight			72
+			elementtype				LISTBOX_IMAGE
+			feeder					FEEDER_FORCEMODEL
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			radius					6
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			textscale				0.7
+		}
+
+		itemDef
+		{
+			name					modelpick_name
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			cvar					"ui_modelPickName"
+			rect					54 540 852 36
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				426
+			font					5
+			textscale				1.03
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					modelpick_clear
+			group					none
+			style					WINDOW_STYLE_PANEL
+			type					ITEM_TYPE_BUTTON
+			rect					112.5 603 165 30
+			text					@VISION_AS_THEY_CHOSE
+			font					5
+			textscale				0.96
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				82.5
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			mouseEnter { show modelpick_clear_glow }
+			mouseExit { hide modelpick_clear_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript ModelPickClear ;
+				close modelpick_popmenu ;
+			}
+			caps					1
+			textaligny				6.36
+			radius					4.8
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+		}
+
+		itemDef
+		{
+			name					modelpick_done
+			group					none
+			style					WINDOW_STYLE_PANEL
+			type					ITEM_TYPE_BUTTON
+			rect					682.5 603 165 30
+			text					@MENUS_DONE_CAPS
+			font					5
+			textscale				0.96
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				82.5
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			mouseEnter { show modelpick_done_glow }
+			mouseExit { hide modelpick_done_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close modelpick_popmenu ;
+			}
+			caps					1
+			textaligny				6.36
+			radius					4.8
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+		}
+		canvas					1600 900
+	}
+}

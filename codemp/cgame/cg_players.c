@@ -1470,111 +1470,6 @@ static qboolean CG_ScanForExistingClientInfo( clientInfo_t *ci, int clientNum ) 
 
 /*
 ======================
-CG_SetDeferredClientInfo
-
-We aren't going to load it now, so grab some other
-client's info to use until we have some spare time.
-======================
-*/
-static void CG_SetDeferredClientInfo( clientInfo_t *ci ) {
-	int		i;
-	clientInfo_t	*match;
-
-	// if someone else is already the same models and skins we
-	// can just load the client info
-	for ( i = 0 ; i < cgs.maxclients ; i++ ) {
-		match = &cgs.clientinfo[ i ];
-		if ( !match->infoValid || match->deferred ) {
-			continue;
-		}
-		if ( Q_stricmp( ci->skinName, match->skinName ) ||
-			 Q_stricmp( ci->modelName, match->modelName ) ||
-//			 Q_stricmp( ci->headModelName, match->headModelName ) ||
-//			 Q_stricmp( ci->headSkinName, match->headSkinName ) ||
-			 (cgs.gametype >= GT_TEAM && ci->team != match->team && ci->team != TEAM_SPECTATOR) ) {
-			continue;
-		}
-
-		 /*
-		if (Q_stricmp(ci->saberName, match->saberName) ||
-			Q_stricmp(ci->saber2Name, match->saber2Name))
-		{
-			continue;
-		}
-		*/
-
-		// just load the real info cause it uses the same models and skins
-		CG_LoadClientInfo( ci );
-		return;
-	}
-
-	// if we are in teamplay, only grab a model if the skin is correct
-	if ( cgs.gametype >= GT_TEAM ) {
-		for ( i = 0 ; i < cgs.maxclients ; i++ ) {
-			match = &cgs.clientinfo[ i ];
-			if ( !match->infoValid || match->deferred ) {
-				continue;
-			}
-			if ( ci->team != TEAM_SPECTATOR &&
-				(Q_stricmp( ci->skinName, match->skinName ) ||
-				 (cgs.gametype >= GT_TEAM && ci->team != match->team)) ) {
-				continue;
-			}
-
-			/*
-			if (Q_stricmp(ci->saberName, match->saberName) ||
-				Q_stricmp(ci->saber2Name, match->saber2Name))
-			{
-				continue;
-			}
-			*/
-
-			ci->deferred = qtrue;
-			CG_CopyClientInfoModel( match, ci );
-			return;
-		}
-		// load the full model, because we don't ever want to show
-		// an improper team skin.  This will cause a hitch for the first
-		// player, when the second enters.  Combat shouldn't be going on
-		// yet, so it shouldn't matter
-		CG_LoadClientInfo( ci );
-		return;
-	}
-
-	// find the first valid clientinfo and grab its stuff
-	for ( i = 0 ; i < cgs.maxclients ; i++ ) {
-		match = &cgs.clientinfo[ i ];
-		if ( !match->infoValid ) {
-			continue;
-		}
-
-		/*
-		if (Q_stricmp(ci->saberName, match->saberName) ||
-			Q_stricmp(ci->saber2Name, match->saber2Name))
-		{
-			continue;
-		}
-		*/
-
-		if (match->deferred)
-		{ //no deferring off of deferred info. Because I said so.
-			continue;
-		}
-
-		ci->deferred = qtrue;
-		CG_CopyClientInfoModel( match, ci );
-		return;
-	}
-
-	// we should never get here...
-	//trap->Print( "CG_SetDeferredClientInfo: no valid clients!\n" );
-	//Actually it is possible now because of the unique sabers.
-
-	CG_LoadClientInfo( ci );
-}
-
-/*
-======================
 CG_NewClientInfo
 ======================
 */
@@ -1940,17 +1835,9 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	// scan for an existing clientinfo that matches this modelname
 	// so we can avoid loading checks if possible
 	if ( !CG_ScanForExistingClientInfo( &newInfo, clientNum ) ) {
-		// if we are defering loads, just have it pick the first valid
-		if (cg.snap && cg.snap->ps.clientNum == clientNum)
-		{ //rww - don't defer your own client info ever
-			CG_LoadClientInfo( &newInfo );
-		}
-		else if (  cg_deferPlayers.integer && cgs.gametype != GT_SIEGE && !com_buildScript.integer && !cg.loading ) {
-			// keep whatever they had if it won't violate team skins
-			CG_SetDeferredClientInfo( &newInfo );
-		} else {
-			CG_LoadClientInfo( &newInfo );
-		}
+		// loaded at once: models load fast enough that nobody waits for a quiet moment (cg_deferPlayers until
+		// 2026-11-02)
+		CG_LoadClientInfo( &newInfo );
 	}
 
 	// replace whatever was there with the new one
@@ -4839,37 +4726,34 @@ static void CG_PlayerSprites( centity_t *cent ) {
 ===============
 CG_PlayerShadow
 
-Returns the Z component of the surface being shadowed
-
-  should it return a full plane instead of a Z?
+A blob under the player, as a mark on the ground below, fading with the height. cg_shadows 0: none. The stencil
+volumes and the flattened copies of the model (cg_shadows 2 and 3) went on 2026-11-02.
 ===============
 */
 #define	SHADOW_DISTANCE		128
-static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
+static void CG_PlayerShadow( centity_t *cent ) {
 	vec3_t		end, mins = {-15, -15, 0}, maxs = {15, 15, 2};
 	trace_t		trace;
 	float		alpha;
 	float		radius = 24.0f;
 
-	*shadowPlane = 0;
-
-	if ( cg_shadows.integer == 0 ) {
-		return qfalse;
+	if ( !cg_shadows.integer ) {
+		return;
 	}
 
 	if ( CG_JPHideOtherDuel( cent->currentState.number ) ) {
-		return qfalse;
+		return;
 	}
 
 	// no shadows when cloaked
 	if ( cent->currentState.powerups & ( 1 << PW_CLOAKED ))
 	{
-		return qfalse;
+		return;
 	}
 
 	if (cent->currentState.eFlags & EF_DEAD)
 	{
-		return qfalse;
+		return;
 	}
 
 	if (CG_IsMindTricked(cent->currentState.trickedentindex,
@@ -4878,53 +4762,23 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 		cent->currentState.trickedentindex4,
 		cg.snap->ps.clientNum))
 	{
-		return qfalse; //this entity is mind-tricking the current client, so don't render it
+		return; //this entity is mind-tricking the current client, so don't render it
 	}
 
-	if ( cg_shadows.integer == 1 )
-	{//dropshadow
-		if (cent->currentState.m_iVehicleNum &&
-			cent->currentState.NPC_class != CLASS_VEHICLE )
-		{//riding a vehicle, no dropshadow
-			return qfalse;
-		}
+	if (cent->currentState.m_iVehicleNum &&
+		cent->currentState.NPC_class != CLASS_VEHICLE )
+	{//riding a vehicle, no dropshadow
+		return;
 	}
 	// send a trace down from the player to the ground
 	VectorCopy( cent->lerpOrigin, end );
-	if (cg_shadows.integer == 2)
-	{ //stencil
-		end[2] -= 4096.0f;
+	end[2] -= SHADOW_DISTANCE;
 
-		trap->CM_Trace( &trace, cent->lerpOrigin, end, mins, maxs, 0, MASK_PLAYERSOLID, 0 );
+	trap->CM_Trace( &trace, cent->lerpOrigin, end, mins, maxs, 0, MASK_PLAYERSOLID, 0 );
 
-		if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid )
-		{
-			trace.endpos[2] = cent->lerpOrigin[2]-25.0f;
-		}
-	}
-	else
-	{
-		end[2] -= SHADOW_DISTANCE;
-
-		trap->CM_Trace( &trace, cent->lerpOrigin, end, mins, maxs, 0, MASK_PLAYERSOLID, 0 );
-
-		// no shadow if too high
-		if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid ) {
-			return qfalse;
-		}
-	}
-
-	if (cg_shadows.integer == 2)
-	{ //stencil shadows need plane to be on ground
-		*shadowPlane = trace.endpos[2];
-	}
-	else
-	{
-		*shadowPlane = trace.endpos[2] + 1;
-	}
-
-	if ( cg_shadows.integer != 1 ) {	// no mark for stencil or projection shadows
-		return qtrue;
+	// no shadow if too high
+	if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid ) {
+		return;
 	}
 
 	// fade the shadow out with height
@@ -4942,8 +4796,6 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 	}
 	CG_ImpactMark( cgs.media.shadowMarkShader, trace.endpos, trace.plane.normal,
 		cent->pe.legs.yawAngle, alpha,alpha,alpha,1, qfalse, radius, qtrue );
-
-	return qtrue;
 }
 
 
@@ -5703,7 +5555,7 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 		radiusmult = 1.0;
 	}
 
-	if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+	if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 	{ //draw the blade as a post-render so it doesn't get in the cap...
 		rfx |= RF_FORCEPOST;
 	}
@@ -6807,7 +6659,7 @@ CheckTrail:
 			if ( (BG_SuperBreakWinAnim(cent->currentState.torsoAnim) || saberTrail->duration > 0 || ((cent->currentState.powerups & (1 << PW_SPEED) && cg_speedTrail.integer)) || (cent->currentState.saberInFlight && saberNum == 0)) && cg.time < saberTrail->lastTime + 2000 ) // if we have a stale segment, don't draw until we have a fresh one
 			{
 	#if 0
-				if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+				if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 				{
 					polyVert_t	verts[4];
 
@@ -6879,7 +6731,7 @@ CheckTrail:
 					{ //don't draw it if the last time is way out of date
 						float oldAlpha = 1.0f - ( diff / trailDur );
 
-						if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+						if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 						{//does other stuff below
 						}
 						else
@@ -6944,7 +6796,7 @@ CheckTrail:
 						fx.mVerts[3].destST[0] = 1.0f + fx.mVerts[2].ST[0];
 						fx.mVerts[3].destST[1] = 1.0f;
 
-						if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+						if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 						{
 							trap->R_SetRefractionProperties(1.0f, 0.0f, qtrue, qtrue); //don't need to do this every frame.. but..
 
@@ -9162,7 +9014,7 @@ static void CG_JPDrawHolsteredSaber( centity_t *cent, clientInfo_t *ci, int sabe
 	else if ( (cent->currentState.powerups & (1 << PW_CLOAKED))
 		&& (!(ps->fd.forcePowersActive & (1 << FP_SEE)) || ps->clientNum == num) )
 	{ // cloaked like the player
-		if ( cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer )
+		if ( cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer )
 		{
 			re.customShader = 2;
 		}
@@ -9549,8 +9401,6 @@ void CG_Player( centity_t *cent ) {
 	refEntity_t		torso;
 	int				clientNum;
 	int				renderfx;
-	qboolean		shadow = qfalse;
-	float			shadowPlane = 0;
 	vec3_t			rootAngles;
 	float			angle;
 	vec3_t			angles, dir, elevated, enang, seekorg;
@@ -10270,7 +10120,7 @@ void CG_Player( centity_t *cent ) {
 	}
 
 	// add the shadow
-	shadow = CG_PlayerShadow( cent, &shadowPlane );
+	CG_PlayerShadow( cent );
 
 	if ( ((cent->currentState.eFlags & EF_SEEKERDRONE) || cent->currentState.genericenemyindex != -1) && cent->currentState.eType != ET_NPC )
 	{
@@ -10282,7 +10132,6 @@ void CG_Player( centity_t *cent ) {
 		elevated[2] += 40;
 
 		VectorCopy( elevated, seeker.lightingOrigin );
-		seeker.shadowPlane = shadowPlane;
 		seeker.renderfx = 0; //renderfx;
 							 //don't show in first person?
 
@@ -10346,9 +10195,6 @@ void CG_Player( centity_t *cent ) {
 	// add a water splash if partially in and out of water
 	CG_PlayerSplash( cent );
 
-	if ( (cg_shadows.integer == 3 || cg_shadows.integer == 2) && shadow ) {
-		renderfx |= RF_SHADOW_PLANE;
-	}
 	renderfx |= RF_LIGHTING_ORIGIN;			// use the same origin for all
 
 	// if we've been hit, display proper fullscreen fx
@@ -10357,16 +10203,11 @@ void CG_Player( centity_t *cent ) {
 	VectorCopy( cent->lerpOrigin, legs.origin );
 
 	VectorCopy( cent->lerpOrigin, legs.lightingOrigin );
-	legs.shadowPlane = shadowPlane;
 	legs.renderfx = renderfx;
 	// a player with an outline is drawn after it and on it (select/cg_select.c): after the glow that is its light
 	// where the renderer adds one, after everything else of the scene where it adds none
 	if ( CG_SelectOutlined( cent->currentState.number ) ) {
 		legs.renderfx |= RF_FORCEPOST | RF_AFTERGLOW;
-	}
-	if (cg_shadows.integer == 2 && (renderfx & RF_THIRD_PERSON))
-	{ //can see own shadow
-		legs.renderfx |= RF_SHADOW_ONLY;
 	}
 	VectorCopy (legs.origin, legs.oldorigin);	// don't positionally lerp at all
 
@@ -10954,7 +10795,6 @@ void CG_Player( centity_t *cent ) {
 				elevated[2] += 8;
 
 				VectorCopy( elevated, holoRef.lightingOrigin );
-				holoRef.shadowPlane = shadowPlane;
 				holoRef.renderfx = 0;//RF_THIRD_PERSON;
 
 				if (renderedHolos == 0)
@@ -11958,7 +11798,7 @@ stillDoSaber:
 				ScaleModelAxis(&legs);
 				*/
 
-				if (cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
+				if (cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
 				{
 					trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
 					legs.customShader = 2; //crazy "refractive" shader
