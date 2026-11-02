@@ -11,7 +11,7 @@
 # over dirt and gravel), rc_servo.wav (the buzz of the steering servo), rc_land1-2.wav (the thump of a landing) and
 # rc_on.wav (the chirp of its receiver), and the snowball (cg_toys.c): snow_pack.wav (packing it in the hands),
 # snow_throw.wav (it leaves the hand), snow_hard1-3.wav (it bursts on stone or metal), snow_soft1-2.wav (on soft ground),
-# snow_body.wav (on a player) and snow_face.wav (in the own face). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
+# snow_body.wav (on a player) and snow_face.wav (in the own face), and spray_can.wav (the can of a spray, cg_spray.c). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
 # files come out the same every time. Writes into assets/japlus_client/sound/vision/toys/.
 # usage: tools/toys/sounds.py
 import math
@@ -488,6 +488,37 @@ def snow_face():
 	return fade( out, 0.0, 0.12 )
 
 
+def spray_can():
+	"""A spray can (cg_spray.c): the ball inside clacks twice as the can comes up, then the gas hisses out of the
+	nozzle for as long as the paint goes on (0.7 s), bright and airy (noise around 6.5 kHz with a broad band of
+	air under it), wavering a little as the finger presses, with the rattle of the paint in the valve: 0.85 s"""
+	rnd = random.Random( 171 )
+	n = int( 0.85 * RATE )
+	out = [0.0] * n
+	# the ball: two short metallic clicks, each a few rings of the thin can
+	for start in ( 0.0, 0.07 ):
+		at = int( start * RATE )
+		for freq, decay, gain in ( ( 2900.0, 0.012, 1.0 ), ( 4700.0, 0.008, 0.6 ), ( 1700.0, 0.02, 0.4 ) ):
+			f = freq * rnd.uniform( 0.97, 1.03 )
+			for i in range( int( 0.06 * RATE ) ):
+				if at + i < n:
+					t = i / RATE
+					out[at + i] += gain * 0.5 * math.sin( 2.0 * math.pi * f * t ) * math.exp( -t / decay )
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( n )]
+	bright = bandpass( noise, lambda t: 6500.0, 1.2 )
+	air = bandpass( noise, lambda t: 2400.0, 0.8 )
+	start, length = 0.1, 0.7
+	for i in range( n ):
+		t = i / RATE - start
+		if t < 0.0:
+			continue
+		env = min( 1.0, t / 0.015 ) * ( 1.0 if t < length else math.exp( -( t - length ) / 0.03 ) )
+		press = 1.0 + 0.08 * math.sin( 2.0 * math.pi * 7.0 * t ) + 0.05 * math.sin( 2.0 * math.pi * 17.0 * t + 1.3 )
+		spit = 1.0 + ( 0.6 if rnd.random() < 0.002 else 0.0 )
+		out[i] += ( bright[i] + 0.45 * air[i] ) * env * press * spit
+	return fade( out, 0.0, 0.05 )
+
+
 os.makedirs( OUT, exist_ok=True )
 write( 'emote_send.wav', send() )
 write( 'emote_pop.wav', pop() )
@@ -517,3 +548,4 @@ for n in range( 2 ):
 	write( 'snow_soft%d.wav' % ( n + 1 ), snow_soft( 151 + n ), 0.75 )
 write( 'snow_body.wav', snow_body(), 0.75 )
 write( 'snow_face.wav', snow_face(), 0.8 )
+write( 'spray_can.wav', spray_can(), 0.6 )

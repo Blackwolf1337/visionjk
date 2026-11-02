@@ -172,6 +172,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				screenSet;			// vk.screen for it
 	VkPipelineLayout			screenFxPipelineLayout;	// the sets of the frame and four of the kind of postSet (VK_ScreenFxPass)
 	VkPipelineLayout			fogPipelineLayout;		// the sets of the frame and the depth (VK_ScreenFxFogPass)
+	VkPipelineLayout			paintPipelineLayout;	// the frame, the copy of it, the depth, the textures (VK_PaintPass)
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
@@ -189,7 +190,9 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkShaderModule				screenFxPrepFragmentShader, screenFxFragmentShader, screenFxFogFragmentShader, screenFxSmokeFragmentShader;
 	VkPipeline					screenFxPrepPipeline, screenFxPipeline, screenFxFogPipeline, screenFxSmokePipeline;
 	VkShaderModule				wetVertexShader, wetFragmentShader;
+	VkShaderModule				paintVertexShader, paintFragmentShader;
 	VkPipeline					wetPipeline;		// the wet places of RE_AddWet (VK_WetPass)
+	VkPipeline					paintPipeline;		// the sprayed pictures of RE_AddPaint (VK_PaintPass)
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered

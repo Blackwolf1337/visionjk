@@ -58,13 +58,19 @@ extern "C" {
 #define TOY_PONG_PADDLE		12		// where the paddle of who sends it is, six times a second while he plays
 #define TOY_BOARD			13		// a drawing board is held (z: 0 put away, 1 in front, 2 over the head) with the picture of
 									//	the store of the site x * TOY_BOARD_SPLIT + y (0: none yet), again and again
-#define TOY_KINDS			14
+#define TOY_SPRAY_STORE		14		// a picture of the player's own sprayed on a wall: the point, and in the speed the angles of
+									//	the wall's normal (x: TOY_SPRAY_ANGLES, pitch and yaw in steps of TOY_SPRAY_STEP
+									//	degrees) and the number of the picture in the store of the site y * TOY_BOARD_SPLIT + z
+#define TOY_KINDS			15
 #define TOY_BOARD_SPLIT		1500	// the number of a picture in two fields of the speed
 #define BOARD_W				256		// a picture of a drawing board: pixels across and down, colours of the palette
 #define BOARD_H				128		//	(cgame/toys/cg_board.c, drawings of modelstore.py of the site)
 #define BOARD_COLORS		32
 #define TOY_PONG_MOST		99		// points of one player in a game at most
 #define TOY_SPRAY_MOST		1400	// pictures a spray can be (so the "speed" of TOY_SPRAY stays under TOY_MAX_SPEED)
+#define TOY_SPRAY_STEP		10		// degrees of a step of the angles of TOY_SPRAY_STORE (the receiver finds the wall itself)
+#define TOY_SPRAY_YAWS		( 360 / TOY_SPRAY_STEP + 1 )			// -180 to 180
+#define TOY_SPRAY_ANGLES	( ( 180 / TOY_SPRAY_STEP + 1 ) * TOY_SPRAY_YAWS )	// pitch -90 to 90 times the yaws
 
 #define TOY_BYTES			19		// a throw as bytes: 1 + 3 * 4 + 3 * 2
 #define TOY_HELLO_BYTES		1

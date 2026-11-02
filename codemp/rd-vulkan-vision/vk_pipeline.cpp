@@ -57,6 +57,12 @@ static const uint32_t vk_wetVert[] =
 static const uint32_t vk_wetFrag[] =
 #include "shaders/wet_frag.inc"
 ;
+static const uint32_t vk_paintVert[] =
+#include "shaders/paint_vert.inc"
+;
+static const uint32_t vk_paintFrag[] =
+#include "shaders/paint_frag.inc"
+;
 static const uint32_t vk_postVert[] =
 #include "shaders/post_vert.inc"
 ;
@@ -212,6 +218,15 @@ static void VK_CreateLayouts( void ) {
 		layout.setLayoutCount = 2;
 		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.fogPipelineLayout ) );
 	}
+	// the sprayed pictures read the globals, the copy of the frame and the depth as the wet places do, and the
+	// table of the textures for the sheets of their pictures
+	{
+		const VkDescriptorSetLayout paintSets[4] = { vk.frameSetLayout, vk.postSetLayout, vk.postSetLayout, vk.textureSetLayout };
+
+		layout.setLayoutCount = 4;
+		layout.pSetLayouts = paintSets;
+		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.paintPipelineLayout ) );
+	}
 
 	alloc.descriptorPool = vk.descriptorPool;
 	alloc.descriptorSetCount = 1;
@@ -265,7 +280,8 @@ post: 0 geometry. 1 a pass over a whole target of its own without vertices (gamm
 frame while it is being drawn, blended as the state bits say (the glow). 3 as 1, and it reads the depth of the
 scene too (the depth of field). 4 as 2 with the four sets and sixteen numbers of the scope. 5 as 2 with the sets
 of the screen effects. 6 as 1 with the sets of their mist. 7 as 1 with the sets of the screen effects (their
-smoke). 8 as 5, quads of its own over the view of the level (the wet places).
+smoke). 8 as 5, quads of its own over the view of the level (the wet places). 9 as 8 with the table of the
+textures as the fourth set (the sprayed pictures).
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program ) {
@@ -421,6 +437,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		info.layout = vk.screenFxPipelineLayout;
 	} else if ( post == 6 ) {
 		info.layout = vk.fogPipelineLayout;
+	} else if ( post == 9 ) {
+		info.layout = vk.paintPipelineLayout;
 	} else {
 		info.layout = ( post == 3 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	}
@@ -502,6 +520,11 @@ void VK_InitPipelines( void ) {
 	vk.wetFragmentShader = VK_CreateShader( vk_wetFrag, sizeof( vk_wetFrag ) );
 	vk.wetPipeline = VK_CreatePipeline( vk.wetVertexShader, vk.wetFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 8,
 		VKP_GENERIC );
+	// the sprayed pictures: the same quads, with the table of the textures in the place of the fourth set
+	vk.paintVertexShader = VK_CreateShader( vk_paintVert, sizeof( vk_paintVert ) );
+	vk.paintFragmentShader = VK_CreateShader( vk_paintFrag, sizeof( vk_paintFrag ) );
+	vk.paintPipeline = VK_CreatePipeline( vk.paintVertexShader, vk.paintFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 9,
+		VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -533,6 +556,9 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.wetPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.wetVertexShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.wetFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.paintPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.paintVertexShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.paintFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {
@@ -548,6 +574,7 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipelineLayout( vk.device, vk.scopePipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.screenFxPipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.fogPipelineLayout, NULL );
+	qvkDestroyPipelineLayout( vk.device, vk.paintPipelineLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.frameSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.textureSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.postSetLayout, NULL );

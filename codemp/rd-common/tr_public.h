@@ -286,6 +286,13 @@ typedef struct refexport_s {
 		// Wet places for the scene of this frame (wetSpot_t), between ClearScene and RenderScene. NULL only asks.
 		// qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its puddles as marks.
 		qboolean			(*AddWet)								( const wetSpot_t *spots, int count );
+		// The picture of a slot of the sprays (paintDecal_t, PAINT_SLOTS): a sheet of size x size RGBA, a power of two
+		// up to PAINT_SHEET, copied. Returns the shader for marks with it (a decal, colour and alpha from the
+		// vertices), 0 when it could not be made.
+		qhandle_t			(*PaintImage)							( int slot, const byte *rgba, int size );
+		// Sprayed pictures for the scene of this frame (paintDecal_t), between ClearScene and RenderScene. NULL only
+		// asks. qfalse: this renderer does not draw them (rd-vanilla), the cgame draws marks.
+		qboolean			(*AddPaint)								( const paintDecal_t *decals, int count );
 		// Font_DrawString at a place in units that need not be whole (the letters of a TrueType font go on the
 		// nearest pixel, a font of the game is cut to whole units)
 		void				(*Font_DrawStringF)						( float ox, float oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );

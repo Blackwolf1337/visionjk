@@ -1014,6 +1014,7 @@ typedef struct trGlobals_s {
 
 	image_t					*defaultImage;
 	image_t					*scratchImage[NUM_SCRATCH_IMAGES];
+	image_t					*paintImage[PAINT_SLOTS];	// the pictures of the sprays (RE_PaintImage), NULL until the first
 	image_t					*fogImage;
 	image_t					*dlightImage;	// inverse-quare highlight for projective adding
 	image_t					*flareImage;
@@ -1295,6 +1296,8 @@ extern	scopeEffect_t	r_scopeFx;				// what RE_SetScopeEffect asked for, flags 0:
 qboolean	RE_SetScreenEffect( const screenEffect_t *fx );
 qboolean	RE_AddLiquid( const liquidSegment_t *segments, int count );
 qboolean	RE_AddWet( const wetSpot_t *spots, int count );
+qboolean	RE_AddPaint( const paintDecal_t *decals, int count );
+qhandle_t	RE_PaintImage( int slot, const byte *rgba, int size );
 void		RE_ForgetMissing( const char *prefix );
 void		R_ForgetMissingSkins( const char *prefix );
 void		R_ForgetMissingShaders( const char *prefix );
@@ -1304,6 +1307,8 @@ extern	liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];	// what RE_AddLiquid was 
 extern	int				r_numLiquids;
 extern	wetSpot_t		r_wet[WET_MAX_SPOTS];		// what RE_AddWet was given this frame
 extern	int				r_numWet;
+extern	paintDecal_t	r_paint[PAINT_MAX_DECALS];	// what RE_AddPaint was given this frame
+extern	int				r_numPaint;
 
 /*
 Ghoul2 Insert Start

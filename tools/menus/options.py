@@ -316,7 +316,7 @@ CONTROLS = [
         ('bind', 'RC Car', 'v_rccar',
          'Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it.'),
         ('bind', 'Spray', 'v_spray',
-         'Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it.'),
+         'Puts your picture on the wall you look at. Choose it with v_sprayImage: an emoji of the chat such as heart, or your own png, jpg, tga or animated gif from the sprays folder. Only players of VisionJK see it.'),
         ('bind', 'Send Emoji', 'v_emote',
          'Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it.'),
         ('bind', 'Table Tennis', 'v_pingpong',

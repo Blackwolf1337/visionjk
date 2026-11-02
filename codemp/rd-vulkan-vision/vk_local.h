@@ -68,6 +68,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_WET_HEADER		11		// the numbers of shaders/wet.vert and wet.frag: the view (VK_DrawWet()),
 #define VK_WET_ROWS			6		//	then this many for each wet place
 #define VK_WET_VEC4S		( VK_WET_HEADER + WET_MAX_SPOTS * VK_WET_ROWS )
+#define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
+#define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
@@ -75,6 +77,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		screenFx[VK_SCREENFX_VEC4S][4];	// what VK_ScreenFxPass() was given
 	float		styles[MAX_LIGHT_STYLES][4];	// the colors of the light styles over 256 (styleColors), for vertex lit surfaces
 	float		wet[VK_WET_VEC4S][4];		// what VK_WetPass() was given
+	float		paint[VK_PAINT_VEC4S][4];	// what VK_PaintPass() was given
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -526,6 +529,7 @@ void		VK_ScreenFxFogPass( vkTarget_t *target, const float *fx );
 // counts it), with the VK_WET_VEC4S numbers of wet; they read vk.screen and the depth of the scene, which is begun
 // with the frame but only read. Not on the OpenGL ES device. vk.color must not be begun, it is not begun after.
 void		VK_WetPass( const float *wet, int count, const int *viewport );
+void		VK_PaintPass( const float *paint, int count, const int *viewport );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

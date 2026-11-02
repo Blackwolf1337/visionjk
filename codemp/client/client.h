@@ -615,6 +615,14 @@ void		CL_ModelsFrame( void );
 void		CL_ModelsShutdown( void );
 qboolean	CL_ModelsAsking( void );
 
+// cl_sprays.cpp: the pictures of the sprays
+//
+#define SPRAY_UPLOAD_MOST	( 512 * 1024 )		// bytes of a sheet for the store at most (MAX_SPRAY of modelstore.py)
+qhandle_t	CL_PaintPicture( int slot, const char *name, paintPicture_t *out );
+qboolean	CL_SprayUploadMake( const char *name );
+int			CL_SprayUploadBody( byte *out, int outSize );
+qboolean	CL_SprayFileGood( const byte *data, int len );
+
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);

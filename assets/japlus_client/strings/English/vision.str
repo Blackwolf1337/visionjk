@@ -159,7 +159,7 @@ REFERENCE           SPRAY
 LANG_ENGLISH        "Spray"
 
 REFERENCE           PUTS_YOUR_PICTURE_ON_THE_WALL_YOU_LO
-LANG_ENGLISH        "Puts your picture on the wall you look at (choose it with v_sprayImage, an emoji of the chat such as heart), and only players of VisionJK see it."
+LANG_ENGLISH        "Puts your picture on the wall you look at. Choose it with v_sprayImage: an emoji of the chat such as heart, or your own png, jpg, tga or animated gif from the sprays folder. Only players of VisionJK see it."
 
 REFERENCE           SEND_EMOJI
 LANG_ENGLISH        "Send Emoji"

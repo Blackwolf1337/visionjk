@@ -149,8 +149,8 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_EMOJI_MOST		( 64 * 1024 )		// bytes of a chat emoji at most (MAX_EMOJI of modelstore.py)
 #define MDL_EMOJI_RECORD	"emojistore.txt"	// in base of the home folder: the emojis of the store that came, a name a line
 #define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
-#define MDL_DRAWING_MOST	( 1500 * 1500 )		// numbers of pictures (TOY_BOARD_SPLIT squared)
-#define MDL_DRAWING_ASKS	8					// pictures the cgame asked for that wait
+#define MDL_PICTURE_MOST	( 1500 * 1500 )		// numbers of pictures of a drawing board or a spray (TOY_BOARD_SPLIT squared)
+#define MDL_PICTURE_ASKS	8					// pictures of a kind the cgame asked for that wait
 
 enum {
 	MDLJOB_FREE,
@@ -179,7 +179,8 @@ typedef struct {
 	char				icon[4];				// "jpg", "png": the job fetches the icon of model
 	char				emoji[WEB_MODEL_NAME];	// a chat emoji of the store (issue #9 of the game)
 	qboolean			emojiIndex;				//	or the list of them
-	int					drawing;				// a picture of a drawing board that is fetched
+	int					picture;				// a picture of a drawing board or a spray that is fetched
+	int					pictureKind;			//	of mdlPictureKinds, also of an upload
 	const byte			*body;					// what is sent with a POST (the own picture), NULL: a GET
 	int					bodyLen;
 } mdlJob_t;
@@ -198,10 +199,8 @@ static int		mdlEmojiIndexTime = -1;
 static mdlNames_t	mdlEmojiTried;			// emojis that came or failed this run
 static mdlNames_t	mdlEmojiHere;			// the emojis of the store in the home folder (MDL_EMOJI_RECORD)
 static qboolean	mdlEmojiRead;
-static byte		mdlDrawingBody[MDL_DRAWING_BYTES];
+static byte		mdlPictureBody[SPRAY_UPLOAD_MOST];
 static char		mdlAnswer[512];				// what the store answered to an upload
-static qboolean	mdlDrawingUpload;			// the own picture waits to go to the store
-static int		mdlDrawingGets[MDL_DRAWING_ASKS], mdlNumDrawingGets;
 
 // the home path of the pak of a model, or of the part of it that comes in
 static const char *MDL_Local( const char *model, qboolean temp ) {
@@ -538,60 +537,115 @@ static void MDL_NextEmoji( void ) {
 /*
 ===============================================================================
 
-The pictures of the drawing boards (cgame/toys/cg_board.c, issue #9 of the game): the own one goes to the store of
-the site when it is held up (v_drawings upload, from drawings/upload.vjd, which the cgame wrote), and its number
-goes back to the cgame (v_boardPicture), which says it to the others. The picture of a number another player holds
-is fetched into base/drawings/<number>.vjd of the home folder (v_drawings get), where the cgame reads it.
+The pictures players make for the others, in stores of the site by number (deploy/models/modelstore.py of the
+website), issue #9 of the game. The pictures of the drawing boards (cgame/toys/cg_board.c): the own one goes to the
+store when it is held up (v_drawings upload, from drawings/upload.vjd, which the cgame wrote). The pictures of the
+sprays (cgame/toys/cg_spray.c): a picture of the player's own goes there when he sprays it (v_sprays upload <file>,
+the sheet cl_sprays.cpp makes of it). The number of the own picture goes back to the cgame (v_boardPicture,
+v_sprayPicture), which says it to the others; the picture of a number another player shows is fetched into the home
+folder (v_drawings get, v_sprays get), base/drawings/<number>.vjd and base/sprays/store/<number>.png, where the cgame
+reads it. A spray that came is said to the cgame (v_sprayArrived), a board looks for its file itself.
 
 ===============================================================================
 */
 
-static const char *MDL_DrawingLocal( int number, qboolean temp ) {
-	return va( "%s/drawings/%i.%s", BASEGAME, number, temp ? "tmp" : "vjd" );
+typedef struct {
+	const char	*store;			// its part of the site, and the command of the console
+	const char	*folder;		// in base of the home folder
+	const char	*extension;
+	int			most;			// bytes of a picture at most
+	const char	*answer;		// the cgame command that gets the number of the own picture
+	const char	*arrived;		// the cgame command that is told of a picture that came, NULL: none
+} mdlPictureKind_t;
+
+enum { MDL_DRAWINGS, MDL_SPRAYS, MDL_PICTURE_KINDS };
+
+static const mdlPictureKind_t mdlPictureKinds[MDL_PICTURE_KINDS] = {
+	{ "drawings", "drawings", "vjd", MDL_DRAWING_BYTES, "v_boardPicture", NULL },
+	{ "sprays", "sprays/store", "png", SPRAY_UPLOAD_MOST, "v_sprayPicture", "v_sprayArrived" },
+};
+
+static qboolean	mdlPictureUpload[MDL_PICTURE_KINDS];		// the own picture of the kind waits to go to the store
+static int		mdlPictureGets[MDL_PICTURE_KINDS][MDL_PICTURE_ASKS], mdlNumPictureGets[MDL_PICTURE_KINDS];
+
+static const char *MDL_PictureLocal( int kind, int number, qboolean temp ) {
+	return va( "%s/%s/%i.%s", BASEGAME, mdlPictureKinds[kind].folder, number, temp ? "tmp" : mdlPictureKinds[kind].extension );
 }
 
-// Starts the fetch of picture get, or with get 0 the upload of the own one.
-static void MDL_StartDrawing( int get ) {
-	mdlJob_t *job = &mdlJob;
+// The own picture of a kind for the store, in mdlPictureBody: the drawing the cgame wrote, the sheet of the spray.
+// 0: there is none.
+static int MDL_PictureBody( int kind ) {
+	if ( kind == MDL_SPRAYS ) {
+		return CL_SprayUploadBody( mdlPictureBody, sizeof( mdlPictureBody ) );
+	}
+	void	*data;
+	int		len = FS_ReadFile( "drawings/upload.vjd", &data );
+
+	if ( len != MDL_DRAWING_BYTES || memcmp( data, "VJD1", 4 ) ) {
+		if ( len > 0 ) {
+			FS_FreeFile( data );
+		}
+		return 0;
+	}
+	Com_Memcpy( mdlPictureBody, data, MDL_DRAWING_BYTES );
+	FS_FreeFile( data );
+	return MDL_DRAWING_BYTES;
+}
+
+// Starts the fetch of picture get of a kind, or with get 0 the upload of the own one.
+static void MDL_StartPicture( int kind, int get ) {
+	const mdlPictureKind_t	*k = &mdlPictureKinds[kind];
+	mdlJob_t				*job = &mdlJob;
 
 	memset( job, 0, sizeof( *job ) );
+	job->pictureKind = kind;
 	if ( get ) {
 		fileHandle_t f;
 
-		if ( !MDL_Url( va( "drawings/files/%i.vjd", get ), job->url, sizeof( job->url ) ) ) {
+		if ( !MDL_Url( va( "%s/files/%i.%s", k->store, get, k->extension ), job->url, sizeof( job->url ) ) ) {
 			return;
 		}
-		f = FS_SV_FOpenFileWrite( MDL_DrawingLocal( get, qtrue ) );
+		f = FS_SV_FOpenFileWrite( MDL_PictureLocal( kind, get, qtrue ) );
 		if ( !f ) {
 			return;
 		}
 		FS_FCloseFile( f );
-		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_DrawingLocal( get, qtrue ) ), sizeof( job->osTemp ) );
-		job->drawing = get;
-		job->most = MDL_DRAWING_BYTES;
+		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_PictureLocal( kind, get, qtrue ) ), sizeof( job->osTemp ) );
+		job->picture = get;
+		job->most = k->most;
 		Web_SHA256Init( &job->sha );
 	} else {
-		void	*data;
-		int		len = FS_ReadFile( "drawings/upload.vjd", &data );
-
-		if ( len != MDL_DRAWING_BYTES || memcmp( data, "VJD1", 4 ) || !MDL_Url( "drawings/api/upload", job->url, sizeof( job->url ) ) ) {
-			if ( len > 0 ) {
-				FS_FreeFile( data );
-			}
+		if ( !MDL_Url( va( "%s/api/upload", k->store ), job->url, sizeof( job->url ) ) || !( job->bodyLen = MDL_PictureBody( kind ) ) ) {
 			return;
 		}
-		Com_Memcpy( mdlDrawingBody, data, MDL_DRAWING_BYTES );
-		FS_FreeFile( data );
-		job->body = mdlDrawingBody;
-		job->bodyLen = MDL_DRAWING_BYTES;
+		job->body = mdlPictureBody;
 		job->index = mdlAnswer;
 		job->most = sizeof( mdlAnswer ) - 1;
 	}
 	MDL_Launch( job );
 }
 
+// whether the file that came is a picture of its kind: a drawing has its size and begins with VJD1, a spray is a
+// PNG with the frames of cl_sprays.cpp
+static qboolean MDL_PictureGood( const mdlJob_t *job ) {
+	static byte	data[SPRAY_UPLOAD_MOST];
+	FILE		*f = fopen( job->osTemp, "rb" );
+	size_t		len = 0;
+
+	if ( f ) {
+		len = fread( data, 1, sizeof( data ), f );
+		fclose( f );
+	}
+	if ( job->pictureKind == MDL_SPRAYS ) {
+		return (qboolean)( len == (size_t)job->bytes && CL_SprayFileGood( data, (int)len ) );
+	}
+	return (qboolean)( job->bytes == MDL_DRAWING_BYTES && len == MDL_DRAWING_BYTES && !memcmp( data, "VJD1", 4 ) );
+}
+
 // The store answered the upload ({"id": <number>, "key": ..}), or a picture came.
-static void MDL_DrawingDone( mdlJob_t *job ) {
+static void MDL_PictureDone( mdlJob_t *job ) {
+	const mdlPictureKind_t *k = &mdlPictureKinds[job->pictureKind];
+
 	if ( job->body ) {
 		const char	*id;
 		int			number;
@@ -599,57 +653,58 @@ static void MDL_DrawingDone( mdlJob_t *job ) {
 		mdlAnswer[job->bytes] = '\0';
 		id = strstr( mdlAnswer, "\"id\":" );
 		number = id ? atoi( id + 5 ) : 0;
-		if ( !job->ok || number <= 0 || number >= MDL_DRAWING_MOST ) {
-			Com_Printf( S_COLOR_YELLOW "The drawing did not go to the store of the site: %s\n", job->status == 429 ? "too many at once, it goes again later" : job->error );
+		if ( !job->ok || number <= 0 || number >= MDL_PICTURE_MOST ) {
+			Com_Printf( S_COLOR_YELLOW "The picture did not go to the store of the site: %s\n", job->status == 429 ? "too many at once, it goes again later" : job->error );
 			return;
 		}
 		if ( cls.cgameStarted ) {
-			Cmd_TokenizeString( va( "v_boardPicture %i", number ) );
+			Cmd_TokenizeString( va( "%s %i", k->answer, number ) );
 			CGVM_ConsoleCommand();
 		}
 		return;
 	}
-	if ( !job->ok || job->disk || job->bytes != MDL_DRAWING_BYTES ) {
+	if ( !job->ok || job->disk || !MDL_PictureGood( job ) ) {
 		remove( job->osTemp );
 		return;
 	}
-	{
-		FILE		*f = fopen( job->osTemp, "rb" );
-		char		head[4] = { 0 };
-		qboolean	good = (qboolean)( f && fread( head, 1, 4, f ) == 4 && !memcmp( head, "VJD1", 4 ) );
-
-		if ( f ) {
-			fclose( f );
-		}
-		if ( !good ) {
-			remove( job->osTemp );
-			return;
-		}
+	FS_SV_Rename( MDL_PictureLocal( job->pictureKind, job->picture, qtrue ), MDL_PictureLocal( job->pictureKind, job->picture, qfalse ), qfalse );
+	if ( k->arrived && cls.cgameStarted ) {
+		Cmd_TokenizeString( va( "%s %i", k->arrived, job->picture ) );
+		CGVM_ConsoleCommand();
 	}
-	FS_SV_Rename( MDL_DrawingLocal( job->drawing, qtrue ), MDL_DrawingLocal( job->drawing, qfalse ), qfalse );
 }
 
-// v_drawings upload: the own picture to the store; v_drawings get <number>: a picture of another board
-static void CL_Drawings_f( void ) {
+// v_drawings upload: the own picture to the store; v_drawings get <number>: a picture of another board. The same
+// for v_sprays, whose upload names the file of the picture (cl_sprays.cpp).
+static void MDL_Pictures( int kind ) {
 	const char	*what = Cmd_Argv( 1 );
 	int			number, i;
 
-	if ( !Q_stricmp( what, "upload" ) ) {
-		mdlDrawingUpload = qtrue;
+	if ( !Q_stricmp( what, "upload" ) && ( kind != MDL_SPRAYS || CL_SprayUploadMake( Cmd_Argv( 2 ) ) ) ) {
+		mdlPictureUpload[kind] = qtrue;
 		return;
 	}
-	if ( Q_stricmp( what, "get" ) || ( number = atoi( Cmd_Argv( 2 ) ) ) <= 0 || number >= MDL_DRAWING_MOST ) {
-		Com_Printf( "usage: v_drawings upload | get <number>\n" );
+	number = atoi( Cmd_Argv( 2 ) );
+	if ( Q_stricmp( what, "get" ) || number <= 0 || number >= MDL_PICTURE_MOST ) {
+		Com_Printf( "usage: %s upload%s | get <number>\n", Cmd_Argv( 0 ), kind == MDL_SPRAYS ? " <file>" : "" );
 		return;
 	}
-	for ( i = 0; i < mdlNumDrawingGets; i++ ) {
-		if ( mdlDrawingGets[i] == number ) {
+	for ( i = 0; i < mdlNumPictureGets[kind]; i++ ) {
+		if ( mdlPictureGets[kind][i] == number ) {
 			return;
 		}
 	}
-	if ( mdlNumDrawingGets < MDL_DRAWING_ASKS ) {
-		mdlDrawingGets[mdlNumDrawingGets++] = number;
+	if ( mdlNumPictureGets[kind] < MDL_PICTURE_ASKS ) {
+		mdlPictureGets[kind][mdlNumPictureGets[kind]++] = number;
 	}
+}
+
+static void CL_Drawings_f( void ) {
+	MDL_Pictures( MDL_DRAWINGS );
+}
+
+static void CL_Sprays_f( void ) {
+	MDL_Pictures( MDL_SPRAYS );
 }
 
 static void MDL_Done( void ) {
@@ -659,8 +714,8 @@ static void MDL_Done( void ) {
 	char			model[WEB_MODEL_NAME];
 
 	SDL_WaitThread( job->thread, NULL );		// (it is through, this does not wait)
-	if ( job->body || job->drawing ) {
-		MDL_DrawingDone( job );
+	if ( job->body || job->picture ) {
+		MDL_PictureDone( job );
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		return;
 	}
@@ -754,15 +809,17 @@ void CL_ModelsFrame( void ) {
 	if ( CL_UpdateBusy() || CL_DownloadWebAsking() ) {
 		return;
 	}
-	// the pictures of the drawing boards first: somebody holds one up now
-	if ( mdlDrawingUpload ) {
-		mdlDrawingUpload = qfalse;
-		MDL_StartDrawing( 0 );
-		return;
-	}
-	if ( mdlNumDrawingGets > 0 ) {
-		MDL_StartDrawing( mdlDrawingGets[--mdlNumDrawingGets] );
-		return;
+	// the pictures of the drawing boards and the sprays first: somebody shows one now
+	for ( int kind = 0; kind < MDL_PICTURE_KINDS; kind++ ) {
+		if ( mdlPictureUpload[kind] ) {
+			mdlPictureUpload[kind] = qfalse;
+			MDL_StartPicture( kind, 0 );
+			return;
+		}
+		if ( mdlNumPictureGets[kind] > 0 ) {
+			MDL_StartPicture( kind, mdlPictureGets[kind][--mdlNumPictureGets[kind]] );
+			return;
+		}
 	}
 	// with nothing of the models to do: the chat emojis of the store, in the game (not on a pure server)
 	if ( !mdlWanted[0] && !mdlIconsWanted ) {
@@ -835,6 +892,7 @@ void CL_ModelsInit( void ) {
 		"Address of the model store (https). Can only be changed on the command line" );
 	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, v_models get <name>, v_models icons" );
 	Cmd_AddCommand( "v_drawings", CL_Drawings_f, "The pictures of the drawing boards in the store of the site: v_drawings upload, v_drawings get <number>" );
+	Cmd_AddCommand( "v_sprays", CL_Sprays_f, "The sprays in the store of the site: v_sprays upload <file>, v_sprays get <number>" );
 }
 
 // The game ends. A thread that is still asking is told to stop and left to itself.
@@ -853,6 +911,7 @@ void CL_ModelsShutdown( void ) {
 	}
 	Cmd_RemoveCommand( "v_models" );
 	Cmd_RemoveCommand( "v_drawings" );
+	Cmd_RemoveCommand( "v_sprays" );
 }
 
 #else // __EMSCRIPTEN__

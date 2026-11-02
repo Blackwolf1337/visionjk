@@ -37,39 +37,13 @@ BINDING( 0, 0 ) uniform Globals {
 
 VARYING( 0 ) flat out uint v_spot;
 
-const vec2 CORNERS[6] = vec2[6]( vec2( -1.0, -1.0 ), vec2( 1.0, -1.0 ), vec2( -1.0, 1.0 ), vec2( -1.0, 1.0 ), vec2( 1.0, -1.0 ),
-	vec2( 1.0, 1.0 ) );
+#include "ball.glsl"
 
 void main() {
 	uint spot = INSTANCE;
 	uint row = 11u + spot * 6u;
-	vec2 corner = CORNERS[int( VERTEX_INDEX ) % 6];
-	vec3 eye = W[4].xyz;
-	vec3 forward = W[5].xyz;
-	vec3 left = W[6].xyz;
-	vec3 up = W[7].xyz;
-	vec3 c = W[row].xyz;
-	// the streaks that run down a wall reach twice as far, and the surface may lie a little off its plane
-	float radius = W[row].w * 2.0 + 8.0;
-	float z = dot( c - eye, forward );
 
 	v_spot = spot;
-	if ( z < radius + 6.0 ) {
-		gl_Position = vec4( corner, 0.5, 1.0 );
-		return;
-	}
-	// the ball on the plane one unit in front of the eye, as in liquid.vert, the quad on its near side
-	vec2 p = vec2( dot( c - eye, left ), dot( c - eye, up ) ) / z;
-	float s = radius / sqrt( max( z * z - radius * radius, 1.0 ) ) * 1.25;
-	p += corner * s;
-	float near = z - radius;
-	vec3 position = eye + ( forward + left * p.x + up * p.y ) * near;
-	mat4 mvp = mat4( W[0], W[1], W[2], W[3] );
-
-	gl_Position = mvp * vec4( position, 1.0 );
-#ifdef VK_GLES
-	gl_Position.y = -gl_Position.y;
-#else
-	gl_Position.z = ( gl_Position.z + gl_Position.w ) * 0.5;
-#endif
+	// the streaks that run down a wall reach twice as far, and the surface may lie a little off its plane
+	gl_Position = BallQuad( W[row].xyz, W[row].w * 2.0 + 8.0 );
 }

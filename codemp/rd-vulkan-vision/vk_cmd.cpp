@@ -709,25 +709,17 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
-// The depth is a target of the frame while the wet places read it, but in the layout for reading: no test, nothing
-// written (the stencil goes with it). With several samples a pixel the frame is drawn into the targets that stand in
-// for color and depth, and the depth the shader reads is the plain one, which has their first sample since the
-// scene ended.
-void VK_WetPass( const float *wet, int count, const int *viewport ) {
-	VkCommandBuffer cmd = vk.frame->cmd;
-	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
-	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.reflect.image ? vk.reflectSet : vk.screenSet };
-	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+// The depth is a target of the frame while the wet places and the sprayed pictures read it, but in the layout for
+// reading: no test, nothing written (the stencil goes with it). With several samples a pixel the frame is drawn into
+// the targets that stand in for color and depth, and the depth the shader reads is the plain one, which has their
+// first sample since the scene ended.
+static void VK_BeginOverLevel( VkCommandBuffer cmd ) {
 	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
 
-	memcpy( globals->wet, wet, sizeof( globals->wet ) );
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	if ( vk.reflect.image ) {
-		VK_TargetLayout( cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	}
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	if ( multi ) {
@@ -756,10 +748,38 @@ void VK_WetPass( const float *wet, int count, const int *viewport ) {
 	info.pDepthAttachment = &depthInfo;
 	info.pStencilAttachment = &depthInfo;
 	qvkCmdBeginRendering( cmd, &info );
+}
 
+void VK_WetPass( const float *wet, int count, const int *viewport ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
+	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.reflect.image ? vk.reflectSet : vk.screenSet };
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+
+	memcpy( globals->wet, wet, sizeof( globals->wet ) );
+	if ( vk.reflect.image ) {
+		VK_TargetLayout( cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	}
+	VK_BeginOverLevel( cmd );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.wetPipeline );
 	vk.boundPipeline = vk.wetPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 0, NULL );
+	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
+	qvkCmdEndRendering( cmd );
+}
+
+// the sheets of the pictures are textures of the table, the shader takes each by its number
+void VK_PaintPass( const float *paint, int count, const int *viewport ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.textureSet };
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+
+	memcpy( globals->paint, paint, sizeof( globals->paint ) );
+	VK_BeginOverLevel( cmd );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.paintPipeline );
+	vk.boundPipeline = vk.paintPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.paintPipelineLayout, 0, 4, sets, 0, NULL );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
 	qvkCmdEndRendering( cmd );

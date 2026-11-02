@@ -120,6 +120,16 @@ BOOST_AUTO_TEST_CASE( board )
 	BOOST_CHECK( !Valid( Throw( TOY_BOARD, 100, 200, 300, 0, 0, 3 ) ) );
 }
 
+BOOST_AUTO_TEST_CASE( spray_store )
+{
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, 0, 0, 1 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, TOY_SPRAY_ANGLES - 1, TOY_BOARD_SPLIT - 1, TOY_BOARD_SPLIT - 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, TOY_SPRAY_ANGLES, 0, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, -1, 0, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, 0, TOY_BOARD_SPLIT, 1 ) ) );
+}
+
 BOOST_AUTO_TEST_CASE( hello )
 {
 	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );

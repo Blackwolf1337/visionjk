@@ -144,8 +144,9 @@ void R_LoadImage( const char *shortname, byte **pic, int *width, int *height ) {
 R_LoadImageFit
 
 The picture of a file (any type R_LoadImage takes, a png of any size) in width x height RGBA for a module, its sides kept: it fills
-one side and is centred on the other, where the pixels keep an alpha of 0. A pixel is the mean of the pixels of the
-file it covers, weighted by their alpha. qfalse: there is no such picture.
+one side and is centred on the other, where the pixels keep an alpha of 0. Shrunk, a pixel is the mean of the pixels
+of the file it covers, grown, the mix of the four nearest, both weighted by their alpha, so the black of transparent
+pixels does not darken an edge. qfalse: there is no such picture.
 =================
 */
 qboolean R_LoadImageFit( const char *name, byte *rgba, int width, int height ) {
@@ -168,6 +169,36 @@ qboolean R_LoadImageFit( const char *name, byte *rgba, int width, int height ) {
 	}
 	ox = ( width - fw ) / 2;
 	oy = ( height - fh ) / 2;
+	if ( fw > w ) {
+		for ( y = 0; y < fh; y++ ) {
+			const float	fy = Com_Clamp( 0.0f, (float)( h - 1 ), ( y + 0.5f ) * h / fh - 0.5f );
+			const int	y0 = (int)fy, y1 = Q_min( y0 + 1, h - 1 );
+			const float	b = fy - y0;
+
+			for ( x = 0; x < fw; x++ ) {
+				const float	fx = Com_Clamp( 0.0f, (float)( w - 1 ), ( x + 0.5f ) * w / fw - 0.5f );
+				const int	x0 = (int)fx, x1 = Q_min( x0 + 1, w - 1 );
+				const float	a = fx - x0;
+				const byte	*in[4] = { pic + ( y0 * w + x0 ) * 4, pic + ( y0 * w + x1 ) * 4, pic + ( y1 * w + x0 ) * 4, pic + ( y1 * w + x1 ) * 4 };
+				const float	weight[4] = { ( 1.0f - a ) * ( 1.0f - b ), a * ( 1.0f - b ), ( 1.0f - a ) * b, a * b };
+				byte		*out = rgba + ( ( oy + y ) * width + ox + x ) * 4;
+				float		sum[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+				for ( int k = 0; k < 4; k++ ) {
+					for ( int c = 0; c < 3; c++ )
+						sum[c] += in[k][c] * in[k][3] * weight[k];
+					sum[3] += in[k][3] * weight[k];
+				}
+				if ( sum[3] > 0.0f ) {
+					for ( int c = 0; c < 3; c++ )
+						out[c] = (byte)Com_Clamp( 0.0f, 255.0f, sum[c] / sum[3] );
+				}
+				out[3] = (byte)Com_Clamp( 0.0f, 255.0f, sum[3] );
+			}
+		}
+		ri.Z_Free( pic );
+		return qtrue;
+	}
 	for ( y = 0; y < fh; y++ ) {
 		const int y0 = y * h / fh, y1 = Q_max( y0 + 1, ( y + 1 ) * h / fh );
 

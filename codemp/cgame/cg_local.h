@@ -2024,6 +2024,8 @@ void		CG_PingPong_f( void );					// v_pingpong (toys/cg_pong.c)
 void		CG_Tennis_f( void );					// v_tennis (toys/cg_pong.c)
 void		CG_Board_f( void );						// v_board (toys/cg_board.c)
 void		CG_BoardPicture_f( void );				// v_boardPicture, from the engine
+void		CG_SprayPicture_f( void );				// v_sprayPicture, from the engine (toys/cg_spray.c)
+void		CG_SprayArrived_f( void );				// v_sprayArrived, from the engine
 void		CG_BoardPublish( void );
 void		CG_BoardOpen( void );
 void		CG_BoardClose( void );
@@ -2245,6 +2247,8 @@ void	CG_ImpactMark( qhandle_t markShader,
 				    float r, float g, float b, float a,
 					qboolean alphaFade,
 					float radius, qboolean temporary );
+void	CG_ImpactMarkFrame( qhandle_t markShader, const vec3_t origin, const vec3_t dir, float orientation, const vec3_t light,
+					float radius, const float *part );
 
 //
 // cg_localents.c

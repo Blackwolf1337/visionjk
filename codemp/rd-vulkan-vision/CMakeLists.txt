@@ -217,12 +217,16 @@ set(MPVulkanVisionShaders
 	screenfxsmoke.frag
 	wet.vert
 	wet.frag
+	paint.vert
+	paint.frag
 	)
 set(MPVulkanVisionShaderIncludes
+	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/scene.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	)
 set(MPVulkanVisionShaderOutputs)

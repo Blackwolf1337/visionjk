@@ -100,6 +100,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // with RGBA_SHADER_HULL: how far the outline stands off the model, in tenths of a unit, in the bits above the
 // flags. Without it 1.1 units. Several of them around one model, the wider the fainter, are a soft light.
 #define RGBA_SHADER_HULL_WIDTH( tenths )	( RGBA_SHADER_HULL | ( ( ( tenths ) & 0xff ) << 8 ) )
+#define RGBA_SHADER_DECAL	32		// a mark on the level: drawn among the decals, a little in front of its wall
 
 #define RDF_NOWORLDMODEL	1		// used for player configuration screen
 #define RDF_HYPERSPACE		4		// teleportation effect
@@ -224,6 +225,37 @@ typedef struct wetSpot_s {
 	float		seed;				// 0 to 1, the shape of its edge
 	int			kind;				// WET_PLACE, ...
 } wetSpot_t;
+
+// A picture sprayed onto the level (re.ext.AddPaint, cgame/toys/cg_spray.c). The renderer keeps a sheet of pictures
+// for each of PAINT_SLOTS slots (re.ext.PaintImage): a still picture, or the frames of an animated one in a grid.
+// rd-vulkan-vision lays a decal as paint onto the surface (shaders/paint.frag): the relief of the wall shows through,
+// the edge is overspray, fresh paint shines and runs down a wall in drips until it dries. rd-vanilla says qfalse
+// and the cgame draws a mark with the shader that PaintImage returned.
+#define PAINT_MAX_DECALS	64		// in one frame
+#define PAINT_SLOTS			40		// pictures the renderer keeps: one a player and some over
+#define PAINT_SHEET			512		// a sheet is this many pixels each way at most
+#define PAINT_FRAMES		16		// frames of an animated picture at most
+
+typedef struct paintDecal_s {
+	vec3_t		origin;
+	vec3_t		normal;				// of the surface, away from it
+	vec3_t		up;					// along the surface: where the top of the picture is
+	float		radius;				// half the side of the picture, units
+	float		reveal;				// 0 to 1: how much of it is sprayed on yet
+	float		fresh;				// 1 just sprayed, wet paint, down to 0 dry
+	float		seed;				// 0 to 1, the shape of its overspray and drips
+	int			slot;				// of PaintImage
+	float		frame[4];			// the part of the sheet shown now: left, top, width, height, 0 to 1
+} paintDecal_t;
+
+// a picture as the engine made a sheet of it (ext.R_PaintPicture of the cgame)
+typedef struct paintPicture_s {
+	int			frames;				// 1: a still picture
+	int			columns;			// of the sheet: frame n is at column n % columns, row n / columns
+	int			cell;				// pixels of a frame each way
+	int			sheet;				// pixels of the sheet each way
+	int			delays[PAINT_FRAMES];	// msec each frame is shown
+} paintPicture_t;
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;
