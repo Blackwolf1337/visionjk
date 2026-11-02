@@ -585,6 +585,13 @@ uploads an hour and 300 a day per address, and the store keeps the newest 5000. 
 `modelstore.py remove-drawing <number>`. The client fetches a picture only by a number below the limit and keeps the
 file only when it has exactly the size of a drawing. Not tested: the POST on Windows.
 
+The board can also take the picture of the system clipboard (`v_clipboardImage`, `codemp/client/cl_clipboard.cpp`).
+It accepts only a PNG or JPEG (on Windows also a bitmap, written as a TGA), and a picture of 32 MB or less. It writes
+only into `drawings/` of the home folder, through the file system of the engine. The path must not contain `..` or a
+drive letter or a backslash, and must not start with `/`. On X11 the engine asks the owner of the clipboard on a
+connection of its own, nothing waits for it, and the answer is dropped after 3 s. The picture is then loaded by the
+normal image loaders, as any picture of the Picture button is. Not tested: Windows and macOS.
+
 ## Added later: the sprays of the store
 
 The spray store of the model service (issue #9, the upload of `v_sprays upload`) takes pictures of the players. It

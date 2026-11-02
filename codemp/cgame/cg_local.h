@@ -2026,6 +2026,7 @@ void		CG_Board_f( void );						// v_board (toys/cg_board.c)
 void		CG_BoardPicture_f( void );				// v_boardPicture, from the engine
 void		CG_SprayPicture_f( void );				// v_sprayPicture, from the engine (toys/cg_spray.c)
 void		CG_SprayArrived_f( void );				// v_sprayArrived, from the engine
+void		CG_BoardPasted_f( void );				// v_boardPasted, from the engine (toys/cg_board.c)
 void		CG_BoardPublish( void );
 void		CG_BoardOpen( void );
 void		CG_BoardClose( void );

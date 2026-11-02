@@ -568,6 +568,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_download.cpp"
 		"${MPDir}/client/cl_models.cpp"
 		"${MPDir}/client/cl_sprays.cpp"
+		"${MPDir}/client/cl_clipboard.cpp"
 		"${SharedDir}/web/web_missing.c"
 		"${SharedDir}/web/web_missing.h"
 		"${SharedDir}/web/web_models.c"

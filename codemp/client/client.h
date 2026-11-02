@@ -623,6 +623,11 @@ qboolean	CL_SprayUploadMake( const char *name );
 int			CL_SprayUploadBody( byte *out, int outSize );
 qboolean	CL_SprayFileGood( const byte *data, int len );
 
+// cl_clipboard.cpp: a picture from the clipboard of the system
+//
+void		CL_ClipboardInit( void );
+void		CL_ClipboardFrame( void );
+
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);
