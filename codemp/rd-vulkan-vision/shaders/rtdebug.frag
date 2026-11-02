@@ -8,6 +8,8 @@
 //   2: a ray from the eye through each pixel against the depth of the scene: black where they agree, red where the
 //      ray stops in front of the depth (something in the structure that is not drawn), green where it goes past it
 //      (something drawn that is not in the structure: what moves, glass, grates, the sky).
+//   3: the rays towards the sun against the players alone (mask 2): dark where a player is in the way, their sun
+//      shadows, also on themselves.
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -27,11 +29,11 @@ layout( location = 0 ) out vec4 o_color;
 
 #include "scene.glsl"
 
-// the distance to the first solid triangle of the level along the ray, or tMax
-float Trace( vec3 origin, vec3 dir, float tMax ) {
+// the distance to the first triangle of what mask selects along the ray (1 the level, 2 the players), or tMax
+float Trace( vec3 origin, vec3 dir, float tMax, uint mask ) {
 	rayQueryEXT query;
 
-	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT, 0x01u, origin, 0.0, dir, tMax );
+	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT, mask, origin, 0.0, dir, tMax );
 	while ( rayQueryProceedEXT( query ) ) {
 	}
 	if ( rayQueryGetIntersectionTypeEXT( query, true ) == gl_RayQueryCommittedIntersectionNoneEXT ) {
@@ -44,17 +46,17 @@ void main() {
 	vec3 p = ScenePoint( gl_FragCoord.xy );
 	int mode = int( W[11].w );
 
-	if ( mode == 1 ) {
+	if ( mode == 1 || mode == 3 ) {
 		vec3 sun = normalize( W[11].xyz );
 		vec3 normal = SceneSurface( gl_FragCoord.xy, p, sun );
 		// off the surface a little, so the ray does not hit the triangle it starts on
-		float t = Trace( p + normal * 1.0, sun, 65536.0 );
+		float t = Trace( p + normal * 1.0, sun, 65536.0, mode == 1 ? 0x01u : 0x02u );
 
 		o_color = vec4( vec3( t >= 65536.0 ? 1.0 : 0.12 ), 1.0 );
 	} else {
 		vec3 eye = W[4].xyz;
 		float depth = distance( p, eye );
-		float t = Trace( eye, normalize( p - eye ), depth + 64.0 );
+		float t = Trace( eye, normalize( p - eye ), depth + 64.0, 0x01u );
 		float diff = clamp( ( depth - t ) / 16.0, -1.0, 1.0 );
 
 		o_color = vec4( max( diff, 0.0 ), max( -diff, 0.0 ), 0.0, 1.0 );

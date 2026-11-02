@@ -97,6 +97,9 @@ qboolean VK_InitShared( void ) {
 	// the buffers of the level and of the models are filled again when they are first drawn
 	VK_WorldChanged();
 	VK_ModelsChanged();
+#ifndef RD_VISION_GLES
+	VK_RT_ModelsChanged();
+#endif
 	VK_ClearFlares();
 	if ( glConfig.vidWidth ) {
 		// the window stays, the textures get their filter again as GL_SetDefaultState() of rd-vanilla gives it to them

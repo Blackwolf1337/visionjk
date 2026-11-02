@@ -348,6 +348,8 @@ void		VK_InitModels( void );
 void		VK_ShutdownModels( void );
 void		VK_ModelsBeginFrame( void );
 int			VK_SkinnedSurface( const mdxmSurface_t *surface );
+int			VK_SkinnedFirstVertex( const mdxmSurface_t *surface, const vkBuffer_t **vertexes );
+qboolean	VK_SkeletonBones( CBoneCache *boneCache, uint32_t *bones );
 int			VK_StaticMeshSurface( const md3Surface_t *surface );
 int			VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData );
 qboolean	VK_UploadGoreBatch( CBoneCache *boneCache, uint32_t *bones );

@@ -222,6 +222,7 @@ set(MPVulkanVisionShaders
 # the shaders that trace rays (vk_rt.cpp): Vulkan only, GLSL ES has no ray queries
 set(MPVulkanVisionRTShaders
 	rtdebug.frag
+	rtskin.comp
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"
@@ -230,6 +231,7 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/scene.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/skin.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	)
 set(MPVulkanVisionShaderOutputs)

@@ -73,6 +73,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdCopyBufferToImage ) \
 	X( vkCmdCopyImage ) \
 	X( vkCmdCopyImageToBuffer ) \
+	X( vkCmdDispatch ) \
 	X( vkCmdDraw ) \
 	X( vkCmdDrawIndexed ) \
 	X( vkCmdEndRendering ) \
@@ -91,6 +92,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdSetViewport ) \
 	X( vkCreateBuffer ) \
 	X( vkCreateCommandPool ) \
+	X( vkCreateComputePipelines ) \
 	X( vkCreateDescriptorPool ) \
 	X( vkCreateDescriptorSetLayout ) \
 	X( vkCreateFence ) \

@@ -58,6 +58,8 @@ typedef VkBufferUsageFlags	vkBufferUsage_t;
 #define VKB_VERTEXES		( VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT )
 #define VKB_INDEXES			( VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT )
 #define VKB_STAGING			VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+// the vertices of the models, which the shadows of the players also read by their address (vk_rt.cpp)
+#define VKB_MODELS			( VKB_VERTEXES | ( vk.rayTracing ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0 ) )
 
 typedef struct vkAlloc_s {
 	int				block;			// -1: nothing allocated
@@ -265,6 +267,8 @@ void		VK_RT_Init( void );
 void		VK_RT_Shutdown( void );
 qboolean	VK_RT_Wanted( void );
 void		VK_RT_Pass( void );
+void		VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface );
+void		VK_RT_ModelsChanged( void );
 
 // vk_cmd.cpp
 // begins vk.color over the level with the depth of the scene only read, for the passes over it (VK_WetPass)

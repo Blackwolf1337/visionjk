@@ -1660,6 +1660,9 @@ typedef struct cgs_s {
 	int					numMiscStaticModels;
 	cg_staticmodel_t	miscStaticModels[MAX_STATIC_MODELS];
 
+	// the renderer traces the shadows of the players from the lights of the level (v_rtAvailable, cg_shadows 2)
+	qboolean			rtShadows;
+
 } cgs_t;
 
 typedef struct siegeExtended_s

@@ -4726,34 +4726,36 @@ static void CG_PlayerSprites( centity_t *cent ) {
 ===============
 CG_PlayerShadow
 
-A blob under the player, as a mark on the ground below, fading with the height. cg_shadows 0: none. The stencil
-volumes and the flattened copies of the model (cg_shadows 2 and 3) went on 2026-11-02.
+A blob under the player, as a mark on the ground below, fading with the height. cg_shadows 0: none. cg_shadows 2
+where the renderer traces rays (v_rtAvailable): no blob, qtrue for a shadow from the lights of the level that the
+renderer traces (RF_SHADOW_PLANE, vk_rt.cpp). The stencil volumes and the flattened copies of the model (the old
+cg_shadows 2 and 3) went on 2026-11-02.
 ===============
 */
 #define	SHADOW_DISTANCE		128
-static void CG_PlayerShadow( centity_t *cent ) {
+static qboolean CG_PlayerShadow( centity_t *cent ) {
 	vec3_t		end, mins = {-15, -15, 0}, maxs = {15, 15, 2};
 	trace_t		trace;
 	float		alpha;
 	float		radius = 24.0f;
 
 	if ( !cg_shadows.integer ) {
-		return;
+		return qfalse;
 	}
 
 	if ( CG_JPHideOtherDuel( cent->currentState.number ) ) {
-		return;
+		return qfalse;
 	}
 
 	// no shadows when cloaked
 	if ( cent->currentState.powerups & ( 1 << PW_CLOAKED ))
 	{
-		return;
+		return qfalse;
 	}
 
 	if (cent->currentState.eFlags & EF_DEAD)
 	{
-		return;
+		return qfalse;
 	}
 
 	if (CG_IsMindTricked(cent->currentState.trickedentindex,
@@ -4762,13 +4764,16 @@ static void CG_PlayerShadow( centity_t *cent ) {
 		cent->currentState.trickedentindex4,
 		cg.snap->ps.clientNum))
 	{
-		return; //this entity is mind-tricking the current client, so don't render it
+		return qfalse; //this entity is mind-tricking the current client, so don't render it
 	}
 
 	if (cent->currentState.m_iVehicleNum &&
 		cent->currentState.NPC_class != CLASS_VEHICLE )
 	{//riding a vehicle, no dropshadow
-		return;
+		return qfalse;
+	}
+	if ( cg_shadows.integer == 2 && cgs.rtShadows ) {
+		return qtrue;
 	}
 	// send a trace down from the player to the ground
 	VectorCopy( cent->lerpOrigin, end );
@@ -4778,7 +4783,7 @@ static void CG_PlayerShadow( centity_t *cent ) {
 
 	// no shadow if too high
 	if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid ) {
-		return;
+		return qfalse;
 	}
 
 	// fade the shadow out with height
@@ -4796,6 +4801,7 @@ static void CG_PlayerShadow( centity_t *cent ) {
 	}
 	CG_ImpactMark( cgs.media.shadowMarkShader, trace.endpos, trace.plane.normal,
 		cent->pe.legs.yawAngle, alpha,alpha,alpha,1, qfalse, radius, qtrue );
+	return qfalse;
 }
 
 
@@ -9412,6 +9418,7 @@ void CG_Player( centity_t *cent ) {
 	qboolean		g2HasWeapon = qfalse;
 	qboolean		drawPlayerSaber = qfalse;
 	qboolean		checkDroidShields = qfalse;
+	qboolean		shadow = qfalse;
 
 	//first if we are not an npc and we are using an emplaced gun then make sure our
 	//angles are visually capped to the constraints (otherwise it's possible to lerp
@@ -10120,7 +10127,7 @@ void CG_Player( centity_t *cent ) {
 	}
 
 	// add the shadow
-	CG_PlayerShadow( cent );
+	shadow = CG_PlayerShadow( cent );
 
 	if ( ((cent->currentState.eFlags & EF_SEEKERDRONE) || cent->currentState.genericenemyindex != -1) && cent->currentState.eType != ET_NPC )
 	{
@@ -10204,6 +10211,9 @@ void CG_Player( centity_t *cent ) {
 
 	VectorCopy( cent->lerpOrigin, legs.lightingOrigin );
 	legs.renderfx = renderfx;
+	if ( shadow ) {
+		legs.renderfx |= RF_SHADOW_PLANE;
+	}
 	// a player with an outline is drawn after it and on it (select/cg_select.c): after the glow that is its light
 	// where the renderer adds one, after everything else of the scene where it adds none
 	if ( CG_SelectOutlined( cent->currentState.number ) ) {

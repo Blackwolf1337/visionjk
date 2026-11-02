@@ -814,6 +814,12 @@ static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean 
 		VK_ModelBatchAdd( first, numIndexes );
 	}
 	tess.numIndexes += numIndexes;
+#ifndef RD_VISION_GLES
+	// a player who casts a shadow: the surface also goes into his acceleration structure
+	if ( !md3 && bones ) {
+		VK_RT_AddCaster( bones, (const mdxmSurface_t *)mesh );
+	}
+#endif
 	return qtrue;
 }
 

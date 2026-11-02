@@ -1,0 +1,55 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+
+// The vertices of one surface of a player who casts a shadow, moved by the bones of his skeleton as
+// shaders/skinned.vert moves them, into the positions the acceleration structure of the player is built from
+// (vk_rt.cpp). Everything is found by its address: the vertices of the surface in the buffer of the models
+// (vkSkinVertex_t, twelve words: position, normal, texture coordinates, four bone numbers in bytes, four 16 bit
+// weights, one unused), the bone buffer of the frame and where the positions go.
+
+layout( local_size_x = 64 ) in;
+
+layout( buffer_reference, std430, buffer_reference_align = 4 ) readonly buffer SkinVertexes {
+	uint	words[];
+};
+layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer BoneRows {
+	vec4	rows[];
+};
+layout( buffer_reference, std430, buffer_reference_align = 4 ) writeonly buffer Positions {
+	float	xyz[];
+};
+
+layout( push_constant ) uniform Skin {
+	uvec2	vertexes;
+	uvec2	bones;
+	uvec2	positions;
+	uint	skeleton;		// where the skeleton starts, in rows
+	uint	count;
+} u;
+
+BoneRows g_bones;
+#define BONE_ROW( r )	g_bones.rows[r]
+#include "skin.glsl"
+
+void main() {
+	uint i = gl_GlobalInvocationID.x;
+
+	if ( i >= u.count ) {
+		return;
+	}
+	SkinVertexes vertexes = SkinVertexes( u.vertexes );
+	Positions positions = Positions( u.positions );
+	uint w = i * 12u;
+	vec3 position = uintBitsToFloat( uvec3( vertexes.words[w], vertexes.words[w + 1u], vertexes.words[w + 2u] ) );
+	uint boneNums = vertexes.words[w + 8u];
+	uint w01 = vertexes.words[w + 9u], w23 = vertexes.words[w + 10u];
+	vec4 weights = vec4( float( w01 & 65535u ), float( w01 >> 16 ), float( w23 & 65535u ), float( w23 >> 16 ) ) / 65535.0;
+
+	g_bones = BoneRows( u.bones );
+	position = SkinPosition( u.skeleton, uvec4( boneNums & 255u, ( boneNums >> 8 ) & 255u, ( boneNums >> 16 ) & 255u, boneNums >> 24 ),
+		weights, position );
+	positions.xyz[i * 3u] = position.x;
+	positions.xyz[i * 3u + 1u] = position.y;
+	positions.xyz[i * 3u + 2u] = position.z;
+}

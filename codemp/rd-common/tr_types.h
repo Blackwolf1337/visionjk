@@ -52,7 +52,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 									// for lighting.  This allows entities to sink into the floor
 									// with their origin going solid, and allows all parts of a
 									// player to get the same lighting
-#define	RF_SHADOW_PLANE		0x00100	// use refEntity->shadowPlane
+#define	RF_SHADOW_PLANE		0x00100	// VisionJK: casts a shadow the renderer traces from the lights of the level (cg_shadows 2)
 #define	RF_WRAP_FRAMES		0x00200	// mod the model frames by the maxframes to allow continuous
 										// animation without needing to know the frame count
 

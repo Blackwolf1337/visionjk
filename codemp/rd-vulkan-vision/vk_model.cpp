@@ -42,6 +42,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <unordered_map>
 
 static std::unordered_map<const void *, int>	vk_modelFirstIndex;		// of an mdxmSurface_t or md3Surface_t, -1: not on the device
+static std::unordered_map<const void *, int>	vk_modelFirstVertex;	// of an mdxmSurface_t on the device
 static vkBuffer_t		vk_modelVertexes;			// vkSkinVertex_t, filled from the front
 static vkSize_t			vk_modelUsed;
 static vkBuffer_t		vk_modelIndexes;			// the triangles of those surfaces, as indexes into the whole buffer
@@ -79,7 +80,7 @@ static int VK_SkeletonStart( const vkFrame_t *frame ) {
 }
 
 void VK_InitModels( void ) {
-	VK_CreateBuffer( &vk_modelVertexes, VK_MODEL_BYTES, VKB_VERTEXES, qfalse );
+	VK_CreateBuffer( &vk_modelVertexes, VK_MODEL_BYTES, VKB_MODELS, qfalse );
 	VK_CreateBuffer( &vk_modelIndexes, VK_MODEL_INDEX_BYTES, VKB_INDEXES, qfalse );
 	vk_modelUsed = vk_modelIndexUsed = 0;
 	for ( int i = 0; i < 2; i++ ) {
@@ -96,6 +97,7 @@ void VK_ShutdownModels( void ) {
 	VK_DestroyBuffer( &vk_modelVertexes );
 	VK_DestroyBuffer( &vk_modelIndexes );
 	vk_modelFirstIndex.clear();
+	vk_modelFirstVertex.clear();
 	vk_modelUsed = vk_modelIndexUsed = 0;
 	VK_DestroyBuffer( &vk_goreVertexes[0] );
 	VK_DestroyBuffer( &vk_goreVertexes[1] );
@@ -116,6 +118,7 @@ a surface holds any more
 void VK_ModelsChanged( void ) {
 	VK_WaitIdle();
 	vk_modelFirstIndex.clear();
+	vk_modelFirstVertex.clear();
 	vk_modelUsed = vk_modelIndexUsed = 0;
 	if ( vk_goreFirstVertex ) {
 		vk_goreFirstVertex->clear();
@@ -225,9 +228,19 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 	first = VK_ModelIndexes( (const int *)( (const byte *)surface + surface->ofsTriangles ), surface->numTriangles * 3,
 		(int)( vk_modelUsed / sizeof( vkSkinVertex_t ) ) );
 	ri.LoadPop();
+	vk_modelFirstVertex[surface] = (int)( vk_modelUsed / sizeof( vkSkinVertex_t ) );
 	vk_modelUsed += size;
 	vk_modelFirstIndex[surface] = first;
 	return first;
+}
+
+// where the vertices of a Ghoul2 surface that VK_SkinnedSurface() put on the device begin in the buffer of the
+// models, -1: not there. vertexes: that buffer.
+int VK_SkinnedFirstVertex( const mdxmSurface_t *surface, const vkBuffer_t **vertexes ) {
+	const auto found = vk_modelFirstVertex.find( surface );
+
+	*vertexes = &vk_modelVertexes;
+	return ( found != vk_modelFirstVertex.end() ) ? found->second : -1;
 }
 
 /*
@@ -428,6 +441,11 @@ static qboolean VK_FrameSkeleton( CBoneCache *boneCache, uint32_t *bones ) {
 	*bones = (uint32_t)first * 3;
 	frame->numBones = first + numBones;
 	return qtrue;
+}
+
+// the same for those who do not draw (the shadows of the players, vk_rt.cpp)
+qboolean VK_SkeletonBones( CBoneCache *boneCache, uint32_t *bones ) {
+	return (qboolean)( vk.frame && boneCache && VK_FrameSkeleton( boneCache, bones ) );
 }
 
 qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {

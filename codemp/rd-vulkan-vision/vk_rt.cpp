@@ -22,27 +22,43 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // The level keeps its lightmaps: the light of the world, its shadows included, was worked out when the map was
 // compiled. What moves gets its shadows here, by rays from the pixels of the view towards the lights of the level.
-// The rays go through acceleration structures: one of the solid surfaces of the level, built once per level from
-// their own copy of the positions (the buffer of vk_world.cpp is laid out for drawing), and one over all of them
-// each frame (the top level), which the shaders that trace read.
+// The rays go through acceleration structures:
+// - one of the solid surfaces of the level, built once per level from their own copy of the positions (the buffer
+//   of vk_world.cpp is laid out for drawing);
+// - one for each player who casts a shadow (RF_SHADOW_PLANE), built each frame from his surfaces as the view drew
+//   them: shaders/rtskin.comp moves their vertices by the bones of his skeleton into positions of the frame;
+// - the top level over all of them each frame, which the shaders that trace read: the level with mask 1, the
+//   players with mask 2, each with the place of his entity.
 //
 // The passes run where the wet places do (RB_DrawWet()): after what is solid, before anything transparent, outside
-// a target, so building the top level can be recorded right before them in the command buffer of the frame.
+// a target, so the builds of the frame are recorded right before them in its command buffer. Every build of a
+// frame first says how much scratch memory it needs, then the scratch buffer is made large enough once, before
+// anything that uses it is recorded.
 //
 // v_rtDebug shows what the rays see: 1 whether a ray from each pixel towards the sun of the level gets out
 // (lit where it does: outdoors that is the shadow the lightmaps have), 2 how far a ray from the eye through each
-// pixel goes against the depth of the scene (black where they agree, red where the ray stops short of the
-// depth, green where it goes past it).
+// pixel goes against the depth of the scene (black where they agree, red where the ray stops short of the depth,
+// green where it goes past it), 3 the rays towards the sun against the players alone: their sun shadows.
 
 #include "vk_local.h"
 
+#include <unordered_map>
 #include <vector>
 
 static const uint32_t vk_rtDebugFrag[] =
 #include "shaders/rtdebug_frag.inc"
 ;
+static const uint32_t vk_rtSkinComp[] =
+#include "shaders/rtskin_comp.inc"
+;
 
-#define VK_RT_MAX_INSTANCES		64
+#define VK_RT_MAX_INSTANCES			64
+#define VK_RT_MAX_CASTERS			16				// players with a shadow in one frame
+#define VK_RT_MAX_CASTER_SURFACES	64				// surfaces of one of them, saber and weapon included
+#define VK_RT_SKIN_VERTEXES			( 256 * 1024 )	// their skinned vertices in one frame
+#define VK_RT_LOCAL_INDEXES			( 1024 * 1024 )	// the triangles of the model surfaces they have, counted in the surface
+#define VK_RT_CASTER_BYTES			( 32 << 20 )	// their acceleration structures in one frame
+#define VK_RT_ACCEL_ALIGN			256				// where an acceleration structure may begin in its buffer
 
 cvar_t	*v_rtDebug;
 
@@ -52,16 +68,50 @@ typedef struct vkAccel_s {
 	VkDeviceAddress				address;
 } vkAccel_t;
 
+typedef struct vkCasterSurface_s {
+	const mdxmSurface_t			*surface;
+	CBoneCache					*bones;
+} vkCasterSurface_t;
+
+typedef struct vkCaster_s {
+	int							entityNum;
+	vec3_t						origin;
+	vec3_t						axis[3];
+	int							numSurfaces;
+	vkCasterSurface_t			surfaces[VK_RT_MAX_CASTER_SURFACES];
+	// filled when the frame builds them
+	VkAccelerationStructureKHR	as;
+	VkDeviceAddress				address;
+	VkDeviceSize				scratch;
+} vkCaster_t;
+
 static struct {
 	// the level
 	const world_t				*world;			// what the structure of the level was built for
-	qboolean					worldReady;		// built, and its build is in the command buffer of a frame before
+	qboolean					levelReady;		// built, or its build is recorded before the first use
+	qboolean					levelPending;	// its build still has to be recorded this frame
 	vkBuffer_t					positions;		// the inputs of its build
 	vkBuffer_t					indexes;
 	uint32_t					numVertexes, numTriangles;
+	VkDeviceSize				levelScratch;
 	vkAccel_t					level;
-	vkBuffer_t					scratch;		// for every build, as large as the largest needs
+
+	vkBuffer_t					scratch;		// for every build of a frame
 	VkDeviceSize				scratchAlign;
+
+	// the players who cast a shadow in this frame, as the view of the level drew them
+	vkCaster_t					casters[VK_RT_MAX_CASTERS];
+	int							numCasters;
+	int							castersFrame;	// backEnd.viewParms.frameCount they belong to
+	vkBuffer_t					localIndexes;	// the triangles of their surfaces, counted from the first vertex of each
+	uint32_t					localIndexesUsed;
+	std::unordered_map<const void *, uint32_t>	*localFirst;	// of an mdxmSurface_t in localIndexes
+	vkBuffer_t					skinned[VK_FRAMES];		// their positions in a frame
+	vkBuffer_t					arena[VK_FRAMES];		// their acceleration structures in a frame
+	VkAccelerationStructureKHR	arenaAs[VK_FRAMES][VK_RT_MAX_CASTERS];
+	VkPipelineLayout			skinLayout;
+	VkPipeline					skinPipeline;
+	VkShaderModule				skinShader;
 
 	// the top level, one for each frame in flight
 	vkAccel_t					top[VK_FRAMES];
@@ -83,18 +133,30 @@ static VkDeviceAddress VK_RT_Address( const vkBuffer_t *buf ) {
 	return qvkGetBufferDeviceAddress( vk.device, &info );
 }
 
-static void VK_RT_CreateAccel( vkAccel_t *accel, VkAccelerationStructureTypeKHR type, VkDeviceSize size ) {
-	VkAccelerationStructureCreateInfoKHR info = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
-	VkAccelerationStructureDeviceAddressInfoKHR address = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+static VkDeviceSize VK_RT_Align( VkDeviceSize size, VkDeviceSize alignment ) {
+	return ( size + alignment - 1 ) / alignment * alignment;
+}
 
-	VK_CreateBuffer( &accel->buffer, size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
-		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qfalse );
-	info.buffer = accel->buffer.buffer;
+static VkAccelerationStructureKHR VK_RT_NewAccel( const vkBuffer_t *buffer, VkDeviceSize offset, VkDeviceSize size,
+	VkAccelerationStructureTypeKHR type, VkDeviceAddress *address ) {
+	VkAccelerationStructureCreateInfoKHR info = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
+	VkAccelerationStructureDeviceAddressInfoKHR addressInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+	VkAccelerationStructureKHR as;
+
+	info.buffer = buffer->buffer;
+	info.offset = offset;
 	info.size = size;
 	info.type = type;
-	VK_CHECK( qvkCreateAccelerationStructureKHR( vk.device, &info, NULL, &accel->as ) );
-	address.accelerationStructure = accel->as;
-	accel->address = qvkGetAccelerationStructureDeviceAddressKHR( vk.device, &address );
+	VK_CHECK( qvkCreateAccelerationStructureKHR( vk.device, &info, NULL, &as ) );
+	addressInfo.accelerationStructure = as;
+	*address = qvkGetAccelerationStructureDeviceAddressKHR( vk.device, &addressInfo );
+	return as;
+}
+
+static void VK_RT_CreateAccel( vkAccel_t *accel, VkAccelerationStructureTypeKHR type, VkDeviceSize size ) {
+	VK_CreateBuffer( &accel->buffer, size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
+		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qfalse );
+	accel->as = VK_RT_NewAccel( &accel->buffer, 0, size, type, &accel->address );
 }
 
 static void VK_RT_DestroyAccel( vkAccel_t *accel ) {
@@ -105,25 +167,50 @@ static void VK_RT_DestroyAccel( vkAccel_t *accel ) {
 	memset( accel, 0, sizeof( *accel ) );
 }
 
-// the scratch buffer at least size bytes past the alignment the device wants for it
-static VkDeviceAddress VK_RT_Scratch( VkDeviceSize size ) {
+// The scratch buffer at least size bytes past the alignment the device wants for it. Only before anything of
+// the frame that uses it is recorded: a larger one replaces it when the frames before are done.
+static void VK_RT_EnsureScratch( VkDeviceSize size ) {
 	if ( rt.scratch.size < size + rt.scratchAlign ) {
-		// (only at a level change or for the first top level: nothing that used the old one is on its way)
 		VK_WaitIdle();
 		VK_DestroyBuffer( &rt.scratch );
 		VK_CreateBuffer( &rt.scratch, size + rt.scratchAlign, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
 			| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qfalse );
 	}
-	return ( VK_RT_Address( &rt.scratch ) + rt.scratchAlign - 1 ) & ~( rt.scratchAlign - 1 );
 }
 
-// what builds write, what the next build or a shader reads
-static void VK_RT_BuildBarrier( VkCommandBuffer cmd, VkPipelineStageFlags next ) {
+static VkDeviceAddress VK_RT_ScratchAt( VkDeviceSize offset ) {
+	return VK_RT_Align( VK_RT_Address( &rt.scratch ), rt.scratchAlign ) + offset;
+}
+
+static void VK_RT_Barrier( VkCommandBuffer cmd, VkPipelineStageFlags srcStage, VkAccessFlags srcAccess,
+	VkPipelineStageFlags dstStage, VkAccessFlags dstAccess ) {
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 
-	barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-	barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-	qvkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, next, 0, 1, &barrier, 0, NULL, 0, NULL );
+	barrier.srcAccessMask = srcAccess;
+	barrier.dstAccessMask = dstAccess;
+	qvkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 1, &barrier, 0, NULL, 0, NULL );
+}
+
+// a build that comes after another one: it may read what that wrote and use the same scratch memory
+static void VK_RT_BuildAfterBuild( VkCommandBuffer cmd ) {
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+		VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+		VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR );
+}
+
+static void VK_RT_Triangles( VkAccelerationStructureGeometryKHR *geometry, VkDeviceAddress vertexes, uint32_t numVertexes,
+	VkDeviceAddress indexes ) {
+	memset( geometry, 0, sizeof( *geometry ) );
+	geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	geometry->geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+	geometry->flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+	geometry->geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+	geometry->geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+	geometry->geometry.triangles.vertexData.deviceAddress = vertexes;
+	geometry->geometry.triangles.vertexStride = sizeof( float ) * 3;
+	geometry->geometry.triangles.maxVertex = numVertexes - 1;
+	geometry->geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+	geometry->geometry.triangles.indexData.deviceAddress = indexes;
 }
 
 /*
@@ -202,36 +289,31 @@ static void VK_RT_LevelTriangles( std::vector<float> &positions, std::vector<uin
 	}
 }
 
-static void VK_RT_LevelGeometry( VkAccelerationStructureGeometryKHR *geometry ) {
-	memset( geometry, 0, sizeof( *geometry ) );
-	geometry->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-	geometry->geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-	geometry->flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-	geometry->geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-	geometry->geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-	geometry->geometry.triangles.vertexData.deviceAddress = VK_RT_Address( &rt.positions );
-	geometry->geometry.triangles.vertexStride = sizeof( float ) * 3;
-	geometry->geometry.triangles.maxVertex = rt.numVertexes - 1;
-	geometry->geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-	geometry->geometry.triangles.indexData.deviceAddress = VK_RT_Address( &rt.indexes );
+static void VK_RT_LevelBuildInfo( VkAccelerationStructureGeometryKHR *geometry, VkAccelerationStructureBuildGeometryInfoKHR *build ) {
+	VK_RT_Triangles( geometry, VK_RT_Address( &rt.positions ), rt.numVertexes, VK_RT_Address( &rt.indexes ) );
+	memset( build, 0, sizeof( *build ) );
+	build->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build->type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	build->flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	build->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	build->geometryCount = 1;
+	build->pGeometries = geometry;
 }
 
 /*
 ===============
-VK_RT_BuildLevel
+VK_RT_PrepareLevel
 
-Once per level, recorded into the command buffer of its first frame that traces. Its inputs stay until the next
-level: the build reads them when that frame runs.
+Once per level: its triangles and its acceleration structure, whose build VK_RT_RecordLevel() records into the
+command buffer of the frame. The inputs stay until the next level, the build reads them when that frame runs.
 ===============
 */
-static void VK_RT_BuildLevel( VkCommandBuffer cmd ) {
+static void VK_RT_PrepareLevel( void ) {
 	std::vector<float>								positions;
 	std::vector<uint32_t>							indexes;
 	VkAccelerationStructureGeometryKHR				geometry;
-	VkAccelerationStructureBuildGeometryInfoKHR		build = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
+	VkAccelerationStructureBuildGeometryInfoKHR		build;
 	VkAccelerationStructureBuildSizesInfoKHR		sizes = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-	VkAccelerationStructureBuildRangeInfoKHR		range;
-	const VkAccelerationStructureBuildRangeInfoKHR	*ranges = &range;
 	const VkBufferUsageFlags						input = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
 		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
@@ -240,7 +322,8 @@ static void VK_RT_BuildLevel( VkCommandBuffer cmd ) {
 	VK_DestroyBuffer( &rt.positions );
 	VK_DestroyBuffer( &rt.indexes );
 	rt.world = tr.world;
-	rt.worldReady = qfalse;
+	rt.levelReady = rt.levelPending = qfalse;
+	rt.levelScratch = 0;
 
 	VK_RT_LevelTriangles( positions, indexes );
 	rt.numVertexes = (uint32_t)( positions.size() / 3 );
@@ -254,49 +337,340 @@ static void VK_RT_BuildLevel( VkCommandBuffer cmd ) {
 	VK_CreateBuffer( &rt.indexes, indexes.size() * sizeof( uint32_t ), input, qtrue );
 	memcpy( rt.indexes.mapped, indexes.data(), indexes.size() * sizeof( uint32_t ) );
 
-	VK_RT_LevelGeometry( &geometry );
-	build.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-	build.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-	build.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	build.geometryCount = 1;
-	build.pGeometries = &geometry;
+	VK_RT_LevelBuildInfo( &geometry, &build );
 	qvkGetAccelerationStructureBuildSizesKHR( vk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build,
 		&rt.numTriangles, &sizes );
 	VK_RT_CreateAccel( &rt.level, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, sizes.accelerationStructureSize );
-	build.dstAccelerationStructure = rt.level.as;
-	build.scratchData.deviceAddress = VK_RT_Scratch( sizes.buildScratchSize );
+	rt.levelScratch = sizes.buildScratchSize;
+	rt.levelPending = qtrue;
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: the level has %u solid triangles\n", rt.numTriangles );
+}
 
+static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
+	VkAccelerationStructureGeometryKHR				geometry;
+	VkAccelerationStructureBuildGeometryInfoKHR		build;
+	VkAccelerationStructureBuildRangeInfoKHR		range;
+	const VkAccelerationStructureBuildRangeInfoKHR	*ranges = &range;
+
+	VK_RT_LevelBuildInfo( &geometry, &build );
+	build.dstAccelerationStructure = rt.level.as;
+	build.scratchData.deviceAddress = VK_RT_ScratchAt( 0 );
 	memset( &range, 0, sizeof( range ) );
 	range.primitiveCount = rt.numTriangles;
 	qvkCmdBuildAccelerationStructuresKHR( cmd, 1, &build, &ranges );
-	VK_RT_BuildBarrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR );
-	rt.worldReady = qtrue;
-	ri.Printf( PRINT_DEVELOPER, "ray tracing: the level has %u solid triangles\n", rt.numTriangles );
+	VK_RT_BuildAfterBuild( cmd );
+	rt.levelPending = qfalse;
+	rt.levelReady = qtrue;
+}
+
+/*
+===============================================================================
+
+THE PLAYERS
+
+===============================================================================
+*/
+
+/*
+===============
+VK_RT_AddCaster
+
+A Ghoul2 surface went into a batch of the device (VK_AddDeviceMesh): it also goes into the acceleration structure
+of its player when his entity casts a shadow and this is the view of the level.
+===============
+*/
+void VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface ) {
+	const trRefEntity_t	*ent = backEnd.currentEntity;
+	const int			entityNum = (int)( ent - backEnd.refdef.entities );
+	vkCaster_t			*caster = NULL;
+
+	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE )
+		|| backEnd.viewParms.isPortal || ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		return;
+	}
+	if ( rt.castersFrame != backEnd.viewParms.frameCount ) {
+		rt.castersFrame = backEnd.viewParms.frameCount;
+		rt.numCasters = 0;
+	}
+	for ( int i = 0; i < rt.numCasters; i++ ) {
+		if ( rt.casters[i].entityNum == entityNum ) {
+			caster = &rt.casters[i];
+			break;
+		}
+	}
+	if ( !caster ) {
+		if ( rt.numCasters == VK_RT_MAX_CASTERS ) {
+			return;
+		}
+		caster = &rt.casters[rt.numCasters++];
+		caster->entityNum = entityNum;
+		caster->numSurfaces = 0;
+		VectorCopy( ent->e.origin, caster->origin );
+		VectorCopy( ent->e.axis[0], caster->axis[0] );
+		VectorCopy( ent->e.axis[1], caster->axis[1] );
+		VectorCopy( ent->e.axis[2], caster->axis[2] );
+	}
+	// a surface of several shaders, or in several batches, goes in once
+	for ( int i = 0; i < caster->numSurfaces; i++ ) {
+		if ( caster->surfaces[i].surface == surface && caster->surfaces[i].bones == bones ) {
+			return;
+		}
+	}
+	if ( caster->numSurfaces < VK_RT_MAX_CASTER_SURFACES ) {
+		caster->surfaces[caster->numSurfaces].surface = surface;
+		caster->surfaces[caster->numSurfaces].bones = bones;
+		caster->numSurfaces++;
+	}
+}
+
+// R_Init() ran: the surfaces of the models may be others at the same addresses
+void VK_RT_ModelsChanged( void ) {
+	if ( rt.localFirst ) {
+		rt.localFirst->clear();
+	}
+	rt.localIndexesUsed = 0;
+	rt.numCasters = 0;
+}
+
+// where the triangles of a surface counted from its first vertex are in localIndexes, put there the first time
+static qboolean VK_RT_LocalIndexes( const mdxmSurface_t *surface, uint32_t *first ) {
+	const auto found = rt.localFirst->find( surface );
+	const uint32_t count = (uint32_t)surface->numTriangles * 3;
+	const int *triangles = (const int *)( (const byte *)surface + surface->ofsTriangles );
+
+	if ( found != rt.localFirst->end() ) {
+		*first = found->second;
+		return qtrue;
+	}
+	if ( rt.localIndexesUsed + count > VK_RT_LOCAL_INDEXES ) {
+		return qfalse;
+	}
+	*first = rt.localIndexesUsed;
+	for ( uint32_t i = 0; i < count; i++ ) {
+		( (uint32_t *)rt.localIndexes.mapped )[*first + i] = (uint32_t)triangles[i];
+	}
+	rt.localIndexesUsed += count;
+	( *rt.localFirst )[surface] = *first;
+	return qtrue;
+}
+
+// what one surface of a caster is built from in this frame
+typedef struct vkCasterPart_s {
+	uint32_t		skinned;		// first position in rt.skinned of the frame
+	uint32_t		numVertexes;
+	uint32_t		localFirst;		// first index in rt.localIndexes
+	uint32_t		numTriangles;
+	uint32_t		firstVertex;	// in the buffer of the models
+	uint32_t		skeleton;		// rows of the bone buffer
+} vkCasterPart_t;
+
+static vkCasterPart_t								vk_parts[VK_RT_MAX_CASTERS][VK_RT_MAX_CASTER_SURFACES];
+static int											vk_numParts[VK_RT_MAX_CASTERS];
+static VkAccelerationStructureGeometryKHR			vk_partGeometry[VK_RT_MAX_CASTERS][VK_RT_MAX_CASTER_SURFACES];
+static VkAccelerationStructureBuildRangeInfoKHR		vk_partRange[VK_RT_MAX_CASTERS][VK_RT_MAX_CASTER_SURFACES];
+static VkAccelerationStructureBuildGeometryInfoKHR	vk_casterBuild[VK_RT_MAX_CASTERS];
+
+static void VK_RT_CasterBuildInfo( int c ) {
+	const VkDeviceAddress skinned = VK_RT_Address( &rt.skinned[vk.frameIndex] );
+	const VkDeviceAddress local = VK_RT_Address( &rt.localIndexes );
+	VkAccelerationStructureBuildGeometryInfoKHR *build = &vk_casterBuild[c];
+
+	for ( int i = 0; i < vk_numParts[c]; i++ ) {
+		const vkCasterPart_t *part = &vk_parts[c][i];
+
+		VK_RT_Triangles( &vk_partGeometry[c][i], skinned + (VkDeviceAddress)part->skinned * sizeof( float ) * 3, part->numVertexes,
+			local + (VkDeviceAddress)part->localFirst * sizeof( uint32_t ) );
+		memset( &vk_partRange[c][i], 0, sizeof( vk_partRange[c][i] ) );
+		vk_partRange[c][i].primitiveCount = part->numTriangles;
+	}
+	memset( build, 0, sizeof( *build ) );
+	build->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build->type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	build->flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+	build->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	build->geometryCount = (uint32_t)vk_numParts[c];
+	build->pGeometries = vk_partGeometry[c];
 }
 
 /*
 ===============
-VK_RT_BuildTop
+VK_RT_PrepareCasters
 
-The top level of this frame over what was built: the level for now, the players come next.
+The parts of the casters of this frame and their acceleration structures in the arena of the frame. Returns the
+scratch memory all their builds need together (they are built at the same time). Casters that do not fit are
+left out.
 ===============
 */
-static void VK_RT_BuildTop( VkCommandBuffer cmd ) {
+static VkDeviceSize VK_RT_PrepareCasters( void ) {
+	const int		frame = vk.frameIndex;
+	VkDeviceSize	arenaUsed = 0, scratch = 0;
+	uint32_t		skinnedUsed = 0;
+	int				kept = 0;
+
+	// the structures of the frame that used this arena before are no longer read, its fence was waited for
+	for ( int i = 0; i < VK_RT_MAX_CASTERS; i++ ) {
+		if ( rt.arenaAs[frame][i] ) {
+			qvkDestroyAccelerationStructureKHR( vk.device, rt.arenaAs[frame][i], NULL );
+			rt.arenaAs[frame][i] = VK_NULL_HANDLE;
+		}
+	}
+	if ( rt.castersFrame != backEnd.viewParms.frameCount ) {
+		rt.numCasters = 0;
+	}
+
+	for ( int c = 0; c < rt.numCasters; c++ ) {
+		vkCaster_t									*caster = &rt.casters[c];
+		uint32_t									counts[VK_RT_MAX_CASTER_SURFACES];
+		VkAccelerationStructureBuildSizesInfoKHR	sizes = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+		const uint32_t								skinnedStart = skinnedUsed;
+		int											n = 0;
+
+		for ( int i = 0; i < caster->numSurfaces; i++ ) {
+			const mdxmSurface_t	*surface = caster->surfaces[i].surface;
+			vkCasterPart_t		*part = &vk_parts[kept][n];
+			const vkBuffer_t	*vertexes;
+			const int			firstVertex = VK_SkinnedFirstVertex( surface, &vertexes );
+
+			if ( firstVertex < 0 || surface->numTriangles <= 0 || skinnedUsed + (uint32_t)surface->numVerts > VK_RT_SKIN_VERTEXES
+				|| !VK_RT_LocalIndexes( surface, &part->localFirst )
+				|| !VK_SkeletonBones( caster->surfaces[i].bones, &part->skeleton ) ) {
+				continue;
+			}
+			part->skinned = skinnedUsed;
+			part->numVertexes = (uint32_t)surface->numVerts;
+			part->numTriangles = (uint32_t)surface->numTriangles;
+			part->firstVertex = (uint32_t)firstVertex;
+			counts[n] = part->numTriangles;
+			skinnedUsed += part->numVertexes;
+			n++;
+		}
+		if ( !n ) {
+			skinnedUsed = skinnedStart;
+			continue;
+		}
+		vk_numParts[kept] = n;
+		VK_RT_CasterBuildInfo( kept );
+		qvkGetAccelerationStructureBuildSizesKHR( vk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vk_casterBuild[kept],
+			counts, &sizes );
+		if ( arenaUsed + sizes.accelerationStructureSize > VK_RT_CASTER_BYTES ) {
+			skinnedUsed = skinnedStart;
+			continue;
+		}
+		if ( kept != c ) {
+			rt.casters[kept] = *caster;
+		}
+		rt.casters[kept].as = rt.arenaAs[frame][kept] = VK_RT_NewAccel( &rt.arena[frame], arenaUsed, sizes.accelerationStructureSize,
+			VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, &rt.casters[kept].address );
+		rt.casters[kept].scratch = scratch;
+		arenaUsed = VK_RT_Align( arenaUsed + sizes.accelerationStructureSize, VK_RT_ACCEL_ALIGN );
+		scratch = VK_RT_Align( scratch + sizes.buildScratchSize, rt.scratchAlign );
+		kept++;
+	}
+	rt.numCasters = kept;
+	return scratch;
+}
+
+// the vertices of every part moved by its bones into the positions of the frame
+static void VK_RT_SkinCasters( VkCommandBuffer cmd ) {
+	const vkBuffer_t		*vertexes;
+	const VkDeviceAddress	skinned = VK_RT_Address( &rt.skinned[vk.frameIndex] );
+	VkDeviceAddress			models, bones;
+	struct {
+		uint32_t			vertexes[2];
+		uint32_t			bones[2];
+		uint32_t			positions[2];
+		uint32_t			skeleton;
+		uint32_t			count;
+	} push;
+
+	if ( !rt.numCasters ) {
+		return;
+	}
+	VK_SkinnedFirstVertex( NULL, &vertexes );
+	models = VK_RT_Address( vertexes );
+	bones = VK_RT_Address( &vk.frame->bones );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.skinPipeline );
+	for ( int c = 0; c < rt.numCasters; c++ ) {
+		for ( int i = 0; i < vk_numParts[c]; i++ ) {
+			const vkCasterPart_t	*part = &vk_parts[c][i];
+			const VkDeviceAddress	from = models + (VkDeviceAddress)part->firstVertex * sizeof( vkSkinVertex_t );
+			const VkDeviceAddress	to = skinned + (VkDeviceAddress)part->skinned * sizeof( float ) * 3;
+
+			push.vertexes[0] = (uint32_t)from;
+			push.vertexes[1] = (uint32_t)( from >> 32 );
+			push.bones[0] = (uint32_t)bones;
+			push.bones[1] = (uint32_t)( bones >> 32 );
+			push.positions[0] = (uint32_t)to;
+			push.positions[1] = (uint32_t)( to >> 32 );
+			push.skeleton = part->skeleton;
+			push.count = part->numVertexes;
+			qvkCmdPushConstants( cmd, rt.skinLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), &push );
+			qvkCmdDispatch( cmd, ( part->numVertexes + 63 ) / 64, 1, 1 );
+		}
+	}
+	// the builds read the positions
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+		VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_SHADER_READ_BIT );
+}
+
+static void VK_RT_RecordCasters( VkCommandBuffer cmd ) {
+	const VkAccelerationStructureBuildRangeInfoKHR *ranges[VK_RT_MAX_CASTERS];
+
+	if ( !rt.numCasters ) {
+		return;
+	}
+	for ( int c = 0; c < rt.numCasters; c++ ) {
+		// (VK_RT_CasterBuildInfo again: the geometry of a caster that was left out may be in its place)
+		VK_RT_CasterBuildInfo( c );
+		vk_casterBuild[c].dstAccelerationStructure = rt.casters[c].as;
+		vk_casterBuild[c].scratchData.deviceAddress = VK_RT_ScratchAt( rt.casters[c].scratch );
+		ranges[c] = vk_partRange[c];
+	}
+	qvkCmdBuildAccelerationStructuresKHR( cmd, (uint32_t)rt.numCasters, vk_casterBuild, ranges );
+	VK_RT_BuildAfterBuild( cmd );
+}
+
+/*
+===============
+VK_RT_RecordTop
+
+The top level of this frame: the level with mask 1, each caster with mask 2 where his entity is.
+===============
+*/
+static void VK_RT_RecordTop( VkCommandBuffer cmd ) {
 	const int										frame = vk.frameIndex;
-	VkAccelerationStructureInstanceKHR				*instance = (VkAccelerationStructureInstanceKHR *)rt.instances[frame].mapped;
+	VkAccelerationStructureInstanceKHR				*instances = (VkAccelerationStructureInstanceKHR *)rt.instances[frame].mapped;
 	VkAccelerationStructureGeometryKHR				geometry;
 	VkAccelerationStructureBuildGeometryInfoKHR		build = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
 	VkAccelerationStructureBuildRangeInfoKHR		range;
 	const VkAccelerationStructureBuildRangeInfoKHR	*ranges = &range;
 	uint32_t										count = 0;
 
-	if ( rt.worldReady ) {
+	if ( rt.levelReady ) {
+		VkAccelerationStructureInstanceKHR *instance = &instances[count++];
+
 		memset( instance, 0, sizeof( *instance ) );
 		instance->transform.matrix[0][0] = instance->transform.matrix[1][1] = instance->transform.matrix[2][2] = 1.0f;
-		instance->mask = 0x01;		// the level, shaders/rtdebug.frag
+		instance->mask = 0x01;
 		instance->flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 		instance->accelerationStructureReference = rt.level.address;
-		count++;
+	}
+	for ( int c = 0; c < rt.numCasters && count < VK_RT_MAX_INSTANCES; c++ ) {
+		const vkCaster_t					*caster = &rt.casters[c];
+		VkAccelerationStructureInstanceKHR	*instance = &instances[count++];
+
+		memset( instance, 0, sizeof( *instance ) );
+		// model to world: origin + axis[0] x + axis[1] y + axis[2] z
+		for ( int r = 0; r < 3; r++ ) {
+			instance->transform.matrix[r][0] = caster->axis[0][r];
+			instance->transform.matrix[r][1] = caster->axis[1][r];
+			instance->transform.matrix[r][2] = caster->axis[2][r];
+			instance->transform.matrix[r][3] = caster->origin[r];
+		}
+		instance->instanceCustomIndex = (uint32_t)c;
+		instance->mask = 0x02;
+		instance->flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		instance->accelerationStructureReference = caster->address;
 	}
 
 	memset( &geometry, 0, sizeof( geometry ) );
@@ -310,11 +684,12 @@ static void VK_RT_BuildTop( VkCommandBuffer cmd ) {
 	build.geometryCount = 1;
 	build.pGeometries = &geometry;
 	build.dstAccelerationStructure = rt.top[frame].as;
-	build.scratchData.deviceAddress = VK_RT_Scratch( rt.topScratch );
+	build.scratchData.deviceAddress = VK_RT_ScratchAt( 0 );
 	memset( &range, 0, sizeof( range ) );
 	range.primitiveCount = count;
 	qvkCmdBuildAccelerationStructuresKHR( cmd, 1, &build, &ranges );
-	VK_RT_BuildBarrier( cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT );
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR );
 }
 
 /*
@@ -357,6 +732,37 @@ static void VK_RT_CreateTop( void ) {
 		write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 	}
+}
+
+static void VK_RT_CreateCasters( void ) {
+	const VkBufferUsageFlags		input = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	VkPushConstantRange				push;
+	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+
+	rt.localFirst = new std::unordered_map<const void *, uint32_t>;
+	VK_CreateBuffer( &rt.localIndexes, sizeof( uint32_t ) * VK_RT_LOCAL_INDEXES, input, qtrue );
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VK_CreateBuffer( &rt.skinned[i], sizeof( float ) * 3 * VK_RT_SKIN_VERTEXES, input | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qfalse );
+		VK_CreateBuffer( &rt.arena[i], VK_RT_CASTER_BYTES, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
+			| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qfalse );
+	}
+
+	// shaders/rtskin.comp finds everything by its address, the push constants hold them
+	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	push.offset = 0;
+	push.size = sizeof( uint32_t ) * 8;
+	layout.pushConstantRangeCount = 1;
+	layout.pPushConstantRanges = &push;
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.skinLayout ) );
+	rt.skinShader = VK_CreateShader( vk_rtSkinComp, sizeof( vk_rtSkinComp ) );
+	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+	info.stage.module = rt.skinShader;
+	info.stage.pName = "main";
+	info.layout = rt.skinLayout;
+	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.skinPipeline ) );
 }
 
 static void VK_RT_CreateLayouts( void ) {
@@ -404,7 +810,8 @@ void VK_RT_Init( void ) {
 	VkPhysicalDeviceAccelerationStructurePropertiesKHR	accel = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR };
 	VkPhysicalDeviceProperties2							props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &accel };
 
-	v_rtDebug = ri.Cvar_Get( "v_rtDebug", "0", CVAR_CHEAT, "What the rays of the ray tracing see. 1: towards the sun, 2: from the eye against the depth" );
+	v_rtDebug = ri.Cvar_Get( "v_rtDebug", "0", CVAR_CHEAT,
+		"What the rays of the ray tracing see. 1: towards the sun, 2: from the eye against the depth, 3: the players towards the sun" );
 	memset( &rt, 0, sizeof( rt ) );
 	if ( !vk.rayTracing || !vk.depthReadable ) {
 		return;
@@ -414,6 +821,7 @@ void VK_RT_Init( void ) {
 
 	VK_RT_CreateLayouts();
 	VK_RT_CreateTop();
+	VK_RT_CreateCasters();
 	rt.debugFragment = VK_CreateShader( vk_rtDebugFrag, sizeof( vk_rtDebugFrag ) );
 	// (8: over the level with the samples of the frame, nothing from a vertex buffer)
 	rt.debugPipeline = VK_CreatePipeline( vk.postVertexShader, rt.debugFragment, 0, 8, VKP_GENERIC, rt.layout );
@@ -425,10 +833,22 @@ void VK_RT_Shutdown( void ) {
 	}
 	qvkDestroyPipeline( vk.device, rt.debugPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.debugFragment, NULL );
+	qvkDestroyPipeline( vk.device, rt.skinPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.skinShader, NULL );
+	qvkDestroyPipelineLayout( vk.device, rt.skinLayout, NULL );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		for ( int j = 0; j < VK_RT_MAX_CASTERS; j++ ) {
+			if ( rt.arenaAs[i][j] ) {
+				qvkDestroyAccelerationStructureKHR( vk.device, rt.arenaAs[i][j], NULL );
+			}
+		}
+		VK_DestroyBuffer( &rt.arena[i] );
+		VK_DestroyBuffer( &rt.skinned[i] );
 		VK_RT_DestroyAccel( &rt.top[i] );
 		VK_DestroyBuffer( &rt.instances[i] );
 	}
+	VK_DestroyBuffer( &rt.localIndexes );
+	delete rt.localFirst;
 	VK_RT_DestroyAccel( &rt.level );
 	VK_DestroyBuffer( &rt.positions );
 	VK_DestroyBuffer( &rt.indexes );
@@ -463,6 +883,7 @@ void VK_RT_Pass( void ) {
 	static float	rows[VK_RT_VEC4S][4];
 	VkCommandBuffer	cmd;
 	vkGlobals_t		*globals;
+	VkDeviceSize	casterScratch;
 	int				viewport[4];
 
 	if ( !vk.frame || !VK_RT_Wanted() ) {
@@ -470,10 +891,23 @@ void VK_RT_Pass( void ) {
 	}
 	cmd = vk.frame->cmd;
 	VK_EndTarget();
+
+	// what has to be built this frame and how much scratch memory that needs, before anything is recorded
 	if ( rt.world != tr.world ) {
-		VK_RT_BuildLevel( cmd );
+		VK_RT_PrepareLevel();
 	}
-	VK_RT_BuildTop( cmd );
+	casterScratch = VK_RT_PrepareCasters();
+	VK_RT_EnsureScratch( Q_max( Q_max( rt.levelPending ? rt.levelScratch : 0, casterScratch ), rt.topScratch ) );
+
+	// the builds of the frame before may still use the scratch memory
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+		VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR );
+	if ( rt.levelPending ) {
+		VK_RT_RecordLevel( cmd );
+	}
+	VK_RT_SkinCasters( cmd );
+	VK_RT_RecordCasters( cmd );
+	VK_RT_RecordTop( cmd );
 
 	memset( rows, 0, sizeof( rows ) );
 	VK_ViewRows( rows, viewport );

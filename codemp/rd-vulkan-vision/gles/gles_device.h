@@ -69,6 +69,7 @@ typedef int					vkBufferUsage_t;
 #define VKB_VERTEXES		1
 #define VKB_INDEXES			2
 #define VKB_STAGING			3
+#define VKB_MODELS			VKB_VERTEXES
 #define VKB_UNIFORMS		4			// of this device: the transforms, draws and bones of a frame
 
 typedef struct vkBuffer_s {
