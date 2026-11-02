@@ -347,6 +347,34 @@ qboolean	RE_AddWet( const wetSpot_t *spots, int count ) {
 #endif
 }
 
+/*
+=============
+RE_AddPaint
+
+Sprayed pictures for the scene of this frame (paintDecal_t), added to the ones it has. They hold for one frame.
+NULL: only the question whether this renderer draws them. rd-vulkan-vision lays them onto the level as paint before
+its wet places (VK_DrawWet), rd-vanilla says qfalse and the cgame draws marks with the shaders of RE_PaintImage.
+=============
+*/
+paintDecal_t	r_paint[PAINT_MAX_DECALS];
+int				r_numPaint;
+
+qboolean	RE_AddPaint( const paintDecal_t *decals, int count ) {
+#ifdef RD_VULKAN_VISION
+	if ( !VK_HasWet() ) {
+		return qfalse;
+	}
+	if ( decals && count > 0 ) {
+		count = Q_min( count, PAINT_MAX_DECALS - r_numPaint );
+		memcpy( r_paint + r_numPaint, decals, sizeof( *decals ) * count );
+		r_numPaint += count;
+	}
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -501,12 +529,13 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	}
 
 	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect(), RE_SetScreenEffect() and
-	// RE_AddLiquid() and RE_AddWet() was for the frame before
+	// RE_AddLiquid(), RE_AddWet() and RE_AddPaint() was for the frame before
 	r_dofAmount = 0.0f;
 	r_scopeFx.flags = 0;
 	r_screenFxSet = qfalse;
 	r_numLiquids = 0;
 	r_numWet = 0;
+	r_numPaint = 0;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

@@ -562,6 +562,19 @@ uploads an hour and 300 a day per address, and the store keeps the newest 5000. 
 `modelstore.py remove-drawing <number>`. The client fetches a picture only by a number below the limit and keeps the
 file only when it has exactly the size of a drawing. Not tested: the POST on Windows.
 
+## Added later: the sprays of the store
+
+The spray store of the model service (issue #9, the upload of `v_sprays upload`) takes pictures of the players. It
+checks the format: a square RGBA PNG of 64 to 512 pixels, a power of two, 512 KB at most, with a valid `vjAn` chunk for
+the frames, and the pixels must unpack to exactly the rows (no decompression bomb). The same file gets the same
+number. The limits are 30 uploads an hour and 120 a day per address, and the store keeps the newest 20000. The owner
+takes one down with `modelstore.py remove-spray <number>`. The client fetches a sheet only by the number that came with a spray, into `sprays/store/<number>.png`.
+
+On a pure server the files of `sprays/` and `sprays/store/` are read from the folder (`FS_IsToyPicture` in
+`files.cpp`, which replaces `FS_IsDrawing`, with the files of `drawings/`). The game decodes a gif with stb_image
+(`lib/stb/stb_image.h`) from the folder of the player, not from the server. Not tested: the store between two players,
+Windows.
+
 ## Recommended server settings
 
 ```

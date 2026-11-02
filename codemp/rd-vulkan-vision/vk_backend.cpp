@@ -1032,11 +1032,12 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_sawOver = qfalse;
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
 	rb_sawLate = qfalse;
-	// the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the level itself, before its glow. The
-	// wet ground in the list before what is transparent (RB_DrawWet), the water over what was drawn.
+	// the sprayed pictures of RE_AddPaint, the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the
+	// level itself, before its glow. Paint and wet ground in the list before what is transparent (RB_DrawWet), the
+	// water over what was drawn.
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
-	rb_wetLater = (qboolean)( levelView && r_numWet );
+	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 	rb_wetLater = qfalse;
 	if ( levelView && r_numLiquids ) {

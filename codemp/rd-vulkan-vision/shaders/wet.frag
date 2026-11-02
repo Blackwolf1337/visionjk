@@ -58,35 +58,7 @@ layout( location = 0 ) out vec4 o_color;
 #define SNOW_ALBEDO		vec3( 0.93, 0.95, 0.98 )
 #define SNOW_HOLLOW		vec3( 0.72, 0.81, 0.95 )
 
-// how far in front of the eye the scene is at a pixel of the target
-float SceneDistance( vec2 pixel ) {
-	ivec2 size = textureSize( u_depth, 0 );
-	float depth = texelFetch( u_depth, clamp( ivec2( pixel ), ivec2( 0 ), size - 1 ), 0 ).r;
-
-	// (both are below zero: x / ( depth - 1 ) and a bit)
-	return W[6].w / min( depth + W[7].w, -1e-7 );
-}
-
-// the point of the level at the middle of a pixel of the target
-vec3 ScenePoint( vec2 pixel ) {
-	vec4 rect = W[8];
-	vec2 ndc = vec2( ( pixel.x - rect.x ) / rect.z * 2.0 - 1.0, 1.0 - ( pixel.y - rect.y ) / rect.w * 2.0 );
-	vec3 ray = W[5].xyz - W[6].xyz * ( ndc.x * W[4].w ) + W[7].xyz * ( ndc.y * W[5].w );
-
-	return W[4].xyz + ray * SceneDistance( pixel );
-}
-
-// a place of the level as a pixel of the target, z: how far in front of the eye, -1 behind it
-vec3 OnTarget( vec3 p ) {
-	vec4 clip = mat4( W[0], W[1], W[2], W[3] ) * vec4( p, 1.0 );
-	vec4 rect = W[8];
-
-	if ( clip.w < 1.0 ) {
-		return vec3( 0.0, 0.0, -1.0 );
-	}
-	vec2 ndc = clip.xy / clip.w;
-	return vec3( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w, dot( p - W[4].xyz, W[5].xyz ) );
-}
+#include "scene.glsl"
 
 // what the ray from o along dir meets in the picture, fallback where it leaves it or finds nothing
 vec3 Mirror( vec3 o, vec3 dir, vec3 fallback ) {
@@ -185,17 +157,9 @@ void main() {
 	float time = W[9].z;
 	vec4 rect = W[8];
 
-	// The level under the pixel, and the way its surface faces: from the neighbours on the side where the depth goes
-	// on smoothly. (The slopes of the block of pixels mix the floor with what stands on it, a player, and a ring of
-	// pixels around him would not be on the floor.)
+	// the level under the pixel, and the way its surface faces
 	vec3 p = ScenePoint( gl_FragCoord.xy );
-	vec3 pl = ScenePoint( gl_FragCoord.xy - vec2( 1.0, 0.0 ) ), pr = ScenePoint( gl_FragCoord.xy + vec2( 1.0, 0.0 ) );
-	vec3 pd = ScenePoint( gl_FragCoord.xy - vec2( 0.0, 1.0 ) ), pu = ScenePoint( gl_FragCoord.xy + vec2( 0.0, 1.0 ) );
-	vec3 dx = ( abs( dot( pr - p, W[5].xyz ) ) < abs( dot( p - pl, W[5].xyz ) ) ) ? pr - p : p - pl;
-	vec3 dy = ( abs( dot( pu - p, W[5].xyz ) ) < abs( dot( p - pd, W[5].xyz ) ) ) ? pu - p : p - pd;
-	vec3 surface = cross( dx, dy );
-	surface = ( dot( surface, surface ) > 1e-10 ) ? normalize( surface ) : W[11u + v_spot * 6u + 1u].xyz;
-	surface = ( dot( surface, eye - p ) < 0.0 ) ? -surface : surface;
+	vec3 surface = SceneSurface( gl_FragCoord.xy, p, W[11u + v_spot * 6u + 1u].xyz );
 
 	// the first place that holds the pixel draws it, the others leave it
 	if ( !InPlace( v_spot, p, surface ) ) {

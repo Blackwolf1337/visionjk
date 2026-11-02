@@ -1597,3 +1597,37 @@ void R_DeleteTextures( void ) {
 	GL_ResetBinds();
 }
 
+
+/*
+===============
+RE_PaintImage
+
+The picture of a slot of the sprays of the cgame (paintDecal_t, cgame/toys/cg_spray.c): a sheet of size x size
+RGBA, mip mapped, clamped at its edges. The image of a slot is made with the first picture and keeps its name and
+its place in the texture table after that, a new picture only replaces its pixels, so the shader for its marks
+stays the same, and rd-vulkan-vision finds it for its paint by the number of the image (VK_DrawPaint). Its star
+keeps it over the change of a level. Returns the shader for marks with it, 0 when it could not be made.
+===============
+*/
+qhandle_t RE_PaintImage( int slot, const byte *rgba, int size ) {
+	static byte	pixels[PAINT_SHEET * PAINT_SHEET * 4];	// Upload32() makes the smaller levels in place
+	image_t		*image;
+
+	if ( slot < 0 || slot >= PAINT_SLOTS || !rgba || size < 1 || size > PAINT_SHEET || ( size & ( size - 1 ) ) ) {
+		return 0;
+	}
+	memcpy( pixels, rgba, (size_t)size * size * 4 );
+	image = tr.paintImage[slot];
+	if ( !image ) {
+		image = tr.paintImage[slot] = R_CreateImage( va( "*paint%d", slot ), pixels, size, size, GL_RGBA, qtrue, qfalse, qfalse, GL_CLAMP );
+		if ( !image ) {
+			return 0;
+		}
+	} else {
+		image->width = (word)size;
+		image->height = (word)size;
+		GL_Bind( image );
+		Upload32( (unsigned *)pixels, GL_RGBA, qtrue, qfalse, qfalse, qfalse, &image->internalFormat, &image->width, &image->height );
+	}
+	return RE_RegisterSceneShader( image->imgName, image, RGBA_SHADER_DECAL, SS_DECAL );
+}

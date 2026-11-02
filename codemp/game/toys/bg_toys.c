@@ -62,6 +62,11 @@ qboolean BG_ToyValid( const toyThrow_t *toy ) {
 		if ( toy->velocity[0] < 0 || toy->velocity[0] >= MAX_CLIENTS || toy->velocity[1] < 0 || toy->velocity[1] > 1 || toy->velocity[2] )
 			return qfalse;
 		break;
+	case TOY_SPRAY_STORE:
+		// (angles and the number of a picture, no speed)
+		return (qboolean)( toy->velocity[0] >= 0 && toy->velocity[0] < TOY_SPRAY_ANGLES && toy->velocity[1] >= 0
+			&& toy->velocity[1] < TOY_BOARD_SPLIT && toy->velocity[2] >= 0 && toy->velocity[2] < TOY_BOARD_SPLIT
+			&& ( toy->velocity[1] || toy->velocity[2] ) );
 	case TOY_BOARD:
 		// (the number of a picture, no speed: the two fields together may be more than TOY_MAX_SPEED)
 		return (qboolean)( toy->velocity[0] >= 0 && toy->velocity[0] < TOY_BOARD_SPLIT && toy->velocity[1] >= 0

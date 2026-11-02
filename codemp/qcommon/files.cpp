@@ -1493,18 +1493,27 @@ qboolean FS_IsExt(const char *filename, const char *ext, int namelen)
 
 /*
 ===========
-FS_IsDrawing
+FS_IsToyPicture
 
-The files of the drawing board (cgame/toys/cg_board.c, client/cl_models.cpp) in drawings/: its pictures and those it
-imports. No pak has them, so they come from the folder on a pure server too.
+The pictures of the toys of issue #9, which no pak has, so they come from the folder on a pure server too: of the
+drawing board (cgame/toys/cg_board.c, client/cl_models.cpp) in drawings/, its pictures and those it imports, and of
+the sprays (client/cl_sprays.cpp) in sprays/, the player's own pictures, and the sheets of the store in sprays/store/.
 ===========
 */
-static qboolean FS_IsDrawing( const char *filename, int namelen )
+static qboolean FS_IsToyPicture( const char *filename, int namelen )
 {
-	if ( Q_stricmpn( filename, "drawings/", 9 ) || strchr( filename + 9, '/' ) )
+	const char *rest;
+
+	if ( !Q_stricmpn( filename, "drawings/", 9 ) && !strchr( filename + 9, '/' ) )
+		return (qboolean)( FS_IsExt( filename, ".vjd", namelen ) || FS_IsExt( filename, ".png", namelen )
+			|| FS_IsExt( filename, ".jpg", namelen ) || FS_IsExt( filename, ".jpeg", namelen ) || FS_IsExt( filename, ".tga", namelen ) );
+	if ( Q_stricmpn( filename, "sprays/", 7 ) )
 		return qfalse;
-	return (qboolean)( FS_IsExt( filename, ".vjd", namelen ) || FS_IsExt( filename, ".png", namelen )
-		|| FS_IsExt( filename, ".jpg", namelen ) || FS_IsExt( filename, ".jpeg", namelen ) || FS_IsExt( filename, ".tga", namelen ) );
+	rest = filename + 7;
+	if ( !Q_stricmpn( rest, "store/", 6 ) && !strchr( rest + 6, '/' ) )
+		return FS_IsExt( filename, ".png", namelen );
+	return (qboolean)( !strchr( rest, '/' ) && ( FS_IsExt( filename, ".png", namelen ) || FS_IsExt( filename, ".jpg", namelen )
+		|| FS_IsExt( filename, ".jpeg", namelen ) || FS_IsExt( filename, ".tga", namelen ) || FS_IsExt( filename, ".gif", namelen ) ) );
 }
 
 /*
@@ -1831,7 +1840,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					    !FS_IsExt( filename, ".game", l ) &&		// menu files
 					    !FS_IsExt( filename, ".dat", l ) &&		// for journal files
 					    !FS_IsDemoExt( filename, l ) &&			// demos
-					    !FS_IsDrawing( filename, l ) ) {
+					    !FS_IsToyPicture( filename, l ) ) {
 						continue;
 					}
 				}
@@ -1853,7 +1862,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					!FS_IsExt( filename, ".game", l ) &&		// menu files
 					!FS_IsExt( filename, ".dat", l ) &&		// for journal files
 					!FS_IsDemoExt( filename, l ) &&			// demos
-					!FS_IsDrawing( filename, l ) ) {
+					!FS_IsToyPicture( filename, l ) ) {
 					fs_fakeChkSum = Q_flrand(0.0f, 1.0f);
 				}
 #ifdef _WIN32
@@ -3091,10 +3100,10 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 
 			// don't scan directories for files if we are pure or restricted
 			if ( fs_numServerPaks &&
-				 (!extension || Q_stricmp(extension, "fcf")) && Q_stricmp( path, "drawings" ) )
+				 (!extension || Q_stricmp(extension, "fcf")) && Q_stricmp( path, "drawings" ) && Q_stricmp( path, "sprays" ) )
 			{
 				//rww - allow scanning for fcf files outside of pak even if pure
-				// (and the pictures of the drawing board, FS_IsDrawing)
+				// (and the pictures of the drawing board and the sprays, FS_IsToyPicture)
 			    continue;
 		    }
 			else

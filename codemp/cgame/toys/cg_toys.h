@@ -61,7 +61,7 @@ void		CG_RcHeard( int client, int kind, const vec3_t origin, const vec3_t veloci
 void		CG_SprayInit( void );
 void		CG_SprayFrame( void );
 void		CG_SprayScene( void );
-void		CG_SprayHeard( int client, const vec3_t origin, const vec3_t velocity );
+void		CG_SprayHeard( int client, int kind, const vec3_t origin, const vec3_t velocity );
 
 // cg_water.c
 void		CG_WaterInit( void );

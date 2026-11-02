@@ -128,9 +128,10 @@ passed to the renderer.
 #define	MAX_MARK_FRAGMENTS	128
 #define	MAX_MARK_POINTS		384
 
-void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
+// part: the part of the picture of the shader the mark shows (left, top, width, height, 0 to 1), NULL all of it
+static void CG_ImpactMarkPart( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 				   float orientation, float red, float green, float blue, float alpha,
-				   qboolean alphaFade, float radius, qboolean temporary ) {
+				   qboolean alphaFade, float radius, qboolean temporary, const float *part ) {
 	matrix3_t		axis;
 	float			texCoordScale;
 	vec3_t			originalPoints[4];
@@ -204,6 +205,10 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 			VectorSubtract( v->xyz, origin, delta );
 			v->st[0] = 0.5 + DotProduct( delta, axis[1] ) * texCoordScale;
 			v->st[1] = 0.5 + DotProduct( delta, axis[2] ) * texCoordScale;
+			if ( part ) {
+				v->st[0] = part[0] + v->st[0] * part[2];
+				v->st[1] = part[1] + v->st[1] * part[3];
+			}
 			for ( k=0; k<4; k++ )
 				v->modulate[k] = colors[k];
 		}
@@ -229,6 +234,18 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 	}
 }
 
+
+void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
+				   float orientation, float red, float green, float blue, float alpha,
+				   qboolean alphaFade, float radius, qboolean temporary ) {
+	CG_ImpactMarkPart( markShader, origin, dir, orientation, red, green, blue, alpha, alphaFade, radius, temporary, NULL );
+}
+
+// a mark of a part of a picture, a frame of the sheet of a spray (toys/cg_spray.c): only temporary, for this frame
+void CG_ImpactMarkFrame( qhandle_t markShader, const vec3_t origin, const vec3_t dir, float orientation, const vec3_t light,
+				   float radius, const float *part ) {
+	CG_ImpactMarkPart( markShader, origin, dir, orientation, light[0], light[1], light[2], 1.0f, qfalse, radius, qtrue, part );
+}
 
 /*
 ===============

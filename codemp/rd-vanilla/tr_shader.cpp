@@ -3792,6 +3792,10 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, f
 	shader.over = ( flags & RGBA_SHADER_OVER ) != 0;
 	shader.cullType = CT_TWO_SIDED;
 	shader.sort = sort;
+	if ( flags & RGBA_SHADER_DECAL ) {
+		shader.polygonOffset = true;
+		shader.sort = SS_DECAL;
+	}
 	if ( flags & RGBA_SHADER_BLUR ) {
 		// Only the pass of the dynamic glow draws this stage, which the stage iterators see to (glowOnly). The
 		// pass draws the surfaces of shaders with hasGlow, against the depth of the scene that is drawn already.

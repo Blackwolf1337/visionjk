@@ -622,21 +622,25 @@ qboolean VK_HasWet( void ) {
 ===============
 VK_DrawWet
 
-The wet places of RE_AddWet over the view of the level as far as it is drawn: in the draw list before what is
-transparent (RB_DrawWet), before its water (shaders/wet.vert and wet.frag). The frame is copied into vk.screen
-first: a place is drawn from there, darker and shining. Standing water at the floor of the puddle view of this
-frame mirrors what that view shows (vk.reflect), other water what the copy shows. The numbers of the view and of
-every place go into the globals of the frame; each place gets the light of the level at its middle.
+The sprayed pictures of RE_AddPaint and the wet places of RE_AddWet over the view of the level as far as it is
+drawn: in the draw list before what is transparent (RB_DrawWet), before its water. The paint first, so a wet place
+darkens it too (shaders/paint.vert and paint.frag, then wet.vert and wet.frag). Before each the frame is copied into
+vk.screen: it is drawn from there, paint over the relief of the wall, wet ground darker and shining. Standing water
+at the floor of the puddle view of this frame mirrors what that view shows (vk.reflect), other water what the copy
+shows. The numbers of the view and of every picture and place go into the globals of the frame; each gets the light
+of the level at its middle.
 ===============
 */
 void VK_DrawWet( void ) {
 #ifndef RD_VISION_GLES
 	static float	wet[VK_WET_VEC4S][4];
+	static float	paint[VK_PAINT_VEC4S][4];
 	const float		*projection = backEnd.viewParms.projectionMatrix;
 	const int		count = Q_min( r_numWet, WET_MAX_SPOTS );
+	int				numPaint = 0;
 	int				viewport[4], x, y, width, height;
 
-	if ( !vk.frame || count <= 0 || !tr.screenImage || !VK_HasWet() ) {
+	if ( !vk.frame || ( count <= 0 && r_numPaint <= 0 ) || !tr.screenImage || !VK_HasWet() ) {
 		return;
 	}
 	memset( wet, 0, sizeof( wet ) );
@@ -661,6 +665,42 @@ void VK_DrawWet( void ) {
 		(float)count );
 	VectorSet4( wet[10], vk.reflectHeight, vk.reflectFrame == backEnd.viewParms.frameCount ? 1.0f : 0.0f, 0.0f, 0.0f );
 
+	// the pictures whose sheet is on the device
+	memcpy( paint, wet, sizeof( float ) * 4 * VK_WET_HEADER );
+	for ( int i = 0; i < Q_min( r_numPaint, PAINT_MAX_DECALS ); i++ ) {
+		const paintDecal_t	*decal = &r_paint[i];
+		const image_t		*image = ( decal->slot >= 0 && decal->slot < PAINT_SLOTS ) ? tr.paintImage[decal->slot] : NULL;
+		float				( *row )[4] = paint + VK_WET_HEADER + numPaint * VK_PAINT_ROWS;
+		vec3_t				normal, up, ambient, directed, dir;
+
+		if ( !image || image->texnum >= VK_MAX_IMAGES || vk.images[image->texnum].owner != image || !vk.images[image->texnum].uploaded ) {
+			continue;
+		}
+		VectorCopy( decal->normal, normal );
+		if ( VectorNormalize( normal ) < 0.5f ) {
+			continue;
+		}
+		// up along the surface, square to the normal
+		VectorMA( decal->up, -DotProduct( decal->up, normal ), normal, up );
+		if ( VectorNormalize( up ) < 0.1f ) {
+			PerpendicularVector( up, normal );
+		}
+		VK_LiquidLight( decal->origin, ambient, directed, dir );
+		VectorNormalize( dir );
+		VectorSet4( row[0], decal->origin[0], decal->origin[1], decal->origin[2], Com_Clamp( 1.0f, 256.0f, decal->radius ) );
+		VectorSet4( row[1], normal[0], normal[1], normal[2], Com_Clamp( 0.0f, 1.0f, decal->reveal ) );
+		VectorSet4( row[2], up[0], up[1], up[2], Com_Clamp( 0.0f, 1.0f, decal->fresh ) );
+		VectorSet4( row[3], ambient[0] / 255.0f, ambient[1] / 255.0f, ambient[2] / 255.0f, (float)image->texnum );
+		VectorSet4( row[4], directed[0] / 255.0f, directed[1] / 255.0f, directed[2] / 255.0f, decal->seed );
+		VectorSet4( row[5], dir[0], dir[1], dir[2], (float)image->width * Com_Clamp( 0.0f, 1.0f, decal->frame[2] ) );
+		VectorSet4( row[6], decal->frame[0], decal->frame[1], decal->frame[2], decal->frame[3] );
+		numPaint++;
+	}
+	paint[9][3] = (float)numPaint;
+	if ( count <= 0 && numPaint <= 0 ) {
+		return;
+	}
+
 	for ( int i = 0; i < count; i++ ) {
 		const wetSpot_t	*spot = &r_wet[i];
 		float			( *row )[4] = wet + VK_WET_HEADER + i * VK_WET_ROWS;
@@ -681,8 +721,14 @@ void VK_DrawWet( void ) {
 	}
 
 	VK_EndTarget();
-	VK_CopyTarget( &vk.color, &vk.screen );
-	VK_WetPass( wet[0], count, viewport );
+	if ( numPaint > 0 ) {
+		VK_CopyTarget( &vk.color, &vk.screen );
+		VK_PaintPass( paint[0], numPaint, viewport );
+	}
+	if ( count > 0 ) {
+		VK_CopyTarget( &vk.color, &vk.screen );
+		VK_WetPass( wet[0], count, viewport );
+	}
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 
 	// the shaders that draw geometry have other sets and other state

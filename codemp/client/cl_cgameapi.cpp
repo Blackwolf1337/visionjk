@@ -919,6 +919,13 @@ static qboolean CL_AddLiquid( const liquidSegment_t *segments, int count ) {
 	return re->ext.AddLiquid( segments, count );
 }
 
+// ext.R_AddPaint: the sprays of the toys (cgame/toys/cg_spray.c), a renderer without it says qfalse
+static qboolean CL_AddPaint( const paintDecal_t *decals, int count ) {
+	if ( !re || !re->ext.AddPaint )
+		return qfalse;
+	return re->ext.AddPaint( decals, count );
+}
+
 // ext.R_AddWet: the puddles and wet patches of the toys (cgame/toys/cg_water.c), a renderer without it says qfalse
 static qboolean CL_AddWet( const wetSpot_t *spots, int count ) {
 	if ( !re || !re->ext.AddWet )
@@ -2044,6 +2051,8 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_LoadImageFit					= CL_LoadImageFit;
 		cgi.ext.R_AddLiquid						= CL_AddLiquid;
 		cgi.ext.R_AddWet						= CL_AddWet;
+		cgi.ext.R_PaintPicture					= CL_PaintPicture;
+		cgi.ext.R_AddPaint						= CL_AddPaint;
 		cgi.ext.S_AddLoopingSoundVolume			= S_AddLoopingSoundVolume;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
