@@ -490,6 +490,7 @@ typedef struct shader_s {
 										// the same name, we don't try looking for it again
 	bool		explicitlyDefined;		// found in a .shader file
 	bool		entityMergable;			// merge across entites optimizable (smoke, blood)
+	float		surfaceLight;			// VisionJK: q3map_surfacelight, the light its surfaces gave when the map was lit (vk_rt.cpp)
 
 	skyParms_t	*sky;
 	fogParms_t	*fogParms;

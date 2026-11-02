@@ -2253,6 +2253,7 @@ static qboolean ParseShader( const char **text )
 		{
 			token = COM_ParseExt( text, qfalse );
 			tr.sunSurfaceLight = atoi( token );
+			shader.surfaceLight = (float)atof( token );
 		}
 		else if ( !Q_stricmp( token, "lightColor" ) )
 		{

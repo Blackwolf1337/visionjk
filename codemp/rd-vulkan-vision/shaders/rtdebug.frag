@@ -10,6 +10,8 @@
 //      (something drawn that is not in the structure: what moves, glass, grates, the sky).
 //   3: the rays towards the sun against the players alone (mask 2): dark where a player is in the way, their sun
 //      shadows, also on themselves.
+//   4: the lights of the level (VK_RT_FindLights) as dots over the scene: the lamps yellow, those the light grid
+//      found cyan, larger the stronger they are.
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -21,6 +23,9 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[16];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
+layout( set = 1, binding = 2, std430 ) readonly buffer Lights {
+	vec4	lights[];
+};
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
 
 #define W	globals.rt
@@ -46,7 +51,23 @@ void main() {
 	vec3 p = ScenePoint( gl_FragCoord.xy );
 	int mode = int( W[11].w );
 
-	if ( mode == 1 || mode == 3 ) {
+	if ( mode == 4 ) {
+		vec3 eye = W[4].xyz;
+		vec3 dir = normalize( p - eye );
+		float depth = distance( p, eye );
+
+		for ( int i = 0; i < int( W[15].z ); i++ ) {
+			vec3 to = lights[i * 3].xyz - eye;
+			float t = dot( to, dir );
+			float size = 3.0 + 0.004 * t + log2( 1.0 + lights[i * 3 + 1].x ) * 0.25;
+
+			if ( t > 0.0 && t < depth + size && length( to - dir * t ) < size ) {
+				o_color = lights[i * 3].w < 1.5 ? vec4( 1.0, 0.85, 0.2, 1.0 ) : vec4( 0.2, 0.9, 1.0, 1.0 );
+				return;
+			}
+		}
+		discard;
+	} else if ( mode == 1 || mode == 3 ) {
 		vec3 sun = normalize( W[11].xyz );
 		vec3 normal = SceneSurface( gl_FragCoord.xy, p, sun );
 		// off the surface a little, so the ray does not hit the triangle it starts on

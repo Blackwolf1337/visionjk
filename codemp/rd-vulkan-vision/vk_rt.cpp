@@ -47,6 +47,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 
@@ -76,6 +77,7 @@ static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
 static cvar_t	*v_rtShadowRays;	// rays a pixel
 static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
+static cvar_t	*v_rtLights;		// 0: the sun and the direction of the light grid alone, not the lamps and found lights
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -111,6 +113,7 @@ static struct {
 	VkDeviceSize				levelScratch;
 	vkAccel_t					level;
 	vkBuffer_t					grid;			// the light grid of the level, three vec4 a cell (shaders/rtshadow.frag)
+	vkBuffer_t					lights;			// the lights of the level, three vec4 each (VK_RT_FindLights)
 
 	vkBuffer_t					scratch;		// for every build of a frame
 	VkDeviceSize				scratchAlign;
@@ -260,54 +263,57 @@ static qboolean VK_RT_StopsLight( const shader_t *shader ) {
 	return qtrue;
 }
 
+// the triangles of a face, triangle mesh or patch of the level, added to the lists
+static void VK_RT_SurfaceTriangles( const msurface_t *surf, std::vector<float> &positions, std::vector<uint32_t> &indexes ) {
+	const uint32_t base = (uint32_t)( positions.size() / 3 );
+
+	if ( *surf->data == SF_FACE ) {
+		const srfSurfaceFace_t	*face = (const srfSurfaceFace_t *)surf->data;
+		const int				*faceIndexes = (const int *)( (const byte *)face + face->ofsIndices );
+
+		for ( int j = 0; j < face->numPoints; j++ ) {
+			positions.insert( positions.end(), face->points[j], face->points[j] + 3 );
+		}
+		for ( int j = 0; j < face->numIndices; j++ ) {
+			indexes.push_back( base + (uint32_t)faceIndexes[j] );
+		}
+	} else if ( *surf->data == SF_TRIANGLES ) {
+		const srfTriangles_t *tris = (const srfTriangles_t *)surf->data;
+
+		for ( int j = 0; j < tris->numVerts; j++ ) {
+			positions.insert( positions.end(), tris->verts[j].xyz, tris->verts[j].xyz + 3 );
+		}
+		for ( int j = 0; j < tris->numIndexes; j++ ) {
+			indexes.push_back( base + (uint32_t)tris->indexes[j] );
+		}
+	} else if ( *surf->data == SF_GRID ) {
+		const srfGridMesh_t *grid = (const srfGridMesh_t *)surf->data;
+
+		for ( int j = 0; j < grid->width * grid->height; j++ ) {
+			positions.insert( positions.end(), grid->verts[j].xyz, grid->verts[j].xyz + 3 );
+		}
+		for ( int y = 0; y < grid->height - 1; y++ ) {
+			for ( int x = 0; x < grid->width - 1; x++ ) {
+				const uint32_t v = base + (uint32_t)( y * grid->width + x );
+
+				indexes.push_back( v );
+				indexes.push_back( v + (uint32_t)grid->width );
+				indexes.push_back( v + 1 );
+				indexes.push_back( v + 1 );
+				indexes.push_back( v + (uint32_t)grid->width );
+				indexes.push_back( v + (uint32_t)grid->width + 1 );
+			}
+		}
+	}
+}
+
 // the triangles of the solid surfaces of the world model (not doors, lifts and the other brush models, which move)
 static void VK_RT_LevelTriangles( std::vector<float> &positions, std::vector<uint32_t> &indexes ) {
 	const bmodel_t *model = &tr.world->bmodels[0];
 
 	for ( int i = 0; i < model->numSurfaces; i++ ) {
-		const msurface_t	*surf = model->firstSurface + i;
-		const uint32_t		base = (uint32_t)( positions.size() / 3 );
-
-		if ( !VK_RT_StopsLight( surf->shader ) ) {
-			continue;
-		}
-		if ( *surf->data == SF_FACE ) {
-			const srfSurfaceFace_t	*face = (const srfSurfaceFace_t *)surf->data;
-			const int				*faceIndexes = (const int *)( (const byte *)face + face->ofsIndices );
-
-			for ( int j = 0; j < face->numPoints; j++ ) {
-				positions.insert( positions.end(), face->points[j], face->points[j] + 3 );
-			}
-			for ( int j = 0; j < face->numIndices; j++ ) {
-				indexes.push_back( base + (uint32_t)faceIndexes[j] );
-			}
-		} else if ( *surf->data == SF_TRIANGLES ) {
-			const srfTriangles_t *tris = (const srfTriangles_t *)surf->data;
-
-			for ( int j = 0; j < tris->numVerts; j++ ) {
-				positions.insert( positions.end(), tris->verts[j].xyz, tris->verts[j].xyz + 3 );
-			}
-			for ( int j = 0; j < tris->numIndexes; j++ ) {
-				indexes.push_back( base + (uint32_t)tris->indexes[j] );
-			}
-		} else if ( *surf->data == SF_GRID ) {
-			const srfGridMesh_t *grid = (const srfGridMesh_t *)surf->data;
-
-			for ( int j = 0; j < grid->width * grid->height; j++ ) {
-				positions.insert( positions.end(), grid->verts[j].xyz, grid->verts[j].xyz + 3 );
-			}
-			for ( int y = 0; y < grid->height - 1; y++ ) {
-				for ( int x = 0; x < grid->width - 1; x++ ) {
-					const uint32_t v = base + (uint32_t)( y * grid->width + x );
-
-					indexes.push_back( v );
-					indexes.push_back( v + (uint32_t)grid->width );
-					indexes.push_back( v + 1 );
-					indexes.push_back( v + 1 );
-					indexes.push_back( v + (uint32_t)grid->width );
-					indexes.push_back( v + (uint32_t)grid->width + 1 );
-				}
-			}
+		if ( VK_RT_StopsLight( model->firstSurface[i].shader ) ) {
+			VK_RT_SurfaceTriangles( &model->firstSurface[i], positions, indexes );
 		}
 	}
 }
@@ -380,6 +386,376 @@ static void VK_RT_UploadGrid( void ) {
 }
 
 /*
+===============================================================================
+
+THE LIGHTS OF THE LEVEL
+
+The maps keep no lights: q3map2 leaves the light entities out of the map it compiles. What is left of them is the
+light they gave: the lightmaps, the light grid (at every cell the light from all sides, the light from one direction
+and that direction) and the surfaces whose shader gave light (q3map_surfacelight), the lamps. So the lights are
+found again when a level is loaded:
+- the sun of the sky shader;
+- every lamp: its surfaces of one shader near each other taken together;
+- the lights that were entities, where the directions of many cells of the grid meet (every cell votes along its
+  direction, the voxels with the most votes win).
+Every light gets the strength the grid says it has: the directed light of the cells it lights, times the square of
+their distance. So the sun, the lamps and the others are in the units of the grid and can be weighed against each
+other by shaders/rtshadow.frag.
+
+===============================================================================
+*/
+
+#define VK_RT_MAX_LIGHTS	128
+#define VK_RT_VOXEL			32.0f		// units of a voxel of the vote
+#define VK_RT_REACH			1024.0f		// how far a cell votes along its direction
+
+typedef struct vkLight_s {
+	vec3_t			origin;
+	vec3_t			normal;			// the side a lamp gives light to, zero: all sides
+	float			radius;			// of the disk it gives light from
+	float			strength;		// directed light of the grid at 1 unit
+	int				kind;			// 1 a lamp, 2 found by the grid
+} vkLight_t;
+
+typedef struct vkCell_s {
+	vec3_t			center;
+	vec3_t			dir;			// where its directed light comes from
+	float			directed;		// how much, in the units of the grid (0 to 255 a colour)
+} vkCell_t;
+
+static vkLight_t	vk_lights[VK_RT_MAX_LIGHTS];
+static int			vk_numLights;
+static float		vk_sunStrength;
+
+// the cell of the grid a point is in, -1: outside the grid or in a wall
+static int VK_RT_GridCell( const vec3_t p ) {
+	const world_t	*world = tr.world;
+	int				pos[3];
+
+	for ( int i = 0; i < 3; i++ ) {
+		pos[i] = (int)floorf( ( p[i] - world->lightGridOrigin[i] ) * world->lightGridInverseSize[i] + 0.5f );
+		if ( pos[i] < 0 || pos[i] >= world->lightGridBounds[i] ) {
+			return -1;
+		}
+	}
+	const int cell = pos[0] + pos[1] * world->lightGridBounds[0] + pos[2] * world->lightGridBounds[0] * world->lightGridBounds[1];
+
+	if ( world->lightGridArray[cell] >= world->numGridArrayElements
+		|| world->lightGridData[world->lightGridArray[cell]].styles[0] == LS_LSNONE ) {
+		return -1;
+	}
+	return cell;
+}
+
+// the direction a cell of the grid has its directed light from, as R_SetupEntityLightingGrid() reads it
+static void VK_RT_CellDirection( const mgrid_t *data, vec3_t dir ) {
+	const int lat = data->latLong[1] * ( FUNCTABLE_SIZE / 256 );
+	const int lng = data->latLong[0] * ( FUNCTABLE_SIZE / 256 );
+
+	dir[0] = tr.sinTable[( lat + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK] * tr.sinTable[lng];
+	dir[1] = tr.sinTable[lat] * tr.sinTable[lng];
+	dir[2] = tr.sinTable[( lng + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK];
+}
+
+// the cells with directed light
+static void VK_RT_GridCells( std::vector<vkCell_t> &cells ) {
+	const world_t *world = tr.world;
+
+	if ( !world->lightGridData || !world->lightGridArray ) {
+		return;
+	}
+	for ( int z = 0; z < world->lightGridBounds[2]; z++ ) {
+		for ( int y = 0; y < world->lightGridBounds[1]; y++ ) {
+			for ( int x = 0; x < world->lightGridBounds[0]; x++ ) {
+				const int		index = x + y * world->lightGridBounds[0] + z * world->lightGridBounds[0] * world->lightGridBounds[1];
+				const mgrid_t	*data;
+				vkCell_t		cell;
+
+				if ( world->lightGridArray[index] >= world->numGridArrayElements ) {
+					continue;
+				}
+				data = world->lightGridData + world->lightGridArray[index];
+				if ( data->styles[0] == LS_LSNONE ) {
+					continue;
+				}
+				cell.directed = data->directLight[0][0] * 0.3f + data->directLight[0][1] * 0.59f + data->directLight[0][2] * 0.11f;
+				if ( cell.directed < 4.0f ) {
+					continue;
+				}
+				cell.center[0] = world->lightGridOrigin[0] + x * world->lightGridSize[0];
+				cell.center[1] = world->lightGridOrigin[1] + y * world->lightGridSize[1];
+				cell.center[2] = world->lightGridOrigin[2] + z * world->lightGridSize[2];
+				VK_RT_CellDirection( data, cell.dir );
+				cells.push_back( cell );
+			}
+		}
+	}
+}
+
+// the lamps: the surfaces of one shader with q3map_surfacelight near each other and facing alike are one lamp
+static void VK_RT_Lamps( std::vector<vkLight_t> &lamps ) {
+	const bmodel_t			*model = &tr.world->bmodels[0];
+	std::vector<float>		positions;
+	std::vector<uint32_t>	indexes;
+	std::vector<const shader_t *>	shaders;
+	std::vector<float>		areas;
+
+	for ( int i = 0; i < model->numSurfaces; i++ ) {
+		const msurface_t	*surf = &model->firstSurface[i];
+		vec3_t				center, normal;
+		float				area = 0.0f;
+		size_t				j;
+
+		if ( !surf->shader || surf->shader->surfaceLight <= 0.0f || ( surf->shader->surfaceFlags & SURF_SKY ) ) {
+			continue;
+		}
+		positions.clear();
+		indexes.clear();
+		VK_RT_SurfaceTriangles( surf, positions, indexes );
+		VectorClear( center );
+		VectorClear( normal );
+		for ( j = 0; j + 2 < indexes.size(); j += 3 ) {
+			const float	*a = &positions[indexes[j] * 3], *b = &positions[indexes[j + 1] * 3], *c = &positions[indexes[j + 2] * 3];
+			vec3_t		ab, ac, cross;
+
+			VectorSubtract( b, a, ab );
+			VectorSubtract( c, a, ac );
+			CrossProduct( ab, ac, cross );
+			const float twice = VectorLength( cross );
+
+			area += twice * 0.5f;
+			VectorAdd( normal, cross, normal );
+			for ( int k = 0; k < 3; k++ ) {
+				center[k] += ( a[k] + b[k] + c[k] ) / 3.0f * twice * 0.5f;
+			}
+		}
+		if ( area < 1.0f ) {
+			continue;
+		}
+		VectorScale( center, 1.0f / area, center );
+
+		// with a lamp of the same shader near it that faces alike
+		vec3_t side;
+
+		VectorCopy( normal, side );
+		VectorNormalize( side );
+		for ( j = 0; j < lamps.size(); j++ ) {
+			vec3_t lampCenter, lampSide;
+
+			VectorScale( lamps[j].origin, 1.0f / areas[j], lampCenter );
+			VectorCopy( lamps[j].normal, lampSide );
+			VectorNormalize( lampSide );
+			if ( shaders[j] == surf->shader && Distance( lampCenter, center ) < 96.0f && DotProduct( lampSide, side ) > 0.7f ) {
+				break;
+			}
+		}
+		if ( j == lamps.size() ) {
+			vkLight_t lamp;
+
+			memset( &lamp, 0, sizeof( lamp ) );
+			lamp.kind = 1;
+			lamps.push_back( lamp );
+			shaders.push_back( surf->shader );
+			areas.push_back( 0.0f );
+		}
+		// (summed by area for now: the origin is the middle, the normal the side, at the end)
+		VectorMA( lamps[j].origin, area, center, lamps[j].origin );
+		VectorAdd( lamps[j].normal, normal, lamps[j].normal );
+		areas[j] += area;
+		lamps[j].strength += surf->shader->surfaceLight * area;
+	}
+	for ( size_t j = 0; j < lamps.size(); j++ ) {
+		const float length = VectorLength( lamps[j].normal );
+
+		VectorScale( lamps[j].origin, 1.0f / areas[j], lamps[j].origin );
+		// a round lamp, or one bent over a patch: light to all sides
+		if ( length < areas[j] ) {
+			VectorClear( lamps[j].normal );
+		} else {
+			VectorScale( lamps[j].normal, 1.0f / length, lamps[j].normal );
+		}
+		lamps[j].radius = Com_Clamp( 2.0f, 64.0f, sqrtf( areas[j] / M_PI ) );
+	}
+}
+
+// the lights that were entities: where the directions of many cells meet
+static void VK_RT_FoundLights( const std::vector<vkCell_t> &cells, const vec3_t sun, std::vector<vkLight_t> &found ) {
+	struct vote_t {
+		float		weight;
+		vec3_t		sum;
+	};
+	std::unordered_map<int64_t, vote_t>	votes;
+	std::vector<std::pair<float, int64_t>>	order;
+
+	for ( const vkCell_t &cell : cells ) {
+		// lit by the sun: its directions do not meet
+		if ( sun && DotProduct( cell.dir, sun ) > 0.995f ) {
+			continue;
+		}
+		for ( float t = 24.0f; t < VK_RT_REACH; t += VK_RT_VOXEL * 0.5f ) {
+			vec3_t p;
+
+			VectorMA( cell.center, t, cell.dir, p );
+			// a ray goes as far as the next wall
+			if ( VK_RT_GridCell( p ) < 0 ) {
+				break;
+			}
+			const int64_t key = ( (int64_t)( floorf( p[0] / VK_RT_VOXEL ) + 2048 ) << 40 ) | ( (int64_t)( floorf( p[1] / VK_RT_VOXEL ) + 2048 ) << 20 )
+				| (int64_t)( floorf( p[2] / VK_RT_VOXEL ) + 2048 );
+			vote_t &vote = votes[key];
+
+			vote.weight += cell.directed;
+			VectorMA( vote.sum, cell.directed, p, vote.sum );
+		}
+	}
+	float best = 0.0f;
+	for ( const auto &it : votes ) {
+		order.push_back( std::make_pair( it.second.weight, it.first ) );
+		best = Q_max( best, it.second.weight );
+	}
+	std::sort( order.begin(), order.end(), []( const std::pair<float, int64_t> &a, const std::pair<float, int64_t> &b ) {
+		return a.first > b.first;
+	} );
+	for ( const auto &it : order ) {
+		const vote_t	&vote = votes[it.second];
+		vkLight_t		light;
+		size_t			j;
+
+		if ( it.first < Q_max( 400.0f, best * 0.05f ) || found.size() >= VK_RT_MAX_LIGHTS ) {
+			break;
+		}
+		memset( &light, 0, sizeof( light ) );
+		VectorScale( vote.sum, 1.0f / vote.weight, light.origin );
+		for ( j = 0; j < found.size() && Distance( found[j].origin, light.origin ) > 96.0f; j++ ) {
+		}
+		if ( j < found.size() ) {
+			continue;
+		}
+		light.radius = 8.0f;
+		light.kind = 2;
+		found.push_back( light );
+	}
+}
+
+// the strength the grid gives a light: the directed light of the cells whose light comes from it, times the square
+// of their distance, on average. 0: no cell takes its light from it.
+static float VK_RT_GridStrength( const std::vector<vkCell_t> &cells, const vkLight_t *light ) {
+	double	sum = 0.0;
+	int		count = 0;
+
+	for ( const vkCell_t &cell : cells ) {
+		vec3_t		to;
+
+		VectorSubtract( light->origin, cell.center, to );
+		const float	d = VectorNormalize( to );
+
+		if ( d < 16.0f || d > VK_RT_REACH || DotProduct( to, cell.dir ) < 0.97f ) {
+			continue;
+		}
+		sum += (double)cell.directed * d * d;
+		count++;
+	}
+	return count ? (float)( sum / count ) : 0.0f;
+}
+
+/*
+===============
+VK_RT_FindLights
+
+The lights of the level into rt.lights, three vec4 each: origin and kind, strength, radius and how far it reaches,
+the side it lights. Only while no frame is on its way.
+===============
+*/
+static void VK_RT_FindLights( void ) {
+	std::vector<vkCell_t>	cells;
+	std::vector<vkLight_t>	lamps, found;
+	vec3_t					sunDir;
+	const float				*sun = NULL;
+	int						numLamps = 0, numFound = 0;
+	float					*out;
+
+	vk_numLights = 0;
+	vk_sunStrength = 0.0f;
+	if ( VectorLengthSquared( tr.sunDirection ) > 0.0f ) {
+		VectorCopy( tr.sunDirection, sunDir );
+		VectorNormalize( sunDir );
+		sun = sunDir;
+	}
+	VK_RT_GridCells( cells );
+	VK_RT_Lamps( lamps );
+	VK_RT_FoundLights( cells, sun, found );
+
+	// the sun: the directed light of the cells it lights
+	if ( sun ) {
+		double	sum = 0.0;
+		int		count = 0;
+
+		for ( const vkCell_t &cell : cells ) {
+			if ( DotProduct( cell.dir, sun ) > 0.995f ) {
+				sum += cell.directed;
+				count++;
+			}
+		}
+		vk_sunStrength = count ? (float)( sum / count ) : 0.0f;
+	}
+	// the lamps first, then what the grid found that is no lamp
+	for ( vkLight_t &lamp : lamps ) {
+		const float strength = VK_RT_GridStrength( cells, &lamp );
+
+		if ( vk_numLights < VK_RT_MAX_LIGHTS ) {
+			// (a lamp no cell takes its light from, by what its shader says)
+			lamp.strength = strength > 0.0f ? strength : lamp.strength * 0.25f;
+			vk_lights[vk_numLights++] = lamp;
+			numLamps++;
+		}
+	}
+	for ( vkLight_t &light : found ) {
+		int j;
+
+		for ( j = 0; j < numLamps && Distance( vk_lights[j].origin, light.origin ) > 64.0f; j++ ) {
+		}
+		light.strength = VK_RT_GridStrength( cells, &light );
+		if ( j < numLamps || light.strength <= 0.0f || vk_numLights == VK_RT_MAX_LIGHTS ) {
+			continue;
+		}
+		vk_lights[vk_numLights++] = light;
+		numFound++;
+	}
+
+	VK_DestroyBuffer( &rt.lights );
+	VK_CreateBuffer( &rt.lights, sizeof( float ) * 12 * Q_max( vk_numLights, 1 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
+	out = (float *)rt.lights.mapped;
+	memset( out, 0, sizeof( float ) * 12 * Q_max( vk_numLights, 1 ) );
+	for ( int i = 0; i < vk_numLights; i++, out += 12 ) {
+		const vkLight_t *light = &vk_lights[i];
+
+		VectorCopy( light->origin, out );
+		out[3] = (float)light->kind;
+		out[4] = light->strength;
+		out[5] = light->radius;
+		// where it gives less than one in the units of the grid
+		out[6] = Com_Clamp( 64.0f, 4096.0f, sqrtf( light->strength ) );
+		VectorCopy( light->normal, out + 8 );
+	}
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VkDescriptorBufferInfo	info;
+		VkWriteDescriptorSet	write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+		info.buffer = rt.lights.buffer;
+		info.offset = 0;
+		info.range = VK_WHOLE_SIZE;
+		write.dstSet = rt.sets[i];
+		write.dstBinding = 2;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		write.pBufferInfo = &info;
+		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	}
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: %i lamps, %i lights found by the light grid, the sun %.0f\n", numLamps, numFound,
+		vk_sunStrength );
+}
+
+/*
 ===============
 VK_RT_PrepareLevel
 
@@ -401,6 +777,7 @@ static void VK_RT_PrepareLevel( void ) {
 	VK_DestroyBuffer( &rt.positions );
 	VK_DestroyBuffer( &rt.indexes );
 	VK_RT_UploadGrid();
+	VK_RT_FindLights();
 	rt.world = tr.world;
 	rt.levelReady = rt.levelPending = qfalse;
 	rt.levelScratch = 0;
@@ -846,7 +1223,7 @@ static void VK_RT_CreateCasters( void ) {
 }
 
 static void VK_RT_CreateLayouts( void ) {
-	VkDescriptorSetLayoutBinding			bindings[2];
+	VkDescriptorSetLayoutBinding			bindings[3];
 	VkDescriptorSetLayoutCreateInfo			setInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	VkDescriptorPoolSize					sizes[3];
 	VkDescriptorPoolCreateInfo				pool = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -856,7 +1233,7 @@ static void VK_RT_CreateLayouts( void ) {
 	// the globals of the frame, the top level, the depth of the scene
 	VkDescriptorSetLayout					passSets[3];
 
-	// the top level and the light grid
+	// the top level, the light grid and the lights of the level
 	memset( bindings, 0, sizeof( bindings ) );
 	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	bindings[0].descriptorCount = 1;
@@ -865,7 +1242,9 @@ static void VK_RT_CreateLayouts( void ) {
 	bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	bindings[1].descriptorCount = 1;
 	bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	setInfo.bindingCount = 2;
+	bindings[2] = bindings[1];
+	bindings[2].binding = 2;
+	setInfo.bindingCount = 3;
 	setInfo.pBindings = bindings;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &setInfo, NULL, &rt.setLayout ) );
 
@@ -873,7 +1252,7 @@ static void VK_RT_CreateLayouts( void ) {
 	sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	sizes[0].descriptorCount = VK_FRAMES;
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	sizes[1].descriptorCount = VK_FRAMES;
+	sizes[1].descriptorCount = VK_FRAMES * 2;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	sizes[2].descriptorCount = 1;
 	pool.maxSets = VK_FRAMES + 1;
@@ -908,6 +1287,7 @@ void VK_RT_Init( void ) {
 	v_rtShadows = ri.Cvar_Get( "v_rtShadows", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players where the graphics card traces rays (cg_shadows 2). 0: none" );
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
+	v_rtLights = ri.Cvar_Get( "v_rtLights", "1", CVAR_ARCHIVE_ND, "Traced shadows from the lamps and the other lights found in the level. 0: from the sun and the light grid alone" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
 	memset( &rt, 0, sizeof( rt ) );
 	if ( !vk.rayTracing || !vk.depthReadable ) {
@@ -955,6 +1335,7 @@ void VK_RT_Shutdown( void ) {
 	qvkDestroyShaderModule( vk.device, rt.resolveFragment, NULL );
 	VK_DestroyTarget( &rt.mask );
 	VK_DestroyBuffer( &rt.grid );
+	VK_DestroyBuffer( &rt.lights );
 	qvkDestroyPipeline( vk.device, rt.skinPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.skinShader, NULL );
 	qvkDestroyPipelineLayout( vk.device, rt.skinLayout, NULL );
@@ -1052,7 +1433,7 @@ void VK_RT_Pass( void ) {
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
-		0.0f, 0.0f );
+		v_rtLights->integer ? (float)vk_numLights : 0.0f, vk_sunStrength );
 	globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	memcpy( globals->rt, rows, sizeof( globals->rt ) );
 

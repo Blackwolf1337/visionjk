@@ -2,18 +2,22 @@
 #extension GL_EXT_ray_query : require
 
 // cg_shadows 2 on a device that traces rays (vk_rt.cpp): how much of the light of the level the players take from
-// each pixel of the view, into the shadow mask (red). The light at a point: the sun of the sky shader where a ray
-// towards it gets out of the level, else the direction the light grid has there. A few rays in a cone around it
-// against the players alone (mask 2) give the part they block, soft by the width of the cone: sharp where a player
-// stands on the point, wider the farther he is. How much that darkens is the share of directed light in the light
-// of the grid there. Surfaces that turn away from the light lie in the shade of the level already and get nothing.
+// each pixel of the view, into the shadow mask (red). The lights of the level (VK_RT_FindLights: the sun, the lamps,
+// those found by the light grid) are weighed by what each gives the point without anything in the way, in the units
+// of the grid; every ray picks one of them by its weight and a point on it (in the cone of the sun, on the disk of a
+// lamp). A ray against the level says whether the light reaches the point, one against the players alone (mask 2)
+// whether a player takes it: the part of the light that reaches it which the players take. Soft by the size of the
+// lights: sharp where a player stands on the point, wider the farther he is; several lamps give several shadows.
+// How much that darkens is the share of directed light in the light of the grid there. Where none of the lights the
+// rays picked reaches the point, the direction of the grid stands in for one. Surfaces that turn away from the light lie in the
+// shade of the level already and get nothing.
 //
 // The numbers are the rt ones of the globals: the view as the wet places have it (rows 0-8), then
 //   11 the direction to the sun, w 1 when the level has one
 //   12 where the light grid begins, w how far a player may be from a point and still shadow it
 //   13 1 / the size of a cell of the grid, w a number that changes every frame (the noise of the rays)
 //   14 the cells of the grid along x, y, z, w the tangent of half the cone of the sun
-//   15 x rays a pixel, y the tangent of half the cone of the grid light
+//   15 x rays a pixel, y the tangent of half the cone of the grid light, z how many lights, w the strength of the sun
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -28,6 +32,10 @@ layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
 layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
 	vec4	cells[];
+};
+// three vec4 a light: origin, kind (1 lamp, 2 found by the grid) / strength, radius, reach / the side it lights
+layout( set = 1, binding = 2, std430 ) readonly buffer Lights {
+	vec4	lights[];
 };
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
 
@@ -97,6 +105,31 @@ float Noise( uint k ) {
 	return float( v.x & 0xffffffu ) / 16777216.0;
 }
 
+// what light i gives at p, facing normal, without anything in the way
+float LightWeight( int i, vec3 p, vec3 normal ) {
+	vec4 a = lights[i * 3], b = lights[i * 3 + 1], c = lights[i * 3 + 2];
+	vec3 to = a.xyz - p;
+	float d2 = dot( to, to );
+
+	if ( d2 > b.z * b.z ) {
+		return 0.0;
+	}
+	to *= inversesqrt( max( d2, 1e-4 ) );
+	float facing = dot( normal, to );
+	float side = dot( c.xyz, c.xyz ) > 0.5 ? max( dot( c.xyz, -to ), 0.0 ) : 1.0;
+	return b.x * max( facing, 0.0 ) * side / max( d2, b.y * b.y + 16.0 );
+}
+
+// a direction in the cone of half width tangent around dir
+vec3 InCone( vec3 dir, float tangent, uint k ) {
+	vec3 t = normalize( cross( dir, abs( dir.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+	vec3 b = cross( dir, t );
+	float r = sqrt( Noise( k * 3u ) ) * tangent;
+	float a = Noise( k * 3u + 1u ) * 6.2831853;
+
+	return normalize( dir + t * ( cos( a ) * r ) + b * ( sin( a ) * r ) );
+}
+
 void main() {
 	vec3 p = ScenePoint( gl_FragCoord.xy );
 	vec3 eye = W[4].xyz;
@@ -119,31 +152,67 @@ void main() {
 	}
 	vec3 origin = p + normal * 1.5;
 	vec3 sun = W[11].xyz;
-	if ( W[11].w > 0.0 && dot( normal, sun ) > 0.0 && !Blocked( origin, sun, 65536.0, 0x01u ) ) {
-		light = sun;
-		cone = W[14].w;
-	} else if ( dot( gridDir, gridDir ) > 1e-4 ) {
-		light = normalize( gridDir );
-		cone = W[15].y;
-	} else {
+	int count = int( W[15].x );
+	int numLights = int( W[15].z );
+	float sunWeight = ( W[11].w > 0.0 && W[15].w > 0.0 ) ? W[15].w * max( dot( normal, sun ), 0.0 ) : 0.0;
+	float total = sunWeight;
+
+	for ( int i = 0; i < numLights; i++ ) {
+		total += LightWeight( i, p, normal );
+	}
+	if ( total > 0.0 ) {
+		// each ray: a light by its weight, a point on it, then whether it reaches the point and a player takes it
+		float reached = 0.0, taken = 0.0;
+
+		for ( int k = 0; k < count; k++ ) {
+			float pick = Noise( uint( k ) * 3u + 2u ) * total;
+			vec3 dir;
+			float len;
+
+			if ( pick < sunWeight ) {
+				dir = InCone( sun, W[14].w, uint( k ) );
+				len = 65536.0;
+			} else {
+				int i = 0;
+
+				pick -= sunWeight;
+				for ( ; i < numLights - 1; i++ ) {
+					pick -= LightWeight( i, p, normal );
+					if ( pick < 0.0 ) {
+						break;
+					}
+				}
+				vec3 to = lights[i * 3].xyz - origin;
+				float d = length( to );
+
+				// a point on its disk, the disk facing the point
+				dir = InCone( to / d, lights[i * 3 + 1].y / max( d, 1.0 ), uint( k ) );
+				len = d - 2.0;
+			}
+			if ( !Blocked( origin, dir, len, 0x01u ) ) {
+				reached += 1.0;
+				taken += Blocked( origin, dir, min( len, W[12].w ), 0x02u ) ? 1.0 : 0.0;
+			}
+		}
+		if ( reached > 0.0 ) {
+			o_color.r = strength * taken / reached;
+			return;
+		}
+	}
+
+	// no light of the list reaches it: the direction of the grid
+	if ( dot( gridDir, gridDir ) < 1e-4 ) {
 		return;
 	}
+	light = normalize( gridDir );
+	cone = W[15].y;
 	float facing = dot( normal, light );
 	if ( facing <= 0.0 ) {
 		return;
 	}
-
-	vec3 t = normalize( cross( light, abs( light.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
-	vec3 b = cross( light, t );
-	int count = int( W[15].x );
 	float blocked = 0.0;
 	for ( int k = 0; k < count; k++ ) {
-		// a point in the disk of the cone
-		float r = sqrt( Noise( uint( k ) * 2u ) ) * cone;
-		float a = Noise( uint( k ) * 2u + 1u ) * 6.2831853;
-		vec3 dir = normalize( light + t * ( cos( a ) * r ) + b * ( sin( a ) * r ) );
-
-		blocked += Blocked( origin, dir, W[12].w, 0x02u ) ? 1.0 : 0.0;
+		blocked += Blocked( origin, InCone( light, cone, uint( k ) ), W[12].w, 0x02u ) ? 1.0 : 0.0;
 	}
 	o_color.r = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
 }
