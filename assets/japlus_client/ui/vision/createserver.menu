@@ -299,15 +299,11 @@
 		itemDef
 		{
 			name					gametypefield
-			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_NETGAMETYPE
-			text					@MENUS_GAME_TYPE
+			text					""
 			descText				@MENUS_ALLOWS_YOU_TO_SELECT
 			textstyle				0
-			rect					24 148 252 44
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				14
-			textaligny				14.5
+			rect					24 168 252 44
 			font					5
 			textscale				0.83
 			forecolor				0.86 0.90 0.945 1
@@ -318,14 +314,14 @@
 				play "sound/interface/button1"
 				uiScript setBotButtons
 			}
-			radius					6
-			backcolor				0.027 0.051 0.102 1
+			radius					3.2
+			row						1
 		}
 
 		itemDef
 		{
 			name					maplist
-			rect					24 208 252 600
+			rect					24 228 252 580
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -1022,23 +1018,20 @@
 		itemDef
 		{
 			name					difficultyfield
-			style					0
 			ownerdraw				UI_SKILL
 			text					@MENUS_SKILL
 			descText				@MENUS_ADJUSTS_THE_DIFFICULTY
-			rect					330 720 540 34
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				9.5
+			rect					336 716 528 44
 			font					5
 			textscale				0.83
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
 			action { play "sound/interface/button1" }
 			mouseEnter { show difficultyfieldButton }
 			mouseExit { hide difficultyfieldButton }
+			row						1
 		}
 
 		itemDef
@@ -1110,6 +1103,22 @@
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_type_title
+			rect					24 144 252 18
+			visible					1
+			text					@MENUS_GAMETYPE
+			font					7
+			textscale				0.67
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3
+			caps					1
 			decoration
 		}
 

@@ -273,6 +273,17 @@ def rows(entries, x, y, w, pitch=52, gap=12, stack=None):
     return pages.as_rows([e.block for e in entries], x, y, w, pitch, gap, px=17, stack=stack)
 
 
+def pages_row(e, rect, px):
+    """An owner draw that is a choice as a row of the new look on a page (name at the left, value between arrows)."""
+    b = e.block
+    place(e, rect)
+    mf.put(b, 'row', 1)
+    sized(e, px)
+    mf.put(b, 'forecolor', *TEXT)
+    for key in ('textalign', 'textalignx', 'textaligny', 'style', 'border', 'bordersize', 'background', 'backcolor'):
+        mf.drop(b, key)
+
+
 def create(m):
     """Create a game: the kind of game and the levels at the left, the level that is chosen and the places of the
     players in the middle, the server and its rules at the right."""
@@ -281,11 +292,15 @@ def create(m):
     y0 = TOP + SUB_H
     m.append(cv.fill('vision_left', (0, y0, 300, FOOT_Y - y0), cv.RAIL))
     m.append(cv.fill('vision_left_line', (299, y0, 1, FOOT_Y - y0), cv.LINE))
+    # the kind of game: a heading, the choice under it as a field with arrows (a row without a name is its widget)
+    m.append(cv.text('vision_type_title', (24, y0 + 20, 252, 18), '@MENUS_GAMETYPE', 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1),
+                     ('decoration',)))
     for e in its.get('gametypefield', []):
-        control(e, (24, y0 + 24, 252, 44), 15, 'field', 'left', 14)
+        mf.put(e.block, 'text', '""')
+        pages_row(e, (24, y0 + 44, 252, 44), 15)
     for e in its.get('maplist', []):
         b = e.block
-        place(e, (24, y0 + 84, 252, FOOT_Y - y0 - 108))
+        place(e, (24, y0 + 104, 252, FOOT_Y - y0 - 128))
         mf.put(b, 'elementheight', 40)
         sized(e, 16)
         mf.put(b, 'textaligny', 11)
@@ -310,7 +325,7 @@ def create(m):
         place(e, (336 + (i // 4) * 134, y0 + 452 + (i % 4) * 34, 130, 34))
         sized(e, 15)
     for e in its.get('difficultyfield', []):
-        middle(e, (330, y0 + 452 + 4 * 34 + 8, 540, 34), 15, 'left', 0)
+        pages_row(e, (336, y0 + 452 + 4 * 34 + 4, 528, 44), 15)
     for e in its.get('vision_slots', []):
         place(e, (318, y0 + 440, 564, 4 * 34 + 64))
         mf.put(e.block, 'radius', 10)

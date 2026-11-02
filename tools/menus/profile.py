@@ -41,6 +41,8 @@ SCREENS = {
                                     'moves': 'rulesMenu_moves'}),
     'ingame_playerforce.menu': ('force', {'profile': 'ingame_player', 'character': 'ingame_player2', 'saber': 'ingame_saber',
                                           'moves': 'rulesMenu_moves'}),
+    'ingame_moves.menu': ('moves', {'profile': 'ingame_player', 'character': 'ingame_player2', 'saber': 'ingame_saber',
+                                    'force': 'ingame_playerforce'}),
 }
 ICONS = ('blue', 'green', 'orange', 'purple', 'yellow', 'red', 'black')
 
@@ -496,7 +498,43 @@ def force(f):
     f.foot([], named(old, 'applyjoin'), back=CLICK + ['close', f.menu, ';', 'open', 'ingame_player', ';'])
 
 
-PAGES = {'profile': profile, 'character': character, 'saber': saber, 'force': force}
+def moves(f):
+    """The moves in a game: the kind of moves and their list at the left, the figure doing the chosen one in the pane
+    with what it is about under it."""
+    old, x, y = f.old, f.x, f.y
+    for e in named(old, 'move_titles_title')[:1]:
+        f.new += heading(e, x, y, COLUMN)
+    for e in named(old, 'move_titles'):
+        # (a row without a name is its widget alone: the arrows and the kind of moves)
+        mf.put(e.block, 'text', '""')
+        f.new.append(row(e, x, y + 22, COLUMN))
+    y2 = y + 22 + ROW_H + 10
+    for e in named(old, 'moveslist_title')[:1]:
+        f.new += heading(e, x, y2, COLUMN)
+    for e in named(old, 'moveslist'):
+        rect(plain(e), x, y2 + 24, COLUMN, f.y + f.h - (y2 + 24))
+        props(e, ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *INSET), ('bordercolor', *SOFT_EDGE), ('radius', 3.2),
+              ('elementheight', 18), ('font', FONT), ('textscale', '0.62'), ('textaligny', 2), ('visible', 1))
+        f.new.append(e)
+    f.pane()
+    fig_h = f.h - 70
+    for e in named(old, 'character'):
+        w = fig_h * 0.9
+        rect(e, f.px + f.pw / 2 - w / 2, y + 4, w, fig_h)
+        shown(e)
+        f.last.append(e)
+    for e in named(old, 'item_desc'):
+        rect(plain(e), f.px + 10, y + f.h - 62, f.pw - 20, 58)
+        props(e, ('font', FONT), ('textscale', '0.6'), ('forecolor', *TEXT), ('visible', 1))
+        f.new.append(e)
+    # (the old menu closed a menu of another name on Esc: this one stayed open)
+    esc = mf.find(f.m, 'onesc')
+    if esc and isinstance(esc.block, list):
+        esc.block = [f.menu if w_.strip('"').lower() == 'ingame_moves' else w_ for w_ in esc.block]
+    f.foot([], [], back=CLICK + ['close', f.menu, ';', 'open', 'ingame_player', ';'])
+
+
+PAGES = {'profile': profile, 'character': character, 'saber': saber, 'force': force, 'moves': moves}
 
 
 def build(m, name, ingame, nav):
