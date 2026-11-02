@@ -15,9 +15,6 @@ OLD = {
     'Shadows Type': 'Shadows',
     'select the player Shadow type': 'How the shadows of the players are drawn.',
     'No Shadow': 'None',
-    'Render To TextureFX': 'Render To Texture Effects',
-    'Reduce some laggy effects(cloak, push blur, protected spheres ...) on some ATI video cards':
-        'Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them.',
     'Display Mode:': 'Display Mode',
     'A window, the whole screen, or a window without a border': 'A window, the whole screen, or a window without a border.',
     'Anti-Aliasing:': 'Anti-Aliasing',
@@ -154,9 +151,6 @@ TR = {
     'Default': 'Standard',
     'More Realistic': 'Realistischer',
     'Realistic': 'Realistisch',
-    'Render To Texture Effects': 'Render-to-Texture-Effekte',
-    'Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them.':
-        'Aus: keine langsamen Effekte (Tarnung, Machtstoß-Unschärfe, Schutzsphären) auf Grafikkarten, die damit Probleme haben.',
 
     # sound
     'Steam Audio: sound that knows the level. Needs its library next to the game.':

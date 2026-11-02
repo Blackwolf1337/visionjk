@@ -5044,71 +5044,6 @@ static void UI_Update(const char *name) {
 		Q_strncpyz( buf, UI_Cvar_VariableString( "name" ), sizeof( buf ) );
 		trap->Cvar_Set( "ui_Name", buf );
 	}
-	else if (Q_stricmp(name, "ui_r_lodbias") == 0)
-	{
-		switch (val)
-		{
-			case 0:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-				break;
-			case 1:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
-				break;
-
-			case 2:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
-				break;
-		}
-	}
-	else if (Q_stricmp(name, "ui_r_glCustom") == 0)
-	{
-		// the detail of the picture. The size of the window, fullscreen and the renderer are not part of a preset
-		switch (val)
-		{
-		case 0:	// high quality
-
-			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_picmip", 0 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );//stencil
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
-			break;
-
-		case 1: // normal
-			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_picmip", 1 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
-			break;
-
-		case 2: // fast
-
-			trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 1 );
-			trap->Cvar_SetValue( "ui_r_picmip", 2 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 1 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-			break;
-
-		case 3: // fastest
-
-			trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 2 );
-			trap->Cvar_SetValue( "ui_r_picmip", 3 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 0 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-			break;
-		}
-	}
 	else if (Q_stricmp(name, "ui_mousePitch") == 0)
 	{
 		if (val == 0)	trap->Cvar_SetValue( "m_pitch", 0.022f );
@@ -5205,15 +5140,6 @@ void UI_UpdateVideoSetup ( void )
 	trap->Cvar_Set( "r_fullscreen", displayMode == 1 ? "1" : "0" );
 	trap->Cvar_Set( "r_noborder", displayMode == 2 ? "1" : "0" );
 	trap->Cvar_Set ( "r_ext_multisample", UI_Cvar_VariableString ( "ui_r_ext_multisample" ) );
-	trap->Cvar_Set ( "r_lodbias", UI_Cvar_VariableString ( "ui_r_lodbias" ) );
-	trap->Cvar_Set ( "r_picmip", UI_Cvar_VariableString ( "ui_r_picmip" ) );
-	trap->Cvar_Set ( "r_texturemode", UI_Cvar_VariableString ( "ui_r_texturemode" ) );
-	trap->Cvar_Set ( "r_detailtextures", UI_Cvar_VariableString ( "ui_r_detailtextures" ) );
-	trap->Cvar_Set ( "r_ext_compress_textures", UI_Cvar_VariableString ( "ui_r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "r_subdivisions", UI_Cvar_VariableString ( "ui_r_subdivisions" ) );
-	trap->Cvar_Set ( "r_fastSky", UI_Cvar_VariableString ( "ui_r_fastSky" ) );
-	trap->Cvar_Set ( "r_inGameVideo", UI_Cvar_VariableString ( "ui_r_inGameVideo" ) );
-	trap->Cvar_Set ( "cg_shadows", UI_Cvar_VariableString ( "ui_cg_shadows" ) );
 	trap->Cvar_Set ( "ui_r_modified", "0" );
 
 	trap->Cmd_ExecuteText( EXEC_APPEND, "vid_restart;" );
@@ -5229,21 +5155,10 @@ interface versions of the cvars.
 */
 void UI_GetVideoSetup ( void )
 {
-	trap->Cvar_Register ( NULL, "ui_r_glCustom",				"4", CVAR_INTERNAL|CVAR_ARCHIVE );
-
 	// Make sure the cvars are registered as read only.
 	trap->Cvar_Register ( NULL, "ui_r_resolution",			"desktop", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_displaymode",			"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_ext_multisample",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_lodbias",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_picmip",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_texturemode",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_detailtextures",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_ext_compress_textures",	"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_subdivisions",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_fastSky",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_inGameVideo",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_cg_shadows",				"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_modified",				"0", CVAR_ROM|CVAR_INTERNAL );
 
 	// Copy over the real video cvars into their temporary counterparts
@@ -5255,15 +5170,6 @@ void UI_GetVideoSetup ( void )
 	}
 	trap->Cvar_Set ( "ui_r_displaymode",				trap->Cvar_VariableValue( "r_fullscreen" ) ? "1" : ( trap->Cvar_VariableValue( "r_noborder" ) ? "2" : "0" ) );
 	trap->Cvar_Set ( "ui_r_ext_multisample",			UI_Cvar_VariableString ( "r_ext_multisample" ) );
-	trap->Cvar_Set ( "ui_r_lodbias",					UI_Cvar_VariableString ( "r_lodbias" ) );
-	trap->Cvar_Set ( "ui_r_picmip",					UI_Cvar_VariableString ( "r_picmip" ) );
-	trap->Cvar_Set ( "ui_r_texturemode",				UI_Cvar_VariableString ( "r_texturemode" ) );
-	trap->Cvar_Set ( "ui_r_detailtextures",			UI_Cvar_VariableString ( "r_detailtextures" ) );
-	trap->Cvar_Set ( "ui_r_ext_compress_textures",	UI_Cvar_VariableString ( "r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "ui_r_subdivisions",				UI_Cvar_VariableString ( "r_subdivisions" ) );
-	trap->Cvar_Set ( "ui_r_fastSky",					UI_Cvar_VariableString ( "r_fastSky" ) );
-	trap->Cvar_Set ( "ui_r_inGameVideo",				UI_Cvar_VariableString ( "r_inGameVideo" ) );
-	trap->Cvar_Set ( "ui_cg_shadows",					UI_Cvar_VariableString ( "cg_shadows" ) );
 	trap->Cvar_Set ( "ui_r_modified",					"0" );
 }
 
@@ -6943,8 +6849,6 @@ static void UI_RunMenuScript(char **args)
 			UI_SaveForceTemplate();
 		} else if (Q_stricmp(name, "refreshForce") == 0) {
 			UI_UpdateForcePowers();
-		} else if (Q_stricmp(name, "glCustom") == 0) {
-			trap->Cvar_Set("ui_r_glCustom", "4");
 		}
 		else if (Q_stricmp(name, "setMovesListDefault") == 0)
 		{

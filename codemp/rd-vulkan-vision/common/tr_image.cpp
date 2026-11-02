@@ -33,7 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static byte			 s_intensitytable[256];
 
-int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
+int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_max = GL_LINEAR;
 
 //#define FILE_HASH_SIZE		1024	// actually the shader code still needs this (from another module, great),

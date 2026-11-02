@@ -320,12 +320,6 @@ LANG_ENGLISH        "More Realistic"
 REFERENCE           REALISTIC
 LANG_ENGLISH        "Realistic"
 
-REFERENCE           RENDER_TO_TEXTURE_EFFECTS
-LANG_ENGLISH        "Render To Texture Effects"
-
-REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
-LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
-
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 

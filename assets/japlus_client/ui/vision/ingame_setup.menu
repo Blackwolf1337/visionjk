@@ -506,40 +506,6 @@
 
 		itemDef
 		{
-			name					graphics
-			group					video
-			text					@MENUS_VIDEO_QUALITY
-			type					ITEM_TYPE_MULTI
-			descText				@MENUS_SELECT_PRESET_GRAPHIC
-			cvar					"ui_r_glCustom"
-			cvarFloatList
-			{
-				@MENUS_HIGH_QUALITY 0
-				@MENUS_NORMAL 1
-				@MENUS_FAST 2
-				@MENUS_FASTEST 3
-				@MENUS_CUSTOM 4
-			}
-			action
-			{
-				play "sound/interface/button1"
-				uiScript update "ui_r_glCustom"
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			rect					306 186 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
 			name					video_mode
 			group					video
 			type					ITEM_TYPE_MULTI
@@ -554,7 +520,7 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					306 238 392 52
+			rect					306 186 392 52
 			page					1
 			scroll					1
 			row						1
@@ -580,7 +546,7 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					306 290 392 52
+			rect					306 238 392 52
 			page					1
 			scroll					1
 			row						1
@@ -606,7 +572,7 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					306 342 392 52
+			rect					306 290 392 52
 			page					1
 			scroll					1
 			row						1
@@ -631,7 +597,7 @@
 			}
 			descText				@MENUS_VIDEO_SYNC_DESC
 			action { play "sound/interface/button1" }
-			rect					306 394 392 52
+			rect					306 342 392 52
 			page					1
 			scroll					1
 			row						1
@@ -651,7 +617,7 @@
 			cvar					"com_maxfps"
 			cvarFloatList { "60" 60 "90" 90 "125" 125 "144" 144 "165" 165 "240" 240 @VISION_NONE 0 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 446 392 52
+			rect					306 394 392 52
 			page					1
 			scroll					1
 			row						1
@@ -670,7 +636,7 @@
 			descText				@VISION_MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
 			cvar					"v_2dAspect"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 498 392 52
+			rect					306 446 392 52
 			page					1
 			scroll					1
 			row						1
@@ -692,7 +658,7 @@
 			descText				@MENUS_ADJUST_THE_BRIGHTNESS
 			action { play "sound/interface/button1" }
 			descPic					"gfx/menus/vision/setup/brightness" 0.8 1.4
-			rect					306 550 392 52
+			rect					306 498 392 52
 			page					1
 			scroll					1
 			row						1
@@ -715,7 +681,7 @@
 				@VISION_HALF 0.5 @VISION_THREE_QUARTERS 0.75 @VISION_FULL 1 @VISION_ONE_AND_A_HALF 1.5 @VISION_DOUBLE 2
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 602 392 52
+			rect					306 550 392 52
 			page					1
 			scroll					1
 			row						1
@@ -730,9 +696,9 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 654 412 100
+			rect					296 602 412 100
 			visible					1
-			text					@VISION_BLOOM
+			text					@VISION_SCREEN_EFFECTS
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
@@ -752,13 +718,32 @@
 
 		itemDef
 		{
-			name					vision_yesno_tay_bloom
+			name					vision_yesno_v_screenfx
 			type					ITEM_TYPE_YESNO
-			text					@VISION_BLOOM
-			descText				@VISION_BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
-			cvar					"tay_bloom"
+			text					@VISION_SCREEN_EFFECTS
+			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+			cvar					"v_screenFx"
 			action { play "sound/interface/button1.wav" ; }
-			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
+			rect					306 702 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxblast
+			type					ITEM_TYPE_YESNO
+			text					@VISION_EXPLOSION_WAVES
+			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+			cvar					"v_fxBlast"
+			action { play "sound/interface/button1.wav" ; }
 			rect					306 754 392 52
 			page					1
 			scroll					1
@@ -773,13 +758,12 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_bloomintensity
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_BLOOM_STRENGTH
-			descText				@VISION_HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
-			cvarfloat				"tay_bloomIntensity" 0.6 0 2
+			name					vision_yesno_v_soundtinnitus
+			type					ITEM_TYPE_YESNO
+			text					@VISION_RINGING_EARS
+			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
+			cvar					"v_soundTinnitus"
 			action { play "sound/interface/button1.wav" ; }
-			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
 			rect					306 806 392 52
 			page					1
 			scroll					1
@@ -794,14 +778,93 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_bloomthreshold
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_BLOOM_THRESHOLD
-			descText				@VISION_HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
-			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
+			name					vision_yesno_v_fxheat
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HEAT_HAZE
+			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+			cvar					"v_fxHeat"
 			action { play "sound/interface/button1.wav" ; }
-			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
 			rect					306 858 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxhit
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HIT_FEEDBACK
+			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+			cvar					"v_fxHit"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 910 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxwater
+			type					ITEM_TYPE_YESNO
+			text					@VISION_UNDER_WATER
+			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
+			cvar					"v_fxWater"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 962 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxforce
+			type					ITEM_TYPE_YESNO
+			text					@VISION_FORCE_LOOKS
+			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+			cvar					"v_fxForce"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1014 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxsaber
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SABER_CLASH_AND_HEAT
+			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
+			cvar					"v_fxSaber"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1066 392 52
 			page					1
 			scroll					1
 			row						1
@@ -837,144 +900,6 @@
 
 		itemDef
 		{
-			name					geometric_detail
-			group					video
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_GEOMETRIC_DETAIL
-			cvarFloatList { @MENUS_LOW 2 @MENUS_MEDIUM 1 @MENUS_HIGH 0 }
-			descText				@MENUS_ADJUST_THE_NUMBER_OF
-			cvar					"ui_r_lodbias"
-			action
-			{
-				play "sound/interface/button1"
-				uiScript glCustom
-				uiScript update "ui_r_lodbias"
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			rect					742 186 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					texture_detail
-			group					video
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_TEXTURE_DETAIL
-			cvarFloatList { @MENUS_LOW 3 @MENUS_MEDIUM 2 @MENUS_HIGH 1 @MENUS_VERY_HIGH 0 }
-			descText				@MENUS_SELECT_THE_RESOLUTION
-			cvar					"ui_r_picmip"
-			action
-			{
-				play "sound/interface/button1"
-				uiScript glCustom
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			descPic					"gfx/menus/vision/setup/textures" @MENUS_LOW @MENUS_VERY_HIGH
-			rect					742 238 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					texture_filter
-			group					video
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_TEXTURE_FILTER
-			cvarStrList { @MENUS_BILINEAR , "GL_LINEAR_MIPMAP_NEAREST" , @MENUS_TRILINEAR , "GL_LINEAR_MIPMAP_LINEAR" }
-			descText				@MENUS_ADJUST_HOW_WELL_THE_TEXTURES
-			cvar					"ui_r_texturemode"
-			action
-			{
-				play "sound/interface/button1.wav"
-				uiScript glCustom
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			rect					742 290 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					simple_shaders
-			group					video
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_DETAILED_SHADERS
-			cvarFloatList { @MENUS_OFF 0 @MENUS_ON 1 }
-			descText				@MENUS_HIDE_OR_UNHIDE_TEXTURES
-			cvar					"ui_r_detailtextures"
-			action
-			{
-				play "sound/interface/button1"
-				uiScript glCustom
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			rect					742 342 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					compress_textures
-			group					video
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_COMPRESSED_TEXTURES
-			cvarFloatList { @MENUS_OFF 0 @MENUS_ON 1 }
-			descText				@MENUS_TAKE_ADVANTAGE_OF_3D
-			cvar					"ui_r_ext_compress_textures"
-			action
-			{
-				play "sound/interface/button1"
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			rect					742 394 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
 			name					anisotropic_filter
 			group					video2
 			type					ITEM_TYPE_SLIDER
@@ -984,7 +909,7 @@
 			cvarfloat				r_ext_texture_filter_anisotropic 1 .5 16
 			descText				@MENUS_TOGGLE_ADVANCED_TEXTURE
 			action { play "sound/interface/button1" }
-			rect					742 446 392 52
+			rect					742 186 392 52
 			page					1
 			scroll					1
 			row						1
@@ -994,31 +919,6 @@
 			visible					1
 			column					1
 			advanced				1
-		}
-
-		itemDef
-		{
-			name					dynamic_light
-			group					video2
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_DYNAMIC_LIGHTS
-			cvar					"r_dynamiclight"
-			cvarFloatList
-			{
-				@MENUS_OFF 0
-				@MENUS_ON 1
-			}
-			descText				@MENUS_TOGGLE_TO_TURN_ON_MOVING
-			action { play "sound/interface/button1" }
-			rect					742 498 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
 		}
 
 		itemDef
@@ -1030,32 +930,7 @@
 			cvar					"r_DynamicGlow"
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/glow" @MENUS_OFF @MENUS_ON
-			rect					742 550 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					wall_marks
-			group					video2
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_WALL_MARKS
-			cvar					"cg_marks"
-			cvarFloatList
-			{
-				@MENUS_OFF 0
-				@MENUS_ON 1
-			}
-			descText				@MENUS_TOGGLE_TO_DISPLAY_SCORCH
-			action { play "sound/interface/button1" }
-			rect					742 602 392 52
+			rect					742 238 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1082,7 +957,7 @@
 			}
 			descText				@VISION_HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 654 392 52
+			rect					742 290 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1091,40 +966,14 @@
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			column					1
-		}
-
-		itemDef
-		{
-			name					cg_renderToTextureFX
-			group					video2
-			type					ITEM_TYPE_MULTI
-			text					@VISION_RENDER_TO_TEXTURE_EFFECTS
-			cvar					cg_renderToTextureFX
-			cvarFloatList
-			{
-				@MENUS_OFF 0
-				@MENUS_ON 1
-			}
-			descText				@VISION_OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 706 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
 		}
 
 		itemDef
 		{
 			name					vision_head
-			rect					732 758 412 100
+			rect					732 342 412 100
 			visible					1
-			text					@VISION_SCREEN_EFFECTS
+			text					@VISION_BLOOM
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
@@ -1139,18 +988,38 @@
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			action { play "sound/interface/button1.wav" ; }
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_yesno_v_screenfx
+			name					vision_yesno_tay_bloom
 			type					ITEM_TYPE_YESNO
-			text					@VISION_SCREEN_EFFECTS
-			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
-			cvar					"v_screenFx"
+			text					@VISION_BLOOM
+			descText				@VISION_BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
+			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 858 392 52
+			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
+			rect					742 442 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_tay_bloomintensity
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLOOM_STRENGTH
+			descText				@VISION_HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
+			cvarfloat				"tay_bloomIntensity" 0.6 0 2
+			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
+			rect					742 494 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1164,133 +1033,14 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_fxblast
-			type					ITEM_TYPE_YESNO
-			text					@VISION_EXPLOSION_WAVES
-			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
-			cvar					"v_fxBlast"
+			name					vision_slider_tay_bloomthreshold
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLOOM_THRESHOLD
+			descText				@VISION_HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
+			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 910 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_soundtinnitus
-			type					ITEM_TYPE_YESNO
-			text					@VISION_RINGING_EARS
-			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
-			cvar					"v_soundTinnitus"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 962 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxheat
-			type					ITEM_TYPE_YESNO
-			text					@VISION_HEAT_HAZE
-			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
-			cvar					"v_fxHeat"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1014 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxhit
-			type					ITEM_TYPE_YESNO
-			text					@VISION_HIT_FEEDBACK
-			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
-			cvar					"v_fxHit"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1066 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxwater
-			type					ITEM_TYPE_YESNO
-			text					@VISION_UNDER_WATER
-			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
-			cvar					"v_fxWater"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1118 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxforce
-			type					ITEM_TYPE_YESNO
-			text					@VISION_FORCE_LOOKS
-			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
-			cvar					"v_fxForce"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1170 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxsaber
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SABER_CLASH_AND_HEAT
-			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
-			cvar					"v_fxSaber"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1222 392 52
+			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
+			rect					742 546 392 52
 			page					1
 			scroll					1
 			row						1

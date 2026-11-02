@@ -98,8 +98,6 @@ MORE = {
     'Default': ('Par défaut', 'Predeterminado'),
     'More Realistic': ('Plus réaliste', 'Más realista'),
     'Realistic': ('Réaliste', 'Realista'),
-    'Render To Texture Effects': ('Effets de rendu sur texture', 'Efectos de render a textura'),
-    'Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them.': ("Désactivé : pas d'effets lents (camouflage, flou de poussée, sphères de protection) sur les cartes graphiques qui les gèrent mal.", 'Desactivado: sin efectos lentos (camuflaje, desenfoque de empuje, esferas de protección) en tarjetas gráficas que los gestionan mal.'),
     # sound
     'Steam Audio: sound that knows the level. Needs its library next to the game.': ('Steam Audio : un son qui tient compte du niveau. Nécessite sa bibliothèque dans le dossier du jeu.', 'Steam Audio: sonido que tiene en cuenta el nivel. Necesita su biblioteca en la carpeta del juego.'),
     'Output': ('Sortie', 'Salida'),

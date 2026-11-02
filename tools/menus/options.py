@@ -76,7 +76,7 @@ class Layout:
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
-        ('old', 'video', ('ui_r_glcustom', 'ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample',
+        ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample',
                           'r_swapinterval')),
         ('multi', 'Frame Limit', 'com_maxfps', (('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240),
                                                 ('None', 0)), 'The most frames a second the game draws.'),
@@ -86,11 +86,9 @@ SETUP = [
         ('multi', 'Render Scale', 'tay_renderScale', (('Half', 0.5), ('Three Quarters', 0.75), ('Full', 1), ('One and a Half', 1.5), ('Double', 2)),
          'The size the level is drawn at, the HUD stays sharp. Counts after a video restart.'),
         ('head', 'Detail'),
-        ('old', 'video', ('ui_r_lodbias', 'ui_r_picmip', 'ui_r_texturemode', 'ui_r_detailtextures',
-                          'ui_r_ext_compress_textures')),
-        ('old', 'video2', ('r_ext_texture_filter_anisotropic', 'r_dynamiclight')),
+        ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
-        ('old', 'video2', ('cg_marks', 'cg_shadows', 'cg_rendertotexturefx', 'advancedvideo')),
+        ('old', 'video2', ('cg_shadows', 'advancedvideo')),
         ('head', 'Bloom'),
         ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
@@ -828,10 +826,10 @@ def window_frame(m, L):
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'Bloom', 'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
+ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
                   'Text', 'Connection', 'Security'}
-ADVANCED_CVARS = {'tay_renderscale', 'v_2daspect', 'r_ext_texture_filter_anisotropic', 'cg_rendertotexturefx', 'ui_r_detailtextures',
-                  'ui_r_ext_compress_textures'}
+ADVANCED_CVARS = {'tay_renderscale', 'v_2daspect', 'r_ext_texture_filter_anisotropic', 'tay_bloomintensity',
+                  'tay_bloomthreshold'}
 
 
 def page_sections(m, content, folds):

@@ -425,14 +425,6 @@ REFERENCE           REALISTIC
 LANG_ENGLISH        "Realistic"
 LANG_SPANISH        "Realista"
 
-REFERENCE           RENDER_TO_TEXTURE_EFFECTS
-LANG_ENGLISH        "Render To Texture Effects"
-LANG_SPANISH        "Efectos de render a textura"
-
-REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
-LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
-LANG_SPANISH        "Desactivado: sin efectos lentos (camuflaje, desenfoque de empuje, esferas de protección) en tarjetas gráficas que los gestionan mal."
-
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 LANG_SPANISH        "#same"

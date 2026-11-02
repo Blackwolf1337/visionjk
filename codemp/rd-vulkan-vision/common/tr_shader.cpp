@@ -3032,29 +3032,6 @@ static shader_t *FinishShader( void ) {
 			continue;
 		}
 
-		//
-		// ditch this stage if it's detail and detail textures are disabled
-		//
-		if ( pStage->isDetail && !r_detailTextures->integer ) {
-			int index;
-
-			for ( index=stage+1; index<MAX_SHADER_STAGES; index++ ) {
-				if ( !stages[index].active )
-					break;
-			}
-
-			if ( index < MAX_SHADER_STAGES )
-				memmove( pStage, pStage + 1, sizeof( *pStage ) * ( index - stage ) );
-			else {
-				if ( stage + 1 < MAX_SHADER_STAGES )
-					memmove( pStage, pStage + 1, sizeof( *pStage ) * ( index - stage - 1 ) );
-
-				Com_Memset( &stages[index - 1], 0, sizeof( *stages ) );
-			}
-
-			continue;
-		}
-
 		pStage->index = stageIndex; //rwwRMG - needed for AGEN_BLEND
 
 		//

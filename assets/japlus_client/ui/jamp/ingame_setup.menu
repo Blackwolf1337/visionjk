@@ -671,50 +671,6 @@
 		//	VIDEO 1 MENU BUTTONS
 		//
 		//----------------------------------------------------------------------------------------------
-		itemDef 
-		{
-		   	name 			graphics				
-			group 			video
-			text			@MENUS_VIDEO_QUALITY
-	   		type 			ITEM_TYPE_MULTI	
-			rect			220 41 300 20
-	   		textalign		ITEM_ALIGN_RIGHT
-			textalignx		165
-			textaligny		0
-			font 			4
-			textscale 		1
-			style			WINDOW_STYLE_FILLED
-			forecolor		.615 .615 .956 1
-			descText		@MENUS_SELECT_PRESET_GRAPHIC
-
-	   		visible 		0
-
-			cvar 			"ui_r_glCustom"
-			cvarFloatList 
-			{ 
-				@MENUS_HIGH_QUALITY	0 
-				@MENUS_NORMAL		1 
-				@MENUS_FAST			2 
-				@MENUS_FASTEST		3 
-				@MENUS_CUSTOM		4 
-			}
-
-			mouseenter 
-			{ 
-				show			highlight1
-			}
-			mouseexit 
-			{ 
-				hide			highlight1
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1"
-				uiScript 		update "ui_r_glCustom"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
 
 		itemDef 
 		{	
@@ -726,7 +682,7 @@
 			cvarStrList			feeder
 			cvar				"ui_r_resolution"
 
-			rect				220 63 300 20
+			rect				220 43 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -736,6 +692,42 @@
 			descText			@MENUS_CHANGE_THE_DISPLAY_RESOLUTION
 
 			visible				0
+
+			mouseenter 
+			{ 
+				show			highlight1
+			}
+			mouseexit 
+			{ 
+				hide			highlight1
+			} 
+			action 
+			{
+				play			"sound/interface/button1"
+				setcvar			ui_r_modified	1
+				show			applyChanges
+			}
+		}
+
+		itemDef 
+		{	
+			name				fullscreen
+			group				video
+			type				ITEM_TYPE_MULTI
+			text				"Display Mode:"
+			rect				220 63 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+
+			cvarFloatList		{  "Window" 0 "Fullscreen" 1 "Borderless" 2 }
+			descText			"A window, the whole screen, or a window without a border"
+			cvar				"ui_r_displaymode"
+
+			visible			0
 
 			mouseenter 
 			{ 
@@ -754,187 +746,6 @@
 		}
 
 		itemDef 
-		{	
-			name				fullscreen
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				"Display Mode:"
-			rect				220 83 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-
-			cvarFloatList		{  "Window" 0 "Fullscreen" 1 "Borderless" 2 }
-			descText			"A window, the whole screen, or a window without a border"
-			cvar				"ui_r_displaymode"
-
-			visible			0
-
-			mouseenter 
-			{ 
-				show			highlight3
-			}
-			mouseexit 
-			{ 
-				hide			highlight3
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				geometric_detail
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_GEOMETRIC_DETAIL
-			rect				220 123 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_LOW 2 @MENUS_MEDIUM 1 @MENUS_HIGH 0 }
-			descText			@MENUS_ADJUST_THE_NUMBER_OF
-			cvar				"ui_r_lodbias"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight5
-			}
-			mouseexit 
-			{ 
-				hide			highlight5
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
-				uiScript update "ui_r_lodbias"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_detail
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_DETAIL
-			rect				220 143 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_LOW 3 @MENUS_MEDIUM 2 @MENUS_HIGH 1 @MENUS_VERY_HIGH 0 }
-			descText			@MENUS_SELECT_THE_RESOLUTION
-			cvar				"ui_r_picmip"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight6
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_filter
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_FILTER
-			rect				220 163 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarStrList		{  @MENUS_BILINEAR , "GL_LINEAR_MIPMAP_NEAREST" , @MENUS_TRILINEAR , "GL_LINEAR_MIPMAP_LINEAR" }
-			descText			@MENUS_ADJUST_HOW_WELL_THE_TEXTURES
-			cvar				"ui_r_texturemode"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight7
-			}
-			mouseexit 
-			{ 
-				hide			highlight7
-			} 
-			action 
-			{
-				play			"sound/interface/button1.wav"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				simple_shaders
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_DETAILED_SHADERS
-			rect				220 183 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_HIDE_OR_UNHIDE_TEXTURES
-			cvar				"ui_r_detailtextures"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
 		{			
 			name				VIDEO_SYNC
 			group				video
@@ -946,7 +757,7 @@
 				@MENUS_OFF 0  
 				@MENUS_ON 1 
 			}
-			rect				220 243 300 20
+			rect				220 103 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -963,47 +774,12 @@
 
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight4
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight4
 			} 
-		}
-
-		itemDef 
-		{	
-			name				compress_textures
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_COMPRESSED_TEXTURES
-			rect				220 203 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_TAKE_ADVANTAGE_OF_3D
-			cvar				"ui_r_ext_compress_textures"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight9
-			}
-			mouseexit 
-			{ 
-				hide			highlight9
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
 		}
 
 		itemDef 
@@ -1012,7 +788,7 @@
 			group				video
 			type				ITEM_TYPE_MULTI
 			text				"Anti-Aliasing:"
-			rect				220 223 300 20
+			rect				220 83 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -1027,11 +803,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight3
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight3
 			} 
 			action 
 			{
@@ -1313,80 +1089,6 @@
 
 
 		itemDef 
-		{			
-			name				dynamic_light
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				@MENUS_DYNAMIC_LIGHTS
-			cvar				"r_dynamiclight"	
-			cvarFloatList		
-			{ 
-				@MENUS_OFF 0  
-				@MENUS_ON 1 
-			}
-			rect				220 183 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible			0
-			// appearance_slot		1
-			descText			@MENUS_TOGGLE_TO_TURN_ON_MOVING
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-		}
-
-		itemDef 
-		{			
-			name				wall_marks
-			group				video2
-      		type				ITEM_TYPE_MULTI
-			text				@MENUS_WALL_MARKS
-			cvar				"cg_marks"	
-			cvarFloatList		
-			{ 
-				@MENUS_OFF 0  
-				@MENUS_ON 1 
-			}
-			rect				220 203 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible			0
-			// appearance_slot		1
-			descText			@MENUS_TOGGLE_TO_DISPLAY_SCORCH
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-
-			mouseenter 
-			{ 
-				show			highlight9
-			}
-			mouseexit 
-			{ 
-				hide			highlight9
-			} 
-		}
-
-		itemDef 
 		{	
 			name				anisotropic_filter
 			group				video2
@@ -1395,7 +1097,7 @@
 			cvarTest			r_ext_texture_filter_anisotropic_avail
 			disableCvar			{ 0 }     
 			cvarfloat				r_ext_texture_filter_anisotropic 1 .5 16
-			rect				220 223 300 20
+			rect				220 163 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -1413,11 +1115,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight7
 			} 
 		}
 
@@ -1477,7 +1179,7 @@
 				"More Realistic" 	2
 				"Realistic" 	3
 			}
-			rect				220 243 300 20
+			rect				220 183 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -1509,42 +1211,6 @@
 			forecolor			1 1 1 1
 			visible			0
 			decoration
-		}
-		
-		itemDef 
-		{	
-			name				cg_renderToTextureFX
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				"Render To TextureFX"
-			cvar				cg_renderToTextureFX
-			cvarFloatList		
-			{  
-				@MENUS_OFF 	0 
-				@MENUS_ON 	1
-				
-			}
-			rect				220 263 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			"Reduce some laggy effects(cloak, push blur, protected spheres ...) on some ATI video cards"
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			cg_renderToTextureFX_glow
-			}
-			mouseexit 
-			{ 
-				hide			cg_renderToTextureFX_glow
-			} 
 		}
 		itemDef
 		{
