@@ -10,8 +10,9 @@
 //      (something drawn that is not in the structure: what moves, glass, grates, the sky).
 //   3: the rays towards the sun against the players alone (mask 2): dark where a player is in the way, their sun
 //      shadows, also on themselves.
-//   4: the lights of the level (VK_RT_FindLights) as dots over the scene: the lamps yellow, those the light grid
-//      found cyan, larger the stronger they are.
+//   4: the lights of the level (the fixtures that lit the light grid, VK_RT_LightsFromCells) as yellow dots over the
+//      scene, larger the stronger they are, dim where something is in front of them (their middle is often inside
+//      the fixture).
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -61,8 +62,8 @@ void main() {
 			float t = dot( to, dir );
 			float size = 3.0 + 0.004 * t + log2( 1.0 + lights[i * 3 + 1].x ) * 0.25;
 
-			if ( t > 0.0 && t < depth + size && length( to - dir * t ) < size ) {
-				o_color = lights[i * 3].w < 1.5 ? vec4( 1.0, 0.85, 0.2, 1.0 ) : vec4( 0.2, 0.9, 1.0, 1.0 );
+			if ( t > 0.0 && length( to - dir * t ) < size ) {
+				o_color = t < depth + size ? vec4( 1.0, 0.85, 0.2, 1.0 ) : vec4( 0.5, 0.35, 0.05, 1.0 );
 				return;
 			}
 		}

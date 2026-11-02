@@ -221,6 +221,7 @@ set(MPVulkanVisionShaders
 	)
 # the shaders that trace rays (vk_rt.cpp): Vulkan only, GLSL ES has no ray queries
 set(MPVulkanVisionRTShaders
+	rtcells.comp
 	rtdebug.frag
 	rtresolve.frag
 	rtshadow.frag

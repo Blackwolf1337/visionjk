@@ -2,10 +2,10 @@
 #extension GL_EXT_ray_query : require
 
 // cg_shadows 2 on a device that traces rays (vk_rt.cpp): how much of the light of the level the players take from
-// each pixel of the view, into the shadow mask (red). The lights of the level (VK_RT_FindLights: the sun, the lamps,
-// those found by the light grid) are weighed by what each gives the point without anything in the way, in the units
+// each pixel of the view, into the shadow mask (red). The lights of the level (the sun, and the fixtures that lit the
+// light grid, VK_RT_LightsFromCells) are weighed by what each gives the point without anything in the way, in the units
 // of the grid; every ray picks one of them by its weight and a point on it (in the cone of the sun, on the disk of a
-// lamp). A ray against the level says whether the light reaches the point, one against the players alone (mask 2)
+// fixture). A ray against the level says whether the light reaches the point, one against the players alone (mask 2)
 // whether a player takes it: the part of the light that reaches it which the players take. Soft by the size of the
 // lights: sharp where a player stands on the point, wider the farther he is; several lamps give several shadows.
 // How much that darkens is the share of directed light in the light of the grid there. Where none of the lights the
@@ -33,7 +33,8 @@ layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
 	vec4	cells[];
 };
-// three vec4 a light: origin, kind (1 lamp, 2 found by the grid) / strength, radius, reach / the side it lights
+// three vec4 a light (a fixture of the level, VK_RT_LightsFromCells): origin, 1 / strength, radius of the disk the
+// rays aim at, reach, how far the fixture goes from its middle / the side it lights
 layout( set = 1, binding = 2, std430 ) readonly buffer Lights {
 	vec4	lights[];
 };
@@ -185,9 +186,10 @@ void main() {
 				vec3 to = lights[i * 3].xyz - origin;
 				float d = length( to );
 
-				// a point on its disk, the disk facing the point
+				// a point on its disk, the disk facing the point; the ray against the level ends where the fixture
+				// begins, which is in the level itself when it is solid
 				dir = InCone( to / d, lights[i * 3 + 1].y / max( d, 1.0 ), uint( k ) );
-				len = d - 2.0;
+				len = max( d - lights[i * 3 + 1].w - 2.0, 1.0 );
 			}
 			if ( !Blocked( origin, dir, len, 0x01u ) ) {
 				reached += 1.0;

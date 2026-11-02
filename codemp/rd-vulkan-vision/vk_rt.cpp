@@ -63,6 +63,9 @@ static const uint32_t vk_rtShadowFrag[] =
 static const uint32_t vk_rtResolveFrag[] =
 #include "shaders/rtresolve_frag.inc"
 ;
+static const uint32_t vk_rtCellsComp[] =
+#include "shaders/rtcells_comp.inc"
+;
 
 #define VK_RT_MAX_INSTANCES			64
 #define VK_RT_MAX_CASTERS			16				// players with a shadow in one frame
@@ -113,7 +116,16 @@ static struct {
 	VkDeviceSize				levelScratch;
 	vkAccel_t					level;
 	vkBuffer_t					grid;			// the light grid of the level, three vec4 a cell (shaders/rtshadow.frag)
-	vkBuffer_t					lights;			// the lights of the level, three vec4 each (VK_RT_FindLights)
+	// the fixtures of the level (VK_RT_Fixtures), two vec4 each for shaders/rtcells.comp: middle and how far the fixture
+	// goes from it, the side it lights; the cells of the grid it traces from, and what it found
+	vkBuffer_t					fixtureList;
+	vkBuffer_t					cells, cellHits;
+	int							cellState;		// 1 to be traced, 2 traced in the frame cellFrame, 0 done or none
+	int							cellFrame;
+	VkPipelineLayout			cellsLayout;
+	VkPipeline					cellsPipeline;
+	VkShaderModule				cellsShader;
+	vkBuffer_t					lights[VK_FRAMES];	// the lights of the level for a frame, three vec4 each
 
 	vkBuffer_t					scratch;		// for every build of a frame
 	VkDeviceSize				scratchAlign;
@@ -318,17 +330,6 @@ static void VK_RT_LevelTriangles( std::vector<float> &positions, std::vector<uin
 	}
 }
 
-static void VK_RT_LevelBuildInfo( VkAccelerationStructureGeometryKHR *geometry, VkAccelerationStructureBuildGeometryInfoKHR *build ) {
-	VK_RT_Triangles( geometry, VK_RT_Address( &rt.positions ), rt.numVertexes, VK_RT_Address( &rt.indexes ) );
-	memset( build, 0, sizeof( *build ) );
-	build->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-	build->type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-	build->flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-	build->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	build->geometryCount = 1;
-	build->pGeometries = geometry;
-}
-
 /*
 ===============
 VK_RT_UploadGrid
@@ -391,31 +392,39 @@ static void VK_RT_UploadGrid( void ) {
 THE LIGHTS OF THE LEVEL
 
 The maps keep no lights: q3map2 leaves the light entities out of the map it compiles. What is left of them is the
-light they gave: the lightmaps, the light grid (at every cell the light from all sides, the light from one direction
-and that direction) and the surfaces whose shader gave light (q3map_surfacelight), the lamps. So the lights are
-found again when a level is loaded:
-- the sun of the sky shader;
-- every lamp: its surfaces of one shader near each other taken together;
-- the lights that were entities, where the directions of many cells of the grid meet (every cell votes along its
-  direction, the voxels with the most votes win).
-Every light gets the strength the grid says it has: the directed light of the cells it lights, times the square of
-their distance. So the sun, the lamps and the others are in the units of the grid and can be weighed against each
-other by shaders/rtshadow.frag.
+light they gave, in the lightmaps and in the light grid (at every cell the light from all sides, the light from one
+direction and that direction), and the things that show where light comes from: the surfaces whose shader glows
+(a glow stage, the lamps, sconces and street lights of the level) or gave light when the map was lit
+(q3map_surfacelight). These are the fixtures. When a level is loaded:
+- every fixture: its surfaces of one shader near each other taken together;
+- shaders/rtcells.comp traces from every lit cell of the grid towards every fixture: which of them it sees (nothing
+  of the level between them), and along the direction of its light whether that gets out to the sky;
+- the directed light of a cell is shared among the fixtures it sees that lie in the direction of its light (within
+  45 degrees and 1024 units), the better they lie in it the more; a cell whose light comes out of the sky gives
+  none;
+- a fixture that gets light from cells becomes a light where it is, with the strength those cells say it has (their
+  share times the square of their distance, the near cells counting most). Fixtures no cell near them takes light
+  from (screens, buttons, an antenna high on a roof) give no light. The sun gets the directed light of the cells that see the sky in its direction.
+The grid has the light of all lights at a cell in one direction, between them, so a cell rarely looks straight at a
+small fixture: what it sees near that direction counts. The sun and the lights are in the units of the grid, so
+shaders/rtshadow.frag can weigh them against each other. The answer of the cells comes a few frames after the
+level, once the frame that traced them is done; until then the shadows go by the sun and the direction of the grid.
 
 ===============================================================================
 */
 
 #define VK_RT_MAX_LIGHTS	128
-#define VK_RT_VOXEL			32.0f		// units of a voxel of the vote
-#define VK_RT_REACH			1024.0f		// how far a cell votes along its direction
+#define VK_RT_MAX_FIXTURES	256			// a cell says which it sees in eight words (shaders/rtcells.comp)
+#define VK_RT_CELL_WORDS	10			// what comes back for a cell: sky or not, how far, and those eight
 
-typedef struct vkLight_s {
+typedef struct vkFixture_s {
+	const shader_t	*shader;
 	vec3_t			origin;
-	vec3_t			normal;			// the side a lamp gives light to, zero: all sides
-	float			radius;			// of the disk it gives light from
-	float			strength;		// directed light of the grid at 1 unit
-	int				kind;			// 1 a lamp, 2 found by the grid
-} vkLight_t;
+	vec3_t			normal;			// the side it gives light to, zero: all sides
+	float			area;
+	float			extent;			// from its middle to its farthest vertex
+	std::vector<int>	surfaces;	// in the world model
+} vkFixture_t;
 
 typedef struct vkCell_s {
 	vec3_t			center;
@@ -423,29 +432,11 @@ typedef struct vkCell_s {
 	float			directed;		// how much, in the units of the grid (0 to 255 a colour)
 } vkCell_t;
 
-static vkLight_t	vk_lights[VK_RT_MAX_LIGHTS];
+static std::vector<vkFixture_t>	*vk_fixtures;
+static std::vector<vkCell_t>	*vk_cells;
+static float		vk_lightData[VK_RT_MAX_LIGHTS * 12];		// what goes into rt.lights of each frame
 static int			vk_numLights;
 static float		vk_sunStrength;
-
-// the cell of the grid a point is in, -1: outside the grid or in a wall
-static int VK_RT_GridCell( const vec3_t p ) {
-	const world_t	*world = tr.world;
-	int				pos[3];
-
-	for ( int i = 0; i < 3; i++ ) {
-		pos[i] = (int)floorf( ( p[i] - world->lightGridOrigin[i] ) * world->lightGridInverseSize[i] + 0.5f );
-		if ( pos[i] < 0 || pos[i] >= world->lightGridBounds[i] ) {
-			return -1;
-		}
-	}
-	const int cell = pos[0] + pos[1] * world->lightGridBounds[0] + pos[2] * world->lightGridBounds[0] * world->lightGridBounds[1];
-
-	if ( world->lightGridArray[cell] >= world->numGridArrayElements
-		|| world->lightGridData[world->lightGridArray[cell]].styles[0] == LS_LSNONE ) {
-		return -1;
-	}
-	return cell;
-}
 
 // the direction a cell of the grid has its directed light from, as R_SetupEntityLightingGrid() reads it
 static void VK_RT_CellDirection( const mgrid_t *data, vec3_t dir ) {
@@ -492,13 +483,22 @@ static void VK_RT_GridCells( std::vector<vkCell_t> &cells ) {
 	}
 }
 
-// the lamps: the surfaces of one shader with q3map_surfacelight near each other and facing alike are one lamp
-static void VK_RT_Lamps( std::vector<vkLight_t> &lamps ) {
+// a shader that shows where light comes from
+static qboolean VK_RT_IsFixture( const shader_t *shader ) {
+	return (qboolean)( shader && !( shader->surfaceFlags & SURF_SKY ) && ( shader->hasGlow || shader->surfaceLight > 0.0f ) );
+}
+
+/*
+===============
+VK_RT_Fixtures
+
+The fixtures of the level, the largest VK_RT_MAX_FIXTURES of them.
+===============
+*/
+static void VK_RT_Fixtures( std::vector<vkFixture_t> &fixtures ) {
 	const bmodel_t			*model = &tr.world->bmodels[0];
-	std::vector<float>		positions;
-	std::vector<uint32_t>	indexes;
-	std::vector<const shader_t *>	shaders;
-	std::vector<float>		areas;
+	std::vector<float>		surfPositions;
+	std::vector<uint32_t>	surfIndexes;
 
 	for ( int i = 0; i < model->numSurfaces; i++ ) {
 		const msurface_t	*surf = &model->firstSurface[i];
@@ -506,281 +506,268 @@ static void VK_RT_Lamps( std::vector<vkLight_t> &lamps ) {
 		float				area = 0.0f;
 		size_t				j;
 
-		if ( !surf->shader || surf->shader->surfaceLight <= 0.0f || ( surf->shader->surfaceFlags & SURF_SKY ) ) {
+		if ( !VK_RT_IsFixture( surf->shader ) ) {
 			continue;
 		}
-		positions.clear();
-		indexes.clear();
-		VK_RT_SurfaceTriangles( surf, positions, indexes );
+		surfPositions.clear();
+		surfIndexes.clear();
+		VK_RT_SurfaceTriangles( surf, surfPositions, surfIndexes );
 		VectorClear( center );
 		VectorClear( normal );
-		for ( j = 0; j + 2 < indexes.size(); j += 3 ) {
-			const float	*a = &positions[indexes[j] * 3], *b = &positions[indexes[j + 1] * 3], *c = &positions[indexes[j + 2] * 3];
+		for ( j = 0; j + 2 < surfIndexes.size(); j += 3 ) {
+			const float	*a = &surfPositions[surfIndexes[j] * 3], *b = &surfPositions[surfIndexes[j + 1] * 3], *c = &surfPositions[surfIndexes[j + 2] * 3];
 			vec3_t		ab, ac, cross;
 
 			VectorSubtract( b, a, ab );
 			VectorSubtract( c, a, ac );
 			CrossProduct( ab, ac, cross );
-			const float twice = VectorLength( cross );
+			const float half = VectorLength( cross ) * 0.5f;
 
-			area += twice * 0.5f;
+			area += half;
 			VectorAdd( normal, cross, normal );
 			for ( int k = 0; k < 3; k++ ) {
-				center[k] += ( a[k] + b[k] + c[k] ) / 3.0f * twice * 0.5f;
+				center[k] += ( a[k] + b[k] + c[k] ) / 3.0f * half;
 			}
 		}
-		if ( area < 1.0f ) {
+		if ( area < 0.5f ) {
 			continue;
 		}
 		VectorScale( center, 1.0f / area, center );
 
-		// with a lamp of the same shader near it that faces alike
-		vec3_t side;
+		// with a fixture of the same shader near it
+		for ( j = 0; j < fixtures.size(); j++ ) {
+			vec3_t middle;
 
-		VectorCopy( normal, side );
-		VectorNormalize( side );
-		for ( j = 0; j < lamps.size(); j++ ) {
-			vec3_t lampCenter, lampSide;
-
-			VectorScale( lamps[j].origin, 1.0f / areas[j], lampCenter );
-			VectorCopy( lamps[j].normal, lampSide );
-			VectorNormalize( lampSide );
-			if ( shaders[j] == surf->shader && Distance( lampCenter, center ) < 96.0f && DotProduct( lampSide, side ) > 0.7f ) {
+			VectorScale( fixtures[j].origin, 1.0f / fixtures[j].area, middle );
+			if ( fixtures[j].shader == surf->shader && Distance( middle, center ) < 64.0f ) {
 				break;
 			}
 		}
-		if ( j == lamps.size() ) {
-			vkLight_t lamp;
+		if ( j == fixtures.size() ) {
+			vkFixture_t fixture;
 
-			memset( &lamp, 0, sizeof( lamp ) );
-			lamp.kind = 1;
-			lamps.push_back( lamp );
-			shaders.push_back( surf->shader );
-			areas.push_back( 0.0f );
+			fixture.shader = surf->shader;
+			VectorClear( fixture.origin );
+			VectorClear( fixture.normal );
+			fixture.area = 0.0f;
+			fixture.extent = 0.0f;
+			fixtures.push_back( fixture );
 		}
-		// (summed by area for now: the origin is the middle, the normal the side, at the end)
-		VectorMA( lamps[j].origin, area, center, lamps[j].origin );
-		VectorAdd( lamps[j].normal, normal, lamps[j].normal );
-		areas[j] += area;
-		lamps[j].strength += surf->shader->surfaceLight * area;
+		// (summed by area for now: the middle and the side at the end)
+		VectorMA( fixtures[j].origin, area, center, fixtures[j].origin );
+		VectorAdd( fixtures[j].normal, normal, fixtures[j].normal );
+		fixtures[j].area += area;
+		fixtures[j].surfaces.push_back( i );
 	}
-	for ( size_t j = 0; j < lamps.size(); j++ ) {
-		const float length = VectorLength( lamps[j].normal );
+	for ( vkFixture_t &fixture : fixtures ) {
+		const float length = VectorLength( fixture.normal );
 
-		VectorScale( lamps[j].origin, 1.0f / areas[j], lamps[j].origin );
-		// a round lamp, or one bent over a patch: light to all sides
-		if ( length < areas[j] ) {
-			VectorClear( lamps[j].normal );
+		VectorScale( fixture.origin, 1.0f / fixture.area, fixture.origin );
+		// round, or bent over a model: light to all sides
+		if ( length < fixture.area ) {
+			VectorClear( fixture.normal );
 		} else {
-			VectorScale( lamps[j].normal, 1.0f / length, lamps[j].normal );
+			VectorScale( fixture.normal, 1.0f / length, fixture.normal );
 		}
-		lamps[j].radius = Com_Clamp( 2.0f, 64.0f, sqrtf( areas[j] / M_PI ) );
-	}
-}
-
-// the lights that were entities: where the directions of many cells meet
-static void VK_RT_FoundLights( const std::vector<vkCell_t> &cells, const vec3_t sun, std::vector<vkLight_t> &found ) {
-	struct vote_t {
-		float		weight;
-		vec3_t		sum;
-	};
-	std::unordered_map<int64_t, vote_t>	votes;
-	std::vector<std::pair<float, int64_t>>	order;
-
-	for ( const vkCell_t &cell : cells ) {
-		// lit by the sun: its directions do not meet
-		if ( sun && DotProduct( cell.dir, sun ) > 0.995f ) {
-			continue;
-		}
-		for ( float t = 24.0f; t < VK_RT_REACH; t += VK_RT_VOXEL * 0.5f ) {
-			vec3_t p;
-
-			VectorMA( cell.center, t, cell.dir, p );
-			// a ray goes as far as the next wall
-			if ( VK_RT_GridCell( p ) < 0 ) {
-				break;
+		for ( int s : fixture.surfaces ) {
+			surfPositions.clear();
+			surfIndexes.clear();
+			VK_RT_SurfaceTriangles( &model->firstSurface[s], surfPositions, surfIndexes );
+			for ( size_t k = 0; k + 2 < surfPositions.size(); k += 3 ) {
+				fixture.extent = Q_max( fixture.extent, Distance( fixture.origin, &surfPositions[k] ) );
 			}
-			const int64_t key = ( (int64_t)( floorf( p[0] / VK_RT_VOXEL ) + 2048 ) << 40 ) | ( (int64_t)( floorf( p[1] / VK_RT_VOXEL ) + 2048 ) << 20 )
-				| (int64_t)( floorf( p[2] / VK_RT_VOXEL ) + 2048 );
-			vote_t &vote = votes[key];
-
-			vote.weight += cell.directed;
-			VectorMA( vote.sum, cell.directed, p, vote.sum );
 		}
 	}
-	float best = 0.0f;
-	for ( const auto &it : votes ) {
-		order.push_back( std::make_pair( it.second.weight, it.first ) );
-		best = Q_max( best, it.second.weight );
+	if ( fixtures.size() > VK_RT_MAX_FIXTURES ) {
+		std::sort( fixtures.begin(), fixtures.end(), []( const vkFixture_t &a, const vkFixture_t &b ) {
+			return a.area > b.area;
+		} );
+		fixtures.resize( VK_RT_MAX_FIXTURES );
 	}
-	std::sort( order.begin(), order.end(), []( const std::pair<float, int64_t> &a, const std::pair<float, int64_t> &b ) {
-		return a.first > b.first;
-	} );
-	for ( const auto &it : order ) {
-		const vote_t	&vote = votes[it.second];
-		vkLight_t		light;
-		size_t			j;
-
-		if ( it.first < Q_max( 400.0f, best * 0.05f ) || found.size() >= VK_RT_MAX_LIGHTS ) {
-			break;
-		}
-		memset( &light, 0, sizeof( light ) );
-		VectorScale( vote.sum, 1.0f / vote.weight, light.origin );
-		for ( j = 0; j < found.size() && Distance( found[j].origin, light.origin ) > 96.0f; j++ ) {
-		}
-		if ( j < found.size() ) {
-			continue;
-		}
-		light.radius = 8.0f;
-		light.kind = 2;
-		found.push_back( light );
-	}
-}
-
-// the strength the grid gives a light: the directed light of the cells whose light comes from it, times the square
-// of their distance, on average. 0: no cell takes its light from it.
-static float VK_RT_GridStrength( const std::vector<vkCell_t> &cells, const vkLight_t *light ) {
-	double	sum = 0.0;
-	int		count = 0;
-
-	for ( const vkCell_t &cell : cells ) {
-		vec3_t		to;
-
-		VectorSubtract( light->origin, cell.center, to );
-		const float	d = VectorNormalize( to );
-
-		if ( d < 16.0f || d > VK_RT_REACH || DotProduct( to, cell.dir ) < 0.97f ) {
-			continue;
-		}
-		sum += (double)cell.directed * d * d;
-		count++;
-	}
-	return count ? (float)( sum / count ) : 0.0f;
 }
 
 /*
 ===============
-VK_RT_FindLights
+VK_RT_LightsFromCells
 
-The lights of the level into rt.lights, three vec4 each: origin and kind, strength, radius and how far it reaches,
-the side it lights. Only while no frame is on its way.
+What shaders/rtcells.comp found for every cell (rt.cellHits, VK_RT_CELL_WORDS each: 1 when the direction of its light
+gets out to the sky, how far it got, the fixtures it sees as bits) into the lights of the level.
 ===============
 */
-static void VK_RT_FindLights( void ) {
-	std::vector<vkCell_t>	cells;
-	std::vector<vkLight_t>	lamps, found;
-	vec3_t					sunDir;
-	const float				*sun = NULL;
-	int						numLamps = 0, numFound = 0;
-	float					*out;
+#define VK_RT_ALIGN_MIN		0.7f		// a fixture further than 45 degrees from the direction of a cell gets none of its light
+#define VK_RT_FIXTURE_REACH	1024.0f		// nor one further away than this
+#define VK_RT_FIXTURE_NEAR	256.0f		// a light lights what is around it: cells this near have to take light from it
 
-	vk_numLights = 0;
-	vk_sunStrength = 0.0f;
-	if ( VectorLengthSquared( tr.sunDirection ) > 0.0f ) {
-		VectorCopy( tr.sunDirection, sunDir );
-		VectorNormalize( sunDir );
-		sun = sunDir;
-	}
-	VK_RT_GridCells( cells );
-	VK_RT_Lamps( lamps );
-	VK_RT_FoundLights( cells, sun, found );
+static void VK_RT_LightsFromCells( void ) {
+	const std::vector<vkCell_t>		&cells = *vk_cells;
+	const std::vector<vkFixture_t>	&fixtures = *vk_fixtures;
+	const uint32_t					*hits = (const uint32_t *)rt.cellHits.mapped;
+	std::vector<double>				sums( fixtures.size(), 0.0 ), weights( fixtures.size(), 0.0 ), counts( fixtures.size(), 0.0 );
+	std::vector<double>				nearby( fixtures.size(), 0.0 );
+	std::vector<float>				share( fixtures.size() );
+	vec3_t							sun;
+	double							sunSum = 0.0;
+	int								sunCount = 0, sharedCells = 0;
 
-	// the sun: the directed light of the cells it lights
-	if ( sun ) {
-		double	sum = 0.0;
-		int		count = 0;
+	VectorCopy( tr.sunDirection, sun );
+	VectorNormalize( sun );
+	for ( size_t i = 0; i < cells.size(); i++ ) {
+		const vkCell_t	*cell = &cells[i];
+		const uint32_t	*hit = hits + i * VK_RT_CELL_WORDS;
+		float			total = 0.0f;
 
-		for ( const vkCell_t &cell : cells ) {
-			if ( DotProduct( cell.dir, sun ) > 0.995f ) {
-				sum += cell.directed;
-				count++;
+		// its light comes out of the sky: from the sun, or the sky itself
+		if ( hit[0] ) {
+			if ( DotProduct( cell->dir, sun ) > 0.99f ) {
+				sunSum += cell->directed;
+				sunCount++;
 			}
-		}
-		vk_sunStrength = count ? (float)( sum / count ) : 0.0f;
-	}
-	// the lamps first, then what the grid found that is no lamp
-	for ( vkLight_t &lamp : lamps ) {
-		const float strength = VK_RT_GridStrength( cells, &lamp );
-
-		if ( vk_numLights < VK_RT_MAX_LIGHTS ) {
-			// (a lamp no cell takes its light from, by what its shader says)
-			lamp.strength = strength > 0.0f ? strength : lamp.strength * 0.25f;
-			vk_lights[vk_numLights++] = lamp;
-			numLamps++;
-		}
-	}
-	for ( vkLight_t &light : found ) {
-		int j;
-
-		for ( j = 0; j < numLamps && Distance( vk_lights[j].origin, light.origin ) > 64.0f; j++ ) {
-		}
-		light.strength = VK_RT_GridStrength( cells, &light );
-		if ( j < numLamps || light.strength <= 0.0f || vk_numLights == VK_RT_MAX_LIGHTS ) {
 			continue;
 		}
-		vk_lights[vk_numLights++] = light;
-		numFound++;
+		// the fixtures it sees, by how well they lie in the direction of its light and how near they are
+		for ( size_t f = 0; f < fixtures.size(); f++ ) {
+			vec3_t to;
+
+			share[f] = 0.0f;
+			if ( !( hit[2 + f / 32] & ( 1u << ( f % 32 ) ) ) ) {
+				continue;
+			}
+			VectorSubtract( fixtures[f].origin, cell->center, to );
+			const float d = Q_max( VectorNormalize( to ), 16.0f );
+			const float align = DotProduct( to, cell->dir );
+
+			if ( align < VK_RT_ALIGN_MIN || d > VK_RT_FIXTURE_REACH || ( VectorLengthSquared( fixtures[f].normal ) > 0.5f && DotProduct( fixtures[f].normal, to ) > 0.0f ) ) {
+				continue;
+			}
+			// (the fourth power: the direction of the grid lies between the lights, the nearest to it gets the most)
+			share[f] = powf( ( align - VK_RT_ALIGN_MIN ) / ( 1.0f - VK_RT_ALIGN_MIN ), 4.0f ) / ( d * d );
+			total += share[f];
+		}
+		if ( total <= 0.0f ) {
+			continue;
+		}
+		sharedCells++;
+		for ( size_t f = 0; f < fixtures.size(); f++ ) {
+			if ( share[f] > 0.0f ) {
+				const float part = share[f] / total;
+				const float d = Q_max( Distance( fixtures[f].origin, cell->center ), 16.0f );
+
+				// directed light times the square of the distance, weighed by one over that square: the cells near a
+				// fixture show it best, far ones mostly show what else lights them
+				sums[f] += (double)part * cell->directed;
+				weights[f] += (double)part / ( d * d );
+				counts[f] += part;
+				if ( d < VK_RT_FIXTURE_NEAR ) {
+					nearby[f] += part;
+				}
+			}
+		}
 	}
+	vk_sunStrength = sunCount ? (float)( sunSum / sunCount ) : 0.0f;
 
-	VK_DestroyBuffer( &rt.lights );
-	VK_CreateBuffer( &rt.lights, sizeof( float ) * 12 * Q_max( vk_numLights, 1 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
-	out = (float *)rt.lights.mapped;
-	memset( out, 0, sizeof( float ) * 12 * Q_max( vk_numLights, 1 ) );
-	for ( int i = 0; i < vk_numLights; i++, out += 12 ) {
-		const vkLight_t *light = &vk_lights[i];
+	// the fixtures that cells took light from, the brightest first
+	std::vector<int> order;
+	for ( size_t f = 0; f < fixtures.size(); f++ ) {
+		if ( counts[f] >= 2.0 && nearby[f] >= 1.0 ) {
+			order.push_back( (int)f );
+		}
+	}
+	std::sort( order.begin(), order.end(), [&]( int a, int b ) {
+		return sums[a] / weights[a] > sums[b] / weights[b];
+	} );
+	vk_numLights = 0;
+	for ( int f : order ) {
+		const vkFixture_t	*fixture = &fixtures[f];
+		const float			strength = (float)( sums[f] / weights[f] );
+		float				*out = &vk_lightData[vk_numLights * 12];
 
-		VectorCopy( light->origin, out );
-		out[3] = (float)light->kind;
-		out[4] = light->strength;
-		out[5] = light->radius;
+		if ( vk_numLights == VK_RT_MAX_LIGHTS ) {
+			break;
+		}
+		VectorCopy( fixture->origin, out );
+		out[3] = 1.0f;
+		out[4] = strength;
+		// the disk the rays aim at, and how far from the middle the fixture itself ends
+		out[5] = Com_Clamp( 2.0f, 24.0f, Q_min( fixture->extent, sqrtf( fixture->area / M_PI ) ) );
 		// where it gives less than one in the units of the grid
-		out[6] = Com_Clamp( 64.0f, 4096.0f, sqrtf( light->strength ) );
-		VectorCopy( light->normal, out + 8 );
+		out[6] = Com_Clamp( 64.0f, 4096.0f, sqrtf( strength ) );
+		out[7] = fixture->extent;
+		VectorCopy( fixture->normal, out + 8 );
+		out[11] = 0.0f;
+		ri.Printf( PRINT_DEVELOPER, "ray tracing: light %i at %.0f %.0f %.0f, %s, strength %.0f from %.1f cells, extent %.0f\n", vk_numLights,
+			fixture->origin[0], fixture->origin[1], fixture->origin[2], fixture->shader->name, strength, counts[f], fixture->extent );
+		vk_numLights++;
 	}
-	for ( int i = 0; i < VK_FRAMES; i++ ) {
-		VkDescriptorBufferInfo	info;
-		VkWriteDescriptorSet	write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: %i of %i fixtures give light (%i of %i cells shared out), the sun %.0f (%i cells)\n", vk_numLights,
+		(int)fixtures.size(), sharedCells, (int)cells.size(), vk_sunStrength, sunCount );
+}
 
-		info.buffer = rt.lights.buffer;
-		info.offset = 0;
-		info.range = VK_WHOLE_SIZE;
-		write.dstSet = rt.sets[i];
-		write.dstBinding = 2;
-		write.descriptorCount = 1;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		write.pBufferInfo = &info;
-		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
-	}
-	ri.Printf( PRINT_DEVELOPER, "ray tracing: %i lamps, %i lights found by the light grid, the sun %.0f\n", numLamps, numFound,
-		vk_sunStrength );
+static void VK_RT_TrianglesBuildInfo( VkAccelerationStructureGeometryKHR *geometry, VkAccelerationStructureBuildGeometryInfoKHR *build,
+	const vkBuffer_t *positions, uint32_t numVertexes, const vkBuffer_t *indexes ) {
+	VK_RT_Triangles( geometry, VK_RT_Address( positions ), numVertexes, VK_RT_Address( indexes ) );
+	memset( build, 0, sizeof( *build ) );
+	build->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build->type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	build->flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	build->mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	build->geometryCount = 1;
+	build->pGeometries = geometry;
+}
+
+// the inputs of a build that the CPU writes once and the device reads once, and the structure itself
+static VkDeviceSize VK_RT_PrepareTriangles( const std::vector<float> &positions, const std::vector<uint32_t> &indexes, vkBuffer_t *positionBuffer,
+	vkBuffer_t *indexBuffer, vkAccel_t *accel ) {
+	VkAccelerationStructureGeometryKHR				geometry;
+	VkAccelerationStructureBuildGeometryInfoKHR		build;
+	VkAccelerationStructureBuildSizesInfoKHR		sizes = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+	const VkBufferUsageFlags						input = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	const uint32_t									numTriangles = (uint32_t)( indexes.size() / 3 );
+
+	VK_CreateBuffer( positionBuffer, positions.size() * sizeof( float ), input, qtrue );
+	memcpy( positionBuffer->mapped, positions.data(), positions.size() * sizeof( float ) );
+	VK_CreateBuffer( indexBuffer, indexes.size() * sizeof( uint32_t ), input, qtrue );
+	memcpy( indexBuffer->mapped, indexes.data(), indexes.size() * sizeof( uint32_t ) );
+	VK_RT_TrianglesBuildInfo( &geometry, &build, positionBuffer, (uint32_t)( positions.size() / 3 ), indexBuffer );
+	qvkGetAccelerationStructureBuildSizesKHR( vk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build, &numTriangles, &sizes );
+	VK_RT_CreateAccel( accel, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, sizes.accelerationStructureSize );
+	return sizes.buildScratchSize;
+}
+
+static void VK_RT_DestroyLevel( void ) {
+	VK_RT_DestroyAccel( &rt.level );
+	VK_DestroyBuffer( &rt.positions );
+	VK_DestroyBuffer( &rt.indexes );
+	VK_DestroyBuffer( &rt.fixtureList );
+	VK_DestroyBuffer( &rt.cells );
+	VK_DestroyBuffer( &rt.cellHits );
+	rt.levelReady = rt.levelPending = qfalse;
+	rt.cellState = 0;
+	vk_numLights = 0;
+	vk_sunStrength = 0.0f;
 }
 
 /*
 ===============
 VK_RT_PrepareLevel
 
-Once per level: its triangles and its acceleration structure, whose build VK_RT_RecordLevel() records into the
-command buffer of the frame. The inputs stay until the next level, the build reads them when that frame runs.
+Once per level: the triangles of the level and their acceleration structure, whose build VK_RT_RecordLevel()
+records into the command buffer of the frame, the fixtures and the cells of the grid shaders/rtcells.comp traces
+from after it. The inputs stay until the next level, the build reads them when that frame runs.
 ===============
 */
 static void VK_RT_PrepareLevel( void ) {
-	std::vector<float>								positions;
-	std::vector<uint32_t>							indexes;
-	VkAccelerationStructureGeometryKHR				geometry;
-	VkAccelerationStructureBuildGeometryInfoKHR		build;
-	VkAccelerationStructureBuildSizesInfoKHR		sizes = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-	const VkBufferUsageFlags						input = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
-		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	std::vector<float>		positions;
+	std::vector<uint32_t>	indexes;
+	const VkBufferUsageFlags	traced = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
 	VK_WaitIdle();
-	VK_RT_DestroyAccel( &rt.level );
-	VK_DestroyBuffer( &rt.positions );
-	VK_DestroyBuffer( &rt.indexes );
+	VK_RT_DestroyLevel();
 	VK_RT_UploadGrid();
-	VK_RT_FindLights();
 	rt.world = tr.world;
-	rt.levelReady = rt.levelPending = qfalse;
 	rt.levelScratch = 0;
+	vk_fixtures->clear();
+	vk_cells->clear();
 
 	VK_RT_LevelTriangles( positions, indexes );
 	rt.numVertexes = (uint32_t)( positions.size() / 3 );
@@ -788,19 +775,39 @@ static void VK_RT_PrepareLevel( void ) {
 	if ( !rt.numTriangles ) {
 		return;
 	}
-	// read once by the build, so they stay where the CPU wrote them
-	VK_CreateBuffer( &rt.positions, positions.size() * sizeof( float ), input, qtrue );
-	memcpy( rt.positions.mapped, positions.data(), positions.size() * sizeof( float ) );
-	VK_CreateBuffer( &rt.indexes, indexes.size() * sizeof( uint32_t ), input, qtrue );
-	memcpy( rt.indexes.mapped, indexes.data(), indexes.size() * sizeof( uint32_t ) );
+	rt.levelScratch = VK_RT_PrepareTriangles( positions, indexes, &rt.positions, &rt.indexes, &rt.level );
 
-	VK_RT_LevelBuildInfo( &geometry, &build );
-	qvkGetAccelerationStructureBuildSizesKHR( vk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build,
-		&rt.numTriangles, &sizes );
-	VK_RT_CreateAccel( &rt.level, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, sizes.accelerationStructureSize );
-	rt.levelScratch = sizes.buildScratchSize;
+	VK_RT_Fixtures( *vk_fixtures );
+	VK_RT_GridCells( *vk_cells );
+	if ( !vk_fixtures->empty() && !vk_cells->empty() ) {
+		const size_t numCells = vk_cells->size();
+		float *out;
+
+		VK_CreateBuffer( &rt.fixtureList, vk_fixtures->size() * sizeof( float ) * 8, traced, qtrue );
+		out = (float *)rt.fixtureList.mapped;
+		for ( const vkFixture_t &fixture : *vk_fixtures ) {
+			VectorCopy( fixture.origin, out );
+			out[3] = fixture.extent;
+			VectorCopy( fixture.normal, out + 4 );
+			out[7] = 0.0f;
+			out += 8;
+		}
+		// two vec4 a cell: its middle, the direction of its light
+		VK_CreateBuffer( &rt.cells, numCells * sizeof( float ) * 8, traced, qtrue );
+		VK_CreateBuffer( &rt.cellHits, numCells * sizeof( uint32_t ) * VK_RT_CELL_WORDS, traced, qtrue );
+		out = (float *)rt.cells.mapped;
+		for ( const vkCell_t &cell : *vk_cells ) {
+			VectorCopy( cell.center, out );
+			out[3] = 0.0f;
+			VectorCopy( cell.dir, out + 4 );
+			out[7] = 0.0f;
+			out += 8;
+		}
+		rt.cellState = 1;
+	}
 	rt.levelPending = qtrue;
-	ri.Printf( PRINT_DEVELOPER, "ray tracing: the level has %u solid triangles\n", rt.numTriangles );
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: the level has %u solid triangles, %i fixtures, %i lit cells\n", rt.numTriangles,
+		(int)vk_fixtures->size(), (int)vk_cells->size() );
 }
 
 static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
@@ -809,7 +816,7 @@ static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
 	VkAccelerationStructureBuildRangeInfoKHR		range;
 	const VkAccelerationStructureBuildRangeInfoKHR	*ranges = &range;
 
-	VK_RT_LevelBuildInfo( &geometry, &build );
+	VK_RT_TrianglesBuildInfo( &geometry, &build, &rt.positions, rt.numVertexes, &rt.indexes );
 	build.dstAccelerationStructure = rt.level.as;
 	build.scratchData.deviceAddress = VK_RT_ScratchAt( 0 );
 	memset( &range, 0, sizeof( range ) );
@@ -818,6 +825,24 @@ static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
 	VK_RT_BuildAfterBuild( cmd );
 	rt.levelPending = qfalse;
 	rt.levelReady = qtrue;
+}
+
+// shaders/rtcells.comp over the cells, after the top level of the frame holds the level
+static void VK_RT_TraceCells( VkCommandBuffer cmd ) {
+	const VkDeviceAddress	cells = VK_RT_Address( &rt.cells ), fixtures = VK_RT_Address( &rt.fixtureList );
+	const VkDeviceAddress	hits = VK_RT_Address( &rt.cellHits );
+	const uint32_t			count = (uint32_t)vk_cells->size();
+	const uint32_t			push[8] = { (uint32_t)cells, (uint32_t)( cells >> 32 ), (uint32_t)fixtures, (uint32_t)( fixtures >> 32 ),
+		(uint32_t)hits, (uint32_t)( hits >> 32 ), count, (uint32_t)vk_fixtures->size() };
+
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.cellsPipeline );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.cellsLayout, 0, 1, &rt.sets[vk.frameIndex], 0, NULL );
+	qvkCmdPushConstants( cmd, rt.cellsLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), push );
+	qvkCmdDispatch( cmd, ( count + 63 ) / 64, 1, 1 );
+	// the CPU reads what it wrote when the frame is done
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT );
+	rt.cellState = 2;
+	rt.cellFrame = vk.frameIndex;
 }
 
 /*
@@ -1146,7 +1171,7 @@ static void VK_RT_RecordTop( VkCommandBuffer cmd ) {
 	range.primitiveCount = count;
 	qvkCmdBuildAccelerationStructuresKHR( cmd, 1, &build, &ranges );
 	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR );
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR );
 }
 
 /*
@@ -1222,6 +1247,48 @@ static void VK_RT_CreateCasters( void ) {
 	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.skinPipeline ) );
 }
 
+// shaders/rtcells.comp and the lights of each frame
+static void VK_RT_CreateLights( void ) {
+	VkPushConstantRange				push;
+	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+
+	vk_fixtures = new std::vector<vkFixture_t>;
+	vk_cells = new std::vector<vkCell_t>;
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VkDescriptorBufferInfo	bufferInfo;
+		VkWriteDescriptorSet	write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+		VK_CreateBuffer( &rt.lights[i], sizeof( vk_lightData ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
+		bufferInfo.buffer = rt.lights[i].buffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = VK_WHOLE_SIZE;
+		write.dstSet = rt.sets[i];
+		write.dstBinding = 2;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		write.pBufferInfo = &bufferInfo;
+		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	}
+
+	// the top level from the set of the frame, the rest by address in the push constants
+	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	push.offset = 0;
+	push.size = sizeof( uint32_t ) * 8;
+	layout.setLayoutCount = 1;
+	layout.pSetLayouts = &rt.setLayout;
+	layout.pushConstantRangeCount = 1;
+	layout.pPushConstantRanges = &push;
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.cellsLayout ) );
+	rt.cellsShader = VK_CreateShader( vk_rtCellsComp, sizeof( vk_rtCellsComp ) );
+	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+	info.stage.module = rt.cellsShader;
+	info.stage.pName = "main";
+	info.layout = rt.cellsLayout;
+	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.cellsPipeline ) );
+}
+
 static void VK_RT_CreateLayouts( void ) {
 	VkDescriptorSetLayoutBinding			bindings[3];
 	VkDescriptorSetLayoutCreateInfo			setInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
@@ -1237,7 +1304,7 @@ static void VK_RT_CreateLayouts( void ) {
 	memset( bindings, 0, sizeof( bindings ) );
 	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	bindings[0].descriptorCount = 1;
-	bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 	bindings[1].binding = 1;
 	bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	bindings[1].descriptorCount = 1;
@@ -1299,6 +1366,7 @@ void VK_RT_Init( void ) {
 	VK_RT_CreateLayouts();
 	VK_RT_CreateTop();
 	VK_RT_CreateCasters();
+	VK_RT_CreateLights();
 	rt.debugFragment = VK_CreateShader( vk_rtDebugFrag, sizeof( vk_rtDebugFrag ) );
 	// (8: over the level with the samples of the frame, nothing from a vertex buffer)
 	rt.debugPipeline = VK_CreatePipeline( vk.postVertexShader, rt.debugFragment, 0, 8, VKP_GENERIC, rt.layout );
@@ -1335,7 +1403,14 @@ void VK_RT_Shutdown( void ) {
 	qvkDestroyShaderModule( vk.device, rt.resolveFragment, NULL );
 	VK_DestroyTarget( &rt.mask );
 	VK_DestroyBuffer( &rt.grid );
-	VK_DestroyBuffer( &rt.lights );
+	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
+	qvkDestroyPipelineLayout( vk.device, rt.cellsLayout, NULL );
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VK_DestroyBuffer( &rt.lights[i] );
+	}
+	delete vk_fixtures;
+	delete vk_cells;
 	qvkDestroyPipeline( vk.device, rt.skinPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.skinShader, NULL );
 	qvkDestroyPipelineLayout( vk.device, rt.skinLayout, NULL );
@@ -1352,9 +1427,7 @@ void VK_RT_Shutdown( void ) {
 	}
 	VK_DestroyBuffer( &rt.localIndexes );
 	delete rt.localFirst;
-	VK_RT_DestroyAccel( &rt.level );
-	VK_DestroyBuffer( &rt.positions );
-	VK_DestroyBuffer( &rt.indexes );
+	VK_RT_DestroyLevel();
 	VK_DestroyBuffer( &rt.scratch );
 	qvkDestroyPipelineLayout( vk.device, rt.layout, NULL );
 	qvkDestroyDescriptorPool( vk.device, rt.pool, NULL );
@@ -1402,6 +1475,12 @@ void VK_RT_Pass( void ) {
 	casterScratch = VK_RT_PrepareCasters();
 	VK_RT_EnsureMask();
 	VK_RT_EnsureScratch( Q_max( Q_max( rt.levelPending ? rt.levelScratch : 0, casterScratch ), rt.topScratch ) );
+	// the frame that traced the cells is done when its place comes round again
+	if ( rt.cellState == 2 && rt.cellFrame == vk.frameIndex ) {
+		VK_RT_LightsFromCells();
+		rt.cellState = 0;
+	}
+	memcpy( rt.lights[vk.frameIndex].mapped, vk_lightData, sizeof( float ) * 12 * vk_numLights );
 
 	// the builds of the frame before may still use the scratch memory
 	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
@@ -1412,6 +1491,9 @@ void VK_RT_Pass( void ) {
 	VK_RT_SkinCasters( cmd );
 	VK_RT_RecordCasters( cmd );
 	VK_RT_RecordTop( cmd );
+	if ( rt.cellState == 1 && rt.levelReady ) {
+		VK_RT_TraceCells( cmd );
+	}
 
 	memset( rows, 0, sizeof( rows ) );
 	VK_ViewRows( rows, viewport );
