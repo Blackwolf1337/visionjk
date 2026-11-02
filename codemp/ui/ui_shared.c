@@ -2707,7 +2707,8 @@ row of that list ("row 1"): its name at the left, its widget at the right. The w
 #define ROW_WIDGET_WIDE	0.56f		// "row 3": a line to type a name in
 #define ROW_NUMBER		31.0f		// in front of the track of a slider: what it stands at
 #define ROW_ARROW		8.0f		// how high the arrows of a choice are
-#define ROW_SMALL		0.76f		// the size of the words of a widget, in that of the name of its row
+#define ROW_SMALL		0.88f		// the size of the words of a widget, in that of the name of its row (0.76 was hard to
+								// read on the menu in the level, 2026-11-02)
 #define TAB_PAD			11.0f		// beside the word of the button of a page
 #define LIST_GLIDE_MSEC	35.0f		// the list covers most of its way to a new place in about three times this
 

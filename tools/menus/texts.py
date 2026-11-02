@@ -355,6 +355,8 @@ TR = {
     'In a game an open menu stands in the level next to you.': 'Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir.',
     'Menu Blur': 'Menü-Unschärfe',
     'How far the level behind an open menu is out of focus.': 'Wie unscharf das Level hinter einem offenen Menü ist.',
+    'Menu Size': 'Menügröße',
+    'How big the menu is that stands in the level.': 'Wie groß das Menü im Level ist.',
     'Field of View': 'Sichtfeld',
     'How wide you see.': 'Wie breit dein Blickfeld ist.',
     'Camera Distance': 'Kameraabstand',

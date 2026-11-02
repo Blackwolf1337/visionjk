@@ -350,6 +350,8 @@ MORE = {
     'In a game an open menu stands in the level next to you.': ('En jeu, un menu ouvert apparaît dans le niveau, à côté de vous.', 'Durante la partida, un menú abierto aparece en el nivel junto a ti.'),
     'Menu Blur': ('Flou du menu', 'Desenfoque del menú'),
     'How far the level behind an open menu is out of focus.': ('Flou du niveau derrière un menu ouvert.', 'Cuánto se desenfoca el nivel detrás de un menú abierto.'),
+    'Menu Size': ('Taille du menu', 'Tamaño del menú'),
+    'How big the menu is that stands in the level.': ('Taille du menu placé dans le niveau.', 'Qué tan grande es el menú dentro del nivel.'),
     'Field of View': ('Champ de vision', 'Campo de visión'),
     'How wide you see.': ("L'étendue de votre champ de vision.", 'Amplitud de tu campo de visión.'),
     'Camera Distance': ('Distance de la caméra', 'Distancia de la cámara'),

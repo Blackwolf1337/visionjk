@@ -41,12 +41,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define MENU3D_IN_MSEC		350
 #define MENU3D_OUT_MSEC		250
-#define MENU3D_SCREEN_PART	0.72f		// how much of the height of the screen the menu takes,
+#define MENU3D_SCREEN_PART	0.72f		// how much of the height of the screen the menu takes at least,
+#define MENU3D_SCREEN_MOST	0.88f		//	at most by itself (more and its rim touches the top of the picture),
+#define MENU3D_SCREEN_LIMIT	0.95f		//	at most with v_menu3dScale (more and it leaves the picture at 16:9),
+#define MENU3D_UNIT_PIXELS	2.6f		//	and the pixels of the window it wants for one of the 2D grid in between
 #define MENU3D_SCREEN_WIDE	0.86f		//	and of the width at most, on a narrow window (its near edge, turned to the camera, takes more)
 #define MENU3D_PLAYER_X		-0.68f		// where the player is in the picture: -1 its left edge, 0 the middle, 1 the right edge
 #define MENU3D_PANEL_X		0.27f		// and the middle of the menu
 #define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands
 #define MENU3D_MARGIN		8.0f		// the panel behind the menu is larger by this on each side, in units of the 2D grid
+#define MENU3D_TILT			8.0f		// degrees the panel is turned towards the player while it comes and goes
 #define MENU3D_BOX_MSEC		70.0f		// the panel covers most of the way to a new size in about three times this
 
 static struct {
@@ -170,7 +174,7 @@ void CG_Menu3DView( void ) {
 	vec3_t			angles, forward, right, up, head, camera, look, lookAngles, camRight, camUp, toPlayer;
 	trace_t			trace;
 	static vec3_t	mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
-	float			blend, depth, tilt, back, panelX;
+	float			blend, depth, tilt, back, panelX, part;
 	int				i;
 
 	if ( menu3d.blend <= 0.0f ) {
@@ -205,9 +209,11 @@ void CG_Menu3DView( void ) {
 	lookAngles[ROLL] = 0.0f;
 	AngleVectors( lookAngles, look, camRight, camUp );
 
-	// The panel faces the camera, turned a little towards the player: its left edge, the one next to him, is the
-	// farther one.
-	tilt = DEG2RAD( 8.0f );
+	// The panel comes turned towards the player, its left edge, the one next to him, the farther one, and faces the
+	// camera once it is there. Turned while it stood its letters were soft: the renderer puts them on whole pixels
+	// only on a plane that faces the camera (R_FontTTF_Plane, 2026-11-02).
+	blend = menu3d.blend * menu3d.blend * ( 3.0f - 2.0f * menu3d.blend );
+	tilt = DEG2RAD( MENU3D_TILT ) * ( 1.0f - blend );
 	VectorScale( camRight, cosf( tilt ), menu3d.right );
 	VectorMA( menu3d.right, -sinf( tilt ), look, menu3d.right );
 	VectorNegate( camUp, menu3d.down );
@@ -215,8 +221,14 @@ void CG_Menu3DView( void ) {
 	// Where it stands: seen from the camera its middle is at MENU3D_PANEL_X of the picture. How far away it is
 	// changes nothing in the picture, the size goes with the distance, and nothing of the level hides the menu
 	// or the panel behind it (CG_BubblePanelAt), so the level is not asked whether it has the room.
+	// Its size by the pixels of the window: at 0.72 of the height the text was hard to read at 1440 (2.2 pixels
+	// for one of the grid, 2026-11-02). A low window gets more of the height, 4K keeps the 0.72. v_menu3dScale
+	// on top for the player.
 	depth = MENU3D_PANEL_DEPTH;
-	menu3d.unit = MENU3D_SCREEN_PART * 2.0f * depth * tanY / SCREEN_HEIGHT;
+	part = MENU3D_UNIT_PIXELS * SCREEN_HEIGHT / (float)Q_max( cgs.glconfig.vidHeight, 1 );
+	part = Com_Clamp( MENU3D_SCREEN_PART, MENU3D_SCREEN_MOST, part );
+	part = Com_Clamp( 0.4f, MENU3D_SCREEN_LIMIT, part * Com_Clamp( 0.5f, 1.5f, v_menu3dScale.value ) );
+	menu3d.unit = part * 2.0f * depth * tanY / SCREEN_HEIGHT;
 	// on a narrow window it moves left as far as it has to for its right edge
 	panelX = Q_min( MENU3D_PANEL_X, 0.97f - SCREEN_WIDTH * 0.5f * menu3d.unit / ( depth * tanX ) );
 	// On a window narrower than 4:3 the 640 of it are no wider than the window, and it stands in the middle, in
@@ -226,11 +238,28 @@ void CG_Menu3DView( void ) {
 		menu3d.unit = MENU3D_SCREEN_WIDE * 2.0f * depth * tanX / SCREEN_WIDTH;
 		panelX = 0.0f;
 	}
-	VectorMA( camera, depth, look, menu3d.center );
+	// The letters and lines of the menus are made for the pixels the panel has (R_FontTTF_Plane in the renderer,
+	// Skin_Scale in the ui), not for the flat screen: told as it is when the camera has arrived, not for each frame
+	// on its way there. The corner of the 640 x 480 goes onto the corner of a pixel of the window, so that the ui
+	// finds the pixels from that size alone.
+	{
+		static float	told = -1.0f;
+		const float		pixels = menu3d.unit * cgs.glconfig.vidHeight * 0.5f / ( depth * tanY );
+		const float		cornerX = ( panelX + 1.0f ) * 0.5f * cgs.glconfig.vidWidth - SCREEN_WIDTH * 0.5f * pixels;
+		const float		cornerY = 0.5f * cgs.glconfig.vidHeight - SCREEN_HEIGHT * 0.5f * pixels;
+
+		if ( fabsf( pixels - told ) > 0.0001f ) {
+			told = pixels;
+			trap->Cvar_Set( "v_uiPlanePixels", va( "%.6f", pixels ) );
+		}
+		panelX += ( floorf( cornerX + 0.5f ) - cornerX ) * 2.0f / cgs.glconfig.vidWidth;
+		VectorMA( camera, depth, look, menu3d.center );
+		VectorMA( menu3d.center, ( floorf( cornerY + 0.5f ) - cornerY ) * 2.0f * depth * tanY / cgs.glconfig.vidHeight, menu3d.down,
+			menu3d.center );
+	}
 	VectorMA( menu3d.center, panelX * tanX * depth, camRight, menu3d.center );
 
 	// from the view of the game to the view of the menu, slowly at both ends
-	blend = menu3d.blend * menu3d.blend * ( 3.0f - 2.0f * menu3d.blend );
 	for ( i = 0; i < 3; i++ ) {
 		cg.refdef.vieworg[i] += ( camera[i] - cg.refdef.vieworg[i] ) * blend;
 		cg.refdef.viewangles[i] = LerpAngle( cg.refdef.viewangles[i], lookAngles[i], blend );
