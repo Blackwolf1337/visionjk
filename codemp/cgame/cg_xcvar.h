@@ -73,6 +73,8 @@ XCVAR_DEF( v_chatBoxWidth,						"380",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_chatInput,						"1",					NULL,					CVAR_ARCHIVE )
 // the menu in the level while in a game (menu3d/cg_menu3d.c), 0: flat on the screen as in the base game
 XCVAR_DEF( v_immersiveMenu,					"1",					NULL,					CVAR_ARCHIVE )
+// its size on top of the one it takes by the height of the window, 0.5 to 1.5
+XCVAR_DEF( v_menu3dScale,						"1",					NULL,					CVAR_ARCHIVE )
 // chat bubbles above the heads (bubble/cg_bubble.c), and how far away one still sees them
 XCVAR_DEF( v_chatBubbles,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_bubbleRange,						"1200",					NULL,					CVAR_ARCHIVE )

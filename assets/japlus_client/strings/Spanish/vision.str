@@ -1153,6 +1153,14 @@ REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
 LANG_ENGLISH        "How far the level behind an open menu is out of focus."
 LANG_SPANISH        "Cuánto se desenfoca el nivel detrás de un menú abierto."
 
+REFERENCE           MENU_SIZE
+LANG_ENGLISH        "Menu Size"
+LANG_SPANISH        "Tamaño del menú"
+
+REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
+LANG_ENGLISH        "How big the menu is that stands in the level."
+LANG_SPANISH        "Qué tan grande es el menú dentro del nivel."
+
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
 LANG_SPANISH        "Campo de visión"

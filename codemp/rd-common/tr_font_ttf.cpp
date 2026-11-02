@@ -110,6 +110,8 @@ static struct {
 	ttfPage_t		pages[FONT_MAX_PAGES];
 	int				numPages;
 	ttfGlyphMap_t	*glyphs;			// by font, size and code point
+	cvar_t			*planePixelsVar;	// v_uiPlanePixels, set by the cgame (menu3d/cg_menu3d.c)
+	float			planePixels;		// the 2D is on a plane in the level: pixels of a glyph for one unit of it (R_FontTTF_Plane)
 } ttf;
 
 /*
@@ -121,6 +123,8 @@ void R_FontTTF_Init( void ) {
 	memset( &ttf, 0, sizeof( ttf ) );
 	ttf.oversample = Com_Clampi( 1, FONT_MAX_OVERSAMPLE, ( glConfig.vidHeight + SCREEN_HEIGHT - 1 ) / SCREEN_HEIGHT );
 	ttf.glyphs = new ttfGlyphMap_t;
+	ttf.planePixels = 0.0f;
+	ttf.planePixelsVar = ri.Cvar_Get( "v_uiPlanePixels", "0", 0, "" );
 
 	for ( int i = 0; i < TTF_NUM_FONTS; i++ ) {
 		ttfFont_t	*font = &ttf.fonts[i];
@@ -453,7 +457,6 @@ int R_FontTTF_ByName( const char *name ) {
 	return ( font >= 0 && ttf.fonts[font].loaded ) ? font : -1;
 }
 
-// the size in pixels of the window a text of that size in units is made in
 // The colour of a colour code for the letters of the new look. Wherever they are used they stand on something
 // dark (the glass of the menus and of the HUD, a bubble in the level), where the black of ^0 can not be read:
 // for them it is a grey that can. (A name in black and red was half a name in the list of servers.)
@@ -463,7 +466,30 @@ static const float *R_FontTTF_CodeColor( int index ) {
 	return ( index == 0 ) ? darkGrey : g_color_table[index];
 }
 
+/*
+===============
+R_FontTTF_Plane
+
+The 2D goes onto a plane in the level (RE_Set2DPlane), or flat onto the screen again. On the plane the letters of
+the menus are made for the size they are seen there, which the cgame says in v_uiPlanePixels, and twice as
+large: the pixels of the plane do not lie on those of the window, and a glyph made in exactly its size was
+smeared over two pixels by the filter, softer than the one made for the flat screen. Made twice as large and
+made smaller by the card its edges were the clearest of 1, 1.5 and 2 (2026-11-02). In steps of half a pixel, so
+that dragging the size of the menu does not fill the pages with glyphs of every size between. The plane is not
+asked itself: while the camera moves to the menu it changes its size every frame.
+===============
+*/
+void R_FontTTF_Plane( qboolean on ) {
+	const float pixels = ( on && ttf.planePixelsVar ) ? Com_Clamp( 0.0f, (float)FONT_MAX_OVERSAMPLE, ttf.planePixelsVar->value ) : 0.0f;
+
+	ttf.planePixels = floorf( pixels * 2.0f * 2.0f + 0.5f ) * 0.5f;
+}
+
+// the size in pixels of the window a text of that size in units is made in
 static int R_FontTTF_MenuPixels( float size ) {
+	if ( ttf.planePixels > 0.0f ) {
+		return Com_Clampi( 4, FONT_MAX_GLYPH, (int)( size * ttf.planePixels + 0.5f ) );
+	}
 	return Com_Clampi( 4, FONT_MAX_GLYPH, (int)( size * glConfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * R_2DBiasY() ) + 0.5f ) );
 }
 
@@ -506,6 +532,12 @@ static qboolean R_FontTTF_MenuChar( int font, const char **text, int pixels, con
 
 // units of the 2D screen for a pixel of the window, as wide and high as R_2DBias() and R_2DBiasY() make it
 static void R_FontTTF_MenuScale( float *xScale, float *yScale, float *bias, float *biasY ) {
+	if ( ttf.planePixels > 0.0f ) {
+		// on the plane the grid starts at its corner, and a pixel is one of the glyph
+		*bias = *biasY = 0.0f;
+		*xScale = *yScale = 1.0f / ttf.planePixels;
+		return;
+	}
 	*bias = R_2DBias();
 	*biasY = R_2DBiasY();
 	*xScale = ( SCREEN_WIDTH + 2.0f * *bias ) / glConfig.vidWidth;

@@ -630,11 +630,11 @@
 			visible					1
 			text					@VISION_SCREEN
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					1
 			page					1
@@ -901,11 +901,11 @@
 			visible					1
 			text					@VISION_VULKAN_RENDERER
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					2
 			page					1
@@ -987,11 +987,11 @@
 			visible					1
 			text					@VISION_DETAIL
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					3
 			page					1
@@ -1316,11 +1316,11 @@
 			visible					1
 			text					@VISION_SCREEN_EFFECTS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					4
 			page					1
@@ -1499,11 +1499,11 @@
 			visible					1
 			text					@VISION_VOLUME
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					5
 			page					2
@@ -1600,11 +1600,11 @@
 			visible					1
 			text					@VISION_HITS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					6
 			page					2
@@ -1663,11 +1663,11 @@
 			visible					1
 			text					@VISION_VOICE_CHAT
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					7
 			page					2
@@ -1886,11 +1886,11 @@
 			visible					1
 			text					@VISION_3D_SOUND
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					8
 			page					2
@@ -2121,11 +2121,11 @@
 			visible					1
 			text					@VISION_BOOMBOX
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					9
 			page					2
@@ -2181,11 +2181,11 @@
 			visible					1
 			text					@VISION_GAME
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					10
 			page					3
@@ -2381,11 +2381,11 @@
 			visible					1
 			text					@VISION_DUELS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					11
 			page					3
@@ -2445,11 +2445,11 @@
 			visible					1
 			text					@VISION_HATS_AND_CAPES
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					12
 			page					3
@@ -2557,11 +2557,11 @@
 			visible					1
 			text					@VISION_LANGUAGE
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					13
 			page					3
@@ -2654,11 +2654,11 @@
 			visible					1
 			text					@VISION_LIGHTSABERS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					14
 			page					3
@@ -2791,11 +2791,11 @@
 			visible					1
 			text					@VISION_PLAYERS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					15
 			page					3
@@ -2855,11 +2855,11 @@
 			visible					1
 			text					@VISION_WEAPONS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					16
 			page					3
@@ -3011,11 +3011,11 @@
 			visible					1
 			text					@VISION_MENUS_AND_HUD
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					17
 			page					4
@@ -3104,16 +3104,35 @@
 
 		itemDef
 		{
+			name					vision_slider_v_menu3dscale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_MENU_SIZE
+			descText				@VISION_HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
+			cvarfloat				"v_menu3dScale" 1 0.5 1.5
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 466 432 52
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					296 466 452 100
+			rect					296 518 452 100
 			visible					1
 			text					@VISION_ON_SCREEN
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					18
 			page					4
@@ -3132,7 +3151,7 @@
 			descText				@VISION_FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
 			cvar					"cg_drawFPS"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 566 432 52
+			rect					306 618 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3151,7 +3170,7 @@
 			descText				@VISION_THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 			cvar					"cg_drawTimer"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 618 432 52
+			rect					306 670 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3170,7 +3189,7 @@
 			descText				@VISION_THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
 			cvar					"tay_timerMsec"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 670 432 52
+			rect					306 722 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3189,7 +3208,7 @@
 			descText				@VISION_THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
 			cvar					"tay_timerCountdown"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 722 432 52
+			rect					306 774 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3208,7 +3227,7 @@
 			descText				@VISION_A_GRAPH_OF_YOUR_CONNECTION
 			cvar					"cg_lagometer"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 774 432 52
+			rect					306 826 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3227,7 +3246,7 @@
 			descText				@VISION_WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
 			cvar					"tay_killfeed"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 826 432 52
+			rect					306 878 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3246,7 +3265,7 @@
 			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 			cvarfloat				"tay_teamOverlayScale" 1 0.5 2.5
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 878 432 52
+			rect					306 930 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3265,7 +3284,7 @@
 			descText				@VISION_THE_TIME_OF_DAY_ON_THE_SCOREBOARD
 			cvar					"tay_scoreboardClock"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 930 432 52
+			rect					306 982 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3284,7 +3303,7 @@
 			descText				@VISION_WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
 			cvar					"tay_specHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 982 432 52
+			rect					306 1034 432 52
 			page					4
 			scroll					1
 			row						1
@@ -3302,11 +3321,11 @@
 			visible					1
 			text					@VISION_VIEW
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					19
 			page					4
@@ -3381,11 +3400,11 @@
 			visible					1
 			text					@VISION_CROSSHAIR
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					20
 			page					4
@@ -3484,11 +3503,11 @@
 			visible					1
 			text					@VISION_MOVEMENT
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					21
 			page					4
@@ -3668,11 +3687,11 @@
 			visible					1
 			text					@VISION_PLAYERS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					22
 			page					5
@@ -3841,11 +3860,11 @@
 			visible					1
 			text					@VISION_NOTIFICATIONS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					23
 			page					5
@@ -3921,11 +3940,11 @@
 			visible					1
 			text					@VISION_CLAN
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					24
 			page					5
@@ -3966,11 +3985,11 @@
 			visible					1
 			text					@VISION_CHAT
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					25
 			page					5
@@ -4141,11 +4160,11 @@
 			visible					1
 			text					@VISION_CONSOLE
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					26
 			page					5
@@ -4245,11 +4264,11 @@
 			visible					1
 			text					@VISION_TEXT
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					27
 			page					5
@@ -4288,11 +4307,11 @@
 			visible					1
 			text					@VISION_UPDATES_AND_DOWNLOADS
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					28
 			page					6
@@ -4463,11 +4482,11 @@
 			visible					1
 			text					@VISION_CONNECTION
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				21.5
+			textaligny				20.5
 			caps					1
 			fold					29
 			page					6
@@ -4507,11 +4526,11 @@
 			visible					1
 			text					@VISION_SECURITY
 			font					7
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				55.5
+			textaligny				54.5
 			caps					1
 			fold					30
 			page					6

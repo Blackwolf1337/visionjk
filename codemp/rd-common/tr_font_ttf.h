@@ -31,4 +31,5 @@ int					R_FontTTF_ByName( const char *name );
 float				R_FontTTF_StringWidth( int font, const char *text, float size );
 void				R_FontTTF_DrawString( int font, float x, float y, const char *text, const float *rgba, float size, int maxWidth, qboolean shadow );
 void				R_FontTTF_InkBox( int font, const char *text, float size, float *box );
+void				R_FontTTF_Plane( qboolean on );
 bool				Font_TextIsUTF8( void );		// tr_font.cpp

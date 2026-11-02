@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "tr_local.h"
+#include "rd-common/tr_font_ttf.h"
 
 
 /*
@@ -208,6 +209,7 @@ again. The engine sets it around the menus when the cgame shows them in the leve
 void	RE_Set2DPlane( const float *matrix ) {
 	set2DPlaneCommand_t	*cmd;
 
+	R_FontTTF_Plane( matrix ? qtrue : qfalse );
 	if ( !tr.registered ) {
 		return;
 	}

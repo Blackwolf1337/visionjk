@@ -15,6 +15,7 @@ import canvas
 from texts import ref
 
 ROW_H = 22                  # a row of a list, and a heading in it
+HEAD_SIZE = 16              # the heading of a card on a canvas, in its pixels (14 was hard to read in the level)
 ROWS = 16                   # rows the window of a list shows
 RAIL_ROWS = 17              #	and with the pages at the left
 ROW_SCALE = 0.7
@@ -185,6 +186,7 @@ SETUP = [
         ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
         ('yesno', 'Menu in the Level', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
         ('slider', 'Menu Blur', 'v_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
+        ('slider', 'Menu Size', 'v_menu3dScale', 1, 0.5, 1.5, 'How big the menu is that stands in the level.'),
         ('head', 'View'),
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
         ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
@@ -1042,9 +1044,9 @@ def build_canvas(m, name, ingame):
                 props += [('decoration',)]
             if adv:
                 props.append(('advanced', 1))
-            e = cv.text('vision_head', (x, cursor[col], col_w, h), words, 14, cv.MUTED, 'left', cv.CARD_PAD, canvas.BOLD, *props)
+            e = cv.text('vision_head', (x, cursor[col], col_w, h), words, HEAD_SIZE, cv.MUTED, 'left', cv.CARD_PAD, canvas.BOLD, *props)
             # (the words stand in the head of the card, under the gap)
-            mf.put(e.block, 'textaligny', mf.fmt(gap + cv.CARD_TEXT_Y - 14 / 2.0))
+            mf.put(e.block, 'textaligny', mf.fmt(gap + cv.CARD_TEXT_Y - HEAD_SIZE / 2.0))
             made_pages.append(e)
             cursor[col] += h
             for b in rows:
