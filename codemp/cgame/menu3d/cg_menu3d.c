@@ -50,6 +50,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MENU3D_PANEL_X		0.27f		// and the middle of the menu
 #define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands
 #define MENU3D_MARGIN		8.0f		// the panel behind the menu is larger by this on each side, in units of the 2D grid
+#define MENU3D_TILT			8.0f		// degrees the panel is turned towards the player while it comes and goes
 #define MENU3D_BOX_MSEC		70.0f		// the panel covers most of the way to a new size in about three times this
 
 static struct {
@@ -208,9 +209,11 @@ void CG_Menu3DView( void ) {
 	lookAngles[ROLL] = 0.0f;
 	AngleVectors( lookAngles, look, camRight, camUp );
 
-	// The panel faces the camera. Turned towards the player (8, then 4 degrees) its letters were soft: the renderer
-	// puts them on whole pixels only on a plane that faces the camera (R_FontTTF_Plane, 2026-11-02).
-	tilt = 0.0f;
+	// The panel comes turned towards the player, its left edge, the one next to him, the farther one, and faces the
+	// camera once it is there. Turned while it stood its letters were soft: the renderer puts them on whole pixels
+	// only on a plane that faces the camera (R_FontTTF_Plane, 2026-11-02).
+	blend = menu3d.blend * menu3d.blend * ( 3.0f - 2.0f * menu3d.blend );
+	tilt = DEG2RAD( MENU3D_TILT ) * ( 1.0f - blend );
 	VectorScale( camRight, cosf( tilt ), menu3d.right );
 	VectorMA( menu3d.right, -sinf( tilt ), look, menu3d.right );
 	VectorNegate( camUp, menu3d.down );
@@ -235,22 +238,28 @@ void CG_Menu3DView( void ) {
 		menu3d.unit = MENU3D_SCREEN_WIDE * 2.0f * depth * tanX / SCREEN_WIDTH;
 		panelX = 0.0f;
 	}
-	// The letters of the menus are made for the pixels the panel has (R_FontTTF_Plane in the renderer), not for the
-	// flat screen: told as it is when the camera has arrived, not for each frame on its way there.
+	// The letters and lines of the menus are made for the pixels the panel has (R_FontTTF_Plane in the renderer,
+	// Skin_Scale in the ui), not for the flat screen: told as it is when the camera has arrived, not for each frame
+	// on its way there. The corner of the 640 x 480 goes onto the corner of a pixel of the window, so that the ui
+	// finds the pixels from that size alone.
 	{
 		static float	told = -1.0f;
 		const float		pixels = menu3d.unit * cgs.glconfig.vidHeight * 0.5f / ( depth * tanY );
+		const float		cornerX = ( panelX + 1.0f ) * 0.5f * cgs.glconfig.vidWidth - SCREEN_WIDTH * 0.5f * pixels;
+		const float		cornerY = 0.5f * cgs.glconfig.vidHeight - SCREEN_HEIGHT * 0.5f * pixels;
 
-		if ( fabsf( pixels - told ) > 0.01f ) {
+		if ( fabsf( pixels - told ) > 0.0001f ) {
 			told = pixels;
-			trap->Cvar_Set( "v_uiPlanePixels", va( "%.3f", pixels ) );
+			trap->Cvar_Set( "v_uiPlanePixels", va( "%.6f", pixels ) );
 		}
+		panelX += ( floorf( cornerX + 0.5f ) - cornerX ) * 2.0f / cgs.glconfig.vidWidth;
+		VectorMA( camera, depth, look, menu3d.center );
+		VectorMA( menu3d.center, ( floorf( cornerY + 0.5f ) - cornerY ) * 2.0f * depth * tanY / cgs.glconfig.vidHeight, menu3d.down,
+			menu3d.center );
 	}
-	VectorMA( camera, depth, look, menu3d.center );
 	VectorMA( menu3d.center, panelX * tanX * depth, camRight, menu3d.center );
 
 	// from the view of the game to the view of the menu, slowly at both ends
-	blend = menu3d.blend * menu3d.blend * ( 3.0f - 2.0f * menu3d.blend );
 	for ( i = 0; i < 3; i++ ) {
 		cg.refdef.vieworg[i] += ( camera[i] - cg.refdef.vieworg[i] ) * blend;
 		cg.refdef.viewangles[i] = LerpAngle( cg.refdef.viewangles[i], lookAngles[i], blend );

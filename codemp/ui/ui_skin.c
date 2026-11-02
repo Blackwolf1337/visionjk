@@ -39,7 +39,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern displayContextDef_t *DC;
 
-#define SKIN_MAX_SHAPES		24		// shapes of different radius that are kept. More than a menu set uses
+#define SKIN_MAX_SHAPES		128		// shapes of different radius that are kept: those of the flat menus and of the menu in the level,
+								//	of every size it is dragged to (24 were full with the two, the rest was not drawn)
 #define SKIN_MAX_RADIUS		120		// pixels: a corner that is rounder is drawn with this radius
 #define SKIN_SOFT_SIZE		64
 #define SKIN_STARS			150
@@ -118,26 +119,45 @@ qhandle_t Skin_FontHandle( int iMenuFont ) {
 	return skin.fonts[iMenuFont - SKIN_FONT_SANS];
 }
 
+// While the menus stand on a plane in the level (v_uiPlane): the pixels of the window a unit of it has there
+// (v_uiPlanePixels, from the cgame, which puts the corner of the 640 x 480 on the corner of a pixel), 0 flat.
+// Asked once a frame.
+static float Skin_PlanePixels( void ) {
+	static int		askedTime = -1;
+	static float	pixels;
+
+	if ( askedTime != DC->realTime ) {
+		askedTime = DC->realTime;
+		pixels = ( DC->getCVarValue( "v_uiPlane" ) != 0.0f ) ? DC->getCVarValue( "v_uiPlanePixels" ) : 0.0f;
+	}
+	return pixels;
+}
+
 // pixels of the window for a unit of the 2D screen
 static float Skin_ScaleX( void ) {
-	return DC->glconfig.vidWidth / ( SCREEN_WIDTH + 2.0f * DC->bias );
+	const float plane = Skin_PlanePixels();
+
+	return plane > 0.0f ? plane : DC->glconfig.vidWidth / ( SCREEN_WIDTH + 2.0f * DC->bias );
 }
 
 static float Skin_ScaleY( void ) {
-	return DC->glconfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * DC->biasY );
+	const float plane = Skin_PlanePixels();
+
+	return plane > 0.0f ? plane : DC->glconfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * DC->biasY );
 }
 
-// a place of the 2D screen on the pixel of the window it is nearest to, as units again
+// a place of the 2D screen on the pixel of the window it is nearest to, as units again (on the plane its grid
+// starts at a pixel)
 static float Skin_SnapX( float x ) {
-	const float scale = Skin_ScaleX();
+	const float scale = Skin_ScaleX(), bias = Skin_PlanePixels() > 0.0f ? 0.0f : DC->bias;
 
-	return floorf( ( x + DC->bias ) * scale + 0.5f ) / scale - DC->bias;
+	return floorf( ( x + bias ) * scale + 0.5f ) / scale - bias;
 }
 
 static float Skin_SnapY( float y ) {
-	const float scale = Skin_ScaleY();
+	const float scale = Skin_ScaleY(), bias = Skin_PlanePixels() > 0.0f ? 0.0f : DC->biasY;
 
-	return floorf( ( y + DC->biasY ) * scale + 0.5f ) / scale - DC->biasY;
+	return floorf( ( y + bias ) * scale + 0.5f ) / scale - bias;
 }
 
 /*
@@ -487,21 +507,15 @@ void Skin_Disc( float cx, float cy, float radius, const vec4_t color ) {
 	DC->setColor( NULL );
 }
 
-// A line from left to right that is one pixel high, whatever the size of the window. While the menus stand on
-// a plane in the level (v_uiPlane) a pixel of the 2D is less than one of the screen, and a line that thin
-// breaks into dashes: there it is a strip with soft edges, which the renderer can thin out evenly.
+// A line from left to right that is one pixel high, whatever the size of the window, also on a plane in the level
+// whose pixels the cgame tells (Skin_PlanePixels). On a plane without them (an old cgame) a pixel of the 2D is
+// less than one of the screen, and a line that thin breaks into dashes: there it is a strip with soft edges, which
+// the renderer can thin out evenly.
 void Skin_Line( float x, float y, float w, const vec4_t color ) {
-	static int		askedTime = -1;
-	static qboolean	plane;
-
 	if ( !Skin_Ready() || color[3] <= 0.0f ) {
 		return;
 	}
-	if ( askedTime != DC->realTime ) {
-		askedTime = DC->realTime;
-		plane = (qboolean)( DC->getCVarValue( "v_uiPlane" ) != 0.0f );
-	}
-	if ( !plane ) {
+	if ( Skin_PlanePixels() > 0.0f || DC->getCVarValue( "v_uiPlane" ) == 0.0f ) {
 		DC->fillRect( Skin_SnapX( x ), Skin_SnapY( y ), w, 1.0f / Skin_ScaleY(), color );
 		return;
 	}
@@ -802,7 +816,9 @@ void Skin_Cube( float x, float y, float w, float h ) {
 	const float			open = 0.5f + 0.5f * sinf( t * 0.8f );					// 0 nearly shut, 1 as open as it gets
 	const float			lid = DEG2RAD( 7.0f + 17.0f * open );
 	const float			top = CUBE_HALF * CUBE_HEIGHT, bob = sinf( t * 0.7f ) * 0.8f;
-	const float			scaleX = Skin_ScaleX(), scaleY = Skin_ScaleY();
+	// (a scene has its place in pixels of the flat screen, also on a plane: CL_UIRenderScene moves it there)
+	const float			scaleX = DC->glconfig.vidWidth / ( SCREEN_WIDTH + 2.0f * DC->bias );
+	const float			scaleY = DC->glconfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * DC->biasY );
 	const float			size = Q_min( w, h ), cx = x + w * 0.5f, cyy = y + h * 0.5f;
 	vec4_t				glow;
 	refdef_t			refdef;
