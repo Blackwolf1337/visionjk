@@ -43,7 +43,7 @@ The game, Jedi Academy, has to be installed. Not affiliated with Raven Software,
     </td>
     <td width="50%" valign="top">
       <h3><img src="docs/images/icons/monitor.svg" width="22" alt=""> Renderer</h3>
-      A Vulkan renderer, <code>rd-vulkan-vision</code>, next to <code>rd-vanilla</code>. The classic renderer takes over when the new one can not run. On a wide window the menus and the HUD keep their shape.
+      One renderer, <code>rd-vulkan-vision</code>, with a Vulkan device and an OpenGL ES device for the browser. When it can not run, the game stops with a message that says why. On a wide window the menus and the HUD keep their shape.
     </td>
   </tr>
   <tr>
@@ -229,7 +229,7 @@ What this tree adds, in [docs/japlus/](docs/japlus):
 | [boombox.md](docs/japlus/boombox.md) | Boxes that play songs of YouTube and the sound system, the quick wheel, the commands and cvars |
 | [update.md](docs/japlus/update.md) | The updater of the client: it asks the website for a newer version, fetches what changed and puts it in place |
 | [audio.md](docs/japlus/audio.md) | `v_spatial`, sound that knows the level, with Steam Audio: walls muffle, rooms ring, sounds come round corners |
-| [renderer.md](docs/japlus/renderer.md) | `rd-vulkan-vision`: how it is built, the state of each part, differences to `rd-vanilla`, what is left |
+| [renderer.md](docs/japlus/renderer.md) | `rd-vulkan-vision`: how it is built, the state of each part, what is left |
 | [ui.md](docs/japlus/ui.md) | The new look of menus and HUD: what a player sees, what a mod's files get, the new words of the menu files |
 | [downloads.md](docs/japlus/downloads.md) | Downloads from a server: a window to choose the paks, what is in them before they are used, programs blocked |
 | [security.md](docs/japlus/security.md) | Security pass over the network code: findings, fixes, build hardening, server settings |

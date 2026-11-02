@@ -549,7 +549,7 @@ Also changed:
   where it differed (the user: "The renderer in the webui, still is not correct ... Do a 1:1 copy of the
   render", and that mountains and rocks were missing on hoth). Until this the page was written from reading
   the engine and judged by eye. Now `tools/refshot.sh` (outside of this tree) runs the real client with
-  rd-vanilla and every cvar at its default as a listen server that also serves the page, puts that client as
+  rd-vanilla (gone since 2026-11-02) and every cvar at its default as a listen server that also serves the page, puts that client as
   a spectator at spots of a map, reads back where its eye is (`/api/state?view=`), and has the game and the
   page take a picture from the same spot, both on the graphics card. The page has a view for it
   (`?ref=<width>x<height>`: the map alone, the projection of the game, no smoothing of edges) and a mask of
@@ -960,7 +960,7 @@ Also changed:
   little, 40 to 80 units long; a bolt is there when that way meets the map, to where it does, and in six of
   a hundred frames when it does not: `gfx/misc/blueLine`, 1.5 units wide to 4, growing to its end and thin
   towards it, for 100 to 150 msec (`fxAddElectricity` in `js/fx-weapons.js`). cgame asks for a bolt that
-  forks; none does, here or in the game: rd-vanilla never sets how many forks a bolt may have (`f_count` in
+  forks; none does, here or in the game: the renderer never sets how many forks a bolt may have (`f_count` in
   `tr_surface.cpp`), so the "forks of electricity" this file listed as not drawn do not exist in this
   engine. Compared with the game in pairs of one moment (`REF_LOOK=shock` of `tools/refshot.sh`: a bot is
   hit by a DEMP 2 the run puts in front of him, which electrifies him for two seconds): thin blue-white
@@ -2021,7 +2021,7 @@ Also changed:
   a wall that is lit by a lightmap is drawn without it or with the one of another wall, and when the swap is
   taken back all but one of them stay that way until the level is loaded again. The renderers of this tree
   give each one the new shader with its own lightmap, and a swap that is taken back is gone (`R_RemapShader`
-  in `rd-vanilla/tr_shader.cpp`, which `rd-vulkan-vision` builds too). Another client keeps the old behaviour.
+  in `rd-vulkan-vision/common/tr_shader.cpp`). Another client keeps the old behaviour.
   Added without a test run: built, the page as a whole checked for syntax, not opened in a browser and not
   seen in a game.
 - New on 2026-10-10: pictures and marks in the tab Textures (the user asked for a preview of the textures and

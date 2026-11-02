@@ -96,7 +96,6 @@ game's menu, changed for this engine. Both have the same pages.
 |------|-------|--------------|
 | Video | Video Mode | a list the ui fills: "Desktop", the size of the screen (`r_mode -2`), the sizes of `r_availableModes`, and common window sizes (1024 x 768 up to 3840 x 2160) that are not larger than the largest of those, so a display that lists only its own mode (Wayland) still offers smaller windows (`Item_Multi_FeedVideoModes()` in `codemp/ui/ui_shared.c`). A size is `r_mode -1` with `r_customwidth` and `r_customheight` |
 | Video | Display Mode | Window, Fullscreen, Borderless (`r_fullscreen`, `r_noborder`). Borderless with "Desktop" covers the screen |
-| Video | Renderer | Vulkan or OpenGL (`cl_renderer`) |
 | Video | Anti-Aliasing | Off, 2x, 4x, 8x (`r_ext_multisample`) |
 | Video | Compressed Textures | `r_ext_compress_textures` |
 | Video | Video Quality | presets for the detail only (`r_lodbias`, `r_picmip`, `r_textureMode`, `r_subdivisions`, `r_fastSky`, `r_inGameVideo`), not for the size or the bit depths any more |
@@ -105,8 +104,7 @@ game's menu, changed for this engine. Both have the same pages.
 | Options | Allow Downloads | Off, On (`cl_allowDownload`) |
 
 Everything on the video page is applied by its "Apply" with a `vid_restart`. Taken out, because they did
-nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores `r_colorbits` and
-`r_texturebits`), Sound Quality (11 or 22 kHz, the engine runs at 44), EAX, and the button for the URL redirect
+nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores `r_texturebits`, and `r_colorbits` is gone), Sound Quality (11 or 22 kHz, the engine runs at 44), EAX, and the button for the URL redirect
 cache. The menus of the base game, which a client shows while it plays as base, still have the EAX and Sound
 Quality entries: the ui hides them (`Item_ApplyHacks`).
 
@@ -119,7 +117,7 @@ None of the pages was looked at in the game after these changes: the rows were p
 The game places all 2D (menus, HUD, console) on a grid of 640 x 480. Until 2026-10-11 both renderers stretched
 that grid over the window, so on 16:9 everything was a third too wide. Now the grid keeps its height of 480 and
 gets as wide as the window: at 16:9 it is 853 wide, the old 640 sit in the middle and x runs from `-bias` to
-`640 + bias` (`R_2DBias()` in `rd-vanilla/tr_init.cpp`, used by `RB_SetGL2D()` of both renderers).
+`640 + bias` (`R_2DBias()` in `rd-vulkan-vision/common/tr_init.cpp`, used by both devices).
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -147,7 +145,7 @@ Pictures made for 16:9 (2026-10-17, as TaystJK): on a wide window the loading sc
 picture `menu/art/unknownmap_mp_16_9`, else the pictures of 4:3 as before (stretched over the window, as they
 were). The map lists of the menus keep the 4:3 pictures, their boxes are 4:3. This tree ships no such pictures.
 
-Shader overrides (2026-10-17, as TaystJK, `rd-vanilla/tr_shader.cpp`, both renderers): a shader in a file
+Shader overrides (2026-10-17, as TaystJK, `rd-vulkan-vision/common/tr_shader.cpp`): a shader in a file
 `shaders/<name>.oshader` takes the place of the shader of that name in any `.shader` file, without a copy of the
 rest of that file. Of two override files with the same shader the one whose name comes later in the alphabet
 wins, as among `.shader` files. The console says at the start how many override files there are.
@@ -159,7 +157,7 @@ window every frame (`WIN_DrawableSize()` in `shared/sdl/sdl_window.cpp`). Once a
 `VK_ResizeFrame()`), `v_2dBias` is set again and `cls.glconfig` is updated. Then the cgame and the ui read the
 glconfig again on their next frame (`CG_CheckScreenSize()`, `UI_CheckScreenSize()`), so the grid, the menus and
 the HUD fit the new size. Modules of this tree say that they do this with the cvars `v_cgameResize` and
-`v_uiResize` (the engine resets both when it loads a module). With rd-vanilla, the OpenGL ES device, or a cgame
+`v_uiResize` (the engine resets both when it loads a module). With the OpenGL ES device or a cgame
 or ui of another tree the client does a `vid_restart` in the new size instead. That restart gets the size once
 (`WIN_SetNextSize()`), it is not written into `r_mode` or `r_custom*`. A page in a browser keeps its own way
 (`boot.js`). A fullscreen window is not resizable.
@@ -177,7 +175,7 @@ menu in the level (`v_immersiveMenu`) is no wider than the window there and stan
 player. `v_2dAspect 0` still stretches as before.
 
 Not looked at in the game: it was built for Linux and nothing more. The live resize was built for Linux (Vulkan
-device, OpenGL ES device, rd-vanilla) and Windows (mingw x86_64) and not run, not on Hyprland either. Open: the siege timer and the automap are
+device, OpenGL ES device) and Windows (mingw x86_64) and not run, not on Hyprland either. Open: the siege timer and the automap are
 placed by the grid but not moved to an edge, and the text of the stock fonts is as soft as before (they are
 bitmaps made for 640 x 480).
 
@@ -910,7 +908,7 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   the floor he stands on stay sharp. The panel is left out of the scene while it is drawn and put onto the
   frame afterwards, as sharp as the menu. What is blended and writes no depth (a saber blade, smoke) is as
   soft as what is behind it. Around the player the soft picture has some of his colour in it: it is a blur of
-  the whole frame. rd-vanilla keeps the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as
+  the whole frame. rd-vanilla (gone since 2026-11-02) kept the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as
   soon as a menu opened, because the pass asked for the descriptor set of the frame where only the sets of the
   glow buffers were known, and after that was repaired it went through the 320 x 240 buffers of the glow,
   which left nothing of the scene to recognise. Until 2026-10-11 the whole picture was soft, the player
@@ -984,7 +982,7 @@ lens, and the light of the mode under it.
 - False boxes: every 2.5 to 8 seconds the tracker takes an edge or a corner of the level in the lens for a mover.
   A spot is traced and two beside it: a jump in distance is an edge, walls facing other ways are a corner. The
   false box lives 250 to 900 ms and flickers. Up to three at once (`TRACK_PHANTOMS`).
-- rd-vanilla draws the brackets over the old mask too, but without the tint and the stencil.
+- rd-vanilla (gone since 2026-11-02) drew the brackets over the old mask too, but without the tint and the stencil.
 - The light under the lens shows that the tracker is on, with a pip for each contact.
 - The tracker key: the tracker has no command and no menu row. While the disruptor is zoomed, the key bound to
   `saberAttackCycle` (the middle mouse button in the defaults of the game, `mpdefault.cfg`) turns it on and off. The
@@ -993,7 +991,7 @@ lens, and the light of the mode under it.
   Outside of the scope the key cycles the styles as always. Typed in the console, `saberAttackCycle` is not caught.
   The choice is kept in the archived cvar `v_scopeMode`: it is used again at the next zoom and at the next start of
   the game.
-- rd-vanilla and a cgame without the call: `v_scope` does nothing and the old mask stays. The tracker has the boxes
+- A renderer or a cgame without the call: `v_scope` does nothing and the old mask stays. The tracker has the boxes
   and the echoes without the tint.
 
 Built for Linux, Windows and the OpenGL ES device. Not run in the game in this form: neither the lens, the wheel,
@@ -1010,12 +1008,12 @@ the tracker, its echoes, its ping nor the key was seen working.
 
 - Binoculars: two lenses are drawn through the scope pass (`SCOPEFX_BINOCULAR`). Once they have zoomed in by
   themselves, the mouse wheel zooms from a field of view of 40 down to 5 degrees. The HUD shows the distance to
-  what the crosshair is on in metres, a compass strip and the zoom factor. With rd-vanilla or `v_binoculars 0` the
+  what the crosshair is on in metres, a compass strip and the zoom factor. With a renderer without the call or `v_binoculars 0` the
   old binocular art stays.
 - Lock-on: brackets stand around the box of the target and close in step by step (8 steps). While it locks they are
   amber, once it is locked they are red and pulse. Eight pips show the steps. Each step has a beep
   (`sound/vision/lock_1.wav` to `lock_8.wav`) and the lock has `sound/vision/lock_on.wav`. At a vehicle and with
-  `v_lockOn 0` the old circle is drawn. It works with rd-vanilla, since the cgame draws all of it.
+  `v_lockOn 0` the old circle is drawn. It needs nothing from the renderer, since the cgame draws all of it.
 
 Not run in the game in this form.
 
@@ -1025,7 +1023,7 @@ Not run in the game in this form.
 [renderer.md](renderer.md)). Each frame the cgame collects the sources of the effects (a ring, a heat line, a puff of
 smoke, a ripple, a flash, a ghost) and the looks of the player (health, water, Force powers), and passes them to the
 renderer with `re->ext.SetScreenEffect` before `R_RenderScene`. The cgame gets it as `trap->ext.R_SetScreenEffect`,
-gated by the ROM cvar `v_cgameScreenFx`. rd-vanilla returns qfalse and the cgame keeps the old looks.
+gated by the ROM cvar `v_cgameScreenFx`. A renderer without the call returns qfalse and the cgame keeps the old looks.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -1087,7 +1085,7 @@ The HUD is hidden and the camera circles the own player, held off the walls like
 | right button or Enter | takes the picture |
 | Esc | leaves |
 
-The picture is a PNG in the screenshots folder of the game, without the hint line at the bottom of the screen. A line says so for two seconds. The depth of field needs rd-vulkan-vision, with rd-vanilla the left button does nothing. The texts are in the CGAME table of `tools/menus/texts.py`.
+The picture is a PNG in the screenshots folder of the game, without the hint line at the bottom of the screen. A line says so for two seconds. The depth of field needs rd-vulkan-vision. The texts are in the CGAME table of `tools/menus/texts.py`.
 
 Not run in the game in this form.
 

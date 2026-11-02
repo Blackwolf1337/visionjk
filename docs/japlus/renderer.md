@@ -1,20 +1,21 @@
 # rd-vulkan-vision: the Vulkan renderer
 
-A second renderer for the VisionJK client next to `rd-vanilla`. It draws with Vulkan 1.3, keeps the level and the
-models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
-frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
+The renderer of the VisionJK client, and the only one. It draws with Vulkan 1.3, keeps the level and the
+models in buffers on the graphics card and does in shaders what the OpenGL renderer `rd-vanilla` computed per vertex
+on the CPU every frame. `rd-vanilla` was taken out of the multiplayer game on 2026-11-02, so the many places below
+that compare with it (differences, checks, speed, the audit) describe how this renderer was made and checked against
+it. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
 
 Since 2026-10-09 the renderer is a shared part and a device. The shared part decides what is drawn and in which
 order, a device hands that to a graphics library. There are two devices: the one for Vulkan, which is the library
 `rd-vulkan-vision` this page is about, and one for OpenGL ES 3, which is what a browser has as WebGL2 and what the
 client for a browser draws with. See "The two devices".
 
-Since 2026-10-07 it is the renderer a client starts with (on macOS that is still `rd-vanilla`). `rd-vanilla` is
-the fallback: where the library is missing or the machine can not run it, the game goes on with `rd-vanilla` by
-itself, see "Building and switching". The renderer is in `master`
-since 2026-10-07 (it was written on the branch `feature/rd-vulkan-vision`), behind the CMake option
-`BuildMPRdVulkanVision`, which is on by default since 2026-10-07: every build of the client makes it next to
-`rd-vanilla`. rend2, the third renderer of OpenJK, was removed from the tree that day: nothing used it.
+Since 2026-10-07 it is the renderer a client starts with. It was written on the branch `feature/rd-vulkan-vision`
+and is in `master` since 2026-10-07, behind the CMake option `BuildMPRdVulkanVision`, which is on by default. rend2,
+the third renderer of OpenJK, was removed from the tree that day: nothing used it. On 2026-11-02 `rd-vanilla` went
+too: the option `BuildMPRdVanilla` and the cvar `cl_renderer` are gone, and there is no fallback. When the renderer
+can not run, the game stops with a message, see "Building and switching". macOS is not supported.
 
 ## State
 
@@ -50,7 +51,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | A minimized window | written, not tried: the desktop of this machine (Hyprland) has no such state |
 | macOS | not tried, would need MoltenVK |
 | Other graphics cards and drivers, a long session, play by a person over a longer time | not tried |
-| `r_dlightStyle 0`, `r_colorbits`, `r_depthbits`, `r_stencilbits`, `r_texturebits 16`, the developer cvars | not there and left out on purpose, see "Checked" |
+| `r_dlightStyle 0`, `r_texturebits 16`, the developer cvars | not there and left out on purpose, see "Checked" |
 | OpenGL ES device on the desktop (`rd-vision-gles`, Linux) | draws what the Vulkan device draws, compared picture by picture (see "The two devices") |
 | OpenGL ES device in a browser (WebGL2) | the menu, demos of two levels, `vid_restart`, four samples a pixel and flares were run in a headless Chromium, in software and on the graphics card |
 | OpenGL ES device: flares | done, one query for each flare, the answer some frames late |
@@ -94,46 +95,32 @@ cmake -S . -B build64 -DBuildMPRdVisionGLES=ON
 ```
 
 builds `rd-vision-gles_x86_64.so` next to the other two (Linux, needs `GLES3/gl3.h` and `libGLESv2`). It is there
-to work on that device with the tools of the desktop, a player has no use for it: `cl_renderer rd-vision-gles;
-vid_restart`. The build for a browser (Emscripten, see [web.md](web.md)) has no Vulkan. There
+to work on that device with the tools of the desktop, a player has no use for it. The test clients of the
+desktop pick it by the name of the library. The build for a browser (Emscripten, see [web.md](web.md)) has no Vulkan. There
 `BuildMPRdVulkanVision` builds the renderer with the OpenGL ES device as a module of the engine, under the name
 the engine asks for (`rd-vulkan-vision_wasm32.wasm`). If `glslangValidator` (package `glslang`) is on the build
 machine, every build compiles and links the shaders as GLSL ES too, so a shader that is not GLSL ES fails the
 build of the desktop and not the game in a browser.
 
-A client that has no renderer stored in its config starts with `rd-vulkan-vision`. A config that was written
-before 2026-10-07 has `cl_renderer "rd-vanilla"` in it and keeps that: the stored value wins over the default.
-In the game:
+There is one renderer and no cvar to choose it. A config that still has `cl_renderer "rd-vanilla"` in it is ignored.
 
-```
-cl_renderer rd-vulkan-vision; vid_restart
-```
-
-and `cl_renderer rd-vanilla; vid_restart` to go back.
-
-A machine that can not run it gets `rd-vanilla` without anybody doing anything: no library of Vulkan, no driver
-for it, Vulkan older than 1.3, no graphics device with descriptor indexing, or the renderer library is not
-there. The console says which (`rd-vulkan-vision can not run here: ...`). `cl_renderer` is not changed by
-that, so the next start and every `vid_restart` try again, for example after a new driver. How it is done:
-`VK_InitVulkan()` returns instead of ending the game, the renderer hands an empty `glconfig` back, and
-`CL_InitRenderer()` of the client loads `rd-vanilla` for the rest of the run. No exception crosses the library
+There is no fallback. A machine that can not run the renderer gets an error dialog and the game stops: no library of
+Vulkan, no driver for it, Vulkan older than 1.3, no graphics device with descriptor indexing, or the renderer
+library is not there. The dialog says why and what to do (update the graphics driver). In a browser without WebGL 2
+the game stops the same way, with the advice to use a current browser with hardware acceleration. The console has the
+reason too (`rd-vulkan-vision can not run here: ...`). `VK_InitVulkan()` returns instead of ending the game, the
+renderer hands back a `glconfig` without a window and with the reason as `renderer_string`, and the client turns that into the error. No exception crosses the library
 border for it (the Windows builds link libgcc statically).
 
-What that does not catch: a driver that crashes inside Vulkan instead of refusing. Then
-`+set cl_renderer rd-vanilla` on the command line is the way out.
-
-The fallback was run on Linux on 2026-10-27 (AMD Radeon 610M, RADV, Mesa 26.2.5, headless gamescope). With no
-Vulkan driver (`VK_ICD_FILENAMES` pointing nowhere) the log says `rd-vulkan-vision can not run on this machine,
-going on with rd-vanilla` and the game runs. With the library `rd-vulkan-vision_x86_64.so` removed it says
-`failed: trying to load fallback renderer` and the game runs. The fallback is code of the client
-(`cl_main.cpp`) and is the same on Windows, so the Windows build has it. It was not run on Windows, only the
-Linux side was run.
+The hardware gamma ramp is not used by the multiplayer game: gamma is a shader pass of both devices. The window
+cvars `r_stereo`, `r_allowSoftwareGL`, `r_colorbits`, `r_depthbits`, `r_stencilbits` and `r_ignorehwgamma` are gone
+from it (the single player engine in `code/` keeps them).
 
 | Cvar | Meaning |
 |------|---------|
 | `v_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
-| `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel, the cvar `rd-vanilla` uses for it (latched) |
-| `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks, the cvar `rd-vanilla` uses for it (latched, the default is 1) |
+| `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel (latched) |
+| `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks (latched, the default is 1) |
 | `v_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
 | `v_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
 | `v_vkSprites 0` | cheat: sprites, lines, cylinders, bolts, sparks and the weather build their corners on the CPU as in `rd-vanilla`, not in `sprite.vert` (1 by default) |
@@ -141,31 +128,26 @@ Linux side was run.
 | `v_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser |
 | `gfxinfo` | device, memory, how many textures are compressed and how long packing them took, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
 
-The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
+The cvars keep the names and meaning they had in `rd-vanilla` (`r_gamma`, `r_textureMode`, `r_picmip`,
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
 that only make sense for OpenGL extensions are registered and ignored.
 
-In the setup menu: the video page has the entries Renderer (`cl_renderer`), Anti-Aliasing (`r_ext_multisample`)
+In the setup menu: the video page has the entries Anti-Aliasing (`r_ext_multisample`)
 and Compressed Textures (`r_ext_compress_textures`), and no Color Depth or Texture Quality, which this renderer
-ignores. The renderer has no player setting that is only its own, so nothing on the page depends on which one
-runs. See "The setup menu" in [client.md](client.md).
+ignores. See "The setup menu" in [client.md](client.md).
 
 ## How it is built
 
-The renderer does not copy the parts of `rd-vanilla` that are not graphics code. Its CMake target compiles them
-from `codemp/rd-vanilla/` with `RD_VULKAN_VISION` defined: the BSP and model loaders, the `.shader` parser,
-Ghoul2 with bones, bolts and collision, skins, marks, the light grid, the scene with PVS and culling, the cvars
-and the export table, the image code up to the upload, the sky geometry, the surface functions for sprites,
-beams and the like, the weather particles, the surface sprites and the shadows (`cg_shadows 2` and `3`).
+The parts that are not graphics code come from `rd-vanilla` and live in `codemp/rd-vulkan-vision/common/` (they moved
+there from `codemp/rd-vanilla/` on 2026-11-02, with their OpenGL code paths removed; `tr_backend.cpp`,
+`tr_shade.cpp` and `tr_arb.cpp` were deleted): the BSP and model loaders, the `.shader` parser, Ghoul2 with bones,
+bolts and collision, skins, marks, the light grid, the scene with PVS and culling, the cvars and the export table, the
+image code up to the upload, the sky geometry, the surface functions for sprites, beams and the like, the weather
+particles, the surface sprites and the shadows (`cg_shadows 2` and `3`). The target links with `-Wl,-z,defs` and
+without libGL, so an OpenGL call that is left in a shared file fails the build.
 
-What that needs in `rd-vanilla`: `#ifndef RD_VULKAN_VISION` around the OpenGL-only functions of `tr_init.cpp`
-and `tr_image.cpp` and around the two functions of `tr_shadows.cpp` that are not about shadows, two functions in
-`tr_ghoul2.cpp` (the bone matrices, the vertices of saber marks), a call where the data of a saber mark is freed
-(`G2_gore.cpp`, `G2_misc.cpp`), the depth test of a flare in `tr_surface.cpp`,
-an early way out for triangles a mark does not reach in `tr_marks.cpp` (see the speed steps below),
-and one include at the end of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
-with `g++ -E -P` against `master`. The target links with `-Wl,-z,defs` and without libGL, so an OpenGL call that
-is left in a shared file fails the build.
+The paragraphs below that speak of `#ifndef RD_VULKAN_VISION` guards and of files that are byte for byte the same
+after the preprocessor describe the time before the move.
 
 `rd-vulkan-vision/vk_hooks.h` is what the shared files see in the place of OpenGL:
 
@@ -199,7 +181,7 @@ header (`vk_device.h`, or `gles/gles_device.h` when `RD_VISION_GLES` is defined)
 | `vk_post.cpp` | dynamic glow, bloom, the scope (`VK_Scope()`), the copy of the frame for refraction, which flares are tested |
 | `vk_gl.cpp` | the immediate mode drawing of the shared files |
 | `vk_bc.cpp` | textures packed into BC1 and BC3 blocks, the worker threads that do it (built with the Vulkan device only) |
-| `vk_stubs.cpp` | what the files of `rd-vanilla` call and this renderer has no use for |
+| `vk_stubs.cpp` | what the shared files call and this renderer has no use for |
 | `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`, `focus.frag`, `scopeprep.frag`, `scope.frag`, with `common.glsl`, `post.glsl` and `dialect.glsl` (what is written in another way in GLSL for Vulkan and in GLSL ES). One set of sources for both devices |
 
 | Vulkan device | Content |
@@ -213,7 +195,7 @@ header (`vk_device.h`, or `gles/gles_device.h` when `RD_VISION_GLES` is defined)
 
 | OpenGL ES device (`gles/`) | Content |
 |----------------------------|---------|
-| `gles_device.h`, `gles_gl.h` | what the shared files take from the device, the names of OpenGL ES (and the few of OpenGL the files of `rd-vanilla` still say) |
+| `gles_device.h`, `gles_gl.h` | what the shared files take from the device, the names of OpenGL ES (and the few of OpenGL the shared files still say) |
 | `gles_main.cpp` | the window with its context, start and shutdown, `gfxinfo` |
 | `gles_buffer.cpp` | buffers. The ones the shared files write into are memory of the engine, sent to the device once a frame |
 | `gles_texture.cpp` | textures, render targets as framebuffer objects, multisample renderbuffers |
@@ -627,7 +609,7 @@ shadows, as a video), the shadows, the automap, `r_showtris`, `r_showImages` and
 prints how many messages the layer had, that number is the thing to look at.
 
 Views are compared as pairs: one session, the camera placed as a spectator with `setviewpos`, a screenshot with
-`rd-vanilla`, `cl_renderer rd-vulkan-vision; vid_restart`, a screenshot from the very same spot, and back.
+`rd-vanilla`, `cl_renderer rd-vulkan-vision; vid_restart` (both gone since 2026-11-02), a screenshot from the very same spot, and back.
 `japlus_port/tools/rdshot.sh` runs such a script, `rdviews.py` writes one for any map from its spawn points,
 `rddiff.py` counts the pixels that differ by more than 16 in a channel and writes both pictures and their
 difference side by side.
@@ -724,8 +706,7 @@ Not brought over. For developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, 
 do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights. `r_dlightStyle 0`
 (the lights of Quake 3, a texture projected on the triangles, where the default 1 is the light of this game)
 changes nothing, the lights are always the ones of the default. That one was found on 2026-10-07, it is not
-saved with the config and no menu sets it. Two that the video menu of the base game does set: `r_colorbits`
-(color depth) and `r_texturebits` (texture quality, 16 or 32 bit). They change nothing here, and neither do
+saved with the config and no menu sets it. One that the video menu of the base game sets: `r_texturebits` (texture quality, 16 or 32 bit). They change nothing here, and neither do
 `r_depthbits` and `r_stencilbits`: 32, 24 and 8 bits always, which is what a card that runs this renderer has.
 These are left out on purpose: nothing a player of today would miss, and the light of Quake 3 would need a
 second way of lighting in the shaders for a cvar nobody sets.

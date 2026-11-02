@@ -70,7 +70,7 @@ Both are in Setup, HUD, under Menus and HUD.
   changes of the page, and the pane at the right lists each changed setting with the old and the new value (the
   name of a choice, On or Off, the number of a slider) and a button that sets that one back. Revert sets all of them
   back, Apply keeps them (and runs the video restart when one of the changes needs it). Settings that take effect
-  only after a restart (a cvar with `CVAR_LATCH`, the `ui_r_*` cvars and `ui_cl_renderer`) mark the legend "Some
+  only after a restart (a cvar with `CVAR_LATCH`, and the `ui_r_*` cvars) mark the legend "Some
   changes apply after a restart".
 - Defaults: with this engine a row has a dot before its name while its setting is not what it is by default, and the
   pane shows for the setting in focus its Default, its Current value and when it Takes effect (Instantly or After
@@ -196,7 +196,7 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `advanced 1` | a setting that is shown only with all settings |
 | itemDef | `stack <n>` | one of a column of places from the top down (`Menu_StackFrame`, every frame): the items at one height are one place, and a place whose items are all hidden by their cvar tests is left out, what is under it moves up. For the rules of game types that share places (Create a Game, Advanced, Solo, About, Join in a game). `stack -<n>`: the frame around stack n, shorter by what is left out |
 | menuDef | `advancedCvar <cvar>` | the cvar that is the switch for `advanced 1` (`v_setupAll`, the toggle Essentials / All Settings). In a menu with a canvas a line of a list is as high as its item, and items share a line only at the same height. `Menu_ListCards` draws each heading (`fold`) of such a list as the top of a card that reaches to the end of its rows (`cardBottom`) with the line under its head. A heading that is not the first of its column has the gap of 24 pixels above its card in it; when it is the first one shown (the cards above it are hidden or folded away) the gap is left out |
-| menuDef | `changesCvar <cvar>` | what a screen changed. When the menu opens it keeps what its settings are (`Menu_ChangesStart`, after `onOpen`). Each frame it counts those that differ (`Menu_ChangesFrame`) and sets `<cvar>` to the number, `<cvar>Restart` to 1 while one of them takes effect only after a restart (a cvar with `CVAR_LATCH`, or `ui_r_*` and `ui_cl_renderer`, which the video restart hands to the renderer), and `<cvar>State` to 0 (nothing), 1 (changed) or 2 (changed and a restart needed) for the buttons of the menu file. `v_setupChanges` is the one of Setup and Controls. The tabs of a page carry the number of their changed settings as a pill (`Menu_ChangesOnPage`, `Item_Tab_Paint`) |
+| menuDef | `changesCvar <cvar>` | what a screen changed. When the menu opens it keeps what its settings are (`Menu_ChangesStart`, after `onOpen`). Each frame it counts those that differ (`Menu_ChangesFrame`) and sets `<cvar>` to the number, `<cvar>Restart` to 1 while one of them takes effect only after a restart (a cvar with `CVAR_LATCH`, or `ui_r_*`, which the video restart hands to the renderer), and `<cvar>State` to 0 (nothing), 1 (changed) or 2 (changed and a restart needed) for the buttons of the menu file. `v_setupChanges` is the one of Setup and Controls. The tabs of a page carry the number of their changed settings as a pill (`Menu_ChangesOnPage`, `Item_Tab_Paint`) |
 | itemDef | `type ITEM_TYPE_CHANGES` | lists the changed settings with the old and the new value (`Item_ValueText`: the name of a choice, On or Off, the number of a slider) and a button that sets each one back |
 | script | `changesRevert`, `changesApply` | `uiScript changesRevert` sets all changed settings back, `uiScript changesApply` keeps them. The Apply button of Setup also runs the video restart of the old menu when `<cvar>State` is 2 |
 | menuDef | `openSlide <units>` | the menu comes up from that far below when it opens |
@@ -248,7 +248,7 @@ row has its cvar and its script as before, only its place changed.
 
 | Tab | Headings |
 |-----|----------|
-| Video | Screen (with Render Scale), Detail, Vulkan Renderer (Bloom, Bloom Strength, Bloom Threshold), Screen Effects |
+| Video | Screen (with Render Scale), Detail, Bloom (Bloom, Bloom Strength, Bloom Threshold), Screen Effects |
 | Sound | Volume, 3D Sound, Hits (Hit Sounds, Kill Sound), Voice Chat, Boombox |
 | Game | Game, Language, Lightsabers (with Saber Team Colours, Two-Coloured Staff), Duels, Players (Enemy Model, Ally Model), Hats and Capes, Weapons (Jedi Outcast Shots, Disruptor Beam, Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, Binocular Lens, Rocket Lock-On) |
 | HUD | Menus and HUD, View (Field of View, Camera Distance, Smooth Camera), Crosshair (Crosshair Size, Crosshair Colour, Name Opacity, Lead Indicator), On Screen (Show Frame Rate, Show Timer, Timer Milliseconds, Timer Counts Down, Show Lagometer, Killfeed, Team Overlay Size, Scoreboard Clock, Spectator Map), Movement (the rows from TaystJK) |
@@ -386,7 +386,7 @@ are.
     freed its old ghoul2 instance at once (`G2API_CleanGhoul2Models` in `ItemParse_asset_model_go`,
     `codemp/ui/ui_shared.c`). When a model item painted earlier in the same frame had already handed that
     instance to the renderer, which draws at the end of the frame, its bone cache was read after it was freed.
-    Both renderers crashed (signal 11 in `CBoneCache::EvalRender` with `rd-vanilla`, in `G2_BoneMatrices` with
+    Both renderers crashed at the time (signal 11 in `CBoneCache::EvalRender` with `rd-vanilla`, in `G2_BoneMatrices` with
     `rd-vulkan-vision`). It showed on the profile page when the list of heads stood after the figure in the
     menu file and chose a head while it was painted.
   - The fix (`codemp/ui/ui_shared.c`, ui module only, `#ifdef UI_BUILD`): the old instance is freed in the
@@ -595,8 +595,8 @@ then run with `+set se_language german` as well.
   Social), Allow Downloads under Game Options (it is under Network), the row of `v_voiceMaster` under Network (it is "On
   Other Servers" under Voice Chat), View Swaying (`ui_disableWeaponSway` is read by nothing in this tree) and the
   axes of a joystick as buttons (`joy_xbutton`, `joy_ybutton`, the same). Every other row of Setup and Controls
-  names a cvar that the engine, a renderer or the cgame reads. The Vulkan renderer is built from the files of
-  rd-vanilla that read the video settings, so those count for both.
+  names a cvar that the engine, a renderer or the cgame reads. The files that read the video settings are in
+  `rd-vulkan-vision/common/`.
 
 The options screens (2026-10-11 night, after "Maybe you could make a menu like this?" with a picture of an
 options screen: tabs at the top, a list of rows with switches, sliders and arrows, what a row is for beside

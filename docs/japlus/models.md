@@ -1,8 +1,8 @@
 # Player models from the model store
 
 Not a JA+ feature. `codemp/client/cl_models.cpp`, `shared/web/web_models.h`, `codemp/qcommon/files.cpp` (the model
-store parts), `RE_ForgetMissing()` in `codemp/rd-vanilla/tr_model.cpp`, `R_ForgetMissingShaders()` in
-`codemp/rd-vanilla/tr_shader.cpp`, `CG_ModelArrived_f()` in `codemp/cgame/cg_players.c`, issue #6, 2026-10-31.
+store parts), `RE_ForgetMissing()` in `codemp/rd-vulkan-vision/common/tr_model.cpp`, `R_ForgetMissingShaders()` in
+`codemp/rd-vulkan-vision/common/tr_shader.cpp`, `CG_ModelArrived_f()` in `codemp/cgame/cg_players.c`, issue #6, 2026-10-31.
 
 ## For players
 

@@ -24,7 +24,7 @@ make small rings. On a wall the water runs down in a few rivulets that end in a 
 up to 36 units, wet patch up to 18 units). Everything dries from the thin edges in: it stays wet for the first third of
 the 20 seconds, then the edge goes in, and standing water goes first. The splash throws droplets of water, stretched
 along their flight, forward and to the sides, and a soft mist. Into standing water there are more droplets, they fly
-higher, and they go all round. rd-vanilla and the browser build keep the old marks and the sprite splash.
+higher, and they go all round. The browser build keeps the old marks and the sprite splash.
 
 The sounds are a hissing loop at the gun while it sprays, a click of the trigger and pump when it starts, the jet
 breaking on a hard surface, the bubbling of the jet into standing water, and a face full of water. They replace the
@@ -78,7 +78,7 @@ stays for the level. You can spray once every 2 seconds at most, with the sound 
 
 With rd-vulkan-vision the spray is paint on the wall. It goes on in passes of the can from the top (700 ms), the relief
 of the wall shows through, the edge is overspray with grain and a mist of dots, and fresh paint is darker with a wet
-sheen. On walls drips run down and grow. The paint dries in 25 seconds. rd-vanilla draws a flat mark of the current
+sheen. On walls drips run down and grow. The paint dries in 25 seconds. The old way (rd-vanilla, gone since 2026-11-02, and the browser build) draws a flat mark of the current
 frame, animated too. Older engines show only the emoji of the game.
 
 To send an emoji, use `v_emote` (Controls, Extras, "Send Emoji"). It sends the emoji of `v_emoteImage` (default
@@ -265,7 +265,7 @@ wetness, the puddle amount from the water that came, the flow while water lands,
 rd-vulkan-vision draws them in `VK_DrawWet` / `VK_WetPass` with `shaders/wet.vert` and `wet.frag`. The level under each
 pixel comes from the depth buffer. Wet ground is darkened by 0.55 at full wetness, after Lagarde's physically based wet
 surfaces, with Fresnel at F0 0.02. The mirror of standing water is a march of the mirrored ray through the depth (32
-steps), with more mirror than Fresnel alone gives, so a puddle reads as water. Without this pass (rd-vanilla, OpenGL ES)
+steps), with more mirror than Fresnel alone gives, so a puddle reads as water. Without this pass (OpenGL ES)
 the marks with the textures of `tools/toys/textures.py` stay as before.
 
 The splash droplets are simulated in `cg_water.c` (`Water_Splash`, 256 at once, 2 to 4 per landing drop, 3 to 5 into
@@ -284,10 +284,10 @@ drop becomes a bead of its own size (Plateau-Rayleigh) and loose drops are stret
 the gun is 0.75 units, a little uneven along the jet. A coordinate that moves with the water (flow) lets the waves
 travel with it.
 
-The renderer call is `re.ext.AddLiquid` (`RE_AddLiquid` in `rd-vanilla/tr_cmds.cpp`, a shared front end). It takes
+The renderer call is `re.ext.AddLiquid` (`RE_AddLiquid` in `rd-vulkan-vision/common/tr_cmds.cpp`, a shared front end). It takes
 pieces of water, `liquidSegment_t` in `rd-common/tr_types.h`: the points a and b, two radii, the flow at both ends and
 a breakup from 0 to 1, up to `LIQUID_MAX_SEGMENTS` (1024) a frame. The engine passes it to the cgame as
-`ext.R_AddLiquid` when `v_cgameLiquid` is 1. rd-vanilla returns `qfalse`, and then the cgame draws the old sprite jet.
+`ext.R_AddLiquid` when `v_cgameLiquid` is 1. A renderer without it (rd-vanilla had none) returns `qfalse`, and then the cgame draws the old sprite jet.
 
 rd-vulkan-vision draws the pieces in `VK_DrawLiquids` (`vk_post.cpp`), right after the main view of the level and before
 its glow. The frame is copied (`vk.screen`), then each piece is a quad made in the vertex shader (`shaders/liquid.vert`,
@@ -452,7 +452,7 @@ room). Two clients: the other client received the `TOY_SPRAY` server command wit
 test for the `TOY_SPRAY` ranges.
 
 The paint sprays were run headless on mp/ffa3 with Vulkan: the heart and an animated gif were sprayed on a wall, and
-the spray-in, the drips and the frames of the gif were seen in screenshots. A second client on rd-vanilla saw the heart
+the spray-in, the drips and the frames of the gif were seen in screenshots. A second client on rd-vanilla (gone since 2026-11-02) saw the heart
 spray of the first through the game server as a mark. There are unit tests for `TOY_SPRAY_STORE`, and the store has
 unit tests (`deploy/models/test_modelstore.py`).
 

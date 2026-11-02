@@ -166,8 +166,8 @@ stages that are lit say `rgbGen lightingDiffuse`.
 
 `RF_RGB_TINT` used to replace the color of every stage with the color of the entity, which made a lit stage flat.
 Now a stage with `rgbGen lightingDiffuse` stays lit with the color on it (`CGEN_LIGHTING_DIFFUSE_ENTITY`), and the
-stages of effects, which have no light, take the color as it is. Both renderers have it (`vk_shade.cpp` of
-rd-vulkan-vision, `tr_shade.cpp` of rd-vanilla, search "VisionJK: a lit stage").
+stages of effects, which have no light, take the color as it is. Both renderers had it (`vk_shade.cpp` of
+rd-vulkan-vision, which stays, and `tr_shade.cpp` of rd-vanilla, now deleted, search "VisionJK: a lit stage").
 
 ## Clients without it
 
