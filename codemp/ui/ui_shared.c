@@ -6524,7 +6524,9 @@ static qboolean Text_InkAt( const char *text, float scale, int font, int align, 
 	} else if ( align == ITEM_ALIGN_RIGHT ) {
 		*tx = x - box[2];
 	} else {
-		*tx = x - box[0];
+		// (by the pen, as type is set, moved by the room before the stem of an H: texts one under the other start
+		// at the same place, and a j or a g that reaches to the left of its pen does so)
+		*tx = x - cap[0];
 	}
 	*ty = y + ( h - cap[1] - cap[3] ) * 0.5f;
 	return qtrue;
@@ -6771,7 +6773,18 @@ void Item_YesNo_Paint(itemDef_t *item) {
 			Item_Text_Paint( item );
 		}
 		Item_SkinLine( item, &lineY, &lineH );
-		Skin_Switch( item, item->text ? item->textRect.x + item->textRect.w + 8 : item->window.rect.x + 2, lineY, lineH, on );
+		if ( item->text && item->textalignment == ITEM_ALIGN_LEFT ) {
+			// the switch at the right end of the item, as far in as the words are from its left: switches of items
+			// side by side stand in a row of their own, and the mark under the mouse holds both evenly (Skin_Switch
+			// is 1.75 times as wide as it is high, no higher than 12)
+			const float sw = Q_min( lineH, 12.0f ) * 1.75f;
+
+			// (on the middle of the item, where its words are)
+			Skin_Switch( item, item->window.rect.x + item->window.rect.w - item->textalignx - sw,
+				item->window.rect.y + ( item->window.rect.h - lineH ) * 0.5f, lineH, on );
+		} else {
+			Skin_Switch( item, item->text ? item->textRect.x + item->textRect.w + 8 : item->window.rect.x + 2, lineY, lineH, on );
+		}
 		return;
 	}
 	if (item->text)
@@ -6839,7 +6852,13 @@ void Item_Multi_Paint(itemDef_t *item) {
 			y = inkY;
 		}
 	}
-	if (item->text) {
+	if ( item->text && Item_Skinned( item ) && item->window.style == WINDOW_STYLE_EMPTY && item->textalignment == ITEM_ALIGN_LEFT
+		&& item->textalignx > 0.0f ) {
+		// (a choice without a box beside others, the data rate beside the switches of the server lists: its value at
+		// the right end, as far in as its name is from the left, as the switches stand)
+		Row_Text( item->window.rect.x + item->window.rect.w - item->textalignx, item->window.rect.y, item->window.rect.h,
+			item->window.rect.w * 0.5f, ITEM_ALIGN_RIGHT, item->textscale, color, text, item->iMenuFont );
+	} else if (item->text) {
 		DC->drawText(item->textRect.x + item->textRect.w + 8, y, scale, color, text, 0, 0, item->textStyle,item->iMenuFont);
 	} else {
 		//JLF added xoffset
@@ -7389,8 +7408,12 @@ static void Item_Row_Paint( itemDef_t *item ) {
 
 	// the row in focus is lit, its name turns white; the widgets keep their colours
 	if ( f > 0.0f ) {
+		// (between the line over the row, a unit over its top and a pixel high, and its own line, a unit over its
+		// end: as far from the one as from the other)
+		const float pixel = ( SCREEN_HEIGHT + 2.0f * DC->biasY ) / DC->glconfig.vidHeight;
+
 		Skin_Color( color, accent, 0.10f * f );
-		Skin_Panel( r->x, r->y + 0.5f, r->w, r->h - 1.5f, rad, color, NULL );
+		Skin_Panel( r->x, r->y + pixel, r->w, r->h - 2.0f - pixel, rad, color, NULL );
 	}
 	Skin_Line( r->x, r->y + r->h - 1.0f, r->w, skinRule );
 
@@ -8584,6 +8607,25 @@ static void Item_ListBox_ImageMark( itemDef_t *item, float x, float y, int i ) {
 	}
 }
 
+// How wide the text of a column of a row of a list may be in the new look: up to the next column that has a text in
+// this row (the facts of a server leave score and ping empty), or the end of the filled row for the last one. The
+// widths of the menu files are not to be trusted.
+static float List_ColumnRoom( const itemDef_t *item, int row, int column ) {
+	const listBoxDef_t	*listPtr = item->typeData.listbox;
+	const float			pad = 3.0f;
+	int					k;
+
+	for ( k = column + 1; k < listPtr->numColumns; k++ ) {
+		qhandle_t	img1, img2, img3;
+		const char	*next = DC->feederItemText( item->special, row, k, &img1, &img2, &img3 );
+
+		if ( ( next && next[0] ) || img1 >= 0 || img2 >= 0 || img3 >= 0 ) {
+			return listPtr->columnInfo[k].pos - listPtr->columnInfo[column].pos - pad;
+		}
+	}
+	return item->window.rect.w - SCROLLBAR_SIZE - 4.0f - listPtr->columnInfo[column].pos - pad;
+}
+
 // The text of a row of a list in the new look: its letters from x, its capitals on the middle of the row (rowY, h).
 // The font's box is used where the engine does not know the letters.
 static void List_TextAt( const char *text, float scale, int font, float x, float rowY, float h, float *tx, float *ty ) {
@@ -8883,7 +8925,8 @@ void Item_ListBox_Paint(itemDef_t *item) {
 				// letters of the old fonts, and the new ones stood above the middle with it.
 				const qboolean	centred = Item_Skinned( item );
 				const float		rowY = y + listPtr->elementHeight + 2;
-				float			tx, ty;
+				float			tx, ty, colScale = item->textscale;
+				char			colText[MAX_STRING_CHARS];
 				// always draw at least one
 				// which may overdraw the box if it is too small for the element
 				if (listPtr->numColumns > 0) {
@@ -8920,16 +8963,25 @@ void Item_ListBox_Paint(itemDef_t *item) {
 //							DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, listPtr->columnInfo[j].maxChars, item->textStyle);
 	//WAS LAST						DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y, item->textscale, item->window.foreColor, text, 0, listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
 							if ( centred ) {
-								// (the first column as far from the bar of the chosen row as the text of a list
-								// without columns)
-								const float colX = x + 4 + listPtr->columnInfo[j].pos;
-
-								List_TextAt( text, item->textscale, item->iMenuFont, j ? colX : Q_max( colX, x + 8 ), rowY, listPtr->elementHeight, &tx, &ty );
+								// (in the new look a column begins where the menu file puts it, from the left of the
+								// list: the headings over the columns are made in the same pixels of the canvas. A
+								// text wider than its column is set smaller, it does not run into the next one)
+								// (copied first: asking the feeder for the next columns takes its buffers again)
+								// (and without the spaces some servers put in front of their names: every text of a
+								// column starts at its edge)
+								while ( *text == ' ' ) {
+									text++;
+								}
+								Q_strncpyz( colText, text, sizeof( colText ) );
+								text = colText;
+								colScale = Text_FitScale( text, item->textscale, item->iMenuFont, List_ColumnRoom( item, i, j ) );
+								List_TextAt( text, colScale, item->iMenuFont, item->window.rect.x + listPtr->columnInfo[j].pos, rowY,
+									listPtr->elementHeight, &tx, &ty );
 							} else {
 								tx = x + 4 + listPtr->columnInfo[j].pos;
 								ty = y + listPtr->elementHeight + textyOffset + item->textaligny;
 							}
-							DC->drawText(tx, ty, item->textscale, item->window.foreColor, text, 0,listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
+							DC->drawText(tx, ty, centred ? colScale : item->textscale, item->window.foreColor, text, 0,listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
 
 
 //JLF END

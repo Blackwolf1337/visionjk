@@ -261,7 +261,7 @@
 			desctext				@MENUS_MOVE_DESC2
 			notselectable
 			visible					1
-			columns					1 4 55 450
+			columns					1 4 110 225
 			doubleclick { play sound/interface/button1.wav }
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1

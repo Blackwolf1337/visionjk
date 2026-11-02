@@ -219,20 +219,27 @@ def join(m):
     for n, rect in (('netsource', (406, y0, 230, 44)), ('netfilter', (646, y0, 250, 44)), ('gametypefilter', (906, y0, 258, 44))):
         for e in its.get(n, []):
             control(e, rect, 15, 'field', 'left', 14)
-    for n, rect in (('viewempty', (36, y0 + 58, 250, 30)), ('viewfull', (296, y0 + 58, 250, 30)), ('viewbotsonly', (556, y0 + 58, 280, 30)),
-                    ('datarate', (846, y0 + 58, 318, 30))):
+    # the filters: three switches and the data rate in cells as wide as each other over the width of the table,
+    # their words 12 in from the left, a switch 12 in from the right (Item_YesNo_Paint)
+    cw = (1128 - 3 * 10) / 4.0
+    for k, n in enumerate(('viewempty', 'viewfull', 'viewbotsonly', 'datarate')):
         for e in its.get(n, []):
-            place(e, rect)
+            place(e, (36 + k * (cw + 10), y0 + 56, cw, 34))
             sized(e, 15)
-            mf.put(e.block, 'textaligny', mf.fmt((30 - 15) / 2.0))
+            mf.put(e.block, 'textalignx', 12)
+            mf.put(e.block, 'textaligny', mf.fmt((34 - 15) / 2.0))
             old_words(e)
     table = (36, y0 + 106, 1128, FOOT_Y - 24 - (y0 + 106))
     tx, ty, tw, th = table
     m.insert(next(i for i, e in enumerate(m) if e.k == 'itemdef' and (mf.get(e.block, 'name') or [''])[0] == 'serverlist'),
              cv.panel('vision_table', table, cv.CARD, cv.CARD_EDGE, 10))
-    for n, x, w in (('server', 12, 520), ('map', 552, 210), ('players', 782, 110), ('type', 912, 120), ('ping', 1052, 64)):
+    # the columns from the left of the list (10 into the table), the headings over them at the same places; the last
+    # one ends inside the filled row (which stops before the bar of the list)
+    cols = (('server', 16, 516), ('map', 552, 210), ('players', 772, 110), ('type', 892, 110), ('ping', 1010, 56))
+    for n, x, w in cols:
         for e in its.get(n, []):
-            middle(e, (tx + x, ty, w, 48), 12, 'left', 10)
+            # (the box of a heading, lit under the mouse, begins 12 before its words, which stand over the column)
+            middle(e, (tx + 10 + x - 12, ty, w, 48), 12, 'left', 12)
             mf.put(e.block, 'font', cv.BOLD)
     m.append(cv.fill('vision_table_line', (tx, ty + 48, tw, 1), cv.CARD_EDGE))
     for e in its.get('serverlist', []):
@@ -242,7 +249,7 @@ def join(m):
         mf.put(b, 'elementheight', 48)
         sized(e, 16)
         mf.put(b, 'textaligny', 14)
-        mf.put(b, 'columns', 5, 12, 40, 520, 552, 40, 210, 782, 5, 110, 912, 20, 120, 1052, 20, 64)
+        mf.put(b, 'columns', 5, *[v for _, x, w in cols for v in (x, w, 0)])
     for e in its.get('refreshdate', []):
         middle(e, (tx + 22, ty + th - 44, 600, 44), 13, 'left')
         mf.put(e.block, 'forecolor', *cv.MUTED)
@@ -273,7 +280,7 @@ def join(m):
     x = tx + tw - 22
     for n in ('createfavoritetext', 'findplayertext'):
         for e in its.get(n, []):
-            control(e, (x - 170, ty + th - 44, 170, 44), 13, 'plain', 'right', 0)
+            control(e, (x - 170, ty + th - 44, 170, 44), 13, 'plain', 'center')
             mf.put(e.block, 'forecolor', *ACCENT)
             m.remove(e)
             m.append(e)
@@ -897,6 +904,16 @@ def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None, 
     return y
 
 
+def info_list(e, w):
+    """The facts of a server and its players (FEEDER_SERVERSTATUS) in a dialog: a name and its value (columns 0 and 3),
+    for a player number, score, ping and name; rows high enough to read, the value clear of the longest name."""
+    inset(e)
+    sized(e, 14)
+    mf.put(e.block, 'elementheight', 28)
+    # (each column: where it begins, how wide, and a limit the engine takes as a width: none, the ui fits the text)
+    mf.put(e.block, 'columns', 4, 14, 250, 0, 110, 70, 0, 190, 70, 0, 280, w - 280 - 40, 0)
+
+
 def inset(e):
     """A list in a dialog: a dark field with round corners."""
     mf.put(e.block, 'style', 'WINDOW_STYLE_PANEL')
@@ -1235,19 +1252,21 @@ def ingame_servers(m):
         for e in get(n):
             control(e, rect, 22, 'field', 'left', 18)
             new.append(e)
-    for n, rect in (('viewempty', (pad, 104, 280, 48)), ('viewfull', (316, 104, 280, 48)), ('viewbotsonly', (608, 104, 300, 48)),
-                    ('datarate', (920, 104, w - pad - 920, 48))):
+    cw = (w - 2 * pad - 3 * 12) / 4.0
+    for k, n in enumerate(('viewempty', 'viewfull', 'viewbotsonly', 'datarate')):
         for e in get(n):
-            place(e, rect)
+            place(e, (pad + k * (cw + 12), 104, cw, 48))
             sized(e, 22)
+            mf.put(e.block, 'textalignx', 16)
             mf.put(e.block, 'textaligny', mf.fmt((48 - 22) / 2.0))
             old_words(e)
             new.append(e)
     tx, ty, tw, th = pad, 168, w - 2 * pad, 600
     new.append(cv.panel('vision_table', (tx, ty, tw, th), cv.FIELD, cv.EDGE, 10))
-    for n, x, cw in (('server', 12, 560), ('map', 590, 220), ('players', 830, 110), ('type', 950, 110), ('ping', 1070, 80)):
+    cols = (('server', 26, 546), ('map', 590, 220), ('players', 830, 110), ('type', 950, 110), ('ping', 1070, 80))
+    for n, x, cw in cols:
         for e in get(n):
-            middle(e, (tx + x, ty, cw, 60), 18, 'left', 10)
+            middle(e, (tx + 10 + x - 16, ty, cw, 60), 18, 'left', 16)
             mf.put(e.block, 'font', cv.BOLD)
             mf.put(e.block, 'forecolor', *cv.MUTED)
             new.append(e)
@@ -1259,7 +1278,7 @@ def ingame_servers(m):
         mf.put(b, 'elementheight', 56)
         sized(e, 24)
         mf.put(b, 'textaligny', 16)
-        mf.put(b, 'columns', 5, 12, 40, 560, 590, 40, 220, 830, 5, 110, 950, 20, 110, 1070, 20, 70)
+        mf.put(b, 'columns', 5, *[v for _, x, w in cols for v in (x, w, 0)])
         new.append(e)
     new.append(cv.fill('vision_table_foot', (tx, ty + th - 60, tw, 1), cv.EDGE))
     for e in get('refreshdate'):
@@ -1344,7 +1363,7 @@ def popups(m, menu):
     if menu == 'serverinfo_popmenu':
         lst = one('serverinfolist')
         dialog(m, 680, 640, None, one('screentitle'), [(lst, 440, 14)], [one('refresh')], one('donetext'))
-        inset(lst)
+        info_list(lst, 680 - 56)
         return True
     if menu == 'findplayer_popmenu':
         name, found, info = one('nameentry'), one('servernamelist'), one('serverinfolist')
@@ -1353,7 +1372,7 @@ def popups(m, menu):
                [one('search'), one('donetext')], one('join'))
         entry(name, one('nametitle') and (mf.get(one('nametitle').block, 'text') or ['""'])[0])
         inset(found)
-        inset(info)
+        info_list(info, 680 - 56)
         return True
     if menu == 'createfavorite_popmenu':
         field = one('addressentry')

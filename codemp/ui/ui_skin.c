@@ -943,6 +943,16 @@ void Skin_ItemBack( itemDef_t *item ) {
 	if ( item->skinFocus <= 0.0f || ( item->window.flags & WINDOW_DECORATION ) ) {
 		return;
 	}
+	if ( item->window.style == WINDOW_STYLE_PANEL && item->window.backColor[3] > 0.5f
+		&& 0.3f * item->window.backColor[0] + 0.59f * item->window.backColor[1] + 0.11f * item->window.backColor[2] > 0.35f ) {
+		// (a button filled with the accent or another bright colour: the accent over it would not be seen, it is lit
+		// with white, in its own shape)
+		const vec4_t white = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		Skin_Color( color, white, 0.16f * item->skinFocus );
+		Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, item->window.radius, color, NULL );
+		return;
+	}
 	Skin_Color( color, accent, 0.12f * item->skinFocus );
 	Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, SKIN_RADIUS, color, NULL );
 }
@@ -1048,7 +1058,7 @@ void Skin_Field( itemDef_t *item, float x, float y, float width, float height, q
 	int			i;
 
 	for ( i = 0; i < 3; i++ ) {
-		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * ( editing ? 1.0f : 0.35f * item->skinFocus );
+		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * ( editing ? 1.0f : 0.65f * item->skinFocus );
 	}
 	edge[3] = 1.0f;
 	Skin_Panel( x, y, width, height, SKIN_RADIUS, skinField, edge );

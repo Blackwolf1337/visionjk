@@ -410,9 +410,9 @@
 			cvar					"ui_browserShowEmpty"
 			font					5
 			textscale				0.83
-			rect					36 206 250 30
-			textalignx				0
-			textaligny				7.5
+			rect					36 204 274.5 34
+			textalignx				12
+			textaligny				9.5
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -438,9 +438,9 @@
 			cvar					"ui_browserShowFull"
 			font					5
 			textscale				0.83
-			rect					296 206 250 30
-			textalignx				0
-			textaligny				7.5
+			rect					320.5 204 274.5 34
+			textalignx				12
+			textaligny				9.5
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -466,9 +466,9 @@
 			cvar					"v_browserShowBotOnly"
 			font					5
 			textscale				0.83
-			rect					556 206 280 30
-			textalignx				0
-			textaligny				7.5
+			rect					605 204 274.5 34
+			textalignx				12
+			textaligny				9.5
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -499,10 +499,10 @@
 				"@MENUS_LAN/CABLE" 25000
 			}
 			textscale				0.83
-			rect					846 206 318 30
+			rect					889.5 204 274.5 34
 			font					5
-			textalignx				0
-			textaligny				7.5
+			textalignx				12
+			textaligny				9.5
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -528,9 +528,9 @@
 			type					ITEM_TYPE_BUTTON
 			textscale				0.67
 			style					WINDOW_STYLE_EMPTY
-			rect					48 254 520 48
+			rect					50 254 516 48
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				18
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -569,9 +569,9 @@
 			descText				@MENUS_SORT_BY_MAP_NAME
 			textscale				0.67
 			style					WINDOW_STYLE_EMPTY
-			rect					588 254 210 48
+			rect					586 254 210 48
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				18
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -606,9 +606,9 @@
 			type					ITEM_TYPE_BUTTON
 			textscale				0.67
 			style					WINDOW_STYLE_EMPTY
-			rect					818 254 110 48
+			rect					806 254 110 48
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				18
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -643,9 +643,9 @@
 			textscale				0.67
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					948 254 120 48
+			rect					926 254 110 48
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				18
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -684,9 +684,9 @@
 			type					ITEM_TYPE_BUTTON
 			textscale				0.67
 			style					WINDOW_STYLE_EMPTY
-			rect					1088 254 64 48
+			rect					1044 254 56 48
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				18
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -746,7 +746,7 @@
 			backcolor				0.031 0.055 0.11 0.86
 			outlinecolor			0.36 0.78 0.96 0.22
 			visible					1
-			columns					5 12 40 520 552 40 210 782 5 110 912 20 120 1052 20 64
+			columns					5 16 516 0 552 210 0 772 110 0 892 110 0 1010 56 0
 			doubleClick { uiScript checkpassword }
 			radius					5.3
 		}
@@ -974,8 +974,8 @@
 			textscale				0.72
 			style					WINDOW_STYLE_EMPTY
 			rect					972 764 170 44
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				170
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				85
 			textaligny				15.5
 			forecolor				0.36 0.78 0.96 1
 			visible					1
@@ -1000,8 +1000,8 @@
 			textscale				0.72
 			style					WINDOW_STYLE_EMPTY
 			rect					782 764 170 44
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				170
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				85
 			textaligny				15.5
 			forecolor				0.36 0.78 0.96 1
 			visible					1

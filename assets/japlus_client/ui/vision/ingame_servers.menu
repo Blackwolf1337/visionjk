@@ -164,8 +164,8 @@
 			cvar					"ui_browserShowEmpty"
 			font					5
 			textscale				1.22
-			rect					24 104 280 48
-			textalignx				0
+			rect					24 104 283 48
+			textalignx				16
 			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
@@ -192,8 +192,8 @@
 			cvar					"ui_browserShowFull"
 			font					5
 			textscale				1.22
-			rect					316 104 280 48
-			textalignx				0
+			rect					319 104 283 48
+			textalignx				16
 			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
@@ -220,8 +220,8 @@
 			cvar					"v_browserShowBotOnly"
 			font					5
 			textscale				1.22
-			rect					608 104 300 48
-			textalignx				0
+			rect					614 104 283 48
+			textalignx				16
 			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
@@ -253,9 +253,9 @@
 				"@MENUS_LAN/CABLE" 25000
 			}
 			textscale				1.22
-			rect					920 104 272 48
+			rect					909 104 283 48
 			font					5
-			textalignx				0
+			textalignx				16
 			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
@@ -294,9 +294,9 @@
 			type					ITEM_TYPE_BUTTON
 			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					36 168 560 60
+			rect					44 168 546 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				16
 			textaligny				21
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -334,9 +334,9 @@
 			descText				@MENUS_SORT_BY_MAP_NAME
 			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					614 168 220 60
+			rect					608 168 220 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				16
 			textaligny				21
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -370,9 +370,9 @@
 			type					ITEM_TYPE_BUTTON
 			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					854 168 110 60
+			rect					848 168 110 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				16
 			textaligny				21
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -406,9 +406,9 @@
 			textscale				1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					974 168 110 60
+			rect					968 168 110 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				16
 			textaligny				21
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -446,9 +446,9 @@
 			type					ITEM_TYPE_BUTTON
 			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					1094 168 80 60
+			rect					1088 168 80 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				16
 			textaligny				21
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -505,7 +505,7 @@
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			visible					1
-			columns					5 12 40 560 590 40 220 830 5 110 950 20 110 1070 20 70
+			columns					5 26 546 0 590 220 0 830 110 0 950 110 0 1070 80 0
 			mouseenter { setitemcolor serverlist bordercolor 0.36 0.78 0.96 0.6 }
 			mouseexit { setitemcolor serverlist bordercolor 0.086 0.149 0.247 1 }
 			doubleClick { open ingame_servers_confirm }

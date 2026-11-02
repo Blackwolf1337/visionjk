@@ -111,13 +111,14 @@ static void UI_Mouse_f( void ) {
 
 /*
 =================
-v_uiSweep <name>
+v_uiSweep <name> [cfg]
 
 For the audit of the menus (tools that measure them): the pointer goes onto every item that can be used in the
 open menus, one after the other, and a PNG is taken of each, the first one with the pointer on nothing
 (screenshots/audit_<name>_base.png, then audit_<name>_<n>.png). audit/<name>_sweep.txt lists n, the menu, the
 item and its rectangle and where the pointer was, in pixels of the window. One step a frame, never waiting: each
-picture is taken when the mark of the item has come up (SKIN_EASE_MSEC and a little).
+picture is taken when the mark of the item has come up (SKIN_EASE_MSEC and a little). With a cfg that cfg is
+executed when the sweep is done: a chain of pages with no waiting on a guessed time.
 =================
 */
 #define SWEEP_SETTLE_MSEC	320
@@ -128,6 +129,7 @@ extern int			menuCount;
 static struct {
 	qboolean	on;
 	char		name[32];
+	char		then[64];		// a cfg to exec when done (v_uiSweep <name> <cfg>): the next page of a chain of them
 	int			count;
 	int			at;				// -1: the picture without the pointer on anything
 	int			shotTime;		// when the picture of this step is taken, then the next step
@@ -148,6 +150,7 @@ static void UI_Sweep_f( void ) {
 	int				i, j;
 
 	Q_strncpyz( sweep.name, UI_Argv( 1 )[0] ? UI_Argv( 1 ) : "sweep", sizeof( sweep.name ) );
+	Q_strncpyz( sweep.then, UI_Argv( 2 ), sizeof( sweep.then ) );
 	sweep.count = 0;
 	for ( i = 0; i < menuCount; i++ ) {
 		menuDef_t *menu = &Menus[i];
@@ -210,6 +213,9 @@ void UI_SweepFrame( void ) {
 		sweep.on = qfalse;
 		UI_SweepPoint( 0.0f, uiInfo.uiDC.glconfig.vidHeight - 1.0f );
 		Com_Printf( "v_uiSweep %s: done\n", sweep.name );
+		if ( sweep.then[0] ) {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "exec %s\n", sweep.then ) );
+		}
 		return;
 	}
 	{

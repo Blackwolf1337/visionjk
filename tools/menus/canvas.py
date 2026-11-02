@@ -166,8 +166,8 @@ def _scale_props(b, k):
     if cols and mf.num(cols[0]) is not None:
         out = [cols[0]]
         for i, v in enumerate(cols[1:]):
-            # (each column: where it begins, how many letters, how wide)
-            out.append(v if i % 3 == 1 else mf.fmt((mf.num(v) or 0) * k))
+            # (each column: where it begins, how wide, how many letters; the old files did not care for the width)
+            out.append(v if i % 3 == 2 else mf.fmt((mf.num(v) or 0) * k))
         mf.put(b, 'columns', *out)
 
 

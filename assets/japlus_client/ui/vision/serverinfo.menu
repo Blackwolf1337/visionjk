@@ -79,14 +79,14 @@
 			feeder					FEEDER_SERVERSTATUS
 			elementtype				LISTBOX_TEXT
 			elementwidth			120
-			elementheight			16
+			elementheight			28
 			font					5
 			textscale				0.78
 			backcolor				0.027 0.051 0.102 1
 			bordercolor				0.153 0.251 0.373 1
 			notselectable
 			visible					1
-			columns					4 2 40 148 50 40 50 100 40 45 150 40 165
+			columns					4 14 250 0 110 70 0 190 70 0 280 304 0
 			radius					6
 			outlinecolor			0.36 0.78 0.96 0.22
 		}

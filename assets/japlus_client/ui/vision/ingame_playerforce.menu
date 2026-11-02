@@ -292,7 +292,7 @@
 			outlinecolor			0.36 0.78 0.96 0.22
 			descText				@MENUS_CHOOSE_A_PRE_MADE_ALLOCATION
 			visible					1
-			columns					1 4 190 500
+			columns					1 4 380 250
 			mouseenter { setitemcolor fcflist bordercolor 0.086 0.149 0.247 1 }
 			mouseexit { setitemcolor fcflist bordercolor 0.086 0.149 0.247 1 }
 			action { play "sound/interface/button1.wav" ; }

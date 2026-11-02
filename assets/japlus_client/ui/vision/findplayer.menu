@@ -129,7 +129,7 @@
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
-			elementheight			16
+			elementheight			28
 			font					5
 			textscale				0.78
 			backcolor				0.027 0.051 0.102 1
@@ -138,7 +138,7 @@
 			feeder					FEEDER_SERVERSTATUS
 			notselectable
 			visible					1
-			columns					4 2 40 120 40 40 180 90 40 180 135 40 180
+			columns					4 14 250 0 110 70 0 190 70 0 280 304 0
 			mouseenter { setitemcolor serverInfowindow bordercolor 0.086 0.149 0.247 1 }
 			mouseexit { setitemcolor serverInfowindow bordercolor 0.086 0.149 0.247 1 }
 			radius					6
