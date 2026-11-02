@@ -185,17 +185,47 @@ body.fp #controlBar { left: 50%; top: 44px; width: max-content; transform: trans
 body.app-editor #help .adminOnly { display: none; }
 
 [hidden] { display: none !important; }
-#logText { position: absolute; inset: 0 0 39px 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+/* The log: the whole width, the bar on top, a line each in the colour of what it is (js/log.js logKind), the time of
+   the game in a column before it, the line for a console command at the bottom */
+body.logOpen #side { display: none; }
+body.logOpen #logView { display: flex; flex-direction: column; left: var(--left) !important; }
+#logText { flex: 1; min-height: 0; margin: 0; padding: 6px 12px; overflow: auto; font: 12px/1.55 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+#logText .ll { display: block; padding-left: 6.4em; text-indent: -6.4em; }
+#logText .ll:hover { background: rgba(92,200,245,.05); }
+#logText .ll i { display: inline-block; width: 5.6em; margin-right: .8em; white-space: pre; text-indent: 0; text-align: right; font-style: normal; color: #5f7590; }
+#logText .dim { color: var(--muted); }
+#logText .kill { color: var(--danger); }
+#logText .chat { color: var(--accent2); }
+#logText .warn { color: var(--yellow); }
+#logText .err { color: var(--danger); font-weight: 600; }
 /* the line for a console command, across the width under the text */
-#logCmd { position: absolute; left: 0; right: 0; bottom: 0; height: 39px; display: flex; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--line); }
-#logCmd input { flex: 1; min-width: 0; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+#logCmd { flex: none; display: flex; gap: 6px; padding: 6px 12px 8px; border-top: 1px solid var(--line); background: var(--frame); }
+#logCmd .find { flex: 1; max-width: none; }
+#logCmd input { font: 12px ui-monospace, Menlo, Consolas, monospace; }
+#logCmd .prompt { color: var(--accent); font: 600 13px ui-monospace, Menlo, Consolas, monospace; }
+#logHelp { position: absolute; top: calc(100% + 6px); right: 12px; z-index: 5; width: min(460px, calc(100% - 24px)); padding: 4px 14px; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.5); color: var(--muted); font-size: 12px; }
 /* which of the two texts is shown */
-#logSource { display: flex; }
-#logSource button { flex: 1; border-radius: 0; color: var(--muted); }
-#logSource button:first-child { border-radius: 3px 0 0 3px; }
-#logSource button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
-#logSource button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-body.logOpen #logView { display: block; }
+/* The bar across the top of a page of the server: its name, what it shows, its switches and its buttons. A field
+   with an icon (.find), a switch for on and off (.switch), a button for one letter (.square). */
+.pageBar { position: relative; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--frame); }
+.pageBar .seg { margin: 0; }
+.pageBar .seg button { flex: none; padding: 3px 11px; }
+.pageBar .spacer { flex: 1; }
+.pageTitle { font-size: 14px; font-weight: 600; color: #fff; }
+.pageSub { font-size: 12px; color: var(--muted); }
+.find { flex: 0 1 280px; min-width: 140px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--field); border: 1px solid var(--edge); border-radius: 4px; }
+.find:focus-within { border-color: var(--accent); }
+.find svg { flex: none; width: 13px; height: 13px; fill: none; stroke: #7489a5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.find input { flex: 1; min-width: 0; padding: 4px 0; border: 0; background: transparent; }
+.switch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.switch i { position: relative; width: 28px; height: 16px; border-radius: 8px; background: var(--line); border: 1px solid var(--edge); transition: background .1s; }
+.switch i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: left .1s; }
+.switch input:checked + i { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + i::after { left: 14px; background: var(--on-accent); }
+.switch input:focus-visible + i { outline: 1px solid var(--accent2); outline-offset: 1px; }
+button.square { width: 26px; padding: 3px 0; }
+button.square.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 #cfgView, #fsView, #logView { position: fixed; top: var(--top); left: calc(var(--left) + var(--side)); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
 body.sideClosed #cfgView, body.sideClosed #fsView, body.sideClosed #logView { left: var(--left); }
 body.fsOpen #fsView { display: block; }
@@ -581,6 +611,7 @@ body.helpOpen #helpBtn { background: var(--accent); border-color: var(--accent);
 	#pages button[data-tab="account"] { margin-top: 0; }
 	#pages button.on { box-shadow: inset 0 2px 0 var(--accent); }
 	#view, #cfgView, #fsView, #logView, #tvView { left: 0 !important; right: 0 !important; bottom: auto; height: var(--split); }
+	body.logOpen #logView { bottom: var(--tabbar); height: auto; }
 	/* (z-index 0: the panels of a player and an entity lie over it here, and they are in #view, which comes later) */
 	#side { left: 0; right: 0; width: auto; top: calc(var(--top) + var(--split)); bottom: var(--tabbar); transform: none !important; border-right: 0; border-top: 1px solid var(--line); z-index: 0; }
 	#fsList { padding: 6px 8px; }

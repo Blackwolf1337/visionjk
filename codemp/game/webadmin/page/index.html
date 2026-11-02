@@ -212,18 +212,8 @@
 			<div class="hint" style="padding:0 10px 8px">One value a second, the last five minutes of this map. A frame of the game is the step of the game module alone, with the work of this panel in it, which the second line shows by itself: answering a browser is done in a frame. Fewer frames than sv_fps or a long wait for one mean the machine does not keep up.</div>
 		</div>
 	</div>
-	<div class="pane" id="pane-log">
-		<h2><span>Server log</span><span id="logSize"></span></h2>
-		<div class="tools">
-			<div id="logSource"><button data-log="log" class="on" title="The log of the game: who came and went, kills, chat, the commands of admins">Game log</button><button data-log="console" title="What the server prints on its console">Server console</button><button data-log="ids" title="What the intrusion detection of the server noticed: packets no client of the game sends, and who was blocked for them">Intrusions</button></div>
-			<div class="inline"><input id="logFilter" placeholder="Show only lines with" spellcheck="false" autocomplete="off"></div>
-			<div class="inline"><label class="hint" style="margin:0"><input type="checkbox" id="logFollow" checked style="width:auto"> follow the end</label><button id="logClear" style="margin-left:auto" title="Empties the view of what is shown, the server keeps its text">Clear view</button></div>
-			<div class="hint" id="logState" style="margin:0"></div>
-		</div>
-		<div class="hint" style="padding:0 10px">Game log is the log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The whole file is games.log in the Files tab. Server console shows what the server prints on its console.</div>
-		<div class="hint" style="padding:0 10px">Intrusions is ids.log: what arrived that no client of the game sends, from which address, and which addresses were blocked for it (vs_ids). "vs_idsstatus" on the console lists the addresses, "vs_idsunblock" lifts a block.</div>
-		<div class="hint" style="padding:0 10px">All three start with their last lines and follow the text as it grows. A command typed into the line under the text runs as if it was typed on the server console, and the view goes to the console for its answer. The arrow keys up and down bring back the commands typed before.</div>
-	</div>
+	<!-- the log has the whole width: its tools are in the bar of #logView -->
+	<div class="pane" id="pane-log"></div>
 	<div class="pane" id="pane-files">
 		<h2><span>Files</span><span id="fsCount"></span></h2>
 		<div class="tools">
@@ -423,7 +413,25 @@
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>
-<div id="logView"><pre id="logText"></pre><form id="logCmd"><input id="logCmdText" placeholder="Console command, Enter runs it" spellcheck="false" autocomplete="off" maxlength="480"><button>Run</button></form></div>
+<div id="logView">
+	<div id="logBar" class="pageBar">
+		<b class="pageTitle">Log</b><span id="logSize" class="pageSub"></span>
+		<div id="logSource" class="seg"><button data-log="log" class="on" title="The log of the game: who came and went, kills, chat, the commands of admins">Game log</button><button data-log="console" title="What the server prints on its console">Server console</button><button data-log="ids" title="What the intrusion detection of the server noticed: packets no client of the game sends, and who was blocked for them">Intrusions</button></div>
+		<label class="find"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg><input id="logFilter" placeholder="Show only lines with" spellcheck="false" autocomplete="off"></label>
+		<span id="logState" class="pageSub"></span>
+		<span class="spacer"></span>
+		<label class="switch" title="Keeps the end of the text in sight while it grows"><input type="checkbox" id="logFollow" checked><i></i>Follow the end</label>
+		<button id="logClear" title="Empties the view of what is shown, the server keeps its text">Clear view</button>
+		<button id="logHelpBtn" class="square" title="What the three logs are">?</button>
+		<div id="logHelp" hidden>
+			<p>Game log is the log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The whole file is games.log in the Files tab. Server console shows what the server prints on its console.</p>
+			<p>Intrusions is ids.log: what arrived that no client of the game sends, from which address, and which addresses were blocked for it (vs_ids). "vs_idsstatus" on the console lists the addresses, "vs_idsunblock" lifts a block.</p>
+			<p>All three start with their last lines and follow the text as it grows. A command typed into the line under the text runs as if it was typed on the server console, and the view goes to the console for its answer. The arrow keys up and down bring back the commands typed before.</p>
+		</div>
+	</div>
+	<pre id="logText"></pre>
+	<form id="logCmd"><label class="find"><span class="prompt" aria-hidden="true">&gt;</span><input id="logCmdText" placeholder="Console command, Enter runs it" spellcheck="false" autocomplete="off" maxlength="480"></label><button class="primary">Run</button></form>
+</div>
 <div id="cfgView">
 	<!-- the bar of the settings: which view, its state and its buttons -->
 	<div id="cfgBar">
