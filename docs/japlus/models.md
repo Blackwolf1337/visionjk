@@ -35,7 +35,7 @@ client. They wait for each other, so a model can come a moment later while anoth
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|
 | `v_modelStore` | 1 | fetch the models players use that the game does not have. 0: do not fetch the models of other players by yourself. What you ask for (the window, `v_models get`) is still fetched. Saved in the config |
-| `v_modelStoreURL` | `https://jka.vision/models/` | the address of the store. https only. It can only be set on the command line |
+| `v_modelStoreURL` | `https://jka.vision/models/` | the address of the store. https only. It can only be set on the command line (`+set v_modelStoreURL https://...`), not later in the game |
 | `v_models` | | prints the address, whether the store is on, and what came |
 | `v_models get <name>` | | fetches a model whether a player uses it or not |
 | `v_models icons` | | fetches the icons of the models of the list (the window asks for this when it opens) |
@@ -54,7 +54,7 @@ reads those files and looks at `v_modelStoreChanged` to know when to read them a
 which tile is busy.
 
 The store has a list, `index.txt`, with a line `<name> <bytes> <sha256>` for each model (lines with `#` are none).
-The client reads it (256 KB at most) and fetches it again after ten minutes when a model is wanted.
+The client reads it (256 KB at most) and fetches it again after ten minutes when a model is wanted, or at once when `stamp.txt` says it changed (see "The stamp").
 
 - Once a second `cl_models.cpp` looks at the players of the server. A model name that the game has no files for and
   that is in the list is fetched. The name is 2 to 32 characters of `a-z`, `0-9` and `_`, and a pak has 100 MB at most.
@@ -74,7 +74,25 @@ model its name says (`FS_ModelPakFits()`, with `WEB_ModelEntryAllowed()`). A pak
 is not loaded, and the console says so. Those paks are not tied to what a server references, as the paks of
 `downloads` are.
 
-A web address of `v_modelStoreURL` that is not https switches the store off with a line on the console.
+A web address of `v_modelStoreURL` that is not https switches the store off with a line on the console. The cvar can be
+set on the command line. It was registered read only before, which made the engine force the default, so the
+command line never worked.
+
+## The stamp
+
+The service writes `https://jka.vision/models/stamp.txt` every time it writes a list. Lines with `#` are comments.
+Then comes one line `<store> <hash>` for each of `models`, `emoji` and `emotes`. The hash is the first 16 hex
+characters of the SHA-256 of the `index.txt` of that store.
+
+In a game that is not a demo, with `v_modelStore` or `v_emojiStore` on, `cl_models.cpp` reads `stamp.txt` at once and
+then every 30 seconds plus a random 0 to 5 seconds, so the games of the players do not all ask together. The first
+read only records the hashes. When a hash changes, that list counts as old and is fetched again the next time it is
+wanted. The emojis and the interactive emojis are fetched at once in the background. For the models, a model that a
+player uses and that was not in the store before is looked for again, and that fetches the list. So an upload on the
+site reaches the games of everyone within about half a minute.
+
+The fetch of a list after ten minutes stays as a fallback, and so does `v_emotes refresh`. The extra request is small
+and goes through the same single web request as the rest of the store.
 
 ## In the browser
 
@@ -142,7 +160,7 @@ owner deletes afterwards. The service is the one of the model store (`deploy/vis
 
 ### How it works
 
-The engine fetches the list of the emojis, again after 10 minutes when it is old, and then every emoji of it in the
+The engine fetches the list of the emojis, again after 10 minutes when it is old or when `stamp.txt` says it changed, and then every emoji of it in the
 background, after the models. It does this only while the player is in a game that is not a demo. On a pure server it
 works too, see "The interactive emojis of the store" below. The picture is saved as `base/gfx/emoji/<name>.png` in the home folder, and only when its size and its SHA-256
 match the list.
