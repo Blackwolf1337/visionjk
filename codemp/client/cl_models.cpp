@@ -152,6 +152,10 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
 #define MDL_PICTURE_MOST	( 1500 * 1500 )		// numbers of pictures of a drawing board or a spray (TOY_BOARD_SPLIT squared)
 #define MDL_PICTURE_ASKS	8					// pictures of a kind the cgame asked for that wait
+#define MDL_STAMP_MSEC		30000				// stamp.txt of the store is read this often in the game
+#define MDL_STAMP_JITTER	5000				//	and up to this much later, so the games of the players spread out
+#define MDL_STAMP_MOST		1024				// bytes of stamp.txt at most
+#define MDL_STAMP_HASH		20
 
 enum {
 	MDLJOB_FREE,
@@ -182,6 +186,7 @@ typedef struct {
 	char				emoji[WEB_MODEL_NAME];	//	this one of it
 	qboolean			emojiIndex;				//	or the list of them
 	qboolean			emoteList;				// the interactive emojis for the cgame (MDL_EMOTE_LIST)
+	qboolean			stamp;					// stamp.txt: what the lists of the stores are now
 	int					picture;				// a picture of a drawing board or a spray that is fetched
 	int					pictureKind;			//	of mdlPictureKinds, also of an upload
 	const byte			*body;					// what is sent with a POST (the own picture), NULL: a GET
@@ -639,6 +644,85 @@ static void MDL_NextEmoji( void ) {
 	MDL_NextNamed( MDL_NAMED_SOUNDS );
 }
 
+/*
+===============================================================================
+
+stamp.txt of the store has a hash of each list: of the models, the chat emojis and the interactive emojis
+(write_stamp of modelstore.py). It is read every MDL_STAMP_MSEC in the game, and a list whose hash changed is
+fetched again when it is next wanted, so what somebody uploads on the site comes into the game of the others
+within half a minute and not after MDL_INDEX_MSEC. The first stamp only says what the lists are.
+
+===============================================================================
+*/
+
+enum { MDL_STAMP_MODELS, MDL_STAMP_EMOJI, MDL_STAMP_EMOTES, MDL_STAMP_STORES };
+
+static const char	*mdlStampStores[MDL_STAMP_STORES] = { "models", "emoji", "emotes" };
+static char			mdlStamp[MDL_STAMP_MOST + 1];
+static char			mdlStampHash[MDL_STAMP_STORES][MDL_STAMP_HASH];		// empty: not read yet
+static int			mdlStampTime;			// cls.realtime when stamp.txt is read next, 0: at once
+
+static qboolean MDL_StampDue( void ) {
+	return (qboolean)( cls.state == CA_ACTIVE && !clc.demoplaying && ( v_modelStore->integer || v_emojiStore->integer )
+		&& ( !mdlStampTime || cls.realtime - mdlStampTime >= 0 ) );
+}
+
+static void MDL_StartStamp( void ) {
+	mdlJob_t *job = &mdlJob;
+
+	memset( job, 0, sizeof( *job ) );
+	mdlStampTime = cls.realtime + MDL_STAMP_MSEC + Q_irand( 0, MDL_STAMP_JITTER );
+	if ( !MDL_Url( "stamp.txt", job->url, sizeof( job->url ) ) ) {
+		return;
+	}
+	job->stamp = qtrue;
+	job->most = MDL_STAMP_MOST;
+	job->index = mdlStamp;
+	MDL_Launch( job );
+}
+
+// The list of a store changed on the site: it is old from now on.
+static void MDL_StampChanged( int store ) {
+	Com_DPrintf( "model store: the list of the %s changed\n", mdlStampStores[store] );
+	if ( store == MDL_STAMP_MODELS ) {
+		// (a model a player uses that was not in the store is looked for again, which fetches the list)
+		mdlIndexTime = -1;
+		mdlSeen.num = 0;
+	} else if ( store == MDL_STAMP_EMOJI ) {
+		mdlNamed[MDL_NAMED_EMOJI].indexTime = -1;
+	} else {
+		mdlEmoteListTime = -1;
+	}
+}
+
+static void MDL_StampDone( mdlJob_t *job ) {
+	const char	*line, *end;
+	char		name[16], hash[MDL_STAMP_HASH];
+
+	if ( !job->ok ) {
+		Com_DPrintf( "stamp.txt of the model store did not come: %s\n", job->error );
+		return;
+	}
+	mdlStamp[job->bytes] = '\0';
+	for ( line = mdlStamp; *line; line = *end ? end + 1 : end ) {
+		end = strchr( line, '\n' );
+		if ( !end ) {
+			end = line + strlen( line );
+		}
+		if ( *line == '#' || sscanf( line, "%15s %19s", name, hash ) != 2 ) {
+			continue;
+		}
+		for ( int store = 0; store < MDL_STAMP_STORES; store++ ) {
+			if ( !strcmp( name, mdlStampStores[store] ) ) {
+				if ( mdlStampHash[store][0] && strcmp( mdlStampHash[store], hash ) ) {
+					MDL_StampChanged( store );
+				}
+				Q_strncpyz( mdlStampHash[store], hash, sizeof( mdlStampHash[store] ) );
+			}
+		}
+	}
+}
+
 // v_emotes refresh: the lists of the stores again now (the cgame heard of an interactive emoji it does not know)
 static void CL_Emotes_f( void ) {
 	if ( Q_stricmp( Cmd_Argv( 1 ), "refresh" ) ) {
@@ -838,6 +922,11 @@ static void MDL_Done( void ) {
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		return;
 	}
+	if ( job->stamp ) {
+		MDL_StampDone( job );
+		SDL_AtomicSet( &job->state, MDLJOB_FREE );
+		return;
+	}
 	if ( job->emoteList ) {
 		MDL_EmoteListDone( job );
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
@@ -945,6 +1034,10 @@ void CL_ModelsFrame( void ) {
 			return;
 		}
 	}
+	if ( MDL_StampDue() ) {
+		MDL_StartStamp();
+		return;
+	}
 	// with nothing of the models to do: the chat emojis and the interactive emojis of the store, in the game (also on
 	// a pure server, which reads them from the folder, FS_IsToyFile of qcommon/files.cpp)
 	if ( !mdlWanted[0] && !mdlIconsWanted ) {
@@ -1014,7 +1107,7 @@ void CL_ModelsInit( void ) {
 	v_emojiStore = Cvar_Get( "v_emojiStore", "1", CVAR_ARCHIVE, "Fetch the chat emojis that players uploaded to the site (0: only the emojis of the game)" );
 	Cvar_Get( "v_emojiStoreChanged", "0", CVAR_ROM, "Counts up when a chat emoji of the store came or went" );
 	Cvar_Get( "v_emoteStoreChanged", "0", CVAR_ROM, "Counts up each time the list or a sound of the interactive emojis arrived (read-only)" );
-	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED,
+	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_PROTECTED,
 		"Address of the model store (https). Can only be changed on the command line" );
 	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, v_models get <name>, v_models icons" );
 	Cmd_AddCommand( "v_drawings", CL_Drawings_f, "The pictures of the drawing boards in the store of the site: v_drawings upload, v_drawings get <number>" );
