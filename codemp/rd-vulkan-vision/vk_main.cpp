@@ -542,7 +542,7 @@ engine knows. A window that was made stays until RE_Shutdown() destroys it.
 static void VK_DestroyInstance( void );
 
 qboolean VK_InitVulkan( void ) {
-	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
+	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	if ( VK_InitShared() ) {

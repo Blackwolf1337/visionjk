@@ -90,7 +90,7 @@ qboolean VK_InitVulkan( void ) {
 	GLint major = 0, align = 1, maxTextureSize = 0;
 	const char *extensions;
 
-	v_glesDebug = ri.Cvar_Get( "v_glesDebug", "0", CVAR_ARCHIVE_ND, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
+	v_glesDebug = ri.Cvar_Get( "v_glesDebug", "0", CVAR_NONE, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
 	r_multisampleGles = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	// The flares of another level are about to get the numbers of the ones the device answered for: what it said and
 	// what it has not said yet is about those.
