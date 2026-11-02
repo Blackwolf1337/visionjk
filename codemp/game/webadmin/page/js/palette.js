@@ -15,7 +15,8 @@ function palShown(el) { return !!el && el.offsetParent !== null; }
 function palCommands() {
 	const out = [];
 	document.querySelectorAll('#pages button').forEach(b => {
-		if (palShown(b)) out.push({ name: b.textContent, about: b.title, run: () => b.click() });
+		// (the rail shows a short label where the full name does not fit: the full one is its aria-label)
+		if (palShown(b)) out.push({ name: b.getAttribute('aria-label') || b.textContent, about: b.title, run: () => b.click() });
 	});
 	if (palShown($('appMode'))) document.querySelectorAll('#appMode button').forEach(b => {
 		out.push({ name: b.textContent + ' mode', about: b.title, run: () => setAppMode(b.dataset.app) });

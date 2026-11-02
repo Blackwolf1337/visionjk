@@ -156,8 +156,24 @@ $('toggleSide').addEventListener('click', () => {
 try { if (localStorage.getItem('wa.sideClosed')) document.body.classList.add('sideClosed'); } catch (e) { /* no storage */ }
 
 
-// the groups of the panel of a player that fold: the page keeps which are open
-document.querySelectorAll('#command details.sect').forEach(d => {
-	try { const kept = localStorage.getItem('wa.sect.' + d.dataset.sect); if (kept) d.open = kept === '1'; } catch (e) { /* as the page has it */ }
-	d.addEventListener('toggle', () => { try { localStorage.setItem('wa.sect.' + d.dataset.sect, d.open ? '1' : '0'); } catch (e) { /* not kept */ } });
+// The groups of the panel of a player: Watch and steer stays open at the top, the others are tabs of which one is
+// open. The page keeps which (wa.cmdTab).
+const cmdSects = [...document.querySelectorAll('#command details.sect:not([data-sect="watch"])')], cmdTabs = document.createElement('nav');
+cmdTabs.id = 'cmdTabs';
+function cmdShowTab(name) {
+	if (!cmdSects.some(d => d.dataset.sect === name)) name = cmdSects[0].dataset.sect;
+	cmdSects.forEach(d => { d.open = d.dataset.sect === name; });
+	cmdTabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sect === name));
+	try { localStorage.setItem('wa.cmdTab', name); } catch (e) { /* not kept */ }
+}
+cmdSects.forEach(d => {
+	const b = document.createElement('button');
+	b.type = 'button';
+	b.dataset.sect = d.dataset.sect;
+	b.textContent = d.querySelector('summary').textContent;
+	b.addEventListener('click', () => cmdShowTab(d.dataset.sect));
+	cmdTabs.appendChild(b);
 });
+cmdSects[0].before(cmdTabs);
+document.querySelector('#command details[data-sect="watch"]').open = true;
+{ let kept = ''; try { kept = localStorage.getItem('wa.cmdTab') || ''; } catch (e) { /* the first tab */ } cmdShowTab(kept); }

@@ -23,12 +23,12 @@
 	<span id="status" title="Connection"></span>
 </div>
 <!-- the pages of the panel: the map with its players (or the tools of the editor), and the pages of the server -->
-<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)">Map</button><button data-tab="tv" title="The game as a spectator sees it, in the client for the browser">TV</button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses">Settings</button><button data-tab="files" title="The files of the server">Files</button><button data-tab="log" title="The log of the game, the console of the server, the intrusions">Log</button><button data-tab="bans" title="Who is banned">Bans</button><button data-tab="load" title="How long a frame of the server takes">Performance</button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts">Account</button></div>
+<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg><span>Map</span></button><button data-tab="tv" title="The game as a spectator sees it, in the client for the browser"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM8 21h8M12 17v4"/></svg><span>TV</span></button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"/></svg><span>Settings</span></button><button data-tab="files" title="The files of the server"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Files</span></button><button data-tab="log" title="The log of the game, the console of the server, the intrusions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 9l3 3-3 3M13 15h4"/></svg><span>Log</span></button><button data-tab="bans" title="Who is banned"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM6 6l12 12"/></svg><span>Bans</span></button><button data-tab="load" aria-label="Performance" title="How long a frame of the server takes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span>Load</span></button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0"/></svg><span>Account</span></button></div>
 </div>
 
 <div id="side">
 	<div id="sideGrip" title="Drag to change the width of the side panel. A double click sets the usual width again."></div>
-	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Physical props</button><button data-tab="clips" data-app="editor">Clips</button><button data-tab="remaps" data-app="editor">Textures</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map info</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on" title="Players"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6"/></svg><span>Players</span></button><button data-tab="world" data-app="editor" title="World"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg><span>World</span></button><button data-tab="models" data-app="editor" title="Physical props"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l2 4v12H5V8zM5 8h14M10 12h4"/></svg><span>Physical props</span></button><button data-tab="clips" data-app="editor" title="Clips"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM3 12h18M9 5v7M15 12v7"/></svg><span>Clips</span></button><button data-tab="remaps" data-app="editor" title="Textures"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4M15 9h.01"/></svg><span>Textures</span></button><button data-tab="routes" data-app="editor" title="Routes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg><span>Routes</span></button><button data-tab="mapinfo" data-app="editor" title="Map info"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5h.01"/></svg><span>Map info</span></button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -116,35 +116,21 @@
 	</div>
 	<div class="pane" id="pane-config">
 		<h2><span id="cfgFileName">server.cfg</span><span id="cfgSize"></span></h2>
-		<div id="cfgSwitch" class="seg" title="The same file three ways: a form with every setting, the text of the file, and what it sets that nothing uses"><button data-view="form" class="on">Form</button><button data-view="text">Text</button><button data-view="cleanup">Cleanup</button></div>
 		<div class="cfgSide" data-view="form">
 			<div class="tools">
 				<input id="setSearch" type="search" placeholder="Search a setting" autocomplete="off">
-				<div class="inline"><button id="setSave" class="primary" title="Writes the changed settings into the file and sets them on the server">Save</button><button id="setDiscard" title="Drops what was changed here and reads the settings again">Discard changes</button></div>
 			</div>
-			<div id="setState"></div>
 			<div id="setCats" class="scroll"></div>
 			<div class="hint">A setting is changed in its line of the file, its comment stays. One the file does not set yet gets a line at the end, under "set by the web panel". The text before a save is kept as .bak.</div>
 			<div class="hint">A saved setting is set on the server at once. One marked "next map" takes effect with the next map, one marked "restart" when the server starts again.</div>
 			<div class="hint">A setting marked "local.cfg" is set again by that file at the next start: the service of the host runs it after this one.</div>
 		</div>
 		<div class="cfgSide" data-view="text" hidden>
-			<div class="tools">
-				<button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button>
-				<button id="cfgRun" title="Writes the file and runs it on the server console">Save and run on server</button>
-				<button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button>
-			</div>
-			<div id="cfgState"></div>
 			<div class="hint">The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/), which the engine reads before the one of the installation. The text before a save is kept as .bak.</div>
 			<div class="hint">Running the file sets its cvars at once. Latched ones (most vs_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
 			<div class="hint">The passwords in the file are shown as they are.</div>
 		</div>
 		<div class="cfgSide" data-view="cleanup" hidden>
-			<div class="tools">
-				<div class="inline"><button id="cleanAll" title="Selects every cvar no code used and every line a later one overrides">Select all</button><button id="cleanRemove" class="danger" title="Takes the selected lines out of the file, and the unused cvars off the server">Remove selected</button></div>
-				<button id="cleanLoad" title="Lists again">Refresh</button>
-			</div>
-			<div id="cleanState"></div>
 			<div class="hint">Unused: cvars no code of the server registered or read for 30 days. They are left from older versions, other mods or the client. Removing one takes its line out of the file and the cvar off the server.</div>
 			<div class="hint">Overridden: a line of a cvar that a later line of the same cvar sets again. Only the last one counts.</div>
 			<div class="hint">The server notes the use of each cvar from this version on. Until it did so for 30 days, a cvar never used is not listed.</div>
@@ -343,7 +329,7 @@
 			<div class="stat">Health <span id="cmdHp"></span><div class="bar"><i id="cmdHpBar" style="background:var(--green)"></i></div></div>
 			<div class="stat">Armor <span id="cmdAr"></span><div class="bar"><i id="cmdArBar" style="background:#5aa9ff"></i></div></div>
 		</div>
-		<!-- what can be done to him, in groups that fold; the page keeps which are open (js/players.js) -->
+		<!-- what can be done to him: Watch and steer at the top, the other groups as tabs; the page keeps which (js/players.js) -->
 		<details class="sect" data-sect="change" open><summary>Change</summary>
 			<div class="grid">
 				<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
@@ -359,10 +345,9 @@
 			<div class="actions">
 				<button id="followBtn">Follow</button>
 				<button id="fpBtn" title="Player view (V)">First person</button>
-				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back.">Control</button>
+				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back. A human who is controlled sees his own view jitter.">Control</button>
 			</div>
 			<div class="hint">Right-click on the map to teleport this player there.</div>
-			<div class="hint">Control steers him from this page until a second click or Esc gives him back: a right-click on the map then makes him walk there instead, and the views Third person and First person play him with the keys and the mouse. A human who is controlled sees his own view jitter.</div>
 		</details>
 		<details class="sect" data-sect="powers"><summary>Powers</summary>
 			<div class="actions">
@@ -440,9 +425,18 @@
 </div>
 <div id="logView"><pre id="logText"></pre><form id="logCmd"><input id="logCmdText" placeholder="Console command, Enter runs it" spellcheck="false" autocomplete="off" maxlength="480"><button>Run</button></form></div>
 <div id="cfgView">
+	<!-- the bar of the settings: which view, its state and its buttons -->
+	<div id="cfgBar">
+		<div id="cfgSwitch" class="seg" title="The same file three ways: a form with every setting, the text of the file, and what it sets that nothing uses"><button data-view="form" class="on">Form</button><button data-view="text">Text</button><button data-view="cleanup">Cleanup</button></div>
+		<div class="cfgTools" data-view="form"><span id="setState"></span><button id="setDiscard" title="Drops what was changed here and reads the settings again">Discard changes</button><button id="setSave" class="primary" title="Writes the changed settings into the file and sets them on the server">Save</button></div>
+		<div class="cfgTools" data-view="text" hidden><span id="cfgState"></span><button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button><button id="cfgRun" title="Writes the file and runs it on the server console">Save and run on server</button><button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button></div>
+		<div class="cfgTools" data-view="cleanup" hidden><span id="cleanState"></span><button id="cleanLoad" title="Lists again">Refresh</button><button id="cleanAll" title="Selects every cvar no code used and every line a later one overrides">Select all</button><button id="cleanRemove" class="danger" title="Takes the selected lines out of the file, and the unused cvars off the server">Remove selected</button></div>
+	</div>
+	<div id="cfgBody">
 	<div id="setForm" class="cfgMain" data-view="form"></div>
 	<div id="cfgEditor" class="cfgMain" data-view="text" hidden><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
 	<div id="cleanView" class="cfgMain" data-view="cleanup" hidden><table><thead><tr><th></th><th>Cvar</th><th>Value</th><th>Last used</th><th>Where</th><th></th></tr></thead><tbody id="cleanRows"></tbody></table></div>
+	</div>
 </div>
 <div id="tvView">
 	<div id="tvStart"><p id="tvNote"></p><button id="tvGo" class="primary">Watch</button></div>
