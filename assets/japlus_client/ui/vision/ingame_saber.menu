@@ -172,7 +172,7 @@
 		itemDef
 		{
 			name					vision_left
-			rect					12 64 564 508
+			rect					12 64 564 592
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86

@@ -248,7 +248,7 @@
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				28
-			textaligny				28
+			textaligny				26.1
 			style					WINDOW_STYLE_PANEL
 			radius					10
 			backcolor				0.36 0.78 0.96 1
@@ -270,7 +270,7 @@
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				29.5
+			textaligny				28.13
 			style					WINDOW_STYLE_PANEL
 			radius					10
 			backcolor				0.031 0.055 0.11 0.86
@@ -292,7 +292,7 @@
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				29.5
+			textaligny				28.13
 			style					WINDOW_STYLE_PANEL
 			radius					10
 			backcolor				0.031 0.055 0.11 0.86
@@ -314,7 +314,7 @@
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				29.5
+			textaligny				28.13
 			style					WINDOW_STYLE_PANEL
 			radius					10
 			backcolor				0.031 0.055 0.11 0.86
@@ -336,7 +336,7 @@
 			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
-			textaligny				29.5
+			textaligny				28.13
 			style					WINDOW_STYLE_PANEL
 			radius					10
 			backcolor				0.031 0.055 0.11 0.86
@@ -449,7 +449,7 @@
 		itemDef
 		{
 			name					vision_join_line
-			rect					76 343 504 20
+			rect					76 341.1 504 20
 			visible					1
 			text					@VISION_BROWSE_SERVERS_AND_JUMP_IN
 			font					5
@@ -464,14 +464,14 @@
 		itemDef
 		{
 			name					vision_join_arrow
-			rect					548 283 40 104
+			rect					548 283 60 104
 			visible					1
 			text					">"
 			font					7
 			textscale				1.67
 			forecolor				0.016 0.071 0.122 1
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				32
 			textaligny				37
 			decoration
 		}
@@ -479,7 +479,7 @@
 		itemDef
 		{
 			name					vision_create_line
-			rect					70 467.5 228 18
+			rect					70 466.12 228 18
 			visible					1
 			text					@VISION_HOST_A_SERVER_FOR_OTHERS
 			font					5
@@ -494,7 +494,7 @@
 		itemDef
 		{
 			name					vision_solo_line
-			rect					358 467.5 228 18
+			rect					358 466.12 228 18
 			visible					1
 			text					@VISION_PLAY_AGAINST_BOTS
 			font					5
@@ -509,7 +509,7 @@
 		itemDef
 		{
 			name					vision_demo_line
-			rect					70 579.5 228 18
+			rect					70 578.12 228 18
 			visible					1
 			text					@VISION_WATCH_A_RECORDED_GAME
 			font					5
@@ -524,7 +524,7 @@
 		itemDef
 		{
 			name					vision_rules_line
-			rect					358 579.5 228 18
+			rect					358 578.12 228 18
 			visible					1
 			text					@VISION_GAME_TYPES_FORCE_WEAPONS
 			font					5

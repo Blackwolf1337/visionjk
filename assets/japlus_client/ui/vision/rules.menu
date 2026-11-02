@@ -18,7 +18,7 @@
 		{
 			play "sound/interface/esc.wav" ;
 			close rulesMenu ;
-			open multiplayerMenu ;
+			open main ;
 		}
 
 		itemDef

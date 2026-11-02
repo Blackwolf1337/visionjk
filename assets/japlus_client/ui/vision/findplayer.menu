@@ -63,7 +63,7 @@
 			name					screenTitle
 			text					@MENUS_FIND_PLAYER
 			style					WINDOW_STYLE_EMPTY
-			rect					28 24 624 34
+			rect					28 19.4 624 34
 			font					5
 			textscale				1.33
 			textalign				ITEM_ALIGN_LEFT
@@ -85,7 +85,7 @@
 			textscale				0.89
 			type					ITEM_TYPE_EDITFIELD
 			cvar					"ui_findplayer"
-			rect					28 70 624 44
+			rect					28 65.4 624 44
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				5
 			textaligny				1.35
@@ -103,7 +103,7 @@
 		itemDef
 		{
 			name					serverNameList
-			rect					28 126 624 140
+			rect					28 121.4 624 140
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -125,7 +125,7 @@
 		itemDef
 		{
 			name					serverInfoList
-			rect					28 278 624 230
+			rect					28 273.4 624 230
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -151,7 +151,7 @@
 			cvar					"ui_playerServersFound"
 			type					0
 			style					WINDOW_STYLE_EMPTY
-			rect					28 520 624 21
+			rect					28 515.4 624 21
 			font					5
 			textscale				0.72
 			textalign				ITEM_ALIGN_LEFT

@@ -927,7 +927,8 @@ def build_canvas(m, name, ingame):
     main_x, main_w = cv.RAIL_W, w - cv.RAIL_W - cv.PANE_W
     list_x, list_y = main_x + 36, top + 120
     list_w, list_h = main_w - 72, bottom - list_y
-    col_w = (list_w - 6 - cv.CARD_GAP) / 2.0
+    # (the cards fill the list: as much room left of them as right of them, the bar in the middle of the room at the right)
+    col_w = (list_w - cv.CARD_GAP) / 2.0
     pane_x = w - cv.PANE_W
     wide = () if ingame else (('wide', 1),)
 
@@ -962,10 +963,13 @@ def build_canvas(m, name, ingame):
         act = list(CLICK)
         if title == '@MENUS_MODS':
             act += ['uiScript', 'loadMods', ';']
+        counted = not setup and not isinstance(secs, tuple)
+        # (its name as far from the right as from the left, or clear of the count of the page: 14 from the right,
+        # two digits of 12, 10 between)
         new.append(cv.text('vision_tab%d' % page, (20, tabs_y + n * 50, 220, 46), word(title), 16, cv.SOFT_TEXT, 'left', 16, FONT,
                            ('type', 'ITEM_TYPE_BUTTON'), ('caps', 1), ('style', 'WINDOW_STYLE_EMPTY'), ('tab', page),
-                           ('descText', word(about)), ('action', act)))
-        if not setup and not isinstance(secs, tuple):
+                           ('descText', word(about)), ('action', act), ('textRoom', 220 - 16 - (14 + 16 + 10 if counted else 16))))
+        if counted:
             # how many actions the page has, at the right of its tab
             count = sum(len(rows) for _, _, rows in secs)
             new.append(cv.text('vision_tabcount%d' % page, (20, tabs_y + n * 50, 220, 46), '"%d"' % count, 12, cv.MUTED, 'right', 14,
@@ -1000,21 +1004,21 @@ def build_canvas(m, name, ingame):
         for head, adv, rows in secs:
             col = 0 if heights[0] <= heights[1] else 1
             placed.append((col, head, adv, rows))
-            heights[col] += (cv.CARD_GAP if heights[col] else 0) + cv.CARD_HEAD + cv.ROW * len(rows) + 12
+            heights[col] += (cv.CARD_GAP + cv.CARD_BOTTOM if heights[col] else 0) + cv.CARD_HEAD + cv.ROW * len(rows) + cv.CARD_BOTTOM
         if not setup:
             # the keys: one card over the whole width, ACTION, KEY and SECOND KEY over its columns
-            x, cw = list_x, list_w - 6
+            x, cw = list_x, list_w
             folds.append(len(folds) + 1)
             e = cv.text('vision_head', (x, list_y, cw, cv.CARD_HEAD), ref('Action'), 12, cv.MUTED, 'left', cv.CARD_PAD, canvas.BOLD,
                         ('caps', 1), ('fold', folds[-1]), ('page', page), ('scroll', 1), ('column', 0), ('decoration',))
-            mf.put(e.block, 'textaligny', mf.fmt((56 - 12) / 2.0))
+            mf.put(e.block, 'textaligny', mf.fmt(cv.CARD_TEXT_Y - 12 / 2.0))
             made_pages.append(e)
             row_x, row_w = x + cv.CARD_PAD - 12, cw - 2 * (cv.CARD_PAD - 12)
             slot_x = row_x + row_w - 12 - (2 * 190 + 16)
             for k, label in enumerate((ref('Key'), ref('Second key'))):
-                e = cv.text('vision_keyhead', (slot_x + k * 206, list_y, 190, 56), label, 12, cv.MUTED, 'left', 0, canvas.BOLD,
-                            ('caps', 1), ('page', page), ('scroll', 1), ('column', 0), ('decoration',))
-                mf.put(e.block, 'textaligny', mf.fmt((56 - 12) / 2.0))
+                e = cv.text('vision_keyhead', (slot_x + k * 206, list_y, 190, cv.CARD_LINE), label, 12, cv.MUTED, 'left', 0, canvas.BOLD,
+                            ('caps', 1), ('page', page), ('scroll', 1), ('column', 0), ('cardHead', 1), ('decoration',))
+                mf.put(e.block, 'textaligny', mf.fmt(cv.CARD_TEXT_Y - 12 / 2.0))
                 made_pages.append(e)
             y = list_y + cv.CARD_HEAD
             for _, _, rows in secs:
@@ -1025,7 +1029,9 @@ def build_canvas(m, name, ingame):
         cursor = [list_y, list_y]
         for col, head, adv, rows in sorted(placed, key=lambda p: p[0]):
             x = list_x + col * (col_w + cv.CARD_GAP)
-            gap = cv.CARD_GAP if cursor[col] > list_y else 0
+            # (the card above ends CARD_BOTTOM under its last row: the gap between the cards is CARD_GAP, as between the
+            # columns)
+            gap = cv.CARD_GAP + cv.CARD_BOTTOM if cursor[col] > list_y else 0
             h = cv.CARD_HEAD + gap
             folds.append(len(folds) + 1)
             words = word(head) if head else '""'
@@ -1038,7 +1044,7 @@ def build_canvas(m, name, ingame):
                 props.append(('advanced', 1))
             e = cv.text('vision_head', (x, cursor[col], col_w, h), words, 14, cv.MUTED, 'left', cv.CARD_PAD, canvas.BOLD, *props)
             # (the words stand in the head of the card, under the gap)
-            mf.put(e.block, 'textaligny', mf.fmt(gap + (56 - 14) / 2.0))
+            mf.put(e.block, 'textaligny', mf.fmt(gap + cv.CARD_TEXT_Y - 14 / 2.0))
             made_pages.append(e)
             cursor[col] += h
             for b in rows:
@@ -1053,7 +1059,7 @@ def build_canvas(m, name, ingame):
                            ('descText', ref('Shows the settings that matter, or all of them.')), ('action', list(CLICK))))
     new += made_pages
     # (the bar in the margin beside the cards, clear of their edge)
-    new.append(cv.item('vision_scroll', (list_x + list_w + 6, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
+    new.append(cv.item('vision_scroll', (list_x + list_w + 15, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
 
     # at the right: what the row under the mouse is for, and the settings the screen changed
     new += [cv.fill('vision_pane', (pane_x, top, cv.PANE_W, bottom - top), cv.RAIL),
@@ -1126,7 +1132,7 @@ def build_canvas(m, name, ingame):
                         ('elementtype', 'LISTBOX_TEXT'), ('feeder', 'FEEDER_MUSICPLAYERS'), ('textalign', 3), ('textaligny', 10),
                         ('textalignx', 14), ('bordercolor', *cv.EDGE), ('outlinecolor', *(ACCENT[:3] + ['0.22'])),
                         ('forecolor', *TEXT), ('backcolor', *cv.FIELD), ('radius', 6))
-        new += card_page(first, (list_x, list_y, list_w - 6), None, ref('Players of My Music'),
+        new += card_page(first, (list_x, list_y, list_w), None, ref('Players of My Music'),
                          [(ref('Click a player to tick it, or to take the tick away.'), False),
                           (ref('Only the songs of ticked players are shown to the others.'), True)],
                          (music, list_h - 260),

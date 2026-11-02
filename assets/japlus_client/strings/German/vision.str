@@ -29,6 +29,14 @@ REFERENCE           EDIT_PROFILE
 LANG_ENGLISH        "Edit profile"
 LANG_GERMAN         "Profil bearbeiten"
 
+REFERENCE           VIEW_BOTS_ONLY
+LANG_ENGLISH        "View Bots Only:"
+LANG_GERMAN         "Nur Bots zeigen:"
+
+REFERENCE           INCLUDE_SERVERS_ON_WHICH_ONLY_BOTS_P
+LANG_ENGLISH        "Include servers on which only bots play"
+LANG_GERMAN         "Server einbeziehen, auf denen nur Bots spielen"
+
 REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
 LANG_ENGLISH        "Double-click a server to join"
 LANG_GERMAN         "Doppelklick auf einen Server zum Beitreten"
@@ -2872,6 +2880,122 @@ LANG_GERMAN         "Tasten"
 REFERENCE           COMMAND
 LANG_ENGLISH        "Command"
 LANG_GERMAN         "Befehl"
+
+REFERENCE           BACK_KICK
+LANG_ENGLISH        "Back Kick"
+LANG_GERMAN         "Rückwärtstritt"
+
+REFERENCE           JEDI_TORNADO
+LANG_ENGLISH        "Jedi Tornado"
+LANG_GERMAN         "Jedi-Tornado"
+
+REFERENCE           JUMP_GRAB_BACK_KICK
+LANG_ENGLISH        "Jump Grab Back Kick"
+LANG_GERMAN         "Sprung-Greif-Rückwärtstritt"
+
+REFERENCE           JUMP_SPIN_BACK_KICK
+LANG_ENGLISH        "Jump Spin Back Kick"
+LANG_GERMAN         "Sprung-Dreh-Rückwärtstritt"
+
+REFERENCE           MELEE_KNEE_KICK
+LANG_ENGLISH        "Melee Knee Kick"
+LANG_GERMAN         "Nahkampf-Kniestoß"
+
+REFERENCE           MELEE_PUNCH
+LANG_ENGLISH        "Melee Punch"
+LANG_GERMAN         "Nahkampf-Schlag"
+
+REFERENCE           MELEE_CHOKE
+LANG_ENGLISH        "Melee Choke"
+LANG_GERMAN         "Nahkampf-Würgegriff"
+
+REFERENCE           MELEE_THROW
+LANG_ENGLISH        "Melee Throw"
+LANG_GERMAN         "Nahkampf-Wurf"
+
+REFERENCE           NEW_FORWARD_KICK
+LANG_ENGLISH        "New Forward Kick"
+LANG_GERMAN         "Neuer Vorwärtstritt"
+
+REFERENCE           NEW_PULL_IMPALE
+LANG_ENGLISH        "New Pull Impale"
+LANG_GERMAN         "Neues Aufspießen mit Macht-Griff"
+
+REFERENCE           NEW_SABER_FLIP_STAB
+LANG_ENGLISH        "New Saber Flip Stab"
+LANG_GERMAN         "Neuer Salto-Stich"
+
+REFERENCE           NEW_SPIN_ATTACK
+LANG_ENGLISH        "New Spin Attack"
+LANG_GERMAN         "Neuer Drehangriff"
+
+REFERENCE           SITH_KISS
+LANG_ENGLISH        "Sith Kiss"
+LANG_GERMAN         "Sith-Kuss"
+
+REFERENCE           SPIN_KICK
+LANG_ENGLISH        "Spin Kick"
+LANG_GERMAN         "Drehtritt"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_RIGHT_ALT_ATT
+LANG_ENGLISH        "Melee or Staff + Forward + Right + Alt Attack"
+LANG_GERMAN         "Nahkampf oder Stab + Vorwärts + Rechts + 2. Feuermodus"
+
+REFERENCE           MELEE_PUSH_LEVEL_2_OR_HIGHER_IN_FRON
+LANG_ENGLISH        "Melee + Push level 2 or higher, in front of an enemy, Jedi only"
+LANG_GERMAN         "Nahkampf + Macht-Schub ab Stufe 2, vor einem Feind, nur für Jedi"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_DUAL_SA
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus mit zwei Schwertern, vor einem Feind"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Forward + Jump + Alt Attack, in front of an enemy"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus, vor einem Feind"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK
+LANG_ENGLISH        "Forward + Jump + Alt Attack"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_SINGLE
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Single Saber"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus mit einem Schwert"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_BACKWARD_IN
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Backward, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus + Rückwärts, vor einem Feind"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_FORWARD_IN_F
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Forward, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus + Vorwärts, vor einem Feind"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Melee + Attack + Alt Attack, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus, vor einem Feind"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_RIGHT_IN_FRO
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Right, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus + Rechts, vor einem Feind"
+
+REFERENCE           FORWARD_ALT_ATTACK_IN_FRONT_OF_AN_EN
+LANG_ENGLISH        "Forward + Alt Attack, in front of an enemy"
+LANG_GERMAN         "Vorwärts + 2. Feuermodus, vor einem Feind"
+
+REFERENCE           PULL_ATTACK_IN_FRONT_OF_AN_ENEMY
+LANG_ENGLISH        "Pull + Attack, in front of an enemy"
+LANG_GERMAN         "Macht-Griff + Angriff, vor einem Feind"
+
+REFERENCE           JUMP_FORWARD_ATTACK_IN_FRONT_OF_AN_E
+LANG_ENGLISH        "Jump + Forward + Attack, in front of an enemy"
+LANG_GERMAN         "Sprung + Vorwärts + Angriff, vor einem Feind"
+
+REFERENCE           MELEE_DRAIN_LEVEL_2_OR_HIGHER_IN_FRO
+LANG_ENGLISH        "Melee + Drain level 2 or higher, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Macht-Entzug ab Stufe 2, vor einem Feind"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_LEFT_ALT_ATTA
+LANG_ENGLISH        "Melee or Staff + Forward + Left + Alt Attack"
+LANG_GERMAN         "Nahkampf oder Stab + Vorwärts + Links + 2. Feuermodus"
 
 
 ENDMARKER

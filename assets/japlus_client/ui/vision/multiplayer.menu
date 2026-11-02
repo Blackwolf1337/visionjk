@@ -209,13 +209,13 @@
 			descText				@MENUS_QUICKSTART_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 249.5 285 54
+			rect					387.5 249.5 285 52.5
 			font					5
 			textscale				1.11
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				18
-			textaligny				15.75
+			textaligny				16.26
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
@@ -241,13 +241,13 @@
 			descText				@MENUS_SEARCH_FOR_SERVERS_TO
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 302 285 54
+			rect					387.5 302 285 52.5
 			font					5
 			textscale				1.11
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				18
-			textaligny				15.75
+			textaligny				16.26
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
@@ -273,13 +273,13 @@
 			descText				@MENUS_CREATE_YOUR_OWN_SERVER
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 354.5 285 54
+			rect					387.5 354.5 285 52.5
 			font					5
 			textscale				1.11
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				18
-			textaligny				15.75
+			textaligny				16.26
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
@@ -305,13 +305,13 @@
 			descText				@MENUS_PLAY_BACK_A_RECORDED
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 407 285 54
+			rect					387.5 407 285 52.5
 			font					5
 			textscale				1.11
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				18
-			textaligny				15.75
+			textaligny				16.26
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter
@@ -337,13 +337,13 @@
 			descText				@MENUS_RULES_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					387.5 459.5 285 54
+			rect					387.5 459.5 285 52.5
 			font					5
 			textscale				1.11
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				18
-			textaligny				15.75
+			textaligny				16.26
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			mouseEnter

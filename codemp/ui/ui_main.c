@@ -176,7 +176,7 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
 		{ "@MENUS_FORCE_PULL_SLASH",	"@MENUS_FORCE_PULL_SLASH_DESC",	"BOTH_PULL_IMPALE_SWING",	MDS_SABER },
-		{ "Jump Grab Back Kick",	"Forward + Jump + Alt attack when you are in front of you ennemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
+		{ "Jump Grab Back Kick",	"Forward + Jump + Alt Attack, in front of an enemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -194,9 +194,9 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
 		{ "@MENUS_FORCE_PULL_SLASH",	"@MENUS_FORCE_PULL_SLASH_DESC",	"BOTH_PULL_IMPALE_SWING",	MDS_SABER },
-		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_BUTTERFLY_LEFT",	MDS_FORCE_JUMP },
-		{ "New Saber Flip stab",	"Forward + Jump + Alt attack",	"BOTH_FLIP_STAB",	MDS_SABER },
-		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+		{ "New Spin Attack",	"Jump + Forward + Attack, in front of an enemy",	"BOTH_BUTTERFLY_LEFT",	MDS_FORCE_JUMP },
+		{ "New Saber Flip Stab",	"Forward + Jump + Alt Attack",	"BOTH_FLIP_STAB",	MDS_SABER },
+		{ "New Pull Impale",	"Pull + Attack, in front of an enemy",	"BOTH_NEW_STABER",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -214,10 +214,10 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_DUAL_STAB_LEFT_RIGHT",	"@MENUS_DUAL_STAB_LEFT_RIGHT_DESC",		"BOTH_A6_LR",					MDS_SABER },
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
-		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_ALORA_SPIN_SLASH",	MDS_FORCE_JUMP },
-		{ "Jump Spin Back Kick",	"Forward + Jump + Alt attack using single saber style",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
-		{ "Jump Grab Back Kick",	"Forward + Jump + Alt attack using dual stance when you are in front of you ennemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
-		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+		{ "New Spin Attack",	"Jump + Forward + Attack, in front of an enemy",	"BOTH_ALORA_SPIN_SLASH",	MDS_FORCE_JUMP },
+		{ "Jump Spin Back Kick",	"Forward + Jump + Alt Attack with Single Saber",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
+		{ "Jump Grab Back Kick",	"Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
+		{ "New Pull Impale",	"Pull + Attack, in front of an enemy",	"BOTH_NEW_STABER",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -235,20 +235,20 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_SPLIT_KICK",	"@MENUS_SPLIT_KICK_DESC",	"BOTH_A7_KICK_RL",	MDS_FORCE_JUMP },
 		{ "@MENUS_SPIN_KICK",	"@MENUS_SPIN_KICK_DESC",	"BOTH_A7_KICK_S",	MDS_FORCE_JUMP },
 		{ "@MENUS_FLIP_KICK",	"@MENUS_FLIP_KICK_DESC",	"BOTH_A7_KICK_BF",	MDS_FORCE_JUMP },
-		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_FJSS_TR_BL",	MDS_FORCE_JUMP },
-		{ "New Kick Forward",	"FORWARD + ALT ATTACK\nWhen you are in front of your ennemy",	"BOTH_A7_HILT",	MDS_SABER },
-		{ "Jump Spin Back Kick",	"Forward + Jump + Alt attack",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
-		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+		{ "New Spin Attack",	"Jump + Forward + Attack, in front of an enemy",	"BOTH_FJSS_TR_BL",	MDS_FORCE_JUMP },
+		{ "New Forward Kick",	"Forward + Alt Attack, in front of an enemy",	"BOTH_A7_HILT",	MDS_SABER },
+		{ "Jump Spin Back Kick",	"Forward + Jump + Alt Attack",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
+		{ "New Pull Impale",	"Pull + Attack, in front of an enemy",	"BOTH_NEW_STABER",	MDS_SABER },
 	},
 	{// JA+: Melee & other attacks
-		{ "Melee Punch",	"Weapon melee + attack + alt attack + forward\nin front for your ennemy",	"BOTH_KYLE_PA_1",	MDS_NONE },
-		{ "Melee kick, knee",	"Weapon melee + attack + alt attack + backward\nin front for your ennemy",	"BOTH_KYLE_PA_2",	MDS_NONE },
-		{ "Melee  throttling",	"Weapon melee + attack + alt attack \nin front for your ennemy",	"BOTH_KYLE_PA_3",	MDS_NONE },
-		{ "Melee throw",	"Weapon melee + attack + alt attack + right\nin front for your ennemy",	"BOTH_A3_TL_BR",	MDS_NONE },
-		{ "Sith Kiss",	"Weapon Melee + DRAIN level 2 minimum\nin front of your ennemy",	"BOTH_FORCE_DRAIN_GRAB_START",	MDS_NONE },
-		{ "Jedi Tornado",	"Weapon Melee + PUSH level 2 minimum\n in front of your ennemy\n only for jedi",	"BOTH_ALORA_SPIN_THROW",	MDS_NONE },
-		{ "Back Kick",	"Weapon Melee or Staff + forward + right + alt attack",	"BOTH_MELEE_BACKKICK",	MDS_SABER },
-		{ "Spin kick",	"Weapon Melee or Staff + forward + left + alt attack",	"BOTH_MELEE_SPINKICK",	MDS_SABER },
+		{ "Melee Punch",	"Melee + Attack + Alt Attack + Forward, in front of an enemy",	"BOTH_KYLE_PA_1",	MDS_NONE },
+		{ "Melee Knee Kick",	"Melee + Attack + Alt Attack + Backward, in front of an enemy",	"BOTH_KYLE_PA_2",	MDS_NONE },
+		{ "Melee Choke",	"Melee + Attack + Alt Attack, in front of an enemy",	"BOTH_KYLE_PA_3",	MDS_NONE },
+		{ "Melee Throw",	"Melee + Attack + Alt Attack + Right, in front of an enemy",	"BOTH_A3_TL_BR",	MDS_NONE },
+		{ "Sith Kiss",	"Melee + Drain level 2 or higher, in front of an enemy",	"BOTH_FORCE_DRAIN_GRAB_START",	MDS_NONE },
+		{ "Jedi Tornado",	"Melee + Push level 2 or higher, in front of an enemy, Jedi only",	"BOTH_ALORA_SPIN_THROW",	MDS_NONE },
+		{ "Back Kick",	"Melee or Staff + Forward + Right + Alt Attack",	"BOTH_MELEE_BACKKICK",	MDS_SABER },
+		{ "Spin Kick",	"Melee or Staff + Forward + Left + Alt Attack",	"BOTH_MELEE_SPINKICK",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -741,11 +741,27 @@ int Text_Height(const char *text, float scale, int iMenuFont)
 	return trap->R_Font_HeightPixels(iFontIndex, scale);
 }
 
+// the engine has ext.R_Font_DrawStringF and ext.R_Font_InkBox (v_uiFontInk, ui_public.h)
+static qboolean ui_fontInk;
+
+static qboolean Text_Ink( const char *text, float scale, int iMenuFont, float *box ) {
+	return trap->ext.R_Font_InkBox( text, MenuFontToHandle( iMenuFont ), scale, box );
+}
+
 void Text_Paint(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style, int iMenuFont)
 {
 	int iStyleOR = 0;
 
 	int iFontIndex = MenuFontToHandle(iMenuFont);
+
+	if ( textCatch.text ) {
+		Q_strncpyz( textCatch.text, text, textCatch.size );
+		textCatch.x = x;
+		if ( textCatch.color && color ) {
+			VectorCopy4( color, textCatch.color );
+		}
+		return;
+	}
 	//
 	// kludge.. convert JK2 menu styles to SOF2 printstring ctrl codes...
 	//
@@ -760,6 +776,10 @@ void Text_Paint(float x, float y, float scale, vec4_t color, const char *text, f
 	case  ITEM_TEXTSTYLE_SHADOWEDMORE:		iStyleOR = (int)STYLE_DROPSHADOW;break;	// JK2 drop shadow
 	}
 
+	if ( ui_fontInk ) {
+		trap->ext.R_Font_DrawStringF( x, y, text, color, iStyleOR | iFontIndex, !limit ? -1 : limit, scale );
+		return;
+	}
 	trap->R_Font_DrawString(	x,		// int ox
 							y,		// int oy
 							text,	// const char *text
@@ -9096,7 +9116,10 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	}
 	else if (feederID == FEEDER_MOVES)
 	{
-		return datapadMoveData[uiInfo.movesTitleIndex][index].title;
+		// (the moves this tree added are named in English: Vision_Text has their words in the other languages)
+		const char *title = datapadMoveData[uiInfo.movesTitleIndex][index].title;
+
+		return ( title && title[0] != '@' ) ? Vision_Text( title ) : title;
 	}
 	else if (feederID == FEEDER_MOVES_TITLES)
 	{
@@ -9560,7 +9583,9 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 
 						if (datapadMoveData[uiInfo.movesTitleIndex][index].desc)
 						{
-							trap->Cvar_Set( "ui_move_desc", datapadMoveData[uiInfo.movesTitleIndex][index].desc);
+							const char *desc = datapadMoveData[uiInfo.movesTitleIndex][index].desc;
+
+							trap->Cvar_Set( "ui_move_desc", desc[0] != '@' ? Vision_Text( desc ) : desc );
 						}
 					}
 					UI_SaberAttachToChar( item );
@@ -10756,6 +10781,8 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.drawCinematic					= &UI_DrawCinematic;
 	uiInfo.uiDC.runCinematicFrame				= &UI_RunCinematicFrame;
 	uiInfo.uiDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
+	ui_fontInk = (qboolean)( trap->Cvar_VariableValue( "v_uiFontInk" ) == 1.0f );
+	uiInfo.uiDC.ext.textInk						= ui_fontInk ? Text_Ink : NULL;
 	// the engine of this tree says in a cvar that it has the call (ui_public.h), any other ends ext before it
 	uiInfo.uiDC.registerShaderRGBA				= ( trap->Cvar_VariableValue( "v_uiSkin" ) == 1.0f ) ? trap->ext.R_RegisterShaderRGBA : NULL;
 	uiInfo.uiDC.statValue						= NULL;
@@ -10877,6 +10904,11 @@ void UI_Refresh( int realtime )
 
 	// models that menu items gave up in the frame before, now that it has been rendered (ui_shared.c)
 	UI_FreeDeferredGhoul2();
+	{
+		extern void UI_SweepFrame( void );
+
+		UI_SweepFrame();
+	}
 	if ( uiKeysReload && !--uiKeysReload ) {
 		Controls_GetConfig();
 	}

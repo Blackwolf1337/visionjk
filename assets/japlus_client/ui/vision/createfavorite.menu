@@ -59,7 +59,7 @@
 			name					title
 			text					@MENUS_FAVORITE_SERVER_INFO
 			style					WINDOW_STYLE_EMPTY
-			rect					28 24 464 34
+			rect					28 19.4 464 34
 			font					5
 			textscale				1.33
 			textalign				ITEM_ALIGN_LEFT
@@ -78,7 +78,7 @@
 			decoration
 			font					5
 			textscale				0.83
-			rect					28 70 464 23
+			rect					28 65.4 464 23
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				4
@@ -98,7 +98,7 @@
 			TYPE					4
 			maxchars				21
 			cvar					"ui_favoriteAddress"
-			rect					28 95 464 44
+			rect					28 90.4 464 44
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				42
 			textaligny				-0.8

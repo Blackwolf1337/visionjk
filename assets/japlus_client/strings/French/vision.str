@@ -29,6 +29,14 @@ REFERENCE           EDIT_PROFILE
 LANG_ENGLISH        "Edit profile"
 LANG_FRENCH         "Modifier le profil"
 
+REFERENCE           VIEW_BOTS_ONLY
+LANG_ENGLISH        "View Bots Only:"
+LANG_FRENCH         "Afficher bots seuls :"
+
+REFERENCE           INCLUDE_SERVERS_ON_WHICH_ONLY_BOTS_P
+LANG_ENGLISH        "Include servers on which only bots play"
+LANG_FRENCH         "Inclure les serveurs où seuls des bots jouent"
+
 REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
 LANG_ENGLISH        "Double-click a server to join"
 LANG_FRENCH         "Double-cliquez sur un serveur pour le rejoindre"
@@ -2872,6 +2880,122 @@ LANG_FRENCH         "Touches"
 REFERENCE           COMMAND
 LANG_ENGLISH        "Command"
 LANG_FRENCH         "Commande"
+
+REFERENCE           BACK_KICK
+LANG_ENGLISH        "Back Kick"
+LANG_FRENCH         "Coup de pied arrière"
+
+REFERENCE           JEDI_TORNADO
+LANG_ENGLISH        "Jedi Tornado"
+LANG_FRENCH         "Tornade Jedi"
+
+REFERENCE           JUMP_GRAB_BACK_KICK
+LANG_ENGLISH        "Jump Grab Back Kick"
+LANG_FRENCH         "Saut, saisie et coup de pied arrière"
+
+REFERENCE           JUMP_SPIN_BACK_KICK
+LANG_ENGLISH        "Jump Spin Back Kick"
+LANG_FRENCH         "Saut, vrille et coup de pied arrière"
+
+REFERENCE           MELEE_KNEE_KICK
+LANG_ENGLISH        "Melee Knee Kick"
+LANG_FRENCH         "Mêlée : coup de genou"
+
+REFERENCE           MELEE_PUNCH
+LANG_ENGLISH        "Melee Punch"
+LANG_FRENCH         "Mêlée : coup de poing"
+
+REFERENCE           MELEE_CHOKE
+LANG_ENGLISH        "Melee Choke"
+LANG_FRENCH         "Mêlée : étranglement"
+
+REFERENCE           MELEE_THROW
+LANG_ENGLISH        "Melee Throw"
+LANG_FRENCH         "Mêlée : projection"
+
+REFERENCE           NEW_FORWARD_KICK
+LANG_ENGLISH        "New Forward Kick"
+LANG_FRENCH         "Nouveau coup de pied avant"
+
+REFERENCE           NEW_PULL_IMPALE
+LANG_ENGLISH        "New Pull Impale"
+LANG_FRENCH         "Nouvel empalement par traction"
+
+REFERENCE           NEW_SABER_FLIP_STAB
+LANG_ENGLISH        "New Saber Flip Stab"
+LANG_FRENCH         "Nouveau saut périlleux et estoc"
+
+REFERENCE           NEW_SPIN_ATTACK
+LANG_ENGLISH        "New Spin Attack"
+LANG_FRENCH         "Nouvelle attaque tournoyante"
+
+REFERENCE           SITH_KISS
+LANG_ENGLISH        "Sith Kiss"
+LANG_FRENCH         "Baiser Sith"
+
+REFERENCE           SPIN_KICK
+LANG_ENGLISH        "Spin Kick"
+LANG_FRENCH         "Coup de pied tournant"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_RIGHT_ALT_ATT
+LANG_ENGLISH        "Melee or Staff + Forward + Right + Alt Attack"
+LANG_FRENCH         "Mêlée ou Bâton + Avant + Droite + Alt + Attaquer"
+
+REFERENCE           MELEE_PUSH_LEVEL_2_OR_HIGHER_IN_FRON
+LANG_ENGLISH        "Melee + Push level 2 or higher, in front of an enemy, Jedi only"
+LANG_FRENCH         "Mêlée + Pouvoir Avant niveau 2 minimum, face à un ennemi, Jedi uniquement"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_DUAL_SA
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy"
+LANG_FRENCH         "Avant + Sauter + Alt + Attaquer avec deux sabres, face à un ennemi"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Forward + Jump + Alt Attack, in front of an enemy"
+LANG_FRENCH         "Avant + Sauter + Alt + Attaquer, face à un ennemi"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK
+LANG_ENGLISH        "Forward + Jump + Alt Attack"
+LANG_FRENCH         "Avant + Sauter + Alt + Attaquer"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_SINGLE
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Single Saber"
+LANG_FRENCH         "Avant + Sauter + Alt + Attaquer avec un seul sabre"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_BACKWARD_IN
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Backward, in front of an enemy"
+LANG_FRENCH         "Mêlée + Attaquer + Alt + Attaquer + Arrière, face à un ennemi"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_FORWARD_IN_F
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Forward, in front of an enemy"
+LANG_FRENCH         "Mêlée + Attaquer + Alt + Attaquer + Avant, face à un ennemi"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Melee + Attack + Alt Attack, in front of an enemy"
+LANG_FRENCH         "Mêlée + Attaquer + Alt + Attaquer, face à un ennemi"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_RIGHT_IN_FRO
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Right, in front of an enemy"
+LANG_FRENCH         "Mêlée + Attaquer + Alt + Attaquer + Droite, face à un ennemi"
+
+REFERENCE           FORWARD_ALT_ATTACK_IN_FRONT_OF_AN_EN
+LANG_ENGLISH        "Forward + Alt Attack, in front of an enemy"
+LANG_FRENCH         "Avant + Alt + Attaquer, face à un ennemi"
+
+REFERENCE           PULL_ATTACK_IN_FRONT_OF_AN_ENEMY
+LANG_ENGLISH        "Pull + Attack, in front of an enemy"
+LANG_FRENCH         "Pouvoir Arrière + Attaquer, face à un ennemi"
+
+REFERENCE           JUMP_FORWARD_ATTACK_IN_FRONT_OF_AN_E
+LANG_ENGLISH        "Jump + Forward + Attack, in front of an enemy"
+LANG_FRENCH         "Sauter + Avant + Attaquer, face à un ennemi"
+
+REFERENCE           MELEE_DRAIN_LEVEL_2_OR_HIGHER_IN_FRO
+LANG_ENGLISH        "Melee + Drain level 2 or higher, in front of an enemy"
+LANG_FRENCH         "Mêlée + Épuisement niveau 2 minimum, face à un ennemi"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_LEFT_ALT_ATTA
+LANG_ENGLISH        "Melee or Staff + Forward + Left + Alt Attack"
+LANG_FRENCH         "Mêlée ou Bâton + Avant + Gauche + Alt + Attaquer"
 
 
 ENDMARKER

@@ -627,6 +627,9 @@ TR = {
     'Watch a recorded game': 'Ein aufgezeichnetes Spiel ansehen',
     'Game types, force, weapons': 'Spielmodi, Macht, Waffen',
     'Edit profile': 'Profil bearbeiten',
+    # the filter of the server lists that JA+ added (ui/jamp/joinserver.menu)
+    'View Bots Only:': 'Nur Bots zeigen:',
+    'Include servers on which only bots play': 'Server einbeziehen, auf denen nur Bots spielen',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
@@ -868,6 +871,36 @@ CGAME = {
     'NOT BOUND': 'NICHT BELEGT',
     'Keys': 'Tasten',
     'Command': 'Befehl',
+    # the moves JA+ added (ui_main.c datapadMoveData): the ui asks for them by their English (Vision_Text)
+    'Back Kick': 'Rückwärtstritt',
+    'Jedi Tornado': 'Jedi-Tornado',
+    'Jump Grab Back Kick': 'Sprung-Greif-Rückwärtstritt',
+    'Jump Spin Back Kick': 'Sprung-Dreh-Rückwärtstritt',
+    'Melee Knee Kick': 'Nahkampf-Kniestoß',
+    'Melee Punch': 'Nahkampf-Schlag',
+    'Melee Choke': 'Nahkampf-Würgegriff',
+    'Melee Throw': 'Nahkampf-Wurf',
+    'New Forward Kick': 'Neuer Vorwärtstritt',
+    'New Pull Impale': 'Neues Aufspießen mit Macht-Griff',
+    'New Saber Flip Stab': 'Neuer Salto-Stich',
+    'New Spin Attack': 'Neuer Drehangriff',
+    'Sith Kiss': 'Sith-Kuss',
+    'Spin Kick': 'Drehtritt',
+    'Melee or Staff + Forward + Right + Alt Attack': 'Nahkampf oder Stab + Vorwärts + Rechts + 2. Feuermodus',
+    'Melee + Push level 2 or higher, in front of an enemy, Jedi only': 'Nahkampf + Macht-Schub ab Stufe 2, vor einem Feind, nur für Jedi',
+    'Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy': 'Vorwärts + Sprung + 2. Feuermodus mit zwei Schwertern, vor einem Feind',
+    'Forward + Jump + Alt Attack, in front of an enemy': 'Vorwärts + Sprung + 2. Feuermodus, vor einem Feind',
+    'Forward + Jump + Alt Attack': 'Vorwärts + Sprung + 2. Feuermodus',
+    'Forward + Jump + Alt Attack with Single Saber': 'Vorwärts + Sprung + 2. Feuermodus mit einem Schwert',
+    'Melee + Attack + Alt Attack + Backward, in front of an enemy': 'Nahkampf + Angriff + 2. Feuermodus + Rückwärts, vor einem Feind',
+    'Melee + Attack + Alt Attack + Forward, in front of an enemy': 'Nahkampf + Angriff + 2. Feuermodus + Vorwärts, vor einem Feind',
+    'Melee + Attack + Alt Attack, in front of an enemy': 'Nahkampf + Angriff + 2. Feuermodus, vor einem Feind',
+    'Melee + Attack + Alt Attack + Right, in front of an enemy': 'Nahkampf + Angriff + 2. Feuermodus + Rechts, vor einem Feind',
+    'Forward + Alt Attack, in front of an enemy': 'Vorwärts + 2. Feuermodus, vor einem Feind',
+    'Pull + Attack, in front of an enemy': 'Macht-Griff + Angriff, vor einem Feind',
+    'Jump + Forward + Attack, in front of an enemy': 'Sprung + Vorwärts + Angriff, vor einem Feind',
+    'Melee + Drain level 2 or higher, in front of an enemy': 'Nahkampf + Macht-Entzug ab Stufe 2, vor einem Feind',
+    'Melee or Staff + Forward + Left + Alt Attack': 'Nahkampf oder Stab + Vorwärts + Links + 2. Feuermodus',
 }
 
 # names that are the same in every language

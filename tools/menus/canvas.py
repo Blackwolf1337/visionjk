@@ -16,7 +16,10 @@ FOOT_H = 68                 # the bar at the bottom
 RAIL_W = 260                # the column at the left (the pages of Setup)
 PANE_W = 340                # the column at the right (what the row under the mouse is for)
 ROW = 52                    # a row of settings
-CARD_HEAD = 64              # the head of a card (56) and the room under its line (8)
+CARD_LINE = 55              # the line under the head of a card: its words in the 55 above it, the line to 56
+CARD_HEAD = 66              # the head of a card and the room under its line (10)
+CARD_TEXT_Y = (2 + CARD_LINE) / 2.0  # the middle of the words of a head: between its rim (2 pixels) and its line
+CARD_BOTTOM = 10            # the room under the last row of a card: as much as under the line
 CARD_GAP = 24               # between two cards of a column, and between the two columns
 CARD_PAD = 22               # from the edge of a card to the names of its rows
 
@@ -154,7 +157,7 @@ IN_K = 2.0                  # and of a menu in a game on the canvas of 1600 x 12
 
 def _scale_props(b, k):
     """The sizes of an item (not its place) times k."""
-    for key in ('textscale', 'textalignx', 'textaligny', 'text2alignx', 'text2aligny', 'radius', 'shadow', 'elementwidth',
+    for key in ('textscale', 'textalignx', 'textaligny', 'text2alignx', 'text2aligny', 'textroom', 'radius', 'shadow', 'elementwidth',
                 'elementheight', 'bordersize'):
         a = mf.get(b, key)
         if a and mf.num(a[0]) is not None:
@@ -311,7 +314,13 @@ def profile_page(m):
         _scale_props(b, k)
         ts = mf.get(b, 'textscale')
         if ts and mf.num(ts[0]) is not None:
-            mf.put(b, 'textscale', mf.fmt(mf.num(ts[0]) * text_k / k))
+            big = mf.num(ts[0])
+            mf.put(b, 'textscale', mf.fmt(big * text_k / k))
+            # (the text grows by text_k, not k: its box of 18 units moves down by half of what it lost, so its middle
+            # stays where the item at twice its size has it)
+            ay = mf.get(b, 'textaligny')
+            if ay and mf.num(ay[0]) is not None:
+                mf.put(b, 'textaligny', mf.fmt(mf.num(ay[0]) + 9.0 * (big - big * text_k / k)))
         new.append(e)
     strip = [fill('vision_sub', (0, HEAD_H, W, 52), RAIL, ('wide', 1)), fill('vision_sub_line', (0, HEAD_H + 51, W, 1), LINE, ('wide', 1))]
     m[:] = [e for e in m if e.k != 'itemdef'] + header('playerMenu') + strip + new

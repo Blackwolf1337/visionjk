@@ -57,7 +57,7 @@
 			ownerdraw				UI_GLINFO
 			font					5
 			textscale				0.78
-			rect					28 24 704 260
+			rect					28 19.4 704 260
 			forecolor				0.86 0.90 0.945 1
 			style					WINDOW_STYLE_EMPTY
 			textalign				ITEM_ALIGN_LEFT

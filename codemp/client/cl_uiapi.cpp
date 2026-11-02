@@ -1511,6 +1511,8 @@ void CL_BindUI( void ) {
 		uii.ext.OpenURL							= Sys_OpenURL;
 		uii.ext.Cvar_UnusedList					= Cvar_UnusedList;
 		uii.ext.Cvar_Info						= Cvar_Info;
+		uii.ext.R_Font_DrawStringF				= re->ext.Font_DrawStringF;
+		uii.ext.R_Font_InkBox					= re->ext.Font_InkBox;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

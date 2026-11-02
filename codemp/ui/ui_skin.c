@@ -140,6 +140,22 @@ static float Skin_SnapY( float y ) {
 	return floorf( ( y + DC->biasY ) * scale + 0.5f ) / scale - DC->biasY;
 }
 
+/*
+=================
+Skin_CardHeadBand
+
+The head of a card that begins at top and has its line at line (Skin_Panel's ring, Skin_Line): where the room
+between the ring and the line is, in units, snapped as they are drawn. Its words and its arrow stand on its middle.
+=================
+*/
+void Skin_CardHeadBand( float top, float line, float *y, float *h ) {
+	const float scale = Skin_ScaleY();
+	const int	ring = Q_max( 1, (int)( scale * 0.7f ) );
+
+	*y = Skin_SnapY( top ) + ring / scale;
+	*h = Skin_SnapY( line ) - *y;
+}
+
 // toward 1 while on and toward 0 while not, all the way in msec
 float Skin_Ease( float value, qboolean on, int msec ) {
 	const float step = Com_Clamp( 0.0f, 1.0f, (float)DC->frameTime / (float)msec );
@@ -331,11 +347,20 @@ column through its middle along the sides, its middle over the rest. corner: the
 */
 // (cornerX and cornerY are the same number of pixels: where the 2D of the game is stretched, v_2dAspect 0, they are not
 // the same number of units, and a corner of the same units would be stretched with it)
+static void Skin_NineSliceTop( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle,
+	qboolean squareBottom );
+
 static void Skin_NineSlice( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle ) {
+	Skin_NineSliceTop( x, y, w, h, cornerX, cornerY, shape, middle, qfalse );
+}
+
+// squareBottom: the lower corners square, as the middle of the shape (the head of a card that ends on a line)
+static void Skin_NineSliceTop( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle,
+	qboolean squareBottom ) {
 	const float	half = 0.5f, c = (float)shape->radius / shape->size;
 	const float	s0 = half - c, s1 = half, s2 = half + c;
 	const float	xs[4] = { x, x + cornerX, x + w - cornerX, x + w };
-	const float	ys[4] = { y, y + cornerY, y + h - cornerY, y + h };
+	const float	ys[4] = { y, y + cornerY, squareBottom ? y + h : y + h - cornerY, y + h };
 	const float	ss[4] = { s0, s1, s1, s2 };
 	int			i, j;
 
@@ -920,6 +945,30 @@ void Skin_ItemBack( itemDef_t *item ) {
 	}
 	Skin_Color( color, accent, 0.12f * item->skinFocus );
 	Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, SKIN_RADIUS, color, NULL );
+}
+
+// The mark of the heading of a card while the mouse is on it: the head of the card from its top to the line under it,
+// round at the top as the card, straight on the line (the rectangle of the heading has the gap above the card in it
+// and reaches below the line)
+void Skin_CardHeadBack( itemDef_t *item, float x, float y, float w, float h, float radius ) {
+	const float			sx = Skin_ScaleX(), sy = Skin_ScaleY();
+	const float			x0 = Skin_SnapX( x ), y0 = Skin_SnapY( y ), x1 = Skin_SnapX( x + w ), y1 = Skin_SnapY( y + h );
+	const int			pixels = Q_max( 1, (int)( Q_min( radius, Q_min( x1 - x0, y1 - y0 ) ) * sy + 0.5f ) );
+	const skinShape_t	*shape;
+	vec4_t				color;
+
+	item->skinFocus = Skin_Ease( item->skinFocus, Skin_HasFocus( item ), SKIN_EASE_MSEC );
+	if ( item->skinFocus <= 0.0f || !Skin_Ready() || x1 <= x0 || y1 <= y0 ) {
+		return;
+	}
+	shape = Skin_Shape( SKIN_FILL, pixels, 0 );
+	if ( !shape ) {
+		return;
+	}
+	Skin_Color( color, Skin_Accent( item ), 0.12f * item->skinFocus );
+	DC->setColor( color );
+	Skin_NineSliceTop( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), pixels / sy, shape, qtrue, qtrue );
+	DC->setColor( NULL );
 }
 
 // the colour of the text of an item: its own, brighter the more it is in focus, and that of its menu when off

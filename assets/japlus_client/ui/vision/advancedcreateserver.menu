@@ -56,7 +56,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_SERVER_RULES
-			rect					28 24 1044 34
+			rect					28 19.4 1044 34
 			font					5
 			textscale				1.33
 			textalign				ITEM_ALIGN_LEFT
@@ -72,7 +72,7 @@
 			name					rules_title
 			group					none
 			text					@MENUS_COMBAT_RULES
-			rect					28 70 502 44
+			rect					28 65.4 502 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -91,7 +91,7 @@
 			name					rules_title
 			group					none
 			text					@MENUS_ADV_GAME_RULES
-			rect					28 390 502 44
+			rect					28 385.4 502 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -110,7 +110,7 @@
 			name					rules_title
 			group					none
 			text					@MENUS_SERVER_RULES
-			rect					570 70 502 44
+			rect					570 65.4 502 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -129,7 +129,7 @@
 			name					rules_title
 			group					none
 			text					@MENUS_CONNECTION_RULES
-			rect					570 302 502 44
+			rect					570 297.4 502 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -159,7 +159,7 @@
 				"4" ;
 				"5"
 			}
-			rect					28 114 502 44
+			rect					28 109.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -181,7 +181,7 @@
 			ownerdraw				UI_FORCE_MASTERY_SET
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					28 246 502 44
+			rect					28 241.4 502 44
 			font					5
 			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
@@ -201,7 +201,7 @@
 			text					@MENUS_DEDICATED_SERVER
 			cvar					"ui_dedicated"
 			cvarFloatList { @MENUS_NO 0 @MENUS_LAN 1 @MENUS_INTERNET 2 }
-			rect					570 202 502 44
+			rect					570 197.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -223,7 +223,7 @@
 			text					@MENUS_PURE_SERVER
 			descText				@MENUS_CLIENT_MUST_HAVE_EXACT
 			cvar					"sv_pure"
-			rect					570 346 502 44
+			rect					570 341.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -244,7 +244,7 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_weaponDisable"
-			rect					28 158 502 44
+			rect					28 153.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -272,7 +272,7 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_duelWeaponDisable"
-			rect					28 158 502 44
+			rect					28 153.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -305,7 +305,7 @@
 				"0" ;
 				"3"
 			}
-			rect					28 202 502 44
+			rect					28 197.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -333,7 +333,7 @@
 				"2" ;
 				"4"
 			}
-			rect					28 290 502 44
+			rect					28 285.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -371,7 +371,7 @@
 				@MENUS_NO 1
 				@MENUS_LIMITED 2
 			}
-			rect					28 290 502 44
+			rect					28 285.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -402,7 +402,7 @@
 				"3" ;
 				"5"
 			}
-			rect					28 478 502 44
+			rect					28 473.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -423,7 +423,7 @@
 			text					@MENUS_SABERLOCKING
 			descText				@MENUS_SABERLOCKING_DESC
 			cvar					"g_saberLocking"
-			rect					28 334 502 44
+			rect					28 329.4 502 44
 			textaligny				3
 			font					5
 			textscale				0.94
@@ -444,7 +444,7 @@
 			text					@MENUS_AUTO_JOIN
 			descText				@MENUS_SET_TO_ON_TO_HAVE_PLAYERS
 			cvar					"g_teamautojoin"
-			rect					28 434 502 44
+			rect					28 429.4 502 44
 			textaligny				3
 			font					5
 			textscale				0.94
@@ -464,7 +464,7 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_ENABLE_VOTING
 			cvar					"g_allowvote"
-			rect					570 158 502 44
+			rect					570 153.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -485,7 +485,7 @@
 			type					4
 			text					@MENUS_PASSWORD_1
 			cvar					"g_password"
-			rect					570 246 502 44
+			rect					570 241.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -508,7 +508,7 @@
 			text					@MENUS_AUTO_DOWNLOAD
 			descText				@MENUS_CLIENTS_CAN_DOWNLOAD
 			cvar					"sv_allowdownload"
-			rect					570 390 502 44
+			rect					570 385.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -530,7 +530,7 @@
 			text					@MENUS_MINIMUM_PING
 			descText				@MENUS_FASTEST_CLIENT_ALLOWED
 			cvar					"sv_minping"
-			rect					570 434 502 44
+			rect					570 429.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -552,7 +552,7 @@
 			text					@MENUS_MAXIMUM_PING
 			descText				@MENUS_SLOWEST_CLIENT_ALLOWED
 			cvar					"sv_maxping"
-			rect					570 478 502 44
+			rect					570 473.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -573,7 +573,7 @@
 			text					@MENUS_MAX_RATE
 			descText				@MENUS_DATA_TRANSFER_RATE_TO
 			cvar					"sv_maxrate"
-			rect					570 522 502 44
+			rect					570 517.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -595,7 +595,7 @@
 			descText				@MENUS_MINIMUM_TIME_ALLOWED
 			cvar					"sv_reconnectlimit"
 			maxchars				4
-			rect					570 566 502 44
+			rect					570 561.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94
@@ -615,7 +615,7 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_AUTO_MAP_CYCLE
 			cvar					"g_autoMapCycle"
-			rect					570 114 502 44
+			rect					570 109.4 502 44
 			textaligny				1
 			font					5
 			textscale				0.94

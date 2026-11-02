@@ -2344,7 +2344,7 @@
 				close all
 			}
 			font					5
-			textaligny				8
+			textaligny				8.48
 			caps					1
 			style					WINDOW_STYLE_PANEL
 			radius					6.4

@@ -23,6 +23,12 @@ LANG_ENGLISH        "Game types, force, weapons"
 REFERENCE           EDIT_PROFILE
 LANG_ENGLISH        "Edit profile"
 
+REFERENCE           VIEW_BOTS_ONLY
+LANG_ENGLISH        "View Bots Only:"
+
+REFERENCE           INCLUDE_SERVERS_ON_WHICH_ONLY_BOTS_P
+LANG_ENGLISH        "Include servers on which only bots play"
+
 REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
 LANG_ENGLISH        "Double-click a server to join"
 
@@ -2155,6 +2161,93 @@ LANG_ENGLISH        "Keys"
 
 REFERENCE           COMMAND
 LANG_ENGLISH        "Command"
+
+REFERENCE           BACK_KICK
+LANG_ENGLISH        "Back Kick"
+
+REFERENCE           JEDI_TORNADO
+LANG_ENGLISH        "Jedi Tornado"
+
+REFERENCE           JUMP_GRAB_BACK_KICK
+LANG_ENGLISH        "Jump Grab Back Kick"
+
+REFERENCE           JUMP_SPIN_BACK_KICK
+LANG_ENGLISH        "Jump Spin Back Kick"
+
+REFERENCE           MELEE_KNEE_KICK
+LANG_ENGLISH        "Melee Knee Kick"
+
+REFERENCE           MELEE_PUNCH
+LANG_ENGLISH        "Melee Punch"
+
+REFERENCE           MELEE_CHOKE
+LANG_ENGLISH        "Melee Choke"
+
+REFERENCE           MELEE_THROW
+LANG_ENGLISH        "Melee Throw"
+
+REFERENCE           NEW_FORWARD_KICK
+LANG_ENGLISH        "New Forward Kick"
+
+REFERENCE           NEW_PULL_IMPALE
+LANG_ENGLISH        "New Pull Impale"
+
+REFERENCE           NEW_SABER_FLIP_STAB
+LANG_ENGLISH        "New Saber Flip Stab"
+
+REFERENCE           NEW_SPIN_ATTACK
+LANG_ENGLISH        "New Spin Attack"
+
+REFERENCE           SITH_KISS
+LANG_ENGLISH        "Sith Kiss"
+
+REFERENCE           SPIN_KICK
+LANG_ENGLISH        "Spin Kick"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_RIGHT_ALT_ATT
+LANG_ENGLISH        "Melee or Staff + Forward + Right + Alt Attack"
+
+REFERENCE           MELEE_PUSH_LEVEL_2_OR_HIGHER_IN_FRON
+LANG_ENGLISH        "Melee + Push level 2 or higher, in front of an enemy, Jedi only"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_DUAL_SA
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Forward + Jump + Alt Attack, in front of an enemy"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK
+LANG_ENGLISH        "Forward + Jump + Alt Attack"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_SINGLE
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Single Saber"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_BACKWARD_IN
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Backward, in front of an enemy"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_FORWARD_IN_F
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Forward, in front of an enemy"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Melee + Attack + Alt Attack, in front of an enemy"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_RIGHT_IN_FRO
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Right, in front of an enemy"
+
+REFERENCE           FORWARD_ALT_ATTACK_IN_FRONT_OF_AN_EN
+LANG_ENGLISH        "Forward + Alt Attack, in front of an enemy"
+
+REFERENCE           PULL_ATTACK_IN_FRONT_OF_AN_ENEMY
+LANG_ENGLISH        "Pull + Attack, in front of an enemy"
+
+REFERENCE           JUMP_FORWARD_ATTACK_IN_FRONT_OF_AN_E
+LANG_ENGLISH        "Jump + Forward + Attack, in front of an enemy"
+
+REFERENCE           MELEE_DRAIN_LEVEL_2_OR_HIGHER_IN_FRO
+LANG_ENGLISH        "Melee + Drain level 2 or higher, in front of an enemy"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_LEFT_ALT_ATTA
+LANG_ENGLISH        "Melee or Staff + Forward + Left + Alt Attack"
 
 
 ENDMARKER

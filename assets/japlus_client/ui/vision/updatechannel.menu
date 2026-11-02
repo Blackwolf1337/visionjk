@@ -52,7 +52,7 @@
 		itemDef
 		{
 			name					vision_kicker
-			rect					28 24 504 18
+			rect					28 23.2 504 18
 			visible					1
 			text					@VISION_UPDATE_CHANNEL
 			font					7
@@ -71,7 +71,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_WARNING
-			rect					28 50 504 34
+			rect					28 49.2 504 34
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -88,7 +88,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
-			rect					28 96 504 23
+			rect					28 95.2 504 23
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -105,7 +105,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
-			rect					28 121 504 23
+			rect					28 120.2 504 23
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -122,7 +122,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
-			rect					28 146 504 23
+			rect					28 145.2 504 23
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5

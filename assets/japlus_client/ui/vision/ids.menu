@@ -59,7 +59,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_INTRUSIONS
-			rect					28 24 844 34
+			rect					28 19.4 844 34
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -74,7 +74,7 @@
 		{
 			name					ids_list
 			group					none
-			rect					28 70 844 320
+			rect					28 65.4 844 320
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			540
@@ -98,7 +98,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
-			rect					28 402 844 22
+			rect					28 397.4 844 22
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5

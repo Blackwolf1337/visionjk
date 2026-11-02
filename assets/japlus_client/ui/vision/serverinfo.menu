@@ -59,7 +59,7 @@
 			name					screenTitle
 			text					@MENUS_SERVER_INFORMATION
 			style					WINDOW_STYLE_EMPTY
-			rect					28 24 624 34
+			rect					28 19.4 624 34
 			font					5
 			textscale				1.33
 			textalign				ITEM_ALIGN_LEFT
@@ -73,7 +73,7 @@
 		itemDef
 		{
 			name					serverinfoList
-			rect					28 70 624 440
+			rect					28 65.4 624 440
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			feeder					FEEDER_SERVERSTATUS

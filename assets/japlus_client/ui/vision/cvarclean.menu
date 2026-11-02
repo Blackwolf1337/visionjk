@@ -54,7 +54,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_CLEAN_UP_SETTINGS
-			rect					28 24 844 34
+			rect					28 19.4 844 34
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -69,7 +69,7 @@
 		{
 			name					cvarclean_list
 			group					none
-			rect					28 70 844 380
+			rect					28 65.4 844 380
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			568
@@ -94,7 +94,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-			rect					28 462 844 22
+			rect					28 457.4 844 22
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5

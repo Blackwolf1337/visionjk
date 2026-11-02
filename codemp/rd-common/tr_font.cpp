@@ -1607,6 +1607,69 @@ int RE_Font_HeightPixels(const int iFontHandle, const float fScaleIn)
 	return(0);
 }
 
+// a text of a TrueType font (vision_sans and the others): at a place in units that need not be whole
+static void RE_Font_DrawTTF( const CFontInfo *curfont, float ox, float oy, const char *psText, const float *rgba, int iFontHandle, int iMaxPixelWidth, float fScale )
+{
+	const float size = curfont->GetPointSize() * fScale;
+
+	if ( iFontHandle & STYLE_DROPSHADOW )
+	{
+		const vec4_t	dark = { 0.0f, 0.0f, 0.0f, ( rgba ? rgba[3] : 1.0f ) * 0.6f };
+		const float		off = Q_max( 0.5f, size * 0.06f );
+
+		R_FontTTF_DrawString( curfont->m_iTTF, ox + off, oy + off, psText, dark, size, iMaxPixelWidth, qtrue );
+	}
+	R_FontTTF_DrawString( curfont->m_iTTF, ox, oy, psText, rgba, size, iMaxPixelWidth, qfalse );
+}
+
+/*
+===============
+RE_Font_DrawStringF
+
+RE_Font_DrawString at a place in units that need not be whole: a TrueType font puts its letters on the pixel
+nearest to it. The fonts of the game only have whole units.
+===============
+*/
+void RE_Font_DrawStringF( float ox, float oy, const char *psText, const float *rgba, const int iFontHandle, int iMaxPixelWidth, const float fScale )
+{
+	const CFontInfo *curfont = GetFont( iFontHandle );
+
+	if ( !curfont || !psText )
+	{
+		return;
+	}
+	if ( curfont->m_iTTF < 0 )
+	{
+		RE_Font_DrawString( (int)ox, (int)oy, psText, rgba, iFontHandle, iMaxPixelWidth, fScale );
+		return;
+	}
+	if ( ( iFontHandle & STYLE_BLINK ) && ( ( ri.Milliseconds() >> 7 ) & 1 ) )
+	{
+		return;
+	}
+	RE_Font_DrawTTF( curfont, ox, oy, psText, rgba, iFontHandle, iMaxPixelWidth, fScale );
+}
+
+/*
+===============
+RE_Font_InkBox
+
+The pixels the letters of a text cover when it is drawn at 0,0: box is left, top, right, bottom in units.
+qfalse for a font of the game, which does not know them (box is not touched).
+===============
+*/
+qboolean RE_Font_InkBox( const char *psText, const int iFontHandle, const float fScale, float *box )
+{
+	const CFontInfo *curfont = GetFont( iFontHandle );
+
+	if ( !curfont || !psText || curfont->m_iTTF < 0 )
+	{
+		return qfalse;
+	}
+	R_FontTTF_InkBox( curfont->m_iTTF, psText, curfont->GetPointSize() * fScale, box );
+	return qtrue;
+}
+
 // iMaxPixelWidth is -1 for "all of string", else pixel display count...
 //
 void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, const int iFontHandleIn, int iMaxPixelWidth, const float fScaleIn)
@@ -1681,16 +1744,7 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 	}
 	if ( curfont->m_iTTF >= 0 )
 	{
-		const float size = curfont->GetPointSize() * fScale;
-
-		if ( iFontHandle & STYLE_DROPSHADOW )
-		{
-			const vec4_t	dark = { 0.0f, 0.0f, 0.0f, ( rgba ? rgba[3] : 1.0f ) * 0.6f };
-			const float		off = Q_max( 0.5f, size * 0.06f );
-
-			R_FontTTF_DrawString( curfont->m_iTTF, ox + off, oy + off, psText, dark, size, iMaxPixelWidth, qtrue );
-		}
-		R_FontTTF_DrawString( curfont->m_iTTF, ox, oy, psText, rgba, size, iMaxPixelWidth, qfalse );
+		RE_Font_DrawTTF( curfont, ox, oy, psText, rgba, iFontHandle, iMaxPixelWidth, fScale );
 		return;
 	}
 	curfont = RE_Font_GetVariant(curfont, &fScale);

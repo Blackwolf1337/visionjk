@@ -19,7 +19,7 @@
 		{
 			play "sound/interface/esc.wav" ;
 			uiScript closeJoin
-			open multiplayermenu
+			open main
 		}
 
 		itemDef
@@ -461,8 +461,8 @@
 		{
 			name					viewBotsOnly
 			type					11
-			text					"View Bots Only:"
-			descText				"Include servers on which only bots play"
+			text					@VISION_VIEW_BOTS_ONLY
+			descText				@VISION_INCLUDE_SERVERS_ON_WHICH_ONLY_BOTS_P
 			cvar					"v_browserShowBotOnly"
 			font					5
 			textscale				0.83
@@ -1047,7 +1047,7 @@
 			{
 				play "sound/interface/esc.wav" ;
 				close joinserver ;
-				open multiplayermenu
+				open main
 			}
 			caps					1
 		}

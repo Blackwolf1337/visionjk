@@ -109,6 +109,117 @@ static void UI_Mouse_f( void ) {
 	}
 }
 
+/*
+=================
+v_uiSweep <name>
+
+For the audit of the menus (tools that measure them): the pointer goes onto every item that can be used in the
+open menus, one after the other, and a PNG is taken of each, the first one with the pointer on nothing
+(screenshots/audit_<name>_base.png, then audit_<name>_<n>.png). audit/<name>_sweep.txt lists n, the menu, the
+item and its rectangle and where the pointer was, in pixels of the window. One step a frame, never waiting: each
+picture is taken when the mark of the item has come up (SKIN_EASE_MSEC and a little).
+=================
+*/
+#define SWEEP_SETTLE_MSEC	320
+
+extern menuDef_t	Menus[];
+extern int			menuCount;
+
+static struct {
+	qboolean	on;
+	char		name[32];
+	int			count;
+	int			at;				// -1: the picture without the pointer on anything
+	int			shotTime;		// when the picture of this step is taken, then the next step
+	qboolean	shot;
+	itemDef_t	*items[512];
+	int			index[512];		// its number in its menu, as the dump has it
+} sweep;
+
+static void UI_SweepPoint( float px, float py ) {
+	const int x = (int)( px / uiInfo.uiDC.xscale - uiInfo.uiDC.bias + 0.5f );
+	const int y = (int)( py / uiInfo.uiDC.yscale - uiInfo.uiDC.biasY + 0.5f );
+
+	UI_MouseEvent( x - uiInfo.uiDC.cursorx, y - uiInfo.uiDC.cursory );
+}
+
+static void UI_Sweep_f( void ) {
+	fileHandle_t	f;
+	int				i, j;
+
+	Q_strncpyz( sweep.name, UI_Argv( 1 )[0] ? UI_Argv( 1 ) : "sweep", sizeof( sweep.name ) );
+	sweep.count = 0;
+	for ( i = 0; i < menuCount; i++ ) {
+		menuDef_t *menu = &Menus[i];
+
+		if ( !( menu->window.flags & WINDOW_VISIBLE ) ) {
+			continue;
+		}
+		for ( j = 0; j < menu->itemCount && sweep.count < (int)ARRAY_LEN( sweep.items ); j++ ) {
+			itemDef_t *item = menu->items[j];
+
+			if ( Item_Dumped( item ) && !( item->window.flags & WINDOW_DECORATION ) && !item->disabled
+				&& item->window.rect.w > 0.0f && item->window.rect.h > 0.0f ) {
+				sweep.index[sweep.count] = j;
+				sweep.items[sweep.count++] = item;
+			}
+		}
+	}
+	if ( trap->FS_Open( va( "audit/%s_sweep.txt", sweep.name ), &f, FS_WRITE ) >= 0 ) {
+		for ( i = 0; i < sweep.count; i++ ) {
+			const itemDef_t	*item = sweep.items[i];
+			const rectDef_t	*r = &item->window.rect;
+			const menuDef_t	*menu = (const menuDef_t *)item->parent;
+			const char		*line = va( "%d %s %d %s %.0f %.0f %.0f %.0f %.0f %.0f\n", i, menu->window.name ? menu->window.name : "?",
+				sweep.index[i], item->window.name ? item->window.name : "-",
+				( r->x + uiInfo.uiDC.bias ) * uiInfo.uiDC.xscale, ( r->y + uiInfo.uiDC.biasY ) * uiInfo.uiDC.yscale,
+				r->w * uiInfo.uiDC.xscale, r->h * uiInfo.uiDC.yscale,
+				( r->x + r->w * 0.5f + uiInfo.uiDC.bias ) * uiInfo.uiDC.xscale, ( r->y + r->h * 0.5f + uiInfo.uiDC.biasY ) * uiInfo.uiDC.yscale );
+
+			trap->FS_Write( line, (int)strlen( line ), f );
+		}
+		trap->FS_Close( f );
+	}
+	sweep.on = qtrue;
+	sweep.at = -1;
+	sweep.shot = qfalse;
+	UI_SweepPoint( 0.0f, uiInfo.uiDC.glconfig.vidHeight - 1.0f );
+	sweep.shotTime = uiInfo.uiDC.realTime + SWEEP_SETTLE_MSEC;
+	Com_Printf( "v_uiSweep %s: %d items\n", sweep.name, sweep.count );
+}
+
+// once a frame (UI_Refresh)
+void UI_SweepFrame( void ) {
+	if ( !sweep.on || uiInfo.uiDC.realTime < sweep.shotTime ) {
+		return;
+	}
+	if ( !sweep.shot ) {
+		// (the picture is taken at the end of this frame)
+		if ( sweep.at < 0 ) {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "screenshot_png audit_%s_base\n", sweep.name ) );
+		} else {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "screenshot_png audit_%s_%d\n", sweep.name, sweep.at ) );
+		}
+		sweep.shot = qtrue;
+		sweep.shotTime = uiInfo.uiDC.realTime + 60;
+		return;
+	}
+	sweep.at++;
+	sweep.shot = qfalse;
+	if ( sweep.at >= sweep.count ) {
+		sweep.on = qfalse;
+		UI_SweepPoint( 0.0f, uiInfo.uiDC.glconfig.vidHeight - 1.0f );
+		Com_Printf( "v_uiSweep %s: done\n", sweep.name );
+		return;
+	}
+	{
+		const rectDef_t *r = &sweep.items[sweep.at]->window.rect;
+
+		UI_SweepPoint( ( r->x + r->w * 0.5f + uiInfo.uiDC.bias ) * uiInfo.uiDC.xscale, ( r->y + r->h * 0.5f + uiInfo.uiDC.biasY ) * uiInfo.uiDC.yscale );
+	}
+	sweep.shotTime = uiInfo.uiDC.realTime + SWEEP_SETTLE_MSEC;
+}
+
 // v_uiPage <n>: opens that page of the menu in focus (an options screen)
 static void UI_Page_f( void ) {
 	Menu_SetPage( Menu_GetFocused(), atoi( UI_Argv( 1 ) ) );
@@ -368,6 +479,7 @@ static consoleCommand_t	commands[] = {
 	{ "ui_opensiegemenu",	UI_OpenSiegeMenu_f },
 	{ "v_uiPage",			UI_Page_f },
 	{ "v_uiDump",			Menus_Dump },
+	{ "v_uiSweep",			UI_Sweep_f },
 	{ "ui_report",			UI_Report },
 };
 

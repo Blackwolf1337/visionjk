@@ -286,6 +286,12 @@ typedef struct refexport_s {
 		// Wet places for the scene of this frame (wetSpot_t), between ClearScene and RenderScene. NULL only asks.
 		// qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its puddles as marks.
 		qboolean			(*AddWet)								( const wetSpot_t *spots, int count );
+		// Font_DrawString at a place in units that need not be whole (the letters of a TrueType font go on the
+		// nearest pixel, a font of the game is cut to whole units)
+		void				(*Font_DrawStringF)						( float ox, float oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
+		// The pixels the letters of a text cover when it is drawn at 0,0: box is left, top, right, bottom in units.
+		// qfalse for a font of the game, which does not know them.
+		qboolean			(*Font_InkBox)							( const char *text, const int setIndex, const float scale, float *box );
 	} ext;
 
 } refexport_t;

@@ -55,7 +55,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_BOTS
-			rect					28 24 624 34
+			rect					28 19.4 624 34
 			font					5
 			textscale				1.33
 			textalign				ITEM_ALIGN_LEFT
@@ -73,7 +73,7 @@
 			text					@MENUS_1_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM1
-			rect					28 70 300 40
+			rect					28 65.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -99,7 +99,7 @@
 			text					@MENUS_2_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM1
-			rect					28 110 300 40
+			rect					28 105.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -125,7 +125,7 @@
 			text					@MENUS_3_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM2
-			rect					28 150 300 40
+			rect					28 145.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -151,7 +151,7 @@
 			text					@MENUS_4_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM2
-			rect					28 190 300 40
+			rect					28 185.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -177,7 +177,7 @@
 			text					@MENUS_5_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM3
-			rect					28 230 300 40
+			rect					28 225.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -203,7 +203,7 @@
 			text					@MENUS_6_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM3
-			rect					28 270 300 40
+			rect					28 265.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -229,7 +229,7 @@
 			text					@MENUS_7_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM4
-			rect					28 310 300 40
+			rect					28 305.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -255,7 +255,7 @@
 			text					@MENUS_8_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM4
-			rect					28 350 300 40
+			rect					28 345.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -281,7 +281,7 @@
 			text					"9."
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM5
-			rect					352 70 300 40
+			rect					352 65.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -307,7 +307,7 @@
 			text					@MENUS_10
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM5
-			rect					352 110 300 40
+			rect					352 105.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -333,7 +333,7 @@
 			text					@MENUS_11
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM6
-			rect					352 150 300 40
+			rect					352 145.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -359,7 +359,7 @@
 			text					@MENUS_12
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM6
-			rect					352 190 300 40
+			rect					352 185.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -385,7 +385,7 @@
 			text					@MENUS_13
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM7
-			rect					352 230 300 40
+			rect					352 225.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -411,7 +411,7 @@
 			text					@MENUS_14
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM7
-			rect					352 270 300 40
+			rect					352 265.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -437,7 +437,7 @@
 			text					@MENUS_15
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM8
-			rect					352 310 300 40
+			rect					352 305.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11
@@ -463,7 +463,7 @@
 			text					@MENUS_16
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM8
-			rect					352 350 300 40
+			rect					352 345.4 300 40
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				11

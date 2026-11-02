@@ -313,7 +313,7 @@
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_STARTMAPCINEMATIC
-			rect					732 226 760 570
+			rect					724 220 776 582
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			backcolor				0 0 0 0
@@ -326,7 +326,7 @@
 		{
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
-			rect					726 220 772 582
+			rect					718 214 788 594
 			bordercolor				0.11 0.18 0.29 1
 			visible					1
 			backcolor				0 0 0 0
@@ -380,7 +380,7 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_weaponDisable"
-			rect					58 268 556 44
+			rect					58 271.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -411,7 +411,7 @@
 			text					@MENUS_LIGHTSABER_ONLY
 			descText				@MENUS_SABER_ONLY_INFO
 			cvar					"g_duelWeaponDisable"
-			rect					58 268 556 44
+			rect					58 271.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -444,7 +444,7 @@
 			cvar					"g_forcePowerDisable"
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					58 312 556 44
+			rect					58 315.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -474,7 +474,7 @@
 			ownerdraw				UI_FORCE_MASTERY_SET
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					58 356 556 44
+			rect					58 359.15 556 44
 			font					5
 			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
@@ -497,7 +497,7 @@
 			type					ITEM_TYPE_NUMERICFIELD
 			text					@MENUS_TIME_LIMIT
 			cvar					"timelimit"
-			rect					58 452 556 44
+			rect					58 455.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -529,7 +529,7 @@
 				"0" ;
 				"3" ;
 			}
-			rect					58 496 556 44
+			rect					58 499.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -557,7 +557,7 @@
 			cvar					"capturelimit"
 			cvarTest				"ui_netGameType"
 			showCvar { "5" ; }
-			rect					58 496 556 44
+			rect					58 499.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -592,7 +592,7 @@
 				"4" ;
 				"5" ;
 			}
-			rect					58 496 556 44
+			rect					58 499.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -619,7 +619,7 @@
 			text					@MENUS_PLAYERS
 			descText				@MENUS_PLAYERS_INFO
 			cvar					"bot_minplayers"
-			rect					58 592 556 44
+			rect					58 595.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -643,7 +643,7 @@
 			type					ITEM_TYPE_NUMERICFIELD
 			text					@MENUS_MAXIMUM_PLAYERS
 			cvar					"sv_maxclients"
-			rect					58 636 556 44
+			rect					58 639.15 556 44
 			textaligny				-0.65
 			font					5
 			textscale				0.94
@@ -668,7 +668,7 @@
 			ownerdraw				UI_SKILL
 			text					@MENUS_SKILL
 			descText				@MENUS_ADJUSTS_THE_DIFFICULTY
-			rect					58 680 556 44
+			rect					58 683.15 556 44
 			textstyle				0
 			font					5
 			textscale				0.94
@@ -695,7 +695,7 @@
 			textscale				0.83
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					58 728 556 36
+			rect					58 731.15 556 36
 			textalignx				278
 			textaligny				10.5
 			textalign				ITEM_ALIGN_CENTER
@@ -718,7 +718,7 @@
 			name					rules_title
 			group					none
 			text					@MENUS_GENERAL_RULES
-			rect					58 224 556 44
+			rect					58 227.15 556 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -737,7 +737,7 @@
 			name					end_game_title
 			group					none
 			text					@MENUS_ENDGAME_RULES
-			rect					58 408 556 44
+			rect					58 411.15 556 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -756,7 +756,7 @@
 			name					bots_title
 			group					none
 			text					@MENUS_BOTS
-			rect					58 548 556 44
+			rect					58 551.15 556 44
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT

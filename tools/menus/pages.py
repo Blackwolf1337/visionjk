@@ -63,13 +63,14 @@ def text_left(b, x_pad, scale, y_drop):
     mf.put(b, 'textaligny', mf.fmt(y_drop))
 
 
-def text_center(b, scale, y_drop):
+def text_center(b, scale):
+    """The words of the item on its middle (the ui puts the capitals on the middle of the box of 18 * scale)."""
     r = rect_of(b)
     mf.put(b, 'font', FONT)
     mf.put(b, 'textscale', mf.fmt(scale))
     mf.put(b, 'textalign', 'ITEM_ALIGN_CENTER')
     mf.put(b, 'textalignx', mf.fmt(r[2] / 2))
-    mf.put(b, 'textaligny', mf.fmt(y_drop))
+    mf.put(b, 'textaligny', mf.fmt((r[3] - 18.0 * scale) / 2))
 
 
 def top_bar(m, here):
@@ -89,7 +90,7 @@ def top_bar(m, here):
         n = name_of(b)
         if n in NAV:
             set_rect(b, NAV_X[n], 7, NAV_W, 20)
-            text_center(b, 0.66, 4)
+            text_center(b, 0.66)
             mf.put(b, 'caps', 1)
             if NAV_X[n] == NAV_X.get(here):
                 mf.put(b, 'forecolor', *ACCENT)
@@ -371,7 +372,7 @@ def window_button(b, primary):
     r = rect_of(b)
     w = max(70, min(r[2], 110))
     set_rect(b, r[0] + r[2] / 2 - w / 2, r[1] + r[3] / 2 - 10, w, 20)
-    text_center(b, 0.64, 4)
+    text_center(b, 0.64)
     mf.put(b, 'caps', 1)
     mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
     mf.put(b, 'radius', 3.2)
@@ -878,7 +879,7 @@ def ingame_bar(m):
     for e in left + right:
         b = e.block
         set_rect(b, 8, 0, 52, 26)
-        text_center(b, 0.56, 7)
+        text_center(b, 0.56)
         mf.put(b, 'caps', 1)
         mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
         mf.put(b, 'flow', 1)
@@ -986,6 +987,12 @@ def page(m, name, ingame):
             elif g in ('video', 'vidrestart'):
                 mf.put(e.block, 'visible', 0)
     full = mf.truth(mf.get(m, 'fullscreen'))
+    for e in items(m):
+        # (a field to type into that is a decoration and shows no cvar is a title of the old menus, the voice chat's:
+        # the new look would draw the box of a field beside it. One with a cvar shows a value: the facts of About)
+        if mf.get(e.block, 'decoration') is not None and not mf.get(e.block, 'cvar') \
+                and (mf.get(e.block, 'type') or [''])[0] in ('ITEM_TYPE_EDITFIELD', '4'):
+            mf.put(e.block, 'type', 'ITEM_TYPE_TEXT')
     if menu == 'rulesmenu_weapons':
         # (the page of the game opens on the stun baton of the single player game, which has no button and no text
         # here: the panel stood empty. It opens on the lightsaber.)
@@ -1054,6 +1061,10 @@ def page(m, name, ingame):
         return
     elif not full and ingame and menu == 'ingame_addbot' and ports.addbot(m):
         return
+    elif not full and ingame and menu == 'modsay' and ports.modsay(m):
+        return
+    elif not full and ingame and menu == 'ingame_voicechat' and ports.voicechat(m):
+        return
     elif not full and ingame and menu == 'ingame_callvote' and ports.callvote(m):
         return
     elif not full and ingame and menu == 'ingame_about' and ports.about(m):
@@ -1070,8 +1081,33 @@ def page(m, name, ingame):
     if not mf.get(m, 'canvas'):
         # (a page in the pixels of the canvas, ports.py, has its texts and rows where it wants them)
         tidy(m)
+    if not ingame and menu != 'multiplayermenu':
+        # (the way back of the pages of Play went to the list "Start Playing" of the old menus: Home has those ways)
+        def home(block):
+            for e in block:
+                if isinstance(e, mf.Entry):
+                    if isinstance(e.block, list):
+                        if e.block and isinstance(e.block[0], mf.Entry):
+                            home(e.block)
+                        else:
+                            e.block = ['main' if isinstance(w, str) and w.lower() == 'multiplayermenu' else w for w in e.block]
+        home(m)
     # everything onto the design canvas (canvas.py): the bars of the board, the content smaller and in the middle
     canvas.convert(m, ingame)
+    if menu == 'multiplayermenu':
+        # (the buttons of the old list were a little higher than the steps between them and overlapped: as high as
+        # a step, their text in the middle)
+        stack = [e for e in items(m) if name_of(e.block) in ('quickserver_button', 'joinserver_button', 'startserver_button',
+                                                              'playdemo_button', 'rules_button')]
+        for a, b in zip(stack, stack[1:] + [None]):
+            x, y, w, h = canvas._rect(a.block)
+            if b is not None:
+                h = canvas._rect(b.block)[1] - y
+            else:
+                h = y - canvas._rect(stack[-2].block)[1]
+            mf.put(a.block, 'rect', mf.fmt(x), mf.fmt(y), mf.fmt(w), mf.fmt(h))
+            ts = mf.num((mf.get(a.block, 'textscale') or ['1'])[0]) or 1.0
+            mf.put(a.block, 'textaligny', mf.fmt((h - 18.0 * ts) / 2))
 
 
 # pages whose content began under the logo of the game, by file: noted before the rules took the logo away

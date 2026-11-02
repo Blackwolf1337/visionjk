@@ -377,7 +377,7 @@
 			{
 				play "sound/interface/button1.wav" ;
 				close all ;
-				open multiplayermenu
+				open main
 			}
 			caps					1
 		}

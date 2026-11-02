@@ -96,7 +96,7 @@
 			mouseEnter { show button_glow }
 			mouseExit { hide button_glow }
 			font					5
-			textaligny				8
+			textaligny				8.48
 			caps					1
 			radius					6.4
 			backcolor				0.36 0.78 0.96 1

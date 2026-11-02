@@ -11,6 +11,7 @@ import texts
 TOP = cv.HEAD_H
 FOOT_Y = cv.H - cv.FOOT_H
 SUB_H = 52                  # the strip under the bar of a section: Join a game, Create a game, Solo game, Demos, Rules
+CAP = 0.7                   # the height of the capitals of the fonts, of their size (measured: bold 0.71, regular 0.68)
 
 
 def by_name(m):
@@ -148,14 +149,20 @@ def home(m):
             middle(e, rect, px, 'left', pad)
             mf.put(b, 'radius', 10)
             mf.put(b, 'font', cv.BOLD if kind == 'primary' else FONT)
-            # the name a little above the middle, a line about it under it (as the board)
+            # the name a little above the middle, a line about it under it (as the board). The ui puts the capitals
+            # of a text on the middle of its box (Text_InkAt): the two together, from the top of the name's capitals
+            # to the baseline of the line, are on the middle of the card
             x, y, w, h = rect
             sub = 16 if kind == 'primary' else 14
-            mf.put(b, 'textaligny', mf.fmt((h - px - sub - 4) / 2.0))
-            m.append(cv.text(n + '_line', (x + pad, y + (h - px - sub - 4) / 2.0 + px + 4, w - 2 * pad, sub + 4), texts.ref(lines[n]), sub,
+            gap = (px + sub) * (1 - CAP) / 2 + 6
+            top = y + (h - CAP * (px + sub) - gap) / 2
+            mf.put(b, 'textaligny', mf.fmt(top - y - px * (1 - CAP) / 2))
+            sub_y = top + CAP * px + gap - sub * (1 - CAP) / 2 - 2
+            m.append(cv.text(n + '_line', (x + pad, sub_y, w - 2 * pad, sub + 4), texts.ref(lines[n]), sub,
                              ['0.043', '0.165', '0.251', '1'] if kind == 'primary' else cv.MUTED, 'left', 0, FONT, ('decoration',)))
             if kind == 'primary':
-                m.append(cv.text(n + '_arrow', (x + w - 60, y, 40, h), '">"', 30, ON_ACCENT, 'center', 0, cv.BOLD, ('decoration',)))
+                # (its letter ends as far from the right edge as the name begins from the left one)
+                m.append(cv.text(n + '_arrow', (x + w - 60, y, 60, h), '">"', 30, ON_ACCENT, 'right', pad, cv.BOLD, ('decoration',)))
     # the player's model in the middle, on a soft light, and the way to the profile under it
     for e in its.get('character', []):
         place(e, (760, 140, 300, 600))
@@ -191,6 +198,15 @@ def home(m):
     mf.put(m, 'descScale', cv.scale(13))
 
 
+def old_words(e):
+    """The text and the line about an item that the old menu wrote in English (the filter JA+ added): the texts of
+    texts.py in their place."""
+    for key in ('text', 'desctext'):
+        words = mf.get(e.block, key)
+        if words:
+            mf.put(e.block, key, texts.old(words[0]))
+
+
 def join(m):
     """Join a game, as the board "Play: join a game": the filters over the list, the list of servers, at the right the
     level of the chosen server and what can be done with it."""
@@ -209,6 +225,7 @@ def join(m):
             place(e, rect)
             sized(e, 15)
             mf.put(e.block, 'textaligny', mf.fmt((30 - 15) / 2.0))
+            old_words(e)
     table = (36, y0 + 106, 1128, FOOT_Y - 24 - (y0 + 106))
     tx, ty, tw, th = table
     m.insert(next(i for i, e in enumerate(m) if e.k == 'itemdef' and (mf.get(e.block, 'name') or [''])[0] == 'serverlist'),
@@ -308,12 +325,23 @@ def create(m):
         mf.put(b, 'backcolor', *cv.CARD)
         mf.put(b, 'bordercolor', *cv.CARD_EDGE)
     # the picture of the level, the places of the players under it
+    # (the frame and the panel of the places as wide as each other, 18 from the rails at both sides; the panel ends
+    # where the list of the levels ends)
     for e in its.get('mappreview', []):
         if mf.get(e.block, 'ownerdraw'):
-            place(e, (336, y0 + 30, 528, 396))
+            place(e, (324, y0 + 30, 552, 414))
         else:
-            place(e, (330, y0 + 24, 540, 408))
+            place(e, (318, y0 + 24, 564, 426))
             mf.put(e.block, 'radius', 10)
+    slots_y = y0 + 24 + 426 + 24
+    slots_h = FOOT_Y - 24 - slots_y
+    # the grid in the middle of the panel: 4 columns of 130 with 4 between them; the capitals of the first places
+    # (15 on the middle of 34: 11.75 under its top) as far under the top of the panel as the line of the last row
+    # (1 over the end of the row) is over its bottom
+    grid_x = 318 + (564 - (4 * 134 - 4)) / 2.0
+    grid_h = 4 * 34 + 4 + 44
+    pad = (slots_h - grid_h - (17 - CAP * 15 / 2) + 1) / 2.0
+    grid_y = slots_y + pad
     # the 16 places of the players, by their number (the text of each is @MENUS_1_1 ... @MENUS_16): four columns of four
     import re
     for e in [e for n in ('humanbotfield', 'humanbotnonfield') for e in its.get(n, [])]:
@@ -322,12 +350,13 @@ def create(m):
         if not num:
             continue
         i = int(num.group(1)) - 1
-        place(e, (336 + (i // 4) * 134, y0 + 452 + (i % 4) * 34, 130, 34))
+        place(e, (grid_x + (i // 4) * 134, grid_y + (i % 4) * 34, 130, 34))
         sized(e, 15)
+        mf.put(e.block, 'textaligny', mf.fmt((34 - 15) / 2.0))
     for e in its.get('difficultyfield', []):
-        pages_row(e, (336, y0 + 452 + 4 * 34 + 4, 528, 44), 15)
+        pages_row(e, (grid_x, grid_y + 4 * 34 + 4, 4 * 134 - 4, 44), 15)
     for e in its.get('vision_slots', []):
-        place(e, (318, y0 + 440, 564, 4 * 34 + 64))
+        place(e, (318, slots_y, 564, slots_h))
         mf.put(e.block, 'radius', 10)
     # the server and its rules at the right
     rx = 900
@@ -374,11 +403,14 @@ def solo(m, menu):
     rule_items = [e for n in ('options', 'normal', 'expert_button', 'difficulty_button', 'custombots_button', 'rules_title',
                               'end_game_title', 'bots_title') for e in its.get(n, [])]
     m.append(cv.panel('vision_rules2', (36, y0 + 90, 600, FOOT_Y - y0 - 114), cv.CARD, cv.CARD_EDGE, 10))
-    rows(rule_items, 58, y0 + 100, 556, 44, 8, stack=1)
+    # (measured: the capitals of the first heading 37.7 under the top of the panel, the button at the end 44 over its
+    # bottom; the rows 3.15 lower put them on its middle)
+    rows(rule_items, 58, y0 + 103.15, 556, 44, 8, stack=1)
     for e in rule_items:
         m.remove(e)
         m.append(e)
-    map_preview(its, (678, y0 + 102, 868, FOOT_Y - y0 - 138))
+    # (the frame of the picture, 6 around it, from the top of the panel of the rules to its bottom)
+    map_preview(its, (678, y0 + 96, 868, FOOT_Y - y0 - 126))
     footer_buttons(m, ('back_button',), ('next_button',))
 
 
@@ -810,7 +842,8 @@ def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None, 
     m[:] = [e for e in m if e.k != 'itemdef' or id(e) in keep]
     new = [cv.fill('vision_veil', (-x0, -y0, cv.W, cv.H), ['0', '0', '0', '0.55'], ('wide', 1)),
            cv.panel('vision_dialog', (0, 0, w, h), DIALOG, cv.EDGE, 12, ('shadow', 40))]
-    y = 24
+    # (the capitals of the first line as far under the top as the content is from the sides: 28)
+    y = 28 - (9 - CAP * 6) if kicker is not None else 28 - (17 - CAP * 12)
     if kicker is not None:
         if isinstance(kicker, str):
             new.append(cv.text('vision_kicker', (28, y, w - 56, 18), kicker, 12, cv.MUTED, 'left', 0, cv.BOLD, ('caps', 1), ('decoration',)))
@@ -986,6 +1019,115 @@ def addbot(m):
     return True
 
 
+def modsay(m):
+    """A message of the mod (JA+ modsay) in a game: the title with Done at the right, the kind of message as a field,
+    the words to send as a row; the list of the players under them for a private say and an admin print, and to
+    whom for an admin print. The window is as high as what its kind shows (the old one grew with the list)."""
+    import pages
+    mr = pages.rect_of(m)
+    its = by_name(m)
+    one = lambda n: (its.get(n) or [None])[0]  # noqa: E731
+    kind, to, words, done, players = (one('modsaytype'), one('modsayallplayers'), one('texttosend'), one('saysendbutton'),
+                                      one('playerlist'))
+    if not mr or not kind or not words or not done:
+        return False
+    w, pad, row_h, list_h = 1100, 24, 84, 300
+    top = 20 + 64 + 16
+    small = top + row_h + 12 + row_h + pad
+    listed = small + list_h + pad
+    full = listed + row_h + pad
+    # (ui_modsay: 0 clan say and 2 admin say without a list, 1 private say with it, 3 admin print with it and to whom)
+    new = []
+    for name, h, values in (('vision_window', small, ('"0"', ';', '"2"')), ('vision_window_list', listed, ('"1"',)),
+                            ('vision_window_to', full, ('"3"',))):
+        e = cv.panel(name, (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16, ('cvarTest', '"ui_modsay"'))
+        e.block.append(Entry('showCvar', [], list(values)))
+        new.append(e)
+    for e in its.get('modsaytitle', []):
+        middle(e, (pad + 4, 20, w - 2 * pad - 260, 64), 22, 'left')
+        mf.put(e.block, 'font', cv.BOLD)
+        mf.put(e.block, 'forecolor', *cv.MUTED)
+        mf.put(e.block, 'caps', 1)
+        mf.put(e.block, 'style', 'WINDOW_STYLE_EMPTY')
+        for key in ('background', 'border'):
+            mf.drop(e.block, key)
+        mf.put(e.block, 'decoration')
+        new.append(e)
+    control(done, (w - pad - 240, 20, 240, 64), 26, 'primary')
+    new.append(done)
+    _ingame_row(kind, (pad, top, w - 2 * pad, row_h))
+    new.append(kind)
+    place(words, (pad, top + row_h + 12, w - 2 * pad, row_h))
+    sized(words, 28)
+    entry(words, (mf.get(words.block, 'text') or ['""'])[0])
+    new.append(words)
+    if players:
+        place(players, (pad, small, w - 2 * pad, list_h))
+        inset(players)
+        sized(players, 26)
+        mf.put(players.block, 'elementheight', 52)
+        new.append(players)
+    if to:
+        # (its switch as wide as the field of the words above it: "Selected Player" needs the room)
+        _ingame_row(to, (pad, listed, w - 2 * pad, row_h))
+        mf.put(to.block, 'row', 3)
+        new.append(to)
+    _ingame_window(m, cv.IN_W / 2.0 + (mr[0] - 320) * cv.IN_K, w, full, new)
+    return True
+
+
+def voicechat(m):
+    """The voice chat in a game: the title with Cancel at the right, the kinds of message (group main) or, after one
+    is chosen, its name and its messages (one group each) as rows. Each group has a panel of its own height, shown
+    and hidden with it by the scripts of the menu."""
+    import pages
+    mr = pages.rect_of(m)
+    its = by_name(m)
+    cancel = (its.get('cancel') or [None])[0]
+    if not mr or not cancel:
+        return False
+    groups = {}
+    for e in pages.items(m):
+        g = pages.group_of(e.block)
+        if g and g != 'none' and pages.rect_of(e.block):
+            groups.setdefault(g, []).append(e)
+    if 'main' not in groups:
+        return False
+    w, pad, row_h, step = 760, 24, 64, 72
+    top = 20 + 64 + 16
+    new, tallest = [], 0
+    for g, group in groups.items():
+        heads = [e for e in group if pages.name_of(e.block) == 'title']
+        rows_ = sorted([e for e in group if e not in heads], key=lambda e: pages.rect_of(e.block)[1])
+        y = top
+        for e in heads:
+            middle(e, (pad + 4, y, w - 2 * pad - 8, 52), 26, 'left')
+            mf.put(e.block, 'forecolor', *BRIGHT)
+            new.append(e)
+            y += 52 + 8
+        for n, e in enumerate(rows_):
+            control(e, (pad, y + n * step, w - 2 * pad, row_h), 26, 'plain', 'left', 18)
+            mf.drop(e.block, 'caps')
+            new.append(e)
+        h = y + len(rows_) * step - (step - row_h) + pad
+        tallest = max(tallest, h)
+        panel_ = cv.panel('vision_window_' + g, (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16, ('group', g))
+        if g != 'main':
+            mf.put(panel_.block, 'visible', 0)
+        new.insert(0, panel_)
+    for e in pages.items(m):
+        if pages.name_of(e.block) == 'title' and pages.group_of(e.block) in ('', 'none', None):
+            middle(e, (pad + 4, 20, w - 2 * pad - 220, 64), 22, 'left')
+            mf.put(e.block, 'font', cv.BOLD)
+            mf.put(e.block, 'forecolor', *cv.MUTED)
+            mf.put(e.block, 'caps', 1)
+            new.append(e)
+    control(cancel, (w - pad - 200, 20, 200, 64), 26, 'outline')
+    new.append(cancel)
+    _ingame_window(m, cv.IN_W / 2.0 + (mr[0] - 320) * cv.IN_K, w, tallest, new)
+    return True
+
+
 def callvote(m):
     """Call a vote in a game: the kinds of vote at the left as a list, what can be voted on at the right: choices as
     cards, or a list with OKAY under it (the groups the scripts of the menu show and hide)."""
@@ -1099,6 +1241,7 @@ def ingame_servers(m):
             place(e, rect)
             sized(e, 22)
             mf.put(e.block, 'textaligny', mf.fmt((48 - 22) / 2.0))
+            old_words(e)
             new.append(e)
     tx, ty, tw, th = pad, 168, w - 2 * pad, 600
     new.append(cv.panel('vision_table', (tx, ty, tw, th), cv.FIELD, cv.EDGE, 10))

@@ -54,7 +54,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_WHAT_S_NEW
-			rect					28 24 984 34
+			rect					28 19.4 984 34
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -69,7 +69,7 @@
 		{
 			name					changelog_list
 			group					none
-			rect					28 70 260 518
+			rect					28 65.4 260 522.6
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			140
@@ -91,7 +91,7 @@
 		{
 			name					changelog_entry
 			group					none
-			rect					308 70 704 518
+			rect					308 65.4 704 522.6
 			type					ITEM_TYPE_OWNERDRAW
 			ownerdraw				UI_CHANGELOG
 			style					WINDOW_STYLE_PANEL

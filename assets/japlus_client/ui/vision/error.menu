@@ -53,7 +53,7 @@
 		itemDef
 		{
 			name					errorinfo
-			rect					28 24 504 18
+			rect					28 23.2 504 18
 			text					@MENUS_ERROR
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
@@ -70,7 +70,7 @@
 		itemDef
 		{
 			name					errorinfo
-			rect					28 50 504 180
+			rect					28 49.2 504 180
 			type					ITEM_TYPE_TEXT
 			style					WINDOW_STYLE_EMPTY
 			textstyle				0

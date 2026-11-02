@@ -57,7 +57,7 @@
 			group					vidwarn
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_UNAPPLIED_VIDEO_CHANGES
-			rect					28 24 504 18
+			rect					28 23.2 504 18
 			font					7
 			textscale				0.67
 			textalign				ITEM_ALIGN_LEFT
@@ -74,7 +74,7 @@
 			name					vidwarn_text2
 			group					vidwarn
 			text					@MENUS_APPLY_THESE_CHANGES_OR
-			rect					28 50 504 34
+			rect					28 49.2 504 34
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			font					5
@@ -89,7 +89,7 @@
 			name					vidwarn_text1
 			group					vidwarn
 			text					@MENUS_YOU_HAVE_MADE_CHANGES
-			rect					28 96 504 24
+			rect					28 95.2 504 24
 			textalign				ITEM_ALIGN_LEFT
 			text2aligny				18
 			textalignx				0

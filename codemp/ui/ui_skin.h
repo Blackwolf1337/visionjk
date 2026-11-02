@@ -59,6 +59,7 @@ void		Skin_Color( vec4_t out, const vec4_t in, float alphaScale );
 void		Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge );
 void		Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color );
 void		Skin_Disc( float cx, float cy, float radius, const vec4_t color );
+void		Skin_CardHeadBand( float top, float line, float *y, float *h );
 void		Skin_Arrow( float x, float y, float w, float h, qboolean left, const vec4_t color );
 void		Skin_ArrowDown( float x, float y, float w, float h, const vec4_t color );
 void		Skin_Line( float x, float y, float w, const vec4_t color );
@@ -71,6 +72,7 @@ void		Skin_LoadPanel( const char *title, const char *about, const char *now, flo
 
 // the widgets of a menu with "skin 1"
 void		Skin_ItemBack( itemDef_t *item );
+void		Skin_CardHeadBack( itemDef_t *item, float x, float y, float w, float h, float radius );
 void		Skin_TextColor( itemDef_t *item, vec4_t out );
 void		Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on );
 void		Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction );

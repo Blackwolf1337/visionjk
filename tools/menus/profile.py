@@ -159,6 +159,9 @@ class Frame:
             # (outside a game the page is put onto the canvas at twice its units, canvas.profile_page: the columns are
             # laid out for a width of 752 units from 24, 1504 pixels from 48, and a height of 352 units)
             self.x, self.w = 24, 752
+            # (and the panels, 6 units around the content, end as far over the bar at the bottom as they begin under
+            # the strip: 12 pixels)
+            self.h = 330
         self.px = self.x + COLUMN + GAP          # the pane beside the column (the force powers)
         self.pw = self.w - COLUMN - GAP
         # the three columns of the other pages
@@ -393,7 +396,9 @@ def saber(f):
         act = mf.find(e.block, 'action')
         act.block = without(act.block, gone)
     # (the columns on panels as the other pages have them; the saber lies under both)
-    f.new += [panel_item('vision_left', (x - 6, y - 6, lw + 12, 254), PANEL, PANEL_EDGE, 5.3),
+    # (both as high as the second blade of two sabers needs, its last row ends at y + 280: the list of the second
+    # hilt ends at y + 254)
+    f.new += [panel_item('vision_left', (x - 6, y - 6, lw + 12, 296), PANEL, PANEL_EDGE, 5.3),
               panel_item('vision_right', (rx - 6, y - 6, rw + 12, 296), PANEL, PANEL_EDGE, 5.3)]
     for e in named(old, 'typebut')[:1]:
         f.new += heading(e, x, y, lw)

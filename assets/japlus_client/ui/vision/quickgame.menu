@@ -17,7 +17,7 @@
 		{
 			play "sound/interface/esc.wav" ;
 			close quickgame ;
-			open multiplayermenu
+			open main
 		}
 		onOpen
 		{
@@ -451,7 +451,7 @@
 			{
 				play "sound/interface/esc.wav" ;
 				close all ;
-				open multiplayermenu
+				open main
 			}
 			caps					1
 		}

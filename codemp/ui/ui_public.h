@@ -390,6 +390,11 @@ typedef struct uiImport_s {
 		// Only an engine that sets the cvar v_uiCvarInfo to 1 has this one, after ext.Cvar_UnusedList: the value a
 		// cvar starts with (its reset string) and its flags. qfalse for a cvar that does not exist.
 		qboolean		(*Cvar_Info)							( const char *var_name, char *defaultValue, int size, uint32_t *flags );
+		// Only an engine that sets the cvar v_uiFontInk to 1 has these two, after ext.Cvar_Info: R_Font_DrawString
+		// at a place that need not be whole units, and the pixels the letters of a text cover when it is drawn at
+		// 0,0 (box: left, top, right, bottom in units; qfalse for a font of the game, which does not know them).
+		void			(*R_Font_DrawStringF)					( float ox, float oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
+		qboolean		(*R_Font_InkBox)						( const char *text, const int setIndex, const float scale, float *box );
 	} ext;
 } uiImport_t;
 

@@ -709,6 +709,8 @@ static void Item_SkinLine( const itemDef_t *item, float *y, float *h ) {
 }
 
 // Is this item drawn in the look of ui_skin.c? Its menu asks for it ("skin 1") and the engine can.
+textCatch_t textCatch;
+
 static qboolean Item_Skinned( const itemDef_t *item ) {
 	return (qboolean)( item->parent && ( (const menuDef_t *)item->parent )->skin && Skin_Ready() );
 }
@@ -1016,6 +1018,7 @@ static void Menu_CanvasKeep( menuDef_t *menu ) {
 		item->canvas.textaligny = item->textaligny;
 		item->canvas.text2alignx = item->text2alignx;
 		item->canvas.text2aligny = item->text2aligny;
+		item->canvas.textRoom = item->textRoom;
 		item->canvas.radius = item->window.radius;
 		item->canvas.shadow = item->window.shadow;
 		item->canvas.borderSize = item->window.borderSize;
@@ -1040,6 +1043,57 @@ float Menu_Unit( const menuDef_t *menu ) {
 		return 1.0f;
 	}
 	return menu->canvasUnit * ( 900.0f / 480.0f );
+}
+
+/*
+=================
+Menu_CanvasBars
+
+A page whose canvas is wider than the screen (4:3, 16:10) has room above and below it: spare is that room under
+the canvas, the same above it. The page goes up to the top of the screen, as a page is read from the top; the bar
+at the bottom ("wide" items from the bottom of the canvas up, one over the other, and what stands in them) goes down
+to its bottom. What reached that bar before (a rail, a pane, the window of a list) grows to reach it again.
+=================
+*/
+static void Menu_CanvasBars( menuDef_t *menu, float spare ) {
+	float		footTop = menu->canvasH;
+	qboolean	grew;
+	int			i;
+
+	if ( spare < 0.5f ) {
+		return;
+	}
+	do {
+		grew = qfalse;
+		for ( i = 0; i < menu->itemCount; i++ ) {
+			const rectDef_t *r = &menu->items[i]->canvas.rect;
+
+			if ( menu->items[i]->window.wide && r->h >= 2.0f && fabsf( r->y + r->h - footTop ) < 0.5f && r->y < footTop - 0.5f ) {
+				footTop = r->y;
+				grew = qtrue;
+			}
+		}
+	} while ( grew );
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		itemDef_t		*item = menu->items[i];
+		const rectDef_t	*r = &item->canvas.rect;
+
+		if ( footTop < menu->canvasH && r->y >= footTop - 0.5f ) {
+			item->window.rectClient.y += spare;
+			continue;
+		}
+		item->window.rectClient.y -= spare;
+		if ( footTop < menu->canvasH && fabsf( r->y + r->h - footTop ) < 0.5f ) {
+			item->window.rectClient.h += 2.0f * spare;
+		}
+	}
+	if ( menu->canvasScroll.w > 0.0f ) {
+		menu->scrollRect.y -= spare;
+		if ( footTop < menu->canvasH && fabsf( menu->canvasScroll.y + menu->canvasScroll.h - footTop ) < 0.5f ) {
+			menu->scrollRect.h += 2.0f * spare;
+		}
+	}
+	menu->descY += (int)( ( footTop < menu->canvasH && menu->canvasDescY >= footTop - 0.5f ) ? spare : -spare );
 }
 
 void Menu_CanvasLayout( menuDef_t *menu ) {
@@ -1110,6 +1164,7 @@ void Menu_CanvasLayout( menuDef_t *menu ) {
 		item->textaligny = item->canvas.textaligny * uy;
 		item->text2alignx = item->canvas.text2alignx * ux;
 		item->text2aligny = item->canvas.text2aligny * uy;
+		item->textRoom = item->canvas.textRoom * ux;
 		item->window.radius = item->canvas.radius * uy;
 		item->window.shadow = item->canvas.shadow * uy;
 		item->window.borderSize = item->canvas.borderSize * uy;
@@ -1122,6 +1177,19 @@ void Menu_CanvasLayout( menuDef_t *menu ) {
 				list->columnInfo[j].pos = (int)( item->canvas.columnPos[j] * ux + 0.5f );
 				list->columnInfo[j].width = (int)( item->canvas.columnWidth[j] * ux + 0.5f );
 			}
+		}
+	}
+	if ( menu->fullScreen ) {
+		Menu_CanvasBars( menu, -now[1] + gh - ( cy0 + menu->canvasH * uy ) );
+	}
+	// what covers the whole height of the canvas (the veil under a window) covers the whole height of the screen
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		itemDef_t		*item = menu->items[i];
+		const float		top = ( menu->fullScreen ? 0.0f : menu->canvasRect.y ) + item->canvas.rect.y;
+
+		if ( item->window.wide && top <= 0.5f && top + item->canvas.rect.h >= menu->canvasH - 0.5f ) {
+			item->window.rectClient.y = -now[1] - menu->window.rect.y;
+			item->window.rectClient.h = gh;
 		}
 	}
 	// (the rows of a list are where the menu file put them again: the list is laid out anew)
@@ -2628,6 +2696,12 @@ row of that list ("row 1"): its name at the left, its widget at the right. The w
 ===============================================================================
 */
 
+// a card of a list in a menu with a canvas (tools/menus/canvas.py CARD_*): its line ends 56 pixels under its top, 10
+// to its first row, 10 under its last
+#define CARD_LINE_PX	55.0f		// where the line under the head of a card is
+#define CARD_HEAD_PX	66.0f		// from the top of a card to its first row
+#define CARD_BOTTOM_PX	10.0f		// from its last row to its bottom
+#define CARD_GAP_PX		24.0f		// between two cards of a column (tools/menus/canvas.py CARD_GAP)
 #define ROW_PAD			8.0f		// from the edge of a row to its name and to its widget
 #define ROW_WIDGET		0.31f		// the part of the width of a row its widget has
 #define ROW_WIDGET_WIDE	0.56f		// "row 3": a line to type a name in
@@ -2728,7 +2802,7 @@ static qboolean Item_Away( const itemDef_t *item ) {
 		if ( item->fold && menu->canvasW > 0.0f ) {
 			// (a heading under another card has the gap above its card in it, see Menu_ListCards: what shows of
 			// it begins at the card)
-			top = Q_max( top, item->window.rect.y + item->window.rect.h - 64.0f * menu->canvasUnit );
+			top = Q_max( top, item->window.rect.y + item->window.rect.h - CARD_HEAD_PX * menu->canvasUnit );
 		}
 		return (qboolean)( top < list.y - 0.5f || item->window.rect.y + item->window.rect.h > list.y + list.h + 0.5f );
 	}
@@ -2920,7 +2994,8 @@ static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
 		out->h = Q_min( 16.0f, r->h - 6.0f );
 	}
 	out->x = r->x + r->w - Item_RowSize( item, 12.0f, ROW_PAD ) - out->w;
-	out->y = r->y + ( r->h - out->h ) * 0.5f;
+	// (on the middle between the line over the row and its own line, a unit over its end, as its name: Row_Name)
+	out->y = r->y + ( r->h - 1.0f - out->h ) * 0.5f;
 }
 
 // A row of keys in a menu with a canvas shows the two keys of its command in two fields, KEY and SECOND KEY, and
@@ -3233,6 +3308,10 @@ static void Menu_ListLayout( menuDef_t *menu, const char *search, const char *fo
 				cursor[col] -= lines[n].gap;
 			}
 			started[col] = qtrue;
+		} else if ( ( i == 0 || lineOf[i - 1] != n ) && lines[n].in && lines[n].fold && lines[n].gap <= 0.0f && menu->canvasW > 0.0f ) {
+			// the other way round: the first heading of a page, which has no room above it, under another card
+			// (a search puts the cards of all pages one under the other)
+			cursor[col] += ( CARD_GAP_PX + CARD_BOTTOM_PX ) * menu->canvasUnit;
 		}
 		item->listOut = (qboolean)!lines[n].in;
 		item->window.rectClient.y = item->listY - lines[n].y + cursor[col];
@@ -6395,6 +6474,76 @@ void Item_Text_Wrapped_Paint(itemDef_t *item) {
 	DC->drawText(x, y, item->textscale, color, start, 0, 0, item->textStyle, item->iMenuFont);
 }
 
+/*
+===============
+Text_InkAt
+
+Where a text of one line is drawn so that its letters, not the box of its font, are placed: x is where the
+letters start, their middle or their end (ITEM_ALIGN_*), and the capitals stand on the middle of h below y. The
+box of a font is wider than its letters and the advance of a text ends after its last letter, so a text placed
+by them is off by a pixel or more. qfalse: the engine does not know the pixels of the font, or the text has none.
+===============
+*/
+// how wide the letters of a text are as they are drawn (the advances of the font are on whole pixels of its size:
+// textWidth adds them up unrounded and is short for a long text set small), else its width by the font
+static float Text_InkWidth( const char *text, float scale, int font ) {
+	float box[4];
+
+	if ( DC->ext.textInk && !strchr( text, '\n' ) && DC->ext.textInk( text, scale, font, box ) && box[2] > box[0] ) {
+		return box[2] - box[0];
+	}
+	return DC->textWidth( text, scale, font );
+}
+
+// a text that is wider than room set smaller, no smaller than 0.55 of its size: the scale it is drawn at
+static float Text_FitScale( const char *text, float scale, int font, float room ) {
+	const float least = scale * 0.55f;
+	int			i;
+
+	// (twice: the letters of the smaller size are on other whole pixels)
+	for ( i = 0; i < 2 && room > 0.0f; i++ ) {
+		const float width = Text_InkWidth( text, scale, font );
+
+		if ( width <= room ) {
+			break;
+		}
+		scale = Q_max( least, scale * room / width * ( i ? 0.98f : 1.0f ) );
+	}
+	return scale;
+}
+
+static qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty ) {
+	float box[4], cap[4];
+
+	if ( !DC->ext.textInk || strchr( text, '\n' ) || !DC->ext.textInk( text, scale, font, box ) || box[2] <= box[0]
+		|| !DC->ext.textInk( "H", scale, font, cap ) ) {
+		return qfalse;
+	}
+	if ( align == ITEM_ALIGN_CENTER ) {
+		*tx = x - ( box[0] + box[2] ) * 0.5f;
+	} else if ( align == ITEM_ALIGN_RIGHT ) {
+		*tx = x - box[2];
+	} else {
+		*tx = x - box[0];
+	}
+	*ty = y + ( h - cap[1] - cap[3] ) * 0.5f;
+	return qtrue;
+}
+
+// The head of the card of a heading of a list in a menu with a canvas (or of a word in it, "cardHead 1"): the
+// room between the ring of the card and the line under its head (Skin_CardHeadBand). qfalse: not such an item.
+static qboolean Item_CardHeadBand( const itemDef_t *item, float *y, float *h ) {
+	const menuDef_t *menu = (const menuDef_t *)item->parent;
+	float			top;
+
+	if ( !menu || menu->canvasW <= 0.0f || !( item->fold || item->cardHead ) || !Skin_Ready() ) {
+		return qfalse;
+	}
+	top = item->fold ? item->window.rect.y + item->window.rect.h - CARD_HEAD_PX * menu->canvasUnit : item->window.rect.y;
+	Skin_CardHeadBand( top, top + CARD_LINE_PX * menu->canvasUnit, y, h );
+	return qtrue;
+}
+
 void Item_Text_Paint(itemDef_t *item) {
 	char text[1024];
 	const char *textPtr;
@@ -6447,7 +6596,30 @@ void Item_Text_Paint(itemDef_t *item) {
 
 	Item_TextColor(item, &color);
 
-	DC->drawText(item->textRect.x, item->textRect.y, item->textscale, color, textPtr, 0, 0, item->textStyle, item->iMenuFont);
+	{
+		float x = item->textRect.x, y = item->textRect.y, scale = item->textscale;
+
+		// the new look: its letters where textalignx and textaligny say, the font's box of height (its size)
+		// centred on the line (an owner draw or a field adds its value to the width of the text)
+		if ( Item_Skinned( item ) && item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_EDITFIELD
+			&& item->type != ITEM_TYPE_NUMERICFIELD ) {
+			float			size = DC->textHeight( "A", 1.0f, item->iMenuFont ) * item->textscale;
+			float			alignX = item->textalignx, alignY = 0.0f, inkX, inkY;
+
+			ToWindowCoords( &alignX, &alignY, &item->window );
+			// (the words of the head of a card: on the middle between its ring and its line, not by textaligny)
+			Item_CardHeadBand( item, &y, &size );
+			// (set smaller where they are wider than the room the menu file gave them: textRoom)
+			if ( item->textRoom > 0.0f ) {
+				scale = Text_FitScale( textPtr, item->textscale, item->iMenuFont, item->textRoom );
+			}
+			if ( Text_InkAt( textPtr, scale, item->iMenuFont, item->textalignment, alignX, y, size, &inkX, &inkY ) ) {
+				x = inkX;
+				y = inkY;
+			}
+		}
+		DC->drawText(x, y, scale, color, textPtr, 0, 0, item->textStyle, item->iMenuFont);
+	}
 
 	if (item->text2)	// Is there a second line of text?
 	{
@@ -6490,7 +6662,8 @@ static void Item_HintField_Paint( itemDef_t *item ) {
 
 		Text_Word( item->text, hint, sizeof( hint ), qfalse, qfalse );
 		color[3] *= 0.7f;
-		DC->drawText( x, y, item->textscale, color, hint, 0, (int)w, item->textStyle, item->iMenuFont );
+		// (set smaller where it is longer than the box, "Alle Einstellungen durchsuchen", not cut off)
+		Row_Text( x, item->window.rect.y, item->window.rect.h, w, ITEM_ALIGN_LEFT, item->textscale, color, hint, item->iMenuFont );
 		return;
 	}
 	Item_TextColor( item, &color );
@@ -6627,6 +6800,7 @@ void Item_Multi_Paint(itemDef_t *item) {
 	vec4_t color;
 	const char *text = "";
 	char	temp[MAX_STRING_CHARS];
+	float	y, scale;
 
 	text = Item_Multi_Setting(item);
 	if (*text == '@')	// string reference
@@ -6644,10 +6818,32 @@ void Item_Multi_Paint(itemDef_t *item) {
 	Item_TextColor(item, &color);
 	if (item->text) {
 		Item_Text_Paint(item);
-		DC->drawText(item->textRect.x + item->textRect.w + 8, item->textRect.y, item->textscale, color, text, 0, 0, item->textStyle,item->iMenuFont);
+	}
+	// the new look: the capitals of the value on the line of the name's (Item_Text_Paint places those by Text_InkAt),
+	// the value set smaller where it is longer than the room the item has after its name ("Geschlossen")
+	y = item->textRect.y;
+	scale = item->textscale;
+	if ( Item_Skinned( item ) ) {
+		const float	size = DC->textHeight( "A", 1.0f, item->iMenuFont ) * item->textscale;
+		float		inkX, inkY, width;
+
+		if ( item->text ) {
+			const float room = item->window.rect.x + item->window.rect.w - ( item->textRect.x + item->textRect.w + 8 );
+
+			width = DC->textWidth( text, scale, item->iMenuFont );
+			if ( room > 0.0f && width > room ) {
+				scale *= Q_max( 0.55f, room / width );
+			}
+		}
+		if ( Text_InkAt( text, scale, item->iMenuFont, ITEM_ALIGN_LEFT, 0.0f, y, size, &inkX, &inkY ) ) {
+			y = inkY;
+		}
+	}
+	if (item->text) {
+		DC->drawText(item->textRect.x + item->textRect.w + 8, y, scale, color, text, 0, 0, item->textStyle,item->iMenuFont);
 	} else {
 		//JLF added xoffset
-		DC->drawText(item->textRect.x+item->xoffset, item->textRect.y, item->textscale, color, text, 0, 0, item->textStyle,item->iMenuFont);
+		DC->drawText(item->textRect.x+item->xoffset, y, item->textscale, color, text, 0, 0, item->textStyle,item->iMenuFont);
 	}
 }
 
@@ -7060,11 +7256,17 @@ The rows, the tabs, the bar and the explanation of a menu with pages (VisionJK)
 // A text on the middle of a height: from x on, around x or up to x (ITEM_ALIGN_*). It is set smaller where it
 // is longer than `room`.
 static void Row_Text( float x, float y, float h, float room, int align, float scale, vec4_t color, const char *text, int font ) {
-	float width = DC->textWidth( text, scale, font );
+	float width;
 
-	if ( room > 0.0f && width > room ) {
-		scale *= Q_max( 0.55f, room / width );
-		width = DC->textWidth( text, scale, font );
+	scale = Text_FitScale( text, scale, font, room );
+	width = DC->textWidth( text, scale, font );
+	{
+		float inkX, inkY;
+
+		if ( Text_InkAt( text, scale, font, align, x, y, h, &inkX, &inkY ) ) {
+			DC->drawText( inkX, inkY, scale, color, text, 0, 0, 0, font );
+			return;
+		}
 	}
 	if ( align == ITEM_ALIGN_CENTER ) {
 		x -= width * 0.5f;
@@ -7101,6 +7303,49 @@ static void Row_Choice( float x, float y, float h, float room, float scale, vec4
 	half = h * 0.5f;
 	Row_Text( x, y + half - lineH, lineH, room, ITEM_ALIGN_CENTER, scale, color, first, font );
 	Row_Text( x, y + half, lineH, room, ITEM_ALIGN_CENTER, scale, color, mid + 1, font );
+}
+
+// The name of a row from x, on the middle of a height: on two lines at the same size when it is longer than `room`
+// (all the names of a list stay one size), set smaller only when even the two lines do not fit
+static void Row_Name( float x, float y, float h, float room, float scale, vec4_t color, const char *text, int font ) {
+	const char	*mid = NULL, *p;
+	char		first[256];
+	float		lineH, widest = 0.0f;
+
+	if ( room <= 0.0f || DC->textWidth( text, scale, font ) <= room ) {
+		Row_Text( x, y, h, room, ITEM_ALIGN_LEFT, scale, color, text, font );
+		return;
+	}
+	// (broken at the space that makes the wider of the two lines narrowest: in German a long word often stands
+	// where the middle of the letters is. After a hyphen as well, which stays on the first line:
+	// "Sprechblasen-Reichweite")
+	for ( p = text; *p; p++ ) {
+		const int	keep = ( *p == '-' && p > text && p[1] ) ? 1 : 0;
+		float		w;
+
+		if ( *p != ' ' && !keep ) {
+			continue;
+		}
+		Q_strncpyz( first, text, Q_min( (int)sizeof( first ), (int)( p - text ) + 1 + keep ) );
+		w = Q_max( DC->textWidth( first, scale, font ), DC->textWidth( p + 1, scale, font ) );
+		if ( !mid || w < widest ) {
+			mid = p;
+			widest = w;
+		}
+	}
+	if ( mid ) {
+		// two lines, set smaller together only when the wider one does not fit
+		const float fit = Q_max( 0.55f, Q_min( 1.0f, room / widest ) );
+
+		Q_strncpyz( first, text, Q_min( (int)sizeof( first ), (int)( mid - text ) + 1 + ( *mid == '-' ? 1 : 0 ) ) );
+		lineH = DC->textHeight( "A", scale * fit, font ) * 1.3f;
+		if ( 2.0f * lineH <= h ) {
+			Row_Text( x, y + h * 0.5f - lineH, lineH, room, ITEM_ALIGN_LEFT, scale * fit, color, first, font );
+			Row_Text( x, y + h * 0.5f, lineH, room, ITEM_ALIGN_LEFT, scale * fit, color, mid + 1, font );
+			return;
+		}
+	}
+	Row_Text( x, y, h, room, ITEM_ALIGN_LEFT, scale, color, text, font );
 }
 
 static void Color_Mix( vec4_t out, const vec4_t from, const vec4_t to, float part ) {
@@ -7184,7 +7429,7 @@ static void Item_Row_Paint( itemDef_t *item ) {
 							&& item->type != ITEM_TYPE_EDITFIELD && item->type != ITEM_TYPE_NUMERICFIELD );
 		const float		end = arrowOnly ? widget.x + widget.w - arrow : widget.x;
 
-		Row_Text( x, r->y, r->h - 1.0f, end - pad - x, ITEM_ALIGN_LEFT, item->textscale, text, word, font );
+		Row_Name( x, r->y, r->h - 1.0f, end - pad - x, item->textscale, text, word, font );
 	}
 
 	if ( ( item->window.flags & WINDOW_DECORATION )
@@ -7243,17 +7488,39 @@ static void Item_Row_Paint( itemDef_t *item ) {
 
 	case ITEM_TYPE_OWNERDRAW:
 		if ( DC->ownerDrawItem ) {
-			// a setting the ui writes itself (team colour, jedi or not): its word in a field between two arrows,
-			// as one of several; the owner draw still takes the clicks
+			// a setting the ui writes itself (game type, team colour, jedi or not): its word in a field between two
+			// arrows, as one of several; the owner draw still takes the clicks. The owner draw runs as it always
+			// did (some show and hide items or grey their word), the word it writes is caught and written here
+			// on the middle of the field, in capitals as the word of a choice
 			const float aw = arrow * 0.55f, apad = Item_RowSize( item, 12.0f, 5.0f );
-			const float width = DC->ownerDrawWidth ? DC->ownerDrawWidth( item->window.ownerDraw, small ) : 0.0f;
-			const float tx = widget.x + ( widget.w - width ) * 0.5f, ty = mid - DC->textHeight( "A", small, font ) * 0.5f;
+			vec4_t		said;
 
 			Skin_Panel( widget.x, widget.y, widget.w, widget.h, rad, skinField, edge );
 			Skin_Arrow( widget.x + apad, mid - arrow * 0.4f, aw, arrow * 0.8f, qtrue, ink );
 			Skin_Arrow( widget.x + widget.w - apad - aw, mid - arrow * 0.4f, aw, arrow * 0.8f, qfalse, ink );
-			DC->ownerDrawItem( tx, ty, width, widget.h, 0, 0, item->window.ownerDraw, item->window.ownerDrawFlags, item->alignment,
-				item->special, small, ink, item->window.background, 0, font );
+			word[0] = '\0';
+			VectorCopy4( ink, said );
+			textCatch.text = word;
+			textCatch.size = sizeof( word );
+			textCatch.color = said;
+			DC->ownerDrawItem( widget.x, widget.y, widget.w, widget.h, 0, 0, item->window.ownerDraw, item->window.ownerDrawFlags,
+				item->alignment, item->special, small, said, item->window.background, 0, font );
+			textCatch.text = NULL;
+			textCatch.color = NULL;
+			if ( word[0] ) {
+				if ( !strpbrk( word, "0123456789" ) ) {
+					Text_Caps( word );
+				}
+				Row_Choice( widget.x + widget.w * 0.5f, widget.y, widget.h, widget.w - 2.0f * ( aw + apad ) - 6.0f * unit, small, said,
+					word, font );
+			} else {
+				// (nothing caught: a text path that does not catch, the cgame's; drawn by the owner draw itself)
+				const float width = DC->ownerDrawWidth ? DC->ownerDrawWidth( item->window.ownerDraw, small ) : 0.0f;
+
+				DC->ownerDrawItem( widget.x + ( widget.w - width ) * 0.5f, mid - DC->textHeight( "A", small, font ) * 0.5f, width,
+					widget.h, 0, 0, item->window.ownerDraw, item->window.ownerDrawFlags, item->alignment, item->special, small, ink,
+					item->window.background, 0, font );
+			}
 		}
 		break;
 
@@ -7563,14 +7830,18 @@ static float Text_PaintWrapped( float x, float y, float width, float scale, vec4
 static void Item_Fold_Paint( itemDef_t *item ) {
 	const menuDef_t	*menu = (const menuDef_t *)item->parent;
 	const qboolean	card = (qboolean)( menu && menu->canvasW > 0.0f );
-	// (in a menu with a canvas the heading is the head of a card: the arrow on the middle of its 56 pixels)
+	// (in a menu with a canvas the heading is the head of a card: the arrow on the middle between its ring and its
+	// line, as its words, Item_CardHeadBand)
 	const float		h = card ? 10.0f * menu->canvasUnit : ROW_ARROW;
-	const float		mid = card ? item->window.rect.y + item->window.rect.h - 36.0f * menu->canvasUnit : item->window.rect.y + item->window.rect.h * 0.5f;
+	float			mid = item->window.rect.y + item->window.rect.h * 0.5f, bandY, bandH;
 	const float		pad = card ? 22.0f * menu->canvasUnit : ROW_PAD;
 	vec4_t			ink;
 
 	if ( !menu || menu->searching || ( item->window.flags & WINDOW_DECORATION ) ) {
 		return;
+	}
+	if ( card && Item_CardHeadBand( item, &bandY, &bandH ) ) {
+		mid = bandY + bandH * 0.5f;
 	}
 	VectorCopy4( item->window.foreColor, ink );
 	if ( item->window.flags & WINDOW_HASFOCUS ) {
@@ -8313,6 +8584,15 @@ static void Item_ListBox_ImageMark( itemDef_t *item, float x, float y, int i ) {
 	}
 }
 
+// The text of a row of a list in the new look: its letters from x, its capitals on the middle of the row (rowY, h).
+// The font's box is used where the engine does not know the letters.
+static void List_TextAt( const char *text, float scale, int font, float x, float rowY, float h, float *tx, float *ty ) {
+	if ( !Text_InkAt( text, scale, font, ITEM_ALIGN_LEFT, x, rowY, h, tx, ty ) ) {
+		*tx = x;
+		*ty = rowY + ( h - DC->textHeight( "A", scale, font ) ) * 0.5f;
+	}
+}
+
 void Item_ListBox_Paint(itemDef_t *item) {
 	float x, y, sizeWidth, count, i, i2,sizeHeight, thumb;
 	int startPos;
@@ -8602,8 +8882,8 @@ void Item_ListBox_Paint(itemDef_t *item) {
 				// the chosen row is drawn. "textaligny" does not count there: the menu files set it for the
 				// letters of the old fonts, and the new ones stood above the middle with it.
 				const qboolean	centred = Item_Skinned( item );
-				const float		rowTextY = y + listPtr->elementHeight + 2
-									+ ( listPtr->elementHeight - DC->textHeight( "A", item->textscale, item->iMenuFont ) ) * 0.5f;
+				const float		rowY = y + listPtr->elementHeight + 2;
+				float			tx, ty;
 				// always draw at least one
 				// which may overdraw the box if it is too small for the element
 				if (listPtr->numColumns > 0) {
@@ -8639,7 +8919,17 @@ void Item_ListBox_Paint(itemDef_t *item) {
 							textyOffset = 0;
 //							DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, listPtr->columnInfo[j].maxChars, item->textStyle);
 	//WAS LAST						DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y, item->textscale, item->window.foreColor, text, 0, listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
-							DC->drawText(x + 4 + listPtr->columnInfo[j].pos, centred ? rowTextY : y + listPtr->elementHeight+ textyOffset + item->textaligny, item->textscale, item->window.foreColor, text, 0,listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
+							if ( centred ) {
+								// (the first column as far from the bar of the chosen row as the text of a list
+								// without columns)
+								const float colX = x + 4 + listPtr->columnInfo[j].pos;
+
+								List_TextAt( text, item->textscale, item->iMenuFont, j ? colX : Q_max( colX, x + 8 ), rowY, listPtr->elementHeight, &tx, &ty );
+							} else {
+								tx = x + 4 + listPtr->columnInfo[j].pos;
+								ty = y + listPtr->elementHeight + textyOffset + item->textaligny;
+							}
+							DC->drawText(tx, ty, item->textscale, item->window.foreColor, text, 0,listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
 
 
 //JLF END
@@ -8694,13 +8984,19 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					{
 //						DC->drawText(x + 4, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle);
 						// (clear of the bar at the left of the chosen row in the new look)
-						DC->drawText(x + ( centred ? 8 : 4 ), centred ? rowTextY : y + item->textaligny, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle, item->iMenuFont);
+						if ( centred ) {
+							List_TextAt( text, item->textscale, item->iMenuFont, x + 8, rowY, listPtr->elementHeight, &tx, &ty );
+						} else {
+							tx = x + 4;
+							ty = y + item->textaligny;
+						}
+						DC->drawText(tx, ty, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle, item->iMenuFont);
 					}
 				}
 
 				if ( Item_Skinned( item ) ) {
 					// the chosen row is filled, the one under the mouse is lit
-					const float		rowY = y + listPtr->elementHeight + 2, rowW = item->window.rect.w - SCROLLBAR_SIZE - 4;
+					const float		rowW = item->window.rect.w - SCROLLBAR_SIZE - 4;
 					const qboolean	under = (qboolean)( DC->cursorx >= x + 2 && DC->cursorx < x + 2 + rowW && DC->cursory >= rowY
 										&& DC->cursory < rowY + listPtr->elementHeight && ( item->window.flags & WINDOW_MOUSEOVER ) );
 
@@ -8772,7 +9068,35 @@ void Item_OwnerDraw_Paint(itemDef_t *item) {
 
 		if (item->text) {
 			Item_Text_Paint(item);
-				if (item->text[0]) {
+				if ( item->text[0] && Item_Skinned( item ) ) {
+					// the new look: the word of the owner draw after the name (as below), caught (textCatch) and
+					// written here, its capitals on the line of the name's and set smaller where it is longer than
+					// the room up to the end of the item (the places of Create a Game: "Geschlossen")
+					const float	x0 = item->textRect.x + item->textRect.w + 8;
+					char		word[256];
+					vec4_t		said;
+
+					word[0] = '\0';
+					VectorCopy4( color, said );
+					textCatch.text = word;
+					textCatch.size = sizeof( word );
+					textCatch.color = said;
+					DC->ownerDrawItem( x0, item->window.rect.y, item->window.rect.w, item->window.rect.h, 0, item->textaligny,
+						item->window.ownerDraw, item->window.ownerDrawFlags, item->alignment, item->special, item->textscale, said,
+						item->window.background, item->textStyle, item->iMenuFont );
+					textCatch.text = NULL;
+					textCatch.color = NULL;
+					if ( word[0] && fabsf( textCatch.x - x0 ) < 1.0f ) {
+						Row_Text( x0, item->window.rect.y, item->window.rect.h, item->window.rect.x + item->window.rect.w - x0,
+							ITEM_ALIGN_LEFT, item->textscale, said, word, item->iMenuFont );
+					} else {
+						// (nothing caught, a text path that does not catch (the cgame's), or an owner draw that places
+						// its word itself (at the right: the facts of the server): drawn by the owner draw as always)
+						DC->ownerDrawItem( x0, item->window.rect.y, item->window.rect.w, item->window.rect.h, 0, item->textaligny,
+							item->window.ownerDraw, item->window.ownerDrawFlags, item->alignment, item->special, item->textscale, color,
+							item->window.background, item->textStyle, item->iMenuFont );
+					}
+				} else if (item->text[0]) {
 					// +8 is an offset kludge to properly align owner draw items that have text combined with them
 					DC->ownerDrawItem(item->textRect.x + item->textRect.w + 8, item->window.rect.y, item->window.rect.w, item->window.rect.h, 0, item->textaligny, item->window.ownerDraw, item->window.ownerDrawFlags, item->alignment, item->special, item->textscale, color, item->window.background, item->textStyle,item->iMenuFont);
 				} else {
@@ -9392,7 +9716,15 @@ void Item_Paint(itemDef_t *item)
 	} else if ( Item_Skinned( item ) && item->type != ITEM_TYPE_LISTBOX && item->type != ITEM_TYPE_TEXTSCROLL && item->type != ITEM_TYPE_MODEL
 		&& ( item->type != ITEM_TYPE_OWNERDRAW || item->action ) && item->type != ITEM_TYPE_TEXT && item->type != ITEM_TYPE_DESC
 		&& item->type != ITEM_TYPE_PAGESCROLL && item->type != ITEM_TYPE_CHANGES ) {
-		Skin_ItemBack( item );
+		if ( item->fold && item->scroll && parent->canvasW > 0.0f ) {
+			// the heading of a card (Menu_ListCards): the head of the card from its top to its line, inside its rim
+			const float u = parent->canvasUnit;
+
+			Skin_CardHeadBack( item, item->window.rect.x + u, item->window.rect.y + item->window.rect.h - ( CARD_HEAD_PX - 1.0f ) * u,
+				item->window.rect.w - 2.0f * u, ( CARD_LINE_PX - 1.0f ) * u, 9.0f * u );
+		} else {
+			Skin_ItemBack( item );
+		}
 	}
 
 	// Draw box to show rectangle extents, in debug mode
@@ -9709,11 +10041,11 @@ static void Menu_ListCards( menuDef_t *menu ) {
 			continue;
 		}
 		// (the heading of a card that is not the first of its column has the gap to the one above in it: the card
-		// begins 64 pixels above the end of the heading, 56 for its head and 8 under the line)
-		top = item->window.rect.y + item->window.rect.h - 64.0f * menu->canvasUnit;
-		bottom = item->window.rect.y + ( item->cardBottom - item->window.rectClient.y ) + 12.0f * menu->canvasUnit;
+		// begins CARD_HEAD_PX above the end of the heading, its line CARD_LINE_PX under its top)
+		top = item->window.rect.y + item->window.rect.h - CARD_HEAD_PX * menu->canvasUnit;
+		bottom = item->window.rect.y + ( item->cardBottom - item->window.rectClient.y ) + CARD_BOTTOM_PX * menu->canvasUnit;
 		{
-			const float	head = top + 56.0f * menu->canvasUnit;
+			const float	head = top + CARD_LINE_PX * menu->canvasUnit;
 			const float	y0 = Q_max( top, list.y ), y1 = Q_min( bottom, list.y + list.h );
 
 			if ( y1 > y0 ) {
@@ -9730,16 +10062,50 @@ static void Menu_ListCards( menuDef_t *menu ) {
 =================
 Menus_Dump
 
-For tools that test the menus (the jka MCP server, "v_uiDump"): the screen, then each open menu and every item of
+For tools that test the menus (the jka MCP server, "v_uiDump [file]"): the screen, then each open menu and every item of
 it that can be seen right now, with its rectangle in pixels of the window, one line each, so a tool can measure a
 layout and point the mouse at an item by its name. Lines begin with "uidump"; the last one is "uidump end".
 =================
 */
+static fileHandle_t dumpFile;
+
+// can this item be seen right now (what the dump lists, and what v_uiSweep points at)
+qboolean Item_Dumped( const itemDef_t *item ) {
+	return (qboolean)!( !( item->window.flags & WINDOW_VISIBLE ) || Item_Away( item ) || item->listOut
+		|| ( item->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) && !Item_EnableShowViaCvar( (itemDef_t *)item, CVAR_SHOW ) ) );
+}
+
+// a line of the dump: printed, or written to the file "v_uiDump <file>" named
+static void QDECL Dump_Line( const char *fmt, ... ) {
+	va_list	ap;
+	char	line[1024];
+
+	va_start( ap, fmt );
+	Q_vsnprintf( line, sizeof( line ), fmt, ap );
+	va_end( ap );
+	if ( dumpFile ) {
+		trap->FS_Write( line, (int)strlen( line ), dumpFile );
+	} else {
+		Com_Printf( "%s", line );
+	}
+}
+
 void Menus_Dump( void ) {
 	const float	bias = DC->bias, biasY = DC->biasY;
 	int			i, j;
 
-	Com_Printf( "uidump screen %d %d %.4f %.4f %.3f %.3f %d %d\n", DC->glconfig.vidWidth, DC->glconfig.vidHeight, DC->xscale,
+	// (a file to write to instead of the console: a tool reads a long dump from it without the console in between)
+	dumpFile = 0;
+	if ( trap->Cmd_Argc() > 1 ) {
+		char name[MAX_QPATH];
+
+		trap->Cmd_Argv( 1, name, sizeof( name ) );
+		if ( trap->FS_Open( name, &dumpFile, FS_WRITE ) < 0 ) {
+			dumpFile = 0;
+		}
+	}
+
+	Dump_Line( "uidump screen %d %d %.4f %.4f %.3f %.3f %d %d\n", DC->glconfig.vidWidth, DC->glconfig.vidHeight, DC->xscale,
 		DC->yscale, bias, biasY, DC->cursorx, DC->cursory );
 	for ( i = 0; i < menuCount; i++ ) {
 		const menuDef_t *menu = &Menus[i];
@@ -9747,17 +10113,17 @@ void Menus_Dump( void ) {
 		if ( !( menu->window.flags & WINDOW_VISIBLE ) ) {
 			continue;
 		}
-		Com_Printf( "uidump menu %s focus=%d page=%d canvas=%gx%g px=%.0f,%.0f,%.0f,%.0f\n", menu->window.name ? menu->window.name : "?",
+		Dump_Line( "uidump menu %s focus=%d page=%d canvas=%gx%g px=%.0f,%.0f,%.0f,%.0f desc=%.0f,%.0f,%d\n", menu->window.name ? menu->window.name : "?",
 			( menu->window.flags & WINDOW_HASFOCUS ) ? 1 : 0, menu->page, menu->canvasW, menu->canvasH,
 			( menu->window.rect.x + bias ) * DC->xscale, ( menu->window.rect.y + biasY ) * DC->yscale,
-			menu->window.rect.w * DC->xscale, menu->window.rect.h * DC->yscale );
+			menu->window.rect.w * DC->xscale, menu->window.rect.h * DC->yscale,
+			( menu->descX + bias ) * DC->xscale, ( menu->descY + biasY ) * DC->yscale, menu->descAlignment );
 		for ( j = 0; j < menu->itemCount; j++ ) {
 			const itemDef_t	*item = menu->items[j];
 			const rectDef_t	*r = &item->window.rect;
 			char			text[128], value[64];
 
-			if ( !( item->window.flags & WINDOW_VISIBLE ) || Item_Away( item ) || item->listOut
-				|| ( item->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) && !Item_EnableShowViaCvar( (itemDef_t *)item, CVAR_SHOW ) ) ) {
+			if ( !Item_Dumped( item ) ) {
 				continue;
 			}
 			text[0] = value[0] = '\0';
@@ -9767,15 +10133,36 @@ void Menus_Dump( void ) {
 			if ( item->cvar ) {
 				DC->getCVarString( item->cvar, value, sizeof( value ) );
 			}
-			Com_Printf( "uidump item %s %d %s type=%d px=%.0f,%.0f,%.0f,%.0f flags=%s%s%s%s cvar=%s value=%s text=%s\n",
+			Dump_Line( "uidump item %s %d %s type=%d px=%.0f,%.0f,%.0f,%.0f flags=%s%s%s%s cvar=%s value=%s text=%s\n",
 				menu->window.name ? menu->window.name : "?", j, item->window.name ? item->window.name : "-", item->type,
 				( r->x + bias ) * DC->xscale, ( r->y + biasY ) * DC->yscale, r->w * DC->xscale, r->h * DC->yscale,
 				( item->window.flags & WINDOW_HASFOCUS ) ? "F" : "", ( item->window.flags & WINDOW_MOUSEOVER ) ? "M" : "",
 				( item->window.flags & WINDOW_DECORATION ) ? "D" : "", item->disabled ? "X" : "",
 				item->cvar ? item->cvar : "-", value, text );
+			{
+				// what a check of the layout needs (tools/test, the audit of the menus): the style, the corners, the
+				// box the text of the item was drawn in, the widget of a row, the list it is in. A line of its own:
+				// the text of the item line goes to its end.
+				const rectDef_t	*t = &item->textRect;
+				rectDef_t		widget = { 0, 0, 0, 0 };
+
+				if ( Item_IsRow( item ) ) {
+					Item_Row_Widget( item, &widget );
+				}
+				Dump_Line( "uidump geom %d style=%d radius=%.1f border=%d text=%.0f,%.0f,%.0f,%.0f align=%d widget=%.0f,%.0f,%.0f,%.0f row=%d page=%d scroll=%d fold=%d column=%d stack=%d card=%.0f\n",
+					j, item->window.style, item->window.radius * DC->yscale, item->window.border,
+					( t->x + bias ) * DC->xscale, ( t->y + biasY ) * DC->yscale, t->w * DC->xscale, t->h * DC->yscale, item->textalignment,
+					widget.w > 0.0f ? ( widget.x + bias ) * DC->xscale : 0.0f, widget.w > 0.0f ? ( widget.y + biasY ) * DC->yscale : 0.0f,
+					widget.w * DC->xscale, widget.h * DC->yscale, item->row, item->page, item->scroll, item->fold, item->column, item->stack,
+					item->fold ? ( item->window.rect.y + ( item->cardBottom - item->window.rectClient.y ) + biasY ) * DC->yscale : 0.0f );
+			}
 		}
 	}
-	Com_Printf( "uidump end\n" );
+	Dump_Line( "uidump end\n" );
+	if ( dumpFile ) {
+		trap->FS_Close( dumpFile );
+		dumpFile = 0;
+	}
 }
 
 /*
@@ -11007,6 +11394,20 @@ qboolean ItemParse_fold( itemDef_t *item, int handle ) {
 	return PC_Int_Parse( handle, &item->fold );
 }
 
+qboolean ItemParse_textRoom( itemDef_t *item, int handle ) {
+	return PC_Float_Parse( handle, &item->textRoom );
+}
+
+qboolean ItemParse_cardHead( itemDef_t *item, int handle ) {
+	int i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	item->cardHead = (qboolean)( i != 0 );
+	return qtrue;
+}
+
 qboolean ItemParse_column( itemDef_t *item, int handle ) {
 	return PC_Int_Parse( handle, &item->column );
 }
@@ -11925,6 +12326,8 @@ keywordHash_t itemParseKeywords[] = {
 	{"scroll",			ItemParse_scroll,			NULL	},
 	{"row",				ItemParse_row,				NULL	},
 	{"fold",			ItemParse_fold,				NULL	},
+	{"cardHead",		ItemParse_cardHead,			NULL	},
+	{"textRoom",		ItemParse_textRoom,			NULL	},
 	{"column",			ItemParse_column,			NULL	},
 	{"stack",			ItemParse_stack,			NULL	},
 	{"advanced",		ItemParse_advanced,			NULL	},

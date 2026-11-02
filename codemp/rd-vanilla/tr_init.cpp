@@ -2271,6 +2271,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.Font_DrawMonoChar				= RE_Font_DrawMonoChar;
 	re.ext.Font_Text3DWidth					= RE_Font_Text3DWidth;
 	re.ext.Font_Text3D						= RE_Font_Text3D;
+	re.ext.Font_DrawStringF					= RE_Font_DrawStringF;
+	re.ext.Font_InkBox						= RE_Font_InkBox;
 	re.ext.RegisterShaderRGBA				= RE_RegisterShaderRGBA;
 	re.ext.Set2DPlane						= RE_Set2DPlane;
 	re.ext.SetDepthOfField					= RE_SetDepthOfField;

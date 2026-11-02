@@ -352,6 +352,10 @@ typedef struct itemDef_s {
 	// moves the rows of a list up under each other when some are folded away or are no match of the search:
 	// listY is where the menu file put the item, listOut that it is not in the list now.
 	int			fold;
+	float		textRoom;			// "textRoom <w>": a text at the left is set smaller where it is wider than w (the name of
+									//	a page beside its count)
+	int			cardHead;			// "cardHead 1": a word in the head of a card that is not its heading (KEY, SECOND KEY):
+									//	on the middle of the head as the heading is, its rectangle from the top of the card
 	qboolean	hint;				// "hint 1": an edit field with its text dimmed inside its empty box
 	// "descPic <picture> <name a> <name b>": the pane (ITEM_TYPE_DESC) shows <picture>_a and <picture>_b by turns
 	// under the description, what the setting looks like at the two values named
@@ -371,7 +375,7 @@ typedef struct itemDef_s {
 	// "canvas <w> <h>" of its menu: what the menu file gave, in the pixels of that canvas (Menu_CanvasLayout)
 	struct {
 		rectDef_t	rect;
-		float		textscale, textalignx, textaligny, text2alignx, text2aligny;
+		float		textscale, textalignx, textaligny, text2alignx, text2aligny, textRoom;
 		float		radius, shadow, borderSize;
 		float		elementWidth, elementHeight;
 		int			columnPos[MAX_LB_COLUMNS], columnWidth[MAX_LB_COLUMNS];
@@ -604,6 +608,9 @@ typedef struct displayContextDef_s {
 
 	struct {
 		float			(*Font_StrLenPixels)				( const char *text, const int iFontIndex, const float scale );
+		// the pixels the letters of a text cover when it is drawn at 0,0 (box: left, top, right, bottom). NULL, or
+		// qfalse for a font of the game: not known.
+		qboolean		(*textInk)							( const char *text, float scale, int iMenuFont, float *box );
 	} ext;
 } displayContextDef_t;
 
@@ -619,9 +626,19 @@ void Menu_PostParse(menuDef_t *menu);
 void Menu_CanvasLayout( menuDef_t *menu );
 void Menu_ChangesRevert( void );
 void Menus_Dump( void );
+qboolean Item_Dumped( const itemDef_t *item );
 void Menu_ChangesApply( void );
 float Menu_Unit( const menuDef_t *menu );
 void Menu_SetPage( menuDef_t *menu, int page );
+// a row of the new look writes the word of an owner draw itself: while text is caught, the text the owner draw
+// would write goes here instead of onto the screen (the ui's Text_Paint, ui_main.c)
+typedef struct textCatch_s {
+	char	*text;
+	int		size;
+	float	*color;
+	float	x;						// where the owner draw would have written it
+} textCatch_t;
+extern textCatch_t textCatch;
 menuDef_t *Menu_GetFocused();
 void Menu_HandleKey(menuDef_t *menu, int key, qboolean down);
 void Menu_HandleMouseMove(menuDef_t *menu, float x, float y);

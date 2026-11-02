@@ -256,7 +256,7 @@
 		itemDef
 		{
 			name					vision_left
-			rect					36 136 524 728
+			rect					36 136 524 684
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
@@ -268,7 +268,7 @@
 		itemDef
 		{
 			name					vision_middle
-			rect					572 136 280 728
+			rect					572 136 280 684
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
@@ -280,7 +280,7 @@
 		itemDef
 		{
 			name					vision_right
-			rect					864 136 700 728
+			rect					864 136 700 684
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.031 0.055 0.11 0.86
@@ -292,7 +292,7 @@
 		itemDef
 		{
 			name					vision_glow
-			rect					612 808 200 24
+			rect					612 764 200 24
 			visible					1
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.36 0.78 0.96 0.07
@@ -336,7 +336,7 @@
 			text					@MENUS_COLOR
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				18
+			textaligny				21.16
 			font					5
 			textscale				0.73
 			forecolor				0.56 0.64 0.74 1
@@ -442,7 +442,7 @@
 			text					@MENUS_APPEARANCE
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				18
+			textaligny				21.16
 			font					5
 			textscale				0.73
 			visible					1
@@ -472,7 +472,7 @@
 			rect					876 196 225.34 44
 			font					5
 			textscale				0.78
-			textaligny				11.56
+			textaligny				14.96
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				112.66
@@ -499,7 +499,7 @@
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
-			rect					876 252 676 600
+			rect					876 252 676 556
 			visible					1
 			action
 			{
@@ -524,7 +524,7 @@
 			rect					1101.34 196 225.34 44
 			font					5
 			textscale				0.78
-			textaligny				11.56
+			textaligny				14.96
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				112.66
@@ -551,7 +551,7 @@
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
-			rect					876 252 676 600
+			rect					876 252 676 556
 			visible					1
 			action
 			{
@@ -576,7 +576,7 @@
 			rect					1326.66 196 225.34 44
 			font					5
 			textscale				0.78
-			textaligny				11.56
+			textaligny				14.96
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				112.66
@@ -603,7 +603,7 @@
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
-			rect					876 252 676 600
+			rect					876 252 676 556
 			visible					1
 			action
 			{
@@ -694,7 +694,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					576 148 272 688
+			rect					576 148 272 644
 			model_g2anim			"BOTH_WALK1"
 			asset_model				"ui_char_model"
 			model_angle				180

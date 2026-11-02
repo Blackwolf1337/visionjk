@@ -83,6 +83,7 @@ typedef struct ttfGlyph_s {
 	qhandle_t	shader;
 	qhandle_t	shaderScene;
 	qboolean	valid;					// qfalse: the font has no such character, or no page had room
+	float		ink[4];					// the outline: left, top, right, bottom in units from the pen on the baseline
 } ttfGlyph_t;
 
 typedef std::map<uint64_t, ttfGlyph_t> ttfGlyphMap_t;
@@ -290,6 +291,23 @@ static qboolean R_FontTTF_Make( const stbtt_fontinfo *font, unsigned int codePoi
 		}
 	}
 
+	// (the cell covers whole units and the bitmap box whole pixels around the outline: R_FontTTF_InkBox wants the
+	// letter itself)
+	{
+		int ix0, iy0, ix1, iy1;
+
+		if ( stbtt_GetGlyphBox( font, index, &ix0, &iy0, &ix1, &iy1 ) ) {
+			glyph->ink[0] = ix0 * scale / k;
+			glyph->ink[1] = -iy1 * scale / k;
+			glyph->ink[2] = ix1 * scale / k;
+			glyph->ink[3] = -iy0 * scale / k;
+		} else {
+			glyph->ink[0] = (float)x0 / k;
+			glyph->ink[1] = (float)y0 / k;
+			glyph->ink[2] = (float)x1 / k;
+			glyph->ink[3] = (float)y1 / k;
+		}
+	}
 	glyph->info.width = (short)( cellW / k );
 	glyph->info.height = (short)( cellH / k );
 	glyph->info.horizOffset = (short)( cellX / k );
@@ -514,6 +532,53 @@ float R_FontTTF_StringWidth( int font, const char *text, float size ) {
 	}
 	R_FontTTF_MenuScale( &xScale, &yScale, &bias, &biasY );
 	return widest * xScale;
+}
+
+/*
+===============
+R_FontTTF_InkBox
+
+Where the letters of a text of that size cover pixels, as R_FontTTF_DrawString draws them at 0,0: box is left,
+top, right, bottom in units. A text of spaces only has an empty box at 0,0. A line feed starts a line below.
+===============
+*/
+void R_FontTTF_InkBox( int font, const char *text, float size, float *box ) {
+	const int			pixels = R_FontTTF_MenuPixels( size );
+	const ttfGlyph_t	*glyph;
+	float				xScale, yScale, bias, biasY;
+	int					colour, penX = 0, lineY = 0;
+	float				left = 0.0f, top = 0.0f, right = 0.0f, bottom = 0.0f;
+	qboolean			newLine, ink = qfalse;
+
+	while ( R_FontTTF_MenuChar( font, &text, pixels, &glyph, &colour, &newLine ) ) {
+		if ( newLine ) {
+			penX = 0;
+			lineY += pixels;
+			continue;
+		}
+		if ( !glyph ) {
+			continue;
+		}
+		// (the 1 x 1 corner R_FontTTF_Make gives a space covers nothing)
+		if ( glyph->info.s2 > glyph->info.s ) {
+			const float x0 = penX + glyph->ink[0], y0 = lineY + glyph->ink[1];
+			const float x1 = penX + glyph->ink[2], y1 = lineY + glyph->ink[3];
+
+			if ( !ink ) {
+				left = x0; top = y0; right = x1; bottom = y1;
+				ink = qtrue;
+			} else {
+				left = Q_min( left, x0 ); top = Q_min( top, y0 );
+				right = Q_max( right, x1 ); bottom = Q_max( bottom, y1 );
+			}
+		}
+		penX += glyph->info.horizAdvance;
+	}
+	R_FontTTF_MenuScale( &xScale, &yScale, &bias, &biasY );
+	box[0] = left * xScale;
+	box[2] = right * xScale;
+	box[1] = ink ? size * TTF_MENU_BASELINE + top * yScale : 0.0f;
+	box[3] = ink ? size * TTF_MENU_BASELINE + bottom * yScale : 0.0f;
 }
 
 /*

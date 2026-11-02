@@ -3141,6 +3141,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_uiCvarClean", "1", CVAR_ROM, "" );
 	// and ext.Cvar_Info after that
 	Cvar_Get( "v_uiCvarInfo", "1", CVAR_ROM, "" );
+	// and ext.R_Font_DrawStringF and ext.R_Font_InkBox after that
+	Cvar_Get( "v_uiFontInk", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );
