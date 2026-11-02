@@ -20,8 +20,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_board.c -- the drawing board, a toy of issue #9 that only players of this tree see: v_board (Controls, Extras)
 // opens a window where the player paints a picture of BOARD_W x BOARD_H with the mouse in BOARD_COLORS colours
-// (brushes, fill, undo, clear, four presets in drawings/ of the home folder, a picture file of drawings/ brought in),
-// and holds it up in front of him or over his head for the others to see, his arms posed to hold it.
+// (brushes, fill, undo, clear, four presets in drawings/ of the home folder, a picture file of drawings/ brought in
+// or one pasted from the clipboard of the system), and holds it up in front of him or over his head for the others
+// to see, his arms posed to hold it.
+//
+// A picture brought in or pasted (Paste, Ctrl+V, v_board paste: the engine writes it to drawings/clipboard,
+// client/cl_clipboard.cpp) is placed first, as in a paint program: it lies over the board in its colours and can be
+// dragged, a corner scales it (its sides kept, Shift lets them go), the wheel scales it about the pointer, Fit and
+// Fill lay it inside or over the whole board, Enter or Done puts it on, Esc or Cancel takes it away. The colours of
+// the board are found in OKLab, a space where distances are what the eye sees (Ottosson 2020), with the error of each
+// pixel spread to the ones after it in rows that turn at each end (Floyd-Steinberg, serpentine), only over the
+// picture, so the rest of the board stays as it was.
 //
 // The picture is shown through a stream of the engine (ext.Video_Picture, client/cl_video.cpp, "videoMap *tv<n>"):
 // the own board in BOARD_STREAM, the boards of the nearest others in the ones after it. The others hear of a board
@@ -65,8 +74,17 @@ typedef enum {
 	BOARD_PART_LOAD,
 	BOARD_PART_IMPORT,
 	BOARD_PART_PICK,			// arg: the file in the list
-	BOARD_PART_PAGE				// arg: -1, 1
+	BOARD_PART_PAGE,			// arg: -1, 1
+	BOARD_PART_PASTE,
+	BOARD_PART_PLACE,			// the picture that is placed, or a corner of it (arg: 0 the picture, 1 to 4 the corners)
+	BOARD_PART_DONE,
+	BOARD_PART_CANCEL,
+	BOARD_PART_FIT				// arg: 0 inside the board, 1 over all of it
 } boardPart_t;
+
+#define BOARD_PLACE_SIZE	512			// pixels of a picture that is placed, each way at most
+#define BOARD_HANDLE		7.0f		// the corners to scale, units of the 2D screen
+#define BOARD_NOTE_MSEC		4000
 
 // how a board is held
 #define BOARD_HOLD_NONE		0
@@ -133,6 +151,20 @@ static struct {
 		int		frame;				// the frame the arms of the player are frozen in, -1: their own
 		void	*ghoul2;			//	on this model
 	} poses[MAX_CLIENTS];
+	struct {
+		qboolean	active;
+		byte		src[BOARD_PLACE_SIZE * BOARD_PLACE_SIZE * 4];
+		float		sx, sy, sw, sh;			// the part of src the picture covers
+		float		x, y, w, h;				// where it lies on the board, its pixels
+		int			drag;					// 0 none, 1 the picture, 2 to 5 a corner
+		float		grabX, grabY;			// where the pointer took it, pixels of the board
+		float		startX, startY, startW, startH;
+		qboolean	changed;
+		byte		preview[BOARD_H][BOARD_W];
+	} place;
+	char		note[128];			// a line over the picture for a while, BOARD_NOTE_MSEC
+	int			noteTime;
+	qboolean	pasting;			// the engine looks at the clipboard
 } board;
 
 void CG_BoardInit( void ) {
@@ -277,13 +309,36 @@ static void Board_KeepUndo( void ) {
 	memcpy( board.undo, board.pixels, sizeof( board.undo ) );
 }
 
-// the colour of the palette nearest to one, weighted roughly as the eye sees
-static int Board_Nearest( int r, int g, int b ) {
-	int i, best = 0, bestDist = INT_MAX;
+// a colour of 0 to 255 in sRGB as OKLab (Ottosson 2020): L, a, b
+static void Board_OkLab( float r, float g, float b, float *out ) {
+	float	c[3] = { r / 255.0f, g / 255.0f, b / 255.0f }, l, m, s;
+	int		k;
 
+	for ( k = 0; k < 3; k++ )
+		c[k] = c[k] <= 0.04045f ? c[k] / 12.92f : powf( ( c[k] + 0.055f ) / 1.055f, 2.4f );
+	l = cbrtf( 0.4122214708f * c[0] + 0.5363325363f * c[1] + 0.0514459929f * c[2] );
+	m = cbrtf( 0.2119034982f * c[0] + 0.6806995451f * c[1] + 0.1073969566f * c[2] );
+	s = cbrtf( 0.0883024619f * c[0] + 0.2817188376f * c[1] + 0.6299787005f * c[2] );
+	out[0] = 0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s;
+	out[1] = 1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s;
+	out[2] = 0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s;
+}
+
+// the colour of the palette nearest to one in OKLab
+static int Board_Nearest( const float *lab ) {
+	static float	palette[BOARD_COLORS][3];
+	static qboolean	made;
+	float			bestDist = 1e9f;
+	int				i, best = 0;
+
+	if ( !made ) {
+		for ( i = 0; i < BOARD_COLORS; i++ )
+			Board_OkLab( boardPalette[i][0], boardPalette[i][1], boardPalette[i][2], palette[i] );
+		made = qtrue;
+	}
 	for ( i = 0; i < BOARD_COLORS; i++ ) {
-		const int	dr = r - boardPalette[i][0], dg = g - boardPalette[i][1], db = b - boardPalette[i][2];
-		const int	dist = 3 * dr * dr + 4 * dg * dg + 2 * db * db;
+		const float	dl = lab[0] - palette[i][0], da = lab[1] - palette[i][1], db = lab[2] - palette[i][2];
+		const float	dist = dl * dl + da * da + db * db;
 
 		if ( dist < bestDist ) {
 			bestDist = dist;
@@ -293,36 +348,52 @@ static int Board_Nearest( int r, int g, int b ) {
 	return best;
 }
 
-// a picture in RGBA into the palette, the error of each pixel spread to the ones after it (Floyd-Steinberg); what is
-// clear (where the picture did not reach) stays white, the rest is laid over white
-static void Board_Quantize( const byte *rgba, byte pixels[BOARD_H][BOARD_W] ) {
-	static int	err[2][BOARD_W + 2][3];		// sixteenths, a pixel at x is at x + 1
-	int			x, y, k;
+/*
+=================
+Board_Quantize
 
+A picture in RGBA into the palette where mask is set (all of it with mask NULL), out keeps what it has elsewhere.
+What is clear is laid over white. The error of each pixel in OKLab goes to the ones after it (7/16 on, 3/16 behind
+below, 5/16 below, 1/16 on below), the rows run back and forth so it does not drift to one side.
+=================
+*/
+static void Board_Quantize( const byte *rgba, const byte mask[BOARD_H][BOARD_W], byte out[BOARD_H][BOARD_W] ) {
+	static float	err[2][BOARD_W + 2][3];		// a pixel at x is at x + 1
+	static float	palette[BOARD_COLORS][3];
+	static qboolean	made;
+	int				x, y, k, i;
+
+	if ( !made ) {
+		for ( i = 0; i < BOARD_COLORS; i++ )
+			Board_OkLab( boardPalette[i][0], boardPalette[i][1], boardPalette[i][2], palette[i] );
+		made = qtrue;
+	}
 	memset( err, 0, sizeof( err ) );
 	for ( y = 0; y < BOARD_H; y++ ) {
-		int ( *cur )[3] = err[y & 1], ( *next )[3] = err[( y + 1 ) & 1];
+		float		( *cur )[3] = err[y & 1], ( *next )[3] = err[( y + 1 ) & 1];
+		const int	step = ( y & 1 ) ? -1 : 1;
 
 		memset( next, 0, sizeof( err[0] ) );
-		for ( x = 0; x < BOARD_W; x++ ) {
+		for ( x = ( y & 1 ) ? BOARD_W - 1 : 0; x >= 0 && x < BOARD_W; x += step ) {
 			const byte	*in = rgba + ( y * BOARD_W + x ) * 4;
-			int			c[3], i;
+			float		lab[3];
 
-			if ( in[3] < 128 ) {
-				pixels[y][x] = 0;
+			if ( mask && !mask[y][x] )
 				continue;
-			}
+			Board_OkLab( ( in[0] * in[3] + 255.0f * ( 255 - in[3] ) ) / 255.0f, ( in[1] * in[3] + 255.0f * ( 255 - in[3] ) ) / 255.0f,
+				( in[2] * in[3] + 255.0f * ( 255 - in[3] ) ) / 255.0f, lab );
 			for ( k = 0; k < 3; k++ )
-				c[k] = Com_Clampi( 0, 255, ( in[k] * in[3] + 255 * ( 255 - in[3] ) ) / 255 + cur[x + 1][k] / 16 );
-			i = Board_Nearest( c[0], c[1], c[2] );
-			pixels[y][x] = (byte)i;
+				lab[k] += cur[x + 1][k];
+			i = Board_Nearest( lab );
+			out[y][x] = (byte)i;
 			for ( k = 0; k < 3; k++ ) {
-				const int e = c[k] - boardPalette[i][k];
+				// (a large error, of a colour far from all of the palette, is not spread whole, it would streak)
+				const float e = Com_Clamp( -0.12f, 0.12f, lab[k] - palette[i][k] );
 
-				cur[x + 2][k] += e * 7;
-				next[x][k] += e * 3;
-				next[x + 1][k] += e * 5;
-				next[x + 2][k] += e;
+				cur[x + 1 + step][k] += e * ( 7.0f / 16.0f );
+				next[x + 1 - step][k] += e * ( 3.0f / 16.0f );
+				next[x + 1][k] += e * ( 5.0f / 16.0f );
+				next[x + 1 + step][k] += e * ( 1.0f / 16.0f );
 			}
 		}
 	}
@@ -347,25 +418,168 @@ static void Board_ListImports( void ) {
 	}
 }
 
-// a picture file of drawings/ onto the board, in its colours (ext.R_LoadImageFit, the engine loads it)
-static void Board_Import( const char *name ) {
-	static byte	rgba[BOARD_W * BOARD_H * 4];
-	char		value[8];
+static void Board_Note( const char *text ) {
+	Q_strncpyz( board.note, text, sizeof( board.note ) );
+	board.noteTime = cg.time;
+}
+
+// the picture that is placed laid inside the board (fill 0) or over all of it (fill 1), its sides kept, in the middle
+static void Board_PlaceFit( int fill ) {
+	const float	board_ = (float)BOARD_W / BOARD_H, pic = board.place.sw / board.place.sh;
+
+	if ( ( pic > board_ ) != ( fill != 0 ) ) {
+		board.place.w = BOARD_W;
+		board.place.h = BOARD_W / pic;
+	} else {
+		board.place.h = BOARD_H;
+		board.place.w = BOARD_H * pic;
+	}
+	board.place.x = ( BOARD_W - board.place.w ) * 0.5f;
+	board.place.y = ( BOARD_H - board.place.h ) * 0.5f;
+	board.place.changed = qtrue;
+}
+
+// the board with the placed picture over it, in its colours, into place.preview
+static void Board_PlaceCompose( void ) {
+	static byte	rgba[BOARD_H * BOARD_W * 4];
+	static byte	mask[BOARD_H][BOARD_W];
+	int			x, y, k;
+
+	memcpy( board.place.preview, board.pixels, sizeof( board.place.preview ) );
+	memset( mask, 0, sizeof( mask ) );
+	for ( y = 0; y < BOARD_H; y++ ) {
+		for ( x = 0; x < BOARD_W; x++ ) {
+			const byte	*base = boardPalette[board.pixels[y][x] % BOARD_COLORS];
+			byte		*out = rgba + ( y * BOARD_W + x ) * 4;
+			const float	u = ( x + 0.5f - board.place.x ) / board.place.w, v = ( y + 0.5f - board.place.y ) / board.place.h;
+			float		fx, fy, a, b, c[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			int			ix, iy;
+
+			out[3] = 255;
+			if ( u < 0.0f || v < 0.0f || u >= 1.0f || v >= 1.0f )
+				continue;
+			// the picture there, the four nearest of its pixels mixed by their alpha
+			fx = Com_Clamp( 0.0f, BOARD_PLACE_SIZE - 1.001f, board.place.sx + u * board.place.sw - 0.5f );
+			fy = Com_Clamp( 0.0f, BOARD_PLACE_SIZE - 1.001f, board.place.sy + v * board.place.sh - 0.5f );
+			ix = (int)fx;
+			iy = (int)fy;
+			a = fx - ix;
+			b = fy - iy;
+			for ( k = 0; k < 4; k++ ) {
+				const byte	*p = board.place.src + ( ( iy + ( k >> 1 ) ) * BOARD_PLACE_SIZE + ix + ( k & 1 ) ) * 4;
+				const float	w = ( ( k & 1 ) ? a : 1.0f - a ) * ( ( k >> 1 ) ? b : 1.0f - b ) * p[3] / 255.0f;
+
+				c[0] += p[0] * w;
+				c[1] += p[1] * w;
+				c[2] += p[2] * w;
+				c[3] += w;
+			}
+			if ( c[3] < 0.03f )
+				continue;
+			// over what the board has there
+			for ( k = 0; k < 3; k++ )
+				out[k] = (byte)Com_Clamp( 0.0f, 255.0f, c[k] / c[3] * c[3] + base[k] * ( 1.0f - c[3] ) );
+			mask[y][x] = 1;
+		}
+	}
+	Board_Quantize( rgba, (const byte ( * )[BOARD_W])mask, board.place.preview );
+	board.place.changed = qfalse;
+	if ( Board_HasVideo() ) {
+		Board_ToRGBA( (const byte ( * )[BOARD_W])board.place.preview, board.rgba );
+		trap->ext.Video_Picture( BOARD_STREAM, board.rgba, BOARD_W, BOARD_H );
+	}
+}
+
+// the placed picture goes onto the board (Undo takes it back), or is taken away
+static void Board_PlaceEnd( qboolean keep ) {
+	if ( !board.place.active )
+		return;
+	if ( keep ) {
+		if ( board.place.changed )
+			Board_PlaceCompose();
+		Board_KeepUndo();
+		memcpy( board.pixels, board.place.preview, sizeof( board.pixels ) );
+	}
+	board.place.active = qfalse;
+	board.place.drag = 0;
+	Board_Show( qtrue );
+	if ( keep )
+		CG_BoardPublish();
+}
+
+/*
+=================
+Board_Import
+
+A picture file onto the board (ext.R_LoadImageFit, the engine loads it): of drawings/, or the one the engine made
+of the clipboard. With the window open it is placed first, without (a bind) it goes on inside the board at once.
+=================
+*/
+static void Board_Import( const char *file ) {
+	char	value[8];
+	int		x, y, x0 = BOARD_PLACE_SIZE, y0 = BOARD_PLACE_SIZE, x1 = -1, y1 = -1;
 
 	trap->Cvar_VariableStringBuffer( "v_cgameImage", value, sizeof( value ) );
 	if ( atoi( value ) != 1 )
 		return;
-	if ( !name[0] || strchr( name, '/' ) || strchr( name, '\\' ) || strstr( name, ".." ) )
-		return;
-	if ( !trap->ext.R_LoadImageFit( va( "drawings/%s", name ), rgba, BOARD_W, BOARD_H ) ) {
-		Com_Printf( "No picture named %s in the drawings folder\n", name );
+	if ( !trap->ext.R_LoadImageFit( file, board.place.src, BOARD_PLACE_SIZE, BOARD_PLACE_SIZE ) ) {
+		Com_Printf( "No picture %s\n", file );
 		return;
 	}
-	Board_KeepUndo();
-	Board_Quantize( rgba, board.pixels );
-	board.dirty = qtrue;
-	Board_Show( qtrue );
-	CG_BoardPublish();
+	// the part of it that is not clear
+	for ( y = 0; y < BOARD_PLACE_SIZE; y++ ) {
+		for ( x = 0; x < BOARD_PLACE_SIZE; x++ ) {
+			if ( board.place.src[( y * BOARD_PLACE_SIZE + x ) * 4 + 3] ) {
+				x0 = Q_min( x0, x );
+				y0 = Q_min( y0, y );
+				x1 = Q_max( x1, x );
+				y1 = Q_max( y1, y );
+			}
+		}
+	}
+	if ( x1 < 0 ) {
+		Board_Note( "That picture is empty" );
+		return;
+	}
+	board.place.sx = (float)x0;
+	board.place.sy = (float)y0;
+	board.place.sw = (float)( x1 - x0 + 1 );
+	board.place.sh = (float)( y1 - y0 + 1 );
+	board.place.active = qtrue;
+	board.place.drag = 0;
+	board.importing = qfalse;
+	Board_PlaceFit( 0 );
+	if ( !board.open )
+		Board_PlaceEnd( qtrue );
+}
+
+// a picture file of drawings/
+static void Board_ImportFile( const char *name ) {
+	if ( !name[0] || strchr( name, '/' ) || strchr( name, '\\' ) || strstr( name, ".." ) )
+		return;
+	Board_Import( va( "drawings/%s", name ) );
+}
+
+// the engine is asked for the picture on the clipboard, it answers with v_boardPasted
+static void Board_Paste( void ) {
+	if ( board.pasting )
+		return;
+	board.pasting = qtrue;
+	Board_Note( "Looking at the clipboard" );
+	trap->SendConsoleCommand( "v_clipboardImage drawings/clipboard v_boardPasted\n" );
+}
+
+// v_boardPasted <file>: the engine wrote the picture of the clipboard there, or found none ("")
+void CG_BoardPasted_f( void ) {
+	const char *file = CG_Argv( 1 );
+
+	board.pasting = qfalse;
+	if ( !file[0] ) {
+		Board_Note( "The clipboard has no picture" );
+		return;
+	}
+	board.note[0] = '\0';
+	Board_Import( file );
 }
 
 // drawings/preset<n>.vjd of the home folder: "VJD1" and a byte a pixel
@@ -462,6 +676,7 @@ void CG_BoardOpen( void ) {
 }
 
 void CG_BoardClose( void ) {
+	Board_PlaceEnd( qfalse );
 	if ( board.open && board.painting ) {
 		board.painting = qfalse;
 		CG_BoardPublish();
@@ -470,7 +685,7 @@ void CG_BoardClose( void ) {
 }
 
 // v_board: the window opens and closes. v_board hold <0 away, 1 in front, 2 over the head>, v_board save <1-4>,
-// v_board load <1-4>, v_board import <file of drawings/>: the same without the window, for a bind
+// v_board load <1-4>, v_board import <file of drawings/>, v_board paste: the same without the window, for a bind
 void CG_Board_f( void ) {
 	char		what[16], arg[MAX_QPATH];
 	int			n;
@@ -488,9 +703,11 @@ void CG_Board_f( void ) {
 	} else if ( !Q_stricmp( what, "load" ) && n >= 1 && n <= BOARD_PRESETS ) {
 		Board_Load( n - 1 );
 	} else if ( !Q_stricmp( what, "import" ) && arg[0] ) {
-		Board_Import( arg );
+		Board_ImportFile( arg );
+	} else if ( !Q_stricmp( what, "paste" ) ) {
+		Board_Paste();
 	} else if ( what[0] ) {
-		Com_Printf( "usage: v_board [hold <0-2> | save <1-%i> | load <1-%i> | import <file>]\n", BOARD_PRESETS, BOARD_PRESETS );
+		Com_Printf( "usage: v_board [hold <0-2> | save <1-%i> | load <1-%i> | import <file> | paste]\n", BOARD_PRESETS, BOARD_PRESETS );
 	} else if ( board.open ) {
 		CG_BoardClose();
 	} else if ( CG_ToyCanUse() || !cg.snap ) {
@@ -546,6 +763,67 @@ static void Board_DrawImports( float cx, float cy ) {
 
 /*
 =================
+Board_PlaceDrag
+
+While the placed picture or a corner of it is dragged, once a frame: moved with the pointer, or scaled from the
+corner across, its sides kept unless Shift is down
+=================
+*/
+static void Board_PlaceDrag( void ) {
+	float px, py;
+
+	if ( !board.place.drag )
+		return;
+	Board_PointerPixel( &px, &py );
+	if ( board.place.drag == 1 ) {
+		board.place.x = board.place.startX + px - board.place.grabX;
+		board.place.y = board.place.startY + py - board.place.grabY;
+	} else {
+		const int	corner = board.place.drag - 2;		// 0 upper left, 1 upper right, 2 lower right, 3 lower left
+		const float	ax = ( corner == 1 || corner == 2 ) ? board.place.startX : board.place.startX + board.place.startW;
+		const float	ay = ( corner >= 2 ) ? board.place.startY : board.place.startY + board.place.startH;
+		float		w = Q_max( 4.0f, fabsf( px - ax ) ), h = Q_max( 4.0f, fabsf( py - ay ) );
+
+		if ( !trap->Key_IsDown( A_SHIFT ) ) {
+			const float scale = Q_max( w / board.place.startW, h / board.place.startH );
+
+			w = board.place.startW * scale;
+			h = board.place.startH * scale;
+		}
+		board.place.w = w;
+		board.place.h = h;
+		board.place.x = ( corner == 1 || corner == 2 ) ? ax : ax - w;
+		board.place.y = ( corner >= 2 ) ? ay : ay - h;
+	}
+	board.place.changed = qtrue;
+}
+
+// the frame of the placed picture with its corners, and the buttons to put it on or away, over the board
+static void Board_DrawPlace( float cx, float cy ) {
+	const float	x = cx + board.place.x * BOARD_SCALE, y = cy + board.place.y * BOARD_SCALE;
+	const float	w = board.place.w * BOARD_SCALE, h = board.place.h * BOARD_SCALE;
+	const float	bw = BOARD_W * BOARD_SCALE, bh = BOARD_H * BOARD_SCALE;
+	int			i;
+
+	CG_DrawRect( x - 1.0f, y - 1.0f, w + 2.0f, h + 2.0f, 1.0f, winAccent );
+	Win_Hit( &board.hits, BOARD_PART_PLACE, 0, cx, cy, bw, bh );
+	for ( i = 0; i < 4; i++ ) {
+		const float hx = ( i == 1 || i == 2 ) ? x + w : x, hy = ( i >= 2 ) ? y + h : y;
+
+		CG_FillRect( hx - BOARD_HANDLE * 0.5f, hy - BOARD_HANDLE * 0.5f, BOARD_HANDLE, BOARD_HANDLE, winAccent );
+		Win_Hit( &board.hits, BOARD_PART_PLACE, i + 1, hx - BOARD_HANDLE, hy - BOARD_HANDLE, BOARD_HANDLE * 2.0f, BOARD_HANDLE * 2.0f );
+	}
+	// under the board, where the colours are while it is painted
+	Win_Text( cx, cy + bh + 12.0f, 0.5f, winText, ITEM_ALIGN_LEFT, "Drag to move, drag a corner to scale (Shift: free), wheel zooms", bw );
+	Win_Text( cx, cy + bh + 33.0f, 0.45f, winDim, ITEM_ALIGN_LEFT, "Enter puts it on, Esc drops it", bw - 250.0f );
+	Win_Button( &board.hits, BOARD_PART_FIT, 0, cx + bw - 246.0f, cy + bh + 31.0f, 52.0f, "Fit", winText, qtrue );
+	Win_Button( &board.hits, BOARD_PART_FIT, 1, cx + bw - 190.0f, cy + bh + 31.0f, 52.0f, "Fill", winText, qtrue );
+	Win_Button( &board.hits, BOARD_PART_CANCEL, 0, cx + bw - 134.0f, cy + bh + 31.0f, 60.0f, "Cancel", winText, qtrue );
+	Win_Button( &board.hits, BOARD_PART_DONE, 0, cx + bw - 70.0f, cy + bh + 31.0f, 60.0f, "Done", winAccent, qtrue );
+}
+
+/*
+=================
 CG_BoardDraw
 
 Once a frame while it is open, in the 2D of the HUD, before the pointer: the picture, the colours, the tools
@@ -567,8 +845,13 @@ void CG_BoardDraw( void ) {
 		board.lastX = px;
 		board.lastY = py;
 	}
-	if ( board.dirty )
+	if ( board.place.active ) {
+		Board_PlaceDrag();
+		if ( board.place.changed )
+			Board_PlaceCompose();
+	} else if ( board.dirty ) {
 		Board_Show( qfalse );
+	}
 	board.hits.num = 0;
 	Win_Panel( board.x, board.y, BOARD_WIN_W, BOARD_WIN_H, 6.0f, winFill, winEdge );
 	Win_Text( board.x + 12.0f, board.y + 8.0f, 0.6f, winText, ITEM_ALIGN_LEFT, "Drawing board", 300.0f );
@@ -576,13 +859,19 @@ void CG_BoardDraw( void ) {
 	// the picture itself, as the stream of the engine shows it
 	CG_FillRect( cx - 1.0f, cy - 1.0f, BOARD_W * BOARD_SCALE + 2.0f, BOARD_H * BOARD_SCALE + 2.0f, winEdge );
 	CG_DrawPic( cx, cy, BOARD_W * BOARD_SCALE, BOARD_H * BOARD_SCALE, board.shaders[BOARD_STREAM] );
-	if ( board.importing )
+	if ( board.place.active )
+		Board_DrawPlace( cx, cy );
+	else if ( board.importing )
 		Board_DrawImports( cx, cy );
 	else
 		Win_Hit( &board.hits, BOARD_PART_CANVAS, 0, cx, cy, BOARD_W * BOARD_SCALE, BOARD_H * BOARD_SCALE );
-	// the colours, two rows
+	if ( board.note[0] && ( board.pasting || cg.time - board.noteTime < BOARD_NOTE_MSEC ) ) {
+		Win_Panel( cx + 6.0f, cy + 6.0f, Win_Width( board.note, 0.5f ) + 20.0f, 24.0f, 4.0f, winFill, winEdge );
+		Win_Text( cx + 16.0f, cy + 10.0f, 0.5f, winText, ITEM_ALIGN_LEFT, board.note, BOARD_W * BOARD_SCALE - 30.0f );
+	}
+	// the colours, two rows, and the tools at the right of them (while a picture is placed its buttons are there)
 	y = cy + BOARD_H * BOARD_SCALE + 10.0f;
-	for ( i = 0; i < BOARD_COLORS; i++ ) {
+	for ( i = 0; i < BOARD_COLORS && !board.place.active; i++ ) {
 		x = cx + ( i % 16 ) * 21.0f;
 		VectorSet( swatch, boardPalette[i][0] / 255.0f, boardPalette[i][1] / 255.0f, boardPalette[i][2] / 255.0f );
 		swatch[3] = 1.0f;
@@ -591,14 +880,16 @@ void CG_BoardDraw( void ) {
 		CG_FillRect( x, y + ( i / 16 ) * 21.0f, 18.0f, 18.0f, swatch );
 		Win_Hit( &board.hits, BOARD_PART_COLOR, i, x, y + ( i / 16 ) * 21.0f, 18.0f, 18.0f );
 	}
-	// the tools at the right of the colours
 	x = cx + 16 * 21.0f + 8.0f;
-	for ( i = 1; i <= 4; i++ )
-		Win_Button( &board.hits, BOARD_PART_SIZE, i, x + ( i - 1 ) * 31.0f, y, 28.0f, va( "%i", i ), ( i == board.size && !board.fill ) ? winAccent : winText, qtrue );
-	Win_Button( &board.hits, BOARD_PART_IMPORT, 0, x + 126.0f, y, 52.0f, "Picture", board.importing ? winAccent : winText, qtrue );
-	Win_Button( &board.hits, BOARD_PART_FILL, 0, x, y + 21.0f, 52.0f, "Fill", board.fill ? winAccent : winText, qtrue );
-	Win_Button( &board.hits, BOARD_PART_UNDO, 0, x + 56.0f, y + 21.0f, 52.0f, "Undo", winText, qtrue );
-	Win_Button( &board.hits, BOARD_PART_CLEAR, 0, x + 112.0f, y + 21.0f, 52.0f, "Clear", winRed, qtrue );
+	if ( !board.place.active ) {
+		for ( i = 1; i <= 4; i++ )
+			Win_Button( &board.hits, BOARD_PART_SIZE, i, x + ( i - 1 ) * 31.0f, y, 28.0f, va( "%i", i ), ( i == board.size && !board.fill ) ? winAccent : winText, qtrue );
+		Win_Button( &board.hits, BOARD_PART_IMPORT, 0, x + 126.0f, y, 52.0f, "Picture", board.importing ? winAccent : winText, qtrue );
+		Win_Button( &board.hits, BOARD_PART_FILL, 0, x, y + 21.0f, 40.0f, "Fill", board.fill ? winAccent : winText, qtrue );
+		Win_Button( &board.hits, BOARD_PART_UNDO, 0, x + 43.0f, y + 21.0f, 40.0f, "Undo", winText, qtrue );
+		Win_Button( &board.hits, BOARD_PART_CLEAR, 0, x + 86.0f, y + 21.0f, 40.0f, "Clear", winRed, qtrue );
+		Win_Button( &board.hits, BOARD_PART_PASTE, 0, x + 129.0f, y + 21.0f, 49.0f, "Paste", board.pasting ? winAccent : winText, qtrue );
+	}
 	// holding, the presets, clear
 	y = board.y + BOARD_WIN_H - 26.0f;
 	for ( i = 0; i < 3; i++ )
@@ -615,9 +906,40 @@ qboolean CG_BoardKey( int key, qboolean down ) {
 	if ( !board.open )
 		return qfalse;
 	if ( key == A_ESCAPE ) {
-		if ( down )
+		if ( down && board.place.active )
+			Board_PlaceEnd( qfalse );
+		else if ( down )
 			CG_BoardClose();
 		return qtrue;
+	}
+	if ( down && ( key == 'v' || key == 'V' ) && trap->Key_IsDown( A_CTRL ) ) {
+		Board_Paste();
+		return qtrue;
+	}
+	if ( board.place.active ) {
+		if ( down && ( key == A_ENTER || key == A_KP_ENTER ) ) {
+			Board_PlaceEnd( qtrue );
+			return qtrue;
+		}
+		// the wheel scales it about the pointer
+		if ( down && ( key == A_MWHEELUP || key == A_MWHEELDOWN ) ) {
+			const float	scale = key == A_MWHEELUP ? 1.1f : 1.0f / 1.1f;
+			float		px, py;
+
+			Board_PointerPixel( &px, &py );
+			if ( board.place.w * scale >= 4.0f && board.place.h * scale >= 4.0f ) {
+				board.place.x = px - ( px - board.place.x ) * scale;
+				board.place.y = py - ( py - board.place.y ) * scale;
+				board.place.w *= scale;
+				board.place.h *= scale;
+				board.place.changed = qtrue;
+			}
+			return qtrue;
+		}
+		if ( key == A_MOUSE1 && !down ) {
+			board.place.drag = 0;
+			return qtrue;
+		}
 	}
 	if ( key != A_MOUSE1 )
 		return CG_BoardPointerOver();
@@ -692,11 +1014,41 @@ qboolean CG_BoardKey( int key, qboolean down ) {
 	case BOARD_PART_PICK:
 		if ( board.hits.hit[at].arg >= 0 && board.hits.hit[at].arg < board.numImports ) {
 			board.importing = qfalse;
-			Board_Import( board.imports[board.hits.hit[at].arg] );
+			Board_ImportFile( board.imports[board.hits.hit[at].arg] );
 		}
 		break;
 	case BOARD_PART_PAGE:
 		board.importPage = Com_Clampi( 0, Q_max( 0, ( board.numImports - 1 ) / BOARD_IMPORT_ROWS ), board.importPage + board.hits.hit[at].arg );
+		break;
+	case BOARD_PART_PASTE:
+		Board_Paste();
+		break;
+	case BOARD_PART_PLACE: {
+			float px, py;
+
+			Board_PointerPixel( &px, &py );
+			// a corner, or inside the picture, takes it; a click beside it does nothing
+			if ( !board.hits.hit[at].arg && ( px < board.place.x || py < board.place.y || px >= board.place.x + board.place.w
+				|| py >= board.place.y + board.place.h ) ) {
+				break;
+			}
+			board.place.drag = board.hits.hit[at].arg + 1;
+			board.place.grabX = px;
+			board.place.grabY = py;
+			board.place.startX = board.place.x;
+			board.place.startY = board.place.y;
+			board.place.startW = board.place.w;
+			board.place.startH = board.place.h;
+		}
+		break;
+	case BOARD_PART_FIT:
+		Board_PlaceFit( board.hits.hit[at].arg );
+		break;
+	case BOARD_PART_DONE:
+		Board_PlaceEnd( qtrue );
+		break;
+	case BOARD_PART_CANCEL:
+		Board_PlaceEnd( qfalse );
 		break;
 	}
 	return qtrue;

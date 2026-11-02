@@ -615,6 +615,11 @@ void		CL_ModelsFrame( void );
 void		CL_ModelsShutdown( void );
 qboolean	CL_ModelsAsking( void );
 
+// cl_clipboard.cpp: a picture from the clipboard of the system
+//
+void		CL_ClipboardInit( void );
+void		CL_ClipboardFrame( void );
+
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);

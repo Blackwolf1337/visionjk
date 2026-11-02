@@ -2441,6 +2441,7 @@ void CL_Frame ( int msec ) {
 	CL_UpdateFrame();
 	CL_DownloadWebFrame();
 	CL_ModelsFrame();
+	CL_ClipboardFrame();
 	CL_MemWatchFrame();
 	CL_RepFrame();
 
@@ -3224,6 +3225,7 @@ void CL_Init( void ) {
 	// is there a newer version of the game? Asked in a thread, the answer comes some frames later
 	CL_UpdateInit();
 	CL_ModelsInit();
+	CL_ClipboardInit();
 
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 

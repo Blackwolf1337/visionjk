@@ -481,6 +481,7 @@ static consoleCommand_t	commands[] = {
 	{ "v_tennis",					CG_Tennis_f },
 	{ "v_board",					CG_Board_f },
 	{ "v_boardPicture",				CG_BoardPicture_f },
+	{ "v_boardPasted",				CG_BoardPasted_f },
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },
