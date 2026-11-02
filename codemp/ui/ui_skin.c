@@ -163,6 +163,19 @@ float Skin_Ease( float value, qboolean on, int msec ) {
 	return on ? Q_min( 1.0f, value + step ) : Q_max( 0.0f, value - step );
 }
 
+// The knob of a switch, the chosen half of a toggle, the mark of a tab: eased only while the item is drawn frame
+// after frame. An item that was not drawn a moment ago (a menu that opens, a page or a card that comes into view, a
+// search) shows its setting at once: eased from where it was last time, a switch slid from on to off as it appeared.
+float Skin_EaseValue( itemDef_t *item, qboolean on ) {
+	if ( DC->realTime - item->skinValueTime > 100 || item->skinValueTime > DC->realTime ) {
+		item->skinValue = on ? 1.0f : 0.0f;
+	} else {
+		item->skinValue = Skin_Ease( item->skinValue, on, SKIN_EASE_MSEC );
+	}
+	item->skinValueTime = DC->realTime;
+	return item->skinValue;
+}
+
 void Skin_Color( vec4_t out, const vec4_t in, float alphaScale ) {
 	VectorCopy( in, out );
 	out[3] = in[3] * alphaScale;
@@ -1010,8 +1023,7 @@ void Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on )
 	float			at;
 	int				i;
 
-	item->skinValue = Skin_Ease( item->skinValue, on, SKIN_EASE_MSEC );
-	at = item->skinValue;
+	at = Skin_EaseValue( item, on );
 	for ( i = 0; i < 3; i++ ) {
 		track[i] = skinField[i] + ( accent[i] - skinField[i] ) * at;
 		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * at;
