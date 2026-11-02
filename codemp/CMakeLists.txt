@@ -558,6 +558,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_ids.cpp"
 		"${MPDir}/client/cl_memwatch.cpp"
 		"${MPDir}/client/cl_reputation.cpp"
+		"${MPDir}/client/cl_master.cpp"
 		"${MPDir}/client/cl_input.cpp"
 		"${MPDir}/client/cl_keys.cpp"
 		"${MPDir}/client/cl_lan.cpp"

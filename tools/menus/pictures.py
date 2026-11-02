@@ -88,7 +88,7 @@ def main():
     env = dict(os.environ, HEADLESS_TIMEOUT=str(120 + 40 * len(pictures)), HEADLESS_LOG=os.path.join(home, 'run.log'))
     # (v_ids 0: a test folder of the game can be a temporary one, which the memory monitor takes for an attack)
     cmd = [HEADLESS, './visionjk.x86_64', '+set', 'fs_homepath', home, '+set', 'v_ids', '0', '+set', 'v_updateCheck', '0',
-           '+set', 'v_voiceMasterHost', '', '+set', 'cl_motd', '0', '+set', 's_volume', '0', '+set', 'r_mode', '-1',
+           '+set', 'v_master', '', '+set', 'cl_motd', '0', '+set', 's_volume', '0', '+set', 'r_mode', '-1',
            '+set', 'r_customwidth', '1280', '+set', 'r_customheight', '720', '+set', 'r_fullscreen', '0',
            '+set', 'com_maxfps', '60', '+set', 'cl_renderer', 'rd-vulkan-vision', '+set', 'cg_draw2D', '0',
            '+set', 'v_hud', '0', '+set', 'cl_noprint', '1',

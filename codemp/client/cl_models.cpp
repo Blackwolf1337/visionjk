@@ -152,10 +152,8 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
 #define MDL_PICTURE_MOST	( 1500 * 1500 )		// numbers of pictures of a drawing board or a spray (TOY_BOARD_SPLIT squared)
 #define MDL_PICTURE_ASKS	8					// pictures of a kind the cgame asked for that wait
-#define MDL_STAMP_MSEC		30000				// stamp.txt of the store is read this often in the game
-#define MDL_STAMP_JITTER	5000				//	and up to this much later, so the games of the players spread out
-#define MDL_STAMP_MOST		1024				// bytes of stamp.txt at most
-#define MDL_STAMP_HASH		20
+#define MDL_CHANGED_JITTER	5000				// a list the masterserver says changed is fetched within this, so the games
+												//	of the players do not all ask at once
 
 enum {
 	MDLJOB_FREE,
@@ -186,7 +184,6 @@ typedef struct {
 	char				emoji[WEB_MODEL_NAME];	//	this one of it
 	qboolean			emojiIndex;				//	or the list of them
 	qboolean			emoteList;				// the interactive emojis for the cgame (MDL_EMOTE_LIST)
-	qboolean			stamp;					// stamp.txt: what the lists of the stores are now
 	int					picture;				// a picture of a drawing board or a spray that is fetched
 	int					pictureKind;			//	of mdlPictureKinds, also of an upload
 	const byte			*body;					// what is sent with a POST (the own picture), NULL: a GET
@@ -647,78 +644,50 @@ static void MDL_NextEmoji( void ) {
 /*
 ===============================================================================
 
-stamp.txt of the store has a hash of each list: of the models, the chat emojis and the interactive emojis
-(write_stamp of modelstore.py). It is read every MDL_STAMP_MSEC in the game, and a list whose hash changed is
-fetched again when it is next wanted, so what somebody uploads on the site comes into the game of the others
-within half a minute and not after MDL_INDEX_MSEC. The first stamp only says what the lists are.
+A change to a store of the site: the masterserver says which list changed (cl_master.cpp), and that list is
+fetched again when it is next wanted, so what somebody uploads comes into the game of the others at once and not
+after MDL_INDEX_MSEC.
 
 ===============================================================================
 */
 
-enum { MDL_STAMP_MODELS, MDL_STAMP_EMOJI, MDL_STAMP_EMOTES, MDL_STAMP_STORES };
+enum { MDL_STORE_MODELS, MDL_STORE_EMOJI, MDL_STORE_EMOTES, MDL_STORES };
 
-static const char	*mdlStampStores[MDL_STAMP_STORES] = { "models", "emoji", "emotes" };
-static char			mdlStamp[MDL_STAMP_MOST + 1];
-static char			mdlStampHash[MDL_STAMP_STORES][MDL_STAMP_HASH];		// empty: not read yet
-static int			mdlStampTime;			// cls.realtime when stamp.txt is read next, 0: at once
+static const char	*mdlStoreNames[MDL_STORES] = { "models", "emoji", "emotes" };
+static qboolean		mdlStoreChanged[MDL_STORES];
+static int			mdlStoreChangedTime[MDL_STORES];		// cls.realtime when the list counts as old
 
-static qboolean MDL_StampDue( void ) {
-	return (qboolean)( cls.state == CA_ACTIVE && !clc.demoplaying && ( v_modelStore->integer || v_emojiStore->integer )
-		&& ( !mdlStampTime || cls.realtime - mdlStampTime >= 0 ) );
+// whether this game wants to hear of changes to the stores
+qboolean CL_ModelsWatching( void ) {
+	return (qboolean)( v_modelStore && ( v_modelStore->integer || v_emojiStore->integer ) );
 }
 
-static void MDL_StartStamp( void ) {
-	mdlJob_t *job = &mdlJob;
-
-	memset( job, 0, sizeof( *job ) );
-	mdlStampTime = cls.realtime + MDL_STAMP_MSEC + Q_irand( 0, MDL_STAMP_JITTER );
-	if ( !MDL_Url( "stamp.txt", job->url, sizeof( job->url ) ) ) {
-		return;
-	}
-	job->stamp = qtrue;
-	job->most = MDL_STAMP_MOST;
-	job->index = mdlStamp;
-	MDL_Launch( job );
-}
-
-// The list of a store changed on the site: it is old from now on.
-static void MDL_StampChanged( int store ) {
-	Com_DPrintf( "model store: the list of the %s changed\n", mdlStampStores[store] );
-	if ( store == MDL_STAMP_MODELS ) {
-		// (a model a player uses that was not in the store is looked for again, which fetches the list)
-		mdlIndexTime = -1;
-		mdlSeen.num = 0;
-	} else if ( store == MDL_STAMP_EMOJI ) {
-		mdlNamed[MDL_NAMED_EMOJI].indexTime = -1;
-	} else {
-		mdlEmoteListTime = -1;
-	}
-}
-
-static void MDL_StampDone( mdlJob_t *job ) {
-	const char	*line, *end;
-	char		name[16], hash[MDL_STAMP_HASH];
-
-	if ( !job->ok ) {
-		Com_DPrintf( "stamp.txt of the model store did not come: %s\n", job->error );
-		return;
-	}
-	mdlStamp[job->bytes] = '\0';
-	for ( line = mdlStamp; *line; line = *end ? end + 1 : end ) {
-		end = strchr( line, '\n' );
-		if ( !end ) {
-			end = line + strlen( line );
+// storeChanged <store> of the masterserver
+void CL_ModelsStoreChanged( const char *store ) {
+	for ( int i = 0; i < MDL_STORES; i++ ) {
+		if ( !Q_stricmp( store, mdlStoreNames[i] ) && !mdlStoreChanged[i] ) {
+			mdlStoreChanged[i] = qtrue;
+			mdlStoreChangedTime[i] = cls.realtime + Q_irand( 0, MDL_CHANGED_JITTER );
 		}
-		if ( *line == '#' || sscanf( line, "%15s %19s", name, hash ) != 2 ) {
+	}
+}
+
+// The lists whose time came are old from now on.
+static void MDL_StoresChanged( void ) {
+	for ( int i = 0; i < MDL_STORES; i++ ) {
+		if ( !mdlStoreChanged[i] || cls.realtime - mdlStoreChangedTime[i] < 0 ) {
 			continue;
 		}
-		for ( int store = 0; store < MDL_STAMP_STORES; store++ ) {
-			if ( !strcmp( name, mdlStampStores[store] ) ) {
-				if ( mdlStampHash[store][0] && strcmp( mdlStampHash[store], hash ) ) {
-					MDL_StampChanged( store );
-				}
-				Q_strncpyz( mdlStampHash[store], hash, sizeof( mdlStampHash[store] ) );
-			}
+		mdlStoreChanged[i] = qfalse;
+		Com_DPrintf( "model store: the list of the %s changed\n", mdlStoreNames[i] );
+		if ( i == MDL_STORE_MODELS ) {
+			// (a model a player uses that was not in the store is looked for again, which fetches the list)
+			mdlIndexTime = -1;
+			mdlSeen.num = 0;
+		} else if ( i == MDL_STORE_EMOJI ) {
+			mdlNamed[MDL_NAMED_EMOJI].indexTime = -1;
+		} else {
+			mdlEmoteListTime = -1;
 		}
 	}
 }
@@ -922,11 +891,6 @@ static void MDL_Done( void ) {
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		return;
 	}
-	if ( job->stamp ) {
-		MDL_StampDone( job );
-		SDL_AtomicSet( &job->state, MDLJOB_FREE );
-		return;
-	}
 	if ( job->emoteList ) {
 		MDL_EmoteListDone( job );
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
@@ -1013,6 +977,8 @@ void CL_ModelsFrame( void ) {
 	default:
 		return;
 	}
+	// (not while a list is fetched: one that left before the change would count as new)
+	MDL_StoresChanged();
 	if ( !mdlWanted[0] && v_modelStore->integer && cls.realtime - mdlScanTime >= MDL_SCAN_MSEC ) {
 		mdlScanTime = cls.realtime;
 		if ( cls.state == CA_ACTIVE && !cl_connectedToPureServer && !clc.demoplaying && MDL_NextOfPlayers( model, sizeof( model ) ) ) {
@@ -1033,10 +999,6 @@ void CL_ModelsFrame( void ) {
 			MDL_StartPicture( kind, mdlPictureGets[kind][--mdlNumPictureGets[kind]] );
 			return;
 		}
-	}
-	if ( MDL_StampDue() ) {
-		MDL_StartStamp();
-		return;
 	}
 	// with nothing of the models to do: the chat emojis and the interactive emojis of the store, in the game (also on
 	// a pure server, which reads them from the folder, FS_IsToyFile of qcommon/files.cpp)

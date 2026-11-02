@@ -356,23 +356,32 @@ static const char *Cvar_Validate( cvar_t *var, const char *value, qboolean warn 
 Cvar_TakeOldName
 
 VisionJK: a cvar is registered whose old name (cvar_renames.h) a config, the command line or a script has set:
-the value goes to the new name and the old one is gone, so it is not stored again. qtrue: there was one.
+the value goes to the new name and the old one is gone, so it is not stored again. A cvar that was several (v_master)
+takes the value of the first old name that was set, and all of them are gone. qtrue: there was one.
 ============
 */
 static qboolean Cvar_TakeOldName( const char *name ) {
-	const char	*from = Cvar_RenamedFrom( name );
-	cvar_t		*old = from ? Cvar_FindVar( from ) : NULL;
+	const char	*from;
 	char		value[MAX_CVAR_VALUE_STRING];
-	uint32_t	flags;
+	uint32_t	flags = 0;
 
-	if ( !old || !( old->flags & CVAR_USER_CREATED ) ) {
+	for ( int nth = 0; ( from = Cvar_RenamedFrom( name, nth ) ) != NULL; nth++ ) {
+		cvar_t *old = Cvar_FindVar( from );
+
+		if ( !old || !( old->flags & CVAR_USER_CREATED ) ) {
+			continue;
+		}
+		if ( !flags ) {
+			Q_strncpyz( value, old->string, sizeof( value ) );
+			flags = CVAR_USER_CREATED | ( old->flags & CVAR_ARCHIVE );
+			// (no value in the line: it may be a password, and a server prints into its log)
+			Com_Printf( "%s is called %s now, its value is taken over\n", from, name );
+		}
+		Cvar_Unset( old );
+	}
+	if ( !flags ) {
 		return qfalse;
 	}
-	Q_strncpyz( value, old->string, sizeof( value ) );
-	flags = CVAR_USER_CREATED | ( old->flags & CVAR_ARCHIVE );
-	Cvar_Unset( old );
-	// (no value in the line: it may be a password, and a server prints into its log)
-	Com_Printf( "%s is called %s now, its value is taken over\n", from, name );
 	Cvar_Set2( name, value, flags, qtrue );
 	return qtrue;
 }

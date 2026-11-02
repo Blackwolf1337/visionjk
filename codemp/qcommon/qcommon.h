@@ -558,7 +558,7 @@ void 	Cvar_WriteVariables( fileHandle_t f );
 cvar_t *Cvar_Unset(cvar_t *cv);
 
 // cvar_renames.cpp: the names of this tree before 2026-10-17 (cvar_renames.h)
-const char *Cvar_RenamedFrom( const char *name );
+const char *Cvar_RenamedFrom( const char *name, int nth );
 const char *Cvar_RenamedTo( const char *name );
 qboolean Cvar_RenamedText( const char *in, char *out, int outSize );
 
@@ -1021,6 +1021,7 @@ void CL_MouseEvent( int dx, int dy, int time );
 void CL_JoystickEvent( int axis, int value, int time );
 
 void CL_PacketEvent( const netadr_t *from, msg_t *msg );
+void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg );
 
 void CL_ConsolePrint( const char *text );
 

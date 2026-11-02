@@ -44,6 +44,9 @@ void CL_Frame ( int msec ) {
 void CL_PacketEvent( const netadr_t *from, msg_t *msg ) {
 }
 
+void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
+}
+
 void CL_CharEvent( int key ) {
 }
 

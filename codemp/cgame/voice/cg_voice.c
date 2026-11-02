@@ -219,7 +219,7 @@ keeps in a cvar: OpenJK as numbers (cl_currentServerIP), jamp only as the player
 that does nothing else. The game only asks whether it is done.
 
 A server without a relay of its own is not asked anything: there the voice goes through the masterserver
-(v_voiceMasterHost), whose name is looked up the same way.
+(v_master), whose name is looked up the same way.
 
 ===============================================================================
 */
@@ -397,11 +397,11 @@ static qboolean Voice_FindServer( void ) {
 		}
 		voice.gameKnown = qtrue;
 	}
-	Q_strncpyz( host, v_voiceMasterHost.string, sizeof( host ) );
+	Q_strncpyz( host, v_master.string, sizeof( host ) );
 	port = VOICE_MASTER_PORT;
 	found = Voice_SplitAddress( host, sizeof( host ), &port ) ? Voice_Lookup( host, &voice.server.sin_addr ) : -1;
 	if ( found < 0 ) {
-		trap->Print( "Voice chat: the masterserver \"%s\" could not be looked up (v_voiceMasterHost)\n", v_voiceMasterHost.string );
+		trap->Print( "Voice chat: the masterserver \"%s\" could not be looked up (v_master)\n", v_master.string );
 		voice.failed = qtrue;
 	}
 	if ( found <= 0 )
@@ -603,7 +603,7 @@ static qboolean Voice_MasterStart( int now ) {
 	voice.range = VOICE_MASTER_RANGE;
 	voice.askTime = now;
 	trap->Print( "Voice chat: this server has none of its own, so it goes through the masterserver %s (v_voiceMaster 0: not at all)\n",
-		v_voiceMasterHost.string );
+		v_master.string );
 	return Voice_Open( voice.port );
 }
 #endif
@@ -1728,7 +1728,7 @@ static void Voice_MasterFrame( int now ) {
 		voice.stateDue = qfalse;
 	}
 	if ( !voice.linked && !voice.refusedSince && !voice.toldNoLink && now - voice.askTime > VOICE_NO_LINK_MSEC ) {
-		trap->Print( "Voice chat: no answer from the masterserver %s (UDP port %i)\n", v_voiceMasterHost.string, voice.port );
+		trap->Print( "Voice chat: no answer from the masterserver %s (UDP port %i)\n", v_master.string, voice.port );
 		voice.toldNoLink = qtrue;
 	}
 }
@@ -2067,7 +2067,7 @@ void CG_VoiceStatus_f( void ) {
 		silent = "no answer from it yet";
 #else
 		if ( voice.master ) {
-			Com_sprintf( way, sizeof( way ), "through the masterserver %s, UDP port %i", v_voiceMasterHost.string, voice.port );
+			Com_sprintf( way, sizeof( way ), "through the masterserver %s, UDP port %i", v_master.string, voice.port );
 			if ( voice.refusedSince )
 				silent = "it does not let this client in";
 		} else {

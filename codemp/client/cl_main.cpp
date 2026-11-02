@@ -2200,6 +2200,11 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		CL_RepPacket( from, c );
 		return;
 	}
+	// and about the stores of the site (cl_master.cpp, which looks at the sender too)
+	if ( !Q_stricmpn( c, "store", 5 ) ) {
+		CL_MasterPacket( from, c );
+		return;
+	}
 
 	if ( !Q_strncmp(c, "getserversResponse", 18) ) {
 		if ( !CL_MasterAsked( from ) ) {
@@ -2443,6 +2448,7 @@ void CL_Frame ( int msec ) {
 	CL_ModelsFrame();
 	CL_ClipboardFrame();
 	CL_MemWatchFrame();
+	CL_MasterFrame();
 	CL_RepFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
@@ -3095,6 +3101,7 @@ void CL_Init( void ) {
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
 	CL_IDS_Init();
 	CL_MemWatchInit();
+	CL_MasterInit();
 	CL_RepInit();
 	v_utf8 = Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
 	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
@@ -3264,7 +3271,7 @@ void CL_Shutdown( void ) {
 	CL_ModelsShutdown();
 	CL_IDS_Shutdown();
 	CL_MemWatchShutdown();
-	CL_RepShutdown();
+	CL_MasterShutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );
