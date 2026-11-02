@@ -121,19 +121,10 @@
 				<input id="setSearch" type="search" placeholder="Search a setting" autocomplete="off">
 			</div>
 			<div id="setCats" class="scroll"></div>
-			<div class="hint">A setting is changed in its line of the file, its comment stays. One the file does not set yet gets a line at the end, under "set by the web panel". The text before a save is kept as .bak.</div>
-			<div class="hint">A saved setting is set on the server at once. One marked "next map" takes effect with the next map, one marked "restart" when the server starts again.</div>
-			<div class="hint">A setting marked "local.cfg" is set again by that file at the next start: the service of the host runs it after this one.</div>
 		</div>
 		<div class="cfgSide" data-view="text" hidden>
-			<div class="hint">The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/), which the engine reads before the one of the installation. The text before a save is kept as .bak.</div>
-			<div class="hint">Running the file sets its cvars at once. Latched ones (most vs_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
-			<div class="hint">The passwords in the file are shown as they are.</div>
 		</div>
 		<div class="cfgSide" data-view="cleanup" hidden>
-			<div class="hint">Unused: cvars no code of the server registered or read for 30 days. They are left from older versions, other mods or the client. Removing one takes its line out of the file and the cvar off the server.</div>
-			<div class="hint">Overridden: a line of a cvar that a later line of the same cvar sets again. Only the last one counts.</div>
-			<div class="hint">The server notes the use of each cvar from this version on. Until it did so for 30 days, a cvar never used is not listed.</div>
 		</div>
 	</div>
 	<div class="pane" id="pane-bans">
@@ -215,25 +206,8 @@
 	<!-- the log has the whole width: its tools are in the bar of #logView -->
 	<div class="pane" id="pane-log"></div>
 	<div class="pane" id="pane-files">
-		<h2><span>Files</span><span id="fsCount"></span></h2>
-		<div class="tools">
-			<button id="fsRefresh" title="Reads the folder that is shown again">Refresh list</button>
-			<button id="fsMkdir" title="In the folder that is shown">New folder</button>
-			<button id="fsUpload" class="primary" title="Into the folder that is shown. A .pk3 always goes into the top folder of the server files: the engine finds one nowhere else.">Upload</button>
-			<button id="fsReload" title="Starts the running map again. The server looks for pk3 files when a map starts, so that is how it finds one that was added. The players stay connected, what was placed in the World tab is put back where it is.">Restart map</button>
-			<input type="file" id="fsFile" multiple hidden>
-		</div>
-		<div class="hint" id="fsPath"></div>
-		<div class="hint" id="fsProgress"></div>
+		<h2><span>Folders</span><span id="fsCount"></span></h2>
 		<div id="fsTree"></div>
-		<div class="tools" id="fsEditTools" hidden>
-			<button id="fsSave" class="primary">Save</button>
-			<button id="fsClose">Close</button>
-		</div>
-		<div id="fsEditState"></div>
-		<div class="hint">Server files is where this server keeps its configs, its logs and what is uploaded. A file there wins over the same file of the installation. Game installation is the game as it was installed and can only be read.</div>
-		<div class="hint">To add a map, drop its .pk3 on the list or use Upload, then use Restart map so that the server finds it. A .pk3 always goes into the top folder of the server files.</div>
-		<div class="hint">A click on a folder shows what is in it, a click on a text file opens it, any other file is downloaded. Game modules and programs can only be downloaded.</div>
 	</div>
 	<div class="pane" id="pane-world">
 		<div class="tools">
@@ -439,6 +413,12 @@
 		<div class="cfgTools" data-view="form"><span id="setState"></span><button id="setDiscard" title="Drops what was changed here and reads the settings again">Discard changes</button><button id="setSave" class="primary" title="Writes the changed settings into the file and sets them on the server">Save</button></div>
 		<div class="cfgTools" data-view="text" hidden><span id="cfgState"></span><button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button><button id="cfgRun" title="Writes the file and runs it on the server console">Save and run on server</button><button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button></div>
 		<div class="cfgTools" data-view="cleanup" hidden><span id="cleanState"></span><button id="cleanLoad" title="Lists again">Refresh</button><button id="cleanAll" title="Selects every cvar no code used and every line a later one overrides">Select all</button><button id="cleanRemove" class="danger" title="Takes the selected lines out of the file, and the unused cvars off the server">Remove selected</button></div>
+		<button id="cfgHelpBtn" class="square" title="How saving works in this view">?</button>
+		<div id="cfgHelp" class="popHelp" hidden>
+			<div data-view="form"><p>A setting is changed in its line of the file, its comment stays. One the file does not set yet gets a line at the end, under "set by the web panel". The text before a save is kept as .bak.</p><p>A saved setting is set on the server at once. One marked "next map" takes effect with the next map, one marked "restart" when the server starts again.</p><p>A setting marked "local.cfg" is set again by that file at the next start: the service of the host runs it after this one.</p></div>
+			<div data-view="text" hidden><p>The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/), which the engine reads before the one of the installation. The text before a save is kept as .bak.</p><p>Running the file sets its cvars at once. Latched ones (most vs_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</p><p>The passwords in the file are shown as they are.</p></div>
+			<div data-view="cleanup" hidden><p>Unused: cvars no code of the server registered or read for 30 days. They are left from older versions, other mods or the client. Removing one takes its line out of the file and the cvar off the server.</p><p>Overridden: a line of a cvar that a later line of the same cvar sets again. Only the last one counts.</p><p>The server notes the use of each cvar from this version on. Until it did so for 30 days, a cvar never used is not listed.</p></div>
+		</div>
 	</div>
 	<div id="cfgBody">
 	<div id="setForm" class="cfgMain" data-view="form"></div>
@@ -451,8 +431,24 @@
 	<iframe id="tvFrame" title="The TV of the server" allow="fullscreen; autoplay" hidden></iframe>
 </div>
 <div id="fsView">
-	<div id="fsList"><table><thead><tr><th>Name</th><th class="num">Size</th><th>Changed</th><th></th></tr></thead><tbody id="fsRows"></tbody></table></div>
+	<!-- the bar of the files: the way to the folder, the buttons, and the ones of a text file that is open -->
+	<div id="fsBar" class="pageBar">
+		<b class="pageTitle">Files</b><span id="fsPath" class="pageSub"></span><span id="fsProgress" class="pageSub"></span>
+		<span class="spacer"></span>
+		<span class="barGroup" id="fsEditTools" hidden><span id="fsEditState"></span><button id="fsClose">Close</button><button id="fsSave" class="primary">Save</button></span>
+		<button id="fsReload" title="Starts the running map again. The server looks for pk3 files when a map starts, so that is how it finds one that was added. The players stay connected, what was placed in the World tab is put back where it is.">Restart map</button>
+		<button id="fsMkdir" title="In the folder that is shown">New folder</button>
+		<button id="fsRefresh" class="square" title="Reads the folder that is shown again" aria-label="Refresh list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button>
+		<button id="fsUpload" class="primary" title="Into the folder that is shown. A .pk3 always goes into the top folder of the server files: the engine finds one nowhere else.">Upload</button>
+		<input type="file" id="fsFile" multiple hidden>
+		<button id="fsHelpBtn" class="square" title="Where the files are">?</button>
+		<div id="fsHelp" class="popHelp" hidden><p>Server files is where this server keeps its configs, its logs and what is uploaded. A file there wins over the same file of the installation. Game installation is the game as it was installed and can only be read.</p><p>To add a map, drop its .pk3 on the list or use Upload, then use Restart map so that the server finds it. A .pk3 always goes into the top folder of the server files.</p><p>A click on a folder shows what is in it, a click on a text file opens it, any other file is downloaded. Game modules and programs can only be downloaded.</p></div>
+	</div>
+	<div id="fsBody">
+	<div id="fsList"><table><thead><tr><th>Name</th><th class="num">Size</th><th>Changed</th><th></th></tr></thead><tbody id="fsRows"></tbody></table>
+		<div class="dropHint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>To add a map, drop its .pk3 here or use Upload, then Restart map so that the server finds it.</div></div>
 	<div id="fsEditor" hidden><pre id="fsHi" class="codeHi" aria-hidden="true"></pre><textarea id="fsText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
+	</div>
 </div>
 <div id="toasts"></div>
 <div id="palette" hidden><div class="palBox"><input id="palInput" placeholder="A command or a page: bot, map, gravity, settings, ..." spellcheck="false" autocomplete="off"><div id="palList"></div><div class="palHint">Up and Down choose, Enter does it, Esc closes. A command that wants a value takes the words after its name.</div></div></div>
