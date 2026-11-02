@@ -148,7 +148,7 @@ static void CL_GetClientState( uiClientState_t *state ) {
 	state->connectPacketCount = clc.connectPacketCount;
 	state->connState = cls.state;
 	Q_strncpyz( state->servername, cls.servername, sizeof( state->servername ) );
-	Q_strncpyz( state->updateInfoString, cls.updateInfoString, sizeof( state->updateInfoString ) );
+	state->updateInfoString[0] = '\0';	// the welcome text of an update server, which VisionJK does not ask
 	Q_strncpyz( state->messageString, clc.serverMessage, sizeof( state->messageString ) );
 	state->clientNum = cl.snap.ps.clientNum;
 }

@@ -44,8 +44,6 @@ cvar_t	*cl_nodelta;
 cvar_t	*cl_debugMove;
 
 cvar_t	*cl_noprint;
-cvar_t	*cl_motd;
-cvar_t	*cl_motdServer[MAX_MASTER_SERVERS];
 
 cvar_t	*rcon_client_password;
 cvar_t	*rconAddress;
@@ -85,7 +83,6 @@ cvar_t	*m_filter;
 
 cvar_t	*cl_activeAction;
 
-cvar_t	*cl_motdString;
 
 cvar_t	*cl_allowDownload;
 cvar_t	*cl_allowAltEnter;
@@ -771,7 +768,6 @@ void CL_MapLoading( void ) {
 	// if we are already connected to the local host, stay connected
 	if ( cls.state >= CA_CONNECTED && !Q_stricmp( cls.servername, "localhost" ) ) {
 		cls.state = CA_CONNECTED;		// so the connect screen is drawn
-		Com_Memset( cls.updateInfoString, 0, sizeof( cls.updateInfoString ) );
 		Com_Memset( clc.serverMessage, 0, sizeof( clc.serverMessage ) );
 		Com_Memset( &cl.gameState, 0, sizeof( cl.gameState ) );
 		clc.lastPacketSentTime = -9999;
@@ -918,76 +914,6 @@ void CL_ForwardCommandToServer( const char *string ) {
 		CL_AddReliableCommand( cmd, qfalse );
 	}
 }
-
-/*
-===================
-CL_RequestMotd
-
-===================
-*/
-void CL_RequestMotd( void ) {
-	netadr_t	to;
-	int			i;
-	char		command[MAX_STRING_CHARS], info[MAX_INFO_STRING];
-	char		*motdaddress;
-
-	if ( !cl_motd->integer ) {
-		return;
-	}
-
-	if ( cl_motd->integer < 1 || cl_motd->integer > MAX_MASTER_SERVERS ) {
-		Com_Printf( "CL_RequestMotd: Invalid motd server num. Valid values are 1-%d or 0 to disable\n", MAX_MASTER_SERVERS );
-		return;
-	}
-
-	Com_sprintf( command, sizeof(command), "cl_motdServer%d", cl_motd->integer );
-	motdaddress = Cvar_VariableString( command );
-
-	if ( !*motdaddress )
-	{
-		Com_Printf( "CL_RequestMotd: Error: No motd server address given.\n" );
-		return;
-	}
-
-	i = NET_StringToAdr( motdaddress, &to );
-
-	if ( !i )
-	{
-		Com_Printf( "CL_RequestMotd: Error: could not resolve address of motd server %s\n", motdaddress );
-		return;
-	}
-	to.type = NA_IP;
-	to.port = BigShort( PORT_UPDATE );
-
-	Com_Printf( "Requesting motd from update %s (%s)...\n", motdaddress, NET_AdrToString( &to ) );
-
-	cls.updateServer = to;
-
-	info[0] = 0;
-  // NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a true randomization
-  // only srand I could catch before here is tr_noise.c l:26 srand(1001)
-  // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=382
-  // NOTE: the Com_Milliseconds xoring only affects the lower 16-bit word,
-  //   but I decided it was enough randomization
-	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ), "%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
-
-	Info_SetValueForKey( info, "challenge", cls.updateChallenge );
-	Info_SetValueForKey( info, "renderer", cls.glconfig.renderer_string );
-	Info_SetValueForKey( info, "rvendor", cls.glconfig.vendor_string );
-	Info_SetValueForKey( info, "version", JK_VERSION_OLD " " PLATFORM_STRING " " SOURCE_DATE );
-
-	//If raven starts filtering for this, add this code back in
-#if 0
-	Info_SetValueForKey( info, "cputype", "Intel Pentium IV");
-	Info_SetValueForKey( info, "mhz", "3000" );
-	Info_SetValueForKey( info, "memory", "4096" );
-#endif
-	Info_SetValueForKey( info, "joystick", Cvar_VariableString("in_joystick") );
-	Info_SetValueForKey( info, "colorbits", va("%d",cls.glconfig.colorBits) );
-
-	NET_OutOfBandPrint( NS_CLIENT, &cls.updateServer, "getmotd \"%s\"\n", info );
-}
-
 
 /*
 ======================================================================
@@ -1152,9 +1078,6 @@ void CL_Connect_f( void ) {
 	CL_IDS_Connect();
 
 	Cvar_Set("ui_singlePlayerActive", "0");
-
-	// fire a message off to the motd server
-	CL_RequestMotd();
 
 	// clear any previous "server full" type messages
 	clc.serverMessage[0] = 0;
@@ -1852,35 +1775,6 @@ void CL_DisconnectPacket( const netadr_t *from ) {
 
 /*
 ===================
-CL_MotdPacket
-
-===================
-*/
-void CL_MotdPacket( const netadr_t *from ) {
-	char	*challenge;
-	char	*info;
-
-	// if not from our server, ignore it
-	if ( !NET_CompareAdr( from, &cls.updateServer ) ) {
-		return;
-	}
-
-	info = Cmd_Argv(1);
-
-	// check challenge
-	challenge = Info_ValueForKey( info, "challenge" );
-	if ( strcmp( challenge, cls.updateChallenge ) ) {
-		return;
-	}
-
-	challenge = Info_ValueForKey( info, "motd" );
-
-	Q_strncpyz( cls.updateInfoString, info, sizeof( cls.updateInfoString ) );
-	Cvar_Set( "cl_motdString", challenge );
-}
-
-/*
-===================
 CL_InitServerInfo
 ===================
 */
@@ -2157,12 +2051,6 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 	// cd check
 	if ( !Q_stricmp(c, "keyAuthorize") ) {
 		// we don't use these now, so dump them on the floor
-		return;
-	}
-
-	// global MOTD from id
-	if ( !Q_stricmp(c, "motd") ) {
-		CL_MotdPacket( from );
 		return;
 	}
 
@@ -2964,14 +2852,6 @@ void CL_Init( void ) {
 	// register our variables
 	//
 	cl_noprint = Cvar_Get( "cl_noprint", "0", 0 );
-	// off by default: the request tells the update server the graphics card, its vendor, version and platform of
-	// the client, the joystick setting and the color depth, on every connect
-	cl_motd = Cvar_Get ("cl_motd", "0", CVAR_ARCHIVE_ND, "Ask the update server for a welcome message on every connect (sends graphics card, version and platform), shown on the bottom of connection screen" );
-	cl_motdServer[0] = Cvar_Get( "cl_motdServer1", UPDATE_SERVER_NAME, 0 );
-	cl_motdServer[1] = Cvar_Get( "cl_motdServer2", JKHUB_UPDATE_SERVER_NAME, 0 );
-	for ( int index = 2; index < MAX_MASTER_SERVERS; index++ )
-		cl_motdServer[index] = Cvar_Get( va( "cl_motdServer%d", index + 1 ), "", CVAR_ARCHIVE_ND );
-
 	cl_timeout = Cvar_Get ("cl_timeout", "200", 0);
 
 	cl_timeNudge = Cvar_Get ("cl_timeNudge", "0", CVAR_TEMP );
@@ -3044,7 +2924,6 @@ void CL_Init( void ) {
 	m_filter = Cvar_Get ("m_filter", "0", CVAR_ARCHIVE_ND);
 #endif
 
-	cl_motdString = Cvar_Get( "cl_motdString", "", CVAR_ROM );
 
 	Cvar_Get( "cl_maxPing", "800", CVAR_ARCHIVE_ND, "Max. ping for servers when searching the serverlist" );
 

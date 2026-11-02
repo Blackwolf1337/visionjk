@@ -198,15 +198,6 @@ void CG_DrawInformation( void ) {
 			y += iPropHeight;
 		}
 
-		{	// display global MOTD at bottom (mirrors ui_main UI_DrawConnectScreen
-			char motdString[1024];
-			trap->Cvar_VariableStringBuffer( "cl_motdString", motdString, sizeof( motdString ) );
-
-			if (motdString[0])
-			{
-				CG_DrawProportionalString( 320, 425, motdString, UI_CENTER|UI_INFOFONT|UI_DROPSHADOW, colorWhite );
-			}
-		}
 
 		// some extra space after hostname and motd
 		y += 10;

@@ -1807,17 +1807,9 @@ static void UI_DrawClanName(rectDef_t *rect, float scale, vec4_t color, int text
 	Text_Paint(rect->x, rect->y, scale, color, UI_Cvar_VariableString("ui_teamName"), 0, 0, textStyle, iMenuFont);
 }
 
-static void UI_SetCapFragLimits(qboolean uiVars) {
-	int cap = 5;
-	int frag = 10;
-
-	if (uiVars) {
-		trap->Cvar_Set("ui_captureLimit", va("%d", cap));
-		trap->Cvar_Set("ui_fragLimit", va("%d", frag));
-	} else {
-		trap->Cvar_Set("capturelimit", va("%d", cap));
-		trap->Cvar_Set("fraglimit", va("%d", frag));
-	}
+static void UI_SetCapFragLimits( void ) {
+	trap->Cvar_Set( "capturelimit", "5" );
+	trap->Cvar_Set( "fraglimit", "10" );
 }
 
 static const char* UI_GetGameTypeName(int gtEnum)
@@ -3996,7 +3988,6 @@ static qboolean UI_GameType_HandleKey(int flags, float *special, int key, qboole
 
 		trap->Cvar_Set("ui_gametype", va("%d", value));
 		trap->Cvar_Update(&ui_gametype);
-		UI_SetCapFragLimits(qtrue);
 		if (resetMap && oldCount != UI_MapCountByGameType(qtrue)) {
 			trap->Cvar_Set( "ui_currentMap", "0");
 			trap->Cvar_Update(&ui_currentMap);
@@ -4888,7 +4879,7 @@ static void UI_StartSkirmish(qboolean next) {
 	temp = trap->Cvar_VariableValue( "fraglimit" );		trap->Cvar_Set("ui_saveFragLimit", va("%i", temp));
 	temp = trap->Cvar_VariableValue( "duel_fraglimit" );	trap->Cvar_Set("ui_saveDuelLimit", va("%i", temp));
 
-	UI_SetCapFragLimits(qfalse);
+	UI_SetCapFragLimits();
 
 	temp = trap->Cvar_VariableValue( "cg_drawTimer" );	trap->Cvar_Set("ui_drawTimer", va("%i", temp));
 	temp = trap->Cvar_VariableValue( "g_doWarmup" );		trap->Cvar_Set("ui_doWarmup", va("%i", temp));
@@ -6461,7 +6452,6 @@ static void UI_RunMenuScript(char **args)
 				}
 			}
 		} else if (Q_stricmp(name, "updateSPMenu") == 0) {
-			UI_SetCapFragLimits(qtrue);
 			UI_MapCountByGameType(qtrue);
 			trap->Cvar_SetValue("ui_mapIndex", UI_GetIndexFromSelection(ui_currentMap.integer));
 			trap->Cvar_Update(&ui_mapIndex);
@@ -7987,13 +7977,9 @@ static void UI_BuildServerDisplayList(int force) {
 		force = 0;
 	}
 
-	// do motd updates here too
-	trap->Cvar_VariableStringBuffer( "cl_motdString", uiInfo.serverStatus.motd, sizeof(uiInfo.serverStatus.motd) );
+	// the text that runs through the bar of the server list
+	Q_strncpyz( uiInfo.serverStatus.motd, "Welcome to Jedi Academy MP!", sizeof( uiInfo.serverStatus.motd ) );
 	len = strlen(uiInfo.serverStatus.motd);
-	if (len == 0) {
-		Q_strncpyz( uiInfo.serverStatus.motd, "Welcome to Jedi Academy MP!", sizeof( uiInfo.serverStatus.motd ) );
-		len = strlen(uiInfo.serverStatus.motd);
-	}
 	if (len != uiInfo.serverStatus.motdLen) {
 		uiInfo.serverStatus.motdLen = len;
 		uiInfo.serverStatus.motdWidth = -1;
@@ -11328,9 +11314,6 @@ static void UI_ConnectPanel( const uiClientState_t *cstate ) {
 		// what the server said (server full, bad version, etc)
 		Q_strncpyz( now, cstate->messageString, sizeof( now ) );
 	}
-	if ( !now[0] ) {
-		Q_strncpyz( now, Info_ValueForKey( cstate->updateInfoString, "motd" ), sizeof( now ) );
-	}
 	Skin_LoadPanel( title, about, now, fraction );
 }
 
@@ -11392,8 +11375,6 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
 	}
 
-	// display global MOTD at bottom
-	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, FONT_MEDIUM);
 	// print any server info (server full, bad version, etc)
 	if ( cstate.connState < CA_CONNECTED ) {
 		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, FONT_MEDIUM);
