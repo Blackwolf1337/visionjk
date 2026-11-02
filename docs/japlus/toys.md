@@ -62,12 +62,24 @@ and the arrows, whatever they are bound to.
 
 To spray a picture, use `v_spray` (Controls, Extras, "Spray"). It puts the picture of `v_sprayImage` on the wall or floor
 you look at, up to 128 units away. The default is `heart`. Any emoji of the chat will do: write its name without the
-colons, such as `thumbsup` or `fire`. The list is `gfx/vision/sprays.txt`.
+colons, such as `thumbsup` or `fire`. The list is `gfx/vision/sprays.txt`. `v_sprayImage` also takes a chat emoji of
+the store, or a picture of your own: a file in the `sprays` folder of the home folder (`japlus/sprays`), png, jpg, tga
+or an animated gif, with or without the extension (`v_sprayImage star.gif`).
+
+A picture of your own is made into a sheet by the engine: a still picture of 512 pixels, or up to 16 frames of a gif in
+a grid, each shown as long as the frames it stands for. The first time you spray it, the sheet goes to the spray store
+of jka.vision (`v_sprays upload <file>`). The store gives it a number, and the same file gets the same number again.
+The number goes to the others, their engine fetches the sheet (`v_sprays get`) and says `v_sprayArrived` when it is
+there. Until the number comes, only you see the spray.
 
 The picture stands upright (on a floor the top points away from you), is 48 units across and is as bright as the light
 there. It is cut off where the surface ends. A player has one spray, and a new one takes the place of the old one. It
-stays for the level. You can spray once every 2 seconds at most, with the sound of a burst of air. Animated sprays and
-pictures of your own are not there yet.
+stays for the level. You can spray once every 2 seconds at most, with the sound of a spray can.
+
+With rd-vulkan-vision the spray is paint on the wall. It goes on in passes of the can from the top (700 ms), the relief
+of the wall shows through, the edge is overspray with grain and a mist of dots, and fresh paint is darker with a wet
+sheen. On walls drips run down and grow. The paint dries in 25 seconds. rd-vanilla draws a flat mark of the current
+frame, animated too. Older engines show only the emoji of the game.
 
 To send an emoji, use `v_emote` (Controls, Extras, "Send Emoji"). It sends the emoji of `v_emoteImage` (default
 `laughing`) to the player under your crosshair: the visible player nearest to it, up to 2048 units away. You can also
@@ -160,7 +172,11 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `+v_water` | | hold to spray water |
 | `v_rccar` | | puts the RC car down, or away again |
 | `v_spray` | | sprays the picture on the wall you look at |
-| `v_sprayImage` | heart | the emoji of the chat that is sprayed, without the colons |
+| `v_sprayImage` | heart | what is sprayed: an emoji of the game or of the store without the colons, or a file of `sprays/` of the home folder (png, jpg, tga, gif) |
+| `v_sprays upload <file>` | | engine command: makes the sheet of a picture and uploads it to the spray store |
+| `v_sprays get <number>` | | engine command: fetches the sheet with that number from the spray store |
+| `v_sprayArrived` | | set by the engine when a sheet was made or fetched |
+| `v_cgamePaint` | 1 | set by the engine: 1 when the cgame can hand sprays to the renderer as paint (`ext.R_PaintPicture`, `ext.R_AddPaint`) |
 | `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one |
 | `v_pingpong` | | puts a table down and plays, or joins the player at the far end, or leaves |
 | `v_tennis` | | puts a tennis court down and plays, or joins a player on the far half, or leaves |
@@ -272,6 +288,21 @@ range (`TOY_SPRAY_MOST`, 1400). `tools/toys/sprays.py` writes `sprays.txt` and `
 has a shader `gfx/vision/spray/<number>` for each picture, with `polygonOffset`. A picture added to `gfx/emoji` moves
 the numbers after it, which only matters between different versions.
 
+A picture of the store goes as `TOY_SPRAY_STORE`. It carries the point, and in the first field of the speed the pitch
+and the yaw of the wall in steps of 10 degrees as one number (`TOY_SPRAY_ANGLES`, pitch step times `TOY_SPRAY_YAWS`
+plus yaw step); the other two fields are the number of the picture in the spray store, split as the board splits its
+number (`TOY_BOARD_SPLIT`). The receiver traces the wall at the point itself. The master and the game module have to
+know it.
+
+Every spray is a sheet in a slot of the renderer, one slot a player (`re.ext.PaintImage`, the images `*paint<n>`). The
+engine makes the sheet in `client/cl_sprays.cpp` from an emoji, a file of `sprays/` or a sheet of the store. A gif is
+decoded frame by frame with `lib/stb/stb_image.h` (stb_image, public domain or MIT). The frames and their delays are in
+the PNG chunk `vjAn` (version, frames, columns, cell size, delays), and a sheet is halved until it fits 512 KB.
+`R_LoadImageFit` now grows small pictures bilinearly. `re.ext.AddPaint` hands the sprays of a frame to
+rd-vulkan-vision. Its paint pass (`shaders/paint.vert`, `paint.frag`, with `scene.glsl` and `ball.glsl` shared with the
+wet pass) is drawn before the wet places. It finds the decal from the depth, fades it where the wall turns away and
+picks the mip level by hand. The sound `spray_can.wav` comes from `tools/toys/sounds.py`.
+
 The own spray is said again every 45 seconds, so a player who came later sees it too. The spray of a player who left
 goes. It is drawn as a temporary mark each frame. The master and the game module have to know `TOY_SPRAY` (0.2.9-dev.27
 and later).
@@ -325,8 +356,9 @@ the arms take a frame of `BOTH_FORCE_2HANDEDLIGHTNING_HOLD`, over the head the e
 On a pure server (`sv_pure 1`) the engine read only a few file types from folders (.cfg, .menu and similar). So the
 presets, the pictures of the boards of others (`drawings/<number>.vjd`) and the upload file could not be read there, and
 the drawing board did not work on pure servers since it came (0.2.9-dev.32). Now files directly in `drawings/` with
-.vjd, .png, .jpg, .jpeg or .tga are read from the folder and listed on a pure server too (`FS_IsDrawing` in
-`qcommon/files.cpp`).
+.vjd, .png, .jpg, .jpeg or .tga are read from the folder and listed on a pure server too (`FS_IsToyPicture` in
+`qcommon/files.cpp`, which replaced `FS_IsDrawing`). Files of `sprays/` and `sprays/store/` are read from the folder on
+a pure server too, so sprays work there.
 
 The engine got three changes for it: `Sys_HttpPost` for curl and WinHTTP, a WinHTTP reader that no longer shares one
 static buffer between requests (it was wrong since the TV streams run beside other requests), and 8 video streams
@@ -371,6 +403,11 @@ For the spray, a spray on the floor and on a wall (upright, not mirrored, cut of
 room). Two clients: the other client received the `TOY_SPRAY` server command with the right picture. There is a unit
 test for the `TOY_SPRAY` ranges.
 
+The paint sprays were run headless on mp/ffa3 with Vulkan: the heart and an animated gif were sprayed on a wall, and
+the spray-in, the drips and the frames of the gif were seen in screenshots. A second client on rd-vanilla saw the heart
+spray of the first through the game server as a mark. There are unit tests for `TOY_SPRAY_STORE`, and the store has
+unit tests (`deploy/models/test_modelstore.py`).
+
 For the emoji, two clients on a local server, and both received the emoji (the server command `vs_toy` with kind 6). The
 flight, the pop, the burst, the 2D pop in first person and the fading near the eyes were seen. There is a unit test
 `emoji` in `tests/vjk/toys.cpp`.
@@ -394,4 +431,4 @@ For the pictures and poses, headless: an RGBA PNG of 400 x 300, a palette PNG, a
 listen server with `sv_pure 1`. Then two clients on a dedicated server with `sv_pure 1`: the holder was seen from the
 front and the side in both poses, and the other client saw the pose.
 
-Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, a spray sheet going through the store from one player to another, the paint sprays on Windows, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

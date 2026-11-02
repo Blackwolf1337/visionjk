@@ -110,8 +110,25 @@ most. The upload answers a delete key. It is shown once, so they should write it
 emoji later. Anyone can report an emoji, and the reports go to the owner.
 
 In the chat a player writes `:name:`. Other players see the picture if their VisionJK has fetched it, else they see
-the text. The emojis of the store are for the chat only. Sprays and the interactive emoji (`v_emote`) use only the
-emojis of the game.
+the text. The interactive emoji (`v_emote`) uses only the emojis of the game. `v_sprayImage` also takes an emoji of the store
+(see the sprays below).
+
+## Sprays of the store
+
+Not a JA+ feature. `codemp/client/cl_sprays.cpp`, `codemp/cgame/toys/cg_spray.c`, issue #9.
+
+Pictures of their own that players spray (a png, jpg, tga or animated gif of the `sprays` folder) go to a store of
+sprays on the site. The engine makes a square RGBA PNG sheet of the picture (a still one, or up to 16 frames in a grid,
+with the PNG chunk `vjAn` for the frames) and uploads it with `v_sprays upload <file>`. The store gives it a number.
+The same file gets the same number again. The number goes to the other players with the spray, and their engine
+fetches the sheet with `v_sprays get`.
+
+The service checks the format: a PNG that is square, 64 to 512 pixels, a power of two, 512 KB at most, with a valid
+`vjAn` chunk, and its pixels must unpack to exactly the rows of the picture (so a small file can not hold a huge one).
+The limits are 30 uploads an hour and 120 a day per address, and the store keeps the newest 20000. The owner takes one
+down with `modelstore.py remove-spray <number>` and lists them with `modelstore.py sprays`. The code is in
+`deploy/models/modelstore.py` of the website, and the files are served by number like the drawings. The unit tests
+(`test_modelstore.py`) cover sizes, frames, the same file twice and a broken sheet.
 
 ### For the owner
 
@@ -155,4 +172,4 @@ The TV page was tested in headless Chromium through nginx with the real config, 
 A client on that server played with a model that only a local copy of the store had. The page fetched the model within
 a second of the start and drew the followed player with it.
 
-Not run: a pure server, a shader file that comes with a model after the restart of the renderer, Windows.
+Not run: the spray store between two players, a pure server, a shader file that comes with a model after the restart of the renderer, Windows.
