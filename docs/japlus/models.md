@@ -110,8 +110,8 @@ most. The upload answers a delete key. It is shown once, so they should write it
 emoji later. Anyone can report an emoji, and the reports go to the owner.
 
 In the chat a player writes `:name:`. Other players see the picture if their VisionJK has fetched it, else they see
-the text. The interactive emoji (`v_emote`) uses only the emojis of the game. `v_sprayImage` also takes an emoji of the store
-(see the sprays below).
+the text. `v_emote` also sends an emoji of the store (see the interactive emojis below). `v_sprayImage` also takes an emoji of the
+store (see the sprays below).
 
 ## Sprays of the store
 
@@ -143,11 +143,13 @@ owner deletes afterwards. The service is the one of the model store (`deploy/vis
 ### How it works
 
 The engine fetches the list of the emojis, again after 10 minutes when it is old, and then every emoji of it in the
-background, after the models. It does this only while the player is in a game that is not on a pure server and is not
-a demo. The picture is saved as `base/gfx/emoji/<name>.png` in the home folder, and only when its size and its SHA-256
+background, after the models. It does this only while the player is in a game that is not a demo. On a pure server it
+works too, see "The interactive emojis of the store" below. The picture is saved as `base/gfx/emoji/<name>.png` in the home folder, and only when its size and its SHA-256
 match the list.
 
-`base/emojistore.txt` in the home folder records which emojis came from the store. When the next list comes, an emoji
+The code is a table of named stores in `cl_models.cpp` (the part "Named stores"): the chat emojis (`emoji/index.txt`
+into `base/gfx/emoji`) and the own sounds of the interactive emojis (`emotes/sounds.txt` into `base/sound/emotes`, 96 KB
+at most for each). `base/emojistore.txt` in the home folder records which emojis came from the store. When the next list comes, an emoji
 the store no longer has (it was taken down) is deleted. `v_emojiStoreChanged` counts up when one came or went, and
 the chat then lists its emojis again.
 
@@ -159,6 +161,52 @@ the chat then lists its emojis again.
 The unit tests of the service are in `deploy/models/test_modelstore.py` of the website (`test_emoji`: upload, the
 name rules, a name of the game, no PNG, too large, broken, too many pixels, delete with the key). The game side
 builds. A test against the live store follows the deploy.
+
+## Interactive emojis of the store
+
+Not a JA+ feature. `codemp/client/cl_models.cpp` (the part "Named stores"), `codemp/cgame/toys/cg_emote.c`,
+`codemp/game/toys/bg_toys.h`, `tools/toys/emotes.py`, `tools/toys/sounds.py`, issue #9.
+
+### For players
+
+jka.vision/emotes.html has a maker for interactive emojis. A player picks the emoji, the burst, two colours, the path,
+the spin, the size, the pop, the sound and the voice (the choices are in [toys.md](toys.md)), sees a live preview and
+uploads it. The preview is drawn with the same numbers, pieces and sounds as the game. Names are shared with the chat
+emojis both ways: a name that a chat emoji has can not be used here, and the other way round. The store holds 500 at most. One address can upload 10 a hour and 30 a day. The upload answers a delete
+key, shown once. Anyone can report an emoji. In the game `v_emote <name>` sends one, and every chat emoji of the store
+is one of them too.
+
+An own sound goes up as a base64 WAV. The server makes it 16 bit mono 22050 Hz, trims the silence, cuts it to 2 seconds
+with a fade, sets the peak to -1 dBFS and lowers it so that the RMS is at most -14 dBFS.
+
+### For the owner
+
+The owner lists the emojis with `modelstore.py emotes` and takes one down with `modelstore.py remove-emote <name>
+[--block]`. The fifth store of the service is `emotes/`. The files are `index.json` (for the page), `index.txt` and
+`sounds.txt` (for the game), `numbers.json` (keeps the number of each emoji stable) and the files by name. The page is
+`site/emotes.html`. `tools/emote-media.sh` of the website copies the pieces and sounds from the game repository. That part
+lives in the repository of the website.
+
+### How it works
+
+The engine fetches the list `emotes/index.txt` into `base/emotes/index.txt` for the cgame. A line is `number name emoji
+burst colour colour path spin size pop sound voice bytes sha256`. Then it fetches the own sounds of the list
+(`sounds.txt`, into `base/sound/emotes`, 96 KB at most for each) and the chat emojis. A file the store no longer has is
+deleted again. The cvar `v_emoteStoreChanged` counts up each time the list or a sound came, and the cgame reads the list
+again. A number the cgame does not know makes it run `v_emotes refresh`, and the engine fetches the lists again, at most
+once a minute.
+
+The chat emojis and the sounds are fetched on pure servers now too. Before, the chat emojis were not. `FS_IsToyFile`
+in `files.cpp` replaces `FS_IsToyPicture` and reads `gfx/emoji/*.png`, `sound/emotes/*.wav` and `emotes/index.txt` from
+the folder on a pure server, besides the files it read before.
+
+| Cvar or command | Default | Meaning |
+|-----------------|---------|---------|
+| `v_emoteStoreChanged` | 0 | read only. Counts up when the list or a sound of the interactive emojis came or went |
+| `v_emotes refresh` | | fetches the lists again, at most once a minute |
+
+Tested: the unit tests of the store, the page in headless Chromium, and the game headless (see [toys.md](toys.md)). Not
+tested: the live store.
 
 ## Tested
 
@@ -172,4 +220,4 @@ The TV page was tested in headless Chromium through nginx with the real config, 
 A client on that server played with a model that only a local copy of the store had. The page fetched the model within
 a second of the start and drew the followed player with it.
 
-Not run: the spray store between two players, a pure server, a shader file that comes with a model after the restart of the renderer, Windows.
+Not run: the spray store between two players, a pure server with the emoji stores, a shader file that comes with a model after the restart of the renderer, Windows.
