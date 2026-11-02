@@ -100,8 +100,6 @@ cvar_t	*r_texturebitslm;
 cvar_t	*r_lightmap;
 cvar_t	*r_vertexLight;
 cvar_t	*r_uiFullScreen;
-cvar_t	*r_shadows;
-cvar_t	*r_shadowRange;
 cvar_t	*r_flares;
 cvar_t	*r_singleShader;
 cvar_t	*r_colorMipLevels;
@@ -734,8 +732,6 @@ void R_Register( void )
 	r_offsetUnits						= ri.Cvar_Get( "r_offsetunits",					"-2",						CVAR_CHEAT, "" );
 	r_lockpvs							= ri.Cvar_Get( "r_lockpvs",						"0",						CVAR_CHEAT, "" );
 	r_noportals							= ri.Cvar_Get( "r_noportals",						"0",						CVAR_CHEAT, "" );
-	r_shadows							= ri.Cvar_Get( "cg_shadows",						"1",						CVAR_NONE, "" );
-	r_shadowRange						= ri.Cvar_Get( "r_shadowRange",					"1000",						CVAR_NONE, "" );
 	r_marksOnTriangleMeshes				= ri.Cvar_Get( "r_marksOnTriangleMeshes",			"0",						CVAR_ARCHIVE_ND, "" );
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()

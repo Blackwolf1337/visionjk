@@ -37,7 +37,7 @@ bool tr_stencilled = false;
 
 // what a surface with the shader internal_distortion does to the stencil buffer: one more wherever it is seen
 static const vkStencil_t vk_distortionStencil = { qtrue, GL_ALWAYS, 1,
-	{ { GL_KEEP, GL_KEEP, GL_INCR }, { GL_KEEP, GL_KEEP, GL_INCR } }, qfalse };
+	{ { GL_KEEP, GL_KEEP, GL_INCR }, { GL_KEEP, GL_KEEP, GL_INCR } } };
 
 extern int skyboxportal;
 extern int drawskyboxportal;
@@ -341,8 +341,7 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 	const float il = tr.identityLight;
 	qboolean perVertexRGB = qfalse, perVertexAlpha = qfalse, perVertexFog;
 	uint32_t shaderAlpha = 0;		// an alpha stage.glsl works out per vertex
-	const qboolean killGen = (qboolean)( tess.shader != tr.projectionShadowShader && tess.shader != tr.shadowShader
-		&& ( ent->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_VOLUMETRIC ) ) );
+	const qboolean killGen = (qboolean)( ( ent->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_VOLUMETRIC ) ) != 0 );
 
 	VectorSet4( base, 0.0f, 0.0f, 0.0f, 0.0f );
 	VectorSet4( vert, 0.0f, 0.0f, 0.0f, 0.0f );
@@ -978,8 +977,7 @@ void RB_StageIteratorGeneric( void ) {
 		RB_DeformTessGeometry();
 		// A body that burns away swells along the line of the fire. rd-vanilla moves the vertices again before
 		// every stage, so a second stage lies a little further out. Here all stages share what the first one has.
-		if ( shader != tr.projectionShadowShader && shader != tr.shadowShader
-			&& ( backEnd.currentEntity->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 ) ) ) {
+		if ( backEnd.currentEntity->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 ) ) {
 			RB_CalcDisintegrateVertDeform();
 		}
 		if ( !VK_UploadTess() ) {
@@ -1245,12 +1243,6 @@ void RB_EndSurface( void ) {
 		Com_Error( ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit" );
 	}
 
-	// the volume a model throws its shadow through goes into the stencil buffer (tr_shadows.cpp of rd-vanilla)
-	if ( tess.shader == tr.shadowShader ) {
-		RB_ShadowTessEnd();
-		tess.numIndexes = 0;
-		return;
-	}
 	// for debugging of sort order issues, stop rendering after a given sort value
 	if ( r_debugSort->integer && r_debugSort->integer < tess.shader->sort ) {
 		return;

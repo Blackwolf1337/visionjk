@@ -1810,6 +1810,12 @@ static void ParseDeform( const char **text ) {
 		return;
 	}
 
+	// the flattened copies of a model as its shadow (cg_shadows 3) went on 2026-11-02: the shader of the game that
+	// asks for them is still read, without them
+	if ( !Q_stricmp( token, "projectionShadow" ) ) {
+		return;
+	}
+
 	if ( shader.numDeforms == MAX_SHADER_DEFORMS ) {
 		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: MAX_SHADER_DEFORMS in '%s'\n", shader.name );
 		return;
@@ -1819,11 +1825,6 @@ static void ParseDeform( const char **text ) {
 
 	ds = shader.deforms[ shader.numDeforms ];
 	shader.numDeforms++;
-
-	if ( !Q_stricmp( token, "projectionShadow" ) ) {
-		ds->deformation = DEFORM_PROJECTION_SHADOW;
-		return;
-	}
 
 	if ( !Q_stricmp( token, "autosprite" ) ) {
 		ds->deformation = DEFORM_AUTOSPRITE;
@@ -4313,11 +4314,6 @@ static void CreateInternalShaders( void ) {
 	stages[0].stateBits = GLS_DEFAULT;
 	tr.defaultShader = FinishShader();
 
-	// shadow shader is just a marker
-	Q_strncpyz( shader.name, "<stencil shadow>", sizeof( shader.name ) );
-	shader.sort = SS_BANNER; //SS_STENCIL_SHADOW;
-	tr.shadowShader = FinishShader();
-
 	// distortion shader is just a marker
 	Q_strncpyz( shader.name, "internal_distortion", sizeof( shader.name ) );
 	shader.sort = SS_BLEND0;
@@ -4329,8 +4325,6 @@ static void CreateInternalShaders( void ) {
 }
 
 static void CreateExternalShaders( void ) {
-	tr.projectionShadowShader = R_FindShader( "projectionShadow", lightmapsNone, stylesDefault, qtrue );
-	tr.projectionShadowShader->sort = SS_STENCIL_SHADOW;
 	tr.sunShader = R_FindShader( "sun", lightmapsNone, stylesDefault, qtrue );
 }
 

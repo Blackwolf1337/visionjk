@@ -91,11 +91,7 @@ MORE = {
     'None': ('Aucune', 'Ninguno'),
     'Dynamic Glow': ('Lueur dynamique', 'Brillo dinámico'),
     'Lightsabers and lights glow.': ('Les sabres laser et les lumières brillent.', 'Los sables de luz y las luces brillan.'),
-    'Shadows': ('Ombres', 'Sombras'),
-    'How the shadows of the players are drawn.': ('Affichage des ombres des joueurs.', 'Cómo se dibujan las sombras de los jugadores.'),
     'Default': ('Par défaut', 'Predeterminado'),
-    'More Realistic': ('Plus réaliste', 'Más realista'),
-    'Realistic': ('Réaliste', 'Realista'),
     # sound
     'Steam Audio: sound that knows the level. Needs its library next to the game.': ('Steam Audio : un son qui tient compte du niveau. Nécessite sa bibliothèque dans le dossier du jeu.', 'Steam Audio: sonido que tiene en cuenta el nivel. Necesita su biblioteca en la carpeta del juego.'),
     'Output': ('Sortie', 'Salida'),

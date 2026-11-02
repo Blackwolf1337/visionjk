@@ -382,7 +382,7 @@ RB_DistortionFill
 Surfaces with the shader internal_distortion have marked their shape in the stencil buffer (RB_StageIteratorGeneric).
 That shape is filled with a copy of the screen that is stretched a little, more and less with the time, so that
 what lies behind seems to bend: a cloaked player, the trail of cg_saberTrail 2. This is RB_DistortionFill() of
-rd-vanilla (tr_shadows.cpp) with its numbers.
+rd-vanilla with its numbers.
 
 rd-vanilla copies a part of the screen into a texture for this, a centered rectangle whose sides are the largest
 powers of two that fit, and puts that over the whole view. The copy here is the whole frame, so the texture
@@ -562,7 +562,7 @@ cvar_t	*v_lodPixels;	// 0: models choose their detail by the share of the screen
 static int VK_ShaderMergesEntities( const shader_t *shader ) {
 	int result = 1;
 
-	if ( shader->sky || shader == tr.shadowShader || shader == tr.projectionShadowShader ) {
+	if ( shader->sky ) {
 		return 0;
 	}
 	for ( int i = 0; i < shader->numDeforms; i++ ) {
@@ -573,8 +573,6 @@ static int VK_ShaderMergesEntities( const shader_t *shader ) {
 		case DEFORM_MOVE:
 			result = 2;
 			break;
-		case DEFORM_PROJECTION_SHADOW:
-			return 0;
 		default:
 			// the sprites and the texts are made vertex by vertex from the view
 			break;
@@ -749,8 +747,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	uint64_t oldSort = (uint64_t)-1;
 	const float originalTime = backEnd.refdef.floatTime;	// save original time for entity shader offsets
 	drawSurf_t *drawSurf = drawSurfs;
-	// the stencil shadows are darkened once, and not in the glow pass
-	qboolean didShadowPass = (qboolean)RB_KEEPS_FRAME();
 	// what VK_ShaderMergesEntities() says about a shader, asked once for a run of surfaces
 	const shader_t *mergeShader = NULL;
 	int shaderMerges = 0;
@@ -845,12 +841,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
-				// the shadow volumes come with the sort of banners: when they are through, darken the frame
-				// where they left a mark in the stencil buffer, before anything transparent is drawn
-				if ( !didShadowPass && shader->sort > SS_BANNER ) {
-					RB_ShadowFinish();
-					didShadowPass = qtrue;
-				}
 				if ( shader->sort > SS_BANNER ) {
 					RB_DrawWet( oldDepthRange );
 				}
@@ -925,10 +915,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	if ( tr_stencilled && !tr_distortionPrePost ) {
 		// draw in the stencil buffer's cutout
 		RB_DistortionFill();
-	}
-	if ( !didShadowPass ) {
-		// darken down any stencil shadows
-		RB_ShadowFinish();
 	}
 }
 

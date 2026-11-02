@@ -4726,37 +4726,34 @@ static void CG_PlayerSprites( centity_t *cent ) {
 ===============
 CG_PlayerShadow
 
-Returns the Z component of the surface being shadowed
-
-  should it return a full plane instead of a Z?
+A blob under the player, as a mark on the ground below, fading with the height. cg_shadows 0: none. The stencil
+volumes and the flattened copies of the model (cg_shadows 2 and 3) went on 2026-11-02.
 ===============
 */
 #define	SHADOW_DISTANCE		128
-static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
+static void CG_PlayerShadow( centity_t *cent ) {
 	vec3_t		end, mins = {-15, -15, 0}, maxs = {15, 15, 2};
 	trace_t		trace;
 	float		alpha;
 	float		radius = 24.0f;
 
-	*shadowPlane = 0;
-
-	if ( cg_shadows.integer == 0 ) {
-		return qfalse;
+	if ( !cg_shadows.integer ) {
+		return;
 	}
 
 	if ( CG_JPHideOtherDuel( cent->currentState.number ) ) {
-		return qfalse;
+		return;
 	}
 
 	// no shadows when cloaked
 	if ( cent->currentState.powerups & ( 1 << PW_CLOAKED ))
 	{
-		return qfalse;
+		return;
 	}
 
 	if (cent->currentState.eFlags & EF_DEAD)
 	{
-		return qfalse;
+		return;
 	}
 
 	if (CG_IsMindTricked(cent->currentState.trickedentindex,
@@ -4765,53 +4762,23 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 		cent->currentState.trickedentindex4,
 		cg.snap->ps.clientNum))
 	{
-		return qfalse; //this entity is mind-tricking the current client, so don't render it
+		return; //this entity is mind-tricking the current client, so don't render it
 	}
 
-	if ( cg_shadows.integer == 1 )
-	{//dropshadow
-		if (cent->currentState.m_iVehicleNum &&
-			cent->currentState.NPC_class != CLASS_VEHICLE )
-		{//riding a vehicle, no dropshadow
-			return qfalse;
-		}
+	if (cent->currentState.m_iVehicleNum &&
+		cent->currentState.NPC_class != CLASS_VEHICLE )
+	{//riding a vehicle, no dropshadow
+		return;
 	}
 	// send a trace down from the player to the ground
 	VectorCopy( cent->lerpOrigin, end );
-	if (cg_shadows.integer == 2)
-	{ //stencil
-		end[2] -= 4096.0f;
+	end[2] -= SHADOW_DISTANCE;
 
-		trap->CM_Trace( &trace, cent->lerpOrigin, end, mins, maxs, 0, MASK_PLAYERSOLID, 0 );
+	trap->CM_Trace( &trace, cent->lerpOrigin, end, mins, maxs, 0, MASK_PLAYERSOLID, 0 );
 
-		if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid )
-		{
-			trace.endpos[2] = cent->lerpOrigin[2]-25.0f;
-		}
-	}
-	else
-	{
-		end[2] -= SHADOW_DISTANCE;
-
-		trap->CM_Trace( &trace, cent->lerpOrigin, end, mins, maxs, 0, MASK_PLAYERSOLID, 0 );
-
-		// no shadow if too high
-		if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid ) {
-			return qfalse;
-		}
-	}
-
-	if (cg_shadows.integer == 2)
-	{ //stencil shadows need plane to be on ground
-		*shadowPlane = trace.endpos[2];
-	}
-	else
-	{
-		*shadowPlane = trace.endpos[2] + 1;
-	}
-
-	if ( cg_shadows.integer != 1 ) {	// no mark for stencil or projection shadows
-		return qtrue;
+	// no shadow if too high
+	if ( trace.fraction == 1.0 || trace.startsolid || trace.allsolid ) {
+		return;
 	}
 
 	// fade the shadow out with height
@@ -4829,8 +4796,6 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 	}
 	CG_ImpactMark( cgs.media.shadowMarkShader, trace.endpos, trace.plane.normal,
 		cent->pe.legs.yawAngle, alpha,alpha,alpha,1, qfalse, radius, qtrue );
-
-	return qtrue;
 }
 
 
@@ -5590,7 +5555,7 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 		radiusmult = 1.0;
 	}
 
-	if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+	if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 	{ //draw the blade as a post-render so it doesn't get in the cap...
 		rfx |= RF_FORCEPOST;
 	}
@@ -6694,7 +6659,7 @@ CheckTrail:
 			if ( (BG_SuperBreakWinAnim(cent->currentState.torsoAnim) || saberTrail->duration > 0 || ((cent->currentState.powerups & (1 << PW_SPEED) && cg_speedTrail.integer)) || (cent->currentState.saberInFlight && saberNum == 0)) && cg.time < saberTrail->lastTime + 2000 ) // if we have a stale segment, don't draw until we have a fresh one
 			{
 	#if 0
-				if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+				if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 				{
 					polyVert_t	verts[4];
 
@@ -6766,7 +6731,7 @@ CheckTrail:
 					{ //don't draw it if the last time is way out of date
 						float oldAlpha = 1.0f - ( diff / trailDur );
 
-						if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+						if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 						{//does other stuff below
 						}
 						else
@@ -6831,7 +6796,7 @@ CheckTrail:
 						fx.mVerts[3].destST[0] = 1.0f + fx.mVerts[2].ST[0];
 						fx.mVerts[3].destST[1] = 1.0f;
 
-						if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
+						if (cg_saberTrail.integer == 2 && cgs.glconfig.stencilBits >= 4)
 						{
 							trap->R_SetRefractionProperties(1.0f, 0.0f, qtrue, qtrue); //don't need to do this every frame.. but..
 
@@ -9049,7 +9014,7 @@ static void CG_JPDrawHolsteredSaber( centity_t *cent, clientInfo_t *ci, int sabe
 	else if ( (cent->currentState.powerups & (1 << PW_CLOAKED))
 		&& (!(ps->fd.forcePowersActive & (1 << FP_SEE)) || ps->clientNum == num) )
 	{ // cloaked like the player
-		if ( cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer )
+		if ( cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer )
 		{
 			re.customShader = 2;
 		}
@@ -9436,8 +9401,6 @@ void CG_Player( centity_t *cent ) {
 	refEntity_t		torso;
 	int				clientNum;
 	int				renderfx;
-	qboolean		shadow = qfalse;
-	float			shadowPlane = 0;
 	vec3_t			rootAngles;
 	float			angle;
 	vec3_t			angles, dir, elevated, enang, seekorg;
@@ -10157,7 +10120,7 @@ void CG_Player( centity_t *cent ) {
 	}
 
 	// add the shadow
-	shadow = CG_PlayerShadow( cent, &shadowPlane );
+	CG_PlayerShadow( cent );
 
 	if ( ((cent->currentState.eFlags & EF_SEEKERDRONE) || cent->currentState.genericenemyindex != -1) && cent->currentState.eType != ET_NPC )
 	{
@@ -10169,7 +10132,6 @@ void CG_Player( centity_t *cent ) {
 		elevated[2] += 40;
 
 		VectorCopy( elevated, seeker.lightingOrigin );
-		seeker.shadowPlane = shadowPlane;
 		seeker.renderfx = 0; //renderfx;
 							 //don't show in first person?
 
@@ -10233,9 +10195,6 @@ void CG_Player( centity_t *cent ) {
 	// add a water splash if partially in and out of water
 	CG_PlayerSplash( cent );
 
-	if ( (cg_shadows.integer == 3 || cg_shadows.integer == 2) && shadow ) {
-		renderfx |= RF_SHADOW_PLANE;
-	}
 	renderfx |= RF_LIGHTING_ORIGIN;			// use the same origin for all
 
 	// if we've been hit, display proper fullscreen fx
@@ -10244,16 +10203,11 @@ void CG_Player( centity_t *cent ) {
 	VectorCopy( cent->lerpOrigin, legs.origin );
 
 	VectorCopy( cent->lerpOrigin, legs.lightingOrigin );
-	legs.shadowPlane = shadowPlane;
 	legs.renderfx = renderfx;
 	// a player with an outline is drawn after it and on it (select/cg_select.c): after the glow that is its light
 	// where the renderer adds one, after everything else of the scene where it adds none
 	if ( CG_SelectOutlined( cent->currentState.number ) ) {
 		legs.renderfx |= RF_FORCEPOST | RF_AFTERGLOW;
-	}
-	if (cg_shadows.integer == 2 && (renderfx & RF_THIRD_PERSON))
-	{ //can see own shadow
-		legs.renderfx |= RF_SHADOW_ONLY;
 	}
 	VectorCopy (legs.origin, legs.oldorigin);	// don't positionally lerp at all
 
@@ -10841,7 +10795,6 @@ void CG_Player( centity_t *cent ) {
 				elevated[2] += 8;
 
 				VectorCopy( elevated, holoRef.lightingOrigin );
-				holoRef.shadowPlane = shadowPlane;
 				holoRef.renderfx = 0;//RF_THIRD_PERSON;
 
 				if (renderedHolos == 0)
@@ -11845,7 +11798,7 @@ stillDoSaber:
 				ScaleModelAxis(&legs);
 				*/
 
-				if (cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
+				if (cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
 				{
 					trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
 					legs.customShader = 2; //crazy "refractive" shader

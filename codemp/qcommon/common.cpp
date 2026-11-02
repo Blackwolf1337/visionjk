@@ -1135,6 +1135,7 @@ Changes to the config of a player that a version makes once, counted in v_config
 before the command line, so a +set still wins.
 1 (2026-11-02): the detail settings that left the video menu go back to their defaults, a low preset of the old
   menu can not be seen or undone there any more
+2 (2026-11-02): cg_shadows 2 and 3 (stencil volumes, flattened copies of the model) went, they become the blob (1)
 ==================
 */
 static void Com_ConfigSteps( void ) {
@@ -1155,6 +1156,12 @@ static void Com_ConfigSteps( void ) {
 			}
 		}
 		Cvar_Set( "v_configStep", "1" );
+	}
+	if ( step->integer < 2 ) {
+		if ( Cvar_VariableIntegerValue( "cg_shadows" ) > 1 ) {
+			Cvar_Set( "cg_shadows", "1" );
+		}
+		Cvar_Set( "v_configStep", "2" );
 	}
 #endif
 }

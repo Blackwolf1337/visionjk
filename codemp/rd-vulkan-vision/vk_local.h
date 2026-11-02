@@ -171,7 +171,6 @@ typedef enum {
 #define VKS_DEPTH_WRITE		0x02u
 #define VKS_DEPTH_EQUAL		0x04u
 #define VKS_OFFSET			0x08u
-#define VKS_DEPTH_LESS		0x40u
 #define VKS_STENCIL			0x80u
 #define VKS_CULL_SHIFT		4		// VKC_*, 2 bits
 
@@ -191,11 +190,10 @@ typedef struct vkImage_s : vkDeviceImage_t {	// one entry of the texture table
 	qboolean		uploaded;		// all levels are there and the layout is the one for sampling
 } vkImage_t;
 
-typedef struct vkStencil_s {	// what the draws of stencil shadows need beyond the state bits, in the words of OpenGL
+typedef struct vkStencil_s {	// what a draw with a stencil test needs beyond the state bits, in the words of OpenGL
 	qboolean	test;				// GL_STENCIL_TEST
 	int			func, ref;			// glStencilFunc
 	int			ops[2][3];			// front and back: when the stencil test fails, when the depth test fails, when both pass
-	qboolean	depthLess;			// glDepthFunc( GL_LESS )
 } vkStencil_t;
 
 typedef struct vkIndexRange_s {	// a run of indexes in a buffer on the device

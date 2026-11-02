@@ -492,9 +492,8 @@ void VK_Draw( vkProgram_t program, uint32_t stateBits, uint32_t state, uint32_t 
 	if ( changed & VKS_DEPTH_WRITE ) {
 		qvkCmdSetDepthWriteEnable( cmd, ( state & VKS_DEPTH_WRITE ) ? VK_TRUE : VK_FALSE );
 	}
-	if ( changed & ( VKS_DEPTH_EQUAL | VKS_DEPTH_LESS ) ) {
-		qvkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL
-			: ( ( state & VKS_DEPTH_LESS ) ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_LESS_OR_EQUAL ) );
+	if ( changed & VKS_DEPTH_EQUAL ) {
+		qvkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL );
 	}
 	if ( changed & VKS_STENCIL ) {
 		qvkCmdSetStencilTestEnable( cmd, ( state & VKS_STENCIL ) ? VK_TRUE : VK_FALSE );

@@ -693,10 +693,6 @@ static qboolean VK_ShaderIsStatic( qboolean world ) {
 	if ( !v_vkStatic->integer ) {
 		return qfalse;
 	}
-	// a shadow volume is built from the vertices as the bones have moved them
-	if ( shader == tr.shadowShader ) {
-		return qfalse;
-	}
 	// the lines of the normals are made from the vertices of the batch
 	if ( r_shownormals->integer ) {
 		return qfalse;

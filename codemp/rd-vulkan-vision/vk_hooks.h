@@ -116,13 +116,9 @@ void VK_GL_ClientState( int which, int on );
 void VK_GL_DrawArrays( int mode, int first, int count );
 void VK_GL_Enable( int cap, int on );
 void VK_GL_Flush( void );
-// triangles of vertices that come once (the shadow volumes of tr_shadows.cpp)
-void VK_GL_DrawIndexed( const vec4_t *xyz, int numVerts, const glIndex_t *indexes, int numIndexes );
 void VK_GL_Collect( qboolean on );
 void VK_GL_StencilFunc( int func, int ref );
 void VK_GL_StencilOp( int face, int fail, int zfail, int zpass );
-void VK_GL_ColorMask( int on );
-void VK_GL_DepthFunc( int func );
 void VK_GL_Fogf( int name, float value );
 void VK_GL_Fogfv( int name, const float *value );
 static void ( * const vk_glNoLockArrays )( int, int ) = 0;
@@ -179,18 +175,13 @@ static void ( * const vk_glNoUnlockArrays )( void ) = 0;
 #undef qglTranslatef
 #define qglTranslatef( x, y, z )	VK_GL_Translate( x, y, z )
 
-// stencil shadows (tr_shadows.cpp): the volume of a model is drawn into the stencil buffer without color, then one
-// quad darkens the frame where the buffer is not zero
+// the stencil test of the overdraw measurement (tr_cmds.cpp)
 #undef qglStencilFunc
 #define qglStencilFunc( func, ref, mask )	VK_GL_StencilFunc( func, ref )
 #undef qglStencilOp
 #define qglStencilOp( fail, zfail, zpass )	VK_GL_StencilOp( GL_FRONT_AND_BACK, fail, zfail, zpass )
 #undef qglStencilOpSeparate
 #define qglStencilOpSeparate( face, fail, zfail, zpass )	VK_GL_StencilOp( face, fail, zfail, zpass )
-#undef qglColorMask
-#define qglColorMask( r, g, b, a )		VK_GL_ColorMask( r )
-#undef qglDepthFunc
-#define qglDepthFunc( func )			VK_GL_DepthFunc( func )
 #undef qglIsEnabled
 #define qglIsEnabled( cap )			0
 

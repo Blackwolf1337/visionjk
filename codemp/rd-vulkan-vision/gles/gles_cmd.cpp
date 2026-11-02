@@ -921,8 +921,8 @@ static void GLES_DrawState( uint32_t stateBits, uint32_t state ) {
 	if ( changed & VKS_DEPTH_WRITE ) {
 		glDepthMask( ( state & VKS_DEPTH_WRITE ) ? GL_TRUE : GL_FALSE );
 	}
-	if ( changed & ( VKS_DEPTH_EQUAL | VKS_DEPTH_LESS ) ) {
-		glDepthFunc( ( state & VKS_DEPTH_EQUAL ) ? GL_EQUAL : ( ( state & VKS_DEPTH_LESS ) ? GL_LESS : GL_LEQUAL ) );
+	if ( changed & VKS_DEPTH_EQUAL ) {
+		glDepthFunc( ( state & VKS_DEPTH_EQUAL ) ? GL_EQUAL : GL_LEQUAL );
 	}
 	if ( changed & VKS_STENCIL ) {
 		GLES_Switch( GL_STENCIL_TEST, (qboolean)( ( state & VKS_STENCIL ) != 0 ) );

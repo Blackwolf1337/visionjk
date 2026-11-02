@@ -473,13 +473,6 @@ static void SetFarClip( void )
 	// The sky renders at zFar so need to move it out a little
 	// ...and make sure there is a minimum zfar to prevent problems
 	tr.viewParms.zFar = Com_Clamp(2048.0f, tr.distanceCull * (1.732), sqrtf( farthestCornerDistance ));
-
-	/*
-	if (r_shadows->integer == 2)
-	{ //volume caps need an "infinite" far clipping plane. So I'm using this semi-arbitrary massive number.
-		tr.viewParms.zFar = 524288.0f;
-	}
-	*/
 }
 
 
@@ -1332,10 +1325,7 @@ Ghoul2 Insert Start
 				case MOD_BAD:		// null model axis
 					if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal)
 					{
-						if (!(ent->e.renderfx & RF_SHADOW_ONLY))
-						{
-							break;
-						}
+						break;
 					}
 
   					if (ent->e.ghoul2 && G2API_HaveWeGhoul2Models(*((CGhoul2Info_v *)ent->e.ghoul2)))

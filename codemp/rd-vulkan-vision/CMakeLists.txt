@@ -151,7 +151,6 @@ set(MPVulkanVisionSceneFiles
 	"${MPDir}/rd-vulkan-vision/common/tr_quicksprite.h"
 	"${MPDir}/rd-vulkan-vision/common/tr_subs.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_surface.cpp"
-	"${MPDir}/rd-vulkan-vision/common/tr_shadows.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_surfacesprites.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_world.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_WorldEffects.cpp"

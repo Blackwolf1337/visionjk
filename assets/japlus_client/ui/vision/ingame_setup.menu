@@ -899,35 +899,8 @@
 
 		itemDef
 		{
-			name					cg_shadows
-			group					video2
-			type					ITEM_TYPE_MULTI
-			text					@VISION_SHADOWS
-			cvar					cg_shadows
-			cvarFloatList
-			{
-				@VISION_NONE 0
-				@VISION_DEFAULT 1
-				@VISION_MORE_REALISTIC 2
-				@VISION_REALISTIC 3
-			}
-			descText				@VISION_HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 290 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
 			name					vision_head
-			rect					732 342 412 100
+			rect					732 290 412 100
 			visible					1
 			text					@VISION_BLOOM
 			font					7
@@ -955,7 +928,7 @@
 			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
-			rect					742 442 392 52
+			rect					742 390 392 52
 			page					1
 			scroll					1
 			row						1
@@ -975,7 +948,7 @@
 			cvarfloat				"tay_bloomIntensity" 0.6 0 2
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
-			rect					742 494 392 52
+			rect					742 442 392 52
 			page					1
 			scroll					1
 			row						1
@@ -996,7 +969,7 @@
 			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
-			rect					742 546 392 52
+			rect					742 494 392 52
 			page					1
 			scroll					1
 			row						1

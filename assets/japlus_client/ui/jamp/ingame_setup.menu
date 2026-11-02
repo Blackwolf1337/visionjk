@@ -1165,64 +1165,6 @@
 		JA+ new vido option
 		////////////////////
 		*/
-		itemDef 
-		{	
-			name				cg_shadows
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				"Shadows Type"
-			cvar				cg_shadows
-			cvarFloatList		
-			{  
-				"No Shadow" 	0 
-				"Default" 	1 
-				"More Realistic" 	2
-				"Realistic" 	3
-			}
-			rect				220 183 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			"select the player Shadow type"
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			cg_shadows_glow
-			}
-			mouseexit 
-			{ 
-				hide			cg_shadows_glow
-			} 
-		}
-		itemDef
-		{
-			name				cg_shadows_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				220 245 300 20
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-		itemDef
-		{
-			name				cg_renderToTextureFX_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				220 265 300 20
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
 
 		//----------------------------------------------------------------------------------------------
 		//

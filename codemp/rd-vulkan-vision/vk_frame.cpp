@@ -388,9 +388,6 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	if ( polygonOffset ) {
 		state |= VKS_OFFSET;
 	}
-	if ( vk.stencil && vk.stencil->depthLess ) {
-		state |= VKS_DEPTH_LESS;
-	}
 	if ( vk.stencil && vk.stencil->test ) {
 		state |= VKS_STENCIL;
 	}

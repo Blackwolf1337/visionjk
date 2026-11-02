@@ -219,7 +219,6 @@ typedef enum {
 	DEFORM_NORMALS,
 	DEFORM_BULGE,
 	DEFORM_MOVE,
-	DEFORM_PROJECTION_SHADOW,
 	DEFORM_AUTOSPRITE,
 	DEFORM_AUTOSPRITE2,
 	DEFORM_TEXT0,
@@ -1044,9 +1043,7 @@ typedef struct trGlobals_s {
 	GLuint					gammaCorrectPxShader;
 
 	shader_t				*defaultShader;
-	shader_t				*shadowShader;
 	shader_t				*distortionShader;
-	shader_t				*projectionShadowShader;
 
 	shader_t				*sunShader;
 
@@ -1214,7 +1211,6 @@ extern	cvar_t	*r_showsky;						// forces sky in front of all surfaces
 extern	cvar_t	*r_shownormals;					// draws wireframe normals
 extern	cvar_t	*r_clear;						// force screen clear every frame
 
-extern	cvar_t	*r_shadows;						// controls shadows: 0 = none, 1 = blur, 2 = stencil, 3 = black planar projection
 extern	cvar_t	*r_flares;						// light flares
 
 extern	cvar_t	*r_intensity;
@@ -1560,9 +1556,6 @@ SHADOWS
 ============================================================
 */
 
-void RB_ShadowTessEnd( void );
-void RB_ShadowFinish( void );
-void RB_ProjectionShadowDeform( void );
 
 /*
 ============================================================

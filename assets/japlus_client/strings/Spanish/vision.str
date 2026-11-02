@@ -369,26 +369,6 @@ REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 LANG_SPANISH        "Los sables de luz y las luces brillan."
 
-REFERENCE           SHADOWS
-LANG_ENGLISH        "Shadows"
-LANG_SPANISH        "Sombras"
-
-REFERENCE           HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
-LANG_ENGLISH        "How the shadows of the players are drawn."
-LANG_SPANISH        "Cómo se dibujan las sombras de los jugadores."
-
-REFERENCE           DEFAULT
-LANG_ENGLISH        "Default"
-LANG_SPANISH        "Predeterminado"
-
-REFERENCE           MORE_REALISTIC
-LANG_ENGLISH        "More Realistic"
-LANG_SPANISH        "Más realista"
-
-REFERENCE           REALISTIC
-LANG_ENGLISH        "Realistic"
-LANG_SPANISH        "Realista"
-
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 LANG_SPANISH        "#same"
@@ -1892,6 +1872,10 @@ LANG_SPANISH        "Foto guardada en la carpeta de capturas."
 REFERENCE           MOUSE_TURN_WHEEL_DISTANCE_LEFT_FOCUS
 LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave."
 LANG_SPANISH        "Ratón: girar. Rueda: distancia. Izquierdo: enfoque. 1-5: filtro. Derecho: foto. Esc: salir."
+
+REFERENCE           DEFAULT
+LANG_ENGLISH        "Default"
+LANG_SPANISH        "Predeterminado"
 
 REFERENCE           TAYSTJK
 LANG_ENGLISH        "TaystJK"

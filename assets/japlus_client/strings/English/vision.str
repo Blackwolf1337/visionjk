@@ -278,21 +278,6 @@ LANG_ENGLISH        "Dynamic Glow"
 REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 
-REFERENCE           SHADOWS
-LANG_ENGLISH        "Shadows"
-
-REFERENCE           HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
-LANG_ENGLISH        "How the shadows of the players are drawn."
-
-REFERENCE           DEFAULT
-LANG_ENGLISH        "Default"
-
-REFERENCE           MORE_REALISTIC
-LANG_ENGLISH        "More Realistic"
-
-REFERENCE           REALISTIC
-LANG_ENGLISH        "Realistic"
-
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 
@@ -1420,6 +1405,9 @@ LANG_ENGLISH        "Picture saved to the screenshots folder."
 
 REFERENCE           MOUSE_TURN_WHEEL_DISTANCE_LEFT_FOCUS
 LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave."
+
+REFERENCE           DEFAULT
+LANG_ENGLISH        "Default"
 
 REFERENCE           TAYSTJK
 LANG_ENGLISH        "TaystJK"

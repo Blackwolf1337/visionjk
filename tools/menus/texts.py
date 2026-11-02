@@ -12,9 +12,6 @@ from texts_more import MORE
 
 # what an old menu file of this tree says in English, where the new menus say it better
 OLD = {
-    'Shadows Type': 'Shadows',
-    'select the player Shadow type': 'How the shadows of the players are drawn.',
-    'No Shadow': 'None',
     'Display Mode:': 'Display Mode',
     'A window, the whole screen, or a window without a border': 'A window, the whole screen, or a window without a border.',
     'Anti-Aliasing:': 'Anti-Aliasing',
@@ -143,11 +140,7 @@ TR = {
     'None': 'Keine',
     'Dynamic Glow': 'Dynamisches Leuchten',
     'Lightsabers and lights glow.': 'Lichtschwerter und Lichtquellen leuchten.',
-    'Shadows': 'Schatten',
-    'How the shadows of the players are drawn.': 'Wie Spielerschatten dargestellt werden.',
     'Default': 'Standard',
-    'More Realistic': 'Realistischer',
-    'Realistic': 'Realistisch',
 
     # sound
     'Steam Audio: sound that knows the level. Needs its library next to the game.':
