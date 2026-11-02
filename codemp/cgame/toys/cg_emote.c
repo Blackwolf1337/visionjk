@@ -567,7 +567,9 @@ void CG_Emote_f( void ) {
 		return;
 	picture = CG_ToyPicture( name );
 	if ( picture < 0 && !( stored = Emote_StoreByName( name ) ) ) {
-		Com_Printf( "v_emoteImage names no known emoji (a chat emoji without colons, as laughing, or an interactive emoji of jka.vision)\n" );
+		// it may be one made on the site since the list was fetched: the engine fetches it again
+		trap->SendConsoleCommand( "v_emotes refresh\n" );
+		Com_Printf( "v_emoteImage does not know this name: it is no chat emoji (write it without colons, like laughing) and no interactive emoji of jka.vision yet. Fetching the store list again, try again in a moment.\n" );
 		return;
 	}
 	VectorCopy( ps->origin, eyes );
