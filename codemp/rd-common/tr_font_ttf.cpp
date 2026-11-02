@@ -112,6 +112,7 @@ static struct {
 	ttfGlyphMap_t	*glyphs;			// by font, size and code point
 	cvar_t			*planePixelsVar;	// v_uiPlanePixels, set by the cgame (menu3d/cg_menu3d.c)
 	float			planePixels;		// the 2D is on a plane in the level: pixels of a glyph for one unit of it (R_FontTTF_Plane)
+	float			planeBias[2];		//	and, when its glyphs lie on the pixels of the window, where its corner is in them
 } ttf;
 
 /*
@@ -470,19 +471,43 @@ static const float *R_FontTTF_CodeColor( int index ) {
 ===============
 R_FontTTF_Plane
 
-The 2D goes onto a plane in the level (RE_Set2DPlane), or flat onto the screen again. On the plane the letters of
-the menus are made for the size they are seen there, which the cgame says in v_uiPlanePixels, and twice as
-large: the pixels of the plane do not lie on those of the window, and a glyph made in exactly its size was
-smeared over two pixels by the filter, softer than the one made for the flat screen. Made twice as large and
-made smaller by the card its edges were the clearest of 1, 1.5 and 2 (2026-11-02). In steps of half a pixel, so
-that dragging the size of the menu does not fill the pages with glyphs of every size between. The plane is not
-asked itself: while the camera moves to the menu it changes its size every frame.
+The 2D goes onto a plane in the level (RE_Set2DPlane, matrix from its grid to clip space), or flat onto the screen
+again (NULL). The cgame says in v_uiPlanePixels how many pixels of the window a unit of the plane has when the
+camera has arrived at the menu (menu3d/cg_menu3d.c). The plane itself is not asked for its size: while the camera
+moves to the menu that changes every frame, and the pages would fill up with glyphs of all those sizes.
+
+Facing the camera, the plane is in the picture only moved and scaled. Then the letters are made in exactly the
+size they are seen and put on whole pixels of the window, as sharp as on the flat screen. Any other plane (the
+camera on its way, an old cgame that turns it) gets its letters made twice the size they are seen, which the card
+makes smaller: made in their size they were smeared over two pixels where the pixels of the plane do not lie on
+those of the window (2026-11-02). In steps of half a pixel, so that dragging the size of the menu does not fill
+the pages with glyphs of every size between.
 ===============
 */
-void R_FontTTF_Plane( qboolean on ) {
-	const float pixels = ( on && ttf.planePixelsVar ) ? Com_Clamp( 0.0f, (float)FONT_MAX_OVERSAMPLE, ttf.planePixelsVar->value ) : 0.0f;
+void R_FontTTF_Plane( const float *m ) {
+	const float	want = ( m && ttf.planePixelsVar ) ? Com_Clamp( 0.0f, (float)FONT_MAX_OVERSAMPLE, ttf.planePixelsVar->value ) : 0.0f;
+	const float	w = m ? m[15] : 0.0f;
 
-	ttf.planePixels = floorf( pixels * 2.0f * 2.0f + 0.5f ) * 0.5f;
+	ttf.planeBias[0] = ttf.planeBias[1] = 0.0f;
+	ttf.planePixels = 0.0f;
+	if ( want <= 0.0f ) {
+		return;
+	}
+	if ( w > 0.0f ) {
+		// (pixels of the window for a unit across and down; how many pixels the far edge of the 640 x 480 is off
+		// for a w that changes over the plane, and for a turn of it in the picture)
+		const float kx = m[0] / w * 0.5f * glConfig.vidWidth, ky = -m[5] / w * 0.5f * glConfig.vidHeight;
+		const float depth = ( fabsf( m[3] ) * SCREEN_WIDTH + fabsf( m[7] ) * SCREEN_HEIGHT ) / w * glConfig.vidWidth;
+		const float turn = fabsf( m[1] / w * 0.5f * glConfig.vidHeight ) * SCREEN_WIDTH + fabsf( m[4] / w * 0.5f * glConfig.vidWidth ) * SCREEN_HEIGHT;
+
+		if ( depth < 0.1f && turn < 0.1f && fabsf( kx - ky ) < 0.002f * kx && fabsf( kx - want ) < 0.002f * want ) {
+			ttf.planePixels = kx;
+			ttf.planeBias[0] = ( m[12] / w * 0.5f + 0.5f ) * glConfig.vidWidth / kx;
+			ttf.planeBias[1] = ( 0.5f - m[13] / w * 0.5f ) * glConfig.vidHeight / kx;
+			return;
+		}
+	}
+	ttf.planePixels = floorf( want * 2.0f * 2.0f + 0.5f ) * 0.5f;
 }
 
 // the size in pixels of the window a text of that size in units is made in
@@ -533,8 +558,9 @@ static qboolean R_FontTTF_MenuChar( int font, const char **text, int pixels, con
 // units of the 2D screen for a pixel of the window, as wide and high as R_2DBias() and R_2DBiasY() make it
 static void R_FontTTF_MenuScale( float *xScale, float *yScale, float *bias, float *biasY ) {
 	if ( ttf.planePixels > 0.0f ) {
-		// on the plane the grid starts at its corner, and a pixel is one of the glyph
-		*bias = *biasY = 0.0f;
+		// on the plane a pixel is one of the glyph, and the corner of the grid where R_FontTTF_Plane found it
+		*bias = ttf.planeBias[0];
+		*biasY = ttf.planeBias[1];
 		*xScale = *yScale = 1.0f / ttf.planePixels;
 		return;
 	}

@@ -208,9 +208,9 @@ void CG_Menu3DView( void ) {
 	lookAngles[ROLL] = 0.0f;
 	AngleVectors( lookAngles, look, camRight, camUp );
 
-	// The panel faces the camera, turned a little towards the player: its left edge, the one next to him, is the
-	// farther one. (8 degrees made the text on the left smaller and slanted, 2026-11-02.)
-	tilt = DEG2RAD( 4.0f );
+	// The panel faces the camera. Turned towards the player (8, then 4 degrees) its letters were soft: the renderer
+	// puts them on whole pixels only on a plane that faces the camera (R_FontTTF_Plane, 2026-11-02).
+	tilt = 0.0f;
 	VectorScale( camRight, cosf( tilt ), menu3d.right );
 	VectorMA( menu3d.right, -sinf( tilt ), look, menu3d.right );
 	VectorNegate( camUp, menu3d.down );

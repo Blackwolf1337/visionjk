@@ -209,7 +209,7 @@ again. The engine sets it around the menus when the cgame shows them in the leve
 void	RE_Set2DPlane( const float *matrix ) {
 	set2DPlaneCommand_t	*cmd;
 
-	R_FontTTF_Plane( matrix ? qtrue : qfalse );
+	R_FontTTF_Plane( matrix );
 	if ( !tr.registered ) {
 		return;
 	}
