@@ -67,7 +67,7 @@ function perfRender() {
 			most = Math.max(most, tops[Math.floor((tops.length - 1) * 0.95)] * 1.25);
 		}
 		g.clearRect(0, 0, w, h);
-		g.strokeStyle = '#2a2a31';
+		g.strokeStyle = '#16263f';
 		g.lineWidth = 1;
 		g.strokeRect(0.5, 0.5, w - 1, h - 1);
 		// the newest value at the right, a second a step, the whole width is what the server keeps
@@ -78,9 +78,9 @@ function perfRender() {
 			all.forEach((s, i) => { if (i) g.lineTo(x(i), y(of(s))); else g.moveTo(x(i), y(of(s))); });
 			g.stroke();
 		};
-		if (row.top) line(row.top, '#6b6b74');
-		line(row.of, '#ff2f4f');
-		g.fillStyle = '#8b8b94';
+		if (row.top) line(row.top, '#4a6080');
+		line(row.of, '#5cc8f5');
+		g.fillStyle = '#8fa3bd';
 		g.font = Math.round(10 * ratio) + 'px sans-serif';
 		g.textBaseline = 'top';
 		g.fillText((most >= 10 ? Math.round(most) : most.toFixed(most < 1 ? 2 : 1)) + row.unit, 4 * ratio, 3 * ratio);
