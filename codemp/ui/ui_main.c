@@ -1824,6 +1824,8 @@ static const char* UI_GetGameTypeName(int gtEnum)
 {
 	switch ( gtEnum )
 	{
+	case -1:	// VisionJK: "All" of joingametypes (ui/jamp/gameinfo.txt), it showed "N/A" (SAGA below)
+		return UI_GetStringEdString("MENUS", "ALL");
 	case GT_FFA:
 		return UI_GetStringEdString("MENUS", "FREE_FOR_ALL");//"Free For All";
 	case GT_HOLOCRON:

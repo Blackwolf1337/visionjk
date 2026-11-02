@@ -9176,8 +9176,9 @@ void Item_OwnerDraw_Paint(itemDef_t *item) {
 				if ( item->text[0] && Item_Skinned( item ) ) {
 					// the new look: the word of the owner draw after the name (as below), caught (textCatch) and
 					// written here, its capitals on the line of the name's and set smaller where it is longer than
-					// the room up to the end of the item (the places of Create a Game: "Geschlossen")
-					const float	x0 = item->textRect.x + item->textRect.w + 8;
+					// the room up to the end of the item (the places of Create a Game: "Geschlossen"); a space after
+					// the name, as "Source: Internet" written in one, not the 8 units of the old fonts
+					const float	x0 = item->textRect.x + item->textRect.w + DC->textWidth( " ", item->textscale, item->iMenuFont );
 					char		word[256];
 					vec4_t		said;
 
