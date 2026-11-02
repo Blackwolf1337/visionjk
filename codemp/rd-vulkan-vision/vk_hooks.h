@@ -21,9 +21,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-// rd-vulkan-vision builds the files of rd-vanilla that hold no graphics code (loaders, the shader parser, Ghoul2,
-// the scene) into its own library instead of keeping copies of them. This header is what those files see in
-// place of OpenGL. It is included at the end of rd-vanilla/tr_local.h when RD_VULKAN_VISION is defined.
+// The files of common/ come from the OpenGL renderer of the game and hold no graphics code of their own (loaders,
+// the shader parser, Ghoul2, the scene). This header is what they see in place of OpenGL. It is included at the
+// end of common/tr_local.h.
 
 // vk_main.cpp
 qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the renderer

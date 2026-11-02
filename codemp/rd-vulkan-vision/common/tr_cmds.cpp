@@ -227,8 +227,7 @@ void	RE_Set2DPlane( const float *matrix ) {
 RE_SetDepthOfField
 
 A module wants the scene of this frame blurred where it is nearer or farther than focus (units of the level),
-amount 0 to 1. It holds for one frame: RE_BeginFrame() forgets it. rd-vulkan-vision has the pass (vk_post.cpp),
-rd-vanilla does nothing with it.
+amount 0 to 1. It holds for one frame: RE_BeginFrame() forgets it. The pass is in vk_post.cpp.
 =============
 */
 float	r_dofFocus, r_dofAmount;
@@ -244,13 +243,12 @@ RE_SetScopeEffect
 
 The cgame wants the view of the level of this frame seen through the scope of a weapon (scopeEffect_t). It holds
 for one frame as the depth of field does. NULL: only the question whether this renderer has it. rd-vulkan-vision
-has the pass (VK_ScopePass), rd-vanilla says qfalse and the cgame draws the scope as it always did.
+has the pass (VK_ScopePass); where the device can not, it says qfalse and the cgame draws the scope as it always did.
 =============
 */
 scopeEffect_t	r_scopeFx;
 
 qboolean	RE_SetScopeEffect( const scopeEffect_t *fx ) {
-#ifdef RD_VULKAN_VISION
 	if ( !VK_HasScope() ) {
 		return qfalse;
 	}
@@ -258,9 +256,6 @@ qboolean	RE_SetScopeEffect( const scopeEffect_t *fx ) {
 		r_scopeFx = *fx;
 	}
 	return qtrue;
-#else
-	return qfalse;
-#endif
 }
 
 /*
@@ -269,14 +264,13 @@ RE_SetScreenEffect
 
 The cgame wants the view of the level of this frame bent and coloured (screenEffect_t: the wave of an explosion,
 hot air). It holds for one frame. NULL: only the question whether this renderer has it. rd-vulkan-vision has the
-pass (VK_ScreenFx), rd-vanilla says qfalse and the cgame keeps the looks it had.
+pass (VK_ScreenFx); where the device can not, it says qfalse and the cgame keeps the looks it had.
 =============
 */
 screenEffect_t	r_screenFx;
 qboolean		r_screenFxSet;
 
 qboolean	RE_SetScreenEffect( const screenEffect_t *fx ) {
-#ifdef RD_VULKAN_VISION
 	if ( !VK_HasScope() ) {
 		return qfalse;
 	}
@@ -286,9 +280,6 @@ qboolean	RE_SetScreenEffect( const screenEffect_t *fx ) {
 		r_screenFxSet = qtrue;
 	}
 	return qtrue;
-#else
-	return qfalse;
-#endif
 }
 
 /*
@@ -297,14 +288,13 @@ RE_AddLiquid
 
 Pieces of water for the scene of this frame (liquidSegment_t), added to the ones it has. They hold for one frame.
 NULL: only the question whether this renderer draws them. rd-vulkan-vision draws them after the scene
-(VK_DrawLiquids), rd-vanilla says qfalse and the cgame draws its water with sprites as it always did.
+(VK_DrawLiquids); where the device can not, it says qfalse and the cgame draws its water with sprites as it always did.
 =============
 */
 liquidSegment_t	r_liquids[LIQUID_MAX_SEGMENTS];
 int				r_numLiquids;
 
 qboolean	RE_AddLiquid( const liquidSegment_t *segments, int count ) {
-#ifdef RD_VULKAN_VISION
 	if ( !VK_HasScope() ) {
 		return qfalse;
 	}
@@ -314,9 +304,6 @@ qboolean	RE_AddLiquid( const liquidSegment_t *segments, int count ) {
 		r_numLiquids += count;
 	}
 	return qtrue;
-#else
-	return qfalse;
-#endif
 }
 
 /*
@@ -325,14 +312,13 @@ RE_AddWet
 
 Wet places for the scene of this frame (wetSpot_t), added to the ones it has. They hold for one frame. NULL: only
 the question whether this renderer draws them. rd-vulkan-vision draws them over the scene before its water
-(VK_DrawWet), rd-vanilla says qfalse and the cgame draws its puddles as marks.
+(VK_DrawWet); where the device can not, it says qfalse and the cgame draws its puddles as marks.
 =============
 */
 wetSpot_t	r_wet[WET_MAX_SPOTS];
 int			r_numWet;
 
 qboolean	RE_AddWet( const wetSpot_t *spots, int count ) {
-#ifdef RD_VULKAN_VISION
 	if ( !VK_HasWet() ) {
 		return qfalse;
 	}
@@ -342,9 +328,6 @@ qboolean	RE_AddWet( const wetSpot_t *spots, int count ) {
 		r_numWet += count;
 	}
 	return qtrue;
-#else
-	return qfalse;
-#endif
 }
 
 /*
@@ -353,14 +336,13 @@ RE_AddPaint
 
 Sprayed pictures for the scene of this frame (paintDecal_t), added to the ones it has. They hold for one frame.
 NULL: only the question whether this renderer draws them. rd-vulkan-vision lays them onto the level as paint before
-its wet places (VK_DrawWet), rd-vanilla says qfalse and the cgame draws marks with the shaders of RE_PaintImage.
+its wet places (VK_DrawWet); where the device can not, it says qfalse and the cgame draws marks with the shaders of RE_PaintImage.
 =============
 */
 paintDecal_t	r_paint[PAINT_MAX_DECALS];
 int				r_numPaint;
 
 qboolean	RE_AddPaint( const paintDecal_t *decals, int count ) {
-#ifdef RD_VULKAN_VISION
 	if ( !VK_HasWet() ) {
 		return qfalse;
 	}
@@ -370,9 +352,6 @@ qboolean	RE_AddPaint( const paintDecal_t *decals, int count ) {
 		r_numPaint += count;
 	}
 	return qtrue;
-#else
-	return qfalse;
-#endif
 }
 
 void	RE_SetColor( const float *rgba ) {

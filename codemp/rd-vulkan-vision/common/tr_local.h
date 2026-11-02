@@ -431,7 +431,7 @@ typedef struct shaderStage_s {
 	// and whether it is drawn in the pass of the dynamic glow only (RGBA_SHADER_BLUR)
 	bool			glowOnly;
 
-	// VisionJK: a stage of a model lit per pixel by rd-vulkan-vision, rd-vanilla draws it as before. normalMap: the
+	// VisionJK: a stage of a model lit per pixel. normalMap: the
 	// bumps of the surface (normalMap <image>), specular: strength, exponent and clear coat of its shine
 	// (specular <strength> <exponent> <coat>)
 	image_t			*normalMap;
@@ -1326,15 +1326,9 @@ extern	cvar_t	*r_patchStitching;
 
 //====================================================================
 
-void R_SwapBuffers( int );
-
 void R_RenderView( viewParms_t *parms );
 
 void R_AddMD3Surfaces( trRefEntity_t *e );
-void R_AddNullModelSurfaces( trRefEntity_t *e );
-void R_AddBeamSurfaces( trRefEntity_t *e );
-void R_AddRailSurfaces( trRefEntity_t *e, qboolean isUnderwater );
-void R_AddLightningBoltSurfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces( void );
 
@@ -1364,7 +1358,6 @@ void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
 void	GL_State( uint32_t stateVector );
-void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
 
 #define GLS_SRCBLEND_ZERO						0x00000001
@@ -1440,7 +1433,6 @@ image_t		*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicm
 
 image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
 
-qboolean	R_GetModeInfo( int *width, int *height, int mode );
 
 void		R_SetColorMappings( void );
 void		R_SetGammaCorrectionLUT();
@@ -1479,7 +1471,6 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, f
 
 shader_t	*R_FindShader( const char *name, const int *lightmapIndex, const byte *styles, qboolean mipRawImage );
 shader_t	*R_GetShaderByHandle( qhandle_t hShader );
-shader_t	*R_GetShaderByState( int index, long *cycleTime );
 shader_t *R_FindShaderByName( const char *name );
 void		R_InitShaders(qboolean server);
 void		R_ShaderList_f( void );
@@ -1591,20 +1582,6 @@ qboolean R_inPVS( const vec3_t p1, const vec3_t p2, byte *mask );
 /*
 ============================================================
 
-FLARES
-
-============================================================
-*/
-
-void R_ClearFlares( void );
-
-void RB_AddFlare( void *surface, int fogNum, vec3_t point, vec3_t color, vec3_t normal );
-void RB_AddDlightFlares( void );
-void RB_RenderFlares (void);
-
-/*
-============================================================
-
 LIGHTS
 
 ============================================================
@@ -1637,7 +1614,6 @@ SKIES
 */
 void R_BuildCloudData( shaderCommands_t *shader );
 void R_InitSkyTexCoords( float cloudLayerHeight );
-void R_DrawSkyBox( shaderCommands_t *shader );
 void RB_DrawSun( void );
 void RB_ClipSkyPolygons( shaderCommands_t *shader );
 /*
@@ -1660,9 +1636,7 @@ Ghoul2 Insert Start
 
 float ProjectRadius( float r, vec3_t location );
 float R_LodScale( void );
-#ifdef RD_VULKAN_VISION
 extern cvar_t	*v_lodPixels;		// vk_backend.cpp
-#endif
 /*
 Ghoul2 Insert End
 */
@@ -1969,8 +1943,6 @@ void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input);
 
 qboolean ShaderHashTableExists(void);
 
-#ifdef RD_VULKAN_VISION
 // rd-vulkan-vision compiles the files of this renderer that hold no graphics code. This is what they call where
 // this renderer calls OpenGL.
 #include "../rd-vulkan-vision/vk_hooks.h"
-#endif

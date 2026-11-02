@@ -1428,7 +1428,6 @@ extern void R_WorldToLocal (vec3_t world, vec3_t localVec) ;
 extern float preTransEntMatrix[16], invEntMatrix[16];
 extern void R_InvertMatrix(float *sourcemat, float *destmat);
 
-#ifdef RD_VULKAN_VISION
 // rd-vulkan-vision draws the surface sprites of the level on the device: what the code below sets up for them
 void RB_SurfaceSpriteFrame( void )
 {
@@ -1438,7 +1437,6 @@ void RB_SurfaceSpriteFrame( void )
 	VectorCopy( backEnd.viewParms.ori.axis[2], ssViewUp );
 	ssLastEntityDrawn = &tr.worldEntity;
 }
-#endif
 
 void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input)
 {

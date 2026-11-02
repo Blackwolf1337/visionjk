@@ -22,10 +22,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-// gles_gl.h: what rd-vanilla/qgl.h includes in the place of the headers of OpenGL when rd-vulkan-vision is built
+// gles_gl.h: what common/qgl.h includes in the place of the headers of OpenGL when rd-vulkan-vision is built
 // with its device for OpenGL ES (RD_VISION_GLES)
 //
-// The types and names of OpenGL ES 3, and the names of OpenGL that the files shared with rd-vanilla still say and
+// The types and names of OpenGL ES 3, and the names of OpenGL that the files of common/ still say and
 // OpenGL ES does not have. Those are numbers the shared code hands around: a primitive of glBegin() for vk_gl.cpp,
 // a wrap mode or a format tr_image.cpp asks for, the way two textures of a stage are combined. None of them
 // reaches OpenGL ES as it is, the device takes what it is handed apart (GL_CLAMP is clamp to edge for it, as for

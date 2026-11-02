@@ -262,17 +262,17 @@ typedef struct refexport_s {
 		// the 2D grid to clip space (16 values, column by column). NULL: flat again.
 		void				(*Set2DPlane)							( const float *matrix );
 		// The scene of this frame is blurred where it is nearer or farther than focus (units of the level),
-		// amount 0 to 1. rd-vanilla has no such pass and does nothing.
+		// amount 0 to 1.
 		void				(*SetDepthOfField)						( float focus, float amount );
 		// The window has that size now, in pixels (the desktop resized it): the renderer draws in that size from
 		// the next frame on and glconfig has it. Called between two frames. qfalse: the renderer can not, the
 		// engine restarts it with a vid_restart.
 		qboolean			(*WindowResized)						( int width, int height );
 		// The view of the level of this frame is seen through the scope of a weapon (scopeEffect_t), until the next
-		// frame. NULL only asks. qfalse: this renderer does not have it (rd-vanilla), the cgame draws the scope itself.
+		// frame. NULL only asks. qfalse: this renderer does not have it, the cgame draws the scope itself.
 		qboolean			(*SetScopeEffect)						( const scopeEffect_t *fx );
 		// The view of the level of this frame bends, flashes and is coloured as screenEffect_t says, until the next
-		// frame. NULL only asks. qfalse: this renderer does not have it (rd-vanilla).
+		// frame. NULL only asks. qfalse: this renderer does not have it.
 		qboolean			(*SetScreenEffect)						( const screenEffect_t *fx );
 		// What was looked for under prefix (a path ending with /) and not found is looked for again: models,
 		// skins, shaders whose image was missing. The file system has a pak more (client/cl_models.cpp).
@@ -281,17 +281,17 @@ typedef struct refexport_s {
 		// where it does not reach the alpha is 0. qfalse: there is no such picture.
 		qboolean			(*LoadImageFit)							( const char *name, byte *rgba, int width, int height );
 		// Pieces of water for the scene of this frame (liquidSegment_t), between ClearScene and RenderScene. NULL
-		// only asks. qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its water itself.
+		// only asks. qfalse: this renderer does not draw them, the cgame draws its water itself.
 		qboolean			(*AddLiquid)							( const liquidSegment_t *segments, int count );
 		// Wet places for the scene of this frame (wetSpot_t), between ClearScene and RenderScene. NULL only asks.
-		// qfalse: this renderer does not draw them (rd-vanilla), the cgame draws its puddles as marks.
+		// qfalse: this renderer does not draw them, the cgame draws its puddles as marks.
 		qboolean			(*AddWet)								( const wetSpot_t *spots, int count );
 		// The picture of a slot of the sprays (paintDecal_t, PAINT_SLOTS): a sheet of size x size RGBA, a power of two
 		// up to PAINT_SHEET, copied. Returns the shader for marks with it (a decal, colour and alpha from the
 		// vertices), 0 when it could not be made.
 		qhandle_t			(*PaintImage)							( int slot, const byte *rgba, int size );
 		// Sprayed pictures for the scene of this frame (paintDecal_t), between ClearScene and RenderScene. NULL only
-		// asks. qfalse: this renderer does not draw them (rd-vanilla), the cgame draws marks.
+		// asks. qfalse: this renderer does not draw them, the cgame draws marks.
 		qboolean			(*AddPaint)								( const paintDecal_t *decals, int count );
 		// Font_DrawString at a place in units that need not be whole (the letters of a TrueType font go on the
 		// nearest pixel, a font of the game is cut to whole units)

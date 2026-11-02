@@ -172,12 +172,7 @@ void R_FontTTF_Flush( void ) {
 			continue;
 		}
 		page->dirty = qfalse;
-#ifdef RD_VULKAN_VISION
 		VK_UpdateImage( page->image, FONT_PAGE_SIZE, FONT_PAGE_SIZE, page->rgba );
-#else
-		GL_Bind( page->image );
-		qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, FONT_PAGE_SIZE, FONT_PAGE_SIZE, GL_RGBA, GL_UNSIGNED_BYTE, page->rgba );
-#endif
 	}
 }
 

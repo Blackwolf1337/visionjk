@@ -664,7 +664,7 @@ static void VK_DestroyInstance( void ) {
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
-int G2API_SlotsInUse( void );		// rd-vanilla/G2_API.cpp
+int G2API_SlotsInUse( void );		// common/G2_API.cpp
 int G2API_ListSlots( qboolean print );
 
 

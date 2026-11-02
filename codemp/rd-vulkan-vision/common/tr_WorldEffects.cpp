@@ -1240,7 +1240,6 @@ public:
 		qglPushMatrix();
 
 
-#ifdef RD_VULKAN_VISION
 		// rd-vulkan-vision: each particle as a record, the vertex shader makes its corners
 		if ( VK_GL_QuadsOn() )
 		{
@@ -1278,7 +1277,6 @@ public:
 			mParticlesRendered += mParticleCountRender;
 			return;
 		}
-#endif
 		// Begin
 		//-------
 		qglBegin(mGLModeEnum);

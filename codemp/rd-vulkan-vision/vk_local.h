@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 // rd-vulkan-vision: everything that touches the GPU. The front end (loaders, shader parser, Ghoul2, scene) is
-// built from rd-vanilla, see vk_hooks.h.
+// in common/, see vk_hooks.h.
 //
 // The renderer is a shared part and a device. The shared part decides what is drawn and in which order, and names
 // no type and no function of a graphics library: vk_backend.cpp, vk_shade.cpp, vk_gl.cpp, vk_world.cpp,

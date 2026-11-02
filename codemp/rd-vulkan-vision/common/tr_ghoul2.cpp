@@ -5145,7 +5145,6 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 
 
 
-#ifdef RD_VULKAN_VISION
 /*
 ==============
 G2_BoneMatrices
@@ -5211,4 +5210,3 @@ void G2_SkinGore( CRenderableSurface *surf )
 		}
 	}
 }
-#endif

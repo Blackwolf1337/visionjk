@@ -775,12 +775,12 @@ typedef struct cgameImport_s {
 		void			(*S_SpatialMovers)						( const spatialMover_t *list, int count );
 		// Only an engine that sets the cvar v_cgameScope to 1 has this one, the same way. The view of the level of
 		// this frame is seen through the scope of a weapon (scopeEffect_t), called before R_RenderScene every
-		// frame it is wanted. NULL only asks. qfalse: the renderer does not have it (rd-vanilla): the cgame draws
+		// frame it is wanted. NULL only asks. qfalse: the renderer does not have it: the cgame draws
 		// the scope itself.
 		qboolean		(*R_SetScopeEffect)						( const scopeEffect_t *fx );
 		// Only an engine that sets the cvar v_cgameScreenFx to 1 has this one, the same way. The view of the level
 		// of this frame bends and is coloured as screenEffect_t says, called before R_RenderScene every frame it is
-		// wanted. NULL only asks. qfalse: the renderer does not have it (rd-vanilla).
+		// wanted. NULL only asks. qfalse: the renderer does not have it.
 		qboolean		(*R_SetScreenEffect)					( const screenEffect_t *fx );
 		// Only an engine that sets the cvar v_cgameVideo to 1 has these, the same way. Videos on surfaces of the level
 		// (client/cl_video.cpp): one of VIDEO_STREAMS streams shows the picture of a video of YouTube (its eleven
@@ -803,11 +803,11 @@ typedef struct cgameImport_s {
 		// Only an engine that sets the cvar v_cgameLiquid to 1 has this one, the same way. Pieces of clear water for
 		// the scene of this frame (liquidSegment_t: a jet is a chain of them, a drop one short piece), between
 		// R_ClearScene and R_RenderScene; they bend what lies behind them. NULL only asks. qfalse: the renderer does
-		// not draw them (rd-vanilla): the cgame draws its water itself.
+		// not draw them: the cgame draws its water itself.
 		qboolean		(*R_AddLiquid)							( const liquidSegment_t *segments, int count );
 		// Only an engine that sets the cvar v_cgameWet to 1 has this one, the same way. Wet places for the scene of
 		// this frame (wetSpot_t: puddles and wet patches), between R_ClearScene and R_RenderScene. NULL only asks.
-		// qfalse: the renderer does not draw them (rd-vanilla): the cgame draws marks.
+		// qfalse: the renderer does not draw them: the cgame draws marks.
 		qboolean		(*R_AddWet)								( const wetSpot_t *spots, int count );
 		// Only an engine that sets the cvar v_cgameLoopVolume to 1 has this one. S_AddLoopingSound at a volume of
 		// its own, 0 to 255 of the full one: several loops of one entity crossfade by it.
@@ -817,7 +817,7 @@ typedef struct cgameImport_s {
 		// a file of sprays/ (png, jpg, tga, an animated gif) or a sheet of the store (sprays/store/<number>.png). out
 		// says how its frames lie and how long each is shown. Returns the shader for marks with it, 0: there is no
 		// such picture. R_AddPaint: sprayed pictures for the scene of this frame, between R_ClearScene and
-		// R_RenderScene. NULL only asks. qfalse: the renderer does not lay them on as paint (rd-vanilla): the cgame
+		// R_RenderScene. NULL only asks. qfalse: the renderer does not lay them on as paint: the cgame
 		// draws marks with the shader.
 		qhandle_t		(*R_PaintPicture)						( int slot, const char *name, paintPicture_t *out );
 		qboolean		(*R_AddPaint)							( const paintDecal_t *decals, int count );

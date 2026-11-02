@@ -201,11 +201,9 @@ float R_LodScale( void ) {
 	} else if ( lodscale < 0 ) {
 		lodscale = 0;
 	}
-#ifdef RD_VULKAN_VISION
 	if ( v_lodPixels->integer && glConfig.vidHeight > 480 ) {
 		lodscale *= glConfig.vidHeight / 480.0f;
 	}
-#endif
 	return lodscale;
 }
 

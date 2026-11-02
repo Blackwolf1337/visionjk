@@ -51,12 +51,10 @@ static	int			numEdgeDefs[SHADER_MAX_VERTEXES];
 static	int			facing[SHADER_MAX_INDEXES/3];
 static	vec3_t		shadowXyz[SHADER_MAX_VERTEXES];
 
-#ifdef RD_VULKAN_VISION
 // rd-vulkan-vision draws the volume as one indexed batch (VK_GL_DrawIndexed): the vertices of the model, then
 // shadowXyz, and per facing triangle 3 edges of 6 indexes and 2 caps of 3
 static	vec4_t		shadowVerts[SHADER_MAX_VERTEXES * 2];
 static	glIndex_t	shadowIndexes[SHADER_MAX_INDEXES * 8];
-#endif
 
 void R_AddEdgeDef( int i1, int i2, int facing ) {
 	int		c;
@@ -85,7 +83,6 @@ void R_RenderShadowEdges( void ) {
 	int		numTris;
 	int		o1, o2, o3;
 #endif
-#ifdef RD_VULKAN_VISION
 	const int	n = tess.numVertexes;
 	int			numIndexes = 0;
 
@@ -94,7 +91,6 @@ void R_RenderShadowEdges( void ) {
 		VectorCopy( shadowXyz[ i ], shadowVerts[ n + i ] );
 		shadowVerts[ i ][3] = shadowVerts[ n + i ][3] = 0.0f;
 	}
-#endif
 
 	// an edge is NOT a silhouette edge if its face doesn't face the light,
 	// or if it has a reverse paired edge that also faces the light.
@@ -117,7 +113,6 @@ void R_RenderShadowEdges( void ) {
 			//we are going to render all edges even though it is a tiny bit slower. -rww
 #if 1
 			i2 = edgeDefs[ i ][ j ].i2;
-#ifdef RD_VULKAN_VISION
 			// the two triangles of the strip below
 			shadowIndexes[ numIndexes++ ] = i;
 			shadowIndexes[ numIndexes++ ] = n + i;
@@ -126,7 +121,6 @@ void R_RenderShadowEdges( void ) {
 			shadowIndexes[ numIndexes++ ] = n + i;
 			shadowIndexes[ numIndexes++ ] = n + i2;
 			continue;
-#endif
 			qglBegin( GL_TRIANGLE_STRIP );
 				qglVertex3fv( tess.xyz[ i ] );
 				qglVertex3fv( shadowXyz[ i ] );
@@ -179,7 +173,6 @@ void R_RenderShadowEdges( void ) {
 		o2 = tess.indexes[ i*3 + 1 ];
 		o3 = tess.indexes[ i*3 + 2 ];
 
-#ifdef RD_VULKAN_VISION
 		shadowIndexes[ numIndexes++ ] = o1;
 		shadowIndexes[ numIndexes++ ] = o2;
 		shadowIndexes[ numIndexes++ ] = o3;
@@ -187,7 +180,6 @@ void R_RenderShadowEdges( void ) {
 		shadowIndexes[ numIndexes++ ] = n + o2;
 		shadowIndexes[ numIndexes++ ] = n + o1;
 		continue;
-#endif
 		qglBegin(GL_TRIANGLES);
 			qglVertex3fv(tess.xyz[o1]);
 			qglVertex3fv(tess.xyz[o2]);
@@ -200,9 +192,7 @@ void R_RenderShadowEdges( void ) {
 		qglEnd();
 	}
 #endif
-#ifdef RD_VULKAN_VISION
 	VK_GL_DrawIndexed( shadowVerts, n * 2, shadowIndexes, numIndexes );
-#endif
 }
 
 //#define _DEBUG_STENCIL_SHADOWS
@@ -561,204 +551,3 @@ void RB_ProjectionShadowDeform( void ) {
 	}
 }
 
-#ifndef RD_VULKAN_VISION
-//update tr.screenImage
-void RB_CaptureScreenImage(void)
-{
-	int radX = 2048;
-	int radY = 2048;
-	int x = glConfig.vidWidth/2;
-	int y = glConfig.vidHeight/2;
-	int cX, cY;
-
-	GL_Bind( tr.screenImage );
-	//using this method, we could pixel-filter the texture and all sorts of crazy stuff.
-	//but, it is slow as hell.
-	/*
-	static byte *tmp = NULL;
-	if (!tmp)
-	{
-		tmp = (byte *)Z_Malloc((sizeof(byte)*4)*(glConfig.vidWidth*glConfig.vidHeight), TAG_ICARUS, qtrue);
-	}
-	qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-	*/
-
-	if (radX > glConfig.maxTextureSize)
-	{
-		radX = glConfig.maxTextureSize;
-	}
-	if (radY > glConfig.maxTextureSize)
-	{
-		radY = glConfig.maxTextureSize;
-	}
-
-	while (glConfig.vidWidth < radX)
-	{
-		radX /= 2;
-	}
-	while (glConfig.vidHeight < radY)
-	{
-		radY /= 2;
-	}
-
-	cX = x-(radX/2);
-	cY = y-(radY/2);
-
-	if (cX+radX > glConfig.vidWidth)
-	{ //would it go off screen?
-		cX = glConfig.vidWidth-radX;
-	}
-	else if (cX < 0)
-	{ //cap it off at 0
-		cX = 0;
-	}
-
-	if (cY+radY > glConfig.vidHeight)
-	{ //would it go off screen?
-		cY = glConfig.vidHeight-radY;
-	}
-	else if (cY < 0)
-	{ //cap it off at 0
-		cY = 0;
-	}
-
-	qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, cX, cY, radX, radY, 0);
-}
-
-//yeah.. not really shadow-related.. but it's stencil-related. -rww
-float tr_distortionAlpha = 1.0f; //opaque
-float tr_distortionStretch = 0.0f; //no stretch override
-qboolean tr_distortionPrePost = qfalse; //capture before postrender phase?
-qboolean tr_distortionNegate = qfalse; //negative blend mode
-void RB_DistortionFill(void)
-{
-	float alpha = tr_distortionAlpha;
-	float spost = 0.0f;
-	float spost2 = 0.0f;
-
-	if ( glConfig.stencilBits < 4 )
-	{
-		return;
-	}
-
-	//ok, cap the stupid thing now I guess
-	if (!tr_distortionPrePost)
-	{
-		RB_CaptureScreenImage();
-	}
-
-	qglEnable(GL_STENCIL_TEST);
-	qglStencilFunc(GL_NOTEQUAL, 0, 0xFFFFFFFF);
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-
-	qglDisable (GL_CLIP_PLANE0);
-	GL_Cull( CT_TWO_SIDED );
-
-	//reset the view matrices and go into ortho mode
-	qglMatrixMode(GL_PROJECTION);
-	qglPushMatrix();
-	qglLoadIdentity();
-	qglOrtho(0, glConfig.vidWidth, glConfig.vidHeight, 32, -1, 1);
-	qglMatrixMode(GL_MODELVIEW);
-	qglPushMatrix();
-	qglLoadIdentity();
-
-	if (tr_distortionStretch)
-	{ //override
-		spost = tr_distortionStretch;
-		spost2 = tr_distortionStretch;
-	}
-	else
-	{ //do slow stretchy effect
-		spost = sin(tr.refdef.time*0.0005f);
-		if (spost < 0.0f)
-		{
-			spost = -spost;
-		}
-		spost *= 0.2f;
-
-		spost2 = sin(tr.refdef.time*0.0005f);
-		if (spost2 < 0.0f)
-		{
-			spost2 = -spost2;
-		}
-		spost2 *= 0.08f;
-	}
-
-	if (alpha != 1.0f)
-	{ //blend
-		GL_State(GLS_SRCBLEND_SRC_ALPHA|GLS_DSTBLEND_SRC_ALPHA);
-	}
-	else
-	{ //be sure to reset the draw state
-		GL_State(0);
-	}
-
-	qglBegin(GL_QUADS);
-		qglColor4f(1.0f, 1.0f, 1.0f, alpha);
-		qglTexCoord2f(0+spost2, 1-spost);
-		qglVertex2f(0, 0);
-
-		qglTexCoord2f(0+spost2, 0+spost);
-		qglVertex2f(0, glConfig.vidHeight);
-
-		qglTexCoord2f(1-spost2, 0+spost);
-		qglVertex2f(glConfig.vidWidth, glConfig.vidHeight);
-
-		qglTexCoord2f(1-spost2, 1-spost);
-		qglVertex2f(glConfig.vidWidth, 0);
-	qglEnd();
-
-	if (tr_distortionAlpha == 1.0f && tr_distortionStretch == 0.0f)
-	{ //no overrides
-		if (tr_distortionNegate)
-		{ //probably the crazy alternate saber trail
-			alpha = 0.8f;
-			GL_State(GLS_SRCBLEND_ZERO|GLS_DSTBLEND_ONE_MINUS_SRC_COLOR);
-		}
-		else
-		{
-			alpha = 0.5f;
-			GL_State(GLS_SRCBLEND_SRC_ALPHA|GLS_DSTBLEND_SRC_ALPHA);
-		}
-
-		spost = sin(tr.refdef.time*0.0008f);
-		if (spost < 0.0f)
-		{
-			spost = -spost;
-		}
-		spost *= 0.08f;
-
-		spost2 = sin(tr.refdef.time*0.0008f);
-		if (spost2 < 0.0f)
-		{
-			spost2 = -spost2;
-		}
-		spost2 *= 0.2f;
-
-		qglBegin(GL_QUADS);
-			qglColor4f(1.0f, 1.0f, 1.0f, alpha);
-			qglTexCoord2f(0+spost2, 1-spost);
-			qglVertex2f(0, 0);
-
-			qglTexCoord2f(0+spost2, 0+spost);
-			qglVertex2f(0, glConfig.vidHeight);
-
-			qglTexCoord2f(1-spost2, 0+spost);
-			qglVertex2f(glConfig.vidWidth, glConfig.vidHeight);
-
-			qglTexCoord2f(1-spost2, 1-spost);
-			qglVertex2f(glConfig.vidWidth, 0);
-		qglEnd();
-	}
-
-	//pop the view matrices back
-	qglMatrixMode(GL_PROJECTION);
-	qglPopMatrix();
-	qglMatrixMode(GL_MODELVIEW);
-	qglPopMatrix();
-
-	qglDisable( GL_STENCIL_TEST );
-}
-#endif

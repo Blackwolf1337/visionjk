@@ -992,7 +992,6 @@ qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
 	return qtrue;
 }
 
-#ifdef RD_VULKAN_VISION
 /*
 ========================
 R_PuddleView
@@ -1052,7 +1051,6 @@ static void R_PuddleView( void ) {
 
 	tr.viewParms = oldParms;
 }
-#endif
 
 /*
 =================
@@ -1221,9 +1219,7 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// sort the drawsurfs by sort type, then orientation, then shader
 	R_RadixSort( drawSurfs, numDrawSurfs );
 
-#ifdef RD_VULKAN_VISION
 	R_PuddleView();
-#endif
 
 	// check for any pass through drawing, which
 	// may cause another view to be rendered first

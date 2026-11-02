@@ -570,12 +570,10 @@ static void DoLine2( const vec3_t start, const vec3_t end, const vec3_t up, floa
 {
 	int			vbase;
 
-#ifdef RD_VULKAN_VISION
 	// a segment of a bolt of electricity as a quad the vertex shader makes, when the batch is one of those
 	if ( VK_AddBoltSegment( start, end, up, spanWidth, spanWidth2 ) ) {
 		return;
 	}
-#endif
 	RB_CHECKOVERFLOW( 4, 6 );
 
 	vbase = tess.numVertexes;
@@ -1693,31 +1691,9 @@ static bool RB_TestZFlare( vec3_t point) {
 		return qfalse;	// shouldn't happen, since we check the clip[] above, except for FP rounding
 	}
 
-#ifdef RD_VULKAN_VISION
 	// the depth of a frame that is still being recorded can not be read: the test an earlier frame made
 	return r_flares->integer != 1 || VK_FlareVisible( point, (int)( backEnd.viewParms.viewportX + window[0] ),
 		(int)( backEnd.viewParms.viewportY + window[1] ), -eye[2] );
-#else
-//do test
-	float			depth = 0.0f;
-	bool			visible;
-	float			screenZ;
-
-	// read back the z buffer contents
-	if ( r_flares->integer !=1 ) {	//skipping the the z-test
-		return true;
-	}
-	// doing a readpixels is as good as doing a glFinish(), so
-	// don't bother with another sync
-	glState.finishCalled = qfalse;
-	qglReadPixels( backEnd.viewParms.viewportX + window[0],backEnd.viewParms.viewportY + window[1], 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth );
-
-	screenZ = backEnd.viewParms.projectionMatrix[14] /
-		( ( 2*depth - 1 ) * backEnd.viewParms.projectionMatrix[11] - backEnd.viewParms.projectionMatrix[10] );
-
-	visible = ( -eye[2] - -screenZ ) < 24;
-	return visible;
-#endif
 }
 
 void RB_SurfaceFlare( srfFlare_t *surf ) {
