@@ -318,7 +318,7 @@ CONTROLS = [
         ('bind', 'Spray', 'v_spray',
          'Puts your picture on the wall you look at. Choose it with v_sprayImage: an emoji of the chat such as heart, or your own png, jpg, tga or animated gif from the sprays folder. Only players of VisionJK see it.'),
         ('bind', 'Send Emoji', 'v_emote',
-         'Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it.'),
+         'Sends the emoji of v_emoteImage to the player under your crosshair: it flies to their head and pops above it. It can be a chat emoji (such as laughing) or an interactive one made on jka.vision. Only players of VisionJK see it.'),
         ('bind', 'Table Tennis', 'v_pingpong',
          'Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it.'),
         ('bind', 'Tennis', 'v_tennis',

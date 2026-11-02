@@ -61,7 +61,10 @@ extern "C" {
 #define TOY_SPRAY_STORE		14		// a picture of the player's own sprayed on a wall: the point, and in the speed the angles of
 									//	the wall's normal (x: TOY_SPRAY_ANGLES, pitch and yaw in steps of TOY_SPRAY_STEP
 									//	degrees) and the number of the picture in the store of the site y * TOY_BOARD_SPLIT + z
-#define TOY_KINDS			15
+#define TOY_EMOTE_STORE		15		// an interactive emoji of the store of the site sent to a player: the point it leaves (the
+									//	eyes), and in the speed the client number of the player it flies to and its
+									//	number in the list of the store y * TOY_BOARD_SPLIT + z (cgame/toys/cg_emote.c)
+#define TOY_KINDS			16
 #define TOY_BOARD_SPLIT		1500	// the number of a picture in two fields of the speed
 #define BOARD_W				256		// a picture of a drawing board: pixels across and down, colours of the palette
 #define BOARD_H				128		//	(cgame/toys/cg_board.c, drawings of modelstore.py of the site)

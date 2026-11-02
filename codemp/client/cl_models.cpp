@@ -147,7 +147,8 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_INDEX_MSEC		( 10 * 60 * 1000 )	// index.txt is fetched again after this long, when a model is wanted
 #define MDL_ICON_MOST		( 256 * 1024 )		// bytes of an icon at most
 #define MDL_EMOJI_MOST		( 64 * 1024 )		// bytes of a chat emoji at most (MAX_EMOJI of modelstore.py)
-#define MDL_EMOJI_RECORD	"emojistore.txt"	// in base of the home folder: the emojis of the store that came, a name a line
+#define MDL_EMOTE_SOUND_MOST	( 96 * 1024 )	// bytes of an own sound of an interactive emoji (2 s at 22050 Hz, 16 bit)
+#define MDL_EMOTE_LIST		"emotes/index.txt"	// in base of the home folder: the interactive emojis for the cgame
 #define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
 #define MDL_PICTURE_MOST	( 1500 * 1500 )		// numbers of pictures of a drawing board or a spray (TOY_BOARD_SPLIT squared)
 #define MDL_PICTURE_ASKS	8					// pictures of a kind the cgame asked for that wait
@@ -177,8 +178,10 @@ typedef struct {
 	// the game's
 	char				model[WEB_MODEL_NAME];	// empty: the job fetches index.txt
 	char				icon[4];				// "jpg", "png": the job fetches the icon of model
-	char				emoji[WEB_MODEL_NAME];	// a chat emoji of the store (issue #9 of the game)
+	int					named;					// a file of a named store (mdlNamedStores) + 1: emojis, sounds
+	char				emoji[WEB_MODEL_NAME];	//	this one of it
 	qboolean			emojiIndex;				//	or the list of them
+	qboolean			emoteList;				// the interactive emojis for the cgame (MDL_EMOTE_LIST)
 	int					picture;				// a picture of a drawing board or a spray that is fetched
 	int					pictureKind;			//	of mdlPictureKinds, also of an upload
 	const byte			*body;					// what is sent with a POST (the own picture), NULL: a GET
@@ -194,11 +197,6 @@ static mdlNames_t	mdlIconsTried;			// icons that came or failed this run
 static char		mdlWanted[WEB_MODEL_NAME];	// the model that is fetched next (v_models get, or a player)
 static qboolean	mdlIconsWanted;				// the window is open: its icons are fetched
 static cvar_t	*v_emojiStore;
-static char		mdlEmojiIndex[MDL_INDEX_MOST + 1];
-static int		mdlEmojiIndexTime = -1;
-static mdlNames_t	mdlEmojiTried;			// emojis that came or failed this run
-static mdlNames_t	mdlEmojiHere;			// the emojis of the store in the home folder (MDL_EMOJI_RECORD)
-static qboolean	mdlEmojiRead;
 static byte		mdlPictureBody[SPRAY_UPLOAD_MOST];
 static char		mdlAnswer[512];				// what the store answered to an upload
 
@@ -388,27 +386,57 @@ static void MDL_IconDone( const mdlJob_t *job ) {
 /*
 ===============================================================================
 
-The chat emojis of the store (issue #9 of the game): every one is fetched, into base/gfx/emoji of the home folder,
-where the chat finds it as any emoji (cgame/chat/cg_chat.c lists them again when v_emojiStoreChanged counts up).
-One the store no longer has (its owner took it down) is deleted again: MDL_EMOJI_RECORD says which came from it.
+Named stores of the site (issue #9 of the game) whose files are all fetched: the chat emojis, into base/gfx/emoji of
+the home folder, where the chat finds them as any emoji (cgame/chat/cg_chat.c lists them again when
+v_emojiStoreChanged counts up), and the own sounds of the interactive emojis, into base/sound/emotes. Their lists
+(index.txt, sounds.txt) have the lines of the list of the models: <name> <bytes> <sha256> <type>. A file the store no
+longer has (its owner took it down) is deleted again: the record of the store says which came from it. Before the
+sounds the list of the interactive emojis comes, the definitions the cgame reads (MDL_EMOTE_LIST, cgame/toys/
+cg_emote.c, which is told by v_emoteStoreChanged).
 
 ===============================================================================
 */
 
-static const char *MDL_EmojiLocal( const char *name, qboolean temp ) {
-	return va( "%s/gfx/emoji/%s.%s", BASEGAME, name, temp ? "tmp" : "png" );
+typedef struct {
+	const char	*list;			// on the site
+	const char	*files;			//	and a file of it, %s the name
+	const char	*local;			// in base of the home folder, %s the name and %s png/wav or tmp
+	const char	*extension;
+	const char	*record;		// in base of the home folder: the names that came, a line each
+	int			most;			// bytes of a file at most
+	const char	*changed;		// the cvar that counts up when one came or went
+} mdlNamedStore_t;
+
+enum { MDL_NAMED_EMOJI, MDL_NAMED_SOUNDS, MDL_NAMED_STORES };
+
+static const mdlNamedStore_t mdlNamedStores[MDL_NAMED_STORES] = {
+	{ "emoji/index.txt", "emoji/files/%s.png", "%s/gfx/emoji/%s.%s", "png", "emojistore.txt", MDL_EMOJI_MOST, "v_emojiStoreChanged" },
+	{ "emotes/sounds.txt", "emotes/files/%s.wav", "%s/sound/emotes/%s.%s", "wav", "emotesounds.txt", MDL_EMOTE_SOUND_MOST, "v_emoteStoreChanged" },
+};
+
+static struct {
+	char		index[MDL_INDEX_MOST + 1];
+	int			indexTime;			// cls.realtime of the list, -1: none yet
+	mdlNames_t	tried;				// files that came or failed this run
+	mdlNames_t	here;				// the files of the store in the home folder (record)
+	qboolean	read;
+} mdlNamed[MDL_NAMED_STORES] = { { "", -1 }, { "", -1 } };
+static int		mdlEmoteListTime = -1;
+
+static const char *MDL_NamedLocal( int store, const char *name, qboolean temp ) {
+	return va( mdlNamedStores[store].local, BASEGAME, name, temp ? "tmp" : mdlNamedStores[store].extension );
 }
 
-static void MDL_EmojiRecordRead( void ) {
+static void MDL_NamedRecordRead( int store ) {
 	char			text[MDL_SEEN * WEB_MODEL_NAME + 1], *line, *next;
 	fileHandle_t	f;
 	int				len;
 
-	if ( mdlEmojiRead ) {
+	if ( mdlNamed[store].read ) {
 		return;
 	}
-	mdlEmojiRead = qtrue;
-	len = FS_SV_FOpenFileRead( va( "%s/%s", BASEGAME, MDL_EMOJI_RECORD ), &f );
+	mdlNamed[store].read = qtrue;
+	len = FS_SV_FOpenFileRead( va( "%s/%s", BASEGAME, mdlNamedStores[store].record ), &f );
 	if ( !f ) {
 		return;
 	}
@@ -421,117 +449,189 @@ static void MDL_EmojiRecordRead( void ) {
 			*next++ = '\0';
 		}
 		if ( WEB_ModelName( line ) ) {
-			MDL_Add( &mdlEmojiHere, line );
+			MDL_Add( &mdlNamed[store].here, line );
 		}
 	}
 }
 
-static void MDL_EmojiRecordWrite( void ) {
-	fileHandle_t	f = FS_SV_FOpenFileWrite( va( "%s/%s", BASEGAME, MDL_EMOJI_RECORD ) );
-	int				i;
+static void MDL_NamedRecordWrite( int store ) {
+	const mdlNames_t	*here = &mdlNamed[store].here;
+	fileHandle_t		f = FS_SV_FOpenFileWrite( va( "%s/%s", BASEGAME, mdlNamedStores[store].record ) );
+	int					i;
 
 	if ( !f ) {
 		return;
 	}
-	for ( i = 0; i < mdlEmojiHere.num; i++ ) {
-		FS_Write( va( "%s\n", mdlEmojiHere.name[i] ), (int)strlen( mdlEmojiHere.name[i] ) + 1, f );
+	for ( i = 0; i < here->num; i++ ) {
+		FS_Write( va( "%s\n", here->name[i] ), (int)strlen( here->name[i] ) + 1, f );
 	}
 	FS_FCloseFile( f );
 }
 
-// Starts the fetch of a chat emoji of the store, or with name NULL of their list.
-static void MDL_StartEmoji( const char *name ) {
-	mdlJob_t *job = &mdlJob;
+// Starts the fetch of a file of a named store, or with name NULL of its list.
+static void MDL_StartNamed( int store, const char *name ) {
+	const mdlNamedStore_t	*s = &mdlNamedStores[store];
+	mdlJob_t				*job = &mdlJob;
 
 	memset( job, 0, sizeof( *job ) );
-	if ( !MDL_Url( name ? va( "emoji/files/%s.png", name ) : "emoji/index.txt", job->url, sizeof( job->url ) ) ) {
+	if ( !MDL_Url( name ? va( s->files, name ) : s->list, job->url, sizeof( job->url ) ) ) {
 		return;
 	}
+	job->named = store + 1;
 	if ( name ) {
 		unsigned char	sha[WEB_SHA256_SIZE];
 		fileHandle_t	f;
 
-		MDL_Add( &mdlEmojiTried, name );
-		if ( !WEB_ModelIndexFind( mdlEmojiIndex, name, &job->most, sha ) || job->most > MDL_EMOJI_MOST ) {
+		MDL_Add( &mdlNamed[store].tried, name );
+		if ( !WEB_ModelIndexFind( mdlNamed[store].index, name, &job->most, sha ) || job->most > s->most ) {
 			return;
 		}
-		f = FS_SV_FOpenFileWrite( MDL_EmojiLocal( name, qtrue ) );
+		f = FS_SV_FOpenFileWrite( MDL_NamedLocal( store, name, qtrue ) );
 		if ( !f ) {
 			return;
 		}
 		FS_FCloseFile( f );
-		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_EmojiLocal( name, qtrue ) ), sizeof( job->osTemp ) );
+		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_NamedLocal( store, name, qtrue ) ), sizeof( job->osTemp ) );
 		Q_strncpyz( job->emoji, name, sizeof( job->emoji ) );
 		Web_SHA256Init( &job->sha );
 	} else {
 		job->emojiIndex = qtrue;
 		job->most = MDL_INDEX_MOST;
-		job->index = mdlEmojiIndex;
-		mdlEmojiIndex[0] = '\0';
+		job->index = mdlNamed[store].index;
+		mdlNamed[store].index[0] = '\0';
 	}
 	MDL_Launch( job );
 }
 
-// The list came: an emoji that came from the store and is no longer in it goes. Or an emoji came: it is kept when
-// it is the file of the list.
-static void MDL_EmojiDone( mdlJob_t *job ) {
+// Starts the fetch of the list of the interactive emojis for the cgame.
+static void MDL_StartEmoteList( void ) {
+	mdlJob_t *job = &mdlJob;
+
+	memset( job, 0, sizeof( *job ) );
+	mdlEmoteListTime = cls.realtime;
+	if ( !MDL_Url( "emotes/index.txt", job->url, sizeof( job->url ) ) ) {
+		return;
+	}
+	job->emoteList = qtrue;
+	job->most = MDL_INDEX_MOST;
+	job->index = mdlNamed[MDL_NAMED_SOUNDS].index;		// (free until the list of the sounds is fetched after it)
+	MDL_Launch( job );
+}
+
+// The list of the interactive emojis came: it goes where the cgame reads it.
+static void MDL_EmoteListDone( mdlJob_t *job ) {
+	fileHandle_t f;
+
+	if ( !job->ok ) {
+		Com_DPrintf( "The list of the interactive emojis of the store did not come: %s\n", job->error );
+		return;
+	}
+	f = FS_SV_FOpenFileWrite( va( "%s/%s", BASEGAME, MDL_EMOTE_LIST ) );
+	if ( f ) {
+		FS_Write( job->index, (int)job->bytes, f );
+		FS_FCloseFile( f );
+	}
+	job->index[0] = '\0';
+	mdlNamed[MDL_NAMED_SOUNDS].indexTime = -1;
+	Cvar_SetValue( "v_emoteStoreChanged", Cvar_VariableValue( "v_emoteStoreChanged" ) + 1.0f );
+}
+
+// The list came: a file that came from the store and is no longer in it goes. Or a file came: it is kept when it
+// is the file of the list.
+static void MDL_NamedDone( mdlJob_t *job ) {
+	const int		store = job->named - 1;
+	mdlNames_t		*here = &mdlNamed[store].here;
 	unsigned char	sha[WEB_SHA256_SIZE], want[WEB_SHA256_SIZE];
 	long long		size = 0;
 	qboolean		changed = qfalse;
 	int				i;
 
 	if ( job->emojiIndex ) {
-		mdlEmojiIndex[job->ok ? job->bytes : 0] = '\0';
-		mdlEmojiIndexTime = cls.realtime;
+		mdlNamed[store].index[job->ok ? job->bytes : 0] = '\0';
+		mdlNamed[store].indexTime = cls.realtime;
 		if ( !job->ok ) {
-			Com_DPrintf( "The list of the chat emojis of the store did not come: %s\n", job->error );
+			Com_DPrintf( "The list %s of the store did not come: %s\n", mdlNamedStores[store].list, job->error );
 			return;
 		}
-		MDL_EmojiRecordRead();
-		for ( i = mdlEmojiHere.num - 1; i >= 0; i-- ) {
-			if ( !WEB_ModelIndexFind( mdlEmojiIndex, mdlEmojiHere.name[i], &size, want ) ) {
-				remove( MDL_OSPath( MDL_EmojiLocal( mdlEmojiHere.name[i], qfalse ) ) );
-				memmove( &mdlEmojiHere.name[i], &mdlEmojiHere.name[i + 1], ( mdlEmojiHere.num - i - 1 ) * sizeof( mdlEmojiHere.name[0] ) );
-				mdlEmojiHere.num--;
+		MDL_NamedRecordRead( store );
+		for ( i = here->num - 1; i >= 0; i-- ) {
+			if ( !WEB_ModelIndexFind( mdlNamed[store].index, here->name[i], &size, want ) ) {
+				remove( MDL_OSPath( MDL_NamedLocal( store, here->name[i], qfalse ) ) );
+				memmove( &here->name[i], &here->name[i + 1], ( here->num - i - 1 ) * sizeof( here->name[0] ) );
+				here->num--;
 				changed = qtrue;
 			}
 		}
 		if ( changed ) {
-			MDL_EmojiRecordWrite();
-			Cvar_SetValue( "v_emojiStoreChanged", Cvar_VariableValue( "v_emojiStoreChanged" ) + 1.0f );
+			MDL_NamedRecordWrite( store );
+			Cvar_SetValue( mdlNamedStores[store].changed, Cvar_VariableValue( mdlNamedStores[store].changed ) + 1.0f );
 		}
 		return;
 	}
 	Web_SHA256Final( &job->sha, sha );
-	if ( !job->ok || job->disk || !WEB_ModelIndexFind( mdlEmojiIndex, job->emoji, &size, want ) || job->bytes != size
+	if ( !job->ok || job->disk || !WEB_ModelIndexFind( mdlNamed[store].index, job->emoji, &size, want ) || job->bytes != size
 		|| memcmp( sha, want, sizeof( sha ) ) ) {
 		remove( job->osTemp );
 		return;
 	}
-	FS_SV_Rename( MDL_EmojiLocal( job->emoji, qtrue ), MDL_EmojiLocal( job->emoji, qfalse ), qfalse );
-	MDL_EmojiRecordRead();
-	MDL_Add( &mdlEmojiHere, job->emoji );
-	MDL_EmojiRecordWrite();
-	Cvar_SetValue( "v_emojiStoreChanged", Cvar_VariableValue( "v_emojiStoreChanged" ) + 1.0f );
+	FS_SV_Rename( MDL_NamedLocal( store, job->emoji, qtrue ), MDL_NamedLocal( store, job->emoji, qfalse ), qfalse );
+	MDL_NamedRecordRead( store );
+	MDL_Add( here, job->emoji );
+	MDL_NamedRecordWrite( store );
+	Cvar_SetValue( mdlNamedStores[store].changed, Cvar_VariableValue( mdlNamedStores[store].changed ) + 1.0f );
 }
 
-// The next thing to fetch of the chat emojis: their list when it is old, else the next one not here yet.
-static void MDL_NextEmoji( void ) {
+// The next file of a named store: its list when it is old, else the next one not here yet (a sound whose size is
+// not the one of the list counts as not here: an interactive emoji of that name was made again). qfalse: nothing.
+static qboolean MDL_NextNamed( int store ) {
 	char		name[WEB_MODEL_NAME], icon[4];
 	const char	*p;
 	long long	size;
 
-	if ( mdlEmojiIndexTime < 0 || cls.realtime - mdlEmojiIndexTime > MDL_INDEX_MSEC ) {
-		MDL_StartEmoji( NULL );
-		return;
+	if ( mdlNamed[store].indexTime < 0 || cls.realtime - mdlNamed[store].indexTime > MDL_INDEX_MSEC ) {
+		MDL_StartNamed( store, NULL );
+		return qtrue;
 	}
-	MDL_EmojiRecordRead();
-	for ( p = WEB_ModelIndexNext( mdlEmojiIndex, name, icon, &size ); p; p = WEB_ModelIndexNext( p, name, icon, &size ) ) {
-		if ( !MDL_Has( &mdlEmojiTried, name ) && !( MDL_Has( &mdlEmojiHere, name ) && FS_SV_FileExists( MDL_EmojiLocal( name, qfalse ) ) ) ) {
-			MDL_StartEmoji( name );
-			return;
+	MDL_NamedRecordRead( store );
+	for ( p = WEB_ModelIndexNext( mdlNamed[store].index, name, icon, &size ); p; p = WEB_ModelIndexNext( p, name, icon, &size ) ) {
+		fileHandle_t	f;
+		const int		len = MDL_Has( &mdlNamed[store].here, name ) ? FS_SV_FOpenFileRead( MDL_NamedLocal( store, name, qfalse ), &f ) : -1;
+
+		if ( len >= 0 && f ) {
+			FS_FCloseFile( f );
+		}
+		if ( !MDL_Has( &mdlNamed[store].tried, name ) && ( len < 0 || !f || ( store == MDL_NAMED_SOUNDS && len != size ) ) ) {
+			MDL_StartNamed( store, name );
+			return qtrue;
 		}
 	}
+	return qfalse;
+}
+
+// The chat emojis first, then the list of the interactive emojis when it is old, then their sounds.
+static void MDL_NextEmoji( void ) {
+	if ( MDL_NextNamed( MDL_NAMED_EMOJI ) ) {
+		return;
+	}
+	if ( mdlEmoteListTime < 0 || cls.realtime - mdlEmoteListTime > MDL_INDEX_MSEC ) {
+		MDL_StartEmoteList();
+		return;
+	}
+	MDL_NextNamed( MDL_NAMED_SOUNDS );
+}
+
+// v_emotes refresh: the lists of the stores again now (the cgame heard of an interactive emoji it does not know)
+static void CL_Emotes_f( void ) {
+	if ( Q_stricmp( Cmd_Argv( 1 ), "refresh" ) ) {
+		Com_Printf( "usage: v_emotes refresh\n" );
+		return;
+	}
+	// (not more than once a minute)
+	if ( mdlEmoteListTime >= 0 && cls.realtime - mdlEmoteListTime < 60000 ) {
+		return;
+	}
+	mdlEmoteListTime = -1;
+	mdlNamed[MDL_NAMED_EMOJI].indexTime = -1;
 }
 
 /*
@@ -719,8 +819,13 @@ static void MDL_Done( void ) {
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		return;
 	}
-	if ( job->emojiIndex || job->emoji[0] ) {
-		MDL_EmojiDone( job );
+	if ( job->emoteList ) {
+		MDL_EmoteListDone( job );
+		SDL_AtomicSet( &job->state, MDLJOB_FREE );
+		return;
+	}
+	if ( job->named ) {
+		MDL_NamedDone( job );
 		SDL_AtomicSet( &job->state, MDLJOB_FREE );
 		return;
 	}
@@ -821,9 +926,10 @@ void CL_ModelsFrame( void ) {
 			return;
 		}
 	}
-	// with nothing of the models to do: the chat emojis of the store, in the game (not on a pure server)
+	// with nothing of the models to do: the chat emojis and the interactive emojis of the store, in the game (also on
+	// a pure server, which reads them from the folder, FS_IsToyFile of qcommon/files.cpp)
 	if ( !mdlWanted[0] && !mdlIconsWanted ) {
-		if ( v_emojiStore->integer && cls.state == CA_ACTIVE && !cl_connectedToPureServer && !clc.demoplaying ) {
+		if ( v_emojiStore->integer && cls.state == CA_ACTIVE && !clc.demoplaying ) {
 			MDL_NextEmoji();
 		}
 		return;
@@ -888,10 +994,12 @@ void CL_ModelsInit( void ) {
 	Cvar_Get( "v_modelStoreFetching", "", CVAR_ROM, "The model that is fetched from the model store now" );
 	v_emojiStore = Cvar_Get( "v_emojiStore", "1", CVAR_ARCHIVE, "Fetch the chat emojis that players uploaded to the site (0: only the emojis of the game)" );
 	Cvar_Get( "v_emojiStoreChanged", "0", CVAR_ROM, "Counts up when a chat emoji of the store came or went" );
+	Cvar_Get( "v_emoteStoreChanged", "0", CVAR_ROM, "Counts up each time the list or a sound of the interactive emojis arrived (read-only)" );
 	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED,
 		"Address of the model store (https). Can only be changed on the command line" );
 	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, v_models get <name>, v_models icons" );
 	Cmd_AddCommand( "v_drawings", CL_Drawings_f, "The pictures of the drawing boards in the store of the site: v_drawings upload, v_drawings get <number>" );
+	Cmd_AddCommand( "v_emotes", CL_Emotes_f, "Fetches the list of interactive emojis of the store again (usage: v_emotes refresh)" );
 	Cmd_AddCommand( "v_sprays", CL_Sprays_f, "The sprays in the store of the site: v_sprays upload <file>, v_sprays get <number>" );
 }
 
@@ -912,6 +1020,7 @@ void CL_ModelsShutdown( void ) {
 	Cmd_RemoveCommand( "v_models" );
 	Cmd_RemoveCommand( "v_drawings" );
 	Cmd_RemoveCommand( "v_sprays" );
+	Cmd_RemoveCommand( "v_emotes" );
 }
 
 #else // __EMSCRIPTEN__

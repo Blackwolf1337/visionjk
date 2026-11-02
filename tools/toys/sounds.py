@@ -11,7 +11,9 @@
 # over dirt and gravel), rc_servo.wav (the buzz of the steering servo), rc_land1-2.wav (the thump of a landing) and
 # rc_on.wav (the chirp of its receiver), and the snowball (cg_toys.c): snow_pack.wav (packing it in the hands),
 # snow_throw.wav (it leaves the hand), snow_hard1-3.wav (it bursts on stone or metal), snow_soft1-2.wav (on soft ground),
-# snow_body.wav (on a player) and snow_face.wav (in the own face), and spray_can.wav (the can of a spray, cg_spray.c). 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
+# snow_body.wav (on a player) and snow_face.wav (in the own face), and spray_can.wav (the can of a spray, cg_spray.c), and the sounds an interactive emoji can pop with (cg_emote.c, made
+# on the page of the store): emote_chime.wav, emote_boing.wav, emote_sparkle.wav, emote_rimshot.wav and
+# emote_fanfare.wav. 22050 Hz, 16 bit, mono, as the sounds of the game. Noise with a fixed seed, so the
 # files come out the same every time. Writes into assets/japlus_client/sound/vision/toys/.
 # usage: tools/toys/sounds.py
 import math
@@ -519,6 +521,98 @@ def spray_can():
 	return fade( out, 0.0, 0.05 )
 
 
+def bell( out, start, freq, decay, gain ):
+	"""A small bell at start: its partials at the ratios of a struck bar, each dying away faster than the one below."""
+	at = int( start * RATE )
+	for ratio, g, d in ( ( 1.0, 1.0, 1.0 ), ( 2.756, 0.45, 0.55 ), ( 5.404, 0.22, 0.32 ), ( 8.933, 0.1, 0.2 ) ):
+		f = freq * ratio
+		if f > RATE * 0.45:
+			continue
+		for i in range( int( decay * 4.0 * d * RATE ) ):
+			if at + i >= len( out ):
+				break
+			t = i / RATE
+			out[at + i] += gain * g * math.sin( 2.0 * math.pi * f * t ) * math.exp( -t / ( decay * d ) ) * min( 1.0, t / 0.002 )
+
+
+def chime():
+	"""Two bells a fifth apart, the second a moment later: 0.9 s"""
+	out = [0.0] * int( 0.9 * RATE )
+	bell( out, 0.0, 1318.5, 0.22, 1.0 )
+	bell( out, 0.07, 1975.5, 0.2, 0.8 )
+	return fade( out, 0.0, 0.1 )
+
+
+def boing():
+	"""A spring: a low tone that wobbles and falls, with the twang of the coil over it: 0.55 s"""
+	n = int( 0.55 * RATE )
+	out = []
+	phase = twang = 0.0
+	for i in range( n ):
+		t = i / RATE
+		freq = 140.0 + 220.0 * math.exp( -t / 0.12 ) + 45.0 * math.sin( 2.0 * math.pi * 14.0 * t ) * math.exp( -t / 0.3 )
+		phase += 2.0 * math.pi * freq / RATE
+		twang += 2.0 * math.pi * freq * 3.01 / RATE
+		env = math.exp( -t / 0.22 ) * min( 1.0, t / 0.004 )
+		out.append( ( math.sin( phase ) + 0.35 * math.sin( 2.0 * phase ) + 0.2 * math.sin( twang ) ) * env )
+	return out
+
+
+def sparkle():
+	"""Five tiny bells running up, and a shimmer of air under them: 0.75 s"""
+	rnd = random.Random( 181 )
+	out = [0.0] * int( 0.75 * RATE )
+	for k, freq in enumerate( ( 2093.0, 2637.0, 3136.0, 3951.0, 4186.0 ) ):
+		bell( out, k * 0.055, freq * rnd.uniform( 0.995, 1.005 ), 0.12, 0.6 )
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( len( out ) )]
+	air = bandpass( noise, lambda t: 7000.0, 2.0 )
+	for i in range( len( out ) ):
+		t = i / RATE
+		out[i] += 0.12 * air[i] * math.sin( math.pi * min( 1.0, t / 0.5 ) )
+	return fade( out, 0.0, 0.1 )
+
+
+def rimshot():
+	"""Ba-dum-tss: two hits of a snare (a tone and a burst of noise through a band), then a cymbal (bright noise that
+	rings out): 1.0 s"""
+	rnd = random.Random( 191 )
+	out = [0.0] * int( 1.0 * RATE )
+	noise = [rnd.uniform( -1.0, 1.0 ) for _ in range( len( out ) )]
+	snare = bandpass( noise, lambda t: 2200.0, 0.9 )
+	cymbal = bandpass( noise, lambda t: 8000.0, 0.7 )
+	for start, pitch, gain in ( ( 0.0, 190.0, 0.8 ), ( 0.16, 160.0, 1.0 ) ):
+		at = int( start * RATE )
+		for i in range( int( 0.18 * RATE ) ):
+			t = i / RATE
+			out[at + i] += gain * ( 0.7 * math.sin( 2.0 * math.pi * pitch * t ) * math.exp( -t / 0.04 ) + snare[at + i] * math.exp( -t / 0.06 ) )
+	at = int( 0.33 * RATE )
+	for i in range( len( out ) - at ):
+		t = i / RATE
+		out[at + i] += 0.8 * cymbal[at + i] * math.exp( -t / 0.25 ) * min( 1.0, t / 0.002 )
+	return fade( out, 0.0, 0.08 )
+
+
+def fanfare():
+	"""A short fanfare of brass: up the chord and a held note at the top, each a saw through a filter that opens as
+	the note swells: 1.0 s"""
+	out = [0.0] * int( 1.0 * RATE )
+	for start, length, freq in ( ( 0.0, 0.12, 523.25 ), ( 0.12, 0.12, 659.25 ), ( 0.24, 0.12, 783.99 ), ( 0.36, 0.6, 1046.5 ) ):
+		at = int( start * RATE )
+		low = 0.0
+		phase = 0.0
+		for i in range( int( ( length + 0.05 ) * RATE ) ):
+			if at + i >= len( out ):
+				break
+			t = i / RATE
+			env = min( 1.0, t / 0.025 ) * ( 1.0 if t < length else math.exp( -( t - length ) / 0.02 ) )
+			phase += freq * ( 1.0 + 0.004 * math.sin( 2.0 * math.pi * 5.5 * t ) ) / RATE
+			saw = 2.0 * ( phase % 1.0 ) - 1.0
+			cutoff = 0.05 + 0.25 * env
+			low += cutoff * ( saw - low )
+			out[at + i] += low * env
+	return fade( out, 0.0, 0.08 )
+
+
 os.makedirs( OUT, exist_ok=True )
 write( 'emote_send.wav', send() )
 write( 'emote_pop.wav', pop() )
@@ -549,3 +643,8 @@ for n in range( 2 ):
 write( 'snow_body.wav', snow_body(), 0.75 )
 write( 'snow_face.wav', snow_face(), 0.8 )
 write( 'spray_can.wav', spray_can(), 0.6 )
+write( 'emote_chime.wav', chime(), 0.7 )
+write( 'emote_boing.wav', boing(), 0.7 )
+write( 'emote_sparkle.wav', sparkle(), 0.6 )
+write( 'emote_rimshot.wav', rimshot(), 0.75 )
+write( 'emote_fanfare.wav', fanfare(), 0.6 )

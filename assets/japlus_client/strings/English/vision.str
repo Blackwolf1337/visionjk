@@ -164,8 +164,8 @@ LANG_ENGLISH        "Puts your picture on the wall you look at. Choose it with v
 REFERENCE           SEND_EMOJI
 LANG_ENGLISH        "Send Emoji"
 
-REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_A_NA
-LANG_ENGLISH        "Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it."
+REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_TO_T
+LANG_ENGLISH        "Sends the emoji of v_emoteImage to the player under your crosshair: it flies to their head and pops above it. It can be a chat emoji (such as laughing) or an interactive one made on jka.vision. Only players of VisionJK see it."
 
 REFERENCE           TABLE_TENNIS
 LANG_ENGLISH        "Table Tennis"

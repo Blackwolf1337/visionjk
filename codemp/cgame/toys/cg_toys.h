@@ -45,7 +45,7 @@ qboolean	CG_BoardFetch( int picture, byte *pixels );
 void		CG_EmoteInit( void );
 void		CG_EmoteScene( void );
 void		CG_EmoteDraw( void );
-void		CG_EmoteHeard( int client, const vec3_t origin, const vec3_t velocity );
+void		CG_EmoteHeard( int client, int kind, const vec3_t origin, const vec3_t velocity );
 
 // cg_pong.c
 void		CG_PongInit( void );

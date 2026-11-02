@@ -2848,7 +2848,7 @@
 			name					vision_bind_v_emote
 			type					ITEM_TYPE_BIND
 			text					@VISION_SEND_EMOJI
-			descText				@VISION_SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_A_NA
+			descText				@VISION_SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_TO_T
 			cvar					"v_emote"
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 1090 908 52
