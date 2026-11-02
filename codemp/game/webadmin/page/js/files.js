@@ -183,10 +183,10 @@ async function fsOpenText(path) {
 	try {
 		const res = await fetch(fsUrl('get', { root: fsRoot, path, text: 1 }), { cache: 'no-store' });
 		if (!res.ok) throw new Error(await res.text());
-		const text = await res.text();
+		// the textarea turns CR LF into LF: what it holds is the text that counts as unchanged
+		$('fsText').value = await res.text();
 		// a file of the installation is saved under the same name in the server files, where the engine looks first
-		fsEdit = { path, saved: text, colored: fsExt(path) === 'cfg', copy: fsRoot !== 'home' };
-		$('fsText').value = text;
+		fsEdit = { path, saved: $('fsText').value, colored: fsExt(path) === 'cfg', copy: fsRoot !== 'home' };
 		$('fsText').scrollTop = $('fsText').scrollLeft = 0;
 		fsShowEdit();
 	} catch (e) {
