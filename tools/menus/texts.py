@@ -31,8 +31,8 @@ OLD = {
     'Microphone Gain:': 'Microphone Gain',
     'Activation Level:': 'Activation Level',
     'Muffle Behind Walls:': 'Muffle Behind Walls',
-    'Show Who Talks:': 'Show Who Talks',
-    'On Other Servers:': 'On Other Servers',
+    'Talking Players List:': 'Talking Players List',
+    'Voice via Masterserver:': 'Voice via Masterserver',
     'Own Voice In The Room:': 'Own Voice In The Room',
     'Radio Sound:': 'Radio Sound',
     'JetPack': 'Jetpack',
@@ -303,7 +303,7 @@ TR = {
         'Echtzeit: wird laufend berechnet, die lautesten Geräusche haben ihr eigenes Echo. Vorberechnet: einmal pro Level berechnet und gespeichert, stabil beim Bewegen, alle Geräusche hallen mit dem Raum, in dem du stehst.',
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
         'Wie viele der lautesten Geräusche von den Wänden widerhallen. Mehr kostet mehr Leistung pro Bild.',
-    'Real Sound Travel': 'Echte Schallausbreitung',
+    'Physically Based Sound': 'Physikalischer Klang',
     'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.':
         'Geräusche werden mit der Entfernung leiser wie in echt, verlieren in der Ferne ihre Höhen und erreichen dich mit Schallgeschwindigkeit.',
     'Talk to and hear other players with your microphone.': 'Mit dem Mikrofon andere Spieler hören und mit ihnen sprechen.',
@@ -326,9 +326,9 @@ TR = {
         'Sprachaktivierung: wie laut du sein musst, damit gesendet wird.',
     'Muffle Behind Walls': 'Hinter Wänden dämpfen',
     'Voices behind walls and under water sound muffled.': 'Stimmen hinter Wänden und unter Wasser klingen gedämpft.',
-    'Show Who Talks': 'Sprecher anzeigen',
+    'Talking Players List': 'Liste sprechender Spieler',
     'A list of the players who are talking on the HUD.': 'Zeigt im HUD eine Liste der Spieler, die gerade sprechen.',
-    'On Other Servers': 'Auf anderen Servern',
+    'Voice via Masterserver': 'Sprache über Masterserver',
     'Servers without voice: use master.jka.vision, which sees your address.':
         'Server ohne Sprachchat: master.jka.vision verwenden, der deine Adresse sieht.',
     'Own Voice In The Room': 'Eigene Stimme im Raum',
@@ -351,7 +351,7 @@ TR = {
     'Classic Menus': 'Klassische Menüs',
     'The menus of the game as they were. Counts from the next start of the game.':
         'Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart.',
-    'Menu in the Level': 'Menü im Level',
+    '3D Menu': '3D-Menü',
     'In a game an open menu stands in the level next to you.': 'Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir.',
     'Menu Blur': 'Menü-Unschärfe',
     'How far the level behind an open menu is out of focus.': 'Wie unscharf das Level hinter einem offenen Menü ist.',

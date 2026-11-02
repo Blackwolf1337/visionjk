@@ -1457,7 +1457,7 @@
 			name					voicechat7
 			group					voicechat
 			type					ITEM_TYPE_YESNO
-			text					@VISION_SHOW_WHO_TALKS
+			text					@VISION_TALKING_PLAYERS_LIST
 			cvar					"v_voiceDrawTalkers"
 			descText				@VISION_A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 			action { play "sound/interface/button1.wav" ; }
@@ -1477,7 +1477,7 @@
 			name					voicechat8
 			group					voicechat
 			type					ITEM_TYPE_YESNO
-			text					@VISION_ON_OTHER_SERVERS
+			text					@VISION_VOICE_VIA_MASTERSERVER
 			cvar					"v_voiceMaster"
 			descText				@VISION_SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 			action { play "sound/interface/button1.wav" ; }
@@ -1731,7 +1731,7 @@
 		{
 			name					vision_yesno_v_spatialphysical
 			type					ITEM_TYPE_YESNO
-			text					@VISION_REAL_SOUND_TRAVEL
+			text					@VISION_PHYSICALLY_BASED_SOUND
 			descText				@VISION_SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 			cvar					"v_spatialPhysical"
 			action { play "sound/interface/button1.wav" ; }
@@ -2137,162 +2137,6 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 1030 452 100
-			visible					1
-			text					@VISION_WEAPONS
-			font					7
-			textscale				0.78
-			forecolor				0.56 0.64 0.74 1
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				22
-			textaligny				55.5
-			caps					1
-			fold					13
-			page					3
-			scroll					1
-			column					0
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					vision_yesno_tay_jk2effects
-			type					ITEM_TYPE_YESNO
-			text					@VISION_JEDI_OUTCAST_SHOTS
-			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
-			cvar					"tay_jk2Effects"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1130 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_multi_tay_disruptorbeam
-			type					ITEM_TYPE_MULTI
-			text					@VISION_DISRUPTOR_BEAM
-			descText				@VISION_HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
-			cvar					"tay_disruptorBeam"
-			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1182 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_scope
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SCOPE_LENS
-			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
-			cvar					"v_scope"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1234 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_scopewheelzoom
-			type					ITEM_TYPE_YESNO
-			text					@VISION_ZOOM_WITH_MOUSE_WHEEL
-			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
-			cvar					"v_scopeWheelZoom"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1286 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_slider_v_motionthreshold
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_MOTION_TRACKER_SPEED
-			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
-			cvarfloat				"v_motionThreshold" 40 10 200
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1338 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_binoculars
-			type					ITEM_TYPE_YESNO
-			text					@VISION_BINOCULAR_LENS
-			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
-			cvar					"v_binoculars"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1390 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_lockon
-			type					ITEM_TYPE_YESNO
-			text					@VISION_ROCKET_LOCK_ON
-			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
-			cvar					"v_lockOn"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1442 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_head
 			rect					772 192 452 66
 			visible					1
 			text					@VISION_LANGUAGE
@@ -2303,7 +2147,7 @@
 			textalignx				22
 			textaligny				21.5
 			caps					1
-			fold					14
+			fold					13
 			page					3
 			scroll					1
 			column					1
@@ -2400,7 +2244,7 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					15
+			fold					14
 			page					3
 			scroll					1
 			column					1
@@ -2529,7 +2373,7 @@
 			name					vision_head
 			rect					772 826 452 100
 			visible					1
-			text					@VISION_HATS_AND_CAPES
+			text					@VISION_WEAPONS
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
@@ -2537,27 +2381,22 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					16
+			fold					15
 			page					3
 			scroll					1
 			column					1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			action { play "sound/interface/button1.wav" ; }
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_multistr_tay_hat
-			type					ITEM_TYPE_MULTI
-			text					@VISION_HAT
-			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
-			cvar					"tay_hat"
-			cvarStrList
-			{
-				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
-			}
+			name					vision_yesno_tay_jk2effects
+			type					ITEM_TYPE_YESNO
+			text					@VISION_JEDI_OUTCAST_SHOTS
+			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+			cvar					"tay_jk2Effects"
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 926 432 52
 			page					3
@@ -2568,20 +2407,16 @@
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			column					1
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_multistr_tay_cape
+			name					vision_multi_tay_disruptorbeam
 			type					ITEM_TYPE_MULTI
-			text					@VISION_CAPE
-			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
-			cvar					"tay_cape"
-			cvarStrList
-			{
-				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
-			}
+			text					@VISION_DISRUPTOR_BEAM
+			descText				@VISION_HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+			cvar					"tay_disruptorBeam"
+			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 978 432 52
 			page					3
@@ -2592,17 +2427,15 @@
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			column					1
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_multi_tay_showcosmetics
-			type					ITEM_TYPE_MULTI
-			text					@VISION_SHOW_THEM
-			descText				@VISION_WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
-			cvar					"tay_showCosmetics"
-			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
+			name					vision_yesno_v_scope
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SCOPE_LENS
+			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
+			cvar					"v_scope"
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 1030 432 52
 			page					3
@@ -2613,16 +2446,15 @@
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			column					1
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_yesno_tay_seasonalcosmetics
+			name					vision_yesno_v_scopewheelzoom
 			type					ITEM_TYPE_YESNO
-			text					@VISION_SEASONAL_HATS
-			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
-			cvar					"tay_seasonalCosmetics"
+			text					@VISION_ZOOM_WITH_MOUSE_WHEEL
+			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
+			cvar					"v_scopeWheelZoom"
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 1082 432 52
 			page					3
@@ -2633,7 +2465,63 @@
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			column					1
-			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_motionthreshold
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_MOTION_TRACKER_SPEED
+			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
+			cvarfloat				"v_motionThreshold" 40 10 200
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1134 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_binoculars
+			type					ITEM_TYPE_YESNO
+			text					@VISION_BINOCULAR_LENS
+			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
+			cvar					"v_binoculars"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1186 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_lockon
+			type					ITEM_TYPE_YESNO
+			text					@VISION_ROCKET_LOCK_ON
+			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
+			cvar					"v_lockOn"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1238 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
 		}
 
 		itemDef
@@ -2649,7 +2537,7 @@
 			textalignx				22
 			textaligny				21.5
 			caps					1
-			fold					17
+			fold					16
 			page					4
 			scroll					1
 			column					0
@@ -2700,7 +2588,7 @@
 		{
 			name					vision_yesno_v_immersivemenu
 			type					ITEM_TYPE_YESNO
-			text					@VISION_MENU_IN_THE_LEVEL
+			text					@VISION_3D_MENU
 			descText				@VISION_IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 			cvar					"v_immersiveMenu"
 			action { play "sound/interface/button1.wav" ; }
@@ -2747,7 +2635,7 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					18
+			fold					17
 			page					4
 			scroll					1
 			column					0
@@ -2921,7 +2809,7 @@
 			textalignx				22
 			textaligny				21.5
 			caps					1
-			fold					19
+			fold					18
 			page					4
 			scroll					1
 			column					1
@@ -3000,7 +2888,7 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					20
+			fold					19
 			page					4
 			scroll					1
 			column					1
@@ -3103,7 +2991,7 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					21
+			fold					20
 			page					4
 			scroll					1
 			column					1
@@ -3287,7 +3175,7 @@
 			textalignx				22
 			textaligny				21.5
 			caps					1
-			fold					22
+			fold					21
 			page					5
 			scroll					1
 			column					0
@@ -3460,7 +3348,7 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					23
+			fold					22
 			page					5
 			scroll					1
 			column					0
@@ -3532,7 +3420,7 @@
 			name					vision_head
 			rect					296 930 452 100
 			visible					1
-			text					@VISION_CLAN
+			text					@VISION_CONSOLE
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
@@ -3540,7 +3428,7 @@
 			textalignx				22
 			textaligny				55.5
 			caps					1
-			fold					24
+			fold					23
 			page					5
 			scroll					1
 			column					0
@@ -3552,18 +3440,57 @@
 
 		itemDef
 		{
-			name					vision_secret_cp_clanpwd
-			type					ITEM_TYPE_EDITFIELD
-			text					@VISION_CLAN_PASSWORD
-			descText				@VISION_CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
-			cvar					"cp_clanPwd"
-			maxChars				32
-			maxPaintChars			24
+			name					vision_slider_con_scale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CONSOLE_TEXT_SIZE
+			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 1030 432 52
 			page					5
 			scroll					1
-			row						2
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_slider_con_opacity
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CONSOLE_OPACITY
+			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+			cvarfloat				"con_opacity" 1 0.2 1
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1082 432 52
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_consoleclock
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CONSOLE_CLOCK
+			descText				@VISION_A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+			cvar					"tay_consoleClock"
+			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1134 432 52
+			page					5
+			scroll					1
+			row						1
 			font					5
 			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
@@ -3577,13 +3504,120 @@
 			name					vision_head
 			rect					772 192 452 66
 			visible					1
-			text					@VISION_CHAT
+			text					@VISION_HATS_AND_CAPES
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				22
 			textaligny				21.5
+			caps					1
+			fold					24
+			page					5
+			scroll					1
+			column					1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					vision_multistr_tay_hat
+			type					ITEM_TYPE_MULTI
+			text					@VISION_HAT
+			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+			cvar					"tay_hat"
+			cvarStrList
+			{
+				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 258 432 52
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_multistr_tay_cape
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CAPE
+			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+			cvar					"tay_cape"
+			cvarStrList
+			{
+				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 310 432 52
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_showcosmetics
+			type					ITEM_TYPE_MULTI
+			text					@VISION_SHOW_THEM
+			descText				@VISION_WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+			cvar					"tay_showCosmetics"
+			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 362 432 52
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_seasonalcosmetics
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SEASONAL_HATS
+			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+			cvar					"tay_seasonalCosmetics"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 414 432 52
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					772 466 452 100
+			visible					1
+			text					@VISION_CHAT
+			font					7
+			textscale				0.78
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				55.5
 			caps					1
 			fold					25
 			page					5
@@ -3602,7 +3636,7 @@
 			descText				@VISION_TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 			cvar					"v_chatInput"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 258 432 52
+			rect					782 566 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3621,7 +3655,7 @@
 			descText				@VISION_HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
 			cvarfloat				"v_chatBoxScale" 0.85 0.6 1.6
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 310 432 52
+			rect					782 618 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3640,7 +3674,7 @@
 			descText				@VISION_HOW_WIDE_THE_CHAT_BOX_IS
 			cvarfloat				"v_chatBoxWidth" 380 200 600
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 362 432 52
+			rect					782 670 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3659,7 +3693,7 @@
 			descText				@VISION_HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
 			cvarfloat				"v_chatBoxRows" 10 4 24
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 414 432 52
+			rect					782 722 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3678,7 +3712,7 @@
 			descText				@VISION_A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 			cvar					"cg_chatBeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 466 432 52
+			rect					782 774 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3697,7 +3731,7 @@
 			descText				@VISION_CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
 			cvar					"tay_chatEmoji"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 518 432 52
+			rect					782 826 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3716,7 +3750,7 @@
 			descText				@VISION_EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 			cvar					"tay_chatLog"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 570 432 52
+			rect					782 878 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3736,7 +3770,7 @@
 			cvar					"tay_notify"
 			cvarFloatList { @VISION_OFF 0 @VISION_MARKED 1 @VISION_MARKED_AND_SOUND 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 622 432 52
+			rect					782 930 432 52
 			page					5
 			scroll					1
 			row						1
@@ -3750,9 +3784,9 @@
 		itemDef
 		{
 			name					vision_head
-			rect					772 674 452 100
+			rect					772 982 452 100
 			visible					1
-			text					@VISION_CONSOLE
+			text					@VISION_CLAN
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
@@ -3772,57 +3806,18 @@
 
 		itemDef
 		{
-			name					vision_slider_con_scale
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_CONSOLE_TEXT_SIZE
-			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-			cvarfloat				"con_scale" 1 0.5 3
+			name					vision_secret_cp_clanpwd
+			type					ITEM_TYPE_EDITFIELD
+			text					@VISION_CLAN_PASSWORD
+			descText				@VISION_CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+			cvar					"cp_clanPwd"
+			maxChars				32
+			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 774 432 52
+			rect					782 1082 432 52
 			page					5
 			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_slider_con_opacity
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_CONSOLE_OPACITY
-			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-			cvarfloat				"con_opacity" 1 0.2 1
-			action { play "sound/interface/button1.wav" ; }
-			rect					782 826 432 52
-			page					5
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_multi_tay_consoleclock
-			type					ITEM_TYPE_MULTI
-			text					@VISION_CONSOLE_CLOCK
-			descText				@VISION_A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
-			cvar					"tay_consoleClock"
-			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					782 878 432 52
-			page					5
-			scroll					1
-			row						1
+			row						2
 			font					5
 			textscale				0.94
 			forecolor				0.86 0.90 0.945 1

@@ -1554,7 +1554,7 @@
 			name				voicechat7
 			group				voicechat
 			type				ITEM_TYPE_YESNO
-			text				"Show Who Talks:"
+			text				"Talking Players List:"
 			cvar				"v_voiceDrawTalkers"
 			rect				220 161 300 20
 			textalign			ITEM_ALIGN_RIGHT
@@ -1584,7 +1584,7 @@
 			name				voicechat8
 			group				voicechat
 			type				ITEM_TYPE_YESNO
-			text				"On Other Servers:"
+			text				"Voice via Masterserver:"
 			cvar				"v_voiceMaster"
 			rect				220 181 300 20
 			textalign			ITEM_ALIGN_RIGHT

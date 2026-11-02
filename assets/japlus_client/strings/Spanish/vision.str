@@ -557,9 +557,9 @@ REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
 LANG_SPANISH        "El sonido rodea las esquinas."
 
-REFERENCE           REAL_SOUND_TRAVEL
-LANG_ENGLISH        "Real Sound Travel"
-LANG_SPANISH        "Propagación real del sonido"
+REFERENCE           PHYSICALLY_BASED_SOUND
+LANG_ENGLISH        "Physically Based Sound"
+LANG_SPANISH        "Sonido físico realista"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
@@ -645,17 +645,17 @@ REFERENCE           VOICES_BEHIND_WALLS_AND_UNDER_WATER
 LANG_ENGLISH        "Voices behind walls and under water sound muffled."
 LANG_SPANISH        "Las voces tras las paredes y bajo el agua suenan apagadas."
 
-REFERENCE           SHOW_WHO_TALKS
-LANG_ENGLISH        "Show Who Talks"
-LANG_SPANISH        "Mostrar quién habla"
+REFERENCE           TALKING_PLAYERS_LIST
+LANG_ENGLISH        "Talking Players List"
+LANG_SPANISH        "Lista de jugadores hablando"
 
 REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 LANG_ENGLISH        "A list of the players who are talking on the HUD."
 LANG_SPANISH        "Muestra en el HUD la lista de jugadores que hablan."
 
-REFERENCE           ON_OTHER_SERVERS
-LANG_ENGLISH        "On Other Servers"
-LANG_SPANISH        "En otros servidores"
+REFERENCE           VOICE_VIA_MASTERSERVER
+LANG_ENGLISH        "Voice via Masterserver"
+LANG_SPANISH        "Voz por servidor maestro"
 
 REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
@@ -817,174 +817,6 @@ REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
 LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
 LANG_SPANISH        "Todos los compañeros con este modelo (modelo/skin). Vacío: el que elijan."
 
-REFERENCE           HAT
-LANG_ENGLISH        "Hat"
-LANG_SPANISH        "Sombrero"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
-LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
-LANG_SPANISH        "Lo que llevas en la cabeza. Los demás jugadores de VisionJK lo ven."
-
-REFERENCE           AFRO
-LANG_ENGLISH        "Afro"
-LANG_SPANISH        "#same"
-
-REFERENCE           BEARD
-LANG_ENGLISH        "Beard"
-LANG_SPANISH        "Barba"
-
-REFERENCE           BUCKET
-LANG_ENGLISH        "Bucket"
-LANG_SPANISH        "Cubo"
-
-REFERENCE           CAP
-LANG_ENGLISH        "Cap"
-LANG_SPANISH        "Gorra"
-
-REFERENCE           PROPELLER_CAP
-LANG_ENGLISH        "Propeller Cap"
-LANG_SPANISH        "Gorra de hélice"
-
-REFERENCE           CROWN
-LANG_ENGLISH        "Crown"
-LANG_SPANISH        "Corona"
-
-REFERENCE           FEDORA
-LANG_ENGLISH        "Fedora"
-LANG_SPANISH        "#same"
-
-REFERENCE           FEDORA_2
-LANG_ENGLISH        "Fedora 2"
-LANG_SPANISH        "#same"
-
-REFERENCE           FEDORA_3
-LANG_ENGLISH        "Fedora 3"
-LANG_SPANISH        "#same"
-
-REFERENCE           FEDORA_4
-LANG_ENGLISH        "Fedora 4"
-LANG_SPANISH        "#same"
-
-REFERENCE           GLASSES
-LANG_ENGLISH        "Glasses"
-LANG_SPANISH        "Gafas"
-
-REFERENCE           GRADUATION_CAP
-LANG_ENGLISH        "Graduation Cap"
-LANG_SPANISH        "Birrete"
-
-REFERENCE           HEADCRAB
-LANG_ENGLISH        "Headcrab"
-LANG_SPANISH        "#same"
-
-REFERENCE           HORNS
-LANG_ENGLISH        "Horns"
-LANG_SPANISH        "Cuernos"
-
-REFERENCE           MARIO_CAP
-LANG_ENGLISH        "Mario Cap"
-LANG_SPANISH        "Gorra de Mario"
-
-REFERENCE           MASK
-LANG_ENGLISH        "Mask"
-LANG_SPANISH        "Máscara"
-
-REFERENCE           METAL_HELMET
-LANG_ENGLISH        "Metal Helmet"
-LANG_SPANISH        "Casco de metal"
-
-REFERENCE           PLAGUE_MASK
-LANG_ENGLISH        "Plague Mask"
-LANG_SPANISH        "Máscara de peste"
-
-REFERENCE           PREDATOR_HELMET
-LANG_ENGLISH        "Predator Helmet"
-LANG_SPANISH        "Casco de Predator"
-
-REFERENCE           PUMPKIN
-LANG_ENGLISH        "Pumpkin"
-LANG_SPANISH        "Calabaza"
-
-REFERENCE           SANTA_HAT
-LANG_ENGLISH        "Santa Hat"
-LANG_SPANISH        "Gorro de Papá Noel"
-
-REFERENCE           SOMBRERO
-LANG_ENGLISH        "Sombrero"
-LANG_SPANISH        "Sombrero mexicano"
-
-REFERENCE           SUPER_SAIYAN_HAIR
-LANG_ENGLISH        "Super Saiyan Hair"
-LANG_SPANISH        "Pelo de Super Saiyan"
-
-REFERENCE           TOP_HAT
-LANG_ENGLISH        "Top Hat"
-LANG_SPANISH        "Sombrero de copa"
-
-REFERENCE           CAPE
-LANG_ENGLISH        "Cape"
-LANG_SPANISH        "Capa"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
-LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
-LANG_SPANISH        "Lo que llevas en la espalda. Los demás jugadores de VisionJK lo ven."
-
-REFERENCE           ROYAL_CAPE
-LANG_ENGLISH        "Royal Cape"
-LANG_SPANISH        "Capa real"
-
-REFERENCE           VADER_CAPE
-LANG_ENGLISH        "Vader Cape"
-LANG_SPANISH        "Capa de Vader"
-
-REFERENCE           YODA
-LANG_ENGLISH        "Yoda"
-LANG_SPANISH        "#same"
-
-REFERENCE           GROGU
-LANG_ENGLISH        "Grogu"
-LANG_SPANISH        "#same"
-
-REFERENCE           GOOSE
-LANG_ENGLISH        "Goose"
-LANG_SPANISH        "Ganso"
-
-REFERENCE           CROWBAR
-LANG_ENGLISH        "Crowbar"
-LANG_SPANISH        "Palanca"
-
-REFERENCE           AK_47
-LANG_ENGLISH        "AK-47"
-LANG_SPANISH        "#same"
-
-REFERENCE           ROCKET_LAUNCHER
-LANG_ENGLISH        "Rocket Launcher"
-LANG_SPANISH        "Lanzacohetes"
-
-REFERENCE           SHOW_THEM
-LANG_ENGLISH        "Show Them"
-LANG_SPANISH        "Mostrar"
-
-REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
-LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
-LANG_SPANISH        "Lo que los jugadores llevan en la cabeza y la espalda. Solo los jugadores de VisionJK los llevan."
-
-REFERENCE           EVERYBODY_S
-LANG_ENGLISH        "Everybody's"
-LANG_SPANISH        "Los de todos"
-
-REFERENCE           MINE_ON_EVERYBODY
-LANG_ENGLISH        "Mine on Everybody"
-LANG_SPANISH        "Los míos en todos"
-
-REFERENCE           SEASONAL_HATS
-LANG_ENGLISH        "Seasonal Hats"
-LANG_SPANISH        "Sombreros de temporada"
-
-REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
-LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
-LANG_SPANISH        "Un gorro de Papá Noel en Navidad y una calabaza en Halloween para quien no lleve sombrero."
-
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 LANG_SPANISH        "Disparos como en Jedi Outcast"
@@ -1065,9 +897,9 @@ REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
 LANG_SPANISH        "Los menús originales del juego. Se aplica en el próximo inicio."
 
-REFERENCE           MENU_IN_THE_LEVEL
-LANG_ENGLISH        "Menu in the Level"
-LANG_SPANISH        "Menú en el nivel"
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
+LANG_SPANISH        "Menú 3D"
 
 REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 LANG_ENGLISH        "In a game an open menu stands in the level next to you."
@@ -1361,6 +1193,174 @@ REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 LANG_SPANISH        "Pulsar dos veces rápido la tecla del marcador lo mantiene abierto, con el ratón libre para hacer clic en un jugador."
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_SPANISH        "Sombrero"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_SPANISH        "Lo que llevas en la cabeza. Los demás jugadores de VisionJK lo ven."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_SPANISH        "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_SPANISH        "Barba"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_SPANISH        "Cubo"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_SPANISH        "Gorra"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_SPANISH        "Gorra de hélice"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_SPANISH        "Corona"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_SPANISH        "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_SPANISH        "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_SPANISH        "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_SPANISH        "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_SPANISH        "Gafas"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_SPANISH        "Birrete"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+LANG_SPANISH        "#same"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_SPANISH        "Cuernos"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+LANG_SPANISH        "Gorra de Mario"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+LANG_SPANISH        "Máscara"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_SPANISH        "Casco de metal"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_SPANISH        "Máscara de peste"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+LANG_SPANISH        "Casco de Predator"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+LANG_SPANISH        "Calabaza"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_SPANISH        "Gorro de Papá Noel"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_SPANISH        "Sombrero mexicano"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+LANG_SPANISH        "Pelo de Super Saiyan"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_SPANISH        "Sombrero de copa"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_SPANISH        "Capa"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_SPANISH        "Lo que llevas en la espalda. Los demás jugadores de VisionJK lo ven."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_SPANISH        "Capa real"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+LANG_SPANISH        "Capa de Vader"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+LANG_SPANISH        "#same"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+LANG_SPANISH        "#same"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+LANG_SPANISH        "Ganso"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+LANG_SPANISH        "Palanca"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+LANG_SPANISH        "#same"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+LANG_SPANISH        "Lanzacohetes"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+LANG_SPANISH        "Mostrar"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+LANG_SPANISH        "Lo que los jugadores llevan en la cabeza y la espalda. Solo los jugadores de VisionJK los llevan."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+LANG_SPANISH        "Los de todos"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+LANG_SPANISH        "Los míos en todos"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+LANG_SPANISH        "Sombreros de temporada"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+LANG_SPANISH        "Un gorro de Papá Noel en Navidad y una calabaza en Halloween para quien no lleve sombrero."
+
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
 LANG_SPANISH        "Entrada de chat propia"
@@ -1645,10 +1645,6 @@ REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_SPANISH        "Jugadores"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_SPANISH        "Armas"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_SPANISH        "Idioma"
@@ -1657,9 +1653,9 @@ REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_SPANISH        "Sables de luz"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_SPANISH        "Sombreros y capas"
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_SPANISH        "Armas"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1697,17 +1693,21 @@ REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_SPANISH        "Chat, bocadillos e información sobre las cabezas."
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
-LANG_SPANISH        "#same"
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_SPANISH        "Consola"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_SPANISH        "Sombreros y capas"
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 LANG_SPANISH        "#same"
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_SPANISH        "Consola"
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_SPANISH        "#same"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"

@@ -419,8 +419,8 @@ LANG_ENGLISH        "Sound Around Corners"
 REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
 
-REFERENCE           REAL_SOUND_TRAVEL
-LANG_ENGLISH        "Real Sound Travel"
+REFERENCE           PHYSICALLY_BASED_SOUND
+LANG_ENGLISH        "Physically Based Sound"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
@@ -485,14 +485,14 @@ LANG_ENGLISH        "Muffle Behind Walls"
 REFERENCE           VOICES_BEHIND_WALLS_AND_UNDER_WATER
 LANG_ENGLISH        "Voices behind walls and under water sound muffled."
 
-REFERENCE           SHOW_WHO_TALKS
-LANG_ENGLISH        "Show Who Talks"
+REFERENCE           TALKING_PLAYERS_LIST
+LANG_ENGLISH        "Talking Players List"
 
 REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 LANG_ENGLISH        "A list of the players who are talking on the HUD."
 
-REFERENCE           ON_OTHER_SERVERS
-LANG_ENGLISH        "On Other Servers"
+REFERENCE           VOICE_VIA_MASTERSERVER
+LANG_ENGLISH        "Voice via Masterserver"
 
 REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
@@ -614,132 +614,6 @@ LANG_ENGLISH        "Ally Model"
 REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
 LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
 
-REFERENCE           HAT
-LANG_ENGLISH        "Hat"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
-LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
-
-REFERENCE           AFRO
-LANG_ENGLISH        "Afro"
-
-REFERENCE           BEARD
-LANG_ENGLISH        "Beard"
-
-REFERENCE           BUCKET
-LANG_ENGLISH        "Bucket"
-
-REFERENCE           CAP
-LANG_ENGLISH        "Cap"
-
-REFERENCE           PROPELLER_CAP
-LANG_ENGLISH        "Propeller Cap"
-
-REFERENCE           CROWN
-LANG_ENGLISH        "Crown"
-
-REFERENCE           FEDORA
-LANG_ENGLISH        "Fedora"
-
-REFERENCE           FEDORA_2
-LANG_ENGLISH        "Fedora 2"
-
-REFERENCE           FEDORA_3
-LANG_ENGLISH        "Fedora 3"
-
-REFERENCE           FEDORA_4
-LANG_ENGLISH        "Fedora 4"
-
-REFERENCE           GLASSES
-LANG_ENGLISH        "Glasses"
-
-REFERENCE           GRADUATION_CAP
-LANG_ENGLISH        "Graduation Cap"
-
-REFERENCE           HEADCRAB
-LANG_ENGLISH        "Headcrab"
-
-REFERENCE           HORNS
-LANG_ENGLISH        "Horns"
-
-REFERENCE           MARIO_CAP
-LANG_ENGLISH        "Mario Cap"
-
-REFERENCE           MASK
-LANG_ENGLISH        "Mask"
-
-REFERENCE           METAL_HELMET
-LANG_ENGLISH        "Metal Helmet"
-
-REFERENCE           PLAGUE_MASK
-LANG_ENGLISH        "Plague Mask"
-
-REFERENCE           PREDATOR_HELMET
-LANG_ENGLISH        "Predator Helmet"
-
-REFERENCE           PUMPKIN
-LANG_ENGLISH        "Pumpkin"
-
-REFERENCE           SANTA_HAT
-LANG_ENGLISH        "Santa Hat"
-
-REFERENCE           SOMBRERO
-LANG_ENGLISH        "Sombrero"
-
-REFERENCE           SUPER_SAIYAN_HAIR
-LANG_ENGLISH        "Super Saiyan Hair"
-
-REFERENCE           TOP_HAT
-LANG_ENGLISH        "Top Hat"
-
-REFERENCE           CAPE
-LANG_ENGLISH        "Cape"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
-LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
-
-REFERENCE           ROYAL_CAPE
-LANG_ENGLISH        "Royal Cape"
-
-REFERENCE           VADER_CAPE
-LANG_ENGLISH        "Vader Cape"
-
-REFERENCE           YODA
-LANG_ENGLISH        "Yoda"
-
-REFERENCE           GROGU
-LANG_ENGLISH        "Grogu"
-
-REFERENCE           GOOSE
-LANG_ENGLISH        "Goose"
-
-REFERENCE           CROWBAR
-LANG_ENGLISH        "Crowbar"
-
-REFERENCE           AK_47
-LANG_ENGLISH        "AK-47"
-
-REFERENCE           ROCKET_LAUNCHER
-LANG_ENGLISH        "Rocket Launcher"
-
-REFERENCE           SHOW_THEM
-LANG_ENGLISH        "Show Them"
-
-REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
-LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
-
-REFERENCE           EVERYBODY_S
-LANG_ENGLISH        "Everybody's"
-
-REFERENCE           MINE_ON_EVERYBODY
-LANG_ENGLISH        "Mine on Everybody"
-
-REFERENCE           SEASONAL_HATS
-LANG_ENGLISH        "Seasonal Hats"
-
-REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
-LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
-
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 
@@ -800,8 +674,8 @@ LANG_ENGLISH        "Classic Menus"
 REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
 
-REFERENCE           MENU_IN_THE_LEVEL
-LANG_ENGLISH        "Menu in the Level"
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
 
 REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 LANG_ENGLISH        "In a game an open menu stands in the level next to you."
@@ -1022,6 +896,132 @@ LANG_ENGLISH        "Keep Scoreboard on Double Tap"
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
 
@@ -1235,17 +1235,14 @@ LANG_ENGLISH        "Duels"
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1274,14 +1271,17 @@ LANG_ENGLISH        "Chat & Social"
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"

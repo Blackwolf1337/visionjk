@@ -251,7 +251,7 @@ MORE = {
         ('Temps réel : calculé en cours de jeu, les sons les plus forts ont leur propre écho. Précalculé : calculé une fois par niveau puis conservé, stable pendant les déplacements, tous les sons résonnent avec la pièce où vous êtes.', 'Tiempo real: se calcula mientras juegas y los sonidos más fuertes tienen su propio eco. Precalculado: se calcula una vez por nivel y se guarda, estable al moverte; todos los sonidos resuenan con la sala en la que estás.'),
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
         ("Nombre de sons parmi les plus forts qui résonnent sur les murs autour d'eux. Plus il y en a, plus chaque image coûte cher.", 'Cuántos de los sonidos más fuertes rebotan en las paredes cercanas. Más eco consume más rendimiento por fotograma.'),
-    'Real Sound Travel': ('Propagation réelle du son', 'Propagación real del sonido'),
+    'Physically Based Sound': ('Son physique réaliste', 'Sonido físico realista'),
     'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.':
         ('Les sons faiblissent avec la distance comme dans la réalité, perdent leurs aigus au loin et arrivent à la vitesse du son.', 'Los sonidos se atenúan con la distancia como en la realidad, pierden agudos a lo lejos y llegan a la velocidad del sonido.'),
     # voice chat
@@ -330,9 +330,9 @@ MORE = {
     'Voice activation: how loud you have to be before you are sent.': ('Activation vocale : le volume à atteindre pour être transmis.', 'Activación por voz: el volumen necesario para que se te transmita.'),
     'Muffle Behind Walls': ('Étouffer derrière les murs', 'Atenuar tras las paredes'),
     'Voices behind walls and under water sound muffled.': ("Les voix derrière les murs et sous l'eau sont étouffées.", 'Las voces tras las paredes y bajo el agua suenan apagadas.'),
-    'Show Who Talks': ('Afficher qui parle', 'Mostrar quién habla'),
+    'Talking Players List': ('Liste des joueurs qui parlent', 'Lista de jugadores hablando'),
     'A list of the players who are talking on the HUD.': ('Affiche sur le HUD la liste des joueurs qui parlent.', 'Muestra en el HUD la lista de jugadores que hablan.'),
-    'On Other Servers': ("Sur d'autres serveurs", 'En otros servidores'),
+    'Voice via Masterserver': ('Voix via serveur maître', 'Voz por servidor maestro'),
     'Servers without voice: use master.jka.vision, which sees your address.': ('Serveurs sans chat vocal : utiliser master.jka.vision, qui voit votre adresse.', 'Servidores sin chat de voz: usa master.jka.vision, que ve tu dirección.'),
     'Own Voice In The Room': ('Votre voix dans la pièce', 'Tu voz en la sala'),
     'With spatial sound: how loud the room rings from what you say yourself.': ('Avec le son 3D : intensité de la résonance de la pièce sur votre propre voix.', 'Con sonido 3D: cuánto resuena la sala con tu propia voz.'),
@@ -348,7 +348,7 @@ MORE = {
     'The HUD of VisionJK. Off: the HUD of the game.': ('Le HUD de VisionJK. Désactivé : le HUD du jeu.', 'El HUD de VisionJK. Desactivado: el HUD del juego.'),
     'Classic Menus': ('Menus classiques', 'Menús clásicos'),
     'The menus of the game as they were. Counts from the next start of the game.': ("Les menus d'origine du jeu. Pris en compte au prochain lancement.", 'Los menús originales del juego. Se aplica en el próximo inicio.'),
-    'Menu in the Level': ('Menu dans le niveau', 'Menú en el nivel'),
+    '3D Menu': ('Menu 3D', 'Menú 3D'),
     'In a game an open menu stands in the level next to you.': ('En jeu, un menu ouvert apparaît dans le niveau, à côté de vous.', 'Durante la partida, un menú abierto aparece en el nivel junto a ti.'),
     'Menu Blur': ('Flou du menu', 'Desenfoque del menú'),
     'How far the level behind an open menu is out of focus.': ('Flou du niveau derrière un menu ouvert.', 'Cuánto se desenfoca el nivel detrás de un menú abierto.'),

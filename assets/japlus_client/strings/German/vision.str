@@ -557,9 +557,9 @@ REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
 LANG_GERMAN         "Geräusche finden ihren Weg um Ecken."
 
-REFERENCE           REAL_SOUND_TRAVEL
-LANG_ENGLISH        "Real Sound Travel"
-LANG_GERMAN         "Echte Schallausbreitung"
+REFERENCE           PHYSICALLY_BASED_SOUND
+LANG_ENGLISH        "Physically Based Sound"
+LANG_GERMAN         "Physikalischer Klang"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
@@ -645,17 +645,17 @@ REFERENCE           VOICES_BEHIND_WALLS_AND_UNDER_WATER
 LANG_ENGLISH        "Voices behind walls and under water sound muffled."
 LANG_GERMAN         "Stimmen hinter Wänden und unter Wasser klingen gedämpft."
 
-REFERENCE           SHOW_WHO_TALKS
-LANG_ENGLISH        "Show Who Talks"
-LANG_GERMAN         "Sprecher anzeigen"
+REFERENCE           TALKING_PLAYERS_LIST
+LANG_ENGLISH        "Talking Players List"
+LANG_GERMAN         "Liste sprechender Spieler"
 
 REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 LANG_ENGLISH        "A list of the players who are talking on the HUD."
 LANG_GERMAN         "Zeigt im HUD eine Liste der Spieler, die gerade sprechen."
 
-REFERENCE           ON_OTHER_SERVERS
-LANG_ENGLISH        "On Other Servers"
-LANG_GERMAN         "Auf anderen Servern"
+REFERENCE           VOICE_VIA_MASTERSERVER
+LANG_ENGLISH        "Voice via Masterserver"
+LANG_GERMAN         "Sprache über Masterserver"
 
 REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
@@ -817,174 +817,6 @@ REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
 LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
 LANG_GERMAN         "Jeder Teamkamerad erscheint mit diesem Modell (Modell/Skin). Leer: wie gewählt."
 
-REFERENCE           HAT
-LANG_ENGLISH        "Hat"
-LANG_GERMAN         "Hut"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
-LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
-LANG_GERMAN         "Was du auf dem Kopf trägst. Andere VisionJK-Spieler sehen es."
-
-REFERENCE           AFRO
-LANG_ENGLISH        "Afro"
-LANG_GERMAN         "#same"
-
-REFERENCE           BEARD
-LANG_ENGLISH        "Beard"
-LANG_GERMAN         "Bart"
-
-REFERENCE           BUCKET
-LANG_ENGLISH        "Bucket"
-LANG_GERMAN         "Eimer"
-
-REFERENCE           CAP
-LANG_ENGLISH        "Cap"
-LANG_GERMAN         "Kappe"
-
-REFERENCE           PROPELLER_CAP
-LANG_ENGLISH        "Propeller Cap"
-LANG_GERMAN         "Propellermütze"
-
-REFERENCE           CROWN
-LANG_ENGLISH        "Crown"
-LANG_GERMAN         "Krone"
-
-REFERENCE           FEDORA
-LANG_ENGLISH        "Fedora"
-LANG_GERMAN         "#same"
-
-REFERENCE           FEDORA_2
-LANG_ENGLISH        "Fedora 2"
-LANG_GERMAN         "#same"
-
-REFERENCE           FEDORA_3
-LANG_ENGLISH        "Fedora 3"
-LANG_GERMAN         "#same"
-
-REFERENCE           FEDORA_4
-LANG_ENGLISH        "Fedora 4"
-LANG_GERMAN         "#same"
-
-REFERENCE           GLASSES
-LANG_ENGLISH        "Glasses"
-LANG_GERMAN         "Brille"
-
-REFERENCE           GRADUATION_CAP
-LANG_ENGLISH        "Graduation Cap"
-LANG_GERMAN         "Doktorhut"
-
-REFERENCE           HEADCRAB
-LANG_ENGLISH        "Headcrab"
-LANG_GERMAN         "#same"
-
-REFERENCE           HORNS
-LANG_ENGLISH        "Horns"
-LANG_GERMAN         "Hörner"
-
-REFERENCE           MARIO_CAP
-LANG_ENGLISH        "Mario Cap"
-LANG_GERMAN         "Mario-Mütze"
-
-REFERENCE           MASK
-LANG_ENGLISH        "Mask"
-LANG_GERMAN         "Maske"
-
-REFERENCE           METAL_HELMET
-LANG_ENGLISH        "Metal Helmet"
-LANG_GERMAN         "Metallhelm"
-
-REFERENCE           PLAGUE_MASK
-LANG_ENGLISH        "Plague Mask"
-LANG_GERMAN         "Pestmaske"
-
-REFERENCE           PREDATOR_HELMET
-LANG_ENGLISH        "Predator Helmet"
-LANG_GERMAN         "Predator-Helm"
-
-REFERENCE           PUMPKIN
-LANG_ENGLISH        "Pumpkin"
-LANG_GERMAN         "Kürbis"
-
-REFERENCE           SANTA_HAT
-LANG_ENGLISH        "Santa Hat"
-LANG_GERMAN         "Weihnachtsmütze"
-
-REFERENCE           SOMBRERO
-LANG_ENGLISH        "Sombrero"
-LANG_GERMAN         "#same"
-
-REFERENCE           SUPER_SAIYAN_HAIR
-LANG_ENGLISH        "Super Saiyan Hair"
-LANG_GERMAN         "Super-Saiyajin-Haare"
-
-REFERENCE           TOP_HAT
-LANG_ENGLISH        "Top Hat"
-LANG_GERMAN         "Zylinder"
-
-REFERENCE           CAPE
-LANG_ENGLISH        "Cape"
-LANG_GERMAN         "Umhang"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
-LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
-LANG_GERMAN         "Was du auf dem Rücken trägst. Andere VisionJK-Spieler sehen es."
-
-REFERENCE           ROYAL_CAPE
-LANG_ENGLISH        "Royal Cape"
-LANG_GERMAN         "Königsumhang"
-
-REFERENCE           VADER_CAPE
-LANG_ENGLISH        "Vader Cape"
-LANG_GERMAN         "Vader-Umhang"
-
-REFERENCE           YODA
-LANG_ENGLISH        "Yoda"
-LANG_GERMAN         "#same"
-
-REFERENCE           GROGU
-LANG_ENGLISH        "Grogu"
-LANG_GERMAN         "#same"
-
-REFERENCE           GOOSE
-LANG_ENGLISH        "Goose"
-LANG_GERMAN         "Gans"
-
-REFERENCE           CROWBAR
-LANG_ENGLISH        "Crowbar"
-LANG_GERMAN         "Brechstange"
-
-REFERENCE           AK_47
-LANG_ENGLISH        "AK-47"
-LANG_GERMAN         "#same"
-
-REFERENCE           ROCKET_LAUNCHER
-LANG_ENGLISH        "Rocket Launcher"
-LANG_GERMAN         "Raketenwerfer"
-
-REFERENCE           SHOW_THEM
-LANG_ENGLISH        "Show Them"
-LANG_GERMAN         "Anzeigen"
-
-REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
-LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
-LANG_GERMAN         "Was Spieler auf dem Kopf und dem Rücken tragen. Gilt nur für VisionJK-Spieler."
-
-REFERENCE           EVERYBODY_S
-LANG_ENGLISH        "Everybody's"
-LANG_GERMAN         "Die von allen"
-
-REFERENCE           MINE_ON_EVERYBODY
-LANG_ENGLISH        "Mine on Everybody"
-LANG_GERMAN         "Eigene bei allen"
-
-REFERENCE           SEASONAL_HATS
-LANG_ENGLISH        "Seasonal Hats"
-LANG_GERMAN         "Saisonale Hüte"
-
-REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
-LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
-LANG_GERMAN         "Weihnachtsmütze an Weihnachten, Kürbis an Halloween, für alle ohne Hut."
-
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
 LANG_GERMAN         "Jedi-Outcast-Schüsse"
@@ -1065,9 +897,9 @@ REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
 LANG_GERMAN         "Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart."
 
-REFERENCE           MENU_IN_THE_LEVEL
-LANG_ENGLISH        "Menu in the Level"
-LANG_GERMAN         "Menü im Level"
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
+LANG_GERMAN         "3D-Menü"
 
 REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 LANG_ENGLISH        "In a game an open menu stands in the level next to you."
@@ -1361,6 +1193,174 @@ REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 LANG_GERMAN         "Zweimal schnell die Scoreboard-Taste drücken hält es offen. So kannst du mit der Maus einen Spieler anklicken."
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_GERMAN         "Hut"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_GERMAN         "Was du auf dem Kopf trägst. Andere VisionJK-Spieler sehen es."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_GERMAN         "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_GERMAN         "Bart"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_GERMAN         "Eimer"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_GERMAN         "Kappe"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_GERMAN         "Propellermütze"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_GERMAN         "Krone"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_GERMAN         "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_GERMAN         "Brille"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_GERMAN         "Doktorhut"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+LANG_GERMAN         "#same"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_GERMAN         "Hörner"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+LANG_GERMAN         "Mario-Mütze"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+LANG_GERMAN         "Maske"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_GERMAN         "Metallhelm"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_GERMAN         "Pestmaske"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+LANG_GERMAN         "Predator-Helm"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+LANG_GERMAN         "Kürbis"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_GERMAN         "Weihnachtsmütze"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_GERMAN         "#same"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+LANG_GERMAN         "Super-Saiyajin-Haare"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_GERMAN         "Zylinder"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_GERMAN         "Umhang"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_GERMAN         "Was du auf dem Rücken trägst. Andere VisionJK-Spieler sehen es."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_GERMAN         "Königsumhang"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+LANG_GERMAN         "Vader-Umhang"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+LANG_GERMAN         "#same"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+LANG_GERMAN         "#same"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+LANG_GERMAN         "Gans"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+LANG_GERMAN         "Brechstange"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+LANG_GERMAN         "#same"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+LANG_GERMAN         "Raketenwerfer"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+LANG_GERMAN         "Anzeigen"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+LANG_GERMAN         "Was Spieler auf dem Kopf und dem Rücken tragen. Gilt nur für VisionJK-Spieler."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+LANG_GERMAN         "Die von allen"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+LANG_GERMAN         "Eigene bei allen"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+LANG_GERMAN         "Saisonale Hüte"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+LANG_GERMAN         "Weihnachtsmütze an Weihnachten, Kürbis an Halloween, für alle ohne Hut."
+
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
 LANG_GERMAN         "Eigene Chateingabe"
@@ -1645,10 +1645,6 @@ REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_GERMAN         "Spieler"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_GERMAN         "Waffen"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_GERMAN         "Sprache"
@@ -1657,9 +1653,9 @@ REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_GERMAN         "Lichtschwerter"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_GERMAN         "Hüte und Umhänge"
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_GERMAN         "Waffen"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1697,17 +1693,21 @@ REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_GERMAN         "Chatfenster, Sprechblasen und Anzeigen über den Köpfen."
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
-LANG_GERMAN         "#same"
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_GERMAN         "Konsole"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_GERMAN         "Hüte und Umhänge"
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 LANG_GERMAN         "#same"
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_GERMAN         "Konsole"
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_GERMAN         "#same"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
