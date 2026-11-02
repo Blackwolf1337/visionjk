@@ -64,6 +64,15 @@ async function fsList(path = fsPath, root = fsRoot) {
 function fsShow(root, path) {
 	if (fsDropEdit()) fsList(path, root);
 }
+// the icons of the list: a folder or a file before the name, the buttons of a row
+const fsIcon = (d, cls) => '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true"><path d="' + d + '"/></svg>';
+const FS_ICONS = {
+	dir: fsIcon('M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'fi dir'),
+	file: fsIcon('M6 3h8l4 4v14H6zM14 3v4h4', 'fi'),
+	get: fsIcon('M12 4v12M6 10l6 6 6-6M4 20h16'),
+	rename: fsIcon('M4 20h4L19 9l-4-4L4 16z'),
+	del: fsIcon('M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13')
+};
 function fsRender() {
 	// the way to the folder, every part of it to click on
 	const parts = fsPath ? fsPath.split('/') : [];
@@ -75,10 +84,11 @@ function fsRender() {
 		// a link and a name the server does not take in a request are only shown
 		const usable = !e.odd && !e.link;
 		const acts = !usable ? '' :
-			(e.dir ? '' : '<button data-fs="get" data-i="' + i + '">Download</button>') +
-			(fsWritable && !e.code ? '<button data-fs="rename" data-i="' + i + '">Rename</button><button data-fs="delete" data-i="' + i + '">Delete</button>' : '');
+			(e.dir ? '' : '<button data-fs="get" data-i="' + i + '" title="Download" aria-label="Download">' + FS_ICONS.get + '</button>') +
+			(fsWritable && !e.code ? '<button data-fs="rename" data-i="' + i + '" title="Rename" aria-label="Rename">' + FS_ICONS.rename + '</button>' +
+				'<button class="danger" data-fs="delete" data-i="' + i + '" title="Delete" aria-label="Delete">' + FS_ICONS.del + '</button>' : '');
 		return '<tr' + (usable ? ' data-fs="open" data-i="' + i + '"' : ' class="off"') + '><td>' +
-			(e.dir ? '<span class="tag">folder</span> ' : '') + escapeHtml(e.name) +
+			(e.dir ? FS_ICONS.dir : FS_ICONS.file) + escapeHtml(e.name) +
 			(e.link ? ' <span class="tag">link</span>' : '') + (e.code ? ' <span class="tag">program</span>' : '') +
 			'</td><td class="num">' + (e.dir || e.link ? '' : fsSize(e.size)) + '</td><td>' + (e.link ? '' : new Date(e.time * 1000).toLocaleString()) +
 			'</td><td class="acts">' + acts + '</td></tr>';
@@ -299,3 +309,5 @@ document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click
 document.querySelectorAll('#pages button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab === 'map' ? (EDITOR_TOOLS.has(lastMapTool) && appMode === 'editor' ? lastMapTool : APP_TAB[appMode]) : b.dataset.tab)));
 document.querySelectorAll('#appMode button').forEach(b => b.addEventListener('click', () => setAppMode(b.dataset.app)));
 
+// the ?: where the files are
+$('fsHelpBtn').addEventListener('click', () => { $('fsHelp').hidden = !$('fsHelp').hidden; $('fsHelpBtn').classList.toggle('on', !$('fsHelp').hidden); });

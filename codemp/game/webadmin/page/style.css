@@ -65,9 +65,19 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 @media (max-width: 1240px) { #topbar .meta.wide { display: none; } }
 @media (max-width: 1080px) { #topbar { gap: 8px; } #topbar #host, #topbar .brand span { display: none; } #topbar form.inline input { width: 64px !important; } }
 @media (max-width: 880px) { #topbar { gap: 6px; padding: 0 8px; } #topbar form.inline input { width: 48px !important; } }
+#statusBox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 #status { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 #status.live { background: var(--green); }
 #status.err { background: var(--danger); }
+/* the state in words: the dot's class says which (js/state.js) */
+#statusBox:has(#status.live) #statusText { font-size: 0; }
+#statusBox:has(#status.live) #statusText::after { content: 'Connected'; font-size: 12px; }
+#statusBox:has(#status.err) #statusText { font-size: 0; }
+#statusBox:has(#status.err) #statusText::after { content: 'No connection'; font-size: 12px; color: var(--danger); }
+#whoBtn { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 3px; border-color: transparent; background: transparent; font-size: 12px; }
+#whoBtn[hidden] { display: none; }
+#whoBtn i { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--sel); border: 1px solid var(--edge); color: var(--accent); font-style: normal; font-weight: 600; font-size: 11px; }
+.palGroup { padding: 8px 14px 3px; font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: #6f86a3; }
 .inline { display: flex; gap: 4px; align-items: center; }
 .inline input { width: 170px; }
 
@@ -81,6 +91,14 @@ body.sideClosed #sideGrip, body.ref #sideGrip { display: none; }
 body.sideDrag #side, body.sideDrag #view, body.sideDrag #cfgView, body.sideDrag #fsView, body.sideDrag #logView { transition: none; }
 body.sideDrag { user-select: none; }
 #side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 10px 6px; display: flex; justify-content: space-between; }
+#playersHead { align-items: center; gap: 8px; padding: 7px 8px 5px 10px; }
+#playersHead #playerCount { margin-right: auto; }
+#addBotBtn { padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); }
+body.role-moderator #addBotBtn { display: none; }
+/* the health of a player: the number, a thin bar under it */
+td.hp { position: relative; }
+td.hp i { position: absolute; right: 6px; bottom: 3px; height: 2px; max-width: 28px; border-radius: 1px; background: var(--accent); }
+tr.player td { height: 26px; }
 #side .scroll { overflow: auto; flex: 1; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 4px 6px; text-align: left; white-space: nowrap; }
@@ -185,20 +203,53 @@ body.fp #controlBar { left: 50%; top: 44px; width: max-content; transform: trans
 body.app-editor #help .adminOnly { display: none; }
 
 [hidden] { display: none !important; }
-#logText { position: absolute; inset: 0 0 39px 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+/* The log: the whole width, the bar on top, a line each in the colour of what it is (js/log.js logKind), the time of
+   the game in a column before it, the line for a console command at the bottom */
+body.logOpen #side { display: none; }
+body.logOpen #logView { display: flex; flex-direction: column; left: var(--left) !important; }
+#logText { flex: 1; min-height: 0; margin: 0; padding: 6px 12px; overflow: auto; font: 12px/1.55 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+#logText .ll { display: block; padding-left: 6.4em; text-indent: -6.4em; }
+#logText .ll:hover { background: rgba(92,200,245,.05); }
+#logText .ll i { display: inline-block; width: 5.6em; margin-right: .8em; white-space: pre; text-indent: 0; text-align: right; font-style: normal; color: #5f7590; }
+#logText .dim { color: var(--muted); }
+#logText .kill { color: var(--danger); }
+#logText .chat { color: var(--accent2); }
+#logText .warn { color: var(--yellow); }
+#logText .err { color: var(--danger); font-weight: 600; }
 /* the line for a console command, across the width under the text */
-#logCmd { position: absolute; left: 0; right: 0; bottom: 0; height: 39px; display: flex; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--line); }
-#logCmd input { flex: 1; min-width: 0; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+#logCmd { flex: none; display: flex; gap: 6px; padding: 6px 12px 8px; border-top: 1px solid var(--line); background: var(--frame); }
+#logCmd .find { flex: 1; max-width: none; }
+#logCmd input { font: 12px ui-monospace, Menlo, Consolas, monospace; }
+#logCmd .prompt { color: var(--accent); font: 600 13px ui-monospace, Menlo, Consolas, monospace; }
+.popHelp, #logHelp { position: absolute; top: calc(100% + 6px); right: 12px; z-index: 5; width: min(460px, calc(100% - 24px)); padding: 4px 14px; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.5); color: var(--muted); font-size: 12px; }
 /* which of the two texts is shown */
-#logSource { display: flex; }
-#logSource button { flex: 1; border-radius: 0; color: var(--muted); }
-#logSource button:first-child { border-radius: 3px 0 0 3px; }
-#logSource button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
-#logSource button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-body.logOpen #logView { display: block; }
+/* The bar across the top of a page of the server: its name, what it shows, its switches and its buttons. A field
+   with an icon (.find), a switch for on and off (.switch), a button for one letter (.square). */
+.pageBar { position: relative; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--frame); }
+.pageBar .seg { margin: 0; }
+.pageBar .seg button { flex: none; padding: 3px 11px; }
+.pageBar .spacer { flex: 1; }
+.pageTitle { font-size: 14px; font-weight: 600; color: #fff; }
+.pageSub { font-size: 12px; color: var(--muted); }
+.find { flex: 0 1 280px; min-width: 140px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--field); border: 1px solid var(--edge); border-radius: 4px; }
+.find:focus-within { border-color: var(--accent); }
+.find svg { flex: none; width: 13px; height: 13px; fill: none; stroke: #7489a5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.find input { flex: 1; min-width: 0; padding: 4px 0; border: 0; background: transparent; }
+.switch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.switch i { position: relative; width: 28px; height: 16px; border-radius: 8px; background: var(--line); border: 1px solid var(--edge); transition: background .1s; }
+.switch i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: left .1s; }
+.switch input:checked + i { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + i::after { left: 14px; background: var(--on-accent); }
+.switch input:focus-visible + i { outline: 1px solid var(--accent2); outline-offset: 1px; }
+button.square { width: 26px; padding: 3px 0; }
+button.square.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 #cfgView, #fsView, #logView { position: fixed; top: var(--top); left: calc(var(--left) + var(--side)); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
 body.sideClosed #cfgView, body.sideClosed #fsView, body.sideClosed #logView { left: var(--left); }
-body.fsOpen #fsView { display: block; }
+body.fsOpen #fsView { display: flex; flex-direction: column; }
+#fsBody { position: relative; flex: 1; min-height: 0; }
+.barGroup { display: inline-flex; align-items: center; gap: 6px; }
+.barGroup[hidden] { display: none; }
 /* the settings: the bar with the view, its state and its buttons, and under it the view */
 body.cfgOpen #cfgView { display: flex; flex-direction: column; }
 #cfgBar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--frame); }
@@ -213,13 +264,31 @@ body.cfgOpen #cfgView { display: flex; flex-direction: column; }
 .codeText { width: 100%; height: 100%; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: var(--text); }
 .codeText::selection { background: rgba(62, 142, 247, .35); color: transparent; }
 #fsList, #fsEditor { position: absolute; inset: 0; }
-#fsList { overflow: auto; padding: 6px 12px; }
-#fsList table { width: 100%; }
-#fsList td { padding: 4px 8px; white-space: nowrap; }
+/* the list of the files: a card, a row each with an icon before the name; the buttons of a row show while the
+   pointer is on it (always on a screen without one) */
+#fsList { overflow: auto; padding: 10px 14px; }
+#fsList table { width: 100%; max-width: 1120px; border: 1px solid #1c2e4a; border-radius: 8px; border-collapse: separate; border-spacing: 0; background: rgba(8,14,28,.78); }
+#fsList th { background: var(--frame); padding: 5px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+#fsList th:first-child { border-radius: 8px 0 0 0; }
+#fsList th:last-child { border-radius: 0 8px 0 0; }
+#fsList td { height: 30px; padding: 0 10px; white-space: nowrap; border-bottom: 1px solid #0f1b2e; }
+#fsList tr:last-child td { border-bottom: 0; }
 #fsList tr[data-fs] { cursor: pointer; }
-#fsList tr[data-fs]:hover { background: var(--panel2); }
+#fsList tr[data-fs]:hover td { background: var(--hover); }
 #fsList tr.off { color: var(--muted); }
 #fsList td.acts { text-align: right; }
+#fsList td:first-child { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+#fsList .fi { width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; }
+#fsList .fi.dir { stroke: var(--accent); }
+#fsList td.acts button { width: 24px; height: 22px; margin-left: 3px; padding: 0; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+#fsList td.acts svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+@media (hover: hover) {
+	#fsList td.acts button { visibility: hidden; }
+	#fsList tr:hover td.acts button, #fsList tr:focus-within td.acts button { visibility: visible; }
+}
+.dropHint { max-width: 1120px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; padding: 14px; border: 1px dashed var(--edge); border-radius: 8px; color: var(--muted); font-size: 12px; text-align: center; }
+.dropHint svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pageBar button.square svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
 /* the list of the Clips tab: the clips that are off and the blocking walls, a row to click on each */
 #clipSizes input { width: 64px; }
 #clipRows tr { cursor: pointer; }
@@ -266,7 +335,6 @@ body.texOpen #view { bottom: var(--tex); }
 .tile.sel span { color: var(--yellow); }
 .tile.script span::after { content: ' *'; color: var(--accent2); }
 #remapPics figcaption { margin-top: 3px; min-height: 14px; color: var(--muted); font-size: 11px; text-align: center; word-break: break-all; }
-#fsList td.acts button { margin-left: 4px; padding: 1px 7px; font-size: 12px; }
 /* files dropped on the list */
 #fsView.drop::after { content: ''; position: absolute; inset: 3px; border: 2px dashed var(--accent2); border-radius: 4px; pointer-events: none; }
 /* (a low window: the pane scrolls before the tree gets too small to be of use) */
@@ -312,28 +380,37 @@ body.texOpen #view { bottom: var(--tex); }
 #setState, #cleanState { margin-right: auto; font-size: 12px; color: var(--muted); }
 #setState.dirty { color: var(--yellow); }
 #setCats { border-top: 1px solid var(--line); }
-.setCat { display: flex; justify-content: space-between; gap: 8px; padding: 5px 10px; cursor: pointer; }
-.setCat:hover { background: var(--panel2); }
-.setCat .n { color: var(--muted); }
+.setCat { display: flex; justify-content: space-between; gap: 8px; margin: 0 4px; padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+.setCat:hover { background: var(--hover); }
+.setCat .n { color: #6f86a3; font-size: 11px; }
 .setCat .n b { color: var(--accent2); font-weight: 600; }
 #cfgView .cfgMain { position: absolute; inset: 0; }
 #setForm, #cleanView { overflow: auto; }
+body.cfgOpen.cfgFull #side { display: none; }
+body.cfgOpen.cfgFull #cfgView { left: var(--left) !important; }
+#cfgBar { position: relative; }
 #setForm, #cleanView, #setCats { color-scheme: dark; }
-#setForm section { padding: 0 16px 8px; }
-#setForm h3 { position: sticky; top: 0; z-index: 1; margin: 0 -16px; padding: 10px 16px 6px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
-.setRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 320px); gap: 6px 16px; padding: 8px 0; border-bottom: 1px solid #0f1b2e; }
-.setRow.changed { box-shadow: inset 3px 0 0 var(--accent2); padding-left: 8px; }
-.setName code { font: 12px ui-monospace, Menlo, Consolas, monospace; margin-right: 6px; }
-.setDesc { color: var(--muted); margin-top: 3px; }
-.setDef { color: var(--muted); font-size: 11px; margin-top: 2px; }
+/* The form of the settings: a card for every group with its name as a header that stays at the top while it is
+   scrolled, a row for every setting, its tags as chips, a changed one lit (js/settings.js) */
+#setForm { padding: 10px 14px; }
+#setForm section { max-width: 1120px; margin: 0 0 12px; border: 1px solid #1c2e4a; border-radius: 8px; background: rgba(8,14,28,.78); }
+#setForm h3 { position: sticky; top: -10px; z-index: 1; margin: 0; padding: 7px 14px; background: var(--frame); border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+.setRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 280px); align-items: center; gap: 4px 16px; padding: 6px 14px; border-bottom: 1px solid #0f1b2e; }
+.setRow:last-child { border-bottom: 0; border-radius: 0 0 8px 8px; }
+.setRow:hover { background: rgba(92,200,245,.03); }
+.setRow.changed { background: #0d1a2e; box-shadow: inset 2px 0 0 var(--accent); }
+.setRow.changed .setField input, .setRow.changed .setField select { border-color: var(--accent); }
+.setName code { font: 500 13px ui-monospace, Menlo, Consolas, monospace; color: #fff; margin-right: 6px; }
+.setDesc { color: var(--muted); font-size: 12px; margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.setDef { color: #6f86a3; font-size: 11px; }
 .setField input[type=text], .setField input[type=number], .setField input[type=password], .setField select { width: 100%; }
 .setField .inline input { flex: 1; min-width: 0; }
 .setBool { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .setBits { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 2px 8px; margin-top: 6px; font-size: 12px; }
 .setBits label { display: flex; gap: 4px; align-items: center; }
-.mk { display: inline-block; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; padding: 1px 5px; margin-right: 4px; border-radius: 3px; border: 1px solid var(--line); color: var(--text); }
-.mk.changed { border-color: var(--accent2); color: var(--accent2); }
-.mk.warn { border-color: #6b5a2a; color: var(--yellow); }
+.mk { display: inline-block; vertical-align: 1px; font-size: 10px; line-height: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; padding: 0 5px; margin-right: 4px; border-radius: 3px; border: 1px solid var(--edge); color: var(--text); }
+.mk.changed { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.mk.warn { border-color: #6b5a2a; background: rgba(255,189,76,.08); color: var(--yellow); }
 .mk.val { text-transform: none; }
 .mk.muted { color: var(--muted); }
 #cleanView { padding: 6px 12px; }
@@ -341,7 +418,7 @@ body.texOpen #view { bottom: var(--tex); }
 @media (max-width: 700px) {
 	.setRow { grid-template-columns: 1fr; }
 }
-#fsEditState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+#fsEditState { font-size: 12px; color: var(--muted); }
 #cfgState { margin-right: auto; font-size: 12px; color: var(--muted); }
 #cfgState.dirty, #fsEditState.dirty { color: var(--yellow); }
 
@@ -378,6 +455,9 @@ tr.ent.ro td:first-child { opacity: .6; }
 /* the form of an entity: a line for every key its class takes, the key with what it is for and the fields of its value */
 #entForm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 4px 8px; align-items: center; margin-bottom: 6px; }
 #entForm:empty { display: none; }
+#entForm:not(.all) .empty { display: none; }
+#entFormMore { width: 100%; margin: 2px 0 8px; padding: 3px; border-style: dashed; background: transparent; color: var(--muted); font-size: 12px; }
+#entFormMore:hover { color: var(--text); }
 #entForm label { min-width: 0; font-size: 12px; line-height: 1.25; }
 #entForm label b, #entForm label i { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #entForm label b { font-weight: 500; }
@@ -403,7 +483,12 @@ tr.ent.ro td:first-child { opacity: .6; }
 #kvTable td.x { width: 24px; white-space: nowrap; }
 #kvTable button.play { margin-right: 3px; }
 #kvTable button { padding: 1px 6px; }
-#entPanel .actions { max-width: none; margin-top: 8px; }
+/* the panel of an entity: what is done to it at the top, + Key, Delete and Apply at the bottom where they stay in
+   sight while it scrolls, the spawnflags as chips that are lit while set */
+#entTools { max-width: none; gap: 3px; margin: 0 0 8px; }
+#entTools button { padding: 2px 7px; font-size: 11px; font-weight: 600; }
+#entFoot { position: sticky; bottom: -10px; z-index: 1; display: flex; gap: 6px; margin: 10px -12px -10px; padding: 8px 12px; background: var(--frame); border-top: 1px solid var(--line); }
+#entFoot .spacer { flex: 1; }
 #classPicker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--field); display: none; }
 #classPicker.open { display: block; }
 #pane-models .tools { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -436,9 +521,11 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 .hud-bottom .w { margin-left: auto; font-size: 16px; font-weight: 700; }
 .c0{color:#666}.c1{color:#ff4040}.c2{color:#40ff40}.c3{color:#ffff40}.c4{color:#5a7dff}.c5{color:#40ffff}.c6{color:#ff40ff}.c7{color:#fff}.c8{color:#ff9a30}.c9{color:#aaa}
 /* the tools of the editor in the panel of an entity */
-#entFlags { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-bottom: 6px; }
-#entFlags label { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
-#entFlags input { width: auto; }
+#entFlags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+#entFlags label { position: relative; display: flex; align-items: center; padding: 1px 6px; border: 1px solid var(--edge); border-radius: 3px; background: var(--field); color: #6f86a3; font-size: 10px; font-weight: 600; cursor: pointer; }
+#entFlags label:has(input:checked) { background: var(--sel); border-color: var(--accent); color: var(--accent); }
+#entFlags label:has(input:focus-visible) { outline: 1px solid var(--accent); }
+#entFlags input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
 #entXform { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 4px; align-items: center; margin-bottom: 6px; }
 #entXform label { color: var(--muted); font-size: 12px; }
 #entXform input, #entXform select { width: 100%; min-width: 0; }
@@ -492,8 +579,10 @@ tr.ent.draft .tn { opacity: .7; }
 #draftDiscardAll { color: var(--danger); }
 #draftDiscardAll.armed { background: var(--danger); color: var(--on-accent); border-color: var(--danger); }
 #band { position: absolute; display: none; border: 1px solid var(--accent); background: rgba(92, 200, 245, .12); pointer-events: none; }
-#flyBtn { position: absolute; right: 10px; bottom: 10px; }
-#shotBtn { position: absolute; right: 56px; bottom: 10px; }
+/* ? , Screenshot and Fly: one bar at the bottom right of the map */
+#viewTools { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 2px; padding: 3px; background: rgba(8,14,28,.88); border: 1px solid #1c2e4a; border-radius: 8px; }
+#viewTools button { border: 0; background: transparent; padding: 3px 10px; font-weight: 600; font-size: 12px; }
+#viewTools button:hover { background: var(--hover); }
 /* The view switches of the editor: a thin bar across the top of the map, each switch a chip that is lit while on.
    The check boxes stay in the page for the keys and the scripts, only unseen. */
 body.app-editor #viewTop { top: 0; left: 0; right: 0; gap: 0; }
@@ -559,13 +648,41 @@ body.hasTV #pages button[data-tab="tv"] { display: flex; }
    their pane, as wide as it reads well, and the map is not shown behind them */
 body.serverPage #chat, body.app-editor #chat { display: none; }
 body.pageWide #side { width: auto; right: 0; transform: none; border-right: 0; }
-body.pageWide #side > .pane.on { width: 100%; max-width: 760px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+body.pageWide #side > .pane.on { width: 100%; overflow: auto; }
+/* Bans, Performance and Account: the whole width, the name of the page in a bar on top, the content in cards */
+body.pageWide #side h2 { position: sticky; top: 0; z-index: 2; justify-content: flex-start; align-items: baseline; gap: 10px; padding: 8px 16px; background: var(--frame); border-bottom: 1px solid var(--line); font-size: 14px; letter-spacing: 0; text-transform: none; color: #fff; }
+body.pageWide #side h2 > span + span { font-size: 12px; font-weight: 400; color: var(--muted); }
+body.pageWide #side .scroll { flex: none; overflow: visible; }
+.card, #pane-bans .tools, #pane-bans .scroll { max-width: 1120px; margin: 12px 16px 0; border: 1px solid #1c2e4a; border-radius: 8px; background: rgba(8,14,28,.78); }
+#pane-bans .tools { padding: 10px 12px; }
+#pane-bans .tools input { flex: 1; max-width: 320px; }
+#pane-bans .scroll td { height: 32px; padding: 0 12px; border-bottom: 1px solid #0f1b2e; font-family: ui-monospace, Menlo, Consolas, monospace; }
+#pane-bans .scroll tr:last-child td { border-bottom: 0; }
+#pane-bans > .hint { max-width: 1120px; margin: 8px 16px; padding: 0 !important; }
+#perfRows { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; max-width: 1240px; padding: 12px 16px 0; }
+#perfRows .perf { padding: 10px 12px 8px; border: 1px solid #1c2e4a; border-radius: 8px; background: rgba(8,14,28,.78); }
+#perfRows .perf .head { font-size: 10px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
+#perfRows .perf .head b { font-size: 16px; letter-spacing: 0; text-transform: none; color: #fff; }
+#perfRows .perf canvas { height: 40px; margin-top: 6px; }
+#pane-load .scroll > .hint { max-width: 1240px; padding: 8px 16px 0 !important; }
+#pane-account h3 { max-width: 1120px; margin: 12px 16px 0; padding: 7px 12px; background: var(--frame); border: 1px solid #1c2e4a; border-bottom: 0; border-radius: 8px 8px 0 0; font-size: 10px; letter-spacing: .8px; }
+#pane-account h3 + .tools { max-width: 1120px; margin: 0 16px; border: 1px solid #1c2e4a; border-radius: 0 0 8px 8px; background: rgba(8,14,28,.78); }
+#pane-account .scroll > .tools:first-child { flex-direction: row; justify-content: flex-end; padding: 8px 16px 0; border: 0; }
+#pane-account #acctUsers td, #pane-account #acctKeys td { height: 30px; }
+@media (min-width: 1100px) {
+	/* two columns: the own account on the left, the codes for the game and the accounts on the right */
+	#pane-account .scroll { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; max-width: 1240px; }
+	#pane-account .scroll > .tools:first-child, #acctOnce { grid-column: 1 / -1; }
+	#acctOwn { grid-column: 1; grid-row: 3 / span 2; }
+	#acctCodes { grid-column: 2; grid-row: 3; }
+	#acctOwner { grid-column: 2; grid-row: 4; }
+}
 body.pageWide #sideGrip, body.pageWide #view, body.pageWide #texBrowser { display: none; }
 
 /* the keys of the map: behind the button ? at the bottom right, open while body.helpOpen (js/palette.js) */
 #help { display: none; }
 body.helpOpen #help { display: block; }
-#helpBtn { position: absolute; right: 156px; bottom: 10px; width: 30px; }
+#helpBtn { width: 28px; padding: 3px 0 !important; }
 body.helpOpen #helpBtn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 /* A phone, or any window narrower than 760 pixels: the pages are a bar at the bottom, the map (or the main view of a
@@ -575,18 +692,18 @@ body.helpOpen #helpBtn { background: var(--accent); border-color: var(--accent);
 	:root { --rail: 0px; --split: 46vh; --tabbar: 54px; }
 	body.app-editor { --tools: 0px; }
 	#topbar { gap: 8px; }
-	#topbar .meta, #paletteBtn kbd, #toggleSide, #sideGrip { display: none; }
+	#topbar .meta, #paletteBtn kbd, #toggleSide, #sideGrip, #statusText, #whoName { display: none; }
 	#pages { top: auto; bottom: 0; right: 0; width: auto; height: var(--tabbar); flex-direction: row; gap: 0; padding: 3px 3px calc(3px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); }
 	#pages button { flex: 1 1 0; min-width: 0; height: auto; }
 	#pages button[data-tab="account"] { margin-top: 0; }
 	#pages button.on { box-shadow: inset 0 2px 0 var(--accent); }
 	#view, #cfgView, #fsView, #logView, #tvView { left: 0 !important; right: 0 !important; bottom: auto; height: var(--split); }
+	body.logOpen #logView { bottom: var(--tabbar); height: auto; }
 	/* (z-index 0: the panels of a player and an entity lie over it here, and they are in #view, which comes later) */
 	#side { left: 0; right: 0; width: auto; top: calc(var(--top) + var(--split)); bottom: var(--tabbar); transform: none !important; border-right: 0; border-top: 1px solid var(--line); z-index: 0; }
 	#fsList { padding: 6px 8px; }
 	#fsList th:nth-child(2), #fsList td:nth-child(2), #fsList th:nth-child(3), #fsList td:nth-child(3) { display: none; }
 	#fsList td { padding: 4px; }
-	#fsList td.acts button { margin-left: 2px; padding: 1px 5px; font-size: 11px; }
 	body.pageWide #side { top: var(--top); }
 	body.pageWide #side > .pane.on { border: 0; }
 	#command, #entPanel { left: 0; width: auto; top: calc(var(--top) + var(--split)); bottom: var(--tabbar); border-left: 0; border-top: 1px solid var(--line); }

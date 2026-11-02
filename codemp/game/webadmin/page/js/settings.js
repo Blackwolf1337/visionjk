@@ -33,7 +33,9 @@ function cfgShowView(v) {
 // what the tab shows when it is opened, or the view changes
 function cfgOpen() {
 	document.querySelectorAll('#cfgSwitch button').forEach(b => b.classList.toggle('on', b.dataset.view === cfgView));
-	document.querySelectorAll('#pane-config .cfgSide, #cfgView .cfgMain, #cfgBar .cfgTools').forEach(e => { e.hidden = e.dataset.view !== cfgView; });
+	document.querySelectorAll('#pane-config .cfgSide, #cfgView .cfgMain, #cfgBar .cfgTools, #cfgHelp [data-view]').forEach(e => { e.hidden = e.dataset.view !== cfgView; });
+	// the text and the cleanup have nothing in the side panel: they take the whole width
+	document.body.classList.toggle('cfgFull', cfgView !== 'form');
 	if (cfgView === 'form' && !setLoaded) setLoad();
 	if (cfgView === 'text' && !cfgLoaded) loadConfig();
 	if (cfgView === 'cleanup') cleanLoad();
@@ -197,6 +199,7 @@ async function setSave() {
 	}, 300);
 }
 
+$('cfgHelpBtn').addEventListener('click', () => { $('cfgHelp').hidden = !$('cfgHelp').hidden; $('cfgHelpBtn').classList.toggle('on', !$('cfgHelp').hidden); });
 $('cfgSwitch').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b) cfgShowView(b.dataset.view); });
 $('setSearch').addEventListener('input', setRender);
 $('setSave').addEventListener('click', setSave);

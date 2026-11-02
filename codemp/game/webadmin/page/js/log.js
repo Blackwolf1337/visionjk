@@ -13,11 +13,30 @@ const LOG_SOURCES = {
 let logView = LOG_SOURCES.log;
 const LOG_KEEP = 4000;	// lines the view holds of each
 
+// What a line is, for its colour: a kill, chat, a warning or an error, noise of the game (an item picked up, a
+// client that begins, his userinfo), or the rest. The game log puts the time of the game before each line, the
+// console the date and the time of day (twice on a line of the game log it echoes).
+const LOG_TIME = /^\s*(?:\d{4}-\d\d-\d\d )?(\d+:\d\d(?::\d\d)?)\s(.*)$/, LOG_STAMP = /^(?:\d{4}-\d\d-\d\d )?\d+:\d\d(?::\d\d)?\s/;
+function logKind(text) {
+	if (/^Kill:/.test(text)) return 'kill';
+	if (/^(say|sayteam|tell|vsay|vsay_team):/i.test(text)) return 'chat';
+	if (/\b(error|failed|refused)\b|\bblocked\b/i.test(text)) return 'err';
+	if (/^warning|\bwarning\b|^SERVER:/i.test(text)) return 'warn';
+	if (/^(Item|ClientBegin|ClientUserinfoChanged|InitGame|ShutdownGame|Exit|score|red:|-{8,})/.test(text)) return 'dim';
+	return '';
+}
+function logLine(line) {
+	const m = LOG_TIME.exec(line), text = m ? m[2] : line, kind = logKind(text.replace(LOG_STAMP, ''));
+	// (the space in the column: a copied line keeps it between the time and the text)
+	return '<span class="ll' + (kind ? ' ' + kind : '') + '">' + (m ? '<i>' + m[1] + ' </i>' : '') + escapeHtml(text) + '</span>';
+}
+
 function logRender() {
 	const f = $('logFilter').value.trim().toLowerCase(), box = $('logText');
 	const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-	box.textContent = (f ? logView.lines.filter(l => l.toLowerCase().includes(f)) : logView.lines).join('\n');
-	$('logSize').textContent = logView.lines.length + ' lines';
+	// a line each, in its colour; copied out of the view they are plain lines again
+	box.innerHTML = (f ? logView.lines.filter(l => l.toLowerCase().includes(f)) : logView.lines).map(logLine).join('');
+	$('logSize').textContent = logView.lines.length + (logView.lines.length === 1 ? ' line' : ' lines');
 	if ($('logFollow').checked && (atEnd || logView.first)) box.scrollTop = box.scrollHeight;
 }
 
@@ -74,6 +93,8 @@ function logTake(v, json, status) {
 setInterval(logPoll, 2000);
 
 document.querySelectorAll('#logSource button').forEach(b => b.addEventListener('click', () => logShow(b.dataset.log)));
+// the ?: what the three logs are
+$('logHelpBtn').addEventListener('click', () => { $('logHelp').hidden = !$('logHelp').hidden; $('logHelpBtn').classList.toggle('on', !$('logHelp').hidden); });
 
 // ---- a line for the console of the server, as if it was typed there. The arrow keys walk the lines that were
 // sent before, which the browser keeps.
