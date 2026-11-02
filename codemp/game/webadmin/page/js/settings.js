@@ -33,7 +33,7 @@ function cfgShowView(v) {
 // what the tab shows when it is opened, or the view changes
 function cfgOpen() {
 	document.querySelectorAll('#cfgSwitch button').forEach(b => b.classList.toggle('on', b.dataset.view === cfgView));
-	document.querySelectorAll('#pane-config .cfgSide, #cfgView .cfgMain').forEach(e => { e.hidden = e.dataset.view !== cfgView; });
+	document.querySelectorAll('#pane-config .cfgSide, #cfgView .cfgMain, #cfgBar .cfgTools').forEach(e => { e.hidden = e.dataset.view !== cfgView; });
 	if (cfgView === 'form' && !setLoaded) setLoad();
 	if (cfgView === 'text' && !cfgLoaded) loadConfig();
 	if (cfgView === 'cleanup') cleanLoad();

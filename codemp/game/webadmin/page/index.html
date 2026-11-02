@@ -116,35 +116,21 @@
 	</div>
 	<div class="pane" id="pane-config">
 		<h2><span id="cfgFileName">server.cfg</span><span id="cfgSize"></span></h2>
-		<div id="cfgSwitch" class="seg" title="The same file three ways: a form with every setting, the text of the file, and what it sets that nothing uses"><button data-view="form" class="on">Form</button><button data-view="text">Text</button><button data-view="cleanup">Cleanup</button></div>
 		<div class="cfgSide" data-view="form">
 			<div class="tools">
 				<input id="setSearch" type="search" placeholder="Search a setting" autocomplete="off">
-				<div class="inline"><button id="setSave" class="primary" title="Writes the changed settings into the file and sets them on the server">Save</button><button id="setDiscard" title="Drops what was changed here and reads the settings again">Discard changes</button></div>
 			</div>
-			<div id="setState"></div>
 			<div id="setCats" class="scroll"></div>
 			<div class="hint">A setting is changed in its line of the file, its comment stays. One the file does not set yet gets a line at the end, under "set by the web panel". The text before a save is kept as .bak.</div>
 			<div class="hint">A saved setting is set on the server at once. One marked "next map" takes effect with the next map, one marked "restart" when the server starts again.</div>
 			<div class="hint">A setting marked "local.cfg" is set again by that file at the next start: the service of the host runs it after this one.</div>
 		</div>
 		<div class="cfgSide" data-view="text" hidden>
-			<div class="tools">
-				<button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button>
-				<button id="cfgRun" title="Writes the file and runs it on the server console">Save and run on server</button>
-				<button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button>
-			</div>
-			<div id="cfgState"></div>
 			<div class="hint">The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/), which the engine reads before the one of the installation. The text before a save is kept as .bak.</div>
 			<div class="hint">Running the file sets its cvars at once. Latched ones (most vs_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
 			<div class="hint">The passwords in the file are shown as they are.</div>
 		</div>
 		<div class="cfgSide" data-view="cleanup" hidden>
-			<div class="tools">
-				<div class="inline"><button id="cleanAll" title="Selects every cvar no code used and every line a later one overrides">Select all</button><button id="cleanRemove" class="danger" title="Takes the selected lines out of the file, and the unused cvars off the server">Remove selected</button></div>
-				<button id="cleanLoad" title="Lists again">Refresh</button>
-			</div>
-			<div id="cleanState"></div>
 			<div class="hint">Unused: cvars no code of the server registered or read for 30 days. They are left from older versions, other mods or the client. Removing one takes its line out of the file and the cvar off the server.</div>
 			<div class="hint">Overridden: a line of a cvar that a later line of the same cvar sets again. Only the last one counts.</div>
 			<div class="hint">The server notes the use of each cvar from this version on. Until it did so for 30 days, a cvar never used is not listed.</div>
@@ -343,7 +329,7 @@
 			<div class="stat">Health <span id="cmdHp"></span><div class="bar"><i id="cmdHpBar" style="background:var(--green)"></i></div></div>
 			<div class="stat">Armor <span id="cmdAr"></span><div class="bar"><i id="cmdArBar" style="background:#5aa9ff"></i></div></div>
 		</div>
-		<!-- what can be done to him, in groups that fold; the page keeps which are open (js/players.js) -->
+		<!-- what can be done to him: Watch and steer at the top, the other groups as tabs; the page keeps which (js/players.js) -->
 		<details class="sect" data-sect="change" open><summary>Change</summary>
 			<div class="grid">
 				<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
@@ -359,10 +345,9 @@
 			<div class="actions">
 				<button id="followBtn">Follow</button>
 				<button id="fpBtn" title="Player view (V)">First person</button>
-				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back.">Control</button>
+				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back. A human who is controlled sees his own view jitter.">Control</button>
 			</div>
 			<div class="hint">Right-click on the map to teleport this player there.</div>
-			<div class="hint">Control steers him from this page until a second click or Esc gives him back: a right-click on the map then makes him walk there instead, and the views Third person and First person play him with the keys and the mouse. A human who is controlled sees his own view jitter.</div>
 		</details>
 		<details class="sect" data-sect="powers"><summary>Powers</summary>
 			<div class="actions">
@@ -440,9 +425,18 @@
 </div>
 <div id="logView"><pre id="logText"></pre><form id="logCmd"><input id="logCmdText" placeholder="Console command, Enter runs it" spellcheck="false" autocomplete="off" maxlength="480"><button>Run</button></form></div>
 <div id="cfgView">
+	<!-- the bar of the settings: which view, its state and its buttons -->
+	<div id="cfgBar">
+		<div id="cfgSwitch" class="seg" title="The same file three ways: a form with every setting, the text of the file, and what it sets that nothing uses"><button data-view="form" class="on">Form</button><button data-view="text">Text</button><button data-view="cleanup">Cleanup</button></div>
+		<div class="cfgTools" data-view="form"><span id="setState"></span><button id="setDiscard" title="Drops what was changed here and reads the settings again">Discard changes</button><button id="setSave" class="primary" title="Writes the changed settings into the file and sets them on the server">Save</button></div>
+		<div class="cfgTools" data-view="text" hidden><span id="cfgState"></span><button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button><button id="cfgRun" title="Writes the file and runs it on the server console">Save and run on server</button><button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button></div>
+		<div class="cfgTools" data-view="cleanup" hidden><span id="cleanState"></span><button id="cleanLoad" title="Lists again">Refresh</button><button id="cleanAll" title="Selects every cvar no code used and every line a later one overrides">Select all</button><button id="cleanRemove" class="danger" title="Takes the selected lines out of the file, and the unused cvars off the server">Remove selected</button></div>
+	</div>
+	<div id="cfgBody">
 	<div id="setForm" class="cfgMain" data-view="form"></div>
 	<div id="cfgEditor" class="cfgMain" data-view="text" hidden><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
 	<div id="cleanView" class="cfgMain" data-view="cleanup" hidden><table><thead><tr><th></th><th>Cvar</th><th>Value</th><th>Last used</th><th>Where</th><th></th></tr></thead><tbody id="cleanRows"></tbody></table></div>
+	</div>
 </div>
 <div id="tvView">
 	<div id="tvStart"><p id="tvNote"></p><button id="tvGo" class="primary">Watch</button></div>

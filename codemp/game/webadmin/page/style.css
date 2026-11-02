@@ -145,12 +145,16 @@ body.ref #hud .hud-top { display: none !important; }
 #command { position: fixed; top: var(--top); right: 0; bottom: 0; width: var(--insp); background: var(--panel); border-left: 1px solid var(--line); padding: 10px 12px; display: none; flex-direction: column; gap: 10px; align-items: stretch; overflow: auto; z-index: 16; }
 #view:has(#command.open) #help { display: none !important; }
 /* the groups of the panel of a player that fold (index.html, js/players.js) */
-#command details.sect { border-top: 1px solid var(--line); padding-top: 6px; }
-#command details.sect > summary { cursor: pointer; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; padding: 2px 0 6px; list-style: none; display: flex; justify-content: space-between; }
-#command details.sect > summary::-webkit-details-marker { display: none; }
-#command details.sect > summary::after { content: '+'; font-size: 13px; }
-#command details.sect[open] > summary::after { content: '\2212'; }
-#command details.sect > summary:hover { color: var(--text); }
+/* Watch and steer under the name, then the row of tabs, then the open group (js/players.js) */
+#command > .who { order: 0; }
+#command details.sect { order: 3; }
+#command details.sect[data-sect="watch"] { order: 1; }
+#command #cmdTabs { order: 2; }
+#command details.sect > summary { display: none; }
+#cmdTabs { display: flex; margin: 0 -12px; padding: 0 6px; border-bottom: 1px solid var(--line); }
+#cmdTabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 6px 7px; font-size: 12px; font-weight: 600; }
+#cmdTabs button:hover { color: var(--text); background: transparent; }
+#cmdTabs button.on { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
 #command details.sect .grid + .actions, #command details.sect .actions + .grid { margin-top: 8px; }
 #command details[data-sect="japlus"] .grid input, #command details[data-sect="japlus"] .grid select { width: 150px; }
 #command.open { display: flex; }
@@ -194,7 +198,15 @@ body.app-editor #help .adminOnly { display: none; }
 body.logOpen #logView { display: block; }
 #cfgView, #fsView, #logView { position: fixed; top: var(--top); left: calc(var(--left) + var(--side)); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
 body.sideClosed #cfgView, body.sideClosed #fsView, body.sideClosed #logView { left: var(--left); }
-body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
+body.fsOpen #fsView { display: block; }
+/* the settings: the bar with the view, its state and its buttons, and under it the view */
+body.cfgOpen #cfgView { display: flex; flex-direction: column; }
+#cfgBar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--frame); }
+#cfgBar .seg { margin: 0; }
+#cfgBar .seg button { flex: none; padding: 3px 12px; }
+.cfgTools { flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.cfgTools[hidden] { display: none; }
+#cfgBody { position: relative; flex: 1; min-height: 0; }
 /* the colored text lies under a text field whose own letters are not drawn: both must set every letter alike */
 .codeHi, .codeText { position: absolute; inset: 0; margin: 0; border: 0; padding: 10px 12px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; font-variant-ligatures: none; white-space: pre; tab-size: 4; }
 .codeHi { overflow: hidden; padding-right: 60px; padding-bottom: 60px; color: var(--text); pointer-events: none; }
@@ -297,7 +309,7 @@ body.texOpen #view { bottom: var(--tex); }
 .seg button { flex: 1; border: 0; border-radius: 0; background: transparent; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button.on { background: var(--accent); color: var(--on-accent); }
-#setState, #cleanState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); }
+#setState, #cleanState { margin-right: auto; font-size: 12px; color: var(--muted); }
 #setState.dirty { color: var(--yellow); }
 #setCats { border-top: 1px solid var(--line); }
 .setCat { display: flex; justify-content: space-between; gap: 8px; padding: 5px 10px; cursor: pointer; }
@@ -329,7 +341,8 @@ body.texOpen #view { bottom: var(--tex); }
 @media (max-width: 700px) {
 	.setRow { grid-template-columns: 1fr; }
 }
-#cfgState, #fsEditState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+#fsEditState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+#cfgState { margin-right: auto; font-size: 12px; color: var(--muted); }
 #cfgState.dirty, #fsEditState.dirty { color: var(--yellow); }
 
 #toasts { position: fixed; right: 12px; top: calc(var(--top) + 10px); z-index: 30; display: flex; flex-direction: column; gap: 6px; }
@@ -481,9 +494,17 @@ tr.ent.draft .tn { opacity: .7; }
 #band { position: absolute; display: none; border: 1px solid var(--accent); background: rgba(92, 200, 245, .12); pointer-events: none; }
 #flyBtn { position: absolute; right: 10px; bottom: 10px; }
 #shotBtn { position: absolute; right: 56px; bottom: 10px; }
-#dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-#dbg input { width: auto; }
-#dbg select { padding: 1px 4px; }
+/* The view switches of the editor: a thin bar across the top of the map, each switch a chip that is lit while on.
+   The check boxes stay in the page for the keys and the scripts, only unseen. */
+body.app-editor #viewTop { top: 0; left: 0; right: 0; gap: 0; }
+body.app-editor #help { margin: 8px 10px 0 auto; }
+#dbg { flex: 1 1 100%; gap: 2px; padding: 3px 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: rgba(5,9,19,.92); }
+#dbg label { position: relative; display: flex; align-items: center; padding: 2px 7px; border: 1px solid transparent; border-radius: 4px; color: #6f86a3; font-size: 11px; font-weight: 600; cursor: pointer; }
+#dbg label:hover { color: var(--text); }
+#dbg label:has(input:checked) { background: var(--sel); border-color: var(--edge); color: var(--text); }
+#dbg label:has(input:focus-visible) { outline: 1px solid var(--accent); }
+#dbg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+#dbg select { margin-left: 6px; padding: 1px 4px; font-size: 11px; }
 body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
 /* the tab row of the side panel is the editor's: the administration has the players there, and nothing to choose */
 body.app-admin #tabs { display: none; }
