@@ -20,6 +20,12 @@
 //   14 the cells of the grid along x, y, z, w the tangent of half the cone of the sun
 //   15 x rays a pixel, y the tangent of half the cone of the grid light, z the scale of the light of the patches
 //      (0: they are not used), w the strength of the sun
+//   16-19 the view and projection of the frame before, 20 its eye, w 1 when the mask of that frame can be used
+//
+// The mask of the frame before (set 3, the same pixels: the mask in red, how far the point was from the eye in green,
+// blue and alpha) is where this frame's rays are added to: the point seen in a pixel is looked up where it was then,
+// and if that pixel saw the same point (by its distance), a fifth of this frame goes onto it. So the few rays a pixel
+// has become many over a few frames.
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -28,7 +34,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[16];
+	vec4	rt[21];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
@@ -44,6 +50,7 @@ layout( set = 1, binding = 3, std430 ) readonly buffer Lists {
 	uint	lists[];
 };
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
+layout( set = 3, binding = 0 ) uniform sampler2D u_history;	// the mask of the frame before, read pixel for pixel
 
 #define W		globals.rt
 #define LIST	8
@@ -135,18 +142,11 @@ int CellAt( vec3 p ) {
 	return cells[cell * 3].w != 0.0 ? cell : -1;
 }
 
-void main() {
-	vec3 p = ScenePoint( gl_FragCoord.xy );
-	vec3 eye = W[4].xyz;
-	vec3 view = normalize( eye - p );
-	vec3 normal = SceneSurface( gl_FragCoord.xy, p, view );
+// how much the players darken the point p of this pixel, facing normal, by the rays of this frame
+float Shadow( vec3 p, vec3 normal ) {
 	float ambient, directed;
 	vec3 gridDir;
 
-	o_color = vec4( 0.0, 0.0, 0.0, 1.0 );
-	if ( distance( p, eye ) > 8192.0 ) {
-		return;
-	}
 	// (a little off the surface: the cells on it may be in the wall it is)
 	GridAt( p + normal * 8.0, ambient, directed, gridDir );
 	vec3 origin = p + normal * 1.5;
@@ -221,24 +221,69 @@ void main() {
 			float takenLight = total * taken / float( count );
 			float reachedLight = total * reached / float( count );
 
-			o_color.r = min( takenLight / ( reachedLight + ambient + 1.0 ), 0.9 );
-			return;
+			return min( takenLight / ( reachedLight + ambient + 1.0 ), 0.9 );
 		}
 	}
 
 	// no light of the list reaches it: the direction of the grid
 	if ( dot( gridDir, gridDir ) < 1e-4 ) {
-		return;
+		return 0.0;
 	}
 	vec3 light = normalize( gridDir );
 	float facing = dot( normal, light );
 	if ( facing <= 0.0 ) {
-		return;
+		return 0.0;
 	}
 	float strength = min( directed / ( ambient + directed + 1.0 ), 0.85 );
 	float blocked = 0.0;
 	for ( int k = 0; k < count; k++ ) {
 		blocked += Blocked( origin, InCone( light, W[15].y, uint( k ) ), W[12].w, 0x02u ) ? 1.0 : 0.0;
 	}
-	o_color.r = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
+	return strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
+}
+
+// a distance from the eye in green, blue and alpha, 24 bits up to 8192 units
+vec3 PackDistance( float d ) {
+	uint v = uint( clamp( d / 8192.0, 0.0, 1.0 ) * 16777215.0 );
+
+	return vec3( float( ( v >> 16u ) & 255u ), float( ( v >> 8u ) & 255u ), float( v & 255u ) ) / 255.0;
+}
+
+float UnpackDistance( vec3 c ) {
+	uvec3 b = uvec3( round( c * 255.0 ) );
+
+	return float( ( b.x << 16u ) | ( b.y << 8u ) | b.z ) / 16777215.0 * 8192.0;
+}
+
+void main() {
+	vec3 p = ScenePoint( gl_FragCoord.xy );
+	vec3 eye = W[4].xyz;
+	float d = distance( p, eye );
+
+	if ( d > 8192.0 ) {
+		o_color = vec4( 0.0, PackDistance( 8192.0 ) );
+		return;
+	}
+	float mask = Shadow( p, SceneSurface( gl_FragCoord.xy, p, normalize( eye - p ) ) );
+
+	// onto what the frame before had for this point, where it saw it
+	if ( W[20].w > 0.0 ) {
+		vec4 clip = mat4( W[16], W[17], W[18], W[19] ) * vec4( p, 1.0 );
+
+		if ( clip.w > 1.0 ) {
+			vec2 ndc = clip.xy / clip.w;
+			vec4 rect = W[8];
+			ivec2 at = ivec2( floor( vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w ) ) );
+
+			if ( all( greaterThanEqual( at, ivec2( rect.xy ) ) ) && all( lessThan( at, ivec2( rect.xy + rect.zw ) ) ) ) {
+				vec4 before = texelFetch( u_history, at, 0 );
+				float then = distance( p, W[20].xyz );
+
+				if ( abs( UnpackDistance( before.gba ) - then ) < then * 0.02 + 2.0 ) {
+					mask = mix( before.r, mask, 0.2 );
+				}
+			}
+		}
+	}
+	o_color = vec4( mask, PackDistance( d ) );
 }

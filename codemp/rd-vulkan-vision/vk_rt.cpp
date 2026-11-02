@@ -156,9 +156,12 @@ static struct {
 	VkShaderModule				debugFragment;
 	VkPipeline					debugPipeline;
 
-	// the shadows of the players
-	vkTarget_t					mask;
-	VkDescriptorSet				maskSet;
+	// the shadows of the players: the mask of this frame and of the one before (frameNumber picks), how far the
+	// points were from the eye with it; the view of the frame before for shaders/rtshadow.frag to find them again
+	vkTarget_t					mask[2];
+	VkDescriptorSet				maskSets[2];
+	float						previous[5][4];		// its view and projection, its eye
+	qboolean					previousValid;
 	VkShaderModule				shadowFragment, resolveFragment;
 	VkPipeline					shadowPipeline, resolvePipeline;
 	int							frameNumber;	// the noise of the rays changes with it
@@ -707,6 +710,7 @@ static void VK_RT_PrepareLevel( void ) {
 	VK_RT_UploadGrid();
 	rt.world = tr.world;
 	rt.levelScratch = 0;
+	rt.previousValid = qfalse;
 	vk_patches->clear();
 
 	VK_RT_LevelTriangles( positions, indexes );
@@ -1236,11 +1240,11 @@ static void VK_RT_CreateLayouts( void ) {
 	VkDescriptorSetLayoutCreateInfo			setInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	VkDescriptorPoolSize					sizes[3];
 	VkDescriptorPoolCreateInfo				pool = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-	VkDescriptorSetLayout					layouts[VK_FRAMES];
+	VkDescriptorSetLayout					layouts[VK_FRAMES > 2 ? VK_FRAMES : 2];
 	VkDescriptorSetAllocateInfo				alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	VkPipelineLayoutCreateInfo				layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	// the globals of the frame, the top level, the depth of the scene
-	VkDescriptorSetLayout					passSets[3];
+	// the globals of the frame, the top level and what the level has, the depth of the scene, the mask before
+	VkDescriptorSetLayout					passSets[4];
 
 	// the top level, the light grid, the light patches of the level and the lists of the cells
 	memset( bindings, 0, sizeof( bindings ) );
@@ -1265,8 +1269,8 @@ static void VK_RT_CreateLayouts( void ) {
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	sizes[2].descriptorCount = 1;
-	pool.maxSets = VK_FRAMES + 1;
+	sizes[2].descriptorCount = 2;
+	pool.maxSets = VK_FRAMES + 2;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &rt.pool ) );
@@ -1277,14 +1281,15 @@ static void VK_RT_CreateLayouts( void ) {
 	alloc.descriptorSetCount = VK_FRAMES;
 	alloc.pSetLayouts = layouts;
 	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, rt.sets ) );
-	alloc.descriptorSetCount = 1;
-	alloc.pSetLayouts = &vk.postSetLayout;
-	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &rt.maskSet ) );
+	layouts[0] = layouts[1] = vk.postSetLayout;
+	alloc.descriptorSetCount = 2;
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, rt.maskSets ) );
 
 	passSets[0] = vk.frameSetLayout;
 	passSets[1] = rt.setLayout;
 	passSets[2] = vk.postSetLayout;
-	layout.setLayoutCount = 3;
+	passSets[3] = vk.postSetLayout;
+	layout.setLayoutCount = 4;
 	layout.pSetLayouts = passSets;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.layout ) );
 }
@@ -1324,16 +1329,21 @@ void VK_RT_Init( void ) {
 	rt.resolvePipeline = VK_CreatePipeline( vk.postVertexShader, rt.resolveFragment, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO, 8, VKP_GENERIC );
 }
 
-// the shadow mask in the size of the frame, made again when that changes (only while no frame is on its way)
+// the two shadow masks in the size of the frame, made again when that changes (only while no frame is on its way);
+// they are readable from the start, what is in them is not used until a frame has drawn one
 static void VK_RT_EnsureMask( void ) {
-	if ( rt.mask.image && rt.mask.width == vk.width && rt.mask.height == vk.height ) {
+	if ( rt.mask[0].image && rt.mask[0].width == vk.width && rt.mask[0].height == vk.height ) {
 		return;
 	}
 	VK_WaitIdle();
-	VK_DestroyTarget( &rt.mask );
-	VK_CreateTarget( &rt.mask, vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	VK_WriteSet( rt.maskSet, vk.postSampler, rt.mask.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	for ( int i = 0; i < 2; i++ ) {
+		VK_DestroyTarget( &rt.mask[i] );
+		VK_CreateTarget( &rt.mask[i], vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+		VK_TargetLayout( vk.frame->cmd, &rt.mask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		VK_WriteSet( rt.maskSets[i], vk.postSampler, rt.mask[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	}
+	rt.previousValid = qfalse;
 }
 
 void VK_RT_Shutdown( void ) {
@@ -1346,7 +1356,8 @@ void VK_RT_Shutdown( void ) {
 	qvkDestroyPipeline( vk.device, rt.resolvePipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.shadowFragment, NULL );
 	qvkDestroyShaderModule( vk.device, rt.resolveFragment, NULL );
-	VK_DestroyTarget( &rt.mask );
+	VK_DestroyTarget( &rt.mask[0] );
+	VK_DestroyTarget( &rt.mask[1] );
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
@@ -1451,11 +1462,14 @@ void VK_RT_Pass( void ) {
 	VectorCopy( tr.world->lightGridOrigin, rows[12] );
 	rows[12][3] = 1024.0f;
 	VectorCopy( tr.world->lightGridInverseSize, rows[13] );
-	rows[13][3] = (float)( rt.frameNumber++ & 0xffff );
+	rows[13][3] = (float)( rt.frameNumber & 0xffff );
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
 		v_rtLights->integer ? vk_patchScale : 0.0f, vk_sunStrength );
+	// the view of the frame before, to find the points of this one in its mask
+	memcpy( rows[16], rt.previous, sizeof( rt.previous ) );
+	rows[20][3] = rt.previousValid ? 1.0f : 0.0f;
 	globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	memcpy( globals->rt, rows, sizeof( globals->rt ) );
 
@@ -1469,19 +1483,27 @@ void VK_RT_Pass( void ) {
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );
-	} else if ( rt.numCasters ) {
-		const VkDescriptorSet traceSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
-		const VkDescriptorSet resolveSets[3] = { vk.frame->set, rt.maskSet, vk.depthSet };
+	} else if ( !rt.numCasters ) {
+		// nothing in the mask this frame: the next one starts it again
+		rt.previousValid = qfalse;
+	} else {
+		const int				now = rt.frameNumber & 1;
+		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet, rt.maskSets[now ^ 1] };
+		const VkDescriptorSet	resolveSets[3] = { vk.frame->set, rt.maskSets[now], vk.depthSet };
 
-		// the rays into the mask
-		VK_BeginTarget( &rt.mask, NULL, 1, qfalse );
+		// the rays into the mask of this frame, onto the one before
+		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.shadowPipeline );
 		vk.boundPipeline = rt.shadowPipeline;
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, traceSets, 0, NULL );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 0, NULL );
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
-		VK_TargetLayout( cmd, &rt.mask, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		VK_TargetLayout( cmd, &rt.mask[now], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		memcpy( rt.previous, rows[0], sizeof( float ) * 16 );
+		VectorCopy( rows[4], rt.previous[4] );
+		rt.previousValid = qtrue;
+		rt.frameNumber++;
 
 		// softened onto the frame
 		VK_BeginOverLevel( cmd );

@@ -70,7 +70,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_WET_VEC4S		( VK_WET_HEADER + WET_MAX_SPOTS * VK_WET_ROWS )
 #define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
-#define VK_RT_VEC4S			( VK_WET_HEADER + 5 )	// shaders that trace rays (vk_rt.cpp): the same view, then their own
+#define VK_RT_VEC4S			( VK_WET_HEADER + 10 )	// shaders that trace rays (vk_rt.cpp): the same view, then their own
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light

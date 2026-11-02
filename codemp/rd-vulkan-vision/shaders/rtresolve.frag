@@ -11,7 +11,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[16];
+	vec4	rt[21];
 } globals;
 layout( set = 1, binding = 0 ) uniform sampler2D u_mask;		// the shadow mask, read pixel for pixel
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
@@ -34,8 +34,8 @@ const vec2 DISK[TAPS] = vec2[TAPS](
 void main() {
 	ivec2 size = textureSize( u_mask, 0 );
 	float d0 = SceneDistance( gl_FragCoord.xy );
-	// about six units of the level around the pixel, at least two pixels
-	float radius = clamp( 6.0 / ( d0 * W[5].w ) * W[8].w * 0.5, 2.0, 12.0 );
+	// about two units of the level around the pixel (the rays of a few frames are in the mask already)
+	float radius = clamp( 2.5 / ( d0 * W[5].w ) * W[8].w * 0.5, 1.0, 6.0 );
 	float sum = texelFetch( u_mask, ivec2( gl_FragCoord.xy ), 0 ).r;
 	float weights = 1.0;
 
