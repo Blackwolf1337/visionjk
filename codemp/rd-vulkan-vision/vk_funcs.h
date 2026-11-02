@@ -38,9 +38,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCreateDevice ) \
 	X( vkDestroyInstance ) \
 	X( vkDestroySurfaceKHR ) \
+	X( vkEnumerateDeviceExtensionProperties ) \
 	X( vkEnumeratePhysicalDevices ) \
 	X( vkGetPhysicalDeviceFeatures ) \
 	X( vkGetPhysicalDeviceFeatures2 ) \
+	X( vkGetPhysicalDeviceProperties2 ) \
 	X( vkGetPhysicalDeviceFormatProperties ) \
 	X( vkGetPhysicalDeviceMemoryProperties ) \
 	X( vkGetPhysicalDeviceProperties ) \
@@ -130,10 +132,20 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkUpdateDescriptorSets ) \
 	X( vkWaitForFences )
 
+// asked from the device when it traces rays (vk.rayTracing, vk_rt.cpp)
+#define VK_FUNCTIONS_RT( X ) \
+	X( vkCmdBuildAccelerationStructuresKHR ) \
+	X( vkCreateAccelerationStructureKHR ) \
+	X( vkDestroyAccelerationStructureKHR ) \
+	X( vkGetAccelerationStructureBuildSizesKHR ) \
+	X( vkGetAccelerationStructureDeviceAddressKHR ) \
+	X( vkGetBufferDeviceAddress )
+
 #define X( name )	extern PFN_##name q##name;
 VK_FUNCTIONS_GLOBAL( X )
 VK_FUNCTIONS_INSTANCE( X )
 VK_FUNCTIONS_DEVICE( X )
+VK_FUNCTIONS_RT( X )
 #undef X
 extern PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 extern PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;

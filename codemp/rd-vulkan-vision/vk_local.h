@@ -70,6 +70,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_WET_VEC4S		( VK_WET_HEADER + WET_MAX_SPOTS * VK_WET_ROWS )
 #define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
+#define VK_RT_VEC4S			( VK_WET_HEADER + 5 )	// shaders that trace rays (vk_rt.cpp): the same view, then their own
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
@@ -78,6 +79,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		styles[MAX_LIGHT_STYLES][4];	// the colors of the light styles over 256 (styleColors), for vertex lit surfaces
 	float		wet[VK_WET_VEC4S][4];		// what VK_WetPass() was given
 	float		paint[VK_PAINT_VEC4S][4];	// what VK_PaintPass() was given
+	float		rt[VK_RT_VEC4S][4];			// what the passes that trace rays were given (vk_rt.cpp)
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -382,6 +384,9 @@ void		VK_CaptureFrame( void );
 void		VK_DrawLiquids( void );
 qboolean	VK_HasWet( void );
 void		VK_DrawWet( void );
+// the first nine rows of the passes over the view of the level (shaders/scene.glsl, ball.glsl), and the view as
+// VK_ViewportAndScissor() takes it
+void		VK_ViewRows( float ( *rows )[4], int *viewport );
 qboolean	VK_BeginPuddle( void );
 void		VK_EndPuddle( void );
 void		VK_ClearFlares( void );

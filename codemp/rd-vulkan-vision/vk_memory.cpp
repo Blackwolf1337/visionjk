@@ -156,7 +156,13 @@ void VK_AllocMemory( const VkMemoryRequirements *req, VkMemoryPropertyFlags flag
 	// a new block, as large as the request needs
 	vkBlock_t *block = &vk_blocks[unused];
 	VkMemoryAllocateInfo info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+	VkMemoryAllocateFlagsInfo addressed = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
 
+	// the inputs and results of the acceleration structures are found by their address (vk_rt.cpp)
+	if ( vk.rayTracing ) {
+		addressed.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+		info.pNext = &addressed;
+	}
 	info.allocationSize = req->size > VK_BLOCK_SIZE ? req->size : VK_BLOCK_SIZE;
 	info.memoryTypeIndex = (uint32_t)type;
 	VK_CHECK( qvkAllocateMemory( vk.device, &info, NULL, &block->memory ) );

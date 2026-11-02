@@ -726,6 +726,9 @@ static void RB_DrawWet( int depthRange ) {
 		return;
 	}
 	rb_wetLater = qfalse;
+#ifndef RD_VISION_GLES
+	VK_RT_Pass();
+#endif
 	VK_DrawWet();
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
@@ -1006,7 +1009,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// water over what was drawn.
 	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+#ifdef RD_VISION_GLES
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
+#else
+	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() ) );
+#endif
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 	rb_wetLater = qfalse;
 	if ( levelView && r_numLiquids ) {

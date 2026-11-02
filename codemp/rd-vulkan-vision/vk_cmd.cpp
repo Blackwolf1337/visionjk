@@ -708,7 +708,7 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 // reading: no test, nothing written (the stencil goes with it). With several samples a pixel the frame is drawn into
 // the targets that stand in for color and depth, and the depth the shader reads is the plain one, which has their
 // first sample since the scene ended.
-static void VK_BeginOverLevel( VkCommandBuffer cmd ) {
+void VK_BeginOverLevel( VkCommandBuffer cmd ) {
 	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };

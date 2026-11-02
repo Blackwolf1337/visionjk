@@ -620,35 +620,44 @@ shows. The numbers of the view and of every picture and place go into the global
 of the level at its middle.
 ===============
 */
+#ifndef RD_VISION_GLES
+void VK_ViewRows( float ( *rows )[4], int *viewport ) {
+	const float	*projection = backEnd.viewParms.projectionMatrix;
+	const int	x = backEnd.viewParms.viewportX, y = backEnd.viewParms.viewportY;
+	const int	width = backEnd.viewParms.viewportWidth, height = backEnd.viewParms.viewportHeight;
+
+	myGlMultMatrix( backEnd.viewParms.world.modelMatrix, projection, rows[0] );
+	VectorCopy( backEnd.viewParms.ori.origin, rows[4] );
+	rows[4][3] = tanf( DEG2RAD( backEnd.viewParms.fovX * 0.5f ) );
+	VectorCopy( backEnd.viewParms.ori.axis[0], rows[5] );
+	rows[5][3] = tanf( DEG2RAD( backEnd.viewParms.fovY * 0.5f ) );
+	// the distance in front of the eye to the depth, as VK_BlurFrame() has it
+	VectorCopy( backEnd.viewParms.ori.axis[1], rows[6] );
+	rows[6][3] = projection[14] * 0.5f;
+	VectorCopy( backEnd.viewParms.ori.axis[2], rows[7] );
+	rows[7][3] = ( projection[10] - 1.0f ) * 0.5f;
+	// the view in pixels of the target from the upper left corner, as VK_ViewportAndScissor() puts it there
+	VectorSet4( rows[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
+	viewport[0] = x;
+	viewport[1] = y;
+	viewport[2] = width;
+	viewport[3] = height;
+}
+#endif
+
 void VK_DrawWet( void ) {
 #ifndef RD_VISION_GLES
 	static float	wet[VK_WET_VEC4S][4];
 	static float	paint[VK_PAINT_VEC4S][4];
-	const float		*projection = backEnd.viewParms.projectionMatrix;
 	const int		count = Q_min( r_numWet, WET_MAX_SPOTS );
 	int				numPaint = 0;
-	int				viewport[4], x, y, width, height;
+	int				viewport[4];
 
 	if ( !vk.frame || ( count <= 0 && r_numPaint <= 0 ) || !tr.screenImage || !VK_HasWet() ) {
 		return;
 	}
 	memset( wet, 0, sizeof( wet ) );
-	myGlMultMatrix( backEnd.viewParms.world.modelMatrix, projection, wet[0] );
-	VectorCopy( backEnd.viewParms.ori.origin, wet[4] );
-	wet[4][3] = tanf( DEG2RAD( backEnd.viewParms.fovX * 0.5f ) );
-	VectorCopy( backEnd.viewParms.ori.axis[0], wet[5] );
-	wet[5][3] = tanf( DEG2RAD( backEnd.viewParms.fovY * 0.5f ) );
-	// the distance in front of the eye to the depth, as VK_BlurFrame() has it
-	VectorCopy( backEnd.viewParms.ori.axis[1], wet[6] );
-	wet[6][3] = projection[14] * 0.5f;
-	VectorCopy( backEnd.viewParms.ori.axis[2], wet[7] );
-	wet[7][3] = ( projection[10] - 1.0f ) * 0.5f;
-	// the view in pixels of the target from the upper left corner, as VK_ViewportAndScissor() puts it there
-	viewport[0] = x = backEnd.viewParms.viewportX;
-	viewport[1] = y = backEnd.viewParms.viewportY;
-	viewport[2] = width = backEnd.viewParms.viewportWidth;
-	viewport[3] = height = backEnd.viewParms.viewportHeight;
-	VectorSet4( wet[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
+	VK_ViewRows( wet, viewport );
 	VectorSet4( wet[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
 		(float)count );
 	VectorSet4( wet[10], vk.reflectHeight, vk.reflectFrame == backEnd.viewParms.frameCount ? 1.0f : 0.0f, 0.0f, 0.0f );

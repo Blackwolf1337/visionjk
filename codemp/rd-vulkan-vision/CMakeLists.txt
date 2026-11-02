@@ -107,6 +107,7 @@ set(MPVulkanVisionVulkanFiles
 	"${MPDir}/rd-vulkan-vision/vk_main.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_rt.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	)
 source_group("vulkan" FILES ${MPVulkanVisionVulkanFiles})
@@ -218,6 +219,10 @@ set(MPVulkanVisionShaders
 	paint.vert
 	paint.frag
 	)
+# the shaders that trace rays (vk_rt.cpp): Vulkan only, GLSL ES has no ray queries
+set(MPVulkanVisionRTShaders
+	rtdebug.frag
+	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
@@ -231,7 +236,7 @@ set(MPVulkanVisionShaderOutputs)
 if(MPVulkanVisionVulkanTarget)
 	# GLSL to SPIR-V as a C initializer list, one .inc per shader, included by vk_pipeline.cpp. glslc runs on the
 	# build machine, so this also works when cross compiling.
-	foreach(shader ${MPVulkanVisionShaders})
+	foreach(shader ${MPVulkanVisionShaders} ${MPVulkanVisionRTShaders})
 		set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
 		string(REPLACE "." "_" shaderName ${shader})
 		set(shaderOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}.inc")

@@ -97,7 +97,7 @@ static const uint32_t vk_screenFxSmokeFrag[] =
 #include "shaders/screenfxsmoke_frag.inc"
 ;
 
-static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
+VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
 	VkShaderModule module;
 
@@ -283,7 +283,7 @@ smoke). 8 as 5, quads of its own over the view of the level (the wet places). 9 
 textures as the fourth set (the sprayed pictures).
 ===============
 */
-VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program ) {
+VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program, VkPipelineLayout layout ) {
 	VkPipelineShaderStageCreateInfo stages[2];
 	VkVertexInputBindingDescription bindings[4];
 	VkVertexInputAttributeDescription attributes[8];
@@ -430,7 +430,9 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	info.pDepthStencilState = &depth;
 	info.pColorBlendState = &blend;
 	info.pDynamicState = &dynamic;
-	if ( post == 4 ) {
+	if ( layout ) {
+		info.layout = layout;
+	} else if ( post == 4 ) {
 		info.layout = vk.scopePipelineLayout;
 	} else if ( post == 5 || post == 7 || post == 8 ) {
 		info.layout = vk.screenFxPipelineLayout;

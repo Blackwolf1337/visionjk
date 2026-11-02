@@ -152,6 +152,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkSampler					linearSampler;
 	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
 	qboolean					depthReadable;		// the device lets its format be read in a shader
+	qboolean					rayTracing;			// acceleration structures and ray queries are on (vk_rt.cpp)
 	VkImageView					depthView;			// of the depth alone, without the stencil
 	VkDescriptorSet				depthSet;
 	// v_wetMirror: the view mirrored at the floor of the puddles (VK_BeginPuddle), traded with color, colorMS, depth
@@ -254,7 +255,19 @@ void		VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkI
 void		VK_InitPipelines( void );
 void		VK_ShutdownPipelines( void );
 VkPipeline	VK_FindPipeline( vkProgram_t program, uint32_t stateBits );
+VkShaderModule VK_CreateShader( const uint32_t *code, size_t size );
+// post: 0 a stage of the level, else one of the passes (see there); layout: one of its own instead of the one post has
+VkPipeline	VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program,
+				VkPipelineLayout layout = VK_NULL_HANDLE );
+
+// vk_rt.cpp
+void		VK_RT_Init( void );
+void		VK_RT_Shutdown( void );
+qboolean	VK_RT_Wanted( void );
+void		VK_RT_Pass( void );
 
 // vk_cmd.cpp
+// begins vk.color over the level with the depth of the scene only read, for the passes over it (VK_WetPass)
+void		VK_BeginOverLevel( VkCommandBuffer cmd );
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );

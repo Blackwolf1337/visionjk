@@ -28,6 +28,7 @@ vkState_t	vk;
 static cvar_t	*v_vkDebug;			// 1: validation layer and its messages, if the layer is installed
 static cvar_t	*r_swapIntervalVk;	// r_swapInterval of the engine
 static cvar_t	*r_multisampleVk;	// r_ext_multisample of the engine
+static cvar_t	*v_rayTracing;		// 0: no ray tracing even where the device has it (vk_rt.cpp)
 
 static char		vk_versionString[64];
 static char		vk_driverString[64];
@@ -92,6 +93,7 @@ THE FUNCTIONS OF VULKAN
 VK_FUNCTIONS_GLOBAL( X )
 VK_FUNCTIONS_INSTANCE( X )
 VK_FUNCTIONS_DEVICE( X )
+VK_FUNCTIONS_RT( X )
 #undef X
 PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;
@@ -123,6 +125,9 @@ static qboolean VK_LoadInstanceFunctions( void ) {
 static void VK_LoadDeviceFunctions( void ) {
 #define X( name )	q##name = (PFN_##name)qvkGetDeviceProcAddr( vk.device, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
 	VK_FUNCTIONS_DEVICE( X )
+	if ( vk.rayTracing ) {
+		VK_FUNCTIONS_RT( X )
+	}
 #undef X
 }
 
@@ -275,10 +280,52 @@ static qboolean VK_PickDevice( void ) {
 	return qtrue;
 }
 
+/*
+===============
+VK_RayTracingUsable
+
+The device builds acceleration structures and its shaders trace rays through them (VK_KHR_ray_query): RTX 20 and
+later, Radeon RX 6000 and later, Intel Arc and many newer integrated GPUs. The shadows of the players are traced
+there (vk_rt.cpp); every other device draws them without.
+===============
+*/
+static qboolean VK_RayTracingUsable( void ) {
+	const char *needed[] = { VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, VK_KHR_RAY_QUERY_EXTENSION_NAME,
+		VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME };
+	VkExtensionProperties available[512];
+	uint32_t count = ARRAY_LEN( available );
+	VkPhysicalDeviceRayQueryFeaturesKHR query = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accel = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, &query };
+	VkPhysicalDeviceVulkan12Features f12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &accel };
+	VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &f12 };
+
+	if ( !v_rayTracing->integer ) {
+		return qfalse;
+	}
+	// (VK_INCOMPLETE leaves the list as long as the array, the ones needed are rarely at its end)
+	if ( qvkEnumerateDeviceExtensionProperties( vk.physicalDevice, NULL, &count, available ) < 0 ) {
+		return qfalse;
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( needed ); i++ ) {
+		uint32_t j;
+
+		for ( j = 0; j < count && strcmp( available[j].extensionName, needed[i] ); j++ ) {
+		}
+		if ( j == count ) {
+			return qfalse;
+		}
+	}
+	qvkGetPhysicalDeviceFeatures2( vk.physicalDevice, &features );
+	return (qboolean)( accel.accelerationStructure && query.rayQuery && f12.bufferDeviceAddress );
+}
+
 static void VK_CreateDevice( void ) {
 	const float priority = 1.0f;
-	const char *extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const char *extensions[4] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	uint32_t numExtensions = 1;
 	VkDeviceQueueCreateInfo queue = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+	VkPhysicalDeviceRayQueryFeaturesKHR query = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accel = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, &query };
 	VkPhysicalDeviceVulkan13Features f13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 	VkPhysicalDeviceVulkan12Features f12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &f13 };
 	VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &f12 };
@@ -302,13 +349,23 @@ static void VK_CreateDevice( void ) {
 	f12.descriptorBindingPartiallyBound = VK_TRUE;
 	f12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 	f12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+	vk.rayTracing = VK_RayTracingUsable();
+	if ( vk.rayTracing ) {
+		extensions[numExtensions++] = VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
+		extensions[numExtensions++] = VK_KHR_RAY_QUERY_EXTENSION_NAME;
+		extensions[numExtensions++] = VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
+		accel.accelerationStructure = VK_TRUE;
+		query.rayQuery = VK_TRUE;
+		f12.bufferDeviceAddress = VK_TRUE;
+		f13.pNext = &accel;
+	}
 
 	queue.queueFamilyIndex = vk.queueFamily;
 	queue.queueCount = 1;
 	queue.pQueuePriorities = &priority;
 	info.queueCreateInfoCount = 1;
 	info.pQueueCreateInfos = &queue;
-	info.enabledExtensionCount = ARRAY_LEN( extensions );
+	info.enabledExtensionCount = numExtensions;
 	info.ppEnabledExtensionNames = extensions;
 	VK_CHECK( qvkCreateDevice( vk.physicalDevice, &info, NULL, &vk.device ) );
 	VK_LoadDeviceFunctions();
@@ -545,6 +602,8 @@ qboolean VK_InitVulkan( void ) {
 	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
+	v_rayTracing = ri.Cvar_Get( "v_rayTracing", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"Ray tracing where the graphics card has it, for the shadows of the players. 0: off" );
 	if ( VK_InitShared() ) {
 		return qtrue;
 	}
@@ -575,6 +634,8 @@ qboolean VK_InitVulkan( void ) {
 		return qfalse;
 	}
 	VK_CreateDevice();
+	ri.Cvar_Get( "v_rtAvailable", "0", CVAR_ROM, "Whether the renderer traces rays on this graphics card (v_rayTracing)" );
+	ri.Cvar_Set( "v_rtAvailable", vk.rayTracing ? "1" : "0" );
 	VK_InitMemory();
 	VK_CreateSwapchain();
 
@@ -594,6 +655,7 @@ qboolean VK_InitVulkan( void ) {
 	VK_InitFrames();
 	VK_InitImages();
 	VK_InitModels();
+	VK_RT_Init();
 
 	// what the engine, cgame and ui want to know about the renderer
 	Com_sprintf( vk_versionString, sizeof( vk_versionString ), "Vulkan %i.%i.%i", VK_API_VERSION_MAJOR( vk.properties.apiVersion ),
@@ -628,6 +690,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 		return;
 	}
 
+	VK_RT_Shutdown();
 	VK_ShutdownWorld();
 	VK_ShutdownModels();
 	VK_ShutdownImages();
