@@ -34,7 +34,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Dynamic lights, also in the glow pass | done |
 | Dynamic glow | done |
 | Refraction: the wave of force push, the cloak, the trail of `cg_saberTrail 2` | done |
-| Shadows: `cg_shadows 1`, `2` and `3` | done |
+| Shadows: `cg_shadows 1` (the blob). 2 and 3 (stencil volumes, projected) gone since 2026-11-02 | done |
 | Flares | done, two frames late (see the differences) |
 | Gamma and overbright | done |
 | Anti aliasing (`r_ext_multisample`) | done |
@@ -142,7 +142,7 @@ there from `codemp/rd-vanilla/` on 2026-11-02, with their OpenGL code paths remo
 `tr_shade.cpp` and `tr_arb.cpp` were deleted): the BSP and model loaders, the `.shader` parser, Ghoul2 with bones,
 bolts and collision, skins, marks, the light grid, the scene with PVS and culling, the cvars and the export table, the
 image code up to the upload, the sky geometry, the surface functions for sprites, beams and the like, the weather
-particles, the surface sprites and the shadows (`cg_shadows 2` and `3`). The target links with `-Wl,-z,defs` and
+particles, the surface sprites and the shadows (`cg_shadows 2` and `3`, gone since 2026-11-02, `common/tr_shadows.cpp` is deleted). The target links with `-Wl,-z,defs` and
 without libGL, so an OpenGL call that is left in a shared file fails the build.
 
 The paragraphs below that speak of `#ifndef RD_VULKAN_VISION` guards and of files that are byte for byte the same
@@ -156,7 +156,7 @@ after the preprocessor describe the time before the move.
   surface sprites work without a change to their files
 - the automap of `tr_world.cpp` (`r_autoMap`) is drawn the same way, one `glBegin` per surface of the level,
   collected into a few draws
-- the stencil calls of the shadows go there too. The volume of a model comes as one `glBegin` to `glEnd` per
+- the stencil calls of the shadows (gone since 2026-11-02) went there too. The volume of a model comes as one `glBegin` to `glEnd` per
   edge: while the color mask is off they are collected and become one draw, with the stencil test as dynamic
   state
 - the rest (line width, display lists) is nothing
@@ -487,7 +487,9 @@ lamps and the glowing pad get a halo), strength 1 with threshold 0.4 by 6 (the w
 Not run on the OpenGL ES device (it is not built in this configuration), not under the validation layer (not
 installed on this machine).
 
-## Render scale (from TaystJK)
+## Render scale (from TaystJK, gone since 2026-11-02)
+
+`tay_renderScale` and the scene targets of their own size with their copy pass are gone from rd-vulkan-vision: the level is always drawn at the size of the window. What follows is the history of 2026-10-19.
 
 `tay_renderScale` (1, 0.5 to 2, `vid_restart`), built 2026-10-19 after `r_renderScale` of TaystJK's Vulkan
 renderer, here for the level alone: its views are drawn in a size of their own, smaller for a weak device, larger
@@ -753,7 +755,7 @@ more than 16. What differs are the sparks (random numbers), the fine grating of 
 Motion JPEG. The file of `rd-vanilla` is three frames behind: it reads the frame buffer before the frame the
 video command belongs to is drawn, and what is in the buffer then is that old on this machine.
 
-Shadows: the player on a bright floor of mp/ctf2 from above, with `cg_shadows 1`, `2` and `3`, next to
+Shadows (`cg_shadows 2` and `3` are gone since 2026-11-02, only the blob stays): the player on a bright floor of mp/ctf2 from above, with `cg_shadows 1`, `2` and `3`, next to
 `rd-vanilla`: the blob, the stencil shadow and the projected shadow have the same shape and place. The fight
 demo recorded with `cg_shadows 2` by both renderers: 2.2 to 3.8 % as without. Stencil shadows take most of the
 speed of both: the volumes are built on the CPU by the same code. The timedemo below runs at 165 and 165 frames

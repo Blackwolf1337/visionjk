@@ -248,11 +248,11 @@ row has its cvar and its script as before, only its place changed.
 
 | Tab | Headings |
 |-----|----------|
-| Video | Screen (Video Mode, Display Mode, Anti-Aliasing, Video Sync, Frame Limit, Brightness; with All Settings also Wide Screen Layout, Render Scale, Anisotropic Filter), Detail (Dynamic Glow, Shadows), Bloom (Bloom, Show Driver Info; with All Settings Bloom Strength, Bloom Threshold), Screen Effects (All Settings only). Since 2026-11-02 the page has no Video Quality preset and no rows for detail, texture, filter, lights, wall marks and render to texture (their cvars stay for the console), see "The setup menu" in [client.md](client.md) |
+| Video | Screen (Video Mode, Display Mode, Anti-Aliasing, Video Sync, Frame Limit, Brightness; with All Settings also Anisotropic Filter), Detail (Dynamic Glow), Bloom (Bloom, Show Driver Info; with All Settings Bloom Strength, Bloom Threshold), Screen Effects (All Settings only). Since 2026-11-02 the page has no Video Quality preset and no rows for detail, texture, filter, lights, wall marks and render to texture (their cvars stay for the console), see "The setup menu" in [client.md](client.md). Wide Screen Layout, Render Scale and Shadows are gone as rows since 2026-11-02 |
 | Sound | Volume, 3D Sound, Hits (Hit Sounds, Kill Sound), Voice Chat, Boombox |
-| Game | Game, Language, Lightsabers (with Saber Team Colours, Two-Coloured Staff), Duels, Players (Enemy Model, Ally Model), Hats and Capes, Weapons (Jedi Outcast Shots, Disruptor Beam, Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, Binocular Lens, Rocket Lock-On) |
-| HUD | Menus and HUD, View (Field of View, Camera Distance, Smooth Camera), Crosshair (Crosshair Size, Crosshair Colour, Name Opacity, Lead Indicator), On Screen (Show Frame Rate, Show Timer, Timer Milliseconds, Timer Counts Down, Show Lagometer, Killfeed, Team Overlay Size, Scoreboard Clock, Spectator Map), Movement (the rows from TaystJK) |
-| Chat & Social | Players, Chat (with Chat Emoji, Chat Log, Name Alert), Notifications, Console (with Console Clock), Clan, Text (UTF-8 Text) |
+| Game | Game, Language, Lightsabers (with Saber Team Colours, Two-Coloured Staff), Duels, Players (Enemy Model, Ally Model, each a button that opens the window "Pick a Model"), Weapons (Jedi Outcast Shots, Disruptor Beam, Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, Binocular Lens, Rocket Lock-On) |
+| HUD | Menus and HUD, View (Field of View, Camera Distance, Smooth Camera), Crosshair (Crosshair Size, Crosshair Colour, Name Opacity, Lead Indicator), On Screen (Show Frame Rate, Show Timer, Timer Milliseconds, Timer Counts Down, Show Lagometer, Killfeed, Team Overlay Size, Spectator Map), Movement (the rows from TaystJK) |
+| Chat & Social | Players, Chat (with Chat Emoji, Chat Log, Name Alert), Notifications, Console (with Console Clock), Clan, Hats and Capes |
 | Network | Updates and Downloads, Connection, Security |
 | Mods | unchanged |
 
@@ -287,7 +287,7 @@ with a lightsaber is always in third person) and the camera lag off. For each pi
 restarts the video where needed, takes a screenshot, does the same for b, then crops and scales with Pillow.
 
 Taken and dropped, because they looked the same at the size of the pane: Geometric Detail, Texture Filter,
-Anisotropic Filter, Detailed Shaders, Anti-Aliasing, Render Scale. Shadows "More Realistic" (`cg_shadows 2`) drew
+Anisotropic Filter, Detailed Shaders, Anti-Aliasing, Render Scale (gone since 2026-11-02). Shadows "More Realistic" (`cg_shadows 2`, gone since 2026-11-02) drew
 the player as a purple, see-through figure with `rd-vulkan-vision`, so it has no picture (a possible renderer
 bug, not looked into).
 
@@ -498,11 +498,11 @@ of the menus.
 
 | Page of Setup | Entries the old menus did not have |
 |---------------|-------------------------------------|
-| Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`v_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
+| Video | Frame Limit (`com_maxfps`), Dynamic Glow (`r_DynamicGlow`) |
 | Sound | Room Reflections (`v_spatialReflections`), Sound Around Corners (`v_spatialPaths`), Doppler Effect (`s_doppler`) |
-| HUD | New HUD (`v_hud`), Classic Menus (`v_classic`), Menu in the Level (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
+| HUD | New HUD (`v_hud`), Classic Menus (`v_classic`), 3D Menu (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
 | Game | under the heading Weapons: Scope Lens (`v_scope`), Zoom with Mouse Wheel (`v_scopeWheelZoom`), Motion Tracker Speed (`v_motionThreshold`, the speed for the tracker, slider, 10 to 200, default 40) |
-| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars), UTF-8 Text (`v_utf8`, under the heading Text) |
+| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`) |
 | Controls, Extras | Free the Mouse (`+v_cursor`), Scoreboard with Mouse (`v_scores_pick`) |
 
