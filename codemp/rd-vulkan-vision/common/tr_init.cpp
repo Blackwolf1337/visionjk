@@ -141,7 +141,6 @@ cvar_t	*r_debugSort;
 cvar_t	*r_marksOnTriangleMeshes;
 
 cvar_t	*r_aspectCorrectFonts;
-cvar_t	*v_2dAspect;
 cvar_t	*v_menuBlur;
 cvar_t	*tay_bloom;
 cvar_t	*tay_bloomIntensity;
@@ -202,12 +201,11 @@ R_2DBias
 
 The 2D of the game is placed on a grid of 640 x 480. On a window that is wider than 4:3 the grid keeps its height
 and gets wider instead of being stretched over the window: the 640 of the menus sit in the middle and x runs from
--bias to 640 + bias. With v_2dAspect 0, or on a window of 4:3 or narrower, the bias is 0 and the grid is stretched
-as it always was. The modules and the engine read the bias from the cvar v_2dBias, which only this renderer sets.
+-bias to 640 + bias. On a window of 4:3 or narrower the bias is 0. The modules and the engine read the bias from the cvar v_2dBias, which only this renderer sets.
 ===============
 */
 float R_2DBias( void ) {
-	if ( !v_2dAspect->integer || glConfig.vidHeight <= 0
+	if ( glConfig.vidHeight <= 0
 		|| glConfig.vidWidth * SCREEN_HEIGHT <= glConfig.vidHeight * SCREEN_WIDTH ) {
 		return 0.0f;
 	}
@@ -225,7 +223,7 @@ grid gave it room for, and the words of the menus ran into each other (2026-10-2
 ===============
 */
 float R_2DBiasY( void ) {
-	if ( !v_2dAspect->integer || glConfig.vidWidth <= 0
+	if ( glConfig.vidWidth <= 0
 		|| glConfig.vidWidth * SCREEN_HEIGHT >= glConfig.vidHeight * SCREEN_WIDTH ) {
 		return 0.0f;
 	}
@@ -748,7 +746,6 @@ void R_Register( void )
 	tay_bloomIntensity					= ri.Cvar_Get( "tay_bloomIntensity",				"0.6",						CVAR_ARCHIVE, "How strongly the bright parts shine with tay_bloom, 0 to 2" );
 	tay_bloomThreshold					= ri.Cvar_Get( "tay_bloomThreshold",				"0.5",						CVAR_ARCHIVE, "How bright a part has to be to shine with tay_bloom, 0 to 0.95 of white" );
 	tay_renderScale						= ri.Cvar_Get( "tay_renderScale",					"1",						CVAR_ARCHIVE|CVAR_LATCH, "The level is drawn at this size of the window, 0.5 to 2, the HUD and the menus at the size of the window (vid_restart)" );
-	v_2dAspect							= ri.Cvar_Get( "v_2dAspect",						"1",						CVAR_ARCHIVE|CVAR_LATCH, "1 menus and HUD keep their shape on a wide window, 0 they are stretched over it (vid_restart)" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );
 /*

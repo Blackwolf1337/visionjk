@@ -1470,111 +1470,6 @@ static qboolean CG_ScanForExistingClientInfo( clientInfo_t *ci, int clientNum ) 
 
 /*
 ======================
-CG_SetDeferredClientInfo
-
-We aren't going to load it now, so grab some other
-client's info to use until we have some spare time.
-======================
-*/
-static void CG_SetDeferredClientInfo( clientInfo_t *ci ) {
-	int		i;
-	clientInfo_t	*match;
-
-	// if someone else is already the same models and skins we
-	// can just load the client info
-	for ( i = 0 ; i < cgs.maxclients ; i++ ) {
-		match = &cgs.clientinfo[ i ];
-		if ( !match->infoValid || match->deferred ) {
-			continue;
-		}
-		if ( Q_stricmp( ci->skinName, match->skinName ) ||
-			 Q_stricmp( ci->modelName, match->modelName ) ||
-//			 Q_stricmp( ci->headModelName, match->headModelName ) ||
-//			 Q_stricmp( ci->headSkinName, match->headSkinName ) ||
-			 (cgs.gametype >= GT_TEAM && ci->team != match->team && ci->team != TEAM_SPECTATOR) ) {
-			continue;
-		}
-
-		 /*
-		if (Q_stricmp(ci->saberName, match->saberName) ||
-			Q_stricmp(ci->saber2Name, match->saber2Name))
-		{
-			continue;
-		}
-		*/
-
-		// just load the real info cause it uses the same models and skins
-		CG_LoadClientInfo( ci );
-		return;
-	}
-
-	// if we are in teamplay, only grab a model if the skin is correct
-	if ( cgs.gametype >= GT_TEAM ) {
-		for ( i = 0 ; i < cgs.maxclients ; i++ ) {
-			match = &cgs.clientinfo[ i ];
-			if ( !match->infoValid || match->deferred ) {
-				continue;
-			}
-			if ( ci->team != TEAM_SPECTATOR &&
-				(Q_stricmp( ci->skinName, match->skinName ) ||
-				 (cgs.gametype >= GT_TEAM && ci->team != match->team)) ) {
-				continue;
-			}
-
-			/*
-			if (Q_stricmp(ci->saberName, match->saberName) ||
-				Q_stricmp(ci->saber2Name, match->saber2Name))
-			{
-				continue;
-			}
-			*/
-
-			ci->deferred = qtrue;
-			CG_CopyClientInfoModel( match, ci );
-			return;
-		}
-		// load the full model, because we don't ever want to show
-		// an improper team skin.  This will cause a hitch for the first
-		// player, when the second enters.  Combat shouldn't be going on
-		// yet, so it shouldn't matter
-		CG_LoadClientInfo( ci );
-		return;
-	}
-
-	// find the first valid clientinfo and grab its stuff
-	for ( i = 0 ; i < cgs.maxclients ; i++ ) {
-		match = &cgs.clientinfo[ i ];
-		if ( !match->infoValid ) {
-			continue;
-		}
-
-		/*
-		if (Q_stricmp(ci->saberName, match->saberName) ||
-			Q_stricmp(ci->saber2Name, match->saber2Name))
-		{
-			continue;
-		}
-		*/
-
-		if (match->deferred)
-		{ //no deferring off of deferred info. Because I said so.
-			continue;
-		}
-
-		ci->deferred = qtrue;
-		CG_CopyClientInfoModel( match, ci );
-		return;
-	}
-
-	// we should never get here...
-	//trap->Print( "CG_SetDeferredClientInfo: no valid clients!\n" );
-	//Actually it is possible now because of the unique sabers.
-
-	CG_LoadClientInfo( ci );
-}
-
-/*
-======================
 CG_NewClientInfo
 ======================
 */
@@ -1940,17 +1835,9 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	// scan for an existing clientinfo that matches this modelname
 	// so we can avoid loading checks if possible
 	if ( !CG_ScanForExistingClientInfo( &newInfo, clientNum ) ) {
-		// if we are defering loads, just have it pick the first valid
-		if (cg.snap && cg.snap->ps.clientNum == clientNum)
-		{ //rww - don't defer your own client info ever
-			CG_LoadClientInfo( &newInfo );
-		}
-		else if (  cg_deferPlayers.integer && cgs.gametype != GT_SIEGE && !com_buildScript.integer && !cg.loading ) {
-			// keep whatever they had if it won't violate team skins
-			CG_SetDeferredClientInfo( &newInfo );
-		} else {
-			CG_LoadClientInfo( &newInfo );
-		}
+		// loaded at once: models load fast enough that nobody waits for a quiet moment (cg_deferPlayers until
+		// 2026-11-02)
+		CG_LoadClientInfo( &newInfo );
 	}
 
 	// replace whatever was there with the new one

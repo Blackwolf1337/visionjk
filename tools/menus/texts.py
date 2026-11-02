@@ -141,9 +141,6 @@ TR = {
     'Frame Limit': 'FPS-Limit',
     'The most frames a second the game draws.': 'Maximale Bilder pro Sekunde.',
     'None': 'Keine',
-    'Wide Screen Layout': 'Breitbild-Layout',
-    'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.':
-        'Menüs und HUD behalten bei einem breiten Fenster ihre Proportionen. Gilt nach einem Neustart der Grafik.',
     'Dynamic Glow': 'Dynamisches Leuchten',
     'Lightsabers and lights glow.': 'Lichtschwerter und Lichtquellen leuchten.',
     'Shadows': 'Schatten',
@@ -269,8 +266,6 @@ TR = {
     'Time': 'Uhrzeit',
     'Date and Time': 'Datum und Uhrzeit',
     'A clock in the corner of the console.': 'Eine Uhr in der Ecke der Konsole.',
-    'Scoreboard Clock': 'Uhr im Scoreboard',
-    'The time of day on the scoreboard.': 'Die Uhrzeit im Scoreboard.',
     'Timer Milliseconds': 'Timer mit Millisekunden',
     'The timer of the level with milliseconds.': 'Zeigt den Timer des Levels mit Millisekunden.',
     'Timer Counts Down': 'Timer als Countdown',
@@ -442,8 +437,6 @@ TR = {
     'How wide the chat box is.': 'Wie breit die Chatbox ist.',
     'Chat Beep': 'Chat-Ton',
     'A sound when somebody says something.': 'Ein Ton, wenn jemand etwas schreibt.',
-    'Sharp Console Font': 'Scharfe Konsolenschrift',
-    'The console in a font with every character.': 'Konsole mit einer Schrift, die alle Zeichen enthält.',
     'Console Text Size': 'Konsolen-Textgröße',
     'The size of the text of the console.': 'Größe des Konsolentextes.',
     'Console Opacity': 'Konsolen-Deckkraft',
@@ -495,9 +488,6 @@ TR = {
     'Key File': 'Schlüsseldatei',
     'The file with the key for the admin login, where no agent has it.':
         'Datei mit dem Schlüssel für den Admin-Login, falls kein Agent ihn hat.',
-    'UTF-8 Text': 'UTF-8-Text',
-    'Every character in names and chat. Off for a language with a code page of its own.':
-        'Alle Zeichen in Namen und Chat. Für Sprachen mit eigener Codepage ausschalten.',
 
     # controls
     'Grapple Hook': 'Enterhaken',

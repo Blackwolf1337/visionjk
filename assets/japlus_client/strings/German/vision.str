@@ -361,14 +361,6 @@ REFERENCE           NONE
 LANG_ENGLISH        "None"
 LANG_GERMAN         "Keine"
 
-REFERENCE           WIDE_SCREEN_LAYOUT
-LANG_ENGLISH        "Wide Screen Layout"
-LANG_GERMAN         "Breitbild-Layout"
-
-REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
-LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
-LANG_GERMAN         "Menüs und HUD behalten bei einem breiten Fenster ihre Proportionen. Gilt nach einem Neustart der Grafik."
-
 REFERENCE           RENDER_SCALE
 LANG_ENGLISH        "Render Scale"
 LANG_GERMAN         "Renderskalierung"
@@ -1273,14 +1265,6 @@ REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 LANG_ENGLISH        "How large the list of your team mates is."
 LANG_GERMAN         "Wie groß die Liste deiner Teamkameraden ist."
 
-REFERENCE           SCOREBOARD_CLOCK
-LANG_ENGLISH        "Scoreboard Clock"
-LANG_GERMAN         "Uhr im Scoreboard"
-
-REFERENCE           THE_TIME_OF_DAY_ON_THE_SCOREBOARD
-LANG_ENGLISH        "The time of day on the scoreboard."
-LANG_GERMAN         "Die Uhrzeit im Scoreboard."
-
 REFERENCE           SPECTATOR_MAP
 LANG_ENGLISH        "Spectator Map"
 LANG_GERMAN         "Zuschauerkarte"
@@ -1529,14 +1513,6 @@ REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
 LANG_ENGLISH        "How large the notifications are."
 LANG_GERMAN         "Wie groß die Benachrichtigungen sind."
 
-REFERENCE           SHARP_CONSOLE_FONT
-LANG_ENGLISH        "Sharp Console Font"
-LANG_GERMAN         "Scharfe Konsolenschrift"
-
-REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
-LANG_ENGLISH        "The console in a font with every character."
-LANG_GERMAN         "Konsole mit einer Schrift, die alle Zeichen enthält."
-
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"
 LANG_GERMAN         "Konsolen-Textgröße"
@@ -1576,14 +1552,6 @@ LANG_GERMAN         "Clan-Passwort"
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_GERMAN         "Clan-Chat und Clan-Funk erreichen alle auf dem Server mit demselben Passwort. Der Server sieht es."
-
-REFERENCE           UTF_8_TEXT
-LANG_ENGLISH        "UTF-8 Text"
-LANG_GERMAN         "UTF-8-Text"
-
-REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
-LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
-LANG_GERMAN         "Alle Zeichen in Namen und Chat. Für Sprachen mit eigener Codepage ausschalten."
 
 REFERENCE           CHECK_FOR_UPDATES
 LANG_ENGLISH        "Check for Updates"
@@ -1721,9 +1689,13 @@ REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
 LANG_GERMAN         "Duelle"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_GERMAN         "Hüte und Umhänge"
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_GERMAN         "Spieler"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_GERMAN         "Waffen"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
@@ -1733,13 +1705,9 @@ REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_GERMAN         "Lichtschwerter"
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_GERMAN         "Spieler"
-
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_GERMAN         "Waffen"
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_GERMAN         "Hüte und Umhänge"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1788,10 +1756,6 @@ LANG_GERMAN         "#same"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_GERMAN         "Konsole"
-
-REFERENCE           TEXT
-LANG_ENGLISH        "Text"
-LANG_GERMAN         "#same"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1924,6 +1888,10 @@ LANG_GERMAN         "Oberfläche"
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 LANG_GERMAN         "Aussehen von Menüs, HUD und Kamera."
+
+REFERENCE           TEXT
+LANG_ENGLISH        "Text"
+LANG_GERMAN         "#same"
 
 REFERENCE           LIGHT_SIDE
 LANG_ENGLISH        "Light Side"

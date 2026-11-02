@@ -80,8 +80,6 @@ SETUP = [
                           'r_swapinterval')),
         ('multi', 'Frame Limit', 'com_maxfps', (('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240),
                                                 ('None', 0)), 'The most frames a second the game draws.'),
-        ('yesno', 'Wide Screen Layout', 'v_2dAspect',
-         'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.'),
         ('old', 'video2', ('r_gamma',)),
         ('multi', 'Render Scale', 'tay_renderScale', (('Half', 0.5), ('Three Quarters', 0.75), ('Full', 1), ('One and a Half', 1.5), ('Double', 2)),
          'The size the level is drawn at, the HUD stays sharp. Counts after a video restart.'),
@@ -204,7 +202,6 @@ SETUP = [
         ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
         ('yesno', 'Killfeed', 'tay_killfeed', 'Who killed whom with what, at the upper right.'),
         ('slider', 'Team Overlay Size', 'tay_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
-        ('yesno', 'Scoreboard Clock', 'tay_scoreboardClock', 'The time of day on the scoreboard.'),
         ('yesno', 'Spectator Map', 'tay_specHud', 'While you watch, a map of the players around at the upper right.'),
         ('head', 'Movement'),
         ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
@@ -248,15 +245,12 @@ SETUP = [
         ('slider', 'Notification Time', 'v_notifyTime', 6000, 2000, 20000, 'How many milliseconds a notification stays.'),
         ('slider', 'Notification Size', 'v_notifyScale', 1, 0.5, 2, 'How large the notifications are.'),
         ('head', 'Console'),
-        ('yesno', 'Sharp Console Font', 'con_font', 'The console in a font with every character.'),
         ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
         ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
         ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
         ('head', 'Clan'),
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
-        ('head', 'Text'),
-        ('yesno', 'UTF-8 Text', 'v_utf8', 'Every character in names and chat. Off for a language with a code page of its own.'),
     ]),
     ('Network', 'Updates, downloads and security.', [
         ('head', 'Updates and Downloads'),
@@ -826,10 +820,8 @@ def window_frame(m, L):
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
-                  'Text', 'Connection', 'Security'}
-ADVANCED_CVARS = {'tay_renderscale', 'v_2daspect', 'r_ext_texture_filter_anisotropic', 'tay_bloomintensity',
-                  'tay_bloomthreshold'}
+ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
+ADVANCED_CVARS = {'tay_renderscale', 'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold'}
 
 
 def page_sections(m, content, folds):

@@ -361,14 +361,6 @@ REFERENCE           NONE
 LANG_ENGLISH        "None"
 LANG_SPANISH        "Ninguno"
 
-REFERENCE           WIDE_SCREEN_LAYOUT
-LANG_ENGLISH        "Wide Screen Layout"
-LANG_SPANISH        "Diseño panorámico"
-
-REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
-LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
-LANG_SPANISH        "Los menús y el HUD mantienen sus proporciones en una ventana panorámica. Se aplica al reiniciar los gráficos."
-
 REFERENCE           RENDER_SCALE
 LANG_ENGLISH        "Render Scale"
 LANG_SPANISH        "Escala de renderizado"
@@ -1273,14 +1265,6 @@ REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 LANG_ENGLISH        "How large the list of your team mates is."
 LANG_SPANISH        "Tamaño de la lista de tus compañeros."
 
-REFERENCE           SCOREBOARD_CLOCK
-LANG_ENGLISH        "Scoreboard Clock"
-LANG_SPANISH        "Reloj del marcador"
-
-REFERENCE           THE_TIME_OF_DAY_ON_THE_SCOREBOARD
-LANG_ENGLISH        "The time of day on the scoreboard."
-LANG_SPANISH        "La hora del día en el marcador."
-
 REFERENCE           SPECTATOR_MAP
 LANG_ENGLISH        "Spectator Map"
 LANG_SPANISH        "Mapa del espectador"
@@ -1529,14 +1513,6 @@ REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
 LANG_ENGLISH        "How large the notifications are."
 LANG_SPANISH        "Tamaño de las notificaciones."
 
-REFERENCE           SHARP_CONSOLE_FONT
-LANG_ENGLISH        "Sharp Console Font"
-LANG_SPANISH        "Fuente de consola nítida"
-
-REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
-LANG_ENGLISH        "The console in a font with every character."
-LANG_SPANISH        "La consola en una fuente con todos los caracteres."
-
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"
 LANG_SPANISH        "Tamaño del texto de la consola"
@@ -1576,14 +1552,6 @@ LANG_SPANISH        "Contraseña del clan"
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_SPANISH        "El chat y la radio del clan llegan a todos en el servidor que tengan la misma. El servidor la ve."
-
-REFERENCE           UTF_8_TEXT
-LANG_ENGLISH        "UTF-8 Text"
-LANG_SPANISH        "Texto UTF-8"
-
-REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
-LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
-LANG_SPANISH        "Todos los caracteres en nombres y chat. Desactivado para un idioma con página de códigos propia."
 
 REFERENCE           CHECK_FOR_UPDATES
 LANG_ENGLISH        "Check for Updates"
@@ -1721,9 +1689,13 @@ REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
 LANG_SPANISH        "Duelos"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_SPANISH        "Sombreros y capas"
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_SPANISH        "Jugadores"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_SPANISH        "Armas"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
@@ -1733,13 +1705,9 @@ REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_SPANISH        "Sables de luz"
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_SPANISH        "Jugadores"
-
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_SPANISH        "Armas"
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_SPANISH        "Sombreros y capas"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1788,10 +1756,6 @@ LANG_SPANISH        "#same"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_SPANISH        "Consola"
-
-REFERENCE           TEXT
-LANG_ENGLISH        "Text"
-LANG_SPANISH        "Texto"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1924,6 +1888,10 @@ LANG_SPANISH        "Interfaz"
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 LANG_SPANISH        "El aspecto de los menús, el HUD y la cámara."
+
+REFERENCE           TEXT
+LANG_ENGLISH        "Text"
+LANG_SPANISH        "Texto"
 
 REFERENCE           LIGHT_SIDE
 LANG_ENGLISH        "Light Side"

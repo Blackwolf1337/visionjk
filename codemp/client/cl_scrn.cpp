@@ -165,10 +165,10 @@ void SCR_DrawSmallChar( int x, int y, int ch ) {
 /*
 ** SCR_DrawConChar
 ** A character of the console or of its input line in a cell: x and y are pixels of the window, the cell is
-** con.charWidth x con.charHeight. Where text is UTF-8 and con_font is 1 it is drawn from the TrueType font with
+** con.charWidth x con.charHeight. Where text is UTF-8 it is drawn from the TrueType font with
 ** a fixed width, in the size of the cell: sharp at any con_scale, with every character that font has. The marks
-** of the console that are no text (the cursor blocks, values below 32), a renderer without that font and
-** con_font 0 take the charset picture of the game, which has Windows-1252 only: any other character is a '?'.
+** of the console that are no text (the cursor blocks, values below 32) and a renderer without that font take
+** the charset picture of the game, which has Windows-1252 only: any other character is a '?'.
 */
 void SCR_DrawConChar( int x, int y, unsigned int ch ) {
 	if ( ch == ' ' ) {
@@ -180,7 +180,7 @@ void SCR_DrawConChar( int x, int y, unsigned int ch ) {
 	if ( CL_UTF8() ) {
 		int byte;
 
-		if ( ch >= 32 && con_font->integer && re->ext.Font_DrawMonoChar( x, y, con.charWidth, con.charHeight, ch ) ) {
+		if ( ch >= 32 && re->ext.Font_DrawMonoChar( x, y, con.charWidth, con.charHeight, ch ) ) {
 			return;
 		}
 		byte = Q_UnicodeToCP1252( ch );

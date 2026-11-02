@@ -1241,7 +1241,6 @@ extern	cvar_t	*r_debugSort;
 extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
-extern	cvar_t	*v_2dAspect;
 extern	cvar_t	*v_menuBlur;
 extern	cvar_t	*tay_bloom;
 extern	cvar_t	*tay_bloomIntensity;

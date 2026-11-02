@@ -96,7 +96,6 @@ cvar_t	*cl_autolodscale;
 
 cvar_t	*cl_consoleKeys;
 cvar_t	*cl_consoleUseScanCode;
-cvar_t	*v_utf8;
 static cvar_t	*v_utf8Text;
 cvar_t	*cl_consoleShiftRequirement;
 
@@ -180,16 +179,15 @@ userinfo as v_utf8Text, by which a server of this tree knows what a client sends
 ======================
 */
 qboolean CL_UTF8( void ) {
-	static int		utf8Count = -1, languageCount = -1;
+	static int		languageCount = -1;
 	static qboolean	active = qfalse;
 
-	if ( !v_utf8 || !se_language ) {
+	if ( !se_language ) {
 		return qfalse;
 	}
-	if ( v_utf8->modificationCount != utf8Count || se_language->modificationCount != languageCount ) {
-		utf8Count = v_utf8->modificationCount;
+	if ( se_language->modificationCount != languageCount ) {
 		languageCount = se_language->modificationCount;
-		active = (qboolean)( v_utf8->integer && !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
+		active = (qboolean)( !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
 			&& !Language_IsTaiwanese() && !Language_IsJapanese() && !Language_IsChinese() && !Language_IsThai() );
 		Cvar_Set( "v_utf8Text", active ? "1" : "0" );
 	}
@@ -2939,7 +2937,6 @@ void CL_Init( void ) {
 	CL_MemWatchInit();
 	CL_MasterInit();
 	CL_RepInit();
-	v_utf8 = Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
 	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
 	Cvar_Get( "v_cgameChat", "1", CVAR_ROM, "" );

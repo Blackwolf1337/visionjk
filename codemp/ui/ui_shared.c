@@ -984,7 +984,7 @@ A menu file with a canvas is written in the pixels of a picture of that size, th
 not in the 640 x 480 units of the game. The picture is put on the screen as large as it fits with the same
 scale across and down, in the middle: on a wide window it fills the height, on a window of 4:3 it fills the
 width. So a page keeps the proportions it was drawn with on every window, also where the 2D of the game is
-stretched (v_2dAspect 0), and on the panel in the level, where it is put on the 640 x 480 of the panel.
+stretched (an engine without v_2dBias), and on the panel in the level, where it is put on the 640 x 480 of the panel.
 
 What the file gave is kept in item->canvas and the rectangles, the sizes of text and the rows of lists are
 worked out from it again whenever the window or the panel is not the one the layout was made for.

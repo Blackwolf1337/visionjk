@@ -1907,15 +1907,15 @@
 
 		itemDef 
 		{	
-			name				defermodels
+			name				teamchatsonly
 			group				options
       		type				ITEM_TYPE_MULTI
-			text				@MENUS_DEFER_PLAYER_MODELS
-			cvar				"cg_deferPlayers"
+			text				@MENUS_TEAM_CHATS_ONLY
+			cvar				"cg_teamChatsOnly"
 			cvarFloatList		
 			{ 
-				@MENUS_OFF				0
-				@MENUS_ON					1
+				@MENUS_NO				0
+				@MENUS_YES			1
 			}
 			rect				220 101 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
@@ -1925,7 +1925,7 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 			visible				0
-			descText			@MENUS_DEFERS_LOADING_OF_NEW
+			descText			@MENUS_IGNORE_NON_TEAM_CHATS
 			action 
 			{ 
 				play			"sound/interface/button1"
@@ -1943,15 +1943,15 @@
 
 		itemDef 
 		{	
-			name				teamchatsonly
+			name				simpleitems
 			group				options
       		type				ITEM_TYPE_MULTI
-			text				@MENUS_TEAM_CHATS_ONLY
-			cvar				"cg_teamChatsOnly"
+			text				@MENUS_SIMPLE_ITEMS
+			cvar				"cg_simpleItems"
 			cvarFloatList		
 			{ 
-				@MENUS_NO				0
-				@MENUS_YES			1
+				@MENUS_OFF		0
+				@MENUS_ON			1
 			}
 			rect				220 121 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
@@ -1961,7 +1961,7 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 			visible				0
-			descText			@MENUS_IGNORE_NON_TEAM_CHATS
+			descText			@MENUS_RENDER_ICONS_FOR_ITEMS
 			action 
 			{ 
 				play			"sound/interface/button1"
@@ -1979,42 +1979,6 @@
 
 		itemDef 
 		{	
-			name				simpleitems
-			group				options
-      		type				ITEM_TYPE_MULTI
-			text				@MENUS_SIMPLE_ITEMS
-			cvar				"cg_simpleItems"
-			cvarFloatList		
-			{ 
-				@MENUS_OFF		0
-				@MENUS_ON			1
-			}
-			rect				220 141 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible				0
-			descText			@MENUS_RENDER_ICONS_FOR_ITEMS
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-
-			mouseenter 
-			{ 
-				show			highlight6
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-			} 
-		}
-
-		itemDef 
-		{	
 			name				teamoverlay
 			group				options
       		type				ITEM_TYPE_MULTI
@@ -2025,7 +1989,7 @@
 				@MENUS_OFF		0
 				@MENUS_ON			1
 			}
-			rect				220 161 300 20
+			rect				220 141 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2041,11 +2005,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight7
+				show			highlight6
 			}
 			mouseexit 
 			{ 
-				hide			highlight7
+				hide			highlight6
 			} 
 		}
 
@@ -2068,7 +2032,7 @@
 			{
 				"0"
 			}
-			rect				220 181 300 20
+			rect				220 161 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2086,11 +2050,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight8
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight8
+				hide			highlight7
 			} 
 		}
 
@@ -2112,7 +2076,7 @@
 			{
 				"0"
 			}
-			rect				220 181 300 20
+			rect				220 161 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2130,11 +2094,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight8
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight8
+				hide			highlight7
 			} 
 		}
 
@@ -2153,7 +2117,7 @@
 				@MENUS_SOUNDS_AND_EFFECTS	2
 				@MENUS_SOUNDS_EFFECTS_GRAPHICS	3
 			}
-			rect				220 201 300 20
+			rect				220 181 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2167,11 +2131,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight9
+				show			highlight8
 			}
 			mouseexit 
 			{ 
-				hide			highlight9
+				hide			highlight8
 			} 
 		}
 
@@ -2184,7 +2148,7 @@
 			cvar				"se_language"
 			feeder				40
 			cvarStrList			feeder
-			rect				220 221 300 20
+			rect				220 201 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2201,11 +2165,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight9
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight9
 			} 
 		}
 		
@@ -2223,7 +2187,7 @@
 				Deutsch   			deutsch
 				"Español" 			espanol
 			}
-			rect				220 241 300 20
+			rect				220 221 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2240,11 +2204,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight10
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight10
 			} 
 		}
 		
@@ -2259,7 +2223,7 @@
 			descText			@VISION_STABLE_THE_RELEASES_DEVELOPMENT_EARL
 			cvar				"v_updateChannel"
 			cvarStrList			{ @VISION_STABLE "stable" @VISION_DEVELOPMENT "dev" }
-			rect				220 261 300 20
+			rect				220 241 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2274,11 +2238,11 @@
 			}
 			mouseenter
 			{
-				show			highlight14
+				show			highlight11
 			}
 			mouseexit
 			{
-				hide			highlight14
+				hide			highlight11
 			}
 		}
 
@@ -2291,7 +2255,7 @@
 			style				WINDOW_STYLE_EMPTY
 			text				@VISION_NEW_MENUS
 			descText			@VISION_THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
-			rect				220 281 300 20
+			rect				220 261 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2308,11 +2272,11 @@
 			}
 			mouseenter
 			{
-				show			highlight15
+				show			highlight14
 			}
 			mouseexit
 			{
-				hide			highlight15
+				hide			highlight14
 			}
 		}
 
@@ -2324,7 +2288,7 @@
 			text				@MENUS_SET_LANGUAGE
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				365 301 120 32 
+			rect				365 281 120 32 
 			font				2
 			textscale			1        
 			textalign			ITEM_ALIGN_CENTER
@@ -2343,11 +2307,11 @@
 			}
 			mouseEnter 
 			{ 
-				show			highlight12
+				show			highlight13
 			}
 			mouseExit 
 			{ 
-				hide			highlight12
+				hide			highlight13
 			}	  	  
 
 		}

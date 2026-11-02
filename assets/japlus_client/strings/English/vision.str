@@ -272,12 +272,6 @@ LANG_ENGLISH        "The most frames a second the game draws."
 REFERENCE           NONE
 LANG_ENGLISH        "None"
 
-REFERENCE           WIDE_SCREEN_LAYOUT
-LANG_ENGLISH        "Wide Screen Layout"
-
-REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
-LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
-
 REFERENCE           RENDER_SCALE
 LANG_ENGLISH        "Render Scale"
 
@@ -956,12 +950,6 @@ LANG_ENGLISH        "Team Overlay Size"
 REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 LANG_ENGLISH        "How large the list of your team mates is."
 
-REFERENCE           SCOREBOARD_CLOCK
-LANG_ENGLISH        "Scoreboard Clock"
-
-REFERENCE           THE_TIME_OF_DAY_ON_THE_SCOREBOARD
-LANG_ENGLISH        "The time of day on the scoreboard."
-
 REFERENCE           SPECTATOR_MAP
 LANG_ENGLISH        "Spectator Map"
 
@@ -1148,12 +1136,6 @@ LANG_ENGLISH        "Notification Size"
 REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
 LANG_ENGLISH        "How large the notifications are."
 
-REFERENCE           SHARP_CONSOLE_FONT
-LANG_ENGLISH        "Sharp Console Font"
-
-REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
-LANG_ENGLISH        "The console in a font with every character."
-
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"
 
@@ -1183,12 +1165,6 @@ LANG_ENGLISH        "Clan Password"
 
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-
-REFERENCE           UTF_8_TEXT
-LANG_ENGLISH        "UTF-8 Text"
-
-REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
-LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
 
 REFERENCE           CHECK_FOR_UPDATES
 LANG_ENGLISH        "Check for Updates"
@@ -1292,8 +1268,11 @@ LANG_ENGLISH        "The game, lightsabers, duels and what players and weapons l
 REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
@@ -1301,11 +1280,8 @@ LANG_ENGLISH        "Language"
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -1342,9 +1318,6 @@ LANG_ENGLISH        "Chat"
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
-
-REFERENCE           TEXT
-LANG_ENGLISH        "Text"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1444,6 +1417,9 @@ LANG_ENGLISH        "Interface"
 
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
+
+REFERENCE           TEXT
+LANG_ENGLISH        "Text"
 
 REFERENCE           LIGHT_SIDE
 LANG_ENGLISH        "Light Side"

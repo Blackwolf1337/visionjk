@@ -321,8 +321,8 @@ static void Scores_Head( float x, float y, float fade ) {
 	Q_StripColor( host );
 	Scores_TextFit( x + 12.0f, y + 5.0f, 14.0f, 0.7f, colorWhite, fade, host, room );
 	Com_sprintf( about, sizeof( about ), "%s  |  %s", BG_GetGametypeString( cgs.gametype ), Info_ValueForKey( info, "mapname" ) );
-	// tay_scoreboardClock: the local time after the level
-	if ( tay_scoreboardClock.integer ) {
+	// the local time after the level
+	{
 		qtime_t now;
 
 		trap->RealTime( &now );
