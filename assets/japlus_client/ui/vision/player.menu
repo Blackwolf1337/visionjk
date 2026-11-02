@@ -351,7 +351,7 @@
 			descText				@MENUS_CHOOSE_SPECIES
 			type					ITEM_TYPE_MULTI
 			style					WINDOW_STYLE_EMPTY
-			rect					20 555 424 52
+			rect					48 555 384 52
 			font					5
 			textscale				0.89
 			textaligny				-3.65
@@ -378,7 +378,7 @@
 		itemDef
 		{
 			name					vision_l_part0
-			rect					48 607 150 52
+			rect					76 607 150 52
 			visible					1
 			text					@MENUS_HEAD
 			font					5
@@ -429,7 +429,7 @@
 		itemDef
 		{
 			name					vision_l_part1
-			rect					48 659 150 52
+			rect					76 659 150 52
 			visible					1
 			text					@MENUS_TORSO
 			font					5
@@ -480,7 +480,7 @@
 		itemDef
 		{
 			name					vision_l_part2
-			rect					48 711 150 52
+			rect					76 711 150 52
 			visible					1
 			text					@MENUS_LEGS
 			font					5

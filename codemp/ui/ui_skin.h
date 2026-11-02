@@ -79,3 +79,4 @@ void		Skin_Field( itemDef_t *item, float x, float y, float width, float height, 
 void		Skin_Bar( float x, float y, float w, float h, float fraction, const vec4_t fill, const vec4_t back );
 void		Skin_ScrollBar( float x, float y, float w, float h, float start, float part, qboolean horizontal, const vec4_t accent );
 void		Skin_Row( float x, float y, float w, float h, const vec4_t accent, qboolean selected, float hover );
+void		Skin_Tile( float x, float y, float w, float h, const vec4_t accent, qboolean selected, qboolean hover );

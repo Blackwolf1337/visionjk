@@ -42,7 +42,7 @@
 		descY					650
 		descScale				0.83
 		descColor				0.56 0.64 0.74 1
-		descAlignment			ITEM_ALIGN_CENTER
+		descAlignment			ITEM_ALIGN_LEFT
 		onOpen
 		{
 			uiScript homeModel ;

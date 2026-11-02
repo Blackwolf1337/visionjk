@@ -1039,6 +1039,28 @@ void Skin_ScrollBar( float x, float y, float w, float h, float start, float part
 	}
 }
 
+// A picture of a list of pictures (heads, parts of the body, characters): the chosen one has a ring of two pixels in
+// the accent, the one under the mouse a faint ring
+void Skin_Tile( float x, float y, float w, float h, const vec4_t accent, qboolean selected, qboolean hover ) {
+	const float			sx = Skin_ScaleX(), sy = Skin_ScaleY();
+	const float			x0 = Skin_SnapX( x ), y0 = Skin_SnapY( y ), x1 = Skin_SnapX( x + w ), y1 = Skin_SnapY( y + h );
+	const int			pixels = Q_max( 2, (int)( SKIN_RADIUS * sy + 0.5f ) );
+	const skinShape_t	*shape;
+	vec4_t				color;
+
+	if ( ( !selected && !hover ) || !Skin_Ready() || x1 <= x0 || y1 <= y0 ) {
+		return;
+	}
+	shape = Skin_Shape( SKIN_RING, pixels, 2 );
+	if ( !shape ) {
+		return;
+	}
+	Skin_Color( color, accent, selected ? 1.0f : 0.45f );
+	DC->setColor( color );
+	Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), Q_min( pixels / sy, ( y1 - y0 ) * 0.5f ), shape, qfalse );
+	DC->setColor( NULL );
+}
+
 // A row of a list: the chosen one is filled and has a bar at its left, the one under the mouse is lit
 void Skin_Row( float x, float y, float w, float h, const vec4_t accent, qboolean selected, float hover ) {
 	vec4_t color;

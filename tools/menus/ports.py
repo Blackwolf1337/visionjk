@@ -186,6 +186,7 @@ def home(m):
         m.append(e)
     mf.put(m, 'descX', 48)
     mf.put(m, 'descY', 650)
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
     mf.put(m, 'descScale', cv.scale(15))
 
 
@@ -501,15 +502,16 @@ def profile_all(m, extra):
         for key in ('group', 'page'):
             mf.drop(e.block, key)
         mf.put(e.block, 'row', 1)
-        # (a row has its name 28 pixels in, room for the dot of a changed setting: its name under the others)
-        place(e, (LX - 28, y, LW + 40, cv.ROW))
+        # (a row has its name 28 pixels in, room for the dot of a changed setting: the names of the parts under it
+        # are as far in, the lines go over the whole column)
+        place(e, (LX, y, LW, cv.ROW))
         sized(e, 16)
         act = mf.find(e.block, 'action')
         act.block = list(act.block) + ['uiScript', 'updatecharmodel', ';']
         new.append(e)
     y += cv.ROW
     for n, (box, words) in enumerate((('headlistbox', '@MENUS_HEAD'), ('torsolistbox', '@MENUS_TORSO'), ('lowerlistbox', '@MENUS_LEGS'))):
-        new.append(cv.text('vision_l_part%d' % n, (LX, y, 150, cv.ROW), words, 16, cv.NAV_TEXT, 'left', 0, FONT, ('decoration',)))
+        new.append(cv.text('vision_l_part%d' % n, (LX + 28, y, 150, cv.ROW), words, 16, cv.NAV_TEXT, 'left', 0, FONT, ('decoration',)))
         for e in get(two, box):
             _listbox(e, (LX + LW - 220, y + 4, 220, cv.ROW - 8), cv.ROW - 12, True)
             act = mf.find(e.block, 'action')

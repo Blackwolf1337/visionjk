@@ -7156,6 +7156,22 @@ static void Item_Row_Paint( itemDef_t *item ) {
 		}
 		break;
 
+	case ITEM_TYPE_OWNERDRAW:
+		if ( DC->ownerDrawItem ) {
+			// a setting the ui writes itself (team colour, jedi or not): its word in a field between two arrows,
+			// as one of several; the owner draw still takes the clicks
+			const float aw = arrow * 0.55f, apad = Item_RowSize( item, 12.0f, 5.0f );
+			const float width = DC->ownerDrawWidth ? DC->ownerDrawWidth( item->window.ownerDraw, small ) : 0.0f;
+			const float tx = widget.x + ( widget.w - width ) * 0.5f, ty = mid - DC->textHeight( "A", small, font ) * 0.5f;
+
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, rad, skinField, edge );
+			Skin_Arrow( widget.x + apad, mid - arrow * 0.4f, aw, arrow * 0.8f, qtrue, ink );
+			Skin_Arrow( widget.x + widget.w - apad - aw, mid - arrow * 0.4f, aw, arrow * 0.8f, qfalse, ink );
+			DC->ownerDrawItem( tx, ty, width, widget.h, 0, 0, item->window.ownerDraw, item->window.ownerDrawFlags, item->alignment,
+				item->special, small, ink, item->window.background, 0, font );
+		}
+		break;
+
 	case ITEM_TYPE_SLIDER: {
 		// a track filled up to its knob, what it stands at after it
 		float w, x = Item_Slider_Track( item, &w );
@@ -7996,6 +8012,12 @@ void Item_Model_Paint(itemDef_t *item)
 	}
 	refdef.fov_x = (modelPtr->fov_x) ? modelPtr->fov_x : (int)((float)refdef.width / 640.0f * 90.0f);
 	refdef.fov_y = (modelPtr->fov_y) ? modelPtr->fov_y : atan2( refdef.height, refdef.width / tan( refdef.fov_x / 360 * M_PI ) ) * ( 360 / M_PI );
+	if ( modelPtr->fov_x && modelPtr->fov_y && refdef.width > 0 && refdef.height > 0 ) {
+		// The two angles of a menu fit the box it was made for. On a screen of another shape (wide screens, canvas
+		// pages) the box has other proportions in pixels, and the model was stretched: keep the height (the model
+		// stands in it, its distance follows from it above) and take the width from the pixels.
+		refdef.fov_x = RAD2DEG( atan( tan( DEG2RAD( refdef.fov_y * 0.5f ) ) * refdef.width / refdef.height ) ) * 2.0f;
+	}
 
 	//refdef.fov_x = (int)((float)refdef.width / 640.0f * 90.0f);
 	//refdef.fov_y = atan2( refdef.height, refdef.width / tan( refdef.fov_x / 360 * M_PI ) ) * ( 360 / M_PI );
@@ -8159,6 +8181,22 @@ void Item_TextScroll_Paint(itemDef_t *item)
 #define COLOR_MAX 255.0f
 
 // Draw routine for list boxes
+// The mark of the chosen picture of a list of pictures, at x, y: a ring in a menu of the new look (and a faint one
+// on the picture under the mouse), the rectangle of the border colour in the others
+static void Item_ListBox_ImageMark( itemDef_t *item, float x, float y, int i ) {
+	const listBoxDef_t *listPtr = item->typeData.listbox;
+
+	if ( Item_Skinned( item ) ) {
+		const qboolean under = (qboolean)( ( item->window.flags & WINDOW_MOUSEOVER ) && DC->cursorx >= x && DC->cursorx < x + listPtr->elementWidth
+			&& DC->cursory >= y && DC->cursory < y + listPtr->elementHeight );
+
+		Skin_Tile( x, y, listPtr->elementWidth - 1, listPtr->elementHeight - 1, ( (menuDef_t *)item->parent )->focusColor,
+			(qboolean)( i == item->cursorPos ), under );
+	} else if ( i == item->cursorPos ) {
+		DC->drawRect( x, y, listPtr->elementWidth - 1, listPtr->elementHeight - 1, item->window.borderSize, item->window.borderColor );
+	}
+}
+
 void Item_ListBox_Paint(itemDef_t *item) {
 	float x, y, sizeWidth, count, i, i2,sizeHeight, thumb;
 	int startPos;
@@ -8208,7 +8246,8 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					const float track = item->window.rect.w - SCROLLBAR_SIZE * 3;
 
 					thumb = Item_ListBox_ThumbDrawPosition( item );
-					Skin_ScrollBar( x + SCROLLBAR_SIZE, y, item->window.rect.w - SCROLLBAR_SIZE * 2, SCROLLBAR_SIZE,
+					// (on the lower rim: a strip of pictures is as high as one picture, and the bar lay on them)
+					Skin_ScrollBar( x + SCROLLBAR_SIZE, item->window.rect.y + item->window.rect.h - 2.0f, item->window.rect.w - SCROLLBAR_SIZE * 2, 4.0f,
 						( track > 0.0f ) ? ( thumb - x - SCROLLBAR_SIZE ) / ( track + SCROLLBAR_SIZE ) : 0.0f,
 						( track > 0.0f ) ? SCROLLBAR_SIZE / ( track + SCROLLBAR_SIZE ) : 1.0f, qtrue, ( (menuDef_t *)item->parent )->focusColor );
 				} else {
@@ -8264,10 +8303,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					DC->drawHandlePic(x+1, y+1, listPtr->elementWidth - 2, listPtr->elementHeight - 2, image);
 				}
 
-				if (i == item->cursorPos)
-				{
-					DC->drawRect(x, y, listPtr->elementWidth-1, listPtr->elementHeight-1, item->window.borderSize, item->window.borderColor);
-				}
+				Item_ListBox_ImageMark( item, x, y, (int)i );
 
 				sizeWidth -= listPtr->elementWidth;
 				if (sizeWidth < listPtr->elementWidth)
@@ -8379,10 +8415,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 							DC->drawHandlePic(x+1, y+1, listPtr->elementWidth - 2, listPtr->elementHeight - 2, image);
 						}
 
-						if (i == item->cursorPos)
-						{
-							DC->drawRect(x, y, listPtr->elementWidth-1, listPtr->elementHeight-1, item->window.borderSize, item->window.borderColor);
-						}
+						Item_ListBox_ImageMark( item, x, y, (int)i );
 
 						sizeWidth -= listPtr->elementWidth;
 						if (sizeWidth < listPtr->elementWidth)
@@ -8423,10 +8456,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 						DC->drawHandlePic(x+1, y+1, listPtr->elementWidth - 2, listPtr->elementHeight - 2, image);
 					}
 
-					if (i == item->cursorPos)
-					{
-						DC->drawRect(x, y, listPtr->elementWidth - 1, listPtr->elementHeight - 1, item->window.borderSize, item->window.borderColor);
-					}
+					Item_ListBox_ImageMark( item, x, y, (int)i );
 
 					listPtr->endPos++;
 					sizeHeight -= listPtr->elementHeight;
@@ -8503,6 +8533,25 @@ void Item_ListBox_Paint(itemDef_t *item) {
 							imageStartX = listPtr->columnInfo[j+1].pos;
 						}
 						DC->setColor( NULL );
+						if ( centred ) {
+							// The pictures of a row (password, force, sabers of a server) end where the next column
+							// begins, as large as the letters. The old code left out where the list starts (near
+							// 0 in the old menus) and made them a whole row high: on a canvas page they covered
+							// the names of the levels.
+							const float	icon = Q_min( listPtr->elementHeight - 4.0f, DC->textHeight( "A", item->textscale, item->iMenuFont ) * 1.6f );
+							const float	iconY = y + listPtr->elementHeight + 2 + ( listPtr->elementHeight - icon ) * 0.5f;
+							const float	right = x + imageStartX - 4.0f;
+
+							if ( optionalImage3 >= 0 ) {
+								DC->drawHandlePic( right - ( icon + 2.0f ) * 3.0f, iconY, icon, icon, optionalImage3 );
+							}
+							if ( optionalImage2 >= 0 ) {
+								DC->drawHandlePic( right - ( icon + 2.0f ) * 2.0f, iconY, icon, icon, optionalImage2 );
+							}
+							if ( optionalImage1 >= 0 ) {
+								DC->drawHandlePic( right - ( icon + 2.0f ), iconY, icon, icon, optionalImage1 );
+							}
+						} else {
 						if (optionalImage3 >= 0)
 						{
 							DC->drawHandlePic(imageStartX - listPtr->elementHeight*3, y+listPtr->elementHeight+2, listPtr->elementHeight, listPtr->elementHeight, optionalImage3);
@@ -8514,6 +8563,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 						if (optionalImage1 >= 0)
 						{
 							DC->drawHandlePic(imageStartX - listPtr->elementHeight, y+listPtr->elementHeight+2, listPtr->elementHeight, listPtr->elementHeight, optionalImage1);
+						}
 						}
 					}
 				}
@@ -8527,7 +8577,8 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					else if (text)
 					{
 //						DC->drawText(x + 4, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle);
-						DC->drawText(x + 4, centred ? rowTextY : y + item->textaligny, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle, item->iMenuFont);
+						// (clear of the bar at the left of the chosen row in the new look)
+						DC->drawText(x + ( centred ? 8 : 4 ), centred ? rowTextY : y + item->textaligny, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle, item->iMenuFont);
 					}
 				}
 

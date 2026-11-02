@@ -125,8 +125,21 @@ def text_row(e, x, y, w):
     return e
 
 
-def rule(x, y, w, *more):
-    return fill('vision_rule', (x, y + ROW_H - 1, w, 0.67), ['1', '1', '1', '0.07'], *more)
+def choice_row(e, x, y, w):
+    """An owner draw that is a choice (team colour, jedi or not) as a row: its name at the left, the value in a field
+    between two arrows at the right (ui_shared.c, Item_Row_Paint)."""
+    return row(e, x, y, w)
+
+
+def rule(x, y, w, *more, of=None):
+    """The line under a row; with of= the item it belongs to, it is shown and hidden with it."""
+    line = fill('vision_rule', (x, y + ROW_H - 1, w, 0.67), ['1', '1', '1', '0.07'], *more)
+    if of is not None:
+        for key in ('group', 'cvartest', 'showcvar', 'hidecvar'):
+            t = mf.find(of.block, key)
+            if t:
+                line.block.append(Entry(t.key, list(t.args), list(t.block) if t.block is not None else None))
+    return line
 
 
 class Frame:
@@ -289,12 +302,12 @@ def profile(f):
     for e in named(old, 'namefield'):
         f.new.append(row(e, rx, y + 22, rw, 3))
     for e in named(old, 'setcolor'):
-        f.new.append(text_row(e, rx, y + 44, rw))
+        f.new.append(choice_row(e, rx, y + 44, rw))
     f.new.append(rule(rx, y + 44, rw))
     top = y + 66
     for e in named(old, 'jedinonjedi'):
-        f.new.append(text_row(e, rx, top, rw))
-        f.new.append(rule(rx, top, rw))
+        f.new.append(choice_row(e, rx, top, rw))
+        f.new.append(rule(rx, top, rw, of=e))
         top += ROW_H
     holsters = named(old, 'holsterlist')
     if holsters:

@@ -305,9 +305,6 @@
 			text					@MENUS_TEAM_COLOR
 			ownerdraw				UI_SKIN_COLOR
 			rect					852 164 340 44
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				16
-			textaligny				8.4
 			outlinecolor			1 .5 .5 .5
 			font					5
 			textscale				1.4
@@ -323,6 +320,7 @@
 			}
 			visible					1
 			action { play "sound/interface/button1" }
+			row						1
 		}
 
 		itemDef
@@ -332,9 +330,6 @@
 			text					@MENUS_TEAM_COLOR
 			ownerdraw				UI_SKIN_COLOR
 			rect					852 164 340 44
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				16
-			textaligny				8.4
 			outlinecolor			1 .5 .5 .5
 			font					5
 			textscale				1.4
@@ -351,6 +346,7 @@
 			visible					1
 			decoration
 			action { play "sound/interface/button1" }
+			row						1
 		}
 
 		itemDef
@@ -371,16 +367,14 @@
 			text					@MENUS_JEDI_NONJEDI
 			ownerdraw				UI_JEDI_NONJEDI
 			rect					852 208 340 44
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				16
 			outlinecolor			1 .5 .5 .5
-			textaligny				8.4
 			font					5
 			textscale				1.4
 			forecolor				0.86 0.90 0.945 1
 			descText				@MENUS_CHOOSE_JEDI_NONJEDI
 			visible					1
 			action { uiScript updateForceStatus }
+			row						1
 		}
 
 		itemDef
@@ -391,6 +385,7 @@
 			style					WINDOW_STYLE_FILLED
 			backcolor				1 1 1 0.07
 			decoration
+			group					jedinonjedi
 		}
 
 		itemDef
