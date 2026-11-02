@@ -1187,20 +1187,14 @@ struct SRagEffector
 #define RAG_MASK (CONTENTS_SOLID|CONTENTS_TERRAIN)//|CONTENTS_SHOTCLIP|CONTENTS_TERRAIN//(/*MASK_SOLID|*/CONTENTS_SOLID|CONTENTS_PLAYERCLIP|CONTENTS_SHOTCLIP|CONTENTS_TERRAIN|CONTENTS_BODY)
 
 extern cvar_t	*broadsword;
-extern cvar_t	*broadsword_kickbones;
-extern cvar_t	*broadsword_kickorigin;
-extern cvar_t	*broadsword_dontstopanim;
-extern cvar_t	*broadsword_waitforshot;
-extern cvar_t	*broadsword_playflop;
 
-extern cvar_t	*broadsword_effcorr;
-
-extern cvar_t	*broadsword_ragtobase;
-
-extern cvar_t	*broadsword_dircap;
-
-extern cvar_t	*broadsword_extra1;
-extern cvar_t	*broadsword_extra2;
+// the tuning of the ragdolls, the cvars broadsword_* until 2026-11-02 with the values they had
+#define RAG_WAIT_FOR_SHOT	0		// 1: a corpse waits for the first shot, 2: for it or a collision during the death
+#define RAG_DONT_STOP_ANIM	0		// the death animation plays to its end before the ragdoll takes over
+#define RAG_KICK_ORIGIN		1		// a shot corpse is kicked
+#define RAG_KICK_BONES		1		// a shot moves the bones near it
+#define RAG_TO_BASE			2		// bones are pulled towards the animation, 2: with the offsets of the pelvis
+#define RAG_DIR_CAP			64.0f	// the most a bone moves towards its goal in a step
 
 #define RAG_PCJ						(0x00001)
 #define RAG_PCJ_POST_MULT			(0x00002)	// has the pcj flag as well
@@ -1674,10 +1668,9 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 		break;
 	case CRagDollParams::RP_END_DEATH_ANIM:
 		ghoul2.mFlags|=GHOUL2_RAG_PENDING|GHOUL2_RAG_DONE;
-		if (broadsword_waitforshot &&
-			broadsword_waitforshot->integer)
+		if (RAG_WAIT_FOR_SHOT)
 		{
-			if (broadsword_waitforshot->integer==2)
+			if (RAG_WAIT_FOR_SHOT==2)
 			{
 				if (!(ghoul2.mFlags&(GHOUL2_RAG_COLLISION_DURING_DEATH|GHOUL2_RAG_COLLISION_SLIDE)))
 				{
@@ -1700,9 +1693,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 		{
 			ghoul2.mFlags|=GHOUL2_RAG_COLLISION_DURING_DEATH;
 		}
-		if (broadsword_dontstopanim && broadsword_waitforshot &&
-			(broadsword_dontstopanim->integer || broadsword_waitforshot->integer)
-			)
+		if (RAG_DONT_STOP_ANIM || RAG_WAIT_FOR_SHOT)
 		{
 			if (!(ghoul2.mFlags&GHOUL2_RAG_DONE))
 			{
@@ -1711,8 +1702,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 		}
 		break;
 	case CRagDollParams::RP_CORPSE_SHOT:
-		if (broadsword_kickorigin &&
-			broadsword_kickorigin->integer)
+		if (RAG_KICK_ORIGIN)
 		{
 			if (index>=0&&index<(int)blist.size())
 			{
@@ -2070,7 +2060,7 @@ void G2_SetRagDollBullet(CGhoul2Info &ghoul2,const vec3_t rayStart,const vec3_t 
 	shotDir[2]*=lenr;
 
 	bool firstOne=false;
-	if (broadsword_kickbones&&broadsword_kickbones->integer)
+	if (RAG_KICK_BONES)
 	{
 		int		magicFactor13=150.0f; // squared radius multiplier for shot effects
 		boneInfo_v &blist = ghoul2.mBlist;
@@ -3480,8 +3470,7 @@ static bool G2_RagDollSettlePositionNumeroTrois(CGhoul2Info_v &ghoul2V, const ve
 		VectorCopy(params->scale, entScale);
 	}
 
-	if (broadsword_ragtobase &&
-		broadsword_ragtobase->integer > 1)
+	if (RAG_TO_BASE > 1)
 	{
 		//grab the pelvis directions to offset base positions for bones
 		G2_RagGetPelvisLumbarOffsets(ghoul2V[0], params, pelvisPos, pelvisDir, animPelvisPos,
@@ -3609,8 +3598,7 @@ static bool G2_RagDollSettlePositionNumeroTrois(CGhoul2Info_v &ghoul2V, const ve
 
 		//get the position this bone would be in if we were in the desired frame
 		hasBasePos = false;
-		if (broadsword_ragtobase &&
-			broadsword_ragtobase->integer)
+		if (RAG_TO_BASE)
 		{
 			vec3_t v, a;
 			float f;
@@ -3618,7 +3606,7 @@ static bool G2_RagDollSettlePositionNumeroTrois(CGhoul2Info_v &ghoul2V, const ve
 			G2_RagGetWorldAnimMatrix(ghoul2V[0], bone, params, worldBaseMatrix);
 			G2API_GiveMeVectorFromMatrix(&worldBaseMatrix, ORIGIN, basePos);
 
-			if (broadsword_ragtobase->integer > 1)
+			if (RAG_TO_BASE > 1)
 			{
 				float fa = AngleNormalize180(animPelvisDir[YAW]-pelvisDir[YAW]);
 				float d = fa-bone.offsetRotation;
@@ -3878,10 +3866,9 @@ static bool G2_RagDollSettlePositionNumeroTrois(CGhoul2Info_v &ghoul2V, const ve
 		{
 			e.desiredDirection[k] = (goalSpot[k] - e.currentOrigin[k]);
 
-			if (broadsword_dircap &&
-				broadsword_dircap->value)
+			if (RAG_DIR_CAP)
 			{
-				float cap = broadsword_dircap->value;
+				float cap = RAG_DIR_CAP;
 
 				if (bone.solidCount > 5)
 				{

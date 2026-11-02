@@ -182,10 +182,11 @@ cvar_t *s_dynamix;
 cvar_t *s_initsound;
 cvar_t *s_khz;
 cvar_t *s_language;	// note that this is distinct from "g_language"
-cvar_t *s_lip_threshold_1;
-cvar_t *s_lip_threshold_2;
-cvar_t *s_lip_threshold_3;
-cvar_t *s_lip_threshold_4;
+// how loud a voice is for each frame of the mouth, as parts of its range (the cvars s_threshold1..4 until 2026-11-02)
+#define S_LIP_THRESHOLD_1	0.5f
+#define S_LIP_THRESHOLD_2	4.0f
+#define S_LIP_THRESHOLD_3	7.0f
+#define S_LIP_THRESHOLD_4	8.0f
 cvar_t *s_mixahead;
 cvar_t *s_mixPreStep;
 cvar_t *s_musicVolume;
@@ -326,10 +327,6 @@ void S_Init( void ) {
 	s_khz               = Cvar_Get( "s_khz",               "44",      CVAR_ARCHIVE | CVAR_LATCH );
 	S_SoundCacheInit();
 	s_language          = Cvar_Get( "s_language",          "english", CVAR_ARCHIVE | CVAR_NORESTART, "Sound language" );
-	s_lip_threshold_1   = Cvar_Get( "s_threshold1",        "0.5",     0 );
-	s_lip_threshold_2   = Cvar_Get( "s_threshold2",        "4.0",     0 );
-	s_lip_threshold_3   = Cvar_Get( "s_threshold3",        "7.0",     0 );
-	s_lip_threshold_4   = Cvar_Get( "s_threshold4",        "8.0",     0 );
 	s_mixahead          = Cvar_Get( "s_mixahead",          "0.2",     CVAR_ARCHIVE );
 	s_mixPreStep        = Cvar_Get( "s_mixPreStep",        "0.05",    CVAR_ARCHIVE );
 	s_musicVolume       = Cvar_Get( "s_musicvolume",       "0.25",    CVAR_ARCHIVE, "Music Volume" );
@@ -339,7 +336,6 @@ void S_Init( void ) {
 	s_volume            = Cvar_Get( "s_volume",            "0.5",     CVAR_ARCHIVE, "Volume" );
 	s_volumeVoice       = Cvar_Get( "s_volumeVoice",       "1.0",     CVAR_ARCHIVE, "Volume for voice channels" );
 
-	MP3_InitCvars();
 
 	if ( !s_initsound->integer ) {
 		s_soundStarted = 0;	// needed in case you set s_initsound to 0 midgame then snd_restart (div0 err otherwise later)
@@ -1819,23 +1815,23 @@ static int S_CheckAmplitude(channel_t	*ch, const unsigned int s_oldpaintedtime )
 		sample_total /= count;
 
 		// I hate doing this, but its the simplest way
-		if (sample_total < ch->thesfx->fVolRange * s_lip_threshold_1->value)
+		if (sample_total < ch->thesfx->fVolRange * S_LIP_THRESHOLD_1)
 		{
 		// tell the scripts that are relying on this that we are still going, but actually silent right now.
 			sample = -1;
 		}
 		else
-		if (sample_total < ch->thesfx->fVolRange * s_lip_threshold_2->value)
+		if (sample_total < ch->thesfx->fVolRange * S_LIP_THRESHOLD_2)
 		{
 			sample = 1;
 		}
 		else
-		if (sample_total < ch->thesfx->fVolRange * s_lip_threshold_3->value)
+		if (sample_total < ch->thesfx->fVolRange * S_LIP_THRESHOLD_3)
 		{
 			sample = 2;
 		}
 		else
-		if (sample_total < ch->thesfx->fVolRange * s_lip_threshold_4->value)
+		if (sample_total < ch->thesfx->fVolRange * S_LIP_THRESHOLD_4)
 		{
 			sample = 3;
 		}
@@ -2265,13 +2261,13 @@ int S_MP3PreProcessLipSync(channel_t *ch, short *data)
 
 	sampleTotal /= 6;
 
-	if (sampleTotal < ch->thesfx->fVolRange * s_lip_threshold_1->value)
+	if (sampleTotal < ch->thesfx->fVolRange * S_LIP_THRESHOLD_1)
 		sample = -1;
-	else if (sampleTotal < ch->thesfx->fVolRange * s_lip_threshold_2->value)
+	else if (sampleTotal < ch->thesfx->fVolRange * S_LIP_THRESHOLD_2)
 		sample = 1;
-	else if (sampleTotal < ch->thesfx->fVolRange * s_lip_threshold_3->value)
+	else if (sampleTotal < ch->thesfx->fVolRange * S_LIP_THRESHOLD_3)
 		sample = 2;
-	else if (sampleTotal < ch->thesfx->fVolRange * s_lip_threshold_4->value)
+	else if (sampleTotal < ch->thesfx->fVolRange * S_LIP_THRESHOLD_4)
 		sample = 3;
 	else
 		sample = 4;
@@ -2539,8 +2535,7 @@ void S_SoundList_f( void ) {
 
 	for (sfx=s_knownSfx, i=0 ; i<s_numSfx ; i++, sfx++)
 	{
-		extern cvar_t *cv_MP3overhead;
-		qboolean bMP3DumpOverride = (qboolean)(bShouldBeMP3 && cv_MP3overhead && !sfx->bDefaultSound && !sfx->pMP3StreamHeader && sfx->pSoundData && (Z_Size(sfx->pSoundData) > cv_MP3overhead->integer));
+		qboolean bMP3DumpOverride = (qboolean)(bShouldBeMP3 && !sfx->bDefaultSound && !sfx->pMP3StreamHeader && sfx->pSoundData && (Z_Size(sfx->pSoundData) > MP3_Overhead()));
 
 		if (bMP3DumpOverride || (!bShouldBeMP3 && (!bWavOnly || sfx->eSoundCompressionMethod == ct_16)))
 		{

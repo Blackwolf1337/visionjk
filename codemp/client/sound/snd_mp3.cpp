@@ -241,10 +241,10 @@ qboolean MP3_ReadSpecialTagInfo(byte *pbLoadedFile, int iLoadedFileLen,
 #define FUZZY_AMOUNT (5*1024)	// so it has to be significantly over, not just break even, because of
 								// the xtra CPU time versus memory saving
 
-cvar_t* cv_MP3overhead = NULL;
-void MP3_InitCvars(void)
+// what a sound kept as MP3 costs beyond its data (the cvar s_mp3overhead until 2026-11-02)
+int MP3_Overhead( void )
 {
-	cv_MP3overhead = Cvar_Get("s_mp3overhead", va("%d", sizeof(MP3STREAM) + FUZZY_AMOUNT), CVAR_ARCHIVE );
+	return (int)sizeof(MP3STREAM) + FUZZY_AMOUNT;
 }
 
 
@@ -262,12 +262,7 @@ qboolean MP3Stream_InitFromFile( sfx_t* sfx, byte *pbSrcData, int iSrcDatalen, c
 	//	making small files much bigger (and therefore best left as WAV)...
 	//
 
-	if (cv_MP3overhead &&
-			(
-			//iSrcDatalen + sizeof(MP3STREAM) + FUZZY_AMOUNT < iMP3UnPackedSize
-			iSrcDatalen + cv_MP3overhead->integer < iMP3UnPackedSize
-			)
-		)
+	if ( iSrcDatalen + MP3_Overhead() < iMP3UnPackedSize )
 	{
 		// ok, let's keep it as MP3 then...
 		//

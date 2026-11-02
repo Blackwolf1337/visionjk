@@ -103,6 +103,16 @@ trRefEntity_t *ssLastEntityDrawn=NULL;
 vec3_t	ssViewOrigin, ssViewRight, ssViewUp;
 
 
+// the wind of the surface sprites where the weather of the level gives none (R_GetWindSpeed), the cvars r_wind* until
+// 2026-11-02 with the values they had
+#define SS_WIND_SPEED		0.0f
+#define SS_WIND_ANGLE		0.0f
+#define SS_WIND_GUST		0.0f
+#define SS_WIND_DAMP		0.1f
+#define SS_WIND_POINT_FORCE	0.0f
+#define SS_WIND_POINT_X		0.0f
+#define SS_WIND_POINT_Y		0.0f
+
 static void R_SurfaceSpriteFrameUpdate(void)
 {
 	float dtime, dampfactor;	// Time since last update and damping time for wind changes
@@ -117,7 +127,7 @@ static void R_SurfaceSpriteFrameUpdate(void)
 	if (backEnd.refdef.time < lastSSUpdateTime)
 	{	// Time is BEFORE the last update time, so reset everything.
 		curWindGust = 5;
-		curWindSpeed = r_windSpeed->value;
+		curWindSpeed = SS_WIND_SPEED;
 		nextGustTime = 0;
 		gustLeft = 0;
 	}
@@ -208,8 +218,8 @@ static void R_SurfaceSpriteFrameUpdate(void)
 	}
 	else
 	{	// Use the cvar.
-		targetspeed = r_windSpeed->value;	// Minimum gust delay, in seconds.
-		curWindGust = r_windGust->value;
+		targetspeed = SS_WIND_SPEED;	// Minimum gust delay, in seconds.
+		curWindGust = SS_WIND_GUST;
 	}
 
 	if (targetspeed > 0 && curWindGust)
@@ -241,7 +251,7 @@ static void R_SurfaceSpriteFrameUpdate(void)
 	}
 	else
 	{	// Calculate the target wind vector based off cvars
-		ang[YAW] = r_windAngle->value;
+		ang[YAW] = SS_WIND_ANGLE;
 	}
 
 	ang[PITCH] = -90.0 + targetspeed;
@@ -267,7 +277,7 @@ static void R_SurfaceSpriteFrameUpdate(void)
 	AngleVectors(ang, targetWindBlowVect, NULL, NULL);
 
 	// Start calculating a smoothing factor so wind doesn't change abruptly between speeds.
-	dampfactor = 1.0-r_windDampFactor->value;	// We must exponent the amount LEFT rather than the amount bled off
+	dampfactor = 1.0-SS_WIND_DAMP;	// We must exponent the amount LEFT rather than the amount bled off
 	dtime = (float)(backEnd.refdef.time - lastSSUpdateTime) * (1.0/(float)WIND_DAMP_INTERVAL);	// Our dampfactor is geared towards a time interval equal to "1".
 
 	// Note that since there are a finite number of "practical" delta millisecond values possible,
@@ -288,7 +298,7 @@ static void R_SurfaceSpriteFrameUpdate(void)
 
 	lastSSUpdateTime = backEnd.refdef.time;
 
-	curWindPointForce = r_windPointForce->value - (ratio * (r_windPointForce->value - curWindPointForce));
+	curWindPointForce = SS_WIND_POINT_FORCE - (ratio * (SS_WIND_POINT_FORCE - curWindPointForce));
 	if (curWindPointForce < 0.01)
 	{
 		curWindPointActive = qfalse;
@@ -296,8 +306,8 @@ static void R_SurfaceSpriteFrameUpdate(void)
 	else
 	{
 		curWindPointActive = qtrue;
-		curWindPoint[0] = r_windPointX->value;
-		curWindPoint[1] = r_windPointY->value;
+		curWindPoint[0] = SS_WIND_POINT_X;
+		curWindPoint[1] = SS_WIND_POINT_Y;
 		curWindPoint[2] = 0;
 	}
 

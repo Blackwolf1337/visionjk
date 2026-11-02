@@ -48,7 +48,7 @@ extern const char sKEY_UNCOMP[];
 //
 // (filenames are used purely for error reporting, all files should already be loaded before you get here)
 //
-void		MP3_InitCvars			( void );
+int			MP3_Overhead			( void );
 qboolean	MP3_IsValid				( const char *psLocalFilename, void *pvData, int iDataLen, qboolean bStereoDesired = qfalse );
 int			MP3_GetUnpackedSize		( const char *psLocalFilename, void *pvData, int iDataLen, qboolean qbIgnoreID3Tag = qfalse, qboolean bStereoDesired = qfalse );
 int			MP3_UnpackRawPCM		( const char *psLocalFilename, void *pvData, int iDataLen, byte *pbUnpackBuffer, qboolean bStereoDesired = qfalse );

@@ -76,13 +76,6 @@ cvar_t	*r_autoMapDisable; //don't calc it (since it's slow in debug) -rww
 cvar_t	*r_surfaceSprites;
 cvar_t	*r_surfaceWeather;
 
-cvar_t	*r_windSpeed;
-cvar_t	*r_windAngle;
-cvar_t	*r_windGust;
-cvar_t	*r_windDampFactor;
-cvar_t	*r_windPointForce;
-cvar_t	*r_windPointX;
-cvar_t	*r_windPointY;
 
 
 cvar_t	*r_ext_compressed_textures;
@@ -185,17 +178,7 @@ cvar_t	*r_Ghoul2UnSqashAfterSmooth=0;
 //cvar_t	*r_Ghoul2BlendMultiplier=0;
 
 cvar_t	*broadsword=0;
-cvar_t	*broadsword_kickbones=0;
-cvar_t	*broadsword_kickorigin=0;
-cvar_t	*broadsword_playflop=0;
-cvar_t	*broadsword_dontstopanim=0;
-cvar_t	*broadsword_waitforshot=0;
-cvar_t	*broadsword_extra1=0;
-cvar_t	*broadsword_extra2=0;
 
-cvar_t	*broadsword_effcorr=0;
-cvar_t	*broadsword_ragtobase=0;
-cvar_t	*broadsword_dircap=0;
 
 /*
 Ghoul2 Insert End
@@ -732,13 +715,6 @@ void R_Register( void )
 	r_debugSort							= ri.Cvar_Get( "r_debugSort",						"0",						CVAR_CHEAT, "" );
 	r_surfaceSprites					= ri.Cvar_Get( "r_surfaceSprites",					"1",						CVAR_ARCHIVE_ND, "" );
 	r_surfaceWeather					= ri.Cvar_Get( "r_surfaceWeather",					"0",						CVAR_TEMP, "" );
-	r_windSpeed							= ri.Cvar_Get( "r_windSpeed",						"0",						CVAR_NONE, "" );
-	r_windAngle							= ri.Cvar_Get( "r_windAngle",						"0",						CVAR_NONE, "" );
-	r_windGust							= ri.Cvar_Get( "r_windGust",						"0",						CVAR_NONE, "" );
-	r_windDampFactor					= ri.Cvar_Get( "r_windDampFactor",					"0.1",						CVAR_NONE, "" );
-	r_windPointForce					= ri.Cvar_Get( "r_windPointForce",					"0",						CVAR_NONE, "" );
-	r_windPointX						= ri.Cvar_Get( "r_windPointX",						"0",						CVAR_NONE, "" );
-	r_windPointY						= ri.Cvar_Get( "r_windPointY",						"0",						CVAR_NONE, "" );
 	r_nocurves							= ri.Cvar_Get( "r_nocurves",						"0",						CVAR_CHEAT, "" );
 	r_drawworld							= ri.Cvar_Get( "r_drawworld",						"1",						CVAR_CHEAT, "" );
 	r_drawfog							= ri.Cvar_Get( "r_drawfog",						"2",						CVAR_CHEAT, "" );
@@ -787,16 +763,6 @@ Ghoul2 Insert Start
 	r_Ghoul2AnimSmooth					= ri.Cvar_Get( "r_ghoul2animsmooth",				"0.3",						CVAR_NONE, "" );
 	r_Ghoul2UnSqashAfterSmooth			= ri.Cvar_Get( "r_ghoul2unsqashaftersmooth",		"1",						CVAR_NONE, "" );
 	broadsword							= ri.Cvar_Get( "broadsword",						"0",						CVAR_ARCHIVE_ND, "" );
-	broadsword_kickbones				= ri.Cvar_Get( "broadsword_kickbones",				"1",						CVAR_NONE, "" );
-	broadsword_kickorigin				= ri.Cvar_Get( "broadsword_kickorigin",			"1",						CVAR_NONE, "" );
-	broadsword_dontstopanim				= ri.Cvar_Get( "broadsword_dontstopanim",			"0",						CVAR_NONE, "" );
-	broadsword_waitforshot				= ri.Cvar_Get( "broadsword_waitforshot",			"0",						CVAR_NONE, "" );
-	broadsword_playflop					= ri.Cvar_Get( "broadsword_playflop",				"1",						CVAR_NONE, "" );
-	broadsword_extra1					= ri.Cvar_Get( "broadsword_extra1",				"0",						CVAR_NONE, "" );
-	broadsword_extra2					= ri.Cvar_Get( "broadsword_extra2",				"0",						CVAR_NONE, "" );
-	broadsword_effcorr					= ri.Cvar_Get( "broadsword_effcorr",				"1",						CVAR_NONE, "" );
-	broadsword_ragtobase				= ri.Cvar_Get( "broadsword_ragtobase",				"2",						CVAR_NONE, "" );
-	broadsword_dircap					= ri.Cvar_Get( "broadsword_dircap",				"64",						CVAR_NONE, "" );
 /*
 Ghoul2 Insert End
 */
