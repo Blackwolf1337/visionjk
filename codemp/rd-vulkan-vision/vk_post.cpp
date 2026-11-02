@@ -744,13 +744,19 @@ void VK_DrawWet( void ) {
 VK_PuddleMirror
 
 Whether the front end draws the view mirrored at the floor of the puddles (R_PuddleView of tr_main.cpp): its
-targets are there, and the views of the level are not drawn in targets of another size (tay_renderScale)
+targets are there, and the views of the level are not drawn in targets of another size (tay_renderScale). The OpenGL
+ES device has none of it (VK_HasWet).
 ===============
 */
 qboolean VK_PuddleMirror( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
 	return (qboolean)( VK_HasWet() && vk.reflect.image && !vk.sceneWidth );
+#endif
 }
 
+#ifndef RD_VISION_GLES
 // the targets of the puddle view take the places of color, depth and their samples, or give them back
 static void VK_SwapPuddleTargets( void ) {
 	vkTarget_t target;
@@ -762,6 +768,7 @@ static void VK_SwapPuddleTargets( void ) {
 	VK_SWAP( vk.depthMS, vk.reflectDepthMS );
 #undef VK_SWAP
 }
+#endif
 
 /*
 ===============
@@ -773,6 +780,9 @@ read it at their own pixel. qfalse: it is not drawn.
 ===============
 */
 qboolean VK_BeginPuddle( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
 	if ( !vk.frame || !VK_PuddleMirror() ) {
 		return qfalse;
 	}
@@ -784,9 +794,11 @@ qboolean VK_BeginPuddle( void ) {
 	vk.reflectFrame = backEnd.viewParms.frameCount;
 	vk.reflectHeight = backEnd.viewParms.portalPlane.dist;
 	return qtrue;
+#endif
 }
 
 void VK_EndPuddle( void ) {
+#ifndef RD_VISION_GLES
 	VK_EndTarget();
 	VK_SwapPuddleTargets();
 	VK_TargetLayout( vk.frame->cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -794,6 +806,7 @@ void VK_EndPuddle( void ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_InvalidateTransform();
+#endif
 }
 
 /*
