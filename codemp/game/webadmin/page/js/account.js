@@ -37,6 +37,10 @@ async function accountLoad() {
 	accountApplyRole();
 	tvApply();
 	$('acctWho').textContent = me.name + ' (' + me.role + (me.account ? '' : ', by key') + ')';
+	// the button of the account at the right of the top bar
+	$('whoName').textContent = me.name;
+	$('whoInit').textContent = (me.name || '?').charAt(0).toUpperCase();
+	$('whoBtn').hidden = false;
 	$('acctOwn').hidden = !me.account;
 	$('acctTotpState').textContent = me.totp ? 'On. ' + me.recovery + ' recovery codes are left.' : 'Off: the password alone opens this account.';
 	$('acctTotpStart').hidden = me.totp;
@@ -169,3 +173,5 @@ $('acctUsers').addEventListener('click', async e => {
 	}
 	accountLoad();
 });
+// the button of the account in the top bar opens its page
+$('whoBtn').addEventListener('click', () => document.querySelector('#pages button[data-tab="account"]').click());

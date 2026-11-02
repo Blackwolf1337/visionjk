@@ -65,9 +65,19 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 @media (max-width: 1240px) { #topbar .meta.wide { display: none; } }
 @media (max-width: 1080px) { #topbar { gap: 8px; } #topbar #host, #topbar .brand span { display: none; } #topbar form.inline input { width: 64px !important; } }
 @media (max-width: 880px) { #topbar { gap: 6px; padding: 0 8px; } #topbar form.inline input { width: 48px !important; } }
+#statusBox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 #status { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 #status.live { background: var(--green); }
 #status.err { background: var(--danger); }
+/* the state in words: the dot's class says which (js/state.js) */
+#statusBox:has(#status.live) #statusText { font-size: 0; }
+#statusBox:has(#status.live) #statusText::after { content: 'Connected'; font-size: 12px; }
+#statusBox:has(#status.err) #statusText { font-size: 0; }
+#statusBox:has(#status.err) #statusText::after { content: 'No connection'; font-size: 12px; color: var(--danger); }
+#whoBtn { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 3px; border-color: transparent; background: transparent; font-size: 12px; }
+#whoBtn[hidden] { display: none; }
+#whoBtn i { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--sel); border: 1px solid var(--edge); color: var(--accent); font-style: normal; font-weight: 600; font-size: 11px; }
+.palGroup { padding: 8px 14px 3px; font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: #6f86a3; }
 .inline { display: flex; gap: 4px; align-items: center; }
 .inline input { width: 170px; }
 
@@ -81,6 +91,14 @@ body.sideClosed #sideGrip, body.ref #sideGrip { display: none; }
 body.sideDrag #side, body.sideDrag #view, body.sideDrag #cfgView, body.sideDrag #fsView, body.sideDrag #logView { transition: none; }
 body.sideDrag { user-select: none; }
 #side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 10px 6px; display: flex; justify-content: space-between; }
+#playersHead { align-items: center; gap: 8px; padding: 7px 8px 5px 10px; }
+#playersHead #playerCount { margin-right: auto; }
+#addBotBtn { padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); }
+body.role-moderator #addBotBtn { display: none; }
+/* the health of a player: the number, a thin bar under it */
+td.hp { position: relative; }
+td.hp i { position: absolute; right: 6px; bottom: 3px; height: 2px; max-width: 28px; border-radius: 1px; background: var(--accent); }
+tr.player td { height: 26px; }
 #side .scroll { overflow: auto; flex: 1; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 4px 6px; text-align: left; white-space: nowrap; }
@@ -437,6 +455,9 @@ tr.ent.ro td:first-child { opacity: .6; }
 /* the form of an entity: a line for every key its class takes, the key with what it is for and the fields of its value */
 #entForm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 4px 8px; align-items: center; margin-bottom: 6px; }
 #entForm:empty { display: none; }
+#entForm:not(.all) .empty { display: none; }
+#entFormMore { width: 100%; margin: 2px 0 8px; padding: 3px; border-style: dashed; background: transparent; color: var(--muted); font-size: 12px; }
+#entFormMore:hover { color: var(--text); }
 #entForm label { min-width: 0; font-size: 12px; line-height: 1.25; }
 #entForm label b, #entForm label i { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #entForm label b { font-weight: 500; }
@@ -462,7 +483,12 @@ tr.ent.ro td:first-child { opacity: .6; }
 #kvTable td.x { width: 24px; white-space: nowrap; }
 #kvTable button.play { margin-right: 3px; }
 #kvTable button { padding: 1px 6px; }
-#entPanel .actions { max-width: none; margin-top: 8px; }
+/* the panel of an entity: what is done to it at the top, + Key, Delete and Apply at the bottom where they stay in
+   sight while it scrolls, the spawnflags as chips that are lit while set */
+#entTools { max-width: none; gap: 3px; margin: 0 0 8px; }
+#entTools button { padding: 2px 7px; font-size: 11px; font-weight: 600; }
+#entFoot { position: sticky; bottom: -10px; z-index: 1; display: flex; gap: 6px; margin: 10px -12px -10px; padding: 8px 12px; background: var(--frame); border-top: 1px solid var(--line); }
+#entFoot .spacer { flex: 1; }
 #classPicker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--field); display: none; }
 #classPicker.open { display: block; }
 #pane-models .tools { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -495,9 +521,11 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 .hud-bottom .w { margin-left: auto; font-size: 16px; font-weight: 700; }
 .c0{color:#666}.c1{color:#ff4040}.c2{color:#40ff40}.c3{color:#ffff40}.c4{color:#5a7dff}.c5{color:#40ffff}.c6{color:#ff40ff}.c7{color:#fff}.c8{color:#ff9a30}.c9{color:#aaa}
 /* the tools of the editor in the panel of an entity */
-#entFlags { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-bottom: 6px; }
-#entFlags label { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
-#entFlags input { width: auto; }
+#entFlags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+#entFlags label { position: relative; display: flex; align-items: center; padding: 1px 6px; border: 1px solid var(--edge); border-radius: 3px; background: var(--field); color: #6f86a3; font-size: 10px; font-weight: 600; cursor: pointer; }
+#entFlags label:has(input:checked) { background: var(--sel); border-color: var(--accent); color: var(--accent); }
+#entFlags label:has(input:focus-visible) { outline: 1px solid var(--accent); }
+#entFlags input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
 #entXform { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 4px; align-items: center; margin-bottom: 6px; }
 #entXform label { color: var(--muted); font-size: 12px; }
 #entXform input, #entXform select { width: 100%; min-width: 0; }
@@ -551,8 +579,10 @@ tr.ent.draft .tn { opacity: .7; }
 #draftDiscardAll { color: var(--danger); }
 #draftDiscardAll.armed { background: var(--danger); color: var(--on-accent); border-color: var(--danger); }
 #band { position: absolute; display: none; border: 1px solid var(--accent); background: rgba(92, 200, 245, .12); pointer-events: none; }
-#flyBtn { position: absolute; right: 10px; bottom: 10px; }
-#shotBtn { position: absolute; right: 56px; bottom: 10px; }
+/* ? , Screenshot and Fly: one bar at the bottom right of the map */
+#viewTools { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 2px; padding: 3px; background: rgba(8,14,28,.88); border: 1px solid #1c2e4a; border-radius: 8px; }
+#viewTools button { border: 0; background: transparent; padding: 3px 10px; font-weight: 600; font-size: 12px; }
+#viewTools button:hover { background: var(--hover); }
 /* The view switches of the editor: a thin bar across the top of the map, each switch a chip that is lit while on.
    The check boxes stay in the page for the keys and the scripts, only unseen. */
 body.app-editor #viewTop { top: 0; left: 0; right: 0; gap: 0; }
@@ -652,7 +682,7 @@ body.pageWide #sideGrip, body.pageWide #view, body.pageWide #texBrowser { displa
 /* the keys of the map: behind the button ? at the bottom right, open while body.helpOpen (js/palette.js) */
 #help { display: none; }
 body.helpOpen #help { display: block; }
-#helpBtn { position: absolute; right: 156px; bottom: 10px; width: 30px; }
+#helpBtn { width: 28px; padding: 3px 0 !important; }
 body.helpOpen #helpBtn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 /* A phone, or any window narrower than 760 pixels: the pages are a bar at the bottom, the map (or the main view of a
@@ -662,7 +692,7 @@ body.helpOpen #helpBtn { background: var(--accent); border-color: var(--accent);
 	:root { --rail: 0px; --split: 46vh; --tabbar: 54px; }
 	body.app-editor { --tools: 0px; }
 	#topbar { gap: 8px; }
-	#topbar .meta, #paletteBtn kbd, #toggleSide, #sideGrip { display: none; }
+	#topbar .meta, #paletteBtn kbd, #toggleSide, #sideGrip, #statusText, #whoName { display: none; }
 	#pages { top: auto; bottom: 0; right: 0; width: auto; height: var(--tabbar); flex-direction: row; gap: 0; padding: 3px 3px calc(3px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); }
 	#pages button { flex: 1 1 0; min-width: 0; height: auto; }
 	#pages button[data-tab="account"] { margin-top: 0; }

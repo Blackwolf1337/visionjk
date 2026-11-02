@@ -74,6 +74,15 @@ function formRead(cell, f) {
 // the form is only built again when the class or what is known of its keys changed (a classname was typed, the
 // keys of the classes came in): else the fields that are there take their values from the table, all but the one
 // the cursor is in. So a field keeps focus and cursor, as the rows of the table do.
+// The fields of the keys without a value: folded, or all shown (formAll, the choice stays for the next entity)
+let formEmpty = 0, formAll = false;
+function formMore() {
+	$('entForm').classList.toggle('all', formAll);
+	$('entFormMore').hidden = !formEmpty;
+	$('entFormMore').textContent = formAll ? 'Fold the keys without a value' : '+ ' + formEmpty + (formEmpty === 1 ? ' more key' : ' more keys') + ' this class takes';
+}
+$('entFormMore').addEventListener('click', () => { formAll = !formAll; formMore(); });
+
 function renderEntForm(fresh) {
 	const ent = ents.get(selectedEnt), editable = !!(ent && ent.keys), cls = panelClass();
 	const wire = c => FORM_WIRE.indexOf(c.key.toLowerCase());
@@ -88,11 +97,16 @@ function renderEntForm(fresh) {
 		formSig = sig;
 		formFields.clear();
 		list.forEach((c, n) => formFields.set(c.key.toLowerCase(), { key: c.key, c, n, tip: [keyHint(c), KIND_WORDS[c.kind]].filter(Boolean).join(' · ') }));
+		// the keys that have no value are folded under "more keys" (formMore), as long as at least one has a value
+		const empty = lower => !values.get(lower);
+		formEmpty = [...formFields.keys()].filter(empty).length;
+		if (formEmpty === formFields.size) formEmpty = 0;
 		$('entForm').innerHTML = [...formFields].map(([lower, f]) => {
-			const value = values.get(lower) || '', shape = formShape(f.c, value);
-			return '<label for="entField' + f.n + '" title="' + escapeHtml(f.tip) + '"><b>' + escapeHtml(f.key) + '</b><i>' + escapeHtml(keyHint(f.c)) + '</i></label>' +
-				'<span class="v" data-key="' + escapeHtml(lower) + '" data-shape="' + shape + '">' + formCell(f, value, shape) + '</span>';
+			const value = values.get(lower) || '', shape = formShape(f.c, value), fold = formEmpty && empty(lower) ? ' class="empty"' : '';
+			return '<label for="entField' + f.n + '" title="' + escapeHtml(f.tip) + '"' + fold + '><b>' + escapeHtml(f.key) + '</b><i>' + escapeHtml(keyHint(f.c)) + '</i></label>' +
+				'<span class="v' + (fold ? ' empty' : '') + '" data-key="' + escapeHtml(lower) + '" data-shape="' + shape + '">' + formCell(f, value, shape) + '</span>';
 		}).join('');
+		formMore();
 	} else {
 		for (const cell of $('entForm').querySelectorAll('.v')) {
 			if (!cell.contains(document.activeElement)) formShow(cell, formFields.get(cell.dataset.key), values.get(cell.dataset.key) || '');
@@ -112,6 +126,8 @@ function renderEntForm(fresh) {
 // unfolded for it. null: the entity has no such key and the form no field for it.
 function keyField(key) {
 	const lower = key.toLowerCase(), cell = formFields.has(lower) && [...$('entForm').querySelectorAll('.v')].find(el => el.dataset.key === lower);
+	// a folded one is shown with the others
+	if (cell && cell.classList.contains('empty') && !formAll) { formAll = true; formMore(); }
 	if (cell) return cell.querySelector('input');
 	const row = panelRow(key);
 	if (row) $('kvBlock').open = true;

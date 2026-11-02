@@ -16,19 +16,19 @@ function palCommands() {
 	const out = [];
 	document.querySelectorAll('#pages button').forEach(b => {
 		// (the rail shows a short label where the full name does not fit: the full one is its aria-label)
-		if (palShown(b)) out.push({ name: b.getAttribute('aria-label') || b.textContent, about: b.title, run: () => b.click() });
+		if (palShown(b)) out.push({ group: 'Pages', name: b.getAttribute('aria-label') || b.textContent, about: b.title, run: () => b.click() });
 	});
 	if (palShown($('appMode'))) document.querySelectorAll('#appMode button').forEach(b => {
-		out.push({ name: b.textContent + ' mode', about: b.title, run: () => setAppMode(b.dataset.app) });
+		out.push({ group: 'Modes', name: b.textContent + ' mode', about: b.title, run: () => setAppMode(b.dataset.app) });
 	});
 	if (appMode === 'editor') document.querySelectorAll('#tabs button[data-app="editor"]').forEach(b => {
-		out.push({ name: b.textContent, about: 'A tool of the editor', run: () => setMode(b.dataset.tab) });
+		out.push({ group: 'Editor', name: b.textContent, about: 'A tool of the editor', run: () => setMode(b.dataset.tab) });
 	});
 	if (roleAtLeast('admin')) {
-		out.push({ name: 'Add bot', arg: 'name', pick: 'pickBots', about: 'A bot joins the game.', run: v => action({ action: 'addbot', value: v }) });
-		out.push({ name: 'Change map', arg: 'map', pick: 'pickMaps', about: 'Ends the running game and starts this map for everybody.',
+		out.push({ group: 'Server', name: 'Add bot', arg: 'name', pick: 'pickBots', about: 'A bot joins the game.', run: v => action({ action: 'addbot', value: v }) });
+		out.push({ group: 'Server', name: 'Change map', arg: 'map', pick: 'pickMaps', about: 'Ends the running game and starts this map for everybody.',
 			run: v => action({ action: 'map', value: v }) });
-		out.push({ name: 'Gravity', arg: 'number', about: 'g_gravity for everybody, 800 is normal' + (serverGravity !== '' ? ', now ' + serverGravity : '') +
+		out.push({ group: 'Server', name: 'Gravity', arg: 'number', about: 'g_gravity for everybody, 800 is normal' + (serverGravity !== '' ? ', now ' + serverGravity : '') +
 			'. The map sets it again when it starts.', run: v => action({ action: 'gravity', value: v }) });
 	}
 	// what can be done to the selected player, by the names of the buttons of his panel (not Kick and Ban, which want a
@@ -37,13 +37,13 @@ function palCommands() {
 		const who = $('cmdName').textContent;
 		document.querySelectorAll('#command .actions button').forEach(b => {
 			if (b.hasAttribute('data-confirm') || b.hidden || b.disabled) return;
-			out.push({ name: b.textContent.trim() + ' (' + who + ')', about: b.title || 'For the selected player.', run: () => b.click() });
+			out.push({ group: 'Player', name: b.textContent.trim() + ' (' + who + ')', about: b.title || 'For the selected player.', run: () => b.click() });
 		});
 	}
-	out.push({ name: 'Side panel', about: 'Shows or hides the side panel.', run: () => $('toggleSide').click() });
-	out.push({ name: 'Keys of the map', about: 'Shows or hides what the keys and the mouse do on the map (?).', run: () => helpToggle() });
-	if (palShown($('flyBtn'))) out.push({ name: 'Fly', about: $('flyBtn').title || 'The camera flies.', run: () => $('flyBtn').click() });
-	if (palShown($('shotBtn'))) out.push({ name: 'Screenshot', about: $('shotBtn').title || 'A picture of the map view.', run: () => $('shotBtn').click() });
+	out.push({ group: 'View', name: 'Side panel', about: 'Shows or hides the side panel.', run: () => $('toggleSide').click() });
+	out.push({ group: 'View', name: 'Keys of the map', about: 'Shows or hides what the keys and the mouse do on the map (?).', run: () => helpToggle() });
+	if (palShown($('flyBtn'))) out.push({ group: 'View', name: 'Fly', about: $('flyBtn').title || 'The camera flies.', run: () => $('flyBtn').click() });
+	if (palShown($('shotBtn'))) out.push({ group: 'View', name: 'Screenshot', about: $('shotBtn').title || 'A picture of the map view.', run: () => $('shotBtn').click() });
 	return out;
 }
 
@@ -63,11 +63,11 @@ function palFilter() {
 					options = [...$(c.pick).options].map(o => o.value).filter(o => o !== v && o.toLowerCase().includes(vl)).slice(0, 10);
 				}
 				// (what fits from the list of the server first, so Enter takes a name that is there; the words as typed after it)
-				for (const o of options) items.push({ name: c.name + ': ' + o, about: c.about, run: () => c.run(o) });
-				if (v) items.push({ name: c.name + ': ' + v, about: c.about, run: () => c.run(v) });
+				for (const o of options) items.push({ group: c.group, name: c.name + ': ' + o, about: c.about, run: () => c.run(o) });
+				if (v) items.push({ group: c.group, name: c.name + ': ' + v, about: c.about, run: () => c.run(v) });
 				continue;
 			}
-			if (!ql || n.includes(ql)) items.push({ name: c.name + ' ...', about: 'Type the ' + c.arg + ' after it. ' + c.about, fill: c.name + ' ' });
+			if (!ql || n.includes(ql)) items.push({ group: c.group, name: c.name + ' ...', about: 'Type the ' + c.arg + ' after it. ' + c.about, fill: c.name + ' ' });
 			continue;
 		}
 		if (!ql || n.includes(ql) || c.about.toLowerCase().includes(ql)) items.push(c);
@@ -87,7 +87,15 @@ function palDraw() {
 		list.appendChild(none);
 		return;
 	}
+	// a heading where the group changes: Pages, Modes, Editor, Server, Player, View
+	const rows = [];
 	palItems.forEach((item, i) => {
+		if (item.group && (!i || palItems[i - 1].group !== item.group)) {
+			const head = document.createElement('div');
+			head.className = 'palGroup';
+			head.textContent = item.group;
+			list.appendChild(head);
+		}
 		const row = document.createElement('div'), name = document.createElement('b'), about = document.createElement('span');
 		row.className = 'palItem' + (i === palAt ? ' on' : '');
 		name.textContent = item.name;
@@ -95,8 +103,9 @@ function palDraw() {
 		row.append(name, about);
 		row.addEventListener('mousedown', e => { e.preventDefault(); palAt = i; palRun(); });
 		list.appendChild(row);
+		rows.push(row);
 	});
-	const on = list.children[palAt];
+	const on = rows[palAt];
 	if (on) on.scrollIntoView({ block: 'nearest' });
 }
 
@@ -125,6 +134,8 @@ function palClose() {
 }
 
 $('paletteBtn').addEventListener('click', palOpen);
+// + Add bot over the players: Commands with the command typed, the name of the bot comes after it
+$('addBotBtn').addEventListener('click', () => { palOpen(); $('palInput').value = 'Add bot '; palFilter(); });
 $('palInput').addEventListener('input', palFilter);
 $('palInput').addEventListener('keydown', e => {
 	if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
