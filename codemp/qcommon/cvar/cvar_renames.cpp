@@ -40,23 +40,24 @@ static const rename_t cmdRenames[] = {
 #undef CMD_RENAME
 };
 
-static const char *Rename_Find( const rename_t *table, size_t count, const char *name, qboolean toOld ) {
+// nth: of several old names of one new name (v_master had three), the one counted from 0
+static const char *Rename_Find( const rename_t *table, size_t count, const char *name, qboolean toOld, int nth ) {
 	for ( size_t i = 0; i < count; i++ ) {
-		if ( !Q_stricmp( toOld ? table[i].to : table[i].from, name ) ) {
+		if ( !Q_stricmp( toOld ? table[i].to : table[i].from, name ) && nth-- == 0 ) {
 			return toOld ? table[i].from : table[i].to;
 		}
 	}
 	return NULL;
 }
 
-// the name a cvar had before, NULL: it had no other
-const char *Cvar_RenamedFrom( const char *name ) {
-	return Rename_Find( cvarRenames, ARRAY_LEN( cvarRenames ), name, qtrue );
+// the nth name a cvar had before, counted from 0. NULL: it had no other, or not so many
+const char *Cvar_RenamedFrom( const char *name, int nth ) {
+	return Rename_Find( cvarRenames, ARRAY_LEN( cvarRenames ), name, qtrue, nth );
 }
 
 // the name a cvar has now, NULL: this is no old name
 const char *Cvar_RenamedTo( const char *name ) {
-	return Rename_Find( cvarRenames, ARRAY_LEN( cvarRenames ), name, qfalse );
+	return Rename_Find( cvarRenames, ARRAY_LEN( cvarRenames ), name, qfalse, 0 );
 }
 
 /*
@@ -107,7 +108,7 @@ qboolean Cvar_RenamedText( const char *in, char *out, int outSize ) {
 			memcpy( word, in, n );
 			word[n] = '\0';
 			if ( first ) {
-				to = Rename_Find( cmdRenames, ARRAY_LEN( cmdRenames ), word, qfalse );
+				to = Rename_Find( cmdRenames, ARRAY_LEN( cmdRenames ), word, qfalse, 0 );
 			}
 			if ( !to ) {
 				to = Cvar_RenamedTo( word );

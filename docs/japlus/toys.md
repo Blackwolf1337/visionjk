@@ -352,7 +352,7 @@ An interactive emoji of the store goes as `TOY_EMOTE_STORE` (15). It carries the
 the target, and its number in the list of the store split by `TOY_BOARD_SPLIT` (1500) into two fields: the number is
 `velocity[1] * 1500 + velocity[2]`. `bg_toys.c` checks the ranges. The cgame reads the list from `emotes/index.txt` (line
 format `number name emoji burst colour colour path spin size pop sound voice bytes sha256`). A number that is not in the
-list makes the cgame run `v_emotes refresh`, and the engine fetches the lists again at most once a minute. Every cgame
+list makes the cgame run `v_emotes refresh`, and the engine fetches the lists again at most once a minute. The lists also come again within seconds of a change on the site, as the masterserver tells the game (see models.md, "The push of changes"). Every cgame
 flies the emoji on its own, as with `TOY_EMOJI`. The sounds are made by `tools/toys/sounds.py` and use no audio of
 anybody else. The voice lines come from `CG_CharacterSound` in `cg_players.c`, which reads them through the new field
 `soundDir` of `clientInfo_t`, for lines the game did not load for the gametype.

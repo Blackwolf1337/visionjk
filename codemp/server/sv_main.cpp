@@ -744,6 +744,10 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		// if a client starts up a local server, we may see some spurious
 		// server disconnect messages when their new server sees our final
 		// sequenced messages to the old client
+	} else if ( !com_dedicated->integer && ( !Q_stricmpn( c, "store", 5 ) || !Q_stricmpn( c, "ids", 3 ) ) ) {
+		// VisionJK: the masterserver to the client of this game (cl_master.cpp, cl_reputation.cpp), whose packets
+		// come here while it runs a server itself. The client looks at the sender.
+		CL_ConnectionlessPacket( from, msg );
 	} else {
 		if ( com_developer->integer ) {
 			Com_Printf( "bad connectionless packet from %s:\n%s\n",

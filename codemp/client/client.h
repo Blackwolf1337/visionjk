@@ -529,13 +529,23 @@ void CL_MemWatchDisconnect( void );
 // cl_reputation.cpp: the reports of the intrusion detection to the VisionJK masterserver, and its list
 //
 void CL_RepInit( void );
-void CL_RepShutdown( void );
+qboolean CL_RepWantsMaster( void );
 void CL_RepFrame( void );
 void CL_RepQueue( const netadr_t *server, clIdsEvent_t event );
 void CL_RepRefresh( void );
 void CL_RepCheckConnect( const netadr_t *adr );
 void CL_RepPacket( const netadr_t *from, const char *command );
 int CL_RepNetworks( const netadr_t *adr );
+
+//
+// cl_master.cpp
+//
+void CL_MasterInit( void );
+void CL_MasterShutdown( void );
+void CL_MasterFrame( void );
+void CL_MasterPacket( const netadr_t *from, const char *command );
+qboolean CL_MasterAddress( netadr_t *adr, int *serial );
+const char *CL_MasterName( void );
 
 void CL_StartHunkUsers( void );
 
@@ -614,6 +624,8 @@ void		CL_ModelsInit( void );
 void		CL_ModelsFrame( void );
 void		CL_ModelsShutdown( void );
 qboolean	CL_ModelsAsking( void );
+qboolean	CL_ModelsWatching( void );
+void		CL_ModelsStoreChanged( const char *store );
 
 // cl_sprays.cpp: the pictures of the sprays
 //

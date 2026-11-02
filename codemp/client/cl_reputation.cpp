@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // OpenJK, see docs/japlus/security.md, which also lists the packets the masterserver answers.
 //
 // v_idsShare 1: a server the client leaves for the intrusion detection (cl_ids.cpp), or one the game crashed on
-// (cl_memwatch.cpp), is reported to the masterserver of v_idsMaster: its address and a word for what happened.
+// (cl_memwatch.cpp), is reported to the masterserver (v_master, cl_master.cpp): its address and a word for what happened.
 // Only what the client saw over its connection is reported, never a connectionless packet (anybody can send one in
 // the name of a server), never what other players or old mod servers cause (an escape character, cvars a server
 // may not set). The first report tells the player on the console.
@@ -31,12 +31,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // server browser, at most every ten minutes. Such a server has an orange IDS in the column of the ping, and the
 // first connect to it is refused with the reason; the next one goes through.
 //
-// The name of the masterserver is looked up on a thread of its own, the rest runs a step a frame: nothing waits.
+// cl_master.cpp looks up the name of the masterserver, the rest runs a step a frame: nothing waits.
 // With v_ids 0 nothing is sent or fetched.
 
 #include "client.h"
-#include "game/voice/bg_voice.h"
-#include <SDL.h>
 
 #define REP_LIST			4096
 #define REP_QUEUE			8
@@ -46,7 +44,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define REP_TRIES			3
 #define REP_CHALLENGE_MSEC	50000		// a challenge is good for a minute or more, taken for less
 #define REP_LIST_MSEC		600000		// the list is fetched this often at most
-#define REP_RESOLVE_MSEC	3600000		// the name is looked up again after this
 #define REP_RETRY_MSEC		60000		// after a masterserver that did not answer
 
 typedef enum {
@@ -61,7 +58,7 @@ typedef struct {
 	int			networks;
 } repServer_t;
 
-static cvar_t		*v_idsShare, *v_idsShareTold, *v_idsShareLocal, *v_idsReputation, *v_idsMaster;
+static cvar_t		*v_idsShare, *v_idsShareTold, *v_idsShareLocal, *v_idsReputation;
 
 static repServer_t	rep_list[REP_LIST], rep_incoming[REP_LIST];
 static int			rep_count, rep_incomingCount, rep_parts;
@@ -77,20 +74,10 @@ static int			rep_queued;
 
 static repState_t	rep_state;
 static netadr_t		rep_master;
-static qboolean		rep_masterKnown;
+static int			rep_masterSerial;		// of the address of cl_master.cpp the state below is about
 static char			rep_challenge[16];
-static int			rep_challengeTime, rep_sentTime, rep_tries, rep_listTime, rep_retryTime, rep_resolveTime;
+static int			rep_challengeTime, rep_sentTime, rep_tries, rep_listTime, rep_retryTime;
 static qboolean		rep_wantList;
-
-// the lookup of the name of the masterserver
-static struct {
-	SDL_Thread		*thread;
-	volatile int	done;			// the thread is through. It writes this last
-	char			name[MAX_OSPATH];
-	byte			ip[4];
-	qboolean		ok;
-	int				port;
-} rep_resolve;
 
 // what the masterserver takes, and only these
 static const struct {
@@ -136,7 +123,7 @@ void CL_RepQueue( const netadr_t *server, clIdsEvent_t event ) {
 		Cvar_Set( "v_idsShareTold", "1" );
 		Com_Printf( S_COLOR_YELLOW "The intrusion detection reports this server to the VisionJK masterserver (%s), so other players are warned:"
 			" its address and what happened, nothing about you. The masterserver keeps the first three numbers of your IP address with the report."
-			" v_idsShare 0 turns it off.\n", v_idsMaster->string );
+			" v_idsShare 0 turns it off.\n", CL_MasterName() );
 	}
 }
 
@@ -185,67 +172,24 @@ void CL_RepRefresh( void ) {
 	}
 }
 
-static int SDLCALL CL_RepResolveThread( void *data ) {
-	rep_resolve.ok = Sys_ResolveIPv4( rep_resolve.name, rep_resolve.ip );
-	rep_resolve.done = 1;
-	return 0;
+// something waits to be sent to the masterserver: cl_master.cpp keeps its address looked up
+qboolean CL_RepWantsMaster( void ) {
+	return (qboolean)( CL_RepOn() && ( rep_queued || rep_wantList ) );
 }
 
-// the name of v_idsMaster is looked up on a thread. qtrue: the address is known.
+// the address of the masterserver; a new one starts anew. qfalse: not known.
 static qboolean CL_RepMaster( void ) {
-	const int now = Sys_Milliseconds();
+	int serial;
 
-	if ( rep_resolve.thread ) {
-		if ( !rep_resolve.done ) {
-			return qfalse;
-		}
-		SDL_WaitThread( rep_resolve.thread, NULL );		// (it is through, this does not wait)
-		rep_resolve.thread = NULL;
-		if ( rep_resolve.ok ) {
-			Com_Memset( &rep_master, 0, sizeof( rep_master ) );
-			rep_master.type = NA_IP;
-			Com_Memcpy( rep_master.ip, rep_resolve.ip, 4 );
-			rep_master.port = BigShort( (short)rep_resolve.port );
-			rep_masterKnown = qtrue;
-		} else {
-			rep_retryTime = now + REP_RETRY_MSEC;
-		}
-		rep_resolveTime = now;
-	}
-	if ( v_idsMaster->modified ) {
-		v_idsMaster->modified = qfalse;
-		rep_masterKnown = qfalse;
-		rep_resolveTime = 0;
-		rep_state = REP_IDLE;
-		rep_challengeTime = 0;
-	}
-	if ( rep_masterKnown && now - rep_resolveTime < REP_RESOLVE_MSEC ) {
-		return qtrue;
-	}
-	if ( rep_retryTime && now - rep_retryTime < 0 ) {
-		return rep_masterKnown;
-	}
-
-	// "name" or "name:port"
-	char *colon;
-
-	Q_strncpyz( rep_resolve.name, v_idsMaster->string, sizeof( rep_resolve.name ) );
-	colon = strrchr( rep_resolve.name, ':' );
-	rep_resolve.port = VOICE_MASTER_PORT;
-	if ( colon ) {
-		*colon = '\0';
-		rep_resolve.port = atoi( colon + 1 );
-	}
-	if ( !rep_resolve.name[0] || rep_resolve.port <= 0 || rep_resolve.port > 65535 ) {
-		rep_retryTime = now + REP_RETRY_MSEC;
+	if ( !CL_MasterAddress( &rep_master, &serial ) ) {
 		return qfalse;
 	}
-	rep_resolve.done = 0;
-	rep_resolve.thread = SDL_CreateThread( CL_RepResolveThread, "idsmaster", NULL );
-	if ( !rep_resolve.thread ) {
-		rep_retryTime = now + REP_RETRY_MSEC;
+	if ( serial != rep_masterSerial ) {
+		rep_masterSerial = serial;
+		rep_state = REP_IDLE;
+		rep_challengeTime = rep_retryTime = 0;
 	}
-	return rep_masterKnown;
+	return qtrue;
 }
 
 static void CL_RepSend( const char *text ) {
@@ -392,7 +336,7 @@ A connectionless packet whose command begins with "ids". Only from the masterser
 =================
 */
 void CL_RepPacket( const netadr_t *from, const char *command ) {
-	if ( !CL_RepOn() || !rep_masterKnown || !NET_CompareAdr( from, &rep_master ) ) {
+	if ( !CL_RepOn() || !CL_RepMaster() || !NET_CompareAdr( from, &rep_master ) ) {
 		return;
 	}
 	if ( !Q_stricmp( command, "idsChallengeResponse" ) && rep_state == REP_CHALLENGE ) {
@@ -421,14 +365,4 @@ void CL_RepInit( void ) {
 	v_idsShareTold = Cvar_Get( "v_idsShareTold", "0", CVAR_ARCHIVE, "Intrusion detection: the player was told once that reports are sent (v_idsShare)" );
 	v_idsShareLocal = Cvar_Get( "v_idsShareLocal", "0", 0, "Intrusion detection: 1 servers on the local network are reported too (for a test)" );
 	v_idsReputation = Cvar_Get( "v_idsReputation", "1", CVAR_ARCHIVE, "Intrusion detection: 1 the servers many players reported are fetched from the VisionJK masterserver, marked in the server browser and the first connect to one is refused. 0 off" );
-	v_idsMaster = Cvar_Get( "v_idsMaster", "master.jka.vision:29170", CVAR_ARCHIVE, "Intrusion detection: the VisionJK masterserver for the reports and the list of servers (v_idsShare, v_idsReputation)" );
-	v_idsMaster->modified = qfalse;
-}
-
-void CL_RepShutdown( void ) {
-	if ( rep_resolve.thread ) {
-		// (a name server that does not answer: the thread ends by itself, nothing of it is used any more)
-		SDL_DetachThread( rep_resolve.thread );
-		rep_resolve.thread = NULL;
-	}
 }

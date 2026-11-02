@@ -279,7 +279,7 @@ connectionless packets are dropped unread, and a player the event came from is d
 |------|---------|---------|
 | `v_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
 | `v_memwatch` | 1 | the memory monitor, see "Added later: the memory monitor of the client" |
-| `v_idsShare`, `v_idsReputation`, `v_idsMaster` | 1, 1, `master.jka.vision:29170` | reports to the masterserver, see "Added later: reports to the masterserver" |
+| `v_idsShare`, `v_idsReputation`, `v_master` | 1, 1, `master.jka.vision` | reports to the masterserver, see "Added later: reports to the masterserver" |
 | `v_idsSeq`, `v_idsLast`, `v_idsSeqShown` | | the events for the notices of the cgame, see below |
 
 - Written down, and the client leaves: a path in the place of the game folder (at once), data of a download
@@ -471,7 +471,7 @@ With `v_ids 0` nothing is sent and nothing is fetched. The masterserver is not p
 |------|---------|---------|
 | `v_idsShare` | 1 | 1: a server the client left, or crashed on, is reported to the masterserver. 0: off |
 | `v_idsReputation` | 1 | 1: the list of flagged servers is fetched, marked in the server browser and the first connect to one is refused. 0: off |
-| `v_idsMaster` | `master.jka.vision:29170` | the masterserver for both |
+| `v_master` | `master.jka.vision` | the masterserver for both, and for the voice chat and the store changes. It was `v_idsMaster` (and `v_voiceMasterHost`), and their values are taken over |
 | `v_idsShareTold` | 0 | set to 1 after the first report, which prints one console line that says what is sent |
 | `v_idsShareLocal` | 0 | 1: servers on the local network are reported too. For tests |
 
@@ -505,8 +505,28 @@ Packets, on the port of the masterserver:
   list, refuses reports of private or local server addresses, and keeps what it counted in a file of its own.
 
 The masterserver is a small program of its own, and its one UDP port answers nothing but the voice datagrams and
-the `ids` packets above. `getinfo`, `getstatus`, `getchallenge`, `connect`, `rcon`, `getservers` and anything else
+the `ids` packets above (and the store packets below, which it does not answer either). `getinfo`, `getstatus`, `getchallenge`, `connect`, `rcon`, `getservers` and anything else
 are dropped without an answer, so the port has no game server query to ask, no rcon and no client slot.
+
+The store packets, on the same port (`client/cl_master.cpp`):
+
+| Packet | Direction | What happens |
+|--------|-----------|--------------|
+| `storeWatch` | game to masterserver, every 25 s | none, the masterserver does not answer. It puts the address in its table of games |
+| `storeChanged <store> [<store> ...]` | masterserver to game | the list of that store counts as old after a random 0 to 5 s and is fetched again |
+
+- The client takes `storeChanged` only from the address of the masterserver (`v_master`), compared with the address
+  it looked up. From any other address it is dropped. A spoofed one can at most make a game fetch a list again, which
+  is one small web request to the store that the game would do after ten minutes anyway, and the random 0 to 5 s
+  spreads them. `<store>` must be `models`, `emoji` or `emotes`, other words are ignored.
+- The masterserver takes `storeChanged` only from 127.0.0.1, where the model store of the site runs. A packet from the
+  internet can not have that source address. `storeWatch` it takes from anybody, but it keeps at most 4 games for
+  one IP address and 16384 in all, drops a game it did not hear from for 90 seconds, and answers nothing. A forged
+  `storeWatch` can only put the forged address in the table for 90 seconds, where it gets one short `storeChanged`
+  packet when a store really changed, which is rare. The limits of 4 games for an address and 16384 in all keep this small.
+- A listen server (a game that hosts a server itself, devmap) hands every UDP packet to the server first. The server
+  now passes connectionless packets that start with `store` or `ids` on to the client, which makes the same check
+  of the address as above. Before, the `ids` answers were lost while the player hosted.
 
 The client looks the name of the master up on a thread of its own (`Sys_ResolveIPv4`), so the game does not wait
 for the lookup. It fetches the list at start and with the server browser, at most every 10 minutes. A flagged

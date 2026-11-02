@@ -18,7 +18,7 @@ die() {
 common_args() {
 	local home=$1
 	printf '%s\n' +set fs_homepath "$home" +set v_updateCheck 0 \
-		+set v_voiceMasterHost "" +set cl_motd 0 +set s_volume 0 +set s_musicvolume 0
+		+set v_master "" +set cl_motd 0 +set s_volume 0 +set s_musicvolume 0
 }
 
 # links the base assets of BASE_ASSETS into the base folder of a game

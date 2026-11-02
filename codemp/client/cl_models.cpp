@@ -152,6 +152,8 @@ static qboolean MDL_Use( const char *model ) {
 #define MDL_DRAWING_BYTES	( 4 + 256 * 128 )	// a picture of a drawing board: "VJD1" and BOARD_W x BOARD_H (bg_toys.h)
 #define MDL_PICTURE_MOST	( 1500 * 1500 )		// numbers of pictures of a drawing board or a spray (TOY_BOARD_SPLIT squared)
 #define MDL_PICTURE_ASKS	8					// pictures of a kind the cgame asked for that wait
+#define MDL_CHANGED_JITTER	5000				// a list the masterserver says changed is fetched within this, so the games
+												//	of the players do not all ask at once
 
 enum {
 	MDLJOB_FREE,
@@ -639,6 +641,57 @@ static void MDL_NextEmoji( void ) {
 	MDL_NextNamed( MDL_NAMED_SOUNDS );
 }
 
+/*
+===============================================================================
+
+A change to a store of the site: the masterserver says which list changed (cl_master.cpp), and that list is
+fetched again when it is next wanted, so what somebody uploads comes into the game of the others at once and not
+after MDL_INDEX_MSEC.
+
+===============================================================================
+*/
+
+enum { MDL_STORE_MODELS, MDL_STORE_EMOJI, MDL_STORE_EMOTES, MDL_STORES };
+
+static const char	*mdlStoreNames[MDL_STORES] = { "models", "emoji", "emotes" };
+static qboolean		mdlStoreChanged[MDL_STORES];
+static int			mdlStoreChangedTime[MDL_STORES];		// cls.realtime when the list counts as old
+
+// whether this game wants to hear of changes to the stores
+qboolean CL_ModelsWatching( void ) {
+	return (qboolean)( v_modelStore && ( v_modelStore->integer || v_emojiStore->integer ) );
+}
+
+// storeChanged <store> of the masterserver
+void CL_ModelsStoreChanged( const char *store ) {
+	for ( int i = 0; i < MDL_STORES; i++ ) {
+		if ( !Q_stricmp( store, mdlStoreNames[i] ) && !mdlStoreChanged[i] ) {
+			mdlStoreChanged[i] = qtrue;
+			mdlStoreChangedTime[i] = cls.realtime + Q_irand( 0, MDL_CHANGED_JITTER );
+		}
+	}
+}
+
+// The lists whose time came are old from now on.
+static void MDL_StoresChanged( void ) {
+	for ( int i = 0; i < MDL_STORES; i++ ) {
+		if ( !mdlStoreChanged[i] || cls.realtime - mdlStoreChangedTime[i] < 0 ) {
+			continue;
+		}
+		mdlStoreChanged[i] = qfalse;
+		Com_DPrintf( "model store: the list of the %s changed\n", mdlStoreNames[i] );
+		if ( i == MDL_STORE_MODELS ) {
+			// (a model a player uses that was not in the store is looked for again, which fetches the list)
+			mdlIndexTime = -1;
+			mdlSeen.num = 0;
+		} else if ( i == MDL_STORE_EMOJI ) {
+			mdlNamed[MDL_NAMED_EMOJI].indexTime = -1;
+		} else {
+			mdlEmoteListTime = -1;
+		}
+	}
+}
+
 // v_emotes refresh: the lists of the stores again now (the cgame heard of an interactive emoji it does not know)
 static void CL_Emotes_f( void ) {
 	if ( Q_stricmp( Cmd_Argv( 1 ), "refresh" ) ) {
@@ -924,6 +977,8 @@ void CL_ModelsFrame( void ) {
 	default:
 		return;
 	}
+	// (not while a list is fetched: one that left before the change would count as new)
+	MDL_StoresChanged();
 	if ( !mdlWanted[0] && v_modelStore->integer && cls.realtime - mdlScanTime >= MDL_SCAN_MSEC ) {
 		mdlScanTime = cls.realtime;
 		if ( cls.state == CA_ACTIVE && !cl_connectedToPureServer && !clc.demoplaying && MDL_NextOfPlayers( model, sizeof( model ) ) ) {
@@ -1014,7 +1069,7 @@ void CL_ModelsInit( void ) {
 	v_emojiStore = Cvar_Get( "v_emojiStore", "1", CVAR_ARCHIVE, "Fetch the chat emojis that players uploaded to the site (0: only the emojis of the game)" );
 	Cvar_Get( "v_emojiStoreChanged", "0", CVAR_ROM, "Counts up when a chat emoji of the store came or went" );
 	Cvar_Get( "v_emoteStoreChanged", "0", CVAR_ROM, "Counts up each time the list or a sound of the interactive emojis arrived (read-only)" );
-	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED,
+	v_modelStoreURL = Cvar_Get( "v_modelStoreURL", MDL_URL_DEFAULT, CVAR_INIT | CVAR_PROTECTED,
 		"Address of the model store (https). Can only be changed on the command line" );
 	Cmd_AddCommand( "v_models", CL_Models_f, "The model store of the site: v_models, v_models get <name>, v_models icons" );
 	Cmd_AddCommand( "v_drawings", CL_Drawings_f, "The pictures of the drawing boards in the store of the site: v_drawings upload, v_drawings get <number>" );
