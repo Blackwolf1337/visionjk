@@ -33,7 +33,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/g2_local.h"
 
 glconfig_t	glConfig;
-glconfigExt_t glConfigExt;
 glstate_t	glState;
 window_t	window;
 
@@ -363,10 +362,6 @@ void R_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 
 	memcount = linelen * height;
 
-	// gamma correct
-	if(glConfig.deviceSupportsGamma && !glConfigExt.doGammaCorrectionWithShaders)
-		R_GammaCorrect(allbuf + offset, memcount);
-
 	ri.FS_WriteFile(fileName, buffer, memcount + 18);
 
 	ri.Hunk_FreeTempMemory(allbuf);
@@ -394,15 +389,10 @@ R_TakeScreenshotJPEG
 */
 void R_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName ) {
 	byte *buffer;
-	size_t offset = 0, memcount;
+	size_t offset = 0;
 	int padlen;
 
 	buffer = RB_ReadPixels(x, y, width, height, &offset, &padlen);
-	memcount = (width * 3 + padlen) * height;
-
-	// gamma correct
-	if(glConfig.deviceSupportsGamma && !glConfigExt.doGammaCorrectionWithShaders)
-		R_GammaCorrect(buffer + offset, memcount);
 
 	RE_SaveJPG(fileName, r_screenshotJpegQuality->integer, width, height, buffer + offset, padlen);
 	ri.Hunk_FreeTempMemory(buffer);
@@ -477,11 +467,6 @@ static void R_LevelShot( void ) {
 			dst[1] = g / 12;
 			dst[2] = r / 12;
 		}
-	}
-
-	// gamma correct
-	if ( ( tr.overbrightBits > 0 ) && glConfig.deviceSupportsGamma && !glConfigExt.doGammaCorrectionWithShaders ) {
-		R_GammaCorrect( buffer + 18, LEVELSHOTSIZE * LEVELSHOTSIZE * 3 );
 	}
 
 	ri.FS_WriteFile( checkname, buffer, LEVELSHOTSIZE * LEVELSHOTSIZE*3 + 18 );
@@ -936,7 +921,8 @@ void R_Init( void ) {
 		RE_SetLightStyle(i, -1);
 	}
 	if ( !VK_InitVulkan() ) {
-		// this machine can not run the renderer: RE_BeginRegistration() hands an empty glconfig back
+		// this machine can not run the renderer: RE_BeginRegistration() hands back a glconfig without a window, the
+		// reason as its renderer_string
 		return;
 	}
 

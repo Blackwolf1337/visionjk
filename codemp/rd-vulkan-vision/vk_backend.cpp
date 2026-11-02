@@ -123,7 +123,6 @@ has said who it is, how large a texture may be and how much anisotropic filter t
 */
 void VK_InitConfig( void ) {
 	glConfig.extensions_string = "";
-	glConfigExt.originalExtensionString = "";
 	glConfig.maxActiveTextures = NUM_TEXTURE_BUNDLES;
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
@@ -135,8 +134,6 @@ void VK_InitConfig( void ) {
 	glConfig.stereoEnabled = qfalse;
 	// gamma and overbright are one pass over the finished frame (shaders/gamma.frag), not a ramp of the display
 	glConfig.deviceSupportsGamma = qfalse;
-	glConfigExt.doGammaCorrectionWithShaders = qtrue;
-	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
 
 	// the setup menus offer the anisotropic filter only if this cvar says how much of it there is
 	ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );

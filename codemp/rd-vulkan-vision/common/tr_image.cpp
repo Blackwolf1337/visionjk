@@ -32,24 +32,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <map>
 
 static byte			 s_intensitytable[256];
-static unsigned char s_gammatable[256];
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
 int		gl_filter_max = GL_LINEAR;
 
 //#define FILE_HASH_SIZE		1024	// actually the shader code still needs this (from another module, great),
 //static	image_t*		hashTable[FILE_HASH_SIZE];
-
-/*
-** R_GammaCorrect
-*/
-void R_GammaCorrect( byte *buffer, int bufSize ) {
-	int i;
-
-	for ( i = 0; i < bufSize; i++ ) {
-		buffer[i] = s_gammatable[buffer[i]];
-	}
-}
 
 typedef struct textureMode_s {
 	const char *name;
@@ -319,51 +307,22 @@ lighting range
 */
 void R_LightScaleTexture (unsigned *in, int inwidth, int inheight, qboolean only_gamma )
 {
+	int		i, c;
+	byte	*p;
+
+	// the gamma is a pass of the renderer (shaders/gamma.frag), only the intensity goes into the texture
 	if ( only_gamma )
 	{
-		if ( !glConfig.deviceSupportsGamma && !glConfigExt.doGammaCorrectionWithShaders )
-		{
-			int		i, c;
-			byte	*p;
-
-			p = (byte *)in;
-
-			c = inwidth*inheight;
-			for (i=0 ; i<c ; i++, p+=4)
-			{
-				p[0] = s_gammatable[p[0]];
-				p[1] = s_gammatable[p[1]];
-				p[2] = s_gammatable[p[2]];
-			}
-		}
+		return;
 	}
-	else
+
+	p = (byte *)in;
+	c = inwidth*inheight;
+	for (i=0 ; i<c ; i++, p+=4)
 	{
-		int		i, c;
-		byte	*p;
-
-		p = (byte *)in;
-
-		c = inwidth*inheight;
-
-		if ( glConfig.deviceSupportsGamma || glConfigExt.doGammaCorrectionWithShaders )
-		{
-			for (i=0 ; i<c ; i++, p+=4)
-			{
-				p[0] = s_intensitytable[p[0]];
-				p[1] = s_intensitytable[p[1]];
-				p[2] = s_intensitytable[p[2]];
-			}
-		}
-		else
-		{
-			for (i=0 ; i<c ; i++, p+=4)
-			{
-				p[0] = s_gammatable[s_intensitytable[p[0]]];
-				p[1] = s_gammatable[s_intensitytable[p[1]]];
-				p[2] = s_gammatable[s_intensitytable[p[2]]];
-			}
-		}
+		p[0] = s_intensitytable[p[0]];
+		p[1] = s_intensitytable[p[1]];
+		p[2] = s_intensitytable[p[2]];
 	}
 }
 
@@ -1382,15 +1341,9 @@ R_SetColorMappings
 */
 void R_SetColorMappings( void ) {
 	int		i, j;
-	float	g;
-	int		inf;
-	int		shift;
 
 	// setup the overbright lighting
 	tr.overbrightBits = r_overBrightBits->integer;
-	if ( !glConfig.deviceSupportsGamma && !glConfigExt.doGammaCorrectionWithShaders ) {
-		tr.overbrightBits = 0;		// need hardware gamma for overbright
-	}
 
 	// never overbright in windowed mode
 	if ( !glConfig.isFullscreen )
@@ -1418,34 +1371,6 @@ void R_SetColorMappings( void ) {
 		ri.Cvar_Set( "r_gamma", "0.5" );
 	} else if ( r_gamma->value > 3.0f ) {
 		ri.Cvar_Set( "r_gamma", "3.0" );
-	}
-
-	g = r_gamma->value;
-
-	shift = tr.overbrightBits;
-
-	if ( !glConfigExt.doGammaCorrectionWithShaders )
-	{
-		for ( i = 0; i < 256; i++ ) {
-			if ( g == 1 ) {
-				inf = i;
-			} else {
-				inf = 255 * pow ( i/255.0f, 1.0f / g ) + 0.5f;
-			}
-			inf <<= shift;
-			if (inf < 0) {
-				inf = 0;
-			}
-			if (inf > 255) {
-				inf = 255;
-			}
-			s_gammatable[i] = inf;
-		}
-
-		if ( glConfig.deviceSupportsGamma )
-		{
-			ri.WIN_SetGamma( &glConfig, s_gammatable, s_gammatable, s_gammatable );
-		}
 	}
 
 	for (i=0 ; i<256 ; i++) {

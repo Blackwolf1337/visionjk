@@ -43,20 +43,21 @@ void VK_WaitIdle( void ) {
 }
 
 /*
-A machine that can not run this renderer (no Vulkan, an older one, no device that fits) is no error of the game:
-VK_InitVulkan() says why in the console and returns qfalse, and the engine goes on with rd-vanilla
-(CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the Windows
-builds link libgcc statically, an exception does not get out of this library there. What fails once a device
-was found is an error as before.
+A machine that can not run this renderer (no Vulkan, an older one, no device that fits): VK_InitVulkan() says why
+in the console and returns qfalse, with the reason as glConfig.renderer_string and no window size, and the engine
+stops with it (CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the
+Windows builds link libgcc statically, an exception does not get out of this library there. What fails once a
+device was found is an error as before.
 */
 static qboolean VK_CanNotRun( const char *fmt, ... ) {
+	static char reason[256];
 	va_list args;
-	char reason[256];
 
 	va_start( args, fmt );
 	Q_vsnprintf( reason, sizeof( reason ), fmt, args );
 	va_end( args );
 	ri.Printf( PRINT_ALL, "rd-vulkan-vision can not run here: %s\n", reason );
+	glConfig.renderer_string = reason;
 	return qfalse;
 }
 
@@ -96,7 +97,7 @@ PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;
 
 static void VK_MissingFunction( const char *name ) {
-	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nSet cl_renderer to rd-vanilla.", name );
+	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nYour graphics driver is too old or incomplete for this game. Update your graphics driver.", name );
 }
 
 // the window is there, so its library of Vulkan is loaded
@@ -551,7 +552,6 @@ qboolean VK_InitVulkan( void ) {
 	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
 
 	memset( &glConfig, 0, sizeof( glConfig ) );
-	memset( &glConfigExt, 0, sizeof( glConfigExt ) );
 	memset( &vk, 0, sizeof( vk ) );
 	window = ri.WIN_Init( &windowDesc, &glConfig );
 	if ( !glConfig.vidWidth ) {

@@ -1796,7 +1796,7 @@ void RE_BeginRegistration( glconfig_t *glconfigOut ) {
 
 	*glconfigOut = glConfig;
 
-	// the renderer could not start on this machine (VK_InitVulkan), the engine sees that in the empty glconfig
+	// the renderer could not start on this machine (VK_InitVulkan), the engine sees that in the glconfig
 	if ( !glConfig.vidWidth ) {
 		return;
 	}

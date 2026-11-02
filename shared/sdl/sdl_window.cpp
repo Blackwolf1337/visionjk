@@ -48,7 +48,6 @@ static float displayAspect;
 static int nextWidth, nextHeight;
 
 cvar_t *r_sdlDriver;
-cvar_t *r_allowSoftwareGL;
 
 // Window cvars
 cvar_t	*r_fullscreen = 0;
@@ -57,16 +56,20 @@ cvar_t	*r_centerWindow;
 cvar_t	*r_customwidth;
 cvar_t	*r_customheight;
 cvar_t	*r_swapInterval;
-cvar_t	*r_stereo;
 cvar_t	*r_mode;
 cvar_t	*r_displayRefresh;
 
 // Window surface cvars
+cvar_t  *r_ext_multisample;
+#ifdef _JK2EXE
+// the OpenGL renderer of the SP engine. The OpenGL ES device of MP takes the frame rd-vulkan-vision has on Vulkan.
+cvar_t *r_allowSoftwareGL;
+cvar_t	*r_stereo;
 cvar_t	*r_stencilbits;
 cvar_t	*r_depthbits;
 cvar_t	*r_colorbits;
 cvar_t	*r_ignorehwgamma;
-cvar_t  *r_ext_multisample;
+#endif
 
 /*
 ** R_GetModeInfo
@@ -485,6 +488,7 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 		glConfig->isFullscreen = qfalse;
 	}
 
+#ifdef _JK2EXE
 	colorBits = r_colorbits->integer;
 	if ((!colorBits) || (colorBits >= 32))
 		colorBits = 24;
@@ -495,6 +499,11 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 		depthBits = r_depthbits->integer;
 
 	stencilBits = r_stencilbits->integer;
+#else
+	colorBits = 24;
+	depthBits = 24;
+	stencilBits = 8;
+#endif
 	samples = r_ext_multisample->integer;
 
 	if ( windowDesc->api == GRAPHICS_API_OPENGL )
@@ -606,19 +615,25 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 				SDL_GL_SetAttribute( SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG );
 			}
 
+#ifdef _JK2EXE
 			if(r_stereo->integer)
 			{
 				glConfig->stereoEnabled = qtrue;
 				SDL_GL_SetAttribute(SDL_GL_STEREO, 1);
 			}
 			else
+#endif
 			{
 				glConfig->stereoEnabled = qfalse;
 				SDL_GL_SetAttribute(SDL_GL_STEREO, 0);
 			}
 
 			SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+#ifdef _JK2EXE
 			SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, !r_allowSoftwareGL->integer );
+#else
+			SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
+#endif
 
 			if( ( screen = SDL_CreateWindow( windowTitle, x, y,
 					glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
@@ -815,7 +830,6 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 	Cmd_AddCommand("minimize", GLimp_Minimize);
 
 	r_sdlDriver			= Cvar_Get( "r_sdlDriver",			"",			CVAR_ROM );
-	r_allowSoftwareGL	= Cvar_Get( "r_allowSoftwareGL",	"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
 
 	// Window cvars
 	r_fullscreen		= Cvar_Get( "r_fullscreen",			"0",		CVAR_ARCHIVE|CVAR_LATCH );
@@ -825,17 +839,20 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 	r_customwidth		= Cvar_Get( "r_customwidth",		"1600",		CVAR_ARCHIVE|CVAR_LATCH );
 	r_customheight		= Cvar_Get( "r_customheight",		"1024",		CVAR_ARCHIVE|CVAR_LATCH );
 	r_swapInterval		= Cvar_Get( "r_swapInterval",		"0",		CVAR_ARCHIVE_ND );
-	r_stereo			= Cvar_Get( "r_stereo",				"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
 	r_mode				= Cvar_Get( "r_mode",				"-2",		CVAR_ARCHIVE|CVAR_LATCH );
 	r_displayRefresh	= Cvar_Get( "r_displayRefresh",		"0",		CVAR_LATCH );
 	Cvar_CheckRange( r_displayRefresh, 0, 240, qtrue );
 
 	// Window render surface cvars
+	r_ext_multisample	= Cvar_Get( "r_ext_multisample",	"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
+#ifdef _JK2EXE
+	r_allowSoftwareGL	= Cvar_Get( "r_allowSoftwareGL",	"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
+	r_stereo			= Cvar_Get( "r_stereo",				"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
 	r_stencilbits		= Cvar_Get( "r_stencilbits",		"8",		CVAR_ARCHIVE_ND|CVAR_LATCH );
 	r_depthbits			= Cvar_Get( "r_depthbits",			"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
 	r_colorbits			= Cvar_Get( "r_colorbits",			"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
 	r_ignorehwgamma		= Cvar_Get( "r_ignorehwgamma",		"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
-	r_ext_multisample	= Cvar_Get( "r_ext_multisample",	"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
+#endif
 	Cvar_Get( "r_availableModes", "", CVAR_ROM );
 
 	// Create the window and set up the context
@@ -868,8 +885,13 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 		return none;
 	}
 
+#ifdef _JK2EXE
 	glConfig->deviceSupportsGamma =
 		(qboolean)(!r_ignorehwgamma->integer && SDL_SetWindowBrightness( screen, 1.0f ) >= 0);
+#else
+	// both devices of rd-vulkan-vision make the gamma a pass of their own
+	glConfig->deviceSupportsGamma = qfalse;
+#endif
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	IN_Init( screen );
@@ -967,6 +989,8 @@ void GLimp_LogComment( char *comment )
 {
 }
 
+#ifdef _JK2EXE
+// the OpenGL renderer of the SP engine
 void WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] )
 {
 	Uint16 table[3][256];
@@ -1030,6 +1054,7 @@ qboolean WIN_GL_ExtensionSupported( const char *extension )
 {
 	return SDL_GL_ExtensionSupported( extension ) == SDL_TRUE ? qtrue : qfalse;
 }
+#endif
 
 /*
 ===============

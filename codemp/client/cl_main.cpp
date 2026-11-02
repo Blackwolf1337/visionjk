@@ -39,7 +39,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
-cvar_t	*cl_renderer;
 
 cvar_t	*cl_nodelta;
 cvar_t	*cl_debugMove;
@@ -155,19 +154,15 @@ static void CL_ShutdownRef( qboolean restarting );
 static qboolean CL_EchoAsked( const netadr_t *from, const char *text );
 static qboolean CL_MasterAsked( const netadr_t *from );
 
-// The renderer a client without a stored cl_renderer starts with, and the one that takes its place for a run
-// where the chosen one is not there or says that it can not run on this machine (CL_InitRenderer).
-// macOS: nobody has seen rd-vulkan-vision run there yet.
-#ifdef MACOS_X
-#define DEFAULT_RENDER_LIBRARY "rd-vanilla"
+// The renderer, a library next to the program. Where it can not run (no Vulkan 1.3, a browser without WebGL 2) it
+// comes back without a window and with the reason as renderer_string, and the game stops with that and this text
+// (CL_InitRenderer).
+#define RENDER_LIBRARY "rd-vulkan-vision"
+#ifdef __EMSCRIPTEN__
+#define RENDER_MISSING_TEXT "Your browser can not draw with WebGL 2. Use a current browser and turn on hardware acceleration in its settings."
 #else
-#define DEFAULT_RENDER_LIBRARY "rd-vulkan-vision"
+#define RENDER_MISSING_TEXT "This computer can not run Vulkan 1.3, which the game needs to draw. Update your graphics driver; graphics cards without Vulkan 1.3 support can not run VisionJK."
 #endif
-#define FALLBACK_RENDER_LIBRARY "rd-vanilla"
-
-// This run goes on with the fallback renderer, whatever cl_renderer says. The cvar is left alone, so the next
-// start and a vid_restart try the chosen renderer again (a new driver may have come).
-static qboolean cl_rendererFallback;
 
 /*
 =======================================================================
@@ -1367,8 +1362,7 @@ void CL_Vid_Restart_f( void ) {
 		Hunk_ClearToMark();
 	}
 
-	// initialize the renderer interface, with the renderer cl_renderer names: a run on the fallback tries again
-	cl_rendererFallback = qfalse;
+	// initialize the renderer interface
 	CL_InitRef();
 
 	// startup all the client stuff
@@ -2611,17 +2605,9 @@ void CL_InitRenderer( void ) {
 	// this sets up the renderer and calls R_Init
 	re->BeginRegistration( &cls.glconfig );
 
-	// A renderer that can not run on this machine comes back without a window: rd-vulkan-vision where there is no
-	// Vulkan 1.3 (VK_InitVulkan() says why in the console). The game goes on with the fallback renderer.
-	if ( !cls.glconfig.vidWidth && !cl_rendererFallback ) {
-		Com_Printf( "%s can not run on this machine, going on with " FALLBACK_RENDER_LIBRARY "\n", cl_renderer->string );
-		cl_rendererFallback = qtrue;
-		CL_ShutdownRef( qfalse );
-		CL_InitRef();
-		re->BeginRegistration( &cls.glconfig );
-	}
+	// the renderer can not run on this machine, VK_InitVulkan() said why
 	if ( !cls.glconfig.vidWidth ) {
-		Com_Error( ERR_FATAL, "The renderer made no window" );
+		Com_Error( ERR_FATAL, RENDER_MISSING_TEXT "\n\n%s", cls.glconfig.renderer_string ? cls.glconfig.renderer_string : "" );
 	}
 	cls.bias2D = Cvar_VariableValue( "v_2dBias" );
 	cls.bias2DY = Cvar_VariableValue( "v_2dBiasY" );
@@ -2719,29 +2705,10 @@ void CL_InitRef( void ) {
 
 	Com_Printf( "----- Initializing Renderer ----\n" );
 
-	cl_renderer = Cvar_Get( "cl_renderer", DEFAULT_RENDER_LIBRARY, CVAR_ARCHIVE|CVAR_LATCH, "Which renderer library to use" );
-
-	// The name of a library next to the program, never a path (the ui and menu scripts set it: Sys_LoadDll joined
-	// "../" and the like to the folders it looks in).
-	if ( !cl_renderer->string[0] || cl_renderer->string[strspn( cl_renderer->string,
-		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" )] ) {
-		Com_Printf( S_COLOR_YELLOW "cl_renderer \"%s\" is no renderer name, using " FALLBACK_RENDER_LIBRARY "\n", cl_renderer->string );
-		cl_rendererFallback = qtrue;
-	}
-
-	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, cl_rendererFallback ? FALLBACK_RENDER_LIBRARY : cl_renderer->string );
-
-	if( !(rendererLib = Sys_LoadDll( dllName, qfalse )) && !cl_rendererFallback && strcmp( cl_renderer->string, FALLBACK_RENDER_LIBRARY ) )
-	{
-		Com_Printf( "failed: trying to load fallback renderer\n" );
-		cl_rendererFallback = qtrue;
-
-		Com_sprintf( dllName, sizeof( dllName ), FALLBACK_RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
-		rendererLib = Sys_LoadDll( dllName, qfalse );
-	}
-
+	Com_sprintf( dllName, sizeof( dllName ), RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
+	rendererLib = Sys_LoadDll( dllName, qfalse );
 	if ( !rendererLib ) {
-		Com_Error( ERR_FATAL, "Failed to load renderer\n" );
+		Com_Error( ERR_FATAL, "Failed to load %s\n", dllName );
 	}
 
 	memset( &ri, 0, sizeof( ri ) );
@@ -2817,14 +2784,11 @@ void CL_InitRef( void ) {
 	ri.CGVM_RagCallback = CGVM_RagCallback;
 
     ri.WIN_Init = WIN_Init;
-	ri.WIN_SetGamma = WIN_SetGamma;
     ri.WIN_Shutdown = WIN_Shutdown;
     ri.WIN_Present = WIN_Present;
 	ri.WIN_VK_InstanceExtensions = WIN_VK_InstanceExtensions;
 	ri.WIN_VK_CreateSurface = WIN_VK_CreateSurface;
 	ri.WIN_VK_GetInstanceProcAddr = WIN_VK_GetInstanceProcAddr;
-	ri.GL_GetProcAddress = WIN_GL_GetProcAddress;
-	ri.GL_ExtensionSupported = WIN_GL_ExtensionSupported;
 
 	ri.CM_GetCachedMapDiskImage = CM_GetCachedMapDiskImage;
 	ri.CM_SetCachedMapDiskImage = CM_SetCachedMapDiskImage;
