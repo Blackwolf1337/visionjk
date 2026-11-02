@@ -5197,7 +5197,7 @@ you to discard your changes if you did something you didnt want
 */
 void UI_UpdateVideoSetup ( void )
 {
-	char	resolution[32], renderer[MAX_QPATH];
+	char	resolution[32];
 	int		width, height, displayMode;
 
 	// "desktop" is the size of the screen, "<width>x<height>" one of the sizes of the list (Item_Multi_FeedVideoModes)
@@ -5213,10 +5213,6 @@ void UI_UpdateVideoSetup ( void )
 	displayMode = (int)trap->Cvar_VariableValue( "ui_r_displaymode" );
 	trap->Cvar_Set( "r_fullscreen", displayMode == 1 ? "1" : "0" );
 	trap->Cvar_Set( "r_noborder", displayMode == 2 ? "1" : "0" );
-	Q_strncpyz( renderer, UI_Cvar_VariableString( "ui_cl_renderer" ), sizeof( renderer ) );
-	if ( renderer[0] ) {
-		trap->Cvar_Set( "cl_renderer", renderer );
-	}
 	trap->Cvar_Set ( "r_ext_multisample", UI_Cvar_VariableString ( "ui_r_ext_multisample" ) );
 	trap->Cvar_Set ( "r_lodbias", UI_Cvar_VariableString ( "ui_r_lodbias" ) );
 	trap->Cvar_Set ( "r_picmip", UI_Cvar_VariableString ( "ui_r_picmip" ) );
@@ -5248,7 +5244,6 @@ void UI_GetVideoSetup ( void )
 	// Make sure the cvars are registered as read only.
 	trap->Cvar_Register ( NULL, "ui_r_resolution",			"desktop", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_displaymode",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_cl_renderer",				"", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_ext_multisample",		"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_lodbias",				"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_picmip",				"0", CVAR_ROM|CVAR_INTERNAL );
@@ -5270,7 +5265,6 @@ void UI_GetVideoSetup ( void )
 		trap->Cvar_Set ( "ui_r_resolution",			va( "%ix%i", uiInfo.uiDC.glconfig.vidWidth, uiInfo.uiDC.glconfig.vidHeight ) );
 	}
 	trap->Cvar_Set ( "ui_r_displaymode",				trap->Cvar_VariableValue( "r_fullscreen" ) ? "1" : ( trap->Cvar_VariableValue( "r_noborder" ) ? "2" : "0" ) );
-	trap->Cvar_Set ( "ui_cl_renderer",				UI_Cvar_VariableString ( "cl_renderer" ) );
 	trap->Cvar_Set ( "ui_r_ext_multisample",			UI_Cvar_VariableString ( "r_ext_multisample" ) );
 	trap->Cvar_Set ( "ui_r_lodbias",					UI_Cvar_VariableString ( "r_lodbias" ) );
 	trap->Cvar_Set ( "ui_r_picmip",					UI_Cvar_VariableString ( "r_picmip" ) );

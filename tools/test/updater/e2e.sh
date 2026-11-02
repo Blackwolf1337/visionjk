@@ -120,7 +120,7 @@ run() {
 			#!/bin/bash
 			export WINEPREFIX="$WINEPREFIX" WINEDLLOVERRIDES="$WINEDLLOVERRIDES" WINEDEBUG=-all
 			cd "$G" || exit 1
-			wine $prog +set fs_homepath "\$(winepath -w "$H")" +set cl_renderer rd-vanilla +set r_fullscreen 0 \\
+			wine $prog +set fs_homepath "\$(winepath -w "$H")" +set r_fullscreen 0 \\
 				+set r_mode -1 +set r_customwidth 1280 +set r_customheight 720 +set s_initsound 0 +set in_nograb 1 +set com_maxfps 60 \\
 				+set r_swapInterval 0 "\$@" +exec updtest.cfg >> "$R/$name.log" 2>&1
 			wineserver -w
@@ -128,7 +128,7 @@ run() {
 	else
 		cat > "$R/start.sh" <<- EOF
 			#!/bin/bash
-			cd "$G" && exec ./$prog +set fs_homepath "$H" +set cl_renderer rd-vanilla +set r_fullscreen 0 \\
+			cd "$G" && exec ./$prog +set fs_homepath "$H" +set r_fullscreen 0 \\
 				+set r_mode -1 +set r_customwidth 1280 +set r_customheight 720 +set s_initsound 0 +set in_nograb 1 +set com_maxfps 60 \\
 				+set r_swapInterval 0 "\$@" +exec updtest.cfg >> "$R/$name.log" 2>&1
 		EOF

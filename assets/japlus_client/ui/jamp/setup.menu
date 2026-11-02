@@ -1369,40 +1369,6 @@
 
 		itemDef 
 		{	
-			name				renderer
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				"Renderer:"
-			rect				260 230 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			.615 .615 .956 1
-			cvarStrList			{  "Vulkan" , "rd-vulkan-vision" , "OpenGL" , "rd-vanilla" }
-			descText			"Draw with Vulkan or with OpenGL"
-			cvar				"ui_cl_renderer"
-			visible				1
-
-			mouseenter 
-			{ 
-				show			highlight4
-			}
-			mouseexit 
-			{ 
-				hide			highlight4
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-				setcvar			ui_r_modified	1 ;
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
 			name				geometric_detail
 			group				video
 			type				ITEM_TYPE_MULTI

@@ -76,7 +76,7 @@ class Layout:
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
-        ('old', 'video', ('ui_r_glcustom', 'ui_r_resolution', 'ui_r_displaymode', 'ui_cl_renderer', 'ui_r_ext_multisample',
+        ('old', 'video', ('ui_r_glcustom', 'ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample',
                           'r_swapinterval')),
         ('multi', 'Frame Limit', 'com_maxfps', (('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240),
                                                 ('None', 0)), 'The most frames a second the game draws.'),
@@ -84,21 +84,21 @@ SETUP = [
          'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.'),
         ('old', 'video2', ('r_gamma',)),
         ('multi', 'Render Scale', 'tay_renderScale', (('Half', 0.5), ('Three Quarters', 0.75), ('Full', 1), ('One and a Half', 1.5), ('Double', 2)),
-         'The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart.'),
+         'The size the level is drawn at, the HUD stays sharp. Counts after a video restart.'),
         ('head', 'Detail'),
         ('old', 'video', ('ui_r_lodbias', 'ui_r_picmip', 'ui_r_texturemode', 'ui_r_detailtextures',
                           'ui_r_ext_compress_textures')),
         ('old', 'video2', ('r_ext_texture_filter_anisotropic', 'r_dynamiclight')),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
         ('old', 'video2', ('cg_marks', 'cg_shadows', 'cg_rendertotexturefx', 'advancedvideo')),
-        ('head', 'Vulkan Renderer'),
-        ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings. Vulkan renderer only.'),
+        ('head', 'Bloom'),
+        ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
         ('slider', 'Bloom Threshold', 'tay_bloomThreshold', 0.5, 0, 0.95, 'How bright a part has to be to shine.'),
         ('head', 'Screen Effects'),
-        ('yesno', 'Screen Effects', 'v_screenFx', 'Master switch for all screen effects. Only with the Vulkan renderer.'),
+        ('yesno', 'Screen Effects', 'v_screenFx', 'Master switch for all screen effects.'),
         ('yesno', 'Explosion Waves', 'v_fxBlast', 'Explosions send a wave through the air that bends the picture. Close by, the colours split.'),
-        ('yesno', 'Ringing Ears', 'v_soundTinnitus', 'After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer.'),
+        ('yesno', 'Ringing Ears', 'v_soundTinnitus', 'After an explosion close by the sound turns dull and your ears ring for a moment.'),
         ('yesno', 'Heat Haze', 'v_fxHeat', 'The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes.'),
         ('yesno', 'Hit Feedback', 'v_fxHit', 'A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays.'),
         ('yesno', 'Under Water', 'v_fxWater', 'Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface.'),
@@ -173,10 +173,10 @@ SETUP = [
         ('head', 'Weapons'),
         ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
         ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
-        ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer.'),
+        ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask.'),
         ('yesno', 'Zoom with Mouse Wheel', 'v_scopeWheelZoom', 'While the disruptor zoom is locked, the mouse wheel zooms in and out.'),
         ('slider', 'Motion Tracker Speed', 'v_motionThreshold', 40, 10, 200, 'The speed a player needs before the tracker of the disruptor scope picks him up.'),
-        ('yesno', 'Binocular Lens', 'v_binoculars', 'The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer.'),
+        ('yesno', 'Binocular Lens', 'v_binoculars', 'The binoculars look through a lens with mouse wheel zoom, the distance and a compass.'),
         ('yesno', 'Rocket Lock-On', 'v_lockOn', 'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.'),
     ]),
     ('HUD', 'What the screen shows around the level, the view and the crosshair.', [
@@ -828,7 +828,7 @@ def window_frame(m, L):
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'Vulkan Renderer', 'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
+ADVANCED_HEADS = {'Bloom', 'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan',
                   'Text', 'Connection', 'Security'}
 ADVANCED_CVARS = {'tay_renderscale', 'v_2daspect', 'r_ext_texture_filter_anisotropic', 'cg_rendertotexturefx', 'ui_r_detailtextures',
                   'ui_r_ext_compress_textures'}

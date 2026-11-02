@@ -341,14 +341,6 @@ REFERENCE           BORDERLESS
 LANG_ENGLISH        "Borderless"
 LANG_SPANISH        "Sin borde"
 
-REFERENCE           RENDERER
-LANG_ENGLISH        "Renderer"
-LANG_SPANISH        "Renderizador"
-
-REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
-LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
-LANG_SPANISH        "Usar Vulkan u OpenGL para dibujar."
-
 REFERENCE           ANTI_ALIASING
 LANG_ENGLISH        "Anti-Aliasing"
 LANG_SPANISH        "Antialiasing"
@@ -382,8 +374,8 @@ LANG_ENGLISH        "Render Scale"
 LANG_SPANISH        "Escala de renderizado"
 
 REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
-LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
-LANG_SPANISH        "Resolución a la que se dibuja el nivel; el HUD sigue nítido. Solo con el renderizador Vulkan, se aplica al reiniciar los gráficos."
+LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Counts after a video restart."
+LANG_SPANISH        "Resolución a la que se dibuja el nivel; el HUD sigue nítido. Se aplica al reiniciar los gráficos."
 
 REFERENCE           HALF
 LANG_ENGLISH        "Half"
@@ -446,8 +438,8 @@ LANG_ENGLISH        "Bloom"
 LANG_SPANISH        "#same"
 
 REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
-LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
-LANG_SPANISH        "Las partes brillantes del nivel resplandecen sobre su entorno. Solo con el renderizador Vulkan."
+LANG_ENGLISH        "Bright parts of the level shine over their surroundings."
+LANG_SPANISH        "Las partes brillantes del nivel resplandecen sobre su entorno."
 
 REFERENCE           BLOOM_STRENGTH
 LANG_ENGLISH        "Bloom Strength"
@@ -470,8 +462,8 @@ LANG_ENGLISH        "Screen Effects"
 LANG_SPANISH        "Efectos de pantalla"
 
 REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
-LANG_ENGLISH        "Master switch for all screen effects. Only with the Vulkan renderer."
-LANG_SPANISH        "Interruptor general de todos los efectos de pantalla. Solo con el renderizador Vulkan."
+LANG_ENGLISH        "Master switch for all screen effects."
+LANG_SPANISH        "Interruptor general de todos los efectos de pantalla."
 
 REFERENCE           EXPLOSION_WAVES
 LANG_ENGLISH        "Explosion Waves"
@@ -486,8 +478,8 @@ LANG_ENGLISH        "Ringing Ears"
 LANG_SPANISH        "Zumbido de oídos"
 
 REFERENCE           AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
-LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer."
-LANG_SPANISH        "Tras una explosión cercana el sonido se apaga y te zumban los oídos un momento. Funciona con cualquier renderizador."
+LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment."
+LANG_SPANISH        "Tras una explosión cercana el sonido se apaga y te zumban los oídos un momento."
 
 REFERENCE           HEAT_HAZE
 LANG_ENGLISH        "Heat Haze"
@@ -1086,8 +1078,8 @@ LANG_ENGLISH        "Scope Lens"
 LANG_SPANISH        "Lente de mira"
 
 REFERENCE           THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
-LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer."
-LANG_SPANISH        "El disruptor con zoom muestra el nivel a través de una lente. Desactivado: la máscara negra plana. Solo con el renderizador Vulkan."
+LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask."
+LANG_SPANISH        "El disruptor con zoom muestra el nivel a través de una lente. Desactivado: la máscara negra plana."
 
 REFERENCE           ZOOM_WITH_MOUSE_WHEEL
 LANG_ENGLISH        "Zoom with Mouse Wheel"
@@ -1110,8 +1102,8 @@ LANG_ENGLISH        "Binocular Lens"
 LANG_SPANISH        "Lente de prismáticos"
 
 REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
-LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer."
-LANG_SPANISH        "Los prismáticos miran a través de una lente con zoom de la rueda, la distancia y una brújula. Solo con el renderizador Vulkan."
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass."
+LANG_SPANISH        "Los prismáticos miran a través de una lente con zoom de la rueda, la distancia y una brújula."
 
 REFERENCE           ROCKET_LOCK_ON
 LANG_ENGLISH        "Rocket Lock-On"
@@ -1712,10 +1704,6 @@ LANG_SPANISH        "El archivo con la clave para el inicio de admin, si ningún 
 REFERENCE           SCREEN
 LANG_ENGLISH        "Screen"
 LANG_SPANISH        "Pantalla"
-
-REFERENCE           VULKAN_RENDERER
-LANG_ENGLISH        "Vulkan Renderer"
-LANG_SPANISH        "Renderizador Vulkan"
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"

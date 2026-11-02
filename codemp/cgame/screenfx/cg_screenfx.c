@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The renderer bends and colours the view of the level as this file asks once a frame (trap->ext.R_SetScreenEffect,
 // screenEffect_t). What happens in the level adds sources while the frame is built, CG_ScreenFxScene() sends the
 // strongest of them before the scene is rendered. Only the look changes, so it works on every server. The renderer
-// leaves a source out where the level is nearer than it: nothing is seen through a wall. rd-vanilla: none of it.
+// leaves a source out where the level is nearer than it: nothing is seen through a wall. A renderer without them: none of it.
 //
 // v_screenFx 0 switches all of it off, and each look has a cvar of its own:
 // - v_fxBlast: an explosion sends a ring through the air that bends the picture as it runs outwards. Close by the

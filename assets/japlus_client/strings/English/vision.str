@@ -257,12 +257,6 @@ LANG_ENGLISH        "Fullscreen"
 REFERENCE           BORDERLESS
 LANG_ENGLISH        "Borderless"
 
-REFERENCE           RENDERER
-LANG_ENGLISH        "Renderer"
-
-REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
-LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
-
 REFERENCE           ANTI_ALIASING
 LANG_ENGLISH        "Anti-Aliasing"
 
@@ -288,7 +282,7 @@ REFERENCE           RENDER_SCALE
 LANG_ENGLISH        "Render Scale"
 
 REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
-LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
+LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Counts after a video restart."
 
 REFERENCE           HALF
 LANG_ENGLISH        "Half"
@@ -336,7 +330,7 @@ REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 
 REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
-LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
+LANG_ENGLISH        "Bright parts of the level shine over their surroundings."
 
 REFERENCE           BLOOM_STRENGTH
 LANG_ENGLISH        "Bloom Strength"
@@ -354,7 +348,7 @@ REFERENCE           SCREEN_EFFECTS
 LANG_ENGLISH        "Screen Effects"
 
 REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
-LANG_ENGLISH        "Master switch for all screen effects. Only with the Vulkan renderer."
+LANG_ENGLISH        "Master switch for all screen effects."
 
 REFERENCE           EXPLOSION_WAVES
 LANG_ENGLISH        "Explosion Waves"
@@ -366,7 +360,7 @@ REFERENCE           RINGING_EARS
 LANG_ENGLISH        "Ringing Ears"
 
 REFERENCE           AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
-LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer."
+LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment."
 
 REFERENCE           HEAT_HAZE
 LANG_ENGLISH        "Heat Haze"
@@ -816,7 +810,7 @@ REFERENCE           SCOPE_LENS
 LANG_ENGLISH        "Scope Lens"
 
 REFERENCE           THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
-LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer."
+LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask."
 
 REFERENCE           ZOOM_WITH_MOUSE_WHEEL
 LANG_ENGLISH        "Zoom with Mouse Wheel"
@@ -834,7 +828,7 @@ REFERENCE           BINOCULAR_LENS
 LANG_ENGLISH        "Binocular Lens"
 
 REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
-LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer."
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass."
 
 REFERENCE           ROCKET_LOCK_ON
 LANG_ENGLISH        "Rocket Lock-On"
@@ -1285,9 +1279,6 @@ LANG_ENGLISH        "The file with the key for the admin login, where no agent h
 
 REFERENCE           SCREEN
 LANG_ENGLISH        "Screen"
-
-REFERENCE           VULKAN_RENDERER
-LANG_ENGLISH        "Vulkan Renderer"
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"

@@ -593,32 +593,6 @@
 
 		itemDef
 		{
-			name					renderer
-			group					video
-			type					ITEM_TYPE_MULTI
-			text					@VISION_RENDERER
-			cvarStrList { "Vulkan" , "rd-vulkan-vision" , "OpenGL" , "rd-vanilla" }
-			descText				@VISION_DRAW_WITH_VULKAN_OR_WITH_OPENGL
-			cvar					"ui_cl_renderer"
-			action
-			{
-				play "sound/interface/button1"
-				setcvar ui_r_modified 1
-				show applyChanges
-			}
-			rect					306 342 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
 			name					antialiasing
 			group					video
 			type					ITEM_TYPE_MULTI
@@ -632,7 +606,7 @@
 				setcvar ui_r_modified 1
 				show applyChanges
 			}
-			rect					306 394 392 52
+			rect					306 342 392 52
 			page					1
 			scroll					1
 			row						1
@@ -657,7 +631,7 @@
 			}
 			descText				@MENUS_VIDEO_SYNC_DESC
 			action { play "sound/interface/button1" }
-			rect					306 446 392 52
+			rect					306 394 392 52
 			page					1
 			scroll					1
 			row						1
@@ -677,7 +651,7 @@
 			cvar					"com_maxfps"
 			cvarFloatList { "60" 60 "90" 90 "125" 125 "144" 144 "165" 165 "240" 240 @VISION_NONE 0 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 498 392 52
+			rect					306 446 392 52
 			page					1
 			scroll					1
 			row						1
@@ -696,7 +670,7 @@
 			descText				@VISION_MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
 			cvar					"v_2dAspect"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 550 392 52
+			rect					306 498 392 52
 			page					1
 			scroll					1
 			row						1
@@ -718,7 +692,7 @@
 			descText				@MENUS_ADJUST_THE_BRIGHTNESS
 			action { play "sound/interface/button1" }
 			descPic					"gfx/menus/vision/setup/brightness" 0.8 1.4
-			rect					306 602 392 52
+			rect					306 550 392 52
 			page					1
 			scroll					1
 			row						1
@@ -741,7 +715,7 @@
 				@VISION_HALF 0.5 @VISION_THREE_QUARTERS 0.75 @VISION_FULL 1 @VISION_ONE_AND_A_HALF 1.5 @VISION_DOUBLE 2
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 654 392 52
+			rect					306 602 392 52
 			page					1
 			scroll					1
 			row						1
@@ -756,9 +730,9 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 706 412 100
+			rect					296 654 412 100
 			visible					1
-			text					@VISION_VULKAN_RENDERER
+			text					@VISION_BLOOM
 			font					7
 			textscale				0.78
 			forecolor				0.56 0.64 0.74 1
@@ -785,7 +759,7 @@
 			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
-			rect					306 806 392 52
+			rect					306 754 392 52
 			page					1
 			scroll					1
 			row						1
@@ -806,7 +780,7 @@
 			cvarfloat				"tay_bloomIntensity" 0.6 0 2
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
-			rect					306 858 392 52
+			rect					306 806 392 52
 			page					1
 			scroll					1
 			row						1
@@ -827,7 +801,7 @@
 			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
-			rect					306 910 392 52
+			rect					306 858 392 52
 			page					1
 			scroll					1
 			row						1

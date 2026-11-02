@@ -20,8 +20,6 @@ OLD = {
         'Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them.',
     'Display Mode:': 'Display Mode',
     'A window, the whole screen, or a window without a border': 'A window, the whole screen, or a window without a border.',
-    'Renderer:': 'Renderer',
-    'Draw with Vulkan or with OpenGL': 'Draw with Vulkan or with OpenGL.',
     'Anti-Aliasing:': 'Anti-Aliasing',
     'Smooths the edges, costs speed': 'Smooths the edges, costs speed.',
     '3D Sound:': '3D Sound',
@@ -141,8 +139,6 @@ TR = {
     'Window': 'Fenster',
     'Fullscreen': 'Vollbild',
     'Borderless': 'Rahmenlos',
-    'Renderer': 'Renderer',
-    'Draw with Vulkan or with OpenGL.': 'Mit Vulkan oder OpenGL rendern.',
     'Anti-Aliasing': 'Kantenglättung',
     'Smooths the edges, costs speed.': 'Glättet Kanten, kostet Leistung.',
     'Frame Limit': 'FPS-Limit',
@@ -296,7 +292,6 @@ TR = {
     'Jump Goal': 'Sprungziel',
     'Jumps at least this fast are gold in the list of jumps. 0: off.': 'Sprünge ab dieser Geschwindigkeit erscheinen in der Sprungliste golden. 0: aus.',
     'Smooth Camera': 'Kamera glätten',
-    'Vulkan Renderer': 'Vulkan-Renderer',
     'Spectator Map': 'Zuschauerkarte',
     'While you watch, a map of the players around at the upper right.': 'Zeigt beim Zuschauen oben rechts eine Karte der Spieler in der Nähe.',
     'Lead Indicator': 'Vorhalteanzeige',
@@ -304,7 +299,7 @@ TR = {
     'Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid.': 'Zeigt, wohin du zielen musst, damit ein fliegender Schuss einen bewegten Gegner trifft. Viele Server werten das als Zielhilfe.',
     'The camera behind you follows the same at every frame rate. It trails a little further behind.': 'Die Kamera hinter dir folgt bei jeder Bildrate gleich. Sie hängt etwas weiter hinterher.',
     'Bloom': 'Bloom',
-    'Bright parts of the level shine over their surroundings. Vulkan renderer only.': 'Helle Stellen des Levels strahlen auf ihre Umgebung aus. Nur mit dem Vulkan-Renderer.',
+    'Bright parts of the level shine over their surroundings.': 'Helle Stellen des Levels strahlen auf ihre Umgebung aus.',
     'Bloom Strength': 'Bloom-Stärke',
     'How strongly the bright parts shine.': 'Wie stark die hellen Stellen strahlen.',
     'Bloom Threshold': 'Bloom-Schwelle',
@@ -315,7 +310,7 @@ TR = {
     'Full': 'Voll',
     'One and a Half': '1,5-fach',
     'Double': 'Doppelt',
-    'The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart.': 'Auflösung, in der das Level gezeichnet wird. Das HUD bleibt scharf. Nur mit dem Vulkan-Renderer, gilt nach einem Neustart der Grafik.',
+    'The size the level is drawn at, the HUD stays sharp. Counts after a video restart.': 'Auflösung, in der das Level gezeichnet wird. Das HUD bleibt scharf. Gilt nach einem Neustart der Grafik.',
     'Name Alert': 'Namenshinweis',
     'Marked': 'Markiert',
     'Marked and Sound': 'Markiert mit Ton',
@@ -392,11 +387,11 @@ TR = {
     'Crosshair Size': 'Fadenkreuzgröße',
     'Disruptor': 'Disruptor',
     'Screen Effects': 'Bildschirmeffekte',
-    'Master switch for all screen effects. Only with the Vulkan renderer.': 'Hauptschalter für alle Bildschirmeffekte. Nur mit dem Vulkan-Renderer.',
+    'Master switch for all screen effects.': 'Hauptschalter für alle Bildschirmeffekte.',
     'Explosion Waves': 'Explosionswellen',
     'Ringing Ears': 'Ohrenklingeln',
     'Explosions send a wave through the air that bends the picture. Close by, the colours split.': 'Explosionen schicken eine Welle durch die Luft, die das Bild verbiegt. In der Nähe spalten sich die Farben.',
-    'After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer.': 'Nach einer Explosion in der Nähe wird der Ton dumpf und deine Ohren klingeln kurz. Funktioniert mit jedem Renderer.',
+    'After an explosion close by the sound turns dull and your ears ring for a moment.': 'Nach einer Explosion in der Nähe wird der Ton dumpf und deine Ohren klingeln kurz.',
     'Heat Haze': 'Hitzeflimmern',
     'The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes.': 'Die Luft flimmert über Jetpack-Flammen, dem Flammenwerfer und dem Lauf deines Repetierers oder Blasters nach einer langen Salve, der dann auch raucht.',
     'Hit Feedback': 'Trefferrückmeldung',
@@ -409,13 +404,13 @@ TR = {
     'Clashing blades flash. The air around a lit blade is hot.': 'Aufeinandertreffende Klingen blitzen auf. Die Luft um eine eingeschaltete Klinge ist heiß.',
     'Binoculars and Rockets': 'Fernglas und Raketen',
     'Binocular Lens': 'Fernglas-Linse',
-    'The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer.': 'Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass. Nur mit dem Vulkan-Renderer.',
+    'The binoculars look through a lens with mouse wheel zoom, the distance and a compass.': 'Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass.',
     'Rocket Lock-On': 'Raketen-Zielerfassung',
     'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.': 'Die Zielerfassung des Raketenwerfers zeichnet Klammern, die sich auf das Ziel zuziehen, und piept mit jedem Schritt höher.',
     'Scope Lens': 'Zielfernrohr-Linse',
     'Zoom with Mouse Wheel': 'Zoom mit Mausrad',
     'Motion Tracker Speed': 'Tempo Bewegungsmelder',
-    'The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer.': 'Der gezoomte Disruptor zeigt den Level durch eine Linse. Aus: die flache schwarze Maske. Nur mit dem Vulkan-Renderer.',
+    'The zoomed disruptor shows the level through a lens. Off: the flat black mask.': 'Der gezoomte Disruptor zeigt den Level durch eine Linse. Aus: die flache schwarze Maske.',
     'While the disruptor zoom is locked, the mouse wheel zooms in and out.': 'Solange der Disruptor-Zoom eingerastet ist, zoomt das Mausrad rein und raus.',
     'The speed a player needs before the tracker of the disruptor scope picks him up.': 'Das Tempo, ab dem der Bewegungsmelder des Disruptor-Zielfernrohrs einen Spieler erfasst.',
     'The size of the crosshair.': 'Die Größe des Fadenkreuzes.',
@@ -904,7 +899,7 @@ CGAME = {
 }
 
 # names that are the same in every language
-SAME = {'2x', '4x', '8x', 'Vulkan', 'OpenGL', 'Español'}
+SAME = {'2x', '4x', '8x', 'Español'}
 
 LANGUAGES = (('English', None), ('German', 'LANG_GERMAN'), ('French', 'LANG_FRENCH'), ('Spanish', 'LANG_SPANISH'))
 

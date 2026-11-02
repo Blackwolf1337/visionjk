@@ -341,14 +341,6 @@ REFERENCE           BORDERLESS
 LANG_ENGLISH        "Borderless"
 LANG_FRENCH         "Sans bordure"
 
-REFERENCE           RENDERER
-LANG_ENGLISH        "Renderer"
-LANG_FRENCH         "Moteur de rendu"
-
-REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
-LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
-LANG_FRENCH         "Utiliser Vulkan ou OpenGL pour l'affichage."
-
 REFERENCE           ANTI_ALIASING
 LANG_ENGLISH        "Anti-Aliasing"
 LANG_FRENCH         "Anticrénelage"
@@ -382,8 +374,8 @@ LANG_ENGLISH        "Render Scale"
 LANG_FRENCH         "Échelle de rendu"
 
 REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
-LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
-LANG_FRENCH         "Résolution à laquelle le niveau est dessiné, le HUD reste net. Moteur Vulkan uniquement, pris en compte après un redémarrage de l'affichage."
+LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Counts after a video restart."
+LANG_FRENCH         "Résolution à laquelle le niveau est dessiné, le HUD reste net. Pris en compte après un redémarrage de l'affichage."
 
 REFERENCE           HALF
 LANG_ENGLISH        "Half"
@@ -446,8 +438,8 @@ LANG_ENGLISH        "Bloom"
 LANG_FRENCH         "#same"
 
 REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
-LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
-LANG_FRENCH         "Les zones lumineuses du niveau rayonnent sur leur environnement. Moteur Vulkan uniquement."
+LANG_ENGLISH        "Bright parts of the level shine over their surroundings."
+LANG_FRENCH         "Les zones lumineuses du niveau rayonnent sur leur environnement."
 
 REFERENCE           BLOOM_STRENGTH
 LANG_ENGLISH        "Bloom Strength"
@@ -470,8 +462,8 @@ LANG_ENGLISH        "Screen Effects"
 LANG_FRENCH         "Effets d'écran"
 
 REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
-LANG_ENGLISH        "Master switch for all screen effects. Only with the Vulkan renderer."
-LANG_FRENCH         "Interrupteur principal de tous les effets d'écran. Uniquement avec le moteur Vulkan."
+LANG_ENGLISH        "Master switch for all screen effects."
+LANG_FRENCH         "Interrupteur principal de tous les effets d'écran."
 
 REFERENCE           EXPLOSION_WAVES
 LANG_ENGLISH        "Explosion Waves"
@@ -486,8 +478,8 @@ LANG_ENGLISH        "Ringing Ears"
 LANG_FRENCH         "Sifflement des oreilles"
 
 REFERENCE           AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
-LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment. Works with any renderer."
-LANG_FRENCH         "Après une explosion proche, le son devient sourd et vos oreilles sifflent un instant. Fonctionne avec tous les moteurs de rendu."
+LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment."
+LANG_FRENCH         "Après une explosion proche, le son devient sourd et vos oreilles sifflent un instant."
 
 REFERENCE           HEAT_HAZE
 LANG_ENGLISH        "Heat Haze"
@@ -1086,8 +1078,8 @@ LANG_ENGLISH        "Scope Lens"
 LANG_FRENCH         "Lentille de lunette"
 
 REFERENCE           THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
-LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer."
-LANG_FRENCH         "Le disrupteur zoomé montre le niveau à travers une lentille. Désactivé : le masque noir plat. Uniquement avec le moteur Vulkan."
+LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask."
+LANG_FRENCH         "Le disrupteur zoomé montre le niveau à travers une lentille. Désactivé : le masque noir plat."
 
 REFERENCE           ZOOM_WITH_MOUSE_WHEEL
 LANG_ENGLISH        "Zoom with Mouse Wheel"
@@ -1110,8 +1102,8 @@ LANG_ENGLISH        "Binocular Lens"
 LANG_FRENCH         "Lentille des jumelles"
 
 REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
-LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer."
-LANG_FRENCH         "Les jumelles regardent à travers une lentille avec zoom à la molette, la distance et une boussole. Uniquement avec le moteur Vulkan."
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass."
+LANG_FRENCH         "Les jumelles regardent à travers une lentille avec zoom à la molette, la distance et une boussole."
 
 REFERENCE           ROCKET_LOCK_ON
 LANG_ENGLISH        "Rocket Lock-On"
@@ -1712,10 +1704,6 @@ LANG_FRENCH         "Le fichier contenant la clé de connexion admin, si aucun ag
 REFERENCE           SCREEN
 LANG_ENGLISH        "Screen"
 LANG_FRENCH         "Écran"
-
-REFERENCE           VULKAN_RENDERER
-LANG_ENGLISH        "Vulkan Renderer"
-LANG_FRENCH         "Rendu Vulkan"
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"

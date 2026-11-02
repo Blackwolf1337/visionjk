@@ -5055,8 +5055,8 @@ What a screen of settings changed (VisionJK, "changesCvar <cvar>" of a menu)
 
 When such a menu opens it keeps what each of its settings is. Every frame it counts the settings that differ from
 that and sets <cvar> to the number and <cvar>Restart to 1 while one of them takes effect only after a restart (a
-cvar with CVAR_LATCH, or one of the video settings the ui hands to the renderer with the restart: ui_r_*,
-ui_cl_renderer). An ITEM_TYPE_CHANGES lists them with a button to undo each; uiScript changesRevert sets them all
+cvar with CVAR_LATCH, or one of the video settings the ui hands to the renderer with the restart: ui_r_*).
+An ITEM_TYPE_CHANGES lists them with a button to undo each; uiScript changesRevert sets them all
 back, uiScript changesApply keeps them (the menu file restarts the video in the same click where needed).
 
 ===============================================================================
@@ -5122,7 +5122,7 @@ static qboolean Cvar_NeedsRestart( const char *cvar ) {
 	char		value[8];
 	uint32_t	flags = 0;
 
-	if ( !Q_stricmpn( cvar, "ui_r_", 5 ) || !Q_stricmp( cvar, "ui_cl_renderer" ) ) {
+	if ( !Q_stricmpn( cvar, "ui_r_", 5 ) ) {
 		return qtrue;
 	}
 	if ( DC->getCVarInfo && DC->getCVarInfo( cvar, value, sizeof( value ), &flags ) ) {
