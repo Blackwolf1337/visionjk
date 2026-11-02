@@ -1245,7 +1245,6 @@ extern	cvar_t	*v_menuBlur;
 extern	cvar_t	*tay_bloom;
 extern	cvar_t	*tay_bloomIntensity;
 extern	cvar_t	*tay_bloomThreshold;
-extern	cvar_t	*tay_renderScale;
 
 float	R_2DBias( void );
 float	R_2DBiasY( void );

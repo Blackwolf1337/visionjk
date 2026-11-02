@@ -145,7 +145,6 @@ cvar_t	*v_menuBlur;
 cvar_t	*tay_bloom;
 cvar_t	*tay_bloomIntensity;
 cvar_t	*tay_bloomThreshold;
-cvar_t	*tay_renderScale;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
@@ -745,7 +744,6 @@ void R_Register( void )
 	tay_bloom							= ri.Cvar_Get( "tay_bloom",						"0",						CVAR_ARCHIVE, "Bright parts of the level shine over their surroundings" );
 	tay_bloomIntensity					= ri.Cvar_Get( "tay_bloomIntensity",				"0.6",						CVAR_ARCHIVE, "How strongly the bright parts shine with tay_bloom, 0 to 2" );
 	tay_bloomThreshold					= ri.Cvar_Get( "tay_bloomThreshold",				"0.5",						CVAR_ARCHIVE, "How bright a part has to be to shine with tay_bloom, 0 to 0.95 of white" );
-	tay_renderScale						= ri.Cvar_Get( "tay_renderScale",					"1",						CVAR_ARCHIVE|CVAR_LATCH, "The level is drawn at this size of the window, 0.5 to 2, the HUD and the menus at the size of the window (vid_restart)" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );
 /*

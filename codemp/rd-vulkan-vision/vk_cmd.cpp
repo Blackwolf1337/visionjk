@@ -186,8 +186,6 @@ void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth,
 	VkViewport viewport;
 	VkRect2D scissor;
 
-	VK_SceneRect( &x, &y, &width, &height );
-
 	const int top = vk.height - ( y + height );
 	const int left = Q_max( x, 0 ), up = Q_max( top, 0 );
 	const int right = Q_min( x + width, vk.width ), down = Q_min( top + height, vk.height );
@@ -208,8 +206,6 @@ void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth,
 
 static void VK_ClearRect( int x, int y, int width, int height, const VkClearAttachment *attachment ) {
 	VkClearRect rect;
-
-	VK_SceneRect( &x, &y, &width, &height );
 
 	const int top = vk.height - ( y + height );
 	const int left = Q_max( x, 0 ), up = Q_max( top, 0 );
@@ -829,34 +825,6 @@ void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
 	qvkCmdCopyImage( cmd, source->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dest->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 	VK_TargetLayout( cmd, dest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-}
-
-/*
-===============
-VK_DrawScene
-
-A pass and not a blit: with several samples a pixel what the frame shows is in vk.colorMS, and the next pass would
-resolve that over a copy into vk.color. The views of the level are laid over the whole window (they have its
-shape), the scissor keeps the rectangle they covered.
-===============
-*/
-void VK_DrawScene( const int *to ) {
-	VkCommandBuffer cmd = vk.frame->cmd;
-	const VkViewport viewport = { 0.0f, 0.0f, (float)vk.width, (float)vk.height, 0.0f, 1.0f };
-	VkRect2D scissor;
-
-	// the images have their top row first
-	scissor.offset.x = to[0];
-	scissor.offset.y = vk.height - ( to[1] + to[3] );
-	scissor.extent.width = (uint32_t)to[2];
-	scissor.extent.height = (uint32_t)to[3];
-	VK_TargetLayout( cmd, &vk.sceneColor, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.scenePipeline );
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.sceneCopySet, 0, NULL );
-	qvkCmdSetViewport( cmd, 0, 1, &viewport );
-	qvkCmdSetScissor( cmd, 0, 1, &scissor );
-	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
 // the pixels go into the buffer of the frame, one word of 32 bits for each probe

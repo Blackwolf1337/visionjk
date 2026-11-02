@@ -39,21 +39,10 @@ cvar_t	*v_wetMirror;
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
-	// tay_renderScale: the views of the level in a size of their own (vk_frame.cpp)
-	const float scale = Com_Clamp( 0.5f, 2.0f, tay_renderScale->value );
 
 	v_wetMirror = ri.Cvar_Get( "v_wetMirror", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
 		"Puddles of the water gun mirror the room: the level is drawn once more, mirrored at their floor. 0: they mirror only what is on the screen" );
-	vk.inScene = qfalse;
-	vk.sceneWidth = vk.sceneHeight = 0;
-	if ( scale != 1.0f ) {
-		vk.sceneWidth = Q_max( 1, (int)( vk.width * scale + 0.5f ) );
-		vk.sceneHeight = Q_max( 1, (int)( vk.height * scale + 0.5f ) );
-	}
 	VK_CreatePostTargets( width, height );
-	if ( vk.sceneWidth && !VK_CreateSceneTargets( vk.sceneWidth, vk.sceneHeight ) ) {
-		vk.sceneWidth = vk.sceneHeight = 0;
-	}
 	vk.screenSlot = -1;
 }
 
@@ -659,7 +648,6 @@ void VK_DrawWet( void ) {
 	viewport[1] = y = backEnd.viewParms.viewportY;
 	viewport[2] = width = backEnd.viewParms.viewportWidth;
 	viewport[3] = height = backEnd.viewParms.viewportHeight;
-	VK_SceneRect( &x, &y, &width, &height );
 	VectorSet4( wet[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
 	VectorSet4( wet[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
 		(float)count );
@@ -744,15 +732,14 @@ void VK_DrawWet( void ) {
 VK_PuddleMirror
 
 Whether the front end draws the view mirrored at the floor of the puddles (R_PuddleView of tr_main.cpp): its
-targets are there, and the views of the level are not drawn in targets of another size (tay_renderScale). The OpenGL
-ES device has none of it (VK_HasWet).
+targets are there. The OpenGL ES device has none of it (VK_HasWet).
 ===============
 */
 qboolean VK_PuddleMirror( void ) {
 #ifdef RD_VISION_GLES
 	return qfalse;
 #else
-	return (qboolean)( VK_HasWet() && vk.reflect.image && !vk.sceneWidth );
+	return (qboolean)( VK_HasWet() && vk.reflect.image );
 #endif
 }
 
@@ -886,7 +873,6 @@ qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ ) {
 		vkProbe_t *probe = &frame->probe[frame->numProbes++];
 
 		probe->flare = (int)( flare - vk_flares );
-		VK_ScenePoint( &x, &y );
 		probe->x = Com_Clampi( 0, vk.width - 1, x );
 		probe->y = Com_Clampi( 0, vk.height - 1, vk.height - 1 - y );
 		probe->eyeZ = eyeZ;

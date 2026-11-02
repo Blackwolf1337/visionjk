@@ -361,34 +361,6 @@ REFERENCE           NONE
 LANG_ENGLISH        "None"
 LANG_GERMAN         "Keine"
 
-REFERENCE           RENDER_SCALE
-LANG_ENGLISH        "Render Scale"
-LANG_GERMAN         "Renderskalierung"
-
-REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
-LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Counts after a video restart."
-LANG_GERMAN         "Auflösung, in der das Level gezeichnet wird. Das HUD bleibt scharf. Gilt nach einem Neustart der Grafik."
-
-REFERENCE           HALF
-LANG_ENGLISH        "Half"
-LANG_GERMAN         "Halb"
-
-REFERENCE           THREE_QUARTERS
-LANG_ENGLISH        "Three Quarters"
-LANG_GERMAN         "Drei Viertel"
-
-REFERENCE           FULL
-LANG_ENGLISH        "Full"
-LANG_GERMAN         "Voll"
-
-REFERENCE           ONE_AND_A_HALF
-LANG_ENGLISH        "One and a Half"
-LANG_GERMAN         "1,5-fach"
-
-REFERENCE           DOUBLE
-LANG_ENGLISH        "Double"
-LANG_GERMAN         "Doppelt"
-
 REFERENCE           DYNAMIC_GLOW
 LANG_ENGLISH        "Dynamic Glow"
 LANG_GERMAN         "Dynamisches Leuchten"

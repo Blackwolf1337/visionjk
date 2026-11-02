@@ -81,8 +81,6 @@ SETUP = [
         ('multi', 'Frame Limit', 'com_maxfps', (('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240),
                                                 ('None', 0)), 'The most frames a second the game draws.'),
         ('old', 'video2', ('r_gamma',)),
-        ('multi', 'Render Scale', 'tay_renderScale', (('Half', 0.5), ('Three Quarters', 0.75), ('Full', 1), ('One and a Half', 1.5), ('Double', 2)),
-         'The size the level is drawn at, the HUD stays sharp. Counts after a video restart.'),
         ('head', 'Detail'),
         ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
@@ -821,7 +819,7 @@ def window_frame(m, L):
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
 ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Hats and Capes', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
-ADVANCED_CVARS = {'tay_renderscale', 'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold'}
+ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold'}
 
 
 def page_sections(m, content, folds):

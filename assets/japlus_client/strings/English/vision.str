@@ -272,27 +272,6 @@ LANG_ENGLISH        "The most frames a second the game draws."
 REFERENCE           NONE
 LANG_ENGLISH        "None"
 
-REFERENCE           RENDER_SCALE
-LANG_ENGLISH        "Render Scale"
-
-REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
-LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Counts after a video restart."
-
-REFERENCE           HALF
-LANG_ENGLISH        "Half"
-
-REFERENCE           THREE_QUARTERS
-LANG_ENGLISH        "Three Quarters"
-
-REFERENCE           FULL
-LANG_ENGLISH        "Full"
-
-REFERENCE           ONE_AND_A_HALF
-LANG_ENGLISH        "One and a Half"
-
-REFERENCE           DOUBLE
-LANG_ENGLISH        "Double"
-
 REFERENCE           DYNAMIC_GLOW
 LANG_ENGLISH        "Dynamic Glow"
 
