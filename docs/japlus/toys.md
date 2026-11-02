@@ -1,7 +1,7 @@
 # Toys
 
 Not a JA+ feature. `codemp/cgame/toys/cg_toys.c`, `codemp/game/toys/bg_toys.h`, `codemp/game/toys/g_toys.c`, `codemp/cgame/toys/cg_spray.c`, `codemp/cgame/toys/cg_emote.c`, `codemp/cgame/toys/cg_pong.c`, `codemp/cgame/toys/cg_board.c`, `tools/toys/sprays.py`, `tools/toys/pingpong.py`, `tools/toys/sounds.py`,
-`tools/toys/textures.py`, issue #9, 2026-10-31.
+`tools/toys/emotes.py`, `tools/toys/textures.py`, issue #9, 2026-10-31.
 
 ## For players
 
@@ -86,18 +86,36 @@ To send an emoji, use `v_emote` (Controls, Extras, "Send Emoji"). It sends the e
 name the emoji after the command, such as `v_emote thumbsup`. The names are the ones of the chat, without the colons.
 You can send one emoji a second at most.
 
+`v_emote` and `v_emoteImage` also take an interactive emoji of the store, by name. These are the ones players made on
+jka.vision/emotes.html and every chat emoji of the store. An interactive emoji has these choices: the emoji, the burst
+(copies, sparkles, confetti, hearts, stars, smoke, rings or none), two colours, the path (arc, spiral, bounce or
+straight), the spin (rock, spin or wobble), the size (60 to 160 percent), the pop (grow, shake, float up or twirl), the
+sound (pop, chime, boing, sparkle, rimshot, fanfare, none or an own sound of the maker) and the voice (none, auto or a
+mood). An emoji of the game is the one described below, with an arc, a rock, a grow pop, copies, the pop sound and the
+voice of its mood. Older engines show an interactive emoji only if its emoji is one of the game.
+
 The emoji flies in an arc from your eyes to the head of the other player and follows them, at about 700 units a second
 (0.35 to 2.2 s in all). Then it pops above the head: it grows, bobs, 10 small copies of it burst out, and it fades after
 1.8 s. A soft whoosh plays when it leaves and a pop with a little chime when it arrives. For the player who gets it, in
 first person the emoji pops on their screen (top centre) and the one flying at them fades near their eyes. In third
 person the pop over their own head is drawn smaller.
 
+The flight and the pop of an interactive emoji follow its choices. It is a sprite in the level. Confetti tumbles as
+polygons. The burst of smoke and rings is drawn behind the emoji and the rest in front of it. Pieces that are added to
+the picture fade by their colour. The receiver in first person sees the pop with its burst on the HUD. The sprite of an
+emoji of the store is made from its picture (`R_LoadImageFit`, `R_RegisterShaderRGBA`, with an engine that has
+`v_cgameImage`). The pieces of the bursts are drawn by `tools/toys/emotes.py`: sparkle, ring, confetti, heart, star and
+smoke, 256 pixels, white and tinted by the colours. It writes them into `gfx/vision/emote` and the shaders into
+`shaders/vision_emotes.shader`. With `--site` it writes them for the web page too. The new pop sounds `emote_chime`,
+`emote_boing`, `emote_sparkle`, `emote_rimshot` and `emote_fanfare` come from `tools/toys/sounds.py`.
+
 An emoji with a mood also lets the voice of your model say a line, if that voice has one. Laughing ones say a gloat
 (or a victory or taunt line). Thumbs up, clap, trophy and fire say a victory line, angry ones an anger line, thinking
 ones a confused line, open mouth and skull a gasp, and tongue, wink and kappa a taunt. Players can also upload chat
 emojis of their own on jka.vision/models.html (section "Chat emojis"). The game fetches them in the background into
 `base/gfx/emoji/` of the home folder, so they can be thrown like the emojis of the game; the upload is described in
-[models.md](models.md#chat-emojis-of-the-store).
+[models.md](models.md#chat-emojis-of-the-store). The interactive emojis and their own sounds are described in
+[models.md](models.md#interactive-emojis-of-the-store).
 
 To play table tennis, use `v_pingpong` (Controls, Extras, "Table Tennis"). It puts a table in front of you and you play
 from its near end. It needs a flat floor and room for the table at any angle. Another player who stands in a box at the far end (from 30 units inside the
@@ -177,7 +195,9 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_sprays get <number>` | | engine command: fetches the sheet with that number from the spray store |
 | `v_sprayArrived` | | set by the engine when a sheet was made or fetched |
 | `v_cgamePaint` | 1 | set by the engine: 1 when the cgame can hand sprays to the renderer as paint (`ext.R_PaintPicture`, `ext.R_AddPaint`) |
-| `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one |
+| `v_emote` | | sends an emoji to the player under the crosshair, `v_emote <name>` sends that one (an emoji of the game or an interactive emoji of the store) |
+| `v_emotes refresh` | | engine command: fetches the lists of the stores of the interactive emojis again (at most once a minute) |
+| `v_emoteStoreChanged` | 0 | read only, set by the engine: counts up when the list or a sound of the interactive emojis came or went |
 | `v_pingpong` | | puts a table down and plays, or joins the player at the far end, or leaves |
 | `v_tennis` | | puts a tennis court down and plays, or joins a player on the far half, or leaves |
 | `v_board` | | opens the drawing board window, or shuts it |
@@ -185,7 +205,7 @@ module, on any other through the masterserver. `v_toys 0` hides the toys of othe
 | `v_board save <1-4>` | | keeps the picture as a preset |
 | `v_board load <1-4>` | | loads a preset |
 | `v_board import <file>` | | puts a picture file of `drawings/` on the board |
-| `v_emoteImage` | laughing | the emoji of the chat that `v_emote` sends, without the colons |
+| `v_emoteImage` | laughing | the emoji that `v_emote` sends, without the colons: a chat emoji or an interactive emoji of the store |
 | `v_cgameLiquid` | 1 | 1: the cgame draws the jet of the water gun as real water when the renderer can (rd-vulkan-vision), 0: always the sprites |
 | `v_cgameWet` | 1 | set by the engine: 1 when the cgame can hand wet spots to the renderer (`ext.R_AddWet`) |
 | `v_screenFxDrops` | 1 | set by the engine: 1 when the screen effect can draw the drops of the water gun on the view |
@@ -313,7 +333,14 @@ checks that the client is below `MAX_CLIENTS`, the picture below `TOY_SPRAY_MOST
 that hears of it lets the emoji fly on its own and follow the head of the target, so nothing about it is on the server
 but the relay. The master and the game module have to know `TOY_EMOJI` (0.2.9-dev.28 and later). `tools/toys/sprays.py`
 now also writes a sprite shader `gfx/vision/emote/<number>` for each picture (without `polygonOffset`), and the list of
-pictures moved into `cg_toys.c`, shared with the sprays. The sounds are made by `tools/toys/sounds.py` and use no audio of
+pictures moved into `cg_toys.c`, shared with the sprays.
+
+An interactive emoji of the store goes as `TOY_EMOTE_STORE` (15). It carries the point of the eyes, the client number of
+the target, and its number in the list of the store split by `TOY_BOARD_SPLIT` (1500) into two fields: the number is
+`velocity[1] * 1500 + velocity[2]`. `bg_toys.c` checks the ranges. The cgame reads the list from `emotes/index.txt` (line
+format `number name emoji burst colour colour path spin size pop sound voice bytes sha256`). A number that is not in the
+list makes the cgame run `v_emotes refresh`, and the engine fetches the lists again at most once a minute. Every cgame
+flies the emoji on its own, as with `TOY_EMOJI`. The sounds are made by `tools/toys/sounds.py` and use no audio of
 anybody else. The voice lines come from `CG_CharacterSound` in `cg_players.c`, which reads them through the new field
 `soundDir` of `clientInfo_t`, for lines the game did not load for the gametype.
 
@@ -412,6 +439,11 @@ For the emoji, two clients on a local server, and both received the emoji (the s
 flight, the pop, the burst, the 2D pop in first person and the fading near the eyes were seen. There is a unit test
 `emoji` in `tests/vjk/toys.cpp`.
 
+For the interactive emojis, the unit tests of the store, and the page in headless Chromium. Then the game headless with a
+dedicated server and two clients on mp/ffa3 with a local list: confetti, sparkles and rings, a spiral and a bounce, and
+the pops seen by the sender and by the receiver. An emoji of the game was sent as before. There are unit tests for
+`TOY_EMOTE_STORE` in `tests/vjk/toys.cpp`.
+
 For table tennis, two clients on a local server: a table put down, the second player joined at the far end, a serve, a
 rally of three hits, a point judged by the receiver and the score sent (1 : 0). Both views were seen: the camera behind
 the own end, the paddle of the other player, the ball and the score over the net. There is a unit test `table_tennis`
@@ -431,4 +463,4 @@ For the pictures and poses, headless: an RGBA PNG of 400 x 300, a palette PNG, a
 listen server with `sv_pure 1`. Then two clients on a dedicated server with `sv_pure 1`: the holder was seen from the
 front and the side in both poses, and the other client saw the pose.
 
-Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, hearing the sounds (the test used dummy audio), emoji on Windows, sprays in a real game with people, a spray sheet going through the store from one player to another, the paint sprays on Windows, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.
+Not run: clicking in the picture list with a real mouse, the pictures and poses on Windows, with other player models than the default, the store upload of an imported picture (the store was off in the test), painting with a real mouse, the drawing board on Windows (the WinHTTP POST) and in a real game with people, table tennis in a real game with people and a mouse, table tennis through the masterserver, table tennis on Windows, tennis in a real game with people, hitting at the real reach of 34 units, tennis through the masterserver, tennis on Windows, emoji in a real game with people, the live store of the interactive emojis, hearing the sounds (the test used dummy audio, so the new pop sounds and the own sounds were not heard), the pop on the HUD in first person with a burst, interactive emojis with rd-vanilla, emoji on Windows at run time, sprays in a real game with people, a spray sheet going through the store from one player to another, the paint sprays on Windows, the RC car in a real game with people, a real game with people (snowball and water gun), the water gun with the OpenGL renderer, Windows, a server without the game module of VisionJK in a real game.

@@ -217,9 +217,9 @@ REFERENCE           SEND_EMOJI
 LANG_ENGLISH        "Send Emoji"
 LANG_FRENCH         "Envoyer un emoji"
 
-REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_A_NA
-LANG_ENGLISH        "Sends the emoji of v_emoteImage (a name of the chat, such as laughing) to the player under your crosshair: it flies to their head and pops above it. Only players of VisionJK see it."
-LANG_FRENCH         "Envoie l'emoji de v_emoteImage (un nom du chat, par exemple laughing) au joueur sous votre viseur : il vole jusqu'à sa tête et éclate au-dessus. Seuls les joueurs de VisionJK le voient."
+REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_TO_T
+LANG_ENGLISH        "Sends the emoji of v_emoteImage to the player under your crosshair: it flies to their head and pops above it. It can be a chat emoji (such as laughing) or an interactive one made on jka.vision. Only players of VisionJK see it."
+LANG_FRENCH         "Envoie l'emoji de v_emoteImage au joueur sous votre viseur : il vole jusqu'à sa tête et éclate au-dessus. Ce peut être un emoji du chat (comme laughing) ou un emoji interactif créé sur jka.vision. Seuls les joueurs de VisionJK le voient."
 
 REFERENCE           TABLE_TENNIS
 LANG_ENGLISH        "Table Tennis"

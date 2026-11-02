@@ -1493,16 +1493,26 @@ qboolean FS_IsExt(const char *filename, const char *ext, int namelen)
 
 /*
 ===========
-FS_IsToyPicture
+FS_IsToyFile
 
-The pictures of the toys of issue #9, which no pak has, so they come from the folder on a pure server too: of the
-drawing board (cgame/toys/cg_board.c, client/cl_models.cpp) in drawings/, its pictures and those it imports, and of
-the sprays (client/cl_sprays.cpp) in sprays/, the player's own pictures, and the sheets of the store in sprays/store/.
+The files of the toys of issue #9 and the stores of the site, which no pak has, so they come from the folder on a
+pure server too: of the drawing board (cgame/toys/cg_board.c, client/cl_models.cpp) in drawings/, its pictures and
+those it imports, of the sprays (client/cl_sprays.cpp) in sprays/, the player's own pictures, and the sheets of the
+store in sprays/store/, the chat emojis of the store in gfx/emoji/, and of the interactive emojis (cgame/toys/
+cg_emote.c) their list emotes/index.txt and their own sounds in sound/emotes/. All of them are pictures and sounds
+for the eye and the ear, nothing that changes the game.
 ===========
 */
-static qboolean FS_IsToyPicture( const char *filename, int namelen )
+static qboolean FS_IsToyFile( const char *filename, int namelen )
 {
 	const char *rest;
+
+	if ( !Q_stricmpn( filename, "gfx/emoji/", 10 ) && !strchr( filename + 10, '/' ) )
+		return FS_IsExt( filename, ".png", namelen );
+	if ( !Q_stricmpn( filename, "sound/emotes/", 13 ) && !strchr( filename + 13, '/' ) )
+		return FS_IsExt( filename, ".wav", namelen );
+	if ( !Q_stricmp( filename, "emotes/index.txt" ) )
+		return qtrue;
 
 	if ( !Q_stricmpn( filename, "drawings/", 9 ) && !strchr( filename + 9, '/' ) )
 		return (qboolean)( FS_IsExt( filename, ".vjd", namelen ) || FS_IsExt( filename, ".png", namelen )
@@ -1840,7 +1850,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					    !FS_IsExt( filename, ".game", l ) &&		// menu files
 					    !FS_IsExt( filename, ".dat", l ) &&		// for journal files
 					    !FS_IsDemoExt( filename, l ) &&			// demos
-					    !FS_IsToyPicture( filename, l ) ) {
+					    !FS_IsToyFile( filename, l ) ) {
 						continue;
 					}
 				}
@@ -1862,7 +1872,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					!FS_IsExt( filename, ".game", l ) &&		// menu files
 					!FS_IsExt( filename, ".dat", l ) &&		// for journal files
 					!FS_IsDemoExt( filename, l ) &&			// demos
-					!FS_IsToyPicture( filename, l ) ) {
+					!FS_IsToyFile( filename, l ) ) {
 					fs_fakeChkSum = Q_flrand(0.0f, 1.0f);
 				}
 #ifdef _WIN32
@@ -3100,10 +3110,11 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 
 			// don't scan directories for files if we are pure or restricted
 			if ( fs_numServerPaks &&
-				 (!extension || Q_stricmp(extension, "fcf")) && Q_stricmp( path, "drawings" ) && Q_stricmp( path, "sprays" ) )
+				 (!extension || Q_stricmp(extension, "fcf")) && Q_stricmp( path, "drawings" ) && Q_stricmp( path, "sprays" )
+				 && Q_stricmp( path, "gfx/emoji" ) )
 			{
 				//rww - allow scanning for fcf files outside of pak even if pure
-				// (and the pictures of the drawing board and the sprays, FS_IsToyPicture)
+				// (and the pictures of the drawing board, the sprays and the chat emojis, FS_IsToyFile)
 			    continue;
 		    }
 			else

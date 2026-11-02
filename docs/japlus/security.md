@@ -548,10 +548,33 @@ takes an emoji down afterwards (`modelstore.py remove-emoji <name> [--block]`). 
 answers a delete key, shown once.
 
 The client takes an emoji only from the list of the store, and only when the file has the size and the SHA-256 of the
-list. Otherwise it does not keep the file. It fetches nothing on a pure server or in a demo, and `v_emojiStore 0`
-stops it. `base/emojistore.txt` records which files came from the store. When a new list lacks one of them, the client
+list. Otherwise it does not keep the file. It fetches nothing in a demo, and `v_emojiStore 0`
+stops it. On a pure server it fetches now, see the interactive emojis below. `base/emojistore.txt` records which files came from the store. When a new list lacks one of them, the client
 deletes it, so an emoji the owner took down goes from the players too. Files that did not come from the store are
 never deleted. Not tested: the store on the host.
+
+## Added later: the interactive emojis of the store
+
+The emote store of the model service (`/models/emotes/`, issue #9) takes the emojis players make on
+jka.vision/emotes.html. The upload is JSON with the choices, and the service validates each one against its list (the
+emoji, the burst, the colours, the path, the spin, the size from 60 to 160, the pop, the sound, the voice). A name is
+shared with the chat emojis both ways, so a name belongs to one store only. The limits are 10 uploads an hour and 30 a
+day per address, and 500 emojis in the store. An own sound comes as a base64 WAV and the server cleans it: it makes it
+16 bit mono 22050 Hz, trims the silence, cuts it to 2 seconds with a fade, sets the peak to -1 dBFS and keeps the RMS at
+most -14 dBFS. So a sound can not be long, large or loud, whatever the file was. The delete is by key, anyone can
+report, and the owner takes one down with `modelstore.py remove-emote <name> [--block]`. Not tested: the store on the
+host.
+
+The client takes the list `emotes/index.txt` and the sounds only from the store. A sound is kept only with the size and
+the SHA-256 of the list and at most 96 KB, and a file the store no longer has is deleted. A received `TOY_EMOTE_STORE`
+carries only a number, and the cgame uses it only to pick an entry of its own local list. A number outside the list
+fetches nothing but the list again, at most once a minute, and a number outside the ranges is dropped by `BG_ToyValid`.
+
+The chat emojis and the sounds of the emotes are fetched on pure servers now too. `FS_IsToyFile` in `files.cpp` (it
+replaces `FS_IsToyPicture`) reads `gfx/emoji/*.png`, `sound/emotes/*.wav` and `emotes/index.txt` from the folder of the
+player on a pure server, with the files it read before. This is harmless for the pure check: the files are pictures
+and sounds that are only seen and heard, and the list is text that the cgame parses for choices from fixed lists. None
+of them changes the game. Not tested: a pure server with the stores in a real game.
 
 ## Added later: the drawings of the board
 
@@ -570,7 +593,7 @@ the frames, and the pixels must unpack to exactly the rows (no decompression bom
 number. The limits are 30 uploads an hour and 120 a day per address, and the store keeps the newest 20000. The owner
 takes one down with `modelstore.py remove-spray <number>`. The client fetches a sheet only by the number that came with a spray, into `sprays/store/<number>.png`.
 
-On a pure server the files of `sprays/` and `sprays/store/` are read from the folder (`FS_IsToyPicture` in
+On a pure server the files of `sprays/` and `sprays/store/` are read from the folder (`FS_IsToyFile` in
 `files.cpp`, which replaces `FS_IsDrawing`, with the files of `drawings/`). The game decodes a gif with stb_image
 (`lib/stb/stb_image.h`) from the folder of the player, not from the server. Not tested: the store between two players,
 Windows.

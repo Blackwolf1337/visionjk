@@ -240,8 +240,8 @@ static void Toys_Heard( int client, const toyThrow_t *toy ) {
 		CG_RcHeard( client, toy->kind, origin, velocity );
 	else if ( toy->kind == TOY_SPRAY || toy->kind == TOY_SPRAY_STORE )
 		CG_SprayHeard( client, toy->kind, origin, velocity );
-	else if ( toy->kind == TOY_EMOJI )
-		CG_EmoteHeard( client, origin, velocity );
+	else if ( toy->kind == TOY_EMOJI || toy->kind == TOY_EMOTE_STORE )
+		CG_EmoteHeard( client, toy->kind, origin, velocity );
 	else if ( toy->kind >= TOY_TABLE && toy->kind <= TOY_PONG_PADDLE )
 		CG_PongHeard( client, toy->kind, origin, velocity );
 	else if ( toy->kind == TOY_BOARD )
