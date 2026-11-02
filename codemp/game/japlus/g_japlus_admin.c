@@ -109,6 +109,24 @@ static int JP_AllowedMaskForLevel( int adminLevel ) {
 
 /*
 =================
+JP_FloodExemptThink
+
+The server leaves the commands of a client with SVF_NOFLOODPROTECT alone (SV_FloodLimited): an rcon admin, or
+an admin whose rank has JP_ADMBIT_NOFLOOD in its mask. Every frame, so login, logout and mask changes count at once.
+=================
+*/
+void JP_FloodExemptThink( gentity_t *ent ) {
+	const int level_ = ent->client->sess.jpAdminLevel;
+
+	if ( level_ == JPADM_RCON
+		|| ( level_ > JPADM_RCON && G_CmdBitAllowed( JP_AllowedMaskForLevel( level_ ), JP_ADMBIT_NOFLOOD ) ) )
+		ent->r.svFlags |= SVF_NOFLOODPROTECT;
+	else
+		ent->r.svFlags &= ~SVF_NOFLOODPROTECT;
+}
+
+/*
+=================
 G_ClientAdminCmdAllowed
 
 true if the admin rank of ent allows the command "cmd"
@@ -978,6 +996,8 @@ static void Svcmd_admGrant_f( void ) {
 }
 
 static const char *JP_AdminCmdName( int bit ) {
+	if ( bit == JP_ADMBIT_NOFLOOD )
+		return "amFloodExempt";
 	return bit <= JP_NUM_ADMIN_CMDS_A ? jp_adminCmdsA[bit - 1] : jp_adminCmdsB[bit - 1 - JP_NUM_ADMIN_CMDS_A];
 }
 
@@ -990,7 +1010,7 @@ static void Svcmd_admToggle_f( void ) {
 	if ( trap->Argc() < 3 ) {
 		trap->Print( "^5Usage:  ^7admToggle < ID Cmd> <level> where <level> = council, knight, instructor\n" );
 		trap->Print( "\t\t^5<ID Cmd>  ^7<=> ^5Adm Cmd Name  \n" );
-		for ( i = 1; i <= JP_NUM_ADMIN_CMDS; i++ )
+		for ( i = 0; i <= JP_NUM_ADMIN_CMDS; i++ )
 			trap->Print( "\t\t^5%i         ^7<=> ^5%s  \n", i, JP_AdminCmdName( i ) );
 		return;
 	}
@@ -998,7 +1018,7 @@ static void Svcmd_admToggle_f( void ) {
 	trap->Argv( 1, arg, sizeof( arg ) );
 	trap->Argv( 2, levelName, sizeof( levelName ) );
 	bit = atoi( arg );
-	if ( bit < 1 || bit > JP_NUM_ADMIN_CMDS ) {
+	if ( bit < 0 || bit > JP_NUM_ADMIN_CMDS || ( bit == 0 && arg[0] != '0' ) ) {
 		trap->Print( "^5Usage:  ^7admToggle < ID Cmd> <level> where <level> = council, knight, instructor\n\ttype admToggle without argument to display help\n" );
 		return;
 	}

@@ -431,14 +431,19 @@ Auth_FloodGap
 
 A server with flood protection drops a client command that comes within a second of the one before and says
 nothing (sv_floodProtect in SV_ClientCommand, every engine since Quake 3). The server answers a "vs_auth" much
-faster than that, so the next one would always be dropped. The cvar is in the serverinfo: 0 is off, 1 is a
-second, any other number is msec in the engine of this tree.
+faster than that, so the next one would always be dropped. The engine of this tree lets commands wait instead
+and says so with sv_floodBurst in the serverinfo: no gap needed there. Older builds of it took any number
+above 1 in sv_floodProtect as msec.
 =================
 */
 static int Auth_FloodGap( void ) {
-	const char	*value = Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "sv_floodProtect" );
+	const char	*info = CG_ConfigString( CS_SERVERINFO );
+	const char	*value = Info_ValueForKey( info, "sv_floodProtect" );
 	int			gap = atoi( value );
 
+	if ( Info_ValueForKey( info, "sv_floodBurst" )[0] ) {
+		return 0;
+	}
 	if ( !value[0] || gap == 1 ) {
 		gap = 1000;
 	}

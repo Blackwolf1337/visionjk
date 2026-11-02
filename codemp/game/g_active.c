@@ -3789,6 +3789,10 @@ void ClientEndFrame( gentity_t *ent ) {
 	{
 		isNPC = qtrue;
 	}
+	else
+	{
+		JP_FloodExemptThink( ent );
+	}
 
 	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
 		G_UnlaggedClear( ent );

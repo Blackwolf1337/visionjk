@@ -1005,8 +1005,14 @@ void SV_Init (void) {
 	sv_maxRate = Cvar_Get ("sv_maxRate", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO, "Max bandwidth rate allowed on server. Use 0 for unlimited." );
 	sv_minPing = Cvar_Get ("sv_minPing", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO );
 	sv_maxPing = Cvar_Get ("sv_maxPing", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO );
-	sv_floodProtect = Cvar_Get ("sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Protect against flooding of server commands" );
-	sv_floodProtectSlow = Cvar_Get ("sv_floodProtectSlow", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Use original method of delaying commands with flood protection" );
+	sv_floodProtect = Cvar_Get ("sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Limits how fast a client can send commands like chat. 0: off, any other value: on." );
+	// in the serverinfo so that a client knows commands wait here instead of being dropped (cgame Auth_FloodGap)
+	sv_floodBurst = Cvar_Get ("sv_floodBurst", "8", CVAR_ARCHIVE | CVAR_SERVERINFO, "How many commands a client can send at once before they have to wait." );
+	Cvar_CheckRange( sv_floodBurst, 1, 64, qtrue );
+	sv_floodRate = Cvar_Get ("sv_floodRate", "3", CVAR_ARCHIVE, "How many commands a client may send per second over time, after the burst is used up." );
+	Cvar_CheckRange( sv_floodRate, 1, 1000, qtrue );
+	sv_floodQueue = Cvar_Get ("sv_floodQueue", "16", CVAR_ARCHIVE, "How many waiting commands are kept per client. They run later, in order. When the queue is full, new commands are dropped." );
+	Cvar_CheckRange( sv_floodQueue, 0, FLOOD_QUEUE_SIZE, qtrue );
 	SV_IDS_Init();
 #ifdef VISIONJK_IDS_TEST
 	SV_IDSTest_Init();

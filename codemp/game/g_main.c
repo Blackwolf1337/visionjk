@@ -3540,6 +3540,14 @@ static void G_SpawnRMGEntity( void ) {
 		G_SpawnGEntityFromSpawnVars( qfalse );
 }
 
+// a login or logout counts for the next command already, also for one in the same packet (SV_FloodLimited)
+static void _G_ClientCommand( int clientNum ) {
+	ClientCommand( clientNum );
+	if ( g_entities[clientNum].client && g_entities[clientNum].client->pers.connected == CON_CONNECTED ) {
+		JP_FloodExemptThink( &g_entities[clientNum] );
+	}
+}
+
 static void _G_ROFF_NotetrackCallback( int entID, const char *notetrack ) {
 	G_ROFF_NotetrackCallback( &g_entities[entID], notetrack );
 }
@@ -3660,7 +3668,7 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	ge.ClientBegin						= ClientBegin;
 	ge.ClientUserinfoChanged			= ClientUserinfoChanged;
 	ge.ClientDisconnect					= ClientDisconnect;
-	ge.ClientCommand					= ClientCommand;
+	ge.ClientCommand					= _G_ClientCommand;
 	ge.ClientThink						= ClientThink;
 	ge.RunFrame							= G_RunFrame;
 	ge.ConsoleCommand					= ConsoleCommand;
@@ -3741,7 +3749,7 @@ Q_EXPORT intptr_t vmMain( int command, intptr_t arg0, intptr_t arg1, intptr_t ar
 		return 0;
 
 	case GAME_CLIENT_COMMAND:
-		ClientCommand( arg0 );
+		_G_ClientCommand( arg0 );
 		return 0;
 
 	case GAME_RUN_FRAME:

@@ -44,6 +44,7 @@ typedef enum {
 } jpAdminLevel_t;
 
 #define JP_NUM_ADMIN_CMDS	38		// bit index 1..38 in jp_*AllowedCMD
+#define JP_ADMBIT_NOFLOOD	0		// not a command: the rank skips the flood protection (VisionJK)
 
 // JA+ per client data. Lives in clientPersistant_t (pers.jp), so it survives respawns but not map changes.
 typedef struct jpClient_s {
@@ -178,6 +179,7 @@ qboolean	JP_IsPlayerCommand( const char *cmd );
 void		JP_EmoteExec( gentity_t *ent, int anim );
 void		JP_FilterPlayerName( gentity_t *ent, char *name, size_t size );
 void		JP_ClanTagThink( gentity_t *ent );
+void		JP_FloodExemptThink( gentity_t *ent );
 void		JP_SanitizeString( char *out, const char *in, size_t outSize, int maxIn );
 gentity_t	*JP_ValidClient( int num );										// g_japlus_admin.c
 int			JP_ClientByName( const char *name, qboolean exact );

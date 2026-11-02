@@ -1785,9 +1785,9 @@ void CG_VoiceFrame( void ) {
 		return;
 #endif
 	if ( !voice.answered ) {
-		// Asked again while there is no answer: the flood protection of the server (sv_floodProtect) drops a
+		// Asked again while there is no answer: the flood protection of other servers (sv_floodProtect) drops a
 		// command that comes within a second of another one without a word, and this one goes out just when the
-		// client entered the game and has more to say.
+		// client entered the game and has more to say. The engine of this tree lets it wait instead.
 		if ( voice.asks < VOICE_MAX_ASKS && ( !voice.asked || now - voice.askTime >= VOICE_ASK_MSEC ) ) {
 			trap->SendClientCommand( va( "vs_voiceLink hello %i", VOICE_PROTOCOL ) );
 			voice.asked = qtrue;

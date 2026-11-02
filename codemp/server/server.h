@@ -131,6 +131,7 @@ typedef struct {
 	int			botReliableAcknowledge; // for bots, need to maintain a separate reliableAcknowledge to record server messages into the demo file
 } demoInfo_t;
 
+#define FLOOD_QUEUE_SIZE	16		// most commands that wait per client (sv_floodQueue), 16 KB each
 
 typedef struct client_s {
 	clientState_t	state;
@@ -168,7 +169,6 @@ typedef struct client_s {
 	int				downloadSendTime;	// time we last got an ack from the client
 
 	int				deltaMessage;		// frame last client usercmd message
-	int				lastReliableTime;	// svs.time when reliable command was last received
 	int				lastPacketTime;		// svs.time when packet was last received
 	int				lastConnectTime;	// svs.time when connection started
 	int				nextSnapshotTime;	// send another snapshot when svs.time >= nextSnapshotTime
@@ -185,6 +185,14 @@ typedef struct client_s {
 
 	int				lastUserInfoChange; //if > svs.time && count > x, deny change -rww
 	int				lastUserInfoCount; //allow a certain number of changes within a certain time period -rww
+
+	// flood protection (SV_FloodCommand): a budget in msec that refills with time, the commands past it wait here
+	int				floodBudget;
+	int				floodTime;			// svs.time the budget was last refilled
+	int				floodHead;			// oldest waiting command in floodQueue
+	int				floodCount;
+	qboolean		floodWarned;		// told about dropped commands, until the queue is empty again
+	char			floodQueue[FLOOD_QUEUE_SIZE][MAX_STRING_CHARS];
 
 	int				oldServerTime;
 	qboolean		csUpdated[MAX_CONFIGSTRINGS];
@@ -261,7 +269,9 @@ extern	cvar_t	*sv_maxPing;
 extern	cvar_t	*sv_gametype;
 extern	cvar_t	*sv_pure;
 extern	cvar_t	*sv_floodProtect;
-extern	cvar_t	*sv_floodProtectSlow;
+extern	cvar_t	*sv_floodBurst;
+extern	cvar_t	*sv_floodRate;
+extern	cvar_t	*sv_floodQueue;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_needpass;
 extern	cvar_t	*sv_filterCommands;
@@ -345,7 +355,9 @@ void SV_UserinfoChanged( client_t *cl );
 void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd );
 void SV_DropClient( client_t *drop, const char *reason );
 
-void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK );
+void SV_ExecuteClientCommand( client_t *cl, const char *s );
+void SV_FloodClear( client_t *cl );
+void SV_FloodFrame( void );
 void SV_ClientThink (client_t *cl, usercmd_t *cmd);
 
 void SV_WriteDownloadToClient( client_t *cl , msg_t *msg );

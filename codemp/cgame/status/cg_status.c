@@ -250,8 +250,9 @@ void CG_StatusFrame( void ) {
 	// A cgame that has just started knows nothing of the others: a new level, but also a restart of the video,
 	// of which the server hears nothing. A game module that answers it (vs_caps bit 3) is asked for what
 	// stands above everybody and for who plays with what (status/cg_peers.c). Not in the first moment, when the
-	// voice chat says its hello, and again while no answer came: the flood protection of a server
+	// voice chat says its hello, and again while no answer came: the flood protection of other servers
 	// (sv_floodProtect, on by default) drops a command that comes within a second of another one without a word.
+	// The engine of this tree lets it wait instead.
 	if ( !status.answered && status.asks < STATUS_MAX_ASKS
 		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & 8 ) ) {
 		const int now = trap->Milliseconds();

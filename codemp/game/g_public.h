@@ -54,6 +54,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SVF_OWNERNOTSHARED		0x00001000	// If it's owned by something and another thing owned by that something
 											// hits it, it will still touch
 
+#define SVF_NOFLOODPROTECT		0x00004000	// VisionJK: commands of this client skip the flood protection of the server (admins)
 #define	SVF_ICARUS_FREEZE		0x00008000	// NPCs are frozen, ents don't execute ICARUS commands
 
 #define SVF_GLASS_BRUSH			0x08000000	// Ent is a glass brush
