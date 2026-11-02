@@ -158,7 +158,7 @@ written to the client command log. Not run.
 The masterserver is not part of this repository. It is a program of its own that the VisionJK hosts run, and it
 is the one place for the players of servers without this game module: the relay of their voice chat, their clan
 radio, their statuses and the boxes of their boombox, and the reputation of game servers. The client finds it at
-`master.jka.vision`, UDP port 29170 (`v_voiceMasterHost`, `v_idsMaster`). A game server owner does nothing for it
+`master.jka.vision`, UDP port 29170 (`v_master`). A game server owner does nothing for it
 and the server is told nothing: the masterserver answers no server query and no connect, only the voice datagrams
 ([voice.md](voice.md)) and the packets of the reputation ([security.md](security.md), "Added later: reports to the
 masterserver"). The voice chat, the clan radio, the statuses and the boombox there work the same for the player as

@@ -39,7 +39,7 @@ has room for.
 | `v_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
 | `v_voiceRadioFX` | 1 | the clan radio sounds like a radio: only the band of a telephone, a little rough, with a click at both ends. 0: as clear as any voice |
 | `v_voiceMaster` | 1 | 0: no voice chat on servers that have none of their own. 1: there it goes through the masterserver |
-| `v_voiceMasterHost` | master.jka.vision | the masterserver, a name or an address, with `:port` if it is not 29170. Up to version 0.1.6 the default was voice.jka.vision, and every player from then has that name stored in his config: both names have to lead to the masterserver for good |
+| `v_master` | master.jka.vision | the masterserver, a name or an address, with `:port` if it is not 29170. Empty: none. The one address for the voice, the intrusion detection and the store changes. It was `v_voiceMasterHost` (and `cg_voiceMasterHost`) and `v_idsMaster`, and their values are taken over. Up to version 0.1.6 the default was voice.jka.vision, and every player from then has that name stored in his config: both names have to lead to the masterserver for good |
 
 | Command | |
 |---------|---|

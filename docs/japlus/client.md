@@ -1166,7 +1166,7 @@ detection" and the two sections after it.
 | `v_memwatch` | 1 | the memory monitor (0 in the hotpatch and sanitizer builds). Needs `v_ids` |
 | `v_idsShare` | 1 | report a server the client left, or crashed on, to the masterserver |
 | `v_idsReputation` | 1 | fetch the servers the masterserver flagged, mark them in the browser, refuse the first connect |
-| `v_idsMaster` | `master.jka.vision:29170` | the masterserver for both |
+| `v_master` | `master.jka.vision` | the masterserver for both (it was `v_idsMaster`, whose value is taken over) |
 | `v_idsShareTold` | 0 | set to 1 after the first report, which prints one console line |
 | `v_idsShareLocal` | 0 | 1: report servers on the local network too (for tests) |
 | `v_idsSeq`, `v_idsLast` | | read only. The count of events and the last one, for the notices of the cgame |

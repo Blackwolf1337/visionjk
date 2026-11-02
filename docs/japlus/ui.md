@@ -509,7 +509,7 @@ of the menus.
 The classic menus have none of the three disruptor rows, by design. The tracker of the scope has no row and no command: it is turned on and off with the key bound to `saberAttackCycle` while zoomed (see "The disruptor scope" in [client.md](client.md)).
 
 Left to the console on purpose: the names of sound devices (`v_voiceCapture`, `v_voicePlayback`, a menu
-can not list them), addresses (`v_voiceMasterHost`, `v_authAgentPath`, `v_updateURL`), the finer numbers
+can not list them), addresses (`v_master`, `v_authAgentPath`, `v_updateURL`), the finer numbers
 of the spatial sound and of the renderers, and what the game had no entry for either. The classic menus do
 not have the new entries.
 
