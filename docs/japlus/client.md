@@ -549,7 +549,7 @@ Who sees them is every player of this tree, on any server:
 - On a server with the game module of this tree (`vs_caps` bit 7), the cgame sends `tay_look <hat> <cape>`.
   The server hands `tay_look <client> <hat> <cape>` to every cgame that draws them (`v_caps` bit 2), also with
   `vs_status all`. The cgame sends again every four seconds until it hears its own look back, at most six times.
-- On any other server, the look goes through the masterserver (`VOICE_LOOK`, see `bg_voice.h`). It needs the voice
+- On any other server, the look goes through the masterserver (`RELAY_LOOK`, see `bg_voice.h`). It needs the voice
   chat linked to the master, as the statuses do. The master hands it only to clients that send looks themselves,
   so a VisionJK client from before never gets a type it does not know. A look the master did not say again for 15
   seconds is over.

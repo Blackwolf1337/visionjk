@@ -18,7 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// bg_boombox.c -- the bytes of a VOICE_BOX: what a client does with a box through the masterserver, and what the
+// bg_boombox.c -- the bytes of a RELAY_BOX: what a client does with a box through the masterserver, and what the
 // masterserver says of a box (bg_boombox.h). Built into the cgame and into the masterserver. Not from JA+, see
 // docs/japlus/boombox.md.
 //
@@ -92,7 +92,7 @@ static qboolean Box_GetPlace( const byte *in, int *origin, float *yaw ) {
 =================
 BG_BoxDoPack
 
-What a client does with a box, as the body of a VOICE_BOX to the master. Returns its length, 0 if it does not fit.
+What a client does with a box, as the body of a RELAY_BOX to the master. Returns its length, 0 if it does not fit.
 =================
 */
 int BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d ) {
@@ -230,7 +230,7 @@ qboolean BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d ) {
 =================
 BG_BoxSayPack
 
-What the master says of a box, as the body of a VOICE_BOX to a client. A title is cut where it does not fit,
+What the master says of a box, as the body of a RELAY_BOX to a client. A title is cut where it does not fit,
 between two characters of UTF-8. Returns the length, 0 if it does not fit.
 =================
 */

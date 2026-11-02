@@ -1,4 +1,4 @@
-// game/toys/bg_toys.c: a throw of a toy as the relays hand it on (VOICE_TOY, vs_toy)
+// game/toys/bg_toys.c: a throw of a toy as the relays hand it on (RELAY_TOY, vs_toy)
 #include "c_api.h"
 
 #include <boost/test/unit_test.hpp>

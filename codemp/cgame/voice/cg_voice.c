@@ -724,7 +724,7 @@ static void Voice_OwnReverb( const short *samples ) {
 }
 
 // one frame of sound goes out
-// type: VOICE_AUDIO for everybody in range, VOICE_RADIO for the clan
+// type: RELAY_AUDIO for everybody in range, RELAY_RADIO for the clan
 static void Voice_SendFrame( const short *samples, int type ) {
 	byte		frame[VOICE_MAX_FRAME];
 	const int	len = opus_encode( (OpusEncoder *)&voiceEncoder, samples, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
@@ -855,7 +855,7 @@ static void Voice_Capture( int now ) {
 		if ( !voice.testNext || now - voice.testNext > 500 )
 			voice.testNext = now;
 		for ( count = 0; count < VOICE_MAX_PER_FRAME && now >= voice.testNext && Voice_TestFrame( samples ); count++ ) {
-			Voice_SendFrame( samples, radio ? VOICE_RADIO : VOICE_AUDIO );
+			Voice_SendFrame( samples, radio ? RELAY_RADIO : RELAY_AUDIO );
 			voice.testNext += VOICE_FRAME_MSEC;
 		}
 		voice.sending = voice.test ? qtrue : qfalse;
@@ -901,7 +901,7 @@ static void Voice_Capture( int now ) {
 		if ( activation && Voice_Level( samples ) > v_voiceThreshold.value )
 			voice.talkUntil = now + VOICE_VAD_HOLD_MSEC;
 		if ( radio || ( activation ? ( now < voice.talkUntil ) : voice.keyDown ) ) {
-			Voice_SendFrame( samples, radio ? VOICE_RADIO : VOICE_AUDIO );
+			Voice_SendFrame( samples, radio ? RELAY_RADIO : RELAY_AUDIO );
 			voice.sending = qtrue;
 			voice.sentTime = now;
 		}
@@ -927,7 +927,7 @@ In: the voices of the others
 =================
 Voice_MasterAnswer
 
-What the masterserver says to a VOICE_STATE. With another token than the one it was sent with: that is the
+What the masterserver says to a RELAY_STATE. With another token than the one it was sent with: that is the
 token this address has there for its room and number, and the master keeps nothing until it is told again
 with it. With the same token: this client is in, or the flags say why not.
 =================
@@ -1013,7 +1013,7 @@ static void Voice_Receive( int now ) {
 #endif
 		if ( !BG_VoiceUnpack( datagram, len, qtrue, &p ) )
 			continue;
-		if ( p.type == VOICE_STATE ) {
+		if ( p.type == RELAY_STATE ) {
 			// only the masterserver says these, and its first one names the token
 			if ( voice.master )
 				Voice_MasterAnswer( &p, now );
@@ -1021,12 +1021,12 @@ static void Voice_Receive( int now ) {
 		}
 		if ( p.token != voice.token )
 			continue;
-		if ( p.type == VOICE_HELLO ) {
+		if ( p.type == RELAY_HELLO ) {
 			if ( !voice.master )
 				voice.linked = qtrue;
 			continue;
 		}
-		if ( p.type == VOICE_BOX ) {
+		if ( p.type == RELAY_BOX ) {
 			// what a box of the masterserver is now (boombox/cg_boombox.c)
 			if ( voice.master && voice.boxes )
 				CG_BoomboxFromMaster( p.data, p.dataLen );
@@ -1036,7 +1036,7 @@ static void Voice_Receive( int now ) {
 			continue;
 		if ( p.client >= MAX_CLIENTS ) {
 			// the song of a box of the boombox: from the relay of a game server, or from a master that plays boxes
-			if ( ( voice.master && !voice.boxes ) || p.type != VOICE_AUDIO || !CG_BoomboxHears( p.client - MAX_CLIENTS ) )
+			if ( ( voice.master && !voice.boxes ) || p.type != RELAY_AUDIO || !CG_BoomboxHears( p.client - MAX_CLIENTS ) )
 				continue;
 		} else {
 			// (the voice chat is off, the way is open for the songs alone)
@@ -1044,7 +1044,7 @@ static void Voice_Receive( int now ) {
 				continue;
 			// whoever speaks here plays with a client of this tree (status/cg_peers.c)
 			CG_PeerHeard( p.client );
-			if ( p.type == VOICE_STATUS ) {
+			if ( p.type == RELAY_STATUS ) {
 				// what stands above the head of somebody, handed on by the masterserver (status/cg_status.c)
 				char		text[VOICE_STATUS_TEXT];
 				qboolean	away;
@@ -1053,7 +1053,7 @@ static void Voice_Receive( int now ) {
 					CG_StatusFromMaster( p.client, away, text );
 				continue;
 			}
-			if ( p.type == VOICE_LOOK ) {
+			if ( p.type == RELAY_LOOK ) {
 				// the hat and the cape of somebody, handed on by the masterserver (look/cg_look.c)
 				char text[VOICE_STATUS_TEXT];
 
@@ -1061,7 +1061,7 @@ static void Voice_Receive( int now ) {
 					CG_LookFromMaster( p.client, text );
 				continue;
 			}
-			if ( p.type == VOICE_TOY ) {
+			if ( p.type == RELAY_TOY ) {
 				// a snowball somebody threw, handed on by the masterserver (toys/cg_toys.c)
 				if ( voice.master )
 					CG_ToyFromMaster( p.client, p.data, p.dataLen );
@@ -1553,7 +1553,7 @@ The masterserver
 
 A game server without the game module of this tree has no relay, hands out no token and tells nobody who is
 near whom. There the voice goes through one relay for all such servers (the masterserver), which knows no
-game server. So this client tells it what a relay of a game server knows by itself, in a VOICE_STATE: which
+game server. So this client tells it what a relay of a game server knows by itself, in a RELAY_STATE: which
 room it is in, and who is near it.
 
 ===============================================================================
@@ -1722,7 +1722,7 @@ static void Voice_MasterFrame( int now ) {
 		BG_VoiceStatePack( state, voice.room, voice.hear, voice.allow );
 		memcpy( state + VOICE_STATE_BYTES, voice.clan, VOICE_CLAN_BYTES );
 		state[VOICE_STATE_LONG_BYTES] = (byte)voice.boxHear;
-		Voice_Send( VOICE_STATE, state, ( voice.boxes && v_boomboxes.integer ) ? VOICE_STATE_BOX_BYTES
+		Voice_Send( RELAY_STATE, state, ( voice.boxes && v_boomboxes.integer ) ? VOICE_STATE_BOX_BYTES
 			: voice.social ? VOICE_STATE_LONG_BYTES : VOICE_STATE_BYTES );
 		voice.stateTime = now;
 		voice.stateDue = qfalse;
@@ -1746,7 +1746,7 @@ Once a frame
 static void Voice_Hello( int now ) {
 	if ( now - voice.helloTime < ( voice.linked ? VOICE_KEEPALIVE_MSEC : VOICE_HELLO_MSEC ) && voice.helloTime )
 		return;
-	Voice_Send( VOICE_HELLO, NULL, 0 );
+	Voice_Send( RELAY_HELLO, NULL, 0 );
 	voice.helloTime = now;
 	if ( !voice.linked && !voice.toldNoLink && now - voice.askTime > VOICE_NO_LINK_MSEC ) {
 #ifdef __EMSCRIPTEN__
@@ -1885,7 +1885,7 @@ qboolean CG_VoiceBoxSend( const boxDo_t *d ) {
 	if ( !voice.master || !voice.linked || !voice.boxes || !len )
 		return qfalse;
 #ifndef __EMSCRIPTEN__
-	Voice_Send( VOICE_BOX, body, len );
+	Voice_Send( RELAY_BOX, body, len );
 	return qtrue;
 #else
 	return qfalse;
@@ -1965,7 +1965,7 @@ void CG_VoiceSendStatus( qboolean away, const char *text ) {
 	byte status[VOICE_STATUS_TEXT];
 
 	if ( CG_VoiceSocial() )
-		Voice_Send( VOICE_STATUS, status, BG_VoiceStatusPack( status, away, text ) );
+		Voice_Send( RELAY_STATUS, status, BG_VoiceStatusPack( status, away, text ) );
 }
 
 // Does the masterserver hand on hats and capes for this client right now?
@@ -1977,7 +1977,7 @@ qboolean CG_VoiceLooks( void ) {
 #endif
 }
 
-// Does the masterserver hand on the throws of toys for this client? A master that does not know VOICE_TOY drops
+// Does the masterserver hand on the throws of toys for this client? A master that does not know RELAY_TOY drops
 // it, so this asks only for the way there: the one hats take.
 qboolean CG_VoiceToys( void ) {
 	return CG_VoiceLooks();
@@ -1986,7 +1986,7 @@ qboolean CG_VoiceToys( void ) {
 // A throw of a toy, or the hello of this cgame, goes to the others of the room (game/toys/bg_toys.h)
 void CG_VoiceSendToy( const byte *data, int len ) {
 	if ( CG_VoiceToys() && len > 0 )
-		Voice_Send( VOICE_TOY, data, len );
+		Voice_Send( RELAY_TOY, data, len );
 }
 
 // What this player wears goes to the others of the room: "<hat> <cape>". The master takes one a second.
@@ -1994,7 +1994,7 @@ void CG_VoiceSendLook( const char *text ) {
 	const int len = Q_min( (int)strlen( text ), VOICE_STATUS_TEXT - 1 );
 
 	if ( CG_VoiceLooks() && len > 0 )
-		Voice_Send( VOICE_LOOK, (const byte *)text, len );
+		Voice_Send( RELAY_LOOK, (const byte *)text, len );
 }
 
 /*

@@ -316,7 +316,7 @@ is refused, so the server never fetches an address inside its own network.
 
 The server codes 20 ms of the song at a time with Opus as they are due by the clock and sends each frame to every
 player in range, over the relay of the voice chat, as the voice of speaker `MAX_CLIENTS` + the number of the box
-(`G_VoiceSendBox`, a `VOICE_AUDIO` datagram as [voice.md](voice.md) has it). Everybody hears the same moment. A
+(`G_VoiceSendBox`, a `RELAY_AUDIO` datagram as [voice.md](voice.md) has it). Everybody hears the same moment. A
 song that is fetched too slowly waits for everybody, a fetch that breaks off is begun again where it was (three
 times a song). The cgame keeps 120 ms of a song before it plays it (the voices: 60).
 
@@ -327,7 +327,7 @@ are told and who hears a frame.
 Through the masterserver everything goes over the way of the voice chat to it ([voice.md](voice.md), "The
 boombox"): a master that plays boxes says so in every answer (`VOICE_FLAG_BOXES`), and only a client that read
 it sends the state with one more byte (the boxes it hears, which the client works out from where the boxes
-stand and the range, 1536) and `VOICE_BOX` datagrams with what its player does and his name. The master answers
+stand and the range, 1536) and `RELAY_BOX` datagrams with what its player does and his name. The master answers
 with the state of a box, its end, or a line for the player, at once and every box again every two seconds.
 Since 0.1.9 a master says `VOICE_FLAG_BOXLIST` too and sends `BOX_SAY_INFO` (who put it down, who asked for the
 song) after every `BOX_SAY_SET`, which itself never grows (a client of 0.1.7 or 0.1.8 checks its length to the

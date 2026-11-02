@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tools/toys/snowball.py) that spins as it flies. It is no entity of the server:
 // this cgame lets it fly, and tells the others where it left the hand and how fast (game/toys/bg_toys.h). On a
 // server of this tree that goes through the game module (vs_caps bit 9, toys/g_toys.c), on any other through the
-// masterserver (VOICE_TOY, voice/cg_voice.c). Every cgame that hears of a throw lets the ball fly on its own, so
+// masterserver (RELAY_TOY, voice/cg_voice.c). Every cgame that hears of a throw lets the ball fly on its own, so
 // where it lands can differ a little from one player to the next. It hurts nobody.
 //
 // Its sounds are made by tools/toys/sounds.py: the snow packed in the hands, the throw, the burst on stone, on soft
@@ -270,7 +270,7 @@ void CG_ToyServerCommand( void ) {
 		Toys_Heard( atoi( CG_Argv( 1 ) ), &toy );
 }
 
-// a VOICE_TOY the masterserver handed on (voice/cg_voice.c)
+// a RELAY_TOY the masterserver handed on (voice/cg_voice.c)
 void CG_ToyFromMaster( int client, const byte *data, int len ) {
 	toyThrow_t toy;
 

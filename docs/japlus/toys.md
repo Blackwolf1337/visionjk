@@ -237,7 +237,7 @@ server sends the server command `vs_toy` to the clients with `v_caps` bit 3. The
 `TOY_TABLE_GONE`, `TOY_PONG_JOIN` and `TOY_PONG_SCORE`, because they carry the middle of the table or court and a court
 player can be far from it), and 4 a second at most.
 
-On any other server it goes through the masterserver (`VOICE_TOY`). The master hands a throw to the sessions of the
+On any other server it goes through the masterserver (`RELAY_TOY`). The master hands a throw to the sessions of the
 room that said `TOY_HELLO` or threw, 4 a second at most. It refuses broken or too fast throws. The cgame says hello
 every 20 s.
 
