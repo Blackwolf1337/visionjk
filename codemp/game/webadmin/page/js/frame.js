@@ -12,6 +12,8 @@ function resize() {
 	canvas.height = Math.round(canvas.clientHeight * dpr);
 }
 window.addEventListener('resize', resize);
+// the view also changes size without the window: a panel at its right edge opens or closes, the side panel moves
+new ResizeObserver(() => resize()).observe(canvas);
 
 function drawMesh(mesh, x, y, z, yaw, scale, color) {
 	const c = Math.cos(yaw), s = Math.sin(yaw);
