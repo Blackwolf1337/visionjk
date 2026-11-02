@@ -24,8 +24,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // v_clipboardImage <path> <cgame command>: the picture on the clipboard goes into <path>.png (or .jpg, or .tga) of the
 // home folder, and the cgame command is run with the name of that file, or without one when the clipboard holds no
 // picture. Nothing waits: on Windows the clipboard is read at once (the registered format PNG that browsers and
-// paint programs put there, else CF_DIBV5 or CF_DIB, written as a TGA); under X11, also XWayland, the owner of the
-// selection CLIPBOARD is asked on a connection of this file's own (first TARGETS, then image/png or image/jpeg, a
+// paint programs put there, else CF_DIBV5 or CF_DIB, written as a TGA); on Linux with SDL 3 in the process (SDL 2 as
+// sdl2-compat over SDL 3, as Arch ships it) SDL 3 is asked (SDL_GetClipboardData), which reads the clipboard of
+// Wayland natively and of X11; else under X11, also XWayland, the owner of the selection CLIPBOARD is asked on a
+// connection of this file's own (first TARGETS, then image/png or image/jpeg, a
 // large picture comes in parts by INCR, ICCCM 2.7.2), and the answers are looked for once a frame (CL_ClipboardFrame);
 // on macOS the general pasteboard is read at once (public.png) through the Objective-C runtime, looked up by name.
 
@@ -394,7 +396,58 @@ static qboolean CLIP_ReadProperty( clipAtom_t *type, int *format, unsigned long 
 		&after, value ) == 0 );
 }
 
+/*
+=================
+CLIP_FromSdl3
+
+The picture of the clipboard through SDL 3, when the game runs on it (sdl2-compat): it knows the clipboard of the
+window system the game runs on, also Wayland, where XWayland is not handed pictures for a Wayland window. SDL 3
+reads the offer at once, the program that copied the picture writes it into a pipe. qfalse: there is no SDL 3.
+=================
+*/
+static qboolean CLIP_FromSdl3( void ) {
+	static void		*lib;
+	static qboolean	tried;
+	static bool		( *hasData )( const char * );
+	static void		*( *getData )( const char *, size_t * );
+	static void		( *freeData )( void * );
+	static const char	*types[][2] = { { "image/png", "png" }, { "image/jpeg", "jpg" } };
+
+	if ( !tried ) {
+		tried = qtrue;
+		// (only the one the process has loaded already: SDL 3 under sdl2-compat)
+		if ( ( lib = dlopen( "libSDL3.so.0", RTLD_NOW | RTLD_NOLOAD ) ) != NULL ) {
+			*(void **)&hasData = dlsym( lib, "SDL_HasClipboardData" );
+			*(void **)&getData = dlsym( lib, "SDL_GetClipboardData" );
+			*(void **)&freeData = dlsym( lib, "SDL_free" );
+		}
+	}
+	if ( !hasData || !getData || !freeData ) {
+		return qfalse;
+	}
+	for ( int i = 0; i < (int)ARRAY_LEN( types ); i++ ) {
+		size_t	size = 0;
+		void	*data;
+
+		if ( !hasData( types[i][0] ) || !( data = getData( types[i][0], &size ) ) ) {
+			continue;
+		}
+		const qboolean ok = (qboolean)( size > 8 && size < CLIP_MOST && CLIP_Append( data, (int)size ) );
+
+		freeData( data );
+		if ( ok ) {
+			CLIP_Write( types[i][1] );
+			return qtrue;
+		}
+	}
+	CLIP_Done( "" );
+	return qtrue;
+}
+
 static void CLIP_Start( void ) {
+	if ( CLIP_FromSdl3() ) {
+		return;
+	}
 	if ( x.stage != CLIPX_IDLE || !CLIP_LoadX11() || !( x.display = x11.OpenDisplay( NULL ) ) ) {
 		CLIP_Done( "" );
 		return;
