@@ -420,11 +420,27 @@ static struct {
 	mdlNames_t	tried;				// files that came or failed this run
 	mdlNames_t	here;				// the files of the store in the home folder (record)
 	qboolean	read;
+	qboolean	complete;			// every file of the list is here: nothing is looked for until the list or a file changes
 } mdlNamed[MDL_NAMED_STORES] = { { "", -1 }, { "", -1 } };
 static int		mdlEmoteListTime = -1;
 
 static const char *MDL_NamedLocal( int store, const char *name, qboolean temp ) {
 	return va( mdlNamedStores[store].local, BASEGAME, name, temp ? "tmp" : mdlNamedStores[store].extension );
+}
+
+// the size of a file of the home folder, -1 when there is none. (Not FS_SV_FOpenFileRead: that clears the buffer of
+// the sound each time, and this is asked in the game.)
+static long long MDL_LocalSize( const char *local ) {
+	FILE		*f = fopen( MDL_OSPath( local ), "rb" );
+	long long	size;
+
+	if ( !f ) {
+		return -1;
+	}
+	fseek( f, 0, SEEK_END );
+	size = ftell( f );
+	fclose( f );
+	return size;
 }
 
 static void MDL_NamedRecordRead( int store ) {
@@ -549,6 +565,7 @@ static void MDL_NamedDone( mdlJob_t *job ) {
 	if ( job->emojiIndex ) {
 		mdlNamed[store].index[job->ok ? job->bytes : 0] = '\0';
 		mdlNamed[store].indexTime = cls.realtime;
+		mdlNamed[store].complete = qfalse;
 		if ( !job->ok ) {
 			Com_DPrintf( "The list %s of the store did not come: %s\n", mdlNamedStores[store].list, job->error );
 			return;
@@ -575,6 +592,7 @@ static void MDL_NamedDone( mdlJob_t *job ) {
 		return;
 	}
 	FS_SV_Rename( MDL_NamedLocal( store, job->emoji, qtrue ), MDL_NamedLocal( store, job->emoji, qfalse ), qfalse );
+	mdlNamed[store].complete = qfalse;
 	MDL_NamedRecordRead( store );
 	MDL_Add( here, job->emoji );
 	MDL_NamedRecordWrite( store );
@@ -582,7 +600,8 @@ static void MDL_NamedDone( mdlJob_t *job ) {
 }
 
 // The next file of a named store: its list when it is old, else the next one not here yet (a sound whose size is
-// not the one of the list counts as not here: an interactive emoji of that name was made again). qfalse: nothing.
+// not the one of the list counts as not here: an interactive emoji of that name was made again). Once all are here
+// the files are not looked at again until the list or a file changes. qfalse: nothing.
 static qboolean MDL_NextNamed( int store ) {
 	char		name[WEB_MODEL_NAME], icon[4];
 	const char	*p;
@@ -592,19 +611,19 @@ static qboolean MDL_NextNamed( int store ) {
 		MDL_StartNamed( store, NULL );
 		return qtrue;
 	}
+	if ( mdlNamed[store].complete ) {
+		return qfalse;
+	}
 	MDL_NamedRecordRead( store );
 	for ( p = WEB_ModelIndexNext( mdlNamed[store].index, name, icon, &size ); p; p = WEB_ModelIndexNext( p, name, icon, &size ) ) {
-		fileHandle_t	f;
-		const int		len = MDL_Has( &mdlNamed[store].here, name ) ? FS_SV_FOpenFileRead( MDL_NamedLocal( store, name, qfalse ), &f ) : -1;
+		const long long here = MDL_Has( &mdlNamed[store].here, name ) ? MDL_LocalSize( MDL_NamedLocal( store, name, qfalse ) ) : -1;
 
-		if ( len >= 0 && f ) {
-			FS_FCloseFile( f );
-		}
-		if ( !MDL_Has( &mdlNamed[store].tried, name ) && ( len < 0 || !f || ( store == MDL_NAMED_SOUNDS && len != size ) ) ) {
+		if ( !MDL_Has( &mdlNamed[store].tried, name ) && ( here < 0 || ( store == MDL_NAMED_SOUNDS && here != size ) ) ) {
 			MDL_StartNamed( store, name );
 			return qtrue;
 		}
 	}
+	mdlNamed[store].complete = qtrue;
 	return qfalse;
 }
 
