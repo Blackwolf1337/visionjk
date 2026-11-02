@@ -248,7 +248,7 @@ row has its cvar and its script as before, only its place changed.
 
 | Tab | Headings |
 |-----|----------|
-| Video | Screen (with Render Scale), Detail, Bloom (Bloom, Bloom Strength, Bloom Threshold), Screen Effects |
+| Video | Screen (Video Mode, Display Mode, Anti-Aliasing, Video Sync, Frame Limit, Brightness; with All Settings also Wide Screen Layout, Render Scale, Anisotropic Filter), Detail (Dynamic Glow, Shadows), Bloom (Bloom, Show Driver Info; with All Settings Bloom Strength, Bloom Threshold), Screen Effects (All Settings only). Since 2026-11-02 the page has no Video Quality preset and no rows for detail, texture, filter, lights, wall marks and render to texture (their cvars stay for the console), see "The setup menu" in [client.md](client.md) |
 | Sound | Volume, 3D Sound, Hits (Hit Sounds, Kill Sound), Voice Chat, Boombox |
 | Game | Game, Language, Lightsabers (with Saber Team Colours, Two-Coloured Staff), Duels, Players (Enemy Model, Ally Model), Hats and Capes, Weapons (Jedi Outcast Shots, Disruptor Beam, Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, Binocular Lens, Rocket Lock-On) |
 | HUD | Menus and HUD, View (Field of View, Camera Distance, Smooth Camera), Crosshair (Crosshair Size, Crosshair Colour, Name Opacity, Lead Indicator), On Screen (Show Frame Rate, Show Timer, Timer Milliseconds, Timer Counts Down, Show Lagometer, Killfeed, Team Overlay Size, Scoreboard Clock, Spectator Map), Movement (the rows from TaystJK) |

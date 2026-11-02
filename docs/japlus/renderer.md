@@ -118,23 +118,22 @@ from it (the single player engine in `code/` keeps them).
 
 | Cvar | Meaning |
 |------|---------|
-| `v_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
+| `v_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched, not saved in the config since 2026-11-02) |
 | `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel (latched) |
 | `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks (latched, the default is 1) |
 | `v_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
 | `v_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
 | `v_vkSprites 0` | cheat: sprites, lines, cylinders, bolts, sparks and the weather build their corners on the CPU as in `rd-vanilla`, not in `sprite.vert` (1 by default) |
 | `v_vkGrass 0` | cheat, latched: the surface sprites of the level (grass) are placed on the CPU every frame as in `rd-vanilla`, not once at load for `grass.vert` (1 by default) |
-| `v_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser |
+| `v_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser. Not saved in the config since 2026-11-02 |
 | `gfxinfo` | device, memory, how many textures are compressed and how long packing them took, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
 
 The cvars keep the names and meaning they had in `rd-vanilla` (`r_gamma`, `r_textureMode`, `r_picmip`,
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
-that only make sense for OpenGL extensions are registered and ignored.
+that only make sense for OpenGL extensions are gone since 2026-11-02 (`r_allowExtensions`, `r_ext_gamma_control`, `r_ext_multitexture`, `r_finish`, `r_nobind`, `r_logFile`, `r_dlightStyle` and others, the list is in client.md). `r_detailtextures` is gone too, detail stages are always drawn. `r_textureMode` now defaults to `GL_LINEAR_MIPMAP_LINEAR` (trilinear).
 
-In the setup menu: the video page has the entries Anti-Aliasing (`r_ext_multisample`)
-and Compressed Textures (`r_ext_compress_textures`), and no Color Depth or Texture Quality, which this renderer
-ignores. See "The setup menu" in [client.md](client.md).
+In the setup menu: the video page has the entry Anti-Aliasing (`r_ext_multisample`)
+and no Color Depth, Texture Quality or Compressed Textures (`r_ext_compress_textures` stays for the console). See "The setup menu" in [client.md](client.md).
 
 ## How it is built
 
@@ -702,7 +701,7 @@ tile with a white cross in both renderers. The room brings a mirror shader with 
 renderer: the first picture of a pair had a see-through player and the second a solid one, 8 % of the pixels,
 with either renderer alone too. The script restarts the renderer before the first picture as well.
 
-Not brought over. For developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, `r_primitives` and `r_finish`
+Not brought over (written on 2026-10-07, `r_nobind`, `r_logFile`, `r_finish` and `r_dlightStyle` are gone since 2026-11-02). For developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, `r_primitives` and `r_finish`
 do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights. `r_dlightStyle 0`
 (the lights of Quake 3, a texture projected on the triangles, where the default 1 is the light of this game)
 changes nothing, the lights are always the ones of the default. That one was found on 2026-10-07, it is not

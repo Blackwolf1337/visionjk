@@ -208,7 +208,7 @@ That version can not update itself. Download the current version once and copy i
 
 The client has no `ja_guid`. OpenJK makes a key file (`jakey`) and sends an identifier made from it to every server it joins. VisionJK does neither. A server sees it like the original game, without a GUID.
 
-`cl_motd` is 0 by default. Switched on, the client asks the update server for a news line on every connect and sends the name and vendor of the graphics card, version, platform, joystick setting and color depth along.
+The client does not ask any update server for a welcome text. `cl_motd` and the cvars of its servers are gone (2026-11-02): Raven's and JKHub's servers got the name and vendor of the graphics card, the version and the joystick setting with that request.
 
 ## Documentation
 
