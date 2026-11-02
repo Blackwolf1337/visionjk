@@ -103,7 +103,8 @@ def frame(m, here, subnav=None):
     mf.put(m, 'canvas', cv.W, cv.H)
     # (the line about the item under the mouse stands in the middle of the bar, clear of its buttons)
     mf.put(m, 'descX', cv.W / 2.0)
-    mf.put(m, 'descY', FOOT_Y + 24)
+    mf.put(m, 'descY', FOOT_Y + cv.FOOT_H / 2.0)
+    mf.put(m, 'descMiddle', 1)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', cv.scale(13))
 
@@ -185,7 +186,7 @@ def home(m):
                      'outline')
     m.append(news)
     for e in its.get('vision_version', []):
-        place(e, (1552, FOOT_Y + 25, 0, 20))
+        place(e, (1552, FOOT_Y, 0, cv.FOOT_H))
         sized(e, 13)
     for e in its.get('exitgamebutton', []):
         control(e, (32, FOOT_Y + 12, 110, 44), 18, 'plain')
@@ -193,7 +194,8 @@ def home(m):
         m.append(e)
     # (the line about the item under the mouse in the middle of the bar at the bottom, as on the other pages)
     mf.put(m, 'descX', cv.W / 2.0)
-    mf.put(m, 'descY', FOOT_Y + 24)
+    mf.put(m, 'descY', FOOT_Y + cv.FOOT_H / 2.0)
+    mf.put(m, 'descMiddle', 1)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', cv.scale(13))
 
@@ -664,7 +666,8 @@ def profile_all(m, extra):
         m.append(Entry(key, [], words))
     mf.put(m, 'canvas', cv.W, cv.H)
     mf.put(m, 'descX', cv.W / 2.0)
-    mf.put(m, 'descY', FOOT_Y + 24)
+    mf.put(m, 'descY', FOOT_Y + cv.FOOT_H / 2.0)
+    mf.put(m, 'descMiddle', 1)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', cv.scale(13))
 

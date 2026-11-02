@@ -406,8 +406,8 @@ typedef struct menuDef_s {
 	vec4_t focusColor;						// focus color for items
 	vec4_t disableColor;					// focus color for items
 	itemDef_t *items[MAX_MENUITEMS];		// items this menu contains
-	int			descX;						// X position of description
-	int			descY;						// X position of description
+	float		descX;						// X position of description
+	float		descY;						// Y position of description
 	vec4_t		descColor;					// description text color for items
 	int			descAlignment;				// Description of alignment
 	float		descScale;					// Description scale
@@ -453,8 +453,9 @@ typedef struct menuDef_s {
 	rectDef_t	canvasRect;
 	rectDef_t	canvasScroll;
 	float		canvasScrollStep;
-	int			canvasDescX, canvasDescY;
+	float		canvasDescX, canvasDescY;
 	float		canvasDescScale;
+	int			descMiddle;					// descY is the middle of the capitals of the description, not its top
 } menuDef_t;
 
 typedef struct cachedAssets_s {
@@ -629,6 +630,7 @@ void Menus_Dump( void );
 qboolean Item_Dumped( const itemDef_t *item );
 void Menu_ChangesApply( void );
 float Menu_Unit( const menuDef_t *menu );
+qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty );
 void Menu_SetPage( menuDef_t *menu, int page );
 // a row of the new look writes the word of an owner draw itself: while text is caught, the text the owner draw
 // would write goes here instead of onto the screen (the ui's Text_Paint, ui_main.c)

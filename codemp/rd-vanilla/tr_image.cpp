@@ -963,12 +963,15 @@ static image_t *R_FindImageFile_NoLoad(const char *name, qboolean mipmap, qboole
 		image_t *pImage = (*itAllocatedImage).second;
 
 		// the white image can be used with any set of parms, but other mismatches are errors...
+		// A 2D request (nomipmaps, which implies nopicmip) draws fine with a mipmapped image: JA+ jedi_hm icons
+		// put gfx/effects/flamejet and gfx/misc/bolt1 over the icon that the models and effects load mipmapped.
 		//
+		const qboolean flatRequest = (qboolean)( !mipmap && !allowPicmip );
 		if ( strcmp( pName, "*white" ) ) {
-			if ( pImage->mipmap != !!mipmap ) {
+			if ( pImage->mipmap != !!mipmap && !flatRequest ) {
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: reused image %s with mixed mipmap parm\n", pName );
 			}
-			if ( pImage->allowPicmip != !!allowPicmip ) {
+			if ( pImage->allowPicmip != !!allowPicmip && !flatRequest ) {
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: reused image %s with mixed allowPicmip parm\n", pName );
 			}
 			if ( pImage->wrapClampMode != glWrapClampMode ) {

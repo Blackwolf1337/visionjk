@@ -261,9 +261,11 @@ class Frame:
     def done(self):
         m, L = self.m, self.L
         m[:] = [e for e in m if e.k != 'itemdef'] + self.new + self.last
-        # what the mouse is on is said in the bar at the bottom, between its buttons
-        mf.put(m, 'descX', mf.fmt(L.width / 2))
-        mf.put(m, 'descY', mf.fmt(L.bar_y + (L.bar_h - 10) / 2))
+        # what the mouse is on is said in the bar at the bottom, between its buttons (on the screen, not from the
+        # corner of the menu as its items: in a game the menu is a window)
+        mf.put(m, 'descX', mf.fmt(L.menu[0] + L.width / 2))
+        mf.put(m, 'descY', mf.fmt(L.menu[1] + L.bar_y + L.bar_h / 2))
+        mf.put(m, 'descMiddle', 1)
         mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
         mf.put(m, 'descScale', '0.55')
         mf.put(m, 'descColor', *DIM)

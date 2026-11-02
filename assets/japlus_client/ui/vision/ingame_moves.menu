@@ -10,8 +10,8 @@
 		rect					192 60 1216 872
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_PANEL
-		descX					768
-		descY					830
+		descX					800
+		descY					900
 		descScale				1.1
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
@@ -35,6 +35,7 @@
 		bordercolor				0.11 0.18 0.29 1
 		radius					6
 		shadow					14
+		descMiddle				1
 
 		itemDef
 		{

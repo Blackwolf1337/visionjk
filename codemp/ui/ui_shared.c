@@ -1093,7 +1093,7 @@ static void Menu_CanvasBars( menuDef_t *menu, float spare ) {
 			menu->scrollRect.h += 2.0f * spare;
 		}
 	}
-	menu->descY += (int)( ( footTop < menu->canvasH && menu->canvasDescY >= footTop - 0.5f ) ? spare : -spare );
+	menu->descY += ( ( footTop < menu->canvasH && menu->canvasDescY >= footTop - 0.5f ) ? spare : -spare );
 }
 
 void Menu_CanvasLayout( menuDef_t *menu ) {
@@ -1145,8 +1145,8 @@ void Menu_CanvasLayout( menuDef_t *menu ) {
 	}
 	menu->scrollStep = menu->canvasScrollStep * uy;
 	// (the line about the item in focus is placed on the screen, from the corner of the canvas)
-	menu->descX = (int)( cx0 + menu->canvasDescX * ux );
-	menu->descY = (int)( cy0 + menu->canvasDescY * uy );
+	menu->descX = cx0 + menu->canvasDescX * ux;
+	menu->descY = cy0 + menu->canvasDescY * uy;
 	menu->descScale = menu->canvasDescScale * uy;
 
 	for ( i = 0; i < menu->itemCount; i++ ) {
@@ -6512,7 +6512,7 @@ static float Text_FitScale( const char *text, float scale, int font, float room 
 	return scale;
 }
 
-static qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty ) {
+qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty ) {
 	float box[4], cap[4];
 
 	if ( !DC->ext.textInk || strchr( text, '\n' ) || !DC->ext.textInk( text, scale, font, box ) || box[2] <= box[0]
@@ -6544,6 +6544,37 @@ static qboolean Item_CardHeadBand( const itemDef_t *item, float *y, float *h ) {
 	top = item->fold ? item->window.rect.y + item->window.rect.h - CARD_HEAD_PX * menu->canvasUnit : item->window.rect.y;
 	Skin_CardHeadBand( top, top + CARD_LINE_PX * menu->canvasUnit, y, h );
 	return qtrue;
+}
+
+// The room of the line about the item in focus at x on the line y: up to the items on that line next to it (what
+// spans x, as the bar under it, is not in the way), less a gap. 0: nothing in the way.
+static float Menu_DescRoom( const menuDef_t *menu, float x, float y, int align ) {
+	const float gap = menu->canvasW > 0.0f ? 12.0f * menu->canvasUnit : 4.0f;
+	float		left = -1.0f, right = -1.0f;
+	int			i;
+
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		const rectDef_t *r = &menu->items[i]->window.rect;
+
+		if ( !( menu->items[i]->window.flags & WINDOW_VISIBLE ) || y < r->y || y > r->y + r->h || ( r->x <= x && r->x + r->w >= x ) ) {
+			continue;
+		}
+		if ( r->x + r->w < x ) {
+			left = Q_max( left, r->x + r->w );
+		} else if ( right < 0.0f || r->x < right ) {
+			right = r->x;
+		}
+	}
+	if ( align == ITEM_ALIGN_LEFT ) {
+		return right < 0.0f ? 0.0f : right - x - gap;
+	}
+	if ( align == ITEM_ALIGN_RIGHT ) {
+		return left < 0.0f ? 0.0f : x - left - gap;
+	}
+	if ( left < 0.0f && right < 0.0f ) {
+		return 0.0f;
+	}
+	return 2.0f * ( Q_min( left < 0.0f ? 1e6f : x - left, right < 0.0f ? 1e6f : right - x ) - gap );
 }
 
 void Item_Text_Paint(itemDef_t *item) {
@@ -8607,10 +8638,32 @@ static void Item_ListBox_ImageMark( itemDef_t *item, float x, float y, int i ) {
 	}
 }
 
+// Where the text of a column of a list in the new look begins, from the left of the list: where the menu file puts it,
+// the first one clear of the mark of the chosen row (16 pixels of the canvas, the room the Join table gives its first
+// column). Many lists of the menu files start their text 2 units from the edge.
+static float List_ColumnX( const itemDef_t *item, int column ) {
+	const menuDef_t	*menu = (const menuDef_t *)item->parent;
+	const float		pos = item->typeData.listbox->columnInfo[column].pos;
+
+	if ( column ) {
+		return pos;
+	}
+	return Q_max( pos, ( menu && menu->canvasW > 0.0f ) ? 16.0f * menu->canvasUnit : 9.0f );
+}
+
+// How wide the filled row of a list in the new look is: from 3 units in to 3 units before the right edge, or before
+// the scroll bar while there is one (it is drawn only when there is something to scroll)
+static float List_RowWidth( itemDef_t *item ) {
+	if ( !item->typeData.listbox->scrollhidden && Item_ListBox_MaxScroll( item ) > 0 ) {
+		return item->window.rect.w - SCROLLBAR_SIZE - 4.0f;
+	}
+	return item->window.rect.w - 6.0f;
+}
+
 // How wide the text of a column of a row of a list may be in the new look: up to the next column that has a text in
 // this row (the facts of a server leave score and ping empty), or the end of the filled row for the last one. The
 // widths of the menu files are not to be trusted.
-static float List_ColumnRoom( const itemDef_t *item, int row, int column ) {
+static float List_ColumnRoom( itemDef_t *item, int row, int column ) {
 	const listBoxDef_t	*listPtr = item->typeData.listbox;
 	const float			pad = 3.0f;
 	int					k;
@@ -8620,10 +8673,10 @@ static float List_ColumnRoom( const itemDef_t *item, int row, int column ) {
 		const char	*next = DC->feederItemText( item->special, row, k, &img1, &img2, &img3 );
 
 		if ( ( next && next[0] ) || img1 >= 0 || img2 >= 0 || img3 >= 0 ) {
-			return listPtr->columnInfo[k].pos - listPtr->columnInfo[column].pos - pad;
+			return List_ColumnX( item, k ) - List_ColumnX( item, column ) - pad;
 		}
 	}
-	return item->window.rect.w - SCROLLBAR_SIZE - 4.0f - listPtr->columnInfo[column].pos - pad;
+	return 3.0f + List_RowWidth( item ) - List_ColumnX( item, column ) - pad;
 }
 
 // The text of a row of a list in the new look: its letters from x, its capitals on the middle of the row (rowY, h).
@@ -8975,7 +9028,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 								Q_strncpyz( colText, text, sizeof( colText ) );
 								text = colText;
 								colScale = Text_FitScale( text, item->textscale, item->iMenuFont, List_ColumnRoom( item, i, j ) );
-								List_TextAt( text, colScale, item->iMenuFont, item->window.rect.x + listPtr->columnInfo[j].pos, rowY,
+								List_TextAt( text, colScale, item->iMenuFont, item->window.rect.x + List_ColumnX( item, j ), rowY,
 									listPtr->elementHeight, &tx, &ty );
 							} else {
 								tx = x + 4 + listPtr->columnInfo[j].pos;
@@ -9048,7 +9101,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 
 				if ( Item_Skinned( item ) ) {
 					// the chosen row is filled, the one under the mouse is lit
-					const float		rowW = item->window.rect.w - SCROLLBAR_SIZE - 4;
+					const float		rowW = List_RowWidth( item );
 					const qboolean	under = (qboolean)( DC->cursorx >= x + 2 && DC->cursorx < x + 2 + rowW && DC->cursory >= rowY
 										&& DC->cursory < rowY + listPtr->elementHeight && ( item->window.flags & WINDOW_MOUSEOVER ) );
 
@@ -9703,9 +9756,22 @@ void Item_Paint(itemDef_t *item)
 					const int descFont = Item_Skinned( item ) ? SKIN_FONT_SANS : FONT_SMALL2;
 
 					if ( Item_Skinned( item ) ) {
+						float inkX, inkY, capMid;
+
 						VectorCopy4( parent->descColor, color );
+						// placed by its letters, as the texts of the items, and set smaller where it would reach an
+						// item on its line (the buttons of the bar at the bottom), the middle of its capitals kept
+						if ( Text_InkAt( textPtr, fDescScale, descFont, parent->descAlignment, parent->descX, parent->descY, 0.0f, &inkX, &inkY ) ) {
+							capMid = parent->descMiddle ? parent->descY : 2.0f * parent->descY - inkY;
+							fDescScale = Text_FitScale( textPtr, fDescScale, descFont,
+								Menu_DescRoom( parent, parent->descX, capMid, parent->descAlignment ) );
+							if ( Text_InkAt( textPtr, fDescScale, descFont, parent->descAlignment, parent->descX, capMid, 0.0f, &inkX, &inkY ) ) {
+								DC->drawText( inkX, inkY, fDescScale, parent->descColor, textPtr, 0, 0, item->textStyle, descFont );
+								fDescScale = 0.0f;
+							}
+						}
 					}
-					while (1)
+					while ( fDescScale > 0.0f )
 					{
 						textWidth = DC->textWidth(textPtr,fDescScale, descFont);
 
@@ -13002,6 +13068,12 @@ qboolean MenuParse_descAlignment( itemDef_t *item, int handle )
 	return qtrue;
 }
 
+qboolean MenuParse_descMiddle( itemDef_t *item, int handle ) {
+	menuDef_t *menu = (menuDef_t *)item;
+
+	return PC_Int_Parse( handle, &menu->descMiddle ) ? qtrue : qfalse;
+}
+
 /*
 =================
 MenuParse_descX
@@ -13011,7 +13083,7 @@ qboolean MenuParse_descX( itemDef_t *item, int handle )
 {
 	menuDef_t *menu = (menuDef_t*)item;
 
-	if (!PC_Int_Parse(handle, &menu->descX))
+	if (!PC_Float_Parse(handle, &menu->descX))
 	{
 		return qfalse;
 	}
@@ -13027,7 +13099,7 @@ qboolean MenuParse_descY( itemDef_t *item, int handle )
 {
 	menuDef_t *menu = (menuDef_t*)item;
 
-	if (!PC_Int_Parse(handle, &menu->descY))
+	if (!PC_Float_Parse(handle, &menu->descY))
 	{
 		return qfalse;
 	}
@@ -13277,6 +13349,7 @@ keywordHash_t menuParseKeywords[] = {
 	{"borderSize",			MenuParse_borderSize,	NULL	},
 	{"cinematic",			MenuParse_cinematic,	NULL	},
 	{"descAlignment",		MenuParse_descAlignment,NULL	},
+	{"descMiddle",			MenuParse_descMiddle,	NULL	},
 	{"desccolor",			MenuParse_descColor,	NULL	},
 	{"descX",				MenuParse_descX,		NULL	},
 	{"descY",				MenuParse_descY,		NULL	},
