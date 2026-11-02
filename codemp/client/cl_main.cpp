@@ -2595,14 +2595,7 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
-	// a renderer that widens the 2D grid on a wide window, or makes it taller on a narrow one, says by how much, any
-	// other leaves the 0
-	Cvar_Get( "v_2dBias", "0", CVAR_ROM );
-	Cvar_Set( "v_2dBias", "0" );
-	Cvar_Get( "v_2dBiasY", "0", CVAR_ROM );
-	Cvar_Set( "v_2dBiasY", "0" );
-
-	// this sets up the renderer and calls R_Init
+	// this sets up the renderer and calls R_Init, which says in v_2dBias and v_2dBiasY how far the 2D grid is widened
 	re->BeginRegistration( &cls.glconfig );
 
 	// the renderer can not run on this machine, VK_InitVulkan() said why
