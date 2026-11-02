@@ -6512,6 +6512,35 @@ static float Text_FitScale( const char *text, float scale, int font, float room 
 	return scale;
 }
 
+// a text wider than room cut so that it ends with "..." within it, in its own buffer (size bytes): the longest
+// start that fits, found by halves (it is asked for every row of a list in every frame). A cut never parts a ^
+// from the digit of its colour.
+static const char *Text_Shorten( char *text, int size, float scale, int font, float room ) {
+	char	cut[MAX_STRING_CHARS];
+	int		lo = 0, hi = (int)strlen( text );
+
+	if ( room <= 0.0f || Text_InkWidth( text, scale, font ) <= room ) {
+		return text;
+	}
+	hi = Q_min( hi, (int)sizeof( cut ) - 4 );
+	while ( lo < hi ) {
+		const int mid = ( lo + hi + 1 ) / 2;
+
+		Com_sprintf( cut, sizeof( cut ), "%.*s...", mid, text );
+		if ( Text_InkWidth( cut, scale, font ) <= room ) {
+			lo = mid;
+		} else {
+			hi = mid - 1;
+		}
+	}
+	while ( lo > 0 && ( text[lo - 1] == ' ' || text[lo - 1] == '^' ) ) {
+		lo--;
+	}
+	Com_sprintf( cut, sizeof( cut ), "%.*s...", lo, text );
+	Q_strncpyz( text, cut, size );
+	return text;
+}
+
 qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty ) {
 	float box[4], cap[4];
 
@@ -7511,7 +7540,7 @@ static void Item_Row_Paint( itemDef_t *item ) {
 			const float	in = Item_RowSize( item, 3.0f, 1.6f ), half = ( widget.w - 2.0f * in ) * 0.5f;
 			int			i;
 
-			item->skinValue = Skin_Ease( item->skinValue, (qboolean)( sel != 0 ), SKIN_EASE_MSEC );
+			Skin_EaseValue( item, (qboolean)( sel != 0 ) );
 			Skin_Panel( widget.x, widget.y, widget.w, widget.h, rad, skinField, edge );
 			Skin_Panel( widget.x + in + item->skinValue * half, widget.y + in, half, widget.h - 2.0f * in, radIn, ink, NULL );
 			for ( i = 0; i < 2; i++ ) {
@@ -7708,7 +7737,7 @@ static void Item_Tab_Paint( itemDef_t *item ) {
 
 	item->skinFocus = Skin_Ease( item->skinFocus, (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && !item->disabled ), SKIN_EASE_MSEC );
 	// ("flow 3": the entry of a strip of menus that stands for the menu that is open)
-	item->skinValue = Skin_Ease( item->skinValue, (qboolean)( item->flow == 3 || ( item->tab && parent->page == item->tab ) ), SKIN_EASE_MSEC );
+	Skin_EaseValue( item, (qboolean)( item->flow == 3 || ( item->tab && parent->page == item->tab ) ) );
 	if ( ( item->window.flags & WINDOW_DECORATION ) && item->flow != 3 ) {
 		return;
 	}
@@ -9088,8 +9117,12 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					else if (text)
 					{
 //						DC->drawText(x + 4, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle);
-						// (clear of the bar at the left of the chosen row in the new look)
+						// (clear of the bar at the left of the chosen row in the new look, and cut with "..." where it
+						// would run past the row: the lines of the intrusion log are longer than any dialog)
 						if ( centred ) {
+							Q_strncpyz( colText, text, sizeof( colText ) );
+							text = Text_Shorten( colText, sizeof( colText ), item->textscale, item->iMenuFont,
+								item->window.rect.x + 3.0f + List_RowWidth( item ) - ( x + 8 ) - 6.0f );
 							List_TextAt( text, item->textscale, item->iMenuFont, x + 8, rowY, listPtr->elementHeight, &tx, &ty );
 						} else {
 							tx = x + 4;

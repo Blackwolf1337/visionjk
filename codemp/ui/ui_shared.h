@@ -333,6 +333,7 @@ typedef struct itemDef_s {
 	// a menu with "skin 1" (ui_skin.c): how far the mark of the focus and the knob of a switch have come, 0 to 1
 	float		skinFocus;
 	float		skinValue;
+	int			skinValueTime;				// realTime skinValue was last eased (Skin_EaseValue)
 	float		skinScale;			// the text scale the menu file gave, where a long text is set smaller than that
 	// ITEM_TYPE_BAR, ITEM_TYPE_VALUE and "showStat": the number of the game this item shows, by name
 	const char	*stat;

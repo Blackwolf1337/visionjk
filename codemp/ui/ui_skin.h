@@ -54,6 +54,7 @@ qboolean	Skin_Ready( void );
 void		Skin_Reset( void );
 qhandle_t	Skin_FontHandle( int iMenuFont );
 float		Skin_Ease( float value, qboolean on, int msec );
+float		Skin_EaseValue( itemDef_t *item, qboolean on );
 void		Skin_Color( vec4_t out, const vec4_t in, float alphaScale );
 
 void		Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge );
