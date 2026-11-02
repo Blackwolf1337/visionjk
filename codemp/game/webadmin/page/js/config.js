@@ -82,7 +82,9 @@ async function loadConfig() {
 	try {
 		const res = await fetch('api/config', { cache: 'no-store' });
 		if (!res.ok) throw new Error('HTTP ' + res.status);
-		cfgSaved = $('cfgText').value = await res.text();
+		// the textarea turns CR LF into LF: what it holds is the text that counts as unchanged
+		$('cfgText').value = await res.text();
+		cfgSaved = $('cfgText').value;
 		cfgLoaded = true;
 	} catch (e) {
 		toast('Could not read the config: ' + e.message, false);
