@@ -184,10 +184,11 @@ def home(m):
         control(e, (32, FOOT_Y + 12, 110, 44), 18, 'plain')
         m.remove(e)
         m.append(e)
-    mf.put(m, 'descX', 48)
-    mf.put(m, 'descY', 650)
-    mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
-    mf.put(m, 'descScale', cv.scale(15))
+    # (the line about the item under the mouse in the middle of the bar at the bottom, as on the other pages)
+    mf.put(m, 'descX', cv.W / 2.0)
+    mf.put(m, 'descY', FOOT_Y + 24)
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', cv.scale(13))
 
 
 def join(m):
@@ -538,10 +539,11 @@ def profile_all(m, extra):
     new.append(cv.panel('vision_saberbox', (RX, y, RW, 92), cv.FIELD, cv.CARD_EDGE, 10, ('decoration',)))
     for n, name in enumerate(('saber', 'saber2')):
         for e in get(sab, name):
-            # (the model is drawn in a square: the blade lies across the middle of the box)
-            # (the saber lies at about two thirds of the height of its square, measured)
-            side = 330
-            place(e, (RX + (RW - side) / 2.0, y + 46 - 0.68 * side + n * 18, side, side))
+            # (the view is the box: the ui frames all of the saber in its width, ui_shared.c Item_Model_Paint; the
+            # second one of two lies a little lower)
+            place(e, (RX + 6, y + 4 + n * 16, RW - 12, 84))
+            mf.put(e.block, 'model_fovx', 70)
+            mf.put(e.block, 'model_fovy', 20)
             new.append(e)
     y += 92 + 22
     new.append(_label('vision_r_style', RX, y, RW, texts.ref('Style')))

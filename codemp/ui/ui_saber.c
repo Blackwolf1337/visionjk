@@ -728,6 +728,28 @@ void UI_GetSaberForMenu( char *saber, int saberNum )
 	}
 }
 
+// the saber a model item of a saber shows (ui_saber or ui_saber2), set back to the default one when it is not
+// allowed
+static qboolean UI_SaberOfItem( itemDef_t *item, char *saber, int saberSize )
+{
+	const char *cvar;
+
+	if ( item->flags & ITF_ISSABER )
+		cvar = "ui_saber";
+	else if ( item->flags & ITF_ISSABER2 )
+		cvar = "ui_saber2";
+	else
+		return qfalse;
+
+	trap->Cvar_VariableStringBuffer( cvar, saber, saberSize );
+	if ( !UI_SaberValidForPlayerInMP( saber ) )
+	{
+		trap->Cvar_Set( cvar, DEFAULT_SABER );
+		trap->Cvar_VariableStringBuffer( cvar, saber, saberSize );
+	}
+	return qtrue;
+}
+
 void UI_SaberDrawBlades( itemDef_t *item, vec3_t origin, vec3_t angles )
 {
 	//NOTE: only allows one saber type in view at a time
@@ -749,24 +771,8 @@ void UI_SaberDrawBlades( itemDef_t *item, vec3_t origin, vec3_t angles )
 			UI_GetSaberForMenu( saber, saberNum );
 			saberModel = saberNum + 1;
 		}
-		else if ( (item->flags&ITF_ISSABER) )
+		else if ( UI_SaberOfItem( item, saber, sizeof( saber ) ) )
 		{
-			trap->Cvar_VariableStringBuffer("ui_saber", saber, sizeof(saber) );
-			if ( !UI_SaberValidForPlayerInMP( saber ) )
-			{
-				trap->Cvar_Set( "ui_saber", DEFAULT_SABER );
-				trap->Cvar_VariableStringBuffer("ui_saber", saber, sizeof(saber) );
-			}
-			saberModel = 0;
-		}
-		else if ( (item->flags&ITF_ISSABER2) )
-		{
-			trap->Cvar_VariableStringBuffer("ui_saber2", saber, sizeof(saber) );
-			if ( !UI_SaberValidForPlayerInMP( saber ) )
-			{
-				trap->Cvar_Set( "ui_saber2", DEFAULT_SABER );
-				trap->Cvar_VariableStringBuffer("ui_saber2", saber, sizeof(saber) );
-			}
 			saberModel = 0;
 		}
 		else
@@ -793,6 +799,91 @@ void UI_SaberDrawBlades( itemDef_t *item, vec3_t origin, vec3_t angles )
 			}
 		}
 	}
+}
+
+/*
+=================
+UI_SaberFrame
+
+All of a saber lying in a menu, in the space of its model: the middle of the line from the end of its hilt (or the
+tip of a blade that points back) to the tip of its farthest blade, and how long that line is. The blades are not
+in the bounds of the model, they come from the tags of the model and the lengths of the saber file. qfalse for an
+item that is no saber or a saber without blades.
+=================
+*/
+qboolean UI_SaberFrame( itemDef_t *item, vec3_t middle, float *length )
+{
+	char		saber[MAX_QPATH], typeName[MAX_QPATH] = { 0 }, modelPath[MAX_QPATH];
+	vec3_t		points[2 + 2 * MAX_BLADES], dir, axisDir = { 0.0f, 0.0f, 0.0f };
+	mdxaBone_t	boltMatrix;
+	int			numPoints = 1, numBlades, i, lo = 0, hi = 0;
+	float		proj, loProj, hiProj;
+
+	if ( ( item->flags & ITF_ISCHARACTER ) || !item->ghoul2 || !trap->G2API_HasGhoul2ModelOnIndex( &item->ghoul2, 0 )
+		|| !UI_SaberOfItem( item, saber, sizeof( saber ) ) ) {
+		return qfalse;
+	}
+	numBlades = Q_min( UI_SaberNumBladesForSaber( saber ), MAX_BLADES );
+	if ( numBlades <= 0 ) {
+		return qfalse;
+	}
+	UI_SaberTypeForSaber( saber, typeName, sizeof( typeName ) );
+	VectorClear( points[0] );		// the end of the hilt is the origin of the model
+	for ( i = 0; i < numBlades; i++ ) {
+		int bolt = trap->G2API_AddBolt( item->ghoul2, 0, va( "*blade%d", i + 1 ) );
+		qboolean tagHack = qfalse;
+
+		if ( bolt == -1 ) {
+			// (old models: the tag of the flash, the blades as UI_SaberDrawBlade puts them on it)
+			tagHack = qtrue;
+			bolt = trap->G2API_AddBolt( item->ghoul2, 0, "*flash" );
+			if ( bolt == -1 ) {
+				bolt = 0;
+			}
+		}
+		trap->G2API_GetBoltMatrix( item->ghoul2, 0, bolt, &boltMatrix, vec3_origin, vec3_origin, uiInfo.uiDC.realTime, NULL, vec3_origin );
+		BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, points[numPoints] );
+		BG_GiveMeVectorFromMatrix( &boltMatrix, NEGATIVE_Y, dir );
+		if ( tagHack && i == 1 && TranslateSaberType( typeName ) == SABER_STAFF ) {
+			VectorScale( dir, -1.0f, dir );
+		}
+		if ( i == 0 ) {
+			VectorCopy( dir, axisDir );
+		}
+		VectorMA( points[numPoints], UI_SaberBladeLengthForSaber( saber, i ), dir, points[numPoints + 1] );
+		numPoints += 2;
+	}
+	// the hilt: the two corners of the bounds of its model farthest along the first blade
+	if ( UI_SaberModelForSaber( saber, modelPath, sizeof( modelPath ) ) ) {
+		const qhandle_t model = trap->R_RegisterModel( modelPath );
+		vec3_t			mins, maxs;
+
+		if ( model ) {
+			trap->R_ModelBounds( model, mins, maxs );
+			for ( i = 0; i < 3; i++ ) {
+				points[numPoints][i] = ( axisDir[i] < 0.0f ) ? maxs[i] : mins[i];
+				points[numPoints + 1][i] = ( axisDir[i] < 0.0f ) ? mins[i] : maxs[i];
+			}
+			numPoints += 2;
+		}
+	}
+	// the two points farthest apart along the first blade
+	loProj = hiProj = 0.0f;
+	for ( i = 1; i < numPoints; i++ ) {
+		proj = DotProduct( points[i], axisDir );
+		if ( proj < loProj ) {
+			loProj = proj;
+			lo = i;
+		}
+		if ( proj > hiProj ) {
+			hiProj = proj;
+			hi = i;
+		}
+	}
+	VectorAdd( points[lo], points[hi], middle );
+	VectorScale( middle, 0.5f, middle );
+	*length = hiProj - loProj;
+	return (qboolean)( *length > 1.0f );
 }
 
 void UI_SaberAttachToChar( itemDef_t *item )

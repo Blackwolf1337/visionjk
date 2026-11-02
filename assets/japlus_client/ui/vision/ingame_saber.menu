@@ -1060,15 +1060,15 @@
 			name					saber
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					24 -98.24 1168 1168
+			rect					24 636 1168 120
 			asset_model				"models/weapons2/saber_reborn/saber_w.glm"
 			isSaber					1
 			model_angle				180
 			model_rotation			20
 			model_g2mins			0 0 0
 			model_g2maxs			20 20 20
-			model_fovx				75
-			model_fovy				75
+			model_fovx				70
+			model_fovy				14
 			visible					1
 			decoration
 		}
@@ -1078,15 +1078,15 @@
 			name					saber2
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					24 -42.24 1168 1168
+			rect					24 676 1168 120
 			asset_model				"models/weapons2/saber_reborn/saber_w.glm"
 			isSaber2				1
 			model_angle				180
 			model_rotation			20
 			model_g2mins			0 0 0
 			model_g2maxs			20 20 20
-			model_fovx				75
-			model_fovy				75
+			model_fovx				70
+			model_fovy				14
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }

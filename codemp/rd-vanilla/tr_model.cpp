@@ -1990,6 +1990,29 @@ void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs ) {
 		return;
 	}
 
+	if ( model->type == MOD_MDXM && model->mdxm ) {
+		// A Ghoul II mesh (VisionJK): the vertices of its first LOD, which are in the space of the model in its base
+		// pose. The ui frames a saber with it, the blades are not part of it.
+		const byte					*lod = (const byte *)model->mdxm + model->mdxm->ofsLODs + sizeof( mdxmLOD_t );
+		const mdxmLODSurfOffset_t	*offsets = (const mdxmLODSurfOffset_t *)lod;
+		int							i, j;
+
+		ClearBounds( mins, maxs );
+		for ( i = 0; i < model->mdxm->numSurfaces; i++ ) {
+			const mdxmSurface_t	*surf = (const mdxmSurface_t *)( lod + offsets->offsets[i] );
+			const mdxmVertex_t	*v = (const mdxmVertex_t *)( (const byte *)surf + surf->ofsVerts );
+
+			for ( j = 0; j < surf->numVerts; j++ ) {
+				AddPointToBounds( v[j].vertCoords, mins, maxs );
+			}
+		}
+		if ( mins[0] > maxs[0] ) {
+			VectorClear( mins );
+			VectorClear( maxs );
+		}
+		return;
+	}
+
 	if ( !model->md3[0] ) {
 		VectorClear( mins );
 		VectorClear( maxs );

@@ -81,6 +81,7 @@ typedef struct scrollInfo_s {
 	// Some extern functions hoisted from the middle of this file to get all the non-cgame,
 	// non-namespace stuff together
 	extern void UI_SaberDrawBlades( itemDef_t *item, vec3_t origin, vec3_t angles );
+	extern qboolean UI_SaberFrame( itemDef_t *item, vec3_t middle, float *length );
 
 	extern void UI_SaberLoadParms( void );
 	extern qboolean ui_saber_parms_parsed;
@@ -8052,6 +8053,27 @@ void Item_Model_Paint(itemDef_t *item)
 	}
 
 	AnglesToAxis( angles, ent.axis );
+
+#ifndef _CGAME
+	if ( Item_Skinned( item ) && ( item->flags & ITF_ISANYSABER ) && !( item->flags & ITF_ISCHARACTER ) ) {
+		vec3_t	middle;
+		float	length;
+
+		// In the new look a saber turns about its middle, and all of it, blades included, fits the width of its
+		// box. The old menus placed it by hand around the end of its hilt, the bounds of the model have no blade.
+		if ( UI_SaberFrame( item, middle, &length ) ) {
+			// (a line of half length c that turns about its middle at distance d looks at most c / sqrt( d*d - c*c )
+			// wide: at d = c * sqrt( 1 + 1 / t*t ) it never leaves a view of half width t)
+			const float t = tan( DEG2RAD( refdef.fov_x * 0.5f ) );
+
+			VectorClear( origin );
+			origin[0] = length * 0.5f * sqrt( 1.0f + 1.0f / ( t * t ) ) * 1.08f;
+			VectorMA( origin, -middle[0], ent.axis[0], origin );
+			VectorMA( origin, -middle[1], ent.axis[1], origin );
+			VectorMA( origin, -middle[2], ent.axis[2], origin );
+		}
+	}
+#endif
 
 	if (item->ghoul2)
 	{

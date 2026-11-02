@@ -433,13 +433,12 @@ def saber(f):
 
     blade(y, False)
     blade(y + 142, True)
-    # the saber lies under the two columns, over the width of the page: a square view that reaches past the bottom
-    # of the screen, as the one of the old page did, with the saber at about two thirds of its height (measured)
-    side = f.w
-    top = y + 310 - 0.68 * side
+    # the saber lies under the two columns, over the width of the page (the ui frames all of it in the width of its
+    # view, ui_shared.c Item_Model_Paint; the second one of two lies a little lower)
     for n, name in enumerate(('saber', 'saber2')):
         for e in named(old, name):
-            rect(e, x, top + n * 28, side, side)
+            rect(e, x, y + 280 + n * 20, f.w, 60)
+            props(e, ('model_fovx', 70), ('model_fovy', 14))
             f.new.append(e)
     if f.ingame:
         f.foot([], named(old, 'applycurrent'), back=CLICK + ['close', f.menu, ';', 'open', 'ingame_player', ';'])
