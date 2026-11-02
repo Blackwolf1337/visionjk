@@ -496,7 +496,6 @@
 			elementheight			144
 			elementtype				1
 			feeder					20
-			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
@@ -507,7 +506,7 @@
 				play "sound/interface/choose_head.wav"
 				uiScript "char_skin"
 			}
-			radius					8
+			radius					6.4
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textscale				0.63
@@ -549,7 +548,6 @@
 			elementheight			144
 			elementtype				1
 			feeder					21
-			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
@@ -560,7 +558,7 @@
 				play "sound/interface/choose_torso.wav"
 				uiScript "char_skin"
 			}
-			radius					8
+			radius					6.4
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textscale				0.63
@@ -602,7 +600,6 @@
 			elementheight			144
 			elementtype				1
 			feeder					22
-			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
@@ -613,7 +610,7 @@
 				play "sound/interface/choose_head.wav"
 				uiScript "char_skin"
 			}
-			radius					8
+			radius					6.4
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textscale				0.63

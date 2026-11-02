@@ -16,9 +16,9 @@
 		onOpen
 		{
 			hide gamedesc ;
-			show stun_desc ;
+			show saber_desc ;
 			setitemcolor weapon_submenu forecolor 0.86 0.90 0.945 1 ;
-			setitemcolor stunmenubutton forecolor 0.36 0.78 0.96 1 ;
+			setitemcolor sabermenubutton forecolor 0.36 0.78 0.96 1 ;
 		}
 		onESC
 		{

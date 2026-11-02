@@ -412,7 +412,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					756 152 520 526
+			rect					756 224 520 422
 			model_g2anim			"BOTH_ROLL_F"
 			asset_model				"ui_char_model"
 			model_angle				180

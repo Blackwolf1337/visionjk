@@ -2920,7 +2920,7 @@
 		itemDef
 		{
 			name					vision_scroll
-			rect					1218 192 6 640
+			rect					1230 192 6 640
 			visible					1
 			type					ITEM_TYPE_PAGESCROLL
 		}

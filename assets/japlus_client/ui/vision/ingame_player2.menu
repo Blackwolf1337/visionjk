@@ -136,6 +136,26 @@
 
 		itemDef
 		{
+			name					vision_to_moves
+			rect					658 0 160 52
+			visible					1
+			text					@MENUS_MOVES
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_THE_LIST_OF_MOVES
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open rulesMenu_moves ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
 			name					vision_left
 			rect					12 64 524 728
 			visible					1
@@ -377,7 +397,6 @@
 			elementheight			144
 			elementtype				1
 			feeder					20
-			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
@@ -388,7 +407,7 @@
 				play "sound/interface/choose_head.wav"
 				uiScript "char_skin"
 			}
-			radius					8
+			radius					6.4
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textscale				0.94
@@ -430,7 +449,6 @@
 			elementheight			144
 			elementtype				1
 			feeder					21
-			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
@@ -441,7 +459,7 @@
 				play "sound/interface/choose_torso.wav"
 				uiScript "char_skin"
 			}
-			radius					8
+			radius					6.4
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textscale				0.94
@@ -483,7 +501,6 @@
 			elementheight			144
 			elementtype				1
 			feeder					22
-			horizontalscroll
 			backcolor				0.027 0.051 0.102 0.9
 			bordercolor				0.086 0.149 0.247 1
 			forecolor				-1
@@ -494,7 +511,7 @@
 				play "sound/interface/choose_head.wav"
 				uiScript "char_skin"
 			}
-			radius					8
+			radius					6.4
 			outlinecolor			0.36 0.78 0.96 0.22
 			font					5
 			textscale				0.94

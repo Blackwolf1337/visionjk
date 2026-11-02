@@ -9,7 +9,11 @@
 		rect					350 170 900 560
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
+		descX					800
+		descY					744
+		descScale				0.78
 		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
 		popup
 		onOpen
 		{

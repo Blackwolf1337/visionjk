@@ -7,64 +7,50 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					370 80 484 268
+		rect					370 80 760 408
 		disableColor			0.40 0.47 0.56 1
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		skin					1
 		openSlide				8
-		descX					612
-		descY					358
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				1.4
-		descColor				0.56 0.64 0.74 1
+		radius					6.4
+		shadow					14
 
 		itemDef
 		{
-			name					background_pic
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					0 0 484 268
-			forecolor				1 1 1 1
+			name					vision_window
+			rect					0 0 760 408
 			visible					1
-			decoration
-			backcolor				0.031 0.055 0.11 0.97
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
 			bordercolor				0.11 0.18 0.29 1
-			radius					12.8
-			shadow					28
+			radius					16
+			decoration
 		}
 
 		itemDef
 		{
 			name					gametypefield
-			style					0
 			text					@MENUS_NAME1
 			ownerdraw				UI_BOTNAME
-			rect					4 8 472 60
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				160
-			textaligny				2.7
+			rect					24 24 712 84
 			font					5
-			textscale				1.54
+			textscale				1.56
 			forecolor				0.86 0.90 0.945 1
-			border					0
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
+			row						1
 		}
 
 		itemDef
 		{
 			name					gametypefield
-			style					0
 			text					@MENUS_TEAM
 			ownerdraw				UI_REDBLUE
-			rect					4 68 472 60
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				160
-			textaligny				2.7
+			rect					24 108 712 84
 			font					5
-			textscale				1.54
+			textscale				1.56
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"g_gametype"
 			disableCvar
@@ -76,29 +62,25 @@
 				"4" ;
 				"5"
 			}
-			border					0
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
+			row						1
 		}
 
 		itemDef
 		{
 			name					gametypefield
-			style					0
 			text					@MENUS_SKILL1
 			ownerdraw				UI_BOTSKILL
-			rect					4 128 472 60
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				160
-			textaligny				2.7
+			rect					24 192 712 84
 			font					5
-			textscale				1.54
+			textscale				1.56
 			forecolor				0.86 0.90 0.945 1
-			border					0
 			bordercolor				0.086 0.149 0.247 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
+			row						1
 		}
 
 		itemDef
@@ -106,14 +88,14 @@
 			name					ok
 			text					@MENUS_ADD_BOT
 			type					1
-			style					WINDOW_STYLE_EMPTY
-			rect					40 188 400 60
+			style					WINDOW_STYLE_PANEL
+			rect					416 300 320 84
 			textalignx				160
-			textaligny				7
-			font					5
-			textscale				1.72
+			textaligny				28
+			font					7
+			textscale				1.56
 			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.90 0.945 1
+			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
 			{
@@ -121,9 +103,16 @@
 				uiScript addBot ;
 				uiScript closeingame
 			}
-			mouseEnter { show okButton }
-			mouseExit { hide okButton }
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			caps					1
 		}
 		canvas					1600 1200
+		descX					750
+		descY					504
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
 	}
 }

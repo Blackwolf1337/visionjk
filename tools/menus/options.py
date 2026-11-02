@@ -1052,7 +1052,8 @@ def build_canvas(m, name, ingame):
                            ('forecolor', *TEXT), ('cvarFloatList', [ref('Essentials'), '0', ref('All Settings'), '1']),
                            ('descText', ref('Shows the settings that matter, or all of them.')), ('action', list(CLICK))))
     new += made_pages
-    new.append(cv.item('vision_scroll', (list_x + list_w - 6, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
+    # (the bar in the margin beside the cards, clear of their edge)
+    new.append(cv.item('vision_scroll', (list_x + list_w + 6, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
 
     # at the right: what the row under the mouse is for, and the settings the screen changed
     new += [cv.fill('vision_pane', (pane_x, top, cv.PANE_W, bottom - top), cv.RAIL),

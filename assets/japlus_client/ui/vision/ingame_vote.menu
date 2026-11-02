@@ -7,31 +7,26 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					1020 80 164 148
+		rect					788 80 620 246
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		skin					1
 		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		descX					1102
-		descY					238
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				1.4
-		descColor				0.56 0.64 0.74 1
+		radius					6.4
+		shadow					14
 
 		itemDef
 		{
-			name					background_pic
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					0 0 164 148
-			forecolor				1 1 1 1
+			name					vision_window
+			rect					0 0 620 246
 			visible					1
-			decoration
-			backcolor				0.031 0.055 0.11 0.97
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
 			bordercolor				0.11 0.18 0.29 1
-			radius					12.8
-			shadow					28
+			radius					16
+			decoration
+			stack					-1
 		}
 
 		itemDef
@@ -39,13 +34,13 @@
 			name					yes
 			text					@MENUS_YES
 			type					1
-			style					2
-			rect					4 8 152 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				3
+			style					WINDOW_STYLE_PANEL
+			rect					24 24 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -54,8 +49,10 @@
 				exec "vote yes" ;
 				uiScript closeingame
 			}
-			mouseEnter { show button1 }
-			mouseExit { hide button1 }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -63,13 +60,13 @@
 			name					no
 			text					@MENUS_NO
 			type					1
-			style					2
-			rect					4 68 152 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				76
-			textaligny				3
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -78,9 +75,16 @@
 				exec "vote no" ;
 				uiScript closeingame
 			}
-			mouseEnter { show button2 }
-			mouseExit { hide button2 }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 		canvas					1600 1200
+		descX					1098
+		descY					342
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
 	}
 }

@@ -1163,6 +1163,7 @@
 				uiscript checkservername
 			}
 			row						3
+			stack					1
 		}
 
 		itemDef
@@ -1186,6 +1187,7 @@
 			mouseEnter { show settingsButton11 }
 			mouseExit { hide settingsButton11 }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1208,6 +1210,7 @@
 			mouseEnter { show settingsButton11 }
 			mouseExit { hide settingsButton11 }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1233,6 +1236,7 @@
 				uiscript clampmaxplayers
 			}
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1260,6 +1264,7 @@
 			mouseEnter { show settingsButton10 }
 			mouseExit { hide settingsButton10 }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1288,6 +1293,7 @@
 			mouseEnter { show settingsButton2 }
 			mouseExit { hide settingsButton2 }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1315,6 +1321,7 @@
 			mouseEnter { show settingsButton3 }
 			mouseExit { hide settingsButton3 }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1338,6 +1345,7 @@
 			mouseEnter { show settingsButton3 }
 			mouseExit { hide settingsButton3 }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1367,6 +1375,7 @@
 			mouseEnter { show settingsButton3b }
 			mouseExit { hide settingsButton3b }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -1385,6 +1394,7 @@
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
+			stack					1
 		}
 
 		itemDef
@@ -1403,6 +1413,7 @@
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
+			stack					1
 		}
 
 		itemDef

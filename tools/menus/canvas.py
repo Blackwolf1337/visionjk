@@ -237,6 +237,9 @@ def convert(m, ingame):
             else:
                 nx, nw = cx + (x - 320) * k, w * k
             mf.put(b, 'rect', mf.fmt(nx), mf.fmt(map_y(y)), mf.fmt(nw), mf.fmt(h * k))
+        elif wide and w >= 640 and h >= 480:
+            # in a window, what covers the whole screen (the veil that dims the page under it) still covers all of it
+            mf.put(b, 'rect', mf.fmt(-(cx + (mr[0] - 320) * k)), mf.fmt(-map_y(mr[1])), mf.fmt(cw), mf.fmt(ch))
         else:
             # in a window: from its corner
             mf.put(b, 'rect', mf.fmt(x * k), mf.fmt(y * k), mf.fmt(w * k), mf.fmt(h * k))

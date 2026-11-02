@@ -113,5 +113,10 @@
 			caps					1
 		}
 		canvas					1600 900
+		descX					800
+		descY					624
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				0.78
+		descColor				0.56 0.64 0.74 1
 	}
 }

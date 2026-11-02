@@ -647,10 +647,12 @@ def join_page(m):
 SETTING_KINDS = ('editfield', 'numericfield', 'yesno', 'multi', 'slider', '4', '9', '10', '11', '12', '13')
 
 
-def as_rows(blocks, x, y0, w, pitch=22, gap=8, px=None):
+def as_rows(blocks, x, y0, w, pitch=22, gap=8, px=None, stack=None):
     """Settings and their headings in a column, one under the other in the order they stood: a setting becomes a row
     (its name at the left, its widget at the right, "row 1"), a heading a small word in capitals. Items that stood
-    in the same place (the menu shows one of them) stay in the same place. Returns where the column ends."""
+    in the same place (the menu shows one of them) stay in the same place. stack: the number of the column for
+    "stack", which closes it up over places that are hidden (ui_shared.c Menu_StackFrame). Returns where the column
+    ends."""
     rows = sorted(blocks, key=lambda b: rect_of(b)[1])
     y, last = y0, None
     for b in rows:
@@ -663,6 +665,8 @@ def as_rows(blocks, x, y0, w, pitch=22, gap=8, px=None):
         last = oy
         set_rect(b, x, y, w, pitch)
         mf.put(b, 'font', FONT)
+        if stack:
+            mf.put(b, 'stack', stack)
         if heading:
             mf.put(b, 'textscale', mf.fmt(12 / 18.0) if px else '0.52')
             mf.put(b, 'caps', 1)
@@ -680,6 +684,14 @@ def as_rows(blocks, x, y0, w, pitch=22, gap=8, px=None):
                 ports.control(Entry('itemDef', [], b), (x, y + 4, w, pitch - 8), 15)
             else:
                 control(b, (x + 2, y + 2, w - 4, pitch - 4), 0.58)
+        elif owner and px:
+            # (in a menu with a canvas an owner draw that is a choice is a row as well: its name at the left, what it
+            # is set to between two arrows, ui_shared.c Item_Row_Paint)
+            mf.put(b, 'row', 1)
+            mf.put(b, 'textscale', mf.fmt(px / 18.0))
+            mf.put(b, 'forecolor', *TEXT)
+            for key in ('textalign', 'textalignx', 'textaligny', 'style', 'border', 'bordersize', 'background'):
+                mf.drop(b, key)
         elif owner:
             # (an owner draw writes its name and what it is set to itself: it stays a line of text)
             mf.put(b, 'textscale', mf.fmt(px / 18.0) if px else '0.66')
@@ -974,6 +986,12 @@ def page(m, name, ingame):
             elif g in ('video', 'vidrestart'):
                 mf.put(e.block, 'visible', 0)
     full = mf.truth(mf.get(m, 'fullscreen'))
+    if menu == 'rulesmenu_weapons':
+        # (the page of the game opens on the stun baton of the single player game, which has no button and no text
+        # here: the panel stood empty. It opens on the lightsaber.)
+        e = mf.find(m, 'onopen')
+        if e and isinstance(e.block, list):
+            e.block = [{'stun_desc': 'saber_desc', 'stunmenubutton': 'sabermenubutton'}.get(w, w) for w in e.block]
     if name == 'player.menu' and not ingame and EXTRA:
         # the player outside a game: profile, character and lightsaber on one page, as the board (ports.profile_all)
         ports.profile_all(m, EXTRA)
@@ -1031,6 +1049,16 @@ def page(m, name, ingame):
         elif menu == 'rulesmenu_moves':
             ports.rules_moves(m)
     elif not full and not ingame and ports.popups(m, menu):
+        return
+    elif not full and ingame and menu in ('ingame_join', 'ingame_leave', 'ingame_vote') and ports.choices(m, menu):
+        return
+    elif not full and ingame and menu == 'ingame_addbot' and ports.addbot(m):
+        return
+    elif not full and ingame and menu == 'ingame_callvote' and ports.callvote(m):
+        return
+    elif not full and ingame and menu == 'ingame_about' and ports.about(m):
+        return
+    elif not full and ingame and menu == 'ingame_servers' and ports.ingame_servers(m):
         return
     elif not full:
         window(m, menu, ingame)

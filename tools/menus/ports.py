@@ -267,10 +267,10 @@ def join(m):
                      cv.MUTED, 'right', 0, FONT, ('decoration',)))
 
 
-def rows(entries, x, y, w, pitch=52, gap=12):
+def rows(entries, x, y, w, pitch=52, gap=12, stack=None):
     """Settings and headings in a column of rows of the board (pages.as_rows, in pixels of the canvas)."""
     import pages
-    return pages.as_rows([e.block for e in entries], x, y, w, pitch, gap, px=17)
+    return pages.as_rows([e.block for e in entries], x, y, w, pitch, gap, px=17, stack=stack)
 
 
 def create(m):
@@ -321,7 +321,7 @@ def create(m):
     for e in its.get('vision_rules', []):
         m.remove(e)
     rule_items = [e for n in ('expert', 'normal', 'rules_title') for e in its.get(n, []) if cv._rect(e.block)]
-    end = rows(rule_items, rx + 36, y0 + 24, cv.W - rx - 72)
+    end = rows(rule_items, rx + 36, y0 + 24, cv.W - rx - 72, stack=1)
     for e in rule_items:
         m.remove(e)
         m.append(e)
@@ -359,12 +359,8 @@ def solo(m, menu):
     rule_items = [e for n in ('options', 'normal', 'expert_button', 'difficulty_button', 'custombots_button', 'rules_title',
                               'end_game_title', 'bots_title') for e in its.get(n, [])]
     m.append(cv.panel('vision_rules2', (36, y0 + 90, 600, FOOT_Y - y0 - 114), cv.CARD, cv.CARD_EDGE, 10))
-    rows(rule_items, 58, y0 + 100, 556, 44, 8)
+    rows(rule_items, 58, y0 + 100, 556, 44, 8, stack=1)
     for e in rule_items:
-        if mf.get(e.block, 'ownerdraw') and mf.get(e.block, 'rect'):
-            # (an owner draw writes its name and value itself: in a dark field like Type at the left)
-            x, y, w, h = (mf.num(v) or 0 for v in mf.get(e.block, 'rect')[:4])
-            control(e, (x, y + 2, w, 40), 15, 'field', 'left', 14)
         m.remove(e)
         m.append(e)
     map_preview(its, (678, y0 + 102, 868, FOOT_Y - y0 - 138))
@@ -774,7 +770,9 @@ def rules_moves(m):
         mf.put(e.block, 'bordercolor', *cv.CARD_EDGE)
         mf.put(e.block, 'radius', 10)
     for e in its.get('character', []):
-        place(e, (cx + cw / 2.0 - 260, cy - 60, 520, ch - 70))
+        # (in the card above the text about the move; the ui keeps the figure's proportions, room above it for
+        # the jumps)
+        place(e, (cx + cw / 2.0 - 260, cy + 12, 520, ch - 174))
     for e in its.get('item_desc', []):
         place(e, (cx + 32, cy + ch - 150, cw - 64, 130))
         sized(e, 16)
@@ -785,13 +783,15 @@ def rules_moves(m):
 DIALOG = ['0.039', '0.071', '0.133', '0.96']       # the card of a dialog (as the quit dialog)
 
 
-def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None):
+def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None, extra=()):
     """A window as the board "Dialogs" draws one: the page dimmed, a card in the middle with a small heading in
     capitals, a title, its content, the buttons at the bottom right (primary: filled with the accent, at the
     right). kicker, title: words, or an item of the menu. body: (item, height, px) from the top down, an item of
-    height 0 is a line of words. buttons: items, from the left. Items of the menu that are not named go."""
+    height 0 is a line of words. buttons: items, from the left. extra: items that stay where the caller puts them.
+    Items of the menu that are not named go. Returns where the body ended."""
     x0, y0 = (cv.W - w) / 2.0, (cv.H - h) / 2.0
-    keep = {id(e) for e in [kicker, title] + [b[0] for b in body] + list(buttons) + [primary] if e is not None and not isinstance(e, str)}
+    keep = {id(e) for e in [kicker, title] + [b[0] for b in body] + list(buttons) + [primary] + list(extra)
+            if e is not None and not isinstance(e, str)}
     m[:] = [e for e in m if e.k != 'itemdef' or id(e) in keep]
     new = [cv.fill('vision_veil', (-x0, -y0, cv.W, cv.H), ['0', '0', '0', '0.55'], ('wide', 1)),
            cv.panel('vision_dialog', (0, 0, w, h), DIALOG, cv.EDGE, 12, ('shadow', 40))]
@@ -833,13 +833,324 @@ def dialog(m, w, h, kicker=None, title=None, body=(), buttons=(), primary=None):
     for e in reversed(list(buttons)):
         x -= 12 + 180
         control(e, (x, h - 28 - 44, 180, 44), 15)
-    new += [e for e in buttons] + ([primary] if primary is not None else [])
+    new += list(extra) + [e for e in buttons] + ([primary] if primary is not None else [])
     m[:] = [e for e in m if e.k != 'itemdef'] + new
     mf.put(m, 'canvas', cv.W, cv.H)
     mf.put(m, 'rect', mf.fmt(x0), mf.fmt(y0), w, h)
     mf.put(m, 'style', 'WINDOW_STYLE_EMPTY')
-    for key in ('descx', 'descy', 'descalignment', 'descscale', 'border', 'bordersize', 'background'):
+    for key in ('border', 'bordersize', 'background'):
         mf.drop(m, key)
+    # (the line about the item under the mouse: centred under the card, the board has no place in it)
+    mf.put(m, 'descX', mf.fmt(cv.W / 2.0))
+    mf.put(m, 'descY', mf.fmt(y0 + h + 14))
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', cv.scale(14))
+    mf.put(m, 'descColor', *cv.MUTED)
+    return y
+
+
+def inset(e):
+    """A list in a dialog: a dark field with round corners."""
+    mf.put(e.block, 'style', 'WINDOW_STYLE_PANEL')
+    mf.put(e.block, 'backcolor', *cv.FIELD)
+    mf.put(e.block, 'bordercolor', *cv.EDGE)
+    mf.put(e.block, 'radius', 6)
+    for key in ('border', 'bordersize', 'background'):
+        mf.drop(e.block, key)
+
+
+def entry(e, label=None):
+    """A field to type into in a dialog: a row of the new look, its name at the left (label: words, or none for the
+    field alone)."""
+    mf.put(e.block, 'style', 'WINDOW_STYLE_EMPTY')
+    mf.put(e.block, 'text', label or '""')
+    mf.put(e.block, 'row', 3)
+    for key in ('border', 'bordersize', 'background'):
+        mf.drop(e.block, key)
+
+
+def choices(m, menu):
+    """A window in a game that is a list of things to do (Join, Exit, Vote): each a card with its words at the left, as
+    the "choice" of the board "In a game", under its button of the bar; Quit in red. What stood in one place (the
+    choices of the game types, the questions of Exit that come instead of its choices) keeps one place, and the
+    places that are hidden close up ("stack"). The window is made in the pixels of the canvas of a game."""
+    import pages
+    mr = pages.rect_of(m)
+    entries = [e for e in pages.items(m) if pages.rect_of(e.block) and mf.get(e.block, 'text') is not None]
+    if not mr or not entries:
+        return False
+    k = cv.IN_K
+    x0, y0 = cv.IN_W / 2.0 + (mr[0] - 320) * k, mr[1] * k
+    # (a pixel of the canvas of a game is smaller than one of a page: 2.5 of them are a unit of the old menus)
+    pad, card, gap, w, px = 24, 92, 14, 620, 30
+    places = sorted({round(pages.rect_of(e.block)[1]) for e in entries})
+    h = pad * 2 + len(places) * (card + gap) - gap
+    # (under its button, but inside the width of the panel, as the pages of the player: 192 to 1408)
+    x0 = max(192.0, min(x0, 192.0 + 1216.0 - w))
+    m[:] = [e for e in m if e.k != 'itemdef' or e in entries]
+    new = [cv.panel('vision_window', (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16, ('stack', -1))]
+    for e in entries:
+        b = e.block
+        y = pad + places.index(round(pages.rect_of(b)[1])) * (card + gap)
+        if pages.clickable(b):
+            control(e, (pad, y, w - 2 * pad, card), px, 'outline', 'left', 30)
+            mf.drop(b, 'caps')
+            if mf.get(b, 'text')[0] == '@MENUS_QUIT_PROGRAM':
+                mf.put(b, 'backcolor', '0.16', '0.05', '0.05', '0.6')
+                mf.put(b, 'bordercolor', '0.42', '0.23', '0.23', '1')
+                mf.put(b, 'forecolor', *RED)
+        else:
+            # (the question of a choice that wants to be sure: a heading over its yes and no)
+            middle(e, (pad + 6, y, w - 2 * pad - 12, card), px + 4, 'left')
+            mf.put(b, 'forecolor', *BRIGHT)
+            mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+            for key in ('border', 'bordersize', 'background'):
+                mf.drop(b, key)
+        mf.put(b, 'stack', 1)
+        new.append(e)
+    m[:] = [e for e in m if e.k != 'itemdef'] + new
+    mf.put(m, 'canvas', cv.IN_W, cv.IN_H)
+    mf.put(m, 'rect', mf.fmt(x0), mf.fmt(y0), w, h)
+    mf.put(m, 'style', 'WINDOW_STYLE_EMPTY')
+    for key in ('border', 'bordersize', 'background', 'backcolor', 'bordercolor'):
+        mf.drop(m, key)
+    mf.put(m, 'descX', mf.fmt(x0 + w / 2.0))
+    mf.put(m, 'descY', mf.fmt(y0 + h + 16))
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', cv.scale(24))
+    mf.put(m, 'descColor', *cv.MUTED)
+    return True
+
+
+def _ingame_window(m, x0, w, h, new):
+    """The menu of a window in a game made in the pixels of the canvas of a game, inside the width of the panel."""
+    x0 = max(192.0, min(x0, 192.0 + 1216.0 - w))
+    m[:] = [e for e in m if e.k != 'itemdef'] + new
+    mf.put(m, 'canvas', cv.IN_W, cv.IN_H)
+    mf.put(m, 'rect', mf.fmt(x0), 80, w, h)
+    mf.put(m, 'style', 'WINDOW_STYLE_EMPTY')
+    for key in ('border', 'bordersize', 'background', 'backcolor', 'bordercolor'):
+        mf.drop(m, key)
+    mf.put(m, 'descX', mf.fmt(x0 + w / 2.0))
+    mf.put(m, 'descY', mf.fmt(80 + h + 16))
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', cv.scale(24))
+    mf.put(m, 'descColor', *cv.MUTED)
+
+
+def _ingame_row(e, rect, px=28):
+    """An owner draw that is a choice as a row of the new look (name at the left, value between arrows)."""
+    b = e.block
+    place(e, rect)
+    mf.put(b, 'row', 1)
+    mf.put(b, 'font', FONT)
+    mf.put(b, 'textscale', cv.scale(px))
+    mf.put(b, 'forecolor', *TEXT)
+    for key in ('textalign', 'textalignx', 'textaligny', 'style', 'border', 'bordersize', 'background'):
+        mf.drop(b, key)
+
+
+def addbot(m):
+    """Add a bot in a game: its name, team and skill as rows, the button that adds it filled with the accent."""
+    import pages
+    mr = pages.rect_of(m)
+    its = by_name(m)
+    rows_ = sorted(its.get('gametypefield', []), key=lambda e: pages.rect_of(e.block)[1])
+    ok = (its.get('ok') or [None])[0]
+    if not mr or not rows_ or not ok:
+        return False
+    pad, row_h, w = 24, 84, 760
+    h = pad * 2 + len(rows_) * row_h + 24 + 84
+    new = [cv.panel('vision_window', (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16)]
+    for n, e in enumerate(rows_):
+        _ingame_row(e, (pad, pad + n * row_h, w - 2 * pad, row_h))
+        new.append(e)
+    control(ok, (w - pad - 320, h - pad - 84, 320, 84), 28, 'primary')
+    new.append(ok)
+    _ingame_window(m, cv.IN_W / 2.0 + (mr[0] - 320) * cv.IN_K, w, h, new)
+    return True
+
+
+def callvote(m):
+    """Call a vote in a game: the kinds of vote at the left as a list, what can be voted on at the right: choices as
+    cards, or a list with OKAY under it (the groups the scripts of the menu show and hide)."""
+    import pages
+    mr = pages.rect_of(m)
+    its = by_name(m)
+    if not mr:
+        return False
+    w, h, pad = 1180, 760, 24
+    rail_w, top = 320, 92
+    px_, py_, pw_, ph_ = pad + rail_w + 20, top, w - 2 * pad - rail_w - 20, h - top - pad
+    new = [cv.panel('vision_window', (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16),
+           cv.panel('vision_rail', (pad, top, rail_w, h - top - pad), cv.FIELD, cv.EDGE, 10),
+           cv.panel('vision_pane', (px_, py_, pw_, ph_), cv.FIELD, cv.EDGE, 10)]
+    for e in its.get('playerconfigtitle', []):
+        middle(e, (pad + 4, 20, w - 2 * pad, 52), 22, 'left')
+        mf.put(e.block, 'font', cv.BOLD)
+        mf.put(e.block, 'forecolor', *cv.MUTED)
+        mf.put(e.block, 'caps', 1)
+        new.append(e)
+    kinds = sorted([e for n in ('miscbutton', 'gametypebutton', 'changemapbutton', 'kickbutton', 'silencebutton', 'sleepbutton')
+                    for e in its.get(n, [])], key=lambda e: pages.rect_of(e.block)[1])
+    for n, e in enumerate(kinds):
+        control(e, (pad + 8, top + 8 + n * 76, rail_w - 16, 72), 26, 'plain', 'left', 18)
+        new.append(e)
+    inner = (px_ + 20, py_ + 20, pw_ - 40)
+    okay_rect = (px_ + pw_ - 20 - 260, py_ + ph_ - 20 - 80, 260, 80)
+    for name in ('misc', 'type', 'map', 'kick', 'silence', 'sleep'):
+        # (the list of the levels has a name of its own)
+        group = sorted(its.get(name, []) + (its.get('maplist', []) if name == 'map' else []), key=lambda e: pages.rect_of(e.block)[1])
+        choices_ = [e for e in group if pages.clickable(e.block) and mf.get(e.block, 'text')[0] != '@MENUS_OKAY']
+        for e in group:
+            b = e.block
+            t = (mf.get(b, 'text') or [''])[0]
+            if t == '@MENUS_OKAY':
+                control(e, okay_rect, 26, 'primary')
+            elif e in choices_:
+                i = choices_.index(e)
+                control(e, (inner[0], inner[1] + i * 106, inner[2], 92), 30, 'outline', 'left', 30)
+                mf.drop(b, 'caps')
+            elif pages.kind_of(b) in ('list',) or (mf.get(b, 'type') or [''])[0] == 'ITEM_TYPE_LISTBOX':
+                place(e, (inner[0], inner[1] + 76, inner[2], okay_rect[1] - 20 - (inner[1] + 76)))
+                mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
+                mf.put(b, 'backcolor', *cv.CARD)
+                mf.put(b, 'bordercolor', *cv.EDGE)
+                mf.put(b, 'radius', 8)
+                mf.put(b, 'elementheight', 56)
+                sized(e, 26)
+            elif mf.get(b, 'ownerdraw') and mf.get(b, 'ownerdraw')[0] == 'UI_NETGAMETYPE':
+                _ingame_row(e, (inner[0], inner[1], inner[2], 84))
+            else:
+                # the heading of the group (an owner draw that writes the map, or a word)
+                middle(e, (inner[0] + 4, inner[1], inner[2], 60), 28, 'left')
+                mf.put(b, 'forecolor', *BRIGHT)
+                mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+                for key in ('border', 'bordersize', 'background', 'backcolor', 'bordercolor', 'radius'):
+                    mf.drop(b, key)
+            new.append(e)
+    _ingame_window(m, cv.IN_W / 2.0 + (mr[0] - 320) * cv.IN_K, w, h, new)
+    return True
+
+
+def about(m):
+    """About in a game: what the server is, as rows with the value at the right (shown, not set); the rows of other
+    game types close up (stack)."""
+    import pages
+    mr = pages.rect_of(m)
+    entries = sorted(by_name(m).get('about', []), key=lambda e: pages.rect_of(e.block)[1])
+    if not mr or not entries:
+        return False
+    pad, row_h, w = 24, 64, 900
+    places = sorted({round(pages.rect_of(e.block)[1]) for e in entries})
+    h = pad * 2 + len(places) * row_h
+    new = [cv.panel('vision_window', (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16, ('stack', -1))]
+    for e in entries:
+        b = e.block
+        y = pad + places.index(round(pages.rect_of(b)[1])) * row_h
+        place(e, (pad, y, w - 2 * pad, row_h))
+        mf.put(b, 'row', 1)
+        mf.put(b, 'font', FONT)
+        mf.put(b, 'textscale', cv.scale(26))
+        mf.put(b, 'forecolor', *TEXT)
+        mf.put(b, 'decoration')
+        mf.put(b, 'stack', 1)
+        for key in ('textalign', 'textalignx', 'textaligny', 'style', 'border', 'bordersize', 'background', 'backcolor'):
+            mf.drop(b, key)
+        new.append(e)
+    _ingame_window(m, cv.IN_W / 2.0 + (mr[0] - 320) * cv.IN_K, w, h, new)
+    return True
+
+
+def ingame_servers(m):
+    """The servers in a game, as Join a game outside one: the buttons and filters over the list, the list of servers with
+    its headings, what can be done with the chosen server under it, Back and Join at the bottom. The question whether
+    to leave the game for another server is a small dialog in the middle."""
+    its = by_name(m)
+    get = lambda n: its.get(n, [])  # noqa: E731
+    w, pad = 1216, 24
+    new = [cv.panel('vision_window', (0, 0, w, 968), cv.CARD, cv.CARD_EDGE, 16)]
+    for n, rect in (('getnewlist_button', (pad, pad, 200, 64)), ('refreshfilter_button', (pad + 212, pad, 200, 64))):
+        for e in get(n):
+            control(e, rect, 22)
+            new.append(e)
+    for n, rect in (('netsource', (448, pad, 240, 64)), ('netfilter', (700, pad, 220, 64)), ('gametypefilter', (932, pad, w - pad - 932, 64))):
+        for e in get(n):
+            control(e, rect, 22, 'field', 'left', 18)
+            new.append(e)
+    for n, rect in (('viewempty', (pad, 104, 280, 48)), ('viewfull', (316, 104, 280, 48)), ('viewbotsonly', (608, 104, 300, 48)),
+                    ('datarate', (920, 104, w - pad - 920, 48))):
+        for e in get(n):
+            place(e, rect)
+            sized(e, 22)
+            mf.put(e.block, 'textaligny', mf.fmt((48 - 22) / 2.0))
+            new.append(e)
+    tx, ty, tw, th = pad, 168, w - 2 * pad, 600
+    new.append(cv.panel('vision_table', (tx, ty, tw, th), cv.FIELD, cv.EDGE, 10))
+    for n, x, cw in (('server', 12, 560), ('map', 590, 220), ('players', 830, 110), ('type', 950, 110), ('ping', 1070, 80)):
+        for e in get(n):
+            middle(e, (tx + x, ty, cw, 60), 18, 'left', 10)
+            mf.put(e.block, 'font', cv.BOLD)
+            mf.put(e.block, 'forecolor', *cv.MUTED)
+            new.append(e)
+    new.append(cv.fill('vision_table_line', (tx, ty + 60, tw, 1), cv.EDGE))
+    for e in get('serverlist'):
+        b = e.block
+        place(e, (tx + 10, ty + 66, tw - 20, th - 66 - 60))
+        mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+        mf.put(b, 'elementheight', 56)
+        sized(e, 24)
+        mf.put(b, 'textaligny', 16)
+        mf.put(b, 'columns', 5, 12, 40, 560, 590, 40, 220, 830, 5, 110, 950, 20, 110, 1070, 20, 70)
+        new.append(e)
+    new.append(cv.fill('vision_table_foot', (tx, ty + th - 60, tw, 1), cv.EDGE))
+    for e in get('refreshdate'):
+        middle(e, (tx + 20, ty + th - 60, 600, 60), 20, 'left')
+        mf.put(e.block, 'forecolor', *cv.MUTED)
+        new.append(e)
+    bw = (tw - 4 * 12) / 5.0
+    for k, names in enumerate((('passwordtext',), ('createfavoritetext',), ('addfavorite', 'delfavorite'), ('serverinfotext',),
+                               ('findplayertext',))):
+        for n in names:
+            for e in get(n):
+                control(e, (tx + k * (bw + 12), ty + th + 20, bw, 64), 20)
+                new.append(e)
+    for e in get('back'):
+        control(e, (pad, 968 - pad - 72, 220, 72), 24)
+        new.append(e)
+    for e in get('join_button')[:1]:
+        control(e, (w - pad - 260, 968 - pad - 72, 260, 72), 24, 'primary')
+        new.append(e)
+    # the question before leaving this game for another server
+    for e in get('confirm_background'):
+        place(e, (w / 2.0 - 280, 330, 560, 320))
+        for key in ('background', 'border', 'bordersize'):
+            mf.drop(e.block, key)
+        mf.put(e.block, 'style', 'WINDOW_STYLE_PANEL')
+        mf.put(e.block, 'backcolor', *DIALOG)
+        mf.put(e.block, 'bordercolor', *cv.EDGE)
+        mf.put(e.block, 'radius', 16)
+        new.append(e)
+    for e in get('confirm_title'):
+        middle(e, (w / 2.0 - 250, 350, 500, 72), 30, 'left')
+        mf.put(e.block, 'forecolor', *BRIGHT)
+        new.append(e)
+    for k, n in enumerate(('confirm_yes', 'confirm_no')):
+        for e in get(n):
+            control(e, (w / 2.0 - 250, 440 + k * 92, 500, 76), 24, 'primary' if k == 0 else 'outline')
+            new.append(e)
+    m[:] = [e for e in m if e.k != 'itemdef'] + new
+    mf.put(m, 'canvas', cv.IN_W, cv.IN_H)
+    mf.put(m, 'rect', 192, 60, w, 968)
+    mf.put(m, 'style', 'WINDOW_STYLE_EMPTY')
+    for key in ('border', 'bordersize', 'background', 'backcolor', 'bordercolor'):
+        mf.drop(m, key)
+    mf.put(m, 'descX', mf.fmt(192 + w / 2.0))
+    mf.put(m, 'descY', mf.fmt(60 + 968 + 16))
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', cv.scale(24))
+    mf.put(m, 'descColor', *cv.MUTED)
+    return True
 
 
 def popups(m, menu):
@@ -866,6 +1177,80 @@ def popups(m, menu):
         mf.put(field.block, 'style', 'WINDOW_STYLE_EMPTY')
         mf.put(field.block, 'text', '""')
         mf.put(field.block, 'row', 3)
+        return True
+    if menu in ('password_request',):
+        field = one('passwordentry')
+        dialog(m, 480, 250, None, one('passwordtitle'), [(field, 44, 16)], [one('cancel')], one('donetext'))
+        entry(field)
+        return True
+    if menu == 'serverinfo_popmenu':
+        lst = one('serverinfolist')
+        dialog(m, 680, 640, None, one('screentitle'), [(lst, 440, 14)], [one('refresh')], one('donetext'))
+        inset(lst)
+        return True
+    if menu == 'findplayer_popmenu':
+        name, found, info = one('nameentry'), one('servernamelist'), one('serverinfolist')
+        dialog(m, 680, 680, None, one('screentitle'),
+               [(name, 44, 16), (found, 140, 14), (info, 230, 14), (one('serversfoundmsg'), 0, 13)],
+               [one('search'), one('donetext')], one('join'))
+        entry(name, one('nametitle') and (mf.get(one('nametitle').block, 'text') or ['""'])[0])
+        inset(found)
+        inset(info)
+        return True
+    if menu == 'createfavorite_popmenu':
+        field = one('addressentry')
+        dialog(m, 520, 280, None, one('title'), [(one('addresstitle'), 0, 15), (field, 44, 16)], [], one('donetext'))
+        entry(field)
+        return True
+    if menu == 'quickbots':
+        slots = its.get('botlist_slot', [])
+        y = dialog(m, 680, 500, None, one('title'), [], [], one('done'), slots)
+        half = (680 - 56 - 24) / 2.0
+        for n, e in enumerate(slots):
+            col, row_ = divmod(n, 8)
+            middle(e, (28 + col * (half + 24), y + row_ * 40, half, 40), 18, 'left')
+            if n == 8:
+                # (the game's text of the ninth place has no dot after the number, the others have)
+                mf.put(e.block, 'text', '"9."')
+        return True
+    if menu == 'changelog_popmenu':
+        lst, page = one('changelog_list'), one('changelog_entry')
+        # (Update now shows only when there is an update: Done keeps the place at the right)
+        y = dialog(m, 1040, 680, None, one('changelog_title'), [], [one('changelog_update')], one('changelog_done'), [lst, page])
+        place(lst, (28, y, 260, 680 - y - 28 - 44 - 20))
+        inset(lst)
+        place(page, (28 + 260 + 20, y, 1040 - 56 - 280, 680 - y - 28 - 44 - 20))
+        sized(page, 16)
+        return True
+    if menu == 'cvarclean_popmenu':
+        lst = one('cvarclean_list')
+        y = dialog(m, 900, 620, None, one('cvarclean_title'), [(lst, 380, 14), (one('cvarclean_about'), 0, 14)],
+                   [one('cvarclean_remove'), one('cvarclean_removeall')], one('cvarclean_done'), [one('cvarclean_none')])
+        inset(lst)
+        middle(one('cvarclean_none'), (28, 24 + 46 + 160, 900 - 56, 40), 16, 'center')
+        mf.put(one('cvarclean_none').block, 'forecolor', *cv.MUTED)
+        return True
+    if menu == 'videodrivermenu':
+        info = one('game_version')
+        dialog(m, 760, 400, None, None, [(info, 260, 14)], [], one('driver_done'))
+        mf.put(info.block, 'forecolor', *cv.NAV_TEXT)
+        return True
+    if menu == 'videowarningmenu':
+        # (as the board: the question as the title, what happened under it)
+        dialog(m, 560, 280, one('vidwarn_title'), one('vidwarn_text2'), [(one('vidwarn_text1'), 0, 16)],
+               [one('vidwarn_no')], one('vidwarn_yes'))
+        return True
+    if menu == 'advancedcreateserver':
+        # the rules of the server in two columns of rows, as Setup; the rows of the game types close up (stack)
+        sets = [e for n, lst in its.items() if n not in ('vision_veil', 'setup_background', 'advanced_title', 'done') for e in lst
+                if cv._rect(e.block)]
+        left = [e for e in sets if cv._rect(e.block)[0] < 200]
+        right = [e for e in sets if cv._rect(e.block)[0] >= 200]
+        w, h = 1100, 700
+        y = dialog(m, w, h, None, one('advanced_title'), [], [], one('done'), sets)
+        col = (w - 56 - 40) / 2.0
+        rows(left, 28, y, col, 44, 12, stack=1)
+        rows(right, 28 + col + 40, y, col, 44, 12, stack=2)
         return True
     if menu == 'error_popmenu':
         labels = its.get('errorinfo', [])

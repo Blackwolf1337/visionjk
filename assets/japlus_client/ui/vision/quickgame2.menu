@@ -400,6 +400,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -430,6 +431,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -460,6 +462,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -471,19 +474,20 @@
 			ownerdraw				UI_FORCE_MASTERY_SET
 			cvarTest				"ui_netGameType"
 			hideCvar { "4" }
-			rect					58 358 556 40
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				14
-			textaligny				12.5
+			rect					58 356 556 44
 			font					5
-			textscale				0.83
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
-			style					WINDOW_STYLE_PANEL
-			radius					6
-			backcolor				0.027 0.051 0.102 1
-			bordercolor				0.153 0.251 0.373 1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 0 167 260 30
+			}
+			mouseExit { hide button_glow }
+			stack					1
+			row						1
 		}
 
 		itemDef
@@ -509,6 +513,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -540,6 +545,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -567,6 +573,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -600,6 +607,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -625,6 +633,7 @@
 			}
 			mouseExit { hide button_glow }
 			row						1
+			stack					1
 		}
 
 		itemDef
@@ -650,28 +659,30 @@
 				uiscript clampmaxplayers
 			}
 			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					difficulty_button
-			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_SKILL
 			text					@MENUS_SKILL
 			descText				@MENUS_ADJUSTS_THE_DIFFICULTY
-			rect					58 682 556 40
+			rect					58 680 556 44
 			textstyle				0
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				14
-			textaligny				12.5
 			font					5
-			textscale				0.83
+			textscale				0.94
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
-			radius					6
-			backcolor				0.027 0.051 0.102 1
-			bordercolor				0.153 0.251 0.373 1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 0 337 260 30
+			}
+			mouseExit { hide button_glow }
+			stack					1
+			row						1
 		}
 
 		itemDef
@@ -699,6 +710,7 @@
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 			caps					1
+			stack					1
 		}
 
 		itemDef
@@ -717,6 +729,7 @@
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
+			stack					1
 		}
 
 		itemDef
@@ -735,6 +748,7 @@
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
+			stack					1
 		}
 
 		itemDef
@@ -753,6 +767,7 @@
 			decoration
 			caps					1
 			style					WINDOW_STYLE_EMPTY
+			stack					1
 		}
 
 		itemDef

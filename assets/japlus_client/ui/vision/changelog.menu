@@ -6,7 +6,7 @@
 		name					"changelog_popmenu"
 		visible					0
 		fullScreen				0
-		rect					320 92 960 720
+		rect					280 110 1040 680
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
 		popup
@@ -23,37 +23,29 @@
 		skin					1
 		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		style					WINDOW_STYLE_EMPTY
-		descX					800
-		descY					750.5
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				1.05
-		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
 			name					vision_veil
-			rect					0 0 960 720
+			rect					-280 -110 1600 900
 			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				0 0.01 0.03 0.6
-			wide					1
+			backcolor				0 0 0 0.55
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
-			name					changelog_background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					24 63 912 588
-			forecolor				1 1 1 1
+			name					vision_dialog
+			rect					0 0 1040 680
 			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.039 0.071 0.133 0.96
+			bordercolor				0.153 0.251 0.373 1
+			radius					12
 			decoration
-			backcolor				0.031 0.055 0.11 0.97
-			bordercolor				0.11 0.18 0.29 1
-			radius					9.6
-			shadow					21
+			shadow					40
 		}
 
 		itemDef
@@ -62,36 +54,35 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@VISION_WHAT_S_NEW
-			rect					30 78 900 30
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				450
+			rect					28 24 984 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
 			font					5
-			textscale				1.11
-			forecolor				0.86 0.90 0.945 1
+			textscale				1.33
+			forecolor				1 1 1 1
 			visible					1
 			decoration
-			caps					1
-			textaligny				3.75
+			textaligny				5
 		}
 
 		itemDef
 		{
 			name					changelog_list
 			group					none
-			rect					54 123 210 456
+			rect					28 70 260 518
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
-			elementwidth			210
-			elementheight			27
+			elementwidth			140
+			elementheight			18
 			font					5
-			textscale				0.78
-			backcolor				0.027 0.051 0.102 0.9
-			bordercolor				0.086 0.149 0.247 1
+			textscale				0.52
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
 			forecolor				0.86 0.90 0.945 1
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_CHANGELOG
 			visible					1
-			textaligny				22.35
+			textaligny				14.9
 			radius					6
 			outlinecolor			0.36 0.78 0.96 0.22
 		}
@@ -100,45 +91,17 @@
 		{
 			name					changelog_entry
 			group					none
-			rect					276 123 630 456
+			rect					308 70 704 518
 			type					ITEM_TYPE_OWNERDRAW
 			ownerdraw				UI_CHANGELOG
 			style					WINDOW_STYLE_PANEL
 			backcolor				0.016 0.031 0.063 0.45
 			bordercolor				0.086 0.149 0.247 1
 			font					5
-			textscale				0.78
+			textscale				0.89
 			forecolor				0.86 0.90 0.945 1
 			visible					1
-			radius					7.5
-		}
-
-		itemDef
-		{
-			name					changelog_done
-			group					none
-			style					WINDOW_STYLE_PANEL
-			type					ITEM_TYPE_BUTTON
-			rect					397.5 603 165 30
-			text					@MENUS_DONE_CAPS
-			font					5
-			textscale				0.96
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				82.5
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			mouseEnter { show changelog_done_glow }
-			mouseExit { hide changelog_done_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close changelog_popmenu ;
-			}
-			caps					1
-			textaligny				6
-			radius					4.8
-			backcolor				0 0 0 0
-			bordercolor				0.153 0.251 0.373 1
+			radius					5
 		}
 
 		itemDef
@@ -147,18 +110,16 @@
 			group					none
 			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					690 603 165 30
+			rect					600 608 180 44
 			text					@VISION_UPDATE_NOW
 			font					5
-			textscale				0.96
+			textscale				0.83
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				82.5
+			textalignx				90
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"v_updateState"
 			showCvar { "1" }
 			visible					1
-			mouseEnter { show changelog_update_glow }
-			mouseExit { hide changelog_update_glow }
 			action
 			{
 				play "sound/interface/button1.wav" ;
@@ -166,11 +127,43 @@
 				close changelog_popmenu ;
 			}
 			caps					1
-			textaligny				6
-			radius					4.8
+			textaligny				14.5
+			radius					6
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
+
+		itemDef
+		{
+			name					changelog_done
+			group					none
+			style					WINDOW_STYLE_PANEL
+			type					ITEM_TYPE_BUTTON
+			rect					792 608 220 44
+			text					@MENUS_DONE_CAPS
+			font					7
+			textscale				0.83
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				110
+			forecolor				0.016 0.071 0.122 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close changelog_popmenu ;
+			}
+			caps					1
+			textaligny				14.5
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+		}
 		canvas					1600 900
+		style					WINDOW_STYLE_EMPTY
+		descX					800
+		descY					804
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				0.78
+		descColor				0.56 0.64 0.74 1
 	}
 }

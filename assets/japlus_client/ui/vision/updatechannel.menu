@@ -9,7 +9,11 @@
 		rect					520 300 560 300
 		focusColor				0.36 0.78 0.96 1
 		outOfBoundsClick
+		descX					800
+		descY					614
+		descScale				0.78
 		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
 		popup
 		onOpen { setfocus updatechannel_no }
 		onESC

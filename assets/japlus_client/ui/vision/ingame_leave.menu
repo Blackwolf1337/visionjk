@@ -7,7 +7,7 @@
 		visible					1
 		fullScreen				0
 		outOfBoundsClick
-		rect					1108 80 316 210
+		rect					788 80 620 352
 		focusColor				0.36 0.78 0.96 1
 		onOpen
 		{
@@ -17,26 +17,18 @@
 		skin					1
 		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		style					WINDOW_STYLE_EMPTY
-		descX					1266
-		descY					300
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				1.4
-		descColor				0.56 0.64 0.74 1
 
 		itemDef
 		{
-			name					background_pic
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					0 0 316 210
-			forecolor				1 1 1 1
+			name					vision_window
+			rect					0 0 620 352
 			visible					1
-			decoration
-			backcolor				0.031 0.055 0.11 0.97
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
 			bordercolor				0.11 0.18 0.29 1
-			radius					12.8
-			shadow					28
+			radius					16
+			decoration
+			stack					-1
 		}
 
 		itemDef
@@ -44,14 +36,14 @@
 			name					leave
 			text					@MENUS_MAIN_MENU
 			group					grpMenu
-			style					2
+			style					WINDOW_STYLE_PANEL
 			type					1
-			rect					4 10 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			rect					24 24 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -61,8 +53,10 @@
 				hide buttons ;
 				show leaveConfirm
 			}
-			mouseEnter { show button1 }
-			mouseExit { hide button1 }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -70,14 +64,14 @@
 			name					leave
 			group					grpMenu
 			text					@MENUS_RESTART_MATCH
-			style					2
+			style					WINDOW_STYLE_PANEL
 			type					1
-			rect					4 70 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			cvarTest				"cl_currentServerAddress"
 			enableCvar { "Localhost" }
@@ -89,8 +83,10 @@
 				hide buttons ;
 				show restartConfirm
 			}
-			mouseEnter { show button2 }
-			mouseExit { hide button2 }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -99,14 +95,14 @@
 			group					grpMenu
 			type					1
 			text					@MENUS_QUIT_PROGRAM
-			style					2
-			rect					4 130 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
-			forecolor				0.86 0.90 0.945 1
+			textscale				1.67
+			forecolor				1 0.54 0.50 1
 			visible					1
 			action
 			{
@@ -115,8 +111,10 @@
 				hide buttons ;
 				show quitConfirm
 			}
-			mouseEnter { show button3 }
-			mouseExit { hide button3 }
+			radius					6
+			backcolor				0.16 0.05 0.05 0.6
+			bordercolor				0.42 0.23 0.23 1
+			stack					1
 		}
 
 		itemDef
@@ -124,16 +122,17 @@
 			name					leaveConfirm
 			text					@MENUS_GO_TO_MAIN_MENU
 			group					grpConfirm
-			style					2
-			rect					4 10 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			style					WINDOW_STYLE_EMPTY
+			rect					30 24 560 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				29
 			font					5
-			textscale				1.72
-			forecolor				0.56 0.64 0.74 1
+			textscale				1.89
+			forecolor				1 1 1 1
 			decoration
 			visible					1
+			stack					1
 		}
 
 		itemDef
@@ -142,13 +141,13 @@
 			text					@MENUS_YES
 			group					grpConfirm
 			type					1
-			style					0
-			rect					4 70 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -156,8 +155,10 @@
 				play "sound/interface/button1.wav" ;
 				uiScript leave
 			}
-			mouseEnter { show button2 }
-			mouseExit { hide button2 }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -166,13 +167,13 @@
 			text					@MENUS_NO
 			group					grpConfirm
 			type					1
-			style					0
-			rect					4 130 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -181,8 +182,10 @@
 				hide grpConfirm ;
 				show grpMenu
 			}
-			mouseEnter { show button3 }
-			mouseExit { hide button3 }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -190,16 +193,17 @@
 			name					restartConfirm
 			text					@MENUS_MATCH
 			group					grpConfirm
-			style					2
-			rect					4 10 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			style					WINDOW_STYLE_EMPTY
+			rect					30 24 560 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				29
 			font					5
-			textscale				1.72
-			forecolor				0.56 0.64 0.74 1
+			textscale				1.89
+			forecolor				1 1 1 1
 			decoration
 			visible					1
+			stack					1
 		}
 
 		itemDef
@@ -208,12 +212,12 @@
 			text					@MENUS_YES
 			group					grpConfirm
 			type					1
-			rect					4 70 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -223,8 +227,11 @@
 				close ingame_leave ;
 				close ingame
 			}
-			mouseEnter { show button2 }
-			mouseExit { hide button2 }
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -233,12 +240,12 @@
 			text					@MENUS_NO
 			group					grpConfirm
 			type					1
-			rect					4 130 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -247,8 +254,11 @@
 				hide grpConfirm ;
 				show grpMenu
 			}
-			mouseEnter { show button3 }
-			mouseExit { hide button3 }
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -256,16 +266,17 @@
 			name					quitConfirm
 			text					@MENUS_PROGRAM
 			group					grpConfirm
-			style					2
-			rect					4 10 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			style					WINDOW_STYLE_EMPTY
+			rect					30 24 560 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				29
 			font					5
-			textscale				1.72
-			forecolor				0.56 0.64 0.74 1
+			textscale				1.89
+			forecolor				1 1 1 1
 			decoration
 			visible					1
+			stack					1
 		}
 
 		itemDef
@@ -274,12 +285,12 @@
 			text					@MENUS_YES
 			group					grpConfirm
 			type					1
-			rect					4 70 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -287,8 +298,11 @@
 				play "sound/interface/button1.wav" ;
 				uiScript quit
 			}
-			mouseEnter { show button2 }
-			mouseExit { hide button2 }
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 
 		itemDef
@@ -297,12 +311,12 @@
 			text					@MENUS_NO
 			group					grpConfirm
 			type					1
-			rect					4 130 304 60
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				152
-			textaligny				3
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
 			font					5
-			textscale				1.72
+			textscale				1.67
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -311,9 +325,18 @@
 				hide grpConfirm ;
 				show grpMenu
 			}
-			mouseEnter { show button3 }
-			mouseExit { hide button3 }
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
 		}
 		canvas					1600 1200
+		style					WINDOW_STYLE_EMPTY
+		descX					1098
+		descY					448
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
 	}
 }

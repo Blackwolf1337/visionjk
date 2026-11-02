@@ -35,9 +35,12 @@ SCREENS = {
     'saber.menu': ('saber', {'profile': 'playerMenu', 'character': 'playerMenu2'}),
     'ingame_player.menu': ('profile', {'character': 'ingame_player2', 'saber': 'ingame_saber', 'force': 'ingame_playerforce',
                                        'moves': 'rulesMenu_moves'}),
-    'ingame_player2.menu': ('character', {'profile': 'ingame_player', 'saber': 'ingame_saber', 'force': 'ingame_playerforce'}),
-    'ingame_saber.menu': ('saber', {'profile': 'ingame_player', 'character': 'ingame_player2', 'force': 'ingame_playerforce'}),
-    'ingame_playerforce.menu': ('force', {'profile': 'ingame_player', 'character': 'ingame_player2', 'saber': 'ingame_saber'}),
+    'ingame_player2.menu': ('character', {'profile': 'ingame_player', 'saber': 'ingame_saber', 'force': 'ingame_playerforce',
+                                          'moves': 'rulesMenu_moves'}),
+    'ingame_saber.menu': ('saber', {'profile': 'ingame_player', 'character': 'ingame_player2', 'force': 'ingame_playerforce',
+                                    'moves': 'rulesMenu_moves'}),
+    'ingame_playerforce.menu': ('force', {'profile': 'ingame_player', 'character': 'ingame_player2', 'saber': 'ingame_saber',
+                                          'moves': 'rulesMenu_moves'}),
 }
 ICONS = ('blue', 'green', 'orange', 'purple', 'yellow', 'red', 'black')
 
@@ -359,8 +362,11 @@ def character(f):
                   ('visible', 1), *centered(r, STRIP_SCALE))
             f.new.append(e)
         for e in named(old, box):
+            # (a grid of all the pictures in the pane, not the strip of one row the old page had)
             rect(e, rx, y + 52, rw, f.h - 52)
-            props(e, ('page', n + 1), ('visible', 1))
+            mf.drop(e.block, 'horizontalscroll')
+            props(e, ('page', n + 1), ('visible', 1), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *INSET),
+                  ('bordercolor', *SOFT_EDGE), ('radius', 3.2))
             f.new.append(e)
     if f.ingame:
         f.foot(named(old, 'backmenu_button'), named(old, 'applycurrent'))
@@ -459,7 +465,9 @@ def force(f):
         b = e.block
         draw = (mf.get(b, 'ownerdraw') or [''])[0]
         if draw in ('UI_FORCE_RANK', 'UI_FORCE_SIDE', 'UI_FORCE_POINTS'):
-            f.new += [text_row(e, x, y + n * ROW_H, w), rule(x, y + n * ROW_H, w)]
+            # (the side is a choice: a row with arrows; rank and points are only shown)
+            made = choice_row(e, x, y + n * ROW_H, w) if draw == 'UI_FORCE_SIDE' else text_row(e, x, y + n * ROW_H, w)
+            f.new += [made, rule(x, y + n * ROW_H, w)]
             n += 1
     for e in [e for e in named(old, 'fcflist') if mf.get(e.block, 'type') is None][:1]:
         f.new += heading(e, x, y + 70, w)

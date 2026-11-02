@@ -365,6 +365,9 @@ typedef struct itemDef_s {
 	int			column;
 	qboolean	advanced;
 	float		cardBottom;
+	// "stack <n>": one of a column of rows with that number, in which a place whose rows are all hidden by their
+	// cvar tests is left out (Menu_StackFrame); "stack -<n>": the frame around them, shorter by what is left out
+	int			stack;
 	// "canvas <w> <h>" of its menu: what the menu file gave, in the pixels of that canvas (Menu_CanvasLayout)
 	struct {
 		rectDef_t	rect;

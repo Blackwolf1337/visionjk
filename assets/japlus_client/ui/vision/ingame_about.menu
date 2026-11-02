@@ -7,96 +7,83 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					180 80 760 560
+		rect					192 80 900 688
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		skin					1
 		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		descX					560
-		descY					570
-		descAlignment			ITEM_ALIGN_CENTER
-		descScale				1.4
-		descColor				0.56 0.64 0.74 1
+		radius					6.4
+		shadow					14
 
 		itemDef
 		{
-			name					background_pic
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					0 0 760 480
-			forecolor				1 1 1 1
+			name					vision_window
+			rect					0 0 900 688
 			visible					1
-			decoration
-			backcolor				0.031 0.055 0.11 0.97
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
 			bordercolor				0.11 0.18 0.29 1
-			radius					12.8
-			shadow					28
+			radius					16
+			decoration
+			stack					-1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 10 720 40
-			style					WINDOW_STYLE_EMPTY
+			rect					24 24 852 64
 			type					4
 			text					@MENUS_HOST_NAME
 			cvar					"ui_about_hostname"
 			maxPaintChars			40
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-1
 			font					5
-			textscale				1.72
-			forecolor				0.56 0.64 0.74 1
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 80 720 40
-			style					0
+			rect					24 88 852 64
 			type					4
 			text					@MENUS_ADDRESS
 			cvar					"cl_currentServerAddress"
 			maxPaintChars			24
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			forecolor				0.86 0.90 0.945 1
 			font					5
-			textscale				1.72
+			textscale				1.44
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 120 720 40
+			rect					24 152 852 64
 			type					4
-			style					0
 			text					@MENUS_MAP_NAME
 			cvar					"ui_about_mapname"
 			maxPaintChars			20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 160 720 40
-			style					0
-			textalign				ITEM_ALIGN_RIGHT
+			rect					24 216 852 64
 			text					@MENUS_TYPE
 			type					ITEM_TYPE_MULTI
 			cvar					"ui_about_gametype"
@@ -112,60 +99,54 @@
 				@MENUS_CAPTURE_THE_FLAG 8
 				@MENUS_CAPTURE_THE_YSALIMARI 9
 			}
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
-			backcolor				0 0 .75 .25
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 200 720 40
+			rect					24 280 852 64
 			type					4
-			style					0
 			text					@MENUS_MAXIMUM_PLAYERS
 			cvar					"ui_about_maxclients"
 			maxPaintChars			12
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 240 720 40
+			rect					24 344 852 64
 			type					4
-			style					0
 			text					@MENUS_TIME_LIMIT
 			maxPaintChars			12
 			cvar					"ui_about_timelimit"
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 280 720 40
+			rect					24 408 852 64
 			type					4
-			style					0
 			text					@MENUS_FRAG_LIMIT
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -180,22 +161,20 @@
 			}
 			maxPaintChars			12
 			cvar					"ui_about_fraglimit"
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 280 720 40
+			rect					24 408 852 64
 			type					4
-			style					0
 			text					@MENUS_CAPTURE_LIMIT
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -205,22 +184,20 @@
 			}
 			maxPaintChars			12
 			cvar					"ui_about_capturelimit"
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 320 720 40
+			rect					24 472 852 64
 			type					4
-			style					0
 			text					@MENUS_DUEL_LIMIT
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -230,53 +207,53 @@
 			}
 			maxPaintChars			12
 			cvar					"ui_about_duellimit"
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 360 720 40
+			rect					24 536 852 64
 			type					4
 			maxPaintChars			4
-			style					0
 			text					@MENUS_MINIMUM_PLAYERS
 			cvar					"ui_about_botminplayers"
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				300
-			textaligny				-3
 			font					5
-			textscale				1.72
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 
 		itemDef
 		{
 			name					about
-			rect					20 420 720 40
+			rect					24 600 852 64
 			type					4
-			style					0
 			text					@MENUS_VERSION
 			cvar					version
 			maxPaintChars			40
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				360
-			textaligny				30
 			font					5
-			textscale				1.36
+			textscale				1.44
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			decoration
+			row						1
+			stack					1
 		}
 		canvas					1600 1200
+		descX					642
+		descY					784
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
 	}
 }

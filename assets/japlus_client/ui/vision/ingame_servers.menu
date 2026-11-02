@@ -6,12 +6,12 @@
 		name					"ingame_servers"
 		visible					0
 		fullscreen				0
-		rect					160 0 1318 972
+		rect					192 60 1216 968
 		outOfBoundsClick
 		focusColor				0.36 0.78 0.96 1
-		descX					819
-		descY					-30
-		descScale				1.4
+		descX					800
+		descY					1044
+		descScale				1.33
 		descColor				0.56 0.64 0.74 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { uiScript UpdateFilter }
@@ -25,66 +25,17 @@
 		skin					1
 		disableColor			0.40 0.47 0.56 1
 		openSlide				8
-		style					WINDOW_STYLE_EMPTY
 
 		itemDef
 		{
-			name					background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					0 0 1318 972
-			backcolor				0.031 0.055 0.11 0.97
-			forecolor				1 1 1 1
+			name					vision_window
+			rect					0 0 1216 968
 			visible					1
-			decoration
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
 			bordercolor				0.11 0.18 0.29 1
-			radius					12.8
-			shadow					28
-		}
-
-		itemDef
-		{
-			name					setup_background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					480 44 768 136
-			backcolor				0.016 0.031 0.063 0.45
-			forecolor				1 1 1 1
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
+			radius					16
 			decoration
-			radius					10
-		}
-
-		itemDef
-		{
-			name					secondary_background
-			group					none
-			style					WINDOW_STYLE_FILLED
-			rect					10 796 1260 44
-			backcolor				1 1 1 0.03
-			forecolor				1 1 1 1
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					join_title
-			group					none
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_JOIN_A_GAME_IN_PROGRESS
-			rect					100 8 1080 32
-			font					5
-			textscale				1.04
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				540
-			textaligny				1.5
-			forecolor				0.56 0.64 0.74 1
-			visible					1
-			decoration
-			caps					1
 		}
 
 		itemDef
@@ -94,12 +45,12 @@
 			text					@MENUS_GET_NEW_LIST
 			descText				@MENUS_GET_UPDATED_SERVER_LIST
 			type					ITEM_TYPE_BUTTON
-			textscale				1.72
-			style					WINDOW_STYLE_EMPTY
-			rect					30 52 360 52
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				3
+			textscale				1.22
+			style					WINDOW_STYLE_PANEL
+			rect					24 24 200 64
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				21
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -107,13 +58,11 @@
 				play "sound/interface/button1.wav"
 				uiScript RefreshServers
 			}
-			mouseEnter
-			{
-				show button_glow2
-				setitemrect button_glow2 10 27 220 26
-			}
-			mouseExit { hide button_glow2 }
 			font					5
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -121,13 +70,13 @@
 			name					refreshFilter_button
 			text					@MENUS_REFRESH_LIST
 			descText				@MENUS_REFRESH_SERVER_LIST
-			textscale				1.72
-			style					WINDOW_STYLE_EMPTY
+			textscale				1.22
+			style					WINDOW_STYLE_PANEL
 			type					ITEM_TYPE_BUTTON
-			rect					30 108 360 52
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				3
+			rect					236 24 200 64
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				21
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -135,86 +84,75 @@
 				play "sound/interface/button1.wav"
 				uiScript RefreshServers
 			}
-			mouseEnter
-			{
-				show button_glow2
-				setitemrect button_glow2 10 55 220 26
-			}
-			mouseExit { hide button_glow2 }
 			font					5
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
 		{
 			name					netsource
-			style					0
+			style					WINDOW_STYLE_PANEL
 			descText				@MENUS_CHOOSE_SOURCE_OF_SERVERS
 			ownerdraw				UI_NETSOURCE
-			rect					500 48 360 32
+			rect					448 24 240 64
 			font					5
-			textscale				1.36
-			textalignx				0
-			textaligny				2
+			textscale				1.22
+			textalignx				18
+			textaligny				21
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
-			mouseEnter
-			{
-				show button_glow2
-				setitemrect button_glow2 242 23 200 18
-			}
-			mouseExit { hide button_glow2 }
+			radius					6
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
 		{
 			name					netfilter
-			style					0
+			style					WINDOW_STYLE_PANEL
 			descText				@MENUS_SET_FILTER_FOR_SPECIFIC
 			ownerdraw				UI_NETFILTER
-			rect					500 80 360 32
+			rect					700 24 220 64
 			font					5
-			textscale				1.36
-			textalignx				0
-			textaligny				2
+			textscale				1.22
+			textalignx				18
+			textaligny				21
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
-			mouseEnter
-			{
-				show button_glow2
-				setitemrect button_glow2 243 39 200 18
-			}
-			mouseExit { hide button_glow2 }
+			radius					6
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
 		{
 			name					gametypefilter
-			style					0
+			style					WINDOW_STYLE_PANEL
 			text					@MENUS_GAME_TYPE
 			descText				@MENUS_FILTER_FOR_SPECIFIC_GAME
 			ownerdraw				UI_JOINGAMETYPE
-			rect					500 112 360 32
+			rect					932 24 260 64
 			font					5
-			textscale				1.36
-			textalignx				0
-			textaligny				2
+			textscale				1.22
+			textalignx				18
+			textaligny				21
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
-			forecolor				0.56 0.64 0.74 1
+			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
-			mouseEnter
-			{
-				show button_glow2
-				setitemrect button_glow2 242 55 200 18
-			}
-			mouseExit { hide button_glow2 }
+			radius					6
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
 		}
 
 		itemDef
@@ -225,10 +163,10 @@
 			descText				@MENUS_INCLUDE_EMPTY_SERVERS
 			cvar					"ui_browserShowEmpty"
 			font					5
-			textscale				1.36
-			rect					860 48 360 32
+			textscale				1.22
+			rect					24 104 280 48
 			textalignx				0
-			textaligny				2
+			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -253,10 +191,10 @@
 			descText				@MENUS_INCLUDE_FULL_SERVERS
 			cvar					"ui_browserShowFull"
 			font					5
-			textscale				1.36
-			rect					860 80 360 32
+			textscale				1.22
+			rect					316 104 280 48
 			textalignx				0
-			textaligny				2
+			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -281,10 +219,10 @@
 			descText				"Include servers on which only bots play"
 			cvar					"v_browserShowBotOnly"
 			font					5
-			textscale				1.36
-			rect					860 112 360 32
+			textscale				1.22
+			rect					608 104 300 48
 			textalignx				0
-			textaligny				2
+			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -314,11 +252,11 @@
 				"@MENUS_ISDN" 5000
 				"@MENUS_LAN/CABLE" 25000
 			}
-			textscale				1.36
-			rect					860 144 360 32
+			textscale				1.22
+			rect					920 104 272 48
 			font					5
 			textalignx				0
-			textaligny				2
+			textaligny				13
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.56 0.64 0.74 1
 			visible					1
@@ -337,18 +275,30 @@
 
 		itemDef
 		{
+			name					vision_table
+			rect					24 168 1168 600
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.027 0.051 0.102 1
+			bordercolor				0.153 0.251 0.373 1
+			radius					10
+			decoration
+		}
+
+		itemDef
+		{
 			name					server
 			group					grpTabs
 			text					@MENUS_SERVER_NAME
 			descText				@MENUS_SORT_BY_SERVER_NAME
 			type					ITEM_TYPE_BUTTON
-			textscale				1.72
+			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					20 176 530 52
+			rect					36 168 560 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				3
-			forecolor				0.86 0.90 0.945 1
+			textalignx				10
+			textaligny				21
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -372,7 +322,7 @@
 				hide button_glow2
 				setitemcolor serverColumn bordercolor 0.086 0.149 0.247 1
 			}
-			font					5
+			font					7
 		}
 
 		itemDef
@@ -382,13 +332,13 @@
 			type					ITEM_TYPE_BUTTON
 			text					@MENUS_MAP_NAME_1
 			descText				@MENUS_SORT_BY_MAP_NAME
-			textscale				1.72
+			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					550 176 250 52
+			rect					614 168 220 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				3
-			forecolor				0.86 0.90 0.945 1
+			textalignx				10
+			textaligny				21
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -408,7 +358,7 @@
 				setitemcolor mapColumn bordercolor 0.36 0.78 0.96 0.6
 			}
 			mouseExit { setitemcolor mapColumn bordercolor 0.086 0.149 0.247 1 }
-			font					5
+			font					7
 		}
 
 		itemDef
@@ -418,13 +368,13 @@
 			text					@MENUS_PLYRS
 			descText				@MENUS_SORT_BY_NUMBER_OF_PLAYERS
 			type					ITEM_TYPE_BUTTON
-			textscale				1.72
+			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					800 176 120 52
+			rect					854 168 110 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				3
-			forecolor				0.86 0.90 0.945 1
+			textalignx				10
+			textaligny				21
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -444,7 +394,7 @@
 				setitemcolor playerColumn bordercolor 0.36 0.78 0.96 0.6
 			}
 			mouseExit { setitemcolor playerColumn bordercolor 0.086 0.149 0.247 1 }
-			font					5
+			font					7
 		}
 
 		itemDef
@@ -453,14 +403,14 @@
 			group					grpTabs
 			text					@MENUS_SORT_TYPE
 			descText				@MENUS_SORT_BY_GAME_TYPE
-			textscale				1.72
+			textscale				1
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					920 176 120 52
+			rect					974 168 110 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				3
-			forecolor				0.86 0.90 0.945 1
+			textalignx				10
+			textaligny				21
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -484,7 +434,7 @@
 				hide button_glow2
 				setitemcolor typeColumn bordercolor 0.086 0.149 0.247 1
 			}
-			font					5
+			font					7
 		}
 
 		itemDef
@@ -494,13 +444,13 @@
 			text					@MENUS_PING
 			descText				@MENUS_SORT_BY_PING_TIME
 			type					ITEM_TYPE_BUTTON
-			textscale				1.72
+			textscale				1
 			style					WINDOW_STYLE_EMPTY
-			rect					1120 176 104 52
+			rect					1094 168 80 60
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				8
-			textaligny				3
-			forecolor				0.86 0.90 0.945 1
+			textalignx				10
+			textaligny				21
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			action
 			{
@@ -524,185 +474,30 @@
 				hide button_glow2
 				setitemcolor pingColumn bordercolor 0.086 0.149 0.247 1
 			}
-			font					5
+			font					7
 		}
 
 		itemDef
 		{
-			name					horizontalseparators
-			rect					20 282 1208 1.34
+			name					vision_table_line
+			rect					24 228 1168 1
+			visible					1
 			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 334 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 386 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 438 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 490 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 542 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 594 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 646 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 698 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					horizontalseparators
-			rect					20 750 1208 1.34
-			style					WINDOW_STYLE_FILLED
-			backcolor				1 1 1 0.07
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					serverColumn
-			group					grpColumn
-			rect					20 224 530 528
-			style					WINDOW_STYLE_EMPTY
-			backcolor				0 0 0 0
-			bordersize				2
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					mapColumn
-			group					grpColumn
-			rect					550 224 250 528
-			style					WINDOW_STYLE_EMPTY
-			backcolor				0 0 0 0
-			bordersize				2
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					playerColumn
-			group					grpColumn
-			rect					800 224 120 528
-			style					WINDOW_STYLE_EMPTY
-			backcolor				0 0 0 0
-			bordersize				2
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					typeColumn
-			group					grpColumn
-			rect					920 224 200 528
-			style					WINDOW_STYLE_EMPTY
-			backcolor				0 0 0 0
-			bordersize				2
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					pingColumn
-			group					grpColumn
-			rect					1120 224 104 528
-			style					WINDOW_STYLE_EMPTY
-			backcolor				0 0 0 0
-			bordersize				2
-			bordercolor				0.086 0.149 0.247 1
-			visible					1
+			backcolor				0.153 0.251 0.373 1
 			decoration
 		}
 
 		itemDef
 		{
 			name					serverlist
-			rect					20 224 1240 528
+			rect					34 234 1148 474
 			type					ITEM_TYPE_LISTBOX
-			style					WINDOW_STYLE_PANEL
-			elementwidth			240
-			elementheight			52
+			style					WINDOW_STYLE_EMPTY
+			elementwidth			120
+			elementheight			56
 			font					5
-			textscale				1.36
-			textaligny				14
+			textscale				1.33
+			textaligny				16
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SERVERS
 			bordercolor				0.086 0.149 0.247 1
@@ -710,11 +505,21 @@
 			backcolor				0.027 0.051 0.102 0.9
 			outlinecolor			0.36 0.78 0.96 0.22
 			visible					1
-			columns					5 4 40 516 540 40 208 776 5 128 900 20 200 1120 20 94
+			columns					5 12 40 560 590 40 220 830 5 110 950 20 110 1070 20 70
 			mouseenter { setitemcolor serverlist bordercolor 0.36 0.78 0.96 0.6 }
 			mouseexit { setitemcolor serverlist bordercolor 0.086 0.149 0.247 1 }
 			doubleClick { open ingame_servers_confirm }
-			radius					8
+			radius					4
+		}
+
+		itemDef
+		{
+			name					vision_table_foot
+			rect					24 708 1168 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.153 0.251 0.373 1
+			decoration
 		}
 
 		itemDef
@@ -722,12 +527,12 @@
 			name					refreshdate
 			ownerdraw				UI_SERVERREFRESHDATE
 			font					5
-			textscale				1.36
-			rect					20 752 570 40
+			textscale				1.11
+			rect					44 708 600 60
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				2
-			forecolor				0.91 0.77 0.42 0.7
+			textaligny				20
+			forecolor				0.56 0.64 0.74 1
 			visible					1
 			decoration
 		}
@@ -739,12 +544,12 @@
 			descText				@MENUS_INPUT_PASSWORD
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.36
-			style					WINDOW_STYLE_EMPTY
-			rect					20 804 240 40
+			textscale				1.11
+			style					WINDOW_STYLE_PANEL
+			rect					24 788 224 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				2
+			textalignx				112
+			textaligny				22
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -752,12 +557,10 @@
 				play "sound/interface/button1.wav" ;
 				open password_popmenu
 			}
-			mouseenter
-			{
-				show button_glow
-				setitemrect button_glow 7 400 150 20
-			}
-			mouseexit { hide button_glow }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -767,12 +570,12 @@
 			descText				@MENUS_ENTER_IP_ADDRESS_OF_FAVORITE
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.36
-			style					WINDOW_STYLE_EMPTY
-			rect					270 804 240 40
+			textscale				1.11
+			style					WINDOW_STYLE_PANEL
+			rect					260 788 224 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				2
+			textalignx				112
+			textaligny				22
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -780,12 +583,10 @@
 				play "sound/interface/button1.wav" ;
 				open createfavorite_popmenu
 			}
-			mouseenter
-			{
-				show button_glow
-				setitemrect button_glow 132 400 150 20
-			}
-			mouseexit { hide button_glow }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -795,13 +596,13 @@
 			descText				@MENUS_ADD_SELECTED_SERVER_TO
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.36
-			style					WINDOW_STYLE_EMPTY
+			textscale				1.11
+			style					WINDOW_STYLE_PANEL
 			ownerdrawFlag			UI_SHOW_NOTFAVORITESERVERS
-			rect					520 804 240 40
+			rect					496 788 224 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				2
+			textalignx				112
+			textaligny				22
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -809,12 +610,10 @@
 				play "sound/interface/button1.wav"
 				uiScript addFavorite
 			}
-			mouseenter
-			{
-				show button_glow
-				setitemrect button_glow 257 400 150 20
-			}
-			mouseexit { hide button_glow }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -824,13 +623,13 @@
 			descText				@MENUS_DELETE_SELECTED_SERVER
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.36
-			style					WINDOW_STYLE_EMPTY
+			textscale				1.11
+			style					WINDOW_STYLE_PANEL
 			ownerdrawFlag			UI_SHOW_FAVORITESERVERS
-			rect					520 804 240 40
+			rect					496 788 224 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				2
+			textalignx				112
+			textaligny				22
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -839,12 +638,10 @@
 				uiScript DeleteFavorite
 				uiScript UpdateFilter
 			}
-			mouseenter
-			{
-				show button_glow
-				setitemrect button_glow 257 400 150 20
-			}
-			mouseexit { hide button_glow }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -854,12 +651,12 @@
 			descText				@MENUS_DISPLAY_SERVER_INFORMATION
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.36
-			style					WINDOW_STYLE_EMPTY
-			rect					770 804 240 40
+			textscale				1.11
+			style					WINDOW_STYLE_PANEL
+			rect					732 788 224 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				2
+			textalignx				112
+			textaligny				22
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -867,12 +664,10 @@
 				play "sound/interface/button1.wav" ;
 				open serverinfo_popmenu
 			}
-			mouseenter
-			{
-				show button_glow
-				setitemrect button_glow 382 400 150 20
-			}
-			mouseexit { hide button_glow }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -882,12 +677,12 @@
 			descText				@MENUS_SEARCH_CURRENT_SERVER
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.36
-			style					WINDOW_STYLE_EMPTY
-			rect					1020 804 240 40
+			textscale				1.11
+			style					WINDOW_STYLE_PANEL
+			rect					968 788 224 64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				120
-			textaligny				2
+			textalignx				112
+			textaligny				22
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			action
@@ -896,12 +691,10 @@
 				open findplayer_popmenu
 				hide findPlayerButton
 			}
-			mouseenter
-			{
-				show button_glow
-				setitemrect button_glow 507 400 150 20
-			}
-			mouseexit { hide button_glow }
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
 		}
 
 		itemDef
@@ -911,12 +704,12 @@
 			descText				@MENUS_BACKUP_ONE_MENU
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				1.28
+			textscale				1.33
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					138 892 220 40
+			rect					24 872 220 72
 			textalignx				110
-			textaligny				8
+			textaligny				24
 			textalign				ITEM_ALIGN_CENTER
 			visible					1
 			forecolor				0.86 0.90 0.945 1
@@ -927,14 +720,8 @@
 				close ingame_servers
 				open ingame
 			}
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 30 441 190 30
-			}
-			mouseExit { hide button_glow }
 			caps					1
-			radius					6.4
+			radius					6
 			backcolor				0 0 0 0
 			bordercolor				0.153 0.251 0.373 1
 		}
@@ -945,14 +732,14 @@
 			text					@MENUS_JOIN
 			descText				@MENUS_JOIN_CHOSEN_SERVER
 			type					ITEM_TYPE_BUTTON
-			font					5
-			textscale				1.28
+			font					7
+			textscale				1.33
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					1000 900 220 40
+			rect					932 872 260 72
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				110
-			textaligny				8
+			textalignx				130
+			textaligny				24
 			forecolor				0.016 0.071 0.122 1
 			visible					1
 			action
@@ -960,18 +747,13 @@
 				play "sound/interface/button1.wav"
 				open ingame_servers_confirm
 			}
-			mouseEnter
-			{
-				show button_glow
-				setitemrect button_glow 425 441 190 30
-			}
-			mouseExit { hide button_glow }
 			caps					1
-			radius					6.4
+			radius					6
 			backcolor				0.36 0.78 0.96 1
 			bordercolor				0.36 0.78 0.96 1
 		}
 		canvas					1600 1200
+		style					WINDOW_STYLE_EMPTY
 	}
 
 	menuDef
