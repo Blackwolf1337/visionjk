@@ -78,6 +78,8 @@ void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );	
 qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );
 qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
 void VK_TexCacheRecord( void );
+void VK_TexCacheLuma( float luma );
+float VK_TexCacheFoundLuma( void );
 void VK_TexCacheEnd( void );
 
 // The few OpenGL calls left in the shared files, by where they are:

@@ -80,7 +80,7 @@ static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
 static cvar_t	*v_rtShadowRays;	// rays a pixel
 static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
-static cvar_t	*v_rtLights;		// 0: the sun and the direction of the light grid alone, not the lamps and found lights
+static cvar_t	*v_rtLights;		// 0: the sun and the direction of the light grid alone, not the light patches
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -116,16 +116,16 @@ static struct {
 	VkDeviceSize				levelScratch;
 	vkAccel_t					level;
 	vkBuffer_t					grid;			// the light grid of the level, three vec4 a cell (shaders/rtshadow.frag)
-	// the fixtures of the level (VK_RT_Fixtures), two vec4 each for shaders/rtcells.comp: middle and how far the fixture
-	// goes from it, the side it lights; the cells of the grid it traces from, and what it found
-	vkBuffer_t					fixtureList;
-	vkBuffer_t					cells, cellHits;
-	int							cellState;		// 1 to be traced, 2 traced in the frame cellFrame, 0 done or none
+	// the light patches of the level (VK_RT_Patches), three vec4 each: middle and power, the side it lights and the
+	// radius of its disk, how far it goes from its middle; for every cell of the grid its list of patches
+	// (VK_RT_LIST_WORDS) and the light of that list with whether the sun reaches it (two floats), from rtcells.comp
+	vkBuffer_t					patches;
+	vkBuffer_t					cellLists, cellLight;
+	int							cellState;		// 1 to be worked out, 2 worked out in the frame cellFrame, 0 done or none
 	int							cellFrame;
 	VkPipelineLayout			cellsLayout;
 	VkPipeline					cellsPipeline;
 	VkShaderModule				cellsShader;
-	vkBuffer_t					lights[VK_FRAMES];	// the lights of the level for a frame, three vec4 each
 
 	vkBuffer_t					scratch;		// for every build of a frame
 	VkDeviceSize				scratchAlign;
@@ -391,52 +391,42 @@ static void VK_RT_UploadGrid( void ) {
 
 THE LIGHTS OF THE LEVEL
 
-The maps keep no lights: q3map2 leaves the light entities out of the map it compiles. What is left of them is the
-light they gave, in the lightmaps and in the light grid (at every cell the light from all sides, the light from one
-direction and that direction), and the things that show where light comes from: the surfaces whose shader glows
-(a glow stage, the lamps, sconces and street lights of the level) or gave light when the map was lit
-(q3map_surfacelight). These are the fixtures. When a level is loaded:
-- every fixture: its surfaces of one shader near each other taken together;
-- shaders/rtcells.comp traces from every lit cell of the grid towards every fixture: which of them it sees (nothing
-  of the level between them), and along the direction of its light whether that gets out to the sky;
-- the directed light of a cell is shared among the fixtures it sees that lie in the direction of its light (within
-  45 degrees and 1024 units), the better they lie in it the more; a cell whose light comes out of the sky gives
-  none;
-- a fixture that gets light from cells becomes a light where it is, with the strength those cells say it has (their
-  share times the square of their distance, the near cells counting most). Fixtures no cell near them takes light
-  from (screens, buttons, an antenna high on a roof) give no light. The sun gets the directed light of the cells that see the sky in its direction.
-The grid has the light of all lights at a cell in one direction, between them, so a cell rarely looks straight at a
-small fixture: what it sees near that direction counts. The sun and the lights are in the units of the grid, so
-shaders/rtshadow.frag can weigh them against each other. The answer of the cells comes a few frames after the
-level, once the frame that traced them is done; until then the shadows go by the sun and the direction of the grid.
+The maps keep no lights: q3map2 leaves the light entities out of the map it compiles. What shows where light
+comes from are the textures that give it: a stage that glows (the glow of the frame), a stage added onto its
+surface that is not the lightmap (lamps, light strips, screens), or a shader that gave light when the map was lit
+(q3map_surfacelight). How bright such a texture is comes from its pixels (image_t::averageLuma) and the colour of
+the stage. When a level is loaded:
+- the triangles of every surface with such a shader become patches, near each other on one surface (up to
+  VK_RT_PATCH_SIZE), each with its middle, the side it lights, its size and its power (brightness times area);
+- shaders/rtcells.comp finds for every cell of the light grid the patches that give it the most light and that it
+  sees (a ray to each with nothing of the level between), eight at most, how much light those give it and whether
+  the sun reaches it;
+- the light of the patches is scaled once for the level so that, at the cells the sun does not reach, it matches
+  the directed light of the grid (least squares): then it is in the units of the grid, like its ambient light and
+  the sun.
+shaders/rtshadow.frag takes the list of the cell a pixel is in. Until the cells are done (a few frames after the
+level, once the frame that worked them out has run) the shadows go by the sun and the direction of the grid.
 
 ===============================================================================
 */
 
-#define VK_RT_MAX_LIGHTS	128
-#define VK_RT_MAX_FIXTURES	256			// a cell says which it sees in eight words (shaders/rtcells.comp)
-#define VK_RT_CELL_WORDS	10			// what comes back for a cell: sky or not, how far, and those eight
+#define VK_RT_MAX_PATCHES	4096
+#define VK_RT_PATCH_SIZE	32.0f		// triangles of one surface this near each other are one patch
+#define VK_RT_CELL_LIST		8			// patches in the list of a cell
+#define VK_RT_LIST_WORDS	( VK_RT_CELL_LIST * 2 )	// a list: the numbers of the patches, then their light
 
-typedef struct vkFixture_s {
-	const shader_t	*shader;
-	vec3_t			origin;
-	vec3_t			normal;			// the side it gives light to, zero: all sides
+typedef struct vkPatch_s {
+	vec3_t			origin;			// summed by area until the patch is done, then its middle
+	vec3_t			normal;			// summed, then the side it lights (zero: all sides)
+	vec3_t			mins, maxs;
 	float			area;
-	float			extent;			// from its middle to its farthest vertex
-	std::vector<int>	surfaces;	// in the world model
-} vkFixture_t;
+	float			emission;		// brightness of its shader
+	int				surface;		// in the world model
+} vkPatch_t;
 
-typedef struct vkCell_s {
-	vec3_t			center;
-	vec3_t			dir;			// where its directed light comes from
-	float			directed;		// how much, in the units of the grid (0 to 255 a colour)
-} vkCell_t;
-
-static std::vector<vkFixture_t>	*vk_fixtures;
-static std::vector<vkCell_t>	*vk_cells;
-static float		vk_lightData[VK_RT_MAX_LIGHTS * 12];		// what goes into rt.lights of each frame
-static int			vk_numLights;
-static float		vk_sunStrength;
+static std::vector<vkPatch_t>	*vk_patches;
+static float		vk_sunStrength;		// the directed light of the grid where the sun shines
+static float		vk_patchScale;		// the light of the patches to the units of the grid, 0: not known yet
 
 // the direction a cell of the grid has its directed light from, as R_SetupEntityLightingGrid() reads it
 static void VK_RT_CellDirection( const mgrid_t *data, vec3_t dir ) {
@@ -448,258 +438,188 @@ static void VK_RT_CellDirection( const mgrid_t *data, vec3_t dir ) {
 	dir[2] = tr.sinTable[( lng + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK];
 }
 
-// the cells with directed light
-static void VK_RT_GridCells( std::vector<vkCell_t> &cells ) {
-	const world_t *world = tr.world;
-
-	if ( !world->lightGridData || !world->lightGridArray ) {
-		return;
-	}
-	for ( int z = 0; z < world->lightGridBounds[2]; z++ ) {
-		for ( int y = 0; y < world->lightGridBounds[1]; y++ ) {
-			for ( int x = 0; x < world->lightGridBounds[0]; x++ ) {
-				const int		index = x + y * world->lightGridBounds[0] + z * world->lightGridBounds[0] * world->lightGridBounds[1];
-				const mgrid_t	*data;
-				vkCell_t		cell;
-
-				if ( world->lightGridArray[index] >= world->numGridArrayElements ) {
-					continue;
-				}
-				data = world->lightGridData + world->lightGridArray[index];
-				if ( data->styles[0] == LS_LSNONE ) {
-					continue;
-				}
-				cell.directed = data->directLight[0][0] * 0.3f + data->directLight[0][1] * 0.59f + data->directLight[0][2] * 0.11f;
-				if ( cell.directed < 4.0f ) {
-					continue;
-				}
-				cell.center[0] = world->lightGridOrigin[0] + x * world->lightGridSize[0];
-				cell.center[1] = world->lightGridOrigin[1] + y * world->lightGridSize[1];
-				cell.center[2] = world->lightGridOrigin[2] + z * world->lightGridSize[2];
-				VK_RT_CellDirection( data, cell.dir );
-				cells.push_back( cell );
-			}
-		}
+// the colour of a stage that does not depend on the light of the level, 0 for one that does (vertex colours)
+static float VK_RT_StageColor( const shaderStage_t *stage ) {
+	switch ( stage->rgbGen ) {
+	case CGEN_IDENTITY:
+	case CGEN_IDENTITY_LIGHTING:
+	case CGEN_WAVEFORM:
+	case CGEN_ENTITY:
+		return 1.0f;
+	case CGEN_CONST:
+		return ( stage->constantColor[0] * 0.3f + stage->constantColor[1] * 0.59f + stage->constantColor[2] * 0.11f ) / 255.0f;
+	default:
+		return 0.0f;
 	}
 }
 
-// a shader that shows where light comes from
-static qboolean VK_RT_IsFixture( const shader_t *shader ) {
-	return (qboolean)( shader && !( shader->surfaceFlags & SURF_SKY ) && ( shader->hasGlow || shader->surfaceLight > 0.0f ) );
+// how much light the surfaces of a shader give, 0: none
+static float VK_RT_Emission( const shader_t *shader ) {
+	float emission = 0.0f;
+
+	if ( !shader || ( shader->surfaceFlags & ( SURF_SKY | SURF_NODRAW ) ) || shader->sort == SS_PORTAL || shader->fogParms
+		|| ( shader->contentFlags & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_FOG ) ) ) {
+		return 0.0f;
+	}
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
+		const shaderStage_t	*stage = &shader->stages[i];
+		const image_t		*image = stage->bundle[0].image;
+		const uint32_t		src = stage->stateBits & GLS_SRCBLEND_BITS, dst = stage->stateBits & GLS_DSTBLEND_BITS;
+
+		if ( !stage->active || !image || stage->bundle[0].isLightmap ) {
+			continue;
+		}
+		if ( stage->glow || ( dst == GLS_DSTBLEND_ONE && ( src == GLS_SRCBLEND_ONE || src == GLS_SRCBLEND_SRC_ALPHA ) ) ) {
+			emission += image->averageLuma * VK_RT_StageColor( stage );
+		}
+	}
+	// (q3map_surfacelight 1000 gives about the light of a white texture)
+	if ( shader->surfaceLight > 0.0f ) {
+		emission += shader->surfaceLight * 0.001f;
+	}
+	return emission;
 }
 
 /*
 ===============
-VK_RT_Fixtures
+VK_RT_Patches
 
-The fixtures of the level, the largest VK_RT_MAX_FIXTURES of them.
+The patches of the level, the most powerful VK_RT_MAX_PATCHES of them.
 ===============
 */
-static void VK_RT_Fixtures( std::vector<vkFixture_t> &fixtures ) {
+static void VK_RT_Patches( std::vector<vkPatch_t> &patches ) {
 	const bmodel_t			*model = &tr.world->bmodels[0];
-	std::vector<float>		surfPositions;
-	std::vector<uint32_t>	surfIndexes;
+	std::vector<float>		positions;
+	std::vector<uint32_t>	indexes;
 
 	for ( int i = 0; i < model->numSurfaces; i++ ) {
 		const msurface_t	*surf = &model->firstSurface[i];
-		vec3_t				center, normal;
-		float				area = 0.0f;
-		size_t				j;
+		const float			emission = VK_RT_Emission( surf->shader );
+		const size_t		first = patches.size();
 
-		if ( !VK_RT_IsFixture( surf->shader ) ) {
+		if ( emission <= 0.0f ) {
 			continue;
 		}
-		surfPositions.clear();
-		surfIndexes.clear();
-		VK_RT_SurfaceTriangles( surf, surfPositions, surfIndexes );
-		VectorClear( center );
-		VectorClear( normal );
-		for ( j = 0; j + 2 < surfIndexes.size(); j += 3 ) {
-			const float	*a = &surfPositions[surfIndexes[j] * 3], *b = &surfPositions[surfIndexes[j + 1] * 3], *c = &surfPositions[surfIndexes[j + 2] * 3];
-			vec3_t		ab, ac, cross;
+		positions.clear();
+		indexes.clear();
+		VK_RT_SurfaceTriangles( surf, positions, indexes );
+		for ( size_t t = 0; t + 2 < indexes.size(); t += 3 ) {
+			const float	*v[3] = { &positions[indexes[t] * 3], &positions[indexes[t + 1] * 3], &positions[indexes[t + 2] * 3] };
+			vec3_t		ab, ac, cross, center, side;
+			size_t		j;
 
-			VectorSubtract( b, a, ab );
-			VectorSubtract( c, a, ac );
+			VectorSubtract( v[1], v[0], ab );
+			VectorSubtract( v[2], v[0], ac );
 			CrossProduct( ab, ac, cross );
-			const float half = VectorLength( cross ) * 0.5f;
+			const float area = VectorLength( cross ) * 0.5f;
 
-			area += half;
-			VectorAdd( normal, cross, normal );
+			if ( area < 0.01f ) {
+				continue;
+			}
+			VectorCopy( cross, side );
+			VectorNormalize( side );
 			for ( int k = 0; k < 3; k++ ) {
-				center[k] += ( a[k] + b[k] + c[k] ) / 3.0f * half;
+				center[k] = ( v[0][k] + v[1][k] + v[2][k] ) / 3.0f;
+			}
+			// with a patch of the surface near it that faces alike
+			for ( j = first; j < patches.size(); j++ ) {
+				vec3_t middle, patchSide;
+
+				VectorScale( patches[j].origin, 1.0f / patches[j].area, middle );
+				VectorCopy( patches[j].normal, patchSide );
+				VectorNormalize( patchSide );
+				if ( Distance( middle, center ) < VK_RT_PATCH_SIZE && DotProduct( patchSide, side ) > 0.7f ) {
+					break;
+				}
+			}
+			if ( j == patches.size() ) {
+				vkPatch_t patch;
+
+				memset( &patch, 0, sizeof( patch ) );
+				ClearBounds( patch.mins, patch.maxs );
+				patch.emission = emission;
+				patch.surface = i;
+				patches.push_back( patch );
+			}
+			VectorMA( patches[j].origin, area, center, patches[j].origin );
+			VectorAdd( patches[j].normal, cross, patches[j].normal );
+			patches[j].area += area;
+			for ( int k = 0; k < 3; k++ ) {
+				AddPointToBounds( v[k], patches[j].mins, patches[j].maxs );
 			}
 		}
-		if ( area < 0.5f ) {
-			continue;
-		}
-		VectorScale( center, 1.0f / area, center );
-
-		// with a fixture of the same shader near it
-		for ( j = 0; j < fixtures.size(); j++ ) {
-			vec3_t middle;
-
-			VectorScale( fixtures[j].origin, 1.0f / fixtures[j].area, middle );
-			if ( fixtures[j].shader == surf->shader && Distance( middle, center ) < 64.0f ) {
-				break;
-			}
-		}
-		if ( j == fixtures.size() ) {
-			vkFixture_t fixture;
-
-			fixture.shader = surf->shader;
-			VectorClear( fixture.origin );
-			VectorClear( fixture.normal );
-			fixture.area = 0.0f;
-			fixture.extent = 0.0f;
-			fixtures.push_back( fixture );
-		}
-		// (summed by area for now: the middle and the side at the end)
-		VectorMA( fixtures[j].origin, area, center, fixtures[j].origin );
-		VectorAdd( fixtures[j].normal, normal, fixtures[j].normal );
-		fixtures[j].area += area;
-		fixtures[j].surfaces.push_back( i );
 	}
-	for ( vkFixture_t &fixture : fixtures ) {
-		const float length = VectorLength( fixture.normal );
+	for ( vkPatch_t &patch : patches ) {
+		const float length = VectorLength( patch.normal );
 
-		VectorScale( fixture.origin, 1.0f / fixture.area, fixture.origin );
-		// round, or bent over a model: light to all sides
-		if ( length < fixture.area ) {
-			VectorClear( fixture.normal );
+		VectorScale( patch.origin, 1.0f / patch.area, patch.origin );
+		// (the cross products are twice the area: a flat patch has a sum of twice its area, a bent one less)
+		if ( length < patch.area ) {
+			VectorClear( patch.normal );
 		} else {
-			VectorScale( fixture.normal, 1.0f / length, fixture.normal );
-		}
-		for ( int s : fixture.surfaces ) {
-			surfPositions.clear();
-			surfIndexes.clear();
-			VK_RT_SurfaceTriangles( &model->firstSurface[s], surfPositions, surfIndexes );
-			for ( size_t k = 0; k + 2 < surfPositions.size(); k += 3 ) {
-				fixture.extent = Q_max( fixture.extent, Distance( fixture.origin, &surfPositions[k] ) );
-			}
+			VectorScale( patch.normal, 1.0f / length, patch.normal );
 		}
 	}
-	if ( fixtures.size() > VK_RT_MAX_FIXTURES ) {
-		std::sort( fixtures.begin(), fixtures.end(), []( const vkFixture_t &a, const vkFixture_t &b ) {
-			return a.area > b.area;
+	if ( patches.size() > VK_RT_MAX_PATCHES ) {
+		std::sort( patches.begin(), patches.end(), []( const vkPatch_t &a, const vkPatch_t &b ) {
+			return a.emission * a.area > b.emission * b.area;
 		} );
-		fixtures.resize( VK_RT_MAX_FIXTURES );
+		patches.resize( VK_RT_MAX_PATCHES );
 	}
 }
 
 /*
 ===============
-VK_RT_LightsFromCells
+VK_RT_FitPatches
 
-What shaders/rtcells.comp found for every cell (rt.cellHits, VK_RT_CELL_WORDS each: 1 when the direction of its light
-gets out to the sky, how far it got, the fixtures it sees as bits) into the lights of the level.
+What shaders/rtcells.comp found for every cell (rt.cellLight: the light of the patches in its list, 1 when the sun
+reaches it) against the light grid: the scale of the light of the patches, and the strength of the sun.
 ===============
 */
-#define VK_RT_ALIGN_MIN		0.7f		// a fixture further than 45 degrees from the direction of a cell gets none of its light
-#define VK_RT_FIXTURE_REACH	1024.0f		// nor one further away than this
-#define VK_RT_FIXTURE_NEAR	256.0f		// a light lights what is around it: cells this near have to take light from it
-
-static void VK_RT_LightsFromCells( void ) {
-	const std::vector<vkCell_t>		&cells = *vk_cells;
-	const std::vector<vkFixture_t>	&fixtures = *vk_fixtures;
-	const uint32_t					*hits = (const uint32_t *)rt.cellHits.mapped;
-	std::vector<double>				sums( fixtures.size(), 0.0 ), weights( fixtures.size(), 0.0 ), counts( fixtures.size(), 0.0 );
-	std::vector<double>				nearby( fixtures.size(), 0.0 );
-	std::vector<float>				share( fixtures.size() );
-	vec3_t							sun;
-	double							sunSum = 0.0;
-	int								sunCount = 0, sharedCells = 0;
+static void VK_RT_FitPatches( void ) {
+	const world_t	*world = tr.world;
+	const float		*light = (const float *)rt.cellLight.mapped;
+	const int		numCells = world->lightGridBounds[0] * world->lightGridBounds[1] * world->lightGridBounds[2];
+	vec3_t			sun;
+	double			sumDE = 0.0, sumEE = 0.0, sunSum = 0.0, sunAll = 0.0;
+	int				fitted = 0, sunCount = 0, sunAllCount = 0, valid = 0, listed = 0;
 
 	VectorCopy( tr.sunDirection, sun );
 	VectorNormalize( sun );
-	for ( size_t i = 0; i < cells.size(); i++ ) {
-		const vkCell_t	*cell = &cells[i];
-		const uint32_t	*hit = hits + i * VK_RT_CELL_WORDS;
-		float			total = 0.0f;
+	for ( int i = 0; i < numCells; i++ ) {
+		const mgrid_t	*data;
+		vec3_t			dir;
 
-		// its light comes out of the sky: from the sun, or the sky itself
-		if ( hit[0] ) {
-			if ( DotProduct( cell->dir, sun ) > 0.99f ) {
-				sunSum += cell->directed;
+		if ( world->lightGridArray[i] >= world->numGridArrayElements ) {
+			continue;
+		}
+		data = world->lightGridData + world->lightGridArray[i];
+		if ( data->styles[0] == LS_LSNONE ) {
+			continue;
+		}
+		const float directed = data->directLight[0][0] * 0.3f + data->directLight[0][1] * 0.59f + data->directLight[0][2] * 0.11f;
+
+		valid++;
+		listed += light[i * 2] > 0.0f ? 1 : 0;
+		if ( light[i * 2 + 1] > 0.5f ) {
+			// the sun shines there: what the grid has from its direction is the sun
+			VK_RT_CellDirection( data, dir );
+			sunAll += directed;
+			sunAllCount++;
+			if ( DotProduct( dir, sun ) > 0.98f ) {
+				sunSum += directed;
 				sunCount++;
 			}
-			continue;
-		}
-		// the fixtures it sees, by how well they lie in the direction of its light and how near they are
-		for ( size_t f = 0; f < fixtures.size(); f++ ) {
-			vec3_t to;
-
-			share[f] = 0.0f;
-			if ( !( hit[2 + f / 32] & ( 1u << ( f % 32 ) ) ) ) {
-				continue;
-			}
-			VectorSubtract( fixtures[f].origin, cell->center, to );
-			const float d = Q_max( VectorNormalize( to ), 16.0f );
-			const float align = DotProduct( to, cell->dir );
-
-			if ( align < VK_RT_ALIGN_MIN || d > VK_RT_FIXTURE_REACH || ( VectorLengthSquared( fixtures[f].normal ) > 0.5f && DotProduct( fixtures[f].normal, to ) > 0.0f ) ) {
-				continue;
-			}
-			// (the fourth power: the direction of the grid lies between the lights, the nearest to it gets the most)
-			share[f] = powf( ( align - VK_RT_ALIGN_MIN ) / ( 1.0f - VK_RT_ALIGN_MIN ), 4.0f ) / ( d * d );
-			total += share[f];
-		}
-		if ( total <= 0.0f ) {
-			continue;
-		}
-		sharedCells++;
-		for ( size_t f = 0; f < fixtures.size(); f++ ) {
-			if ( share[f] > 0.0f ) {
-				const float part = share[f] / total;
-				const float d = Q_max( Distance( fixtures[f].origin, cell->center ), 16.0f );
-
-				// directed light times the square of the distance, weighed by one over that square: the cells near a
-				// fixture show it best, far ones mostly show what else lights them
-				sums[f] += (double)part * cell->directed;
-				weights[f] += (double)part / ( d * d );
-				counts[f] += part;
-				if ( d < VK_RT_FIXTURE_NEAR ) {
-					nearby[f] += part;
-				}
-			}
+		} else if ( light[i * 2] > 0.0f && directed > 4.0f ) {
+			sumDE += (double)directed * light[i * 2];
+			sumEE += (double)light[i * 2] * light[i * 2];
+			fitted++;
 		}
 	}
-	vk_sunStrength = sunCount ? (float)( sunSum / sunCount ) : 0.0f;
-
-	// the fixtures that cells took light from, the brightest first
-	std::vector<int> order;
-	for ( size_t f = 0; f < fixtures.size(); f++ ) {
-		if ( counts[f] >= 2.0 && nearby[f] >= 1.0 ) {
-			order.push_back( (int)f );
-		}
-	}
-	std::sort( order.begin(), order.end(), [&]( int a, int b ) {
-		return sums[a] / weights[a] > sums[b] / weights[b];
-	} );
-	vk_numLights = 0;
-	for ( int f : order ) {
-		const vkFixture_t	*fixture = &fixtures[f];
-		const float			strength = (float)( sums[f] / weights[f] );
-		float				*out = &vk_lightData[vk_numLights * 12];
-
-		if ( vk_numLights == VK_RT_MAX_LIGHTS ) {
-			break;
-		}
-		VectorCopy( fixture->origin, out );
-		out[3] = 1.0f;
-		out[4] = strength;
-		// the disk the rays aim at, and how far from the middle the fixture itself ends
-		out[5] = Com_Clamp( 2.0f, 24.0f, Q_min( fixture->extent, sqrtf( fixture->area / M_PI ) ) );
-		// where it gives less than one in the units of the grid
-		out[6] = Com_Clamp( 64.0f, 4096.0f, sqrtf( strength ) );
-		out[7] = fixture->extent;
-		VectorCopy( fixture->normal, out + 8 );
-		out[11] = 0.0f;
-		ri.Printf( PRINT_DEVELOPER, "ray tracing: light %i at %.0f %.0f %.0f, %s, strength %.0f from %.1f cells, extent %.0f\n", vk_numLights,
-			fixture->origin[0], fixture->origin[1], fixture->origin[2], fixture->shader->name, strength, counts[f], fixture->extent );
-		vk_numLights++;
-	}
-	ri.Printf( PRINT_DEVELOPER, "ray tracing: %i of %i fixtures give light (%i of %i cells shared out), the sun %.0f (%i cells)\n", vk_numLights,
-		(int)fixtures.size(), sharedCells, (int)cells.size(), vk_sunStrength, sunCount );
+	vk_patchScale = sumEE > 0.0 ? (float)( sumDE / sumEE ) : 0.0f;
+	vk_sunStrength = sunCount ? (float)( sunSum / sunCount ) : ( sunAllCount ? (float)( sunAll / sunAllCount ) : 0.0f );
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: %i light patches, %i of %i cells see some, scale %g from %i cells, the sun %.0f (%i cells)\n",
+		(int)vk_patches->size(), listed, valid, vk_patchScale, fitted, vk_sunStrength, sunCount );
 }
 
 static void VK_RT_TrianglesBuildInfo( VkAccelerationStructureGeometryKHR *geometry, VkAccelerationStructureBuildGeometryInfoKHR *build,
@@ -738,13 +658,31 @@ static void VK_RT_DestroyLevel( void ) {
 	VK_RT_DestroyAccel( &rt.level );
 	VK_DestroyBuffer( &rt.positions );
 	VK_DestroyBuffer( &rt.indexes );
-	VK_DestroyBuffer( &rt.fixtureList );
-	VK_DestroyBuffer( &rt.cells );
-	VK_DestroyBuffer( &rt.cellHits );
+	VK_DestroyBuffer( &rt.patches );
+	VK_DestroyBuffer( &rt.cellLists );
+	VK_DestroyBuffer( &rt.cellLight );
 	rt.levelReady = rt.levelPending = qfalse;
 	rt.cellState = 0;
-	vk_numLights = 0;
+	vk_patchScale = 0.0f;
 	vk_sunStrength = 0.0f;
+}
+
+// a storage buffer of the level into binding of the sets of both frames (only while no frame is on its way)
+static void VK_RT_WriteLevelSet( uint32_t binding, const vkBuffer_t *buffer ) {
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VkDescriptorBufferInfo	info;
+		VkWriteDescriptorSet	write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+		info.buffer = buffer->buffer;
+		info.offset = 0;
+		info.range = VK_WHOLE_SIZE;
+		write.dstSet = rt.sets[i];
+		write.dstBinding = binding;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		write.pBufferInfo = &info;
+		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	}
 }
 
 /*
@@ -752,22 +690,24 @@ static void VK_RT_DestroyLevel( void ) {
 VK_RT_PrepareLevel
 
 Once per level: the triangles of the level and their acceleration structure, whose build VK_RT_RecordLevel()
-records into the command buffer of the frame, the fixtures and the cells of the grid shaders/rtcells.comp traces
-from after it. The inputs stay until the next level, the build reads them when that frame runs.
+records into the command buffer of the frame, the light patches and the lists of the cells that shaders/rtcells.comp
+works out after it. The inputs stay until the next level, the build reads them when that frame runs.
 ===============
 */
 static void VK_RT_PrepareLevel( void ) {
 	std::vector<float>		positions;
 	std::vector<uint32_t>	indexes;
 	const VkBufferUsageFlags	traced = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	const world_t			*world = tr.world;
+	const int				numCells = world->lightGridData ? world->lightGridBounds[0] * world->lightGridBounds[1] * world->lightGridBounds[2] : 0;
+	float					*out;
 
 	VK_WaitIdle();
 	VK_RT_DestroyLevel();
 	VK_RT_UploadGrid();
 	rt.world = tr.world;
 	rt.levelScratch = 0;
-	vk_fixtures->clear();
-	vk_cells->clear();
+	vk_patches->clear();
 
 	VK_RT_LevelTriangles( positions, indexes );
 	rt.numVertexes = (uint32_t)( positions.size() / 3 );
@@ -777,37 +717,28 @@ static void VK_RT_PrepareLevel( void ) {
 	}
 	rt.levelScratch = VK_RT_PrepareTriangles( positions, indexes, &rt.positions, &rt.indexes, &rt.level );
 
-	VK_RT_Fixtures( *vk_fixtures );
-	VK_RT_GridCells( *vk_cells );
-	if ( !vk_fixtures->empty() && !vk_cells->empty() ) {
-		const size_t numCells = vk_cells->size();
-		float *out;
-
-		VK_CreateBuffer( &rt.fixtureList, vk_fixtures->size() * sizeof( float ) * 8, traced, qtrue );
-		out = (float *)rt.fixtureList.mapped;
-		for ( const vkFixture_t &fixture : *vk_fixtures ) {
-			VectorCopy( fixture.origin, out );
-			out[3] = fixture.extent;
-			VectorCopy( fixture.normal, out + 4 );
-			out[7] = 0.0f;
-			out += 8;
-		}
-		// two vec4 a cell: its middle, the direction of its light
-		VK_CreateBuffer( &rt.cells, numCells * sizeof( float ) * 8, traced, qtrue );
-		VK_CreateBuffer( &rt.cellHits, numCells * sizeof( uint32_t ) * VK_RT_CELL_WORDS, traced, qtrue );
-		out = (float *)rt.cells.mapped;
-		for ( const vkCell_t &cell : *vk_cells ) {
-			VectorCopy( cell.center, out );
-			out[3] = 0.0f;
-			VectorCopy( cell.dir, out + 4 );
-			out[7] = 0.0f;
-			out += 8;
-		}
-		rt.cellState = 1;
+	VK_RT_Patches( *vk_patches );
+	VK_CreateBuffer( &rt.patches, sizeof( float ) * 12 * Q_max( (int)vk_patches->size(), 1 ), traced, qtrue );
+	out = (float *)rt.patches.mapped;
+	for ( const vkPatch_t &patch : *vk_patches ) {
+		VectorCopy( patch.origin, out );
+		out[3] = patch.emission * patch.area;
+		VectorCopy( patch.normal, out + 4 );
+		out[7] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch.area / M_PI ) );
+		out[8] = 0.5f * Distance( patch.mins, patch.maxs );
+		out[9] = out[10] = out[11] = 0.0f;
+		out += 12;
 	}
+	VK_CreateBuffer( &rt.cellLists, sizeof( uint32_t ) * VK_RT_LIST_WORDS * Q_max( numCells, 1 ), traced, qtrue );
+	VK_CreateBuffer( &rt.cellLight, sizeof( float ) * 2 * Q_max( numCells, 1 ), traced, qtrue );
+	// (no patch in any list until rtcells.comp has worked them out)
+	memset( rt.cellLists.mapped, 0xff, sizeof( uint32_t ) * VK_RT_LIST_WORDS * Q_max( numCells, 1 ) );
+	VK_RT_WriteLevelSet( 2, &rt.patches );
+	VK_RT_WriteLevelSet( 3, &rt.cellLists );
+	rt.cellState = ( numCells && !vk_patches->empty() ) ? 1 : 0;
 	rt.levelPending = qtrue;
-	ri.Printf( PRINT_DEVELOPER, "ray tracing: the level has %u solid triangles, %i fixtures, %i lit cells\n", rt.numTriangles,
-		(int)vk_fixtures->size(), (int)vk_cells->size() );
+	ri.Printf( PRINT_DEVELOPER, "ray tracing: the level has %u solid triangles, %i light patches, %i cells\n", rt.numTriangles,
+		(int)vk_patches->size(), numCells );
 }
 
 static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
@@ -827,20 +758,47 @@ static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
 	rt.levelReady = qtrue;
 }
 
-// shaders/rtcells.comp over the cells, after the top level of the frame holds the level
+// shaders/rtcells.comp over the cells of the grid, after the top level of the frame holds the level
 static void VK_RT_TraceCells( VkCommandBuffer cmd ) {
-	const VkDeviceAddress	cells = VK_RT_Address( &rt.cells ), fixtures = VK_RT_Address( &rt.fixtureList );
-	const VkDeviceAddress	hits = VK_RT_Address( &rt.cellHits );
-	const uint32_t			count = (uint32_t)vk_cells->size();
-	const uint32_t			push[8] = { (uint32_t)cells, (uint32_t)( cells >> 32 ), (uint32_t)fixtures, (uint32_t)( fixtures >> 32 ),
-		(uint32_t)hits, (uint32_t)( hits >> 32 ), count, (uint32_t)vk_fixtures->size() };
+	const world_t			*world = tr.world;
+	const VkDeviceAddress	patches = VK_RT_Address( &rt.patches ), grid = VK_RT_Address( &rt.grid );
+	const VkDeviceAddress	lists = VK_RT_Address( &rt.cellLists ), light = VK_RT_Address( &rt.cellLight );
+	const uint32_t			numCells = (uint32_t)( world->lightGridBounds[0] * world->lightGridBounds[1] * world->lightGridBounds[2] );
+	struct {
+		uint32_t			addresses[8];
+		float				origin[4];
+		float				size[4];
+		uint32_t			bounds[4];		// w: how many patches
+		float				sun[4];			// w: 1 when the level has one
+	} push;
+
+	push.addresses[0] = (uint32_t)patches;
+	push.addresses[1] = (uint32_t)( patches >> 32 );
+	push.addresses[2] = (uint32_t)grid;
+	push.addresses[3] = (uint32_t)( grid >> 32 );
+	push.addresses[4] = (uint32_t)lists;
+	push.addresses[5] = (uint32_t)( lists >> 32 );
+	push.addresses[6] = (uint32_t)light;
+	push.addresses[7] = (uint32_t)( light >> 32 );
+	VectorCopy( world->lightGridOrigin, push.origin );
+	push.origin[3] = 0.0f;
+	VectorCopy( world->lightGridSize, push.size );
+	push.size[3] = 0.0f;
+	for ( int i = 0; i < 3; i++ ) {
+		push.bounds[i] = (uint32_t)world->lightGridBounds[i];
+	}
+	push.bounds[3] = (uint32_t)vk_patches->size();
+	VectorCopy( tr.sunDirection, push.sun );
+	VectorNormalize( push.sun );
+	push.sun[3] = VectorLengthSquared( tr.sunDirection ) > 0.0f ? 1.0f : 0.0f;
 
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.cellsPipeline );
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.cellsLayout, 0, 1, &rt.sets[vk.frameIndex], 0, NULL );
-	qvkCmdPushConstants( cmd, rt.cellsLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), push );
-	qvkCmdDispatch( cmd, ( count + 63 ) / 64, 1, 1 );
-	// the CPU reads what it wrote when the frame is done
-	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT );
+	qvkCmdPushConstants( cmd, rt.cellsLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), &push );
+	qvkCmdDispatch( cmd, ( numCells + 63 ) / 64, 1, 1 );
+	// the shadows of the next frames read the lists, the CPU what it found when the frame is done
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+		VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_HOST_READ_BIT | VK_ACCESS_SHADER_READ_BIT );
 	rt.cellState = 2;
 	rt.cellFrame = vk.frameIndex;
 }
@@ -1247,34 +1205,18 @@ static void VK_RT_CreateCasters( void ) {
 	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.skinPipeline ) );
 }
 
-// shaders/rtcells.comp and the lights of each frame
+// shaders/rtcells.comp
 static void VK_RT_CreateLights( void ) {
 	VkPushConstantRange				push;
 	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
 
-	vk_fixtures = new std::vector<vkFixture_t>;
-	vk_cells = new std::vector<vkCell_t>;
-	for ( int i = 0; i < VK_FRAMES; i++ ) {
-		VkDescriptorBufferInfo	bufferInfo;
-		VkWriteDescriptorSet	write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+	vk_patches = new std::vector<vkPatch_t>;
 
-		VK_CreateBuffer( &rt.lights[i], sizeof( vk_lightData ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
-		bufferInfo.buffer = rt.lights[i].buffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range = VK_WHOLE_SIZE;
-		write.dstSet = rt.sets[i];
-		write.dstBinding = 2;
-		write.descriptorCount = 1;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		write.pBufferInfo = &bufferInfo;
-		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
-	}
-
-	// the top level from the set of the frame, the rest by address in the push constants
+	// the top level from the set of the frame, the rest by address and in numbers in the push constants
 	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 	push.offset = 0;
-	push.size = sizeof( uint32_t ) * 8;
+	push.size = sizeof( uint32_t ) * 24;
 	layout.setLayoutCount = 1;
 	layout.pSetLayouts = &rt.setLayout;
 	layout.pushConstantRangeCount = 1;
@@ -1290,7 +1232,7 @@ static void VK_RT_CreateLights( void ) {
 }
 
 static void VK_RT_CreateLayouts( void ) {
-	VkDescriptorSetLayoutBinding			bindings[3];
+	VkDescriptorSetLayoutBinding			bindings[4];
 	VkDescriptorSetLayoutCreateInfo			setInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	VkDescriptorPoolSize					sizes[3];
 	VkDescriptorPoolCreateInfo				pool = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -1300,7 +1242,7 @@ static void VK_RT_CreateLayouts( void ) {
 	// the globals of the frame, the top level, the depth of the scene
 	VkDescriptorSetLayout					passSets[3];
 
-	// the top level, the light grid and the lights of the level
+	// the top level, the light grid, the light patches of the level and the lists of the cells
 	memset( bindings, 0, sizeof( bindings ) );
 	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	bindings[0].descriptorCount = 1;
@@ -1311,7 +1253,9 @@ static void VK_RT_CreateLayouts( void ) {
 	bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	bindings[2] = bindings[1];
 	bindings[2].binding = 2;
-	setInfo.bindingCount = 3;
+	bindings[3] = bindings[1];
+	bindings[3].binding = 3;
+	setInfo.bindingCount = 4;
 	setInfo.pBindings = bindings;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &setInfo, NULL, &rt.setLayout ) );
 
@@ -1319,7 +1263,7 @@ static void VK_RT_CreateLayouts( void ) {
 	sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	sizes[0].descriptorCount = VK_FRAMES;
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	sizes[1].descriptorCount = VK_FRAMES * 2;
+	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	sizes[2].descriptorCount = 1;
 	pool.maxSets = VK_FRAMES + 1;
@@ -1350,11 +1294,12 @@ void VK_RT_Init( void ) {
 	VkPhysicalDeviceProperties2							props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &accel };
 
 	v_rtDebug = ri.Cvar_Get( "v_rtDebug", "0", CVAR_CHEAT,
-		"What the rays of the ray tracing see. 1: towards the sun, 2: from the eye against the depth, 3: the players towards the sun" );
+		"What the rays of the ray tracing see. 1: towards the sun, 2: from the eye against the depth, 3: the players towards the sun, "
+		"4: the light patches, 5: the direction of the strongest light" );
 	v_rtShadows = ri.Cvar_Get( "v_rtShadows", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players where the graphics card traces rays (cg_shadows 2). 0: none" );
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
-	v_rtLights = ri.Cvar_Get( "v_rtLights", "1", CVAR_ARCHIVE_ND, "Traced shadows from the lamps and the other lights found in the level. 0: from the sun and the light grid alone" );
+	v_rtLights = ri.Cvar_Get( "v_rtLights", "1", CVAR_ARCHIVE_ND, "Traced shadows from the textures that give light (lamps, light strips). 0: from the sun and the light grid alone" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
 	memset( &rt, 0, sizeof( rt ) );
 	if ( !vk.rayTracing || !vk.depthReadable ) {
@@ -1406,11 +1351,7 @@ void VK_RT_Shutdown( void ) {
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
 	qvkDestroyPipelineLayout( vk.device, rt.cellsLayout, NULL );
-	for ( int i = 0; i < VK_FRAMES; i++ ) {
-		VK_DestroyBuffer( &rt.lights[i] );
-	}
-	delete vk_fixtures;
-	delete vk_cells;
+	delete vk_patches;
 	qvkDestroyPipeline( vk.device, rt.skinPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.skinShader, NULL );
 	qvkDestroyPipelineLayout( vk.device, rt.skinLayout, NULL );
@@ -1477,10 +1418,9 @@ void VK_RT_Pass( void ) {
 	VK_RT_EnsureScratch( Q_max( Q_max( rt.levelPending ? rt.levelScratch : 0, casterScratch ), rt.topScratch ) );
 	// the frame that traced the cells is done when its place comes round again
 	if ( rt.cellState == 2 && rt.cellFrame == vk.frameIndex ) {
-		VK_RT_LightsFromCells();
+		VK_RT_FitPatches();
 		rt.cellState = 0;
 	}
-	memcpy( rt.lights[vk.frameIndex].mapped, vk_lightData, sizeof( float ) * 12 * vk_numLights );
 
 	// the builds of the frame before may still use the scratch memory
 	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
@@ -1515,7 +1455,7 @@ void VK_RT_Pass( void ) {
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
-		v_rtLights->integer ? (float)vk_numLights : 0.0f, vk_sunStrength );
+		v_rtLights->integer ? vk_patchScale : 0.0f, vk_sunStrength );
 	globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	memcpy( globals->rt, rows, sizeof( globals->rt ) );
 

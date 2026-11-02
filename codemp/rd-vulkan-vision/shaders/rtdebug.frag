@@ -10,9 +10,10 @@
 //      (something drawn that is not in the structure: what moves, glass, grates, the sky).
 //   3: the rays towards the sun against the players alone (mask 2): dark where a player is in the way, their sun
 //      shadows, also on themselves.
-//   4: the lights of the level (the fixtures that lit the light grid, VK_RT_LightsFromCells) as yellow dots over the
-//      scene, larger the stronger they are, dim where something is in front of them (their middle is often inside
-//      the fixture).
+//   4: the light patches of the level (the textures that give light, VK_RT_Patches) as dots over the scene, larger
+//      and whiter the more power they have, dim where something is in front of them.
+//   5: the direction of the strongest light in the list of the grid cell of each pixel as a colour (x red, y green,
+//      z blue, half grey for 0); black where the cell has none.
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -24,8 +25,14 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[16];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
-layout( set = 1, binding = 2, std430 ) readonly buffer Lights {
-	vec4	lights[];
+layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
+	vec4	cells[];		// three a cell, the first: ambient light, w 0 in a wall
+};
+layout( set = 1, binding = 2, std430 ) readonly buffer Patches {
+	vec4	patches[];		// three a patch: middle and power, the side it lights and its radius, how far it goes
+};
+layout( set = 1, binding = 3, std430 ) readonly buffer Lists {
+	uint	lists[];		// sixteen a cell: up to eight patches (all bits: none), their light
 };
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
 
@@ -57,17 +64,35 @@ void main() {
 		vec3 dir = normalize( p - eye );
 		float depth = distance( p, eye );
 
-		for ( int i = 0; i < int( W[15].z ); i++ ) {
-			vec3 to = lights[i * 3].xyz - eye;
+		for ( int i = 0; i < patches.length() / 3; i++ ) {
+			vec3 to = patches[i * 3].xyz - eye;
+			float power = patches[i * 3].w;
 			float t = dot( to, dir );
-			float size = 3.0 + 0.004 * t + log2( 1.0 + lights[i * 3 + 1].x ) * 0.25;
+			float size = 1.5 + 0.003 * t + log2( 1.0 + power ) * 0.3;
 
-			if ( t > 0.0 && length( to - dir * t ) < size ) {
-				o_color = t < depth + size ? vec4( 1.0, 0.85, 0.2, 1.0 ) : vec4( 0.5, 0.35, 0.05, 1.0 );
+			if ( power > 0.0 && t > 0.0 && length( to - dir * t ) < size ) {
+				vec3 c = mix( vec3( 1.0, 0.5, 0.1 ), vec3( 1.0, 1.0, 0.9 ), clamp( log2( 1.0 + power ) / 12.0, 0.0, 1.0 ) );
+
+				o_color = vec4( t < depth + size ? c : c * 0.35, 1.0 );
 				return;
 			}
 		}
 		discard;
+	} else if ( mode == 5 ) {
+		vec3 normal = SceneSurface( gl_FragCoord.xy, p, normalize( W[4].xyz - p ) );
+		vec3 q = p + normal * 12.0;
+		ivec3 bounds = ivec3( W[14].xyz );
+		ivec3 c = ivec3( floor( ( q - W[12].xyz ) * W[13].xyz + 0.5 ) );
+
+		o_color = vec4( 0.0, 0.0, 0.0, 1.0 );
+		if ( all( greaterThanEqual( c, ivec3( 0 ) ) ) && all( lessThan( c, bounds ) ) ) {
+			int cell = c.x + c.y * bounds.x + c.z * bounds.x * bounds.y;
+			uint first = lists[cell * 16];
+
+			if ( cells[cell * 3].w != 0.0 && first != 0xffffffffu ) {
+				o_color = vec4( normalize( patches[first * 3u].xyz - p ) * 0.5 + 0.5, 1.0 );
+			}
+		}
 	} else if ( mode == 1 || mode == 3 ) {
 		vec3 sun = normalize( W[11].xyz );
 		vec3 normal = SceneSurface( gl_FragCoord.xy, p, sun );

@@ -2,22 +2,24 @@
 #extension GL_EXT_ray_query : require
 
 // cg_shadows 2 on a device that traces rays (vk_rt.cpp): how much of the light of the level the players take from
-// each pixel of the view, into the shadow mask (red). The lights of the level (the sun, and the fixtures that lit the
-// light grid, VK_RT_LightsFromCells) are weighed by what each gives the point without anything in the way, in the units
-// of the grid; every ray picks one of them by its weight and a point on it (in the cone of the sun, on the disk of a
-// fixture). A ray against the level says whether the light reaches the point, one against the players alone (mask 2)
-// whether a player takes it: the part of the light that reaches it which the players take. Soft by the size of the
-// lights: sharp where a player stands on the point, wider the farther he is; several lamps give several shadows.
-// How much that darkens is the share of directed light in the light of the grid there. Where none of the lights the
-// rays picked reaches the point, the direction of the grid stands in for one. Surfaces that turn away from the light lie in the
-// shade of the level already and get nothing.
+// each pixel of the view, into the shadow mask (red). The lights at a point are the sun and the light patches of the
+// list of the grid cell it is in (the textures that give light, VK_RT_Patches; the list has those the cell sees),
+// each weighed by the light it gives the point without anything in the way, in the units of the light grid. Every
+// ray picks one of them by its weight and a point on it (in the cone of the sun, on the disk of a patch): a ray
+// against the level says whether that light reaches the point, one against the players alone (mask 2) whether a
+// player takes it. The darkness is the light the players take over all the light there, the light that reaches the
+// point and the ambient light of the grid: next to a bright lamp the shadow is dark, from a weak far one faint, and
+// every lamp gives its own shadow in its own direction, sharp where the player stands, softer the farther he is by
+// the size of the lamp. Where no light of the list reaches the point the direction of the grid stands in for one.
+// Surfaces that turn away from a light lie in the shade of the level already and get nothing from it.
 //
 // The numbers are the rt ones of the globals: the view as the wet places have it (rows 0-8), then
 //   11 the direction to the sun, w 1 when the level has one
 //   12 where the light grid begins, w how far a player may be from a point and still shadow it
 //   13 1 / the size of a cell of the grid, w a number that changes every frame (the noise of the rays)
 //   14 the cells of the grid along x, y, z, w the tangent of half the cone of the sun
-//   15 x rays a pixel, y the tangent of half the cone of the grid light, z how many lights, w the strength of the sun
+//   15 x rays a pixel, y the tangent of half the cone of the grid light, z the scale of the light of the patches
+//      (0: they are not used), w the strength of the sun
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -33,14 +35,19 @@ layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
 	vec4	cells[];
 };
-// three vec4 a light (a fixture of the level, VK_RT_LightsFromCells): origin, 1 / strength, radius of the disk the
-// rays aim at, reach, how far the fixture goes from its middle / the side it lights
-layout( set = 1, binding = 2, std430 ) readonly buffer Lights {
-	vec4	lights[];
+// three vec4 a light patch: middle and power, the side it lights and the radius of its disk, how far it goes
+layout( set = 1, binding = 2, std430 ) readonly buffer Patches {
+	vec4	patches[];
+};
+// sixteen words a cell: the numbers of up to eight patches it sees (all bits: none), then the light of each
+layout( set = 1, binding = 3, std430 ) readonly buffer Lists {
+	uint	lists[];
 };
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
 
-#define W	globals.rt
+#define W		globals.rt
+#define LIST	8
+#define NONE	0xffffffffu
 
 layout( location = 0 ) out vec4 o_color;
 
@@ -106,21 +113,6 @@ float Noise( uint k ) {
 	return float( v.x & 0xffffffu ) / 16777216.0;
 }
 
-// what light i gives at p, facing normal, without anything in the way
-float LightWeight( int i, vec3 p, vec3 normal ) {
-	vec4 a = lights[i * 3], b = lights[i * 3 + 1], c = lights[i * 3 + 2];
-	vec3 to = a.xyz - p;
-	float d2 = dot( to, to );
-
-	if ( d2 > b.z * b.z ) {
-		return 0.0;
-	}
-	to *= inversesqrt( max( d2, 1e-4 ) );
-	float facing = dot( normal, to );
-	float side = dot( c.xyz, c.xyz ) > 0.5 ? max( dot( c.xyz, -to ), 0.0 ) : 1.0;
-	return b.x * max( facing, 0.0 ) * side / max( d2, b.y * b.y + 16.0 );
-}
-
 // a direction in the cone of half width tangent around dir
 vec3 InCone( vec3 dir, float tangent, uint k ) {
 	vec3 t = normalize( cross( dir, abs( dir.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
@@ -131,6 +123,18 @@ vec3 InCone( vec3 dir, float tangent, uint k ) {
 	return normalize( dir + t * ( cos( a ) * r ) + b * ( sin( a ) * r ) );
 }
 
+// the cell of the grid nearest p, -1: outside the grid or in a wall
+int CellAt( vec3 p ) {
+	ivec3 bounds = ivec3( W[14].xyz );
+	ivec3 c = ivec3( floor( ( p - W[12].xyz ) * W[13].xyz + 0.5 ) );
+
+	if ( any( lessThan( c, ivec3( 0 ) ) ) || any( greaterThanEqual( c, bounds ) ) ) {
+		return -1;
+	}
+	int cell = c.x + c.y * bounds.x + c.z * bounds.x * bounds.y;
+	return cells[cell * 3].w != 0.0 ? cell : -1;
+}
+
 void main() {
 	vec3 p = ScenePoint( gl_FragCoord.xy );
 	vec3 eye = W[4].xyz;
@@ -138,8 +142,6 @@ void main() {
 	vec3 normal = SceneSurface( gl_FragCoord.xy, p, view );
 	float ambient, directed;
 	vec3 gridDir;
-	vec3 light;
-	float cone;
 
 	o_color = vec4( 0.0, 0.0, 0.0, 1.0 );
 	if ( distance( p, eye ) > 8192.0 ) {
@@ -147,22 +149,39 @@ void main() {
 	}
 	// (a little off the surface: the cells on it may be in the wall it is)
 	GridAt( p + normal * 8.0, ambient, directed, gridDir );
-	float strength = min( directed / ( ambient + directed + 1.0 ), 0.85 );
-	if ( strength < 0.02 ) {
-		return;
-	}
 	vec3 origin = p + normal * 1.5;
 	vec3 sun = W[11].xyz;
 	int count = int( W[15].x );
-	int numLights = int( W[15].z );
-	float sunWeight = ( W[11].w > 0.0 && W[15].w > 0.0 ) ? W[15].w * max( dot( normal, sun ), 0.0 ) : 0.0;
-	float total = sunWeight;
+	float scale = W[15].z;
 
-	for ( int i = 0; i < numLights; i++ ) {
-		total += LightWeight( i, p, normal );
+	// the lights at the point and what each gives it; the sun only where it shines (else most rays would go to it
+	// and find the roof)
+	float sunWeight = ( W[11].w > 0.0 && W[15].w > 0.0 ) ? W[15].w * max( dot( normal, sun ), 0.0 ) : 0.0;
+	if ( sunWeight > 0.0 && Blocked( origin, sun, 65536.0, 0x01u ) ) {
+		sunWeight = 0.0;
 	}
+	float weights[LIST];
+	uint which[LIST];
+	float total = sunWeight;
+	int cell = scale > 0.0 ? CellAt( p + normal * 12.0 ) : -1;
+
+	for ( int k = 0; k < LIST; k++ ) {
+		weights[k] = 0.0;
+		which[k] = cell >= 0 ? lists[cell * 16 + k] : NONE;
+		if ( which[k] == NONE ) {
+			continue;
+		}
+		vec4 a = patches[which[k] * 3u], b = patches[which[k] * 3u + 1u];
+		vec3 to = a.xyz - p;
+		float d2 = dot( to, to );
+
+		to *= inversesqrt( max( d2, 1e-4 ) );
+		float side = dot( b.xyz, b.xyz ) > 0.5 ? max( dot( b.xyz, -to ), 0.0 ) : 1.0;
+		weights[k] = scale * a.w * side * max( dot( normal, to ), 0.0 ) / max( d2, b.w * b.w + 16.0 );
+		total += weights[k];
+	}
+
 	if ( total > 0.0 ) {
-		// each ray: a light by its weight, a point on it, then whether it reaches the point and a player takes it
 		float reached = 0.0, taken = 0.0;
 
 		for ( int k = 0; k < count; k++ ) {
@@ -174,22 +193,23 @@ void main() {
 				dir = InCone( sun, W[14].w, uint( k ) );
 				len = 65536.0;
 			} else {
-				int i = 0;
+				int j = 0;
 
 				pick -= sunWeight;
-				for ( ; i < numLights - 1; i++ ) {
-					pick -= LightWeight( i, p, normal );
+				for ( ; j < LIST - 1; j++ ) {
+					pick -= weights[j];
 					if ( pick < 0.0 ) {
 						break;
 					}
 				}
-				vec3 to = lights[i * 3].xyz - origin;
+				vec4 a = patches[which[j] * 3u];
+				vec3 to = a.xyz - origin;
 				float d = length( to );
 
-				// a point on its disk, the disk facing the point; the ray against the level ends where the fixture
-				// begins, which is in the level itself when it is solid
-				dir = InCone( to / d, lights[i * 3 + 1].y / max( d, 1.0 ), uint( k ) );
-				len = max( d - lights[i * 3 + 1].w - 2.0, 1.0 );
+				// a point on its disk, the disk facing the point; the ray against the level ends where the patch
+				// begins, which is the level itself when it is solid
+				dir = InCone( to / d, patches[which[j] * 3u + 1u].w / max( d, 1.0 ), uint( k ) );
+				len = max( d - patches[which[j] * 3u + 2u].x - 1.0, 1.0 );
 			}
 			if ( !Blocked( origin, dir, len, 0x01u ) ) {
 				reached += 1.0;
@@ -197,7 +217,11 @@ void main() {
 			}
 		}
 		if ( reached > 0.0 ) {
-			o_color.r = strength * taken / reached;
+			// the light taken and the light that reaches, both in the units of the grid
+			float takenLight = total * taken / float( count );
+			float reachedLight = total * reached / float( count );
+
+			o_color.r = min( takenLight / ( reachedLight + ambient + 1.0 ), 0.9 );
 			return;
 		}
 	}
@@ -206,15 +230,15 @@ void main() {
 	if ( dot( gridDir, gridDir ) < 1e-4 ) {
 		return;
 	}
-	light = normalize( gridDir );
-	cone = W[15].y;
+	vec3 light = normalize( gridDir );
 	float facing = dot( normal, light );
 	if ( facing <= 0.0 ) {
 		return;
 	}
+	float strength = min( directed / ( ambient + directed + 1.0 ), 0.85 );
 	float blocked = 0.0;
 	for ( int k = 0; k < count; k++ ) {
-		blocked += Blocked( origin, InCone( light, cone, uint( k ) ), W[12].w, 0x02u ) ? 1.0 : 0.0;
+		blocked += Blocked( origin, InCone( light, W[15].y, uint( k ) ), W[12].w, 0x02u ) ? 1.0 : 0.0;
 	}
 	o_color.r = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
 }

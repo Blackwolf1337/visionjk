@@ -47,7 +47,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "vk_local.h"
 #include <vector>
 
-#define TEXCACHE_MAGIC		0x31585456		// "VTX1"
+#define TEXCACHE_MAGIC		0x32585456		// "VTX2": with the brightness of the image
 #define TEXCACHE_VERSION	1				// of the file and of what the packer makes: another one, another name
 #define TEXCACHE_MAX_LEVELS	16
 #define TEXCACHE_KEY		256
@@ -58,6 +58,7 @@ typedef struct texCacheHeader_s {
 	int		format;					// VKF_BC1 or VKF_BC3
 	int		mipLevels;
 	int		keyLength;				// the key follows, then the levels one after the other
+	float	averageLuma;			// image_t::averageLuma, which needs the pixels the image is made without
 } texCacheHeader_t;
 
 static struct {
@@ -241,6 +242,18 @@ qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height ) {
 		level += size;
 	}
 	return qtrue;
+}
+
+// R_CreateImage(): how bright the pixels of the image are that is being kept
+void VK_TexCacheLuma( float luma ) {
+	if ( texCache.pending ) {
+		texCache.recorded.averageLuma = luma;
+	}
+}
+
+// how bright the pixels were of the image VK_TexCacheFind() found, until VK_TexCacheEnd()
+float VK_TexCacheFoundLuma( void ) {
+	return texCache.file ? texCache.header.averageLuma : 0.0f;
 }
 
 // the levels of the image that R_CreateImage() makes next are kept, if it is one VK_TexCacheFind() did not find

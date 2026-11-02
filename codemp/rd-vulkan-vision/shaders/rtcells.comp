@@ -3,75 +3,121 @@
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_buffer_reference_uvec2 : require
 
-// Once per level (vk_rt.cpp, VK_RT_TraceCells): from every lit cell of the light grid towards every fixture of the
-// level, whether nothing of the level (mask 1) is between them, and along the direction of its light whether that
-// gets out to the sky. Ten words back for each cell: 1 when it gets out, how far it got (a float), eight words of
-// bits, one for each fixture it sees.
+// Once per level (vk_rt.cpp, VK_RT_TraceCells): for every cell of the light grid the light patches that give it
+// the most light and that it sees, nothing of the level (mask 1) between them, eight at most and the strongest
+// first (of the CANDIDATES strongest without anything in the way: in a level with many lamps those near a cell
+// are often in the rooms next to it): their numbers and the light each gives the middle of the cell (power, the side it lights, the square of the
+// distance). Also the sum of that light and whether the sun reaches the cell, for the fit to the grid.
 
 layout( local_size_x = 64 ) in;
 
 layout( set = 0, binding = 0 ) uniform accelerationStructureEXT u_top;
 
-layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Cells {
-	vec4	rows[];			// two a cell: its middle, the direction of its light
+layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Patches {
+	vec4	rows[];			// three a patch: middle and power, the side it lights and the radius of its disk, how far it goes
 };
-layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Fixtures {
-	vec4	rows[];			// two a fixture: its middle and how far it goes from there, the side it lights
+layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Grid {
+	vec4	rows[];			// three a cell, the first: ambient light, w 0 in a wall
 };
-layout( buffer_reference, std430, buffer_reference_align = 4 ) writeonly buffer Hits {
-	uint	words[];
+layout( buffer_reference, std430, buffer_reference_align = 4 ) writeonly buffer Lists {
+	uint	words[];		// sixteen a cell: eight numbers of patches (all bits: none), the light of each as a float
+};
+layout( buffer_reference, std430, buffer_reference_align = 8 ) writeonly buffer Light {
+	vec2	cells[];
 };
 
-layout( push_constant ) uniform Trace {
-	uvec2	cells;
-	uvec2	fixtures;
-	uvec2	hits;
-	uint	numCells;
-	uint	numFixtures;
+layout( push_constant ) uniform Cells {
+	uvec2	patches;
+	uvec2	grid;
+	uvec2	lists;
+	uvec2	light;
+	vec4	origin;
+	vec4	size;
+	uvec4	bounds;			// w: how many patches
+	vec4	sun;			// w: 1 when the level has one
 } u;
 
-#define REACH	8192.0
+#define CANDIDATES	64
+#define LIST		8
+#define REACH		2048.0
+#define NONE		0xffffffffu
 
-// how far the first triangle of the level is along the ray, tMax: none
-float Closest( vec3 origin, vec3 dir, float tMax ) {
+// whether nothing of the level is on the way from origin along dir before reach
+bool Clear( vec3 origin, vec3 dir, float reach ) {
 	rayQueryEXT query;
 
-	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT, 0x01u, origin, 0.0, dir, tMax );
+	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0x01u, origin, 0.0, dir, reach );
 	while ( rayQueryProceedEXT( query ) ) {
 	}
-	if ( rayQueryGetIntersectionTypeEXT( query, true ) == gl_RayQueryCommittedIntersectionNoneEXT ) {
-		return tMax;
-	}
-	return rayQueryGetIntersectionTEXT( query, true );
+	return rayQueryGetIntersectionTypeEXT( query, true ) == gl_RayQueryCommittedIntersectionNoneEXT;
 }
 
 void main() {
 	uint i = gl_GlobalInvocationID.x;
+	uint numCells = u.bounds.x * u.bounds.y * u.bounds.z;
 
-	if ( i >= u.numCells ) {
+	if ( i >= numCells ) {
 		return;
 	}
-	Cells cells = Cells( u.cells );
-	Fixtures fixtures = Fixtures( u.fixtures );
-	Hits hits = Hits( u.hits );
-	vec3 origin = cells.rows[i * 2u].xyz;
-	float out_ = Closest( origin, normalize( cells.rows[i * 2u + 1u].xyz ), REACH );
-	uint seen[8] = uint[8]( 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u );
+	Patches patches = Patches( u.patches );
+	Grid grid = Grid( u.grid );
+	Lists lists = Lists( u.lists );
+	Light light = Light( u.light );
+	uint count = 0u;
+	float total = 0.0;
 
-	for ( uint f = 0u; f < u.numFixtures; f++ ) {
-		vec4 fixture = fixtures.rows[f * 2u];
-		vec3 to = fixture.xyz - origin;
-		float d = length( to );
-		// up to where the fixture begins: it may be in the level itself
-		float reach = d - fixture.w - 1.0;
+	if ( grid.rows[i * 3u].w != 0.0 ) {
+		uvec3 c = uvec3( i % u.bounds.x, ( i / u.bounds.x ) % u.bounds.y, i / ( u.bounds.x * u.bounds.y ) );
+		vec3 p = u.origin.xyz + vec3( c ) * u.size.xyz;
+		float best[CANDIDATES];
+		uint which[CANDIDATES];
 
-		if ( reach <= 1.0 || Closest( origin, to / d, reach ) >= reach ) {
-			seen[f >> 5u] |= 1u << ( f & 31u );
+		for ( int k = 0; k < CANDIDATES; k++ ) {
+			best[k] = 0.0;
+			which[k] = NONE;
 		}
+		// the strongest without anything in the way
+		for ( uint n = 0u; n < u.bounds.w; n++ ) {
+			vec4 a = patches.rows[n * 3u], b = patches.rows[n * 3u + 1u];
+			vec3 to = a.xyz - p;
+			float d2 = dot( to, to );
+
+			if ( d2 > REACH * REACH ) {
+				continue;
+			}
+			float side = dot( b.xyz, b.xyz ) > 0.5 ? max( dot( b.xyz, -to * inversesqrt( max( d2, 1e-4 ) ) ), 0.0 ) : 1.0;
+			float e = a.w * side / max( d2, b.w * b.w + 16.0 );
+
+			if ( e <= best[CANDIDATES - 1] ) {
+				continue;
+			}
+			int k = CANDIDATES - 1;
+			for ( ; k > 0 && best[k - 1] < e; k-- ) {
+				best[k] = best[k - 1];
+				which[k] = which[k - 1];
+			}
+			best[k] = e;
+			which[k] = n;
+		}
+		// of those the ones it sees, up to where the patch begins (it may be part of the level itself)
+		for ( int k = 0; k < CANDIDATES && count < uint( LIST ) && which[k] != NONE; k++ ) {
+			vec3 to = patches.rows[which[k] * 3u].xyz - p;
+			float d = length( to );
+			float reach = d - patches.rows[which[k] * 3u + 2u].x - 1.0;
+
+			if ( reach <= 1.0 || Clear( p, to / d, reach ) ) {
+				lists.words[i * 16u + count] = which[k];
+				lists.words[i * 16u + 8u + count] = floatBitsToUint( best[k] );
+				total += best[k];
+				count++;
+			}
+		}
+		light.cells[i] = vec2( total, ( u.sun.w > 0.0 && Clear( p, u.sun.xyz, 65536.0 ) ) ? 1.0 : 0.0 );
+	} else {
+		light.cells[i] = vec2( 0.0 );
 	}
-	hits.words[i * 10u] = out_ >= REACH ? 1u : 0u;
-	hits.words[i * 10u + 1u] = floatBitsToUint( out_ );
-	for ( uint k = 0u; k < 8u; k++ ) {
-		hits.words[i * 10u + 2u + k] = seen[k];
+	for ( uint k = count; k < uint( LIST ); k++ ) {
+		lists.words[i * 16u + k] = NONE;
+		lists.words[i * 16u + 8u + k] = 0u;
 	}
 }
