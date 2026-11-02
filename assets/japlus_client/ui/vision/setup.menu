@@ -2094,14 +2094,15 @@
 
 		itemDef
 		{
-			name					vision_edit_tay_forceenemymodel
-			type					ITEM_TYPE_EDITFIELD
+			name					vision_pick_tay_forceenemymodel
+			type					ITEM_TYPE_BUTTON
 			text					@VISION_ENEMY_MODEL
-			descText				@VISION_EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
+			descText				@VISION_EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
 			cvar					"tay_forceEnemyModel"
-			maxChars				32
-			maxPaintChars			24
-			action { play "sound/interface/button1.wav" ; }
+			action
+			{
+				play "sound/interface/button1.wav" ; setcvar ui_modelPickTarget tay_forceEnemyModel ; open modelpick_popmenu ;
+			}
 			rect					306 926 432 52
 			page					3
 			scroll					1
@@ -2115,14 +2116,15 @@
 
 		itemDef
 		{
-			name					vision_edit_tay_forceallymodel
-			type					ITEM_TYPE_EDITFIELD
+			name					vision_pick_tay_forceallymodel
+			type					ITEM_TYPE_BUTTON
 			text					@VISION_ALLY_MODEL
-			descText				@VISION_EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
+			descText				@VISION_EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
 			cvar					"tay_forceAllyModel"
-			maxChars				32
-			maxPaintChars			24
-			action { play "sound/interface/button1.wav" ; }
+			action
+			{
+				play "sound/interface/button1.wav" ; setcvar ui_modelPickTarget tay_forceAllyModel ; open modelpick_popmenu ;
+			}
 			rect					306 978 432 52
 			page					3
 			scroll					1

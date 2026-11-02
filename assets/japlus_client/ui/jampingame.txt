@@ -50,5 +50,6 @@
 	loadMenu { "ui/jamp/updatechannel.menu" }
 	loadMenu { "ui/jamp/changelog.menu" }
 	loadMenu { "ui/jamp/cvarclean.menu" }
+	loadMenu { "ui/jamp/modelpick.menu" }
 }
 

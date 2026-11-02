@@ -200,5 +200,7 @@ XCVAR_DEF( ui_screenshotType,				"jpg",					UI_UpdateScreenshot,	CVAR_ARCHIVE )
 XCVAR_DEF( ui_singlePlayerActive,			"0",					NULL,				CVAR_INTERNAL )
 // VisionJK: how many the window "Clean Up Settings" lists, for its line when there are none (ui_cvarclean.c)
 XCVAR_DEF( ui_cvarCleanCount,				"0",					NULL,				CVAR_ROM|CVAR_INTERNAL )
+XCVAR_DEF( ui_modelPickTarget,				"",						NULL,				CVAR_INTERNAL )
+XCVAR_DEF( ui_modelPickName,				"",						NULL,				CVAR_INTERNAL )
 
 #undef XCVAR_DEF

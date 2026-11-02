@@ -238,9 +238,9 @@ TR = {
     'Seasonal Hats': 'Saisonale Hüte',
     'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.': 'Weihnachtsmütze an Weihnachten, Kürbis an Halloween, für alle ohne Hut.',
     'Enemy Model': 'Gegnermodell',
-    'Every opponent in this model, as model/skin. Empty: as they chose.': 'Jeder Gegner erscheint mit diesem Modell (Modell/Skin). Leer: wie vom Spieler gewählt.',
     'Ally Model': 'Teammodell',
-    'Every team mate in this model, as model/skin. Empty: as they chose.': 'Jeder Teamkamerad erscheint mit diesem Modell (Modell/Skin). Leer: wie gewählt.',
+    'Every opponent is shown in the model you pick. As They Chose: each keeps his own.': 'Jeder Gegner wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes.',
+    'Every team mate is shown in the model you pick. As They Chose: each keeps his own.': 'Jeder Mitspieler wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes.',
     'Saber Team Colours': 'Teamfarben für Klingen',
     'In team games every blade in the colour of its team. Off: blades keep their colour.': 'In Teamspielen hat jede Klinge die Farbe ihres Teams. Aus: Klingen behalten ihre Farbe.',
     'Two-Coloured Staff': 'Zweifarbiger Stab',
@@ -731,6 +731,9 @@ CGAME = {
     'Left speaker': 'Linker Lautsprecher',
     'Right speaker': 'Rechter Lautsprecher',
     'No boombox here': 'Keine Boombox hier',
+    # the model picker of Setup (codemp/ui/ui_main.c, ui/jamp/modelpick.menu)
+    'As They Chose': 'Wie gewählt',
+    'Pick a Model': 'Modell wählen',
     # the players of music in Setup (codemp/ui/ui_main.c)
     'No player of music runs right now': 'Gerade läuft kein Musikplayer',
     'not running': 'läuft nicht',

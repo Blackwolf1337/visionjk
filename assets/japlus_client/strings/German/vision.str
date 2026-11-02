@@ -805,17 +805,17 @@ REFERENCE           ENEMY_MODEL
 LANG_ENGLISH        "Enemy Model"
 LANG_GERMAN         "Gegnermodell"
 
-REFERENCE           EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
-LANG_ENGLISH        "Every opponent in this model, as model/skin. Empty: as they chose."
-LANG_GERMAN         "Jeder Gegner erscheint mit diesem Modell (Modell/Skin). Leer: wie vom Spieler gewählt."
+REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
+LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
+LANG_GERMAN         "Jeder Gegner wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes."
 
 REFERENCE           ALLY_MODEL
 LANG_ENGLISH        "Ally Model"
 LANG_GERMAN         "Teammodell"
 
-REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
-LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
-LANG_GERMAN         "Jeder Teamkamerad erscheint mit diesem Modell (Modell/Skin). Leer: wie gewählt."
+REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
+LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
+LANG_GERMAN         "Jeder Mitspieler wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
@@ -2900,6 +2900,14 @@ LANG_GERMAN         "Nahkampf + Macht-Entzug ab Stufe 2, vor einem Feind"
 REFERENCE           MELEE_OR_STAFF_FORWARD_LEFT_ALT_ATTA
 LANG_ENGLISH        "Melee or Staff + Forward + Left + Alt Attack"
 LANG_GERMAN         "Nahkampf oder Stab + Vorwärts + Links + 2. Feuermodus"
+
+REFERENCE           AS_THEY_CHOSE
+LANG_ENGLISH        "As They Chose"
+LANG_GERMAN         "Wie gewählt"
+
+REFERENCE           PICK_A_MODEL
+LANG_ENGLISH        "Pick a Model"
+LANG_GERMAN         "Modell wählen"
 
 
 ENDMARKER

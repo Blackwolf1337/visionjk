@@ -7506,10 +7506,12 @@ static void Item_Row_Paint( itemDef_t *item ) {
 			}
 			x += 16.0f * parent->canvasUnit;
 		}
-		// (the name has the room up to the widget; a row that is a button has only an arrow at its end)
+		// (the name has the room up to the widget; a row that is a button has only an arrow at its end, unless it
+		// picks a value for a cvar, which it shows)
 		const qboolean	arrowOnly = (qboolean)( item->type != ITEM_TYPE_YESNO && item->type != ITEM_TYPE_MULTI
 							&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_SLIDER && item->type != ITEM_TYPE_BIND
-							&& item->type != ITEM_TYPE_EDITFIELD && item->type != ITEM_TYPE_NUMERICFIELD );
+							&& item->type != ITEM_TYPE_EDITFIELD && item->type != ITEM_TYPE_NUMERICFIELD
+							&& !( item->type == ITEM_TYPE_BUTTON && item->cvar ) );
 		const float		end = arrowOnly ? widget.x + widget.w - arrow : widget.x;
 
 		Row_Name( x, r->y, r->h - 1.0f, end - pad - x, item->textscale, text, word, font );
@@ -7716,7 +7718,15 @@ static void Item_Row_Paint( itemDef_t *item ) {
 	}
 
 	default:
-		// something to click: an arrow says so
+		// something to click: an arrow says so. A button that opens a picker for a cvar (the model rows of Setup,
+		// modelpick.menu) shows the value before it, empty is "As They Chose".
+		if ( item->type == ITEM_TYPE_BUTTON && item->cvar ) {
+			DC->getCVarString( item->cvar, word, sizeof( word ) );
+			Color_Mix( color, item->window.foreColor, white, f );
+			color[3] = off ? 0.5f : 1.0f;
+			Row_Text( widget.x + widget.w - arrow - 4.0f, widget.y, widget.h, widget.w - arrow - 4.0f, ITEM_ALIGN_RIGHT, small, color,
+				word[0] ? word : Vision_Text( "As They Chose" ), font );
+		}
 		Skin_Arrow( widget.x + widget.w - 1.0f - arrow * 0.55f, mid - arrow * 0.4f, arrow * 0.55f, arrow * 0.8f, qfalse, ink );
 		break;
 	}

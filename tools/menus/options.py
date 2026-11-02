@@ -73,6 +73,8 @@ class Layout:
 #   ('bind', name, command, what for)
 #   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
 #   ('menu', name, menu, what for)                a button that opens a window of its own (a menu of the lists)
+#   ('pick', name, cvar, what for)                a button that shows a model the cvar holds and opens the model picker
+#                                               (modelpick.menu), which writes the model it is given into that cvar
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
@@ -146,8 +148,8 @@ SETUP = [
          'How players look who are in a duel you are not part of. Their colour is v_duelColour in the console.'),
         ('yesno', 'Their Blades', 'v_duelShowSabers', 'The blades of players who are in a duel you are not part of.'),
         ('head', 'Players'),
-        ('edit', 'Enemy Model', 'tay_forceEnemyModel', 32, 'Every opponent in this model, as model/skin. Empty: as they chose.'),
-        ('edit', 'Ally Model', 'tay_forceAllyModel', 32, 'Every team mate in this model, as model/skin. Empty: as they chose.'),
+        ('pick', 'Enemy Model', 'tay_forceEnemyModel', 'Every opponent is shown in the model you pick. As They Chose: each keeps his own.'),
+        ('pick', 'Ally Model', 'tay_forceAllyModel', 'Every team mate is shown in the model you pick. As They Chose: each keeps his own.'),
         ('head', 'Weapons'),
         ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
         ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
@@ -546,6 +548,14 @@ def menu_row(spec):
             Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['open', menu, ';'])]
 
 
+def pick_row(spec):
+    """A button among the rows that shows the model its cvar holds and opens the model picker for that cvar."""
+    _, text, cvar, about = spec
+    return [Entry('name', ['vision_pick_' + cvar.lower()]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+            Entry('descText', [ref(about)]), Entry('cvar', [quoted(cvar)]),
+            Entry('action', [], list(CLICK) + ['setcvar', 'ui_modelPickTarget', cvar, ';', 'open', 'modelpick_popmenu', ';'])]
+
+
 def new_row(spec):
     """A setting the old menus did not have."""
     kind, text, cvar = spec[:3]
@@ -553,6 +563,8 @@ def new_row(spec):
         return open_row(spec)
     if kind == 'menu':
         return menu_row(spec)
+    if kind == 'pick':
+        return pick_row(spec)
     b = [Entry('name', ['vision_%s_%s' % (kind, cvar.lower().replace(' ', '_').replace('+', ''))]), Entry('type', [TYPES[kind]]),
          Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])])]
     if kind == 'slider':

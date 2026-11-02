@@ -185,9 +185,7 @@ MORE = {
     'Seasonal Hats': ('Chapeaux de saison', 'Sombreros de temporada'),
     'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.': ("Un bonnet de Noël à Noël et une citrouille à Halloween pour ceux qui n'ont pas de chapeau.", 'Un gorro de Papá Noel en Navidad y una calabaza en Halloween para quien no lleve sombrero.'),
     'Enemy Model': ('Modèle des ennemis', 'Modelo de los enemigos'),
-    'Every opponent in this model, as model/skin. Empty: as they chose.': ('Tous les adversaires avec ce modèle (modèle/skin). Vide : selon leur choix.', 'Todos los rivales con este modelo (modelo/skin). Vacío: el que elijan.'),
     'Ally Model': ('Modèle des alliés', 'Modelo de los aliados'),
-    'Every team mate in this model, as model/skin. Empty: as they chose.': ('Tous les coéquipiers avec ce modèle (modèle/skin). Vide : selon leur choix.', 'Todos los compañeros con este modelo (modelo/skin). Vacío: el que elijan.'),
     'Saber Team Colours': ("Couleurs d'équipe des sabres", 'Colores de equipo de los sables'),
     'In team games every blade in the colour of its team. Off: blades keep their colour.': ('En équipe, chaque lame prend la couleur de son équipe. Désactivé : les lames gardent leur couleur.', 'En partidas por equipos, cada hoja toma el color de su equipo. Desactivado: las hojas conservan su color.'),
     'Two-Coloured Staff': ('Bâton bicolore', 'Bastón de dos colores'),
@@ -771,4 +769,9 @@ MORE = {
     'Melee or Staff + Forward + Left + Alt Attack': ('Mêlée ou Bâton + Avant + Gauche + Alt + Attaquer', 'Cuerpo a cuerpo o Bastón + hacia delante + izquierda + alt-atacar'),
     'View Bots Only:': ('Afficher bots seuls :', 'Ver solo bots:'),
     'Include servers on which only bots play': ('Inclure les serveurs où seuls des bots jouent', 'Incluir servidores en los que solo juegan bots'),
+    # the model picker of Setup
+    'As They Chose': ('Leur choix', 'Su elección'),
+    'Pick a Model': ('Choisir un modèle', 'Elegir modelo'),
+    'Every opponent is shown in the model you pick. As They Chose: each keeps his own.': ('Chaque adversaire est montré avec le modèle choisi. Leur choix: chacun garde le sien.', 'Cada rival se muestra con el modelo que elijas. Su elección: cada uno conserva el suyo.'),
+    'Every team mate is shown in the model you pick. As They Chose: each keeps his own.': ('Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien.', 'Cada compañero se muestra con el modelo que elijas. Su elección: cada uno conserva el suyo.'),
 }

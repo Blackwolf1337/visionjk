@@ -511,6 +511,8 @@ static void UI_BuildFindPlayerList(qboolean force);
 static int QDECL UI_ServersQsortCompare( const void *arg1, const void *arg2 );
 static int UI_MapCountByGameType(qboolean singlePlayer);
 static int UI_HeadCountByColor( void );
+static void UI_ModelPickSet( const char *model );
+static void UI_ModelPickOpen( void );
 static void UI_ParseGameInfo(const char *teamFile);
 static const char *UI_SelectedMap(int index, int *actual);
 static int UI_GetIndexFromSelection(int actual);
@@ -6458,6 +6460,10 @@ static void UI_RunMenuScript(char **args)
 		} else if (Q_stricmp(name, "CvarCleanRemove") == 0 || Q_stricmp(name, "CvarCleanRemoveAll") == 0) {
 			UI_CvarCleanRemove( (qboolean)!Q_stricmp( name, "CvarCleanRemoveAll" ) );
 			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "ModelPickOpen") == 0) {	// VisionJK: the window of the model picker
+			UI_ModelPickOpen();
+		} else if (Q_stricmp(name, "ModelPickClear") == 0) {
+			UI_ModelPickSet( "" );
 		}
 		else if (Q_stricmp(name, "checkservername") == 0)
 		{
@@ -8473,6 +8479,10 @@ static int UI_FeederCount(float feederID)
 		case FEEDER_Q3HEADS:
 			return UI_HeadCountByColor();
 
+		case FEEDER_FORCEMODEL:
+			UI_Q3HeadsNeeded();
+			return uiInfo.q3HeadCount;
+
 		case FEEDER_SIEGE_TEAM1:
 			if (!siegeTeam1)
 			{
@@ -8744,6 +8754,9 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	else if (feederID == FEEDER_Q3HEADS) {
 		int actual;
 		return UI_SelectedTeamHead(index, &actual);
+	}
+	else if (feederID == FEEDER_FORCEMODEL) {
+		return ( index >= 0 && index < uiInfo.q3HeadCount ) ? uiInfo.q3HeadNames[index] : "";
 	}
 	else if (feederID == FEEDER_SIEGE_TEAM1)
 	{
@@ -9068,6 +9081,87 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	return "";
 }
 
+/*
+=================
+UI_HeadIcon
+
+The picture of a model of the list (uiInfo.q3HeadNames), registered when it is first drawn
+=================
+*/
+static qhandle_t UI_HeadIcon( int index ) {
+	if (!uiInfo.q3HeadIcons[index])
+	{ //this isn't the best way of doing this I guess, but I didn't want a whole seperate string array
+	  //for storing shader names. I can't just replace q3HeadNames with the shader name, because we
+	  //print what's in q3HeadNames and the icon name would look funny.
+		char iconNameFromSkinName[256];
+		int i = 0;
+		int skinPlace;
+		const char *skinSlash = strrchr( uiInfo.q3HeadNames[index], '/' );
+
+		if ( !skinSlash )
+		{ // (UI_BuildQ3Model_List keeps only names with one)
+			return 0;
+		}
+		skinPlace = (int)( skinSlash - uiInfo.q3HeadNames[index] ) + 1; //remember that this is where the skin name begins
+
+		//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
+		Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
+
+		i = strlen(iconNameFromSkinName);
+
+		while (iconNameFromSkinName[i] != '/')
+		{
+			i--;
+		}
+
+		i++;
+		iconNameFromSkinName[i] = 0; //terminate, and append..
+		Q_strcat(iconNameFromSkinName, 256, "icon_");
+
+		//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
+		Q_strcat( iconNameFromSkinName, sizeof( iconNameFromSkinName ), uiInfo.q3HeadNames[index] + skinPlace );
+
+		//and now we are ready to register (thankfully this will only happen once)
+		uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
+	}
+	return uiInfo.q3HeadIcons[index];
+}
+
+/*
+=================
+UI_ModelPickSet / UI_ModelPickOpen
+
+The window of the model picker (ui/jamp/modelpick.menu), opened by a row of Setup that names its cvar in
+ui_modelPickTarget (tay_forceEnemyModel, tay_forceAllyModel): the models of the list as pictures, a click writes
+model/skin into that cvar, "As They Chose" empties it. ui_modelPickName is what the window shows under the list.
+=================
+*/
+static void UI_ModelPickSet( const char *model ) {
+	const char *target = UI_Cvar_VariableString( "ui_modelPickTarget" );
+
+	if ( Q_stricmp( target, "tay_forceEnemyModel" ) && Q_stricmp( target, "tay_forceAllyModel" ) ) {
+		return;
+	}
+	trap->Cvar_Set( target, model );
+	trap->Cvar_Set( "ui_modelPickName", model[0] ? model : Vision_Text( "As They Chose" ) );
+}
+
+static void UI_ModelPickOpen( void ) {
+	char	now[MAX_QPATH];
+	int		i;
+
+	UI_Q3HeadsNeeded();
+	Q_strncpyz( now, UI_Cvar_VariableString( UI_Cvar_VariableString( "ui_modelPickTarget" ) ), sizeof( now ) );
+	trap->Cvar_Set( "ui_modelPickName", now[0] ? now : Vision_Text( "As They Chose" ) );
+	for ( i = 0; i < uiInfo.q3HeadCount; i++ ) {
+		if ( now[0] && !Q_stricmp( uiInfo.q3HeadNames[i], now ) ) {
+			break;
+		}
+	}
+	// nothing marked while every player keeps his own model
+	Menu_SetFeederSelection( NULL, FEEDER_FORCEMODEL, i < uiInfo.q3HeadCount ? i : -1, NULL );
+}
+
 static qhandle_t UI_FeederItemImage(float feederID, int index) {
 	int	validCnt,i;
 	static char info[MAX_STRING_CHARS];
@@ -9120,44 +9214,13 @@ static qhandle_t UI_FeederItemImage(float feederID, int index) {
 				}
 			}
 
-			if (!uiInfo.q3HeadIcons[index])
-			{ //this isn't the best way of doing this I guess, but I didn't want a whole seperate string array
-			  //for storing shader names. I can't just replace q3HeadNames with the shader name, because we
-			  //print what's in q3HeadNames and the icon name would look funny.
-				char iconNameFromSkinName[256];
-				int i = 0;
-				int skinPlace;
-				const char *skinSlash = strrchr( uiInfo.q3HeadNames[index], '/' );
-
-				if ( !skinSlash )
-				{ // (UI_BuildQ3Model_List keeps only names with one)
-					return 0;
-				}
-				skinPlace = (int)( skinSlash - uiInfo.q3HeadNames[index] ) + 1; //remember that this is where the skin name begins
-
-				//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
-				Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
-
-				i = strlen(iconNameFromSkinName);
-
-				while (iconNameFromSkinName[i] != '/')
-				{
-					i--;
-				}
-
-				i++;
-				iconNameFromSkinName[i] = 0; //terminate, and append..
-				Q_strcat(iconNameFromSkinName, 256, "icon_");
-
-				//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
-				Q_strcat( iconNameFromSkinName, sizeof( iconNameFromSkinName ), uiInfo.q3HeadNames[index] + skinPlace );
-
-				//and now we are ready to register (thankfully this will only happen once)
-				uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
-			}
-			return uiInfo.q3HeadIcons[index];
+			return UI_HeadIcon( index );
 		}
     }
+	else if (feederID == FEEDER_FORCEMODEL)
+	{
+		return ( index >= 0 && index < uiInfo.q3HeadCount && uiInfo.q3HeadNames[index][0] ) ? UI_HeadIcon( index ) : 0;
+	}
 	else if (feederID == FEEDER_SIEGE_TEAM1)
 	{
 		if (!siegeTeam1)
@@ -9350,6 +9413,15 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 	}
 	if ( feederID == FEEDER_CVARCLEAN ) {
 		UI_CvarCleanSelect( index );
+		return qtrue;
+	}
+
+	// VisionJK: a click on a model of the window of the model picker writes it into the cvar the row named
+	// (ui_modelPickTarget); the selection that only shows what the cvar holds (UI_ModelPickOpen) does not
+	if ( feederID == FEEDER_FORCEMODEL ) {
+		if ( item && index >= 0 && index < uiInfo.q3HeadCount && uiInfo.q3HeadNames[index][0] ) {
+			UI_ModelPickSet( uiInfo.q3HeadNames[index] );
+		}
 		return qtrue;
 	}
 
