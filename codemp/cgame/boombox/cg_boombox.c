@@ -34,7 +34,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // server drops a command that comes within a second of another one.
 //
 // On a server without the game module of this tree the masterserver keeps the boxes of the server, when it says it plays boxes (VOICE_FLAG_BOXES). Then all of it goes through the way of the voice
-// chat to the master (voice/cg_voice.c): what the player does as a VOICE_BOX, what a box is now back the same way,
+// chat to the master (voice/cg_voice.c): what the player does as a RELAY_BOX, what a box is now back the same way,
 // and the boxes this client hears in its state, since the master does not know where anybody stands.
 
 #include "cgame/cg_local.h"
@@ -250,7 +250,7 @@ static const char *const boxVerbs[] = { "", "play", "place", "move", "pause", "r
 =================
 Box_Do
 
-What this player does with a box (BOX_DO_*): the client command boombox to a server of this tree, a VOICE_BOX to
+What this player does with a box (BOX_DO_*): the client command boombox to a server of this tree, a RELAY_BOX to
 the masterserver. at and yaw: where it goes (place, move, part, and play into box 255: a new box). value: the
 volume, the second to jump to, the place in the line of the song to take out, the part to move. text: what to
 play. Box 255 for watch: no box any more. A new sound system is Box_DoSystem().
@@ -724,7 +724,7 @@ void CG_BoomboxMasterReady( qboolean ready ) {
 	}
 }
 
-// a VOICE_BOX of the master: what a box is now, who put it down, that it is gone, or a line for this player
+// a RELAY_BOX of the master: what a box is now, who put it down, that it is gone, or a line for this player
 void CG_BoomboxFromMaster( const byte *data, int len ) {
 	boxSay_t	say;
 	vec3_t		origin;

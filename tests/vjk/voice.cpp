@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE( status_round_trip )
 	char		text[VOICE_STATUS_TEXT];
 	qboolean	away = qfalse;
 	const int	len = BG_VoiceStatusPack( out, qtrue, "listens to \xE2\x99\xAA lofi" );
-	const voicePacket_t p = Packet( VOICE_STATUS, out, len );
+	const voicePacket_t p = Packet( RELAY_STATUS, out, len );
 
 	BOOST_CHECK( BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) );
 	BOOST_CHECK( away );
@@ -53,18 +53,18 @@ BOOST_AUTO_TEST_CASE( status_refused )
 	qboolean	away;
 	const byte	control[] = { 0, 'a', '\n', 'b' }, del[] = { 0, 'a', 127 }, plain[] = { 0, 'a', 'b' };
 
-	voicePacket_t p = Packet( VOICE_STATUS, control, sizeof( control ) );
+	voicePacket_t p = Packet( RELAY_STATUS, control, sizeof( control ) );
 	BOOST_CHECK( !BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) );
-	p = Packet( VOICE_STATUS, del, sizeof( del ) );
+	p = Packet( RELAY_STATUS, del, sizeof( del ) );
 	BOOST_CHECK( !BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) );
 	// no room for it and its end
-	p = Packet( VOICE_STATUS, plain, sizeof( plain ) );
+	p = Packet( RELAY_STATUS, plain, sizeof( plain ) );
 	BOOST_CHECK( !BG_VoiceStatusUnpack( &p, &away, text, 2 ) );
 	BOOST_CHECK( BG_VoiceStatusUnpack( &p, &away, text, 3 ) );
 	// another kind of packet, and one without its flags
-	p = Packet( VOICE_LOOK, plain, sizeof( plain ) );
+	p = Packet( RELAY_LOOK, plain, sizeof( plain ) );
 	BOOST_CHECK( !BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) );
-	p = Packet( VOICE_STATUS, plain, 0 );
+	p = Packet( RELAY_STATUS, plain, 0 );
 	BOOST_CHECK( !BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) );
 }
 
@@ -73,16 +73,16 @@ BOOST_AUTO_TEST_CASE( look )
 	char		text[32];
 	const byte	good[] = "kyle/default", bad[] = { 'a', '\x1b', 'b' }, high[] = { 'a', 0xC3, 0xA4 };
 
-	voicePacket_t p = Packet( VOICE_LOOK, good, sizeof( good ) - 1 );
+	voicePacket_t p = Packet( RELAY_LOOK, good, sizeof( good ) - 1 );
 	BOOST_CHECK( BG_VoiceLookUnpack( &p, text, sizeof( text ) ) );
 	BOOST_CHECK_EQUAL( std::string( text ), "kyle/default" );
 	BOOST_CHECK( !BG_VoiceLookUnpack( &p, text, (int)sizeof( good ) - 1 ) );
-	p = Packet( VOICE_LOOK, bad, sizeof( bad ) );
+	p = Packet( RELAY_LOOK, bad, sizeof( bad ) );
 	BOOST_CHECK( !BG_VoiceLookUnpack( &p, text, sizeof( text ) ) );
 	// names of models are ASCII
-	p = Packet( VOICE_LOOK, high, sizeof( high ) );
+	p = Packet( RELAY_LOOK, high, sizeof( high ) );
 	BOOST_CHECK( !BG_VoiceLookUnpack( &p, text, sizeof( text ) ) );
-	p = Packet( VOICE_LOOK, good, 0 );
+	p = Packet( RELAY_LOOK, good, 0 );
 	BOOST_CHECK( !BG_VoiceLookUnpack( &p, text, sizeof( text ) ) );
 }
 

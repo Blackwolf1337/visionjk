@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // models/cosmetics/capes/<name>.md3 on *back, and settings/cosmetics/hats|capes/<name>.cosmetic (JSON) may move
 // one for a model and skin. What one wears (tay_hat, tay_cape) reaches the other players of this tree: on a server of
 // this tree through the game module (status/g_status.c, the commands tay_look), on any other through the
-// masterserver (VOICE_LOOK, voice/cg_voice.c). Legacy clients see nothing: they would need the models. A player
+// masterserver (RELAY_LOOK, voice/cg_voice.c). Legacy clients see nothing: they would need the models. A player
 // whose hat this machine lacks wears none here.
 //
 // And TaystJK's ways, so its players and these see each other's hats (2026-10-17):

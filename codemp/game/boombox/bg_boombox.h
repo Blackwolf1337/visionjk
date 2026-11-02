@@ -28,7 +28,7 @@ and hear it: it is no entity, nothing of it is in the game protocol, and a clien
 
 The server fetches a song itself (yt-dlp and ffmpeg, game/boombox/g_boombox_fetch.c), codes it with Opus and
 sends it out over the relay of the voice chat (game/voice/g_voice.c), as the voice of a speaker with the number
-BOX_SPEAKER_BASE + the number of the box: a VOICE_AUDIO datagram as bg_voice.h has it. A cgame from before the
+BOX_SPEAKER_BASE + the number of the box: a RELAY_AUDIO datagram as bg_voice.h has it. A cgame from before the
 boombox drops a speaker number that is no client number, and it is never sent one anyway.
 
 Over the game connection:
@@ -69,7 +69,7 @@ box moved.
 
 On a server without the game module of this tree the masterserver keeps the boxes of its room (all clients of one
 game server), and everything goes through the datagrams of the voice chat:
-VOICE_BOX of bg_voice.h, after the head, every number with its low byte first:
+RELAY_BOX of bg_voice.h, after the head, every number with its low byte first:
 
 to the master	what box nameLen name[nameLen]		and for BOX_DO_PLACE and BOX_DO_MOVE x[4] y[4] z[4] yaw[2],
 													for BOX_DO_SYSTEM three of those (table, left, right), for
@@ -155,7 +155,7 @@ looks at the bits of its four boxes only.
 #define TV_APART			48.0f		//	and how far it stands from any other part at least
 
 #define BOX_MASTER_MAX		4			// boxes a room of the masterserver has at most
-#define BOX_NAME_MAX		35			// bytes of the name in a VOICE_BOX to the master at most
+#define BOX_NAME_MAX		35			// bytes of the name in a RELAY_BOX to the master at most
 
 // what a client does with a box through the masterserver
 #define BOX_DO_PLAY			1
@@ -198,7 +198,7 @@ looks at the bits of its four boxes only.
 #define BOX_LOADING			4			// the song is being fetched: nothing is heard yet
 #define BOX_LOOKING			8			// a song that was asked for is being looked up
 
-// a VOICE_BOX to the master, unpacked
+// a RELAY_BOX to the master, unpacked
 typedef struct boxDo_s {
 	int		what, box;
 	char	name[BOX_NAME_MAX + 1];
@@ -211,7 +211,7 @@ typedef struct boxDo_s {
 	char	text[BOX_ASK];
 } boxDo_t;
 
-// a VOICE_BOX to a client, unpacked
+// a RELAY_BOX to a client, unpacked
 typedef struct boxSay_s {
 	int		what, box;
 	int		rev;

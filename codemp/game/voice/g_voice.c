@@ -327,7 +327,7 @@ static void G_VoiceRadio( int speaker, const voicePacket_t *in ) {
 	if ( !vs_voiceRadio.integer || !voiceClients[speaker].ready || client->pers.connected != CON_CONNECTED
 		|| client->pers.jp.silenced || !client->pers.jp.clanPass[0] )
 		return;
-	out.type = VOICE_AUDIO;
+	out.type = RELAY_AUDIO;
 	out.client = speaker;
 	// a cgame from before the radio takes it for a voice close by that it is not shown, see bg_voice.h
 	out.flags = VOICE_FLAG_RADIO | VOICE_FLAG_UNSEEN;
@@ -386,13 +386,13 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 	voiceClient_t	*vc;
 	qboolean		fromSelf;
 
-	// (a VOICE_STATE, a VOICE_STATUS and a VOICE_LOOK are for the masterserver: this relay knows from the game
+	// (a RELAY_STATE, a RELAY_STATUS and a RELAY_LOOK are for the masterserver: this relay knows from the game
 	// where everybody is, and the statuses and looks of a server with it go through the game connection,
 	// status/g_status.c)
 	// (only what a client sends this relay: the others are for the masterserver, and what is passed on keeps its
 	// type, so anything else would reach the other clients as if a master had sent it)
 	if ( from->sin_family != AF_INET || !BG_VoiceUnpack( datagram, len, qfalse, &p )
-		|| ( p.type != VOICE_HELLO && p.type != VOICE_AUDIO && p.type != VOICE_RADIO ) || p.client >= level.maxclients ) {
+		|| ( p.type != RELAY_HELLO && p.type != RELAY_AUDIO && p.type != RELAY_RADIO ) || p.client >= level.maxclients ) {
 		voiceRefused++;
 		return qfalse;
 	}
@@ -434,7 +434,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 	vc->viaGame = viaGame;
 	vc->ready = qtrue;
 
-	if ( p.type == VOICE_HELLO ) {
+	if ( p.type == RELAY_HELLO ) {
 		// the answer tells him that the way is open in both directions
 		voicePacket_t	ack = p;
 		byte			out[VOICE_MAX_DATAGRAM];
@@ -444,7 +444,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 		outLen = BG_VoicePack( out, sizeof( out ), &ack, qtrue );
 		if ( outLen )
 			G_VoiceSend( vc, out, outLen );
-	} else if ( p.type == VOICE_RADIO ) {
+	} else if ( p.type == RELAY_RADIO ) {
 		G_VoiceRadio( p.client, &p );
 	} else {
 		G_VoiceRelay( p.client, &p );
@@ -526,7 +526,7 @@ void G_VoiceSendBox( int clientNum, int speaker, int seq, int distance, const by
 	if ( !G_VoiceReady( clientNum ) )
 		return;
 	memset( &out, 0, sizeof( out ) );
-	out.type = VOICE_AUDIO;
+	out.type = RELAY_AUDIO;
 	out.client = speaker;
 	out.token = vc->token;
 	out.seq = seq;

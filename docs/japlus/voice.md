@@ -218,13 +218,13 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 ## The boombox
 
 The relay also carries the songs of the boombox ([boombox.md](boombox.md)): the server codes them itself and
-sends them as `VOICE_AUDIO` with a speaker number behind the players, `MAX_CLIENTS` + the box, only to clients
+sends them as `RELAY_AUDIO` with a speaker number behind the players, `MAX_CLIENTS` + the box, only to clients
 that asked for boxes (`vs_box hello`). A cgame from before drops a speaker number that is no client number. A
 client whose voice chat is off (`v_voice 0`) still opens the way to the relay for the songs, without the
 microphone, and drops the voices.
 
 On a server without the game module the masterserver plays the boxes: the state to it may carry one more byte,
-the boxes the client hears, and `VOICE_BOX` (type 6) carries what a player does with a box and what a box is now,
+the boxes the client hears, and `RELAY_BOX` (type 6) carries what a player does with a box and what a box is now,
 for clients and masters that said they know it (`VOICE_FLAG_BOXES`). See [boombox.md](boombox.md).
 
 ## On a server without it
@@ -251,7 +251,7 @@ who never connected during this level. A player who was kicked or banned, or lef
 is made of the server address and `sv_serverid`) until the next map or `map_restart`, and the first session that
 claims a client number keeps it. There is no fix for that without a server that vouches for its players.
 
-**The token.** Nobody hands one out over a game connection here. The cgame sends its first `VOICE_STATE`
+**The token.** Nobody hands one out over a game connection here. The cgame sends its first `RELAY_STATE`
 without one, the master answers with the token that address has for that room and client number, and the cgame
 says the same again with it. The master works the token out (SHA-1 of a secret it made at its start, the
 address, the room and the number) and keeps nothing of an address until a datagram came back from there with
@@ -299,10 +299,10 @@ both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   fl
 
 - `clan` is the first eight bytes of the SHA-1 of "clan", the room and `cp_clanPwd`, all zero for a player
   without a clan password. Players of one server with the same password say the same bytes, the master never
-  has the password, and the bytes are others with every level. A frame sent as type 3 (`VOICE_RADIO`) goes to
+  has the password, and the bytes are others with every level. A frame sent as type 3 (`RELAY_RADIO`) goes to
   the members of the room that said the same clan, wherever their game has them, as the relay of a game server
-  sends it: a `VOICE_AUDIO` with the flags of the radio and a distance of 0. The two masks do not count for it.
-- Type 4 (`VOICE_STATUS`) is what stands above the head of a player ([client.md](client.md), "Statuses above
+  sends it: a `RELAY_AUDIO` with the flags of the radio and a distance of 0. The two masks do not count for it.
+- Type 4 (`RELAY_STATUS`) is what stands above the head of a player ([client.md](client.md), "Statuses above
   the heads"): one byte of flags (1: away from the keyboard) and up to 63 bytes of text in UTF-8, the music he
   shares. The master hands it to the other members of the room that sent the long state, one a second from a
   session at most, and none with a control character in it. It keeps nothing of it: every client says its
@@ -468,10 +468,10 @@ Nothing of the voice chat is in the game protocol.
 
 ## The clan radio in the protocol
 
-A client sends a frame for its clan as `VOICE_RADIO` (type 3) in place of `VOICE_AUDIO`, only to a relay that
+A client sends a frame for its clan as `RELAY_RADIO` (type 3) in place of `RELAY_AUDIO`, only to a relay that
 said it knows the radio: the answer to `vs_voiceLink hello` has a fifth number for that (`VOICE_CAP_RADIO`), which a
 cgame from before does not read. The relay (`G_VoiceRadio`) hands the frame to the clients whose clan password
-is the one of the speaker, as a `VOICE_AUDIO` with `VOICE_FLAG_RADIO`, `VOICE_FLAG_UNSEEN` and a distance of 0.
+is the one of the speaker, as a `RELAY_AUDIO` with `VOICE_FLAG_RADIO`, `VOICE_FLAG_UNSEEN` and a distance of 0.
 The masterserver does the same for the members of a room that named the clan of the speaker, so a
 client plays the radio the same from either. A cgame that knows the first flag plays it without a place through `BG_VoiceRadio()`. One from before the radio
 (release 0.1.1) knows the second: for it the frame is a voice close by that it is not shown, which it plays
@@ -606,12 +606,12 @@ loss, a server over the internet.
 without sound hardware.
 
 - Unit tests of `bg_voice.c` (`tools/voicetest/run.sh`): 126 checks with the sanitizers, 18 of them for
-  `VOICE_STATE` (both directions, every wrong length, the masks byte for byte). The 800000 random datagrams
+  `RELAY_STATE` (both directions, every wrong length, the masks byte for byte). The 800000 random datagrams
   pass with the new type among them.
 - The master by itself (`tools/voicetest/master.sh`): built with the address and undefined behaviour
   sanitizers and talked to over the loopback addresses of the machine, each client from an address of its own.
   41 checks: the token is named for 35 bytes with 13 and nothing is kept, sound with it before the second
-  `VOICE_STATE` is no session, a voice passes only where the listener asks and the speaker allows, rooms do
+  `RELAY_STATE` is no session, a voice passes only where the listener asks and the speaker allows, rooms do
   not mix, a second address that says a number that is taken is refused and reaches nobody, the token of
   somebody else from another address or under another number is nobody, a new port of the same address is
   the same session, 3000 datagrams that are no voice get no answer, of 300 at once 60 a second are handed on,

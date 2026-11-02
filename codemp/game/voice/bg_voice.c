@@ -42,31 +42,31 @@ sides.
 ===============================================================================
 */
 
-// How long what follows the head has to be. A hello carries nothing, sound is never empty, and a VOICE_STATE
+// How long what follows the head has to be. A hello carries nothing, sound is never empty, and a RELAY_STATE
 // carries its fields on the way to the master (with or without the clan) and nothing on the way back. A
-// VOICE_STATUS has its flags and maybe a text, both ways, a VOICE_LOOK a text.
+// RELAY_STATUS has its flags and maybe a text, both ways, a RELAY_LOOK a text.
 static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	switch ( type ) {
-	case VOICE_HELLO:
+	case RELAY_HELLO:
 		return ( bodyLen == 0 ) ? qtrue : qfalse;
-	case VOICE_AUDIO:
+	case RELAY_AUDIO:
 		return ( bodyLen > 0 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
-	case VOICE_RADIO:
-		// only ever to the relay: a client gets what came over the radio as a VOICE_AUDIO with a flag
+	case RELAY_RADIO:
+		// only ever to the relay: a client gets what came over the radio as a RELAY_AUDIO with a flag
 		return ( !toClient && bodyLen > 0 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
-	case VOICE_STATE:
+	case RELAY_STATE:
 		if ( toClient )
 			return ( bodyLen == 0 ) ? qtrue : qfalse;
 		return ( bodyLen == VOICE_STATE_BYTES || bodyLen == VOICE_STATE_LONG_BYTES || bodyLen == VOICE_STATE_BOX_BYTES ) ? qtrue : qfalse;
-	case VOICE_BOX:
+	case RELAY_BOX:
 		// to the master: what, box and the length of a name at least. To a client: what and box at least
 		return ( bodyLen >= ( toClient ? 2 : 3 ) && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
-	case VOICE_STATUS:
+	case RELAY_STATUS:
 		return ( bodyLen >= 1 && bodyLen <= VOICE_STATUS_TEXT ) ? qtrue : qfalse;
-	case VOICE_LOOK:
+	case RELAY_LOOK:
 		// a text, both ways: "<hat> <cape>"
 		return ( bodyLen >= 1 && bodyLen < VOICE_STATUS_TEXT ) ? qtrue : qfalse;
-	case VOICE_TOY:
+	case RELAY_TOY:
 		// a throw, both ways, or to the master the hello of a cgame that draws toys
 		return ( bodyLen == TOY_BYTES || ( !toClient && bodyLen == TOY_HELLO_BYTES ) ) ? qtrue : qfalse;
 	default:
@@ -137,7 +137,7 @@ qboolean BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket
 	return qtrue;
 }
 
-// what a VOICE_STATE tells the master, as the bytes that follow its head
+// what a RELAY_STATE tells the master, as the bytes that follow its head
 void BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_BYTES], unsigned int hear, unsigned int allow ) {
 	int i;
 
@@ -148,7 +148,7 @@ void BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_
 	}
 }
 
-// and back, from a VOICE_STATE that BG_VoiceUnpack() took as one to the server. *room points into the datagram.
+// and back, from a RELAY_STATE that BG_VoiceUnpack() took as one to the server. *room points into the datagram.
 void BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned int *hear, unsigned int *allow ) {
 	const byte	*in = p->data + VOICE_ROOM_BYTES;
 
@@ -165,7 +165,7 @@ qboolean BG_VoiceStateBoxes( const voicePacket_t *p, int *boxes ) {
 	return qtrue;
 }
 
-// The clan of a client that sent the long VOICE_STATE, VOICE_CLAN_BYTES inside the datagram. NULL: it sent the
+// The clan of a client that sent the long RELAY_STATE, VOICE_CLAN_BYTES inside the datagram. NULL: it sent the
 // short one, or has no clan (all zero).
 const byte *BG_VoiceStateClan( const voicePacket_t *p ) {
 	const byte	*clan = p->data + VOICE_STATE_BYTES;
@@ -180,7 +180,7 @@ const byte *BG_VoiceStateClan( const voicePacket_t *p ) {
 	return NULL;
 }
 
-// What a VOICE_STATUS carries after its head. Returns its length. A text that is too long is cut where a
+// What a RELAY_STATUS carries after its head. Returns its length. A text that is too long is cut where a
 // character of UTF-8 ends.
 int BG_VoiceStatusPack( byte out[VOICE_STATUS_TEXT], qboolean away, const char *text ) {
 	int len = (int)strlen( text );
@@ -200,7 +200,7 @@ qboolean BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *tex
 	const int	len = p->dataLen - 1;
 	int			i;
 
-	if ( p->type != VOICE_STATUS || len < 0 || len >= textSize )
+	if ( p->type != RELAY_STATUS || len < 0 || len >= textSize )
 		return qfalse;
 	for ( i = 0; i < len; i++ ) {
 		if ( p->data[1 + i] < ' ' || p->data[1 + i] == 127 )
@@ -212,11 +212,11 @@ qboolean BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *tex
 	return qtrue;
 }
 
-// The text of a VOICE_LOOK. qfalse: it has a control character in it or does not fit
+// The text of a RELAY_LOOK. qfalse: it has a control character in it or does not fit
 qboolean BG_VoiceLookUnpack( const voicePacket_t *p, char *text, int textSize ) {
 	int i;
 
-	if ( p->type != VOICE_LOOK || p->dataLen < 1 || p->dataLen >= textSize )
+	if ( p->type != RELAY_LOOK || p->dataLen < 1 || p->dataLen >= textSize )
 		return qfalse;
 	for ( i = 0; i < p->dataLen; i++ ) {
 		if ( p->data[i] < ' ' || p->data[i] >= 127 )
