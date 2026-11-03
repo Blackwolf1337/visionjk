@@ -171,13 +171,13 @@ vec4 PbrGrid( Draw d, vec3 world ) {
 	return vec4( ( v.rgb / v.a ) * 2.0 - 1.0, v.a );
 }
 
-// The reflection probe a point of the world takes (R_CreateProbes): the number in the cell of the light grid it lies
-// in, read as it is (a pixel of the grid picture, in the layout of PbrGrid).
-float ProbeAt( Draw d, vec3 world ) {
-	vec3 cells = d.grid2.xyz;
-	ivec3 g = ivec3( clamp( floor( ( world - d.grid0.xyz ) * d.grid1.xyz + 0.5 ), vec3( 0.0 ), cells - 1.0 ) );
+// The reflection probe a cell of the light grid takes (R_CreateProbes): its number, read as it is from a pixel of the
+// grid picture (the layout of PbrGrid).
+float ProbeOfCell( Draw d, ivec3 g ) {
+	ivec3 cells = ivec3( d.grid2.xyz );
 	int tiles = int( d.grid0.w );
-	ivec2 texel = ivec2( ( g.z % tiles ) * int( cells.x ) + g.x, ( g.z / tiles ) * int( cells.y ) + g.y );
+	g = clamp( g, ivec3( 0 ), cells - 1 );
+	ivec2 texel = ivec2( ( g.z % tiles ) * cells.x + g.x, ( g.z / tiles ) * cells.y + g.y );
 	return floor( texelFetch( TEX5( d ), texel, 0 ).r * 255.0 + 0.5 );
 }
 
@@ -208,6 +208,29 @@ vec3 ProbeSample( Draw d, float probe, vec3 dir, float level ) {
 	float margin = 0.5 / ( float( d.probeSize ) / exp2( level ) );
 	st = clamp( st, vec2( margin ), vec2( 1.0 - margin ) );
 	return textureLod( TEX6( d ), vec2( ( face + st.x ) / 6.0, ( probe + st.y ) / float( d.probeCount ) ), level ).rgb;
+}
+
+// What the probes around a point of the world see in a direction: the eight cells of the grid around it, each with
+// the probe it takes, weighed as the light grid is (by how near the point is to each), so the mirror goes over from
+// one probe to the next across a cell and not at its edge. Where all eight take the same probe it is read once.
+vec3 ProbesAround( Draw d, vec3 world, vec3 dir, float level ) {
+	vec3 g = ( world - d.grid0.xyz ) * d.grid1.xyz;
+	vec3 base = floor( g ), f = g - base;
+	float probes[8];
+	bool same = true;
+	for ( int i = 0; i < 8; i++ ) {
+		probes[i] = ProbeOfCell( d, ivec3( base ) + ivec3( i & 1, ( i >> 1 ) & 1, ( i >> 2 ) & 1 ) );
+		same = same && probes[i] == probes[0];
+	}
+	if ( same ) {
+		return ProbeSample( d, probes[0], dir, level );
+	}
+	vec3 sum = vec3( 0.0 );
+	for ( int i = 0; i < 8; i++ ) {
+		vec3 w3 = mix( 1.0 - f, f, vec3( float( i & 1 ), float( ( i >> 1 ) & 1 ), float( ( i >> 2 ) & 1 ) ) );
+		sum += ProbeSample( d, probes[i], dir, level ) * ( w3.x * w3.y * w3.z );
+	}
+	return sum;
 }
 
 float D_GGX( float nh, float a ) {
@@ -317,7 +340,7 @@ vec4 PbrStage( Draw d ) {
 		return vec4( n * 0.5 + 0.5, alpha );
 	} else if ( d.pbr.w == 8.0 && ( d.pbrFlags & PBR_PROBES ) != 0u ) {
 		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
-		return vec4( ProbeSample( d, ProbeAt( d, world ), normalize( mat3( t.model ) * reflect( -toEye, n ) ), 0.0 ), alpha );
+		return vec4( ProbesAround( d, world, normalize( mat3( t.model ) * reflect( -toEye, n ) ), 0.0 ), alpha );
 	} else if ( d.pbr.w == 7.0 ) {
 		return vec4( ( d.pbrFlags & PBR_RMO ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_NORMAL ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_GRID ) != 0u ? 1.0 : 0.0, alpha );
 	} else if ( d.pbr.w == 6.0 ) {
@@ -334,7 +357,7 @@ vec4 PbrStage( Draw d ) {
 	if ( ( d.pbrFlags & PBR_PROBES ) != 0u ) {
 		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
 		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, n ) );
-		vec3 around = pow( ProbeSample( d, ProbeAt( d, world ), mirror, roughness * 5.0 ), vec3( 2.2 ) );
+		vec3 around = pow( ProbesAround( d, world, mirror, roughness * 5.0 ), vec3( 2.2 ) );
 		color += around * occlusion * EnvBRDF( f0, roughness, nv );
 	} else {
 		color += ambient * occlusion * EnvBRDF( f0, roughness, max( nv, 0.6 ) );

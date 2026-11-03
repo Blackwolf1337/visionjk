@@ -749,7 +749,8 @@ VK_PbrDraw
 
 VisionJK: the draw of a stage with a material (shaderStage_t::pbr, or a normal map on a stage of the level): which
 light it is lit by and its maps (VKP_* of vk_local.h). qfalse for a stage that is drawn as it always was: one of a
-model whose light is not the one of its entity, a second texture that is not the lightmap, the glow pass, r_lightmap.
+model whose light is not the one of its entity, a second texture that is not the lightmap, a stage that adds its
+colour, the glow pass, r_lightmap.
 ===============
 */
 static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader, qboolean refract, vkDraw_t *draw ) {
@@ -760,6 +761,11 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 		return qfalse;
 	}
 	if ( !pStage->pbr && !( pStage->normalMap && second->image && second->isLightmap ) ) {
+		return qfalse;
+	}
+	// a stage that adds its colour to what is under it is light itself (a sign, a glowing decal), not a surface lit
+	const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
+	if ( dst == GLS_DSTBLEND_ONE || dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
 		return qfalse;
 	}
 	if ( rgbGen ) {
