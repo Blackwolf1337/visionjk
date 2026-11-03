@@ -239,6 +239,27 @@ float D_GGX( float nh, float a ) {
 	return a2 / ( 3.14159265 * k * k );
 }
 
+// Parallax occlusion (normalHeightMap, parallaxDepth; the material tool previews it the same way): the ray from the eye
+// goes down into the height in the alpha of the normal map (1 at the top) in steps until it is below it, and the
+// last step is split where it crosses. e: the direction to the eye in the frame of the texture, z out of the surface.
+// The texture is read with the slopes of the pixel, the loop is not the same for neighbouring pixels.
+vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth ) {
+	const int STEPS = 16;
+	vec2 dx = dFdx( uv ), dy = dFdy( uv );
+	vec2 delta = -e.xy / max( e.z, 0.2 ) * depth / float( STEPS );
+	float layer = 1.0, h = textureGrad( TEX2( d ), uv, dx, dy ).a, lastLayer = 1.0, lastH = h;
+	vec2 cur = uv;
+	for ( int i = 0; i < STEPS && layer > h; i++ ) {
+		lastLayer = layer;
+		lastH = h;
+		layer -= 1.0 / float( STEPS );
+		cur += delta;
+		h = textureGrad( TEX2( d ), cur, dx, dy ).a;
+	}
+	float before = lastH - lastLayer, after = h - layer;
+	return cur - delta * clamp( after / max( after - before, 1e-4 ), 0.0, 1.0 );
+}
+
 // the reflection of light that comes from all around, for a roughness and an angle (Karis, "Physically Based Shading
 // on Mobile", 2014)
 vec3 EnvBRDF( vec3 f0, float roughness, float nv ) {
@@ -271,10 +292,7 @@ vec4 PbrStage( Draw d ) {
 	mat3 frame = CotangentFrame( flat_, v_position, uv );
 
 	if ( ( d.pbrFlags & PBR_HEIGHT ) != 0u && d.pbr.z > 0.0 ) {
-		// parallax: the texture moved along the view by how high the surface is there (one step)
-		vec3 e = vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) );
-		float h = texture( TEX2( d ), uv ).a - 0.5;
-		uv += e.xy / max( e.z, 0.25 ) * h * d.pbr.z;
+		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), d.pbr.z );
 	}
 
 	vec4 base = texture( TEX0( d ), uv );
