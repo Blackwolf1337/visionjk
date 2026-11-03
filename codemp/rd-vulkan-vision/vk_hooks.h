@@ -44,6 +44,8 @@ qboolean VK_HasScope( void );
 // whether RE_AddWet() is drawn, and whether its puddles mirror a view of their own (R_PuddleView of tr_main.cpp)
 qboolean VK_HasWet( void );
 qboolean VK_PuddleMirror( void );
+qboolean VK_ProbesSupported( void );
+qboolean VK_ProbesLost( void );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );

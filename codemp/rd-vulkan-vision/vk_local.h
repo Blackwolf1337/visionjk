@@ -107,6 +107,17 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
 #define VKD_MATERIAL		0x08000000u		// lit per pixel with material (normal map in tex1, shine), see generic.frag
+#define VKD_PBR				0x10000000u		// lit per pixel with a material of GGX (VKP_*), see generic.frag PbrStage
+
+// vkDraw_t.pbrFlags: what a stage with VKD_PBR has and how it is lit
+#define VKP_NORMAL			0x01u			// a normal map in tex2
+#define VKP_RMO				0x02u			// roughness, metalness and occlusion in tex3
+#define VKP_ORM				0x04u			//	in the order occlusion, roughness, metalness
+#define VKP_HEIGHT			0x08u			// the height in the alpha of the normal map, for parallax
+#define VKP_ENTITY			0x10u			// lit by the light of its entity (ambient, directed, its direction)
+#define VKP_LIGHTMAP		0x20u			// lit by its lightmap in tex1; without this nor VKP_ENTITY by its vertex colors
+#define VKP_GRID			0x40u			// the light grid of the level in tex4 (grid*), for the direction of that light
+#define VKP_PROBES			0x80u			// the reflection probes of the level in tex5 and tex6 (R_CreateProbes)
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
@@ -114,6 +125,11 @@ typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
 	uint32_t	tex0, tex1;			// indices into the texture table
 	uint32_t	flags;				// VKD_*
+	uint32_t	tex2, tex3, tex4;	// VKD_PBR: the normal map, the rmo map and the light grid of the level
+	uint32_t	pbrFlags;			//	VKP_*
+	uint32_t	tex5, tex6;			//	VKP_PROBES: which probe a cell of the grid takes, the faces of the probes
+	uint32_t	probeSize;			//	pixels a face each way
+	uint32_t	probeCount;			//	probes in the atlas
 	float		baseColor[4];		// color = baseColor + vertColor * vertex color
 	float		vertColor[4];
 	float		texMat0[8];			// two rows: s' = dot( row0.xy, st ) + row0.z, row0.w: phase of the turbulence
@@ -134,6 +150,10 @@ typedef struct vkDraw_s {		// once per draw
 	uint32_t	styles;				// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 	float		material[4];		// VKD_MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
 	float		material2[4];		//	and light wrapped into the shadow, glints of crystals
+	float		pbr[4];				// VKD_PBR: roughness, metalness, parallax depth, v_pbr (2 and up: debug views)
+	float		grid0[4];			//	VKP_GRID: the origin of the light grid in the world, its layers across
+	float		grid1[4];			//	1 / the size of a cell, w the height of its picture
+	float		grid2[4];			//	how many cells it has each way, w the width of its picture
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -335,6 +355,8 @@ void		VK_QuadRecord( vec4_t *row, int kind, const vec3_t a, float aw, const vec3
 void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
 qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
 extern cvar_t	*v_vkSprites;
+extern cvar_t	*v_pbr;			// vk_shade.cpp
+extern cvar_t	*v_pbrProbes;
 extern cvar_t	*v_vkGrass;
 qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );
 void		VK_AddSurface( surfaceType_t *surface );
@@ -391,6 +413,9 @@ void		VK_DrawWet( void );
 void		VK_ViewRows( float ( *rows )[4], int *viewport );
 qboolean	VK_BeginPuddle( void );
 void		VK_EndPuddle( void );
+qboolean	VK_BeginProbe( void );
+void		VK_EndProbe( int face, int probe, int numProbes );
+void		VK_DestroyProbeAtlas( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );

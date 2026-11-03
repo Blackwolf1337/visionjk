@@ -295,6 +295,257 @@ static void LogLight( trRefEntity_t *ent ) {
 
 /*
 =================
+R_CreatePbrGrid
+
+VisionJK: the light grid of the level as a picture, for the stages with a material (generic.frag PbrGrid): they
+split the light of their lightmap into the part that comes from one direction and the rest, so that bumps and shine
+follow the lamps. A pixel per cell, the layers of the grid side by side, pbrGridTiles across: in RGB the direction
+the light comes from times the share of that light (directed / (directed + ambient)), as x * 0.5 + 0.5, in alpha
+whether the cell lies in the open (1) or in a wall (0), and RGB times alpha, so that what the texture filtering mixes
+of open cells and walls comes out right again after dividing by alpha. The picture is a power of two each way, the
+rest of it stays empty.
+=================
+*/
+void R_CreatePbrGrid( const char *mapName ) {
+	const world_t	*w = tr.world;
+	int				tiles, rows, width, height;
+	byte			*pic;
+	char			name[MAX_QPATH];
+
+	tr.pbrGrid = NULL;
+	tr.pbrGridTiles = 0;
+	if ( !w || !w->lightGridData || !w->lightGridArray ) {
+		return;
+	}
+	tiles = (int)ceil( sqrt( (double)w->lightGridBounds[2] ) );
+	rows = ( w->lightGridBounds[2] + tiles - 1 ) / tiles;
+	// (the size of a picture is a power of two: R_CreateImage)
+	for ( width = 1; width < w->lightGridBounds[0] * tiles; width <<= 1 ) {
+	}
+	for ( height = 1; height < w->lightGridBounds[1] * rows; height <<= 1 ) {
+	}
+	if ( width > glConfig.maxTextureSize || height > glConfig.maxTextureSize ) {
+		ri.Printf( PRINT_DEVELOPER, "the light grid of %ix%ix%i is too large for one picture, materials light without it\n",
+			w->lightGridBounds[0], w->lightGridBounds[1], w->lightGridBounds[2] );
+		return;
+	}
+
+	pic = (byte *)Z_Malloc( width * height * 4, TAG_TEMP_WORKSPACE, qtrue );
+	for ( int z = 0; z < w->lightGridBounds[2]; z++ ) {
+		for ( int y = 0; y < w->lightGridBounds[1]; y++ ) {
+			for ( int x = 0; x < w->lightGridBounds[0]; x++ ) {
+				const int		cell = x + y * w->lightGridBounds[0] + z * w->lightGridBounds[0] * w->lightGridBounds[1];
+				const mgrid_t	*data;
+				byte			*out;
+				vec3_t			ambient = { 0, 0, 0 }, directed = { 0, 0, 0 }, dir;
+				float			a, d, share;
+				int				lat, lng;
+
+				if ( cell >= w->numGridArrayElements ) {
+					continue;
+				}
+				data = w->lightGridData + w->lightGridArray[cell];
+				if ( data->styles[0] == LS_LSNONE ) {
+					continue;	// in a wall: all four bytes stay 0
+				}
+				for ( int j = 0; j < MAXLIGHTMAPS && data->styles[j] != LS_LSNONE; j++ ) {
+					for ( int c = 0; c < 3; c++ ) {
+						ambient[c] += data->ambientLight[j][c] * styleColors[data->styles[j]][c] / 255.0f;
+						directed[c] += data->directLight[j][c] * styleColors[data->styles[j]][c] / 255.0f;
+					}
+				}
+				// as R_SetupEntityLightingGrid decodes it
+				lat = data->latLong[1] * ( FUNCTABLE_SIZE / 256 );
+				lng = data->latLong[0] * ( FUNCTABLE_SIZE / 256 );
+				dir[0] = tr.sinTable[( lat + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK] * tr.sinTable[lng];
+				dir[1] = tr.sinTable[lat] * tr.sinTable[lng];
+				dir[2] = tr.sinTable[( lng + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK];
+
+				a = 0.2126f * ambient[0] + 0.7152f * ambient[1] + 0.0722f * ambient[2];
+				d = 0.2126f * directed[0] + 0.7152f * directed[1] + 0.0722f * directed[2];
+				share = ( a + d > 0.0f ) ? d / ( a + d ) : 0.0f;
+
+				out = pic + ( ( ( z / tiles ) * w->lightGridBounds[1] + y ) * width + ( z % tiles ) * w->lightGridBounds[0] + x ) * 4;
+				for ( int c = 0; c < 3; c++ ) {
+					out[c] = (byte)Com_Clamp( 0.0f, 255.0f, ( dir[c] * share * 0.5f + 0.5f ) * 255.0f + 0.5f );
+				}
+				out[3] = 255;
+			}
+		}
+	}
+
+	R_IssuePendingRenderCommands();
+	Com_sprintf( name, sizeof( name ), "*%s/pbrgrid", mapName );
+	tr.pbrGrid = R_CreateImage( name, pic, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.pbrGridTiles = tiles;
+	Z_Free( pic );
+}
+
+// the cluster of the visibility of the level a point lies in, -1 in a wall
+static int R_PointCluster( const vec3_t p ) {
+	return ri.CM_LeafCluster( ri.CM_PointLeafnum( p ) );
+}
+
+// a reflection probe at p, unless it is in a wall or near one there is already
+static qboolean R_AddProbe( const vec3_t p, float spacing ) {
+	if ( tr.numProbes >= MAX_PROBES || R_PointCluster( p ) < 0 ) {
+		return qfalse;
+	}
+	for ( int i = 0; i < tr.numProbes; i++ ) {
+		if ( DistanceSquared( p, tr.probes[i] ) < spacing * spacing ) {
+			return qfalse;
+		}
+	}
+	VectorCopy( p, tr.probes[tr.numProbes++] );
+	return qtrue;
+}
+
+/*
+=================
+R_CreateProbes
+
+VisionJK: the reflection probes of a level and which one each cell of the light grid takes. A probe is a point the
+level is drawn from in all six directions while it loads (R_ProbeViews), and what the stages with a material mirror
+(generic.frag PbrStage). The points: where players are and fight (the spawns, weapons and items, a little over the
+floor), then where the grid has open cells furthest from all of those, until MAX_PROBES or until none is far from
+one. A cell takes the nearest probe in its view (the visibility of the level), else the nearest one; in pbrProbes,
+a pixel per cell in the layout of pbrGrid, the number of the probe in red.
+=================
+*/
+void R_CreateProbes( const char *mapName ) {
+	const world_t	*w = tr.world;
+	const char		*p;
+	char			*token, classname[MAX_QPATH];
+	vec3_t			origin;
+	qboolean		hasOrigin;
+	int				probeCluster[MAX_PROBES];
+	byte			*pic;
+	char			name[MAX_QPATH];
+
+	tr.numProbes = 0;
+	tr.probeNext = 0;
+	tr.probesReady = qfalse;
+	tr.pbrProbes = NULL;
+	if ( !w || !tr.pbrGrid || !w->entityString ) {
+		return;
+	}
+
+	// the places of the game: an entity a block of keys and values in braces
+	p = w->entityString;
+	while ( 1 ) {
+		token = COM_ParseExt( &p, qtrue );
+		if ( !token[0] ) {
+			break;
+		}
+		if ( token[0] != '{' ) {
+			continue;
+		}
+		classname[0] = 0;
+		hasOrigin = qfalse;
+		while ( 1 ) {
+			char key[MAX_TOKEN_CHARS];
+
+			token = COM_ParseExt( &p, qtrue );
+			if ( !token[0] || token[0] == '}' ) {
+				break;
+			}
+			Q_strncpyz( key, token, sizeof( key ) );
+			token = COM_ParseExt( &p, qtrue );
+			if ( !Q_stricmp( key, "classname" ) ) {
+				Q_strncpyz( classname, token, sizeof( classname ) );
+			} else if ( !Q_stricmp( key, "origin" ) ) {
+				hasOrigin = (qboolean)( sscanf( token, "%f %f %f", &origin[0], &origin[1], &origin[2] ) == 3 );
+			}
+		}
+		if ( hasOrigin && ( !Q_stricmpn( classname, "info_player", 11 ) || !Q_stricmpn( classname, "team_CTF", 8 )
+			|| !Q_stricmpn( classname, "weapon_", 7 ) || !Q_stricmpn( classname, "item_", 5 ) || !Q_stricmpn( classname, "ammo_", 5 ) ) ) {
+			origin[2] += 40.0f;		// about the height of the eyes over the floor
+			R_AddProbe( origin, 384.0f );
+		}
+	}
+
+	// then the open cells of the grid furthest from every probe
+	while ( tr.numProbes < MAX_PROBES ) {
+		vec3_t	best;
+		float	bestDist = 0.0f;
+
+		for ( int z = 0; z < w->lightGridBounds[2]; z += 2 ) {
+			for ( int y = 0; y < w->lightGridBounds[1]; y += 3 ) {
+				for ( int x = 0; x < w->lightGridBounds[0]; x += 3 ) {
+					const int cell = x + y * w->lightGridBounds[0] + z * w->lightGridBounds[0] * w->lightGridBounds[1];
+					vec3_t c;
+					float d = 1e30f;
+
+					if ( w->lightGridData[w->lightGridArray[cell]].styles[0] == LS_LSNONE ) {
+						continue;
+					}
+					for ( int k = 0; k < 3; k++ ) {
+						c[k] = w->lightGridOrigin[k] + ( k == 0 ? x : k == 1 ? y : z ) * w->lightGridSize[k];
+					}
+					for ( int i = 0; i < tr.numProbes; i++ ) {
+						d = Q_min( d, DistanceSquared( c, tr.probes[i] ) );
+					}
+					if ( d > bestDist ) {
+						bestDist = d;
+						VectorCopy( c, best );
+					}
+				}
+			}
+		}
+		if ( bestDist < 768.0f * 768.0f || !R_AddProbe( best, 768.0f ) ) {
+			break;
+		}
+	}
+	if ( !tr.numProbes ) {
+		return;
+	}
+
+	// which probe a cell takes
+	for ( int i = 0; i < tr.numProbes; i++ ) {
+		probeCluster[i] = R_PointCluster( tr.probes[i] );
+	}
+	pic = (byte *)Z_Malloc( tr.pbrGrid->width * tr.pbrGrid->height * 4, TAG_TEMP_WORKSPACE, qtrue );
+	for ( int z = 0; z < w->lightGridBounds[2]; z++ ) {
+		for ( int y = 0; y < w->lightGridBounds[1]; y++ ) {
+			for ( int x = 0; x < w->lightGridBounds[0]; x++ ) {
+				vec3_t		c;
+				const byte	*pvs;
+				int			cluster, best = 0, seen = -1;
+				float		bestDist = 1e30f, seenDist = 1e30f;
+
+				for ( int k = 0; k < 3; k++ ) {
+					c[k] = w->lightGridOrigin[k] + ( k == 0 ? x : k == 1 ? y : z ) * w->lightGridSize[k];
+				}
+				cluster = R_PointCluster( c );
+				pvs = cluster >= 0 ? (const byte *)ri.CM_ClusterPVS( cluster ) : NULL;
+				for ( int i = 0; i < tr.numProbes; i++ ) {
+					const float d = DistanceSquared( c, tr.probes[i] );
+
+					if ( d < bestDist ) {
+						bestDist = d;
+						best = i;
+					}
+					if ( d < seenDist && pvs && probeCluster[i] >= 0 && ( pvs[probeCluster[i] >> 3] & ( 1 << ( probeCluster[i] & 7 ) ) ) ) {
+						seenDist = d;
+						seen = i;
+					}
+				}
+				byte *out = pic + ( ( ( z / tr.pbrGridTiles ) * w->lightGridBounds[1] + y ) * tr.pbrGrid->width
+					+ ( z % tr.pbrGridTiles ) * w->lightGridBounds[0] + x ) * 4;
+				out[0] = (byte)( seen >= 0 ? seen : best );
+				out[3] = 255;
+			}
+		}
+	}
+	R_IssuePendingRenderCommands();
+	Com_sprintf( name, sizeof( name ), "*%s/pbrprobes", mapName );
+	tr.pbrProbes = R_CreateImage( name, pic, tr.pbrGrid->width, tr.pbrGrid->height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	Z_Free( pic );
+	ri.Printf( PRINT_DEVELOPER, "%i reflection probes\n", tr.numProbes );
+}
+
+/*
+=================
 R_SetupEntityLighting
 
 Calculates all the lighting values that will be used

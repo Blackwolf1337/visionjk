@@ -1046,6 +1046,73 @@ static void R_PuddleView( void ) {
 }
 
 /*
+========================
+R_ProbeViews
+
+VisionJK: one face of the next reflection probe of the level (R_CreateProbes) is drawn before the view of the level,
+a square of PROBE_SIZE at the corner of the frame, 90 degrees each way, the level alone (no entity, no light of an
+entity, no mark): rd-vulkan-vision draws it into targets of its own and copies it to its place among the faces
+(VK_BeginProbe, VK_EndProbe). One face a frame, so a frame keeps all of its room for the view itself; with 32
+probes all of them are drawn in 192 frames. The faces look along +x, -x, +y, -y, +z, -z (the same table in
+generic.frag ProbeFace). Done again from the start when the device lost them (a new window size).
+========================
+*/
+static const float probeAxes[6][3][3] = {	// forward, left, up
+	{ { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+	{ { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, 1 } },
+	{ { 0, 1, 0 }, { -1, 0, 0 }, { 0, 0, 1 } },
+	{ { 0, -1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } },
+	{ { 0, 0, 1 }, { 0, 1, 0 }, { -1, 0, 0 } },
+	{ { 0, 0, -1 }, { 0, 1, 0 }, { 1, 0, 0 } },
+};
+
+void R_ProbeViews( const viewParms_t *main ) {
+	viewParms_t	parms;
+	int			face, probe, entities, dlights, polys;
+
+	if ( !tr.world || !tr.numProbes || !VK_ProbesSupported() ) {
+		return;
+	}
+	if ( VK_ProbesLost() ) {
+		tr.probeNext = 0;
+		tr.probesReady = qfalse;
+	}
+	if ( tr.probesReady ) {
+		return;
+	}
+	probe = tr.probeNext / 6;
+	face = tr.probeNext % 6;
+
+	memset( &parms, 0, sizeof( parms ) );
+	parms.viewportX = 0;
+	parms.viewportY = glConfig.vidHeight - PROBE_SIZE;
+	parms.viewportWidth = parms.viewportHeight = PROBE_SIZE;
+	parms.fovX = parms.fovY = 90.0f;
+	parms.isPortal = qtrue;
+	parms.probeFace = face + 1;
+	parms.probeIndex = probe;
+	VectorCopy( tr.probes[probe], parms.ori.origin );
+	VectorCopy( tr.probes[probe], parms.pvsOrigin );
+	for ( int i = 0; i < 3; i++ ) {
+		VectorCopy( probeAxes[face][i], parms.ori.axis[i] );
+	}
+
+	entities = tr.refdef.num_entities;
+	dlights = tr.refdef.num_dlights;
+	polys = tr.refdef.numPolys;
+	tr.refdef.num_entities = tr.refdef.num_dlights = tr.refdef.numPolys = 0;
+	R_RenderView( &parms );
+	tr.refdef.num_entities = entities;
+	tr.refdef.num_dlights = dlights;
+	tr.refdef.numPolys = polys;
+	tr.viewParms = *main;
+
+	if ( ++tr.probeNext == tr.numProbes * 6 ) {
+		tr.probesReady = qtrue;
+	}
+}
+
+/*
 =================
 R_SpriteFogNum
 

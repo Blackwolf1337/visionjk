@@ -808,6 +808,214 @@ void VK_EndPuddle( void ) {
 /*
 ===============================================================================
 
+REFLECTION PROBES
+
+The faces of the reflection probes of the level (R_ProbeViews of tr_main.cpp): each is drawn as the puddle view into
+targets of its own of PROBE_SIZE, traded with the ones of the frame, and copied to its place in probeAtlas: a probe
+a row, its six faces side by side. When the last face is in, the smaller levels of the atlas are made by halving
+(a rough surface reads one of them, generic.frag ProbeSample) and tr.probeImage shows the atlas from then on. The
+OpenGL ES device has none of it.
+
+===============================================================================
+*/
+
+#define PROBE_LEVELS	6			// 128 down to 4 pixels a face
+
+qboolean VK_ProbesSupported( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	return (qboolean)( v_pbr->integer && v_pbrProbes->integer && vk.probeColor.image && tr.probeImage );
+#endif
+}
+
+// whether the faces that were drawn are gone (new targets), once
+qboolean VK_ProbesLost( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	const qboolean lost = vk.probesLost;
+
+	vk.probesLost = qfalse;
+	return lost;
+#endif
+}
+
+#ifndef RD_VISION_GLES
+// the targets of a face take the places of color, depth and their samples, or give them back
+static void VK_SwapProbeTargets( void ) {
+	vkTarget_t target;
+
+#define VK_SWAP( a, b )	( target = a, a = b, b = target )
+	VK_SWAP( vk.color, vk.probeColor );
+	VK_SWAP( vk.colorMS, vk.probeColorMS );
+	VK_SWAP( vk.depth, vk.probeDepth );
+	VK_SWAP( vk.depthMS, vk.probeDepthMS );
+#undef VK_SWAP
+}
+
+// levels of the atlas from one layout to another
+static void VK_AtlasLayout( VkCommandBuffer cmd, int level, int count, VkImageLayout from, VkImageLayout to, VkAccessFlags fromAccess,
+	VkAccessFlags toAccess ) {
+	VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+	barrier.srcAccessMask = fromAccess;
+	barrier.dstAccessMask = toAccess;
+	barrier.oldLayout = from;
+	barrier.newLayout = to;
+	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = vk.probeAtlas;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = (uint32_t)level;
+	barrier.subresourceRange.levelCount = (uint32_t)count;
+	barrier.subresourceRange.layerCount = 1;
+	qvkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, NULL, 0, NULL, 1, &barrier );
+}
+
+// an atlas for numProbes probes, its levels ready to be copied to
+static void VK_CreateProbeAtlas( int numProbes ) {
+	VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+	VkMemoryRequirements req;
+
+	VK_DestroyProbeAtlas();
+	vk.probesLost = qfalse;		// (a new atlas while the faces are being drawn anyway)
+	info.imageType = VK_IMAGE_TYPE_2D;
+	info.format = vk.color.format;
+	info.extent.width = PROBE_SIZE * 6;
+	info.extent.height = (uint32_t)( PROBE_SIZE * numProbes );
+	info.extent.depth = 1;
+	info.mipLevels = PROBE_LEVELS;
+	info.arrayLayers = 1;
+	info.samples = VK_SAMPLE_COUNT_1_BIT;
+	info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VK_CHECK( qvkCreateImage( vk.device, &info, NULL, &vk.probeAtlas ) );
+	qvkGetImageMemoryRequirements( vk.device, vk.probeAtlas, &req );
+	VK_AllocMemory( &req, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vk.probeAtlasAlloc );
+	VK_CHECK( qvkBindImageMemory( vk.device, vk.probeAtlas, VK_MemoryOf( &vk.probeAtlasAlloc ), vk.probeAtlasAlloc.offset ) );
+	view.image = vk.probeAtlas;
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = info.format;
+	view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view.subresourceRange.levelCount = PROBE_LEVELS;
+	view.subresourceRange.layerCount = 1;
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.probeAtlasView ) );
+	vk.probeAtlasProbes = numProbes;
+}
+#endif
+
+void VK_DestroyProbeAtlas( void ) {
+#ifndef RD_VISION_GLES
+	if ( vk.probeAtlas ) {
+		// (the texture table may still name it: it is not read until the faces are drawn again)
+		qvkDestroyImageView( vk.device, vk.probeAtlasView, NULL );
+		qvkDestroyImage( vk.device, vk.probeAtlas, NULL );
+		VK_FreeMemory( &vk.probeAtlasAlloc );
+		vk.probeAtlas = VK_NULL_HANDLE;
+		vk.probeAtlasView = VK_NULL_HANDLE;
+		vk.probesLost = qtrue;
+	}
+	vk.probeAtlasProbes = 0;
+#endif
+}
+
+/*
+===============
+VK_BeginProbe
+
+A face of a reflection probe is drawn into the targets of the faces, begun empty. qfalse: it is not drawn.
+===============
+*/
+qboolean VK_BeginProbe( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	if ( !vk.frame || !VK_ProbesSupported() ) {
+		return qfalse;
+	}
+	VK_EndTarget();
+	VK_SwapProbeTargets();
+	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	return qtrue;
+#endif
+}
+
+/*
+===============
+VK_EndProbe
+
+The face that was drawn goes to its place in the atlas (a new atlas with the first face of the first probe); after
+the last face of the last probe the smaller levels are made and the texture table shows the atlas.
+===============
+*/
+void VK_EndProbe( int face, int probe, int numProbes ) {
+#ifndef RD_VISION_GLES
+	VkCommandBuffer cmd = vk.frame->cmd;
+	VkImageCopy region;
+
+	VK_EndTarget();
+	VK_SwapProbeTargets();
+	if ( face == 0 && probe == 0 ) {
+		if ( vk.probeAtlasProbes != numProbes ) {
+			VK_CreateProbeAtlas( numProbes );
+		}
+		VK_AtlasLayout( cmd, 0, PROBE_LEVELS, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT );
+	}
+	if ( vk.probeAtlas && probe < vk.probeAtlasProbes ) {
+		memset( &region, 0, sizeof( region ) );
+		region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.srcSubresource.layerCount = region.dstSubresource.layerCount = 1;
+		region.dstOffset.x = face * PROBE_SIZE;
+		region.dstOffset.y = probe * PROBE_SIZE;
+		region.extent.width = region.extent.height = PROBE_SIZE;
+		region.extent.depth = 1;
+		VK_TargetLayout( cmd, &vk.probeColor, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+		qvkCmdCopyImage( cmd, vk.probeColor.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.probeAtlas, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &region );
+		VK_TargetLayout( cmd, &vk.probeColor, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+
+		if ( face == 5 && probe == numProbes - 1 ) {
+			// each level half of the one before it
+			for ( int level = 1; level < PROBE_LEVELS; level++ ) {
+				VkImageBlit blit;
+
+				VK_AtlasLayout( cmd, level - 1, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT );
+				memset( &blit, 0, sizeof( blit ) );
+				blit.srcSubresource.aspectMask = blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blit.srcSubresource.mipLevel = (uint32_t)( level - 1 );
+				blit.dstSubresource.mipLevel = (uint32_t)level;
+				blit.srcSubresource.layerCount = blit.dstSubresource.layerCount = 1;
+				blit.srcOffsets[1].x = ( PROBE_SIZE * 6 ) >> ( level - 1 );
+				blit.srcOffsets[1].y = ( PROBE_SIZE * numProbes ) >> ( level - 1 );
+				blit.srcOffsets[1].z = 1;
+				blit.dstOffsets[1].x = ( PROBE_SIZE * 6 ) >> level;
+				blit.dstOffsets[1].y = ( PROBE_SIZE * numProbes ) >> level;
+				blit.dstOffsets[1].z = 1;
+				qvkCmdBlitImage( cmd, vk.probeAtlas, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.probeAtlas, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1, &blit, VK_FILTER_LINEAR );
+			}
+			VK_AtlasLayout( cmd, 0, PROBE_LEVELS - 1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT );
+			VK_AtlasLayout( cmd, PROBE_LEVELS - 1, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT );
+			VK_ShowImage( (int)tr.probeImage->texnum, vk.probeAtlasView, qtrue );
+		}
+	}
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_InvalidateTransform();
+#endif
+}
+
+/*
+===============================================================================
+
 FLARES
 
 A flare (the shine around a lamp) is drawn when nothing is in front of its point. rd-vanilla finds that out by

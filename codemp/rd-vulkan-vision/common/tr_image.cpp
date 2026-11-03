@@ -1321,6 +1321,8 @@ void R_CreateBuiltinImages( void ) {
 	tr.whiteImage = R_CreateImage("*white", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT);
 
 	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
+	// VisionJK: the place of the faces of the reflection probes in the texture table (VK_EndProbe)
+	tr.probeImage = R_CreateImage( "*probes", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
 
 
 	// with overbright bits active, we need an image which is some fraction of full color,

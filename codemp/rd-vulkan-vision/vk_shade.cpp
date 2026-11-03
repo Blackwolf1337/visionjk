@@ -740,6 +740,80 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 	VectorCopy4( vk_deform.vec, draw->deformVec );
 }
 
+cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
+cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
+
+/*
+===============
+VK_PbrDraw
+
+VisionJK: the draw of a stage with a material (shaderStage_t::pbr, or a normal map on a stage of the level): which
+light it is lit by and its maps (VKP_* of vk_local.h). qfalse for a stage that is drawn as it always was: one of a
+model whose light is not the one of its entity, a second texture that is not the lightmap, a stage that adds its
+colour, the glow pass, r_lightmap.
+===============
+*/
+static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader, qboolean refract, vkDraw_t *draw ) {
+	const uint32_t rgbGen = ( draw->flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK;
+	const textureBundle_t *second = &pStage->bundle[1];
+
+	if ( !v_pbr->integer || g_bRenderGlowingObjects || refract || r_lightmap->integer ) {
+		return qfalse;
+	}
+	if ( !pStage->pbr && !( pStage->normalMap && second->image && second->isLightmap ) ) {
+		return qfalse;
+	}
+	// a stage that adds its colour to what is under it is light itself (a sign, a glowing decal), not a surface lit
+	const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
+	if ( dst == GLS_DSTBLEND_ONE || dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+		return qfalse;
+	}
+	if ( rgbGen ) {
+		draw->pbrFlags = VKP_ENTITY;
+	} else if ( second->image ) {
+		if ( !second->isLightmap || shader->multitextureEnv != GL_MODULATE ) {
+			return qfalse;
+		}
+		draw->pbrFlags = VKP_LIGHTMAP;
+	}
+	draw->flags |= VKD_PBR;
+	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
+	if ( pStage->normalMap ) {
+		draw->tex2 = pStage->normalMap->texnum;
+		draw->pbrFlags |= VKP_NORMAL | ( pStage->normalHeight ? VKP_HEIGHT : 0u );
+	}
+	if ( pStage->rmoMap ) {
+		draw->tex3 = pStage->rmoMap->texnum;
+		draw->pbrFlags |= VKP_RMO | ( pStage->ormOrder ? VKP_ORM : 0u );
+	}
+	draw->pbr[0] = pStage->pbr ? pStage->roughness : 0.8f;
+	draw->pbr[1] = pStage->metalness;
+	draw->pbr[2] = pStage->parallaxDepth;
+	draw->pbr[3] = (float)v_pbr->integer;
+	if ( !( draw->pbrFlags & VKP_ENTITY ) && tr.pbrGrid && tr.world ) {
+		draw->tex4 = tr.pbrGrid->texnum;
+		draw->pbrFlags |= VKP_GRID;
+		VectorCopy( tr.world->lightGridOrigin, draw->grid0 );
+		draw->grid0[3] = (float)tr.pbrGridTiles;
+		VectorCopy( tr.world->lightGridInverseSize, draw->grid1 );
+		draw->grid1[3] = (float)tr.pbrGrid->height;
+		for ( int i = 0; i < 3; i++ ) {
+			draw->grid2[i] = (float)tr.world->lightGridBounds[i];
+		}
+		draw->grid2[3] = (float)tr.pbrGrid->width;
+	}
+	if ( ( draw->pbrFlags & VKP_GRID ) && tr.probesReady && tr.pbrProbes && VK_ProbesSupported() ) {
+		draw->pbrFlags |= VKP_PROBES;
+		draw->tex5 = tr.pbrProbes->texnum;
+		draw->tex6 = tr.probeImage->texnum;
+		draw->probeSize = PROBE_SIZE;
+		draw->probeCount = (uint32_t)tr.numProbes;
+	} else {
+		draw->tex5 = draw->tex6 = draw->tex0;
+	}
+	return qtrue;
+}
+
 static void VK_IdentityTexCoords( vkDraw_t *draw ) {
 	draw->flags |= (uint32_t)TCGEN_TEXTURE << VKD_TCGEN0_SHIFT;
 	draw->texMat0[0] = draw->texMat0[5] = 1.0f;
@@ -1082,9 +1156,10 @@ void RB_StageIteratorGeneric( void ) {
 				stateBits |= GLS_DEPTHMASK_TRUE;
 			}
 		}
-		// VisionJK: a lit stage with a normal map or a shine (shader keywords normalMap and specular) is lit per
-		// pixel, see generic.frag; the second texture is the normal map then
-		if ( ( pStage->normalMap || pStage->specular[0] > 0.0f || pStage->specular[2] > 0.0f || pStage->wrapLight > 0.0f
+		// VisionJK: a stage with a material of the material tool (shader keywords rmoMap, roughness, metalness ...)
+		// is lit per pixel with GGX by the light it gets anyway, see generic.frag PbrStage
+		if ( VK_PbrDraw( pStage, shader, refract, &draw ) ) {
+		} else if ( ( pStage->normalMap || pStage->specular[0] > 0.0f || pStage->specular[2] > 0.0f || pStage->wrapLight > 0.0f
 			|| pStage->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
 			draw.flags |= VKD_MATERIAL;
 			VectorCopy( pStage->specular, draw.material );
