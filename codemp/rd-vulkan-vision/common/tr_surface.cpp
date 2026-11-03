@@ -1692,6 +1692,10 @@ static bool RB_TestZFlare( vec3_t point) {
 	}
 
 	// the depth of a frame that is still being recorded can not be read: the test an earlier frame made
+	// (a face of a reflection probe shows no flare: its depth is not the one of the frame)
+	if ( backEnd.viewParms.probeFace ) {
+		return qfalse;
+	}
 	return r_flares->integer != 1 || VK_FlareVisible( point, (int)( backEnd.viewParms.viewportX + window[0] ),
 		(int)( backEnd.viewParms.viewportY + window[1] ), -eye[2] );
 }

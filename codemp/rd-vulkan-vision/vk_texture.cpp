@@ -294,6 +294,20 @@ void VK_WriteTexture( int slot ) {
 	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 }
 
+// an image of the device in a place of the texture table, filtered across its levels when it has them
+void VK_ShowImage( int slot, VkImageView view, qboolean mipmapped ) {
+	VkDescriptorImageInfo image = { mipmapped ? VK_FindSampler( GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_CLAMP, 1.0f ) : vk.linearSampler,
+		view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+	write.dstSet = vk.textureSet;
+	write.dstArrayElement = (uint32_t)slot;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write.pImageInfo = &image;
+	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+}
+
 void VK_ShowTarget( int slot, const vkTarget_t *target ) {
 	VkDescriptorImageInfo image = { vk.linearSampler, target->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -548,6 +562,22 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	}
 	vk.reflectFrame = -1;
 
+	// the faces of the reflection probes, with the formats and the samples of the frame as the puddle view
+	{
+		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		VK_CreateTarget( &vk.probeColor, PROBE_SIZE, PROBE_SIZE, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_SAMPLE_COUNT_1_BIT );
+		VK_CreateTarget( &vk.probeDepth, PROBE_SIZE, PROBE_SIZE, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+			VK_SAMPLE_COUNT_1_BIT );
+		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+			VK_CreateTarget( &vk.probeColorMS, PROBE_SIZE, PROBE_SIZE, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+				vk.samples );
+			VK_CreateTarget( &vk.probeDepthMS, PROBE_SIZE, PROBE_SIZE, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+				vk.samples );
+		}
+	}
+
 	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
 	// pixel (not every device filters a depth format) while nothing draws into it.
 	if ( vk.depthReadable ) {
@@ -558,6 +588,11 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 }
 
 void VK_DestroyPostTargets( void ) {
+	VK_DestroyTarget( &vk.probeColor );
+	VK_DestroyTarget( &vk.probeColorMS );
+	VK_DestroyTarget( &vk.probeDepth );
+	VK_DestroyTarget( &vk.probeDepthMS );
+	VK_DestroyProbeAtlas();
 	VK_DestroyTarget( &vk.glow );
 	VK_DestroyTarget( &vk.glowMS );
 	VK_DestroyTarget( &vk.screen );

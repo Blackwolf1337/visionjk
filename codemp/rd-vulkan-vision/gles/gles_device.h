@@ -154,7 +154,9 @@ typedef enum {
 #define GLES_UNIT_TEX2		7		// the normal map, the rmo map and the light grid of a stage with a material
 #define GLES_UNIT_TEX3		8
 #define GLES_UNIT_TEX4		9
-#define GLES_UNITS			10
+#define GLES_UNIT_TEX5		10		// (never read: the device has no reflection probes)
+#define GLES_UNIT_TEX6		11
+#define GLES_UNITS			12
 
 typedef enum {						// what a vertex array object is set up for
 	GLV_GENERIC,					// the four streams of the tess arrays

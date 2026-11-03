@@ -160,6 +160,15 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				reflectSet;
 	int							reflectFrame;		// frameCount of the view that was drawn last
 	float						reflectHeight;		// the height of its floor
+	// the faces of the reflection probes of the level (VK_BeginProbe, VK_EndProbe): drawn into probeColor and
+	// probeDepth (traded with color and depth as the puddle view), copied to their places in probeAtlas (a probe a row
+	// of six faces, with its smaller levels for rough surfaces), which the texture table shows for tr.probeImage
+	vkTarget_t					probeColor, probeColorMS, probeDepth, probeDepthMS;
+	VkImage						probeAtlas;
+	VkImageView					probeAtlasView;
+	vkAlloc_t					probeAtlasAlloc;
+	int							probeAtlasProbes;	// probes it has room for, 0: there is none
+	qboolean					probesLost;			// the faces that were drawn went with the targets
 	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
 	VkPipelineLayout			scopePipelineLayout;	// four sets of that kind and sixteen numbers (VK_ScopePass)
 	VkDescriptorSet				screenSet;			// vk.screen for it
@@ -246,6 +255,7 @@ void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat forma
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
+void		VK_ShowImage( int slot, VkImageView view, qboolean mipmapped );
 void		VK_DestroyPostTargets( void );
 // a combined image sampler set of one image
 void		VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkImageLayout layout );

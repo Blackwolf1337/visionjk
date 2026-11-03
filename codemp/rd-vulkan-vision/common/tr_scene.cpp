@@ -544,6 +544,10 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	VectorCopy( fd->vieworg, parms.pvsOrigin );
 
+	// VisionJK: a face of a reflection probe of the level while they are not all drawn, before the view of the level
+	if ( !( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		R_ProbeViews( &parms );
+	}
 	R_RenderView( &parms );
 
 	// the next scene rendered in this frame will tack on after this one

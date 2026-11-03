@@ -615,6 +615,9 @@ typedef struct fog_s {
 	float		surface[4];
 } fog_t;
 
+#define MAX_PROBES		32			// VisionJK: reflection probes of a level (R_CreateProbes)
+#define PROBE_SIZE		128			//	pixels a face of one each way
+
 typedef struct viewParms_s {
 	orientationr_t	ori;				// Can't use "or" as it is a reserved word with gcc DREWS 2/2/2002
 	orientationr_t	world;
@@ -622,6 +625,8 @@ typedef struct viewParms_s {
 	qboolean	isPortal;			// true if this view is through a portal
 	qboolean	isMirror;			// the portal is a mirror, invert the face culling
 	qboolean	isPuddle;			// VisionJK: the mirror at the floor of the puddles of RE_AddWet (R_PuddleView)
+	int			probeFace;			// VisionJK: 1 to 6 for a face of a reflection probe (R_ProbeViews), 0 else
+	int			probeIndex;			//	and which probe
 	int			frameSceneNum;		// copied from tr.frameSceneNum
 	int			frameCount;			// copied from tr.frameCount
 	cplane_t	portalPlane;		// clip anything behind this if mirroring
@@ -1068,6 +1073,16 @@ typedef struct trGlobals_s {
 	// layers side by side, pbrGridTiles of them across. NULL: the level has no grid
 	image_t					*pbrGrid;
 	int						pbrGridTiles;
+	// VisionJK: the reflection probes of the level (R_CreateProbes): points in the open the level is drawn from in all
+	// six directions while it loads (R_ProbeViews, one face a frame), which the stages with a material mirror. pbrProbes
+	// says which probe each cell of the light grid takes, in the layout of pbrGrid; probeImage is the place of all the
+	// faces in the texture table (VK_EndProbe). probeNext: the next face to draw, probesReady once all are drawn.
+	int						numProbes;
+	vec3_t					probes[MAX_PROBES];
+	image_t					*pbrProbes;
+	image_t					*probeImage;
+	int						probeNext;
+	qboolean				probesReady;
 
 	trRefEntity_t			*currentEntity;
 	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
@@ -1564,6 +1579,8 @@ LIGHTS
 void R_DlightBmodel( bmodel_t *bmodel, bool NoLight );
 void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent );
 void R_CreatePbrGrid( const char *mapName );
+void R_CreateProbes( const char *mapName );
+void R_ProbeViews( const viewParms_t *main );
 void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori );
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
 

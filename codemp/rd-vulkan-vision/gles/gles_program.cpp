@@ -168,6 +168,8 @@ static GLuint VK_LinkProgram( glesProgram_t which ) {
 	VK_BindSampler( program, "u_tex2", GLES_UNIT_TEX2 );
 	VK_BindSampler( program, "u_tex3", GLES_UNIT_TEX3 );
 	VK_BindSampler( program, "u_tex4", GLES_UNIT_TEX4 );
+	VK_BindSampler( program, "u_tex5", GLES_UNIT_TEX5 );
+	VK_BindSampler( program, "u_tex6", GLES_UNIT_TEX6 );
 	VK_BindSampler( program, "u_image", 0 );
 	VK_BindSampler( program, "u_depth", 1 );
 	VK_BindSampler( program, "u_soft", GLES_UNIT_SOFT );

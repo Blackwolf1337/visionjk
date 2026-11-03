@@ -115,6 +115,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKP_ENTITY			0x10u			// lit by the light of its entity (ambient, directed, its direction)
 #define VKP_LIGHTMAP		0x20u			// lit by its lightmap in tex1; without this nor VKP_ENTITY by its vertex colors
 #define VKP_GRID			0x40u			// the light grid of the level in tex4 (grid*), for the direction of that light
+#define VKP_PROBES			0x80u			// the reflection probes of the level in tex5 and tex6 (R_CreateProbes)
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
@@ -124,6 +125,9 @@ typedef struct vkDraw_s {		// once per draw
 	uint32_t	flags;				// VKD_*
 	uint32_t	tex2, tex3, tex4;	// VKD_PBR: the normal map, the rmo map and the light grid of the level
 	uint32_t	pbrFlags;			//	VKP_*
+	uint32_t	tex5, tex6;			//	VKP_PROBES: which probe a cell of the grid takes, the faces of the probes
+	uint32_t	probeSize;			//	pixels a face each way
+	uint32_t	probeCount;			//	probes in the atlas
 	float		baseColor[4];		// color = baseColor + vertColor * vertex color
 	float		vertColor[4];
 	float		texMat0[8];			// two rows: s' = dot( row0.xy, st ) + row0.z, row0.w: phase of the turbulence
@@ -350,6 +354,7 @@ void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
 qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
+extern cvar_t	*v_pbrProbes;
 extern cvar_t	*v_vkGrass;
 qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );
 void		VK_AddSurface( surfaceType_t *surface );
@@ -401,6 +406,9 @@ qboolean	VK_HasWet( void );
 void		VK_DrawWet( void );
 qboolean	VK_BeginPuddle( void );
 void		VK_EndPuddle( void );
+qboolean	VK_BeginProbe( void );
+void		VK_EndProbe( int face, int probe, int numProbes );
+void		VK_DestroyProbeAtlas( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );

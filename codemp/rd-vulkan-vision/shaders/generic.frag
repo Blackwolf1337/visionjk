@@ -10,11 +10,15 @@ uniform sampler2D u_tex1;
 uniform sampler2D u_tex2;
 uniform sampler2D u_tex3;
 uniform sampler2D u_tex4;
+uniform sampler2D u_tex5;
+uniform sampler2D u_tex6;
 #define TEX0( draw_ )	u_tex0
 #define TEX1( draw_ )	u_tex1
 #define TEX2( draw_ )	u_tex2
 #define TEX3( draw_ )	u_tex3
 #define TEX4( draw_ )	u_tex4
+#define TEX5( draw_ )	u_tex5
+#define TEX6( draw_ )	u_tex6
 #else
 BINDING( 1, 0 ) uniform sampler2D u_textures[];
 #define TEX0( draw_ )	u_textures[nonuniformEXT( draw_.tex0 )]
@@ -22,6 +26,8 @@ BINDING( 1, 0 ) uniform sampler2D u_textures[];
 #define TEX2( draw_ )	u_textures[nonuniformEXT( draw_.tex2 )]
 #define TEX3( draw_ )	u_textures[nonuniformEXT( draw_.tex3 )]
 #define TEX4( draw_ )	u_textures[nonuniformEXT( draw_.tex4 )]
+#define TEX5( draw_ )	u_textures[nonuniformEXT( draw_.tex5 )]
+#define TEX6( draw_ )	u_textures[nonuniformEXT( draw_.tex6 )]
 #endif
 
 VARYING( 0 ) in vec2 v_texCoord0;
@@ -165,6 +171,45 @@ vec4 PbrGrid( Draw d, vec3 world ) {
 	return vec4( ( v.rgb / v.a ) * 2.0 - 1.0, v.a );
 }
 
+// The reflection probe a point of the world takes (R_CreateProbes): the number in the cell of the light grid it lies
+// in, read as it is (a pixel of the grid picture, in the layout of PbrGrid).
+float ProbeAt( Draw d, vec3 world ) {
+	vec3 cells = d.grid2.xyz;
+	ivec3 g = ivec3( clamp( floor( ( world - d.grid0.xyz ) * d.grid1.xyz + 0.5 ), vec3( 0.0 ), cells - 1.0 ) );
+	int tiles = int( d.grid0.w );
+	ivec2 texel = ivec2( ( g.z % tiles ) * int( cells.x ) + g.x, ( g.z / tiles ) * int( cells.y ) + g.y );
+	return floor( texelFetch( TEX5( d ), texel, 0 ).r * 255.0 + 0.5 );
+}
+
+// What the probe sees in a direction of the world, at a level for the roughness. Its six faces lie side by side in a
+// row of the atlas, looking along +x, -x, +y, -y, +z, -z (forward, left, up as R_ProbeViews has them); a face shows
+// left on the left and up at the top. Kept half a pixel of its level inside its face.
+vec3 ProbeSample( Draw d, float probe, vec3 dir, float level ) {
+	vec3 a = abs( dir ), forward, left, up;
+	float face;
+	if ( a.x >= a.y && a.x >= a.z ) {
+		face = dir.x > 0.0 ? 0.0 : 1.0;
+		forward = vec3( sign( dir.x ), 0.0, 0.0 );
+		left = vec3( 0.0, sign( dir.x ), 0.0 );
+		up = vec3( 0.0, 0.0, 1.0 );
+	} else if ( a.y >= a.z ) {
+		face = dir.y > 0.0 ? 2.0 : 3.0;
+		forward = vec3( 0.0, sign( dir.y ), 0.0 );
+		left = vec3( -sign( dir.y ), 0.0, 0.0 );
+		up = vec3( 0.0, 0.0, 1.0 );
+	} else {
+		face = dir.z > 0.0 ? 4.0 : 5.0;
+		forward = vec3( 0.0, 0.0, sign( dir.z ) );
+		left = vec3( 0.0, 1.0, 0.0 );
+		up = vec3( -sign( dir.z ), 0.0, 0.0 );
+	}
+	float f = dot( dir, forward );
+	vec2 st = vec2( -dot( dir, left ), -dot( dir, up ) ) / f * 0.5 + 0.5;
+	float margin = 0.5 / ( float( d.probeSize ) / exp2( level ) );
+	st = clamp( st, vec2( margin ), vec2( 1.0 - margin ) );
+	return textureLod( TEX6( d ), vec2( ( face + st.x ) / 6.0, ( probe + st.y ) / float( d.probeCount ) ), level ).rgb;
+}
+
 float D_GGX( float nh, float a ) {
 	float a2 = a * a;
 	float k = nh * nh * ( a2 - 1.0 ) + 1.0;
@@ -263,13 +308,16 @@ vec4 PbrStage( Draw d ) {
 	vec3 shine = directed * D_GGX( nh, a ) * visibility * fresnel * nl * step( 0.0001, dot( flat_, l ) );
 	// v_pbr 2: albedo times the light alone (as without a material), 3: the shine alone, 4: the normal, 5: the share
 	// and direction of the light of the grid, 6: roughness, metalness and occlusion, 7: has an rmo map (red), a normal
-	// map (green), the grid (blue)
+	// map (green), the grid (blue), 8: what the reflection probe shows as a mirror
 	if ( d.pbr.w == 2.0 ) {
 		return vec4( pow( albedo * ( ambient + directed * max( dot( flat_, l ), 0.0 ) ), vec3( 1.0 / 2.2 ) ), alpha );
 	} else if ( d.pbr.w == 3.0 ) {
 		return vec4( pow( shine, vec3( 1.0 / 2.2 ) ), alpha );
 	} else if ( d.pbr.w == 4.0 ) {
 		return vec4( n * 0.5 + 0.5, alpha );
+	} else if ( d.pbr.w == 8.0 && ( d.pbrFlags & PBR_PROBES ) != 0u ) {
+		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+		return vec4( ProbeSample( d, ProbeAt( d, world ), normalize( mat3( t.model ) * reflect( -toEye, n ) ), 0.0 ), alpha );
 	} else if ( d.pbr.w == 7.0 ) {
 		return vec4( ( d.pbrFlags & PBR_RMO ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_NORMAL ) != 0u ? 1.0 : 0.0, ( d.pbrFlags & PBR_GRID ) != 0u ? 1.0 : 0.0, alpha );
 	} else if ( d.pbr.w == 6.0 ) {
@@ -278,10 +326,19 @@ vec4 PbrStage( Draw d ) {
 		return vec4( l * 0.5 + 0.5, alpha ) * length( directed ) / max( length( ambient + directed ), 1e-4 );
 	}
 	color += shine;
-	// What it throws back of the light around it: the level has no pictures of its surroundings, so the light of
-	// the lightmap stands for them. That is far too bright at a flat angle, where a floor would mirror the dark
-	// walls and ceilings around it, so the angle is not let below 0.6 (Fresnel stays at what it is from above).
-	color += ambient * occlusion * EnvBRDF( f0, roughness, max( nv, 0.6 ) );
+	// What it throws back of the light around it: what the nearest reflection probe sees in the direction of the
+	// mirror (blurrier the rougher it is), scaled by how bright the lightmap is here against there is no telling,
+	// so as it is. Without probes the light of the lightmap stands for the surroundings; that is far too bright at a
+	// flat angle, where a floor would mirror the dark walls and ceilings around it, so the angle is not let below
+	// 0.6 then (Fresnel stays at what it is from above).
+	if ( ( d.pbrFlags & PBR_PROBES ) != 0u ) {
+		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, n ) );
+		vec3 around = pow( ProbeSample( d, ProbeAt( d, world ), mirror, roughness * 5.0 ), vec3( 2.2 ) );
+		color += around * occlusion * EnvBRDF( f0, roughness, nv );
+	} else {
+		color += ambient * occlusion * EnvBRDF( f0, roughness, max( nv, 0.6 ) );
+	}
 	return vec4( pow( color, vec3( 1.0 / 2.2 ) ), alpha );
 }
 

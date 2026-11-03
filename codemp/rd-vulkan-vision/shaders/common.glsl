@@ -23,6 +23,9 @@ struct Draw {
 	uint	flags;
 	uint	tex2, tex3, tex4;	// PBR: normal map, rmo map, light grid
 	uint	pbrFlags;
+	uint	tex5, tex6;			//	which probe a cell takes, the faces of the probes
+	uint	probeSize;
+	uint	probeCount;
 	vec4	baseColor;		// color = baseColor + vertColor * vertex color
 	vec4	vertColor;
 	vec4	texMat0[2];		// s' = dot( row0.xy, st ) + row0.z, row0.w: phase of the turbulence
@@ -107,6 +110,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define PBR_ENTITY		0x10u
 #define PBR_LIGHTMAP	0x20u
 #define PBR_GRID		0x40u
+#define PBR_PROBES		0x80u
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

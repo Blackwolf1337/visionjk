@@ -90,7 +90,8 @@ qboolean VK_InitShared( void ) {
 	v_vkMerge = ri.Cvar_Get( "v_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
 	v_vkSprites = ri.Cvar_Get( "v_vkSprites", "1", CVAR_CHEAT, "Sprites, the glow of blades, lines and bolts made in the vertex shader. 0: their corners are built on the CPU every frame" );
 	v_vkGrass = ri.Cvar_Get( "v_vkGrass", "1", CVAR_CHEAT | CVAR_LATCH, "Surface sprites of the level placed once and drawn from the device. 0: placed on the CPU every frame, and the surfaces under them too" );
-	v_pbr = ri.Cvar_Get( "v_pbr", "1", CVAR_ARCHIVE_ND, "Surfaces with a material (shaders of the material tool of jka.vision) lit with their normal map, roughness and metalness. 0: drawn as without it. Views to check them: 2 the light alone as without a material, 3 the shine alone, 4 the normals, 5 the direction of the light of the grid, 6 roughness, metalness and occlusion, 7 which maps a surface has" );
+	v_pbrProbes = ri.Cvar_Get( "v_pbrProbes", "1", CVAR_ARCHIVE_ND, "Surfaces with a material mirror the level around them: it is drawn from up to 32 points in all directions while it loads. 0: they mirror the light of their lightmap" );
+	v_pbr = ri.Cvar_Get( "v_pbr", "1", CVAR_ARCHIVE_ND, "Surfaces with a material (shaders of the material tool of jka.vision) lit with their normal map, roughness and metalness. 0: drawn as without it. Views to check them: 2 the light alone as without a material, 3 the shine alone, 4 the normals, 5 the direction of the light of the grid, 6 roughness, metalness and occlusion, 7 which maps a surface has, 8 the surfaces as mirrors of the reflection probes" );
 	v_lodPixels = ri.Cvar_Get( "v_lodPixels", "1", CVAR_ARCHIVE_ND, "Models keep their detail by how many pixels they cover, as at 640 x 480 (R_LodScale). 0: by the share of the screen they cover, as before" );
 
 	// the builtin images are made again, the copy of the frame has to be put into the texture table again
@@ -989,6 +990,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( puddle && !VK_BeginPuddle() ) {
 		return (const void *)( cmd + 1 );
 	}
+	// a face of a reflection probe as well (VK_BeginProbe)
+	const int probeFace = backEnd.viewParms.probeFace;
+	if ( probeFace && !VK_BeginProbe() ) {
+		return (const void *)( cmd + 1 );
+	}
 	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
 	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
 	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && v_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
@@ -1000,7 +1006,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 
 	rb_overLater = focus;
 	rb_sawOver = qfalse;
-	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
+	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !probeFace;
 	rb_sawLate = qfalse;
 	// the sprayed pictures of RE_AddPaint, the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the
 	// level itself, before its glow. Paint and wet ground in the list before what is transparent (RB_DrawWet), the
@@ -1012,6 +1018,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_wetLater = qfalse;
 	if ( levelView && r_numLiquids ) {
 		VK_DrawLiquids();
+	}
+	if ( probeFace ) {
+		VK_EndProbe( probeFace - 1, backEnd.viewParms.probeIndex, tr.numProbes );
+		tess.shader = NULL;
+		return (const void *)( cmd + 1 );
 	}
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();

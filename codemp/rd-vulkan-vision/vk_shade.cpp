@@ -741,6 +741,7 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 }
 
 cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
+cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
 
 /*
 ===============
@@ -770,7 +771,7 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 		draw->pbrFlags = VKP_LIGHTMAP;
 	}
 	draw->flags |= VKD_PBR;
-	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex0;
+	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
 	if ( pStage->normalMap ) {
 		draw->tex2 = pStage->normalMap->texnum;
 		draw->pbrFlags |= VKP_NORMAL | ( pStage->normalHeight ? VKP_HEIGHT : 0u );
@@ -794,6 +795,15 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 			draw->grid2[i] = (float)tr.world->lightGridBounds[i];
 		}
 		draw->grid2[3] = (float)tr.pbrGrid->width;
+	}
+	if ( ( draw->pbrFlags & VKP_GRID ) && tr.probesReady && tr.pbrProbes && VK_ProbesSupported() ) {
+		draw->pbrFlags |= VKP_PROBES;
+		draw->tex5 = tr.pbrProbes->texnum;
+		draw->tex6 = tr.probeImage->texnum;
+		draw->probeSize = PROBE_SIZE;
+		draw->probeCount = (uint32_t)tr.numProbes;
+	} else {
+		draw->tex5 = draw->tex6 = draw->tex0;
 	}
 	return qtrue;
 }
