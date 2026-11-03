@@ -1179,6 +1179,76 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 ParseStage
 ===================
 */
+/*
+===================
+ParseMaterialKeyword
+
+VisionJK: the keywords of a stage with a material, as the material tool of jka.vision (site/materials/ of the
+website) writes them, with the names of rend2 so that packs made for it work too:
+	normalHeightMap <image>		a normal map with the height in its alpha, for parallaxDepth
+	rmoMap <image>				roughness, metalness and occlusion in red, green and blue
+	ormMap <image>				the same as occlusion, roughness, metalness
+	roughness <0..1>, gloss <0..1> (1 - roughness), metalness <0..1>, parallaxDepth <depth>
+The other material keywords of rend2 are read and left out. 1: it was one of them, 0: it was not, -1: it was
+one but wrong.
+===================
+*/
+static int DefaultStages( image_t *image, int first, int *base );
+
+static int ParseMaterialKeyword( const char *word, const char **text, shaderStage_t *stage )
+{
+	static const char *rend2Only[] = { "specularReflectance", "specularExponent", "specularScale", "normalScale", "parallaxBias",
+		"cloth", "specMap", "specularMap", "rmosMap", "moxrMap", "mosrMap", "ormsMap", NULL };
+	char keyword[MAX_TOKEN_CHARS];	// (word is the buffer of COM_ParseExt, which the parameter overwrites)
+	char *token;
+
+	Q_strncpyz( keyword, word, sizeof( keyword ) );
+
+	for ( int i = 0; rend2Only[i]; i++ ) {
+		if ( !Q_stricmp( keyword, rend2Only[i] ) ) {
+			SkipRestOfLine( text );
+			return 1;
+		}
+	}
+	if ( Q_stricmp( keyword, "normalHeightMap" ) && Q_stricmp( keyword, "rmoMap" ) && Q_stricmp( keyword, "ormMap" )
+		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
+		&& Q_stricmp( keyword, "parallaxDepth" ) ) {
+		return 0;
+	}
+	if ( !stage->pbr ) {
+		// a material without a roughness of its own is a dull one
+		stage->pbr = true;
+		stage->roughness = 0.8f;
+	}
+	token = COM_ParseExt( text, qfalse );
+	if ( !token[0] ) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: missing parameter for '%s' keyword in shader '%s'\n", keyword, shader.name );
+		return -1;
+	}
+	if ( !Q_stricmp( keyword, "normalHeightMap" ) || !Q_stricmp( keyword, "rmoMap" ) || !Q_stricmp( keyword, "ormMap" ) ) {
+		image_t *image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+
+		if ( !image ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+		} else if ( !Q_stricmp( keyword, "normalHeightMap" ) ) {
+			stage->normalMap = image;
+			stage->normalHeight = true;
+		} else {
+			stage->rmoMap = image;
+			stage->ormOrder = !Q_stricmp( keyword, "ormMap" );
+		}
+	} else if ( !Q_stricmp( keyword, "roughness" ) ) {
+		stage->roughness = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "gloss" ) ) {
+		stage->roughness = Com_Clamp( 0.0f, 1.0f, 1.0f - atof( token ) );
+	} else if ( !Q_stricmp( keyword, "metalness" ) ) {
+		stage->metalness = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else {
+		stage->parallaxDepth = Com_Clamp( 0.0f, 0.2f, atof( token ) );
+	}
+	return 1;
+}
+
 static qboolean ParseStage( shaderStage_t *stage, const char **text )
 {
 	char *token;
@@ -1199,6 +1269,16 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		if ( token[0] == '}' )
 		{
 			break;
+		}
+		//
+		// VisionJK: the keywords of a material (normalHeightMap, rmoMap, roughness, ...)
+		//
+		else if ( int material = ParseMaterialKeyword( token, text, stage ) )
+		{
+			if ( material < 0 )
+			{
+				return qfalse;
+			}
 		}
 		//
 		// map <name>
@@ -2162,6 +2242,7 @@ static qboolean ParseShader( const char **text )
 	char *token;
 	const char *begin = *text;
 	int s;
+	int implicitBase = -1;		// the stage of the texture of implicitMap
 
 	s = 0;
 
@@ -2204,6 +2285,62 @@ static qboolean ParseShader( const char **text )
 				shader.hasGlow = true;
 			}
 			s++;
+			continue;
+		}
+		//
+		// VisionJK: implicitMap <image>, the stages the engine makes for a texture without a shader (R_FindShader),
+		// so that a shader of the material tool of jka.vision can give such a texture a material; the material
+		// keywords after it in the shader are the ones of the stage of that texture
+		//
+		else if ( !Q_stricmp( token, "implicitMap" ) )
+		{
+			char name[MAX_QPATH];
+			image_t *image;
+
+			token = COM_ParseExt( text, qfalse );
+			COM_StripExtension( token[0] == '-' || !token[0] ? shader.name : token, name, sizeof( name ) );
+			image = R_FindImageFile( name, qtrue, qtrue, qtrue, GL_REPEAT );
+			if ( !image ) {
+				ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", name, shader.name );
+				return qfalse;
+			}
+			if ( s + 2 > MAX_SHADER_STAGES ) {
+				ri.Printf( PRINT_WARNING, "WARNING: too many stages in shader %s (max is %i)\n", shader.name, MAX_SHADER_STAGES );
+				return qfalse;
+			}
+			s += DefaultStages( image, s, &implicitBase );
+			continue;
+		}
+		else if ( implicitBase >= 0 && !Q_stricmp( token, "normalMap" ) )
+		{
+			token = COM_ParseExt( text, qfalse );
+			stages[implicitBase].normalMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+			continue;
+		}
+		else if ( implicitBase >= 0 && ParseMaterialKeyword( token, text, &stages[implicitBase] ) )
+		{
+			continue;
+		}
+		//
+		// VisionJK: emissive <light> [<r> <g> <b>] [noshadows], what the surface gives off as light for the shadows
+		// of the renderer, in the units of q3map_surfacelight; 0 for a surface that gives none
+		//
+		else if ( !Q_stricmp( token, "emissive" ) )
+		{
+			shader.emissiveSet = true;
+			shader.emissiveShadows = true;
+			VectorSet( shader.emissive, 1.0f, 1.0f, 1.0f );
+			// (an empty word is the end of the line: one more read would take the first word of the next one)
+			token = COM_ParseExt( text, qfalse );
+			shader.emissive[3] = atof( token );
+			for ( int i = 0; i < 4 && token[0]; i++ ) {
+				token = COM_ParseExt( text, qfalse );
+				if ( !Q_stricmp( token, "noshadows" ) ) {
+					shader.emissiveShadows = false;
+				} else if ( token[0] && i < 3 ) {
+					shader.emissive[i] = atof( token );
+				}
+			}
 			continue;
 		}
 		// skip stuff that only the QuakeEdRadient needs
@@ -2580,6 +2717,18 @@ static qboolean CollapseMultitexture( void ) {
 		tmpBundle = stages[0].bundle[0];
 		stages[0].bundle[0] = stages[1].bundle[0];
 		stages[0].bundle[1] = tmpBundle;
+		// VisionJK: and the material of the stage of the texture with it
+		if ( stages[1].pbr || stages[1].normalMap )
+		{
+			stages[0].pbr = stages[1].pbr;
+			stages[0].normalHeight = stages[1].normalHeight;
+			stages[0].ormOrder = stages[1].ormOrder;
+			stages[0].normalMap = stages[1].normalMap;
+			stages[0].rmoMap = stages[1].rmoMap;
+			stages[0].roughness = stages[1].roughness;
+			stages[0].metalness = stages[1].metalness;
+			stages[0].parallaxDepth = stages[1].parallaxDepth;
+		}
 	}
 	else
 	{
@@ -3416,6 +3565,71 @@ static inline const int *R_FindLightmap( const int *lightmapIndex )
 
 /*
 ===============
+DefaultStages
+
+The stages of a texture that has no shader, by how the surface is lit (R_FindShader), from stages[first] on. Answers
+how many there are; *base is the one of the texture.
+===============
+*/
+static int DefaultStages( image_t *image, int first, int *base )
+{
+	if ( shader.lightmapIndex[0] == LIGHTMAP_NONE ) {
+		// dynamic colors at vertexes
+		stages[first].bundle[0].image = image;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_LIGHTING_DIFFUSE;
+		stages[first].stateBits = GLS_DEFAULT;
+	} else if ( shader.lightmapIndex[0] == LIGHTMAP_BY_VERTEX ) {
+		// explicit colors at vertexes
+		stages[first].bundle[0].image = image;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_EXACT_VERTEX;
+		stages[first].alphaGen = AGEN_SKIP;
+		stages[first].stateBits = GLS_DEFAULT;
+	} else if ( shader.lightmapIndex[0] == LIGHTMAP_2D ) {
+		// GUI elements
+		stages[first].bundle[0].image = image;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_VERTEX;
+		stages[first].alphaGen = AGEN_VERTEX;
+		stages[first].stateBits = GLS_DEPTHTEST_DISABLE |
+			  GLS_SRCBLEND_SRC_ALPHA |
+			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+	} else if ( shader.lightmapIndex[0] == LIGHTMAP_WHITEIMAGE ) {
+		// fullbright level
+		stages[first].bundle[0].image = tr.whiteImage;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_IDENTITY_LIGHTING;
+		stages[first].stateBits = GLS_DEFAULT;
+
+		stages[first + 1].bundle[0].image = image;
+		stages[first + 1].active = qtrue;
+		stages[first + 1].rgbGen = CGEN_IDENTITY;
+		stages[first + 1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+	} else {
+		// two pass lightmap
+		stages[first].bundle[0].image = tr.lightmaps[shader.lightmapIndex[0]];
+		stages[first].bundle[0].isLightmap = qtrue;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation
+													// for identitylight
+		stages[first].stateBits = GLS_DEFAULT;
+
+		stages[first + 1].bundle[0].image = image;
+		stages[first + 1].active = qtrue;
+		stages[first + 1].rgbGen = CGEN_IDENTITY;
+		stages[first + 1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+	}
+	if ( shader.lightmapIndex[0] == LIGHTMAP_WHITEIMAGE || shader.lightmapIndex[0] >= 0 ) {
+		*base = first + 1;
+		return 2;
+	}
+	*base = first;
+	return 1;
+}
+
+/*
+===============
 R_FindShader
 
 Will always return a valid shader, but it might be the
@@ -3538,53 +3752,8 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	//
 	// create the default shading commands
 	//
-	if ( shader.lightmapIndex[0] == LIGHTMAP_NONE ) {
-		// dynamic colors at vertexes
-		stages[0].bundle[0].image = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-		stages[0].stateBits = GLS_DEFAULT;
-	} else if ( shader.lightmapIndex[0] == LIGHTMAP_BY_VERTEX ) {
-		// explicit colors at vertexes
-		stages[0].bundle[0].image = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_EXACT_VERTEX;
-		stages[0].alphaGen = AGEN_SKIP;
-		stages[0].stateBits = GLS_DEFAULT;
-	} else if ( shader.lightmapIndex[0] == LIGHTMAP_2D ) {
-		// GUI elements
-		stages[0].bundle[0].image = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_VERTEX;
-		stages[0].alphaGen = AGEN_VERTEX;
-		stages[0].stateBits = GLS_DEPTHTEST_DISABLE |
-			  GLS_SRCBLEND_SRC_ALPHA |
-			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-	} else if ( shader.lightmapIndex[0] == LIGHTMAP_WHITEIMAGE ) {
-		// fullbright level
-		stages[0].bundle[0].image = tr.whiteImage;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		stages[0].stateBits = GLS_DEFAULT;
-
-		stages[1].bundle[0].image = image;
-		stages[1].active = qtrue;
-		stages[1].rgbGen = CGEN_IDENTITY;
-		stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-	} else {
-		// two pass lightmap
-		stages[0].bundle[0].image = tr.lightmaps[shader.lightmapIndex[0]];
-		stages[0].bundle[0].isLightmap = qtrue;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation
-													// for identitylight
-		stages[0].stateBits = GLS_DEFAULT;
-
-		stages[1].bundle[0].image = image;
-		stages[1].active = qtrue;
-		stages[1].rgbGen = CGEN_IDENTITY;
-		stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-	}
+	int base;
+	DefaultStages( image, 0, &base );
 
 	return FinishShader();
 }

@@ -295,6 +295,94 @@ static void LogLight( trRefEntity_t *ent ) {
 
 /*
 =================
+R_CreatePbrGrid
+
+VisionJK: the light grid of the level as a picture, for the stages with a material (generic.frag PbrGrid): they
+split the light of their lightmap into the part that comes from one direction and the rest, so that bumps and shine
+follow the lamps. A pixel per cell, the layers of the grid side by side, pbrGridTiles across: in RGB the direction
+the light comes from times the share of that light (directed / (directed + ambient)), as x * 0.5 + 0.5, in alpha
+whether the cell lies in the open (1) or in a wall (0), and RGB times alpha, so that what the texture filtering mixes
+of open cells and walls comes out right again after dividing by alpha. The picture is a power of two each way, the
+rest of it stays empty.
+=================
+*/
+void R_CreatePbrGrid( const char *mapName ) {
+	const world_t	*w = tr.world;
+	int				tiles, rows, width, height;
+	byte			*pic;
+	char			name[MAX_QPATH];
+
+	tr.pbrGrid = NULL;
+	tr.pbrGridTiles = 0;
+	if ( !w || !w->lightGridData || !w->lightGridArray ) {
+		return;
+	}
+	tiles = (int)ceil( sqrt( (double)w->lightGridBounds[2] ) );
+	rows = ( w->lightGridBounds[2] + tiles - 1 ) / tiles;
+	// (the size of a picture is a power of two: R_CreateImage)
+	for ( width = 1; width < w->lightGridBounds[0] * tiles; width <<= 1 ) {
+	}
+	for ( height = 1; height < w->lightGridBounds[1] * rows; height <<= 1 ) {
+	}
+	if ( width > glConfig.maxTextureSize || height > glConfig.maxTextureSize ) {
+		ri.Printf( PRINT_DEVELOPER, "the light grid of %ix%ix%i is too large for one picture, materials light without it\n",
+			w->lightGridBounds[0], w->lightGridBounds[1], w->lightGridBounds[2] );
+		return;
+	}
+
+	pic = (byte *)Z_Malloc( width * height * 4, TAG_TEMP_WORKSPACE, qtrue );
+	for ( int z = 0; z < w->lightGridBounds[2]; z++ ) {
+		for ( int y = 0; y < w->lightGridBounds[1]; y++ ) {
+			for ( int x = 0; x < w->lightGridBounds[0]; x++ ) {
+				const int		cell = x + y * w->lightGridBounds[0] + z * w->lightGridBounds[0] * w->lightGridBounds[1];
+				const mgrid_t	*data;
+				byte			*out;
+				vec3_t			ambient = { 0, 0, 0 }, directed = { 0, 0, 0 }, dir;
+				float			a, d, share;
+				int				lat, lng;
+
+				if ( cell >= w->numGridArrayElements ) {
+					continue;
+				}
+				data = w->lightGridData + w->lightGridArray[cell];
+				if ( data->styles[0] == LS_LSNONE ) {
+					continue;	// in a wall: all four bytes stay 0
+				}
+				for ( int j = 0; j < MAXLIGHTMAPS && data->styles[j] != LS_LSNONE; j++ ) {
+					for ( int c = 0; c < 3; c++ ) {
+						ambient[c] += data->ambientLight[j][c] * styleColors[data->styles[j]][c] / 255.0f;
+						directed[c] += data->directLight[j][c] * styleColors[data->styles[j]][c] / 255.0f;
+					}
+				}
+				// as R_SetupEntityLightingGrid decodes it
+				lat = data->latLong[1] * ( FUNCTABLE_SIZE / 256 );
+				lng = data->latLong[0] * ( FUNCTABLE_SIZE / 256 );
+				dir[0] = tr.sinTable[( lat + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK] * tr.sinTable[lng];
+				dir[1] = tr.sinTable[lat] * tr.sinTable[lng];
+				dir[2] = tr.sinTable[( lng + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK];
+
+				a = 0.2126f * ambient[0] + 0.7152f * ambient[1] + 0.0722f * ambient[2];
+				d = 0.2126f * directed[0] + 0.7152f * directed[1] + 0.0722f * directed[2];
+				share = ( a + d > 0.0f ) ? d / ( a + d ) : 0.0f;
+
+				out = pic + ( ( ( z / tiles ) * w->lightGridBounds[1] + y ) * width + ( z % tiles ) * w->lightGridBounds[0] + x ) * 4;
+				for ( int c = 0; c < 3; c++ ) {
+					out[c] = (byte)Com_Clamp( 0.0f, 255.0f, ( dir[c] * share * 0.5f + 0.5f ) * 255.0f + 0.5f );
+				}
+				out[3] = 255;
+			}
+		}
+	}
+
+	R_IssuePendingRenderCommands();
+	Com_sprintf( name, sizeof( name ), "*%s/pbrgrid", mapName );
+	tr.pbrGrid = R_CreateImage( name, pic, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.pbrGridTiles = tiles;
+	Z_Free( pic );
+}
+
+/*
+=================
 R_SetupEntityLighting
 
 Calculates all the lighting values that will be used

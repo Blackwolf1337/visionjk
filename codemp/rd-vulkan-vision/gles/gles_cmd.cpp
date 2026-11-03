@@ -968,6 +968,11 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 	}
 	GLES_Texture( 0, VK_SlotTexture( draw->tex0 ) );
 	GLES_Texture( 1, VK_SlotTexture( draw->tex1 ) );
+	if ( draw->flags & VKD_PBR ) {
+		GLES_Texture( GLES_UNIT_TEX2, VK_SlotTexture( draw->tex2 ) );
+		GLES_Texture( GLES_UNIT_TEX3, VK_SlotTexture( draw->tex3 ) );
+		GLES_Texture( GLES_UNIT_TEX4, VK_SlotTexture( draw->tex4 ) );
+	}
 
 	if ( cmd->draw.numRanges ) {
 		// surfaces of models: their triangles are in an index buffer on the device

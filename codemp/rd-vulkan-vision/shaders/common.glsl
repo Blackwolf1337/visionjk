@@ -21,6 +21,8 @@ struct Draw {
 	uint	transform;
 	uint	tex0, tex1;
 	uint	flags;
+	uint	tex2, tex3, tex4;	// PBR: normal map, rmo map, light grid
+	uint	pbrFlags;
 	vec4	baseColor;		// color = baseColor + vertColor * vertex color
 	vec4	vertColor;
 	vec4	texMat0[2];		// s' = dot( row0.xy, st ) + row0.z, row0.w: phase of the turbulence
@@ -41,6 +43,10 @@ struct Draw {
 	uint	styles;			// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 	vec4	material;		// MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
 	vec4	material2;		//	and light wrapped into the shadow, glints of crystals
+	vec4	pbr;			// PBR: roughness, metalness, parallax depth
+	vec4	grid0;			//	the light grid: origin, w its layers across
+	vec4	grid1;			//	1 / the size of a cell, w the height of its picture
+	vec4	grid2;			//	cells each way, w the width of its picture
 };
 
 BINDING( 0, 0 ) uniform Globals {
@@ -91,6 +97,16 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
 #define DEFORM( flags )		( ( ( flags ) >> 24 ) & 7u )
 #define MATERIAL( flags )	( ( ( flags ) & 0x08000000u ) != 0u )
+#define PBR( flags )		( ( ( flags ) & 0x10000000u ) != 0u )
+
+// Draw.pbrFlags (VKP_* of vk_local.h)
+#define PBR_NORMAL		0x01u
+#define PBR_RMO			0x02u
+#define PBR_ORM			0x04u
+#define PBR_HEIGHT		0x08u
+#define PBR_ENTITY		0x10u
+#define PBR_LIGHTMAP	0x20u
+#define PBR_GRID		0x40u
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

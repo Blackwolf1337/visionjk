@@ -196,7 +196,8 @@ void StageVertex( StageInput v ) {
 		// lightingDiffuseEntity (RB_CalcDiffuseColor and RB_CalcDiffuseEntityColor of rd-vanilla). A stage with a
 		// material is lit per pixel instead (generic.frag).
 		float incoming = max( dot( v.normal, t.lightDir.xyz ), 0.0 );
-		vec3 light = MATERIAL( d.flags ) ? vec3( 1.0 ) : min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
+		bool perPixel = MATERIAL( d.flags ) || ( PBR( d.flags ) && ( d.pbrFlags & PBR_ENTITY ) != 0u );
+		vec3 light = perPixel ? vec3( 1.0 ) : min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
 
 		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * v.color.a, 0.0, 1.0 ) );
 	} else {

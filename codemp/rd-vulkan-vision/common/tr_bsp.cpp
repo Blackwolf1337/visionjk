@@ -2165,6 +2165,10 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 
 		// only set tr.world now that we know the entire level has loaded properly
 		tr.world = &worldData;
+
+		char sMapName[MAX_QPATH];
+		COM_StripExtension( name, sMapName, sizeof( sMapName ) );
+		R_CreatePbrGrid( sMapName );
 	}
 
 	if (ri.CM_GetCachedMapDiskImage())
