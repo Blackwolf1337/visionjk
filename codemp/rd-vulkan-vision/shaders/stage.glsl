@@ -207,7 +207,7 @@ void StageVertex( StageInput v ) {
 			// ComputeFinalVertexColor() of rd-vanilla: the color of each light style of the vertex times the color of
 			// that style. The ones after the first are in lightmap1 and lightmap2, three bytes in a float each
 			// (VK_PackStyles in vk_world.cpp).
-			float packed[3] = float[3]( v.lightmap1.x, v.lightmap1.y, v.lightmap2.x );
+			float more[3] = float[3]( v.lightmap1.x, v.lightmap1.y, v.lightmap2.x );	// (not "packed": a reserved word of GLSL ES)
 			vec3 sum = v.color.rgb * globals.styles[( d.styles & 255u ) - 1u].rgb;
 
 			for ( int k = 1; k < 4; k++ ) {
@@ -216,7 +216,7 @@ void StageVertex( StageInput v ) {
 				if ( style == 0u ) {
 					break;
 				}
-				uint p = uint( packed[k - 1] );
+				uint p = uint( more[k - 1] );
 				sum += vec3( uvec3( p, p >> 8, p >> 16 ) & 255u ) / 255.0 * globals.styles[style - 1u].rgb;
 			}
 			color.rgb = min( sum, vec3( 1.0 ) );
