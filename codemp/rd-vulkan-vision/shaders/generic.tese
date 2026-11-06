@@ -22,6 +22,7 @@ layout( location = 3 ) in vec3 c_position[];
 layout( location = 5 ) in uint c_draw[];
 layout( location = 6 ) in vec2 c_screenCoord0[];
 layout( location = 7 ) in vec3 c_normal[];
+layout( location = 8 ) patch in uint c_borders;
 
 // what generic.frag reads (stage.glsl)
 layout( location = 0 ) out vec2 v_texCoord0;
@@ -56,7 +57,19 @@ void main() {
 		float texels = uvPerUnit * step * max( size.x, size.y );
 		float height = textureLod( u_textures[nonuniformEXT( d.tex2 )], uv, log2( max( texels, 1.0 ) ) ).a;
 
-		position += normalize( normal ) * ( height - d.tess.y ) * d.tess.x;
+		// Toward an edge on a border of the surface the bumps go down to nothing over about one and a half pieces,
+		// so on the edge both sides lie on their polygons whatever their normals and cuts (no gap opens). On the
+		// edge across from vertex i its weight gl_TessCoord[i] is 0.
+		float width = 1.5 / max( gl_TessLevelInner[0], 1.0 );
+		float fade = 1.0;
+		for ( int i = 0; i < 3; i++ ) {
+			if ( ( c_borders & ( 1u << uint( i ) ) ) != 0u ) {
+				fade = min( fade, gl_TessCoord[i] / width );
+			}
+		}
+		fade = smoothstep( 0.0, 1.0, fade );
+
+		position += normalize( normal ) * ( height - d.tess.y ) * d.tess.x * fade;
 	}
 
 	gl_Position = t.mvp * vec4( position, 1.0 );

@@ -1286,6 +1286,74 @@ static qboolean VK_UploadSpriteBatch( uint32_t *bones ) {
 
 /*
 ===============
+VK_TessBorders
+
+For a batch of the level drawn with tessellation (VKP_TESS, shaders/generic.tesc): which edges of its triangles lie
+on a border, as one float a triangle into the bone buffer of the frame, four to a row, bits 1, 2, 4 for the edges
+across from its first, second and third vertex. A border is an edge only one triangle of the batch has: where two
+surfaces of the level meet with vertices of their own (their normals differ, one edge may meet two), and where the
+surface ends at another shader. generic.tese lets the bumps go down to nothing toward those, so the two sides stay
+on their polygons and no gap opens between them. bones: where the floats start, in rows. qfalse: not a batch of
+the level, or no room in the frame.
+===============
+*/
+#define VK_TESS_EDGE_HASH	16384		// a power of two over the edges of a batch (SHADER_MAX_INDEXES)
+qboolean VK_TessBorders( uint32_t *bones ) {
+	static uint64_t	keys[VK_TESS_EDGE_HASH];
+	static uint32_t	stamps[VK_TESS_EDGE_HASH];
+	static byte		counts[VK_TESS_EDGE_HASH];
+	static uint32_t	stamp;
+	vkFrame_t		*frame = vk.frame;
+	const int		numTriangles = tess.numIndexes / 3;
+	const int		rows = ( numTriangles + 3 ) / 4;
+	const int		first = ( frame ? frame->numBones + VK_BONE_ALIGN - 1 : 0 ) / VK_BONE_ALIGN * VK_BONE_ALIGN;
+	const int		count = ( rows + 2 ) / 3;		// the buffer counts in bones of three rows
+	int				slots[SHADER_MAX_INDEXES];
+
+	if ( vk_batchMode != 1 || !frame || !numTriangles || first + count > VK_MAX_BONES ) {
+		return qfalse;
+	}
+	if ( ++stamp == 0 ) {
+		memset( stamps, 0, sizeof( stamps ) );
+		stamp = 1;
+	}
+	// how many triangles have each edge; slots: where the edge of a corner is in the table
+	for ( int i = 0; i < numTriangles * 3; i++ ) {
+		const glIndex_t a = tess.indexes[i - i % 3 + ( i % 3 + 1 ) % 3], b = tess.indexes[i - i % 3 + ( i % 3 + 2 ) % 3];
+		const uint64_t key = ( a < b ) ? ( (uint64_t)a << 32 | b ) : ( (uint64_t)b << 32 | a );
+		uint32_t h = (uint32_t)( ( key * 0x9E3779B97F4A7C15ull ) >> 50 ) & ( VK_TESS_EDGE_HASH - 1 );
+
+		while ( stamps[h] == stamp && keys[h] != key ) {
+			h = ( h + 1 ) & ( VK_TESS_EDGE_HASH - 1 );
+		}
+		if ( stamps[h] != stamp ) {
+			stamps[h] = stamp;
+			keys[h] = key;
+			counts[h] = 0;
+		}
+		if ( counts[h] < 255 ) {
+			counts[h]++;
+		}
+		slots[i] = (int)h;
+	}
+	float *out = (float *)( frame->bones.mapped + sizeof( float ) * 12 * first );
+	for ( int t = 0; t < numTriangles; t++ ) {
+		uint32_t bits = 0;
+
+		for ( int c = 0; c < 3; c++ ) {
+			if ( counts[slots[t * 3 + c]] == 1 ) {
+				bits |= 1u << c;
+			}
+		}
+		out[t] = (float)bits;
+	}
+	frame->numBones = first + count;
+	*bones = (uint32_t)first * 3;
+	return qtrue;
+}
+
+/*
+===============
 VK_UploadStaticBatch
 
 The indexes of a static batch into the frame, the vertices are the ones of the level or of the models.

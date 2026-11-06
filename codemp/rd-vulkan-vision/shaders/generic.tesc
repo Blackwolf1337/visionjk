@@ -29,6 +29,13 @@ layout( location = 3 ) out vec3 c_position[];
 layout( location = 5 ) out uint c_draw[];
 layout( location = 6 ) out vec2 c_screenCoord0[];
 layout( location = 7 ) out vec3 c_normal[];
+// which edges of the triangle are borders (VK_TessBorders of vk_world.cpp): bits 1, 2, 4 across from vertex 0, 1, 2
+layout( location = 8 ) patch out uint c_borders;
+
+// the floats of VK_TessBorders, four triangles to a row, from draw.bones on
+layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
+	vec4	bones[];
+};
 
 // pieces for the edge from a to b: its length over its distance from the eye is the angle it fills, times the
 // pixels the screen has for an angle of one (about its height for the field of view of the game)
@@ -52,6 +59,8 @@ void main() {
 	if ( gl_InvocationID == 0 ) {
 		Draw d = DRAWS( v_draw[0] );
 		Transform t = TRANSFORMS( d.transform );
+
+		c_borders = uint( bones[d.bones + uint( gl_PrimitiveID ) / 4u][gl_PrimitiveID % 4] );
 
 		// outer level i is the edge across from vertex i
 		gl_TessLevelOuter[0] = EdgeLevel( d, t, 1, 2 );

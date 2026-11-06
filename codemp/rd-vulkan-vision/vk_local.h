@@ -369,6 +369,7 @@ void		VK_QuadRecord( vec4_t *row, int kind, const vec3_t a, float aw, const vec3
 				const float *st, const float *color, const vec3_t d );
 void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
 qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
+qboolean	VK_TessBorders( uint32_t *bones );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;

@@ -1247,9 +1247,13 @@ void RB_StageIteratorGeneric( void ) {
 			// Tessellation: the triangles of this stage cut on the device and moved by the height of the normal map,
 			// which takes the place of the parallax. Only geometry in the layout of the tess arrays, not in a
 			// mirror or probe view (their faces stay cheap), and only where the normal map has a height.
+			// The borders of the batch go into the frame for generic.tese (VK_TessBorders), so only surfaces of
+			// the level.
+			uint32_t borders = 0;
 			if ( mat->tessHeight > 0.0f && program == VKP_GENERIC && vk.tessellation && v_tessellation->integer
-				&& ( draw.pbrFlags & VKP_HEIGHT ) && !backEnd.viewParms.probeFace ) {
+				&& ( draw.pbrFlags & VKP_HEIGHT ) && !backEnd.viewParms.probeFace && VK_TessBorders( &borders ) ) {
 				stageProgram = VKP_TESS;
+				draw.bones = borders;
 				draw.pbr[2] = 0.0f;
 				draw.tess[0] = mat->tessHeight;
 				draw.tess[1] = mat->tessPlane;
