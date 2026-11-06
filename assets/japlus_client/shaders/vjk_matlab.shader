@@ -1,0 +1,484 @@
+// the test map of the materials (tools/maps/matlab.py writes this file, do not edit it by hand)
+
+textures/vjk_matlab/floor
+{
+	qer_editorimage textures/vjk_matlab/floor.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/floor.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/wall
+{
+	qer_editorimage textures/vjk_matlab/wall.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/wall.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/ceiling
+{
+	qer_editorimage textures/vjk_matlab/ceiling.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/ceiling.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/object_a
+{
+	qer_editorimage textures/vjk_matlab/object.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/object.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/object_b
+{
+	qer_editorimage textures/vjk_matlab/object.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/object.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/object_c
+{
+	qer_editorimage textures/vjk_matlab/object.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/object.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/grey18
+{
+	qer_editorimage textures/vjk_matlab/grey18.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/grey18.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chrome
+{
+	qer_editorimage textures/vjk_matlab/chrome.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chrome.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/mirrorfloor
+{
+	qer_editorimage textures/vjk_matlab/chrome.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chrome.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/checker
+{
+	qer_editorimage textures/vjk_matlab/checker.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/checker.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart00
+{
+	qer_editorimage textures/vjk_matlab/chart00.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart00.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart01
+{
+	qer_editorimage textures/vjk_matlab/chart01.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart01.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart02
+{
+	qer_editorimage textures/vjk_matlab/chart02.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart02.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart03
+{
+	qer_editorimage textures/vjk_matlab/chart03.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart03.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart04
+{
+	qer_editorimage textures/vjk_matlab/chart04.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart04.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart05
+{
+	qer_editorimage textures/vjk_matlab/chart05.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart05.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart06
+{
+	qer_editorimage textures/vjk_matlab/chart06.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart06.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart07
+{
+	qer_editorimage textures/vjk_matlab/chart07.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart07.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart08
+{
+	qer_editorimage textures/vjk_matlab/chart08.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart08.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart09
+{
+	qer_editorimage textures/vjk_matlab/chart09.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart09.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart10
+{
+	qer_editorimage textures/vjk_matlab/chart10.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart10.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart11
+{
+	qer_editorimage textures/vjk_matlab/chart11.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart11.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart12
+{
+	qer_editorimage textures/vjk_matlab/chart12.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart12.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart13
+{
+	qer_editorimage textures/vjk_matlab/chart13.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart13.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart14
+{
+	qer_editorimage textures/vjk_matlab/chart14.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart14.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart15
+{
+	qer_editorimage textures/vjk_matlab/chart15.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart15.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart16
+{
+	qer_editorimage textures/vjk_matlab/chart16.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart16.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart17
+{
+	qer_editorimage textures/vjk_matlab/chart17.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart17.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart18
+{
+	qer_editorimage textures/vjk_matlab/chart18.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart18.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart19
+{
+	qer_editorimage textures/vjk_matlab/chart19.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart19.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart20
+{
+	qer_editorimage textures/vjk_matlab/chart20.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart20.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart21
+{
+	qer_editorimage textures/vjk_matlab/chart21.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart21.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart22
+{
+	qer_editorimage textures/vjk_matlab/chart22.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart22.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/chart23
+{
+	qer_editorimage textures/vjk_matlab/chart23.png
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/chart23.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/vjk_matlab/lamp
+{
+	qer_editorimage textures/vjk_matlab/lamp.png
+	q3map_surfacelight 6000
+	q3map_lightRGB 1 0.95 0.85
+	surfaceparm nomarks
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjk_matlab/lamp.png
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+	{
+		map textures/vjk_matlab/lamp_glow.png
+		blendFunc GL_ONE GL_ONE
+		glow
+	}
+}
+
+textures/vjk_matlab/glass_clear
+{
+	qer_editorimage textures/vjk_matlab/glass_clear.png
+	surfaceparm trans
+	surfaceparm nolightmap
+	surfaceparm glass
+	cull none
+	{
+		map textures/vjk_matlab/glass_clear.png
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen identity
+	}
+}
+
+textures/vjk_matlab/glass_tint
+{
+	qer_editorimage textures/vjk_matlab/glass_tint.png
+	surfaceparm trans
+	surfaceparm nolightmap
+	surfaceparm glass
+	cull none
+	{
+		map textures/vjk_matlab/glass_tint.png
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen identity
+	}
+}
+
+textures/vjk_matlab/glass_frost
+{
+	qer_editorimage textures/vjk_matlab/glass_frost.png
+	surfaceparm trans
+	surfaceparm nolightmap
+	surfaceparm glass
+	cull none
+	{
+		map textures/vjk_matlab/glass_frost.png
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen identity
+	}
+}
+
+textures/vjk_matlab/sky
+{
+	qer_editorimage textures/skies/sky.tga
+	surfaceparm sky
+	surfaceparm noimpact
+	surfaceparm nomarks
+	surfaceparm nolightmap
+	q3map_sun 1 0.95 0.85 180 40 55
+	q3map_skylight 220 4
+	sun 255 242 217 180 40 55
+	skyParms textures/skies/desert 512 -
+}

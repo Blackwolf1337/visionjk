@@ -627,6 +627,43 @@ static void MatDebug_DrawActions( void ) {
 	}
 }
 
+// In the test map vjk_matlab (tools/maps/matlab.py): its test objects carry the shaders object_a (studio), object_b
+// (court) and object_c (dark hall), which are remapped to the shader that is judged, so they show its texture and
+// material in each light; Back gives them their own again.
+static qboolean labObjectsShow;
+
+static qboolean MatDebug_InLab( void ) {
+	return (qboolean)( Q_stristr( cl.mapname, "vjk_matlab" ) != NULL );
+}
+
+static void MatDebug_LabObjects( const char *shader ) {
+	static const char *const objects[] = { "textures/vjk_matlab/object_a", "textures/vjk_matlab/object_b", "textures/vjk_matlab/object_c" };
+
+	for ( int i = 0; i < (int)ARRAY_LEN( objects ); i++ ) {
+		re->RemapShader( objects[i], shader ? shader : objects[i], "0" );
+	}
+	labObjectsShow = shader ? qtrue : qfalse;
+}
+
+static void MatDebug_DrawLab( void ) {
+	if ( !MatDebug_InLab() ) {
+		return;
+	}
+	ImGui::SeparatorText( "Test map" );
+	if ( ImGui::Button( "Show on the test objects" ) ) {
+		MatDebug_LabObjects( selName );
+		MatDebug_Message( qfalse, "The test objects show %s", selName );
+	}
+	ImGui::SameLine();
+	ImGui::BeginDisabled( !labObjectsShow );
+	if ( ImGui::Button( "Back" ) ) {
+		MatDebug_LabObjects( NULL );
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	ImGui::TextDisabled( "studio, court and dark hall" );
+}
+
 static void MatDebug_DrawText( void ) {
 	static char text[32768];
 	char file[MAX_QPATH];
@@ -682,6 +719,7 @@ static void MatDebug_DrawShader( void ) {
 	}
 	ImGui::Separator();
 	MatDebug_DrawActions();
+	MatDebug_DrawLab();
 	ImGui::SeparatorText( "Material of the stage" );
 	ImGui::BeginDisabled( showOriginal != qfalse );
 	MatDebug_DrawMaterial();
@@ -709,6 +747,23 @@ static void MatDebug_DrawList( void ) {
 	if ( ImGui::Button( "Refresh" ) ) {
 		numListed = -1;
 	}
+	// a shader this level does not use, loaded by name (to judge it in the test map)
+	static char openName[MAX_QPATH];
+	ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.6f );
+	if ( ImGui::InputTextWithHint( "##open", "open a shader by name", openName, sizeof( openName ), ImGuiInputTextFlags_EnterReturnsTrue ) && openName[0] ) {
+		re->RegisterShader( openName );
+		const qhandle_t opened = re->ext.MaterialFind( openName );
+
+		if ( opened ) {
+			numListed = -1;
+			listAll = qtrue;
+			MatDebug_Select( opened );
+		} else {
+			MatDebug_Message( qtrue, "No shader %s", openName );
+		}
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled( "Enter opens it" );
 	ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.6f );
 	ImGui::InputTextWithHint( "##filter", "filter by name", filter, sizeof( filter ) );
 	ImGui::SameLine();

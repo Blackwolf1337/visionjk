@@ -1,0 +1,8 @@
+// the views of the quality control in vjk_matlab: name, origin x y z, yaw, pitch (tools/maps/matlab.py)
+studio_objects 200 0 120 0 8
+studio_chart 1000 0 280 0 0
+studio_balls 760 0 140 0 10
+court_objects 1620 0 140 0 6
+court_mirror 1340 0 90 0 18
+dark_objects 2720 0 120 0 6
+glass_panes 3840 0 150 0 0
