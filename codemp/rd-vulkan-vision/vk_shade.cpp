@@ -753,6 +753,19 @@ model whose light is not the one of its entity, a second texture that is not the
 colour, the glow pass, r_lightmap.
 ===============
 */
+// the reflection probes of the level for a draw with a material (tex5, tex6), where there are any
+static void VK_PbrProbes( vkDraw_t *draw ) {
+	if ( tr.probesReady && tr.pbrProbes && VK_ProbesSupported() && tr.world ) {
+		draw->pbrFlags |= VKP_PROBES;
+		draw->tex5 = tr.pbrProbes->texnum;
+		draw->tex6 = tr.probeImage->texnum;
+		draw->probeSize = PROBE_SIZE;
+		draw->probeCount = (uint32_t)tr.numProbes;
+	} else {
+		draw->tex5 = draw->tex6 = draw->tex0;
+	}
+}
+
 static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader, qboolean refract, vkDraw_t *draw ) {
 	const uint32_t rgbGen = ( draw->flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK;
 	const textureBundle_t *second = &pStage->bundle[1];
@@ -807,16 +820,63 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 		}
 		draw->grid2[3] = (float)tr.pbrGrid->width;
 	}
-	if ( ( draw->pbrFlags & VKP_GRID ) && tr.probesReady && tr.pbrProbes && VK_ProbesSupported() ) {
-		draw->pbrFlags |= VKP_PROBES;
-		draw->tex5 = tr.pbrProbes->texnum;
-		draw->tex6 = tr.probeImage->texnum;
-		draw->probeSize = PROBE_SIZE;
-		draw->probeCount = (uint32_t)tr.numProbes;
+	if ( draw->pbrFlags & VKP_GRID ) {
+		VK_PbrProbes( draw );
 	} else {
 		draw->tex5 = draw->tex6 = draw->tex0;
 	}
 	return qtrue;
+}
+
+#ifndef RD_VISION_GLES
+// VisionJK: glass may be drawn bent (VK_GlassDraw): the backend copied the frame for it in this view
+qboolean vk_glassReady;
+#endif
+
+/*
+===============
+VK_GlassDraw
+
+VisionJK: a stage whose material is glass (transmission > 0) is drawn as the copy of the frame behind it, bent by
+its normal and ior, blurred by its roughness and tinted, with what it mirrors of the probes (generic.frag GlassStage),
+in place of blending its texture over the scene. Only where the backend copied the frame for this view
+(vk_glassReady); else, and on GLES, the stage is drawn as its text says.
+===============
+*/
+static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkDraw_t *draw, uint32_t *stateBits ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	const stageMaterial_t *mat = pStage->mat;
+
+	if ( !mat || mat->transmission <= 0.0f || !vk_glassReady || !v_pbr->integer || g_bRenderGlowingObjects || refract
+		|| !tr.screenImage ) {
+		return qfalse;
+	}
+	draw->flags |= VKD_PBR;
+	draw->pbrFlags = VKP_GLASS;
+	draw->tex1 = tr.screenImage->texnum;
+	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
+	if ( mat->normalMap ) {
+		draw->tex2 = mat->normalMap->texnum;
+		draw->pbrFlags |= VKP_NORMAL;
+	}
+	draw->pbr[0] = mat->roughness;
+	draw->pbr[1] = 0.0f;
+	draw->pbr[2] = mat->ior;
+	draw->pbr[3] = (float)v_pbr->integer;
+	draw->pbr2[0] = mat->transmission;
+	draw->pbr2[1] = mat->thickness;
+	draw->pbr2[2] = mat->absorptionDistance;
+	draw->pbr2[3] = 0.0f;
+	VectorCopy( mat->absorption, draw->material );
+	draw->material[3] = 0.0f;
+	VK_PbrProbes( draw );
+	// not blended: what it shows of the scene is in its colour. Its depth is written, so what is drawn after it and
+	// lies behind it is not drawn over it (R_SortGlass draws glass far to near, before the other transparent things)
+	*stateBits = GLS_DEPTHMASK_TRUE;
+	return qtrue;
+#endif
 }
 
 static void VK_IdentityTexCoords( vkDraw_t *draw ) {
@@ -1164,7 +1224,8 @@ void RB_StageIteratorGeneric( void ) {
 		// VisionJK: a stage with a material of the material tool (shader keywords rmoMap, roughness, metalness ...)
 		// is lit per pixel with GGX by the light it gets anyway, see generic.frag PbrStage
 		const stageMaterial_t *mat = pStage->mat;
-		if ( VK_PbrDraw( pStage, shader, refract, &draw ) ) {
+		if ( VK_GlassDraw( pStage, refract, &draw, &stateBits ) ) {
+		} else if ( VK_PbrDraw( pStage, shader, refract, &draw ) ) {
 		} else if ( mat && ( mat->normalMap || mat->specular[0] > 0.0f || mat->specular[2] > 0.0f || mat->wrapLight > 0.0f
 			|| mat->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
 			draw.flags |= VKD_MATERIAL;

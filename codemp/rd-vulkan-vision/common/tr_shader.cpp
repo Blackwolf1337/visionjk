@@ -1209,6 +1209,11 @@ material needs no picture files:
 	albedoGen <rrggbb> <delight> <saturation>			the texture with its painted light taken out, tinted
 	normalGen <strength> <blur> <detail> [invert]		bumps from its brightness, the height in alpha
 	rmoGen <variation> <occlusion>						roughness that varies with it, occlusion in its cracks
+and glass, the screen behind the surface bent and tinted (VK_GlassDraw):
+	transmission <0..1>									how much of what is behind shows through, 1 clear glass
+	ior <n>												1.5 glass, 1.33 water, 1.0 nothing bends
+	thickness <units>									0 a thin pane, else a solid of that depth
+	absorption <r g b> <distance>						what is left of each colour after that many units in it
 These are not rend2's: only in .oshader files, which rend2 does not read (it drops a shader with a word it does
 not know).
 The other material keywords of rend2 are read and left out. 1: it was one of them, 0: it was not, -1: it was
@@ -1232,6 +1237,9 @@ static stageMaterial_t *StageMaterial( shaderStage_t *stage )
 		memset( mat, 0, sizeof( *mat ) );
 		mat->roughness = 0.8f;
 		mat->parallaxPlane = 0.5f;
+		mat->ior = 1.5f;
+		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
+		mat->absorptionDistance = 64.0f;
 		R_DefaultMaterialGen( &mat->gen );
 		mat->sourceStage = stage->sourceStage;
 		stage->mat = mat;
@@ -1269,6 +1277,9 @@ stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean crea
 		memset( mat, 0, sizeof( *mat ) );
 		mat->roughness = 0.8f;
 		mat->parallaxPlane = 0.5f;
+		mat->ior = 1.5f;
+		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
+		mat->absorptionDistance = 64.0f;
 		R_DefaultMaterialGen( &mat->gen );
 	}
 	Q_strncpyz( mat->shaderName, name, sizeof( mat->shaderName ) );
@@ -1335,7 +1346,8 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 	if ( Q_stricmp( keyword, "normalHeightMap" ) && Q_stricmp( keyword, "rmoMap" ) && Q_stricmp( keyword, "ormMap" )
 		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
 		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) && Q_stricmp( keyword, "albedoGen" )
-		&& Q_stricmp( keyword, "normalGen" ) && Q_stricmp( keyword, "rmoGen" ) ) {
+		&& Q_stricmp( keyword, "normalGen" ) && Q_stricmp( keyword, "rmoGen" ) && Q_stricmp( keyword, "transmission" )
+		&& Q_stricmp( keyword, "ior" ) && Q_stricmp( keyword, "thickness" ) && Q_stricmp( keyword, "absorption" ) ) {
 		return 0;
 	}
 	stageMaterial_t *mat = StageMaterial( stage );
@@ -1389,6 +1401,20 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 		mat->gen.normalDetail = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.3f;
 		token = COM_ParseExt( text, qfalse );
 		mat->gen.normalInvert = !Q_stricmp( token, "invert" ) ? qtrue : qfalse;
+	} else if ( !Q_stricmp( keyword, "transmission" ) ) {
+		mat->transmission = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "ior" ) ) {
+		mat->ior = Com_Clamp( 1.0f, 3.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "thickness" ) ) {
+		mat->thickness = Com_Clamp( 0.0f, 512.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "absorption" ) ) {
+		mat->absorption[0] = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		for ( int c = 1; c < 3; c++ ) {
+			token = COM_ParseExt( text, qfalse );
+			mat->absorption[c] = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : mat->absorption[0];
+		}
+		token = COM_ParseExt( text, qfalse );
+		mat->absorptionDistance = token[0] ? Com_Clamp( 1.0f, 4096.0f, atof( token ) ) : 64.0f;
 	} else if ( !Q_stricmp( keyword, "rmoGen" ) ) {
 		mat->gen.flags |= MATGEN_RMO;
 		mat->gen.rmoVariation = Com_Clamp( 0.0f, 1.0f, atof( token ) );

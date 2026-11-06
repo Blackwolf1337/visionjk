@@ -141,12 +141,19 @@ def shaders(with_materials):
         "\tsurfaceparm nomarks\n\t{\n\t\tmap $lightmap\n\t}\n\t{\n\t\tmap %s/lamp.png\n\t\tblendFunc GL_DST_COLOR GL_ZERO\n\t}\n"
         "\t{\n\t\tmap %s/lamp_glow.png\n\t\tblendFunc GL_ONE GL_ONE\n\t\tglow\n\t}\n}\n" % (TEX, TEX, TEX, TEX))
 
-    # glass: blended, no lightmap, lets light through (the glass keywords of the renderer come with stage 7)
-    for name in ("glass_clear", "glass_tint", "glass_frost"):
+    # glass: blended, no lightmap, lets light through; with its material rd-vulkan-vision bends and tints what is
+    # behind it (transmission, ior, thickness, absorption)
+    glass = {
+        "glass_clear": ["roughness 0.02", "metalness 0", "transmission 1", "ior 1.5"],
+        "glass_tint": ["roughness 0.04", "metalness 0", "transmission 1", "ior 1.52", "thickness 6", "absorption 0.45 0.8 0.65 8"],
+        "glass_frost": ["roughness 0.55", "metalness 0", "transmission 1", "ior 1.5"],
+    }
+    for name, mat in glass.items():
+        lines = "".join("\t\t%s\n" % line for line in (mat if with_materials else []))
         text.append(
             "%s/%s\n{\n\tqer_editorimage %s/%s.png\n\tsurfaceparm trans\n\tsurfaceparm nolightmap\n\tsurfaceparm glass\n"
-            "\tcull none\n\t{\n\t\tmap %s/%s.png\n\t\tblendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA\n\t\trgbGen identity\n\t}\n}\n"
-            % (TEX, name, TEX, name, TEX, name))
+            "\tcull none\n\t{\n\t\tmap %s/%s.png\n\t\tblendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA\n\t\trgbGen identity\n%s\t}\n}\n"
+            % (TEX, name, TEX, name, TEX, name, lines))
 
     # the sky: the desert sky of the game, with a sun for the lightmap and the traced shadows
     text.append(
@@ -404,6 +411,9 @@ def build_map():
         y = -340 + i * 240
         m.box((4240, y, 0), (4244, y + 200, 300), tex(name))
     m.box((4340, -340, 0), (4344, -140, 300), tex("glass_tint"))
+    for x in (3850, 4400):
+        for y in (-300, 300):
+            m.entity("light", origin="%d %d 460" % (x, y), light="1800", _color="1 1 1")
     cams += [("glass_panes", (3840, 0, 150), 0, 0)]
 
     worldspawn = {"message": "VisionJK material lab", "_lightmapscale": "0.5", "_minlight": "10",

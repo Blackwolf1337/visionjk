@@ -570,6 +570,9 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	memset( out, 0, sizeof( *out ) );
 	out->roughness = 0.8f;
 	out->parallaxPlane = 0.5f;
+	out->ior = 1.5f;
+	VectorSet( out->absorption, 1.0f, 1.0f, 1.0f );
+	out->absorptionDistance = 64.0f;
 	R_DefaultMaterialGen( &out->gen );
 	if ( shader <= 0 || shader >= tr.numShaders ) {
 		return qfalse;
@@ -600,6 +603,11 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	}
 	out->ormOrder = (qboolean)mat->ormOrder;
 	out->gen = mat->gen;
+	out->transmission = mat->transmission;
+	out->ior = mat->ior;
+	out->thickness = mat->thickness;
+	VectorCopy( mat->absorption, out->absorption );
+	out->absorptionDistance = mat->absorptionDistance;
 	return qtrue;
 }
 
@@ -678,6 +686,15 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 		mat->ormOrder = mat->rmoMap && in->ormOrder;
 		mat->rmoRelative = false;
 	}
+	if ( fields & MATP_GLASS ) {
+		mat->transmission = Com_Clamp( 0.0f, 1.0f, in->transmission );
+		mat->ior = Com_Clamp( 1.0f, 3.0f, in->ior );
+		mat->thickness = Com_Clamp( 0.0f, 512.0f, in->thickness );
+		for ( int c = 0; c < 3; c++ ) {
+			mat->absorption[c] = Com_Clamp( 0.0f, 1.0f, in->absorption[c] );
+		}
+		mat->absorptionDistance = Com_Clamp( 1.0f, 4096.0f, in->absorptionDistance );
+	}
 	if ( fields & MATP_GEN ) {
 		// made again from the texture the record had them from (the stage shows the albedo now), into its images
 		mat->gen = in->gen;
@@ -701,7 +718,8 @@ The text of a shader with its materials, and saving it
 
 // what a stage line of a material says, which the text gets again from the record
 static const char *const materialWords[] = { "normalMap", "normalHeightMap", "rmoMap", "ormMap", "roughness", "gloss",
-	"metalness", "parallaxDepth", "parallaxPlane", "albedoGen", "normalGen", "rmoGen", "specular", "wrapLight", "sparkle", NULL };
+	"metalness", "parallaxDepth", "parallaxPlane", "albedoGen", "normalGen", "rmoGen", "specular", "wrapLight", "sparkle",
+	"transmission", "ior", "thickness", "absorption", NULL };
 
 static qboolean IsMaterialWord( const char *word ) {
 	for ( int i = 0; materialWords[i]; i++ ) {
@@ -782,6 +800,20 @@ static void OutMaterial( textOut_t *out, const stageMaterial_t *mat, int depth )
 			Out( out, "parallaxDepth %g\n", mat->parallaxDepth );
 			OutIndent( out, depth );
 			Out( out, "parallaxPlane %g\n", mat->parallaxPlane );
+		}
+	}
+	if ( mat->transmission > 0.0f ) {
+		OutIndent( out, depth );
+		Out( out, "transmission %g\n", mat->transmission );
+		OutIndent( out, depth );
+		Out( out, "ior %g\n", mat->ior );
+		if ( mat->thickness > 0.0f ) {
+			OutIndent( out, depth );
+			Out( out, "thickness %g\n", mat->thickness );
+		}
+		if ( mat->absorption[0] < 1.0f || mat->absorption[1] < 1.0f || mat->absorption[2] < 1.0f ) {
+			OutIndent( out, depth );
+			Out( out, "absorption %g %g %g %g\n", mat->absorption[0], mat->absorption[1], mat->absorption[2], mat->absorptionDistance );
 		}
 	}
 	if ( mat->specular[0] || mat->specular[1] || mat->specular[2] ) {
@@ -927,9 +959,10 @@ static qboolean SameMaterial( const stageMaterial_t *a, const stageMaterial_t *b
 		const stageMaterial_t *m = a ? a : b;
 
 		return (qboolean)( !m || ( !m->pbr && !m->gen.flags && !IsFileImage( m->normalMap ) && !IsFileImage( m->rmoMap )
-			&& !m->specular[0] && !m->specular[1] && !m->specular[2] && !m->wrapLight && !m->sparkle ) );
+			&& !m->specular[0] && !m->specular[1] && !m->specular[2] && !m->wrapLight && !m->sparkle && !m->transmission ) );
 	}
-	if ( a->pbr != b->pbr || a->gen.flags != b->gen.flags ) {
+	if ( a->pbr != b->pbr || a->gen.flags != b->gen.flags || fabsf( a->transmission - b->transmission ) > e
+		|| ( a->transmission > 0.0f && ( fabsf( a->ior - b->ior ) > e || fabsf( a->thickness - b->thickness ) > e ) ) ) {
 		return qfalse;
 	}
 	if ( a->pbr && ( fabsf( a->roughness - b->roughness ) > e || fabsf( a->metalness - b->metalness ) > e

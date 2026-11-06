@@ -339,9 +339,97 @@ vec3 DebugLights( Transform t, vec3 n, vec3 flat_, vec3 toEye, vec3 albedo, floa
 	}
 	return shine;
 }
+
+/* Glass (VK_GlassDraw, material keywords transmission, ior, thickness, absorption): the copy of the frame in tex1
+   behind the surface. Where it shows it is bent: the ray from the eye through the surface (refract by ior) against
+   the straight one, both carried thickness units on (a thin pane 4) and projected to the screen. It is blurred by the
+   roughness (frosted), coloured by the absorption over the path through it (a thin pane by the colour alone) and
+   by the texture as far as its alpha says. On top, what it mirrors of the probes by Fresnel (F0 from ior) and the
+   shine of the lamps. pbr: roughness, -, ior, v_pbr; pbr2: transmission, thickness, absorption distance; material:
+   the absorption colour. */
+vec4 GlassStage( Draw d ) {
+	const vec2 disk[12] = vec2[12]( vec2( -0.326, -0.406 ), vec2( -0.840, -0.074 ), vec2( -0.696, 0.457 ), vec2( -0.203, 0.621 ),
+		vec2( 0.962, -0.195 ), vec2( 0.473, -0.480 ), vec2( 0.519, 0.767 ), vec2( 0.185, -0.893 ), vec2( 0.507, 0.064 ),
+		vec2( 0.896, 0.412 ), vec2( -0.322, -0.933 ), vec2( -0.792, -0.598 ) );
+	Transform t = TRANSFORMS( d.transform );
+	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
+	vec3 flat_ = normalize( v_normal );
+	if ( dot( flat_, toEye ) < 0.0 ) {
+		flat_ = -flat_;
+	}
+	vec3 n = flat_;
+	if ( ( d.pbrFlags & PBR_NORMAL ) != 0u ) {
+		mat3 frame = CotangentFrame( flat_, v_position, v_texCoord0 );
+		n = normalize( frame * ( texture( TEX2( d ), v_texCoord0 ).xyz * 2.0 - 1.0 ) );
+	}
+	float roughness = d.pbr.x, ior = max( d.pbr.z, 1.0 ), transmission = d.pbr2.x, thickness = d.pbr2.y;
+	float nv = max( dot( n, toEye ), 1e-4 );
+
+	// the screen behind, bent
+	float dist = thickness > 0.0 ? thickness : 4.0;
+	vec3 bent = refract( -toEye, n, 1.0 / ior );
+	if ( dot( bent, bent ) < 1e-6 ) {
+		bent = -toEye;
+	}
+	vec4 straight = t.mvp * vec4( v_position - toEye * dist, 1.0 );
+	vec4 through = t.mvp * vec4( v_position + bent * dist, 1.0 );
+	// (the viewport turns the y of OpenGL: up on the screen is down in the frame)
+	vec2 offset = ( through.xy / through.w - straight.xy / straight.w ) * vec2( 0.5, -0.5 );
+	vec2 uv = gl_FragCoord.xy / globals.screen.xy + offset;
+	vec3 back;
+	float radius = roughness * roughness * 0.06;
+	if ( radius < 0.0005 ) {
+		back = texture( TEX1( d ), uv ).rgb;
+	} else {
+		vec2 aspect = vec2( globals.screen.y / globals.screen.x, 1.0 ) * radius;
+		// the disk turned another way at each pixel (interleaved gradient noise, Jimenez 2014), so its twelve points
+		// do not show as a pattern
+		float turn = 6.2831853 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+		mat2 rotation = mat2( cos( turn ), sin( turn ), -sin( turn ), cos( turn ) );
+		back = vec3( 0.0 );
+		for ( int i = 0; i < 12; i++ ) {
+			back += texture( TEX1( d ), uv + rotation * disk[i] * aspect ).rgb;
+		}
+		back /= 12.0;
+	}
+	back = pow( back, vec3( 2.2 ) );
+
+	// coloured on its way through
+	vec4 tint = texture( TEX0( d ), v_texCoord0 ) * v_color;
+	vec3 tintLinear = pow( tint.rgb, vec3( 2.2 ) );
+	vec3 absorbed = thickness > 0.0
+		? pow( max( d.material.rgb, vec3( 1e-3 ) ), vec3( thickness / max( nv, 0.2 ) / max( d.pbr2.z, 1.0 ) ) )
+		: d.material.rgb;
+	vec3 passed = back * absorbed * mix( vec3( 1.0 ), tintLinear, tint.a );
+	// what is not let through is the texture, as dim as the light around
+	vec3 own = tintLinear * pow( max( v_color.rgb, vec3( 0.25 ) ), vec3( 2.2 ) ) * 0.5;
+
+	// what it mirrors
+	float f0 = ( ior - 1.0 ) / ( ior + 1.0 );
+	f0 *= f0;
+	vec3 mirrored = vec3( 0.0 );
+	vec3 fresnel = EnvBRDF( vec3( f0 ), roughness, nv );
+	if ( ( d.pbrFlags & PBR_PROBES ) != 0u ) {
+		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, n ) );
+		mirrored = pow( ProbesAround( d, world, mirror, roughness * 5.0 ), vec3( 2.2 ) );
+	} else {
+		mirrored = back;
+	}
+	vec3 unused = vec3( 0.0 );
+	vec3 shine = DebugLights( t, n, flat_, toEye, vec3( 0.0 ), 0.0, max( roughness, 0.03 ), vec3( f0 ), unused );
+
+	vec3 color = mix( own, passed, transmission ) * ( 1.0 - fresnel ) + mirrored * fresnel + shine;
+	return vec4( pow( color, vec3( 1.0 / 2.2 ) ), 1.0 );
+}
 #endif
 
 vec4 PbrStage( Draw d ) {
+#ifndef VK_GLES
+	if ( ( d.pbrFlags & PBR_GLASS ) != 0u ) {
+		return GlassStage( d );
+	}
+#endif
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
 	vec3 flat_ = normalize( v_normal );

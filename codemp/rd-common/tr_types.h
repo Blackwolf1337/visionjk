@@ -274,7 +274,8 @@ typedef struct paintPicture_s {
 #define MATP_NORMALMAP			(1 << 7)	// normalMap and normalHeight
 #define MATP_RMOMAP				(1 << 8)	// rmoMap and ormOrder
 #define MATP_GEN				(1 << 9)	// gen: the maps are made again
-#define MATP_ALL				0x3ff
+#define MATP_GLASS				(1 << 10)	// transmission, ior, thickness, absorption
+#define MATP_ALL				0x7ff
 
 // the maps the renderer makes from the texture of a stage when it loads (shader keywords albedoGen, normalGen,
 // rmoGen of .oshader files, tr_matgen.cpp), so a material needs no picture files
@@ -315,6 +316,12 @@ typedef struct materialParms_s {
 	char		rmoMap[MAX_QPATH];	// image name, "" none
 	qboolean	ormOrder;			// occlusion, roughness, metalness instead of roughness, metalness, occlusion
 	materialGen_t	gen;			// what is made from the texture; a made map stands before the named one
+	// glass: the screen behind shows through, bent and tinted (transmission > 0)
+	float		transmission;		// 0 to 1
+	float		ior;				// 1 to 3, 1.5 glass
+	float		thickness;			// units, 0 a thin pane
+	float		absorption[3];		// what is left of each colour after absorptionDistance units in it
+	float		absorptionDistance;
 } materialParms_t;
 
 // what a stage is (materialStage_t flags)

@@ -430,6 +430,12 @@ typedef struct stageMaterial_s {
 	// 1 carves the surface into it, so what stands on it floats over the hollows
 	float			parallaxPlane;
 
+	// glass (transmission > 0, VK_GlassDraw): the screen behind it shows through, bent by ior over thickness units (0:
+	// a thin pane), blurred by the roughness, coloured by absorption: what is left of each colour after
+	// absorptionDistance units in it
+	float			transmission, ior, thickness;
+	float			absorption[3], absorptionDistance;
+
 	// the maps made from the texture of the stage (albedoGen, normalGen, rmoGen, tr_matgen.cpp): made once for the
 	// record (genDone), into images of the record that a change of the menu fills again. albedoMap takes the place
 	// of baseImage in the stages; a made rmo map has the change of the roughness in red (rmoRelative), so the

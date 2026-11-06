@@ -835,6 +835,23 @@ static void RB_DrawWet( int depthRange ) {
 RB_RenderDrawSurfList
 ===============
 */
+#ifndef RD_VISION_GLES
+// VisionJK: how often the frame is copied for glass in a view (VK_GlassDraw), the copy before each glass shader
+static cvar_t *v_glassCaptures;
+
+// a stage of the shader (or of what it is remapped to) is glass
+static qboolean RB_ShaderHasGlass( const shader_t *shader ) {
+	const shader_t *state = shader->remappedShader ? shader->remappedShader : shader;
+
+	for ( int i = 0; i < state->numUnfoggedPasses; i++ ) {
+		if ( state->stages[i].active && state->stages[i].mat && state->stages[i].mat->transmission > 0.0f ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+#endif
+
 static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	shader_t *shader = NULL, *oldShader = NULL;
 	int fogNum = 0, oldFogNum = -1;
@@ -849,6 +866,14 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	int shaderMerges = 0;
 	// the entity came into a batch that was begun, RB_SetEntity() has not run for it
 	qboolean mergedEntity = qfalse;
+#ifndef RD_VISION_GLES
+	int glassCaptures = 0;
+
+	if ( !v_glassCaptures ) {
+		v_glassCaptures = ri.Cvar_Get( "v_glassCaptures", "4", CVAR_ARCHIVE_ND, "How often the frame is copied in a view for glass that bends what is behind it: before each glass shader, so glass behind glass shows. 0: glass is drawn as its shader text says" );
+	}
+	vk_glassReady = qfalse;
+#endif
 
 	RB_BeginDrawingView();
 	if ( backEnd.isHyperspace ) {
@@ -942,6 +967,17 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 					RB_DrawWet( oldDepthRange );
 				}
 			}
+#ifndef RD_VISION_GLES
+			// VisionJK: glass shows the scene as drawn so far, so the frame is copied before each glass shader, up to
+			// v_glassCaptures a view (the glass that is farther drawn first shows behind the nearer); not in the faces
+			// of the reflection probes and not in the glow pass
+			if ( shader != oldShader && glassCaptures < v_glassCaptures->integer && !g_bRenderGlowingObjects
+				&& !backEnd.viewParms.probeFace && v_pbr->integer && RB_ShaderHasGlass( shader ) ) {
+				VK_CaptureFrame();
+				glassCaptures++;
+				vk_glassReady = qtrue;
+			}
+#endif
 			RB_BeginSurface( shader, fogNum );
 			oldShader = shader;
 			oldFogNum = fogNum;
@@ -973,6 +1009,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	if ( oldShader != NULL ) {
 		RB_EndSurface();
 	}
+#ifndef RD_VISION_GLES
+	vk_glassReady = qfalse;
+#endif
 	// the list had nothing transparent: before what was put off to the end
 	RB_DrawWet( oldDepthRange );
 

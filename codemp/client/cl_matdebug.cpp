@@ -463,6 +463,70 @@ static void MatDebug_DrawGen( void ) {
 	}
 }
 
+// glass: what is behind shows through, bent by the ior, tinted, blurred by the roughness (VK_GlassDraw)
+typedef struct {
+	const char	*name;
+	float		roughness, ior, thickness;
+	float		absorption[3], distance;
+} glassPreset_t;
+
+static const glassPreset_t glassPresets[] = {
+	{ "Clear pane", 0.02f, 1.5f, 0.0f, { 1.0f, 1.0f, 1.0f }, 64.0f },
+	{ "Frosted pane", 0.55f, 1.5f, 0.0f, { 1.0f, 1.0f, 1.0f }, 64.0f },
+	{ "Green bottle glass", 0.04f, 1.52f, 8.0f, { 0.45f, 0.8f, 0.6f }, 8.0f },
+	{ "Thick block", 0.03f, 1.5f, 48.0f, { 0.85f, 0.95f, 0.93f }, 64.0f },
+	{ "Water", 0.02f, 1.33f, 64.0f, { 0.7f, 0.88f, 0.92f }, 128.0f },
+	{ "Ice", 0.25f, 1.31f, 32.0f, { 0.85f, 0.95f, 1.0f }, 96.0f },
+};
+
+static void MatDebug_DrawGlass( void ) {
+	if ( !ImGui::CollapsingHeader( "Glass" ) ) {
+		return;
+	}
+	bool changed = false;
+
+	changed |= ImGui::SliderFloat( "Transmission", &selParms.transmission, 0.0f, 1.0f, "%.2f" );
+	ImGui::SetItemTooltip( "How much of what is behind shows through: 0 not glass, 1 clear glass" );
+	ImGui::BeginDisabled( selParms.transmission <= 0.0f );
+	changed |= ImGui::SliderFloat( "Index of refraction", &selParms.ior, 1.0f, 2.5f, "%.2f" );
+	ImGui::SetItemTooltip( "How much it bends: 1.0 air, 1.33 water, 1.5 glass, 2.4 diamond" );
+	changed |= ImGui::SliderFloat( "Thickness", &selParms.thickness, 0.0f, 128.0f, "%.0f" );
+	ImGui::SetItemTooltip( "0 a thin pane, else a solid that deep (units)" );
+	changed |= ImGui::ColorEdit3( "Colour after the distance", selParms.absorption, ImGuiColorEditFlags_NoInputs );
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth( 160.0f );
+	changed |= ImGui::SliderFloat( "Distance", &selParms.absorptionDistance, 1.0f, 512.0f, "%.0f" );
+	ImGui::TextDisabled( "Roughness above makes it frosted" );
+	for ( int i = 0; i < (int)ARRAY_LEN( glassPresets ); i++ ) {
+		const glassPreset_t *g = &glassPresets[i];
+
+		if ( i % 3 ) {
+			ImGui::SameLine();
+		}
+		ImGui::EndDisabled();
+		if ( ImGui::Button( g->name ) ) {
+			selParms.pbr = qtrue;
+			selParms.transmission = 1.0f;
+			selParms.roughness = g->roughness;
+			selParms.metalness = 0.0f;
+			selParms.ior = g->ior;
+			selParms.thickness = g->thickness;
+			VectorCopy( g->absorption, selParms.absorption );
+			selParms.absorptionDistance = g->distance;
+			MatDebug_Set( MATP_PBR | MATP_ROUGHNESS | MATP_METALNESS | MATP_GLASS );
+		}
+		ImGui::BeginDisabled( selParms.transmission <= 0.0f );
+	}
+	ImGui::EndDisabled();
+	if ( changed ) {
+		if ( selParms.transmission > 0.0f && !selParms.pbr ) {
+			selParms.pbr = qtrue;
+			MatDebug_Set( MATP_PBR | MATP_ROUGHNESS );
+		}
+		MatDebug_Set( MATP_GLASS );
+	}
+}
+
 static void MatDebug_DrawFiles( void ) {
 	bool height = selParms.normalHeight ? true : false;
 	bool orm = selParms.ormOrder ? true : false;
@@ -530,6 +594,7 @@ static void MatDebug_DrawMaterial( void ) {
 	ImGui::SetItemTooltip( "Where the polygon lies in the height of the parallax.\n1: the surface is carved into it, feet float over its hollows.\n0: the surface rises out of it, feet stand in the bumps." );
 	MatDebug_DrawWarnings();
 
+	MatDebug_DrawGlass();
 	MatDebug_DrawGen();
 	MatDebug_DrawFiles();
 

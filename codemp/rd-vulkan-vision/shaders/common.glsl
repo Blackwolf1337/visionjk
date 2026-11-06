@@ -119,6 +119,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define PBR_GRID		0x40u
 #define PBR_PROBES		0x80u
 #define PBR_RMO_RELATIVE	0x100u
+#define PBR_GLASS		0x200u
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u
