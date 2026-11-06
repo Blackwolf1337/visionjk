@@ -395,8 +395,26 @@ void CL_MatLight_Toggle( void ) {
 	CL_ImGui_Toggle( &lightWindow );
 }
 
+// v_matlight alone opens or closes the window; v_matlight <preset> sets a preset by its name (for scripts)
 static void MatLight_Toggle_f( void ) {
-	CL_MatLight_Toggle();
+	static const char *names[] = { "level", "studio", "noon", "sunset", "overcast", "night", "torch" };
+
+	if ( Cmd_Argc() < 2 ) {
+		CL_MatLight_Toggle();
+		return;
+	}
+	if ( !re || !re->ext.SetLightOverride ) {
+		Com_Printf( "The light to judge materials by needs the renderer rd-vulkan-vision\n" );
+		return;
+	}
+	for ( int i = 0; i < (int)ARRAY_LEN( names ); i++ ) {
+		if ( !Q_stricmp( Cmd_Argv( 1 ), names[i] ) ) {
+			Light_Preset( i );
+			Com_Printf( "Light: %s\n", names[i] );
+			return;
+		}
+	}
+	Com_Printf( "usage: v_matlight [level|studio|noon|sunset|overcast|night|torch]\n" );
 }
 
 void CL_MatLight_Init( void ) {

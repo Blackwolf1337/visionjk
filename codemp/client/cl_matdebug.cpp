@@ -999,6 +999,256 @@ static void MatDebug_Draw( debugWindow_t *window ) {
 	}
 }
 
+/*
+===============
+Console commands: what the menu does, for scripts and the quality control of the materials (they need no menu open)
+===============
+*/
+
+// a shader by name, loaded when the level has not; 0 when there is none
+static qhandle_t MatCmd_Shader( const char *name ) {
+	qhandle_t shader = re->ext.MaterialFind( name );
+
+	if ( !shader ) {
+		re->RegisterShader( name );
+		shader = re->ext.MaterialFind( name );
+	}
+	if ( !shader ) {
+		Com_Printf( "No shader %s\n", name );
+	}
+	return shader;
+}
+
+// the stage: a number, or - for the one the menu would choose (with a material, else the first that is not the lightmap)
+static int MatCmd_Stage( qhandle_t shader, const char *arg ) {
+	materialInfo_t info;
+
+	if ( Q_stricmp( arg, "-" ) ) {
+		return atoi( arg );
+	}
+	if ( !re->ext.MaterialInfo( shader, &info ) ) {
+		return -1;
+	}
+	for ( int i = 0; i < info.numStages; i++ ) {
+		if ( info.stages[i].flags & MATS_MATERIAL ) {
+			return info.stages[i].sourceStage;
+		}
+	}
+	for ( int i = 0; i < info.numStages; i++ ) {
+		if ( Q_stricmp( info.stages[i].image, "$lightmap" ) ) {
+			return info.stages[i].sourceStage;
+		}
+	}
+	return -1;
+}
+
+typedef struct {
+	const char	*name;
+	size_t		offset;			// in materialParms_t
+	int			count;			// floats (a qboolean is one, as 0 or 1)
+	qboolean	isBool;
+	int			field;			// MATP_*
+} matField_t;
+
+#define MF( n, member, c, b, f )	{ n, offsetof( materialParms_t, member ), c, b, f }
+static const matField_t matFields[] = {
+	MF( "pbr", pbr, 1, qtrue, MATP_PBR ),
+	MF( "roughness", roughness, 1, qfalse, MATP_ROUGHNESS ),
+	MF( "metalness", metalness, 1, qfalse, MATP_METALNESS ),
+	MF( "parallaxDepth", parallaxDepth, 1, qfalse, MATP_PARALLAX ),
+	MF( "parallaxPlane", parallaxPlane, 1, qfalse, MATP_PARALLAX ),
+	MF( "transmission", transmission, 1, qfalse, MATP_GLASS ),
+	MF( "ior", ior, 1, qfalse, MATP_GLASS ),
+	MF( "thickness", thickness, 1, qfalse, MATP_GLASS ),
+	MF( "absorption", absorption, 3, qfalse, MATP_GLASS ),
+	MF( "absorptionDistance", absorptionDistance, 1, qfalse, MATP_GLASS ),
+	MF( "clearcoat", clearcoat, 1, qfalse, MATP_SURFACE ),
+	MF( "clearcoatRoughness", clearcoatRoughness, 1, qfalse, MATP_SURFACE ),
+	MF( "sheen", sheen, 3, qfalse, MATP_SURFACE ),
+	MF( "sheenRoughness", sheenRoughness, 1, qfalse, MATP_SURFACE ),
+	MF( "anisotropy", anisotropy, 1, qfalse, MATP_SURFACE ),
+	MF( "anisotropyRotation", anisotropyRotation, 1, qfalse, MATP_SURFACE ),
+	MF( "emission", emission, 3, qfalse, MATP_SURFACE ),
+	MF( "emissionStrength", emissionStrength, 1, qfalse, MATP_SURFACE ),
+	MF( "emissionThreshold", emissionThreshold, 1, qfalse, MATP_SURFACE ),
+	MF( "specularReflectance", specularReflectance, 1, qfalse, MATP_SURFACE ),
+	MF( "normalScale", normalScale, 1, qfalse, MATP_SURFACE ),
+	MF( "albedoGen.delight", gen.delight, 1, qfalse, MATP_GEN ),
+	MF( "albedoGen.saturation", gen.saturation, 1, qfalse, MATP_GEN ),
+	MF( "albedoGen.tint", gen.tint, 3, qfalse, MATP_GEN ),
+	MF( "normalGen.strength", gen.normalStrength, 1, qfalse, MATP_GEN ),
+	MF( "normalGen.blur", gen.normalBlur, 1, qfalse, MATP_GEN ),
+	MF( "normalGen.detail", gen.normalDetail, 1, qfalse, MATP_GEN ),
+	MF( "rmoGen.variation", gen.rmoVariation, 1, qfalse, MATP_GEN ),
+	MF( "rmoGen.occlusion", gen.rmoOcclusion, 1, qfalse, MATP_GEN ),
+};
+#undef MF
+
+// the maps made from the texture are switched by name: albedoGen, normalGen, rmoGen with 1 or 0
+static const struct { const char *name; int flag; } matGenFlags[] = {
+	{ "albedoGen", MATGEN_ALBEDO }, { "normalGen", MATGEN_NORMAL }, { "rmoGen", MATGEN_RMO },
+};
+
+// all values of a material on one line, as v_matset takes them
+static void MatCmd_Print( const char *name, int stage, const materialParms_t *m ) {
+	char line[2048];
+
+	Com_sprintf( line, sizeof( line ), "matinfo %s stage %d", name, stage );
+	for ( int i = 0; i < (int)ARRAY_LEN( matFields ); i++ ) {
+		const matField_t *f = &matFields[i];
+		const byte *base = (const byte *)m + f->offset;
+
+		Q_strcat( line, sizeof( line ), va( " %s", f->name ) );
+		for ( int c = 0; c < f->count; c++ ) {
+			if ( f->isBool ) {
+				Q_strcat( line, sizeof( line ), va( " %d", ( (const qboolean *)base )[c] ? 1 : 0 ) );
+			} else {
+				Q_strcat( line, sizeof( line ), va( " %g", ( (const float *)base )[c] ) );
+			}
+		}
+	}
+	for ( int i = 0; i < (int)ARRAY_LEN( matGenFlags ); i++ ) {
+		Q_strcat( line, sizeof( line ), va( " %s %d", matGenFlags[i].name, ( m->gen.flags & matGenFlags[i].flag ) ? 1 : 0 ) );
+	}
+	Q_strcat( line, sizeof( line ), va( " normalMap %s rmoMap %s", m->normalMap[0] ? m->normalMap : "-", m->rmoMap[0] ? m->rmoMap : "-" ) );
+	Com_Printf( "%s\n", line );
+}
+
+static void MatInfo_f( void ) {
+	materialParms_t m;
+
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf( "usage: v_matinfo <shader> [stage|-]: all values of the material of a stage on one line\n" );
+		return;
+	}
+	const qhandle_t shader = MatCmd_Shader( Cmd_Argv( 1 ) );
+	const int stage = shader ? MatCmd_Stage( shader, Cmd_Argc() > 2 ? Cmd_Argv( 2 ) : "-" ) : -1;
+
+	if ( stage < 0 || !re->ext.MaterialGet( shader, stage, &m ) ) {
+		Com_Printf( "No such stage\n" );
+		return;
+	}
+	MatCmd_Print( Cmd_Argv( 1 ), stage, &m );
+}
+
+static void MatSet_f( void ) {
+	materialParms_t m;
+	int fields = 0;
+
+	if ( Cmd_Argc() < 5 ) {
+		Com_Printf( "usage: v_matset <shader> <stage|-> <field> <value...> [<field> <value...> ...]\n"
+			"  fields as v_matinfo prints them; albedoGen, normalGen, rmoGen take 1 or 0\n" );
+		return;
+	}
+	const qhandle_t shader = MatCmd_Shader( Cmd_Argv( 1 ) );
+	const int stage = shader ? MatCmd_Stage( shader, Cmd_Argv( 2 ) ) : -1;
+
+	if ( stage < 0 || !re->ext.MaterialGet( shader, stage, &m ) ) {
+		Com_Printf( "No such stage\n" );
+		return;
+	}
+	for ( int arg = 3; arg < Cmd_Argc(); ) {
+		const char *name = Cmd_Argv( arg++ );
+		qboolean known = qfalse;
+
+		for ( int i = 0; i < (int)ARRAY_LEN( matGenFlags ) && !known; i++ ) {
+			if ( !Q_stricmp( name, matGenFlags[i].name ) && arg < Cmd_Argc() ) {
+				m.gen.flags = atoi( Cmd_Argv( arg++ ) ) ? ( m.gen.flags | matGenFlags[i].flag ) : ( m.gen.flags & ~matGenFlags[i].flag );
+				fields |= MATP_GEN;
+				known = qtrue;
+			}
+		}
+		for ( int i = 0; i < (int)ARRAY_LEN( matFields ) && !known; i++ ) {
+			const matField_t *f = &matFields[i];
+			byte *base = (byte *)&m + f->offset;
+
+			if ( Q_stricmp( name, f->name ) ) {
+				continue;
+			}
+			for ( int c = 0; c < f->count && arg < Cmd_Argc(); c++ ) {
+				if ( f->isBool ) {
+					( (qboolean *)base )[c] = atoi( Cmd_Argv( arg++ ) ) ? qtrue : qfalse;
+				} else {
+					( (float *)base )[c] = atof( Cmd_Argv( arg++ ) );
+				}
+			}
+			fields |= f->field;
+			known = qtrue;
+		}
+		if ( !known ) {
+			Com_Printf( "Unknown field %s\n", name );
+			return;
+		}
+	}
+	// a value of a material makes it one
+	if ( fields & ~( MATP_PBR | MATP_GEN ) ) {
+		m.pbr = qtrue;
+		fields |= MATP_PBR | MATP_ROUGHNESS;
+	}
+	re->ext.MaterialSet( shader, stage, &m, fields );
+	re->ext.MaterialGet( shader, stage, &m );
+	MatCmd_Print( Cmd_Argv( 1 ), stage, &m );
+	// the menu shows what was set when it is on this stage
+	if ( shader == selShader && stage == selStage ) {
+		MatDebug_SelectStage( stage );
+	}
+}
+
+static void MatSave_f( void ) {
+	char path[MAX_QPATH], err[256];
+
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf( "usage: v_matsave <shader>: its materials into shaders/zz_mat_<file>.oshader of the profile\n" );
+		return;
+	}
+	const qhandle_t shader = MatCmd_Shader( Cmd_Argv( 1 ) );
+
+	if ( !shader ) {
+		return;
+	}
+	if ( !re->ext.MaterialSave( shader, path, sizeof( path ), err, sizeof( err ) ) ) {
+		Com_Printf( S_COLOR_YELLOW "Not saved: %s\n", err );
+		return;
+	}
+	if ( !statusesRead ) {
+		MatDebug_ReadStatuses();
+	}
+	if ( MatDebug_Status( Cmd_Argv( 1 ) ) == MS_NONE ) {
+		MatDebug_SetStatus( Cmd_Argv( 1 ), MS_DRAFT );
+	}
+	Com_Printf( "Saved into %s\n", path );
+}
+
+static void MatStatus_f( void ) {
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf( "usage: v_matstatus <shader> [none|draft|check|done]\n" );
+		return;
+	}
+	if ( !statusesRead ) {
+		MatDebug_ReadStatuses();
+	}
+	if ( Cmd_Argc() > 2 ) {
+		for ( int s = 0; s < MS_NUM; s++ ) {
+			if ( !Q_stricmp( Cmd_Argv( 2 ), statusNames[s] ) ) {
+				MatDebug_SetStatus( Cmd_Argv( 1 ), s );
+			}
+		}
+	}
+	Com_Printf( "%s: %s\n", Cmd_Argv( 1 ), statusNames[MatDebug_Status( Cmd_Argv( 1 ) )] );
+}
+
+static void MatShow_f( void ) {
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf( "usage: v_matshow <shader|->: the test objects of vjk_matlab show the shader, - their own again\n" );
+		return;
+	}
+	if ( !Q_stricmp( Cmd_Argv( 1 ), "-" ) ) {
+		MatDebug_LabObjects( NULL );
+	} else if ( MatCmd_Shader( Cmd_Argv( 1 ) ) ) {
+		MatDebug_LabObjects( Cmd_Argv( 1 ) );
+	}
+}
+
 static void MatDebug_Toggle_f( void ) {
 	if ( !re || !re->ext.MaterialList ) {
 		Com_Printf( "The material debug menu needs the renderer rd-vulkan-vision\n" );
@@ -1014,4 +1264,9 @@ void CL_MatDebug_Init( void ) {
 	CL_ImGui_Register( &matWindow );
 	CL_MatLight_Init();
 	Cmd_AddCommand( "v_matdebug", MatDebug_Toggle_f, "Opens or closes the material debug menu: the material of the surfaces live, needs rd-vulkan-vision" );
+	Cmd_AddCommand( "v_matinfo", MatInfo_f, "All values of the material of a shader stage on one line: v_matinfo <shader> [stage|-]" );
+	Cmd_AddCommand( "v_matset", MatSet_f, "Changes the material of a shader stage live: v_matset <shader> <stage|-> <field> <value...> ..." );
+	Cmd_AddCommand( "v_matsave", MatSave_f, "Saves the materials of a shader into shaders/zz_mat_<file>.oshader of the profile: v_matsave <shader>" );
+	Cmd_AddCommand( "v_matstatus", MatStatus_f, "How far the material of a shader is: v_matstatus <shader> [none|draft|check|done]" );
+	Cmd_AddCommand( "v_matshow", MatShow_f, "The test objects of vjk_matlab show a shader: v_matshow <shader|->" );
 }
