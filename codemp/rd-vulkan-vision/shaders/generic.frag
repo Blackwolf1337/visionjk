@@ -574,9 +574,14 @@ vec4 PbrStage( Draw d ) {
 		// the direction in the world, turned into the space of the model (a door, a lift)
 		l = k > 0.001 ? normalize( transpose( mat3( t.model ) ) * grid.xyz ) : flat_;
 		k = min( k, 0.95 );
-		float flatLit = max( 1.0 - k + k * max( dot( flat_, l ), 0.0 ), 0.2 );
-		ambient = light * ( 1.0 - k ) / flatLit;
-		directed = light * k / flatLit;
+		float facing = max( dot( flat_, l ), 0.0 );
+		float flatLit = max( 1.0 - k + k * facing, 0.2 );
+		// Where the polygon faces away from the direction of the grid, light / flatLit grew to five times the light
+		// of the lightmap, and every bump that faced the grid lit up white (dark corners beside a bright opening). The
+		// light from the direction is kept at 1.5 times the lightmap at most, and the even part is what the flat
+		// polygon then lacks of its lightmap, so a flat surface still shows its lightmap exactly.
+		directed = light * min( k / flatLit, 1.5 );
+		ambient = max( light - directed * facing, vec3( 0.0 ) );
 	}
 
 #ifndef VK_GLES
@@ -670,18 +675,32 @@ vec4 PbrStage( Draw d ) {
 	}
 	float specOcclusion = clamp( pow( nv + occlusion, exp2( -16.0 * roughness - 1.0 ) ) - 1.0 + occlusion, 0.0, 1.0 );
 	float coatEnv = s.coat > 0.0 ? ( 0.04 + 0.96 * pow( 1.0 - max( dot( flat_, toEye ), 0.0 ), 5.0 ) ) * s.coat : 0.0;
+	vec3 envColor;
 	if ( ( d.pbrFlags & PBR_PROBES ) != 0u ) {
 		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
 		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, mirrorNormal ) );
 		vec3 around = pow( ProbesAround( d, world, mirror, roughness * 5.0 ), vec3( 2.2 ) );
-		color += around * specOcclusion * envShine * ( 1.0 - coatEnv );
+		// The probe saw the light where it stands, not here: a wall in the shade beside a bright opening mirrored the
+		// bright opening as if it stood in it. So what it mirrors is scaled down to the light this surface gets (its
+		// lightmap, the grid, its entity) as far as the probe, blurred round this normal, is brighter than that
+		// (normalising the probe by the light of the place, as many engines do).
+		vec3 seen = pow( ProbesAround( d, world, normalize( mat3( t.model ) * n ), 5.0 ), vec3( 2.2 ) );
+		float here = dot( ambient + directed * 0.5, vec3( 0.2126, 0.7152, 0.0722 ) );
+		float there = dot( seen, vec3( 0.2126, 0.7152, 0.0722 ) );
+		float match = clamp( here / max( there, 1e-3 ), 0.0, 1.0 );
+		envColor = around * match * specOcclusion * envShine * ( 1.0 - coatEnv );
 		if ( s.coat > 0.0 ) {
 			vec3 coatMirror = normalize( mat3( t.model ) * reflect( -toEye, flat_ ) );
-			color += pow( ProbesAround( d, world, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * coatEnv;
+			envColor += pow( ProbesAround( d, world, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * match * coatEnv;
 		}
 	} else {
-		color += ambient * specOcclusion * envShine * ( 1.0 - coatEnv ) + ambient * coatEnv;
+		envColor = ambient * specOcclusion * envShine * ( 1.0 - coatEnv ) + ambient * coatEnv;
 	}
+	// v_pbr 12: what it mirrors of the light around it, alone
+	if ( d.pbr.w == 12.0 ) {
+		return vec4( pow( envColor, vec3( 1.0 / 2.2 ) ), alpha );
+	}
+	color += envColor;
 	// the sheen of cloth at a flat angle in the light around it
 	color += s.sheen * ambient * pow( 1.0 - nv, 3.0 ) * 0.5;
 	// emission: the parts of the texture brighter than the threshold give off their colour (as emissionGen would mask)
