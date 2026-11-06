@@ -579,8 +579,10 @@ vec4 PbrStage( Draw d ) {
 		// Where the polygon faces away from the direction of the grid, light / flatLit grew to five times the light
 		// of the lightmap, and every bump that faced the grid lit up white (dark corners beside a bright opening). The
 		// light from the direction is kept at 1.5 times the lightmap at most, and the even part is what the flat
-		// polygon then lacks of its lightmap, so a flat surface still shows its lightmap exactly.
-		directed = light * min( k / flatLit, 1.5 );
+		// polygon then lacks of its lightmap, so a flat surface still shows its lightmap exactly. Where the direction
+		// runs along the polygon (a corridor lit from an opening at its end) the bumps that face it got up to 2.5
+		// times the lightmap (QC ffa3 R2): there the cap goes down to half the lightmap.
+		directed = light * min( k / flatLit, min( 1.5, 0.5 + facing ) );
 		ambient = max( light - directed * facing, vec3( 0.0 ) );
 	}
 
@@ -688,7 +690,19 @@ vec4 PbrStage( Draw d ) {
 		float here = dot( ambient + directed * 0.5, vec3( 0.2126, 0.7152, 0.0722 ) );
 		float there = dot( seen, vec3( 0.2126, 0.7152, 0.0722 ) );
 		float match = clamp( here / max( there, 1e-3 ), 0.0, 1.0 );
-		envColor = around * match * specOcclusion * envShine * ( 1.0 - coatEnv );
+		// The mirror direction may still see far more than the normal does (the sky at a flat angle, from a dark pit or
+		// corridor), and in the colour of the probe, not of the lightmap: dark textures went grey-blue (QC ffa3 R1, R3).
+		// So the mirrored light stays at 1.5 times the light of the place at most, and half its colour is the colour
+		// of that light.
+		around *= match;
+		float aroundLum = dot( around, vec3( 0.2126, 0.7152, 0.0722 ) );
+		around *= min( 1.0, 1.5 * here / max( aroundLum, 1e-4 ) );
+		vec3 local = ambient + directed;
+		float localLum = dot( local, vec3( 0.2126, 0.7152, 0.0722 ) );
+		if ( localLum > 1e-4 ) {
+			around = mix( around, local * ( dot( around, vec3( 0.2126, 0.7152, 0.0722 ) ) / localLum ), 0.5 );
+		}
+		envColor = around * specOcclusion * envShine * ( 1.0 - coatEnv );
 		if ( s.coat > 0.0 ) {
 			vec3 coatMirror = normalize( mat3( t.model ) * reflect( -toEye, flat_ ) );
 			envColor += pow( ProbesAround( d, world, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * match * coatEnv;
