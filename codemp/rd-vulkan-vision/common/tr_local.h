@@ -1049,6 +1049,7 @@ typedef struct trGlobals_s {
 	image_t					*defaultImage;
 	image_t					*scratchImage[NUM_SCRATCH_IMAGES];
 	image_t					*paintImage[PAINT_SLOTS];	// the pictures of the sprays (RE_PaintImage), NULL until the first
+	image_t					*uiImage[UI_TEXTURES];		// the pictures of the debug menu of the client (RE_UiTexture)
 	image_t					*fogImage;
 	image_t					*dlightImage;	// inverse-quare highlight for projective adding
 	image_t					*flareImage;
@@ -1899,8 +1900,22 @@ typedef enum {
 	RC_WORLD_EFFECTS,
 	RC_AUTO_MAP,
 	RC_VIDEOFRAME,
-	RC_SET_2D_PLANE
+	RC_SET_2D_PLANE,
+	RC_DRAW_TRIS_2D
 } renderCommand_t;
+
+// VisionJK: triangles in pixels of the window (RE_DrawTriangles2D, the debug menu of the client); verts and
+// indexes are in the arena of the frame in tr_cmds.cpp
+typedef struct drawTris2DCommand_s {
+	int				commandId;
+	shader_t		*shader;
+	const polyVert_t	*verts;
+	int				numVerts;
+	const int		*indexes;
+	int				numIndexes;
+	qboolean		clipped;
+	int				clip[4];		// left, top, right, bottom
+} drawTris2DCommand_t;
 
 
 // all of the information needed by the back end must be
@@ -1928,6 +1943,8 @@ void R_IssuePendingRenderCommands( void );
 void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 
 void RE_SetColor( const float *rgba );
+void RE_DrawTriangles2D( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t hShader, const int *clip );
+qhandle_t RE_UiTexture( int slot, const byte *rgba, int width, int height );
 void RE_StretchPic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_RotatePic ( float x, float y, float w, float h,

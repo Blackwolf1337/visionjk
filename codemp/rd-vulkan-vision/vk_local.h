@@ -425,6 +425,7 @@ void		VK_BeginFrame( void );
 void		VK_EndFrame( void );
 void		VK_WriteVideoFrame( void );
 void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth );
+void		VK_Scissor( int left, int top, int right, int bottom );
 void		VK_FrameInfo_f( void );
 int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );

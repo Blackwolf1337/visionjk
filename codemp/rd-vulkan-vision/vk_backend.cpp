@@ -290,6 +290,88 @@ static const void *RB_RotatePic( const void *data, qboolean centered ) {
 }
 
 
+/*
+===============
+RB_DrawTris2D
+
+VisionJK: the triangles of RE_DrawTriangles2D, in pixels of the window and always flat on it, in batches of
+what tess holds: the whole list when it fits, else triangle by triangle with their own corners. The 2D of the
+640 x 480 screen is set up again by the next picture after them.
+===============
+*/
+static void RB_Tris2DVertex( const polyVert_t *v ) {
+	const int n = tess.numVertexes++;
+
+	tess.xyz[n][0] = v->xyz[0];
+	tess.xyz[n][1] = v->xyz[1];
+	tess.xyz[n][2] = 0.0f;
+	tess.texCoords[n][0][0] = v->st[0];
+	tess.texCoords[n][0][1] = v->st[1];
+	memcpy( tess.vertexColors[n], v->modulate, sizeof( tess.vertexColors[n] ) );
+}
+
+static const void *RB_DrawTris2D( const void *data ) {
+	const drawTris2DCommand_t *cmd = (const drawTris2DCommand_t *)data;
+	float ortho[16];
+
+	if ( !cmd->shader->numUnfoggedPasses ) {
+		return (const void *)( cmd + 1 );
+	}
+	VK_BeginFrame();
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, 1.0f );
+	memset( ortho, 0, sizeof( ortho ) );
+	ortho[0] = 2.0f / glConfig.vidWidth;
+	ortho[5] = -2.0f / glConfig.vidHeight;
+	ortho[10] = -2.0f;
+	ortho[12] = -1.0f;
+	ortho[13] = 1.0f;
+	ortho[14] = -1.0f;
+	ortho[15] = 1.0f;
+	VK_SetProjection( ortho );
+	memset( &backEnd.ori, 0, sizeof( backEnd.ori ) );
+	backEnd.ori.axis[0][0] = backEnd.ori.axis[1][1] = backEnd.ori.axis[2][2] = 1.0f;
+	backEnd.ori.modelMatrix[0] = backEnd.ori.modelMatrix[5] = backEnd.ori.modelMatrix[10] = backEnd.ori.modelMatrix[15] = 1.0f;
+	backEnd.refdef.time = ri.Milliseconds() * ri.Cvar_VariableValue( "timescale" );
+	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
+	// the whole frame is there for the 2D (VK_FrameRoom)
+	backEnd.projection2D = qtrue;
+	if ( cmd->clipped ) {
+		VK_Scissor( cmd->clip[0], cmd->clip[1], cmd->clip[2], cmd->clip[3] );
+	}
+
+	backEnd.currentEntity = &backEnd.entity2D;
+	RB_BeginSurface( cmd->shader, 0 );
+	if ( cmd->numVerts < SHADER_MAX_VERTEXES && cmd->numIndexes < SHADER_MAX_INDEXES ) {
+		for ( int i = 0; i < cmd->numVerts; i++ ) {
+			RB_Tris2DVertex( &cmd->verts[i] );
+		}
+		for ( int i = 0; i < cmd->numIndexes; i++ ) {
+			const int index = cmd->indexes[i];
+
+			tess.indexes[tess.numIndexes++] = ( index >= 0 && index < cmd->numVerts ) ? (glIndex_t)index : 0;
+		}
+	} else {
+		for ( int i = 0; i + 2 < cmd->numIndexes; i += 3 ) {
+			RB_CHECKOVERFLOW( 3, 3 );
+			for ( int k = 0; k < 3; k++ ) {
+				const int index = cmd->indexes[i + k];
+
+				tess.indexes[tess.numIndexes++] = (glIndex_t)tess.numVertexes;
+				RB_Tris2DVertex( &cmd->verts[( index >= 0 && index < cmd->numVerts ) ? index : 0] );
+			}
+		}
+	}
+	RB_EndSurface();
+
+	// the scissor back to the viewport, and the next picture sets the 640 x 480 screen up again
+	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, 1.0f );
+	backEnd.projection2D = qfalse;
+	return (const void *)( cmd + 1 );
+}
+
 // RF_AFTERGLOW: the entities that are drawn after the glow has been added. The list of surfaces is run once more
 // for them, without them the first time.
 // (the first two are read by R_GhoulSurfaceDone())
@@ -1231,6 +1313,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_ROTATE_PIC2:
 			data = RB_RotatePic( data, qtrue );
+			break;
+		case RC_DRAW_TRIS_2D:
+			data = RB_DrawTris2D( data );
 			break;
 		case RC_DRAW_SURFS:
 			data = RB_DrawSurfs( data );

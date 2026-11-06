@@ -260,6 +260,9 @@ typedef struct paintPicture_s {
 // named by the number of that stage in the text (sourceStage), and all shaders of that name share it.
 #define MATERIAL_MAX_STAGES		8
 
+// pictures of the debug menu of the client (refexport_t ext.UiTexture): its font atlas and such
+#define UI_TEXTURES				8
+
 // the fields of materialParms_t that ext.MaterialSet writes
 #define MATP_PBR				(1 << 0)
 #define MATP_ROUGHNESS			(1 << 1)

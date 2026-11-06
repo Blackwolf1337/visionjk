@@ -408,6 +408,50 @@ void RE_StretchPic ( float x, float y, float w, float h,
 
 /*
 =============
+RE_DrawTriangles2D
+
+VisionJK: triangles in pixels of the window, x to the right and y down, with the picture of hShader and the
+colours of the vertices (the debug menu of the client draws its Dear ImGui lists with it), cut to clip (left, top,
+right, bottom in pixels, NULL for the whole window). They are drawn in the 2D of the frame where the call is.
+=============
+*/
+#define UI2D_VERTS		65536
+#define UI2D_INDEXES	( UI2D_VERTS * 3 )
+static polyVert_t	ui2DVerts[UI2D_VERTS];
+static int			ui2DIndexes[UI2D_INDEXES];
+static int			ui2DNumVerts, ui2DNumIndexes;
+
+void RE_DrawTriangles2D( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t hShader, const int *clip ) {
+	drawTris2DCommand_t	*cmd;
+
+	if ( !tr.registered || numVerts <= 0 || numIndexes < 3 ) {
+		return;
+	}
+	if ( ui2DNumVerts + numVerts > UI2D_VERTS || ui2DNumIndexes + numIndexes > UI2D_INDEXES ) {
+		return;
+	}
+	cmd = (drawTris2DCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return;
+	}
+	memcpy( &ui2DVerts[ui2DNumVerts], verts, sizeof( *verts ) * numVerts );
+	memcpy( &ui2DIndexes[ui2DNumIndexes], indexes, sizeof( *indexes ) * numIndexes );
+	cmd->commandId = RC_DRAW_TRIS_2D;
+	cmd->shader = R_GetShaderByHandle( hShader );
+	cmd->verts = &ui2DVerts[ui2DNumVerts];
+	cmd->numVerts = numVerts;
+	cmd->indexes = &ui2DIndexes[ui2DNumIndexes];
+	cmd->numIndexes = numIndexes - numIndexes % 3;
+	cmd->clipped = clip ? qtrue : qfalse;
+	if ( clip ) {
+		memcpy( cmd->clip, clip, sizeof( cmd->clip ) );
+	}
+	ui2DNumVerts += numVerts;
+	ui2DNumIndexes += numIndexes;
+}
+
+/*
+=============
 RE_RotatePic
 =============
 */
@@ -517,6 +561,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	r_numLiquids = 0;
 	r_numWet = 0;
 	r_numPaint = 0;
+	ui2DNumVerts = ui2DNumIndexes = 0;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

@@ -1464,3 +1464,43 @@ qhandle_t RE_PaintImage( int slot, const byte *rgba, int size ) {
 	}
 	return RE_RegisterSceneShader( image->imgName, image, RGBA_SHADER_DECAL, SS_DECAL );
 }
+
+/*
+===============
+RE_UiTexture
+
+VisionJK: a picture of the debug menu of the client for RE_DrawTriangles2D (its font atlas): slot 0 to
+UI_TEXTURES - 1, width x height RGBA, sides powers of two. The same slot again takes the new pixels into the same
+image. Answers its shader for the 2D (vertex colours, alpha blended), 0 when it could not be made.
+===============
+*/
+qhandle_t RE_UiTexture( int slot, const byte *rgba, int width, int height ) {
+	image_t	*image;
+	byte	*pixels;
+	int		lightmapIndex[MAXLIGHTMAPS];
+	byte	styles[MAXLIGHTMAPS];
+
+	if ( slot < 0 || slot >= UI_TEXTURES || !rgba || width < 1 || height < 1 || width > 4096 || height > 4096
+		|| ( width & ( width - 1 ) ) || ( height & ( height - 1 ) ) ) {
+		return 0;
+	}
+	// Upload32() makes the smaller levels in place, so it gets a copy (sized by the picture)
+	pixels = (byte *)Z_Malloc( width * height * 4, TAG_TEMP_WORKSPACE, qfalse );
+	memcpy( pixels, rgba, (size_t)width * height * 4 );
+	image = tr.uiImage[slot];
+	if ( !image ) {
+		image = tr.uiImage[slot] = R_CreateImage( va( "*ui%d", slot ), pixels, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	} else {
+		image->width = (word)width;
+		image->height = (word)height;
+		GL_Bind( image );
+		Upload32( (unsigned *)pixels, GL_RGBA, qfalse, qfalse, qfalse, qfalse, &image->internalFormat, &image->width, &image->height );
+	}
+	Z_Free( pixels );
+	if ( !image ) {
+		return 0;
+	}
+	memcpy( lightmapIndex, lightmaps2d, sizeof( lightmapIndex ) );
+	memcpy( styles, stylesDefault, sizeof( styles ) );
+	return RE_RegisterShaderFromImage( image->imgName, lightmapIndex, styles, image, qfalse );
+}

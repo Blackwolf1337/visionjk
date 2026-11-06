@@ -314,6 +314,14 @@ typedef struct refexport_s {
 		qboolean			(*MaterialGet)							( qhandle_t shader, int sourceStage, materialParms_t *out );
 		// Writes the fields of in that fields says (MATP_*); a stage without a material gets one.
 		qboolean			(*MaterialSet)							( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
+		// A picture of the debug menu of the client (its font atlas): slot 0 to UI_TEXTURES - 1, width x height
+		// RGBA, sides powers of two; the same slot again takes the new pixels. Answers a shader for DrawTriangles2D
+		// (colours of the vertices, alpha blended), 0 when it could not be made.
+		qhandle_t			(*UiTexture)							( int slot, const byte *rgba, int width, int height );
+		// Triangles in pixels of the window, x right and y down (xyz[2] is not used), with the picture of shader
+		// and the colours of the vertices, cut to clip (left, top, right, bottom pixels, NULL none); drawn in the 2D
+		// of this frame where the call comes, flat on the window also while the 2D is on a plane.
+		void				(*DrawTriangles2D)						( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t shader, const int *clip );
 	} ext;
 
 } refexport_t;

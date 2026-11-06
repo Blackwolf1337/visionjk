@@ -205,6 +205,31 @@ void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth,
 	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
 
+/*
+===============
+VK_Scissor
+
+VisionJK: the scissor alone, in pixels of the window from its upper left corner (the clip rectangles of the debug
+menu of the client). VK_SetViewport() puts it back to the viewport.
+===============
+*/
+void VK_Scissor( int left, int top, int right, int bottom ) {
+	VkRect2D scissor;
+
+	if ( !vk.frame ) {
+		return;
+	}
+	left = Q_max( left, 0 );
+	top = Q_max( top, 0 );
+	right = Q_min( right, vk.width );
+	bottom = Q_min( bottom, vk.height );
+	scissor.offset.x = left;
+	scissor.offset.y = top;
+	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
+	scissor.extent.height = (uint32_t)Q_max( bottom - top, 0 );
+	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
+}
+
 static void VK_ClearRect( int x, int y, int width, int height, const VkClearAttachment *attachment ) {
 	VkClearRect rect;
 

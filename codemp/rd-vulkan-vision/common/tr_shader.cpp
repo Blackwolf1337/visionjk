@@ -2908,6 +2908,12 @@ static void FixRenderCommandList( int newShader ) {
 					curCmd = (const void *)(sb_cmd + 1);
 					break;
 					}
+				case RC_DRAW_TRIS_2D:
+					{
+					const drawTris2DCommand_t *tc_cmd = (const drawTris2DCommand_t *)curCmd;
+					curCmd = (const void *)(tc_cmd + 1);
+					break;
+					}
 				case RC_END_OF_LIST:
 				default:
 					return;
