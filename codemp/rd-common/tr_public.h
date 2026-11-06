@@ -314,6 +314,12 @@ typedef struct refexport_s {
 		qboolean			(*MaterialGet)							( qhandle_t shader, int sourceStage, materialParms_t *out );
 		// Writes the fields of in that fields says (MATP_*); a stage without a material gets one.
 		qboolean			(*MaterialSet)							( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
+		// The text of the shader with the materials it has now, and the shader file it came from ("" for a shader
+		// without text). qfalse when it does not fit.
+		qboolean			(*MaterialText)							( qhandle_t shader, char *buf, int size, char *file, int fileSize );
+		// That text into shaders/zz_mat_<file>.oshader of the profile, read after the shader files from the next
+		// level on; path is the file. qfalse and err when the text would not give the materials shown now.
+		qboolean			(*MaterialSave)							( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
 		// A picture of the debug menu of the client (its font atlas): slot 0 to UI_TEXTURES - 1, width x height
 		// RGBA, sides powers of two; the same slot again takes the new pixels. Answers a shader for DrawTriangles2D
 		// (colours of the vertices, alpha blended), 0 when it could not be made.

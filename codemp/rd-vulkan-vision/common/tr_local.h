@@ -1495,6 +1495,8 @@ void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
 stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean create, const stageMaterial_t *init );
 int			R_ShadersNamed( const char *name, shader_t **out, int max );
+const char	*R_ShaderTextOf( const char *name, const char **file );
+qboolean	R_CheckShaderText( const char *text, const int *lightmapIndex, const stageMaterial_t **materials, char *err, int errSize );
 void		R_MaterialStageImage( shaderStage_t *stage );
 
 //
@@ -1515,6 +1517,8 @@ qhandle_t	RE_MaterialFind( const char *name );
 qboolean	RE_MaterialInfo( qhandle_t shader, materialInfo_t *out );
 qboolean	RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out );
 qboolean	RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
+qboolean	RE_MaterialText( qhandle_t shader, char *buf, int size, char *file, int fileSize );
+qboolean	RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
 
 //
 // tr_arb.c

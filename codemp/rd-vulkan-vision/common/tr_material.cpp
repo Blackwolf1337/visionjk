@@ -474,6 +474,8 @@ qboolean RE_MaterialInfo( qhandle_t shader, materialInfo_t *out )
 			Q_strncpyz( ms->image, "$lightmap", sizeof( ms->image ) );
 		} else if ( st->bundle[0].image ) {
 			Q_strncpyz( ms->image, st->bundle[0].image->imgName, sizeof( ms->image ) );
+			// of the texture the material was made from, not of a made albedo
+			ms->luma = ( st->mat && st->mat->baseImage ) ? st->mat->baseImage->averageLuma : st->bundle[0].image->averageLuma;
 		}
 		out->numStages++;
 	}
@@ -621,5 +623,347 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 			}
 		}
 	}
+	return qtrue;
+}
+
+/*
+===============
+The text of a shader with its materials, and saving it
+===============
+*/
+
+// what a stage line of a material says, which the text gets again from the record
+static const char *const materialWords[] = { "normalMap", "normalHeightMap", "rmoMap", "ormMap", "roughness", "gloss",
+	"metalness", "parallaxDepth", "parallaxPlane", "albedoGen", "normalGen", "rmoGen", "specular", "wrapLight", "sparkle", NULL };
+
+static qboolean IsMaterialWord( const char *word ) {
+	for ( int i = 0; materialWords[i]; i++ ) {
+		if ( !Q_stricmp( word, materialWords[i] ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+typedef struct {
+	char	*buf;
+	int		size, length;
+	qboolean full;
+} textOut_t;
+
+static void QDECL Out( textOut_t *out, const char *fmt, ... ) __attribute__ ( ( format( printf, 2, 3 ) ) );
+static void QDECL Out( textOut_t *out, const char *fmt, ... ) {
+	va_list args;
+	int written;
+
+	if ( out->full ) {
+		return;
+	}
+	va_start( args, fmt );
+	written = Q_vsnprintf( out->buf + out->length, out->size - out->length, fmt, args );
+	va_end( args );
+	if ( written < 0 || written >= out->size - out->length ) {
+		out->full = qtrue;
+		out->buf[out->size - 1] = '\0';
+		return;
+	}
+	out->length += written;
+}
+
+static void OutIndent( textOut_t *out, int depth ) {
+	for ( int i = 0; i < depth; i++ ) {
+		Out( out, "\t" );
+	}
+}
+
+// a made map is not a file: its name is not written (gen says it is made)
+static qboolean IsFileImage( const image_t *image ) {
+	return (qboolean)( image && Q_strncmp( image->imgName, "*gen", 4 ) );
+}
+
+// the lines of a material, at depth
+static void OutMaterial( textOut_t *out, const stageMaterial_t *mat, int depth ) {
+	const materialGen_t *g = &mat->gen;
+
+	if ( g->flags & MATGEN_ALBEDO ) {
+		OutIndent( out, depth );
+		Out( out, "albedoGen %02x%02x%02x %g %g\n", Com_Clampi( 0, 255, (int)( g->tint[0] * 255.0f + 0.5f ) ),
+			Com_Clampi( 0, 255, (int)( g->tint[1] * 255.0f + 0.5f ) ), Com_Clampi( 0, 255, (int)( g->tint[2] * 255.0f + 0.5f ) ),
+			g->delight, g->saturation );
+	}
+	if ( g->flags & MATGEN_NORMAL ) {
+		OutIndent( out, depth );
+		Out( out, "normalGen %g %g %g%s\n", g->normalStrength, g->normalBlur, g->normalDetail, g->normalInvert ? " invert" : "" );
+	} else if ( IsFileImage( mat->normalMap ) ) {
+		OutIndent( out, depth );
+		Out( out, "%s %s\n", mat->normalHeight ? "normalHeightMap" : "normalMap", mat->normalMap->imgName );
+	}
+	if ( g->flags & MATGEN_RMO ) {
+		OutIndent( out, depth );
+		Out( out, "rmoGen %g %g\n", g->rmoVariation, g->rmoOcclusion );
+	} else if ( IsFileImage( mat->rmoMap ) ) {
+		OutIndent( out, depth );
+		Out( out, "%s %s\n", mat->ormOrder ? "ormMap" : "rmoMap", mat->rmoMap->imgName );
+	}
+	if ( mat->pbr ) {
+		OutIndent( out, depth );
+		Out( out, "roughness %g\n", mat->roughness );
+		OutIndent( out, depth );
+		Out( out, "metalness %g\n", mat->metalness );
+		if ( mat->parallaxDepth > 0.0f ) {
+			OutIndent( out, depth );
+			Out( out, "parallaxDepth %g\n", mat->parallaxDepth );
+			OutIndent( out, depth );
+			Out( out, "parallaxPlane %g\n", mat->parallaxPlane );
+		}
+	}
+	if ( mat->specular[0] || mat->specular[1] || mat->specular[2] ) {
+		OutIndent( out, depth );
+		Out( out, "specular %g %g %g\n", mat->specular[0], mat->specular[1], mat->specular[2] );
+	}
+	if ( mat->wrapLight ) {
+		OutIndent( out, depth );
+		Out( out, "wrapLight %g\n", mat->wrapLight );
+	}
+	if ( mat->sparkle ) {
+		OutIndent( out, depth );
+		Out( out, "sparkle %g\n", mat->sparkle );
+	}
+}
+
+// a word as the parser reads it again: in quotes when it has a space
+static void OutWord( textOut_t *out, const char *word, qboolean first ) {
+	Out( out, strchr( word, ' ' ) ? "%s\"%s\"" : "%s%s", first ? "" : " ", word );
+}
+
+/*
+===============
+RE_MaterialText
+
+The text of the shader with the materials it has now: the loaded text line by line with the material lines of each
+stage given again from its record (before the closing brace of the stage, or after implicitMap); a shader without
+text gets implicitMap with the material of the stage of its texture. *file: where it came from ("" without text).
+qfalse when it does not fit.
+===============
+*/
+static qboolean MaterialText( shader_t *sh, char *buf, int size, const char **file ) {
+	textOut_t out = { buf, size, 0, qfalse };
+	const char *text = R_ShaderTextOf( sh->name, file );
+
+	buf[0] = '\0';
+	Out( &out, "%s\n{\n", sh->name );
+	if ( !text ) {
+		const stageMaterial_t *mat = R_MaterialFor( sh->name, 1, qfalse, NULL );
+
+		Out( &out, "\timplicitMap -\n" );
+		if ( mat ) {
+			OutMaterial( &out, mat, 1 );
+		}
+		Out( &out, "}\n" );
+		return (qboolean)!out.full;
+	}
+
+	const char *p = text;
+	char *token = COM_ParseExt( &p, qtrue );
+	int depth = 1, stage = 0;
+
+	if ( Q_stricmp( token, "{" ) ) {
+		return qfalse;
+	}
+	while ( depth > 0 ) {
+		token = COM_ParseExt( &p, qtrue );
+		if ( !token[0] ) {
+			return qfalse;
+		}
+		if ( !Q_stricmp( token, "{" ) ) {
+			OutIndent( &out, depth );
+			Out( &out, "{\n" );
+			depth++;
+			continue;
+		}
+		if ( !Q_stricmp( token, "}" ) ) {
+			if ( depth == 2 ) {
+				const stageMaterial_t *mat = R_MaterialFor( sh->name, stage, qfalse, NULL );
+
+				if ( mat ) {
+					OutMaterial( &out, mat, 2 );
+				}
+				stage++;
+			}
+			depth--;
+			OutIndent( &out, depth );
+			Out( &out, "}\n" );
+			continue;
+		}
+		// a line: its first word and the rest of it
+		const qboolean material = IsMaterialWord( token );
+		const qboolean implicit = ( depth == 1 && !Q_stricmp( token, "implicitMap" ) ) ? qtrue : qfalse;
+
+		if ( !material ) {
+			OutIndent( &out, depth );
+			OutWord( &out, token, qtrue );
+		}
+		while ( ( token = COM_ParseExt( &p, qfalse ) )[0] ) {
+			if ( !material ) {
+				OutWord( &out, token, qfalse );
+			}
+		}
+		if ( !material ) {
+			Out( &out, "\n" );
+		}
+		if ( implicit ) {
+			// the stages of implicitMap, with a lightmap: the texture is the second (DefaultStages)
+			const stageMaterial_t *mat = R_MaterialFor( sh->name, stage + 1, qfalse, NULL );
+
+			if ( mat ) {
+				OutMaterial( &out, mat, 1 );
+			}
+			stage += 2;
+		}
+	}
+	return (qboolean)!out.full;
+}
+
+qboolean RE_MaterialText( qhandle_t shader, char *buf, int size, char *file, int fileSize ) {
+	const char *from = "";
+
+	if ( size > 0 ) {
+		buf[0] = '\0';
+	}
+	if ( fileSize > 0 ) {
+		file[0] = '\0';
+	}
+	if ( shader <= 0 || shader >= tr.numShaders || size < 2 ) {
+		return qfalse;
+	}
+	const qboolean ok = MaterialText( tr.shaders[shader], buf, size, &from );
+
+	if ( fileSize > 0 ) {
+		Q_strncpyz( file, from, fileSize );
+	}
+	return ok;
+}
+
+// the same picture file (the check may load it with other mip settings, so by name)
+static qboolean SameFile( const image_t *a, const image_t *b ) {
+	const char *na = IsFileImage( a ) ? a->imgName : "", *nb = IsFileImage( b ) ? b->imgName : "";
+
+	return (qboolean)!Q_stricmp( na, nb );
+}
+
+// the material the text gives a stage is the one the record has (as far as the text keeps it)
+static qboolean SameMaterial( const stageMaterial_t *a, const stageMaterial_t *b ) {
+	const float e = 0.0005f;
+
+	if ( !a || !b ) {
+		// a record that says nothing is the same as none
+		const stageMaterial_t *m = a ? a : b;
+
+		return (qboolean)( !m || ( !m->pbr && !m->gen.flags && !IsFileImage( m->normalMap ) && !IsFileImage( m->rmoMap )
+			&& !m->specular[0] && !m->specular[1] && !m->specular[2] && !m->wrapLight && !m->sparkle ) );
+	}
+	if ( a->pbr != b->pbr || a->gen.flags != b->gen.flags ) {
+		return qfalse;
+	}
+	if ( a->pbr && ( fabsf( a->roughness - b->roughness ) > e || fabsf( a->metalness - b->metalness ) > e
+		|| fabsf( a->parallaxDepth - b->parallaxDepth ) > e || ( a->parallaxDepth > 0.0f && fabsf( a->parallaxPlane - b->parallaxPlane ) > e ) ) ) {
+		return qfalse;
+	}
+	if ( !( a->gen.flags & MATGEN_NORMAL ) && !SameFile( a->normalMap, b->normalMap ) ) {
+		return qfalse;
+	}
+	if ( !( a->gen.flags & MATGEN_RMO ) && !SameFile( a->rmoMap, b->rmoMap ) ) {
+		return qfalse;
+	}
+	return qtrue;
+}
+
+/*
+===============
+RE_MaterialSave
+
+The text of the shader with its materials into shaders/zz_mat_<file>.oshader of the profile (<file> the shader file
+it came from, textures for a shader without text), in place of the one of that name there or added. Overrides are
+read last when a level loads, so the next load gives what is shown now. The text is parsed first and its materials
+compared with the records: qfalse and err when it would not give the same.
+===============
+*/
+qboolean RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err, int errSize ) {
+	static char text[32768], merged[262144];
+	const stageMaterial_t *parsed[MATERIAL_MAX_STAGES];
+	char stem[MAX_QPATH], file[MAX_QPATH];
+	const char *from = "";
+
+	err[0] = '\0';
+	path[0] = '\0';
+	if ( shader <= 0 || shader >= tr.numShaders ) {
+		Com_sprintf( err, errSize, "no such shader" );
+		return qfalse;
+	}
+	shader_t *sh = tr.shaders[shader];
+
+	if ( !MaterialText( sh, text, sizeof( text ), &from ) ) {
+		Com_sprintf( err, errSize, "the text of %s is too long", sh->name );
+		return qfalse;
+	}
+	if ( !R_CheckShaderText( text, sh->lightmapIndex, parsed, err, errSize ) ) {
+		return qfalse;
+	}
+	for ( int s = 0; s < MATERIAL_MAX_STAGES; s++ ) {
+		if ( !SameMaterial( parsed[s], R_MaterialFor( sh->name, s, qfalse, NULL ) ) ) {
+			Com_sprintf( err, errSize, "the text would not give stage %d the material it has now, not saved", s );
+			return qfalse;
+		}
+	}
+
+	// the file: the stem of the shader file without the prefixes of material files
+	COM_StripExtension( from[0] ? from : "textures", stem, sizeof( stem ) );
+	const char *bare = stem;
+
+	if ( !Q_stricmpn( bare, "zz_mat_", 7 ) ) {
+		bare += 7;
+	} else if ( !Q_stricmpn( bare, "vjk_", 4 ) ) {
+		bare += 4;
+	}
+	Com_sprintf( file, sizeof( file ), "shaders/zz_mat_%s.oshader", bare );
+	Q_strncpyz( path, file, pathSize );
+
+	// the shaders of the file that are there, but the one of this name
+	textOut_t out = { merged, (int)sizeof( merged ), 0, qfalse };
+	void *old = NULL;
+	const long oldLength = ri.FS_ReadFile( file, &old );
+
+	Out( &out, "// materials of the material debug menu (v_matdebug) for %s, read after the shader files\n\n", from[0] ? from : "textures without a shader" );
+	if ( oldLength > 0 && old ) {
+		const char *p = (const char *)old;
+
+		while ( 1 ) {
+			const char *start;
+			char *token;
+
+			// (a comment before a name stays with the name before it, so the line of the header is not kept twice)
+			token = COM_ParseExt( &p, qtrue );
+			if ( !token[0] ) {
+				break;
+			}
+			char name[MAX_QPATH];
+
+			Q_strncpyz( name, token, sizeof( name ) );
+			start = p;
+			SkipBracedSection( &p, 0 );
+			if ( Q_stricmp( name, sh->name ) ) {
+				Out( &out, "%s%.*s\n\n", name, (int)( p - start ), start );
+			}
+		}
+	}
+	if ( old ) {
+		ri.FS_FreeFile( old );
+	}
+	Out( &out, "%s", text );
+	if ( out.full ) {
+		Com_sprintf( err, errSize, "%s is too long", file );
+		return qfalse;
+	}
+	ri.FS_WriteFile( file, merged, out.length );
 	return qtrue;
 }

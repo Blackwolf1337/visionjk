@@ -329,6 +329,7 @@ typedef struct materialStage_s {
 	int			sourceStage;
 	int			flags;				// MATS_*
 	char		image[MAX_QPATH];	// its texture
+	float		luma;				// how bright the texture is on average, of its sRGB values, 0 to 1
 } materialStage_t;
 
 // what a shader is (materialInfo_t flags)

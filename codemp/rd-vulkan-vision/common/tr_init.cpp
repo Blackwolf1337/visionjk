@@ -1200,6 +1200,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.MaterialInfo						= RE_MaterialInfo;
 	re.ext.MaterialGet						= RE_MaterialGet;
 	re.ext.MaterialSet						= RE_MaterialSet;
+	re.ext.MaterialText						= RE_MaterialText;
+	re.ext.MaterialSave						= RE_MaterialSave;
 	re.ext.UiTexture						= RE_UiTexture;
 	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;
 

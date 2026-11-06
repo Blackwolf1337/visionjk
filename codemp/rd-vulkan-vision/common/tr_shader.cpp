@@ -28,6 +28,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static char *s_shaderText;
 
+// VisionJK: where each shader file starts in s_shaderText, for the file a shader came from (R_ShaderTextFile)
+typedef struct {
+	int		start;
+	char	name[MAX_QPATH];
+} shaderTextFile_t;
+static shaderTextFile_t	*shaderTextFiles;
+static int				numShaderTextFiles;
+
 // the shader is parsed into these global variables, then copied into
 // dynamically allocated memory if it is valid.
 static	shaderStage_t	stages[MAX_SHADER_STAGES];
@@ -3561,6 +3569,67 @@ return NULL if not found
 If found, it will return a valid shader
 =====================
 */
+static const char *FindShaderInShaderText( const char *shadername );
+
+/*
+===============
+R_ShaderTextOf
+
+VisionJK: the text of the shader of that name as it is loaded (from its '{' on, comments taken out), NULL when it
+has none; *file is the shader file it came from (e.g. "desert.shader")
+===============
+*/
+const char *R_ShaderTextOf( const char *name, const char **file )
+{
+	const char *text = FindShaderInShaderText( name );
+
+	*file = "";
+	if ( text && shaderTextFiles ) {
+		const int at = (int)( text - s_shaderText );
+
+		for ( int i = 0; i < numShaderTextFiles; i++ ) {
+			if ( shaderTextFiles[i].start <= at ) {
+				*file = shaderTextFiles[i].name;
+			}
+		}
+	}
+	return text;
+}
+
+/*
+===============
+R_CheckShaderText
+
+VisionJK: the text of a shader (its name, then its braces) parsed as a shader of that lightmap would be, without
+making one: qfalse and err when it does not parse. *materials is the material of each source stage it gives, NULL
+where it gives none (pointers into the globals of the parse, valid until the next shader is parsed).
+===============
+*/
+qboolean R_CheckShaderText( const char *text, const int *lightmapIndex, const stageMaterial_t **materials, char *err, int errSize )
+{
+	const char *p = text;
+	char *token;
+
+	ClearGlobalShader();
+	token = COM_ParseExt( &p, qtrue );
+	Q_strncpyz( shader.name, token, sizeof( shader.name ) );
+	memcpy( shader.lightmapIndex, lightmapIndex, sizeof( shader.lightmapIndex ) );
+	memcpy( shader.styles, stylesDefault, sizeof( shader.styles ) );
+	for ( int i = 0; i < MATERIAL_MAX_STAGES; i++ ) {
+		materials[i] = NULL;
+	}
+	if ( !ParseShader( &p ) ) {
+		Com_sprintf( err, errSize, "the text of %s does not parse, the console says why", shader.name );
+		return qfalse;
+	}
+	for ( int i = 0; i < MAX_SHADER_STAGES; i++ ) {
+		if ( stages[i].active && stages[i].mat && stages[i].mat->sourceStage >= 0 && stages[i].mat->sourceStage < MATERIAL_MAX_STAGES ) {
+			materials[stages[i].mat->sourceStage] = stages[i].mat;
+		}
+	}
+	return qtrue;
+}
+
 static const char *FindShaderInShaderText( const char *shadername ) {
 	char *token;
 	const char *p;
@@ -4432,6 +4501,11 @@ a single large text block that can be scanned for shader names
 =====================
 */
 #define	MAX_SHADER_FILES	4096
+static int QDECL CompareFileNames( const void *a, const void *b )
+{
+	return Q_stricmp( *(const char *const *)a, *(const char *const *)b );
+}
+
 static void ScanAndLoadShaderFiles( void )
 {
 	char **shaderFiles, **overrideFiles;
@@ -4466,6 +4540,12 @@ static void ScanAndLoadShaderFiles( void )
 	// name in any .shader file, without a copy of the rest of that file. The text is put together from the last
 	// file to the first and the first shader of a name in it is used, so the overrides go last.
 	overrideFiles = ri.FS_ListFiles( "shaders", ".oshader", &numOverrideFiles );
+	// VisionJK: by name, so of two overrides of one shader the file later in the alphabet wins wherever each lies
+	// (the list comes in the order of the search path, the profile first): zz_mat_*.oshader of the material debug
+	// menu after the others
+	if ( overrideFiles && numOverrideFiles > 1 ) {
+		qsort( overrideFiles, numOverrideFiles, sizeof( overrideFiles[0] ), CompareFileNames );
+	}
 	for ( i = 0; i < numOverrideFiles && numShaderFiles < MAX_SHADER_FILES; i++ ) {
 		names[numShaderFiles++] = overrideFiles[i];
 	}
@@ -4542,19 +4622,24 @@ static void ScanAndLoadShaderFiles( void )
 	s_shaderText[ 0 ] = '\0';
 	textEnd = s_shaderText;
 
-	// free in reverse order, so the temp files are all dumped
+	// free in reverse order, so the temp files are all dumped. VisionJK: each file is compressed on its own (as the
+	// whole text was before), so where it starts in the text is known
+	shaderTextFiles = (shaderTextFile_t *)ri.Hunk_Alloc( sizeof( *shaderTextFiles ) * Q_max( numShaderFiles, 1 ), h_low );
+	numShaderTextFiles = 0;
 	for ( i = numShaderFiles - 1; i >= 0 ; i-- )
 	{
 		if ( !buffers[i] )
 			continue;
 
+		COM_CompressShader( buffers[i] );
+		shaderTextFiles[numShaderTextFiles].start = (int)( textEnd - s_shaderText );
+		Q_strncpyz( shaderTextFiles[numShaderTextFiles].name, names[i], sizeof( shaderTextFiles[0].name ) );
+		numShaderTextFiles++;
 		strcat( textEnd, buffers[i] );
 		strcat( textEnd, "\n" );
 		textEnd += strlen( textEnd );
 		ri.FS_FreeFile( buffers[i] );
 	}
-
-	COM_CompressShader( s_shaderText );
 
 	// free up memory
 	ri.FS_FreeFileList( shaderFiles );
