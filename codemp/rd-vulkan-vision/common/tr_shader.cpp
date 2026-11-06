@@ -1255,6 +1255,26 @@ stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean crea
 	return mat;
 }
 
+/*
+===================
+R_ShadersNamed
+
+VisionJK: the loaded shaders of that name (its lightmap variants), up to max of them in out; answers how many
+===================
+*/
+int R_ShadersNamed( const char *name, shader_t **out, int max )
+{
+	const int hash = generateHashValue( name, FILE_HASH_SIZE );
+	int count = 0;
+
+	for ( shader_t *sh = hashTable[hash]; sh && count < max; sh = sh->next ) {
+		if ( !Q_stricmp( sh->name, name ) ) {
+			out[count++] = sh;
+		}
+	}
+	return count;
+}
+
 static int ParseMaterialKeyword( const char *word, const char **text, shaderStage_t *stage )
 {
 	static const char *rend2Only[] = { "specularReflectance", "specularExponent", "specularScale", "normalScale", "parallaxBias",

@@ -1194,6 +1194,12 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.AddWet							= RE_AddWet;
 	re.ext.PaintImage						= RE_PaintImage;
 	re.ext.AddPaint							= RE_AddPaint;
+	re.ext.MaterialPick						= RE_MaterialPick;
+	re.ext.MaterialList						= RE_MaterialList;
+	re.ext.MaterialFind						= RE_MaterialFind;
+	re.ext.MaterialInfo						= RE_MaterialInfo;
+	re.ext.MaterialGet						= RE_MaterialGet;
+	re.ext.MaterialSet						= RE_MaterialSet;
 
 	return &re;
 }

@@ -547,6 +547,8 @@ void RE_RenderScene( const refdef_t *fd ) {
 	// VisionJK: a face of a reflection probe of the level while they are not all drawn, before the view of the level
 	if ( !( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		R_ProbeViews( &parms );
+		// and the view the material debug menu picks along (ext.MaterialPick)
+		R_MaterialLevelView( fd->vieworg, fd->viewaxis );
 	}
 	R_RenderView( &parms );
 

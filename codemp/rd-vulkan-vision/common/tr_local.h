@@ -1480,6 +1480,18 @@ void		R_InitShaders(qboolean server);
 void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
 stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean create, const stageMaterial_t *init );
+int			R_ShadersNamed( const char *name, shader_t **out, int max );
+
+//
+// tr_material.cpp: the material debug menu (refexport_t ext.Material*)
+//
+void		R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] );
+qboolean	RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *out );
+int			RE_MaterialList( qboolean all, int first, qhandle_t *out, int max );
+qhandle_t	RE_MaterialFind( const char *name );
+qboolean	RE_MaterialInfo( qhandle_t shader, materialInfo_t *out );
+qboolean	RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out );
+qboolean	RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
 
 //
 // tr_arb.c

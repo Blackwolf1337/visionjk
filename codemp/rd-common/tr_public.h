@@ -299,6 +299,21 @@ typedef struct refexport_s {
 		// The pixels the letters of a text cover when it is drawn at 0,0: box is left, top, right, bottom in units.
 		// qfalse for a font of the game, which does not know them.
 		qboolean			(*Font_InkBox)							( const char *text, const int setIndex, const float scale, float *box );
+		// The material debug menu (materialParms_t of tr_types.h). A material is the one of a stage of a shader
+		// text, named by the number of the stage in the text (materialStage_t sourceStage); all loaded shaders of
+		// that name share it, and a change shows from the next frame on. NULL in a renderer without them.
+		// The surface of the level a ray hits: start NULL is the middle of the last view of the level.
+		qboolean			(*MaterialPick)							( const vec3_t start, const vec3_t end, materialPick_t *out );
+		// The shaders as one handle per name, those the level uses (largest area first) or all loaded ones: handles
+		// from first on, up to max of them, into out; answers how many there are.
+		int					(*MaterialList)							( qboolean all, int first, qhandle_t *out, int max );
+		// A loaded shader by name (any of its lightmap variants), 0 for none. It is never loaded by this.
+		qhandle_t			(*MaterialFind)							( const char *name );
+		qboolean			(*MaterialInfo)							( qhandle_t shader, materialInfo_t *out );
+		// The material of a stage; a stage without one gives the empty material. qfalse: there is no such stage.
+		qboolean			(*MaterialGet)							( qhandle_t shader, int sourceStage, materialParms_t *out );
+		// Writes the fields of in that fields says (MATP_*); a stage without a material gets one.
+		qboolean			(*MaterialSet)							( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
 	} ext;
 
 } refexport_t;

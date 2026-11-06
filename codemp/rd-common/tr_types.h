@@ -256,6 +256,75 @@ typedef struct paintPicture_s {
 	int			delays[PAINT_FRAMES];	// msec each frame is shown
 } paintPicture_t;
 
+// VisionJK: the material debug menu (refexport_t ext.Material*). A material belongs to a stage of a shader text,
+// named by the number of that stage in the text (sourceStage), and all shaders of that name share it.
+#define MATERIAL_MAX_STAGES		8
+
+// the fields of materialParms_t that ext.MaterialSet writes
+#define MATP_PBR				(1 << 0)
+#define MATP_ROUGHNESS			(1 << 1)
+#define MATP_METALNESS			(1 << 2)
+#define MATP_PARALLAX			(1 << 3)
+#define MATP_SPECULAR			(1 << 4)
+#define MATP_WRAPLIGHT			(1 << 5)
+#define MATP_SPARKLE			(1 << 6)
+#define MATP_NORMALMAP			(1 << 7)	// normalMap and normalHeight
+#define MATP_RMOMAP				(1 << 8)	// rmoMap and ormOrder
+#define MATP_ALL				0x1ff
+
+typedef struct materialParms_s {
+	qboolean	pbr;				// lit per pixel with GGX
+	float		roughness;			// 0 to 1
+	float		metalness;			// 0 to 1
+	float		parallaxDepth;		// 0 to 0.2, needs normalHeight
+	float		specular[3];		// strength, exponent, clear coat (stages of models, not pbr)
+	float		wrapLight;
+	float		sparkle;
+	char		normalMap[MAX_QPATH];	// image name, "" none
+	qboolean	normalHeight;		// the height is in the alpha of the normal map
+	char		rmoMap[MAX_QPATH];	// image name, "" none
+	qboolean	ormOrder;			// occlusion, roughness, metalness instead of roughness, metalness, occlusion
+} materialParms_t;
+
+// what a stage is (materialStage_t flags)
+#define MATS_LIGHTMAP			(1 << 0)	// lit by the lightmap of the level
+#define MATS_ADD				(1 << 1)	// adds its colour to what is under it (a sign, a glow)
+#define MATS_BLEND				(1 << 2)	// blended in some other way
+#define MATS_GLOW				(1 << 3)	// in the pass of the dynamic glow
+#define MATS_MATERIAL			(1 << 4)	// it has a material
+#define MATS_ENTITY				(1 << 5)	// lit by the light of its entity (models)
+
+typedef struct materialStage_s {
+	int			sourceStage;
+	int			flags;				// MATS_*
+	char		image[MAX_QPATH];	// its texture
+} materialStage_t;
+
+// what a shader is (materialInfo_t flags)
+#define MATI_SCRIPT				(1 << 0)	// from the text of a .shader or .oshader file
+#define MATI_SKY				(1 << 1)
+#define MATI_FOG				(1 << 2)
+#define MATI_NODRAW				(1 << 3)	// no stage is drawn
+#define MATI_LEVEL				(1 << 4)	// surfaces of the level have it
+
+typedef struct materialInfo_s {
+	qhandle_t	shader;
+	char		name[MAX_QPATH];
+	int			flags;				// MATI_*
+	float		area;				// square units of the surfaces of the level with it
+	float		emissive[4];		// emissive light: r, g, b and the light, all 0 when it gives none
+	float		surfaceLight;		// q3map_surfacelight
+	int			numStages;
+	materialStage_t	stages[MATERIAL_MAX_STAGES];
+} materialInfo_t;
+
+typedef struct materialPick_s {
+	qhandle_t	shader;
+	vec3_t		point;
+	vec3_t		normal;				// of the surface, towards the start of the ray
+	float		distance;			// from the start of the ray, units
+} materialPick_t;
+
 extern int	skyboxportal;
 extern int	drawskyboxportal;
 
