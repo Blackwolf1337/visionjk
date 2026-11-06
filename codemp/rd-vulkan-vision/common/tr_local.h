@@ -436,6 +436,19 @@ typedef struct stageMaterial_s {
 	float			transmission, ior, thickness;
 	float			absorption[3], absorptionDistance;
 
+	// more of a surface (generic.frag Surface): a clear coat over it (varnish, lacquer: its amount and roughness),
+	// sheen (cloth: its colour, or the albedo with rend2's cloth, and roughness), anisotropy (brushed metal: -1 to 1
+	// and the turn of its direction in degrees), emission (the parts of the texture brighter than emissionThreshold
+	// give off their colour times emission times emissionStrength), rend2's specular map (spec/gloss: F0 in rgb,
+	// gloss in alpha), specularReflectance (F0 of what is not metal, 0 for 0.04) and normalScale
+	float			clearcoat, clearcoatRoughness;
+	float			sheen[3], sheenRoughness;
+	bool			sheenAlbedo;
+	float			anisotropy, anisotropyRotation;
+	float			emission[3], emissionStrength, emissionThreshold;
+	image_t			*specGlossMap;
+	float			specularReflectance, normalScale;
+
 	// the maps made from the texture of the stage (albedoGen, normalGen, rmoGen, tr_matgen.cpp): made once for the
 	// record (genDone), into images of the record that a change of the menu fills again. albedoMap takes the place
 	// of baseImage in the stages; a made rmo map has the change of the roughness in red (rmoRelative), so the

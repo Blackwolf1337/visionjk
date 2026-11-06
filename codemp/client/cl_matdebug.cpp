@@ -527,6 +527,77 @@ static void MatDebug_DrawGlass( void ) {
 	}
 }
 
+// clear coat, sheen, anisotropy, emission and rend2's spec/gloss (generic.frag Surface)
+static void MatDebug_DrawSurface( void ) {
+	static char editSpec[MAX_QPATH];
+	static qhandle_t editSpecOf;
+	static int editSpecStage = -1;
+
+	if ( editSpecOf != selShader || editSpecStage != selStage ) {
+		editSpecOf = selShader;
+		editSpecStage = selStage;
+		Q_strncpyz( editSpec, selParms.specGlossMap, sizeof( editSpec ) );
+	}
+	if ( !ImGui::CollapsingHeader( "More of the surface" ) ) {
+		return;
+	}
+	bool changed = false;
+
+	ImGui::SeparatorText( "Clear coat" );
+	changed |= ImGui::SliderFloat( "Coat", &selParms.clearcoat, 0.0f, 1.0f, "%.2f" );
+	ImGui::SetItemTooltip( "A clear layer over it: varnished wood, lacquer, car paint, a polished floor" );
+	changed |= ImGui::SliderFloat( "Coat roughness", &selParms.clearcoatRoughness, 0.0f, 1.0f, "%.2f" );
+
+	ImGui::SeparatorText( "Sheen" );
+	bool clothAlbedo = selParms.sheenAlbedo ? true : false;
+	if ( ImGui::Checkbox( "Sheen of its own colour (rend2's cloth)", &clothAlbedo ) ) {
+		selParms.sheenAlbedo = clothAlbedo ? qtrue : qfalse;
+		changed = true;
+	}
+	ImGui::BeginDisabled( clothAlbedo );
+	changed |= ImGui::ColorEdit3( "Sheen colour", selParms.sheen, ImGuiColorEditFlags_NoInputs );
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth( 200.0f );
+	changed |= ImGui::SliderFloat( "Sheen roughness", &selParms.sheenRoughness, 0.05f, 1.0f, "%.2f" );
+	ImGui::SetItemTooltip( "Cloth, velvet, banners: a soft light at a flat angle. Black colour: none" );
+
+	ImGui::SeparatorText( "Anisotropy" );
+	changed |= ImGui::SliderFloat( "Anisotropy", &selParms.anisotropy, -1.0f, 1.0f, "%.2f" );
+	ImGui::SetItemTooltip( "Shine drawn out along a direction: brushed metal. 0 none" );
+	changed |= ImGui::SliderFloat( "Direction", &selParms.anisotropyRotation, -180.0f, 180.0f, "%.0f deg" );
+
+	ImGui::SeparatorText( "Emission" );
+	changed |= ImGui::SliderFloat( "Emission", &selParms.emissionStrength, 0.0f, 8.0f, "%.2f" );
+	ImGui::SetItemTooltip( "The parts brighter than the threshold give off light: lamps painted into the texture. 0 none" );
+	changed |= ImGui::ColorEdit3( "Emission colour", selParms.emission, ImGuiColorEditFlags_NoInputs );
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth( 200.0f );
+	changed |= ImGui::SliderFloat( "Threshold", &selParms.emissionThreshold, 0.0f, 1.0f, "%.2f" );
+
+	ImGui::SeparatorText( "Shine of what is not metal" );
+	changed |= ImGui::SliderFloat( "Specular reflectance", &selParms.specularReflectance, 0.0f, 0.2f, "%.3f" );
+	ImGui::SetItemTooltip( "F0 of what is not metal: 0 for 0.04 (most things), 0.02 water, 0.05 plastic, 0.08 gems" );
+	changed |= ImGui::SliderFloat( "Bump strength (normalScale)", &selParms.normalScale, 0.0f, 4.0f, "%.2f" );
+	if ( ImGui::InputText( "Spec/gloss map (rend2)", editSpec, sizeof( editSpec ), ImGuiInputTextFlags_EnterReturnsTrue ) ) {
+		Q_strncpyz( selParms.specGlossMap, editSpec, sizeof( selParms.specGlossMap ) );
+		changed = true;
+	}
+	ImGui::SetItemTooltip( "F0 in rgb, gloss in alpha; used where the stage has no rmo map" );
+
+	bool energy = Cvar_VariableIntegerValue( "v_pbrEnergy" ) ? true : false;
+	if ( ImGui::Checkbox( "Energy conserving (v_pbrEnergy, all materials)", &energy ) ) {
+		Cvar_Set( "v_pbrEnergy", energy ? "1" : "0" );
+	}
+	if ( changed ) {
+		if ( !selParms.pbr ) {
+			selParms.pbr = qtrue;
+			MatDebug_Set( MATP_PBR | MATP_ROUGHNESS );
+		}
+		MatDebug_Set( MATP_SURFACE );
+	}
+}
+
 static void MatDebug_DrawFiles( void ) {
 	bool height = selParms.normalHeight ? true : false;
 	bool orm = selParms.ormOrder ? true : false;
@@ -595,6 +666,7 @@ static void MatDebug_DrawMaterial( void ) {
 	MatDebug_DrawWarnings();
 
 	MatDebug_DrawGlass();
+	MatDebug_DrawSurface();
 	MatDebug_DrawGen();
 	MatDebug_DrawFiles();
 

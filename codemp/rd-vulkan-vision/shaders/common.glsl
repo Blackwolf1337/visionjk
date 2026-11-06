@@ -50,7 +50,9 @@ struct Draw {
 	vec4	grid0;			//	the light grid: origin, w its layers across
 	vec4	grid1;			//	1 / the size of a cell, w the height of its picture
 	vec4	grid2;			//	cells each way, w the width of its picture
-	vec4	pbr2;			// PBR: x where the surface lies in the height of the parallax, 0 bottom to 1 top
+	vec4	pbr2;			// PBR: where the surface lies in the height of the parallax (0 bottom to 1 top), clear coat,
+							//	its roughness, anisotropy; glass: transmission, thickness, absorption distance
+	vec4	pbr3;			// PBR: emission colour times strength, the threshold of the brightness that gives off
 };
 
 BINDING( 0, 0 ) uniform Globals {
@@ -120,6 +122,9 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define PBR_PROBES		0x80u
 #define PBR_RMO_RELATIVE	0x100u
 #define PBR_GLASS		0x200u
+#define PBR_SPECGLOSS	0x400u
+#define PBR_SHEEN_ALBEDO	0x800u
+#define PBR_ENERGY		0x1000u
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

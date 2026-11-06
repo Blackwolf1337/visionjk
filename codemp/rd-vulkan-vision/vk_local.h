@@ -122,6 +122,9 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKP_PROBES			0x80u			// the reflection probes of the level in tex5 and tex6 (R_CreateProbes)
 #define VKP_RMO_RELATIVE	0x100u			// the rmo map was made (rmoGen): red is the change of the roughness, 0.5 none
 #define VKP_GLASS			0x200u			// glass: the copy of the frame in tex1 bent and tinted (VK_GlassDraw)
+#define VKP_SPECGLOSS		0x400u			// rend2's specular map in tex3: F0 in rgb, gloss in alpha
+#define VKP_SHEEN_ALBEDO	0x800u			// the sheen has the colour of the albedo (rend2's cloth)
+#define VKP_ENERGY			0x1000u			// diffuse loses what the shine takes (v_pbrEnergy)
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
@@ -158,7 +161,9 @@ typedef struct vkDraw_s {		// once per draw
 	float		grid0[4];			//	VKP_GRID: the origin of the light grid in the world, its layers across
 	float		grid1[4];			//	1 / the size of a cell, w the height of its picture
 	float		grid2[4];			//	how many cells it has each way, w the width of its picture
-	float		pbr2[4];			// VKD_PBR: x where the surface lies in the height of the parallax (parallaxPlane)
+	float		pbr2[4];			// VKD_PBR: where the surface lies in the height of the parallax, clear coat and its
+									//	roughness, anisotropy (glass: transmission, thickness, absorption distance)
+	float		pbr3[4];			// VKD_PBR: emission colour times strength, the threshold of the brightness that gives off
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -362,6 +367,7 @@ qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;
+extern cvar_t	*v_pbrEnergy;
 extern cvar_t	*v_vkGrass;
 qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );
 void		VK_AddSurface( surfaceType_t *surface );

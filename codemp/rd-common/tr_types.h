@@ -275,7 +275,8 @@ typedef struct paintPicture_s {
 #define MATP_RMOMAP				(1 << 8)	// rmoMap and ormOrder
 #define MATP_GEN				(1 << 9)	// gen: the maps are made again
 #define MATP_GLASS				(1 << 10)	// transmission, ior, thickness, absorption
-#define MATP_ALL				0x7ff
+#define MATP_SURFACE			(1 << 11)	// clearcoat, sheen, anisotropy, emission, specGlossMap, specularReflectance, normalScale
+#define MATP_ALL				0xfff
 
 // the maps the renderer makes from the texture of a stage when it loads (shader keywords albedoGen, normalGen,
 // rmoGen of .oshader files, tr_matgen.cpp), so a material needs no picture files
@@ -322,6 +323,20 @@ typedef struct materialParms_s {
 	float		thickness;			// units, 0 a thin pane
 	float		absorption[3];		// what is left of each colour after absorptionDistance units in it
 	float		absorptionDistance;
+	// more of the surface
+	float		clearcoat;			// 0 to 1, a clear coat over it
+	float		clearcoatRoughness;
+	float		sheen[3];			// cloth: the colour of its sheen, 0 none
+	float		sheenRoughness;
+	qboolean	sheenAlbedo;		// the sheen has the colour of the albedo (rend2's cloth)
+	float		anisotropy;			// -1 to 1, brushed metal
+	float		anisotropyRotation;	// degrees
+	float		emission[3];		// the colour the bright parts give off
+	float		emissionStrength;	// 0 none
+	float		emissionThreshold;	// 0 to 1, how bright a part must be to give off light
+	char		specGlossMap[MAX_QPATH];	// rend2's specular map (F0 in rgb, gloss in alpha), "" none
+	float		specularReflectance;	// F0 of what is not metal, 0 for 0.04
+	float		normalScale;		// strength of the bumps, 1 as the map has them
 } materialParms_t;
 
 // what a stage is (materialStage_t flags)

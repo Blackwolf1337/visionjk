@@ -742,6 +742,7 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 
 cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
 cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
+cvar_t	*v_pbrEnergy;	// 0: their diffuse light is not lessened by what the shine takes
 
 /*
 ===============
@@ -800,7 +801,22 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	if ( mat->rmoMap ) {
 		draw->tex3 = mat->rmoMap->texnum;
 		draw->pbrFlags |= VKP_RMO | ( mat->ormOrder ? VKP_ORM : 0u ) | ( mat->rmoRelative ? VKP_RMO_RELATIVE : 0u );
+	} else if ( mat->specGlossMap ) {
+		draw->tex3 = mat->specGlossMap->texnum;
+		draw->pbrFlags |= VKP_SPECGLOSS;
 	}
+	draw->pbrFlags |= ( mat->sheenAlbedo ? VKP_SHEEN_ALBEDO : 0u ) | ( v_pbrEnergy->integer ? VKP_ENERGY : 0u );
+	draw->pbr2[1] = mat->clearcoat;
+	draw->pbr2[2] = mat->clearcoatRoughness;
+	draw->pbr2[3] = mat->anisotropy;
+	VectorScale( mat->emission, mat->emissionStrength, draw->pbr3 );
+	draw->pbr3[3] = mat->emissionThreshold;
+	VectorCopy( mat->sheen, draw->material );
+	draw->material[3] = mat->sheenRoughness;
+	draw->material2[0] = DEG2RAD( mat->anisotropyRotation );
+	draw->material2[1] = mat->normalScale;
+	draw->material2[2] = mat->specularReflectance;
+	draw->material2[3] = 0.0f;
 	draw->pbr[0] = mat->pbr ? mat->roughness : 0.8f;
 	draw->pbr[1] = mat->metalness;
 	draw->pbr[2] = mat->parallaxDepth;

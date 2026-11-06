@@ -573,6 +573,11 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	out->ior = 1.5f;
 	VectorSet( out->absorption, 1.0f, 1.0f, 1.0f );
 	out->absorptionDistance = 64.0f;
+	out->clearcoatRoughness = 0.1f;
+	out->sheenRoughness = 0.5f;
+	VectorSet( out->emission, 1.0f, 1.0f, 1.0f );
+	out->emissionThreshold = 0.7f;
+	out->normalScale = 1.0f;
 	R_DefaultMaterialGen( &out->gen );
 	if ( shader <= 0 || shader >= tr.numShaders ) {
 		return qfalse;
@@ -608,6 +613,21 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	out->thickness = mat->thickness;
 	VectorCopy( mat->absorption, out->absorption );
 	out->absorptionDistance = mat->absorptionDistance;
+	out->clearcoat = mat->clearcoat;
+	out->clearcoatRoughness = mat->clearcoatRoughness;
+	VectorCopy( mat->sheen, out->sheen );
+	out->sheenRoughness = mat->sheenRoughness;
+	out->sheenAlbedo = (qboolean)mat->sheenAlbedo;
+	out->anisotropy = mat->anisotropy;
+	out->anisotropyRotation = mat->anisotropyRotation;
+	VectorCopy( mat->emission, out->emission );
+	out->emissionStrength = mat->emissionStrength;
+	out->emissionThreshold = mat->emissionThreshold;
+	if ( mat->specGlossMap ) {
+		Q_strncpyz( out->specGlossMap, mat->specGlossMap->imgName, sizeof( out->specGlossMap ) );
+	}
+	out->specularReflectance = mat->specularReflectance;
+	out->normalScale = mat->normalScale;
 	return qtrue;
 }
 
@@ -695,6 +715,23 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 		}
 		mat->absorptionDistance = Com_Clamp( 1.0f, 4096.0f, in->absorptionDistance );
 	}
+	if ( fields & MATP_SURFACE ) {
+		mat->clearcoat = Com_Clamp( 0.0f, 1.0f, in->clearcoat );
+		mat->clearcoatRoughness = Com_Clamp( 0.0f, 1.0f, in->clearcoatRoughness );
+		for ( int c = 0; c < 3; c++ ) {
+			mat->sheen[c] = Com_Clamp( 0.0f, 1.0f, in->sheen[c] );
+			mat->emission[c] = Com_Clamp( 0.0f, 1.0f, in->emission[c] );
+		}
+		mat->sheenRoughness = Com_Clamp( 0.05f, 1.0f, in->sheenRoughness );
+		mat->sheenAlbedo = in->sheenAlbedo ? true : false;
+		mat->anisotropy = Com_Clamp( -1.0f, 1.0f, in->anisotropy );
+		mat->anisotropyRotation = in->anisotropyRotation;
+		mat->emissionStrength = Com_Clamp( 0.0f, 16.0f, in->emissionStrength );
+		mat->emissionThreshold = Com_Clamp( 0.0f, 1.0f, in->emissionThreshold );
+		mat->specGlossMap = MaterialImage( in->specGlossMap, sh );
+		mat->specularReflectance = Com_Clamp( 0.0f, 1.0f, in->specularReflectance );
+		mat->normalScale = Com_Clamp( 0.0f, 8.0f, in->normalScale );
+	}
 	if ( fields & MATP_GEN ) {
 		// made again from the texture the record had them from (the stage shows the albedo now), into its images
 		mat->gen = in->gen;
@@ -719,7 +756,8 @@ The text of a shader with its materials, and saving it
 // what a stage line of a material says, which the text gets again from the record
 static const char *const materialWords[] = { "normalMap", "normalHeightMap", "rmoMap", "ormMap", "roughness", "gloss",
 	"metalness", "parallaxDepth", "parallaxPlane", "albedoGen", "normalGen", "rmoGen", "specular", "wrapLight", "sparkle",
-	"transmission", "ior", "thickness", "absorption", NULL };
+	"transmission", "ior", "thickness", "absorption", "clearcoat", "sheen", "anisotropy", "emission", "specMap",
+	"specularMap", "specularReflectance", "normalScale", "cloth", NULL };
 
 static qboolean IsMaterialWord( const char *word ) {
 	for ( int i = 0; materialWords[i]; i++ ) {
@@ -801,6 +839,38 @@ static void OutMaterial( textOut_t *out, const stageMaterial_t *mat, int depth )
 			OutIndent( out, depth );
 			Out( out, "parallaxPlane %g\n", mat->parallaxPlane );
 		}
+	}
+	if ( mat->clearcoat > 0.0f ) {
+		OutIndent( out, depth );
+		Out( out, "clearcoat %g %g\n", mat->clearcoat, mat->clearcoatRoughness );
+	}
+	if ( mat->sheenAlbedo ) {
+		OutIndent( out, depth );
+		Out( out, "cloth\n" );
+	} else if ( mat->sheen[0] > 0.0f || mat->sheen[1] > 0.0f || mat->sheen[2] > 0.0f ) {
+		OutIndent( out, depth );
+		Out( out, "sheen %g %g %g %g\n", mat->sheen[0], mat->sheen[1], mat->sheen[2], mat->sheenRoughness );
+	}
+	if ( mat->anisotropy != 0.0f ) {
+		OutIndent( out, depth );
+		Out( out, "anisotropy %g %g\n", mat->anisotropy, mat->anisotropyRotation );
+	}
+	if ( mat->emissionStrength > 0.0f ) {
+		OutIndent( out, depth );
+		Out( out, "emission %g %g %g %g %g\n", mat->emission[0], mat->emission[1], mat->emission[2], mat->emissionStrength,
+			mat->emissionThreshold );
+	}
+	if ( IsFileImage( mat->specGlossMap ) ) {
+		OutIndent( out, depth );
+		Out( out, "specularMap %s\n", mat->specGlossMap->imgName );
+	}
+	if ( mat->specularReflectance > 0.0f ) {
+		OutIndent( out, depth );
+		Out( out, "specularReflectance %g\n", mat->specularReflectance );
+	}
+	if ( mat->normalScale != 1.0f ) {
+		OutIndent( out, depth );
+		Out( out, "normalScale %g\n", mat->normalScale );
 	}
 	if ( mat->transmission > 0.0f ) {
 		OutIndent( out, depth );
@@ -959,10 +1029,14 @@ static qboolean SameMaterial( const stageMaterial_t *a, const stageMaterial_t *b
 		const stageMaterial_t *m = a ? a : b;
 
 		return (qboolean)( !m || ( !m->pbr && !m->gen.flags && !IsFileImage( m->normalMap ) && !IsFileImage( m->rmoMap )
-			&& !m->specular[0] && !m->specular[1] && !m->specular[2] && !m->wrapLight && !m->sparkle && !m->transmission ) );
+			&& !m->specular[0] && !m->specular[1] && !m->specular[2] && !m->wrapLight && !m->sparkle && !m->transmission
+			&& !m->clearcoat && !m->emissionStrength && !m->anisotropy && !m->sheenAlbedo && !IsFileImage( m->specGlossMap ) ) );
 	}
 	if ( a->pbr != b->pbr || a->gen.flags != b->gen.flags || fabsf( a->transmission - b->transmission ) > e
-		|| ( a->transmission > 0.0f && ( fabsf( a->ior - b->ior ) > e || fabsf( a->thickness - b->thickness ) > e ) ) ) {
+		|| ( a->transmission > 0.0f && ( fabsf( a->ior - b->ior ) > e || fabsf( a->thickness - b->thickness ) > e ) )
+		|| fabsf( a->clearcoat - b->clearcoat ) > e || fabsf( a->anisotropy - b->anisotropy ) > e
+		|| fabsf( a->emissionStrength - b->emissionStrength ) > e || a->sheenAlbedo != b->sheenAlbedo
+		|| fabsf( a->normalScale - b->normalScale ) > e || !SameFile( a->specGlossMap, b->specGlossMap ) ) {
 		return qfalse;
 	}
 	if ( a->pbr && ( fabsf( a->roughness - b->roughness ) > e || fabsf( a->metalness - b->metalness ) > e

@@ -285,21 +285,97 @@ vec3 EnvBRDF( vec3 f0, float roughness, float nv ) {
 	 flat = 1 - k + k N.l; with bumps N.l changes and the shine of GGX comes on top.
    All in linear light: the textures and the light to the power 2.2 and back, which keeps albedo times light exactly
    what it was. */
+// A surface lit per pixel (PbrStage, the shine of glass), its vectors in one space: the normal with its bumps, the
+// normal of the polygon, the direction to the eye; albedo and F0 in linear light; a clear coat over it (amount and
+// roughness, on the polygon, F0 0.04), sheen (cloth: colour and roughness), and the direction of the brush strokes
+// with how far anisotropy draws the shine out along them.
+struct Surface {
+	vec3	n;
+	vec3	flat_;
+	vec3	v;
+	vec3	albedo;
+	vec3	f0;
+	float	metalness;
+	float	roughness;
+	float	coat;
+	float	coatRoughness;
+	vec3	sheen;
+	float	sheenRoughness;
+	vec3	along;
+	float	anisotropy;
+};
+
+// the distribution of the sheen of cloth (Estevez and Kulla 2017)
+float D_Charlie( float nh, float r ) {
+	float inv = 1.0 / max( r, 0.05 );
+	float sin2 = max( 1.0 - nh * nh, 0.0078125 );
+	return ( 2.0 + inv ) * pow( sin2, inv * 0.5 ) / 6.2831853;
+}
+
+// GGX drawn out along t (at) and b (ab): brushed metal (Burley 2012)
+float D_GGXAniso( vec3 h, vec3 n, vec3 t, vec3 b, float at, float ab ) {
+	float th = dot( t, h ), bh = dot( b, h ), nh = dot( n, h );
+	float x = th * th / ( at * at ) + bh * bh / ( ab * ab ) + nh * nh;
+	return 1.0 / ( 3.14159265 * at * ab * x * x );
+}
+
+// The light from direction l, of radiance (light as the engine counts it: a white surface lit straight on gets it as
+// it is), on the surface: what it adds to diffuse, and the shine it gives back. minRoughness widens the lobe of light
+// that is many lamps taken together (the grid, an entity).
+vec3 SurfaceLight( Surface s, vec3 l, vec3 radiance, float minRoughness, inout vec3 diffuse ) {
+	float nl = max( dot( s.n, l ), 0.0 );
+	if ( nl <= 0.0 || dot( s.flat_, l ) <= 0.0001 ) {
+		return vec3( 0.0 );
+	}
+	vec3 h = normalize( l + s.v );
+	float nv = max( dot( s.n, s.v ), 1e-4 ), nh = max( dot( s.n, h ), 0.0 ), vh = max( dot( s.v, h ), 0.0 );
+	float r = max( s.roughness, minRoughness ), a = r * r, kv = a * 0.5;
+	vec3 fresnel = s.f0 + ( 1.0 - s.f0 ) * pow( 1.0 - vh, 5.0 );
+	float visibility = 0.25 / ( ( nl * ( 1.0 - kv ) + kv ) * ( nv * ( 1.0 - kv ) + kv ) );
+	float distribution;
+	if ( abs( s.anisotropy ) > 0.01 ) {
+		vec3 t = normalize( s.along - s.n * dot( s.along, s.n ) );
+		vec3 b = cross( s.n, t );
+		distribution = D_GGXAniso( h, s.n, t, b, max( a * ( 1.0 + s.anisotropy ), 0.002 ), max( a * ( 1.0 - s.anisotropy ), 0.002 ) );
+	} else {
+		distribution = D_GGX( nh, a );
+	}
+	vec3 shine = distribution * visibility * fresnel;
+	if ( dot( s.sheen, s.sheen ) > 0.0 ) {
+		shine += s.sheen * D_Charlie( nh, s.sheenRoughness ) / ( 4.0 * ( nl + nv - nl * nv ) );
+	}
+	// what the clear coat mirrors the layer under it does not get
+	float coatFresnel = 0.0;
+	vec3 coat = vec3( 0.0 );
+	if ( s.coat > 0.0 ) {
+		float cnl = max( dot( s.flat_, l ), 0.0 ), cnv = max( dot( s.flat_, s.v ), 1e-4 ), cnh = max( dot( s.flat_, h ), 0.0 );
+		float ca = max( s.coatRoughness, 0.02 );
+		ca *= ca;
+		float ck = ca * 0.5;
+		coatFresnel = ( 0.04 + 0.96 * pow( 1.0 - vh, 5.0 ) ) * s.coat;
+		coat = vec3( D_GGX( cnh, ca ) * 0.25 / ( ( cnl * ( 1.0 - ck ) + ck ) * ( cnv * ( 1.0 - ck ) + ck ) ) * coatFresnel * cnl );
+	}
+	diffuse += s.albedo * ( 1.0 - s.metalness ) * radiance * nl * ( 1.0 - coatFresnel );
+	return radiance * ( shine * nl * ( 1.0 - coatFresnel ) + coat );
+}
+
 #ifndef VK_GLES
 // The lamps of the light to judge materials by (globals.lights, VK_LightRows): lit per pixel with the roughness the
 // material has (a lamp is small, its shine is not widened as the light of the grid is). The light falls off with the
 // square of the distance in hundreds of units, to nothing at the range, and a spot between its two angles. The
-// diffuse part is added to diffuse, the shine is returned. Everything in the space of the world.
-vec3 DebugLights( Transform t, vec3 n, vec3 flat_, vec3 toEye, vec3 albedo, float metalness, float roughness, vec3 f0, inout vec3 diffuse ) {
+// diffuse part is added to diffuse, the shine is returned. Lit in the space of the world.
+vec3 DebugLights( Transform t, Surface s, inout vec3 diffuse ) {
 	int count = int( globals.lights[0].x );
 	if ( count <= 0 ) {
 		return vec3( 0.0 );
 	}
 	vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
 	mat3 toWorld = mat3( t.model );
-	vec3 wn = normalize( toWorld * n ), wflat = normalize( toWorld * flat_ ), wv = normalize( toWorld * toEye );
-	float a = roughness * roughness, kv = a * 0.5;
-	float nv = max( dot( wn, wv ), 1e-4 );
+	Surface w = s;
+	w.n = normalize( toWorld * s.n );
+	w.flat_ = normalize( toWorld * s.flat_ );
+	w.v = normalize( toWorld * s.v );
+	w.along = toWorld * s.along;
 	vec3 shine = vec3( 0.0 );
 
 	for ( int i = 0; i < count && i < 8; i++ ) {
@@ -324,18 +400,9 @@ vec3 DebugLights( Transform t, vec3 n, vec3 flat_, vec3 toEye, vec3 albedo, floa
 				fall *= smoothstep( r3.x, r2.w, dot( -l, r2.xyz ) );
 			}
 		}
-		float nl = max( dot( wn, l ), 0.0 );
-		if ( nl <= 0.0 || fall <= 0.0 || dot( wflat, l ) <= 0.0 ) {
-			continue;
+		if ( fall > 0.0 ) {
+			shine += SurfaceLight( w, l, r1.rgb * fall, 0.0, diffuse );
 		}
-		vec3 h = normalize( l + wv );
-		float nh = max( dot( wn, h ), 0.0 ), vh = max( dot( wv, h ), 0.0 );
-		vec3 fresnel = f0 + ( 1.0 - f0 ) * pow( 1.0 - vh, 5.0 );
-		float visibility = 0.25 / ( ( nl * ( 1.0 - kv ) + kv ) * ( nv * ( 1.0 - kv ) + kv ) );
-		vec3 radiance = r1.rgb * fall;
-
-		diffuse += albedo * ( 1.0 - metalness ) * radiance * nl;
-		shine += radiance * D_GGX( nh, a ) * visibility * fresnel * nl;
 	}
 	return shine;
 }
@@ -416,8 +483,22 @@ vec4 GlassStage( Draw d ) {
 	} else {
 		mirrored = back;
 	}
+	Surface pane;
+	pane.n = n;
+	pane.flat_ = flat_;
+	pane.v = toEye;
+	pane.albedo = vec3( 0.0 );
+	pane.f0 = vec3( f0 );
+	pane.metalness = 0.0;
+	pane.roughness = max( roughness, 0.03 );
+	pane.coat = 0.0;
+	pane.coatRoughness = 0.0;
+	pane.sheen = vec3( 0.0 );
+	pane.sheenRoughness = 0.5;
+	pane.along = flat_;
+	pane.anisotropy = 0.0;
 	vec3 unused = vec3( 0.0 );
-	vec3 shine = DebugLights( t, n, flat_, toEye, vec3( 0.0 ), 0.0, max( roughness, 0.03 ), vec3( f0 ), unused );
+	vec3 shine = DebugLights( t, pane, unused );
 
 	vec3 color = mix( own, passed, transmission ) * ( 1.0 - fresnel ) + mirrored * fresnel + shine;
 	return vec4( pow( color, vec3( 1.0 / 2.2 ) ), 1.0 );
@@ -446,9 +527,14 @@ vec4 PbrStage( Draw d ) {
 	vec4 base = texture( TEX0( d ), uv );
 	vec3 n = flat_;
 	if ( ( d.pbrFlags & PBR_NORMAL ) != 0u ) {
-		n = normalize( frame * ( texture( TEX2( d ), uv ).xyz * 2.0 - 1.0 ) );
+		// normalScale makes the bumps stronger or weaker
+		vec3 bump = texture( TEX2( d ), uv ).xyz * 2.0 - 1.0;
+		bump.xy *= d.material2.y;
+		n = normalize( frame * bump );
 	}
 	vec3 rmo = vec3( d.pbr.x, d.pbr.y, 1.0 );
+	vec3 specF0 = vec3( 0.0 );
+	bool specGloss = ( d.pbrFlags & PBR_SPECGLOSS ) != 0u;
 	if ( ( d.pbrFlags & PBR_RMO_RELATIVE ) != 0u ) {
 		// made by rmoGen: the change of the roughness around the one of the material, which stays live with its
 		// metalness, and the occlusion
@@ -459,6 +545,11 @@ vec4 PbrStage( Draw d ) {
 		if ( ( d.pbrFlags & PBR_ORM ) != 0u ) {
 			rmo = rmo.gbr;
 		}
+	} else if ( specGloss ) {
+		// rend2's specular map: F0 in rgb, gloss in alpha, no metalness
+		vec4 sg = texture( TEX3( d ), uv );
+		specF0 = pow( sg.rgb, vec3( 2.2 ) );
+		rmo = vec3( 1.0 - sg.a, 0.0, 1.0 );
 	}
 	float roughness = max( rmo.r, 0.04 ), metalness = rmo.g, occlusion = rmo.b;
 
@@ -496,20 +587,35 @@ vec4 PbrStage( Draw d ) {
 	}
 #endif
 
-	vec3 h = normalize( l + toEye );
-	float nl = max( dot( n, l ), 0.0 ), nv = max( dot( n, toEye ), 1e-4 ), nh = max( dot( n, h ), 0.0 ), vh = max( dot( toEye, h ), 0.0 );
+	Surface s;
+	s.n = n;
+	s.flat_ = flat_;
+	s.v = toEye;
+	s.metalness = metalness;
+	s.roughness = roughness;
+	if ( specGloss ) {
+		s.f0 = specF0;
+		s.albedo = albedo * ( 1.0 - max( specF0.r, max( specF0.g, specF0.b ) ) );
+	} else {
+		// specularReflectance: F0 of what is not metal, 0.04 when not given
+		s.f0 = mix( vec3( d.material2.z > 0.0 ? d.material2.z : 0.04 ), albedo, metalness );
+		s.albedo = albedo;
+	}
+	s.coat = d.pbr2.y;
+	s.coatRoughness = d.pbr2.z;
+	s.sheen = ( d.pbrFlags & PBR_SHEEN_ALBEDO ) != 0u ? albedo : d.material.rgb;
+	s.sheenRoughness = d.material.w;
+	s.along = cos( d.material2.x ) * frame[0] + sin( d.material2.x ) * frame[1];
+	s.anisotropy = d.pbr2.w;
+	float nv = max( dot( n, toEye ), 1e-4 );
+
 	// The light of the grid and of an entity is many lamps of the level taken together, from all around a direction,
 	// not one point: its shine is as wide as on a surface of roughness 0.4 at the least (as Karis widens the lobe for
 	// a lamp of a size), else a smooth bumpy floor glitters with highlights everywhere.
-	float a = max( roughness, 0.4 ) * max( roughness, 0.4 ), kv = a * 0.5;
-	vec3 f0 = mix( vec3( 0.04 ), albedo, metalness );
-	vec3 fresnel = f0 + ( 1.0 - f0 ) * pow( 1.0 - vh, 5.0 );
-	float visibility = 0.25 / ( ( nl * ( 1.0 - kv ) + kv ) * ( nv * ( 1.0 - kv ) + kv ) );
-
-	vec3 color = albedo * ( 1.0 - metalness ) * ( ambient * occlusion + directed * nl );
-	vec3 shine = directed * D_GGX( nh, a ) * visibility * fresnel * nl * step( 0.0001, dot( flat_, l ) );
+	vec3 color = s.albedo * ( 1.0 - metalness ) * ambient * occlusion;
+	vec3 shine = SurfaceLight( s, l, directed, 0.4, color );
 #ifndef VK_GLES
-	shine += DebugLights( t, n, flat_, toEye, albedo, metalness, roughness, f0, color );
+	shine += DebugLights( t, s, color );
 #endif
 	// v_pbr 2: albedo times the light alone (as without a material), 3: the shine alone, 4: the normal, 5: the share
 	// and direction of the light of the grid, 6: roughness, metalness and occlusion, 7: has an rmo map (red), a normal
@@ -542,19 +648,46 @@ vec4 PbrStage( Draw d ) {
 	} else if ( d.pbr.w == 5.0 ) {
 		return vec4( l * 0.5 + 0.5, alpha ) * length( directed ) / max( length( ambient + directed ), 1e-4 );
 	}
-	color += shine;
+
 	// What it throws back of the light around it: what the nearest reflection probe sees in the direction of the
 	// mirror (blurrier the rougher it is), scaled by how bright the lightmap is here against there is no telling,
 	// so as it is. Without probes the light of the lightmap stands for the surroundings; that is far too bright at a
 	// flat angle, where a floor would mirror the dark walls and ceilings around it, so the angle is not let below
-	// 0.6 then (Fresnel stays at what it is from above).
+	// 0.6 then (Fresnel stays at what it is from above). Anisotropy bends the mirror along the strokes (as Filament
+	// does), the occlusion takes from it as far as it hides the mirror (Lagarde 2014), and with v_pbrEnergy the
+	// diffuse light loses what the shine takes.
+	vec3 envShine = EnvBRDF( s.f0, roughness, ( d.pbrFlags & PBR_PROBES ) != 0u ? nv : max( nv, 0.6 ) );
+	if ( ( d.pbrFlags & PBR_ENERGY ) != 0u ) {
+		color *= 1.0 - max( envShine.r, max( envShine.g, envShine.b ) );
+	}
+	color += shine;
+	vec3 mirrorNormal = n;
+	if ( abs( s.anisotropy ) > 0.01 ) {
+		vec3 tangent = normalize( s.along - n * dot( s.along, n ) );
+		vec3 strokes = s.anisotropy >= 0.0 ? cross( n, tangent ) : tangent;
+		vec3 across = cross( strokes, toEye );
+		mirrorNormal = normalize( mix( n, cross( across, strokes ), abs( s.anisotropy ) ) );
+	}
+	float specOcclusion = clamp( pow( nv + occlusion, exp2( -16.0 * roughness - 1.0 ) ) - 1.0 + occlusion, 0.0, 1.0 );
+	float coatEnv = s.coat > 0.0 ? ( 0.04 + 0.96 * pow( 1.0 - max( dot( flat_, toEye ), 0.0 ), 5.0 ) ) * s.coat : 0.0;
 	if ( ( d.pbrFlags & PBR_PROBES ) != 0u ) {
 		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
-		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, n ) );
+		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, mirrorNormal ) );
 		vec3 around = pow( ProbesAround( d, world, mirror, roughness * 5.0 ), vec3( 2.2 ) );
-		color += around * occlusion * EnvBRDF( f0, roughness, nv );
+		color += around * specOcclusion * envShine * ( 1.0 - coatEnv );
+		if ( s.coat > 0.0 ) {
+			vec3 coatMirror = normalize( mat3( t.model ) * reflect( -toEye, flat_ ) );
+			color += pow( ProbesAround( d, world, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * coatEnv;
+		}
 	} else {
-		color += ambient * occlusion * EnvBRDF( f0, roughness, max( nv, 0.6 ) );
+		color += ambient * specOcclusion * envShine * ( 1.0 - coatEnv ) + ambient * coatEnv;
+	}
+	// the sheen of cloth at a flat angle in the light around it
+	color += s.sheen * ambient * pow( 1.0 - nv, 3.0 ) * 0.5;
+	// emission: the parts of the texture brighter than the threshold give off their colour (as emissionGen would mask)
+	if ( dot( d.pbr3.rgb, d.pbr3.rgb ) > 0.0 ) {
+		float lum = dot( base.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+		color += albedo * clamp( ( lum - d.pbr3.w ) / 0.1, 0.0, 1.0 ) * d.pbr3.rgb;
 	}
 	return vec4( pow( color, vec3( 1.0 / 2.2 ) ), alpha );
 }

@@ -1214,7 +1214,14 @@ and glass, the screen behind the surface bent and tinted (VK_GlassDraw):
 	ior <n>												1.5 glass, 1.33 water, 1.0 nothing bends
 	thickness <units>									0 a thin pane, else a solid of that depth
 	absorption <r g b> <distance>						what is left of each colour after that many units in it
-These are not rend2's: only in .oshader files, which rend2 does not read (it drops a shader with a word it does
+and more of the surface:
+	clearcoat <amount> [roughness]						a clear coat over it: varnish, lacquer, car paint
+	sheen <r g b> [roughness]							the sheen of cloth at a flat angle
+	anisotropy <-1..1> [degrees]						shine drawn out along a direction: brushed metal
+	emission <r g b> <strength> [threshold]				the parts brighter than threshold give off light
+rend2's own, read as rend2 does: specMap or specularMap <image> (spec/gloss: F0 in rgb, gloss in alpha),
+specularReflectance <value>, normalScale <x> [y] [height], cloth (sheen of the albedo).
+These (but rend2's) are not rend2's: only in .oshader files, which rend2 does not read (it drops a shader with a word it does
 not know).
 The other material keywords of rend2 are read and left out. 1: it was one of them, 0: it was not, -1: it was
 one but wrong.
@@ -1240,6 +1247,11 @@ static stageMaterial_t *StageMaterial( shaderStage_t *stage )
 		mat->ior = 1.5f;
 		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
 		mat->absorptionDistance = 64.0f;
+		mat->clearcoatRoughness = 0.1f;
+		mat->sheenRoughness = 0.5f;
+		VectorSet( mat->emission, 1.0f, 1.0f, 1.0f );
+		mat->emissionThreshold = 0.7f;
+		mat->normalScale = 1.0f;
 		R_DefaultMaterialGen( &mat->gen );
 		mat->sourceStage = stage->sourceStage;
 		stage->mat = mat;
@@ -1280,6 +1292,11 @@ stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean crea
 		mat->ior = 1.5f;
 		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
 		mat->absorptionDistance = 64.0f;
+		mat->clearcoatRoughness = 0.1f;
+		mat->sheenRoughness = 0.5f;
+		VectorSet( mat->emission, 1.0f, 1.0f, 1.0f );
+		mat->emissionThreshold = 0.7f;
+		mat->normalScale = 1.0f;
 		R_DefaultMaterialGen( &mat->gen );
 	}
 	Q_strncpyz( mat->shaderName, name, sizeof( mat->shaderName ) );
@@ -1330,8 +1347,8 @@ void R_MaterialStageImage( shaderStage_t *stage )
 
 static int ParseMaterialKeyword( const char *word, const char **text, shaderStage_t *stage )
 {
-	static const char *rend2Only[] = { "specularReflectance", "specularExponent", "specularScale", "normalScale", "parallaxBias",
-		"cloth", "specMap", "specularMap", "rmosMap", "moxrMap", "mosrMap", "ormsMap", NULL };
+	static const char *rend2Only[] = { "specularExponent", "specularScale", "parallaxBias", "rmosMap", "moxrMap", "mosrMap",
+		"ormsMap", NULL };
 	char keyword[MAX_TOKEN_CHARS];	// (word is the buffer of COM_ParseExt, which the parameter overwrites)
 	char *token;
 
@@ -1343,7 +1360,21 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 			return 1;
 		}
 	}
+	// rend2's cloth: a word alone, the sheen of the albedo
+	if ( !Q_stricmp( keyword, "cloth" ) ) {
+		stageMaterial_t *mat = StageMaterial( stage );
+
+		if ( !mat->pbr ) {
+			mat->pbr = true;
+			mat->roughness = 0.8f;
+		}
+		mat->sheenAlbedo = true;
+		return 1;
+	}
 	if ( Q_stricmp( keyword, "normalHeightMap" ) && Q_stricmp( keyword, "rmoMap" ) && Q_stricmp( keyword, "ormMap" )
+		&& Q_stricmp( keyword, "clearcoat" ) && Q_stricmp( keyword, "sheen" ) && Q_stricmp( keyword, "anisotropy" )
+		&& Q_stricmp( keyword, "emission" ) && Q_stricmp( keyword, "specMap" ) && Q_stricmp( keyword, "specularMap" )
+		&& Q_stricmp( keyword, "specularReflectance" ) && Q_stricmp( keyword, "normalScale" )
 		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
 		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) && Q_stricmp( keyword, "albedoGen" )
 		&& Q_stricmp( keyword, "normalGen" ) && Q_stricmp( keyword, "rmoGen" ) && Q_stricmp( keyword, "transmission" )
@@ -1401,6 +1432,43 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 		mat->gen.normalDetail = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.3f;
 		token = COM_ParseExt( text, qfalse );
 		mat->gen.normalInvert = !Q_stricmp( token, "invert" ) ? qtrue : qfalse;
+	} else if ( !Q_stricmp( keyword, "clearcoat" ) ) {
+		mat->clearcoat = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->clearcoatRoughness = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.1f;
+	} else if ( !Q_stricmp( keyword, "sheen" ) ) {
+		mat->sheen[0] = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		for ( int c = 1; c < 3; c++ ) {
+			token = COM_ParseExt( text, qfalse );
+			mat->sheen[c] = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : mat->sheen[0];
+		}
+		token = COM_ParseExt( text, qfalse );
+		mat->sheenRoughness = token[0] ? Com_Clamp( 0.05f, 1.0f, atof( token ) ) : 0.5f;
+	} else if ( !Q_stricmp( keyword, "anisotropy" ) ) {
+		mat->anisotropy = Com_Clamp( -1.0f, 1.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->anisotropyRotation = token[0] ? atof( token ) : 0.0f;
+	} else if ( !Q_stricmp( keyword, "emission" ) ) {
+		mat->emission[0] = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		for ( int c = 1; c < 3; c++ ) {
+			token = COM_ParseExt( text, qfalse );
+			mat->emission[c] = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : mat->emission[0];
+		}
+		token = COM_ParseExt( text, qfalse );
+		mat->emissionStrength = token[0] ? Com_Clamp( 0.0f, 16.0f, atof( token ) ) : 1.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->emissionThreshold = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.7f;
+	} else if ( !Q_stricmp( keyword, "specMap" ) || !Q_stricmp( keyword, "specularMap" ) ) {
+		mat->specGlossMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+		if ( !mat->specGlossMap ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+		}
+	} else if ( !Q_stricmp( keyword, "specularReflectance" ) ) {
+		mat->specularReflectance = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "normalScale" ) ) {
+		// rend2 gives x, y and the height; one strength for the bumps here
+		mat->normalScale = Com_Clamp( 0.0f, 8.0f, atof( token ) );
+		SkipRestOfLine( text );
 	} else if ( !Q_stricmp( keyword, "transmission" ) ) {
 		mat->transmission = Com_Clamp( 0.0f, 1.0f, atof( token ) );
 	} else if ( !Q_stricmp( keyword, "ior" ) ) {
