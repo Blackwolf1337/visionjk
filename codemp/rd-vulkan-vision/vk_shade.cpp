@@ -791,6 +791,7 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	draw->pbr[0] = mat->pbr ? mat->roughness : 0.8f;
 	draw->pbr[1] = mat->metalness;
 	draw->pbr[2] = mat->parallaxDepth;
+	draw->pbr2[0] = mat->parallaxPlane;
 	draw->pbr[3] = (float)v_pbr->integer;
 	if ( !( draw->pbrFlags & VKP_ENTITY ) && tr.pbrGrid && tr.world ) {
 		draw->tex4 = tr.pbrGrid->texnum;

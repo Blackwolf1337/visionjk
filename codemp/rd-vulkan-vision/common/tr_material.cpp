@@ -500,6 +500,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 {
 	memset( out, 0, sizeof( *out ) );
 	out->roughness = 0.8f;
+	out->parallaxPlane = 0.5f;
 	if ( shader <= 0 || shader >= tr.numShaders ) {
 		return qfalse;
 	}
@@ -516,6 +517,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	out->roughness = mat->roughness;
 	out->metalness = mat->metalness;
 	out->parallaxDepth = mat->parallaxDepth;
+	out->parallaxPlane = mat->parallaxPlane;
 	VectorCopy( mat->specular, out->specular );
 	out->wrapLight = mat->wrapLight;
 	out->sparkle = mat->sparkle;
@@ -577,6 +579,7 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 	}
 	if ( fields & MATP_PARALLAX ) {
 		mat->parallaxDepth = Com_Clamp( 0.0f, 0.2f, in->parallaxDepth );
+		mat->parallaxPlane = Com_Clamp( 0.0f, 1.0f, in->parallaxPlane );
 	}
 	if ( fields & MATP_SPECULAR ) {
 		VectorCopy( in->specular, mat->specular );

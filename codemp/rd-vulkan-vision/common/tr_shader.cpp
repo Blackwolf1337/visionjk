@@ -1194,6 +1194,8 @@ website) writes them, with the names of rend2 so that packs made for it work too
 	rmoMap <image>				roughness, metalness and occlusion in red, green and blue
 	ormMap <image>				the same as occlusion, roughness, metalness
 	roughness <0..1>, gloss <0..1> (1 - roughness), metalness <0..1>, parallaxDepth <depth>
+	parallaxPlane <0..1>		where the polygon lies in the height of the parallax, 0 bottom to 1 top, 0.5 when not
+								given; 1 carves the surface into the polygon, so feet float over its hollows
 The other material keywords of rend2 are read and left out. 1: it was one of them, 0: it was not, -1: it was
 one but wrong.
 ===================
@@ -1213,6 +1215,8 @@ static stageMaterial_t *StageMaterial( shaderStage_t *stage )
 		stageMaterial_t *mat = &parseMaterials[stage - stages];
 
 		memset( mat, 0, sizeof( *mat ) );
+		mat->roughness = 0.8f;
+		mat->parallaxPlane = 0.5f;
 		mat->sourceStage = stage->sourceStage;
 		stage->mat = mat;
 	}
@@ -1247,6 +1251,8 @@ stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean crea
 		*mat = *init;
 	} else {
 		memset( mat, 0, sizeof( *mat ) );
+		mat->roughness = 0.8f;
+		mat->parallaxPlane = 0.5f;
 	}
 	Q_strncpyz( mat->shaderName, name, sizeof( mat->shaderName ) );
 	mat->sourceStage = sourceStage;
@@ -1292,7 +1298,7 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 	}
 	if ( Q_stricmp( keyword, "normalHeightMap" ) && Q_stricmp( keyword, "rmoMap" ) && Q_stricmp( keyword, "ormMap" )
 		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
-		&& Q_stricmp( keyword, "parallaxDepth" ) ) {
+		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) ) {
 		return 0;
 	}
 	stageMaterial_t *mat = StageMaterial( stage );
@@ -1324,6 +1330,8 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 		mat->roughness = Com_Clamp( 0.0f, 1.0f, 1.0f - atof( token ) );
 	} else if ( !Q_stricmp( keyword, "metalness" ) ) {
 		mat->metalness = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "parallaxPlane" ) ) {
+		mat->parallaxPlane = Com_Clamp( 0.0f, 1.0f, atof( token ) );
 	} else {
 		mat->parallaxDepth = Com_Clamp( 0.0f, 0.2f, atof( token ) );
 	}

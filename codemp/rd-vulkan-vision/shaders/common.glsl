@@ -50,6 +50,7 @@ struct Draw {
 	vec4	grid0;			//	the light grid: origin, w its layers across
 	vec4	grid1;			//	1 / the size of a cell, w the height of its picture
 	vec4	grid2;			//	cells each way, w the width of its picture
+	vec4	pbr2;			// PBR: x where the surface lies in the height of the parallax, 0 bottom to 1 top
 };
 
 BINDING( 0, 0 ) uniform Globals {

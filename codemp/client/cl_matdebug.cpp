@@ -186,6 +186,10 @@ static void MatDebug_DrawMaterial( void ) {
 	if ( ImGui::SliderFloat( "Parallax depth", &selParms.parallaxDepth, 0.0f, 0.2f, "%.3f" ) ) {
 		MatDebug_Set( MATP_PARALLAX );
 	}
+	if ( ImGui::SliderFloat( "Parallax plane", &selParms.parallaxPlane, 0.0f, 1.0f, "%.2f" ) ) {
+		MatDebug_Set( MATP_PARALLAX );
+	}
+	ImGui::SetItemTooltip( "Where the polygon lies in the height of the parallax.\n1: the surface is carved into it, feet float over its hollows.\n0: the surface rises out of it, feet stand in the bumps." );
 
 	ImGui::SeparatorText( "Maps" );
 	bool height = selParms.normalHeight ? true : false;

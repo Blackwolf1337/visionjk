@@ -154,6 +154,7 @@ typedef struct vkDraw_s {		// once per draw
 	float		grid0[4];			//	VKP_GRID: the origin of the light grid in the world, its layers across
 	float		grid1[4];			//	1 / the size of a cell, w the height of its picture
 	float		grid2[4];			//	how many cells it has each way, w the width of its picture
+	float		pbr2[4];			// VKD_PBR: x where the surface lies in the height of the parallax (parallaxPlane)
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert

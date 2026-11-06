@@ -426,6 +426,9 @@ typedef struct stageMaterial_s {
 	bool			ormOrder;
 	image_t			*rmoMap;
 	float			roughness, metalness, parallaxDepth;
+	// where the polygon lies in the height of the parallax, 0 bottom to 1 top (parallaxPlane, 0.5 when not given):
+	// 1 carves the surface into it, so what stands on it floats over the hollows
+	float			parallaxPlane;
 } stageMaterial_t;
 
 typedef struct shaderStage_s {

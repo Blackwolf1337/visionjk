@@ -267,7 +267,7 @@ typedef struct paintPicture_s {
 #define MATP_PBR				(1 << 0)
 #define MATP_ROUGHNESS			(1 << 1)
 #define MATP_METALNESS			(1 << 2)
-#define MATP_PARALLAX			(1 << 3)
+#define MATP_PARALLAX			(1 << 3)	// parallaxDepth and parallaxPlane
 #define MATP_SPECULAR			(1 << 4)
 #define MATP_WRAPLIGHT			(1 << 5)
 #define MATP_SPARKLE			(1 << 6)
@@ -280,6 +280,7 @@ typedef struct materialParms_s {
 	float		roughness;			// 0 to 1
 	float		metalness;			// 0 to 1
 	float		parallaxDepth;		// 0 to 0.2, needs normalHeight
+	float		parallaxPlane;		// where the polygon lies in the height, 0 bottom to 1 top
 	float		specular[3];		// strength, exponent, clear coat (stages of models, not pbr)
 	float		wrapLight;
 	float		sparkle;

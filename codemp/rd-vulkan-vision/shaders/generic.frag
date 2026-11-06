@@ -239,16 +239,20 @@ float D_GGX( float nh, float a ) {
 	return a2 / ( 3.14159265 * k * k );
 }
 
-// Parallax occlusion (normalHeightMap, parallaxDepth; the material tool previews it the same way): the ray from the eye
-// goes down into the height in the alpha of the normal map (1 at the top) in steps until it is below it, and the
-// last step is split where it crosses. e: the direction to the eye in the frame of the texture, z out of the surface.
-// The texture is read with the slopes of the pixel, the loop is not the same for neighbouring pixels.
-vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth ) {
+// Parallax occlusion (normalHeightMap, parallaxDepth, parallaxPlane): the ray from the eye goes down into the height
+// in the alpha of the normal map (1 at the top) in steps until it is below it, and the last step is split where it
+// crosses. The polygon lies at height plane: from 1 the surface carved into it (what stands on it floats over the
+// hollows), from 0 the surface rises out of it (feet stand in the bumps), between the two the error is split. The
+// ray starts where it is at height 1, above the polygon by what is over the plane. e: the direction to the eye in
+// the frame of the texture, z out of the surface. The texture is read with the slopes of the pixel, the loop is not
+// the same for neighbouring pixels.
+vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth, float plane ) {
 	const int STEPS = 16;
 	vec2 dx = dFdx( uv ), dy = dFdy( uv );
-	vec2 delta = -e.xy / max( e.z, 0.2 ) * depth / float( STEPS );
-	float layer = 1.0, h = textureGrad( TEX2( d ), uv, dx, dy ).a, lastLayer = 1.0, lastH = h;
-	vec2 cur = uv;
+	vec2 through = -e.xy / max( e.z, 0.2 ) * depth;
+	vec2 delta = through / float( STEPS );
+	vec2 cur = uv - through * ( 1.0 - clamp( plane, 0.0, 1.0 ) );
+	float layer = 1.0, h = textureGrad( TEX2( d ), cur, dx, dy ).a, lastLayer = 1.0, lastH = h;
 	for ( int i = 0; i < STEPS && layer > h; i++ ) {
 		lastLayer = layer;
 		lastH = h;
@@ -292,7 +296,7 @@ vec4 PbrStage( Draw d ) {
 	mat3 frame = CotangentFrame( flat_, v_position, uv );
 
 	if ( ( d.pbrFlags & PBR_HEIGHT ) != 0u && d.pbr.z > 0.0 ) {
-		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), d.pbr.z );
+		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), d.pbr.z, d.pbr2.x );
 	}
 
 	vec4 base = texture( TEX0( d ), uv );
