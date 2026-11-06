@@ -10933,6 +10933,12 @@ void UI_Refresh( int realtime )
 	else if ( uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.wide ) {
 		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.wide;
 	}
+	if ( uiInfo.uiDC.cursory < -(int)uiInfo.uiDC.tall ) {
+		uiInfo.uiDC.cursory = -(int)uiInfo.uiDC.tall;
+	}
+	else if ( uiInfo.uiDC.cursory > SCREEN_HEIGHT + (int)uiInfo.uiDC.tall ) {
+		uiInfo.uiDC.cursory = SCREEN_HEIGHT + (int)uiInfo.uiDC.tall;
+	}
 
 	previousTimes[index % UI_FPS_FRAMES] = uiInfo.uiDC.frameTime;
 	index++;
@@ -11122,11 +11128,12 @@ void UI_MouseEvent( int dx, int dy )
 	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.wide)
 		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.wide;
 
+	// (a window narrower than 4:3 makes the grid taller: y runs from -tall to 480 + tall)
 	uiInfo.uiDC.cursory += dy;
-	if (uiInfo.uiDC.cursory < 0)
-		uiInfo.uiDC.cursory = 0;
-	else if (uiInfo.uiDC.cursory > SCREEN_HEIGHT)
-		uiInfo.uiDC.cursory = SCREEN_HEIGHT;
+	if (uiInfo.uiDC.cursory < -(int)uiInfo.uiDC.tall)
+		uiInfo.uiDC.cursory = -(int)uiInfo.uiDC.tall;
+	else if (uiInfo.uiDC.cursory > SCREEN_HEIGHT + (int)uiInfo.uiDC.tall)
+		uiInfo.uiDC.cursory = SCREEN_HEIGHT + (int)uiInfo.uiDC.tall;
 
 	if (Menu_Count() > 0) {
 		//menuDef_t *menu = Menu_GetFocused();
