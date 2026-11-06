@@ -78,6 +78,7 @@ void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );	
 
 // vk_texcache.cpp: the texture of an image file as an earlier run packed it, see there for the order of the calls
 qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );
+qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *checksum );
 qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
 void VK_TexCacheRecord( void );
 void VK_TexCacheLuma( float luma );

@@ -118,6 +118,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKP_LIGHTMAP		0x20u			// lit by its lightmap in tex1; without this nor VKP_ENTITY by its vertex colors
 #define VKP_GRID			0x40u			// the light grid of the level in tex4 (grid*), for the direction of that light
 #define VKP_PROBES			0x80u			// the reflection probes of the level in tex5 and tex6 (R_CreateProbes)
+#define VKP_RMO_RELATIVE	0x100u			// the rmo map was made (rmoGen): red is the change of the roughness, 0.5 none
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 

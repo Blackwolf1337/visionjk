@@ -142,6 +142,7 @@ set(MPVulkanVisionSceneFiles
 	"${MPDir}/rd-vulkan-vision/common/tr_main.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_marks.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_material.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_matgen.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_mesh.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_model.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_scene.cpp"

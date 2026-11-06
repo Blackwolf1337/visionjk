@@ -97,20 +97,21 @@ static void VK_TexCachePath( char *path, int pathSize ) {
 
 /*
 ===============
-VK_TexCacheKey
+VK_ImageFileOf
 
 Which file R_LoadImage() would take for the name, as it looks for it: the extension of the name first, then
-the kinds it knows in its order. qfalse when that file is of a directory or there is none, else the key of
-what is made from it.
+the kinds it knows in its order. qfalse when that file is of a directory or there is none, else file is its
+name with its length and the checksum of its pak (also for the generated maps of tr_matgen.cpp).
 
-The settings in the key are the ones Upload32() and VK_LevelFormat() look at.
+VK_TexCacheKey: the key of what is made from it. The settings in the key are the ones Upload32() and
+VK_LevelFormat() look at.
 ===============
 */
-static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allowPicmip ) {
+qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *checksum ) {
 	static const char *const kinds[] = { "jpg", "png", "tga" };
-	char		stripped[MAX_QPATH], file[MAX_QPATH];
+	char		stripped[MAX_QPATH];
 	const char	*given = COM_GetExtension( name );
-	int			length = 0, checksum = 0, first = -1;
+	int			first = -1;
 
 	COM_StripExtension( name, stripped, sizeof( stripped ) );
 	for ( int i = 0; i < (int)ARRAY_LEN( kinds ); i++ ) {
@@ -125,8 +126,8 @@ static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allo
 		if ( kind < 0 || ( i >= 0 && kind == first ) ) {
 			continue;
 		}
-		Com_sprintf( file, sizeof( file ), "%s.%s", stripped, kinds[kind] );
-		source = ri.FS_FileSource( file, &length, &checksum );
+		Com_sprintf( file, fileSize, "%s.%s", stripped, kinds[kind] );
+		source = ri.FS_FileSource( file, length, checksum );
 		if ( source == FS_SOURCE_NONE ) {
 			continue;
 		}
@@ -134,6 +135,16 @@ static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allo
 			return qfalse;
 		}
 		Q_strlwr( file );
+		return qtrue;
+	}
+	return qfalse;
+}
+
+static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allowPicmip ) {
+	char	file[MAX_QPATH];
+	int		length = 0, checksum = 0;
+
+	if ( VK_ImageFileOf( name, file, sizeof( file ), &length, &checksum ) ) {
 		Com_sprintf( texCache.key, sizeof( texCache.key ), "%s %i %08x v%i m%i p%i s%i c%i t%i x%i o%i i%g g%g", file, length,
 			(unsigned)checksum, TEXCACHE_VERSION, mipmap ? 1 : 0, allowPicmip ? r_picmip->integer : 0,
 			r_simpleMipMaps->integer, r_colorMipLevels->integer, r_texturebits->integer, glConfig.maxTextureSize, tr.overbrightBits,

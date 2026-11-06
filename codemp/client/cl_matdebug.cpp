@@ -170,6 +170,75 @@ static void MatDebug_Set( int fields ) {
 	re->ext.MaterialSet( selShader, selStage, &selParms, fields );
 }
 
+// the maps are made again (a moment for a large texture), what the stage has now is read back
+static void MatDebug_SetGen( void ) {
+	if ( selParms.gen.flags ) {
+		selParms.pbr = qtrue;
+	}
+	MatDebug_Set( MATP_GEN | MATP_PBR | MATP_ROUGHNESS );
+	re->ext.MaterialGet( selShader, selStage, &selParms );
+	Q_strncpyz( editNormal, selParms.normalMap, sizeof( editNormal ) );
+	Q_strncpyz( editRmo, selParms.rmoMap, sizeof( editRmo ) );
+}
+
+static void MatDebug_GenFlag( const char *label, int flag ) {
+	bool on = ( selParms.gen.flags & flag ) ? true : false;
+
+	if ( ImGui::Checkbox( label, &on ) ) {
+		selParms.gen.flags = on ? ( selParms.gen.flags | flag ) : ( selParms.gen.flags & ~flag );
+		MatDebug_SetGen();
+	}
+}
+
+// a value of the made maps: they are made again when the slider is let go
+static void MatDebug_GenSlider( const char *label, float *value, float low, float high ) {
+	ImGui::SliderFloat( label, value, low, high, "%.2f" );
+	if ( ImGui::IsItemDeactivatedAfterEdit() ) {
+		MatDebug_SetGen();
+	}
+}
+
+static void MatDebug_DrawGen( void ) {
+	materialGen_t *g = &selParms.gen;
+
+	ImGui::SeparatorText( "Made from the texture" );
+	ImGui::TextDisabled( "Maps the renderer makes when it loads (albedoGen, normalGen, rmoGen): no picture files" );
+
+	MatDebug_GenFlag( "Albedo: painted light taken out, tinted", MATGEN_ALBEDO );
+	if ( g->flags & MATGEN_ALBEDO ) {
+		ImGui::Indent();
+		ImGui::ColorEdit3( "Tint", g->tint, ImGuiColorEditFlags_NoInputs );
+		if ( ImGui::IsItemDeactivatedAfterEdit() ) {
+			MatDebug_SetGen();
+		}
+		MatDebug_GenSlider( "Delight", &g->delight, 0.0f, 1.0f );
+		MatDebug_GenSlider( "Saturation", &g->saturation, 0.0f, 2.0f );
+		ImGui::Unindent();
+	}
+
+	MatDebug_GenFlag( "Normal map from the brightness", MATGEN_NORMAL );
+	if ( g->flags & MATGEN_NORMAL ) {
+		ImGui::Indent();
+		MatDebug_GenSlider( "Strength", &g->normalStrength, 0.0f, 8.0f );
+		MatDebug_GenSlider( "Smooth", &g->normalBlur, 0.0f, 8.0f );
+		MatDebug_GenSlider( "Fine detail", &g->normalDetail, 0.0f, 1.0f );
+		bool invert = g->normalInvert ? true : false;
+		if ( ImGui::Checkbox( "Dark stands out", &invert ) ) {
+			g->normalInvert = invert ? qtrue : qfalse;
+			MatDebug_SetGen();
+		}
+		ImGui::Unindent();
+	}
+
+	MatDebug_GenFlag( "Roughness varies with it, occlusion in its cracks", MATGEN_RMO );
+	if ( g->flags & MATGEN_RMO ) {
+		ImGui::Indent();
+		MatDebug_GenSlider( "Variation", &g->rmoVariation, 0.0f, 1.0f );
+		MatDebug_GenSlider( "Occlusion", &g->rmoOcclusion, 0.0f, 1.0f );
+		ImGui::Unindent();
+	}
+}
+
 static void MatDebug_DrawMaterial( void ) {
 	bool pbr = selParms.pbr ? true : false;
 
@@ -191,8 +260,11 @@ static void MatDebug_DrawMaterial( void ) {
 	}
 	ImGui::SetItemTooltip( "Where the polygon lies in the height of the parallax.\n1: the surface is carved into it, feet float over its hollows.\n0: the surface rises out of it, feet stand in the bumps." );
 
-	ImGui::SeparatorText( "Maps" );
+	MatDebug_DrawGen();
+
+	ImGui::SeparatorText( "Map files" );
 	bool height = selParms.normalHeight ? true : false;
+	ImGui::BeginDisabled( ( selParms.gen.flags & MATGEN_NORMAL ) != 0 );
 	if ( ImGui::InputText( "Normal map", editNormal, sizeof( editNormal ), ImGuiInputTextFlags_EnterReturnsTrue ) ) {
 		Q_strncpyz( selParms.normalMap, editNormal, sizeof( selParms.normalMap ) );
 		MatDebug_Set( MATP_NORMALMAP );
@@ -202,7 +274,9 @@ static void MatDebug_DrawMaterial( void ) {
 		selParms.normalHeight = height ? qtrue : qfalse;
 		MatDebug_Set( MATP_NORMALMAP );
 	}
+	ImGui::EndDisabled();
 	bool orm = selParms.ormOrder ? true : false;
+	ImGui::BeginDisabled( ( selParms.gen.flags & MATGEN_RMO ) != 0 );
 	if ( ImGui::InputText( "RMO map", editRmo, sizeof( editRmo ), ImGuiInputTextFlags_EnterReturnsTrue ) ) {
 		Q_strncpyz( selParms.rmoMap, editRmo, sizeof( selParms.rmoMap ) );
 		MatDebug_Set( MATP_RMOMAP );
@@ -212,7 +286,8 @@ static void MatDebug_DrawMaterial( void ) {
 		selParms.ormOrder = orm ? qtrue : qfalse;
 		MatDebug_Set( MATP_RMOMAP );
 	}
-	ImGui::TextDisabled( "Enter applies a map name, empty takes it off" );
+	ImGui::EndDisabled();
+	ImGui::TextDisabled( "Enter applies a map name, empty takes it off; a made map stands before a file" );
 
 	if ( ImGui::CollapsingHeader( "Shine of model stages (not GGX)" ) ) {
 		if ( ImGui::SliderFloat3( "Strength, exponent, coat", selParms.specular, 0.0f, 64.0f, "%.2f" ) ) {

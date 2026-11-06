@@ -1196,6 +1196,13 @@ website) writes them, with the names of rend2 so that packs made for it work too
 	roughness <0..1>, gloss <0..1> (1 - roughness), metalness <0..1>, parallaxDepth <depth>
 	parallaxPlane <0..1>		where the polygon lies in the height of the parallax, 0 bottom to 1 top, 0.5 when not
 								given; 1 carves the surface into the polygon, so feet float over its hollows
+and the maps the renderer makes from the texture of the stage when it loads (tr_matgen.cpp, materialGen_t), so a
+material needs no picture files:
+	albedoGen <rrggbb> <delight> <saturation>			the texture with its painted light taken out, tinted
+	normalGen <strength> <blur> <detail> [invert]		bumps from its brightness, the height in alpha
+	rmoGen <variation> <occlusion>						roughness that varies with it, occlusion in its cracks
+These are not rend2's: only in .oshader files, which rend2 does not read (it drops a shader with a word it does
+not know).
 The other material keywords of rend2 are read and left out. 1: it was one of them, 0: it was not, -1: it was
 one but wrong.
 ===================
@@ -1217,6 +1224,7 @@ static stageMaterial_t *StageMaterial( shaderStage_t *stage )
 		memset( mat, 0, sizeof( *mat ) );
 		mat->roughness = 0.8f;
 		mat->parallaxPlane = 0.5f;
+		R_DefaultMaterialGen( &mat->gen );
 		mat->sourceStage = stage->sourceStage;
 		stage->mat = mat;
 	}
@@ -1253,6 +1261,7 @@ stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean crea
 		memset( mat, 0, sizeof( *mat ) );
 		mat->roughness = 0.8f;
 		mat->parallaxPlane = 0.5f;
+		R_DefaultMaterialGen( &mat->gen );
 	}
 	Q_strncpyz( mat->shaderName, name, sizeof( mat->shaderName ) );
 	mat->sourceStage = sourceStage;
@@ -1281,6 +1290,25 @@ int R_ShadersNamed( const char *name, shader_t **out, int max )
 	return count;
 }
 
+/*
+===================
+R_MaterialStageImage
+
+VisionJK: the texture of a stage with a material: the made albedo where there is one, else the texture it was made
+from (after the albedo was taken off in the menu)
+===================
+*/
+void R_MaterialStageImage( shaderStage_t *stage )
+{
+	const stageMaterial_t *mat = stage->mat;
+	textureBundle_t *bundle = ( stage->bundle[0].isLightmap && stage->bundle[1].image ) ? &stage->bundle[1] : &stage->bundle[0];
+
+	if ( !mat || !mat->baseImage ) {
+		return;
+	}
+	bundle->image = mat->albedoMap ? mat->albedoMap : mat->baseImage;
+}
+
 static int ParseMaterialKeyword( const char *word, const char **text, shaderStage_t *stage )
 {
 	static const char *rend2Only[] = { "specularReflectance", "specularExponent", "specularScale", "normalScale", "parallaxBias",
@@ -1298,7 +1326,8 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 	}
 	if ( Q_stricmp( keyword, "normalHeightMap" ) && Q_stricmp( keyword, "rmoMap" ) && Q_stricmp( keyword, "ormMap" )
 		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
-		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) ) {
+		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) && Q_stricmp( keyword, "albedoGen" )
+		&& Q_stricmp( keyword, "normalGen" ) && Q_stricmp( keyword, "rmoGen" ) ) {
 		return 0;
 	}
 	stageMaterial_t *mat = StageMaterial( stage );
@@ -1332,6 +1361,31 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 		mat->metalness = Com_Clamp( 0.0f, 1.0f, atof( token ) );
 	} else if ( !Q_stricmp( keyword, "parallaxPlane" ) ) {
 		mat->parallaxPlane = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "albedoGen" ) ) {
+		const unsigned rgb = (unsigned)strtoul( token, NULL, 16 );
+
+		mat->gen.flags |= MATGEN_ALBEDO;
+		mat->gen.tint[0] = ( ( rgb >> 16 ) & 255 ) / 255.0f;
+		mat->gen.tint[1] = ( ( rgb >> 8 ) & 255 ) / 255.0f;
+		mat->gen.tint[2] = ( rgb & 255 ) / 255.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.delight = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.saturation = token[0] ? Com_Clamp( 0.0f, 2.0f, atof( token ) ) : 1.0f;
+	} else if ( !Q_stricmp( keyword, "normalGen" ) ) {
+		mat->gen.flags |= MATGEN_NORMAL;
+		mat->gen.normalStrength = Com_Clamp( 0.0f, 8.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.normalBlur = token[0] ? Com_Clamp( 0.0f, 8.0f, atof( token ) ) : 1.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.normalDetail = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.3f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.normalInvert = !Q_stricmp( token, "invert" ) ? qtrue : qfalse;
+	} else if ( !Q_stricmp( keyword, "rmoGen" ) ) {
+		mat->gen.flags |= MATGEN_RMO;
+		mat->gen.rmoVariation = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.rmoOcclusion = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
 	} else {
 		mat->parallaxDepth = Com_Clamp( 0.0f, 0.2f, atof( token ) );
 	}
@@ -3010,8 +3064,16 @@ static shader_t *GeneratePermanentShader( void ) {
 		}
 		newShader->stages[i] = stages[i];
 		if ( stages[i].mat ) {
-			// VisionJK: the record all shaders of this name share
-			newShader->stages[i].mat = R_MaterialFor( newShader->name, stages[i].mat->sourceStage, qtrue, stages[i].mat );
+			// VisionJK: the record all shaders of this name share, its made maps made once for all of them
+			stageMaterial_t *mat = R_MaterialFor( newShader->name, stages[i].mat->sourceStage, qtrue, stages[i].mat );
+
+			newShader->stages[i].mat = mat;
+			if ( mat->gen.flags && !mat->genDone ) {
+				const textureBundle_t *bundle = ( stages[i].bundle[0].isLightmap && stages[i].bundle[1].image ) ? &stages[i].bundle[1] : &stages[i].bundle[0];
+
+				R_MakeMaterialMaps( mat, bundle->image );
+			}
+			R_MaterialStageImage( &newShader->stages[i] );
 		}
 
 		for ( b = 0 ; b < NUM_TEXTURE_BUNDLES ; b++ ) {

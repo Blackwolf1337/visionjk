@@ -501,6 +501,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	memset( out, 0, sizeof( *out ) );
 	out->roughness = 0.8f;
 	out->parallaxPlane = 0.5f;
+	R_DefaultMaterialGen( &out->gen );
 	if ( shader <= 0 || shader >= tr.numShaders ) {
 		return qfalse;
 	}
@@ -529,6 +530,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 		Q_strncpyz( out->rmoMap, mat->rmoMap->imgName, sizeof( out->rmoMap ) );
 	}
 	out->ormOrder = (qboolean)mat->ormOrder;
+	out->gen = mat->gen;
 	return qtrue;
 }
 
@@ -551,6 +553,7 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 	shader_t *variants[MAX_VARIANTS];
 	const int count = R_ShadersNamed( sh->name, variants, MAX_VARIANTS );
 	stageMaterial_t *mat = NULL;
+	image_t *texture = NULL;
 
 	// the record of the name, given to every variant that has the stage and had no material yet
 	for ( int i = 0; i < count; i++ ) {
@@ -563,6 +566,12 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 			mat = R_MaterialFor( sh->name, sourceStage, qtrue, NULL );
 		}
 		st->mat = mat;
+		if ( !texture ) {
+			// the texture of the stage, which the maps are made from
+			const textureBundle_t *bundle = ( st->bundle[0].isLightmap && st->bundle[1].image ) ? &st->bundle[1] : &st->bundle[0];
+
+			texture = bundle->image;
+		}
 	}
 	if ( !mat ) {
 		return qfalse;
@@ -590,13 +599,27 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 	if ( fields & MATP_SPARKLE ) {
 		mat->sparkle = in->sparkle;
 	}
-	if ( fields & MATP_NORMALMAP ) {
+	// (a made map, *gen..., is not a file: it stays, gen says whether it is made)
+	if ( ( fields & MATP_NORMALMAP ) && Q_strncmp( in->normalMap, "*gen", 4 ) ) {
 		mat->normalMap = MaterialImage( in->normalMap, sh );
 		mat->normalHeight = mat->normalMap && in->normalHeight;
 	}
-	if ( fields & MATP_RMOMAP ) {
+	if ( ( fields & MATP_RMOMAP ) && Q_strncmp( in->rmoMap, "*gen", 4 ) ) {
 		mat->rmoMap = MaterialImage( in->rmoMap, sh );
 		mat->ormOrder = mat->rmoMap && in->ormOrder;
+		mat->rmoRelative = false;
+	}
+	if ( fields & MATP_GEN ) {
+		// made again from the texture the record had them from (the stage shows the albedo now), into its images
+		mat->gen = in->gen;
+		R_MakeMaterialMaps( mat, mat->baseImage ? NULL : texture );
+		for ( int i = 0; i < count; i++ ) {
+			shaderStage_t *st = FindStage( variants[i], sourceStage );
+
+			if ( st ) {
+				R_MaterialStageImage( st );
+			}
+		}
 	}
 	return qtrue;
 }

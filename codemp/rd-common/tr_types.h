@@ -273,7 +273,33 @@ typedef struct paintPicture_s {
 #define MATP_SPARKLE			(1 << 6)
 #define MATP_NORMALMAP			(1 << 7)	// normalMap and normalHeight
 #define MATP_RMOMAP				(1 << 8)	// rmoMap and ormOrder
-#define MATP_ALL				0x1ff
+#define MATP_GEN				(1 << 9)	// gen: the maps are made again
+#define MATP_ALL				0x3ff
+
+// the maps the renderer makes from the texture of a stage when it loads (shader keywords albedoGen, normalGen,
+// rmoGen of .oshader files, tr_matgen.cpp), so a material needs no picture files
+#define MATGEN_ALBEDO			(1 << 0)
+#define MATGEN_NORMAL			(1 << 1)
+#define MATGEN_RMO				(1 << 2)
+
+typedef struct materialGen_s {
+	int			flags;				// MATGEN_*
+	// albedoGen <rrggbb> <delight> <saturation>: the light painted into the texture taken out (0 to 1), tinted,
+	// its colour stronger or weaker (0 to 2)
+	float		tint[3];
+	float		delight;
+	float		saturation;
+	// normalGen <strength> <blur> <detail> [invert]: the bumps from the brightness of the texture (bright stands
+	// out), the height in the alpha for parallax
+	float		normalStrength;		// 0 to 8
+	float		normalBlur;			// 0 to 8 pixels
+	float		normalDetail;		// 0 to 1, the fine detail mixed into the blurred height
+	qboolean	normalInvert;		// dark stands out
+	// rmoGen <variation> <occlusion>: roughness that varies with the texture around the roughness of the material
+	// (darker cracks rougher), and occlusion in what lies lower than its surroundings
+	float		rmoVariation;		// 0 to 1
+	float		rmoOcclusion;		// 0 to 1
+} materialGen_t;
 
 typedef struct materialParms_s {
 	qboolean	pbr;				// lit per pixel with GGX
@@ -288,6 +314,7 @@ typedef struct materialParms_s {
 	qboolean	normalHeight;		// the height is in the alpha of the normal map
 	char		rmoMap[MAX_QPATH];	// image name, "" none
 	qboolean	ormOrder;			// occlusion, roughness, metalness instead of roughness, metalness, occlusion
+	materialGen_t	gen;			// what is made from the texture; a made map stands before the named one
 } materialParms_t;
 
 // what a stage is (materialStage_t flags)

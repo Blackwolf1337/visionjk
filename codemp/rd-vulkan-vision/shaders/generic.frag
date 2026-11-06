@@ -305,7 +305,12 @@ vec4 PbrStage( Draw d ) {
 		n = normalize( frame * ( texture( TEX2( d ), uv ).xyz * 2.0 - 1.0 ) );
 	}
 	vec3 rmo = vec3( d.pbr.x, d.pbr.y, 1.0 );
-	if ( ( d.pbrFlags & PBR_RMO ) != 0u ) {
+	if ( ( d.pbrFlags & PBR_RMO_RELATIVE ) != 0u ) {
+		// made by rmoGen: the change of the roughness around the one of the material, which stays live with its
+		// metalness, and the occlusion
+		vec3 made = texture( TEX3( d ), uv ).rgb;
+		rmo = vec3( clamp( d.pbr.x + made.r * 2.0 - 1.0, 0.05, 1.0 ), d.pbr.y, made.b );
+	} else if ( ( d.pbrFlags & PBR_RMO ) != 0u ) {
 		rmo = texture( TEX3( d ), uv ).rgb;
 		if ( ( d.pbrFlags & PBR_ORM ) != 0u ) {
 			rmo = rmo.gbr;

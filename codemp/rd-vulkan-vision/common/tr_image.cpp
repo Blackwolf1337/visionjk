@@ -1467,6 +1467,40 @@ qhandle_t RE_PaintImage( int slot, const byte *rgba, int size ) {
 
 /*
 ===============
+R_ReplaceImagePixels
+
+VisionJK: new pixels for an image that is there (the made maps of tr_matgen.cpp), with its own mip and picmip
+settings; pic is used up by the upload. A new size makes the device wait once.
+===============
+*/
+void R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height ) {
+	image->width = (word)width;
+	image->height = (word)height;
+	GL_Bind( image );
+	Upload32( (unsigned *)pic, GL_RGBA, (qboolean)image->mipmap, (qboolean)image->allowPicmip, qfalse, qfalse, &image->internalFormat, &image->width, &image->height );
+}
+
+/*
+===============
+R_MadeImage
+
+VisionJK: an image the renderer made itself by that name (mipmapped, repeated, never packed into blocks): made the
+first time, its pixels replaced when it is there already (also when it is left from an earlier level). pic is used
+up by the upload.
+===============
+*/
+image_t *R_MadeImage( const char *name, byte *pic, int width, int height ) {
+	image_t *image = R_FindImageFile_NoLoad( name, qtrue, qtrue, qfalse, GL_REPEAT );
+
+	if ( image ) {
+		R_ReplaceImagePixels( image, pic, width, height );
+		return image;
+	}
+	return R_CreateImage( name, pic, width, height, GL_RGBA, qtrue, qtrue, qfalse, GL_REPEAT );
+}
+
+/*
+===============
 RE_UiTexture
 
 VisionJK: a picture of the debug menu of the client for RE_DrawTriangles2D (its font atlas): slot 0 to

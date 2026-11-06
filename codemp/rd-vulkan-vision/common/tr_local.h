@@ -429,6 +429,16 @@ typedef struct stageMaterial_s {
 	// where the polygon lies in the height of the parallax, 0 bottom to 1 top (parallaxPlane, 0.5 when not given):
 	// 1 carves the surface into it, so what stands on it floats over the hollows
 	float			parallaxPlane;
+
+	// the maps made from the texture of the stage (albedoGen, normalGen, rmoGen, tr_matgen.cpp): made once for the
+	// record (genDone), into images of the record that a change of the menu fills again. albedoMap takes the place
+	// of baseImage in the stages; a made rmo map has the change of the roughness in red (rmoRelative), so the
+	// roughness and metalness of the material stay live.
+	materialGen_t	gen;
+	bool			genDone;
+	bool			rmoRelative;
+	image_t			*baseImage;
+	image_t			*albedoMap;
 } stageMaterial_t;
 
 typedef struct shaderStage_s {
@@ -1485,6 +1495,15 @@ void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
 stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean create, const stageMaterial_t *init );
 int			R_ShadersNamed( const char *name, shader_t **out, int max );
+void		R_MaterialStageImage( shaderStage_t *stage );
+
+//
+// tr_matgen.cpp: the maps made from the texture of a stage
+//
+void		R_MakeMaterialMaps( stageMaterial_t *mat, image_t *base );
+void		R_DefaultMaterialGen( materialGen_t *gen );
+void		R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height );
+image_t		*R_MadeImage( const char *name, byte *pic, int width, int height );
 
 //
 // tr_material.cpp: the material debug menu (refexport_t ext.Material*)
