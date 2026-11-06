@@ -760,7 +760,9 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	if ( !v_pbr->integer || g_bRenderGlowingObjects || refract || r_lightmap->integer ) {
 		return qfalse;
 	}
-	if ( !pStage->pbr && !( pStage->normalMap && second->image && second->isLightmap ) ) {
+	const stageMaterial_t *mat = pStage->mat;
+
+	if ( !mat || ( !mat->pbr && !( mat->normalMap && second->image && second->isLightmap ) ) ) {
 		return qfalse;
 	}
 	// a stage that adds its colour to what is under it is light itself (a sign, a glowing decal), not a surface lit
@@ -778,17 +780,17 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	}
 	draw->flags |= VKD_PBR;
 	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
-	if ( pStage->normalMap ) {
-		draw->tex2 = pStage->normalMap->texnum;
-		draw->pbrFlags |= VKP_NORMAL | ( pStage->normalHeight ? VKP_HEIGHT : 0u );
+	if ( mat->normalMap ) {
+		draw->tex2 = mat->normalMap->texnum;
+		draw->pbrFlags |= VKP_NORMAL | ( mat->normalHeight ? VKP_HEIGHT : 0u );
 	}
-	if ( pStage->rmoMap ) {
-		draw->tex3 = pStage->rmoMap->texnum;
-		draw->pbrFlags |= VKP_RMO | ( pStage->ormOrder ? VKP_ORM : 0u );
+	if ( mat->rmoMap ) {
+		draw->tex3 = mat->rmoMap->texnum;
+		draw->pbrFlags |= VKP_RMO | ( mat->ormOrder ? VKP_ORM : 0u );
 	}
-	draw->pbr[0] = pStage->pbr ? pStage->roughness : 0.8f;
-	draw->pbr[1] = pStage->metalness;
-	draw->pbr[2] = pStage->parallaxDepth;
+	draw->pbr[0] = mat->pbr ? mat->roughness : 0.8f;
+	draw->pbr[1] = mat->metalness;
+	draw->pbr[2] = mat->parallaxDepth;
 	draw->pbr[3] = (float)v_pbr->integer;
 	if ( !( draw->pbrFlags & VKP_ENTITY ) && tr.pbrGrid && tr.world ) {
 		draw->tex4 = tr.pbrGrid->texnum;
@@ -1158,15 +1160,16 @@ void RB_StageIteratorGeneric( void ) {
 		}
 		// VisionJK: a stage with a material of the material tool (shader keywords rmoMap, roughness, metalness ...)
 		// is lit per pixel with GGX by the light it gets anyway, see generic.frag PbrStage
+		const stageMaterial_t *mat = pStage->mat;
 		if ( VK_PbrDraw( pStage, shader, refract, &draw ) ) {
-		} else if ( ( pStage->normalMap || pStage->specular[0] > 0.0f || pStage->specular[2] > 0.0f || pStage->wrapLight > 0.0f
-			|| pStage->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
+		} else if ( mat && ( mat->normalMap || mat->specular[0] > 0.0f || mat->specular[2] > 0.0f || mat->wrapLight > 0.0f
+			|| mat->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
 			draw.flags |= VKD_MATERIAL;
-			VectorCopy( pStage->specular, draw.material );
-			draw.material2[0] = pStage->wrapLight;
-			draw.material2[1] = pStage->sparkle;
-			if ( pStage->normalMap ) {
-				draw.tex1 = pStage->normalMap->texnum;
+			VectorCopy( mat->specular, draw.material );
+			draw.material2[0] = mat->wrapLight;
+			draw.material2[1] = mat->sparkle;
+			if ( mat->normalMap ) {
+				draw.tex1 = mat->normalMap->texnum;
 				draw.material[3] = 1.0f;
 			}
 		}

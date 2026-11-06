@@ -401,6 +401,33 @@ typedef struct textureBundle_s {
 
 #define NUM_TEXTURE_BUNDLES 2
 
+// VisionJK: the material of a stage, one record for a stage of a shader text that all shaders of that name share
+// (the lightmap variants of a level), so a change of the material debug menu (ext.MaterialSet) is one write. Kept
+// in a table by shader name and the number of the stage in the text (R_MaterialFor).
+typedef struct stageMaterial_s {
+	char			shaderName[MAX_QPATH];
+	int				sourceStage;
+	struct stageMaterial_s *next;
+
+	// a stage of a model lit per pixel. normalMap: the bumps of the surface (normalMap <image>), specular:
+	// strength, exponent and clear coat of its shine (specular <strength> <exponent> <coat>)
+	image_t			*normalMap;
+	float			specular[3];
+	// and a light that wraps round the surface into its shadow, as through snow (wrapLight <amount>), and crystals
+	// that glint in it (sparkle <strength>)
+	float			wrapLight, sparkle;
+
+	// a stage with a material (the keywords of rend2, see ParseMaterialKeyword): lit per pixel with GGX on top of
+	// its lightmap or the light of its entity (generic.frag PbrLight). rmoMap: roughness, metalness and occlusion
+	// in red, green and blue (ormMap: occlusion first), else roughness and metalness alone; normalHeightMap has
+	// the height in the alpha of the normal map, for parallax.
+	bool			pbr;
+	bool			normalHeight;
+	bool			ormOrder;
+	image_t			*rmoMap;
+	float			roughness, metalness, parallaxDepth;
+} stageMaterial_t;
+
 typedef struct shaderStage_s {
 	bool			active;
 	bool			isDetail;
@@ -431,24 +458,10 @@ typedef struct shaderStage_s {
 	// and whether it is drawn in the pass of the dynamic glow only (RGBA_SHADER_BLUR)
 	bool			glowOnly;
 
-	// VisionJK: a stage of a model lit per pixel. normalMap: the
-	// bumps of the surface (normalMap <image>), specular: strength, exponent and clear coat of its shine
-	// (specular <strength> <exponent> <coat>)
-	image_t			*normalMap;
-	float			specular[3];
-	// and a light that wraps round the surface into its shadow, as through snow (wrapLight <amount>), and crystals
-	// that glint in it (sparkle <strength>)
-	float			wrapLight, sparkle;
-
-	// VisionJK: a stage with a material as the material tool of jka.vision writes it (the keywords of rend2, see
-	// ParseMaterialKeyword): lit per pixel with GGX on top of its lightmap or the light of its entity (generic.frag
-	// PbrLight). rmoMap: roughness, metalness and occlusion in red, green and blue (ormMap: occlusion first), else
-	// roughness and metalness alone; normalHeightMap has the height in the alpha of the normal map, for parallax.
-	bool			pbr;
-	bool			normalHeight;
-	bool			ormOrder;
-	image_t			*rmoMap;
-	float			roughness, metalness, parallaxDepth;
+	// VisionJK: the number of the stage in the shader text (stages are moved and merged when the shader is
+	// finished), and its material, NULL for a stage without one
+	byte			sourceStage;
+	stageMaterial_t	*mat;
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -1466,6 +1479,7 @@ shader_t *R_FindShaderByName( const char *name );
 void		R_InitShaders(qboolean server);
 void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
+stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean create, const stageMaterial_t *init );
 
 //
 // tr_arb.c
