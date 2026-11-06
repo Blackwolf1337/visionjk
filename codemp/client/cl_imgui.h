@@ -1,0 +1,47 @@
+/*
+===========================================================================
+Copyright (C) 2026, VisionJK contributors
+
+This file is part of the OpenJK source code.
+
+OpenJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
+// cl_imgui.h: Dear ImGui (lib/imgui) in the client, for its debug menus. They are drawn by the engine through the
+// renderer (ext.DrawTriangles2D), not by the ui or the cgame, so they work in any mod and on any server.
+
+#pragma once
+
+// a debug menu: draw is called every frame while *open, between ImGui::NewFrame and ImGui::Render
+typedef struct debugWindow_s {
+	const char	*name;
+	qboolean	open;
+	void		( *draw )( struct debugWindow_s *window );
+} debugWindow_t;
+
+void		CL_ImGui_Register( debugWindow_t *window );
+// opens or closes it; open takes the keys and frees the mouse
+void		CL_ImGui_Toggle( debugWindow_t *window );
+qboolean	CL_ImGui_Active( void );
+// after the renderer started again (a level, vid_restart): its pictures are made again
+void		CL_ImGui_RendererStarted( void );
+// in the 2D of the frame, after the menus of the engine, under the console
+void		CL_ImGui_Frame( void );
+// qtrue: a debug menu is open and took the key
+qboolean	CL_ImGui_KeyEvent( int key, qboolean down );
+qboolean	CL_ImGui_CharEvent( int ch );
+void		CL_ImGui_Shutdown( void );
+
+// cl_matdebug.cpp
+void		CL_MatDebug_Init( void );

@@ -36,6 +36,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
 #include "cl_lan.h"
+#include "cl_imgui.h"
 #include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
@@ -2502,6 +2503,9 @@ void CL_InitRenderer( void ) {
 
 	cls.cursorShader = re->RegisterShaderNoMip("cursor");
 	cls.menuFont = re->RegisterFont( "ocr_a" );
+
+	// the pictures of the debug menus went with the renderer
+	CL_ImGui_RendererStarted();
 }
 
 /*
@@ -3068,6 +3072,7 @@ void CL_Init( void ) {
 	CL_UpdateInit();
 	CL_ModelsInit();
 	CL_ClipboardInit();
+	CL_MatDebug_Init();
 
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 
@@ -3105,6 +3110,7 @@ void CL_Shutdown( void ) {
 	CL_IDS_Shutdown();
 	CL_MemWatchShutdown();
 	CL_MasterShutdown();
+	CL_ImGui_Shutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );

@@ -601,6 +601,24 @@ if(BuildMPEngine)
 	source_group("client" FILES ${MPEngineClientFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientFiles})
 
+	# the debug menus of the client (v_matdebug), drawn with Dear ImGui 1.93.0 (lib/imgui, MIT, only its core files)
+	set(MPEngineDebugMenuFiles
+		"${MPDir}/client/cl_imgui.cpp"
+		"${MPDir}/client/cl_imgui.h"
+		"${MPDir}/client/cl_matdebug.cpp"
+		"${VisionJKLibDir}/imgui/imgui.cpp"
+		"${VisionJKLibDir}/imgui/imgui.h"
+		"${VisionJKLibDir}/imgui/imgui_draw.cpp"
+		"${VisionJKLibDir}/imgui/imgui_tables.cpp"
+		"${VisionJKLibDir}/imgui/imgui_widgets.cpp"
+		)
+	# no files, shell or Windows calls of its own: the layout goes through the file system of the engine, the
+	# clipboard through Sys_GetClipboardData
+	set_source_files_properties(${MPEngineDebugMenuFiles} PROPERTIES COMPILE_DEFINITIONS
+		"IMGUI_DISABLE_OBSOLETE_FUNCTIONS;IMGUI_DISABLE_FILE_FUNCTIONS;IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS;IMGUI_DISABLE_WIN32_FUNCTIONS")
+	source_group("client/debugmenus" FILES ${MPEngineDebugMenuFiles})
+	set(MPEngineFiles ${MPEngineFiles} ${MPEngineDebugMenuFiles})
+
 	# the sound that knows the level, with Steam Audio (docs/japlus/audio.md)
 	set(MPEngineClientSpatialFiles
 		"${MPDir}/client/sound/spatial/snd_spatial.cpp"

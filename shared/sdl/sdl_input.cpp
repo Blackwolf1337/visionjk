@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qcommon.h"
 #include "qcommon/q_shared.h"
 #include "client/client.h"
+#include "client/cl_imgui.h"
 #include "sys/sys_local.h"
 
 static cvar_t *in_keyboardDebug     = NULL;
@@ -1189,6 +1190,11 @@ void IN_Frame (void) {
 	else if( !cls.glconfig.isFullscreen && loading && !cls.cursorActive )
 	{
 		// Loading in windowed mode
+		IN_DeactivateMouse( );
+	}
+	else if( CL_ImGui_Active( ) )
+	{
+		// a debug menu of the client is open, the system draws its cursor (cl_imgui.cpp)
 		IN_DeactivateMouse( );
 	}
 	else if( !( SDL_GetWindowFlags( SDL_window ) & SDL_WINDOW_INPUT_FOCUS ) )

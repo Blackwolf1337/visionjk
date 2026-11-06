@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
+#include "cl_imgui.h"
 #include "qcommon/stringed/stringed_ingame.h"
 /*
 
@@ -1711,6 +1712,11 @@ void CL_KeyDownEvent( int key, unsigned time )
 		return;
 	}
 
+	// VisionJK: an open debug menu of the client takes the keys (cl_imgui.cpp), the console still comes down
+	if ( !( Key_GetCatcher() & KEYCATCH_CONSOLE ) && CL_ImGui_KeyEvent( key, qtrue ) ) {
+		return;
+	}
+
 	// keys can still be used for bound actions
 	if ( cls.state == CA_CINEMATIC && !Key_GetCatcher() ) {
 		if ( !com_cameraMode->integer ) {
@@ -1824,6 +1830,9 @@ void CL_KeyUpEvent( int key, unsigned time )
 	//
 	CL_ParseBinding( bound, qfalse, time );
 
+	if ( CL_ImGui_KeyEvent( key, qfalse ) )
+		return;
+
 	if ( Key_GetCatcher( ) & KEYCATCH_UI && cls.uiStarted )
 		UIVM_KeyEvent( key, qfalse );
 	else if ( Key_GetCatcher( ) & KEYCATCH_CGAME && cls.cgameStarted )
@@ -1854,6 +1863,9 @@ Normal keyboard characters, already shifted / capslocked / etc
 void CL_CharEvent( int key ) {
 	// delete is not a printable character and is otherwise handled by Field_KeyDownEvent
 	if ( key == 127 )
+		return;
+
+	if ( !( Key_GetCatcher() & KEYCATCH_CONSOLE ) && CL_ImGui_CharEvent( key ) )
 		return;
 
 	// distribute the key down event to the appropriate handler

@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "cl_uiapi.h"
+#include "cl_imgui.h"
 
 extern console_t con;
 qboolean	scr_initialized;		// ready to draw
@@ -524,6 +525,9 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 
 	// Engine internal menu
 	CL_DrawEngineMenus();
+
+	// the debug menus of the client (v_matdebug)
+	CL_ImGui_Frame();
 
 	// console draws next
 	Con_DrawConsole ();
