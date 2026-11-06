@@ -1276,6 +1276,16 @@ qboolean Rect_ContainsPoint(rectDef_t *rect, float x, float y) {
 	return qfalse;
 }
 
+// whether a point is on a menu. A whole page with a canvas covers the whole screen, as a fullScreen menu does in
+// the stock ui: its window.rect is only the canvas, and at 4:3 or 16:10 Menu_CanvasBars puts the bars outside it
+// (a click on the Exit button in the bottom bar of the main page counted as a click beside the menu, #15)
+static qboolean Menu_ContainsPoint( menuDef_t *menu, float x, float y ) {
+	if ( menu->fullScreen && menu->canvasW > 0.0f ) {
+		return qtrue;
+	}
+	return Rect_ContainsPoint( &menu->window.rect, x, y );
+}
+
 int Menu_ItemsMatchingGroup(menuDef_t *menu, const char *name) {
 	int i;
 	int count = 0;
@@ -5992,7 +6002,7 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 		return;
 	}
 		// see if the mouse is within the window bounds and if so is this a mouse click
-	if (down && !(menu->window.flags & WINDOW_POPUP) && !Rect_ContainsPoint(&menu->window.rect, DC->cursorx, DC->cursory))
+	if (down && !(menu->window.flags & WINDOW_POPUP) && !Menu_ContainsPoint(menu, DC->cursorx, DC->cursory))
 	{
 		static qboolean inHandleKey = qfalse;
 		if (!inHandleKey && ( key == A_MOUSE1 || key == A_MOUSE2 || key == A_MOUSE3 ) ) {
@@ -13609,7 +13619,7 @@ void *Display_CaptureItem(int x, int y) {
 	for (i = 0; i < menuCount; i++) {
 		// turn off focus each item
 		// menu->items[i].window.flags &= ~WINDOW_HASFOCUS;
-		if (Rect_ContainsPoint(&Menus[i].window.rect, x, y)) {
+		if (Menu_ContainsPoint(&Menus[i], x, y)) {
 			return &Menus[i];
 		}
 	}
@@ -13709,7 +13719,7 @@ void Display_CacheAll() {
 
 static qboolean Menu_OverActiveItem(menuDef_t *menu, float x, float y) {
  	if (menu && menu->window.flags & (WINDOW_VISIBLE | WINDOW_FORCED)) {
-		if (Rect_ContainsPoint(&menu->window.rect, x, y)) {
+		if (Menu_ContainsPoint(menu, x, y)) {
 			int i;
 			for (i = 0; i < menu->itemCount; i++) {
 				// turn off focus each item

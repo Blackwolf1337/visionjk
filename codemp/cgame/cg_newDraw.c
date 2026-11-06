@@ -776,10 +776,10 @@ void CG_MouseEvent(int x, int y) {
 		cgs.cursorX = 640 + (int)cgs.bias2D;
 
 	cgs.cursorY += y;
-	if (cgs.cursorY < 0)
-		cgs.cursorY = 0;
-	else if (cgs.cursorY > 480)
-		cgs.cursorY = 480;
+	if (cgs.cursorY < -(int)cgs.bias2DY)
+		cgs.cursorY = -(int)cgs.bias2DY;
+	else if (cgs.cursorY > 480 + (int)cgs.bias2DY)
+		cgs.cursorY = 480 + (int)cgs.bias2DY;
 
 	n = Display_CursorType(cgs.cursorX, cgs.cursorY);
 	cgs.activeCursor = 0;
