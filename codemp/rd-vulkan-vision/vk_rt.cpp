@@ -348,7 +348,7 @@ static void VK_RT_UploadGrid( void ) {
 	float			*out;
 
 	VK_DestroyBuffer( &rt.grid );
-	VK_CreateBuffer( &rt.grid, sizeof( float ) * 12 * Q_max( numCells, 1 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
+	VK_CreateBuffer( &rt.grid, sizeof( float ) * 12 * Q_max( numCells, 1 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
 	out = (float *)rt.grid.mapped;
 	memset( out, 0, sizeof( float ) * 12 * Q_max( numCells, 1 ) );
 	for ( int i = 0; i < numCells; i++, out += 12 ) {
