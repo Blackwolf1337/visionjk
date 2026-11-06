@@ -43,5 +43,7 @@ qboolean	CL_ImGui_KeyEvent( int key, qboolean down );
 qboolean	CL_ImGui_CharEvent( int ch );
 void		CL_ImGui_Shutdown( void );
 
-// cl_matdebug.cpp
+// cl_matdebug.cpp, cl_matlight.cpp
 void		CL_MatDebug_Init( void );
+void		CL_MatLight_Init( void );
+void		CL_MatLight_Toggle( void );

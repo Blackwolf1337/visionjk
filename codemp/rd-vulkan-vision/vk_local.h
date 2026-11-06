@@ -71,6 +71,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
 #define VK_RT_VEC4S			( VK_WET_HEADER + 10 )	// shaders that trace rays (vk_rt.cpp): the same view, then their own
+#define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
@@ -80,6 +81,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		wet[VK_WET_VEC4S][4];		// what VK_WetPass() was given
 	float		paint[VK_PAINT_VEC4S][4];	// what VK_PaintPass() was given
 	float		rt[VK_RT_VEC4S][4];			// what the passes that trace rays were given (vk_rt.cpp)
+	float		lights[VK_LIGHT_VEC4S][4];	// light to judge materials by, see VK_LightRows()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity

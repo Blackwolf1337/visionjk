@@ -775,6 +775,13 @@ static void VK_RT_RecordLevel( VkCommandBuffer cmd ) {
 	rt.levelReady = qtrue;
 }
 
+// VisionJK: the sun is another one (ext.SetLightOverride): which cells see it is worked out again
+void VK_RT_SunChanged( void ) {
+	if ( rt.levelReady && rt.cellState == 0 && vk_patches && !vk_patches->empty() ) {
+		rt.cellState = 1;
+	}
+}
+
 // shaders/rtcells.comp over the cells of the grid, after the top level of the frame holds the level
 static void VK_RT_TraceCells( VkCommandBuffer cmd ) {
 	const world_t			*world = tr.world;

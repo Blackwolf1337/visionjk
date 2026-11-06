@@ -428,7 +428,7 @@ qboolean CL_ImGui_KeyEvent( int key, qboolean down ) {
 	if ( down ) {
 		const char *binding = Key_GetBinding( key );
 
-		if ( binding && !io.WantTextInput && ( !Q_stricmp( binding, "v_matdebug" ) ) ) {
+		if ( binding && !io.WantTextInput && ( !Q_stricmp( binding, "v_matdebug" ) || !Q_stricmp( binding, "v_matlight" ) ) ) {
 			Cbuf_ExecuteText( EXEC_APPEND, va( "%s\n", binding ) );
 			return qtrue;
 		}

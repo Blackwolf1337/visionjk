@@ -279,6 +279,7 @@ qboolean	VK_RT_Wanted( void );
 void		VK_RT_Pass( void );
 void		VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface );
 void		VK_RT_ModelsChanged( void );
+void		VK_RT_SunChanged( void );
 
 // vk_cmd.cpp
 // begins vk.color over the level with the depth of the scene only read, for the passes over it (VK_WetPass)

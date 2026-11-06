@@ -1511,6 +1511,7 @@ image_t		*R_MadeImage( const char *name, byte *pic, int width, int height );
 // tr_material.cpp: the material debug menu (refexport_t ext.Material*)
 //
 void		R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] );
+void		R_MaterialWorldLoaded( void );
 qboolean	RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *out );
 int			RE_MaterialList( qboolean all, int first, qhandle_t *out, int max );
 qhandle_t	RE_MaterialFind( const char *name );
@@ -1519,6 +1520,9 @@ qboolean	RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 qboolean	RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
 qboolean	RE_MaterialText( qhandle_t shader, char *buf, int size, char *file, int fileSize );
 qboolean	RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
+void		RE_SetLightOverride( const lightOverride_t *light );
+qboolean	RE_LevelView( vec3_t origin, vec3_t forward );
+const lightOverride_t *R_LightOverride( void );
 
 //
 // tr_arb.c

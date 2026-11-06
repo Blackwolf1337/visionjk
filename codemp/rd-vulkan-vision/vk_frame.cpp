@@ -67,6 +67,44 @@ void VK_SetDepthRange( float minDepth, float maxDepth ) {
 
 /*
 ===============
+VK_LightRows
+
+The light to judge materials by (ext.SetLightOverride, R_LightOverride) as shaders/generic.frag reads it, colours in
+linear light as it works in: row 0 x how many lamps, y 1 when the lightmap gives way to the even light, row 1 that
+light; then four rows a lamp: its place and type, its colour times its intensity and its range, the direction it
+shines and the cosine of its inner angle, the cosine of its outer angle.
+===============
+*/
+static void VK_LightRows( float ( *rows )[4] ) {
+	const lightOverride_t *light = R_LightOverride();
+
+	if ( !light ) {
+		return;
+	}
+	rows[0][0] = (float)light->numLights;
+	rows[0][1] = light->replaceLight ? 1.0f : 0.0f;
+	for ( int c = 0; c < 3; c++ ) {
+		rows[1][c] = powf( Com_Clamp( 0.0f, 1.0f, light->ambient[c] ), 2.2f );
+	}
+	for ( int i = 0; i < light->numLights; i++ ) {
+		const debugLight_t *l = &light->lights[i];
+		float ( *r )[4] = rows + 2 + i * 4;
+
+		VectorCopy( l->origin, r[0] );
+		r[0][3] = (float)l->type;
+		for ( int c = 0; c < 3; c++ ) {
+			r[1][c] = powf( Com_Clamp( 0.0f, 1.0f, l->color[c] ), 2.2f ) * l->intensity;
+		}
+		r[1][3] = l->range;
+		VectorCopy( l->direction, r[2] );
+		VectorNormalize( r[2] );
+		r[2][3] = cosf( DEG2RAD( Com_Clamp( 0.0f, 89.0f, l->innerAngle ) ) );
+		r[3][0] = cosf( DEG2RAD( Com_Clamp( 0.0f, 89.9f, Q_max( l->outerAngle, l->innerAngle + 0.1f ) ) ) );
+	}
+}
+
+/*
+===============
 VK_BeginFrame
 ===============
 */
@@ -95,6 +133,7 @@ void VK_BeginFrame( void ) {
 	globals->gamma[2] = tr.identityLight;
 	globals->screen[0] = (float)vk.width;
 	globals->screen[1] = (float)vk.height;
+	VK_LightRows( globals->lights );
 
 	vk.frame = frame;
 	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
@@ -115,7 +154,9 @@ The device does the rest: gamma pass, copy to the window, submit, present
 */
 void VK_EndFrame( void ) {
 	vkFrame_t *frame = vk.frame;
-	const float gamma[4] = { 1.0f / r_gamma->value, (float)( 1 << tr.overbrightBits ), 0.0f, 0.0f };
+	// z: the exposure of ext.SetLightOverride
+	const lightOverride_t *light = R_LightOverride();
+	const float gamma[4] = { 1.0f / r_gamma->value, (float)( 1 << tr.overbrightBits ), light ? light->exposure : 1.0f, 0.0f };
 
 	if ( !frame ) {
 		return;

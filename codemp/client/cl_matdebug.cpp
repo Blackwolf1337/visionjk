@@ -752,7 +752,8 @@ static void MatDebug_DrawList( void ) {
 
 static void MatDebug_DrawViews( void ) {
 	static const char *views[] = { "Off (as without materials)", "Materials", "Light alone", "Shine alone", "Normals",
-		"Light direction of the grid", "Roughness, metalness, occlusion", "Which maps", "Mirror of the probes" };
+		"Light direction of the grid", "Roughness, metalness, occlusion", "Which maps", "Mirror of the probes",
+		"Albedo checked (blue dark, red bright, magenta dark metal)", "Roughness alone", "Metalness alone" };
 	int view = Com_Clampi( 0, (int)ARRAY_LEN( views ) - 1, Cvar_VariableIntegerValue( "v_pbr" ) );
 
 	ImGui::SetNextItemWidth( 260.0f );
@@ -764,6 +765,11 @@ static void MatDebug_DrawViews( void ) {
 	if ( ImGui::Checkbox( "Reflection probes", &probes ) ) {
 		Cvar_Set( "v_pbrProbes", probes ? "1" : "0" );
 	}
+	ImGui::SameLine();
+	if ( ImGui::Button( "Light..." ) ) {
+		CL_MatLight_Toggle();
+	}
+	ImGui::SetItemTooltip( "Light to judge materials by: presets, lamps, another sun, exposure, sky (v_matlight)" );
 }
 
 static void MatDebug_Draw( debugWindow_t *window ) {
@@ -814,5 +820,6 @@ void CL_MatDebug_Init( void ) {
 	matWindow.name = "Materials";
 	matWindow.draw = MatDebug_Draw;
 	CL_ImGui_Register( &matWindow );
+	CL_MatLight_Init();
 	Cmd_AddCommand( "v_matdebug", MatDebug_Toggle_f, "Opens or closes the material debug menu: the material of the surfaces live, needs rd-vulkan-vision" );
 }

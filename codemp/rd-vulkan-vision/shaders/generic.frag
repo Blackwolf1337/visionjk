@@ -285,6 +285,62 @@ vec3 EnvBRDF( vec3 f0, float roughness, float nv ) {
 	 flat = 1 - k + k N.l; with bumps N.l changes and the shine of GGX comes on top.
    All in linear light: the textures and the light to the power 2.2 and back, which keeps albedo times light exactly
    what it was. */
+#ifndef VK_GLES
+// The lamps of the light to judge materials by (globals.lights, VK_LightRows): lit per pixel with the roughness the
+// material has (a lamp is small, its shine is not widened as the light of the grid is). The light falls off with the
+// square of the distance in hundreds of units, to nothing at the range, and a spot between its two angles. The
+// diffuse part is added to diffuse, the shine is returned. Everything in the space of the world.
+vec3 DebugLights( Transform t, vec3 n, vec3 flat_, vec3 toEye, vec3 albedo, float metalness, float roughness, vec3 f0, inout vec3 diffuse ) {
+	int count = int( globals.lights[0].x );
+	if ( count <= 0 ) {
+		return vec3( 0.0 );
+	}
+	vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+	mat3 toWorld = mat3( t.model );
+	vec3 wn = normalize( toWorld * n ), wflat = normalize( toWorld * flat_ ), wv = normalize( toWorld * toEye );
+	float a = roughness * roughness, kv = a * 0.5;
+	float nv = max( dot( wn, wv ), 1e-4 );
+	vec3 shine = vec3( 0.0 );
+
+	for ( int i = 0; i < count && i < 8; i++ ) {
+		vec4 r0 = globals.lights[2 + i * 4], r1 = globals.lights[3 + i * 4], r2 = globals.lights[4 + i * 4], r3 = globals.lights[5 + i * 4];
+		vec3 l;
+		float fall = 1.0;
+
+		if ( r0.w == 2.0 ) {
+			l = -r2.xyz;
+		} else {
+			vec3 toLight = r0.xyz - world;
+			float dist = max( length( toLight ), 1.0 );
+			l = toLight / dist;
+			float hundreds = dist * 0.01;
+			fall = 1.0 / max( hundreds * hundreds, 0.01 );
+			if ( r1.w > 0.0 ) {
+				float x = dist / r1.w;
+				x = clamp( 1.0 - x * x * x * x, 0.0, 1.0 );
+				fall *= x * x;
+			}
+			if ( r0.w == 1.0 ) {
+				fall *= smoothstep( r3.x, r2.w, dot( -l, r2.xyz ) );
+			}
+		}
+		float nl = max( dot( wn, l ), 0.0 );
+		if ( nl <= 0.0 || fall <= 0.0 || dot( wflat, l ) <= 0.0 ) {
+			continue;
+		}
+		vec3 h = normalize( l + wv );
+		float nh = max( dot( wn, h ), 0.0 ), vh = max( dot( wv, h ), 0.0 );
+		vec3 fresnel = f0 + ( 1.0 - f0 ) * pow( 1.0 - vh, 5.0 );
+		float visibility = 0.25 / ( ( nl * ( 1.0 - kv ) + kv ) * ( nv * ( 1.0 - kv ) + kv ) );
+		vec3 radiance = r1.rgb * fall;
+
+		diffuse += albedo * ( 1.0 - metalness ) * radiance * nl;
+		shine += radiance * D_GGX( nh, a ) * visibility * fresnel * nl;
+	}
+	return shine;
+}
+#endif
+
 vec4 PbrStage( Draw d ) {
 	Transform t = TRANSFORMS( d.transform );
 	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
@@ -344,6 +400,14 @@ vec4 PbrStage( Draw d ) {
 		directed = light * k / flatLit;
 	}
 
+#ifndef VK_GLES
+	// the light to judge materials by: the light of the lightmap, the grid or the entity gives way to an even one
+	if ( globals.lights[0].y > 0.0 ) {
+		ambient = globals.lights[1].rgb;
+		directed = vec3( 0.0 );
+	}
+#endif
+
 	vec3 h = normalize( l + toEye );
 	float nl = max( dot( n, l ), 0.0 ), nv = max( dot( n, toEye ), 1e-4 ), nh = max( dot( n, h ), 0.0 ), vh = max( dot( toEye, h ), 0.0 );
 	// The light of the grid and of an entity is many lamps of the level taken together, from all around a direction,
@@ -356,10 +420,25 @@ vec4 PbrStage( Draw d ) {
 
 	vec3 color = albedo * ( 1.0 - metalness ) * ( ambient * occlusion + directed * nl );
 	vec3 shine = directed * D_GGX( nh, a ) * visibility * fresnel * nl * step( 0.0001, dot( flat_, l ) );
+#ifndef VK_GLES
+	shine += DebugLights( t, n, flat_, toEye, albedo, metalness, roughness, f0, color );
+#endif
 	// v_pbr 2: albedo times the light alone (as without a material), 3: the shine alone, 4: the normal, 5: the share
 	// and direction of the light of the grid, 6: roughness, metalness and occlusion, 7: has an rmo map (red), a normal
-	// map (green), the grid (blue), 8: what the reflection probe shows as a mirror
-	if ( d.pbr.w == 2.0 ) {
+	// map (green), the grid (blue), 8: what the reflection probe shows as a mirror, 9: the albedo checked against what
+	// real surfaces have (sRGB 30 to 240, metals 186 and more): too dark blue, too bright red, a dark metal magenta,
+	// the rest grey, 10: roughness alone, 11: metalness alone
+	if ( d.pbr.w == 9.0 ) {
+		float lum = dot( base.rgb, vec3( 0.2126, 0.7152, 0.0722 ) ) * 255.0;
+		if ( metalness >= 0.5 ) {
+			return lum < 186.0 ? vec4( 1.0, 0.0, 1.0, alpha ) : vec4( vec3( lum / 255.0 ), alpha );
+		}
+		return lum < 30.0 ? vec4( 0.0, 0.2, 1.0, alpha ) : lum > 240.0 ? vec4( 1.0, 0.1, 0.0, alpha ) : vec4( vec3( lum / 255.0 ), alpha );
+	} else if ( d.pbr.w == 10.0 ) {
+		return vec4( vec3( roughness ), alpha );
+	} else if ( d.pbr.w == 11.0 ) {
+		return vec4( vec3( metalness ), alpha );
+	} else if ( d.pbr.w == 2.0 ) {
 		return vec4( pow( albedo * ( ambient + directed * max( dot( flat_, l ), 0.0 ) ), vec3( 1.0 / 2.2 ) ), alpha );
 	} else if ( d.pbr.w == 3.0 ) {
 		return vec4( pow( shine, vec3( 1.0 / 2.2 ) ), alpha );

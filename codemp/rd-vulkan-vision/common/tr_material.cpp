@@ -42,6 +42,72 @@ static int				levelCount, allCount;
 static const world_t	*listWorld;
 static int				listShaders = -1;
 
+/*
+===============
+Light to judge materials by (ext.SetLightOverride). The lamps, the even light and the exposure go to the shaders
+with the globals of every frame (vk_frame.cpp, R_LightOverride); the sun goes into tr.sunDirection while it is set,
+the one of the level kept to go back to.
+===============
+*/
+static lightOverride_t	lightOverride;
+static qboolean			lightOverrideOn;
+static qboolean			levelSunKept;
+static vec3_t			levelSunDirection;
+
+const lightOverride_t *R_LightOverride( void ) {
+	return lightOverrideOn ? &lightOverride : NULL;
+}
+
+void R_MaterialWorldLoaded( void ) {
+	// tr.sunDirection is the sun of the new level now (its sky shader, tr_bsp.cpp)
+	levelSunKept = qfalse;
+}
+
+// tr.sunDirection as the override says, once per view of the level
+static void R_ApplySun( void ) {
+	vec3_t want;
+
+	if ( !tr.world ) {
+		return;
+	}
+	if ( !levelSunKept ) {
+		VectorCopy( tr.sunDirection, levelSunDirection );
+		levelSunKept = qtrue;
+	}
+	if ( lightOverrideOn && lightOverride.sun ) {
+		VectorCopy( lightOverride.sunDirection, want );
+		VectorNormalize( want );
+	} else {
+		VectorCopy( levelSunDirection, want );
+	}
+	if ( !VectorCompare( want, tr.sunDirection ) ) {
+		VectorCopy( want, tr.sunDirection );
+		VK_SunChanged();
+	}
+}
+
+void RE_SetLightOverride( const lightOverride_t *light ) {
+	if ( light ) {
+		lightOverride = *light;
+		lightOverride.numLights = Com_Clampi( 0, DEBUG_LIGHTS, lightOverride.numLights );
+		if ( lightOverride.exposure <= 0.0f ) {
+			lightOverride.exposure = 1.0f;
+		}
+		lightOverrideOn = qtrue;
+	} else {
+		lightOverrideOn = qfalse;
+	}
+}
+
+qboolean RE_LevelView( vec3_t origin, vec3_t forward ) {
+	if ( !tr.world || levelViewWorld != tr.world ) {
+		return qfalse;
+	}
+	VectorCopy( levelViewOrigin, origin );
+	VectorCopy( levelViewAxis[0], forward );
+	return qtrue;
+}
+
 void R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] )
 {
 	VectorCopy( origin, levelViewOrigin );
@@ -49,6 +115,7 @@ void R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] )
 	VectorCopy( axis[1], levelViewAxis[1] );
 	VectorCopy( axis[2], levelViewAxis[2] );
 	levelViewWorld = tr.world;
+	R_ApplySun();
 }
 
 /*

@@ -606,6 +606,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_imgui.cpp"
 		"${MPDir}/client/cl_imgui.h"
 		"${MPDir}/client/cl_matdebug.cpp"
+		"${MPDir}/client/cl_matlight.cpp"
 		"${VisionJKLibDir}/imgui/imgui.cpp"
 		"${VisionJKLibDir}/imgui/imgui.h"
 		"${VisionJKLibDir}/imgui/imgui_draw.cpp"

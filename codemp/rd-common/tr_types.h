@@ -357,6 +357,38 @@ typedef struct materialPick_s {
 	float		distance;			// from the start of the ray, units
 } materialPick_t;
 
+// VisionJK: light to judge materials by (refexport_t ext.SetLightOverride): lamps lit per pixel on every surface
+// with a material, the light of the lightmap swapped for an even one, another sun, another exposure
+#define DEBUG_LIGHTS			8
+
+typedef enum {
+	DLT_POINT,
+	DLT_SPOT,
+	DLT_DIRECTIONAL
+} debugLightType_t;
+
+typedef struct debugLight_s {
+	int			type;				// debugLightType_t
+	vec3_t		origin;				// point and spot
+	vec3_t		direction;			// where it shines (spot, directional), length 1
+	vec3_t		color;				// 0 to 1
+	float		intensity;			// the light it gives at 100 units, 1 as bright as white at full light
+	float		range;				// units it reaches, 0 without end (point, spot)
+	float		innerAngle;			// spot: full light within this half angle, degrees
+	float		outerAngle;			//	none beyond this one
+} debugLight_t;
+
+typedef struct lightOverride_s {
+	int			numLights;
+	debugLight_t lights[DEBUG_LIGHTS];
+	qboolean	replaceLight;		// the lightmap and the light grid of the surfaces with a material give way to ambient
+	vec3_t		ambient;			//	an even light from all round, 0 to 1
+	qboolean	sun;				// another sun for the shadows the renderer traces and the models
+	vec3_t		sunDirection;		//	towards the sun, length 1
+	vec3_t		sunColor;			//	0 to 1
+	float		exposure;			// the whole picture times this, 1 as it is
+} lightOverride_t;
+
 extern int	skyboxportal;
 extern int	drawskyboxportal;
 

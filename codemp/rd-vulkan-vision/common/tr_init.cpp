@@ -1202,6 +1202,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.MaterialSet						= RE_MaterialSet;
 	re.ext.MaterialText						= RE_MaterialText;
 	re.ext.MaterialSave						= RE_MaterialSave;
+	re.ext.SetLightOverride					= RE_SetLightOverride;
+	re.ext.LevelView						= RE_LevelView;
 	re.ext.UiTexture						= RE_UiTexture;
 	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;
 

@@ -58,6 +58,12 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	screen;
 	vec4	screenFx[160];	// only screenfx.frag reads them (VK_SCREENFX_VEC4S)
 	vec4	styles[64];		// the colors of the light styles over 256 (MAX_LIGHT_STYLES)
+#ifndef VK_GLES
+	vec4	wet[779];		// (wet.frag, paint.frag, the ray tracing shaders read these)
+	vec4	paint[459];
+	vec4	rt[21];
+	vec4	lights[34];		// light to judge materials by (VK_LightRows of vk_frame.cpp, VK_LIGHT_VEC4S); not on GLES
+#endif
 } globals;
 
 #ifdef VK_GLES

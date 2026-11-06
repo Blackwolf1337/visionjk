@@ -320,6 +320,11 @@ typedef struct refexport_s {
 		// That text into shaders/zz_mat_<file>.oshader of the profile, read after the shader files from the next
 		// level on; path is the file. qfalse and err when the text would not give the materials shown now.
 		qboolean			(*MaterialSave)							( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
+		// Light to judge materials by (lightOverride_t of tr_types.h), until it is called again; NULL: the light of
+		// the level as it is. Kept over a change of level.
+		void				(*SetLightOverride)						( const lightOverride_t *light );
+		// Where the last view of the level was seen from and where it looked. qfalse before the first one.
+		qboolean			(*LevelView)							( vec3_t origin, vec3_t forward );
 		// A picture of the debug menu of the client (its font atlas): slot 0 to UI_TEXTURES - 1, width x height
 		// RGBA, sides powers of two; the same slot again takes the new pixels. Answers a shader for DrawTriangles2D
 		// (colours of the vertices, alpha blended), 0 when it could not be made.
