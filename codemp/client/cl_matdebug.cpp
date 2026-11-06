@@ -945,7 +945,7 @@ static void MatDebug_DrawList( void ) {
 static void MatDebug_DrawViews( void ) {
 	static const char *views[] = { "Off (as without materials)", "Materials", "Light alone", "Shine alone", "Normals",
 		"Light direction of the grid", "Roughness, metalness, occlusion", "Which maps", "Mirror of the probes",
-		"Albedo checked (blue dark, red bright, magenta dark metal)", "Roughness alone", "Metalness alone" };
+		"Albedo checked (blue dark, red bright, magenta dark metal)", "Roughness alone", "Metalness alone", "Mirror of the light around alone" };
 	int view = Com_Clampi( 0, (int)ARRAY_LEN( views ) - 1, Cvar_VariableIntegerValue( "v_pbr" ) );
 
 	ImGui::SetNextItemWidth( 260.0f );
@@ -1112,6 +1112,9 @@ static void MatCmd_Print( const char *name, int stage, const materialParms_t *m 
 	}
 	Q_strcat( line, sizeof( line ), va( " normalMap %s rmoMap %s", m->normalMap[0] ? m->normalMap : "-", m->rmoMap[0] ? m->rmoMap : "-" ) );
 	Com_Printf( "%s\n", line );
+	if ( m->rmoMap[0] && Q_strncmp( m->rmoMap, "*gen", 4 ) ) {
+		Com_Printf( "  (the rmo map file sets roughness and metalness: the two values above are not used; rmoGen 1 makes them count again)\n" );
+	}
 }
 
 static void MatInfo_f( void ) {
@@ -1237,6 +1240,24 @@ static void MatStatus_f( void ) {
 	Com_Printf( "%s: %s\n", Cmd_Argv( 1 ), statusNames[MatDebug_Status( Cmd_Argv( 1 ) )] );
 }
 
+// the shader of the level under the crosshair, and its material (for scripts that find a surface on the screen)
+static void MatPick_f( void ) {
+	materialPick_t pick;
+	materialInfo_t info;
+	materialParms_t m;
+
+	if ( !re->ext.MaterialPick( NULL, NULL, &pick ) || !re->ext.MaterialInfo( pick.shader, &info ) ) {
+		Com_Printf( "Nothing of the level under the crosshair\n" );
+		return;
+	}
+	Com_Printf( "matpick %s at %.0f %.0f %.0f distance %.0f\n", info.name, pick.point[0], pick.point[1], pick.point[2], pick.distance );
+	const int stage = MatCmd_Stage( pick.shader, "-" );
+
+	if ( stage >= 0 && re->ext.MaterialGet( pick.shader, stage, &m ) ) {
+		MatCmd_Print( info.name, stage, &m );
+	}
+}
+
 static void MatShow_f( void ) {
 	if ( Cmd_Argc() < 2 ) {
 		Com_Printf( "usage: v_matshow <shader|->: the test objects of vjk_matlab show the shader, - their own again\n" );
@@ -1269,4 +1290,5 @@ void CL_MatDebug_Init( void ) {
 	Cmd_AddCommand( "v_matsave", MatSave_f, "Saves the materials of a shader into shaders/zz_mat_<file>.oshader of the profile: v_matsave <shader>" );
 	Cmd_AddCommand( "v_matstatus", MatStatus_f, "How far the material of a shader is: v_matstatus <shader> [none|draft|check|done]" );
 	Cmd_AddCommand( "v_matshow", MatShow_f, "The test objects of vjk_matlab show a shader: v_matshow <shader|->" );
+	Cmd_AddCommand( "v_matpick", MatPick_f, "Names the shader of the level under the crosshair and prints its material" );
 }

@@ -158,8 +158,8 @@ def shaders(with_materials):
     # the sky: the desert sky of the game, with a sun for the lightmap and the traced shadows
     text.append(
         "%s/sky\n{\n\tqer_editorimage textures/skies/sky.tga\n\tsurfaceparm sky\n\tsurfaceparm noimpact\n"
-        "\tsurfaceparm nomarks\n\tsurfaceparm nolightmap\n\tq3map_sun 1 0.95 0.85 180 40 55\n"
-        "\tq3map_skylight 220 4\n\tsun 255 242 217 180 40 55\n\tskyParms textures/skies/desert 512 -\n}\n" % TEX)
+        "\tsurfaceparm nomarks\n\tsurfaceparm nolightmap\n\tq3map_sun 1 0.95 0.85 220 200 70\n"
+        "\tq3map_skylight 220 4\n\tsun 255 242 217 220 200 70\n\tskyParms textures/skies/desert 512 -\n}\n" % TEX)
 
     head = ("// the test map of the materials (tools/maps/matlab.py writes this file, do not edit it by hand)%s\n\n"
             % (": with the materials of rd-vulkan-vision, read after the shader files" if with_materials else ""))
@@ -378,10 +378,10 @@ def build_map():
     # the colour chart and the grey card on the far wall, 2 in front of it
     for i in range(len(COLOR_CHART)):
         row, col = divmod(i, 6)
-        y = -165 + col * 56
+        y = 113 - col * 56
         z = 360 - row * 56
         m.box((1276, y, z), (1278, y + 52, z + 52), None, faces={"-x": tex("chart%02d" % i)})
-    m.box((1276, 260, 200), (1278, 388, 328), None, faces={"-x": tex("grey18")})
+    m.box((1276, -388, 200), (1278, -260, 328), None, faces={"-x": tex("grey18")})
     for x in (320, 640, 960):
         for y in (-400, 0, 400):
             m.entity("light", origin="%d %d 560" % (x, y), light="2600", _color="1 1 1")
@@ -392,7 +392,7 @@ def build_map():
     # court, open to the sky
     room(m, court[0], court[1], -640, 640, 640, sky=True)
     for i, model in enumerate(("sphere_b", "cube_b", "cylinder_b", "panel_b")):
-        plinth(m, 2100, -360 + i * 240, model)
+        plinth(m, 1936, -360 + i * 240, model)
     m.box((1420, -64, 0), (2420, 64, 1), None, faces={"+z": tex("mirrorfloor")})
     cams += [("court_objects", (1620, 0, 140), 0, 6), ("court_mirror", (1340, 0, 90), 0, 18)]
 
@@ -400,8 +400,9 @@ def build_map():
     room(m, dark[0], dark[1], -512, 512, 384)
     for i, model in enumerate(("sphere_c", "cube_c", "cylinder_c", "panel_c")):
         plinth(m, 3100, -300 + i * 200, model)
-    m.box((3060, -512, 220), (3140, -510, 260), None, faces={"+y": tex("lamp")})
-    m.box((3060, 510, 220), (3140, 512, 260), None, faces={"-y": tex("lamp")})
+    for x in (2800, 3100, 3400):
+        m.box((x - 60, -512, 200), (x + 60, -510, 280), None, faces={"+y": tex("lamp")})
+        m.box((x - 60, 510, 200), (x + 60, 512, 280), None, faces={"-y": tex("lamp")})
     cams += [("dark_objects", (2720, 0, 120), 0, 6)]
 
     # glass: a checker wall behind panes (clear, tinted, frosted, and tinted behind clear)

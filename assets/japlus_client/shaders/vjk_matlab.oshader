@@ -560,8 +560,8 @@ textures/vjk_matlab/sky
 	surfaceparm noimpact
 	surfaceparm nomarks
 	surfaceparm nolightmap
-	q3map_sun 1 0.95 0.85 180 40 55
+	q3map_sun 1 0.95 0.85 220 200 70
 	q3map_skylight 220 4
-	sun 255 242 217 180 40 55
+	sun 255 242 217 220 200 70
 	skyParms textures/skies/desert 512 -
 }
