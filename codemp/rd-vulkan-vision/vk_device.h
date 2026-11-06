@@ -181,6 +181,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
+	VkShaderModule				tessControlShader;	// VKP_TESS, with vk.tessellation
+	VkShaderModule				tessEvalShader;
 	VkShaderModule				postVertexShader;
 	VkShaderModule				gammaFragmentShader;
 	VkPipeline					gammaPipeline;

@@ -221,8 +221,11 @@ set(MPVulkanVisionShaders
 	paint.vert
 	paint.frag
 	)
-# the shaders that trace rays (vk_rt.cpp): Vulkan only, GLSL ES has no ray queries
+# the shaders that trace rays (vk_rt.cpp): Vulkan only, GLSL ES has no ray queries; and the tessellation of
+# materials (VKP_TESS), which GLSL ES 3.00 has not either
 set(MPVulkanVisionRTShaders
+	generic.tesc
+	generic.tese
 	rtcells.comp
 	rtdebug.frag
 	rtresolve.frag

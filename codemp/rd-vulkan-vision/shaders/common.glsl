@@ -53,6 +53,8 @@ struct Draw {
 	vec4	pbr2;			// PBR: where the surface lies in the height of the parallax (0 bottom to 1 top), clear coat,
 							//	its roughness, anisotropy; glass: transmission, thickness, absorption distance
 	vec4	pbr3;			// PBR: emission colour times strength, the threshold of the brightness that gives off
+	vec4	tess;			// generic.tesc/.tese: units of the height, where the polygon lies in it, pixels an edge is
+							//	cut down to, the most pieces an edge is cut into
 };
 
 BINDING( 0, 0 ) uniform Globals {

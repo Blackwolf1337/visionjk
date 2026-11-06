@@ -1219,6 +1219,10 @@ and more of the surface:
 	sheen <r g b> [roughness]							the sheen of cloth at a flat angle
 	anisotropy <-1..1> [degrees]						shine drawn out along a direction: brushed metal
 	emission <r g b> <strength> [threshold]				the parts brighter than threshold give off light
+and real bumps in place of the parallax (Vulkan, a device with tessellation shaders, v_tessellation):
+	tessellation <units> [plane] [pixels]				the triangles cut until an edge is that many pixels (8),
+														each vertex moved by the height of normalHeight times units;
+														plane 0 (default) rises out of the polygon, 1 sinks into it
 rend2's own, read as rend2 does: specMap or specularMap <image> (spec/gloss: F0 in rgb, gloss in alpha),
 specularReflectance <value>, normalScale <x> [y] [height], cloth (sheen of the albedo).
 These (but rend2's) are not rend2's: only in .oshader files, which rend2 does not read (it drops a shader with a word it does
@@ -1244,6 +1248,7 @@ static stageMaterial_t *StageMaterial( shaderStage_t *stage )
 		memset( mat, 0, sizeof( *mat ) );
 		mat->roughness = 0.8f;
 		mat->parallaxPlane = 0.5f;
+		mat->tessDensity = 8.0f;
 		mat->ior = 1.5f;
 		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
 		mat->absorptionDistance = 64.0f;
@@ -1289,6 +1294,7 @@ stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean crea
 		memset( mat, 0, sizeof( *mat ) );
 		mat->roughness = 0.8f;
 		mat->parallaxPlane = 0.5f;
+		mat->tessDensity = 8.0f;
 		mat->ior = 1.5f;
 		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
 		mat->absorptionDistance = 64.0f;
@@ -1378,7 +1384,8 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
 		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) && Q_stricmp( keyword, "albedoGen" )
 		&& Q_stricmp( keyword, "normalGen" ) && Q_stricmp( keyword, "rmoGen" ) && Q_stricmp( keyword, "transmission" )
-		&& Q_stricmp( keyword, "ior" ) && Q_stricmp( keyword, "thickness" ) && Q_stricmp( keyword, "absorption" ) ) {
+		&& Q_stricmp( keyword, "ior" ) && Q_stricmp( keyword, "thickness" ) && Q_stricmp( keyword, "absorption" )
+		&& Q_stricmp( keyword, "tessellation" ) ) {
 		return 0;
 	}
 	stageMaterial_t *mat = StageMaterial( stage );
@@ -1488,6 +1495,12 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 		mat->gen.rmoVariation = Com_Clamp( 0.0f, 1.0f, atof( token ) );
 		token = COM_ParseExt( text, qfalse );
 		mat->gen.rmoOcclusion = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
+	} else if ( !Q_stricmp( keyword, "tessellation" ) ) {
+		mat->tessHeight = Com_Clamp( 0.0f, 64.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->tessPlane = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->tessDensity = token[0] ? Com_Clamp( 2.0f, 64.0f, atof( token ) ) : 8.0f;
 	} else {
 		mat->parallaxDepth = Com_Clamp( 0.0f, 0.2f, atof( token ) );
 	}

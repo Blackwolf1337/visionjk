@@ -663,6 +663,20 @@ static void MatDebug_DrawMaterial( void ) {
 		MatDebug_Set( MATP_PARALLAX );
 	}
 	ImGui::SetItemTooltip( "Where the polygon lies in the height of the parallax.\n1: the surface is carved into it, feet float over its hollows.\n0: the surface rises out of it, feet stand in the bumps." );
+	if ( ImGui::SliderFloat( "Tessellation height", &selParms.tessHeight, 0.0f, 16.0f, "%.1f units" ) ) {
+		MatDebug_Set( MATP_TESS );
+	}
+	ImGui::SetItemTooltip( "Real bumps instead of the parallax: the triangles are cut finer on the graphics card and moved\nby the height of the bump map (made or a normalHeightMap). 0: off. Vulkan only, v_tessellation 1.\nWhile it is on, this surface has no parallax." );
+	if ( selParms.tessHeight > 0.0f ) {
+		if ( ImGui::SliderFloat( "Tessellation plane", &selParms.tessPlane, 0.0f, 1.0f, "%.2f" ) ) {
+			MatDebug_Set( MATP_TESS );
+		}
+		ImGui::SetItemTooltip( "Where the polygon lies in that height.\n0: the bumps rise out of it (nothing goes below the floor the player walks on).\n1: they sink into it." );
+		if ( ImGui::SliderFloat( "Tessellation detail", &selParms.tessDensity, 2.0f, 32.0f, "%.0f px" ) ) {
+			MatDebug_Set( MATP_TESS );
+		}
+		ImGui::SetItemTooltip( "How long an edge of the cut triangles is on the screen. Smaller: finer bumps, more work for the card." );
+	}
 	MatDebug_DrawWarnings();
 
 	MatDebug_DrawGlass();
@@ -1057,6 +1071,9 @@ static const matField_t matFields[] = {
 	MF( "metalness", metalness, 1, qfalse, MATP_METALNESS ),
 	MF( "parallaxDepth", parallaxDepth, 1, qfalse, MATP_PARALLAX ),
 	MF( "parallaxPlane", parallaxPlane, 1, qfalse, MATP_PARALLAX ),
+	MF( "tessHeight", tessHeight, 1, qfalse, MATP_TESS ),
+	MF( "tessPlane", tessPlane, 1, qfalse, MATP_TESS ),
+	MF( "tessDensity", tessDensity, 1, qfalse, MATP_TESS ),
 	MF( "transmission", transmission, 1, qfalse, MATP_GLASS ),
 	MF( "ior", ior, 1, qfalse, MATP_GLASS ),
 	MF( "thickness", thickness, 1, qfalse, MATP_GLASS ),

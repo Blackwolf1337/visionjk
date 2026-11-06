@@ -429,6 +429,12 @@ typedef struct stageMaterial_s {
 	// where the polygon lies in the height of the parallax, 0 bottom to 1 top (parallaxPlane, 0.5 when not given):
 	// 1 carves the surface into it, so what stands on it floats over the hollows
 	float			parallaxPlane;
+	// tessellation (tessellation <height> [plane] [density]): the triangles of the stage are cut on the device until
+	// an edge is density pixels on the screen, and each new vertex moves along the normal by the height of the normal
+	// map (normalHeight) times height units; plane is where the polygon lies in it, 0 (the default) the surface rises
+	// out of it, so nothing goes below what the player stands on and what the shadows are traced against. Vulkan
+	// only, the stage then has no parallax (vk_shade.cpp, shaders/generic.tesc and .tese).
+	float			tessHeight, tessPlane, tessDensity;
 
 	// glass (transmission > 0, VK_GlassDraw): the screen behind it shows through, bent by ior over thickness units (0:
 	// a thin pane), blurred by the roughness, coloured by absorption: what is left of each colour after

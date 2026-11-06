@@ -45,6 +45,12 @@ static const uint32_t vk_grassVert[] =
 static const uint32_t vk_genericFrag[] =
 #include "shaders/generic_frag.inc"
 ;
+static const uint32_t vk_genericTesc[] =
+#include "shaders/generic_tesc.inc"
+;
+static const uint32_t vk_genericTese[] =
+#include "shaders/generic_tese.inc"
+;
 static const uint32_t vk_liquidVert[] =
 #include "shaders/liquid_vert.inc"
 ;
@@ -130,6 +136,10 @@ static void VK_CreateLayouts( void ) {
 		frame[i].descriptorType = i ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		frame[i].descriptorCount = 1;
 		frame[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		if ( vk.tessellation ) {
+			// VKP_TESS reads the draws, transforms and the size of the screen in its tessellation shaders
+			frame[i].stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+		}
 	}
 	info.bindingCount = 4;
 	info.pBindings = frame;
@@ -140,6 +150,10 @@ static void VK_CreateLayouts( void ) {
 	texture.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	texture.descriptorCount = VK_MAX_IMAGES;
 	texture.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	if ( vk.tessellation ) {
+		// and the height in the normal map where it moves the vertices
+		texture.stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	}
 	flags.bindingCount = 1;
 	flags.pBindingFlags = &textureFlags;
 	info.pNext = &flags;
@@ -284,7 +298,12 @@ textures as the fourth set (the sprayed pictures).
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program, VkPipelineLayout layout ) {
-	VkPipelineShaderStageCreateInfo stages[2];
+	VkPipelineShaderStageCreateInfo stages[4];
+	// the domain of the tessellation with its origin at the lower left as in OpenGL, so that generic.tese keeps the
+	// winding of the triangles with ccw (Vulkan 1.1)
+	VkPipelineTessellationDomainOriginStateCreateInfo domainOrigin = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_DOMAIN_ORIGIN_STATE_CREATE_INFO,
+		NULL, VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT };
+	VkPipelineTessellationStateCreateInfo tessellation = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, &domainOrigin };
 	VkVertexInputBindingDescription bindings[4];
 	VkVertexInputAttributeDescription attributes[8];
 	VkPipelineVertexInputStateCreateInfo input = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
@@ -314,6 +333,18 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	stages[1].module = fragment;
 	stages[1].pName = "main";
+	// VKP_TESS: the triangles go through generic.tesc and generic.tese between the two, as patches of three
+	const qboolean tess = (qboolean)( !post && program == VKP_TESS );
+	if ( tess ) {
+		stages[2].sType = stages[3].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		stages[2].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+		stages[2].module = vk.tessControlShader;
+		stages[2].pName = "main";
+		stages[3].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+		stages[3].module = vk.tessEvalShader;
+		stages[3].pName = "main";
+		tessellation.patchControlPoints = 3;
+	}
 
 	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID ) ) {
 		// nothing comes from a vertex buffer, see shaders/sprite.vert and liquid.vert
@@ -386,7 +417,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		input.pVertexAttributeDescriptions = attributes;
 	}
 
-	assembly.topology = ( !post && ( stateBits & VK_GLS_LINES ) ) ? VK_PRIMITIVE_TOPOLOGY_LINE_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	assembly.topology = tess ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST
+		: ( !post && ( stateBits & VK_GLS_LINES ) ) ? VK_PRIMITIVE_TOPOLOGY_LINE_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	viewport.viewportCount = 1;
 	viewport.scissorCount = 1;
 	raster.polygonMode = ( !post && vk.wireframe && ( stateBits & GLS_POLYMODE_LINE ) ) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
@@ -420,8 +452,9 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		rendering.stencilAttachmentFormat = vk.depth.format;
 	}
 
-	info.stageCount = 2;
+	info.stageCount = tess ? 4 : 2;
 	info.pStages = stages;
+	info.pTessellationState = tess ? &tessellation : NULL;
 	info.pVertexInputState = &input;
 	info.pInputAssemblyState = &assembly;
 	info.pViewportState = &viewport;
@@ -489,6 +522,12 @@ void VK_InitPipelines( void ) {
 	vk.fragmentShaders[VKP_SPRITE] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.vertexShaders[VKP_LIQUID] = VK_CreateShader( vk_liquidVert, sizeof( vk_liquidVert ) );
 	vk.fragmentShaders[VKP_LIQUID] = VK_CreateShader( vk_liquidFrag, sizeof( vk_liquidFrag ) );
+	if ( vk.tessellation ) {
+		vk.vertexShaders[VKP_TESS] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
+		vk.fragmentShaders[VKP_TESS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
+		vk.tessControlShader = VK_CreateShader( vk_genericTesc, sizeof( vk_genericTesc ) );
+		vk.tessEvalShader = VK_CreateShader( vk_genericTese, sizeof( vk_genericTese ) );
+	}
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );
@@ -564,6 +603,8 @@ void VK_ShutdownPipelines( void ) {
 		qvkDestroyShaderModule( vk.device, vk.vertexShaders[i], NULL );
 		qvkDestroyShaderModule( vk.device, vk.fragmentShaders[i], NULL );
 	}
+	qvkDestroyShaderModule( vk.device, vk.tessControlShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.tessEvalShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.postVertexShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.gammaFragmentShader, NULL );
 	qvkDestroySampler( vk.device, vk.postSampler, NULL );

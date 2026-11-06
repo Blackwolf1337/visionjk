@@ -743,6 +743,7 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
 cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
 cvar_t	*v_pbrEnergy;	// 0: their diffuse light is not lessened by what the shine takes
+cvar_t	*v_tessellation;	// 0: materials with tessellation keep their parallax
 
 /*
 ===============
@@ -1240,8 +1241,21 @@ void RB_StageIteratorGeneric( void ) {
 		// VisionJK: a stage with a material of the material tool (shader keywords rmoMap, roughness, metalness ...)
 		// is lit per pixel with GGX by the light it gets anyway, see generic.frag PbrStage
 		const stageMaterial_t *mat = pStage->mat;
+		vkProgram_t stageProgram = program;
 		if ( VK_GlassDraw( pStage, refract, &draw, &stateBits ) ) {
 		} else if ( VK_PbrDraw( pStage, shader, refract, &draw ) ) {
+			// Tessellation: the triangles of this stage cut on the device and moved by the height of the normal map,
+			// which takes the place of the parallax. Only geometry in the layout of the tess arrays, not in a
+			// mirror or probe view (their faces stay cheap), and only where the normal map has a height.
+			if ( mat->tessHeight > 0.0f && program == VKP_GENERIC && vk.tessellation && v_tessellation->integer
+				&& ( draw.pbrFlags & VKP_HEIGHT ) && !backEnd.viewParms.probeFace ) {
+				stageProgram = VKP_TESS;
+				draw.pbr[2] = 0.0f;
+				draw.tess[0] = mat->tessHeight;
+				draw.tess[1] = mat->tessPlane;
+				draw.tess[2] = mat->tessDensity;
+				draw.tess[3] = 64.0f;
+			}
 		} else if ( mat && ( mat->normalMap || mat->specular[0] > 0.0f || mat->specular[2] > 0.0f || mat->wrapLight > 0.0f
 			|| mat->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
 			draw.flags |= VKD_MATERIAL;
@@ -1278,7 +1292,7 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
-		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
+		VK_DrawTess( &draw, stageProgram, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );
 		if ( cpuColors ) {
 			VK_TessColors( NULL );

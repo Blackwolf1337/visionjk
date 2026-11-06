@@ -164,6 +164,8 @@ typedef struct vkDraw_s {		// once per draw
 	float		pbr2[4];			// VKD_PBR: where the surface lies in the height of the parallax, clear coat and its
 									//	roughness, anisotropy (glass: transmission, thickness, absorption distance)
 	float		pbr3[4];			// VKD_PBR: emission colour times strength, the threshold of the brightness that gives off
+	float		tess[4];			// VKP_TESS: units of the height, where the polygon lies in it, pixels an edge is cut
+									//	down to, the most pieces an edge is cut into
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -194,6 +196,8 @@ typedef enum {
 	VKP_SPRITE,						// no vertices: sprites made in the vertex shader from records in the bone buffer
 	VKP_GRASS,						// surface sprites of the level, vkGrassVertex_t
 	VKP_LIQUID,						// no vertices: the pieces of water of RE_AddLiquid, from records in the bone buffer
+	VKP_TESS,						// as VKP_GENERIC, the triangles cut and moved on the device (a material with
+									// tessellation, shaders/generic.tesc and .tese); Vulkan only, never sent to GLES
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -310,6 +314,7 @@ typedef struct vkState_s : vkDeviceState_t {
 	int							statNumCpuShaders[2];
 
 	qboolean					wireframe;			// the device can draw triangles as lines (r_showtris)
+	qboolean					tessellation;		// and has tessellation shaders (VKP_TESS); never on GLES
 	qboolean					anisotropy;			// and filter textures along the direction they are seen in
 	qboolean					bcTextures;			// r_ext_compress_textures on a device that takes BC1 and BC3 blocks
 	double						statBcPixels;		// what packing textures into blocks has cost since the window was made
@@ -368,6 +373,7 @@ extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;
 extern cvar_t	*v_pbrEnergy;
+extern cvar_t	*v_tessellation;
 extern cvar_t	*v_vkGrass;
 qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );
 void		VK_AddSurface( surfaceType_t *surface );

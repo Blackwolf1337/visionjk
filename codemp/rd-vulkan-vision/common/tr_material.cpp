@@ -570,6 +570,7 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	memset( out, 0, sizeof( *out ) );
 	out->roughness = 0.8f;
 	out->parallaxPlane = 0.5f;
+	out->tessDensity = 8.0f;
 	out->ior = 1.5f;
 	VectorSet( out->absorption, 1.0f, 1.0f, 1.0f );
 	out->absorptionDistance = 64.0f;
@@ -596,6 +597,9 @@ qboolean RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out
 	out->metalness = mat->metalness;
 	out->parallaxDepth = mat->parallaxDepth;
 	out->parallaxPlane = mat->parallaxPlane;
+	out->tessHeight = mat->tessHeight;
+	out->tessPlane = mat->tessPlane;
+	out->tessDensity = mat->tessDensity;
 	VectorCopy( mat->specular, out->specular );
 	out->wrapLight = mat->wrapLight;
 	out->sparkle = mat->sparkle;
@@ -687,6 +691,11 @@ qboolean RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_
 		mat->parallaxDepth = Com_Clamp( 0.0f, 0.2f, in->parallaxDepth );
 		mat->parallaxPlane = Com_Clamp( 0.0f, 1.0f, in->parallaxPlane );
 	}
+	if ( fields & MATP_TESS ) {
+		mat->tessHeight = Com_Clamp( 0.0f, 64.0f, in->tessHeight );
+		mat->tessPlane = Com_Clamp( 0.0f, 1.0f, in->tessPlane );
+		mat->tessDensity = Com_Clamp( 2.0f, 64.0f, in->tessDensity );
+	}
 	if ( fields & MATP_SPECULAR ) {
 		VectorCopy( in->specular, mat->specular );
 	}
@@ -757,7 +766,7 @@ The text of a shader with its materials, and saving it
 static const char *const materialWords[] = { "normalMap", "normalHeightMap", "rmoMap", "ormMap", "roughness", "gloss",
 	"metalness", "parallaxDepth", "parallaxPlane", "albedoGen", "normalGen", "rmoGen", "specular", "wrapLight", "sparkle",
 	"transmission", "ior", "thickness", "absorption", "clearcoat", "sheen", "anisotropy", "emission", "specMap",
-	"specularMap", "specularReflectance", "normalScale", "cloth", NULL };
+	"specularMap", "specularReflectance", "normalScale", "cloth", "tessellation", NULL };
 
 static qboolean IsMaterialWord( const char *word ) {
 	for ( int i = 0; materialWords[i]; i++ ) {
@@ -838,6 +847,10 @@ static void OutMaterial( textOut_t *out, const stageMaterial_t *mat, int depth )
 			Out( out, "parallaxDepth %g\n", mat->parallaxDepth );
 			OutIndent( out, depth );
 			Out( out, "parallaxPlane %g\n", mat->parallaxPlane );
+		}
+		if ( mat->tessHeight > 0.0f ) {
+			OutIndent( out, depth );
+			Out( out, "tessellation %g %g %g\n", mat->tessHeight, mat->tessPlane, mat->tessDensity );
 		}
 	}
 	if ( mat->clearcoat > 0.0f ) {
@@ -1040,7 +1053,9 @@ static qboolean SameMaterial( const stageMaterial_t *a, const stageMaterial_t *b
 		return qfalse;
 	}
 	if ( a->pbr && ( fabsf( a->roughness - b->roughness ) > e || fabsf( a->metalness - b->metalness ) > e
-		|| fabsf( a->parallaxDepth - b->parallaxDepth ) > e || ( a->parallaxDepth > 0.0f && fabsf( a->parallaxPlane - b->parallaxPlane ) > e ) ) ) {
+		|| fabsf( a->parallaxDepth - b->parallaxDepth ) > e || ( a->parallaxDepth > 0.0f && fabsf( a->parallaxPlane - b->parallaxPlane ) > e )
+		|| fabsf( a->tessHeight - b->tessHeight ) > e
+		|| ( a->tessHeight > 0.0f && ( fabsf( a->tessPlane - b->tessPlane ) > e || fabsf( a->tessDensity - b->tessDensity ) > e ) ) ) ) {
 		return qfalse;
 	}
 	if ( !( a->gen.flags & MATGEN_NORMAL ) && !SameFile( a->normalMap, b->normalMap ) ) {

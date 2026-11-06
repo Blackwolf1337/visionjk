@@ -338,6 +338,8 @@ static void VK_CreateDevice( void ) {
 	vk.anisotropy = (qboolean)( available.samplerAnisotropy != VK_FALSE );
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
 	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
+	features.features.tessellationShader = available.tessellationShader;
+	vk.tessellation = (qboolean)( available.tessellationShader != VK_FALSE );
 	features.features.textureCompressionBC = available.textureCompressionBC;
 	vk.bcTextures = (qboolean)( available.textureCompressionBC != VK_FALSE && r_ext_compressed_textures->integer );
 	features.features.shaderClipDistance = VK_TRUE;

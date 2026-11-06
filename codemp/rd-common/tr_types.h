@@ -276,7 +276,8 @@ typedef struct paintPicture_s {
 #define MATP_GEN				(1 << 9)	// gen: the maps are made again
 #define MATP_GLASS				(1 << 10)	// transmission, ior, thickness, absorption
 #define MATP_SURFACE			(1 << 11)	// clearcoat, sheen, anisotropy, emission, specGlossMap, specularReflectance, normalScale
-#define MATP_ALL				0xfff
+#define MATP_TESS				(1 << 12)	// tessHeight, tessPlane, tessDensity
+#define MATP_ALL				0x1fff
 
 // the maps the renderer makes from the texture of a stage when it loads (shader keywords albedoGen, normalGen,
 // rmoGen of .oshader files, tr_matgen.cpp), so a material needs no picture files
@@ -309,6 +310,9 @@ typedef struct materialParms_s {
 	float		metalness;			// 0 to 1
 	float		parallaxDepth;		// 0 to 0.2, needs normalHeight
 	float		parallaxPlane;		// where the polygon lies in the height, 0 bottom to 1 top
+	float		tessHeight;			// tessellation: units the height moves the surface, 0 none (needs normalHeight)
+	float		tessPlane;			//	where the polygon lies in that height, 0 bottom (the surface rises out of it) to 1 top
+	float		tessDensity;		//	pixels a triangle edge is cut down to on the screen
 	float		specular[3];		// strength, exponent, clear coat (stages of models, not pbr)
 	float		wrapLight;
 	float		sparkle;
