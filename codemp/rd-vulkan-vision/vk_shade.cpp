@@ -786,13 +786,15 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	}
 	if ( mat->rmoMap ) {
 		draw->tex3 = mat->rmoMap->texnum;
-		draw->pbrFlags |= VKP_RMO | ( mat->ormOrder ? VKP_ORM : 0u );
+		draw->pbrFlags |= VKP_RMO | ( mat->ormOrder ? VKP_ORM : 0u ) | ( mat->rmoRelative ? VKP_RMO_RELATIVE : 0u );
 	}
 	draw->pbr[0] = mat->pbr ? mat->roughness : 0.8f;
 	draw->pbr[1] = mat->metalness;
 	draw->pbr[2] = mat->parallaxDepth;
 	draw->pbr2[0] = mat->parallaxPlane;
-	draw->pbr[3] = (float)v_pbr->integer;
+	// a face of a reflection probe is always drawn with the materials as they look, never in a debug view of v_pbr,
+	// or the surfaces mirror that view until the level is loaded again
+	draw->pbr[3] = backEnd.viewParms.probeFace ? 1.0f : (float)v_pbr->integer;
 	if ( !( draw->pbrFlags & VKP_ENTITY ) && tr.pbrGrid && tr.world ) {
 		draw->tex4 = tr.pbrGrid->texnum;
 		draw->pbrFlags |= VKP_GRID;
