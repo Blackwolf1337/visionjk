@@ -486,6 +486,41 @@ if(BuildJPAssets)
 	add_subdirectory(assets)
 endif()
 
+# macOS: cmake/MacBundle.cmake makes the installed app run on its own, after every other install rule: the
+# renderer goes into the app by a rule of its own, and the signature has to be made over all of it. It copies the
+# libraries of Homebrew the engine links (SDL2) into Contents/Frameworks, SDL3 beside sdl2-compat, MoltenVK for
+# rd-vulkan-vision, and signs the app ad hoc. The tools are the ones of the build (CMAKE_INSTALL_NAME_TOOL, otool
+# next to it with the same prefix), which the toolchain file of a cross build names. Without codesign (a cross
+# build) the app is not signed, and has to be before it runs on Apple Silicon.
+if(MakeApplicationBundles AND BuildMPEngine)
+	find_library(MacBundleSDL3 NAMES SDL3 SDL3.0)
+	# rd-vanilla is gone, so without MoltenVK in the app the game on a Mac has no renderer that runs
+	if(TARGET ${MPVulkanVisionRenderer})
+		find_library(MacBundleMoltenVK NAMES libMoltenVK.dylib
+			HINTS /opt/homebrew/lib /usr/local/lib "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/../MoltenVK/dylib/macOS")
+		if(NOT MacBundleMoltenVK)
+			message(WARNING "No libMoltenVK.dylib was found to put into the app (brew install molten-vk, or "
+				"-DMacBundleMoltenVK=<file>). Without it the game only starts on a Mac that has a Vulkan library "
+				"installed.")
+		endif()
+	endif()
+	string(REPLACE "install_name_tool" "otool" MacBundleOtool "${CMAKE_INSTALL_NAME_TOOL}")
+	find_program(MacBundleCodesign codesign)
+	if(NOT MacBundleCodesign)
+		message(STATUS "No codesign: the installed app is not signed, sign it before it runs on Apple Silicon")
+	endif()
+	install(CODE "
+		set(app \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JKAInstallDir}/${MPEngine}.app\")
+		get_filename_component(app \"\${app}\" ABSOLUTE)
+		execute_process(COMMAND \"${CMAKE_COMMAND}\" \"-DAPP=\${app}\" \"-DENGINE=${MPEngine}\"
+			\"-DSDL3=${MacBundleSDL3}\" \"-DMOLTENVK=${MacBundleMoltenVK}\" \"-DOTOOL=${MacBundleOtool}\"
+			\"-DINSTALL_NAME_TOOL=${CMAKE_INSTALL_NAME_TOOL}\" \"-DCODESIGN=${MacBundleCodesign}\"
+			-P \"${CMAKE_SOURCE_DIR}/cmake/MacBundle.cmake\"
+			COMMAND_ERROR_IS_FATAL ANY)
+		"
+		COMPONENT ${JKAMPClientComponent})
+endif()
+
 if(BuildTests)
 	enable_testing()
 	add_subdirectory("tests")

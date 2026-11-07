@@ -1,9 +1,10 @@
 #============================================================================
-# Makes the app the build puts together run on its own (macOS only, run as a step of the build):
+# Makes the installed app run on its own (macOS only, run at the end of cmake --install, see CMakeLists.txt):
 #
 # - the libraries the engine links from Homebrew (SDL2, which is sdl2-compat) are copied into
 #   Contents/Frameworks and the engine is pointed there
-# - sdl2-compat loads SDL3 when it runs, from next to itself: SDL3 goes beside it
+# - sdl2-compat loads SDL3 when it runs, from next to itself (@loader_path/libSDL3.dylib): SDL3 goes beside it.
+#   It is not linked, so nothing else would see that it is needed. A real SDL2 does not get it
 # - at the end everything is signed ad hoc. install_name_tool breaks the signature the linker made, and a
 #   program without a valid one is ended by macOS on Apple Silicon. A signed app also gets its own entry in
 #   the privacy settings (microphone for the voice chat)
@@ -11,8 +12,16 @@
 # - MoltenVK, the Vulkan library the renderer rd-vulkan-vision loads when it starts, goes there too
 #
 # Called with -DAPP=<path of the .app> -DENGINE=<name of the program in Contents/MacOS>
-# and optionally -DSDL3=<libSDL3 dylib> -DMOLTENVK=<libMoltenVK dylib>
+# and optionally -DSDL3=<libSDL3 dylib> -DMOLTENVK=<libMoltenVK dylib>, and the tools: -DOTOOL=
+# -DINSTALL_NAME_TOOL= (the plain names when not given), -DCODESIGN= (not signed when empty, a cross build)
 #============================================================================
+
+if(NOT OTOOL)
+	set(OTOOL otool)
+endif()
+if(NOT INSTALL_NAME_TOOL)
+	set(INSTALL_NAME_TOOL install_name_tool)
+endif()
 
 set(contents "${APP}/Contents")
 set(engine "${contents}/MacOS/${ENGINE}")
@@ -23,39 +32,65 @@ function(bundle_copy from name)
 	get_filename_component(real "${from}" REALPATH)
 	execute_process(COMMAND ${CMAKE_COMMAND} -E copy "${real}" "${frameworks}/${name}")
 	execute_process(COMMAND chmod u+w "${frameworks}/${name}")
-	execute_process(COMMAND install_name_tool -id "@executable_path/../Frameworks/${name}" "${frameworks}/${name}"
+	execute_process(COMMAND "${INSTALL_NAME_TOOL}" -id "@executable_path/../Frameworks/${name}" "${frameworks}/${name}"
 		ERROR_QUIET)
+	# its search paths point to where it came from (sdl2-compat of Homebrew finds SDL3 by one, outside of the app)
+	execute_process(COMMAND "${OTOOL}" -l "${frameworks}/${name}" OUTPUT_VARIABLE loads)
+	string(REGEX MATCHALL "cmd LC_RPATH\n[^\n]*\n *path [^\n]* \\(offset" rpaths "${loads}")
+	foreach(rpath ${rpaths})
+		string(REGEX REPLACE ".* path (.*) \\(offset$" "\\1" rpath "${rpath}")
+		execute_process(COMMAND "${INSTALL_NAME_TOOL}" -delete_rpath "${rpath}" "${frameworks}/${name}" ERROR_QUIET)
+	endforeach()
 endfunction()
 
 # the libraries of Homebrew (or /usr/local) the engine is linked against
-execute_process(COMMAND otool -L "${engine}" OUTPUT_VARIABLE deps)
+execute_process(COMMAND "${OTOOL}" -L "${engine}" OUTPUT_VARIABLE deps COMMAND_ERROR_IS_FATAL ANY)
 string(REGEX MATCHALL "/(opt/homebrew|usr/local)/[^ \t\n]+\\.dylib" deps "${deps}")
 foreach(dep ${deps})
 	get_filename_component(name "${dep}" NAME)
 	bundle_copy("${dep}" "${name}")
-	execute_process(COMMAND install_name_tool -change "${dep}" "@executable_path/../Frameworks/${name}" "${engine}")
+	execute_process(COMMAND "${INSTALL_NAME_TOOL}" -change "${dep}" "@executable_path/../Frameworks/${name}" "${engine}")
 endforeach()
 
-if(SDL3 AND EXISTS "${SDL3}")
-	bundle_copy("${SDL3}" "libSDL3.dylib")
+file(GLOB sdl2 "${frameworks}/libSDL2*.dylib")
+if(sdl2)
+	list(GET sdl2 0 sdl2)
+	file(STRINGS "${sdl2}" compat REGEX "@loader_path/libSDL3[.]dylib" LIMIT_COUNT 1)
+endif()
+if(compat)
+	if(SDL3 AND EXISTS "${SDL3}")
+		bundle_copy("${SDL3}" "libSDL3.dylib")
+	else()
+		message(FATAL_ERROR "The SDL2 of the app is sdl2-compat, which needs SDL3, and no SDL3 was found (brew install sdl3)")
+	endif()
 endif()
 
 if(MOLTENVK AND EXISTS "${MOLTENVK}")
 	bundle_copy("${MOLTENVK}" "libMoltenVK.dylib")
 	# it is meant to need nothing but the system. If it does, the app only runs where that is installed
-	execute_process(COMMAND otool -L "${frameworks}/libMoltenVK.dylib" OUTPUT_VARIABLE deps)
+	execute_process(COMMAND "${OTOOL}" -L "${frameworks}/libMoltenVK.dylib" OUTPUT_VARIABLE deps)
 	string(REGEX MATCHALL "/(opt/homebrew|usr/local)/[^ \t\n]+\\.dylib" deps "${deps}")
 	if(deps)
 		message(WARNING "libMoltenVK.dylib in the app links ${deps}, which is not in the app")
 	endif()
 endif()
 
-# sign from the inside out: the libraries and modules first, then the app
+if(NOT CODESIGN)
+	message(STATUS "${APP} is not signed: no codesign")
+	return()
+endif()
+
+# sign from the inside out: the libraries and modules first (also those in japlus/ and base/), then the app
 file(GLOB_RECURSE parts "${frameworks}/*.dylib" "${contents}/MacOS/*.dylib")
 foreach(part ${parts})
-	execute_process(COMMAND codesign --force --sign - "${part}" OUTPUT_QUIET ERROR_QUIET)
+	execute_process(COMMAND "${CODESIGN}" --force --sign - "${part}" OUTPUT_QUIET ERROR_QUIET)
 endforeach()
-execute_process(COMMAND codesign --force --sign - "${APP}" RESULT_VARIABLE signed OUTPUT_QUIET ERROR_VARIABLE err)
+execute_process(COMMAND "${CODESIGN}" --force --sign - "${APP}" RESULT_VARIABLE signed OUTPUT_QUIET ERROR_VARIABLE err)
 if(NOT signed EQUAL 0)
-	message(WARNING "codesign of ${APP} failed: ${err}")
+	message(FATAL_ERROR "codesign of ${APP} failed: ${err}")
 endif()
+execute_process(COMMAND "${CODESIGN}" --verify --deep --strict "${APP}" RESULT_VARIABLE verified ERROR_VARIABLE err)
+if(NOT verified EQUAL 0)
+	message(FATAL_ERROR "The signature of ${APP} does not hold: ${err}")
+endif()
+message(STATUS "Signed ad hoc: ${APP}")

@@ -377,16 +377,7 @@ if(EMSCRIPTEN)
 	vjk_wasm_side_module(${MPCGame})
 endif()
 
-if(MakeApplicationBundles AND BuildMPEngine)
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/VisionJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
-		COMPONENT ${JKAMPCoreComponent})
-elseif(WIN32)
+if(WIN32)
 	# into the mod directory, next to the asset archives and the configs
 	install(TARGETS ${MPCGame}
 		RUNTIME
@@ -399,6 +390,8 @@ elseif(WIN32)
 		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
 elseif(NOT EMSCRIPTEN)
+	# on macOS too: next to the app, as on Linux. The client looks there (fs_basepath is the folder of the
+	# app), and an app takes only code in Contents/MacOS, a pk3 or a config there breaks its signature
 	install(TARGETS ${MPCGame}
 		LIBRARY
 		DESTINATION "${JPModInstallDir}"

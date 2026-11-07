@@ -26,12 +26,9 @@
 # entries of the pk3, see make_pk3.py for why that matters.
 #============================================================================
 
-# next to the modules of the mod (JPAssetsDir and JPModInstallDir are set in the CMakeLists.txt of the tree)
-if(MakeApplicationBundles AND BuildMPEngine)
-	set(JPAssetsInstallDir "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/${JPAssetsDir}")
-else()
-	set(JPAssetsInstallDir "${JPModInstallDir}")
-endif()
+# next to the modules of the mod (JPAssetsDir and JPModInstallDir are set in the CMakeLists.txt of the tree), on
+# macOS next to the app as well, not in it
+set(JPAssetsInstallDir "${JPModInstallDir}")
 
 # jp_add_configs(<directory in assets/>): its .cfg files are installed into the mod directory as they are, not
 # packed, and only where there is no file of that name yet: they are for the admin of a server to edit.

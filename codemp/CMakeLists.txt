@@ -787,12 +787,7 @@ if(BuildMPEngine)
 	endif(WIN32)
 
 	if(MakeApplicationBundles)
-		install(CODE "
-			include(BundleUtilities)
-			set(BU_CHMOD_BUNDLE_ITEMS ON)
-			fixup_bundle(\"${CMAKE_BINARY_DIR}/${MPEngine}.app\" \"\" \"\")
-			"
-			COMPONENT Runtime)
+		# SDL, MoltenVK and the signature: cmake/MacBundle.cmake at the end of the CMakeLists.txt of the tree
 		install(TARGETS ${MPEngine}
 			BUNDLE
 			DESTINATION ${JKAInstallDir}
