@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -54,6 +55,7 @@ static void	UI_Cache_f( void ) {
 	Display_CacheAll();
 	if ( trap->Cmd_Argc() == 2 ) {
 		int i;
+		UI_Q3HeadsNeeded();
 		for ( i=0; i<uiInfo.q3HeadCount; i++ ) {
 			trap->Print( "model %s\n", uiInfo.q3HeadNames[i] );
 		}
@@ -62,9 +64,186 @@ static void	UI_Cache_f( void ) {
 }
 
 static void UI_OpenMenu_f( void ) {
-	Menus_CloseAll();
+	// "over": on top of what is open, as a button of a page opens a window (for scripts that look at the menus)
+	if ( Q_stricmp( UI_Argv( 2 ), "over" ) )
+		Menus_CloseAll();
 	if ( Menus_ActivateByName( UI_Argv( 1 ) ) )
 		trap->Key_SetCatcher( KEYCATCH_UI );
+}
+
+void UI_MouseEvent( int dx, int dy );
+void UI_KeyEvent( int key, qboolean down );
+
+// For scripts that look at the menus (docs/japlus/ui.md, "Checked"): the pointer goes to a place in the 640 x 480
+// units of the menus, and with "click" the left button is pressed and let go there, as the mouse would do it.
+// "wheelup" and "wheeldown" turn the wheel by a notch there, "hold" presses the button without letting go and
+// "release" lets it go. v_uiKey <number> presses and lets go a key (its number in keycodes.h), v_uiKey <number> char
+// types a letter.
+static void UI_Mouse_f( void ) {
+	char		what[16];
+	int			x = atoi( UI_Argv( 1 ) ), y = atoi( UI_Argv( 2 ) );
+
+	// (UI_Argv returns one static buffer: keep the word before reading the next one)
+	Q_strncpyz( what, UI_Argv( 3 ), sizeof( what ) );
+	// "px" after the place: it is in pixels of the window, as a screenshot has them (the jka MCP server)
+	if ( !Q_stricmp( UI_Argv( 4 ), "px" ) || !Q_stricmp( what, "px" ) ) {
+		x = (int)( atof( UI_Argv( 1 ) ) / uiInfo.uiDC.xscale - uiInfo.uiDC.bias + 0.5f );
+		y = (int)( atof( UI_Argv( 2 ) ) / uiInfo.uiDC.yscale - uiInfo.uiDC.biasY + 0.5f );
+		if ( !Q_stricmp( what, "px" ) ) {
+			what[0] = '\0';
+		}
+	}
+	UI_MouseEvent( x - uiInfo.uiDC.cursorx, y - uiInfo.uiDC.cursory );
+	if ( !Q_stricmp( what, "click" ) ) {
+		UI_KeyEvent( A_MOUSE1, qtrue );
+		UI_KeyEvent( A_MOUSE1, qfalse );
+	} else if ( !Q_stricmp( what, "hold" ) ) {
+		UI_KeyEvent( A_MOUSE1, qtrue );
+	} else if ( !Q_stricmp( what, "release" ) ) {
+		UI_KeyEvent( A_MOUSE1, qfalse );
+	} else if ( !Q_stricmp( what, "wheelup" ) || !Q_stricmp( what, "wheeldown" ) ) {
+		const int key = Q_stricmp( what, "wheelup" ) ? A_MWHEELDOWN : A_MWHEELUP;
+
+		UI_KeyEvent( key, qtrue );
+		UI_KeyEvent( key, qfalse );
+	}
+}
+
+/*
+=================
+v_uiSweep <name> [cfg]
+
+For the audit of the menus (tools that measure them): the pointer goes onto every item that can be used in the
+open menus, one after the other, and a PNG is taken of each, the first one with the pointer on nothing
+(screenshots/audit_<name>_base.png, then audit_<name>_<n>.png). audit/<name>_sweep.txt lists n, the menu, the
+item and its rectangle and where the pointer was, in pixels of the window. One step a frame, never waiting: each
+picture is taken when the mark of the item has come up (SKIN_EASE_MSEC and a little). With a cfg that cfg is
+executed when the sweep is done: a chain of pages with no waiting on a guessed time.
+=================
+*/
+#define SWEEP_SETTLE_MSEC	320
+
+extern menuDef_t	Menus[];
+extern int			menuCount;
+
+static struct {
+	qboolean	on;
+	char		name[32];
+	char		then[64];		// a cfg to exec when done (v_uiSweep <name> <cfg>): the next page of a chain of them
+	int			count;
+	int			at;				// -1: the picture without the pointer on anything
+	int			shotTime;		// when the picture of this step is taken, then the next step
+	qboolean	shot;
+	itemDef_t	*items[512];
+	int			index[512];		// its number in its menu, as the dump has it
+} sweep;
+
+static void UI_SweepPoint( float px, float py ) {
+	const int x = (int)( px / uiInfo.uiDC.xscale - uiInfo.uiDC.bias + 0.5f );
+	const int y = (int)( py / uiInfo.uiDC.yscale - uiInfo.uiDC.biasY + 0.5f );
+
+	UI_MouseEvent( x - uiInfo.uiDC.cursorx, y - uiInfo.uiDC.cursory );
+}
+
+static void UI_Sweep_f( void ) {
+	fileHandle_t	f;
+	int				i, j;
+
+	Q_strncpyz( sweep.name, UI_Argv( 1 )[0] ? UI_Argv( 1 ) : "sweep", sizeof( sweep.name ) );
+	Q_strncpyz( sweep.then, UI_Argv( 2 ), sizeof( sweep.then ) );
+	sweep.count = 0;
+	for ( i = 0; i < menuCount; i++ ) {
+		menuDef_t *menu = &Menus[i];
+
+		if ( !( menu->window.flags & WINDOW_VISIBLE ) ) {
+			continue;
+		}
+		for ( j = 0; j < menu->itemCount && sweep.count < (int)ARRAY_LEN( sweep.items ); j++ ) {
+			itemDef_t *item = menu->items[j];
+
+			if ( Item_Dumped( item ) && !( item->window.flags & WINDOW_DECORATION ) && !item->disabled
+				&& item->window.rect.w > 0.0f && item->window.rect.h > 0.0f ) {
+				sweep.index[sweep.count] = j;
+				sweep.items[sweep.count++] = item;
+			}
+		}
+	}
+	if ( trap->FS_Open( va( "audit/%s_sweep.txt", sweep.name ), &f, FS_WRITE ) >= 0 ) {
+		for ( i = 0; i < sweep.count; i++ ) {
+			const itemDef_t	*item = sweep.items[i];
+			const rectDef_t	*r = &item->window.rect;
+			const menuDef_t	*menu = (const menuDef_t *)item->parent;
+			const char		*line = va( "%d %s %d %s %.0f %.0f %.0f %.0f %.0f %.0f\n", i, menu->window.name ? menu->window.name : "?",
+				sweep.index[i], item->window.name ? item->window.name : "-",
+				( r->x + uiInfo.uiDC.bias ) * uiInfo.uiDC.xscale, ( r->y + uiInfo.uiDC.biasY ) * uiInfo.uiDC.yscale,
+				r->w * uiInfo.uiDC.xscale, r->h * uiInfo.uiDC.yscale,
+				( r->x + r->w * 0.5f + uiInfo.uiDC.bias ) * uiInfo.uiDC.xscale, ( r->y + r->h * 0.5f + uiInfo.uiDC.biasY ) * uiInfo.uiDC.yscale );
+
+			trap->FS_Write( line, (int)strlen( line ), f );
+		}
+		trap->FS_Close( f );
+	}
+	sweep.on = qtrue;
+	sweep.at = -1;
+	sweep.shot = qfalse;
+	UI_SweepPoint( 0.0f, uiInfo.uiDC.glconfig.vidHeight - 1.0f );
+	sweep.shotTime = uiInfo.uiDC.realTime + SWEEP_SETTLE_MSEC;
+	Com_Printf( "v_uiSweep %s: %d items\n", sweep.name, sweep.count );
+}
+
+// once a frame (UI_Refresh)
+void UI_SweepFrame( void ) {
+	if ( !sweep.on || uiInfo.uiDC.realTime < sweep.shotTime ) {
+		return;
+	}
+	if ( !sweep.shot ) {
+		// (the picture is taken at the end of this frame)
+		if ( sweep.at < 0 ) {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "screenshot_png audit_%s_base\n", sweep.name ) );
+		} else {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "screenshot_png audit_%s_%d\n", sweep.name, sweep.at ) );
+		}
+		sweep.shot = qtrue;
+		sweep.shotTime = uiInfo.uiDC.realTime + 60;
+		return;
+	}
+	sweep.at++;
+	sweep.shot = qfalse;
+	if ( sweep.at >= sweep.count ) {
+		sweep.on = qfalse;
+		UI_SweepPoint( 0.0f, uiInfo.uiDC.glconfig.vidHeight - 1.0f );
+		Com_Printf( "v_uiSweep %s: done\n", sweep.name );
+		if ( sweep.then[0] ) {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "exec %s\n", sweep.then ) );
+		}
+		return;
+	}
+	{
+		const rectDef_t *r = &sweep.items[sweep.at]->window.rect;
+
+		UI_SweepPoint( ( r->x + r->w * 0.5f + uiInfo.uiDC.bias ) * uiInfo.uiDC.xscale, ( r->y + r->h * 0.5f + uiInfo.uiDC.biasY ) * uiInfo.uiDC.yscale );
+	}
+	sweep.shotTime = uiInfo.uiDC.realTime + SWEEP_SETTLE_MSEC;
+}
+
+// v_uiPage <n>: opens that page of the menu in focus (an options screen)
+static void UI_Page_f( void ) {
+	Menu_SetPage( Menu_GetFocused(), atoi( UI_Argv( 1 ) ) );
+}
+
+static void UI_Key_f( void ) {
+	const int key = atoi( UI_Argv( 1 ) );
+
+	if ( key <= 0 || key >= MAX_KEYS ) {
+		return;
+	}
+	if ( !Q_stricmp( UI_Argv( 2 ), "char" ) ) {
+		// a letter that was typed
+		UI_KeyEvent( key | K_CHAR_FLAG, qtrue );
+		return;
+	}
+	UI_KeyEvent( key, qtrue );
+	UI_KeyEvent( key, qfalse );
 }
 
 static void UI_OpenSiegeMenu_f( void ) {
@@ -297,11 +476,16 @@ int cmdcmp( const void *a, const void *b ) {
 
 static consoleCommand_t	commands[] = {
 	{ "ui_cache",			UI_Cache_f },
+	{ "v_uiKey",				UI_Key_f },
 	{ "ui_load",			UI_Load },
 	{ "ui_macroenable",		UI_JPMacroEnable_f },
 	{ "ui_macroscan",		UI_JPMacroScan_f },
+	{ "v_uiMouse",			UI_Mouse_f },
 	{ "ui_openmenu",		UI_OpenMenu_f },
 	{ "ui_opensiegemenu",	UI_OpenSiegeMenu_f },
+	{ "v_uiPage",			UI_Page_f },
+	{ "v_uiDump",			Menus_Dump },
+	{ "v_uiSweep",			UI_Sweep_f },
 	{ "ui_report",			UI_Report },
 };
 

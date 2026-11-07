@@ -1,0 +1,435 @@
+//--------SINGLE SABERS--------------
+jpsg1
+{
+	name		{DX}Caladien
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/saber_caladien/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	40
+	saberColor	random
+	
+	//idleInBack 	"1"
+	
+}
+
+jpsg2
+{
+	name		"Hadhafang"
+	saberType	"SABER_SINGLE"
+	saberModel	"models/weapons2/hadhafang_gamma/hadhafang.glm"
+	saberLength	"35"
+	noBlade		"1"
+	noDlight	"1"
+	noWallMarks	"1"
+	onInWater	"1"
+	trailStyle	"1"
+	noWallMarks	"1"
+	//disarmable	"0"
+	//lockBonus	"1"
+	//parryBonus	"2"
+	bounceOnWalls	"1"	
+	
+
+	soundOn		"sound/weapons/sword/draw1.mp3"
+	soundOff	"sound/weapons/sword/draw1.mp3"
+
+	swingSound1	"sound/weapons/sword/swing1.mp3"
+	swingSound2	"sound/weapons/sword/swing3.mp3"
+	swingSound3	"sound/weapons/sword/swing4.mp3"
+
+	fallSound1	"sound/weapons/sword/fall4.mp3"
+	fallSound2	"sound/weapons/sword/fall5.mp3"
+	fallSound3	"sound/weapons/sword/fall6.mp3"
+
+	hitSound1	"sound/weapons/sword/stab2.mp3"
+	hitSound2	"sound/weapons/sword/stab4.mp3"
+	hitSound3	"sound/weapons/sword/stab1.mp3"
+	
+	
+	blockSound1	"sound/weapons/sword/block1.wav"
+	blockSound2	"sound/weapons/sword/block2.wav"
+	blockSound3	"sound/weapons/sword/block3.wav"
+	
+	idleInBack 	"1"
+}
+
+jpsg3
+{
+	name		"^5-^2JADE^5-"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/saber_ElvishDesign/saber_w.glm"
+	
+	numBlades	1
+	saberLength 40
+    	noWallMarks	1
+	noDlight	1
+      	noBlade	1
+	noClashFlare 1
+      	trailStyle	1	
+	noIdleEffect	1	
+	onInWater		1
+	bounceOnWalls	1	
+	
+	blockEffect	"sparks/spark.efx"	
+	hitOtherEffect	"sparks/spark.efx"	
+	
+	tauntAnim	BOTH_TAVION_SWORDPOWER	
+	//drawAnim	BOTH_SHOWOFF_STRONG
+	
+	soundOn		"sound/weapons/sword/draw1.mp3"
+	soundOff	"sound/weapons/sword/draw1.mp3"
+
+	swingSound1	"sound/weapons/sword/swing1.mp3"
+	swingSound2	"sound/weapons/sword/swing3.mp3"
+	swingSound3	"sound/weapons/sword/swing4.mp3"
+
+	fallSound1	"sound/weapons/sword/fall4.mp3"
+	fallSound2	"sound/weapons/sword/fall5.mp3"
+	fallSound3	"sound/weapons/sword/fall6.mp3"
+
+	hitSound1	"sound/weapons/sword/stab2.mp3"
+	hitSound2	"sound/weapons/sword/stab4.mp3"
+	hitSound3	"sound/weapons/sword/stab1.mp3"
+	
+	
+	blockSound1	"sound/weapons/sword/block1.wav"
+	blockSound2	"sound/weapons/sword/block2.wav"
+	blockSound3	"sound/weapons/sword/block3.wav"
+	
+	idleInBack 	"1"
+	
+}
+
+
+
+
+jpsg5
+{
+	name		"Lord Desann"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/saber_desann/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	40
+	saberColor	random
+}
+
+
+
+
+
+jpsg7
+{
+	name		"Dragon's Wing v2"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/roar2/saber_w.glm"
+	soundOn	"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	44
+	saberColor	random
+
+
+}
+
+jpsg8
+{
+	name		"Proton"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/proton/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	44
+	saberColor	random
+}
+
+
+
+
+jpsg10
+{
+	name		"Bride's Hanzo Steel"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/saber_bride/saber_w.glm"
+	
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	
+	saberLength	42
+	//saberradius -1
+	saberColor	Random
+	
+	noBlade		"1"
+	noDlight	"1"
+	noWallMarks	"1"
+	onInWater	"1"
+	trailStyle	"1"
+	noWallMarks	"1"	
+	bounceOnWalls	"1"	
+	
+
+	soundOn		"sound/weapons/sword/draw1.mp3"
+	soundOff	"sound/weapons/sword/draw1.mp3"
+
+	swingSound1	"sound/weapons/sword/swing1.mp3"
+	swingSound2	"sound/weapons/sword/swing3.mp3"
+	swingSound3	"sound/weapons/sword/swing4.mp3"
+
+	fallSound1	"sound/weapons/sword/fall4.mp3"
+	fallSound2	"sound/weapons/sword/fall5.mp3"
+	fallSound3	"sound/weapons/sword/fall6.mp3"
+
+	hitSound1	"sound/weapons/sword/stab_hard1.wav"
+	hitSound2	"sound/weapons/sword/stab_hard2.wav"
+	hitSound3	"sound/weapons/sword/stab_hard3.wav"
+	blockSound1	"sound/weapons/sword/block1.wav"
+	blockSound2	"sound/weapons/sword/block2.wav"
+	blockSound3	"sound/weapons/sword/block3.wav"
+	
+	idleInBack 	"1"
+	animSpeedScale  0.9
+}
+
+
+
+jpsg11
+{
+	name		"Aisha Katana"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/saber_Aisha/saber_w.glm"
+	
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	
+	saberLength	27
+	//saberradius -1
+	saberColor	Random
+	
+	noBlade		"1"
+	noDlight	"1"
+	noWallMarks	"1"
+	onInWater	"1"
+	trailStyle	"1"
+	noWallMarks	"1"
+	
+	bounceOnWalls	"1"	
+	
+
+	soundOn		"sound/weapons/sword/draw1.mp3"
+	soundOff	"sound/weapons/sword/draw1.mp3"
+
+	swingSound1	"sound/weapons/sword/swing1.mp3"
+	swingSound2	"sound/weapons/sword/swing3.mp3"
+	swingSound3	"sound/weapons/sword/swing4.mp3"
+
+	fallSound1	"sound/weapons/sword/fall4.mp3"
+	fallSound2	"sound/weapons/sword/fall5.mp3"
+	fallSound3	"sound/weapons/sword/fall6.mp3"
+
+	hitSound1	"sound/weapons/sword/stab_hard1.wav"
+	hitSound2	"sound/weapons/sword/stab_hard2.wav"
+	hitSound3	"sound/weapons/sword/stab_hard3.wav"
+	blockSound1	"sound/weapons/sword/block1.wav"
+	blockSound2	"sound/weapons/sword/block2.wav"
+	blockSound3	"sound/weapons/sword/block3.wav"
+	
+	idleInBack 	"1"
+}
+
+jpsg12
+{
+	name		"Thunder"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/thunder/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	40
+	saberColor	random
+}
+
+
+
+
+
+
+
+
+jpsg14
+{
+	name		"Bones" 
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/bones/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	45
+	saberColor	random
+
+}
+
+
+
+
+brokenSliderR
+{
+	name		"Broken Slider R"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/favori/saber_w2.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	44
+	saberColor	random
+}
+
+brokenSliderL
+{
+	name		"Broken Slider L"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/favori/saber_w3.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberLength	44
+	saberColor	random
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//--------STAFF SABERS--------------
+
+
+jpst1
+{
+	name		"Demon"
+	saberType	SABER_STAFF
+	saberModel	"models/weapons2/Demon/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberColor	random
+	numBlades	2
+	saberLength	32
+	saberStyle	staff
+	throwable		0
+	singleBladeStyle	medium
+	singleBladeThrowable		1
+	brokenSaber1	brokenstaff
+	brokenSaber2	brokenstaff
+	twoHanded		1
+}
+
+
+jpst2
+{
+	name		"Slider"
+	saberType	SABER_STAFF
+	saberModel	"models/weapons2/favori/saber_w.glm"
+	soundOn		"sound/weapons/saber/saberon.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	soundOff	"sound/weapons/saber/saberoff.wav"
+	saberColor	random
+	numBlades	2
+	saberLength	37
+	saberStyle	staff
+	throwable		0
+	singleBladeStyle	medium
+	singleBladeThrowable		1
+	brokenSaber1	brokenSliderR
+	brokenSaber2	brokenSliderL
+	twoHanded		1
+}
+
+
+jpst3
+{
+	name		"^4Serren^5Sceptor"
+	saberType	SABER_STAFF
+	saberModel	"models/weapons2/saber_serren/saber_serren.glm"
+	soundOn	"sound/weapons/sword/swing4.wav"
+	soundLoop	"sound/weapons/saber/saberhum4.wav"
+	
+	
+	numBlades	3
+	saberLength	30
+	saberLength2	25
+	saberLength3	25
+     	saberStyle	staff
+	throwable	0
+	animSpeedScale			0.8  	
+	tauntAnim	BOTH_VICTORY_FAST
+	twoHanded		1	
+	onInWater		1
+	bounceOnWalls	1
+	
+	soundOn		"sound/weapons/sword/draw1.mp3"
+	soundOff	"sound/weapons/sword/draw1.mp3"
+
+	swingSound1	"sound/weapons/sword/swing1.mp3"
+	swingSound2	"sound/weapons/sword/swing3.mp3"
+	swingSound3	"sound/weapons/sword/swing4.mp3"
+
+	fallSound1	"sound/weapons/sword/fall4.mp3"
+	fallSound2	"sound/weapons/sword/fall5.mp3"
+	fallSound3	"sound/weapons/sword/fall6.mp3"
+
+	hitSound1	"sound/weapons/sword/stab_hard1.wav"
+	hitSound2	"sound/weapons/sword/stab_hard2.wav"
+	hitSound3	"sound/weapons/sword/stab_hard3.wav"
+	blockSound1	"sound/weapons/sword/block1.wav"
+	blockSound2	"sound/weapons/sword/block2.wav"
+	blockSound3	"sound/weapons/sword/block3.wav"
+      
+      	
+	
+	
+	noWallMarks	1
+	noDlight	1
+	noBlade	1
+	noClashFlare 1
+	trailStyle	2
+	damageScale	0.33	
+	noManualDeactivate	1      
+     	noIdleEffect	1
+     	
+	
+	blockEffect	"sparks/spark.efx"	
+	hitPersonEffect "melee/punch_impact.efx"
+	hitOtherEffect	"sparks/spark.efx"
+	bladeEffect	"magic/electric.efx"	
+	
+	
+
+	bladeStyle2Start	1
+	noWallMarks2	1
+	noDlight2	1
+	noBlade2	1
+	noClashFlare2 1
+	trailStyle2	2	
+	noIdleEffect2	1
+	damageScale2	0.33	
+	noManualDeactivate2	1
+	trailStyle2	1
+	
+	blockEffect2	"sparks/spark.efx"	
+	
+}
+

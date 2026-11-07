@@ -2,3 +2,4 @@
 # have CRLF line ends and are not UTF-8, and the checksum of a pk3 that a pure server compares is made of the
 # checksums of its files: a line end git changed would give another pk3 on Windows than on Linux.
 japlus_client/** -text
+configs/** -text

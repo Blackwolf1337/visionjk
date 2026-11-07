@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -27,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "rd-common/tr_types.h"
 #include "ui_public.h"
 #include "keycodes.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "ui_shared.h"
 
 // ui_cvar.c
@@ -49,6 +50,7 @@ void UI_Load( void );
 void UI_LoadMenus( const char *menuFile, qboolean reset );
 void UI_LoadArenas( void );
 void UI_LoadForceConfig_List( void );
+void UI_Q3HeadsNeeded( void );
 
 //
 // ui_players.c
@@ -361,6 +363,7 @@ typedef struct uiInfo_s {
 
 	int						currentCrosshair;
 
+	qboolean				q3HeadsListed;		// UI_Q3HeadsNeeded() made the list for this start of the ui
 	int						q3HeadCount;
 	char					q3HeadNames[MAX_Q3PLAYERMODELS][64];
 	qhandle_t				q3HeadIcons[MAX_Q3PLAYERMODELS];
@@ -415,8 +418,48 @@ char *UI_GetBotNameByNumber( int num );
 // ui_saber.c
 //
 
-qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel );
-qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType );
+qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel, int saberModelSize );
+qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType, int saberTypeSize );
+
+
+//
+// ui_ids.c
+//
+
+void UI_IDSLoad( void );
+int UI_IDSCount( void );
+const char *UI_IDSText( int index );
+
+//
+// ui_changelog.c
+//
+
+int UI_ChangelogOpen( void );
+int UI_ChangelogCount( void );
+const char *UI_ChangelogText( int index );
+const char *UI_ChangelogNewest( void );
+void UI_ChangelogSelect( int index );
+void UI_ChangelogDraw( rectDef_t *rect, float scale, int iMenuFont );
+qboolean UI_ChangelogKey( int key );
+int MenuFontToHandle( int iMenuFont );											// ui_main.c
+
+//
+// ui_cvarclean.c
+//
+
+void UI_CvarCleanLoad( void );
+int UI_CvarCleanCount( void );
+const char *UI_CvarCleanText( int index, int column );
+void UI_CvarCleanSelect( int index );
+void UI_CvarCleanRemove( qboolean all );
+
+//
+// ui_update.c
+//
+
+void UI_UpdateNoticeDraw( void );
+qboolean	UI_NewLook( void );												// ui_main.c
+qboolean UI_UpdateNoticeKey( int key, qboolean down );
 
 
 // new ui

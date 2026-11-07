@@ -1,0 +1,333 @@
+// ingame_join.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_join.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_join"
+		visible					1
+		fullScreen				0
+		outOfBoundsClick
+		rect					270 80 620 458
+		focusColor				0.36 0.78 0.96 1
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+
+		itemDef
+		{
+			name					vision_window
+			rect					0 0 620 458
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			stack					-1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MENUS_AUTO_TEAM
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 24 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			showCvar
+			{
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd team free" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MENUS_TEAM_RED
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			showCvar
+			{
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd team red" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MENUS_TEAM_BLUE
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			showCvar
+			{
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd team blue" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MP_INGAME_JOIN_SINGLE
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			showCvar { "4" }
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd duelteam single" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MP_INGAME_JOIN_DOUBLE
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			showCvar { "4" }
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd duelteam double" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MENUS_SPECTATE
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 342 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			showCvar
+			{
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd team s" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MENUS_JOIN_GAME
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			hideCvar
+			{
+				"4" ;
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd team free" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					@MENUS_SPECTATE
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			hideCvar
+			{
+				"4" ;
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "cmd team s" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					team
+			text					"Switch Dimension"
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 342 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_about_gametype"
+			hideCvar
+			{
+				"4" ;
+				"6" ;
+				"7" ;
+				"8" ;
+				"9"
+			}
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "amAltDim" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+		canvas					1600 1200
+		style					WINDOW_STYLE_EMPTY
+		descX					580
+		descY					554
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
+	}
+}

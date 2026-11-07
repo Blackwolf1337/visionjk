@@ -606,7 +606,7 @@ Ghoul2 Insert End
 } surfaceType_t;
 
 typedef struct drawSurf_s {
-	unsigned			sort;			// bit combination for fast compares
+	uint64_t			sort;			// bit combination for fast compares
 	surfaceType_t		*surface;		// any of surface*_t
 } drawSurf_t;
 
@@ -902,20 +902,21 @@ void		R_Modellist_f (void);
 
 /*
 
-the drawsurf sort data is packed into a single 32 bit value so it can be
+the drawsurf sort data is packed into a single 64 bit value so it can be
 compared quickly during the qsorting process
 
 the bits are allocated as follows:
 
-18-31 : sorted shader index
-7-17  : entity index
+19-32 : sorted shader index
+7-18  : entity index
 2-6   : fog index
 0-1   : dlightmap index
 */
 #define	QSORT_FOGNUM_SHIFT		2
 #define	QSORT_REFENTITYNUM_SHIFT	7
 #define	QSORT_SHADERNUM_SHIFT	(QSORT_REFENTITYNUM_SHIFT+REFENTITYNUM_BITS)
-#if (QSORT_SHADERNUM_SHIFT+SHADERNUM_BITS) > 32
+#define	QSORT_BYTES				( ( QSORT_SHADERNUM_SHIFT + SHADERNUM_BITS + 15 ) / 16 * 2 )	// even, for R_RadixSort
+#if QSORT_BYTES > 8
 	#error "Need to update sorting, too many bits."
 #endif
 
@@ -1285,7 +1286,7 @@ void R_AddLightningBoltSurfaces( trRefEntity_t *e );
 
 void R_AddPolygonSurfaces( void );
 
-void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
+void R_DecomposeSort( uint64_t sort, int *entityNum, shader_t **shader, int *fogNum, int *dlightMap );
 
 void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader, int fogIndex, int dlightMap );
 

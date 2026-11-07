@@ -353,6 +353,13 @@ char *CON_Input( void )
 	if(ttycon_on)
 	{
 		avail = read(STDIN_FILENO, &key, 1);
+		if (avail == 0)
+		{
+			// the terminal is gone: each read would return nothing again, and key held no character
+			ttycon_on = qfalse;
+			stdin_active = qfalse;
+			return NULL;
+		}
 		if (avail != -1)
 		{
 			// we have something
@@ -509,7 +516,7 @@ void CON_Print( const char *msg )
 	if( com_ansiColor && com_ansiColor->integer )
 		Sys_AnsiColorPrint( msg );
 	else
-		fputs( msg, stderr );
+		Sys_StderrPrint( msg );
 
 	if (!ttycon_on) {
 		// CON_Hide didn't do anything.

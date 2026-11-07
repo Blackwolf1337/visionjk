@@ -8,12 +8,16 @@ extern "C" {
 
 int Q_isprint( int c );
 int Q_isprintext( int c );
+int Q_isLogChar( int c );
+int Q_TermSafe( char *out, int outSize, const char *in );
 int Q_isgraph( int c );
 int Q_islower( int c );
 int Q_isupper( int c );
 int Q_isalpha( int c );
 qboolean Q_isanumber( const char *s );
 qboolean Q_isintegral( float f );
+// VisionJK: "a.b.c.d", four numbers 0 to 255 and nothing else, into the four bytes as they go over the network
+qboolean Q_ParseIPv4( const char *s, unsigned char out[4] );
 
 // portable case insensitive compare
 int Q_stricmp(const char *s1, const char *s2);
@@ -26,6 +30,7 @@ char *Q_strrchr( const char* string, int c );
 // buffer size safe library replacements
 void Q_strncpyz( char *dest, const char *src, int destsize );
 void Q_strcat( char *dest, int size, const char *src );
+void Q_StringEdExpand( char *out, int outSize, const char *in, const char *( *lookup )( const char *ref ) );
 
 const char *Q_stristr( const char *s, const char *find);
 
@@ -39,6 +44,18 @@ void Q_StripColor(char *text);
 const char *Q_strchrs( const char *string, const char *search );
 
 void Q_strstrip( char *string, const char *strip, const char *repl );
+
+// UTF-8. Text inside the client is UTF-8, text of legacy clients and of the game's files is Windows-1252 (one
+// byte a character). Q_UTF8_Decode() reads both: a byte that starts no valid UTF-8 sequence is taken as
+// Windows-1252.
+unsigned int Q_CP1252ToUnicode( int c );
+int Q_UnicodeToCP1252( unsigned int codePoint );
+int Q_UTF8_Decode( const char *s, unsigned int *codePoint );
+int Q_UTF8_Encode( unsigned int codePoint, char *out );
+int Q_UTF8_PrevChar( const char *string, int offset );
+void Q_UTF8_Truncate( char *string, int maxBytes );
+void Q_UTF8_FromCP1252( const char *in, char *out, int outSize );
+void Q_UTF8_ToCP1252( const char *in, char *out, int outSize );
 
 #if defined (_MSC_VER)
 	// vsnprintf is ISO/IEC 9899:1999

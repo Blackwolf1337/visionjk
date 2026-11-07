@@ -1,0 +1,136 @@
+/*
+===========================================================================
+Copyright (C) 2026, VisionJK contributors
+
+This file is part of the VisionJK source code.
+
+VisionJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
+// bg_toys.c -- a throw of a toy as the cgame, the game module and the masterserver hand it on. See bg_toys.h.
+
+#include "bg_toys.h"
+
+qboolean BG_ToyValid( const toyThrow_t *toy ) {
+	double	speed = 0.0;
+	int		i;
+
+	if ( toy->kind <= TOY_HELLO || toy->kind >= TOY_KINDS ) {
+		return qfalse;
+	}
+	for ( i = 0; i < 3; i++ ) {
+		if ( toy->origin[i] <= -TOY_MAX_COORD || toy->origin[i] >= TOY_MAX_COORD
+			|| toy->velocity[i] < -TOY_MAX_SPEED || toy->velocity[i] > TOY_MAX_SPEED ) {
+			return qfalse;
+		}
+		speed += (double)toy->velocity[i] * toy->velocity[i];
+	}
+	// a spray carries angles and the number of its picture in place of a speed
+	if ( toy->kind == TOY_SPRAY && ( toy->velocity[0] < -90 || toy->velocity[0] > 90 || toy->velocity[1] < -180
+		|| toy->velocity[1] > 180 || toy->velocity[2] < 0 || toy->velocity[2] >= TOY_SPRAY_MOST ) ) {
+		return qfalse;
+	}
+	// an emoji carries who it flies to and the number of its picture
+	if ( toy->kind == TOY_EMOJI && ( toy->velocity[0] < 0 || toy->velocity[0] >= MAX_CLIENTS || toy->velocity[1] < 0
+		|| toy->velocity[1] >= TOY_SPRAY_MOST || toy->velocity[2] ) ) {
+		return qfalse;
+	}
+	// table tennis: angles, client numbers and points in place of a speed
+	switch ( toy->kind ) {
+	case TOY_TABLE:
+		if ( toy->velocity[0] < -180 || toy->velocity[0] > 180 || toy->velocity[1] < 0 || toy->velocity[1] > MAX_CLIENTS
+			|| toy->velocity[2] < 0 || toy->velocity[2] > 1 )
+			return qfalse;
+		break;
+	case TOY_TABLE_GONE:
+	case TOY_PONG_PADDLE:
+		if ( toy->velocity[0] || toy->velocity[1] || toy->velocity[2] )
+			return qfalse;
+		break;
+	case TOY_PONG_JOIN:
+		if ( toy->velocity[0] < 0 || toy->velocity[0] >= MAX_CLIENTS || toy->velocity[1] < 0 || toy->velocity[1] > 1 || toy->velocity[2] )
+			return qfalse;
+		break;
+	case TOY_EMOTE_STORE:
+		// (a client and the number of an interactive emoji, no speed)
+		return (qboolean)( toy->velocity[0] >= 0 && toy->velocity[0] < MAX_CLIENTS && toy->velocity[1] >= 0
+			&& toy->velocity[1] < TOY_BOARD_SPLIT && toy->velocity[2] >= 0 && toy->velocity[2] < TOY_BOARD_SPLIT
+			&& ( toy->velocity[1] || toy->velocity[2] ) );
+	case TOY_SPRAY_STORE:
+		// (angles and the number of a picture, no speed)
+		return (qboolean)( toy->velocity[0] >= 0 && toy->velocity[0] < TOY_SPRAY_ANGLES && toy->velocity[1] >= 0
+			&& toy->velocity[1] < TOY_BOARD_SPLIT && toy->velocity[2] >= 0 && toy->velocity[2] < TOY_BOARD_SPLIT
+			&& ( toy->velocity[1] || toy->velocity[2] ) );
+	case TOY_BOARD:
+		// (the number of a picture, no speed: the two fields together may be more than TOY_MAX_SPEED)
+		return (qboolean)( toy->velocity[0] >= 0 && toy->velocity[0] < TOY_BOARD_SPLIT && toy->velocity[1] >= 0
+			&& toy->velocity[1] < TOY_BOARD_SPLIT && toy->velocity[2] >= 0 && toy->velocity[2] <= 2 );
+	case TOY_PONG_SCORE:
+		if ( toy->velocity[0] < 0 || toy->velocity[0] > TOY_PONG_MOST || toy->velocity[1] < 0 || toy->velocity[1] > TOY_PONG_MOST
+			|| toy->velocity[2] < 0 || toy->velocity[2] > 1 )
+			return qfalse;
+		break;
+	default:
+		break;
+	}
+	return (qboolean)( speed <= (double)TOY_MAX_SPEED * TOY_MAX_SPEED );
+}
+
+int BG_ToyPack( const toyThrow_t *toy, byte *out ) {
+	int i, n = 0;
+
+	out[n++] = (byte)toy->kind;
+	if ( toy->kind == TOY_HELLO ) {
+		return n;
+	}
+	for ( i = 0; i < 3; i++ ) {
+		const unsigned int v = (unsigned int)toy->origin[i];
+
+		out[n++] = (byte)v;
+		out[n++] = (byte)( v >> 8 );
+		out[n++] = (byte)( v >> 16 );
+		out[n++] = (byte)( v >> 24 );
+	}
+	for ( i = 0; i < 3; i++ ) {
+		const unsigned int v = (unsigned int)toy->velocity[i];
+
+		out[n++] = (byte)v;
+		out[n++] = (byte)( v >> 8 );
+	}
+	return n;
+}
+
+qboolean BG_ToyUnpack( const byte *data, int len, toyThrow_t *out ) {
+	int i, n = 1;
+
+	memset( out, 0, sizeof( *out ) );
+	if ( len < 1 ) {
+		return qfalse;
+	}
+	out->kind = data[0];
+	if ( out->kind == TOY_HELLO ) {
+		return (qboolean)( len == TOY_HELLO_BYTES );
+	}
+	if ( len != TOY_BYTES ) {
+		return qfalse;
+	}
+	for ( i = 0; i < 3; i++, n += 4 ) {
+		out->origin[i] = (int)( (unsigned int)data[n] | (unsigned int)data[n + 1] << 8 | (unsigned int)data[n + 2] << 16
+			| (unsigned int)data[n + 3] << 24 );
+	}
+	for ( i = 0; i < 3; i++, n += 2 ) {
+		out->velocity[i] = (short)( data[n] | data[n + 1] << 8 );
+	}
+	return BG_ToyValid( out );
+}

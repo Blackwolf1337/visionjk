@@ -2,6 +2,7 @@
 ===========================================================================
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -31,7 +32,11 @@ typedef enum netadrtype_s
 	NA_BOT,
 	NA_LOOPBACK,
 	NA_BROADCAST,
-	NA_IP
+	NA_IP,
+	NA_WEB						// a peer of the web host of the dedicated server (codemp/server/web): the address and
+								// the port of its TCP connection, kept as NA_IP keeps them. The type is what tells
+								// it from a UDP peer of the same address: the server finds a client by address and
+								// qport and writes the port over (SV_PacketEvent), so a port could not.
 } netadrtype_t;
 
 typedef struct netadr_s
@@ -43,6 +48,16 @@ typedef struct netadr_s
 	};
 	uint16_t	port;
 } netadr_t;
+
+// qtrue: the address is an IPv4 address and a port. That is NA_IP, and for the dedicated server NA_WEB too.
+static inline bool NET_AdrHasIP( const netadr_t *a ) {
+#ifdef DEDICATED
+	if ( a->type == NA_WEB ) {
+		return true;
+	}
+#endif
+	return a->type == NA_IP;
+}
 
 /*
 ==============================================================
@@ -107,7 +122,12 @@ char	*Sys_GetCurrentUser( void );
 
 void	NORETURN QDECL Sys_Error( const char *error, ... );
 void	NORETURN Sys_Quit (void);
+void	Sys_RestartOnExit( void );		// client: when the program has ended it starts itself again, with the same arguments
+const char *Sys_ProgramFolder( void );	// client: the folder the program file is in, as the system names it
+qboolean Sys_SameFolder( const char *a, const char *b );
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
+void	Sys_SetClipboardData( const char *text );	// UTF-8
+qboolean Sys_OpenURL( const char *url );
 
 void	Sys_Print( const char *msg );
 
@@ -135,6 +155,7 @@ qboolean	Sys_Mkdir( const char *path );
 char	*Sys_Cwd( void );
 void	Sys_SetDefaultInstallPath(const char *path);
 char	*Sys_DefaultInstallPath(void);
+char	*Sys_BinaryPath(void);			// the folder the program file is in
 
 #ifdef MACOS_X
 char    *Sys_DefaultAppPath(void);
@@ -203,10 +224,15 @@ typedef struct windowDesc_s
 typedef struct glconfig_s glconfig_t;
 window_t	WIN_Init( const windowDesc_t *desc, glconfig_t *glConfig );
 void		WIN_Present( window_t *window );
-void		WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
 void		WIN_Shutdown( void );
+qboolean	WIN_DrawableSize( int *width, int *height );
+void		WIN_SetNextSize( int width, int height );
+#ifdef _JK2EXE
+// the OpenGL renderer of the SP engine
+void		WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
 void *		WIN_GL_GetProcAddress( const char *proc );
 qboolean	WIN_GL_ExtensionSupported( const char *extension );
+#endif
 int			WIN_VK_InstanceExtensions( const char **names, int maxNames );
 qboolean	WIN_VK_CreateSurface( void *instance, void *surface );
 void *		WIN_VK_GetInstanceProcAddr( void );

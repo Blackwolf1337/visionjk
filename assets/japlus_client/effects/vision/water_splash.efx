@@ -1,0 +1,78 @@
+Particle
+{
+	name				drops
+
+	flags				usePhysics useAlpha
+
+	count				5 8
+
+	life				350 650
+
+	bounce				0.1 0.25
+
+	velocity			40 -90 -90 160 90 90
+
+	gravity				-700 -800
+
+	alpha
+	{
+		start			0.8 1
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			0.6 1.3
+		end				0.3 0.6
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/vision/toys/waterdrop
+	]
+}
+
+Particle
+{
+	name				mist
+
+	flags				useAlpha
+
+	count				2 3
+
+	life				400 700
+
+	velocity			10 -25 -25 40 25 25
+
+	gravity				-40 -80
+
+	rotation			0 360
+
+	rotationDelta		-30 30
+
+	rgb
+	{
+		start			0.75 0.85 1
+	}
+
+	alpha
+	{
+		start			0.25 0.4
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			3 5
+		end				8 12
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/vision/toys/snowpuff
+	]
+}

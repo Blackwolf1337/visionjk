@@ -3,6 +3,7 @@
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -30,7 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
  *
  *****************************************************************************/
 #include "g_local.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 #define SIEGEITEM_STARTOFFRADAR 8
 
@@ -181,12 +182,14 @@ void InitSiegeMode(void)
 
 	trap->FS_Read(siege_info, len, f);
 
+	siege_info[len] = 0;	// (a shorter file than the one of the level before leaves its end otherwise)
+
 	trap->FS_Close(f);
 
 	siege_valid = 1;
 
 	//See if players should be specs or ingame preround
-	if (BG_SiegeGetPairedValue(siege_info, "preround_state", teams))
+	if (BG_SiegeGetPairedValue(siege_info, "preround_state", teams, sizeof( teams )))
 	{
 		if (teams[0])
 		{
@@ -194,7 +197,7 @@ void InitSiegeMode(void)
 		}
 	}
 
-	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams))
+	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams, sizeof( teams )))
 	{
 		if (g_siegeTeam1.string[0] && Q_stricmp(g_siegeTeam1.string, "none"))
 		{ //check for override
@@ -202,7 +205,7 @@ void InitSiegeMode(void)
 		}
 		else
 		{ //otherwise use level default
-			BG_SiegeGetPairedValue(teams, "team1", team1);
+			BG_SiegeGetPairedValue(teams, "team1", team1, sizeof( team1 ));
 		}
 
 		if (g_siegeTeam2.string[0] && Q_stricmp(g_siegeTeam2.string, "none"))
@@ -211,7 +214,7 @@ void InitSiegeMode(void)
 		}
 		else
 		{ //otherwise use level default
-			BG_SiegeGetPairedValue(teams, "team2", team2);
+			BG_SiegeGetPairedValue(teams, "team2", team2, sizeof( team2 ));
 		}
 	}
 	else
@@ -219,18 +222,18 @@ void InitSiegeMode(void)
 		trap->Error( ERR_DROP, "Siege teams not defined" );
 	}
 
-	if (BG_SiegeGetValueGroup(siege_info, team2, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, team2, gParseObjectives, sizeof( gParseObjectives )))
 	{
-		if (BG_SiegeGetPairedValue(gParseObjectives, "TeamIcon", teamIcon))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "TeamIcon", teamIcon, sizeof( teamIcon )))
 		{
 			trap->Cvar_Set( "team2_icon", teamIcon);
 		}
 
-		if (BG_SiegeGetPairedValue(gParseObjectives, "RequiredObjectives", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "RequiredObjectives", goalreq, sizeof( goalreq )))
 		{
 			rebel_goals_required = atoi(goalreq);
 		}
-		if (BG_SiegeGetPairedValue(gParseObjectives, "Timed", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "Timed", goalreq, sizeof( goalreq )))
 		{
 			rebel_time_limit = atoi(goalreq)*1000;
 			if (g_siegeTeamSwitch.integer &&
@@ -243,25 +246,25 @@ void InitSiegeMode(void)
 				gRebelCountdown = level.time + rebel_time_limit;
 			}
 		}
-		if (BG_SiegeGetPairedValue(gParseObjectives, "attackers", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "attackers", goalreq, sizeof( goalreq )))
 		{
 			rebel_attackers = atoi(goalreq);
 		}
 	}
 
-	if (BG_SiegeGetValueGroup(siege_info, team1, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, team1, gParseObjectives, sizeof( gParseObjectives )))
 	{
 
-		if (BG_SiegeGetPairedValue(gParseObjectives, "TeamIcon", teamIcon))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "TeamIcon", teamIcon, sizeof( teamIcon )))
 		{
 			trap->Cvar_Set( "team1_icon", teamIcon);
 		}
 
-		if (BG_SiegeGetPairedValue(gParseObjectives, "RequiredObjectives", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "RequiredObjectives", goalreq, sizeof( goalreq )))
 		{
 			imperial_goals_required = atoi(goalreq);
 		}
-		if (BG_SiegeGetPairedValue(gParseObjectives, "Timed", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "Timed", goalreq, sizeof( goalreq )))
 		{
 			if (rebel_time_limit)
 			{
@@ -281,7 +284,7 @@ void InitSiegeMode(void)
 				}
 			}
 		}
-		if (BG_SiegeGetPairedValue(gParseObjectives, "attackers", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "attackers", goalreq, sizeof( goalreq )))
 		{
 			imperial_attackers = atoi(goalreq);
 		}
@@ -331,9 +334,9 @@ void InitSiegeMode(void)
 
 	//Get and set the team themes for each team. This will control which classes can be
 	//used on each team.
-	if (BG_SiegeGetValueGroup(siege_info, team1, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, team1, gParseObjectives, sizeof( gParseObjectives )))
 	{
-		if (BG_SiegeGetPairedValue(gParseObjectives, "UseTeam", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "UseTeam", goalreq, sizeof( goalreq )))
 		{
 			BG_SiegeSetTeamTheme(SIEGETEAM_TEAM1, goalreq);
 		}
@@ -341,16 +344,16 @@ void InitSiegeMode(void)
 		//Now count up the objectives for this team.
 		i = 1;
 		strcpy(objecStr, va("Objective%i", i));
-		while (BG_SiegeGetValueGroup(gParseObjectives, objecStr, objective))
+		while (BG_SiegeGetValueGroup(gParseObjectives, objecStr, objective, sizeof( objective )))
 		{
 			objectiveNumTeam1++;
 			i++;
 			strcpy(objecStr, va("Objective%i", i));
 		}
 	}
-	if (BG_SiegeGetValueGroup(siege_info, team2, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, team2, gParseObjectives, sizeof( gParseObjectives )))
 	{
-		if (BG_SiegeGetPairedValue(gParseObjectives, "UseTeam", goalreq))
+		if (BG_SiegeGetPairedValue(gParseObjectives, "UseTeam", goalreq, sizeof( goalreq )))
 		{
 			BG_SiegeSetTeamTheme(SIEGETEAM_TEAM2, goalreq);
 		}
@@ -358,7 +361,7 @@ void InitSiegeMode(void)
 		//Now count up the objectives for this team.
 		i = 1;
 		strcpy(objecStr, va("Objective%i", i));
-		while (BG_SiegeGetValueGroup(gParseObjectives, objecStr, objective))
+		while (BG_SiegeGetValueGroup(gParseObjectives, objecStr, objective, sizeof( objective )))
 		{
 			objectiveNumTeam2++;
 			i++;
@@ -712,9 +715,9 @@ void SiegeRoundComplete(int winningteam, int winningclient)
 	gSiegeRoundEnded = qtrue;
 	gSiegeRoundWinningTeam = winningteam;
 
-	if (BG_SiegeGetValueGroup(siege_info, teamstr, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, teamstr, gParseObjectives, sizeof( gParseObjectives )))
 	{
-		if (!BG_SiegeGetPairedValue(gParseObjectives, "roundover_target", teamstr))
+		if (!BG_SiegeGetPairedValue(gParseObjectives, "roundover_target", teamstr, sizeof( teamstr )))
 		{ //didn't find the name of the thing to target upon win, just logexit now then.
 			LogExit( "Objectives completed" );
 			return;
@@ -917,7 +920,7 @@ void SiegeBeginRound(int entNum)
 	}
 
 	//Now check if there's something to fire off at the round start, if so do it.
-	if (BG_SiegeGetPairedValue(siege_info, "roundbegin_target", targname))
+	if (BG_SiegeGetPairedValue(siege_info, "roundbegin_target", targname, sizeof( targname )))
 	{
 		if (targname[0])
 		{
@@ -1119,18 +1122,18 @@ void siegeTriggerUse(gentity_t *ent, gentity_t *other, gentity_t *activator)
 		Com_sprintf(teamstr, sizeof(teamstr), team2);
 	}
 
-	if (BG_SiegeGetValueGroup(siege_info, teamstr, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, teamstr, gParseObjectives, sizeof( gParseObjectives )))
 	{
 		Com_sprintf(objectivestr, sizeof(objectivestr), "Objective%i", ent->objective);
 
-		if (BG_SiegeGetValueGroup(gParseObjectives, objectivestr, desiredobjective))
+		if (BG_SiegeGetValueGroup(gParseObjectives, objectivestr, desiredobjective, sizeof( desiredobjective )))
 		{
-			if (BG_SiegeGetPairedValue(desiredobjective, "final", teamstr))
+			if (BG_SiegeGetPairedValue(desiredobjective, "final", teamstr, sizeof( teamstr )))
 			{
 				final = atoi(teamstr);
 			}
 
-			if (BG_SiegeGetPairedValue(desiredobjective, "target", teamstr))
+			if (BG_SiegeGetPairedValue(desiredobjective, "target", teamstr, sizeof( teamstr )))
 			{
 				while (teamstr[i])
 				{
@@ -1293,13 +1296,13 @@ void decompTriggerUse(gentity_t *ent, gentity_t *other, gentity_t *activator)
 		Com_sprintf(teamstr, sizeof(teamstr), team2);
 	}
 
-	if (BG_SiegeGetValueGroup(siege_info, teamstr, gParseObjectives))
+	if (BG_SiegeGetValueGroup(siege_info, teamstr, gParseObjectives, sizeof( gParseObjectives )))
 	{
 		Com_sprintf(objectivestr, sizeof(objectivestr), "Objective%i", ent->objective);
 
-		if (BG_SiegeGetValueGroup(gParseObjectives, objectivestr, desiredobjective))
+		if (BG_SiegeGetValueGroup(gParseObjectives, objectivestr, desiredobjective, sizeof( desiredobjective )))
 		{
-			if (BG_SiegeGetPairedValue(desiredobjective, "final", teamstr))
+			if (BG_SiegeGetPairedValue(desiredobjective, "final", teamstr, sizeof( teamstr )))
 			{
 				final = atoi(teamstr);
 			}

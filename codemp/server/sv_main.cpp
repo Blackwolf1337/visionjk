@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -36,7 +37,6 @@ cvar_t	*sv_snapsPolicy;		// 0-2
 cvar_t	*sv_fps = NULL;				// time rate for running non-clients
 cvar_t	*sv_timeout;			// seconds without any message
 cvar_t	*sv_zombietime;			// seconds to sink messages after disconnect
-cvar_t	*sv_rconPassword;		// password for remote server commands
 cvar_t	*sv_privatePassword;	// password for the privateClient slots
 cvar_t	*sv_maxclients;
 cvar_t	*sv_privateClients;		// number of clients reserved for password
@@ -60,7 +60,9 @@ cvar_t	*sv_maxPing;
 cvar_t	*sv_gametype;
 cvar_t	*sv_pure;
 cvar_t	*sv_floodProtect;
-cvar_t	*sv_floodProtectSlow;
+cvar_t	*sv_floodBurst;
+cvar_t	*sv_floodRate;
+cvar_t	*sv_floodQueue;
 cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_needpass;
 cvar_t	*sv_filterCommands; // strict filtering on commands (1: strip ['\r', '\n'], 2: also strip ';')
@@ -132,6 +134,11 @@ void SV_AddServerCommand( client_t *client, const char *cmd ) {
 	// we check == instead of >= so a broadcast print added by SV_DropClient()
 	// doesn't cause a recursive drop client
 	if ( client->reliableSequence - client->reliableAcknowledge == MAX_RELIABLE_COMMANDS + 1 ) {
+		// (the TV of the server is in no slot: it ends, nobody is dropped, sv_tv.cpp)
+		if ( client == SV_TVClient() ) {
+			SV_TVStop( "server command overflow" );
+			return;
+		}
 		Com_Printf( "===== pending server commands =====\n" );
 		for ( i = client->reliableAcknowledge + 1 ; i <= client->reliableSequence ; i++ ) {
 			Com_Printf( "cmd %5d: %s\n", i, client->reliableCommands[ i & (MAX_RELIABLE_COMMANDS-1) ] );
@@ -185,6 +192,10 @@ void QDECL SV_SendServerCommand(client_t *cl, const char *fmt, ...) {
 	// send the data to all relevent clients
 	for (j = 0, client = svs.clients; j < sv_maxclients->integer ; j++, client++) {
 		SV_AddServerCommand( client, (char *)message );
+	}
+	// and to the TV of the server (sv_tv.cpp)
+	if ( SV_TVClient() ) {
+		SV_AddServerCommand( SV_TVClient(), (char *)message );
 	}
 }
 
@@ -327,7 +338,8 @@ static leakyBucket_t *SVC_BucketForAddress( const netadr_t *address, int burst, 
 	static std::map<int, leakyBucket_t> bucketMap;
 	static int lastGC = 0;
 
-	if (address->type != NA_IP) {
+	// (a peer of the web host shares the bucket of its address with the UDP peers of that address)
+	if (!NET_AdrHasIP(address)) {
 		return NULL;
 	}
 
@@ -438,7 +450,8 @@ void SVC_Status( const netadr_t *from ) {
 	if(strlen(Cmd_Argv(1)) > 128)
 		return;
 
-	Q_strncpyz( infostring, Cvar_InfoString( CVAR_SERVERINFO ), sizeof( infostring ) );
+	// (with room for the challenge: a full server info had no room left for it, and the reply was thrown away)
+	Q_strncpyz( infostring, Cvar_InfoStringRoom( CVAR_SERVERINFO, (int)strlen( Cmd_Argv( 1 ) ) + 12 ), sizeof( infostring ) );
 
 	// echo back the parameter to status. so master servers can use it as a challenge
 	// to prevent timed spoofed reply packets that add ghost servers
@@ -554,73 +567,30 @@ void SVC_Info( const netadr_t *from ) {
 }
 
 /*
-================
-SVC_FlushRedirect
-
-================
-*/
-void SV_FlushRedirect( char *outputbuf ) {
-	NET_OutOfBandPrint( NS_SERVER, &svs.redirectAddress, "print\n%s", outputbuf );
-}
-
-/*
 ===============
-SVC_RemoteCommand
+SVC_NoRemoteCommand
 
-An rcon packet arrived from the network.
-Shift down the remaining args
-Redirect all printfs
+An rcon packet arrived from the network. This server takes none: the password went over the wire in the clear
+with every command, anybody could try passwords at the rate of the limiter, and what a command printed went
+back to an address nobody had checked. The web panel of the game module does that work (docs/japlus/webadmin.md),
+the console of the server stays. The sender is told so, at most once a second, and the intrusion detection
+counts every one of them.
 ===============
 */
-void SVC_RemoteCommand( const netadr_t *from, msg_t *msg ) {
-	qboolean	valid;
-	char		remaining[1024];
-	// TTimo - scaled down to accumulate, but not overflow anything network wise, print wise etc.
-	// (OOB messages are the bottleneck here)
-#define	SV_OUTPUTBUF_LENGTH	(1024 - 16)
-	char		sv_outputbuf[SV_OUTPUTBUF_LENGTH];
-	char		*cmd_aux;
+static void SVC_NoRemoteCommand( const netadr_t *from ) {
+	static int	lastTime;
+	const int	now = Sys_Milliseconds();
 
-	if ( !strlen( sv_rconPassword->string ) ||
-		strcmp (Cmd_Argv(1), sv_rconPassword->string) ) {
-		valid = qfalse;
-		Com_Printf ("Bad rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2) );
-	} else {
-		valid = qtrue;
-		Com_Printf ("Rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2) );
+	if ( now - lastTime < 1000 && now >= lastTime ) {
+		return;
 	}
-
-	// start redirecting all print outputs to the packet
-	svs.redirectAddress = *from;
-	Com_BeginRedirect (sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect);
-
-	if ( !strlen( sv_rconPassword->string ) ) {
-		Com_Printf ("No rconpassword set.\n");
-	} else if ( !valid ) {
-		Com_Printf ("Bad rconpassword.\n");
-	} else {
-		remaining[0] = 0;
-
-		// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=543
-		// get the command directly, "rcon <pass> <command>" to avoid quoting issues
-		// extract the command by walking
-		// since the cmd formatting can fuckup (amount of spaces), using a dumb step by step parsing
-		cmd_aux = Cmd_Cmd();
-		cmd_aux+=4;
-		while(cmd_aux[0]==' ')
-			cmd_aux++;
-		while(cmd_aux[0] && cmd_aux[0]!=' ') // password
-			cmd_aux++;
-		while(cmd_aux[0]==' ')
-			cmd_aux++;
-
-		Q_strcat( remaining, sizeof(remaining), cmd_aux);
-
-		Cmd_ExecuteString (remaining);
-	}
-
-	Com_EndRedirect ();
+	lastTime = now;
+	Com_Printf( "rcon from %s: this server takes no remote commands\n", NET_AdrToString( from ) );
+	NET_OutOfBandPrint( NS_SERVER, from, "print\nThis server has no rcon.\n" );
 }
+
+// a connectionless packet is a few words, the longest (connect, with a userinfo) well under this
+#define SVC_MAX_SIZE	1400
 
 // dos protection whitelist
 
@@ -657,7 +627,7 @@ void SVC_LoadWhitelist( void ) {
 void SVC_WhitelistAdr( const netadr_t *adr ) {
 	fileHandle_t f;
 
-	if (adr->type != NA_IP) {
+	if (!NET_AdrHasIP(adr)) {
 		return;
 	}
 
@@ -678,7 +648,7 @@ void SVC_WhitelistAdr( const netadr_t *adr ) {
 }
 
 static qboolean SVC_IsWhitelisted( const netadr_t *adr ) {
-	if (adr->type == NA_IP) {
+	if (NET_AdrHasIP(adr)) {
 		return (qboolean)(svc_whitelist.find(adr->ipi) != svc_whitelist.end());
 	} else {
 		return qtrue;
@@ -712,6 +682,7 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			if (com_developer && com_developer->integer) {
 				Com_Printf("SV_ConnectionlessPacket: Rate limit from %s exceeded, dropping request\n", NET_AdrToString(from));
 			}
+			SV_IDS_Event( from, NULL, IDS_OOB_FLOOD, NULL );
 			return;
 		}
 	}
@@ -734,6 +705,11 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		Com_Printf("SV_ConnectionlessPacket: Rate limit exceeded, dropped %d requests\n", dropped);
 		dropped = 0;
 		lastMsg = now;
+	}
+
+	if ( msg->cursize > SVC_MAX_SIZE ) {
+		SV_IDS_Event( from, NULL, IDS_OOB_SIZE, va( "%i bytes", msg->cursize ) );
+		return;
 	}
 
 	MSG_BeginReadingOOB( msg );
@@ -762,16 +738,22 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 	} else if (!Q_stricmp(c, "ipAuthorize")) {
 		// ...
 	} else if (!Q_stricmp(c, "rcon")) {
-		SVC_RemoteCommand( from, msg );
+		SV_IDS_Event( from, NULL, IDS_RCON, NULL );
+		SVC_NoRemoteCommand( from );
 	} else if (!Q_stricmp(c, "disconnect")) {
 		// if a client starts up a local server, we may see some spurious
 		// server disconnect messages when their new server sees our final
 		// sequenced messages to the old client
+	} else if ( !com_dedicated->integer && ( !Q_stricmpn( c, "store", 5 ) || !Q_stricmpn( c, "ids", 3 ) ) ) {
+		// VisionJK: the masterserver to the client of this game (cl_master.cpp, cl_reputation.cpp), whose packets
+		// come here while it runs a server itself. The client looks at the sender.
+		CL_ConnectionlessPacket( from, msg );
 	} else {
 		if ( com_developer->integer ) {
 			Com_Printf( "bad connectionless packet from %s:\n%s\n",
 				NET_AdrToString( from ), s );
 		}
+		SV_IDS_Event( from, NULL, IDS_OOB_UNKNOWN, s );
 	}
 }
 
@@ -783,6 +765,19 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 SV_ReadPackets
 =================
 */
+// qtrue: a client plays from this very address and port with this qport
+static qboolean SV_PacketFromClient( const netadr_t *from, int qport ) {
+	int			i;
+	client_t	*cl;
+
+	for ( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ ) {
+		if ( cl->state != CS_FREE && cl->netchan.qport == qport && NET_CompareAdr( from, &cl->netchan.remoteAddress ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	int			i;
 	client_t	*cl;
@@ -790,6 +785,10 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 
 	// check for connectionless packet (0xffffffff) first
 	if ( msg->cursize >= 4 && *(int *)msg->data == -1) {
+		// not from an address the intrusion detection has blocked, see sv_ids.cpp
+		if ( SV_IDS_Blocked( from ) ) {
+			return;
+		}
 		SV_ConnectionlessPacket( from, msg );
 		return;
 	}
@@ -799,6 +798,15 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	MSG_BeginReadingOOB( msg );
 	MSG_ReadLong( msg );				// sequence number
 	qport = MSG_ReadShort( msg ) & 0xffff;
+
+	// The voice chat can come in on this socket too (sv_voice.cpp). Its datagrams are looked for in this place
+	// and no other: after the packets of a client whose address and port are known, because the packet with
+	// the sequence number 85846 of every client starts with the bytes of such a datagram, and before a client
+	// is looked for by address and qport alone, because two bytes of such a datagram would be read as a qport
+	// and pull the port of that client over to the socket of his voice chat.
+	if ( !SV_PacketFromClient( from, qport ) && SV_VoicePacket( from, msg ) ) {
+		return;
+	}
 
 	// find which client the message is from
 	for (i=0, cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++) {
@@ -818,6 +826,16 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 		// some address translating routers periodically change UDP
 		// port assignments
 		if (cl->netchan.remoteAddress.port != from->port) {
+#ifdef DEDICATED
+			// The port of a peer of the web host (NA_WEB) is the one of its connection and does not change
+			// while that is open: this packet is from another socket of the address, and the channel of a
+			// client is not pulled over to it. A client whose socket is gone goes on from its next one,
+			// which is what the client in a page does (codemp/qcommon/net/net_ws.cpp). Nothing is answered: a
+			// "disconnect" would end that client while its old socket is not yet known to be gone.
+			if ( from->type == NA_WEB && SV_WebPeerOpen( &cl->netchan.remoteAddress ) ) {
+				return;
+			}
+#endif
 			Com_Printf( "SV_ReadPackets: fixing up a translated port\n" );
 			cl->netchan.remoteAddress.port = from->port;
 		}
@@ -831,6 +849,8 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 				cl->lastPacketTime = svs.time;	// don't timeout
 				SV_ExecuteClientMessage( cl, msg );
 			}
+		} else if ( netchan_anomaly && cl->state != CS_ZOMBIE ) {
+			SV_IDS_Event( from, cl, IDS_FRAGMENT, NULL );
 		}
 		return;
 	}
@@ -1206,7 +1226,11 @@ void SV_Frame( int msec ) {
 		cvar_modifiedFlags &= ~CVAR_SERVERINFO;
 	}
 	if ( cvar_modifiedFlags & CVAR_SYSTEMINFO ) {
+#ifdef VISIONJK_IDS_TEST
+		SV_SetConfigstring( CS_SYSTEMINFO, SV_IDSTest_SystemInfo( Cvar_InfoString_Big( CVAR_SYSTEMINFO ) ) );
+#else
 		SV_SetConfigstring( CS_SYSTEMINFO, Cvar_InfoString_Big( CVAR_SYSTEMINFO ) );
+#endif
 		cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
 	}
 
@@ -1228,7 +1252,9 @@ void SV_Frame( int msec ) {
 		sv.time += frameMsec;
 
 		// let everything in the world think and move
+		Com_LoadPush( "frame: game", NULL );
 		GVM_RunFrame( sv.time );
+		Com_LoadPop();
 	}
 
 	//rww - RAGDOLL_BEGIN
@@ -1241,6 +1267,9 @@ void SV_Frame( int msec ) {
 
 	// check timeouts
 	SV_CheckTimeouts();
+
+	// commands that waited for the flood protection
+	SV_FloodFrame();
 
 	// send messages back to the clients
 	SV_SendClientMessages();

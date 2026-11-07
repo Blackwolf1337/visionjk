@@ -3,6 +3,7 @@
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -38,9 +39,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VERSION_STRING_DOTTED XSTRING(VERSION_MAJOR_RELEASE) "." XSTRING(VERSION_MINOR_RELEASE) "." XSTRING(VERSION_EXTERNAL_BUILD) "." XSTRING(VERSION_INTERNAL_BUILD) // "a.b.c.d"
 
 #if defined(_DEBUG)
-	#define	JK_VERSION		"(debug)OpenJK: " GIT_TAG
+	#define	JK_VERSION		"(debug)VisionJK: " GIT_TAG
 	#define JK_VERSION_OLD	"(debug)JA: v" VERSION_STRING_DOTTED
 #else
-	#define	JK_VERSION		"OpenJK: " GIT_TAG
+	#define	JK_VERSION		"VisionJK: " GIT_TAG
 	#define JK_VERSION_OLD	"JA: v" VERSION_STRING_DOTTED
 #endif

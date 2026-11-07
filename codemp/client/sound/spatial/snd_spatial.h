@@ -1,0 +1,69 @@
+/*
+===========================================================================
+Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
+
+This file is part of the OpenJK source code.
+
+OpenJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
+#pragma once
+
+// snd_spatial.cpp: sound that knows the level, with Steam Audio. See docs/japlus/audio.md.
+
+#define SPATIAL_FRAME	1024	// samples Steam Audio works on at a time, the size of the paint buffer
+
+// of snd_local.h, for the files that only start and stop this
+typedef struct channel_s channel_t;
+typedef struct sfx_s sfx_t;
+typedef struct portable_samplepair_s portable_samplepair_t;
+
+void		S_SpatialInit( void );			// the sound device is open: dma.speed is known
+void		S_SpatialShutdown( void );
+qboolean	S_SpatialBakeRunning( void );	// a bake of the paths was left to run to its end (Sys_Exit)
+qboolean	S_SpatialActive( void );		// v_spatial is on, the library is there and a level is loaded
+void		S_SpatialLoadMap( const char *mapname );	// the collision model of a level was loaded
+void		S_SpatialUpdate( void );		// once a frame: a level that was loaded is taken over when that is safe
+
+// once a frame, from S_Update_(): where the listener hears from (his head, S_SpatialHearing()), the axis of his
+// camera, every sound with a place in the level, then render ahead
+void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis );
+// what is left of a sound at a distance: the game's fade, or with v_spatialPhysical that of a real source
+float		S_SpatialFade( float dist, int channel );
+// volume: how loud the game plays it, 0 to 1. fade: what is left of that at its distance in a straight line
+qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume );
+// a sound of the own player: the mixer goes on playing it, only the reverb gets it
+void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume );
+qboolean	S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade );
+void		S_SpatialEndFrame( int from, int target );
+float		S_SpatialAhead( void );
+
+// from the cgame (ext.S_SpatialVoice): the voice of a player of the voice chat as a sound in the level, or the song
+// of a box of the boombox (clientNum MAX_CLIENTS and up, v_spatialBoxes of them).
+// Returns the samples of him that wait, at his rate, or -1 if the cgame has to play him itself.
+int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
+// from the cgame (ext.S_SpatialOwnVoice): what the own player says into the voice chat, only for the reverb
+void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate );
+
+// v_spatialDebug: a sound no voice was free for (snd_dma.cpp), and from the cgame (ext.S_SpatialDebug) what to draw
+typedef struct spatialDebug_s spatialDebug_t;
+typedef struct spatialMover_s spatialMover_t;
+// from the cgame (ext.S_SpatialMovers): where the brush models of its snapshot are
+void		S_SpatialMovers( const spatialMover_t *list, int count );
+void		S_SpatialDebugFallback( const vec3_t origin, const sfx_t *sfx );
+void		S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward );
+
+// from S_PaintChannels(): adds what the voices have for the samples from to to
+void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint );

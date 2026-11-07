@@ -265,6 +265,7 @@
 
 				setitemcolor	setup_submenu		forecolor	1 .682 0 1
 				setitemcolor	soundmenubutton		forecolor	1 1 1 1
+				uiScript		getsoundsetup ;
 			}
 		}
 
@@ -641,55 +642,35 @@
 			visible			0
 			decoration
 		}
+
+		itemDef
+		{
+			name				highlight14
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				220 263 300 20
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				highlight15
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				220 283 300 20
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
 		//----------------------------------------------------------------------------------------------
 		//
 		//	VIDEO 1 MENU BUTTONS
 		//
 		//----------------------------------------------------------------------------------------------
-		itemDef 
-		{
-		   	name 			graphics				
-			group 			video
-			text			@MENUS_VIDEO_QUALITY
-	   		type 			ITEM_TYPE_MULTI	
-			rect			220 41 300 20
-	   		textalign		ITEM_ALIGN_RIGHT
-			textalignx		165
-			textaligny		0
-			font 			4
-			textscale 		1
-			style			WINDOW_STYLE_FILLED
-			forecolor		.615 .615 .956 1
-			descText		@MENUS_SELECT_PRESET_GRAPHIC
-
-	   		visible 		0
-
-			cvar 			"ui_r_glCustom"
-			cvarFloatList 
-			{ 
-				@MENUS_HIGH_QUALITY	0 
-				@MENUS_NORMAL		1 
-				@MENUS_FAST			2 
-				@MENUS_FASTEST		3 
-				@MENUS_CUSTOM		4 
-			}
-
-			mouseenter 
-			{ 
-				show			highlight1
-			}
-			mouseexit 
-			{ 
-				hide			highlight1
-			} 
-			action 
-			{ 
-				play			"sound/interface/button1"
-				uiScript 		update "ui_r_glCustom"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
 
 		itemDef 
 		{	
@@ -697,10 +678,11 @@
 			group				video
       		type				ITEM_TYPE_MULTI
 			text				@MENUS_VIDEO_MODE
-			cvarFloatList		{  @MENUS_640_X_480 3 @MENUS_800_X_600 4  @MENUS_1024_X_768 6 @MENUS_1152_X_864 7  @MENUS_1280_X_1024 8  @MENUS_1600_X_1200 9  @MENUS_2048_X_1536 10 @MENUS_2400_X_600 12 }
-			cvar				"ui_r_mode"
+			feeder				46
+			cvarStrList			feeder
+			cvar				"ui_r_resolution"
 
-			rect				220 83 300 20
+			rect				220 43 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -713,54 +695,15 @@
 
 			mouseenter 
 			{ 
-				show			highlight3
+				show			highlight1
 			}
 			mouseexit 
 			{ 
-				hide			highlight3
+				hide			highlight1
 			} 
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				color_depth
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_COLOR_DEPTH
-			rect				220 103 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-
-			cvarFloatList		{  @MENUS_DEFAULT 0 @MENUS_16_BIT 16 @MENUS_32_BIT 32 }
-			descText			@MENUS_CHANGE_THE_NUMBER_OF
-			cvar				"ui_r_colorbits"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight4
-			}
-			mouseexit 
-			{ 
-				hide			highlight4
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
-				uiScript update "ui_r_colorbits"
 				setcvar			ui_r_modified	1
 				show			applyChanges
 			}
@@ -771,8 +714,8 @@
 			name				fullscreen
 			group				video
 			type				ITEM_TYPE_MULTI
-			text				@MENUS_FULL_SCREEN
-			rect				220 123 300 20
+			text				"Display Mode:"
+			rect				220 63 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -780,205 +723,23 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_TOGGLE_BETWEEN_FULL_SCREEN
-			cvar				"ui_r_fullscreen"
+			cvarFloatList		{  "Window" 0 "Fullscreen" 1 "Borderless" 2 }
+			descText			"A window, the whole screen, or a window without a border"
+			cvar				"ui_r_displaymode"
 
 			visible			0
 
 			mouseenter 
 			{ 
-				show			highlight5
+				show			highlight2
 			}
 			mouseexit 
 			{ 
-				hide			highlight5
+				hide			highlight2
 			} 
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				geometric_detail
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_GEOMETRIC_DETAIL
-			rect				220 143 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_LOW 2 @MENUS_MEDIUM 1 @MENUS_HIGH 0 }
-			descText			@MENUS_ADJUST_THE_NUMBER_OF
-			cvar				"ui_r_lodbias"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight6
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
-				uiScript update "ui_r_lodbias"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_detail
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_DETAIL
-			rect				220 163 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_LOW 3 @MENUS_MEDIUM 2 @MENUS_HIGH 1 @MENUS_VERY_HIGH 0 }
-			descText			@MENUS_SELECT_THE_RESOLUTION
-			cvar				"ui_r_picmip"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight7
-			}
-			mouseexit 
-			{ 
-				hide			highlight7
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_quality
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_QUALITY
-			rect				220 183 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_DEFAULT 0 @MENUS_16_BIT 16 @MENUS_32_BIT 32 }
-			descText			@MENUS_SELECT_THE_NUMBER_OF
-			cvar				"ui_r_texturebits"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-			action 
-			{
-				play			"sound/interface/button1.wav"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				texture_filter
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_FILTER
-			rect				220 203 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarStrList		{  @MENUS_BILINEAR , "GL_LINEAR_MIPMAP_NEAREST" , @MENUS_TRILINEAR , "GL_LINEAR_MIPMAP_LINEAR" }
-			descText			@MENUS_ADJUST_HOW_WELL_THE_TEXTURES
-			cvar				"ui_r_texturemode"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight9
-			}
-			mouseexit 
-			{ 
-				hide			highlight9
-			} 
-			action 
-			{
-				play			"sound/interface/button1.wav"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				simple_shaders
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_DETAILED_SHADERS
-			rect				220 223 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_HIDE_OR_UNHIDE_TEXTURES
-			cvar				"ui_r_detailtextures"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight10
-			}
-			mouseexit 
-			{ 
-				hide			highlight10
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
 				setcvar			ui_r_modified	1
 				show			applyChanges
 			}
@@ -996,7 +757,7 @@
 				@MENUS_OFF 0  
 				@MENUS_ON 1 
 			}
-			rect				220 243 300 20
+			rect				220 103 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -1013,45 +774,44 @@
 
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight4
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight4
 			} 
 		}
 
 		itemDef 
 		{	
-			name				compress_textures
-			group				video_obsolete
+			name				antialiasing
+			group				video
 			type				ITEM_TYPE_MULTI
-			text				@MENUS_COMPRESSED_TEXTURES
-			rect				220 243 300 20
+			text				"Anti-Aliasing:"
+			rect				220 83 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
 			font 				4
 			textscale 			1
 			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_TAKE_ADVANTAGE_OF_3D
-			cvar				"ui_r_ext_compress_textures"
+			cvarFloatList		{  @MENUS_OFF 0 "2x" 2 "4x" 4 "8x" 8 }
+			descText			"Smooths the edges, costs speed"
+			cvar				"ui_r_ext_multisample"
 
 			visible				0
 
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight3
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight3
 			} 
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		glCustom
 				setcvar			ui_r_modified	1
 				show			applyChanges
 			}
@@ -1329,89 +1089,15 @@
 
 
 		itemDef 
-		{			
-			name				dynamic_light
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				@MENUS_DYNAMIC_LIGHTS
-			cvar				"r_dynamiclight"	
-			cvarFloatList		
-			{ 
-				@MENUS_OFF 0  
-				@MENUS_ON 1 
-			}
-			rect				220 183 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible			0
-			// appearance_slot		1
-			descText			@MENUS_TOGGLE_TO_TURN_ON_MOVING
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-		}
-
-		itemDef 
-		{			
-			name				wall_marks
-			group				video2
-      		type				ITEM_TYPE_MULTI
-			text				@MENUS_WALL_MARKS
-			cvar				"cg_marks"	
-			cvarFloatList		
-			{ 
-				@MENUS_OFF 0  
-				@MENUS_ON 1 
-			}
-			rect				220 203 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible			0
-			// appearance_slot		1
-			descText			@MENUS_TOGGLE_TO_DISPLAY_SCORCH
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-
-			mouseenter 
-			{ 
-				show			highlight9
-			}
-			mouseexit 
-			{ 
-				hide			highlight9
-			} 
-		}
-
-		itemDef 
 		{	
-			name				video_mode
+			name				anisotropic_filter
 			group				video2
 			type				ITEM_TYPE_SLIDER
 			text				@MENUS_ANISOTROPIC_FILTERING
 			cvarTest			r_ext_texture_filter_anisotropic_avail
 			disableCvar			{ 0 }     
 			cvarfloat				r_ext_texture_filter_anisotropic 1 .5 16
-			rect				220 223 300 20
+			rect				220 163 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -1429,11 +1115,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight7
 			} 
 		}
 
@@ -1479,100 +1165,6 @@
 		JA+ new vido option
 		////////////////////
 		*/
-		itemDef 
-		{	
-			name				cg_shadows
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				"Shadows Type"
-			cvar				cg_shadows
-			cvarFloatList		
-			{  
-				"No Shadow" 	0 
-				"Default" 	1 
-				"More Realistic" 	2
-				"Realistic" 	3
-			}
-			rect				220 243 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			"select the player Shadow type"
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			cg_shadows_glow
-			}
-			mouseexit 
-			{ 
-				hide			cg_shadows_glow
-			} 
-		}
-		itemDef
-		{
-			name				cg_shadows_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				220 245 300 20
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-		
-		itemDef 
-		{	
-			name				cg_renderToTextureFX
-			group				video2
-      			type				ITEM_TYPE_MULTI
-			text				"Render To TextureFX"
-			cvar				cg_renderToTextureFX
-			cvarFloatList		
-			{  
-				@MENUS_OFF 	0 
-				@MENUS_ON 	1
-				
-			}
-			rect				220 263 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor			0.65 0.65 1 1
-			visible				0
-			descText			"Reduce some laggy effects(cloak, push blur, protected spheres ...) on some ATI video cards"
-			action
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-			mouseenter 
-			{ 
-				show			cg_renderToTextureFX_glow
-			}
-			mouseexit 
-			{ 
-				hide			cg_renderToTextureFX_glow
-			} 
-		}
-		itemDef
-		{
-			name				cg_renderToTextureFX_glow
-			group				highlights
-			style				WINDOW_STYLE_SHADER
-			rect				220 265 300 20
-			background			"gfx/menus/menu_blendbox"
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
 
 		//----------------------------------------------------------------------------------------------
 		//
@@ -1677,12 +1269,12 @@
 
 		itemDef 
 		{	
-			name				sound_quality
+			name				spatial_quality
 			group				sound
       		type				ITEM_TYPE_MULTI
-			text				@MENUS_SOUND_QUALITY
-			cvar				"s_khz"
-			cvarFloatList		{ @MENUS_LOW 11  @MENUS_HIGH 22 }
+			text				"3D Sound:"
+			cvar				"v_spatialQuality"
+			cvarFloatList		{  @MENUS_OFF 0 @MENUS_LOW 1 @MENUS_MEDIUM 2 @MENUS_HIGH 3 @MENUS_VERY_HIGH 4 @MENUS_CUSTOM 5 }
 			rect				220 141 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1691,9 +1283,7 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 			visible			0
-			descText			@MENUS_TRADE_CLARITY_OF_SOUND
-			cvarTest			"s_UseOpenAL"
-			hideCvar			{ 1 }
+			descText			"Steam Audio: sound that knows the level. Needs its library next to the game"
 
 			mouseenter 
 			{ 
@@ -1706,31 +1296,27 @@
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		update 	"s_khz"
+				uiScript		update 	v_spatialQuality
 			}
 		}
+
 		itemDef 
-		{
-			name				eax
+		{	
+			name				spatial_output
 			group				sound
-			type				ITEM_TYPE_MULTI
-			cvar				"s_UseOpenAL"
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			text				@MENUS_EAX
+      		type				ITEM_TYPE_MULTI
+			text				"Output:"
+			cvar				"v_spatialHrtf"
+			cvarFloatList		{  "Headphones" 1 "Speakers" 0 }
 			rect				220 181 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			120
+			textalignx			165
 			textaligny			0
 			font 				4
 			textscale 			1
 			forecolor		.615 .615 .956 1
 			visible			0
-			descText			@MENUS_EAX_DESC
-			action 
-			{ 
-				play			"sound/interface/button1.wav"
-				uiScript		update s_khz
-			}
+			descText			"3D Sound: direction for two ears, or plain panning for speakers"
 
 			mouseenter 
 			{ 
@@ -1740,20 +1326,41 @@
 			{ 
 				hide			highlight8
 			} 
+			action 
+			{
+				play			"sound/interface/button1"
+			}
 		}
 
-		itemDef
+		itemDef 
 		{
-			name				eax_icon
+			name				spatial_reverb
 			group				sound
-			style				WINDOW_STYLE_SHADER
-			rect				297 201 128 64
-			background			"gfx/menus/eax"
-			forecolor			1 1 1 1
-			visible				1
-			decoration
-			cvarTest			"s_UseOpenAL"
-			hideCvar			{ 0 }
+			type				ITEM_TYPE_SLIDER
+			text				"Reverb:"
+			cvarfloat			"v_spatialReverb" 1 0 2
+			rect				220 221 300 20
+	   		textalign			ITEM_ALIGN_RIGHT
+			textalignx			120
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible				0
+			descText			"3D Sound: how loud the rooms ring"
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+
+			mouseenter 
+			{ 
+				show			highlight10
+			}
+			mouseexit 
+			{ 
+				hide			highlight10
+			} 
 		}
 
 		//----------------------------------------------------------------------------------------------
@@ -1767,7 +1374,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Voice Chat:"
-			cvar				"cg_voice"
+			cvar				"v_voice"
 			rect				220 41 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1776,7 +1383,7 @@
 			textscale			1
 			forecolor			.615 .615 .956 1
 			visible				0
-			descText			"Talk to and hear other players, on servers that have a voice chat."
+			descText			"Talk to and hear other players with your microphone."
 			action
 			{
 				play			"sound/interface/button1"
@@ -1797,7 +1404,7 @@
 			group				voicechat
 			type				ITEM_TYPE_MULTI
 			text				"Mode:"
-			cvar				"cg_voiceMode"
+			cvar				"v_voiceMode"
 			cvarFloatList		{ "Push To Talk" 1 "Voice Activation" 2 }
 			rect				220 61 300 20
 			textalign			ITEM_ALIGN_RIGHT
@@ -1828,7 +1435,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Volume:"
-			cvarfloat			"cg_voiceVolume" 1 0 2
+			cvarfloat			"v_voiceVolume" 1 0 2
 			rect				220 81 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1858,7 +1465,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Microphone Gain:"
-			cvarfloat			"cg_voiceMicGain" 1 0 3
+			cvarfloat			"v_voiceMicGain" 1 0 3
 			rect				220 101 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1888,7 +1495,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Activation Level:"
-			cvarfloat			"cg_voiceThreshold" 0.02 0 0.2
+			cvarfloat			"v_voiceThreshold" 0.02 0 0.2
 			rect				220 121 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1918,7 +1525,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Muffle Behind Walls:"
-			cvar				"cg_voiceMuffle"
+			cvar				"v_voiceMuffle"
 			rect				220 141 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1947,8 +1554,8 @@
 			name				voicechat7
 			group				voicechat
 			type				ITEM_TYPE_YESNO
-			text				"Show Who Talks:"
-			cvar				"cg_voiceDrawTalkers"
+			text				"Talking Players List:"
+			cvar				"v_voiceDrawTalkers"
 			rect				220 161 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -1971,6 +1578,157 @@
 				hide			highlight7
 			}
 		}
+
+		itemDef
+		{
+			name				voicechat8
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Voice via Masterserver:"
+			cvar				"v_voiceMaster"
+			rect				220 181 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"Servers without voice: use master.jka.vision, which sees your address."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight8
+			}
+			mouseexit
+			{
+				hide			highlight8
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat9
+			group				voicechat
+			type				ITEM_TYPE_SLIDER
+			text				"Own Voice In The Room:"
+			cvarfloat			"v_voiceOwnReverb" 1 0 2
+			rect				220 201 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"With spatial sound: how loud the room rings from what you say yourself."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight9
+			}
+			mouseexit
+			{
+				hide			highlight9
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat10
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Radio Sound:"
+			cvar				"v_voiceRadioFX"
+			rect				220 221 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"The clan radio sounds like one: narrow, a little rough, with a click."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight10
+			}
+			mouseexit
+			{
+				hide			highlight10
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat11
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Chat Bubbles:"
+			cvar				"v_chatBubbles"
+			rect				220 241 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"What a player says stands above his head, and dots while he types."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight11
+			}
+			mouseexit
+			{
+				hide			highlight11
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat12
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Show My Music:"
+			cvar				"v_shareMusic"
+			rect				220 261 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"The others see above your head what you listen to (Spotify, YT Music)."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight12
+			}
+			mouseexit
+			{
+				hide			highlight12
+			}
+		}
+
 
 		//----------------------------------------------------------------------------------------------
 		//
@@ -2091,15 +1849,15 @@
 
 		itemDef 
 		{	
-			name				defermodels
+			name				teamchatsonly
 			group				options
       		type				ITEM_TYPE_MULTI
-			text				@MENUS_DEFER_PLAYER_MODELS
-			cvar				"cg_deferPlayers"
+			text				@MENUS_TEAM_CHATS_ONLY
+			cvar				"cg_teamChatsOnly"
 			cvarFloatList		
 			{ 
-				@MENUS_OFF				0
-				@MENUS_ON					1
+				@MENUS_NO				0
+				@MENUS_YES			1
 			}
 			rect				220 101 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
@@ -2109,7 +1867,7 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 			visible				0
-			descText			@MENUS_DEFERS_LOADING_OF_NEW
+			descText			@MENUS_IGNORE_NON_TEAM_CHATS
 			action 
 			{ 
 				play			"sound/interface/button1"
@@ -2127,15 +1885,15 @@
 
 		itemDef 
 		{	
-			name				teamchatsonly
+			name				simpleitems
 			group				options
       		type				ITEM_TYPE_MULTI
-			text				@MENUS_TEAM_CHATS_ONLY
-			cvar				"cg_teamChatsOnly"
+			text				@MENUS_SIMPLE_ITEMS
+			cvar				"cg_simpleItems"
 			cvarFloatList		
 			{ 
-				@MENUS_NO				0
-				@MENUS_YES			1
+				@MENUS_OFF		0
+				@MENUS_ON			1
 			}
 			rect				220 121 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
@@ -2145,7 +1903,7 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 			visible				0
-			descText			@MENUS_IGNORE_NON_TEAM_CHATS
+			descText			@MENUS_RENDER_ICONS_FOR_ITEMS
 			action 
 			{ 
 				play			"sound/interface/button1"
@@ -2163,42 +1921,6 @@
 
 		itemDef 
 		{	
-			name				simpleitems
-			group				options
-      		type				ITEM_TYPE_MULTI
-			text				@MENUS_SIMPLE_ITEMS
-			cvar				"cg_simpleItems"
-			cvarFloatList		
-			{ 
-				@MENUS_OFF		0
-				@MENUS_ON			1
-			}
-			rect				220 141 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible				0
-			descText			@MENUS_RENDER_ICONS_FOR_ITEMS
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-
-			mouseenter 
-			{ 
-				show			highlight6
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-			} 
-		}
-
-		itemDef 
-		{	
 			name				teamoverlay
 			group				options
       		type				ITEM_TYPE_MULTI
@@ -2209,7 +1931,7 @@
 				@MENUS_OFF		0
 				@MENUS_ON			1
 			}
-			rect				220 161 300 20
+			rect				220 141 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2225,11 +1947,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight7
+				show			highlight6
 			}
 			mouseexit 
 			{ 
-				hide			highlight7
+				hide			highlight6
 			} 
 		}
 
@@ -2252,7 +1974,7 @@
 			{
 				"0"
 			}
-			rect				220 181 300 20
+			rect				220 161 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2270,11 +1992,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight8
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight8
+				hide			highlight7
 			} 
 		}
 
@@ -2296,7 +2018,7 @@
 			{
 				"0"
 			}
-			rect				220 181 300 20
+			rect				220 161 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2314,11 +2036,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight8
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight8
+				hide			highlight7
 			} 
 		}
 
@@ -2337,7 +2059,7 @@
 				@MENUS_SOUNDS_AND_EFFECTS	2
 				@MENUS_SOUNDS_EFFECTS_GRAPHICS	3
 			}
-			rect				220 201 300 20
+			rect				220 181 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2351,11 +2073,11 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight9
+				show			highlight8
 			}
 			mouseexit 
 			{ 
-				hide			highlight9
+				hide			highlight8
 			} 
 		}
 
@@ -2368,7 +2090,7 @@
 			cvar				"se_language"
 			feeder				40
 			cvarStrList			feeder
-			rect				220 221 300 20
+			rect				220 201 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2385,11 +2107,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight9
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight9
 			} 
 		}
 		
@@ -2407,7 +2129,7 @@
 				Deutsch   			deutsch
 				"Español" 			espanol
 			}
-			rect				220 241 300 20
+			rect				220 221 300 20
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2424,14 +2146,81 @@
 			}
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight10
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight10
 			} 
 		}
 		
+
+		// VisionJK: the update channel (a warning popup before the development builds, updatechannel.menu)
+		itemDef
+		{
+			name				updatechannel
+			group				options
+			type				ITEM_TYPE_MULTI
+			text				@VISION_UPDATE_CHANNEL
+			descText			@VISION_STABLE_THE_RELEASES_DEVELOPMENT_EARL
+			cvar				"v_updateChannel"
+			cvarStrList			{ @VISION_STABLE "stable" @VISION_DEVELOPMENT "dev" }
+			rect				220 241 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				uiScript		updateChannel updateChannelMenu ;
+			}
+			mouseenter
+			{
+				show			highlight11
+			}
+			mouseexit
+			{
+				hide			highlight11
+			}
+		}
+
+		// VisionJK: the way back to its own menus and HUD, as the New Menus button of setup.menu
+		itemDef
+		{
+			name				visionlookbutton
+			group				options
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_NEW_MENUS
+			descText			@VISION_THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+			rect				220 261 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				0
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				setcvar			v_classic 0 ;
+				setcvar			v_hud 1 ;
+				exec			"vid_restart" ;
+			}
+			mouseenter
+			{
+				show			highlight14
+			}
+			mouseexit
+			{
+				hide			highlight14
+			}
+		}
 
 		// APPLY CHANGES button
 		itemDef 
@@ -2441,7 +2230,7 @@
 			text				@MENUS_SET_LANGUAGE
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				365 261 120 32 
+			rect				365 281 120 32 
 			font				2
 			textscale			1        
 			textalign			ITEM_ALIGN_CENTER
@@ -2460,11 +2249,11 @@
 			}
 			mouseEnter 
 			{ 
-				show			highlight12
+				show			highlight13
 			}
 			mouseExit 
 			{ 
-				hide			highlight12
+				hide			highlight13
 			}	  	  
 
 		}

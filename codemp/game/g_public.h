@@ -54,6 +54,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SVF_OWNERNOTSHARED		0x00001000	// If it's owned by something and another thing owned by that something
 											// hits it, it will still touch
 
+#define SVF_NOFLOODPROTECT		0x00004000	// VisionJK: commands of this client skip the flood protection of the server (admins)
 #define	SVF_ICARUS_FREEZE		0x00008000	// NPCs are frozen, ents don't execute ICARUS commands
 
 #define SVF_GLASS_BRUSH			0x08000000	// Ent is a glass brush
@@ -1093,6 +1094,21 @@ typedef struct gameImport_s {
 	void		(*G2API_CleanEntAttachments)			( void );
 	qboolean	(*G2API_OverrideServer)					( void *serverInstance );
 	void		(*G2API_GetSurfaceName)					( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf );
+
+	// Not from OpenJK. Only an engine that sets the cvar vs_voiceShared to 1 has this block, any other ends
+	// the structure before it: look at the cvar before touching it.
+	struct {
+		// One datagram out of the UDP socket of the game: answers of the voice chat that came in there
+		// (ext.VoiceDatagram of the exports). ip: the four bytes of an IPv4 address as they go over the network.
+		void		(*SendDatagram)							( const byte *ip, int port, const byte *data, int length );
+		// Only an engine that sets the cvar vs_gameImportExt to 2 or more has these, any other ends the structure
+		// before them (WebAdmin_WrapImport leaves them NULL then). The flags of a cvar (CVAR_*, CVAR_NONEXISTENT
+		// for none), for the settings form of the web panel.
+		uint32_t	(*Cvar_Flags)							( const char *name );
+		// The cvars no code has used for a while (cvar_cleanup), one "name\tvalue\tday\n" a line, day in days since
+		// 1970, 0 for never. Returns the length, cut at a whole line where buf has no more room.
+		int			(*Cvar_UnusedList)						( char *buf, int size );
+	} ext;
 } gameImport_t;
 
 typedef struct gameExport_s {
@@ -1136,6 +1152,14 @@ typedef struct gameExport_s {
 	qboolean	(*NAV_EntIsRemovableUsable)			( int entNum );
 	void		(*NAV_FindCombatPointWaypoints)		( void );
 	int			(*BG_GetItemIndexByTag)				( int tag, int type );
+
+	// Not from OpenJK. Only a module that sets the cvar vs_voiceSharedGame to 1 has this block, any other ends
+	// the structure before it: the engine looks at the cvar before touching it.
+	struct {
+		// A datagram of the voice chat (game/voice/bg_voice.h) that came in on the UDP socket of the game.
+		// qfalse: it is none of a client of this server.
+		qboolean	(*VoiceDatagram)					( const byte *ip, int port, const byte *data, int length );
+	} ext;
 } gameExport_t;
 
 

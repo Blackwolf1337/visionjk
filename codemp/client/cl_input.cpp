@@ -922,7 +922,10 @@ CL_MouseEvent
 =================
 */
 void CL_MouseEvent( int dx, int dy, int time ) {
-	if (cls.cursorActive) {
+	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) {
+		// the console is down: the mouse moves its cursor, with which text is selected
+		Con_MouseEvent( dx, dy );
+	} else if (cls.cursorActive) {
 		CL_UpdateCursorPosition( dx, dy );
 	} else if (g_clAutoMapMode && cls.cgameStarted)
 	{ //automap input
@@ -1222,7 +1225,12 @@ void CL_CmdButtons( usercmd_t *cmd ) {
 	}
 
 	if ( Key_GetCatcher( ) ) {
-		cmd->buttons |= BUTTON_TALK;
+		// A cgame that holds the keys only to point at something says so (v_catchQuiet 1, its pointer for
+		// players and for the scoreboard): its player does not type. He is not shown as talking then, and the
+		// game module does not hold him still for it.
+		if ( Key_GetCatcher( ) != KEYCATCH_CGAME || !Cvar_VariableIntegerValue( "v_catchQuiet" ) ) {
+			cmd->buttons |= BUTTON_TALK;
+		}
 	}
 
 	// allow the game to know if any key at all is
@@ -1599,6 +1607,8 @@ void CL_WritePacket( void ) {
 	if ( cl_showSend->integer ) {
 		Com_Printf( "%i ", buf.cursize );
 	}
+
+	CL_JoinSent( buf.cursize );
 
 	CL_Netchan_Transmit (&clc.netchan, &buf);
 

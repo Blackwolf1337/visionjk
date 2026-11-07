@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VisionJK Web Admin</title>
+<style>
+<!--#include style.css -->
+</style>
+</head>
+<body>
+<div id="topbar">
+	<button id="toggleSide" title="Show or hide the side panel">&#9776;</button>
+	<div class="brand"><i></i><span>VisionJK Admin</span></div>
+	<div id="appMode"><button data-app="admin" title="The map as the game draws it, the players, the server">Administration</button><button data-app="editor" title="Placing entities and physical props, with the debug views">Editor</button></div>
+	<span class="meta" id="host"></span>
+	<span class="meta">Map <b id="map">-</b></span>
+	<span class="meta wide"><b id="gametype">-</b></span>
+	<span class="meta wide">Time <b id="time">-</b></span>
+	<span id="teamScores" class="inline" style="display:none"><span class="score red" id="scoreRed">0</span><span class="score blue" id="scoreBlue">0</span></span>
+	<span class="spacer"></span>
+	<button id="paletteBtn" title="Every command and page of the panel by name: add a bot, change the map, gravity, ...">Commands <kbd>Ctrl K</kbd></button>
+	<span id="statusBox"><span id="status" title="Connection"></span><span id="statusText">Connecting</span></span>
+	<button id="whoBtn" title="Your account" hidden><i id="whoInit"></i><span id="whoName"></span></button>
+</div>
+<!-- the pages of the panel: the map with its players (or the tools of the editor), and the pages of the server -->
+<div id="pages"><button data-tab="map" class="on" title="The map, the players and the chat (in the editor: its tools)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg><span>Map</span></button><button data-tab="tv" title="The game as a spectator sees it, in the client for the browser"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM8 21h8M12 17v4"/></svg><span>TV</span></button><button data-tab="config" title="Every setting of the server, the text of its config, and what it sets that nothing uses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"/></svg><span>Settings</span></button><button data-tab="files" title="The files of the server"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Files</span></button><button data-tab="log" title="The log of the game, the console of the server, the intrusions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 9l3 3-3 3M13 15h4"/></svg><span>Log</span></button><button data-tab="bans" title="Who is banned"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM6 6l12 12"/></svg><span>Bans</span></button><button data-tab="load" aria-label="Performance" title="How long a frame of the server takes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span>Load</span></button><button data-tab="account" title="Your password and second step, tokens, one-time codes, the accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0"/></svg><span>Account</span></button></div>
+</div>
+
+<div id="side">
+	<div id="sideGrip" title="Drag to change the width of the side panel. A double click sets the usual width again."></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on" title="Players"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6"/></svg><span>Players</span></button><button data-tab="world" data-app="editor" title="World"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/></svg><span>World</span></button><button data-tab="models" data-app="editor" title="Physical props"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l2 4v12H5V8zM5 8h14M10 12h4"/></svg><span>Physical props</span></button><button data-tab="clips" data-app="editor" title="Clips"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM3 12h18M9 5v7M15 12v7"/></svg><span>Clips</span></button><button data-tab="remaps" data-app="editor" title="Textures"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4M15 9h.01"/></svg><span>Textures</span></button><button data-tab="routes" data-app="editor" title="Routes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg><span>Routes</span></button><button data-tab="mapinfo" data-app="editor" title="Map info"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5h.01"/></svg><span>Map info</span></button></div>
+	<div class="pane on" id="pane-players">
+		<h2 id="playersHead"><span>Players</span><span id="playerCount">0</span><button id="addBotBtn" title="A bot joins the game: its name in the field of Commands">+ Add bot</button></h2>
+		<div class="scroll">
+			<table>
+				<thead><tr><th>Name</th><th class="num">HP</th><th class="num">AR</th><th class="num">Score</th><th class="num">Ping</th></tr></thead>
+				<tbody id="players"></tbody>
+			</table>
+		</div>
+		<div id="itemsInfo"></div>
+	</div>
+	<div class="pane" id="pane-models">
+		<h2><span>Physical props</span><span id="mdlCount"></span></h2>
+		<div class="tools">
+			<div class="inline"><input id="mdlFilter" placeholder="Search a model" spellcheck="false" autocomplete="off"><button id="mdlPlace" title="Then right-click on the map">Place</button></div>
+			<div id="mdlOpts">
+				<label title="Size of the model in percent. The server changes it if the longest edge would be under 8 or over 384 units.">Scale<input type="number" id="mdlScale" min="1" max="1023" value="100"></label>
+				<label title="Empty: from the size of the model. A box of 32 units has 4.">Mass<input type="number" id="mdlMass" min="0.1" max="100" step="0.1" placeholder="auto"></label>
+				<label title="model: the hull around the model, what it really looks like from outside. box: the box around it. ball: a ball as wide as it, for something round that is to roll">Shape<select id="mdlShape"><option>model</option><option>box</option><option>ball</option></select></label>
+			</div>
+			<div class="hint" id="mdlPicked" style="padding:0">Pick a model, then right-click on the map.</div>
+		</div>
+		<div id="mdlList"></div>
+		<div class="tools"><button class="danger" id="mdlClear" title="Deletes every misc_prop that was placed through the panel. The ones of the map stay, and so do the balls and cubes of the World tab.">Delete all props</button></div>
+		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with physics of its own: a body with the shape of the model that falls, tips, can be shoved, thrown, stacked and stood on. Thrown hard at somebody it hurts. It is in the list of the World tab afterwards.</div>
+	</div>
+	<div class="pane" id="pane-clips">
+		<h2><span>Clips and walls</span><span id="clipCount"></span></h2>
+		<div class="tools">
+			<div class="inline"><button id="clipNew" title="A new blocking wall: then right-click on the map. It stands on the floor there, its wide side across the view.">New wall</button>
+				<button id="clipDelete" class="danger" disabled title="The selected wall (Del)">Remove wall</button></div>
+			<div class="inline" id="clipSizes" title="How wide, deep and high the selected wall is. Even numbers: the server makes them that. The yellow handles on the map drag one face each."><label class="hint" style="margin:0">Size</label>
+				<input type="number" id="clipSizeX" step="2" min="2" disabled title="Along X"><input type="number" id="clipSizeY" step="2" min="2" disabled title="Along Y"><input type="number" id="clipSizeZ" step="2" min="2" disabled title="Height"></div>
+			<div class="inline"><button id="clipToggle" disabled title="The server stops minding the selected clip of the map, or minds it again. Off, players are let through there. A game that does not know of that still has the clip: it stops its player for a moment, then the server sets him right.">Turn off</button>
+				<button id="clipToWall" disabled title="Puts a wall of the size of the selected clip where it is and turns the clip off. The wall can be dragged and shaped, and every game is told of it.">Move it</button>
+				<button id="clipAllOn" disabled title="Every clip of the map that is off is minded again">All on again</button></div>
+			<div class="inline"><button id="clipSave" title="Writes wallblocks/&lt;map&gt;.cfg: the walls that stand and the clips that are off come back with every start of the map">Save</button>
+				<button id="clipRevert" title="Drops what was changed since the last save: the walls and the clips as the file has them">Revert to saved</button></div>
+			<div class="hint" id="clipState" style="margin:0"></div>
+		</div>
+		<div class="scroll"><table><tbody id="clipRows"></tbody></table>
+		<div class="hint" style="padding:6px 10px 0">What stops players without being seen. The clips of the map are pink, the ones that are off red, the walls violet. A click on the map selects what is under the mouse. A wall is dragged with the mouse or sent to a spot with a right-click, its yellow handles drag one face each.</div>
+		<div class="hint" style="padding:0 10px 8px">A clip is part of the map file every game has, so it can only be turned off, not moved. This game is told which ones are off and lets its player through. Another game still has the clip: it stops its player for a moment and the server then sets him right. Move it puts a wall where the clip was, which every game is told of. Nothing is kept until Save.</div></div>
+	</div>
+	<div class="pane" id="pane-remaps">
+		<h2><span>Texture swap</span><span id="remapCount"></span></h2>
+		<div class="tools">
+			<div class="inline"><input type="text" id="remapOld" list="remapOldNames" spellcheck="false" autocomplete="off" placeholder="a shader of the map: click a wall" title="The shader that is swapped, wherever the map has it. A click on the map or on a row puts it here, typing narrows the rows."></div>
+			<div class="inline"><input type="text" id="remapNew" list="remapNewNames" spellcheck="false" autocomplete="off" placeholder="draw it as" title="The shader or image it is drawn as: chosen from the textures, or typed. A game only draws one it has: one of the game itself or of a pk3 it has.">
+				<button id="remapBrowse" title="The textures of the game as pictures, below the map: searched by name, a folder at a time. A click on one puts it here.">Pick a texture</button></div>
+			<div class="inline" id="remapPics"><figure title="The selected shader of the map: the image of that name, or the one a map editor shows for the shader"><i class="thumb" id="remapOldPic"></i><figcaption></figcaption></figure>
+				<figure title="What it would be drawn as: the same kind of picture"><i class="thumb" id="remapNewPic"></i><figcaption></figcaption></figure></div>
+			<figure id="remapTest"><canvas id="remapBall" width="224" height="224"></canvas><figcaption><button id="remapShape" title="The test object: a ball or a cube. It is drawn with what the shader would be drawn as, or with the shader itself while nothing is chosen.">Ball</button></figcaption></figure>
+			<div class="inline"><button id="remapSet" disabled title="For every player, at once (Enter in the field above). A draft of the selected shader is sent.">Swap</button>
+				<button id="remapClear" disabled title="The selected shader is drawn as itself again">Take back</button></div>
+			<div class="inline" id="remapDraftRow" hidden><span class="hint" id="remapDraftCount" style="margin:0"></span>
+				<button id="remapDraftsSwap" class="primary" style="margin-left:auto" title="Sends every draft to the server: every player sees them then">Swap all</button><button id="remapDraftsDrop" title="Throws every draft away. No player saw them.">Discard all</button></div>
+			<div class="inline"><button id="remapSave" title="Writes remaps/&lt;map&gt;.cfg: the swaps come back with every start of the map">Save</button>
+				<button id="remapRevert" title="Drops what was changed since the last save: the swaps as the file has them">Revert to saved</button></div>
+			<div class="hint" id="remapState" style="margin:0"></div>
+			<datalist id="remapOldNames"></datalist><datalist id="remapNewNames"></datalist>
+		</div>
+		<div class="scroll"><table><tbody id="remapRows"></tbody></table>
+		<div class="hint" style="padding:6px 10px 0">A shader of the map drawn as another one, for every player and at once. Every game can do that, the unchanged one too. A shader is swapped wherever the map has it, not on one wall, and a game only draws a shader it has. The surfaces that have the selected shader are yellow on the map, their rims faintly through the walls. A click on a row turns the camera to the nearest one.</div>
+		<div class="hint" style="padding:0 10px 8px">The two pictures are the selected shader and what it would be drawn as. The ball or cube below them is drawn with that the way the game draws a shader on a model, with every stage of its script.</div>
+		<div class="hint" style="padding:0 10px 8px">"Pick a texture" shows the textures of the game below the map. A click on one draws the selected shader as it at once, as a draft: only this page shows it, until Swap or Swap all sends it to every player.</div>
+		<div class="hint" style="padding:0 10px 8px">A wall that is lit by a lightmap keeps its light in a game of this tree. Another game draws it without once it is swapped, and stays that way after the swap is taken back, until the map is loaded again. What is not lit that way is safe to swap: screens, signs, lights, the skin of a model.</div></div>
+	</div>
+	<div class="pane" id="pane-mapinfo">
+		<h2><span>Map</span><span id="mapReportName"></span></h2>
+		<div class="tools"><button id="mapReportAgain" title="Builds the report of the map again: what is missing, what the file holds, the entities">Count again</button></div>
+		<div class="scroll"><div id="surfInfo"></div><div id="mapReport"></div></div>
+	</div>
+	<div class="pane" id="pane-routes">
+		<h2><span>Bot route</span><span id="wpCount"></span></h2>
+		<div class="tools">
+			<div class="inline"><button id="wpAdd" style="flex:none" title="Then right-click on the map">Add waypoint</button>
+				<select id="wpFlags" style="flex:1;min-width:0" title="What a bot does at a new waypoint, and what Set flag gives the selected ones"><option value="0">walk</option><option value="16">jump</option><option value="32">duck</option><option value="2048">snipe or camp, standing</option>
+					<option value="8192">snipe or camp, ducked</option><option value="65536">goal</option><option value="131072">red flag</option><option value="262144">blue flag</option></select></div>
+			<div class="inline"><button id="wpSetFlags" disabled title="Gives every selected waypoint what is chosen above">Set flag</button><button id="wpRemove" class="danger" disabled title="Every selected waypoint (Del)">Remove</button></div>
+			<div class="inline" style="flex-wrap:wrap"><button id="wpSave" class="primary" title="Writes botroutes/&lt;map&gt;.wnt and lets the bots walk again">Save route</button><button id="wpRevert" title="Drops what was changed since the last save and loads the saved route again">Revert to saved</button><button id="wpDefault" class="danger" title="Puts back the route that came with the map. The saved one is kept as botroutes/&lt;map&gt;.wnt.bak.">Map default</button></div>
+			<div class="hint" id="wpState" style="margin:0"></div>
+		</div>
+		<div class="hint" style="padding:0 10px">The waypoints the bots walk along, in the order of the trail: yellow from each one to the next, blue to the others it leads to. A click selects one, Ctrl and a click one more or one less, Shift and a drag every one in a rectangle. Remove and Set flag are for all that are selected, and dragging one of them moves them all. With Add waypoint on, a right-click on the map puts a new one there, behind the selected one or at the end.</div>
+		<div class="hint" style="padding:0 10px">The bots stand still from the first change until the route is saved: which waypoint leads to which is only worked out again by the save, and so is the blue. Revert to saved drops what was changed since the last save, Map default puts back the route that came with the map.</div>
+	</div>
+	<div class="pane" id="pane-config">
+		<h2><span id="cfgFileName">server.cfg</span><span id="cfgSize"></span></h2>
+		<div class="cfgSide" data-view="form">
+			<div class="tools">
+				<input id="setSearch" type="search" placeholder="Search a setting" autocomplete="off">
+			</div>
+			<div id="setCats" class="scroll"></div>
+		</div>
+		<div class="cfgSide" data-view="text" hidden>
+		</div>
+		<div class="cfgSide" data-view="cleanup" hidden>
+		</div>
+	</div>
+	<div class="pane" id="pane-bans">
+		<h2><span>Bans</span><span id="banCount"></span></h2>
+		<div class="tools">
+			<form class="inline" id="banForm"><input id="banAddress" placeholder="1.2.3.4 or 1.2.*.*" spellcheck="false" autocomplete="off" maxlength="15"><button>Ban address</button></form>
+		</div>
+		<div class="scroll"><table><tbody id="banRows"></tbody></table></div>
+		<div class="hint" style="padding:8px 10px">The addresses that may not connect (banIPs.txt of the server). A * stands for any number. "Ban" in the panel of a player puts his address here and kicks him, "Unban" lets an address connect again.</div>
+	</div>
+	<div class="pane" id="pane-account">
+		<h2><span>Account</span><span id="acctWho"></span></h2>
+		<div class="scroll">
+			<div class="tools"><button id="acctLogout">Log out</button></div>
+			<div id="acctOnce" class="tools" hidden>
+				<div class="hint" id="acctOnceTitle" style="margin:0"></div>
+				<textarea id="acctOnceText" readonly spellcheck="false"></textarea>
+				<button id="acctOnceClose">I have it, hide it</button>
+			</div>
+			<div id="acctOwn">
+				<h3>Password</h3>
+				<form class="tools" id="acctPassForm" autocomplete="off">
+					<input type="password" id="acctPassOld" placeholder="The password you have" autocomplete="current-password" maxlength="128" required>
+					<input type="password" id="acctPassNew" placeholder="The new one, ten characters at least" autocomplete="new-password" minlength="10" maxlength="128" required>
+					<input type="password" id="acctPassAgain" placeholder="The new one again" autocomplete="new-password" maxlength="128" required>
+					<button>Change password</button>
+				</form>
+				<h3>Second step of the login</h3>
+				<div class="tools">
+					<div class="hint" id="acctTotpState" style="margin:0"></div>
+					<button id="acctTotpStart">Set up</button>
+					<button id="acctTotpOff" class="danger" hidden>Switch off</button>
+					<div id="acctTotpSetup" hidden>
+						<canvas id="acctTotpQr"></canvas>
+						<div class="hint">Scan this with an authenticator app, or copy the address below into your password manager. By hand: the secret <b id="acctTotpSecret"></b>, by time, SHA-1, six digits, 30 seconds.</div>
+						<input id="acctTotpUri" readonly spellcheck="false">
+						<form class="inline" id="acctTotpForm" autocomplete="off"><input id="acctTotpCode" placeholder="The code the app shows" inputmode="numeric" maxlength="7" required><button>Switch on</button></form>
+					</div>
+					<div class="hint" style="margin:0">A code of six digits from an app on your phone or from your password manager, a new one every 30 seconds, asked for after the password.</div>
+				</div>
+				<h3>Token for scripts</h3>
+				<div class="tools">
+					<div class="hint" id="acctTokenState" style="margin:0"></div>
+					<div class="inline"><button id="acctTokenNew">Make a token</button><button id="acctTokenOff" class="danger" hidden>Remove it</button></div>
+					<div class="hint" style="margin:0">A script sends it as "Authorization: Bearer &lt;token&gt;" and may do what this account may. It never gets the password.</div>
+				</div>
+			</div>
+			<div id="acctCodes">
+				<h3>One-time code for the game</h3>
+				<div class="tools">
+					<form class="inline" id="acctCodeForm"><select id="acctCodeRank"><option value="instructor">instructor</option><option value="knight">knight</option><option value="council">council</option><option value="rcon">rcon (every right)</option></select><button>Make a code</button></form>
+					<div id="acctCode"></div>
+					<div class="hint" id="acctCodeHint" style="margin:0"></div>
+				</div>
+			</div>
+			<div id="acctOwner">
+				<h3>Accounts of the panel</h3>
+				<div class="tools">
+					<table><tbody id="acctUsers"></tbody></table>
+					<form class="inline" id="acctAddForm" autocomplete="off"><input id="acctAddName" placeholder="Name" maxlength="23" spellcheck="false" required><select id="acctAddRole"><option>moderator</option><option>admin</option><option>owner</option></select><button>Add</button></form>
+					<div class="hint" style="margin:0">A moderator has the players (kick, ban, team and the like). An admin has the editor, the map and the log as well. An owner also has the console of the server, its config, its files and these accounts. A new account gets a password from the server, which is shown once.</div>
+				</div>
+				<h3>Keys of admin_keys.txt</h3>
+				<div class="tools">
+					<table><tbody id="acctKeys"></tbody></table>
+					<div class="hint" style="margin:0">These keys log in to the game with "v_amkey login" and to this panel from the page of the login: rcon as an owner, council as an admin, knight and instructor as a moderator. The file is in the game folder of the server and is read with every map.</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="pane" id="pane-load">
+		<h2><span>Server load</span><span id="perfSpan"></span></h2>
+		<div class="scroll">
+			<div id="perfRows"></div>
+			<div class="hint" id="perfState" style="padding:0 10px"></div>
+			<div class="hint" style="padding:0 10px 8px">One value a second, the last five minutes of this map. A frame of the game is the step of the game module alone, with the work of this panel in it, which the second line shows by itself: answering a browser is done in a frame. Fewer frames than sv_fps or a long wait for one mean the machine does not keep up.</div>
+		</div>
+	</div>
+	<!-- the log has the whole width: its tools are in the bar of #logView -->
+	<div class="pane" id="pane-log"></div>
+	<div class="pane" id="pane-files">
+		<h2><span>Folders</span><span id="fsCount"></span></h2>
+		<div id="fsTree"></div>
+	</div>
+	<div class="pane" id="pane-world">
+		<div class="tools">
+			<div class="inline"><input id="newClass" placeholder="Search a class or a kit to place" title="A class of the game, a kit (+name: several entities that belong together, wired already) or a template (@name)" spellcheck="false" autocomplete="off"><button id="placeBtn" title="Then right-click on the map">Place</button></div>
+			<div id="classPicker"></div>
+			<div class="inline"><input id="entFilter" placeholder="Filter by class or targetname" spellcheck="false"><a href="api/export" title="Download all entities of the map as .ent">Export .ent</a></div>
+			<div class="inline"><a href="api/export?placed=1" title="Download only what was placed through the panel, as .ent: what an import takes on another map or server">Export placed</a>
+				<button id="entImport" style="margin-left:auto" title="Places every entity of a .ent file. The worldspawn and what is made of brushes of another map are left out.">Import .ent</button><input type="file" id="entImportFile" accept=".ent,.txt,text/plain" hidden></div>
+			<div class="inline"><button id="entUndo" disabled title="Takes the last change to an entity back (Ctrl+Z)">Undo</button><button id="entRedo" disabled title="Does it again (Ctrl+Y)">Redo</button>
+				<label class="hint" style="margin:0 0 0 auto" title="Placing, moving and the Shift+arrow keys go in steps of this many units">Grid <select id="grid"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
+			<div class="inline" id="layoutRow"><span class="hint" id="layoutState" style="margin:0"></span>
+				<button id="layoutSave" style="margin-left:auto" title="Keeps the map as it stands for every start of it: what was placed, and what of the map was changed or deleted. Without this a change of the map or a restart of the server loses it.">Save layout</button><button id="layoutForget" title="The next start of the map is the map as its file has it. What stands on the map now stays until then.">Forget layout</button></div>
+			<div class="inline" id="draftRow" hidden><span class="hint" id="draftCount" style="margin:0"></span>
+				<button id="draftPlaceAll" class="primary" style="margin-left:auto" title="Sends every draft to the server, what is aimed at before what aims at it. All of them are one step of undo.">Place all</button><button id="draftDiscardAll" title="Throws every draft away. Nothing of them is on the server.">Discard all</button></div>
+			<div class="hint" id="entBudget" title="What is in use of what the engine has a limit for. The server refuses to place an entity that would go over one."></div>
+		</div>
+		<h2><span>Entities</span><span id="entCount">0</span></h2>
+		<div class="scroll">
+			<table>
+				<thead><tr><th class="num">#</th><th>Class</th><th>Targetname</th></tr></thead>
+				<tbody id="entities"></tbody>
+			</table>
+		</div>
+	</div>
+	<div id="chat">
+		<h2 id="chatHead" title="Show or hide the chat"><span>Chat</span><span id="chatNew"></span></h2>
+		<div id="chatLog"></div>
+		<form class="inline" id="sayForm"><input id="sayText" placeholder="Message to all players" maxlength="150" autocomplete="off"><button>Say</button></form>
+	</div>
+</div>
+
+<div id="texBrowser">
+	<div class="bar"><input type="text" id="texFind" spellcheck="false" autocomplete="off" placeholder="Search a texture" title="Only what has every word that is typed in its name">
+		<select id="texSet" title="The folder of textures that is shown. Everything: all of them, and the shaders that only have a script. Of this map: the ones the map has, which every game that plays it has too."></select>
+		<span class="hint" id="texCount"></span><span class="spacer"></span>
+		<span class="hint">A click draws the selected shader of the map as it, as a draft. A name with a star has a shader script.</span>
+		<button id="texClose" title="The map view gets its room back">Close</button></div>
+	<div id="texTiles"></div>
+</div>
+
+<div id="view">
+	<canvas id="gl"></canvas>
+	<div id="labels"></div>
+	<div id="entLabels"></div>
+	<div id="viewTop">
+	<div id="dbg">
+		<label title="A marker at every entity of the map, and an arrow where its keys say which way it looks (a start point, a shooter) or moves (a door)"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
+		<label title="The box of every entity: the brushes of a trigger or a door, the size of a class"><input type="checkbox" id="dbgVolumes" checked>Volumes</label>
+		<label title="A line from every entity to what it fires (target and targetname). When one fires another, the line and the box of the one that was fired light up for three seconds."><input type="checkbox" id="dbgLinks" checked>Links</label>
+		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
+		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
+		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Backface culling</label>
+		<label title="The name of its class above an entity, with its targetname. Of the ones near the camera, the selected ones and every draft."><input type="checkbox" id="dbgNames" checked>Names</label>
+		<label title="The effects of the game: what an fx_runner plays, what the server plays once, and what the weapons leave. The administration always has them."><input type="checkbox" id="dbgFx" checked>Effects</label>
+		<select id="dbgLight" title="How the map is drawn. As in the game: with the shader scripts, the light and the fog of the game, as the administration draws it. The others are the plain view of the editor: twice the light so that dark corners can be worked in, the light alone, or the images alone."><option value="3" selected>As in the game</option><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
+	</div>
+	<div id="help">
+		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
+		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
+		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly &nbsp; <kbd>1</kbd>-<kbd>9</kbd> views, <kbd>Shift</kbd> stores<span class="editorOnly"><br>
+		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste<br>
+		<kbd>Ctrl</kbd>+click selects one more entity &nbsp; <kbd>Shift</kbd>+drag selects in a rectangle</span>
+		<span class="editorOnly"><br>Routes: <kbd>Ctrl</kbd>+click one more waypoint &nbsp; <kbd>Shift</kbd>+drag a rectangle &nbsp; drag a selected one to move them &nbsp; <kbd>Del</kbd> removes them</span>
+		<span class="adminOnly"><br>Control of a player: <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>C</kbd> / <kbd>Ctrl</kbd> crouch &nbsp; <kbd>Shift</kbd> walk &nbsp; <kbd>LMB</kbd> <kbd>RMB</kbd> attack, alternate &nbsp; <kbd>E</kbd> use &nbsp; <kbd>F</kbd> force power &nbsp; <kbd>Esc</kbd> gives him back</span>
+	</div>
+	</div>
+	<!-- the buttons at the bottom right of the map, one bar -->
+	<div id="viewTools">
+	<button id="helpBtn" title="The keys and the mouse on the map (?)">?</button>
+	<button id="shotBtn" title="Saves what the map view shows as a PNG file">Screenshot</button>
+	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
+	</div>
+	<div id="coords" class="editorOnly"></div>
+	<div id="band"></div>
+	<div id="loading">Loading map...</div>
+	<div id="hud"><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
+	<div id="controlBar" hidden><span>Controlling <b id="controlName"></b></span>
+		<button data-view="map" title="The view of the map stays as it is. A right-click on the map makes him walk to that spot.">Map</button>
+		<button data-view="third" title="The camera behind him. A click on the map takes the mouse, which turns him from then on. W A S D move him, Space jumps, C or Ctrl crouches, Shift walks, the mouse buttons attack, E uses, F is the force power. Esc frees the mouse, Esc again gives him back.">Third person</button>
+		<button data-view="first" title="The view through his eyes, with the keys and the mouse of the third person. It turns as the server reports him, a moment after the mouse.">First person</button>
+		<button id="controlEnd" title="Lets him go (Esc)">Give back</button><span class="hint" id="controlHint"></span></div>
+	<div id="command">
+		<div class="who">
+			<div class="nm" id="cmdName"></div>
+			<div class="sub" id="cmdSub"></div>
+			<div class="stat">Health <span id="cmdHp"></span><div class="bar"><i id="cmdHpBar" style="background:var(--green)"></i></div></div>
+			<div class="stat">Armor <span id="cmdAr"></span><div class="bar"><i id="cmdArBar" style="background:#5aa9ff"></i></div></div>
+		</div>
+		<!-- what can be done to him: Watch and steer at the top, the other groups as tabs; the page keeps which (js/players.js) -->
+		<details class="sect" data-sect="change" open><summary>Change</summary>
+			<div class="grid">
+				<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
+				<label for="setAr">Armor</label><input type="number" id="setAr" min="0" max="999"><button data-set="armor" data-input="setAr">Set</button>
+				<label for="setScale">Size <span id="scaleVal"></span></label><input type="number" id="setScale" min="10" max="500" step="5"><button data-set="scale" data-input="setScale">Set</button>
+				<input type="range" id="setScaleBar" min="0" max="1000" tabindex="-1" data-wheel="setScale" title="The size in percent: the left half is 10 to 100, the right half 100 to 500. It stops at 100 in the middle, and a double click sets 100. Nothing is sent before Set, or Enter in the field.">
+				<div id="setScaleMarks"><span>10%</span><span>100%</span><span>500%</span></div>
+				<label for="setTeam">Team</label><select id="setTeam"><option>free</option><option>red</option><option>blue</option><option>spectator</option></select><button data-set="team" data-input="setTeam">Set</button>
+				<label for="setGrav" title="A gravity only for this player. Empty: the gravity of the server.">Gravity</label><input type="number" id="setGrav" min="-2000" max="5000" placeholder="server"><button data-set="playergravity" data-input="setGrav">Set</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="watch" open><summary>Watch and steer</summary>
+			<div class="actions">
+				<button id="followBtn">Follow</button>
+				<button id="fpBtn" title="Player view (V)">First person</button>
+				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back. A human who is controlled sees his own view jitter.">Control</button>
+			</div>
+			<div class="hint">Right-click on the map to teleport this player there.</div>
+		</details>
+		<details class="sect" data-sect="powers"><summary>Powers</summary>
+			<div class="actions">
+				<button data-act="god" id="godBtn">God mode</button>
+				<button data-act="noclip" id="noclipBtn" title="Fly through walls">Noclip</button>
+				<button data-jp="amprotect" data-jpstate="protect" title="amprotect">Protect</button>
+				<button data-jp="amempower" data-jpstate="empower" title="amempower">Empower</button>
+				<button data-jp="ammerc" data-jpstate="merc" title="ammerc">Merc</button>
+				<button data-jp="amghost" data-jpstate="ghost" title="amghost">Ghost</button>
+				<button data-jp="ammindtrick" data-jpstate="mindtrick" title="ammindtrick">Mindtrick</button>
+				<button data-jp="amForceAltDim" data-jpoff="amUnForceAltDim" data-jpstate="altForced" title="amForceAltDim / amUnForceAltDim">Force alt dim</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="punish" open><summary>Punish</summary>
+			<div class="actions">
+				<button data-jp="amslap" title="amslap">Slap</button>
+				<button data-act="kill">Kill</button>
+				<button data-jp="amsleep" data-jpoff="amwake" data-jpstate="sleep" title="amsleep / amwake">Sleep</button>
+				<button data-jp="freeze" data-jpstate="frozen" title="freeze">Freeze</button>
+				<button data-jp="amsilence" data-jpoff="amunsilence" data-jpstate="silence" title="amsilence / amunsilence">Silence</button>
+				<button data-jp="amdenyvote" data-jpstate="denyVote" title="amdenyvote">Deny vote</button>
+				<button class="danger" data-act="kick" data-confirm>Kick</button>
+				<button class="danger" data-act="ban" data-confirm>Ban</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="fun"><summary>Fun</summary>
+			<div class="actions">
+				<button data-act="poop" title="The emote ampoop for him: he sits down, moans and leaves a small rock. He has to stand still.">Poop</button>
+				<button data-act="flatulence" id="flatulenceBtn" title="He breaks wind every few seconds: a sound and a green cloud for everybody near him">Flatulence</button>
+				<button data-act="schizo" id="schizoBtn" title="He hears and sees things nobody else does: shots, steps, voices, chat lines">Schizophrenia</button>
+				<button data-act="disorient" id="disorientBtn" title="The view sways, every few seconds it is thrown around with a shake and a stumble, now and then the world turns">Disorient</button>
+			</div>
+		</details>
+		<details class="sect" data-sect="japlus"><summary>JA+ admin</summary>
+			<div class="actions">
+				<button data-jp="amShowMotd" title="amShowMotd">Show MOTD</button>
+			</div>
+			<div class="grid">
+				<label for="jpName">Rename</label><input id="jpName" maxlength="35" autocomplete="off"><button data-jptext="amrename" data-input="jpName">Set</button>
+				<label for="jpMsg">Message</label><input id="jpMsg" maxlength="140" autocomplete="off"><button data-jptext="ampsay" data-input="jpMsg">Send</button>
+				<label for="jpRank">Admin</label><select id="jpRank"><option value="no">none</option><option>council</option><option>knight</option><option>instructor</option></select><button data-jptext="admgrant" data-input="jpRank">Set</button>
+			</div>
+		</details>
+		<button class="close" id="cmdClose" title="Deselect">&#10005;</button>
+	</div>
+	<div id="kvSuggest"></div>
+	<div id="entPanel">
+		<div class="hd"><b id="entTitle"></b><span class="meta" id="entSub"></span><button class="close" id="entClose" title="Deselect">&#10005;</button></div>
+		<div class="actions" id="entTools">
+			<button id="entFocus" title="Brings the camera to it">Focus</button>
+			<button id="entFire" title="Fires it as a trigger would that has it as its target: a door opens, a trigger fires its targets. The world is what fired it, so what only works on the player who fired it does nothing.">Fire</button>
+			<button id="entDup">Duplicate</button>
+			<button id="entFloor" title="Puts it on the floor below it">To floor</button>
+			<button id="entTemplate" title="Keeps its keys under a name. The name is offered in the class search, to place more of it.">Template</button>
+			<button id="entRotL" title="Turn left 15&deg;. Several selected turn together around their middle.">&#10226; 15&deg;</button>
+			<button id="entRotR" title="Turn right 15&deg;. Several selected turn together around their middle.">&#10227; 15&deg;</button>
+		</div>
+		<div id="entXform">
+			<label>Position</label><input type="number" id="posX" step="1" title="X"><input type="number" id="posY" step="1" title="Y"><input type="number" id="posZ" step="1" title="Z">
+			<label>Angles</label><input type="number" id="angP" step="15" title="Pitch"><input type="number" id="angY" step="15" title="Yaw"><input type="number" id="angR" step="15" title="Roll">
+			<label id="boxLabel" title="How wide, deep and high the box of this trigger is. Its middle stays where it is. The yellow handles on the map drag one face each.">Box</label><input type="number" id="boxX" step="8" min="1" title="Along X"><input type="number" id="boxY" step="8" min="1" title="Along Y"><input type="number" id="boxZ" step="8" min="1" title="Height">
+		</div>
+		<div id="entFlags"></div>
+		<div id="entLinks"></div>
+		<div id="entForm"></div>
+		<button id="entFormMore" hidden></button>
+		<details id="kvBlock"><summary title="Every key of the entity as it is sent, also the ones its class is not known to take. The fields above are another view of the same keys.">All keys <span id="kvCount"></span></summary><table id="kvTable"><tbody id="kvRows"></tbody></table></details>
+		<datalist id="pickBrush"></datalist><datalist id="pickMaps"></datalist><datalist id="pickBots"></datalist><datalist id="pickEffects"></datalist><datalist id="pickMusic"></datalist>
+		<datalist id="pickNpcs"></datalist><datalist id="pickPath"></datalist><datalist id="pickClasses"></datalist><datalist id="pickNames"></datalist>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more, Shift and a drag all in a rectangle: what is done to this one is then done to all of them.<span id="boxHint"> The yellow handles on the box of this trigger each drag one face of it, on the grid.</span></div>
+		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
+		<!-- at the bottom of the panel, always in sight -->
+		<div id="entFoot">
+			<button id="kvAdd">+ Key</button>
+			<button class="danger" id="entDel">Delete</button>
+			<span class="spacer"></span>
+			<button class="primary" id="entApply" title="Sends the keys as they stand here to the server. A draft is placed.">Apply changes</button>
+		</div>
+	</div>
+</div>
+<div id="logView">
+	<div id="logBar" class="pageBar">
+		<b class="pageTitle">Log</b><span id="logSize" class="pageSub"></span>
+		<div id="logSource" class="seg"><button data-log="log" class="on" title="The log of the game: who came and went, kills, chat, the commands of admins">Game log</button><button data-log="console" title="What the server prints on its console">Server console</button><button data-log="ids" title="What the intrusion detection of the server noticed: packets no client of the game sends, and who was blocked for them">Intrusions</button></div>
+		<label class="find"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg><input id="logFilter" placeholder="Show only lines with" spellcheck="false" autocomplete="off"></label>
+		<span id="logState" class="pageSub"></span>
+		<span class="spacer"></span>
+		<label class="switch" title="Keeps the end of the text in sight while it grows"><input type="checkbox" id="logFollow" checked><i></i>Follow the end</label>
+		<button id="logClear" title="Empties the view of what is shown, the server keeps its text">Clear view</button>
+		<button id="logHelpBtn" class="square" title="What the three logs are">?</button>
+		<div id="logHelp" hidden>
+			<p>Game log is the log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The whole file is games.log in the Files tab. Server console shows what the server prints on its console.</p>
+			<p>Intrusions is ids.log: what arrived that no client of the game sends, from which address, and which addresses were blocked for it (vs_ids). "vs_idsstatus" on the console lists the addresses, "vs_idsunblock" lifts a block.</p>
+			<p>All three start with their last lines and follow the text as it grows. A command typed into the line under the text runs as if it was typed on the server console, and the view goes to the console for its answer. The arrow keys up and down bring back the commands typed before.</p>
+		</div>
+	</div>
+	<pre id="logText"></pre>
+	<form id="logCmd"><label class="find"><span class="prompt" aria-hidden="true">&gt;</span><input id="logCmdText" placeholder="Console command, Enter runs it" spellcheck="false" autocomplete="off" maxlength="480"></label><button class="primary">Run</button></form>
+</div>
+<div id="cfgView">
+	<!-- the bar of the settings: which view, its state and its buttons -->
+	<div id="cfgBar">
+		<div id="cfgSwitch" class="seg" title="The same file three ways: a form with every setting, the text of the file, and what it sets that nothing uses"><button data-view="form" class="on">Form</button><button data-view="text">Text</button><button data-view="cleanup">Cleanup</button></div>
+		<div class="cfgTools" data-view="form"><span id="setState"></span><button id="setDiscard" title="Drops what was changed here and reads the settings again">Discard changes</button><button id="setSave" class="primary" title="Writes the changed settings into the file and sets them on the server">Save</button></div>
+		<div class="cfgTools" data-view="text" hidden><span id="cfgState"></span><button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button><button id="cfgRun" title="Writes the file and runs it on the server console">Save and run on server</button><button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button></div>
+		<div class="cfgTools" data-view="cleanup" hidden><span id="cleanState"></span><button id="cleanLoad" title="Lists again">Refresh</button><button id="cleanAll" title="Selects every cvar no code used and every line a later one overrides">Select all</button><button id="cleanRemove" class="danger" title="Takes the selected lines out of the file, and the unused cvars off the server">Remove selected</button></div>
+		<button id="cfgHelpBtn" class="square" title="How saving works in this view">?</button>
+		<div id="cfgHelp" class="popHelp" hidden>
+			<div data-view="form"><p>A setting is changed in its line of the file, its comment stays. One the file does not set yet gets a line at the end, under "set by the web panel". The text before a save is kept as .bak.</p><p>A saved setting is set on the server at once. One marked "next map" takes effect with the next map, one marked "restart" when the server starts again.</p><p>A setting marked "local.cfg" is set again by that file at the next start: the service of the host runs it after this one.</p></div>
+			<div data-view="text" hidden><p>The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/), which the engine reads before the one of the installation. The text before a save is kept as .bak.</p><p>Running the file sets its cvars at once. Latched ones (most vs_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</p><p>The passwords in the file are shown as they are.</p></div>
+			<div data-view="cleanup" hidden><p>Unused: cvars no code of the server registered or read for 30 days. They are left from older versions, other mods or the client. Removing one takes its line out of the file and the cvar off the server.</p><p>Overridden: a line of a cvar that a later line of the same cvar sets again. Only the last one counts.</p><p>The server notes the use of each cvar from this version on. Until it did so for 30 days, a cvar never used is not listed.</p></div>
+		</div>
+	</div>
+	<div id="cfgBody">
+	<div id="setForm" class="cfgMain" data-view="form"></div>
+	<div id="cfgEditor" class="cfgMain" data-view="text" hidden><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
+	<div id="cleanView" class="cfgMain" data-view="cleanup" hidden><table><thead><tr><th></th><th>Cvar</th><th>Value</th><th>Last used</th><th>Where</th><th></th></tr></thead><tbody id="cleanRows"></tbody></table></div>
+	</div>
+</div>
+<div id="tvView">
+	<div id="tvStart"><p id="tvNote"></p><button id="tvGo" class="primary">Watch</button></div>
+	<iframe id="tvFrame" title="The TV of the server" allow="fullscreen; autoplay" hidden></iframe>
+</div>
+<div id="fsView">
+	<!-- the bar of the files: the way to the folder, the buttons, and the ones of a text file that is open -->
+	<div id="fsBar" class="pageBar">
+		<b class="pageTitle">Files</b><span id="fsPath" class="pageSub"></span><span id="fsProgress" class="pageSub"></span>
+		<span class="spacer"></span>
+		<span class="barGroup" id="fsEditTools" hidden><span id="fsEditState"></span><button id="fsClose">Close</button><button id="fsSave" class="primary">Save</button></span>
+		<button id="fsReload" title="Starts the running map again. The server looks for pk3 files when a map starts, so that is how it finds one that was added. The players stay connected, what was placed in the World tab is put back where it is.">Restart map</button>
+		<button id="fsMkdir" title="In the folder that is shown">New folder</button>
+		<button id="fsRefresh" class="square" title="Reads the folder that is shown again" aria-label="Refresh list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button>
+		<button id="fsUpload" class="primary" title="Into the folder that is shown. A .pk3 always goes into the top folder of the server files: the engine finds one nowhere else.">Upload</button>
+		<input type="file" id="fsFile" multiple hidden>
+		<button id="fsHelpBtn" class="square" title="Where the files are">?</button>
+		<div id="fsHelp" class="popHelp" hidden><p>Server files is where this server keeps its configs, its logs and what is uploaded. A file there wins over the same file of the installation. Game installation is the game as it was installed and can only be read.</p><p>To add a map, drop its .pk3 on the list or use Upload, then use Restart map so that the server finds it. A .pk3 always goes into the top folder of the server files.</p><p>A click on a folder shows what is in it, a click on a text file opens it, any other file is downloaded. Game modules and programs can only be downloaded.</p></div>
+	</div>
+	<div id="fsBody">
+	<div id="fsList"><table><thead><tr><th>Name</th><th class="num">Size</th><th>Changed</th><th></th></tr></thead><tbody id="fsRows"></tbody></table>
+		<div class="dropHint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>To add a map, drop its .pk3 here or use Upload, then Restart map so that the server finds it.</div></div>
+	<div id="fsEditor" hidden><pre id="fsHi" class="codeHi" aria-hidden="true"></pre><textarea id="fsText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
+	</div>
+</div>
+<div id="toasts"></div>
+<div id="palette" hidden><div class="palBox"><input id="palInput" placeholder="A command or a page: bot, map, gravity, settings, ..." spellcheck="false" autocomplete="off"><div id="palList"></div><div class="palHint">Up and Down choose, Enter does it, Esc closes. A command that wants a value takes the words after its name.</div></div></div>
+<div id="preview"><canvas id="previewGl" width="488" height="400"></canvas><div class="pv-none" id="pvNone"></div><div class="pv-name" id="pvName"></div><div class="pv-sub" id="pvSub"></div></div>
+
+<script>
+<!--#include js/util.js -->
+<!--#include js/bsp.js -->
+<!--#include js/gl.js -->
+<!--#include js/map.js -->
+<!--#include js/scripts-programs.js -->
+<!--#include js/scripts-parse.js -->
+<!--#include js/scripts-world.js -->
+<!--#include js/scripts-models.js -->
+<!--#include js/world-ents.js -->
+<!--#include js/flares.js -->
+<!--#include js/pick.js -->
+<!--#include js/camera.js -->
+<!--#include js/state.js -->
+<!--#include js/stream.js -->
+<!--#include js/players.js -->
+<!--#include js/chat.js -->
+<!--#include js/input.js -->
+<!--#include js/ui-inputs.js -->
+<!--#include js/frame.js -->
+<!--#include js/items.js -->
+<!--#include js/movers.js -->
+<!--#include js/trace.js -->
+<!--#include js/marks.js -->
+<!--#include js/weather.js -->
+<!--#include js/editor-world.js -->
+<!--#include js/editor-props.js -->
+<!--#include js/config.js -->
+<!--#include js/settings.js -->
+<!--#include js/tv.js -->
+<!--#include js/files.js -->
+<!--#include js/editor-entities.js -->
+<!--#include js/editor-classes.js -->
+<!--#include js/editor-lines.js -->
+<!--#include js/editor-move.js -->
+<!--#include js/editor-panel.js -->
+<!--#include js/editor-complete.js -->
+<!--#include js/editor-drafts.js -->
+<!--#include js/editor-labels.js -->
+<!--#include js/routes.js -->
+<!--#include js/control.js -->
+<!--#include js/mapreport.js -->
+<!--#include js/log.js -->
+<!--#include js/load.js -->
+<!--#include js/editor-templates.js -->
+<!--#include js/editor-form.js -->
+<!--#include js/editor-kits.js -->
+<!--#include js/editor-clips.js -->
+<!--#include js/editor-remaps.js -->
+<!--#include js/editor-textures.js -->
+<!--#include js/bans.js -->
+<!--#include js/qr.js -->
+<!--#include js/account.js -->
+<!--#include js/editor-select.js -->
+<!--#include js/editor-history.js -->
+<!--#include js/g2.js -->
+<!--#include js/g2-angles.js -->
+<!--#include js/player-draw.js -->
+<!--#include js/player-fx.js -->
+<!--#include js/picker.js -->
+<!--#include js/weapons.js -->
+<!--#include js/sabers.js -->
+<!--#include js/dlights.js -->
+<!--#include js/fx-parse.js -->
+<!--#include js/fx-run.js -->
+<!--#include js/fx-draw.js -->
+<!--#include js/fx-weapons.js -->
+<!--#include js/events.js -->
+<!--#include js/hud-font.js -->
+<!--#include js/hud.js -->
+<!--#include js/hud-scores.js -->
+<!--#include js/hud-console.js -->
+<!--#include js/hud-world.js -->
+<!--#include js/palette.js -->
+<!--#include js/boot.js -->
+</script>
+</body>
+</html>

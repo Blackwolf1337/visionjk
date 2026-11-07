@@ -25,15 +25,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "botlib/botlib.h"
-#include "FXExport.h"
-#include "FxUtil.h"
+#include "client/fx/FXExport.h"
+#include "client/fx/FxUtil.h"
 #include "qcommon/RoffSystem.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "ghoul2/G2_gore.h"
 
 extern IHeapAllocator *G2VertSpaceClient;
 
-#include "snd_ambient.h"
+#include "client/sound/snd_ambient.h"
 #include "qcommon/timing.h"
 
 /*
@@ -296,73 +296,13 @@ void CL_ConfigstringModified( void ) {
 	#define MAX_STRINGED_SV_STRING 1024
 #endif
 // just copied it from CG_CheckSVStringEdRef(
-void CL_CheckSVStringEdRef(char *buf, const char *str)
-{ //I don't really like doing this. But it utilizes the system that was already in place.
-	int i = 0;
-	int b = 0;
-	int strLen = 0;
-	qboolean gotStrip = qfalse;
+static const char *CL_SVStringEd( const char *ref ) {
+	return SE_GetString( va( "MP_SVGAME_%s", ref ) );
+}
 
-	if (!str || !str[0])
-	{
-		if (str)
-		{
-			strcpy(buf, str);
-		}
-		return;
-	}
-
-	strcpy(buf, str);
-
-	strLen = strlen(str);
-
-	if (strLen >= MAX_STRINGED_SV_STRING)
-	{
-		return;
-	}
-
-	while (i < strLen && str[i])
-	{
-		gotStrip = qfalse;
-
-		if (str[i] == '@' && (i+1) < strLen)
-		{
-			if (str[i+1] == '@' && (i+2) < strLen)
-			{
-				if (str[i+2] == '@' && (i+3) < strLen)
-				{ //@@@ should mean to insert a StringEd reference here, so insert it into buf at the current place
-					char stringRef[MAX_STRINGED_SV_STRING];
-					int r = 0;
-
-					while (i < strLen && str[i] == '@')
-					{
-						i++;
-					}
-
-					while (i < strLen && str[i] && str[i] != ' ' && str[i] != ':' && str[i] != '.' && str[i] != '\n')
-					{
-						stringRef[r] = str[i];
-						r++;
-						i++;
-					}
-					stringRef[r] = 0;
-
-					buf[b] = 0;
-					Q_strcat(buf, MAX_STRINGED_SV_STRING, SE_GetString("MP_SVGAME", stringRef));
-					b = strlen(buf);
-				}
-			}
-		}
-
-		if (!gotStrip)
-		{
-			buf[b] = str[i];
-			b++;
-		}
-		i++;
-	}
-
-	buf[b] = 0;
+// buf has MAX_STRINGED_SV_STRING bytes
+void CL_CheckSVStringEdRef( char *buf, const char *str ) {
+	Q_StringEdExpand( buf, MAX_STRINGED_SV_STRING, str ? str : "", CL_SVStringEd );
 }
 /*
 ===================
@@ -493,6 +433,14 @@ CL_ShutdonwCGame
 */
 void CL_ShutdownCGame( void ) {
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
+	Cvar_Set( "v_chatHandler", "0" );		// see Con_ChatByCgame()
+	Cvar_Set( "v_catchQuiet", "0" );		// see CL_CmdButtons()
+	Cvar_Set( "v_muffle", "0" );			// see S_MufflePaint(): nobody is left who would take it back
+	Cvar_Set( "v_tinnitus", "0" );			// see S_TinnitusPaint(), the same
+	Cvar_Set( "v_dreamReverb", "0" );		// see S_SpatialRenderDream(), the same
+	Cvar_Set( "v_cgameResize", "0" );		// see CL_WindowSize()
+	Cvar_Set( "v_scopeWheel", "0" );		// see CL_ParseBinding()
+	CL_VideoShutdown();						// the streams of the screens are the cgame's (cl_video.cpp)
 
 	if ( !cls.cgameStarted )
 		return;
@@ -517,6 +465,13 @@ void CL_InitCGame( void ) {
 
 	t1 = Sys_Milliseconds();
 
+	// a cgame of this tree sets it again when it takes the chat line (Con_ChatByCgame())
+	Cvar_Set( "v_chatHandler", "0" );
+	// and this one while it holds the keys without its player typing (CL_CmdButtons())
+	Cvar_Set( "v_catchQuiet", "0" );
+	// and this one when it follows a new size of the window by itself (CL_WindowSize())
+	Cvar_Set( "v_cgameResize", "0" );
+
 	// put away the console
 	Con_Close();
 
@@ -533,7 +488,10 @@ void CL_InitCGame( void ) {
 	// init for this gamestate
 	// use the lastExecutedServerCommand instead of the serverCommandSequence
 	// otherwise server commands sent just before a gamestate are dropped
+	// what the cgame asks the engine to load in there has kinds of its own, this is the rest of it
+	Com_LoadPush( "cgame start", NULL );
 	CGVM_Init( clc.serverMessageSequence, clc.lastExecutedServerCommand, clc.clientNum );
+	Com_LoadPop();
 
 	int clRate = Cvar_VariableIntegerValue( "rate" );
 	if ( clRate == 4000 ) {
@@ -554,7 +512,9 @@ void CL_InitCGame( void ) {
 
 	// have the renderer touch all its images, so they are present
 	// on the card even if the driver does deferred loading
+	Com_LoadPush( "renderer end of registration", NULL );
 	re->EndRegistration();
+	Com_LoadPop();
 
 	// make sure everything is paged in
 //	if (!Sys_LowPhysicalMemory())
@@ -597,7 +557,9 @@ void CL_CGameRendering( stereoFrame_t stereo ) {
 	re->G2API_SetTime(cl.serverTime, 1);
 	//rww - RAGDOLL_END
 
+	Com_LoadPush( "frame: cgame", NULL );
 	CGVM_DrawActiveFrame( cl.serverTime, stereo, clc.demoplaying );
+	Com_LoadPop();
 }
 
 
@@ -622,6 +584,88 @@ or bursted delayed packets.
 */
 
 #define	RESET_TIME	500
+#define	SNAP_MARGIN	5		// how close a frame may come to the newest snapshot before the clock goes back, at least
+
+/*
+=================
+CL_SnapshotJitter
+
+How evenly the snapshots come, as RFC 3550 measures it for the packets of a stream: how much the time between
+the server making one and the client taking it in changes from one to the next, smoothed over about 16. The
+clock of the game (CL_AdjustTimeDelta) goes forward a little with every snapshot and back a little when a frame
+came closer than cl.snapMargin to the newest one. With the 5 ms of the original as that margin, a line whose
+snapshots come unevenly has frames that run past the newest snapshot, which the cgame has to extrapolate: what
+moves stutters. Twice the jitter as the margin keeps the clock as far behind as the line needs, and no further:
+on an even line it stays the 5 ms (v_netSmooth 0: always). Not from OpenJK, 2026-10-19.
+=================
+*/
+static void CL_SnapshotJitter( void ) {
+	const int offset = cls.realtime - cl.snap.serverTime;
+
+	if ( cl.snapOffsetValid ) {
+		const int change = abs( offset - cl.snapOffset );
+
+		// (a jump of the clock or a long gap is no jitter)
+		if ( change < RESET_TIME ) {
+			cl.snapJitter += ( change - cl.snapJitter ) / 16.0f;
+		}
+	}
+	cl.snapOffset = offset;
+	cl.snapOffsetValid = qtrue;
+	if ( v_netSmooth->integer > SNAP_MARGIN ) {
+		cl.snapMargin = Com_Clampi( SNAP_MARGIN, v_netSmooth->integer, (int)( 2.0f * cl.snapJitter + 0.5f ) );
+	} else {
+		cl.snapMargin = SNAP_MARGIN;
+	}
+}
+
+/*
+=================
+CL_NetStats
+
+v_netStats 1: a line every five seconds with how the snapshots come and how the game runs behind them. Counted
+whatever the cvar says, it is a few additions.
+=================
+*/
+static struct {
+	int			start;				// cls.realtime the counts began
+	int			snapshots, bytes;
+	int			frames, past;		// frames of the game, and those past the newest snapshot (the cgame extrapolates)
+	long long	behind;				// cl.snap.serverTime - cl.serverTime of every frame, added up
+} netStats;
+
+void CL_NetStatsPacket( int bytes ) {
+	netStats.bytes += bytes;
+}
+
+void CL_NetStatsSnapshot( void ) {
+	netStats.snapshots++;
+}
+
+static void CL_NetStatsFrame( void ) {
+	int msec;
+
+	netStats.frames++;
+	netStats.behind += cl.snap.serverTime - cl.serverTime;
+	if ( cl.serverTime > cl.snap.serverTime ) {
+		netStats.past++;
+	}
+	if ( !netStats.start ) {
+		netStats.start = cls.realtime;
+	}
+	msec = cls.realtime - netStats.start;
+	if ( msec < 5000 ) {
+		return;
+	}
+	if ( v_netStats->integer ) {
+		Com_Printf( "net: %i snapshots/s, %i bytes/s, %i of %i frames past the newest snapshot, jitter %.1f ms, margin %i ms, "
+			"%.1f ms behind the newest snapshot\n", netStats.snapshots * 1000 / msec, (int)( netStats.bytes * 1000LL / msec ),
+			netStats.past, netStats.frames, cl.snapJitter, cl.snapMargin ? cl.snapMargin : SNAP_MARGIN,
+			netStats.frames ? (double)netStats.behind / netStats.frames : 0.0 );
+	}
+	memset( &netStats, 0, sizeof( netStats ) );
+	netStats.start = cls.realtime;
+}
 
 void CL_AdjustTimeDelta( void ) {
 	int		newDelta;
@@ -629,10 +673,12 @@ void CL_AdjustTimeDelta( void ) {
 
 	cl.newSnapshots = qfalse;
 
-	// the delta never drifts when replaying a demo
-	if ( clc.demoplaying ) {
+	// the delta never drifts when replaying a demo (but on the TV of a server, which comes live, cl_tv.cpp)
+	if ( clc.demoplaying && !clc.tvLive ) {
 		return;
 	}
+
+	CL_SnapshotJitter();
 
 	newDelta = cl.snap.serverTime - cls.realtime;
 	deltaDelta = abs( newDelta - cl.serverTimeDelta );
@@ -684,9 +730,14 @@ void CL_FirstSnapshot( void ) {
 		return;
 	}
 
+	Com_LoadPush( "renderer end of load", NULL );
 	re->RegisterMedia_LevelLoadEnd();
+	Com_LoadPop();
 
 	cls.state = CA_ACTIVE;
+	// the frame that runs draws the game for the first time: with it the load is over
+	Com_LoadDone();
+	CL_JoinStep( JOIN_ACTIVE );
 
 	// set the timedelta so we are exactly on this first frame
 	cl.serverTimeDelta = cl.snap.serverTime - cls.realtime;
@@ -715,7 +766,8 @@ void CL_SetCGameTime( void ) {
 		if ( cls.state != CA_PRIMED ) {
 			return;
 		}
-		if ( clc.demoplaying ) {
+		// (the TV of a server, cl_tv.cpp, hands its messages over as they come, as packets are)
+		if ( clc.demoplaying && !clc.tvLive ) {
 			// we shouldn't get the first snapshot on the same frame
 			// as the gamestate, because it causes a bad time skip
 			if ( !clc.firstDemoFrameSkipped ) {
@@ -787,8 +839,11 @@ void CL_SetCGameTime( void ) {
 
 		// note if we are almost past the latest frame (without timeNudge),
 		// so we will try and adjust back a bit when the next snapshot arrives
-		if ( cls.realtime + cl.serverTimeDelta >= cl.snap.serverTime - 5 ) {
+		if ( cls.realtime + cl.serverTimeDelta >= cl.snap.serverTime - ( cl.snapMargin ? cl.snapMargin : SNAP_MARGIN ) ) {
 			cl.extrapolatedSnapshot = qtrue;
+		}
+		if ( !clc.demoplaying ) {
+			CL_NetStatsFrame();
 		}
 	}
 
@@ -799,7 +854,7 @@ void CL_SetCGameTime( void ) {
 		CL_AdjustTimeDelta();
 	}
 
-	if ( !clc.demoplaying ) {
+	if ( !clc.demoplaying || clc.tvLive ) {
 		return;
 	}
 

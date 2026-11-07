@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "server.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 
 /*
 =============================================================================
@@ -357,6 +357,85 @@ static void SV_AddEntToSnapshot( svEntity_t *svEnt, sharedEntity_t *gEnt, snapsh
 
 /*
 ===============
+SV_PlayerHidden
+
+vs_antiWallhack. A client is told of every player the map lets through to where it stands (the PVS, which goes by
+rooms and not by walls), and a cheat draws those players through the walls. With the cvar on, a player nobody
+could see from the eye of the client is not in its snapshot at all, so there is nothing to draw.
+
+"Could see" errs on the side of sending him: lines from the eye to the middle of his box, to its top and bottom
+and to its eight corners, the box widened by 16 units and by where he will be in a fifth of a second. One line
+that is not stopped by the world is enough. Only the brushes of the map stop a line, and none that are drawn
+through (glass, grates) or not drawn (an unseen wall): doors and movers never hide anybody. Never hidden: a
+player closer than SV_WALLHACK_NEAR, anybody from somebody who watches (a spectator), and anybody from a
+player who uses Force Sight, which shows players through walls by the rules of the game.
+
+What it costs, and why it is off by default: a client that is not told of a player does not hear him either.
+Steps, sabers and shots behind a wall are silent until he comes into view.
+===============
+*/
+#define SV_WALLHACK_NEAR	384.0f
+#define SV_WALLHACK_AHEAD	0.2f		// seconds
+
+cvar_t	*vs_antiWallhack;
+
+static qboolean SV_SightLine( const vec3_t eye, const vec3_t point ) {
+	trace_t trace;
+
+	CM_BoxTrace( &trace, eye, point, vec3_origin, vec3_origin, 0, CONTENTS_SOLID, qfalse );
+	if ( trace.fraction == 1.0f || trace.startsolid ) {
+		return qtrue;
+	}
+	// stopped by something one sees through, or by something that is not drawn
+	return (qboolean)( ( trace.contents & CONTENTS_TRANSLUCENT ) || ( trace.surfaceFlags & ( SURF_NODRAW | SURF_SKY ) ) );
+}
+
+static qboolean SV_PlayerHidden( const vec3_t eye, const playerState_t *viewer, const sharedEntity_t *ent ) {
+	vec3_t	mins, maxs, point, delta;
+	int		i;
+
+	if ( ent->s.eType != ET_PLAYER ) {
+		return qfalse;
+	}
+	if ( viewer->pm_type == PM_SPECTATOR || viewer->pm_type == PM_INTERMISSION || ( viewer->pm_flags & PMF_FOLLOW )
+		|| ( viewer->fd.forcePowersActive & ( 1 << FP_SEE ) ) ) {
+		return qfalse;
+	}
+
+	// his box, with room for where he and the eye will be when the snapshot is drawn
+	for ( i = 0; i < 3; i++ ) {
+		const float ahead = fabsf( ent->s.pos.trDelta[i] ) * SV_WALLHACK_AHEAD + fabsf( viewer->velocity[i] ) * SV_WALLHACK_AHEAD + 16.0f;
+
+		mins[i] = ent->r.absmin[i] - ahead;
+		maxs[i] = ent->r.absmax[i] + ahead;
+		point[i] = ( mins[i] + maxs[i] ) * 0.5f;
+	}
+	VectorSubtract( point, eye, delta );
+	if ( VectorLengthSquared( delta ) < SV_WALLHACK_NEAR * SV_WALLHACK_NEAR ) {
+		return qfalse;
+	}
+
+	if ( SV_SightLine( eye, point ) ) {
+		return qfalse;
+	}
+	// the top and the bottom of the box above its middle, then its corners
+	for ( i = 0; i < 2; i++ ) {
+		point[2] = i ? mins[2] : maxs[2];
+		if ( SV_SightLine( eye, point ) ) {
+			return qfalse;
+		}
+	}
+	for ( i = 0; i < 8; i++ ) {
+		VectorSet( point, ( i & 1 ) ? maxs[0] : mins[0], ( i & 2 ) ? maxs[1] : mins[1], ( i & 4 ) ? maxs[2] : mins[2] );
+		if ( SV_SightLine( eye, point ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
+/*
+===============
 SV_AddEntitiesVisibleFromPoint
 ===============
 */
@@ -510,6 +589,11 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 			}
 		}
 
+		// a player no line of sight reaches, see SV_PlayerHidden()
+		if ( vs_antiWallhack->integer && e < sv_maxclients->integer && SV_PlayerHidden( origin, &frame->ps, ent ) ) {
+			continue;
+		}
+
 		// add it
 		SV_AddEntToSnapshot( svEnt, ent, eNums );
 
@@ -540,22 +624,18 @@ currently doesn't.
 For viewing through other player's eyes, client can be something other than client->gentity
 =============
 */
-static void SV_BuildClientSnapshot( client_t *client ) {
+// What is seen from the playerState ps (of a player, or of the TV of the server that stands somewhere, sv_tv.cpp),
+// into frame. follow: as a spectator who follows that player sees it, his playerState with PMF_FOLLOW.
+static void SV_BuildSnapshotFrom( clientSnapshot_t *frame, const playerState_t *ps, qboolean follow ) {
 	vec3_t						org;
-	clientSnapshot_t			*frame;
 	snapshotEntityNumbers_t		entityNumbers;
 	int							i;
 	sharedEntity_t				*ent;
 	entityState_t				*state;
 	svEntity_t					*svEnt;
-	sharedEntity_t				*clent;
-	playerState_t				*ps;
 
 	// bump the counter used to prevent double adding
 	sv.snapshotCounter++;
-
-	// this is the frame we are creating
-	frame = &client->frames[ client->netchan.outgoingSequence & PACKET_MASK ];
 
 	// clear everything in this snapshot
 	entityNumbers.numSnapshotEntities = 0;
@@ -563,14 +643,11 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 
 	frame->num_entities = 0;
 
-	clent = client->gentity;
-	if ( !clent || client->state == CS_ZOMBIE ) {
-		return;
-	}
-
-	// grab the current playerState_t
-	ps = SV_GameClientNum( client - svs.clients );
+	// the current playerState_t
 	frame->ps = *ps;
+	if ( follow ) {
+		frame->ps.pm_flags |= PMF_FOLLOW;
+	}
 #ifdef _ONEBIT_COMBO
 	frame->pDeltaOneBit = &ps->deltaOneBits;
 	frame->pDeltaNumBit = &ps->deltaNumBits;
@@ -638,6 +715,19 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 		}
 		frame->num_entities++;
 	}
+}
+
+static void SV_BuildClientSnapshot( client_t *client ) {
+	clientSnapshot_t *frame = &client->frames[ client->netchan.outgoingSequence & PACKET_MASK ];
+
+	if ( !client->gentity || client->state == CS_ZOMBIE ) {
+		// (nothing in it)
+		sv.snapshotCounter++;
+		Com_Memset( frame->areabits, 0, sizeof( frame->areabits ) );
+		frame->num_entities = 0;
+		return;
+	}
+	SV_BuildSnapshotFrom( frame, SV_GameClientNum( client - svs.clients ), qfalse );
 }
 
 
@@ -749,7 +839,9 @@ void SV_SendMessageToClient( msg_t *msg, client_t *client ) {
 	client->nextSnapshotTime = svs.time + ((int) (rateMsec * com_timescale->value));
 
 	// don't pile up empty snapshots while connecting
-	if ( client->state != CS_ACTIVE ) {
+	// (but the rest of a message that did not fit into one packet goes on at the rate, as in ioq3: the fragments of
+	// every gamestate waited a second here, a second of every join)
+	if ( client->state != CS_ACTIVE && !client->netchan.unsentFragments ) {
 		// a gigantic connection message may have already put the nextSnapshotTime
 		// more than a second away, so don't shorten it
 		// do shorten if client is downloading
@@ -846,6 +938,9 @@ void SV_SendClientSnapshot( client_t *client ) {
 
 	// Add any download data if the client is downloading
 	SV_WriteDownloadToClient( client, &msg );
+#ifdef VISIONJK_IDS_TEST
+	SV_IDSTest_Unasked( client, &msg );
+#endif
 
 	// check for overflow
 	if ( msg.overflowed ) {
@@ -854,6 +949,50 @@ void SV_SendClientSnapshot( client_t *client ) {
 	}
 
 	SV_SendMessageToClient( &msg, client );
+}
+
+
+/*
+=======================
+SV_SendTVSnapshot
+
+The TV of the server (sv_tv.cpp): a client_t that is in no slot and has no connection, as a bot that records a
+demo has none. It sees from ps: the player it follows (follow), or where it stands itself. Its reliable commands
+and its snapshot (against the one before, or whole with full) go into out, as a message of a demo is (svc_EOF at
+its end); the length is returned, and *sequence is its number. The commands count as received.
+=======================
+*/
+int SV_SendTVSnapshot( client_t *tv, const playerState_t *ps, qboolean follow, qboolean full, byte *out, int outSize, int *sequence ) {
+	clientSnapshot_t	*frame = &tv->frames[ tv->netchan.outgoingSequence & PACKET_MASK ];
+	msg_t				msg;
+
+	SV_BuildSnapshotFrom( frame, ps, follow );
+
+	// (SV_WriteSnapshotToClient sends it whole while a recording waits for that, and stops waiting)
+	if ( full ) {
+		tv->demo.demowaiting = qtrue;
+	}
+	MSG_Init( &msg, out, outSize );
+	msg.allowoverflow = qtrue;
+	MSG_WriteLong( &msg, tv->lastClientCommand );
+	SV_UpdateServerCommandsToClient( tv, &msg );
+	SV_WriteSnapshotToClient( tv, &msg );
+	MSG_WriteByte( &msg, svc_EOF );
+	if ( msg.overflowed ) {
+		Com_Printf( "WARNING: msg overflowed for the TV of the server\n" );
+		return 0;
+	}
+
+	// what SV_SendMessageToClient keeps of a message, and what it does for a bot
+	frame->messageSize = msg.cursize;
+	frame->messageSent = svs.time;
+	frame->messageAcked = -1;
+	*sequence = tv->netchan.outgoingSequence;
+	tv->netchan.outgoingSequence++;
+	tv->demo.botReliableAcknowledge = tv->reliableSent;
+	// (what SV_AddServerCommand counts the commands that wait against)
+	tv->reliableAcknowledge = tv->reliableSent;
+	return msg.cursize;
 }
 
 
@@ -888,5 +1027,7 @@ void SV_SendClientMessages( void ) {
 		// generate and send a new message
 		SV_SendClientSnapshot( c );
 	}
+	// the TV of the server (sv_tv.cpp)
+	SV_TVFrame();
 }
 

@@ -1,3 +1,4 @@
+// visionjk-classic: a menu file of this tree. A file of this name without this line is a mod's: the ui then loads the menus of the game and not the new look (ui/vision), see docs/japlus/ui.md
 //---------------------------------------------------------
 // jk2mpingame.txt 
 // 
@@ -38,5 +39,17 @@
 	loadMenu { "ui/jamp/UrlRedirectBackground.menu" }
 	
 	loadMenu { "ui/jamp/modsay.menu" }
+
+	// the server browser while in a game, and the pop-ups of the base game its buttons open
+	loadMenu { "ui/jamp/ingame_servers.menu" }
+	loadMenu { "ui/jamp/password.menu" }
+	loadMenu { "ui/jamp/password_request.menu" }
+	loadMenu { "ui/jamp/serverinfo.menu" }
+	loadMenu { "ui/jamp/findplayer.menu" }
+	loadMenu { "ui/jamp/createfavorite.menu" }
+	loadMenu { "ui/jamp/updatechannel.menu" }
+	loadMenu { "ui/jamp/changelog.menu" }
+	loadMenu { "ui/jamp/cvarclean.menu" }
+	loadMenu { "ui/jamp/modelpick.menu" }
 }
 

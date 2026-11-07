@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -143,6 +144,11 @@ static void CG_Obituary( entityState_t *ent ) {
 	ci = &cgs.clientinfo[target];
 	CG_JPReplyObituary( target );
 
+	// tay_killSound, as jaPRO's cg_killSounds: the own player killed somebody else
+	if ( tay_killSound.integer && cg.snap && !( cg.snap->ps.pm_flags & PMF_FOLLOW ) && attacker == cg.snap->ps.clientNum && target != attacker ) {
+		trap->S_StartLocalSound( cgs.media.tayKillSound, CHAN_LOCAL_SOUND );
+	}
+
 	if ( attacker < 0 || attacker >= MAX_CLIENTS ) {
 		attacker = ENTITYNUM_WORLD;
 		attackerInfo = NULL;
@@ -280,6 +286,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
 		trap->Print( "%s %s\n", targetName, message);
+		CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, message ) );
 		return;
 	}
 
@@ -459,12 +466,14 @@ clientkilled:
 
 			trap->Print( "%s %s %s\n",
 				targetName, message, attackerName);
+			CG_KillfeedAdd( attacker, target, mod, va( "%s %s %s", targetName, message, attackerName ) );
 			return;
 		}
 	}
 
 	// we don't know what it was
 	trap->Print( "%s %s\n", targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
+	CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, CG_GetStringEdString( "MP_INGAME", "DIED_GENERIC" ) ) );
 }
 
 //==========================================================================
@@ -1394,6 +1403,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_FOOTSTEP:
 		DEBUGNAME("EV_FOOTSTEP");
+		// (this one only comes with a soft landing, the steps come from the animations)
+		CG_WaterLand( cent, 0.35f );
 		if (cg_footsteps.integer) {
 			footstep_t	soundType;
 			switch( es->eventParm )
@@ -1480,6 +1491,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		}
 		DoFall(cent, es, clientNum);
+		CG_WaterLand( cent, Com_Clamp( 0.6f, 1.0f, 0.6f + es->eventParm / 60.0f ) );
 		break;
 	case EV_STEP_4:
 	case EV_STEP_8:
@@ -1574,6 +1586,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_JUMP:
 		DEBUGNAME("EV_JUMP");
+		CG_WaterLand( cent, 0.5f );
 		if (cg_jumpSounds.integer)
 		{
 			trap->S_StartSound (NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*jump1.wav" ) );
@@ -1581,6 +1594,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 	case EV_ROLL:
 		DEBUGNAME("EV_ROLL");
+		CG_WaterLand( cent, 0.6f );
 		if (es->number == cg.snap->ps.clientNum && cg.snap->ps.fallingToDeath)
 		{
 			break;
@@ -2371,6 +2385,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					{
 						cg_saberFlashTime = cg.time-50;
 						VectorCopy( es->origin, cg_saberFlashPos );
+						CG_ScreenFxFlash( es->origin, 40.0f, 0.85f );
 					}
 				}
 			}
@@ -2392,6 +2407,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		{
 			cg_saberFlashTime = cg.time-50;
 			VectorCopy( es->origin, cg_saberFlashPos );
+			CG_ScreenFxFlash( es->origin, 64.0f, 1.0f );
 			trap->S_StartSound ( es->origin, -1, CHAN_WEAPON, trap->S_RegisterSound( va("sound/weapons/saber/saberhitwall%i", Q_irand(1, 3)) ) );
 		}
 		break;
@@ -2471,7 +2487,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
-		FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
+		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qfalse ) )
+			FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
+		CG_WaterImpact( cent->lerpOrigin, 0.7f );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_SHOT:
@@ -2488,7 +2506,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
-		FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
+		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qtrue ) )
+			FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
+		CG_WaterImpact( cent->lerpOrigin, 0.9f );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_MISS:
@@ -2986,21 +3006,26 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		case EFFECT_EXPLOSION:
 			eID = cgs.effects.mEmplacedExplode;
+			CG_ScreenFxBlast( es->origin, 200.0f );
 			break;
 		case EFFECT_EXPLOSION_PAS:
 			eID = cgs.effects.mTurretExplode;
+			CG_ScreenFxBlast( es->origin, 128.0f );
 			break;
 		case EFFECT_SPARK_EXPLOSION:
 			eID = cgs.effects.mSparkExplosion;
 			break;
 		case EFFECT_EXPLOSION_TRIPMINE:
 			eID = cgs.effects.mTripmineExplosion;
+			CG_ScreenFxBlast( es->origin, 256.0f );
 			break;
 		case EFFECT_EXPLOSION_DETPACK:
 			eID = cgs.effects.mDetpackExplosion;
+			CG_ScreenFxBlast( es->origin, 256.0f );
 			break;
 		case EFFECT_EXPLOSION_FLECHETTE:
 			eID = cgs.effects.mFlechetteAltBlow;
+			CG_ScreenFxBlast( es->origin, 128.0f );
 			break;
 		case EFFECT_STUNHIT:
 			eID = cgs.effects.mStunBatonFleshImpact;
@@ -3011,6 +3036,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		case EFFECT_EXPLOSION_TURRET:
 			eID = cgs.effects.mTurretExplode;
+			CG_ScreenFxBlast( es->origin, 128.0f );
 			break;
 		case EFFECT_SPARKS:
 			eID = cgs.effects.mSparksExplodeNoSound;

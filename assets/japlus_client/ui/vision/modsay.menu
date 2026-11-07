@@ -1,0 +1,238 @@
+// modsay.menu in the new look. Made by tools/menus/build.py from ui/jamp/modsay.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"modsay"
+		visible					1
+		fullscreen				0
+		outOfBoundsClick
+		rect					200 80 1100 736
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_EMPTY
+		descX					750
+		descY					832
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		radius					6.4
+		shadow					14
+
+		itemDef
+		{
+			name					vision_window
+			rect					0 0 1100 304
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			cvarTest				"ui_modsay"
+			showCvar { "0" ; "2" }
+		}
+
+		itemDef
+		{
+			name					vision_window_list
+			rect					0 0 1100 628
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			cvarTest				"ui_modsay"
+			showCvar { "1" }
+		}
+
+		itemDef
+		{
+			name					vision_window_to
+			rect					0 0 1100 736
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			cvarTest				"ui_modsay"
+			showCvar { "3" }
+		}
+
+		itemDef
+		{
+			name					modsaytitle
+			style					WINDOW_STYLE_EMPTY
+			text					"Say Mod"
+			rect					28 20 792 64
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				21
+			outlinecolor			1 .5 .5 .5
+			backcolor				0 0 0 0
+			font					7
+			textscale				1.22
+			forecolor				0.56 0.64 0.74 1
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			caps					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					saySendButton
+			text					@MENUS_DONE
+			descText				"send the message"
+			type					1
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					836 20 240 64
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				120
+			textaligny				19
+			font					7
+			textscale				1.44
+			forecolor				0.016 0.071 0.122 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript sendModSayMsg ;
+				uiScript closeingame
+			}
+			caps					1
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+		}
+
+		itemDef
+		{
+			name					modsayType
+			group					none
+			type					ITEM_TYPE_MULTI
+			text					""
+			descText				"select the type of modSay"
+			cvar					"ui_modsay"
+			cvarFloatList
+			{
+				"Clan Say (clansay)" 0
+				"Private Say (tell)" 1
+				"Admin Say (amsay)" 2
+				"Admin Print (ampsay)" 3
+			}
+			rect					24 100 1052 84
+			font					5
+			textscale				1.56
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			mouseenter { show highlight1 }
+			mouseexit { hide highlight1 }
+			row						1
+		}
+
+		itemDef
+		{
+			name					textToSend
+			type					ITEM_TYPE_EDITFIELD
+			style					WINDOW_STYLE_EMPTY
+			text					"Text:"
+			cvar					"ui_modSayText"
+			maxchars				133
+			rect					24 196 1052 84
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				0.6
+			font					5
+			textscale				1.56
+			forecolor				0.86 0.90 0.945 1
+			outlinecolor			1 .5 .5 .5
+			backcolor				0 0 0 0
+			bordercolor				0.086 0.149 0.247 1
+			descText				"Write your Text here"
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseenter
+			{
+				hide highlight2
+				setitemcolor textToSend bordercolor 0.086 0.149 0.247 1
+			}
+			mouseexit
+			{
+				show highlight2
+				setitemcolor textToSend bordercolor 0.086 0.149 0.247 1
+			}
+			radius					5
+			row						3
+		}
+
+		itemDef
+		{
+			name					playerList
+			group					none
+			descText				"Select a player"
+			rect					24 304 1052 300
+			style					WINDOW_STYLE_PANEL
+			type					ITEM_TYPE_LISTBOX
+			elementwidth			120
+			elementheight			52
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_PLAYER_LIST
+			bordercolor				0.153 0.251 0.373 1
+			backcolor				0.027 0.051 0.102 1
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			textaligny				13.2
+			textscale				1.44
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			cvarTest				"ui_modsay"
+			showCvar { "1" ; "3" }
+			mouseEnter
+			{
+				fadein message_arena ;
+				setitemcolor playerList bordercolor 0.086 0.149 0.247 1
+			}
+			mouseExit
+			{
+				fadeout message_arena ;
+				setitemcolor playerList bordercolor 0.086 0.149 0.247 1
+			}
+			action { play "sound/interface/button1.wav" ; }
+			radius					6
+		}
+
+		itemDef
+		{
+			name					modsayAllPlayers
+			group					none
+			type					ITEM_TYPE_MULTI
+			text					"To"
+			descText				"send messages to all players?"
+			cvar					"ui_modsayAllPlayer"
+			cvarFloatList
+			{
+				"selected player" 0
+				"all players" 1
+			}
+			rect					24 628 1052 84
+			font					5
+			textscale				1.56
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			cvarTest				"ui_modsay"
+			showCvar { "3" }
+			action { play "sound/interface/button1.wav" ; }
+			mouseenter { show highlight3 }
+			mouseexit { hide highlight3 }
+			row						3
+		}
+		canvas					1600 1200
+	}
+}

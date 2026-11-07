@@ -22,15 +22,29 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 int gTrigFallSound;
 
 void InitTrigger( gentity_t *self ) {
+	vec3_t	mins, maxs;
+
 	if (!VectorCompare (self->s.angles, vec3_origin))
 		G_SetMovedir (self->s.angles, self->movedir);
 
-	trap->SetBrushModel( (sharedEntity_t *)self, self->model );
+	// Not in the game as it was: a trigger that names no brush model and has the keys mins and maxs is a box of
+	// that size at its origin. No map file has such a trigger (without a model the line below ends the server),
+	// the editor of the web admin panel places them, so that a trigger does not need a shape the map happens to
+	// have. The server alone works such a trigger: a client predicts its own way only through triggers that are
+	// brush models (CG_TouchTriggerPrediction), so a push by one comes with the next snapshot.
+	if ( ( !self->model || self->model[0] != '*' ) && G_SpawnVector( "mins", "0 0 0", mins ) && G_SpawnVector( "maxs", "0 0 0", maxs )
+		&& maxs[0] > mins[0] && maxs[1] > mins[1] && maxs[2] > mins[2] ) {
+		VectorCopy( mins, self->r.mins );
+		VectorCopy( maxs, self->r.maxs );
+		G_SetOrigin( self, self->s.origin );
+	} else {
+		trap->SetBrushModel( (sharedEntity_t *)self, self->model );
+	}
 	self->r.contents = CONTENTS_TRIGGER;		// replaces the -1 from trap->SetBrushModel
 	self->r.svFlags = SVF_NOCLIENT;
 
@@ -1101,7 +1115,9 @@ void AimAtTarget( gentity_t *self ) {
 	height = ent->s.origin[2] - origin[2];
 	gravity = g_gravity.value;
 	time = sqrt( height / ( .5 * gravity ) );
-	if ( !time ) {
+	// Not in the game as it was: only a target at the height of the push ended here. With one below it the root
+	// is no number, and so was the speed everybody got who touched the push.
+	if ( !( time > 0 ) ) {
 		G_FreeEntity( self );
 		return;
 	}
@@ -1115,6 +1131,44 @@ void AimAtTarget( gentity_t *self ) {
 	VectorScale( self->s.origin2, forward, self->s.origin2 );
 
 	self->s.origin2[2] = time * gravity;
+}
+
+/*
+=================
+G_PushAimAgain
+
+Not in the game as it was. A trigger_push and a target_push work out their throw once, in their first frame, from
+where their target is then. The editor of the web admin panel places and moves entities while the map runs: what
+is aimed at the one given here is aimed again. Not a push the new place has no throw for (a target that is not
+above it): AimAtTarget frees that one, and moving a target should not take the push away. It keeps the throw it
+had.
+=================
+*/
+void G_PushAimAgain( const gentity_t *target ) {
+	int i;
+
+	if ( !VALIDSTRING( target->targetname ) )
+		return;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*ent = &g_entities[i];
+		qboolean	arc;
+
+		if ( !ent->inuse || ent == target || !ent->classname || !VALIDSTRING( ent->target ) || Q_stricmp( ent->target, target->targetname ) )
+			continue;
+		if ( !Q_stricmp( ent->classname, "trigger_push" ) )
+			arc = (qboolean)!( ent->spawnflags & ( PUSH_RELATIVE | PUSH_LINEAR ) );
+		else if ( !Q_stricmp( ent->classname, "target_push" ) )
+			arc = (qboolean)!( ent->spawnflags & PUSH_CONSTANT );
+		else
+			continue;
+		// the height AimAtTarget takes: from the middle of the push to its target
+		if ( arc && target->s.origin[2] <= ( ent->r.absmin[2] + ent->r.absmax[2] ) * 0.5f )
+			continue;
+
+		ent->think = AimAtTarget;
+		ent->nextthink = level.time + FRAMETIME;
+	}
 }
 
 

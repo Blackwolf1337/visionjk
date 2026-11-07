@@ -1,0 +1,143 @@
+// createfavorite.menu in the new look. Made by tools/menus/build.py from ui/jamp/createfavorite.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"createfavorite_popmenu"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					540 310 520 280
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_EMPTY
+		descX					800
+		descY					604
+		descScale				0.78
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		popup
+		onOpen { setfocus addressEntry }
+		onESC
+		{
+			play "sound/interface/esc.wav" ;
+			close createfavorite_popmenu
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		backcolor				0.031 0.055 0.11 0.86
+		bordercolor				0.11 0.18 0.29 1
+		radius					6.4
+		shadow					14
+
+		itemDef
+		{
+			name					vision_veil
+			rect					-540 -310 1600 900
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0 0 0.55
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_dialog
+			rect					0 0 520 280
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.039 0.071 0.133 0.96
+			bordercolor				0.153 0.251 0.373 1
+			radius					12
+			decoration
+			shadow					40
+		}
+
+		itemDef
+		{
+			name					title
+			text					@MENUS_FAVORITE_SERVER_INFO
+			style					WINDOW_STYLE_EMPTY
+			rect					28 19.4 464 34
+			font					5
+			textscale				1.33
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					addressTitle
+			text					@MENUS_ENTER_IP_ADDRESS
+			style					0
+			decoration
+			font					5
+			textscale				0.83
+			rect					28 65.4 464 23
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				4
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					addressEntry
+			style					WINDOW_STYLE_EMPTY
+			maxPaintChars			21
+			text					""
+			descText				@MENUS_INPUT_IP_ADDRESS_OF_SERVER
+			font					5
+			textscale				0.89
+			TYPE					4
+			maxchars				21
+			cvar					"ui_favoriteAddress"
+			rect					28 90.4 464 44
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				42
+			textaligny				-0.8
+			forecolor				0.56 0.64 0.74 1
+			bordercolor				0.086 0.149 0.247 1
+			backcolor				0.11 0.18 0.29 0.45
+			visible					1
+			mouseenter { setitemcolor addressEntry backcolor .25 .25 .25 .75 }
+			mouseexit { setitemcolor addressEntry backcolor .25 .25 .25 .5 }
+			radius					3
+			row						3
+		}
+
+		itemDef
+		{
+			name					doneText
+			text					@MENUS_DONE
+			descText				@MENUS_FINISHED_INPUTTING_INFO
+			type					1
+			font					7
+			textscale				0.83
+			style					WINDOW_STYLE_PANEL
+			rect					272 208 220 44
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				110
+			textaligny				14.5
+			forecolor				0.016 0.071 0.122 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+				uiScript CreateFavorite
+				close createfavorite_popmenu
+			}
+			caps					1
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+		}
+		canvas					1600 900
+	}
+}

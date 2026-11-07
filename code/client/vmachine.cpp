@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -59,14 +60,11 @@ intptr_t	VM_Call( int callnum, ... )
 // This hack below copies all needed values for an argument to an array in memory, so that QVM can get the correct values.
 // This can also be used on systems where the stack grows upwards, as the presumably standard and safe stdargs.h macros
 //	are used.
-// The original code, while probably still inherently dangerous, seems to work well enough for the platforms it already
-//	works on. Rather than add the performance hit for those platforms, the original code is still in use there.
 // For speed, we just grab 9 arguments, and don't worry about exactly how many the syscall actually needs; the extra is
 //	thrown away.
 extern intptr_t CL_CgameSystemCalls( intptr_t *args );
 
 intptr_t VM_DllSyscall( intptr_t arg, ... ) {
-#if !id386 || defined __clang__ || defined MACOS_X
 	// rcg010206 - see commentary above
 	intptr_t args[16];
 	va_list ap;
@@ -79,7 +77,4 @@ intptr_t VM_DllSyscall( intptr_t arg, ... ) {
 	va_end( ap );
 
 	return CL_CgameSystemCalls( args );
-#else // original id code
-	return CL_CgameSystemCalls( &arg );
-#endif
 }

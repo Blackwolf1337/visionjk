@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -243,6 +244,61 @@ typedef struct refexport_s {
 
 	struct {
 		float				(*Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
+		// A character of the font with a fixed width, in a cell of the console: place and size of the cell are
+		// pixels of the window. qfalse: there is no such font or it does not have the character, nothing is drawn.
+		qboolean			(*Font_DrawMonoChar)					( int x, int y, int cellWidth, int cellHeight, unsigned int codePoint );
+		// Text in the scene, from the TrueType font: polygons that are hidden by what is in front of them. The
+		// first letter stands at origin on the line of the text, which runs along right; up and the height of a
+		// letter are units of the level. A ^ with a digit colours what follows. Called between ClearScene and
+		// RenderScene. qfalse and a width of 0: there is no such font.
+		float				(*Font_Text3DWidth)						( const char *text, float height );
+		qboolean			(*Font_Text3D)							( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
+		// A shader for a picture a module made itself, for polygons in the scene (see RE_RegisterSceneShader):
+		// width and height are powers of two. flags: RGBA_SHADER_GLOW, it is added and glows. RGBA_SHADER_OVER,
+		// nothing of the scene hides it. RGBA_SHADER_BEHIND, drawn before the others. Its files need no pk3, so it
+		// is there on a pure server too.
+		qhandle_t			(*RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
+		// The 2D that follows is drawn on a plane in the level, not flat on the screen: matrix takes a place of
+		// the 2D grid to clip space (16 values, column by column). NULL: flat again.
+		void				(*Set2DPlane)							( const float *matrix );
+		// The scene of this frame is blurred where it is nearer or farther than focus (units of the level),
+		// amount 0 to 1.
+		void				(*SetDepthOfField)						( float focus, float amount );
+		// The window has that size now, in pixels (the desktop resized it): the renderer draws in that size from
+		// the next frame on and glconfig has it. Called between two frames. qfalse: the renderer can not, the
+		// engine restarts it with a vid_restart.
+		qboolean			(*WindowResized)						( int width, int height );
+		// The view of the level of this frame is seen through the scope of a weapon (scopeEffect_t), until the next
+		// frame. NULL only asks. qfalse: this renderer does not have it, the cgame draws the scope itself.
+		qboolean			(*SetScopeEffect)						( const scopeEffect_t *fx );
+		// The view of the level of this frame bends, flashes and is coloured as screenEffect_t says, until the next
+		// frame. NULL only asks. qfalse: this renderer does not have it.
+		qboolean			(*SetScreenEffect)						( const screenEffect_t *fx );
+		// What was looked for under prefix (a path ending with /) and not found is looked for again: models,
+		// skins, shaders whose image was missing. The file system has a pak more (client/cl_models.cpp).
+		void				(*ForgetMissing)						( const char *prefix );
+		// A picture file of the game (tga, png, jpg) for a module, in width x height RGBA, its sides kept and centred:
+		// where it does not reach the alpha is 0. qfalse: there is no such picture.
+		qboolean			(*LoadImageFit)							( const char *name, byte *rgba, int width, int height );
+		// Pieces of water for the scene of this frame (liquidSegment_t), between ClearScene and RenderScene. NULL
+		// only asks. qfalse: this renderer does not draw them, the cgame draws its water itself.
+		qboolean			(*AddLiquid)							( const liquidSegment_t *segments, int count );
+		// Wet places for the scene of this frame (wetSpot_t), between ClearScene and RenderScene. NULL only asks.
+		// qfalse: this renderer does not draw them, the cgame draws its puddles as marks.
+		qboolean			(*AddWet)								( const wetSpot_t *spots, int count );
+		// The picture of a slot of the sprays (paintDecal_t, PAINT_SLOTS): a sheet of size x size RGBA, a power of two
+		// up to PAINT_SHEET, copied. Returns the shader for marks with it (a decal, colour and alpha from the
+		// vertices), 0 when it could not be made.
+		qhandle_t			(*PaintImage)							( int slot, const byte *rgba, int size );
+		// Sprayed pictures for the scene of this frame (paintDecal_t), between ClearScene and RenderScene. NULL only
+		// asks. qfalse: this renderer does not draw them, the cgame draws marks.
+		qboolean			(*AddPaint)								( const paintDecal_t *decals, int count );
+		// Font_DrawString at a place in units that need not be whole (the letters of a TrueType font go on the
+		// nearest pixel, a font of the game is cut to whole units)
+		void				(*Font_DrawStringF)						( float ox, float oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
+		// The pixels the letters of a text cover when it is drawn at 0,0: box is left, top, right, bottom in units.
+		// qfalse for a font of the game, which does not know them.
+		qboolean			(*Font_InkBox)							( const char *text, const int setIndex, const float scale, float *box );
 	} ext;
 
 } refexport_t;
@@ -325,13 +381,8 @@ typedef struct refimport_s {
 
 	// window handling
 	window_t		(*WIN_Init)                         ( const windowDesc_t *desc, glconfig_t *glConfig );
-	void			(*WIN_SetGamma)						( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
 	void			(*WIN_Present)						( window_t *window );
 	void            (*WIN_Shutdown)                     ( void );
-
-	// OpenGL-specific
-	void *			(*GL_GetProcAddress)				( const char *name );
-	qboolean		(*GL_ExtensionSupported)			( const char *extension );
 
 	// gpvCachedMapDiskImage
 	void *			(*CM_GetCachedMapDiskImage)			( void );
@@ -352,6 +403,20 @@ typedef struct refimport_s {
 	int				(*WIN_VK_InstanceExtensions)		( const char **names, int maxNames );
 	qboolean		(*WIN_VK_CreateSurface)				( void *instance, void *surface );
 	void *			(*WIN_VK_GetInstanceProcAddr)		( void );
+
+	// What the load of a level and a long frame were spent on (qcommon/com_load.cpp): around something that is
+	// loaded, on the main thread. At the end of the table.
+	void			(*LoadPush)							( const char *kind, const char *name );
+	void			(*LoadPop)							( void );
+
+	// Where a read of a file would get it from: 0 nowhere, 1 a pak (with the length of the file and the checksum
+	// of the pak), 2 a directory. FS_FileSource() of the engine, for the textures rd-vulkan-vision keeps.
+	int				(*FS_FileSource)					( const char *qpath, int *length, int *pakChecksum );
+
+	// A TrueType font of this tree, read and checked by the engine (client/cl_font.cpp): 0 the one for the
+	// characters the fonts of the game do not have, 1 the one with a fixed width. NULL when there is none. The
+	// bytes stay where they are until the program ends.
+	const byte *	(*FontFile)							( int font, int *length );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

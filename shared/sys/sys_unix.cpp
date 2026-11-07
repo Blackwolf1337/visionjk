@@ -33,11 +33,24 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <sched.h>
 #include <signal.h>
 #include <sys/resource.h>
+#include <poll.h>
+#include <limits.h>
 
 #include "qcommon/q_version.h"
 #include "qcommon/qcommon.h"
 #include "qcommon/q_shared.h"
 #include "sys_local.h"
+#include "con_local.h"
+#include "qcommon/game_version.h"
+#include <pthread.h>
+#include "sys_memwatch.h"
+#ifdef __linux__
+#include <link.h>
+#endif
+#if defined(__GLIBC__) || defined(__APPLE__)
+#include <execinfo.h>
+#define SYS_BACKTRACE
+#endif
 
 qboolean stdinIsATTY = qfalse;
 
@@ -48,21 +61,143 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 // MAX_SEARCH_PATHS limit.
 #define MAX_OPEN_FILES	4096
 
+/*
+=================
+Sys_CrashHandler
+
+A crash (a bad address, a bad instruction, abort()): the crash log, as Sys_Error() writes one, with what crashed
+and where, then the crash goes on as it would have, so the system still gets its core (coredumpctl). Before
+2026-10-19 only Sys_Error() wrote one, and a segfault left nothing.
+The names in the stack are the exported ones only: an offset in a file is turned into a function with
+addr2line -f -C -e <file> <offset>, on the same build.
+Nothing in here may allocate or take a lock of libc: a crash inside malloc (abort() on a broken heap) holds the
+lock of the heap, and until 2026-10-30 fopen() waited for it here forever, so the game hung instead of crashing.
+So open()/write(), snprintf() into the stack, and no strsignal().
+=================
+*/
+static void Sys_CrashWrite( int fd, const char *text, int length )
+{
+	while ( length > 0 ) {
+		const ssize_t written = write( fd, text, length );
+
+		if ( written <= 0 ) {
+			if ( written < 0 && errno == EINTR )
+				continue;
+			return;
+		}
+		text += written;
+		length -= (int)written;
+	}
+}
+
+static const char *Sys_CrashSignalName( int sig )
+{
+	switch ( sig ) {
+	case SIGSEGV:	return "Segmentation fault";
+	case SIGBUS:	return "Bus error";
+	case SIGILL:	return "Illegal instruction";
+	case SIGFPE:	return "Floating point exception";
+	case SIGABRT:	return "Aborted";
+	default:		return "?";
+	}
+}
+
+static void Sys_CrashHandler( int sig, siginfo_t *info, void *context )
+{
+	static volatile sig_atomic_t crashed;
+
+	if ( !crashed ) {
+		char path[MAX_OSPATH], thread[32] = "", line[MAX_OSPATH + 128];
+		const char *first, *second;
+		int fd, length, firstLen, secondLen;
+
+		crashed = 1;
+		Sys_CrashLogPath( path, sizeof( path ) );
+		fd = open( path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644 );
+		if ( fd >= 0 ) {
+			pthread_getname_np( pthread_self(), thread, sizeof( thread ) );
+			length = snprintf( line, sizeof( line ), "%s %s crashed: signal %d (%s), address %p, thread \"%s\"\n\n", JK_VERSION,
+				PLATFORM_STRING, sig, Sys_CrashSignalName( sig ), info ? info->si_addr : NULL, thread );
+			Sys_CrashWrite( fd, line, Q_min( length, (int)sizeof( line ) - 1 ) );
+#ifdef SYS_BACKTRACE
+			void *frames[64];
+			const int numFrames = backtrace( frames, ARRAY_LEN( frames ) );
+			static const char stackHead[] = "stack (a function of an offset: addr2line -f -C -e <file> <offset>):\n";
+
+			Sys_CrashWrite( fd, stackHead, sizeof( stackHead ) - 1 );
+			backtrace_symbols_fd( frames, numFrames, fd );
+#endif
+			static const char consoleHead[] = "\nconsole:\n";
+
+			Sys_CrashWrite( fd, consoleHead, sizeof( consoleHead ) - 1 );
+			ConsoleLogParts( &first, &firstLen, &second, &secondLen );
+			Sys_CrashWrite( fd, first, firstLen );
+			Sys_CrashWrite( fd, second, secondLen );
+			close( fd );
+			length = snprintf( line, sizeof( line ), "\nCrashed (signal %d), the crash log was written to %s\n", sig, path );
+			Sys_CrashWrite( STDERR_FILENO, line, Q_min( length, (int)sizeof( line ) - 1 ) );
+		}
+	}
+
+	// SA_RESETHAND gave the signal its default back: a fault happens again when this returns and ends the program
+	// with a core. One that was sent (kill, raise) is sent again.
+	if ( !info || info->si_code <= 0 ) {
+		raise( sig );
+	}
+}
+
+static void Sys_CrashHandlers( void )
+{
+	static const int signals[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+	static byte altStack[64 * 1024];	// a stack that ran over still gets its crash log (in the thread of the game)
+	stack_t stack;
+	struct sigaction action;
+
+#ifdef SYS_BACKTRACE
+	// the first backtrace() loads what it needs, which is not to be done in the handler
+	void *frame;
+	backtrace( &frame, 1 );
+#endif
+
+	memset( &stack, 0, sizeof( stack ) );
+	stack.ss_sp = altStack;
+	stack.ss_size = sizeof( altStack );
+	sigaltstack( &stack, NULL );
+
+	memset( &action, 0, sizeof( action ) );
+	action.sa_sigaction = Sys_CrashHandler;
+	action.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_NODEFER | SA_ONSTACK;
+	sigemptyset( &action.sa_mask );
+	for ( size_t i = 0; i < ARRAY_LEN( signals ); i++ ) {
+		sigaction( signals[i], &action, NULL );
+	}
+}
+
 void Sys_PlatformInit( int argc, char *argv[] )
 {
 	const char* term = getenv( "TERM" );
 
+#ifdef DEDICATED
 	signal( SIGHUP, Sys_SigHandler );
+	// a service that is stopped: the players are told and the game module ends as on "quit"
+	signal( SIGTERM, Sys_SigHandler );
+	signal( SIGINT, Sys_SigHandler );
+#else
+	// the client has its window: it plays on when the terminal it was started from closes (CON_Input() lets go of it)
+	signal( SIGHUP, SIG_IGN );
+#endif
 	signal( SIGQUIT, Sys_SigHandler );
 	signal( SIGTRAP, Sys_SigHandler );
-	signal( SIGABRT, Sys_SigHandler );
-	signal( SIGBUS, Sys_SigHandler );
+#ifndef __EMSCRIPTEN__
+	Sys_CrashHandlers();
+#endif
 
 	if (isatty( STDIN_FILENO ) && !( term && ( !strcmp( term, "raw" ) || !strcmp( term, "dumb" ) ) ))
 		stdinIsATTY = qtrue;
 	else
 		stdinIsATTY = qfalse;
 
+#ifndef __EMSCRIPTEN__	// a page has no such limit to raise
 	// raise open file limit to allow more pk3 files
 	int retval;
 	struct rlimit rlim;
@@ -81,6 +216,7 @@ void Sys_PlatformInit( int argc, char *argv[] )
 	if (retval == -1) {
 		Com_Printf("Warning: Failed to raise open file limit. %s\n", strerror(errno));
 	}
+#endif
 }
 
 void Sys_PlatformExit( void )
@@ -393,6 +529,11 @@ void Sys_Sleep( int msec )
 	if( msec == 0 )
 		return;
 
+#ifdef __EMSCRIPTEN__
+	// a page has one thread, a wait would stop the page with it
+	return;
+#endif
+
 	if( stdinIsATTY )
 	{
 		fd_set fdset;
@@ -574,6 +715,41 @@ bool Sys_DLLNeedsUnpacking()
 
 /*
 =================
+Sys_StderrPrint
+
+stderr of a game started from the desktop is a stream into journald (JOURNAL_STREAM). When that is not read
+any more, a write blocks and the game froze in it (0.2.2, after a map change). Text goes out only while there
+is room for it, the rest is lost for stderr alone: the console and qconsole.log have it. No O_NONBLOCK on fd 2,
+the program that started the game shares it.
+=================
+*/
+void Sys_StderrPrint( const char *text )
+{
+	size_t			len = strlen( text );
+	ssize_t			sent;
+	struct pollfd	pfd;
+
+	while ( len > 0 )
+	{
+		pfd.fd = STDERR_FILENO;
+		pfd.events = POLLOUT;
+		pfd.revents = 0;
+		// POLLOUT: room for PIPE_BUF bytes on a pipe, far more on a socket, so a write of that much does not block
+		if ( poll( &pfd, 1, 0 ) != 1 || !( pfd.revents & POLLOUT ) )
+			return;
+
+		sent = write( STDERR_FILENO, text, len < PIPE_BUF ? len : PIPE_BUF );
+		if ( sent < 0 && errno == EINTR )
+			continue;
+		if ( sent <= 0 )
+			return;
+		text += sent;
+		len -= (size_t)sent;
+	}
+}
+
+/*
+=================
 Sys_AnsiColorPrint
 
 Transform Q3 colour codes to ANSI escape sequences
@@ -605,14 +781,14 @@ void Sys_AnsiColorPrint( const char *msg )
 			if ( length > 0 )
 			{
 				buffer[length] = '\0';
-				fputs( buffer, stderr );
+				Sys_StderrPrint( buffer );
 				length = 0;
 			}
 
 			if ( *msg == '\n' )
 			{
 				// Issue a reset and then the newline
-				fputs( "\033[0m\n", stderr );
+				Sys_StderrPrint( "\033[0m\n" );
 				msg++;
 			}
 			else
@@ -620,7 +796,7 @@ void Sys_AnsiColorPrint( const char *msg )
 				// Print the color code
 				Com_sprintf( buffer, sizeof( buffer ), "\033[%dm",
 					q3ToAnsi[ColorIndex( *(msg + 1) )] );
-				fputs( buffer, stderr );
+				Sys_StderrPrint( buffer );
 				msg += 2;
 			}
 		}
@@ -639,6 +815,189 @@ void Sys_AnsiColorPrint( const char *msg )
 	if ( length > 0 )
 	{
 		buffer[length] = '\0';
-		fputs( buffer, stderr );
+		Sys_StderrPrint( buffer );
 	}
 }
+
+/*
+==============================================================
+
+The memory monitor of the client (client/cl_memwatch.cpp, sys_memwatch.h)
+
+==============================================================
+*/
+
+#ifndef DEDICATED
+
+#ifdef __linux__
+int Sys_MemWatchRegions( sysMemRegion_t *regions, int max )
+{
+	char line[MAX_OSPATH + 128];
+	FILE *f = fopen( "/proc/self/maps", "r" );
+	int count = 0;
+
+	if ( !f )
+		return -1;
+	while ( count < max && fgets( line, sizeof( line ), f ) )
+	{
+		const size_t len = strlen( line );
+
+		if ( MemW_ParseMapsLine( line, &regions[count] ) )
+			count++;
+		// the rest of a line longer than the buffer
+		if ( len && line[len - 1] != '\n' )
+		{
+			int c;
+
+			while ( ( c = fgetc( f ) ) != EOF && c != '\n' )
+				;
+		}
+	}
+	fclose( f );
+	return count;
+}
+
+// /proc/self/task/<thread>/children: the processes each thread started (the kernel has them with
+// CONFIG_PROC_CHILDREN, which the kernels of the distributions are built with)
+int Sys_MemWatchChildren( sysMemChild_t *children, int max )
+{
+	DIR *tasks = opendir( "/proc/self/task" );
+	struct dirent *task;
+	int count = 0;
+	qboolean any = qfalse;
+
+	if ( !tasks )
+		return -1;
+	while ( ( task = readdir( tasks ) ) != NULL )
+	{
+		char path[64], list[512];
+		FILE *f;
+		size_t len;
+
+		if ( task->d_name[0] < '0' || task->d_name[0] > '9' )
+			continue;
+		Com_sprintf( path, sizeof( path ), "/proc/self/task/%s/children", task->d_name );
+		f = fopen( path, "r" );
+		if ( !f )
+			continue;
+		any = qtrue;
+		len = fread( list, 1, sizeof( list ) - 1, f );
+		fclose( f );
+		list[len] = '\0';
+
+		for ( char *p = list; *p && count < max; )
+		{
+			const int pid = atoi( p );
+
+			if ( pid > 0 )
+			{
+				FILE *comm;
+
+				children[count].pid = pid;
+				children[count].name[0] = '\0';
+				Com_sprintf( path, sizeof( path ), "/proc/%d/comm", pid );
+				comm = fopen( path, "r" );
+				if ( comm )
+				{
+					if ( fgets( children[count].name, sizeof( children[count].name ), comm ) )
+						children[count].name[strcspn( children[count].name, "\n" )] = '\0';
+					fclose( comm );
+				}
+				count++;
+			}
+			while ( *p && *p != ' ' )
+				p++;
+			while ( *p == ' ' )
+				p++;
+		}
+	}
+	closedir( tasks );
+	return any ? count : -1;
+}
+
+typedef struct {
+	uintptr_t addr;
+	sysMemCode_t *code;
+	int max, count;
+} memWatchFind_t;
+
+static int Sys_MemWatchPhdr( struct dl_phdr_info *info, size_t size, void *data )
+{
+	memWatchFind_t *find = (memWatchFind_t *)data;
+	qboolean has = qfalse;
+	int i;
+
+	for ( i = 0; i < info->dlpi_phnum; i++ )
+	{
+		const ElfW(Phdr) *ph = &info->dlpi_phdr[i];
+		const uintptr_t start = info->dlpi_addr + ph->p_vaddr;
+
+		if ( ph->p_type == PT_LOAD && find->addr >= start && find->addr < start + ph->p_memsz )
+			has = qtrue;
+	}
+	if ( !has )
+		return 0;
+	for ( i = 0; i < info->dlpi_phnum && find->count < find->max; i++ )
+	{
+		const ElfW(Phdr) *ph = &info->dlpi_phdr[i];
+
+		if ( ph->p_type == PT_LOAD && ( ph->p_flags & PF_X ) && ph->p_memsz )
+		{
+			find->code[find->count].start = info->dlpi_addr + ph->p_vaddr;
+			find->code[find->count].size = ph->p_memsz;
+			find->count++;
+		}
+	}
+	return 1;
+}
+
+int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
+{
+	memWatchFind_t find = { (uintptr_t)addr, code, max, 0 };
+
+	if ( addr )
+		dl_iterate_phdr( Sys_MemWatchPhdr, &find );
+	return find.count;
+}
+
+void Sys_MemWatchPlaces( memwPlaces_t *places )
+{
+	static const char * const system[] = { "/usr", "/lib", "/lib32", "/lib64", "/opt", "/nix/store", "/gnu/store",
+		"/app", "/run/host", "/snap", NULL };
+	static char runtime[MAX_OSPATH];
+	static const char *temporary[] = { "/tmp", "/var/tmp", "/dev/shm", runtime, NULL };
+	const char *xdg = getenv( "XDG_RUNTIME_DIR" );
+
+	Q_strncpyz( runtime, xdg && xdg[0] == '/' ? xdg : "", sizeof( runtime ) );
+	places->program = Sys_ProgramFolder();
+	places->system = system;
+	places->temporary = temporary;
+	places->foldCase = qfalse;
+}
+#else
+void Sys_MemWatchPlaces( memwPlaces_t *places )
+{
+	static const char * const none[] = { NULL };
+
+	places->program = Sys_ProgramFolder();
+	places->system = none;
+	places->temporary = none;
+	places->foldCase = qfalse;
+}
+
+int Sys_MemWatchRegions( sysMemRegion_t *regions, int max )
+{
+	return -1;
+}
+
+int Sys_MemWatchChildren( sysMemChild_t *children, int max )
+{
+	return -1;
+}
+
+int Sys_MemWatchCode( const void *addr, sysMemCode_t *code, int max )
+{
+	return 0;
+}
+#endif
+#endif // !DEDICATED

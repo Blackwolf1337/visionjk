@@ -1,5 +1,6 @@
 #============================================================================
 # Copyright (C) 2013 - 2018, OpenJK contributors
+# Copyright (C) 2026, VisionJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -17,9 +18,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPSharedDefines ${SharedDefines})
 
@@ -38,19 +39,9 @@ if(BuildMPUI)
 	add_subdirectory("${MPDir}/ui")
 endif(BuildMPUI)
 
-#	 Add Vanilla JKA Renderer Project
-if(BuildMPRdVanilla)
-	add_subdirectory("${MPDir}/rd-vanilla")
-endif(BuildMPRdVanilla)
-
-#	Add rend2 JKA Renderer Project
-if(BuildMPRend2)
-	add_subdirectory("${MPDir}/rd-rend2")
-endif(BuildMPRend2)
-
-if(BuildMPRdVulkanVision)
+if(BuildMPRdVulkanVision OR BuildMPRdVisionGLES)
 	add_subdirectory("${MPDir}/rd-vulkan-vision")
-endif(BuildMPRdVulkanVision)
+endif()
 
 #    Common things between Engine and Dedicated Server
 if(BuildMPEngine OR BuildMPDed)
@@ -138,7 +129,7 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPBotlibFiles ${MPBotlibFiles} ${MPBotlibGameFiles})
 
 	set(MPBotlibCommonFiles
-		"${MPDir}/qcommon/cm_public.h"
+		"${MPDir}/qcommon/cm/cm_public.h"
 		"${MPDir}/qcommon/disablewarnings.h"
 		"${MPDir}/qcommon/q_shared.h"
 		"${MPDir}/qcommon/qcommon.h"
@@ -165,10 +156,15 @@ if(BuildMPEngine OR BuildMPDed)
 	source_group("server" FILES ${MPBotlibServerFiles})
 	set(MPBotlibFiles ${MPBotlibFiles} ${MPBotlibServerFiles})
 
+	if(EMSCRIPTEN)
+		# A main module takes every member of a library, used or not, and the engine has these files itself.
+		list(FILTER MPBotlibFiles EXCLUDE REGEX "/shared/qcommon/.*\\.(c|cpp)$")
+	endif()
+
 	add_library(${MPBotLib} STATIC ${MPBotlibFiles})
 
 	# Hide symbols not explicitly marked public.
-	set_property(TARGET ${MPBotLib} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+	set_property(TARGET ${MPBotLib} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 	set_target_properties(${MPBotLib} PROPERTIES COMPILE_DEFINITIONS "${MPBotlibDefines}")
 	set_target_properties(${MPBotLib} PROPERTIES INCLUDE_DIRECTORIES "${MPBotlibIncludeDirectories}")
@@ -203,15 +199,15 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPEngineAndDedClientFiles
 		"${MPDir}/client/client.h"
 		"${MPDir}/client/keys.h"
-		"${MPDir}/client/snd_public.h"
+		"${MPDir}/client/sound/snd_public.h"
 		)
 	source_group("client" FILES ${MPEngineAndDedClientFiles})
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedClientFiles})
 
 	set(MPEngineAndDedGameFiles
 		"${MPDir}/game/anims.h"
-		"${MPDir}/game/bg_public.h"
-		"${MPDir}/game/bg_weapons.h"
+		"${MPDir}/game/bg/bg_public.h"
+		"${MPDir}/game/bg/bg_weapons.h"
 		"${MPDir}/botlib/botlib.h"
 		"${MPDir}/game/g_public.h"
 		"${MPDir}/game/surfaceflags.h"
@@ -222,33 +218,40 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPEngineAndDedCommonFiles
 		"${MPDir}/qcommon/q_shared.h"
 		"${SharedDir}/qcommon/q_platform.h"
-		"${MPDir}/qcommon/cm_load.cpp"
-		"${MPDir}/qcommon/cm_local.h"
-		"${MPDir}/qcommon/cm_patch.cpp"
-		"${MPDir}/qcommon/cm_patch.h"
-		"${MPDir}/qcommon/cm_polylib.cpp"
-		"${MPDir}/qcommon/cm_polylib.h"
-		"${MPDir}/qcommon/cm_public.h"
-		"${MPDir}/qcommon/cm_test.cpp"
-		"${MPDir}/qcommon/cm_trace.cpp"
+		"${MPDir}/qcommon/cm/cm_export.cpp"
+		"${MPDir}/qcommon/cm/cm_load.cpp"
+		"${MPDir}/qcommon/cm/cm_local.h"
+		"${MPDir}/qcommon/cm/cm_patch.cpp"
+		"${MPDir}/qcommon/cm/cm_patch.h"
+		"${MPDir}/qcommon/cm/cm_polylib.cpp"
+		"${MPDir}/qcommon/cm/cm_polylib.h"
+		"${MPDir}/qcommon/cm/cm_public.h"
+		"${MPDir}/qcommon/cm/cm_test.cpp"
+		"${MPDir}/qcommon/cm/cm_trace.cpp"
 		"${MPDir}/qcommon/cmd.cpp"
 		"${MPDir}/qcommon/common.cpp"
-		"${MPDir}/qcommon/cvar.cpp"
+		"${MPDir}/qcommon/com_load.cpp"
+		"${MPDir}/qcommon/cvar/cvar.cpp"
+		"${MPDir}/qcommon/cvar/cvar_cleanup.cpp"
+		"${MPDir}/qcommon/cvar/cvar_seen.c"
+		"${MPDir}/qcommon/cvar/cvar_seen.h"
+		"${MPDir}/qcommon/cvar/cvar_renames.cpp"
+		"${MPDir}/qcommon/cvar/cvar_renames.h"
 		"${MPDir}/qcommon/disablewarnings.h"
 		"${MPDir}/qcommon/files.cpp"
 		"${MPDir}/qcommon/game_version.h"
 		"${MPDir}/qcommon/GenericParser2.cpp"
 		"${MPDir}/qcommon/GenericParser2.h"
-		"${MPDir}/qcommon/huffman.cpp"
+		"${MPDir}/qcommon/net/huffman.cpp"
 		"${MPDir}/qcommon/md4.cpp"
 		"${MPDir}/qcommon/md5.cpp"
 		"${MPDir}/qcommon/md5.h"
 		"${MPDir}/qcommon/MiniHeap.h"
-		"${MPDir}/qcommon/msg.cpp"
+		"${MPDir}/qcommon/net/msg.cpp"
 		"${MPDir}/qcommon/matcomp.h"
 		"${MPDir}/qcommon/matcomp.cpp"
-		"${MPDir}/qcommon/net_chan.cpp"
-		"${MPDir}/qcommon/net_ip.cpp"
+		"${MPDir}/qcommon/net/net_chan.cpp"
+		"${MPDir}/qcommon/net/net_ip.cpp"
 		"${MPDir}/qcommon/persistence.cpp"
 		"${MPDir}/qcommon/q_shared.cpp"
 		"${MPDir}/qcommon/qcommon.h"
@@ -256,13 +259,14 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/qcommon/RoffSystem.cpp"
 		"${MPDir}/qcommon/RoffSystem.h"
 		"${MPDir}/qcommon/sstring.h"
-		"${MPDir}/qcommon/stringed_ingame.cpp"
-		"${MPDir}/qcommon/stringed_ingame.h"
-		"${MPDir}/qcommon/stringed_interface.cpp"
-		"${MPDir}/qcommon/stringed_interface.h"
+		"${MPDir}/qcommon/stringed/stringed_ingame.cpp"
+		"${MPDir}/qcommon/stringed/stringed_ingame.h"
+		"${MPDir}/qcommon/stringed/stringed_interface.cpp"
+		"${MPDir}/qcommon/stringed/stringed_interface.h"
 		"${MPDir}/qcommon/tags.h"
 		"${MPDir}/qcommon/timing.h"
 		"${MPDir}/qcommon/vm.cpp"
+		"${MPDir}/qcommon/vm_hotpatch.cpp"
 		"${MPDir}/qcommon/z_memman_pc.cpp"
 
 		${SharedCommonFiles}
@@ -326,10 +330,13 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/server/sv_challenge.cpp"
 		"${MPDir}/server/sv_client.cpp"
 		"${MPDir}/server/sv_game.cpp"
+		"${MPDir}/server/sv_ids.cpp"
 		"${MPDir}/server/sv_init.cpp"
 		"${MPDir}/server/sv_main.cpp"
 		"${MPDir}/server/sv_net_chan.cpp"
 		"${MPDir}/server/sv_snapshot.cpp"
+		"${MPDir}/server/sv_tv.cpp"
+		"${MPDir}/server/sv_voice.cpp"
 		"${MPDir}/server/sv_world.cpp"
 		"${MPDir}/server/sv_gameapi.cpp"
 		"${MPDir}/server/sv_gameapi.h"
@@ -356,53 +363,170 @@ endif(BuildMPEngine OR BuildMPDed)
 if(BuildMPEngine)
 	set(MPEngineLibraries ${MPEngineAndDedLibraries})
 	set(MPEngineIncludeDirectories ${MPEngineAndDedIncludeDirectories})
+	# lib/pl_mpeg for the video of the screens (client/cl_video.cpp)
+	set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${VisionJKLibDir})
 	set(MPEngineFiles ${MPEngineAndDedFiles})
 	set(MPEngineDefines ${MPSharedDefines})
 
+	# Steam Audio: sound that knows the level (client/sound/spatial/snd_spatial.cpp). The engine is not linked against it, it
+	# loads the library when it runs. It needs the header of Valve's repository, the submodule lib/steamaudio:
+	# only that one file is put on the include path (in the build folder), the folder it comes from holds the
+	# whole of Steam Audio, with header names of its own that the engine must not pick up.
+	# The client for a browser does the same with phonon.wasm. Valve gives out no library for WebAssembly, so
+	# that file is built from the submodule, see cmake/Modules/SteamAudioWasm.cmake.
+	if(BuildJPSpatialAudio)
+		set(SteamAudioCore "${CMAKE_SOURCE_DIR}/lib/steamaudio/core")
+		if(EXISTS "${SteamAudioCore}/src/core/phonon.h")
+			# phonon.h includes phonon_version.h. Valve's build writes that from a template with the version of
+			# its project line, so this build does the same.
+			function(jp_steamaudio_headers)
+				file(STRINGS "${SteamAudioCore}/CMakeLists.txt" line REGEX "^project\\(Phonon VERSION")
+				string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" version "${line}")
+				if(NOT version)
+					message(FATAL_ERROR "No version in ${SteamAudioCore}/CMakeLists.txt")
+				endif()
+				set(PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1})
+				set(PROJECT_VERSION_MINOR ${CMAKE_MATCH_2})
+				set(PROJECT_VERSION_PATCH ${CMAKE_MATCH_3})
+				configure_file("${SteamAudioCore}/src/core/phonon_version.h.in" "${CMAKE_BINARY_DIR}/steamaudio/phonon_version.h" @ONLY)
+				configure_file("${SteamAudioCore}/src/core/phonon.h" "${CMAKE_BINARY_DIR}/steamaudio/phonon.h" COPYONLY)
+				set(SteamAudioVersion "${version}" PARENT_SCOPE)
+			endfunction()
+			jp_steamaudio_headers()
+			message(STATUS "Steam Audio ${SteamAudioVersion}: the header of lib/steamaudio, the library is loaded at run time")
+			set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
+			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
+			# The rays of the echo on the graphics card (client/sound/spatial/snd_spatial_gpu.cpp, v_spatialGpu): the headers of
+			# Vulkan and glslc for its shader, as the renderer has them. The SPIR-V goes next to phonon.h. Without them,
+			# and in a browser, the CPU traces all the rays.
+			if(NOT EMSCRIPTEN)
+				include(VulkanHeaders)
+				jp_vulkan_headers(SpatialVulkanHeaders "${CMAKE_BINARY_DIR}/steamaudio/vulkan-headers")
+				find_program(GLSLC glslc)
+				if(SpatialVulkanHeaders AND GLSLC)
+					set(SpatialShaderIn "${MPDir}/client/sound/spatial/shaders/spatial_rays.comp")
+					set(SpatialShaderOut "${CMAKE_BINARY_DIR}/steamaudio/spatial_rays_comp.inc")
+					add_custom_command(
+						OUTPUT ${SpatialShaderOut}
+						COMMAND ${GLSLC} --target-env=vulkan1.2 -O -mfmt=c -o ${SpatialShaderOut} ${SpatialShaderIn}
+						DEPENDS ${SpatialShaderIn}
+						COMMENT "glslc spatial_rays.comp"
+						VERBATIM)
+					set(MPEngineSpatialGpuFiles "${SpatialShaderIn}" "${SpatialShaderOut}")
+					set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL_GPU")
+					set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${SpatialVulkanHeaders}")
+					message(STATUS "Steam Audio: the rays of the echo can be traced on the graphics card (v_spatialGpu)")
+				else()
+					message(STATUS "Steam Audio: no Vulkan headers or no glslc, the CPU traces all the rays of the echo")
+				endif()
+			endif()
+			option(FetchSteamAudio "Download what the build needs of Steam Audio and does not find: the release zip when SteamAudioSDK does not have the library of this system (181 MB, once), for a browser the sources of FlatBuffers and PFFFT (1.3 MB, once)" ON)
+
+			if(EMSCRIPTEN)
+				# The library for a browser is a module of its own in the folder the server hands out, and has two
+				# functions more than Valve's, which the engine looks up like the others: their header goes next
+				# to phonon.h.
+				configure_file("${CMAKE_SOURCE_DIR}/lib/steamaudio-wasm/phonon_slices.h" "${CMAKE_BINARY_DIR}/steamaudio/phonon_slices.h" COPYONLY)
+				include(SteamAudioWasm)
+				jp_steamaudio_wasm(SteamAudioModule)
+				if(SteamAudioModule)
+					message(STATUS "Steam Audio: phonon.wasm is built from lib/steamaudio and goes next to the client")
+				else()
+					message(STATUS "Steam Audio: what phonon.wasm is built from is not there (see above). The client is built with v_spatial, the file has to be put next to it by hand (docs/japlus/audio.md)")
+				endif()
+			else()
+				# The library is no part of this tree and is not built here: Valve gives it out ready made, in the zip
+				# of a release. SteamAudioSDK is a folder with the content of that zip. The library of this system is
+				# copied from there next to the client, when the client is built and when it is installed. If the
+				# folder does not have it and FetchSteamAudio is on, the zip is fetched once and that one file is
+				# taken out of it.
+				set(SteamAudioSDK "${CMAKE_SOURCE_DIR}/lib/steamaudio-sdk" CACHE PATH "The unpacked release zip of Steam Audio (the folder with lib/ in it): where the library is taken from that the client loads at run time")
+				set(SteamAudioURL "" CACHE STRING "Where FetchSteamAudio gets the zip. Empty: the release of Valve on GitHub. file:// for a zip that is on the disk already")
+				# the zips this tree knows: nothing else is unpacked under the name of a release
+				set(SteamAudioSHA256_4.8.1 "4a0aa5ec1176f38f0b0993a37c2259d9e86f27e22d5e24f83ec4c3cb9a1d5449")
+				if(WIN32)
+					set(SteamAudioLibrary "lib/windows-x64/phonon.dll")
+				elseif(APPLE)
+					set(SteamAudioLibrary "lib/osx/libphonon.dylib")
+				elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+					set(SteamAudioLibrary "lib/linux-x64/libphonon.so")
+				else()
+					set(SteamAudioLibrary "")
+				endif()
+
+				function(jp_steamaudio_fetch)
+					set(url "${SteamAudioURL}")
+					if(NOT url)
+						set(url "https://github.com/ValveSoftware/steam-audio/releases/download/v${SteamAudioVersion}/steamaudio_${SteamAudioVersion}.zip")
+					endif()
+					if(NOT DEFINED SteamAudioSHA256_${SteamAudioVersion})
+						message(STATUS "Steam Audio: no checksum of the zip of ${SteamAudioVersion} in codemp/CMakeLists.txt, it is not fetched")
+						return()
+					endif()
+					if(CMAKE_VERSION VERSION_LESS 3.18)
+						message(STATUS "Steam Audio: this cmake can not unpack a zip (3.18 and up can)")
+						return()
+					endif()
+					set(zip "${CMAKE_BINARY_DIR}/steamaudio/release.zip")
+					message(STATUS "Steam Audio: fetching ${url} for ${SteamAudioLibrary} (181 MB, once)")
+					file(DOWNLOAD "${url}" "${zip}" STATUS status TLS_VERIFY ON)
+					list(GET status 0 code)
+					if(code)
+						list(GET status 1 text)
+						message(WARNING "Steam Audio: the download failed (${text})")
+						file(REMOVE "${zip}")
+						return()
+					endif()
+					file(SHA256 "${zip}" sum)
+					if(NOT sum STREQUAL "${SteamAudioSHA256_${SteamAudioVersion}}")
+						message(WARNING "Steam Audio: ${url} is not the zip of ${SteamAudioVersion} this tree knows (its SHA256 is ${sum}), it is not used")
+						file(REMOVE "${zip}")
+						return()
+					endif()
+					file(ARCHIVE_EXTRACT INPUT "${zip}" DESTINATION "${CMAKE_BINARY_DIR}/steamaudio/unpacked" PATTERNS "steamaudio/${SteamAudioLibrary}")
+					get_filename_component(dir "${SteamAudioSDK}/${SteamAudioLibrary}" DIRECTORY)
+					file(COPY "${CMAKE_BINARY_DIR}/steamaudio/unpacked/steamaudio/${SteamAudioLibrary}" DESTINATION "${dir}")
+					file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/steamaudio/unpacked")
+					file(REMOVE "${zip}")
+				endfunction()
+
+				if(SteamAudioLibrary AND FetchSteamAudio AND NOT EXISTS "${SteamAudioSDK}/${SteamAudioLibrary}")
+					jp_steamaudio_fetch()
+				endif()
+				if(SteamAudioLibrary AND EXISTS "${SteamAudioSDK}/${SteamAudioLibrary}")
+					set(SteamAudioLibraryFile "${SteamAudioSDK}/${SteamAudioLibrary}")
+					message(STATUS "Steam Audio: ${SteamAudioLibraryFile} goes next to the client")
+				else()
+					message(STATUS "Steam Audio: no library for this system in ${SteamAudioSDK}. The client is built with v_spatial, the library has to be put next to it by hand (docs/japlus/audio.md)")
+				endif()
+			endif()
+		else()
+			message(STATUS "Steam Audio: lib/steamaudio is not checked out (git submodule update --init), the client is built without v_spatial")
+		endif()
+	endif()
+
 	#    Dependencies
 
-	if (NOT WIN32)
+	if (NOT WIN32 AND NOT EMSCRIPTEN)
 		# OpenGL
 		find_package(OpenGL REQUIRED)
 		set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${OPENGL_INCLUDE_DIR})
 		set(MPEngineLibraries ${MPEngineLibraries} ${OPENGL_LIBRARIES})
 	endif()
 
-	# OpenAL (is optionally included for Windows)
-	if (MSVC AND NOT WIN64)
-		if(UseInternalOpenAL)
-			# There's a libs/OpenAL32.lib
-			# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-			find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
-			if(NOT OpenALLibrary)
-				message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
-			endif(NOT OpenALLibrary)
-			set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
-		else(UseInternalOpenAL)
-			find_package(OpenAL REQUIRED)
-			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
-			set(MPEngineLibraries ${MPEngineLibraries} ${OPENAL_LIBRARY})
-		endif(UseInternalOpenAL)
-	endif()
-
-	if(UseInternalSDL2)
-		if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-			set(MPEngineLibraries
-				${MPEngineLibraries}
-				${OpenJKLibDir}/SDL2/lib/x86/SDL2main.lib
-				${OpenJKLibDir}/SDL2/lib/x86/SDL2.lib
-				)
-		else()
-			set(MPEngineLibraries
-				${MPEngineLibraries}
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib
-				)
-		endif()
+	if(EMSCRIPTEN)
+		# SDL2 is one of the ports that come with Emscripten, and WebGL with its headers is part of it: both are
+		# options of the compiler and not libraries to find
+	elseif(UseInternalSDL2)
+		set(MPEngineLibraries
+			${MPEngineLibraries}
+			${VisionJKLibDir}/SDL2/lib/x64/SDL2main.lib
+			${VisionJKLibDir}/SDL2/lib/x64/SDL2.lib
+			)
 
 		set(MPEngineIncludeDirectories
 			${MPEngineIncludeDirectories}
-			${OpenJKLibDir}/SDL2/include
+			${VisionJKLibDir}/SDL2/include
 			)
 	else()
 		find_package(SDL2 REQUIRED CONFIG)
@@ -415,16 +539,6 @@ if(BuildMPEngine)
 		set(MPEngineLibraries ${MPEngineLibraries} ${SDL2_LIBRARIES})
 	endif()
 
-	# EAX is Windows-Only (right?)
-	if(MSVC)
-		set(MPEngineEAXFiles
-			"${MPDir}/client/eax/eax.h"
-			"${MPDir}/client/eax/EaxMan.h"
-			)
-		source_group("eax" FILES ${MPEngineEAXFiles})
-		set(MPEngineFiles ${MPEngineFiles} ${MPEngineEAXFiles})
-	endif(MSVC)
-
 	#    Source Files
 
 	set(MPEngineClientFiles
@@ -433,42 +547,77 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_cgameapi.cpp"
 		"${MPDir}/client/cl_cgameapi.h"
 		"${MPDir}/client/cl_cin.cpp"
+		"${MPDir}/client/cl_video.cpp"
 		"${MPDir}/client/cl_console.cpp"
+		"${MPDir}/client/cl_font.cpp"
+		"${MPDir}/client/cl_ids.cpp"
+		"${MPDir}/client/cl_memwatch.cpp"
+		"${MPDir}/client/cl_reputation.cpp"
+		"${MPDir}/client/cl_master.cpp"
 		"${MPDir}/client/cl_input.cpp"
 		"${MPDir}/client/cl_keys.cpp"
 		"${MPDir}/client/cl_lan.cpp"
 		"${MPDir}/client/cl_lan.h"
 		"${MPDir}/client/cl_main.cpp"
+		"${MPDir}/client/cl_tv.cpp"
+		"${MPDir}/client/cl_update.cpp"
+		"${MPDir}/client/cl_download.cpp"
+		"${MPDir}/client/cl_models.cpp"
+		"${MPDir}/client/cl_sprays.cpp"
+		"${MPDir}/client/cl_clipboard.cpp"
+		"${SharedDir}/web/web_missing.c"
+		"${SharedDir}/web/web_missing.h"
+		"${SharedDir}/web/web_models.c"
+		"${SharedDir}/web/web_models.h"
 		"${MPDir}/client/cl_net_chan.cpp"
 		"${MPDir}/client/cl_parse.cpp"
 		"${MPDir}/client/cl_scrn.cpp"
 		"${MPDir}/client/cl_ui.cpp"
 		"${MPDir}/client/cl_uiapi.cpp"
 		"${MPDir}/client/cl_uiapi.h"
-		"${MPDir}/client/FXExport.cpp"
-		"${MPDir}/client/FXExport.h"
-		"${MPDir}/client/FxPrimitives.cpp"
-		"${MPDir}/client/FxPrimitives.h"
-		"${MPDir}/client/FxScheduler.cpp"
-		"${MPDir}/client/FxScheduler.h"
-		"${MPDir}/client/FxSystem.cpp"
-		"${MPDir}/client/FxSystem.h"
-		"${MPDir}/client/FxTemplate.cpp"
-		"${MPDir}/client/FxUtil.cpp"
-		"${MPDir}/client/FxUtil.h"
-		"${MPDir}/client/snd_ambient.cpp"
-		"${MPDir}/client/snd_ambient.h"
-		"${MPDir}/client/snd_dma.cpp"
-		"${MPDir}/client/snd_local.h"
-		"${MPDir}/client/snd_mem.cpp"
-		"${MPDir}/client/snd_mix.cpp"
-		"${MPDir}/client/snd_mp3.cpp"
-		"${MPDir}/client/snd_mp3.h"
-		"${MPDir}/client/snd_music.cpp"
-		"${MPDir}/client/snd_music.h"
+		"${MPDir}/client/fx/FXExport.cpp"
+		"${MPDir}/client/fx/FXExport.h"
+		"${MPDir}/client/fx/FxPrimitives.cpp"
+		"${MPDir}/client/fx/FxPrimitives.h"
+		"${MPDir}/client/fx/FxScheduler.cpp"
+		"${MPDir}/client/fx/FxScheduler.h"
+		"${MPDir}/client/fx/FxSystem.cpp"
+		"${MPDir}/client/fx/FxSystem.h"
+		"${MPDir}/client/fx/FxTemplate.cpp"
+		"${MPDir}/client/fx/FxUtil.cpp"
+		"${MPDir}/client/fx/FxUtil.h"
+		"${MPDir}/client/sound/snd_ambient.cpp"
+		"${MPDir}/client/sound/snd_ambient.h"
+		"${MPDir}/client/sound/snd_cache.cpp"
+		"${MPDir}/client/sound/snd_dma.cpp"
+		"${MPDir}/client/sound/snd_local.h"
+		"${MPDir}/client/sound/snd_mem.cpp"
+		"${MPDir}/client/sound/snd_mix.cpp"
+		"${MPDir}/client/sound/snd_mp3.cpp"
+		"${MPDir}/client/sound/snd_mp3.h"
+		"${MPDir}/client/sound/snd_music.cpp"
+		"${MPDir}/client/sound/snd_music.h"
 		)
 	source_group("client" FILES ${MPEngineClientFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientFiles})
+
+	# the sound that knows the level, with Steam Audio (docs/japlus/audio.md)
+	set(MPEngineClientSpatialFiles
+		"${MPDir}/client/sound/spatial/snd_spatial.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial.h"
+		"${MPDir}/client/sound/spatial/snd_spatial_bake.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_debug.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_gpu.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_level.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_local.h"
+		"${MPDir}/client/sound/spatial/snd_spatial_page.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_render.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_sim.cpp"
+		"${MPDir}/client/sound/spatial/snd_spatial_voice.cpp"
+		${MPEngineSpatialGpuFiles}
+		)
+	source_group("client/spatial" FILES ${MPEngineClientSpatialFiles})
+	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientSpatialFiles})
 
 	set(MPEngineRatlFiles
 		"${MPDir}/Ratl/bits_vs.h"
@@ -527,6 +676,8 @@ if(BuildMPEngine)
 		"${SharedDir}/sys/sys_loadlib.h"
 		"${SharedDir}/sys/sys_local.h"
 		"${SharedDir}/sys/sys_main.cpp"
+		"${SharedDir}/sys/sys_memwatch.h"
+		"${SharedDir}/sys/sys_memwatch_rules.c"
 		"${SharedDir}/sys/sys_event.cpp"
 		"${SharedDir}/sys/sys_public.h"
 		"${SharedDir}/sys/con_local.h"
@@ -536,7 +687,7 @@ if(BuildMPEngine)
 	if(WIN32)
 		set(MPEngineWin32Files
 			"${MPDir}/win32/resource.h"
-			"${MPDir}/win32/openjk.rc"
+			"${MPDir}/win32/visionjk.rc"
 			"${SharedDir}/sys/win_manifest.manifest"
 			)
 
@@ -547,24 +698,74 @@ if(BuildMPEngine)
 			${MPEngineSysFiles}
 			"${SharedDir}/sys/sys_win32.cpp"
 			"${SharedDir}/sys/con_passive.cpp"
+			"${SharedDir}/sys/sys_http_win32.cpp"
 			)
+		# the updater asks the website through WinHTTP, which is part of Windows
+		set(MPEngineLibraries ${MPEngineLibraries} "winhttp")
+	elseif(EMSCRIPTEN)
+		# The browser: no terminal, a frame when the page is about to paint, modules that the page has compiled,
+		# and packets through a WebSocket to the server the page came from (a page can not send UDP).
+		set(MPEngineSysFiles
+			${MPEngineSysFiles}
+			"${SharedDir}/sys/sys_unix.cpp"
+			"${SharedDir}/sys/con_passive.cpp"
+			"${SharedDir}/sys/web/sys_web.h"
+			"${SharedDir}/sys/web/sys_web.cpp"
+			)
+		list(REMOVE_ITEM MPEngineFiles "${MPDir}/qcommon/net/net_ip.cpp")
+		set(MPEngineFiles ${MPEngineFiles} "${MPDir}/qcommon/net/net_ws.cpp")
 	else(WIN32)
 		set(MPEngineSysFiles
 			${MPEngineSysFiles}
 			"${SharedDir}/sys/sys_unix.cpp"
 			"${SharedDir}/sys/con_tty.cpp"
+			# the updater asks the website through the libcurl of the system, loaded when it runs
+			"${SharedDir}/sys/sys_http_curl.cpp"
 			)
 	endif(WIN32)
 
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineSysFiles})
 	source_group("sys" FILES ${MPEngineSysFiles})
 
+	# The font for the characters the fonts of the game do not have (client/cl_font.cpp): the engine takes the
+	# file of the client assets only when it has the checksum of the one this tree ships.
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSans-Regular.ttf" MPEngineFontHash)
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/DejaVuSansMono.ttf" MPEngineFontMonoHash)
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSansCJKjp-Regular.otf" MPEngineFontCJKHash)
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSans-Bold.ttf" MPEngineFontBoldHash)
+	set_source_files_properties("${MPDir}/client/cl_font.cpp" PROPERTIES COMPILE_DEFINITIONS
+		"FONT_SHA256=\"${MPEngineFontHash}\";FONT_MONO_SHA256=\"${MPEngineFontMonoHash}\";FONT_CJK_SHA256=\"${MPEngineFontCJKHash}\";FONT_BOLD_SHA256=\"${MPEngineFontBoldHash}\"")
+	if(EMSCRIPTEN)
+		# the updater below brings the checksum code where there is an updater
+		set(MPEngineFiles ${MPEngineFiles} "${SharedDir}/web/web_http.h" "${SharedDir}/web/web_sha256.c")
+	endif()
+
+	# The updater of the client (client/cl_update.cpp, docs/japlus/update.md): the file list of a release and
+	# the checksum of a file, both plain C. A page is the newest version whenever it is loaded and has none.
+	if(NOT EMSCRIPTEN)
+		set(MPEngineUpdateFiles
+			"${SharedDir}/sys/sys_http.h"
+			"${SharedDir}/update/upd_manifest.c"
+			"${SharedDir}/update/upd_manifest.h"
+			"${SharedDir}/web/web_http.h"
+			"${SharedDir}/web/web_sha256.c"
+			)
+		set(MPEngineFiles ${MPEngineFiles} ${MPEngineUpdateFiles})
+		source_group("update" FILES ${MPEngineUpdateFiles})
+		# only the one file that asks is told the address, so another address does not build the engine anew
+		set(MPEngineUpdateDefines "UPDATE_URL=\"${UpdateURL}\"")
+		if(UpdateVersion)
+			set(MPEngineUpdateDefines ${MPEngineUpdateDefines} "UPDATE_VERSION=\"${UpdateVersion}\"")
+		endif()
+		set_source_files_properties("${MPDir}/client/cl_update.cpp" PROPERTIES COMPILE_DEFINITIONS "${MPEngineUpdateDefines}")
+	endif()
+
 	if(MakeApplicationBundles)
 		set(MACOSX_BUNDLE_BUNDLE_NAME ${MPEngine})
 		set(MACOSX_BUNDLE_DISPLAY_NAME ${MPEngine})
-		set(MACOSX_BUNDLE_ICON_FILE OpenJK.icns)
-		set_source_files_properties(${MPDir}/macosx/OpenJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-		set(MPEngineFiles ${MPEngineFiles} ${MPDir}/macosx/OpenJK.icns)
+		set(MACOSX_BUNDLE_ICON_FILE VisionJK.icns)
+		set_source_files_properties(${MPDir}/macosx/VisionJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+		set(MPEngineFiles ${MPEngineFiles} ${MPDir}/macosx/VisionJK.icns)
 		set_source_files_properties(${MPDir}/macosx/English.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj)
 		set(MPEngineFiles ${MPEngineFiles} ${MPDir}/macosx/English.lproj/InfoPlist.strings)
 	endif(MakeApplicationBundles)
@@ -572,20 +773,14 @@ if(BuildMPEngine)
 	if(WIN32)
 		add_executable(${MPEngine} WIN32 ${MPEngineFiles})
 		if(UseInternalSDL2)
-			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-				set(MPEngineExtraInstallFiles
-					${OpenJKLibDir}/SDL2/bin/x86/SDL2.dll
-					)
-			else()
-				set(MPEngineExtraInstallFiles
-					${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll
-					)
-			endif()
+			set(MPEngineExtraInstallFiles
+				${VisionJKLibDir}/SDL2/bin/x64/SDL2.dll
+				)
 		endif()
 	else(WIN32)
 		if(MakeApplicationBundles)
 			add_executable(${MPEngine} MACOSX_BUNDLE ${MPEngineFiles})
-			set_target_properties(${MPEngine} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MPDir}/macosx/OpenJKInfo.plist")
+			set_target_properties(${MPEngine} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MPDir}/macosx/VisionJKInfo.plist")
 		else(MakeApplicationBundles)
 			add_executable(${MPEngine} ${MPEngineFiles})
 		endif(MakeApplicationBundles)
@@ -602,6 +797,8 @@ if(BuildMPEngine)
 			BUNDLE
 			DESTINATION ${JKAInstallDir}
 			COMPONENT ${JKAMPClientComponent})
+	elseif(EMSCRIPTEN)
+		# the client for the browser is installed as the folder the server hands out, see vjk_wasm_page()
 	else(MakeApplicationBundles)
 		install(TARGETS ${MPEngine}
 			RUNTIME
@@ -612,12 +809,31 @@ if(BuildMPEngine)
 				DESTINATION ${JKAInstallDir}
 				COMPONENT ${JKAMPClientComponent})
 		endif()
+		if(SteamAudioLibraryFile)
+			install(FILES "${SteamAudioLibraryFile}"
+				DESTINATION ${JKAInstallDir}
+				COMPONENT ${JKAMPClientComponent})
+		endif()
 	endif(MakeApplicationBundles)
+
+	# The client looks for the library of Steam Audio in the folder it is in itself. In an application bundle
+	# that is inside the bundle, which is installed as a whole.
+	if(SteamAudioLibraryFile)
+		add_custom_command(TARGET ${MPEngine} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SteamAudioLibraryFile}" "$<TARGET_FILE_DIR:${MPEngine}>"
+			VERBATIM)
+	endif()
 
 	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS "${MPEngineDefines}")
 
 	# Hide symbols not explicitly marked public.
-	set_property(TARGET ${MPEngine} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+	set_property(TARGET ${MPEngine} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+
+	if(EMSCRIPTEN)
+		include(WasmModule)
+		vjk_wasm_main_module(${MPEngine} "${SharedDir}/sys/web/sys_web.js")
+		vjk_wasm_page("${SharedDir}/sys/web/page")
+	endif()
 
 	set_target_properties(${MPEngine} PROPERTIES INCLUDE_DIRECTORIES "${MPEngineIncludeDirectories}")
 	set_target_properties(${MPEngine} PROPERTIES PROJECT_LABEL "MP Client")
@@ -664,7 +880,7 @@ if(BuildMPDed)
 	set(MPDedFiles ${MPDedFiles} ${MPDedNullFiles})
 	if(WIN32)
 		set(MPDedWin32Files
-			"${MPDir}/win32/openjkded.rc"
+			"${MPDir}/win32/visionjkded.rc"
 			)
 		source_group("win32" FILES ${MPDedWin32Files})
 		set(MPDedFiles ${MPDedFiles} ${MPDedWin32Files})
@@ -700,6 +916,10 @@ if(BuildMPDed)
 		set(MPDedFiles ${MPDedFiles} ${MPDedSysFiles})
 	endif(WIN32)
 
+	# the web host of the dedicated server: page, game files and WebSocket peers (vs_clientWebPort). It appends to
+	# MPDedFiles and MPDedIncludeDirectories.
+	include("${MPDir}/server/web/sources.cmake" OPTIONAL)
+
 	add_executable(${MPDed} ${MPDedFiles})
 	install(TARGETS ${MPDed}
 		RUNTIME
@@ -709,58 +929,31 @@ if(BuildMPDed)
 	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines}")
 
 	# Hide symbols not explicitly marked public.
-	set_property(TARGET ${MPDed} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+	set_property(TARGET ${MPDed} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 	set_target_properties(${MPDed} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")
 	target_link_libraries(${MPDed} ${MPDedLibraries})
+
+	# The test server of the intrusion detection of the client: the same program, and with vs_idsTest it sends
+	# what no server of the game does (server/sv_idstest.cpp). For tools/test/ids-test.sh, never installed.
+	if(BuildDevIdsTest)
+		add_executable(${IdsTestServer} ${MPDedFiles} "${MPDir}/server/sv_idstest.cpp")
+		set_target_properties(${IdsTestServer} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines};VISIONJK_IDS_TEST")
+		set_property(TARGET ${IdsTestServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+		set_target_properties(${IdsTestServer} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
+		set_target_properties(${IdsTestServer} PROPERTIES PROJECT_LABEL "IDS Test Server")
+		target_link_libraries(${IdsTestServer} ${MPDedLibraries})
+		message(STATUS "BuildDevIdsTest is on: developer build, not for a release")
+	endif(BuildDevIdsTest)
 endif(BuildMPDed)
 
-# macOS: the app the build makes is ready to run as it is. The renderers go next to the program, game, cgame
-# and ui into base/ beside it (both are in the search path), then cmake/MacBundle.cmake copies SDL into the app
-# and signs it. `cmake --install` is not needed for a game to start from the build folder.
-if(APPLE AND MakeApplicationBundles AND BuildMPEngine)
-	find_library(MacBundleSDL3 NAMES SDL3 SDL3.0)
-	set(MacBundleApp "$<TARGET_BUNDLE_DIR:${MPEngine}>")
-	set(MacBundleCommands
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${MacBundleApp}/Contents/MacOS/base")
-	set(MacBundleTargets ${MPEngine})
-	foreach(renderer ${MPVanillaRenderer} ${MPRend2} ${MPVulkanVisionRenderer})
-		if(TARGET ${renderer})
-			list(APPEND MacBundleCommands
-				COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${renderer}>" "${MacBundleApp}/Contents/MacOS/")
-			list(APPEND MacBundleTargets ${renderer})
-		endif()
-	endforeach()
-	foreach(module ${MPGame} ${MPCGame} ${MPUI})
-		if(TARGET ${module})
-			list(APPEND MacBundleCommands
-				COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${module}>" "${MacBundleApp}/Contents/MacOS/base/")
-			list(APPEND MacBundleTargets ${module})
-		endif()
-	endforeach()
-	set(MacBundleOptional "")
-	if(MacBundleSDL3)
-		list(APPEND MacBundleOptional "-DSDL3=${MacBundleSDL3}")
+# The masterserver: a program of its own for the hosts of VisionJK, its code is in a private repository checked out
+# at codemp/master (git-ignored). Its master.cmake builds it from there with the shared code of this tree.
+if(BuildMasterServer)
+	if(EXISTS "${MPDir}/master/master.cmake")
+		include("${MPDir}/master/master.cmake")
+	else()
+		message(FATAL_ERROR "BuildMasterServer needs the private masterserver repository checked out at ${MPDir}/master")
 	endif()
-	# The Vulkan renderer loads a Vulkan library when it starts and macOS has none: MoltenVK goes into the app,
-	# where the window code looks first (WIN_VK_LoadLibraryMac in shared/sdl/sdl_window.cpp)
-	if(TARGET ${MPVulkanVisionRenderer})
-		find_library(MacBundleMoltenVK NAMES libMoltenVK.dylib
-			HINTS /opt/homebrew/lib /usr/local/lib "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/../MoltenVK/dylib/macOS")
-		if(MacBundleMoltenVK)
-			list(APPEND MacBundleOptional "-DMOLTENVK=${MacBundleMoltenVK}")
-		else()
-			message(WARNING "rd-vulkan-vision is built, but no libMoltenVK.dylib was found to put into the app "
-				"(brew install molten-vk, or -DMacBundleMoltenVK=<file>). Without it the renderer only starts "
-				"on a Mac that has a Vulkan library installed.")
-		endif()
-	endif()
-	add_custom_target(MacBundle ALL
-		${MacBundleCommands}
-		COMMAND ${CMAKE_COMMAND} "-DAPP=${MacBundleApp}" "-DENGINE=${MPEngine}" ${MacBundleOptional}
-			-P "${CMAKE_SOURCE_DIR}/cmake/MacBundle.cmake"
-		COMMENT "Putting the modules, SDL and MoltenVK into ${MPEngine}.app and signing it"
-		VERBATIM)
-	add_dependencies(MacBundle ${MacBundleTargets})
-endif()
+endif(BuildMasterServer)

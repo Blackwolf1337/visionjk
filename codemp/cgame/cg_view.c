@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_view.c -- setup all the parameters (position, angle, etc)
 // for a 3D rendering
 #include "cg_local.h"
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 #define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
 #define CAMERA_SIZE	4
@@ -2260,16 +2261,19 @@ void CG_DrawAutoMap(void)
 	trap->R_GetRealRes(&vWidth, &vHeight);
 
 	//set scaling values so that the 640x480 will result at 1.0/1.0
-	hScale = vWidth/640.0f;
-	vScale = vHeight/480.0f;
+	hScale = vWidth / ( 640.0f + 2.0f * cgs.bias2D );
+	vScale = vHeight / ( 480.0f + 2.0f * cgs.bias2DY );
 
 	x = r_autoMapX.value;
 	y = r_autoMapY.value;
 	w = r_autoMapW.value;
 	h = r_autoMapH.value;
 
-	refdef.x = x*hScale;
-	refdef.y = y*vScale;
+	// on a wide window it goes to the edge of the window it is nearer to, as the HUD of that side does
+	CG_Place2D( x + w * 0.5f > SCREEN_WIDTH * 0.5f ? PLACE_RIGHT : PLACE_LEFT );
+
+	refdef.x = ( x + cgs.bias2D + cgs.shift2D ) * hScale;
+	refdef.y = ( y + cgs.bias2DY ) * vScale;
 	refdef.width = w*hScale;
 	refdef.height = h*vScale;
 
@@ -2277,6 +2281,7 @@ void CG_DrawAutoMap(void)
 	CG_DrawPic(x+w, y, SIDEFRAME_WIDTH, h, cgs.media.wireframeAutomapFrame_right);
 	CG_DrawPic(x-SIDEFRAME_WIDTH, y-SIDEFRAME_HEIGHT, w+(SIDEFRAME_WIDTH*2), SIDEFRAME_HEIGHT, cgs.media.wireframeAutomapFrame_top);
 	CG_DrawPic(x-SIDEFRAME_WIDTH, y+h, w+(SIDEFRAME_WIDTH*2), SIDEFRAME_HEIGHT, cgs.media.wireframeAutomapFrame_bottom);
+	CG_Place2D( PLACE_CENTER );
 
 	refdef.time = cg.time;
 
@@ -2395,6 +2400,27 @@ qboolean CG_CullPointAndRadius( const vec3_t pt, float radius ) {
 
 /*
 =================
+CG_HearingPoint
+
+Where the player hears from: his head, at the height of the camera between crouching and standing, so in first
+person his eyes. In third person the camera circles him when it turns, and what the walls hide and how far a
+sound is would change with it. A camera far from him (spectator, follow) is where he hears from. The engine
+takes the same point for the sounds of the level (S_SpatialHearing() in snd_dma.cpp), keep the two alike.
+=================
+*/
+#define HEAR_EYE_LOW	CROUCH_VIEWHEIGHT
+#define HEAR_EYE_HIGH	DEFAULT_VIEWHEIGHT
+#define HEAR_EYE_FAR	160.0f
+
+void CG_HearingPoint( vec3_t hear ) {
+	VectorCopy( cg.predictedPlayerState.origin, hear );
+	hear[2] = Com_Clamp( hear[2] + HEAR_EYE_LOW, hear[2] + HEAR_EYE_HIGH, cg.refdef.vieworg[2] );
+	if ( DistanceSquared( hear, cg.refdef.vieworg ) > HEAR_EYE_FAR * HEAR_EYE_FAR )
+		VectorCopy( cg.refdef.vieworg, hear );
+}
+
+/*
+=================
 CG_DrawActiveFrame
 
 Generates and draws a game scene and status information at the given time.
@@ -2412,9 +2438,16 @@ extern void CG_ActualLoadDeferredPlayers( void );
 static int cg_siegeClassIndex = -2;
 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback ) {
+	CG_CheckScreenSize();
 	CG_JPReplyFrame();
-	CG_JPMacroScanFrame();
+	//CG_JPMacroScanFrame();
 	CG_VoiceFrame();
+	CG_BoomboxFrame();
+	CG_ToolsFrame();
+	CG_StatusFrame();
+	CG_LookFrame();
+	CG_ToysFrame();
+	CG_AuthFrame();
 	int		inwater;
 	const char *cstr;
 	float mSensitivity = cg.zoomSensitivity;
@@ -2478,6 +2511,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	// set up cg.snap and possibly cg.nextSnap
 	CG_ProcessSnapshots();
+
+	// the forced models of the others when this player changed teams (cg_cvar.c)
+	CG_ForcedModelsCheck();
 
 	trap->ROFF_UpdateEntities();
 
@@ -2605,13 +2641,42 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		cg.renderingThirdPerson = 0;
 	}
 
+	// the menu in the level: the camera stands behind the player (menu3d/cg_menu3d.c)
+	if ( CG_Menu3DFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+
 	if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
 	{
 		cg.renderingThirdPerson = 0;
 	}
 
+	// the photo mode: the camera circles the player (photo/cg_photo.c)
+	if ( CG_PhotoFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+	// the remote controlled car: the camera follows it, the own player is seen standing (toys/cg_rccar.c)
+	if ( CG_RcFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+	// table tennis: the camera stands behind the own end of the table (toys/cg_pong.c)
+	if ( CG_PongFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+
+	// the zoom of the wheel and the motion view of the disruptor (scope/cg_scope.c), before the fov is worked out
+	CG_ScopeFrame();
+
 	// build cg.refdef
 	inwater = CG_CalcViewValues();
+	CG_Menu3DView();
+	CG_PhotoView();
+	CG_RcView();
+	CG_PongView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)
@@ -2640,7 +2705,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_CalcScreenEffects();
 
 	// first person blend blobs, done after AnglesToAxis
-	if ( !cg.renderingThirdPerson && cg.predictedPlayerState.pm_type != PM_SPECTATOR ) {
+	// (the screen effects draw a hit themselves, screenfx/cg_screenfx.c)
+	if ( !cg.renderingThirdPerson && cg.predictedPlayerState.pm_type != PM_SPECTATOR && !CG_ScreenFxHitDrawn() ) {
 		CG_DamageBlendBlob();
 	}
 
@@ -2648,10 +2714,14 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	if ( !cg.hyperspace ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
+		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
+		CG_BoomboxScene();
+		// the snowballs in the air, which are no entities either (toys/cg_toys.c)
+		CG_ToysScene();
 	}
 	CG_AddViewWeapon( &cg.predictedPlayerState );
 
-	if ( !cg.hyperspace)
+	if ( !cg.hyperspace )
 	{
 		trap->FX_AddScheduledEffects(qfalse);
 	}
@@ -2666,6 +2736,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	if ( !cg.hyperspace ) {
 		CG_AddLocalEntities();
+		CG_StrafeTrailsAdd();		// cg_strafetrail.c
+		CG_SpatialDebugAdd();		// cg_spatialdebug.c, v_spatialDebug
 	}
 
 	cg.refdef.time = cg.time;
@@ -2697,7 +2769,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		trap->S_UpdateAmbientSet( cstr, cg.refdef.vieworg );
 	}
 
-	// update audio positions
+	// update audio positions, and where the doors are for the sound of the level (cg_spatialmovers.c)
+	CG_SpatialMovers();
 	trap->S_Respatialize( cg.snap->ps.clientNum, cg.refdef.vieworg, cg.refdef.viewaxis, inwater );
 
 	// make sure the lagometerSample and frame timing isn't done twice when in stereo

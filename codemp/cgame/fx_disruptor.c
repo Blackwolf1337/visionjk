@@ -3,6 +3,7 @@
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -183,4 +184,105 @@ void FX_DisruptorHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid )
 		return;
 
 	trap->FX_PlayEffectID( cgs.effects.disruptorFleshImpactEffect, origin, normal, -1, -1, qfalse );
+}
+
+/*
+---------------------------
+FX_DisruptorBeam
+
+tay_disruptorBeam (2026-10-17, TaystJK's cg_disruptorNew and cg_disruptorSpiral, after the rail of Quake 3): the shot
+as a line with a glow, 1, and with a spiral of sparks around it, 2. The colour is tay_disruptorColor ("r g b"),
+empty cyan, the team's in a team game. qfalse with 0: the shot of the game is drawn
+---------------------------
+*/
+static void FX_BeamLine( const vec3_t start, const vec3_t end, const vec3_t color, float radius, float alpha, int life, qboolean tint ) {
+	localEntity_t	*le = CG_AllocLocalEntity();
+	refEntity_t		*re = &le->refEntity;
+
+	le->leType = LE_FADE_RGB;
+	le->startTime = cg.time;
+	le->endTime = cg.time + life;
+	le->lifeRate = 1.0f / ( le->endTime - le->startTime );
+	re->shaderTime = cg.time / 1600.0f;
+	re->reType = RT_LINE;
+	re->radius = radius;
+	re->customShader = trap->R_RegisterShader( "gfx/misc/whiteline2" );
+	VectorCopy( start, re->origin );
+	VectorCopy( end, re->oldorigin );
+	re->shaderRGBA[0] = color[0] * 255;
+	re->shaderRGBA[1] = color[1] * 255;
+	re->shaderRGBA[2] = color[2] * 255;
+	re->shaderRGBA[3] = 255;
+	if ( tint ) {
+		VectorScale( color, 0.75f, le->color );
+	} else {
+		VectorSet( le->color, 1.0f, 1.0f, 1.0f );
+	}
+	le->color[3] = alpha;
+	AxisClear( re->axis );
+}
+
+qboolean FX_DisruptorBeam( int shooter, vec3_t start, vec3_t end, qboolean alt ) {
+	const int	life = alt ? 350 : 175;
+	vec3_t		color = { 0.0f, 0.878f, 1.0f };
+	vec3_t		axis[36], dir, side, move;
+	float		len;
+	int			i, j;
+
+	if ( !tay_disruptorBeam.integer ) {
+		return qfalse;
+	}
+	if ( cgs.gametype >= GT_TEAM && shooter >= 0 && shooter < MAX_CLIENTS && cgs.clientinfo[shooter].team == TEAM_RED ) {
+		VectorSet( color, 1.0f, 0.1f, 0.1f );
+	} else if ( cgs.gametype >= GT_TEAM && shooter >= 0 && shooter < MAX_CLIENTS && cgs.clientinfo[shooter].team == TEAM_BLUE ) {
+		VectorSet( color, 0.1f, 0.3f, 1.0f );
+	} else if ( tay_disruptorColor.string[0] ) {
+		sscanf( tay_disruptorColor.string, "%f %f %f", &color[0], &color[1], &color[2] );
+	}
+
+	FX_BeamLine( start, end, color, 3.0f, 1.0f, life, qtrue );		// glow
+	FX_BeamLine( start, end, color, 1.0f, 0.6f, life, qfalse );		// core
+	if ( tay_disruptorBeam.integer < 2 ) {
+		return qtrue;
+	}
+
+	// sparks on a spiral of radius 4 around it, one every 5 units, a turn of 10 degrees each
+	VectorSubtract( end, start, dir );
+	// the ends come from the server: a shot is a few thousand units at most, a huge or NaN length is none
+	len = VectorNormalize( dir );
+	if ( !( len < 16384.0f ) ) {
+		len = 16384.0f;
+	}
+	PerpendicularVector( side, dir );
+	for ( i = 0; i < 36; i++ ) {
+		RotatePointAroundVector( axis[i], dir, side, i * 10 );
+	}
+	VectorMA( start, 20.0f, dir, move );
+	for ( i = 20, j = 18; i < len; i += 10, j = ( j + 2 ) % 36 ) {
+		localEntity_t	*le = CG_AllocLocalEntity();
+		refEntity_t		*re = &le->refEntity;
+
+		le->leFlags = LEF_PUFF_DONT_SCALE;
+		le->leType = LE_MOVE_SCALE_FADE;
+		le->startTime = cg.time;
+		le->endTime = cg.time + ( i >> 1 ) + (int)( life / 1.337f );
+		le->lifeRate = 1.0f / ( le->endTime - le->startTime );
+		re->shaderTime = cg.time / 2000.0f;
+		re->reType = RT_SPRITE;
+		re->radius = 1.8f;
+		re->customShader = cgs.media.enlightenmentShader;
+		re->renderfx |= RF_RGB_TINT;
+		re->shaderRGBA[0] = color[0] * 255;
+		re->shaderRGBA[1] = color[1] * 255;
+		re->shaderRGBA[2] = color[2] * 255;
+		re->shaderRGBA[3] = 255;
+		VectorScale( color, 0.75f, le->color );
+		le->color[3] = 1.0f;
+		le->pos.trType = TR_LINEAR;
+		le->pos.trTime = cg.time;
+		VectorMA( move, 4.0f, axis[j], le->pos.trBase );
+		VectorScale( axis[j], 6.0f, le->pos.trDelta );
+		VectorMA( move, 10.0f, dir, move );
+	}
+	return qtrue;
 }

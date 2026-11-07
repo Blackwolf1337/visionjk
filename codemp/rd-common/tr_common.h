@@ -29,6 +29,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern refimport_t ri;
 
+// The largest side of a picture the loaders take (tr_image_*.cpp): width * height * 4 of it still fits an int.
+// The pictures of a pak are the pak's word.
+#define IMAGE_MAX_SIDE	16384
+
 /*
 ================================================================================
  Noise Generation
@@ -59,6 +63,7 @@ qboolean R_ImageLoader_Add( const char *extension, ImageLoaderFn imageLoader );
 
 // Load an image from file.
 void R_LoadImage( const char *shortname, byte **pic, int *width, int *height );
+qboolean R_LoadImageFit( const char *name, byte *rgba, int width, int height );
 
 // Load raw image data from TGA image.
 void LoadTGA( const char *name, byte **pic, int *width, int *height );
@@ -68,6 +73,7 @@ void LoadJPG( const char *filename, byte **pic, int *width, int *height );
 
 // Load raw image data from PNG image.
 void LoadPNG( const char *filename, byte **data, int *width, int *height );
+void LoadPNGPicture( const char *filename, byte **data, int *width, int *height );
 
 
 /*

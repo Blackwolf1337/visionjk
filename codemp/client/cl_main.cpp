@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -28,24 +29,21 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <limits.h>
 #include "ghoul2/G2.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/MiniHeap.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/game_version.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
 #include "cl_lan.h"
-#include "snd_local.h"
+#include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
-cvar_t	*cl_renderer;
 
 cvar_t	*cl_nodelta;
 cvar_t	*cl_debugMove;
 
 cvar_t	*cl_noprint;
-cvar_t	*cl_motd;
-cvar_t	*cl_motdServer[MAX_MASTER_SERVERS];
 
 cvar_t	*rcon_client_password;
 cvar_t	*rconAddress;
@@ -55,6 +53,9 @@ cvar_t	*cl_maxpackets;
 cvar_t	*cl_packetdup;
 cvar_t	*cl_timeNudge;
 cvar_t	*cl_showTimeDelta;
+cvar_t	*v_netSmooth;
+cvar_t	*v_netStats;
+cvar_t	*v_joinReport;
 cvar_t	*cl_freezeDemo;
 
 cvar_t	*cl_shownet;
@@ -82,7 +83,6 @@ cvar_t	*m_filter;
 
 cvar_t	*cl_activeAction;
 
-cvar_t	*cl_motdString;
 
 cvar_t	*cl_allowDownload;
 cvar_t	*cl_allowAltEnter;
@@ -92,15 +92,11 @@ cvar_t	*cl_inGameVideo;
 cvar_t	*cl_serverStatusResendTime;
 cvar_t	*cl_framerate;
 
-// cvar to enable sending a "ja_guid" player identifier in userinfo to servers
-// ja_guid is a persistent "cookie" that allows servers to track players across game sessions
-cvar_t	*cl_enableGuid;
-cvar_t	*cl_guidServerUniq;
-
 cvar_t	*cl_autolodscale;
 
 cvar_t	*cl_consoleKeys;
 cvar_t	*cl_consoleUseScanCode;
+static cvar_t	*v_utf8Text;
 cvar_t	*cl_consoleShiftRequirement;
 
 cvar_t  *cl_lanForcePackets;
@@ -151,6 +147,18 @@ void CL_ShowIP_f(void);
 void CL_ServerStatus_f(void);
 void CL_ServerStatusResponse( const netadr_t *from, msg_t *msg );
 static void CL_ShutdownRef( qboolean restarting );
+static qboolean CL_EchoAsked( const netadr_t *from, const char *text );
+static qboolean CL_MasterAsked( const netadr_t *from );
+
+// The renderer, a library next to the program. Where it can not run (no Vulkan 1.3, a browser without WebGL 2) it
+// comes back without a window and with the reason as renderer_string, and the game stops with that and this text
+// (CL_InitRenderer).
+#define RENDER_LIBRARY "rd-vulkan-vision"
+#ifdef __EMSCRIPTEN__
+#define RENDER_MISSING_TEXT "Your browser can not draw with WebGL 2. Use a current browser and turn on hardware acceleration in its settings."
+#else
+#define RENDER_MISSING_TEXT "This computer can not run Vulkan 1.3, which the game needs to draw. Update your graphics driver; graphics cards without Vulkan 1.3 support can not run VisionJK."
+#endif
 
 /*
 =======================================================================
@@ -159,6 +167,40 @@ CLIENT RELIABLE COMMAND COMMUNICATION
 
 =======================================================================
 */
+
+/*
+======================
+CL_UTF8
+
+Whether text is UTF-8 right now: what is typed, what the renderer draws (it asks the same way, tr_font.cpp) and
+what goes to a server that says it knows UTF-8. Not with a language whose fonts have a code page of their own
+(Russian, Polish, the Asian ones): text is that code page then, as it always was. The answer is also in the
+userinfo as v_utf8Text, by which a server of this tree knows what a client sends and reads.
+======================
+*/
+qboolean CL_UTF8( void ) {
+	static int		languageCount = -1;
+	static qboolean	active = qfalse;
+
+	if ( !se_language ) {
+		return qfalse;
+	}
+	if ( se_language->modificationCount != languageCount ) {
+		languageCount = se_language->modificationCount;
+		active = (qboolean)( !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
+			&& !Language_IsTaiwanese() && !Language_IsJapanese() && !Language_IsChinese() && !Language_IsThai() );
+		Cvar_Set( "v_utf8Text", active ? "1" : "0" );
+	}
+	return active;
+}
+
+// a server of this tree says in its server info what it knows, bit 0: chat in UTF-8 (vs_caps of the game module)
+static qboolean CL_ServerKnowsUTF8( void ) {
+	if ( cls.state < CA_PRIMED ) {
+		return qfalse;
+	}
+	return (qboolean)( atoi( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "vs_caps" ) ) & 1 );
+}
 
 /*
 ======================
@@ -182,6 +224,14 @@ void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd ) {
 			return;
 		else
 			Com_Error(ERR_DROP, "Client command overflow");
+	}
+
+	// any other server and its clients read one byte as one character (Windows-1252): what was typed here as UTF-8
+	// goes out that way, '?' for what Windows-1252 does not have
+	if ( CL_UTF8() && !CL_ServerKnowsUTF8() ) {
+		Q_UTF8_ToCP1252( cmd, clc.reliableCommands[++clc.reliableSequence & (MAX_RELIABLE_COMMANDS - 1)],
+			sizeof(*clc.reliableCommands) );
+		return;
 	}
 
 	Q_strncpyz(clc.reliableCommands[++clc.reliableSequence & (MAX_RELIABLE_COMMANDS - 1)],
@@ -439,6 +489,19 @@ void CL_DemoCompleted( void ) {
 CL_ReadDemoMessage
 =================
 */
+// One message of a demo, from its file or from the TV of a server (cl_tv.cpp): its number and the message
+void CL_DemoMessage( int sequence, msg_t *buf ) {
+	// The netchan only ever goes up from 0, a demo sets the number itself: one that goes back made the snapshot
+	// code of CL_ParseSnapshot count across the whole range of an int. (clc is cleared by CL_Disconnect before.)
+	if ( sequence < clc.serverMessageSequence ) {
+		Com_Error( ERR_DROP, "CL_ReadDemoMessage: the messages of the demo go back (%d after %d)", sequence, clc.serverMessageSequence );
+	}
+	clc.serverMessageSequence = sequence;
+	clc.lastPacketTime = cls.realtime;
+	buf->readcount = 0;
+	CL_ParseServerMessage( buf );
+}
+
 void CL_ReadDemoMessage( void ) {
 	int			r;
 	msg_t		buf;
@@ -456,7 +519,6 @@ void CL_ReadDemoMessage( void ) {
 		CL_DemoCompleted ();
 		return;
 	}
-	clc.serverMessageSequence = LittleLong( s );
 
 	// init the message
 	MSG_Init( &buf, bufData, sizeof( bufData ) );
@@ -468,12 +530,15 @@ void CL_ReadDemoMessage( void ) {
 		return;
 	}
 	buf.cursize = LittleLong( buf.cursize );
+	// the end of a demo is a number and a length of -1 (the number is not looked at before: it goes back there)
 	if ( buf.cursize == -1 ) {
 		CL_DemoCompleted ();
 		return;
 	}
-	if ( buf.cursize > buf.maxsize ) {
-		Com_Error (ERR_DROP, "CL_ReadDemoMessage: demoMsglen > MAX_MSGLEN");
+	// (a negative length passed the check below and FS_Read took it as a huge one: the rest of the file went past
+	// bufData on the stack)
+	if ( buf.cursize < 0 || buf.cursize > buf.maxsize ) {
+		Com_Error (ERR_DROP, "CL_ReadDemoMessage: bad demo message length %d", buf.cursize);
 	}
 	r = FS_Read( buf.data, buf.cursize, clc.demofile );
 	if ( r != buf.cursize ) {
@@ -481,10 +546,7 @@ void CL_ReadDemoMessage( void ) {
 		CL_DemoCompleted ();
 		return;
 	}
-
-	clc.lastPacketTime = cls.realtime;
-	buf.readcount = 0;
-	CL_ParseServerMessage( &buf );
+	CL_DemoMessage( LittleLong( s ), &buf );
 }
 
 /*
@@ -528,6 +590,15 @@ void CL_PlayDemo_f( void ) {
 	arg = Cmd_Argv(1);
 
 	CL_Disconnect( qtrue );
+
+	// A server of this program ends here and now. Left to the next frame of the server (sv_killserver), it ended
+	// after the demo below had loaded its level, and took the collision map of that level with it
+	// (SV_Shutdown() clears it): the first trace of the cgame then stopped the demo with "CM_ClipHandleToModel:
+	// bad handle". So whoever played a level by himself could not start a demo from its console.
+	if ( com_sv_running->integer ) {
+		SV_Shutdown( "Server was killed.\n" );
+		Cvar_Set( "sv_killserver", "0" );
+	}
 
 	Com_sprintf(extension, sizeof(extension), ".dm_%d", PROTOCOL_VERSION);
 	if ( !Q_stricmp( arg + strlen(arg) - strlen(extension), extension ) ) {
@@ -695,7 +766,6 @@ void CL_MapLoading( void ) {
 	// if we are already connected to the local host, stay connected
 	if ( cls.state >= CA_CONNECTED && !Q_stricmp( cls.servername, "localhost" ) ) {
 		cls.state = CA_CONNECTED;		// so the connect screen is drawn
-		Com_Memset( cls.updateInfoString, 0, sizeof( cls.updateInfoString ) );
 		Com_Memset( clc.serverMessage, 0, sizeof( clc.serverMessage ) );
 		Com_Memset( &cl.gameState, 0, sizeof( cl.gameState ) );
 		clc.lastPacketSentTime = -9999;
@@ -730,43 +800,6 @@ void CL_ClearState (void) {
 }
 
 /*
-====================
-CL_UpdateGUID
-
-update cl_guid using QKEY_FILE and optional prefix
-====================
-*/
-static void CL_UpdateGUID( const char *prefix, int prefix_len )
-{
-	if (cl_enableGuid->integer) {
-		fileHandle_t f;
-		int len;
-
-		len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
-		FS_FCloseFile( f );
-
-		// initialize the cvar here in case it's unset or was user-created
-		// while tracking was disabled (removes CVAR_USER_CREATED)
-		Cvar_Get( "ja_guid", "", CVAR_USERINFO | CVAR_ROM, "Client GUID" );
-
-		if( len != QKEY_SIZE ) {
-			Cvar_Set( "ja_guid", "" );
-		} else {
-			Cvar_Set( "ja_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE,
-				prefix, prefix_len ) );
-		}
-	} else {
-		// Remove the cvar entirely if tracking is disabled
-		uint32_t flags = Cvar_Flags("ja_guid");
-		// keep the cvar if it's user-created, but destroy it otherwise
-		if (flags != CVAR_NONEXISTENT && !(flags & CVAR_USER_CREATED)) {
-			cvar_t *ja_guid = Cvar_Get("ja_guid", "", 0, "Client GUID" );
-			Cvar_Unset(ja_guid);
-		}
-	}
-}
-
-/*
 =====================
 CL_Disconnect
 
@@ -787,11 +820,17 @@ void CL_Disconnect( qboolean showMainMenu ) {
 	if ( clc.demorecording ) {
 		CL_StopRecord_f ();
 	}
+	CL_TVClose();
 
 	if (clc.download) {
 		FS_FCloseFile( clc.download );
 		clc.download = 0;
 	}
+	CL_DownloadWebStop();
+	// what came of a pak that did not finish (a fetch from the web address that was let go may still write into
+	// it: Linux takes the name away at once, Windows keeps it and the next download of the pak writes it anew)
+	CL_DownloadRemoveTemp();
+	CL_MemWatchDisconnect();
 	*clc.downloadTempName = *clc.downloadName = 0;
 	Cvar_Set( "cl_downloadName", "" );
 
@@ -824,6 +863,7 @@ void CL_Disconnect( qboolean showMainMenu ) {
 
 	// wipe the client connection
 	Com_Memset( &clc, 0, sizeof( clc ) );
+	CL_DownloadReviewReset();
 
 	cls.state = CA_DISCONNECTED;
 
@@ -839,8 +879,6 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		SCR_UpdateScreen( );
 		CL_CloseAVI( );
 	}
-
-	CL_UpdateGUID( NULL, 0 );
 }
 
 
@@ -874,76 +912,6 @@ void CL_ForwardCommandToServer( const char *string ) {
 		CL_AddReliableCommand( cmd, qfalse );
 	}
 }
-
-/*
-===================
-CL_RequestMotd
-
-===================
-*/
-void CL_RequestMotd( void ) {
-	netadr_t	to;
-	int			i;
-	char		command[MAX_STRING_CHARS], info[MAX_INFO_STRING];
-	char		*motdaddress;
-
-	if ( !cl_motd->integer ) {
-		return;
-	}
-
-	if ( cl_motd->integer < 1 || cl_motd->integer > MAX_MASTER_SERVERS ) {
-		Com_Printf( "CL_RequestMotd: Invalid motd server num. Valid values are 1-%d or 0 to disable\n", MAX_MASTER_SERVERS );
-		return;
-	}
-
-	Com_sprintf( command, sizeof(command), "cl_motdServer%d", cl_motd->integer );
-	motdaddress = Cvar_VariableString( command );
-
-	if ( !*motdaddress )
-	{
-		Com_Printf( "CL_RequestMotd: Error: No motd server address given.\n" );
-		return;
-	}
-
-	i = NET_StringToAdr( motdaddress, &to );
-
-	if ( !i )
-	{
-		Com_Printf( "CL_RequestMotd: Error: could not resolve address of motd server %s\n", motdaddress );
-		return;
-	}
-	to.type = NA_IP;
-	to.port = BigShort( PORT_UPDATE );
-
-	Com_Printf( "Requesting motd from update %s (%s)...\n", motdaddress, NET_AdrToString( &to ) );
-
-	cls.updateServer = to;
-
-	info[0] = 0;
-  // NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a true randomization
-  // only srand I could catch before here is tr_noise.c l:26 srand(1001)
-  // https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=382
-  // NOTE: the Com_Milliseconds xoring only affects the lower 16-bit word,
-  //   but I decided it was enough randomization
-	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ), "%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
-
-	Info_SetValueForKey( info, "challenge", cls.updateChallenge );
-	Info_SetValueForKey( info, "renderer", cls.glconfig.renderer_string );
-	Info_SetValueForKey( info, "rvendor", cls.glconfig.vendor_string );
-	Info_SetValueForKey( info, "version", JK_VERSION_OLD " " PLATFORM_STRING " " SOURCE_DATE );
-
-	//If raven starts filtering for this, add this code back in
-#if 0
-	Info_SetValueForKey( info, "cputype", "Intel Pentium IV");
-	Info_SetValueForKey( info, "mhz", "3000" );
-	Info_SetValueForKey( info, "memory", "4096" );
-#endif
-	Info_SetValueForKey( info, "joystick", Cvar_VariableString("in_joystick") );
-	Info_SetValueForKey( info, "colorbits", va("%d",cls.glconfig.colorBits) );
-
-	NET_OutOfBandPrint( NS_CLIENT, &cls.updateServer, "getmotd \"%s\"\n", info );
-}
-
 
 /*
 ======================================================================
@@ -1000,6 +968,91 @@ void CL_Reconnect_f( void ) {
 }
 
 /*
+===============================================================================
+
+THE JOIN REPORT
+
+v_joinReport 1: one line when the game starts after a connect, how long each step of joining took. The load
+itself is told apart by v_loadReport (qcommon/com_load.cpp).
+
+===============================================================================
+*/
+
+static struct {
+	qboolean	active;
+	int			at[JOIN_NUM_STEPS];			// Sys_Milliseconds(), 0 for a step that did not come
+	int			gamestatePackets, gamestateBytes;
+	int			snapshotPackets, snapshotBytes;
+} join;
+
+static int CL_JoinSpan( joinStep_t from, joinStep_t to ) {
+	return join.at[from] && join.at[to] ? join.at[to] - join.at[from] : -1;
+}
+
+void CL_JoinStep( joinStep_t step ) {
+	if ( step == JOIN_CONNECT ) {
+		Com_Memset( &join, 0, sizeof( join ) );
+		join.active = (qboolean)( v_joinReport && v_joinReport->integer );
+	}
+	if ( !join.active || join.at[step] ) {
+		return;		// (a second gamestate after a download: the first one counts)
+	}
+	join.at[step] = Sys_Milliseconds();
+	if ( !join.at[step] ) {
+		join.at[step] = 1;
+	}
+	if ( step != JOIN_ACTIVE ) {
+		return;
+	}
+
+	join.active = qfalse;
+	// the challenge is skipped for an address of the LAN
+	const joinStep_t before = join.at[JOIN_CHALLENGE] ? JOIN_CHALLENGE : JOIN_CONNECT;
+	Com_Printf( "join of %s: challenge %d ms, connect %d, first packet %d, gamestate %d (%d packets, %d bytes), "
+		"downloads %d, load %d, first snapshot %d (%d packets, %d bytes), total %d ms\n",
+		NET_AdrToString( &clc.serverAddress ), CL_JoinSpan( JOIN_CONNECT, JOIN_CHALLENGE ),
+		CL_JoinSpan( before, JOIN_CONNECTED ), CL_JoinSpan( JOIN_CONNECTED, JOIN_FIRST_PACKET ),
+		CL_JoinSpan( JOIN_FIRST_PACKET, JOIN_GAMESTATE ), join.gamestatePackets, join.gamestateBytes,
+		CL_JoinSpan( JOIN_GAMESTATE, JOIN_LOAD ), CL_JoinSpan( JOIN_LOAD, JOIN_PRIMED ),
+		CL_JoinSpan( JOIN_PRIMED, JOIN_ACTIVE ), join.snapshotPackets, join.snapshotBytes,
+		CL_JoinSpan( JOIN_CONNECT, JOIN_ACTIVE ) );
+}
+
+// v_joinReport 2: every packet between connectResponse and the first snapshot, by the time since connectResponse
+static void CL_JoinTrace( const char *what, int bytes ) {
+	if ( join.active && v_joinReport->integer >= 2 && join.at[JOIN_CONNECTED] ) {
+		Com_Printf( "join: +%d ms %s %d bytes (%s)\n", Sys_Milliseconds() - join.at[JOIN_CONNECTED], what, bytes,
+			cls.state == CA_CONNECTED ? "connected" : cls.state == CA_PRIMED ? "primed" : "loading" );
+	}
+}
+
+void CL_JoinSent( int bytes ) {
+	CL_JoinTrace( "sent", bytes );
+}
+
+// a packet of the server, before the netchan puts its fragments together
+void CL_JoinPacket( int bytes ) {
+	if ( !join.active ) {
+		return;
+	}
+	CL_JoinTrace( "got", bytes );
+	if ( cls.state == CA_CONNECTED && !join.at[JOIN_GAMESTATE] ) {
+		CL_JoinStep( JOIN_FIRST_PACKET );
+		join.gamestatePackets++;
+	} else if ( cls.state == CA_PRIMED ) {
+		join.snapshotPackets++;
+		join.snapshotBytes += bytes;
+	}
+}
+
+void CL_JoinGamestate( int bytes ) {
+	if ( join.active && !join.at[JOIN_GAMESTATE] ) {
+		join.gamestateBytes = bytes;
+	}
+	CL_JoinStep( JOIN_GAMESTATE );
+}
+
+/*
 ================
 CL_Connect_f
 
@@ -1014,13 +1067,15 @@ void CL_Connect_f( void ) {
 		return;
 	}
 
+	CL_JoinStep( JOIN_CONNECT );
+
 	// save arguments for reconnect
 	Cvar_Set("cl_reconnectArgs", Cmd_Args());
 
-	Cvar_Set("ui_singlePlayerActive", "0");
+	// what the last server did is not held against this one
+	CL_IDS_Connect();
 
-	// fire a message off to the motd server
-	CL_RequestMotd();
+	Cvar_Set("ui_singlePlayerActive", "0");
 
 	// clear any previous "server full" type messages
 	clc.serverMessage[0] = 0;
@@ -1050,14 +1105,14 @@ void CL_Connect_f( void ) {
 		clc.serverAddress.port = BigShort( PORT_SERVER );
 	}
 
+	// a server the client left for the intrusion detection: once refused with the reason
+	CL_IDS_CheckConnect( &clc.serverAddress );
+	CL_RepCheckConnect( &clc.serverAddress );
+	CL_MemWatchConnect();
+
 	serverString = NET_AdrToString(&clc.serverAddress);
 
 	Com_Printf( "%s resolved to %s\n", cls.servername, serverString );
-
-	if( cl_guidServerUniq->integer )
-		CL_UpdateGUID( serverString, strlen( serverString ) );
-	else
-		CL_UpdateGUID( NULL, 0 );
 
 	// if we aren't playing on a lan, we need to authenticate
 	if ( NET_IsLocalAddress( &clc.serverAddress ) ) {
@@ -1365,6 +1420,8 @@ void CL_DownloadsComplete( void ) {
 		return;
 	}
 
+	CL_JoinStep( JOIN_LOAD );
+
 	// starting to load a map so we get out of full screen ui mode
 	Cvar_Set("r_uiFullScreen", "0");
 
@@ -1372,7 +1429,10 @@ void CL_DownloadsComplete( void ) {
 	// this will also (re)load the UI
 	// if this is a local client then only the client part of the hunk
 	// will be cleared, note that this is done after the hunk mark has been set
+	Com_LoadBegin( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "mapname" ) );
+	Com_LoadPush( "client restart", NULL );
 	CL_FlushMemory();
+	Com_LoadPop();
 
 	// initialize the CGame
 	cls.cgameStarted = qtrue;
@@ -1384,6 +1444,8 @@ void CL_DownloadsComplete( void ) {
 	CL_WritePacket();
 	CL_WritePacket();
 	CL_WritePacket();
+
+	CL_JoinStep( JOIN_PRIMED );
 }
 
 /*
@@ -1409,11 +1471,20 @@ void CL_BeginDownloadConfirm( void ) {
 
 	clc.downloadBlock = 0; // Starting new file
 	clc.downloadCount = 0;
+	clc.downloadSize = 0;	// (else CL_NextDownload checks a pak that never came by the size of the one before)
 	clc.downloadTime = cls.realtime;
 
 	// Set current time to make sure the module knows the real start time after the delay
 	Cvar_SetValue( "cl_downloadTime", (float) cls.realtime );
 
+	// from the web address the server names for its paks (cl_download.cpp), else through the game
+	if ( !CL_DownloadWebStart() ) {
+		CL_DownloadUdpStart();
+	}
+}
+
+// the pak of cl_downloadName is asked from the server itself
+void CL_DownloadUdpStart( void ) {
 	CL_AddReliableCommand( va("download %s", cl_downloadName->string), qfalse );
 }
 
@@ -1427,8 +1498,8 @@ void CL_BeginDownload( const char *localName, const char *remoteName ) {
 	Cvar_Set( "cl_downloadCount", "0" );
 	Cvar_SetValue( "cl_downloadTime", (float) cls.realtime );
 
-	// Prompt the user (unless they disabled it)
-	if ( cl_downloadPrompt->integer ) {
+	// Prompt the user (unless they disabled it, or chose in the window of cl_download.cpp)
+	if ( cl_downloadPrompt->integer && !CL_DownloadReviewActive() ) {
 		clc.downloadMenuActive = qtrue;
 		clc.downloadWaitingOnUser = qtrue;
 	} else {
@@ -1455,8 +1526,13 @@ void CL_NextDownload(void) {
 		char *zippath = FS_BuildOSPath(Cvar_VariableString("fs_homepath"), clc.downloadName, "");
 		zippath[strlen(zippath)-1] = '\0';
 
-		if(!FS_CompareZipChecksum(zippath))
+		if(!FS_CompareZipChecksum(zippath)) {
+			// not the pak the server named: it would only lie in the folder of downloads under that name
+			FS_Remove( zippath );
 			Com_Error(ERR_DROP, "Incorrect checksum for file: %s", clc.downloadName);
+		}
+		// (the programs in it are blocked before anything can load it)
+		CL_DownloadArrived( clc.downloadName );
 	}
 
 	*clc.downloadTempName = *clc.downloadName = 0;
@@ -1474,7 +1550,8 @@ void CL_NextDownload(void) {
 		remoteName = s;
 
 		if ( (s = strchr(s, '@')) == NULL ) {
-			CL_DownloadsComplete();
+			if ( !CL_DownloadReviewEnd() )
+				CL_DownloadsComplete();
 			return;
 		}
 
@@ -1490,7 +1567,8 @@ void CL_NextDownload(void) {
 			return;
 		}
 		else {
-			CL_BeginDownload( localName, remoteName );
+			// (into the folder of the session, if its player wants it for this one only)
+			CL_BeginDownload( CL_DownloadLocalName( localName ), remoteName );
 		}
 
 		clc.downloadRestart = qtrue;
@@ -1501,7 +1579,9 @@ void CL_NextDownload(void) {
 		return;
 	}
 
-	CL_DownloadsComplete();
+	// the window of what came in them, if there is one
+	if ( !CL_DownloadReviewEnd() )
+		CL_DownloadsComplete();
 }
 
 /*
@@ -1514,6 +1594,13 @@ and determine if we need to download them
 */
 void CL_InitDownloads(void) {
   char missingfiles[1024];
+
+	// (a new level while a pak came from the web address: its list is another one now)
+	if ( CL_DownloadWebBusy() ) {
+		CL_DownloadWebStop();
+		*clc.downloadTempName = *clc.downloadName = 0;
+		Cvar_Set( "cl_downloadName", "" );
+	}
 
 	if ( clc.downloadFinished ) {
 		// If we just finished a download with a "donedl" we are getting another gamestate and we would be asked to
@@ -1541,12 +1628,11 @@ void CL_InitDownloads(void) {
 		}
 	}
 	else if ( FS_ComparePaks( clc.downloadList, sizeof( clc.downloadList ) , qtrue ) ) {
-		const char *serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SERVERINFO ];
-		const char *serverAllowDownloads = Info_ValueForKey( serverInfo, "sv_allowDownload" );
-
 		Com_Printf("Need paks: %s\n", clc.downloadList );
 
-		if ( serverAllowDownloads[0] && !atoi(serverAllowDownloads) ) {
+		// A server that names a web address for its paks (jp_DlBaseURL) turns its own downloads off for it, as JA+
+		// servers do: then they come from there (cl_download.cpp)
+		if ( !CL_ServerSendsDownloads() && !CL_DownloadWebOffered() ) {
 			// The server has an "sv_allowDownload" value set, but it's 0
 			Com_Printf("Skipping downloads, because the server does not allow downloads\n");
 		} else if ( *clc.downloadList ) {
@@ -1556,6 +1642,9 @@ void CL_InitDownloads(void) {
 			*clc.downloadTempName = *clc.downloadName = 0;
 			Cvar_Set( "cl_downloadName", "" );
 
+			// first the window of what the server offers, if its player wants one (cl_download.cpp)
+			if ( CL_DownloadReviewBegin() )
+				return;
 			CL_NextDownload();
 			return;
 		}
@@ -1590,6 +1679,19 @@ void CL_CheckForResend( void ) {
 		return;
 	}
 
+	// A server that refused the connect ("Reconnect rejected : too soon") may say nothing to the packets after it,
+	// and the connect screen waited for ever
+	if ( clc.serverAddress.type != NA_LOOPBACK && clc.connectPacketCount * RETRANSMIT_TIMEOUT >= CONNECT_GIVE_UP ) {
+		char	last[MAX_STRING_CHARS];
+
+		Q_strncpyz( last, clc.serverMessage, sizeof( last ) );
+		Q_strstrip( last, "\r\n", NULL );
+		if ( last[0] ) {
+			Com_Error( ERR_DROP, "%s did not answer for %d seconds, its last word: %s", cls.servername, CONNECT_GIVE_UP / 1000, last );
+		}
+		Com_Error( ERR_DROP, "%s did not answer for %d seconds", cls.servername, CONNECT_GIVE_UP / 1000 );
+	}
+
 	clc.connectTime = cls.realtime;	// for retransmit requests
 	clc.connectPacketCount++;
 
@@ -1608,7 +1710,13 @@ void CL_CheckForResend( void ) {
 		// sending back the challenge
 		port = (int) Cvar_VariableValue ("net_qport");
 
-		Q_strncpyz( info, Cvar_InfoString( CVAR_USERINFO ), sizeof( info ) );
+		// The userinfo always goes out as Windows-1252, also to a server that reads UTF-8 chat: the name in it
+		// is handed to every client alike (a config string, status answers), and every client reads that.
+		if ( CL_UTF8() ) {
+			Q_UTF8_ToCP1252( Cvar_InfoString( CVAR_USERINFO ), info, sizeof( info ) );
+		} else {
+			Q_strncpyz( info, Cvar_InfoString( CVAR_USERINFO ), sizeof( info ) );
+		}
 		Info_SetValueForKey( info, "protocol", va("%i", PROTOCOL_VERSION ) );
 		Info_SetValueForKey( info, "qport", va("%i", port ) );
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
@@ -1644,6 +1752,9 @@ void CL_DisconnectPacket( const netadr_t *from ) {
 
 	// if not from our server, ignore it
 	if ( !NET_CompareAdr( from, &clc.netchan.remoteAddress ) ) {
+		if ( cls.state >= CA_CONNECTED ) {
+			CL_IDS_Event( CLIDS_OOB_SOURCE, from, "disconnect" );
+		}
 		return;
 	}
 
@@ -1659,35 +1770,6 @@ void CL_DisconnectPacket( const netadr_t *from ) {
 	CL_Disconnect( qtrue );
 }
 
-
-/*
-===================
-CL_MotdPacket
-
-===================
-*/
-void CL_MotdPacket( const netadr_t *from ) {
-	char	*challenge;
-	char	*info;
-
-	// if not from our server, ignore it
-	if ( !NET_CompareAdr( from, &cls.updateServer ) ) {
-		return;
-	}
-
-	info = Cmd_Argv(1);
-
-	// check challenge
-	challenge = Info_ValueForKey( info, "challenge" );
-	if ( strcmp( challenge, cls.updateChallenge ) ) {
-		return;
-	}
-
-	challenge = Info_ValueForKey( info, "motd" );
-
-	Q_strncpyz( cls.updateInfoString, info, sizeof( cls.updateInfoString ) );
-	Cvar_Set( "cl_motdString", challenge );
-}
 
 /*
 ===================
@@ -1711,6 +1793,7 @@ void CL_InitServerInfo( serverInfo_t *server, const netadr_t *address ) {
 	server->game[0] = '\0';
 	server->gameType = 0;
 	server->humans = server->bots = 0;
+	server->humansAskTime = 0;
 }
 
 #define MAX_SERVERSPERPACKET	256
@@ -1825,73 +1908,13 @@ void CL_ServersResponsePacket( const netadr_t *from, msg_t *msg ) {
 #ifndef MAX_STRINGED_SV_STRING
 #define MAX_STRINGED_SV_STRING 1024
 #endif
-static void CL_CheckSVStringEdRef(char *buf, const char *str)
-{ //I don't really like doing this. But it utilizes the system that was already in place.
-	int i = 0;
-	int b = 0;
-	int strLen = 0;
-	qboolean gotStrip = qfalse;
+static const char *CL_SVStringEdOOB( const char *ref ) {
+	return SE_GetString( va( "MP_SVGAME_%s", ref ) );
+}
 
-	if (!str || !str[0])
-	{
-		if (str)
-		{
-			strcpy(buf, str);
-		}
-		return;
-	}
-
-	strcpy(buf, str);
-
-	strLen = strlen(str);
-
-	if (strLen >= MAX_STRINGED_SV_STRING)
-	{
-		return;
-	}
-
-	while (i < strLen && str[i])
-	{
-		gotStrip = qfalse;
-
-		if (str[i] == '@' && (i+1) < strLen)
-		{
-			if (str[i+1] == '@' && (i+2) < strLen)
-			{
-				if (str[i+2] == '@' && (i+3) < strLen)
-				{ //@@@ should mean to insert a stringed reference here, so insert it into buf at the current place
-					char stripRef[MAX_STRINGED_SV_STRING];
-					int r = 0;
-
-					while (i < strLen && str[i] == '@')
-					{
-						i++;
-					}
-
-					while (i < strLen && str[i] && str[i] != ' ' && str[i] != ':' && str[i] != '.' && str[i] != '\n')
-					{
-						stripRef[r] = str[i];
-						r++;
-						i++;
-					}
-					stripRef[r] = 0;
-
-					buf[b] = 0;
-					Q_strcat(buf, MAX_STRINGED_SV_STRING, SE_GetString(va("MP_SVGAME_%s", stripRef)));
-					b = strlen(buf);
-				}
-			}
-		}
-
-		if (!gotStrip)
-		{
-			buf[b] = str[i];
-			b++;
-		}
-		i++;
-	}
-
-	buf[b] = 0;
+// buf has MAX_STRINGED_SV_STRING bytes
+static void CL_CheckSVStringEdRef( char *buf, const char *str ) {
+	Q_StringEdExpand( buf, MAX_STRINGED_SV_STRING, str ? str : "", CL_SVStringEdOOB );
 }
 
 
@@ -1942,6 +1965,7 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			if(!*c || challenge != clc.challenge)
 			{
 				Com_DPrintf("Challenge response received from unexpected source. Ignored.\n");
+				CL_IDS_Event( CLIDS_OOB_SOURCE, from, "challengeResponse" );
 				return;
 			}
 		}
@@ -1956,6 +1980,7 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		// a server proxy to hand off connections to multiple servers
 		clc.serverAddress = *from;
 		Com_DPrintf ("challengeResponse: %d\n", clc.challenge);
+		CL_JoinStep( JOIN_CHALLENGE );
 		return;
 	}
 
@@ -1971,11 +1996,13 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		}
 		if ( !NET_CompareAdr( from, &clc.serverAddress ) ) {
 			Com_Printf( "connectResponse from wrong address. Ignored.\n" );
+			CL_IDS_Event( CLIDS_OOB_SOURCE, from, "connectResponse" );
 			return;
 		}
 		Netchan_Setup (NS_CLIENT, &clc.netchan, from, Cvar_VariableValue( "net_qport" ) );
 		cls.state = CA_CONNECTED;
 		clc.lastPacketSentTime = -9999;		// send first packet immediately
+		CL_JoinStep( JOIN_CONNECTED );
 		return;
 	}
 
@@ -1998,21 +2025,30 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		return;
 	}
 
-	// echo request from server
+	// Echo request from server. Only from the server: the answer is whatever the packet asks for, sent to
+	// wherever the packet says it came from, so anybody could have a client send a packet of his choice to an
+	// address of his choice. A server this client asked for its info or status may ask too (CL_EchoAsked). The
+	// engines echo the first word after "echo", which a server puts in quotes when it has blanks; the text of
+	// such a question is taken whole, so "echoResponse getinfo <random>" is the same with quotes or without.
 	if ( !Q_stricmp(c, "echo") ) {
-		NET_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv(1) );
+		char text[MAX_STRING_CHARS];
+
+		Q_strncpyz( text, Cmd_ArgsFrom( 1 ), sizeof( text ) );
+		if ( cls.state >= CA_CONNECTING && NET_CompareAdr( from, &clc.serverAddress ) ) {
+			NET_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv(1) );
+			return;
+		}
+		if ( !CL_EchoAsked( from, text ) ) {
+			CL_IDS_Event( CLIDS_ECHO, from, text );
+			return;
+		}
+		NET_OutOfBandPrint( NS_CLIENT, from, "%s", text );
 		return;
 	}
 
 	// cd check
 	if ( !Q_stricmp(c, "keyAuthorize") ) {
 		// we don't use these now, so dump them on the floor
-		return;
-	}
-
-	// global MOTD from id
-	if ( !Q_stricmp(c, "motd") ) {
-		CL_MotdPacket( from );
 		return;
 	}
 
@@ -2029,11 +2065,32 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			Q_strncpyz( clc.serverMessage, sTemp, sizeof( clc.serverMessage ) );
 			Com_Printf( "%s", sTemp );
 		}
+		else if ( cls.state >= CA_CONNECTED )
+		{
+			// a line for the screen of a player from somebody who is not his server
+			CL_IDS_Event( CLIDS_OOB_SOURCE, from, "print" );
+		}
 		return;
 	}
 
-	// list of servers sent back by a master server (classic)
+	// list of servers sent back by a master server (classic). From anybody else it would put made up servers into
+	// the browser, which then pings every address in it.
+	// the VisionJK masterserver about the intrusion detection (cl_reputation.cpp, which looks at the sender)
+	if ( !Q_stricmpn( c, "ids", 3 ) ) {
+		CL_RepPacket( from, c );
+		return;
+	}
+	// and about the stores of the site (cl_master.cpp, which looks at the sender too)
+	if ( !Q_stricmpn( c, "store", 5 ) ) {
+		CL_MasterPacket( from, c );
+		return;
+	}
+
 	if ( !Q_strncmp(c, "getserversResponse", 18) ) {
+		if ( !CL_MasterAsked( from ) ) {
+			CL_IDS_Event( CLIDS_MASTER, from, NULL );
+			return;
+		}
 		CL_ServersResponsePacket( from, msg );
 		return;
 	}
@@ -2080,7 +2137,12 @@ void CL_PacketEvent( const netadr_t *from, msg_t *msg ) {
 		return;
 	}
 
+	CL_JoinPacket( msg->cursize );
+
 	if (!CL_Netchan_Process( &clc.netchan, msg) ) {
+		if ( netchan_anomaly ) {
+			CL_IDS_Event( CLIDS_FRAGMENT, NULL, NULL );
+		}
 		return;		// out of order, duplicated, etc
 	}
 
@@ -2166,7 +2228,15 @@ void CL_CheckUserinfo( void ) {
 	// send a reliable userinfo update if needed
 	if ( cvar_modifiedFlags & CVAR_USERINFO ) {
 		cvar_modifiedFlags &= ~CVAR_USERINFO;
-		CL_AddReliableCommand( va("userinfo \"%s\"", Cvar_InfoString( CVAR_USERINFO ) ), qfalse );
+		if ( CL_UTF8() ) {
+			// as Windows-1252 to every server, see CL_CheckForResend()
+			char info[MAX_INFO_STRING];
+
+			Q_UTF8_ToCP1252( Cvar_InfoString( CVAR_USERINFO ), info, sizeof( info ) );
+			CL_AddReliableCommand( va("userinfo \"%s\"", info ), qfalse );
+		} else {
+			CL_AddReliableCommand( va("userinfo \"%s\"", Cvar_InfoString( CVAR_USERINFO ) ), qfalse );
+		}
 	}
 
 }
@@ -2180,6 +2250,68 @@ CL_Frame
 static unsigned int frameCount;
 static float avgFrametime=0.0;
 extern void SE_CheckForLanguageUpdates(void);
+/*
+==================
+CL_WindowSize
+
+The desktop gave the window another size: a tiling window manager does that to every window, and since the window
+is resizable the player can drag it. Once the size has stayed the same for a moment the renderer draws in it
+(re->ext.WindowResized), and cgame and ui follow on their next frame. A renderer that can not do that (rd-vanilla)
+or a cgame or ui that does not follow (one of another tree) gets a vid_restart in the new size instead. Before
+this the frame kept the size the window was made with, and Wayland showed it cut off.
+==================
+*/
+#define WINDOW_SIZE_SETTLE_MSEC	200
+
+static void CL_WindowSize( void ) {
+#ifndef __EMSCRIPTEN__	// a page restarts the renderer itself when its size settled (boot.js)
+	static int	pendingWidth, pendingHeight, pendingTime;
+	static int	restartWidth, restartHeight;	// the size of the last vid_restart this made
+	int			width, height;
+	qboolean	follow;
+
+	if ( !cls.rendererStarted || !re || !WIN_DrawableSize( &width, &height ) ) {
+		return;
+	}
+	if ( width == cls.glconfig.vidWidth && height == cls.glconfig.vidHeight ) {
+		pendingWidth = pendingHeight = 0;
+		restartWidth = restartHeight = 0;
+		return;
+	}
+	if ( width != pendingWidth || height != pendingHeight ) {
+		pendingWidth = width;
+		pendingHeight = height;
+		pendingTime = Sys_Milliseconds();
+		return;
+	}
+	if ( Sys_Milliseconds() - pendingTime < WINDOW_SIZE_SETTLE_MSEC ) {
+		return;
+	}
+	pendingWidth = pendingHeight = 0;
+
+	follow = (qboolean)( ( !cls.uiStarted || Cvar_VariableIntegerValue( "v_uiResize" ) )
+		&& ( !cls.cgameStarted || Cvar_VariableIntegerValue( "v_cgameResize" ) ) );
+	if ( follow && re->ext.WindowResized && re->ext.WindowResized( width, height ) ) {
+		cls.glconfig.vidWidth = width;
+		cls.glconfig.vidHeight = height;
+		cls.bias2D = Cvar_VariableValue( "v_2dBias" );
+		cls.bias2DY = Cvar_VariableValue( "v_2dBiasY" );
+		g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
+		g_consoleField.widthInChars = g_console_field_width;
+		return;
+	}
+	if ( width == restartWidth && height == restartHeight ) {
+		// the window was made in this size and the desktop gave it another one again: stay with that
+		return;
+	}
+	restartWidth = width;
+	restartHeight = height;
+	Com_Printf( "The window is now %i x %i, restarting the renderer\n", width, height );
+	WIN_SetNextSize( width, height );
+	Cbuf_AddText( "vid_restart\n" );
+#endif
+}
+
 void CL_Frame ( int msec ) {
 	qboolean takeVideoFrame = qfalse;
 
@@ -2188,7 +2320,16 @@ void CL_Frame ( int msec ) {
 	}
 
 	SE_CheckForLanguageUpdates();	// will take zero time to execute unless language changes, then will reload strings.
+	CL_UTF8();						// keeps v_utf8Text right for the input code and the userinfo
 									//	of course this still doesn't work for menus...
+
+	CL_UpdateFrame();
+	CL_DownloadWebFrame();
+	CL_ModelsFrame();
+	CL_ClipboardFrame();
+	CL_MemWatchFrame();
+	CL_MasterFrame();
+	CL_RepFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
@@ -2247,14 +2388,22 @@ void CL_Frame ( int msec ) {
 	// resend a connection request if necessary
 	CL_CheckForResend();
 
+	// what the TV of a server sent (cl_tv.cpp), as packets are taken
+	CL_TVFrame();
+
 	// decide on the serverTime to render
 	CL_SetCGameTime();
+
+	// a new size of the window, before anything is drawn in the old one
+	CL_WindowSize();
 
 	// update the screen
 	SCR_UpdateScreen();
 
 	// update audio
+	Com_LoadPush( "frame: sound", NULL );
 	S_Update();
+	Com_LoadPop();
 
 	// advance local effects for next frame
 	SCR_RunCinematic();
@@ -2332,8 +2481,15 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
-	// this sets up the renderer and calls R_Init
+	// this sets up the renderer and calls R_Init, which says in v_2dBias and v_2dBiasY how far the 2D grid is widened
 	re->BeginRegistration( &cls.glconfig );
+
+	// the renderer can not run on this machine, VK_InitVulkan() said why
+	if ( !cls.glconfig.vidWidth ) {
+		Com_Error( ERR_FATAL, RENDER_MISSING_TEXT "\n\n%s", cls.glconfig.renderer_string ? cls.glconfig.renderer_string : "" );
+	}
+	cls.bias2D = Cvar_VariableValue( "v_2dBias" );
+	cls.bias2DY = Cvar_VariableValue( "v_2dBiasY" );
 
 	// load character sets
 	cls.charSetShader = re->RegisterShaderNoMip("gfx/2d/charsgrid_med");
@@ -2367,22 +2523,30 @@ void CL_StartHunkUsers( void ) {
 
 	if ( !cls.rendererStarted ) {
 		cls.rendererStarted = qtrue;
+		Com_LoadPush( "renderer start", NULL );
 		CL_InitRenderer();
+		Com_LoadPop();
 	}
 
 	if ( !cls.soundStarted ) {
 		cls.soundStarted = qtrue;
+		Com_LoadPush( "sound start", NULL );
 		S_Init();
+		Com_LoadPop();
 	}
 
 	if ( !cls.soundRegistered ) {
 		cls.soundRegistered = qtrue;
+		Com_LoadPush( "sound start", NULL );
 		S_BeginRegistration();
+		Com_LoadPop();
 	}
 
 	if ( !cls.uiStarted ) {
 		cls.uiStarted = qtrue;
+		Com_LoadPush( "ui start", NULL );
 		CL_InitUI();
+		Com_LoadPop();
 	}
 }
 
@@ -2393,7 +2557,7 @@ CL_InitRef
 */
 qboolean Com_TheHunkMarkHasBeenMade(void);
 
-//qcommon/cm_load.cpp
+//qcommon/cm/cm_load.cpp
 extern void *gpvCachedMapDiskImage;
 extern qboolean gbUsingCachedMapDataRightNow;
 
@@ -2412,8 +2576,6 @@ static IHeapAllocator *GetG2VertSpaceServer( void ) {
 	return G2VertSpaceServer;
 }
 
-#define DEFAULT_RENDER_LIBRARY "rd-vanilla"
-
 void CL_InitRef( void ) {
 	static refimport_t ri;
 	refexport_t	*ret;
@@ -2422,21 +2584,10 @@ void CL_InitRef( void ) {
 
 	Com_Printf( "----- Initializing Renderer ----\n" );
 
-	cl_renderer = Cvar_Get( "cl_renderer", DEFAULT_RENDER_LIBRARY, CVAR_ARCHIVE|CVAR_LATCH, "Which renderer library to use" );
-
-	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, cl_renderer->string );
-
-	if( !(rendererLib = Sys_LoadDll( dllName, qfalse )) && strcmp( cl_renderer->string, cl_renderer->resetString ) )
-	{
-		Com_Printf( "failed: trying to load fallback renderer\n" );
-		Cvar_ForceReset( "cl_renderer" );
-
-		Com_sprintf( dllName, sizeof( dllName ), DEFAULT_RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
-		rendererLib = Sys_LoadDll( dllName, qfalse );
-	}
-
+	Com_sprintf( dllName, sizeof( dllName ), RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
+	rendererLib = Sys_LoadDll( dllName, qfalse );
 	if ( !rendererLib ) {
-		Com_Error( ERR_FATAL, "Failed to load renderer\n" );
+		Com_Error( ERR_FATAL, "Failed to load %s\n", dllName );
 	}
 
 	memset( &ri, 0, sizeof( ri ) );
@@ -2512,14 +2663,11 @@ void CL_InitRef( void ) {
 	ri.CGVM_RagCallback = CGVM_RagCallback;
 
     ri.WIN_Init = WIN_Init;
-	ri.WIN_SetGamma = WIN_SetGamma;
     ri.WIN_Shutdown = WIN_Shutdown;
     ri.WIN_Present = WIN_Present;
 	ri.WIN_VK_InstanceExtensions = WIN_VK_InstanceExtensions;
 	ri.WIN_VK_CreateSurface = WIN_VK_CreateSurface;
 	ri.WIN_VK_GetInstanceProcAddr = WIN_VK_GetInstanceProcAddr;
-	ri.GL_GetProcAddress = WIN_GL_GetProcAddress;
-	ri.GL_ExtensionSupported = WIN_GL_ExtensionSupported;
 
 	ri.CM_GetCachedMapDiskImage = CM_GetCachedMapDiskImage;
 	ri.CM_SetCachedMapDiskImage = CM_SetCachedMapDiskImage;
@@ -2531,6 +2679,10 @@ void CL_InitRef( void ) {
 
 	ri.PD_Store = PD_Store;
 	ri.PD_Load = PD_Load;
+	ri.LoadPush = Com_LoadPush;
+	ri.LoadPop = Com_LoadPop;
+	ri.FS_FileSource = FS_FileSource;
+	ri.FontFile = CL_FontFile;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 
@@ -2677,50 +2829,6 @@ static void CL_AddFavorite_f( void ) {
 #define G2_VERT_SPACE_CLIENT_SIZE 256
 
 /*
-===============
-CL_GenerateQKey
-
-test to see if a valid QKEY_FILE exists.  If one does not, try to generate
-it by filling it with 2048 bytes of random data.
-===============
-*/
-
-static void CL_GenerateQKey(void)
-{
-	if (cl_enableGuid->integer) {
-		int len = 0;
-		unsigned char buff[ QKEY_SIZE ];
-		fileHandle_t f;
-
-		len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
-		FS_FCloseFile( f );
-		if( len == QKEY_SIZE ) {
-			Com_Printf( "QKEY found.\n" );
-			return;
-		}
-		else {
-			if( len > 0 ) {
-				Com_Printf( "QKEY file size != %d, regenerating\n",
-					QKEY_SIZE );
-			}
-
-			Com_Printf( "QKEY building random string\n" );
-			Com_RandomBytes( buff, sizeof(buff) );
-
-			f = FS_SV_FOpenFileWrite( QKEY_FILE );
-			if( !f ) {
-				Com_Printf( "QKEY could not open %s for write\n",
-					QKEY_FILE );
-				return;
-			}
-			FS_Write( buff, sizeof(buff), f );
-			FS_FCloseFile( f );
-			Com_Printf( "QKEY generated\n" );
-		}
-	}
-}
-
-/*
 ====================
 CL_Init
 ====================
@@ -2742,21 +2850,20 @@ void CL_Init( void ) {
 	// register our variables
 	//
 	cl_noprint = Cvar_Get( "cl_noprint", "0", 0 );
-	cl_motd = Cvar_Get ("cl_motd", "1", CVAR_ARCHIVE_ND, "Display welcome message from master server on the bottom of connection screen" );
-	cl_motdServer[0] = Cvar_Get( "cl_motdServer1", UPDATE_SERVER_NAME, 0 );
-	cl_motdServer[1] = Cvar_Get( "cl_motdServer2", JKHUB_UPDATE_SERVER_NAME, 0 );
-	for ( int index = 2; index < MAX_MASTER_SERVERS; index++ )
-		cl_motdServer[index] = Cvar_Get( va( "cl_motdServer%d", index + 1 ), "", CVAR_ARCHIVE_ND );
-
 	cl_timeout = Cvar_Get ("cl_timeout", "200", 0);
 
 	cl_timeNudge = Cvar_Get ("cl_timeNudge", "0", CVAR_TEMP );
 	cl_shownet = Cvar_Get ("cl_shownet", "0", CVAR_TEMP );
 	cl_showSend = Cvar_Get ("cl_showSend", "0", CVAR_TEMP );
 	cl_showTimeDelta = Cvar_Get ("cl_showTimeDelta", "0", CVAR_TEMP );
+	v_netSmooth = Cvar_Get( "v_netSmooth", "40", CVAR_ARCHIVE_ND, "On a line whose snapshots come unevenly the clock of the game stays further behind the newest one, by twice their jitter, at most this many ms. 0: always 5 ms, as before" );
+	v_netStats = Cvar_Get( "v_netStats", "0", CVAR_TEMP, "1: a line every five seconds: snapshots and bytes a second, frames past the newest snapshot, jitter, margin, how far the game is behind the newest snapshot" );
+	v_joinReport = Cvar_Get( "v_joinReport", "0", CVAR_TEMP, "1: a line when the game starts after a connect: how long each step of the join took. 2: also every packet of the join" );
 	cl_freezeDemo = Cvar_Get ("cl_freezeDemo", "0", CVAR_TEMP );
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP, "Password for remote console access" );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );
+	// what CL_NextDemo runs: registered so that a server can not make it (Cvar_Server_Set takes a cvar nobody has)
+	Cvar_Get( "nextdemo", "", CVAR_TEMP );
 
 	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
 	cl_aviFrameRate = Cvar_Get ("cl_aviFrameRate", "25", CVAR_ARCHIVE);
@@ -2789,6 +2896,8 @@ void CL_Init( void ) {
 	cl_framerate	= Cvar_Get ("cl_framerate", "0", CVAR_TEMP);
 	cl_allowDownload = Cvar_Get ("cl_allowDownload", "1", CVAR_ARCHIVE_ND, "Allow downloading custom paks from server");
 	cl_allowAltEnter = Cvar_Get ("cl_allowAltEnter", "1", CVAR_ARCHIVE_ND, "Enables use of ALT+ENTER keyboard combo to toggle fullscreen" );
+	// the effect system makes it at a level's start, a row of Setup sets it in the menus before that (FxUtil.cpp)
+	Cvar_Get( "tay_jk2Effects", "0", CVAR_ARCHIVE_ND, "1: shots as crisp as in Jedi Outcast, from the next level on" );
 
 	cl_autolodscale = Cvar_Get( "cl_autolodscale", "1", CVAR_ARCHIVE_ND );
 
@@ -2813,7 +2922,6 @@ void CL_Init( void ) {
 	m_filter = Cvar_Get ("m_filter", "0", CVAR_ARCHIVE_ND);
 #endif
 
-	cl_motdString = Cvar_Get( "cl_motdString", "", CVAR_ROM );
 
 	Cvar_Get( "cl_maxPing", "800", CVAR_ARCHIVE_ND, "Max. ping for servers when searching the serverlist" );
 
@@ -2821,13 +2929,63 @@ void CL_Init( void ) {
 
 	cl_drawRecording = Cvar_Get("cl_drawRecording", "1", CVAR_ARCHIVE);
 
-	// enable the ja_guid player identifier in userinfo by default in OpenJK
-	cl_enableGuid = Cvar_Get("cl_enableGuid", "1", CVAR_ARCHIVE_ND, "Enable GUID userinfo identifier" );
-	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "1", CVAR_ARCHIVE_ND, "Use a unique guid value per server" );
 
 	// ~ and `, as keys and characters
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60 0xb2", CVAR_ARCHIVE, "Which keys are used to toggle the console");
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
+	CL_IDS_Init();
+	CL_MemWatchInit();
+	CL_MasterInit();
+	CL_RepInit();
+	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
+	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
+	Cvar_Get( "v_cgameChat", "1", CVAR_ROM, "" );
+	// and the calls for text and pictures of its own in the scene
+	Cvar_Get( "v_cgameScene", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameSpatialDebug", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameSpatialMovers", "1", CVAR_ROM, "" );
+	// the menus on a plane in the level, and the blur of the scene around a distance
+	Cvar_Get( "v_cgameUIPlane", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameDoF", "1", CVAR_ROM, "" );
+	// and the view through the scope of a weapon (R_SetScopeEffect), and the screen effects (R_SetScreenEffect)
+	Cvar_Get( "v_cgameScope", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameScreenFx", "1", CVAR_ROM, "" );
+	// and the videos on the screens of the level (ext.Video_*, cl_video.cpp)
+	Cvar_Get( "v_cgameVideo", "1", CVAR_ROM, "" );
+	// and picture files for the cgame (ext.R_LoadImageFit, the drawing board)
+	Cvar_Get( "v_cgameImage", "1", CVAR_ROM, "" );
+	// and the water of the toys drawn by the renderer (ext.R_AddLiquid)
+	Cvar_Get( "v_cgameLiquid", "1", CVAR_ROM, "" );
+	// and the puddles and wet patches of the toys drawn by the renderer (ext.R_AddWet)
+	Cvar_Get( "v_cgameWet", "1", CVAR_ROM, "" );
+	// and the sprays as paint and their pictures (ext.R_PaintPicture, ext.R_AddPaint, cl_sprays.cpp)
+	Cvar_Get( "v_cgamePaint", "1", CVAR_ROM, "" );
+	// and looping sounds at a volume of their own (ext.S_AddLoopingSoundVolume, the motor of the RC car)
+	Cvar_Get( "v_cgameLoopVolume", "1", CVAR_ROM, "" );
+	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
+	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
+	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)
+	Cvar_Get( "v_screenFxSnow", "1", CVAR_ROM, "" );
+	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test
+	Cvar_Get( "v_tvService", "https://jka.vision/tv/", CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
+	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())
+	Cvar_Get( "v_scopeWheel", "0", 0, "" );
+	// set by a cgame and a ui of this tree, which follow a new size of the window without a vid_restart
+	Cvar_Get( "v_cgameResize", "0", 0, "" );
+	Cvar_Get( "v_uiResize", "0", 0, "" );
+	// for the ui: 1 while its menus are drawn onto that plane, which has the 640 x 480 of a menu and no more
+	Cvar_Get( "v_uiPlane", "0", CVAR_ROM, "" );
+	// tells the ui and the cgame that the engine can draw their new look: pictures the ui computes
+	// (ext.R_RegisterShaderRGBA of uiImport_t) and the fonts "vision_sans" and "vision_mono"
+	Cvar_Get( "v_uiSkin", "1", CVAR_ROM, "" );
+	// and that uiImport_t has ext.OpenURL, after ext.R_RegisterShaderRGBA
+	Cvar_Get( "v_uiURL", "1", CVAR_ROM, "" );
+	// and ext.Cvar_UnusedList after that
+	Cvar_Get( "v_uiCvarClean", "1", CVAR_ROM, "" );
+	// and ext.Cvar_Info after that
+	Cvar_Get( "v_uiCvarInfo", "1", CVAR_ROM, "" );
+	// and ext.R_Font_DrawStringF and ext.R_Font_InkBox after that
+	Cvar_Get( "v_uiFontInk", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );
@@ -2835,6 +2993,7 @@ void CL_Init( void ) {
 	cl_downloadName = Cvar_Get( "cl_downloadName", "", CVAR_INTERNAL );
 	cl_downloadPrompt = Cvar_Get( "cl_downloadPrompt", "1", CVAR_ARCHIVE, "Confirm pk3 downloads from the server" );
 	cl_downloadOverlay = Cvar_Get( "cl_downloadOverlay", "1", CVAR_ARCHIVE, "Draw download info overlay" );
+	CL_DownloadInit();
 
 	cl_reconnectArgs = Cvar_Get( "cl_reconnectArgs", "", CVAR_ARCHIVE, "Arguments provided when last connecting to a server" );
 
@@ -2873,6 +3032,7 @@ void CL_Init( void ) {
 	Cmd_AddCommand( "addFavorite", CL_AddFavorite_f, "Add server to favorites" );
 	Cmd_AddCommand ("record", CL_Record_f, "Record a demo" );
 	Cmd_AddCommand ("demo", CL_PlayDemo_f, "Playback a demo" );
+	CL_TVInit();
 	Cmd_SetCommandCompletionFunc( "demo", CL_CompleteDemoName );
 	Cmd_AddCommand ("stoprecord", CL_StopRecord_f, "Stop recording a demo" );
 	Cmd_AddCommand ("configstrings", CL_Configstrings_f, "Prints the configstrings list" );
@@ -2904,10 +3064,12 @@ void CL_Init( void ) {
 
 	Cvar_Set( "cl_running", "1" );
 
-	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
+	// is there a newer version of the game? Asked in a thread, the answer comes some frames later
+	CL_UpdateInit();
+	CL_ModelsInit();
+	CL_ClipboardInit();
 
-	CL_GenerateQKey();
-	CL_UpdateGUID( NULL, 0 );
+	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 
 //	Com_Printf( "----- Client Initialization Complete -----\n" );
 }
@@ -2937,6 +3099,12 @@ void CL_Shutdown( void ) {
 	}
 
 	CL_Disconnect( qtrue );
+
+	CL_UpdateShutdown();
+	CL_ModelsShutdown();
+	CL_IDS_Shutdown();
+	CL_MemWatchShutdown();
+	CL_MasterShutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );
@@ -3005,12 +3173,155 @@ static void CL_SetServerInfo(serverInfo_t *server, const char *info, int ping) {
 			server->trueJedi = atoi(Info_ValueForKey(info, "truejedi" ));
 			server->weaponDisable = atoi(Info_ValueForKey(info, "wdisable" ));
 			server->forceDisable = atoi(Info_ValueForKey(info, "fdisable" ));
-			server->humans = atoi( Info_ValueForKey( info, "g_humanplayers" ) );
-			server->bots = atoi( Info_ValueForKey( info, "bots" ) );
+			// How many of the players are people, for the browser that leaves out servers with bots only. A
+			// server built on OpenJK says it, some say how many are bots. Any other with players is asked for
+			// its status (CL_AskHumans): until that answer comes, or if it never does, the number is -1.
+			{
+				const char *humans = Info_ValueForKey( info, "g_humanplayers" );
+				const char *bots = Info_ValueForKey( info, "bots" );
+
+				server->bots = atoi( bots );
+				if ( humans[0] ) {
+					server->humans = atoi( humans );
+				} else if ( bots[0] ) {
+					server->humans = Q_max( 0, server->clients - server->bots );
+				} else if ( server->clients <= 0 ) {
+					server->humans = 0;
+				} else if ( !server->humansAskTime ) {
+					server->humans = -1;
+				}
+			}
 //			server->pure = (qboolean)atoi(Info_ValueForKey(info, "pure" ));
 		}
 		server->ping = ping;
 	}
+}
+
+// calls a function for every entry of the server lists that is the server at an address
+static void CL_ForServersAt( const netadr_t *from, void (*func)( serverInfo_t *server, int value ), int value ) {
+	int i;
+
+	for (i = 0; i < MAX_OTHER_SERVERS; i++) {
+		if (NET_CompareAdr(from, &cls.localServers[i].adr)) {
+			func( &cls.localServers[i], value );
+		}
+	}
+	for (i = 0; i < MAX_GLOBAL_SERVERS; i++) {
+		if (NET_CompareAdr(from, &cls.globalServers[i].adr)) {
+			func( &cls.globalServers[i], value );
+		}
+	}
+	for (i = 0; i < MAX_OTHER_SERVERS; i++) {
+		if (NET_CompareAdr(from, &cls.favoriteServers[i].adr)) {
+			func( &cls.favoriteServers[i], value );
+		}
+	}
+}
+
+static int cl_humansWaiting;
+
+static void CL_HumansAsked( serverInfo_t *server, int time ) {
+	if ( server->humans == -1 && !server->humansAskTime ) {
+		server->humansAskTime = time;
+		cl_humansWaiting++;
+	}
+}
+
+static void CL_HumansWaiting( serverInfo_t *server, int unused ) {
+	if ( server->humans == -1 && server->humansAskTime ) {
+		cl_humansWaiting++;
+	}
+}
+
+static void CL_HumansAnswered( serverInfo_t *server, int humans ) {
+	if ( server->humans == -1 && server->humansAskTime ) {
+		server->humans = humans;
+	}
+}
+
+/*
+===================
+CL_AskHumans
+
+The info of a server came and does not say who of its players is a bot (the original server and JA+ on it do
+not). The status of a server lists its players with their pings, and a bot has none: it is asked for, once a
+refresh. The answer goes through CL_HumansFromStatus().
+===================
+*/
+static void CL_AskHumans( const netadr_t *from ) {
+	cl_humansWaiting = 0;
+	CL_ForServersAt( from, CL_HumansAsked, cls.realtime ? cls.realtime : 1 );
+	if ( cl_humansWaiting ) {
+		NET_OutOfBandPrint( NS_CLIENT, from, "getstatus" );
+	}
+}
+
+/*
+===================
+CL_HumansFromStatus
+
+A status answer came. If the browser waits for it, its players with a ping are counted. The message is left as
+it was for whoever else reads it.
+===================
+*/
+static void CL_HumansFromStatus( const netadr_t *from, msg_t *msg ) {
+	const int	readcount = msg->readcount, bit = msg->bit;
+	int			humans = 0;
+	char		*s;
+
+	cl_humansWaiting = 0;
+	CL_ForServersAt( from, CL_HumansWaiting, 0 );
+	if ( !cl_humansWaiting ) {
+		return;
+	}
+	MSG_ReadStringLine( msg );		// the settings of the server
+	for ( s = MSG_ReadStringLine( msg ); *s; s = MSG_ReadStringLine( msg ) ) {
+		int score = 0, ping = 0;
+
+		sscanf( s, "%d %d", &score, &ping );
+		if ( ping > 0 ) {
+			humans++;
+		}
+	}
+	msg->readcount = readcount;
+	msg->bit = bit;
+	CL_ForServersAt( from, CL_HumansAnswered, humans );
+}
+
+/*
+===================
+CL_EchoAsked
+
+Some servers (SkyMod) answer getinfo and getstatus only after an echo of "echoResponse <question> <random>" from
+the address that asked, so a question with a forged sender brings nobody a flood of answers. The echo is sent back
+only for a question this client asked that server and still waits for: getinfo of a ping, getstatus of a status
+request or of the browser. Answering any echo with that text would confirm questions somebody else asked in the
+name of this client.
+===================
+*/
+static qboolean CL_EchoAsked( const netadr_t *from, const char *text ) {
+	static const char	getinfo[] = "echoResponse getinfo ", getstatus[] = "echoResponse getstatus ";
+	int					i;
+
+	if ( !Q_strncmp( text, getinfo, sizeof( getinfo ) - 1 ) ) {
+		for ( i = 0; i < MAX_PINGREQUESTS; i++ ) {
+			if ( cl_pinglist[i].adr.port && !cl_pinglist[i].time && NET_CompareAdr( from, &cl_pinglist[i].adr ) ) {
+				return qtrue;
+			}
+		}
+		return qfalse;
+	}
+	if ( !Q_strncmp( text, getstatus, sizeof( getstatus ) - 1 ) ) {
+		for ( i = 0; i < MAX_SERVERSTATUSREQUESTS; i++ ) {
+			if ( cl_serverStatusList[i].pending && NET_CompareAdr( from, &cl_serverStatusList[i].address ) ) {
+				return qtrue;
+			}
+		}
+		cl_humansWaiting = 0;
+		CL_ForServersAt( from, CL_HumansWaiting, 0 );
+		return (qboolean)( cl_humansWaiting > 0 );
+	}
+	return qfalse;
 }
 
 static void CL_SetServerInfoByAddress(const netadr_t *from, const char *info, int ping) {
@@ -3032,6 +3343,10 @@ static void CL_SetServerInfoByAddress(const netadr_t *from, const char *info, in
 		if (NET_CompareAdr(from, &cls.favoriteServers[i].adr)) {
 			CL_SetServerInfo(&cls.favoriteServers[i], info, ping);
 		}
+	}
+
+	if ( info ) {
+		CL_AskHumans( from );
 	}
 }
 
@@ -3249,6 +3564,9 @@ void CL_ServerStatusResponse( const netadr_t *from, msg_t *msg ) {
 	int		len;
 	serverStatus_t *serverStatus;
 
+	// the browser may have asked, to tell bots from people
+	CL_HumansFromStatus( from, msg );
+
 	serverStatus = NULL;
 	for (i = 0; i < MAX_SERVERSTATUSREQUESTS; i++) {
 		if ( NET_CompareAdr( from, &cl_serverStatusList[i].address ) ) {
@@ -3386,10 +3704,30 @@ OpenJK July 2017; made master 0 fetch all master servers and 1-5 request a singl
 
 ==================
 */
+#define MASTER_ANSWER_MSEC	10000		// a master answers in a packet or several, within a second or two
+
+static struct {
+	netadr_t	adr;
+	int			time;					// cls.realtime of the request, 0: none
+} cl_mastersAsked[MAX_MASTER_SERVERS];
+
+// a master the client asked for its list of servers a short while ago
+static qboolean CL_MasterAsked( const netadr_t *from ) {
+	for ( int i = 0; i < MAX_MASTER_SERVERS; i++ ) {
+		if ( cl_mastersAsked[i].time && cls.realtime - cl_mastersAsked[i].time <= MASTER_ANSWER_MSEC
+			&& NET_CompareAdr( from, &cl_mastersAsked[i].adr ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 void CL_GlobalServers_f( void ) {
 	netadr_t	to;
 	int			count, i, masterNum;
 	char		command[1024], *masteraddress;
+
+	CL_RepRefresh();
 
 	if ((count = Cmd_Argc()) < 3 || (masterNum = atoi(Cmd_Argv(1))) < 0 || masterNum > MAX_MASTER_SERVERS)
 	{
@@ -3446,6 +3784,9 @@ void CL_GlobalServers_f( void ) {
 
 	cls.numglobalservers = -1;
 	cls.pingUpdateSource = AS_GLOBAL;
+
+	cl_mastersAsked[masterNum - 1].adr = to;
+	cl_mastersAsked[masterNum - 1].time = cls.realtime ? cls.realtime : 1;
 
 	Com_sprintf(command, sizeof(command), "getservers %s", Cmd_Argv(2));
 
@@ -3748,6 +4089,19 @@ qboolean CL_UpdateVisiblePings_f(int source) {
 		}
 	}
 
+	// the refresh is not over while a server was asked who of its players is a bot and may still answer
+	if ( !status ) {
+		serverInfo_t	*server = ( source == AS_LOCAL ) ? cls.localServers : ( source == AS_GLOBAL ) ? cls.globalServers : cls.favoriteServers;
+		const int		count = ( source == AS_LOCAL ) ? cls.numlocalservers : ( source == AS_GLOBAL ) ? cls.numglobalservers : cls.numfavoriteservers;
+
+		for ( i = 0; i < count; i++ ) {
+			if ( server[i].humans == -1 && server[i].humansAskTime && cls.realtime - server[i].humansAskTime < HUMANS_WAIT_MSEC ) {
+				status = qtrue;
+				break;
+			}
+		}
+	}
+
 	return status;
 }
 
@@ -4001,7 +4355,7 @@ void CL_DrawDownloadRequest( void ) {
 		CL_DrawCenterStringAt( centerX, centerY+10, va("%.02f%%", dlFrac * 100), cls.menuFont, scale );
 
 		// Draw size info
-		re->Font_DrawString( width + 10, centerY+30, va("File Size: %s", CL_ByteCountToHumanString(clc.downloadSize)) , colorWhite, cls.menuFont, -1, scale );
+		re->Font_DrawString( width + 10, centerY+30, va("File Size: %s", clc.downloadSize ? CL_ByteCountToHumanString(clc.downloadSize) : "unknown") , colorWhite, cls.menuFont, -1, scale );
 		re->Font_DrawString( width + 10, centerY+50, va("Downloaded: %s", CL_ByteCountToHumanString(clc.downloadCount)) , colorWhite, cls.menuFont, -1, scale );
 
 		// Download Speed
@@ -4015,7 +4369,7 @@ void CL_DrawDownloadRequest( void ) {
 
 			// Draw info texts
 			re->Font_DrawString( width + 10, centerY+70, va("Transfer Rate: %s/sec", CL_ByteCountToHumanString(dlRate)) , colorWhite, cls.menuFont, -1, scale );
-			re->Font_DrawString( width + 10, centerY+90, va("Estimated Time Left: %s", dlRate ? CL_DurationSecToString(clc.downloadSize/dlRate - dlLastCount/dlRate) : "unknown" ) , colorWhite, cls.menuFont, -1, scale );
+			re->Font_DrawString( width + 10, centerY+90, va("Estimated Time Left: %s", dlRate && clc.downloadSize ? CL_DurationSecToString(clc.downloadSize/dlRate - dlLastCount/dlRate) : "unknown" ) , colorWhite, cls.menuFont, -1, scale );
 		} else {
 			// Set defaults - if we somehow don't get here and start with dlTime >= 1 we get incorrect values for one second, but that's okay
 			dlLastCount = clc.downloadCount;
@@ -4037,6 +4391,16 @@ void CL_DrawDownloadRequest( void ) {
 		CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
 	}
 
+	// a pak from the web address of the server can be left out, or it and the rest (the Abort and Abort All of the
+	// client plugin of JA+, cl_download.cpp): above Abort, where the lines of the download leave room
+	if ( !clc.downloadWaitingOnUser && CL_DownloadWebBusy() ) {
+		button = CL_RegisterMenuButtonArea( SCREEN_WIDTH - width - 13 - 80, (height * 3) - 80, 80, 20, "Skip", cls.menuFont, scale, CL_DownloadWebSkip );
+		CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
+
+		button = CL_RegisterMenuButtonArea( SCREEN_WIDTH - width - 13 - 80, (height * 3) - 55, 80, 20, "Skip all", cls.menuFont, scale, CL_DownloadWebSkipAll );
+		CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
+	}
+
 	// The user can always abort if they change their mind
 	button = CL_RegisterMenuButtonArea( SCREEN_WIDTH - width - 13 - 80, (height * 3) - 30, 80, 20, "Abort", cls.menuFont, scale, CL_Disconnect_f );
 	CL_DrawMenuButton( button, buttonBackgroundColor, buttonBorderColor );
@@ -4055,7 +4419,7 @@ void CL_DrawEngineMenus( void ) {
 	menuButtonsActive = 0;
 
 	// Draw menus
-	if ( clc.downloadMenuActive ) {
+	if ( clc.downloadMenuActive && !CL_DownloadReviewDraw() ) {
 		CL_DrawDownloadRequest();
 	}
 
@@ -4080,12 +4444,15 @@ void CL_DrawEngineMenus( void ) {
 void CL_UpdateCursorPosition( int dx, int dy ) {
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) return;
 
-	cls.cursorX = Com_Clampi( 0, SCREEN_WIDTH, cls.cursorX + dx );
+	cls.cursorX = Com_Clampi( (int)-cls.bias2D, SCREEN_WIDTH + (int)cls.bias2D, cls.cursorX + dx );
 	cls.cursorY = Com_Clampi( 0, SCREEN_HEIGHT, cls.cursorY + dy );
 }
 
 void CL_CursorButton( int key ) {
 	int i;
+	if ( CL_DownloadReviewKey( key ) ) {
+		return;
+	}
 	if ( key == A_MOUSE1 ) {
 		for ( i = 0; i < menuButtonsActive; i++ ) {
 			if ( CL_IsCursorOnMenuButton(&menuButtons[i]) ) {

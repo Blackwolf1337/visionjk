@@ -75,6 +75,15 @@ void G_InitMemory( void ) {
 	allocPoint = 0;
 }
 
+// Not in the game as it was: how much of the pool is left, and how big it is, for the editor of the web admin
+// panel. Every spawn takes from it (the strings of its keys) and nothing is given back while a map runs, so
+// a long sitting in the editor uses it up, and the allocation that does not fit any more ends the server.
+int G_MemoryLeft( int *size ) {
+	if ( size )
+		*size = POOLSIZE;
+	return POOLSIZE - allocPoint;
+}
+
 void Svcmd_GameMem_f( void ) {
 	float f = allocPoint;
 	f /= POOLSIZE;

@@ -24,7 +24,103 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_drawtools.c -- helper functions called by cg_draw, cg_scoreboard, cg_info, etc
 #include "cg_local.h"
 #include "qcommon/q_shared.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
 
+
+/*
+================
+CG_Place2D
+
+On a wide window the grid of the 2D is wider than 640 with a renderer of this tree: cgs.bias2D on either side, the
+640 in the middle (R_2DBias() of the renderer). What is drawn after CG_Place2D( PLACE_LEFT ) or ( PLACE_RIGHT ) is
+moved to that edge of the window, until CG_Place2D( PLACE_CENTER ). It holds for the draw functions of this file,
+for CG_Text_Paint() and for what the menu code draws. On a 4:3 window and on another engine nothing moves.
+================
+*/
+void CG_Place2D( place2D_t place ) {
+	switch ( place ) {
+	case PLACE_LEFT:	cgs.shift2D = -cgs.bias2D;	break;
+	case PLACE_RIGHT:	cgs.shift2D = cgs.bias2D;	break;
+	default:			cgs.shift2D = 0.0f;			break;
+	}
+}
+
+/*
+================
+CG_AdjustFrom640
+
+From the grid of the 2D to pixels of the window, for a viewport, with the place CG_Place2D() set
+================
+*/
+void CG_AdjustFrom640( float *x, float *y, float *w, float *h ) {
+	*x = ( *x + cgs.bias2D + cgs.shift2D ) * cgs.screenXScale;
+	*y = ( *y + cgs.bias2DY ) * cgs.screenYScale;
+	*w *= cgs.screenXScale;
+	*h *= cgs.screenYScale;
+}
+
+/*
+================
+CG_FillSides
+
+What is beside the 640 in the middle of a wide window, for a picture that keeps its 4:3 there
+================
+*/
+void CG_FillSides( const float *color ) {
+	if ( cgs.bias2D <= 0.0f ) {
+		return;
+	}
+	trap->R_SetColor( color );
+	trap->R_DrawStretchPic( -cgs.bias2D, 0, cgs.bias2D, SCREEN_HEIGHT, 0, 0, 0, 0, cgs.media.whiteShader );
+	trap->R_DrawStretchPic( SCREEN_WIDTH, 0, cgs.bias2D, SCREEN_HEIGHT, 0, 0, 0, 0, cgs.media.whiteShader );
+	trap->R_SetColor( NULL );
+}
+
+/*
+================
+CG_DrawPicWide
+
+A picture over the whole window, also where it is wider than the 640 of the grid
+================
+*/
+void CG_DrawPicWide( qhandle_t hShader ) {
+	trap->R_DrawStretchPic( -cgs.bias2D, 0, SCREEN_WIDTH + 2.0f * cgs.bias2D, SCREEN_HEIGHT, 0, 0, 1, 1, hShader );
+}
+
+/*
+================
+CG_WidePicture
+
+The picture for CG_DrawPicWide: on a wide window the one made for 16:9 where a pak has it (levelshots_16_9/<map>,
+as TaystJK, 2026-10-17), else the one of 4:3. 0 when neither is there
+================
+*/
+qhandle_t CG_WidePicture( const char *name, const char *wideName ) {
+	if ( cgs.bias2D > 0.0f ) {
+		const qhandle_t wide = trap->R_RegisterShaderNoMip( wideName );
+
+		if ( wide ) {
+			return wide;
+		}
+	}
+	return trap->R_RegisterShaderNoMip( name );
+}
+
+/*
+================
+CG_DrawStretchPic, CG_Font_DrawString
+
+The calls of the renderer for the menu code (cgDC), with the place CG_Place2D() set
+================
+*/
+void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader ) {
+	trap->R_DrawStretchPic( x + cgs.shift2D, y, w, h, s1, t1, s2, t2, hShader );
+}
+
+void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale ) {
+	trap->R_Font_DrawString( ox + (int)cgs.shift2D, oy, text, rgba, setIndex, iCharLimit, scale );
+}
 
 /*
 ================
@@ -96,12 +192,14 @@ Coords are virtual 640x480
 */
 void CG_DrawSides(float x, float y, float w, float h, float size) {
 	size *= cgs.screenXScale;
+	x += cgs.shift2D;
 	trap->R_DrawStretchPic( x, y, size, h, 0, 0, 0, 0, cgs.media.whiteShader );
 	trap->R_DrawStretchPic( x + w - size, y, size, h, 0, 0, 0, 0, cgs.media.whiteShader );
 }
 
 void CG_DrawTopBottom(float x, float y, float w, float h, float size) {
 	size *= cgs.screenYScale;
+	x += cgs.shift2D;
 	trap->R_DrawStretchPic( x, y, w, size, 0, 0, 0, 0, cgs.media.whiteShader );
 	trap->R_DrawStretchPic( x, y + h - size, w, size, 0, 0, 0, 0, cgs.media.whiteShader );
 }
@@ -114,7 +212,7 @@ real coords
 */
 void CG_FillRect2( float x, float y, float width, float height, const float *color ) {
 	trap->R_SetColor( color );
-	trap->R_DrawStretchPic( x, y, width, height, 0, 0, 0, 0, cgs.media.whiteShader);
+	trap->R_DrawStretchPic( x + cgs.shift2D, y, width, height, 0, 0, 0, 0, cgs.media.whiteShader);
 	trap->R_SetColor( NULL );
 }
 
@@ -122,10 +220,16 @@ void CG_FillRect2( float x, float y, float width, float height, const float *col
 ================
 CG_FillRect
 
-Coordinates are 640*480 virtual values
+Coordinates are 640*480 virtual values. A fill of the whole 640 x 480 (a fade, a tint) covers a wide window too.
 =================
 */
 void CG_FillRect( float x, float y, float width, float height, const float *color ) {
+	if ( x == 0.0f && y == 0.0f && width == SCREEN_WIDTH && height == SCREEN_HEIGHT ) {
+		x = -cgs.bias2D;
+		width += 2.0f * cgs.bias2D;
+	} else {
+		x += cgs.shift2D;
+	}
 	trap->R_SetColor( color );
 	trap->R_DrawStretchPic( x, y, width, height, 0, 0, 0, 0, cgs.media.whiteShader);
 	trap->R_SetColor( NULL );
@@ -141,7 +245,7 @@ A width of 0 will draw with the original image width
 =================
 */
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader ) {
-	trap->R_DrawStretchPic( x, y, width, height, 0, 0, 1, 1, hShader );
+	trap->R_DrawStretchPic( x + cgs.shift2D, y, width, height, 0, 0, 1, 1, hShader );
 }
 
 /*
@@ -154,7 +258,7 @@ rotates around the upper right corner of the passed in point
 =================
 */
 void CG_DrawRotatePic( float x, float y, float width, float height,float angle, qhandle_t hShader ) {
-	trap->R_DrawRotatePic( x, y, width, height, 0, 0, 1, 1, angle, hShader );
+	trap->R_DrawRotatePic( x + cgs.shift2D, y, width, height, 0, 0, 1, 1, angle, hShader );
 }
 
 /*
@@ -167,7 +271,7 @@ Actually rotates around the center point of the passed in coordinates
 =================
 */
 void CG_DrawRotatePic2( float x, float y, float width, float height,float angle, qhandle_t hShader ) {
-	trap->R_DrawRotatePic2( x, y, width, height, 0, 0, 1, 1, angle, hShader );
+	trap->R_DrawRotatePic2( x + cgs.shift2D, y, width, height, 0, 0, 1, 1, angle, hShader );
 }
 
 /*
@@ -190,7 +294,7 @@ void CG_DrawChar( int x, int y, int width, int height, int ch ) {
 		return;
 	}
 
-	ax = x;
+	ax = x + cgs.shift2D;
 	ay = y;
 	aw = width;
 	ah = height;
@@ -218,8 +322,55 @@ Coordinates are at 640 by 480 virtual resolution
 ==================
 */
 #include "ui/menudef.h"	// for "ITEM_TEXTSTYLE_SHADOWED"
+// What scale the letters of the new look are written at where the game writes its fixed letters charHeight high:
+// a line of them (18 units at a scale of 1) is a little lower than a row of the fixed ones, so two rows that
+// follow each other without a gap, as in the team overlay, do not touch.
+#define STRING_LOOK_SCALE( charHeight )		( (charHeight) * ( (charHeight) <= 8 ? 0.86f : 0.94f ) / 18.0f )
+
+/*
+=================
+CG_StringWidth
+
+How wide CG_DrawStringExt() writes a line with letters of that size: so many letters of charWidth, or with the
+HUD of the new look what its letters take. For whoever puts such a line in the middle or at the right.
+=================
+*/
+int CG_StringWidth( const char *str, int charWidth, int charHeight ) {
+	if ( CG_HudNewLook() ) {
+		return CG_Text_Width( str, STRING_LOOK_SCALE( charHeight ), SKIN_FONT_SANS );
+	}
+	return CG_DrawStrlen( str ) * charWidth;
+}
+
 void CG_DrawStringExt( int x, int y, const char *string, const float *setColor, qboolean forceColor, qboolean shadow, int charWidth, int charHeight, int maxChars )
 {
+	// With the HUD of the new look the fixed letters of the game are the letters of that look, as high as they
+	// were and as wide as they are.
+	if ( CG_HudNewLook() ) {
+		char		line[1024];
+		vec4_t		color;
+		const char	*in;
+		int			n = 0, chars = 0;
+
+		for ( in = string; *in && n < (int)sizeof( line ) - 3 && ( maxChars <= 0 || chars < maxChars ); ) {
+			if ( Q_IsColorString( in ) ) {
+				if ( !forceColor ) {
+					line[n++] = in[0];
+					line[n++] = in[1];
+				}
+				in += 2;
+				continue;
+			}
+			line[n++] = *in++;
+			chars++;
+		}
+		line[n] = '\0';
+		memcpy( color, setColor, sizeof( color ) );
+		// (in the middle of the row the fixed letters would take)
+		CG_Text_Paint( x, y + ( charHeight - 18.0f * STRING_LOOK_SCALE( charHeight ) ) * 0.5f, STRING_LOOK_SCALE( charHeight ), color, line, 0, 0,
+			shadow ? ITEM_TEXTSTYLE_SHADOWED : 0, SKIN_FONT_SANS );
+		return;
+	}
 	if (trap->R_Language_IsAsian())
 	{
 		// hack-a-doodle-do (post-release quick fix code)...

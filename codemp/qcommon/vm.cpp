@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -60,6 +61,9 @@ void VM_Init( void ) {
 #ifdef _DEBUG
 	vm_legacy = Cvar_Get( "vm_legacy", "0", 0 );
 #endif
+#ifdef VISIONJK_HOTPATCH
+	VM_HotpatchInit();
+#endif
 
 	memset( vmTable, 0, sizeof(vmTable) );
 }
@@ -75,12 +79,9 @@ void VM_Init( void ) {
 // This hack below copies all needed values for an argument to an array in memory, so that QVM can get the correct values.
 // This can also be used on systems where the stack grows upwards, as the presumably standard and safe stdargs.h macros
 //	are used.
-// The original code, while probably still inherently dangerous, seems to work well enough for the platforms it already
-//	works on. Rather than add the performance hit for those platforms, the original code is still in use there.
 // For speed, we just grab 15 arguments, and don't worry about exactly how many the syscall actually needs; the extra is
 //	thrown away.
 intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
-#if !id386 || defined __clang__ || defined MACOS_X
 	// rcg010206 - see commentary above
 	intptr_t args[16];
 	va_list ap;
@@ -93,9 +94,6 @@ intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
 	va_end( ap );
 
 	return currentVM->legacy.syscall( args );
-#else // original id code
-	return currentVM->legacy.syscall( &arg );
-#endif
 }
 
 // Reload the data, but leave everything else in place
@@ -143,6 +141,9 @@ vm_t *VM_CreateLegacy( vmSlots_t vmSlot, intptr_t( *systemCalls )(intptr_t *) ) 
 			Com_Printf( " succeeded [0x%" PRIxPTR "]\n", (uintptr_t)vm->dllHandle );
 		else
 			Com_Printf( " succeeded\n" );
+#ifdef VISIONJK_HOTPATCH
+		VM_HotpatchLoaded( vm );
+#endif
 		return vm;
 	}
 
@@ -182,12 +183,25 @@ vm_t *VM_Create( vmSlots_t vmSlot ) {
 			Com_Printf( " succeeded [0x%" PRIxPTR "+0x%" PRIxPTR "]\n", vm->dllHandle, (intptr_t)vm->GetModuleAPI - (intptr_t)vm->dllHandle );
 		else
 			Com_Printf( " succeeded\n" );
+#ifdef VISIONJK_HOTPATCH
+		VM_HotpatchLoaded( vm );
+#endif
 		return vm;
 	}
 
 	VM_Free( vm );
 	Com_Printf( " failed!\n" );
 	return NULL;
+}
+
+// an address inside the module of a slot, NULL when none is loaded (the memory monitor, client/cl_memwatch.cpp)
+void *VM_ModuleAddress( vmSlots_t vmSlot ) {
+	const vm_t *vm = vmSlot >= 0 && vmSlot < MAX_VM ? vmTable[vmSlot] : NULL;
+
+	if ( !vm || !vm->dllHandle ) {
+		return NULL;
+	}
+	return vm->isLegacy ? (void *)vm->legacy.main : (void *)vm->GetModuleAPI;
 }
 
 void VM_Free( vm_t *vm ) {
@@ -197,6 +211,9 @@ void VM_Free( vm_t *vm ) {
 	// mark the slot as free
 	vmTable[vm->slot] = NULL;
 
+#ifdef VISIONJK_HOTPATCH
+	VM_HotpatchFreed( vm );
+#endif
 	if ( vm->dllHandle )
 		Sys_UnloadDll( vm->dllHandle );
 

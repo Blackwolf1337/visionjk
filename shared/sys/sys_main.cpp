@@ -2,6 +2,7 @@
 ===========================================================================
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,11 +27,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#ifndef _WIN32
+	#include <unistd.h>		// _exit() in Sys_SigHandler
+#endif
 #include "qcommon/qcommon.h"
 #include "sys_local.h"
 #include "sys_loadlib.h"
 #include "sys_public.h"
+#include "sys_memwatch.h"
 #include "con_local.h"
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	#ifdef _WIN32
+		#include <windows.h>
+	#else
+		#include <unistd.h>
+		#include <climits>
+	#endif
+#endif
 
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
@@ -119,6 +132,56 @@ char *Sys_GetClipboardData( void ) {
 }
 
 /*
+==================
+Sys_SetClipboardData
+
+Puts a text (UTF-8) on the clipboard of the system
+==================
+*/
+void Sys_SetClipboardData( const char *text ) {
+#ifndef DEDICATED
+	SDL_SetClipboardText( text );
+#endif
+}
+
+/*
+==================
+Sys_OpenURL
+
+Hands a web address to the system, which opens it in the browser of the user. Only http and https, and only
+an address without blanks, quotes and control characters: it comes from a chat line, which anybody can write.
+The caller asks the player first. qfalse: it was not handed on.
+==================
+*/
+static int sysOpenURLTime;
+
+// the memory monitor (client/cl_memwatch.cpp): the system starts a program for an address, which is no stranger
+int Sys_OpenURLTime( void ) {
+	return sysOpenURLTime;
+}
+
+qboolean Sys_OpenURL( const char *url ) {
+#ifdef DEDICATED
+	return qfalse;
+#else
+	const size_t len = strlen( url );
+
+	if ( len > 1024 || ( Q_strncmp( url, "https://", 8 ) && Q_strncmp( url, "http://", 7 ) ) ) {
+		return qfalse;
+	}
+	for ( size_t i = 0; i < len; i++ ) {
+		const unsigned char c = (unsigned char)url[i];
+
+		if ( c <= ' ' || c == 127 || c == '"' || c == '\'' || c == '`' || c == '\\' || c == '<' || c == '>' ) {
+			return qfalse;
+		}
+	}
+	sysOpenURLTime = Sys_Milliseconds();
+	return (qboolean)( SDL_OpenURL( url ) == 0 );
+#endif
+}
+
+/*
 =================
 Sys_ConsoleInput
 
@@ -139,8 +202,15 @@ void Sys_Print( const char *msg ) {
 	if ( msg[0] == '*' ) {
 		msg += 1;
 	}
-	ConsoleLogAppend( msg );
-	CON_Print( msg );
+	// names, hostnames and prints of servers and players come through here: no control characters for the terminal
+	// and the log (the ANSI colours are made later by Sys_AnsiColorPrint)
+	while ( *msg ) {
+		char	safe[MAXPRINTMSG];
+
+		msg += Q_TermSafe( safe, sizeof( safe ), msg );
+		ConsoleLogAppend( safe );
+		CON_Print( safe );
+	}
 }
 
 /*
@@ -169,6 +239,191 @@ void Sys_Init( void ) {
 	com_unpackLibraries = Cvar_Get( "com_unpackLibraries", "0", CVAR_INIT|CVAR_PROTECTED );
 }
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+/*
+=================
+The program starts itself again
+
+For the updater of the client (client/cl_update.cpp): when it has replaced the files of the game, the game
+ends and starts again, with the arguments it was started with.
+=================
+*/
+static struct {
+	char		program[ MAX_OSPATH ];	// the file this program was started from, under the name it had then
+	char		folder[ MAX_OSPATH ];	//	and the folder that file is in
+	char		**argv;
+	qboolean	wanted;
+} sysRestart;
+
+// at the very start, before the updater gives any file another name
+static void Sys_RestartInit( char **argv ) {
+	sysRestart.argv = argv;
+#ifdef _WIN32
+	const DWORD len = GetModuleFileNameA( NULL, sysRestart.program, sizeof( sysRestart.program ) );
+
+	if ( !len || len >= sizeof( sysRestart.program ) )
+		sysRestart.program[0] = '\0';
+#else
+	char			resolved[ PATH_MAX ];
+	const ssize_t	len = readlink( "/proc/self/exe", resolved, sizeof( resolved ) - 1 );
+
+	if ( len > 0 )
+		resolved[len] = '\0';
+	else if ( !realpath( argv[0], resolved ) )
+		resolved[0] = '\0';
+	Q_strncpyz( sysRestart.program, resolved, sizeof( sysRestart.program ) );
+#endif
+	Q_strncpyz( sysRestart.folder, sysRestart.program, sizeof( sysRestart.folder ) );
+	char *slash = strrchr( sysRestart.folder, PATH_SEP );
+	if ( slash )
+		*slash = '\0';
+	else
+		sysRestart.folder[0] = '\0';
+}
+
+/*
+=================
+Sys_ProgramFolder
+
+The folder the program file is in, as the system names it, "" if the system does not say. Sys_BinaryPath() is
+what the program was called with, which on Windows is nothing at all for a program started by its bare name
+from its own folder (a batch file, a console): the updater must not take that for a folder.
+=================
+*/
+const char *Sys_ProgramFolder( void ) {
+	return sysRestart.folder;
+}
+
+// Are these two the same folder? Each is made a whole path first, so "." and a path with other slashes count.
+qboolean Sys_SameFolder( const char *a, const char *b ) {
+	char	wholeA[ MAX_OSPATH ], wholeB[ MAX_OSPATH ];
+
+	if ( !a[0] || !b[0] )
+		return qfalse;
+#ifdef _WIN32
+	char	*whole[2] = { wholeA, wholeB };
+	const DWORD lenA = GetFullPathNameA( a, sizeof( wholeA ), wholeA, NULL ), lenB = GetFullPathNameA( b, sizeof( wholeB ), wholeB, NULL );
+
+	if ( !lenA || lenA >= sizeof( wholeA ) || !lenB || lenB >= sizeof( wholeB ) )
+		return qfalse;
+	// (a slash at the end, but not the one of "C:\")
+	for ( int i = 0; i < 2; i++ ) {
+		const size_t len = strlen( whole[i] );
+
+		if ( len > 3 && whole[i][len - 1] == '\\' )
+			whole[i][len - 1] = '\0';
+	}
+	return Q_stricmp( wholeA, wholeB ) ? qfalse : qtrue;
+#else
+	char	realA[ PATH_MAX ], realB[ PATH_MAX ];
+
+	(void)wholeA; (void)wholeB;
+	if ( !realpath( a, realA ) || !realpath( b, realB ) )
+		return qfalse;
+	return strcmp( realA, realB ) ? qfalse : qtrue;
+#endif
+}
+
+void Sys_RestartOnExit( void ) {
+	sysRestart.wanted = qtrue;
+}
+
+#ifdef _WIN32
+/*
+=================
+Sys_RelaunchWithOutput
+
+Starts the program again with the three standard handles of this one and no other handle: what this one writes
+to goes on with the next one, a log somebody sent its output to has all of it.
+
+"No other handle" is the point. A process that is started with "inherit handles" gets every handle of its
+parent that can be inherited, and every file the C library opens can be. The first version of this did that:
+the game had a pk3 open when it started its successor (the video of the main menu), the successor held that
+pk3 without knowing it, and the updater in it could never give the file another name. qfalse: not started.
+=================
+*/
+static qboolean Sys_RelaunchWithOutput( char *commandLine ) {
+	const DWORD						which[3] = { STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE };
+	static byte						listBuffer[ 512 ];
+	LPPROC_THREAD_ATTRIBUTE_LIST	list = (LPPROC_THREAD_ATTRIBUTE_LIST)listBuffer;
+	STARTUPINFOEXA					startup;
+	PROCESS_INFORMATION				process;
+	HANDLE							handles[3];
+	DWORD							numHandles = 0, flags;
+	SIZE_T							size = sizeof( listBuffer );
+	BOOL							started;
+
+	memset( &startup, 0, sizeof( startup ) );
+	startup.StartupInfo.cb = sizeof( startup );
+	startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+	startup.StartupInfo.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
+	startup.StartupInfo.hStdOutput = GetStdHandle( STD_OUTPUT_HANDLE );
+	startup.StartupInfo.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+	// The list takes a handle once, and only one that can be inherited. A game that was started by a double
+	// click has none: then there is nothing to hand on.
+	for ( int i = 0; i < 3; i++ ) {
+		const HANDLE	h = GetStdHandle( which[i] );
+		DWORD			n;
+
+		if ( !h || h == INVALID_HANDLE_VALUE || !GetHandleInformation( h, &flags ) || !( flags & HANDLE_FLAG_INHERIT ) )
+			continue;
+		for ( n = 0; n < numHandles && handles[n] != h; n++ ) {
+		}
+		if ( n == numHandles )
+			handles[numHandles++] = h;
+	}
+	if ( !numHandles || !InitializeProcThreadAttributeList( list, 1, 0, &size ) )
+		return qfalse;
+	started = FALSE;
+	if ( UpdateProcThreadAttribute( list, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, handles, numHandles * sizeof( handles[0] ), NULL, NULL ) ) {
+		startup.lpAttributeList = list;
+		started = CreateProcessA( sysRestart.program, commandLine, NULL, NULL, TRUE, EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
+			&startup.StartupInfo, &process );
+	}
+	DeleteProcThreadAttributeList( list );
+	if ( !started )
+		return qfalse;
+	CloseHandle( process.hThread );
+	CloseHandle( process.hProcess );
+	return qtrue;
+}
+#endif
+
+// qfalse: it could not be started. On every system but Windows this does not come back if it could.
+static qboolean Sys_Relaunch( void ) {
+	if ( !sysRestart.program[0] )
+		return qfalse;
+#ifdef _WIN32
+	static char			commandLine[ 8192 ];
+	const char			*given = GetCommandLineA();
+	STARTUPINFOA		startup;
+	PROCESS_INFORMATION	process;
+
+	if ( strlen( given ) >= sizeof( commandLine ) )
+		return qfalse;
+	Q_strncpyz( commandLine, given, sizeof( commandLine ) );
+	if ( Sys_RelaunchWithOutput( commandLine ) )
+		return qtrue;
+	// without its output, and with no handle of this one at all: that it starts counts for more
+	Q_strncpyz( commandLine, given, sizeof( commandLine ) );
+	memset( &startup, 0, sizeof( startup ) );
+	startup.cb = sizeof( startup );
+	if ( !CreateProcessA( sysRestart.program, commandLine, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &process ) )
+		return qfalse;
+	CloseHandle( process.hThread );
+	CloseHandle( process.hProcess );
+	return qtrue;
+#else
+	execv( sysRestart.program, sysRestart.argv );
+	return qfalse;
+#endif
+}
+#endif
+
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+qboolean S_SpatialBakeRunning( void );	// client/sound/spatial/snd_spatial.h
+#endif
+
 static void NORETURN Sys_Exit( int ex ) {
 	IN_Shutdown();
 #ifndef DEDICATED
@@ -184,25 +439,57 @@ static void NORETURN Sys_Exit( int ex ) {
 
 	CON_Shutdown();
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	// the last thing it does: the new one must not find this one still holding the window and the ports
+	if ( sysRestart.wanted )
+		Sys_Relaunch();
+
+	// a bake of Steam Audio that was left to run (snd_spatial.cpp) would go on while exit() takes its library down
+	if ( S_SpatialBakeRunning() ) {
+		fflush( NULL );
+		_exit( ex );
+	}
+#endif
+
     exit( ex );
 }
 
-#if !defined(DEDICATED)
-static void Sys_ErrorDialog( const char *error )
+/*
+=================
+Sys_CrashLogPath
+
+The file for a crash log: crashlog-<time>.txt in fs_homepath (a profile of its own gets its own), before that is
+set in the home folder of the game, or next to the program. The folder is made.
+=================
+*/
+void Sys_CrashLogPath( char *path, int size )
 {
 	time_t rawtime;
 	char timeStr[32] = {}; // should really only reach ~19 chars
-	char crashLogPath[MAX_OSPATH];
 
 	time( &rawtime );
 	strftime( timeStr, sizeof( timeStr ), "%Y-%m-%d_%H-%M-%S", localtime( &rawtime ) ); // or gmtime
-	const char *homePath = Sys_DefaultHomePath();
+	const char *homePath = Cvar_VariableString( "fs_homepath" );
+	if ( !homePath[0] )
+		homePath = Sys_DefaultHomePath();
 	const char *logPath = ( homePath && homePath[0] ) ? homePath : Sys_DefaultInstallPath();
-	Com_sprintf( crashLogPath, sizeof( crashLogPath ),
-					"%s%ccrashlog-%s.txt",
-					logPath, PATH_SEP, timeStr );
+	Com_sprintf( path, size, "%s%ccrashlog-%s.txt", logPath, PATH_SEP, timeStr );
 
 	Sys_Mkdir( logPath );
+}
+
+#if defined(__EMSCRIPTEN__)
+// no dialog and no crash log: the page shows the text, the console is in its log
+static void Sys_ErrorDialog( const char *error )
+{
+	Sys_WebShowError( error );
+}
+#elif !defined(DEDICATED)
+static void Sys_ErrorDialog( const char *error )
+{
+	char crashLogPath[MAX_OSPATH];
+
+	Sys_CrashLogPath( crashLogPath, sizeof( crashLogPath ) );
 
 	FILE *fp = fopen( crashLogPath, "w" );
 	if ( fp )
@@ -280,6 +567,8 @@ time_t Sys_FileTime( const char *path )
 Sys_UnloadDll
 =================
 */
+static int sysLibraryGeneration;
+
 void Sys_UnloadDll( void *dllHandle )
 {
 	if( !dllHandle )
@@ -288,7 +577,14 @@ void Sys_UnloadDll( void *dllHandle )
 		return;
 	}
 
+	sysLibraryGeneration++;
 	Sys_UnloadLibrary(dllHandle);
+}
+
+// the memory monitor (client/cl_memwatch.cpp): its code ranges of a module are no good after an unload
+int Sys_LibraryGeneration( void )
+{
+	return sysLibraryGeneration;
 }
 
 /*
@@ -324,6 +620,12 @@ void *Sys_LoadDll( const char *name, qboolean useSystemLib )
 	const char *binarypath = Sys_BinaryPath();
 	const char *basepath = Cvar_VariableString( "fs_basepath" );
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	// the folder of the program file as the system names it: Sys_BinaryPath() is what the program was called with,
+	// "" or "." for a bare name, and then the current folder (of a download or a link) was searched first
+	if ( Sys_ProgramFolder()[0] )
+		binarypath = Sys_ProgramFolder();
+#endif
 	if ( !*binarypath )
 		binarypath = ".";
 
@@ -379,9 +681,25 @@ enum SearchPathFlag
 {
 	SEARCH_PATH_MOD		= 1 << 0,
 	SEARCH_PATH_BASE	= 1 << 1,
-	SEARCH_PATH_OPENJK	= 1 << 2,
+	SEARCH_PATH_VISIONJK	= 1 << 2,
 	SEARCH_PATH_ROOT	= 1 << 3
 };
+
+// One of the folders a module is looked for in did not give it. A folder that has no such file is the usual
+// case (the folder of the player comes first and has none) and no failure: the next one is tried.
+static void Sys_DllFailed( const char *callerName, const char *fn )
+{
+	const char *why = Sys_LibraryError();
+	FILE *f = fopen( fn, "rb" );
+
+	if ( !f )
+	{
+		Com_DPrintf( "%s: no %s\n", callerName, fn );
+		return;
+	}
+	fclose( f );
+	Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, why );
+}
 
 static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, const char **searchPaths,
 									size_t numPaths, uint32_t searchFlags, const char *callerName )
@@ -402,7 +720,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
@@ -419,11 +737,11 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
-	if ( searchFlags & SEARCH_PATH_OPENJK )
+	if ( searchFlags & SEARCH_PATH_VISIONJK )
 	{
 		for ( size_t i = 0; i < numPaths; i++ )
 		{
@@ -431,12 +749,12 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( !libDir[0] )
 				continue;
 
-			fn = FS_BuildOSPath( libDir, OPENJKGAME, filename );
+			fn = FS_BuildOSPath( libDir, VISIONJKGAME, filename );
 			libHandle = Sys_LoadLibrary( fn );
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
@@ -453,7 +771,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
@@ -502,7 +820,7 @@ void *Sys_LoadLegacyGameDll( const char *name, VMMainProc **vmMain, SystemCallPr
 #if defined(MACOS_X) && !defined(_JK2EXE)
 			//First, look for the old-style mac .bundle that's inside a pk3
 			//It's actually zipped, and the zipfile has the same name as 'name'
-			libHandle = Sys_LoadMachOBundle( name );
+			libHandle = com_unpackLibraries->integer ? Sys_LoadMachOBundle( name ) : NULL;	// (from a pak: as the DLLs of Windows, only with com_unpackLibraries)
 #endif
 
 			if (!libHandle) {
@@ -560,7 +878,7 @@ void *Sys_LoadSPGameDll( const char *name, GetGameAPIProc **GetGameAPI )
 #if defined(MACOS_X) && !defined(_JK2EXE)
     //First, look for the old-style mac .bundle that's inside a pk3
     //It's actually zipped, and the zipfile has the same name as 'name'
-    libHandle = Sys_LoadMachOBundle( filename );
+    libHandle = com_unpackLibraries->integer ? Sys_LoadMachOBundle( filename ) : NULL;	// (from a pak: as the DLLs of Windows, only with com_unpackLibraries)
 #endif
 
 	if (!libHandle) {
@@ -583,7 +901,7 @@ void *Sys_LoadSPGameDll( const char *name, GetGameAPIProc **GetGameAPI )
 		size_t numPaths = ARRAY_LEN( searchPaths );
 
 		libHandle = Sys_LoadDllFromPaths( filename, gamedir, searchPaths, numPaths,
-											SEARCH_PATH_BASE | SEARCH_PATH_MOD | SEARCH_PATH_OPENJK | SEARCH_PATH_ROOT,
+											SEARCH_PATH_BASE | SEARCH_PATH_MOD | SEARCH_PATH_VISIONJK | SEARCH_PATH_ROOT,
 											__FUNCTION__ );
 		if ( !libHandle )
 			return NULL;
@@ -635,7 +953,7 @@ void *Sys_LoadGameDll( const char *name, GetModuleAPIProc **moduleAPI )
 #if defined(MACOS_X) && !defined(_JK2EXE)
 			//First, look for the old-style mac .bundle that's inside a pk3
 			//It's actually zipped, and the zipfile has the same name as 'name'
-			libHandle = Sys_LoadMachOBundle( name );
+			libHandle = com_unpackLibraries->integer ? Sys_LoadMachOBundle( name ) : NULL;	// (from a pak: as the DLLs of Windows, only with com_unpackLibraries)
 #endif
 
 			if (!libHandle) {
@@ -674,6 +992,11 @@ void *Sys_LoadGameDll( const char *name, GetModuleAPIProc **moduleAPI )
 	return libHandle;
 }
 
+// A signal that asks the program to end, for the main loop: it quits there at the start of the next frame. The
+// handler runs in whichever thread got the signal, and a shutdown in there pulled the zone from under a frame of
+// the main thread (2026-10-14: "Z_Free(): Corrupt zone header!", then the process hung).
+static volatile sig_atomic_t sys_quitSignal;
+
 /*
 =================
 Sys_SigHandler
@@ -682,6 +1005,17 @@ Sys_SigHandler
 void Sys_SigHandler( int signal )
 {
 	static qboolean signalcaught = qfalse;
+
+#ifndef _WIN32
+	if ( signal == SIGHUP || signal == SIGQUIT || signal == SIGTERM || signal == SIGINT ) {
+		if ( sys_quitSignal ) {
+			// a second one: the frame that was to quit does not come, so nothing is shut down
+			_exit( 1 );
+		}
+		sys_quitSignal = signal;
+		return;
+	}
+#endif
 
 	if( signalcaught )
 	{
@@ -744,6 +1078,19 @@ char *Sys_StripAppBundle( char *dir )
 
 int main ( int argc, char* argv[] )
 {
+#ifdef _WIN32
+	// Libraries by bare name (libcurl, the backends of miniaudio) are looked for in the folder of the program and the
+	// system folders, not in the current folder. Looked up: Windows 7 has it only with KB2533623.
+	{
+		typedef BOOL ( WINAPI *setDirs_t )( DWORD );
+		const setDirs_t setDirs = (setDirs_t)(void *)GetProcAddress( GetModuleHandleA( "kernel32.dll" ), "SetDefaultDllDirectories" );
+
+		if ( setDirs ) {
+			setDirs( 0x00001000 );	// LOAD_LIBRARY_SEARCH_DEFAULT_DIRS
+		}
+	}
+#endif
+
 	int		i;
 	char	commandLine[ MAX_STRING_CHARS ] = { 0 };
 
@@ -762,10 +1109,20 @@ int main ( int argc, char* argv[] )
 	Sys_SetBinaryPath( Sys_Dirname( argv[ 0 ] ) );
 	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	Sys_RestartInit( argv );
+	// A swap of files by the updater that was cut short is finished here, before a renderer or a module is
+	// loaded. The program that runs may be the old one then, so it starts the new one in its place.
+	if ( CL_UpdateResume() && Sys_Relaunch() )
+		return 0;
+#endif
+
 	// Concatenate the command line for passing to Com_Init
 	for( i = 1; i < argc; i++ )
 	{
-		const bool containsSpaces = (strchr(argv[i], ' ') != NULL);
+		// An argument with a space is one word, and so is one with two slashes in it: the console takes those
+		// as the start of a comment and would cut a web address off behind "https:" (+set v_updateURL).
+		const bool containsSpaces = (strchr(argv[i], ' ') != NULL || strstr(argv[i], "//") != NULL || strstr(argv[i], "/*") != NULL);
 		if (containsSpaces)
 			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
 
@@ -790,6 +1147,10 @@ int main ( int argc, char* argv[] )
 	Com_Printf( "SDL Version Linked: %d.%d.%d\n", linked.major, linked.minor, linked.patch );
 #endif
 
+#ifdef __EMSCRIPTEN__
+	// a page has one thread and no loop of its own: the frames come when it is about to paint
+	Sys_WebMainLoop();
+#else
 	// main game loop
 	while (1)
 	{
@@ -815,9 +1176,15 @@ int main ( int argc, char* argv[] )
 			}
 		}
 
+		if ( sys_quitSignal ) {
+			Com_Printf( "Received signal %d, quitting\n", (int)sys_quitSignal );
+			Cbuf_ExecuteText( EXEC_NOW, "quit\n" );
+		}
+
 		// run the game
 		Com_Frame();
 	}
+#endif
 
 	// never gets here
 	return 0;

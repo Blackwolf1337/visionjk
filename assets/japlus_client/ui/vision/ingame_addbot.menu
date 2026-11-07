@@ -1,0 +1,118 @@
+// ingame_addbot.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_addbot.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_addbot"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					370 80 760 408
+		disableColor			0.40 0.47 0.56 1
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_EMPTY
+		skin					1
+		openSlide				8
+		radius					6.4
+		shadow					14
+
+		itemDef
+		{
+			name					vision_window
+			rect					0 0 760 408
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			text					@MENUS_NAME1
+			ownerdraw				UI_BOTNAME
+			rect					24 24 712 84
+			font					5
+			textscale				1.56
+			forecolor				0.86 0.90 0.945 1
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			row						1
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			text					@MENUS_TEAM
+			ownerdraw				UI_REDBLUE
+			rect					24 108 712 84
+			font					5
+			textscale				1.56
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"g_gametype"
+			disableCvar
+			{
+				"0" ;
+				"1" ;
+				"2" ;
+				"3" ;
+				"4" ;
+				"5"
+			}
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			row						1
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			text					@MENUS_SKILL1
+			ownerdraw				UI_BOTSKILL
+			rect					24 192 712 84
+			font					5
+			textscale				1.56
+			forecolor				0.86 0.90 0.945 1
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			row						1
+		}
+
+		itemDef
+		{
+			name					ok
+			text					@MENUS_ADD_BOT
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					416 300 320 84
+			textalignx				160
+			textaligny				28
+			font					7
+			textscale				1.56
+			textalign				ITEM_ALIGN_CENTER
+			forecolor				0.016 0.071 0.122 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript addBot ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			caps					1
+		}
+		canvas					1600 1200
+		descX					750
+		descY					504
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
+	}
+}

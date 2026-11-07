@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -1319,7 +1320,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 			}
 			// is the element a pak file?
 			if ( search->pack && search->pack->hashTable[hash] ) {
-				// autoexec_sp.cfg and openjk_sp.cfg can only be loaded outside of pk3 files.
+				// autoexec_sp.cfg and visionjk_sp.cfg can only be loaded outside of pk3 files.
 				if ( isUserConfig ) {
 					continue;
 				}

@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -22,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "cg_local.h"
+#include "qcommon/game_version.h"	// GIT_TAG, for v_vision
 
 //
 // Cvar callbacks
@@ -50,6 +52,20 @@ static void CG_ForceModelChange( void ) {
 			continue;
 
 		CG_NewClientInfo( i, qtrue );
+	}
+}
+
+// the forced models hang on the team of this player: once it changed, every other one is looked at again
+void CG_ForcedModelsCheck( void ) {
+	static int lastTeam = -1;
+	const int team = cg.snap ? cg.snap->ps.persistant[PERS_TEAM] : -1;
+
+	if ( team == lastTeam ) {
+		return;
+	}
+	lastTeam = team;
+	if ( tay_forceEnemyModel.string[0] || tay_forceAllyModel.string[0] ) {
+		CG_ForceModelChange();
 	}
 }
 

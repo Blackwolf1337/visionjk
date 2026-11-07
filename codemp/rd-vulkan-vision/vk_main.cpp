@@ -1,6 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 2026, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 vkState_t	vk;
 
-static cvar_t	*r_vkDebug;			// 1: validation layer and its messages, if the layer is installed
+static cvar_t	*v_vkDebug;			// 1: validation layer and its messages, if the layer is installed
 static cvar_t	*r_swapIntervalVk;	// r_swapInterval of the engine
 static cvar_t	*r_multisampleVk;	// r_ext_multisample of the engine
 
@@ -33,6 +34,31 @@ static char		vk_driverString[64];
 
 void VK_Fatal( const char *what, VkResult result ) {
 	Com_Error( ERR_FATAL, "Vulkan: %s failed with %i", what, (int)result );
+}
+
+void VK_WaitIdle( void ) {
+	if ( vk.device ) {
+		qvkDeviceWaitIdle( vk.device );
+	}
+}
+
+/*
+A machine that can not run this renderer (no Vulkan, an older one, no device that fits): VK_InitVulkan() says why
+in the console and returns qfalse, with the reason as glConfig.renderer_string and no window size, and the engine
+stops with it (CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the
+Windows builds link libgcc statically, an exception does not get out of this library there. What fails once a
+device was found is an error as before.
+*/
+static qboolean VK_CanNotRun( const char *fmt, ... ) {
+	static char reason[256];
+	va_list args;
+
+	va_start( args, fmt );
+	Q_vsnprintf( reason, sizeof( reason ), fmt, args );
+	va_end( args );
+	ri.Printf( PRINT_ALL, "rd-vulkan-vision can not run here: %s\n", reason );
+	glConfig.renderer_string = reason;
+	return qfalse;
 }
 
 // r_swapInterval changed since the swapchain was made
@@ -71,25 +97,27 @@ PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;
 
 static void VK_MissingFunction( const char *name ) {
-	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nSet cl_renderer to rd-vanilla.", name );
+	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nYour graphics driver is too old or incomplete for this game. Update your graphics driver.", name );
 }
 
 // the window is there, so its library of Vulkan is loaded
-static void VK_LoadGlobalFunctions( void ) {
+static qboolean VK_LoadGlobalFunctions( void ) {
 	qvkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)ri.WIN_VK_GetInstanceProcAddr();
 	if ( !qvkGetInstanceProcAddr ) {
-		Com_Error( ERR_FATAL, "Vulkan: no library of Vulkan was loaded for the window.\nSet cl_renderer to rd-vanilla." );
+		return VK_CanNotRun( "no library of Vulkan was loaded for the window" );
 	}
-#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( VK_NULL_HANDLE, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( VK_NULL_HANDLE, #name ); if ( !q##name ) { return VK_CanNotRun( "the library of Vulkan has no %s", #name ); }
 	VK_FUNCTIONS_GLOBAL( X )
 #undef X
 	qvkEnumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)qvkGetInstanceProcAddr( VK_NULL_HANDLE, "vkEnumerateInstanceVersion" );
+	return qtrue;
 }
 
-static void VK_LoadInstanceFunctions( void ) {
-#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( vk.instance, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+static qboolean VK_LoadInstanceFunctions( void ) {
+#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( vk.instance, #name ); if ( !q##name ) { return VK_CanNotRun( "the library of Vulkan has no %s", #name ); }
 	VK_FUNCTIONS_INSTANCE( X )
 #undef X
+	return qtrue;
 }
 
 static void VK_LoadDeviceFunctions( void ) {
@@ -113,35 +141,38 @@ static qboolean VK_HasExtension( const VkExtensionProperties *list, uint32_t cou
 	return qfalse;
 }
 
-static void VK_CreateInstance( void ) {
-	static VkExtensionProperties available[256];
+// qfalse: this machine can not run the renderer, see VK_CanNotRun()
+static qboolean VK_CreateInstance( void ) {
+	static VkExtensionProperties offered[256];
 	const char *extensions[16];
 	const char *layers[1];
 	int numExtensions, numLayers = 0;
 	uint32_t count, version = VK_API_VERSION_1_0;
 	VkApplicationInfo app = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	VkInstanceCreateInfo info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+	VkResult result;
 
-	VK_LoadGlobalFunctions();
+	if ( !VK_LoadGlobalFunctions() ) {
+		return qfalse;
+	}
 	if ( qvkEnumerateInstanceVersion ) {
 		qvkEnumerateInstanceVersion( &version );
 	}
 	if ( version < VK_API_VERSION_1_3 ) {
-		Com_Error( ERR_FATAL, "rd-vulkan-vision needs Vulkan 1.3, this system has %i.%i.\n"
-			"Set cl_renderer to rd-vanilla.", VK_API_VERSION_MAJOR( version ), VK_API_VERSION_MINOR( version ) );
+		return VK_CanNotRun( "it needs Vulkan 1.3, this system has %i.%i", VK_API_VERSION_MAJOR( version ), VK_API_VERSION_MINOR( version ) );
 	}
 
 	numExtensions = ri.WIN_VK_InstanceExtensions( extensions, ARRAY_LEN( extensions ) - 2 );
 	if ( !numExtensions ) {
-		Com_Error( ERR_FATAL, "Vulkan: the window system names no instance extensions" );
+		return VK_CanNotRun( "the window system names no instance extensions" );
 	}
 
 	// macOS has no Vulkan of its own. MoltenVK runs it on top of Metal and is a Vulkan with parts missing, and
 	// the loader only lists such a driver for a program that asks for it, with this extension and this flag.
 	// Where the extension is not offered nothing changes.
-	count = ARRAY_LEN( available );
-	if ( qvkEnumerateInstanceExtensionProperties( NULL, &count, available ) >= VK_SUCCESS
-		&& VK_HasExtension( available, count, VK_PORTABILITY_ENUMERATION_NAME ) ) {
+	count = ARRAY_LEN( offered );
+	if ( qvkEnumerateInstanceExtensionProperties( NULL, &count, offered ) >= VK_SUCCESS
+		&& VK_HasExtension( offered, count, VK_PORTABILITY_ENUMERATION_NAME ) ) {
 		int i;
 
 		for ( i = 0; i < numExtensions && strcmp( extensions[i], VK_PORTABILITY_ENUMERATION_NAME ); i++ ) {
@@ -153,7 +184,7 @@ static void VK_CreateInstance( void ) {
 	}
 
 	vk.validation = qfalse;
-	if ( r_vkDebug->integer ) {
+	if ( v_vkDebug->integer ) {
 		VkLayerProperties available[64];
 
 		count = ARRAY_LEN( available );
@@ -167,11 +198,11 @@ static void VK_CreateInstance( void ) {
 			layers[numLayers++] = "VK_LAYER_KHRONOS_validation";
 			extensions[numExtensions++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 		} else {
-			ri.Printf( PRINT_WARNING, "r_vkDebug: the layer VK_LAYER_KHRONOS_validation is not installed\n" );
+			ri.Printf( PRINT_WARNING, "v_vkDebug: the layer VK_LAYER_KHRONOS_validation is not installed\n" );
 		}
 	}
 
-	app.pApplicationName = "OpenJK";
+	app.pApplicationName = "VisionJK";
 	app.pEngineName = "rd-vulkan-vision";
 	app.apiVersion = VK_API_VERSION_1_3;
 	info.pApplicationInfo = &app;
@@ -179,8 +210,15 @@ static void VK_CreateInstance( void ) {
 	info.ppEnabledExtensionNames = extensions;
 	info.enabledLayerCount = (uint32_t)numLayers;
 	info.ppEnabledLayerNames = layers;
-	VK_CHECK( qvkCreateInstance( &info, NULL, &vk.instance ) );
-	VK_LoadInstanceFunctions();
+	// fails with VK_ERROR_INCOMPATIBLE_DRIVER where the library is there and no driver for it
+	result = qvkCreateInstance( &info, NULL, &vk.instance );
+	if ( result != VK_SUCCESS ) {
+		vk.instance = VK_NULL_HANDLE;
+		return VK_CanNotRun( "vkCreateInstance failed with %i", (int)result );
+	}
+	if ( !VK_LoadInstanceFunctions() ) {
+		return qfalse;
+	}
 
 	if ( vk.validation ) {
 		VkDebugUtilsMessengerCreateInfoEXT debug = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -195,6 +233,7 @@ static void VK_CreateInstance( void ) {
 			create( vk.instance, &debug, NULL, &vk.messenger );
 		}
 	}
+	return qtrue;
 }
 
 /*
@@ -237,7 +276,8 @@ static qboolean VK_DeviceUsable( VkPhysicalDevice device, uint32_t *queueFamily 
 	return qfalse;
 }
 
-static void VK_PickDevice( void ) {
+// qfalse: this machine can not run the renderer, see VK_CanNotRun()
+static qboolean VK_PickDevice( void ) {
 	VkPhysicalDevice devices[16];
 	uint32_t count = ARRAY_LEN( devices );
 	uint32_t family = 0;
@@ -260,16 +300,15 @@ static void VK_PickDevice( void ) {
 		}
 	}
 	if ( !vk.physicalDevice ) {
-		Com_Error( ERR_FATAL, "rd-vulkan-vision found no graphics device with Vulkan 1.3 and descriptor indexing.\n"
-			"Set cl_renderer to rd-vanilla." );
+		return VK_CanNotRun( "no graphics device with Vulkan 1.3 and descriptor indexing" );
 	}
 	qvkGetPhysicalDeviceProperties( vk.physicalDevice, &vk.properties );
 	qvkGetPhysicalDeviceMemoryProperties( vk.physicalDevice, &vk.memoryProperties );
 
-	// The texture table is VK_MAX_IMAGES textures and, apart from them, VK_MAX_SAMPLERS samplers in one set. A
-	// graphics card says it takes a million of each. MoltenVK passes on what Metal says, which is far fewer
-	// samplers (about a thousand): that is why they are apart. What the device says is printed, and less than
-	// the renderer has is said here and not refused.
+	// The texture table is VK_MAX_IMAGES textures with a sampler each in one set. A graphics card says it takes a
+	// million of them, MoltenVK passes on what Metal says. In October 2026 that was about a thousand samplers, and
+	// MoltenVK 1.4.2 on an Apple M5 Max says 500000. What the device says is printed, and less than the renderer
+	// has is said here and not refused.
 	{
 		VkPhysicalDeviceVulkan12Properties p12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
 		VkPhysicalDeviceProperties2 p2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &p12 };
@@ -278,18 +317,19 @@ static void VK_PickDevice( void ) {
 		qvkGetPhysicalDeviceProperties2( vk.physicalDevice, &p2 );
 		images = Q_min( p12.maxPerStageDescriptorUpdateAfterBindSampledImages, p12.maxDescriptorSetUpdateAfterBindSampledImages );
 		samplers = Q_min( p12.maxPerStageDescriptorUpdateAfterBindSamplers, p12.maxDescriptorSetUpdateAfterBindSamplers );
-		ri.Printf( PRINT_ALL, "Vulkan: the device takes %u textures and %u samplers in one table, the renderer has %i and %i\n",
-			images, samplers, VK_MAX_IMAGES, VK_MAX_SAMPLERS );
-		if ( images < VK_MAX_IMAGES || samplers < VK_MAX_SAMPLERS ) {
+		ri.Printf( PRINT_ALL, "Vulkan: the device takes %u textures and %u samplers in one table, the renderer has %i\n",
+			images, samplers, VK_MAX_IMAGES );
+		if ( images < VK_MAX_IMAGES || samplers < VK_MAX_IMAGES ) {
 			ri.Printf( PRINT_WARNING, "Vulkan: that is less than the renderer has. If the start fails after this line or "
 				"textures are missing, that is why.\n" );
 		}
 	}
+	return qtrue;
 }
 
 static void VK_CreateDevice( void ) {
-	static VkExtensionProperties offered[512];
 	const float priority = 1.0f;
+	static VkExtensionProperties offered[512];
 	const char *extensions[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	uint32_t numExtensions = 1, count = ARRAY_LEN( offered );
 	VkDeviceQueueCreateInfo queue = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
@@ -324,7 +364,7 @@ static void VK_CreateDevice( void ) {
 	info.pQueueCreateInfos = &queue;
 	// A device that offers this extension has to have it switched on: it says of itself that it is not a whole
 	// Vulkan (MoltenVK). Of the parts such a device may lack this renderer uses one, an image view that reads
-	// alpha as 1 (the copy of the frame in vk_post.cpp), which MoltenVK has on macOS 10.15 and later.
+	// alpha as 1 (the copy of the frame in vk_texture.cpp), which MoltenVK has on macOS 10.15 and later.
 	if ( qvkEnumerateDeviceExtensionProperties( vk.physicalDevice, NULL, &count, offered ) >= VK_SUCCESS
 		&& VK_HasExtension( offered, count, VK_PORTABILITY_SUBSET_NAME ) ) {
 		extensions[numExtensions++] = VK_PORTABILITY_SUBSET_NAME;
@@ -495,67 +535,122 @@ static VkSampleCountFlagBits VK_SampleCount( void ) {
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-/*
-===============
-VK_InitVulkan
-
-Called by R_Init() in the place of InitOpenGL(). The window and everything on the device live until the
-window is destroyed (vid_restart), a map change keeps them.
-===============
-*/
-void VK_InitVulkan( void ) {
-	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
-	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
-	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
-	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
-	r_vkMerge = ri.Cvar_Get( "r_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
-
-	// the builtin images are made again, the copy of the frame has to be put into the texture table again
-	vk.screenSlot = -1;
-	// the buffers of the level and of the models are filled again when they are first drawn
-	VK_WorldChanged();
-	VK_ModelsChanged();
-	VK_ClearFlares();
-	if ( glConfig.vidWidth ) {
-		// the window stays, the textures get their filter again as GL_SetDefaultState() of rd-vanilla gives it to them
-		GL_TextureMode( r_textureMode->string );
-		return;
-	}
-
-	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
-
-	memset( &glConfig, 0, sizeof( glConfig ) );
-	memset( &glConfigExt, 0, sizeof( glConfigExt ) );
-	memset( &vk, 0, sizeof( vk ) );
-	window = ri.WIN_Init( &windowDesc, &glConfig );
-	vk.width = glConfig.vidWidth;
-	vk.height = glConfig.vidHeight;
-
-	VK_CreateInstance();
-	if ( !ri.WIN_VK_CreateSurface( vk.instance, &vk.surface ) ) {
-		Com_Error( ERR_FATAL, "Vulkan: no surface for the window" );
-	}
-	VK_PickDevice();
-	VK_CreateDevice();
-	VK_InitMemory();
-	VK_CreateSwapchain();
-
+// the targets of the frame in the size of the window: what the scene and the 2D are drawn into, and the picture
+// after the gamma pass that is copied to the window
+static void VK_CreateFrameTargets( void ) {
 	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
-	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginTarget()
-	vk.samples = VK_SampleCount();
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
 		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
 	}
+}
+
+static void VK_DestroyFrameTargets( void ) {
+	VK_DestroyTarget( &vk.color );
+	VK_DestroyTarget( &vk.final );
+	VK_DestroyTarget( &vk.depth );
+	VK_DestroyTarget( &vk.colorMS );
+	VK_DestroyTarget( &vk.depthMS );
+}
+
+/*
+===============
+VK_ResizeFrame
+
+The window has a new size (the desktop resized it, a tiling window manager among others). The frame, the swapchain
+and every target of the size of the window are made anew in it, between two frames, without a vid_restart:
+textures, the level and the models stay. The sets that show the targets stay too and are written again.
+===============
+*/
+qboolean VK_ResizeFrame( int width, int height ) {
+	if ( !vk.device || vk.frame ) {
+		return qfalse;
+	}
+	qvkDeviceWaitIdle( vk.device );
+	VK_DestroyPostTargets();
+	VK_DestroyFrameTargets();
+	vk.width = glConfig.vidWidth = width;
+	vk.height = glConfig.vidHeight = height;
+	VK_CreateFrameTargets();
+	VK_WriteSet( vk.postSet, vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_InitPost();
+	vk.finalValid = qfalse;
+	// the size Wayland takes the swapchain in, see VK_CreateSwapchain()
+	VK_CreateSwapchain();
+	ri.Printf( PRINT_DEVELOPER, "window resized to %i x %i\n", width, height );
+	return qtrue;
+}
+
+/*
+===============
+VK_InitVulkan
+
+Called by R_Init() in the place of InitOpenGL(). The window and everything on the device live until the
+window is destroyed (vid_restart), a map change keeps them.
+
+qfalse: this machine can not run the renderer, see VK_CanNotRun(). glConfig is empty then, which is how the
+engine knows. A window that was made stays until RE_Shutdown() destroys it.
+===============
+*/
+static void VK_DestroyInstance( void );
+
+qboolean VK_InitVulkan( void ) {
+	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_LATCH, "Vulkan validation layer and its messages" );
+	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
+	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
+	if ( VK_InitShared() ) {
+		return qtrue;
+	}
+
+	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
+
+	memset( &glConfig, 0, sizeof( glConfig ) );
+	memset( &vk, 0, sizeof( vk ) );
+	window = ri.WIN_Init( &windowDesc, &glConfig );
+	if ( !glConfig.vidWidth ) {
+		// WIN_Init() of the engine hands back a window without a size where none with Vulkan can be made
+		return VK_CanNotRun( "no window for Vulkan could be made" );
+	}
+	vk.width = glConfig.vidWidth;
+	vk.height = glConfig.vidHeight;
+
+	if ( !VK_CreateInstance() ) {
+		VK_DestroyInstance();
+		return qfalse;
+	}
+	if ( !ri.WIN_VK_CreateSurface( vk.instance, &vk.surface ) ) {
+		vk.surface = VK_NULL_HANDLE;
+		VK_DestroyInstance();
+		return VK_CanNotRun( "no surface for the window" );
+	}
+	if ( !VK_PickDevice() ) {
+		VK_DestroyInstance();
+		return qfalse;
+	}
+	VK_CreateDevice();
+	VK_InitMemory();
+	VK_CreateSwapchain();
+
+	{
+		VkFormatProperties props;
+
+		// the depth of field reads the depth of the scene as a texture
+		qvkGetPhysicalDeviceFormatProperties( vk.physicalDevice, VK_DepthFormat(), &props );
+		vk.depthReadable = (qboolean)( ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) != 0 );
+	}
+	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginRendering()
+	vk.samples = VK_SampleCount();
+	VK_CreateFrameTargets();
 
 	VK_InitPipelines();
 	VK_InitPost();
@@ -571,33 +666,13 @@ void VK_InitVulkan( void ) {
 	glConfig.renderer_string = vk.properties.deviceName;
 	glConfig.vendor_string = vk_driverString;
 	glConfig.version_string = vk_versionString;
-	glConfig.extensions_string = "";
-	glConfigExt.originalExtensionString = "";
 	glConfig.maxTextureSize = Q_min( (int)vk.properties.limits.maxImageDimension2D, 8192 );
-	glConfig.maxActiveTextures = NUM_TEXTURE_BUNDLES;
 	glConfig.maxTextureFilterAnisotropy = vk.anisotropy ? vk.properties.limits.maxSamplerAnisotropy : 0.0f;
-	glConfig.colorBits = 32;
-	glConfig.depthBits = 24;
-	glConfig.stencilBits = 8;
-	// tr_image.cpp then asks for the formats of GL_EXT_texture_compression_s3tc, see VK_ImageLevel()
-	glConfig.textureCompression = vk.bcTextures ? TC_S3TC_DXT : TC_NONE;
-	glConfig.textureEnvAddAvailable = qtrue;
-	glConfig.clampToEdgeAvailable = qtrue;
-	glConfig.stereoEnabled = qfalse;
-	// gamma and overbright are one pass over the finished frame (shaders/gamma.frag), not a ramp of the display
-	glConfig.deviceSupportsGamma = qfalse;
-	glConfigExt.doGammaCorrectionWithShaders = qtrue;
-	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
-
-	// the setup menus offer the anisotropic filter only if this cvar says how much of it there is
-	ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
-	// The filter new textures are made with (r_textureMode) lives in tr_image.cpp and is what it was compiled as in a
-	// library that was just loaded. rd-vanilla sets it in GL_SetDefaultState() at every start, RE_BeginFrame() only
-	// when the cvar changes.
-	GL_TextureMode( r_textureMode->string );
+	VK_InitConfig();
 
 	ri.Printf( PRINT_ALL, "Vulkan device: %s, %s\n", vk.properties.deviceName, vk_versionString );
 	VK_Splash();
+	return qtrue;
 }
 
 /*
@@ -620,31 +695,39 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_ShutdownModels();
 	VK_ShutdownImages();
 	VK_ShutdownFrames();
-	VK_ShutdownPost();
+	VK_DestroyPostTargets();
 	VK_ShutdownPipelines();
-	VK_DestroyTarget( &vk.color );
-	VK_DestroyTarget( &vk.final );
-	VK_DestroyTarget( &vk.depth );
-	VK_DestroyTarget( &vk.colorMS );
-	VK_DestroyTarget( &vk.depthMS );
+	VK_DestroyFrameTargets();
 	VK_DestroySwapchain();
 	VK_ShutdownMemory();
 	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );
 	qvkDestroyDevice( vk.device, NULL );
-	qvkDestroySurfaceKHR( vk.instance, vk.surface, NULL );
-	if ( vk.messenger ) {
-		PFN_vkDestroyDebugUtilsMessengerEXT destroy = (PFN_vkDestroyDebugUtilsMessengerEXT)
-			qvkGetInstanceProcAddr( vk.instance, "vkDestroyDebugUtilsMessengerEXT" );
+	VK_DestroyInstance();
+}
 
-		if ( destroy ) {
-			destroy( vk.instance, vk.messenger, NULL );
+// The end of the instance and of what hangs on it alone, and of what the renderer knows about the window. Also
+// for a start that stopped before it had a device: then some of it was never made.
+static void VK_DestroyInstance( void ) {
+	if ( vk.instance ) {
+		if ( vk.surface && qvkDestroySurfaceKHR ) {
+			qvkDestroySurfaceKHR( vk.instance, vk.surface, NULL );
+		}
+		if ( vk.messenger ) {
+			PFN_vkDestroyDebugUtilsMessengerEXT destroy = (PFN_vkDestroyDebugUtilsMessengerEXT)
+				qvkGetInstanceProcAddr( vk.instance, "vkDestroyDebugUtilsMessengerEXT" );
+
+			if ( destroy ) {
+				destroy( vk.instance, vk.messenger, NULL );
+			}
+		}
+		if ( qvkDestroyInstance ) {
+			qvkDestroyInstance( vk.instance, NULL );
 		}
 	}
-	qvkDestroyInstance( vk.instance, NULL );
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
-int G2API_SlotsInUse( void );		// rd-vanilla/G2_API.cpp
+int G2API_SlotsInUse( void );		// common/G2_API.cpp
 int G2API_ListSlots( qboolean print );
 
 
@@ -654,16 +737,9 @@ VK_GfxInfo_f
 ===============
 */
 void VK_GfxInfo_f( void ) {
-	int numImages = 0, numBlockImages = 0;
+	int numImages, numBlockImages;
 
-	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
-		if ( vk.images[i].owner ) {
-			numImages++;
-			if ( vk.images[i].format == VK_FORMAT_BC1_RGB_UNORM_BLOCK || vk.images[i].format == VK_FORMAT_BC3_UNORM_BLOCK ) {
-				numBlockImages++;
-			}
-		}
-	}
+	VK_CountImages( &numImages, &numBlockImages );
 	ri.Printf( PRINT_ALL, "\nrd-vulkan-vision\n" );
 	ri.Printf( PRINT_ALL, "device: %s\n", vk.properties.deviceName );
 	ri.Printf( PRINT_ALL, "version: %s\n", vk_versionString );
@@ -676,28 +752,7 @@ void VK_GfxInfo_f( void ) {
 		G2API_ListSlots( (qboolean)( ri.Cvar_VariableIntegerValue( "developer" ) != 0 ) ) );
 	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES,
 		numBlockImages, vk.numPipelines, vk.numSamplers );
-	if ( vk.bcTextures ) {
-		ri.Printf( PRINT_ALL, "  packed into blocks since the window was made: %.1f million pixels in %.2f s\n", vk.statBcPixels * 1e-6,
-			vk.statBcSeconds );
-	}
-	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
-		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
-	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );
-	// the shaders with the most triangles from the CPU
-	for ( int n = 0; n < 8; n++ ) {
-		vkStatShader_t *most = NULL;
-
-		for ( int i = 0; i < vk.statNumCpuShaders[1]; i++ ) {
-			if ( vk.statCpuShaders[1][i].indexes > ( most ? most->indexes : 0 ) ) {
-				most = &vk.statCpuShaders[1][i];
-			}
-		}
-		if ( !most ) {
-			break;
-		}
-		ri.Printf( PRINT_ALL, "  on the CPU: %5i triangles %s\n", most->indexes / 3, most->name );
-		most->indexes = 0;
-	}
+	VK_FrameInfo_f();
 	VK_MemoryInfo_f();
 	ri.Printf( PRINT_ALL, "validation layer: %s", vk.validation ? "on" : "off" );
 	if ( vk.validation ) {

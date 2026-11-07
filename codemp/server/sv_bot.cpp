@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // sv_bot.c
 #include "server.h"
 #include "botlib/botlib.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "server/sv_gameapi.h"
 
 typedef struct bot_debugpoly_s
@@ -590,7 +590,7 @@ SV_BotClientCommand
 ==================
 */
 void BotClientCommand( int client, char *command ) {
-	SV_ExecuteClientCommand( &svs.clients[client], command, qtrue );
+	SV_ExecuteClientCommand( &svs.clients[client], command );
 }
 
 /*

@@ -1,6 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 2026, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -36,7 +37,7 @@ bool tr_stencilled = false;
 
 // what a surface with the shader internal_distortion does to the stencil buffer: one more wherever it is seen
 static const vkStencil_t vk_distortionStencil = { qtrue, GL_ALWAYS, 1,
-	{ { GL_KEEP, GL_KEEP, GL_INCR }, { GL_KEEP, GL_KEEP, GL_INCR } }, qfalse };
+	{ { GL_KEEP, GL_KEEP, GL_INCR }, { GL_KEEP, GL_KEEP, GL_INCR } } };
 
 extern int skyboxportal;
 extern int drawskyboxportal;
@@ -340,8 +341,7 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 	const float il = tr.identityLight;
 	qboolean perVertexRGB = qfalse, perVertexAlpha = qfalse, perVertexFog;
 	uint32_t shaderAlpha = 0;		// an alpha stage.glsl works out per vertex
-	const qboolean killGen = (qboolean)( tess.shader != tr.projectionShadowShader && tess.shader != tr.shadowShader
-		&& ( ent->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_VOLUMETRIC ) ) );
+	const qboolean killGen = (qboolean)( ( ent->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_VOLUMETRIC ) ) != 0 );
 
 	VectorSet4( base, 0.0f, 0.0f, 0.0f, 0.0f );
 	VectorSet4( vert, 0.0f, 0.0f, 0.0f, 0.0f );
@@ -546,15 +546,15 @@ that bend that square.
 static qboolean	vk_refraction;
 static float	vk_refractionScale[2], vk_refractionOffset[2];
 
-// x, y: the lower left corner of the square in the frame as OpenGL counts, size: its edge in pixels
+// x, y: the lower left corner of the square in the frame as OpenGL counts, size: its edge in pixels of the window
 void VK_SetRefraction( qboolean on, int x, int y, int size ) {
 	vk_refraction = on;
 	if ( on ) {
-		// the copy of the frame has its first row at the top
-		vk_refractionScale[0] = (float)size / vk.width;
-		vk_refractionOffset[0] = (float)x / vk.width;
-		vk_refractionScale[1] = -(float)size / vk.height;
-		vk_refractionOffset[1] = 1.0f - (float)y / vk.height;
+		// the copy of the frame has its first row at the top, vk.screen has the size of the window
+		vk_refractionScale[0] = (float)size / vk.screen.width;
+		vk_refractionOffset[0] = (float)x / vk.screen.width;
+		vk_refractionScale[1] = -(float)size / vk.screen.height;
+		vk_refractionOffset[1] = (float)( vk.height - y ) / vk.screen.height;
 	}
 }
 
@@ -563,12 +563,12 @@ static int VK_CullMode( cullType_t type ) {
 	qboolean front = (qboolean)( type == CT_FRONT_SIDED );
 
 	if ( type == CT_TWO_SIDED || backEnd.projection2D ) {
-		return VK_CULL_MODE_NONE;
+		return VKC_NONE;
 	}
 	if ( backEnd.viewParms.isMirror ) {
 		front = (qboolean)!front;
 	}
-	return front ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_BACK_BIT;
+	return front ? VKC_FRONT : VKC_BACK;
 }
 
 static uint32_t VK_TexEnv( int env ) {
@@ -611,7 +611,7 @@ static struct {
 	float		vec[4];
 } vk_deform;						// of the batch that is drawn
 
-qboolean VK_DeformOnDevice( const shader_t *shader ) {
+qboolean VK_DeformOnDevice( const shader_t *shader, qboolean world ) {
 	const deformStage_t *ds = shader->deforms[0];
 
 	if ( !shader->numDeforms ) {
@@ -624,6 +624,10 @@ qboolean VK_DeformOnDevice( const shader_t *shader ) {
 	case DEFORM_BULGE:
 	case DEFORM_MOVE:
 		return qtrue;
+	case DEFORM_AUTOSPRITE:
+	case DEFORM_AUTOSPRITE2:
+		// only the surfaces of the level have what the shader needs in their vertices
+		return world;
 	case DEFORM_WAVE:
 		// a wave that runs over the surface has to be one of the table functions
 		return (qboolean)( ds->deformationWave.frequency == 0
@@ -647,6 +651,40 @@ static void VK_BatchDeform( void ) {
 	memset( &vk_deform, 0, sizeof( vk_deform ) );
 	if ( !shader->numDeforms || !VK_BatchIsStatic() ) {
 		return;		// none, or RB_DeformTessGeometry() moved the vertices in the tess arrays
+	}
+	if ( ds->deformation == DEFORM_AUTOSPRITE || ds->deformation == DEFORM_AUTOSPRITE2 ) {
+		// the axes of the view in the space of the model (GlobalVectorToLocal of tr_shade_calc.cpp)
+		vec3_t dirs[3];
+
+		for ( int i = 0; i < 3; i++ ) {
+			const float *v = backEnd.viewParms.ori.axis[i];
+
+			if ( backEnd.currentEntity == &tr.worldEntity ) {
+				VectorCopy( v, dirs[i] );
+			} else {
+				VectorSet( dirs[i], DotProduct( v, backEnd.ori.axis[0] ), DotProduct( v, backEnd.ori.axis[1] ),
+					DotProduct( v, backEnd.ori.axis[2] ) );
+			}
+		}
+		if ( ds->deformation == DEFORM_AUTOSPRITE2 ) {
+			vk_deform.flags = 4u << VKD_DEFORM_SHIFT;
+			VectorCopy( dirs[0], vk_deform.vec );
+			return;
+		}
+		// compensate for scale in the axes if necessary
+		float scale = 1.0f;
+
+		if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
+			const float axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
+
+			scale = axisLength ? 1.0f / axisLength : 0.0f;
+		}
+		vk_deform.flags = 3u << VKD_DEFORM_SHIFT;
+		VectorCopy( dirs[1], vk_deform.wave );
+		vk_deform.wave[3] = backEnd.viewParms.isMirror ? -scale : scale;
+		VectorCopy( dirs[2], vk_deform.vec );
+		vk_deform.vec[3] = scale;
+		return;
 	}
 	if ( ds->deformation == DEFORM_WAVE && ds->deformationWave.frequency != 0 ) {
 		// a wave that runs over the surface
@@ -830,6 +868,84 @@ static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, u
 
 /*
 ===============
+VK_GoreDraw
+
+A saber mark from the device that grows or fades, as RB_SurfaceGhoul() of rd-vanilla does it to the vertices: its
+texture coordinates scaled around 0.5 0.5 under the tcMods of the stage, and its alpha (and how bright it may be)
+from how far its fade has come
+===============
+*/
+static void VK_GoreDraw( const shaderStage_t *pStage, vkDraw_t *draw ) {
+	float scale, fade;
+
+	if ( !VK_BatchGore( &scale, &fade ) ) {
+		return;
+	}
+	if ( scale != 1.0f ) {
+		const float k = 0.5f * ( 1.0f - scale );
+
+		for ( int b = 0; b < 2; b++ ) {
+			float *mat = b ? draw->texMat1 : draw->texMat0;
+
+			if ( pStage->bundle[b].tcGen != TCGEN_TEXTURE ) {
+				continue;
+			}
+			for ( int row = 0; row < 2; row++ ) {
+				float *r = mat + row * 4;
+
+				r[2] += ( r[0] + r[1] ) * k;
+				r[0] *= scale;
+				r[1] *= scale;
+			}
+		}
+	}
+	if ( fade > 0.0f && fade < 1.0f ) {
+		draw->fade = Q_ftol( 254.4f * fade ) / 255.0f;
+		draw->fadeMode = 1;
+	} else if ( fade > 2.0f && fade < 3.0f ) {
+		draw->fade = Q_ftol( 254.4f * ( fade - 2.0f ) ) / 255.0f;
+		draw->fadeMode = 2;
+	}
+}
+
+/*
+===============
+VK_DrawGrass
+
+The surface sprites of a batch of the level from the device: each stage that has them with its texture and blend,
+the colors of the sprites as the vertex colors and the texture over each sprite, no culling, as CQuickSpriteSystem
+of tr_quicksprite.cpp draws them. Then the fog volume over them.
+===============
+*/
+static void VK_DrawGrass( uint32_t transform ) {
+	const shader_t *shader = tess.shader;
+
+	for ( int stage = 1; stage < shader->numUnfoggedPasses; stage++ ) {
+		const shaderStage_t *pStage = &tess.xstages[stage];
+		uint32_t bones;
+		vkDraw_t draw;
+
+		if ( !pStage->active || !pStage->ss || !pStage->ss->surfaceSpriteType || !VK_BindGrass( pStage, stage, &bones ) ) {
+			continue;
+		}
+		memset( &draw, 0, sizeof( draw ) );
+		draw.transform = transform;
+		draw.bones = bones;
+		VK_IdentityTexCoords( &draw );
+		draw.tex0 = draw.tex1 = VK_BundleTexture( &pStage->bundle[0] );
+		draw.vertColor[0] = draw.vertColor[1] = draw.vertColor[2] = draw.vertColor[3] = 1.0f;
+		draw.flags |= VK_AlphaTest( pStage->stateBits );
+		VK_GlobalFog( &draw );
+		VK_DrawTess( &draw, VKP_GRASS, pStage->stateBits, VKC_NONE, qfalse );
+		if ( tess.fogNum && shader->fogPass && r_drawfog->value
+			&& ( r_drawfog->integer != 2 || tess.fogNum != tr.world->globalFog ) ) {
+			VK_FogPass( transform, VKC_NONE, VKP_GRASS, bones );
+		}
+	}
+}
+
+/*
+===============
 RB_StageIteratorGeneric
 
 The stages of tess.shader on the geometry in tess
@@ -850,7 +966,9 @@ void RB_StageIteratorGeneric( void ) {
 		if ( !VK_UploadStaticBatch( &bones ) ) {
 			return;
 		}
-		if ( VK_BatchIsSkinned() ) {
+		if ( VK_BatchIsSprites() ) {
+			program = VKP_SPRITE;
+		} else if ( VK_BatchIsSkinned() ) {
 			program = VKP_SKINNED;
 		} else {
 			VK_StaticColorScale( colorScale );
@@ -859,8 +977,7 @@ void RB_StageIteratorGeneric( void ) {
 		RB_DeformTessGeometry();
 		// A body that burns away swells along the line of the fire. rd-vanilla moves the vertices again before
 		// every stage, so a second stage lies a little further out. Here all stages share what the first one has.
-		if ( shader != tr.projectionShadowShader && shader != tr.shadowShader
-			&& ( backEnd.currentEntity->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 ) ) ) {
+		if ( backEnd.currentEntity->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 ) ) {
 			RB_CalcDisintegrateVertDeform();
 		}
 		if ( !VK_UploadTess() ) {
@@ -883,8 +1000,8 @@ void RB_StageIteratorGeneric( void ) {
 		if ( !pStage->active ) {
 			break;
 		}
-		// in the glow pass only the stages that glow
-		if ( g_bRenderGlowingObjects && !pStage->glow ) {
+		// in the glow pass only the stages that glow, and the stages that are for it alone in no other pass
+		if ( g_bRenderGlowingObjects ? !pStage->glow : pStage->glowOnly ) {
 			continue;
 		}
 		if ( stage && r_lightmap->integer
@@ -902,7 +1019,9 @@ void RB_StageIteratorGeneric( void ) {
 			stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
 		}
 		if ( ent->e.renderfx & RF_RGB_TINT ) {
-			forceRGBGen = CGEN_ENTITY;
+			// VisionJK: a lit stage stays lit, with the colour of the entity on it (a prop the toolgun coloured,
+			// game/props/g_tools.c); the stages of effects have no light and take the colour as it is
+			forceRGBGen = ( pStage->rgbGen == CGEN_LIGHTING_DIFFUSE ) ? CGEN_LIGHTING_DIFFUSE_ENTITY : CGEN_ENTITY;
 		}
 
 		VK_InitDraw( &draw, transform, bones );
@@ -936,7 +1055,17 @@ void RB_StageIteratorGeneric( void ) {
 			}
 			VectorScale4( draw.texTurb0, 0.0f, draw.texTurb0 );
 		}
-		draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
+		if ( refract && !pStage->bundle[1].image && ( ent->e.renderfx & RF_REFRACT_REST ) && ent->e.radius > 0.0f ) {
+			// the screen behind where each vertex rests: the model need not face the view (RestTexCoord of stage.glsl)
+			memset( draw.tcGenVec0, 0, sizeof( draw.tcGenVec0 ) );
+			draw.tcGenVec0[0] = 0.5f * glConfig.vidWidth / ent->e.radius;
+			draw.tcGenVec0[1] = 0.5f * glConfig.vidHeight / ent->e.radius;
+			draw.tcGenVec0[2] = ent->e.shaderTexCoord[0];
+			draw.tcGenVec0[3] = ( ent->e.shaderTexCoord[1] > 0.0f ) ? ent->e.shaderTexCoord[1] : 1.0f;
+			draw.flags |= (uint32_t)VK_TCGEN_REST << VKD_TCGEN0_SHIFT;
+		} else {
+			draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
+		}
 		draw.tex1 = draw.tex0;
 		if ( pStage->bundle[1].image ) {
 			draw.tex1 = VK_BundleTexture( &pStage->bundle[1] );
@@ -953,7 +1082,24 @@ void RB_StageIteratorGeneric( void ) {
 				stateBits |= GLS_DEPTHMASK_TRUE;
 			}
 		}
+		// VisionJK: a lit stage with a normal map or a shine (shader keywords normalMap and specular) is lit per
+		// pixel, see generic.frag; the second texture is the normal map then
+		if ( ( pStage->normalMap || pStage->specular[0] > 0.0f || pStage->specular[2] > 0.0f || pStage->wrapLight > 0.0f
+			|| pStage->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
+			draw.flags |= VKD_MATERIAL;
+			VectorCopy( pStage->specular, draw.material );
+			draw.material2[0] = pStage->wrapLight;
+			draw.material2[1] = pStage->sparkle;
+			if ( pStage->normalMap ) {
+				draw.tex1 = pStage->normalMap->texnum;
+				draw.material[3] = 1.0f;
+			}
+		}
 		draw.flags |= VK_AlphaTest( stateBits );
+		VK_GoreDraw( pStage, &draw );
+		if ( isStatic ) {
+			draw.styles = VK_StaticStyles();
+		}
 		if ( VK_GlobalFog( &draw ) && pStage->mGLFogColorOverride ) {
 			// some stages want to fade to black or white, not to the fog color
 			const float c = ( pStage->mGLFogColorOverride == GLFOGOVERRIDE_WHITE ) ? 1.0f : 0.0f;
@@ -966,7 +1112,7 @@ void RB_StageIteratorGeneric( void ) {
 			// surface is not drawn. It marks its shape in the stencil buffer, both sides, where nothing is in front
 			// of it, and RB_DistortionFill() puts a bent copy of the screen into that shape when the view is done.
 			vk.stencil = &vk_distortionStencil;
-			VK_DrawTess( &draw, program, GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE, VK_CULL_MODE_NONE, (qboolean)shader->polygonOffset );
+			VK_DrawTess( &draw, program, GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE, VKC_NONE, (qboolean)shader->polygonOffset );
 			vk.stencil = NULL;
 			tr_stencilled = true;
 			continue;
@@ -974,7 +1120,7 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
-		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VK_CULL_MODE_NONE : cullMode,
+		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
@@ -1004,7 +1150,11 @@ void RB_StageIteratorGeneric( void ) {
 		VK_SetDepthRange( 0.0f, 1.0f );
 	}
 	// Now check for surfacesprites: grass and the like that tr_surfacesprites.cpp grows on the triangles of the
-	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp.
+	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp. Surfaces of the level have
+	// theirs in a buffer on the device (vk_world.cpp, shaders/grass.vert).
+	if ( r_surfaceSprites->integer && isStatic ) {
+		VK_DrawGrass( transform );
+	}
 	if ( r_surfaceSprites->integer && !isStatic ) {
 		for ( int stage = 1; stage < shader->numUnfoggedPasses; stage++ ) {
 			if ( tess.xstages[stage].ss && tess.xstages[stage].ss->surfaceSpriteType ) {
@@ -1045,7 +1195,7 @@ static void VK_DrawNormals( void ) {
 	draw.tex0 = draw.tex1 = tr.whiteImage->texnum;
 	VectorSet4( draw.baseColor, 1.0f, 1.0f, 1.0f, 1.0f );
 	VK_SetDepthRange( 0.0f, 0.0f );
-	VK_DrawTess( &draw, VKP_GENERIC, VK_GLS_LINES | GLS_DEPTHMASK_TRUE, VK_CULL_MODE_NONE, qfalse );
+	VK_DrawTess( &draw, VKP_GENERIC, VK_GLS_LINES | GLS_DEPTHMASK_TRUE, VKC_NONE, qfalse );
 	VK_SetDepthRange( 0.0f, 1.0f );
 }
 
@@ -1093,12 +1243,6 @@ void RB_EndSurface( void ) {
 		Com_Error( ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit" );
 	}
 
-	// the volume a model throws its shadow through goes into the stencil buffer (tr_shadows.cpp of rd-vanilla)
-	if ( tess.shader == tr.shadowShader ) {
-		RB_ShadowTessEnd();
-		tess.numIndexes = 0;
-		return;
-	}
 	// for debugging of sort order issues, stop rendering after a given sort value
 	if ( r_debugSort->integer && r_debugSort->integer < tess.shader->sort ) {
 		return;

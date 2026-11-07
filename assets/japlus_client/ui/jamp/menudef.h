@@ -21,6 +21,13 @@
 #define ITEM_TYPE_MULTI			12        // multiple list setting, enumerated
 #define ITEM_TYPE_BIND			13		  // multiple list setting, enumerated
 #define ITEM_TYPE_TEXTSCROLL	14		  // scrolls text
+#define ITEM_TYPE_BAR			16		// VisionJK: a bar filled by a number of the game ("stat"), for the HUD
+#define ITEM_TYPE_VALUE			17		// VisionJK: that number as text
+#define ITEM_TYPE_CUBE			18		// VisionJK: the box of the icon of the game, turning, in the rectangle of the item
+#define ITEM_TYPE_LOGO			19		// VisionJK: that icon as a flat picture
+#define ITEM_TYPE_DESC			20		// VisionJK: what the item in focus is for: its name and its descText, in the rectangle of the item
+#define ITEM_TYPE_PAGESCROLL	21		// VisionJK: the bar of the list of a page ("scroll 1"), in the rectangle of the item
+#define ITEM_TYPE_CHANGES		22		// VisionJK: the settings the screen changed since it opened ("changesCvar" of the menu), each with a button that undoes it
     
 #define ITEM_ALIGN_LEFT 0                 // left alignment
 #define ITEM_ALIGN_CENTER 1               // center alignment
@@ -46,6 +53,7 @@
 #define WINDOW_STYLE_SHADER   3           // gradient bar based on background color 
 #define WINDOW_STYLE_TEAMCOLOR 4          // team color
 #define WINDOW_STYLE_CINEMATIC 5          // cinematic
+#define WINDOW_STYLE_PANEL 6              // VisionJK: a panel with round corners ("radius", "shadow", "glowcolor", "sheen")
 
 #define MENU_TRUE 1                       // uh.. true
 #define MENU_FALSE 0                      // and false
@@ -111,6 +119,12 @@
 #define FEEDER_SABER_STAFF_INFO				0x2c			// saber staff
 //MODIFICATION
 #define FEEDER_HOLSTERS				0x2d			//holsters model list
+#define FEEDER_VIDEOMODES					0x2e			// list control: "Desktop" and the sizes the display offers
+#define FEEDER_MUSICPLAYERS					0x2f			// VisionJK: the players of music, ticked for v_shareMusicPlayers
+#define FEEDER_IDSLOG						0x30			// VisionJK: the last lines of ids.log, the newest first
+#define FEEDER_CHANGELOG					0x31			// VisionJK: the versions of the changelog, the newest first
+#define FEEDER_CVARCLEAN					0x32			// VisionJK: the cvars no code used for a month (cvar_cleanup)
+#define FEEDER_FORCEMODEL					0x33			// VisionJK: the models for tay_forceEnemyModel and tay_forceAllyModel
 
 
 
@@ -354,6 +368,8 @@
 #define UI_CHAT_REPLY		295
 #define UI_CHAT_SPOT		296
 #define UI_CHAT_TACTICAL	297
+
+#define UI_CHANGELOG		298		// VisionJK: the entry of the changelog that is selected (ui_changelog.c)
 
 #define VOICECHAT_GETFLAG			"getflag"				// command someone to get the flag
 #define VOICECHAT_OFFENSE			"offense"				// command someone to go on offense

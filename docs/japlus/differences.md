@@ -62,7 +62,7 @@ Client (seen when the cgame and ui are compared with the original plugin on the 
 - In team games the HUD is not tinted in the color of the team. OpenJK took that out, 1.01 and the plugin draw
   the frames and ticks in light red or light blue.
 - Static models of a map (`misc_model_static`, for example the flag stands of `mp/ctf3`) are only added to the
-  scene when they are in the view, and cast no stencil shadow.
+  scene when they are in the view, and cast no stencil shadow (the stencil shadows are gone since 2026-11-02).
 - The own player is not drawn while he is a spectator. 1.01 and the plugin show him for the first frames after a
   join as spectator, until the second snapshot arrives.
 - In the menus: the mouse cursor is 40 pixels wide (1.01: 48), the scrollbar of the head list sits 2 pixels further
@@ -97,6 +97,13 @@ A bug of OpenJK that was fixed:
   corrected by the server. An original plugin on this server ignores the bit.
 - A model without the tags `*back`, `*hip_l` and `*hip_r` is loaded and simply has no saber on the body. The plugin
   refuses such a model.
+
+## What of the original was taken out
+
+- The commands of the blocking walls: BlockWallCreate, BlockWallDel, BlockWallNext, BlockWallPrev (players with
+  editor rights), BlockWallDraw, BlockWallWrite and BlockWallGrantEditor (rcon). The user on 2026-10-09: the web
+  panel drags the walls, the commands are not needed. The walls themselves are there and are predicted by the
+  clients now, see `server.md`. The client still knows none of these names for its tab completion.
 
 ## Where the client is knowingly not the plugin
 

@@ -1,0 +1,342 @@
+// ingame_leave.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_leave.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_leave"
+		visible					1
+		fullScreen				0
+		outOfBoundsClick
+		rect					788 80 620 352
+		focusColor				0.36 0.78 0.96 1
+		onOpen
+		{
+			show grpMenu ;
+			hide grpConfirm
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+
+		itemDef
+		{
+			name					vision_window
+			rect					0 0 620 352
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			stack					-1
+		}
+
+		itemDef
+		{
+			name					leave
+			text					@MENUS_MAIN_MENU
+			group					grpMenu
+			style					WINDOW_STYLE_PANEL
+			type					1
+			rect					24 24 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpMenu ;
+				hide buttons ;
+				show leaveConfirm
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					leave
+			group					grpMenu
+			text					@MENUS_RESTART_MATCH
+			style					WINDOW_STYLE_PANEL
+			type					1
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"cl_currentServerAddress"
+			enableCvar { "Localhost" }
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpMenu ;
+				hide buttons ;
+				show restartConfirm
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					leave
+			group					grpMenu
+			type					1
+			text					@MENUS_QUIT_PROGRAM
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				1 0.54 0.50 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpMenu ;
+				hide buttons ;
+				show quitConfirm
+			}
+			radius					6
+			backcolor				0.16 0.05 0.05 0.6
+			bordercolor				0.42 0.23 0.23 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					leaveConfirm
+			text					@MENUS_GO_TO_MAIN_MENU
+			group					grpConfirm
+			style					WINDOW_STYLE_EMPTY
+			rect					30 24 560 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				29
+			font					5
+			textscale				1.89
+			forecolor				1 1 1 1
+			decoration
+			visible					1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					leaveConfirm
+			text					@MENUS_YES
+			group					grpConfirm
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript leave
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					leaveConfirm
+			text					@MENUS_NO
+			group					grpConfirm
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpConfirm ;
+				show grpMenu
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					restartConfirm
+			text					@MENUS_MATCH
+			group					grpConfirm
+			style					WINDOW_STYLE_EMPTY
+			rect					30 24 560 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				29
+			font					5
+			textscale				1.89
+			forecolor				1 1 1 1
+			decoration
+			visible					1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					restartConfirm
+			text					@MENUS_YES
+			group					grpConfirm
+			type					1
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "map_restart" ;
+				close ingame_leave ;
+				close ingame
+			}
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					restartConfirm
+			text					@MENUS_NO
+			group					grpConfirm
+			type					1
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpConfirm ;
+				show grpMenu
+			}
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					quitConfirm
+			text					@MENUS_PROGRAM
+			group					grpConfirm
+			style					WINDOW_STYLE_EMPTY
+			rect					30 24 560 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				29
+			font					5
+			textscale				1.89
+			forecolor				1 1 1 1
+			decoration
+			visible					1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					quitConfirm
+			text					@MENUS_YES
+			group					grpConfirm
+			type					1
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript quit
+			}
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					quitConfirm
+			text					@MENUS_NO
+			group					grpConfirm
+			type					1
+			rect					24 236 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpConfirm ;
+				show grpMenu
+			}
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+		canvas					1600 1200
+		style					WINDOW_STYLE_EMPTY
+		descX					1098
+		descY					448
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
+	}
+}

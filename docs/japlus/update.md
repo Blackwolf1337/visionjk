@@ -1,0 +1,442 @@
+# The updater of the client
+
+The client asks the website whether there is a newer version of the game, tells the player, and on his word
+fetches the files that changed and puts them in place. It is not a JA+ feature. It is in the engine
+(`client/cl_update.cpp`) and in the ui module (`ui/ui_update.c`), so only the client of this tree has it. The
+dedicated server and the client that runs in a browser do not: a page is the newest version every time it is
+loaded.
+
+Added 2026-10-10. Run on Linux, under Wine and on a Windows 11 in a virtual machine, each against a server
+on the local network: see "Checked". Update channels (stable and development builds) added 2026-10-24, version
+0.2.8.
+
+## For players
+
+At its start the game asks the website once. That happens beside the game, which does not wait for the
+answer. If there is a newer version, the console says so and the main menu has a line above its EXIT button:
+
+```
+Version 0.1.1 is out. Click here to update (12.3 MB)
+```
+
+A click fetches the files that changed, the line shows how far that is, then the game ends and starts again by
+itself, twice in a row: once to put the files in place, once as the new version. Settings, binds and `.cfg`
+files are not touched.
+
+The same look is taken when the game is the newest version already, since 2026-10-11: a program of a version
+does not prove that its files are of it. Two lines can come of that, and a click on either puts it right:
+
+```
+Files of version 0.1.3 are missing or changed. Click here to repair (3.1 MB)
+Old modules are used in place of those of version 0.1.3. Click here to repair
+```
+
+The first names files in the folder of the game. The second names game modules (`cgame`, `ui`, `jampgame`) in
+the folder of the player (`Documents\My Games\VisionJK` on Windows, `~/.local/share/visionjk` on Linux): the
+game loads a module from there before its own, so one that was left there from an older version takes the
+place of the new one whatever the update brings. The repair gives them another name (`.vjkold` at the end)
+and deletes nothing. The console names the files.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_updateCheck` | 1 | 0: the website is not asked at the start |
+| `v_updateChannel` | stable | `stable` or `dev`, saved. Anything but `dev` is stable. See "The update channels" |
+| `v_updateURL` | https://jka.vision/downloads/update | where it asks. Only the command line can name another one, see "Who is trusted" |
+| `v_updateState`, `v_updateText` | | read only: what the updater is doing, and the line of the menu |
+| `v_version` | | read only: the version of this build, as the updater reads it |
+| `v_changelog` | 0 | read only: how many times the engine fetched the changelog, so the ui reads the files again |
+| `v_updated` | | set by the engine to the new version after a start that finished an update. The window "What's new" opens once and empties it |
+| `v_uiURL` | 0 | read only: 1 when the engine can open an address in the browser of the system (`ext.OpenURL`) |
+
+| Command | |
+|---------|---|
+| `v_update_check` | asks the website now, also with `v_updateCheck 0` |
+| `update` | fetches the newer version, puts it in place and starts the game again. Only in the main menu, not on a server |
+| `v_update_cancel` | stops a download. What came in is kept for the next try |
+
+On Linux the game asks through the `libcurl` of the system (`libcurl.so.4`). Without it there is no update
+check, one line says so when `v_update_check` is typed, and the game runs.
+
+## The update channels
+
+Since 0.2.8 there are two. `stable` (the default) offers releases. `dev` offers development builds, early test
+versions that can crash, corrupt configs or not work on some servers, and the release where that is newer than
+the last development build. A development build is a version like `0.2.8-dev.2` (tag `v0.2.8-dev.2`).
+
+The order is `0.2.8-dev.1` < `0.2.8-dev.2` < `0.2.8` < `0.2.9-dev.1`. Inside, a version has a fourth part:
+the number of the development build, or `UPD_STABLE` (10000) for a release. A build between two tags
+(`v0.2.7-4-gc0e1c5a2`, `v0.2.8-dev.1-3-gabc1234`) takes the version of the tag it was made after. It has
+commits that tag does not have, so only a strictly newer version on its channel is offered (on `dev` newer
+development builds and releases, on `stable` newer releases). The version of its own tag is not offered as a
+repair, and a development based build on `stable` is not taken back to an older release. As always the update
+is only offered, the player starts it with `update` or a click. The console names such a build by its full
+version: "This is version 0.0.2-1-gabc1234. The newest version is 0.0.2." A build whose tag has no version
+the updater can read (`vUNKNOWN` without git, `v0.1.0-rc1`) gets no updates and the console says so.
+
+Changing `v_updateChannel` makes the client ask the website again at once. Switching to `dev` prints:
+
+```
+Development builds are early test versions. They can crash, corrupt your configs or not work on some servers. You can switch back to stable at any time.
+```
+
+The menu has the row "Update Channel" (Stable / Development) in Setup, Network, under "Check for Updates".
+Choosing Development opens a page with that warning and the buttons "Stay on Stable" and "Switch to
+Development". Only the second sets the cvar (`channel_page` in `tools/menus/options.py`, the script command
+`updateChannel` in `ui/ui_main.c`).
+
+Back to stable: a development build on the stable channel takes an older release too. The console says
+"You are on development build X, but the update channel is set to stable. To switch to stable version Y, type
+update here or click the line on the main menu", and the line of the menu reads "Back to stable version Y.
+Click here to switch" (`upd.back`).
+
+Files only the development build had: whenever a development build is left (back to stable, to a newer
+release, or to the next development build), the client fetches `lists/<own version>/<system>.txt`. Each file
+that list has and the new list lacks, except a `keep` file, goes into the journal as `gone <path>`. The next
+start puts it aside as `.vjkold` before the engine opens any file, and it is deleted with the other old
+files. If the own list can not be fetched, the update still goes through and the console says that files only
+that build had may stay.
+
+Players on 0.2.7 and older have no channel setting. They get it by updating to 0.2.8, and a list for the
+stable channel stays where it was, so they keep working.
+
+## The changelog
+
+The window "What's new" lists what changed in each version. At the left are the versions, at the right the
+selected entry. A version has a tag: "Development build", "Installed" (the version of this build, `v_version`)
+or "Not installed yet". Bold words are in Noto Sans Bold, code is in the mono font on a dark inset, links are
+light blue. A first click on a link shows its address and asks for a second click, which opens it in the
+browser of the system (only when `v_uiURL` is 1). The text scrolls with the wheel, the page keys, Home and End,
+and a click on the bar. While a newer version is out (`v_updateState` 1) the window has a button "Update Now".
+It works in the classic menus too.
+
+It is opened from:
+
+- the pill "What's new" on the main menu, next to the update line. While an update is offered it says
+  "What's new in <version>"
+- the row "Changelog" in Setup and in Network (in a game too)
+- once by itself at the first start after an update (`v_updated`)
+
+The text comes from two files, both in the format of `changelog/<version>.md` of the website repository
+(front matter with `version:`, `date:` and `summary:`, then the entries):
+
+- `base/visionjk/changelog.md` came with the zip. `tools/build-game.sh` of the website puts it in.
+- `base/visionjk/changelog-fetched.md` in the folder of the player (`FS_SV_FOpenFileWrite`) is what the engine
+  fetched.
+
+The engine fetches `<v_updateURL>/changelog.md` on the stable channel and `<v_updateURL>/dev/changelog.md` on
+the dev channel, in the same thread as the file list and with the same checks. It takes at most 256 KB and keeps
+the answer only if it starts with `---\nversion:`. Each fetch counts up `v_changelog`. The window shows the
+file whose newest entry is the newer one, so an offered version can be read before it is fetched. The parser
+for the text is in `codemp/ui/ui_changelog.c` (the Markdown subset is the one of `ui_markdown.c`, tested by
+`tests/vjk/markdown.cpp`).
+
+## What is never replaced
+
+- A build whose tag is not a release or a development build. The version of a build is the tag it was made
+  from or after, and only a tag like `v0.1.1` or `v0.2.8-dev.1` counts. A build between two tags
+  (`v0.1.1-3-gabc1234`) is updated only to a newer version, see "The update channels".
+- A `.cfg` that is there (`japlus/server.cfg` and the others). A release can bring a new one, it never
+  replaces one.
+- Anything outside the folder the program is in, and anything a file list names that is not a plain path
+  below that folder.
+- A game that is started with another `fs_basepath` than the folder of its program. That is set up by hand.
+  The folder of the program is the one the system names (`Sys_ProgramFolder`), not the one the program was
+  called with: on Windows that is empty for a program started by its bare name from a batch file. Both are
+  compared as whole paths, so the same folder spelled another way is the same folder.
+- A game that is connected to a server: `update` says to leave first.
+
+## How it works
+
+**The file list.** The website has one for every system and channel, plain text:
+
+```
+https://jka.vision/downloads/update/windows-x86_64.txt
+https://jka.vision/downloads/update/linux-x86_64.txt
+
+visionjk-update 1
+version 0.1.1
+file 2051598 <sha256, 64 hex digits> visionjk.x86_64.exe
+keep 13071 <sha256> japlus/server.cfg
+```
+
+The first line is the format: a client reads no list of another format than its own, and skips a line that
+starts with a word it does not know. `keep` is a file that is only put there if it is missing. The files are at
+`<address>/<version>/<system>/<path>`. `tools/build-game.sh` of the website writes both.
+
+Under the address the layout is:
+
+```
+<system>.txt                       the stable list (as before, so old clients keep working)
+dev/<system>.txt                   the dev list: the last development build, or the release where that is
+                                   newer or where there is no development build for the system
+<version>/<system>/...             the files, only of versions a list names
+lists/<version>/<system>.txt       a copy of every list ever written, never removed
+```
+
+The client asks for `dev/<system>.txt` on the dev channel and for `<system>.txt` otherwise. The copies under
+`lists/` are what a client reads when it leaves a development build (see "The update channels").
+
+**Asking.** A thread fetches the list (`Sys_HttpGet`). If its version is newer than the build, every file of
+the list is compared with the one that is here: by size, and if that is the same by SHA-256. What differs or
+is missing has to be fetched. The game learns the result some frames later and says it, in the console and in
+`v_updateState` and `v_updateText`, which the ui module draws on the menu named `main`. That line is drawn
+in code and is no item of a menu file, so it is there with the main menu of the client assets in `japlus`,
+where the game starts, and with the one of the original game in `base`.
+
+**Fetching.** Each file goes to `<path>.vjknew` beside the one it replaces and is hashed as it comes in. It
+counts only with exactly the size and the SHA-256 the list names, anything else is deleted. One that is there
+from an earlier try and is right is not fetched again. Nothing of the game is touched in this step.
+
+**The swap.** A program file that runs can not be written to on Windows, only renamed, and a file the game has
+open (a pk3) not even that. So the game itself moves nothing. It writes a journal into its folder
+(`visionjk-update.txt`: which files wait), ends, and starts again. The first thing `main()` does, before the
+engine is started and before any file is open, is to look for that journal (`CL_UpdateResume`):
+
+1. Every file that waits: the old one becomes `<path>.vjkold`, the new one takes its name.
+2. If one can not be moved, the ones that were are moved back, the journal is dropped and the game starts as
+   the old version and says which file it was. `update` then tries again with the files that are still there.
+3. Otherwise the journal says `done` and the program starts once more, now as the new one.
+4. That start deletes the `.vjkold` files and the journal, and the console says that the game was updated.
+
+The journal can also have lines `gone <path>`: files of a development build that was left. They are put aside
+like the old files in step 1 (renamed to `.vjkold`, nothing new takes their name) and deleted with them. A
+build from before the channels skips such a line.
+
+A swap that was cut short (the machine went off) is finished by the next start in the same way. On Linux a
+file keeps whether it can be run, a new one gets that by its name (`visionjk.x86_64`).
+
+**The repair.** The swap takes a file whose `.vjknew` is not there for one that was moved by a start before,
+which is what lets it finish a swap that was cut short. It also means that a `.vjknew` that went missing
+between the download and the next start (an antivirus that takes a new program file) is left out without a
+word: the program is the new one, that file is the old one, and a list of the same version was never compared.
+On 2026-10-11 a player had the program of 0.1.3 with the `cgame` of 0.1.2 that way or the next one. So the
+check compares the files also when the list is of the version that runs (`upd.repair`), and what differs is
+fetched and swapped like an update. That look is made at every start, so a file bigger than 16 MB (the asset
+pack, the library of Steam Audio) is taken by its size, the programs and modules are hashed. A `keep` file
+that is missing is not missed by a repair, its owner may have deleted it.
+
+The other way to the same state: the engine loads a game module from the folder of the player before the one
+in the folder of the game (`Sys_LoadGameDll`: `fs_homepath`, then `fs_basepath`). A module of an older version
+that lies there wins over every update. The check hashes the modules of the list that also exist there
+(`upd.shadow`), with an update and with a repair, and `update` gives the ones that differ the ending
+`.vjkold`. It is the one thing the updater touches outside the folder of the game: a file with the path of a
+module of the list, renamed, never deleted. If nothing else has to be fetched the game starts again once.
+A build that is no release (with modules in a folder of its own on purpose) is not checked.
+
+"Before any file is open" has to hold for the start the game makes of itself too, and up to version 0.1.2 it
+did not on Windows. Two things came together. The video of the main menu is read from the asset pack
+(`japlus/zz_japlus_client_assets.pk3`) through a handle of its own, and nothing closed that handle when the game
+ended. And the game started its successor with "inherit handles", so that a log somebody sent its output to
+goes on: a process started that way gets every handle of its parent that can be inherited, and every file the
+C library opens can be. The successor held the asset pack without knowing it, the updater in it could not give
+the file another name (error 32, held by its own process), moved everything back and said "can not be
+replaced". The files were fetched and never put in place, whenever a release changed the asset pack. Since
+then `FS_Shutdown` closes every file that is still open when the game ends, and the successor gets the three
+standard handles and no other (`Sys_RelaunchWithOutput`, a handle list of `CreateProcess`), or none at all if
+that can not be done.
+
+**The web.** The engine brings no code for https. On Windows it asks WinHTTP, which is part of the system
+(`sys_http_win32.cpp`). Everywhere else it loads the `libcurl` of the system when it first needs it and is
+built without its headers (`sys_http_curl.cpp`). Both check the certificate of the server against what the
+system trusts, follow no redirect, and take nothing but an answer of 200.
+
+| File | Content |
+|------|---------|
+| `client/cl_update.cpp` | the journal, the swap at the start, the thread, cvars and commands |
+| `shared/update/upd_manifest.c`, `.h` | reading a file list, versions, which paths and addresses are allowed. Calls nothing of the engine |
+| `shared/web/web_sha256.c` | SHA-256 in pieces |
+| `shared/sys/sys_http.h`, `sys_http_win32.cpp`, `sys_http_curl.cpp` | one question to a web server |
+| `shared/sys/sys_main.cpp` | `main()` calls `CL_UpdateResume`, and the program starts itself again when it has ended (`Sys_RestartOnExit`) |
+| `ui/ui_update.c` | the line on the main menu, and the pill "What's new" |
+| `ui/ui_changelog.c`, `ui/ui_markdown.c` | the window "What's new" (`UI_CHANGELOG`, `FEEDER_CHANGELOG`) and the reader of its text |
+| `ui/jamp/changelog.menu`, `ui/vision/changelog.menu` | the menu of the window (the second one is made by `tools/menus`) |
+| `base/visionjk/changelog.md` | the changelog that came with the zip |
+| `base/visionjk/changelog-fetched.md` | the changelog the engine fetched, in the folder of the player |
+
+## Who is trusted
+
+The server at the address the game asks, by its certificate. A release is not signed (decided 2026-10-10).
+What a client fetches is checked against the file list, and the file list comes from the same server.
+
+So whoever can change the files of that server, or holds the name `jka.vision` later, decides what the
+clients out there install. Keep the domain renewed.
+
+Because of that the address is hard to change:
+
+- It is compiled in (`-DUpdateURL=...`, by default `https://jka.vision/downloads/update`).
+- A player can name another one on the command line and nowhere else:
+  `visionjk.x86_64 +set v_updateURL https://example.org/update`. `Com_Init` takes it right after the command
+  line was read, before any config file is run, and the updater keeps a copy of its own and never reads the
+  cvar again. No config, no module, no game server and nobody at the console can send a client elsewhere.
+- An address a player gives has to be `https://`. If it is not, the game says so and asks the one it was
+  built with.
+- The console takes two slashes as the start of a comment, which cut such an address off behind `https:`.
+  `main()` now puts an argument with `//` in it into quotes before it hands the command line on, so the
+  line above works as it is written, also from a shortcut on Windows.
+
+That one way in is what moving to another domain takes: a new release has the new address compiled in, and
+a player with an older one starts it once with `+set v_updateURL`.
+
+If the website can not be reached, nothing happens: no answer, no word (with `developer 1` one line), and the
+next start asks again. A download that breaks off changes no file.
+
+## For whoever makes a release
+
+- `tools/build-game.sh` of the website repository writes the lists and the files into
+  `site/downloads/update`, `tools/deploy.sh --check` looks whether they are true. From the moment a list is
+  published, every release build that is started offers that version.
+- Before `tools/build-game.sh <version>`, also of a development build, `changelog/<version>.md` of the website
+  has to exist, in the words of a player. The script stops without it. It puts `base/visionjk/changelog.md`
+  into each zip and writes `site/downloads/update/changelog.md` (on a release) and
+  `site/downloads/update/dev/changelog.md` (always) for the game to fetch.
+- A version with a suffix other than `-dev.N` (`0.1.0-rc1`) gets no list and never updates itself.
+- A development build (`tools/build-game.sh 0.2.8-dev.1`) gets lists in `dev/` and `lists/` and leaves the
+  stable list alone. A release that is not older than the development build on the site makes the dev lists
+  copies of its own (see the README of the website repository).
+- `-DUpdateVersion=v0.0.1` makes a build take itself for that release, for a try against a server of one's
+  own together with `-DUpdateURL=`. The address of a build may be `http://`, the one a player gives may not.
+- Windows, versions 0.1.1 and 0.1.2: their updater can not replace the asset pack (see "The swap"). A release
+  whose `japlus/zz_japlus_client_assets.pk3` is byte for byte the one they have reaches them, any other does
+  not. So the first release with the repaired updater has to bring the asset pack of 0.1.2 unchanged: the
+  players of 0.1.2 get it by themselves, and from there on every release reaches them. The players of 0.1.1
+  have another asset pack and need the zip from the website once.
+
+## Checked
+
+2026-10-10, Linux, no sound and no window in sight. The tools are in `tools/updatetest` beside the tree.
+
+- Unit tests (`run.sh`, with the address and undefined behaviour sanitizers): 182 checks of versions, of what
+  a path and an address may look like, of the reader of file lists and of SHA-256. Among them 300000 lists
+  with something changed in them or made of noise, each in a buffer of exactly its size: nothing was read
+  past one, and no list that was taken named a path the game does not touch. SHA-256 against the values of
+  the standard, whole and in pieces of every size around a block.
+- The reader and SHA-256 against real files: the lists `tools/build-game.sh` writes for the two zips of
+  0.1.0 (27 and 28 files) were read, and every one of the 55 checksums was the one `sha256sum` gives.
+- End to end (`e2e.sh`): a game folder of a made up version 0.0.1 with the original game linked into it, a
+  web server on the loopback address with version 0.0.2 (its lists written by `fill_update` of the website's
+  build script), and the client on a hidden workspace. The two programs are the engine of the build with
+  `cl_update.cpp` built again for the test address and each version. 72 checks in nine runs:
+  - 0.0.1 finds 0.0.2, the console and the line of the menu say so, `update` fetches the four files that
+    differ and none of the others, the game starts again twice and is 0.0.2: the new program, still one that
+    can be run, the changed file, the `.cfg` the player had untouched, the one he did not have and a file in
+    a new folder in place, no `.vjknew`, `.vjkold` or journal left, and nothing newer offered.
+  - A file of the server that is not the one of the list: the console names it, nothing was changed, what
+    came in right before it is kept, and the next try fetches only what is missing and goes through.
+  - A swap that was cut short after one file of four: the next start finishes it and is 0.0.2.
+  - A file that can not be put in place (its folder read only): the two that had been moved are moved back,
+    the journal is gone, the game starts as 0.0.1, says which file it was and offers 0.0.2 again.
+  - `v_updateCheck 0`: the server gets no request.
+  - No server: the start says nothing, `v_update_check` says why, the game runs.
+  - The address: without https on the command line it is refused and the address of the build is asked. A
+    config file with `set` and `seta` can not change it, neither can the console. With https on the command
+    line it is taken, and a server that speaks no TLS there gives no update ("SSL connect error").
+  - A build with no readable version (`vUNKNOWN`) and a game with another `fs_basepath`: each says why it
+    does not update, and the server gets no request. The folder of the program under another spelling is not
+    another folder.
+  - A build between two releases (`devbuild`): 0.0.1-5-gabc1234 updates to 0.0.2, 0.0.2-1-gabc1234 gets
+    nothing, `vUNKNOWN` gets the message that it has no version number.
+- The line on the menu was looked at in two screenshots, once offered and once failed, on the main menu of
+  the client assets and on the one of the original game.
+- `check_update` of the website's `tools/deploy.sh`, by itself on a copy of that server: a true list
+  passes, and a changed file, a byte flipped at the same size, a file too many, a file missing, another
+  version on the page and no release on the page are each named.
+- The Windows build under Wine 11.19 (`WIN=1 e2e.sh`, a Wine prefix of its own): the same nine runs, 73
+  checks. The list and the files came in through WinHTTP, the game started itself again twice
+  (`CreateProcess`), put the files in place and was 0.0.2, with the paths of Windows. Its release had one
+  file more, `SDL2.dll` with other bytes: a library the running program has loaded from its start was
+  replaced. What a program writes to its output goes on with the one it starts, so a log has all three.
+
+- Windows 11 Pro 24H2 (German, fresh install, Defender as it comes) in a virtual machine without a graphics
+  card, the test folder `tools/updatetest/wintest.sh` packs, started by its batch file, driven by keys from
+  outside and read from pictures of its screen:
+  - The game runs there with the OpenGL Windows has by itself. At the first start Windows asks whether the
+    program may be reached from the network (its firewall, as for any game), and nothing else ever asked or
+    warned.
+  - The line stands on the main menu and lights up under the cursor of the game.
+  - `update` in a folder of the user (`C:\vjk-test`): five files came in through WinHTTP, among them the
+    program and `SDL2.dll`, which the running program has loaded. One second later the game had started
+    itself again twice and was 0.0.2. No `.vjknew`, `.vjkold` or journal was left, also not for one start:
+    the old program could be deleted at once. The `.cfg` the player had was his own still. The log of the
+    batch file has the lines of all three starts.
+  - The same in `C:\Program Files`, as a user without the right to write there: "The folder of the game can
+    not be written to (base/new.cfg)", the line of the menu says that it failed, no file was fetched and
+    nothing in the folder changed.
+- Builds: client, ui module and dedicated server for Linux 64, client and ui module with mingw for Windows 64
+  (that build folder has no dedicated server), and the client for the browser. The Windows client imports
+  `WINHTTP.dll` in addition to what it imported before.
+
+Found by these runs and fixed: `+set v_updateURL https://...` was cut off by the console (see "Who is
+trusted"), the line of the menu lay over the top of the logo, and, only on the real Windows: a game started
+by its bare name from a batch file took the folder it was called with, which is empty there, for its own,
+and refused to update as a game that reads its files from somewhere else. Wine names the whole path and did
+not show it.
+
+The same virtual machine again on 2026-10-11, after a player said that on Windows the files are written and
+not replaced, this time with the real releases and the website itself (`https://jka.vision`):
+
+- Release 0.1.1 as it is: 13 files came in, then "japlus/zz_japlus_client_assets.pk3 can not be replaced", and
+  the game was 0.1.1 still. A build that says why: the asset pack could not be moved aside, error 32, and the
+  one process that held it was the new one itself, also five seconds later.
+- The build with the repair, taking itself for 0.1.1, in a folder with the asset pack of 0.1.1: updated to
+  0.1.2, asset pack and program replaced, nothing left over. Once with its output sent to a file (the log has
+  the lines of all starts, so the standard handles still go on) and once started as a player starts it, with
+  no console and nothing redirected.
+- The updater as it is in 0.1.2, offered a release in which only the program differs: updated. That is the
+  way the players of 0.1.2 get the repair.
+- On Linux, what the game has open when it ends, read with strace: before the repair one handle on the asset
+  pack, after it none.
+
+- After 0.1.3 was on the website: release 0.1.2 exactly as it was shipped, started with no console, saw
+  "Version 0.1.3 is out" (23.7 MB, eleven files, the asset pack not among them), fetched it and was 0.1.3
+  after its two starts, with nothing left over.
+
+The tests before this did not find it because none of their releases changed a pk3, and Wine was not asked.
+
+- The repair, 2026-10-11 (`e2e.sh repair shadow same`, three more runs, on Linux and with the Windows build
+  under Wine, 43 checks each time, and the nine older runs again after the change: 73 checks on Linux, all
+  twelve runs under Wine 117):
+  - `repair`: the program of 0.0.2 in a folder where one file was of 0.0.1, the game module had its size and
+    another last byte, and one file was missing. Named on the console and on the line of the menu, `update`
+    fetched those three and nothing else (not the program, not the asset pack, not a `.cfg` the player does
+    not have), the swap put them in place, and the start after it had nothing to say.
+  - `shadow`: a ui module with some bytes behind its end and a cgame module with another last byte in the
+    folder of the player, and a game module there that is the one of the release. The first two were named,
+    `update` gave them the ending `.vjkold` (the ui module while the game had it loaded), fetched nothing,
+    the game started again and had nothing to say. The third stayed. Then the same with 0.0.1 and a newer
+    version out: the update moved the module of the player aside on its way.
+  - `same`: every file right and a module of the release in the folder of the player: nothing offered,
+    nothing fetched, nothing touched.
+- The repair on Windows 11, 2026-10-11, in the test VM (`tools/updatetest/winfs.sh` makes the game folder
+  and a batch file that runs there and sends back what the game printed, what is left in the folders and the
+  SHA-256 of seven files of the game). Four runs, each with a fresh folder of the made up version 0.0.2:
+  `same`, `repair` and `shadow` as above, and an update from 0.0.1 with a ui module of the player in the way.
+  All four ended with "This is version 0.0.2, and the newest one is 0.0.2.", nothing left over, and the seven
+  files the ones of the release. `repair` fetched its three files and no other, `shadow` fetched none, the
+  update fetched the program and the `.cfg` that was new. A fifth run of `shadow` with `developer 1` shows
+  where the ui module came from: before the repair the game found none in `japlus` of either folder and
+  loaded the one in `base` of the folder of the player, that one was renamed while the game had it loaded,
+  and the start after it names that folder as having none and loads the one of the game. Windows asked its
+  firewall question at the first start and nothing else.
+
+Channels, 2026-10-24:
+
+- Unit tests (`tests/vjk/update.cpp`): parsing, the order of versions (with the dev number and `UPD_STABLE`),
+  the version text, and lists that name a development version.
+- `tools/test/updater/e2e.sh` has three scenarios besides the old ones: `channel` (0.0.2 switches to dev and
+  gets 0.0.3-dev.1, the console warns), `back` (the development build on the stable channel goes back to 0.0.2
+  and its own file goes) and `devstable` (on the dev channel the release 0.0.3 comes over 0.0.3-dev.1).
+- `tools/test/all.sh` runs all release tests in parallel: smoke, sanitize, lint, and with `--updater` the
+  updater on Linux and Windows.
+
+Not checked:
+
+- An antivirus that takes a `.vjknew` away, which is the case the repair is for: the tests put the wrong
+  files there by hand. Defender said nothing in any of the runs.
+- A click on the line with a real mouse. The cursor of the game was moved onto it once (it lit up), a click
+  through the two pointer devices of the virtual machine could not be sent cleanly. The runs typed `update`.
+- Windows 10, a Windows with a graphics driver, an antivirus other than Defender, and a program that was
+  fetched with a browser (which marks it as from the internet; this one came through curl).
+- A real https server with a real certificate, and a certificate that is wrong. The test server spoke plain
+  http, which only the address of a build may be.
+- A download that is stopped (`v_update_cancel`) or a line that drops in the middle of a file.
+- A release made by `tools/build-game.sh` from start to end, and the site behind its proxy.

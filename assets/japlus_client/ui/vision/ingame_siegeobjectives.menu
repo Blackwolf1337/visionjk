@@ -1,0 +1,922 @@
+// ingame_siegeobjectives.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_siegeobjectives.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_siegeobjectives"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					190 80 1220 856
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_EMPTY
+		descX					800
+		descY					50
+		descScale				1.4
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onClose
+		{
+			hide seconddescA
+			hide seconddescB
+			hide seconddescC
+			hide seconddescD
+			hide seconddescE
+			hide seconddescF
+			hide seconddescG
+			hide secondpicA
+			hide secondpicB
+			hide secondpicC
+			hide secondpicD
+			hide secondpicE
+			hide secondpicF
+			hide secondpicG
+			hide secondpic_text
+			hide missionpics
+		}
+		onOpen
+		{
+			show primeicon
+			hide seconddescA
+			hide seconddescB
+			hide seconddescC
+			hide seconddescD
+			hide seconddescE
+			hide seconddescF
+			hide seconddescG
+			hide secondpicA
+			hide secondpicB
+			hide secondpicC
+			hide secondpicD
+			hide secondpicE
+			hide secondpicF
+			hide secondpicG
+			exec "siegeCvarUpdate"
+			setitembackground mappic "*siege_mapgraphic"
+			setitembackground primeicon "*siege_primobj_mapicon"
+			setitembackground primepic "*siege_primobj_gfx"
+			setitembackground secondpicA "*siege_objective1_gfx"
+			setitembackground secondpicB "*siege_objective2_gfx"
+			setitembackground secondpicC "*siege_objective3_gfx"
+			setitembackground secondpicD "*siege_objective4_gfx"
+			setitembackground secondpicE "*siege_objective5_gfx"
+			setitembackground secondpicF "*siege_objective6_gfx"
+			setitembackground secondpicG "*siege_objective7_gfx"
+			setitembackground secondiconA "*siege_objective1_mapicon"
+			setitembackground secondiconB "*siege_objective2_mapicon"
+			setitembackground secondiconC "*siege_objective3_mapicon"
+			setitembackground secondiconD "*siege_objective4_mapicon"
+			setitembackground secondiconE "*siege_objective5_mapicon"
+			setitembackground secondiconF "*siege_objective6_mapicon"
+			setitembackground secondiconG "*siege_objective7_mapicon"
+			setitemrectcvar primeicon "siege_primobj_mappos"
+			setitemrectcvar secondiconA "siege_objective1_mappos"
+			setitemrectcvar secondiconB "siege_objective2_mappos"
+			setitemrectcvar secondiconC "siege_objective3_mappos"
+			setitemrectcvar secondiconD "siege_objective4_mappos"
+			setitemrectcvar secondiconE "siege_objective5_mappos"
+			setitemrectcvar secondiconF "siege_objective6_mappos"
+			setitemrectcvar secondiconG "siege_objective7_mappos"
+		}
+		onESC
+		{
+			hide seconddescA
+			hide seconddescB
+			hide seconddescC
+			hide seconddescD
+			hide seconddescE
+			hide seconddescF
+			hide seconddescG
+			hide secondpicA
+			hide secondpicB
+			hide secondpicC
+			hide secondpicD
+			hide secondpicE
+			hide secondpicF
+			hide secondpicG
+			hide secondpic_text
+			hide missionpics
+			close all;
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+
+		itemDef
+		{
+			name					background_pic
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					0 0 1220 856
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			backcolor				0.031 0.055 0.11 0.97
+			bordercolor				0.11 0.18 0.29 1
+			radius					12.8
+			shadow					28
+		}
+
+		itemDef
+		{
+			name					mappic
+			group					none
+			style					WINDOW_STYLE_SHADER
+			rect					840 84 360 696
+			forecolor				1 1 1 .6
+			visible					1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			decoration
+			background				"*siege_mapgraphic"
+		}
+
+		itemDef
+		{
+			name					objectivetitle
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_MISSION_OBJECTIVES
+			rect					240 10 780 56
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				390
+			textaligny				8.5
+			outlinecolor			1 .5 .5 .5
+			font					5
+			textscale				1.34
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					primaryobj
+			rect					20 84 400 48
+			type					ITEM_TYPE_TEXT
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_PRIMARY_OBJECTIVES
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				-1.6
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			decoration
+			radius					6
+		}
+
+		itemDef
+		{
+			name					primedesc
+			rect					20 136 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_primobj_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondobj
+			rect					20 300 400 48
+			type					ITEM_TYPE_TEXT
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_SECONDARY_OBJECTIVES
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				-1.6
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			decoration
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjA
+			rect					430 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_1
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective1_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				show seconddescA
+				hide seconddescB
+				hide seconddescC
+				hide seconddescD
+				hide seconddescE
+				hide seconddescF
+				hide seconddescG
+				show secondpicA
+				hide secondpicB
+				hide secondpicC
+				hide secondpicD
+				hide secondpicE
+				hide secondpicF
+				hide secondpicG
+				show secondiconA
+				hide secondiconB
+				hide secondiconC
+				hide secondiconD
+				hide secondiconE
+				hide secondiconF
+				hide secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjB
+			rect					488 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_2
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective2_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				hide seconddescA
+				show seconddescB
+				hide seconddescC
+				hide seconddescD
+				hide seconddescE
+				hide seconddescF
+				hide seconddescG
+				hide secondpicA
+				show secondpicB
+				hide secondpicC
+				hide secondpicD
+				hide secondpicE
+				hide secondpicF
+				hide secondpicG
+				hide secondiconA
+				show secondiconB
+				hide secondiconC
+				hide secondiconD
+				hide secondiconE
+				hide secondiconF
+				hide secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjC
+			rect					546 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_3
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective3_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				hide seconddescA
+				hide seconddescB
+				show seconddescC
+				hide seconddescD
+				hide seconddescE
+				hide seconddescF
+				hide seconddescG
+				hide secondpicA
+				hide secondpicB
+				show secondpicC
+				hide secondpicD
+				hide secondpicE
+				hide secondpicF
+				hide secondpicG
+				hide secondiconA
+				hide secondiconB
+				show secondiconC
+				hide secondiconD
+				hide secondiconE
+				hide secondiconF
+				hide secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjD
+			rect					604 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_4
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective4_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				hide seconddescA
+				hide seconddescB
+				hide seconddescC
+				show seconddescD
+				hide seconddescE
+				hide seconddescF
+				hide seconddescG
+				hide secondpicA
+				hide secondpicB
+				hide secondpicC
+				show secondpicD
+				hide secondpicE
+				hide secondpicF
+				hide secondpicG
+				hide secondiconA
+				hide secondiconB
+				hide secondiconC
+				show secondiconD
+				hide secondiconE
+				hide secondiconF
+				hide secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjE
+			rect					662 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_5
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective5_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				hide seconddescA
+				hide seconddescB
+				hide seconddescC
+				hide seconddescD
+				show seconddescE
+				hide seconddescF
+				hide seconddescG
+				hide secondpicA
+				hide secondpicB
+				hide secondpicC
+				hide secondpicD
+				show secondpicE
+				hide secondpicF
+				hide secondpicG
+				hide secondiconA
+				hide secondiconB
+				hide secondiconC
+				hide secondiconD
+				show secondiconE
+				hide secondiconF
+				hide secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjF
+			rect					720 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_6
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective6_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				hide seconddescA
+				hide seconddescB
+				hide seconddescC
+				hide seconddescD
+				hide seconddescE
+				show seconddescF
+				hide seconddescG
+				hide secondpicA
+				hide secondpicB
+				hide secondpicC
+				hide secondpicD
+				hide secondpicE
+				show secondpicF
+				hide secondpicG
+				hide secondiconA
+				hide secondiconB
+				hide secondiconC
+				hide secondiconD
+				hide secondiconE
+				show secondiconF
+				hide secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					secondobjG
+			rect					778 300 48 48
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			text					@MENUS_7
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				24
+			textaligny				0.4
+			backcolor				0.11 0.18 0.29 0.45
+			forecolor				0.36 0.78 0.96 1
+			visible					1
+			bordercolor				0.086 0.149 0.247 1
+			cvartest				"siege_objective7_inuse"
+			showcvar { "2" }
+			action
+			{
+				show secondpic_text
+				hide seconddescA
+				hide seconddescB
+				hide seconddescC
+				hide seconddescD
+				hide seconddescE
+				hide seconddescF
+				show seconddescG
+				hide secondpicA
+				hide secondpicB
+				hide secondpicC
+				hide secondpicD
+				hide secondpicE
+				hide secondpicF
+				show secondpicG
+				hide secondiconA
+				hide secondiconB
+				hide secondiconC
+				hide secondiconD
+				hide secondiconE
+				hide secondiconF
+				show secondiconG
+			}
+			radius					6
+		}
+
+		itemDef
+		{
+			name					seconddescA
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective1_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					seconddescB
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective2_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					seconddescC
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective3_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					seconddescD
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective4_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					seconddescE
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective5_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					seconddescF
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective6_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					seconddescG
+			rect					20 352 804 152
+			type					ITEM_TYPE_TEXT
+			cvar					"siege_objective7_desc"
+			font					5
+			textscale				1.38
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				12
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			autowrapped
+			decoration
+		}
+
+		itemDef
+		{
+			name					primeicon
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconA
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconB
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconC
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconD
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconE
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconF
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondiconG
+			group					missionpics
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					primepic_text
+			rect					20 764 384 28
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_PRIMARY_OBJECTIVES
+			font					5
+			textscale				1.04
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				4
+			forecolor				0.91 0.77 0.42 1
+			visible					1
+			autowrapped
+			decoration
+			textaligny				1.8
+		}
+
+		itemDef
+		{
+			name					secondpic_text
+			rect					424 764 384 28
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_SECONDARY_OBJECTIVES
+			font					5
+			textscale				1.04
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				4
+			forecolor				0.91 0.77 0.42 1
+			visible					0
+			autowrapped
+			decoration
+			textaligny				1.8
+		}
+
+		itemDef
+		{
+			name					primepic
+			group					primepic
+			rect					20 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicA
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicB
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicC
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicD
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicE
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicF
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					secondpicG
+			group					missionpics
+			rect					424 508 384 256
+			style					WINDOW_STYLE_SHADER
+			background				"gfx/2d/select"
+			forecolor				1 1 1 1
+			border					1
+			bordercolor				0.086 0.149 0.247 1
+			visible					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					exit
+			text					@MENUS_OKAY
+			type					1
+			textscale				1.72
+			group					grpControlbutton
+			type					ITEM_TYPE_BUTTON
+			rect					320 784 600 52
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				300
+			forecolor				0.91 0.77 0.42 1
+			backcolor				.37 .1 .1 1
+			visible					1
+			action
+			{
+				play "sound/misc/nomenu.wav" ;
+				hide missionpics
+				close ingame_siegeobjectives ;
+			}
+			mouseEnter { setitemcolor 1 1 1 1 }
+			mouseExit { setitemcolor .79 .64 .22 1 }
+			font					5
+			textaligny				3
+		}
+		canvas					1600 1200
+	}
+}

@@ -1,0 +1,364 @@
+// ingame_moves.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_moves.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"rulesMenu_moves"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					192 60 1216 872
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_PANEL
+		descX					800
+		descY					900
+		descScale				1.1
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onESC
+		{
+			play "sound/interface/esc.wav"
+			close rulesMenu_moves ;
+			open "ingame_player" ;
+		}
+		onOpen
+		{
+			setcvar "ui_movesflag" 0
+			setcvar "ui_move_title" 2
+			uiScript setMoveCharacter
+			uiScript setMovesListDefault
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		backcolor				0.031 0.055 0.11 0.97
+		bordercolor				0.11 0.18 0.29 1
+		radius					6
+		shadow					14
+		descMiddle				1
+
+		itemDef
+		{
+			name					vision_strip
+			rect					0 0 1216 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_strip_line
+			rect					0 52 1216 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_to_profile
+			rect					18 0 160 52
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_NAME_MODEL_AND_TEAM_COLOUR
+			action { play "sound/interface/button1.wav" ; close rulesMenu_moves ; open ingame_player ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_to_character
+			rect					178 0 160 52
+			visible					1
+			text					@VISION_CHARACTER
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_BUILD_A_CHARACTER_OF_YOUR_OWN
+			action { play "sound/interface/button1.wav" ; close rulesMenu_moves ; open ingame_player2 ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_to_saber
+			rect					338 0 160 52
+			visible					1
+			text					@MENUS_LIGHTSABER_CAPS
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+			action { play "sound/interface/button1.wav" ; close rulesMenu_moves ; open ingame_saber ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_to_force
+			rect					498 0 160 52
+			visible					1
+			text					@MENUS_DP_FORCE
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_YOUR_FORCE_POWERS
+			action { play "sound/interface/button1.wav" ; close rulesMenu_moves ; open ingame_playerforce ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+			group					yesforce
+		}
+
+		itemDef
+		{
+			name					vision_strip_here
+			rect					658 0 160 52
+			visible					1
+			text					@MENUS_MOVES
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			flow					3
+			decoration
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					move_titles_title
+			rect					28 76 624 44
+			text					@MENUS_MOVE_TYPES
+			font					5
+			forecolor				0.56 0.64 0.74 1
+			textscale				1.08
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			visible					1
+			decoration
+			caps					1
+			textaligny				18
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					move_titles_title
+			rect					24 118 632 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.11 0.18 0.29 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					move_titles
+			group					none
+			text					""
+			descText				@MENUS_CHOOSE_MOVE_DESC
+			type					ITEM_TYPE_MULTI
+			style					WINDOW_STYLE_EMPTY
+			rect					24 120 632 44
+			font					5
+			textscale				1.4
+			textstyle				.8
+			forecolor				0.86 0.90 0.945 1
+			feeder					42
+			cvar					"ui_move_title"
+			cvarFloatList
+			{
+				"@MENUS_ACROBATICS" 0
+				"@MENUS_SINGLE_FAST" 1
+				"@MENUS_SINGLE_MEDIUM" 2
+				"@MENUS_SINGLE_STRONG" 3
+				"@MENUS_DUAL_SABERS" 4
+				"@MENUS_SABER_STAFF" 5
+				"Melee & others attacks" 6
+			}
+			visible					1
+			action
+			{
+				uiScript resetMovesList
+				play "sound/interface/button1.wav"
+			}
+			row						1
+		}
+
+		itemDef
+		{
+			name					moveslist_title
+			rect					28 184 624 44
+			text					@MENUS_MOVES
+			font					5
+			forecolor				0.56 0.64 0.74 1
+			textscale				1.08
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			visible					1
+			decoration
+			caps					1
+			textaligny				18
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					moveslist_title
+			rect					24 226 632 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.11 0.18 0.29 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					moveslist
+			group					none
+			rect					24 232 632 548
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			240
+			elementheight			36
+			font					5
+			textscale				1.24
+			forecolor				0.56 0.64 0.74 1
+			outlinecolor			0.36 0.78 0.96 0.22
+			elementtype				LISTBOX_TEXT
+			feeder					41
+			desctext				@MENUS_MOVE_DESC2
+			notselectable
+			visible					1
+			columns					1 4 110 225
+			doubleclick { play sound/interface/button1.wav }
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			radius					6.4
+			textaligny				4
+		}
+
+		itemDef
+		{
+			name					vision_pane
+			rect					680 76 512 704
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					8
+			decoration
+		}
+
+		itemDef
+		{
+			name					item_desc
+			type					ITEM_TYPE_TEXTSCROLL
+			rect					700 656 472 116
+			text					"  "
+			cvar					ui_move_desc
+			font					5
+			forecolor				0.86 0.90 0.945 1
+			textscale				1.2
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				14
+			visible					1
+			lineHeight				13
+			outlinecolor			0.36 0.78 0.96 0.22
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 808 1216 64
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 808 1216 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_back
+			rect					18 808 144 64
+			visible					1
+			text					@MENUS_BACK
+			font					5
+			textscale				1.2
+			forecolor				0.86 0.90 0.945 1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			caps					1
+			descText				@MENUS_BACK
+			action { play "sound/interface/button1.wav" ; close rulesMenu_moves ; open ingame_player ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				72
+			textaligny				21.2
+			flow					1
+		}
+
+		itemDef
+		{
+			name					character
+			group					models
+			type					ITEM_TYPE_MODEL
+			rect					682.2 84 507.6 564
+			model_g2anim			"BOTH_ROLL_F"
+			asset_model				"ui_char_model"
+			model_angle				180
+			model_g2mins			-20 -15 -10
+			model_g2maxs			20 15 45
+			model_rotation			50
+			model_fovx				50
+			model_fovy				50
+			isCharacter				1
+			isSaber					1
+			visible					1
+			decoration
+		}
+		canvas					1600 1200
+	}
+}

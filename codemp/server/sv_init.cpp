@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,9 +25,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.h"
 #include "ghoul2/G2.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/MiniHeap.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "sv_gameapi.h"
 
 /*
@@ -147,6 +148,10 @@ void SV_SetConfigstring (int index, const char *val) {
 			}
 
 			SV_SendConfigstring(client, index);
+		}
+		// and the TV of the server (sv_tv.cpp)
+		if ( SV_TVClient() ) {
+			SV_SendConfigstring( SV_TVClient(), index );
 		}
 	}
 }
@@ -459,10 +464,24 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 
 	SV_SendMapChange();
 
+	// a config from before this server lost its rcon (SVC_NoRemoteCommand) still sets the password
+	if ( com_dedicated->integer && *Cvar_VariableString( "rconPassword" ) ) {
+		static qboolean said;
+
+		if ( !said ) {
+			said = qtrue;
+			Com_Printf( S_COLOR_YELLOW "rconPassword is set, but this server takes no rcon. Take the line out of the config, admins use the web panel (vs_webPort)\n" );
+		}
+	}
+
+	Com_LoadBegin( server );
+	Com_LoadPush( "server: end of the level before", NULL );
 	re->RegisterMedia_LevelLoadBegin(server, eForceReload);
 
 	// shut down the existing game if it is running
+	SV_TVLevelEnd();
 	SV_ShutdownGameProgs();
+	Com_LoadPop();
 	svs.gameStarted = qfalse;
 
 	Com_Printf ("------ Server Initialization ------\n");
@@ -587,10 +606,19 @@ Ghoul2 Insert End
 
 	// get a new checksum feed and restart the file system
 	srand(Com_Milliseconds());
-	sv.checksumFeed = ( ((int) rand() << 16) ^ rand() ) ^ Com_Milliseconds();
-	FS_Restart( sv.checksumFeed );
+	// in unsigned: rand() << 16 does not fit into an int
+	sv.checksumFeed = (int)( ( ( (unsigned int)rand() << 16 ) ^ (unsigned int)rand() ) ^ (unsigned int)Com_Milliseconds() );
+	Com_LoadPush( "server: file system", NULL );
+	if ( !FS_NewChecksumFeed( sv.checksumFeed ) ) {
+		FS_Restart( sv.checksumFeed );
+	}
+	Com_LoadPop();
 
+	Com_LoadPush( "server: collision map", server );
 	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum );
+	Com_LoadPop();
+	// Port: the map is loaded anew, no clip brush of it is off (clipbrush)
+	SV_ClipBrushesReset();
 
 	SV_SendMapChange();
 
@@ -616,12 +644,15 @@ Ghoul2 Insert End
 	sv.state = SS_LOADING;
 
 	// load and spawn all other entities
+	Com_LoadPush( "server: game start", NULL );
 	SV_InitGameProgs();
+	Com_LoadPop();
 
 	// don't allow a map_restart if game is modified
 	sv_gametype->modified = qfalse;
 
 	// run a few frames to allow everything to settle
+	Com_LoadPush( "server: first frames", NULL );
 	for ( i = 0 ;i < 3 ; i++ ) {
 		//rww - RAGDOLL_BEGIN
 		re->G2API_SetTime(sv.time,0);
@@ -631,6 +662,7 @@ Ghoul2 Insert End
 		sv.time += 100;
 		svs.time += 100;
 	}
+	Com_LoadPop();
 	//rww - RAGDOLL_BEGIN
 	re->G2API_SetTime(sv.time,0);
 	//rww - RAGDOLL_END
@@ -724,6 +756,9 @@ Ghoul2 Insert End
 
 	// save systeminfo and serverinfo strings
 	Q_strncpyz( systemInfo, Cvar_InfoString_Big( CVAR_SYSTEMINFO ), sizeof( systemInfo ) );
+#ifdef VISIONJK_IDS_TEST
+	Q_strncpyz( systemInfo, SV_IDSTest_SystemInfo( systemInfo ), sizeof( systemInfo ) );
+#endif
 	cvar_modifiedFlags &= ~CVAR_SYSTEMINFO;
 	SV_SetConfigstring( CS_SYSTEMINFO, systemInfo );
 
@@ -757,6 +792,11 @@ Ghoul2 Insert End
 	}
 
 	SV_BeginAutoRecordDemos();
+
+	// a client of this program goes on with the load, and ends it with its first frame
+	if ( com_dedicated->integer ) {
+		Com_LoadDone();
+	}
 }
 
 
@@ -805,7 +845,7 @@ qboolean Com_TheHunkMarkHasBeenMade(void);
 //qcommon/vm.cpp
 extern vm_t *currentVM;
 
-//qcommon/cm_load.cpp
+//qcommon/cm/cm_load.cpp
 extern void *gpvCachedMapDiskImage;
 extern qboolean gbUsingCachedMapDataRightNow;
 
@@ -907,6 +947,9 @@ static void SV_InitRef( void ) {
 
 	//FIXME: Might have to do something about this...
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;
+	ri.LoadPush = Com_LoadPush;
+	ri.LoadPop = Com_LoadPop;
+	ri.FS_FileSource = FS_FileSource;
 	G2VertSpaceServer = &IHeapAllocator_singleton;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
@@ -962,8 +1005,21 @@ void SV_Init (void) {
 	sv_maxRate = Cvar_Get ("sv_maxRate", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO, "Max bandwidth rate allowed on server. Use 0 for unlimited." );
 	sv_minPing = Cvar_Get ("sv_minPing", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO );
 	sv_maxPing = Cvar_Get ("sv_maxPing", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO );
-	sv_floodProtect = Cvar_Get ("sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Protect against flooding of server commands" );
-	sv_floodProtectSlow = Cvar_Get ("sv_floodProtectSlow", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Use original method of delaying commands with flood protection" );
+	sv_floodProtect = Cvar_Get ("sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Limits how fast a client can send commands like chat. 0: off, any other value: on." );
+	// in the serverinfo so that a client knows commands wait here instead of being dropped (cgame Auth_FloodGap)
+	sv_floodBurst = Cvar_Get ("sv_floodBurst", "8", CVAR_ARCHIVE | CVAR_SERVERINFO, "How many commands a client can send at once before they have to wait." );
+	Cvar_CheckRange( sv_floodBurst, 1, 64, qtrue );
+	sv_floodRate = Cvar_Get ("sv_floodRate", "3", CVAR_ARCHIVE, "How many commands a client may send per second over time, after the burst is used up." );
+	Cvar_CheckRange( sv_floodRate, 1, 1000, qtrue );
+	sv_floodQueue = Cvar_Get ("sv_floodQueue", "16", CVAR_ARCHIVE, "How many waiting commands are kept per client. They run later, in order. When the queue is full, new commands are dropped." );
+	Cvar_CheckRange( sv_floodQueue, 0, FLOOD_QUEUE_SIZE, qtrue );
+	SV_IDS_Init();
+#ifdef VISIONJK_IDS_TEST
+	SV_IDSTest_Init();
+#endif
+	SV_VoiceInit();
+	SV_TVInit();
+	vs_antiWallhack = Cvar_Get( "vs_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM, "Allow cheats on server if set to 1" );
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
@@ -974,7 +1030,6 @@ void SV_Init (void) {
 	Cvar_Get ("sv_referencedPakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
 
 	// server vars
-	sv_rconPassword = Cvar_Get ("rconPassword", "", CVAR_TEMP );
 	sv_privatePassword = Cvar_Get ("sv_privatePassword", "", CVAR_TEMP );
 	sv_snapsMin = Cvar_Get ("sv_snapsMin", "10", CVAR_ARCHIVE_ND ); // 1 <=> sv_snapsMax
 	sv_snapsMax = Cvar_Get ("sv_snapsMax", "40", CVAR_ARCHIVE_ND ); // sv_snapsMin <=> sv_fps
@@ -1030,6 +1085,11 @@ void SV_Init (void) {
 	// create a heap for Ghoul2 to use for game side model vertex transforms used in collision detection
 #ifdef DEDICATED
 	SV_InitRef();
+
+	// the web host: the page of the client that runs in a browser, its files and its packets (vs_clientWebPort).
+	// It is started here and not with a map, and ends with the process (NET_Shutdown): no change of map and
+	// no end of the server may cut a download or the socket of a page.
+	SV_WebInit();
 #endif
 }
 
@@ -1090,6 +1150,8 @@ void SV_Shutdown( char *finalmsg )
 	SV_RemoveOperatorCommands();
 	SV_MasterShutdown();
 	SV_ChallengeShutdown();
+	SV_IDS_Shutdown();
+	SV_TVLevelEnd();
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;
 /*

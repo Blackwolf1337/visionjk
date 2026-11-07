@@ -124,7 +124,7 @@ static void SCR_DrawChar( int x, int y, float size, int ch ) {
 
 /*
 ** SCR_DrawSmallChar
-** small chars are drawn at native screen resolution
+** small chars are drawn at native screen resolution: x and y are pixels of the window
 */
 void SCR_DrawSmallChar( int x, int y, int ch ) {
 	int row, col;
@@ -154,11 +154,39 @@ void SCR_DrawSmallChar( int x, int y, int ch ) {
 
 	size2 = 0.0625;
 
-	re->DrawStretchPic( x * con.xadjust, y * con.yadjust,
+	re->DrawStretchPic( x * con.xadjust - cls.bias2D, y * con.yadjust - cls.bias2DY,
 					   con.charWidth * con.xadjust, con.charHeight * con.yadjust,
 					   fcol, frow,
 					   fcol + size, frow + size2,
 					   cls.charSetShader );
+}
+
+
+/*
+** SCR_DrawConChar
+** A character of the console or of its input line in a cell: x and y are pixels of the window, the cell is
+** con.charWidth x con.charHeight. Where text is UTF-8 it is drawn from the TrueType font with
+** a fixed width, in the size of the cell: sharp at any con_scale, with every character that font has. The marks
+** of the console that are no text (the cursor blocks, values below 32) and a renderer without that font take
+** the charset picture of the game, which has Windows-1252 only: any other character is a '?'.
+*/
+void SCR_DrawConChar( int x, int y, unsigned int ch ) {
+	if ( ch == ' ' ) {
+		return;
+	}
+	if ( y < -con.charHeight ) {
+		return;
+	}
+	if ( CL_UTF8() ) {
+		int byte;
+
+		if ( ch >= 32 && re->ext.Font_DrawMonoChar( x, y, con.charWidth, con.charHeight, ch ) ) {
+			return;
+		}
+		byte = Q_UnicodeToCP1252( ch );
+		ch = ( byte < 0 ) ? '?' : byte;
+	}
+	SCR_DrawSmallChar( x, y, (int)ch );
 }
 
 
@@ -262,9 +290,16 @@ void SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 				continue;
 			}
 		}
-		SCR_DrawSmallChar( xx, y, *s );
+		if ( CL_UTF8() ) {
+			unsigned int codePoint;
+
+			s += Q_UTF8_Decode( s, &codePoint );
+			SCR_DrawConChar( xx, y, codePoint );
+		} else {
+			SCR_DrawConChar( xx, y, (unsigned char)*s );
+			s++;
+		}
 		xx += con.charWidth;
-		s++;
 	}
 	re->SetColor( NULL );
 }
@@ -467,9 +502,24 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		}
 	}
 
-	// the menu draws next
+	// the menu draws next: flat on the screen, or on a plane in the level where the cgame asked for that with
+	// this frame (CL_SetUIPlane)
 	if ( Key_GetCatcher( ) & KEYCATCH_UI && cls.uiStarted ) {
+		const qboolean plane = (qboolean)( cls.state == CA_ACTIVE && cls.uiPlaneFrame == cls.framecount );
+
+		if ( plane ) {
+			re->ext.Set2DPlane( cls.uiPlane );
+		}
+		if ( plane != cls.uiPlaneTold ) {
+			cls.uiPlaneTold = plane;
+			Cvar_Set( "v_uiPlane", plane ? "1" : "0" );
+		}
+		cls.uiPlaneOn = plane;
 		UIVM_Refresh( cls.realtime );
+		cls.uiPlaneOn = qfalse;
+		if ( plane ) {
+			re->ext.Set2DPlane( NULL );
+		}
 	}
 
 	// Engine internal menu
@@ -482,6 +532,23 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 	if ( cl_debuggraph->integer || cl_timegraph->integer || cl_debugMove->integer ) {
 		SCR_DrawDebugGraph ();
 	}
+}
+
+/*
+==================
+CL_SetUIPlane
+
+From the cgame, while it draws its frame: the menus of this frame go onto a plane in the level. matrix takes a
+place of the 2D grid to clip space (RE_Set2DPlane of the renderer).
+==================
+*/
+void CL_SetUIPlane( const float *matrix ) {
+	if ( !matrix ) {
+		cls.uiPlaneFrame = -1;
+		return;
+	}
+	memcpy( cls.uiPlane, matrix, sizeof( cls.uiPlane ) );
+	cls.uiPlaneFrame = cls.framecount;
 }
 
 /*
@@ -508,18 +575,16 @@ void SCR_UpdateScreen( void ) {
 	// that case.
 	if( cls.uiStarted || com_dedicated->integer )
 	{
-		// if running in stereo, we need to draw the frame twice
-		if ( cls.glconfig.stereoEnabled ) {
-			SCR_DrawScreenField( STEREO_LEFT );
-			SCR_DrawScreenField( STEREO_RIGHT );
-		} else {
-			SCR_DrawScreenField( STEREO_CENTER );
-		}
+		SCR_DrawScreenField( STEREO_CENTER );
 
 		if ( com_speeds->integer ) {
+			Com_LoadPush( "frame: drawn", NULL );
 			re->EndFrame( &time_frontend, &time_backend );
+			Com_LoadPop();
 		} else {
+			Com_LoadPush( "frame: drawn", NULL );
 			re->EndFrame( NULL, NULL );
+			Com_LoadPop();
 		}
 	}
 

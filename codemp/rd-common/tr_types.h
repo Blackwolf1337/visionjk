@@ -27,7 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../qcommon/q_shared.h"
 
 #define	MAX_DLIGHTS		32			// can't be increased, because bit flags are used on surfaces
-#define	REFENTITYNUM_BITS	11		// can't be increased without changing drawsurf bit packing
+#define	REFENTITYNUM_BITS	12		// 11 in JKA; 12 since the sort key of a drawsurf is 64 bit (2026-10-24, the ambient
+									// effects of the JoF server fill 2047 slots and the rest of the scene was dropped)
 #define	REFENTITYNUM_MASK	((1<<REFENTITYNUM_BITS) - 1)
 // the last N-bit number (2^REFENTITYNUM_BITS - 1) is reserved for the special world refentity,
 //  and this is reflected by the value of MAX_REFENTITIES (which therefore is not a power-of-2)
@@ -74,8 +75,32 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RF_ALPHA_DEPTH		0x100000 //depth write on alpha model
 
 #define RF_FORCEPOST		0x200000 //force it to post-render -rww
+// Drawn after the dynamic glow has been added to the picture, in a view that adds one (r_DynamicGlow): a light
+// that only the glow draws around the entity (RGBA_SHADER_BLUR) then lies behind it and not across it. In a view
+// without a glow the flag does nothing.
+#define RF_AFTERGLOW		0x400000
+// With RF_DISTORTION, in rd-vulkan-vision: the model may lie at any angle, it need not face the view. Its texture
+// coordinates say where a vertex lies when nothing bends it, (0, (s - 0.5) * 2r, (t - 0.5) * 2r) in the model,
+// r = shaderTexCoord[0], and it shows what the screen has there: where a vertex was moved, the picture under it
+// moves with it (the shockwave of the boombox, sound_wave.md3). shaderTexCoord[1]: how many times as far, 0 is 1.
+#define RF_REFRACT_REST		0x800000
 
 // refdef flags
+// what a shader for a picture a module made is like (RE_RegisterShaderRGBA). The first one is the qtrue the
+// call took before it had flags.
+#define RGBA_SHADER_GLOW	1		// added to what is behind it, and the dynamic glow takes it
+#define RGBA_SHADER_OVER	2		// drawn over all of the scene: nothing in front of it hides it
+#define RGBA_SHADER_BEHIND	4		// drawn before the pictures without it, where a glow is drawn, but blended as they are
+#define RGBA_SHADER_HULL	8		// for a model as its custom shader: an outline around it. Only what faces away is
+									// drawn, pushed out along the normals, in the colour of the entity
+#define RGBA_SHADER_BLUR	16		// Drawn into the buffer of the dynamic glow and nowhere else, in the colour of the
+									// entity: what is seen of it is the blurred light the renderer makes of that buffer
+									// (r_DynamicGlow), added to the picture. Nothing at all with r_DynamicGlow 0.
+// with RGBA_SHADER_HULL: how far the outline stands off the model, in tenths of a unit, in the bits above the
+// flags. Without it 1.1 units. Several of them around one model, the wider the fainter, are a soft light.
+#define RGBA_SHADER_HULL_WIDTH( tenths )	( RGBA_SHADER_HULL | ( ( ( tenths ) & 0xff ) << 8 ) )
+#define RGBA_SHADER_DECAL	32		// a mark on the level: drawn among the decals, a little in front of its wall
+
 #define RDF_NOWORLDMODEL	1		// used for player configuration screen
 #define RDF_HYPERSPACE		4		// teleportation effect
 
@@ -85,6 +110,151 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RDF_AUTOMAP			32		//means this scene is to draw the automap -rww
 #define	RDF_NOFOG			64		//no global fog in this scene (but still brush fog) -rww
 #define RDF_ForceSightOn	128		//using force sight
+
+// What the cgame asks of the view of the level while a weapon is zoomed (re.ext.SetScopeEffect), once a frame.
+#define SCOPEFX_LENS		1		// the lens: bent and coloured towards its rim, the scene behind it out of focus
+									// around what the crosshair is on, outside of it soft and dark
+#define SCOPEFX_RETICLE		4		// a reticle on the lens, and the ammo, the zoom and the charge as arcs at its rim
+#define SCOPEFX_TRACKER		8		// the motion tracker: the lens dim and red with the edges of the level, but the
+									// boxes keep its colours
+#define SCOPEFX_BINOCULAR	16		// two lenses side by side, the binoculars
+#define SCOPEFX_MAX_BOXES	8
+
+typedef struct scopeEffect_s {
+	int			flags;				// SCOPEFX_*
+	float		center[2];			// the middle of the lens, fractions of the view from its upper left corner
+	float		radius;				// of the lens, a fraction of the height of the view
+	float		zoom;				// 0 not zoomed in, 1 all the way
+	float		motion;				// how far the tracker has faded in, 0 to 1
+	float		time;				// seconds, for what moves on the lens
+	float		charge;				// of the alt fire, 0 to 1, below 0: it is not charging
+	float		ammo;				// what is left of the weapon's ammo, 0 to 1
+	int			numBoxes;			// SCOPEFX_TRACKER: the boxes, fractions of the view from its upper left corner:
+	float		boxes[SCOPEFX_MAX_BOXES][4];	// left, top, right, bottom
+} scopeEffect_t;
+
+// What the cgame asks of the view of the level besides the scope (re.ext.SetScreenEffect), once a frame: places
+// where the picture bends or flashes (sources) and how the whole of it is coloured.
+#define SCREENFX_RING		1		// a ring that pushes the picture outwards, the wave of an explosion
+#define SCREENFX_HEAT		2		// air that shimmers along the line from a to b, hot gas over a flame
+#define SCREENFX_SMOKE		3		// a puff of smoke at a
+#define SCREENFX_RIPPLE		4		// waves that run out from a (seed 1) or in to it (seed -1): a Force push or pull
+#define SCREENFX_FLASH		5		// a bright star of light at a: blades that clash
+#define SCREENFX_GHOSTSMOKE	7		// a ghost of Force Sight from a (feet) to b (head): he puts smoke into the smoke of
+										// the view, which rises and smears as the eye moves
+#define SCREENFX_DROP		8		// a drop of water on the view at a, radius its size, width the trail it left above
+										// it as it ran down, strength how wet. Only with an engine that sets the cvar
+										// v_screenFxDrops to 1: the renderer of an older one draws it as a flash.
+#define SCREENFX_SNOW		9		// a clump of snow on the view at a, radius its size, strength how much of it is
+										// left as it melts, seed its shape. Only with an engine that sets the cvar
+										// v_screenFxSnow to 1.
+#define SCREENFX_MAX_SOURCES	48
+
+typedef struct screenFxSource_s {
+	int			kind;				// SCREENFX_*
+	float		a[2], b[2];			// fractions of the view from its upper left corner. A ring has its middle at a
+	float		radius;				// a fraction of the height of the view: of the ring, of the air around the line
+	float		width;				// of the ring, the same unit. Heat: around the line that much stays still
+	float		strength;			// 0 to 1
+	float		distance;			// from the eye, units of the level. Where the level is nearer, it is not seen
+	float		seed;				// smoke: tells one puff from the next, its shape
+} screenFxSource_t;
+
+typedef struct screenEffect_s {
+	float		time;				// seconds, for what moves
+	float		frameTime;			// seconds since the frame before
+	float		split;				// the colours part towards the edges, 0 to 1
+	float		tint[4];			// the picture towards this colour, a: how far, 0 to 1
+	float		desaturate;			// 0 to 1: grey
+	float		vignette[4];		// the edges of the view towards this colour, a: how far, 0 to 1
+	float		vignetteArc[3];		// and only on the side of this direction on the view (x to the right, y up), z
+									// wide: 0 all around, 1 half of it
+	float		radialBlur;			// streaks from the middle of the view outwards, 0 to 1
+	float		sight;				// Force Sight: the level cold and grey with its edges drawn, 0 to 1
+	float		rage;				// the red burns, the rest drains, dark red closes in, 0 to 1, with every beat of
+									// ragePulse 0 to 1 more
+	float		ragePulse;
+	float		protect;			// a dome of energy around the eye, seen at its edge, 0 to 1. A hit sends a ripple
+	float		protectHit;			// over it from the side of the arc of the vignette, protectHit 1 to 0
+	float		absorb;				// streams of light drawn in from the edges, 0 to 1, brighter by absorbPulse
+	float		absorbPulse;
+	float		viewShift[2];		// how far the picture moved on the view since the frame before as the eye turned,
+									// fractions of the view, x to the right, y down: the smoke of the ghosts trails
+	float		water;				// under water, 0 to 1: the picture sways, fades into waterColor with the
+	float		waterColor[3];		// distance, light plays on the level
+	float		drops;				// drops running down the view after surfacing, 0 to 1
+	int			numSources;
+	screenFxSource_t	sources[SCREENFX_MAX_SOURCES];
+} screenEffect_t;
+
+// A piece of clear water the cgame puts into the scene (re.ext.AddLiquid): a round body from a to b, as thick as the
+// two radii, with the ends rounded. A jet is a chain of them, a drop one whose a and b are close. The renderer
+// draws them after the scene, bending what lies behind them (rd-vulkan-vision, shaders/liquid.frag).
+#define LIQUID_MAX_SEGMENTS	1024	// in one frame, all of them together
+
+typedef struct liquidSegment_s {
+	vec3_t		a, b;
+	float		radius[2];			// at a and at b
+	float		flow[2];			// where the water at a and at b is on the water itself, units: the surface moves with it
+	float		breakup;			// 0 a smooth jet, 1 one that is falling apart into drops
+} liquidSegment_t;
+
+// A wet place on the level the cgame puts into the scene (re.ext.AddWet): where water came to a floor or a wall. The
+// renderer darkens the ground there as wet ground is, makes it shine, and where water stands it mirrors the room
+// (rd-vulkan-vision, shaders/wet.frag). Its edge is ragged, a wall gets streaks that run down. Other kinds: the
+// print of a wet foot or a piece of the track of a wet tire, a ring that runs over standing water from where
+// something came into it, and a splat of snow that melts.
+#define WET_MAX_SPOTS	128		// in one frame
+
+#define WET_PLACE		0
+#define WET_FOOT_LEFT	1		// radius: half the length of the foot, wet: how wet the print still is, seed: yaw / 360
+#define WET_FOOT_RIGHT	2
+#define WET_RING		3		// radius: how far it runs out, wet: how strong, flow: 0 to 1 of its life
+#define WET_TRACK		4		// a piece of the track of a wet tire from 2 origin - hit to hit, seed: half its width
+#define WET_SNOW		5		// a splat of snow, slid down to origin from hit, wet: how much of it is left
+
+typedef struct wetSpot_s {
+	vec3_t		origin;
+	vec3_t		normal;				// of the surface, away from it
+	vec3_t		hit;				// where the water lands now: the rings of a puddle run out from there
+	float		radius;				// units, the most the water reaches
+	float		wet;				// 0 to 1: how far towards radius it is wet, it dries from the edge in
+	float		puddle;				// 0 to 1: how far towards radius water stands (a floor only)
+	float		flow;				// 0 to 1: how much water lands at hit right now
+	float		seed;				// 0 to 1, the shape of its edge
+	int			kind;				// WET_PLACE, ...
+} wetSpot_t;
+
+// A picture sprayed onto the level (re.ext.AddPaint, cgame/toys/cg_spray.c). The renderer keeps a sheet of pictures
+// for each of PAINT_SLOTS slots (re.ext.PaintImage): a still picture, or the frames of an animated one in a grid.
+// rd-vulkan-vision lays a decal as paint onto the surface (shaders/paint.frag): the relief of the wall shows through,
+// the edge is overspray, fresh paint shines and runs down a wall in drips until it dries. A renderer
+// that can not says qfalse and the cgame draws a mark with the shader that PaintImage returned.
+#define PAINT_MAX_DECALS	64		// in one frame
+#define PAINT_SLOTS			40		// pictures the renderer keeps: one a player and some over
+#define PAINT_SHEET			512		// a sheet is this many pixels each way at most
+#define PAINT_FRAMES		16		// frames of an animated picture at most
+
+typedef struct paintDecal_s {
+	vec3_t		origin;
+	vec3_t		normal;				// of the surface, away from it
+	vec3_t		up;					// along the surface: where the top of the picture is
+	float		radius;				// half the side of the picture, units
+	float		reveal;				// 0 to 1: how much of it is sprayed on yet
+	float		fresh;				// 1 just sprayed, wet paint, down to 0 dry
+	float		seed;				// 0 to 1, the shape of its overspray and drips
+	int			slot;				// of PaintImage
+	float		frame[4];			// the part of the sheet shown now: left, top, width, height, 0 to 1
+} paintDecal_t;
+
+// a picture as the engine made a sheet of it (ext.R_PaintPicture of the cgame)
+typedef struct paintPicture_s {
+	int			frames;				// 1: a still picture
+	int			columns;			// of the sheet: frame n is at column n % columns, row n / columns
+	int			cell;				// pixels of a frame each way
+	int			sheet;				// pixels of the sheet each way
+	int			delays[PAINT_FRAMES];	// msec each frame is shown
+} paintPicture_t;
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;

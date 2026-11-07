@@ -651,4 +651,5 @@ static void TranslateSyscalls( void ) {
 	trap->ext.R_Font_StrLenPixels			= trap_R_Font_StrLenPixelsFloat;
 	trap->ext.AddCommand					= UISyscall_AddCommand;
 	trap->ext.RemoveCommand					= UISyscall_RemoveCommand;
+	trap->ext.R_RegisterShaderRGBA			= NULL;
 }

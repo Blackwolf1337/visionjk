@@ -1,0 +1,1509 @@
+// createserver.menu in the new look. Made by tools/menus/build.py from ui/jamp/createserver.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"createserver"
+		fullScreen				MENU_TRUE
+		rect					0 0 640 480
+		visible					1
+		focusColor				0.36 0.78 0.96 1
+		descX					800.0
+		descY					866.0
+		descScale				0.72
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onEsc
+		{
+			setcvartocvar password g_password
+			close createserver
+			open main
+			uiscript checkservername
+		}
+		onOpen
+		{
+			setcvartocvar password g_password
+			uiScript loadArenas
+			hide accept_alt
+			show accept
+			hide back_alt
+			show back
+			hide grpmessage
+			uiScript setBotButtons
+			uiscript clampmaxplayers
+			uiscript checkservername
+		}
+
+		itemDef
+		{
+			name					vision_bar
+			rect					0 0 1600 72
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.55
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					0 71 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_logo
+			rect					48 19 34 34
+			visible					1
+			type					ITEM_TYPE_LOGO
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark
+			rect					96 16 180 40
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				1.67
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					268 22 300 32
+			visible					1
+			text					"JEDI ACADEMY"
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				8.5
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_nav_play
+			rect					1090 0 86 72
+			visible					1
+			text					@MENUS_PLAY
+			font					5
+			textscale				1.06
+			forecolor				0.36 0.78 0.96 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				43
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_START_PLAYING_NOW
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					1090 69 86 3
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_nav_profile
+			rect					1184 0 116 72
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				58
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_PROFILE_DESC
+			action { play "sound/interface/button1.wav" ; close all ; open playerMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_controls
+			rect					1308 0 136 72
+			visible					1
+			text					@MENUS_CONTROLS2
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				68
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			action { play "sound/interface/button1.wav" ; close all ; open controlsMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_setup
+			rect					1452 0 100 72
+			visible					1
+			text					@MENUS_SETUP
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				50
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			action { play "sound/interface/button1.wav" ; close all ; open setup_menu ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub
+			rect					0 72 1600 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_line
+			rect					0 123 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_join
+			rect					36 72 190 52
+			visible					1
+			text					@MENUS_JOIN_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				95
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create
+			rect					230 72 210 52
+			visible					1
+			text					@MENUS_CREATE_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				105
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create_line
+			rect					246 122 178 2
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo
+			rect					444 72 160 52
+			visible					1
+			text					@MENUS_SOLO_GAME
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo
+			rect					608 72 160 52
+			visible					1
+			text					@MENUS_PLAY_DEMO_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules
+			rect					772 72 110 52
+			visible					1
+			text					@MENUS_RULES
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			ownerdraw				UI_NETGAMETYPE
+			text					""
+			descText				@MENUS_ALLOWS_YOU_TO_SELECT
+			textstyle				0
+			rect					24 168 252 44
+			font					5
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			bordercolor				0.153 0.251 0.373 1
+			action
+			{
+				play "sound/interface/button1"
+				uiScript setBotButtons
+			}
+			radius					3.2
+			row						1
+		}
+
+		itemDef
+		{
+			name					maplist
+			rect					24 228 252 580
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			40
+			font					5
+			textscale				0.89
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_ALLMAPS
+			textstyle				0
+			textalign				3
+			textaligny				11
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.031 0.055 0.11 0.78
+			outlinecolor			0.36 0.78 0.96 0.22
+			descText				@MENUS_CHOOSE_YOUR_GAME
+			visible					1
+			columns					1 2 196 172
+			mouseEnter { setitemcolor maplist bordercolor 0.36 0.78 0.96 0.6 }
+			mouseExit { setitemcolor maplist bordercolor 0.36 0.78 0.96 0.6 }
+			radius					10
+		}
+
+		itemDef
+		{
+			name					vision_slots
+			rect					318 598 564 210
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					10
+			shadow					0
+			sheen					0
+			decoration
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_1_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM1
+			rect					334 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot1Button }
+			mouseExit { hide bot1Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_2_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM1
+			rect					334 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot2Button }
+			mouseExit { hide bot2Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_3_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM2
+			rect					334 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot3Button }
+			mouseExit { hide bot3Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_4_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM2
+			rect					334 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot4Button }
+			mouseExit { hide bot4Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_5_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM3
+			rect					468 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot5Button }
+			mouseExit { hide bot5Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_6_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM3
+			rect					468 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot6Button }
+			mouseExit { hide bot6Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_7_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM4
+			rect					468 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot7Button }
+			mouseExit { hide bot7Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_8_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM4
+			rect					468 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot8Button }
+			mouseExit { hide bot8Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_9_1
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM5
+			rect					602 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot9Button }
+			mouseExit { hide bot9Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_10
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM5
+			rect					602 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot10Button }
+			mouseExit { hide bot10Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_11
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM6
+			rect					602 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot11Button }
+			mouseExit { hide bot11Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_12
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM6
+			rect					602 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot12Button }
+			mouseExit { hide bot12Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_13
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM7
+			rect					736 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot13Button }
+			mouseExit { hide bot13Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_14
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM7
+			rect					736 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot14Button }
+			mouseExit { hide bot14Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_15
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_BLUETEAM8
+			rect					736 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot15Button }
+			mouseExit { hide bot15Button }
+		}
+
+		itemDef
+		{
+			name					humanbotfield
+			style					0
+			text					@MENUS_16
+			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
+			ownerdraw				UI_REDTEAM8
+			rect					736 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show bot16Button }
+			mouseExit { hide bot16Button }
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_1_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM1
+			rect					334 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_2_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM1
+			rect					334 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_3_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM2
+			rect					334 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_4_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM2
+			rect					334 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_5_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM3
+			rect					468 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_6_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM3
+			rect					468 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_7_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM4
+			rect					468 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_8_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM4
+			rect					468 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_9_1
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM5
+			rect					602 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				20
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_10
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM5
+			rect					602 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_11
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM6
+			rect					602 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_12
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM6
+			rect					602 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_13
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM7
+			rect					736 605.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_14
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM7
+			rect					736 639.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_15
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_BLUETEAM8
+			rect					736 673.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					humanbotnonfield
+			style					0
+			text					@MENUS_16
+			descText				@MENUS_ONLY_HUMANS
+			ownerdraw				UI_REDTEAM8
+			rect					736 707.62 130 34
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				10
+			textaligny				9.5
+			font					5
+			textscale				0.83
+			forecolor				1 0.54 0.50 1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					difficultyfield
+			ownerdraw				UI_SKILL
+			text					@MENUS_SKILL
+			descText				@MENUS_ADJUSTS_THE_DIFFICULTY
+			rect					334 745.62 532 44
+			font					5
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			cvarTest				"ui_netGameType"
+			hideCvar { "4" }
+			action { play "sound/interface/button1" }
+			mouseEnter { show difficultyfieldButton }
+			mouseExit { hide difficultyfieldButton }
+			row						1
+		}
+
+		itemDef
+		{
+			name					mappreview
+			style					WINDOW_STYLE_PANEL
+			ownerdraw				UI_STARTMAPCINEMATIC
+			rect					324 154 552 414
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			backcolor				0 0 0 0
+			radius					5
+			font					5
+			textscale				0.47
+		}
+
+		itemDef
+		{
+			name					mappreview
+			style					WINDOW_STYLE_PANEL
+			rect					318 148 564 426
+			bordercolor				0.11 0.18 0.29 1
+			visible					1
+			backcolor				0 0 0 0
+			radius					10
+			decoration
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 832 1600 68
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.6
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 832 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+		canvas					1600 900
+		descMiddle				1
+
+		itemDef
+		{
+			name					vision_left
+			rect					0 124 300 708
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_left_line
+			rect					299 124 1 708
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_type_title
+			rect					24 144 252 18
+			visible					1
+			text					@MENUS_GAMETYPE
+			font					7
+			textscale				0.67
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				3
+			caps					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_right
+			rect					900 124 700 708
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_right_line
+			rect					900 124 1 708
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_EDITFIELD
+			text					@MENUS_SERVER_NAME_1
+			cvar					"sv_hostname"
+			maxChars				32
+			maxPaintChars			18
+			rect					936 148 628 52
+			textaligny				-1.65
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			border					0
+			bordercolor				0.086 0.149 0.247 1
+			descText				@MENUS_ENTER_THE_NAME_FOR_YOUR
+			mouseEnter { show hostnameButton }
+			mouseExit
+			{
+				hide hostnameButton
+				uiscript checkservername
+			}
+			action
+			{
+				play "sound/interface/button1"
+				uiscript checkservername
+			}
+			row						3
+			stack					1
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			maxchars				4
+			text					@MENUS_PLAYERS
+			descText				@MENUS_PLAYERS_INFO
+			cvar					"bot_minplayers"
+			rect					936 264 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			cvarTest				"ui_netGameType"
+			hideCvar { "4" }
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton11 }
+			mouseExit { hide settingsButton11 }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_TEAM_SWITCHING
+			cvar					"g_siegeTeamSwitch"
+			cvarTest				"ui_netGameType"
+			showCvar { "4" }
+			rect					936 264 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				@MENUS_TEAM_SWITCHING_DESC
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton11 }
+			mouseExit { hide settingsButton11 }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_MAXIMUM_PLAYERS
+			cvar					"sv_maxclients"
+			rect					936 316 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			maxchars				6
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				@MENUS_SETS_THE_MAXIMUM_NUMBER
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton1 }
+			mouseExit
+			{
+				hide settingsButton1
+				uiscript clampmaxplayers
+			}
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_EVEN_TEAMS
+			cvar					"g_teamforcebalance"
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"3" ;
+				"4" ;
+				"5"
+			}
+			rect					936 368 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				@MENUS_THIS_OPTION_RE_BALANCES
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton10 }
+			mouseExit { hide settingsButton10 }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_TIME_LIMIT
+			cvar					"timelimit"
+			rect					936 484 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			maxchars				4
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				@MENUS_THIS_VALUE_ADJUSTS_THE
+			cvarTest				"ui_netGameType"
+			hideCvar
+			{
+				"1" ;
+				"2" ;
+				"4"
+			}
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton2 }
+			mouseExit { hide settingsButton2 }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_KILL_LIMIT
+			cvar					"fraglimit"
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"0" ;
+				"3"
+			}
+			rect					936 536 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			maxchars				4
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				@MENUS_ESTABLISH_THE_NUMBER
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton3 }
+			mouseExit { hide settingsButton3 }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_CAPTURE_LIMIT
+			cvar					"capturelimit"
+			cvarTest				"ui_netGameType"
+			showCvar { "5" }
+			rect					936 536 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			maxchars				6
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				@MENUS_THIS_IS_THE_NUMBER_OF
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton3 }
+			mouseExit { hide settingsButton3 }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_DUEL_LIMIT
+			descText				@MENUS_VALUE_ADJUSTS_THE_TOTAL
+			cvar					"duel_fraglimit"
+			cvarTest				"ui_netGameType"
+			hideCvar
+			{
+				"0" ;
+				"3" ;
+				"4" ;
+				"5"
+			}
+			rect					936 588 628 52
+			textaligny				1
+			font					5
+			textscale				0.94
+			maxchars				6
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action { play "sound/interface/button1" }
+			mouseEnter { show settingsButton3b }
+			mouseExit { hide settingsButton3b }
+			row						1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					rules_title
+			group					none
+			text					@MENUS_GENERAL_RULES
+			rect					936 212 628 52
+			font					7
+			textscale				0.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				2
+			textaligny				34
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			decoration
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			stack					1
+		}
+
+		itemDef
+		{
+			name					rules_title
+			group					none
+			text					@MENUS_ENDGAME_RULES
+			rect					936 432 628 52
+			font					7
+			textscale				0.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				2
+			textaligny				34
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			decoration
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			stack					1
+		}
+
+		itemDef
+		{
+			name					back
+			text					@MENUS_BACK
+			descText				@MENUS_EXIT_TO_MAIN_MENU
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				1
+			textstyle				0
+			style					WINDOW_STYLE_EMPTY
+			rect					32 844 110 44
+			textalignx				55
+			textaligny				13
+			textalign				ITEM_ALIGN_CENTER
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1"
+				close createserver
+				open main
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					advanced
+			text					@MENUS_ADVANCED
+			descText				@MENUS_UPDATE_ADVANCED_SERVER
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				1
+			textstyle				0
+			style					WINDOW_STYLE_EMPTY
+			rect					148 844 110 44
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				13
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+				open advancedcreateserver
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					accept
+			text					@MENUS_BEGIN
+			descText				@MENUS_START_SERVER
+			type					ITEM_TYPE_BUTTON
+			font					7
+			textscale				0.83
+			textstyle				0
+			style					WINDOW_STYLE_PANEL
+			rect					1352 844 200 44
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				14.5
+			forecolor				0.016 0.071 0.122 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1"
+				uiScript setSiegeNoBots
+				uiScript weaponDisable
+				uiScript StartServer
+				setcvartocvar password g_password
+				close createserver
+			}
+			caps					1
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					6
+		}
+	}
+}

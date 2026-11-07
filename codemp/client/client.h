@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -29,16 +30,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qcommon.h"
 #include "rd-common/tr_public.h"
 #include "keys.h"
-#include "snd_public.h"
-#include "game/bg_public.h"
+#include "client/sound/snd_public.h"
+#include "game/bg/bg_public.h"
 #include "cgame/cg_public.h"
 #include "ui/ui_public.h"
 
-#define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
-
-// file full of random crap that gets used to create ja_guid
-#define QKEY_FILE "jakey"
-#define QKEY_SIZE 2048
+#define	RETRANSMIT_TIMEOUT	1000	// time between connection packet retransmits (3000 before: a lost packet cost 3 s of a join)
+#define	CONNECT_GIVE_UP		30000	// a server that does not answer a step of the connect this long is given up
 
 // Wind
 extern vec3_t cl_windVec;
@@ -103,6 +101,11 @@ typedef struct clientActive_s {
 									// this value changes as net lag varies
 	qboolean	extrapolatedSnapshot;	// set if any cgame frame has been forced to extrapolate
 									// cleared when CL_AdjustTimeDelta looks at it
+	// how evenly the snapshots come (CL_SnapshotJitter, cl_cgame.cpp)
+	int			snapOffset;			// cls.realtime - cl.snap.serverTime when the newest one came
+	qboolean	snapOffsetValid;
+	float		snapJitter;			// how much that changes from one snapshot to the next, smoothed
+	int			snapMargin;			// a frame this close to the newest snapshot sets extrapolatedSnapshot, 0: 5
 	qboolean	newSnapshots;		// set on parse of any valid packet
 
 	gameState_t	gameState;			// configstrings
@@ -233,6 +236,7 @@ typedef struct clientConnection_s {
 	qboolean	spDemoRecording;
 	qboolean	demorecording;
 	qboolean	demoplaying;
+	qboolean	tvLive;				// the demo is the TV of a server, live (cl_tv.cpp): it comes as packets do
 	qboolean	demowaiting;	// don't record until a non-delta message is received
 	qboolean	firstDemoFrameSkipped;
 	fileHandle_t	demofile;
@@ -283,8 +287,12 @@ typedef struct serverInfo_s {
 	int			trueJedi;
 	int			weaponDisable;
 	int			forceDisable;
-	int			humans, bots;
+	int			humans, bots;		// humans -1: the server did not say, it was asked for its status (CL_AskHumans)
+	int			humansAskTime;		// when, 0: not in this refresh
 } serverInfo_t;
+
+// how long the browser waits for the status of a server before it shows it without knowing who is a bot
+#define HUMANS_WAIT_MSEC	2000
 
 typedef struct clientStatic_s {
 	connstate_t	state;				// connection status
@@ -318,15 +326,16 @@ typedef struct clientStatic_s {
 
 	int pingUpdateSource;		// source currently pinging or updating
 
-	// update server info
-	netadr_t	updateServer;
-	char		updateChallenge[MAX_TOKEN_CHARS];
-	char		updateInfoString[MAX_INFO_STRING];
-
 	netadr_t	authorizeServer;
 
 	// rendering info
 	glconfig_t	glconfig;
+	float		bias2D;			// the 2D grid runs from -bias2D to 640 + bias2D on a wide window (cvar v_2dBias of the renderer)
+	float		bias2DY;		//	and from -bias2DY to 480 + bias2DY on a window narrower than 4:3 (v_2dBiasY)
+	float		uiPlane[16];	// the cgame wants the menus of the frame uiPlaneFrame on a plane in the level (CL_SetUIPlane)
+	int			uiPlaneFrame;
+	qboolean	uiPlaneOn;		// right now: the menus are being drawn onto it
+	qboolean	uiPlaneTold;	// what the cvar v_uiPlane says to the ui
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
@@ -345,12 +354,13 @@ typedef struct clientStatic_s {
 #define	CON_TEXTSIZE	0x30000 //was 32768
 #define	NUM_CON_TIMES	4
 
+// a cell of the console: a code point where text is UTF-8 (CL_UTF8()), else a byte of the code page of the language
 typedef union {
 	struct {
-		unsigned char	color;
-		char			character;
+		unsigned int	color : 8;
+		unsigned int	character : 24;
 	} f;
-	unsigned short	compare;
+	unsigned int	compare;
 } conChar_t;
 
 typedef struct {
@@ -398,6 +408,9 @@ extern	cvar_t	*cl_shownet;
 extern	cvar_t	*cl_showSend;
 extern	cvar_t	*cl_timeNudge;
 extern	cvar_t	*cl_showTimeDelta;
+extern	cvar_t	*v_netSmooth;
+extern	cvar_t	*v_netStats;
+extern	cvar_t	*v_joinReport;
 extern	cvar_t	*cl_freezeDemo;
 
 extern	cvar_t	*cl_yawspeed;
@@ -430,6 +443,7 @@ extern	cvar_t	*cl_forceavidemo;
 extern	cvar_t	*cl_activeAction;
 
 extern	cvar_t	*cl_allowDownload;
+extern	cvar_t	*cl_downloadName;
 extern	cvar_t	*cl_allowAltEnter;
 extern	cvar_t	*cl_conXOffset;
 extern	cvar_t	*cl_inGameVideo;
@@ -454,6 +468,78 @@ void CL_Init (void);
 void CL_FlushMemory(void);
 void CL_ShutdownAll( qboolean shutdownRef );
 void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd );
+qboolean CL_UTF8( void );
+const byte *CL_FontFile( int font, int *length );		// cl_font.cpp
+void CL_GetClipboard( char *buf, int buflen );		// cl_uiapi.cpp
+void CL_SetClipboard( const char *text );
+void CL_SetUIPlane( const float *matrix );		// cl_scrn.cpp
+
+//
+// cl_ids.cpp: the intrusion detection. The order is the one of its table of names.
+//
+typedef enum clIdsEvent_e {
+	CLIDS_OOB_SOURCE,
+	CLIDS_ECHO,
+	CLIDS_MESSAGE,
+	CLIDS_DOWNLOAD,
+	CLIDS_FRAGMENT,
+	CLIDS_GAMEDIR,
+	CLIDS_COMMAND_FLOOD,
+	CLIDS_COMMAND_TEXT,
+	CLIDS_DOWNLOAD_SIZE,
+	CLIDS_CVAR,
+	CLIDS_CVAR_PROTECTED,
+	CLIDS_MASTER,
+	// what the memory monitor (cl_memwatch.cpp) finds in this process, and a crash on a server
+	CLIDS_MEM_CODE,
+	CLIDS_MEM_EXEC,
+	CLIDS_MEM_CHILD,
+	CLIDS_MEM_RWX,
+	CLIDS_MEM_ANON,
+	CLIDS_MEM_LIBRARY,
+	CLIDS_CRASH,
+	CLIDS_NUM_EVENTS
+} clIdsEvent_t;
+
+void CL_IDS_Init( void );
+void CL_IDS_Shutdown( void );
+void CL_IDS_Connect( void );
+void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail );
+void CL_IDS_ServerCommand( char *text );
+void CL_IDS_CheckConnect( const netadr_t *adr );
+qboolean CL_IDS_Left( const netadr_t *adr );
+void CL_IDS_Crashed( const netadr_t *adr, const char *detail );
+
+//
+// cl_memwatch.cpp: the memory monitor
+//
+void CL_MemWatchInit( void );
+void CL_MemWatchShutdown( void );
+void CL_MemWatchFrame( void );
+void CL_MemWatchConnect( void );
+void CL_MemWatchDisconnect( void );
+
+//
+// cl_reputation.cpp: the reports of the intrusion detection to the VisionJK masterserver, and its list
+//
+void CL_RepInit( void );
+qboolean CL_RepWantsMaster( void );
+void CL_RepFrame( void );
+void CL_RepQueue( const netadr_t *server, clIdsEvent_t event );
+void CL_RepRefresh( void );
+void CL_RepCheckConnect( const netadr_t *adr );
+void CL_RepPacket( const netadr_t *from, const char *command );
+int CL_RepNetworks( const netadr_t *adr );
+
+//
+// cl_master.cpp
+//
+void CL_MasterInit( void );
+void CL_MasterShutdown( void );
+void CL_MasterFrame( void );
+void CL_MasterPacket( const netadr_t *from, const char *command );
+qboolean CL_MasterAddress( netadr_t *adr, int *serial );
+const char *CL_MasterName( void );
 
 void CL_StartHunkUsers( void );
 
@@ -470,9 +556,24 @@ void CL_Snd_Restart_f (void);
 void CL_StartDemoLoop( void );
 void CL_NextDemo( void );
 void CL_ReadDemoMessage( void );
+void CL_DemoMessage( int sequence, msg_t *buf );
+
+// cl_tv.cpp: the TV of a server, a demo that comes live, in the browser client only (issue #7)
+#ifdef __EMSCRIPTEN__
+void CL_TVInit( void );
+void CL_TVFrame( void );
+void CL_TVClose( void );
+#else
+static inline void CL_TVInit( void ) {}
+static inline void CL_TVFrame( void ) {}
+static inline void CL_TVClose( void ) {}
+#endif
 
 void CL_InitDownloads(void);
+void CL_NetStatsPacket( int bytes );
+void CL_NetStatsSnapshot( void );
 void CL_NextDownload(void);
+void CL_DownloadUdpStart( void );
 
 void CL_GetPing( int n, char *buf, int buflen, int *pingtime );
 void CL_GetPingInfo( int n, char *buf, int buflen );
@@ -480,6 +581,58 @@ void CL_ClearPing( int n );
 int CL_GetPingQueueCount( void );
 
 void CL_InitRef( void );
+
+//
+// cl_download.cpp
+void		CL_DownloadInit( void );
+void		CL_DownloadReviewReset( void );
+qboolean	CL_DownloadReviewActive( void );
+qboolean	CL_DownloadReviewBegin( void );
+qboolean	CL_DownloadReviewEnd( void );
+void		CL_DownloadArrived( const char *local );
+const char	*CL_DownloadLocalName( const char *local );
+qboolean	CL_DownloadWebOffered( void );
+qboolean	CL_ServerSendsDownloads( void );
+qboolean	CL_DownloadWebStart( void );
+void		CL_DownloadWebFrame( void );
+void		CL_DownloadWebStop( void );
+void		CL_DownloadRemoveTemp( void );
+qboolean	CL_DownloadWebBusy( void );
+void		CL_DownloadWebSkip( void );
+void		CL_DownloadWebSkipAll( void );
+qboolean	CL_DownloadWebAsking( void );
+qboolean	CL_DownloadReviewDraw( void );
+qboolean	CL_DownloadReviewKey( int key );
+void		CL_DrawMenuRect( float x, float y, float width, float height, float borderSize, vec4_t elementBackgroundColor, vec4_t elementBorderColor );
+
+// cl_update.cpp
+//
+void CL_UpdateInit( void );
+void CL_UpdateFrame( void );
+qboolean CL_UpdateBusy( void );
+void CL_UpdateShutdown( void );
+
+// cl_models.cpp: the player models of the model store of the site
+//
+void		CL_ModelsInit( void );
+void		CL_ModelsFrame( void );
+void		CL_ModelsShutdown( void );
+qboolean	CL_ModelsAsking( void );
+qboolean	CL_ModelsWatching( void );
+void		CL_ModelsStoreChanged( const char *store );
+
+// cl_sprays.cpp: the pictures of the sprays
+//
+#define SPRAY_UPLOAD_MOST	( 512 * 1024 )		// bytes of a sheet for the store at most (MAX_SPRAY of modelstore.py)
+qhandle_t	CL_PaintPicture( int slot, const char *name, paintPicture_t *out );
+qboolean	CL_SprayUploadMake( const char *name );
+int			CL_SprayUploadBody( byte *out, int outSize );
+qboolean	CL_SprayFileGood( const byte *data, int len );
+
+// cl_clipboard.cpp: a picture from the clipboard of the system
+//
+void		CL_ClipboardInit( void );
+void		CL_ClipboardFrame( void );
 
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
@@ -517,6 +670,28 @@ extern int cl_connectedToPureServer;
 extern int cl_connectedToCheatServer;
 
 void CL_SystemInfoChanged( void );
+void CL_ParseGamestate( msg_t *msg );
+void CL_DownloadsComplete( void );
+
+// the steps of joining a server, for the join report (v_joinReport, cl_main.cpp)
+typedef enum {
+	JOIN_CONNECT,		// the connect command
+	JOIN_CHALLENGE,		// challengeResponse
+	JOIN_CONNECTED,		// connectResponse
+	JOIN_FIRST_PACKET,	// the first packet of the gamestate
+	JOIN_GAMESTATE,		// the whole gamestate
+	JOIN_LOAD,			// downloads done, the level starts to load
+	JOIN_PRIMED,		// the level is loaded, the first snapshot is asked for
+	JOIN_ACTIVE,		// the first snapshot
+	JOIN_NUM_STEPS
+} joinStep_t;
+
+void CL_JoinStep( joinStep_t step );
+void CL_JoinPacket( int bytes );
+void CL_JoinSent( int bytes );
+void CL_JoinGamestate( int bytes );
+
+void CL_ClipOffChanged( const char *list );
 void CL_ParseServerMessage( msg_t *msg );
 
 //====================================================================
@@ -543,6 +718,14 @@ void Con_ClearNotify (void);
 void Con_RunConsole (void);
 void Con_DrawConsole (void);
 void Con_PageUp( void );
+// the mouse of the console and its selection (cl_console.cpp)
+void Con_MouseEvent( int dx, int dy );
+void Con_MouseDown( void );
+void Con_SelectAll( void );
+qboolean Con_CopySelection( void );
+void Con_ClearSelection( void );
+qboolean IN_MousePosition( int *x, int *y );		// sdl_input.cpp
+void SCR_DrawConChar( int x, int y, unsigned int ch );
 void Con_PageDown( void );
 void Con_Top( void );
 void Con_Bottom( void );
@@ -585,6 +768,19 @@ void CIN_DrawCinematic (int handle);
 void CIN_SetExtents (int handle, int x, int y, int w, int h);
 void CIN_SetLooping (int handle, qboolean loop);
 void CIN_UploadCinematic(int handle);
+
+//
+// cl_video.cpp: videos the cgame streams onto surfaces, "videoMap *tv<n>"
+//
+qboolean CL_VideoOpen( int stream, const char *video, int second );
+qboolean CL_VideoFeed( int stream, const byte *data, int len );
+int CL_VideoAdvance( int stream, int msec );
+int CL_VideoState( int stream );
+void CL_VideoPicture( int stream, const byte *rgba, int width, int height );
+qboolean CL_VideoColor( int stream, vec3_t out );
+void CL_VideoReset( int stream );
+void CL_VideoShutdown( void );
+void CL_VideoUpload( int stream, int handle );
 void CIN_CloseAllVideos(void);
 
 //

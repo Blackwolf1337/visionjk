@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -23,9 +24,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <inttypes.h>
 
-#include "bg_public.h"
+#include "game/bg/bg_public.h"
 #include "g_local.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "qcommon/game_version.h"
 
 //
@@ -74,16 +75,27 @@ typedef struct cvarTable_s {
 
 #define XCVAR_DECL
 	#include "g_xcvar.h"
-	#include "g_japlus_xcvar.h"
+	#include "game/japlus/g_japlus_xcvar.h"
 #undef XCVAR_DECL
 
 static const cvarTable_t gameCvarTable[] = {
 	#define XCVAR_LIST
 		#include "g_xcvar.h"
-		#include "g_japlus_xcvar.h"
+		#include "game/japlus/g_japlus_xcvar.h"
 	#undef XCVAR_LIST
 };
 static const size_t gameCvarTableSize = ARRAY_LEN( gameCvarTable );
+
+// Not from OpenJK: an entry of the table, for the settings form of the web panel (webadmin/wa_settings.c).
+// qfalse past the last one.
+qboolean G_CvarTableEntry( int index, const char **name, const char **defaultString, uint32_t *flags ) {
+	if ( index < 0 || index >= (int)gameCvarTableSize )
+		return qfalse;
+	*name = gameCvarTable[index].cvarName;
+	*defaultString = gameCvarTable[index].defaultString;
+	*flags = gameCvarTable[index].cvarFlags;
+	return qtrue;
+}
 
 void G_RegisterCvars( void ) {
 	size_t i = 0;

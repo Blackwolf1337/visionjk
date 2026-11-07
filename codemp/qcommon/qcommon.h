@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -153,6 +154,7 @@ void		Sys_SendPacket( int length, const void *data, const netadr_t *to );
 //Does NOT parse port numbers, only base addresses.
 qboolean	Sys_StringToAdr( const char *s, netadr_t *a );
 qboolean	Sys_IsLANAddress (const netadr_t *adr);
+qboolean	Sys_ResolveIPv4( const char *name, byte ip[4] );	// may be called from any thread, waits for the name server
 void		Sys_ShowIP(void);
 
 
@@ -201,6 +203,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data );
 void Netchan_TransmitNextFragment( netchan_t *chan );
 
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg );
+extern qboolean netchan_anomaly;		// the packet it just threw away was not lost or late, it was wrong
 
 
 /*
@@ -213,14 +216,11 @@ PROTOCOL
 
 #define	PROTOCOL_VERSION	26
 
-#define	UPDATE_SERVER_NAME			"updatejk3.ravensoft.com"
 #define MASTER_SERVER_NAME			"masterjk3.ravensoft.com"
 
 #define JKHUB_MASTER_SERVER_NAME	"master.jkhub.org"
-#define JKHUB_UPDATE_SERVER_NAME	"update.jkhub.org"
 
 #define	PORT_MASTER			29060
-#define	PORT_UPDATE			29061
 #define	PORT_SERVER			29070	//...+9 more for multiple servers
 #define	NUM_SERVER_PORTS	4		// broadcast scan this many ports after PORT_SERVER so a single machine can run multiple servers
 
@@ -323,6 +323,7 @@ typedef enum {
 void			VM_Init( void );
 vm_t			*VM_CreateLegacy( vmSlots_t vmSlot, intptr_t (*systemCalls)(intptr_t *) );
 vm_t			*VM_Create( vmSlots_t vmSlot );
+void			*VM_ModuleAddress( vmSlots_t vmSlot );
 void			 VM_Free( vm_t *vm );
 void			 VM_Clear(void);
 vm_t			*VM_Restart( vm_t *vm );
@@ -331,6 +332,13 @@ void			 VM_Shifted_Alloc( void **ptr, int size );
 void			 VM_Shifted_Free( void **ptr );
 void			*VM_ArgPtr( intptr_t intValue );
 void			*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
+#ifdef VISIONJK_HOTPATCH
+// vm_hotpatch.cpp, developer builds only
+void			 VM_HotpatchInit( void );
+void			 VM_HotpatchLoaded( vm_t *vm );
+void			 VM_HotpatchFreed( vm_t *vm );
+void			 VM_HotpatchFrame( void );
+#endif
 float			_vmf( intptr_t x );
 
 #define	VMA(x) VM_ArgPtr( args[x] )
@@ -368,6 +376,9 @@ void Cbuf_Execute (void);
 // them through Cmd_ExecuteString.  Stops when the buffer is empty.
 // Normally called once per frame, but may be explicitly invoked.
 // Do not call inside a command function, or current args will be destroyed.
+
+void Cbuf_CheckPending( void );
+// Runs what tay_delay and tay_waitf kept aside once it is due, once a frame
 
 //===========================================================================
 
@@ -486,7 +497,12 @@ cvar_t	*Cvar_SetSafe( const char *var_name, const char *value );
 cvar_t	*Cvar_User_Set( const char *var_name, const char *value );
 // same as Cvar_SetSafe, but defaults to CVAR_USER_CREATED
 
-void	Cvar_Server_Set( const char *var_name, const char *value );
+typedef enum {
+	CVAR_SERVER_SET,
+	CVAR_SERVER_REFUSED,		// not a cvar a server may set, left as it is
+	CVAR_SERVER_PROTECTED		// never, the connection has to end
+} cvarServerSet_t;
+cvarServerSet_t	Cvar_Server_Set( const char *var_name, const char *value );
 void	Cvar_VM_Set( const char *var_name, const char *value, vmSlots_t vmslot );
 // sometimes we set variables from an untrusted source: fail if flags & CVAR_PROTECTED
 
@@ -505,6 +521,18 @@ void	Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 
 uint32_t	Cvar_Flags(const char *var_name);
 // returns CVAR_NONEXISTENT if cvar doesn't exist or the flags of that particular CVAR.
+
+// VisionJK, cvar_cleanup.cpp: the day code last used a cvar, and the ones no code used for a month
+void	Cvar_Used( const char *name );
+void	Cvar_VM_VariableStringBuffer( const char *name, char *buffer, int bufsize );	// as the plain ones, for the
+int		Cvar_VM_VariableIntegerValue( const char *name );							// modules: a cvar a module
+float	Cvar_VM_VariableValue( const char *name );									// reads is used
+int		Cvar_UnusedList( char *buf, int size );
+qboolean	Cvar_Info( const char *var_name, char *defaultValue, int size, uint32_t *flags );
+void	Cvar_SeenLoad( void );
+void	Cvar_SeenSave( void );
+void	Cvar_SeenFrame( void );
+void	Cvar_CleanupInit( void );
 
 void	Cvar_CommandCompletion( callbackFunc_t callback );
 // callback with each valid string
@@ -526,9 +554,15 @@ void 	Cvar_WriteVariables( fileHandle_t f );
 
 cvar_t *Cvar_Unset(cvar_t *cv);
 
+// cvar_renames.cpp: the names of this tree before 2026-10-17 (cvar_renames.h)
+const char *Cvar_RenamedFrom( const char *name, int nth );
+const char *Cvar_RenamedTo( const char *name );
+qboolean Cvar_RenamedText( const char *in, char *out, int outSize );
+
 void	Cvar_Init( void );
 
 char	*Cvar_InfoString( int bit );
+char	*Cvar_InfoStringRoom( int bit, int room );	// VisionJK: room bytes left free for what is added behind it
 char	*Cvar_InfoString_Big( int bit );
 // returns an info string containing all the cvars that have the given bit set
 // in their flags ( CVAR_USERINFO, CVAR_SERVERINFO, CVAR_SYSTEMINFO, etc )
@@ -579,7 +613,17 @@ qboolean FS_Initialized();
 void	FS_InitFilesystem (void);
 void	FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles = qfalse );
 
+// Where a client puts what it downloads from a server, in a game folder of the home folder: kept, or for this
+// session only (client/cl_download.cpp). Their paks are loaded only while a server references them.
+#define FS_DOWNLOADS			"downloads"
+#define FS_DOWNLOADS_SESSION	"downloads/session"
+// The player models of the model store of the site (client/cl_models.cpp), in base of the home folder, one pak a
+// model. Always loaded, but only with files of their model.
+#define FS_MODELSTORE			"modelstore"
+qboolean	FS_AddModelPak( const char *model, char *why, int whySize );
+
 qboolean	FS_ConditionalRestart( int checksumFeed );
+qboolean	FS_NewChecksumFeed( int checksumFeed );
 void	FS_Restart( int checksumFeed, qboolean inPlace = qfalse );
 // shutdown and restart the filesystem so changes to fs_gamedir can take effect
 
@@ -598,6 +642,7 @@ void FS_Rmdir( const char *osPath, qboolean recursive );
 void FS_HomeRmdir( const char *homePath, qboolean recursive );
 
 qboolean FS_FileExists( const char *file );
+qboolean FS_SV_FileExists( const char *file );		// a path of the home folder
 
 char   *FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 qboolean FS_CompareZipChecksum(const char *zipfile);
@@ -621,6 +666,12 @@ long		FS_FOpenFileRead( const char *qpath, fileHandle_t *file, qboolean uniqueFI
 // file IO goes through FS_ReadFile, which Does The Right Thing already.
 
 int		FS_FileIsInPAK(const char *filename, int *pChecksum );
+
+// where a read of a file would get it from
+#define FS_SOURCE_NONE		0
+#define FS_SOURCE_PAK		1
+#define FS_SOURCE_DIRECTORY	2
+int		FS_FileSource( const char *qpath, int *length, int *pakChecksum );
 // returns 1 if a file is in the PAK file, otherwise -1
 
 qboolean FS_FindPureDLL(const char *name);
@@ -708,6 +759,19 @@ void FS_Rename( const char *from, const char *to );
 qboolean FS_WriteToTemporaryFile( const void *data, size_t dataLength, char **tempFileName );
 const char *FS_MV_VerifyDownloadPath(const char *pk3file);
 
+#ifdef DEDICATED
+// a pk3 file of the search path, for the web host of the dedicated server (codemp/server/web). The texts are
+// those of the search path and are gone with the next restart of the file system.
+typedef struct fsPakInfo_s {
+	const char	*gameDir;		// base
+	const char	*baseName;		// assets0
+	const char	*fileName;		// the file itself, with its path
+	int			checksum;
+} fsPakInfo_t;
+
+int FS_PakInfo( fsPakInfo_t *list, int max );
+#endif
+
 
 /*
 ==============================================================
@@ -726,6 +790,7 @@ typedef struct field_s {
 	int		scroll;
 	int		widthInChars;
 	char	buffer[MAX_EDIT_LINE];
+	int		selAnchor;		// what is marked runs from here to the cursor (Shift and the arrow keys), -1: nothing
 } field_t;
 
 void Field_Clear( field_t *edit );
@@ -758,11 +823,21 @@ void 		NORETURN Com_Quit_f( void );
 int			Com_EventLoop( void );
 int			Com_Milliseconds( void );	// will be journaled properly
 uint32_t	Com_BlockChecksum( const void *buffer, int length );
-char		*Com_MD5File(const char *filename, int length, const char *prefix, int prefix_len);
 int      Com_HashKey(char *string, int maxlen);
+
+// com_load.cpp: what the load of a level and a long frame were spent on (v_loadReport, v_hitchLog)
+void	Com_LoadInit( void );
+void	Com_LoadPush( const char *kind, const char *name );	// around something that is loaded
+void	Com_LoadPop( void );
+void	Com_LoadBegin( const char *what );					// a level begins to load
+void	Com_LoadDone( void );								//	and is loaded with the frame that runs
+void	Com_LoadFrameBegin( void );
+void	Com_LoadFrameEnd( void );
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
 int			Com_RealTime(qtime_t *qtime);
+const char	*Com_IDSDetail( const char *detail, int max );
+void		Com_IDSLine( fileHandle_t *file, const char *path, const char *line );
 qboolean	Com_SafeMode( void );
 void		Com_RunAndTimeServerPacket(const netadr_t *evFrom, msg_t *buf);
 
@@ -904,7 +979,9 @@ void Com_TouchMemory( void );
 // commandLine should not include the executable name (argv[0])
 void Com_Init( char *commandLine );
 void Com_Frame( void );
+int Com_MinFrameMsec( void );
 void Com_Shutdown( void );
+void Com_WriteConfiguration( void );	// the config, when an archived cvar changed
 
 
 /*
@@ -923,6 +1000,10 @@ void CL_InitKeyCommands( void );
 // config files, but the rest of client startup will happen later
 
 void CL_Init( void );
+
+// client/cl_update.cpp, the two parts of the updater that run before the client is started
+qboolean CL_UpdateResume( void );	// from main(): a swap of files that was cut short is finished. qtrue: start the program again
+void CL_UpdateAddress( void );		// from Com_Init(): where updates are asked for, as the build or the command line says
 void CL_Disconnect( qboolean showMainMenu );
 void CL_Shutdown( void );
 void CL_Frame( int msec );
@@ -937,6 +1018,7 @@ void CL_MouseEvent( int dx, int dy, int time );
 void CL_JoystickEvent( int axis, int value, int time );
 
 void CL_PacketEvent( const netadr_t *from, msg_t *msg );
+void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg );
 
 void CL_ConsolePrint( const char *text );
 
@@ -987,6 +1069,15 @@ void SV_Frame( int msec );
 void SV_PacketEvent( const netadr_t *from, msg_t *msg );
 int SV_FrameMsec( void );
 qboolean SV_GameCommand( void );
+
+#ifdef DEDICATED
+// the web host of the dedicated server (codemp/server/web): the page of the client that runs in a browser,
+// the pk3 files it loads, and its packets, which come over a WebSocket and not over UDP
+void SV_WebInit( void );
+void SV_WebShutdown( void );
+void SV_WebSendPacket( int length, const void *data, const netadr_t *to );
+qboolean SV_WebPeerOpen( const netadr_t *adr );
+#endif
 
 
 //

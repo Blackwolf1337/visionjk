@@ -87,7 +87,7 @@
 			name				setup_background
 			group				none
 			style				WINDOW_STYLE_FILLED
-			rect				240 24 384 60	
+			rect				240 22 384 68	
 			backcolor			0 0 .6 .5
 			forecolor			1 1 1 1
 			border				1
@@ -234,7 +234,7 @@
 			//text			@MENUS_SOURCE
 			descText			@MENUS_CHOOSE_SOURCE_OF_SERVERS
 			ownerdraw			UI_NETSOURCE
-			rect				250 26 180 18
+			rect				250 24 180 16
 			font				4
 			textscale			1
 			textalignx			0
@@ -250,7 +250,7 @@
 			mouseEnter 
 			{ 
 				show			button_glow2 
-				setitemrect		button_glow2	242 24 200 20
+				setitemrect		button_glow2	242 23 200 18
 			}
 			mouseExit 
 			{ 
@@ -266,7 +266,7 @@
 			//text			@MENUS_GAME
 			descText			@MENUS_SET_FILTER_FOR_SPECIFIC
 			ownerdraw			UI_NETFILTER
-			rect				250 44 180 18
+			rect				250 40 180 16
 			font				4
 			textscale			1
 			textalignx			0
@@ -282,7 +282,7 @@
 			mouseEnter 
 			{ 
 				show			button_glow2 
-				setitemrect		button_glow2	243 42 200 20
+				setitemrect		button_glow2	243 39 200 18
 			}
 			mouseExit 
 			{ 
@@ -298,7 +298,7 @@
 			text				@MENUS_GAME_TYPE
 			descText			@MENUS_FILTER_FOR_SPECIFIC_GAME
 			ownerdraw			UI_JOINGAMETYPE
-			rect				250 62 180 18
+			rect				250 56 180 16
 			font				4
 			textscale			1
 			textalignx			0
@@ -314,7 +314,7 @@
 			mouseEnter 
 			{ 
 				show			button_glow2 
-				setitemrect		button_glow2	242 60 200 20
+				setitemrect		button_glow2	242 55 200 18
 			}
 			mouseExit 
 			{ 
@@ -335,7 +335,7 @@
 			cvar				"ui_browserShowEmpty"
 			font				4
 			textscale			1
-			rect				430 26 180 18
+			rect				430 24 180 16
 			textalignx			0
 			textaligny			0
 			textalign			ITEM_ALIGN_LEFT
@@ -350,7 +350,7 @@
 			mouseEnter 
 			{ 
 				show			button_glow2 
-				setitemrect		button_glow2	422 24 200 20
+				setitemrect		button_glow2	422 23 200 18
 			}
 			mouseExit 
 			{ 
@@ -368,7 +368,7 @@
 			cvar				"ui_browserShowFull"
 			font				4
 			textscale			1
-			rect				430 44 180 18
+			rect				430 40 180 16
 			textalignx			0
 			textaligny			0
 			textalign			ITEM_ALIGN_LEFT
@@ -383,7 +383,40 @@
 			mouseEnter 
 			{ 
 				show			button_glow2 
-				setitemrect		button_glow2	422 42 200 20
+				setitemrect		button_glow2	422 39 200 18
+			}
+			mouseExit 
+			{ 
+				hide			button_glow2 
+			}	  	  
+		}
+
+		// Bots only selector: servers on which nobody but bots plays (not in the base game)
+		itemDef 
+		{
+			name				viewBotsOnly
+			type				11
+			text				"View Bots Only:"
+			descText			"Include servers on which only bots play"
+			cvar				"v_browserShowBotOnly"
+			font				4
+			textscale			1
+			rect				430 56 180 16
+			textalignx			0
+			textaligny			0
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			 .615 .615 .956 1
+			visible				1 
+			action 
+			{ 
+				play			"sound/interface/button1.wav"
+			//	uiScript		RefreshFilter
+				uiScript		RefreshServers  
+			}
+			mouseEnter 
+			{ 
+				show			button_glow2 
+				setitemrect		button_glow2	422 55 200 18
 			}
 			mouseExit 
 			{ 
@@ -406,7 +439,7 @@
 				"@MENUS_LAN/CABLE" 25000  
 			}
 			textscale			1
-			rect				430 62 180 18
+			rect				430 72 180 16
 			font				4
 			textalignx			0
 			textaligny			0
@@ -421,7 +454,7 @@
 			mouseEnter 
 			{ 
 				show			button_glow2 
-				setitemrect		button_glow2	422 60 200 20
+				setitemrect		button_glow2	422 71 200 18
 			}
 			mouseExit 
 			{ 
@@ -1065,6 +1098,38 @@
 			{ 
 				show			button_glow 
 				setitemrect		button_glow	507 400 150 20
+			}
+			mouseexit 
+			{ 
+				hide			button_glow 
+			}
+		}
+
+		// INTRUSIONS (VisionJK): what the intrusion detection of the client wrote down, ids.menu
+		itemDef 
+		{
+			name				idsText
+			text				@VISION_INTRUSIONS
+			descText			@VISION_WHAT_THE_INTRUSION_DETECTION_NOTED_A
+			type				ITEM_TYPE_BUTTON
+			font				4
+			textscale			1
+			style				WINDOW_STYLE_FILLED
+			rect				510 376 120 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			60
+			textaligny			0
+			forecolor			1 .682 0 1
+			visible				1 
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;  
+				open			ids_popmenu 
+			}
+			mouseenter 
+			{ 
+				show			button_glow 
+				setitemrect		button_glow	507 374 150 20
 			}
 			mouseexit 
 			{ 

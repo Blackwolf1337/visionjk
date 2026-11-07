@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -29,11 +30,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <string>
 
-#ifdef USE_OPENAL
-// Open AL
-void S_PreProcessLipSync(sfx_t *sfx);
-extern int s_UseOpenAL;
-#endif
 /*
 ===============================================================================
 
@@ -789,16 +785,6 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 			{
 //				Com_DPrintf("(Keeping file \"%s\" as MP3)\n",sLoadName);
 
-#ifdef USE_OPENAL
-				if (s_UseOpenAL)
-				{
-					// Create space for lipsync data (4 lip sync values per streaming AL buffer)
-					if (strstr(sfx->sSoundName, "chars") )
-						sfx->lipSyncData = (char *)Z_Malloc(16, TAG_SND_RAWDATA, qfalse);
-					else
-						sfx->lipSyncData = NULL;
-				}
-#endif
 			}
 			else
 			{
@@ -850,36 +836,6 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 #endif
 
 						// Open AL
-#ifdef USE_OPENAL
-						if (s_UseOpenAL)
-						{
-							if (strstr(sfx->sSoundName, "chars"))
-							{
-								sfx->lipSyncData = (char *)Z_Malloc((sfx->iSoundLengthInSamples / 1000) + 1, TAG_SND_RAWDATA, qfalse);
-								S_PreProcessLipSync(sfx);
-							}
-							else
-								sfx->lipSyncData = NULL;
-
-							// Clear Open AL Error state
-							alGetError();
-
-							// Generate AL Buffer
-							ALuint Buffer;
-							alGenBuffers(1, &Buffer);
-							if (alGetError() == AL_NO_ERROR)
-							{
-								// Copy audio data to AL Buffer
-								alBufferData(Buffer, AL_FORMAT_MONO16, sfx->pSoundData, sfx->iSoundLengthInSamples*2, 22050);
-								if (alGetError() == AL_NO_ERROR)
-								{
-									sfx->Buffer = Buffer;
-									Z_Free(sfx->pSoundData);
-									sfx->pSoundData = NULL;
-								}
-							}
-						}
-#endif
 
 						Z_Free(pbUnpackBuffer);
 					}
@@ -923,37 +879,6 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 		ResampleSfx( sfx, info.rate, info.width, data + info.dataofs );
 
 		// Open AL
-#ifdef USE_OPENAL
-		if (s_UseOpenAL)
-		{
-			if ((strstr(sfx->sSoundName, "chars")) || (strstr(sfx->sSoundName, "CHARS")))
-			{
-				sfx->lipSyncData = (char *)Z_Malloc((sfx->iSoundLengthInSamples / 1000) + 1, TAG_SND_RAWDATA, qfalse);
-				S_PreProcessLipSync(sfx);
-			}
-			else
-				sfx->lipSyncData = NULL;
-
-			// Clear Open AL Error State
-			alGetError();
-
-			// Generate AL Buffer
-			ALuint Buffer;
-			alGenBuffers(1, &Buffer);
-			if (alGetError() == AL_NO_ERROR)
-			{
-				// Copy audio data to AL Buffer
-				alBufferData(Buffer, AL_FORMAT_MONO16, sfx->pSoundData, sfx->iSoundLengthInSamples*2, 22050);
-				if (alGetError() == AL_NO_ERROR)
-				{
-					// Store AL Buffer in sfx struct, and release sample data
-					sfx->Buffer = Buffer;
-					Z_Free(sfx->pSoundData);
-					sfx->pSoundData = NULL;
-				}
-			}
-		}
-#endif
 
 		Z_Free(samples);
 	}
@@ -978,74 +903,3 @@ qboolean S_LoadSound( sfx_t *sfx )
 	return bReturn;
 }
 
-#ifdef USE_OPENAL
-/*
-	Precalculate the lipsync values for the whole sample
-*/
-void S_PreProcessLipSync(sfx_t *sfx)
-{
-	int i, j;
-	int sample;
-	int sampleTotal = 0;
-
-	j = 0;
-	for (i = 0; i < sfx->iSoundLengthInSamples; i += 100)
-	{
-		sample = LittleShort(sfx->pSoundData[i]);
-
-		sample = sample >> 8;
-		sampleTotal += sample * sample;
-		if (((i + 100) % 1000) == 0)
-		{
-			sampleTotal /= 10;
-
-			if (sampleTotal < sfx->fVolRange *  s_lip_threshold_1->value)
-			{
-				// tell the scripts that are relying on this that we are still going, but actually silent right now.
-				sample = -1;
-			}
-			else if (sampleTotal < sfx->fVolRange * s_lip_threshold_2->value)
-				sample = 1;
-			else if (sampleTotal < sfx->fVolRange * s_lip_threshold_3->value)
-				sample = 2;
-			else if (sampleTotal < sfx->fVolRange * s_lip_threshold_4->value)
-				sample = 3;
-			else
-				sample = 4;
-
-			sfx->lipSyncData[j] = sample;
-			j++;
-
-			sampleTotal = 0;
-		}
-	}
-
-	if ((i % 1000) == 0)
-		return;
-
-	i -= 100;
-	i = i % 1000;
-	i = i / 100;
-	// Process last < 1000 samples
-	if (i != 0)
-		sampleTotal /= i;
-	else
-		sampleTotal = 0;
-
-	if (sampleTotal < sfx->fVolRange * s_lip_threshold_1->value)
-	{
-		// tell the scripts that are relying on this that we are still going, but actually silent right now.
-		sample = -1;
-	}
-	else if (sampleTotal < sfx->fVolRange * s_lip_threshold_2->value)
-		sample = 1;
-	else if (sampleTotal < sfx->fVolRange * s_lip_threshold_3->value)
-		sample = 2;
-	else if (sampleTotal < sfx->fVolRange * s_lip_threshold_4->value)
-		sample = 3;
-	else
-		sample = 4;
-
-	sfx->lipSyncData[j] = sample;
-}
-#endif

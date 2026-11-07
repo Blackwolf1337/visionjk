@@ -1,0 +1,39 @@
+Particle
+{
+	name				powder
+
+	flags				useAlpha
+
+	count				10 14
+
+	life				700 1200
+
+	origin				2 -4 -4 6 4 4
+
+	velocity			30 -70 -70 110 70 70
+
+	gravity				-140 -220
+
+	rotation			0 360
+
+	rotationDelta		-40 40
+
+	alpha
+	{
+		start			0.45 0.65
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			3 6
+		end				9 14
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/vision/toys/snowpuff
+	]
+}

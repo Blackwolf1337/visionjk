@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,8 +25,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // common.c -- misc functions used in client and server
 
-#include "stringed_ingame.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/stringed/stringed_ingame.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/game_version.h"
 #include "../server/NPCNav/navigator.h"
 #include "../shared/sys/sys_local.h"
@@ -714,6 +715,66 @@ int Com_RealTime(qtime_t *qtime) {
 	return t;
 }
 
+/*
+================
+Com_IDSDetail
+
+What came with an event of the intrusion detection (client/cl_ids.cpp, server/sv_ids.cpp), as it may stand in
+a log and on a console: plain characters, at most max of them, and ".." when there was more.
+================
+*/
+const char *Com_IDSDetail( const char *detail, int max ) {
+	static char	clean[256 + 4];
+	int			n = 0;
+
+	if ( !detail ) {
+		return "";
+	}
+	max = Com_Clampi( 0, 256, max );
+	for ( ; *detail && n < max; detail++ ) {
+		clean[n++] = Q_isLogChar( (unsigned char)*detail ) ? *detail : '.';
+	}
+	if ( *detail ) {
+		clean[n++] = '.';
+		clean[n++] = '.';
+	}
+	clean[n] = '\0';
+	return clean;
+}
+
+// a line of the intrusion detection: into its log file, with the time in front, and onto the console
+// (bytes of ids.log a run writes at most: anybody can send the client a packet that gets a line, one every two
+// seconds an event, and the file had no end)
+#define IDS_LOG_MOST	( 4 * 1024 * 1024 )
+
+void Com_IDSLine( fileHandle_t *file, const char *path, const char *line ) {
+	static int written;
+
+	if ( written >= IDS_LOG_MOST ) {
+		Com_Printf( S_COLOR_YELLOW "IDS: %s\n", line );
+		return;
+	}
+	if ( !*file ) {
+		FS_FOpenFileByMode( path, file, FS_APPEND );
+	}
+	if ( *file ) {
+		written += (int)strlen( line ) + 21;
+		if ( written >= IDS_LOG_MOST ) {
+			line = "more lines than fit this run: the rest goes to the console only";
+		}
+		qtime_t	t = {};		// (zeros where the system has no local time)
+		char	stamp[32];
+
+		Com_RealTime( &t );
+		Com_sprintf( stamp, sizeof( stamp ), "%04i-%02i-%02i %02i:%02i:%02i ", 1900 + t.tm_year, 1 + t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec );
+		FS_Write( stamp, (int)strlen( stamp ), *file );
+		FS_Write( line, (int)strlen( line ), *file );
+		FS_Write( "\n", 1, *file );
+		FS_Flush( *file );
+	}
+	Com_Printf( S_COLOR_YELLOW "IDS: %s\n", line );
+}
+
 
 /*
 ===================================================================
@@ -1067,6 +1128,45 @@ void Com_ExecuteCfg(void)
 }
 
 /*
+==================
+Com_ConfigSteps
+
+Changes to the config of a player that a version makes once, counted in v_configStep. Runs after the config and
+before the command line, so a +set still wins.
+1 (2026-11-02): the detail settings that left the video menu go back to their defaults, a low preset of the old
+  menu can not be seen or undone there any more
+2 (2026-11-02): cg_shadows 2 and 3 (stencil volumes, flattened copies of the model) went, they become the blob (1)
+==================
+*/
+static void Com_ConfigSteps( void ) {
+#ifndef DEDICATED
+	static const char *step1[][2] = {
+		{ "r_picmip", "0" }, { "r_lodbias", "0" }, { "r_textureMode", "GL_LINEAR_MIPMAP_LINEAR" },
+		{ "r_ext_texture_filter_anisotropic", "16" }, { "r_ext_compress_textures", "1" }, { "r_dynamiclight", "1" },
+		{ "cg_marks", "1" }, { "cg_renderToTextureFX", "1" }, { "r_subdivisions", "4" }, { "r_fastsky", "0" },
+		{ "r_inGameVideo", "1" },
+	};
+	cvar_t	*step = Cvar_Get( "v_configStep", "0", CVAR_ARCHIVE_ND, "Changes a version made to the config once" );
+
+	if ( step->integer < 1 ) {
+		// only what the config has: the rest gets its default when it is registered
+		for ( size_t i = 0; i < ARRAY_LEN( step1 ); i++ ) {
+			if ( !( Cvar_Flags( step1[i][0] ) & CVAR_NONEXISTENT ) ) {
+				Cvar_Set( step1[i][0], step1[i][1] );
+			}
+		}
+		Cvar_Set( "v_configStep", "1" );
+	}
+	if ( step->integer < 2 ) {
+		if ( Cvar_VariableIntegerValue( "cg_shadows" ) > 1 ) {
+			Cvar_Set( "cg_shadows", "1" );
+		}
+		Cvar_Set( "v_configStep", "2" );
+	}
+#endif
+}
+
+/*
 =================
 Com_InitRand
 Seed the random number generator, if possible with an OS supplied random seed.
@@ -1180,6 +1280,11 @@ void Com_Init( char *commandLine ) {
 		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );
 
+#ifndef DEDICATED
+		// here and not later: so far a cvar can only have come from the command line
+		CL_UpdateAddress();
+#endif
+
 		Com_InitZoneMemoryVars();
 		Cmd_Init ();
 
@@ -1198,6 +1303,8 @@ void Com_Init( char *commandLine ) {
 		NET_Init();
 
 		FS_InitFilesystem ();
+		// VisionJK: the day code last used each cvar, before a config sets any (cvar_cleanup.cpp)
+		Cvar_SeenLoad();
 
 		Com_InitJournaling();
 
@@ -1215,6 +1322,7 @@ void Com_Init( char *commandLine ) {
 		Cmd_SetCommandCompletionFunc( "writeconfig", Cmd_CompleteCfgName );
 
 		Com_ExecuteCfg();
+		Com_ConfigSteps();
 
 		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );
@@ -1250,6 +1358,7 @@ void Com_Init( char *commandLine ) {
 		com_showtrace = Cvar_Get ("com_showtrace", "0", CVAR_CHEAT);
 
 		com_speeds = Cvar_Get ("com_speeds", "0", 0);
+		Com_LoadInit();
 		com_timedemo = Cvar_Get ("timedemo", "0", 0);
 		com_cameraMode = Cvar_Get ("com_cameraMode", "0", CVAR_CHEAT);
 
@@ -1343,7 +1452,7 @@ void Com_WriteConfigToFile( const char *filename ) {
 		return;
 	}
 
-	FS_Printf (f, "// generated by OpenJK MP, do not modify\n");
+	FS_Printf (f, "// generated by VisionJK MP, do not modify\n");
 	Key_WriteBindings (f);
 	Cvar_WriteVariables (f);
 	FS_FCloseFile( f );
@@ -1488,6 +1597,23 @@ int Com_TimeVal(int minMsec)
 
 /*
 =================
+Com_MinFrameMsec
+
+How long a frame of the client lasts at least, as com_maxfps and its two variants ask for it
+=================
+*/
+int Com_MinFrameMsec( void ) {
+	if(com_minimized->integer && com_maxfpsMinimized->integer > 0)
+		return 1000 / com_maxfpsMinimized->integer;
+	if(com_unfocused->integer && com_maxfpsUnfocused->integer > 0)
+		return 1000 / com_maxfpsUnfocused->integer;
+	if(com_maxfps->integer > 0)
+		return 1000 / com_maxfps->integer;
+	return 1;
+}
+
+/*
+=================
 Com_Frame
 =================
 */
@@ -1508,8 +1634,14 @@ void Com_Frame( void ) {
 		int           timeBeforeClient = 0;
 		int           timeAfter = 0;
 
+#ifdef VISIONJK_HOTPATCH
+		// between two frames no module code is on the stack
+		VM_HotpatchFrame();
+#endif
+
 		// write config file if anything changed
 		Com_WriteConfiguration();
+		Cvar_SeenFrame();
 
 		//
 		// main event loop
@@ -1525,14 +1657,7 @@ void Com_Frame( void ) {
 				minMsec = SV_FrameMsec();
 			else
 			{
-				if(com_minimized->integer && com_maxfpsMinimized->integer > 0)
-					minMsec = 1000 / com_maxfpsMinimized->integer;
-				else if(com_unfocused->integer && com_maxfpsUnfocused->integer > 0)
-					minMsec = 1000 / com_maxfpsUnfocused->integer;
-				else if(com_maxfps->integer > 0)
-					minMsec = 1000 / com_maxfps->integer;
-				else
-					minMsec = 1;
+				minMsec = Com_MinFrameMsec();
 
 				timeVal = com_frameTime - lastTime;
 				bias += timeVal - minMsec;
@@ -1556,6 +1681,8 @@ void Com_Frame( void ) {
 			else
 				NET_Sleep(timeVal - 1);
 		} while( (timeVal = Com_TimeVal(minMsec)) != 0 );
+		// what follows is the work of the frame
+		Com_LoadFrameBegin();
 		IN_Frame();
 
 		lastTime = com_frameTime;
@@ -1564,6 +1691,7 @@ void Com_Frame( void ) {
 		msec = com_frameTime - lastTime;
 
 		Cbuf_Execute ();
+		Cbuf_CheckPending ();
 
 		// mess with msec if needed
 		msec = Com_ModifyMsec( msec );
@@ -1575,7 +1703,9 @@ void Com_Frame( void ) {
 			timeBeforeServer = Sys_Milliseconds ();
 		}
 
+		Com_LoadPush( "frame: server", NULL );
 		SV_Frame( msec );
+		Com_LoadPop();
 
 		// if "dedicated" has been modified, start up
 		// or shut down the client system.
@@ -1615,7 +1745,9 @@ void Com_Frame( void ) {
 				timeBeforeClient = Sys_Milliseconds ();
 			}
 
+			Com_LoadPush( "frame: client", NULL );
 			CL_Frame( msec );
+			Com_LoadPop();
 
 			if ( com_speeds->integer ) {
 				timeAfter = Sys_Milliseconds ();
@@ -1668,6 +1800,7 @@ void Com_Frame( void ) {
 			Sys_SetProcessorAffinity();
 		}
 
+		Com_LoadFrameEnd();
 		com_frameNumber++;
 	}
 	catch (int code) {
@@ -1696,6 +1829,7 @@ Com_Shutdown
 void MSG_shutdownHuffman();
 void Com_Shutdown (void)
 {
+	Cvar_SeenSave();
 	CM_ClearMap();
 
 	if (logfile) {
@@ -1730,6 +1864,7 @@ void Field_Clear( field_t *edit ) {
 	memset(edit->buffer, 0, MAX_EDIT_LINE);
 	edit->cursor = 0;
 	edit->scroll = 0;
+	edit->selAnchor = -1;
 }
 
 /*

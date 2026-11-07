@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/q_shared.h"
 #include "rd-common/tr_types.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "cg_public.h"
 
 // The entire cgame module is unloaded and reloaded on each level change,
@@ -312,6 +313,8 @@ typedef struct clientInfo_s {
 	sfxHandle_t		jediSounds[MAX_CUSTOM_JEDI_SOUNDS];
 	sfxHandle_t		siegeSounds[MAX_CUSTOM_SIEGE_SOUNDS];
 	sfxHandle_t		duelSounds[MAX_CUSTOM_DUEL_SOUNDS];
+	char			soundDir[MAX_QPATH];	// sound/chars/<soundDir>/misc holds the voice, "" none (CG_CharacterSound)
+	qboolean		soundFemale;
 
 	int				legsAnim;
 	int				torsoAnim;
@@ -754,14 +757,6 @@ typedef struct skulltrail_s {
 #define MAX_PREDICTED_EVENTS	16
 
 
-#define	MAX_CHATBOX_ITEMS		5
-typedef struct chatBoxItem_s
-{
-	char	string[MAX_SAY_TEXT];
-	int		time;
-	int		lines;
-} chatBoxItem_t;
-
 typedef struct cg_s {
 	int			clientFrame;		// incremented each frame
 
@@ -1028,8 +1023,6 @@ Ghoul2 Insert End
 
 	float				distanceCull;
 
-	chatBoxItem_t		chatItems[MAX_CHATBOX_ITEMS];
-	int					chatItemActive;
 
 #if 0
 	int					snapshotTimeoutTime;
@@ -1153,6 +1146,7 @@ typedef struct cgMedia_s {
 	qhandle_t	purpleSaberGlowShader;
 	qhandle_t	purpleSaberCoreShader;
 	qhandle_t	saberBlurShader;
+	qhandle_t	sfxSaberTrailShader;	// the white of the swept place of v_saberStyle 1 (CG_SFXSaberTrailFill)
 	qhandle_t	swordTrailShader;
 	// JA+ saber colors: 6 to 10 are RGB blades, 11 is black
 	qhandle_t	RGBSaberGlowShader;
@@ -1289,6 +1283,9 @@ typedef struct cgMedia_s {
 	sfxHandle_t	teleOutSound;
 	sfxHandle_t	respawnSound;
 	sfxHandle_t talkSound;
+	sfxHandle_t tayHitSound;		// tay_hitSounds, tay_killSound, tay_notify (assets: tools/sounds/make_tay_sounds.py)
+	sfxHandle_t tayKillSound;
+	sfxHandle_t tayNotifySound;
 	sfxHandle_t landSound;
 	sfxHandle_t fallSound;
 
@@ -1566,6 +1563,9 @@ typedef struct cgs_s {
 	glconfig_t		glconfig;			// rendering configuration
 	float			screenXScale;		// derived from glconfig
 	float			screenYScale;
+	float			bias2D;				// the grid of the 2D runs from -bias2D to 640 + bias2D on a wide window (cvar v_2dBias)
+	float			bias2DY;			//	and from -bias2DY to 480 + bias2DY on a window narrower than 4:3 (v_2dBiasY)
+	float			shift2D;			// what CG_Place2D() moves the 2D by right now
 	float			screenXBias;
 
 	int				serverCommandSequence;	// reliable command stream counter
@@ -1732,6 +1732,7 @@ void CG_ZoomUp_f( void );
 void CG_AddBufferedSound( sfxHandle_t sfx);
 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback );
+void CG_HearingPoint( vec3_t hear );
 /*
 Ghoul2 Insert Start
 */
@@ -1750,6 +1751,323 @@ Ghoul2 Insert End
 //
 // cg_drawtools.c
 //
+// chat/cg_chat.c: the chat box
+typedef enum {
+	CHAT_ALL,
+	CHAT_TEAM,			// team chat, and the clan and admin chat of JA+
+	CHAT_TELL,
+	CHAT_NUM_KINDS
+} chatKind_t;
+
+void		CG_ChatInit( void );
+void		CG_ChatDraw( void );
+void		CG_ChatAdd( int kind, int clientNum, const char *text );
+int			CG_ChatKind( const char *cmd, const char *raw );
+int			CG_ChatSender( const char *raw, int clientNum );
+void		CG_ChatBox_AddString( char *chatStr );
+qboolean	CG_ChatKeyEvent( int key, qboolean down );
+void		CG_ChatOpen_f( void );
+qboolean	CG_ChatOpenFor( int mode, int target );
+void		CG_ChatDrag_f( void );
+void		CG_ChatEmoji_f( void );
+void		CG_ChatClose( void );
+
+// bubble/cg_bubble.c: chat bubbles above the heads
+void		CG_BubbleInit( void );
+void		CG_BubbleSay( int clientNum, int kind, const char *message );
+qboolean	CG_BubbleDraw( centity_t *cent, qboolean dots );
+qboolean	CG_BubbleReady( void );
+qboolean	CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
+				const float *fill, const float *border );
+qboolean	CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
+				const float *fill, const float *border, const float *light, float alpha );
+
+// scope/cg_scope.c: the scope of the disruptor
+void		CG_ScopeInit( void );
+void		CG_ScopeFrame( void );
+void		CG_ScopeScene( void );
+void		CG_ScopeEntity( centity_t *cent );
+qboolean	CG_ScopeLensDrawn( void );
+void		CG_ScopeDrawHUD( void );
+void		CG_ScopeZoom_f( void );
+qboolean	CG_ScopeKeyCommand( const char *command );
+void		CG_ScopeDrawBinoculars( void );
+void		CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep );
+
+// photo/cg_photo.c: the photo mode
+void		CG_Photo_f( void );
+qboolean	CG_PhotoActive( void );
+qboolean	CG_PhotoFrame( void );
+void		CG_PhotoView( void );
+void		CG_PhotoGrade( screenEffect_t *fx );
+qboolean	CG_PhotoMouseEvent( int x, int y );
+qboolean	CG_PhotoKeyEvent( int key, qboolean down );
+void		CG_PhotoDraw2D( void );
+
+// screenfx/cg_screenfx.c: the renderer bends and colours the view of the level
+void		CG_ScreenFxInit( void );
+void		CG_ScreenFxScene( void );
+void		CG_ScreenFxBlast( const vec3_t origin, float radius );
+void		CG_ScreenFxWeaponBlast( int weapon, qboolean altFire, const vec3_t origin );
+void		CG_ScreenFxEmit( int id, const vec3_t origin, const vec3_t dir, float radius, float strength, float smoke );
+void		CG_ScreenFxFired( int weapon );
+qboolean	CG_ScreenFxHitDrawn( void );
+qboolean	CG_ScreenFxWaterDrawn( void );
+qboolean	CG_ScreenFxForceDrawn( void );
+void		CG_ScreenFxPlayer( centity_t *cent );
+void		CG_ScreenFxFlash( const vec3_t origin, float size, float strength );
+void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
+void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength );
+void		CG_ScreenFxWet( const vec3_t velocity );
+qboolean	CG_ScreenFxSnow( const vec3_t velocity );	// a snowball in the face, qfalse: draw the picture instead
+qboolean	CG_ScreenFxSightDrawn( void );
+void		CG_ScreenFxGhostBody( refEntity_t *body );
+void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );
+
+// menu3d/cg_menu3d.c: the menu in the level
+void		CG_Menu3DInit( void );
+qboolean	CG_Menu3DFrame( void );
+qboolean	CG_Menu3DActive( void );
+float		CG_Menu3DMuffle( void );
+void		CG_Menu3DView( void );
+void		CG_Menu3DScene( void );
+
+// select/cg_select.c: players that can be clicked while the mouse is free
+void		CG_SelectInit( void );
+void		CG_SelectLetGo( void );
+void		CG_SelectCarry( int piece );
+void		CG_SelectDraw( void );
+void		CG_SelectScene( void );
+void		CG_SelectOverScene( void );
+void		CG_SelectDrawCursor( void );
+qboolean	CG_SelectKeyEvent( int key, qboolean down );
+void		CG_SelectOutline( int clientNum, const refEntity_t *model );
+qboolean	CG_SelectOutlined( int clientNum );
+void		CG_SelectBoxOutline( int piece, const refEntity_t *model );
+qboolean	CG_SelectBoxOutlined( int piece );
+void		CG_SelectCursorDown_f( void );
+void		CG_SelectCursorUp_f( void );
+int			CG_SelectHoveredPiece( void );
+
+// radial/cg_radial.c: the quick wheel (+v_radial), a mode of the pointer
+void		CG_RadialDown_f( void );
+void		CG_RadialUp_f( void );
+qboolean	CG_RadialOpen( void );
+void		CG_RadialClose( void );
+qboolean	CG_RadialKey( int key, qboolean down );
+void		CG_RadialDraw( void );
+
+// cmdmenu/cg_cmdmenu.c: the command menu (v_commandmenu), a mode of the pointer as the quick wheel is
+void		CG_CmdMenu_f( void );
+qboolean	CG_CmdMenuOpen( void );
+void		CG_CmdMenuClose( void );
+qboolean	CG_CmdMenuKey( int key, qboolean down );
+void		CG_CmdMenuDraw( void );
+void		CG_SelectCursor_f( void );
+// what the card of a player uses of the chat box, the voice chat and the key login
+qboolean	CG_ChatIsOpen( void );
+qboolean	CG_ChatHidden( int clientNum );
+void		CG_ChatHide( int clientNum, qboolean hide );
+qboolean	CG_VoiceMuted( int clientNum );
+int			CG_VoiceLouder( int clientNum, int steps );
+qboolean	CG_AuthIsAdmin( void );
+
+// hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
+qboolean	CG_StatValue( const char *name, float *value, float *max );
+void		CG_HudLoad( void );
+qboolean	CG_HudLoading( void );
+void		CG_DisplayEnsure( void );					// cg_main.c
+void		CG_ScreenSize( void );						// cg_main.c: the size of the window and the 2D grid on it
+void		CG_CheckScreenSize( void );					//	and again when the window got another one
+void		CG_ParseMenu( const char *menuFile );		// cg_main.c
+qboolean	CG_HudDraw( void );
+qboolean	CG_HudNewLook( void );
+const char	*CG_VisionText( const char *english );
+const char	*CG_VisionTextWith( const char *english, const char *value );
+// sandbox/cg_tools.c: the toolgun of the sandbox
+void		CG_ToolsInit( void );
+void		CG_ToolsFrame( void );
+void		CG_ToolsDraw( void );
+void		CG_ToolServerCommand( void );			// vs_tool
+// sandbox/cg_tools_ui.c: its window
+void		CG_ToolWindow_f( void );				// v_tools
+void		CG_ToolWindowClose( void );
+qboolean	CG_ToolWindowShown( void );
+qboolean	CG_ToolWindowPointerOver( void );
+void		CG_ToolWindowDraw( void );
+qboolean	CG_ToolWindowKey( int key, qboolean down );
+// modelstore/cg_modelstore.c: the window of the model store of the site
+void		CG_ModelStore_f( void );				// v_modelbrowser
+void		CG_ModelStoreClose( void );
+qboolean	CG_ModelStoreShown( void );
+qboolean	CG_ModelStorePointerOver( void );
+void		CG_ModelStoreDraw( void );
+qboolean	CG_ModelStoreKey( int key, qboolean down );
+const char	*CG_KeyLabel( int key );
+void		CG_TextCut( const char *text, float most, float (*width)( const char *text, void *arg ), void *arg, char *out, int outSize );
+qboolean	CG_ScoresDraw( void );											// hud/cg_scores.c
+qboolean	CG_ScoresPicking( void );
+qboolean	CG_ScoresShown( void );
+qboolean	CG_ScoresPointerOver( void );
+int			CG_ScoresClientAt( float *cardX, float *cardY );
+qboolean	CG_ScoresKeyEvent( int key );
+void		CG_ScoresLetGo( void );
+qboolean	CG_ScoresPress( void );
+void		CG_ScoresRelease( void );
+qboolean	CG_ScoresKept( void );
+void		CG_ScoresPick_f( void );
+void		CG_ScoresInit( void );
+
+// status/cg_status.c and cg_status_music.c: away and music above the heads
+void		CG_PeerInit( void );											// status/cg_peers.c
+void		CG_PeerServerCommand( void );
+void		CG_PeerHeard( int clientNum );
+void		CG_PeerLeft( int clientNum );
+int			CG_PeerVision( int clientNum, const char **version );
+void		CG_PeerList_f( void );
+void		CG_StatusInit( void );
+void		CG_StatusFrame( void );
+void		CG_StatusServerCommand( void );
+void		CG_StatusAnswered( void );
+void		CG_StatusFromMaster( int clientNum, qboolean away, const char *text );
+void		CG_StatusList_f( void );
+void		CG_StatusTest_f( void );
+
+// auth/cg_auth.c: admin login with a key
+void		CG_AuthInit( void );
+void		CG_AuthFrame( void );
+void		CG_AuthServerCommand( void );
+void		CG_AuthCommand_f( void );
+qboolean	CG_StatusLine( int clientNum, char *out, int outSize );
+void		CG_MusicFrame( void );
+void		CG_MusicShutdown( void );
+qboolean	CG_MusicNowPlaying( char *out, int outSize );
+
+// where on a wide window something of the 2D sits, see CG_Place2D()
+typedef enum {
+	PLACE_CENTER,
+	PLACE_LEFT,
+	PLACE_RIGHT
+} place2D_t;
+
+void CG_Place2D( place2D_t place );
+void CG_AdjustFrom640( float *x, float *y, float *w, float *h );
+void CG_FillSides( const float *color );
+void CG_DrawPicWide( qhandle_t hShader );
+qhandle_t CG_WidePicture( const char *name, const char *wideName );
+
+// hud/cg_killfeed.c
+void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
+float CG_KillfeedDraw( float y );
+
+// hud/cg_notify.c
+typedef enum {
+	NOTIFY_EVENT,			// of VisionJK: a boombox, an update, the command v_notify_show
+	NOTIFY_TELL,			// a tell to this player
+	NOTIFY_MENTION,			// a chat line with his name (tay_notify)
+	NOTIFY_IDS				// an event of the intrusion detection of the engine (v_idsSeq)
+} notifyKind_t;
+
+void CG_NotifyAdd( notifyKind_t kind, const char *text );
+void CG_NotifyDraw( void );
+void CG_NotifyInit( void );
+void CG_Notify_f( void );
+
+// tay_forceEnemyModel, tay_forceAllyModel (cg_players.c, cg_cvar.c)
+qboolean CG_IsAlly( team_t team );
+void CG_ForcedModelsCheck( void );
+
+// cg_strafetrail.c
+void CG_StrafeTrailsAdd( void );
+qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y );
+
+// cg_spatialdebug.c
+void CG_SpatialDebugAdd( void );
+void CG_SpatialDebugDraw( void );
+// cg_spatialmovers.c
+void CG_SpatialMovers( void );
+
+// look/cg_look.c: hats and capes
+void CG_LookInit( void );
+void CG_LookFrame( void );
+void CG_LookServerCommand( void );
+// toys/cg_toys.c: the snowball and the other toys of issue #9
+void		CG_ToysInit( void );
+void		CG_ToysFrame( void );
+void		CG_ToysScene( void );
+void		CG_ToysDraw( void );
+void		CG_ToyServerCommand( void );			// vs_toy
+void		CG_ToyFromMaster( int client, const byte *data, int len );
+void		CG_SnowballDown_f( void );				// +v_snowball
+void		CG_SnowballUp_f( void );
+void		CG_WaterDown_f( void );					// +v_water (toys/cg_water.c)
+void		CG_WaterUp_f( void );
+qboolean	CG_WaterHolding( int client );			// the water gun is in his hand: his weapon is put away
+qboolean	CG_WaterGun( centity_t *cent );			// draws it there, qtrue: it is in the hand
+qboolean	CG_WaterViewGun( void );				// the own one in first person, in place of the view weapon
+int			CG_SnowballTorsoAnim( centity_t *cent, int anim );	// pulled back to throw, the throw (toys/cg_toys.c)
+void		CG_SnowballHand( centity_t *cent );		// the own ball in the hand while it is held
+qboolean	CG_SnowballHolding( int client );		//	which puts the weapon away meanwhile
+qboolean	CG_SnowballViewBall( void );			//	and in the view in first person, in place of the weapon
+qboolean	CG_WaterStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right, qboolean heavy );
+void		CG_WaterLand( centity_t *cent, float strength );	// a jump or a landing into standing water
+void		CG_WaterImpact( const vec3_t at, float strength );	// a shot into standing water
+float		CG_WaterWheel( const vec3_t at, const vec3_t normal, const vec3_t velocity, qboolean effects );	// RC car
+void		CG_WaterTrack( const vec3_t from, const vec3_t to, const vec3_t normal, float width, float wet );
+qboolean	CG_WaterWetDrawn( void );				// the renderer draws wet places (ext.R_AddWet)
+void		CG_WaterSoak( const vec3_t origin, const vec3_t normal, float size );	// melted snow makes the ground wet
+int			CG_WaterTorsoAnim( centity_t *cent, int anim );	// a rifle held up while it is in the hand
+void		CG_RcCar_f( void );						// v_rccar (toys/cg_rccar.c)
+void		CG_Spray_f( void );						// v_spray (toys/cg_spray.c)
+void		CG_Emote_f( void );						// v_emote (toys/cg_emote.c)
+void		CG_PingPong_f( void );					// v_pingpong (toys/cg_pong.c)
+void		CG_Tennis_f( void );					// v_tennis (toys/cg_pong.c)
+void		CG_Board_f( void );						// v_board (toys/cg_board.c)
+void		CG_BoardPicture_f( void );				// v_boardPicture, from the engine
+void		CG_SprayPicture_f( void );				// v_sprayPicture, from the engine (toys/cg_spray.c)
+void		CG_SprayArrived_f( void );				// v_sprayArrived, from the engine
+void		CG_BoardPasted_f( void );				// v_boardPasted, from the engine (toys/cg_board.c)
+void		CG_BoardPublish( void );
+void		CG_BoardOpen( void );
+void		CG_BoardClose( void );
+qboolean	CG_BoardShown( void );
+qboolean	CG_BoardPointerOver( void );
+void		CG_BoardDraw( void );
+qboolean	CG_BoardKey( int key, qboolean down );
+qboolean	CG_PongPlaying( void );
+qboolean	CG_PongFrame( void );
+void		CG_PongView( void );
+qboolean	CG_PongMouseEvent( int x, int y );
+qboolean	CG_PongKeyEvent( int key, qboolean down );
+void		CG_PongDraw( void );
+qboolean	CG_RcDriving( void );
+qboolean	CG_RcFrame( void );
+void		CG_RcView( void );
+qboolean	CG_RcMouseEvent( int x, int y );
+qboolean	CG_RcKeyEvent( int key, qboolean down );
+void		CG_RcDraw( void );
+qboolean	CG_VoiceToys( void );					// voice/cg_voice.c
+void		CG_VoiceSendToy( const byte *data, int len );
+void CG_LookFromMaster( int client, const char *text );
+void CG_LookClear( int client );
+void CG_LookPlayerInfo( int client, const char *c1, const char *c2, const char *c5 );
+void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body );
+void CG_Cosmetics_f( void );
+qboolean CG_VoiceLooks( void );
+void CG_VoiceSendLook( const char *text );
+
+// hud/cg_movehud.c
+void CG_MoveHudDraw( void );
+
+// cg_players.c: JA+, the player is in the other alternate dimension (shots pass through him)
+qboolean CG_JPOtherDimension( int clientNum );
+
+// hud/cg_lead.c, hud/cg_spechud.c
+void CG_LeadDraw( void );
+qboolean CG_SpecHudShown( void );
+float CG_SpecHudDraw( float y );
+void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
+void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 void CG_FillRect( float x, float y, float width, float height, const float *color );
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader );
 void CG_DrawRotatePic( float x, float y, float width, float height,float angle, qhandle_t hShader );
@@ -1767,6 +2085,7 @@ void CG_DrawSmallString( int x, int y, const char *s, float alpha );
 void CG_DrawSmallStringColor( int x, int y, const char *s, vec4_t color );
 
 int CG_DrawStrlen( const char *str );
+int CG_StringWidth( const char *str, int charWidth, int charHeight );
 
 float	*CG_FadeColor( int startMsec, int totalMsec );
 float *CG_TeamColor( int team );
@@ -1830,6 +2149,7 @@ void CG_ResetPlayerEntity( centity_t *cent );
 void CG_AddRefEntityWithPowerups( refEntity_t *ent, entityState_t *state, int team );
 void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized );
 sfxHandle_t	CG_CustomSound( int clientNum, const char *soundName );
+sfxHandle_t	CG_CharacterSound( int clientNum, const char *name );
 void CG_PlayerShieldHit(int entitynum, vec3_t angles, int amount);
 
 
@@ -1845,6 +2165,7 @@ void CG_G2Trace( trace_t *result, const vec3_t start, const vec3_t mins, const v
 					 int skipNumber, int mask );
 void CG_PredictPlayerState( void );
 void CG_LoadDeferredPlayers( void );
+void CG_ModelArrived_f( void );
 
 
 //
@@ -1927,6 +2248,8 @@ void	CG_ImpactMark( qhandle_t markShader,
 				    float r, float g, float b, float a,
 					qboolean alphaFade,
 					float radius, qboolean temporary );
+void	CG_ImpactMarkFrame( qhandle_t markShader, const vec3_t origin, const vec3_t dir, float orientation, const vec3_t light,
+					float radius, const float *part );
 
 //
 // cg_localents.c
@@ -2047,16 +2370,21 @@ int CG_ClientNumFromName( const char *p );		// cg_newDraw.c
 void CG_VoiceInit( void );
 void CG_VoiceShutdown( void );
 void CG_VoiceFrame( void );
-void CG_VoiceServerInfo( qboolean has );
+void CG_VoiceServerInfo( const char *value );	// vs_voice of the server info, "" if the server does not say it
 void CG_VoiceServerCommand( void );
 void CG_VoiceDown_f( void );
 void CG_VoiceUp_f( void );
+void CG_VoiceClanDown_f( void );
+void CG_VoiceClanUp_f( void );
 void CG_VoiceDevices_f( void );
 void CG_VoiceStatus_f( void );
 void CG_VoiceTest_f( void );
 void CG_VoiceMute_f( void );
 void CG_VoiceUnmute_f( void );
 void CG_VoiceDraw( void );
+int CG_VoiceLip( int clientNum );	// how far the mouth of a player is open by what he says, 0 to 4
+qboolean CG_VoiceSocial( void );	// the masterserver hands statuses on for this client
+void CG_VoiceSendStatus( qboolean away, const char *text );
 
 void CG_JPAutoReplierInit( void );
 void CG_JPReplyDuelEvent( qboolean start );
@@ -2146,5 +2474,8 @@ void	CG_SetLightstyle (int i);
 /*
 Ghoul2 Insert End
 */
+
+// boombox/cg_boombox.c: boxes that play songs of YouTube
+#include "cgame/boombox/cg_boombox.h"
 
 extern cgameImport_t *trap;

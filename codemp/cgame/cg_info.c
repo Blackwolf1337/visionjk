@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -142,12 +143,17 @@ void CG_DrawInformation( void ) {
 	sysInfo = CG_ConfigString( CS_SYSTEMINFO );
 
 	s = Info_ValueForKey( info, "mapname" );
-	levelshot = trap->R_RegisterShaderNoMip( va( "levelshots/%s", s ) );
+	levelshot = CG_WidePicture( va( "levelshots/%s", s ), va( "levelshots_16_9/%s", s ) );
 	if ( !levelshot ) {
-		levelshot = trap->R_RegisterShaderNoMip( "menu/art/unknownmap_mp" );
+		levelshot = CG_WidePicture( "menu/art/unknownmap_mp", "menu/art/unknownmap_mp_16_9" );
 	}
 	trap->R_SetColor( NULL );
-	CG_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, levelshot );
+	CG_DrawPicWide( levelshot );
+
+	// the loading screen of the new look in place of all that follows (hud/cg_hud.c), where it can be drawn
+	if ( CG_HudLoading() ) {
+		return;
+	}
 
 	CG_LoadBar();
 
@@ -192,15 +198,6 @@ void CG_DrawInformation( void ) {
 			y += iPropHeight;
 		}
 
-		{	// display global MOTD at bottom (mirrors ui_main UI_DrawConnectScreen
-			char motdString[1024];
-			trap->Cvar_VariableStringBuffer( "cl_motdString", motdString, sizeof( motdString ) );
-
-			if (motdString[0])
-			{
-				CG_DrawProportionalString( 320, 425, motdString, UI_CENTER|UI_INFOFONT|UI_DROPSHADOW, colorWhite );
-			}
-		}
 
 		// some extra space after hostname and motd
 		y += 10;

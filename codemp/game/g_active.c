@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -23,8 +24,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
-#include "bg_props.h"
-#include "bg_saga.h"
+#include "game/props/bg_props.h"
+#include "game/bg/bg_saga.h"
 
 extern void Jedi_Cloak( gentity_t *self );
 extern void Jedi_Decloak( gentity_t *self );
@@ -731,8 +732,6 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		pmove.ps = &client->ps;
 		pmove.cmd = *ucmd;
 		pmove.tracemask = MASK_PLAYERSOLID & ~CONTENTS_BODY;	// spectators can fly through bodies
-		if ( client->pers.jp.blockEditor )
-			pmove.tracemask = 0;	// JA+: the editor of the blocking walls flies through everything
 		pmove.trace = SV_PMTrace;
 		pmove.pointcontents = trap->PointContents;
 
@@ -1905,6 +1904,15 @@ void ClientThink_real( gentity_t *ent ) {
 	if (client->pers.connected != CON_CONNECTED && !isNPC) {
 		return;
 	}
+
+	// a sign of life, or none: who is away has it above his head (status/g_status.c). What the web admin panel
+	// does with a player below is not his doing.
+	if ( ent->s.number < MAX_CLIENTS && !isNPC )
+		G_StatusInput( ent, &client->pers.cmd );
+
+	// a player who is moved from the web admin panel: his command is what the page says
+	if ( ent->s.number < MAX_CLIENTS )
+		WebAdmin_ClientCommand( ent, &client->pers.cmd );
 
 	// This code was moved here from clientThink to fix a problem with g_synchronousClients
 	// being set to 1 when in vehicles.
@@ -3611,8 +3619,10 @@ A new command has arrived from the client
 void ClientThink( int clientNum, usercmd_t *ucmd ) {
 	gentity_t *ent;
 
-	// the voice relay is looked at with every move that comes in, not only once a server frame
+	// the voice relay is looked at with every move that comes in, not only once a server frame, and so are the
+	// songs of the boombox that are due
 	G_VoiceFrame();
+	G_BoomboxFrame();
 
 	ent = g_entities + clientNum;
 	if (clientNum < MAX_CLIENTS)
@@ -3779,8 +3789,13 @@ void ClientEndFrame( gentity_t *ent ) {
 	{
 		isNPC = qtrue;
 	}
+	else
+	{
+		JP_FloodExemptThink( ent );
+	}
 
 	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
+		G_UnlaggedClear( ent );
 		SpectatorClientEndFrame( ent );
 		return;
 	}
@@ -3843,6 +3858,10 @@ void ClientEndFrame( gentity_t *ent ) {
 	}
 
 	SendPendingPredictableEvents( &ent->client->ps );
+
+	if ( ent->s.number < MAX_CLIENTS ) {
+		G_UnlaggedStore( ent );
+	}
 
 	// set the bit for the reachability area the client is currently in
 //	i = trap->AAS_PointReachabilityAreaIndex( ent->client->ps.origin );

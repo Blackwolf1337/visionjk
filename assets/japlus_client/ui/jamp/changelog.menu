@@ -1,0 +1,179 @@
+//----------------------------------------------------------------------------------------------
+//
+//	WHAT'S NEW (VisionJK): the changelog of the website, the versions at the left (FEEDER_CHANGELOG),
+//	the one that is selected at the right (owner draw UI_CHANGELOG, ui/ui_changelog.c). Opened by the
+//	pill "What's new" on the main menu (ui/ui_update.c), by the row of Setup, Network, and once by
+//	itself after an update. The texts are the ones of the new look (strings/<language>/vision.str).
+//
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name					"changelog_popmenu"
+		visible					0
+		fullScreen				0
+		rect					0 0 640 480
+		focusColor				1 1 1 1
+		outOfBoundsClick
+		popup
+		onOpen
+		{
+			uiScript			Changelog ;
+			setfocus			changelog_entry
+		}
+		onESC
+		{
+			play				"sound/interface/esc.wav" ;
+			close				changelog_popmenu ;
+		}
+		itemDef
+		{
+			name				changelog_background
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				20 40 600 400
+			background			"gfx/menus/main_centerblue"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				changelog_title
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_WHAT_S_NEW
+			rect				20 52 600 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			300
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				changelog_list
+			group				none
+			rect				36 82 140 304
+			type				ITEM_TYPE_LISTBOX
+			style				WINDOW_STYLE_FILLED
+			elementwidth		140
+			elementheight		18
+			font				2
+			textscale			0.6
+			backcolor			0 0 0 .5
+			border				1
+			bordersize			1
+			bordercolor			.5 .5 .5 1
+			forecolor			1 1 1 1
+			elementtype			LISTBOX_TEXT
+			feeder				FEEDER_CHANGELOG
+			visible				1
+			textaligny			14
+		}
+		itemDef
+		{
+			name				changelog_entry
+			group				none
+			rect				184 82 420 304
+			type				ITEM_TYPE_OWNERDRAW
+			ownerdraw			UI_CHANGELOG
+			style				WINDOW_STYLE_FILLED
+			backcolor			0 0 0 .5
+			border				1
+			bordersize			1
+			bordercolor			.5 .5 .5 1
+			font				2
+			textscale			0.6
+			forecolor			1 1 1 1
+			visible				1
+		}
+		itemDef
+		{
+			name				changelog_done_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				220 400 200 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				changelog_done
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				220 400 200 24
+			text				@MENUS_DONE_CAPS
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			100
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			changelog_done_glow
+			}
+			mouseExit
+			{
+				hide			changelog_done_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				close			changelog_popmenu ;
+			}
+		}
+		// while a newer version is out (v_updateState 1, client/cl_update.cpp): fetch it from here
+		itemDef
+		{
+			name				changelog_update_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				430 400 170 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				changelog_update
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				430 400 170 24
+			text				@VISION_UPDATE_NOW
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			85
+			forecolor			1 .682 0 1
+			cvarTest			"v_updateState"
+			showCvar
+			{
+				"1"
+			}
+			visible				1
+			mouseEnter
+			{
+				show			changelog_update_glow
+			}
+			mouseExit
+			{
+				hide			changelog_update_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				exec			"update" ;
+				close			changelog_popmenu ;
+			}
+		}
+	}
+}

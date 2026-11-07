@@ -1,7 +1,11 @@
-// what every shader of rd-vulkan-vision sees. The structures are vkGlobals_t, vkTransform_t and vkDraw_t of
-// vk_local.h, keep them the same.
+// what every shader of rd-vulkan-vision that draws geometry sees. The structures are vkGlobals_t, vkTransform_t
+// and vkDraw_t of vk_local.h, keep them the same.
 
+#include "dialect.glsl"
+
+#ifndef VK_GLES
 #extension GL_EXT_nonuniform_qualifier : require
+#endif
 
 struct Transform {
 	mat4	mvp;			// OpenGL clip space
@@ -15,7 +19,7 @@ struct Transform {
 
 struct Draw {
 	uint	transform;
-	uint	tex0, tex1;		// index into the texture table, above bit 16 the index of the sampler
+	uint	tex0, tex1;
 	uint	flags;
 	vec4	baseColor;		// color = baseColor + vertColor * vertex color
 	vec4	vertColor;
@@ -32,14 +36,35 @@ struct Draw {
 	vec4	deformWave;		// deformVertexes along the normal: x + y * wave( z + dot( deformVec.xyz, position ) + deformVec.w * s ), w: which wave
 	vec4	deformVec;		// for a move, xyz: by how much
 	uint	bones;			// skinned: where the skeleton starts in the bones of the frame, in rows
-	uint	unused0, unused1, unused2;
+	float	fade;			// a saber mark that fades: its alpha
+	uint	fadeMode;		//	0: it does not, 1: the alpha, 2: the color is no brighter than that either
+	uint	styles;			// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
+	vec4	material;		// MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
+	vec4	material2;		//	and light wrapped into the shadow, glints of crystals
 };
 
-layout( set = 0, binding = 0 ) uniform Globals {
+BINDING( 0, 0 ) uniform Globals {
 	vec4	gamma;			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	vec4	screen;
+	vec4	screenFx[160];	// only screenfx.frag reads them (VK_SCREENFX_VEC4S)
+	vec4	styles[64];		// the colors of the light styles over 256 (MAX_LIGHT_STYLES)
 } globals;
 
+#ifdef VK_GLES
+// GLSL ES has no buffers a shader could index, so a block holds one transform and one draw, and the device binds
+// the place of its buffers where the ones of a draw call lie. std140 puts every member where std430 has it: they
+// are all scalars of 4 bytes in fours, vec4 and mat4.
+uniform Transforms {
+	Transform	u_transform;
+};
+
+uniform Draws {
+	Draw		u_draw;
+};
+
+#define TRANSFORMS( index )	u_transform
+#define DRAWS( index )		u_draw
+#else
 layout( set = 0, binding = 1, std430 ) readonly buffer Transforms {
 	Transform	transforms[];
 };
@@ -50,6 +75,9 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 
 // Which of the draws a draw call is comes as its first instance: gl_InstanceIndex in the vertex shaders (DRAW in
 // stage.glsl), which hand it on to the fragment shader as v_draw. That costs no call of its own per draw.
+#define TRANSFORMS( index )	transforms[index]
+#define DRAWS( index )		draws[index]
+#endif
 
 // Draw.flags
 #define ATEST( flags )		( ( flags ) & 7u )
@@ -61,7 +89,8 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define DLIGHT( flags )		( ( ( flags ) & 0x80000u ) != 0u )
 #define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
-#define DEFORM( flags )		( ( ( flags ) >> 24 ) & 3u )
+#define DEFORM( flags )		( ( ( flags ) >> 24 ) & 7u )
+#define MATERIAL( flags )	( ( ( flags ) & 0x08000000u ) != 0u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u
@@ -73,3 +102,4 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define TCGEN_ENVIRONMENT	7u
 #define TCGEN_FOG			8u
 #define TCGEN_VECTOR		9u
+#define TCGEN_REST			10u		// VK_TCGEN_REST of vk_local.h: RF_REFRACT_REST

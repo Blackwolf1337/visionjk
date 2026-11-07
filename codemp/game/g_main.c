@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,9 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "g_ICARUScb.h"
 #include "g_nav.h"
-#include "bg_saga.h"
-#include "b_local.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_saga.h"
+#include "game/npc/b_local.h"
+#include "game/bg/bg_public.h"
 #include "qcommon/game_version.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
@@ -213,8 +214,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	G_ProcessAdminIPBans();
 	JP_HighlanderMapStart();
 
+	G_AuthInit();
 	WebAdmin_Init();
 	G_VoiceInit( restart ? qtrue : qfalse );
+	G_BoomboxInit( restart ? qtrue : qfalse );
 
 	G_InitMemory();
 
@@ -375,6 +378,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	JP_LoadBlockWalls();
+	WebAdmin_LoadRemaps();
 	WP_ModelScaleLoadParms();
 	JP_AntiFakeLoad();
 	JP_AutoQuitInit();
@@ -386,7 +390,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	trap->Cvar_Register( NULL, "V", JP_SERVER_VERSION, CVAR_SERVERINFO|CVAR_ROM );
 	trap->Cvar_Set( "V", JP_SERVER_VERSION );
 
-	// the new animations come with japlus_gla_anims.pk3 in base, without it they have no frames
+	// the new animations come with the _humanoid files of the asset pk3 (japlus_gla_anims.pk3 in JA+), without them they have no frames
 	if ( jp_newGLAAnims.integer && !bgHumanoidAnimations[BOTH_KISSEE].numFrames )
 		trap->Cvar_Set( "jp_newGLAAnims", "0" );
 	trap->Cvar_Update( &jp_newGLAAnims );
@@ -474,6 +478,7 @@ void G_ShutdownGame( int restart ) {
 //	trap->Print ("==== ShutdownGame ====\n");
 
 	WebAdmin_Shutdown();
+	G_BoomboxShutdown( restart ? qtrue : qfalse );
 	G_VoiceShutdown( restart ? qtrue : qfalse );
 
 	G_CleanAllFakeClients(); //get rid of dynamically allocated fake client structs.
@@ -1557,6 +1562,9 @@ void QDECL G_LogPrintf( const char *fmt, ... ) {
 
 	if ( dedicated.integer )
 		trap->Print( "%s", string + l );
+
+	// not in OpenJK: the web admin panel follows the log, the file is written in blocks and is behind
+	WebAdmin_Log( string );
 
 	if ( !level.logFile )
 		return;
@@ -2987,6 +2995,8 @@ void G_RunFrame( int levelTime ) {
 
 	WebAdmin_Frame();
 	G_VoiceFrame();
+	G_BoomboxFrame();
+	G_StatusFrame();
 	G_SchizoFrame();
 	G_FlatulenceFrame();
 	G_DisorientFrame();
@@ -3503,6 +3513,8 @@ void G_RunFrame( int levelTime ) {
 #endif
 
 	g_LastFrameTime = level.time;
+
+	WebAdmin_FrameEnd();
 }
 
 const char *G_GetStringEdString(char *refSection, char *refName)
@@ -3526,6 +3538,14 @@ const char *G_GetStringEdString(char *refSection, char *refName)
 static void G_SpawnRMGEntity( void ) {
 	if ( G_ParseSpawnVars( qfalse ) )
 		G_SpawnGEntityFromSpawnVars( qfalse );
+}
+
+// a login or logout counts for the next command already, also for one in the same packet (SV_FloodLimited)
+static void _G_ClientCommand( int clientNum ) {
+	ClientCommand( clientNum );
+	if ( g_entities[clientNum].client && g_entities[clientNum].client->pers.connected == CON_CONNECTED ) {
+		JP_FloodExemptThink( &g_entities[clientNum] );
+	}
 }
 
 static void _G_ROFF_NotetrackCallback( int entID, const char *notetrack ) {
@@ -3630,7 +3650,8 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	static gameExport_t ge = {0};
 
 	assert( import );
-	trap = import;
+	// the web panel reads what the game tells all clients at once (webadmin/g_webadmin.c)
+	trap = WebAdmin_WrapImport( import );
 	Com_Printf	= trap->Print;
 	Com_Error	= trap->Error;
 
@@ -3647,7 +3668,7 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	ge.ClientBegin						= ClientBegin;
 	ge.ClientUserinfoChanged			= ClientUserinfoChanged;
 	ge.ClientDisconnect					= ClientDisconnect;
-	ge.ClientCommand					= ClientCommand;
+	ge.ClientCommand					= _G_ClientCommand;
 	ge.ClientThink						= ClientThink;
 	ge.RunFrame							= G_RunFrame;
 	ge.ConsoleCommand					= ConsoleCommand;
@@ -3681,6 +3702,8 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	ge.NAV_EntIsRemovableUsable			= G_EntIsRemovableUsable;
 	ge.NAV_FindCombatPointWaypoints		= CP_FindCombatPointWaypoints;
 	ge.BG_GetItemIndexByTag				= BG_GetItemIndexByTag;
+	// (not from OpenJK: the engine touches it only where vs_voiceSharedGame is 1, voice/g_voice.c)
+	ge.ext.VoiceDatagram				= G_VoiceFromGame;
 
 	return &ge;
 }
@@ -3726,7 +3749,7 @@ Q_EXPORT intptr_t vmMain( int command, intptr_t arg0, intptr_t arg1, intptr_t ar
 		return 0;
 
 	case GAME_CLIENT_COMMAND:
-		ClientCommand( arg0 );
+		_G_ClientCommand( arg0 );
 		return 0;
 
 	case GAME_RUN_FRAME:

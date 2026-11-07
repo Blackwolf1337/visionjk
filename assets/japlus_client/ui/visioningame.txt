@@ -1,0 +1,38 @@
+// the menus in a game, in the new look (ui/vision). Made by tools/menus/build.py.
+{
+	loadMenu { "ui/vision/connect.menu" }
+	loadMenu { "ui/vision/ingame_about.menu" }
+	loadMenu { "ui/vision/ingame_addbot.menu" }
+	loadMenu { "ui/vision/ingame_callvote.menu" }
+	loadMenu { "ui/vision/ingame_controls.menu" }
+	loadMenu { "ui/vision/ingame_join.menu" }
+	loadMenu { "ui/vision/ingame_leave.menu" }
+	loadMenu { "ui/vision/ingame.menu" }
+	loadMenu { "ui/vision/ingame_player.menu" }
+	loadMenu { "ui/vision/ingame_player2.menu" }
+	loadMenu { "ui/vision/ingame_playerforce.menu" }
+	loadMenu { "ui/vision/ingame_saber.menu" }
+	loadMenu { "ui/vision/ingame_setup.menu" }
+	loadMenu { "ui/vision/ingame_siegeobjectives.menu" }
+	loadMenu { "ui/vision/ingame_vote.menu" }
+	loadMenu { "ui/vision/ingame_orders.menu" }
+	loadMenu { "ui/vision/ingame_voicechat.menu" }
+	loadMenu { "ui/vision/siege_msg.menu" }
+	loadMenu { "ui/vision/siege_class.menu" }
+	loadMenu { "ui/vision/vid_warning.menu" }
+	loadMenu { "ui/vision/ingame_objectives.menu" }
+	loadMenu { "ui/vision/ingame_moves.menu" }
+	loadMenu { "ui/vision/UrlRedirectDownload.menu" }
+	loadMenu { "ui/vision/UrlRedirectBackground.menu" }
+	loadMenu { "ui/vision/modsay.menu" }
+	loadMenu { "ui/vision/ingame_servers.menu" }
+	loadMenu { "ui/vision/password.menu" }
+	loadMenu { "ui/vision/password_request.menu" }
+	loadMenu { "ui/vision/serverinfo.menu" }
+	loadMenu { "ui/vision/findplayer.menu" }
+	loadMenu { "ui/vision/createfavorite.menu" }
+	loadMenu { "ui/vision/updatechannel.menu" }
+	loadMenu { "ui/vision/changelog.menu" }
+	loadMenu { "ui/vision/cvarclean.menu" }
+	loadMenu { "ui/vision/modelpick.menu" }
+}

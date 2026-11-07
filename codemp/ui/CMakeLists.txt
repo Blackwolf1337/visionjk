@@ -1,5 +1,6 @@
 #============================================================================
 # Copyright (C) 2013 - 2018, OpenJK contributors
+# Copyright (C) 2026, VisionJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -17,9 +18,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPUIIncludeDirectories
 	"${MPDir}"
@@ -33,16 +34,16 @@ endif(WIN32)
 set(MPUIDefines ${MPSharedDefines} "UI_BUILD")
 
 set(MPUIGameFiles
-	"${MPDir}/game/bg_misc.c"
-	"${MPDir}/game/bg_saberLoad.c"
-	"${MPDir}/game/bg_saga.c"
-	"${MPDir}/game/bg_vehicleLoad.c"
-	"${MPDir}/game/bg_weapons.c"
+	"${MPDir}/game/bg/bg_misc.c"
+	"${MPDir}/game/bg/bg_saberLoad.c"
+	"${MPDir}/game/bg/bg_saga.c"
+	"${MPDir}/game/bg/bg_vehicleLoad.c"
+	"${MPDir}/game/bg/bg_weapons.c"
 	"${MPDir}/game/anims.h"
-	"${MPDir}/game/bg_local.h"
-	"${MPDir}/game/bg_public.h"
-	"${MPDir}/game/bg_saga.h"
-	"${MPDir}/game/bg_weapons.h"
+	"${MPDir}/game/bg/bg_local.h"
+	"${MPDir}/game/bg/bg_public.h"
+	"${MPDir}/game/bg/bg_saga.h"
+	"${MPDir}/game/bg/bg_weapons.h"
 	"${MPDir}/game/surfaceflags.h"
 	)
 source_group("game" FILES ${MPUIGameFiles})
@@ -72,16 +73,28 @@ set(MPUIUIFiles
 	"${MPDir}/ui/ui_cvar.c"
 	"${MPDir}/ui/ui_force.c"
 	"${MPDir}/ui/ui_gameinfo.c"
+	"${MPDir}/ui/ui_changelog.c"
+	"${MPDir}/ui/ui_cvarclean.c"
+	"${MPDir}/ui/ui_ids.c"
+	"${MPDir}/ui/ui_markdown.c"
+	"${MPDir}/ui/ui_markdown.h"
 	"${MPDir}/ui/ui_main.c"
 	"${MPDir}/ui/ui_saber.c"
 	"${MPDir}/ui/ui_shared.c"
+	"${MPDir}/ui/ui_skin.c"
+	"${MPDir}/ui/ui_saberfx.c"
+	"${MPDir}/ui/ui_music.c"
 	"${MPDir}/ui/ui_syscalls.c"
+	"${MPDir}/ui/ui_update.c"
 	"${MPDir}/ui/keycodes.h"
 	"${MPDir}/ui/menudef.h"
 	"${MPDir}/ui/ui_force.h"
 	"${MPDir}/ui/ui_local.h"
 	"${MPDir}/ui/ui_public.h"
 	"${MPDir}/ui/ui_shared.h"
+	"${MPDir}/ui/ui_skin.h"
+	"${MPDir}/ui/ui_saberfx.h"
+	"${MPDir}/ui/ui_music.h"
 	"${MPDir}/ui/ui_xcvar.h"
 	)
 source_group("ui" FILES ${MPUIUIFiles})
@@ -100,30 +113,36 @@ if(NOT MSVC)
 	set_target_properties(${MPUI} PROPERTIES PREFIX "")
 endif()
 
+if(EMSCRIPTEN)
+	include(WasmModule)
+	vjk_wasm_side_module(${MPUI})
+endif()
+
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPUI}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/VisionJK"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPUI}
 		LIBRARY
 		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
 		COMPONENT ${JKAMPCoreComponent})
 elseif(WIN32)
+	# into the mod directory, next to the asset archives and the configs
 	install(TARGETS ${MPUI}
 		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
+		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
 
-	# Use OpenJK modules as default
+	# and into base: the engine looks there when fs_game is not set or the mod directory has no module
 	install(TARGETS ${MPUI}
 		RUNTIME
 		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
-else()
+elseif(NOT EMSCRIPTEN)
 	install(TARGETS ${MPUI}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/OpenJK"
+		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPUI}
 		LIBRARY
@@ -133,8 +152,8 @@ endif()
 
 set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS "${MPUIDefines}")
 
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+# Hide symbols not explicitly marked public (not for BuildDevHotpatch, see the main CMakeLists.txt).
+set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_MODULE_FLAGS})
 
 set_target_properties(${MPUI} PROPERTIES INCLUDE_DIRECTORIES "${MPUIIncludeDirectories}")
 set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")

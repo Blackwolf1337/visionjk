@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -27,17 +28,18 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // g_local.h -- local definitions for game module
 
 #include "qcommon/q_shared.h"
-#include "bg_public.h"
-#include "bg_vehicles.h"
+#include "game/bg/bg_public.h"
+#include "game/bg/bg_vehicles.h"
 #include "g_public.h"
 
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
-#include "g_japlus.h"
+#include "game/japlus/g_japlus.h"
+#include "game/unlagged/g_unlagged.h"
 
 //npc stuff
-#include "b_public.h"
+#include "game/npc/b_public.h"
 
 extern int gPainMOD;
 extern int gPainHitLoc;
@@ -101,7 +103,7 @@ extern vec3_t gPainPoint;
 #define DEBUG_SABER_BOX
 #endif
 
-// make sure this matches game/match.h for botlibs
+// make sure this matches game/bots/match.h for botlibs
 #define EC "\x19"
 
 #define	MAX_G_SHARED_BUFFER_SIZE		8192
@@ -803,6 +805,8 @@ struct gclient_s {
 		int		drainDebounce;
 		int		lightningDebounce;
 	} force;
+
+	unlagged_t	unlagged;		// where the client was in the last frames (unlagged/g_unlagged.c)
 };
 
 //Interest points
@@ -1026,6 +1030,7 @@ qboolean	G_SpawnString( const char *key, const char *defaultString, char **out )
 qboolean	G_SpawnFloat( const char *key, const char *defaultString, float *out );
 qboolean	G_SpawnInt( const char *key, const char *defaultString, int *out );
 qboolean	G_SpawnVector( const char *key, const char *defaultString, float *out );
+qboolean	G_SpawnFieldInfo( int index, const char **name, const char **kind );
 qboolean	G_SpawnBoolean( const char *key, const char *defaultString, qboolean *out );
 void		G_SpawnEntitiesFromString( qboolean inSubBSP );
 char *G_NewString( const char *string );
@@ -1147,6 +1152,8 @@ void G_SetOrigin( gentity_t *ent, vec3_t origin );
 qboolean G_CheckInSolid (gentity_t *self, qboolean fix);
 void AddRemap(const char *oldShader, const char *newShader, float timeOffset);
 const char *BuildShaderStateConfig(void);
+qboolean G_GetRemap( int index, const char **oldShader, const char **newShader );
+int G_DropTakenBackRemaps( void );
 /*
 Ghoul2 Insert Start
 */
@@ -1231,6 +1238,7 @@ void Touch_DoorTrigger( gentity_t *ent, gentity_t *other, trace_t *trace );
 // g_trigger.c
 //
 void trigger_teleporter_touch (gentity_t *self, gentity_t *other, trace_t *trace );
+void G_PushAimAgain( const gentity_t *target );
 
 
 //
@@ -1263,14 +1271,26 @@ int TAG_GetFlags( const char *owner, const char *name );
 
 void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
 
-// g_webadmin.c
+// webadmin/: g_webadmin.c and the wa_*.c files next to it
 void WebAdmin_Init( void );
 void WebAdmin_Frame( void );
+void WebAdmin_FrameEnd( void );
+void WebAdmin_Used( const gentity_t *by, const gentity_t *ent );
+void WebAdmin_Effect( int kind, int id, const vec3_t org, const vec3_t ang );
 void WebAdmin_Shutdown( void );
 void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );
+int WebAdmin_LoadRemaps( void );	// the texture swaps of the map, from its file
+int WA_FreeEntities( void );		// entities the game can still spawn
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
+qboolean WebAdmin_ConsoleCommand( const char *cmd );
+void WebAdmin_Log( const char *line );
+gameImport_t *WebAdmin_WrapImport( gameImport_t *import );
+// g_svcmds.c: the ban list, for the panel
+int G_BanListSize( void );
+qboolean G_BanListEntry( int index, char *out, int outSize );
 float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
+void WebAdmin_ClientCommand( gentity_t *ent, usercmd_t *ucmd );
 
 // g_utils.c
 int G_TryConfigstringIndex( const char *name, int start, int max );
@@ -1278,11 +1298,38 @@ qboolean G_CleanIP( const char *in, char *out, int outSize );
 
 // g_voice.c: the relay of the voice chat
 void G_VoiceInit( qboolean restart );
+
+// auth/g_auth.c: admin login with a key or a one-time code
+void		G_AuthInit( void );
+void		G_AuthClientGone( int clientNum );
+void		Cmd_JPAuth_f( gentity_t *ent );
+qboolean	G_AuthConsoleCommand( const char *cmd );
+int			G_AuthTakeCode( const char *text );
+qboolean	G_AuthNewCode( int adminLevel, char *out, int outSize );
+const char	*G_AuthRankName( int adminLevel );
+int			G_AuthRankLevel( const char *name );
+int			G_AuthKeyLevel( const byte *pub, const char **comment );
+qboolean	G_AuthCheck( const byte *signature, const byte *pub, const byte *message, int length );
+int			G_AuthNumKeys( void );
+qboolean	G_AuthKeyInfo( int index, int *adminLevel, char *fingerprint, int fingerprintSize, const char **comment );
 void G_VoiceShutdown( qboolean restart );
 void G_VoiceFrame( void );
+qboolean G_VoiceFromGame( const byte *ip, int port, const byte *data, int length );
 void G_VoiceClientGone( int clientNum );
 void Cmd_JPVoice_f( gentity_t *ent );
 void Svcmd_VoiceStatus_f( void );
+qboolean G_VoiceOn( void );
+qboolean G_VoiceReady( int clientNum );
+void G_VoiceSendBox( int clientNum, int speaker, int seq, int distance, const byte *frame, int len );
+
+// boombox/g_boombox.c: boxes that play songs of YouTube, for the clients of this tree
+void G_BoomboxInit( qboolean restart );
+void G_BoomboxShutdown( qboolean restart );
+void G_BoomboxFrame( void );
+void G_BoomboxClientGone( int clientNum );
+void Cmd_JPBox_f( gentity_t *ent );
+void Cmd_Boombox_f( gentity_t *ent );
+void Svcmd_Boombox_f( void );
 
 // g_props.c: the entities misc_ball and misc_cube
 void G_PropFrame( void );
@@ -1293,7 +1340,18 @@ qboolean G_PropCarried( int clientNum );
 void Svcmd_Props_f( void );
 qboolean G_PropIs( const gentity_t *ent );
 void G_PropFlipKick( gentity_t *ent );
-void G_PropGunToggle( gentity_t *ent );
+void G_SandboxToggle( gentity_t *ent );
+// g_tools.c: the toolgun of the sandbox (the Bryar pistol), for G_PropGunCmd and the frame of g_props.c
+void G_ToolFrame( gentity_t *ent, int buttons, int pressed );
+void G_ToolReload( gentity_t *ent );
+void Cmd_Tool_f( gentity_t *ent );
+void G_ToolClear( int clientNum );
+qboolean G_PropFrozen( gentity_t *prop );
+void G_PropFreeze( gentity_t *prop, qboolean freeze );
+int G_PropThawAll( void );
+void G_PropPhysics( gentity_t *prop, float mass, float bounce, float grip );
+void G_PropGetPhysics( gentity_t *prop, qboolean base, float *mass, float *bounce, float *grip );
+void G_PropRemove( gentity_t *prop );
 void G_PropGunCmd( gentity_t *ent, const usercmd_t *ucmd );
 void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
@@ -1303,7 +1361,6 @@ float G_PropPlayerSpeed( const gentity_t *ent );
 qboolean G_SchizoToggle( gentity_t *ent );
 qboolean G_SchizoActive( int clientNum );
 void G_SchizoFrame( void );
-void Svcmd_Schizo_f( void );
 
 // g_japlus_cmds.c: the parts of amhug, for the player who is carried with +button13 (g_props.c)
 void JP_HolsterNow( gentity_t *ent );
@@ -1319,13 +1376,11 @@ void G_PoopFrame( void );
 qboolean G_FlatulenceToggle( gentity_t *ent );
 qboolean G_FlatulenceActive( int clientNum );
 void G_FlatulenceFrame( void );
-void Svcmd_Flatulence_f( void );
 
 // g_disorient.c: a player whose view sways and is thrown around
 qboolean G_DisorientToggle( gentity_t *ent );
 qboolean G_DisorientActive( int clientNum );
 void G_DisorientFrame( void );
-void Svcmd_Disorient_f( void );
 
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );
@@ -1447,6 +1502,7 @@ void Team_CheckDroppedItem( gentity_t *dropped );
 //
 void *G_Alloc( int size );
 void G_InitMemory( void );
+int G_MemoryLeft( int *size );
 void Svcmd_GameMem_f( void );
 
 //
@@ -1604,9 +1660,10 @@ void Svcmd_ToggleAllowVote_f( void );
 // g_cvar.c
 #define XCVAR_PROTO
 	#include "g_xcvar.h"
-	#include "g_japlus_xcvar.h"
+	#include "game/japlus/g_japlus_xcvar.h"
 #undef XCVAR_PROTO
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );
+qboolean G_CvarTableEntry( int index, const char **name, const char **defaultString, uint32_t *flags );
 
 extern gameImport_t *trap;

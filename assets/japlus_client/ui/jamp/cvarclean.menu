@@ -1,0 +1,231 @@
+//----------------------------------------------------------------------------------------------
+//
+//	CLEAN UP SETTINGS (VisionJK): the cvars of the config no code used for a month, from older
+//	versions and other mods (FEEDER_CVARCLEAN, ui/ui_cvarclean.c, cvar_cleanup of the engine).
+//	Opened by the row of Setup, Network. The texts are the ones of the new look
+//	(strings/<language>/vision.str).
+//
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name					"cvarclean_popmenu"
+		visible					0
+		fullScreen				0
+		rect					0 0 640 480
+		focusColor				1 1 1 1
+		outOfBoundsClick
+		popup
+		onOpen
+		{
+			uiScript			CvarClean ;
+			setfocus			cvarclean_list
+		}
+		onESC
+		{
+			play				"sound/interface/esc.wav" ;
+			close				cvarclean_popmenu ;
+		}
+		itemDef
+		{
+			name				cvarclean_background
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				20 40 600 400
+			background			"gfx/menus/main_centerblue"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_title
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_CLEAN_UP_SETTINGS
+			rect				20 52 600 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			300
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_list
+			group				none
+			rect				36 82 568 270
+			type				ITEM_TYPE_LISTBOX
+			style				WINDOW_STYLE_FILLED
+			elementwidth		568
+			elementheight		18
+			font				2
+			textscale			0.6
+			backcolor			0 0 0 .5
+			border				1
+			bordersize			1
+			bordercolor			.5 .5 .5 1
+			forecolor			1 1 1 1
+			elementtype			LISTBOX_TEXT
+			feeder				FEEDER_CVARCLEAN
+			columns				3	4 20 216	230 20 216	456 20 104
+			visible				1
+			textaligny			14
+		}
+		// while nothing is listed
+		itemDef
+		{
+			name				cvarclean_none
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_NOTHING_TO_CLEAN_UP
+			rect				36 200 568 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			284
+			font				2
+			textscale			0.7
+			forecolor			.7 .7 .7 1
+			cvarTest			"ui_cvarCleanCount"
+			showCvar
+			{
+				"0"
+			}
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_about
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+			rect				36 360 568 30
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			284
+			font				2
+			textscale			0.6
+			forecolor			.7 .7 .7 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_remove_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				40 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_remove
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				40 400 180 24
+			text				@VISION_REMOVE
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			cvarclean_remove_glow
+			}
+			mouseExit
+			{
+				hide			cvarclean_remove_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				uiScript		CvarCleanRemove ;
+			}
+		}
+		itemDef
+		{
+			name				cvarclean_removeall_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				230 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_removeall
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				230 400 180 24
+			text				@VISION_REMOVE_ALL
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			cvarclean_removeall_glow
+			}
+			mouseExit
+			{
+				hide			cvarclean_removeall_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				uiScript		CvarCleanRemoveAll ;
+			}
+		}
+		itemDef
+		{
+			name				cvarclean_done_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				420 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				cvarclean_done
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				420 400 180 24
+			text				@MENUS_DONE_CAPS
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			cvarclean_done_glow
+			}
+			mouseExit
+			{
+				hide			cvarclean_done_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				close			cvarclean_popmenu ;
+			}
+		}
+	}
+}

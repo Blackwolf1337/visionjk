@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 typedef struct teamgame_s {
 	float			last_flag_capture;

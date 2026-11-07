@@ -70,6 +70,9 @@ There are no names in the two DLLs, but there are two other binaries to compare 
 
 ## Comparison harness for the server module
 
+(The tree is built for 64 bit only since 2026-10-07. This harness and the comparison of the client modules
+below need a 32 bit build of the port, the last commit that makes one is `5ab290ba`.)
+
 The original server module and a 32 bit build of the port are loaded into one process. A small stand in for the
 engine answers their system calls: cvars, config strings, a box world with traces, entity linking, file access to
 the real game data, a simple Ghoul2 with bolts at fixed places. Nothing of the game is started.

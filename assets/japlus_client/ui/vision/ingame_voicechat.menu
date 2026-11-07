@@ -1,0 +1,1232 @@
+// ingame_voicechat.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_voicechat.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_voicechat"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					192 80 760 608
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_EMPTY
+		onESC
+		{
+			hide att_grp
+			hide def_grp
+			hide req_grp
+			hide rep_grp
+			hide spot_grp
+			hide tac_grp
+			hide main
+			close all
+		}
+		onClose
+		{
+			hide att_grp
+			hide def_grp
+			hide req_grp
+			hide rep_grp
+			hide spot_grp
+			hide tac_grp
+			hide main
+		}
+		onOpen
+		{
+			disable main 0
+			disable att_grp 0
+			disable def_grp 0
+			disable req_grp 0
+			disable rep_grp 0
+			disable spot_grp 0
+			disable tac_grp 0
+			setFocus attack
+			show main
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		radius					6.4
+		shadow					14
+
+		itemDef
+		{
+			name					vision_window_tac_grp
+			rect					0 0 760 608
+			visible					0
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					tac_grp
+		}
+
+		itemDef
+		{
+			name					vision_window_spot_grp
+			rect					0 0 760 464
+			visible					0
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					spot_grp
+		}
+
+		itemDef
+		{
+			name					vision_window_rep_grp
+			rect					0 0 760 536
+			visible					0
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					rep_grp
+		}
+
+		itemDef
+		{
+			name					vision_window_req_grp
+			rect					0 0 760 608
+			visible					0
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					req_grp
+		}
+
+		itemDef
+		{
+			name					vision_window_def_grp
+			rect					0 0 760 464
+			visible					0
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					def_grp
+		}
+
+		itemDef
+		{
+			name					vision_window_att_grp
+			rect					0 0 760 392
+			visible					0
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					att_grp
+		}
+
+		itemDef
+		{
+			name					vision_window_main
+			rect					0 0 760 548
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			group					main
+		}
+
+		itemDef
+		{
+			name					attack
+			group					main
+			rect					24 100 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_ATT
+			textalign				ITEM_ALIGN_LEFT
+			ownerdraw				UI_CHAT_MAIN
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide title_small_background
+				show title_big_background
+				hide def_grp
+				hide req_grp
+				hide rep_grp
+				hide spot_grp
+				hide tac_grp
+				hide main
+				show att_grp
+				setFocus att_01
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					defend
+			group					main
+			rect					24 172 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_DEF
+			textalign				ITEM_ALIGN_LEFT
+			ownerdraw				UI_CHAT_MAIN
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide title_small_background
+				show title_big_background
+				disable main 1
+				hide att_grp
+				hide req_grp
+				hide rep_grp
+				hide spot_grp
+				hide tac_grp
+				hide main
+				show def_grp
+				setFocus def_01
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					request
+			group					main
+			rect					24 244 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ
+			textalign				ITEM_ALIGN_LEFT
+			ownerdraw				UI_CHAT_MAIN
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide title_small_background
+				show title_big_background
+				disable main 1
+				hide att_grp
+				hide def_grp
+				hide req_grp
+				hide spot_grp
+				hide tac_grp
+				hide main
+				show req_grp
+				setFocus req_01
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					reply
+			group					main
+			rect					24 316 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REPLY
+			textalign				ITEM_ALIGN_LEFT
+			ownerdraw				UI_CHAT_MAIN
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide title_small_background
+				show title_big_background
+				disable main 1
+				hide att_grp
+				hide def_grp
+				hide req_grp
+				hide spot_grp
+				hide tac_grp
+				hide main
+				show rep_grp
+				setFocus rep_01
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					spot
+			group					main
+			rect					24 388 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_SPOT
+			textalign				ITEM_ALIGN_LEFT
+			ownerdraw				UI_CHAT_MAIN
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide title_small_background
+				show title_big_background
+				disable main 1
+				hide att_grp
+				hide def_grp
+				hide req_grp
+				hide rep_grp
+				hide tac_grp
+				hide main
+				show spot_grp
+				setFocus spot_01
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					tactics
+			group					main
+			rect					24 460 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TACTIC
+			textalign				ITEM_ALIGN_LEFT
+			ownerdraw				UI_CHAT_MAIN
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide title_small_background
+				show title_big_background
+				disable main 1
+				hide att_grp
+				hide def_grp
+				hide req_grp
+				hide rep_grp
+				hide spot_grp
+				hide main
+				show tac_grp
+				setFocus tac_01
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			group					att_grp
+			rect					28 100 704 52
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_ATTACK_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				13
+			font					5
+			textscale				1.44
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					att_01
+			group					att_grp
+			rect					24 160 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_ATT_PRIMARY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_ATTACK
+			action
+			{
+				disable att_grp 1
+				exec "voice_cmd att_primary"
+				hide att_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					att_02
+			group					att_grp
+			rect					24 232 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_ATT_SECONDARY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_ATTACK
+			action
+			{
+				disable att_grp 1
+				exec "voice_cmd att_second"
+				hide att_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					att_03
+			group					att_grp
+			rect					24 304 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_ATT_POSITION
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_ATTACK
+			action
+			{
+				disable att_grp 1
+				exec "voice_cmd att_attack"
+				hide att_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			group					def_grp
+			rect					28 100 704 52
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_DEFEND_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				13
+			font					5
+			textscale				1.44
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					def_01
+			group					def_grp
+			rect					24 160 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_DEF_PRIMARY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_DEFEND
+			action
+			{
+				disable def_grp 1
+				exec "voice_cmd def_primary"
+				hide def_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					def_02
+			group					def_grp
+			rect					24 232 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_DEF_SECONDARY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_DEFEND
+			action
+			{
+				disable def_grp 1
+				exec "voice_cmd def_second"
+				hide def_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					def_03
+			group					def_grp
+			rect					24 304 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_DEF_POSITION
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_DEFEND
+			action
+			{
+				disable def_grp 1
+				exec "voice_cmd def_position"
+				hide def_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					def_04
+			group					def_grp
+			rect					24 376 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_DEF_GUNS
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_DEFEND
+			action
+			{
+				disable def_grp 1
+				exec "voice_cmd def_guns"
+				hide def_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			group					req_grp
+			rect					28 100 704 52
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_REQUEST_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				13
+			font					5
+			textscale				1.44
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					req_01
+			group					req_grp
+			rect					24 160 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ_ASSIST
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REQUEST
+			action
+			{
+				disable req_grp 1
+				exec "voice_cmd req_assist"
+				hide req_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					req_02
+			group					req_grp
+			rect					24 232 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ_MEDIC
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REQUEST
+			action
+			{
+				disable req_grp 1
+				exec "voice_cmd req_medic"
+				hide req_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					req_03
+			group					req_grp
+			rect					24 304 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ_SUPPLY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REQUEST
+			action
+			{
+				disable req_grp 1
+				exec "voice_cmd req_sup"
+				hide req_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					req_04
+			group					req_grp
+			rect					24 376 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ_TECH
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REQUEST
+			action
+			{
+				disable req_grp 1
+				exec "voice_cmd req_tech"
+				hide req_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					req_05
+			group					req_grp
+			rect					24 448 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ_HVY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REQUEST
+			action
+			{
+				disable req_grp 1
+				exec "voice_cmd req_hvy"
+				hide req_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					req_06
+			group					req_grp
+			rect					24 520 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REQ_DEMO
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REQUEST
+			action
+			{
+				disable req_grp 1
+				exec "voice_cmd req_demo"
+				hide req_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			group					rep_grp
+			rect					28 100 704 52
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_REPLY_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				13
+			font					5
+			textscale				1.44
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					rep_01
+			group					rep_grp
+			rect					24 160 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REPLY_YES
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REPLY
+			action
+			{
+				disable rep_grp 1
+				exec "voice_cmd reply_yes"
+				hide rep_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					rep_02
+			group					rep_grp
+			rect					24 232 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REPLY_NO
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REPLY
+			action
+			{
+				disable rep_grp 1
+				exec "voice_cmd reply_no"
+				hide rep_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					rep_03
+			group					rep_grp
+			rect					24 304 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REPLY_COMING
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REPLY
+			action
+			{
+				disable rep_grp 1
+				exec "voice_cmd reply_coming"
+				hide rep_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					rep_04
+			group					rep_grp
+			rect					24 376 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REPLY_GO
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REPLY
+			action
+			{
+				disable rep_grp 1
+				exec "voice_cmd reply_go"
+				hide rep_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					rep_05
+			group					rep_grp
+			rect					24 448 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_REPLY_STAY
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_REPLY
+			action
+			{
+				disable rep_grp 1
+				exec "voice_cmd reply_stay"
+				hide rep_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			group					spot_grp
+			rect					28 100 704 52
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_SPOTTED_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				13
+			font					5
+			textscale				1.44
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					spot_01
+			group					spot_grp
+			rect					24 160 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_SPOT_DEF
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_SPOT
+			action
+			{
+				disable spot_grp 1
+				exec "voice_cmd spot_defenses"
+				hide spot_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					spot_02
+			group					spot_grp
+			rect					24 232 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_SPOT_TROOP
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_SPOT
+			action
+			{
+				disable spot_grp 1
+				exec "voice_cmd spot_troops"
+				hide spot_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					spot_03
+			group					spot_grp
+			rect					24 304 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_SPOT_SNIPER
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_SPOT
+			action
+			{
+				disable spot_grp 1
+				exec "voice_cmd spot_sniper"
+				hide spot_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					spot_04
+			group					spot_grp
+			rect					24 376 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_SPOT_EMPLACED
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_SPOT
+			action
+			{
+				disable spot_grp 1
+				exec "voice_cmd spot_emplaced"
+				hide spot_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			group					tac_grp
+			rect					28 100 704 52
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_TACTICS_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				13
+			font					5
+			textscale				1.44
+			forecolor				1 1 1 1
+			visible					0
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					tac_01
+			group					tac_grp
+			rect					24 160 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TAC_COVER
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_TACTICAL
+			action
+			{
+				disable tac_grp 1
+				exec "voice_cmd tac_cover"
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					tac_02
+			group					tac_grp
+			rect					24 232 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TAC_HOLD
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_TACTICAL
+			action
+			{
+				disable tac_grp 1
+				exec "voice_cmd tac_hold"
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					tac_03
+			group					tac_grp
+			rect					24 304 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TAC_FOLLOW
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_TACTICAL
+			action
+			{
+				disable tac_grp 1
+				exec "voice_cmd tac_follow"
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					tac_04
+			group					tac_grp
+			rect					24 376 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TAC_FALLBACK
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_TACTICAL
+			action
+			{
+				disable tac_grp 1
+				exec "voice_cmd tac_fallback"
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					tac_05
+			group					tac_grp
+			rect					24 448 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TAC_TOGETHER
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_TACTICAL
+			action
+			{
+				disable tac_grp 1
+				exec "voice_cmd tac_together"
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					tac_06
+			group					tac_grp
+			rect					24 520 712 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_TAC_SPLIT
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				18
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					0
+			ownerdraw				UI_CHAT_TACTICAL
+			action
+			{
+				disable tac_grp 1
+				exec "voice_cmd tac_split"
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
+			name					title
+			rect					28 20 492 64
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_TEXT
+			text					@MENUS_VC_TITLE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				21
+			font					7
+			textscale				1.22
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					cancel
+			group					none
+			rect					536 20 200 64
+			type					ITEM_TYPE_BUTTON
+			text					@MENUS_VC_CANCEL
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				19
+			font					5
+			textscale				1.44
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				hide att_grp
+				hide def_grp
+				hide req_grp
+				hide rep_grp
+				hide spot_grp
+				hide tac_grp
+				show main
+				close all
+			}
+			style					WINDOW_STYLE_PANEL
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			caps					1
+		}
+		canvas					1600 1200
+		descX					572
+		descY					704
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
+	}
+}

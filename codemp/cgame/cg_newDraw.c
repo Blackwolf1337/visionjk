@@ -749,6 +749,19 @@ void CG_OwnerDraw(float x, float y, float w, float h, float text_x, float text_y
 void CG_MouseEvent(int x, int y) {
 	int n;
 
+	// the photo mode turns its camera (photo/cg_photo.c)
+	if ( CG_PhotoMouseEvent( x, y ) ) {
+		return;
+	}
+	// the remote controlled car turns its camera (toys/cg_rccar.c)
+	if ( CG_RcMouseEvent( x, y ) ) {
+		return;
+	}
+	// table tennis moves the paddle (toys/cg_pong.c)
+	if ( CG_PongMouseEvent( x, y ) ) {
+		return;
+	}
+
 	/*
 	if ( (cg.predictedPlayerState.pm_type == PM_NORMAL || cg.predictedPlayerState.pm_type == PM_JETPACK || cg.predictedPlayerState.pm_type == PM_FLOAT || cg.predictedPlayerState.pm_type == PM_SPECTATOR) && cg.showScores == qfalse) {
 		trap->Key_SetCatcher(0);
@@ -757,16 +770,16 @@ void CG_MouseEvent(int x, int y) {
 	*/
 
 	cgs.cursorX+= x;
-	if (cgs.cursorX < 0)
-		cgs.cursorX = 0;
-	else if (cgs.cursorX > 640)
-		cgs.cursorX = 640;
+	if (cgs.cursorX < -(int)cgs.bias2D)
+		cgs.cursorX = -(int)cgs.bias2D;
+	else if (cgs.cursorX > 640 + (int)cgs.bias2D)
+		cgs.cursorX = 640 + (int)cgs.bias2D;
 
 	cgs.cursorY += y;
-	if (cgs.cursorY < 0)
-		cgs.cursorY = 0;
-	else if (cgs.cursorY > 480)
-		cgs.cursorY = 480;
+	if (cgs.cursorY < -(int)cgs.bias2DY)
+		cgs.cursorY = -(int)cgs.bias2DY;
+	else if (cgs.cursorY > 480 + (int)cgs.bias2DY)
+		cgs.cursorY = 480 + (int)cgs.bias2DY;
 
 	n = Display_CursorType(cgs.cursorX, cgs.cursorY);
 	cgs.activeCursor = 0;
@@ -820,6 +833,7 @@ type 0 - no event handling
 void CG_EventHandling(int type) {
 	cgs.eventHandling = type;
 	if (type == CGAME_EVENT_NONE) {
+		CG_ChatClose();		// Escape: the engine took the keys back
 		CG_HideTeamMenu();
 	} else if (type == CGAME_EVENT_TEAMMENU) {
 		//CG_ShowTeamMenu();
@@ -831,6 +845,29 @@ void CG_EventHandling(int type) {
 
 
 void CG_KeyEvent(int key, qboolean down) {
+
+	// the photo mode takes every key while it is on (photo/cg_photo.c)
+	if ( CG_PhotoKeyEvent( key, down ) ) {
+		return;
+	}
+	// the remote controlled car takes every key while it drives (toys/cg_rccar.c)
+	if ( CG_RcKeyEvent( key, down ) ) {
+		return;
+	}
+	// table tennis takes every key while it is played (toys/cg_pong.c)
+	if ( CG_PongKeyEvent( key, down ) ) {
+		return;
+	}
+
+	// a click on a player or on his card while the mouse is free (select/cg_select.c)
+	if ( CG_SelectKeyEvent( key, down ) ) {
+		return;
+	}
+
+	// the chat box takes every key while it is open (chat/cg_chat.c)
+	if ( CG_ChatKeyEvent( key, down ) ) {
+		return;
+	}
 
 	if (!down) {
 		return;

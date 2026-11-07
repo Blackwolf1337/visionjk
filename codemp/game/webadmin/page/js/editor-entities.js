@@ -1,0 +1,389 @@
+let classesLoaded = false;
+async function loadClasses() {
+	if (classesLoaded) return;
+	try {
+		const json = await (await fetch('api/classes')).json();
+		allClasses = [...new Set(json.classes)].sort();
+		for (const it of json.items) { classInfo.set(it.classname, it); if (it.index) itemDefs[it.index] = it; }
+		classesLoaded = true;
+		if ($('classPicker').classList.contains('open')) renderPicker();
+	} catch (e) { /* retry next time */ }
+}
+
+async function pollEntities() {
+	if (appMode !== 'editor') { streamDrop('entities'); return; }
+	// over the socket of the page when it is open (js/stream.js), pushed when the list changed
+	if (streamGet('entities', 'api/entities', json => { if (json) entitiesTake(json); }, () => {})) return;
+	try {
+		entitiesTake(await (await fetch('api/entities', { cache: 'no-store' })).json());
+	} catch (e) { /* keep the old list */ }
+}
+
+function entitiesTake(json) {
+	ents.clear();
+	for (const e of json.entities) ents.set(e.id, e);
+	draftsKeep();
+	takeFired(json.used);
+	renderBudget(json.budget);
+	renderLayout(json.layout);
+	refreshLinks();
+	if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
+	renderEntityList();
+	// not while the cursor is in a key field: a rebuilt table takes the focus away
+	if (!kvDirty && !panelTyping()) renderEntPanel();
+}
+
+function renderEntityList() {
+	const f = $('entFilter').value.trim().toLowerCase();
+	// the drafts first: the list is cut, and they are what is being worked on
+	const list = [...drafts.values()].concat([...ents.values()].filter(e => !e.draft)).filter(e => entMatches(e, f));
+	$('entCount').textContent = list.length + (list.length !== ents.size ? ' / ' + ents.size : '');
+	$('entities').innerHTML = list.slice(0, 600).map(e =>
+		'<tr class="player ent' + (e.id === selectedEnt ? ' sel' : '') + (e.keys ? '' : ' ro') + (e.draft ? ' draft' : '') + '" data-id="' + e.id + '">' +
+		'<td class="num">' + (e.draft ? 'new' : e.id) + '</td><td>' + escapeHtml(e.classname) + '</td><td class="tn">' + escapeHtml(entKey(e, 'targetname')) + '</td></tr>').join('');
+}
+$('entFilter').addEventListener('input', renderEntityList);
+$('entities').addEventListener('click', e => {
+	const tr = e.target.closest('tr.ent');
+	if (!tr) return;
+	selectEnt(+tr.dataset.id);
+	const ent = ents.get(selectedEnt);
+	if (ent) { const far = cam.dist; focusEntity(selectedEnt); cam.dist = far; }
+});
+
+function entityAt(x, y) {
+	let best = -1, bestD = 16;
+	for (const ent of ents.values()) {
+		if (!entVisible(ent)) continue;
+		const sp = project(ent.pos);
+		if (!sp) continue;
+		const d = Math.hypot(sp[0] - x, sp[1] - y);
+		if (d < bestD) { bestD = d; best = ent.id; }
+	}
+	return best;
+}
+
+function selectEnt(id) {
+	// a draft has no Apply: what was typed into its keys is taken before the panel shows something else
+	draftTakePanel();
+	selectedEnt = id;
+	kvDirty = false;
+	ghost = null;
+	kvShown = '';
+	renderEntPanel();
+	if (mode === 'world') renderEntityList();
+}
+
+// kvShown is what the key table shows: the entity and its keys. The poll comes every second, the table is only
+// built again when this changed, so fields keep focus, cursor and selection (JKAdmin rebuilds it every time).
+function kvSig(ent) { return ent.id + '|' + JSON.stringify(ent.keys || null); }
+// the cursor is in a field of the keys: in the table, or in the form that shows the same keys (editor-form.js)
+const panelTyping = () => $('kvRows').contains(document.activeElement) || $('entForm').contains(document.activeElement);
+function renderEntPanel() {
+	const ent = selectedEnt >= 0 && ents.get(selectedEnt);
+	$('entPanel').classList.toggle('open', !!ent);
+	if (!ent) return;
+	$('entTitle').textContent = ent.classname;
+	// of a draft: why the server would not take it as it is, when it has said so
+	$('entSub').textContent = (ent.draft ? 'draft · ' + (ent.why || 'not on the server yet') : '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked')) +
+		(picked.size ? ' · and ' + picked.size + ' more' : '');
+	const editable = !!ent.keys;
+	const shown = kvSig(ent);
+	if (shown !== kvShown) {
+		kvShown = shown;
+		$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
+		renderEntTools(ent);
+		renderEntForm(true);
+	}
+	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor', 'entTemplate']) $(id).disabled = !editable;
+	// a draft is sent with Place, with the drafts that are selected with it, and thrown away with Discard. There is
+	// nothing of it yet to fire.
+	const all = selectedIds(), nd = all.filter(id => drafts.has(id)).length;
+	$('entApply').textContent = ent.draft ? (nd > 1 ? 'Place ' + nd : 'Place') : 'Apply changes';
+	if (!$('entDel').classList.contains('armed')) $('entDel').textContent = nd === all.length ? 'Discard' : 'Delete';
+	$('entFire').disabled = nd === all.length;
+	$('entHint').style.display = editable ? '' : 'none';
+}
+
+// a key whose value can be played: a sound here in the browser, an effect in the game
+const playKind = key => { const k = key.trim().toLowerCase(); return k === 'noise' || k === 'music' ? 'sound' : /fx/.test(k) ? 'effect' : ''; };
+
+// the button beside such a value, '' for a key that has nothing to play
+const playButton = key => {
+	const kind = playKind(key);
+	return kind ? '<button class="play" title="' + (kind === 'sound' ? 'Plays the sound here, in the browser' : 'Plays the effect once in the game, where the entity is') + '">Play</button>' : '';
+};
+
+function kvRow(kv) {
+	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false" autocomplete="off"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
+		'<td class="x">' + playButton(kv[0]) + '<button title="Remove key">&#10005;</button></td></tr>';
+}
+// what is typed into the table shows in the form above it
+$('kvRows').addEventListener('input', () => { kvDirty = true; draftTyped(); renderEntForm(); });
+$('kvRows').addEventListener('click', e => {
+	if (e.target.tagName !== 'BUTTON') return;
+	if (e.target.classList.contains('play')) {
+		const [key, value] = [...e.target.closest('tr').querySelectorAll('input')].map(i => i.value);
+		playValue(key, value);
+		return;
+	}
+	e.target.closest('tr').remove();
+	kvDirty = true;
+	draftTyped();
+	renderEntForm();
+});
+
+let playing = null;
+async function playValue(key, value) {
+	value = value.trim();
+	if (!value) return;
+	if (playKind(key) === 'effect') {
+		const ent = ents.get(selectedEnt);
+		if (ent) action({ action: 'effect', value, x: ent.pos[0].toFixed(1), y: ent.pos[1].toFixed(1), z: ent.pos[2].toFixed(1) });
+		return;
+	}
+	// a name without an ending is a .wav for the game, and some are .mp3
+	if (playing) playing.pause();
+	for (const name of /\.(wav|mp3)$/i.test(value) ? [value] : [value + '.wav', value + '.mp3']) {
+		const audio = new Audio('api/file?name=' + encodeURIComponent(name));
+		try { await audio.play(); playing = audio; return; } catch (e) { /* the next ending */ }
+	}
+	toast('The browser can not play ' + value, false);
+}
+$('kvAdd').addEventListener('click', () => {
+	$('kvRows').insertAdjacentHTML('beforeend', kvRow(['', '']));
+	kvDirty = true;
+	// A field of a block that is folded takes no cursor. Who adds a key wants the table: it stays unfolded.
+	kvOpen = $('kvBlock').open = true;
+	$('kvRows').lastElementChild.querySelector('input').focus();
+});
+
+function panelKeys() {
+	return [...$('kvRows').querySelectorAll('tr')].map(tr => [...tr.querySelectorAll('input')].map(i => i.value.trim())).filter(kv => kv.length === 2 && kv[0]);
+}
+function keysText(keys) { return keys.map(kv => kv[0] + '=' + kv[1]).join('\n'); }
+function setKey(keys, key, value) {
+	const kv = keys.find(k => k[0].toLowerCase() === key);
+	if (kv) kv[1] = value; else keys.push([key, value]);
+	return keys;
+}
+const fmtVec = v => v.map(n => Math.round(n)).join(' ');
+
+// Every change to an entity goes through here. record: it is one the user made, it goes into the history
+// (not the steps of undo and redo themselves). Gives the answer of the server, null if it was refused.
+// quiet: one of several changes that are made together. It says nothing, leaves the list and the selection as
+// they are, and why it was refused is in entRefused for whoever makes them.
+let entRefused = '', entRefusedKey = '';
+// The game may free what was just spawned a moment later, and says nothing of it to the panel: an item that
+// starts inside a wall or that this game type does not have (FinishSpawningItem, two frames after the spawn), a
+// class that does its one thing and goes. The panel had said "Placed" by then. So the list is looked at once
+// more when those frames are over, and it is said when the entity is not in it.
+const spawnedWatch = new Map();		// number -> class, of what was spawned and not looked at again yet
+let spawnedTimer = 0;
+function spawnedStays(id, classname) {
+	if (!classname) return;
+	spawnedWatch.set(id, classname);
+	clearTimeout(spawnedTimer);
+	spawnedTimer = setTimeout(async () => {
+		const watch = [...spawnedWatch];
+		spawnedWatch.clear();
+		let list;
+		try { list = (await (await fetch('api/entities', { cache: 'no-store' })).json()).entities; } catch (e) { return; }
+		const now = new Map(list.map(e => [e.id, e.classname]));
+		const gone = watch.filter(([id, cls]) => (now.get(id) || '').toLowerCase() !== cls.toLowerCase()).map(w => w[1]);
+		if (!gone.length) return;
+		toast((gone.length === 1 ? 'The game removed the ' + gone[0] : 'The game removed ' + gone.length + ' of them (' + [...new Set(gone)].join(', ') + ')')
+			+ ' again right after it was placed: an item inside a wall (spawnflags 1 lets it hang where it is put), an item this game type does not have, or a class that acts once and goes', false);
+		pollEntities();
+	}, 700);
+}
+
+async function entityOp(params, okMessage, record = true, quiet = false) {
+	// a draft is not on the server: what is done to it is done here
+	if (params.id !== undefined && drafts.has(+params.id)) return draftOp(params, quiet);
+	// and what was typed into one is its keys before the panel goes to what the server answers with
+	draftTakePanel();
+	const ent = params.id !== undefined ? ents.get(+params.id) : null;
+	const before = ent && ent.keys ? keysText(ent.keys) : null;
+	// The class the page takes the entity for goes along: the game uses a number again, and what is meant for an
+	// entity that is gone must not reach the one that has its number now. The history says the class itself.
+	if (ent && params.class === undefined && params.id !== undefined) params = Object.assign({ class: ent.classname }, params);
+	try {
+		const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams(params) })).json();
+		if (!quiet) toast(json.ok ? okMessage || json.message : json.message, json.ok);
+		if (!json.ok) { entRefused = json.message; entRefusedKey = json.key || ''; }
+		if (json.ok) {
+			if (record) histPush(histStepFor(params, ent, before, json.id));
+			if (params.op === 'spawn') spawnedStays(json.id, (/^classname=(.*)$/mi.exec(params.kv || '') || ['', ''])[1].trim());
+			if (!quiet) {
+				kvDirty = false;
+				await pollEntities();
+				selectEnt(params.op === 'delete' || params.op === 'clear' ? -1 : json.id);
+			}
+		}
+		return json.ok ? json : null;
+	} catch (e) {
+		entRefused = e.message;
+		entRefusedKey = '';
+		if (!quiet) toast('Request failed: ' + e.message, false);
+		return null;
+	}
+}
+
+$('entApply').addEventListener('click', () => {
+	if (drafts.has(selectedEnt)) placeDrafts(selectedIds(), 'Placed');
+	else entityOp({ op: 'update', id: selectedEnt, kv: keysText(panelKeys()) }, 'Applied');
+});
+// the copies are drafts beside what they are copies of, also the copy of a draft
+$('entDup').addEventListener('click', () => {
+	const ent = ents.get(selectedEnt);
+	if (ent.bmodel) { toast('Brush models can not be duplicated, they use the map geometry', false); return; }
+	const beside = (keys, one) => draftAt(keys, [one.pos[0] + 48, one.pos[1], one.pos[2]]);
+	const more = [...picked].map(id => ents.get(id)).filter(e => e && e.keys && !e.bmodel);
+	openDrafts([beside(panelKeys(), ent)].concat(more.map(e => beside(e.keys, e))), 'Duplicated');
+});
+// the keys of an entity that is turned by delta degrees around the upright axis
+function turnKeys(keys, delta) {
+	const angles = keys.find(k => k[0].toLowerCase() === 'angles');
+	if (angles) {
+		const a = angles[1].split(/\s+/).map(Number);
+		a[1] = (((a[1] || 0) + delta) % 360 + 360) % 360;
+		angles[1] = fmtVec(a);
+	} else {
+		const cur = Number((keys.find(k => k[0].toLowerCase() === 'angle') || [])[1] || 0);
+		setKey(keys, 'angle', String(((cur + delta) % 360 + 360) % 360));
+	}
+	return keys;
+}
+
+for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
+	$(id).addEventListener('click', () => {
+		if (!picked.size) { entityOp({ op: 'update', id: selectedEnt, kv: keysText(turnKeys(panelKeys(), delta)) }, 'Rotated'); return; }
+		// Several: they turn together around the middle of where they stand, each as far as the others. What is
+		// made of brushes stays: its angle is the way a door opens, not how it stands.
+		const all = [selectedEnt, ...picked].map(n => ents.get(n)).filter(e => e && e.keys && !e.bmodel);
+		if (!all.length) { toast('Nothing of what is selected can be turned', false); return; }
+		const mid = [0, 1].map(i => (Math.min(...all.map(e => e.pos[i])) + Math.max(...all.map(e => e.pos[i]))) / 2);
+		const r = delta * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+		groupRun('Rotated', ent => {
+			if (!ent.keys || ent.bmodel) { entRefused = 'what is made of brushes stays as it is'; return null; }
+			const dx = ent.pos[0] - mid[0], dy = ent.pos[1] - mid[1];
+			const keys = turnKeys(ent.keys.map(k => k.slice()), delta);
+			return { op: 'update', id: ent.id, kv: keysText(setKey(keys, 'origin', fmtVec([mid[0] + dx * c - dy * sn, mid[1] + dx * sn + dy * c, ent.pos[2]]))) };
+		});
+	});
+}
+$('entDel').addEventListener('click', () => {
+	// nothing is lost with a draft but what was typed
+	const all = selectedIds();
+	if (all.every(id => drafts.has(id))) { discardDrafts(all); return; }
+	if (!confirmed($('entDel'))) return;
+	if (picked.size) groupRun('Deleted', ent => ({ op: 'delete', id: ent.id }));
+	else entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
+});
+$('entClose').addEventListener('click', () => selectEnt(-1));
+
+// new origin for a moved entity, brush models keep their offset to the map geometry
+function moveParams(ent, pos) {
+	if (!ent.keys) return null;
+	const keys = ent.keys.map(k => k.slice());
+	const cur = (entKey(ent, 'origin') || '0 0 0').split(/\s+/).map(Number);
+	const origin = ent.bmodel ? cur.map((v, i) => v + pos[i] - ent.pos[i]) : pos;
+	return { op: 'update', id: ent.id, kv: keysText(setKey(keys, 'origin', fmtVec(origin))) };
+}
+
+function moveEntity(id, pos) {
+	const ent = ents.get(id), params = ent && moveParams(ent, pos);
+	ghost = null;
+	if (!params) { toast('This entity has no keys, it can not be moved', false); return; }
+	// one of several that are selected: the others go the same way
+	if (picked.size && (id === selectedEnt || picked.has(id))) {
+		const by = pos.map((v, i) => v - ent.pos[i]);
+		return groupRun('Moved', one => moveParams(one, one.pos.map((v, i) => v + by[i])));
+	}
+	return entityOp(params, 'Moved');
+}
+
+function setPlacing(on) {
+	placing = on && !!$('newClass').value.trim();
+	$('placeBtn').classList.toggle('armedPlace', placing);
+	$('placeBtn').textContent = placing ? 'Right-click map' : 'Place';
+	canvas.style.cursor = placing ? 'crosshair' : 'default';
+}
+$('placeBtn').addEventListener('click', () => {
+	if (!$('newClass').value.trim()) { toast('Pick a classname first', false); $('newClass').focus(); return; }
+	setPlacing(!placing);
+});
+
+// not in JKAdmin: keys a class gets when it is placed, so they are there to edit, and its height above the floor
+const PLACE_KEYS = {
+	misc_blackhole: [['radius', '600'], ['strength', '2400'], ['coreradius', '48'], ['dmg', '1000']],
+	misc_ball: [['radius', '18'], ['modelscale', '600'], ['bounce', '0.7'], ['friction', '90'], ['mass', '1'], ['kick', '1']],
+	misc_cube: [['size', '32'], ['bounce', '0.25'], ['friction', '0.7'], ['mass', '4'], ['kick', '1']],
+	misc_prop: [['model', 'models/map_objects/cairn/cargo_sm.md3'], ['scale', '100']],
+};
+const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48, misc_prop: 48 };
+// A trigger is placed as a box of its own, standing on the floor: the brushes of the map are for the ones the
+// map came with. All but the two that are no space to walk into.
+const BOX_TRIGGER = /^trigger_(?!always$|asteroid_field$)/i, TRIGGER_BOX = [['mins', '-64 -64 -48'], ['maxs', '64 64 48']];
+// Where a class sends to, from where it is placed: one that pushes or teleports is placed with a target_position
+// of its own. A trigger_push without one is freed by the game in its first frame, before a key could be added.
+const PLACE_AIM = { trigger_push: at => [at[0], at[1], at[2] + 256], trigger_teleport: at => {
+	// towards the viewer, where the floor is seen
+	const d = camDir(), l = Math.hypot(d[0], d[1]);
+	return l > 0.2 ? [at[0] - d[0] / l * 192, at[1] - d[1] / l * 192, at[2]] : [at[0] + 192, at[1], at[2]];
+} };
+const placeHeight = cls => cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : BOX_TRIGGER.test(cls) ? 48 : /^misc_model/.test(cls) ? 0 : 24;
+
+// where a class is placed above the spot of the floor that was clicked: items drop to the floor themselves, players
+// and NPCs stand on it
+const placeSpot = (cls, hit) => [hit[0], hit[1], hit[2] + placeHeight(cls)];
+// a class at a place as openDrafts takes it: with the keys its class begins with, and more
+const placedAt = (cls, at, more = []) => ({ keys: [['classname', cls], ['origin', fmtVec(at)]].concat(PLACE_KEYS[cls.toLowerCase()] || (BOX_TRIGGER.test(cls) ? TRIGGER_BOX : []), more), pos: at });
+
+// Names to wire what is placed together: a stem and a number, each a name no entity has as its targetname and
+// none names as what it fires, the drafts counted. Gives a function that is asked with a stem: every call of it
+// gives another name.
+function freeNames() {
+	const taken = new Set();
+	for (const e of ents.values()) {
+		for (const [k, v] of e.keys || []) if (v && (k.toLowerCase() === 'targetname' || LINK_KEYS.has(k.toLowerCase()))) taken.add(v.toLowerCase());
+	}
+	return stem => {
+		let n = 1;
+		while (taken.has(stem + n)) n++;
+		taken.add(stem + n);
+		return stem + n;
+	};
+}
+
+// The trigger and what it is aimed at under that name, as two drafts: the trigger is the one the panel shows, and
+// Place sends its target before it, for the trigger looks for it in its first frame.
+function aimedPair(one, name) {
+	const to = PLACE_AIM[entKey(one, 'classname').toLowerCase()](one.pos);
+	return [{ keys: one.keys.concat([['target', name]]), pos: one.pos }, { keys: [['classname', 'target_position'], ['origin', fmtVec(to)], ['targetname', name]], pos: to }];
+}
+
+// Place: the class that is picked, a template or a kit, as drafts where the click was. Nothing is sent: a class
+// may lack a key it can not be without, and what is placed is one step of the history with what it belongs to.
+function placeEntity(hit) {
+	const name = $('newClass').value.trim();
+	// a kit: all it is made of, wired with names that are free (editor-kits.js)
+	if (name[0] === '+') {
+		const kit = kitNamed(name.slice(1));
+		if (!kit) { toast('No kit ' + name.slice(1), false); return; }
+		openDrafts(kit.make(hit, freeNames()), kit.name);
+		return;
+	}
+	// a template: its keys, at the height its class is placed at
+	if (name[0] === '@') {
+		const keys = templates[name.slice(1)];
+		if (!keys) { toast('No template ' + name.slice(1), false); return; }
+		const tcls = (keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || '';
+		openDrafts([draftAt(keys, placeSpot(tcls, hit))], name.slice(1));
+		return;
+	}
+	const one = placedAt(name, placeSpot(name, hit));
+	if (name.toLowerCase() in PLACE_AIM) openDrafts(aimedPair(one, freeNames()('aim')), name + ' and what it is aimed at');
+	else openDrafts([one], name);
+}

@@ -1,5 +1,6 @@
 #============================================================================
 # Copyright (C) 2015, OpenJK contributors
+# Copyright (C) 2026, VisionJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -67,11 +68,10 @@ cpack_add_component_group(JK2SP
 	DESCRIPTION "Jedi Outcast single player game")
 
 if(WIN32)
-	set(CPACK_NSIS_DISPLAY_NAME "OpenJK")
-	set(CPACK_NSIS_PACKAGE_NAME "OpenJK")
+	set(CPACK_NSIS_DISPLAY_NAME "VisionJK")
+	set(CPACK_NSIS_PACKAGE_NAME "VisionJK")
 	set(CPACK_NSIS_MUI_ICON "${SharedDir}/icons/icon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${SharedDir}/icons/icon.ico")
-	set(CPACK_NSIS_URL_INFO_ABOUT "https://openjk.org")
 
 	set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 	include(InstallRequiredSystemLibraries)
@@ -88,10 +88,6 @@ if(WIN32)
 		set(CPACK_NSIS_DELETE_ICONS_EXTRA
 			"${CPACK_NSIS_DELETE_ICONS_EXTRA}
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Academy MP.lnk'")
-
-		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-				DESTINATION ${JKAInstallDir}
-				COMPONENT ${JKAMPClientComponent})
 
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
 				DESTINATION ${JKAInstallDir}
@@ -110,10 +106,6 @@ if(WIN32)
 		set(CPACK_NSIS_DELETE_ICONS_EXTRA
 			"${CPACK_NSIS_DELETE_ICONS_EXTRA}
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Academy SP.lnk'")
-
-		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-			DESTINATION ${JKAInstallDir}
-			COMPONENT ${JKASPClientComponent})
 
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
 				DESTINATION ${JKAInstallDir}
@@ -134,10 +126,6 @@ if(WIN32)
 			"${CPACK_NSIS_DELETE_ICONS_EXTRA}
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Outcast SP.lnk'")
 
-		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-			DESTINATION ${JK2InstallDir}
-			COMPONENT ${JK2SPClientComponent})
-
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
 				DESTINATION ${JK2InstallDir}
 				COMPONENT ${JK2SPClientComponent})
@@ -148,11 +136,11 @@ endif()
 set(CPACK_PACKAGE_VERSION_MAJOR "1")
 set(CPACK_PACKAGE_VERSION_MINOR "0")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
-set(CPACK_PACKAGE_FILE_NAME "OpenJK-${CMAKE_SYSTEM_NAME}-${Architecture}")
+set(CPACK_PACKAGE_FILE_NAME "VisionJK-${CMAKE_SYSTEM_NAME}-${Architecture}")
 
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "An improved Jedi Academy")
-set(CPACK_PACKAGE_VENDOR "JACoders")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "OpenJK")
+set(CPACK_PACKAGE_VENDOR "VisionJK")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "VisionJK")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_DIRECTORY ${PACKAGE_DIR})

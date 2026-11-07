@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -61,30 +62,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Win32
 #elif defined(_WIN32) || defined(__WIN32__)
 
-	#undef QDECL
-	#define	QDECL __cdecl
-
-	#undef QCALL
-	#define QCALL __stdcall
-
-	#if defined(_MSC_VER)
-		#define OS_STRING "win_msvc"
-	#elif defined(__MINGW32__)
-		#define OS_STRING "win_mingw"
-	#endif
-
-	#define QINLINE __inline
-	#define PATH_SEP '\\'
-
-	#if defined(_M_IX86) || defined(__i386__)
-		#define ARCH_STRING "x86"
-	#elif defined _M_ALPHA
-		#define ARCH_STRING "AXP"
-	#endif
-
-	#define Q3_LITTLE_ENDIAN
-
-	#define DLL_EXT ".dll"
+	#error "32 bit Windows is not supported, this tree is built for 64 bit only"
 
 // MAC OS X
 #elif defined(MACOS_X) || defined(__APPLE_CC__)
@@ -101,9 +79,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#if defined(__ppc__)
 		#define ARCH_STRING "ppc"
 		#define Q3_BIG_ENDIAN
-	#elif defined(__i386__)
-		#define ARCH_STRING "x86"
-		#define Q3_LITTLE_ENDIAN
 	#elif defined(__x86_64__)
 		#define idx64
 		#define ARCH_STRING "x86_64"
@@ -114,6 +89,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#endif
 
     #define DLL_EXT ".dylib"
+
+// the browser: WebAssembly built with Emscripten, pointers of 4 bytes
+#elif defined(__EMSCRIPTEN__)
+
+	#define OS_STRING "emscripten"
+
+	#define QINLINE inline
+
+	#define PATH_SEP '/'
+
+	#if !defined(ARCH_STRING)
+		#error ARCH_STRING should be defined by the build system
+	#endif
+
+	#define Q3_LITTLE_ENDIAN
+
+	#define DLL_EXT ".wasm"
 
 // Linux
 #elif defined(__linux__) || defined(__FreeBSD_kernel__)

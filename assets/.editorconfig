@@ -1,6 +1,6 @@
 # The files of the asset archives stay as they are: an editor must not change their line ends or their white
 # space when one of them is saved (see .gitattributes).
-[japlus_client/**]
+[{japlus_client,configs}/**]
 insert_final_newline = unset
 trim_trailing_whitespace = unset
 indent_style = unset

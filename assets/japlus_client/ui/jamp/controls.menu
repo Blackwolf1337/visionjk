@@ -3735,7 +3735,7 @@
 			group				japluscontrols
 			type				ITEM_TYPE_BIND
 			text				"Voice Chat (Talk)"
-			cvar				"+voice"
+			cvar				"+v_voice"
 			rect				260 244 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -3754,6 +3754,38 @@
 			mouseexit 
 			{ 
 				hide			highlight5
+				hide			keybindstatus
+			}
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ; 
+			}
+		}
+
+		itemDef 
+		{
+			group				japluscontrols
+			type				ITEM_TYPE_BIND
+			text				"Clan Radio (Talk)"
+			cvar				"+v_voiceclan"
+			rect				260 258 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"hold to talk to your clan over the radio, wherever they are"
+
+			mouseenter 
+			{ 
+				show			highlight6
+				show			keybindstatus
+			}
+			mouseexit 
+			{ 
+				hide			highlight6
 				hide			keybindstatus
 			}
 			action 

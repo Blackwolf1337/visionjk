@@ -1,5 +1,5 @@
 // create default module initialization
-#define BOOST_TEST_MODULE OpenJK
+#define BOOST_TEST_MODULE VisionJK
 
 // let the boost unit test framework create a main function
 #define BOOST_TEST_MAIN

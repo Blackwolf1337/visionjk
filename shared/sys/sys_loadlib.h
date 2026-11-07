@@ -21,7 +21,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#ifdef DEDICATED
+#if defined(__EMSCRIPTEN__)
+// the modules are compiled by the page, each load makes a fresh instance of one (sys/web/sys_web.js)
+#	include <SDL.h>
+#	include "sys/web/sys_web.h"
+#	define Sys_LoadLibrary(f) Sys_WebLoadLibrary(f)
+#	define Sys_UnloadLibrary(h) Sys_WebUnloadLibrary(h)
+#	define Sys_LoadFunction(h,fn) Sys_WebLoadFunction(h,fn)
+#	define Sys_LibraryError() "the page has no such module"
+#elif defined(DEDICATED)
 #	ifdef _WIN32
 #		include <windows.h>
 #		define Sys_LoadLibrary(f) (void*)LoadLibrary(f)

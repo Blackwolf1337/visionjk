@@ -1,5 +1,6 @@
 #============================================================================
 # Copyright (C) 2013 - 2018, OpenJK contributors
+# Copyright (C) 2026, VisionJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -17,9 +18,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPGameIncludeDirectories
 	"${MPDir}"
@@ -29,50 +30,33 @@ set(MPGameIncludeDirectories
 	)
 if(WIN32)
 	set(MPGameLibraries "winmm" "ws2_32")
+else()
+	# the hash of a login of the web panel is made on a thread of its own (webadmin/wa_auth.c)
+	set(MPGameLibraries "pthread")
 endif(WIN32)
 set(MPGameDefines ${MPSharedDefines} "_GAME" )
 set(MPGameGameFiles
-	"${MPDir}/game/ai_main.c"
-	"${MPDir}/game/ai_util.c"
-	"${MPDir}/game/ai_wpnav.c"
-	"${MPDir}/game/AnimalNPC.c"
-	"${MPDir}/game/bg_g2_utils.c"
-	"${MPDir}/game/bg_misc.c"
-	"${MPDir}/game/bg_panimate.c"
-	"${MPDir}/game/bg_pmove.c"
-	"${MPDir}/game/bg_props.c"
-	"${MPDir}/game/bg_voice.c"
-	"${MPDir}/game/bg_saber.c"
-	"${MPDir}/game/bg_saberLoad.c"
-	"${MPDir}/game/bg_saga.c"
-	"${MPDir}/game/bg_slidemove.c"
-	"${MPDir}/game/bg_vehicleLoad.c"
-	"${MPDir}/game/bg_weapons.c"
-	"${MPDir}/game/FighterNPC.c"
+	"${MPDir}/game/bots/ai_main.c"
+	"${MPDir}/game/bots/ai_util.c"
+	"${MPDir}/game/bots/ai_wpnav.c"
+	"${MPDir}/game/vehicles/AnimalNPC.c"
+	"${MPDir}/game/bg/bg_g2_utils.c"
+	"${MPDir}/game/bg/bg_misc.c"
+	"${MPDir}/game/bg/bg_panimate.c"
+	"${MPDir}/game/bg/bg_pmove.c"
+	"${MPDir}/game/bg/bg_saber.c"
+	"${MPDir}/game/bg/bg_saberLoad.c"
+	"${MPDir}/game/bg/bg_saga.c"
+	"${MPDir}/game/bg/bg_slidemove.c"
+	"${MPDir}/game/bg/bg_vehicleLoad.c"
+	"${MPDir}/game/bg/bg_weapons.c"
+	"${MPDir}/game/vehicles/FighterNPC.c"
 	"${MPDir}/game/g_active.c"
-	"${MPDir}/game/g_blackhole.c"
 	"${MPDir}/game/g_bot.c"
 	"${MPDir}/game/g_client.c"
-	"${MPDir}/game/g_disorient.c"
-	"${MPDir}/game/g_flatulence.c"
-	"${MPDir}/game/g_poop.c"
-	"${MPDir}/game/g_props.c"
 	"${MPDir}/game/g_cmds.c"
 	"${MPDir}/game/g_combat.c"
 	"${MPDir}/game/g_cvar.c"
-	"${MPDir}/game/g_japlus_admin.c"
-	"${MPDir}/game/g_japlus_admin2.c"
-	"${MPDir}/game/g_japlus_chat.c"
-	"${MPDir}/game/g_japlus_cmds.c"
-	"${MPDir}/game/g_japlus_dim.c"
-	"${MPDir}/game/g_japlus_fx.c"
-	"${MPDir}/game/g_japlus_highlander.c"
-	"${MPDir}/game/g_japlus_hook.c"
-	"${MPDir}/game/g_japlus_blockwall.c"
-	"${MPDir}/game/g_japlus_info.c"
-	"${MPDir}/game/g_japlus_misc.c"
-	"${MPDir}/game/g_japlus_scale.c"
-	"${MPDir}/game/g_japlus_tele.c"
 	"${MPDir}/game/g_exphysics.c"
 	"${MPDir}/game/g_ICARUScb.c"
 	"${MPDir}/game/g_items.c"
@@ -86,12 +70,9 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_navnew.c"
 	"${MPDir}/game/g_object.c"
 	"${MPDir}/game/g_saga.c"
-	"${MPDir}/game/g_schizo.c"
 	"${MPDir}/game/g_session.c"
 	"${MPDir}/game/g_spawn.c"
 	"${MPDir}/game/g_svcmds.c"
-	"${MPDir}/game/g_webadmin.c"
-	"${MPDir}/game/webadmin/index.html"
 	"${MPDir}/game/g_syscalls.c"
 	"${MPDir}/game/g_target.c"
 	"${MPDir}/game/g_team.c"
@@ -100,78 +81,234 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_turret.c"
 	"${MPDir}/game/g_turret_G2.c"
 	"${MPDir}/game/g_utils.c"
-	"${MPDir}/game/g_voice.c"
-	"${MPDir}/game/g_vehicles.c"
-	"${MPDir}/game/g_vehicleTurret.c"
+	"${MPDir}/game/vehicles/g_vehicles.c"
+	"${MPDir}/game/vehicles/g_vehicleTurret.c"
 	"${MPDir}/game/g_weapon.c"
-	"${MPDir}/game/NPC.c"
-	"${MPDir}/game/NPC_AI_Atst.c"
-	"${MPDir}/game/NPC_AI_Default.c"
-	"${MPDir}/game/NPC_AI_Droid.c"
-	"${MPDir}/game/NPC_AI_GalakMech.c"
-	"${MPDir}/game/NPC_AI_Grenadier.c"
-	"${MPDir}/game/NPC_AI_Howler.c"
-	"${MPDir}/game/NPC_AI_ImperialProbe.c"
-	"${MPDir}/game/NPC_AI_Interrogator.c"
-	"${MPDir}/game/NPC_AI_Jedi.c"
-	"${MPDir}/game/NPC_AI_Mark1.c"
-	"${MPDir}/game/NPC_AI_Mark2.c"
-	"${MPDir}/game/NPC_AI_MineMonster.c"
-	"${MPDir}/game/NPC_AI_Rancor.c"
-	"${MPDir}/game/NPC_AI_Remote.c"
-	"${MPDir}/game/NPC_AI_Seeker.c"
-	"${MPDir}/game/NPC_AI_Sentry.c"
-	"${MPDir}/game/NPC_AI_Sniper.c"
-	"${MPDir}/game/NPC_AI_Stormtrooper.c"
-	"${MPDir}/game/NPC_AI_Utils.c"
-	"${MPDir}/game/NPC_AI_Wampa.c"
-	"${MPDir}/game/NPC_behavior.c"
-	"${MPDir}/game/NPC_combat.c"
-	"${MPDir}/game/NPC_goal.c"
-	"${MPDir}/game/NPC_misc.c"
-	"${MPDir}/game/NPC_move.c"
-	"${MPDir}/game/NPC_reactions.c"
-	"${MPDir}/game/NPC_senses.c"
-	"${MPDir}/game/NPC_sounds.c"
-	"${MPDir}/game/NPC_spawn.c"
-	"${MPDir}/game/NPC_stats.c"
-	"${MPDir}/game/NPC_utils.c"
-	"${MPDir}/game/SpeederNPC.c"
+	"${MPDir}/game/npc/NPC.c"
+	"${MPDir}/game/npc/NPC_AI_Atst.c"
+	"${MPDir}/game/npc/NPC_AI_Default.c"
+	"${MPDir}/game/npc/NPC_AI_Droid.c"
+	"${MPDir}/game/npc/NPC_AI_GalakMech.c"
+	"${MPDir}/game/npc/NPC_AI_Grenadier.c"
+	"${MPDir}/game/npc/NPC_AI_Howler.c"
+	"${MPDir}/game/npc/NPC_AI_ImperialProbe.c"
+	"${MPDir}/game/npc/NPC_AI_Interrogator.c"
+	"${MPDir}/game/npc/NPC_AI_Jedi.c"
+	"${MPDir}/game/npc/NPC_AI_Mark1.c"
+	"${MPDir}/game/npc/NPC_AI_Mark2.c"
+	"${MPDir}/game/npc/NPC_AI_MineMonster.c"
+	"${MPDir}/game/npc/NPC_AI_Rancor.c"
+	"${MPDir}/game/npc/NPC_AI_Remote.c"
+	"${MPDir}/game/npc/NPC_AI_Seeker.c"
+	"${MPDir}/game/npc/NPC_AI_Sentry.c"
+	"${MPDir}/game/npc/NPC_AI_Sniper.c"
+	"${MPDir}/game/npc/NPC_AI_Stormtrooper.c"
+	"${MPDir}/game/npc/NPC_AI_Utils.c"
+	"${MPDir}/game/npc/NPC_AI_Wampa.c"
+	"${MPDir}/game/npc/NPC_behavior.c"
+	"${MPDir}/game/npc/NPC_combat.c"
+	"${MPDir}/game/npc/NPC_goal.c"
+	"${MPDir}/game/npc/NPC_misc.c"
+	"${MPDir}/game/npc/NPC_move.c"
+	"${MPDir}/game/npc/NPC_reactions.c"
+	"${MPDir}/game/npc/NPC_senses.c"
+	"${MPDir}/game/npc/NPC_sounds.c"
+	"${MPDir}/game/npc/NPC_spawn.c"
+	"${MPDir}/game/npc/NPC_stats.c"
+	"${MPDir}/game/npc/NPC_utils.c"
+	"${MPDir}/game/vehicles/SpeederNPC.c"
 	"${MPDir}/game/tri_coll_test.c"
 	"${MPDir}/game/w_force.c"
 	"${MPDir}/game/w_saber.c"
-	"${MPDir}/game/WalkerNPC.c"
-	"${MPDir}/game/ai.h"
-	"${MPDir}/game/ai_main.h"
+	"${MPDir}/game/vehicles/WalkerNPC.c"
+	"${MPDir}/game/npc/ai.h"
+	"${MPDir}/game/bots/ai_main.h"
 	"${MPDir}/game/anims.h"
-	"${MPDir}/game/b_local.h"
-	"${MPDir}/game/b_public.h"
-	"${MPDir}/game/bg_local.h"
-	"${MPDir}/game/bg_props.h"
-	"${MPDir}/game/bg_props_math.h"
-	"${MPDir}/game/bg_voice.h"
-	"${MPDir}/game/bg_net.h"
-	"${MPDir}/game/bg_public.h"
-	"${MPDir}/game/bg_saga.h"
-	"${MPDir}/game/bg_vehicles.h"
-	"${MPDir}/game/bg_weapons.h"
-	"${MPDir}/game/chars.h"
+	"${MPDir}/game/npc/b_local.h"
+	"${MPDir}/game/npc/b_public.h"
+	"${MPDir}/game/bg/bg_local.h"
+	"${MPDir}/game/bg/bg_net.h"
+	"${MPDir}/game/bg/bg_public.h"
+	"${MPDir}/game/bg/bg_saga.h"
+	"${MPDir}/game/bg/bg_vehicles.h"
+	"${MPDir}/game/bg/bg_weapons.h"
+	"${MPDir}/game/bots/chars.h"
 	"${MPDir}/game/g_ICARUScb.h"
 	"${MPDir}/game/g_local.h"
 	"${MPDir}/game/g_nav.h"
 	"${MPDir}/game/g_public.h"
 	"${MPDir}/game/g_team.h"
 	"${MPDir}/game/g_xcvar.h"
-	"${MPDir}/game/inv.h"
-	"${MPDir}/game/match.h"
-	"${MPDir}/game/npc_headers.h"
-	"${MPDir}/game/say.h"
+	"${MPDir}/game/bots/inv.h"
+	"${MPDir}/game/bots/match.h"
+	"${MPDir}/game/npc/npc_headers.h"
+	"${MPDir}/game/npc/say.h"
 	"${MPDir}/game/surfaceflags.h"
 	"${MPDir}/game/teams.h"
 	"${MPDir}/game/w_saber.h"
 	)
 source_group("game" FILES ${MPGameGameFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameGameFiles})
+
+# the features of JA+ v2.4 Build 7
+set(MPGameJaplusFiles
+	"${MPDir}/game/japlus/g_japlus_admin.c"
+	"${MPDir}/game/japlus/g_japlus_admin2.c"
+	"${MPDir}/game/japlus/g_japlus_blockwall.c"
+	"${MPDir}/game/japlus/g_japlus_chat.c"
+	"${MPDir}/game/japlus/g_japlus_cmds.c"
+	"${MPDir}/game/japlus/g_japlus_dim.c"
+	"${MPDir}/game/japlus/g_japlus_fx.c"
+	"${MPDir}/game/japlus/g_japlus_highlander.c"
+	"${MPDir}/game/japlus/g_japlus_hook.c"
+	"${MPDir}/game/japlus/g_japlus_info.c"
+	"${MPDir}/game/japlus/g_japlus_misc.c"
+	"${MPDir}/game/japlus/g_japlus_scale.c"
+	"${MPDir}/game/japlus/g_japlus_tele.c"
+	"${MPDir}/game/japlus/g_japlus.h"
+	"${MPDir}/game/japlus/g_japlus_xcvar.h"
+	)
+source_group("game/japlus" FILES ${MPGameJaplusFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
+
+# lag compensation of TaystJK's jaPRO
+set(MPGameUnlaggedFiles
+	"${MPDir}/game/unlagged/g_unlagged.c"
+	"${MPDir}/game/unlagged/g_unlagged.h"
+	)
+source_group("game/unlagged" FILES ${MPGameUnlaggedFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameUnlaggedFiles})
+
+# what stands above the head of a player: away, music
+set(MPGameStatusFiles
+	"${MPDir}/game/status/g_status.c"
+	"${MPDir}/game/toys/g_toys.c"
+	)
+source_group("game/status" FILES ${MPGameStatusFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})
+
+# Admin login with a key or a one-time code, bg_auth.c is built into the cgame too. Monocypher checks the
+# signatures (and makes them in the cgame), and hashes the passwords of the web panel.
+set(MPGameAuthFiles
+	"${MPDir}/game/auth/bg_auth.c"
+	"${MPDir}/game/auth/g_auth.c"
+	"${MPDir}/game/auth/bg_auth.h"
+	"${VisionJKLibDir}/monocypher/monocypher.c"
+	"${VisionJKLibDir}/monocypher/monocypher.h"
+	"${VisionJKLibDir}/monocypher/monocypher-ed25519.c"
+	"${VisionJKLibDir}/monocypher/monocypher-ed25519.h"
+	"${SharedDir}/web/web_sha256.c"
+	)
+source_group("game/auth" FILES ${MPGameAuthFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameAuthFiles})
+set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${VisionJKLibDir}/monocypher")
+# gcc warns of reads behind an array in the SHA-512 of Monocypher where it works out a call with 32 bytes: the
+# branch it means is never taken with that length. The file is left as its authors ship it.
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties("${VisionJKLibDir}/monocypher/monocypher-ed25519.c" PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
+endif()
+
+# the relay of the voice chat, bg_voice.c is built into the cgame too
+set(MPGameVoiceFiles
+	"${MPDir}/game/voice/bg_voice.c"
+	"${MPDir}/game/toys/bg_toys.c"
+	"${MPDir}/game/toys/bg_toys.h"
+	"${MPDir}/game/voice/g_voice.c"
+	"${MPDir}/game/voice/bg_voice.h"
+	)
+source_group("game/voice" FILES ${MPGameVoiceFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameVoiceFiles})
+
+# the boombox, on that relay. It codes the songs it plays with Opus, the library of the voice chat of the cgame:
+# without it (BuildJPVoice OFF) there are no boxes.
+set(MPGameBoomboxFiles
+	"${MPDir}/game/boombox/g_boombox.c"
+	"${MPDir}/game/boombox/bg_boombox_core.c"
+	"${MPDir}/game/boombox/bg_boombox_fetch.c"
+	"${MPDir}/game/boombox/bg_boombox.h"
+	"${MPDir}/game/boombox/bg_boombox_core.h"
+	)
+source_group("game/boombox" FILES ${MPGameBoomboxFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameBoomboxFiles})
+if(BuildJPVoice)
+	if(NOT TARGET bundled_opus)
+		add_subdirectory("${VisionJKLibDir}/opus" "${CMAKE_BINARY_DIR}/lib/opus")
+	endif()
+	set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${VisionJKLibDir}/opus/include")
+	set(MPGameDefines ${MPGameDefines} "JP_BOOMBOX")
+	set(MPGameLibraries ${MPGameLibraries} bundled_opus)
+endif(BuildJPVoice)
+
+# the web admin panel and its page: a template, a style sheet and one script file for each part of the page
+file(GLOB_RECURSE MPGameWebadminPageFiles CONFIGURE_DEPENDS
+	"${MPDir}/game/webadmin/page/*.html"
+	"${MPDir}/game/webadmin/page/*.css"
+	"${MPDir}/game/webadmin/page/*.js"
+	)
+set(MPGameWebadminFiles
+	"${MPDir}/game/webadmin/wa_local.h"
+	"${MPDir}/game/webadmin/g_webadmin.c"
+	"${MPDir}/game/webadmin/wa_http.c"
+	"${MPDir}/game/webadmin/wa_auth.c"
+	"${MPDir}/game/webadmin/wa_totp.c"
+	"${MPDir}/game/webadmin/wa_totp.h"
+	"${MPDir}/game/webadmin/wa_state.c"
+	"${MPDir}/game/webadmin/wa_actions.c"
+	"${MPDir}/game/webadmin/wa_entities.c"
+	"${MPDir}/game/webadmin/wa_assets.c"
+	"${MPDir}/game/webadmin/wa_fs.c"
+	"${MPDir}/game/webadmin/wa_perf.c"
+	"${MPDir}/game/webadmin/wa_log.c"
+	"${MPDir}/game/webadmin/wa_routes.c"
+	"${MPDir}/game/webadmin/wa_control.c"
+	"${MPDir}/game/webadmin/wa_clips.c"
+	"${MPDir}/game/webadmin/wa_remaps.c"
+	"${MPDir}/game/webadmin/wa_live.c"
+	"${MPDir}/game/webadmin/wa_stream.c"
+	"${MPDir}/game/webadmin/wa_settings.c"
+	"${MPDir}/game/webadmin/wa_settings_table.h"
+	"${MPDir}/game/webadmin/wa_cfgedit.c"
+	"${MPDir}/game/webadmin/wa_cfgedit.h"
+	)
+source_group("game/webadmin" FILES ${MPGameWebadminFiles})
+source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles} ${MPGameWebadminPageFiles})
+
+# what the web admin panel reads a request with. The web host of the dedicated server is built with the same
+# files (codemp/server/web/sources.cmake). SHA-1 is for the codes by time of the login (wa_totp.c).
+set(MPGameSharedWebFiles
+	"${SharedDir}/web/web_http.h"
+	"${SharedDir}/web/web_http.c"
+	"${SharedDir}/web/web_base64.c"
+	"${SharedDir}/web/web_sha1.c"
+	"${SharedDir}/web/web_ws.c"
+	)
+source_group("shared/web" FILES ${MPGameSharedWebFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameSharedWebFiles})
+
+# the props with physics, the black hole that pulls them and the sandbox (amsandbox, the toolgun of g_tools.c),
+# bg_props.c is built into the cgame too, bg_tools.h is known there
+set(MPGamePropsFiles
+	"${MPDir}/game/props/bg_props.c"
+	"${MPDir}/game/props/g_blackhole.c"
+	"${MPDir}/game/props/g_props.c"
+	"${MPDir}/game/props/g_tools.c"
+	"${MPDir}/game/props/bg_props.h"
+	"${MPDir}/game/props/bg_props_math.h"
+	"${MPDir}/game/props/bg_tools.h"
+	)
+source_group("game/props" FILES ${MPGamePropsFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})
+
+# what an admin does to one player, and the emote ampoop
+set(MPGameFunFiles
+	"${MPDir}/game/fun/g_disorient.c"
+	"${MPDir}/game/fun/g_flatulence.c"
+	"${MPDir}/game/fun/g_poop.c"
+	"${MPDir}/game/fun/g_schizo.c"
+	)
+source_group("game/fun" FILES ${MPGameFunFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameFunFiles})
 
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"
@@ -236,13 +373,64 @@ set(MPGameUiFiles
 source_group("ui" FILES ${MPGameUiFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameUiFiles})
 
-# the web admin page is compiled into the module
+# The web admin page is put together into one file (the template with the style sheet and the scripts in it),
+# and that file is compiled into the module. A browser gets the page as it got it when it was one file.
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/page/index.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	DEPENDS ${MPGameWebadminPageFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	COMMENT "Putting the web admin page together")
 add_custom_command(
 	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h"
-	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/index.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h" -DNAME=webadmin_html -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
-	DEPENDS "${MPDir}/game/webadmin/index.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h" -DNAME=webadmin_html -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
 	COMMENT "Embedding web admin page")
 set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h")
+# the script of the live view (wa_live.c): the drawing parts of the page put together the same way
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/page/live.js" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	DEPENDS ${MPGameWebadminPageFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	COMMENT "Putting the live view together")
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.h" -DNAME=webadmin_live -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the live view")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.h")
+# the page of the login is a file by itself: a visitor who is not logged in gets nothing of the panel
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/page/login.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h" -DNAME=webadmin_login -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${MPDir}/game/webadmin/page/login.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the login page of the web admin")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h")
+
+# and so are the entity definitions of the game code (its QUAKED comments), which the editor of the page shows
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt"
+	COMMAND ${CMAKE_COMMAND} -DDIR="${MPDir}/game" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractQuaked.cmake"
+	DEPENDS ${MPGameGameFiles} ${MPGameJaplusFiles} ${MPGameVoiceFiles} ${MPGamePropsFiles} ${MPGameFunFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractQuaked.cmake"
+	COMMENT "Collecting the entity definitions")
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h" -DNAME=classdoc_txt -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the entity definitions")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h")
+
+# and the keys the spawn function of every class reads, which the editor offers when a key is typed
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt"
+	COMMAND ${CMAKE_COMMAND} -DDIR="${MPDir}/game" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractSpawnKeys.cmake"
+	DEPENDS ${MPGameGameFiles} ${MPGameJaplusFiles} ${MPGameVoiceFiles} ${MPGamePropsFiles} ${MPGameFunFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractSpawnKeys.cmake"
+	COMMENT "Collecting the keys of the entity classes")
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classkeys_txt.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classkeys_txt.h" -DNAME=classkeys_txt -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the keys of the entity classes")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/classkeys_txt.h")
 set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_library(${MPGame} SHARED ${MPGameFiles})
@@ -255,19 +443,20 @@ endif()
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPGame}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/VisionJK"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPGame}
 		LIBRARY
 		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
 		COMPONENT ${JKAMPCoreComponent})
 elseif(WIN32)
+	# into the mod directory, next to the asset archives and the configs
 	install(TARGETS ${MPGame}
 		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
+		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
 
-	# Use OpenJK modules as default
+	# and into base: the engine looks there when fs_game is not set or the mod directory has no module
 	install(TARGETS ${MPGame}
 		RUNTIME
 		DESTINATION "${JKAInstallDir}/base"
@@ -275,7 +464,7 @@ elseif(WIN32)
 else()
 	install(TARGETS ${MPGame}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/OpenJK"
+		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPGame}
 		LIBRARY
@@ -285,8 +474,8 @@ endif()
 
 set_target_properties(${MPGame} PROPERTIES COMPILE_DEFINITIONS "${MPGameDefines}")
 
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+# Hide symbols not explicitly marked public (not for BuildDevHotpatch, see the main CMakeLists.txt).
+set_property(TARGET ${MPGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_MODULE_FLAGS})
 
 set_target_properties(${MPGame} PROPERTIES INCLUDE_DIRECTORIES "${MPGameIncludeDirectories}")
 set_target_properties(${MPGame} PROPERTIES PROJECT_LABEL "MP Game Library")

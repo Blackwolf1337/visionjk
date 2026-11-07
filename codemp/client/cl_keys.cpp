@@ -25,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 /*
 
 key up events are sent even if in console mode
@@ -183,9 +183,9 @@ keyname_t keynames[MAX_KEYS] =
 	{ 0x7f, 0x7f, "DEL", A_DELETE, false								},
 
 	{ 0x80, 0x80, "EURO", A_EURO, false  								},
-	{ 0x81, 0x81, "SHIFT", A_SHIFT2, false								},
-	{ 0x82, 0x82, "CTRL", A_CTRL2, false								},
-	{ 0x83, 0x83, "ALT", A_ALT2, false									},
+	{ 0x81, 0x81, "RSHIFT", A_SHIFT2, false								},
+	{ 0x82, 0x82, "RCTRL", A_CTRL2, false								},
+	{ 0x83, 0x83, "RALT", A_ALT2, false									},
 	{ 0x84, 0x84, "F5", A_F5, true										},
 	{ 0x85, 0x85, "F6", A_F6, true										},
 	{ 0x86, 0x86, "F7", A_F7, true										},
@@ -382,6 +382,41 @@ keyname_t keynames[MAX_KEYS] =
 };
 static const size_t numKeynames = ARRAY_LEN( keynames );
 
+// Binds with a modifier, as TaystJK has them (2026-10-17): "bind ctrl+x ...". Only the left Alt, Ctrl and Shift
+// make them, looked at in that order; a key without one for what is held runs its plain bind. The right keys have
+// codes of their own (RALT, RCTRL, RSHIFT) and binds of their own, else they run the left key's bind. Everything
+// that asks whether Ctrl is down (kg.keys[A_CTRL].down, Key_IsDown) still hears yes for either key.
+enum { KEYMOD_ALT, KEYMOD_CTRL, KEYMOD_SHIFT, KEYMOD_COUNT };
+static const char	*keyModNames[KEYMOD_COUNT] = { "ALT", "CTRL", "SHIFT" };
+static const int	keyModLeft[KEYMOD_COUNT] = { A_ALT, A_CTRL, A_SHIFT };
+static const int	keyModRight[KEYMOD_COUNT] = { A_ALT2, A_CTRL2, A_SHIFT2 };
+static char			*keyModBinding[KEYMOD_COUNT][MAX_KEYS];
+static qboolean		keyModLeftDown[KEYMOD_COUNT];
+static signed char	keyDownBind[MAX_KEYS];		// what a key ran when it went down, so its release ends that: 0 plain, else KEYMOD_ + 1
+
+// KEYMOD_ of a modifier key, left or right, else -1
+static int Key_ModifierOf( int keynum ) {
+	for ( int i = 0; i < KEYMOD_COUNT; i++ ) {
+		if ( keynum == keyModLeft[i] || keynum == keyModRight[i] ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+// "ctrl+x": KEYMOD_CTRL, and str moves on to "x". -1 and str as it was without a prefix
+static int Key_ParseModifier( char **str ) {
+	for ( int i = 0; i < KEYMOD_COUNT; i++ ) {
+		const size_t len = strlen( keyModNames[i] );
+
+		if ( !Q_stricmpn( *str, keyModNames[i], len ) && (*str)[len] == '+' && (*str)[len + 1] ) {
+			*str += len + 1;
+			return i;
+		}
+	}
+	return -1;
+}
+
 
 
 /*
@@ -402,6 +437,128 @@ x, y, amd width are in pixels
 ===================
 */
 extern console_t con;
+
+// The bytes of the character at pos and the offset of the character before pos. Where text is UTF-8 (CL_UTF8())
+// a character has 1 to 4 bytes, and cursor and scroll of a field stand between two characters.
+static int Field_CharLen( const field_t *edit, int pos ) {
+	unsigned int codePoint;
+
+	if ( !CL_UTF8() ) {
+		return edit->buffer[pos] ? 1 : 0;
+	}
+	return Q_UTF8_Decode( edit->buffer + pos, &codePoint );
+}
+
+static int Field_PrevChar( const field_t *edit, int pos ) {
+	if ( !CL_UTF8() ) {
+		return pos > 0 ? pos - 1 : 0;
+	}
+	return Q_UTF8_PrevChar( edit->buffer, pos );
+}
+
+// how many characters lie between two bytes of a field
+static int Field_CountChars( const field_t *edit, int from, int to ) {
+	int count = 0;
+
+	while ( from < to ) {
+		const int charLen = Field_CharLen( edit, from );
+
+		if ( !charLen ) {
+			break;
+		}
+		from += charLen;
+		count++;
+	}
+	return count;
+}
+
+// Where Ctrl with left or right goes: to the start of this word or of the one before, to the start of the next one.
+// Ctrl+Backspace and Ctrl+Delete delete up to there.
+static int Field_WordLeft( const field_t *edit, int pos ) {
+	while ( pos > 0 && edit->buffer[pos - 1] == ' ' ) {
+		pos--;
+	}
+	while ( pos > 0 && edit->buffer[pos - 1] != ' ' ) {
+		pos = Field_PrevChar( edit, pos );
+	}
+	return pos;
+}
+
+static int Field_WordRight( const field_t *edit, int pos ) {
+	const int len = strlen( edit->buffer );
+
+	while ( pos < len && edit->buffer[pos] != ' ' ) {
+		pos += Field_CharLen( edit, pos );
+	}
+	while ( pos < len && edit->buffer[pos] == ' ' ) {
+		pos++;
+	}
+	return pos;
+}
+
+static void Field_DeleteRange( field_t *edit, int from, int to ) {
+	if ( from >= to ) {
+		return;
+	}
+	memmove( edit->buffer + from, edit->buffer + to, strlen( edit->buffer + to ) + 1 );
+	edit->cursor = from;
+	if ( edit->scroll > edit->cursor ) {
+		edit->scroll = edit->cursor;
+	}
+}
+
+/*
+===================
+Field_Selection
+
+What is marked in a field: Shift with the arrow keys, Home or End marks from where the cursor was to where it
+goes. Typing replaces it, Ctrl+C copies it, Ctrl+X cuts it. From the byte `from` up to the byte `to`, qfalse
+when nothing is marked.
+===================
+*/
+static qboolean Field_Selection( const field_t *edit, int *from, int *to ) {
+	const int len = strlen( edit->buffer );
+
+	if ( edit->selAnchor < 0 || edit->selAnchor > len || edit->selAnchor == edit->cursor ) {
+		return qfalse;
+	}
+	*from = Q_min( edit->selAnchor, edit->cursor );
+	*to = Q_max( edit->selAnchor, edit->cursor );
+	return qtrue;
+}
+
+static void Field_DeleteSelection( field_t *edit ) {
+	int from, to;
+
+	if ( Field_Selection( edit, &from, &to ) ) {
+		memmove( edit->buffer + from, edit->buffer + to, strlen( edit->buffer + to ) + 1 );
+		edit->cursor = from;
+		if ( edit->scroll > edit->cursor ) {
+			edit->scroll = edit->cursor;
+		}
+	}
+	edit->selAnchor = -1;
+}
+
+// puts what is marked on the clipboard, qfalse when nothing is
+static qboolean Field_CopySelection( const field_t *edit ) {
+	char	text[MAX_EDIT_LINE], utf8[MAX_EDIT_LINE * 3];
+	int		from, to;
+
+	if ( !Field_Selection( edit, &from, &to ) ) {
+		return qfalse;
+	}
+	Q_strncpyz( text, edit->buffer + from, Q_min( (int)sizeof( text ), to - from + 1 ) );
+	if ( CL_UTF8() ) {
+		Sys_SetClipboardData( text );
+	} else {
+		// the clipboard is UTF-8: a byte of a code page goes there as the character it is in Windows-1252
+		Q_UTF8_FromCP1252( text, utf8, sizeof( utf8 ) );
+		Sys_SetClipboardData( utf8 );
+	}
+	return qtrue;
+}
+
 void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean showCursor, qboolean noColorEscape ) {
 	int		len;
 	int		drawLen;
@@ -409,6 +566,7 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 	int		cursorChar;
 	char	str[MAX_STRING_CHARS];
 	int		i;
+	int		cursorColumn;
 
 	drawLen = edit->widthInChars - 1; // - 1 so there is always a space for the cursor
 	len = strlen( edit->buffer );
@@ -438,8 +596,44 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 		Com_Error( ERR_DROP, "drawLen >= MAX_STRING_CHARS" );
 	}
 
+	cursorColumn = edit->cursor - prestep;
+	if ( CL_UTF8() ) {
+		// The cursor is as many cells in as there are characters before it. The big letters (the chat line) are
+		// drawn with the charset picture, which has a cell for a byte of Windows-1252: a character it does not
+		// have shows as '?' there.
+		char utf8[MAX_STRING_CHARS];
+
+		while ( ( edit->buffer[prestep] & 0xC0 ) == 0x80 ) {
+			prestep++;		// not into the middle of a character
+		}
+		Q_strncpyz( utf8, edit->buffer + prestep, sizeof( utf8 ) );
+		Q_UTF8_Truncate( utf8, drawLen );
+		if ( size == con.charWidth ) {
+			// the console draws any character (SCR_DrawConChar)
+			Q_strncpyz( str, utf8, sizeof( str ) );
+		} else {
+			Q_UTF8_ToCP1252( utf8, str, sizeof( str ) );
+		}
+		drawLen = strlen( str );
+		cursorColumn = Field_CountChars( edit, prestep, edit->cursor );
+	} else {
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
+	}
+
+	// what is marked, behind the text (x and y of the small letters are pixels of the window)
+	if ( size == con.charWidth ) {
+		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f };
+		int				from, to;
+
+		if ( Field_Selection( edit, &from, &to ) && to > prestep && from < prestep + drawLen ) {
+			const int first = Field_CountChars( edit, prestep, Q_max( from, prestep ) );
+			const int count = Field_CountChars( edit, Q_max( from, prestep ), Q_min( to, prestep + drawLen ) );
+
+			SCR_FillRect( ( x + first * size ) * con.xadjust - cls.bias2D, y * con.yadjust - cls.bias2DY,
+				count * size * con.xadjust, con.charHeight * con.yadjust, selColor );
+		}
+	}
 
 	// draw it
 	if ( size == con.charWidth ) {
@@ -467,11 +661,11 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 		i = drawLen - strlen( str );
 
 		if ( size == con.charWidth ) {
-			SCR_DrawSmallChar( x + ( edit->cursor - prestep - i ) * size, y, cursorChar );
+			SCR_DrawSmallChar( x + ( cursorColumn - i ) * size, y, cursorChar );
 		} else {
 			str[0] = cursorChar;
 			str[1] = 0;
-			SCR_DrawBigString( x + ( edit->cursor - prestep - i ) * size, y, str, 1.0, qfalse );
+			SCR_DrawBigString( x + ( cursorColumn - i ) * size, y, str, 1.0, qfalse );
 		}
 	}
 }
@@ -501,6 +695,14 @@ void Field_Paste( field_t *edit ) {
 	}
 
 	// send as if typed, so insert / overstrike works properly
+	if ( CL_UTF8() ) {
+		// the clipboard is UTF-8 and so is the field: byte by byte, without control characters
+		for ( ; *c; c++ ) {
+			if ( (unsigned char)*c >= 32 && *c != 127 ) {
+				Field_CharEvent( edit, (unsigned char)*c );
+			}
+		}
+	} else
 	while( *c )
 	{
 		uint32_t utf32 = ConvertUTF8ToUTF32( c, &c );
@@ -522,6 +724,7 @@ Key events are used for non-printable characters, others are gotten from char ev
 */
 void Field_KeyDownEvent( field_t *edit, int key ) {
 	int		len;
+	int		selFrom, selTo;
 
 	// shift-insert is paste
 	if ( ( ( key == A_INSERT ) || ( key == A_KP_0 ) ) && kg.keys[A_SHIFT].down ) {
@@ -532,23 +735,45 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 	key = tolower( key );
 	len = strlen( edit->buffer );
 
+	// Shift with a key that moves the cursor marks from where the cursor is, without Shift nothing stays marked
+	if ( key == A_CURSOR_RIGHT || key == A_CURSOR_LEFT || key == A_HOME || key == A_END ) {
+		if ( !kg.keys[A_SHIFT].down ) {
+			edit->selAnchor = -1;
+		} else if ( edit->selAnchor < 0 || edit->selAnchor > len ) {
+			edit->selAnchor = edit->cursor;
+		}
+	}
+
 	switch ( key ) {
 		case A_DELETE:
-			if ( edit->cursor < len ) {
+			if ( Field_Selection( edit, &selFrom, &selTo ) ) {
+				Field_DeleteSelection( edit );
+			} else if ( kg.keys[A_CTRL].down ) {
+				Field_DeleteRange( edit, edit->cursor, Field_WordRight( edit, edit->cursor ) );
+			} else if ( edit->cursor < len ) {
+				const int charLen = Field_CharLen( edit, edit->cursor );
+
 				memmove( edit->buffer + edit->cursor,
-					edit->buffer + edit->cursor + 1, len - edit->cursor );
+					edit->buffer + edit->cursor + charLen, len - edit->cursor - charLen + 1 );
 			}
+			edit->selAnchor = -1;
 			break;
 
 		case A_CURSOR_RIGHT:
 			if ( edit->cursor < len ) {
-				edit->cursor++;
+				edit->cursor += Field_CharLen( edit, edit->cursor );
+			}
+			if ( kg.keys[A_CTRL].down ) {
+				edit->cursor = Field_WordRight( edit, edit->cursor );
 			}
 			break;
 
 		case A_CURSOR_LEFT:
 			if ( edit->cursor > 0 ) {
-				edit->cursor--;
+				edit->cursor = Field_PrevChar( edit, edit->cursor );
+			}
+			if ( kg.keys[A_CTRL].down ) {
+				edit->cursor = Field_WordLeft( edit, edit->cursor );
 			}
 			break;
 
@@ -583,27 +808,59 @@ Field_CharEvent
 */
 void Field_CharEvent( field_t *edit, int ch ) {
 	int		len;
+	int		selFrom, selTo;
 
 	if ( ch == 'v' - 'a' + 1 ) {	// ctrl-v is paste
 		Field_Paste( edit );
 		return;
 	}
 
-	if ( ch == 'c' - 'a' + 1 ) {	// ctrl-c clears the field
+	if ( ch == 'c' - 'a' + 1 ) {
+		// ctrl-c copies what is marked: in the field, else in the text of the console above it. With nothing
+		// marked it clears the field, as it always did.
+		if ( Field_CopySelection( edit ) ) {
+			return;
+		}
+		if ( edit == &g_consoleField && Con_CopySelection() ) {
+			return;
+		}
 		Field_Clear( edit );
 		return;
 	}
 
+	if ( ch == 'x' - 'a' + 1 ) {	// ctrl-x cuts what is marked
+		if ( Field_CopySelection( edit ) ) {
+			Field_DeleteSelection( edit );
+		}
+		return;
+	}
+
+	if ( ch == 'h' - 'a' + 1 && Field_Selection( edit, &selFrom, &selTo ) ) {
+		// backspace takes what is marked
+		Field_DeleteSelection( edit );
+		return;
+	}
+
+	// what is typed takes the place of what is marked. Of a character of several bytes the first one does that.
+	if ( ch >= 32 && ( !CL_UTF8() || ( ch & 0xC0 ) != 0x80 ) ) {
+		Field_DeleteSelection( edit );
+	}
+	edit->selAnchor = -1;
+
 	len = strlen( edit->buffer );
 
 	if ( ch == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
-		if ( edit->cursor > 0 ) {
-			memmove( edit->buffer + edit->cursor - 1,
+		if ( kg.keys[A_CTRL].down ) {
+			Field_DeleteRange( edit, Field_WordLeft( edit, edit->cursor ), edit->cursor );
+		} else if ( edit->cursor > 0 ) {
+			const int prev = Field_PrevChar( edit, edit->cursor );
+
+			memmove( edit->buffer + prev,
 				edit->buffer + edit->cursor, len + 1 - edit->cursor );
-			edit->cursor--;
+			edit->cursor = prev;
 			if ( edit->cursor < edit->scroll )
 			{
-				edit->scroll--;
+				edit->scroll = edit->cursor;
 			}
 		}
 		return;
@@ -628,7 +885,24 @@ void Field_CharEvent( field_t *edit, int ch ) {
 		return;
 	}
 
-	if ( kg.key_overstrikeMode ) {
+	if ( kg.key_overstrikeMode && CL_UTF8() ) {
+		// the first byte of a character takes the place of the whole character under the cursor, the bytes
+		// that follow it are put in behind it
+		if ( ( ch & 0xC0 ) != 0x80 && edit->cursor < len ) {
+			const int charLen = Field_CharLen( edit, edit->cursor );
+
+			memmove( edit->buffer + edit->cursor,
+				edit->buffer + edit->cursor + charLen, len - edit->cursor - charLen + 1 );
+			len -= charLen;
+		}
+		if ( len == MAX_EDIT_LINE - 2 ) {
+			return; // all full
+		}
+		memmove( edit->buffer + edit->cursor + 1,
+			edit->buffer + edit->cursor, len + 1 - edit->cursor );
+		edit->buffer[edit->cursor] = ch;
+		edit->cursor++;
+	} else if ( kg.key_overstrikeMode ) {
 		// - 2 to leave room for the leading slash and trailing \0
 		if ( edit->cursor == MAX_EDIT_LINE - 2 )
 			return;
@@ -662,6 +936,24 @@ Handles history and console scrollback
 ====================
 */
 void Console_Key( int key ) {
+	// The mouse marks text of the console (cl_console.cpp). The right button puts what is marked on the
+	// clipboard, and pastes into the input line when nothing is marked.
+	if ( key == A_MOUSE1 ) {
+		Con_MouseDown();
+		return;
+	}
+	if ( key == A_MOUSE2 ) {
+		if ( !Con_CopySelection() ) {
+			Field_Paste( &g_consoleField );
+		}
+		return;
+	}
+	// ctrl-A marks all of it (the input line also gets its ctrl-a, which is home)
+	if ( keynames[key].lower == 'a' && kg.keys[A_CTRL].down ) {
+		Con_SelectAll();
+		return;
+	}
+
 	// ctrl-L clears screen
 	if ( keynames[key].lower == 'l' && kg.keys[A_CTRL].down ) {
 		Cbuf_AddText( "clear\n" );
@@ -733,6 +1025,7 @@ void Console_Key( int key ) {
 	// tab completion
 	if ( key == A_TAB ) {
 		Field_AutoComplete( &g_consoleField );
+		g_consoleField.selAnchor = -1;
 		return;
 	}
 
@@ -744,6 +1037,7 @@ void Console_Key( int key ) {
 		if ( nextHistoryLine - historyLine < COMMAND_HISTORY && historyLine > 0 )
 			historyLine--;
 		g_consoleField = historyEditLines[historyLine % COMMAND_HISTORY];
+		g_consoleField.selAnchor = -1;
 
 		return;
 	}
@@ -760,6 +1054,7 @@ void Console_Key( int key ) {
 			return;
 		}
 		g_consoleField = historyEditLines[historyLine % COMMAND_HISTORY];
+		g_consoleField.selAnchor = -1;
 		return;
 	}
 
@@ -986,19 +1281,33 @@ const char *Key_KeynumToString( int keynum ) {
 Key_SetBinding
 ===================
 */
+static void Key_StoreBinding( int mod, int keynum, const char *binding ) {
+	char **slot = mod >= 0 ? &keyModBinding[mod][keynames[keynum].upper] : &kg.keys[keynames[keynum].upper].binding;
+
+	// free old bindings
+	if ( *slot ) {
+		Z_Free( *slot );
+		*slot = NULL;
+	}
+
+	// allocate memory for new binding, with the names of this tree since 2026-10-17 (cvar_renames.h)
+	if ( binding ) {
+		char renamed[MAX_STRING_CHARS];
+
+		if ( Cvar_RenamedText( binding, renamed, sizeof( renamed ) ) ) {
+			Com_Printf( "The bind of %s%s%s is \"%s\" now\n", mod >= 0 ? keyModNames[mod] : "", mod >= 0 ? "+" : "",
+				Key_KeynumToString( keynum ), renamed );
+			binding = renamed;
+		}
+		*slot = CopyString( binding );
+	}
+}
+
 void Key_SetBinding( int keynum, const char *binding ) {
 	if ( keynum < 0 || keynum >= MAX_KEYS )
 		return;
 
-	// free old bindings
-	if ( kg.keys[keynames[keynum].upper].binding ) {
-		Z_Free( kg.keys[keynames[keynum].upper].binding );
-		kg.keys[keynames[keynum].upper].binding = NULL;
-	}
-
-	// allocate memory for new binding
-	if ( binding )
-		kg.keys[keynames[keynum].upper].binding = CopyString( binding );
+	Key_StoreBinding( -1, keynum, binding );
 
 	// consider this like modifying an archived cvar, so the
 	// file write will be triggered at the next oportunity
@@ -1044,13 +1353,16 @@ void Key_Unbind_f( void ) {
 		return;
 	}
 
-	int b = Key_StringToKeynum( Cmd_Argv( 1 ) );
+	char *name = Cmd_Argv( 1 );
+	const int mod = Key_ParseModifier( &name );
+	int b = Key_StringToKeynum( name );
 	if ( b == -1 ) {
 		Com_Printf( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ) );
 		return;
 	}
 
-	Key_SetBinding( b, "" );
+	Key_StoreBinding( mod, b, "" );
+	cvar_modifiedFlags |= CVAR_ARCHIVE;
 }
 
 /*
@@ -1062,6 +1374,12 @@ void Key_Unbindall_f( void ) {
 	for ( int i=0; i<MAX_KEYS; i++ ) {
 		if ( kg.keys[i].binding )
 			Key_SetBinding( i, "" );
+		for ( int mod = 0; mod < KEYMOD_COUNT; mod++ ) {
+			if ( keyModBinding[mod][i] ) {
+				Z_Free( keyModBinding[mod][i] );
+				keyModBinding[mod][i] = NULL;
+			}
+		}
 	}
 }
 
@@ -1078,21 +1396,31 @@ void Key_Bind_f( void ) {
 		return;
 	}
 
-	int b = Key_StringToKeynum( Cmd_Argv( 1 ) );
+	char *name = Cmd_Argv( 1 );
+	const int mod = Key_ParseModifier( &name );
+	int b = Key_StringToKeynum( name );
 	if ( b == -1 ) {
 		Com_Printf( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ) );
 		return;
 	}
-
-	if ( c == 2 ) {
-		if ( kg.keys[b].binding && kg.keys[b].binding[0] )
-			Com_Printf( S_COLOR_GREY "Bind " S_COLOR_WHITE "%s = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n", Key_KeynumToString( b ), kg.keys[b].binding );
-		else
-			Com_Printf( "\"%s\" is not bound\n", Key_KeynumToString( b ) );
+	if ( mod >= 0 && Key_ModifierOf( b ) >= 0 ) {
+		Com_Printf( "A modifier key can not be bound with a modifier\n" );
 		return;
 	}
 
-	Key_SetBinding( b, Cmd_ArgsFrom( 2 ) );
+	if ( c == 2 ) {
+		const char *binding = mod >= 0 ? keyModBinding[mod][keynames[b].upper] : kg.keys[b].binding;
+
+		if ( binding && binding[0] )
+			Com_Printf( S_COLOR_GREY "Bind " S_COLOR_WHITE "%s%s%s = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n",
+				mod >= 0 ? keyModNames[mod] : "", mod >= 0 ? "+" : "", Key_KeynumToString( b ), binding );
+		else
+			Com_Printf( "\"%s%s%s\" is not bound\n", mod >= 0 ? keyModNames[mod] : "", mod >= 0 ? "+" : "", Key_KeynumToString( b ) );
+		return;
+	}
+
+	Key_StoreBinding( mod, b, Cmd_ArgsFrom( 2 ) );
+	cvar_modifiedFlags |= CVAR_ARCHIVE;
 }
 
 /*
@@ -1115,6 +1443,12 @@ void Key_WriteBindings( fileHandle_t f ) {
 				FS_Printf( f, "bind \"%s\" \"%s\"\n", name, kg.keys[i].binding );
 		}
 	}
+	for ( int mod = 0; mod < KEYMOD_COUNT; mod++ ) {
+		for ( size_t i=0; i<MAX_KEYS; i++ ) {
+			if ( keyModBinding[mod][i] && keyModBinding[mod][i][0] )
+				FS_Printf( f, "bind \"%s+%s\" \"%s\"\n", keyModNames[mod], Key_KeynumToString( i ), keyModBinding[mod][i] );
+		}
+	}
 }
 
 /*
@@ -1127,6 +1461,12 @@ void Key_Bindlist_f( void ) {
 	for ( size_t i=0; i<MAX_KEYS; i++ ) {
 		if ( kg.keys[i].binding && kg.keys[i].binding[0] )
 			Com_Printf( S_COLOR_GREY "Key " S_COLOR_WHITE "%s (%s) = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n", Key_KeynumToAscii( i ), Key_KeynumToString( i ), kg.keys[i].binding );
+	}
+	for ( int mod = 0; mod < KEYMOD_COUNT; mod++ ) {
+		for ( size_t i=0; i<MAX_KEYS; i++ ) {
+			if ( keyModBinding[mod][i] && keyModBinding[mod][i][0] )
+				Com_Printf( S_COLOR_GREY "Key " S_COLOR_WHITE "%s+%s = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n", keyModNames[mod], Key_KeynumToString( i ), keyModBinding[mod][i] );
+		}
 	}
 }
 
@@ -1221,16 +1561,54 @@ CL_ParseBinding
 Execute the commands in the bind string
 ===================
 */
+// The bind a key runs: with a left modifier held the bind of that pair when there is one. A key goes up with what it
+// went down with, whatever is held then.
+static const char *Key_BindingFor( int key, qboolean down ) {
+	const int upper = keynames[key].upper;
+	const int side = Key_ModifierOf( upper );
+	int mod = -1;
+
+	if ( side >= 0 ) {
+		if ( upper == keyModRight[side] && !VALIDSTRING( kg.keys[upper].binding ) ) {
+			return kg.keys[keyModLeft[side]].binding;
+		}
+		return kg.keys[upper].binding;
+	}
+	if ( down ) {
+		for ( int i = 0; i < KEYMOD_COUNT && mod < 0; i++ ) {
+			if ( keyModLeftDown[i] && VALIDSTRING( keyModBinding[i][upper] ) ) {
+				mod = i;
+			}
+		}
+		keyDownBind[upper] = (signed char)( mod + 1 );
+	} else {
+		mod = keyDownBind[upper] - 1;
+		keyDownBind[upper] = 0;
+	}
+	return mod >= 0 ? keyModBinding[mod][upper] : kg.keys[upper].binding;
+}
+
 void CL_ParseBinding( int key, qboolean down, unsigned time )
 {
 	char buf[ MAX_STRING_CHARS ], *p = buf, *end;
 	qboolean allCommands, allowUpCmds;
+	const char *binding;
 
 	if( cls.state == CA_DISCONNECTED && Key_GetCatcher( ) == 0 )
 		return;
-	if( !kg.keys[keynames[key].upper].binding || !kg.keys[keynames[key].upper].binding[0] )
+	// The disruptor of a cgame of this tree is zoomed in and locked: the wheel zooms (cgame/scope/cg_scope.c)
+	// instead of doing what it is bound to, a weapnext on it among others.
+	if ( ( key == A_MWHEELUP || key == A_MWHEELDOWN ) && Key_GetCatcher( ) == 0 && cls.cgameStarted
+		&& Cvar_VariableIntegerValue( "v_scopeWheel" ) ) {
+		if ( down ) {
+			Cbuf_AddText( key == A_MWHEELUP ? "v_scopezoom in\n" : "v_scopezoom out\n" );
+		}
 		return;
-	Q_strncpyz( buf, kg.keys[keynames[key].upper].binding, sizeof( buf ) );
+	}
+	binding = Key_BindingFor( key, down );
+	if( !binding || !binding[0] )
+		return;
+	Q_strncpyz( buf, binding, sizeof( buf ) );
 
 	// run all bind commands if console, ui, etc aren't reading keys
 	allCommands = (qboolean)( Key_GetCatcher( ) == 0 );
@@ -1301,11 +1679,23 @@ Called by CL_KeyEvent to handle a keypress
 */
 void CL_KeyDownEvent( int key, unsigned time )
 {
+	const int side = Key_ModifierOf( key );
+	const int bound = key;
+
 	kg.keys[keynames[key].upper].down = qtrue;
 	kg.keys[keynames[key].upper].repeats++;
 	if( kg.keys[keynames[key].upper].repeats == 1 ) {
 		kg.keyDownCount++;
 		kg.anykeydown = qtrue;
+	}
+
+	// a right modifier is the modifier for everything but the binds, the console and the modules get the left one
+	if ( side >= 0 ) {
+		if ( key == keyModLeft[side] ) {
+			keyModLeftDown[side] = qtrue;
+		}
+		kg.keys[keyModLeft[side]].down = qtrue;
+		key = keyModLeft[side];
 	}
 
 	if ( cl_allowAltEnter->integer && kg.keys[A_ALT].down && key == A_ENTER )
@@ -1366,7 +1756,7 @@ void CL_KeyDownEvent( int key, unsigned time )
 	}
 
 	// send the bound action
-	if ( !cls.cursorActive ) CL_ParseBinding( key, qtrue, time );
+	if ( !cls.cursorActive ) CL_ParseBinding( bound, qtrue, time );
 
 	// distribute the key down event to the appropriate handler
 	// console
@@ -1402,6 +1792,9 @@ Called by CL_KeyEvent to handle a keyrelease
 */
 void CL_KeyUpEvent( int key, unsigned time )
 {
+	const int side = Key_ModifierOf( key );
+	const int bound = key;
+
 	kg.keys[keynames[key].upper].repeats = 0;
 	kg.keys[keynames[key].upper].down = qfalse;
 	kg.keyDownCount--;
@@ -1409,6 +1802,14 @@ void CL_KeyUpEvent( int key, unsigned time )
 	if (kg.keyDownCount <= 0) {
 		kg.anykeydown = qfalse;
 		kg.keyDownCount = 0;
+	}
+
+	if ( side >= 0 ) {
+		if ( key == keyModLeft[side] ) {
+			keyModLeftDown[side] = qfalse;
+		}
+		kg.keys[keyModLeft[side]].down = (qboolean)( keyModLeftDown[side] || kg.keys[keyModRight[side]].down );
+		key = keyModLeft[side];
 	}
 
 	// don't process key-up events for the console key
@@ -1421,7 +1822,7 @@ void CL_KeyUpEvent( int key, unsigned time )
 	// console mode and menu mode, to keep the character from continuing
 	// an action started before a mode switch.
 	//
-	CL_ParseBinding( key, qfalse, time );
+	CL_ParseBinding( bound, qfalse, time );
 
 	if ( Key_GetCatcher( ) & KEYCATCH_UI && cls.uiStarted )
 		UIVM_KeyEvent( key, qfalse );
@@ -1477,6 +1878,8 @@ void Key_ClearStates( void ) {
 		kg.keys[i].down = qfalse;
 		kg.keys[i].repeats = 0;
 	}
+	memset( keyModLeftDown, 0, sizeof( keyModLeftDown ) );
+	memset( keyDownBind, 0, sizeof( keyDownBind ) );
 }
 
 static int keyCatchers = 0;

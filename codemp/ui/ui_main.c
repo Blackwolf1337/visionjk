@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -41,8 +42,11 @@ USER INTERFACE MAIN
 #include "qcommon/game_version.h"
 #include "ui_force.h"
 #include "cgame/animtable.h" //we want this to be compiled into the module because we access it in the shared module.
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 #include "ui_shared.h"
+#include "ui_skin.h"
+#include "ui_saberfx.h"
+#include "ui_music.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -172,7 +176,7 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
 		{ "@MENUS_FORCE_PULL_SLASH",	"@MENUS_FORCE_PULL_SLASH_DESC",	"BOTH_PULL_IMPALE_SWING",	MDS_SABER },
-		{ "Jump Grab Back Kick",	"Forward + Jump + Alt attack when you are in front of you ennemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
+		{ "Jump Grab Back Kick",	"Forward + Jump + Alt Attack, in front of an enemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -190,9 +194,9 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
 		{ "@MENUS_FORCE_PULL_SLASH",	"@MENUS_FORCE_PULL_SLASH_DESC",	"BOTH_PULL_IMPALE_SWING",	MDS_SABER },
-		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_BUTTERFLY_LEFT",	MDS_FORCE_JUMP },
-		{ "New Saber Flip stab",	"Forward + Jump + Alt attack",	"BOTH_FLIP_STAB",	MDS_SABER },
-		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+		{ "New Spin Attack",	"Jump + Forward + Attack, in front of an enemy",	"BOTH_BUTTERFLY_LEFT",	MDS_FORCE_JUMP },
+		{ "New Saber Flip Stab",	"Forward + Jump + Alt Attack",	"BOTH_FLIP_STAB",	MDS_SABER },
+		{ "New Pull Impale",	"Pull + Attack, in front of an enemy",	"BOTH_NEW_STABER",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -210,10 +214,10 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_DUAL_STAB_LEFT_RIGHT",	"@MENUS_DUAL_STAB_LEFT_RIGHT_DESC",		"BOTH_A6_LR",					MDS_SABER },
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
-		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_ALORA_SPIN_SLASH",	MDS_FORCE_JUMP },
-		{ "Jump Spin Back Kick",	"Forward + Jump + Alt attack using single saber style",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
-		{ "Jump Grab Back Kick",	"Forward + Jump + Alt attack using dual stance when you are in front of you ennemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
-		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+		{ "New Spin Attack",	"Jump + Forward + Attack, in front of an enemy",	"BOTH_ALORA_SPIN_SLASH",	MDS_FORCE_JUMP },
+		{ "Jump Spin Back Kick",	"Forward + Jump + Alt Attack with Single Saber",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
+		{ "Jump Grab Back Kick",	"Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
+		{ "New Pull Impale",	"Pull + Attack, in front of an enemy",	"BOTH_NEW_STABER",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -231,20 +235,20 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_SPLIT_KICK",	"@MENUS_SPLIT_KICK_DESC",	"BOTH_A7_KICK_RL",	MDS_FORCE_JUMP },
 		{ "@MENUS_SPIN_KICK",	"@MENUS_SPIN_KICK_DESC",	"BOTH_A7_KICK_S",	MDS_FORCE_JUMP },
 		{ "@MENUS_FLIP_KICK",	"@MENUS_FLIP_KICK_DESC",	"BOTH_A7_KICK_BF",	MDS_FORCE_JUMP },
-		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_FJSS_TR_BL",	MDS_FORCE_JUMP },
-		{ "New Kick Forward",	"FORWARD + ALT ATTACK\nWhen you are in front of your ennemy",	"BOTH_A7_HILT",	MDS_SABER },
-		{ "Jump Spin Back Kick",	"Forward + Jump + Alt attack",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
-		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+		{ "New Spin Attack",	"Jump + Forward + Attack, in front of an enemy",	"BOTH_FJSS_TR_BL",	MDS_FORCE_JUMP },
+		{ "New Forward Kick",	"Forward + Alt Attack, in front of an enemy",	"BOTH_A7_HILT",	MDS_SABER },
+		{ "Jump Spin Back Kick",	"Forward + Jump + Alt Attack",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
+		{ "New Pull Impale",	"Pull + Attack, in front of an enemy",	"BOTH_NEW_STABER",	MDS_SABER },
 	},
 	{// JA+: Melee & other attacks
-		{ "Melee Punch",	"Weapon melee + attack + alt attack + forward\nin front for your ennemy",	"BOTH_KYLE_PA_1",	MDS_NONE },
-		{ "Melee kick, knee",	"Weapon melee + attack + alt attack + backward\nin front for your ennemy",	"BOTH_KYLE_PA_2",	MDS_NONE },
-		{ "Melee  throttling",	"Weapon melee + attack + alt attack \nin front for your ennemy",	"BOTH_KYLE_PA_3",	MDS_NONE },
-		{ "Melee throw",	"Weapon melee + attack + alt attack + right\nin front for your ennemy",	"BOTH_A3_TL_BR",	MDS_NONE },
-		{ "Sith Kiss",	"Weapon Melee + DRAIN level 2 minimum\nin front of your ennemy",	"BOTH_FORCE_DRAIN_GRAB_START",	MDS_NONE },
-		{ "Jedi Tornado",	"Weapon Melee + PUSH level 2 minimum\n in front of your ennemy\n only for jedi",	"BOTH_ALORA_SPIN_THROW",	MDS_NONE },
-		{ "Back Kick",	"Weapon Melee or Staff + forward + right + alt attack",	"BOTH_MELEE_BACKKICK",	MDS_SABER },
-		{ "Spin kick",	"Weapon Melee or Staff + forward + left + alt attack",	"BOTH_MELEE_SPINKICK",	MDS_SABER },
+		{ "Melee Punch",	"Melee + Attack + Alt Attack + Forward, in front of an enemy",	"BOTH_KYLE_PA_1",	MDS_NONE },
+		{ "Melee Knee Kick",	"Melee + Attack + Alt Attack + Backward, in front of an enemy",	"BOTH_KYLE_PA_2",	MDS_NONE },
+		{ "Melee Choke",	"Melee + Attack + Alt Attack, in front of an enemy",	"BOTH_KYLE_PA_3",	MDS_NONE },
+		{ "Melee Throw",	"Melee + Attack + Alt Attack + Right, in front of an enemy",	"BOTH_A3_TL_BR",	MDS_NONE },
+		{ "Sith Kiss",	"Melee + Drain level 2 or higher, in front of an enemy",	"BOTH_FORCE_DRAIN_GRAB_START",	MDS_NONE },
+		{ "Jedi Tornado",	"Melee + Push level 2 or higher, in front of an enemy, Jedi only",	"BOTH_ALORA_SPIN_THROW",	MDS_NONE },
+		{ "Back Kick",	"Melee or Staff + Forward + Right + Alt Attack",	"BOTH_MELEE_BACKKICK",	MDS_SABER },
+		{ "Spin Kick",	"Melee or Staff + Forward + Left + Alt Attack",	"BOTH_MELEE_SPINKICK",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -507,6 +511,8 @@ static void UI_BuildFindPlayerList(qboolean force);
 static int QDECL UI_ServersQsortCompare( const void *arg1, const void *arg2 );
 static int UI_MapCountByGameType(qboolean singlePlayer);
 static int UI_HeadCountByColor( void );
+static void UI_ModelPickSet( const char *model );
+static void UI_ModelPickOpen( void );
 static void UI_ParseGameInfo(const char *teamFile);
 static const char *UI_SelectedMap(int index, int *actual);
 static int UI_GetIndexFromSelection(int actual);
@@ -706,6 +712,12 @@ void _UI_DrawRect( float x, float y, float width, float height, float size, cons
 
 int MenuFontToHandle(int iMenuFont)
 {
+	// the fonts of the new look, where the engine has them
+	const qhandle_t skinFont = Skin_FontHandle( iMenuFont );
+
+	if ( skinFont ) {
+		return skinFont;
+	}
 	switch (iMenuFont)
 	{
 		case 1: return uiInfo.uiDC.Assets.qhSmallFont;
@@ -731,11 +743,27 @@ int Text_Height(const char *text, float scale, int iMenuFont)
 	return trap->R_Font_HeightPixels(iFontIndex, scale);
 }
 
+// the engine has ext.R_Font_DrawStringF and ext.R_Font_InkBox (v_uiFontInk, ui_public.h)
+static qboolean ui_fontInk;
+
+static qboolean Text_Ink( const char *text, float scale, int iMenuFont, float *box ) {
+	return trap->ext.R_Font_InkBox( text, MenuFontToHandle( iMenuFont ), scale, box );
+}
+
 void Text_Paint(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style, int iMenuFont)
 {
 	int iStyleOR = 0;
 
 	int iFontIndex = MenuFontToHandle(iMenuFont);
+
+	if ( textCatch.text ) {
+		Q_strncpyz( textCatch.text, text, textCatch.size );
+		textCatch.x = x;
+		if ( textCatch.color && color ) {
+			VectorCopy4( color, textCatch.color );
+		}
+		return;
+	}
 	//
 	// kludge.. convert JK2 menu styles to SOF2 printstring ctrl codes...
 	//
@@ -750,6 +778,10 @@ void Text_Paint(float x, float y, float scale, vec4_t color, const char *text, f
 	case  ITEM_TEXTSTYLE_SHADOWEDMORE:		iStyleOR = (int)STYLE_DROPSHADOW;break;	// JK2 drop shadow
 	}
 
+	if ( ui_fontInk ) {
+		trap->ext.R_Font_DrawStringF( x, y, text, color, iStyleOR | iFontIndex, !limit ? -1 : limit, scale );
+		return;
+	}
 	trap->R_Font_DrawString(	x,		// int ox
 							y,		// int oy
 							text,	// const char *text
@@ -1069,9 +1101,11 @@ _UI_Shutdown
 =================
 */
 void UI_CleanupGhoul2(void);
+void UI_FreeDeferredGhoul2( void );
 void UI_FreeAllSpecies(void);
 
 void UI_Shutdown( void ) {
+	Music_Shutdown();
 	trap->LAN_SaveCachedServers();
 	UI_CleanupGhoul2();
 	UI_FreeAllSpecies();
@@ -1440,12 +1474,227 @@ qboolean Load_Menu(int handle) {
 	return qfalse;
 }
 
+static void UI_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t *verts ) {
+	trap->R_AddPolysToScene( shader, numVerts, verts, 1 );
+}
+
+/*
+=================
+UI_OfferCursorKey
+
+The key that frees the mouse to point at players (+v_cursor of the cgame): the left Alt key, once, if no key has
+the command and Alt can be spared. It can where it does nothing, and where it holds what the defaults of the game
+give it (+altattack, mpdefault.cfg) while another key does the same (the second mouse button in those defaults):
+without that a new install had no key for it at all. Any other bind on Alt is somebody's own and stays. Whoever
+takes the bind away afterwards keeps it away.
+=================
+*/
+/*
+=================
+UI_ReadDefaultKeys
+
+The binds of mpdefault.cfg, the defaults of the game: for "Default" beside a row of keys and for the button
+Defaults of the keys (UI_KeysDefaults).
+=================
+*/
+#define UI_DEFAULT_BINDS	160
+
+static struct {
+	char	key[32];
+	char	command[64];
+} uiDefaultBinds[UI_DEFAULT_BINDS];
+static int uiDefaultBindCount;
+static int uiKeysReload;			// frames until the keys of the menus are read again from the binds of the engine
+
+static void UI_ReadDefaultKeys( void ) {
+	static char		text[8192];
+	char			words[UI_DEFAULT_BINDS][48], sOR[32], name[32];
+	const char		*p, *token;
+	fileHandle_t	f;
+	int				len, i, j;
+
+	uiDefaultBindCount = 0;
+	len = trap->FS_Open( "mpdefault.cfg", &f, FS_READ );
+	if ( !f ) {
+		return;
+	}
+	if ( len <= 0 || len >= (int)sizeof( text ) ) {
+		trap->FS_Close( f );
+		return;
+	}
+	trap->FS_Read( text, len, f );
+	trap->FS_Close( f );
+	text[len] = '\0';
+
+	p = text;
+	while ( uiDefaultBindCount < UI_DEFAULT_BINDS ) {
+		token = COM_ParseExt( &p, qtrue );
+		if ( !token[0] ) {
+			break;
+		}
+		if ( Q_stricmp( token, "bind" ) ) {
+			continue;
+		}
+		Q_strncpyz( uiDefaultBinds[uiDefaultBindCount].key, COM_ParseExt( &p, qfalse ), sizeof( uiDefaultBinds[0].key ) );
+		Q_strncpyz( uiDefaultBinds[uiDefaultBindCount].command, COM_ParseExt( &p, qfalse ), sizeof( uiDefaultBinds[0].command ) );
+		if ( uiDefaultBinds[uiDefaultBindCount].key[0] && uiDefaultBinds[uiDefaultBindCount].command[0] ) {
+			uiDefaultBindCount++;
+		}
+	}
+
+	// the words to show: "W or UPARROW" as the menus write it, "W or UP"
+	trap->SE_GetStringTextString( "MENUS_KEYBIND_OR", sOR, sizeof( sOR ) );
+	for ( i = 0; i < uiDefaultBindCount; i++ ) {
+		char *arrow;
+
+		words[i][0] = '\0';
+		for ( j = 0; j < i; j++ ) {
+			if ( !Q_stricmp( uiDefaultBinds[j].command, uiDefaultBinds[i].command ) ) {
+				break;
+			}
+		}
+		Q_strncpyz( name, uiDefaultBinds[i].key, sizeof( name ) );
+		Q_strupr( name );
+		arrow = strstr( name, "ARROW" );
+		if ( arrow && arrow != name ) {
+			*arrow = '\0';
+		}
+		if ( j < i ) {
+			// a second key of a command that came before
+			if ( !strstr( words[j], sOR ) ) {
+				Q_strcat( words[j], sizeof( words[j] ), va( " %s %s", sOR, name ) );
+			}
+			continue;
+		}
+		Q_strncpyz( words[i], name, sizeof( words[i] ) );
+	}
+	for ( i = 0; i < uiDefaultBindCount; i++ ) {
+		if ( words[i][0] ) {
+			Controls_SetDefaultKeys( uiDefaultBinds[i].command, words[i] );
+		}
+	}
+}
+
+/*
+=================
+UI_KeysDefaults
+
+The button Defaults of the keys: the commands of the menus get the keys of the defaults of the game, and lose the
+ones they had; binds of other commands stay.
+=================
+*/
+static void UI_KeysDefaults( void ) {
+	int i;
+
+	Controls_ClearAll();
+	for ( i = 0; i < uiDefaultBindCount; i++ ) {
+		if ( BindingIDFromName( uiDefaultBinds[i].command ) >= 0 ) {
+			trap->Cmd_ExecuteText( EXEC_APPEND, va( "bind %s \"%s\"\n", uiDefaultBinds[i].key, uiDefaultBinds[i].command ) );
+		}
+	}
+	// (the binds are made when the commands run, before the next frame of the menus is drawn)
+	uiKeysReload = 2;
+}
+
+static void UI_OfferCursorKey( void ) {
+	char		bound[MAX_STRING_CHARS], alt[MAX_STRING_CHARS];
+	int			key;
+	qboolean	twice = qfalse;
+
+	if ( v_cursorKeyOffered.integer ) {
+		return;
+	}
+	trap->Cvar_Set( "v_cursorKeyOffered", "1" );
+	trap->Key_GetBindingBuf( A_ALT, alt, sizeof( alt ) );
+	if ( alt[0] && Q_stricmp( alt, "+altattack" ) ) {
+		return;
+	}
+	for ( key = 0; key < MAX_KEYS; key++ ) {
+		if ( key == A_ALT ) {
+			continue;
+		}
+		trap->Key_GetBindingBuf( key, bound, sizeof( bound ) );
+		if ( !Q_stricmp( bound, "+v_cursor" ) ) {
+			return;
+		}
+		if ( alt[0] && !Q_stricmp( bound, alt ) ) {
+			twice = qtrue;
+		}
+	}
+	if ( alt[0] && !twice ) {
+		return;
+	}
+	trap->Key_SetBinding( A_ALT, "+v_cursor" );
+}
+
+// Is this file of the old look the one of this tree? Those carry a mark in their first line. Without it the
+// file is somebody else's: a mod that brings menus of its own.
+static qboolean UI_FileIsOurs( const char *path ) {
+	fileHandle_t	f;
+	char			head[128];
+	const int		len = trap->FS_Open( path, &f, FS_READ );
+
+	if ( !f ) {
+		return qfalse;
+	}
+	memset( head, 0, sizeof( head ) );
+	if ( len > 0 ) {
+		trap->FS_Read( head, Q_min( len, (int)sizeof( head ) - 1 ), f );
+	}
+	trap->FS_Close( f );
+	return (qboolean)( strstr( head, "visionjk-classic" ) != NULL );
+}
+
+static qboolean UI_FileExists( const char *filename );
+
+/*
+=================
+UI_NewLookList
+
+The list of menu files that is loaded for a list of the game: the menus of the new look (ui/vision, made by
+tools/menus/build.py) in place of the two lists of the game. Not in an engine that can not draw that look, not
+with v_classic 1, and not when the list or the first menu of the old look is not the file of this tree: then a
+mod brought its own menus, and those are what its player wants to see.
+=================
+*/
+static qboolean uiNewLook;		// the menus that are loaded are the ones of the new look
+
+// are the menus that are loaded the ones of the new look (for what is drawn over them by code, ui_update.c)
+qboolean UI_NewLook( void ) {
+	return uiNewLook;
+}
+
+static const char *UI_NewLookList( const char *menuFile ) {
+	static const struct {
+		const char *stock, *vision, *first;
+	} lists[] = {
+		{ "ui/jampmenus.txt", "ui/visionmenus.txt", "ui/jamp/main.menu" },
+		{ "ui/jampingame.txt", "ui/visioningame.txt", "ui/jamp/ingame.menu" },
+	};
+	size_t i;
+
+	for ( i = 0; i < ARRAY_LEN( lists ); i++ ) {
+		if ( Q_stricmp( menuFile, lists[i].stock ) ) {
+			continue;
+		}
+		if ( !Skin_Ready() || v_classic.integer || !UI_FileIsOurs( lists[i].stock ) || !UI_FileIsOurs( lists[i].first )
+			|| !UI_FileExists( lists[i].vision ) ) {
+			uiNewLook = qfalse;
+			return menuFile;
+		}
+		uiNewLook = qtrue;
+		return lists[i].vision;
+	}
+	return menuFile;
+}
+
 void UI_LoadMenus(const char *menuFile, qboolean reset) {
 	pc_token_t token;
 	int handle;
 //	int start = trap->Milliseconds();
 
 	trap->PC_LoadGlobalDefines ( "ui/jamp/menudef.h" );
+	menuFile = UI_NewLookList( menuFile );
 
 	handle = trap->PC_LoadSource( menuFile );
 	if (!handle) {
@@ -1560,23 +1809,17 @@ static void UI_DrawClanName(rectDef_t *rect, float scale, vec4_t color, int text
 	Text_Paint(rect->x, rect->y, scale, color, UI_Cvar_VariableString("ui_teamName"), 0, 0, textStyle, iMenuFont);
 }
 
-static void UI_SetCapFragLimits(qboolean uiVars) {
-	int cap = 5;
-	int frag = 10;
-
-	if (uiVars) {
-		trap->Cvar_Set("ui_captureLimit", va("%d", cap));
-		trap->Cvar_Set("ui_fragLimit", va("%d", frag));
-	} else {
-		trap->Cvar_Set("capturelimit", va("%d", cap));
-		trap->Cvar_Set("fraglimit", va("%d", frag));
-	}
+static void UI_SetCapFragLimits( void ) {
+	trap->Cvar_Set( "capturelimit", "5" );
+	trap->Cvar_Set( "fraglimit", "10" );
 }
 
 static const char* UI_GetGameTypeName(int gtEnum)
 {
 	switch ( gtEnum )
 	{
+	case -1:	// VisionJK: "All" of joingametypes (ui/jamp/gameinfo.txt), it showed "N/A" (SAGA below)
+		return UI_GetStringEdString("MENUS", "ALL");
 	case GT_FFA:
 		return UI_GetStringEdString("MENUS", "FREE_FOR_ALL");//"Free For All";
 	case GT_HOLOCRON:
@@ -2963,9 +3206,12 @@ static void UI_DrawGLInfo(rectDef_t *rect, float scale, vec4_t color, int textSt
 	char *extensionName;
 	int y, i=0;
 
-	Text_Paint(rect->x + 2, rect->y, scale, color, va("GL_VENDOR: %s", uiInfo.uiDC.glconfig.vendor_string), 0, rect->w, textStyle,iMenuFont);
-	Text_Paint(rect->x + 2, rect->y + 15, scale, color, va("GL_VERSION: %s: %s", uiInfo.uiDC.glconfig.version_string,uiInfo.uiDC.glconfig.renderer_string), 0, rect->w, textStyle,iMenuFont);
-	Text_Paint(rect->x + 2, rect->y + 30, scale, color, va ("GL_PIXELFORMAT: color(%d-bits) Z(%d-bits) stencil(%d-bits)", uiInfo.uiDC.glconfig.colorBits, uiInfo.uiDC.glconfig.depthBits, uiInfo.uiDC.glconfig.stencilBits), 0, rect->w, textStyle,iMenuFont);
+	// rd-vulkan-vision fills the same strings: the driver, "Vulkan <version>" and the device, no extensions
+	const char *gl = Q_stricmpn( uiInfo.uiDC.glconfig.version_string, "Vulkan", 6 ) ? "GL_" : "";
+
+	Text_Paint(rect->x + 2, rect->y, scale, color, va("%sVENDOR: %s", gl, uiInfo.uiDC.glconfig.vendor_string), 0, rect->w, textStyle,iMenuFont);
+	Text_Paint(rect->x + 2, rect->y + 15, scale, color, va("%sVERSION: %s: %s", gl, uiInfo.uiDC.glconfig.version_string,uiInfo.uiDC.glconfig.renderer_string), 0, rect->w, textStyle,iMenuFont);
+	Text_Paint(rect->x + 2, rect->y + 30, scale, color, va ("%sPIXELFORMAT: color(%d-bits) Z(%d-bits) stencil(%d-bits)", gl, uiInfo.uiDC.glconfig.colorBits, uiInfo.uiDC.glconfig.depthBits, uiInfo.uiDC.glconfig.stencilBits), 0, rect->w, textStyle,iMenuFont);
 
 	// build null terminated extension strings
 	Q_strncpyz(buff, uiInfo.uiDC.glconfig.extensions_string, sizeof(buff));
@@ -2997,7 +3243,13 @@ UI_Version
 static void UI_Version(rectDef_t *rect, float scale, vec4_t color, int iMenuFont)
 {
 	int width;
+	float tx, ty;
 
+	// (VisionJK: ending at x by its letters, its capitals on the middle of its rectangle, as the texts of the items)
+	if ( rect->h > 0.0f && Text_InkAt( JK_VERSION, scale, iMenuFont, ITEM_ALIGN_RIGHT, rect->x, rect->y, rect->h, &tx, &ty ) ) {
+		uiInfo.uiDC.drawText( tx, ty, scale, color, JK_VERSION, 0, 0, 0, iMenuFont );
+		return;
+	}
 	width = uiInfo.uiDC.textWidth(JK_VERSION, scale, iMenuFont);
 
 	uiInfo.uiDC.drawText(rect->x - width, rect->y, scale, color, JK_VERSION, 0, 0, 0, iMenuFont);
@@ -3272,6 +3524,11 @@ static void UI_OwnerDraw(float x, float y, float w, float h, float text_x, float
 			break;
 		case UI_VERSION:
 			UI_Version(&rect, scale, color, iMenuFont);
+			break;
+		case UI_CHANGELOG:	// VisionJK: the window "What's new" (ui_changelog.c)
+			rect.x = x;
+			rect.y = y;
+			UI_ChangelogDraw( &rect, scale, iMenuFont );
 			break;
     default:
       break;
@@ -3733,7 +3990,6 @@ static qboolean UI_GameType_HandleKey(int flags, float *special, int key, qboole
 
 		trap->Cvar_Set("ui_gametype", va("%d", value));
 		trap->Cvar_Update(&ui_gametype);
-		UI_SetCapFragLimits(qtrue);
 		if (resetMap && oldCount != UI_MapCountByGameType(qtrue)) {
 			trap->Cvar_Set( "ui_currentMap", "0");
 			trap->Cvar_Update(&ui_currentMap);
@@ -4206,6 +4462,8 @@ static qboolean UI_OwnerDrawHandleKey(int ownerDraw, int flags, float *special, 
 	case UI_CHAT_MAIN:
 		return UI_Chat_Main_HandleKey(key);
 		break;
+	case UI_CHANGELOG:
+		return UI_ChangelogKey( key );
 	case UI_CHAT_ATTACK:
 		return UI_Chat_Attack_HandleKey(key);
 		break;
@@ -4623,7 +4881,7 @@ static void UI_StartSkirmish(qboolean next) {
 	temp = trap->Cvar_VariableValue( "fraglimit" );		trap->Cvar_Set("ui_saveFragLimit", va("%i", temp));
 	temp = trap->Cvar_VariableValue( "duel_fraglimit" );	trap->Cvar_Set("ui_saveDuelLimit", va("%i", temp));
 
-	UI_SetCapFragLimits(qfalse);
+	UI_SetCapFragLimits();
 
 	temp = trap->Cvar_VariableValue( "cg_drawTimer" );	trap->Cvar_Set("ui_drawTimer", va("%i", temp));
 	temp = trap->Cvar_VariableValue( "g_doWarmup" );		trap->Cvar_Set("ui_doWarmup", va("%i", temp));
@@ -4688,12 +4946,80 @@ static void UI_StartSkirmish(qboolean next) {
 	}
 }
 
+/*
+The presets of the "3D Sound" entry of the sound page: v_spatial of the engine (Steam Audio) and how much it
+works out. The engine reads the cvars of a row while it runs, only v_spatial and the rays need the sound started
+again. Rays and bounces are the ones of a pass of the reflections, the engine clamps them to 256..8192 and 1..64.
+*/
+typedef struct spatialPreset_s {
+	int		spatial, reflections, rays, bounces, paths, sources;
+} spatialPreset_t;
+
+static const spatialPreset_t uiSpatialPresets[] = {
+	{ 0, 0, 0, 0, 0, 0 },			// off
+	{ 1, 0, 0, 0, 0, 0 },			// low: direction and muffling behind walls, no rays at all
+	{ 1, 1, 1024, 8, 0, 4 },		// medium: the room around the listener rings, and the 4 loudest sounds have reflections of their own
+	{ 1, 1, 2048, 16, 1, 8 },		// high: and a sound comes round corners. The defaults of the engine
+	{ 1, 1, 8192, 32, 1, 16 },		// very high
+};
+
+/*
+=================
+UI_GetSoundSetup
+
+Which preset of the "3D Sound" entry the cvars of the engine are. One more than the last preset: none of them
+(the entry shows "Custom")
+=================
+*/
+static void UI_GetSoundSetup( void ) {
+	const int	spatial = (int)trap->Cvar_VariableValue( "v_spatial" );
+	const int	reflections = (int)trap->Cvar_VariableValue( "v_spatialReflections" );
+	const int	rays = (int)trap->Cvar_VariableValue( "v_spatialRays" );
+	const int	bounces = (int)trap->Cvar_VariableValue( "v_spatialBounces" );
+	const int	paths = (int)trap->Cvar_VariableValue( "v_spatialPaths" );
+	const int	sources = (int)trap->Cvar_VariableValue( "v_spatialSources" );
+	size_t		i;
+
+	for ( i = 0; i < ARRAY_LEN( uiSpatialPresets ); i++ ) {
+		const spatialPreset_t *preset = &uiSpatialPresets[i];
+
+		if ( !preset->spatial ) {
+			if ( !spatial ) {
+				break;
+			}
+		} else if ( spatial && !reflections == !preset->reflections && !paths == !preset->paths
+			&& ( !preset->reflections || ( rays == preset->rays && bounces == preset->bounces && sources == preset->sources ) ) ) {
+			break;
+		}
+	}
+	trap->Cvar_Register( NULL, "v_spatialQuality", "0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Set( "v_spatialQuality", va( "%i", (int)i ) );
+}
+
 static void UI_Update(const char *name) {
 	int	val = trap->Cvar_VariableValue(name);
 
-	if (Q_stricmp(name, "s_khz") == 0)
-	{
-		trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
+	if ( !Q_stricmp( name, "v_spatialQuality" ) ) {
+		if ( val >= 0 && val < (int)ARRAY_LEN( uiSpatialPresets ) ) {
+			const spatialPreset_t	*preset = &uiSpatialPresets[val];
+			// v_spatial and the rays are taken when the sound starts
+			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "v_spatial" ) != !preset->spatial
+				|| ( preset->reflections && (int)trap->Cvar_VariableValue( "v_spatialRays" ) != preset->rays ) );
+
+			trap->Cvar_Set( "v_spatial", preset->spatial ? "1" : "0" );
+			if ( preset->spatial ) {
+				trap->Cvar_Set( "v_spatialReflections", preset->reflections ? "1" : "0" );
+				trap->Cvar_Set( "v_spatialPaths", preset->paths ? "1" : "0" );
+				if ( preset->reflections ) {
+					trap->Cvar_Set( "v_spatialRays", va( "%i", preset->rays ) );
+					trap->Cvar_Set( "v_spatialBounces", va( "%i", preset->bounces ) );
+					trap->Cvar_Set( "v_spatialSources", va( "%i", preset->sources ) );
+				}
+			}
+			if ( restart ) {
+				trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
+			}
+		}
 		return;
 	}
 
@@ -4719,107 +5045,6 @@ static void UI_Update(const char *name) {
 		char buf[MAX_NETNAME] = {0};
 		Q_strncpyz( buf, UI_Cvar_VariableString( "name" ), sizeof( buf ) );
 		trap->Cvar_Set( "ui_Name", buf );
-	}
-	else if (Q_stricmp(name, "ui_r_colorbits") == 0)
-	{
-		switch (val)
-		{
-			case 0:
-				trap->Cvar_SetValue( "ui_r_depthbits", 0 );
-				break;
-
-			case 16:
-				trap->Cvar_SetValue( "ui_r_depthbits", 16 );
-				break;
-
-			case 32:
-				trap->Cvar_SetValue( "ui_r_depthbits", 24 );
-				break;
-		}
-	}
-	else if (Q_stricmp(name, "ui_r_lodbias") == 0)
-	{
-		switch (val)
-		{
-			case 0:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-				break;
-			case 1:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
-				break;
-
-			case 2:
-				trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
-				break;
-		}
-	}
-	else if (Q_stricmp(name, "ui_r_glCustom") == 0)
-	{
-		switch (val)
-		{
-		case 0:	// high quality
-
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
-			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 32 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 24 );
-			trap->Cvar_SetValue( "ui_r_picmip", 0 );
-			trap->Cvar_SetValue( "ui_r_mode", 4 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 32 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );//stencil
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
-			break;
-
-		case 1: // normal
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
-			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 0 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 24 );
-			trap->Cvar_SetValue( "ui_r_picmip", 1 );
-			trap->Cvar_SetValue( "ui_r_mode", 3 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 0 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
-			break;
-
-		case 2: // fast
-
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
-			trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 1 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 0 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 0 );
-			trap->Cvar_SetValue( "ui_r_picmip", 2 );
-			trap->Cvar_SetValue( "ui_r_mode", 3 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 0 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 1 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-			break;
-
-		case 3: // fastest
-
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
-			trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
-			trap->Cvar_SetValue( "ui_r_lodbias", 2 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 16 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 16 );
-			trap->Cvar_SetValue( "ui_r_mode", 3 );
-			trap->Cvar_SetValue( "ui_r_picmip", 3 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 16 );
-			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
-			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
-		//	trap->Cvar_SetValue( "ui_cg_shadows", 0 );
-			trap->Cvar_Set( "ui_r_texturemode", "GL_LINEAR_MIPMAP_NEAREST" );
-			break;
-		}
 	}
 	else if (Q_stricmp(name, "ui_mousePitch") == 0)
 	{
@@ -4900,21 +5125,23 @@ you to discard your changes if you did something you didnt want
 */
 void UI_UpdateVideoSetup ( void )
 {
-	trap->Cvar_Set ( "r_mode", UI_Cvar_VariableString ( "ui_r_mode" ) );
-	trap->Cvar_Set ( "r_fullscreen", UI_Cvar_VariableString ( "ui_r_fullscreen" ) );
-	trap->Cvar_Set ( "r_colorbits", UI_Cvar_VariableString ( "ui_r_colorbits" ) );
-	trap->Cvar_Set ( "r_lodbias", UI_Cvar_VariableString ( "ui_r_lodbias" ) );
-	trap->Cvar_Set ( "r_picmip", UI_Cvar_VariableString ( "ui_r_picmip" ) );
-	trap->Cvar_Set ( "r_texturebits", UI_Cvar_VariableString ( "ui_r_texturebits" ) );
-	trap->Cvar_Set ( "r_texturemode", UI_Cvar_VariableString ( "ui_r_texturemode" ) );
-	trap->Cvar_Set ( "r_detailtextures", UI_Cvar_VariableString ( "ui_r_detailtextures" ) );
-	trap->Cvar_Set ( "r_ext_compress_textures", UI_Cvar_VariableString ( "ui_r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "r_depthbits", UI_Cvar_VariableString ( "ui_r_depthbits" ) );
-	trap->Cvar_Set ( "r_subdivisions", UI_Cvar_VariableString ( "ui_r_subdivisions" ) );
-	trap->Cvar_Set ( "r_fastSky", UI_Cvar_VariableString ( "ui_r_fastSky" ) );
-	trap->Cvar_Set ( "r_inGameVideo", UI_Cvar_VariableString ( "ui_r_inGameVideo" ) );
-	trap->Cvar_Set ( "r_allowExtensions", UI_Cvar_VariableString ( "ui_r_allowExtensions" ) );
-	trap->Cvar_Set ( "cg_shadows", UI_Cvar_VariableString ( "ui_cg_shadows" ) );
+	char	resolution[32];
+	int		width, height, displayMode;
+
+	// "desktop" is the size of the screen, "<width>x<height>" one of the sizes of the list (Item_Multi_FeedVideoModes)
+	Q_strncpyz( resolution, UI_Cvar_VariableString( "ui_r_resolution" ), sizeof( resolution ) );
+	if ( sscanf( resolution, "%dx%d", &width, &height ) == 2 && width > 0 && height > 0 ) {
+		trap->Cvar_Set( "r_mode", "-1" );
+		trap->Cvar_Set( "r_customwidth", va( "%i", width ) );
+		trap->Cvar_Set( "r_customheight", va( "%i", height ) );
+	} else {
+		trap->Cvar_Set( "r_mode", "-2" );
+	}
+	// 0 window, 1 fullscreen, 2 a window without a border: with "desktop" it covers the screen
+	displayMode = (int)trap->Cvar_VariableValue( "ui_r_displaymode" );
+	trap->Cvar_Set( "r_fullscreen", displayMode == 1 ? "1" : "0" );
+	trap->Cvar_Set( "r_noborder", displayMode == 2 ? "1" : "0" );
+	trap->Cvar_Set ( "r_ext_multisample", UI_Cvar_VariableString ( "ui_r_ext_multisample" ) );
 	trap->Cvar_Set ( "ui_r_modified", "0" );
 
 	trap->Cmd_ExecuteText( EXEC_APPEND, "vid_restart;" );
@@ -4930,42 +5157,21 @@ interface versions of the cvars.
 */
 void UI_GetVideoSetup ( void )
 {
-	trap->Cvar_Register ( NULL, "ui_r_glCustom",				"4", CVAR_INTERNAL|CVAR_ARCHIVE );
-
 	// Make sure the cvars are registered as read only.
-	trap->Cvar_Register ( NULL, "ui_r_mode",					"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_fullscreen",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_colorbits",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_lodbias",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_picmip",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_texturebits",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_texturemode",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_detailtextures",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_ext_compress_textures",	"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_depthbits",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_subdivisions",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_fastSky",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_inGameVideo",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_allowExtensions",		"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_cg_shadows",				"0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_r_resolution",			"desktop", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_r_displaymode",			"0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_r_ext_multisample",		"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_modified",				"0", CVAR_ROM|CVAR_INTERNAL );
 
 	// Copy over the real video cvars into their temporary counterparts
-	trap->Cvar_Set ( "ui_r_mode",						UI_Cvar_VariableString ( "r_mode" ) );
-	trap->Cvar_Set ( "ui_r_colorbits",				UI_Cvar_VariableString ( "r_colorbits" ) );
-	trap->Cvar_Set ( "ui_r_fullscreen",				UI_Cvar_VariableString ( "r_fullscreen" ) );
-	trap->Cvar_Set ( "ui_r_lodbias",					UI_Cvar_VariableString ( "r_lodbias" ) );
-	trap->Cvar_Set ( "ui_r_picmip",					UI_Cvar_VariableString ( "r_picmip" ) );
-	trap->Cvar_Set ( "ui_r_texturebits",				UI_Cvar_VariableString ( "r_texturebits" ) );
-	trap->Cvar_Set ( "ui_r_texturemode",				UI_Cvar_VariableString ( "r_texturemode" ) );
-	trap->Cvar_Set ( "ui_r_detailtextures",			UI_Cvar_VariableString ( "r_detailtextures" ) );
-	trap->Cvar_Set ( "ui_r_ext_compress_textures",	UI_Cvar_VariableString ( "r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "ui_r_depthbits",				UI_Cvar_VariableString ( "r_depthbits" ) );
-	trap->Cvar_Set ( "ui_r_subdivisions",				UI_Cvar_VariableString ( "r_subdivisions" ) );
-	trap->Cvar_Set ( "ui_r_fastSky",					UI_Cvar_VariableString ( "r_fastSky" ) );
-	trap->Cvar_Set ( "ui_r_inGameVideo",				UI_Cvar_VariableString ( "r_inGameVideo" ) );
-	trap->Cvar_Set ( "ui_r_allowExtensions",			UI_Cvar_VariableString ( "r_allowExtensions" ) );
-	trap->Cvar_Set ( "ui_cg_shadows",					UI_Cvar_VariableString ( "cg_shadows" ) );
+	// r_mode -2 is the size of the screen, whatever that is. Every other mode is shown as the size it gave
+	if ( trap->Cvar_VariableValue( "r_mode" ) == -2 ) {
+		trap->Cvar_Set ( "ui_r_resolution",			"desktop" );
+	} else {
+		trap->Cvar_Set ( "ui_r_resolution",			va( "%ix%i", uiInfo.uiDC.glconfig.vidWidth, uiInfo.uiDC.glconfig.vidHeight ) );
+	}
+	trap->Cvar_Set ( "ui_r_displaymode",				trap->Cvar_VariableValue( "r_fullscreen" ) ? "1" : ( trap->Cvar_VariableValue( "r_noborder" ) ? "2" : "0" ) );
+	trap->Cvar_Set ( "ui_r_ext_multisample",			UI_Cvar_VariableString ( "r_ext_multisample" ) );
 	trap->Cvar_Set ( "ui_r_modified",					"0" );
 }
 
@@ -5359,7 +5565,7 @@ static void UI_SetSaberBoxesandHilts (void)
 	}
 }
 
-extern qboolean UI_SaberSkinForSaber( const char *saberName, char *saberSkin );
+extern qboolean UI_SaberSkinForSaber( const char *saberName, char *saberSkin, int saberSkinSize );
 extern qboolean ItemParse_asset_model_go( itemDef_t *item, const char *name,int *runTimeLength );
 extern qboolean ItemParse_model_g2skin_go( itemDef_t *item, const char *skinName );
 
@@ -5415,13 +5621,13 @@ static void UI_UpdateSaberHilt( qboolean secondSaber )
 
 	item->text = model;
 	//read this from the sabers.cfg
-	if ( UI_SaberModelForSaber( model, modelPath ) )
+	if ( UI_SaberModelForSaber( model, modelPath, sizeof( modelPath ) ) )
 	{//successfully found a model
 		ItemParse_asset_model_go( item, modelPath, &animRunLength );//set the model
 		//get the customSkin, if any
 		//COM_StripExtension( modelPath, skinPath );
 		//COM_DefaultExtension( skinPath, sizeof( skinPath ), ".skin" );
-		if ( UI_SaberSkinForSaber( model, skinPath ) )
+		if ( UI_SaberSkinForSaber( model, skinPath, sizeof( skinPath ) ) )
 		{
 			ItemParse_model_g2skin_go( item, skinPath );//apply the skin
 		}
@@ -5446,6 +5652,32 @@ static void UI_UpdateSaberColor( qboolean secondSaber )
 		trap->Cvar_Set( "cp_sbRGB2", va( "%i", (ui_sbBlue2.integer << 16) | (ui_sbGreen2.integer << 8) | ui_sbRed2.integer ) );
 	else
 		trap->Cvar_Set( "cp_sbRGB2", "0" );
+}
+
+/*
+=================
+UI_SaberMixFrame
+
+Once a frame, with the menus of the new look. The three sliders of a blade mix a colour of one's own, and a
+blade in one of the seven fixed colours does not have one: it gets the plain style of a mixed blade the moment
+one of its sliders is moved, so no slider of the page is without effect. (The page of JA+ shows its sliders
+only after the button for a mixed colour was pressed.)
+=================
+*/
+static void UI_SaberMixFrame( void ) {
+	static int			seen[2] = { -1, -1 };
+	const vmCvar_t		*parts[2][3] = { { &ui_sbRed1, &ui_sbGreen1, &ui_sbBlue1 }, { &ui_sbRed2, &ui_sbGreen2, &ui_sbBlue2 } };
+	static const char	*styles[2] = { "ui_saber_color", "ui_saber2_color" };
+	int					blade;
+
+	for ( blade = 0; blade < 2; blade++ ) {
+		const int count = parts[blade][0]->modificationCount + parts[blade][1]->modificationCount + parts[blade][2]->modificationCount;
+
+		if ( seen[blade] != -1 && count != seen[blade] && Q_strncmp( UI_Cvar_VariableString( styles[blade] ), "rgb", 3 ) ) {
+			trap->Cvar_Set( styles[blade], "rgb" );
+		}
+		seen[blade] = count;
+	}
 }
 
 const char *SaberColorToString( saber_colors_t color );
@@ -5612,17 +5844,23 @@ JA+: puts the model and skin of the "model" cvar on the item "character" of the 
 the player menu. qfalse if the model can not be shown.
 ==================
 */
+static qboolean UI_MenuCharacter( menuDef_t *menu );
+
 static qboolean UI_UpdateNormalMenuCharacter( void )
 {
-	menuDef_t *menu;
+	return UI_MenuCharacter( Menu_GetFocused() );
+}
+
+// the same for a menu that is named, not the focused one (VisionJK: the first page shows the player's model,
+// uiScript homeModel in its onOpen, when it may not have the focus yet)
+static qboolean UI_MenuCharacter( menuDef_t *menu )
+{
 	itemDef_t *item;
 	char model[MAX_QPATH];
 	char modelPath[MAX_QPATH];
 	char skinPath[MAX_QPATH];
 	char *skin;
 	int	animRunLength;
-
-	menu = Menu_GetFocused();
 
 	if (!menu)
 	{
@@ -5824,7 +6062,7 @@ void UI_SiegeSetCvarsForClass( siegeClass_t *scl ) {
 				else
 				{
 					char buf[1024];
-					if (scl->saber1[0] && UI_SaberTypeForSaber(scl->saber1, buf))
+					if (scl->saber1[0] && UI_SaberTypeForSaber(scl->saber1, buf, sizeof( buf )))
 					{
 						if ( !Q_stricmp( buf, "SABER_STAFF" ) )
 						{
@@ -5995,6 +6233,26 @@ void UI_UpdateSiegeStatusIcons( void ) {
 	}
 }
 
+// The text of a menu script that is a format for one player number ("orders", "voiceOrders"): at most one %i or %d
+// and no other conversion. A menu can come from a pak, and its text goes to va() and Com_sprintf() as the format.
+static qboolean UI_OneNumberFormat( const char *fmt ) {
+	int numbers = 0;
+
+	for ( ; *fmt; fmt++ ) {
+		if ( *fmt != '%' ) {
+			continue;
+		}
+		fmt++;
+		if ( *fmt == '%' ) {
+			continue;
+		}
+		if ( ( *fmt != 'i' && *fmt != 'd' ) || ++numbers > 1 ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
 static void UI_RunMenuScript(char **args)
 {
 	const char *name, *name2;
@@ -6102,7 +6360,6 @@ static void UI_RunMenuScript(char **args)
 				}
 			}
 		} else if (Q_stricmp(name, "updateSPMenu") == 0) {
-			UI_SetCapFragLimits(qtrue);
 			UI_MapCountByGameType(qtrue);
 			trap->Cvar_SetValue("ui_mapIndex", UI_GetIndexFromSelection(ui_currentMap.integer));
 			trap->Cvar_Update(&ui_mapIndex);
@@ -6124,6 +6381,8 @@ static void UI_RunMenuScript(char **args)
 			Controls_SetConfig();
 		} else if (Q_stricmp(name, "loadControls") == 0) {
 			Controls_GetConfig();
+		} else if ( !Q_stricmp( name, "keysDefaults" ) ) {
+			UI_KeysDefaults();
 		} else if (Q_stricmp(name, "clearError") == 0) {
 			trap->Cvar_Set("com_errorMessage", "");
 		} else if (Q_stricmp(name, "loadGameInfo") == 0) {
@@ -6144,7 +6403,7 @@ static void UI_RunMenuScript(char **args)
 			if (uiInfo.previewMovie >= 0) {
 				trap->CIN_StopCinematic(uiInfo.previewMovie);
 			}
-			trap->Cmd_ExecuteText( EXEC_APPEND, va("cinematic %s.roq 2\n", uiInfo.movieList[uiInfo.movieIndex]));
+			trap->Cmd_ExecuteText( EXEC_APPEND, va("cinematic \"%s.roq\" 2\n", uiInfo.movieList[uiInfo.movieIndex]));
 		} else if (Q_stricmp(name, "RunMod") == 0) {
 			trap->Cvar_Set( "fs_game", uiInfo.modList[uiInfo.modIndex].modName);
 			trap->Cmd_ExecuteText( EXEC_APPEND, "vid_restart;" );
@@ -6190,6 +6449,21 @@ static void UI_RunMenuScript(char **args)
 			// clear the displayed server status info
 			uiInfo.serverStatusInfo.numLines = 0;
 			Menu_SetFeederSelection(NULL, FEEDER_FINDPLAYER, 0, NULL);
+		} else if (Q_stricmp(name, "IDSLog") == 0) {	// VisionJK: the window "Intrusions" (ui_ids.c)
+			UI_IDSLoad();
+			Menu_SetFeederSelection(NULL, FEEDER_IDSLOG, 0, NULL);
+		} else if (Q_stricmp(name, "Changelog") == 0) {	// VisionJK: the window "What's new" (ui_changelog.c)
+			Menu_SetFeederSelection(NULL, FEEDER_CHANGELOG, UI_ChangelogOpen(), NULL);
+		} else if (Q_stricmp(name, "CvarClean") == 0) {	// VisionJK: the window "Clean Up Settings" (ui_cvarclean.c)
+			UI_CvarCleanLoad();
+			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "CvarCleanRemove") == 0 || Q_stricmp(name, "CvarCleanRemoveAll") == 0) {
+			UI_CvarCleanRemove( (qboolean)!Q_stricmp( name, "CvarCleanRemoveAll" ) );
+			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "ModelPickOpen") == 0) {	// VisionJK: the window of the model picker
+			UI_ModelPickOpen();
+		} else if (Q_stricmp(name, "ModelPickClear") == 0) {
+			UI_ModelPickSet( "" );
 		}
 		else if (Q_stricmp(name, "checkservername") == 0)
 		{
@@ -6230,6 +6504,40 @@ static void UI_RunMenuScript(char **args)
 		else if (Q_stricmp(name, "getvideosetup") == 0)
 		{
 			UI_GetVideoSetup ( );
+		}
+		else if (Q_stricmp(name, "getsoundsetup") == 0)
+		{
+			UI_GetSoundSetup ( );
+		}
+		else if ( Q_stricmp( name, "updateChannel" ) == 0 )
+		{
+			// The row of the update channel just changed it. The development builds are only taken after the
+			// warning of the argument, whose button sets the cvar itself: a page of the menu in the new look
+			// (tools/menus/options.py), a popup menu in the classic one (ui/jamp/updatechannel.menu).
+			const char *warning;
+
+			if ( String_Parse( args, &warning ) && !Q_stricmp( UI_Cvar_VariableString( "v_updateChannel" ), "dev" ) )
+			{
+				trap->Cvar_Set( "v_updateChannel", "stable" );
+				if ( warning[0] >= '0' && warning[0] <= '9' )
+				{
+					if ( Menu_GetFocused() )
+						Menu_SetPage( Menu_GetFocused(), atoi( warning ) );
+				}
+				else
+				{
+					Menus_OpenByName( warning );
+				}
+			}
+		}
+		else if ( Q_stricmp( name, "abordURLRedirectCurrDownload" ) == 0 )
+		{
+			// the buttons of ui/jamp/UrlRedirectDownload.menu of the client plugin of JA+: 0 Abort, 1 Abort All of
+			// a pak from the web address. The engine downloads those, and its overlay has the same buttons.
+			int all = 0;
+
+			Int_Parse( args, &all );
+			trap->Cmd_ExecuteText( EXEC_APPEND, all ? "v_downloadReview_do skipall\n" : "v_downloadReview_do skip\n" );
 		}
 		else if (Q_stricmp(name, "getsaberhiltinfo") == 0)
 		{
@@ -6399,7 +6707,7 @@ static void UI_RunMenuScript(char **args)
 			}
 		} else if (Q_stricmp(name, "orders") == 0) {
 			const char *orders;
-			if (String_Parse(args, &orders)) {
+			if (String_Parse(args, &orders) && UI_OneNumberFormat( orders )) {
 				int selectedPlayer = trap->Cvar_VariableValue("cg_selectedPlayer");
 				if (selectedPlayer < uiInfo.myTeamCount) {
 					Q_strncpyz( buff, orders, sizeof( buff ) );
@@ -6436,7 +6744,7 @@ static void UI_RunMenuScript(char **args)
 			}
 		} else if (Q_stricmp(name, "voiceOrders") == 0) {
 			const char *orders;
-			if (String_Parse(args, &orders)) {
+			if (String_Parse(args, &orders) && UI_OneNumberFormat( orders )) {
 				int selectedPlayer = trap->Cvar_VariableValue("cg_selectedPlayer");
 
 				if (selectedPlayer == uiInfo.myTeamCount)
@@ -6547,8 +6855,6 @@ static void UI_RunMenuScript(char **args)
 			UI_SaveForceTemplate();
 		} else if (Q_stricmp(name, "refreshForce") == 0) {
 			UI_UpdateForcePowers();
-		} else if (Q_stricmp(name, "glCustom") == 0) {
-			trap->Cvar_Set("ui_r_glCustom", "4");
 		}
 		else if (Q_stricmp(name, "setMovesListDefault") == 0)
 		{
@@ -6617,6 +6923,21 @@ static void UI_RunMenuScript(char **args)
 		else if (Q_stricmp(name, "characterchanged") == 0)
 		{
 			UI_UpdateCharacter( qtrue );
+		}
+		else if ( Q_stricmp( name, "changesRevert" ) == 0 )
+		{
+			// VisionJK: the settings the screen changed back to what they were when it opened (changesCvar)
+			Menu_ChangesRevert();
+		}
+		else if ( Q_stricmp( name, "changesApply" ) == 0 )
+		{
+			// and kept: what they are now is what the list compares with from here on
+			Menu_ChangesApply();
+		}
+		else if ( Q_stricmp( name, "homeModel" ) == 0 )
+		{
+			// VisionJK: the player's model on the first page (its item "character")
+			UI_MenuCharacter( Menus_FindByName( "main" ) );
 		}
 		else if (Q_stricmp(name, "updatecharcvars") == 0
 			|| (Q_stricmp(name, "updatecharmodel") == 0) )
@@ -7266,7 +7587,7 @@ void UI_SetSiegeTeams(void)
 
 	//Found the .siege file
 
-	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams))
+	if (BG_SiegeGetValueGroup(siege_info, "Teams", teams, sizeof( teams )))
 	{
 		char buf[1024];
 
@@ -7277,7 +7598,7 @@ void UI_SetSiegeTeams(void)
 		}
 		else
 		{
-			BG_SiegeGetPairedValue(teams, "team1", team1);
+			BG_SiegeGetPairedValue(teams, "team1", team1, sizeof( team1 ));
 		}
 
 		trap->Cvar_VariableStringBuffer("cg_siegeTeam2", buf, 1024);
@@ -7287,7 +7608,7 @@ void UI_SetSiegeTeams(void)
 		}
 		else
 		{
-			BG_SiegeGetPairedValue(teams, "team2", team2);
+			BG_SiegeGetPairedValue(teams, "team2", team2, sizeof( team2 ));
 		}
 	}
 	else
@@ -7296,16 +7617,16 @@ void UI_SetSiegeTeams(void)
 	}
 
 	//Set the team themes so we know what classes to make available for selection
-	if (BG_SiegeGetValueGroup(siege_info, team1, teamInfo))
+	if (BG_SiegeGetValueGroup(siege_info, team1, teamInfo, sizeof( teamInfo )))
 	{
-		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime))
+		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime, sizeof( btime )))
 		{
 			BG_SiegeSetTeamTheme(SIEGETEAM_TEAM1, btime);
 		}
 	}
-	if (BG_SiegeGetValueGroup(siege_info, team2, teamInfo))
+	if (BG_SiegeGetValueGroup(siege_info, team2, teamInfo, sizeof( teamInfo )))
 	{
-		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime))
+		if (BG_SiegeGetPairedValue(teamInfo, "UseTeam", btime, sizeof( btime )))
 		{
 			BG_SiegeSetTeamTheme(SIEGETEAM_TEAM2, btime);
 		}
@@ -7424,6 +7745,7 @@ UI_HeadCountByColor
 static int UI_HeadCountByColor(void) {
 	int i, c;
 
+	UI_Q3HeadsNeeded();
 	c = 0;
 
 	// Count each head with this color
@@ -7565,13 +7887,9 @@ static void UI_BuildServerDisplayList(int force) {
 		force = 0;
 	}
 
-	// do motd updates here too
-	trap->Cvar_VariableStringBuffer( "cl_motdString", uiInfo.serverStatus.motd, sizeof(uiInfo.serverStatus.motd) );
+	// the text that runs through the bar of the server list
+	Q_strncpyz( uiInfo.serverStatus.motd, "Welcome to Jedi Academy MP!", sizeof( uiInfo.serverStatus.motd ) );
 	len = strlen(uiInfo.serverStatus.motd);
-	if (len == 0) {
-		Q_strncpyz( uiInfo.serverStatus.motd, "Welcome to Jedi Academy MP!", sizeof( uiInfo.serverStatus.motd ) );
-		len = strlen(uiInfo.serverStatus.motd);
-	}
 	if (len != uiInfo.serverStatus.motdLen) {
 		uiInfo.serverStatus.motdLen = len;
 		uiInfo.serverStatus.motdWidth = -1;
@@ -7600,6 +7918,7 @@ static void UI_BuildServerDisplayList(int force) {
 	}
 
 	trap->Cvar_Update( &ui_browserFilterInvalidInfo );
+	trap->Cvar_Update( &v_browserShowBotOnly );
 	trap->Cvar_Update( &ui_browserShowEmpty );
 	trap->Cvar_Update( &ui_browserShowFull );
 	trap->Cvar_Update( &ui_browserShowPasswordProtected );
@@ -7626,6 +7945,22 @@ static void UI_BuildServerDisplayList(int force) {
 			}
 
 			clients = atoi(Info_ValueForKey(info, "clients"));
+
+			// Servers where only bots play are left out with v_browserShowBotOnly 0. An engine of this tree says how many of the players
+			// are people: 0 none, -1 it has asked the server and the answer may still come (the server is
+			// looked at again with the next pass), -2 it is not known. Another engine says nothing.
+			if ( !v_browserShowBotOnly.integer && clients > 0 ) {
+				const char *humans = Info_ValueForKey( info, "g_humanplayers" );
+
+				if ( humans[0] && atoi( humans ) == -1 ) {
+					continue;
+				}
+				if ( humans[0] && atoi( humans ) == 0 ) {
+					trap->LAN_MarkServerVisible(lanSource, i, qfalse);
+					continue;
+				}
+			}
+
 			uiInfo.serverStatus.numPlayersOnServers += clients;
 
 			if (ui_browserShowEmpty.integer == 0) {
@@ -8025,6 +8360,81 @@ static void UI_BuildServerStatus(qboolean force) {
 }
 
 /*
+===============================================================================
+
+The players of music in Setup (FEEDER_MUSICPLAYERS): the ones there are now (ui_music.c), and the ones that are
+ticked in v_shareMusicPlayers but not there. A click ticks a player or takes the tick away. While the list is
+drawn the players are looked for every second and a half; when it is no longer drawn nothing is looked for.
+
+===============================================================================
+*/
+
+static struct {
+	char		keys[MUSIC_MAX_PLAYERS * 2][MUSIC_KEY];
+	qboolean	there[MUSIC_MAX_PLAYERS * 2];
+	int			count;
+	int			drawn;			// uiInfo.uiDC.realTime when it was last drawn, 0: never
+} uiMusic;
+
+static void UI_MusicList( void ) {
+	char		found[MUSIC_MAX_PLAYERS][MUSIC_KEY], word[MUSIC_KEY];
+	const char	*p = v_shareMusicPlayers.string;
+	const int	n = Music_Players( found );
+	int			i, k;
+
+	uiMusic.count = 0;
+	for ( i = 0; i < n; i++ ) {
+		Q_strncpyz( uiMusic.keys[uiMusic.count], found[i], MUSIC_KEY );
+		uiMusic.there[uiMusic.count++] = qtrue;
+	}
+	while ( *p && uiMusic.count < (int)ARRAY_LEN( uiMusic.keys ) ) {
+		while ( *p == ' ' )
+			p++;
+		for ( k = 0; *p && *p != ' '; p++ ) {
+			if ( k < (int)sizeof( word ) - 1 )
+				word[k++] = *p;
+		}
+		word[k] = '\0';
+		for ( i = 0; i < uiMusic.count && Q_stricmp( uiMusic.keys[i], word ); i++ ) {
+		}
+		if ( k && i == uiMusic.count ) {
+			Q_strncpyz( uiMusic.keys[uiMusic.count], word, MUSIC_KEY );
+			uiMusic.there[uiMusic.count++] = qfalse;
+		}
+	}
+	uiMusic.drawn = uiInfo.uiDC.realTime ? uiInfo.uiDC.realTime : 1;
+}
+
+static const char *UI_MusicText( int index ) {
+	static char	text[128];
+	char		name[64];
+
+	if ( !uiMusic.count ) {
+		return Vision_Text( "No player of music runs right now" );
+	}
+	if ( index < 0 || index >= uiMusic.count ) {
+		return "";
+	}
+	Music_PlayerName( uiMusic.keys[index], name, sizeof( name ) );
+	Com_sprintf( text, sizeof( text ), "%s  %s%s", Music_Allowed( v_shareMusicPlayers.string, uiMusic.keys[index] ) ? "[x]" : "[  ]", name,
+		uiMusic.there[index] ? "" : va( "  (%s)", Vision_Text( "not running" ) ) );
+	return text;
+}
+
+// a click on a player: ticked, or not any more
+static void UI_MusicToggle( int index ) {
+	char allow[MAX_CVAR_VALUE_STRING];
+
+	if ( index < 0 || index >= uiMusic.count ) {
+		return;
+	}
+	Q_strncpyz( allow, v_shareMusicPlayers.string, sizeof( allow ) );
+	Music_Toggle( allow, sizeof( allow ), uiMusic.keys[index] );
+	trap->Cvar_Set( "v_shareMusicPlayers", allow );
+	trap->Cvar_Update( &v_shareMusicPlayers );
+}
+
+/*
 ==================
 UI_FeederCount
 ==================
@@ -8068,6 +8478,10 @@ static int UI_FeederCount(float feederID)
 
 		case FEEDER_Q3HEADS:
 			return UI_HeadCountByColor();
+
+		case FEEDER_FORCEMODEL:
+			UI_Q3HeadsNeeded();
+			return uiInfo.q3HeadCount;
 
 		case FEEDER_SIEGE_TEAM1:
 			if (!siegeTeam1)
@@ -8135,6 +8549,19 @@ static int UI_FeederCount(float feederID)
 
 		case FEEDER_MODS:
 			return uiInfo.modCount;
+
+		case FEEDER_MUSICPLAYERS:
+			UI_MusicList();
+			return uiMusic.count ? uiMusic.count : 1;
+
+		case FEEDER_IDSLOG:
+			return UI_IDSCount();
+
+		case FEEDER_CHANGELOG:
+			return UI_ChangelogCount();
+
+		case FEEDER_CVARCLEAN:
+			return UI_CvarCleanCount();
 
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
@@ -8260,6 +8687,8 @@ UI_HeadCountByColor
 static const char *UI_SelectedTeamHead(int index, int *actual) {
 	int i,c=0;
 
+	UI_Q3HeadsNeeded();
+
 	// Count each head with this color
 
 	for (i=0; i<uiInfo.q3HeadCount; i++)
@@ -8325,6 +8754,9 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	else if (feederID == FEEDER_Q3HEADS) {
 		int actual;
 		return UI_SelectedTeamHead(index, &actual);
+	}
+	else if (feederID == FEEDER_FORCEMODEL) {
+		return ( index >= 0 && index < uiInfo.q3HeadCount ) ? uiInfo.q3HeadNames[index] : "";
 	}
 	else if (feederID == FEEDER_SIEGE_TEAM1)
 	{
@@ -8524,6 +8956,15 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 
 					return needPass;
 				case SORT_PING :
+					// a server the client left for its intrusion detection: the engine says so, and this column is
+					// measured by the client, so no server can put the mark here itself
+					if ( atoi( Info_ValueForKey( info, "ids" ) ) ) {
+						return S_COLOR_RED "IDS";
+					}
+					// players from other networks left it, by the list of the VisionJK masterserver
+					if ( atoi( Info_ValueForKey( info, "rep" ) ) ) {
+						return S_COLOR_ORANGE "IDS";
+					}
 					if (ping <= 0) {
 						return "...";
 					} else {
@@ -8550,6 +8991,14 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 		if (index >= 0 && index < uiInfo.myTeamCount) {
 			return uiInfo.teamNames[index];
 		}
+	} else if (feederID == FEEDER_MUSICPLAYERS) {
+		return UI_MusicText( index );
+	} else if (feederID == FEEDER_IDSLOG) {
+		return UI_IDSText( index );
+	} else if (feederID == FEEDER_CHANGELOG) {
+		return UI_ChangelogText( index );
+	} else if (feederID == FEEDER_CVARCLEAN) {
+		return UI_CvarCleanText( index, column );
 	} else if (feederID == FEEDER_MODS) {
 		if (index >= 0 && index < uiInfo.modCount) {
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr) {
@@ -8569,7 +9018,10 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	}
 	else if (feederID == FEEDER_MOVES)
 	{
-		return datapadMoveData[uiInfo.movesTitleIndex][index].title;
+		// (the moves this tree added are named in English: Vision_Text has their words in the other languages)
+		const char *title = datapadMoveData[uiInfo.movesTitleIndex][index].title;
+
+		return ( title && title[0] != '@' ) ? Vision_Text( title ) : title;
 	}
 	else if (feederID == FEEDER_MOVES_TITLES)
 	{
@@ -8629,6 +9081,87 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	return "";
 }
 
+/*
+=================
+UI_HeadIcon
+
+The picture of a model of the list (uiInfo.q3HeadNames), registered when it is first drawn
+=================
+*/
+static qhandle_t UI_HeadIcon( int index ) {
+	if (!uiInfo.q3HeadIcons[index])
+	{ //this isn't the best way of doing this I guess, but I didn't want a whole seperate string array
+	  //for storing shader names. I can't just replace q3HeadNames with the shader name, because we
+	  //print what's in q3HeadNames and the icon name would look funny.
+		char iconNameFromSkinName[256];
+		int i = 0;
+		int skinPlace;
+		const char *skinSlash = strrchr( uiInfo.q3HeadNames[index], '/' );
+
+		if ( !skinSlash )
+		{ // (UI_BuildQ3Model_List keeps only names with one)
+			return 0;
+		}
+		skinPlace = (int)( skinSlash - uiInfo.q3HeadNames[index] ) + 1; //remember that this is where the skin name begins
+
+		//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
+		Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
+
+		i = strlen(iconNameFromSkinName);
+
+		while (iconNameFromSkinName[i] != '/')
+		{
+			i--;
+		}
+
+		i++;
+		iconNameFromSkinName[i] = 0; //terminate, and append..
+		Q_strcat(iconNameFromSkinName, 256, "icon_");
+
+		//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
+		Q_strcat( iconNameFromSkinName, sizeof( iconNameFromSkinName ), uiInfo.q3HeadNames[index] + skinPlace );
+
+		//and now we are ready to register (thankfully this will only happen once)
+		uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
+	}
+	return uiInfo.q3HeadIcons[index];
+}
+
+/*
+=================
+UI_ModelPickSet / UI_ModelPickOpen
+
+The window of the model picker (ui/jamp/modelpick.menu), opened by a row of Setup that names its cvar in
+ui_modelPickTarget (tay_forceEnemyModel, tay_forceAllyModel): the models of the list as pictures, a click writes
+model/skin into that cvar, "As They Chose" empties it. ui_modelPickName is what the window shows under the list.
+=================
+*/
+static void UI_ModelPickSet( const char *model ) {
+	const char *target = UI_Cvar_VariableString( "ui_modelPickTarget" );
+
+	if ( Q_stricmp( target, "tay_forceEnemyModel" ) && Q_stricmp( target, "tay_forceAllyModel" ) ) {
+		return;
+	}
+	trap->Cvar_Set( target, model );
+	trap->Cvar_Set( "ui_modelPickName", model[0] ? model : Vision_Text( "As They Chose" ) );
+}
+
+static void UI_ModelPickOpen( void ) {
+	char	now[MAX_QPATH];
+	int		i;
+
+	UI_Q3HeadsNeeded();
+	Q_strncpyz( now, UI_Cvar_VariableString( UI_Cvar_VariableString( "ui_modelPickTarget" ) ), sizeof( now ) );
+	trap->Cvar_Set( "ui_modelPickName", now[0] ? now : Vision_Text( "As They Chose" ) );
+	for ( i = 0; i < uiInfo.q3HeadCount; i++ ) {
+		if ( now[0] && !Q_stricmp( uiInfo.q3HeadNames[i], now ) ) {
+			break;
+		}
+	}
+	// nothing marked while every player keeps his own model
+	Menu_SetFeederSelection( NULL, FEEDER_FORCEMODEL, i < uiInfo.q3HeadCount ? i : -1, NULL );
+}
+
 static qhandle_t UI_FeederItemImage(float feederID, int index) {
 	int	validCnt,i;
 	static char info[MAX_STRING_CHARS];
@@ -8681,55 +9214,13 @@ static qhandle_t UI_FeederItemImage(float feederID, int index) {
 				}
 			}
 
-			if (!uiInfo.q3HeadIcons[index])
-			{ //this isn't the best way of doing this I guess, but I didn't want a whole seperate string array
-			  //for storing shader names. I can't just replace q3HeadNames with the shader name, because we
-			  //print what's in q3HeadNames and the icon name would look funny.
-				char iconNameFromSkinName[256];
-				int i = 0;
-				int skinPlace;
-
-				i = strlen(uiInfo.q3HeadNames[index]);
-
-				while (uiInfo.q3HeadNames[index][i] != '/')
-				{
-					i--;
-				}
-
-				i++;
-				skinPlace = i; //remember that this is where the skin name begins
-
-				//now, build a full path out of what's in q3HeadNames, into iconNameFromSkinName
-				Com_sprintf(iconNameFromSkinName, sizeof(iconNameFromSkinName), "models/players/%s", uiInfo.q3HeadNames[index]);
-
-				i = strlen(iconNameFromSkinName);
-
-				while (iconNameFromSkinName[i] != '/')
-				{
-					i--;
-				}
-
-				i++;
-				iconNameFromSkinName[i] = 0; //terminate, and append..
-				Q_strcat(iconNameFromSkinName, 256, "icon_");
-
-				//and now, for the final step, append the skin name from q3HeadNames onto the end of iconNameFromSkinName
-				i = strlen(iconNameFromSkinName);
-
-				while (uiInfo.q3HeadNames[index][skinPlace])
-				{
-					iconNameFromSkinName[i] = uiInfo.q3HeadNames[index][skinPlace];
-					i++;
-					skinPlace++;
-				}
-				iconNameFromSkinName[i] = 0;
-
-				//and now we are ready to register (thankfully this will only happen once)
-				uiInfo.q3HeadIcons[index] = trap->R_RegisterShaderNoMip(iconNameFromSkinName);
-			}
-			return uiInfo.q3HeadIcons[index];
+			return UI_HeadIcon( index );
 		}
     }
+	else if (feederID == FEEDER_FORCEMODEL)
+	{
+		return ( index >= 0 && index < uiInfo.q3HeadCount && uiInfo.q3HeadNames[index][0] ) ? UI_HeadIcon( index ) : 0;
+	}
 	else if (feederID == FEEDER_SIEGE_TEAM1)
 	{
 		if (!siegeTeam1)
@@ -8916,6 +9407,32 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 	static char info[MAX_STRING_CHARS];
 	const int feederID = feederFloat;
 
+	if ( feederID == FEEDER_CHANGELOG ) {
+		UI_ChangelogSelect( index );
+		return qtrue;
+	}
+	if ( feederID == FEEDER_CVARCLEAN ) {
+		UI_CvarCleanSelect( index );
+		return qtrue;
+	}
+
+	// VisionJK: a click on a model of the window of the model picker writes it into the cvar the row named
+	// (ui_modelPickTarget); the selection that only shows what the cvar holds (UI_ModelPickOpen) does not
+	if ( feederID == FEEDER_FORCEMODEL ) {
+		if ( item && index >= 0 && index < uiInfo.q3HeadCount && uiInfo.q3HeadNames[index][0] ) {
+			UI_ModelPickSet( uiInfo.q3HeadNames[index] );
+		}
+		return qtrue;
+	}
+
+	// VisionJK: a click on a player of music (item is set for a click only, not for the keys that move the bar)
+	if ( feederID == FEEDER_MUSICPLAYERS ) {
+		if ( item ) {
+			UI_MusicToggle( index );
+		}
+		return qtrue;
+	}
+
 	if (feederID == FEEDER_HOLSTERS)
 	{// JA+: the picture "model<N>" stands for holster model N of cp_holster
 		int holster = 1;
@@ -9027,7 +9544,9 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 
 						if (datapadMoveData[uiInfo.movesTitleIndex][index].desc)
 						{
-							trap->Cvar_Set( "ui_move_desc", datapadMoveData[uiInfo.movesTitleIndex][index].desc);
+							const char *desc = datapadMoveData[uiInfo.movesTitleIndex][index].desc;
+
+							trap->Cvar_Set( "ui_move_desc", desc[0] != '@' ? Vision_Text( desc ) : desc );
 						}
 					}
 					UI_SaberAttachToChar( item );
@@ -9550,7 +10069,7 @@ nextSearch:
 			uiInfo.forceConfigSide[uiInfo.forceConfigCount] = qfalse; //dark side config
 		}
 
-		Com_sprintf( uiInfo.forceConfigNames[uiInfo.forceConfigCount], sizeof(uiInfo.forceConfigNames[uiInfo.forceConfigCount]), configname);
+		Q_strncpyz( uiInfo.forceConfigNames[uiInfo.forceConfigCount], configname, sizeof(uiInfo.forceConfigNames[uiInfo.forceConfigCount]) );
 		uiInfo.forceConfigCount++;
 	}
 
@@ -9768,12 +10287,14 @@ static void UI_BuildQ3Model_List( void )
 					s++;
 				}
 
-				if (iconExists)
+				// a name that does not fit would lose its '/' (UI_FeederItemImage looks for it); folder and skin
+				// names come from paks, so they are text and not the format
+				if (iconExists || strlen( dirptr ) + strlen( skinname ) >= sizeof( uiInfo.q3HeadNames[0] ))
 				{
 					continue;
 				}
 
-				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), va("%s%s", dirptr, skinname));
+				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), "%s%s", dirptr, skinname );
 				uiInfo.q3HeadIcons[uiInfo.q3HeadCount++] = hasIcon ? 0 : uiInfo.q3HeadHiddenIcon;//trap->R_RegisterShaderNoMip(fpath);
 				//rww - we are now registering them as they are drawn like the TA feeder, so as to decrease UI load time.
 			}
@@ -9785,6 +10306,28 @@ static void UI_BuildQ3Model_List( void )
 		}
 	}
 
+}
+
+/*
+=================
+UI_Q3HeadsNeeded
+
+The list of the player models and skins for the menus (FEEDER_Q3HEADS), made when it is first asked for and not at
+every start of the ui: the start is every level, and the list was the most of it (87 of 140 ms on mp/ffa3,
+2026-10-19): a list of the files of every model folder, each a walk over all files of all paks, and up to three
+icons opened per skin. Now a menu that shows the models costs that once per level, when it is opened, and again
+when a model came from the model store of the site (client/cl_models.cpp counts v_modelStoreChanged up).
+=================
+*/
+void UI_Q3HeadsNeeded( void ) {
+	static int	store = -1;
+	const int	changed = (int)trap->Cvar_VariableValue( "v_modelStoreChanged" );
+
+	if ( !uiInfo.q3HeadsListed || changed != store ) {
+		uiInfo.q3HeadsListed = qtrue;
+		store = changed;
+		UI_BuildQ3Model_List();
+	}
 }
 
 void UI_SiegeInit(void)
@@ -10083,6 +10626,36 @@ static qhandle_t UI_RegisterShaderNoMip( const char *name ) {
 UI_Init
 =================
 */
+/*
+=================
+UI_ScreenSize
+
+The size of the window, for a 640x480 virtualized screen. A renderer of this tree makes the grid wider than 640 on
+a wide window instead of stretching it, and says by how much in the cvar v_2dBias: x then runs from -bias to
+640 + bias and the menus sit in the middle. On a window narrower than 4:3 it makes the grid taller the same way
+(v_2dBiasY), and the 640 x 480 is a band across the middle. Any other engine leaves both at 0. At the start, and every frame
+the engine resized the frame with the window (CL_WindowSize()).
+=================
+*/
+static void UI_ScreenSize( void ) {
+	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
+	uiInfo.uiDC.bias = Q_max( 0.0f, trap->Cvar_VariableValue( "v_2dBias" ) );
+	uiInfo.uiDC.biasY = Q_max( 0.0f, trap->Cvar_VariableValue( "v_2dBiasY" ) );
+	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight / ( 480.0 + 2.0 * uiInfo.uiDC.biasY );
+	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth / ( 640.0 + 2.0 * uiInfo.uiDC.bias );
+	uiInfo.uiDC.wide = uiInfo.uiDC.bias;
+	uiInfo.uiDC.tall = uiInfo.uiDC.biasY;
+}
+
+static void UI_CheckScreenSize( void ) {
+	glconfig_t glconfig;
+
+	trap->GetGlconfig( &glconfig );
+	if ( glconfig.vidWidth != uiInfo.uiDC.glconfig.vidWidth || glconfig.vidHeight != uiInfo.uiDC.glconfig.vidHeight ) {
+		UI_ScreenSize();
+	}
+}
+
 void UI_Init( qboolean inGameLoad ) {
 	const char *menuSet;
 
@@ -10104,19 +10677,9 @@ void UI_Init( qboolean inGameLoad ) {
 	UI_InitMemory();
 
 	// cache redundant calulations
-	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
-
-	// for 640x480 virtualized screen
-	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * (1.0/480.0);
-	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth * (1.0/640.0);
-	if ( uiInfo.uiDC.glconfig.vidWidth * 480 > uiInfo.uiDC.glconfig.vidHeight * 640 ) {
-		// wide screen
-		uiInfo.uiDC.bias = 0.5 * ( uiInfo.uiDC.glconfig.vidWidth - ( uiInfo.uiDC.glconfig.vidHeight * (640.0/480.0) ) );
-	}
-	else {
-		// no wide screen
-		uiInfo.uiDC.bias = 0;
-	}
+	UI_ScreenSize();
+	// the engine of this tree resizes the frame with the window and leaves it to this module to follow
+	trap->Cvar_Set( "v_uiResize", "1" );
 
 	//UI_Load();
 	uiInfo.uiDC.registerShaderNoMip				= UI_RegisterShaderNoMip;
@@ -10153,6 +10716,7 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.setCVar							= trap->Cvar_Set;
 	uiInfo.uiDC.getCVarString					= trap->Cvar_VariableStringBuffer;
 	uiInfo.uiDC.getCVarValue					= trap->Cvar_VariableValue;
+	uiInfo.uiDC.getCVarInfo						= ( trap->Cvar_VariableValue( "v_uiCvarInfo" ) == 1.0f ) ? trap->ext.Cvar_Info : NULL;
 	uiInfo.uiDC.drawTextWithCursor				= &Text_PaintWithCursor;
 	uiInfo.uiDC.setOverstrikeMode				= trap->Key_SetOverstrikeMode;
 	uiInfo.uiDC.getOverstrikeMode				= trap->Key_GetOverstrikeMode;
@@ -10178,8 +10742,18 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.drawCinematic					= &UI_DrawCinematic;
 	uiInfo.uiDC.runCinematicFrame				= &UI_RunCinematicFrame;
 	uiInfo.uiDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
+	ui_fontInk = (qboolean)( trap->Cvar_VariableValue( "v_uiFontInk" ) == 1.0f );
+	uiInfo.uiDC.ext.textInk						= ui_fontInk ? Text_Ink : NULL;
+	// the engine of this tree says in a cvar that it has the call (ui_public.h), any other ends ext before it
+	uiInfo.uiDC.registerShaderRGBA				= ( trap->Cvar_VariableValue( "v_uiSkin" ) == 1.0f ) ? trap->ext.R_RegisterShaderRGBA : NULL;
+	uiInfo.uiDC.statValue						= NULL;
+	uiInfo.uiDC.addPolyToScene					= &UI_AddPolyToScene;
 
 	Init_Display(&uiInfo.uiDC);
+	Skin_Reset();
+	SaberFX_Reset();
+	UI_OfferCursorKey();
+	UI_ReadDefaultKeys();
 
 	UI_BuildPlayerModel_List(inGameLoad);
 
@@ -10225,7 +10799,12 @@ void UI_Init( qboolean inGameLoad ) {
 
 	trap->LAN_LoadCachedServers();
 
-	UI_BuildQ3Model_List();
+	// A skin without an icon has the tile of the new look in its menus, not the question mark of JA+. (The list
+	// keeps the handle, so this comes before it is built.)
+	if ( uiNewLook && Skin_NoPicture() ) {
+		uiInfo.q3HeadHiddenIcon = Skin_NoPicture();
+	}
+	uiInfo.q3HeadsListed = qfalse;		// (made when a menu asks for it, UI_Q3HeadsNeeded)
 	UI_BuildHolster_List();	// JA+
 	UI_LoadBots();
 
@@ -10248,6 +10827,31 @@ void UI_Init( qboolean inGameLoad ) {
 }
 
 #define	UI_FPS_FRAMES	4
+/*
+=================
+UI_OpenBoxFrame
+
+Once a frame, after the menus were painted (their items are where they are shown then): the cvar v_openBox says
+how much of the 640 x 480 they take, "x y w h", or nothing while none is open. The cgame reads it for the panel
+behind a menu that stands in the level.
+=================
+*/
+static void UI_OpenBoxFrame( void ) {
+	static char	said[64];
+	char		now[64];
+	rectDef_t	box;
+
+	if ( Menus_OpenBox( &box ) ) {
+		Com_sprintf( now, sizeof( now ), "%i %i %i %i", (int)box.x, (int)box.y, (int)( box.w + 0.99f ), (int)( box.h + 0.99f ) );
+	} else {
+		now[0] = '\0';
+	}
+	if ( strcmp( now, said ) ) {
+		Q_strncpyz( said, now, sizeof( said ) );
+		trap->Cvar_Set( "v_openBox", now );
+	}
+}
+
 void UI_Refresh( int realtime )
 {
 	static int index;
@@ -10257,12 +10861,45 @@ void UI_Refresh( int realtime )
 	//	return;
 	//}
 
+	UI_CheckScreenSize();
+
+	// models that menu items gave up in the frame before, now that it has been rendered (ui_shared.c)
+	UI_FreeDeferredGhoul2();
+	{
+		extern void UI_SweepFrame( void );
+
+		UI_SweepFrame();
+	}
+	if ( uiKeysReload && !--uiKeysReload ) {
+		Controls_GetConfig();
+	}
+
 	trap->G2API_SetTime(realtime, 0);
 	trap->G2API_SetTime(realtime, 1);
 	//ghoul2 timer must be explicitly updated during ui rendering.
 
 	uiInfo.uiDC.frameTime = realtime - uiInfo.uiDC.realTime;
 	uiInfo.uiDC.realTime = realtime;
+
+	// the players of music are looked for while their list in Setup is drawn, and only then
+	Music_Frame( realtime, qfalse, (qboolean)( uiMusic.drawn && realtime - uiMusic.drawn < 1000 ), v_shareMusicPlayers.string );
+
+	// The cgame of this tree puts the menus of a running game onto a panel in the level, and the engine says so:
+	// the panel is as wide as a menu is, so nothing reaches past the 640 there, whatever the window is like.
+	uiInfo.uiDC.wide = trap->Cvar_VariableValue( "v_uiPlane" ) ? 0.0f : uiInfo.uiDC.bias;
+	uiInfo.uiDC.tall = trap->Cvar_VariableValue( "v_uiPlane" ) ? 0.0f : uiInfo.uiDC.biasY;
+	if ( uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.wide ) {
+		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.wide;
+	}
+	else if ( uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.wide ) {
+		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.wide;
+	}
+	if ( uiInfo.uiDC.cursory < -(int)uiInfo.uiDC.tall ) {
+		uiInfo.uiDC.cursory = -(int)uiInfo.uiDC.tall;
+	}
+	else if ( uiInfo.uiDC.cursory > SCREEN_HEIGHT + (int)uiInfo.uiDC.tall ) {
+		uiInfo.uiDC.cursory = SCREEN_HEIGHT + (int)uiInfo.uiDC.tall;
+	}
 
 	previousTimes[index % UI_FPS_FRAMES] = uiInfo.uiDC.frameTime;
 	index++;
@@ -10280,22 +10917,31 @@ void UI_Refresh( int realtime )
 	}
 
 	UI_UpdateCvars();
+	if ( uiNewLook ) {
+		UI_SaberMixFrame();
+	}
 
 	if (Menu_Count() > 0) {
 		// paint all the menus
 		Menu_PaintAll();
+		UI_OpenBoxFrame();
 		// refresh server browser list
 		UI_DoServerRefresh();
 		// refresh server status
 		UI_BuildServerStatus(qfalse);
 		// refresh find player list
 		UI_BuildFindPlayerList(qfalse);
+		// a newer version of the game is out: said on the main menu, see ui_update.c
+		UI_UpdateNoticeDraw();
 	}
 	// draw cursor
 	UI_SetColor( NULL );
 	if (Menu_Count() > 0 && (trap->Key_GetCatcher() & KEYCATCH_UI)) {
-		UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f, 40.0f, uiInfo.uiDC.Assets.cursor);
-		//UI_DrawHandlePic( uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory, 48, 48, uiInfo.uiDC.Assets.cursor);
+		if ( uiNewLook ) {
+			Skin_Cursor( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory );
+		} else {
+			UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f, 40.0f, uiInfo.uiDC.Assets.cursor);
+		}
 	}
 
 	if (ui_rankChange.integer)
@@ -10409,6 +11055,8 @@ UI_KeyEvent
 void UI_KeyEvent( int key, qboolean down ) {
 	if (Menu_Count() > 0) {
 		menuDef_t *menu = Menu_GetFocused();
+		if ( UI_UpdateNoticeKey( key, down ) )
+			return;
 		if (menu) {
 			if (key == A_ESCAPE && down && !Menus_AnyFullScreenVisible()) {
 				Menus_CloseAll();
@@ -10436,16 +11084,17 @@ void UI_MouseEvent( int dx, int dy )
 {
 	// update mouse screen position
 	uiInfo.uiDC.cursorx += dx;
-	if (uiInfo.uiDC.cursorx < 0)
-		uiInfo.uiDC.cursorx = 0;
-	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH)
-		uiInfo.uiDC.cursorx = SCREEN_WIDTH;
+	if (uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.wide)
+		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.wide;
+	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.wide)
+		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.wide;
 
+	// (a window narrower than 4:3 makes the grid taller: y runs from -tall to 480 + tall)
 	uiInfo.uiDC.cursory += dy;
-	if (uiInfo.uiDC.cursory < 0)
-		uiInfo.uiDC.cursory = 0;
-	else if (uiInfo.uiDC.cursory > SCREEN_HEIGHT)
-		uiInfo.uiDC.cursory = SCREEN_HEIGHT;
+	if (uiInfo.uiDC.cursory < -(int)uiInfo.uiDC.tall)
+		uiInfo.uiDC.cursory = -(int)uiInfo.uiDC.tall;
+	else if (uiInfo.uiDC.cursory > SCREEN_HEIGHT + (int)uiInfo.uiDC.tall)
+		uiInfo.uiDC.cursory = SCREEN_HEIGHT + (int)uiInfo.uiDC.tall;
 
 	if (Menu_Count() > 0) {
 		//menuDef_t *menu = Menu_GetFocused();
@@ -10489,30 +11138,22 @@ void Text_PaintCenter(float x, float y, float scale, vec4_t color, const char *t
 	Text_Paint(x - len / 2, y, scale, color, text, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE, iMenuFont);
 }
 
-static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint, float yStart, float scale, int iMenuFont) {
-	char sDownLoading[256];
-	char sEstimatedTimeLeft[256];
-	char sTransferRate[256];
-	char sOf[20];
-	char sCopied[256];
-	char sSec[20];
-	//
-	int downloadSize, downloadCount, downloadTime;
-	char dlSizeBuf[64], totalSizeBuf[64], xferRateBuf[64], dlTimeBuf[64];
-	int xferRate;
-	int leftWidth;
-	const char *s;
+// what a download screen says of the file that comes: how much of it is here, how long it will take, how fast it is
+typedef struct downloadTexts_s {
+	char	copied[128];		// "(1.2 MB of 5.0 MB copied)"
+	char	left[64];			// the time left, or "estimating"
+	char	rate[64];			// "310 KB/sec", empty while nobody knows
+	int		size, count;		// of the file and of what is here, in bytes
+} downloadTexts_t;
 
-	vec4_t colorLtGreyAlpha = {0, 0, 0, .5};
+static void UI_DownloadTexts( downloadTexts_t *d ) {
+	char		sOf[20], sCopied[256], sSec[20];
+	char		dlSizeBuf[64], totalSizeBuf[64], xferRateBuf[64];
+	const int	downloadTime = trap->Cvar_VariableValue( "cl_downloadTime" );
+	int			xferRate = 0;
+	qboolean	early;
+	const char	*s;
 
-	UI_FillRect( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, colorLtGreyAlpha );
-
-	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 0);	// "Downloading:"
-	Q_strncpyz(sDownLoading,s?s:"", sizeof(sDownLoading));
-	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 1);	// "Estimated time left:"
-	Q_strncpyz(sEstimatedTimeLeft,s?s:"", sizeof(sEstimatedTimeLeft));
-	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 2);	// "Transfer rate:"
-	Q_strncpyz(sTransferRate,s?s:"", sizeof(sTransferRate));
 	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 3);	// "of"
 	Q_strncpyz(sOf,s?s:"", sizeof(sOf));
 	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 4);	// "copied"
@@ -10520,9 +11161,61 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 5);	// "sec."
 	Q_strncpyz(sSec,s?s:"", sizeof(sSec));
 
-	downloadSize = trap->Cvar_VariableValue( "cl_downloadSize" );
-	downloadCount = trap->Cvar_VariableValue( "cl_downloadCount" );
-	downloadTime = trap->Cvar_VariableValue( "cl_downloadTime" );
+	d->size = trap->Cvar_VariableValue( "cl_downloadSize" );
+	d->count = trap->Cvar_VariableValue( "cl_downloadCount" );
+	early = (qboolean)( d->count < 4096 || !downloadTime );
+
+	UI_ReadableSize( dlSizeBuf,		sizeof dlSizeBuf,		d->count );
+	UI_ReadableSize( totalSizeBuf,	sizeof totalSizeBuf,	d->size );
+
+	if ( !early && (uiInfo.uiDC.realTime - downloadTime) / 1000 ) {
+		xferRate = d->count / ((uiInfo.uiDC.realTime - downloadTime) / 1000);
+	}
+
+	if ( early || d->size ) {
+		Com_sprintf( d->copied, sizeof( d->copied ), "(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied );
+	} else {
+		Com_sprintf( d->copied, sizeof( d->copied ), "(%s %s)", dlSizeBuf, sCopied );
+	}
+
+	// Extrapolate estimated completion time
+	if ( !early && d->size && xferRate ) {
+		int n = d->size / xferRate; // estimated time for entire d/l in secs
+
+		// We do it in K (/1024) because we'd overflow around 4MB
+		UI_PrintTime ( d->left, sizeof( d->left ),
+			(n - (((d->count/1024) * n) / (d->size/1024))) * 1000);
+	} else {
+		Q_strncpyz( d->left, "estimating", sizeof( d->left ) );
+	}
+
+	d->rate[0] = '\0';
+	if ( xferRate ) {
+		UI_ReadableSize( xferRateBuf, sizeof xferRateBuf, xferRate );
+		Com_sprintf( d->rate, sizeof( d->rate ), "%s/%s", xferRateBuf, sSec );
+	}
+}
+
+static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint, float yStart, float scale, int iMenuFont) {
+	char sDownLoading[256];
+	char sEstimatedTimeLeft[256];
+	char sTransferRate[256];
+	downloadTexts_t d;
+	int leftWidth;
+	const char *s;
+
+	vec4_t colorLtGreyAlpha = {0, 0, 0, .5};
+
+	UI_FillRect( -uiInfo.uiDC.bias, 0, SCREEN_WIDTH + 2.0f * uiInfo.uiDC.bias, SCREEN_HEIGHT, colorLtGreyAlpha );
+
+	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 0);	// "Downloading:"
+	Q_strncpyz(sDownLoading,s?s:"", sizeof(sDownLoading));
+	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 1);	// "Estimated time left:"
+	Q_strncpyz(sEstimatedTimeLeft,s?s:"", sizeof(sEstimatedTimeLeft));
+	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 2);	// "Transfer rate:"
+	Q_strncpyz(sTransferRate,s?s:"", sizeof(sTransferRate));
+
+	UI_DownloadTexts( &d );
 
 	leftWidth = 320;
 
@@ -10532,51 +11225,79 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	Text_PaintCenter(centerPoint, yStart + 192, scale, colorWhite, sEstimatedTimeLeft, 0, iMenuFont);
 	Text_PaintCenter(centerPoint, yStart + 248, scale, colorWhite, sTransferRate, 0, iMenuFont);
 
-	if (downloadSize > 0) {
-		s = va( "%s (%d%%)", downloadName, (int)( (float)downloadCount * 100.0f / downloadSize ) );
+	if (d.size > 0) {
+		s = va( "%s (%d%%)", downloadName, (int)( (float)d.count * 100.0f / d.size ) );
 	} else {
 		s = downloadName;
 	}
 
 	Text_PaintCenter(centerPoint, yStart+136, scale, colorWhite, s, 0, iMenuFont);
+	Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, d.copied, 0, iMenuFont);
+	Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, d.left, 0, iMenuFont);
+	if (d.rate[0]) {
+		Text_PaintCenter(leftWidth, yStart+272, scale, colorWhite, d.rate, 0, iMenuFont);
+	}
+}
 
-	UI_ReadableSize( dlSizeBuf,		sizeof dlSizeBuf,		downloadCount );
-	UI_ReadableSize( totalSizeBuf,	sizeof totalSizeBuf,	downloadSize );
+/*
+========================
+UI_ConnectPanel
 
-	if (downloadCount < 4096 || !downloadTime) {
-		Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, "estimating", 0, iMenuFont);
-		Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied), 0, iMenuFont);
+The connect screen in the new look: over the sky of the menus the panel the cgame shows while the level loads
+(Skin_LoadPanel), with the server in it, how far the connection is and what the server says (it is full, the
+password is wrong). While a file comes from the server: its name, how much of it is here, how fast it comes
+and how long it will take, with the bar for the part that is here.
+========================
+*/
+static void UI_ConnectPanel( const uiClientState_t *cstate ) {
+	char		title[256], about[256], now[MAX_STRING_CHARS], format[256];
+	float		fraction = -1.0f;
+
+	about[0] = now[0] = '\0';
+	if ( !Q_stricmp( cstate->servername, "localhost" ) ) {
+		trap->SE_GetStringTextString( "MENUS_STARTING_UP", title, sizeof( title ) );
 	} else {
-		if ((uiInfo.uiDC.realTime - downloadTime) / 1000) {
-			xferRate = downloadCount / ((uiInfo.uiDC.realTime - downloadTime) / 1000);
-		} else {
-			xferRate = 0;
-		}
-		UI_ReadableSize( xferRateBuf, sizeof xferRateBuf, xferRate );
+		trap->SE_GetStringTextString( "MENUS_CONNECTING_TO", format, sizeof( format ) );
+		Com_sprintf( title, sizeof( title ), format, cstate->servername );
 
-		// Extrapolate estimated completion time
-		if (downloadSize && xferRate) {
-			int n = downloadSize / xferRate; // estimated time for entire d/l in secs
-
-			// We do it in K (/1024) because we'd overflow around 4MB
-			UI_PrintTime ( dlTimeBuf, sizeof dlTimeBuf,
-				(n - (((downloadCount/1024) * n) / (downloadSize/1024))) * 1000);
-
-			Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, dlTimeBuf, 0, iMenuFont);
-			Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied), 0, iMenuFont);
-		} else {
-			Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, "estimating", 0, iMenuFont);
-			if (downloadSize) {
-				Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied), 0, iMenuFont);
-			} else {
-				Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s)", dlSizeBuf, sCopied), 0, iMenuFont);
-			}
-		}
-
-		if (xferRate) {
-			Text_PaintCenter(leftWidth, yStart+272, scale, colorWhite, va("%s/%s", xferRateBuf,sSec), 0, iMenuFont);
+		switch ( cstate->connState ) {
+		case CA_CONNECTING:
+			trap->SE_GetStringTextString( "MENUS_AWAITING_CONNECTION", format, sizeof( format ) );
+			Com_sprintf( about, sizeof( about ), format, cstate->connectPacketCount );
+			break;
+		case CA_CHALLENGING:
+			trap->SE_GetStringTextString( "MENUS_AWAITING_CHALLENGE", format, sizeof( format ) );
+			Com_sprintf( about, sizeof( about ), format, cstate->connectPacketCount );
+			break;
+		case CA_CONNECTED:
+			trap->SE_GetStringTextString( "MENUS_AWAITING_GAMESTATE", about, sizeof( about ) );
+			break;
+		default:
+			break;
 		}
 	}
+
+	if ( cstate->connState == CA_CONNECTED ) {
+		char	downloadName[MAX_INFO_VALUE];
+
+		trap->Cvar_VariableStringBuffer( "cl_downloadName", downloadName, sizeof( downloadName ) );
+		if ( downloadName[0] ) {
+			downloadTexts_t	d;
+			const char		*s;
+
+			UI_DownloadTexts( &d );
+			Q_strncpyz( title, downloadName, sizeof( title ) );
+			Com_sprintf( about, sizeof( about ), "%s  %s", d.copied, d.rate );
+			// (asked for after the other texts: every one of these strings is handed out in the same memory)
+			s = GetCRDelineatedString( "MENUS", "DOWNLOAD_STUFF", 1 );	// "Estimated time left:"
+			Com_sprintf( now, sizeof( now ), "%s %s", s ? s : "", d.left );
+			fraction = ( d.size > 0 ) ? (float)d.count / d.size : 0.0f;
+		}
+	} else if ( cstate->connState < CA_CONNECTED ) {
+		// what the server said (server full, bad version, etc)
+		Q_strncpyz( now, cstate->messageString, sizeof( now ) );
+	}
+	Skin_LoadPanel( title, about, now, fraction );
 }
 
 /*
@@ -10598,7 +11319,6 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 	menuDef_t *menu = Menus_FindByName("Connect");
 
-
 	if ( !overlay && menu ) {
 		Menu_Paint(menu, qtrue);
 	}
@@ -10617,6 +11337,11 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	// see what information we should display
 	trap->GetClientState( &cstate );
 
+	if ( uiNewLook ) {
+		UI_ConnectPanel( &cstate );
+		return;
+	}
+
 
 	info[0] = '\0';
 	if( trap->GetConfigString( CS_SERVERINFO, info, sizeof(info) ) ) {
@@ -10633,8 +11358,6 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
 	}
 
-	// display global MOTD at bottom
-	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, FONT_MEDIUM);
 	// print any server info (server full, bad version, etc)
 	if ( cstate.connState < CA_CONNECTED ) {
 		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, FONT_MEDIUM);

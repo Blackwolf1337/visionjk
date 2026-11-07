@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/q_shared.h"
 #include "qcommon/qcommon.h"
 #include "game/g_public.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "rd-common/tr_public.h"
 
 //=============================================================================
@@ -131,6 +131,7 @@ typedef struct {
 	int			botReliableAcknowledge; // for bots, need to maintain a separate reliableAcknowledge to record server messages into the demo file
 } demoInfo_t;
 
+#define FLOOD_QUEUE_SIZE	16		// most commands that wait per client (sv_floodQueue), 16 KB each
 
 typedef struct client_s {
 	clientState_t	state;
@@ -168,7 +169,6 @@ typedef struct client_s {
 	int				downloadSendTime;	// time we last got an ack from the client
 
 	int				deltaMessage;		// frame last client usercmd message
-	int				lastReliableTime;	// svs.time when reliable command was last received
 	int				lastPacketTime;		// svs.time when packet was last received
 	int				lastConnectTime;	// svs.time when connection started
 	int				nextSnapshotTime;	// send another snapshot when svs.time >= nextSnapshotTime
@@ -185,6 +185,14 @@ typedef struct client_s {
 
 	int				lastUserInfoChange; //if > svs.time && count > x, deny change -rww
 	int				lastUserInfoCount; //allow a certain number of changes within a certain time period -rww
+
+	// flood protection (SV_FloodCommand): a budget in msec that refills with time, the commands past it wait here
+	int				floodBudget;
+	int				floodTime;			// svs.time the budget was last refilled
+	int				floodHead;			// oldest waiting command in floodQueue
+	int				floodCount;
+	qboolean		floodWarned;		// told about dropped commands, until the queue is empty again
+	char			floodQueue[FLOOD_QUEUE_SIZE][MAX_STRING_CHARS];
 
 	int				oldServerTime;
 	qboolean		csUpdated[MAX_CONFIGSTRINGS];
@@ -209,8 +217,6 @@ typedef struct serverStatic_s {
 	int			nextSnapshotEntities;		// next snapshotEntities to use
 	entityState_t	*snapshotEntities;		// [numSnapshotEntities]
 	int			nextHeartbeatTime;
-	netadr_t	redirectAddress;			// for rcon return messages
-
 	netadr_t	authorizeAddress;			// for rcon return messages
 
 	qboolean	gameStarted;				// gvm is loaded
@@ -240,7 +246,6 @@ extern	cvar_t	*sv_snapsPolicy;
 extern	cvar_t	*sv_fps;
 extern	cvar_t	*sv_timeout;
 extern	cvar_t	*sv_zombietime;
-extern	cvar_t	*sv_rconPassword;
 extern	cvar_t	*sv_privatePassword;
 extern	cvar_t	*sv_allowDownload;
 extern	cvar_t	*sv_maxclients;
@@ -264,7 +269,9 @@ extern	cvar_t	*sv_maxPing;
 extern	cvar_t	*sv_gametype;
 extern	cvar_t	*sv_pure;
 extern	cvar_t	*sv_floodProtect;
-extern	cvar_t	*sv_floodProtectSlow;
+extern	cvar_t	*sv_floodBurst;
+extern	cvar_t	*sv_floodRate;
+extern	cvar_t	*sv_floodQueue;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_needpass;
 extern	cvar_t	*sv_filterCommands;
@@ -348,7 +355,9 @@ void SV_UserinfoChanged( client_t *cl );
 void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd );
 void SV_DropClient( client_t *drop, const char *reason );
 
-void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK );
+void SV_ExecuteClientCommand( client_t *cl, const char *s );
+void SV_FloodClear( client_t *cl );
+void SV_FloodFrame( void );
 void SV_ClientThink (client_t *cl, usercmd_t *cmd);
 
 void SV_WriteDownloadToClient( client_t *cl , msg_t *msg );
@@ -357,6 +366,7 @@ void SV_WriteDownloadToClient( client_t *cl , msg_t *msg );
 // sv_ccmds.c
 //
 void SV_Heartbeat_f( void );
+void SV_ClipBrushesReset( void );		// Port: every clip brush of the map is on again (clipbrush)
 void SV_RecordDemo( client_t *cl, char *demoName );
 void SV_StopRecordDemo( client_t *cl );
 void SV_AutoRecordDemo( client_t *cl );
@@ -442,6 +452,69 @@ int SV_PointContents( const vec3_t p, int passEntityNum );
 
 
 void SV_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod );
+
+//
+// sv_ids.cpp: the intrusion detection. The order is the one of its table of names and weights.
+//
+typedef enum idsEvent_e {
+	IDS_OOB_UNKNOWN,
+	IDS_OOB_SIZE,
+	IDS_RCON,
+	IDS_OOB_FLOOD,
+	IDS_BAD_CHALLENGE,
+	IDS_BAD_MESSAGE,
+	IDS_BAD_COUNT,
+	IDS_BAD_ACK,
+	IDS_LOST_COMMANDS,
+	IDS_FRAGMENT,
+	IDS_USERCMD,
+	IDS_CMD_FLOOD,
+	IDS_DOWNLOAD,
+	IDS_DOWNLOAD_PATH,
+	IDS_TEXT_BREAK,
+	IDS_TEXT_PATH,
+	IDS_TEXT_BINARY,
+	IDS_USERINFO,
+	IDS_NUM_EVENTS
+} idsEvent_t;
+
+void		SV_IDS_Init( void );
+void		SV_IDS_Shutdown( void );
+qboolean	SV_IDS_Blocked( const netadr_t *from );
+void		SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const char *detail );
+void		SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo );
+
+#ifdef VISIONJK_IDS_TEST
+// sv_idstest.cpp: the test server that misbehaves on purpose (visionjkded-idstest only)
+void		SV_IDSTest_Init( void );
+const char	*SV_IDSTest_SystemInfo( const char *info );
+int			SV_IDSTest_DownloadSize( int size );
+void		SV_IDSTest_Unasked( client_t *cl, msg_t *msg );
+#endif
+
+// sv_tv.cpp: the TV of the server, a spectator in no slot that records what it sees
+void		SV_TVInit( void );
+void		SV_TVFrame( void );
+void		SV_TVStop( const char *why );
+void		SV_TVLevelEnd( void );
+client_t	*SV_TVClient( void );
+int			SV_TVGamestate( byte *out, int outSize );
+// server/web/sv_web_tv.cpp: the viewers of the TV on the web host (GET /tv)
+int			SV_WebTVViewers( void );
+qboolean	SV_WebTVWaiting( void );
+void		SV_WebTVSend( const byte *record, int len, qboolean full );
+void		SV_WebTVResync( void );
+void		SV_WebTVGreet( void );
+int			SV_SendTVSnapshot( client_t *tv, const playerState_t *ps, qboolean follow, qboolean full, byte *out, int outSize, int *sequence );	// sv_snapshot.cpp
+void		SV_CreateGameStateMessage( client_t *client, msg_t *msg, int clientNum );	// sv_client.cpp
+
+// sv_voice.cpp: the voice chat on the UDP port of the game
+void		SV_VoiceInit( void );
+qboolean	SV_VoicePacket( const netadr_t *from, msg_t *msg );
+void		SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length );
+
+extern	cvar_t	*vs_antiWallhack;		// sv_snapshot.cpp
+
 // mins and maxs are relative
 
 // if the entire move stays in a solid volume, trace.allsolid will be set,

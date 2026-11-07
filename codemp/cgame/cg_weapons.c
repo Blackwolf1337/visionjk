@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -825,6 +826,11 @@ void CG_AddViewWeapon( playerState_t *ps ) {
 		return;
 	}
 
+	// VisionJK: the water gun in place of the weapon while it sprays (toys/cg_water.c), the snowball while it is held
+	if ( CG_WaterViewGun() || CG_SnowballViewBall() ) {
+		return;
+	}
+
 	// drop gun lower at higher fov
 	if ( cg_fovViewmodelAdjust.integer && cgFov > 90 )
 		fovOffset = -0.2f * ( cgFov - 90 );
@@ -1387,7 +1393,9 @@ and the previous weapon do not change the weapon, they move the prop along the b
 ===============
 */
 static qboolean CG_PhysgunWheel( qboolean away ) {
-	if ( !cg.snap || !(cg.predictedPlayerState.stats[STAT_CARRY] & CARRY_GUNHOLD) || cg.predictedPlayerState.weapon != WP_STUN_BATON )
+	const int weapon = cg.predictedPlayerState.weapon;
+
+	if ( !cg.snap || !(cg.predictedPlayerState.stats[STAT_CARRY] & CARRY_GUNHOLD) || ( weapon != WP_STUN_BATON && weapon != WP_CONCUSSION ) )
 		return qfalse;
 	trap->SendConsoleCommand( away ? "+button14\n-button14\n" : "+button15\n-button15\n" );
 	return qtrue;
@@ -1868,6 +1876,9 @@ void CG_FireWeapon( centity_t *cent, qboolean altFire ) {
 	// mark the entity as muzzle flashing, so when it is added it will
 	// append the flash to the weapon model
 	cent->muzzleFlashTime = cg.time;
+	if ( cent->currentState.number == cg.predictedPlayerState.clientNum ) {
+		CG_ScreenFxFired( ent->weapon );
+	}
 
 	if (cg.predictedPlayerState.clientNum == cent->currentState.number)
 	{
@@ -2041,6 +2052,10 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	// JA+ client plugin: no impacts while in a separated private duel
 	if ( CG_JPInSeparatedDuel() )
 		return;
+	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
+	// VisionJK: into standing water of the water gun (toys/cg_water.c), explosives harder
+	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
+		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
 
 	switch( weapon )
 	{
@@ -2153,6 +2168,7 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 	// JA+ client plugin: no impacts while in a separated private duel
 	if ( CG_JPInSeparatedDuel() )
 		return;
+	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
 
 	/*
 	// NOTENOTE Non-portable code from single player
@@ -2605,7 +2621,8 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 	}
 
 	if (cent->ghoul2 && cent->ghoul2weapon != CG_G2WeaponInstance(cent, ps->weapon) &&
-		ps->clientNum == cent->currentState.number) //don't want spectator mode forcing one client's weapon instance over another's
+		ps->clientNum == cent->currentState.number && //don't want spectator mode forcing one client's weapon instance over another's
+		!CG_WaterHolding(ps->clientNum) && !CG_SnowballHolding(ps->clientNum)) // VisionJK: not while a toy is in the hand
 	{
 		CG_CopyG2WeaponInstance(cent, ps->weapon, cent->ghoul2);
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, ps->weapon);

@@ -7,49 +7,296 @@ which is OpenJK 260c59c2 plus that one commit, the same base this tree starts fr
 
 | File | Content |
 |------|---------|
-| `codemp/game/g_webadmin.c` | HTTP server, JSON state, player actions, entity editor, chat lines |
+| `codemp/game/webadmin/g_webadmin.c` | the HTTP server: connections, which request goes where, what the game calls |
+| `codemp/game/webadmin/wa_http.c` | buffers, answers, headers, the login and its throttle, form values |
+| `codemp/game/webadmin/wa_state.c` | `/api/state` |
+| `codemp/game/webadmin/wa_actions.c` | player and server actions, the bans |
+| `codemp/game/webadmin/wa_entities.c` | the entity editor, the reload of placed entities |
+| `codemp/game/webadmin/wa_assets.c` | the map, the files of the game, the lists to pick from |
+| `codemp/game/webadmin/wa_fs.c` | the file manager and the server config |
+| `codemp/game/webadmin/wa_settings.c`, `wa_settings_table.h` | the tab Settings: the form of the cvars, saving them, the cleanup view. The table says group, kind, limits and one line of text for 336 cvars |
+| `codemp/game/webadmin/wa_cfgedit.c`, `wa_cfgedit.h` | reads a config file the way the console does and changes or takes out single statements (unit test `tests/vjk/cfgedit.cpp`) |
+| `codemp/game/webadmin/wa_perf.c` | `/api/perf` |
+| `codemp/game/webadmin/wa_log.c` | the chat lines and the log of the game |
+| `codemp/game/webadmin/wa_routes.c` | the route of the bots |
+| `codemp/game/webadmin/wa_local.h` | what those files share |
+| `codemp/game/webadmin/page/` | the page: a template, a style sheet and its script files |
 | `codemp/game/webadmin/index.html` | the page of JKAdmin, with a chat box added |
 | `cmake/Modules/EmbedFile.cmake` | turns the page into `webadmin_html.h` in the build directory |
+| `cmake/Modules/ExtractQuaked.cmake` | collects the entity definitions of the game code for the editor |
+| `cmake/Modules/ExtractSpawnKeys.cmake` | collects the keys the spawn function of every class reads, for the completion of the editor |
 
 The page is compiled into `jampgame`, the server needs no extra files and no extra library (`ws2_32` on Windows).
 
 ## Turning it on
 
-The panel only starts when a password is set. In the server config:
+The panel starts when it has an account and a port. On the console of the server:
 
 ```
-seta g_webPassword "something long"
-seta g_webPort 8080
-seta g_webBind ""
+webuser add admin owner
+```
+
+prints a password once. In the server config:
+
+```
+seta vs_webPort 8080
+seta vs_webBind "0.0.0.0"
 ```
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_webPassword` | empty | password of the panel. Empty: the panel is off |
-| `g_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
-| `g_webBind` | empty | IPv4 address to listen on. Empty: 127.0.0.1 only. Set `0.0.0.0` to reach it from the network |
-| `g_webRoot` | empty | folder with an `index.html` that is served instead of the built in page, for working on the page |
+| `vs_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
+| `vs_webBind` | 0.0.0.0 | IPv4 address to listen on. `0.0.0.0` or empty: every interface, the panel is reached from the network. `127.0.0.1`: this machine only. A value that is no address: 127.0.0.1, with a line in the log |
+| `vs_webProxy` | empty | the IPv4 addresses of the reverse proxies in front of the panel, separated by blanks or commas. Then only those addresses are let in, see "Behind a reverse proxy" |
+| `vs_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
+| `vs_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
+| `vs_liveView` | 0 | 1: the live view below `/live/` is open to everybody without a login, see "The live view". It opens the port also without an account. Latched |
+| `vs_webTVPage` | empty | the address of the page of the browser client for the page TV, like `https://tv.example.org/?tv`. Empty: the host of the panel with the port `vs_clientWebPort` and `?tv`. Needed behind a reverse proxy, or when the panel comes over https (a page over https can not show a frame over plain http) |
+| `vs_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
-The first three are latched, they take effect at the next map start. Open `http://server:8080/` and log in with
-any user name and the password (HTTP basic auth).
+Port and bind are latched, they take effect at the next map start. Open `http://server:8080/` and log in.
+
+## Accounts and logging in
+
+`wa_auth.c`, `wa_totp.c`, the page of the login is `page/login.html`. Since 2026-10-11. Before that the panel
+had one password for everybody, which the browser sent with every request (HTTP basic auth).
+
+| Role | May |
+|------|-----|
+| moderator | look at the game, and everything that is done to a player: kick, ban, team, sleep, teleport and the like, the bans |
+| admin | also the editor, the clips, the textures, the routes, a controlled player, change the map, add bots, make a player an admin of the game, read the log, the console and what the intrusion detection wrote down, make one-time codes for the three ranks of JA+ |
+| owner | also run commands on the console, the server config, the file manager, the accounts, one-time codes for the rank with every right |
+
+The page does not show what a role may not use, and the server refuses it whatever the page shows
+(`WA_RouteRole`, and for the actions `WA_ApiAction`).
+
+- An account is a name, a role and a password. The password is kept as an Argon2id hash (12 MiB, three passes,
+  a salt of 16 bytes) in `webadmin_users.dat` of the game folder. The login (`POST /api/login`) hashes on a
+  thread of its own beside the game, so no frame waits for Argon2id, and the answer comes when the hash is
+  there. One password is hashed in a second for the whole server at most, a second try at the same time is told
+  to come again ("busy").
+- `webuser` on the console of the server lists the accounts. `webuser add <name> <moderator|admin|owner>`,
+  `webuser reset <name>` (a new password, the second step and the token off, the sessions closed),
+  `webuser role <name> <role>`, `webuser token <name>` (a token for a script, shown once),
+  `webuser remove <name>`. An owner does the same on the Account tab. A password the server makes is shown once
+  and meant to be changed. The first account opens the port right away, no new map is needed.
+- A login gives a session: 32 random bytes in a cookie (`HttpOnly`, `SameSite=Strict`, `Secure` behind a proxy
+  that speaks HTTPS). It ends after 30 minutes without a request and after 12 hours at the latest. The server
+  keeps the SHA-256 of the cookie, also over a change of the map (`webadmin_sessions.dat`). A page whose
+  session ran out loads the login again.
+- The second step (Account tab, "Set up"): the server makes a secret, an authenticator app scans it as a QR
+  code or a password manager takes its `otpauth://` address, and a first code switches it on. From then on the
+  login asks for the code of six digits (RFC 6238, SHA-1, 30 seconds, the step before and after count too, no
+  code twice). Eight recovery codes are shown once, each opens the account one time.
+- A script gets a token of its account (Account tab): `curl -H "Authorization: Bearer <token>" .../api/state`.
+  It may do what the account may and never has the password.
+- A browser can log in with a key in place of a password: the page of the login makes an Ed25519 key the
+  browser can not hand out, its public line goes into `admin_keys.txt` of the game folder behind a rank (the
+  file of the login in the game, see server.md), and the browser signs what the server asks. `rcon` is an
+  owner, `council` an admin, `knight` and `instructor` a moderator. Browsers only do that on HTTPS (or on the
+  machine itself), and not all of them know this kind of key: where one does not, the page does not offer it.
+- Wrong passwords make an address wait (five, then 30 seconds that double). They do not make the account wait:
+  anybody who knew the name of an account ("owner" for the first one) could keep its owner out that way. A wrong
+  code of the second step does make the account wait (five, then 30 seconds that double up to five minutes),
+  because who gets that far has the password. Every login and every wrong one is in the security log with the
+  address and the account.
+- A one-time code for the game (Account tab, an admin and up): for an admin in the game whose client can not
+  log in with a key. He types `amlogin <code>` within a minute, it works once.
+
+## Behind a reverse proxy
+
+The panel speaks plain HTTP. On a network that is not your own it belongs behind a reverse proxy that speaks
+HTTPS, and it should never be reachable from the internet without one: a session cookie that crosses the
+network in the clear can be taken along.
+
+```
+seta vs_webBind "0.0.0.0"          // or the address of the interface the proxy reaches
+seta vs_webProxy "192.168.0.20"   // the address the proxy connects from
+```
+
+`vs_webProxy` is a list of IPv4 addresses, separated by blanks or commas. A host whose own nginx hands out the
+live view and whose panel sits behind another proxy names both:
+
+```
+seta vs_webProxy "127.0.0.1 192.168.0.20"
+```
+
+With `vs_webProxy` set only those addresses are let in, every other connection is closed at once. Each of them
+says who the visitor is: `X-Real-IP`, else the last entry of `X-Forwarded-For`. That address gets the wait after
+wrong logins and stands in the log. A word that is no IPv4 address lets nobody in and is named in a yellow line
+at start. With `X-Forwarded-Proto: https` the cookie of a session is marked `Secure`.
+
+Without `vs_webProxy` every visitor behind a proxy is the address of the proxy, so five wrong logins of anybody
+would lock everybody out. The routes of the live view (`/live/...`) are answered before the wait after wrong
+logins, so wrong tokens sent through the proxy of the live view do not close the live view for everybody.
+
+Every page of the panel (the index and the login) is sent with a `Content-Security-Policy` that names the SHA-256
+of each of its inline scripts (`script-src`), and has `object-src 'none'` and `base-uri 'none'`. The hashes are
+made of what is sent, so a page from `vs_webRoot` gets its own.
+
+Nginx Proxy Manager: a proxy host for the name of the panel, scheme `http`, the address and port of the game
+server, "Block Common Exploits" on, "Websockets Support" on (the socket of the page, see "The socket of a page";
+without it the page asks over HTTP). On the SSL tab a
+certificate, "Force SSL", "HTTP/2 Support" and "HSTS Enabled". It sends `Host`, `X-Real-IP`,
+`X-Forwarded-For` and `X-Forwarded-Proto` by itself, nothing has to go into the Advanced tab. An access list
+(a second password of the proxy, or addresses that may come) in front of it does no harm. Opening the port of
+the proxy to the internet is a rule of the router and the firewall, which this text does not change.
+
+## The socket of a page
+
+Not in JKAdmin. The page and the live view ask for nothing again and again while their WebSocket is open: the
+server pushes. `GET /api/stream` of the panel (with the login of the page, and only from a page of the same
+address: `Origin` is checked) and `/live/stream` of the live view are WebSockets (RFC 6455, the frames of
+`shared/web/web_ws.c`, which the web host of the dedicated server has its sockets with too).
+
+What the server sends is a text message: a line with its name and the HTTP status, then the answer as a GET of
+the same address has it.
+
+- `state 200` and `/api/state` every 50 ms (`/live/api/state` for the live view). The server asks for the socket
+  with what its page has after the last one (`WA_StateNext` in `wa_state.c`), so only what changed comes again:
+  the items when their list changed, the part of a player that stays when it changed, the effects and events
+  since the last one. The pages of the live view all have the same after their first push, they are sent one
+  answer that is put together once.
+- What the page subscribed to, under the name it gave, now and whenever the answer is another one (asked every
+  250 ms, the entity list every second): the texture swaps, the chat, the entities, the clips, the log, the
+  console, the intrusion detection. The live view may subscribe to the texture swaps alone.
+
+The page sends text messages: `state hud=<client>` (the HUD of the player it looks through), `sub <name>
+<path>?<query>` (the question it would have asked, which the server keeps and asks), `unsub <name>`. A part of
+the page subscribes again with what it has after every answer (the chat with the number of the last line, the
+log from where its text ended).
+
+A page that does not read is not pushed more than 512 KB: what does not fit is left out, the state is then
+asked with what the page has. The login is asked again every second with the cookie of the upgrade, a page that
+is logged out loses its socket. The panel takes 96 connections, the sockets of the live view 64 of them at
+most, so that they never take the last ones from the panel. The live view lets its socket go after ten seconds
+of not being seen.
+
+Without a socket (a game module from before it, a reverse proxy that does not pass WebSockets on) everything is
+asked over HTTP as before, and the socket is tried again, later each time. Behind Nginx Proxy Manager the proxy
+host needs "Websockets Support" on; behind nginx a location with `proxy_http_version 1.1` and the `Upgrade` and
+`Connection` headers passed on.
+
+## The live view
+
+Not in JKAdmin. With `vs_liveView 1` the port of the panel also answers below `/live/`, to everybody and read
+only: the map view of the panel without the panel, for the start page of a website. jka.vision has it behind
+its headline (nginx of the host passes `/live/` on and keeps the files, see `deploy/nginx.conf` of the website).
+
+| Address | What |
+|---------|------|
+| `/live/live.js` | the script: the drawing files of the page and `js/live-boot.js`, put together from `page/live.js` as the page is from `index.html` (with `vs_webRoot` from disk at every load) |
+| `/live/stream` | the WebSocket of the live view, see "The socket of a page": the state below twenty times a second, and the texture swaps when they change |
+| `/live/api/state` | what `/api/state` has, without the address, the arrival and the JA+ client plugin of a player, without his JA+ admin state, without what the server prints, and without the view and the HUD of a player |
+| `/live/api/map?name=` | the map that runs, only under its own name, written exactly as the server has it (no other case), so a proxy cache keeps one file per map |
+| `/live/api/file?name=` | what `/api/file` hands out, without sounds and music |
+| `/live/api/anims`, `/live/api/shaders`, `/live/api/remaps` | as below `/api/` |
+| `/live/api/list?kind=` | `fxindex`, `events` and `mods` only |
+
+Everything else below `/live/` is 404, also while `vs_liveView` is 0, and nothing below `/live/` takes a POST.
+The original game's files of the map that runs (textures, models, shader scripts, the map itself) go to every
+visitor this way: that is what the view is drawn with.
+
+A website has a canvas `#gl` and a box `#labels` for the names, sets `window.VJK_LIVE` and then loads
+`/live/live.js`:
+
+| `VJK_LIVE` | Meaning |
+|------------|---------|
+| `base` | where the questions go, `/live/` when it is not given |
+| `paused` | true while the view is not seen: nothing is drawn, and the server is asked once in two seconds |
+| `side` | degrees the camera looks past the spot it watches, so that the spot is off the middle |
+| `onState` | called after every answer with `{ map, players, ready, error }`: `players` counts who plays (no spectators), `ready` says the map is drawn as the game draws it |
+
+The camera goes round the spot where the most players are close together, at the height of a man and a half,
+keeps in front of the walls and goes round faster while a wall holds it close. It looks for another spot every
+15 seconds or when the one it watches is gone, and a spot far from the last one is a cut. A name stands over a
+player only while the camera sees his head and he is no farther than 1500; the panel names everybody, through
+walls. Health and shield are not shown.
 
 ## What the page does
 
+- Two modes, switched in the top bar and kept by the browser. Administration: the players in the side panel and the
+  map drawn the way the game draws it (see below). Editor: the tools World, Physical props, Clips, Textures, Routes
+  and Map info in the side panel, the plain view of the map (an image times the light) and its debug views: a marker
+  at every entity, the triangles of the map as lines, the light alone or the texture alone. The tools wrap onto as
+  many lines as they need.
+- Pages of the server: TV, Settings, Files, Log, Bans, Performance and Account are
+  in a row of their own under the top bar, with "Map" at its left to go back to the map. The address names the
+  page: `#/tv`, `#/config`, `#/files`, `#/log`, `#/bans`, `#/load`, `#/account`, and `#/players` or an editor
+  tool (`#/world`, `#/models`, `#/clips`, `#/remaps`, `#/routes`, `#/mapinfo`, which open the editor). A reload or a
+  link comes back to that page. A page of the server stays open when the mode is switched. Bans, Performance and
+  Account take the whole width (their pane is at most 760 px wide, in the middle) and the map is not shown behind
+  them.
+- Page TV: the TV of the server (a spectator in no slot who follows the players, see server.md, "The TV of the
+  server") in the client for the browser, in a frame (`js/tv.js`, `#/tv`). The page starts nothing by itself: it
+  says from which address the client comes and that it loads the game files first (more than a GB the first time,
+  then from the storage of the browser), and the button Watch starts it. Leaving the page empties the frame, which
+  stops the game in it. The tab is there only when `/api/me` has `"tv": {"port": N, "page": "..."}`: `port` is
+  `vs_clientWebPort`, 0 when the server has no web host, `vs_tv` is 0, or the web host hands out the TV alone
+  (`vs_clientWebTVOnly 1`) and `vs_webTVPage` names no page of the client elsewhere, and `page` is `vs_webTVPage`.
+  Every role sees it.
+- Command palette: the button "Commands Ctrl K" in the top bar, or Ctrl+K (`js/palette.js`). It lists the pages, the
+  two modes, the tools of the editor, Add bot, Change map, Gravity (with the current value), the side panel, the keys
+  of the map, Fly, Screenshot and, while a player is selected, what his panel can do to him, named
+  "<button> (<player>)". Kick and Ban are not in it, they want a second click. A command that wants a value takes
+  the words after its name ("map mp/ffa3", "change map mp/ffa3", "bot jan", "gravity 600"). For maps and bots it
+  offers the names the server has (`/api/list`), those first, then the words as typed. Up and Down choose, Enter
+  does it, Escape or a click beside it closes it. What the role may not use is not offered, the server refuses it
+  anyway.
 - Players: list, health, armor, size, team, god mode, kill, kick, ban, follow, first person view with the HUD.
-  Right click on the map teleports the selected player.
+  Right click on the map teleports the selected player. The actions are in groups that fold: Change (health, armor,
+  size, team, gravity), Watch and steer (follow, first person, control), Powers (god mode, noclip, protect, empower,
+  merc, ghost, mindtrick, force alt dim), Punish (slap, kill, sleep, freeze, silence, deny vote, kick, ban), Fun
+  (poop, flatulence, schizophrenia, disorient) and JA+ admin (show MOTD, rename, message, admin rank). Change,
+  Watch and steer and Punish are open, the others folded, and the page keeps which are open
+  (`localStorage` `wa.sect.<name>`).
 - World: all entities with their spawn keys. Edit keys and apply, drag or right click to move, rotate, duplicate,
   delete, place new ones with a model preview, export the layout as `.ent`.
+- The tools of the editor on top of that: what a class is, with its keys and its spawnflags by name, read from
+  the game code. The box of every entity and the lines to what it fires. Position and angles as numbers, a grid,
+  moving with keys, putting on the floor, undo and redo. How much of what the engine limits is in use. The
+  server refuses to place what would end it.
 - JA+ admin commands for the selected player: sleep and wake, protect, empower, merc, mindtrick, ghost, silence
   and unsilence, force and unforce the alternate dimension, deny vote, freeze, slap, show the MOTD, rename, a
   message on his screen (ampsay) and his admin rank (admGrant). A button is lit while its state is on.
-- Chat, at the bottom of the side bar: what the players say, with the time, the team of the speaker and a tag for
+- Chat, at the bottom of the side panel in the administration, beside the map (not on the pages of the server, not
+  in the editor): what the players say, with the time, the team of the speaker and a tag for
   team chat, tells (with the receiver), clan chat and admin chat. Below it the field for a message to all players.
   A click on the title folds it away, new lines are counted there meanwhile.
-- Gravity: a field in the top bar for everybody (`g_gravity`, 800 is normal, the field shows the current value),
-  and a field in the player panel for a gravity only that player has. Empty there means the gravity of the server.
-- Top bar: add bots, change map.
+- Gravity: a command of the palette for everybody (`g_gravity`, 800 is normal, the palette shows the current
+  value), and a field in the player panel for a gravity only that player has. Empty there means the gravity of the server.
+- Add bot and Change map are commands of the palette. The three forms they were in the top bar (Add bot, Change map,
+  Set gravity) are gone.
+- The box with the keys of the map is hidden. The button "?" at the bottom right of the map (beside Screenshot and
+  Fly) or the key ? shows it, and the page keeps that (`wa.help`).
+- Settings: every cvar of the server as a field, see "The tab Settings".
 
 ## How it works
+
+The page is kept as a template, a style sheet and one script file for each part of it
+(`codemp/game/webadmin/page`, its `README.md` says what is where). The build puts them together into the one
+file a browser gets (`cmake/Modules/BundlePage.cmake`) and compiles that into the game module, so nothing
+changed for the browser when the page was split: one request, one script.
+
+The code of the panel in the game module is ten files with one header (`wa_local.h` lists them). It was one
+file of 4,000 lines: the functions moved as they were, the ones another file calls lost their `static`, and
+every variable stayed with the one file that owns it. Where a file needed a variable of another it asks
+through a function now (`WA_Running`, `WA_GravityIsSet`, the `Frame` and `Shutdown` of the entities and the
+assets).
+
+The three longest functions were cut up as well, each into the parts it already had: `WA_ApiState` (320
+lines) into one function for each list of the answer and for the two parts of a player, `WA_ApiAction` (265
+lines) into what is done to the server and what is done to a player, and `frame()` of the page (245 lines)
+into one function for each thing a frame draws.
+
+What was checked for the split, on Linux: the page put together by the build and the one the server puts
+together for `vs_webRoot` are the page as it was before the split, byte for byte (322,968 bytes). Of the 3,900
+lines of the one C file all but four are in the new files, once each (the four: a title and a comment that
+were no longer true), and the files compile without a warning. After each step the checks of the panel ran
+against a private server: 25 scripts with about 230 checks, every route once by hand, the file manager with a
+file written, read, renamed and deleted, and the 20 actions of `/api/action`. The answer of `/api/state` was
+compared before and after by its keys, their order and the kinds of its values, not byte for byte, since it
+changes with every frame. Not built: Windows.
 
 `WebAdmin_Frame` is called at the start of `G_RunFrame`. All sockets are non-blocking, a request is read, answered
 and closed without ever waiting, so a slow browser can not hold up the game. At most 32 connections at once, an
@@ -68,27 +315,89 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs and items as JSON. The page polls this |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. An item is `[entity, its place in the list of the items of the game (the `index` of `/api/classes`), eFlags, x, y, z, pitch, yaw, roll]`: every item the clients are sent, also the ghost of a weapon that was taken. An NPC has, besides its name, model, health and place, its `class`, `weapon`, `angles`, `vel` and `f` (the frames and speeds as of a player, eFlags, eFlags2, powerups, the flips, the entity it stands on); for a vehicle the model is the one of its vehicle file and `skin` the skin of that file. A player is `id`, `r` (the number of what stays the same of him), `s` (that part: name, address, team, flags, sabers, model; left out for a page that names the number with `p=<id>.<r>-<id>.<r>`), `f` (35 numbers: health, armor, score, ping, weapon, force, flags 1 dead 2 saber on 4 saber in flight, saberHolstered, saber entity, origin, velocity, yaw, pitch, legs and torso animation, view height, ammo, and from the 22nd on what a client draws him by: the frame the server has his legs at and how fast it runs in frames per 50 msec, the same of his torso (-1 and 0 while the skeleton is not in the animation the row names), `eFlags`, `eFlags2` and `powerups` of his entity, the force powers that are on, `weaponstate`, `saberMove`, the flips 1 legs 2 torso, the entity he stands on, `brokenLimbs`, the saber style he fights in) and `b` (for every blade its length now, where it starts and the way it points). `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it, with two more for one that has them: the frame of its shaders (`EF_SHADER_ANIM`, else -1) and its `model2`. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, its speed along the three axes, pitch, yaw, roll, eFlags]` The effects: with `fx=<number>&fxs=<number>` the page says what it has, and `fx` (`rev` and a `list` of the entities that are effects: entity, index of the effect, state, delay and random part of its loop in msec, place, direction) and `fxSeq` with `fxPlay` (what the game played once in the last two seconds: number, msec ago, kind 0 for an `effectTypes_t` or 1 for an index, which, place, direction) are sent only when they differ With `hud=<client>` the answer has `hud`: what that client draws his HUD and his own view from, the part of his player state the rows do not have (`stats`, `pers`, `powerups`, `ammo` and `forceLevel` as the arrays of the player state, `force`, `zoom`, `weapon`, `lock`, `fuel`, `duel`, `pm`, `damage`, `angles` as short rows, and single values such as `fallingToDeath`; the times are the ones of the game and `now` is the time they are measured against). The page asks for it while it looks through the eyes of a player. With `evs=<number>` the answer has the events of the game the page does not have yet (`evSeq` and `ev`: number, msec ago, entity, event, parameter, place, origin2, angles, and of the entity that carried it otherEntityNum, otherEntityNum2, weapon, eFlags, time, time2, clientNum, owner); without it only `evSeq`. `/api/list?kind=events` names the events in the order of their numbers. `bodies`: the bodies players left behind when they came back, each as `[entity, the client it was, x, y, z, yaw, the animation he died in, weapon, msec since he came back, eFlags, scale]`. `leader`, `scores1`, `scores2`: who leads and the two best scores as the clients are told them (the config strings of `CalculateRanks`). |
 | `GET /api/map` | the `.bsp` of the current map |
-| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin) |
+| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` Also an effect file `effects/<name>.efx`, as text, and what the HUD of the game is made of: below `ui/` the menu files, their lists (`.txt`) and images, below `fonts/` the fonts (`.fontdat` and the image of the glyphs), below `strings/` the texts (`.str`) |
+| `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
-| `GET /api/entities` | the entities with their keys |
-| `GET /api/export` | the entities in `.ent` format |
+| `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has. `used`: what fired what in the last ten seconds, each as `[number of the event, milliseconds ago, entity that fired, entity that was fired]`, the first entity is the world (1022) for what the panel fired |
+| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects`, `maps` or `textures`, with the endings of `ext` (`.wav,.mp3`) `kind=fxindex`: the effects the map has in use, in the order of the numbers the state feed names them by |
+| `GET /api/bans` | the addresses that are banned, as `addip` and `removeip` take them (a `*` for a part that matches anything) |
+| `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
+| `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`indexes` as `3,5,9`, or one `index`), flags (`indexes`, `flags`), move (`indexes`, `dx`, `dy`, `dz`), save, revert (the route as the start of the map loaded it) or default (the route of the map's own files) |
+| `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
+| `GET /api/console?from=` | the console of the server from a place on, as `/api/log` gives the log: read from `qconsole.log` of the server folder. The first request sets `logfile 2` when it is 0 |
+| `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
+| `GET /api/clips` | the clip editor: `off` (the numbers of the clip brushes of the map the server does not mind), `walls` (the blocking walls, each with the number of its entity and its two corners), `dirty` (changed since the last save) |
+| `POST /api/clip` | `op` off or on (`brush`: numbers of clip brushes), wall (`x1 y1 z1 x2 y2 z2`, with `id` in the place of that wall), delete (`id`), save (writes `wallblocks/<map>.cfg`) or revert (what that file has) |
+| `GET /api/remaps` | the texture swap: `remaps` (each `old`, `new` and `own`: made by the panel or read from the file of the map, not by an entity of the map), `told` and `toldRoom` (all the characters a client is told when it connects, and how many of them the swaps may bring that to), `used` and `budget` (the characters the swaps take of what a client is told when it connects), `dirty` |
+| `POST /api/remap` | `op` set (`old`, `new`), clear (`old`), save (writes `remaps/<map>.cfg`) or revert (what that file has) |
+| `POST /api/control` | a player moved from the page. `op` start (`id`), input (`id`, `f`, `r`, `u` from -127 to 127, `buttons`, `yaw`, `pitch`), goal (`id`, `x`, `y`, `z`: he walks there) or stop. The answer names who is held, -1 for nobody |
+| `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
+| `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
+| `GET /api/classkeys` | the keys the game code reads, as text: a line for a class with its name and, each after a tab, `key\|kind\|default`. The first line (`*`) is the keys every entity takes, `*item` the ones of an item |
+| `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
-| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel |
+| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` use with `id` fires the entity. `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one. `op` check with `kv` spawns nothing and answers what a spawn of these keys would be refused for (`ok`, `message`, and `key` when a key is what is missing): the page asks it for its drafts. A refused spawn answers with `key` the same way With `class=<classname>` an operation on an `id` is refused when the entity of that number is of another class: the page says what it takes the entity for. |
+| `POST /api/layout` | `op` save keeps the map as it stands for every start of it (`layouts/<map>.txt` in the game folder), `op` forget removes that file. `/api/entities` has `layout`: is one saved, is the map as it has it, and how many entities it would add and take away now |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
+| `GET /api/settings` | the Settings form, owner only: `file` (the config file it edits), `flags` (whether the flags come from the engine), `categories` and `cvars`, each `{name, cat, type, min?, max?, opts?, desc?, def, value, file?, local?, apply}` |
+| `POST /api/settings` | the body is lines `name<tab>value`. The answer has one result for each cvar: live, map, restart, or refused with the reason |
+| `GET /api/settings/cleanup` | the Cleanup view, owner only: `unused` (user made cvars no code used for a month, with the line of `server.cfg` or "only on the server"), `overridden` (every statement of a cvar but the last one in the file) and `rev` |
+| `POST /api/settings/cleanup` | `rev` and lines `line<tab>name<tab>unset`: takes those statements out of the file. A file that changed since the listing is refused |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
 | `GET /api/fs/list?root=&path=` | the files of a folder. `root` is `home` (the game folder in the home path of the server) or `install` (the one of the installation, read only) |
 | `GET /api/fs/get?root=&path=[&text=1]` | a file as a download, or as UTF-8 text for the editor |
 | `POST /api/fs/put?path=&offset=[&last=1][&text=1]` | the body is the next piece of a file (a request is 64 KB at most). `last=1` puts the file in its place |
 | `POST /api/fs/delete?path=`, `/api/fs/rename?path=&to=`, `/api/fs/mkdir?path=` | in the home path only |
 
+## The tab Settings
+
+`wa_settings.c`, `wa_settings_table.h`, `wa_cfgedit.c`, `page/js/settings.js`. The tab was "Config". It has a switch
+Form, Text and Cleanup, which the browser remembers. Text is the editor of `server.cfg` as it was (`/api/config`).
+Owner role only, as `/api/config`.
+
+Form: every cvar of the server is a field of its kind: text, a number with limits, on or off, a list to choose
+from, a set of bits with a box for each bit, or a password with a button Show. The fields are in groups (Server,
+Network, Game type and more), there is a search, and Save and Discard. The group, kind, limits and one line of text
+of a cvar are in `wa_settings_table.h`, written for 336 cvars. Every other cvar of the table of the game module
+shows under Other. Cvars that are read only are left out.
+
+Save sends `POST /api/settings` with a line `name<tab>value` for each changed cvar. The server checks every value:
+no quote, no control character, a number is clamped to its limits, a choice must be in the list, a switch is 0 or
+1. Then it changes `server.cfg`: the last statement that sets the cvar is changed in place (the comment and the rest
+of the line stay), and a cvar the file does not set gets a line `seta name "value"` in a block `// set by the web
+panel` at the end. The file is written once and the old one is kept as `server.cfg.bak`, as the text editor does.
+After that each cvar is set on the console as `set name "value"`, not through the Cvar_Set of the VM: that one skips
+the ROM and INIT checks and drops the server on a protected cvar like `sv_master1`. A `CVAR_INIT` cvar is only
+written to the file and answered "restart". A latched one takes effect with the next map and is answered "map". The
+answer of each cvar is live, map, restart, or refused with the reason (`g_gametype 99` and a value with a quote are
+refused). The log line names the cvars and never the values.
+
+Marks in the form: changed, next map, restart, not in file, `file: X` when the file has another value than the
+server now, `local.cfg: X` when `local.cfg` sets the cvar (the file of the owner the host service runs after
+`server.cfg`, `deploy/server-local.cfg` of the website) and will set it back at the next start, and the default.
+
+`wa_cfgedit.c` reads statements as the console does: `;` and a line break end one, quotes, `//` comments. Its unit
+test is `tests/vjk/cfgedit.cpp`.
+
+With an engine of this version the flags of every cvar come from the engine (`ext.Cvar_Flags`, used only when the
+ROM cvar `vs_gameImportExt` is 2). With an older engine the cvars of the engine get the marks of the table only.
+
+The view Cleanup lists two things. `unused`: the cvars the engine says no code used for a month (see client.md,
+"Cleaning up cvars"), with the line of `server.cfg` that sets them, or "only on the server" when they are not in the
+file. `overridden`: every statement of a cvar but the last one in the file, since only the last one counts. Marked
+lines are sent with `POST /api/settings/cleanup`, together with the `rev`, a hash of the file as it was listed. A
+file that changed since is refused and the page lists again. A line whose statements all go is removed with its
+comment, else only the statement and its `;` go. `server.cfg.bak` is kept, and for the unused ones the server runs
+`cvar_cleanup remove` as well. The unit test is `tests/vjk/cvarseen.cpp` and `cfgedit.cpp`.
+
 ## Where it differs from JKAdmin
 
-In `g_webadmin.c` the player actions that would bypass JA+ state go through the JA+ code instead, each place
+In `wa_actions.c` the player actions that would bypass JA+ state go through the JA+ code instead, each place
 carries a `JA+` comment:
 
 | Action | JKAdmin | Here | Reason |
@@ -103,18 +412,1034 @@ Also changed:
 
 - The chat view is new: `WebAdmin_Chat`, `/api/chat` and the one line hooks in `g_cmds.c`, `g_japlus_chat.c`,
   `g_japlus_admin.c` and `g_svcmds.c`. In the page: the `#chat` block in the side bar with its style rules, the
-  script section "chat", and the say form moved there from the top bar. The chat section in `g_webadmin.c` and the
+  script section "chat", and the say form moved there from the top bar. The chat section in `wa_log.c` and the
   script section are marked "not in JKAdmin". The rest of the page is JKAdmin's.
 - A message typed in the panel is turned from UTF-8 into the one byte per character the game uses (Latin-1), so
   umlauts arrive. Characters the game does not have become `?`.
+- New: the modes Administration and Editor (`setAppMode` in the page). In the administration the map is drawn
+  with the shader scripts of the game, by a renderer of the page (script section "the shader scripts of the
+  game"): the page asks `/api/shaders` for the script files, reads them through `/api/file` and keeps the text of
+  every shader until a map uses it. A surface is drawn with the stages of its script, in the sort order of the
+  game: images, `animMap`, `clampMap`, `$lightmap`, `blendFunc`, `alphaFunc`, `depthFunc`, `depthWrite`,
+  `rgbGen` and `alphaGen` (const, wave, vertex, `lightingDiffuse`, `lightingSpecular`), `tcGen` (lightmap, environment), `tcMod` (scroll, scale, rotate,
+  stretch, transform, turb), `polygonOffset`, `sort`. A shader without a script is the lightmap times its image,
+  a surface without a lightmap is lit by its vertices, both as `tr_shader.cpp` makes them. The sky is the box of
+  `skyParms` around the eye and the stages of the sky shader as layers of clouds, as in `tr_sky.cpp`. The
+  lightmaps are taken as they are in the map, which is what the game shows with `r_overBrightBits 0`,
+  `r_mapOverBrightBits 0` and `r_gamma 1`, the defaults. See-through surfaces are drawn after the players and
+  the models. A surface is drawn from the side the game draws it from (`cull`, `setCull`): the front, unless
+  its script says the back or both. Seen from outside a room is open that way, as in the game when one leaves
+  the map: its walls and its ceiling face inwards. So the view from above shows who is in a building. A click
+  on the map goes through what is not drawn (`pickGround` with `oneSided`), a right-click from above lands
+  on the floor of the room and not on its roof. `deformVertexes` is done in the vertex shader (`setDeform`,
+  `buildSprites`): `wave` and `bulge` move a vertex along its normal, `move` shifts all of them, and the quads
+  of `autosprite` and `autosprite2` turn to the viewer as in `tr_shade_calc.cpp`, which is what makes the
+  flares of a map round lights and its chains chains from every side. Not done: the deforms `normal`,
+  `projectionShadow` and the text ones, the fog of a brush on a surface that is deformed, glow,
+  `surfaceSprites`, portals.
+  Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
+  left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
+  were checked by reading all 3365 shaders of the game through the parser. The picture was looked at in headless
+  Chromium on mp/ffa3, where every image a stage names loaded. It was not put next to a picture of the game.
+- New: the tools of the editor (script section "the tools of the editor"), each made of what the game code has.
+  - The entity definitions. A step of the build (`cmake/Modules/ExtractQuaked.cmake`) collects every `QUAKED`
+    comment of `codemp/game` into the module, `/api/classdoc` hands them out. The panel of an entity shows the
+    text of its class, a box for every spawnflag that has a name, and offers the keys the text names (and since
+    the completion of the keys many more, see below). A class
+    is drawn in the colour of its definition, and the class picker shows the first lines as a tip.
+  - Views, switched in the bar at the top left of the map: Volumes draws every entity as lines (a trigger or a
+    door with the real shape of its brushes, worked out from the planes of the map file, moved and turned as
+    the server says the entity is now, another one as the box its class is defined with), Links a line from an entity to every one
+    it fires (`target` to `targetname`), Clip the brushes of the map that stop players, NPCs, bots or shots
+    and are not seen in the game. What belongs to the selected entity is drawn through the walls, the panel
+    lists it with a click to go there.
+  - Moving: position and angles as numbers, a grid (1 to 64) for what the mouse places, Shift with the arrow
+    keys and Page Up or Down for a step of the grid, "To floor", "Focus". Page Up and Down alone move the camera
+    up and down.
+  - Undo and redo (Ctrl+Z, Ctrl+Y, 200 steps) for placing, changing and deleting. The server spawns an entity
+    anew with every change, so the history follows its number. An entity of the map that is deleted and taken
+    back is one of the map again (`map=1`). Deleting a whole class, or an entity without keys, empties the
+    history.
+  - The budget line: entities, models, sounds and effects in use against the limits of the engine, red from
+    90 percent on.
+  - The plain view shows a shader whose own name is no image with the image its script names for editors
+    (`qer_editorimage`), or the first one of its stages.
+- New: the page draws the models of `models` in both modes, on their way from where they were at the last poll:
+  the props of the Models tab, cubes, balls and what else is a model entity.
+- New: in the administration every model is drawn with the stages of its shaders too (`drawModelScripted`):
+  players and NPCs with the shaders of their skin, items, the weapons they hold, props. A surface whose shader
+  has no script is its image times the light of the place, as the engine makes it. The light of the place comes
+  from the light grid of the map file as in `tr_light.cpp`: the eight samples around the model weighed by how
+  near they are, without the ones inside walls, the ambient light times `r_ambientScale` (0.6) with the little
+  the engine adds for everything, the directed light and where it comes from. A map without a grid gives the
+  same light everywhere. Light styles that flicker and dynamic lights (a saber, a shot) are not in it. A
+  surface of a model that is see-through (a sort after the banners) waits until everything solid is drawn
+  (`lateModels`) and is then drawn in the order of its sort together with the see-through surfaces of the map,
+  the model first where both have the same sort, as the game sorts all of them together. Before that a model
+  drawn later behind such a surface wiped it out. Within one sort nothing is ordered by distance, the game
+  does not do that either. The colour of the team that the plain view lays over a player is left out here, the
+  game has none. The editor draws models as before.
+- New: values to pick from (`/api/list`). The Map field of the top bar offers the maps of the server and the
+  bot field its bots. In the key table of an entity a value field offers what fits its key: the class names for
+  `classname`, the targetnames there are for `target` and the other keys that fire, the effects for a key with
+  `fx` in its name, the NPC types for `NPC_type`, the maps for `mapname`, the music files for `music`. A value
+  that is a file is completed folder by folder: `noise` below `sound/`, `model` and `model2` below `models/`. The
+  field offers what is in the folder typed so far, a folder that is picked shows its own files next.
+- New: the tab Routes of the editor, the waypoints the bots walk along (`ai_wpnav.c`). The trail is drawn from
+  each waypoint to the next and to the others it leads to, faintly through the walls so that it is seen from
+  above. A click selects a waypoint. With Add on, a right-click on the map puts a new one there, behind the
+  selected one or at the end, with what a bot does there (walk, jump, duck, snipe or camp, goal, a flag).
+  Remove takes the selected one away, Save writes `botroutes/<map>.wnt` into the server folder. The server uses
+  the functions of the waypoint commands of the game (`bot_wp_add`, `bot_wp_rem`, `bot_wp_save`), and as with
+  those the bots stand still from the first change until the route is saved: which waypoint leads to which is
+  only worked out again by the save.
+- New: the fly camera, in both modes (the button at the bottom right of the map, or C). The camera of JKAdmin
+  looks at a point of the map from above. Flying, it is in the map: W A S D go along and across the line of
+  sight, Q and E down and up, the mouse turns the head, the wheel sets the speed, Shift is faster. Leaving it
+  puts the point the other camera looks at in front of where one was. Picking, placing and "Focus" work in both.
+- New: copy and paste in the World tab. Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them
+  where the mouse is on the map (on the grid, as high above the floor as the copied one was), Ctrl+D is the
+  Duplicate of the panel. Both go into the history of undo.
+- New: doors, lifts and everything else that is made of brushes and is an entity are drawn where the game has
+  them, in both modes (`movers` of `/api/state`, `applyMovers`, `moverPlaces`). The map file has such a
+  brush model at one place, the game moves it: before this a lift that rests at the bottom was drawn at the
+  top (on mp/ffa3 all six of them, 270 to 296 units too high), a door never opened and what was broken or
+  switched off stayed. The server lists what the clients draw as a mover (`CG_Mover`: linked, `ET_MOVER`,
+  not `EF_NODRAW`, not `SVF_NOCLIENT`) with place and angles from its trajectory, the page puts the surfaces
+  of the brush model there and moves them between two polls as it does with the players. A brush model no
+  entity shows is not drawn and a click goes through it, one that moved or turned is hit where it is
+  (`pickGround` takes the ray to where the map file has the model), so a right-click puts a player on a lift
+  that is up. In the editor the surfaces now follow the box of a brush entity that is moved or turned, and a
+  deleted one is gone at once. Limits: the fog of a brush is not drawn on one that moved, and a turn of more
+  than half a circle between two polls (a tenth of a second) is drawn the short way round.
+- New: the switch "Open" in the bar of the debug views of the editor. The plain view of the editor draws every
+  surface from both sides, so a map with ceilings is a closed box from above. With "Open" it draws the side
+  the game draws, a click goes through the rest, and entities can be placed into a room from above.
+- Changed: the bar at the top holds together in a narrow window. Below about 1000 px "Add bot" broke into two
+  lines and the fields at the right ran out of the window. Now what only tells goes first (the game type and
+  the time below 1240 px, the name of the server and of the panel below 1080 px), the fields get shorter, and
+  nothing wraps. Tried at 1440, 1280, 1100, 1000, 900 and 800 px (`steps_topbar.js`).
+- Changed: the bar of the debug views and the legend of the keys share the top of the map view (`#viewTop`).
+  The legend goes below the bar when both do not fit next to each other, they lay over each other before.
+- New: "Fire" in the panel of an entity (`op` use). It does to the entity what a trigger does that has it as
+  its target: a door opens, a lift goes up, a trigger fires its targets, something that breaks breaks. The
+  world stands in for the trigger, as with a `trigger_always`, so what only works on the player who fired it
+  (a teleporter, a give) does nothing. With several entities selected all of them are fired. It is not a
+  change of the map and no step of undo. The server refuses an entity without a use function, one that is
+  inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
+  The use functions of the game were read for this: every one that reaches into the client of what fired it
+  asks first whether there is one.
+- New: a trigger can be a box of its own (`InitTrigger` in `g_trigger.c`, the one change to a file of the game
+  for this). A trigger of the game is made of brushes of the map, so the editor could only place one in a
+  shape the map already had: a second teleporter the size of the first, where the first is. A trigger that
+  names no brush model and has the keys `mins` and `maxs` is now a box of that size at its origin, and it
+  works as any other: `trigger_multiple`, `trigger_once`, `trigger_push`, `trigger_teleport`, `trigger_hurt`
+  and the rest that go through `InitTrigger` (not `trigger_asteroid_field`, which asks for its brushes
+  itself). No map file is read differently: a trigger without a model ended the server before. Such a box
+  does not turn (a trigger takes its angles as the way it pushes) and only the server works it: a client
+  predicts its own way only through triggers that are brush models, so the push of a box comes with the next
+  snapshot instead of at once. In the editor "Place" gives a trigger class a box of 128 x 128 x 96 that stands
+  on the floor, the Volumes view draws it, and the panel of the entity has a "Box" row with its size (the
+  middle of the box stays where it is; for another middle the two keys are edited). A `trigger_push` and a
+  `trigger_teleport` are placed with a `target_position` of their own, as one step: 256 above for the push,
+  192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
+  frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
+  box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the renderer of the page is measured against the game, and ported from the engine function by function
+  where it differed (the user: "The renderer in the webui, still is not correct ... Do a 1:1 copy of the
+  render", and that mountains and rocks were missing on hoth). Until this the page was written from reading
+  the engine and judged by eye. Now `tools/refshot.sh` (outside of this tree) runs the real client with
+  rd-vanilla (gone since 2026-11-02) and every cvar at its default as a listen server that also serves the page, puts that client as
+  a spectator at spots of a map, reads back where its eye is (`/api/state?view=`), and has the game and the
+  page take a picture from the same spot, both on the graphics card. The page has a view for it
+  (`?ref=<width>x<height>`: the map alone, the projection of the game, no smoothing of edges) and a mask of
+  what animates on its own (`refMask`), which two pictures never catch at the same moment. The numbers are
+  the mean difference of a pixel (of 255) and the share of pixels that are off by more than 16. One
+  departure from the defaults: `r_ext_compress_textures 0`, because what the driver makes of a compressed
+  texture can not be made in a browser.
+  The first table, six views on each of six maps: the plain map was close (mean 1 to 2), and whole things
+  were missing. What was done about it, each from the function of the engine or the client game that does it:
+  - The projection (`gameProjection` in `js/camera.js`): 80 degrees across whatever the shape of the picture,
+    the angle up and down from that shape (`CG_CalcFov`), near plane 4, and the far plane of `SetFarClip`
+    (the farthest corner, at least 2048, at most `distancecull` of the worldspawn times 1.732). The page had
+    55 degrees up and down everywhere. The view from above keeps a far plane behind all of the map.
+  - The sky portal (`js/world-ents.js`, `CG_DrawSkyBoxPortal`): the room of a `misc_skyportal` is drawn first,
+    from the origin of the portal, then the depth is cleared and the map is drawn over it without its sky.
+    Which part of the map is that room comes from the visibility data of the map file. Those are the
+    mountains of mp/siege_hoth.
+  - The models of `misc_model_static` (`SP_misc_model_static`, `CG_DrawMiscStaticModels`): the client game
+    spawns them itself from the entities of the map file, the server never has them. 63 on mp/siege_hoth, 189
+    on mp/siege_korriban. Placed and culled as the client does it, lit by the light grid.
+  - Textures (`js/gl.js`, `js/map.js`; `Upload32`, `R_MipMap`): mip-nearest filtering with anisotropy 16, the
+    mip levels built as the engine builds them (four pixels made one, never rounded up) by a small program on
+    the graphics card, lightmaps without mipmaps.
+  - Curved surfaces (`js/bsp.js`; `R_SubdividePatchToGrid`, `MakeMeshNormals`, the stitching, and the level
+    of detail of `RB_SurfaceGrid` per frame). The engine's own code, built into a small program, gives the
+    same grids float for float on all 23 maps of the game.
+  - Which surface is drawn is decided as the engine decides it and no longer by the name of its shader.
+  - Flares (`js/flares.js`; `RB_SurfaceFlare`, `RB_TestZFlare`): a quad that faces the viewer, sized by
+    `alphaGen portal` of its shader, shown when nothing is in front of it, which the page asks the graphics
+    card with a query whose answer is one or two frames old.
+  - Fog (`js/scripts-world.js`, `js/scripts-programs.js`; `R_LoadFogs`, `RB_FogPass`, `RB_CalcFogTexCoords`,
+    and the fog of OpenGL for the fog of a whole map): per pixel over the depth, every stage fading to the
+    colour the engine's table gives it, the fog of a brush as one more pass with the fog image, also on
+    models, movers and effects in a fog of the whole map. The frame begins as the colour of that fog.
+  - Lightmap and image of a wall are one pass with two images (`CollapseMultitexture`) and no longer two
+    passes. That is what makes most pixels the very value of the game, and it removed a striped line on a
+    floor of mp/ctf4 where two triangles of the map file overlap.
+  - The order of drawing: the sort values of the engine, and within one value the order in which the engine
+    registers the shaders of a map.
+  - The parser of shader scripts reads every word the scripts of the game have but one
+    (`deformVertexes projectionShadow`); `tools/panelshot/shader_keywords.js` lists what it drops.
+  Not done in this step, and seen in the pictures: weather (the snow of mp/ctf2), items and pickups as the
+  game draws them, players, the HUD. No visibility culling: from outside the hull of a map the game shows
+  only what is seen from there and the page shows rooms through their missing outer walls.
+- New: the state says what a client draws players, items, movers and shots by (`wa_state.c`). The page drew
+  them from less than a client has: an animation without the frame it is at, an item as a class name and a
+  place. Now:
+  - A player and an NPC have the frame the server has their skeleton at, for the legs and for the torso, and
+    how fast it runs (`WA_StateBoneFrame`: the server sets the same animations on its own copy of the skeleton
+    as a client does, `G_UpdateClientAnims`). The frame is left out while the skeleton is not in the animation
+    the row names: the player state gets a new one with a move, the skeleton later in the frame. On a private
+    server with bots that was 1 or 2 of 40 looks.
+  - A player has the flags of his entity (`eFlags`, `eFlags2`), his powerups and the force powers that are
+    on, the state of his weapon, his saber move, the flips, what he stands on, his broken limbs and the saber
+    style he fights in. What stays of him has the two RGB colours of his sabers (`saberRgb`, as `c3` and `c4`
+    of the client info, when `jp_allowRGBsaber` is 1).
+  - An NPC has its class, weapon, angles and speed, and a vehicle the model and the skin of its vehicle file:
+    the server tells the clients only the name of a vehicle with a `$` in front, and they look it up
+    (`CG_G2AnimEntModelLoad`). The walker of mp/siege_hoth came as `$atst_vehicle`, which is no model.
+  - An item is a row: its entity, its place in the list of the items of the game, the flags of its entity,
+    its place and its angles. `/api/classes` says that place for every class (`index`) and the second model
+    some items have (`model2`). A weapon or a powerup that was taken stays in the list with
+    `EF_ITEMPLACEHOLDER`: the game draws a ghost of it there. The page drew it as if it lay there, and still
+    does until the items are drawn as `CG_Item` draws them.
+  - A mover says the frame of its shaders and its `model2` when it has them, a shot its angles and the
+    flags of its entity.
+  A player is about 220 bytes ten times a second now, he was about 170. `tools/panelshot/steps_feed.js` (21
+  checks): the frames against the animation files the page reads, a weapon placed through the panel in the
+  list by its place, a `func_static` with `model2` and a switched shader, a rocket.
+- New: what an entity asks of the renderer besides its model, for the next steps of the port. A brush model
+  whose entity has `EF_SHADER_ANIM` shows the image of an `animMap` its entity names and not the one the time
+  gives (`stFrame` in `js/scripts-world.js`; `RF_SETANIMINDEX` in `R_BindAnimatedImage`): a `func_static` with
+  the spawnflag SWITCH_SHADER, a locked door. A model can be drawn with a shader of its own, with its colour
+  on every stage and blended by its alpha after everything else (`shader`, `tint`, `forceAlpha` of the `ent`
+  of `drawModelScripted`; `customShader`, `RF_RGB_TINT` and `RF_FORCE_ENT_ALPHA` in
+  `RB_IterateStagesGeneric`): what the game does for the ghost of an item that was taken and for one that
+  fades in. Nothing draws with them yet. What a frame draws of players, items, movers, marks and lights is
+  in files of its own now (`js/player-draw.js`, `items.js`, `movers.js`, `marks.js`, `trace.js`,
+  `dlights.js`, `sabers.js`, `player-fx.js`, `g2-angles.js`), most of them empty until those steps.
+  `tools/panelshot/steps_entfx.js` (5 checks).
+- New: saber blades, the weapon in a hand, shots and the light they throw, as the client draws them
+  (`js/sabers.js`, `js/dlights.js`, `js/weapons.js`, the effect files). The page drew a blade as a wide streak
+  in a colour of its own table, with no light.
+  - The blade (`CG_DoSaber`, `RB_SurfaceSaberGlow`, `RB_SurfaceLine`): the glow sprites from the tip down and the
+    core line with the shaders of the game, the sizes of the game with their random part (the middle of it in
+    the comparison view), the length as `BG_SI_SetLengthGradual` grows and shrinks it, the trail of a blade
+    that moves (`CG_AddSaberBlade`, the trail length of every saber move), RGB sabers of JA+.
+  - The colour is the one a client draws: `color1` and `color2` of the player (`saberColors` of the state), the
+    team colour in team games. The state had only the colour of the saber file as the server read it, which is
+    another one. With it, the two red blades of the baseline picture are red.
+  - Dynamic lights (`RE_AddLightToScene`, up to 32): on the map as `ProjectDlightTexture2` does it (the one the
+    defaults take: per triangle, with the light image, added over the surface), on brush models and curves, and
+    on models as `R_SetupEntityLighting` adds them to the light of the grid. A blade, a rocket, the lights of
+    effect files and of powerups throw one.
+  - The weapon in a hand sits on the bolt of the hand as the client bolts it on, a hilt is turned onto the blade
+    the server tells; a missile is the model of `CG_Missile`, turned as it turns it.
+  - The state says more for this: per saber its second flags and trail styles, per shot how it was fired and by
+    whom, and for a mine that sticks its weapon, flags and time.
+  Against the real client, two frozen bots each at a start point of his own: 2.4, 3.4, 1.9, 0.8 for the first
+  from four sides. The second stands next to an item, which is not drawn as the game draws it in this step.
+  Not done: the burn of a blade on a wall, the flare and sparks when blades meet (the state has no events), the
+  beam of a trip mine, sabers of NPCs. `tools/panelshot/steps_sabers.js` (50 checks; one of them needs a bot
+  with his saber on in view and fails when none is).
+- New: the items, the models of movers, marks and shadows as the client draws them, and a line through the map
+  (`js/items.js`, `js/movers.js`, `js/marks.js`, `js/trace.js`). The page drew an item as one model on the
+  floor and had no shadow and no mark.
+  - Items (`CG_Item`, `CG_RegisterItemVisuals`): a weapon or powerup floats over the holo base with its cone of
+    light (the effect `mp/itemcone`), 16 higher, bobbing and turning by the time of the game, a weapon at one
+    and a half times its size, with the bluish light of `RF_MINLIGHT`; the heights of the other kinds; the
+    second model of health and powerups; the ghost of one that was taken (`powerups/placeholder`, tinted),
+    nothing for `EF_NODRAW`; a dropped weapon as its angles say; the fade after a respawn; what the force
+    side of the viewer greys (`CG_GreyItem`). Eight kinds on mp/ffa3 against the game: 3.8, 13.2, 11.9, 1.0,
+    0.2, 0.01, 0.2, 29.2 before, 0.15, 0.7, 0.45, 0.3, 0.02, 0.01, 0.02, 0.7 after.
+  - A mover's `model2` is drawn where the mover is (`CG_Mover`).
+  - A line or box through the map (`traceWorld`, `traceBox`; `CM_Trace` with the tree, the brushes and the
+    curves, the last as the triangles the page draws of them).
+  - Marks (`CG_ImpactMark` with `R_MarkFragments`, which cuts the mark against the surfaces near it;
+    `CG_AddMarks` with its ten seconds and fade; the decals of effect files; the burn of a blade,
+    `CG_CreateSaberMarks`) and the round shadow under players and NPCs (`CG_PlayerShadow`: a box traced down
+    128, darker the nearer the floor).
+  - What a client is not sent, it does not draw: the server sends a client only the entities in clusters of
+    the map its eye sees, and none at all when its eye is in no area (inside a wall). The page asks the same
+    for its own eye (`clientSees`, `snapshotFrom`, `snapshotSees` from `SV_AddEntitiesVisibleFromPoint`) for
+    items, shadows, players, NPCs, blades, lights, shots and models, in every view from inside the map. Not
+    known to the page: which doors are shut. Found by measuring: four of the item views had the eye in a
+    wall, and the game drew no item there.
+  Not compared with a picture of the game: a ghost, a fade, a dropped weapon, a flag, a mover with a model, a
+  mark that stays, a decal. `tools/panelshot/steps_ground.js` (59 checks).
+- New: the weather of a map (`js/weather.js`, all of `tr_WorldEffects.cpp`): the commands the game names
+  among its effects with a `*` (`fx_snow`, `fx_rain`, `fx_spacedust`), the zones of `misc_weather_zone`, the
+  cache that says where a point is under the sky, the wind, and the clouds of particles with their numbers,
+  boxes, speeds and images. Of the stock maps only mp/ctf2 has weather (snow, fog, a steady wind). Against
+  the game the flakes can only be counted, they fall at random: 182 against 167, 190 against 192 and 176
+  against 174 in one outdoor view, the same size and the same brightest value. The mean difference of such a
+  view does not say this: both pictures have flakes at other places, and it went from 0.6 to 1.1 and from 0.1
+  to 2.3 in two views while the snow was added. Rain, dust, sand and gusts are ported and checked against the
+  source, with no map to compare them on. `tools/panelshot/steps_weather.js` (58 checks on mp/ctf2).
+- New: players and NPCs as `CG_Player` draws them (`js/g2.js`, `js/g2-angles.js`, `js/player-draw.js`,
+  `js/player-fx.js`). The page started an animation when it first saw its number, ran it by its own clock
+  and turned the whole model by the yaw of its player.
+  - Ghoul2 as the engine has it: the list of bones with an animation of their own (`G2_Set_Bone_Anim_Index`),
+    the frame of a bone at a time with the wrap of a loop and the hold of a freeze (`G2_TimingModel`), a bone
+    takes the frames of its parent unless it has its own, the blend from the pose before, bone angle
+    overrides, bolts.
+  - The animation (`CG_PlayerAnimation`, `CG_RunLerpFrame`, `CG_SetLerpFrameAnimation`): legs on `model_root`,
+    torso on `lower_lumbar` and `Motion`, a blend of 100 msec as the client has it, the speed scales. The bone
+    is put at the frame the server has it at (the state), and runs on between two polls and where the state
+    has none.
+  - How the model is turned (`BG_G2PlayerAngles` with the spine, the neck, the look and the swing of the
+    legs): the legs follow where he moves, torso and head where he looks.
+  - NPCs go the same way, with the model and skin the state names; the walker turns its head
+    (`BG_G2ATSTAngles`). The walker of mp/siege_hoth no longer breaks a frame: a non-humanoid is not given an
+    animation its file lacks, and a model that fails is given up with one warning.
+  - Around the model (`js/player-fx.js`), ported and checked in the page only, not against the game: the
+    sprites above a head, the flag, the spheres of powerups, the shells of rage, protect and absorb, the speed
+    trail, the cloak.
+  A bot with a pistol from four sides, the same in both runs: 0.62, 0.47, 0.56 before, 0.30, 0.30, 0.29
+  after. What moves can not match a single picture: the page draws the frame of the server, a client is a
+  snapshot behind. `tools/panelshot/steps_players.js` (36 checks).
+- New: the 2D of a client (`js/hud.js`, `js/hud-font.js`, `js/hud-world.js`): the HUD of the page was written
+  by hand into a canvas of its own. Now it is drawn as the game draws it, into the 3D picture after the scene
+  with the shaders of the game (many of them blend in ways a canvas laid over another can not), in the
+  virtual screen of 640 x 480 the renderer stretches over the picture.
+  - The fonts (`tr_font.cpp`): the `.fontdat` with its glyph table, widths and heights of a string, colour
+    codes, the drop shadow; the text functions of cgame on top of it.
+  - The HUD (`CG_DrawHUD` with `ui/hud.menu`, which the page parses for the places, sizes and colours):
+    health, armor, force, ammo, saber style, the numbers, the score.
+  - More of `CG_Draw2D`: who is followed, the leader with his picture at the top right, the crosshair where
+    the line from the muzzle ends, the line of JA+ for the other dimension. Ported from the source and never
+    seen running: the selection bar of weapons, the screen tints of force powers, the zoom masks, the fuel
+    bars, the names under the crosshair.
+  The HUD alone against the game (where a picture with it differs from one without): 70.1 and 66.5 with 90 %
+  of its pixels off before, 9.7 and 6.6 with 13 % and 7 % after. Not ported: the radar, the chat lines, votes,
+  centre prints, the scoreboard, the flag status. `tools/panelshot/steps_hud.js` (13 checks).
+- New: the server keeps the events of the game for the pages (`WA_EventsFrame` in `wa_state.c`). Much of what
+  a client shows it is told once as an event and the server keeps none of them: that somebody fired, that two
+  blades met, where the beam of a disruptor went, that a shield was hit. At the end of every frame the panel
+  looks at what is new (the events of the players, the entities that are an event and nothing else, the
+  events of other entities) and keeps the last 256 for two seconds; a poll brings the ones a page does not
+  have (`evs=`). With four bots that was 112 events in 45 seconds. The page takes them (`js/events.js`; what
+  it shows for them came later, see above). Four more checks in `steps_feed.js` (32).
+- New: what an effect leaves on a wall. 41 effect files of the game have a decal (the scorch of a blaster
+  bolt, of an explosion), and the page dropped that part when it read a file. The scheduler of the engine
+  hands a decal to the renderer at once (the `Decal` case of `CFxScheduler::CreateEffect`,
+  `RE_AddDecalToScene`), and the page now hands it to its marks the same way (`fxCreate` in `js/fx-run.js`
+  to `decalMark` in `js/marks.js`): onto the surfaces around its place along the forward of the effect, in
+  its start colour, alpha and size, kept until its place in the ring of 100 is taken. Seen: the burn mark of
+  `blaster/wall_impact` on a floor. Not compared with a picture of the game. `tools/panelshot/steps_decal.js`
+  (4 checks).
+- New: the beam of a trip mine. A mine that sticks and is armed has no entity for its beam: the client plays
+  the effect `tripMine/laserMP` at it in every one of its frames (`CG_General`), 6.6 in front of the mine
+  along the direction the server keeps in `pos.trDelta`. The page does the same in `drawModelEntities`
+  (`js/frame.js`). "Played anew in every frame of a client" was already there for the cone under an item,
+  inside `js/items.js`; it is one helper for both now (`fxFrames`, `fxFramePlays`, `fxFramePlay` at the end
+  of `js/fx-run.js`): a client frame is taken as 8 msec, a gap between two frames of the page counts for
+  50 msec at most, and in the comparison with the game, where the time stands, it is played 51 times once.
+  Seen: the blue beam from a mine on a floor up to the ceiling. Not compared with a picture of the game.
+  `tools/panelshot/steps_mine.js` (3 checks).
+- New: what else moves the view through the eyes of a player (`own` and `firstPersonCamera` in
+  `js/weapons.js`; `CG_OffsetFirstPersonView`). A hit he takes kicks the view (`CG_DamageFeedback`): by the
+  damage times 40 through his health, 5 to 10 degrees, up for a hit from the front or from nowhere, rolled
+  for one from the side, there within 100 msec and back within 400. The page sees it as the game does, by
+  `damageEvent` of his player state (two hits between two polls count as one). With it the flash of the hit
+  (`CG_DamageBlendBlob`): a sprite 8 in front of the eye for half a second, to the side the hit came from,
+  red when his health took it, green for his shield, yellow for both (`gfx/misc/borgeyeflare`,
+  `gfx/mp/dmgshader_shields`, `gfx/mp/dmgshader_shieldsandhealth`). A change of his view height is spread
+  over 100 msec (ducking). There too, and not set by anything until the page acts on the events of the
+  game: the dip after a fall (`ownFall` for `EV_FALL`: up to 32, there in 150 msec, back in 300, the weapon a
+  quarter more) and the kick of the concussion rifle (`ownKick`: 10 to 15 degrees, up in 200 msec, back in
+  600). Left out as the game leaves it out for one it follows: the smoothing of steps.
+  The hand that holds the weapon has its frames (`viewWeaponFrame`, `viewHandTag`;
+  `CG_MapTorsoToWeaponFrame`, `R_LerpTag`): the frame of the bone of his torso picks the frame of the hand
+  model while he fires (1 to 6), puts the weapon away (6 to 10) or takes it out (10 to 13), and while he
+  holds a hand out for a force power the weapon goes down a frame every 10 msec and stays there. The weapon
+  sits on the tag between the two frames. Seen: the green flash of a hit on the shield with the pistol in
+  front of it. Nothing of this is compared with a picture of the game: none of it stands still.
+  `tools/panelshot/steps_ownview.js` (17 checks).
+- New: the page shows the events of the game (`js/events.js`, `js/fx-weapons.js`; `CG_EntityEvent`). Until
+  now it guessed a muzzle flash and an impact from the shots it saw come and go, and showed nothing where no
+  shot entity exists. Now, from the events of the feed:
+  - who fires has the flash at the muzzle of the weapon in his hands (`CG_FireWeapon`, `CG_AddPlayerWeapon`:
+    played in every frame of a client for 20 msec, the second effect by `EF_ALT_FIRING` of the player, not by
+    the event), a stun baton lights the map there;
+  - where a blade hits or is blocked: the sparks by what it hit and how hard (`EV_SABER_HIT`,
+    `EV_SABER_BLOCK`), and the flare of two blades that clash (`CG_SaberClashFlare`, a picture of the 2D);
+  - the beams of the disruptor (`FX_DisruptorMainShot`, `AltShot`, the bands of `FX_AddBezier` and
+    `FX_AddLine`), what it leaves at a wall or on a player, and the other fire of the concussion rifle with a
+    ring every 64 units of its way;
+  - what a shot does where it ends is by `EV_MISSILE_HIT`, `EV_MISSILE_MISS` and `EV_MISSILE_MISS_METAL`
+    (`CG_MissileHitWall`, `CG_MissileHitPlayer`): on a player the effect for flesh, the bryar by its charge,
+    the DEMP 2 and the flechette as their code has them. The guess stays for a game module without events;
+  - the effect where somebody comes into the map or is teleported, the half shield around one whose shield
+    took a hit (`CG_PlayerHitFX`, drawn where the players are drawn), the red shell of one who is drained;
+  - the view through the eyes of a player shakes (`CGCam_Shake`, `CG_SE_UpdateShake`: for the bowcaster, the
+    rocket launcher, the repeater's and flechette's second fire, a charged pistol or DEMP 2, and for
+    `EV_SCREENSHAKE`). As in the game the shake moves the eye, and its two angles turn only the weapon in
+    front of the camera, because the axes of the view are made before it. His fall dips his view (`EV_FALL`)
+    and the concussion rifle kicks it back, the two that waited for the events.
+  An event is taken once (two polls that were on their way together both have it), not when it is older than
+  the 300 msec the server keeps it for a client, and with the time of the next frame of the page. The events
+  are drawn in the plain view of the editor too. The feed sends the angles of an event to a thousandth now
+  (they are a direction of length one in the saber events).
+  Not measured against the game: the bots of a comparison are frozen and cause no event. Seen from the
+  server and played in a probe of 30 seconds with two bots face to face: 24 `EV_SABER_HIT`, 25
+  `EV_SABER_BLOCK`, 5 `EV_SHIELD_HIT`, 1 `EV_PLAYER_TELEPORT_IN`, none older than 100 msec when it came.
+  Only handed in by the check, never seen from the server: the fire events, the impacts, all disruptor
+  events, the clash flare, the screen shake, the drain. Not shown: the flashes of NPCs and of turrets, sparks between two server frames (`CG_SaberCompWork`), glass, debris,
+  score plums, marks on models, effects of a saber of its own, and every event that is only a sound.
+  `tools/panelshot/steps_events.js` (59 checks), `steps_events_live.js` (the probe), `steps_fx.js` (39).
+- New: the scoreboard and the centre print of a kill (`js/hud-scores.js`; `cg_scoreboard.c`,
+  `CG_CenterPrint`, `CG_DrawCenterString`, `CG_Obituary`). A client that follows a player shows the scoreboard
+  while he is dead and in the intermission, and the page showed an empty picture with a body. The server
+  sends such a client the scores when he dies; the state has them with his player state for as long as his
+  client would show them (`scoreboard` of `hud`: the clients by rank with score, ping, minutes, powerups,
+  deaths, wins and losses; `duelists` at the top). The page draws the table as `CG_DrawOldScoreboard` does:
+  the head with its picture, a line of 25 for every client (15 and three quarters of the size from the
+  thirteenth client on), score with deaths as a JA+ server sends it to a client with the plugin, `BOT` for the
+  ping of a bot, the line of the one who is watched in the colour of his place, his place or the team that
+  leads above it, the teams of a team game on their colours with the leading one first, and "Killed by" with
+  the name from the obituary event. When the watched player kills somebody the centre print says so with his
+  place, for three seconds, cut at 50 characters a line.
+  Against the game, a bot killed through the panel while the client follows him (`REF_DEAD=1` of
+  `tools/refshot.sh`): the whole picture 1.35 of 255, the names 0.13, the ping and time columns 0.22, the
+  place line 0.19, the head of the table 1.19 (its picture is an animated shader). What differs most is the
+  body itself, which is in another frame of its death animation. Not drawn: the flag of one who carries it
+  as a turning model (its icon is drawn), the pictures of a power duel and of a siege class; in a Jedi
+  Master game the centre print is the short one. Never seen from the server: the scoreboard of a team game
+  and of a duel, the centre print (the checks hand them in). `tools/panelshot/steps_scores.js` (20 checks).
+- New: two more parts of the 2D of a client (`js/hud.js`). The icon of what the watched player picked up, for
+  three seconds at the right above the HUD (`CG_ItemPickup`, `CG_DrawPickupItem`; from his `EV_ITEM_PICKUP`,
+  the item by its entity in the list of the items, or in the list of the poll before for one that is gone with
+  the pickup). And the line of a vote that runs (`CG_DrawVote`): what it is for in the words of the string
+  file, the seconds it has left and the count, at the top left in the fixed font; the state tells a vote as
+  the clients are told it (`vote`: time, yes, no, text). Seen from the server: a bot picked up a rocket
+  launcher and the event named its icon. Never seen: a real vote (nobody on the test server can call one, the
+  check hands one in), so the `vote` of the state is only seen absent. Not compared with a picture of the
+  game. `tools/panelshot/steps_pickup.js` (8 checks).
+- New: the flash of a shot of the one the page looks through the eyes of, and where the beam of his disruptor
+  starts. The muzzle is the `tag_flash` of the weapon in front of the camera (`drawViewWeapon` in
+  `js/weapons.js` keeps it, `CG_AddPlayerWeapon`); the events are taken after that weapon is placed, so the
+  flash of a frame is at the muzzle of that frame. The beam starts at the muzzle as it last was
+  (`cg.lastFPFlashPoint`): while he looks through the scope the weapon is not drawn and the point stays, as in
+  the game. Seen: the flash of the pistol at its muzzle. The game plays the effect bound to the weapon with
+  all three of its axes, the page along the first; the glow while a weapon is charged is not drawn. Not
+  compared with a picture of the game. Three more checks in `steps_ownview.js` (20).
+- New: the last lines of the console over the picture (`js/hud-console.js`; `CL_ConsolePrint` and
+  `Con_DrawNotify` of the engine). A client shows the last lines of its console at the top left for three
+  seconds: what the server prints for everybody (a player comes or goes, a limit is changed or hit) and the
+  line of every kill. Neither was in any state the panel could read.
+  - What the game sends to all clients at once goes straight to the engine from some four hundred places. The
+    game now calls the engine through a copy of the engine's table in which `SendServerCommand` is the
+    panel's (`WebAdmin_WrapImport`, one line in `GetModuleAPI` of `g_main.c`): it keeps the `print` and `cp`
+    commands that go to everybody (the last 32, five seconds) and hands every command on unchanged. The state
+    has them for a page that says the number of the last one it has (`prs=`, `pr`: number, msec ago, kind,
+    text). What one client alone is told is not kept: a client that follows a player is not told it either.
+  - The page puts a `print` into its console as the engine does (rows of the line width, which is two
+    characters less than fit the picture, a colour for every character, `@@@NAME` replaced by the text of the
+    server's string package as `CG_CheckSVStringEdRef` does) and a `cp` into the centre print.
+  - The line of a kill is made from the obituary event as `CG_Obituary` makes it: the text by the means of
+    death (their names come from the server, `/api/list?kind=mods`), with the attacker for a kill, with the
+    pronoun of the model for a death by one's own hand (the gender is read from the sound file of the model,
+    as cgame does).
+  - Drawn as `Con_DrawNotify` draws them: the last four rows that are not older than three seconds, the one
+    that is being written among them, 8 x 16 pixels of the picture a character in the fixed font, from the
+    top left. They stay in a picture taken without the HUD, as the engine draws them with `cg_draw2D 0`.
+  Seen from the server: "Server: fraglimit changed to 29" after the limit was set, "Alora killed herself"
+  after a kill through the panel. Not compared with a picture of the game: the client of the comparison
+  keeps an empty menu open, and the engine leaves these lines out while a menu has the keys. Not shown: what
+  the engine and the client game print by themselves besides the kills. `tools/panelshot/steps_console.js`
+  (19 checks).
+- New: the lightning and the drain of the Force. Who casts lightning or drains has an effect at his left
+  hand along the way his torso looks, played anew in every frame of a client (`CG_Player`,
+  `activeForcePass` of the entity): a blue bolt to where it meets something, a fan of bolts from the third
+  level on, the same in red for the drain; with JA+ the flame of a merc instead of lightning (`EF_FLAME`),
+  the hand of the drain grab and its own wide drain. The state did not tell it: the row of a player has a
+  38th number, `activeForcePass`, and `plForcePass` in `js/player-fx.js` plays the effect. Found in pictures
+  of a fight side by side with the game, where a bot cast lightning and the page showed nothing. Seen on the
+  page for all three; not compared with a picture of the game (no bot cast it while a row was taken after
+  it was in). Not here: a client that fights a private duel does not see the force effects of the others
+  (`CG_JPForceFxVisible`). Three more checks in `steps_players.js` (41).
+- New: the jetpack. Who wears one (`EF_JETPACK`, with JA+ `jp_allowJetpack`) has its model on his back, on
+  the `*chestg` bolt of his model, not when he is dead and not from inside his own head. While it is on
+  (`EF_JETPACK_ACTIVE`) the jet effect `boba/jet` plays at its two nozzles in every frame of a client, twice
+  while it burns (`EF_JETPACK_FLAMING`), as `CG_Player` does it. A nozzle is no tag: cgame bolts to the two
+  drawn surfaces `torso_ljet` and `torso_rjet`, and the engine makes such a bolt of the first three vertices
+  of the surface (`G2_ProcessSurfaceBolt2`). The two share their third vertex, so both bolts sit at one
+  point in the middle of the pack, and the 9.5 and 13.5 units cgame moves along two axes of each lead from
+  there to the nozzles, 19 apart. The effect is handed the way up: its flames leave against the way it is
+  given. `plJetpack` in `js/player-fx.js`. Three more checks in `steps_players.js` (44). Compared with the
+  game since: no bot switches a jetpack on, so the client of the comparison plays itself
+  (`REF_LOOK=self` of `tools/refshot.sh`, see the hook below) and is seen from behind as it sees itself,
+  hovering and burning. He moves in both, so the pairs are judged by eye: the pack and both flames are in
+  the same place, of the same size and colour.
+- Fixed: what a client plays anew in every frame was too bright on the page. The page draws fewer frames
+  than a client (125 a second by default) and plays such an effect once for every frame of a client it has
+  to catch up with (`fxFramePlay`). It played them all as of now: what such an effect has that lives
+  shorter than a frame, as the flare of a jet (2 msec), was then seen once for every frame caught up, where
+  the game shows one. Now the last of them is of now and each one before it 8 msec older: a primitive is
+  made by the clock of the moment it belongs to and is where it has come to since, and one whose life is
+  over is gone before it is drawn (`born` of `fxPlay` and `fxStart`, `aged` of `fxCreate` in
+  `js/fx-run.js`). Found in the first pair of a jetpack with the game, where the page had a white glow
+  around the flames that the game did not have. It holds for the cone of light over an item, the beam of a
+  trip mine and the lightning and the drain of the Force too.
+- New: the grappling hook of JA+. Its missile is a shot of the pistol that names its owner when the owner
+  has no client plugin (a bot), and a stun baton missile with a second pistol shot that names client 32
+  when he has one. A client of this tree draws the second not at all, nor a pistol shot that names a player
+  whose hook is not out (`EF2_HOOK`), and the page drew every one of them as a pistol shot that glows in the
+  wall for as long as the hook holds. Now as `FX_BryarProjectileThink`, `CG_Missile` and `CG_JPHookTrail`
+  have it: while it flies (fired with 100 or more) the shot of the concussion rifle in every frame of a
+  client, and for the pistol kind the shot of the pistol too; a rope from the right hand of the owner to
+  the hook (`CG_TestLine`: a line of the `white` shader, one unit wide, of the colour 0x30000, there for one
+  frame); for the stun baton kind the model of the hook (`cp_hookModel` at its default 0: the grapple of the
+  base game), which looks the way it flies and spins as every missile, and once it holds looks away from
+  its owner. `drawHook` and `hookHand` in `js/weapons.js`. The state did not say whom a shot names: a row of
+  `shots` has a 21st number, the `otherEntityNum` of the missile (-1: nobody, as JA+ sends its pistol
+  shots). Compared with the game: the client of the comparison plays itself, fires its hook at a wall above
+  it and is seen from behind as it sees itself, while the hook pulls him (mean difference 0.12 to 0.36 of
+  255 in three runs) and while he hangs on the rope (0.33 to 1.03, once 3.11 while he swung). That client
+  has the plugin, so it is the stun baton kind that was compared; the pistol kind of a bot is checked on
+  the page only. Not compared: the hook in flight. Open: in the first of the four runs the camera behind
+  him sat about 100 of 720 pixels lower on the page than in the game while the hook pulled him against a
+  ceiling (the other three agree, the cause is not found). `tools/panelshot/steps_hook.js` (11 checks), one more in
+  `steps_feed.js` (36).
+- Fixed: the trail of a swinging blade was hardly there. The page adds a piece of trail at the start of a
+  frame and let it age by that whole frame before it was first drawn: at 60 frames a second every piece
+  missed its first and brightest frame, and at fewer than 25 it was gone before it was drawn at all (a piece
+  lives 30 or 40 msec). The game adds such a primitive and draws it in the same frame. What code adds between
+  two frames (a trail piece, a line of a beam) begins with the frame it is first drawn in now (`fresh` in
+  `fxAdvance`, `js/fx-run.js`). Counted with two bots that fight: the pieces were made (some 1.3 for every
+  frame of an attack) and none drawn at ten frames a second. Against the game, side by side at the game's
+  speed (`REF_LIVE` of `tools/refshot.sh`): the game had its fans in five of six pictures, the page a short
+  streak in one; after it the page has them as the game does.
+- The comparison can take a row of pictures of both while the game runs at its speed (`REF_LIVE=<n>` with
+  `REF_LOOK=fight`): they are of nearly the same time, 50 to 100 msec apart, and for what is too quick and
+  too random to count in pixels (sparks, the flare of a clash, trails). The camera of the comparison alone no
+  longer stops the page: it stands still only when the comparison names a time of the game (`refStands` in
+  `js/camera.js`); before, the skeletons of the page did not move between two polls in every view of the
+  comparison.
+- New: the electric shell of a player. One who is electrified (force lightning, a DEMP 2 hit, the stun baton,
+  the login effect and the freeze of the JA+ admins) is drawn by the game once more with one of two electric
+  shaders in six of ten frames, white, fainter in his last half second (`CG_Player`, `emplacedOwner` of the
+  entity). The state did not tell it: the row of a player has a 37th number now, the msec he is electrified
+  for, and `plDrawModel` in `js/player-fx.js` draws the shell. Found in the pairs of a fight (see below), where
+  the game had the shell on both bots and the page on neither; with it the page has it too. Not drawn: the
+  forks of lightning between his limbs (`CG_ForceElectrocution`). Two more checks in `steps_players.js` (38).
+- Fixed: the animations of a player begin when a client begins them. The page put the legs and the torso
+  of a player at the frames the server has for his skeleton (`legsFrame`, `torsoFrame` of his row). That
+  skeleton is the one the game keeps for its own hit tests, and it is not started when a client starts his:
+  `G_UpdateClientAnims` runs with the saber code only, and a loop that is never set anew there runs on from
+  wherever it was. Measured in pairs of one moment with the game: a bot ran in the right place with its legs
+  in another part of the stride, in one case 17 of the 26 frames of the run off (the client log,
+  `cg_debugAnim -1`, says when the client began each animation; note that its lines have TORSO and LEGS the
+  wrong way round). A client begins an animation in the frame it draws after the snapshot that showed
+  another animation or another flip bit in the entity (`CG_RunLerpFrame`). So the server looks at the
+  entities of the players at the end of every frame (`WA_AnimsFrame` in `wa_state.c`) and says how many msec
+  ago the legs and the torso changed: the 39th and 40th number of a player's row. The page begins the
+  animation as of then, with the rules of the client it already had (`plRunLerpFrame`,
+  `plSetLerpFrameAnimation` in `js/player-draw.js`), and begins it anew whenever that time is another one,
+  which also catches a change and a change back between two polls. The frames of the server's skeleton are
+  only used where the server does not say the time (an older module, NPCs). After it, of six pairs of bots
+  that ran and jumped four were the same pose as far as one can see (mean difference 0.64 to 1.83 of 255),
+  one had the blades at another angle, and in one the game had him standing where the page had him running
+  (not looked into yet). `steps_players.js` has two checks for the new rule in the place of the one for the
+  old (46), `steps_feed.js` and `steps_state.js` count 40 numbers.
+- New: the bolts that jump off one who is electrified (`CG_ForceElectrocution`, `plElectrocution` in
+  `js/player-fx.js`). In every frame of a client one of seven places of his body is taken by chance (elbows,
+  hands, feet, and the bone `lower_lumbar`) and a way from there along one of two axes of that bolt, bent a
+  little, 40 to 80 units long; a bolt is there when that way meets the map, to where it does, and in six of
+  a hundred frames when it does not: `gfx/misc/blueLine`, 1.5 units wide to 4, growing to its end and thin
+  towards it, for 100 to 150 msec (`fxAddElectricity` in `js/fx-weapons.js`). cgame asks for a bolt that
+  forks; none does, here or in the game: the renderer never sets how many forks a bolt may have (`f_count` in
+  `tr_surface.cpp`), so the "forks of electricity" this file listed as not drawn do not exist in this
+  engine. Compared with the game in pairs of one moment (`REF_LOOK=shock` of `tools/refshot.sh`: a bot is
+  hit by a DEMP 2 the run puts in front of him, which electrifies him for two seconds): thin blue-white
+  bolts at his limbs on both, of the same kind. The page had more of them that one could see in the two
+  pairs that showed him (about six against two, two against none); the tries are chance, and whether the
+  page makes too many is not settled. One more check in `steps_players.js` (45).
+
+- Fixed: what a poll tells once was forgotten by the clock of the page. An effect that was played, an event
+  and a line of the server are known by their number and the time of the map they happened at, and the page
+  forgot them five seconds of its own clock later. The server keeps them by the time of the game: when that
+  runs slower than the clock (a low `timescale`), the page took the same event again every five seconds and
+  played its effect anew. They are forgotten by the time of the map now (`heardForget` in `js/fx-run.js`).
+- The comparison with the game can take a pair of one moment of a scene that moves (`REF_LOOK=fight` of
+  `tools/refshot.sh`: two bots frozen next to each other, who still fight). Until now a pair was taken at
+  `timescale 0.05`, which the engine does not go below a msec a frame with: 60 msec of the game went by in
+  every second, and the two pictures were of moments some 60 to 120 msec apart. For a moment the client is
+  slowed to ten frames a second of a msec each and the server runs a frame for every msec, so that the panel
+  still answers; and the pair waits seven seconds, because the client draws the world a snapshot or two
+  behind the server and comes nearer only by a msec with every snapshot. What that showed: bodies and blades
+  of two fighting bots agree with the game to about a frame of their animation, the electric shell was
+  missing (above), and the half shield of a hit is there on both. What it can not compare yet: sparks,
+  flares and the trails of blades, which the page runs by its own clock while the time of the game nearly
+  stands; the page plays no particle effects in such a pair for that reason.
+  - Corrected on 2026-10-09: those pairs were not of one moment, for two reasons. The run set `sv_fps 1000`
+    next to `timescale 0.01`, and the server sets the timescale back when its own frame (1000 / `sv_fps`
+    times the timescale) comes out below a msec (`SV_Frame`): the game ran on at its speed. With `sv_fps 10`
+    the frame of the server is exactly a msec. And a client draws the world a snapshot or two behind the
+    server, 25 to 50 msec in these runs, and stays exactly that far behind while the timescale is neither 0
+    nor 1 (`CL_AdjustTimeDelta` does not drift then; the seven seconds the run waited for it to catch up
+    did nothing). Now the page is held at the state of one poll, and the pair is taken when the client has
+    come to that time: the state says when the client drew its last frame (`commandTime`, a 13th number of
+    `view`), and the run prints both numbers with every such view. That the bodies had agreed "to about a
+    frame" before was the delays of the two pictures cancelling out.
+  - What pairs of one moment showed then (`REF_LOOK=roam`: the bots are left to run, jump and fight, and the
+    eye is put next to the fastest one just before the game is slowed): a running bot was in the right place
+    and in the wrong part of its stride, by any part of the loop. See the entry on when an animation begins,
+    below. Still open from those pairs: the trails of blades are far too large on the page in a slowed game,
+    and the half shield of a hit is gone there while the game still has it (the page times both, and its
+    effects, by its own clock, which runs a hundred times faster than such a game).
+- Changed: a saber in the air has its blades at the bolts of its hilt, as one in a hand (`drawModelEntities`
+  in `js/frame.js`; `CG_Player` for `saberInFlight` hands `CG_AddSaberBlade` the saber entity). Until now
+  only the first blade was drawn, along the way the hilt lies: a staff that was thrown had one blade.
+  The second blade is left out while it is off (`saberHolstered` 1). Still not as the game has it: the hilt
+  is laid flat at once (the game tilts it there within some 180 msec), it is not turned towards its owner
+  while he pulls it back, and the hand that guides it has no glow. Three more checks in `steps_sabers.js`
+  (53). Not compared with a picture of the game.
+- Fixed: the sabers were not in the hands. The page put every blade where the server says its blade is and
+  set the hilt to it. A client never sees those points: it bolts the hilt to the hand of its own skeleton and
+  the blade to the hilt (`CG_AddSaberBlade`). The points of the server are for its own hit tests, worked out
+  from an origin it pushes along the velocity of the player and from its own skeleton
+  (`WP_SaberPositionUpdate`). With bots that fight they were 14 to 18 units away from the hands the page
+  draws on average and up to 85, and 13 to 30 degrees off, for both sabers of every player: a second saber
+  stood in the air beside its owner. The page takes a blade from the hand it draws now (`sbFromHand` in
+  `js/sabers.js`), and from the server only until it has drawn a hand. The light of a blade and where it
+  ends at a wall are from the hand of the frame before.
+  Against the game, twelve views of three standing bots, one of them with two sabers: with the blades of the
+  server 5.28, 8.06, 0.39 and 4.66 of 255 for the four sides of that one (in that run the bots also fought,
+  so not all of it is the blades), with the blades from the hand 0.15, 0.24, 0.34 and 0.16, and 0.01 to 0.27
+  for the other eight. `steps_sabers.js` 50, with its light checks taking the second of two frames.
+- Fixed: a call the graphics card refuses, in every frame while the models of the players were still read. The
+  plain figure that stands in for a player whose model is not there yet was drawn with the program of the
+  model drawn before it (`plTry` in `js/player-draw.js` now ends on the plain program, as `drawStatic` does).
+  Nothing was seen of it but the missing figure; the checks that ask the card for errors found it once the
+  events made more files load at the start of a map.
+- Changed: the leader and the scores at the top right of the HUD are the ones the game tells its clients
+  (`leader`, `scores1`, `scores2` of the state). The page worked them out from the scores of the players, which
+  is another order when two have the same score.
+- New: the chat lines over the picture (`hudChatAdd`, `hudDrawChatBox` in `js/hud.js`; `CG_ChatBox_AddString`
+  and `CG_ChatBox_DrawStrings`): the last five lines, each for ten seconds of the game, above 350 in the small
+  font at 0.65 with an outline, the oldest on top, a line wider than 550 cut at a blank. What was said to all
+  and what the panel itself says, in the words the server sends them with; not what a team or one player was
+  told. Two lines said through the panel while the client followed a bot are the same in both pictures. Two
+  more checks in `steps_hud.js` (15).
+- New: the eye of the own view as the game moves it (`firstPersonCamera` in `js/weapons.js`,
+  `CG_OffsetFirstPersonView`): it leans with the speed of the player (`cg_runPitch`, `cg_runRoll`) and bobs
+  with his steps (`cg_bobPitch`, `cg_bobRoll`, `cg_bobUp`, three times as much while he ducks), by the bob
+  cycle of his player state. And the zoom (`CG_CalcFov`): the angle across narrows while he looks through
+  the scope of the disruptor or through binoculars, frame by frame as on a client that follows him. The state
+  tells where a player is and the way he looks to a hundredth now: a tenth of a degree was more than a pixel
+  of the picture, and that was what was left of the difference. Through the eyes of a bot with a pistol
+  against the game: 1.50 of 255 before, 0.13 after, at the same spot. (The kick of a hit, the dip after a
+  fall and the smoothing of ducking came later, see above.)
+- New: the bodies players leave behind (`bodies` of the state, `drawBodies` in `js/player-draw.js`). When a
+  player comes back the game leaves his body where he died for half a minute (`CopyToBodyQue`, the last eight
+  of them); the state did not tell them and the page drew none. A client copies the model of the one who died
+  and holds it at the end of the animation he died in (`CG_BodyQueueCopy`), and blends it away in 2.5 seconds
+  when the game says it fades. The page does the same through the code that poses players and NPCs. Against
+  the game, the body of a killed bot from three sides: 0.07, 0.11 and 0.02 of 255. Not done: the glow over a
+  body that fades, the weapon in its hand. Three more checks in `steps_feed.js` (35).
+- New: the camera behind a player as the game has it (`chaseCamera` in `js/camera.js`,
+  `CG_OffsetThirdPersonView`): it looks at a point 16 above his eye from 80 behind it along his view, both
+  follow him with the delay of the game (stiffer the faster he turns), and both stop at walls: a box of 4 to
+  every side is traced from his eye to the point and from the point to the camera. The page had its own guess
+  with two rays, which stood inside a wall in a narrow corridor (14.5 of 255 against the game there). And the
+  game decides who is looked at from behind: one who is dead, who holds a saber or his fists, who falls to his
+  death or rides. Against the game, behind three bots: 4.1, 1.5 and (through the eyes of one with a gun) 1.5;
+  what is left is the place of the blades. Not ported: the camera of a vehicle, movers in the way of the
+  camera.
+- New: the weapon in front of the camera as the game puts it (`drawViewWeapon` in `js/weapons.js`,
+  `CG_AddViewWeapon` with `CG_CalculateWeaponPosition`): on the `tag_weapon` of the hand model of that
+  weapon, which stands at the eye and is turned as the view with the drift of a hand and the bob of his
+  steps, drawn in the near third of the depth (`RF_DEPTHHACK`). The page hung every weapon on the hand of the
+  stun baton, which is below the picture for a pistol: no weapon was seen. Through the eyes of a bot with a
+  pistol against the game: 0.65 of 255, its HUD alone 0.49. Not ported: the barrel of the stun baton, the
+  flash at the muzzle (the frames of the hand came later, see above).
+- Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
+  it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
+  of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image
+  `models/weapons2/blaster_pistol/w_blaster_pistol_inview_spec` of a shader was never drawn. The value is
+  decoded as it is copied now. One more check in `steps_feed.js` (28).
+- Fixed: one error while a frame was drawn ended the picture for good. The frame that threw never asked for
+  the next one, so the map stood still until the page was loaded again. A frame is now drawn inside a guard
+  (`frame` around `drawFrame` in `js/frame.js`): the error is told once on the console, the state of the
+  graphics card is put back, and the next frame comes. Found on mp/siege_hoth: since a vehicle is told with
+  its real model, the page loads the skeleton of the walker and reads past its animation file in every frame
+  (`glaBone`). That error itself is not fixed with this: what a frame draws after the NPCs is missing there
+  until it is.
+- Fixed: an undo could reach the wrong entity. The game uses the number of an entity again, and the history
+  of the editor names an entity by its number: an item that is placed inside a wall is freed by the game two
+  frames after the panel said "Placed", and an undo a few seconds later deleted whatever had that number by
+  then. A delete, an edit and a fire now say the class the page takes the entity for (`class=` of
+  `/api/entity`), the history from the keys of its step, and the server refuses when the entity of that
+  number is of another class ("that entity is gone, another one has its number now"); the step is dropped.
+  Seen in the log of a check run, where nothing wrong was deleted because the number was still free.
+  And the panel now says when the game took back what was just placed: 0.7 seconds after a spawn it looks at
+  the list once more (`spawnedStays` in `js/editor-entities.js`) and names what is not in it, with the three
+  reasons there are (an item inside a wall, which `spawnflags 1` avoids, an item the game type does not
+  have, a class that acts once and frees itself such as `trigger_always`). `tools/panelshot/steps_entclass.js`
+  (10 checks).
+- New: what the HUD and the own view of a client are drawn from, for the last step of the port. `/api/state`
+  with `hud=<client>` has the rest of his player state (`WA_StateHud`: 684 bytes for a bot, and only when a
+  page asks, which it does while it looks through the eyes of a player), and `/api/file` serves the menu
+  files of the HUD (`ui/jahud.txt` names them), its images, the fonts and the texts. Nothing draws with them
+  yet: the HUD of the page is still its own. Six more checks in `steps_feed.js` (27).
+- New: the editor draws the map as the game does, unless its plain view is chosen (the user: "when in editor mode
+  the map is really bright than in normal administration mode", and "add the as in the game and make it
+  default"). The editor had only its plain view: an image times the light for every surface, with twice the
+  light of the map so that dark corners can be worked in, and a grey haze with the distance. That is a third
+  brighter than the game on mp/ffa3, and it has no shader scripts, no sky and no fog. The choice in the bar of
+  the views now begins with "As in the game", which is the renderer of the administration (`gameLook()` in
+  `js/pick.js`: the world, the models and which side of a surface is drawn). The three plain views are still
+  there: "Texture and light", "Light only", "Texture only". "Open" works in both: without it the editor draws
+  both sides of every surface, so that a room is closed from outside, with it only the side the game draws
+  (for a day it was greyed out in the game look, which then always had the sides of the game; the user asked
+  why). The wireframe lies over both, in the game look drawn forward by a hair of the depth. Until the shader scripts are read the game look is the plain view with
+  the light as it is and without the haze.
+- New: the effects of the game are drawn (`js/fx-parse.js`, `fx-run.js`, `fx-draw.js`, `fx-weapons.js`; the
+  user: "Effects/FXes don't show up in the panel"). Nothing of them was in the page: the fire of an
+  `fx_runner`, an explosion, what a blaster bolt leaves on a wall were not there.
+  - What the server tells (`WA_StateEffects` in `wa_state.c`): the entities that are effects (`ET_FX`:
+    `fx_runner`, `misc_blackhole`) with the effect, the state, the delay and where they are, and what the
+    game played once through `G_PlayEffect` and `G_PlayEffectID` in the last two seconds. For the second a
+    line in each of those two functions of `g_utils.c` tells the panel (`WebAdmin_Effect`, a ring of 64):
+    the game sends such an effect to clients only, as an event. Both parts are left out of a poll when the
+    page has them, so a poll in which nothing happened is no bigger than before (663 bytes with four bots).
+  - The files: the page reads an effect file (`.efx`) through `/api/file` the first time it is needed and
+    parses it with the rules of the engine (`FxTemplate.cpp`, `GenericParser2`): counts, delays, ranges, the
+    blocks for size, colour and alpha with their flags.
+  - Playing (`fx-run.js`): as `CFxScheduler` does it. Where a primitive is made and how it moves (through the
+    axis of the effect, on a sphere or a cylinder, with gravity), how its size, colour and alpha change over
+    its life, emitters that play an effect as they move, effects at the death of a primitive, effects that
+    play other effects. An entity loops as `CG_FX` loops it, and a state that means once plays once for every
+    change. No more than 3000 primitives live at a time, counts thin out from 2000 on, and nothing is played
+    further than 8192 units from the camera.
+  - Drawing (`fx-draw.js`): particles, oriented particles, lines, tails, cylinders and electricity as quads
+    with the shader scripts of the game, through the same stage renderer as the map (`materialFor`,
+    `drawStage`): the engine colours a particle by the vertex colour of a normal shader. One buffer that is
+    filled every frame, a batch for every shader. After the see-through surfaces of the map, with the depth
+    test and without writing the depth.
+  - Weapons (`fx-weapons.js`): the server names no effect for a shot, a client makes them itself. The page
+    has a table by weapon for the muzzle, the shot in the air and what it leaves on a wall or on a player,
+    and finds the wall with a ray against the map (four rays a poll at most). The glow quads from before
+    stay for when Effects is off in the editor, the shader scripts are not read yet, or a file is missing.
+  - The view toggle "Effects" of the editor switches them off there. The administration always has them.
+  - Not drawn: sounds, camera shakes and screen flashes of an effect, the models of emitters (its lights are
+    lights of the frame, `fxLights` in `js/fx-run.js`),
+    wind; particles do not collide with the map. And of what a client plays on its own
+    that is neither an effect entity, nor played by the server, nor a missile: the push, the pull and the
+    grip of the Force (lightning, drain and the jetpack are there, the rest comes with the events of the
+    game, see above).
+- New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
+  bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that
+  Duplicate or a paste makes, and a `trigger_push` or `trigger_teleport` with the `target_position` it is aimed
+  at exist only in the page: the server gets no spawn. A draft is in the entity list (first, numbered "new")
+  and on the map as a diamond in the colour of its class made half white, turning over a ring. It is selected,
+  moved, turned, resized, duplicated and copied like an entity, alone or together with placed ones: in a
+  mixed selection the drafts change in the page and the placed ones on the server, and only the placed ones
+  are in the step of the history. A draft has no Apply: what is typed into its keys is taken when the
+  selection changes, when it is moved or placed, and before any request to the server. After a draft is made
+  and after its keys change the page asks the server what a spawn would be refused for (`op` check, which
+  spawns nothing): a class that needs a key gets that key as an empty row, a single new draft with the cursor
+  in it, and its panel and its name on the map say what is missing.
+  "Place" in the panel of a draft sends it, with several drafts selected it reads "Place N", and "Place all"
+  above the list sends every draft. Drafts that a sent draft names as its targets go with it, and what is
+  aimed at is sent before what aims at it, because the game frees a `trigger_push` whose target is not there
+  in its first frame. All that one Place puts on the server is one step of undo. A draft the server refuses
+  stays a draft, selected, with the reason in its panel; one that aims at a draft that was not placed is not
+  sent. "Discard" throws drafts away, "Discard all" asks once when there is more than one. Drafts belong to
+  the map they were made on and are lost with a reload of the page.
+  What goes to the server at once as before: undo and redo, the import of a `.ent` file, the layout, and
+  Place of the Models tab. Their keys are complete, there is nothing to fill in first. What is not in a draft:
+  an export or a saved layout, which are made on the server.
+- New: the names of the entities float above their markers (`js/editor-labels.js`, view toggle "Names"): the
+  class, the targetname in quotes, and `[draft]` or `[draft: needs fxFile]` for a draft. Every draft and what
+  is selected always have a name (64 at most), besides those the 40 entities nearest to the camera that pass
+  the filter of the list, are in front of the camera and within reach (1500 units, more when the camera is
+  far out). A name that would lie over one already placed is left out. Which entities have one is worked out
+  every 150 ms without the screen, a frame only projects those and moves their lines, which are made once and
+  used again. A name has no test against the walls: it shows where its marker is hidden. Not in the
+  administration.
+- New, and since the entry above the way of every new entity: a class that can not be placed bare is opened as a
+  draft (first as one draft at a time, with ``openDraft`, `draftOp`, `placeDraft` in
+  `js/editor-entities.js`). Place gives a class its name and where it is, and the server refuses a class
+  without a key it can not be without: an effect without its file, a speaker without its sound, a class of
+  brushes without its model. That left such a class with no way into the map but a template or an import
+  (the log of the user's server had a `fx_runner` tried four times in a row). The answer of a refused spawn
+  now names the key it was refused for (`key` in the answer of `/api/entity`), and the page opens the entity
+  as a draft with that key in its table and the cursor in its value. A draft is in the list (as "new") and on
+  the map like an entity, its keys are edited and completed like those of one, it is moved, turned and
+  resized like one, and "Place" in its panel sends it; "Discard" throws it away. The server knows nothing of
+  it until then, so nothing of it is in the history either: the entity it becomes is one step. Place that is
+  refused again leaves the draft as it was typed, with the next key that is missing. One draft at a time, and
+  it belongs to the map it was begun on. What is refused for something no key helps with (a `misc_bsp`, a
+  full map) is only refused, as before.
+- New: the `model` key of a class that is made of brushes offers the brush models of the map (`*1`, `*2`,
+  ...), each with the entities that have it now. A disabled button looks disabled.
+- Fixed: a `misc_bsp` placed in the editor ended the server. It happened to the user on 2026-10-08: the class
+  loads another `.bsp` file into the map, placed without keys it asks for `maps/.bsp`, and a file the engine
+  can not load is an error that a dedicated server does not survive. That error comes from the engine and not
+  from the spawn function, so reading the spawn functions for `trap->Error` had not found it. The panel does
+  not place a `misc_bsp` at all now: a file that is there can still bring more entities than the map has room
+  for. And it can not work on a running map for the players either: a client loads such a file only while
+  it loads the map (`CG_RegisterGraphics`), so one that is connected already gets an entity with a model its
+  collision map does not have, and the engine drops it (`CM_InlineModel: bad number`). The refusal says so.
+  A `misc_bsp` could only come with the start of a map, before any client loads it. Found by going through every class again, this time with what it calls (two deep) and with every call
+  that can end the server: an `info_siege_radaricon` without `icon` is refused, and a `misc_weapon_shooter`
+  whose `weapon` is no weapon or one without an item (it registers the item and ends the server when there is
+  none). A `fx_runner` without `fxFile` frees itself; it is refused with that reason instead of "the game did
+  not keep it", which is now worded for what it means.
+- New: the memory of the game is a budget of the editor. Every spawn takes memory for the text of its keys
+  from a pool the game gives back only when the map starts (`G_Alloc`, 4 MB here), every move of an entity in
+  the editor is a spawn, and the allocation that does not fit ends the server. The line with the budgets
+  shows how much is used ("Memory 1%", `memory` in the `budget` of `/api/entities`, from `G_MemoryLeft` in
+  `g_mem.c`), and the server refuses a spawn when less than 256 KB are left and says that a start of the map
+  frees it. A map takes about 20 KB when it starts and a spawn 30 to 100 bytes, so this is far away, but it
+  is not out of reach for a script.
+- Fixed: a model whose name begins with a `/` is found by the page as the game finds it (two classes of the
+  game name their model that way and the page got a 400 for it).
+- New: the keys are completed while they are typed (`js/editor-complete.js`, asked for by the user: "add auto
+  completion for keys"). The key field of a row had the list of the browser with the keys a definition writes
+  in quotes, which for many classes is none (`trigger_push` writes `wait - how long ...`). Now a list opens
+  under the field with every key the entity can have and does not have yet, each with what is known about
+  it, from four places, the nearest first: what the definition of the class says about a key (both ways of
+  writing are read, a spawnflag is not taken for a key), what the spawn function of the class reads, what
+  other entities of the class have on this map (with a value one of them has), and the keys every entity
+  takes. Typing narrows the list to what begins with the typed text, then what has it in its middle. The
+  arrows walk it, Enter or a click takes a key and goes on to the field of its value, Tab takes the nearest
+  one, Escape closes it. The field of a value says in its tip what its key is for and shows the default of the
+  key while it is empty.
+  The keys of the code come from the build: `cmake/Modules/ExtractSpawnKeys.cmake` looks for the calls
+  `G_SpawnString`, `G_SpawnInt`, `G_SpawnFloat`, `G_SpawnVector` and `G_SpawnBoolean` in the function the table
+  of the classes names for a class and in the functions that one calls (`InitTrigger`, `InitMover`, three
+  deep), with the kind of the value and the default the call has: 133 classes. The keys every entity takes
+  are the table of the fields in `g_spawn.c`, handed out at run time (`G_SpawnFieldInfo`, 84 keys).
+  `/api/classkeys` is both. What this does not know: a key that is read some other way (a field that a class
+  uses for something of its own is offered as what it is for every entity), and what a value may be.
+- New: the throw of a push is drawn (`pushArc`, `drawArcs` in `js/editor-lines.js`). With the Links view on,
+  every `trigger_push` and `target_push` that throws an arc has that arc as a line: from its middle on the way
+  whose top is its target, worked out as the game does it (`AimAtTarget`: the time to the top from the height
+  and the gravity, the speed across from that time). For the selected push, and for the pushes that are aimed
+  at the selected entity, the way is followed on down until it meets the map, with a cross there; under a roof
+  it ends at the roof, which is where a player would hit his head. The panel of a push says the same in
+  numbers: how far up and across, the time to the top, where it meets the map. While a target is dragged the
+  arc follows it. A push that goes straight (`LINEAR`, `RELATIVE`, `CONSTANT`) has no arc. A push whose target
+  is not above it has no throw: a red line, a warning in its panel and a line in "Entities to look at".
+- Fixed: a push throws to where its target is now (`G_PushAimAgain` in `g_trigger.c`, called for every entity
+  the panel spawns). The game works the throw out once, in the first frame of the push, so a target moved in
+  the editor changed nothing until the map started again, and a layout that moved the target of a jump pad of
+  the map left that pad throwing to the old place. What is aimed at a placed or changed entity is aimed again.
+  Not when the new place has no throw (a target that is not above the push): the game frees such a push, and
+  moving a target should not take the push away, so it keeps the throw it had and the report names it.
+- Fixed in the game: a push whose target is below it (`AimAtTarget`). The time to the top is a root, and of a
+  negative height that is no number: the push stayed and gave everybody who touched it a speed that is no
+  number. Only a target at exactly the height of the push ended it. Now one below does too.
+- New: the faces of a trigger box are dragged with the mouse (`boxHandles`, `boxDragMove` in
+  `js/editor-move.js`). A selected trigger that is a box has a yellow handle in the middle of each of its six
+  faces, drawn through the walls and as big on the screen wherever it is; the one under the mouse is white. A
+  handle dragged with the left button moves its face along its axis, to the point of that line the ray of the
+  mouse comes closest to, on the grid of the editor. The other five faces and the origin stay, so a box can be
+  fitted into a doorway side by side. While it is dragged the box is drawn where it will be and the "Box" row
+  says its size; nothing is sent before the button is let go, and then it is one change and one step of undo.
+  A face stops one unit before the one across. The box of such a trigger is drawn while it is selected, also
+  with the Volumes view off. Several selected entities have no handles (they are moved, not shaped), and with
+  the fly camera a drag that starts on a handle moves the face and not the head.
+- New: the layout of a map (`WA_ApiLayout`, `WA_LayoutText`, `WA_ReloadSpawn` in `wa_entities.c`). What the
+  editor did to a map was lost with every change of the map and every start of the server, only "Reload map"
+  carried the placed entities over. "Save layout" in the World tab keeps the map as it stands in
+  `layouts/<map>.txt`, and the server does that to the map again whenever it starts, with the panel on or off:
+  the entities that are there and that the map file does not bring are spawned (the placed ones, and the ones
+  of the map that were changed), and the entities of the map file that were deleted or changed are taken
+  away. For that the server keeps the keys every entity of the map file came with, and knows of each entity
+  whether it still is one of them. Keys that are put back to what the map file has, or a delete that is
+  undone, make an entity that one again. An entity that the game frees by itself (something that broke) is
+  not a change. The line above the buttons says how it stands: none, not saved, saved, changed since.
+  "Forget" removes the file, the map is its own again with the next start. The file is text and can be
+  changed in the Files tab, what is in it goes through the same checks as an entity that is placed by hand.
+  An entity keeps the origin its keys have unless it is somewhere else by now, as a prop that was pushed.
+  "Reload map" writes the same text for the one start that follows, so it carries what was deleted or
+  changed of the map as well now. Limits: an entity of the map file is known by its keys, so a layout made
+  for one version of a map takes nothing away in another whose entities have other keys (it says how many it
+  did not find), and two entities with the very same keys are one as good as the other.
+- New: an arrow at every entity whose keys say which way it looks (`drawFacing`, with the markers): where a
+  player looks at a start point, where a shooter fires, the way a door opens. `angle` and `angles` are read
+  as the game reads them, -1 and -2 are up and down. The arrow of the selected entity is longer and in its
+  colour, and follows the turn buttons.
+- New: "Entities to look at" in the report of the tab Map (`entityProblems`). Red, it does not work as it is:
+  a target key (`target` to `target6`, `opentarget`, `closetarget`, `paintarget`, `deathtarget`) that names
+  no entity, an entity outside of the map, no `info_player_deathmatch`, capture the flag without a flag.
+  Yellow, it may be meant or a script may do what is missing: a `func_door`, a `func_usable` or a `target_`
+  entity with a name that nothing fires (such a door never opens), a brush class without a brush model in
+  its keys, a game type without its own start points. A click on a line selects the entity in the World tab
+  and brings the camera to it. The twenty maps of the game for free for all, capture the flag and duel give
+  no line at all, the three siege maps a few yellow ones for relays that the rules of the siege fire by name.
+- New: what a surface is made of, in the tab Map of the editor (`inspectSurface`, `renderSurface`). A click on
+  the map shows the surface under it: the name of its shader and the script of it as the game reads it, or
+  that it has none and is its image times the light; whether it is a face of a brush, a patch or the triangles
+  of a model of the map; the brush model it belongs to and the entity that has that one; its lightmap and its
+  fog; what it is for the game (the material that says how steps and hits sound, and flags like slick or no
+  marks) and what the brush behind it holds (solid, water, the clips); and how the page draws it (stages, sort,
+  side, deforms). Its triangles are outlined. The page had all of this already, it only had to remember which
+  surface a triangle of the map is from. What is never drawn (the sky, nodraw, the clip brushes themselves)
+  has no triangles and can not be clicked.
+- New: what fires what lights up in the editor (`WebAdmin_Used`, `used` of `/api/entities`, `takeFired`). The
+  game tells the panel every time an entity fires one of its targets (one line in `G_UseTargets2`), the last
+  64 of them are kept. With "Links" on, the line from the one to the other turns yellow for three seconds,
+  with "Volumes" the box of the one that was fired. So a trigger that a player walks into, a button, a chain
+  of relays or a click on "Fire" can be followed while it happens. Only what goes through a target is told:
+  a door that its own trigger opens when somebody walks up to it is not.
+- New: several entities selected at once in the World tab. Ctrl and a click on a marker adds an entity to the
+  selected one or takes it out again, a click without Ctrl or Escape ends it. Moving (the drag, the right-click,
+  the fields of the position, "To floor", Shift and the keys) takes the others along by the same way, Delete,
+  Duplicate, Ctrl+C and Ctrl+V take all of them, and a paste keeps where they stand to each other. Each of
+  these is one step of undo. The two turn buttons turn all of them together, by 15 degrees around the middle
+  of where they stand, each as far as the others (what is made of brushes stays: its angle is the way a door
+  opens). The keys of the panel stay those of the one that was clicked first, and "Apply" changes only that
+  one. The server knows nothing of it: the page sends one change for each
+  entity, so one of them can be refused while the others are made, and the message says how many.
+  Shift and a drag draws a rectangle and selects every entity whose marker is in it, also the ones behind a
+  wall. With Ctrl they are added to what is selected. The one nearest to where the drag began is the one
+  the panel shows.
+- New: stored views. Shift and a digit from 1 to 9 stores where the camera is, around a point or flying, the
+  digit alone goes back there. The browser keeps them for each map.
+- New: the button Picture at the bottom right saves what the map view shows as a PNG.
+- New: the tab Map of the editor, a report of the map that runs. What its file holds (size, extent, surfaces,
+  triangles, vertices, shaders, lightmaps, brushes, brush models, the shader of its sky). What is missing: a
+  shader a surface names that is neither a script nor an image, and every image a stage of a shader names that
+  the server does not have. The entities by class with their number, a click shows a class in the World tab.
+- New: the tab Log of the administration, the log of the game as it grows (who came and went, kills, chat, the
+  commands of admins), with a filter for lines. The engine writes the file of the log in blocks unless
+  `g_logSync` is set, so the end of the file is behind: the game hands every line to the panel where it writes
+  it (`WebAdmin_Log`, one line in `G_LogPrintf`), which keeps the last 64 KB. The module is loaded anew with
+  every map, so the view of a new map starts with the end of the file as the map before left it. The whole
+  file is `games.log` in the Files tab.
+- New: fog in the administration, where the camera is in the map (flying, or through the eyes of a player; from
+  above it would hide the map). The page reads the fogs of the map file and which one a surface is in, and takes
+  colour and depth from `fogParms` of the fog shader. The fog of the whole map is what the engine does with the
+  fog of OpenGL: every stage fades to the colour of the fog by `exp( -( d * 2.354 / depth )^2 )`, a stage that
+  adds fades to black and one that multiplies to white. The fog of a brush (a pit) is a pass of its own over the
+  surfaces in it, as `RB_FogPass`: the colour of the fog, the thicker the further the line of sight runs through
+  the fog, cut at the side of the brush the fog ends at. Only shaders with a sort up to see-through are fogged,
+  and `noglfog` is read, as in the engine. Models are in the fog of the whole map, the fog of a brush is not
+  drawn on them, and the sky is not fogged.
+- A shader script or an image the server did not answer for is asked for again (the server is away for a moment
+  when the map changes), a few times, before it counts as missing.
+- New: in the World tab. "Export placed" downloads only what was placed through the panel, "Import .ent" places
+  every entity of such a file, one after the other, and says how many the server refused and why. The
+  worldspawn and what is made of brushes of the map it came from are left out. An import empties the history of
+  undo. "Template" in the panel of an entity keeps its keys under a name in the browser: the name is offered in
+  the class search as `@name` and is placed like a class, Shift and a click there takes it away. At the bottom
+  of the map the place under the mouse is shown, on the grid, and how far it is from the selected entity.
+- The panel of a selected player is a column at the right edge of the map. JKAdmin has it across the bottom,
+  where with the buttons of JA+ in it it took half of the height of the map view and lay over what one wanted
+  to click on.
+- New: what is in the air is drawn, in both modes (`shots` of `/api/state`, `drawShots`): the shots, rockets
+  and grenades the clients draw as missiles. The page has none of the effects of the game, so a bolt is a
+  streak of light in about the colour of its effect, as long and as thick as the weapon makes it, and what the
+  game draws as a model is that model: a rocket, a thermal detonator, a det pack. They move between two polls
+  by where they were, a new one comes from where its speed says it was. A saber that was thrown was drawn
+  before, but only as its hilt, upright and without a blade: the server has it among the models then. Now the
+  page knows whose saber an entity is (`saberEnt` of a player), lays it flat as the client does, lets it turn
+  its 800 degrees a second between the polls and gives it the blade of its owner. Where a shot ends there is
+  a flash for a moment (`flashes`): the page has no explosion of the game to show, so what was in the air at
+  one poll and is gone at the next lights up about where it must have hit, a spark for a bolt, a ball of 35
+  to 90 units for half a second for a rocket, a grenade, a det pack and the shots that burst. Not drawn: the
+  trail of anything, the real effects, and what only an effect shows (the beam of a disruptor).
+- Changed: "Fire" also fires a `misc_weapon_shooter`. The game lends that class a client for the weapon code,
+  and the first guard took everything with a client for an NPC. It asks for the NPC itself now.
+- New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Six
+  values, one a second, each with a graph of the last five minutes: how long a frame of the game takes on
+  average and at most, how much of that is this panel (`WA_PerfPanelDone`, from the start of a frame to
+  the end of `WebAdmin_Frame`), how many frames the game got, the longest wait from one frame to the next, the
+  entities in use and the players. The game module measures itself from the start of `G_RunFrame` to its
+  end with a clock of the system (`clock_gettime`, `QueryPerformanceCounter` on Windows), since a frame is
+  done in a fraction of a millisecond and the precision timer of the engine only counts on Windows. The
+  engine around the game is not in the frame time, it shows in the wait between two frames. The work of the
+  panel is in it: a map or a model handed out to a browser is sent from inside a frame, and the graph shows
+  that as peaks when a page loads. A value turns yellow when the game got less than nine tenths of its
+  frames, waited twice as long as `sv_fps` says, or a frame took longer than the time there is for one. The
+  numbers start anew with every map. The graph of the frame time lets the few highest peaks run over its
+  top, or one long frame at the start of a map would flatten the rest.
+- New: the tab Bans of the administration. It lists the addresses that may not connect (`G_BanListEntry`, the
+  list the game keeps in `banIPs.txt`), lifts a ban and takes a new one by its address, with a `*` for any
+  number. The actions `banip` and `unban` run `addip` and `removeip` of the game, only digits, dots and `*`
+  go into the line.
+- New: "Play" next to a key of an entity that names something to hear or see. A sound (`noise`, `music`) is
+  played in the browser, from the file of the game. An effect (a key with `fx` in its name) is played once in
+  the game where the entity is (action `effect`, and `sound` does the same for a sound), so it is seen by who is
+  in the game, not in the panel. The server refuses it when the name would need a place among the config
+  strings and none is left.
+- New: "Set" in the Routes tab gives the selected waypoint what a bot does there (`op` flags).
+- New: the panel of a player says who that is for an admin: how long he has been in the game, the address he
+  connects from (without the port, none for a bot) and the client plugin of JA+ he has or that he has none
+  (`address`, `minutes`, `plugin` of a player in `/api/state`).
+- New (2026-10-19): the panel of a player names his lag, how many ms behind the server his commands are: what lag
+  compensation (`tay_unlagged`, server.md) shifts the others back by for his shots. It is more than his ping, as
+  it holds how far behind the newest snapshot his client draws. Number 40 of `f` in `/api/state`, 0 for a bot.
+  Read through `/api/state` with a client behind 100 ms (`tools/lagpanel.sh` of the test tools: 135 to 145 ms at
+  a ping of 101 to 103); the line on the page was not looked at in a browser.
+- New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
+  `func_`) without a `model` key that names a brush model of the map (a trigger may have a box instead, see
+  above), the classes whose spawn function raises
+  an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
+  `trigger_lightningstrike`, `misc_siege_item`, `misc_model_breakable`, `trigger_shipboundary`,
+  `trigger_hyperspace`, later `info_siege_radaricon` and `fx_runner`), a `misc_bsp`, a `misc_weapon_shooter` with a
+  weapon that has no item, an entity when fewer than 64 are left for the game or the memory of the game is
+  nearly used up, and a model, sound or effect when its kind has no place left. The answer says which rule
+  it was.
+- Fixed: a `func_plat` or a `func_door` that the panel deletes or changes takes its own trigger along
+  (`WA_FreeEntity`). Such a mover makes a trigger when it spawns and the game never frees a mover, so the
+  trigger stayed: every move of a lift left one more behind, and it named an entity number that the next
+  entity gets.
+- Fixed: a team of movers (doors with the same `team` key, which open together) stays whole when the panel
+  deletes or changes one of its parts (`WA_LeaveTeam`, `WA_TakeTeamPlace`). The game builds the chain of a
+  team once at the start of the map and never frees a mover. Deleted through the panel, the first part of a
+  team left the others without the one that moves them, and any part stayed in the chain, so the team went
+  on moving and linking whatever entity got its number. An edited part (an edit spawns a new entity) was no
+  longer one of the team. Now a deleted part is taken out of the chain, the next one leads when it was the
+  first (it takes over the targetname, the trigger and what the team was about to do), and an edited part
+  takes the place of the old one unless the edit gave it another team.
+- Changed: the state feed is smaller and asked for less often. The list of the items is more than a third of
+  an answer and the same from one poll to the next unless something was picked up or came back: it has a
+  number now (`itemsRev`, a hash of its text), and a page that has the list of that number is not sent it
+  again. The same for a player, who was about a kilobyte ten times a second: who he is and what he has stays
+  the same nearly always and is sent with a number and then only when it changed, what changes all the time
+  comes as two rows of numbers, about 150 bytes (`expandPlayers` makes the one object of it that the rest of
+  the page reads). With three bots an answer went from about 7,500 to about 1,000 bytes. And the page asks once a second and not ten times while the map is not looked at: the tab of the
+  browser is in the back, or the config, the files or the log lie over the map.
+- Fixed: the map file is read as it is sent as well (`/api/map`), and the panel no longer keeps a copy of
+  it. It read the whole `.bsp` in one go at the first question an editor has after a map started, 7 to 20 MB,
+  and kept it, only to hand it out and to know how many brush models there are. That number comes from the
+  head of the file now. The longest frame of the game after a map start with an editor open went from 8.6 to
+  1.5 ms on mp/ffa3 and from 12.4 to 2.3 ms on mp/siege_hoth.
+- Fixed: a file of the game is read as it is sent (`/api/file`, `WA_FileMore`): at most 256 KB for a
+  connection and 512 KB for all of them in one frame, and another connection is the first each frame. It was
+  read in one go before, and the tab Load showed what that costs: the animations of the players, 11.8 MB out
+  of a pk3, made a frame of 30 ms every time a page was opened. Now the longest frame while six such files
+  go out at once is under 2 ms, and the file takes half a second.
+- Fixed: a file of the game that the page asked for while the server changed the map is asked for again
+  (`fetchGameFile`, every three seconds for half a minute). The server does not answer during a change, and
+  what was on its way just then was lost for good: a player whose model was being read stayed the plain
+  figure until the page was loaded again. An answer that says the file is not there is still final.
 - New: the JA+ admin commands that work on a player (`WA_JpAction`). The panel does not copy them, it sends the
   same line an rcon admin would type on the server console (`amsleep 3`, `amrename 3 "name"`), so the rules,
   texts and logs are those of JA+. The command runs in the next frame, the answer of the panel only says it was
   sent, what happened shows in the state (`jp` object of a player: admin rank and the JA+ flags). `freeze` has no
   console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
   offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
-- New: hallucinations for one player (`codemp/game/g_schizo.c`), the "Schizophrenia" button in the player panel,
-  action `schizo`, also the server console command `schizo <player>`. Every few seconds something happens that
+- New: hallucinations for one player (`codemp/game/fun/g_schizo.c`), the "Schizophrenia" button in the player panel,
+  action `schizo`, also the server console command `vs_schizo <player>`. Every few seconds something happens that
   only he gets: blaster bolts pass him, a saber is switched on behind him, steps come closer, voices, breathing
   and screams, a detonator beeps and goes off, the lock tone of a rocket launcher, thunder with a shaking view,
   chat lines other players never wrote, text on his screen, a kill message between two other players, a hit from
@@ -131,21 +1456,21 @@ Also changed:
 - Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
   table again with every poll of the entities unless something was typed. Here it is only built again when the
   entity or its keys changed, and never while the cursor is in one of its fields.
-- New emote `ampoop` (`codemp/game/g_poop.c`, the command with the other emotes in `g_japlus_cmds.c`). A player
+- New emote `ampoop` (`codemp/game/fun/g_poop.c`, the command with the other emotes in `g_japlus_cmds.c`). A player
   types it or binds it like `amsit`: he sits down in the air (animation `BOTH_SIT3`), moans three times (the
   pain sounds of his own model), and a small rock lands on the floor under him with a splat and a sigh. The
   rock is a plain model entity (a chunk of the rock debris), lies there for 90 seconds, at most 24 on the map.
   The rules of the emotes apply (`JP_Emote`), bit 30 of `jp_emotDisallow` turns it off, he has to stand still
   and it is not for duels. It is in the emote list the server prints. In the panel the "Poop" button sends it
   for the selected player (action `poop`). Server side only. Added without a test run.
-- New: flatulence for one player (`codemp/game/g_flatulence.c`), the "Flatulence" button in the player panel,
-  action `flatulence`, also the server console command `flatulence <player>`. Every 1.5 to 6 seconds he breaks
+- New: flatulence for one player (`codemp/game/fun/g_flatulence.c`), the "Flatulence" button in the player panel,
+  action `flatulence`, also the server console command `vs_flatulence <player>`. Every 1.5 to 6 seconds he breaks
   wind: a sound everybody near him hears (the snorts of the rancor, the talk of the gonk droid, an air burst)
   and a green cloud behind him (the gas cloud of the noghri stick). One in six is a big one with three clouds
   that shoves him forward, not in a duel. Server side only, stock sound and effect events. Gone when he leaves or
   the map changes. Added without a test run.
-- New: disorientation for one player (`codemp/game/g_disorient.c`), the "Disorient" button in the player panel,
-  action `disorient`, also the server console command `disorient <player>`. The view sways all the time (pitch,
+- New: disorientation for one player (`codemp/game/fun/g_disorient.c`), the "Disorient" button in the player panel,
+  action `disorient`, also the server console command `vs_disorient <player>`. The view sways all the time (pitch,
   yaw and roll, two sines each with periods that do not fit together). Every 3.5 to 9 seconds it is thrown around
   by 70 to 200 degrees with a screen shake only this client gets, and the player stumbles a step to the side (not
   in a duel, not in the air). One in four of those is a whirl instead: the view turns once or twice around. All
@@ -154,7 +1479,7 @@ Also changed:
   third person camera has none). Not while dead, a spectator or in a vehicle. Bots are not bothered, they turn
   to where they want to look. Server side only. Gone when the player leaves or the map changes. Added without a
   test run.
-- New: the tab "Config" edits `server.cfg` (`WA_ApiConfigGet`, `WA_ApiConfigSet` in `g_webadmin.c`). It is that
+- New: the tab "Config" edits `server.cfg` (`WA_ApiConfigGet`, `WA_ApiConfigSet` in `wa_fs.c`). It is that
   one file, the request names none. The text field lies over the map view, the buttons are "Save", "Save and
   execute" (`exec server.cfg` on the server console) and "Reload". The engine reads a file from the home path
   first and writes only there, so the first save makes `fs_homepath/<game>/server.cfg` and the file of the
@@ -162,7 +1487,7 @@ Also changed:
   saved. The file is Latin-1 on disk and UTF-8 on the page, a character the game does not have becomes `?`.
   A request may be 64 KB now (16 KB before), the page refuses a text over 60000 bytes. The passwords in the
   file are shown as they are, and whoever can log in can change them: the panel is only as safe as
-  `g_webPassword`. The security log gets "config saved" with the size, never the text. Executing sets cvars at
+  `vs_webPassword`. The security log gets "config saved" with the size, never the text. Executing sets cvars at
   once, latched ones wait for the next map, and a line that changes the map changes the map. Added without a
   test run (the read was called once after the deploy, nothing was saved).
   The text has colors: commands of the console, cvar names, quoted text, numbers and comments, and inside
@@ -171,7 +1496,7 @@ Also changed:
   `cfgString`, `cfgPaint` in the page), no library. Checked with node that every line of the config reads
   the same colored and plain, not seen in a browser.
 - New: the tab "Files", a file manager for the game folder and nothing above it (`WA_ApiFs*` in
-  `g_webadmin.c`). It shows two folders: the game folder in the home path of the server
+  `wa_fs.c`). It shows two folders: the game folder in the home path of the server
   (`fs_homepath/<fs_game>`: logs, the stored config, what the panel saved), which can be changed, and the game
   folder of the installation (`fs_basepath/<fs_game>`), which can only be read. A click opens a folder or a
   text file (in a text field as in the Config tab, with the colors for a `.cfg`), any other file is
@@ -195,7 +1520,7 @@ Also changed:
   rename and delete, a link to `/etc` inside the folder, the game module, and the plain operations on scratch
   files with text in Latin-1 and an upload in two pieces. Everything was refused that has to be and nothing
   was written outside. The page itself was not seen in a browser. The Windows module builds, it was not run.
-- New: action `reload`, the running map again (`WA_ReloadMap` in `g_webadmin.c`). The engine looks through its
+- New: action `reload`, the running map again (`WA_ReloadMap` in `wa_entities.c`). The engine looks through its
   folders for pk3 files when a map starts and at no other time (`FS_Restart` in `SV_SpawnServer`), so this is
   what makes the server find a pk3 that was uploaded. A restart of the server process is not needed for that,
   and the panel could not start the process again. The players stay connected. With cheats on it is `devmap`,
@@ -208,8 +1533,8 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
-- New: the physgun, as in Garry's Mod (`g_props.c`, the section "The physgun"). An admin of JA+ types
-  `/amphysgun` and has it: it is the stun baton, which he gets with the command and keeps over a death. The
+- New: the physgun, as in Garry's Mod (`g_props.c`, the section "The sandbox (amsandbox)"). An admin of JA+ types
+  `/amsandbox` (was `/amphysgun`, see [sandbox.md](sandbox.md)) and has it: it is the stun baton, which he gets with the command and keeps over a death. The
   command again takes it away. The client of the port takes the baton out by itself, on another client it is
   reached with the next and previous weapon keys (it has no number).
   - Attack takes the prop he looks at into the beam, from up to 2048 units away (what a shot would hit: the box
@@ -267,7 +1592,7 @@ Also changed:
   within about 350 of the 600 units of reach), a weaker pull would not move it and everything in reach would
   stay awake. Added without a test run.
 - New: props have the shape of their model, players stand on them, and a prop that is thrown at somebody hurts
-  (`codemp/game/bg_props.c`, shared by the game and the cgame, and `g_props.c`).
+  (`codemp/game/props/bg_props.c`, shared by the game and the cgame, and `g_props.c`).
   - The shape. `misc_prop` has a key `shape`: `model` (the default now), `box` or `ball`. `model` is the convex
     hull of the model: its furthest vertex along each of 26 directions, then the vertex that sticks out of the
     hull of those furthest, one at a time, until nothing sticks out by more than half a percent of the size of
@@ -306,8 +1631,8 @@ Also changed:
     before it was seen next to him). Who held, shoved, pushed or shot it in the five seconds before is the
     attacker, and is not hurt by it himself in the first 0.4 seconds. A crate of mass 6 at 600 units a second
     does about 50.
-  - New server command `props`: lists the props with their corners, faces, mass, place, lowest and highest
-    corner and whether they lie still. `props <number>`: what that body touches.
+  - New server command `vs_props`: lists the props with their corners, faces, mass, place, lowest and highest
+    corner and whether they lie still. `vs_props <number>`: what that body touches.
   - Checked before the user asked me to stop testing and build it: `bg_props.c` alone in a small program (300
     clouds of points give sound hulls, a nearest spot is off by 1.3 units at most where a face has no width,
     4000 moves of a box against turned shapes stop where stepping along the way says they should, 0.3 units
@@ -321,7 +1646,7 @@ Also changed:
     Not checked: the prediction of the cgame (not at all, it shares the code of the trace), shoving by walking,
     a prop thrown with +button13 at a player, stacks and piles after the last change of the hull, a client
     without the new cgame. Built for Linux and Windows.
-- New: `+button13` takes players too, for admins only (`Prop_CarryPlayer` in `codemp/game/g_props.c`): who is
+- New: `+button13` takes players too, for admins only (`Prop_CarryPlayer` in `codemp/game/props/g_props.c`): who is
   logged in as an admin of JA+, with any rank. Everybody else takes props with it as before. The ranks are not
   compared and `jp_admUsableOn` is not looked at, any admin takes any player. He takes the player he looks at
   within 96 units (his legs, his chest or his head within 32 units of the line of sight, not through a wall)
@@ -340,7 +1665,7 @@ Also changed:
     the emote. If something else has his hands when he is taken (he lies on the ground, he is choked) that
     runs out first.
   - The one who is carried is right in front of the admin, turned to him (his yaw is set every frame, his
-    pitch is his own), 4 units off the ground, `g_grabHugDist` units away (default 10, 0 to 64). The emote
+    pitch is his own), 4 units off the ground, `vs_grabHugDist` units away (default 10, 0 to 64). The emote
     itself can not have two players closer than 30 units, their boxes are 30 wide, and at that distance the
     arms do not reach. So the two of a hug stand in each other, and neither is there for the moves of the
     other: the server takes the other one out of every trace of the move (`SV_PMTrace`, `G_PropMate`). That
@@ -382,7 +1707,7 @@ Also changed:
   he gets more than 128 units from his place, and when the admin logs out. Not taken: spectators, players in a
   duel, in a vehicle or in noclip, and nobody who is carried takes a player himself (two who hold each other
   would lift each other off the ground). Bots can be taken. Of a prop and a player in front of him he takes
-  what is closer to his line of sight. The default of 10 units is what the user chose in the game, `g_grabHugDist`
+  what is closer to his line of sight. The default of 10 units is what the user chose in the game, `vs_grabHugDist`
   sets it while the server runs. A stock client knows nothing of `STAT_CARRY`: for somebody who plays with
   one, carrying and being carried jerks, his prediction runs into the other one. Built for Linux and
   Windows, not tried in the game by me.
@@ -390,7 +1715,7 @@ Also changed:
   for the other deletes): every `misc_prop` that was placed through the panel goes, with one request (`op`
   clear). Props of the map stay, and so do the balls and cubes of the World tab. The buttons that need a second
   click share one helper on the page now (`confirmed`). Added without a test run.
-- New: the tab "Models" and the entity `misc_prop` (`codemp/game/g_props.c`): any model of the game as a thing
+- New: the tab "Models" and the entity `misc_prop` (`codemp/game/props/g_props.c`): any model of the game as a thing
   with the physics of the cube. The tab lists every `.md3` and `.glm` of the game (748 with the base game and
   JA+), with a search and the turning preview the class list has. Pick one, set scale, mass and shape if they
   are not to be the defaults, and right-click on the map: it is spawned as a `misc_prop` half its height above
@@ -424,7 +1749,7 @@ Also changed:
   props dropped onto a floor come to rest with their middle half their height above it (a crate, a crystal, a
   player model, a weapon model at 300 percent, a ball), two crates stack. The user placed props through the
   page. How the models look in the game was not seen by me.
-- New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
+- New entity `misc_cube` (`codemp/game/props/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:
   only part of their speed gets into it, off its middle the shove turns it, and the player is slowed down while
@@ -528,7 +1853,7 @@ Also changed:
   of the button, it keeps the speed it had, so it can be flung. A force push throws it out of the hand. It is
   also let go when he dies, leaves, or it gets more than 144 units away from the hand (caught behind a wall,
   teleport). The one who holds it does not kick it. Added without a test run.
-- New entity `misc_ball` (`codemp/game/g_props.c`), placed in the World tab like the black hole. A ball with
+- New entity `misc_ball` (`codemp/game/props/g_props.c`), placed in the World tab like the black hole. A ball with
   physics of its own: gravity, bounces that keep part of the speed, rolling with resistance, rolling down slopes,
   coming to rest. Players and NPCs kick it by running into it (it bounces off them like off something much
   heavier that moves), force push and pull throw it (a call in `ForceThrow` of `w_force.c`), shots, sabers and
@@ -538,7 +1863,7 @@ Also changed:
   `radius` 18, `modelscale` 600, `bounce` 0.7, `friction` 90, `mass` 1, `kick` 1, `model`. A use, falling out of
   the world or getting stuck brings it back to where it was placed. Lifts do not carry it, and the black hole
   does not pull it. Added without a test run.
-- New entity `misc_blackhole` (`codemp/game/g_blackhole.c`), made to be placed in the World tab: it is in the
+- New entity `misc_blackhole` (`codemp/game/props/g_blackhole.c`), made to be placed in the World tab: it is in the
   spawn table, so it shows up in the class list. It pulls players and NPCs towards itself, stronger the closer
   they are, and crushes what reaches its core. It is server side only: for the client it is a stock looping effect
   entity (`ET_FX`, like `fx_runner`) with a looping sound and a light. Keys: `radius` 600, `strength` 2400 (the
@@ -552,6 +1877,230 @@ Also changed:
   has `gravity` for the server and `gravity` and `ownGravity` for each player.
 - New player action noclip: a button next to god mode toggles `client->noclip` like the `noclip` cheat, for a
   living player. The state has a `noclip` field, the list shows a tag. Added without a test run.
+- New: several waypoints of a route at once. Ctrl and a click selects one more or one less, Shift and a drag
+  every one in a rectangle, as with the entities of the World tab. Remove and "Set flag" are for all of them in
+  one request, and dragging a selected one moves them all: the one that is grabbed follows the floor under the
+  mouse, the others keep their place to it. "Revert to saved" loads the route again as the start of the map did
+  (`RemoveAllWP`, `LoadPath_ThisLevel`), which drops what was not saved. "Map default" puts the saved
+  `botroutes/<map>.wnt` of the server folder aside as `.wnt.bak` first, so that the load finds the route of the
+  map's own files. On a server whose folder is the installation the saved one is all there is: it is put back
+  and stays. After both the bots forget the waypoints they held and walk again. Added without a test run.
+- New: the console of the server in the Log tab. A switch shows the game log or the console, each with its own
+  lines, and a line under the text runs a command on the server console (Enter or Run, the arrow keys walk the
+  last 50 commands, which the browser keeps without the ones that name a password). The game module only sees
+  its own prints, so the text of the console is read from the file the engine keeps of it: `qconsole.log`, which
+  is written while `logfile` is set. The first request for the console sets `logfile 2` when it is off, and the
+  view starts with what is printed from then on. A command is one line of 480 characters at most without control
+  characters, goes to the security log and is echoed on the console with a `]` in front, both without what
+  follows a word with `pass` in it. It gives the panel no right it did not have: the config tab could run any
+  console line already. Added without a test run.
+- New: the Files tab has a tree instead of the list of two roots. Its top entries are "Server files" (the game
+  folder in the home path of the server: its configs, its logs, what is uploaded, open at the start) and "Game
+  installation, read only" (the game folder of the installation). A folder asks the server for its sub folders
+  when it is opened the first time, a click on its name shows it in the list, the path above is parts to click
+  on. Files can be dropped onto the list. A `.pk3` always goes into the top folder of the server files whatever
+  folder is shown, the engine finds one nowhere else, and the page says so. Any other file goes into the folder
+  that is shown and is refused there when that is of the installation. The server side is unchanged
+  (`/api/fs/*`). Added without a test run.
+- New: "Control" in the panel of a player takes him over, a bot or a human, one at a time (`wa_control.c`). A
+  bar over the map has three views. Map: a right-click makes him walk to that spot instead of teleporting him,
+  straight there, with a jump when he does not get on and a stop after a few of them. Third person: the camera
+  of the map sits behind him. First person: the view through his eyes that the panel has. In those two a click
+  on the map takes the mouse, which turns him, and W A S D, Space, C or Ctrl, Shift, E, F and the mouse buttons
+  are his (move, jump, crouch, walk, use, the force power, attack and alternate attack). Esc, a second click on
+  Control or selecting somebody else gives him back. The page sends what is held 20 times a second. On the
+  server `ClientThink_real` asks `WebAdmin_ClientCommand` for every command of that player before it runs it:
+  the moves, the buttons and the view of the command are replaced, the view as `ANGLE2SHORT( want ) -
+  delta_angles`. An input counts for half a second and five seconds without a request let him go, so a page
+  that is closed does not keep him. A bot goes on thinking and is not listened to. A human goes on predicting
+  his own keys, so his own view jitters while he is held: nothing on the server can change that for a client
+  that predicts. While he is dead his own command counts, which is what brings him back. Added without a test
+  run.
+- New: the blocking wall of JA+ in the entity editor. `InvisibleBlockingWall` is a spawn class now (keys
+  `origin`, `mins`, `maxs`), and the page treats it like a trigger that is a box of its own: it is placed with a
+  box that stands on the floor, the Box fields and the yellow handles shape it, and the Volumes view draws it.
+  It is shown as "Blocking wall". The server makes a wall of parts that clients are told of, so that they
+  predict it (see `server.md`, the blocking walls): it rounds each side up to an even number, which the page
+  does too, refuses a box that would take more than 64 parts or more entities than the map has left, and leaves
+  the parts out of the list of the editor. A wall of the editor is kept by "Save layout" like every placed
+  entity. BlockWallWrite leaves it out, or it would come back twice. Added without a test run.
+- New: a form per class in the panel of an entity. Above the table of keys the panel shows the keys the class is
+  known to take (what its definition tells of and what its spawn function reads, without the ones that have a
+  control of their own: place, angles, spawnflags, box), each as a field of its kind: a number, three numbers
+  for a vector, a box to tick for a yes or no, text for the rest, with the lists, the search for files and the
+  Play button the table has for the same keys. What the game code says about a key is under its name. The form
+  holds nothing itself: a field writes into the row of its key, an emptied field takes the row away, and what
+  is typed into the table shows in its field, so Apply, Place, the drafts and undo work as before. The table of
+  every key is folded under "All keys" while the form has fields, and unfolded when a class has none or a key
+  waits for a value that has no field. Added without a test run.
+- New: kits. Where the classes are searched, a kit is offered with a `+` before its name (a template has an
+  `@`), the kits first while the field is empty. Placing one makes drafts of everything it is made of where
+  the floor was clicked, wired with targetnames that are free, and "Place all" sends them, what is aimed at
+  before what aims at it. The first ones: Teleporter (a `trigger_teleport` box and its `target_position`), Jump
+  pad (`trigger_push` and the top of its jump), Use button (a `trigger_multiple` that fires on use, its target
+  to be picked), Hurt zone, Sound emitter, Effect emitter, Spawn points (four in a ring), Pickups, Cube stack
+  and Blocking wall. A kit is only offered when the game module has every class of it. There are no doors:
+  a mover is made of brushes of the map. Added without a test run.
+- Renamed on 2026-10-09, the text above still has the names of the day a thing was built: the tab Models is
+  "Physical props", the tab Map of the editor is "Map info", the tab Load is "Performance". Config: "Save file",
+  "Save and run on server" (was "Save and execute"), "Discard changes" (was "Reload"). Routes: "Add waypoint",
+  "Set flag", and "Reload" gave way to "Revert to saved" and "Map default". Files: "Refresh list", "Restart map"
+  (was "Reload map"), "Server files" and "Game installation" (were "Server folder" and "Installation"). World:
+  "Apply changes", "Forget layout". Top bar: "Change map", "Set gravity". View: "Screenshot" (was "Picture"),
+  "Backface culling" (was "Open"). Bans: "Ban address", "Unban" (was "Lift"). Every id of the page is what it
+  was, only the words changed.
+- New: small things of the page that make it easier to use, all in `js/ui-inputs.js` and `js/players.js`. A box
+  that was ticked and a list that was chosen from give the focus back, so W A S D move the camera again right
+  after (the keys of the map are only dropped while the cursor is in a field that is typed into). The wheel
+  over a number field turns it by its step, five steps with Shift: the field gets its `input` event at once and
+  its `change` when the wheel rests, so a position field of the entity panel sends the entity once. Inside a
+  panel that has something to scroll the wheel is the panel's until the field has the focus. Enter in a field
+  of the player panel is its Set button, Enter in a key field of an entity is "Apply changes" or Place. The
+  size of a player is a number field with a slider under it whose middle is 100 percent (10 to 100 on the
+  left half, 100 to 500 on the right) and which stops there, a double click sets 100. The side panel has a
+  grip on its right edge that drags its width, from 240 pixels to 60 percent of the window, kept by the
+  browser, a double click sets the usual width. Added without a test run.
+- New: the tab Clips of the editor, for the clips of the map: the brushes that stop players, NPCs, bots or shots
+  and are not seen. They are part of the map file, which the server and every client load alike, so nothing can
+  move one for everybody while the map runs. What the server can do is stop minding one. The engine got a
+  command for that, `clipbrush off|on <number> [<number> ...]` (`all` for every one, without arguments it lists
+  what is off): `CM_SetClipBrush` in `cm_load.cpp` takes the contents of the brush away or gives it those of
+  its shader again, for a brush that is a clip and not solid, so that nobody is let through a wall he can see.
+  The numbers that are off are in `vs_clipOff`, and a load or a restart of the map puts every clip back. In the
+  tab a click on the map selects the clip under the mouse (drawn in pink, the ones that are off in red, the
+  selected one in yellow). "Turn off" and "Turn on" switch it, "All on again" all of them. "Move it" puts a
+  blocking wall of its size where it is and turns the clip off: the wall is dragged and shaped in the World tab,
+  and clients predict it, which they do not for a clip that is only off on the server. A client still has that
+  clip in its own copy of the map: it stops the player for a moment and the server then sets him to where it
+  has him. That is the price of doing it while the map runs, and the user asked for it knowing that. "New clip"
+  places a blocking wall. What is off is a block of the layout of the map (`#{`, a line `off=`), so "Save
+  layout", "Forget layout" and "Restart map" carry it like the entities. The panel sends only digits to the
+  console line. Tried once on a private server: all 243 clips of mp/ffa3 off and on, two off through the panel,
+  kept by a saved layout over a start of the map and put back after `map_restart`. Not seen in a game.
+- Changed on 2026-10-09, after the three entries above that tell of the blocking wall as an entity, of its kit
+  and of the tab Clips (the user: put the walls next to the clip editor and not among the entities, take their
+  commands away, and keep them in a file like the route of the bots). A blocking wall is no entity of the World
+  tab any more: `InvisibleBlockingWall` is no spawn class, the kit is gone, the list of the entities leaves
+  walls out, and a layout holds neither walls nor clips. The tab Clips has both. A click on the map selects the
+  wall or the clip under the mouse. "New wall" and a right-click put a wall on the floor, its wide side across
+  the view. The selected wall is dragged with the mouse or sent to a spot with a right-click, its six yellow
+  handles drag one face each (the handles of a box trigger, `boxSubject` in `editor-move.js`), its size can be
+  typed, Del removes it. A change is a new wall in the place of the old one on the server, so a wall gets a
+  new number with it. "Move it" on a clip puts a wall of its size there and turns the clip off. "Save" writes
+  `wallblocks/<map>.cfg` with the walls and the clips that are off, "Revert to saved" loads it again, and the
+  start of a map loads it (`JP_LoadBlockWalls`). Nothing is kept without Save.
+  The clips that are off are told to the clients now: the engine keeps them in the system info as `vs_clipRanges`,
+  and a client of this tree turns the same brushes off in its own collision (`CL_ClipOffChanged`), so it
+  predicts the moves the server makes. Its prediction code is unchanged. A client that does not know the key
+  still has the clip and is set right by the server after a moment, as before. `server.md` says what another
+  client has to do to take part.
+  Tried on a private server and in a headless browser: walls placed, moved, resized, refused when too large,
+  saved, reverted and loaded by a start of the map, the tab driven through all of it without an error of the
+  page, a box trigger of the World tab still shaped by its handles. Not seen in a game, and no client was
+  connected, so that a client applies `vs_clipRanges` is untested.
+- New on 2026-10-10: the tab Textures of the editor, the texture swap (the user asked whether textures of a
+  map can be changed without modifying the client). They can: the game has shader remaps for the entities of a
+  map (`targetShaderName`, `targetShaderNewName`), the server keeps a table and tells it in the configstring
+  `CS_SHADERSTATE`, and every client swaps the shader by itself (`CG_ShaderStateChanged`, `R_RemapShader`), the
+  unchanged one too. Until now only an entity of a map filled that table, the tab fills it as well
+  (`wa_remaps.c`). A click on the map takes the shader of the surface under the mouse, typing narrows the list
+  of the shaders of the map, "Swap" draws it as another shader for every player at once, "Take back" undoes
+  it. "Save" writes `remaps/<map>.cfg` (a line per swap, the old name and the new one), which the start of a
+  map loads whether the panel runs or not (`WebAdmin_LoadRemaps`). What a map swaps by itself is shown and can
+  be taken back, and is not saved. The page draws the swaps in both of its views.
+  What it can not do, and the tab says so: a shader is swapped wherever the map has it, not on one wall. A
+  client only draws a shader it has, a name it does not know is left as it is there (the server does not know
+  what a client has). The swaps got 1000 characters of the 16000 a client is told when it connects (4000 since
+  the entry "the room of the swaps" below), and one
+  that was taken back kept its room until the next map (not any more, see "the room of a swap that is taken
+  back" below): it stays in the table with both names the same,
+  which is how a client is told. A name is refused when it is longer than 63 characters or has a blank or one
+  of `= : @ " ; % \`: the parser of every client cuts the configstring at the first three and copies what is
+  between them into buffers of that size.
+  Lightmaps: the renderer of the game points every lightmap of the old shader at one copy of the new one, so
+  a wall that is lit by a lightmap is drawn without it or with the one of another wall, and when the swap is
+  taken back all but one of them stay that way until the level is loaded again. The renderers of this tree
+  give each one the new shader with its own lightmap, and a swap that is taken back is gone (`R_RemapShader`
+  in `rd-vulkan-vision/common/tr_shader.cpp`). Another client keeps the old behaviour.
+  Added without a test run: built, the page as a whole checked for syntax, not opened in a browser and not
+  seen in a game.
+- New on 2026-10-10: pictures and marks in the tab Textures (the user asked for a preview of the textures and
+  for the area to be marked as in the clip editor). The pane shows a picture of the selected shader and of
+  what is typed to draw it as, with the file and its size under each, and a small one in every row (`thumbOf`
+  in `page/js/editor-remaps.js`). The picture is the image of the name of the shader, or else the one a map
+  editor shows for it (`qer_editorimage`, then the first image of its stages): what the plain view draws on a
+  wall, not what the stages of a script make of it. A row asks for its picture when it comes into view, three
+  are on their way at a time, and the file is read by the loader of the map textures (`fetchImageFile` in
+  `page/js/map.js`, split off `fetchImage` for it). On the map the surfaces that have the selected shader are
+  tinted yellow and their rims drawn, the rims faintly through the walls (`drawRemapMarks`), and a click on a
+  row turns the camera to the nearest of them. The rim is every edge that only one triangle of the shader has,
+  so where a surface ends in the middle of the edge of its neighbour there is a line inside the area.
+  Added without a test run: built, the page as a whole checked for syntax, not opened in a browser.
+- 2026-10-10: a brush editor (a tab Brushes: boxes with a texture put into the running map) was built and
+  taken out again the same day, on the user's word: "remove the brush editor again, if its not possible
+  without downloading and clientside modifications". It is not possible. A level is a file every client has,
+  and a server can only add entities to it. An unchanged client clips against a solid box entity and draws
+  nothing for it, so a box with a texture needs either a cgame that draws it, or a level file in a pk3 that
+  the client has to fetch. Both were built: boxes drawn by the cgame of this tree, and a "Publish" that wrote
+  them as a second level file a level takes in like `misc_bsp` does. The code was kept on a branch for a few
+  hours and deleted with it the same day, on the user's word. What an unchanged client draws without a download is a model of the
+  game placed as an entity, which is the tab Physical props.
+- New on 2026-10-10: the textures to choose from, and a test object, in the tab Textures (the user: "instead of
+  putting in the string, we can search and select from multiple batches which show the texture", and "a
+  debugview/preview with a ball or a cube as a test object, which shows the proper shader"). "Pick a texture"
+  opens a list below the map view, which makes room for it (`page/js/editor-textures.js`): every texture as a
+  picture, a folder of `textures/` at a time, the ones of the map, or everything, narrowed by the words typed
+  into the search, 150 at a time with a button for the next batch. A click puts the name into the field of
+  the tab, Swap does the rest. The names are the images of the folders, which the page asks the server for
+  one folder after the other, two requests at a time (`/api/list?kind=dir`, which now tells `textures` too),
+  and the shaders that have a script, which the page has anyway. A name with a star has a script. With a game
+  module from before this one the list has only what has a script, and says so.
+  The test object is the third picture of the pane: a ball or a cube (the button under it) that is drawn with
+  what the shader would be drawn as, or with the selected shader while nothing is chosen. It is drawn by the
+  code that draws the models of the map (`drawModelMesh`), so with every stage of the script, the tcMods, the
+  waves and the animations, and with the light the engine gives a place without a light grid where a shader
+  has no script. That is how the game draws a shader on a model: a stage `$lightmap` is white, so a wall
+  shader is shown without the light of a wall. It is drawn into a corner of the canvas of the map before the
+  frame, which then draws over it, and copied from there into the pane, about 16 times a second: one graphics
+  context draws both.
+  Added without a test run: built, the page as a whole checked for syntax and for the names it uses, not
+  opened in a browser. The winding of the ball and the cube and which way their images lie are worked out on
+  paper.
+- New on 2026-10-10: drafts of the texture swap (the user, after seeing the list and the test object: "when
+  clicking a texture already apply it on the surface, but add a draft mode like on the entties", and the
+  preview "below, since theres enough space"). A click on a texture of the list draws the selected shader of
+  the map as it at once, in the view of this page only: a draft, as a new entity of the World tab is one. The
+  server and the players know nothing of it until "Swap" (the selected one, or the button of its row) or "Swap
+  all" sends it, "Discard" throws it away. A draft is a row of the list, yellow and slanted, it is of the map
+  it was made on, and only the editor draws it: the administration shows the map as the players have it. The
+  yellow tint of the selected shader is left out while the shader is drawn as another one, swapped or as a
+  draft, so that the other one is seen as it is (the rims stay). What is typed into the field is still sent by
+  Swap without being a draft first.
+  The test object is on a line of its own below the two pictures now, as wide as the pane (less in a low
+  window), and drawn with as many pixels as it is shown with.
+  Added without a test run: built, the page checked for syntax and names, not opened in a browser by me. The
+  user had seen the list and the test object of the entry before in their browser and called the preview nice.
+- 2026-10-10, the room of the swaps: 4000 characters instead of 1000 (the user asked for the limit and then:
+  "yeah go with the hard ceiling"). That is what the game can tell of them: `BuildShaderStateConfig` builds the
+  list in 4096 characters, 96 are left for what a map swaps by itself later. About 80 swaps with names of the
+  usual length, the table of the game has 128. The list is still one configstring of the 16000 characters a
+  client is told when it connects, and a client that is told more is dropped, the connected ones too with the
+  next change. So `WA_RemapSet` now also counts all of it as the client does (`WA_GamestateUsed`) and refuses a
+  swap that would not leave 200 characters for every player who can still join and 800 for what the map still
+  names (`WA_GamestateRoom`). The tab shows both numbers. With every change the whole list goes to every
+  client again, in pieces of a thousand characters as the engine sends a long configstring.
+  Built, not tried: no list of that length was sent to a client by me.
+- 2026-10-10, the room of a swap that is taken back (the user: when the room is used up the map has to be
+  started again, "can't u just configstrings everything back to normal to free it up?"). It can. A swap that
+  is taken back is told as an entry with both names the same, and every client that plays is told a change of
+  a configstring at once and in order. So the entry has done its work then: `WA_RemapsFrame` takes such
+  entries out of the table (`G_DropTakenBackRemaps` in `g_utils.c`) and tells the list again without them, a
+  frame after the swap was taken back. The one case where that would be wrong is a client that is on its way
+  into the game: it was told the list when it connected, maybe with the swap in it, its game draws the swap
+  from its start (`CG_Init`), and when it is in the game it is only told the newest list
+  (`SV_UpdateConfigstrings`). So nothing is taken out while a player (not a bot) is connecting, and the
+  entries wait for him. What a map took back by itself goes the same way.
+  Built, not tried in a game.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.
@@ -561,19 +2110,38 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
 
 ## Limits
 
-- Not fixed: the entity editor can end the server. If the spawn code of a class raises an error, the dedicated
-  server exits, because OpenJK makes every game error fatal there. Seen with `trigger_lightningstrike` placed
-  without a `lightningfx` key. Brush classes (`trigger_`, `func_`) without a valid `model` key are expected to do
-  the same. A restart script or care in the World tab is needed until placing is guarded.
-- Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
-  leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
-  not every interface.
-- `g_webPassword` is an archived cvar. The server writes it in clear text into `openjk_server.cfg` in its home
-  path, and it shows in the process list when it is given on the command line.
+- The entity editor can still end the server in ways the guard does not know. If the spawn code of a class
+  raises an error, the dedicated server exits, because OpenJK makes every game error fatal there. The cases that
+  can be told from the keys are refused since `WA_SpawnRefused` (see above). The list was first made by reading
+  the spawn functions for `trap->Error`, which missed `misc_bsp` (the error comes from the engine). Since then
+  every class the editor offers is placed bare by a check (`steps_guard.js`) and the server has to be there
+  after it. What that does not cover: keys with values that are wrong, and other game types.
+- The editor also refuses these, because each one would end the server: a `misc_maglock` that starts inside a
+  wall (the same trace `maglock_link` makes a moment after the spawn), and deleting, clearing or editing away
+  the last entity of a spawn class (`info_player_deathmatch`, `team_CTF_redplayer`, `team_CTF_blueplayer`,
+  `team_CTF_redspawn`, `team_CTF_bluespawn`, `info_player_siegeteam1`, `info_player_siegeteam2`). A player who
+  spawns without one ends the server ("Couldn't find a spawn point"), so the message is "this is the last
+  <class>: a player who spawns without one ends the server, place another one first". The same goes for the
+  only entity with a targetname that a `trigger_shipboundary` or `trigger_hyperspace` names as `target` or
+  `target2`. A clear keeps such entities and says "n deleted, m kept: why". Tested through the panel API on
+  mp/ffa1.
+- The lights of a map can not be shown: the compiler takes them out of the map file.
+- Plain HTTP, and it listens on every interface unless `vs_webBind` says otherwise: the password of a login and
+  the cookie of a session cross the network as they are. Where that network is not your own, put a reverse
+  proxy with HTTPS in front (`vs_webProxy`, see "Behind a reverse proxy"), or set `vs_webBind 127.0.0.1` and use
+  an SSH tunnel. The security pass had made localhost the default; since 2026-10-08 it is every interface
+  again, by decision of the owner of this fork, who opens the panel from other machines. A config that still
+  has `vs_webBind ""` from that time listens on every interface now.
+- A password is hashed on a thread of its own, about 20 ms of one core. One a second at most for the whole
+  server, so a flood of logins costs the server at most that much and no frame waits for it.
+- An owner of the panel owns the server: the console runs anything, the file manager writes any file of the
+  game folder. An admin does not have those two, but he can make a player an admin of the game and change the
+  map.
+- A visitor behind the proxy who has no IPv4 address is told apart by a number made from the text of his
+  address, which stands in the log in place of it.
 - Whoever can connect can occupy the 32 connections, then the panel does not answer until they time out. The game
   is not affected.
-- With the panel off the server prints one line at every map start ("Web admin is off, set g_webPassword to
-  start it").
+- With the panel off the server prints one line at every map start ("Web admin is off: it has no account").
 - Entities the game code made itself (JA+ blocking walls, hooks, effects) have no keys. The editor can only delete
   them, and the JA+ code is not told about it.
 - The chat view shows team chat, tells, clan chat and admin chat too, like `games.log` does. The server keeps 128
@@ -582,8 +2150,9 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
 The panel went through the security pass in [security.md](security.md). Fixed there: the `Content-Length`
 overflow, requests from other sites (an `Origin` check on every POST), the password compare (now constant time)
 and a wait after wrong passwords, guarded allocations, the base64 decoder, and the localhost default bind. The IP
-of a ban is checked before it goes into a console line. Open items above (plain HTTP, the editor ending the
-server) stand.
+of a ban is checked before it goes into a console line. Since 2026-10-11 the one password is gone: accounts with
+roles, sessions, a second step, tokens and a proxy mode took its place (see "Accounts and logging in"). Open
+items above (plain HTTP without a proxy, the editor ending the server) stand.
 
 ## What was tested
 
@@ -597,6 +2166,301 @@ Chat: every kind of line once from a scripted client (`japlus_port/tools/clientt
 tell, amsay, clansay, umlauts), the console `say`, the panel, the ring with more than 128 lines, `since` and
 `epoch` over a `map_restart` and a map change, also under valgrind.
 
+2026-10-08, the modes and the tools of the editor, on a private server (mp/ffa3 with bots) in headless Chromium
+with software GL, driven through its debugging port: both modes and every view came up without an error on the
+console. The guard refused the five bad entities that were tried and the server kept running. Placing a cube,
+moving it a grid step, two undos and two redos gave the states they should, a deleted spawn point of the map came
+back with its keys and as an entity of the map, a spawnflag box wrote its bit into the key table.
+
+The same day the panel was used with the mouse and the keys as events of the browser
+(`japlus_port/tools/panelshot/steps_mouse.js`, `steps_keys.js`), 18 checks: a click selects a player, an entity, a
+waypoint. A drag moves the view, turns it with the middle button, moves an entity by its marker, turns the head
+when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
+adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
+the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+Triggers as boxes (`steps_boxtrigger.js`, 21 checks, 2026-10-08, mp/ffa3 with four bots): a trigger without a
+shape, a flat box, half a box, one wider than 32768, a `trigger_asteroid_field` with a box and a `func_door`
+with one were refused, each with its reason. A box over the whole map was tried with four classes: as a
+`trigger_multiple` it fired its `target_relay` seven times in three seconds (read from the trace of what fires
+what), as a `trigger_teleport` it had all four bots at its target, as a `trigger_push` with a target 4000 units
+up it gave them 2530 units/s upwards and was still there after its first frame, as a `trigger_hurt` it left
+seven deaths by `MOD_TRIGGER_HURT` in the log. Placed through the page a `trigger_hurt` stood on the floor
+with the keys of the box, its panel showed 128 x 128 x 96, a new size gave the keys for it around the same
+middle, a start point had no such row, a push and a teleport came with their `target_position` and one Undo
+took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
+player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
+classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The page against the game (`tools/refshot.sh`, 2026-10-09, six views from start points on each of six maps,
+game and page on the same graphics card; mean difference of 255 / percent of pixels off by more than 16):
+
+| Map | Before | After |
+|---|---|---|
+| mp/siege_hoth | 6.28/7.5, 2.54/3.5, 0.25/0.1, 0.43/0.3, 0.88/0.2, 0.36/0.1 | 0.39/0.2, 0.02/0.0, 0.02/0.0, 0.02/0.0, 0.02/0.0, 0.01/0.0 |
+| mp/ffa3 | 0.79/0.1, 0.96/0.3, 1.59/0.6, 3.60/3.4, 1.96/1.3, 1.20/0.2 | 0.02/0.0, 0.10/0.1, 0.11/0.3, 0.43/0.5, 0.95/1.0, 0.02/0.0 |
+| mp/ffa2 | 2.53/0.5, 2.03/0.7, 2.34/0.4, 1.35/0.2, 1.04/0.2, 1.35/0.2 | 0.20/0.2, 0.46/0.5, 0.02/0.0, 0.04/0.1, 0.06/0.1, 0.01/0.0 |
+| mp/ctf4 | 0.97/0.1, 6.01/17.0, 7.24/6.8, 6.42/10.2, 6.50/15.7, 0.71/0.1 | 0.01/0.0, 0.01/0.0, 4.67/5.0, 0.12/0.1, 0.02/0.0, 0.01/0.0 |
+| mp/duel7 | 1.22/0.3, 1.31/0.2, 1.26/0.4, 0.84/0.3, 0.84/0.3, 1.10/0.5 | 0.11/0.3, 0.02/0.0, 0.10/0.3, 0.05/0.1, 0.05/0.1, 0.04/0.1 |
+| mp/ctf2 | 6.86/5.1, 13.10/27.7, 27.06/49.2, 20.40/53.8, 60.41/71.0, 7.76/5.2 | 0.58/0.0, 0.42/0.0, 0.12/0.1, 0.31/0.3, 4.84/0.3, 0.11/0.0 |
+
+How to read it. The before column is too bad for the two fog maps: the view of the comparison itself drew no
+fog then (fog was only on for the fly camera and the eyes of a player), which was found and put right in this
+step. The after column leaves out more than the before one: where the clouds of a sky scroll the whole sky is
+masked, 8 and 12 percent of the picture in the first two views of hoth and 62 percent of the fourth, and with
+it the mountains of the sky portal behind it. Those were measured apart, from spots outdoors, before the
+mask knew the sky: 22.2 and 27.1 before, 1.9 and 2.5 after. What is left: view 3 of mp/ctf4 is a weapon
+pickup, view 5 of mp/ctf2 the falling snow, view 5 of mp/ffa3 fine lines of texture filtering. Other maps,
+measured by the sessions that did the parts: mp/duel5 (19 flares) 1.1 to 2.8 before and 0.10 to 0.13 after,
+mp/duel6 (sky portal, 51 trees) 5.8 to 30.3 and 2.1 to 4.7, mp/siege_korriban at its static models 7.5 to
+64.9 and 0.1 to 2.0. One view of mp/ffa5 from outside the hull of the map stays at 35.5 (no visibility
+culling). A frame on the graphics card costs what it did or less: mp/ctf2 2.4 to 2.7 ms before and 1.9 to
+2.0 ms after (573 draw calls of the map became 412), the portal pass of hoth is not measurable.
+Written by three sessions of the assistant side by side, each with its own client of the game to measure
+against, and put together and measured again by the one that reports. Not done: a comparison at the game's
+default of compressed textures, another graphics card, the Windows build.
+
+The look of the editor (`steps_look.js`, 8 checks, 2026-10-08, mp/ffa3): the editor begins with "As in the
+game"; with its markers off its picture is as bright as the one of the administration from the same camera
+(63.2 against 63.2 of 255 on average, with "Open" set as the administration has it); "Texture and light" is
+brighter (83.9); "Open" switches the sides in the game look too (seen from below the map the picture changes); the wireframe is in the picture of both and gone without it; a ray into
+the middle of the picture finds the same spot of the map in both. The checks of the editor, which had all
+run in the plain view, ran again in the game look: `steps_drafts.js` 68, `steps_labels.js` 23,
+`steps_boxdrag.js` 16, `steps_mouse.js` 19, `steps_group.js` 24, `steps_boxtrigger.js` 24, `steps_pusharc.js`
+13, `steps_fx.js` 38, `steps_cull.js` 5, `steps_surface.js` 7, `steps_movers.js` 15, `steps_facing.js` 3,
+`steps_trace.js` 4. Not tried: how fast the game look is in the editor on a real GPU with many entities.
+
+The effects (`steps_fx.js`, 38 checks, and `steps_fxsweep.js`, 9 checks, 2026-10-08, mp/ffa3): an effect file
+is handed out and a name with `..` is not; a poll of a page that has it all has neither `fx` nor `fxPlay`
+(663 bytes, 720 when the page says nothing of the effects); an `fx_runner` with `env/fire` is one runner and
+within two seconds has primitives and quads, the pixels at its place are brighter with Effects on than off,
+and the administration draws it too; one that plays once plays once for every time it is fired; the Play
+button of the editor arrives once and is not played again by the next poll; a bolt that ends at a wall or at
+a player leaves the effect of its weapon there; while the bots fight effects are played that the script did
+not ask for; with Effects off the glow quads are back; a change of the map leaves nothing behind. The sweep
+reads all 378 effect files the server has (the 376 of the game, seven of them replaced and two added by the
+JA+ pk3) through the page: none makes the parser fail, each is played and stepped for three seconds with no
+exception and no number in a vertex that is none, and never more than 580 of the 3000 are alive. The files
+hold 692 particles, 151 lines, 102 tails, 72 oriented particles, 46 emitters, 47 cylinders, 29 electricity
+and 20 runners; seven files hold nothing the page draws. With 3000 primitives of fire close to the camera a
+frame took 29 to 57 ms in software GL, of that 0.7 to 1.8 ms to write the vertices. Looked at as pictures:
+fire, a rocket explosion, a shockwave ring, electricity, sparks, water spray, the 28 torches of mp/ffa2.
+Written and first run by a second session of the assistant that worked next to the one on the drafts, with a
+private server of its own; the counts here are from a run of both parts together, where `steps_shots.js`
+(9), `steps_saber.js` (4), `steps_state.js` (14), `steps_movers.js` (15), `steps_deform.js` (12) and
+`steps_cull.js` (5) ran as before. Not done: a comparison with the picture of a real client, a real GPU, the
+Windows build (the C code of it is three small functions with ints, floats and vectors).
+
+Drafts for everything (`steps_drafts.js`, 68 checks, 2026-10-08, it takes the place of `steps_draft.js`): a
+placed class is a draft with a number from 100000 and the server has none of it; three survive a poll; typed
+keys survive a change of the selection; a class that needs a key shows it without a spawn; a template,
+Duplicate, a paste of one and of a group and a `trigger_push` give drafts; Place on the push alone places its
+target first and the push is still there two seconds later; the rectangle and Ctrl with a click take drafts;
+a draft and a placed entity moved together are one step of the history; "Place all" with one `fx_runner`
+that lacks its file places the others, keeps that one with the cursor in `fxFile`, and one Undo takes away
+all that were placed; "Discard all"; a draft of another map is gone; a prop of the Models tab is on the
+server at once. The names (`steps_labels.js`, 23 checks): a draft reads `fx_runner [draft: needs fxFile]`, a
+targetname shows, no more than 40 besides the ones that always have one, the pool of lines does not grow in
+200 frames, none with Names off and none in the administration, and a frame spends 0.1 to 0.2 ms on them with
+74 entities and 0.3 to 0.5 ms with 924 (software GL). The checks that placed, duplicated or pasted were
+changed to place their drafts and run as before: `steps_boxtrigger.js` 24, `steps_group.js` 24,
+`steps_pusharc.js` 13, `steps_mouse.js` 19, `steps_boxdrag.js` 16, `steps_complete.js` 22, `steps_guard.js`
+12, `steps_layout.js` 13, `steps_problems.js` 7. Written and first run by a second session of the assistant
+that worked next to the one on the effects, each with a private server of its own; the counts here are from
+a run after it. Not tried: a real browser, the editor through the eyes of a player, many drafts (hundreds).
+
+The first drafts (`steps_draft.js`, 18 checks, the same day, the script is gone since): a `fx_runner` placed with Place came up as a draft with
+the row `fxFile`, the cursor in its value and the list of the effects on it, "Place" and "Discard" as its
+buttons, Fire and Duplicate off, listed as "new", and the server had no `fx_runner`; it was still there after
+the next poll. With an effect typed in, Place made it entity 107 of the server and one Undo took that away.
+A `target_speaker` draft was moved by the Z field with a key typed into a new row and not applied: it stood
+where the number said and the typed key was still in the table, and nothing had gone to the server. Place
+without the noise was refused and left the draft, with the noise it was placed where it had been moved to.
+Discard threw a draft away at once. A `func_wall` asked for its model with the brush models of the map to
+pick from (`*1 func_plat #77`, ...). A `misc_bsp` gave no draft, a `trigger_hurt` was placed as before, and
+a draft of another map was gone at the next poll. Not tried: a real browser, a draft of a class of brushes
+placed (the checks do not put a second entity on the brushes of the lift).
+
+Every class placed bare (`steps_guard.js`, 12 checks, the same day, mp/ffa3): a `misc_bsp` with and without a
+file, an `info_siege_radaricon` without an icon, a `fx_runner` without an effect and a shooter with `WP_NONSENSE`
+and with `WP_NONE` were refused with their reasons, a shooter with `WP_ROCKET_LAUNCHER` and one without the
+key were placed. The budget had 21088 of 3932160 bytes of memory in use and an entity with three text keys
+took 96 more. Then each of the 243 classes the editor offers was spawned with the keys a click on Place
+gives it (classname and origin, a box for a trigger), given a moment, and deleted: 184 were placed and
+deleted, 4 were placed and gone by themselves (the three flags outside of CTF, a `trigger_push` without a
+target), 55 were refused (31 the game did not keep, 13 are made of brushes, 11 need a key or are a
+`misc_bsp`), and the server was still there. That sweep is what would have found the `misc_bsp` before the
+user did. Not tried: every class with keys that are wrong instead of missing, other game types, other maps.
+
+The completion of the keys (`steps_complete.js`, 22 checks, the same day, keyboard and mouse of the browser):
+`/api/classkeys` had 84 keys for every entity and 133 classes, `func_door` with `lip|Float|8` and, from
+`InitMover`, `color|Vector|1 1 1`. The definition of `trigger_push` gave `wait` and `speed` and none of its
+flags. For a `trigger_push` the list had 86 keys, each once, `wait`, `speed`, `mins`, `maxs` before
+`targetname`. In the panel: "+ Key" opened the list without the keys the entity has; `wa` left `wait` and
+`awakescript` with `wait` marked; Enter took it, the focus was in the value field and its tip had the text
+of the definition; Apply gave the entity `wait=2`. The arrows walked the list and Enter took the marked key,
+Tab took `speed` for `spe`, `name` offered `targetname`, Escape closed the list and left the entity selected,
+the arrow down opened it again, a click took `targetname`. On a door a key it did not have showed its default
+in the empty value field, and `lip`, which it has, was not offered. A headless window sends no focus events
+by itself, the check turns them on. Not tried: a real browser, and how it reads on a narrow screen (the list
+is 440 px wide).
+
+The throw of a push (`steps_pusharc.js`, 12 checks, the same day, mp/ffa3 with four bots). In the game: a
+push over the whole map with its target 4000 above gave the bots 2530 units/s upwards, which is the root of
+2 x 800 x 4000; with the target alone moved to 500 above they got 894, the number for that; with it moved to
+below the middle of the push the push was still there and threw 894 as before, the report named it and its
+panel said "No throw". A push placed with its target below it from the start was gone after its first frame
+and every place and speed of the players was a number. In the editor: a placed push had an arc of 256 up
+and none across with its top at the target and 0.80 s to it, it came down on the floor under it, the panel
+said so; with the target moved to the side the point of the arc at the top was the target to a hundredth of
+a unit; not selected the arc has no rays, and with `LINEAR` there is none. Following the way down cost 30 ms
+for 19 rays on this machine. At the first place tried the way ended at a roof 215 above the floor, which is
+right and is why the check now looks for open sky. Not tried: a real player on such a pad (the arc is the
+way from the middle of the push, a player starts where he touches it), `target_push`, a push of a map file
+whose target a layout moves.
+
+The handles of a box (`steps_boxdrag.js`, 16 checks, the same day, with the mouse of the browser): six
+handles, none under the panel of the entity in the view that was set up. The face towards +X dragged 64 units
+out, the top 48 up, the one towards -Y 32 out and the one towards -X 32 in gave exactly those keys on a grid
+of 16, with the origin where it was. In the middle of a drag the box was drawn 240 wide, the row said 240, the
+keys were the old ones and the entity the same; let go, the keys followed. A face dragged 600 units through
+the one across stopped one unit before it. Six undos gave the box that was placed. A click on a handle
+changed nothing, flying the yaw stayed, and a start point, two selected entities and the administration had
+no handles. Not tried: a hand on a real mouse, a box seen along one of its axes (the code leaves the face
+where it is then), a touch screen.
+
+The layout (`steps_layout.js`, 13 checks, the same day, mp/ffa3): two entities placed, an item of the map
+deleted and a start point of the map moved gave a layout of three to spawn and two to take away. Saved, the
+file was in the game folder with those five blocks, and after the map was started again with the map command
+all of it was there: the two placed ones, the item gone, the start point at its new place and not at the old.
+Moved back to the keys of the map file the start point was the one of the map again (two and one). After
+"Forget" the file was gone and the next start was the map as its file has it. A "Reload map" with an entity
+placed and an item deleted came back with both, and a plain start after it was the map again. On a second
+server without a password, so with the panel off, a layout written by hand was done at the start of its map:
+one entity spawned, a door without a brush model refused, an entity to take away that the map does not have
+passed over. Not tried: a layout in another game type than it was made in, one with many props, a layout
+that a pk3 brings.
+
+The arrows (`steps_facing.js`, 3 checks, the same day, mp/ffa3): 23 of the entities of the map have an angle.
+Seen from straight above, the pixels that the arrow of a start point adds to the picture reach furthest in
+the direction 359, its angle key says 360. Not tried: an arrow that points up or down.
+
+Entities to look at (`steps_problems.js`, 7 checks, the same day, mp/ffa3): the map as it is gave nothing. Of
+five entities placed for it, the one with a target that names nothing, the relay with a name nothing fires
+and the one 900 units outside of the map were listed, the relay that is fired and what fires it were not. A
+click on a line opened the World tab with that entity selected, and with the five deleted the list was empty
+again. The rules were also run over the entity lists of all 23 map files of the game by a script.
+
+What a surface is made of (`steps_surface.js`, 7 checks, the same day, mp/ffa3): the camera was put in front of
+a surface with a script, one without, a patch and one of a lift, each the first of its kind that can be seen
+from there, and a click in the middle of the view showed that surface with its shader and with what its
+kind must say, the lift with the `func_door` it belongs to. The outline had six line ends for every triangle,
+and a click at nothing emptied the box.
+
+A saber that was thrown (`steps_saber.js`, the same day, mp/ffa3): no bot throws on demand, so the page was given
+a saber in the air by hand. As a thrown one it got one blade, flat and as long as the saber of its owner, and
+the picture differed from the one with the hilt alone. Then the bots were watched: one threw, his saber was
+among the models with its own hilt from the second state on, moved about 50 units from poll to poll and
+turned 80 degrees in each, the 800 a second the page turns it by. Not seen: the picture of a real throw (it
+is over in a second), a saber with two blades, a thrown saber of a player with two sabers.
+
+What is in the air (`steps_shots.js`, 7 checks, the same day, mp/ffa3): a `misc_weapon_shooter` with a rocket
+launcher, placed and fired through the panel, put a rocket into the list that flew 360 units in 0.4 s along
+the way the shooter looks (its speed is 900) and had the page ask for the model of a rocket. One with a
+blaster that repeats had three bolts in the air at once, and the picture with them differed from the one
+without. The rocket ended in one flash, about where it met the wall 2,700 units on, and the flash was gone
+half a second later (9 checks now, three runs). Seen while testing, in the code of the game and not of the
+panel: the client the game lends a `misc_weapon_shooter` starts as zeros, which `WP_FireRocket` takes for a
+finished lock on player 0, so the first rocket a shooter fires after a map started turns to that player
+when he is alive. Not tried: a thermal detonator and a det pack (no bot threw one), and how the colours
+compare with the effects of the game.
+
+What fires what (`steps_trace.js`, 4 checks, the same day, mp/ffa3): a trigger_multiple fired through the
+panel gave five events, the world firing the trigger and the trigger firing each of its four lifts, nothing
+before the click and nothing after, and the light was out after three seconds.
+
+The state feed (`steps_state.js`, 14 checks, the same day, mp/ffa3): without a number the 40 items came with
+one, with that number they were left out and the answer was 87% smaller (456 of 3,418 bytes, nobody on the
+server), with another number they came again. The page kept its list, got a new one when an item was placed
+and the old number back when it was taken away. It asked 29 times in three seconds with the map in view, 4
+times with the log over it, and 29 times again after it. Three players came with what stays of them the
+first time (2,988 bytes), without it when their numbers were named (1,012 bytes, about 152 a player), and
+with it again for a number that was not theirs. The page read a player as before, with his name, his team,
+his place and the blades of his saber, and the checks that click, follow and teleport players passed.
+
+The tab Load (`steps_load.js`, 11 checks, the same day, Linux, a private server with four bots and nobody on
+it): 40 frames in a second at `sv_fps 40`, a frame of 0.06 ms on average and 0.2 ms at most, 0.3 and 1.1 ms
+while the page read its files, a wait of 25 ms, the entities the editor counts too. A value came every
+second, a number the server does not have got all it keeps, and nothing was asked for with the tab closed.
+In one run a second had a frame of 30 ms: the page was reading the animations of the players just then,
+which the server read in one go. That led to the files being read as they are sent. Tried with a script
+that takes six files through the route and compares them with what the pk3 files of the game hold: the same
+to the byte, 11.8 MB in 0.56 s alone and three of them next to three models in 1.8 s, with frames of the game
+of 1.7 to 1.8 ms at most in those seconds and all 40 frames in each. The same for the map: `/api/map` of
+mp/ffa3 (7.6 MB, 0.38 s) and mp/siege_hoth (11.1 MB, 0.55 s) is what the pk3 holds to the byte, and the
+number of brush models (9 and 95) is right.
+The part of the panel: on the empty server 0.05 of 0.06 ms (a page asking for the state ten times a second
+is most of what the game module does then), with four bots 0.05 of 0.34 ms. Not tried: a server under real
+load, where the yellow marks would show, and the clock on Windows.
+
+Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift
+its 280 units, an info_player_deathmatch answered that it does nothing when fired, and a fired
+trigger_multiple sent the four lifts it has as targets. A drag with Shift around three placed entities
+selected the three. On mp/ctf2, with its team of four doors: fired at the second part all four moved, after
+an edit of the third part all four still moved, and with the first part deleted the other three moved
+together when the last was fired. On mp/duel6 a fired `func_breakable` broke: its entity was gone and its
+brush model was not drawn any more (30 drawn before, 29 after). Not tried: a team whose first part is
+deleted while it moves, and firing every class of the game (the use functions were read, not run).
+
+Doors and lifts (`steps_movers.js`, the same day, mp/ffa3): the server named 6 of the 8 brush
+models as drawn, the two triggers not, and each where the entity list of the editor has it. A lift with a
+targetname of its own was fired by a `trigger_always` placed through the panel: it was drawn up to 280 units
+from where it rests, at seven or eight places on the way, the picture changed, it came back and the picture
+was the one from before to the pixel. Deleted in the editor its brush model was not drawn and a ray at it
+went through, undo brought both back. Aimed at where the lift rests the ray hit it, aimed at where the map
+file has it the ray went on. A `func_rotating` placed with the brush model of the lift made the server name
+that model twice, the second one turned 90 degrees in a second as its speed says, and a ray at one of its
+triangles where it was at that moment hit it (15 checks now). Not tried: a door that a player opens, a
+`func_usable` that is switched off.
+
+The sides, the deforms and the order of see-through model surfaces (`steps_cull.js`, `steps_deform.js`, the
+same day, on mp/ffa3, mp/ctf4 and mp/duel7): inside the map, at 8 spawn points looking four ways, the picture
+with one side drawn and the one with both differ in 0.04% of their pixels on average and 0.25% at most, and a
+click in the middle hits the same place either way in all 32 views, so the front of a triangle is taken as the
+game takes it. From above a third of the picture is another one: the rooms are open. A player close up is not
+inside out. The three flares of mp/ctf4 and the eight chain quads of mp/duel7 are found and the picture differs
+from the one with the quads as the map has them. No map of the game for more than one player has a wave, a
+bulge or a move, so those were put on every shader of mp/ffa3 by hand: the picture changes and is the old one
+after it, and a move by nothing changes nothing. After the two changes of the map every player had his model
+(one file was cut off on its way and was asked for again). Not tried: a model with a see-through surface in
+front of another model (no such pair stood on the maps), a comparison with a picture of the game.
+
+Several entities at once (`steps_group.js`, 22 checks, the same day): Ctrl and a click selected three and took
+one out again, Shift and Page Up lifted the three by one grid step as one step of undo, Ctrl+Z and Ctrl+Y put
+them back and up again, the Z field moved the others by as much, a paste of the three stood as the copied ones,
+Delete took them away and undo brought them back, Duplicate made three more, and at the end the map had the
+entities it had before, class by class. A brush entity in the group went the same way and came back, and with
+one of the three deleted behind the back of the page the other two were moved and the message named the one
+refused. Six turns of 15 degrees put the three exactly where a quarter turn puts them, each with the angle
+90, and six undos put them back. Tried with info_notnull, which stays where it is put: a prop falls, and then where it is and what its
+origin key says are two things. This run is what found the trigger a moved lift left behind: after the fix a
+func_plat moved and put back leaves the same entities as before (the door of this map has no trigger of its
+own, so that half is not tried).
+
 The page was looked at once in headless Chromium with software GL: the 3D map, the player list and the chat box
 with all kinds of lines show up. Not tested: using the page by hand (HUD view, dragging entities), the Windows DLL
 at run time (it builds and links with mingw-w64), macOS.
+
+The tab Settings (2026-10-28). A headless dedicated server on 127.0.0.1:18080 with curl:
+`GET` and `POST /api/settings`, the change of a statement in place, `server.cfg.bak`, the live values in `cvarlist`,
+`sv_maxclients` latched, `sv_master3` set without dropping the server, `g_gametype 99` and a value with a quote
+refused, the cleanup list and remove, a stale `rev` refused, the mark for `local.cfg`. Headless Chromium over its
+debugging port: the three views of the tab on the server, a change with its mark, a bit box, a save, no script
+error. The unit tests pass. Not tested: the panel in a real browser on the live host, the
+changes of the deploy on the host.
+
+Checked 2026-10-30 (issue #7, the new layout of the page): a dedicated server of the build (mp/ffa3, one bot), headless
+Chromium at 1366 x 768, logged in with a token through a local proxy. Every page by its address, the palette by keys
+(Ctrl+K, "map ffa" listed mp/ffa1 to mp/ffa5, Escape, "gravity 600" and Enter set the gravity of the server, "slap"
+with a selected player ran amslap on him), the groups of the player panel and the button ?. The game module was built
+with the page bundled. Not checked: a real browser by a person, a phone, the roles moderator and admin on screen.

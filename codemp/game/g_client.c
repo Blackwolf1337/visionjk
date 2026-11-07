@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "g_local.h"
 #include "ghoul2/G2.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 // g_client.c -- client functions that don't happen every frame
 
@@ -2503,8 +2504,10 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 	ent->s.number = clientNum;
 	ent->classname = "connecting";
 	// a new client has this number: what the one before him was given for the voice chat is void
-	if ( firstTime )
+	if ( firstTime ) {
 		G_VoiceClientGone( clientNum );
+		G_BoomboxClientGone( clientNum );
+	}
 
 	trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -4103,6 +4106,9 @@ void ClientDisconnect( int clientNum ) {
 	// hasn't spawned yet
 	G_RemoveQueuedBotBegin( clientNum );
 	G_VoiceClientGone( clientNum );
+	G_BoomboxClientGone( clientNum );
+	G_AuthClientGone( clientNum );
+	G_ToolClear( clientNum );
 
 	ent = g_entities + clientNum;
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {

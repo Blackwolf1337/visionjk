@@ -1,0 +1,16 @@
+--- a/hrtf_database.cpp
++++ b/hrtf_database.cpp
+@@ -673,7 +673,12 @@
+ {
+     auto samples = unwrappedPhase.data();
+     auto size = unwrappedPhase.size(0);
+-    auto simdSize = size & ~3;
++    // VisionJK, the build for a browser: none of it in fours. That takes float4::round(), and the one of
++    // neon_float4.h, which this platform is built with, adds a half and rounds nothing (it reinterprets where
++    // it should convert): every phase came out of here as pi or -pi, and a direction between two measured ones
++    // (IPL_HRTFINTERPOLATION_BILINEAR) got a filter with the right loudness and no timing. The loop for what
++    // is left over of the fours rounds, and now does all of it. With sse_float4.h the fours are right.
++    auto simdSize = size & 0;
+ 
+     auto twoPi = float4::set1(2.0f * Math::kPi);
+     auto twoPiInverse = float4::set1(1.0f / (2.0f * Math::kPi));

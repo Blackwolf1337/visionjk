@@ -64,15 +64,30 @@ void ConsoleLogAppend( const char *string )
 	}
 }
 
-void ConsoleLogWriteOut( FILE *fp )
+// The text of the log in two parts, oldest first: the ring wraps. Allocates nothing and locks nothing, so a crash
+// handler can write it with write() (a crash inside malloc holds its lock, stdio would wait for it forever).
+void ConsoleLogParts( const char **first, int *firstLen, const char **second, int *secondLen )
 {
-	assert( fp );
-
+	*first = consoleLog.text + consoleLog.writeHead;
+	*firstLen = 0;
 	if ( consoleLog.length == MAX_CONSOLE_LOG_SIZE &&
 			consoleLog.writeHead != MAX_CONSOLE_LOG_SIZE )
 	{
-		fwrite( consoleLog.text + consoleLog.writeHead, MAX_CONSOLE_LOG_SIZE - consoleLog.writeHead, 1, fp );
+		*firstLen = MAX_CONSOLE_LOG_SIZE - consoleLog.writeHead;
 	}
 
-	fwrite( consoleLog.text, consoleLog.writeHead, 1, fp );
+	*second = consoleLog.text;
+	*secondLen = consoleLog.writeHead;
+}
+
+void ConsoleLogWriteOut( FILE *fp )
+{
+	const char *first, *second;
+	int firstLen, secondLen;
+
+	assert( fp );
+
+	ConsoleLogParts( &first, &firstLen, &second, &secondLen );
+	fwrite( first, firstLen, 1, fp );
+	fwrite( second, secondLen, 1, fp );
 }

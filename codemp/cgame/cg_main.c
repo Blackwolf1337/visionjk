@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 
 #include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
+#include "ui/ui_saberfx.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -537,36 +540,17 @@ void CG_ParseWeatherEffect(const char *str)
 }
 
 extern int cgSiegeRoundBeganTime;
+// "<state>|<time>", a configstring of the server: read in place, the two copies into b[1024] had no bound
 void CG_ParseSiegeState(const char *str)
 {
-	int i = 0;
-	int j = 0;
-//	int prevState = cgSiegeRoundState;
-	char b[1024];
+	const char *bar = strchr( str, '|' );
 
-	while (str[i] && str[i] != '|')
-	{
-		b[j] = str[i];
-		i++;
-		j++;
-	}
-	b[j] = 0;
-	cgSiegeRoundState = atoi(b);
+	cgSiegeRoundState = atoi( str );
 
-	if (str[i] == '|')
+	if ( bar )
 	{
-		j = 0;
-		i++;
-		while (str[i])
-		{
-			b[j] = str[i];
-			i++;
-			j++;
-		}
-		b[j] = 0;
-//		if (cgSiegeRoundState != prevState)
 		{ //it changed
-			cgSiegeRoundTime = atoi(b);
+			cgSiegeRoundTime = atoi( bar + 1 );
 			if (cgSiegeRoundState == 0 || cgSiegeRoundState == 2)
 			{
 				cgSiegeRoundBeganTime = cgSiegeRoundTime;
@@ -639,6 +623,7 @@ static void CG_RegisterSounds( void ) {
 	cgs.media.purpleSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/purple_glow" );
 	cgs.media.purpleSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/purple_line" );
 	cgs.media.saberBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/saberBlur" );
+	cgs.media.sfxSaberTrailShader		= trap->R_RegisterShaderNoMip( "gfx/sfx_sabers/saber_trail" );
 	cgs.media.swordTrailShader			= trap->R_RegisterShader( "gfx/effects/sabers/swordTrail" );
 	cgs.media.RGBSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBGlow" );
 	cgs.media.RGBSaberGlow4Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBGlow4" );
@@ -800,6 +785,9 @@ static void CG_RegisterSounds( void ) {
 	trap->S_RegisterSound( "sound/movers/objects/objectHit.wav" );
 
 	cgs.media.talkSound = trap->S_RegisterSound( "sound/player/talk.wav" );
+	cgs.media.tayHitSound = trap->S_RegisterSound( "sound/tay/hit.wav" );
+	cgs.media.tayKillSound = trap->S_RegisterSound( "sound/tay/kill.wav" );
+	cgs.media.tayNotifySound = trap->S_RegisterSound( "sound/tay/notify.wav" );
 	cgs.media.landSound = trap->S_RegisterSound( "sound/player/land1.wav");
 	cgs.media.fallSound = trap->S_RegisterSound( "sound/player/fallsplat.wav");
 
@@ -1432,7 +1420,11 @@ Ghoul2 Insert End
 			break;
 		}
 
-		strcpy(modelName, cModelName);
+		// (a configstring of the server: a name that does not fit is no model)
+		if ( strlen( cModelName ) >= sizeof( modelName ) ) {
+			continue;
+		}
+		Q_strncpyz( modelName, cModelName, sizeof( modelName ) );
 		if (strstr(modelName, ".glm") || modelName[0] == '$')
 		{ //Check to see if it has a custom skin attached.
 			CG_HandleAppendedSkin(modelName);
@@ -2187,6 +2179,13 @@ CG_LoadMenus();
 
 =================
 */
+// "exec" of a menu the cgame draws (its HUD): nothing. The cgame never had it and called NULL for it, so a HUD
+// menu of a pak with an exec ended the game; the HUD of the game has none.
+static void CG_MenuExecuteText( int exec_when, const char *text ) {
+	(void)exec_when;
+	(void)text;
+}
+
 void CG_LoadMenus(const char *menuFile)
 {
 	const char	*token;
@@ -2259,14 +2258,76 @@ CG_LoadHudMenu();
 
 =================
 */
-void CG_LoadHudMenu()
+static void CG_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t *verts ) {
+	trap->R_AddPolysToScene( shader, numVerts, verts, 1 );
+}
+
+static qboolean cgDisplayReady;
+
+// the size of the window into what the menu code draws by
+static void CG_DisplaySize( void ) {
+	cgDC.bias		= cgs.bias2D;
+	cgDC.biasY		= cgs.bias2DY;
+	cgDC.wide		= cgs.bias2D;
+	cgDC.tall		= cgs.bias2DY;
+	cgDC.glconfig	= cgs.glconfig;
+	cgDC.yscale		= cgs.glconfig.vidHeight / ( 480.0f + 2.0f * cgs.bias2DY );
+	cgDC.xscale		= cgs.glconfig.vidWidth / ( 640.0f + 2.0f * cgs.bias2D );
+}
+
+/*
+=================
+CG_ScreenSize
+
+The size of the window and the grid of the 2D on it. A renderer of this tree widens the grid on a wide window and
+says by how much in v_2dBias, see CG_Place2D().
+=================
+*/
+void CG_ScreenSize( void ) {
+	char bias[32];
+
+	trap->GetGlconfig( &cgs.glconfig );
+	trap->Cvar_VariableStringBuffer( "v_2dBias", bias, sizeof( bias ) );
+	cgs.bias2D = atof( bias );
+	if ( cgs.bias2D < 0.0f ) {
+		cgs.bias2D = 0.0f;
+	}
+	trap->Cvar_VariableStringBuffer( "v_2dBiasY", bias, sizeof( bias ) );
+	cgs.bias2DY = Q_max( 0.0f, atof( bias ) );
+	cgs.screenXScale = cgs.glconfig.vidWidth / ( 640.0 + 2.0 * cgs.bias2D );
+	cgs.screenYScale = cgs.glconfig.vidHeight / ( 480.0 + 2.0 * cgs.bias2DY );
+	if ( cgDisplayReady ) {
+		CG_DisplaySize();
+	}
+}
+
+/*
+=================
+CG_CheckScreenSize
+
+Once a frame: the engine resized the frame with the window (CL_WindowSize()), the 2D follows
+=================
+*/
+void CG_CheckScreenSize( void ) {
+	glconfig_t glconfig;
+
+	trap->GetGlconfig( &glconfig );
+	if ( glconfig.vidWidth != cgs.glconfig.vidWidth || glconfig.vidHeight != cgs.glconfig.vidHeight ) {
+		CG_ScreenSize();
+	}
+}
+
+// What the menu code and the look of ui/ui_skin.c need to draw (cgDC). Before the HUD is loaded already, for
+// the loading screen.
+static void CG_DisplaySetup( void )
 {
-	const char *hudSet;
+	char buff[16];
+	qboolean hasSkin;
 
 	cgDC.registerShaderNoMip			= trap->R_RegisterShaderNoMip;
 	cgDC.setColor						= trap->R_SetColor;
 	cgDC.drawHandlePic					= &CG_DrawPic;
-	cgDC.drawStretchPic					= trap->R_DrawStretchPic;
+	cgDC.drawStretchPic					= &CG_DrawStretchPic;
 	cgDC.drawText						= &CG_Text_Paint;
 	cgDC.textWidth						= &CG_Text_Width;
 	cgDC.textHeight						= &CG_Text_Height;
@@ -2283,7 +2344,7 @@ void CG_LoadHudMenu()
 	cgDC.Font_StrLenPixels				= trap->R_Font_StrLenPixels;
 	cgDC.Font_StrLenChars				= trap->R_Font_StrLenChars;
 	cgDC.Font_HeightPixels				= trap->R_Font_HeightPixels;
-	cgDC.Font_DrawString				= trap->R_Font_DrawString;
+	cgDC.Font_DrawString				= &CG_Font_DrawString;
 	cgDC.Language_IsAsian				= trap->R_Language_IsAsian;
 	cgDC.Language_UsesSpaces			= trap->R_Language_UsesSpaces;
 	cgDC.AnyLanguage_ReadCharFromString	= trap->R_AnyLanguage_ReadCharFromString;
@@ -2308,7 +2369,7 @@ void CG_LoadHudMenu()
 	//cgDC.setBinding					= &trap->Key_SetBinding;
 	//cgDC.getBindingBuf				= &trap->Key_GetBindingBuf;
 	//cgDC.keynumToStringBuf			= &trap->Key_KeynumToStringBuf;
-	//cgDC.executeText					= &trap->Cmd_ExecuteText;
+	cgDC.executeText					= CG_MenuExecuteText;
 	cgDC.Error							= Com_Error;
 	cgDC.Print							= Com_Printf;
 	cgDC.ownerDrawWidth					= &CG_OwnerDrawWidth;
@@ -2321,9 +2382,36 @@ void CG_LoadHudMenu()
 	cgDC.drawCinematic					= &CG_DrawCinematic;
 	cgDC.runCinematicFrame				= &CG_RunCinematicFrame;
 	cgDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
+	// For the look of ui/ui_skin.c in the HUD: the size of the window, and the call that makes a shader from a
+	// picture, which only the engine of this tree has. It says so in two cvars (cg_public.h, ui_public.h: the
+	// second one stands for the fonts of that look).
+	CG_DisplaySize();
+	trap->Cvar_VariableStringBuffer( "v_cgameScene", buff, sizeof( buff ) );
+	hasSkin = (qboolean)( atoi( buff ) == 1 );
+	trap->Cvar_VariableStringBuffer( "v_uiSkin", buff, sizeof( buff ) );
+	cgDC.registerShaderRGBA				= ( hasSkin && atoi( buff ) == 1 ) ? trap->ext.R_RegisterShaderRGBA : NULL;
+	cgDC.statValue						= &CG_StatValue;
+	cgDC.addPolyToScene					= &CG_AddPolyToScene;
 
 
 	Init_Display(&cgDC);
+	Skin_Reset();
+	SaberFX_Reset();
+	cgDisplayReady = qtrue;
+}
+
+void CG_DisplayEnsure( void )
+{
+	if ( !cgDisplayReady ) {
+		CG_DisplaySetup();
+	}
+}
+
+void CG_LoadHudMenu()
+{
+	const char *hudSet;
+
+	CG_DisplaySetup();
 
 	Menu_Reset();
 
@@ -2334,6 +2422,8 @@ void CG_LoadHudMenu()
 	}
 
 	CG_LoadMenus(hudSet);
+	// and the HUD of the new look (hud/cg_hud.c)
+	CG_HudLoad();
 
 }
 
@@ -2598,9 +2688,10 @@ Ghoul2 Insert End
 	// old servers
 
 	// get the rendering configuration from the client system
-	trap->GetGlconfig( &cgs.glconfig );
-	cgs.screenXScale = cgs.glconfig.vidWidth / 640.0;
-	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
+	CG_ScreenSize();
+	cgs.shift2D = 0.0f;
+	// the engine of this tree resizes the frame with the window and leaves it to this module to follow
+	trap->Cvar_Set( "v_cgameResize", "1" );
 
 	// get the gamestate from the client system
 	trap->GetGameState( &cgs.gameState );
@@ -2617,6 +2708,21 @@ Ghoul2 Insert End
 	cgs.levelStartTime = atoi( s );
 
 	CG_VoiceInit();		// in front of the server info, which tells it whether this server has a voice chat
+	CG_BoomboxInit();	//	and boxes of the boombox
+	CG_ChatInit();
+	CG_NotifyInit();
+	CG_BubbleInit();
+	CG_StatusInit();
+	CG_LookInit();
+	CG_PeerInit();
+	CG_SelectInit();
+	CG_ToolsInit();
+	CG_ScoresInit();
+	CG_AuthInit();
+	CG_Menu3DInit();
+	CG_ScopeInit();
+	CG_ScreenFxInit();
+	CG_ToysInit();
 	CG_ParseServerinfo();
 	CG_JPAutoReplierInit();
 
@@ -2729,6 +2835,7 @@ void CG_Shutdown( void )
 {
 	// first of all: the threads of the voice chat run code of this module
 	CG_VoiceShutdown();
+	CG_MusicShutdown();
 
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine
 
@@ -2909,6 +3016,12 @@ static void _CG_MouseEvent( int x, int y ) {
 }
 
 static qboolean CG_IncomingConsoleCommand( void ) {
+	// the key of the saber styles turns the motion view of the disruptor on and off while it is zoomed
+	// (scope/cg_scope.c)
+	if ( CG_ScopeKeyCommand( cg.sharedBuffer.icc.conCommand ) ) {
+		cg.sharedBuffer.icc.conCommand[0] = 0;
+		return qfalse;
+	}
 	//rww - let mod authors filter client console messages so they can cut them off if they want.
 	//return qtrue if the command is ok. Otherwise, you can set char 0 on the command str to 0 and return
 	//qfalse to not execute anything, or you can fill conCommand in with something valid and return 0

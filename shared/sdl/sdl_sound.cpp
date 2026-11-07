@@ -1,6 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 1999-2005 Id Software, Inc.
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of Quake III Arena source code.
 
@@ -24,10 +25,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 
 #include <SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "qcommon/q_shared.h"
 #include "client/client.h"
-#include "client/snd_local.h"
+#include "client/sound/snd_local.h"
 
 extern dma_t		dma;
 SDL_AudioDeviceID	dev;
@@ -275,6 +279,18 @@ void SNDDMA_Shutdown(void)
 {
 	Com_Printf("Closing SDL audio device...\n");
 	SDL_PauseAudioDevice(dev, 1);
+#ifdef __EMSCRIPTEN__
+	// SDL 2.32 only disconnects the node of the page that asks for sound and leaves it its handler. A call
+	// that was on its way already then arrives after the device is gone. snd_restart opens the next device in
+	// the same go, so the call does not stop at "there is no device" either and runs with the memory of the
+	// old one (it ended in a division by zero, the format of a freed device). So the handler goes first.
+	EM_ASM( {
+		var SDL2 = Module['SDL2'];
+		if ( SDL2 && SDL2.audio && SDL2.audio.scriptProcessorNode ) {
+			SDL2.audio.scriptProcessorNode['onaudioprocess'] = null;
+		}
+	} );
+#endif
 	SDL_CloseAudioDevice(dev);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	free(dma.buffer);
@@ -306,19 +322,9 @@ void SNDDMA_BeginPainting (void)
 	SDL_LockAudioDevice(dev);
 }
 
-#ifdef USE_OPENAL
-extern int s_UseOpenAL;
-#endif
-
 // (De)activates sound playback
 void SNDDMA_Activate( qboolean activate )
 {
-#ifdef USE_OPENAL
-	if ( s_UseOpenAL )
-	{
-		S_AL_MuteAllSounds( (qboolean)!activate );
-	}
-#endif
 
 	if ( activate )
 	{

@@ -1,0 +1,90 @@
+// ingame_vote.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_vote.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_vote"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					788 80 620 246
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_EMPTY
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		radius					6.4
+		shadow					14
+
+		itemDef
+		{
+			name					vision_window
+			rect					0 0 620 246
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					16
+			decoration
+			stack					-1
+		}
+
+		itemDef
+		{
+			name					yes
+			text					@MENUS_YES
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 24 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "vote yes" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+
+		itemDef
+		{
+			name					no
+			text					@MENUS_NO
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					24 130 572 92
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				30
+			textaligny				31
+			font					5
+			textscale				1.67
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "vote no" ;
+				uiScript closeingame
+			}
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+			stack					1
+		}
+		canvas					1600 1200
+		descX					1098
+		descY					342
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				1.33
+		descColor				0.56 0.64 0.74 1
+	}
+}

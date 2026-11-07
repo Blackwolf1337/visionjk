@@ -1,0 +1,488 @@
+// quickgame.menu in the new look. Made by tools/menus/build.py from ui/jamp/quickgame.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"quickgame"
+		fullScreen				MENU_TRUE
+		rect					0 0 640 480
+		visible					1
+		focusColor				0.36 0.78 0.96 1
+		descX					800.0
+		descY					866.0
+		descScale				0.72
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onEsc
+		{
+			play "sound/interface/esc.wav" ;
+			close quickgame ;
+			open main
+		}
+		onOpen
+		{
+			uiScript loadArenas ;
+			uiScript checkforsiege ;
+			hide accept_alt ;
+			show accept ;
+			hide back_alt ;
+			show back ;
+			hide grpmessage
+		}
+
+		itemDef
+		{
+			name					vision_bar
+			rect					0 0 1600 72
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.55
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					0 71 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_logo
+			rect					48 19 34 34
+			visible					1
+			type					ITEM_TYPE_LOGO
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark
+			rect					96 16 180 40
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				1.67
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					268 22 300 32
+			visible					1
+			text					"JEDI ACADEMY"
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				8.5
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_nav_play
+			rect					1090 0 86 72
+			visible					1
+			text					@MENUS_PLAY
+			font					5
+			textscale				1.06
+			forecolor				0.36 0.78 0.96 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				43
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_START_PLAYING_NOW
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					1090 69 86 3
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_nav_profile
+			rect					1184 0 116 72
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				58
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_PROFILE_DESC
+			action { play "sound/interface/button1.wav" ; close all ; open playerMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_controls
+			rect					1308 0 136 72
+			visible					1
+			text					@MENUS_CONTROLS2
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				68
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			action { play "sound/interface/button1.wav" ; close all ; open controlsMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_setup
+			rect					1452 0 100 72
+			visible					1
+			text					@MENUS_SETUP
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				50
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			action { play "sound/interface/button1.wav" ; close all ; open setup_menu ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub
+			rect					0 72 1600 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.35
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_line
+			rect					0 123 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_sub_join
+			rect					36 72 190 52
+			visible					1
+			text					@MENUS_JOIN_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				95
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_create
+			rect					230 72 210 52
+			visible					1
+			text					@MENUS_CREATE_SERVER_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				105
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open createserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo
+			rect					444 72 160 52
+			visible					1
+			text					@MENUS_SOLO_GAME
+			font					5
+			textscale				0.83
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open quickgame ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_solo_line
+			rect					460 122 128 2
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.36 0.78 0.96 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_sub_demo
+			rect					608 72 160 52
+			visible					1
+			text					@MENUS_PLAY_DEMO_CAPS
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open demo ; }
+		}
+
+		itemDef
+		{
+			name					vision_sub_rules
+			rect					772 72 110 52
+			visible					1
+			text					@MENUS_RULES
+			font					5
+			textscale				0.83
+			forecolor				0.706 0.765 0.839 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				18.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			action { play "sound/interface/button1.wav" ; close all ; open rulesMenu ; }
+		}
+
+		itemDef
+		{
+			name					title
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_SOLO_GAME
+			rect					48 152 800 44
+			font					5
+			textscale				1.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				7
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					solo_gametypefield
+			style					WINDOW_STYLE_PANEL
+			ownerdraw				UI_NETGAMETYPE
+			text					@MENUS_GAME_TYPE
+			descText				@MENUS_ALLOWS_YOU_TO_SELECT
+			textstyle				0
+			rect					48 220 360 44
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				14
+			textaligny				14.5
+			font					5
+			textscale				0.83
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			bordercolor				0.153 0.251 0.373 1
+			action { play "sound/interface/button1.wav" }
+			radius					6
+			backcolor				0.027 0.051 0.102 1
+		}
+
+		itemDef
+		{
+			name					create_title
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_MAP_LISTING
+			rect					48 280 360 24
+			font					7
+			textscale				0.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				6
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					maplist
+			rect					48 312 360 496
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			40
+			font					5
+			textscale				0.89
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_ALLMAPS
+			textstyle				0
+			textalign				3
+			textaligny				11
+			bordercolor				0.11 0.18 0.29 1
+			forecolor				0.56 0.64 0.74 1
+			backcolor				0.031 0.055 0.11 0.86
+			outlinecolor			0.36 0.78 0.96 0.22
+			descText				@MENUS_CHOOSE_YOUR_GAME
+			visible					1
+			columns					1 2 190 172
+			action { play "sound/interface/button1.wav" ; }
+			mouseEnter { setitemcolor maplist bordercolor 0.36 0.78 0.96 0.6 }
+			mouseExit { setitemcolor maplist bordercolor 0.36 0.78 0.96 0.6 }
+			radius					10
+		}
+
+		itemDef
+		{
+			name					mappreview
+			style					WINDOW_STYLE_PANEL
+			ownerdraw				UI_STARTMAPCINEMATIC
+			rect					616 226 760 570
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			backcolor				0 0 0 0
+			radius					5
+			font					5
+			textscale				0.47
+		}
+
+		itemDef
+		{
+			name					mappreview
+			style					WINDOW_STYLE_PANEL
+			rect					610 220 772 582
+			bordercolor				0.11 0.18 0.29 1
+			visible					1
+			backcolor				0 0 0 0
+			radius					10
+			decoration
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 832 1600 68
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.6
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 832 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+		canvas					1600 900
+		descMiddle				1
+
+		itemDef
+		{
+			name					backbutton
+			group					fade_buttons
+			text					@MENUS_BACK
+			descText				@MENUS_BACKUP_ONE_MENU
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					32 844 110 44
+			font					5
+			textscale				1
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				13
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/esc.wav" ;
+				close all ;
+				open main
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					next_button
+			text					@MENUS_NEXT
+			descText				@MENUS_CHOOSE_RULES
+			type					ITEM_TYPE_BUTTON
+			font					7
+			textscale				0.83
+			textstyle				0
+			style					WINDOW_STYLE_PANEL
+			rect					1352 844 200 44
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				14.5
+			forecolor				0.016 0.071 0.122 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close quickgame ;
+				open quickgame2
+			}
+			caps					1
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					6
+		}
+	}
+}

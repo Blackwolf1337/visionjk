@@ -1,6 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 2026, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -20,25 +21,49 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-// rd-vulkan-vision builds the files of rd-vanilla that hold no graphics code (loaders, the shader parser, Ghoul2,
-// the scene) into its own library instead of keeping copies of them. This header is what those files see in
-// place of OpenGL. It is included at the end of rd-vanilla/tr_local.h when RD_VULKAN_VISION is defined.
+// The files of common/ come from the OpenGL renderer of the game and hold no graphics code of their own (loaders,
+// the shader parser, Ghoul2, the scene). This header is what they see in place of OpenGL. It is included at the
+// end of common/tr_local.h.
 
 // vk_main.cpp
-void VK_InitVulkan( void );
+qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the renderer
 void VK_ShutdownVulkan( qboolean destroyWindow );
 void VK_GfxInfo_f( void );
+// the window has that size now: the frame follows it between two frames. qfalse: this device can not, the engine
+// restarts the renderer instead
+qboolean VK_ResizeFrame( int width, int height );
 
-// vk_screenshot.cpp: what tr_init.cpp has between its screenshot commands and the frame buffer
+// vk_frame.cpp: what tr_init.cpp has between its screenshot commands and the frame buffer
 byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *padlen );
 const void *RB_TakeVideoFrameCmd( const void *data );
 
 // vk_post.cpp: what RB_TestZFlare() of tr_surface.cpp asks the depth buffer
 qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ );
+// and whether RE_SetScopeEffect() of tr_cmds.cpp is drawn
+qboolean VK_HasScope( void );
+// whether RE_AddWet() is drawn, and whether its puddles mirror a view of their own (R_PuddleView of tr_main.cpp)
+qboolean VK_HasWet( void );
+qboolean VK_PuddleMirror( void );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );
 void G2_SkinGore( CRenderableSurface *surf );
+// tr_surfacesprites.cpp, for the surface sprites vk_world.cpp draws on the device: the wind and the vectors of the
+// view of this frame, as RB_DrawSurfaceSprites() works them out before it draws
+void RB_SurfaceSpriteFrame( void );
+extern float	curWindSpeed, curWindPointForce, rangescalefactor;
+extern qboolean	curWindPointActive;
+extern vec3_t	curWindGrassDir, curWindPoint, ssrightvectors[4], ssfwdvector, ssViewOrigin, ssViewRight, ssViewUp;
+extern const float	randomchart[256];
+// vk_gl.cpp, for CWeatherParticleCloud::Render() of tr_WorldEffects.cpp: its particles as records of
+// shaders/sprite.vert with the GL state that is set, kind 1 (a quad of two vectors) or 5 (a triangle). qfalse from
+// VK_GL_QuadsOn(): they are built corner by corner as in rd-vanilla.
+qboolean VK_GL_QuadsOn( void );
+void VK_GL_Quad( int kind, const float *a, const float *b, const float *c, const float *st, const float *color );
+void VK_GL_QuadFlush( void );
+// vk_world.cpp, for DoLine2() of tr_surface.cpp: one segment of a bolt into a batch of quads (shaders/sprite.vert).
+// qfalse: the batch is not one, the segment goes into the tess arrays.
+qboolean VK_AddBoltSegment( const float *start, const float *end, const float *side, float startWidth, float endWidth );
 // vk_model.cpp, for G2_misc.cpp: the data of a saber mark on a model is freed
 void VK_GoreFreed( const void *goreData );
 
@@ -47,6 +72,13 @@ void VK_GoreFreed( const void *goreData );
 void VK_ImageLevel( int level, int internalFormat, int width, int height, const byte *rgba );
 void VK_ImageParm( int name, int value );
 void VK_ImageDelete( unsigned int texnum );
+void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );	// for the glyph pages of rd-common/tr_font_ttf.cpp
+
+// vk_texcache.cpp: the texture of an image file as an earlier run packed it, see there for the order of the calls
+qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );
+qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
+void VK_TexCacheRecord( void );
+void VK_TexCacheEnd( void );
 
 // The few OpenGL calls left in the shared files, by where they are:
 // tr_image.cpp Upload32, R_CreateImage, GL_TextureMode, R_Images_DeleteImageContents
@@ -87,8 +119,6 @@ void VK_GL_Flush( void );
 void VK_GL_Collect( qboolean on );
 void VK_GL_StencilFunc( int func, int ref );
 void VK_GL_StencilOp( int face, int fail, int zfail, int zpass );
-void VK_GL_ColorMask( int on );
-void VK_GL_DepthFunc( int func );
 void VK_GL_Fogf( int name, float value );
 void VK_GL_Fogfv( int name, const float *value );
 static void ( * const vk_glNoLockArrays )( int, int ) = 0;
@@ -145,18 +175,13 @@ static void ( * const vk_glNoUnlockArrays )( void ) = 0;
 #undef qglTranslatef
 #define qglTranslatef( x, y, z )	VK_GL_Translate( x, y, z )
 
-// stencil shadows (tr_shadows.cpp): the volume of a model is drawn into the stencil buffer without color, then one
-// quad darkens the frame where the buffer is not zero
+// the stencil test of the overdraw measurement (tr_cmds.cpp)
 #undef qglStencilFunc
 #define qglStencilFunc( func, ref, mask )	VK_GL_StencilFunc( func, ref )
 #undef qglStencilOp
 #define qglStencilOp( fail, zfail, zpass )	VK_GL_StencilOp( GL_FRONT_AND_BACK, fail, zfail, zpass )
 #undef qglStencilOpSeparate
 #define qglStencilOpSeparate( face, fail, zfail, zpass )	VK_GL_StencilOp( face, fail, zfail, zpass )
-#undef qglColorMask
-#define qglColorMask( r, g, b, a )		VK_GL_ColorMask( r )
-#undef qglDepthFunc
-#define qglDepthFunc( func )			VK_GL_DepthFunc( func )
 #undef qglIsEnabled
 #define qglIsEnabled( cap )			0
 

@@ -1,0 +1,320 @@
+// quit.menu in the new look. Made by tools/menus/build.py from ui/jamp/quit.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"quitMenu"
+		visible					0
+		fullScreen				1
+		rect					0 0 640 480
+		focusColor				0.36 0.78 0.96 1
+		appearanceIncrement		100
+		descX					800.0
+		descY					866.0
+		descScale				0.72
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		appearanceIncrement		100
+		onESC
+		{
+			play "sound/interface/button1.wav" ;
+			close quitMenu ;
+			open mainMenu ;
+		}
+		onOpen { setfocus quitgame_cancel }
+
+		itemDef
+		{
+			name					vision_bar
+			rect					0 0 1600 72
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.55
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					0 71 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_logo
+			rect					48 19 34 34
+			visible					1
+			type					ITEM_TYPE_LOGO
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark
+			rect					96 16 180 40
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				1.67
+			forecolor				1 1 1 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				5
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					268 22 300 32
+			visible					1
+			text					"JEDI ACADEMY"
+			font					5
+			textscale				0.83
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				8.5
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_nav_play
+			rect					1090 0 86 72
+			visible					1
+			text					@MENUS_PLAY
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				43
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_START_PLAYING_NOW
+			action { play "sound/interface/button1.wav" ; close all ; open joinserver ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_profile
+			rect					1184 0 116 72
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				58
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_PROFILE_DESC
+			action { play "sound/interface/button1.wav" ; close all ; open playerMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_controls
+			rect					1308 0 136 72
+			visible					1
+			text					@MENUS_CONTROLS2
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				68
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			action { play "sound/interface/button1.wav" ; close all ; open controlsMenu ; }
+		}
+
+		itemDef
+		{
+			name					vision_nav_setup
+			rect					1452 0 100 72
+			visible					1
+			text					@MENUS_SETUP
+			font					5
+			textscale				1.06
+			forecolor				0.86 0.90 0.945 1
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				50
+			textaligny				26.5
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			action { play "sound/interface/button1.wav" ; close all ; open setup_menu ; }
+		}
+
+		itemDef
+		{
+			name					vision_dialog
+			rect					560 330 480 220
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.039 0.071 0.133 0.96
+			bordercolor				0.153 0.251 0.373 1
+			radius					12
+			decoration
+			shadow					40
+		}
+
+		itemDef
+		{
+			name					creditsbutton
+			group					othermain
+			descText				@MENUS_SHOW_GAME_CREDITS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					590 350 420 30
+			font					2
+			textscale				1
+			textaligny				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				46
+			backcolor				0 0 0 0
+			forecolor				0.65 0.65 1 1
+			visible					0
+			mouseEnter {  }
+			mouseExit {  }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open creditsMenu
+			}
+		}
+
+		itemDef
+		{
+			name					quit_title
+			group					none
+			text					@MENUS_LEAVING_JEDI_KNIGHT_2
+			style					WINDOW_STYLE_EMPTY
+			rect					590 356 420 20
+			font					7
+			textscale				0.67
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				4
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					confirm
+			group					none
+			text					@MENUS_QUIT_JEDI_KNIGHT_II
+			font					5
+			textscale				1.44
+			textstyle				0
+			rect					590 384 420 40
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				7
+			decoration
+			forecolor				1 1 1 1
+			visible					1
+			style					WINDOW_STYLE_EMPTY
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		backdrop				1
+
+		itemDef
+		{
+			name					quitgame_cancel
+			group					none
+			text					@MENUS_NO
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					762 478 120 44
+			font					5
+			textscale				0.83
+			textalignx				60
+			textaligny				14.5
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			descText				@MENUS_DO_NOT_LEAVE_JEDI_KNIGHT
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close quitMenu ;
+				open mainMenu ;
+			}
+			caps					1
+			radius					6
+			backcolor				0 0 0 0
+			bordercolor				0.153 0.251 0.373 1
+		}
+
+		itemDef
+		{
+			name					quitgame_yes
+			group					none
+			text					@MENUS_QUIT
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					892 478 120 44
+			font					7
+			textscale				0.83
+			textalignx				60
+			textaligny				14.5
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			descText				@MENUS_JEDI_KNIGHT_II
+			forecolor				0.16 0.03 0.02 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript Quit
+			}
+			caps					1
+			backcolor				1 0.54 0.50 1
+			bordercolor				1 0.54 0.50 1
+			radius					6
+		}
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 832 1600 68
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.6
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 832 1600 1
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+			wide					1
+		}
+		canvas					1600 900
+		descMiddle				1
+	}
+}

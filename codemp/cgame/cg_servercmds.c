@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -27,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // be a valid snapshot this frame
 
 #include "cg_local.h"
-#include "game/bg_public.h"
+#include "game/bg/bg_public.h"
 #include "ui/menudef.h"
 #include "ghoul2/G2.h"
 #include "ui/ui_public.h"
@@ -43,16 +44,8 @@ static void CG_ParseScores( void ) {
 	const int SCORE_OFFSET = cgs.jpVersion >= 2.1f ? 15 : 14;
 	int i, powerups, readScores;
 
-	cg.numScores = atoi( CG_Argv( 1 ) );
-
-	readScores = cg.numScores;
-
-	if (readScores > MAX_CLIENT_SCORE_SEND)
-		readScores = MAX_CLIENT_SCORE_SEND;
-
-	if ( cg.numScores > MAX_CLIENTS )
-		cg.numScores = MAX_CLIENTS;
-
+	// the count comes from the server: below 0 the scoreboard would index cg.scores with it (hud/cg_scores.c)
+	readScores = Com_Clampi( 0, MAX_CLIENT_SCORE_SEND, atoi( CG_Argv( 1 ) ) );
 	cg.numScores = readScores;
 
 	cg.teamScores[0] = atoi( CG_Argv( 2 ) );
@@ -167,8 +160,11 @@ void CG_ParseServerinfo( void ) {
 	bg_jpGripSpeedScale = cgs.jpVersion > 0.0f ? atof( Info_ValueForKey( info, "jp_gripSpeedScale" ) ) : 0.4f;
 	bg_jpForceCombo = atoi( Info_ValueForKey( info, "jp_forceCombo" ) );
 	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;
-	// the voice chat asks a server for voice only if the server says here that it has one
-	CG_VoiceServerInfo( atoi( Info_ValueForKey( info, "g_voice" ) ) ? qtrue : qfalse );
+	// the voice chat asks a server for voice only if the server says here that it has one. One that does not say
+	// the key at all has no relay, there the voice goes through the masterserver
+	CG_VoiceServerInfo( Info_ValueForKey( info, "vs_voice" ) );
+	// and for boxes of the boombox only if it says vs_boombox (they go out over that relay)
+	CG_BoomboxServerInfo( Info_ValueForKey( info, "vs_boombox" ) );
 
 	// this changes on map_restart, attempt to precache weapons
 	value = atoi( Info_ValueForKey( info, "g_weaponDisable" ) );
@@ -270,6 +266,35 @@ static char ctfFlagStatusRemap[] = {
 
 /*
 ================
+CG_DuelField, CG_DuelClient
+
+The duel configstrings are numbers between "|". A field is read with a bound and the string is left behind its
+"|", or at its end and never past it: the server decides how long these are (stock JKA copied them into a 64 byte
+buffer without one).
+================
+*/
+static int CG_DuelField( const char **s ) {
+	const char	*p = *s;
+	char		buf[16];
+	int			n = 0;
+
+	while ( *p && *p != '|' ) {
+		if ( n < (int)sizeof( buf ) - 1 )
+			buf[n++] = *p;
+		p++;
+	}
+	buf[n] = '\0';
+	*s = *p ? p + 1 : p;
+	return atoi( buf );
+}
+
+// a client number from the server, -1 when it names nobody (it is an index into cgs.clientinfo)
+static int CG_DuelClient( int num ) {
+	return ( num >= 0 && num < MAX_CLIENTS ) ? num : -1;
+}
+
+/*
+================
 CG_SetConfigValues
 
 Called on load to set the initial values from configure strings
@@ -302,37 +327,14 @@ void CG_SetConfigValues( void )
 
 	// Track who the jedi master is
 	cgs.jediMaster = atoi ( CG_ConfigString ( CS_CLIENT_JEDIMASTER ) );
-	cgs.duelWinner = atoi ( CG_ConfigString ( CS_CLIENT_DUELWINNER ) );
+	cgs.duelWinner = CG_DuelClient( atoi ( CG_ConfigString ( CS_CLIENT_DUELWINNER ) ) );
 
 	str = CG_ConfigString(CS_CLIENT_DUELISTS);
 
 	if (str && str[0])
 	{
-		char buf[64];
-		int c = 0;
-		int i = 0;
-
-		while (str[i] && str[i] != '|')
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist1 = atoi ( buf );
-		c = 0;
-
-		i++;
-		while (str[i])
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist2 = atoi ( buf );
+		cgs.duelist1 = CG_DuelClient( CG_DuelField( &str ) );
+		cgs.duelist2 = CG_DuelClient( CG_DuelField( &str ) );
 	}
 }
 
@@ -352,21 +354,28 @@ void CG_ShaderStateChanged(void) {
 	while (o && *o) {
 		n = strstr(o, "=");
 		if (n && *n) {
-			strncpy(originalShader, o, n-o);
-			originalShader[n-o] = 0;
+			// (the lengths are distances in a configstring of the server: what does not fit ends the list)
+			if ( n - o >= (int)sizeof( originalShader ) ) {
+				break;
+			}
+			Q_strncpyz( originalShader, o, (int)( n - o ) + 1 );
 			n++;
 			t = strstr(n, ":");
 			if (t && *t) {
-				strncpy(newShader, n, t-n);
-				newShader[t-n] = 0;
+				if ( t - n >= (int)sizeof( newShader ) ) {
+					break;
+				}
+				Q_strncpyz( newShader, n, (int)( t - n ) + 1 );
 			} else {
 				break;
 			}
 			t++;
 			o = strstr(t, "@");
 			if (o) {
-				strncpy(timeOffset, t, o-t);
-				timeOffset[o-t] = 0;
+				if ( o - t >= (int)sizeof( timeOffset ) ) {
+					break;
+				}
+				Q_strncpyz( timeOffset, t, (int)( o - t ) + 1 );
 				o++;
 				trap->R_RemapShader( originalShader, newShader, timeOffset );
 			}
@@ -477,7 +486,7 @@ static void CG_RegisterCustomSounds(clientInfo_t *ci, int setType, const char *p
 			char modifiedSound[MAX_QPATH];
 			char *p;
 
-			strcpy(modifiedSound, s);
+			Q_strncpyz( modifiedSound, s, sizeof( modifiedSound ) );
 			p = strchr(modifiedSound,'.');
 
 			if (p)
@@ -505,22 +514,19 @@ static void CG_RegisterCustomSounds(clientInfo_t *ci, int setType, const char *p
 	}
 }
 
+// The folder of an NPC sound set, the configstring "*$<folder>" without its two marks, cut at outSize.
+static void CG_NPCSoundDir( char *out, int outSize, const char *s ) {
+	Q_strncpyz( out, ( s[0] && s[1] ) ? s + 2 : "", outSize );
+}
+
 void CG_PrecacheNPCSounds(const char *str)
 {
 	char sEnd[MAX_QPATH];
 	char pEnd[MAX_QPATH];
 	int i = 0;
 	int j = 0;
-	int k = 0;
 
-	k = 2;
-
-	while (str[k])
-	{
-		pEnd[k-2] = str[k];
-		k++;
-	}
-	pEnd[k-2] = 0;
+	CG_NPCSoundDir( pEnd, sizeof( pEnd ), str );
 
 	while (i < 4) //4 types
 	{ //It would be better if we knew what type this actually was (extra, combat, jedi, etc).
@@ -532,13 +538,7 @@ void CG_PrecacheNPCSounds(const char *str)
 
 			if (s && s[0])
 			{ //whatever it is, try registering it under this folder.
-				k = 1;
-				while (s[k])
-				{
-					sEnd[k-1] = s[k];
-					k++;
-				}
-				sEnd[k-1] = 0;
+				Q_strncpyz( sEnd, s + 1, sizeof( sEnd ) );
 
 				trap->S_Shutup(qtrue);
 				trap->S_RegisterSound( va("sound/chars/%s/misc/%s", pEnd, sEnd) );
@@ -572,18 +572,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 1, sEnd);
 		}
@@ -601,18 +591,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 2, sEnd);
 		}
@@ -630,18 +610,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 3, sEnd);
 		}
@@ -659,18 +629,8 @@ void CG_HandleNPCSounds(centity_t *cent)
 		if (s && s[0])
 		{
 			char sEnd[MAX_QPATH];
-			int i = 2;
-			int j = 0;
 
-			//Parse past the initial "*" which indicates this is a custom sound, and the $ which indicates
-			//it is an NPC custom sound dir.
-			while (s[i])
-			{
-				sEnd[j] = s[i];
-				j++;
-				i++;
-			}
-			sEnd[j] = 0;
+			CG_NPCSoundDir( sEnd, sizeof( sEnd ), s );
 
 			CG_RegisterCustomSounds(cent->npcClient, 4, sEnd);
 		}
@@ -686,49 +646,14 @@ void CG_CacheG2AnimInfo(char *modelName);
 
 // nmckenzie: DUEL_HEALTH - fixme - we could really clean this up immensely with some helper functions.
 void SetDuelistHealthsFromConfigString ( const char *str ) {
-	char buf[64];
-	int c = 0;
-	int i = 0;
-
-	while (str[i] && str[i] != '|')
-	{
-		buf[c] = str[i];
-		c++;
-		i++;
-	}
-	buf[c] = 0;
-
-	cgs.duelist1health = atoi ( buf );
-
-	c = 0;
-	i++;
-	while (str[i] && str[i] != '|')
-	{
-		buf[c] = str[i];
-		c++;
-		i++;
-	}
-	buf[c] = 0;
-
-	cgs.duelist2health = atoi ( buf );
-
-	c = 0;
-	i++;
-	if ( str[i] == '!' )
+	cgs.duelist1health = CG_DuelField( &str );
+	cgs.duelist2health = CG_DuelField( &str );
+	if ( *str == '!' )
 	{	// we only have 2 duelists, apparently.
 		cgs.duelist3health = -1;
 		return;
 	}
-
-	while (str[i] && str[i] != '|')
-	{
-		buf[c] = str[i];
-		c++;
-		i++;
-	}
-	buf[c] = 0;
-
-	cgs.duelist3health = atoi ( buf );
+	cgs.duelist3health = CG_DuelField( &str );
 }
 
 /*
@@ -773,51 +698,17 @@ static void CG_ConfigStringModified( void ) {
 	}
 	else if ( num == CS_CLIENT_DUELWINNER )
 	{
-		cgs.duelWinner = atoi ( str );
+		cgs.duelWinner = CG_DuelClient( atoi ( str ) );
 	}
 	else if ( num == CS_CLIENT_DUELISTS )
 	{
-		char buf[64];
-		int c = 0;
-		int i = 0;
+		const char *field = str;
 
-		while (str[i] && str[i] != '|')
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist1 = atoi ( buf );
-		c = 0;
-
-		i++;
-		while (str[i] && str[i] != '|')
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist2 = atoi ( buf );
-
-		if (str[i])
-		{
-			c = 0;
-			i++;
-
-			while (str[i])
-			{
-				buf[c] = str[i];
-				c++;
-				i++;
-			}
-			buf[c] = 0;
-
-			cgs.duelist3 = atoi(buf);
-		}
+		cgs.duelist1 = CG_DuelClient( CG_DuelField( &field ) );
+		cgs.duelist2 = CG_DuelClient( CG_DuelField( &field ) );
+		// a third one only behind a second "|" (power duel)
+		if ( field > str && field[-1] == '|' )
+			cgs.duelist3 = CG_DuelClient( CG_DuelField( &field ) );
 	}
 	else if ( num == CS_CLIENT_DUELHEALTHS ) {	// nmckenzie: DUEL_HEALTH
 		SetDuelistHealthsFromConfigString(str);
@@ -850,7 +741,12 @@ static void CG_ConfigStringModified( void ) {
 		cg.intermissionStarted = atoi( str );
 	} else if ( num >= CS_MODELS && num < CS_MODELS+MAX_MODELS ) {
 		char modelName[MAX_QPATH];
-		strcpy(modelName, str);
+
+		// (a name that does not fit is no model)
+		if ( strlen( str ) >= sizeof( modelName ) ) {
+			return;
+		}
+		Q_strncpyz( modelName, str, sizeof( modelName ) );
 		if (strstr(modelName, ".glm") || modelName[0] == '$')
 		{ //Check to see if it has a custom skin attached.
 			CG_HandleAppendedSkin(modelName);
@@ -1100,6 +996,9 @@ static void CG_MapRestart( void ) {
 
 	cg.mapRestart = qtrue;
 
+	// a round begins: the mouse is the game's again, whatever held it (select/cg_select.c)
+	CG_SelectLetGo();
+
 	CG_StartMusic(qtrue);
 
 	trap->S_ClearLoopingSounds();
@@ -1141,73 +1040,13 @@ static void CG_RemoveChatEscapeChar( char *text ) {
 
 #define MAX_STRINGED_SV_STRING 1024	// this is an quake-engine limit, not a StringEd limit
 
-void CG_CheckSVStringEdRef(char *buf, const char *str)
-{ //I don't really like doing this. But it utilizes the system that was already in place.
-	int i = 0;
-	int b = 0;
-	int strLen = 0;
-	qboolean gotStrip = qfalse;
+static const char *CG_SVStringEd( const char *ref ) {
+	return CG_GetStringEdString( "MP_SVGAME", (char *)ref );
+}
 
-	if (!str || !str[0])
-	{
-		if (str)
-		{
-			strcpy(buf, str);
-		}
-		return;
-	}
-
-	strcpy(buf, str);
-
-	strLen = strlen(str);
-
-	if (strLen >= MAX_STRINGED_SV_STRING)
-	{
-		return;
-	}
-
-	while (i < strLen && str[i])
-	{
-		gotStrip = qfalse;
-
-		if (str[i] == '@' && (i+1) < strLen)
-		{
-			if (str[i+1] == '@' && (i+2) < strLen)
-			{
-				if (str[i+2] == '@' && (i+3) < strLen)
-				{ //@@@ should mean to insert a StringEd reference here, so insert it into buf at the current place
-					char stringRef[MAX_STRINGED_SV_STRING];
-					int r = 0;
-
-					while (i < strLen && str[i] == '@')
-					{
-						i++;
-					}
-
-					while (i < strLen && str[i] && str[i] != ' ' && str[i] != ':' && str[i] != '.' && str[i] != '\n')
-					{
-						stringRef[r] = str[i];
-						r++;
-						i++;
-					}
-					stringRef[r] = 0;
-
-					buf[b] = 0;
-					Q_strcat(buf, MAX_STRINGED_SV_STRING, CG_GetStringEdString("MP_SVGAME", stringRef));
-					b = strlen(buf);
-				}
-			}
-		}
-
-		if (!gotStrip)
-		{
-			buf[b] = str[i];
-			b++;
-		}
-		i++;
-	}
-
-	buf[b] = 0;
+// buf has MAX_STRINGED_SV_STRING bytes
+void CG_CheckSVStringEdRef( char *buf, const char *str ) {
+	Q_StringEdExpand( buf, MAX_STRINGED_SV_STRING, str ? str : "", CG_SVStringEd );
 }
 
 static void CG_BodyQueueCopy(centity_t *cent, int clientNum, int knownWeapon)
@@ -1384,6 +1223,10 @@ static void CG_KillGhoul2_f( void ) {
 	for ( i=1; i<argNum; i++ ) {
 		indexNum = atoi( CG_Argv( i ) );
 
+		// (only the instances of entities that are no clients; the game sends no other number)
+		if ( indexNum < MAX_CLIENTS || indexNum >= MAX_GENTITIES ) {
+			continue;
+		}
 		if ( cg_entities[indexNum].ghoul2 && trap->G2_HaveWeGhoul2Models( cg_entities[indexNum].ghoul2 ) ) {
 			if ( indexNum < MAX_CLIENTS ) { //You try to do very bad thing!
 #ifdef _DEBUG
@@ -1471,6 +1314,14 @@ static void CG_RestoreClientGhoul_f( void ) {
 		weaponIndex = atoi( CG_Argv( 3 ) );
 		side = atoi( CG_Argv( 4 ) );
 
+		// a body of the queue is an entity that is no client, its weapon one of the game (g_client.c BodySink)
+		if ( bodyIndex < MAX_CLIENTS || bodyIndex >= MAX_GENTITIES ) {
+			return;
+		}
+		if ( weaponIndex < 0 || weaponIndex >= WP_NUM_WEAPONS ) {
+			weaponIndex = WP_NONE;
+		}
+
 		body = &cg_entities[bodyIndex];
 
 		if ( side )
@@ -1524,9 +1375,40 @@ static void CG_Print_f( void ) {
 	CG_JPReplyPrint( strEd );
 }
 
-void CG_ChatBox_AddString(char *chatStr);
+// a line for the chat box (chat/cg_chat.c): what kind it is and who said it are read from the line as the server
+// sent it, raw, before the marks of the game are taken out of what is shown. number: the argument in which a
+// server built on OpenJK names the client.
+// message: what was said, where the command has it apart from the name. NULL: it is what follows the last mark
+// and its colon in raw.
+static void CG_ChatLine( const char *cmd, const char *raw, int number, char *text, const char *message ) {
+	char		arg[16];
+	int			clientNum = -1;
+	const int	kind = CG_ChatKind( cmd, raw );
+
+	if ( trap->Cmd_Argc() > number ) {
+		trap->Cmd_Argv( number, arg, sizeof( arg ) );
+		clientNum = ( arg[0] >= '0' && arg[0] <= '9' ) ? atoi( arg ) : -1;
+	}
+	clientNum = CG_ChatSender( raw, clientNum );
+	CG_RemoveChatEscapeChar( text );
+	CG_ChatAdd( kind, clientNum, text );
+
+	// the bubble above the head of who said it (bubble/cg_bubble.c)
+	if ( !message ) {
+		message = strrchr( raw, '\x19' );
+		if ( message && message[1] == ':' && message[2] == ' ' ) {
+			message += 3;
+		} else {
+			message = NULL;
+		}
+	}
+	if ( message && clientNum >= 0 ) {
+		CG_BubbleSay( clientNum, kind, message );
+	}
+}
+
 static void CG_Chat_f( void ) {
-	char cmd[MAX_STRING_CHARS] = {0}, text[MAX_SAY_TEXT] = {0};
+	char cmd[MAX_STRING_CHARS] = {0}, text[MAX_SAY_TEXT] = {0}, raw[MAX_SAY_TEXT] = {0};
 
 	trap->Cmd_Argv( 0, cmd, sizeof( cmd ) );
 
@@ -1535,8 +1417,8 @@ static void CG_Chat_f( void ) {
 			if( cg_chatBeep.integer )
 				trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 			trap->Cmd_Argv( 1, text, sizeof( text ) );
-			CG_RemoveChatEscapeChar( text );
-			CG_ChatBox_AddString( text );
+			Q_strncpyz( raw, text, sizeof( raw ) );
+			CG_ChatLine( cmd, raw, 2, text, NULL );
 			trap->Print( "*%s\n", text );
 		}
 	}
@@ -1560,8 +1442,7 @@ static void CG_Chat_f( void ) {
 			if( cg_chatBeep.integer )
 				trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 			Com_sprintf( text, sizeof( text ), "%s^7<%s> ^%s%s", name, loc, color, message );
-			CG_RemoveChatEscapeChar( text );
-			CG_ChatBox_AddString( text );
+			CG_ChatLine( cmd, name, 5, text, message );
 			trap->Print( "*%s\n", text );
 		}
 	}
@@ -1569,8 +1450,8 @@ static void CG_Chat_f( void ) {
 		if( cg_teamChatBeep.integer )
 			trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		trap->Cmd_Argv( 1, text, sizeof( text ) );
-		CG_RemoveChatEscapeChar( text );
-		CG_ChatBox_AddString( text );
+		Q_strncpyz( raw, text, sizeof( raw ) );
+		CG_ChatLine( cmd, raw, 2, text, NULL );
 		trap->Print( "*%s\n", text );
 	}
 	else if ( !strcmp( cmd, "ltchat" ) ) {
@@ -1592,8 +1473,7 @@ static void CG_Chat_f( void ) {
 		if( cg_teamChatBeep.integer )
 			trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		Com_sprintf( text, sizeof( text ), "%s^7<%s> ^%s%s", name, loc, color, message );
-		CG_RemoveChatEscapeChar( text );
-		CG_ChatBox_AddString( text );
+		CG_ChatLine( cmd, name, 5, text, message );
 		trap->Print( "*%s\n", text );
 	}
 }
@@ -1630,7 +1510,14 @@ static serverCommand_t	commands[] = {
 	{ "cps",				CG_CenterPrintSE_f },
 	{ "cs",					CG_ConfigStringModified },
 	{ "ircg",				CG_RestoreClientGhoul_f },
-	{ "jpvoice",			CG_VoiceServerCommand },
+	{ "vs_auth",				CG_AuthServerCommand },
+	{ "vs_box",				CG_BoomboxServerCommand },
+	{ "jpclient",			CG_PeerServerCommand },
+	{ "vs_status",			CG_StatusServerCommand },
+	{ "vs_tool",			CG_ToolServerCommand },
+	{ "tay_look",			CG_LookServerCommand },
+	{ "vs_toy",				CG_ToyServerCommand },
+	{ "vs_voiceLink",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },
 	{ "lchat",				CG_Chat_f },

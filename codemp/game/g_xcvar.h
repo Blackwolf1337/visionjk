@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -66,6 +67,11 @@ XCVAR_DEF( dmflags,						"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE,					qtr
 XCVAR_DEF( duel_fraglimit,				"10",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 XCVAR_DEF( fraglimit,					"20",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 XCVAR_DEF( g_adaptRespawn,				"1",			NULL,						CVAR_NONE,										qtrue )
+// seconds without a key or a turn after which a player counts as away (status/g_status.c), 0: never
+XCVAR_DEF( vs_afkTime,					"60",			NULL,						CVAR_ARCHIVE,									qtrue )
+// lag compensation (unlagged/g_unlagged.c): 1 hitscan, 2 projectiles, 4 push and pull; at most this many ms back
+XCVAR_DEF( tay_unlagged,				"7",			NULL,						CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( tay_unlaggedMax,				"200",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_allowDuelSuicide,			"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_allowHighPingDuelist,		"1",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_allowNPC,					"1",			NULL,						CVAR_ARCHIVE,										qtrue )
@@ -109,14 +115,16 @@ XCVAR_DEF( g_friendlyFire,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_friendlySaber,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_g2TraceLod,				"3",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_gametype,					"0",			NULL,						CVAR_SERVERINFO|CVAR_LATCH,						qfalse )
-XCVAR_DEF( g_grabHugDist,				"10",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_grabHugDist,				"10",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_gravity,					"800",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_inactivity,				"0",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_jediVmerc,					"0",			NULL,						CVAR_SERVERINFO|CVAR_LATCH|CVAR_ARCHIVE,		qtrue )
 XCVAR_DEF( g_knockback,					"1000",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_locationBasedDamage,		"1",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_log,						"games.log",	NULL,						CVAR_ARCHIVE,									qfalse )
-XCVAR_DEF( g_logClientCmds,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_logClientCmds,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_sandbox 1: every player may use amsandbox (physgun, toolgun, gravity gun), not only the admins (g_props.c)
+XCVAR_DEF( vs_sandbox,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_logClientInfo,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_logSync,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_maxConnPerIP,				"3",			NULL,						CVAR_ARCHIVE,									qfalse )
@@ -169,18 +177,50 @@ XCVAR_DEF( g_teamAutoJoin,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_teamForceBalance,			"3",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_timeouttospec,				"70",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									qfalse )
+// What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
+// chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
+// passes on what stands above the heads (status/g_status.c). Bit 2 the key login, bit 3 who plays with what,
+// bits 4 to 6 were Focus and the Vision Temple and stay unused, bit 7 hats and capes (status/g_status.c), bit 8
+// the key login with the host key of the server (auth/bg_auth.h).
+XCVAR_DEF( vs_caps,				"911",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
+// The boombox (boombox/g_boombox.c), on the relay of the voice chat. vs_boombox is in the server info: the cgame of this
+// tree asks for boxes only where it reads it there. The programs that fetch the songs can only be named while the
+// server starts (CVAR_INIT: server.cfg or the command line), so nobody can make a running server start another one.
+XCVAR_DEF( vs_boombox,					"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE,					qfalse )
+XCVAR_DEF( vs_boomboxFfmpeg,				"ffmpeg",		NULL,						CVAR_INIT,										qfalse )
+XCVAR_DEF( vs_boomboxMax,				"4",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_boomboxMaxSeconds,			"600",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_boomboxQueue,				"10",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_boomboxRange,				"1536",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_boomboxYtdlp,				"yt-dlp",		NULL,						CVAR_INIT,										qfalse )
+XCVAR_DEF( vs_boomboxYtdlpArgs,			"",				NULL,						CVAR_INIT,										qfalse )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
-// The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
-XCVAR_DEF( g_voice,						"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )
-XCVAR_DEF( g_voicePort,					"0",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
-XCVAR_DEF( g_voiceRange,				"1024",			NULL,						CVAR_ARCHIVE,									qtrue )
-XCVAR_DEF( g_voiceTeamOnly,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
+// The voice chat (g_voice.c). vs_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
+XCVAR_DEF( vs_voice,						"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )
+XCVAR_DEF( vs_voicePort,					"0",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+// 1: players with the same clan password (cp_clanPwd) hear each other over the clan radio wherever they are (+v_voiceclan)
+XCVAR_DEF( vs_voiceRadio,					"1",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_voiceRange,				"1024",			NULL,						CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( vs_voiceKbps,					"6000",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_voiceTeamOnly,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voteDelay,					"3000",			NULL,						CVAR_NONE,										qfalse )
 XCVAR_DEF( g_warmup,					"20",			NULL,						CVAR_ARCHIVE,									qtrue )
-XCVAR_DEF( g_webBind,					"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
-XCVAR_DEF( g_webPassword,				"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
-XCVAR_DEF( g_webRoot,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
-XCVAR_DEF( g_webPort,					"80",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+// The accounts of the panel are in webadmin_users.dat (wa_auth.c). vs_webBasicAuth 1: a script may send the token
+// of its account as the password of basic auth behind its name, besides "Bearer". vs_webProxy: the addresses of the
+// reverse proxies in front of the panel, separated by blanks. Then nobody else is let in, and a proxy says who the
+// visitor is.
+XCVAR_DEF( vs_webBasicAuth,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_liveView 1: /live/ of the panel's port is open to everybody without a login, read only: the map and what
+// moves on it, for the live view of a website (wa_live.c). It opens the port by itself, without an account.
+XCVAR_DEF( vs_liveView,					"0",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+XCVAR_DEF( vs_webBind,					"0.0.0.0",		NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+XCVAR_DEF( vs_webPassword,				"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+XCVAR_DEF( vs_webRoot,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_webPort,					"80",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+XCVAR_DEF( vs_webProxy,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_webTVPage: the address of the page of the browser client for the page TV of the panel, "": the host of the panel
+// with the port vs_clientWebPort (behind a proxy, or over https, that address may not be the one to open)
+XCVAR_DEF( vs_webTVPage,				"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_weaponDisable,				"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qtrue )
 XCVAR_DEF( g_weaponRespawn,				"5",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( gamedate,					SOURCE_DATE,	NULL,						CVAR_ROM,										qfalse )

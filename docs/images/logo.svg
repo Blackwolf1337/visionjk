@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-60 -60 520 520" role="img" aria-label="VisionJK">
+	<defs>
+		<filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+			<feGaussianBlur stdDeviation="34"/>
+		</filter>
+	</defs>
+	<g filter="url(#glow)" opacity="0.7">
+		<polygon points="183,102 279,149 204,209 107,163" fill="#ffffff"/>
+		<polygon points="107,163 204,209 204,306 107,261" fill="#e3d75c"/>
+		<polygon points="204,209 302,163 302,260 204,306" fill="#00a8ff"/>
+	</g>
+	<polygon points="183,102 279,149 204,209 107,163" fill="#ffffff"/>
+	<polygon points="107,163 204,209 204,306 107,261" fill="#e3d75c"/>
+	<polygon points="204,209 302,163 302,260 204,306" fill="#00a8ff"/>
+</svg>

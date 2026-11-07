@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "cl_uiapi.h"
-#include "snd_local.h"
+#include "client/sound/snd_local.h"
 #ifndef _WIN32
 #include <cmath>
 #endif
@@ -134,6 +134,7 @@ typedef struct cin_cache_s {
 	int					playonwalls;
 	byte*				buf;
 	long				drawX, drawY;
+	int					stream;							// a stream of cl_video.cpp + 1, 0: a file
 } cin_cache_t;
 
 static cinematics_t		cin;
@@ -1174,13 +1175,14 @@ redump:
 			decodeCodeBook( framedata, (unsigned short)cinTable[currentHandle].roq_flags );
 			break;
 		case	ZA_SOUND_MONO:
-			if (!cinTable[currentHandle].silent) {
+			// (a chunk of a video from a pak: mono gives two samples a byte, and sbuf has room for 32768)
+			if (!cinTable[currentHandle].silent && cinTable[currentHandle].RoQFrameSize <= ARRAY_LEN( sbuf ) / 2) {
 				ssize = RllDecodeMonoToStereo( framedata, sbuf, cinTable[currentHandle].RoQFrameSize, 0, (unsigned short)cinTable[currentHandle].roq_flags);
                 S_RawSamples( ssize, 22050, 2, 1, (byte *)sbuf, s_volume->value, 1 );
 			}
 			break;
 		case	ZA_SOUND_STEREO:
-			if (!cinTable[currentHandle].silent) {
+			if (!cinTable[currentHandle].silent && cinTable[currentHandle].RoQFrameSize <= ARRAY_LEN( sbuf )) {
 				if (cinTable[currentHandle].numQuads == -1) {
 					S_Update();
 					s_rawend = s_soundtime;
@@ -1337,6 +1339,11 @@ CIN_StopCinematic
 e_status CIN_StopCinematic(int handle) {
 
 	if (handle < 0 || handle>= MAX_VIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return FMV_EOF;
+	if ( cinTable[handle].stream ) {
+		Com_Memset( &cinTable[handle], 0, sizeof( cinTable[handle] ) );
+		cinTable[handle].status = FMV_EOF;
+		return FMV_EOF;
+	}
 	currentHandle = handle;
 
 	Com_DPrintf("trFMV::stop(), closing %s\n", cinTable[currentHandle].fileName);
@@ -1371,6 +1378,11 @@ e_status CIN_RunCinematic (int handle)
 	int     thisTime = 0;
 
 	if (handle < 0 || handle>= MAX_VIDEO_HANDLES || cinTable[handle].status == FMV_EOF) return FMV_EOF;
+
+	// a stream is decoded when the cgame says how far it plays (CL_VideoAdvance)
+	if ( cinTable[handle].stream ) {
+		return FMV_PLAY;
+	}
 
 	if (cin.currentHandle != handle) {
 		currentHandle = handle;
@@ -1436,10 +1448,42 @@ e_status CIN_RunCinematic (int handle)
 CIN_PlayCinematic
 ==================
 */
+/*
+==================
+CIN_PlayVideoStream
+
+"*tv<n>", the name of stream n of cl_video.cpp in a videoMap stage: a handle whose frames come from there
+==================
+*/
+static int CIN_PlayVideoStream( const char *arg ) {
+	const int	stream = atoi( arg + 3 );
+	int			i, handle;
+
+	if ( stream < 0 || stream >= VIDEO_STREAMS || arg[3] < '0' || arg[3] > '9' ) {
+		return -1;
+	}
+	for ( i = 0 ; i < MAX_VIDEO_HANDLES ; i++ ) {
+		if ( !Q_stricmp( cinTable[i].fileName, arg ) ) {
+			return i;
+		}
+	}
+	handle = CIN_HandleForVideo();
+	Com_Memset( &cinTable[handle], 0, sizeof( cinTable[handle] ) );
+	Q_strncpyz( cinTable[handle].fileName, arg, sizeof( cinTable[handle].fileName ) );
+	cinTable[handle].stream = stream + 1;
+	cinTable[handle].status = FMV_PLAY;
+	cinTable[handle].shader = qtrue;
+	return handle;
+}
+
 int CIN_PlayCinematic( const char *arg, int x, int y, int w, int h, int systemBits ) {
 	unsigned short RoQID;
 	char	name[MAX_OSPATH];
 	int		i;
+
+	if ( !Q_stricmpn( arg, "*tv", 3 ) ) {
+		return CIN_PlayVideoStream( arg );
+	}
 
 	if (strstr(arg, "/") == NULL && strstr(arg, "\\") == NULL) {
 		Com_sprintf (name, sizeof(name), "video/%s", arg);
@@ -1670,6 +1714,16 @@ void CL_PlayCinematic_f(void) {
 
 void SCR_DrawCinematic (void) {
 	if (CL_handle >= 0 && CL_handle < MAX_VIDEO_HANDLES) {
+		// the video keeps its 4:3 in the middle of a wide window, black beside it, and of a narrow one, black above and
+		// below it
+		if ( cls.bias2D > 0.0f ) {
+			SCR_FillRect( -cls.bias2D, 0, cls.bias2D, SCREEN_HEIGHT, g_color_table[0] );
+			SCR_FillRect( SCREEN_WIDTH, 0, cls.bias2D, SCREEN_HEIGHT, g_color_table[0] );
+		}
+		if ( cls.bias2DY > 0.0f ) {
+			SCR_FillRect( 0, -cls.bias2DY, SCREEN_WIDTH, cls.bias2DY, g_color_table[0] );
+			SCR_FillRect( 0, SCREEN_HEIGHT, SCREEN_WIDTH, cls.bias2DY, g_color_table[0] );
+		}
 		CIN_DrawCinematic(CL_handle);
 	}
 }
@@ -1691,6 +1745,10 @@ void SCR_StopCinematic(void) {
 
 void CIN_UploadCinematic(int handle) {
 	if (handle >= 0 && handle < MAX_VIDEO_HANDLES) {
+		if ( cinTable[handle].stream ) {
+			CL_VideoUpload( cinTable[handle].stream - 1, handle );
+			return;
+		}
 		if (!cinTable[handle].buf) {
 			return;
 		}

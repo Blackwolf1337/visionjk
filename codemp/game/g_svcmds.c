@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -429,6 +430,32 @@ void Svcmd_RemoveIP_f (void)
 		trap->Print( "Didn't find %s.\n", str );
 }
 
+/*
+=================
+G_BanListSize, G_BanListEntry
+
+Not from JA+, for the web admin panel: the ban list an address at a time, written the way addip and removeip
+read it (a * for a part that matches anything). qfalse: that place of the list is empty.
+=================
+*/
+int G_BanListSize( void ) {
+	return numIPFilters;
+}
+
+qboolean G_BanListEntry( int index, char *out, int outSize ) {
+	byteAlias_t	b, m;
+	int			i;
+
+	if ( index < 0 || index >= numIPFilters || ipFilters[index].compare == 0xffffffffu )
+		return qfalse;
+	b.ui = ipFilters[index].compare;
+	m.ui = ipFilters[index].mask;
+	out[0] = '\0';
+	for ( i = 0; i < 4; i++ )
+		Q_strcat( out, outSize, va( "%s%s", m.b[i] ? va( "%i", b.b[i] ) : "*", i < 3 ? "." : "" ) );
+	return qtrue;
+}
+
 void Svcmd_ListIP_f (void)
 {
 	int		i, count = 0;
@@ -615,6 +642,33 @@ void Svcmd_Say_f( void ) {
 	WebAdmin_Chat( "server", NULL, NULL, text );
 }
 
+/*
+=================
+Svcmd_Toggle
+
+<command> <player>, server console and rcon: one of the fun states of a player on or off (the files of fun/)
+=================
+*/
+static void Svcmd_Toggle( qboolean (*toggle)( gentity_t *ent ) ) {
+	char		cmd[MAX_TOKEN_CHARS], arg[MAX_TOKEN_CHARS];
+	gclient_t	*cl;
+
+	trap->Argv( 0, cmd, sizeof( cmd ) );
+	if ( trap->Argc() < 2 ) {
+		trap->Print( "Usage: %s <player>\n", cmd );
+		return;
+	}
+	trap->Argv( 1, arg, sizeof( arg ) );
+	if ( !(cl = ClientForString( arg )) )
+		return;
+
+	trap->Print( "%s %s for %s\n", cmd, toggle( &g_entities[cl - level.clients] ) ? "on" : "off", cl->pers.netname );
+}
+
+static void Svcmd_Disorient_f( void )	{ Svcmd_Toggle( G_DisorientToggle ); }
+static void Svcmd_Flatulence_f( void )	{ Svcmd_Toggle( G_FlatulenceToggle ); }
+static void Svcmd_Schizo_f( void )		{ Svcmd_Toggle( G_SchizoToggle ); }
+
 typedef struct svcmd_s {
 	const char	*name;
 	void		(*func)(void);
@@ -629,19 +683,20 @@ svcmd_t svcmds[] = {
 	{ "addbot",						Svcmd_AddBot_f,						qfalse },
 	{ "addip",						Svcmd_AddIP_f,						qfalse },
 	{ "botlist",					Svcmd_BotList_f,					qfalse },
-	{ "disorient",					Svcmd_Disorient_f,					qfalse },
+	{ "vs_disorient",					Svcmd_Disorient_f,					qfalse },
+	{ "vs_boxes",					Svcmd_Boombox_f,					qfalse },
 	{ "entitylist",					Svcmd_EntityList_f,					qfalse },
-	{ "flatulence",					Svcmd_Flatulence_f,					qfalse },
+	{ "vs_flatulence",					Svcmd_Flatulence_f,					qfalse },
 	{ "forceteam",					Svcmd_ForceTeam_f,					qfalse },
 	{ "game_memory",				Svcmd_GameMem_f,					qfalse },
 	{ "listip",						Svcmd_ListIP_f,						qfalse },
-	{ "props",						Svcmd_Props_f,						qfalse },
+	{ "vs_props",						Svcmd_Props_f,						qfalse },
 	{ "removeip",					Svcmd_RemoveIP_f,					qfalse },
 	{ "say",						Svcmd_Say_f,						qtrue },
-	{ "schizo",						Svcmd_Schizo_f,						qfalse },
+	{ "vs_schizo",						Svcmd_Schizo_f,						qfalse },
 	{ "toggleallowvote",			Svcmd_ToggleAllowVote_f,			qfalse },
 	{ "toggleuserinfovalidation",	Svcmd_ToggleUserinfoValidation_f,	qfalse },
-	{ "voicestatus",				Svcmd_VoiceStatus_f,				qfalse },
+	{ "vs_voicestatus",				Svcmd_VoiceStatus_f,				qfalse },
 };
 static const size_t numsvcmds = ARRAY_LEN( svcmds );
 
@@ -658,6 +713,12 @@ qboolean	ConsoleCommand( void ) {
 	trap->Argv( 0, cmd, sizeof( cmd ) );
 
 	if ( JP_ConsoleCommand( cmd ) )
+		return qtrue;
+
+	if ( G_AuthConsoleCommand( cmd ) )
+		return qtrue;
+
+	if ( WebAdmin_ConsoleCommand( cmd ) )
 		return qtrue;
 
 	command = (svcmd_t *)Q_LinearSearch( cmd, svcmds, numsvcmds, sizeof( svcmds[0] ), svcmdcmp );

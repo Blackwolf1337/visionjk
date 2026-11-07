@@ -375,6 +375,26 @@ typedef struct uiImport_s {
 		float			(*R_Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
 		void			(*AddCommand)							( const char *cmd_name );
 		void			(*RemoveCommand)						( const char *cmd_name );
+		// Only an engine that sets the cvar v_uiSkin to 1 has this one, any other ends the structure before
+		// it: look at the cvar before touching it. A shader for a picture the ui computed (ui_skin.c), as the
+		// call of the same name for the cgame (cg_public.h); with RGBA_SHADER_OVER it is one for the 2D. Such an
+		// engine also knows the fonts "vision_sans" and "vision_mono" (R_RegisterFont).
+		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
+		// Only an engine that sets the cvar v_uiURL to 1 has this one: an address to the web browser of the system
+		// (the links of the changelog, ui_changelog.c).
+		qboolean		(*OpenURL)								( const char *url );
+		// Only an engine that sets the cvar v_uiCvarClean to 1 has this one, after ext.OpenURL: the cvars no code
+		// used for a month (cvar_cleanup), one "name\tvalue\tday\n" a line, day in days since 1970, 0 for never.
+		// Returns the length, cut at a whole line where buf has no more room (ui_cvarclean.c).
+		int				(*Cvar_UnusedList)						( char *buf, int size );
+		// Only an engine that sets the cvar v_uiCvarInfo to 1 has this one, after ext.Cvar_UnusedList: the value a
+		// cvar starts with (its reset string) and its flags. qfalse for a cvar that does not exist.
+		qboolean		(*Cvar_Info)							( const char *var_name, char *defaultValue, int size, uint32_t *flags );
+		// Only an engine that sets the cvar v_uiFontInk to 1 has these two, after ext.Cvar_Info: R_Font_DrawString
+		// at a place that need not be whole units, and the pixels the letters of a text cover when it is drawn at
+		// 0,0 (box: left, top, right, bottom in units; qfalse for a font of the game, which does not know them).
+		void			(*R_Font_DrawStringF)					( float ox, float oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
+		qboolean		(*R_Font_InkBox)						( const char *text, const int setIndex, const float scale, float *box );
 	} ext;
 } uiImport_t;
 

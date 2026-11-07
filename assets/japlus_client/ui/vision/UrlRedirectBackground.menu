@@ -1,0 +1,31 @@
+// UrlRedirectBackground.menu in the new look. Made by tools/menus/build.py from ui/jamp/UrlRedirectBackground.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"UrlRedirectBackground"
+		rect					320 92 960 720
+		fullScreen				MENU_FALSE
+		visible					MENU_FALSE
+		style					WINDOW_STYLE_SHADER
+		skin					1
+		focusColor				0.36 0.78 0.96 1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+
+		itemDef
+		{
+			name					dl_background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					225 304.5 510 135
+			backcolor				0.016 0.031 0.063 0.45
+			forecolor				1 1 1 1
+			bordercolor				0.086 0.149 0.247 1
+			visible					1
+			decoration
+			radius					7.5
+		}
+		canvas					1600 900
+	}
+}

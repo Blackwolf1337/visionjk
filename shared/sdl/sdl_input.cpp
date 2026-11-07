@@ -34,6 +34,10 @@ static qboolean mouseActive = qfalse;
 
 static cvar_t *in_mouse             = NULL;
 static cvar_t *in_nograb;
+// 1: the sound goes on playing while the window is not in front or is minimized. 0: it pauses, as the engine
+// always did
+static cvar_t *v_soundUnfocused;
+static qboolean soundPaused;	// by a loss of the focus
 
 cvar_t *in_joystick          		= NULL;
 static cvar_t *in_joystickThreshold = NULL;
@@ -326,14 +330,15 @@ static fakeAscii_t IN_TranslateSDLToJKKey( SDL_Keysym *keysym, qboolean down ) {
 			case SDLK_DELETE:       key = A_DELETE;        break;
 			case SDLK_PAUSE:        key = A_PAUSE;         break;
 
-			case SDLK_LSHIFT:
-			case SDLK_RSHIFT:       key = A_SHIFT;         break;
+			// the right keys have codes of their own, for binds (CL_KeyDownEvent counts them as the left ones too)
+			case SDLK_LSHIFT:       key = A_SHIFT;         break;
+			case SDLK_RSHIFT:       key = A_SHIFT2;        break;
 
-			case SDLK_LCTRL:
-			case SDLK_RCTRL:        key = A_CTRL;          break;
+			case SDLK_LCTRL:        key = A_CTRL;          break;
+			case SDLK_RCTRL:        key = A_CTRL2;         break;
 
-			case SDLK_RALT:
 			case SDLK_LALT:         key = A_ALT;           break;
+			case SDLK_RALT:         key = A_ALT2;          break;
 
 			case SDLK_KP_5:         key = A_KP_5;          break;
 			case SDLK_INSERT:       key = A_INSERT;        break;
@@ -647,6 +652,7 @@ void IN_Init( void *windowData )
 	// mouse variables
 	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );
 	in_nograb = Cvar_Get( "in_nograb", "0", CVAR_ARCHIVE_ND );
+	v_soundUnfocused = Cvar_Get( "v_soundUnfocused", "0", CVAR_ARCHIVE, "1: the sound goes on playing while the game is not in front or is minimized" );
 
 	SDL_StartTextInput( );
 
@@ -888,6 +894,17 @@ static void IN_ProcessEvents( void )
 								Sys_QueEvent( 0, SE_KEY, A_CONSOLE, qtrue, 0, NULL );
 								Sys_QueEvent( 0, SE_KEY, A_CONSOLE, qfalse, 0, NULL );
 							}
+							else if( Cvar_VariableIntegerValue( "v_utf8Text" ) )
+							{
+								// text is UTF-8 inside the client (CL_UTF8()): the bytes of the character, one
+								// event each. The edit fields put them together again, and a module gets them
+								// with K_CHAR_FLAG as it always got a byte.
+								char bytes[4];
+								const int count = Q_UTF8_Encode( utf32, bytes );
+
+								for( int i = 0; i < count; i++ )
+									Sys_QueEvent( 0, SE_CHAR, (unsigned char)bytes[i], 0, 0, NULL );
+							}
 							else
 							{
 								uint8_t encoded = ConvertUTF32ToExpectedCharset( utf32 );
@@ -964,14 +981,20 @@ static void IN_ProcessEvents( void )
 					case SDL_WINDOWEVENT_FOCUS_LOST:
 					{
 						Cvar_SetValue( "com_unfocused", 1 );
-						SNDDMA_Activate( qfalse );
+						if ( !v_soundUnfocused->integer ) {
+							SNDDMA_Activate( qfalse );
+							soundPaused = qtrue;
+						}
 						break;
 					}
 
 					case SDL_WINDOWEVENT_FOCUS_GAINED:
 					{
 						Cvar_SetValue( "com_unfocused", 0 );
-						SNDDMA_Activate( qtrue );
+						if ( soundPaused ) {
+							SNDDMA_Activate( qtrue );
+							soundPaused = qfalse;
+						}
 						break;
 					}
 				}
@@ -1230,6 +1253,33 @@ void IN_Frame (void) {
 #endif
 
 	IN_ProcessEvents( );
+}
+
+/*
+===============
+IN_MousePosition
+
+Where the mouse is in the window, in pixels of the frame, while the game does not hold it (IN_DeactivateMouse():
+the console is down in a window, and the system draws its own cursor). qfalse while the game holds the mouse:
+then it only gets movements (SE_MOUSE).
+===============
+*/
+qboolean IN_MousePosition( int *x, int *y )
+{
+	int w, h;
+
+	if( mouseActive || !SDL_window )
+		return qfalse;
+
+	SDL_GetMouseState( x, y );
+	SDL_GetWindowSize( SDL_window, &w, &h );
+	if( w > 0 && h > 0 )
+	{
+		// a window can have more pixels than the units its size is counted in
+		*x = *x * cls.glconfig.vidWidth / w;
+		*y = *y * cls.glconfig.vidHeight / h;
+	}
+	return qtrue;
 }
 
 /*

@@ -1,0 +1,17 @@
+// connect.menu in the new look. Made by tools/menus/build.py from ui/jamp/connect.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"Connect"
+		rect					320 92 960 720
+		fullScreen				MENU_FALSE
+		visible					MENU_FALSE
+		skin					1
+		focusColor				0.36 0.78 0.96 1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		backdrop				1
+		canvas					1600 900
+	}
+}

@@ -47,7 +47,10 @@ int G_WeaponLogFrags[MAX_CLIENTS][MAX_CLIENTS];
 int G_WeaponLogTime[MAX_CLIENTS][WP_NUM_WEAPONS];
 int G_WeaponLogLastTime[MAX_CLIENTS];
 qboolean G_WeaponLogClientTouch[MAX_CLIENTS];
-int G_WeaponLogPowerups[MAX_CLIENTS][HI_NUM_HOLDABLE];
+// (VisionJK: as wide as the powerups are many. The game counts a powerup that is picked up here by its PW_
+// number, which goes up to 15, in a row that was HI_NUM_HOLDABLE (12) long: the count of the Ysalamiri and of
+// the flags went into the row of the next player, and of the last player past the end of the array.)
+int G_WeaponLogPowerups[MAX_CLIENTS][PW_NUM_POWERUPS];
 int	G_WeaponLogItems[MAX_CLIENTS][PW_NUM_POWERUPS];
 
 // MOD-weapon mapping array.
@@ -213,6 +216,8 @@ void QDECL G_LogWeaponPowerup(int client, int powerupid)
 #ifdef LOGGING_WEAPONS
 	if (client>=MAX_CLIENTS)
 		return;
+	if ( client < 0 || powerupid < 0 || powerupid >= PW_NUM_POWERUPS )
+		return;
 	G_WeaponLogPowerups[client][powerupid]++;
 	G_WeaponLogClientTouch[client] = qtrue;
 #endif //_LOGGING_WEAPONS
@@ -222,6 +227,8 @@ void QDECL G_LogWeaponItem(int client, int itemid)
 {
 #ifdef LOGGING_WEAPONS
 	if (client>=MAX_CLIENTS)
+		return;
+	if ( client < 0 || itemid < 0 || itemid >= PW_NUM_POWERUPS )
 		return;
 	G_WeaponLogItems[client][itemid]++;
 	G_WeaponLogClientTouch[client] = qtrue;

@@ -1,0 +1,5 @@
+screen1,gfx/vision/tv/screen1
+screen2,models/map_objects/imperial/monitor_screen_02
+screen3,models/map_objects/imperial/monitor_screen_03
+cylinder03,models/map_objects/imperial/monitor
+glow,models/map_objects/imperial/monitor_buttons

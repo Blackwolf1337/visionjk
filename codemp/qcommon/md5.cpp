@@ -252,58 +252,6 @@ void MD5Final(struct MD5Context *ctx, unsigned char *digest)
     memset(ctx, 0, sizeof(*ctx));	/* In case it's sensitive */
 }
 
-char *Com_MD5File( const char *fn, int length, const char *prefix, int prefix_len )
-{
-	static char final[33] = {""};
-	unsigned char digest[16] = {""};
-	fileHandle_t f;
-	MD5_CTX md5;
-	byte buffer[2048];
-	int i;
-	int filelen = 0;
-	int r = 0;
-	int total = 0;
-
-	Q_strncpyz( final, "", sizeof( final ) );
-
-	filelen = FS_SV_FOpenFileRead( fn, &f );
-
-	if( !f ) {
-		return final;
-	}
-	if( filelen < 1 ) {
-		FS_FCloseFile( f );
-		return final;
-	}
-	if(filelen < length || !length) {
-		length = filelen;
-	}
-
-	MD5Init(&md5);
-
-	if( prefix_len && *prefix )
-		MD5Update(&md5 , (unsigned char *)prefix, prefix_len);
-
-	for(;;) {
-		r = FS_Read(buffer, sizeof(buffer), f);
-		if(r < 1)
-			break;
-		if(r + total > length)
-			r = length - total;
-		total += r;
-		MD5Update(&md5 , buffer, r);
-		if(r < (int)sizeof(buffer) || total >= length)
-			break;
-	}
-	FS_FCloseFile(f);
-	MD5Final(&md5, digest);
-	final[0] = '\0';
-	for(i = 0; i < 16; i++) {
-		Q_strcat(final, sizeof(final), va("%02X", digest[i]));
-	}
-	return final;
-}
-
 /*
  * The following code implements HMAC-MD5 using the public domain MD5 implementation above.
  * This code (originally for OpenJK) is also released into the public domain.

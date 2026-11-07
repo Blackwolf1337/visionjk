@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -342,6 +343,10 @@ void CG_CheckLocalSounds( playerState_t *ps, playerState_t *ops ) {
 //			trap->S_StartLocalSound( cgs.media.hitSound, CHAN_LOCAL_SOUND );
 		}
 
+		// tay_hitSounds, as jaPRO's cg_hitsounds: the server counts the hits of the own shots
+		if ( tay_hitSounds.integer ) {
+			trap->S_StartLocalSound( cgs.media.tayHitSound, CHAN_LOCAL_SOUND );
+		}
 		//FIXME: Hit sounds?
 		/*
 		if (armor > 50 ) {
@@ -522,7 +527,7 @@ void CG_TransitionPlayerState( playerState_t *ps, playerState_t *ops ) {
 		CG_Respawn();
 	}
 
-	// Port, not in the original: amphysgun gave him the physgun, which is the stun baton. It has no number to
+	// Port, not in the original: amsandbox gave him the physgun, which is the stun baton. It has no number to
 	// pick it with, so it is taken out for him.
 	if ( (ps->stats[STAT_CARRY] & CARRY_PHYSGUN) && !(ops->stats[STAT_CARRY] & CARRY_PHYSGUN)
 		&& (ps->stats[STAT_WEAPONS] & (1 << WP_STUN_BATON)) ) {

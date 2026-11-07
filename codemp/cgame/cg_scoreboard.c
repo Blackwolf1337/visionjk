@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_scoreboard -- draw the scoreboard on top of the game screen
 #include "cg_local.h"
 #include "ui/ui_shared.h"
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 #define	SCOREBOARD_X		(0)
 
@@ -465,6 +466,15 @@ qboolean CG_DrawOldScoreboard( void ) {
 		y = 60;
 
 		CG_Text_Paint ( x - CG_Text_Width ( s, 1.0f, FONT_MEDIUM ) / 2, y, 1.0f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_MEDIUM );
+	}
+
+	// the local time in the upper right corner
+	{
+		qtime_t now;
+
+		trap->RealTime( &now );
+		s = va( "%02i:%02i", now.tm_hour, now.tm_min );
+		CG_Text_Paint( SCREEN_WIDTH - 24 - CG_Text_Width( s, 0.8f, FONT_MEDIUM ), 36, 0.8f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_MEDIUM );
 	}
 
 	// scoreboard

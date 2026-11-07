@@ -1,0 +1,715 @@
+/* the colours of the VisionJK design system (the new-* tokens of the menu redesign) */
+:root {
+	--bg: #060b16;
+	--panel: #080e1c;
+	--panel2: #0d1729;
+	--frame: #050913;
+	--line: #16263f;
+	--edge: #27405f;
+	--field: #070d1a;
+	--hover: #11233b;
+	--sel: #12243c;
+	--text: #dbe5f1;
+	--muted: #8fa3bd;
+	--accent: #5cc8f5;
+	--accent2: #8fdcff;
+	--on-accent: #04121f;
+	--danger: #ff8a80;
+	--red: #ff736b;
+	--blue: #73a8ff;
+	--green: #5fd08e;
+	--yellow: #ffbd4c;
+	--bar: 44px;
+	--top: var(--bar);
+	--rail: 60px;
+	--side: 300px;
+	--tex: 42vh;
+	--insp: 320px;
+	--inspEnt: 360px;
+}
+/* where the side panel begins: after the rail of the pages, and in the editor after the strip of its tools too */
+body { --tools: 0px; --left: calc(var(--rail) + var(--tools)); }
+body.app-editor { --tools: 40px; }
+body.app-editor.sideClosed, body.app-editor.serverPage { --tools: 0px; }
+* { box-sizing: border-box; }
+/* dark scroll bars, and check boxes, sliders and radio buttons in the accent */
+html { color-scheme: dark; accent-color: var(--accent); }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 "Noto Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+button, input, select { font: inherit; color: inherit; }
+button { background: var(--field); border: 1px solid var(--edge); border-radius: 4px; padding: 3px 9px; cursor: pointer; }
+button:hover { border-color: #3a5a82; background: var(--hover); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+button.primary:hover { background: var(--accent2); }
+button:disabled { opacity: 0.4; cursor: default; }
+button:disabled:hover { border-color: var(--edge); background: var(--field); }
+button.danger { color: var(--danger); }
+button.danger.armed { background: var(--danger); color: var(--on-accent); border-color: var(--danger); }
+input, select { background: var(--field); border: 1px solid var(--edge); border-radius: 4px; padding: 3px 6px; }
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+#topbar { position: fixed; inset: 0 0 auto 0; height: var(--bar); background: var(--frame); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; padding: 0 12px; z-index: 20; }
+#topbar .brand { font-weight: 700; letter-spacing: .3px; display: flex; align-items: center; gap: 8px; }
+#topbar .brand i { width: 10px; height: 10px; background: var(--accent); display: inline-block; border-radius: 2px; }
+#toggleSide { padding: 3px 7px; }
+.meta { color: var(--muted); white-space: nowrap; }
+.meta b { color: var(--text); font-weight: 600; }
+.score { font-weight: 700; padding: 1px 7px; border-radius: 3px; }
+.score.red { background: rgba(229,72,77,.18); color: var(--red); }
+.score.blue { background: rgba(62,142,247,.18); color: var(--blue); }
+#topbar .spacer { flex: 1; }
+/* A narrow window: nothing of the bar breaks into two lines or runs out of it. What only tells goes first (the
+   game type, the time, the name of the server, the name of the panel), the fields get shorter, and the name of
+   the map is cut before a button is. */
+#topbar > * { flex: none; white-space: nowrap; }
+#topbar .meta { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1240px) { #topbar .meta.wide { display: none; } }
+@media (max-width: 1080px) { #topbar { gap: 8px; } #topbar #host, #topbar .brand span { display: none; } #topbar form.inline input { width: 64px !important; } }
+@media (max-width: 880px) { #topbar { gap: 6px; padding: 0 8px; } #topbar form.inline input { width: 48px !important; } }
+#statusBox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+#status { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+#status.live { background: var(--green); }
+#status.err { background: var(--danger); }
+/* the state in words: the dot's class says which (js/state.js) */
+#statusBox:has(#status.live) #statusText { font-size: 0; }
+#statusBox:has(#status.live) #statusText::after { content: 'Connected'; font-size: 12px; }
+#statusBox:has(#status.err) #statusText { font-size: 0; }
+#statusBox:has(#status.err) #statusText::after { content: 'No connection'; font-size: 12px; color: var(--danger); }
+#whoBtn { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 3px; border-color: transparent; background: transparent; font-size: 12px; }
+#whoBtn[hidden] { display: none; }
+#whoBtn i { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--sel); border: 1px solid var(--edge); color: var(--accent); font-style: normal; font-weight: 600; font-size: 11px; }
+.palGroup { padding: 8px 14px 3px; font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: #6f86a3; }
+.inline { display: flex; gap: 4px; align-items: center; }
+.inline input { width: 170px; }
+
+#side { position: fixed; top: var(--top); left: var(--left); bottom: 0; width: var(--side); background: var(--panel); border-right: 1px solid var(--line); z-index: 15; display: flex; flex-direction: column; transition: transform .15s; }
+body.sideClosed #side { transform: translateX(calc(-1 * var(--side))); }
+/* the grip on the right edge of the side panel, which drags its width (js/ui-inputs.js) */
+#sideGrip { position: absolute; top: 0; right: -3px; bottom: 0; width: 6px; z-index: 1; cursor: col-resize; touch-action: none; }
+#sideGrip:hover, body.sideDrag #sideGrip { background: rgba(255,255,255,.14); }
+body.sideClosed #sideGrip, body.ref #sideGrip { display: none; }
+/* while it is dragged nothing eases after the pointer, and no text is selected on the way */
+body.sideDrag #side, body.sideDrag #view, body.sideDrag #cfgView, body.sideDrag #fsView, body.sideDrag #logView { transition: none; }
+body.sideDrag { user-select: none; }
+#side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 10px 6px; display: flex; justify-content: space-between; }
+#playersHead { align-items: center; gap: 8px; padding: 7px 8px 5px 10px; }
+#playersHead #playerCount { margin-right: auto; }
+#addBotBtn { padding: 2px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); }
+body.role-moderator #addBotBtn { display: none; }
+/* the health of a player: the number, a thin bar under it */
+td.hp { position: relative; }
+td.hp i { position: absolute; right: 6px; bottom: 3px; height: 2px; max-width: 28px; border-radius: 1px; background: var(--accent); }
+tr.player td { height: 26px; }
+#side .scroll { overflow: auto; flex: 1; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 4px 6px; text-align: left; white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 11px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+td { border-bottom: 1px solid #0f1b2e; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.player { cursor: pointer; }
+tr.player:hover td { background: var(--hover); }
+tr.player.sel td { background: var(--sel); }
+tr.player.sel td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+tr.player.dead td { opacity: .5; }
+.team { display: inline-block; width: 7px; height: 7px; border-radius: 1px; margin-right: 5px; vertical-align: 1px; }
+.team.red { background: var(--red); } .team.blue { background: var(--blue); } .team.free { background: var(--yellow); } .team.spectator { background: var(--muted); }
+.tag { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; margin-left: 4px; }
+#itemsInfo { padding: 8px 10px; color: var(--muted); border-top: 1px solid var(--line); font-size: 12px; }
+#chat { flex: none; height: 36%; min-height: 150px; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+body.chatClosed #chat { height: auto; min-height: 0; }
+body.chatClosed #chatLog, body.chatClosed #sayForm { display: none; }
+#chatHead { cursor: pointer; user-select: none; }
+#chatNew { color: var(--accent2); }
+#chatLog { flex: 1; min-height: 0; overflow-y: auto; padding: 0 10px 4px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+#chatLog .t { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 5px; }
+#chatLog .k { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; margin-right: 5px; }
+#chatLog .sep { color: var(--muted); font-size: 11px; text-align: center; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 2px; }
+#chatLog .none { color: var(--muted); }
+#sayForm { padding: 6px 10px 8px; }
+#sayForm input { flex: 1; width: auto; min-width: 0; }
+
+#view { position: fixed; top: var(--top); left: calc(var(--left) + var(--side)); right: 0; bottom: 0; transition: left .15s, right .15s; }
+/* a selected player or entity: its panel is a column at the right edge, and the map view ends where it begins */
+body:has(#command.open) #view { right: var(--insp); }
+body:has(#entPanel.open) #view, body:has(#entPanel.open) #texBrowser { right: var(--inspEnt); }
+body:has(#entPanel.open) #command { display: none; }
+/* through the eyes of a player the panels are hidden (body.fp): the view takes the width again */
+body.fp:has(#command.open) #view, body.fp:has(#entPanel.open) #view { right: 0; }
+/* the messages stay off the panel and its close button */
+body:has(#command.open) #toasts { right: calc(var(--insp) + 12px); }
+body:has(#entPanel.open) #toasts { right: calc(var(--inspEnt) + 12px); }
+body.sideClosed #view { left: var(--left); }
+#gl { width: 100%; height: 100%; display: block; cursor: default; }
+/* the view for a comparison with a picture of the game (?ref=): the map alone, at the top left */
+body.ref #topbar, body.ref #pages, body.ref #side, body.ref #toasts, body.ref #view > :not(canvas) { display: none !important; }
+body.ref #view { left: 0; top: 0; right: auto; bottom: auto; transition: none; }
+/* and through the eyes of a player, with his HUD as the game draws it for one who looks through them (body.fp);
+   body.nohud takes the HUD away for the second picture of such a view */
+body.ref.fp:not(.nohud) #view > #hud { display: block !important; }
+body.ref #hud .hud-top { display: none !important; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.label { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; font-size: 12px; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.label .bar { width: 46px; height: 4px; background: rgba(0,0,0,.6); margin: 2px auto 0; border-radius: 1px; overflow: hidden; }
+.label .bar i { display: block; height: 100%; background: var(--green); }
+.label .bar.ar i { background: #5aa9ff; }
+.label.sel .nm { outline: 1px solid var(--accent); outline-offset: 1px; background: rgba(92,200,245,.3); padding: 0 3px; }
+#loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 10px 16px; border-radius: 4px; }
+#viewTop { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 10px; pointer-events: none; }
+#viewTop > * { pointer-events: auto; }
+#help { margin-left: auto; min-width: 0; color: var(--muted); font-size: 11px; background: rgba(8,14,28,.86); border: 1px solid var(--line); padding: 6px 8px; border-radius: 3px; line-height: 1.6; }
+#help kbd { color: var(--text); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 2px; padding: 0 3px; font-size: 10px; }
+
+/* The panel of a selected player: a column at the right edge, beside the map and not over it. JKAdmin has it
+   across the bottom, where it took half of the view with the buttons of JA+ in it. */
+#command { position: fixed; top: var(--top); right: 0; bottom: 0; width: var(--insp); background: var(--panel); border-left: 1px solid var(--line); padding: 10px 12px; display: none; flex-direction: column; gap: 10px; align-items: stretch; overflow: auto; z-index: 16; }
+#view:has(#command.open) #help { display: none !important; }
+/* the groups of the panel of a player that fold (index.html, js/players.js) */
+/* Watch and steer under the name, then the row of tabs, then the open group (js/players.js) */
+#command > .who { order: 0; }
+#command details.sect { order: 3; }
+#command details.sect[data-sect="watch"] { order: 1; }
+#command #cmdTabs { order: 2; }
+#command details.sect > summary { display: none; }
+#cmdTabs { display: flex; margin: 0 -12px; padding: 0 6px; border-bottom: 1px solid var(--line); }
+#cmdTabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 6px 7px; font-size: 12px; font-weight: 600; }
+#cmdTabs button:hover { color: var(--text); background: transparent; }
+#cmdTabs button.on { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+#command details.sect .grid + .actions, #command details.sect .actions + .grid { margin-top: 8px; }
+#command details[data-sect="japlus"] .grid input, #command details[data-sect="japlus"] .grid select { width: 150px; }
+#command.open { display: flex; }
+#command .who { min-width: 190px; }
+#command .who .nm { font-size: 16px; font-weight: 700; }
+#command .who .sub { color: var(--muted); margin-top: 2px; }
+.stat { margin-top: 6px; }
+.stat .bar { height: 5px; background: var(--field); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; width: 100%; }
+.stat .bar i { display: block; height: 100%; }
+.grid { display: grid; grid-template-columns: auto auto auto; gap: 5px 8px; align-items: center; }
+.grid label { color: var(--muted); }
+.grid input[type=number] { width: 70px; }
+.grid input[type=range] { width: 120px; padding: 0; accent-color: var(--accent); }
+/* the slider of the size, a row of its own under its field, and under it what its ends and its middle stand for */
+#setScaleBar { grid-column: 1 / -1; width: 100%; margin: 0; }
+#setScaleMarks { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto 1fr; margin-top: -4px; font-size: 10px; color: var(--muted); }
+#setScaleMarks :last-child { text-align: right; }
+.actions { display: flex; flex-wrap: wrap; gap: 5px; max-width: 330px; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+#command .close { position: absolute; top: 8px; right: 8px; }
+#command .actions { max-width: none; }
+/* Who is controlled from the page and from where he is looked at: a bar at the top left of the map, and under the
+   name of the view through his eyes while that is on. */
+#controlBar { position: absolute; left: 10px; top: 10px; max-width: calc(100% - 20px); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(8,14,28,.86); border: 1px solid var(--line); border-radius: 3px; padding: 5px 8px; }
+#controlBar .hint { margin: 0; }
+body.fp #controlBar { left: 50%; top: 44px; width: max-content; transform: translateX(-50%); }
+/* the keys of it in the help are of the administration alone */
+body.app-editor #help .adminOnly { display: none; }
+
+[hidden] { display: none !important; }
+/* The log: the whole width, the bar on top, a line each in the colour of what it is (js/log.js logKind), the time of
+   the game in a column before it, the line for a console command at the bottom */
+body.logOpen #side { display: none; }
+body.logOpen #logView { display: flex; flex-direction: column; left: var(--left) !important; }
+#logText { flex: 1; min-height: 0; margin: 0; padding: 6px 12px; overflow: auto; font: 12px/1.55 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+#logText .ll { display: block; padding-left: 6.4em; text-indent: -6.4em; }
+#logText .ll:hover { background: rgba(92,200,245,.05); }
+#logText .ll i { display: inline-block; width: 5.6em; margin-right: .8em; white-space: pre; text-indent: 0; text-align: right; font-style: normal; color: #5f7590; }
+#logText .dim { color: var(--muted); }
+#logText .kill { color: var(--danger); }
+#logText .chat { color: var(--accent2); }
+#logText .warn { color: var(--yellow); }
+#logText .err { color: var(--danger); font-weight: 600; }
+/* the line for a console command, across the width under the text */
+#logCmd { flex: none; display: flex; gap: 6px; padding: 6px 12px 8px; border-top: 1px solid var(--line); background: var(--frame); }
+#logCmd .find { flex: 1; max-width: none; }
+#logCmd input { font: 12px ui-monospace, Menlo, Consolas, monospace; }
+#logCmd .prompt { color: var(--accent); font: 600 13px ui-monospace, Menlo, Consolas, monospace; }
+.popHelp, #logHelp { position: absolute; top: calc(100% + 6px); right: 12px; z-index: 5; width: min(460px, calc(100% - 24px)); padding: 4px 14px; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.5); color: var(--muted); font-size: 12px; }
+/* which of the two texts is shown */
+/* The bar across the top of a page of the server: its name, what it shows, its switches and its buttons. A field
+   with an icon (.find), a switch for on and off (.switch), a button for one letter (.square). */
+.pageBar { position: relative; flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--frame); }
+.pageBar .seg { margin: 0; }
+.pageBar .seg button { flex: none; padding: 3px 11px; }
+.pageBar .spacer { flex: 1; }
+.pageTitle { font-size: 14px; font-weight: 600; color: #fff; }
+.pageSub { font-size: 12px; color: var(--muted); }
+.find { flex: 0 1 280px; min-width: 140px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--field); border: 1px solid var(--edge); border-radius: 4px; }
+.find:focus-within { border-color: var(--accent); }
+.find svg { flex: none; width: 13px; height: 13px; fill: none; stroke: #7489a5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.find input { flex: 1; min-width: 0; padding: 4px 0; border: 0; background: transparent; }
+.switch { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; user-select: none; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.switch i { position: relative; width: 28px; height: 16px; border-radius: 8px; background: var(--line); border: 1px solid var(--edge); transition: background .1s; }
+.switch i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: left .1s; }
+.switch input:checked + i { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + i::after { left: 14px; background: var(--on-accent); }
+.switch input:focus-visible + i { outline: 1px solid var(--accent2); outline-offset: 1px; }
+button.square { width: 26px; padding: 3px 0; }
+button.square.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#cfgView, #fsView, #logView { position: fixed; top: var(--top); left: calc(var(--left) + var(--side)); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
+body.sideClosed #cfgView, body.sideClosed #fsView, body.sideClosed #logView { left: var(--left); }
+body.fsOpen #fsView { display: flex; flex-direction: column; }
+#fsBody { position: relative; flex: 1; min-height: 0; }
+.barGroup { display: inline-flex; align-items: center; gap: 6px; }
+.barGroup[hidden] { display: none; }
+/* the settings: the bar with the view, its state and its buttons, and under it the view */
+body.cfgOpen #cfgView { display: flex; flex-direction: column; }
+#cfgBar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--frame); }
+#cfgBar .seg { margin: 0; }
+#cfgBar .seg button { flex: none; padding: 3px 12px; }
+.cfgTools { flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.cfgTools[hidden] { display: none; }
+#cfgBody { position: relative; flex: 1; min-height: 0; }
+/* the colored text lies under a text field whose own letters are not drawn: both must set every letter alike */
+.codeHi, .codeText { position: absolute; inset: 0; margin: 0; border: 0; padding: 10px 12px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; font-variant-ligatures: none; white-space: pre; tab-size: 4; }
+.codeHi { overflow: hidden; padding-right: 60px; padding-bottom: 60px; color: var(--text); pointer-events: none; }
+.codeText { width: 100%; height: 100%; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: var(--text); }
+.codeText::selection { background: rgba(62, 142, 247, .35); color: transparent; }
+#fsList, #fsEditor { position: absolute; inset: 0; }
+/* the list of the files: a card, a row each with an icon before the name; the buttons of a row show while the
+   pointer is on it (always on a screen without one) */
+#fsList { overflow: auto; padding: 10px 14px; }
+#fsList table { width: 100%; max-width: 1120px; border: 1px solid #1c2e4a; border-radius: 8px; border-collapse: separate; border-spacing: 0; background: rgba(8,14,28,.78); }
+#fsList th { background: var(--frame); padding: 5px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+#fsList th:first-child { border-radius: 8px 0 0 0; }
+#fsList th:last-child { border-radius: 0 8px 0 0; }
+#fsList td { height: 30px; padding: 0 10px; white-space: nowrap; border-bottom: 1px solid #0f1b2e; }
+#fsList tr:last-child td { border-bottom: 0; }
+#fsList tr[data-fs] { cursor: pointer; }
+#fsList tr[data-fs]:hover td { background: var(--hover); }
+#fsList tr.off { color: var(--muted); }
+#fsList td.acts { text-align: right; }
+#fsList td:first-child { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+#fsList .fi { width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; }
+#fsList .fi.dir { stroke: var(--accent); }
+#fsList td.acts button { width: 24px; height: 22px; margin-left: 3px; padding: 0; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+#fsList td.acts svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+@media (hover: hover) {
+	#fsList td.acts button { visibility: hidden; }
+	#fsList tr:hover td.acts button, #fsList tr:focus-within td.acts button { visibility: visible; }
+}
+.dropHint { max-width: 1120px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; padding: 14px; border: 1px dashed var(--edge); border-radius: 8px; color: var(--muted); font-size: 12px; text-align: center; }
+.dropHint svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pageBar button.square svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
+/* the list of the Clips tab: the clips that are off and the blocking walls, a row to click on each */
+#clipSizes input { width: 64px; }
+#clipRows tr { cursor: pointer; }
+#clipRows tr.sel td, #remapRows tr.sel td { color: var(--yellow); }
+#clipRows td.acts, #remapRows td.acts { text-align: right; }
+#clipRows td.acts button, #remapRows td.acts button { padding: 1px 7px; font-size: 12px; }
+#remapRows tr[data-old] { cursor: pointer; }
+#remapRows td { word-break: break-all; }
+/* the picture of a shader: in a row of the Textures tab, and the two large ones above them. none: there is no image of it */
+.thumb { display: block; box-sizing: border-box; width: 26px; height: 26px; background: #000 center / contain no-repeat; border: 1px solid var(--line); }
+.thumb.none { background-image: repeating-linear-gradient(45deg, transparent 0 5px, var(--line) 5px 6px); }
+#remapRows td.pic { width: 28px; padding-right: 0; }
+#remapPics { align-items: flex-start; gap: 8px; }
+#remapPics figure { flex: 1; min-width: 0; margin: 0; }
+#remapPics .thumb { width: 96px; height: 96px; margin: 0 auto; }
+/* the test object of the Textures tab, below them: copied there from the map view (js/editor-textures.js). As
+   large as the pane is wide, and smaller in a low window, which the list of the shaders needs more */
+#remapTest { margin: 0; }
+#remapBall { display: block; box-sizing: border-box; width: min(100%, 28vh); aspect-ratio: 1; margin: 0 auto; background: #000; border: 1px solid var(--line); }
+#remapTest figcaption { margin-top: 3px; text-align: center; }
+#remapTest button { padding: 0 7px; font-size: 11px; }
+/* the swaps that are drafts: a row each, and the row of buttons for all of them */
+#remapRows tr.draft td { color: var(--yellow); font-style: italic; }
+#remapDraftRow button { white-space: nowrap; flex: none; }
+#remapDraftRow[hidden] { display: none; }
+#remapDraftsDrop { color: #ff8b8b; }
+/* the textures to choose from, below the map view, which makes room for them */
+#texBrowser { position: fixed; left: calc(var(--left) + var(--side)); right: 0; bottom: 0; height: var(--tex); z-index: 14; display: none; flex-direction: column; background: var(--panel); border-top: 1px solid var(--line); transition: left .15s, right .15s; }
+body.sideClosed #texBrowser { left: var(--left); }
+body.texOpen #texBrowser { display: flex; }
+body.texOpen #view { bottom: var(--tex); }
+#texBrowser .bar { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+#texBrowser .bar .hint { margin: 0; }
+#texBrowser .bar .spacer { flex: 1; }
+#texFind { width: 240px; }
+#texTiles { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; padding: 10px; align-content: start; }
+#texTiles > .hint { grid-column: 1 / -1; margin: 0; }
+#texMore { align-self: center; }
+.tile { min-width: 0; padding: 3px; border: 1px solid transparent; border-radius: 3px; cursor: pointer; }
+.tile:hover { background: var(--panel2); }
+.tile.sel { border-color: var(--yellow); }
+.tile .thumb { width: 100%; height: auto; aspect-ratio: 1; box-sizing: border-box; pointer-events: none; }
+.tile span { display: block; margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.tile.sel span { color: var(--yellow); }
+.tile.script span::after { content: ' *'; color: var(--accent2); }
+#remapPics figcaption { margin-top: 3px; min-height: 14px; color: var(--muted); font-size: 11px; text-align: center; word-break: break-all; }
+/* files dropped on the list */
+#fsView.drop::after { content: ''; position: absolute; inset: 3px; border: 2px dashed var(--accent2); border-radius: 4px; pointer-events: none; }
+/* (a low window: the pane scrolls before the tree gets too small to be of use) */
+#pane-files { overflow: hidden auto; }
+#pane-files .tools { display: flex; flex-flow: row wrap; gap: 5px; padding: 10px; }
+#pane-files .hint { padding: 0 10px; }
+#pane-files .hint:last-child { padding-bottom: 8px; }
+/* the folders of the server files and of the installation as a tree, which scrolls by itself */
+#fsTree { flex: 1 1 0; min-height: 110px; overflow: auto; margin-top: 6px; padding: 4px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--field); font-size: 12px; }
+.fsNode { display: flex; align-items: center; gap: 3px; padding: 2px 8px 2px 6px; cursor: pointer; white-space: nowrap; }
+.fsNode:hover { background: var(--panel2); }
+.fsNode.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+/* the arrow of a folder: to the right while it is closed, down while it is open, none when it has no sub folders */
+.fsNode i { flex: none; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; }
+.fsNode i::before { content: ''; border: 4px solid transparent; border-left: 6px solid var(--muted); border-right: 0; }
+.fsNode.open i::before { transform: rotate(90deg); }
+.fsNode.leaf i::before { display: none; }
+#fsPath a { color: var(--text); cursor: pointer; }
+#fsPath a:hover { color: var(--accent2); }
+.perf { padding: 6px 10px 4px; border-bottom: 1px solid var(--line); }
+.perf .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted); }
+.perf .head b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.perf .head b.bad { color: var(--yellow); }
+.perf canvas { display: block; width: 100%; height: 30px; margin-top: 3px; }
+#fsPath { word-break: break-all; }
+.cfg-c { color: var(--muted); font-style: italic; }
+.cfg-k { color: var(--accent2); }
+.cfg-v { color: #7cc4ff; }
+.cfg-s { color: #9ad29a; }
+.cfg-n { color: #f0a45d; }
+.cfg-p, .cfg-code { color: var(--muted); }
+#pane-config .tools { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; }
+#pane-config .tools > input { width: 100%; }
+#pane-config .hint { padding: 0 10px; }
+#pane-config .cfgSide { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#pane-config .cfgSide[hidden], #cfgView .cfgMain[hidden] { display: none; }
+#pane-config .cfgSide .hint:last-child { padding-bottom: 8px; }
+/* Form | Text | Cleanup: one button is on */
+.seg { display: flex; margin: 0 10px 4px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg button { flex: 1; border: 0; border-radius: 0; background: transparent; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: var(--on-accent); }
+#setState, #cleanState { margin-right: auto; font-size: 12px; color: var(--muted); }
+#setState.dirty { color: var(--yellow); }
+#setCats { border-top: 1px solid var(--line); }
+.setCat { display: flex; justify-content: space-between; gap: 8px; margin: 0 4px; padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+.setCat:hover { background: var(--hover); }
+.setCat .n { color: #6f86a3; font-size: 11px; }
+.setCat .n b { color: var(--accent2); font-weight: 600; }
+#cfgView .cfgMain { position: absolute; inset: 0; }
+#setForm, #cleanView { overflow: auto; }
+body.cfgOpen.cfgFull #side { display: none; }
+body.cfgOpen.cfgFull #cfgView { left: var(--left) !important; }
+#cfgBar { position: relative; }
+#setForm, #cleanView, #setCats { color-scheme: dark; }
+/* The form of the settings: a card for every group with its name as a header that stays at the top while it is
+   scrolled, a row for every setting, its tags as chips, a changed one lit (js/settings.js) */
+#setForm { padding: 10px 14px; }
+#setForm section { max-width: 1120px; margin: 0 0 12px; border: 1px solid #1c2e4a; border-radius: 8px; background: rgba(8,14,28,.78); }
+#setForm h3 { position: sticky; top: -10px; z-index: 1; margin: 0; padding: 7px 14px; background: var(--frame); border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+.setRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 280px); align-items: center; gap: 4px 16px; padding: 6px 14px; border-bottom: 1px solid #0f1b2e; }
+.setRow:last-child { border-bottom: 0; border-radius: 0 0 8px 8px; }
+.setRow:hover { background: rgba(92,200,245,.03); }
+.setRow.changed { background: #0d1a2e; box-shadow: inset 2px 0 0 var(--accent); }
+.setRow.changed .setField input, .setRow.changed .setField select { border-color: var(--accent); }
+.setName code { font: 500 13px ui-monospace, Menlo, Consolas, monospace; color: #fff; margin-right: 6px; }
+.setDesc { color: var(--muted); font-size: 12px; margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.setDef { color: #6f86a3; font-size: 11px; }
+.setField input[type=text], .setField input[type=number], .setField input[type=password], .setField select { width: 100%; }
+.setField .inline input { flex: 1; min-width: 0; }
+.setBool { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.setBits { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 2px 8px; margin-top: 6px; font-size: 12px; }
+.setBits label { display: flex; gap: 4px; align-items: center; }
+.mk { display: inline-block; vertical-align: 1px; font-size: 10px; line-height: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; padding: 0 5px; margin-right: 4px; border-radius: 3px; border: 1px solid var(--edge); color: var(--text); }
+.mk.changed { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.mk.warn { border-color: #6b5a2a; background: rgba(255,189,76,.08); color: var(--yellow); }
+.mk.val { text-transform: none; }
+.mk.muted { color: var(--muted); }
+#cleanView { padding: 6px 12px; }
+#cleanView td.val { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 700px) {
+	.setRow { grid-template-columns: 1fr; }
+}
+#fsEditState { font-size: 12px; color: var(--muted); }
+#cfgState { margin-right: auto; font-size: 12px; color: var(--muted); }
+#cfgState.dirty, #fsEditState.dirty { color: var(--yellow); }
+
+#toasts { position: fixed; right: 12px; top: calc(var(--top) + 10px); z-index: 30; display: flex; flex-direction: column; gap: 6px; }
+.toast { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--green); padding: 6px 10px; border-radius: 3px; min-width: 200px; }
+.toast.err { border-left-color: var(--danger); }
+
+/* the tools of the editor: a strip of icons left of the side panel, the name of each in its title */
+#tabs { position: absolute; top: 0; bottom: 0; left: -40px; width: 40px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; background: #070c18; border-right: 1px solid var(--line); }
+#tabs button { flex: none; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 5px; background: transparent; color: var(--muted); }
+#tabs button span { display: none; }
+#tabs button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#tabs button:hover { color: var(--text); background: var(--hover); }
+#tabs button.on { color: var(--accent); background: var(--sel); box-shadow: inset 0 0 0 1px var(--edge); }
+body.serverPage #tabs { display: none; }
+.pane { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.pane.on { display: flex; }
+.tools { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--line); }
+.tools .inline input { flex: 1; width: auto; }
+.tools .inline a { color: var(--muted); font-size: 12px; text-decoration: none; }
+.tools .inline a:hover { color: var(--text); }
+button.armedPlace { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+tr.ent td { font-size: 12px; }
+tr.ent .tn { color: var(--muted); }
+tr.ent.ro td:first-child { opacity: .6; }
+/* the panel of a selected entity: like the one of a player, a column at the right edge */
+#entPanel { position: fixed; top: var(--top); right: 0; bottom: 0; width: var(--inspEnt); overflow: auto; background: var(--panel); border-left: 1px solid var(--line); padding: 10px 12px; display: none; z-index: 16; }
+#entPanel.open { display: block; }
+#entPanel .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+#entPanel .hd b { font-size: 15px; }
+#entPanel .hd .close { margin-left: auto; }
+/* what the server says of a draft can be a long line */
+#entPanel .hd .meta { white-space: normal; min-width: 0; }
+/* the form of an entity: a line for every key its class takes, the key with what it is for and the fields of its value */
+#entForm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 4px 8px; align-items: center; margin-bottom: 6px; }
+#entForm:empty { display: none; }
+#entForm:not(.all) .empty { display: none; }
+#entFormMore { width: 100%; margin: 2px 0 8px; padding: 3px; border-style: dashed; background: transparent; color: var(--muted); font-size: 12px; }
+#entFormMore:hover { color: var(--text); }
+#entForm label { min-width: 0; font-size: 12px; line-height: 1.25; }
+#entForm label b, #entForm label i { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#entForm label b { font-weight: 500; }
+#entForm label i { font-style: normal; font-size: 11px; color: var(--muted); }
+#entForm label i:empty { display: none; }
+#entForm .v { display: flex; gap: 4px; align-items: center; min-width: 0; }
+#entForm .v input { flex: 1; width: 0; min-width: 0; }
+#entForm .v input[type=checkbox] { flex: none; width: auto; margin: 4px 0; accent-color: var(--accent); }
+#entForm .v button { flex: none; padding: 1px 6px; }
+/* the table of all keys, folded under the form */
+#kvBlock summary { cursor: pointer; color: var(--muted); font-size: 12px; user-select: none; }
+#kvBlock[open] summary { margin-bottom: 3px; }
+#kvTable td { padding: 2px 3px; border: 0; }
+#kvTable input { width: 100%; }
+#kvTable td.k { width: 38%; }
+#kvSuggest { position: fixed; z-index: 40; display: none; width: 440px; max-width: calc(100vw - 8px); overflow-y: auto; background: var(--field); border: 1px solid var(--line); border-radius: 3px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); font-size: 12px; }
+#kvSuggest .opt { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 4px 8px; cursor: pointer; border-bottom: 1px solid #1c1c22; }
+#kvSuggest .opt.on { background: var(--sel); }
+#kvSuggest .opt b { color: var(--text); font-weight: 600; }
+#kvSuggest .opt i { color: var(--muted); font-style: normal; text-align: right; white-space: nowrap; }
+#kvSuggest .opt span { grid-column: 1 / 3; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#kvSuggest .opt span:empty { display: none; }
+#kvTable td.x { width: 24px; white-space: nowrap; }
+#kvTable button.play { margin-right: 3px; }
+#kvTable button { padding: 1px 6px; }
+/* the panel of an entity: what is done to it at the top, + Key, Delete and Apply at the bottom where they stay in
+   sight while it scrolls, the spawnflags as chips that are lit while set */
+#entTools { max-width: none; gap: 3px; margin: 0 0 8px; }
+#entTools button { padding: 2px 7px; font-size: 11px; font-weight: 600; }
+#entFoot { position: sticky; bottom: -10px; z-index: 1; display: flex; gap: 6px; margin: 10px -12px -10px; padding: 8px 12px; background: var(--frame); border-top: 1px solid var(--line); }
+#entFoot .spacer { flex: 1; }
+#classPicker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--field); display: none; }
+#classPicker.open { display: block; }
+#pane-models .tools { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+#pane-models .hint { padding: 0 10px 6px; }
+#mdlOpts { display: flex; flex-wrap: wrap; gap: 8px; }
+#mdlOpts label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+#mdlOpts input { width: 58px; }
+#mdlPicked { word-break: break-all; }
+#mdlList { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line); background: var(--field); }
+.cls { padding: 3px 7px; cursor: pointer; display: flex; gap: 7px; align-items: center; font-size: 12px; }
+.cls:hover, .cls.hl { background: var(--sel); }
+.cls i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.cls .ty { margin-left: auto; color: var(--muted); font-size: 10px; }
+/* a kit in the class search: under its name a line that says what it makes */
+.cls.kit { flex-wrap: wrap; gap: 0 7px; }
+.cls .about { flex: 0 0 100%; min-width: 0; padding-left: 15px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#preview { position: fixed; left: calc(var(--left) + var(--side) + 8px); width: 262px; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 4px; padding: 8px; z-index: 25; display: none; pointer-events: none; }
+#preview.open { display: block; }
+#preview canvas { width: 244px; height: 200px; display: block; background: radial-gradient(circle at 50% 40%, #1c2e4a, #070d1a); border-radius: 3px; }
+#preview .pv-name { font-weight: 700; margin-top: 7px; }
+#preview .pv-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+#preview .pv-none { height: 200px; display: flex; align-items: center; justify-content: center; color: var(--muted); text-align: center; padding: 20px; background: var(--field); border-radius: 3px; }
+#hud { position: absolute; inset: 0; display: none; pointer-events: none; }
+body.fp #hud { display: block; }
+body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
+.hud-top { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 700; text-shadow: 0 1px 3px #000; pointer-events: auto; }
+.hud-bottom { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; gap: 22px; align-items: flex-end; text-shadow: 0 1px 3px #000; }
+.hud-bottom b { font-size: 30px; display: block; line-height: 1; }
+.hud-bottom span { color: #ccc; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
+.hud-bottom .w { margin-left: auto; font-size: 16px; font-weight: 700; }
+.c0{color:#666}.c1{color:#ff4040}.c2{color:#40ff40}.c3{color:#ffff40}.c4{color:#5a7dff}.c5{color:#40ffff}.c6{color:#ff40ff}.c7{color:#fff}.c8{color:#ff9a30}.c9{color:#aaa}
+/* the tools of the editor in the panel of an entity */
+#entFlags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+#entFlags label { position: relative; display: flex; align-items: center; padding: 1px 6px; border: 1px solid var(--edge); border-radius: 3px; background: var(--field); color: #6f86a3; font-size: 10px; font-weight: 600; cursor: pointer; }
+#entFlags label:has(input:checked) { background: var(--sel); border-color: var(--accent); color: var(--accent); }
+#entFlags label:has(input:focus-visible) { outline: 1px solid var(--accent); }
+#entFlags input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+#entXform { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 4px; align-items: center; margin-bottom: 6px; }
+#entXform label { color: var(--muted); font-size: 12px; }
+#entXform input, #entXform select { width: 100%; min-width: 0; }
+#entLinks { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+/* (inline blocks: the links stand side by side without a space, the line may still break between them) */
+#entLinks a { display: inline-block; color: var(--text); cursor: pointer; margin-right: 8px; white-space: nowrap; }
+#entLinks a:hover { color: var(--accent); }
+#entLinks .warn { color: var(--yellow); }
+#entDoc { margin-top: 8px; font-size: 12px; }
+#entDoc summary { cursor: pointer; color: var(--muted); }
+#entDocText { white-space: pre-wrap; margin: 6px 0 0; max-height: 220px; overflow: auto; font: inherit; color: var(--text); }
+#mapReport { padding: 0 10px 10px; font-size: 12px; }
+#surfInfo { padding: 0 10px; font-size: 12px; border-bottom: 1px solid var(--line); }
+#surfInfo h3 { margin: 12px 0 4px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+#surfInfo td { padding: 1px 0; border: 0; vertical-align: top; }
+#surfInfo td.num { color: var(--text); padding-left: 12px; word-break: break-all; user-select: text; }
+#surfInfo pre { margin: 6px 0 10px; padding: 6px 8px; max-height: 220px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--text); white-space: pre; user-select: text; tab-size: 4; }
+#surfInfo .hint { margin: 8px 0 10px; }
+#mapReport h3 { margin: 12px 0 4px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+#mapReport td { padding: 1px 0; border: 0; }
+#mapReport td.num { color: var(--text); padding-left: 12px; }
+#mapReport a { color: var(--text); cursor: pointer; }
+#mapReport a:hover { color: var(--accent); }
+#mapReport .bad { color: #ff8b8b; word-break: break-all; }
+#mapReport .maybe { color: var(--yellow); }
+#mapReport .look { margin: 2px 0; }
+#entBudget { margin: 0; font-size: 11px; }
+#entBudget b { color: #ff8b8b; font-weight: 400; }
+/* administration or editor: which tabs there are and whether the debug views are offered */
+#appMode { display: flex; }
+#appMode button { border-radius: 0; color: var(--muted); }
+#appMode button:first-child { border-radius: 3px 0 0 3px; }
+#appMode button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
+#appMode button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+#dbg { flex: 0 1 auto; flex-wrap: wrap; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(8,14,28,.86); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
+#coords { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); color: var(--muted); font: 11px ui-monospace, Menlo, Consolas, monospace; background: rgba(8,14,28,.86); border: 1px solid var(--line); padding: 3px 8px; border-radius: 3px; pointer-events: none; white-space: nowrap; }
+#coords:empty { display: none; }
+#layoutRow button { white-space: nowrap; flex: none; }
+#draftRow button { white-space: nowrap; flex: none; }
+#draftRow[hidden] { display: none; }
+#entLabels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+/* the name of an entity above its marker: a line that is moved by its transform alone, sixty times a second */
+.elabel { position: absolute; left: 0; top: 0; white-space: nowrap; font: 10px/12px ui-monospace, Menlo, Consolas, monospace; color: #d0d0d6; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.elabel i { font-style: normal; opacity: .65; }
+.elabel b { font-weight: 400; }
+.elabel.sel { color: #fff; }
+/* what is not on the server yet is yellow, on the map and in the list */
+.elabel.draft, tr.ent.draft td { color: var(--yellow); }
+tr.ent.draft td.num { font-style: italic; }
+tr.ent.draft .tn { opacity: .7; }
+#draftDiscardAll { color: var(--danger); }
+#draftDiscardAll.armed { background: var(--danger); color: var(--on-accent); border-color: var(--danger); }
+#band { position: absolute; display: none; border: 1px solid var(--accent); background: rgba(92, 200, 245, .12); pointer-events: none; }
+/* ? , Screenshot and Fly: one bar at the bottom right of the map */
+#viewTools { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 2px; padding: 3px; background: rgba(8,14,28,.88); border: 1px solid #1c2e4a; border-radius: 8px; }
+#viewTools button { border: 0; background: transparent; padding: 3px 10px; font-weight: 600; font-size: 12px; }
+#viewTools button:hover { background: var(--hover); }
+/* The view switches of the editor: a thin bar across the top of the map, each switch a chip that is lit while on.
+   The check boxes stay in the page for the keys and the scripts, only unseen. */
+body.app-editor #viewTop { top: 0; left: 0; right: 0; gap: 0; }
+body.app-editor #help { margin: 8px 10px 0 auto; }
+#dbg { flex: 1 1 100%; gap: 2px; padding: 3px 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: rgba(5,9,19,.92); }
+#dbg label { position: relative; display: flex; align-items: center; padding: 2px 7px; border: 1px solid transparent; border-radius: 4px; color: #6f86a3; font-size: 11px; font-weight: 600; cursor: pointer; }
+#dbg label:hover { color: var(--text); }
+#dbg label:has(input:checked) { background: var(--sel); border-color: var(--edge); color: var(--text); }
+#dbg label:has(input:focus-visible) { outline: 1px solid var(--accent); }
+#dbg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+#dbg select { margin-left: 6px; padding: 1px 4px; font-size: 11px; }
+body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
+/* the tab row of the side panel is the editor's: the administration has the players there, and nothing to choose */
+body.app-admin #tabs { display: none; }
+
+/* the tab Account, and what the role of an account does not show (js/account.js). The server refuses it anyway. */
+#pane-account h3 { margin: 0; padding: 8px 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+#pane-account .tools input, #pane-account .tools select { width: 100%; }
+#pane-account .tools .inline select { flex: 1; }
+#pane-account textarea { width: 100%; height: 150px; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; color: inherit; background: var(--field); border: 1px solid var(--line); border-radius: 3px; padding: 6px; resize: vertical; }
+#pane-account canvas { display: block; margin: 0 auto 6px; image-rendering: pixelated; border-radius: 3px; }
+#pane-account table { width: 100%; }
+#acctCode { font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace; min-height: 20px; user-select: all; }
+#acctTotpSecret { user-select: all; color: var(--text); }
+body.role-moderator #appMode,
+body.role-moderator #pages button[data-tab="log"], body.role-moderator #pages button[data-tab="load"] { display: none !important; }
+body.role-moderator #pages button[data-tab="config"], body.role-moderator #pages button[data-tab="files"],
+body.role-admin #pages button[data-tab="config"], body.role-admin #pages button[data-tab="files"] { display: none !important; }
+/* the line that runs a command on the console is the owner's */
+body.role-moderator #logCmd, body.role-admin #logCmd { display: none !important; }
+
+#tvView { position: fixed; top: var(--top); left: calc(var(--left) + var(--side)); right: 0; bottom: 0; z-index: 14; display: none; background: #000; transition: left .15s; }
+body.sideClosed #tvView { left: var(--left); }
+body.tvOpen #tvView { display: block; }
+#tvStart { max-width: 520px; margin: 15vh auto 0; padding: 0 16px; color: var(--muted); }
+#tvFrame { width: 100%; height: 100%; border: 0; display: block; }
+#pages button[data-tab="tv"] { display: none; }
+body.hasTV #pages button[data-tab="tv"] { display: flex; }
+
+/* the pages of the panel, a rail of icons down the left edge (js/editor-world.js setMode, the address #/<page>) */
+#pages { position: fixed; top: var(--bar); left: 0; bottom: 0; width: var(--rail); background: var(--frame); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; padding: 6px 5px; z-index: 19; }
+#pages button { flex: none; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 10px; line-height: 12px; font-weight: 600; }
+#pages button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+#pages button:hover { color: var(--text); background: var(--hover); }
+#pages button.on { color: var(--accent); background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+#pages button[data-tab="account"] { margin-top: auto; }
+#paletteBtn kbd, .palHint kbd { font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; margin-left: 6px; }
+
+/* the command palette (js/palette.js) */
+#palette { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .45); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+#palette[hidden] { display: none; }
+.palBox { width: min(560px, 92vw); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, .6); overflow: hidden; }
+#palInput { width: 100%; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 12px 14px; font-size: 15px; background: transparent; }
+#palList { max-height: 50vh; overflow: auto; }
+.palItem { display: flex; justify-content: space-between; gap: 12px; padding: 7px 14px; cursor: pointer; }
+.palItem span { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.palItem.on { background: var(--sel); box-shadow: inset 2px 0 0 var(--accent); }
+.palEmpty { padding: 10px 14px; color: var(--muted); }
+.palHint { padding: 7px 14px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+
+/* a page of the server (js/editor-world.js setMode): the chat is the map's in the administration, the editor has its
+   tools there; Bans, Performance and Account are only
+   their pane, as wide as it reads well, and the map is not shown behind them */
+body.serverPage #chat, body.app-editor #chat { display: none; }
+body.pageWide #side { width: auto; right: 0; transform: none; border-right: 0; }
+body.pageWide #side > .pane.on { width: 100%; overflow: auto; }
+/* Bans, Performance and Account: the whole width, the name of the page in a bar on top, the content in cards */
+body.pageWide #side h2 { position: sticky; top: 0; z-index: 2; justify-content: flex-start; align-items: baseline; gap: 10px; padding: 8px 16px; background: var(--frame); border-bottom: 1px solid var(--line); font-size: 14px; letter-spacing: 0; text-transform: none; color: #fff; }
+body.pageWide #side h2 > span + span { font-size: 12px; font-weight: 400; color: var(--muted); }
+body.pageWide #side .scroll { flex: none; overflow: visible; }
+.card, #pane-bans .tools, #pane-bans .scroll { max-width: 1120px; margin: 12px 16px 0; border: 1px solid #1c2e4a; border-radius: 8px; background: rgba(8,14,28,.78); }
+#pane-bans .tools { padding: 10px 12px; }
+#pane-bans .tools input { flex: 1; max-width: 320px; }
+#pane-bans .scroll td { height: 32px; padding: 0 12px; border-bottom: 1px solid #0f1b2e; font-family: ui-monospace, Menlo, Consolas, monospace; }
+#pane-bans .scroll tr:last-child td { border-bottom: 0; }
+#pane-bans > .hint { max-width: 1120px; margin: 8px 16px; padding: 0 !important; }
+#perfRows { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; max-width: 1240px; padding: 12px 16px 0; }
+#perfRows .perf { padding: 10px 12px 8px; border: 1px solid #1c2e4a; border-radius: 8px; background: rgba(8,14,28,.78); }
+#perfRows .perf .head { font-size: 10px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; }
+#perfRows .perf .head b { font-size: 16px; letter-spacing: 0; text-transform: none; color: #fff; }
+#perfRows .perf canvas { height: 40px; margin-top: 6px; }
+#pane-load .scroll > .hint { max-width: 1240px; padding: 8px 16px 0 !important; }
+#pane-account h3 { max-width: 1120px; margin: 12px 16px 0; padding: 7px 12px; background: var(--frame); border: 1px solid #1c2e4a; border-bottom: 0; border-radius: 8px 8px 0 0; font-size: 10px; letter-spacing: .8px; }
+#pane-account h3 + .tools { max-width: 1120px; margin: 0 16px; border: 1px solid #1c2e4a; border-radius: 0 0 8px 8px; background: rgba(8,14,28,.78); }
+#pane-account .scroll > .tools:first-child { flex-direction: row; justify-content: flex-end; padding: 8px 16px 0; border: 0; }
+#pane-account #acctUsers td, #pane-account #acctKeys td { height: 30px; }
+@media (min-width: 1100px) {
+	/* two columns: the own account on the left, the codes for the game and the accounts on the right */
+	#pane-account .scroll { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; max-width: 1240px; }
+	#pane-account .scroll > .tools:first-child, #acctOnce { grid-column: 1 / -1; }
+	#acctOwn { grid-column: 1; grid-row: 3 / span 2; }
+	#acctCodes { grid-column: 2; grid-row: 3; }
+	#acctOwner { grid-column: 2; grid-row: 4; }
+}
+body.pageWide #sideGrip, body.pageWide #view, body.pageWide #texBrowser { display: none; }
+
+/* the keys of the map: behind the button ? at the bottom right, open while body.helpOpen (js/palette.js) */
+#help { display: none; }
+body.helpOpen #help { display: block; }
+#helpBtn { width: 28px; padding: 3px 0 !important; }
+body.helpOpen #helpBtn { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* A phone, or any window narrower than 760 pixels: the pages are a bar at the bottom, the map (or the main view of a
+   page of the server) is the upper part of the screen, the side panel the lower part under it. A selected player or
+   entity has its panel there, over the side panel, and the map stays in sight above it. */
+@media (max-width: 760px) {
+	:root { --rail: 0px; --split: 46vh; --tabbar: 54px; }
+	body.app-editor { --tools: 0px; }
+	#topbar { gap: 8px; }
+	#topbar .meta, #paletteBtn kbd, #toggleSide, #sideGrip, #statusText, #whoName { display: none; }
+	#pages { top: auto; bottom: 0; right: 0; width: auto; height: var(--tabbar); flex-direction: row; gap: 0; padding: 3px 3px calc(3px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); }
+	#pages button { flex: 1 1 0; min-width: 0; height: auto; }
+	#pages button[data-tab="account"] { margin-top: 0; }
+	#pages button.on { box-shadow: inset 0 2px 0 var(--accent); }
+	#view, #cfgView, #fsView, #logView, #tvView { left: 0 !important; right: 0 !important; bottom: auto; height: var(--split); }
+	body.logOpen #logView { bottom: var(--tabbar); height: auto; }
+	/* (z-index 0: the panels of a player and an entity lie over it here, and they are in #view, which comes later) */
+	#side { left: 0; right: 0; width: auto; top: calc(var(--top) + var(--split)); bottom: var(--tabbar); transform: none !important; border-right: 0; border-top: 1px solid var(--line); z-index: 0; }
+	#fsList { padding: 6px 8px; }
+	#fsList th:nth-child(2), #fsList td:nth-child(2), #fsList th:nth-child(3), #fsList td:nth-child(3) { display: none; }
+	#fsList td { padding: 4px; }
+	body.pageWide #side { top: var(--top); }
+	body.pageWide #side > .pane.on { border: 0; }
+	#command, #entPanel { left: 0; width: auto; top: calc(var(--top) + var(--split)); bottom: var(--tabbar); border-left: 0; border-top: 1px solid var(--line); }
+	body:has(#command.open) #toasts, body:has(#entPanel.open) #toasts { right: 12px; }
+	#texBrowser { left: 0 !important; right: 0 !important; bottom: var(--tabbar); }
+	/* the tools of the editor: a row at the top of the side panel */
+	#tabs { position: static; width: auto; flex-direction: row; justify-content: flex-start; padding: 4px 6px; border-right: 0; border-bottom: 1px solid var(--line); }
+	#preview { display: none !important; }
+}

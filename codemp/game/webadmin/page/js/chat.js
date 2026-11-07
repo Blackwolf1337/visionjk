@@ -1,0 +1,78 @@
+/* ------------------------------------------------------------------ */
+/* chat (not in JKAdmin)                                               */
+/* ------------------------------------------------------------------ */
+
+const CHAT_MAX_LINES = 400;
+// the colors the game gives the text of each kind of chat
+const CHAT_COLOR = { all: 2, team: 5, tell: 6, clan: 1, admin: 3 };
+let chatSeq = 0, chatEpoch = 0, chatBusy = false, chatUnread = 0;
+
+function chatLine(m) {
+	const kind = m.mode === 'tell' ? 'to ' + plainName(m.to) : (m.mode === 'team' || m.mode === 'clan' || m.mode === 'admin') ? m.mode : '';
+	return '<div><span class="t">' + escapeHtml(m.time) + '</span>' +
+		(kind ? '<span class="k">' + escapeHtml(kind) + '</span>' : '') +
+		(m.team ? '<span class="team ' + escapeHtml(m.team) + '"></span>' : '') +
+		colorName(m.name) + ': ' + colorName('^' + (CHAT_COLOR[m.mode] || 7) + m.text) + '</div>';
+}
+
+async function pollChat() {
+	if (chatBusy) return;
+	// over the socket of the page when it is open (js/stream.js), pushed when something was said
+	if (streamGet('chat', 'api/chat?since=' + chatSeq + '&epoch=' + chatEpoch, chatTake, pollChat)) return;
+	chatBusy = true;
+	try {
+		const res = await fetch('api/chat?since=' + chatSeq + '&epoch=' + chatEpoch, { cache: 'no-store' });
+		if (res.ok) chatTake(await res.json());
+	} catch (e) {
+		/* the state poll shows a lost connection */
+	} finally {
+		chatBusy = false;
+	}
+}
+
+function chatTake(json) {
+	if (!json) return;
+	const log = $('chatLog');
+	const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+	let html = '';
+	// a new map loads the game again, its chat numbers start over
+	if (chatEpoch && json.epoch !== chatEpoch) {
+		html = '<div class="sep">new map</div>';
+		chatSeq = 0;
+	}
+	const fresh = json.messages.filter(m => m.seq > chatSeq);
+	html += fresh.map(chatLine).join('');
+	// What was said to all goes over the picture too, as on a client (js/hud.js), in the words the server sends
+	// it with. Not what was there before the page came.
+	// (G_Say for a player: his name, white, a colon and his words in green; the panel's own line as wa_actions.c
+	// sends it, without the green)
+	if (chatEpoch) for (const m of fresh) {
+		if (m.mode === 'all') hudChatAdd(m.name + '^7: ^2' + m.text);
+		else if (m.mode === 'panel') hudChatAdd(m.name + '^7: ' + m.text);
+	}
+	chatEpoch = json.epoch;
+	chatSeq = json.seq;
+	if (!html) return;
+	const none = log.querySelector('.none');
+	if (none) none.remove();
+	log.insertAdjacentHTML('beforeend', html);
+	while (log.children.length > CHAT_MAX_LINES) log.firstChild.remove();
+	if (atEnd) log.scrollTop = log.scrollHeight;
+	if (document.body.classList.contains('chatClosed')) {
+		chatUnread += fresh.length;
+		$('chatNew').textContent = chatUnread ? chatUnread + ' new' : '';
+	}
+}
+
+$('chatLog').innerHTML = '<div class="none">Nothing said yet.</div>';
+$('chatHead').addEventListener('click', () => {
+	const closed = document.body.classList.toggle('chatClosed');
+	try { localStorage.setItem('wa.chatClosed', closed ? '1' : ''); } catch (e) { /* no storage */ }
+	chatUnread = 0;
+	$('chatNew').textContent = '';
+	if (!closed) $('chatLog').scrollTop = $('chatLog').scrollHeight;
+});
+try { if (localStorage.getItem('wa.chatClosed')) document.body.classList.add('chatClosed'); } catch (e) { /* no storage */ }
+setInterval(pollChat, 1000);
+pollChat();
+

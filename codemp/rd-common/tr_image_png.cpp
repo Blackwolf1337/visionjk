@@ -144,7 +144,8 @@ struct PNGFileReader
 		png_destroy_read_struct (&png_ptr, &info_ptr, NULL);
 	}
 
-	int Read ( byte **data, int *width, int *height )
+	// picture: a picture for a module (R_LoadImageFit), not a texture: any size, palette and grey too
+	int Read ( byte **data, int *width, int *height, bool picture )
 	{
 		// Setup the pointers
 		*data = NULL;
@@ -186,6 +187,8 @@ struct PNGFileReader
 		png_set_keep_unknown_chunks (png_ptr, PNG_HANDLE_CHUNK_NEVER, NULL, -1);
 #endif
 		png_set_sig_bytes (png_ptr, SIGNATURE_LEN);
+		// a picture of a pak: libpng refuses a larger one before it reads anything of it
+		png_set_user_limits (png_ptr, IMAGE_MAX_SIDE, IMAGE_MAX_SIDE);
 		png_read_info (png_ptr, info_ptr);
 
 		png_uint_32 width_;
@@ -197,9 +200,15 @@ struct PNGFileReader
 
 		// While modern OpenGL can handle non-PoT textures, it's faster to handle only PoT
 		// so that the graphics driver doesn't have to fiddle about with the texture when uploading.
-		if ( !IsPowerOfTwo (width_) || !IsPowerOfTwo (height_) )
+		if ( !picture && ( !IsPowerOfTwo (width_) || !IsPowerOfTwo (height_) ) )
 		{
 			ri.Printf (PRINT_ERROR, "Width or height is not a power-of-two.\n");
+			return 0;
+		}
+		// (width * height * 4 is an int below: the side limit keeps it at 1 GB at most)
+		if ( !width_ || !height_ || width_ > IMAGE_MAX_SIDE || height_ > IMAGE_MAX_SIDE )
+		{
+			ri.Printf (PRINT_ERROR, "The image is larger than %i pixels a side.\n", IMAGE_MAX_SIDE);
 			return 0;
 		}
 
@@ -207,6 +216,13 @@ struct PNGFileReader
 		// but this only seemed to be used by the RMG system which does not work in JKA. If this
 		// does need to be re-implemented, then colortype should be PNG_COLOR_TYPE_PALETTE or
 		// PNG_COLOR_TYPE_GRAY.
+		if ( picture && colortype != PNG_COLOR_TYPE_RGB && colortype != PNG_COLOR_TYPE_RGBA )
+		{
+			png_set_expand (png_ptr);
+			if ( colortype == PNG_COLOR_TYPE_GRAY || colortype == PNG_COLOR_TYPE_GRAY_ALPHA )
+				png_set_gray_to_rgb (png_ptr);
+			colortype = ( colortype & PNG_COLOR_MASK_ALPHA ) || png_get_valid (png_ptr, info_ptr, PNG_INFO_tRNS) ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB;
+		}
 		if ( colortype != PNG_COLOR_TYPE_RGB && colortype != PNG_COLOR_TYPE_RGBA )
 		{
 			ri.Printf (PRINT_ERROR, "Image is not 24-bit or 32-bit.");
@@ -220,7 +236,19 @@ struct PNGFileReader
 			png_set_add_alpha (png_ptr, 0xff, PNG_FILLER_AFTER);
 		}
 
+		// 16 bits a channel would be written as 8 bytes a pixel into the 4 of each pixel below
+		if ( depth == 16 )
+		{
+			png_set_strip_16 (png_ptr);
+		}
+
 		png_read_update_info (png_ptr, info_ptr);
+
+		if ( png_get_rowbytes (png_ptr, info_ptr) != (png_size_t)width_ * 4 )
+		{
+			ri.Printf (PRINT_ERROR, "Image is not 24-bit or 32-bit.");
+			return 0;
+		}
 
 		// We always assume there are 4 channels. RGB channels are expanded to RGBA when read.
 		byte *tempData = (byte *)ri.Z_Malloc (width_ * height_ * 4, TAG_TEMP_PNG, qfalse, 4);
@@ -288,8 +316,7 @@ void user_read_data( png_structp png_ptr, png_bytep data, png_size_t length ) {
 	reader->ReadBytes (data, length);
 }
 
-// Loads a PNG image from file.
-void LoadPNG ( const char *filename, byte **data, int *width, int *height )
+static void LoadPNGFile ( const char *filename, byte **data, int *width, int *height, bool picture )
 {
 	char *buf = NULL;
 	int len = ri.FS_ReadFile (filename, (void **)&buf);
@@ -299,6 +326,18 @@ void LoadPNG ( const char *filename, byte **data, int *width, int *height )
 	}
 
 	PNGFileReader reader (buf);
-	reader.Read (data, width, height);
+	reader.Read (data, width, height, picture);
+}
+
+// Loads a PNG image from file.
+void LoadPNG ( const char *filename, byte **data, int *width, int *height )
+{
+	LoadPNGFile (filename, data, width, height, false);
+}
+
+// A PNG picture for a module (R_LoadImageFit): of any size, palette and grey ones too
+void LoadPNGPicture ( const char *filename, byte **data, int *width, int *height )
+{
+	LoadPNGFile (filename, data, width, height, true);
 }
 

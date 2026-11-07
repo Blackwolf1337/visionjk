@@ -1,0 +1,29 @@
+Particle
+{
+	spawnFlags			evenDistribution
+
+	count				3
+
+	life				500
+
+	delay				0 50
+
+	rotation			0 360
+
+	alpha
+	{
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		end				25
+		flags			linear clamp
+	}
+
+	shaders
+	[
+		gfx/effects/snowpuff2
+	]
+}

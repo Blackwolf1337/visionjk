@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "cl_cgameapi.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 
 #ifdef USE_INTERNAL_ZLIB
 #include "zlib/zlib.h"
@@ -134,6 +135,7 @@ void CL_ParsePacketEntities( msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *n
 		}
 
 		if ( msg->readcount > msg->cursize ) {
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "the entities of a snapshot end early" );
 			Com_Error (ERR_DROP,"CL_ParsePacketEntities: end of message");
 		}
 
@@ -289,6 +291,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 
 	if((unsigned)len > sizeof(newSnap.areamask))
 	{
+		CL_IDS_Event( CLIDS_MESSAGE, NULL, "an area mask of a wrong size" );
 		Com_Error (ERR_DROP,"CL_ParseSnapshot: Invalid size %d for areamask", len);
 		return;
 	}
@@ -353,6 +356,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 		cl.snap.deltaNum, cl.snap.ping );
 	}
 
+	CL_NetStatsSnapshot();
 	cl.newSnapshots = qtrue;
 }
 
@@ -367,6 +371,12 @@ rww - Update fs_game, this message is so we can use the ext_data
 */
 void MSG_CheckNETFPSFOverrides(qboolean psfOverrides);
 void FS_UpdateGamedir(void);
+// An fs_game of a server is the name of one folder: no part of a path, no other folder, no drive (it was only
+// checked for "../", so ".." and "x/.." were folders above the game folders).
+static qboolean CL_BadGameDir( const char *dir ) {
+	return ( FS_CheckDirTraversal( dir ) || strpbrk( dir, "/\\:" ) || !strcmp( dir, "." ) ) ? qtrue : qfalse;
+}
+
 void CL_ParseSetGame( msg_t *msg )
 {
 	char newGameDir[MAX_QPATH];
@@ -390,9 +400,16 @@ void CL_ParseSetGame( msg_t *msg )
 	}
 	newGameDir[i] = 0;
 
-	if(FS_CheckDirTraversal(newGameDir))
+	// a demo does not change the game folder: CL_SystemInfoChanged leaves it alone in demos too, and it stayed
+	// after the demo
+	if ( clc.demoplaying ) {
+		return;
+	}
+
+	if(CL_BadGameDir(newGameDir))
 	{
 		Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", newGameDir);
+		CL_IDS_Event( CLIDS_GAMEDIR, NULL, newGameDir );
 		return;
 	}
 
@@ -432,9 +449,12 @@ void CL_SystemInfoChanged( void ) {
 	const char		*s, *t;
 	char			key[BIG_INFO_KEY];
 	char			value[BIG_INFO_VALUE];
+	char			refused[256] = "";
 	qboolean		gameSet;
 
 	systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SYSTEMINFO ];
+	// Port: the clip brushes the server has off (clipbrush), none from a server that does not say
+	CL_ClipOffChanged( Info_ValueForKey( systemInfo, "vs_clipRanges" ) );
 	// NOTE TTimo:
 	// when the serverId changes, any further messages we send to the server will use this new serverId
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=475
@@ -453,11 +473,7 @@ void CL_SystemInfoChanged( void ) {
 		Cvar_SetCheatState();
 	}
 
-	// check pure server string
-	s = Info_ValueForKey( systemInfo, "sv_paks" );
-	t = Info_ValueForKey( systemInfo, "sv_pakNames" );
-	FS_PureServerSetLoadedPaks( s, t );
-
+	// the pure list is not taken, see FS_ReferencedPakPureChecksums
 	s = Info_ValueForKey( systemInfo, "sv_referencedPaks" );
 	t = Info_ValueForKey( systemInfo, "sv_referencedPakNames" );
 	FS_PureServerSetReferencedPaks( s, t );
@@ -472,9 +488,10 @@ void CL_SystemInfoChanged( void ) {
 		}
 		// ehw!
 		if ( !Q_stricmp( key, "fs_game" ) ) {
-			if(FS_CheckDirTraversal(value))
+			if(CL_BadGameDir(value))
 			{
 				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", value);
+				CL_IDS_Event( CLIDS_GAMEDIR, NULL, value );
 				continue;
 			}
 
@@ -485,7 +502,21 @@ void CL_SystemInfoChanged( void ) {
 
 			gameSet = qtrue;
 		}
-		Cvar_Server_Set( key, value );
+		switch ( Cvar_Server_Set( key, value ) ) {
+		case CVAR_SERVER_SET:
+			break;
+		case CVAR_SERVER_REFUSED:
+			Q_strcat( refused, sizeof( refused ), va( "%s%s=%s", *refused ? ", " : "", key, value ) );
+			break;
+		case CVAR_SERVER_PROTECTED:
+			CL_IDS_Event( CLIDS_CVAR_PROTECTED, NULL, va( "%s=%s", key, value ) );
+			Com_Error( ERR_DROP, "Server tried to set \"%s\" to \"%s\"", key, value );
+			break;
+		}
+	}
+	// one line for all of them: the IDS writes at most one line of an event in two seconds
+	if ( *refused ) {
+		CL_IDS_Event( CLIDS_CVAR, NULL, refused );
 	}
 	// if game folder should not be set and it is set at the client side
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
@@ -511,6 +542,8 @@ void CL_ParseGamestate( msg_t *msg ) {
 
 	clc.connectPacketCount = 0;
 
+	CL_JoinGamestate( msg->cursize );
+
 	// wipe local client state
 	CL_ClearState();
 
@@ -533,6 +566,7 @@ void CL_ParseGamestate( msg_t *msg ) {
 
 			i = MSG_ReadShort( msg );
 			if ( i < 0 || i >= MAX_CONFIGSTRINGS ) {
+				CL_IDS_Event( CLIDS_MESSAGE, NULL, "a config string past the last one" );
 				Com_Error( ERR_DROP, "configstring > MAX_CONFIGSTRINGS" );
 			}
 			s = MSG_ReadBigString( msg );
@@ -575,6 +609,7 @@ void CL_ParseGamestate( msg_t *msg ) {
 			len = strlen( s );
 
 			if ( len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS ) {
+				CL_IDS_Event( CLIDS_MESSAGE, NULL, "more config strings than there is room for" );
 				Com_Error( ERR_DROP, "MAX_GAMESTATE_CHARS exceeded" );
 			}
 
@@ -585,12 +620,14 @@ void CL_ParseGamestate( msg_t *msg ) {
 		} else if ( cmd == svc_baseline ) {
 			newnum = MSG_ReadBits( msg, GENTITYNUM_BITS );
 			if ( newnum < 0 || newnum >= MAX_GENTITIES ) {
+				CL_IDS_Event( CLIDS_MESSAGE, NULL, "a baseline past the last entity" );
 				Com_Error( ERR_DROP, "Baseline number out of range: %i", newnum );
 			}
 			Com_Memset (&nullstate, 0, sizeof(nullstate));
 			es = &cl.entityBaselines[ newnum ];
 			MSG_ReadDeltaEntity( msg, &nullstate, es, newnum );
 		} else {
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "an unknown command in the game state" );
 			Com_Error( ERR_DROP, "CL_ParseGamestate: bad command byte" );
 		}
 	}
@@ -633,45 +670,78 @@ A download message has been received from the server
 =====================
 */
 void CL_ParseDownload ( msg_t *msg ) {
-	int		size;
+	int		size, fileSize = 0;
 	unsigned char data[MAX_MSGLEN];
 	uint16_t block;
+	const char *why = NULL;
+	qboolean	asked;
 
-	if (!*clc.downloadTempName) {
-		Com_Printf("Server sending download, but no download was requested\n");
-		CL_AddReliableCommand("stopdl", qfalse);
+	// The whole message is read before anything is decided, also of a download nobody asked for: what is left
+	// unread would be taken for the next commands of the server (block zero again after it came is one too).
+	block = MSG_ReadShort ( msg );
+
+	if ( !block )
+	{
+		// block zero is special, contains file size, or -1 and why the server can not send the file
+		fileSize = MSG_ReadLong ( msg );
+		if ( fileSize < 0 ) {
+			why = MSG_ReadString( msg );
+		}
+	}
+
+	size = 0;
+	if ( !why ) {
+		size = /*(unsigned short)*/MSG_ReadShort ( msg );
+		if (size < 0 || size > (int)sizeof(data))
+		{
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "a block of a download of a wrong size" );
+			Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
+			return;
+		}
+
+		MSG_ReadData( msg, data, size );
+	}
+
+	// A pak that comes from the web address of the server was not asked from the server. What still comes of one
+	// that was (the last block again, while the acknowledgement is on its way) is no attack.
+	asked = (qboolean)( *clc.downloadTempName != '\0' );
+	if ( CL_DownloadWebBusy() ) {
+		Com_DPrintf( "Server sending download while a pak comes from its web address\n" );
+		CL_AddReliableCommand( "stopdl", qfalse );
 		return;
 	}
 
-	// read the data
-	block = MSG_ReadShort ( msg );
+	if ( !asked ) {
+		Com_Printf("Server sending download, but no download was requested\n");
+		CL_AddReliableCommand("stopdl", qfalse);
+		CL_IDS_Event( CLIDS_DOWNLOAD, NULL, NULL );
+		return;
+	}
 
 	if ( !block && !clc.downloadBlock )
 	{
-		// block zero is special, contains file size
-		clc.downloadSize = MSG_ReadLong ( msg );
+		clc.downloadSize = fileSize;
 
 		Cvar_SetValue( "cl_downloadSize", clc.downloadSize );
 
-		if (clc.downloadSize < 0)
+		if ( why )
 		{
-			Com_Error(ERR_DROP, "%s", MSG_ReadString( msg ) );
+			Com_Error(ERR_DROP, "%s", why );
 			return;
 		}
 	}
 
-	size = /*(unsigned short)*/MSG_ReadShort ( msg );
-	if (size < 0 || size > (int)sizeof(data))
-	{
-		Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
-		return;
-	}
-
-	MSG_ReadData( msg, data, size );
-
 	if((clc.downloadBlock & 0xFFFF) != block)
 	{
 		Com_DPrintf( "CL_ParseDownload: Expected block %d, got %d\n", (clc.downloadBlock & 0xFFFF), block);
+		return;
+	}
+
+	// past the size of block zero the server would fill the disk
+	if ( (long long)clc.downloadCount + size > (long long)clc.downloadSize )
+	{
+		CL_IDS_Event( CLIDS_DOWNLOAD_SIZE, NULL, va( "%s, %i bytes said, %lld sent", clc.downloadName, clc.downloadSize, (long long)clc.downloadCount + size ) );
+		Com_Error( ERR_DROP, "CL_ParseDownload: %s is larger than the %i bytes the server said", clc.downloadName, clc.downloadSize );
 		return;
 	}
 
@@ -747,6 +817,7 @@ void CL_ParseCommandString( msg_t *msg ) {
 		return;
 	}
 	clc.serverCommandSequence = seq;
+	CL_IDS_ServerCommand( s );
 
 	index = seq & (MAX_RELIABLE_COMMANDS-1);
 	/*
@@ -808,6 +879,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage( msg_t *msg ) {
 	int			cmd;
 
+	CL_NetStatsPacket( msg->cursize );
 	if ( cl_shownet->integer == 1 ) {
 		Com_Printf ("%i ",msg->cursize);
 	} else if ( cl_shownet->integer >= 2 ) {
@@ -828,6 +900,7 @@ void CL_ParseServerMessage( msg_t *msg ) {
 	//
 	while ( 1 ) {
 		if ( msg->readcount > msg->cursize ) {
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "a message that ends early" );
 			Com_Error (ERR_DROP,"CL_ParseServerMessage: read past end of server message");
 			break;
 		}
@@ -850,6 +923,7 @@ void CL_ParseServerMessage( msg_t *msg ) {
 	// other commands
 		switch ( cmd ) {
 		default:
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "an unknown command" );
 			Com_Error (ERR_DROP,"CL_ParseServerMessage: Illegible server message\n");
 			break;
 		case svc_nop:

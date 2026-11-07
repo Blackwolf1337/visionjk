@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -23,7 +24,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "qcommon/spatial_debug.h"
+
 #define	CGAME_API_VERSION		2
+
+// the videos on surfaces of the level (ext.Video_*, client/cl_video.cpp): streams, and what one does
+#define VIDEO_STREAMS		8		// 0 to 3 for the TVs of the boombox, 4 to 7 for the drawing boards (Video_Picture)
+#define VIDEO_NONE			0
+#define VIDEO_FETCHING		1		// opened, nothing to show yet
+#define VIDEO_PLAYING		2
+#define VIDEO_ENDED			3		// all of it came and was shown
+#define VIDEO_FAILED		4		// nothing came, or what came was refused
 
 #define	CMD_BACKUP			64
 #define	CMD_MASK			(CMD_BACKUP - 1)
@@ -716,6 +727,100 @@ typedef struct cgameImport_s {
 
 	struct {
 		float			(*R_Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
+		// Only an engine that sets the cvar v_spatialVoice to 1 has this one, any other ends the structure
+		// before it: look at the cvar before touching it. The voice of a player of the voice chat as a sound in
+		// the level, see client/sound/spatial/snd_spatial.cpp. Returns the samples of him that wait, or -1. An engine that sets
+		// v_spatialBoxes takes that many boxes of the boombox the same way, as clientNum MAX_CLIENTS and up.
+		int				(*S_SpatialVoice)						( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
+		// Only an engine that sets the cvar v_spatialOwnVoice to 1 has this one, the same way. What the own
+		// player says into the voice chat: he does not hear the voice, the room he stands in rings from it.
+		void			(*S_SpatialOwnVoice)					( float volume, const short *samples, int numSamples, int rate );
+		// Only an engine that sets the cvar v_cgameChat to 1 has these three, the same way. For the chat box
+		// (cgame/chat/cg_chat.c): the clipboard of the system, as the text the client has (UTF-8 where
+		// v_utf8Text is 1), and a web address handed to the system to open, http and https only. Such an
+		// engine also hands its message mode commands to the cgame command v_chatOpen while the cvar
+		// v_chatHandler is 1.
+		void			(*GetClipboard)							( char *buf, int size );
+		void			(*SetClipboard)							( const char *text );
+		qboolean		(*OpenURL)								( const char *url );
+		// Only an engine that sets the cvar v_cgameScene to 1 has these three, the same way. For what the cgame
+		// writes and paints into the level itself (the chat bubbles, bubble/cg_bubble.c). Text from the
+		// TrueType font as polygons that are hidden by what is in front of them: the first letter stands at
+		// origin on the line of the text, which runs along right; up and the height of a letter are units of
+		// the level, a ^ with a digit colours what follows. Between R_ClearScene and R_RenderScene. A width of
+		// 0 and qfalse: there is no such font. And a shader for a picture the cgame made itself, width and
+		// height powers of two up to 512, for polygons in the scene; flags: RGBA_SHADER_GLOW, it is added and
+		// glows. RGBA_SHADER_OVER, nothing of the scene hides it. RGBA_SHADER_BEHIND, drawn before the others.
+		// RGBA_SHADER_HULL (an engine with the cvar v_uiSkin): as the custom shader of a model that is added a
+		// second time it draws an outline around it, in the colour of the entity.
+		float			(*R_Text3DWidth)						( const char *text, float height );
+		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
+		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
+		// Only an engine that sets the cvar v_cgameUIPlane to 1 has this one, the same way. The menus of this
+		// frame are drawn on a plane in the level and not flat on the screen (menu3d/cg_menu3d.c): matrix takes
+		// a place of the 2D grid to clip space, 16 values column by column. Called before the menus are drawn,
+		// every frame it is wanted.
+		void			(*R_SetUIPlane)							( const float *matrix );
+		// Only an engine that sets the cvar v_cgameDoF to 1 has this one, the same way. The scene of this
+		// frame is blurred where it is nearer or farther than focus (units of the level), amount 0 to 1. Called
+		// before R_RenderScene, every frame it is wanted. A renderer without the effect does nothing.
+		void			(*R_SetDepthOfField)					( float focus, float amount );
+		// Only an engine that sets the cvar v_cgameSpatialDebug to 1 has this one, the same way. What the sound of
+		// the level with Steam Audio shows of itself for v_spatialDebug (qcommon/spatial_debug.h), once a frame:
+		// eye and forward are where the camera is and looks, for the wall under the crosshair.
+		void			(*S_SpatialDebug)						( spatialDebug_t *out, const vec3_t eye, const vec3_t forward );
+		// Only an engine that sets the cvar v_cgameSpatialMovers to 1 has this one, the same way. Where the brush
+		// models of the snapshot are (doors, lifts, func_static), once a frame, for the sound of the level with
+		// Steam Audio: a closed door blocks, an open one lets through. One not named keeps its place.
+		void			(*S_SpatialMovers)						( const spatialMover_t *list, int count );
+		// Only an engine that sets the cvar v_cgameScope to 1 has this one, the same way. The view of the level of
+		// this frame is seen through the scope of a weapon (scopeEffect_t), called before R_RenderScene every
+		// frame it is wanted. NULL only asks. qfalse: the renderer does not have it: the cgame draws
+		// the scope itself.
+		qboolean		(*R_SetScopeEffect)						( const scopeEffect_t *fx );
+		// Only an engine that sets the cvar v_cgameScreenFx to 1 has this one, the same way. The view of the level
+		// of this frame bends and is coloured as screenEffect_t says, called before R_RenderScene every frame it is
+		// wanted. NULL only asks. qfalse: the renderer does not have it.
+		qboolean		(*R_SetScreenEffect)					( const screenEffect_t *fx );
+		// Only an engine that sets the cvar v_cgameVideo to 1 has these, the same way. Videos on surfaces of the level
+		// (client/cl_video.cpp): one of VIDEO_STREAMS streams shows the picture of a video of YouTube (its eleven
+		// characters) from a second on, fetched by the engine from the TV of the masterserver. It plays on to msec
+		// (from that second) when Video_Advance is called, once a frame, and a shader stage "videoMap *tv<stream>"
+		// shows it. Video_Open qfalse: nothing is fetched now, ask again later. Video_Advance returns the time of the
+		// frame shown, -1 none. Video_State: VIDEO_*. Video_Color: the mean colour of that frame.
+		qboolean		(*Video_Open)							( int stream, const char *video, int second );
+		int				(*Video_Advance)						( int stream, int msec );
+		int				(*Video_State)							( int stream );
+		qboolean		(*Video_Color)							( int stream, vec3_t out );
+		void			(*Video_Reset)							( int stream );
+		// A picture the cgame made in place of a video: the stream shows it until the next one or a reset. width and
+		// height 16 to 512, rgba width * height * 4 bytes, copied.
+		void			(*Video_Picture)						( int stream, const byte *rgba, int width, int height );
+		// Only an engine that sets the cvar v_cgameImage to 1 has this one, the same way. A picture file of the game
+		// (tga, png, jpg) in width x height RGBA (up to 512 each), its sides kept and centred: where it does not reach
+		// the alpha is 0. qfalse: there is no such picture.
+		qboolean		(*R_LoadImageFit)						( const char *name, byte *rgba, int width, int height );
+		// Only an engine that sets the cvar v_cgameLiquid to 1 has this one, the same way. Pieces of clear water for
+		// the scene of this frame (liquidSegment_t: a jet is a chain of them, a drop one short piece), between
+		// R_ClearScene and R_RenderScene; they bend what lies behind them. NULL only asks. qfalse: the renderer does
+		// not draw them: the cgame draws its water itself.
+		qboolean		(*R_AddLiquid)							( const liquidSegment_t *segments, int count );
+		// Only an engine that sets the cvar v_cgameWet to 1 has this one, the same way. Wet places for the scene of
+		// this frame (wetSpot_t: puddles and wet patches), between R_ClearScene and R_RenderScene. NULL only asks.
+		// qfalse: the renderer does not draw them: the cgame draws marks.
+		qboolean		(*R_AddWet)								( const wetSpot_t *spots, int count );
+		// Only an engine that sets the cvar v_cgameLoopVolume to 1 has this one. S_AddLoopingSound at a volume of
+		// its own, 0 to 255 of the full one: several loops of one entity crossfade by it.
+		void			(*S_AddLoopingSoundVolume)				( int entityNum, const vec3_t origin, const vec3_t velocity, sfxHandle_t sfx, int volume );
+		// Only an engine that sets the cvar v_cgamePaint to 1 has these, the same way. The sheet of a picture in a slot
+		// of the renderer (paintDecal_t, PAINT_SLOTS of tr_types.h, client/cl_sprays.cpp): an emoji (gfx/emoji/..png),
+		// a file of sprays/ (png, jpg, tga, an animated gif) or a sheet of the store (sprays/store/<number>.png). out
+		// says how its frames lie and how long each is shown. Returns the shader for marks with it, 0: there is no
+		// such picture. R_AddPaint: sprayed pictures for the scene of this frame, between R_ClearScene and
+		// R_RenderScene. NULL only asks. qfalse: the renderer does not lay them on as paint: the cgame
+		// draws marks with the shader.
+		qhandle_t		(*R_PaintPicture)						( int slot, const char *name, paintPicture_t *out );
+		qboolean		(*R_AddPaint)							( const paintDecal_t *decals, int count );
 	} ext;
 } cgameImport_t;
 

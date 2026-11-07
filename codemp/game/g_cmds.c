@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -23,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 
 #include "ui/menudef.h"			// for the voice chats
 
@@ -1587,6 +1588,8 @@ G_Say
 
 static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, char *locMsg )
 {
+	char legacy[MAX_SAY_TEXT];
+
 	if (!other) {
 		return;
 	}
@@ -1625,6 +1628,9 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 		return;
 	}
 
+	// JA+: what a client that writes UTF-8 said, as this one reads it
+	message = JP_ChatFor( ent, other, message, legacy, sizeof( legacy ) );
+
 	if (locMsg)
 	{
 		trap->SendServerCommand( other-g_entities, va("%s \"%s\" \"%s\" \"%c\" \"%s\" %i",
@@ -1653,7 +1659,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		mode = SAY_ALL;
 	}
 
-	Q_strncpyz( text, chatText, sizeof(text) );
+	JP_ChatCopy( ent, chatText, text, sizeof(text) );
 
 	Q_strstrip( text, "\n\r", "  " );
 
@@ -2692,8 +2698,10 @@ void Cmd_SetViewpos_f( gentity_t *ent ) {
 	char		buffer[MAX_TOKEN_CHARS];
 	int			i;
 
-	if ( trap->Argc() != 5 ) {
-		trap->SendServerCommand( ent-g_entities, va("print \"usage: setviewpos x y z yaw\n\""));
+	// VisionJK: "setviewpos x y z yaw [pitch [still]]": with a pitch, and "still" puts the player there without the
+	// push forward of a teleport (for tools that test the game)
+	if ( trap->Argc() < 5 || trap->Argc() > 7 ) {
+		trap->SendServerCommand( ent-g_entities, va("print \"usage: setviewpos x y z yaw [pitch [still]]\n\""));
 		return;
 	}
 
@@ -2705,8 +2713,20 @@ void Cmd_SetViewpos_f( gentity_t *ent ) {
 
 	trap->Argv( 4, buffer, sizeof( buffer ) );
 	angles[YAW] = atof( buffer );
+	if ( trap->Argc() > 5 ) {
+		trap->Argv( 5, buffer, sizeof( buffer ) );
+		angles[PITCH] = atof( buffer );
+	}
 
 	TeleportPlayer( ent, origin, angles );
+	if ( trap->Argc() > 6 ) {
+		trap->Argv( 6, buffer, sizeof( buffer ) );
+		if ( !Q_stricmp( buffer, "still" ) ) {
+			VectorClear( ent->client->ps.velocity );
+			ent->client->ps.pm_time = 0;
+			ent->client->ps.pm_flags &= ~PMF_TIME_KNOCKBACK;
+		}
+	}
 }
 
 void G_LeaveVehicle( gentity_t* ent, qboolean ConCheck ) {
@@ -3724,6 +3744,7 @@ int cmdcmp( const void *a, const void *b ) {
 
 command_t commands[] = {
 	{ "addbot",				Cmd_AddBot_f,				0 },
+	{ "vs_boxaction",		Cmd_Boombox_f,				0 },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
@@ -3742,7 +3763,11 @@ command_t commands[] = {
 	{ "give",				Cmd_Give_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "giveother",			Cmd_GiveOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "jpvoice",			Cmd_JPVoice_f,				0 },
+	{ "vs_auth",				Cmd_JPAuth_f,				0 },
+	{ "vs_box",				Cmd_JPBox_f,				0 },
+	{ "vs_status",			Cmd_JPStatus_f,				0 },
+	{ "vs_tool",				Cmd_Tool_f,					0 },
+	{ "vs_voiceLink",			Cmd_JPVoice_f,				0 },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 //	{ "kylesmash",			TryGrapple,					0 },
@@ -3757,6 +3782,7 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "stats",				Cmd_Stats_f,				0 },
+	{ "tay_look",			Cmd_TayLook_f,				0 },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
 	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 	{ "teamvote",			Cmd_TeamVote_f,				CMD_NOINTERMISSION },
@@ -3765,6 +3791,7 @@ command_t commands[] = {
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
+	{ "vs_toy",				Cmd_Toy_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
@@ -3776,16 +3803,20 @@ G_LogClientCommand
 Not in JA+ and not in OpenJK. Writes what a player sends into the security log: his number, address and name
 and the command with its arguments, one line each. Without it nothing on the server shows what a player typed
 or what a tool sent in his place. Chat is left out (the game log has it) and so is the scoreboard request every
-client sends. Commands that carry a password are logged without their arguments. g_logClientCmds 0 turns it off.
+client sends. Commands that carry a password are logged without their arguments. vs_logClientCmds 0 turns it off.
 =================
 */
 static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
-	static const char *const skip[] = { "say", "say_team", "tell", "score" };
+	// vs_status: what the cgame of a client sends by itself with every new song, see status/g_status.c
+	// vs_box: what it sends when it starts, see boombox/g_boombox.c
+	// tay_look: what it sends when it starts and with every new hat, see status/g_status.c
+	// vs_toy: a snowball and the like, see toys/g_toys.c
+	static const char *const skip[] = { "say", "say_team", "tell", "score", "vs_status", "vs_box", "tay_look", "vs_toy" };
 	static const char *const secret[] = { "amlogin", "clanpass" };
 	char	name[64], args[200];
 	size_t	i;
 
-	if ( !g_logClientCmds.integer || (ent->r.svFlags & SVF_BOT) )
+	if ( !vs_logClientCmds.integer || (ent->r.svFlags & SVF_BOT) )
 		return;
 	for ( i = 0; i < ARRAY_LEN( skip ); i++ ) {
 		if ( !Q_stricmp( cmd, skip[i] ) )

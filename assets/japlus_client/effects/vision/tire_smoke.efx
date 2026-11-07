@@ -1,0 +1,42 @@
+Particle
+{
+	name				smoke
+
+	flags				useAlpha
+
+	count				1 2
+
+	life				600 1100
+
+	velocity			-10 -18 6 10 18 22
+
+	gravity				10 25
+
+	rotation			0 360
+
+	rotationDelta		-40 40
+
+	rgb
+	{
+		start			0.72 0.72 0.74
+	}
+
+	alpha
+	{
+		start			0.14 0.22
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			3 5
+		end				14 22
+		flags			linear
+	}
+
+	shaders
+	[
+		models/vision/toys/rccar/smoke
+	]
+}

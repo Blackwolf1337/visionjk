@@ -23,10 +23,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.h"
 #include "botlib/botlib.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/RoffSystem.h"
 #include "ghoul2/ghoul2_shared.h"
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "icarus/GameInterface.h"
 #include "qcommon/timing.h"
 #include "NPCNav/navigator.h"
@@ -399,6 +399,17 @@ int GVM_BG_GetItemIndexByTag( int tag, int type ) {
 	VMSwap v( gvm );
 
 	return ge->BG_GetItemIndexByTag( tag, type );
+}
+
+// Not from OpenJK: a datagram of the voice chat that came in on the UDP port of the game (sv_voice.cpp), for
+// the relay of a module that says vs_voiceSharedGame 1. Any other module has no such export (g_public.h).
+// qfalse: there is no such module, or the datagram is none of a client of this server.
+qboolean GVM_VoiceDatagram( const netadr_t *from, const byte *data, int length ) {
+	if ( !gvm || gvm->isLegacy || !ge || !svs.gameStarted || sv.state != SS_GAME || !Cvar_VariableIntegerValue( "vs_voiceSharedGame" ) )
+		return qfalse;
+	VMSwap v( gvm );
+
+	return ge->ext.VoiceDatagram( from->ip, (unsigned short)BigShort( (short)from->port ), data, length );
 }
 
 //
@@ -1548,7 +1559,7 @@ static void SV_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 
 	char *tmp = re->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
 	if ( tmp )
-		strcpy( fillBuf, tmp );
+		Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 	else
 		fillBuf[0] = '\0';
 }
@@ -1743,7 +1754,7 @@ static qboolean SV_G2API_OverrideServer( void *serverInstance ) {
 static void SV_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
 	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
-	strcpy( fillBuf, tmp );
+	Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 }
 
 static void GVM_Cvar_Set( const char *var_name, const char *value ) {
@@ -1843,10 +1854,10 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case G_CVAR_VARIABLE_INTEGER_VALUE:
-		return Cvar_VariableIntegerValue( (const char *)VMA(1) );
+		return Cvar_VM_VariableIntegerValue( (const char *)VMA(1) );
 
 	case G_CVAR_VARIABLE_STRING_BUFFER:
-		Cvar_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
+		Cvar_VM_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
 		return 0;
 
 	case G_ARGC:
@@ -2822,8 +2833,8 @@ void SV_BindGame( void ) {
 		gi.Cvar_Register						= Cvar_Register;
 		gi.Cvar_Set								= GVM_Cvar_Set;
 		gi.Cvar_Update							= Cvar_Update;
-		gi.Cvar_VariableIntegerValue			= Cvar_VariableIntegerValue;
-		gi.Cvar_VariableStringBuffer			= Cvar_VariableStringBuffer;
+		gi.Cvar_VariableIntegerValue			= Cvar_VM_VariableIntegerValue;
+		gi.Cvar_VariableStringBuffer			= Cvar_VM_VariableStringBuffer;
 		gi.Argc									= Cmd_Argc;
 		gi.Argv									= Cmd_ArgvBuffer;
 		gi.FS_Close								= FS_FCloseFile;
@@ -3118,6 +3129,12 @@ void SV_BindGame( void ) {
 		gi.G2API_CleanEntAttachments			= SV_G2API_CleanEntAttachments;
 		gi.G2API_OverrideServer					= SV_G2API_OverrideServer;
 		gi.G2API_GetSurfaceName					= SV_G2API_GetSurfaceName;
+		gi.ext.SendDatagram						= SV_GameSendDatagram;
+		gi.ext.Cvar_Flags						= Cvar_Flags;
+		gi.ext.Cvar_UnusedList					= Cvar_UnusedList;
+
+		// VisionJK: how far ext goes, for the module (g_public.h)
+		Cvar_Get( "vs_gameImportExt", "2", CVAR_ROM, "How many of the imports of the game module that are not from OpenJK this engine has" );
 
 		GetGameAPI = (GetGameAPI_t)gvm->GetModuleAPI;
 		ret = GetGameAPI( GAME_API_VERSION, &gi );
@@ -3143,6 +3160,8 @@ void SV_UnbindGame( void ) {
 	GVM_ShutdownGame( qfalse );
 	VM_Free( gvm );
 	gvm = NULL;
+	// (the next module may be one without ext.VoiceDatagram)
+	Cvar_Set( "vs_voiceSharedGame", "0" );
 }
 
 void SV_RestartGame( void ) {

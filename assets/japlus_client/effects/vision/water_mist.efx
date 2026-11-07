@@ -1,0 +1,42 @@
+Particle
+{
+	name				mist
+
+	flags				useAlpha
+
+	count				1 2
+
+	life				400 700
+
+	velocity			10 -25 -25 40 25 25
+
+	gravity				-40 -80
+
+	rotation			0 360
+
+	rotationDelta		-30 30
+
+	rgb
+	{
+		start			0.55 0.6 0.65
+	}
+
+	alpha
+	{
+		start			0.08 0.14
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			4 6
+		end				12 18
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/vision/toys/snowpuff
+	]
+}

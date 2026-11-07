@@ -1,5 +1,6 @@
 #============================================================================
 # Copyright (C) 2013 - 2018, OpenJK contributors
+# Copyright (C) 2026, VisionJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -22,9 +23,9 @@ cmake_minimum_required(VERSION 3.1...3.31)
 # 11.0: the first macOS on Apple Silicon. 10.9 is older than any Mac the libraries of today still build for
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS deployment version")
 
-set(InOpenJK ON)
+set(InVisionJK ON)
 
-set(ProjectName "OpenJK" CACHE STRING "Project Name")
+set(ProjectName "VisionJK" CACHE STRING "Project Name")
 project(${ProjectName})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -36,43 +37,33 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 #=============================================================================
 option(BuildPortableVersion "Build portable version (does not read or write files from your user/home directory" OFF)
 
-option(BuildMPEngine "Whether to create projects for the MP client (openjk.exe)" ON)
-option(BuildMPRdVanilla "Whether to create projects for the MP default renderer (rd-vanilla_x86.dll)" ON)
-option(BuildMPDed "Whether to create projects for the MP dedicated server (openjkded.exe)" ON)
-option(BuildMPGame "Whether to create projects for the MP server-side gamecode (jampgamex86.dll)" ON)
-option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86.dll)" ON)
-option(BuildMPUI "Whether to create projects for the MP UI code (uix86.dll)" ON)
-option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it)" ON)
+option(BuildMPEngine "Whether to create projects for the MP client (visionjk.exe)" ON)
+option(BuildMPDed "Whether to create projects for the MP dedicated server (visionjkded.exe)" ON)
+option(BuildMPGame "Whether to create projects for the MP server-side gamecode (jampgamex86_64.dll)" ON)
+option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86_64.dll)" ON)
+option(BuildMPUI "Whether to create projects for the MP UI code (uix86_64.dll)" ON)
+option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it), and the MP server-side gamecode the boombox (Opus)" ON)
+option(BuildMasterServer "Whether to create projects for the masterserver (visionjk-master.exe): a small program of its own with the relay for servers without the MP server-side gamecode of this tree (voice chat, clan radio, statuses, boombox) and the reputation of game servers, for the hosts of VisionJK itself. Needs its private repository checked out at codemp/master. Never part of a release, it is not installed" OFF)
+set(UpdateURL "https://jka.vision/downloads/update" CACHE STRING "Where the MP client asks for a newer version of itself (docs/japlus/update.md)")
+set(UpdateVersion "" CACHE STRING "For a test of the updater: the version the MP client takes itself for, as a tag (v0.0.1). Empty: the tag the build was made from")
 option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files (needs Python 3)" ON)
-option(BuildMPRend2 "Whether to create projects for the EXPERIMENTAL MP rend2 renderer (rd-rend2_x86.dll)" ON)
-# macOS has no OpenGL that is still looked after. There the Vulkan renderer (on top of MoltenVK) is built
-# whenever what its build needs is installed: brew install vulkan-headers shaderc molten-vk
-set(BuildMPRdVulkanVisionDefault OFF)
-if(APPLE)
-	find_path(VulkanHeadersDir vulkan/vulkan.h HINTS /opt/homebrew/include /usr/local/include)
-	find_program(GLSLC glslc HINTS /opt/homebrew/bin /usr/local/bin)
-	if(VulkanHeadersDir AND GLSLC)
-		set(BuildMPRdVulkanVisionDefault ON)
-	else()
-		message(STATUS "rd-vulkan-vision is not built by default: no Vulkan headers or no glslc (brew install vulkan-headers shaderc molten-vk)")
-	endif()
-endif()
-option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86.dll)" ${BuildMPRdVulkanVisionDefault})
+option(BuildJPSpatialAudio "Whether the MP client can use Steam Audio for its sound (needs the submodule lib/steamaudio, the library is loaded at run time)" ON)
+option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86_64.dll, needs the Vulkan headers and glslc)" ON)
+option(BuildMPRdVisionGLES "Whether to also build rd-vulkan-vision with its OpenGL ES 3 device as a library for the desktop (rd-vision-gles_x86_64.dll). That device is what the client for the browser draws with, this library is for working on it with the tools of the desktop" OFF)
 
-option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.exe)" ON)
-option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86.dll)" ON)
-option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86.dll)" ON)
+option(BuildSPEngine "Whether to create projects for the SP engine (visionjk_sp.exe)" OFF)
+option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86_64.dll)" OFF)
+option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86_64.dll)" OFF)
 
 option(BuildJK2SPEngine "Whether to create projects for the jk2 SP engine (openjo_sp.exe)" OFF)
-option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86.dll)" OFF)
-option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (rdjosp-vanilla_x86.dll)" OFF)
+option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86_64.dll)" OFF)
+option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (rdjosp-vanilla_x86_64.dll)" OFF)
 
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 option(UseAddressSanitizer "Whether to enable runtime address sanitizer" OFF)
 option(UseUndefinedSanitizer "Whether to enable runtime Undefined Behavior sanitizer" OFF)
-
-include(CMakeDependentOption)
-cmake_dependent_option(BuildSymbolServer "Build WIP Windows Symbol Server (experimental and unused)" OFF "NOT WIN32 OR NOT MSVC" OFF)
+option(BuildDevHotpatch "Developer builds only, never a release: the MP engine and dedicated server put patches of the game, cgame and ui modules into them while they run (v_devHotpatch, tools/hotpatch.py), and the modules are built for that (symbols not hidden, room for a jump at the start of every function). Linux x86_64 with GCC" OFF)
+option(BuildDevIdsTest "Developer builds only, never a release: also the dedicated server visionjkded-idstest, which does on purpose what no server of the game does toward its clients (vs_idsTest), to run the intrusion detection of the client against it (tools/test/ids-test.sh). It is not installed" OFF)
 
 # Configure the use of bundled libraries.  By default, we assume the user is on
 # a platform that does not require any bundling.
@@ -80,14 +71,12 @@ cmake_dependent_option(BuildSymbolServer "Build WIP Windows Symbol Server (exper
 # Note that we always use the bundled copy of minizip, since it is modified to
 # use Z_Malloc.
 
-set(UseInternalOpenALDefault OFF)
 set(UseInternalZlibDefault   OFF)
 set(UseInternalPNGDefault    OFF)
 set(UseInternalJPEGDefault   OFF)
 set(UseInternalSDL2Default   OFF)
 
 if(UseInternalLibs OR WIN32)
-  set(UseInternalOpenALDefault ON)
   set(UseInternalZlibDefault   ON)
   set(UseInternalPNGDefault    ON)
   set(UseInternalJPEGDefault   ON)
@@ -99,7 +88,6 @@ if(APPLE)
   set(UseInternalPNGDefault  ON)
 endif()
 
-option(UseInternalOpenAL "If set, use bundled OpenAL."  ${UseInternalOpenALDefault})
 option(UseInternalZlib   "If set, use bundled zlib."    ${UseInternalZlibDefault})
 option(UseInternalPNG    "If set, use bundled libpng."  ${UseInternalPNGDefault})
 option(UseInternalJPEG   "If set, use bundled libjpeg." ${UseInternalJPEGDefault})
@@ -131,16 +119,22 @@ endif()
 #
 #=============================================================================
 # ${Architecture} must match ARCH_STRING in q_platform.h,
-# and is used in DLL names (jagamex86.dll, jagamex86.dylib, jagamei386.so).
-if(WIN32)
+# and is used in DLL names (jagamex86_64.dll, jagamex86_64.dylib, jagamex86_64.so).
+
+# This tree is built for 64 bit only. A toolchain file that forces the compiler leaves the size unset.
+# The one exception is the client for the browser: WebAssembly as Emscripten builds it has pointers of 4 bytes.
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
+	message(FATAL_ERROR "32 bit builds are not supported, use a 64 bit compiler")
+endif()
+
+if(EMSCRIPTEN)
+	# the toolchain of Emscripten calls the processor x86
+	set(X86 OFF)
+	set(Architecture "wasm32")
+elseif(WIN32)
 	set(X86 ON)
-	if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-		set(Architecture "x86_64")
-		set(WIN64 TRUE)
-	else()
-		set(Architecture "x86")
-		set(WIN64 FALSE)
-	endif()
+	set(Architecture "x86_64")
+	set(WIN64 TRUE)
 else()
 	set(X86 OFF)
 	if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
@@ -148,14 +142,6 @@ else()
 		add_definitions(-DPNG_ARM_NEON_OPT=0)
 	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
 		set(Architecture "arm")
-	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
-		set(X86 ON)
-		if(APPLE)
-			set(Architecture "x86")
-		else()
-			# e.g. Linux
-			set(Architecture "i386")
-		endif()
 	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^x86.64$")
 		set(X86 ON)
 		set(Architecture "x86_64")
@@ -179,21 +165,22 @@ endif()
 # Binary names
 #
 #=============================================================================
-set(SPEngine "openjk_sp.${Architecture}")
+set(SPEngine "visionjk_sp.${Architecture}")
 set(SPGame "jagame${Architecture}")
 set(SPRDVanillaRenderer "rdsp-vanilla_${Architecture}")
-set(MPEngine "openjk.${Architecture}")
-set(MPVanillaRenderer "rd-vanilla_${Architecture}")
-set(MPDed "openjkded.${Architecture}")
+set(MPEngine "visionjk.${Architecture}")
+set(MPDed "visionjkded.${Architecture}")
+set(MasterServer "visionjk-master.${Architecture}")
+set(IdsTestServer "visionjkded-idstest.${Architecture}")
 set(MPGame "jampgame${Architecture}")
 set(MPCGame "cgame${Architecture}")
 set(MPUI "ui${Architecture}")
-set(MPRend2 "rd-rend2_${Architecture}")
 set(MPVulkanVisionRenderer "rd-vulkan-vision_${Architecture}")
+set(MPVisionGLESRenderer "rd-vision-gles_${Architecture}")
 set(JK2SPEngine "openjo_sp.${Architecture}")
 set(JK2SPGame "jospgame${Architecture}")
 set(JK2SPVanillaRenderer "rdjosp-vanilla_${Architecture}")
-set(AssetsPk3 "openjk-${Architecture}.pk3")
+set(AssetsPk3 "visionjk-${Architecture}.pk3")
 # Library names
 set(MPBotLib "botlib")
 set(SharedLib "shared")
@@ -207,10 +194,15 @@ set(SPDir "${CMAKE_SOURCE_DIR}/code")
 set(MPDir "${CMAKE_SOURCE_DIR}/codemp")
 set(JK2SPDir "${CMAKE_SOURCE_DIR}/codeJK2")
 set(SharedDir ${CMAKE_SOURCE_DIR}/shared)
-set(OpenJKLibDir "${CMAKE_SOURCE_DIR}/lib")
-set(GSLIncludeDirectory "${OpenJKLibDir}/gsl-lite/include")
+set(VisionJKLibDir "${CMAKE_SOURCE_DIR}/lib")
+set(GSLIncludeDirectory "${VisionJKLibDir}/gsl-lite/include")
 
 include(InstallConfig)
+
+# The mod directory of the JA+ port. The three modules, the asset archives and the configs are installed into
+# it, so "cmake --install <build> --prefix <folder>" gives one complete game folder, <folder>/JediAcademy.
+set(JPAssetsDir "japlus" CACHE STRING "The mod directory the modules and the asset archives of assets/ are installed into")
+set(JPModInstallDir "${JKAInstallDir}/${JPAssetsDir}")
 
 #=============================================================================
 #
@@ -231,8 +223,22 @@ if (NOT WIN32 AND NOT APPLE)
 	set(SharedDefines ${SharedDefines} "ARCH_STRING=\"${Architecture}\"")
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "BSD")
+if(CMAKE_SYSTEM_NAME MATCHES "BSD" OR EMSCRIPTEN)
   add_definitions(-DIOAPI_NO_64)
+endif()
+
+if(EMSCRIPTEN)
+	# Com_Error() throws through the C code of the modules, libjpeg and libpng jump: both as WebAssembly does
+	# it natively, and the same in every object file. The engine is a main module and the game modules are
+	# side modules of it, so everything is position independent.
+	add_compile_options(-fwasm-exceptions -fPIC)
+	add_link_options(-fwasm-exceptions)
+	# zlib takes off_t for its file offsets only when it is told that unistd.h is there, and else long, which
+	# is half the size here. C++ files are told so by the compiler, C files are not: one answer for all.
+	add_definitions(-DZ_HAVE_UNISTD_H)
+	# A call through a function pointer of another type than the function works on the desktop and traps in
+	# WebAssembly, so the compiler should name such casts.
+	add_compile_options(-Wcast-function-type)
 endif()
 
 # Compiler settings
@@ -242,14 +248,13 @@ if(MSVC)
 	set(SharedDefines ${SharedDefines} "_SCL_SECURE_NO_WARNINGS")
 	set(SharedDefines ${SharedDefines} "_CRT_NONSTDC_NO_DEPRECATE")
 
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 	# We don't try to control symbol visibility under MSVC.
-	set(OPENJK_VISIBILITY_FLAGS "")
+	set(VISIONJK_VISIBILITY_FLAGS "")
+	set(VISIONJK_MODULE_FLAGS "")
 elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang"))
 	# I hope this doesn't come back to bite me in the butt later on.
 	# Realistically though, can the C and CXX compilers be different?
@@ -259,7 +264,7 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 	# ZLib explicitly declares symbols hidden, rather than defaulting to hidden.
 	#
 	# Note that -fvisibility=hidden is stronger than -fvisibility-inlines-hidden.
-	set(OPENJK_VISIBILITY_FLAGS "-fvisibility=hidden")
+	set(VISIONJK_VISIBILITY_FLAGS "-fvisibility=hidden")
 
 	# removes the -rdynamic flag at linking (which causes crashes for some reason)
 	set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
@@ -286,6 +291,24 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+
+	# The game, cgame and ui modules. For BuildDevHotpatch their symbols stay visible, so that a patch reaches
+	# the globals of the running module through its GOT, and every function starts with 16 bytes of nops for
+	# the jump to its new version. The -fno-ipa flags keep callers from relying on what they knew about a
+	# callee in the same file (registers it clobbers, its return values, its clones), which a patch changes.
+	if(BuildDevHotpatch)
+		if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND X86))
+			message(FATAL_ERROR "BuildDevHotpatch needs Linux x86_64 and GCC")
+		endif()
+		set(SharedDefines ${SharedDefines} "VISIONJK_HOTPATCH")
+		set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+		set(VISIONJK_MODULE_FLAGS -fpatchable-function-entry=16 -fno-ipa-ra -fno-ipa-cp-clone -fno-ipa-sra
+			-fno-ipa-icf -fno-ipa-vrp -fno-ipa-bit-cp -fno-ipa-pure-const -fno-ipa-reference -fno-ipa-modref
+			-fno-ipa-stack-alignment -fno-partial-inlining -fno-reorder-blocks-and-partition)
+		message(STATUS "BuildDevHotpatch is on: developer build, not for a release")
+	else()
+		set(VISIONJK_MODULE_FLAGS ${VISIONJK_VISIBILITY_FLAGS})
+	endif()
 
 	# enable somewhat modern C++
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -343,7 +366,7 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 			# the PE flags: data execution prevention and address space layout randomisation. No stack protector
 			# here: on mingw it would pull in libssp-0.dll, a new runtime file the modules must not depend on.
 			add_link_options(-Wl,--nxcompat -Wl,--dynamicbase)
-		else()
+		elseif(NOT EMSCRIPTEN)
 			# a canary on functions with buffers (the runtime is in libc, no new dependency), checked libc calls
 			# (needs optimisation, so only in the optimised configs), and a read-only GOT bound at start
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong")
@@ -387,21 +410,20 @@ else()
 	message(STATUS "SOURCE_DATE_EPOCH is set ($ENV{SOURCE_DATE_EPOCH}): SOURCE_DATE set to \"${SOURCE_DATE}\"")
 endif()
 
-# Current Git tag/version
-# ideally we would separate the hash suffix into its own variable, but sed is not available everywhere
-execute_process(
-	COMMAND "git" "describe" "--tag"
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	OUTPUT_VARIABLE GIT_TAG
-	RESULT_VARIABLE GIT_TAG_ERROR
-	OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(GIT_TAG_ERROR AND NOT GIT_TAG_ERROR EQUAL 0)
-	message(WARNING "Unable to determine Git tag")
-	set(GIT_TAG vUNKNOWN)
-endif()
+# Current Git tag/version, written now and again at every build (vjk_version), see cmake/GitVersion.cmake
+set(VERSION_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+set(VERSION_BINARY_DIR "${CMAKE_BINARY_DIR}")
+include(cmake/GitVersion.cmake)
 message(STATUS "Git tag is ${GIT_TAG}")
 
-configure_file(shared/qcommon/q_version.h.in shared/qcommon/q_version.h @ONLY)
+add_custom_target(vjk_version
+	COMMAND "${CMAKE_COMMAND}"
+		"-DVERSION_SOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DVERSION_BINARY_DIR=${CMAKE_BINARY_DIR}"
+		"-DSOURCE_DATE=${SOURCE_DATE}" "-DBUILD_PORTABLE=${BUILD_PORTABLE}"
+		-P "${CMAKE_SOURCE_DIR}/cmake/GitVersion.cmake"
+	BYPRODUCTS "${CMAKE_BINARY_DIR}/shared/qcommon/q_version.h"
+	COMMENT "Checking the Git tag"
+	VERBATIM)
 
 #=============================================================================
 
@@ -464,11 +486,24 @@ if(BuildJPAssets)
 	add_subdirectory(assets)
 endif()
 
-if(BuildSymbolServer)
-	add_subdirectory("tools/WinSymbol")
-endif()
-
 if(BuildTests)
 	enable_testing()
 	add_subdirectory("tests")
 endif()
+
+# every target with q_version.h among its sources waits for vjk_version, so it compiles with the current tag
+function(vjk_version_depends dir)
+	get_property(targets DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
+	foreach(target ${targets})
+		get_target_property(sources ${target} SOURCES)
+		list(FIND sources "${CMAKE_BINARY_DIR}/shared/qcommon/q_version.h" index)
+		if(NOT index EQUAL -1)
+			add_dependencies(${target} vjk_version)
+		endif()
+	endforeach()
+	get_property(subdirs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
+	foreach(subdir ${subdirs})
+		vjk_version_depends("${subdir}")
+	endforeach()
+endfunction()
+vjk_version_depends("${CMAKE_SOURCE_DIR}")

@@ -18,6 +18,41 @@ int Q_isprint( int c )
 	return ( 0 );
 }
 
+// a character that may stand in a log or on a console as it is: printable ASCII without the quote, the percent
+// sign and the caret of the colour codes (VisionJK)
+int Q_isLogChar( int c )
+{
+	return ( c >= ' ' && c < 127 && c != '"' && c != '%' && c != '^' );
+}
+
+// in copied to out for a terminal: control characters but the line break and the tab, DEL and the C1 controls in
+// UTF-8 (C2 80..C2 9F, the CSI among them) become a dot, so text from others can not move the cursor, clear the
+// screen or talk to the terminal. Stops before out is full, never inside such a pair. Returns the bytes of in
+// that were taken (VisionJK)
+int Q_TermSafe( char *out, int outSize, const char *in )
+{
+	const unsigned char	*s = (const unsigned char *)in;
+	int					n = 0;
+
+	if ( outSize < 1 )
+		return 0;
+	while ( *s && n < outSize - 1 )
+	{
+		if ( s[0] == 0xC2 && s[1] >= 0x80 && s[1] <= 0x9F )
+		{
+			out[n++] = '.';
+			s += 2;
+		}
+		else
+		{
+			out[n++] = ( ( *s < 0x20 && *s != '\n' && *s != '\t' ) || *s == 0x7F ) ? '.' : (char)*s;
+			s++;
+		}
+	}
+	out[n] = '\0';
+	return (int)( (const char *)s - in );
+}
+
 int Q_isprintext( int c )
 {
 	if ( c >= 0x20 && c <= 0x7E )
@@ -76,6 +111,42 @@ qboolean Q_isanumber( const char *s )
 qboolean Q_isintegral( float f )
 {
 	return (qboolean)( (int)f == f );
+}
+
+/*
+=================
+Q_ParseIPv4
+
+VisionJK: a strict IPv4 address, for what inet_pton was used for. No name is looked up, and none of what
+inet_addr also takes ("0", "1", "0x7f.1", "127.1") counts. The engine has winsock.h on Windows, which has no
+inet_pton.
+=================
+*/
+qboolean Q_ParseIPv4( const char *s, unsigned char out[4] )
+{
+	unsigned char	ip[4];
+	int				part;
+
+	for ( part = 0; part < 4; part++ ) {
+		int value = 0, digits = 0;
+
+		if ( part > 0 && *s++ != '.' ) {
+			return qfalse;
+		}
+		while ( *s >= '0' && *s <= '9' && digits < 4 ) {
+			value = value * 10 + ( *s++ - '0' );
+			digits++;
+		}
+		if ( !digits || digits > 3 || value > 255 ) {
+			return qfalse;
+		}
+		ip[part] = (unsigned char)value;
+	}
+	if ( *s ) {
+		return qfalse;
+	}
+	memcpy( out, ip, sizeof( ip ) );
+	return qtrue;
 }
 
 char* Q_strrchr( const char* string, int c )
@@ -210,6 +281,51 @@ void Q_strcat( char *dest, int size, const char *src ) {
 		return;
 	}
 	Q_strncpyz( dest + l1, src, size - l1 );
+}
+
+/*
+=============
+Q_StringEdExpand
+
+The text of a server with every "@@@REF" in it replaced by lookup( "REF" ), into out of outSize bytes. A
+reference ends at a blank, ':', '.' or a line break, which stays. A replacement that does not fit is left out,
+as Q_strcat leaves it, and the rest of the text is cut at the end of out. The three copies of this that the
+game had (CG_CheckSVStringEdRef and two in the engine) took the cut for the replacement only and went on
+writing the text after it past the buffer.
+=============
+*/
+void Q_StringEdExpand( char *out, int outSize, const char *in, const char *( *lookup )( const char *ref ) ) {
+	int i = 0, b = 0;
+
+	if ( outSize <= 0 ) {
+		return;
+	}
+	out[0] = '\0';
+	while ( in[i] && b < outSize - 1 ) {
+		if ( in[i] == '@' && in[i + 1] == '@' && in[i + 2] == '@' && in[i + 3] ) {
+			char	ref[1024];
+			int		r = 0;
+
+			while ( in[i] == '@' ) {
+				i++;
+			}
+			while ( in[i] && in[i] != ' ' && in[i] != ':' && in[i] != '.' && in[i] != '\n' ) {
+				if ( r < (int)sizeof( ref ) - 1 ) {
+					ref[r++] = in[i];
+				}
+				i++;
+			}
+			ref[r] = '\0';
+			out[b] = '\0';
+			Q_strcat( out, outSize, lookup( ref ) );
+			b = (int)strlen( out );
+			if ( !in[i] || b >= outSize - 1 ) {
+				break;
+			}
+		}
+		out[b++] = in[i++];
+	}
+	out[b] = '\0';
 }
 
 /*
@@ -420,6 +536,207 @@ const char *Q_strchrs( const char *string, const char *search )
 	}
 
 	return NULL;
+}
+
+/*
+===============================================================================
+
+UTF-8
+
+Text inside the client is UTF-8. Text of legacy clients and of the files of the game is Windows-1252, where a
+byte is a character. Q_UTF8_Decode() reads both, so a name or a chat line of a legacy client shows right without
+being converted first: a byte that starts no valid UTF-8 sequence is taken as Windows-1252.
+
+===============================================================================
+*/
+
+// 0x80 to 0x9F of Windows-1252. The rest of it is Latin-1: the code point is the byte.
+static const unsigned short cp1252High[32] = {
+	0x20AC, 0x0081, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x008D, 0x017D, 0x008F,
+	0x0090, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x009D, 0x017E, 0x0178
+};
+
+unsigned int Q_CP1252ToUnicode( int c ) {
+	c &= 255;
+	if ( c >= 0x80 && c <= 0x9F ) {
+		return cp1252High[c - 0x80];
+	}
+	return (unsigned int)c;
+}
+
+// the byte of a code point in Windows-1252, -1 when it has none
+int Q_UnicodeToCP1252( unsigned int codePoint ) {
+	int i;
+
+	if ( codePoint < 0x80 || ( codePoint >= 0xA0 && codePoint <= 0xFF ) ) {
+		return (int)codePoint;
+	}
+	for ( i = 0; i < 32; i++ ) {
+		if ( cp1252High[i] == codePoint ) {
+			return 0x80 + i;
+		}
+	}
+	return -1;
+}
+
+/*
+=============
+Q_UTF8_Decode
+
+The character at s. Returns the bytes it takes (1 to 4), 0 at the end of the string. A sequence that is too long
+for its value, a surrogate, a value above U+10FFFF and a byte that fits nowhere are no UTF-8: the byte is one
+character of Windows-1252 then.
+=============
+*/
+int Q_UTF8_Decode( const char *s, unsigned int *codePoint ) {
+	const unsigned char	*b = (const unsigned char *)s;
+	unsigned int		c = b[0];
+
+	if ( !c ) {
+		*codePoint = 0;
+		return 0;
+	}
+	if ( c < 0x80 ) {
+		*codePoint = c;
+		return 1;
+	}
+	if ( c >= 0xC2 && c <= 0xDF ) {
+		if ( ( b[1] & 0xC0 ) == 0x80 ) {
+			*codePoint = ( ( c & 0x1F ) << 6 ) | ( b[1] & 0x3F );
+			return 2;
+		}
+	} else if ( c >= 0xE0 && c <= 0xEF ) {
+		const unsigned int low = ( c == 0xE0 ) ? 0xA0 : 0x80;
+		const unsigned int high = ( c == 0xED ) ? 0x9F : 0xBF;
+
+		if ( b[1] >= low && b[1] <= high && ( b[2] & 0xC0 ) == 0x80 ) {
+			*codePoint = ( ( c & 0x0F ) << 12 ) | ( ( b[1] & 0x3F ) << 6 ) | ( b[2] & 0x3F );
+			return 3;
+		}
+	} else if ( c >= 0xF0 && c <= 0xF4 ) {
+		const unsigned int low = ( c == 0xF0 ) ? 0x90 : 0x80;
+		const unsigned int high = ( c == 0xF4 ) ? 0x8F : 0xBF;
+
+		if ( b[1] >= low && b[1] <= high && ( b[2] & 0xC0 ) == 0x80 && ( b[3] & 0xC0 ) == 0x80 ) {
+			*codePoint = ( ( c & 0x07 ) << 18 ) | ( ( b[1] & 0x3F ) << 12 ) | ( ( b[2] & 0x3F ) << 6 ) | ( b[3] & 0x3F );
+			return 4;
+		}
+	}
+	*codePoint = Q_CP1252ToUnicode( (int)c );
+	return 1;
+}
+
+// writes a code point as UTF-8 without a terminating zero, out has room for 4 bytes. Returns the bytes written.
+int Q_UTF8_Encode( unsigned int codePoint, char *out ) {
+	if ( codePoint < 0x80 ) {
+		out[0] = (char)codePoint;
+		return 1;
+	}
+	if ( codePoint < 0x800 ) {
+		out[0] = (char)( 0xC0 | ( codePoint >> 6 ) );
+		out[1] = (char)( 0x80 | ( codePoint & 0x3F ) );
+		return 2;
+	}
+	if ( codePoint > 0x10FFFF || ( codePoint >= 0xD800 && codePoint <= 0xDFFF ) ) {
+		codePoint = 0xFFFD;		// the replacement character
+	}
+	if ( codePoint < 0x10000 ) {
+		out[0] = (char)( 0xE0 | ( codePoint >> 12 ) );
+		out[1] = (char)( 0x80 | ( ( codePoint >> 6 ) & 0x3F ) );
+		out[2] = (char)( 0x80 | ( codePoint & 0x3F ) );
+		return 3;
+	}
+	out[0] = (char)( 0xF0 | ( codePoint >> 18 ) );
+	out[1] = (char)( 0x80 | ( ( codePoint >> 12 ) & 0x3F ) );
+	out[2] = (char)( 0x80 | ( ( codePoint >> 6 ) & 0x3F ) );
+	out[3] = (char)( 0x80 | ( codePoint & 0x3F ) );
+	return 4;
+}
+
+// the offset of the character that ends at offset, for a cursor that steps back
+int Q_UTF8_PrevChar( const char *string, int offset ) {
+	int pos = 0;
+
+	while ( pos < offset ) {
+		unsigned int	codePoint;
+		const int		len = Q_UTF8_Decode( string + pos, &codePoint );
+
+		if ( !len || pos + len >= offset ) {
+			break;
+		}
+		pos += len;
+	}
+	return pos;
+}
+
+// cuts a string to maxBytes at most, between two characters
+void Q_UTF8_Truncate( char *string, int maxBytes ) {
+	int pos = 0;
+
+	for ( ;; ) {
+		unsigned int	codePoint;
+		const int		len = Q_UTF8_Decode( string + pos, &codePoint );
+
+		if ( !len ) {
+			return;
+		}
+		if ( pos + len > maxBytes ) {
+			string[pos] = '\0';
+			return;
+		}
+		pos += len;
+	}
+}
+
+// Windows-1252 to UTF-8. A character that does not fit into out any more ends the copy.
+void Q_UTF8_FromCP1252( const char *in, char *out, int outSize ) {
+	int len = 0;
+
+	if ( outSize < 1 ) {
+		return;
+	}
+	for ( ; *in; in++ ) {
+		char		bytes[4];
+		const int	count = Q_UTF8_Encode( Q_CP1252ToUnicode( (unsigned char)*in ), bytes );
+		int			i;
+
+		if ( len + count >= outSize ) {
+			break;
+		}
+		for ( i = 0; i < count; i++ ) {
+			out[len++] = bytes[i];
+		}
+	}
+	out[len] = '\0';
+}
+
+/*
+=============
+Q_UTF8_ToCP1252
+
+UTF-8 (or a mix, see Q_UTF8_Decode) to Windows-1252, for a client that knows nothing else. What Windows-1252 does
+not have becomes a '?'.
+=============
+*/
+void Q_UTF8_ToCP1252( const char *in, char *out, int outSize ) {
+	int len = 0;
+
+	if ( outSize < 1 ) {
+		return;
+	}
+	while ( len < outSize - 1 ) {
+		unsigned int	codePoint;
+		const int		count = Q_UTF8_Decode( in, &codePoint );
+		int				c;
+
+		if ( !count ) {
+			break;
+		}
+		in += count;
+		c = Q_UnicodeToCP1252( codePoint );
+		out[len++] = (char)( c < 0 ? '?' : c );
+	}
+	out[len] = '\0';
 }
 
 #if defined(_MSC_VER)

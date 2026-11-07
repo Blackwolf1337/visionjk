@@ -662,7 +662,9 @@ char *C_MP3Stream_DecodeInit( LP_MP3STREAM pSFX_MP3Stream, void *pvSourceData, i
 
 // return value is decoded bytes for this packet, which is effectively a BOOL, NZ for not finished decoding yet...
 //
-unsigned int C_MP3Stream_Decode( LP_MP3STREAM pSFX_MP3Stream )
+// bFastForwarding is what the callers pass and what the header says (snd_mp3.h), it is not used. Without it
+// here the call does not fit the function, which a desktop forgives and WebAssembly does not.
+unsigned int C_MP3Stream_Decode( LP_MP3STREAM pSFX_MP3Stream, int bFastForwarding )
 {
 	unsigned int uiDecoded = 0;	// default to "finished"
 	IN_OUT	 x;

@@ -1,0 +1,618 @@
+// ingame_player2.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_player2.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_player2"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					192 60 1216 872
+		focusColor				0.36 0.78 0.96 1
+		style					WINDOW_STYLE_PANEL
+		descX					800
+		descY					900
+		descScale				1.1
+		descColor				0.56 0.64 0.74 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onOpen
+		{
+			uiScript "getcharcvars"
+			uiScript "character"
+			uiScript updateForceStatus
+			hide highlights
+		}
+		onClose
+		{
+			uiScript updateForceStatus
+			hide highlights
+		}
+		skin					1
+		disableColor			0.40 0.47 0.56 1
+		openSlide				8
+		backcolor				0.031 0.055 0.11 0.97
+		bordercolor				0.11 0.18 0.29 1
+		radius					6
+		shadow					14
+		descMiddle				1
+
+		itemDef
+		{
+			name					vision_strip
+			rect					0 0 1216 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_strip_line
+			rect					0 52 1216 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_to_profile
+			rect					18 0 160 52
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_NAME_MODEL_AND_TEAM_COLOUR
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open ingame_player ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_strip_here
+			rect					178 0 160 52
+			visible					1
+			text					@VISION_CHARACTER
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			flow					3
+			decoration
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_to_saber
+			rect					338 0 160 52
+			visible					1
+			text					@MENUS_LIGHTSABER_CAPS
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open ingame_saber ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_to_force
+			rect					498 0 160 52
+			visible					1
+			text					@MENUS_DP_FORCE
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_YOUR_FORCE_POWERS
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open ingame_playerforce ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+			group					yesforce
+		}
+
+		itemDef
+		{
+			name					vision_to_moves
+			rect					658 0 160 52
+			visible					1
+			text					@MENUS_MOVES
+			font					5
+			textscale				1.16
+			forecolor				0.56 0.64 0.74 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_THE_LIST_OF_MOVES
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open rulesMenu_moves ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				80
+			textaligny				15.56
+		}
+
+		itemDef
+		{
+			name					vision_left
+			rect					12 64 524 728
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					10.6
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_middle
+			rect					548 64 280 728
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.016 0.031 0.063 0.45
+			bordercolor				0.086 0.149 0.247 1
+			radius					10.6
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_right
+			rect					840 64 364 728
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.86
+			bordercolor				0.11 0.18 0.29 1
+			radius					10.6
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_glow
+			rect					588 736 200 24
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.36 0.78 0.96 0.07
+			radius					12
+			glowcolor				0.36 0.78 0.96 0.14
+			decoration
+		}
+
+		itemDef
+		{
+			name					speciesbut
+			group					none
+			text					@MENUS_SPECIES
+			descText				@MENUS_CHOOSE_SPECIES
+			type					ITEM_TYPE_MULTI
+			style					WINDOW_STYLE_EMPTY
+			rect					24 76 500 44
+			font					5
+			textscale				1.4
+			textstyle				0
+			forecolor				0.86 0.90 0.945 1
+			feeder					19
+			cvar					"ui_char_model"
+			cvarStrList				feeder
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+				uiScript "characterchanged"
+				uiScript "resetcharacterlistboxes"
+			}
+			row						3
+		}
+
+		itemDef
+		{
+			name					color
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			rect					28 128 492 44
+			forecolor				0.56 0.64 0.74 1
+			text					@MENUS_COLOR
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				18
+			font					5
+			textscale				1.08
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					color
+			rect					24 170 500 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.11 0.18 0.29 1
+			decoration
+			group					none
+		}
+
+		itemDef
+		{
+			name					colorbox
+			group					tints
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			64
+			elementheight			64
+			elementtype				1
+			feeder					23
+			horizontalscroll
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			rect					24 176 500 96
+			visible					1
+			action { play "sound/interface/choose_color.wav" }
+			radius					8
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			textscale				0.94
+		}
+
+		itemDef
+		{
+			name					barrerouge
+			group					tints2
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_RED
+			cvarfloat				"ui_char_color_red" 50 0 255
+			rect					24 284 500 44
+			font					5
+			textscale				1.4
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				"Red component in RGB colors"
+			action { play "sound/interface/button1" }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					barrevert
+			group					tints2
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_GREEN
+			cvarfloat				"ui_char_color_green" 50 0 255
+			rect					24 328 500 44
+			font					5
+			textscale				1.4
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				"Green component in RGB colors"
+			action { play "sound/interface/button1" }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					barrebleu
+			group					tints2
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLUE
+			cvarfloat				"ui_char_color_blue" 50 0 255
+			rect					24 372 500 44
+			font					5
+			textscale				1.4
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			descText				"Blue component in RGB colors"
+			action { play "sound/interface/button1" }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					appear
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			rect					856 76 332 44
+			forecolor				0.56 0.64 0.74 1
+			text					@MENUS_APPEARANCE
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				18
+			font					5
+			textscale				1.08
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					appear
+			rect					852 118 340 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.11 0.18 0.29 1
+			decoration
+			group					none
+		}
+
+		itemDef
+		{
+			name					headbut
+			group					none
+			text					@MENUS_HEAD
+			descText				@MENUS_SELECT_HEAD
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					852 124 113.34 44
+			font					5
+			textscale				1.16
+			textaligny				11.56
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				56.66
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+			tab						1
+			caps					1
+		}
+
+		itemDef
+		{
+			name					headlistbox
+			group					heads
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			144
+			elementheight			144
+			elementtype				1
+			feeder					20
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				-1
+			rect					852 180 340 600
+			visible					1
+			action
+			{
+				play "sound/interface/choose_head.wav"
+				uiScript "char_skin"
+			}
+			radius					6.4
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			textscale				0.94
+			page					1
+		}
+
+		itemDef
+		{
+			name					torsobut
+			group					none
+			text					@MENUS_TORSO
+			descText				@MENUS_SELECT_TORSO
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					965.34 124 113.34 44
+			font					5
+			textscale				1.16
+			textaligny				11.56
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				56.66
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+			tab						2
+			caps					1
+		}
+
+		itemDef
+		{
+			name					torsolistbox
+			group					torso
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			144
+			elementheight			144
+			elementtype				1
+			feeder					21
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				-1
+			rect					852 180 340 600
+			visible					1
+			action
+			{
+				play "sound/interface/choose_torso.wav"
+				uiScript "char_skin"
+			}
+			radius					6.4
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			textscale				0.94
+			page					2
+		}
+
+		itemDef
+		{
+			name					legsbut
+			group					none
+			text					@MENUS_LEGS
+			descText				@MENUS_SELECT_LEGS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					1078.66 124 113.34 44
+			font					5
+			textscale				1.16
+			textaligny				11.56
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				56.66
+			forecolor				0.56 0.64 0.74 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+			tab						3
+			caps					1
+		}
+
+		itemDef
+		{
+			name					lowerlistbox
+			group					lower
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			144
+			elementheight			144
+			elementtype				1
+			feeder					22
+			backcolor				0.027 0.051 0.102 0.9
+			bordercolor				0.086 0.149 0.247 1
+			forecolor				-1
+			rect					852 180 340 600
+			visible					1
+			action
+			{
+				play "sound/interface/choose_head.wav"
+				uiScript "char_skin"
+			}
+			radius					6.4
+			outlinecolor			0.36 0.78 0.96 0.22
+			font					5
+			textscale				0.94
+			page					3
+		}
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 808 1216 64
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 808 1216 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					backmenu_button
+			text					@MENUS_BACK
+			descText				@MENUS_RETURN_PREVIOUS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					18 808 144 64
+			font					5
+			textscale				1.2
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				72
+			textaligny				21.2
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			action
+			{
+				play "sound/interface/esc.wav" ;
+				close ingame_player2 ;
+				open ingame_player ;
+			}
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					applycurrent
+			group					"playerapply"
+			text					@MENUS_APPLY
+			type					1
+			style					WINDOW_STYLE_PANEL
+			rect					928 820 264 40
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				132
+			textaligny				9.2
+			font					5
+			textscale				1.2
+			forecolor				0.016 0.071 0.122 1
+			descText				@MENUS_APPLY_CHANGES_AND_JOIN
+			visible					1
+			action
+			{
+				play "sound/interface/button1"
+				uiScript "updatecharmodel"
+				hide highlights
+				close ingame_player2
+				open ingame_player
+			}
+			caps					1
+			backcolor				0.36 0.78 0.96 1
+			bordercolor				0.36 0.78 0.96 1
+			radius					6.4
+		}
+
+		itemDef
+		{
+			name					character
+			group					models
+			type					ITEM_TYPE_MODEL
+			rect					552 76 272 688
+			model_g2anim			"BOTH_WALK1"
+			asset_model				"ui_char_model"
+			model_angle				180
+			model_g2mins			-30 -15 -14
+			model_g2maxs			20 15 30
+			model_rotation			50
+			model_fovx				50
+			model_fovy				50
+			isCharacter				1
+			visible					1
+			decoration
+		}
+		canvas					1600 1200
+	}
+}

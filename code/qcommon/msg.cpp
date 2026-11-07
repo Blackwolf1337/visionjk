@@ -136,7 +136,8 @@ void MSG_WriteBits( msg_t *msg, int value, int bits ) {
 		} else {
 			int	r;
 
-			r = 1 << (bits-1);
+			// bits is negative here, a signed value of -bits bits
+			r = 1 << ( -bits - 1 );
 
 			if ( value >  r - 1 || value < -r ) {
 				overflows++;

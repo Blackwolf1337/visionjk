@@ -1,0 +1,2922 @@
+// The texts the menus of VisionJK add to the game. Made by tools/menus/build.py from tools/menus/texts.py:
+// change that file, not this one.
+//
+VERSION             "1"
+CONFIG              "W:\bin\stringed.cfg"
+FILENOTES           "Menus of VisionJK"
+
+REFERENCE           BROWSE_SERVERS_AND_JUMP_IN
+LANG_ENGLISH        "Browse servers and jump in"
+LANG_GERMAN         "Server durchsuchen und einsteigen"
+
+REFERENCE           HOST_A_SERVER_FOR_OTHERS
+LANG_ENGLISH        "Host a server for others"
+LANG_GERMAN         "Einen Server für andere hosten"
+
+REFERENCE           PLAY_AGAINST_BOTS
+LANG_ENGLISH        "Play against bots"
+LANG_GERMAN         "Gegen Bots spielen"
+
+REFERENCE           WATCH_A_RECORDED_GAME
+LANG_ENGLISH        "Watch a recorded game"
+LANG_GERMAN         "Ein aufgezeichnetes Spiel ansehen"
+
+REFERENCE           GAME_TYPES_FORCE_WEAPONS
+LANG_ENGLISH        "Game types, force, weapons"
+LANG_GERMAN         "Spielmodi, Macht, Waffen"
+
+REFERENCE           EDIT_PROFILE
+LANG_ENGLISH        "Edit profile"
+LANG_GERMAN         "Profil bearbeiten"
+
+REFERENCE           VIEW_BOTS_ONLY
+LANG_ENGLISH        "View Bots Only:"
+LANG_GERMAN         "Nur Bots zeigen:"
+
+REFERENCE           INCLUDE_SERVERS_ON_WHICH_ONLY_BOTS_P
+LANG_ENGLISH        "Include servers on which only bots play"
+LANG_GERMAN         "Server einbeziehen, auf denen nur Bots spielen"
+
+REFERENCE           DOUBLE_CLICK_A_SERVER_TO_JOIN
+LANG_ENGLISH        "Double-click a server to join"
+LANG_GERMAN         "Doppelklick auf einen Server zum Beitreten"
+
+REFERENCE           CHARACTER
+LANG_ENGLISH        "Character"
+LANG_GERMAN         "Charakter"
+
+REFERENCE           STYLE
+LANG_ENGLISH        "Style"
+LANG_GERMAN         "Stil"
+
+REFERENCE           HILT
+LANG_ENGLISH        "Hilt"
+LANG_GERMAN         "Griff"
+
+REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
+LANG_ENGLISH        "Name, model and team colour."
+LANG_GERMAN         "Name, Modell und Teamfarbe."
+
+REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+LANG_ENGLISH        "Hilt and blade of your lightsaber."
+LANG_GERMAN         "Griff und Klinge deines Lichtschwerts."
+
+REFERENCE           RED
+LANG_ENGLISH        "Red"
+LANG_GERMAN         "Rot"
+
+REFERENCE           GREEN
+LANG_ENGLISH        "Green"
+LANG_GERMAN         "Grün"
+
+REFERENCE           BLUE
+LANG_ENGLISH        "Blue"
+LANG_GERMAN         "Blau"
+
+REFERENCE           SEARCH_ACTIONS_OR_KEYS
+LANG_ENGLISH        "Search actions or keys"
+LANG_GERMAN         "Aktionen oder Tasten suchen"
+
+REFERENCE           SHOWS_THE_ACTIONS_OF_ALL_PAGES_WHOSE
+LANG_ENGLISH        "Shows the actions of all pages whose name or key has these words."
+LANG_GERMAN         "Zeigt die Aktionen aller Seiten, deren Name oder Taste diese Wörter enthält."
+
+REFERENCE           SEARCH
+LANG_ENGLISH        "Search"
+LANG_GERMAN         "Suchen"
+
+REFERENCE           GRAPPLE_HOOK
+LANG_ENGLISH        "Grapple Hook"
+LANG_GERMAN         "Enterhaken"
+
+REFERENCE           A_HOOK_ON_A_ROPE_THAT_PULLS_YOU_TO_W
+LANG_ENGLISH        "A hook on a rope that pulls you to where it hits."
+LANG_GERMAN         "Ein Haken am Seil, der dich dorthin zieht, wo er trifft."
+
+REFERENCE           JETPACK
+LANG_ENGLISH        "Jetpack"
+LANG_GERMAN         "#same"
+
+REFERENCE           TURNS_THE_JETPACK_ON_AND_OFF
+LANG_ENGLISH        "Turns the jetpack on and off."
+LANG_GERMAN         "Schaltet das Jetpack ein und aus."
+
+REFERENCE           FULL_FORCE_DUEL
+LANG_ENGLISH        "Full Force Duel"
+LANG_GERMAN         "Duell mit allen Kräften"
+
+REFERENCE           CHALLENGES_TO_A_DUEL_WITH_EVERY_FORC
+LANG_ENGLISH        "Challenges to a duel with every force power that is allowed."
+LANG_GERMAN         "Fordert zu einem Duell mit allen erlaubten Machtkräften heraus."
+
+REFERENCE           MESSAGE_MENU
+LANG_ENGLISH        "Message Menu"
+LANG_GERMAN         "Nachrichtenmenü"
+
+REFERENCE           A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
+LANG_ENGLISH        "A menu for clan chat, private and admin messages."
+LANG_GERMAN         "Ein Menü für Clan-Chat sowie private und Admin-Nachrichten."
+
+REFERENCE           VOICE_CHAT_TALK
+LANG_ENGLISH        "Voice Chat (Talk)"
+LANG_GERMAN         "Sprachchat (Sprechen)"
+
+REFERENCE           HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
+LANG_ENGLISH        "Hold to talk in the voice chat (push to talk)."
+LANG_GERMAN         "Gedrückt halten, um im Sprachchat zu sprechen (Push-to-Talk)."
+
+REFERENCE           CLAN_RADIO_TALK
+LANG_ENGLISH        "Clan Radio (Talk)"
+LANG_GERMAN         "Clan-Funk (Sprechen)"
+
+REFERENCE           HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
+LANG_ENGLISH        "Hold to talk to your clan over the radio, wherever they are."
+LANG_GERMAN         "Gedrückt halten, um über Funk mit deinem Clan zu sprechen, egal wo er ist."
+
+REFERENCE           FREE_THE_MOUSE_SELECT_PLAYERS
+LANG_ENGLISH        "Free the Mouse (Select Players)"
+LANG_GERMAN         "Maus freigeben (Spieler auswählen)"
+
+REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
+LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
+LANG_GERMAN         "Gedrückt halten, um mit der Maus auf Spieler zu zeigen: Ein Klick zeigt, was du mit ihnen tun kannst."
+
+REFERENCE           QUICK_WHEEL_BOOMBOX
+LANG_ENGLISH        "Quick Wheel (Boombox)"
+LANG_GERMAN         "Schnellrad (Boombox)"
+
+REFERENCE           HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
+LANG_ENGLISH        "Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice."
+LANG_GERMAN         "Gedrückt halten für ein Rad: Boombox oder Soundanlage aufstellen oder die bedienen, auf die du schaust. Zum Auswählen loslassen."
+
+REFERENCE           SCOREBOARD_WITH_MOUSE
+LANG_ENGLISH        "Scoreboard with Mouse"
+LANG_GERMAN         "Scoreboard mit Maus"
+
+REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
+LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
+LANG_GERMAN         "Öffnet das Scoreboard mit freier Maus: Ein Klick auf eine Zeile zeigt, was du mit dem Spieler tun kannst."
+
+REFERENCE           COMMAND_MENU
+LANG_ENGLISH        "Command Menu"
+LANG_GERMAN         "Befehlsmenü"
+
+REFERENCE           OPENS_LISTS_OF_WHAT_VISIONJK_CAN_DO
+LANG_ENGLISH        "Opens lists of what VisionJK can do, from the boombox to emotes and votes: a number key or a click picks one."
+LANG_GERMAN         "Öffnet Listen mit dem, was VisionJK kann, von der Boombox bis zu Gesten und Abstimmungen: Eine Zifferntaste oder ein Klick wählt aus."
+
+REFERENCE           TOOL_WINDOW_SANDBOX
+LANG_ENGLISH        "Tool Window (Sandbox)"
+LANG_GERMAN         "Werkzeugfenster (Sandbox)"
+
+REFERENCE           OPENS_THE_TOOLGUN_WINDOW_AFTER_AMSAN
+LANG_ENGLISH        "Opens the toolgun window (after amsandbox): pick a tool and set its colour, material or properties."
+LANG_GERMAN         "Öffnet das Fenster der Toolgun (nach amsandbox): Werkzeug wählen und Farbe, Material oder Eigenschaften einstellen."
+
+REFERENCE           MODEL_STORE
+LANG_ENGLISH        "Model Store"
+LANG_GERMAN         "Modell-Store"
+
+REFERENCE           OPENS_THE_MODEL_STORE_OF_JKA_VISION
+LANG_ENGLISH        "Opens the model store of jka.vision: get player models others uploaded, and use them at once."
+LANG_GERMAN         "Öffnet den Modell-Store von jka.vision: hole Spielermodelle, die andere hochgeladen haben, und nutze sie sofort."
+
+REFERENCE           THROW_SNOWBALL
+LANG_ENGLISH        "Throw Snowball"
+LANG_GERMAN         "Schneeball werfen"
+
+REFERENCE           HOLD_TO_WIND_UP_LET_GO_TO_THROW_THE
+LANG_ENGLISH        "Hold to wind up, let go to throw: the longer you hold, the further it flies. Only players of VisionJK see it."
+LANG_GERMAN         "Halten zum Ausholen, loslassen zum Werfen: je länger du hältst, desto weiter fliegt er. Nur Spieler von VisionJK sehen ihn."
+
+REFERENCE           WATER_GUN
+LANG_ENGLISH        "Water Gun"
+LANG_GERMAN         "Wasserpistole"
+
+REFERENCE           HOLD_TO_SPRAY_WATER_WHERE_YOU_LOOK_I
+LANG_ENGLISH        "Hold to spray water where you look: it splashes, leaves puddles that dry, and who is hit sees drops run down the view. Only players of VisionJK see it."
+LANG_GERMAN         "Halten, um Wasser dorthin zu spritzen, wohin du schaust: es spritzt, hinterlässt Pfützen, die trocknen, und wer getroffen wird, sieht Tropfen über die Sicht laufen. Nur Spieler von VisionJK sehen es."
+
+REFERENCE           RC_CAR
+LANG_ENGLISH        "RC Car"
+LANG_GERMAN         "RC-Auto"
+
+REFERENCE           PUTS_A_REMOTE_CONTROLLED_DROID_IN_FR
+LANG_ENGLISH        "Puts a remote controlled droid in front of you and you drive it: W and S drive, A and D steer, Space hops, the mouse looks, Esc puts it away. Only players of VisionJK see it."
+LANG_GERMAN         "Setzt einen ferngesteuerten Droiden vor dich und du fährst ihn: W und S fahren, A und D lenken, Leertaste hüpft, die Maus schaut, Esc räumt ihn weg. Nur Spieler von VisionJK sehen ihn."
+
+REFERENCE           SPRAY
+LANG_ENGLISH        "Spray"
+LANG_GERMAN         "#same"
+
+REFERENCE           PUTS_YOUR_PICTURE_ON_THE_WALL_YOU_LO
+LANG_ENGLISH        "Puts your picture on the wall you look at. Choose it with v_sprayImage: an emoji of the chat such as heart, or your own png, jpg, tga or animated gif from the sprays folder. Only players of VisionJK see it."
+LANG_GERMAN         "Bringt dein Bild auf die Wand, die du ansiehst. Wähle es mit v_sprayImage: ein Emoji des Chats wie heart oder dein eigenes png, jpg, tga oder animiertes gif aus dem Ordner sprays. Nur Spieler von VisionJK sehen es."
+
+REFERENCE           SEND_EMOJI
+LANG_ENGLISH        "Send Emoji"
+LANG_GERMAN         "Emoji senden"
+
+REFERENCE           SENDS_THE_EMOJI_OF_V_EMOTEIMAGE_TO_T
+LANG_ENGLISH        "Sends the emoji of v_emoteImage to the player under your crosshair: it flies to their head and pops above it. It can be a chat emoji (such as laughing) or an interactive one made on jka.vision. Only players of VisionJK see it."
+LANG_GERMAN         "Sendet das Emoji aus v_emoteImage an den Spieler unter deinem Fadenkreuz: Es fliegt zu seinem Kopf und platzt darüber auf. Das kann ein Chat-Emoji (zum Beispiel laughing) oder ein interaktives von jka.vision sein. Nur Spieler von VisionJK sehen es."
+
+REFERENCE           TABLE_TENNIS
+LANG_ENGLISH        "Table Tennis"
+LANG_GERMAN         "Tischtennis"
+
+REFERENCE           PUTS_A_TABLE_TENNIS_TABLE_IN_FRONT_O
+LANG_ENGLISH        "Puts a table tennis table in front of you and you play from its near end: the mouse moves the paddle, a click serves, Esc leaves. A player who stands at the far end and uses it there plays against you. Only players of VisionJK see it."
+LANG_GERMAN         "Stellt einen Tischtennistisch vor dich und du spielst vom nahen Ende aus: die Maus bewegt den Schläger, ein Klick schlägt auf, Esc verlässt das Spiel. Wer am anderen Ende steht und es dort benutzt, spielt gegen dich. Nur Spieler von VisionJK sehen es."
+
+REFERENCE           TENNIS
+LANG_ENGLISH        "Tennis"
+LANG_GERMAN         "#same"
+
+REFERENCE           PUTS_A_TENNIS_COURT_ON_THE_FLOOR_IN
+LANG_ENGLISH        "Puts a tennis court on the floor in front of you and you play on your half: you run with the movement keys, the racket hits the ball by itself toward where you look, Use serves. A player who stands on the far half and uses it there plays against you. Only players of VisionJK see it."
+LANG_GERMAN         "Stellt einen Tennisplatz vor dich auf den Boden und du spielst auf deiner Hälfte: du läufst mit den Bewegungstasten, der Schläger trifft den Ball von selbst in die Richtung, in die du schaust, mit Benutzen schlägst du auf. Wer auf der anderen Hälfte steht und es dort benutzt, spielt gegen dich. Nur Spieler von VisionJK sehen es."
+
+REFERENCE           DRAWING_BOARD
+LANG_ENGLISH        "Drawing Board"
+LANG_GERMAN         "Zeichentafel"
+
+REFERENCE           OPENS_THE_DRAWING_BOARD_PAINT_A_SMAL
+LANG_ENGLISH        "Opens the drawing board: paint a small picture with the mouse (32 colours) or bring in a picture file, and hold it up in front of you or over your head, or put it away. Only players of VisionJK see it."
+LANG_GERMAN         "Öffnet die Zeichentafel: male mit der Maus ein kleines Bild (32 Farben) oder hole eine Bilddatei hinein, und halte es vor dich oder über deinen Kopf, oder stelle sie weg. Nur Spieler von VisionJK sehen es."
+
+REFERENCE           PHOTO_MODE
+LANG_ENGLISH        "Photo Mode"
+LANG_GERMAN         "Fotomodus"
+
+REFERENCE           THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
+LANG_ENGLISH        "The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves."
+LANG_GERMAN         "Die Kamera kreist für ein Foto um dich: Maus dreht, Rad verschiebt, rechte Taste knipst, Esc beendet."
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH
+LANG_ENGLISH        "The keys you move with."
+LANG_GERMAN         "Tasten für die Bewegung."
+
+REFERENCE           ACTION
+LANG_ENGLISH        "Action"
+LANG_GERMAN         "Aktion"
+
+REFERENCE           KEY
+LANG_ENGLISH        "Key"
+LANG_GERMAN         "Taste"
+
+REFERENCE           SECOND_KEY
+LANG_ENGLISH        "Second key"
+LANG_GERMAN         "Zweite Taste"
+
+REFERENCE           ATTACK_USE_AND_LOOK
+LANG_ENGLISH        "Attack, use and look."
+LANG_GERMAN         "Angreifen, benutzen und umsehen."
+
+REFERENCE           THE_KEYS_OF_THE_WEAPONS
+LANG_ENGLISH        "The keys of the weapons."
+LANG_GERMAN         "Tasten für die Waffen."
+
+REFERENCE           FORCE_POWERS
+LANG_ENGLISH        "Force Powers"
+LANG_GERMAN         "Machtkräfte"
+
+REFERENCE           THE_KEYS_OF_THE_FORCE_POWERS
+LANG_ENGLISH        "The keys of the force powers."
+LANG_GERMAN         "Tasten für die Machtkräfte."
+
+REFERENCE           MOUSE_AND_JOYSTICK
+LANG_ENGLISH        "Mouse and joystick."
+LANG_GERMAN         "Maus und Joystick."
+
+REFERENCE           CHAT_SCORES_AND_GESTURES
+LANG_ENGLISH        "Chat, scores and gestures."
+LANG_GERMAN         "Chat, Punktestand und Gesten."
+
+REFERENCE           EXTRAS
+LANG_ENGLISH        "Extras"
+LANG_GERMAN         "#same"
+
+REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
+LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
+LANG_GERMAN         "Tasten für die Extras von VisionJK und JA+."
+
+REFERENCE           CLICK_A_KEY_THEN_PRESS_THE_NEW_ONE_B
+LANG_ENGLISH        "Click a key, then press the new one. Backspace clears it, Esc keeps the old key."
+LANG_GERMAN         "Klicke eine Taste, dann drücke die neue. Rücktaste löscht sie, Esc behält die alte Taste."
+
+REFERENCE           GIVES_EVERY_ACTION_THE_KEYS_IT_HAS_I
+LANG_ENGLISH        "Gives every action the keys it has in the defaults of the game. Other binds stay."
+LANG_GERMAN         "Gibt jeder Aktion die Tasten der Spielstandards. Andere Belegungen bleiben."
+
+REFERENCE           KEYS_ARE_SAVED_AS_SOON_AS_YOU_SET_TH
+LANG_ENGLISH        "Keys are saved as soon as you set them"
+LANG_GERMAN         "Tasten werden gespeichert, sobald du sie setzt"
+
+REFERENCE           SEARCH_ALL_SETTINGS
+LANG_ENGLISH        "Search all settings"
+LANG_GERMAN         "Alle Einstellungen durchsuchen"
+
+REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
+LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
+LANG_GERMAN         "Zeigt die Einstellungen aller Seiten, in deren Name oder Beschreibung diese Wörter vorkommen."
+
+REFERENCE           DISPLAY_MODE
+LANG_ENGLISH        "Display Mode"
+LANG_GERMAN         "Anzeigemodus"
+
+REFERENCE           A_WINDOW_THE_WHOLE_SCREEN_OR_A_WINDO
+LANG_ENGLISH        "A window, the whole screen, or a window without a border."
+LANG_GERMAN         "Fenster, Vollbild oder Fenster ohne Rahmen."
+
+REFERENCE           WINDOW
+LANG_ENGLISH        "Window"
+LANG_GERMAN         "Fenster"
+
+REFERENCE           FULLSCREEN
+LANG_ENGLISH        "Fullscreen"
+LANG_GERMAN         "Vollbild"
+
+REFERENCE           BORDERLESS
+LANG_ENGLISH        "Borderless"
+LANG_GERMAN         "Rahmenlos"
+
+REFERENCE           ANTI_ALIASING
+LANG_ENGLISH        "Anti-Aliasing"
+LANG_GERMAN         "Kantenglättung"
+
+REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
+LANG_ENGLISH        "Smooths the edges, costs speed."
+LANG_GERMAN         "Glättet Kanten, kostet Leistung."
+
+REFERENCE           FRAME_LIMIT
+LANG_ENGLISH        "Frame Limit"
+LANG_GERMAN         "FPS-Limit"
+
+REFERENCE           THE_MOST_FRAMES_A_SECOND_THE_GAME_DR
+LANG_ENGLISH        "The most frames a second the game draws."
+LANG_GERMAN         "Maximale Bilder pro Sekunde."
+
+REFERENCE           NONE
+LANG_ENGLISH        "None"
+LANG_GERMAN         "Keine"
+
+REFERENCE           DYNAMIC_GLOW
+LANG_ENGLISH        "Dynamic Glow"
+LANG_GERMAN         "Dynamisches Leuchten"
+
+REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
+LANG_ENGLISH        "Lightsabers and lights glow."
+LANG_GERMAN         "Lichtschwerter und Lichtquellen leuchten."
+
+REFERENCE           BLOOM
+LANG_ENGLISH        "Bloom"
+LANG_GERMAN         "#same"
+
+REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
+LANG_ENGLISH        "Bright parts of the level shine over their surroundings."
+LANG_GERMAN         "Helle Stellen des Levels strahlen auf ihre Umgebung aus."
+
+REFERENCE           BLOOM_STRENGTH
+LANG_ENGLISH        "Bloom Strength"
+LANG_GERMAN         "Bloom-Stärke"
+
+REFERENCE           HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
+LANG_ENGLISH        "How strongly the bright parts shine."
+LANG_GERMAN         "Wie stark die hellen Stellen strahlen."
+
+REFERENCE           BLOOM_THRESHOLD
+LANG_ENGLISH        "Bloom Threshold"
+LANG_GERMAN         "Bloom-Schwelle"
+
+REFERENCE           HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
+LANG_ENGLISH        "How bright a part has to be to shine."
+LANG_GERMAN         "Wie hell eine Stelle sein muss, um zu strahlen."
+
+REFERENCE           SCREEN_EFFECTS
+LANG_ENGLISH        "Screen Effects"
+LANG_GERMAN         "Bildschirmeffekte"
+
+REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+LANG_ENGLISH        "Master switch for all screen effects."
+LANG_GERMAN         "Hauptschalter für alle Bildschirmeffekte."
+
+REFERENCE           EXPLOSION_WAVES
+LANG_ENGLISH        "Explosion Waves"
+LANG_GERMAN         "Explosionswellen"
+
+REFERENCE           EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+LANG_ENGLISH        "Explosions send a wave through the air that bends the picture. Close by, the colours split."
+LANG_GERMAN         "Explosionen schicken eine Welle durch die Luft, die das Bild verbiegt. In der Nähe spalten sich die Farben."
+
+REFERENCE           RINGING_EARS
+LANG_ENGLISH        "Ringing Ears"
+LANG_GERMAN         "Ohrenklingeln"
+
+REFERENCE           AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
+LANG_ENGLISH        "After an explosion close by the sound turns dull and your ears ring for a moment."
+LANG_GERMAN         "Nach einer Explosion in der Nähe wird der Ton dumpf und deine Ohren klingeln kurz."
+
+REFERENCE           HEAT_HAZE
+LANG_ENGLISH        "Heat Haze"
+LANG_GERMAN         "Hitzeflimmern"
+
+REFERENCE           THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+LANG_ENGLISH        "The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes."
+LANG_GERMAN         "Die Luft flimmert über Jetpack-Flammen, dem Flammenwerfer und dem Lauf deines Repetierers oder Blasters nach einer langen Salve, der dann auch raucht."
+
+REFERENCE           HIT_FEEDBACK
+LANG_ENGLISH        "Hit Feedback"
+LANG_GERMAN         "Trefferrückmeldung"
+
+REFERENCE           A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+LANG_ENGLISH        "A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays."
+LANG_GERMAN         "Ein roter Rand zeigt die Seite, von der ein Treffer kommt, und die Farben spalten sich kurz. Unter 30 Leben verblassen die Farben und ein Herzschlag ertönt."
+
+REFERENCE           UNDER_WATER
+LANG_ENGLISH        "Under Water"
+LANG_GERMAN         "Unter Wasser"
+
+REFERENCE           UNDER_WATER_THE_PICTURE_SWAYS_FADES
+LANG_ENGLISH        "Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface."
+LANG_GERMAN         "Unter Wasser schwankt das Bild, nimmt die Farbe des Wassers an und Licht spielt auf dem Boden. Der Ton ist gedämpft. Nach dem Auftauchen laufen Tropfen über das Bild."
+
+REFERENCE           FORCE_LOOKS
+LANG_ENGLISH        "Force Looks"
+LANG_GERMAN         "Macht-Optik"
+
+REFERENCE           LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+LANG_ENGLISH        "Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound."
+LANG_GERMAN         "Optik für die Machtkräfte. Wut: dunkelroter Tunnel, Adern und ein leises Summen. Schutz: eine Energiekuppel. Absorbieren: blaue Ströme, die eingesogen werden. Tempo: Unschärfe zur Mitte hin. Stoßen und Ziehen: eine Welle durch die Luft. Machtsicht: eine Geisterwelt mit Nebel, Spieler als rauchende Geister und ein traumhafter Klang."
+
+REFERENCE           SABER_CLASH_AND_HEAT
+LANG_ENGLISH        "Saber Clash and Heat"
+LANG_GERMAN         "Klingenschlag und Hitze"
+
+REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
+LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
+LANG_GERMAN         "Aufeinandertreffende Klingen blitzen auf. Die Luft um eine eingeschaltete Klinge ist heiß."
+
+REFERENCE           SOUND_IN_THE_BACKGROUND
+LANG_ENGLISH        "Sound in the Background"
+LANG_GERMAN         "Ton im Hintergrund"
+
+REFERENCE           THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
+LANG_ENGLISH        "The game goes on playing its sound while it is not in front or is minimized."
+LANG_GERMAN         "Das Spiel spielt den Ton weiter, wenn es im Hintergrund läuft oder minimiert ist."
+
+REFERENCE           3D_SOUND
+LANG_ENGLISH        "3D Sound"
+LANG_GERMAN         "3D-Sound"
+
+REFERENCE           STEAM_AUDIO_SOUND_THAT_KNOWS_THE_LEV
+LANG_ENGLISH        "Steam Audio: sound that knows the level. Needs its library next to the game."
+LANG_GERMAN         "Steam Audio: Klang, der die Umgebung kennt. Die Bibliothek muss im Spielordner liegen."
+
+REFERENCE           OUTPUT
+LANG_ENGLISH        "Output"
+LANG_GERMAN         "Ausgabe"
+
+REFERENCE           3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
+LANG_ENGLISH        "3D Sound: direction for two ears, or plain panning for speakers."
+LANG_GERMAN         "3D-Sound: Richtungshören für Kopfhörer oder einfaches Panning für Lautsprecher."
+
+REFERENCE           HEADPHONES
+LANG_ENGLISH        "Headphones"
+LANG_GERMAN         "Kopfhörer"
+
+REFERENCE           SPEAKERS
+LANG_ENGLISH        "Speakers"
+LANG_GERMAN         "Lautsprecher"
+
+REFERENCE           REVERB
+LANG_ENGLISH        "Reverb"
+LANG_GERMAN         "Hall"
+
+REFERENCE           3D_SOUND_HOW_LOUD_THE_ROOMS_RING
+LANG_ENGLISH        "3D Sound: how loud the rooms ring."
+LANG_GERMAN         "3D-Sound: wie stark die Räume nachhallen."
+
+REFERENCE           ROOM_REFLECTIONS
+LANG_ENGLISH        "Room Reflections"
+LANG_GERMAN         "Raumreflexionen"
+
+REFERENCE           THE_ROOM_AROUND_YOU_RINGS
+LANG_ENGLISH        "The room around you rings."
+LANG_GERMAN         "Der Raum um dich herum hallt mit."
+
+REFERENCE           ECHO
+LANG_ENGLISH        "Echo"
+LANG_GERMAN         "#same"
+
+REFERENCE           REAL_TIME_WORKED_OUT_AS_YOU_GO_THE_L
+LANG_ENGLISH        "Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in."
+LANG_GERMAN         "Echtzeit: wird laufend berechnet, die lautesten Geräusche haben ihr eigenes Echo. Vorberechnet: einmal pro Level berechnet und gespeichert, stabil beim Bewegen, alle Geräusche hallen mit dem Raum, in dem du stehst."
+
+REFERENCE           REAL_TIME
+LANG_ENGLISH        "Real Time"
+LANG_GERMAN         "Echtzeit"
+
+REFERENCE           PRECALCULATED
+LANG_ENGLISH        "Precalculated"
+LANG_GERMAN         "Vorberechnet"
+
+REFERENCE           ECHO_CALCULATION
+LANG_ENGLISH        "Echo Calculation"
+LANG_GERMAN         "Echo-Berechnung"
+
+REFERENCE           GRAPHICS_CARD_THE_RAYS_OF_THE_ECHO_A
+LANG_ENGLISH        "Graphics Card: the rays of the echo are traced on the graphics card, which leaves the CPU free. CPU: they are traced on the CPU. Where the card cannot do it, the CPU is used. Does nothing with a precalculated echo."
+LANG_GERMAN         "Grafikkarte: die Strahlen des Echos werden auf der Grafikkarte verfolgt, die CPU bleibt frei. CPU: sie werden auf der CPU verfolgt. Wo die Karte das nicht kann, rechnet die CPU. Ohne Wirkung bei einem vorberechneten Echo."
+
+REFERENCE           GRAPHICS_CARD
+LANG_ENGLISH        "Graphics Card"
+LANG_GERMAN         "Grafikkarte"
+
+REFERENCE           CPU
+LANG_ENGLISH        "CPU"
+LANG_GERMAN         "#same"
+
+REFERENCE           ECHOES_OF_THEIR_OWN
+LANG_ENGLISH        "Echoes of Their Own"
+LANG_GERMAN         "Eigene Echos"
+
+REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
+LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
+LANG_GERMAN         "Wie viele der lautesten Geräusche von den Wänden widerhallen. Mehr kostet mehr Leistung pro Bild."
+
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+LANG_GERMAN         "Aus"
+
+REFERENCE           SOUND_AROUND_CORNERS
+LANG_ENGLISH        "Sound Around Corners"
+LANG_GERMAN         "Schall um die Ecke"
+
+REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
+LANG_ENGLISH        "A sound finds its way around corners."
+LANG_GERMAN         "Geräusche finden ihren Weg um Ecken."
+
+REFERENCE           PHYSICALLY_BASED_SOUND
+LANG_ENGLISH        "Physically Based Sound"
+LANG_GERMAN         "Physikalischer Klang"
+
+REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
+LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
+LANG_GERMAN         "Geräusche werden mit der Entfernung leiser wie in echt, verlieren in der Ferne ihre Höhen und erreichen dich mit Schallgeschwindigkeit."
+
+REFERENCE           DOPPLER_EFFECT
+LANG_ENGLISH        "Doppler Effect"
+LANG_GERMAN         "Doppler-Effekt"
+
+REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
+LANG_ENGLISH        "What comes closer or goes away changes its pitch."
+LANG_GERMAN         "Was sich nähert oder entfernt, ändert seine Tonhöhe."
+
+REFERENCE           HIT_SOUNDS
+LANG_ENGLISH        "Hit Sounds"
+LANG_GERMAN         "Treffergeräusche"
+
+REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
+LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
+LANG_GERMAN         "Ein kurzes Ticken, wenn deine Schüsse oder deine Klinge treffen."
+
+REFERENCE           KILL_SOUND
+LANG_ENGLISH        "Kill Sound"
+LANG_GERMAN         "Kill-Sound"
+
+REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
+LANG_ENGLISH        "Two notes when you kill someone."
+LANG_GERMAN         "Zwei Töne, wenn du jemanden erledigst."
+
+REFERENCE           VOICE_CHAT
+LANG_ENGLISH        "Voice Chat"
+LANG_GERMAN         "Sprachchat"
+
+REFERENCE           TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
+LANG_ENGLISH        "Talk to and hear other players with your microphone."
+LANG_GERMAN         "Mit dem Mikrofon andere Spieler hören und mit ihnen sprechen."
+
+REFERENCE           MODE
+LANG_ENGLISH        "Mode"
+LANG_GERMAN         "Modus"
+
+REFERENCE           PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
+LANG_ENGLISH        "Push to talk: hold the talk key (Controls, Extras)."
+LANG_GERMAN         "Push-to-Talk: Sprechtaste gedrückt halten (Steuerung, Extras)."
+
+REFERENCE           PUSH_TO_TALK
+LANG_ENGLISH        "Push To Talk"
+LANG_GERMAN         "Push-to-Talk"
+
+REFERENCE           VOICE_ACTIVATION
+LANG_ENGLISH        "Voice Activation"
+LANG_GERMAN         "Sprachaktivierung"
+
+REFERENCE           VOICE_CHAT_VOLUME
+LANG_ENGLISH        "Voice Chat Volume"
+LANG_GERMAN         "Sprachchat-Lautstärke"
+
+REFERENCE           HOW_LOUD_THE_OTHER_PLAYERS_ARE
+LANG_ENGLISH        "How loud the other players are."
+LANG_GERMAN         "Wie laut du die anderen Spieler hörst."
+
+REFERENCE           MICROPHONE_GAIN
+LANG_ENGLISH        "Microphone Gain"
+LANG_GERMAN         "Mikrofonverstärkung"
+
+REFERENCE           HOW_LOUD_YOUR_MICROPHONE_IS_SENT
+LANG_ENGLISH        "How loud your microphone is sent."
+LANG_GERMAN         "Lautstärke, mit der dein Mikrofon gesendet wird."
+
+REFERENCE           ACTIVATION_LEVEL
+LANG_ENGLISH        "Activation Level"
+LANG_GERMAN         "Aktivierungsschwelle"
+
+REFERENCE           VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
+LANG_ENGLISH        "Voice activation: how loud you have to be before you are sent."
+LANG_GERMAN         "Sprachaktivierung: wie laut du sein musst, damit gesendet wird."
+
+REFERENCE           MUFFLE_BEHIND_WALLS
+LANG_ENGLISH        "Muffle Behind Walls"
+LANG_GERMAN         "Hinter Wänden dämpfen"
+
+REFERENCE           VOICES_BEHIND_WALLS_AND_UNDER_WATER
+LANG_ENGLISH        "Voices behind walls and under water sound muffled."
+LANG_GERMAN         "Stimmen hinter Wänden und unter Wasser klingen gedämpft."
+
+REFERENCE           TALKING_PLAYERS_LIST
+LANG_ENGLISH        "Talking Players List"
+LANG_GERMAN         "Liste sprechender Spieler"
+
+REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
+LANG_ENGLISH        "A list of the players who are talking on the HUD."
+LANG_GERMAN         "Zeigt im HUD eine Liste der Spieler, die gerade sprechen."
+
+REFERENCE           VOICE_VIA_MASTERSERVER
+LANG_ENGLISH        "Voice via Masterserver"
+LANG_GERMAN         "Sprache über Masterserver"
+
+REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
+LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
+LANG_GERMAN         "Server ohne Sprachchat: master.jka.vision verwenden, der deine Adresse sieht."
+
+REFERENCE           OWN_VOICE_IN_THE_ROOM
+LANG_ENGLISH        "Own Voice In The Room"
+LANG_GERMAN         "Eigene Stimme im Raum"
+
+REFERENCE           WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
+LANG_ENGLISH        "With spatial sound: how loud the room rings from what you say yourself."
+LANG_GERMAN         "Mit 3D-Sound: wie stark der Raum auf deine eigene Stimme nachhallt."
+
+REFERENCE           RADIO_SOUND
+LANG_ENGLISH        "Radio Sound"
+LANG_GERMAN         "Funkklang"
+
+REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
+LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
+LANG_GERMAN         "Der Clan-Funk klingt wie echter Funk: schmal, etwas rau, mit einem Klick."
+
+REFERENCE           BOOMBOXES
+LANG_ENGLISH        "Boomboxes"
+LANG_GERMAN         "Boomboxen"
+
+REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
+LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
+LANG_GERMAN         "Boomboxen auf VisionJK-Servern sehen und hören. Sie spielen Songs von YouTube."
+
+REFERENCE           BOOMBOX_VOLUME
+LANG_ENGLISH        "Boombox Volume"
+LANG_GERMAN         "Boombox-Lautstärke"
+
+REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
+LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
+LANG_GERMAN         "Lautstärke der Boomboxen für dich."
+
+REFERENCE           BLADE_LOOK
+LANG_ENGLISH        "Blade Look"
+LANG_GERMAN         "Klingenoptik"
+
+REFERENCE           SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
+LANG_ENGLISH        "SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic."
+LANG_GERMAN         "SFX: ein dünner weißer Kern in einem Leuchten, das über den Schwung gezogen wird. RGB-Stile und Schwarz bleiben klassisch."
+
+REFERENCE           CLASSIC
+LANG_ENGLISH        "Classic"
+LANG_GERMAN         "Klassisch"
+
+REFERENCE           SFX
+LANG_ENGLISH        "SFX"
+LANG_GERMAN         "#same"
+
+REFERENCE           TRAIL_LENGTH
+LANG_ENGLISH        "Trail Length"
+LANG_GERMAN         "Spurlänge"
+
+REFERENCE           HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
+LANG_ENGLISH        "How long the trail behind a swinging blade is."
+LANG_GERMAN         "Wie lang die Spur hinter einer schwingenden Klinge ist."
+
+REFERENCE           BLADE_CORE
+LANG_ENGLISH        "Blade Core"
+LANG_GERMAN         "Klingenkern"
+
+REFERENCE           HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
+LANG_ENGLISH        "How thick the white core of a blade is."
+LANG_GERMAN         "Wie dick der weiße Kern einer Klinge ist."
+
+REFERENCE           BLADE_GLOW
+LANG_ENGLISH        "Blade Glow"
+LANG_GERMAN         "Klingenleuchten"
+
+REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
+LANG_ENGLISH        "How wide the glow around a blade is."
+LANG_GERMAN         "Wie breit das Leuchten um eine Klinge ist."
+
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+LANG_GERMAN         "Teamfarben für Klingen"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+LANG_GERMAN         "In Teamspielen hat jede Klinge die Farbe ihres Teams. Aus: Klingen behalten ihre Farbe."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+LANG_GERMAN         "Zweifarbiger Stab"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+LANG_GERMAN         "Die zweite Klinge eines Stabs hat die zweite Schwertfarbe."
+
+REFERENCE           OTHERS_IN_A_DUEL
+LANG_ENGLISH        "Others in a Duel"
+LANG_GERMAN         "Andere im Duell"
+
+REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
+LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
+LANG_GERMAN         "Wie Spieler aussehen, die in einem Duell sind, an dem du nicht beteiligt bist. Ihre Farbe steht in v_duelColour in der Konsole."
+
+REFERENCE           GAME
+LANG_ENGLISH        "Game"
+LANG_GERMAN         "Spiel"
+
+REFERENCE           TINTED
+LANG_ENGLISH        "Tinted"
+LANG_GERMAN         "Eingefärbt"
+
+REFERENCE           SHIELD
+LANG_ENGLISH        "Shield"
+LANG_GERMAN         "Schild"
+
+REFERENCE           DAMAGED_SHIELD
+LANG_ENGLISH        "Damaged Shield"
+LANG_GERMAN         "Getroffener Schild"
+
+REFERENCE           FORCE_SHELL
+LANG_ENGLISH        "Force Shell"
+LANG_GERMAN         "Machthülle"
+
+REFERENCE           SIGHT_SHELL
+LANG_ENGLISH        "Sight Shell"
+LANG_GERMAN         "Sichthülle"
+
+REFERENCE           HALF_SHIELD
+LANG_ENGLISH        "Half Shield"
+LANG_GERMAN         "Halber Schild"
+
+REFERENCE           CLOAKED
+LANG_ENGLISH        "Cloaked"
+LANG_GERMAN         "Getarnt"
+
+REFERENCE           SIGHT_BUBBLE
+LANG_ENGLISH        "Sight Bubble"
+LANG_GERMAN         "Sichtblase"
+
+REFERENCE           THEIR_BLADES
+LANG_ENGLISH        "Their Blades"
+LANG_GERMAN         "Ihre Klingen"
+
+REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
+LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
+LANG_GERMAN         "Die Klingen von Spielern in einem Duell, an dem du nicht beteiligt bist."
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+LANG_GERMAN         "Gegnermodell"
+
+REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
+LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
+LANG_GERMAN         "Jeder Gegner wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+LANG_GERMAN         "Teammodell"
+
+REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
+LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
+LANG_GERMAN         "Jeder Mitspieler wird im gewählten Modell gezeigt. Wie gewählt: jeder behält sein eigenes."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+LANG_GERMAN         "Jedi-Outcast-Schüsse"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+LANG_GERMAN         "Schüsse werden so scharf dargestellt wie in Jedi Outcast. Gilt ab dem nächsten Level."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+LANG_GERMAN         "Disruptor-Strahl"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+LANG_GERMAN         "Aussehen des Disruptor-Schusses."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+LANG_GERMAN         "Linie"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+LANG_GERMAN         "Spirale"
+
+REFERENCE           SCOPE_LENS
+LANG_ENGLISH        "Scope Lens"
+LANG_GERMAN         "Zielfernrohr-Linse"
+
+REFERENCE           THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
+LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask."
+LANG_GERMAN         "Der gezoomte Disruptor zeigt den Level durch eine Linse. Aus: die flache schwarze Maske."
+
+REFERENCE           ZOOM_WITH_MOUSE_WHEEL
+LANG_ENGLISH        "Zoom with Mouse Wheel"
+LANG_GERMAN         "Zoom mit Mausrad"
+
+REFERENCE           WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
+LANG_ENGLISH        "While the disruptor zoom is locked, the mouse wheel zooms in and out."
+LANG_GERMAN         "Solange der Disruptor-Zoom eingerastet ist, zoomt das Mausrad rein und raus."
+
+REFERENCE           MOTION_TRACKER_SPEED
+LANG_ENGLISH        "Motion Tracker Speed"
+LANG_GERMAN         "Tempo Bewegungsmelder"
+
+REFERENCE           THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
+LANG_ENGLISH        "The speed a player needs before the tracker of the disruptor scope picks him up."
+LANG_GERMAN         "Das Tempo, ab dem der Bewegungsmelder des Disruptor-Zielfernrohrs einen Spieler erfasst."
+
+REFERENCE           BINOCULAR_LENS
+LANG_ENGLISH        "Binocular Lens"
+LANG_GERMAN         "Fernglas-Linse"
+
+REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass."
+LANG_GERMAN         "Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass."
+
+REFERENCE           ROCKET_LOCK_ON
+LANG_ENGLISH        "Rocket Lock-On"
+LANG_GERMAN         "Raketen-Zielerfassung"
+
+REFERENCE           THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
+LANG_ENGLISH        "The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step."
+LANG_GERMAN         "Die Zielerfassung des Raketenwerfers zeichnet Klammern, die sich auf das Ziel zuziehen, und piept mit jedem Schritt höher."
+
+REFERENCE           NEW_HUD
+LANG_ENGLISH        "New HUD"
+LANG_GERMAN         "Neues HUD"
+
+REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
+LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
+LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Originalspiels."
+
+REFERENCE           CLASSIC_MENUS
+LANG_ENGLISH        "Classic Menus"
+LANG_GERMAN         "Klassische Menüs"
+
+REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
+LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
+LANG_GERMAN         "Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart."
+
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
+LANG_GERMAN         "3D-Menü"
+
+REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
+LANG_ENGLISH        "In a game an open menu stands in the level next to you."
+LANG_GERMAN         "Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir."
+
+REFERENCE           MENU_BLUR
+LANG_ENGLISH        "Menu Blur"
+LANG_GERMAN         "Menü-Unschärfe"
+
+REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
+LANG_ENGLISH        "How far the level behind an open menu is out of focus."
+LANG_GERMAN         "Wie unscharf das Level hinter einem offenen Menü ist."
+
+REFERENCE           MENU_SIZE
+LANG_ENGLISH        "Menu Size"
+LANG_GERMAN         "Menügröße"
+
+REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
+LANG_ENGLISH        "How big the menu is that stands in the level."
+LANG_GERMAN         "Wie groß das Menü im Level ist."
+
+REFERENCE           FIELD_OF_VIEW
+LANG_ENGLISH        "Field of View"
+LANG_GERMAN         "Sichtfeld"
+
+REFERENCE           HOW_WIDE_YOU_SEE
+LANG_ENGLISH        "How wide you see."
+LANG_GERMAN         "Wie breit dein Blickfeld ist."
+
+REFERENCE           CAMERA_DISTANCE
+LANG_ENGLISH        "Camera Distance"
+LANG_GERMAN         "Kameraabstand"
+
+REFERENCE           HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
+LANG_ENGLISH        "How far the camera is behind you in third person."
+LANG_GERMAN         "Wie weit die Kamera in der Außenansicht hinter dir ist."
+
+REFERENCE           SMOOTH_CAMERA
+LANG_ENGLISH        "Smooth Camera"
+LANG_GERMAN         "Kamera glätten"
+
+REFERENCE           THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
+LANG_ENGLISH        "The camera behind you follows the same at every frame rate. It trails a little further behind."
+LANG_GERMAN         "Die Kamera hinter dir folgt bei jeder Bildrate gleich. Sie hängt etwas weiter hinterher."
+
+REFERENCE           CROSSHAIR_SIZE
+LANG_ENGLISH        "Crosshair Size"
+LANG_GERMAN         "Fadenkreuzgröße"
+
+REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
+LANG_ENGLISH        "The size of the crosshair."
+LANG_GERMAN         "Die Größe des Fadenkreuzes."
+
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+LANG_GERMAN         "Fadenkreuzfarbe"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+LANG_GERMAN         "Farbe des Fadenkreuzes, wenn es auf nichts zielt."
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+LANG_GERMAN         "Weiß"
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+LANG_GERMAN         "#same"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+LANG_GERMAN         "Gelb"
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+LANG_GERMAN         "#same"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+LANG_GERMAN         "Rosa"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+LANG_GERMAN         "Namen-Deckkraft"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+LANG_GERMAN         "Wie deutlich der Name des Spielers unter dem Fadenkreuz angezeigt wird."
+
+REFERENCE           LEAD_INDICATOR
+LANG_ENGLISH        "Lead Indicator"
+LANG_GERMAN         "Vorhalteanzeige"
+
+REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
+LANG_GERMAN         "Zeigt, wohin du zielen musst, damit ein fliegender Schuss einen bewegten Gegner trifft. Viele Server werten das als Zielhilfe."
+
+REFERENCE           WITH_OWN_PING
+LANG_ENGLISH        "With Own Ping"
+LANG_GERMAN         "Mit eigenem Ping"
+
+REFERENCE           SHOW_FRAME_RATE
+LANG_ENGLISH        "Show Frame Rate"
+LANG_GERMAN         "FPS anzeigen"
+
+REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
+LANG_ENGLISH        "Frames a second in the corner of the screen."
+LANG_GERMAN         "Bilder pro Sekunde in der Bildschirmecke."
+
+REFERENCE           SHOW_TIMER
+LANG_ENGLISH        "Show Timer"
+LANG_GERMAN         "Timer anzeigen"
+
+REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
+LANG_ENGLISH        "The time of the level in the corner of the screen."
+LANG_GERMAN         "Die Zeit des Levels in der Bildschirmecke."
+
+REFERENCE           TIMER_MILLISECONDS
+LANG_ENGLISH        "Timer Milliseconds"
+LANG_GERMAN         "Timer mit Millisekunden"
+
+REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+LANG_ENGLISH        "The timer of the level with milliseconds."
+LANG_GERMAN         "Zeigt den Timer des Levels mit Millisekunden."
+
+REFERENCE           TIMER_COUNTS_DOWN
+LANG_ENGLISH        "Timer Counts Down"
+LANG_GERMAN         "Timer als Countdown"
+
+REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
+LANG_GERMAN         "Der Timer zeigt die verbleibende Zeit bis zum Zeitlimit, falls es eins gibt."
+
+REFERENCE           SHOW_LAGOMETER
+LANG_ENGLISH        "Show Lagometer"
+LANG_GERMAN         "Lagometer anzeigen"
+
+REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
+LANG_ENGLISH        "A graph of your connection."
+LANG_GERMAN         "Ein Diagramm deiner Verbindung."
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_GERMAN         "#same"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_GERMAN         "Wer wen womit erledigt hat, oben rechts."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+LANG_GERMAN         "Größe der Teamliste"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+LANG_GERMAN         "Wie groß die Liste deiner Teamkameraden ist."
+
+REFERENCE           SPECTATOR_MAP
+LANG_ENGLISH        "Spectator Map"
+LANG_GERMAN         "Zuschauerkarte"
+
+REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
+LANG_GERMAN         "Zeigt beim Zuschauen oben rechts eine Karte der Spieler in der Nähe."
+
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+LANG_GERMAN         "Tacho"
+
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+LANG_GERMAN         "Deine Geschwindigkeit unter dem Fadenkreuz und die deiner letzten Sprünge."
+
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+LANG_GERMAN         "Strafe-Hilfe"
+
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+LANG_GERMAN         "Ein Balken unter dem Fadenkreuz, der zeigt, wohin du drehen musst, um schneller zu werden."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+LANG_GERMAN         "Snap-Anzeige"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+LANG_GERMAN         "Zeigt in der Luft die Winkel, in denen die Rundung des Spiels etwas mehr Tempo bringt."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+LANG_GERMAN         "Neigungsanzeige"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+LANG_GERMAN         "Eine Markierung, wo dein Blick bei einem gewählten Neigungswinkel läge."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+LANG_GERMAN         "Strafe-Spuren"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+LANG_GERMAN         "Eine verblassende Linie auf dem Boden entlang der Laufwege der Spieler."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+LANG_GERMAN         "Eigene"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+LANG_GERMAN         "Alle"
+
+REFERENCE           MOVEMENT_KEYS
+LANG_ENGLISH        "Movement Keys"
+LANG_GERMAN         "Bewegungstasten"
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
+LANG_ENGLISH        "The keys you move with on the screen, lit while held."
+LANG_GERMAN         "Zeigt die Bewegungstasten auf dem Bildschirm, sie leuchten, solange sie gedrückt sind."
+
+REFERENCE           START_GOAL
+LANG_ENGLISH        "Start Goal"
+LANG_GERMAN         "Startziel"
+
+REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
+LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
+LANG_GERMAN         "Der Tacho wird ab dieser Geschwindigkeit golden. 0: aus."
+
+REFERENCE           JUMP_GOAL
+LANG_ENGLISH        "Jump Goal"
+LANG_GERMAN         "Sprungziel"
+
+REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
+LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
+LANG_GERMAN         "Sprünge ab dieser Geschwindigkeit erscheinen in der Sprungliste golden. 0: aus."
+
+REFERENCE           CHAT_BUBBLES
+LANG_ENGLISH        "Chat Bubbles"
+LANG_GERMAN         "Sprechblasen"
+
+REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
+LANG_ENGLISH        "What a player says stands above his head."
+LANG_GERMAN         "Was ein Spieler sagt, steht über seinem Kopf."
+
+REFERENCE           BUBBLE_RANGE
+LANG_ENGLISH        "Bubble Range"
+LANG_GERMAN         "Sprechblasen-Reichweite"
+
+REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
+LANG_ENGLISH        "How far away a bubble is still drawn."
+LANG_GERMAN         "Bis zu welcher Entfernung Sprechblasen angezeigt werden."
+
+REFERENCE           PLAYER_STATUSES
+LANG_ENGLISH        "Player Statuses"
+LANG_GERMAN         "Spielerstatus"
+
+REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
+LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
+LANG_GERMAN         "Zeigt Abwesenheit und Musik über den Köpfen der anderen."
+
+REFERENCE           SHOW_MY_MUSIC
+LANG_ENGLISH        "Show My Music"
+LANG_GERMAN         "Meine Musik zeigen"
+
+REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
+LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
+LANG_GERMAN         "Zeigt anderen, was du hörst. Jeder auf dem Server kann es lesen."
+
+REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Choose Players of My Music ..."
+LANG_GERMAN         "Musikplayer auswählen ..."
+
+REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
+LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
+LANG_GERMAN         "Welche Musikplayer angezeigt werden dürfen: Nur die Songs der angehakten sehen die anderen."
+
+REFERENCE           SELECT_PLAYERS
+LANG_ENGLISH        "Select Players"
+LANG_GERMAN         "Spieler auswählen"
+
+REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
+LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
+LANG_GERMAN         "Bei freier Maus öffnet ein Klick auf einen Spieler eine Karte mit den möglichen Aktionen."
+
+REFERENCE           SELECTION_OUTLINE
+LANG_ENGLISH        "Selection Outline"
+LANG_GERMAN         "Auswahlumriss"
+
+REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
+LANG_ENGLISH        "A glowing outline around the player under the mouse."
+LANG_GERMAN         "Ein leuchtender Umriss um den Spieler unter der Maus."
+
+REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
+LANG_ENGLISH        "Keep Scoreboard on Double Tap"
+LANG_GERMAN         "Scoreboard bei Doppeltipp offen halten"
+
+REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
+LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+LANG_GERMAN         "Zweimal schnell die Scoreboard-Taste drücken hält es offen. So kannst du mit der Maus einen Spieler anklicken."
+
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_GERMAN         "Hut"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_GERMAN         "Was du auf dem Kopf trägst. Andere VisionJK-Spieler sehen es."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_GERMAN         "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_GERMAN         "Bart"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_GERMAN         "Eimer"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_GERMAN         "Kappe"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_GERMAN         "Propellermütze"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_GERMAN         "Krone"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_GERMAN         "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_GERMAN         "Brille"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_GERMAN         "Doktorhut"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+LANG_GERMAN         "#same"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_GERMAN         "Hörner"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+LANG_GERMAN         "Mario-Mütze"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+LANG_GERMAN         "Maske"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_GERMAN         "Metallhelm"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_GERMAN         "Pestmaske"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+LANG_GERMAN         "Predator-Helm"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+LANG_GERMAN         "Kürbis"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_GERMAN         "Weihnachtsmütze"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_GERMAN         "#same"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+LANG_GERMAN         "Super-Saiyajin-Haare"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_GERMAN         "Zylinder"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_GERMAN         "Umhang"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_GERMAN         "Was du auf dem Rücken trägst. Andere VisionJK-Spieler sehen es."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_GERMAN         "Königsumhang"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+LANG_GERMAN         "Vader-Umhang"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+LANG_GERMAN         "#same"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+LANG_GERMAN         "#same"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+LANG_GERMAN         "Gans"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+LANG_GERMAN         "Brechstange"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+LANG_GERMAN         "#same"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+LANG_GERMAN         "Raketenwerfer"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+LANG_GERMAN         "Anzeigen"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+LANG_GERMAN         "Was Spieler auf dem Kopf und dem Rücken tragen. Gilt nur für VisionJK-Spieler."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+LANG_GERMAN         "Die von allen"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+LANG_GERMAN         "Eigene bei allen"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+LANG_GERMAN         "Saisonale Hüte"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+LANG_GERMAN         "Weihnachtsmütze an Weihnachten, Kürbis an Halloween, für alle ohne Hut."
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+LANG_GERMAN         "Eigene Chateingabe"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+LANG_GERMAN         "Im Chatfenster von VisionJK tippen, mit Verlauf und Links."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_GERMAN         "Chatgröße"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_GERMAN         "Wie groß der Chat und sein Text sind. Im geöffneten Chat ändern auch Strg und das Mausrad die Größe."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_GERMAN         "Chatbreite"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_GERMAN         "Wie breit die Chatbox ist."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_GERMAN         "Chatzeilen"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_GERMAN         "Wie viele Zeilen der geöffnete Chat zeigt. Du kannst auch die obere rechte Ecke mit der Maus ziehen."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+LANG_GERMAN         "Chat-Ton"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+LANG_GERMAN         "Ein Ton, wenn jemand etwas schreibt."
+
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+LANG_GERMAN         "Emojis im Chat"
+
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+LANG_GERMAN         "Codes wie :smile: werden im Chat als Bilder angezeigt."
+
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+LANG_GERMAN         "Chatprotokoll"
+
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+LANG_GERMAN         "Speichert jede Chatzeile mit Uhrzeit im Ordner chatlogs."
+
+REFERENCE           NAME_ALERT
+LANG_ENGLISH        "Name Alert"
+LANG_GERMAN         "Namenshinweis"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
+LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
+LANG_GERMAN         "Eine Chatzeile mit deinem Namen wird golden markiert. Weitere Wörter mit tay_notifyWords in der Konsole."
+
+REFERENCE           MARKED
+LANG_ENGLISH        "Marked"
+LANG_GERMAN         "Markiert"
+
+REFERENCE           MARKED_AND_SOUND
+LANG_ENGLISH        "Marked and Sound"
+LANG_GERMAN         "Markiert mit Ton"
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_GERMAN         "Benachrichtigungen"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_GERMAN         "Private Nachrichten, dein Name im Chat, Boombox-Zeilen und neue Versionen erscheinen links am Bildschirmrand."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_GERMAN         "Angezeigt"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_GERMAN         "Angezeigt mit Ton"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_GERMAN         "Anzeigedauer"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_GERMAN         "Wie viele Millisekunden eine Benachrichtigung sichtbar bleibt."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_GERMAN         "Größe der Benachrichtigungen"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_GERMAN         "Wie groß die Benachrichtigungen sind."
+
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+LANG_GERMAN         "Konsolen-Textgröße"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+LANG_GERMAN         "Größe des Konsolentextes."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+LANG_GERMAN         "Konsolen-Deckkraft"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+LANG_GERMAN         "Wie viel vom Spiel durch die Konsole zu sehen ist."
+
+REFERENCE           CONSOLE_CLOCK
+LANG_ENGLISH        "Console Clock"
+LANG_GERMAN         "Uhr in der Konsole"
+
+REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+LANG_ENGLISH        "A clock in the corner of the console."
+LANG_GERMAN         "Eine Uhr in der Ecke der Konsole."
+
+REFERENCE           TIME
+LANG_ENGLISH        "Time"
+LANG_GERMAN         "Uhrzeit"
+
+REFERENCE           DATE_AND_TIME
+LANG_ENGLISH        "Date and Time"
+LANG_GERMAN         "Datum und Uhrzeit"
+
+REFERENCE           CLAN_PASSWORD
+LANG_ENGLISH        "Clan Password"
+LANG_GERMAN         "Clan-Passwort"
+
+REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
+LANG_GERMAN         "Clan-Chat und Clan-Funk erreichen alle auf dem Server mit demselben Passwort. Der Server sieht es."
+
+REFERENCE           CHECK_FOR_UPDATES
+LANG_ENGLISH        "Check for Updates"
+LANG_GERMAN         "Nach Updates suchen"
+
+REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
+LANG_ENGLISH        "Ask at every start whether a newer version is out."
+LANG_GERMAN         "Fragt bei jedem Start, ob eine neuere Version da ist."
+
+REFERENCE           UPDATE_CHANNEL
+LANG_ENGLISH        "Update Channel"
+LANG_GERMAN         "Update-Kanal"
+
+REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
+LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
+LANG_GERMAN         "Stabil: die Releases. Entwicklung: frühe Testversionen und die Releases, wenn sie neuer sind."
+
+REFERENCE           STABLE
+LANG_ENGLISH        "Stable"
+LANG_GERMAN         "Stabil"
+
+REFERENCE           DEVELOPMENT
+LANG_ENGLISH        "Development"
+LANG_GERMAN         "Entwicklung"
+
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_GERMAN         "#same"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_GERMAN         "Was sich in jeder Version geändert hat und was eine neue Version bringt."
+
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+LANG_GERMAN         "Einstellungen aufräumen"
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods."
+
+REFERENCE           CHOOSE_DOWNLOADS
+LANG_ENGLISH        "Choose Downloads"
+LANG_GERMAN         "Downloads auswählen"
+
+REFERENCE           BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
+LANG_ENGLISH        "Before a download choose the files of the server, and see what is in them before they are used."
+LANG_GERMAN         "Vor einem Download die Dateien des Servers auswählen und ihren Inhalt ansehen, bevor sie verwendet werden."
+
+REFERENCE           KEEP_DOWNLOADS
+LANG_ENGLISH        "Keep Downloads"
+LANG_GERMAN         "Downloads behalten"
+
+REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
+LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
+LANG_GERMAN         "Heruntergeladene Dateien im Ordner downloads behalten. Aus: nur für diese Sitzung."
+
+REFERENCE           WEB_DOWNLOADS
+LANG_ENGLISH        "Web Downloads"
+LANG_GERMAN         "Web-Downloads"
+
+REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
+LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
+LANG_GERMAN         "Nennt ein Server eine Webadresse für seine Dateien, werden sie von dort geladen, viel schneller. Aus: direkt vom Server."
+
+REFERENCE           SMOOTH_JITTERY_LINES
+LANG_ENGLISH        "Smooth Jittery Lines"
+LANG_GERMAN         "Jitter ausgleichen"
+
+REFERENCE           ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
+LANG_ENGLISH        "On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters."
+LANG_GERMAN         "Kommen die Snapshots einer Verbindung ungleichmäßig an, wird das Spiel etwas später angezeigt, damit nichts ruckelt."
+
+REFERENCE           UP_TO_20_MS
+LANG_ENGLISH        "Up to 20 ms"
+LANG_GERMAN         "Bis 20 ms"
+
+REFERENCE           UP_TO_40_MS
+LANG_ENGLISH        "Up to 40 ms"
+LANG_GERMAN         "Bis 40 ms"
+
+REFERENCE           UP_TO_80_MS
+LANG_ENGLISH        "Up to 80 ms"
+LANG_GERMAN         "Bis 80 ms"
+
+REFERENCE           INTRUSION_LOG
+LANG_ENGLISH        "Intrusion Log"
+LANG_GERMAN         "Angriffsprotokoll"
+
+REFERENCE           WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
+LANG_ENGLISH        "Write down what a server sends that no server of the game does, and leave one that keeps at it."
+LANG_GERMAN         "Protokolliert, was ein Server sendet, das kein Server des Spiels sendet, und verlässt Server, die damit nicht aufhören."
+
+REFERENCE           KEY_LOGIN_BY_AGENT
+LANG_ENGLISH        "Key Login by Agent"
+LANG_GERMAN         "Schlüssel-Login per Agent"
+
+REFERENCE           THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
+LANG_ENGLISH        "The admin login asks your ssh-agent for the key (1Password, OpenSSH)."
+LANG_GERMAN         "Der Admin-Login holt den Schlüssel von deinem ssh-agent (1Password, OpenSSH)."
+
+REFERENCE           KEY_FILE
+LANG_ENGLISH        "Key File"
+LANG_GERMAN         "Schlüsseldatei"
+
+REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
+LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
+LANG_GERMAN         "Datei mit dem Schlüssel für den Admin-Login, falls kein Agent ihn hat."
+
+REFERENCE           SCREEN
+LANG_ENGLISH        "Screen"
+LANG_GERMAN         "Bildschirm"
+
+REFERENCE           DETAIL
+LANG_ENGLISH        "Detail"
+LANG_GERMAN         "Details"
+
+REFERENCE           VOLUME
+LANG_ENGLISH        "Volume"
+LANG_GERMAN         "Lautstärke"
+
+REFERENCE           HITS
+LANG_ENGLISH        "Hits"
+LANG_GERMAN         "Treffer"
+
+REFERENCE           BOOMBOX
+LANG_ENGLISH        "Boombox"
+LANG_GERMAN         "#same"
+
+REFERENCE           THE_GAME_LIGHTSABERS_DUELS_AND_WHAT
+LANG_ENGLISH        "The game, lightsabers, duels and what players and weapons look like."
+LANG_GERMAN         "Das Spiel, Lichtschwerter, Duelle und das Aussehen von Spielern und Waffen."
+
+REFERENCE           DUELS
+LANG_ENGLISH        "Duels"
+LANG_GERMAN         "Duelle"
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_GERMAN         "Spieler"
+
+REFERENCE           LANGUAGE
+LANG_ENGLISH        "Language"
+LANG_GERMAN         "Sprache"
+
+REFERENCE           LIGHTSABERS
+LANG_ENGLISH        "Lightsabers"
+LANG_GERMAN         "Lichtschwerter"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_GERMAN         "Waffen"
+
+REFERENCE           HUD
+LANG_ENGLISH        "HUD"
+LANG_GERMAN         "#same"
+
+REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
+LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
+LANG_GERMAN         "Was der Bildschirm um den Level herum zeigt, die Sicht und das Fadenkreuz."
+
+REFERENCE           MENUS_AND_HUD
+LANG_ENGLISH        "Menus and HUD"
+LANG_GERMAN         "Menüs und HUD"
+
+REFERENCE           ON_SCREEN
+LANG_ENGLISH        "On Screen"
+LANG_GERMAN         "Auf dem Bildschirm"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_GERMAN         "Sicht"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_GERMAN         "Fadenkreuz"
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+LANG_GERMAN         "Bewegung"
+
+REFERENCE           CHAT_SOCIAL
+LANG_ENGLISH        "Chat & Social"
+LANG_GERMAN         "Chat & Community"
+
+REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
+LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+LANG_GERMAN         "Chatfenster, Sprechblasen und Anzeigen über den Köpfen."
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_GERMAN         "Konsole"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_GERMAN         "Hüte und Umhänge"
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+LANG_GERMAN         "#same"
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_GERMAN         "#same"
+
+REFERENCE           NETWORK
+LANG_ENGLISH        "Network"
+LANG_GERMAN         "Netzwerk"
+
+REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
+LANG_ENGLISH        "Updates, downloads and security."
+LANG_GERMAN         "Updates, Downloads und Sicherheit."
+
+REFERENCE           UPDATES_AND_DOWNLOADS
+LANG_ENGLISH        "Updates and Downloads"
+LANG_GERMAN         "Updates und Downloads"
+
+REFERENCE           CONNECTION
+LANG_ENGLISH        "Connection"
+LANG_GERMAN         "Verbindung"
+
+REFERENCE           SECURITY
+LANG_ENGLISH        "Security"
+LANG_GERMAN         "Sicherheit"
+
+REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
+LANG_ENGLISH        "Game folders with other mods."
+LANG_GERMAN         "Spielordner mit anderen Mods."
+
+REFERENCE           ESSENTIALS
+LANG_ENGLISH        "Essentials"
+LANG_GERMAN         "Wichtig"
+
+REFERENCE           ALL_SETTINGS
+LANG_ENGLISH        "All Settings"
+LANG_GERMAN         "Alle Einstellungen"
+
+REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
+LANG_ENGLISH        "Shows the settings that matter, or all of them."
+LANG_GERMAN         "Zeigt die wichtigen Einstellungen oder alle."
+
+REFERENCE           CHANGED_FROM_DEFAULT
+LANG_ENGLISH        "Changed from default"
+LANG_GERMAN         "Vom Standard geändert"
+
+REFERENCE           SOME_CHANGES_APPLY_AFTER_A_RESTART
+LANG_ENGLISH        "Some changes apply after a restart"
+LANG_GERMAN         "Einige Änderungen gelten nach einem Neustart"
+
+REFERENCE           REVERT
+LANG_ENGLISH        "Revert"
+LANG_GERMAN         "Zurücksetzen"
+
+REFERENCE           APPLY
+LANG_ENGLISH        "Apply"
+LANG_GERMAN         "Übernehmen"
+
+REFERENCE           PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Players of My Music"
+LANG_GERMAN         "Meine Musikplayer"
+
+REFERENCE           CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
+LANG_ENGLISH        "Click a player to tick it, or to take the tick away."
+LANG_GERMAN         "Ein Klick hakt einen Player an oder entfernt den Haken."
+
+REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
+LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
+LANG_GERMAN         "Nur die Songs angehakter Player sehen die anderen."
+
+REFERENCE           DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
+LANG_ENGLISH        "Development builds are early test versions."
+LANG_GERMAN         "Entwicklungsversionen sind frühe Testversionen."
+
+REFERENCE           THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
+LANG_ENGLISH        "They can crash, corrupt your configs or not work on some servers."
+LANG_GERMAN         "Sie können abstürzen, deine Configs beschädigen oder auf manchen Servern nicht laufen."
+
+REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
+LANG_ENGLISH        "You can switch back to Stable at any time."
+LANG_GERMAN         "Du kannst jederzeit zu Stabil zurückwechseln."
+
+REFERENCE           STAY_ON_STABLE
+LANG_ENGLISH        "Stay on Stable"
+LANG_GERMAN         "Bei Stabil bleiben"
+
+REFERENCE           KEEP_THE_RELEASES
+LANG_ENGLISH        "Keep the releases."
+LANG_GERMAN         "Bei den Releases bleiben."
+
+REFERENCE           SWITCH_TO_DEVELOPMENT
+LANG_ENGLISH        "Switch to Development"
+LANG_GERMAN         "Zu Entwicklung wechseln"
+
+REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
+LANG_ENGLISH        "Update to the development builds from now on."
+LANG_GERMAN         "Ab jetzt auf Entwicklungsversionen aktualisieren."
+
+REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
+LANG_ENGLISH        "Build a character of your own."
+LANG_GERMAN         "Eigenen Charakter erstellen."
+
+REFERENCE           FIXED_COLOR
+LANG_ENGLISH        "Fixed Color"
+LANG_GERMAN         "Feste Farbe"
+
+REFERENCE           BLADE_STYLE
+LANG_ENGLISH        "Blade Style"
+LANG_GERMAN         "Klingenstil"
+
+REFERENCE           PHOTO
+LANG_ENGLISH        "Photo"
+LANG_GERMAN         "Foto"
+
+REFERENCE           YOUR_FORCE_POWERS
+LANG_ENGLISH        "Your force powers."
+LANG_GERMAN         "Deine Machtkräfte."
+
+REFERENCE           THE_LIST_OF_MOVES
+LANG_ENGLISH        "The list of moves."
+LANG_GERMAN         "Liste der Bewegungen."
+
+REFERENCE           PLAYER
+LANG_ENGLISH        "Player"
+LANG_GERMAN         "Spieler"
+
+REFERENCE           HOLSTERS
+LANG_ENGLISH        "Holsters"
+LANG_GERMAN         "Holster"
+
+REFERENCE           INTERFACE
+LANG_ENGLISH        "Interface"
+LANG_GERMAN         "Oberfläche"
+
+REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
+LANG_ENGLISH        "How menus, HUD and camera look."
+LANG_GERMAN         "Aussehen von Menüs, HUD und Kamera."
+
+REFERENCE           TEXT
+LANG_ENGLISH        "Text"
+LANG_GERMAN         "#same"
+
+REFERENCE           LIGHT_SIDE
+LANG_ENGLISH        "Light Side"
+LANG_GERMAN         "Helle Seite"
+
+REFERENCE           DARK_SIDE
+LANG_ENGLISH        "Dark Side"
+LANG_GERMAN         "Dunkle Seite"
+
+REFERENCE           BOTH_SIDES
+LANG_ENGLISH        "Both Sides"
+LANG_GERMAN         "Beide Seiten"
+
+REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
+LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
+LANG_GERMAN         "Enter oder Klick: Taste ändern. Rücktaste: Zuweisung löschen."
+
+REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
+LANG_ENGLISH        "Restart the video with these settings."
+LANG_GERMAN         "Grafik mit diesen Einstellungen neu starten."
+
+REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
+LANG_ENGLISH        "Picture saved to the screenshots folder."
+LANG_GERMAN         "Foto im Screenshot-Ordner gespeichert."
+
+REFERENCE           MOUSE_TURN_WHEEL_DISTANCE_LEFT_FOCUS
+LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave."
+LANG_GERMAN         "Maus: drehen. Rad: Abstand. Links: Fokus. 1-5: Filter. Rechts: Foto. Esc: zurück."
+
+REFERENCE           DEFAULT
+LANG_ENGLISH        "Default"
+LANG_GERMAN         "Standard"
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+LANG_GERMAN         "#same"
+
+REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
+LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
+LANG_GERMAN         "Funktionen aus dem TaystJK-Client: HUD, Bewegung, Hüte, Umhänge und mehr."
+
+REFERENCE           CHAT_AND_CONSOLE
+LANG_ENGLISH        "Chat and Console"
+LANG_GERMAN         "Chat und Konsole"
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_GERMAN         "Aussehen"
+
+REFERENCE           PLAY_A_SONG
+LANG_ENGLISH        "Play a song ..."
+LANG_GERMAN         "Song abspielen ..."
+
+REFERENCE           ADD_A_SONG
+LANG_ENGLISH        "Add a song ..."
+LANG_GERMAN         "Song hinzufügen ..."
+
+REFERENCE           PAUSE
+LANG_ENGLISH        "Pause"
+LANG_GERMAN         "#same"
+
+REFERENCE           RESUME
+LANG_ENGLISH        "Resume"
+LANG_GERMAN         "Fortsetzen"
+
+REFERENCE           SKIP_THIS_SONG
+LANG_ENGLISH        "Skip this song"
+LANG_GERMAN         "Song überspringen"
+
+REFERENCE           STOP_THE_MUSIC
+LANG_ENGLISH        "Stop the music"
+LANG_GERMAN         "Musik stoppen"
+
+REFERENCE           QUIETER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Quieter for everybody (%i %%)"
+LANG_GERMAN         "Leiser für alle (%i %%)"
+
+REFERENCE           LOUDER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Louder for everybody (%i %%)"
+LANG_GERMAN         "Lauter für alle (%i %%)"
+
+REFERENCE           MUTE_IT_FOR_ME
+LANG_ENGLISH        "Mute it for me"
+LANG_GERMAN         "Für mich stummschalten"
+
+REFERENCE           HEAR_IT_AGAIN
+LANG_ENGLISH        "Hear it again"
+LANG_GERMAN         "Wieder einschalten"
+
+REFERENCE           MOVE_IT
+LANG_ENGLISH        "Move it"
+LANG_GERMAN         "Verschieben"
+
+REFERENCE           TAKE_IT_AWAY
+LANG_ENGLISH        "Take it away"
+LANG_GERMAN         "Entfernen"
+
+REFERENCE           CLICK_AGAIN_TO_TAKE_IT_AWAY
+LANG_ENGLISH        "Click again to take it away"
+LANG_GERMAN         "Zum Entfernen nochmal klicken"
+
+REFERENCE           PLAYS
+LANG_ENGLISH        "Plays"
+LANG_GERMAN         "Läuft"
+
+REFERENCE           PAUSED
+LANG_ENGLISH        "Paused"
+LANG_GERMAN         "Pausiert"
+
+REFERENCE           LOADING
+LANG_ENGLISH        "Loading ..."
+LANG_GERMAN         "Lädt ..."
+
+REFERENCE           SILENT
+LANG_ENGLISH        "Silent"
+LANG_GERMAN         "Still"
+
+REFERENCE           NEXT_S
+LANG_ENGLISH        "Next: %s"
+LANG_GERMAN         "Als Nächstes: %s"
+
+REFERENCE           LOOKING_A_SONG_UP
+LANG_ENGLISH        "Looking a song up ..."
+LANG_GERMAN         "Suche Song ..."
+
+REFERENCE           VOLUME_I
+LANG_ENGLISH        "Volume %i %%"
+LANG_GERMAN         "Lautstärke %i %%"
+
+REFERENCE           MUTED_FOR_YOU
+LANG_ENGLISH        "muted for you"
+LANG_GERMAN         "für dich stumm"
+
+REFERENCE           BOOMBOX_LINK_OR_SONG
+LANG_ENGLISH        "Boombox, link or song"
+LANG_GERMAN         "Boombox, Link oder Song"
+
+REFERENCE           PUT_DOWN_BY_S
+LANG_ENGLISH        "Put down by %s"
+LANG_GERMAN         "Aufgestellt von %s"
+
+REFERENCE           ASKED_FOR_BY_S
+LANG_ENGLISH        "Asked for by %s"
+LANG_GERMAN         "Gewünscht von %s"
+
+REFERENCE           OPEN_THE_PLAYER
+LANG_ENGLISH        "Open the player"
+LANG_GERMAN         "Player öffnen"
+
+REFERENCE           NOTHING_PLAYS
+LANG_ENGLISH        "Nothing plays"
+LANG_GERMAN         "Es läuft nichts"
+
+REFERENCE           SKIP
+LANG_ENGLISH        "Skip"
+LANG_GERMAN         "Überspringen"
+
+REFERENCE           STOP
+LANG_ENGLISH        "Stop"
+LANG_GERMAN         "Stopp"
+
+REFERENCE           IN_THE_LINE_S
+LANG_ENGLISH        "In the line: %s"
+LANG_GERMAN         "Warteschlange: %s"
+
+REFERENCE           IN_THE_LINE
+LANG_ENGLISH        "In the line"
+LANG_GERMAN         "Warteschlange"
+
+REFERENCE           NOTHING_WAITS
+LANG_ENGLISH        "Nothing waits"
+LANG_GERMAN         "Warteschlange leer"
+
+REFERENCE           MUTE
+LANG_ENGLISH        "Mute"
+LANG_GERMAN         "Stumm"
+
+REFERENCE           UNMUTE
+LANG_ENGLISH        "Unmute"
+LANG_GERMAN         "Ton an"
+
+REFERENCE           FILES_OF_THE_SERVER
+LANG_ENGLISH        "Files of the server"
+LANG_GERMAN         "Dateien des Servers"
+
+REFERENCE           THE_SERVER_OFFERS_THESE_FILES_TO_DOW
+LANG_ENGLISH        "The server offers these files to download."
+LANG_GERMAN         "Der Server bietet diese Dateien zum Download an."
+
+REFERENCE           BEFORE_ANYTHING_OF_THEM_IS_USED_YOU
+LANG_ENGLISH        "Before anything of them is used you see what is inside. Programs stay blocked."
+LANG_GERMAN         "Bevor etwas davon verwendet wird, siehst du den Inhalt. Programme bleiben gesperrt."
+
+REFERENCE           KEEP_THEM_DOWNLOADS_FOLDER
+LANG_ENGLISH        "Keep them (downloads folder)"
+LANG_GERMAN         "Behalten (Ordner downloads)"
+
+REFERENCE           THIS_SESSION_ONLY
+LANG_ENGLISH        "This session only"
+LANG_GERMAN         "Nur für diese Sitzung"
+
+REFERENCE           A_PURE_SERVER_MAY_NOT_LET_YOU_PLAY_W
+LANG_ENGLISH        "A pure server may not let you play without its files."
+LANG_GERMAN         "Ein Server mit sv_pure lässt dich ohne seine Dateien eventuell nicht spielen."
+
+REFERENCE           DOWNLOAD
+LANG_ENGLISH        "Download"
+LANG_GERMAN         "Herunterladen"
+
+REFERENCE           JOIN_WITHOUT
+LANG_ENGLISH        "Join without"
+LANG_GERMAN         "Ohne beitreten"
+
+REFERENCE           DISCONNECT
+LANG_ENGLISH        "Disconnect"
+LANG_GERMAN         "Trennen"
+
+REFERENCE           WHAT_IS_INSIDE
+LANG_ENGLISH        "What is inside"
+LANG_GERMAN         "Inhalt"
+
+REFERENCE           UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING
+LANG_ENGLISH        "Untick what you do not want: nothing of it is used."
+LANG_GERMAN         "Nimm den Haken bei allem raus, was du nicht willst: Davon wird nichts verwendet."
+
+REFERENCE           PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER
+LANG_ENGLISH        "Programs could run on your computer: they are blocked unless you tick them."
+LANG_GERMAN         "Programme könnten auf deinem Computer ausgeführt werden: Sie bleiben gesperrt, solange du sie nicht anhakst."
+
+REFERENCE           MAPS
+LANG_ENGLISH        "Maps"
+LANG_GERMAN         "Karten"
+
+REFERENCE           MODELS
+LANG_ENGLISH        "Models"
+LANG_GERMAN         "Modelle"
+
+REFERENCE           TEXTURES_AND_EFFECTS
+LANG_ENGLISH        "Textures and effects"
+LANG_GERMAN         "Texturen und Effekte"
+
+REFERENCE           SOUNDS_AND_MUSIC
+LANG_ENGLISH        "Sounds and music"
+LANG_GERMAN         "Sounds und Musik"
+
+REFERENCE           SHADERS_AND_SCRIPTS
+LANG_ENGLISH        "Shaders and scripts"
+LANG_GERMAN         "Shader und Skripte"
+
+REFERENCE           CONFIGS_THEY_CAN_RUN_COMMANDS
+LANG_ENGLISH        "Configs (they can run commands)"
+LANG_GERMAN         "Configs (können Befehle ausführen)"
+
+REFERENCE           OTHER_FILES
+LANG_ENGLISH        "Other files"
+LANG_GERMAN         "Sonstige Dateien"
+
+REFERENCE           PROGRAMS_THEY_COULD_RUN_ON_YOUR_COMP
+LANG_ENGLISH        "Programs (they could run on your computer)"
+LANG_GERMAN         "Programme (könnten auf deinem Computer laufen)"
+
+REFERENCE           USE_THEM
+LANG_ENGLISH        "Use them"
+LANG_GERMAN         "Verwenden"
+
+REFERENCE           THEY_COME_FROM_THE_WEB_ADDRESS
+LANG_ENGLISH        "They come from the web address:"
+LANG_GERMAN         "Sie kommen von dieser Webadresse:"
+
+REFERENCE           INITIATE
+LANG_ENGLISH        "Initiate"
+LANG_GERMAN         "Anwärter"
+
+REFERENCE           PADAWAN
+LANG_ENGLISH        "Padawan"
+LANG_GERMAN         "#same"
+
+REFERENCE           JEDI
+LANG_ENGLISH        "Jedi"
+LANG_GERMAN         "#same"
+
+REFERENCE           JEDI_KNIGHT
+LANG_ENGLISH        "Jedi Knight"
+LANG_GERMAN         "Jedi-Ritter"
+
+REFERENCE           JEDI_MASTER
+LANG_ENGLISH        "Jedi Master"
+LANG_GERMAN         "Jedi-Meister"
+
+REFERENCE           DISRUPTOR
+LANG_ENGLISH        "Disruptor"
+LANG_GERMAN         "#same"
+
+REFERENCE           BINOCULARS_AND_ROCKETS
+LANG_ENGLISH        "Binoculars and Rockets"
+LANG_GERMAN         "Fernglas und Raketen"
+
+REFERENCE           MUTE_HIS_VOICE
+LANG_ENGLISH        "Mute his voice"
+LANG_GERMAN         "Stimme stummschalten"
+
+REFERENCE           HEAR_HIS_VOICE_AGAIN
+LANG_ENGLISH        "Hear his voice again"
+LANG_GERMAN         "Stimme wieder einschalten"
+
+REFERENCE           VOICE_QUIETER_I
+LANG_ENGLISH        "Voice quieter (%i %%)"
+LANG_GERMAN         "Stimme leiser (%i %%)"
+
+REFERENCE           VOICE_LOUDER_I
+LANG_ENGLISH        "Voice louder (%i %%)"
+LANG_GERMAN         "Stimme lauter (%i %%)"
+
+REFERENCE           HIDE_HIS_CHAT_LINES
+LANG_ENGLISH        "Hide his chat lines"
+LANG_GERMAN         "Chatzeilen ausblenden"
+
+REFERENCE           SHOW_HIS_CHAT_LINES_AGAIN
+LANG_ENGLISH        "Show his chat lines again"
+LANG_GERMAN         "Chatzeilen wieder einblenden"
+
+REFERENCE           WHISPER_TO_HIM
+LANG_ENGLISH        "Whisper to him"
+LANG_GERMAN         "Flüstern"
+
+REFERENCE           WATCH_HIM
+LANG_ENGLISH        "Watch him"
+LANG_GERMAN         "Zuschauen"
+
+REFERENCE           COPY_HIS_NAME
+LANG_ENGLISH        "Copy his name"
+LANG_GERMAN         "Namen kopieren"
+
+REFERENCE           CALL_A_VOTE_TO_KICK_HIM
+LANG_ENGLISH        "Call a vote to kick him"
+LANG_GERMAN         "Rauswurf-Abstimmung"
+
+REFERENCE           CLICK_AGAIN_TO_CALL_THE_VOTE
+LANG_ENGLISH        "Click again to call the vote"
+LANG_GERMAN         "Zum Starten nochmal klicken"
+
+REFERENCE           ADMIN_KICK
+LANG_ENGLISH        "Admin: kick"
+LANG_GERMAN         "Admin: kicken"
+
+REFERENCE           ADMIN_SILENCE
+LANG_ENGLISH        "Admin: silence"
+LANG_GERMAN         "Admin: stummschalten"
+
+REFERENCE           ADMIN_SLEEP
+LANG_ENGLISH        "Admin: sleep"
+LANG_GERMAN         "Admin: schlafen legen"
+
+REFERENCE           ADMIN_SLAP
+LANG_ENGLISH        "Admin: slap"
+LANG_GERMAN         "Admin: Ohrfeige"
+
+REFERENCE           ADMIN_GO_TO_HIM
+LANG_ENGLISH        "Admin: go to him"
+LANG_GERMAN         "Admin: hingehen"
+
+REFERENCE           ADMIN_BRING_HIM_HERE
+LANG_ENGLISH        "Admin: bring him here"
+LANG_GERMAN         "Admin: herholen"
+
+REFERENCE           YOU
+LANG_ENGLISH        "You"
+LANG_GERMAN         "Du"
+
+REFERENCE           BOT
+LANG_ENGLISH        "Bot"
+LANG_GERMAN         "#same"
+
+REFERENCE           SPECTATOR
+LANG_ENGLISH        "Spectator"
+LANG_GERMAN         "Zuschauer"
+
+REFERENCE           SCORE_I
+LANG_ENGLISH        "Score %i"
+LANG_GERMAN         "Punkte %i"
+
+REFERENCE           PING_I
+LANG_ENGLISH        "Ping %i"
+LANG_GERMAN         "#same"
+
+REFERENCE           I_MIN
+LANG_ENGLISH        "%i min"
+LANG_GERMAN         "%i Min."
+
+REFERENCE           ANOTHER_CLIENT
+LANG_ENGLISH        "Another client"
+LANG_GERMAN         "Anderer Client"
+
+REFERENCE           AWAY_FROM_KEYBOARD
+LANG_ENGLISH        "Away from keyboard"
+LANG_GERMAN         "AFK"
+
+REFERENCE           LISTENING_TO_S
+LANG_ENGLISH        "Listening to %s"
+LANG_GERMAN         "Hört %s"
+
+REFERENCE           SPECTATORS
+LANG_ENGLISH        "Spectators"
+LANG_GERMAN         "Zuschauer"
+
+REFERENCE           CONNECTING
+LANG_ENGLISH        "connecting"
+LANG_GERMAN         "verbindet sich"
+
+REFERENCE           AND_I_MORE
+LANG_ENGLISH        "and %i more"
+LANG_GERMAN         "und %i weitere"
+
+REFERENCE           THE_SCORES_KEY
+LANG_ENGLISH        "The scores key"
+LANG_GERMAN         "Die Scoreboard-Taste"
+
+REFERENCE           S_TWICE_PICK_A_PLAYER
+LANG_ENGLISH        "%s twice: pick a player"
+LANG_GERMAN         "%s zweimal: Spieler auswählen"
+
+REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
+LANG_ENGLISH        "Click a player. %s or Esc closes."
+LANG_GERMAN         "Spieler anklicken. Schließen mit %s oder Esc."
+
+REFERENCE           NEW_MENUS
+LANG_ENGLISH        "New Menus"
+LANG_GERMAN         "Neue Menüs"
+
+REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
+LANG_GERMAN         "Die Menüs und das HUD von VisionJK. Die Grafik wird neu gestartet."
+
+REFERENCE           YOU_CLAN_RADIO
+LANG_ENGLISH        "You, clan radio"
+LANG_GERMAN         "Du, Clan-Funk"
+
+REFERENCE           RADIO
+LANG_ENGLISH        "radio"
+LANG_GERMAN         "Funk"
+
+REFERENCE           ALL
+LANG_ENGLISH        "All"
+LANG_GERMAN         "Alle"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+LANG_GERMAN         "#same"
+
+REFERENCE           PRIVATE
+LANG_ENGLISH        "Private"
+LANG_GERMAN         "Privat"
+
+REFERENCE           SAY
+LANG_ENGLISH        "Say"
+LANG_GERMAN         "Sagen"
+
+REFERENCE           TO_S
+LANG_ENGLISH        "To %s"
+LANG_GERMAN         "An %s"
+
+REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
+LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
+LANG_GERMAN         "%s öffnen? Enter: ja, jede andere Taste: nein"
+
+REFERENCE           SABER
+LANG_ENGLISH        "Saber"
+LANG_GERMAN         "Schwert"
+
+REFERENCE           ALTERNATE_DIMENSION
+LANG_ENGLISH        "Alternate Dimension"
+LANG_GERMAN         "Andere Dimension"
+
+REFERENCE           SOUND_SYSTEM
+LANG_ENGLISH        "Sound System"
+LANG_GERMAN         "Soundanlage"
+
+REFERENCE           PUT_A_BOOMBOX_HERE
+LANG_ENGLISH        "Put a boombox here"
+LANG_GERMAN         "Boombox hier aufstellen"
+
+REFERENCE           PUT_A_SOUND_SYSTEM_HERE
+LANG_ENGLISH        "Put a sound system here"
+LANG_GERMAN         "Soundanlage hier aufstellen"
+
+REFERENCE           TV
+LANG_ENGLISH        "TV"
+LANG_GERMAN         "Fernseher"
+
+REFERENCE           PUT_A_TV_HERE
+LANG_ENGLISH        "Put a TV here"
+LANG_GERMAN         "Fernseher hier aufstellen"
+
+REFERENCE           PLAY
+LANG_ENGLISH        "Play"
+LANG_GERMAN         "Abspielen"
+
+REFERENCE           MUSIC_PLAYER
+LANG_ENGLISH        "Music Player"
+LANG_GERMAN         "Musikplayer"
+
+REFERENCE           LOUDER
+LANG_ENGLISH        "Louder"
+LANG_GERMAN         "Lauter"
+
+REFERENCE           QUIETER
+LANG_ENGLISH        "Quieter"
+LANG_GERMAN         "Leiser"
+
+REFERENCE           REMOVE
+LANG_ENGLISH        "Remove"
+LANG_GERMAN         "Entfernen"
+
+REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
+LANG_ENGLISH        "Click a choice, Esc closes"
+LANG_GERMAN         "Option anklicken, Esc schließt"
+
+REFERENCE           LEFT_SPEAKER
+LANG_ENGLISH        "Left speaker"
+LANG_GERMAN         "Linker Lautsprecher"
+
+REFERENCE           RIGHT_SPEAKER
+LANG_ENGLISH        "Right speaker"
+LANG_GERMAN         "Rechter Lautsprecher"
+
+REFERENCE           NO_BOOMBOX_HERE
+LANG_ENGLISH        "No boombox here"
+LANG_GERMAN         "Keine Boombox hier"
+
+REFERENCE           NO_PLAYER_OF_MUSIC_RUNS_RIGHT_NOW
+LANG_ENGLISH        "No player of music runs right now"
+LANG_GERMAN         "Gerade läuft kein Musikplayer"
+
+REFERENCE           NOT_RUNNING
+LANG_ENGLISH        "not running"
+LANG_GERMAN         "läuft nicht"
+
+REFERENCE           INTRUSIONS
+LANG_ENGLISH        "Intrusions"
+LANG_GERMAN         "Angriffe"
+
+REFERENCE           WHAT_THE_INTRUSION_DETECTION_NOTED_A
+LANG_ENGLISH        "What the intrusion detection noted about servers, newest first."
+LANG_GERMAN         "Was die Angriffserkennung über Server notiert hat, neueste zuerst."
+
+REFERENCE           ALL_OF_IT_IS_IN_IDS_LOG_IN_THE_GAME
+LANG_ENGLISH        "All of it is in ids.log in the game folder."
+LANG_GERMAN         "Alles steht in ids.log im Spielordner."
+
+REFERENCE           WHAT_S_NEW
+LANG_ENGLISH        "What's new"
+LANG_GERMAN         "Neuigkeiten"
+
+REFERENCE           WHAT_S_NEW_IN
+LANG_ENGLISH        "What's new in"
+LANG_GERMAN         "Neu in"
+
+REFERENCE           UPDATE_NOW
+LANG_ENGLISH        "Update Now"
+LANG_GERMAN         "Jetzt aktualisieren"
+
+REFERENCE           VERSION
+LANG_ENGLISH        "Version"
+LANG_GERMAN         "#same"
+
+REFERENCE           DEVELOPMENT_BUILD
+LANG_ENGLISH        "Development build"
+LANG_GERMAN         "Entwicklungsversion"
+
+REFERENCE           INSTALLED
+LANG_ENGLISH        "Installed"
+LANG_GERMAN         "Installiert"
+
+REFERENCE           NOT_INSTALLED_YET
+LANG_ENGLISH        "Not installed yet"
+LANG_GERMAN         "Noch nicht installiert"
+
+REFERENCE           CLICK_THE_LINK_AGAIN_TO_OPEN_IT_IN_Y
+LANG_ENGLISH        "Click the link again to open it in your browser:"
+LANG_GERMAN         "Klicke den Link noch einmal, um ihn im Browser zu öffnen:"
+
+REFERENCE           THE_CHANGELOG_IS_NOT_THERE_IT_COMES
+LANG_ENGLISH        "The changelog is not there. It comes with the next update."
+LANG_GERMAN         "Der Changelog fehlt. Er kommt mit dem nächsten Update."
+
+REFERENCE           NOTHING_TO_CLEAN_UP
+LANG_ENGLISH        "Nothing to clean up."
+LANG_GERMAN         "Nichts aufzuräumen."
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
+LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat: übrig aus älteren Versionen und anderen Mods. Entfernen nimmt eine aus der Config."
+
+REFERENCE           REMOVE_ALL
+LANG_ENGLISH        "Remove All"
+LANG_GERMAN         "Alle entfernen"
+
+REFERENCE           NEVER_USED
+LANG_ENGLISH        "Never used"
+LANG_GERMAN         "Nie benutzt"
+
+REFERENCE           I_DAYS_AGO
+LANG_ENGLISH        "%i days ago"
+LANG_GERMAN         "vor %i Tagen"
+
+REFERENCE           NO_SETTING_HAS_THESE_WORDS
+LANG_ENGLISH        "No setting has these words."
+LANG_GERMAN         "Keine Einstellung hat diese Wörter."
+
+REFERENCE           PLACE_A_BOOMBOX
+LANG_ENGLISH        "Place a Boombox"
+LANG_GERMAN         "Boombox aufstellen"
+
+REFERENCE           PLACE_A_SOUND_SYSTEM
+LANG_ENGLISH        "Place a Sound System"
+LANG_GERMAN         "Soundanlage aufstellen"
+
+REFERENCE           MUTE_EVERYBODY
+LANG_ENGLISH        "Mute Everybody"
+LANG_GERMAN         "Alle stummschalten"
+
+REFERENCE           HEAR_EVERYBODY_AGAIN
+LANG_ENGLISH        "Hear Everybody Again"
+LANG_GERMAN         "Alle wieder hören"
+
+REFERENCE           VOICE_CHAT_STATUS
+LANG_ENGLISH        "Voice Chat Status"
+LANG_GERMAN         "Sprachchat-Status"
+
+REFERENCE           EMOTES
+LANG_ENGLISH        "Emotes"
+LANG_GERMAN         "Gesten"
+
+REFERENCE           SIT
+LANG_ENGLISH        "Sit"
+LANG_GERMAN         "Hinsetzen"
+
+REFERENCE           KNEEL
+LANG_ENGLISH        "Kneel"
+LANG_GERMAN         "Knien"
+
+REFERENCE           HELLO
+LANG_ENGLISH        "Hello"
+LANG_GERMAN         "Hallo"
+
+REFERENCE           VICTORY
+LANG_ENGLISH        "Victory"
+LANG_GERMAN         "Sieg"
+
+REFERENCE           COME_ON
+LANG_ENGLISH        "Come On"
+LANG_GERMAN         "Komm her"
+
+REFERENCE           SURRENDER
+LANG_ENGLISH        "Surrender"
+LANG_GERMAN         "Aufgeben"
+
+REFERENCE           BREAK_DANCE
+LANG_ENGLISH        "Break Dance"
+LANG_GERMAN         "Breakdance"
+
+REFERENCE           FLIP
+LANG_ENGLISH        "Flip"
+LANG_GERMAN         "Salto"
+
+REFERENCE           MORE
+LANG_ENGLISH        "More"
+LANG_GERMAN         "Mehr"
+
+REFERENCE           SIT_DIFFERENTLY
+LANG_ENGLISH        "Sit Differently"
+LANG_GERMAN         "Anders hinsetzen"
+
+REFERENCE           NOD
+LANG_ENGLISH        "Nod"
+LANG_GERMAN         "Nicken"
+
+REFERENCE           SHAKE_HEAD
+LANG_ENGLISH        "Shake Head"
+LANG_GERMAN         "Kopfschütteln"
+
+REFERENCE           AT_EASE
+LANG_ENGLISH        "At Ease"
+LANG_GERMAN         "Rührt euch"
+
+REFERENCE           BEG
+LANG_ENGLISH        "Beg"
+LANG_GERMAN         "Betteln"
+
+REFERENCE           WAIT
+LANG_ENGLISH        "Wait"
+LANG_GERMAN         "Warten"
+
+REFERENCE           HANDS_ON_HIPS
+LANG_ENGLISH        "Hands on Hips"
+LANG_GERMAN         "Hände in die Hüften"
+
+REFERENCE           POWER
+LANG_ENGLISH        "Power"
+LANG_GERMAN         "Kraft"
+
+REFERENCE           NEO
+LANG_ENGLISH        "Neo"
+LANG_GERMAN         "#same"
+
+REFERENCE           DUEL
+LANG_ENGLISH        "Duel"
+LANG_GERMAN         "Duell"
+
+REFERENCE           CHALLENGE_TO_A_DUEL
+LANG_ENGLISH        "Challenge to a Duel"
+LANG_GERMAN         "Zum Duell herausfordern"
+
+REFERENCE           JOIN_THE_GAME
+LANG_ENGLISH        "Join the Game"
+LANG_GERMAN         "Mitspielen"
+
+REFERENCE           JOIN_RED
+LANG_ENGLISH        "Join Red"
+LANG_GERMAN         "Zu Rot"
+
+REFERENCE           JOIN_BLUE
+LANG_ENGLISH        "Join Blue"
+LANG_GERMAN         "Zu Blau"
+
+REFERENCE           SPECTATE
+LANG_ENGLISH        "Spectate"
+LANG_GERMAN         "Zuschauen"
+
+REFERENCE           VOTE
+LANG_ENGLISH        "Vote"
+LANG_GERMAN         "Abstimmung"
+
+REFERENCE           YES
+LANG_ENGLISH        "Yes"
+LANG_GERMAN         "Ja"
+
+REFERENCE           NO
+LANG_ENGLISH        "No"
+LANG_GERMAN         "Nein"
+
+REFERENCE           RESTART_THE_MAP
+LANG_ENGLISH        "Restart the Map"
+LANG_GERMAN         "Karte neu starten"
+
+REFERENCE           SHOW
+LANG_ENGLISH        "Show"
+LANG_GERMAN         "Anzeigen"
+
+REFERENCE           FRAME_RATE
+LANG_ENGLISH        "Frame Rate"
+LANG_GERMAN         "Bildrate"
+
+REFERENCE           TIMER
+LANG_ENGLISH        "Timer"
+LANG_GERMAN         "Zeitanzeige"
+
+REFERENCE           LAGOMETER
+LANG_ENGLISH        "Lagometer"
+LANG_GERMAN         "#same"
+
+REFERENCE           SCREENSHOT
+LANG_ENGLISH        "Screenshot"
+LANG_GERMAN         "#same"
+
+REFERENCE           TOOLS
+LANG_ENGLISH        "Tools"
+LANG_GERMAN         "Werkzeuge"
+
+REFERENCE           REMOVER
+LANG_ENGLISH        "Remover"
+LANG_GERMAN         "Entfernen"
+
+REFERENCE           COLOR
+LANG_ENGLISH        "Color"
+LANG_GERMAN         "Farbe"
+
+REFERENCE           MATERIAL
+LANG_ENGLISH        "Material"
+LANG_GERMAN         "#same"
+
+REFERENCE           PHYSICAL_PROPERTIES
+LANG_ENGLISH        "Physical Properties"
+LANG_GERMAN         "Physikalische Eigenschaften"
+
+REFERENCE           FREEZE
+LANG_ENGLISH        "Freeze"
+LANG_GERMAN         "Einfrieren"
+
+REFERENCE           PLAIN
+LANG_ENGLISH        "Plain"
+LANG_GERMAN         "Schlicht"
+
+REFERENCE           CHROME
+LANG_ENGLISH        "Chrome"
+LANG_GERMAN         "Chrom"
+
+REFERENCE           GOLD
+LANG_ENGLISH        "Gold"
+LANG_GERMAN         "#same"
+
+REFERENCE           GLASS
+LANG_ENGLISH        "Glass"
+LANG_GERMAN         "Glas"
+
+REFERENCE           ICE
+LANG_ENGLISH        "Ice"
+LANG_GERMAN         "Eis"
+
+REFERENCE           LAVA
+LANG_ENGLISH        "Lava"
+LANG_GERMAN         "#same"
+
+REFERENCE           MASS
+LANG_ENGLISH        "Mass"
+LANG_GERMAN         "Masse"
+
+REFERENCE           BOUNCE
+LANG_ENGLISH        "Bounce"
+LANG_GERMAN         "Elastizität"
+
+REFERENCE           GRIP
+LANG_ENGLISH        "Grip"
+LANG_GERMAN         "Haftung"
+
+REFERENCE           LIGHT
+LANG_ENGLISH        "Light"
+LANG_GERMAN         "Leicht"
+
+REFERENCE           HEAVY
+LANG_ENGLISH        "Heavy"
+LANG_GERMAN         "Schwer"
+
+REFERENCE           BOUNCY
+LANG_ENGLISH        "Bouncy"
+LANG_GERMAN         "Springend"
+
+REFERENCE           SLIPPERY
+LANG_ENGLISH        "Slippery"
+LANG_GERMAN         "Rutschig"
+
+REFERENCE           LEFT_CLICK_REMOVES_THE_PROP_YOU_LOOK
+LANG_ENGLISH        "Left click removes the prop you look at."
+LANG_GERMAN         "Linksklick entfernt das Objekt, auf das du schaust."
+
+REFERENCE           LEFT_CLICK_PAINTS_THE_PROP_RIGHT_CLI
+LANG_ENGLISH        "Left click paints the prop, right click takes its color."
+LANG_GERMAN         "Linksklick färbt das Objekt, Rechtsklick übernimmt seine Farbe."
+
+REFERENCE           LEFT_CLICK_PUTS_THE_MATERIAL_ON_THE
+LANG_ENGLISH        "Left click puts the material on the prop, right click takes it."
+LANG_GERMAN         "Linksklick setzt das Material auf das Objekt, Rechtsklick übernimmt es."
+
+REFERENCE           LEFT_CLICK_GIVES_THE_PROP_THESE_PROP
+LANG_ENGLISH        "Left click gives the prop these properties, right click takes them."
+LANG_GERMAN         "Linksklick gibt dem Objekt diese Eigenschaften, Rechtsklick übernimmt sie."
+
+REFERENCE           LEFT_CLICK_FREEZES_THE_PROP_IN_PLACE
+LANG_ENGLISH        "Left click freezes the prop in place, right click frees it, R frees all."
+LANG_GERMAN         "Linksklick friert das Objekt an Ort und Stelle ein, Rechtsklick löst es, R löst alle."
+
+REFERENCE           LEFT_CLICK_USE_RIGHT_CLICK_TAKE_R_RE
+LANG_ENGLISH        "Left click: use   Right click: take   R: reset"
+LANG_GERMAN         "Linksklick: benutzen   Rechtsklick: übernehmen   R: zurücksetzen"
+
+REFERENCE           S_MODELS
+LANG_ENGLISH        "%s models"
+LANG_GERMAN         "%s Modelle"
+
+REFERENCE           THE_STORE_HAS_NO_MODELS_YET
+LANG_ENGLISH        "The store has no models yet."
+LANG_GERMAN         "Der Store hat noch keine Modelle."
+
+REFERENCE           THE_LIST_OF_THE_STORE_IS_ON_ITS_WAY
+LANG_ENGLISH        "The list of the store is on its way."
+LANG_GERMAN         "Die Liste des Stores ist unterwegs."
+
+REFERENCE           IN_THE_GAME
+LANG_ENGLISH        "In the game"
+LANG_GERMAN         "Im Spiel"
+
+REFERENCE           COMING
+LANG_ENGLISH        "Coming..."
+LANG_GERMAN         "Kommt..."
+
+REFERENCE           GET_S
+LANG_ENGLISH        "Get (%s)"
+LANG_GERMAN         "Holen (%s)"
+
+REFERENCE           UPLOAD_YOUR_OWN_AT_JKA_VISION_MODELS
+LANG_ENGLISH        "Upload your own at jka.vision/models.html"
+LANG_GERMAN         "Lade eigene hoch auf jka.vision/models.html"
+
+REFERENCE           W_S_DRIVE_A_D_STEER_SHIFT_HANDBRAKE
+LANG_ENGLISH        "W/S: drive. A/D: steer. Shift: handbrake. Space: hop. Mouse: look. Esc: put it away."
+LANG_GERMAN         "W/S: fahren. A/D: lenken. Umschalt: Handbremse. Leertaste: hüpfen. Maus: schauen. Esc: wegräumen."
+
+REFERENCE           CHANGED_SETTINGS
+LANG_ENGLISH        "Changed settings"
+LANG_GERMAN         "Geänderte Einstellungen"
+
+REFERENCE           NOTHING_CHANGED_YET
+LANG_ENGLISH        "Nothing changed yet."
+LANG_GERMAN         "Noch nichts geändert."
+
+REFERENCE           CURRENT
+LANG_ENGLISH        "Current"
+LANG_GERMAN         "Aktuell"
+
+REFERENCE           TAKES_EFFECT
+LANG_ENGLISH        "Takes effect"
+LANG_GERMAN         "Gilt"
+
+REFERENCE           AFTER_RESTART
+LANG_ENGLISH        "After restart"
+LANG_GERMAN         "Nach Neustart"
+
+REFERENCE           INSTANTLY
+LANG_ENGLISH        "Instantly"
+LANG_GERMAN         "Sofort"
+
+REFERENCE           ON
+LANG_ENGLISH        "On"
+LANG_GERMAN         "An"
+
+REFERENCE           PRESS_A_KEY
+LANG_ENGLISH        "PRESS A KEY"
+LANG_GERMAN         "TASTE DRÜCKEN"
+
+REFERENCE           NOT_BOUND
+LANG_ENGLISH        "NOT BOUND"
+LANG_GERMAN         "NICHT BELEGT"
+
+REFERENCE           KEYS
+LANG_ENGLISH        "Keys"
+LANG_GERMAN         "Tasten"
+
+REFERENCE           COMMAND
+LANG_ENGLISH        "Command"
+LANG_GERMAN         "Befehl"
+
+REFERENCE           BACK_KICK
+LANG_ENGLISH        "Back Kick"
+LANG_GERMAN         "Rückwärtstritt"
+
+REFERENCE           JEDI_TORNADO
+LANG_ENGLISH        "Jedi Tornado"
+LANG_GERMAN         "Jedi-Tornado"
+
+REFERENCE           JUMP_GRAB_BACK_KICK
+LANG_ENGLISH        "Jump Grab Back Kick"
+LANG_GERMAN         "Sprung-Greif-Rückwärtstritt"
+
+REFERENCE           JUMP_SPIN_BACK_KICK
+LANG_ENGLISH        "Jump Spin Back Kick"
+LANG_GERMAN         "Sprung-Dreh-Rückwärtstritt"
+
+REFERENCE           MELEE_KNEE_KICK
+LANG_ENGLISH        "Melee Knee Kick"
+LANG_GERMAN         "Nahkampf-Kniestoß"
+
+REFERENCE           MELEE_PUNCH
+LANG_ENGLISH        "Melee Punch"
+LANG_GERMAN         "Nahkampf-Schlag"
+
+REFERENCE           MELEE_CHOKE
+LANG_ENGLISH        "Melee Choke"
+LANG_GERMAN         "Nahkampf-Würgegriff"
+
+REFERENCE           MELEE_THROW
+LANG_ENGLISH        "Melee Throw"
+LANG_GERMAN         "Nahkampf-Wurf"
+
+REFERENCE           NEW_FORWARD_KICK
+LANG_ENGLISH        "New Forward Kick"
+LANG_GERMAN         "Neuer Vorwärtstritt"
+
+REFERENCE           NEW_PULL_IMPALE
+LANG_ENGLISH        "New Pull Impale"
+LANG_GERMAN         "Neues Aufspießen mit Macht-Griff"
+
+REFERENCE           NEW_SABER_FLIP_STAB
+LANG_ENGLISH        "New Saber Flip Stab"
+LANG_GERMAN         "Neuer Salto-Stich"
+
+REFERENCE           NEW_SPIN_ATTACK
+LANG_ENGLISH        "New Spin Attack"
+LANG_GERMAN         "Neuer Drehangriff"
+
+REFERENCE           SITH_KISS
+LANG_ENGLISH        "Sith Kiss"
+LANG_GERMAN         "Sith-Kuss"
+
+REFERENCE           SPIN_KICK
+LANG_ENGLISH        "Spin Kick"
+LANG_GERMAN         "Drehtritt"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_RIGHT_ALT_ATT
+LANG_ENGLISH        "Melee or Staff + Forward + Right + Alt Attack"
+LANG_GERMAN         "Nahkampf oder Stab + Vorwärts + Rechts + 2. Feuermodus"
+
+REFERENCE           MELEE_PUSH_LEVEL_2_OR_HIGHER_IN_FRON
+LANG_ENGLISH        "Melee + Push level 2 or higher, in front of an enemy, Jedi only"
+LANG_GERMAN         "Nahkampf + Macht-Schub ab Stufe 2, vor einem Feind, nur für Jedi"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_DUAL_SA
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Dual Sabers, in front of an enemy"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus mit zwei Schwertern, vor einem Feind"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Forward + Jump + Alt Attack, in front of an enemy"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus, vor einem Feind"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK
+LANG_ENGLISH        "Forward + Jump + Alt Attack"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus"
+
+REFERENCE           FORWARD_JUMP_ALT_ATTACK_WITH_SINGLE
+LANG_ENGLISH        "Forward + Jump + Alt Attack with Single Saber"
+LANG_GERMAN         "Vorwärts + Sprung + 2. Feuermodus mit einem Schwert"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_BACKWARD_IN
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Backward, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus + Rückwärts, vor einem Feind"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_FORWARD_IN_F
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Forward, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus + Vorwärts, vor einem Feind"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_IN_FRONT_OF
+LANG_ENGLISH        "Melee + Attack + Alt Attack, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus, vor einem Feind"
+
+REFERENCE           MELEE_ATTACK_ALT_ATTACK_RIGHT_IN_FRO
+LANG_ENGLISH        "Melee + Attack + Alt Attack + Right, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Angriff + 2. Feuermodus + Rechts, vor einem Feind"
+
+REFERENCE           FORWARD_ALT_ATTACK_IN_FRONT_OF_AN_EN
+LANG_ENGLISH        "Forward + Alt Attack, in front of an enemy"
+LANG_GERMAN         "Vorwärts + 2. Feuermodus, vor einem Feind"
+
+REFERENCE           PULL_ATTACK_IN_FRONT_OF_AN_ENEMY
+LANG_ENGLISH        "Pull + Attack, in front of an enemy"
+LANG_GERMAN         "Macht-Griff + Angriff, vor einem Feind"
+
+REFERENCE           JUMP_FORWARD_ATTACK_IN_FRONT_OF_AN_E
+LANG_ENGLISH        "Jump + Forward + Attack, in front of an enemy"
+LANG_GERMAN         "Sprung + Vorwärts + Angriff, vor einem Feind"
+
+REFERENCE           MELEE_DRAIN_LEVEL_2_OR_HIGHER_IN_FRO
+LANG_ENGLISH        "Melee + Drain level 2 or higher, in front of an enemy"
+LANG_GERMAN         "Nahkampf + Macht-Entzug ab Stufe 2, vor einem Feind"
+
+REFERENCE           MELEE_OR_STAFF_FORWARD_LEFT_ALT_ATTA
+LANG_ENGLISH        "Melee or Staff + Forward + Left + Alt Attack"
+LANG_GERMAN         "Nahkampf oder Stab + Vorwärts + Links + 2. Feuermodus"
+
+REFERENCE           AS_THEY_CHOSE
+LANG_ENGLISH        "As They Chose"
+LANG_GERMAN         "Wie gewählt"
+
+REFERENCE           PICK_A_MODEL
+LANG_ENGLISH        "Pick a Model"
+LANG_GERMAN         "Modell wählen"
+
+
+ENDMARKER
+

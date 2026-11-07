@@ -1,0 +1,175 @@
+// game/toys/bg_toys.c: a throw of a toy as the relays hand it on (RELAY_TOY, vs_toy)
+#include "c_api.h"
+
+#include <boost/test/unit_test.hpp>
+
+namespace {
+
+toyThrow_t Throw( int kind, int x, int y, int z, int vx, int vy, int vz ) {
+	toyThrow_t t = {};
+	t.kind = kind;
+	t.origin[0] = x; t.origin[1] = y; t.origin[2] = z;
+	t.velocity[0] = vx; t.velocity[1] = vy; t.velocity[2] = vz;
+	return t;
+}
+
+bool Valid( toyThrow_t t ) {
+	return BG_ToyValid( &t ) != qfalse;
+}
+
+}
+
+BOOST_AUTO_TEST_SUITE( toys )
+
+BOOST_AUTO_TEST_CASE( round_trip )
+{
+	const toyThrow_t in = Throw( TOY_SNOWBALL, -1234, 56789 - 65536, 300, -900, 700, -150 );
+	byte buf[TOY_BYTES + 4];
+	toyThrow_t out;
+
+	BOOST_REQUIRE_EQUAL( BG_ToyPack( &in, buf ), TOY_BYTES );
+	BOOST_REQUIRE( BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+	BOOST_CHECK_EQUAL( out.kind, TOY_SNOWBALL );
+	for ( int i = 0; i < 3; i++ ) {
+		BOOST_CHECK_EQUAL( out.origin[i], in.origin[i] );
+		BOOST_CHECK_EQUAL( out.velocity[i], in.velocity[i] );
+	}
+	// a byte too few or too many
+	BOOST_CHECK( !BG_ToyUnpack( buf, TOY_BYTES - 1, &out ) );
+	BOOST_CHECK( !BG_ToyUnpack( buf, TOY_BYTES + 1, &out ) );
+	BOOST_CHECK( !BG_ToyUnpack( buf, 0, &out ) );
+}
+
+BOOST_AUTO_TEST_CASE( water )
+{
+	const toyThrow_t in = Throw( TOY_WATER, 3476, 1599, 1846, -720, 0, 0 );
+	byte buf[TOY_BYTES];
+	toyThrow_t out;
+
+	BOOST_REQUIRE_EQUAL( BG_ToyPack( &in, buf ), TOY_BYTES );
+	BOOST_REQUIRE( BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+	BOOST_CHECK_EQUAL( out.kind, TOY_WATER );
+	BOOST_CHECK_EQUAL( out.velocity[0], -720 );
+}
+
+BOOST_AUTO_TEST_CASE( rc_car )
+{
+	// the speed over the ground in x and y, the yaw in z
+	const toyThrow_t in = Throw( TOY_RC, 3440, 1592, 1792, 300, -250, -179 );
+	byte buf[TOY_BYTES];
+	toyThrow_t out;
+
+	BOOST_REQUIRE_EQUAL( BG_ToyPack( &in, buf ), TOY_BYTES );
+	BOOST_REQUIRE( BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+	BOOST_CHECK_EQUAL( out.kind, TOY_RC );
+	BOOST_CHECK_EQUAL( out.velocity[2], -179 );
+	BOOST_CHECK( Valid( Throw( TOY_RC_GONE, 3440, 1592, 1792, 0, 0, 0 ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( spray )
+{
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY, 100, 200, 300, -90, 180, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY, 100, 200, 300, 45, -180, TOY_SPRAY_MOST - 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 91, 0, 5 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 181, 5 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 0, -1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY, 100, 200, 300, 0, 0, TOY_SPRAY_MOST ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( emoji )
+{
+	BOOST_CHECK( Valid( Throw( TOY_EMOJI, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_EMOJI, 100, 200, 300, MAX_CLIENTS - 1, TOY_SPRAY_MOST - 1, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, -1, 5, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, MAX_CLIENTS, 5, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, 3, TOY_SPRAY_MOST, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOJI, 100, 200, 300, 3, 5, 1 ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( table_tennis )
+{
+	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, -180, MAX_CLIENTS, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, 90, 3, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 181, 3, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 0, MAX_CLIENTS + 1, 0 ) ) );
+	// a tennis court is a table with z 1
+	BOOST_CHECK( Valid( Throw( TOY_TABLE, 100, 200, 300, 45, MAX_CLIENTS, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 45, 3, 2 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE, 100, 200, 300, 45, 3, -1 ) ) );
+	// the points of a court: games * 8 + points, three games and advantage at most
+	BOOST_CHECK( Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, 3 * 8 + 4, 2 * 8 + 3, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_TABLE_GONE, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_TABLE_GONE, 100, 200, 300, 1, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, 5, 1, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, MAX_CLIENTS, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_JOIN, 100, 200, 300, 5, 2, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_BALL, 100, 200, 300, 400, -50, 120 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_BALL, 100, 200, 300, TOY_MAX_SPEED + 1, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, 11, 9, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, TOY_PONG_MOST + 1, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_PONG_SCORE, 100, 200, 300, 3, 4, 2 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_PONG_PADDLE, 100, 200, 300, 0, 0, 0 ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( board )
+{
+	BOOST_CHECK( Valid( Throw( TOY_BOARD, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_BOARD, 100, 200, 300, TOY_BOARD_SPLIT - 1, TOY_BOARD_SPLIT - 1, 2 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_BOARD, 100, 200, 300, TOY_BOARD_SPLIT, 0, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_BOARD, 100, 200, 300, 0, -1, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_BOARD, 100, 200, 300, 0, 0, 3 ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( spray_store )
+{
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, 0, 0, 1 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, TOY_SPRAY_ANGLES - 1, TOY_BOARD_SPLIT - 1, TOY_BOARD_SPLIT - 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, TOY_SPRAY_ANGLES, 0, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, -1, 0, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SPRAY_STORE, 100, 200, 300, 0, TOY_BOARD_SPLIT, 1 ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( emote_store )
+{
+	BOOST_CHECK( Valid( Throw( TOY_EMOTE_STORE, 100, 200, 300, 5, 0, 1 ) ) );
+	BOOST_CHECK( Valid( Throw( TOY_EMOTE_STORE, 100, 200, 300, MAX_CLIENTS - 1, TOY_BOARD_SPLIT - 1, TOY_BOARD_SPLIT - 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOTE_STORE, 100, 200, 300, MAX_CLIENTS, 0, 1 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOTE_STORE, 100, 200, 300, 5, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_EMOTE_STORE, 100, 200, 300, 5, -1, 1 ) ) );
+}
+
+BOOST_AUTO_TEST_CASE( hello )
+{
+	const toyThrow_t in = Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 );
+	byte buf[TOY_BYTES];
+	toyThrow_t out;
+
+	BOOST_REQUIRE_EQUAL( BG_ToyPack( &in, buf ), TOY_HELLO_BYTES );
+	BOOST_CHECK( BG_ToyUnpack( buf, TOY_HELLO_BYTES, &out ) );
+	BOOST_CHECK_EQUAL( out.kind, TOY_HELLO );
+	// a hello with a body, a throw without one
+	BOOST_CHECK( !BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+	buf[0] = TOY_SNOWBALL;
+	BOOST_CHECK( !BG_ToyUnpack( buf, TOY_HELLO_BYTES, &out ) );
+}
+
+BOOST_AUTO_TEST_CASE( limits )
+{
+	BOOST_CHECK( Valid( Throw( TOY_SNOWBALL, 0, 0, 0, TOY_MAX_SPEED, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SNOWBALL, 0, 0, 0, TOY_MAX_SPEED + 1, 0, 0 ) ) );
+	// each axis within, the whole too fast
+	BOOST_CHECK( !Valid( Throw( TOY_SNOWBALL, 0, 0, 0, 1200, 1200, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SNOWBALL, TOY_MAX_COORD, 0, 0, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_SNOWBALL, 0, -TOY_MAX_COORD, 0, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_HELLO, 0, 0, 0, 0, 0, 0 ) ) );
+	BOOST_CHECK( !Valid( Throw( TOY_KINDS, 0, 0, 0, 0, 0, 0 ) ) );
+
+	byte buf[TOY_BYTES];
+	toyThrow_t out;
+	const toyThrow_t fast = Throw( TOY_SNOWBALL, 0, 0, 0, 1200, 1200, 0 );
+	BG_ToyPack( &fast, buf );
+	BOOST_CHECK( !BG_ToyUnpack( buf, TOY_BYTES, &out ) );
+}
+
+BOOST_AUTO_TEST_SUITE_END()

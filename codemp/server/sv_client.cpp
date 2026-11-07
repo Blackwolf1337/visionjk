@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -25,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // sv_client.c -- server code for dealing with clients
 
 #include "server.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 
 #ifdef USE_INTERNAL_ZLIB
 #include "zlib/zlib.h"
@@ -95,6 +96,17 @@ static qboolean SV_IsBanned( const netadr_t *from, qboolean isexception )
 {
 	int index;
 	serverBan_t *curban;
+#ifdef DEDICATED
+	netadr_t asIP;
+
+	// a ban is kept as NA_IP and holds for the address whichever way it comes in: a peer of the web host
+	// (NA_WEB, codemp/server/web) is looked up as the UDP peer of its address
+	if ( from->type == NA_WEB ) {
+		asIP = *from;
+		asIP.type = NA_IP;
+		from = &asIP;
+	}
+#endif
 
 	if ( !serverBansCount ) {
 		return qfalse;
@@ -210,6 +222,7 @@ void SV_DirectConnect( const netadr_t *from ) {
 		// Verify the received challenge against the expected challenge
 		if (!SV_VerifyChallenge(challenge, from))
 		{
+			SV_IDS_Event( from, NULL, IDS_BAD_CHALLENGE, NULL );
 			NET_OutOfBandPrint( NS_SERVER, from, "print\nIncorrect challenge for your address.\n" );
 			return;
 		}
@@ -376,6 +389,7 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 
 	// Kill any download
 	SV_CloseDownload( drop );
+	SV_FloodClear( drop );
 
 	// tell everyone why they got dropped
 	SV_SendServerCommand( NULL, "print \"%s" S_COLOR_WHITE " %s\n\"", drop->name, reason );
@@ -420,7 +434,9 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 	}
 }
 
-void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
+// clientNum: the number the receiver has of itself; a client of a slot has the one of its slot, the TV of the server
+// (sv_tv.cpp) one that no player uses
+void SV_CreateGameStateMessage( client_t *client, msg_t *msg, int clientNum ) {
 	int			start;
 	entityState_t	*base, nullstate;
 
@@ -460,13 +476,17 @@ void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
 
 	MSG_WriteByte( msg, svc_EOF );
 
-	MSG_WriteLong( msg, client - svs.clients);
+	MSG_WriteLong( msg, clientNum );
 
 	// write the checksum feed
 	MSG_WriteLong( msg, sv.checksumFeed);
 
 	// For old RMG system.
 	MSG_WriteShort ( msg, 0 );
+}
+
+void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
+	SV_CreateGameStateMessage( client, msg, client - svs.clients );
 }
 
 /*
@@ -498,6 +518,7 @@ void SV_SendClientGameState( client_t *client ) {
 	}
 
 	Com_DPrintf ("SV_SendClientGameState() for %s\n", client->name);
+	SV_FloodClear( client );	// nothing from before a new level or map_restart
 	Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
 	if ( client->state == CS_CONNECTED )
 		client->state = CS_PRIMED;
@@ -568,6 +589,7 @@ void SV_ClientEnterWorld( client_t *client, usercmd_t *cmd ) {
 
 	client->lastUserInfoChange = 0; //reset the delay
 	client->lastUserInfoCount = 0; //reset the count
+	SV_FloodClear( client );
 
 	client->deltaMessage = -1;
 	client->nextSnapshotTime = svs.time;	// generate a snapshot immediately
@@ -734,6 +756,14 @@ void SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
 			// cannot auto-download file
 			if( !allowDownload )
 			{
+				// a name that leaves the folders of the game, or that is no pk3, is not what a client asks for
+				// that just lacks a file
+				SV_IDS_Event( &cl->netchan.remoteAddress, cl, ( strstr( cl->downloadName, ".." ) || cl->downloadName[0] == '/'
+					|| strchr( cl->downloadName, ':' ) || strchr( cl->downloadName, '\\' ) || Q_stricmp( COM_GetExtension( cl->downloadName ), "pk3" ) )
+					? IDS_DOWNLOAD_PATH : IDS_DOWNLOAD, cl->downloadName );
+				if ( cl->state < CS_CONNECTED ) {
+					return;		// the intrusion detection dropped it
+				}
 				Com_Printf("clientDownload: %d : \"%s\" is not referenced and cannot be downloaded.\n", (int) (cl - svs.clients), cl->downloadName);
 				Com_sprintf(errorMessage, sizeof(errorMessage), "File \"%s\" is not referenced and cannot be downloaded.", cl->downloadName);
 			} else if ( !sv_allowDownload->integer ) {
@@ -861,7 +891,11 @@ void SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
 
 		// block zero is special, contains file size
 		if ( cl->downloadXmitBlock == 0 )
+#ifdef VISIONJK_IDS_TEST
+			MSG_WriteLong( msg, SV_IDSTest_DownloadSize( cl->downloadSize ) );
+#else
 			MSG_WriteLong( msg, cl->downloadSize );
+#endif
 
 		MSG_WriteShort( msg, cl->downloadBlockSize[curindex] );
 
@@ -1136,8 +1170,11 @@ void SV_UserinfoChanged( client_t *cl ) {
 	else
 		len = strlen( ip ) + 4 + strlen( cl->userinfo );
 
-	if( len >= MAX_INFO_STRING )
-		SV_DropClient( cl, "userinfo string length exceeded" );
+	if( len >= MAX_INFO_STRING ) {
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_USERINFO, NULL );
+		if ( cl->state >= CS_CONNECTED )
+			SV_DropClient( cl, "userinfo string length exceeded" );
+	}
 	else
 		Info_SetValueForKey( cl->userinfo, "ip", ip );
 }
@@ -1201,6 +1238,18 @@ static ucmd_t ucmds[] = {
 	{NULL, NULL}
 };
 
+// the server level command of this name, NULL for one of the game
+static ucmd_t *SV_EngineCommand( const char *name ) {
+	ucmd_t	*u;
+
+	for ( u = ucmds; u->name; u++ ) {
+		if ( !strcmp( name, u->name ) ) {
+			return u;
+		}
+	}
+	return NULL;
+}
+
 /*
 ==================
 SV_ExecuteClientCommand
@@ -1208,37 +1257,148 @@ SV_ExecuteClientCommand
 Also called by bot code
 ==================
 */
-void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK ) {
+void SV_ExecuteClientCommand( client_t *cl, const char *s ) {
 	ucmd_t	*u;
-	qboolean bProcessed = qfalse;
 
 	Cmd_TokenizeString( s );
 
 	// see if it is a server level command
-	for (u=ucmds ; u->name ; u++) {
-		if (!strcmp (Cmd_Argv(0), u->name) ) {
-			u->func( cl );
-			bProcessed = qtrue;
-			break;
-		}
+	u = SV_EngineCommand( Cmd_Argv( 0 ) );
+	if ( u ) {
+		u->func( cl );
+		return;
 	}
 
-	if (clientOK) {
-		// pass unknown strings to the game
-		if (!u->name && sv.state == SS_GAME && (cl->state == CS_ACTIVE || cl->state == CS_PRIMED)) {
-			// strip \r \n and ;
-			if ( sv_filterCommands->integer ) {
-				Cmd_Args_Sanitize( MAX_CVAR_VALUE_STRING, "\n\r", "  " );
-				if ( sv_filterCommands->integer == 2 ) {
-					// also strip ';' for callvote
-					Cmd_Args_Sanitize( MAX_CVAR_VALUE_STRING, ";", " " );
-				}
+	// pass unknown strings to the game
+	if ( sv.state == SS_GAME && (cl->state == CS_ACTIVE || cl->state == CS_PRIMED) ) {
+		// strip \r \n and ;
+		if ( sv_filterCommands->integer ) {
+			Cmd_Args_Sanitize( MAX_CVAR_VALUE_STRING, "\n\r", "  " );
+			if ( sv_filterCommands->integer == 2 ) {
+				// also strip ';' for callvote
+				Cmd_Args_Sanitize( MAX_CVAR_VALUE_STRING, ";", " " );
 			}
-			GVM_ClientCommand( cl - svs.clients );
 		}
+		GVM_ClientCommand( cl - svs.clients );
 	}
-	else if (!bProcessed)
-		Com_DPrintf( "client text ignored for %s: %s\n", cl->name, Cmd_Argv(0) );
+}
+
+/*
+==================
+Flood protection
+
+A client may send sv_floodBurst commands at once and sv_floodRate a second after that: a budget in msec that
+refills with time. The commands past it are not dropped, they wait in floodQueue and SV_FloodFrame runs them
+in order as the budget comes back, so pressing a bind twice loses nothing and a flooder only slows down their
+own commands. Only a full queue drops commands. The server level commands (userinfo, downloads, disconnect) never
+wait. The game module sets SVF_NOFLOODPROTECT on the clients that are left alone (admins).
+==================
+*/
+static qboolean SV_FloodLimited( client_t *cl ) {
+	return (qboolean)( !com_cl_running->integer && cl->state == CS_ACTIVE && sv_floodProtect->integer
+		&& !( SV_GentityNum( cl - svs.clients )->r.svFlags & SVF_NOFLOODPROTECT ) );
+}
+
+static int SV_FloodCost( void ) {
+	return 1000 / sv_floodRate->integer;
+}
+
+static void SV_FloodRefill( client_t *cl ) {
+	const int	full = sv_floodBurst->integer * SV_FloodCost();
+	int			elapsed = svs.time - cl->floodTime;
+
+	cl->floodTime = svs.time;
+	if ( elapsed < 0 || elapsed > full ) {
+		elapsed = full;		// also the first command, floodTime is still 0
+	}
+	cl->floodBudget += elapsed;
+	if ( cl->floodBudget > full ) {
+		cl->floodBudget = full;
+	}
+}
+
+void SV_FloodClear( client_t *cl ) {
+	cl->floodHead = 0;
+	cl->floodCount = 0;
+	cl->floodWarned = qfalse;
+}
+
+// the waiting commands, as many as the budget allows, or all of them
+static void SV_FloodRun( client_t *cl, qboolean all ) {
+	char		cmd[MAX_STRING_CHARS];
+	const int	cost = SV_FloodCost();
+
+	while ( cl->floodCount && cl->state == CS_ACTIVE ) {
+		if ( !all ) {
+			if ( cl->floodBudget < cost ) {
+				break;
+			}
+			cl->floodBudget -= cost;
+		}
+		// out of the queue first: the command may drop the client, which clears it
+		Q_strncpyz( cmd, cl->floodQueue[cl->floodHead], sizeof( cmd ) );
+		cl->floodHead = ( cl->floodHead + 1 ) % FLOOD_QUEUE_SIZE;
+		cl->floodCount--;
+		SV_ExecuteClientCommand( cl, cmd );
+	}
+	if ( !cl->floodCount ) {
+		cl->floodWarned = qfalse;
+	}
+}
+
+// a game command of a client that is limited: now, later or not at all
+static void SV_FloodCommand( client_t *cl, const char *s ) {
+	const int	cost = SV_FloodCost();
+
+	SV_FloodRefill( cl );
+	if ( !cl->floodCount && cl->floodBudget >= cost ) {
+		cl->floodBudget -= cost;
+		SV_ExecuteClientCommand( cl, s );
+		return;
+	}
+
+	if ( cl->floodCount >= sv_floodQueue->integer ) {
+		if ( !cl->floodWarned ) {
+			cl->floodWarned = qtrue;
+			SV_SendServerCommand( cl, "print \"Too many commands at once, some of yours are being dropped.\n\"" );
+			SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_CMD_FLOOD, NULL );
+		}
+		Com_DPrintf( "client text dropped for %s: %s\n", cl->name, s );
+		return;
+	}
+	Q_strncpyz( cl->floodQueue[( cl->floodHead + cl->floodCount ) % FLOOD_QUEUE_SIZE], s, MAX_STRING_CHARS );
+	cl->floodCount++;
+}
+
+/*
+==================
+SV_FloodFrame
+
+Every server frame: the commands that waited for the flood protection
+==================
+*/
+void SV_FloodFrame( void ) {
+	client_t	*cl;
+	int			i;
+
+	if ( sv.state != SS_GAME ) {
+		return;
+	}
+	for ( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ ) {
+		if ( !cl->floodCount ) {
+			continue;
+		}
+		if ( cl->state != CS_ACTIVE ) {
+			SV_FloodClear( cl );
+			continue;
+		}
+		if ( !SV_FloodLimited( cl ) ) {
+			SV_FloodRun( cl, qtrue );	// flood protection turned off, or the client became an admin
+			continue;
+		}
+		SV_FloodRefill( cl );
+		SV_FloodRun( cl, qfalse );
+	}
 }
 
 /*
@@ -1249,7 +1409,6 @@ SV_ClientCommand
 static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
 	int		seq;
 	const char	*s;
-	qboolean clientOk = qtrue;
 
 	seq = MSG_ReadLong( msg );
 	s = MSG_ReadString( msg );
@@ -1265,36 +1424,28 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
 	if ( seq > cl->lastClientCommand + 1 ) {
 		Com_Printf( "Client %s lost %i clientCommands\n", cl->name,
 			seq - cl->lastClientCommand + 1 );
-		SV_DropClient( cl, "Lost reliable commands" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_LOST_COMMANDS, NULL );
+		if ( cl->state >= CS_CONNECTED )
+			SV_DropClient( cl, "Lost reliable commands" );
 		return qfalse;
 	}
 
-	// malicious users may try using too many string commands
-	// to lag other players.  If we decide that we want to stall
-	// the command, we will stop processing the rest of the packet,
-	// including the usercmd.  This causes flooders to lag themselves
-	// but not other people
-	// We don't do this when the client hasn't been active yet since its
-	// normal to spam a lot of commands when downloading
-	if ( !com_cl_running->integer &&
-		cl->state >= CS_ACTIVE &&
-		sv_floodProtect->integer )
-	{
-		const int floodTime = (sv_floodProtect->integer == 1) ? 1000 : sv_floodProtect->integer;
-		if ( svs.time < (cl->lastReliableTime + floodTime) ) {
-			// ignore any other text messages from this client but let them keep playing
-			// TTimo - moved the ignored verbose to the actual processing in SV_ExecuteClientCommand, only printing if the core doesn't intercept
-			clientOk = qfalse;
-		}
-		else {
-			cl->lastReliableTime = svs.time;
-		}
-		if ( sv_floodProtectSlow->integer ) {
-			cl->lastReliableTime = svs.time;
-		}
+	// what the known attacks look like, see sv_ids.cpp. The command is run all the same: nothing of it does harm.
+	SV_IDS_Text( cl, s, (qboolean)!Q_stricmpn( s, "userinfo", 8 ) );
+	if ( cl->state < CS_CONNECTED ) {
+		return qfalse;		// dropped by that
 	}
 
-	SV_ExecuteClientCommand( cl, s, clientOk );
+	// see "Flood protection" above
+	Cmd_TokenizeString( s );
+	if ( SV_EngineCommand( Cmd_Argv( 0 ) ) ) {
+		SV_ExecuteClientCommand( cl, s );
+	} else if ( SV_FloodLimited( cl ) ) {
+		SV_FloodCommand( cl, s );
+	} else {
+		SV_FloodRun( cl, qtrue );		// left from before the client became an admin, they keep their order
+		SV_ExecuteClientCommand( cl, s );
+	}
 
 	cl->lastClientCommand = seq;
 	Com_sprintf(cl->lastClientCommandString, sizeof(cl->lastClientCommandString), "%s", s);
@@ -1341,6 +1492,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	usercmd_t	nullcmd;
 	usercmd_t	cmds[MAX_PACKET_USERCMDS];
 	usercmd_t	*cmd, *oldcmd;
+	qboolean	outOfRange = qfalse;		// one event for a packet, however many of its moves have it
 
 	if ( delta ) {
 		cl->deltaMessage = cl->messageAcknowledge;
@@ -1352,11 +1504,13 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 
 	if ( cmdCount < 1 ) {
 		Com_Printf( "cmdCount < 1\n" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_COUNT, "none" );
 		return;
 	}
 
 	if ( cmdCount > MAX_PACKET_USERCMDS ) {
 		Com_Printf( "cmdCount > MAX_PACKET_USERCMDS\n" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_COUNT, va( "%i", cmdCount ) );
 		return;
 	}
 
@@ -1372,8 +1526,17 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	for ( i = 0 ; i < cmdCount ; i++ ) {
 		cmd = &cmds[i];
 		MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd );
+		if ( cmd->weapon >= WP_NUM_WEAPONS && !outOfRange ) {
+			outOfRange = qtrue;
+			SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_USERCMD, va( "weapon %i", cmd->weapon ) );
+		}
 		if ( sv_legacyFixes->integer ) {
-			// block "charge jump" and other nonsense
+			// block "charge jump" and other nonsense. 0xFF is what this sets and what a client sends for
+			// "none", anything else past the last power is an index into nothing.
+			if ( cmd->forcesel >= NUM_FORCE_POWERS && cmd->forcesel != 0xFFu && !outOfRange ) {
+				outOfRange = qtrue;
+				SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_USERCMD, va( "force power %i", cmd->forcesel ) );
+			}
 			if ( cmd->forcesel == FP_LEVITATION || cmd->forcesel >= NUM_FORCE_POWERS ) {
 				cmd->forcesel = 0xFFu;
 			}
@@ -1469,6 +1632,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		// usually only hackers create messages like this
 		// it is more annoying for them to let them hanging
 		//SV_DropClient( cl, "illegible client message" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_ACK, va( "message %i", cl->messageAcknowledge ) );
 		return;
 	}
 
@@ -1481,6 +1645,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		// usually only hackers create messages like this
 		// it is more annoying for them to let them hanging
 		//SV_DropClient( cl, "illegible client message" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_ACK, va( "command %i of %i", cl->reliableAcknowledge, cl->reliableSequence ) );
 		cl->reliableAcknowledge = cl->reliableSequence;
 		return;
 	}
@@ -1529,7 +1694,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 			break;
 		}
 		if ( !SV_ClientCommand( cl, msg ) ) {
-			return;	// we couldn't execute it because of the flood protection
+			return;
 		}
 		if (cl->state == CS_ZOMBIE) {
 			return;	// disconnect command
@@ -1543,6 +1708,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		SV_UserMove( cl, msg, qfalse );
 	} else if ( c != clc_EOF ) {
 		Com_Printf( "WARNING: bad command byte for client %i\n", cl - svs.clients );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_MESSAGE, va( "command byte %i", c ) );
 	}
 //	if ( msg->readcount != msg->cursize ) {
 //		Com_Printf( "WARNING: Junk at end of packet for client %i\n", cl - svs.clients );

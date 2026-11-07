@@ -153,6 +153,13 @@ typedef struct windowDef_s {
   vec4_t borderColor;             // border color
   vec4_t outlineColor;            // border color
   qhandle_t background;           // background asset
+  // WINDOW_STYLE_PANEL (ui_skin.c): how round its corners are, how far its shadow reaches, a light around it,
+  // and how bright the line along its top is. All 0 unless the menu file says so.
+  float radius;
+  float shadow;
+  float sheen;
+  vec4_t glowColor;
+  qboolean wide;					// "wide 1": reaches the sides of a screen that is wider than the 640 units of a menu
 } windowDef_t;
 
 typedef struct colorRangeDef_s {
@@ -213,6 +220,7 @@ typedef struct multiDef_s {
 	float cvarValue[MAX_MULTI_CVARS];
 	int count;
 	qboolean strDef;
+	const char *other;	// what it shows while its cvar has none of its settings, NULL: "Custom"
 } multiDef_t;
 
 typedef struct modelDef_s {
@@ -321,7 +329,62 @@ typedef struct itemDef_s {
 	int			xoffset;
 
 	qboolean disabledHidden;				// hide the item when 'disabled' is true (for generic image items)
+
+	// a menu with "skin 1" (ui_skin.c): how far the mark of the focus and the knob of a switch have come, 0 to 1
+	float		skinFocus;
+	float		skinValue;
+	int			skinValueTime;				// realTime skinValue was last eased (Skin_EaseValue)
+	float		skinScale;			// the text scale the menu file gave, where a long text is set smaller than that
+	// ITEM_TYPE_BAR, ITEM_TYPE_VALUE and "showStat": the number of the game this item shows, by name
+	const char	*stat;
+	const char	*showStat;
+	qboolean	caps;						// "caps 1": its text is drawn in capital letters
+	// a menu with pages (Menu_SetPage): "page <n>": the item is only there while that page is open. "tab <n>": a
+	// button that opens that page. "scroll 1": it stands in the list of its page, which moves under the window
+	// of the list ("scrollRect" of the menu). "row 1": a setting drawn as a row of that list, its name at the
+	// left and its widget at the right (Item_Row_Paint).
+	int			page;
+	int			tab;
+	qboolean	scroll;
+	int			row;
+	int			flow;				// "flow 1": in a row of buttons it is as wide as its word, with a line in front of it.
+									//	2 and 3: an entry of a strip of menus, 3 the one of the menu that is open
+	// a heading of a list: "fold <n>" (n unique in its menu), a click folds the rows under it away. Menu_ListLayout
+	// moves the rows of a list up under each other when some are folded away or are no match of the search:
+	// listY is where the menu file put the item, listOut that it is not in the list now.
+	int			fold;
+	float		textRoom;			// "textRoom <w>": a text at the left is set smaller where it is wider than w (the name of
+									//	a page beside its count)
+	int			cardHead;			// "cardHead 1": a word in the head of a card that is not its heading (KEY, SECOND KEY):
+									//	on the middle of the head as the heading is, its rectangle from the top of the card
+	qboolean	hint;				// "hint 1": an edit field with its text dimmed inside its empty box
+	// "descPic <picture> <name a> <name b>": the pane (ITEM_TYPE_DESC) shows <picture>_a and <picture>_b by turns
+	// under the description, what the setting looks like at the two values named
+	const char	*descPic[3];
+	float		listY;
+	float		listX;		// and its x (a card of a search moves into the column with room, Menu_ListLayout)
+	qboolean	listOut;
+	// "column <n>": the column of the list of its page it stands in (0, 1). "advanced 1": a setting that is shown
+	// only with all settings (advancedCvar of the menu) or found by the search. cardBottom: for a heading, where the
+	// card of its part ends (Menu_ListLayout, Menu_ListCards).
+	int			column;
+	qboolean	advanced;
+	float		cardBottom;
+	// "stack <n>": one of a column of rows with that number, in which a place whose rows are all hidden by their
+	// cvar tests is left out (Menu_StackFrame); "stack -<n>": the frame around them, shorter by what is left out
+	int			stack;
+	// "canvas <w> <h>" of its menu: what the menu file gave, in the pixels of that canvas (Menu_CanvasLayout)
+	struct {
+		rectDef_t	rect;
+		float		textscale, textalignx, textaligny, text2alignx, text2aligny, textRoom;
+		float		radius, shadow, borderSize;
+		float		elementWidth, elementHeight;
+		int			columnPos[MAX_LB_COLUMNS], columnWidth[MAX_LB_COLUMNS];
+	} canvas;
 } itemDef_t;
+
+#define MENU_PAGES		16					// pages of a menu, counted from 1
+#define PAGE_SEARCH		( MENU_PAGES - 1 )	// "page 15": an item that shows while a search of the menu is on
 
 typedef struct menuDef_s {
 	windowDef_t window;
@@ -344,14 +407,56 @@ typedef struct menuDef_s {
 	vec4_t focusColor;						// focus color for items
 	vec4_t disableColor;					// focus color for items
 	itemDef_t *items[MAX_MENUITEMS];		// items this menu contains
-	int			descX;						// X position of description
-	int			descY;						// X position of description
+	float		descX;						// X position of description
+	float		descY;						// Y position of description
 	vec4_t		descColor;					// description text color for items
 	int			descAlignment;				// Description of alignment
 	float		descScale;					// Description scale
 	float		appearanceTime;				//	when next item should appear
 	int			appearanceCnt;				//	current item displayed
 	float		appearanceIncrement;		//
+	qboolean	skin;						// "skin 1": its items are drawn by ui_skin.c
+	qboolean	backdrop;					// "backdrop 1": the sky of ui_skin.c is behind it
+	int			openSlide;					// "openSlide <units>": it comes up from that far below when it opens,
+	int			openTime;					//	which was then
+	// pages: the one that is open, and for the list of each how far it is moved up. "scrollRect <x y w h>" is
+	// the window of that list, "scrollStep <units>" the height of one of its rows.
+	int			page;
+	rectDef_t	scrollRect;
+	float		scrollStep;
+	float		scrollTo[MENU_PAGES];		// where the list of a page is going,
+	float		scrollShown;				//	and where the one of the open page is drawn in this frame
+	qboolean	descPane;					// an ITEM_TYPE_DESC is in it: it says what the item in focus is for
+	// "searchCvar <cvar>": while it holds a text the list shows the rows of all pages whose name or description has
+	// it, on page 0 (searchPage: the page that was open before). "foldCvar <cvar>": the numbers of the headings
+	// ("fold <n>") that are folded. Menu_ListLayout lays the list out again when one of the two changed.
+	const char	*searchCvar;
+	const char	*foldCvar;
+	qboolean	searching;
+	int			searchPage;
+	int			searchFound;				// rows the search has found
+	qboolean	listKnown;
+	char		listSearch[64];
+	char		listFolds[256];
+	// "canvas <w> <h>": the menu file is written for a picture of that many pixels, which is put on the screen as
+	// large as it fits, with the same scale across and down, in the middle (Menu_CanvasLayout). canvasUnit is the
+	// units of the 640 x 480 grid one of its pixels has now, the rest what the layout was made for.
+	float		canvasW, canvasH;
+	float		canvasUnit;
+	// "advancedCvar <cvar>": while it is 0 the settings marked "advanced 1" are not in the list. listAll: what it
+	// was when the list was laid out. "changesCvar <cvar>": the screen keeps what its settings were and sets the
+	// cvar to the number that differ now (Menu_Changes*), and <cvar>Restart to 1 while one of them takes effect
+	// only after a restart.
+	const char	*advancedCvar;
+	qboolean	listAll;
+	const char	*changesCvar;
+	float		canvasFor[4];
+	rectDef_t	canvasRect;
+	rectDef_t	canvasScroll;
+	float		canvasScrollStep;
+	float		canvasDescX, canvasDescY;
+	float		canvasDescScale;
+	int			descMiddle;					// descY is the middle of the capitals of the description, not its top
 } menuDef_t;
 
 typedef struct cachedAssets_s {
@@ -447,6 +552,8 @@ typedef struct displayContextDef_s {
 	void			(*getTeamColor)						( vec4_t *color );
 	void			(*getCVarString)					( const char *cvar, char *buffer, int bufsize );
 	float			(*getCVarValue)						( const char *cvar );
+	// the value a cvar starts with and its flags (VisionJK, ext.Cvar_Info of the engine); NULL without it
+	qboolean		(*getCVarInfo)						( const char *cvar, char *defaultValue, int size, uint32_t *flags );
 	void			(*setCVar)							( const char *cvar, const char *value );
 	void			(*drawTextWithCursor)				( float x, float y, float scale, vec4_t color, const char *text, int cursorPos, char cursor, int limit, int style, int iFontIndex );
 	void			(*setOverstrikeMode)				( qboolean b );
@@ -472,10 +579,20 @@ typedef struct displayContextDef_s {
 	void			(*stopCinematic)					( int handle );
 	void			(*drawCinematic)					( int handle, float x, float y, float w, float h );
 	void			(*runCinematicFrame)				( int handle );
+	// NULL in an engine that can not make a picture a module computed (ui_skin.c)
+	qhandle_t		(*registerShaderRGBA)				( const char *name, const byte *rgba, int width, int height, int flags );
+	// a polygon for the scene that is being put together (clearScene, renderScene), for ui_skin.c
+	void			(*addPolyToScene)					( qhandle_t shader, int numVerts, const polyVert_t *verts );
+	// a number of the game by its name, for ITEM_TYPE_BAR and ITEM_TYPE_VALUE. NULL where there is no game (the ui)
+	qboolean		(*statValue)						( const char *name, float *value, float *max );
 
 	float			yscale;
 	float			xscale;
-	float			bias;
+	float			bias;				// the grid of the 2D runs from -bias to 640 + bias on a wide screen (cvar v_2dBias)
+	float			biasY;				//	and from -biasY to 480 + biasY on one narrower than 4:3 (v_2dBiasY)
+	float			wide;				// how far a window over the whole 640 x 480 and the cursor reach into that: the bias, or 0
+										// while the menus stand on a plane in the level, which is 640 wide (cvar v_uiPlane)
+	float			tall;				//	and how far a background reaches above and below the 480: biasY, or 0 on the plane
 	int				realTime;
 	int				frameTime;
 	int				cursorx;
@@ -493,6 +610,9 @@ typedef struct displayContextDef_s {
 
 	struct {
 		float			(*Font_StrLenPixels)				( const char *text, const int iFontIndex, const float scale );
+		// the pixels the letters of a text cover when it is drawn at 0,0 (box: left, top, right, bottom). NULL, or
+		// qfalse for a font of the game: not known.
+		qboolean		(*textInk)							( const char *text, float scale, int iMenuFont, float *box );
 	} ext;
 } displayContextDef_t;
 
@@ -505,6 +625,23 @@ void Display_ExpandMacros(char * buff);
 void Menu_Init(menuDef_t *menu);
 void Item_Init(itemDef_t *item);
 void Menu_PostParse(menuDef_t *menu);
+void Menu_CanvasLayout( menuDef_t *menu );
+void Menu_ChangesRevert( void );
+void Menus_Dump( void );
+qboolean Item_Dumped( const itemDef_t *item );
+void Menu_ChangesApply( void );
+float Menu_Unit( const menuDef_t *menu );
+qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty );
+void Menu_SetPage( menuDef_t *menu, int page );
+// a row of the new look writes the word of an owner draw itself: while text is caught, the text the owner draw
+// would write goes here instead of onto the screen (the ui's Text_Paint, ui_main.c)
+typedef struct textCatch_s {
+	char	*text;
+	int		size;
+	float	*color;
+	float	x;						// where the owner draw would have written it
+} textCatch_t;
+extern textCatch_t textCatch;
 menuDef_t *Menu_GetFocused();
 void Menu_HandleKey(menuDef_t *menu, int key, qboolean down);
 void Menu_HandleMouseMove(menuDef_t *menu, float x, float y);
@@ -527,6 +664,7 @@ void Menu_PaintAll();
 menuDef_t *Menus_ActivateByName(const char *p);
 void Menu_Reset(void);
 qboolean Menus_AnyFullScreenVisible( void );
+qboolean Menus_OpenBox( rectDef_t *box );
 void  Menus_Activate(menuDef_t *menu);
 itemDef_t *Menu_FindItemByName(menuDef_t *menu, const char *p);
 void Menu_ShowGroup (menuDef_t *menu, const char *itemName, qboolean showFlag);
@@ -558,9 +696,15 @@ qboolean UI_OutOfMemory();
 void Controls_GetConfig( void );
 void Controls_SetConfig( void );
 void Controls_SetDefaults( void );
+void Controls_SetDefaultKeys( const char *command, const char *keys );
+void Controls_ClearAll( void );
+int BindingIDFromName( const char *name );
 
 /*
 Ghoul2 Insert End
 */
 
 extern const char *HolocronIcons[NUM_FORCE_POWERS];
+
+// a text of this tree in the language of the game, by its English (tools/menus/texts.py)
+const char	*Vision_Text( const char *english );

@@ -1,0 +1,461 @@
+// ingame.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	assetGlobalDef
+	{
+		font					"ergoec" 18
+		smallFont				"ocr_a" 18
+		bigFont					"anewhope" 20
+		small2Font				"arialnb" 14
+		cursor					"cursor"
+		gradientBar				"ui/assets/gradientbar2.tga"
+		itemFocusSound			"sound/interface/menuroam.wav"
+		fadeClamp				1.0
+		fadeCycle				1
+		fadeAmount				0.1
+		shadowColor				0.1 0.1 0.1 0.25
+		precacheSound
+		{
+			"sound/interface/choose_color.wav" ;
+			"sound/interface/choose_head.wav" ;
+			"sound/interface/choose_torso.wav" ;
+			"sound/interface/choose_saber.wav" ;
+			"sound/interface/choose_hilt.wav" ;
+			"sound/interface/choose_blade.wav" ;
+			"sound/interface/transition.wav" ;
+			"sound/interface/esc.wav" ;
+			"sound/interface/sub_select.wav" ;
+		}
+		focuscolor				0.36 0.78 0.96 1
+	}
+
+	menuDef
+	{
+		name					"ingame"
+		visible					0
+		fullScreen				0
+		outOfBoundsClick
+		rect					160 0 1280 960
+		focusColor				0.36 0.78 0.96 1
+		disableColor			0.40 0.47 0.56 1
+		onOpen { uiScript setBotButton }
+		skin					1
+		openSlide				8
+
+		itemDef
+		{
+			name					vision_bar
+			rect					0 0 1280 52
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.016 0.031 0.063 0.8
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					0 52 1280 1.34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.086 0.149 0.247 1
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					join
+			text					@MENUS_JOIN
+			cvarTest				"ui_singleplayeractive"
+			disableCvar { "1" }
+			rect					16 0 104 52
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "0" , "1" , "2" , "3" , "4" , "5" , "6" , "8" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_join
+			}
+			mouseenter { show joinButton }
+			mouseexit { hide joinButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					class
+			text					@MENUS_JOIN
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "7" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_siegeclass
+			}
+			mouseenter { show joinButton }
+			mouseexit { hide joinButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					vote
+			text					@MENUS_VOTE
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			cvarTest				"ui_singleplayeractive"
+			disableCvar { "1" }
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_vote
+			}
+			mouseenter { show voteButton }
+			mouseexit { hide voteButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					callvote
+			text					@MENUS_CALL_VOTE
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			cvarTest				"ui_singleplayeractive"
+			disableCvar { "1" }
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_callvote
+			}
+			mouseenter { show callvoteButton }
+			mouseexit { hide callvoteButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					chat
+			text					@MENUS_VOICE_CHAT
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "7" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_voicechat
+			}
+			mouseenter { show chatButton }
+			mouseexit { hide chatButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					addBot
+			text					@MENUS_ADD_BOT
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvarTest				"sv_running"
+			disableCvar { "0" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_addbot
+			}
+			mouseenter { show addBotButton }
+			mouseexit { hide addBotButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					player
+			text					@MENUS_PROFILE_LOWER
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "0" , "1" , "2" , "3" , "4" , "5" , "6" , "8" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_player
+			}
+			mouseenter { show playerButton }
+			mouseexit { hide playerButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					objectives
+			text					@MENUS_OBJECTIVES
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			cvartest				"g_gametype"
+			showcvar { "7" }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_objectives
+			}
+			mouseenter { show objectivesButton }
+			mouseexit { hide objectivesButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					controls
+			text					@MENUS_CONTROLS2
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_controls
+			}
+			mouseenter { show controlsButton }
+			mouseexit { hide controlsButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					setup
+			text					@MENUS_SETUP_INGAME
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_setup
+			}
+			mouseenter { show setupButton }
+			mouseexit { hide setupButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					photo
+			rect					16 0 104 52
+			visible					1
+			text					@VISION_PHOTO
+			type					ITEM_TYPE_BUTTON
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				exec "v_photo" ;
+			}
+			font					5
+			textscale				1.12
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			flow					1
+		}
+
+		itemdef
+		{
+			name					about
+			text					@MENUS_ABOUT
+			rect					16 0 104 52
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_about
+			}
+			mouseenter { show aboutButton }
+			mouseexit { hide aboutButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					servers
+			text					"SERVERS"
+			rect					16 0 104 52
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				0.86 0.90 0.945 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close ingame ;
+				open ingame_servers
+			}
+			mouseenter { show serversButton }
+			mouseexit { hide serversButton }
+			caps					1
+			flow					1
+		}
+
+		itemDef
+		{
+			name					leave
+			text					@MENUS_EXIT_INGAME
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					16 0 104 52
+			font					5
+			textscale				1.12
+			textstyle				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				52
+			textaligny				15.92
+			forecolor				1 0.54 0.50 1
+			backcolor				0 0 0 0
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				open ingame_leave
+			}
+			mouseenter { show leaveButton }
+			mouseexit { hide leaveButton }
+			caps					1
+			flow					1
+		}
+		canvas					1600 1200
+	}
+}

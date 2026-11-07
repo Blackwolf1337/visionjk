@@ -20,14 +20,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cl_uiapi.c  -- client system interaction with client game
 #include "qcommon/RoffSystem.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/timing.h"
 #include "client.h"
 #include "cl_lan.h"
 #include "botlib/botlib.h"
-#include "snd_ambient.h"
-#include "FXExport.h"
-#include "FxUtil.h"
+#include "client/sound/snd_ambient.h"
+#include "client/fx/FXExport.h"
+#include "client/fx/FxUtil.h"
 
 extern IHeapAllocator *G2VertSpaceClient;
 extern botlib_export_t *botlib_export;
@@ -148,7 +148,7 @@ static void CL_GetClientState( uiClientState_t *state ) {
 	state->connectPacketCount = clc.connectPacketCount;
 	state->connState = cls.state;
 	Q_strncpyz( state->servername, cls.servername, sizeof( state->servername ) );
-	Q_strncpyz( state->updateInfoString, cls.updateInfoString, sizeof( state->updateInfoString ) );
+	state->updateInfoString[0] = '\0';	// the welcome text of an update server, which VisionJK does not ask
 	Q_strncpyz( state->messageString, clc.serverMessage, sizeof( state->messageString ) );
 	state->clientNum = cl.snap.ps.clientNum;
 }
@@ -157,12 +157,79 @@ static void CL_GetGlconfig( glconfig_t *config ) {
 	*config = cls.glconfig;
 }
 
-static void GetClipboardData( char *buf, int buflen ) {
+/*
+====================
+CL_UIRenderScene
+
+A scene inside a menu (the model of a player) has its place in pixels of the flat screen. While the menus are
+drawn onto a plane in the level (CL_SetUIPlane), the scene goes to where the middle of that place is on the
+plane, in the size the plane has there. It stays upright: a viewport can not be tilted.
+====================
+*/
+static void CL_UIRenderScene( const refdef_t *fd ) {
+	const float	*m = cls.uiPlane;
+	const float	toGridX = ( SCREEN_WIDTH + 2.0f * cls.bias2D ) / cls.glconfig.vidWidth;
+	const float	toGridY = ( SCREEN_HEIGHT + 2.0f * cls.bias2DY ) / cls.glconfig.vidHeight;
+	const float	gx = ( fd->x + fd->width * 0.5f ) * toGridX - cls.bias2D;
+	const float	gy[3] = { fd->y * toGridY - cls.bias2DY, ( fd->y + fd->height * 0.5f ) * toGridY - cls.bias2DY, ( fd->y + fd->height ) * toGridY - cls.bias2DY };
+	float		sx = 0.0f, sy[3], scale;
+	refdef_t	moved;
+	int			i;
+
+	if ( !cls.uiPlaneOn || fd->width <= 0 || fd->height <= 0 ) {
+		re->RenderScene( fd );
+		return;
+	}
+
+	// the upper edge, the middle and the lower edge of the place: through the matrix of the plane to pixels
+	for ( i = 0; i < 3; i++ ) {
+		const float w = m[3] * gx + m[7] * gy[i] + m[15];
+
+		if ( w <= 0.0f ) {
+			return;		// behind the camera
+		}
+		sy[i] = ( 0.5f - 0.5f * ( m[1] * gx + m[5] * gy[i] + m[13] ) / w ) * cls.glconfig.vidHeight;
+		if ( i == 1 ) {
+			sx = ( 0.5f + 0.5f * ( m[0] * gx + m[4] * gy[i] + m[12] ) / w ) * cls.glconfig.vidWidth;
+		}
+	}
+	scale = ( sy[2] - sy[0] ) / fd->height;
+
+	moved = *fd;
+	moved.width = (int)( fd->width * scale );
+	moved.height = (int)( fd->height * scale );
+	moved.x = (int)( sx - moved.width * 0.5f );
+	moved.y = (int)( sy[1] - moved.height * 0.5f );
+	// Not while a part of it is off the screen (the view is still on its way to the menu): the renderers clear the
+	// depth of the place, and a place that is cut would bend the picture.
+	if ( moved.width < 1 || moved.height < 1 || moved.x < 0 || moved.y < 0
+		|| moved.x + moved.width > cls.glconfig.vidWidth || moved.y + moved.height > cls.glconfig.vidHeight ) {
+		return;
+	}
+	re->RenderScene( &moved );
+}
+
+// the clipboard of the system as the text the client has: UTF-8, or the bytes of the code page of the language
+void CL_GetClipboard( char *buf, int buflen ) {
 	char	*cbd, *c;
+
+	if ( buflen < 1 ) {
+		return;
+	}
+	memset( buf, 0, buflen );
 
 	c = cbd = Sys_GetClipboardData();
 	if ( !cbd ) {
 		*buf = 0;
+		return;
+	}
+
+	if ( CL_UTF8() )
+	{
+		// the clipboard is UTF-8 and so is the text of the client: as it is, cut between two characters
+		Q_UTF8_Truncate( cbd, buflen - 1 );
+		Q_strncpyz( buf, cbd, buflen );
+		Z_Free( cbd );
 		return;
 	}
 
@@ -173,6 +240,19 @@ static void GetClipboardData( char *buf, int buflen ) {
 	}
 
 	Z_Free( cbd );
+}
+
+// text of the client onto the clipboard of the system, which is UTF-8
+void CL_SetClipboard( const char *text ) {
+	if ( CL_UTF8() ) {
+		Sys_SetClipboardData( text );
+	} else {
+		// a byte of a code page goes there as the character it is in Windows-1252
+		static char utf8[MAX_STRING_CHARS * 3];
+
+		Q_UTF8_FromCP1252( text, utf8, sizeof( utf8 ) );
+		Sys_SetClipboardData( utf8 );
+	}
 }
 
 static int GetConfigString(int index, char *buf, int size)
@@ -522,7 +602,7 @@ static void CL_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 
 	char *tmp = re->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
 	if ( tmp )
-		strcpy( fillBuf, tmp );
+		Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 	else
 		fillBuf[0] = '\0';
 }
@@ -699,7 +779,7 @@ static void CL_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelInde
 
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
 	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
-	strcpy( fillBuf, tmp );
+	Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 }
 
 static qboolean CL_G2API_AttachG2Model( void *ghoul2From, int modelIndexFrom, void *ghoul2To, int toBoltIndex, int toModel ) {
@@ -819,10 +899,10 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_CVAR_VARIABLEVALUE:
-		return FloatAsInt( Cvar_VariableValue( (const char *)VMA(1) ) );
+		return FloatAsInt( Cvar_VM_VariableValue( (const char *)VMA(1) ) );
 
 	case UI_CVAR_VARIABLESTRINGBUFFER:
-		Cvar_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
+		Cvar_VM_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
 		return 0;
 
 	case UI_CVAR_SETVALUE:
@@ -900,7 +980,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_R_RENDERSCENE:
-		re->RenderScene( (const refdef_t *)VMA(1) );
+		CL_UIRenderScene( (const refdef_t *)VMA(1) );
 		return 0;
 
 	case UI_R_SETCOLOR:
@@ -964,7 +1044,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_GETCLIPBOARDDATA:
-		GetClipboardData( (char *)VMA(1), args[2] );
+		CL_GetClipboard( (char *)VMA(1), args[2] );
 		return 0;
 
 	case UI_GETCLIENTSTATE:
@@ -1293,8 +1373,8 @@ void CL_BindUI( void ) {
 		uii.Cvar_Set							= UIVM_Cvar_Set;
 		uii.Cvar_SetValue						= UIVM_Cvar_SetValue;
 		uii.Cvar_Update							= Cvar_Update;
-		uii.Cvar_VariableStringBuffer			= Cvar_VariableStringBuffer;
-		uii.Cvar_VariableValue					= Cvar_VariableValue;
+		uii.Cvar_VariableStringBuffer			= Cvar_VM_VariableStringBuffer;
+		uii.Cvar_VariableValue					= Cvar_VM_VariableValue;
 
 		uii.Cmd_Argc							= Cmd_Argc;
 		uii.Cmd_Argv							= Cmd_ArgvBuffer;
@@ -1307,7 +1387,7 @@ void CL_BindUI( void ) {
 		uii.FS_Write							= FS_Write;
 
 		uii.GetClientState						= CL_GetClientState;
-		uii.GetClipboardData					= GetClipboardData;
+		uii.GetClipboardData					= CL_GetClipboard;
 		uii.GetConfigString						= GetConfigString;
 		uii.GetGlconfig							= CL_GetGlconfig;
 		uii.UpdateScreen						= SCR_UpdateScreen;
@@ -1384,7 +1464,7 @@ void CL_BindUI( void ) {
 		uii.R_RegisterShaderNoMip				= re->RegisterShaderNoMip;
 		uii.R_RegisterSkin						= re->RegisterSkin;
 		uii.R_RemapShader						= re->RemapShader;
-		uii.R_RenderScene						= re->RenderScene;
+		uii.R_RenderScene						= CL_UIRenderScene;
 		uii.R_SetColor							= re->SetColor;
 		uii.R_ShaderNameFromIndex				= CL_R_ShaderNameFromIndex;
 
@@ -1427,6 +1507,12 @@ void CL_BindUI( void ) {
 		uii.ext.R_Font_StrLenPixels				= re->ext.Font_StrLenPixels;
 		uii.ext.AddCommand						= CL_AddUICommand;
 		uii.ext.RemoveCommand					= UIVM_Cmd_RemoveCommand;
+		uii.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
+		uii.ext.OpenURL							= Sys_OpenURL;
+		uii.ext.Cvar_UnusedList					= Cvar_UnusedList;
+		uii.ext.Cvar_Info						= Cvar_Info;
+		uii.ext.R_Font_DrawStringF				= re->ext.Font_DrawStringF;
+		uii.ext.R_Font_InkBox					= re->ext.Font_InkBox;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

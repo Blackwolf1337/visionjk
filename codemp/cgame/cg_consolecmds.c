@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // executed by a key binding
 
 #include "cg_local.h"
-#include "game/bg_saga.h"
+#include "game/bg/bg_saga.h"
 #include "ui/ui_shared.h"
 
 /*
@@ -85,12 +86,98 @@ static void CG_Viewpos_f (void) {
 
 /*
 =================
+CG_LevelDump_f
+
+For tools that test the game (the jka MCP server): "v_levelDump [radius]" prints the time of the game, the own
+player, the view and every entity of the snapshot within radius of the view (2048 without one). One line each,
+"leveldump <kind> key=value ...", the last one "leveldump end". Rectangles are in pixels of the window.
+=================
+*/
+static const char *CG_EntityTypeName( int type ) {
+	static const char *names[] = { "general", "player", "item", "missile", "special", "holocron", "mover", "beam", "portal",
+		"speaker", "push_trigger", "teleport_trigger", "invisible", "npc", "team", "body", "terrain", "fx" };
+
+	return ( type >= 0 && type < (int)ARRAY_LEN( names ) ) ? names[type] : "event";
+}
+
+static void CG_LevelDump_f( void ) {
+	const float			radius = trap->Cmd_Argc() > 1 ? atof( CG_Argv( 1 ) ) : 2048.0f;
+	const playerState_t	*ps = &cg.predictedPlayerState;
+	const refdef_t		*rd = &cg.refdef;
+	int					i;
+
+	trap->Print( "leveldump time cg=%d server=%d frame=%d map=%s\n", cg.time, cg.snap ? cg.snap->serverTime : 0, cg.frametime,
+		cgs.mapname );
+	trap->Print( "leveldump player client=%d team=%d origin=%.1f,%.1f,%.1f velocity=%.1f,%.1f,%.1f angles=%.1f,%.1f,%.1f health=%d "
+		"weapon=%d holstered=%d pmtype=%d third=%d spectating=%d\n", ps->clientNum, ps->persistant[PERS_TEAM],
+		ps->origin[0], ps->origin[1], ps->origin[2], ps->velocity[0], ps->velocity[1], ps->velocity[2],
+		ps->viewangles[0], ps->viewangles[1], ps->viewangles[2], ps->stats[STAT_HEALTH], ps->weapon, ps->saberHolstered,
+		ps->pm_type, cg.renderingThirdPerson, ( ps->pm_flags & PMF_FOLLOW ) ? 2 : ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR ) );
+	trap->Print( "leveldump view origin=%.1f,%.1f,%.1f angles=%.1f,%.1f,%.1f fov=%.1f,%.1f rect=%d,%d,%d,%d\n",
+		rd->vieworg[0], rd->vieworg[1], rd->vieworg[2], rd->viewangles[0], rd->viewangles[1], rd->viewangles[2],
+		rd->fov_x, rd->fov_y, rd->x, rd->y, rd->width, rd->height );
+	for ( i = 0; cg.snap && i < cg.snap->numEntities; i++ ) {
+		const entityState_t	*es = &cg.snap->entities[i];
+		const centity_t		*cent = &cg_entities[es->number];
+		const char			*model = "";
+		float				dist;
+
+		dist = Distance( cent->lerpOrigin, rd->vieworg );
+		if ( dist > radius ) {
+			continue;
+		}
+		if ( es->eType == ET_PLAYER && es->clientNum >= 0 && es->clientNum < MAX_CLIENTS ) {
+			model = cgs.clientinfo[es->clientNum].modelName;
+		} else if ( es->modelindex > 0 && es->modelindex < MAX_MODELS ) {
+			model = CG_ConfigString( CS_MODELS + es->modelindex );
+		}
+		trap->Print( "leveldump entity num=%d type=%s origin=%.1f,%.1f,%.1f dist=%.0f weapon=%d model=%s\n", es->number,
+			CG_EntityTypeName( es->eType ), cent->lerpOrigin[0], cent->lerpOrigin[1], cent->lerpOrigin[2], dist, es->weapon,
+			model && model[0] ? model : "-" );
+	}
+	trap->Print( "leveldump end\n" );
+}
+
+/*
+=================
+CG_Project_f
+
+"v_project x y z": where a point of the level is drawn, in pixels of the window (the jka MCP server crops
+screenshots around it). "project x y" or "project behind".
+=================
+*/
+static void CG_Project_f( void ) {
+	const refdef_t	*rd = &cg.refdef;
+	vec3_t			point, d;
+	float			z;
+	int				i;
+
+	for ( i = 0; i < 3; i++ ) {
+		point[i] = atof( CG_Argv( i + 1 ) );
+	}
+	VectorSubtract( point, rd->vieworg, d );
+	z = DotProduct( d, rd->viewaxis[0] );
+	if ( z <= 0.001f || rd->fov_x <= 0.0f || rd->fov_y <= 0.0f ) {
+		trap->Print( "project behind\n" );
+		return;
+	}
+	trap->Print( "project %.1f %.1f\n",
+		rd->x + rd->width * 0.5f * ( 1.0f - DotProduct( d, rd->viewaxis[1] ) / ( z * tanf( DEG2RAD( rd->fov_x * 0.5f ) ) ) ),
+		rd->y + rd->height * 0.5f * ( 1.0f - DotProduct( d, rd->viewaxis[2] ) / ( z * tanf( DEG2RAD( rd->fov_y * 0.5f ) ) ) ) );
+}
+
+/*
+=================
 CG_ScoresDown_f
 
 =================
 */
 static void CG_ScoresDown_f( void ) {
 
+	// twice quickly keeps the scoreboard open, with the mouse free for its rows (hud/cg_scores.c)
+	if ( !CG_ScoresPress() ) {
+		return;
+	}
 	CG_BuildSpectatorString();
 	if ( cg.scoresRequestTime + 2000 < cg.time ) {
 		// the scores are more than two seconds out of data,
@@ -118,10 +205,67 @@ CG_ScoresUp_f
 =================
 */
 static void CG_ScoresUp_f( void ) {
+	CG_ScoresRelease();
+	if ( CG_ScoresKept() ) {
+		return;
+	}
 	if ( cg.showScores ) {
 		cg.showScores = qfalse;
 		cg.scoreFadeTime = cg.time;
 	}
+}
+
+/*
+=================
+CG_Key_f
+
+v_cgKey <key> [up|char]: a key or a button of the mouse for the cgame, or with char a letter by its code, as the engine hands one over while the cgame
+has the keys (the chat box, the card of a player, the scoreboard that is kept). For a script in place of a
+hand, as v_uiKey is for the menus. By name (esc, tab, enter, mouse1, mouse2, wheelup, wheeldown, pgup, pgdn) or
+by its number.
+=================
+*/
+static void CG_Key_f( void ) {
+	static const struct {
+		const char	*name;
+		int			key;
+	} names[] = {
+		{ "esc", A_ESCAPE }, { "tab", A_TAB }, { "enter", A_ENTER }, { "mouse1", A_MOUSE1 }, { "mouse2", A_MOUSE2 },
+		{ "wheelup", A_MWHEELUP }, { "wheeldown", A_MWHEELDOWN }, { "pgup", A_PAGE_UP }, { "pgdn", A_PAGE_DOWN },
+	};
+	const char	*arg = CG_Argv( 1 );
+	int			key = atoi( arg );
+	size_t		i;
+
+	for ( i = 0; i < ARRAY_LEN( names ); i++ ) {
+		if ( !Q_stricmp( arg, names[i].name ) ) {
+			key = names[i].key;
+		}
+	}
+	if ( key <= 0 || key >= MAX_KEYS || !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
+		return;
+	}
+	if ( !Q_stricmp( CG_Argv( 2 ), "char" ) ) {
+		CG_KeyEvent( key | K_CHAR_FLAG, qtrue );		// a letter that was typed, by its code
+		return;
+	}
+	CG_KeyEvent( key, (qboolean)( Q_stricmp( CG_Argv( 2 ), "up" ) != 0 ) );
+}
+
+/*
+=================
+CG_Mouse_f
+
+v_cgMouse <x> <y>: the pointer of the cgame to that place of the 640 x 480 of the HUD, while the cgame has the
+keys. For a script, with v_cgKey mouse1 for the click, as v_uiMouse is for the menus.
+=================
+*/
+static void CG_Mouse_f( void ) {
+	if ( trap->Cmd_Argc() < 3 || !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
+		return;
+	}
+	cgs.cursorX = atoi( CG_Argv( 1 ) );
+	cgs.cursorY = atoi( CG_Argv( 2 ) );
 }
 
 void CG_ClientList_f( void )
@@ -293,46 +437,88 @@ int cmdcmp( const void *a, const void *b ) {
 }
 
 static consoleCommand_t	commands[] = {
+	{ "+v_cursor",					CG_SelectCursorDown_f },
+	{ "+v_snowball",				CG_SnowballDown_f },
+	{ "+v_water",					CG_WaterDown_f },
+	{ "+v_radial",					CG_RadialDown_f },
 	{ "+scores",					CG_ScoresDown_f },
-	{ "+voice",						CG_VoiceDown_f },
+	{ "+v_voice",						CG_VoiceDown_f },
+	{ "+v_voiceclan",					CG_VoiceClanDown_f },
+	{ "-v_cursor",					CG_SelectCursorUp_f },
+	{ "-v_snowball",				CG_SnowballUp_f },
+	{ "-v_water",					CG_WaterUp_f },
+	{ "-v_radial",					CG_RadialUp_f },
 	{ "-scores",					CG_ScoresUp_f },
-	{ "-voice",						CG_VoiceUp_f },
+	{ "-v_voice",						CG_VoiceUp_f },
+	{ "-v_voiceclan",					CG_VoiceClanUp_f },
 	{ "admCmdEXE",					CG_JPAdmCmdExe_f },
 	{ "admCmdNext",					CG_JPAdmCycleCmd_f },
 	{ "admCmdPrev",					CG_JPAdmCycleCmd_f },
+	{ "v_amkey",						CG_AuthCommand_f },
+	{ "v_boombox",					CG_Boombox_f },
 	{ "briefing",					CG_SiegeBriefing_f },
+	{ "v_chatDrag",				CG_ChatDrag_f },
+	{ "tay_emoji",				CG_ChatEmoji_f },
+	{ "tay_cosmetics",			CG_Cosmetics_f },
+	{ "v_chatOpen",				CG_ChatOpen_f },
+	{ "v_commandmenu",				CG_CmdMenu_f },
+	{ "v_tools",						CG_ToolWindow_f },
+	{ "v_cgKey",						CG_Key_f },
+	{ "v_cgMouse",					CG_Mouse_f },
 	{ "clientlist",					CG_ClientList_f },
+	{ "cursor",						CG_SelectCursor_f },
 	{ "forcenext",					CG_NextForcePower_f },
 	{ "forceprev",					CG_PrevForcePower_f },
 	{ "invnext",					CG_NextInventory_f },
 	{ "invprev",					CG_PrevInventory_f },
 	{ "loaddeferred",				CG_LoadDeferredPlayers },
+	{ "v_modelArrived",				CG_ModelArrived_f },
+	{ "v_modelbrowser",			CG_ModelStore_f },
+	{ "v_rccar",					CG_RcCar_f },
+	{ "v_spray",					CG_Spray_f },
+	{ "v_emote",					CG_Emote_f },
+	{ "v_pingpong",					CG_PingPong_f },
+	{ "v_tennis",					CG_Tennis_f },
+	{ "v_board",					CG_Board_f },
+	{ "v_boardPicture",				CG_BoardPicture_f },
+	{ "v_sprayPicture",				CG_SprayPicture_f },
+	{ "v_sprayArrived",				CG_SprayArrived_f },
+	{ "v_boardPasted",				CG_BoardPasted_f },
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },
+	{ "v_peers",						CG_PeerList_f },
+	{ "v_notify_show",				CG_Notify_f },
 	{ "playerNext",					CG_JPAdmCyclePlayer_f },
 	{ "playerPrev",					CG_JPAdmCyclePlayer_f },
 	{ "pluginDisable",				CG_JPPluginDisable_f },
 	{ "prevframe",					CG_TestModelPrevFrame_f },
 	{ "prevskin",					CG_TestModelPrevSkin_f },
 	{ "reloadReplier",				CG_JPReloadReplier_f },
+	{ "v_scores_pick",				CG_ScoresPick_f },
+	{ "v_scopezoom",				CG_ScopeZoom_f },
+	{ "v_photo",					CG_Photo_f },
 	{ "showPlayerID",				CG_JPShowPlayerID_f },
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },
 	{ "sizedown",					CG_SizeDown_f },
 	{ "sizeup",						CG_SizeUp_f },
 	{ "startOrbit",					CG_StartOrbit_f },
+	{ "v_status_test",				CG_StatusTest_f },
+	{ "v_statuses",					CG_StatusList_f },
 	{ "tcmd",						CG_TargetCommand_f },
 	{ "tell_attacker",				CG_TellAttacker_f },
 	{ "tell_target",				CG_TellTarget_f },
 	{ "testgun",					CG_TestGun_f },
 	{ "testmodel",					CG_TestModel_f },
 	{ "viewpos",					CG_Viewpos_f },
-	{ "voice_devices",				CG_VoiceDevices_f },
-	{ "voice_mute",					CG_VoiceMute_f },
-	{ "voice_status",				CG_VoiceStatus_f },
-	{ "voice_test",					CG_VoiceTest_f },
-	{ "voice_unmute",				CG_VoiceUnmute_f },
+	{ "v_levelDump",				CG_LevelDump_f },
+	{ "v_project",					CG_Project_f },
+	{ "v_voice_devices",				CG_VoiceDevices_f },
+	{ "v_voice_mute",					CG_VoiceMute_f },
+	{ "v_voice_status",				CG_VoiceStatus_f },
+	{ "v_voice_test",					CG_VoiceTest_f },
+	{ "v_voice_unmute",				CG_VoiceUnmute_f },
 	{ "weapnext",					CG_NextWeapon_f },
 	{ "weapon",						CG_Weapon_f },
 	{ "weaponclean",				CG_WeaponClean_f },
@@ -405,8 +591,7 @@ static const char *jpgcmds[] = {
 	"amghost", "aminfo", "amkick", "amkillvote", "amknockmedown", "amlockteam", "amlogin", "amlogout", "ammap", "ammerc",
 	"ammindtrick", "ammotd", "ammove", "amorigin", "ampoll", "amprotect", "ampsay", "amrename", "amsay", "amseeGhost",
 	"amShowMotd", "amsilence", "amslap", "amsleep", "amstatus", "amtele", "amtelemark", "amUnForceAltDim", "amunsilence",
-	"amvstr", "amwake", "amwhois", "BlockWallCreate", "BlockWallDel", "BlockWallDraw", "BlockWallGrantEditor",
-	"BlockWallNext", "BlockWallPrev", "BlockWallWrite", "clanpass", "clansay", "clanwhois", "duelWhois",
+	"amvstr", "amwake", "amwhois", "clanpass", "clansay", "clanwhois", "duelWhois",
 	"engage_FullForceDuel", "ignore", "immortal", "jetpack", "refuseTele", "sabercolor", "say_team_mod", "toggleFlame",
 	"ui_macroenable", "ui_macroscan",
 };

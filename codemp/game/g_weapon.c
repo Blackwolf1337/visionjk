@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -26,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "g_local.h"
 #include "botlib/be_aas.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 #include "ghoul2/G2.h"
 #include "qcommon/q_shared.h"
 
@@ -4544,7 +4545,15 @@ FireWeapon
 */
 int BG_EmplacedView(vec3_t baseAngles, vec3_t angles, float *newYaw, float constraint);
 
+// the weapons that hit at once along a line, the shooter's lag is made up for them (unlagged/g_unlagged.c)
+static qboolean WP_IsHitscan( int weapon, qboolean altFire ) {
+	return (qboolean)( weapon == WP_DISRUPTOR || weapon == WP_STUN_BATON || weapon == WP_MELEE
+		|| ( weapon == WP_CONCUSSION && altFire ) );
+}
+
 void FireWeapon( gentity_t *ent, qboolean altFire ) {
+	qboolean unlagged;
+
 	// JA+: ghosts can not shoot
 	if ( ent->client && ent->s.number < MAX_CLIENTS && ent->client->pers.jp.isGhost )
 		return;
@@ -4632,6 +4641,9 @@ void FireWeapon( gentity_t *ent, qboolean altFire ) {
 
 		CalcMuzzlePoint ( ent, forward, vright, up, muzzle );
 
+		// the others where the shooter saw them
+		unlagged = WP_IsHitscan( ent->s.weapon, altFire ) && G_UnlaggedShift( ent, UNLAGGED_HITSCAN );
+
 		// fire the specific weapon
 		switch( ent->s.weapon ) {
 		case WP_STUN_BATON:
@@ -4710,6 +4722,10 @@ void FireWeapon( gentity_t *ent, qboolean altFire ) {
 		default:
 //			assert(!"unknown weapon fire");
 			break;
+		}
+
+		if ( unlagged ) {
+			G_UnlaggedRestore( ent );
 		}
 	}
 

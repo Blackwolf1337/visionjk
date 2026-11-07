@@ -1,0 +1,1164 @@
+/*
+===========================================================================
+Copyright (C) 2026, VisionJK contributors
+
+This file is part of the VisionJK source code.
+
+VisionJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
+// ui_skin.c -- the look of the menus and the HUD of this tree, see ui_skin.h and docs/japlus/ui.md.
+//
+// Everything here is drawn with pictures this file computes and hands to the renderer (DC->registerShaderRGBA,
+// the call the chat bubbles of the cgame use). A shape with a round corner is made for the pixels its radius has
+// in the window and is put on whole pixels, so its edge is as sharp at any size of the window. An engine without
+// that call has no such look: Skin_Ready() is qfalse there and the callers draw what they always drew.
+//
+// Nothing here keeps time by itself. What moves (a mark that comes and goes, the stars behind the menus) goes
+// by DC->realTime and DC->frameTime.
+
+#ifdef _CGAME
+	#include "cgame/cg_local.h"
+#else
+	#include "ui/ui_local.h"
+#endif
+
+#include "ui_shared.h"
+#include "ui_skin.h"
+
+extern displayContextDef_t *DC;
+
+#define SKIN_MAX_SHAPES		128		// shapes of different radius that are kept: those of the flat menus and of the menu in the level,
+								//	of every size it is dragged to (24 were full with the two, the rest was not drawn)
+#define SKIN_MAX_RADIUS		120		// pixels: a corner that is rounder is drawn with this radius
+#define SKIN_SOFT_SIZE		64
+#define SKIN_STARS			150
+#define SKIN_ARROW_SIZE		32
+
+typedef enum {
+	SKIN_FILL,						// a disc
+	SKIN_RING						// its rim
+} skinKind_t;
+
+typedef struct skinShape_s {
+	skinKind_t	kind;
+	int			radius, thick;		// pixels
+	int			size;				// of the picture, a power of two
+	qhandle_t	shader;
+} skinShape_t;
+
+static struct {
+	skinShape_t	shapes[SKIN_MAX_SHAPES];
+	int			numShapes;
+	qhandle_t	soft;				// a round light that fades to its rim
+	qhandle_t	sky;				// the colours behind the menus, top to bottom
+	qboolean	tried;
+	qhandle_t	fonts[3];			// SKIN_FONT_SANS, SKIN_FONT_MONO and SKIN_FONT_BOLD
+	qboolean	fontsTried;
+	qhandle_t	pointer;			// the arrow of the mouse
+	qboolean	pointerTried;
+	qhandle_t	logo;				// the icon of the game, flat
+	qhandle_t	solid;				// a white picture for polygons in a scene
+	qboolean	logoTried;
+	qhandle_t	arrow;				// a triangle that points to the right
+	qhandle_t	arrowDown;			//	and the same that points down
+	qhandle_t	noPicture;			// the tile of somebody who has no picture
+	qboolean	noPictureTried;
+} skin;
+
+// the colours of the widgets, see ui_skin.h
+const vec4_t skinField = { 0.027f, 0.051f, 0.102f, 1.0f };			// #070d1a
+const vec4_t skinEdge = { 0.153f, 0.251f, 0.373f, 1.0f };			// #27405f
+const vec4_t skinKeyFill = { 0.043f, 0.086f, 0.157f, 1.0f };		// #0b1628
+const vec4_t skinKeyEdge = { 0.184f, 0.294f, 0.431f, 1.0f };		// #2f4b6e
+const vec4_t skinOnAccent = { 0.016f, 0.071f, 0.122f, 1.0f };		// #04121f
+const vec4_t skinMuted = { 0.639f, 0.710f, 0.796f, 1.0f };			// #a3b5cb
+const vec4_t skinFaint = { 0.455f, 0.537f, 0.647f, 1.0f };			// #7489a5
+const vec4_t skinRule = { 0.110f, 0.180f, 0.290f, 0.6f };			// #1c2e4a
+const vec4_t skinTrack = { 0.133f, 0.212f, 0.310f, 1.0f };			// #22364f
+const vec4_t skinThumb = { 0.918f, 0.969f, 0.996f, 1.0f };			// #eaf7fe
+const vec4_t skinScrollThumb = { 0.165f, 0.271f, 0.400f, 1.0f };	// #2a4566
+
+static byte skinPic[256 * 256 * 4];
+
+// the renderer was started anew (or the module was): every handle is gone
+void Skin_Reset( void ) {
+	memset( &skin, 0, sizeof( skin ) );
+}
+
+qboolean Skin_Ready( void ) {
+	return (qboolean)( DC && DC->registerShaderRGBA != NULL );
+}
+
+// The font of "font 5" or "font 6" of a menu file, 0: this engine does not have it and the caller takes a font
+// of the game. An engine that makes the pictures also knows the two names.
+qhandle_t Skin_FontHandle( int iMenuFont ) {
+	if ( !Skin_Ready() || iMenuFont < SKIN_FONT_SANS || iMenuFont > SKIN_FONT_BOLD ) {
+		return 0;
+	}
+	if ( !skin.fontsTried ) {
+		skin.fontsTried = qtrue;
+		skin.fonts[0] = DC->RegisterFont( "vision_sans" );
+		skin.fonts[1] = DC->RegisterFont( "vision_mono" );
+		// (an engine from before the bold font has none: the bold words are in the plain one then)
+		skin.fonts[2] = DC->RegisterFont( "vision_sans_bold" );
+		if ( !skin.fonts[2] )
+			skin.fonts[2] = skin.fonts[0];
+	}
+	return skin.fonts[iMenuFont - SKIN_FONT_SANS];
+}
+
+// While the menus stand on a plane in the level (v_uiPlane): the pixels of the window a unit of it has there
+// (v_uiPlanePixels, from the cgame, which puts the corner of the 640 x 480 on the corner of a pixel), 0 flat.
+// Asked once a frame.
+static float Skin_PlanePixels( void ) {
+	static int		askedTime = -1;
+	static float	pixels;
+
+	if ( askedTime != DC->realTime ) {
+		askedTime = DC->realTime;
+		pixels = ( DC->getCVarValue( "v_uiPlane" ) != 0.0f ) ? DC->getCVarValue( "v_uiPlanePixels" ) : 0.0f;
+	}
+	return pixels;
+}
+
+// pixels of the window for a unit of the 2D screen
+static float Skin_ScaleX( void ) {
+	const float plane = Skin_PlanePixels();
+
+	return plane > 0.0f ? plane : DC->glconfig.vidWidth / ( SCREEN_WIDTH + 2.0f * DC->bias );
+}
+
+static float Skin_ScaleY( void ) {
+	const float plane = Skin_PlanePixels();
+
+	return plane > 0.0f ? plane : DC->glconfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * DC->biasY );
+}
+
+// a place of the 2D screen on the pixel of the window it is nearest to, as units again (on the plane its grid
+// starts at a pixel)
+static float Skin_SnapX( float x ) {
+	const float scale = Skin_ScaleX(), bias = Skin_PlanePixels() > 0.0f ? 0.0f : DC->bias;
+
+	return floorf( ( x + bias ) * scale + 0.5f ) / scale - bias;
+}
+
+static float Skin_SnapY( float y ) {
+	const float scale = Skin_ScaleY(), bias = Skin_PlanePixels() > 0.0f ? 0.0f : DC->biasY;
+
+	return floorf( ( y + bias ) * scale + 0.5f ) / scale - bias;
+}
+
+/*
+=================
+Skin_CardHeadBand
+
+The head of a card that begins at top and has its line at line (Skin_Panel's ring, Skin_Line): where the room
+between the ring and the line is, in units, snapped as they are drawn. Its words and its arrow stand on its middle.
+=================
+*/
+void Skin_CardHeadBand( float top, float line, float *y, float *h ) {
+	const float scale = Skin_ScaleY();
+	const int	ring = Q_max( 1, (int)( scale * 0.7f ) );
+
+	*y = Skin_SnapY( top ) + ring / scale;
+	*h = Skin_SnapY( line ) - *y;
+}
+
+// toward 1 while on and toward 0 while not, all the way in msec
+float Skin_Ease( float value, qboolean on, int msec ) {
+	const float step = Com_Clamp( 0.0f, 1.0f, (float)DC->frameTime / (float)msec );
+
+	return on ? Q_min( 1.0f, value + step ) : Q_max( 0.0f, value - step );
+}
+
+// The knob of a switch, the chosen half of a toggle, the mark of a tab: eased only while the item is drawn frame
+// after frame. An item that was not drawn a moment ago (a menu that opens, a page or a card that comes into view, a
+// search) shows its setting at once: eased from where it was last time, a switch slid from on to off as it appeared.
+float Skin_EaseValue( itemDef_t *item, qboolean on ) {
+	if ( DC->realTime - item->skinValueTime > 100 || item->skinValueTime > DC->realTime ) {
+		item->skinValue = on ? 1.0f : 0.0f;
+	} else {
+		item->skinValue = Skin_Ease( item->skinValue, on, SKIN_EASE_MSEC );
+	}
+	item->skinValueTime = DC->realTime;
+	return item->skinValue;
+}
+
+void Skin_Color( vec4_t out, const vec4_t in, float alphaScale ) {
+	VectorCopy( in, out );
+	out[3] = in[3] * alphaScale;
+}
+
+/*
+=================
+Skin_Shape
+
+A disc or its rim for a radius in pixels, white with the shape in the alpha, in the middle of a picture. The
+rim of a ring is `thick` pixels wide. A shape that was made before is found again.
+=================
+*/
+static const skinShape_t *Skin_Shape( skinKind_t kind, int radius, int thick ) {
+	skinShape_t	*shape;
+	int			i, x, y, size;
+
+	radius = Com_Clampi( 1, SKIN_MAX_RADIUS, radius );
+	for ( i = 0; i < skin.numShapes; i++ ) {
+		shape = &skin.shapes[i];
+		if ( shape->kind == kind && shape->radius == radius && shape->thick == thick ) {
+			return shape;
+		}
+	}
+	if ( skin.numShapes == SKIN_MAX_SHAPES ) {
+		return NULL;
+	}
+	for ( size = 8; size < 2 * radius; size *= 2 )
+		;
+	for ( y = 0; y < size; y++ ) {
+		for ( x = 0; x < size; x++ ) {
+			// from the middle of the picture to the middle of this pixel
+			const float	dx = x + 0.5f - size * 0.5f, dy = y + 0.5f - size * 0.5f;
+			const float	d = sqrtf( dx * dx + dy * dy );
+			float		alpha = Com_Clamp( 0.0f, 1.0f, radius - d );
+			byte		*out = &skinPic[( y * size + x ) * 4];
+
+			if ( kind == SKIN_RING ) {
+				alpha -= Com_Clamp( 0.0f, 1.0f, radius - thick - d );
+			}
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( alpha * 255.0f + 0.5f );
+		}
+	}
+	shape = &skin.shapes[skin.numShapes];
+	shape->kind = kind;
+	shape->radius = radius;
+	shape->thick = thick;
+	shape->size = size;
+	shape->shader = DC->registerShaderRGBA( va( "skin_%s_%i_%i", kind == SKIN_RING ? "ring" : "fill", radius, thick ),
+		skinPic, size, size, RGBA_SHADER_OVER );
+	if ( !shape->shader ) {
+		return NULL;
+	}
+	skin.numShapes++;
+	return shape;
+}
+
+static void Skin_Pictures( void ) {
+	int x, y;
+
+	if ( skin.tried ) {
+		return;
+	}
+	skin.tried = qtrue;
+
+	// a light that is full in the middle and gone at the rim
+	for ( y = 0; y < SKIN_SOFT_SIZE; y++ ) {
+		for ( x = 0; x < SKIN_SOFT_SIZE; x++ ) {
+			const float	dx = x + 0.5f - SKIN_SOFT_SIZE * 0.5f, dy = y + 0.5f - SKIN_SOFT_SIZE * 0.5f;
+			const float	a = Com_Clamp( 0.0f, 1.0f, 1.0f - sqrtf( dx * dx + dy * dy ) / ( SKIN_SOFT_SIZE * 0.5f - 1.0f ) );
+			byte		*out = &skinPic[( y * SKIN_SOFT_SIZE + x ) * 4];
+
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( a * a * ( 3.0f - 2.0f * a ) * 255.0f + 0.5f );
+		}
+	}
+	// (Blended, never added to what is behind it: the only way to a picture that is added is RGBA_SHADER_GLOW,
+	// and what that marks also goes through the dynamic glow of the renderer (r_DynamicGlow), which smeared a
+	// soft light in the 2D into a row of blots beside it.)
+	skin.soft = DC->registerShaderRGBA( "skin_soft", skinPic, SKIN_SOFT_SIZE, SKIN_SOFT_SIZE, RGBA_SHADER_OVER );
+
+	// the sky behind the menus: nearly black at the top, a deep blue at the bottom
+	for ( y = 0; y < 64; y++ ) {
+		const float t = y / 63.0f;
+
+		for ( x = 0; x < 2; x++ ) {
+			byte *out = &skinPic[( y * 2 + x ) * 4];
+
+			out[0] = (byte)( 4.0f + 6.0f * t * t );
+			out[1] = (byte)( 6.0f + 16.0f * t * t );
+			out[2] = (byte)( 12.0f + 34.0f * t );
+			out[3] = 255;
+		}
+	}
+	skin.sky = DC->registerShaderRGBA( "skin_sky", skinPic, 2, 64, RGBA_SHADER_OVER );
+
+	// a triangle that points to the right: its tip in the middle of the right edge, its base the left edge
+	for ( y = 0; y < SKIN_ARROW_SIZE; y++ ) {
+		for ( x = 0; x < SKIN_ARROW_SIZE; x++ ) {
+			// how far this pixel is inside of the two slanted edges, in pixels along their normal
+			const float	px = x + 0.5f, py = fabsf( y + 0.5f - SKIN_ARROW_SIZE * 0.5f );
+			const float	inside = ( ( SKIN_ARROW_SIZE - 1.0f - px ) * 0.5f - py ) * 0.894f;
+			byte		*out = &skinPic[( y * SKIN_ARROW_SIZE + x ) * 4];
+
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( Com_Clamp( 0.0f, 1.0f, Q_min( inside + 0.5f, px ) ) * 255.0f + 0.5f );
+		}
+	}
+	skin.arrow = DC->registerShaderRGBA( "skin_arrow", skinPic, SKIN_ARROW_SIZE, SKIN_ARROW_SIZE, RGBA_SHADER_OVER );
+
+	// the same turned to point down (the heading of a list that is open): its tip in the middle of the bottom edge
+	for ( y = 0; y < SKIN_ARROW_SIZE; y++ ) {
+		for ( x = 0; x < SKIN_ARROW_SIZE; x++ ) {
+			const float	py = y + 0.5f, px = fabsf( x + 0.5f - SKIN_ARROW_SIZE * 0.5f );
+			const float	inside = ( ( SKIN_ARROW_SIZE - 1.0f - py ) * 0.5f - px ) * 0.894f;
+			byte		*out = &skinPic[( y * SKIN_ARROW_SIZE + x ) * 4];
+
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( Com_Clamp( 0.0f, 1.0f, Q_min( inside + 0.5f, py ) ) * 255.0f + 0.5f );
+		}
+	}
+	skin.arrowDown = DC->registerShaderRGBA( "skin_arrowdown", skinPic, SKIN_ARROW_SIZE, SKIN_ARROW_SIZE, RGBA_SHADER_OVER );
+}
+
+/*
+=================
+Skin_NoPicture
+
+The tile of somebody who has no picture: the outline of a head and shoulders on dark glass. The list of models
+shows it for a skin without an icon, in place of the red question mark of JA+. 0: this engine makes no pictures.
+=================
+*/
+qhandle_t Skin_NoPicture( void ) {
+	const int	size = 64;
+	int			x, y, i, j;
+
+	if ( !Skin_Ready() ) {
+		return 0;
+	}
+	if ( skin.noPictureTried ) {
+		return skin.noPicture;
+	}
+	skin.noPictureTried = qtrue;
+	for ( y = 0; y < size; y++ ) {
+		for ( x = 0; x < size; x++ ) {
+			const float	t = y / (float)( size - 1 );
+			const float	back[3] = { 13.0f + 7.0f * t, 22.0f + 12.0f * t, 37.0f + 19.0f * t };
+			const float	figure[3] = { 70.0f, 102.0f, 136.0f };
+			float		cover = 0.0f;
+			byte		*out = &skinPic[( y * size + x ) * 4];
+
+			// how much of this pixel the figure covers, from sixteen places in it
+			for ( j = 0; j < 4; j++ ) {
+				for ( i = 0; i < 4; i++ ) {
+					const float	px = x + ( i + 0.5f ) * 0.25f, py = y + ( j + 0.5f ) * 0.25f;
+					const float	hx = px - 32.0f, hy = py - 24.0f;				// the head: a disc
+					const float	sx = ( px - 32.0f ) / 21.0f, sy = ( py - 65.0f ) / 24.0f;	// the shoulders: an oval at the lower edge
+
+					if ( hx * hx + hy * hy <= 11.0f * 11.0f || sx * sx + sy * sy <= 1.0f ) {
+						cover += 1.0f / 16.0f;
+					}
+				}
+			}
+			for ( i = 0; i < 3; i++ ) {
+				out[i] = (byte)( back[i] + ( figure[i] - back[i] ) * cover + 0.5f );
+			}
+			out[3] = 255;
+		}
+	}
+	skin.noPicture = DC->registerShaderRGBA( "skin_nopicture", skinPic, size, size, RGBA_SHADER_OVER );
+	return skin.noPicture;
+}
+
+/*
+=================
+Skin_NineSlice
+
+A shape with round corners over a rectangle: the four quarters of the disc at the corners, the row and the
+column through its middle along the sides, its middle over the rest. corner: the size of a corner in units.
+=================
+*/
+// (cornerX and cornerY are the same number of pixels: where the 2D of the game is stretched (an engine without v_2dBias) they are not
+// the same number of units, and a corner of the same units would be stretched with it)
+static void Skin_NineSliceTop( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle,
+	qboolean squareBottom );
+
+static void Skin_NineSlice( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle ) {
+	Skin_NineSliceTop( x, y, w, h, cornerX, cornerY, shape, middle, qfalse );
+}
+
+// squareBottom: the lower corners square, as the middle of the shape (the head of a card that ends on a line)
+static void Skin_NineSliceTop( float x, float y, float w, float h, float cornerX, float cornerY, const skinShape_t *shape, qboolean middle,
+	qboolean squareBottom ) {
+	const float	half = 0.5f, c = (float)shape->radius / shape->size;
+	const float	s0 = half - c, s1 = half, s2 = half + c;
+	const float	xs[4] = { x, x + cornerX, x + w - cornerX, x + w };
+	const float	ys[4] = { y, y + cornerY, squareBottom ? y + h : y + h - cornerY, y + h };
+	const float	ss[4] = { s0, s1, s1, s2 };
+	int			i, j;
+
+	for ( j = 0; j < 3; j++ ) {
+		for ( i = 0; i < 3; i++ ) {
+			if ( ( i == 1 && j == 1 && !middle ) || xs[i + 1] <= xs[i] || ys[j + 1] <= ys[j] ) {
+				continue;
+			}
+			DC->drawStretchPic( xs[i], ys[j], xs[i + 1] - xs[i], ys[j + 1] - ys[j], ss[i], ss[j], ss[i + 1], ss[j + 1], shape->shader );
+		}
+	}
+}
+
+/*
+=================
+Skin_Panel
+
+A rectangle with round corners: filled, and with a rim of one pixel if edge is given and can be seen. Its
+corners are whole pixels and the rectangle starts and ends on a pixel.
+=================
+*/
+void Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge ) {
+	const float			sx = Skin_ScaleX(), sy = Skin_ScaleY();
+	const float			x0 = Skin_SnapX( x ), y0 = Skin_SnapY( y ), x1 = Skin_SnapX( x + w ), y1 = Skin_SnapY( y + h );
+	const skinShape_t	*shape;
+	int					pixels;
+	float				corner;
+
+	if ( !Skin_Ready() || x1 <= x0 || y1 <= y0 ) {
+		return;
+	}
+	// no rounder than the rectangle is small
+	pixels = (int)( Q_min( radius, Q_min( x1 - x0, y1 - y0 ) * 0.5f ) * sy + 0.5f );
+	if ( pixels < 1 ) {
+		if ( fill && fill[3] > 0.0f ) {
+			DC->fillRect( x0, y0, x1 - x0, y1 - y0, fill );
+		}
+		if ( edge && edge[3] > 0.0f ) {
+			DC->drawRect( x0, y0, x1 - x0, y1 - y0, 1.0f / sy, edge );
+		}
+		return;
+	}
+	corner = pixels / sy;
+	if ( fill && fill[3] > 0.0f ) {
+		shape = Skin_Shape( SKIN_FILL, pixels, 0 );
+		if ( shape ) {
+			DC->setColor( fill );
+			Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), corner, shape, qtrue );
+		}
+	}
+	if ( edge && edge[3] > 0.0f ) {
+		shape = Skin_Shape( SKIN_RING, pixels, Q_max( 1, (int)( sy * 0.7f ) ) );
+		if ( shape ) {
+			DC->setColor( edge );
+			Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), corner, shape, qfalse );
+		}
+	}
+	DC->setColor( NULL );
+}
+
+/*
+=================
+Skin_Soft
+
+A light without an edge around a rectangle: full inside it, gone `spread` units outside of it. A dark one is a
+shadow, a bright one a glow. Blended in both cases.
+=================
+*/
+void Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color ) {
+	const float		in = Q_min( spread, Q_min( w, h ) * 0.5f );
+	const float		xs[4] = { x - spread, x + in, x + w - in, x + w + spread };
+	const float		ys[4] = { y - spread, y + in, y + h - in, y + h + spread };
+	const float		ss[4] = { 0.0f, 0.5f, 0.5f, 1.0f };
+	int				i, j;
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Pictures();
+	if ( !skin.soft || color[3] <= 0.0f ) {
+		return;
+	}
+	DC->setColor( color );
+	for ( j = 0; j < 3; j++ ) {
+		for ( i = 0; i < 3; i++ ) {
+			if ( xs[i + 1] > xs[i] && ys[j + 1] > ys[j] ) {
+				DC->drawStretchPic( xs[i], ys[j], xs[i + 1] - xs[i], ys[j + 1] - ys[j], ss[i], ss[j], ss[i + 1], ss[j + 1], skin.soft );
+			}
+		}
+	}
+	DC->setColor( NULL );
+}
+
+void Skin_Disc( float cx, float cy, float radius, const vec4_t color ) {
+	const int			pixels = Q_max( 1, (int)( radius * Skin_ScaleY() + 0.5f ) );
+	const skinShape_t	*shape = Skin_Ready() ? Skin_Shape( SKIN_FILL, pixels, 0 ) : NULL;
+	const float			r = pixels / Skin_ScaleY();
+	float				c;
+
+	if ( !shape ) {
+		return;
+	}
+	c = (float)shape->radius / shape->size;
+	{
+		// (as many pixels across as down, see Skin_NineSlice)
+		const float rx = pixels / Skin_ScaleX();
+
+		DC->setColor( color );
+		DC->drawStretchPic( Skin_SnapX( cx - rx ), Skin_SnapY( cy - r ), 2.0f * rx, 2.0f * r, 0.5f - c, 0.5f - c, 0.5f + c, 0.5f + c, shape->shader );
+	}
+	DC->setColor( NULL );
+}
+
+// A line from left to right that is one pixel high, whatever the size of the window, also on a plane in the level
+// whose pixels the cgame tells (Skin_PlanePixels). On a plane without them (an old cgame) a pixel of the 2D is
+// less than one of the screen, and a line that thin breaks into dashes: there it is a strip with soft edges, which
+// the renderer can thin out evenly.
+void Skin_Line( float x, float y, float w, const vec4_t color ) {
+	if ( !Skin_Ready() || color[3] <= 0.0f ) {
+		return;
+	}
+	if ( Skin_PlanePixels() > 0.0f || DC->getCVarValue( "v_uiPlane" ) == 0.0f ) {
+		DC->fillRect( Skin_SnapX( x ), Skin_SnapY( y ), w, 1.0f / Skin_ScaleY(), color );
+		return;
+	}
+	Skin_Pictures();
+	if ( skin.soft ) {
+		vec4_t strong;
+
+		// (the column through the middle of the round light: nothing, all, nothing)
+		Skin_Color( strong, color, 1.6f );
+		DC->setColor( strong );
+		DC->drawStretchPic( x, y - 1.0f, w, 2.6f, 0.5f, 0.0f, 0.5f, 1.0f, skin.soft );
+		DC->setColor( NULL );
+	}
+}
+
+// A triangle in a rectangle, pointing to its right edge or to its left
+void Skin_Arrow( float x, float y, float w, float h, qboolean left, const vec4_t color ) {
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Pictures();
+	if ( !skin.arrow || color[3] <= 0.0f ) {
+		return;
+	}
+	DC->setColor( color );
+	DC->drawStretchPic( Skin_SnapX( x ), Skin_SnapY( y ), w, h, left ? 1.0f : 0.0f, 0.0f, left ? 0.0f : 1.0f, 1.0f, skin.arrow );
+	DC->setColor( NULL );
+}
+
+void Skin_ArrowDown( float x, float y, float w, float h, const vec4_t color ) {
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Pictures();
+	if ( !skin.arrowDown || color[3] <= 0.0f ) {
+		return;
+	}
+	DC->setColor( color );
+	DC->drawStretchPic( Skin_SnapX( x ), Skin_SnapY( y ), w, h, 0.0f, 0.0f, 1.0f, 1.0f, skin.arrowDown );
+	DC->setColor( NULL );
+}
+
+/*
+=================
+Skin_Backdrop
+
+What is behind the menus outside of a game: a dark sky, two wide lights that wander slowly, and stars that
+drift past at three depths and flicker a little. Over all of a wide window.
+=================
+*/
+void Skin_Backdrop( void ) {
+	const float		left = -DC->wide, width = SCREEN_WIDTH + 2.0f * DC->wide;
+	const float		top = -DC->tall, height = SCREEN_HEIGHT + 2.0f * DC->tall;
+	const float		t = DC->realTime * 0.001f;
+	const vec4_t	blue = { 0.10f, 0.34f, 0.75f, 0.16f }, teal = { 0.05f, 0.55f, 0.62f, 0.10f };
+	unsigned int	seed = 0x9e3779b9u;
+	int				i;
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Pictures();
+	if ( skin.sky ) {
+		// (half a pixel of the picture in from its ends: its rim would be mixed with nothing)
+		DC->setColor( NULL );
+		DC->drawStretchPic( left, top, width, height, 0.5f, 0.5f / 64.0f, 0.5f, 63.5f / 64.0f, skin.sky );
+	}
+	if ( !skin.soft ) {
+		return;
+	}
+	DC->setColor( blue );
+	DC->drawHandlePic( left + width * 0.55f + sinf( t * 0.05f ) * 40.0f - 300.0f, 150.0f + cosf( t * 0.04f ) * 20.0f, 600.0f, 420.0f, skin.soft );
+	DC->setColor( teal );
+	DC->drawHandlePic( left + width * 0.2f + cosf( t * 0.03f ) * 50.0f - 220.0f, -120.0f + sinf( t * 0.045f ) * 25.0f, 440.0f, 360.0f, skin.soft );
+
+	for ( i = 0; i < SKIN_STARS; i++ ) {
+		float	fx, fy, depth, size, twinkle;
+		vec4_t	color;
+
+		// the same stars every frame: a row of numbers that starts anew
+		seed = seed * 1664525u + 1013904223u;
+		fx = ( seed >> 8 ) * ( 1.0f / 16777216.0f );
+		seed = seed * 1664525u + 1013904223u;
+		fy = ( seed >> 8 ) * ( 1.0f / 16777216.0f );
+		seed = seed * 1664525u + 1013904223u;
+		depth = 0.25f + 0.75f * ( ( seed >> 8 ) * ( 1.0f / 16777216.0f ) );
+
+		// the near ones are larger, brighter and faster
+		fx = fmodf( fx + t * 0.004f * depth, 1.0f );
+		size = 0.7f + 1.5f * depth * depth;
+		twinkle = 0.75f + 0.25f * sinf( t * ( 0.6f + 1.7f * fy ) + fx * 40.0f + i );
+		VectorSet( color, 0.75f + 0.25f * fy, 0.86f, 1.0f );
+		color[3] = ( 0.18f + 0.6f * depth * depth ) * twinkle;
+		DC->setColor( color );
+		DC->drawHandlePic( left + ( 1.0f - fx ) * ( width + 8.0f ) - 4.0f, top + fy * height, size, size, skin.soft );
+	}
+	DC->setColor( NULL );
+}
+
+// Is a point inside the arrow of the mouse? Its outline in a square of 32, the tip at the top left.
+static qboolean Skin_InArrow( float x, float y ) {
+	static const float	arrow[7][2] = { { 3, 2 }, { 3, 24 }, { 9, 18.5f }, { 13.5f, 28.5f }, { 17.5f, 26.8f }, { 13, 17 }, { 21, 17 } };
+	qboolean			inside = qfalse;
+	int					i, j;
+
+	for ( i = 0, j = 6; i < 7; j = i++ ) {
+		if ( ( arrow[i][1] > y ) != ( arrow[j][1] > y )
+			&& x < ( arrow[j][0] - arrow[i][0] ) * ( y - arrow[i][1] ) / ( arrow[j][1] - arrow[i][1] ) + arrow[i][0] ) {
+			inside = !inside;
+		}
+	}
+	return inside;
+}
+
+/*
+=================
+Skin_Cursor
+
+The pointer of the mouse in the new look: a light arrow with a dark rim, its tip at x and y
+=================
+*/
+void Skin_Cursor( float x, float y ) {
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	if ( !skin.pointerTried ) {
+		int px, py, sx, sy, k;
+
+		skin.pointerTried = qtrue;
+		for ( py = 0; py < 32; py++ ) {
+			for ( px = 0; px < 32; px++ ) {
+				// how much of the pixel the arrow covers, and how much the arrow made 1.3 pixels fatter does
+				static const float	ring[8][2] = { { 1.3f, 0 }, { -1.3f, 0 }, { 0, 1.3f }, { 0, -1.3f }, { 0.9f, 0.9f }, { -0.9f, 0.9f }, { 0.9f, -0.9f }, { -0.9f, -0.9f } };
+				int					fill = 0, rim = 0;
+				byte				*out = &skinPic[( py * 32 + px ) * 4];
+
+				for ( sy = 0; sy < 4; sy++ ) {
+					for ( sx = 0; sx < 4; sx++ ) {
+						const float	fx = px + ( sx + 0.5f ) * 0.25f, fy = py + ( sy + 0.5f ) * 0.25f;
+						qboolean	near = Skin_InArrow( fx, fy );
+
+						fill += near;
+						for ( k = 0; k < 8 && !near; k++ ) {
+							near = Skin_InArrow( fx + ring[k][0], fy + ring[k][1] );
+						}
+						rim += near;
+					}
+				}
+				out[0] = (byte)( 16 + fill * 232 / 16 );
+				out[1] = (byte)( 26 + fill * 224 / 16 );
+				out[2] = (byte)( 40 + fill * 215 / 16 );
+				out[3] = (byte)( rim * 255 / 16 );
+			}
+		}
+		skin.pointer = DC->registerShaderRGBA( "skin_pointer", skinPic, 32, 32, RGBA_SHADER_OVER );
+	}
+	if ( skin.pointer ) {
+		DC->setColor( NULL );
+		DC->drawHandlePic( x - 2.0f, y - 1.5f, 21.0f, 21.0f, skin.pointer );
+	}
+}
+
+/*
+===============================================================================
+
+The icon of the game: a box seen from above, its lid white, its sides yellow and blue. The same three shapes
+the website has (img/logo.svg), flat as a picture, and as a body in a scene of its own that turns.
+
+===============================================================================
+*/
+
+#define LOGO_SIZE		128
+// the corners of the three faces in the drawing of the icon, which is 209 wide and 216 high from 100, 96
+static const float	logoFaces[3][4][2] = {
+	{ { 183, 102 }, { 279, 149 }, { 204, 209 }, { 107, 163 } },
+	{ { 107, 163 }, { 204, 209 }, { 204, 306 }, { 107, 261 } },
+	{ { 204, 209 }, { 302, 163 }, { 302, 260 }, { 204, 306 } },
+};
+static const byte	logoColors[3][3] = { { 255, 255, 255 }, { 227, 215, 92 }, { 0, 168, 255 } };
+
+static qboolean Skin_InQuad( const float quad[4][2], float x, float y ) {
+	qboolean	inside = qfalse;
+	int			i, j;
+
+	for ( i = 0, j = 3; i < 4; j = i++ ) {
+		if ( ( quad[i][1] > y ) != ( quad[j][1] > y )
+			&& x < ( quad[j][0] - quad[i][0] ) * ( y - quad[i][1] ) / ( quad[j][1] - quad[i][1] ) + quad[i][0] ) {
+			inside = !inside;
+		}
+	}
+	return inside;
+}
+
+static void Skin_LogoPictures( void ) {
+	int px, py, sx, sy, f;
+
+	if ( skin.logoTried ) {
+		return;
+	}
+	skin.logoTried = qtrue;
+	for ( py = 0; py < LOGO_SIZE; py++ ) {
+		for ( px = 0; px < LOGO_SIZE; px++ ) {
+			int		sum[4] = { 0, 0, 0, 0 };
+			byte	*out = &skinPic[( py * LOGO_SIZE + px ) * 4];
+
+			// sixteen places in the pixel, each in the drawing of the icon, which stands in the middle of the picture
+			for ( sy = 0; sy < 4; sy++ ) {
+				for ( sx = 0; sx < 4; sx++ ) {
+					const float	x = 96.5f + ( px + ( sx + 0.5f ) * 0.25f ) * ( 216.0f / LOGO_SIZE );
+					const float	y = 96.0f + ( py + ( sy + 0.5f ) * 0.25f ) * ( 216.0f / LOGO_SIZE );
+
+					for ( f = 0; f < 3; f++ ) {
+						if ( Skin_InQuad( logoFaces[f], x, y ) ) {
+							sum[0] += logoColors[f][0];
+							sum[1] += logoColors[f][1];
+							sum[2] += logoColors[f][2];
+							sum[3]++;
+							break;
+						}
+					}
+				}
+			}
+			out[0] = out[1] = out[2] = 255;
+			if ( sum[3] ) {
+				out[0] = (byte)( sum[0] / sum[3] );
+				out[1] = (byte)( sum[1] / sum[3] );
+				out[2] = (byte)( sum[2] / sum[3] );
+			}
+			out[3] = (byte)( sum[3] * 255 / 16 );
+		}
+	}
+	skin.logo = DC->registerShaderRGBA( "skin_logo", skinPic, LOGO_SIZE, LOGO_SIZE, RGBA_SHADER_OVER );
+	memset( skinPic, 255, 8 * 8 * 4 );
+	skin.solid = DC->registerShaderRGBA( "skin_solid", skinPic, 8, 8, 0 );
+}
+
+// the icon as a picture, as large as fits into the rectangle and in its middle
+void Skin_Logo( float x, float y, float w, float h, float alpha ) {
+	const float		size = Q_min( w, h );
+	const vec4_t	color = { 1.0f, 1.0f, 1.0f, alpha };
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_LogoPictures();
+	if ( skin.logo ) {
+		DC->setColor( color );
+		DC->drawHandlePic( x + ( w - size ) * 0.5f, y + ( h - size ) * 0.5f, size, size, skin.logo );
+		DC->setColor( NULL );
+	}
+}
+
+/*
+=================
+Skin_Cube
+
+The box of the icon as a body, in the pose the icon has: seen from above over one edge, the yellow side at the
+left, the blue one at the right, the white lid hinged on the yellow side and a little open, the dark of its
+inside in the gap. It is alive without leaving that pose: it sways a few degrees and the lid opens and closes
+slowly. A scene of its own in the rectangle, seen from far away through a narrow lens, so its edges
+run side by side as in the drawing. Where the engine gives no way to add a polygon to such a scene the flat
+icon stands there.
+=================
+*/
+#define CUBE_HALF		20.0f		// half the width of the box, in units of its scene
+#define CUBE_HEIGHT		0.8f		//	its height against its width: the box of the icon is a little flat
+#define CUBE_LID		0.9f		//	the lid against the top
+#define CUBE_FOV		9.0f		// the lens,
+#define CUBE_DISTANCE	520.0f		//	and how far the eye is: what is seen is about 80 units high
+#define CUBE_PITCH		28.0f		// how far above the box the eye is, as in the drawing
+#define CUBE_YAW		135.0f		// the turn in which the yellow side is at the left
+
+// a corner of the box, turned and set down in front of the eye
+static void Skin_CubePoint( float px, float py, float pz, float cy, float sy, float cp, float sp, vec3_t out ) {
+	const float x = px * cy - py * sy, y = px * sy + py * cy;
+
+	out[0] = x * cp - pz * sp + CUBE_DISTANCE;
+	out[1] = y;
+	out[2] = x * sp + pz * cp;
+}
+
+static void Skin_CubeVert( polyVert_t *v, const vec3_t at, const byte *rgb, float shade ) {
+	VectorCopy( at, v->xyz );
+	v->modulate[0] = (byte)( rgb[0] * shade );
+	v->modulate[1] = (byte)( rgb[1] * shade );
+	v->modulate[2] = (byte)( rgb[2] * shade );
+	v->modulate[3] = 255;
+}
+
+void Skin_Cube( float x, float y, float w, float h ) {
+	// the four sides: where they stand, and their two colours by turns
+	static const float	sideAt[4][2][2] = { { { 1, -1 }, { 1, 1 } }, { { 1, 1 }, { -1, 1 } }, { { -1, 1 }, { -1, -1 } }, { { -1, -1 }, { 1, -1 } } };
+	static const float	sideNormal[4][2] = { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
+	static const byte	inside[3] = { 26, 60, 104 };
+	const float			t = DC->realTime * 0.001f;
+	const float			yaw = DEG2RAD( CUBE_YAW + 9.0f * sinf( t * 0.55f ) ), pitch = DEG2RAD( CUBE_PITCH );
+	const float			cy = cosf( yaw ), sy = sinf( yaw ), cp = cosf( pitch ), sp = sinf( pitch );
+	const float			open = 0.5f + 0.5f * sinf( t * 0.8f );					// 0 nearly shut, 1 as open as it gets
+	const float			lid = DEG2RAD( 7.0f + 17.0f * open );
+	const float			top = CUBE_HALF * CUBE_HEIGHT, bob = sinf( t * 0.7f ) * 0.8f;
+	// (a scene has its place in pixels of the flat screen, also on a plane: CL_UIRenderScene moves it there)
+	const float			scaleX = DC->glconfig.vidWidth / ( SCREEN_WIDTH + 2.0f * DC->bias );
+	const float			scaleY = DC->glconfig.vidHeight / ( SCREEN_HEIGHT + 2.0f * DC->biasY );
+	const float			size = Q_min( w, h ), cx = x + w * 0.5f, cyy = y + h * 0.5f;
+	vec4_t				glow;
+	refdef_t			refdef;
+	polyVert_t			verts[4];
+	vec3_t				at;
+	int					f;
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_LogoPictures();
+	if ( !skin.solid || !DC->addPolyToScene || !DC->clearScene || !DC->renderScene ) {
+		Skin_Logo( x, y, w, h, 1.0f );
+		return;
+	}
+
+	// a light behind the box, brighter while the lid is open, and its shadow under it
+	VectorSet( glow, 0.10f, 0.55f, 1.0f );
+	glow[3] = 0.10f + 0.10f * open;
+	Skin_Soft( cx - size * 0.16f, cyy - size * 0.20f, size * 0.32f, size * 0.32f, size * 0.34f, glow );
+	VectorSet( glow, 0.0f, 0.0f, 0.0f );
+	glow[3] = 0.40f;
+	Skin_Soft( cx - size * 0.20f, cyy + size * 0.36f, size * 0.40f, size * 0.01f, size * 0.06f, glow );
+
+	memset( &refdef, 0, sizeof( refdef ) );
+	refdef.rdflags = RDF_NOWORLDMODEL;
+	AxisClear( refdef.viewaxis );
+	// a square in the middle of the rectangle, on whole pixels
+	refdef.width = refdef.height = (int)( size * scaleY );
+	refdef.x = (int)( ( cx + DC->bias ) * scaleX ) - refdef.width / 2;
+	refdef.y = (int)( ( cyy + DC->biasY ) * scaleY ) - refdef.height / 2;
+	if ( refdef.width < 8 ) {
+		return;
+	}
+	refdef.fov_x = refdef.fov_y = CUBE_FOV;
+	refdef.time = DC->realTime;
+
+	// The polygons of a scene are drawn in the order they come in and do not hide each other by their depth.
+	// So: the sides that look at the eye (of a box no two of those overlap), its opening, the lid.
+	DC->clearScene();
+	memset( verts, 0, sizeof( verts ) );
+	for ( f = 0; f < 4; f++ ) {
+		const float	nx = sideNormal[f][0] * cy - sideNormal[f][1] * sy;
+		const byte	*rgb = logoColors[1 + ( f & 1 )];
+
+		// (the eye is in front of the box and above it: a side looks at it when it looks back along the view)
+		if ( nx * cp >= 0.0f ) {
+			continue;
+		}
+		Skin_CubePoint( sideAt[f][0][0] * CUBE_HALF, sideAt[f][0][1] * CUBE_HALF, -top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[0], at, rgb, 0.86f );
+		Skin_CubePoint( sideAt[f][1][0] * CUBE_HALF, sideAt[f][1][1] * CUBE_HALF, -top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[1], at, rgb, 0.86f );
+		Skin_CubePoint( sideAt[f][1][0] * CUBE_HALF, sideAt[f][1][1] * CUBE_HALF, top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[2], at, rgb, 1.0f );
+		Skin_CubePoint( sideAt[f][0][0] * CUBE_HALF, sideAt[f][0][1] * CUBE_HALF, top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[3], at, rgb, 1.0f );
+		DC->addPolyToScene( skin.solid, 4, verts );
+	}
+	// the opening: the dark inside the box, darker still toward the side the lid is hinged on
+	for ( f = 0; f < 4; f++ ) {
+		Skin_CubePoint( sideAt[f][0][0] * CUBE_HALF, sideAt[f][0][1] * CUBE_HALF, top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[f], at, inside, ( sideAt[f][0][0] > 0.0f ? 0.50f : 0.85f ) + 0.15f * open );
+	}
+	DC->addPolyToScene( skin.solid, 4, verts );
+	// the lid: hinged on the top edge of the first side, the yellow one of the pose, and swung up from there
+	for ( f = 0; f < 4; f++ ) {
+		const float	away = ( f == 1 || f == 2 ) ? 2.0f * CUBE_HALF * CUBE_LID : 0.0f;		// how far this corner is from the hinge
+		const float	along = ( f < 2 ) ? CUBE_HALF : -CUBE_HALF;
+
+		Skin_CubePoint( CUBE_HALF - away * cosf( lid ), along, top + bob + away * sinf( lid ), cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[f], at, logoColors[0], ( away > 0.0f ) ? 1.0f : 0.93f );
+	}
+	DC->addPolyToScene( skin.solid, 4, verts );
+	DC->renderScene( &refdef );
+}
+
+/*
+=================
+Skin_LoadPanel
+
+The panel at the bottom of the screens that wait for a level, the one of the ui while it connects and the one of
+the cgame while it loads, so the second follows the first without a jump: the box of the icon, a title, a line
+about it, a line that says what happens now, and a bar. fraction is how far it is. Below 0 nobody knows: then a
+piece of the bar runs to and fro.
+=================
+*/
+#define LOAD_TEXT_X		130.0f
+#define LOAD_TEXT_W		470.0f
+
+// a line of the panel: one that is too long (the name of a server, what a server says) is set smaller and stays in it
+static void Skin_LoadLine( float y, float scale, const vec4_t color, const char *text ) {
+	const float	width = DC->textWidth( text, scale, SKIN_FONT_SANS );
+	const float	fit = ( width > LOAD_TEXT_W ) ? LOAD_TEXT_W / width : 1.0f;
+
+	DC->drawText( LOAD_TEXT_X, y + ( 1.0f - fit ) * scale * 9.0f, scale * fit, (float *)color, text, 0, 0, 0, SKIN_FONT_SANS );
+}
+
+void Skin_LoadPanel( const char *title, const char *about, const char *now, float fraction ) {
+	static const vec4_t	fill = { 0.035f, 0.07f, 0.12f, 0.80f }, edge = { 0.43f, 0.83f, 1.0f, 0.28f }, dark = { 0.0f, 0.0f, 0.0f, 0.45f };
+	static const vec4_t	bar = { 0.43f, 0.83f, 1.0f, 1.0f }, track = { 1.0f, 1.0f, 1.0f, 0.10f };
+	static const vec4_t	bright = { 1.0f, 1.0f, 1.0f, 1.0f }, text = { 0.86f, 0.92f, 0.97f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f };
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Soft( 24.0f, 362.0f, 592.0f, 96.0f, 14.0f, dark );
+	Skin_Panel( 24.0f, 358.0f, 592.0f, 96.0f, 9.0f, fill, edge );
+	Skin_Cube( 30.0f, 360.0f, 92.0f, 92.0f );
+
+	Skin_LoadLine( 366.0f, 1.15f, bright, title );
+	Skin_LoadLine( 392.0f, 0.62f, dim, about );
+	Skin_LoadLine( 410.0f, 0.62f, text, now );
+	if ( fraction >= 0.0f ) {
+		Skin_Bar( LOAD_TEXT_X, 432.0f, LOAD_TEXT_W, 5.0f, fraction, bar, track );
+	} else {
+		const float	piece = LOAD_TEXT_W * 0.2f, at = 0.5f - 0.5f * cosf( DC->realTime * 0.0025f );
+
+		Skin_Bar( LOAD_TEXT_X, 432.0f, LOAD_TEXT_W, 5.0f, 0.0f, bar, track );
+		Skin_Bar( LOAD_TEXT_X + at * ( LOAD_TEXT_W - piece ), 432.0f, piece, 5.0f, 1.0f, bar, NULL );
+	}
+	DC->setColor( NULL );
+}
+
+/*
+===============================================================================
+
+The widgets of a menu with "skin 1"
+
+The colours come from the menu file: the text of an item has its forecolor, what is switched on, filled or in
+focus has the focusColor of its menu.
+
+===============================================================================
+*/
+
+static const float *Skin_Accent( const itemDef_t *item ) {
+	return ( (const menuDef_t *)item->parent )->focusColor;
+}
+
+static qboolean Skin_HasFocus( const itemDef_t *item ) {
+	return (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && !item->disabled );
+}
+
+// The mark behind an item the mouse is on or the keys are at: a light fill with round corners. It comes and
+// goes in SKIN_EASE_MSEC. Called once a frame for every item that can have the focus.
+void Skin_ItemBack( itemDef_t *item ) {
+	const float	*accent = Skin_Accent( item );
+	vec4_t		color;
+
+	item->skinFocus = Skin_Ease( item->skinFocus, Skin_HasFocus( item ), SKIN_EASE_MSEC );
+	if ( item->skinFocus <= 0.0f || ( item->window.flags & WINDOW_DECORATION ) ) {
+		return;
+	}
+	if ( item->window.style == WINDOW_STYLE_PANEL && item->window.backColor[3] > 0.5f
+		&& 0.3f * item->window.backColor[0] + 0.59f * item->window.backColor[1] + 0.11f * item->window.backColor[2] > 0.35f ) {
+		// (a button filled with the accent or another bright colour: the accent over it would not be seen, it is lit
+		// with white, in its own shape)
+		const vec4_t white = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		Skin_Color( color, white, 0.16f * item->skinFocus );
+		Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, item->window.radius, color, NULL );
+		return;
+	}
+	Skin_Color( color, accent, 0.12f * item->skinFocus );
+	Skin_Panel( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, SKIN_RADIUS, color, NULL );
+}
+
+// The mark of the heading of a card while the mouse is on it: the head of the card from its top to the line under it,
+// round at the top as the card, straight on the line (the rectangle of the heading has the gap above the card in it
+// and reaches below the line)
+void Skin_CardHeadBack( itemDef_t *item, float x, float y, float w, float h, float radius ) {
+	const float			sx = Skin_ScaleX(), sy = Skin_ScaleY();
+	const float			x0 = Skin_SnapX( x ), y0 = Skin_SnapY( y ), x1 = Skin_SnapX( x + w ), y1 = Skin_SnapY( y + h );
+	const int			pixels = Q_max( 1, (int)( Q_min( radius, Q_min( x1 - x0, y1 - y0 ) ) * sy + 0.5f ) );
+	const skinShape_t	*shape;
+	vec4_t				color;
+
+	item->skinFocus = Skin_Ease( item->skinFocus, Skin_HasFocus( item ), SKIN_EASE_MSEC );
+	if ( item->skinFocus <= 0.0f || !Skin_Ready() || x1 <= x0 || y1 <= y0 ) {
+		return;
+	}
+	shape = Skin_Shape( SKIN_FILL, pixels, 0 );
+	if ( !shape ) {
+		return;
+	}
+	Skin_Color( color, Skin_Accent( item ), 0.12f * item->skinFocus );
+	DC->setColor( color );
+	Skin_NineSliceTop( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), pixels / sy, shape, qtrue, qtrue );
+	DC->setColor( NULL );
+}
+
+// the colour of the text of an item: its own, brighter the more it is in focus, and that of its menu when off
+void Skin_TextColor( itemDef_t *item, vec4_t out ) {
+	const menuDef_t	*parent = (const menuDef_t *)item->parent;
+	const vec4_t	bright = { 1.0f, 1.0f, 1.0f, item->window.foreColor[3] };
+
+	if ( item->disabled ) {
+		VectorCopy4( parent->disableColor, out );
+		return;
+	}
+	// dark words stand on a button filled with the accent: white would not be read there
+	if ( 0.3f * item->window.foreColor[0] + 0.59f * item->window.foreColor[1] + 0.11f * item->window.foreColor[2] < 0.3f ) {
+		VectorCopy4( item->window.foreColor, out );
+		return;
+	}
+	out[0] = item->window.foreColor[0] + ( bright[0] - item->window.foreColor[0] ) * item->skinFocus;
+	out[1] = item->window.foreColor[1] + ( bright[1] - item->window.foreColor[1] ) * item->skinFocus;
+	out[2] = item->window.foreColor[2] + ( bright[2] - item->window.foreColor[2] ) * item->skinFocus;
+	out[3] = item->window.foreColor[3];
+}
+
+// A switch in place of the words yes and no: a track with a knob that slides to the right when it is on. On, the
+// track has the accent and the knob is dark; off, it is the dark of a field with a grey knob.
+void Skin_Switch( itemDef_t *item, float x, float y, float height, qboolean on ) {
+	const float		*accent = Skin_Accent( item );
+	const float		h = Q_min( height, 12.0f ), w = h * 1.75f, top = y + ( height - h ) * 0.5f;
+	vec4_t			track, edge, knob;
+	float			at;
+	int				i;
+
+	at = Skin_EaseValue( item, on );
+	for ( i = 0; i < 3; i++ ) {
+		track[i] = skinField[i] + ( accent[i] - skinField[i] ) * at;
+		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * at;
+		knob[i] = skinFaint[i] + ( skinOnAccent[i] - skinFaint[i] ) * at;
+	}
+	track[3] = edge[3] = knob[3] = item->disabled ? 0.4f : 1.0f;
+	Skin_Panel( x, top, w, h, h * 0.5f, track, edge );
+	Skin_Disc( x + h * 0.5f + ( w - h ) * at, top + h * 0.5f, h * 0.5f - 1.6f, knob );
+}
+
+// The track of a slider and its knob: filled with the accent up to the knob, a light knob with a ring of the
+// accent. Also used for the rows of a list (ui_shared.c).
+void Skin_SliderTrack( float x, float mid, float width, float fraction, const vec4_t accent, float focus, float alpha, float unit ) {
+	vec4_t color;
+
+	fraction = Com_Clamp( 0.0f, 1.0f, fraction );
+	Skin_Color( color, skinTrack, alpha );
+	Skin_Panel( x, mid - 1.05f * unit, width, 2.1f * unit, 1.05f * unit, color, NULL );
+	Skin_Color( color, accent, alpha );
+	if ( width * fraction > 0.5f ) {
+		Skin_Panel( x, mid - 1.05f * unit, width * fraction, 2.1f * unit, 1.05f * unit, color, NULL );
+	}
+	if ( focus > 0.0f ) {
+		vec4_t glow;
+
+		Skin_Color( glow, accent, 0.3f * focus * alpha );
+		Skin_Soft( x + width * fraction - 1.0f, mid - 1.0f, 2.0f, 2.0f, 7.0f, glow );
+	}
+	Skin_Disc( x + width * fraction, mid, 4.3f * unit, color );
+	Skin_Color( color, skinThumb, alpha );
+	Skin_Disc( x + width * fraction, mid, 3.2f * unit, color );
+}
+
+void Skin_Slider( itemDef_t *item, float x, float y, float width, float height, float fraction ) {
+	Skin_SliderTrack( x, y + height * 0.5f, width, fraction, Skin_Accent( item ), item->skinFocus, item->disabled ? 0.4f : 1.0f,
+		Menu_Unit( (const menuDef_t *)item->parent ) );
+}
+
+// The box of a line that can be typed in, or of the key a command is bound to: the dark of a field with an
+// outline that takes the accent while it is typed in
+void Skin_Field( itemDef_t *item, float x, float y, float width, float height, qboolean editing ) {
+	const float	*accent = Skin_Accent( item );
+	vec4_t		edge;
+	int			i;
+
+	for ( i = 0; i < 3; i++ ) {
+		edge[i] = skinEdge[i] + ( accent[i] - skinEdge[i] ) * ( editing ? 1.0f : 0.65f * item->skinFocus );
+	}
+	edge[3] = 1.0f;
+	Skin_Panel( x, y, width, height, SKIN_RADIUS, skinField, edge );
+}
+
+// A bar that is filled to a part of its length, for the HUD: health, shield, force
+void Skin_Bar( float x, float y, float w, float h, float fraction, const vec4_t fill, const vec4_t back ) {
+	const float radius = h * 0.5f;
+
+	fraction = Com_Clamp( 0.0f, 1.0f, fraction );
+	if ( back && back[3] > 0.0f ) {
+		Skin_Panel( x, y, w, h, radius, back, NULL );
+	}
+	if ( fraction > 0.0f && fill[3] > 0.0f ) {
+		Skin_Panel( x, y, Q_max( h, w * fraction ), h, radius, fill, NULL );
+	}
+}
+
+// The bar at the side of a list: a thumb with round ends that is `part` of it long and starts at `start` (0 to 1),
+// in the middle of a w (or h) wide strip. It takes the accent while the mouse is over the strip.
+void Skin_ScrollBar( float x, float y, float w, float h, float start, float part, qboolean horizontal, const vec4_t accent ) {
+	const float		thick = 3.2f;
+	const qboolean	over = (qboolean)( DC->cursorx >= x && DC->cursorx < x + w && DC->cursory >= y && DC->cursory < y + h );
+	vec4_t			thumb;
+
+	if ( over ) {
+		Skin_Color( thumb, accent, 0.85f );
+	} else {
+		VectorCopy4( skinScrollThumb, thumb );
+	}
+	part = Com_Clamp( 0.08f, 1.0f, part );
+	start = Com_Clamp( 0.0f, 1.0f - part, start );
+	if ( horizontal ) {
+		Skin_Panel( x + w * start, y + ( h - thick ) * 0.5f, w * part, thick, thick * 0.5f, thumb, NULL );
+	} else {
+		Skin_Panel( x + ( w - thick ) * 0.5f, y + h * start, thick, h * part, thick * 0.5f, thumb, NULL );
+	}
+}
+
+// A picture of a list of pictures (heads, parts of the body, characters): the chosen one has a ring of two pixels in
+// the accent, the one under the mouse a faint ring
+void Skin_Tile( float x, float y, float w, float h, const vec4_t accent, qboolean selected, qboolean hover ) {
+	const float			sx = Skin_ScaleX(), sy = Skin_ScaleY();
+	const float			x0 = Skin_SnapX( x ), y0 = Skin_SnapY( y ), x1 = Skin_SnapX( x + w ), y1 = Skin_SnapY( y + h );
+	const int			pixels = Q_max( 2, (int)( SKIN_RADIUS * sy + 0.5f ) );
+	const skinShape_t	*shape;
+	vec4_t				color;
+
+	if ( ( !selected && !hover ) || !Skin_Ready() || x1 <= x0 || y1 <= y0 ) {
+		return;
+	}
+	shape = Skin_Shape( SKIN_RING, pixels, 2 );
+	if ( !shape ) {
+		return;
+	}
+	Skin_Color( color, accent, selected ? 1.0f : 0.45f );
+	DC->setColor( color );
+	Skin_NineSlice( x0, y0, x1 - x0, y1 - y0, Q_min( pixels / sx, ( x1 - x0 ) * 0.5f ), Q_min( pixels / sy, ( y1 - y0 ) * 0.5f ), shape, qfalse );
+	DC->setColor( NULL );
+}
+
+// A row of a list: the chosen one is filled and has a bar at its left, the one under the mouse is lit
+void Skin_Row( float x, float y, float w, float h, const vec4_t accent, qboolean selected, float hover ) {
+	vec4_t color;
+
+	if ( selected ) {
+		Skin_Color( color, accent, 0.16f );
+		Skin_Panel( x, y, w, h, SKIN_RADIUS, color, NULL );
+		Skin_Color( color, accent, 1.0f );
+		Skin_Panel( x, y + 1.0f, 1.6f, h - 2.0f, 0.8f, color, NULL );
+	} else if ( hover > 0.0f ) {
+		Skin_Color( color, accent, 0.08f * hover );
+		Skin_Panel( x, y, w, h, SKIN_RADIUS, color, NULL );
+	}
+}

@@ -1,0 +1,194 @@
+//----------------------------------------------------------------------------------------------
+//
+//	UPDATE CHANNEL WARNING (VisionJK): before the development builds, the row "Update Channel" of
+//	setup.menu and ingame_setup.menu opens it (uiScript updateChannel updateChannelMenu). Only its
+//	button sets v_updateChannel dev. The texts are the ones of the new look (strings/<language>/vision.str).
+//
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name					"updateChannelMenu"
+		visible					0
+		fullScreen				0
+		rect					0 0 640 480
+		focusColor				1 1 1 1
+		outOfBoundsClick
+		descX					320
+		descY					424
+		descScale				1
+		descColor				1 .682 0 .8
+		descAlignment			ITEM_ALIGN_CENTER
+		popup
+		onOpen
+		{
+			setfocus			updatechannel_no
+		}
+		onESC
+		{
+			play				"sound/interface/button1.wav" ;
+			close				updateChannelMenu ;
+		}
+
+		itemDef
+		{
+			name				updatechannel_background
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				100 150 440 210
+			background			"gfx/menus/main_centerblue"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_title
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@MENUS_WARNING
+			rect				100 166 440 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			220
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_line1
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
+			rect				100 210 440 16
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			220
+			font				2
+			textscale			0.7
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_line2
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
+			rect				100 228 440 16
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			220
+			font				2
+			textscale			0.7
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_line3
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
+			rect				100 246 440 16
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			220
+			font				2
+			textscale			0.7
+			forecolor			.65 .65 1 1
+			visible				1
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_no_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				115 300 200 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_no
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				115 300 200 24
+			text				@VISION_STAY_ON_STABLE
+			descText			@VISION_KEEP_THE_RELEASES
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			100
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			updatechannel_no_glow
+			}
+			mouseExit
+			{
+				hide			updatechannel_no_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				close			updateChannelMenu ;
+			}
+		}
+
+		itemDef
+		{
+			name				updatechannel_yes_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				325 300 200 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef
+		{
+			name				updatechannel_yes
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				325 300 200 24
+			text				@VISION_SWITCH_TO_DEVELOPMENT
+			descText			@VISION_UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			100
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			updatechannel_yes_glow
+			}
+			mouseExit
+			{
+				hide			updatechannel_yes_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				setcvar			v_updateChannel dev ;
+				close			updateChannelMenu ;
+			}
+		}
+	}
+}

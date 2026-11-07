@@ -1,6 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -19,16 +20,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cl_cgameapi.cpp  -- client system interaction with client game
-#include "qcommon/cm_public.h"
+#include "qcommon/cm/cm_public.h"
 #include "qcommon/RoffSystem.h"
-#include "qcommon/stringed_ingame.h"
+#include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/timing.h"
 #include "client.h"
 #include "cl_uiapi.h"
 #include "botlib/botlib.h"
-#include "snd_ambient.h"
-#include "FXExport.h"
-#include "FxUtil.h"
+#include "client/sound/snd_ambient.h"
+#include "client/sound/spatial/snd_spatial.h"
+#include "client/fx/FXExport.h"
+#include "client/fx/FxUtil.h"
 
 extern IHeapAllocator *G2VertSpaceClient;
 extern botlib_export_t *botlib_export;
@@ -318,9 +320,37 @@ static void CL_AddCgameCommand( const char *cmdName ) {
 	Cmd_AddCommand( cmdName, NULL );
 }
 
+/*
+====================
+CL_ClipOffChanged
+
+Port, not in the game as it was. A server of this tree can stop minding clip brushes of the map while the map
+runs (clipbrush) and says in its system info which (vs_clipRanges). They are off in the collision of this client
+too then, so that it predicts the moves the server makes. Not while this process runs the server itself: the
+collision is the one of the server then.
+====================
+*/
+static char cl_clipOff[1024];
+
+void CL_ClipOffChanged( const char *list ) {
+	if ( !strcmp( list, cl_clipOff ) ) {
+		return;
+	}
+	Q_strncpyz( cl_clipOff, list, sizeof( cl_clipOff ) );
+	if ( !com_sv_running->integer ) {
+		CM_ApplyClipOff( cl_clipOff );
+	}
+}
+
 static void CL_CM_LoadMap( const char *mapname, qboolean subBSP ) {
 	if ( subBSP )	CM_LoadSubBSP( va( "maps/%s.bsp", mapname+1 ), qfalse );
 	else			CM_LoadMap( mapname, qtrue, NULL );
+
+	// Port: the map as it is loaded has every clip brush on, the server may have some off (CL_ClipOffChanged)
+	if ( !subBSP && !com_sv_running->integer )	CM_ApplyClipOff( cl_clipOff );
+
+	// the sound gets the world as a mesh (v_spatial)
+	if ( !subBSP )	S_SpatialLoadMap( mapname );
 }
 
 static void CL_GetGlconfig( glconfig_t *glconfig ) {
@@ -505,11 +535,70 @@ static qboolean CL_G2API_GetBoltMatrix_NoRecNoRot( void *ghoul2, const int model
 	return re->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
 }
 
+// What the cgame has the engine load, each with its kind for v_loadReport and v_hitchLog (qcommon/com_load.cpp)
+static qhandle_t CL_LoadModel( const char *name ) {
+	Com_LoadPush( "model", name );
+	const qhandle_t h = re->RegisterModel( name );
+	Com_LoadPop();
+	return h;
+}
+
+static qhandle_t CL_LoadSkin( const char *name ) {
+	Com_LoadPush( "skin", name );
+	const qhandle_t h = re->RegisterSkin( name );
+	Com_LoadPop();
+	return h;
+}
+
+static qhandle_t CL_LoadShader( const char *name ) {
+	Com_LoadPush( "shader", name );
+	const qhandle_t h = re->RegisterShader( name );
+	Com_LoadPop();
+	return h;
+}
+
+static qhandle_t CL_LoadShaderNoMip( const char *name ) {
+	Com_LoadPush( "shader", name );
+	const qhandle_t h = re->RegisterShaderNoMip( name );
+	Com_LoadPop();
+	return h;
+}
+
+static sfxHandle_t CL_LoadSound( const char *name ) {
+	Com_LoadPush( "sound", name );
+	const sfxHandle_t h = S_RegisterSound( name );
+	Com_LoadPop();
+	return h;
+}
+
+static int CL_LoadEffect( const char *name ) {
+	Com_LoadPush( "effect", name );
+	const int h = FX_RegisterEffect( name );
+	Com_LoadPop();
+	return h;
+}
+
+static void CL_LoadWorld( const char *name ) {
+	Com_LoadPush( "world", name );
+	re->LoadWorld( name );
+	Com_LoadPop();
+}
+
+// the loading screen, drawn between the steps of a load
+static void CL_LoadScreen( void ) {
+	Com_LoadPush( "screen", NULL );
+	SCR_UpdateScreen();
+	Com_LoadPop();
+}
+
 static int CL_G2API_InitGhoul2Model( void **ghoul2Ptr, const char *fileName, int modelIndex, qhandle_t customSkin, qhandle_t customShader, int modelFlags, int lodBias ) {
 #ifdef _FULL_G2_LEAK_CHECKING
 		g_G2AllocServer = 0;
 #endif
-	return re->G2API_InitGhoul2Model( (CGhoul2Info_v **)ghoul2Ptr, fileName, modelIndex, customSkin, customShader, modelFlags, lodBias );
+	Com_LoadPush( "ghoul2 model", fileName );
+	const int ret = re->G2API_InitGhoul2Model( (CGhoul2Info_v **)ghoul2Ptr, fileName, modelIndex, customSkin, customShader, modelFlags, lodBias );
+	Com_LoadPop();
+	return ret;
 }
 
 static qboolean CL_G2API_SetSkin( void *ghoul2, int modelIndex, qhandle_t customSkin, qhandle_t renderSkin ) {
@@ -569,7 +658,7 @@ static void CL_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 
 	char *tmp = re->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
 	if ( tmp )
-		strcpy( fillBuf, tmp );
+		Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
 	else
 		fillBuf[0] = '\0';
 }
@@ -813,7 +902,35 @@ static void CL_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelInde
 	if ( !ghoul2 ) return;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
 	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
-	strcpy( fillBuf, tmp );
+	Q_strncpyz( fillBuf, tmp, MAX_QPATH );	// (the buffers of the modules are MAX_QPATH, the name is a model's)
+}
+
+// ext.R_LoadImageFit: a picture file for the cgame (the drawing board, cgame/toys/cg_board.c)
+static qboolean CL_LoadImageFit( const char *name, byte *rgba, int width, int height ) {
+	if ( !re || !re->ext.LoadImageFit || !name || !rgba || width < 1 || height < 1 || width > 512 || height > 512 )
+		return qfalse;
+	return re->ext.LoadImageFit( name, rgba, width, height );
+}
+
+// ext.R_AddLiquid: the water of the toys (cgame/toys/cg_water.c), a renderer without it says qfalse
+static qboolean CL_AddLiquid( const liquidSegment_t *segments, int count ) {
+	if ( !re || !re->ext.AddLiquid )
+		return qfalse;
+	return re->ext.AddLiquid( segments, count );
+}
+
+// ext.R_AddPaint: the sprays of the toys (cgame/toys/cg_spray.c), a renderer without it says qfalse
+static qboolean CL_AddPaint( const paintDecal_t *decals, int count ) {
+	if ( !re || !re->ext.AddPaint )
+		return qfalse;
+	return re->ext.AddPaint( decals, count );
+}
+
+// ext.R_AddWet: the puddles and wet patches of the toys (cgame/toys/cg_water.c), a renderer without it says qfalse
+static qboolean CL_AddWet( const wetSpot_t *spots, int count ) {
+	if ( !re || !re->ext.AddWet )
+		return qfalse;
+	return re->ext.AddWet( spots, count );
 }
 
 static void CL_Key_SetCatcher( int catcher ) {
@@ -923,7 +1040,7 @@ intptr_t CL_CgameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case CG_CVAR_VARIABLESTRINGBUFFER:
-		Cvar_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
+		Cvar_VM_VariableStringBuffer( (const char *)VMA(1), (char *)VMA(2), args[3] );
 		return 0;
 
 	case CG_CVAR_GETHIDDENVALUE:
@@ -1719,7 +1836,7 @@ void CL_BindCGame( void ) {
 		cgi.Cvar_Register						= Cvar_Register;
 		cgi.Cvar_Set							= CGVM_Cvar_Set;
 		cgi.Cvar_Update							= Cvar_Update;
-		cgi.Cvar_VariableStringBuffer			= Cvar_VariableStringBuffer;
+		cgi.Cvar_VariableStringBuffer			= Cvar_VM_VariableStringBuffer;
 		cgi.AddCommand							= CL_AddCgameCommand;
 		cgi.Cmd_Argc							= Cmd_Argc;
 		cgi.Cmd_Args							= Cmd_ArgsBuffer;
@@ -1732,7 +1849,7 @@ void CL_BindCGame( void ) {
 		cgi.FS_Open								= FS_FOpenFileByMode;
 		cgi.FS_Read								= FS_Read;
 		cgi.FS_Write							= FS_Write;
-		cgi.UpdateScreen						= SCR_UpdateScreen;
+		cgi.UpdateScreen						= CL_LoadScreen;
 		cgi.CM_InlineModel						= CM_InlineModel;
 		cgi.CM_LoadMap							= CL_CM_LoadMap;
 		cgi.CM_NumInlineModels					= CM_NumInlineModels;
@@ -1748,7 +1865,7 @@ void CL_BindCGame( void ) {
 		cgi.S_ClearLoopingSounds				= S_ClearLoopingSounds;
 		cgi.S_GetVoiceVolume					= CL_S_GetVoiceVolume;
 		cgi.S_MuteSound							= S_MuteSound;
-		cgi.S_RegisterSound						= S_RegisterSound;
+		cgi.S_RegisterSound						= CL_LoadSound;
 		cgi.S_Respatialize						= S_Respatialize;
 		cgi.S_Shutup							= CL_S_Shutup;
 		cgi.S_StartBackgroundTrack				= S_StartBackgroundTrack;
@@ -1788,14 +1905,14 @@ void CL_BindCGame( void ) {
 		cgi.R_Language_UsesSpaces				= re->Language_UsesSpaces;
 		cgi.R_LerpTag							= re->LerpTag;
 		cgi.R_LightForPoint						= re->LightForPoint;
-		cgi.R_LoadWorld							= re->LoadWorld;
+		cgi.R_LoadWorld							= CL_LoadWorld;
 		cgi.R_MarkFragments						= re->MarkFragments;
 		cgi.R_ModelBounds						= re->ModelBounds;
 		cgi.R_RegisterFont						= re->RegisterFont;
-		cgi.R_RegisterModel						= re->RegisterModel;
-		cgi.R_RegisterShader					= re->RegisterShader;
-		cgi.R_RegisterShaderNoMip				= re->RegisterShaderNoMip;
-		cgi.R_RegisterSkin						= re->RegisterSkin;
+		cgi.R_RegisterModel						= CL_LoadModel;
+		cgi.R_RegisterShader					= CL_LoadShader;
+		cgi.R_RegisterShaderNoMip				= CL_LoadShaderNoMip;
+		cgi.R_RegisterSkin						= CL_LoadSkin;
 		cgi.R_RemapShader						= re->RemapShader;
 		cgi.R_RenderScene						= re->RenderScene;
 		cgi.R_SetColor							= re->SetColor;
@@ -1833,7 +1950,7 @@ void CL_BindCGame( void ) {
 		cgi.CIN_SetExtents						= CIN_SetExtents;
 		cgi.CIN_StopCinematic					= CIN_StopCinematic;
 		cgi.FX_AddLine							= CGFX_AddLine;
-		cgi.FX_RegisterEffect					= FX_RegisterEffect;
+		cgi.FX_RegisterEffect					= CL_LoadEffect;
 		cgi.FX_PlayEffect						= FX_PlayEffect;
 		cgi.FX_PlayEffectID						= FX_PlayEffectID;
 		cgi.FX_PlayEntityEffectID				= FX_PlayEntityEffectID;
@@ -1911,6 +2028,32 @@ void CL_BindCGame( void ) {
 		cgi.G2API_GetSurfaceName				= CL_G2API_GetSurfaceName;
 
 		cgi.ext.R_Font_StrLenPixels				= re->ext.Font_StrLenPixels;
+		cgi.ext.S_SpatialVoice					= S_SpatialVoice;
+		cgi.ext.S_SpatialOwnVoice				= S_SpatialOwnVoice;
+		cgi.ext.GetClipboard					= CL_GetClipboard;
+		cgi.ext.SetClipboard					= CL_SetClipboard;
+		cgi.ext.OpenURL							= Sys_OpenURL;
+		cgi.ext.R_Text3DWidth					= re->ext.Font_Text3DWidth;
+		cgi.ext.R_Text3D						= re->ext.Font_Text3D;
+		cgi.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
+		cgi.ext.R_SetUIPlane					= CL_SetUIPlane;
+		cgi.ext.R_SetDepthOfField				= re->ext.SetDepthOfField;
+		cgi.ext.S_SpatialDebug					= S_SpatialDebug;
+		cgi.ext.S_SpatialMovers					= S_SpatialMovers;
+		cgi.ext.R_SetScopeEffect				= re->ext.SetScopeEffect;
+		cgi.ext.R_SetScreenEffect				= re->ext.SetScreenEffect;
+		cgi.ext.Video_Open						= CL_VideoOpen;
+		cgi.ext.Video_Advance					= CL_VideoAdvance;
+		cgi.ext.Video_State						= CL_VideoState;
+		cgi.ext.Video_Picture					= CL_VideoPicture;
+		cgi.ext.Video_Color						= CL_VideoColor;
+		cgi.ext.Video_Reset						= CL_VideoReset;
+		cgi.ext.R_LoadImageFit					= CL_LoadImageFit;
+		cgi.ext.R_AddLiquid						= CL_AddLiquid;
+		cgi.ext.R_AddWet						= CL_AddWet;
+		cgi.ext.R_PaintPicture					= CL_PaintPicture;
+		cgi.ext.R_AddPaint						= CL_AddPaint;
+		cgi.ext.S_AddLoopingSoundVolume			= S_AddLoopingSoundVolume;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

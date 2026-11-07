@@ -4,6 +4,7 @@ Copyright (C) 1999 - 2005, Id Software, Inc.
 Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -24,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // g_utils.c -- misc utility functions for game module
 
 #include "g_local.h"
-#include "bg_saga.h"
+#include "game/bg/bg_saga.h"
 #include "qcommon/q_shared.h"
 
 typedef struct shaderRemap_s {
@@ -99,6 +100,47 @@ const char *BuildShaderStateConfig(void) {
 		Q_strcat( buff, sizeof( buff ), out);
 	}
 	return buff;
+}
+
+/*
+=================
+G_GetRemap
+
+Not in JA+. What the table of the remaps holds, one entry a call, for the texture swap of the web admin panel:
+qfalse past the last one. An entry whose two names are the same is a remap that was taken back: that is what
+tells a client to draw the shader as itself again.
+=================
+*/
+qboolean G_GetRemap( int index, const char **oldShader, const char **newShader ) {
+	if ( index < 0 || index >= remapCount )
+		return qfalse;
+	*oldShader = remappedShaders[index].oldShader;
+	*newShader = remappedShaders[index].newShader;
+	return qtrue;
+}
+
+/*
+=================
+G_DropTakenBackRemaps
+
+Not in JA+. Takes the remaps that were taken back out of the table, the ones whose two names are the same, and
+returns how many those were. For the caller to do only when every client was told of them: a client that had
+the shader swapped and is told a list without it keeps it swapped.
+=================
+*/
+int G_DropTakenBackRemaps( void ) {
+	int i, kept = 0, dropped;
+
+	for ( i = 0; i < remapCount; i++ ) {
+		if ( !Q_stricmp( remappedShaders[i].oldShader, remappedShaders[i].newShader ) )
+			continue;
+		if ( kept != i )
+			remappedShaders[kept] = remappedShaders[i];
+		kept++;
+	}
+	dropped = remapCount - kept;
+	remapCount = kept;
+	return dropped;
 }
 
 /*
@@ -662,6 +704,7 @@ void G_UseTargets2( gentity_t *ent, gentity_t *activator, const char *string ) {
 			trap->Print ("WARNING: Entity used itself.\n");
 		} else {
 			if ( t->use ) {
+				WebAdmin_Used( ent, t );
 				GlobalUse(t, ent, activator);
 			}
 		}
@@ -1012,6 +1055,7 @@ void G_FreeEntity( gentity_t *ed ) {
 	}
 
 	WebAdmin_EntityFreed( ed-g_entities );
+	JP_BlockWallFreed( ed );
 
 	trap->UnlinkEntity ((sharedEntity_t *)ed);		// unlink from world
 
@@ -1329,6 +1373,9 @@ gentity_t *G_PlayEffect(int fxID, vec3_t org, vec3_t ang)
 	VectorCopy(org, te->s.origin);
 	te->s.eventParm = fxID;
 
+	// not in the game as it was: the web admin panel draws the effects too, and only a client is sent this event
+	WebAdmin_Effect( 0, fxID, org, te->s.angles );
+
 	return te;
 }
 
@@ -1352,6 +1399,9 @@ gentity_t *G_PlayEffectID(const int fxID, vec3_t org, vec3_t ang)
 	{ //play off this dir by default then.
 		te->s.angles[1] = 1;
 	}
+
+	// not in the game as it was: the web admin panel draws the effects too, and only a client is sent this event
+	WebAdmin_Effect( 1, fxID, org, te->s.angles );
 
 	return te;
 }

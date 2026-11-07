@@ -1,6 +1,6 @@
-# JA+ v2.4 Build 7 in OpenJK
+# JA+ v2.4 Build 7 in VisionJK
 
-This tree is OpenJK (multiplayer) with the features of the JA+ mod for Jedi Academy built in. The source of JA+
+This tree, VisionJK, is OpenJK (multiplayer) with the features of the JA+ mod for Jedi Academy built in. The source of JA+
 was never released. Everything here was rebuilt from the released binaries:
 
 - `jampgamei386.so` of JA+ v2.4 Build 7, the Linux server module. It still has its symbol names.
@@ -8,6 +8,17 @@ was never released. Everything here was rebuilt from the released binaries:
   graphics.
 
 The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on top of that history.
+
+## Names
+
+Since 2026-10-17 every cvar and command this tree added begins with `v_` (the client: cgame, ui, engine client,
+sound, renderer, and the console commands of the client) or `vs_` (the server: game module, dedicated server,
+masterserver, its console commands, and the commands client and server send each other). Stock OpenJK and JA+
+names keep theirs. `codemp/qcommon/cvar/cvar_renames.h` lists every old name with its new one. A value stored or set
+under an old name, and a bind with an old command, is taken over by the engine with a line on the console, so
+a config with the old names keeps working and says what to change. The commands between client and server are
+renamed too: a client or server of 0.1.7 or before does not understand them, so voice chat, statuses, boombox
+and the key login only work between versions from after the change.
 
 ## Documents
 
@@ -21,10 +32,21 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [webadmin.md](webadmin.md) | The web admin panel taken from JKAdmin (not a JA+ feature): cvars, requests, JA+ glue, limits |
 | [security.md](security.md) | Security pass over `codemp/`: findings, fixes, build hardening, what stays, server settings |
 | [threading.md](threading.md) | The frame loop from `main`, why server and client share one thread, timing numbers, what was not built |
+| [loading.md](loading.md) | What the load of a level and a long frame are spent on: the two reports of the engine, the test, the numbers, the packed textures that are kept |
+| [ui.md](ui.md) | The new look of menus and HUD (not a JA+ feature): what a player sees, what a mod's files get, the new words of the menu files, how the menus are made |
+| [windows.md](windows.md) | The Windows client run as a whole on Windows 11: what ran, what it found, what is still unchecked |
 | [macos.md](macos.md) | The state on macOS: what the first build on a Mac found and changed, how to build and run there, what is still open |
 | [macos-test.md](macos-test.md) | For a tester with a Mac: build, start the Vulkan renderer, what to look at and what to send back |
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
-| [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
+| [boombox.md](boombox.md) | Boxes that play songs of YouTube (not a JA+ feature): fetched by the server, sent over the relay of the voice chat, a sound of the level with `v_spatial`, only VisionJK players see and hear them. Never run |
+| [sandbox.md](sandbox.md) | The sandbox, step 1 of issue #3 (not a JA+ feature): `/amsandbox` gives the physgun, the toolgun and the gravity gun. Tools, tool window, cvars, how colour and material reach the clients, what was tested |
+| [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `v_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
+| [renderer.md](renderer.md) | rd-vulkan-vision, the renderer of the client, with a Vulkan and an OpenGL ES device (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
+| [downloads.md](downloads.md) | Downloads from a server (not a JA+ feature): a window to choose the paks, kept or for one session, what is in them before they are used, programs blocked |
+| [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`vs_clientWebPort`), packets through a WebSocket. What runs and what never ran |
+| [testing.md](testing.md) | The test scripts of `tools/test/`: smoke test of the zips, sanitizers and valgrind, unit tests, static checks, other games, the environment variables, the release flow |
+| [models.md](models.md) | Player models from the model store of the site (not a JA+ feature): fetched in the background and shown at once, the checks, the cvars |
+| [toys.md](toys.md) | Toys that only VisionJK players see, the snowball first (not a JA+ feature): thrown with a held key, sent through the game module or the masterserver, flown by every client on its own. How it works, what was tested |
 
 ## Where the code is
 
@@ -32,29 +54,29 @@ New files, all JA+ code that did not have to live inside a base function:
 
 | File | Content |
 |------|---------|
-| `codemp/game/g_japlus.h` | `jpClient_t` (the state of a player), prototypes, version strings |
-| `codemp/game/g_japlus_xcvar.h` | the 187 `jp_` cvars |
-| `codemp/game/g_japlus_admin.c` | login, ranks, allowed commands, anti abuse, admin gun, console commands |
-| `codemp/game/g_japlus_admin2.c` | ammap, amvstr, amrename, amlockteam, amforceteam, amkillvote, ampoll, amweather |
-| `codemp/game/g_japlus_fx.c` | sleep, ghost, empower, merc, mindtrick, protect, silence, slap, forced dimension |
-| `codemp/game/g_japlus_tele.c` | amtele, amtelemark, amorigin, refuseTele, the teleport effect |
-| `codemp/game/g_japlus_cmds.c` | emotes, kiss and hug, flip, jetpack, amcolor, sabercolor, /saber, flamethrower |
-| `codemp/game/g_japlus_chat.c` | word filter, silence, clan chat, ignore, name rules, clan tag |
-| `codemp/game/g_japlus_info.c` | ammove, amDMGs, duelWhois |
-| `codemp/game/g_japlus_dim.c` | alternate dimension and duel isolation: who may touch whom, the traces |
-| `codemp/game/g_japlus_hook.c` | grappling hook |
-| `codemp/game/g_japlus_highlander.c` | highlander mode |
-| `codemp/game/g_japlus_blockwall.c` | invisible blocking walls and their editor |
-| `codemp/game/g_japlus_scale.c` | model scale |
-| `codemp/game/g_japlus_misc.c` | timers, welcome and MOTD, inactivity protection, `jp_cinfo` |
+| `codemp/game/japlus/g_japlus.h` | `jpClient_t` (the state of a player), prototypes, version strings |
+| `codemp/game/japlus/g_japlus_xcvar.h` | the 187 `jp_` cvars |
+| `codemp/game/japlus/g_japlus_admin.c` | login, ranks, allowed commands, anti abuse, admin gun, console commands |
+| `codemp/game/japlus/g_japlus_admin2.c` | ammap, amvstr, amrename, amlockteam, amforceteam, amkillvote, ampoll, amweather |
+| `codemp/game/japlus/g_japlus_fx.c` | sleep, ghost, empower, merc, mindtrick, protect, silence, slap, forced dimension |
+| `codemp/game/japlus/g_japlus_tele.c` | amtele, amtelemark, amorigin, refuseTele, the teleport effect |
+| `codemp/game/japlus/g_japlus_cmds.c` | emotes, kiss and hug, flip, jetpack, amcolor, sabercolor, /saber, flamethrower |
+| `codemp/game/japlus/g_japlus_chat.c` | word filter, silence, clan chat, ignore, name rules, clan tag |
+| `codemp/game/japlus/g_japlus_info.c` | ammove, amDMGs, duelWhois |
+| `codemp/game/japlus/g_japlus_dim.c` | alternate dimension and duel isolation: who may touch whom, the traces |
+| `codemp/game/japlus/g_japlus_hook.c` | grappling hook |
+| `codemp/game/japlus/g_japlus_highlander.c` | highlander mode |
+| `codemp/game/japlus/g_japlus_blockwall.c` | invisible blocking walls and their editor |
+| `codemp/game/japlus/g_japlus_scale.c` | model scale |
+| `codemp/game/japlus/g_japlus_misc.c` | timers, welcome and MOTD, inactivity protection, `jp_cinfo` |
 | `codemp/cgame/cg_japlus.c` | auto replier, cameras, macro scan |
-| `codemp/game/g_webadmin.c`, `codemp/game/webadmin/index.html` | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_blackhole.c` | the entity `misc_blackhole`, not from JA+, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_schizo.c` | hallucinations only one player gets, not from JA+, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_props.c` | the entities `misc_ball`, `misc_cube` and `misc_prop` (any model of the game) with physics, taking them with `+button13` (admins take players with it too), not from JA+, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_poop.c` | the emote `ampoop`, not from JA+, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_flatulence.c` | a player who breaks wind all the time, not from JA+, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_disorient.c` | a player whose view sways and is thrown around, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/webadmin/` (`g_webadmin.c`, `wa_*.c`, `page/`) | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
+| `codemp/game/props/g_blackhole.c` | the entity `misc_blackhole`, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/fun/g_schizo.c` | hallucinations only one player gets, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/props/g_props.c` | the entities `misc_ball`, `misc_cube` and `misc_prop` (any model of the game) with physics, taking them with `+button13` (admins take players with it too), not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/fun/g_poop.c` | the emote `ampoop`, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/fun/g_flatulence.c` | a player who breaks wind all the time, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/fun/g_disorient.c` | a player whose view sways and is thrown around, not from JA+, see [webadmin.md](webadmin.md) |
 
 Changes inside base files carry a comment that starts with `JA+`. The largest ones are in `w_saber.c` (damage
 rules, thrown saber, kicks), `bg_pmove.c` and `bg_saber.c` (new moves, ledge grab, hook pull, freeze), `w_force.c`
@@ -64,55 +86,25 @@ all 70 files.
 
 ## Building
 
-The three modules are `jampgame`, `cgame` and `ui`. The mod directory is `japlus` (`+set fs_game japlus`).
-
-64 bit Linux, with engine and dedicated server:
-
-```
-cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF -DBuildMPRend2=OFF
-cmake --build build64 -j$(nproc)
-```
-
-32 bit Linux modules:
-
-```
-cmake -S . -B build32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/linux-i686.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF -DBuildMPRend2=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
-cmake --build build32 -j$(nproc)
-```
-
-32 bit Windows DLLs, cross compiled with mingw-w64 (`jampgamex86.dll`, `cgamex86.dll`, `uix86.dll`):
-
-```
-cmake -S . -B buildwin32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF -DBuildMPRend2=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
-cmake --build buildwin32 -j$(nproc)
-```
-
-All three configurations build without errors. The code keeps to the rules of the surrounding files: C, no
-assumptions about pointer size in the game code, bounded string functions.
-
-Every build also packs the client assets of the port, `assets/japlus_client` (the files of the JA+ client plugin
-1.4B4 with the menus of the port), into `<build>/assets/zz_japlus_client_assets.pk3`, and `cmake --install` puts
-it into `JediAcademy/japlus/` (`-DJPAssetsDir=` names another mod directory). A file that was changed, added or
-removed there is packed again by the next build. The pk3 is the same for every platform: the files are kept
-byte for byte (`assets/.gitattributes`) and `assets/make_pk3.py` writes them in the order of
-`assets/japlus_client.order`, which the player menu and the pure check depend on. Packing needs Python 3,
-`-DBuildJPAssets=OFF` builds without it. A client needs this pk3 in `japlus/` next to the modules.
+How to build the tree, the Windows cross build, the release folder (`cmake --install`) and the assets pk3 are in
+[BUILDING.md](../../BUILDING.md). The three modules are `jampgame`, `cgame` and `ui`.
 
 ## Files needed at run time
 
-All but the last one come from the original JA+ packages and are not part of this repository.
+All of them are part of this repository.
 
 | File | Where | Needed for |
 |------|-------|-----------|
-| `japlus_gla_anims.pk3` | `base/` on the server and on every client | the new animations. Without it `jp_newGLAAnims` is switched off at map start |
-| `japlus_sabers.pk3`, `efx_MOD.pk3` | `japlus/` | the JA+ sabers and effects |
-| `modelscale.cfg` | `japlus/` | `jp_allowModelScale` |
-| `<map>_holes.cfg` | `japlus/` | blocking walls of a map |
-| `autoreplier.cfg` | `japlus/` on the client | auto replier texts |
-| `zz_japlus_client_assets.pk3` | `japlus/` on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port |
+| `modelscale.cfg` | `japlus/`, from `assets/configs` | `jp_allowModelScale` |
+| `<map>_holes.cfg` | `japlus/`, from `assets/configs` | blocking walls of a map as JA+ kept them, read when the map has no `wallblocks/<map>.cfg` |
+| `wallblocks/<map>.cfg` | the server folder, written by the tab Clips of the web panel | the blocking walls of a map and the clip brushes of it that are off |
+| `autoreplier.cfg` | `japlus/` on the client, from `assets/configs` | auto replier texts |
+| `server.cfg`, `admin.cfg`, `jk2.cfg`, `vstr.cfg`, `chat.cfg`, `saber.cfg` | `japlus/`, from `assets/configs` | the example server config of JA+ and what it loads. Nothing reads them unless a server is started with `+exec server.cfg` |
+| `zz_japlus_client_assets.pk3` | `japlus/` on the server and on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port, the JA+ sabers and effects, and the new animations (`models/players/_humanoid`). Without them `jp_newGLAAnims` is switched off at map start |
 
-The last file is built with the tree from `assets/japlus_client` (see "Building"), which holds the contents of
-`clientPlugin_v1.4B4.pk3` without the two DLLs. It is packed with the folder entries of the original pk3 and in
+The last file is built with the tree from `assets/japlus_client` (see [BUILDING.md](../../BUILDING.md)), which holds the contents of
+`clientPlugin_v1.4B4.pk3`, `japlus_sabers.pk3`, `efx_MOD.pk3` and `japlus_gla_anims.pk3` of JA+ 2.4 Build 7, without the two DLLs of the
+plugin and without the `Thumbs.db` files. It replaces those four: a folder that has it does not need them. It is packed with the folder entries of the original pk3 and in
 their order: the engine lists a folder of a pk3 only when it has an entry of its own, and the head list of the
 player menu, and with it the model a new player starts with, follows that order.
 
