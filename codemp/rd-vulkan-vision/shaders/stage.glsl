@@ -198,6 +198,12 @@ void StageVertex( StageInput v ) {
 		float incoming = max( dot( v.normal, t.lightDir.xyz ), 0.0 );
 		bool perPixel = MATERIAL( d.flags ) || ( PBR( d.flags ) && ( d.pbrFlags & PBR_ENTITY ) != 0u );
 		vec3 light = perPixel ? vec3( 1.0 ) : min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
+		// VisionJK: a model baked into the level (misc_model, q3map_nolightmap) keeps its rgbGen lightingDiffuse, but
+		// the level has no light of an entity, so rd-vanilla draws it black (the cart and the air purifier of
+		// mp/ffa3). The light q3map2 baked into its vertices stands in for it.
+		if ( !perPixel && t.lightDir.w == 0.0 && t.ambientLight.rgb == vec3( 0.0 ) && t.directedLight.rgb == vec3( 0.0 ) ) {
+			light = v.color.rgb;
+		}
 
 		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * v.color.a, 0.0, 1.0 ) );
 	} else {
