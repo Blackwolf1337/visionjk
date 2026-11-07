@@ -245,9 +245,10 @@ float D_GGX( float nh, float a ) {
 // hollows), from 0 the surface rises out of it (feet stand in the bumps), between the two the error is split. The
 // ray starts where it is at height 1, above the polygon by what is over the plane. e: the direction to the eye in
 // the frame of the texture, z out of the surface. The texture is read with the slopes of the pixel, the loop is not
-// the same for neighbouring pixels.
+// the same for neighbouring pixels. The steps follow the angle: 8 looking straight down, 32 at a flat angle, where
+// few steps cut the bumps into slices.
 vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth, float plane ) {
-	const int STEPS = 16;
+	int STEPS = int( mix( 32.0, 8.0, clamp( e.z, 0.0, 1.0 ) ) + 0.5 );
 	vec2 dx = dFdx( uv ), dy = dFdy( uv );
 	vec2 through = -e.xy / max( e.z, 0.2 ) * depth;
 	vec2 delta = through / float( STEPS );
@@ -520,8 +521,11 @@ vec4 PbrStage( Draw d ) {
 	vec2 uv = v_texCoord0;
 	mat3 frame = CotangentFrame( flat_, v_position, uv );
 
-	if ( ( d.pbrFlags & PBR_HEIGHT ) != 0u && d.pbr.z > 0.0 ) {
-		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), d.pbr.z, d.pbr2.x );
+	// far off the parallax fades out (from 768 to 1536 units in front of the eye) and is not worked out at all
+	// beyond, where its few pixels cost the loop for nothing
+	float parallax = d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 );
+	if ( ( d.pbrFlags & PBR_HEIGHT ) != 0u && parallax > 0.0 ) {
+		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), parallax, d.pbr2.x );
 	}
 
 	vec4 base = texture( TEX0( d ), uv );
