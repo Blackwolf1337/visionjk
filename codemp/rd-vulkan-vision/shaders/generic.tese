@@ -34,6 +34,10 @@ layout( location = 5 ) flat out uint v_draw;
 layout( location = 6 ) noperspective out vec2 v_screenCoord0;
 layout( location = 7 ) out vec3 v_normal;
 
+// the passes after the stages (dynamic light, fog, VK_TessPass of vk_shade.cpp) test their depth for EQUAL against
+// the tessellated stage, so the same vertex must give the same place in every pipeline
+invariant gl_Position;
+
 #define WEIGH( a )	( gl_TessCoord.x * a[0] + gl_TessCoord.y * a[1] + gl_TessCoord.z * a[2] )
 
 void main() {
@@ -43,7 +47,9 @@ void main() {
 
 	vec3 position = WEIGH( c_position );
 	vec3 normal = WEIGH( c_normal );
-	vec2 uv = WEIGH( c_texCoord0 );
+	// the texture coordinates of the material: of the first texture, or for a pass after the stages, which needs the
+	// first for itself, of the second (tess.w below 0)
+	vec2 uv = d.tess.w < 0.0 ? WEIGH( c_texCoord1 ) : WEIGH( c_texCoord0 );
 
 	if ( dot( normal, normal ) > 0.0 ) {
 		// The mip level whose texels are about as far apart as the new vertices, so the height does not shimmer. It
@@ -99,7 +105,7 @@ void main() {
 
 	v_position = position;
 	v_normal = normal;
-	v_texCoord0 = uv;
+	v_texCoord0 = WEIGH( c_texCoord0 );
 	v_texCoord1 = WEIGH( c_texCoord1 );
 	v_color = WEIGH( c_color );
 	v_screenCoord0 = WEIGH( c_screenCoord0 );

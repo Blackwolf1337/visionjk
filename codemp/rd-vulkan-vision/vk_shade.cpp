@@ -953,7 +953,32 @@ One more pass over the batch for every dynamic light that reaches it. The light 
 generic.frag and added to what the stages left there, times the texture of the surface.
 ===============
 */
-static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones ) {
+/*
+===============
+VK_TessPass
+
+A pass after the stages (dynamic light, fog) on a batch whose material stage was tessellated: drawn through the same
+tessellation with the same height, so its depth is the same and the depth test EQUAL holds on the bumps too. The
+texture coordinates the height is read with go into the second texture of the pass (the passes need the first
+for themselves), tess.w below 0 says so to generic.tese. The program for the pass.
+===============
+*/
+static vkProgram_t VK_TessPass( vkDraw_t *draw, const vkDraw_t *from, vkProgram_t program ) {
+	if ( !from ) {
+		return program;
+	}
+	draw->tex2 = from->tex2;
+	draw->bones = from->bones;
+	VectorCopy4( from->tess, draw->tess );
+	draw->tess[3] = -fabsf( from->tess[3] );
+	draw->flags = ( draw->flags & ~( 15u << VKD_TCGEN1_SHIFT ) ) | ( ( ( from->flags >> VKD_TCGEN0_SHIFT ) & 15u ) << VKD_TCGEN1_SHIFT );
+	memcpy( draw->texMat1, from->texMat0, sizeof( draw->texMat1 ) );
+	memcpy( draw->texTurb1, from->texTurb0, sizeof( draw->texTurb1 ) );
+	memcpy( draw->tcGenVec1, from->tcGenVec0, sizeof( draw->tcGenVec1 ) );
+	return VKP_TESS;
+}
+
+static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	const shader_t *shader = tess.shader;
 	const shaderStage_t *textured = NULL;
 	const textureBundle_t *bundle = NULL;
@@ -995,7 +1020,7 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		VectorCopy( dl->color, draw.baseColor );
 		VectorCopy( dl->transformed, draw.parm );
 		draw.parm[3] = dl->radius;
-		VK_DrawTess( &draw, program, ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
+		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}
 }
@@ -1008,7 +1033,7 @@ A surface inside a fog volume gets the fog as one more pass: the fog color, with
 way through the fog. The alpha comes from the fog image, the coordinates into it from stage.glsl.
 ===============
 */
-static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones ) {
+static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	const fog_t *fog = tr.world->fogs + tess.fogNum;
 	vkDraw_t draw;
 
@@ -1018,7 +1043,7 @@ static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, u
 	VK_FogVectors( &draw );
 	draw.tex0 = draw.tex1 = tr.fogImage->texnum;
 	VK_ByteColor( (const byte *)&fog->colorInt, draw.baseColor );
-	VK_DrawTess( &draw, program, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
+	VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
 		| ( tess.shader->fogPass == FP_EQUAL ? GLS_DEPTHFUNC_EQUAL : 0 ), cullMode, (qboolean)tess.shader->polygonOffset );
 }
 
@@ -1095,7 +1120,7 @@ static void VK_DrawGrass( uint32_t transform ) {
 		VK_DrawTess( &draw, VKP_GRASS, pStage->stateBits, VKC_NONE, qfalse );
 		if ( tess.fogNum && shader->fogPass && r_drawfog->value
 			&& ( r_drawfog->integer != 2 || tess.fogNum != tr.world->globalFog ) ) {
-			VK_FogPass( transform, VKC_NONE, VKP_GRASS, bones );
+			VK_FogPass( transform, VKC_NONE, VKP_GRASS, bones, NULL );
 		}
 	}
 }
@@ -1144,6 +1169,9 @@ void RB_StageIteratorGeneric( void ) {
 	cullMode = VK_CullMode( shader->cullType );
 	VK_BatchDeform();
 	const qboolean refract = (qboolean)( vk_refraction && tr.screenImage && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) );
+	// the tessellated stage of the batch, for the passes after the stages (VK_TessPass)
+	vkDraw_t tessDraw;
+	qboolean haveTessDraw = qfalse;
 
 	for ( int stage = 0; stage < shader->numUnfoggedPasses; stage++ ) {
 		const shaderStage_t *pStage = &tess.xstages[stage];
@@ -1298,6 +1326,10 @@ void RB_StageIteratorGeneric( void ) {
 		}
 		VK_DrawTess( &draw, stageProgram, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );
+		if ( stageProgram == VKP_TESS && !g_bRenderGlowingObjects ) {
+			tessDraw = draw;
+			haveTessDraw = qtrue;
+		}
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
 		}
@@ -1307,12 +1339,12 @@ void RB_StageIteratorGeneric( void ) {
 	// stage that glows gets the light on its texture added to the glow as well, so it shines more where a blade
 	// lights it.
 	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) ) ) {
-		VK_DynamicLights( transform, cullMode, program, bones );
+		VK_DynamicLights( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
 	}
 	// now do fog
 	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum
 		&& shader->fogPass ) {
-		VK_FogPass( transform, cullMode, program, bones );
+		VK_FogPass( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
 	}
 	// draw debugging stuff: the triangles of the batch as white lines over everything (DrawTris of rd-vanilla)
 	if ( r_showtris->integer && vk.wireframe ) {

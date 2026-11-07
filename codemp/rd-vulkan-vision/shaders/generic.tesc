@@ -42,7 +42,7 @@ layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 float EdgeLevel( Draw d, Transform t, int a, int b ) {
 	vec3 middle = ( v_position[a] + v_position[b] ) * 0.5;
 	float pixels = distance( v_position[a], v_position[b] ) / max( distance( middle, t.viewOrigin.xyz ), 1.0 ) * globals.screen.y;
-	return clamp( pixels / max( d.tess.z, 1.0 ), 1.0, max( d.tess.w, 1.0 ) );
+	return clamp( pixels / max( d.tess.z, 1.0 ), 1.0, max( abs( d.tess.w ), 1.0 ) );
 }
 
 void main() {
