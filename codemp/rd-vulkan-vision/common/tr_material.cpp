@@ -299,9 +299,14 @@ typedef struct {
 	float		fraction;			// of the nearest hit so far
 	vec3_t		tri[3];				// its triangle
 	qboolean	hit;
+	// the surface being tried: which sides of it are drawn (cullType_t), and whether its corners are drawVert_t
+	// (patches and triangle surfaces), whose normals say where its front is
+	int			cull;
+	qboolean	drawVerts;
 } pickRay_t;
 
-// Moeller and Trumbore, from both sides
+// Moeller and Trumbore, from the sides the surface is drawn from: the pick went through the backs of walls the
+// renderer does not draw (two sided it named a wall behind a pipe on mp/ffa3)
 static qboolean PickTriangle( const float *a, const float *b, const float *c, void *context )
 {
 	pickRay_t *ray = (pickRay_t *)context;
@@ -314,6 +319,22 @@ static qboolean PickTriangle( const float *a, const float *b, const float *c, vo
 	const float det = DotProduct( e1, p );
 	if ( fabsf( det ) < 1e-8f ) {
 		return qtrue;
+	}
+	if ( ray->cull != CT_TWO_SIDED ) {
+		// det is the ray along cross( c - a, b - a ), the front of the triangles of a face of the level (their
+		// winding as q3map2 writes it); a patch or triangle surface says it by the normals of its vertices
+		float facing = det;
+
+		if ( ray->drawVerts ) {
+			vec3_t n;
+
+			VectorAdd( ( (const drawVert_t *)a )->normal, ( (const drawVert_t *)b )->normal, n );
+			VectorAdd( n, ( (const drawVert_t *)c )->normal, n );
+			facing = DotProduct( ray->dir, n );
+		}
+		if ( ( ray->cull == CT_FRONT_SIDED ) ? facing > 0.0f : facing < 0.0f ) {
+			return qtrue;
+		}
 	}
 	const float inv = 1.0f / det;
 
@@ -431,6 +452,8 @@ qboolean RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *
 		const qboolean before = ray.hit;
 		const float fraction = ray.fraction;
 
+		ray.cull = surf->shader->cullType;
+		ray.drawVerts = (qboolean)( *surf->data != SF_FACE );
 		SurfaceTriangles( surf->data, PickTriangle, &ray );
 		if ( ray.hit && ( !before || ray.fraction < fraction ) ) {
 			best = surf;
