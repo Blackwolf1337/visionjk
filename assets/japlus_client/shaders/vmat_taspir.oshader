@@ -1,0 +1,125 @@
+// materials of the material debug menu (v_matdebug) for taspir.shader, read after the shader files
+
+textures/taspir/t_wall5
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/t_wall5
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/taspir/t_wall5_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/taspir/door
+{
+	qer_editorimage textures/taspir/door
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/door
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/taspir/door_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/taspir/smalltrim
+{
+	qer_editorimage textures/taspir/smalltrim
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/smalltrim
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/taspir/smalltrim_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/taspir/floor
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/floor
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.65
+		metalness 0.1
+	}
+}
+
+textures/taspir/256_128rustv
+{
+	qer_editorimage textures/taspir/256_128rustv
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/256_128rustv
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.3 0.4
+		roughness 0.7
+		metalness 0.1
+	}
+	{
+		map textures/taspir/256_128rustv_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/taspir/taspir_phongrock
+{
+	q3map_shadeangle 150
+	qer_editorimage textures/taspir/taspir_rock2.tga
+	q3map_lightmapsamplesize 64
+	q3map_nonplanar
+	{
+		map textures/taspir/taspir_rock2
+		rgbGen identity
+		tcMod scale 0.5 0.5
+		normalGen 0.6 2 0.3
+		roughness 0.9
+		metalness 0
+	}
+	{
+		map $lightmap
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+}

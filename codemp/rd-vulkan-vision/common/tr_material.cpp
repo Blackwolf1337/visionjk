@@ -1105,12 +1105,15 @@ qboolean RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err,
 		}
 	}
 
-	// the file: the stem of the shader file without the prefixes of material files
+	// the file: the stem of the shader file without the prefixes of material files (zz_mat_ of a profile, vmat_ of
+	// the materials the client ships, tools/materials/export.sh, vjk_ of the old snapshots of the website)
 	COM_StripExtension( from[0] ? from : "textures", stem, sizeof( stem ) );
 	const char *bare = stem;
 
 	if ( !Q_stricmpn( bare, "zz_mat_", 7 ) ) {
 		bare += 7;
+	} else if ( !Q_stricmpn( bare, "vmat_", 5 ) ) {
+		bare += 5;
 	} else if ( !Q_stricmpn( bare, "vjk_", 4 ) ) {
 		bare += 4;
 	}

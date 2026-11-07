@@ -1,8 +1,11 @@
 #!/bin/bash
 # Copies the materials saved in the material debug menu (v_matdebug) from a profile into the assets of the
-# client, so the next build puts them into zz_japlus_client_assets.pk3: the files shaders/zz_mat_*.oshader (text
-# only, the maps are made by the renderer when it loads, tr_matgen.cpp). A file there already is replaced. With
-# --done only the shaders whose status in materials/status.txt is done are taken.
+# client, so the next build puts them into zz_japlus_client_assets.pk3: each shaders/zz_mat_<file>.oshader of the
+# profile becomes assets/japlus_client/shaders/vmat_<file>.oshader (text only, the maps are made by the renderer
+# when it loads, tr_matgen.cpp). The shipped files have a name of their own so that a player's own saves
+# (zz_mat_<file> in the profile) never hide a whole shipped file: overrides are read in the order of their names,
+# vmat_ before zz_mat_, so a saved shader takes the place of the shipped one of its name alone. A file there
+# already is replaced. With --done only the shaders whose status in materials/status.txt is done are taken.
 #
 # usage: tools/materials/export.sh [--done] [PROFILE]
 #   --done    only what is done
@@ -24,30 +27,26 @@ if [ ${#files[@]} -eq 0 ]; then
 	echo "no saved materials in $profile/shaders" >&2
 	exit 1
 fi
-
-if ! $done_only; then
-	cp -v "${files[@]}" "$target/"
-	exit 0
-fi
-
-# only the shaders that are done: each file is cut into its shaders (a name line, then its braces)
 status=$profile/materials/status.txt
-if [ ! -f "$status" ]; then
+if $done_only && [ ! -f "$status" ]; then
 	echo "no $status, nothing is done" >&2
 	exit 1
 fi
-python3 -I - "$status" "$target" "${files[@]}" <<'PY'
-import sys, re, os
-status_file, target, files = sys.argv[1], sys.argv[2], sys.argv[3:]
+
+# each file is cut into its shaders (a name line, then its braces); with --done only those that are done stay
+python3 -I - "$done_only" "${status:-}" "$target" "${files[@]}" <<'PY'
+import sys, os
+done_only, status_file, target, files = sys.argv[1] == 'true', sys.argv[2], sys.argv[3], sys.argv[4:]
 done = set()
-for line in open(status_file, encoding='latin-1'):
-    parts = line.split()
-    if len(parts) == 2 and not line.startswith('//') and parts[1] == 'done':
-        done.add(parts[0].lower())
+if done_only:
+    for line in open(status_file, encoding='latin-1'):
+        parts = line.split()
+        if len(parts) == 2 and not line.startswith('//') and parts[1] == 'done':
+            done.add(parts[0].lower())
+total = 0
 for path in files:
-    text = open(path, encoding='latin-1').read()
+    lines = open(path, encoding='latin-1').read().split('\n')
     header, kept, i = [], [], 0
-    lines = text.split('\n')
     while i < len(lines):
         name = lines[i].strip()
         if not name or name.startswith('//'):
@@ -62,10 +61,12 @@ for path in files:
             i += 1
             if depth <= 0 and '}' in block[-1]:
                 break
-        if name.lower() in done:
+        if not done_only or name.lower() in done:
             kept.append('\n'.join(block))
-    out = os.path.join(target, os.path.basename(path))
+    out = os.path.join(target, 'vmat_' + os.path.basename(path)[len('zz_mat_'):])
     if kept:
         open(out, 'w', encoding='latin-1').write('\n'.join(header) + '\n\n' + '\n\n'.join(kept) + '\n')
-        print(f"{out}: {len(kept)} done")
+        print(f"{os.path.relpath(out)}: {len(kept)} shaders")
+        total += len(kept)
+print(f"{total} shaders exported")
 PY

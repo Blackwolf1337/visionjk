@@ -1,0 +1,49 @@
+// materials of the material debug menu (v_matdebug) for ships.shader, read after the shader files
+
+models/map_objects/imp_mine/xwings
+{
+	q3map_nolightmap
+	{
+		map models/map_objects/imp_mine/xwings
+		rgbGen vertex
+		normalGen 0.5 1.99 0.6
+		rmoGen 0.3 0.5
+		roughness 0.7
+		metalness 0.25
+		anisotropy 0.93 13
+		specularReflectance 0.02
+		normalScale 0.12
+	}
+}
+
+models/map_objects/imp_mine/xwglass_shd
+{
+	q3map_nolightmap
+	{
+		map models/map_objects/imp_mine/xwglass_shd
+		rgbGen vertex
+		normalGen 3.81 1 0
+		roughness 0
+		metalness 0
+		clearcoat 1 0.05
+		cloth
+		anisotropy 0.46 -1
+		specularReflectance 0.1
+	}
+}
+
+models/map_objects/imp_mine/xwbody
+{
+	q3map_nolightmap
+	{
+		map models/map_objects/imp_mine/xwbody
+		rgbGen vertex
+		normalGen 0.5 1.99 0.6
+		rmoGen 0.3 0.5
+		roughness 0.7
+		metalness 0.25
+		anisotropy 0.93 13
+		specularReflectance 0.02
+		normalScale 0.12
+	}
+}

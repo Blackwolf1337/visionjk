@@ -1,0 +1,17 @@
+// materials of the material debug menu (v_matdebug) for doomgiver.shader, read after the shader files
+
+textures/doomgiver/new2d
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/doomgiver/new2d
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.65
+		metalness 0.1
+	}
+}

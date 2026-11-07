@@ -1,0 +1,120 @@
+// materials of the material debug menu (v_matdebug) for byss.shader, read after the shader files
+
+textures/byss/byss_basicwall
+{
+	qer_editorimage textures/byss/byss_basicwall
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/byss_basicwall
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/byss/byss_basicwall_glow
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/byss/basicred
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/basicred
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+}
+
+textures/byss/byss_crate_side
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/byss_crate_side
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/byss/byss_crate_side_glw
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/byss/byss_basic2
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/byss_basic2
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+}
+
+textures/byss/byss_crate_top
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/byss_crate_top
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/byss/byss_crate_top_glw
+		blendFunc GL_ONE GL_ONE
+		rgbGen identity
+	}
+}
+
+textures/byss/floor_byss
+{
+	qer_editorimage textures/byss/large_floor
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/byss/floor_byss
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.65
+		metalness 0
+		specularReflectance 0.015
+	}
+	{
+		map textures/byss/env_large_floor
+		blendFunc GL_SRC_ALPHA GL_ONE
+		alphaGen const 0.25
+		tcGen environment
+	}
+}
