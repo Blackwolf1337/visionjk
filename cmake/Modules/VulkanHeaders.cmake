@@ -23,7 +23,9 @@
 # jp_vulkan_headers(<out> <copyDir>) sets <out> to the directory to put on the include path, or to "" when there
 # are none. The headers are the same for every platform, so the ones of the host do when cross compiling. But their
 # directory may be the include directory of the host, which a cross compiler must not see: then it gets a copy of
-# the two directories in <copyDir>.
+# the two directories in <copyDir>. On macOS too: there they are in the include directory of Homebrew, with the
+# jpeglib.h of jpeg-turbo, which came before the one of lib/jpeg-9a the renderer is linked with. Every JPEG then
+# failed to load ("Wrong JPEG library version: library is 90, caller expects 80"), and the levels were white.
 function(jp_vulkan_headers out copyDir)
 	find_path(VulkanHeadersDir vulkan/vulkan.h)
 	if(NOT VulkanHeadersDir AND CMAKE_CROSSCOMPILING AND EXISTS "/usr/include/vulkan/vulkan.h")
@@ -31,11 +33,16 @@ function(jp_vulkan_headers out copyDir)
 	endif()
 	if(NOT VulkanHeadersDir)
 		set(${out} "" PARENT_SCOPE)
-	elseif(CMAKE_CROSSCOMPILING)
-		file(COPY "${VulkanHeadersDir}/vulkan" DESTINATION "${copyDir}")
-		if(EXISTS "${VulkanHeadersDir}/vk_video")
-			file(COPY "${VulkanHeadersDir}/vk_video" DESTINATION "${copyDir}")
-		endif()
+	elseif(CMAKE_CROSSCOMPILING OR APPLE)
+		foreach(dir vulkan vk_video)
+			if(EXISTS "${VulkanHeadersDir}/${dir}")
+				# the directory itself and not a link to it: Homebrew links them in from its Cellar, by a relative
+				# path that leads nowhere from the copy
+				get_filename_component(real "${VulkanHeadersDir}/${dir}" REALPATH)
+				file(REMOVE_RECURSE "${copyDir}/${dir}")
+				file(COPY "${real}/" DESTINATION "${copyDir}/${dir}")
+			endif()
+		endforeach()
 		set(${out} "${copyDir}" PARENT_SCOPE)
 	else()
 		set(${out} "${VulkanHeadersDir}" PARENT_SCOPE)
