@@ -1289,12 +1289,13 @@ static qboolean VK_UploadSpriteBatch( uint32_t *bones ) {
 VK_TessBorders
 
 For a batch of the level drawn with tessellation (VKP_TESS, shaders/generic.tesc): which edges of its triangles lie
-on a border, as one float a triangle into the bone buffer of the frame, four to a row, bits 1, 2, 4 for the edges
-across from its first, second and third vertex. A border is an edge only one triangle of the batch has: where two
-surfaces of the level meet with vertices of their own (their normals differ, one edge may meet two), and where the
-surface ends at another shader. generic.tese lets the bumps go down to nothing toward those, so the two sides stay
-on their polygons and no gap opens between them. bones: where the floats start, in rows. qfalse: not a batch of
-the level, or no room in the frame.
+on a border, as one float a triangle into the bone buffer of the frame, four to a row: bits 1, 2, 4 for the edges
+across from its first, second and third vertex, bits 8, 16, 32 for those vertices when they lie on a border (of
+any triangle of the batch). A border is an edge only one triangle of the batch has: where two surfaces of the level
+meet with vertices of their own (their normals differ, one edge may meet two), and where the surface ends at
+another shader. generic.tese lets the bumps go down to nothing toward those, so the two sides stay on their polygons
+and no gap opens; the marks of the vertices let a triangle fade along its inner edges exactly as its neighbour on
+that edge does. bones: where the floats start, in rows. qfalse: not a batch of the level, or no room in the frame.
 ===============
 */
 #define VK_TESS_EDGE_HASH	16384		// a power of two over the edges of a batch (SHADER_MAX_INDEXES)
@@ -1303,6 +1304,8 @@ qboolean VK_TessBorders( uint32_t *bones ) {
 	static uint32_t	stamps[VK_TESS_EDGE_HASH];
 	static byte		counts[VK_TESS_EDGE_HASH];
 	static uint32_t	stamp;
+	static glIndex_t	vertKeys[VK_TESS_EDGE_HASH];	// the vertices on a border
+	static uint32_t	vertStamps[VK_TESS_EDGE_HASH];
 	vkFrame_t		*frame = vk.frame;
 	const int		numTriangles = tess.numIndexes / 3;
 	const int		rows = ( numTriangles + 3 ) / 4;
@@ -1315,8 +1318,25 @@ qboolean VK_TessBorders( uint32_t *bones ) {
 	}
 	if ( ++stamp == 0 ) {
 		memset( stamps, 0, sizeof( stamps ) );
+		memset( vertStamps, 0, sizeof( vertStamps ) );
 		stamp = 1;
 	}
+	// the slot of a vertex in the table of the ones on a border; mark: put it there
+	auto vertexSlot = [&]( glIndex_t v, qboolean mark ) -> qboolean {
+		uint32_t h = (uint32_t)( ( (uint64_t)v * 0x9E3779B97F4A7C15ull ) >> 50 ) & ( VK_TESS_EDGE_HASH - 1 );
+
+		while ( vertStamps[h] == stamp && vertKeys[h] != v ) {
+			h = ( h + 1 ) & ( VK_TESS_EDGE_HASH - 1 );
+		}
+		if ( vertStamps[h] == stamp ) {
+			return qtrue;
+		}
+		if ( mark ) {
+			vertStamps[h] = stamp;
+			vertKeys[h] = v;
+		}
+		return qfalse;
+	};
 	// how many triangles have each edge; slots: where the edge of a corner is in the table
 	for ( int i = 0; i < numTriangles * 3; i++ ) {
 		const glIndex_t a = tess.indexes[i - i % 3 + ( i % 3 + 1 ) % 3], b = tess.indexes[i - i % 3 + ( i % 3 + 2 ) % 3];
@@ -1336,6 +1356,13 @@ qboolean VK_TessBorders( uint32_t *bones ) {
 		}
 		slots[i] = (int)h;
 	}
+	// the vertices of the borders
+	for ( int i = 0; i < numTriangles * 3; i++ ) {
+		if ( counts[slots[i]] == 1 ) {
+			vertexSlot( tess.indexes[i - i % 3 + ( i % 3 + 1 ) % 3], qtrue );
+			vertexSlot( tess.indexes[i - i % 3 + ( i % 3 + 2 ) % 3], qtrue );
+		}
+	}
 	float *out = (float *)( frame->bones.mapped + sizeof( float ) * 12 * first );
 	for ( int t = 0; t < numTriangles; t++ ) {
 		uint32_t bits = 0;
@@ -1343,6 +1370,9 @@ qboolean VK_TessBorders( uint32_t *bones ) {
 		for ( int c = 0; c < 3; c++ ) {
 			if ( counts[slots[t * 3 + c]] == 1 ) {
 				bits |= 1u << c;
+			}
+			if ( vertexSlot( tess.indexes[t * 3 + c], qfalse ) ) {
+				bits |= 8u << c;
 			}
 		}
 		out[t] = (float)bits;

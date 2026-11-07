@@ -47,27 +47,45 @@ void main() {
 
 	if ( dot( normal, normal ) > 0.0 ) {
 		// The mip level whose texels are about as far apart as the new vertices, so the height does not shimmer. It
-		// comes from the point alone (its distance from the eye, the texels a unit of the mapping), not from the
-		// triangle, so that two triangles that share an edge read the same height on it.
-		vec2 size = vec2( textureSize( u_textures[nonuniformEXT( d.tex2 )], 0 ) );
-		float uvPerUnit = max( max( distance( c_texCoord0[0], c_texCoord0[1] ) / max( distance( c_position[0], c_position[1] ), 1e-3 ),
-			distance( c_texCoord0[1], c_texCoord0[2] ) / max( distance( c_position[1], c_position[2] ), 1e-3 ) ),
-			distance( c_texCoord0[2], c_texCoord0[0] ) / max( distance( c_position[2], c_position[0] ), 1e-3 ) );
+		// comes from the point alone, its distance from the eye, with the texels a unit of the default mapping of a
+		// level (two): from the texture coordinates of the triangle it differed between neighbours on a curved patch,
+		// whose texture is stretched unevenly, and the shared edge got two heights and opened.
 		float step = distance( position, t.viewOrigin.xyz ) * max( d.tess.z, 1.0 ) / globals.screen.y;
-		float texels = uvPerUnit * step * max( size.x, size.y );
+		float texels = step * 2.0;
 		float height = textureLod( u_textures[nonuniformEXT( d.tex2 )], uv, log2( max( texels, 1.0 ) ) ).a;
 
-		// Toward an edge on a border of the surface the bumps go down to nothing over about one and a half pieces,
-		// so on the edge both sides lie on their polygons whatever their normals and cuts (no gap opens). On the
-		// edge across from vertex i its weight gl_TessCoord[i] is 0.
-		float width = 1.5 / max( gl_TessLevelInner[0], 1.0 );
-		float fade = 1.0;
+		// Toward a border of the surface the bumps go down to nothing over about one and a half pieces, so on a border
+		// both sides lie on their polygons whatever their normals and cuts (no gap opens). On each edge the fade
+		// comes from that edge alone, so the triangle on its other side fades the same way along it: 0 on a border
+		// edge, else a ramp from those of its ends that lie on a border (c_borders bits 8 << vertex). Inside the
+		// triangle the three are blended so that each counts alone on its edge (weight b_j b_k for the edge across
+		// from vertex i, which is 0 on the other two).
+		float ramp = 1.5 * step;
+		vec3 b = gl_TessCoord;
+		float g[3];
 		for ( int i = 0; i < 3; i++ ) {
+			int j = ( i + 1 ) % 3, k = ( i + 2 ) % 3;
+
 			if ( ( c_borders & ( 1u << uint( i ) ) ) != 0u ) {
-				fade = min( fade, gl_TessCoord[i] / width );
+				g[i] = 0.0;
+				continue;
 			}
+			float toK = ( b[j] + b[k] > 0.0 ) ? b[k] / ( b[j] + b[k] ) : 0.5;		// how far along from j to k
+			float len = distance( c_position[j], c_position[k] );
+			float fromJ = ( c_borders & ( 8u << uint( j ) ) ) != 0u ? smoothstep( 0.0, 1.0, toK * len / ramp ) : 1.0;
+			float fromK = ( c_borders & ( 8u << uint( k ) ) ) != 0u ? smoothstep( 0.0, 1.0, ( 1.0 - toK ) * len / ramp ) : 1.0;
+			g[i] = min( fromJ, fromK );
 		}
-		fade = smoothstep( 0.0, 1.0, fade );
+		vec3 w = vec3( b.y * b.z, b.z * b.x, b.x * b.y );
+		float sum = w.x + w.y + w.z;
+		float fade;
+		if ( sum > 1e-7 ) {
+			fade = ( w.x * g[0] + w.y * g[1] + w.z * g[2] ) / sum;
+		} else {
+			// a corner: the vertex itself
+			int c = ( b.x >= b.y && b.x >= b.z ) ? 0 : ( b.y >= b.z ? 1 : 2 );
+			fade = ( c_borders & ( 8u << uint( c ) ) ) != 0u ? 0.0 : 1.0;
+		}
 
 		position += normalize( normal ) * ( height - d.tess.y ) * d.tess.x * fade;
 	}
