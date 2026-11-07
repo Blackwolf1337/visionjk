@@ -35,8 +35,8 @@ and the key login only work between versions from after the change.
 | [loading.md](loading.md) | What the load of a level and a long frame are spent on: the two reports of the engine, the test, the numbers, the packed textures that are kept |
 | [ui.md](ui.md) | The new look of menus and HUD (not a JA+ feature): what a player sees, what a mod's files get, the new words of the menu files, how the menus are made |
 | [windows.md](windows.md) | The Windows client run as a whole on Windows 11: what ran, what it found, what is still unchecked |
-| [macos.md](macos.md) | The state on macOS: what the first build on a Mac found and changed, how to build and run there, what is still open |
-| [macos-test.md](macos-test.md) | For a tester with a Mac: build, start the Vulkan renderer, what to look at and what to send back |
+| [macos.md](macos.md) | The state on macOS: what the builds on a Mac of 2026-10-07 and 2026-11-07 found and changed, MoltenVK, how to build and run there, what a cross build needs, what is still open |
+| [macos-test.md](macos-test.md) | For a tester with a Mac: build, install, the first start with MoltenVK, what to look at and what to send back |
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
 | [boombox.md](boombox.md) | Boxes that play songs of YouTube (not a JA+ feature): fetched by the server, sent over the relay of the voice chat, a sound of the level with `v_spatial`, only VisionJK players see and hear them. Never run |
 | [sandbox.md](sandbox.md) | The sandbox, step 1 of issue #3 (not a JA+ feature): `/amsandbox` gives the physgun, the toolgun and the gravity gun. Tools, tool window, cvars, how colour and material reach the clients, what was tested |

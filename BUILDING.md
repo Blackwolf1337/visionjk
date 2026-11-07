@@ -66,7 +66,7 @@ the port are there from the first picture on.
 
 A config that is already in the folder is kept, so an edited `server.cfg` survives the next install. Not in the folder,
 because the build does not make them: `libphonon.so` of Steam Audio for `v_spatial` (when the build did not find it, see
-below), and on Windows `libwinpthread-1.dll` of mingw. On macOS the modules are installed into the app as before.
+below), and on Windows `libwinpthread-1.dll` of mingw.
 
 ### The assets pk3
 
@@ -103,6 +103,32 @@ described in [docs/japlus/windows.md](docs/japlus/windows.md).
 
 `CMakeLists.txt` has flags for MSVC, but no file in this repository says that a build with it works or was tried.
 
+## macOS
+
+Built on the Mac itself, with Xcode clang and the libraries of Homebrew. The client is an app, the rest is laid out
+as on Linux:
+
+```
+brew install cmake ninja python sdl2-compat sdl3 vulkan-headers shaderc molten-vk
+cmake -S . -B build-mac -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build-mac
+cmake --install build-mac --prefix release-mac
+```
+
+```
+JediAcademy/
+  visionjk.arm64.app   the client: rd-vulkan-vision_arm64.dylib and libphonon.dylib next to the program,
+                       SDL2, SDL3 and MoltenVK in Contents/Frameworks
+  visionjkded.arm64
+  japlus/  base/       as on Linux, with .dylib for .so
+```
+
+macOS has no Vulkan: the renderer runs on MoltenVK, which the install puts into the app. Without it the game on a
+Mac has no renderer, the configure warns. The install signs the app ad hoc at the end (`cmake/MacBundle.cmake`),
+the modules, the pk3 and the configs are next to the app and not in it, where they would break the signature. The
+libraries of Homebrew are built for the macOS they were installed on, so the app starts only there or later. What
+was built, run and found on a Mac, and what a cross build needs: [docs/japlus/macos.md](docs/japlus/macos.md).
+
 ## CMake options
 
 Set with `-DName=value` on the configure line. The text is short, the full text is in `CMakeLists.txt`.
@@ -124,7 +150,7 @@ What is built:
 | `BuildMasterServer` | OFF | the masterserver (its code is private, see below) |
 | `BuildTests` | OFF | the unit tests. Needs Boost |
 | `BuildPortableVersion` | OFF | a portable version: does not read or write files from your user or home directory |
-| `MakeApplicationBundles` | ON | macOS only: builds `.app` bundles for the engines |
+| `MakeApplicationBundles` | ON | macOS only: builds an `.app` for the client |
 
 Single player and Jedi Outcast, all OFF and not documented here: `BuildSPEngine`, `BuildSPGame`, `BuildSPRdVanilla`,
 `BuildJK2SPEngine`, `BuildJK2SPGame`, `BuildJK2SPRdVanilla`.

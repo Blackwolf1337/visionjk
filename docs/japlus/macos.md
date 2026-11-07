@@ -4,17 +4,19 @@ The state of this tree on macOS.
 
 The multiplayer game was built and run on a Mac for the first time on 2026-10-07: a MacBook Pro with an Apple
 M5 Max, macOS 26 (Tahoe), Xcode clang, SDL from Homebrew (sdl2-compat on top of SDL3). It was played on a JA+
-server with `rd-vanilla`. Everything before that date was written without a Mac, see below. The voice chat and
-the Vulkan renderer compile on the Mac, but were not tried there yet.
+server with `rd-vanilla`. That was the branch `feature/macos`, which then stood still while develop went on.
 
-After that a tester reported that the game only runs with `rd-vanilla` on his Mac. How `rd-vulkan-vision` failed
-was not reported. The section "The Vulkan renderer on MoltenVK" says what was changed for it on the same day,
-on Linux and without a Mac: none of that was built or run on macOS.
+On 2026-11-07 (issue #1) develop was merged into the branch, and the tree was built, installed and checked again on
+the same Mac, now with macOS 27, Xcode clang 21 and from Homebrew sdl2-compat 2.32.74, SDL3 3.4.20, MoltenVK 1.4.2,
+vulkan-headers 1.4.363 and shaderc 2026.4. In between `rd-vanilla` was removed (2026-11-02), so on a Mac the game
+runs only with `rd-vulkan-vision`, on Vulkan through MoltenVK, which the app brings along. There is no renderer of
+its own for Metal and none is planned: MoltenVK is the way. The dedicated server ran a level with bots. The client
+was not started that day, see "Still open".
 
 ## What was already there
 
 OpenJK builds on macOS upstream, and this tree is OpenJK 260c59c2 with additions: the app bundle
-(`MakeApplicationBundles`, `codemp/macosx/OpenJKInfo.plist`), `MACOS_X` in the shared defines, the names of the
+(`MakeApplicationBundles`, `codemp/macosx/VisionJKInfo.plist`), `MACOS_X` in the shared defines, the names of the
 architectures including `arm64` for Apple Silicon, the module names for each of them, fullscreen as a desktop
 window. None of that was touched.
 
@@ -22,161 +24,190 @@ window. None of that was touched.
 
 | Part | macOS | Done |
 |------|-------|------|
-| JA+ port in game, cgame, ui | plain C, no call that macOS lacks (searched: `malloc.h`, `MSG_NOSIGNAL` used bare, Linux only calls, x86 intrinsics, assembler) | `bg_props.c` defined the bone structure of `mdx_format.h` a second time, which clang refuses: fixed. Without it neither game nor cgame would have compiled |
+| JA+ port in game, cgame, ui | plain C, no call that macOS lacks (searched: `malloc.h`, `MSG_NOSIGNAL` used bare, Linux only calls, x86 intrinsics, assembler) | `bg_props.c` defined the bone structure of `mdx_format.h` a second time, which clang refuses. Develop fixed it the same way in the meantime |
 | Web admin panel (`g_webadmin.c`) | sockets and files through POSIX, `SO_NOSIGPIPE` is set where it exists | nothing needed |
 | Voice chat, relay (`g_voice.c`, `bg_net.h`) | UDP through POSIX, random numbers from `/dev/urandom` | nothing needed |
-| Voice chat, client (`cg_voice.c`) | pthread and `getaddrinfo` | nothing needed |
-| Voice chat, sound (`cg_voice_audio.c`) | miniaudio has a Core Audio back end | `MA_NO_RUNTIME_LINKING` for Apple, the cgame links CoreFoundation, CoreAudio and AudioToolbox, and the Info.plist of the app says what the microphone is for (`NSMicrophoneUsageDescription`), without which macOS ends a program that opens it |
+| Voice chat, client (`voice/cg_voice.c`) | pthread and `getaddrinfo` | nothing needed |
+| Voice chat, sound (`voice/cg_voice_audio.c`) | miniaudio has a Core Audio back end | `MA_NO_RUNTIME_LINKING` for Apple, the cgame links CoreFoundation, CoreAudio and AudioToolbox, and the Info.plist of the app says what the microphone is for (`NSMicrophoneUsageDescription`), without which macOS ends a program that opens it |
 | Opus (`lib/opus`) | plain C | nothing needed |
 | `rd-vulkan-vision` | macOS has no Vulkan. MoltenVK runs it on top of Metal | see below |
 | Engine: window for Vulkan (`sdl_window.cpp`) | SDL makes it, but finds the Vulkan library only in the places the system searches | `WIN_VK_LoadLibraryMac`: first in `Contents/Frameworks` of the bundle and next to the program, then what SDL finds, then `/opt/homebrew/lib` and `/usr/local/lib`. The console says which one was loaded (`Vulkan library: ...`) |
-| Build files | the renderer is installed into the bundle like `rd-vanilla` | see the next section for what the first build on a Mac found |
+| Spatial sound on the graphics card (`v_spatialGpu`) | needs ray queries (`VK_KHR_ray_query`), MoltenVK 1.4.2 has none | nothing: the CPU traces the rays of the echo, as in a browser |
+| Build files | see the two tables of what the builds on a Mac found | |
 
 ### The Vulkan renderer on MoltenVK
 
 - The instance is made with `VK_KHR_portability_enumeration` and its flag where the loader offers the extension.
-  Without that the loader of the Vulkan SDK does not list MoltenVK at all.
+  Without that the loader of the Vulkan SDK does not list MoltenVK at all. MoltenVK alone, which is what the app
+  brings, does not need it.
 - The device gets `VK_KHR_portability_subset` switched on where it offers it, which is a must for such a device.
+  The console says `Vulkan on top of another graphics interface (VK_KHR_portability_subset)`.
 - What a device of that kind may lack, and what the renderer does about each:
 
 | May be missing | Renderer |
 |----------------|----------|
-| triangle fans | not used, everything is triangle lists and line lists |
+| triangle fans | not drawn as such: `vk_gl.cpp` turns fans and polygons into triangle lists |
 | a lod bias in samplers | not used |
 | vertex attributes that reach past their stride | none do |
-| an image view that reorders or fixes channels | used once: the copy of the frame is read with alpha as 1 (`vk_post.cpp`). MoltenVK has it from macOS 10.15 on |
-| depth with 24 bits and stencil | Apple GPUs do not have it. The renderer already takes 32 bit float with stencil then |
+| an image view that reorders or fixes channels | used once: the copy of the frame is read with alpha as 1 (`vk_texture.cpp`). MoltenVK has it from macOS 10.15 on |
+| depth with 24 bits and stencil | Apple GPUs do not have it. The renderer takes 32 bit float with stencil then |
 | textures in BC blocks | optional, the renderer stores them as they are without it |
 | wide lines, lines as fill mode | lines are 1 wide, fill mode lines is optional (`r_showtris`) |
 
-- It needs Vulkan 1.3 with dynamic rendering and descriptor indexing, as on every platform. That means a
-  MoltenVK that reports Vulkan 1.3 (its 1.3 releases and newer) and a macOS and a Mac that MoltenVK can use
-  Metal argument buffers on. An older one ends in the error that names `rd-vanilla`.
-- The texture table was 4096 textures with a sampler each in one descriptor array. A graphics card takes a
-  million of those, MoltenVK passes on what Metal says, which is about a thousand samplers a set. So the table
-  is two arrays now, on every platform: 4096 images, and next to them the samplers they are read with, at most
-  32 (the renderer never had more that differ). A draw names the texture and, above bit 16, its sampler
-  (`vk_image.cpp`, `generic.frag`). The console prints what the device takes:
-  `Vulkan: the device takes N textures and M samplers in one table, the renderer has 4096 and 32`. Checked on
-  Linux: the same pictures as before (a floor at a flat angle with trilinear and 16 times anisotropic
-  filtering, old build against new build: 0.002 % of the pixels off by more than 16), the pair tests against
-  `rd-vanilla` on mp/ffa3 and in the test room as before, no message of the validation layer.
-- The app brings MoltenVK along: the build copies `libMoltenVK.dylib` (of Homebrew, or of the Vulkan SDK through
+- It needs Vulkan 1.3 with dynamic rendering and descriptor indexing, as on every platform. MoltenVK 1.4.2 on the
+  M5 Max says: Vulkan 1.3 for the device, and every feature the renderer asks for (clip distance, dynamic
+  rendering, demote to helper, a runtime array of textures with non uniform indexing, partially bound, update
+  after bind). Read with a small program that makes no window, not by the game.
+- The texture table is 4096 textures with a sampler each in one descriptor array. On 2026-10-07 MoltenVK passed on
+  about a thousand samplers a set, and the branch split the table into images and samplers for it. MoltenVK
+  1.4.2 says 500000 samplers and 1000000 images for a set that is updated after binding, so the split was not
+  taken over into develop's renderer. The console prints what the device takes:
+  `Vulkan: the device takes N textures and M samplers in one table, the renderer has 4096`, with a warning
+  where that is less.
+- The app brings MoltenVK along: the install copies `libMoltenVK.dylib` (of Homebrew, or of the Vulkan SDK through
   `VULKAN_SDK`) into `Contents/Frameworks` and signs it with the rest, and the window code looks there first. A
   Vulkan loader that is installed somewhere on the Mac is only used if the app has none, or if
   `SDL_VULKAN_LIBRARY` names it: a loader may be installed without any driver, and then it finds no graphics
-  device.
+  device. Without MoltenVK in the app and without a Vulkan installed, the game on a Mac has no renderer at all.
 
-## What the first build on a Mac found, and what was changed
+## What the first build on a Mac found, and what was changed (2026-10-07)
 
 | Found | Changed |
 |-------|---------|
-| The link failed for every program and module: `ld: unknown options: -z -z`. `-Wl,-z,relro -Wl,-z,now` are flags of the linker of Linux, the one of macOS does not know them | `CMakeLists.txt`: set only when not `APPLE` |
-| `cmake --build` made an app that could not start: "Failed to load renderer". The renderer and the game modules are only put into the app by `cmake --install` | `codemp/CMakeLists.txt`, target `MacBundle` (part of `ALL`): after every build the renderers go into `Contents/MacOS`, game, cgame and ui into `Contents/MacOS/base` |
-| The app needed SDL from Homebrew at `/opt/homebrew`, it did not run on a Mac without it | `cmake/MacBundle.cmake`, run by `MacBundle`: the Homebrew libraries the engine links (SDL2 = sdl2-compat) are copied into `Contents/Frameworks`, the engine is pointed there with `install_name_tool`. sdl2-compat loads SDL3 from next to itself, so SDL3 goes beside it as `libSDL3.dylib` |
-| `install_name_tool` breaks the signature the linker made, and macOS on Apple Silicon ends a program without a valid one | `MacBundle.cmake` signs the libraries, the modules and then the app ad hoc (`codesign --sign -`). `codesign --verify --deep --strict` passes. This also gives the app its own entry in the privacy settings, which the microphone of the voice chat needs |
+| The link failed for every program and module: `ld: unknown options: -z -z`. `-Wl,-z,relro -Wl,-z,now` are flags of the linker of Linux, the one of macOS does not know them | `CMakeLists.txt`: set only when not `APPLE`. Develop still had them, they came with the merge of 2026-11-07 |
+| `cmake --build` made an app that could not start: "Failed to load renderer". The renderer and the game modules are only put into the app by `cmake --install` | a target `MacBundle` that put everything into the app after every build. Since 2026-11-07 the install does it, see below |
+| The app needed SDL from Homebrew at `/opt/homebrew`, it did not run on a Mac without it | `cmake/MacBundle.cmake`: the Homebrew libraries the engine links (SDL2 = sdl2-compat) are copied into `Contents/Frameworks`, the engine is pointed there with `install_name_tool`. sdl2-compat loads SDL3 from next to itself, so SDL3 goes beside it as `libSDL3.dylib` |
+| `install_name_tool` breaks the signature the linker made, and macOS on Apple Silicon ends a program without a valid one | `MacBundle.cmake` signs the libraries, the modules and then the app ad hoc (`codesign --sign -`). This also gives the app its own entry in the privacy settings, which the microphone of the voice chat needs |
 | The deployment target was macOS 10.9, older than any Mac the libraries of today build for, the linker warned about it | `CMAKE_OSX_DEPLOYMENT_TARGET` is 11.0, the first macOS on Apple Silicon |
-| The window was not high resolution on a Retina display: the game rendered at the size in points and macOS scaled it up, blurred | `shared/sdl/sdl_window.cpp`: the window is made with `SDL_WINDOW_ALLOW_HIGHDPI`, and after the OpenGL context is made the game takes the size of the drawable (`SDL_GL_GetDrawableSize`) as its resolution. The console says `High DPI drawable: W x H` when it differs. New cvar `r_highDpi` (default 1, archived, `vid_restart`): 0 renders at the size in points, a quarter of the pixels, for a slow graphics chip. Only for the OpenGL window, the Vulkan one is as it was. All of it is compiled only on macOS (`MACOS_X`) |
+| The window was not high resolution on a Retina display: the game rendered at the size in points and macOS scaled it up, blurred | `shared/sdl/sdl_window.cpp`: the OpenGL window is made with `SDL_WINDOW_ALLOW_HIGHDPI`, and the game takes the size of the drawable (`SDL_GL_GetDrawableSize`) as its resolution. The console says `High DPI drawable: W x H` when it differs. Cvar `v_highDpi` (`r_highDpi` until the merge, default 1, archived, `vid_restart`): 0 renders at the size in points. The multiplayer game has no OpenGL window since `rd-vanilla` is gone, so this is for the OpenGL ES library (`BuildMPRdVisionGLES`) only now, see "Still open" |
 | With the high resolution drawable the mouse would move at half speed: SDL counts the motion in points, the game in pixels | `shared/sdl/sdl_input.cpp`: the relative motion is scaled by drawable size / window size. The mouse is put back into the middle of the window in points, not in pixels. Only on macOS |
-| In a window the cursor left the game while looking around | The cause was the cvar `in_nograb 1` in the `openjk.cfg` of the `japlus` folder: it switches the capture of the mouse off, by design. The code is more robust now as well: while the mouse is captured, the relative mode and the grab of SDL are checked every frame and set again if SDL lost them (a change of focus, a first call that failed). In a window the cursor also stays inside while the console is down or a level loads, as long as the window has the focus. `in_nograb 1` still switches all of it off. These checks are compiled only on macOS: on Linux and Windows the input code is the one of master, where nobody asked for a cursor that can not leave the window |
+| In a window the cursor left the game while looking around | The cause was the cvar `in_nograb 1` in the config of the `japlus` folder: it switches the capture of the mouse off, by design. The code is more robust now as well: while the mouse is captured, the relative mode and the grab of SDL are checked every frame and set again if SDL lost them. In a window the cursor also stays inside while the console is down or a level loads, as long as the window has the focus. `in_nograb 1` still switches all of it off. Compiled only on macOS |
 | Paste in the console and text fields was only Ctrl+V and Shift+Insert | Cmd+V pastes too (`sdl_input.cpp`, only `MACOS_X`) |
-| A microphone that the user refused in the privacy settings opens on macOS without an error and gives silence. The player would talk and nobody would hear them, with no message | `cg_voice_audio.c`: `CG_VoiceAudioMicDenied()` asks AVFoundation (`AVCaptureDevice authorizationStatusForMediaType:`) through the Objective-C runtime, so the file stays C. `cg_voice.c` asks it before the microphone is opened and says where to switch it on. The cgame links `AVFoundation` and `objc` on macOS |
+| A microphone that the user refused in the privacy settings opens on macOS without an error and gives silence. The player would talk and nobody would hear them, with no message | `voice/cg_voice_audio.c`: `CG_VoiceAudioMicDenied()` asks AVFoundation (`AVCaptureDevice authorizationStatusForMediaType:`) through the Objective-C runtime, so the file stays C. `voice/cg_voice.c` asks it before the microphone is opened and says where to switch it on. The cgame links `AVFoundation` and `objc` on macOS |
 
 Trackpad scrolling in the menus and the keyboard layout needed nothing: SDL sums the small steps of a trackpad
 into whole wheel steps, and text comes through `SDL_TEXTINPUT` in the layout of the system. Cmd+Q ends the game
-through `SDL_QUIT`. A game controller works as on the other platforms through `in_joystick 1` (the joystick
-interface of SDL, not its game controller mapping); that was not tried, there was none to hand.
+through `SDL_QUIT`.
+
+## What the build of 2026-11-07 found, and what was changed (issue #1)
+
+| Found | Changed |
+|-------|---------|
+| The merge of develop: 14 files in conflict, most of them in `rd-vulkan-vision`, which had become a shared part with a Vulkan and an OpenGL ES device since the branch | the renderer of develop, with the part for MoltenVK of the branch carried over (portability, the line of the texture table). The split texture table was left out, see above. `r_highDpi` became `v_highDpi`, the microphone check went to `voice/cg_voice.c` |
+| `cmake --install` put game, cgame and ui into `Contents/MacOS/VisionJK` of the app, a folder the engine never looks in (it looks in the mod folder and `base`). The client only found its modules in `Contents/MacOS/base` | the modules, the pk3 and the configs are installed next to the app, into `JediAcademy/japlus` and `JediAcademy/base`, as on Linux. The client finds them there: `fs_basepath` of an app is the folder the app is in |
+| The dedicated server of a macOS install had no game module: "VM_CreateLegacy on game failed". It is installed next to the app and does not look into it | the same: it finds `japlus/jampgamearm64.dylib` next to it now. Run with mp/ffa3 and `bot_minplayers 3`: the module loads, three bots come in, SIGTERM quits as on `quit` |
+| A pk3 or a config in `Contents/MacOS` breaks the signature of the app: codesign takes every file there for code ("code object is not signed at all, in subcomponent ... chat.cfg") | none are in the app any more, the app has only code |
+| The `fixup_bundle` of OpenJK changed the app in the build folder ahead of the copy, and the install then failed on "no LC_RPATH load command with path: /opt/homebrew/lib" after every build that linked the engine again | gone. `cmake/MacBundle.cmake` runs at the end of `cmake --install`, on the installed app, after every other install rule, and no longer as a step of the build: the install collects what the build made, as on Linux and Windows |
+| sdl2-compat opens SDL3 when it runs and is not linked against it, so nothing that follows the links sees it. Out of the build folder the engine finds it through the path to Homebrew the linker wrote into it, the installed app has no such path and would stop at once with a dialog "Failed loading SDL3 library" | SDL3 goes beside it (as on the branch), only where the SDL2 is sdl2-compat. Without an SDL3 to copy the install stops |
+| sdl2-compat of Homebrew brings a search path of its own, `@loader_path/../../../../opt/sdl3/lib`, which points out of the app | the search paths of the libraries copied into the app are taken out |
+| | the signature is checked at the end of the install with `codesign --verify --deep --strict`, which passes. `otool -L` and `otool -l` of every program and library of the install name nothing outside the app and the system |
+| `rd-vanilla` is gone, so MoltenVK in the app is a must now | the configure warns when it finds no `libMoltenVK.dylib` |
+| The libraries of Homebrew are built for the macOS they were installed on: SDL2 and SDL3 say macOS 27, MoltenVK 12.0, the program and the renderer 11.0 | nothing. Such an app starts on macOS 27 only. See "Not done" |
+
+The branch was also built on Linux (Debian 12 on arm64, gcc 12) after the merge: everything builds.
 
 ## Building on a Mac
 
 ```
 xcode-select --install
-brew install cmake ninja sdl2-compat vulkan-headers shaderc molten-vk
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF -DBuildMPRend2=OFF -DBuildMPRdVulkanVision=ON
-cmake --build build
+brew install cmake ninja python sdl2-compat sdl3 vulkan-headers shaderc molten-vk
+git submodule update --init
+cmake -S . -B build-mac -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build-mac
+cmake --install build-mac --prefix release-mac
 ```
 
-The result is `build/openjk.arm64.app`, ready to start: renderer, modules and SDL are inside, it is signed. The
-game data (`assets0.pk3` to `assets3.pk3`) goes into `~/Library/Application Support/OpenJK/base`.
+`release-mac/JediAcademy` is then a complete game folder, as on Linux:
 
-- `-DBuildJPVoice=OFF` leaves the voice chat and its two libraries out.
-- `-DBuildMPRdVulkanVision=ON` builds the Vulkan renderer as well. A new build folder does that by itself on
-  macOS when the Vulkan headers and `glslc` are installed, a build folder that was configured before keeps
-  what it had, so name it. The build needs `vulkan-headers` and `shaderc`, and `molten-vk` for the library
-  that goes into the app. cmake warns if it finds no `libMoltenVK.dylib` (`-DMacBundleMoltenVK=<file>` names
-  one). Without the three packages leave the option out, the app then has `rd-vanilla` only.
-- `-DBuildMPRend2=OFF`: rend2 was not tried.
+```
+JediAcademy/
+  visionjk.arm64.app/Contents/
+    MacOS/        visionjk.arm64  rd-vulkan-vision_arm64.dylib  libphonon.dylib
+    Frameworks/   libSDL2-2.0.0.dylib  libSDL3.dylib  libMoltenVK.dylib
+  visionjkded.arm64
+  japlus/
+    jampgamearm64.dylib  cgamearm64.dylib  uiarm64.dylib
+    zz_japlus_client_assets.pk3
+    server.cfg and the other configs of assets/configs
+  base/
+    jampgamearm64.dylib  cgamearm64.dylib  uiarm64.dylib
+```
 
-The SDL of Homebrew is built for the macOS it was installed on (macOS 26 here). The app carries that SDL, so it
-starts on the same macOS or newer, not on older ones, although the program itself is built for 11.0.
+Its content goes next to the `base/` with `assets0.pk3` to `assets3.pk3` of the game, or the four pk3 go into
+`~/Library/Application Support/VisionJK/base`, the home folder of the game on macOS.
+
+- The build folder is not meant to be run from: the app there has no SDL, MoltenVK or modules in it.
+- `libphonon.dylib` of Steam Audio is fetched as on Linux (`lib/osx/libphonon.dylib` of the release zip, for arm64
+  and x86_64) and goes into the app next to the program.
+- The install signs the app ad hoc, which is enough on the Mac that built it. On another Mac Gatekeeper asks
+  (right click, Open), and macOS may ask for the microphone again after every build.
 
 ## Running
 
 ```
-open build/openjk.arm64.app --args +connect <server>
+open release-mac/JediAcademy/visionjk.arm64.app --args +set logfile 2
 ```
 
-`+set logfile 2` writes the console to `~/Library/Application Support/OpenJK/<mod>/qconsole.log`, flushed after
-every line. A crash writes `crashlog-<date>.txt` one folder above.
+`+set logfile 2` writes the console to `~/Library/Application Support/VisionJK/japlus/qconsole.log`, flushed after
+every line. The dedicated server is started in the folder: `./visionjkded.arm64 +map mp/ffa3`.
 
-- The mouse is not captured: look for `in_nograb` in the `openjk.cfg` of the mod folder (`japlus/`, not only
-  `base/`), it has to be 0.
-- `cl_renderer` names a renderer that is not in the app (an old config had `rd-metal`, which this tree does not
-  have): the engine says so and falls back to `rd-vanilla`, nothing to do.
-- After every build the ad hoc signature is new, and macOS may ask for the microphone again.
-
-The Vulkan renderer is not the one the game starts with, `rd-vanilla` is. To start with it:
-
-```
-open build/openjk.arm64.app --args +set cl_renderer rd-vulkan-vision +set logfile 2
-```
-
-or in the console `cl_renderer rd-vulkan-vision; vid_restart`. The setting is stored. If the game does not
-start with it any more, `--args +set cl_renderer rd-vanilla` goes back.
-
-If it does not start, these lines of the console (or of `qconsole.log`) say how far it came:
+If the game does not start, these lines of the console (or of `qconsole.log`) say how far it came:
 
 | Line | Meaning |
 |------|---------|
-| `rd-vulkan-vision` is not loaded, the engine names `rd-vanilla` | the renderer is not in the app: it was built without `-DBuildMPRdVulkanVision=ON` |
-| `No Vulkan library (MoltenVK) found` | no `libMoltenVK.dylib` in `Contents/Frameworks` of the app and none installed. `brew install molten-vk` and build again, or start with `SDL_VULKAN_LIBRARY=/path/to/libMoltenVK.dylib` |
-| `Vulkan library: ...` | which library was loaded |
-| `rd-vulkan-vision needs Vulkan 1.3, this system has ...` | the MoltenVK is too old |
-| `found no graphics device with Vulkan 1.3 and descriptor indexing` | the library knows no device that can do it. With a loader: it has no driver (MoltenVK) registered |
+| `Vulkan library: ...` | which library was loaded. In an install it is `Contents/Frameworks/libMoltenVK.dylib` of the app |
+| `No Vulkan library (MoltenVK) found` | none in the app and none installed. `brew install molten-vk` and install again, or start with `SDL_VULKAN_LIBRARY=/path/to/libMoltenVK.dylib` |
+| `rd-vulkan-vision can not run here: it needs Vulkan 1.3, this system has ...` | the MoltenVK is too old |
+| `rd-vulkan-vision can not run here: no graphics device with Vulkan 1.3 and descriptor indexing` | the library knows no device that can do it. With a loader: it has no driver (MoltenVK) registered |
 | `Vulkan on top of another graphics interface` | the device is MoltenVK, as expected |
-| `Vulkan: the device takes N textures and M samplers in one table` | what Metal offers. The renderer needs 4096 and 32 |
+| `Vulkan: the device takes N textures and M samplers in one table` | what Metal offers. The renderer needs 4096 of each |
 | `Vulkan: ... failed with ...` | a call of Vulkan failed, the line names it |
 
-`r_vkDebug 1` needs the validation layer and with it the loader of the Vulkan SDK:
-`SDL_VULKAN_LIBRARY=<sdk>/lib/libvulkan.1.dylib`. The window of the Vulkan renderer is not high resolution on a
-Retina display yet (`r_highDpi` is for the OpenGL window).
+`v_vkDebug 1` needs the validation layer and with it the loader of the Vulkan SDK:
+`SDL_VULKAN_LIBRARY=<sdk>/lib/libvulkan.1.dylib`.
 
 The voice chat asks for the microphone the first time the talk key is pressed (the question comes from macOS,
-with the sentence from the Info.plist). If it was refused, the console says where to switch it on. Whether the
-Jedi Academy app of the Mac App Store or of Steam loads this cgame at all was not looked at.
+with the sentence from the Info.plist). If it was refused, the console says where to switch it on.
+
+## A cross build
+
+A build for macOS on another system (osxcross on Linux) can be compared with the native build of 2026-11-07: the
+file list above, `otool -L` of each file, and the lines of the install. What the build files expect from it:
+
+- a toolchain file with `CMAKE_SYSTEM_NAME Darwin`, `CMAKE_OSX_ARCHITECTURES arm64` (an Intel build is a build of
+  its own, see "Not done"), and `CMAKE_INSTALL_NAME_TOOL` set to the `install_name_tool` of the cross tools.
+  `MacBundle.cmake` takes that one and the `otool` with the same prefix next to it.
+- SDL2 for macOS (or sdl2-compat with SDL3) found by `find_package(SDL2 CONFIG)`, SDL3 and MoltenVK found by
+  `find_library`, or named with `-DMacBundleSDL3=<file>` and `-DMacBundleMoltenVK=<file>`.
+- `glslc` and Python 3 of the build machine: the shaders are SPIR-V and the pk3 is the same for every platform.
+- `MacBundle.cmake` copies the libraries the engine links by the path `otool -L` names for them, and only those
+  under `/opt/homebrew` and `/usr/local`. A library of a cross build has the path it has on a Mac (its install
+  name), not where it lies on the build machine: that part of the script does not fit a cross build yet.
+- There is no `codesign` on Linux. The install then leaves the app unsigned and says so: `No codesign: the
+  installed app is not signed, sign it before it runs on Apple Silicon`. `rcodesign sign` (apple-codesign) signs
+  ad hoc on Linux. A program for arm64 without a valid signature is ended by macOS at once.
 
 ## Still open, in this order
 
 The steps for somebody who tests on a Mac, and what to send back, are in [macos-test.md](macos-test.md).
 
-1. The voice chat on the Mac: `voice_devices`, then `+voice` on a server with `g_voice 1`. Does macOS ask, does
-   `voice_status` say connected, is a second player heard.
-2. Fullscreen (`r_fullscreen 1`): Cmd+Tab, Mission Control, the notch of the built in display. Fullscreen is a
-   desktop window (upstream), the mouse is let go when the game loses the focus.
-3. `r_highDpi` on the built in Retina display. The first run was on an external display at 1x, where drawable and
-   window have the same size and nothing changes.
-4. The Vulkan renderer with MoltenVK: a first start with what was changed after the report (MoltenVK in the app,
-   the split texture table), and if it fails the lines of the table in "Running". Then `gfxinfo`, a level, the
-   menus, a fight. High resolution for its window.
+1. The client: start, the menus of the new look, a level, a fight, with `rd-vulkan-vision` on MoltenVK. It has
+   never run on a Mac with that renderer.
+2. High resolution on a Retina display for the Vulkan window. It is made without `SDL_WINDOW_ALLOW_HIGHDPI`, so
+   it renders at the size in points and macOS scales it up. `v_highDpi` is for the OpenGL window, which the
+   multiplayer game no longer has. The mouse code above scales by drawable size / window size, which is 1 then.
+3. The voice chat on the Mac: `v_voice_devices`, then talk on a server with `vs_voice 1`. Does macOS ask, does
+   `v_voice_status` say connected, is a second player heard.
+4. Fullscreen (`r_fullscreen 1`): Cmd+Tab, Mission Control, the notch of the built in display.
+5. The capture of the mouse in a window (2026-10-07) with the pointer of the menus of the new look.
 
 ## Not done
 
 - One app for both architectures (universal). The SDL of Homebrew is arm64 only, and the names of the modules
-  carry the architecture (`rd-vanilla_arm64.dylib`), so one app would need both sets. An Intel Mac needs its own
-  build there, with an SDL for Intel.
-- Signing with a developer certificate and notarizing. The app is signed ad hoc, which is enough on the Mac
-  that built it; on another Mac Gatekeeper asks (right click, Open).
+  carry the architecture (`rd-vulkan-vision_arm64.dylib`), so one app would need both sets. An Intel Mac needs its
+  own build, with an SDL for Intel.
+- SDL and MoltenVK built for macOS 11.0. The ones of Homebrew are built for the macOS they were installed on, and
+  the app that carries them starts only there or later. A release needs its own builds of them.
+- Signing with a developer certificate and notarizing. The app is signed ad hoc.
 - A game controller through the game controller interface of SDL.
-- No cross compiler setup (osxcross).
 - The single player parts of the tree were not looked at. This port is the multiplayer game.

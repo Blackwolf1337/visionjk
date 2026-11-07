@@ -359,13 +359,13 @@ looks for it by name only, in the places the system searches, and neither the ap
 an Apple Silicon Mac (/opt/homebrew/lib) is among them. So, in this order:
 
 - what SDL_VULKAN_LIBRARY names, if it is set: the player said which one
-- what the app brings, in Contents/Frameworks of the bundle or next to the program. The build puts MoltenVK
+- what the app brings, in Contents/Frameworks of the bundle or next to the program. The install puts MoltenVK
   there (cmake/MacBundle.cmake), and that one always works: a loader that is installed somewhere on the Mac
   may know no driver at all
 - what SDL finds by itself
 - the two places of Homebrew, the loader of the Vulkan SDK before MoltenVK, so layers work where there is one
 
-The validation layer (r_vkDebug) needs the loader: start with SDL_VULKAN_LIBRARY=<path>/libvulkan.1.dylib.
+The validation layer (v_vkDebug) needs the loader: start with SDL_VULKAN_LIBRARY=<path>/libvulkan.1.dylib.
 
 Without a library the window can not be made, and the engine says so as for any window that fails.
 ===============
