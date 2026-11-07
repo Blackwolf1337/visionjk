@@ -17,27 +17,6 @@ textures/mp/kor_outside
 	}
 }
 
-textures/mp/s_rift_newcolumn
-{
-	q3map_lightimage textures/rift/newcolumn_glow
-	qer_editorimage textures/rift/newcolumn.tga
-	q3map_surfacelight 50
-	{
-		map $lightmap
-	}
-	{
-		map textures/rift/newcolumn
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.5 2 0.3
-		roughness 0.85
-		metalness 0
-	}
-	{
-		map textures/rift/newcolumn_glow
-		blendFunc GL_ONE GL_ONE
-	}
-}
-
 textures/mp/s_wall2_nophong
 {
 	qer_editorimage textures/quicktrip/qt_wall2
@@ -53,5 +32,28 @@ textures/mp/s_wall2_nophong
 		roughness 0.85
 		metalness 0
 		tessellation 2.2 0 32
+	}
+}
+
+textures/mp/s_rift_newcolumn
+{
+	q3map_lightimage textures/rift/newcolumn_glow
+	qer_editorimage textures/rift/newcolumn.tga
+	q3map_surfacelight 50
+	{
+		map $lightmap
+	}
+	{
+		map textures/rift/newcolumn
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.5 2 0 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.021
+		parallaxPlane 0.5
+	}
+	{
+		map textures/rift/newcolumn_glow
+		blendFunc GL_ONE GL_ONE
 	}
 }

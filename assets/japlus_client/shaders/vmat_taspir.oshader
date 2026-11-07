@@ -1,4 +1,4 @@
-// materials of the material debug menu (v_matdebug) for taspir.shader, read after the shader files
+// materials of the material debug menu (v_matdebug) for zz_mat_taspir.oshader, read after the shader files
 
 textures/taspir/t_wall5
 {
@@ -65,22 +65,6 @@ textures/taspir/smalltrim
 	}
 }
 
-textures/taspir/floor
-{
-	q3map_material SolidMetal
-	{
-		map $lightmap
-	}
-	{
-		map textures/taspir/floor
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 2 0.3
-		rmoGen 0.2 0.4
-		roughness 0.65
-		metalness 0.1
-	}
-}
-
 textures/taspir/256_128rustv
 {
 	qer_editorimage textures/taspir/256_128rustv
@@ -103,6 +87,24 @@ textures/taspir/256_128rustv
 	}
 }
 
+textures/taspir/floor
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/taspir/floor
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 1 invert
+		rmoGen 0.2 0.4
+		roughness 0.9
+		metalness 0.1
+		parallaxDepth 0.014
+		parallaxPlane 0.5
+	}
+}
+
 textures/taspir/taspir_phongrock
 {
 	q3map_shadeangle 150
@@ -116,6 +118,7 @@ textures/taspir/taspir_phongrock
 		normalGen 0.6 2 0.3
 		roughness 0.9
 		metalness 0
+		tessellation 16 0.5 2
 	}
 	{
 		map $lightmap

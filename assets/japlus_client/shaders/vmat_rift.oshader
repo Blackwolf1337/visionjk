@@ -1,4 +1,4 @@
-// materials of the material debug menu (v_matdebug) for rift.shader, read after the shader files
+// materials of the material debug menu (v_matdebug) for zz_mat_rift.oshader, read after the shader files
 
 textures/rift/stone_rim
 {
@@ -14,26 +14,6 @@ textures/rift/stone_rim
 	}
 	{
 		map textures/rift/stone_rim_glow
-		blendFunc GL_ONE GL_ONE
-		glow
-		rgbGen identity
-	}
-}
-
-textures/rift/newcolumn
-{
-	{
-		map $lightmap
-	}
-	{
-		map textures/rift/newcolumn
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.5 2 0.3
-		roughness 0.85
-		metalness 0
-	}
-	{
-		map textures/rift/newcolumn_glow
 		blendFunc GL_ONE GL_ONE
 		glow
 		rgbGen identity
@@ -57,6 +37,28 @@ textures/rift/rock3_phong
 	{
 		map $lightmap
 		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+}
+
+textures/rift/newcolumn
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/rift/newcolumn
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.5 2 0.3 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.034
+		parallaxPlane 0.5
+	}
+	{
+		map textures/rift/newcolumn_glow
+		blendFunc GL_ONE GL_ONE
+		glow
 		rgbGen identity
 	}
 }

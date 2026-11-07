@@ -558,33 +558,6 @@ textures/byss/byss_doorlining2
 	metalness 0.1
 }
 
-textures/taspir/ceilingbase1
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.2 0.4
-	roughness 0.6
-	metalness 0.1
-}
-
-textures/taspir/t_wall
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.2 0.4
-	roughness 0.6
-	metalness 0.1
-}
-
-textures/taspir/doortrim
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.2 0.4
-	roughness 0.6
-	metalness 0.1
-}
-
 textures/taspir/t_pillar
 {
 	implicitMap -
@@ -667,15 +640,6 @@ textures/vjun/newfloor_vjun
 }
 
 textures/mp/s_vader_floor2
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.2 0.4
-	roughness 0.65
-	metalness 0.1
-}
-
-textures/taspir/taspir_walk
 {
 	implicitMap -
 	normalGen 0.4 2 0.3
@@ -774,15 +738,6 @@ textures/taspir/bigflat
 	metalness 0.1
 }
 
-textures/taspir/background
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.3 0.4
-	roughness 0.7
-	metalness 0.1
-}
-
 textures/taspir/t_wall3
 {
 	implicitMap -
@@ -793,15 +748,6 @@ textures/taspir/t_wall3
 }
 
 textures/taspir/t_wall2
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	rmoGen 0.3 0.4
-	roughness 0.7
-	metalness 0.1
-}
-
-textures/taspir/wallnew2
 {
 	implicitMap -
 	normalGen 0.4 2 0.3
@@ -846,63 +792,7 @@ textures/kejim/kej_pipe
 	metalness 0.6
 }
 
-textures/korriban/os_basic_pillar
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/yavin/templewall_1
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
 textures/korriban/os_outsidebasee
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/os_outsidebasec
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/yavin/gardenwall3
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/k_ceiling2
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/k_ceiling
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/k_wall2plain
 {
 	implicitMap -
 	normalGen 0.5 2 0.3
@@ -934,14 +824,6 @@ textures/korriban/k_wall10
 	metalness 0
 }
 
-textures/korriban/trim
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
 textures/korriban/k_trim2
 {
 	implicitMap -
@@ -950,31 +832,7 @@ textures/korriban/k_trim2
 	metalness 0
 }
 
-textures/korriban/k_trim7
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
 textures/korriban/k_wall6
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/entrance_side
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/korriban/k_wall7
 {
 	implicitMap -
 	normalGen 0.5 2 0.3
@@ -998,30 +856,6 @@ textures/korriban/k_trim8
 	metalness 0
 }
 
-textures/rift/newwall1
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/rift/flag2
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/rift/flag3
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
 textures/rift/basewall
 {
 	implicitMap -
@@ -1030,31 +864,7 @@ textures/rift/basewall
 	metalness 0
 }
 
-textures/rift/piller
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
 textures/rift/stone_rimb
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/rift/thick_trim
-{
-	implicitMap -
-	normalGen 0.5 2 0.3
-	roughness 0.85
-	metalness 0
-}
-
-textures/rift/thick_trim_a
 {
 	implicitMap -
 	normalGen 0.5 2 0.3
@@ -1118,26 +928,6 @@ textures/rift/piller_b
 	metalness 0
 }
 
-textures/korriban/os_basic_walkway
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
-textures/bounty/floor3
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
 textures/korriban/stairs
 {
 	implicitMap -
@@ -1148,67 +938,7 @@ textures/korriban/stairs
 	parallaxPlane 0.5
 }
 
-textures/rift/flag1
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
-textures/rift/floor1b
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
-textures/rift/floor1
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
-textures/rift/floor2
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
-textures/rift/floor1_formalb
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
 textures/rift/crypt_floor
-{
-	implicitMap -
-	normalGen 0.4 2 0.3
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.01
-	parallaxPlane 0.5
-}
-
-textures/rift/floor1_formal
 {
 	implicitMap -
 	normalGen 0.4 2 0.3
@@ -1238,30 +968,6 @@ textures/rift/floor1_trim
 	parallaxPlane 0.5
 }
 
-textures/korriban/os_rock
-{
-	implicitMap -
-	normalGen 0.6 2 0.3
-	roughness 0.9
-	metalness 0
-}
-
-textures/yavin/rock_mayan4
-{
-	implicitMap -
-	normalGen 0.6 2 0.3
-	roughness 0.9
-	metalness 0
-}
-
-textures/rift/rock3
-{
-	implicitMap -
-	normalGen 0.6 2 0.3
-	roughness 0.9
-	metalness 0
-}
-
 textures/rift/blackrock2
 {
 	implicitMap -
@@ -1270,31 +976,7 @@ textures/rift/blackrock2
 	metalness 0
 }
 
-textures/rift/rock3_crosssection
-{
-	implicitMap -
-	normalGen 0.6 2 0.3
-	roughness 0.9
-	metalness 0
-}
-
-textures/rift/blackrock2_gold
-{
-	implicitMap -
-	normalGen 0.6 2 0.3
-	roughness 0.9
-	metalness 0
-}
-
 textures/korriban/marble_pass
-{
-	implicitMap -
-	normalGen 0.2 2 0.3
-	roughness 0.35
-	metalness 0
-}
-
-textures/rift/pillerwall2
 {
 	implicitMap -
 	normalGen 0.2 2 0.3
@@ -1372,14 +1054,6 @@ models/map_objects/korriban/statue_sith_lord01
 }
 
 models/map_objects/korriban/statue_sith_lord02
-{
-	implicitMap -
-	normalGen 0.3 2 0.3
-	roughness 0.8
-	metalness 0
-}
-
-models/map_objects/korriban/statue_guard02
 {
 	implicitMap -
 	normalGen 0.3 2 0.3
@@ -1775,4 +1449,383 @@ textures/desert/s_door_1
 	parallaxPlane 0.5
 	anisotropy 0.8 90
 	specularReflectance 0.004
+}
+
+textures/taspir/background
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.3 0.4
+	roughness 0.7
+	metalness 0.1
+	parallaxDepth 0.015
+	parallaxPlane 0.5
+}
+
+textures/taspir/taspir_walk
+{
+	implicitMap -
+	normalGen 1 2 0 invert
+	rmoGen 0.2 0.4
+	roughness 0.91
+	metalness 0.1
+	parallaxDepth 0.02
+	parallaxPlane 0.5
+}
+
+textures/taspir/t_wall
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+	parallaxDepth 0.016
+	parallaxPlane 0.5
+}
+
+textures/taspir/doortrim
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+	parallaxDepth 0.04
+	parallaxPlane 0.5
+}
+
+textures/taspir/wallnew2
+{
+	implicitMap -
+	normalGen 0.4 2 0.3
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+}
+
+textures/taspir/ceilingbase1
+{
+	implicitMap -
+	normalGen 0.4 2 0.3
+	rmoGen 0.2 0.4
+	roughness 0.8
+	metalness 0.1
+}
+
+textures/rift/flag1
+{
+	implicitMap -
+	normalGen 1 2 0.5 invert
+	rmoGen 0.76 0.99
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.05
+	parallaxPlane 0.5
+}
+
+textures/rift/newwall1
+{
+	implicitMap -
+	normalGen 0.5 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.027
+	parallaxPlane 0.5
+}
+
+textures/rift/thick_trim_a
+{
+	implicitMap -
+	normalGen 0.5 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.023
+	parallaxPlane 0.5
+}
+
+textures/rift/rock3_crosssection
+{
+	implicitMap -
+	normalGen 0.6 2 0.3 invert
+	roughness 0.9
+	metalness 0
+	parallaxDepth 0.03
+	parallaxPlane 0.5
+}
+
+textures/rift/rock3
+{
+	implicitMap -
+	normalGen 0.6 2 0.3
+	roughness 0.9
+	metalness 0
+	parallaxDepth 0.018
+	parallaxPlane 0.5
+}
+
+textures/rift/piller
+{
+	implicitMap -
+	normalGen 0.5 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.015
+	parallaxPlane 0.5
+}
+
+textures/rift/thick_trim
+{
+	implicitMap -
+	normalGen 0.5 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.025
+	parallaxPlane 0.5
+}
+
+textures/rift/floor1_formal
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.025
+	parallaxPlane 0.5
+}
+
+textures/rift/floor1b
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.036
+	parallaxPlane 0.5
+}
+
+textures/rift/floor1_formalb
+{
+	implicitMap -
+	normalGen 0.4 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.029
+	parallaxPlane 0.5
+}
+
+textures/rift/floor2
+{
+	implicitMap -
+	normalGen 0.4 2 0.3
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.023
+	parallaxPlane 0.5
+}
+
+textures/rift/flag2
+{
+	implicitMap -
+	normalGen 0.5 2 0.3 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.032
+	parallaxPlane 0.5
+}
+
+textures/rift/floor1
+{
+	implicitMap -
+	normalGen 0.5 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.057
+	parallaxPlane 0.5
+}
+
+textures/rift/flag3
+{
+	implicitMap -
+	normalGen 0.5 2 0
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.045
+	parallaxPlane 0.5
+}
+
+textures/rift/blackrock2_gold
+{
+	implicitMap -
+	normalGen 0.6 2 0.3 invert
+	roughness 0.9
+	metalness 0
+	parallaxDepth 0.029
+	parallaxPlane 0.5
+}
+
+textures/rift/pillerwall2
+{
+	implicitMap -
+	normalGen 0.2 2 0.3
+	roughness 0.8
+	metalness 0
+	parallaxDepth 0.076
+	parallaxPlane 0.5
+}
+
+textures/yavin/gardenwall3
+{
+	implicitMap -
+	normalGen 0.5 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.04
+	parallaxPlane 0.5
+}
+
+textures/yavin/rock_mayan4
+{
+	implicitMap -
+	normalGen 0.6 2 0 invert
+	roughness 0.9
+	metalness 0
+	parallaxDepth 0.03
+	parallaxPlane 0.5
+}
+
+textures/bounty/floor3
+{
+	implicitMap -
+	normalGen 0.4 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.063
+	parallaxPlane 0.5
+}
+
+textures/korriban/os_basic_pillar
+{
+	implicitMap -
+	normalGen 0.5 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.04
+	parallaxPlane 0.5
+}
+
+textures/yavin/templewall_1
+{
+	implicitMap -
+	normalGen 0.5 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.03
+	parallaxPlane 0.5
+}
+
+textures/korriban/os_rock
+{
+	implicitMap -
+	normalGen 0.4 2 0
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.031
+	parallaxPlane 0.5
+}
+
+textures/korriban/os_outsidebasec
+{
+	implicitMap -
+	normalGen 0 2.55 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.04
+	parallaxPlane 0.5
+}
+
+textures/korriban/entrance_side
+{
+	implicitMap -
+	normalGen 0.4 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.045
+	parallaxPlane 0.5
+}
+
+models/map_objects/korriban/statue_guard02
+{
+	implicitMap -
+	normalGen 0.4 2 0 invert
+	roughness 0.85
+	metalness 0
+}
+
+textures/korriban/k_wall7
+{
+	implicitMap -
+	normalGen 0.4 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.045
+	parallaxPlane 0.5
+}
+
+textures/korriban/k_trim7
+{
+	implicitMap -
+	normalGen 0.4 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.045
+	parallaxPlane 0.5
+}
+
+textures/korriban/k_ceiling2
+{
+	implicitMap -
+	normalGen 0.4 0.38 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.04
+	parallaxPlane 0.5
+}
+
+textures/korriban/os_basic_walkway
+{
+	implicitMap -
+	normalGen 0.4 0.66 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.035
+	parallaxPlane 0.5
+}
+
+textures/korriban/k_ceiling
+{
+	implicitMap -
+	normalGen 0.4 0.93 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.03
+	parallaxPlane 0.5
+}
+
+textures/korriban/trim
+{
+	implicitMap -
+	normalGen 0.4 2 0 invert
+	roughness 0.85
+	metalness 0
+	parallaxDepth 0.031
+	parallaxPlane 0.5
+}
+
+textures/korriban/k_wall2plain
+{
+	implicitMap -
+	normalGen 0.4 2 0
+	roughness 0.85
+	metalness 0
 }

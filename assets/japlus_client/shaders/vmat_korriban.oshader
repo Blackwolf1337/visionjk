@@ -1,20 +1,5 @@
 // materials of the material debug menu (v_matdebug) for korriban.shader, read after the shader files
 
-textures/korriban/k_basic3
-{
-	q3map_material Rock
-	{
-		map $lightmap
-	}
-	{
-		map textures/korriban/k_basic3
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.5 2 0.3
-		roughness 0.85
-		metalness 0
-	}
-}
-
 textures/korriban/k_basic2
 {
 	q3map_material Rock
@@ -45,23 +30,6 @@ textures/korriban/k_basic
 	}
 }
 
-textures/korriban/os_basewalk
-{
-	q3map_material Rock
-	{
-		map $lightmap
-	}
-	{
-		map textures/korriban/os_basewalk
-		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 2 0.3
-		roughness 0.85
-		metalness 0
-		parallaxDepth 0.01
-		parallaxPlane 0.5
-	}
-}
-
 textures/korriban/k_basicfloor
 {
 	q3map_material Rock
@@ -71,10 +39,66 @@ textures/korriban/k_basicfloor
 	{
 		map textures/korriban/k_basicfloor
 		blendFunc GL_DST_COLOR GL_ZERO
-		normalGen 0.4 2 0.3
+		normalGen 0.4 2 0 invert
 		roughness 0.85
 		metalness 0
-		parallaxDepth 0.01
+		parallaxDepth 0.045
 		parallaxPlane 0.5
+	}
+}
+
+textures/korriban/os_basewalk
+{
+	q3map_material Rock
+	{
+		map $lightmap
+	}
+	{
+		map textures/korriban/os_basewalk
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.028
+		parallaxPlane 0.5
+	}
+}
+
+textures/korriban/k_basic3
+{
+	q3map_material Rock
+	{
+		map $lightmap
+	}
+	{
+		map textures/korriban/k_basic3
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.045
+		parallaxPlane 0.5
+	}
+}
+
+textures/korriban/os_outsidebased
+{
+	qer_editorimage textures/korriban/os_outsidebased
+	{
+		map textures/common/etest4
+		tcGen environment
+		normalGen 0.4 2 0 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.045
+		parallaxPlane 0.5
+	}
+	{
+		map textures/korriban/os_outsidebased
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+	}
+	{
+		map $lightmap
+		blendFunc GL_DST_COLOR GL_ZERO
 	}
 }
