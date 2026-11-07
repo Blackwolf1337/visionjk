@@ -1,9 +1,8 @@
 # Testing the game on a Mac
 
 The game on macOS draws with `rd-vulkan-vision`, on Vulkan, which macOS only has through MoltenVK. The app
-brings MoltenVK along. The renderer was changed for that, and the build was checked on a Mac on 2026-11-07, but
-the game itself has not run there with this renderer yet. This test is that first run. It takes about fifteen
-minutes.
+brings MoltenVK along. On 2026-11-07 the game ran on a Mac without a window, driven by a script (see
+[macos.md](macos.md)). This test is the first run in a window, by a person. It takes about fifteen minutes.
 
 What is wanted from it: does the game start and draw, and if not, the log that says where it stopped.
 
@@ -48,7 +47,8 @@ open release-mac/JediAcademy/visionjk.arm64.app --args +set logfile 2
 
 ## 5. If it starts, look at these
 
-1. The main menu: is it there, are the texts and the background right, does the pointer follow the mouse?
+1. The main menu: is it there, are the texts and the background right, does the pointer follow the mouse? Is
+   there a figure in the middle (it was empty in the run without a window)?
 2. Join a server (or `devmap mp/ffa3` in the console, Shift+Esc opens it).
 3. In the level: walls, floor, sky, your own player model, the HUD. Anything black, white, missing or flickering?
 4. Type `gfxinfo` in the console once. Its output goes into the log.

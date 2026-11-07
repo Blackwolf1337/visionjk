@@ -10,8 +10,9 @@ On 2026-11-07 (issue #1) develop was merged into the branch, and the tree was bu
 the same Mac, now with macOS 27, Xcode clang 21 and from Homebrew sdl2-compat 2.32.74, SDL3 3.4.20, MoltenVK 1.4.2,
 vulkan-headers 1.4.363 and shaderc 2026.4. In between `rd-vanilla` was removed (2026-11-02), so on a Mac the game
 runs only with `rd-vulkan-vision`, on Vulkan through MoltenVK, which the app brings along. There is no renderer of
-its own for Metal and none is planned: MoltenVK is the way. The dedicated server ran a level with bots. The client
-was not started that day, see "Still open".
+its own for Metal and none is planned: MoltenVK is the way. The dedicated server ran a level with bots, and the
+client ran without a window (SDL with its offscreen driver, MoltenVK with a surface that is not on the screen): the
+menus, mp/ffa3 with a bot, `vid_restart`. See "The first start of the client". Nobody has played it in a window yet.
 
 ## What was already there
 
@@ -102,9 +103,35 @@ through `SDL_QUIT`.
 | sdl2-compat of Homebrew brings a search path of its own, `@loader_path/../../../../opt/sdl3/lib`, which points out of the app | the search paths of the libraries copied into the app are taken out |
 | | the signature is checked at the end of the install with `codesign --verify --deep --strict`, which passes. `otool -L` and `otool -l` of every program and library of the install name nothing outside the app and the system |
 | `rd-vanilla` is gone, so MoltenVK in the app is a must now | the configure warns when it finds no `libMoltenVK.dylib` |
+| Every JPEG of the game failed to load in the client: "Wrong JPEG library version: library is 90, caller expects 80" (392 times up to the first level), and the walls of a level were white. The Vulkan headers were found in the include directory of Homebrew, which went onto the include path as a whole, with the `jpeglib.h` of jpeg-turbo in it ahead of the one of `lib/jpeg-9a` the renderer is linked with | `cmake/Modules/VulkanHeaders.cmake`: on macOS the two directories of the headers are copied into the build folder, as for a cross build. The copies are of the directories themselves, not of the links Homebrew has to them |
 | The libraries of Homebrew are built for the macOS they were installed on: SDL2 and SDL3 say macOS 27, MoltenVK 12.0, the program and the renderer 11.0 | nothing. Such an app starts on macOS 27 only. See "Not done" |
 
 The branch was also built on Linux (Debian 12 on arm64, gcc 12) after the merge: everything builds.
+
+## The first start of the client (2026-11-07)
+
+The client was started from the install, without a window: `SDL_VIDEODRIVER=offscreen` (SDL3 under sdl2-compat
+takes it), which makes the Vulkan window with `VK_EXT_headless_surface` of MoltenVK, and `SDL_AUDIODRIVER=dummy`.
+The game data was `assets0.pk3` to `assets3.pk3` through `fs_cdpath`, the home folder a new one. A config ran the
+steps (`+exec`) and the game took its own screenshots. The engine shows a dialog of macOS when it ends with an error,
+which would take the focus: a small library put in with `DYLD_INSERT_LIBRARIES` turned it into a line on stderr for
+the test. It was not needed, there was no error.
+
+| | Result |
+|---|---|
+| Start | `Vulkan library: .../visionjk.arm64.app/Contents/Frameworks/libMoltenVK.dylib`, `Vulkan device: Apple M5 Max, Vulkan 1.3.357`, `Vulkan on top of another graphics interface (VK_KHR_portability_subset)`, `the device takes 1000000 textures and 500000 samplers in one table`. The offscreen driver has no display modes, so the game fell back to `r_mode 4` |
+| The menus | the first page of the new look as on Linux, fonts and panels (picture: [macos-menu.jpg](../images/macos-menu.jpg)). The profile page in the level with the model icons of the game |
+| A level | `devmap mp/ffa3`: game, cgame and ui load, the level is drawn with its textures, the HUD, the hilt in the hand, the message of the server, the items (picture: [macos-level.jpg](../images/macos-level.jpg)) |
+| Joining, a bot | `team free`, `addbot alora 3` |
+| `vid_restart` | the renderer starts again and draws the level, `swapchains made: 1, frames that were not shown: 0` |
+| Voice chat | `Voice chat on UDP port 29071`, `Voice chat: on`. Nothing was sent or heard |
+| End | `quit` ends the game, exit code 0 |
+
+What it found: the JPEG of the table above, which made the level white in the first run. And one thing that is not
+explained: the figure in the middle of the first page and of the profile page is empty, only the light under it is
+there. The instance of the model is made (`ghoul2 instances: 8 of 1024 slots in use, 0 of them without a model`).
+Whether it is empty on Linux as well with a new home folder (the model is `human_merc/key_carrier`) was not looked
+at.
 
 ## Building on a Mac
 
@@ -191,8 +218,8 @@ file list above, `otool -L` of each file, and the lines of the install. What the
 
 The steps for somebody who tests on a Mac, and what to send back, are in [macos-test.md](macos-test.md).
 
-1. The client: start, the menus of the new look, a level, a fight, with `rd-vulkan-vision` on MoltenVK. It has
-   never run on a Mac with that renderer.
+1. The client in a window, played by a person: the mouse and the keyboard, a fight, a server on the internet, the
+   picture on the display. It ran once without a window, see above. The empty figure of the first page.
 2. High resolution on a Retina display for the Vulkan window. It is made without `SDL_WINDOW_ALLOW_HIGHDPI`, so
    it renders at the size in points and macOS scales it up. `v_highDpi` is for the OpenGL window, which the
    multiplayer game no longer has. The mouse code above scales by drawable size / window size, which is 1 then.
