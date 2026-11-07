@@ -1,4 +1,4 @@
-// materials of the material debug menu (v_matdebug) for byss.shader, read after the shader files
+// materials of the material debug menu (v_matdebug) for zz_mat_byss.oshader, read after the shader files
 
 textures/byss/byss_basicwall
 {
@@ -107,7 +107,7 @@ textures/byss/floor_byss
 		blendFunc GL_DST_COLOR GL_ZERO
 		normalGen 0.4 2 0.3
 		rmoGen 0.2 0.4
-		roughness 0.65
+		roughness 1
 		metalness 0
 		specularReflectance 0.015
 	}
