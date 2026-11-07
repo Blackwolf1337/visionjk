@@ -45,5 +45,6 @@ void		CL_ImGui_Shutdown( void );
 
 // cl_matdebug.cpp, cl_matlight.cpp
 void		CL_MatDebug_Init( void );
+void		CL_MatDebug_Shutdown( void );
 void		CL_MatLight_Init( void );
 void		CL_MatLight_Toggle( void );

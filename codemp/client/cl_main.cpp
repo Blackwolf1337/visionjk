@@ -3110,6 +3110,7 @@ void CL_Shutdown( void ) {
 	CL_IDS_Shutdown();
 	CL_MemWatchShutdown();
 	CL_MasterShutdown();
+	CL_MatDebug_Shutdown();
 	CL_ImGui_Shutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)

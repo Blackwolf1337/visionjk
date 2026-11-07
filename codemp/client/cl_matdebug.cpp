@@ -110,6 +110,21 @@ static qboolean			messageBad;
 static std::map<std::string, int>	statuses;
 static qboolean			statusesRead;
 
+// Materials changed live and not saved, by shader and stage ("name#stage", lower case): what they were before the
+// first change, so a change back to that is no change. Live changes stay until the level changes (the renderer
+// loads its shaders again) or the game quits, then they are gone.
+typedef struct {
+	qhandle_t		shader;
+	char			name[MAX_QPATH];
+	int				stage;
+	materialParms_t	before;
+	materialParms_t	after;			// what it was set to last: when the renderer has something else, the shaders
+									// were loaded again (a level, also the same one again) and the change is gone
+} unsavedMaterial_t;
+static std::map<std::string, unsavedMaterial_t>	unsaved;
+static char				unsavedLevel[MAX_QPATH];	// the level they were made in, for the message
+static qboolean			closeWarned;				// closing once more closes with them unsaved
+
 /*
 ===============
 Status of the materials (materials/status.txt: a line "<shader> <status>")
@@ -184,6 +199,158 @@ static void MatDebug_Message( qboolean bad, const char *fmt, ... ) {
 	Q_vsnprintf( message, sizeof( message ), fmt, args );
 	va_end( args );
 	messageBad = bad;
+}
+
+/*
+===============
+What is not saved
+===============
+*/
+static qboolean MatDebug_SameValues( const materialParms_t *a, const materialParms_t *b );
+
+static std::string MatDebug_UnsavedKey( const char *name, int stage ) {
+	return MatDebug_Key( name ) + "#" + std::to_string( stage );
+}
+
+// a material was set live: before is what it was just before, now what it is
+static void MatDebug_Changed( qhandle_t shader, const char *name, int stage, const materialParms_t *before, const materialParms_t *now ) {
+	const std::string key = MatDebug_UnsavedKey( name, stage );
+	auto it = unsaved.find( key );
+
+	if ( it == unsaved.end() ) {
+		if ( MatDebug_SameValues( before, now ) ) {
+			return;
+		}
+		unsavedMaterial_t u;
+
+		u.shader = shader;
+		Q_strncpyz( u.name, name, sizeof( u.name ) );
+		u.stage = stage;
+		u.before = *before;
+		u.after = *now;
+		unsaved[key] = u;
+		Q_strncpyz( unsavedLevel, cl.mapname, sizeof( unsavedLevel ) );
+		closeWarned = qfalse;
+	} else if ( MatDebug_SameValues( &it->second.before, now ) ) {
+		unsaved.erase( it );
+	} else {
+		it->second.after = *now;
+	}
+}
+
+static void MatDebug_SavedShader( const char *name ) {
+	const std::string prefix = MatDebug_Key( name ) + "#";
+
+	for ( auto it = unsaved.begin(); it != unsaved.end(); ) {
+		it = it->first.compare( 0, prefix.size(), prefix ) ? std::next( it ) : unsaved.erase( it );
+	}
+}
+
+static qboolean MatDebug_IsUnsaved( const char *name ) {
+	const std::string prefix = MatDebug_Key( name ) + "#";
+	const auto it = unsaved.lower_bound( prefix );
+
+	return (qboolean)( it != unsaved.end() && !it->first.compare( 0, prefix.size(), prefix ) );
+}
+
+// the number of shaders with unsaved materials
+static int MatDebug_NumUnsaved( void ) {
+	std::string last;
+	int count = 0;
+
+	for ( const auto &entry : unsaved ) {
+		const std::string shader = entry.first.substr( 0, entry.first.rfind( '#' ) );
+
+		if ( shader != last ) {
+			count++;
+			last = shader;
+		}
+	}
+	return count;
+}
+
+static void MatDebug_Message( qboolean bad, const char *fmt, ... );
+
+// the same values, but the names of the maps: a made map gets its name when it is made again, later (tr_matgen.cpp)
+static qboolean MatDebug_SameValues( const materialParms_t *a, const materialParms_t *b ) {
+	materialParms_t x = *a, y = *b;
+
+	memset( x.normalMap, 0, sizeof( x.normalMap ) );
+	memset( y.normalMap, 0, sizeof( y.normalMap ) );
+	memset( x.rmoMap, 0, sizeof( x.rmoMap ) );
+	memset( y.rmoMap, 0, sizeof( y.rmoMap ) );
+	return (qboolean)!memcmp( &x, &y, sizeof( x ) );
+}
+
+// After a change of level (or the same level again) the renderer has loaded its shaders again: the live changes are
+// gone, and a handle may mean another shader. Seen by a material that is no longer what it was set to.
+static void MatDebug_CheckLevel( void ) {
+	qboolean lost = qfalse;
+
+	for ( const auto &entry : unsaved ) {
+		materialInfo_t info;
+		materialParms_t live;
+
+		// (the menu shows the original of the selected stage for a moment)
+		if ( showOriginal && entry.second.shader == selShader && entry.second.stage == selStage ) {
+			continue;
+		}
+		if ( !re->ext.MaterialInfo( entry.second.shader, &info ) || Q_stricmp( info.name, entry.second.name )
+			|| !re->ext.MaterialGet( entry.second.shader, entry.second.stage, &live )
+			|| !MatDebug_SameValues( &live, &entry.second.after ) ) {
+			lost = qtrue;
+			break;
+		}
+	}
+	if ( !lost ) {
+		return;
+	}
+	std::string names;
+
+	for ( const auto &entry : unsaved ) {
+		if ( names.find( entry.second.name ) == std::string::npos ) {
+			names += names.empty() ? "" : ", ";
+			names += entry.second.name;
+		}
+	}
+	Com_Printf( S_COLOR_YELLOW "Material changes made in %s were not saved and are gone with the level: %s\n", unsavedLevel, names.c_str() );
+	MatDebug_Message( qtrue, "%d unsaved material changes of %s are gone with the level (names in the console)", MatDebug_NumUnsaved(), unsavedLevel );
+	unsaved.clear();
+}
+
+// saves every shader with unsaved materials
+static void MatDebug_SaveAll( void ) {
+	std::map<std::string, unsavedMaterial_t> todo;
+	int saved = 0, failed = 0;
+	char path[MAX_QPATH], err[256], firstErr[300] = "";
+
+	MatDebug_CheckLevel();
+	for ( const auto &entry : unsaved ) {
+		todo[MatDebug_Key( entry.second.name )] = entry.second;
+	}
+	for ( const auto &entry : todo ) {
+		if ( re->ext.MaterialSave( entry.second.shader, path, sizeof( path ), err, sizeof( err ) ) ) {
+			MatDebug_SavedShader( entry.second.name );
+			if ( MatDebug_Status( entry.second.name ) == MS_NONE ) {
+				MatDebug_SetStatus( entry.second.name, MS_DRAFT );
+			}
+			saved++;
+		} else {
+			if ( !failed ) {
+				Com_sprintf( firstErr, sizeof( firstErr ), "%s: %s", entry.second.name, err );
+			}
+			Com_Printf( S_COLOR_YELLOW "%s not saved: %s\n", entry.second.name, err );
+			failed++;
+		}
+	}
+	if ( selShader ) {
+		re->ext.MaterialGet( selShader, selStage, &selOriginal );
+	}
+	if ( failed ) {
+		MatDebug_Message( qtrue, "Saved %d, %d not (%s)", saved, failed, firstErr );
+	} else {
+		MatDebug_Message( qfalse, "Saved %d shader%s, the next level loads %s", saved, saved == 1 ? "" : "s", saved == 1 ? "it" : "them" );
+	}
 }
 
 /*
@@ -284,7 +451,12 @@ static void MatDebug_Pick( void ) {
 }
 
 static void MatDebug_Set( int fields ) {
+	materialParms_t before, now;
+
+	re->ext.MaterialGet( selShader, selStage, &before );
 	re->ext.MaterialSet( selShader, selStage, &selParms, fields );
+	re->ext.MaterialGet( selShader, selStage, &now );
+	MatDebug_Changed( selShader, selName, selStage, &before, &now );
 }
 
 // all of a material at once (undo, redo, paste, revert); the maps are made again only when what they are made of
@@ -349,6 +521,7 @@ static void MatDebug_Save( void ) {
 	if ( MatDebug_Status( selName ) == MS_NONE ) {
 		MatDebug_SetStatus( selName, MS_DRAFT );
 	}
+	MatDebug_SavedShader( selName );
 	selOriginal = selParms;
 	MatDebug_Message( qfalse, "Saved into %s, the next level loads it", path );
 }
@@ -710,6 +883,14 @@ static void MatDebug_DrawActions( void ) {
 		MatDebug_Save();
 	}
 	ImGui::SameLine();
+	const int numUnsaved = MatDebug_NumUnsaved();
+	ImGui::BeginDisabled( numUnsaved == 0 );
+	if ( ImGui::Button( va( "Save all (%d)###saveall", numUnsaved ) ) ) {
+		MatDebug_SaveAll();
+	}
+	ImGui::EndDisabled();
+	ImGui::SetItemTooltip( "Saves every material changed and not saved (marked * in the list). Unsaved changes are gone when the level changes or the game quits." );
+	ImGui::SameLine();
 	ImGui::BeginDisabled( undoPos <= 0 );
 	if ( ImGui::Button( "Undo" ) ) {
 		MatDebug_Undo();
@@ -842,6 +1023,9 @@ static void MatDebug_DrawShader( void ) {
 		// nothing picked, or the level changed under it
 		selShader = 0;
 		ImGui::TextDisabled( "Pick a surface (P) or choose a shader in the list" );
+		if ( message[0] ) {
+			ImGui::TextColored( messageBad ? ImVec4( 1.0f, 0.45f, 0.4f, 1.0f ) : ImVec4( 0.55f, 0.9f, 0.55f, 1.0f ), "%s", message );
+		}
 		return;
 	}
 	ImGui::TextUnformatted( info.name );
@@ -942,8 +1126,16 @@ static void MatDebug_DrawList( void ) {
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			ImGui::PushID( i );
-			if ( ImGui::Selectable( l->name, l->shader == selShader, ImGuiSelectableFlags_SpanAllColumns ) ) {
+			const qboolean changed = MatDebug_IsUnsaved( l->name );
+			if ( changed ) {
+				ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1.0f, 0.7f, 0.3f, 1.0f ) );
+			}
+			if ( ImGui::Selectable( changed ? va( "%s *", l->name ) : l->name, l->shader == selShader, ImGuiSelectableFlags_SpanAllColumns ) ) {
 				MatDebug_Select( l->shader );
+			}
+			if ( changed ) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemTooltip( "Changed and not saved" );
 			}
 			ImGui::PopID();
 			ImGui::TableNextColumn();
@@ -978,6 +1170,19 @@ static void MatDebug_DrawViews( void ) {
 	ImGui::SetItemTooltip( "Light to judge materials by: presets, lamps, another sun, exposure, sky (v_matlight)" );
 }
 
+// Closing with unsaved materials asks once: they stay live after it, until the level changes or the game quits
+static void MatDebug_Close( void ) {
+	const int numUnsaved = MatDebug_NumUnsaved();
+
+	if ( numUnsaved && !closeWarned ) {
+		closeWarned = qtrue;
+		MatDebug_Message( qtrue, "%d materials are not saved: Save all, or close again (they stay until the level changes)", numUnsaved );
+		return;
+	}
+	closeWarned = qfalse;
+	CL_ImGui_Toggle( &matWindow );
+}
+
 static void MatDebug_Draw( debugWindow_t *window ) {
 	bool open = true;
 	ImGuiIO &io = ImGui::GetIO();
@@ -985,6 +1190,7 @@ static void MatDebug_Draw( debugWindow_t *window ) {
 	if ( !statusesRead ) {
 		MatDebug_ReadStatuses();
 	}
+	MatDebug_CheckLevel();
 	// made again when the level or the shaders changed
 	if ( numListed < 0 || re->ext.MaterialList( listAll, 0, NULL, 0 ) != listedTotal ) {
 		MatDebug_MakeList();
@@ -1009,7 +1215,7 @@ static void MatDebug_Draw( debugWindow_t *window ) {
 	}
 	ImGui::End();
 	if ( !open ) {
-		CL_ImGui_Toggle( window );
+		MatDebug_Close();
 	}
 }
 
@@ -1205,7 +1411,18 @@ static void MatSet_f( void ) {
 		m.pbr = qtrue;
 		fields |= MATP_PBR | MATP_ROUGHNESS;
 	}
+	materialParms_t before;
+	re->ext.MaterialGet( shader, stage, &before );
+	MatDebug_CheckLevel();
 	re->ext.MaterialSet( shader, stage, &m, fields );
+	re->ext.MaterialGet( shader, stage, &m );
+	{
+		materialInfo_t info;
+
+		if ( re->ext.MaterialInfo( shader, &info ) ) {
+			MatDebug_Changed( shader, info.name, stage, &before, &m );
+		}
+	}
 	re->ext.MaterialGet( shader, stage, &m );
 	MatCmd_Print( Cmd_Argv( 1 ), stage, &m );
 	// the menu shows what was set when it is on this stage
@@ -1235,6 +1452,13 @@ static void MatSave_f( void ) {
 	}
 	if ( MatDebug_Status( Cmd_Argv( 1 ) ) == MS_NONE ) {
 		MatDebug_SetStatus( Cmd_Argv( 1 ), MS_DRAFT );
+	}
+	{
+		materialInfo_t info;
+
+		if ( re->ext.MaterialInfo( shader, &info ) ) {
+			MatDebug_SavedShader( info.name );
+		}
 	}
 	Com_Printf( "Saved into %s\n", path );
 }
@@ -1293,7 +1517,28 @@ static void MatDebug_Toggle_f( void ) {
 		return;
 	}
 	numListed = -1;
-	CL_ImGui_Toggle( &matWindow );
+	if ( matWindow.open ) {
+		MatDebug_Close();
+	} else {
+		CL_ImGui_Toggle( &matWindow );
+	}
+}
+
+// the game quits: what was not saved is gone, said in the console (and the log)
+void CL_MatDebug_Shutdown( void ) {
+	if ( unsaved.empty() ) {
+		return;
+	}
+	std::string names;
+
+	for ( const auto &entry : unsaved ) {
+		if ( names.find( entry.second.name ) == std::string::npos ) {
+			names += names.empty() ? "" : ", ";
+			names += entry.second.name;
+		}
+	}
+	Com_Printf( S_COLOR_YELLOW "Material changes not saved, gone now: %s\n", names.c_str() );
+	unsaved.clear();
 }
 
 void CL_MatDebug_Init( void ) {
