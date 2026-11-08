@@ -726,6 +726,25 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_smaa
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SMAA
+			descText				@VISION_SMOOTHS_THE_JAGGED_EDGES_OF_THE_LEVE
+			cvar					"v_smaa"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 414 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					video_sync
 			group					video
 			type					ITEM_TYPE_MULTI
@@ -738,7 +757,7 @@
 			}
 			descText				@MENUS_VIDEO_SYNC_DESC
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 414 432 52
+			rect					306 466 432 52
 			page					1
 			scroll					1
 			row						1
@@ -758,7 +777,7 @@
 			cvar					"com_maxfps"
 			cvarFloatList { "60" 60 "90" 90 "125" 125 "144" 144 "165" 165 "240" 240 @VISION_NONE 0 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 466 432 52
+			rect					306 518 432 52
 			page					1
 			scroll					1
 			row						1
@@ -779,7 +798,7 @@
 			descText				@MENUS_ADJUST_THE_BRIGHTNESS
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/brightness" 0.8 1.4
-			rect					306 518 432 52
+			rect					306 570 432 52
 			page					1
 			scroll					1
 			row						1
@@ -793,7 +812,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 570 452 100
+			rect					296 622 452 100
 			visible					1
 			text					@VISION_SCREEN_EFFECTS
 			font					7
@@ -821,7 +840,7 @@
 			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
 			cvar					"v_screenFx"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 670 432 52
+			rect					306 722 432 52
 			page					1
 			scroll					1
 			row						1
@@ -841,7 +860,7 @@
 			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
 			cvar					"v_fxBlast"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 722 432 52
+			rect					306 774 432 52
 			page					1
 			scroll					1
 			row						1
@@ -861,7 +880,7 @@
 			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
 			cvar					"v_soundTinnitus"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 774 432 52
+			rect					306 826 432 52
 			page					1
 			scroll					1
 			row						1
@@ -881,7 +900,7 @@
 			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
 			cvar					"v_fxHeat"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 826 432 52
+			rect					306 878 432 52
 			page					1
 			scroll					1
 			row						1
@@ -901,7 +920,7 @@
 			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
 			cvar					"v_fxHit"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 878 432 52
+			rect					306 930 432 52
 			page					1
 			scroll					1
 			row						1
@@ -921,7 +940,7 @@
 			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
 			cvar					"v_fxWater"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 930 432 52
+			rect					306 982 432 52
 			page					1
 			scroll					1
 			row						1
@@ -941,7 +960,7 @@
 			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
 			cvar					"v_fxForce"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 982 432 52
+			rect					306 1034 432 52
 			page					1
 			scroll					1
 			row						1
@@ -961,7 +980,7 @@
 			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
 			cvar					"v_fxSaber"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 1034 432 52
+			rect					306 1086 432 52
 			page					1
 			scroll					1
 			row						1

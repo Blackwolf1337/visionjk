@@ -316,6 +316,7 @@ void		VK_GL_ResetMatrix( void );
 extern cvar_t	*v_vkStatic;
 extern cvar_t	*v_vkMerge;
 extern cvar_t	*v_wetMirror;		// vk_post.cpp
+extern cvar_t	*v_smaa;			// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -374,6 +375,7 @@ void		VK_InitPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
+void		VK_Smaa( void );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
@@ -511,6 +513,10 @@ void		VK_ScreenFxFogPass( vkTarget_t *target, const float *fx );
 // with the frame but only read. Not on the OpenGL ES device. vk.color must not be begun, it is not begun after.
 void		VK_WetPass( const float *wet, int count, const int *viewport );
 void		VK_PaintPass( const float *paint, int count, const int *viewport );
+// v_smaa, SMAA 1x over the whole frame: its edges and their weights into targets of its own, then the frame mixed
+// with its neighbours by them, from a copy of it. threshold: of the edges, in the colours of vk.color. Not on the
+// OpenGL ES device. vk.color must not be begun before; it is begun with vk.depth after, as by VK_ScopePass().
+void		VK_SmaaPass( float threshold );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

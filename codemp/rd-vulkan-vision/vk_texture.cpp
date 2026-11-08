@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // is the index.
 
 #include "vk_local.h"
+#include "smaa/AreaTex.h"
+#include "smaa/SearchTex.h"
 
 /*
 ===============
@@ -557,7 +559,71 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	}
 }
 
+// one of the lookup textures of SMAA, the bytes of lib/smaa row for row, through the uploads of the textures
+static void VK_SmaaLookup( vkTarget_t *target, VkDescriptorSet *set, VkSampler sampler, int width, int height, VkFormat format,
+	const byte *bytes, vkSize_t size ) {
+	VkBufferImageCopy region;
+	VkDeviceSize staged;
+	byte *to;
+
+	VK_CreateTarget( target, width, height, format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_SAMPLE_COUNT_1_BIT );
+	to = VK_Stage( size, &staged );
+	memcpy( to, bytes, size );
+	memset( &region, 0, sizeof( region ) );
+	region.bufferOffset = staged;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.layerCount = 1;
+	region.imageExtent.width = (uint32_t)width;
+	region.imageExtent.height = (uint32_t)height;
+	region.imageExtent.depth = 1;
+	VK_TargetLayout( VK_UploadCmd(), target, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	qvkCmdCopyBufferToImage( VK_UploadCmd(), vk.staging.buffer, target->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+	VK_TargetLayout( VK_UploadCmd(), target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_PostSetOnce( set );
+	VK_WriteSet( *set, sampler, target->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+/*
+===============
+VK_CreateSmaaTargets
+
+What v_smaa draws with, the first time it is drawn after the start or a new size of the window: two targets in
+the size of the frame for its edges and its weights, a copy of the frame, and the two lookup textures of SMAA.
+VK_DestroyPostTargets() takes them all. They are made while a frame is recorded: the uploads of the lookup
+textures go to the device before the frame does (VK_PresentFrame).
+===============
+*/
+void VK_CreateSmaaTargets( void ) {
+	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+	if ( vk.smaaEdges.image ) {
+		return;
+	}
+	VK_CreateTarget( &vk.smaaEdges, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.smaaWeights, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.smaaColor, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	// all of them filtered: SMAA reads between pixels on purpose, and at the middle of a pixel where it wants that
+	// pixel alone; the search texture is read pixel for pixel, as SMAA.hlsl has it with its point sampler
+	VK_PostSetOnce( &vk.smaaEdgesSet );
+	VK_WritePostSet( vk.smaaEdgesSet, vk.smaaEdges.view );
+	VK_PostSetOnce( &vk.smaaWeightsSet );
+	VK_WritePostSet( vk.smaaWeightsSet, vk.smaaWeights.view );
+	VK_PostSetOnce( &vk.smaaColorSet );
+	VK_WritePostSet( vk.smaaColorSet, vk.smaaColor.view );
+	VK_SmaaLookup( &vk.smaaArea, &vk.smaaAreaSet, vk.linearSampler, AREATEX_WIDTH, AREATEX_HEIGHT, VK_FORMAT_R8G8_UNORM, areaTexBytes,
+		sizeof( areaTexBytes ) );
+	VK_SmaaLookup( &vk.smaaSearch, &vk.smaaSearchSet, vk.postSampler, SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, VK_FORMAT_R8_UNORM, searchTexBytes,
+		sizeof( searchTexBytes ) );
+}
+
 void VK_DestroyPostTargets( void ) {
+	VK_DestroyTarget( &vk.smaaEdges );
+	VK_DestroyTarget( &vk.smaaWeights );
+	VK_DestroyTarget( &vk.smaaColor );
+	VK_DestroyTarget( &vk.smaaArea );
+	VK_DestroyTarget( &vk.smaaSearch );
 	VK_DestroyTarget( &vk.glow );
 	VK_DestroyTarget( &vk.glowMS );
 	VK_DestroyTarget( &vk.screen );

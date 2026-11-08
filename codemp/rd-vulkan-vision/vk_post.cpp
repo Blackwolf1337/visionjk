@@ -35,6 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 void myGlMultMatrix( const float *a, const float *b, float *out );
 
 cvar_t	*v_wetMirror;
+cvar_t	*v_smaa;
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
@@ -42,6 +43,8 @@ void VK_InitPost( void ) {
 
 	v_wetMirror = ri.Cvar_Get( "v_wetMirror", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
 		"Puddles of the water gun mirror the room: the level is drawn once more, mirrored at their floor. 0: they mirror only what is on the screen" );
+	v_smaa = ri.Cvar_Get( "v_smaa", "0", CVAR_ARCHIVE_ND,
+		"Smooths the edges of the level after it is drawn (SMAA 1x), far cheaper than r_ext_multisample and sharper than a blur; with r_ext_multisample 2 it also catches thin lines. Vulkan only. 0: off" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
 }
@@ -220,6 +223,31 @@ void VK_Bloom( void ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_Smaa
+
+v_smaa, for the view of the level only, before tay_bloom and the 2D: the edges of the level are smoothed, the
+text of the HUD drawn later stays sharp. The edges are found by brightness, SMAA's threshold of 0.1 on the
+screen, so in the frame, which holds the colors before the gamma pass, it is divided by the overbright factor as
+the threshold of tay_bloom is.
+===============
+*/
+void VK_Smaa( void ) {
+#ifndef RD_VISION_GLES
+	if ( !vk.frame || !v_smaa->integer ) {
+		return;
+	}
+	VK_EndTarget();
+	VK_SmaaPass( 0.1f / (float)( 1 << tr.overbrightBits ) );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
 }
 
 /*
