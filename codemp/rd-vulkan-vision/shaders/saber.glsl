@@ -77,6 +77,41 @@ void Swept( vec3 a, vec3 seg, vec3 oa, vec3 oseg, float s, out vec3 sa, out vec3
 	sseg = way * ( mix( len, olen, s ) / max( length( way ), 1e-4 ) );
 }
 
+// whether the ray eye + dir t passes through the triangle p0 p1 p2 in front of the eye (Moeller and Trumbore)
+bool ThroughTriangle( vec3 eye, vec3 dir, vec3 p0, vec3 p1, vec3 p2 ) {
+	vec3 e1 = p1 - p0, e2 = p2 - p0, h = cross( dir, e2 );
+	float det = dot( e1, h );
+
+	if ( abs( det ) < 1e-6 ) {
+		return false;
+	}
+	vec3 s = eye - p0, q = cross( s, e1 );
+	float u = dot( s, h ) / det, v = dot( dir, q ) / det;
+	return u >= 0.0 && v >= 0.0 && u + v <= 1.0 && dot( e2, q ) / det > 0.0;
+}
+
+// Whether the ray comes within reach of the place the blade swept (a b now, oa ob a moment ago) at all: through the
+// two triangles between them or near one of the edges round them (the one of the blade now the caller has). Only
+// then is the nearest blade in between searched for: the search ran at every pixel round the blade and cost about
+// as much as all the rest of it during a swing.
+bool NearSwept( vec3 eye, vec3 dir, vec3 a, vec3 b, vec3 oa, vec3 ob, float reach ) {
+	float u, t, d, along;
+
+	Nearest( eye, dir, b, ob - b, u, t, d, along );
+	if ( d < reach ) {
+		return true;
+	}
+	Nearest( eye, dir, oa, ob - oa, u, t, d, along );
+	if ( d < reach ) {
+		return true;
+	}
+	Nearest( eye, dir, a, oa - a, u, t, d, along );
+	if ( d < reach ) {
+		return true;
+	}
+	return ThroughTriangle( eye, dir, a, b, ob ) || ThroughTriangle( eye, dir, a, ob, oa );
+}
+
 // how far the point p is from the part of the blade in front of the surface (normal n) at it, 1e9: none of it is
 float SurfaceDistance( vec3 p, vec3 n, vec3 a, vec3 seg ) {
 	float da = dot( a - p, n ), db = dot( a + seg - p, n );
@@ -152,7 +187,9 @@ void main() {
 		// glows fainter the older the blade, its core smears less the slower it swept; the blade now stays as it
 		// is, the swept place only adds where it is brighter.
 		vec3 sweep = vec3( 0.0 );
-		if ( oa.w > 0.0 && distance( a.xyz, oa.xyz ) + distance( b.xyz, ob.xyz ) > 0.5 ) {
+		// (the tip sweeps an arc, which bulges out past the edge between its two places by a little of the length)
+		if ( oa.w > 0.0 && distance( a.xyz, oa.xyz ) + distance( b.xyz, ob.xyz ) > 0.5
+			&& ( d < glow * 2.5 || NearSwept( eye, dir, a.xyz, b.xyz, oa.xyz, ob.xyz, glow * 2.5 + 0.15 * max( length( seg ), length( oseg ) ) ) ) ) {
 			float best = 1e9, s = 1.0 / 6.0;
 			vec3 sa, sseg;
 			float su, st, sd, salong;
