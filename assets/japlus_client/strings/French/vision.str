@@ -797,6 +797,22 @@ REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
 LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
 LANG_FRENCH         "Les lames en lumière 3D avec le rendu Vulkan, elles s'arrêtent aux murs et brillent sur le mouvement. Désactivé : la lame plate de l'aspect ci-dessus."
 
+REFERENCE           SLICE_BODIES
+LANG_ENGLISH        "Slice Bodies"
+LANG_FRENCH         "Trancher les corps"
+
+REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
+LANG_FRENCH         "Un coup de sabre mortel tranche le corps le long du mouvement, avec une coupe brûlée qui rougeoie. Demande le rendu Vulkan."
+
+REFERENCE           BLOOD
+LANG_ENGLISH        "Blood"
+LANG_FRENCH         "Sang"
+
+REFERENCE           BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
+LANG_ENGLISH        "Blood runs out under a body that was cut. Off: the cut stays, without any blood."
+LANG_FRENCH         "Du sang s'écoule sous un corps tranché. Désactivé : la coupe reste, sans sang."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_FRENCH         "Longueur de la traînée"

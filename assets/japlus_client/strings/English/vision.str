@@ -599,6 +599,18 @@ LANG_ENGLISH        "3D Blades"
 REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
 LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
 
+REFERENCE           SLICE_BODIES
+LANG_ENGLISH        "Slice Bodies"
+
+REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
+
+REFERENCE           BLOOD
+LANG_ENGLISH        "Blood"
+
+REFERENCE           BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
+LANG_ENGLISH        "Blood runs out under a body that was cut. Off: the cut stays, without any blood."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 

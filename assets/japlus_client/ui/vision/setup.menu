@@ -2474,13 +2474,51 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_slice
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SLICE_BODIES
+			descText				@VISION_A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+			cvar					"v_slice"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 618 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_gore
+			type					ITEM_TYPE_YESNO
+			text					@VISION_BLOOD
+			descText				@VISION_BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
+			cvar					"v_gore"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 670 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
 			name					vision_slider_v_sabertraillength
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_TRAIL_LENGTH
 			descText				@VISION_HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
 			cvarfloat				"v_saberTrailLength" 1 0 4
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 618 432 52
+			rect					782 722 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2499,7 +2537,7 @@
 			descText				@VISION_HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
 			cvarfloat				"v_saberCoreScale" 1 0.25 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 670 432 52
+			rect					782 774 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2518,7 +2556,7 @@
 			descText				@VISION_HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 			cvarfloat				"v_saberGlowScale" 1 0.25 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 722 432 52
+			rect					782 826 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2537,7 +2575,7 @@
 			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 			cvar					"tay_saberTeamColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 774 432 52
+			rect					782 878 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2556,7 +2594,7 @@
 			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 			cvar					"tay_saberStaffColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 826 432 52
+			rect					782 930 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2570,7 +2608,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					772 878 452 100
+			rect					772 982 452 100
 			visible					1
 			text					@VISION_WEAPONS
 			font					7
@@ -2597,7 +2635,7 @@
 			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
 			cvar					"tay_jk2Effects"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 978 432 52
+			rect					782 1082 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2617,7 +2655,7 @@
 			cvar					"tay_disruptorBeam"
 			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1030 432 52
+			rect					782 1134 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2636,7 +2674,7 @@
 			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
 			cvar					"v_scope"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1082 432 52
+			rect					782 1186 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2655,7 +2693,7 @@
 			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
 			cvar					"v_scopeWheelZoom"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1134 432 52
+			rect					782 1238 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2674,7 +2712,7 @@
 			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
 			cvarfloat				"v_motionThreshold" 40 10 200
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1186 432 52
+			rect					782 1290 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2693,7 +2731,7 @@
 			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
 			cvar					"v_binoculars"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1238 432 52
+			rect					782 1342 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2712,7 +2750,7 @@
 			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
 			cvar					"v_lockOn"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1290 432 52
+			rect					782 1394 432 52
 			page					3
 			scroll					1
 			row						1

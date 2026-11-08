@@ -797,6 +797,22 @@ REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
 LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
 LANG_SPANISH        "Hojas como luz 3D con el renderizador Vulkan, se detienen en las paredes y brillan sobre el golpe. Desactivado: la hoja plana del aspecto de arriba."
 
+REFERENCE           SLICE_BODIES
+LANG_ENGLISH        "Slice Bodies"
+LANG_SPANISH        "Cortar cuerpos"
+
+REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
+LANG_SPANISH        "Un golpe de sable mortal corta el cuerpo a lo largo del golpe, con un corte quemado que brilla. Necesita el renderizador Vulkan."
+
+REFERENCE           BLOOD
+LANG_ENGLISH        "Blood"
+LANG_SPANISH        "Sangre"
+
+REFERENCE           BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
+LANG_ENGLISH        "Blood runs out under a body that was cut. Off: the cut stays, without any blood."
+LANG_SPANISH        "Bajo un cuerpo cortado se extiende la sangre. Desactivado: el corte queda, sin sangre."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_SPANISH        "Longitud de la estela"

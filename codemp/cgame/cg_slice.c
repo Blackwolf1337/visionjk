@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the other part is a copy of the model in the pose of the moment that is thrown off along the swing, tips over and
 // comes to rest on the floor. Both are drawn cut by the plane (the renderer's ext.R_AddCutEntity, rd-vulkan-vision),
 // each once more with its back faces alone in a glowing colour (gfx/vision/slice/cut), which fills the opening: the
-// burnt cut face, white hot at first, fading through red to dark (the afterglow). With v_gore 1 blood runs out on
+// burnt cut face, orange hot at first, fading through red to dark (the afterglow). With v_gore 1 blood runs out on
 // the floor under the cut, a wet place of the kind WET_BLOOD (ext.R_AddWet). It all goes when the body goes.
 //
 // Only a VisionJK client on a renderer that cuts (v_cgameCutEntity) sees it; everyone else sees the stock death, and
@@ -282,14 +282,15 @@ static void CG_SliceBoltFrame( mdxaBone_t *m, vec3_t origin, vec3_t axis[3] ) {
 	BG_GiveMeVectorFromMatrix( m, POSITIVE_Z, axis[2] );
 }
 
-// the colour of the cut face: white hot, then orange, red, and dark (the afterglow)
+// The colour of the cut face: orange hot, then red, and dark (the afterglow). It started white hot, and a body cut
+// lengthwise shows a large face: the whole half looked on fire.
 static void CG_SliceGlow( const slice_t *s, byte *rgba ) {
 	static const float stops[5][4] = {
-		{ 0.00f, 255.0f, 235.0f, 190.0f },
-		{ 0.06f, 255.0f, 170.0f, 60.0f },
-		{ 0.25f, 230.0f, 70.0f, 10.0f },
-		{ 0.60f, 120.0f, 12.0f, 2.0f },
-		{ 1.00f, 40.0f, 4.0f, 2.0f },
+		{ 0.00f, 230.0f, 140.0f, 50.0f },
+		{ 0.08f, 210.0f, 90.0f, 20.0f },
+		{ 0.30f, 170.0f, 40.0f, 8.0f },
+		{ 0.65f, 90.0f, 10.0f, 2.0f },
+		{ 1.00f, 35.0f, 4.0f, 2.0f },
 	};
 	const float	age = Com_Clamp( 0.0f, 1.0f, (float)( cg.time - s->time ) / SLICE_GLOW_MSEC );
 	int			i;
