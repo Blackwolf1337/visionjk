@@ -1908,27 +1908,35 @@ static void VK_RT_PickLights( void ) {
 ===============
 VK_RT_PickLamps
 
-rows 255 + i (VK_RT_LAMP_ROW): the panel that casts the shadow of player i (shaders/rtshadow.frag GridShadow), where
-it is and the radius of its disk in w, 0 for none (his shadow goes along the light of the grid then).
+Rows 255 on (VK_RT_LAMP_ROW), four for each player i: the three panels that cast his shadow
+(shaders/rtshadow.frag GridShadow), where each is and the radius of its disk in w, then their shares of his light
+in x, y, z and the share of the direction of the grid in w.
 
 The levels keep no lights: what lit their lightmaps were mostly light entities that q3map2 left out, and a panel
 that glows may have given none. The light grid knows from where the light at a player came, but as an average of
-the cell. So of the panels the cell of the player sees (its list, shaders/rtcells.comp) the one that gives the
-most light from about that side casts his shadow from where it is: the shadow has the length a lamp gives and
-spreads under one above him. One whose direction is more than 80 degrees off the grid casts nothing (their choice
-2026-11-08: the panels checked by the grid; the grid has the average of all the lights, so a panel on one side of
-a room is often 60 degrees off it). The panel of the frame before is kept while it gives at least 70 per
-cent of the best one, so a shadow does not jump between two lamps.
+the cell. So of the panels the cell of the player sees (its list, shaders/rtcells.comp) those that give light from
+about that side cast his shadow from where they are, each by its share of the light they give him together: the
+shadows have the length a lamp gives and spread under one above him. One more than 80 degrees off the grid casts
+nothing (their choice 2026-11-08: the panels checked by the grid; the grid has the average of all the lights, so a
+panel on one side of a room is often 60 degrees off it). Where no panel fits, the grid casts it.
+
+The shares follow what the cell says over about 0.15 s, and a panel of the frames before stays in them by the
+light it gave him when the cell he stepped into does not list it (the next cell sees other panels first). One
+panel for all of the light made the shadow jump from lamp to lamp as he walked (2026-11-08).
 ===============
 */
-#define VK_RT_LAMP_ROW		( VK_RT_VEC4S - VK_RT_CASTERS )
+#define VK_RT_LAMP_ROWS		4
+#define VK_RT_LAMP_ROW		( VK_RT_VEC4S - VK_RT_CASTERS * VK_RT_LAMP_ROWS )
+#define VK_RT_LAMP_SHOWN	3		// panels a player casts from in the shader
+#define VK_RT_LAMP_KEPT		6		// panels he remembers with their shares
 
 // what a player had the frame before: found again by where he stands
 typedef struct vkLampMemory_s {
 	vec3_t	origin;
-	int		lamp;			// the patch, -1: none
-	float	light;			// how much light it gave him by the list of his cell
-	vec4_t	shown;			// where the shader was told it is, and the radius of its disk
+	int		count;
+	int		lamp[VK_RT_LAMP_KEPT];		// the patches
+	float	light[VK_RT_LAMP_KEPT];		// how much light each gave him by the list of his cell
+	float	share[VK_RT_LAMP_KEPT];		// its share of his light now
 } vkLampMemory_t;
 
 // how much a patch counts as the light of a player whose light the grid has from dir: its light where it lies on
@@ -1940,8 +1948,7 @@ static float VK_RT_LampScore( const vkPatch_t *patch, const vec3_t middle, const
 	if ( VectorNormalize( to ) < 1.0f || DotProduct( patch->normal, to ) > -0.05f ) {
 		return 0.0f;
 	}
-	// 1 within 60 degrees of the grid, 0 from 80 on: the grid has the average of the lights, and between two panels
-	// on facing walls it points up, 55 to 65 degrees from each (the hall of mp/ffa3)
+	// 1 within 60 degrees of the grid, 0 from 80 on
 	const float t = Com_Clamp( 0.0f, 1.0f, ( DotProduct( to, dir ) - 0.17f ) / ( 0.5f - 0.17f ) );
 	return light * t * t * ( 3.0f - 2.0f * t );
 }
@@ -1955,24 +1962,25 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 	const int				count = Q_min( rt.numCasters, VK_RT_CASTERS );
 	const qboolean			ready = (qboolean)( v_rtLamps->integer && !rt.maps && world && world->lightGridData && vk_patches
 		&& !vk_patches->empty() && vk_patchScale > 0.0f && rt.cellState == 0 && rt.cellLists.mapped );
-	// a light that moves to another panel gets there in about a tenth of a second
 	const float				dt = Com_Clamp( 0.0f, 0.25f, backEnd.refdef.floatTime - lastTime );
-	const float				follow = 1.0f - expf( -dt / 0.1f );
+	const float				follow = 1.0f - expf( -dt / 0.15f );
 
 	lastTime = backEnd.refdef.floatTime;
 	for ( int i = 0; i < count; i++ ) {
-		vkLampMemory_t		*me = &now[i];
-		const vkLampMemory_t *was = NULL;
-		vec3_t				middle, dir, g;
-		int					cell[3], best = -1;
-		float				bestScore = 0.0f, bestLight = 0.0f, previousScore = 0.0f, previousLight = 0.0f;
-		qboolean			listed = qfalse;
+		float					(*out)[4] = &rows[VK_RT_LAMP_ROW + i * VK_RT_LAMP_ROWS];
+		vkLampMemory_t			*me = &now[i];
+		const vkLampMemory_t	*was = NULL;
+		// what the cell says now: up to its list and the panels remembered, with their light and their score
+		int						candidate[VK_RT_CELL_LIST + VK_RT_LAMP_KEPT];
+		float					candidateLight[VK_RT_CELL_LIST + VK_RT_LAMP_KEPT], candidateScore[VK_RT_CELL_LIST + VK_RT_LAMP_KEPT];
+		int						numCandidates = 0;
+		vec3_t					middle, dir, g;
+		int						cell[3];
 
+		memset( out, 0, sizeof( float ) * 4 * VK_RT_LAMP_ROWS );
+		out[3][3] = 1.0f;		// all of it the grid
 		VectorCopy( rt.casters[i].origin, me->origin );
-		me->lamp = -1;
-		me->light = 0.0f;
-		VectorSet4( me->shown, 0.0f, 0.0f, 0.0f, 0.0f );
-		VectorSet4( rows[VK_RT_LAMP_ROW + i], 0.0f, 0.0f, 0.0f, 0.0f );
+		me->count = 0;
 		if ( !ready ) {
 			continue;
 		}
@@ -1993,54 +2001,116 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 			+ ( cell[0] + cell[1] * world->lightGridBounds[0] + cell[2] * world->lightGridBounds[0] * world->lightGridBounds[1] ) * VK_RT_LIST_WORDS;
 
 		for ( int k = 0; k < VK_RT_CELL_LIST; k++ ) {
-			const uint32_t	n = list[k];
-			float			light;
+			const uint32_t n = list[k];
 
 			if ( n >= (uint32_t)vk_patches->size() ) {
 				break;		// (all bits: the end of the list)
 			}
-			memcpy( &light, &list[VK_RT_CELL_LIST + k], sizeof( light ) );
-			const float score = VK_RT_LampScore( &( *vk_patches )[n], middle, dir, light );
-			if ( was && (int)n == was->lamp ) {
-				previousScore = score;
-				previousLight = light;
-				listed = qtrue;
-			}
-			if ( score > bestScore ) {
-				bestScore = score;
-				bestLight = light;
-				best = (int)n;
-			}
+			candidate[numCandidates] = (int)n;
+			memcpy( &candidateLight[numCandidates], &list[VK_RT_CELL_LIST + k], sizeof( float ) );
+			numCandidates++;
 		}
-		// The panel of the frame before stays while it gives at least 70 per cent of the best one, so a shadow does
-		// not jump between two lamps; also when the cell he stepped into does not list it (the next cell sees other
-		// panels first), by the light it gave him before.
-		if ( was && was->lamp >= 0 && !listed ) {
-			previousLight = was->light;
-			previousScore = VK_RT_LampScore( &( *vk_patches )[was->lamp], middle, dir, previousLight );
-		}
-		if ( was && was->lamp >= 0 && previousScore > 0.0f && previousScore >= bestScore * 0.7f ) {
-			best = was->lamp;
-			bestLight = previousLight;
-		}
-		if ( best < 0 ) {
-			continue;
-		}
-		const vkPatch_t *patch = &( *vk_patches )[best];
-		vec4_t target;
+		for ( int k = 0; was && k < was->count; k++ ) {
+			int c = 0;
 
-		VectorCopy( patch->origin, target );
-		target[3] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
-		if ( was && was->shown[3] > 0.0f ) {
-			for ( int k = 0; k < 4; k++ ) {
-				me->shown[k] = was->shown[k] + ( target[k] - was->shown[k] ) * follow;
+			while ( c < numCandidates && candidate[c] != was->lamp[k] ) {
+				c++;
 			}
-		} else {
-			VectorCopy4( target, me->shown );
+			if ( c == numCandidates ) {
+				candidate[numCandidates] = was->lamp[k];
+				candidateLight[numCandidates] = was->light[k];
+				numCandidates++;
+			}
 		}
-		me->lamp = best;
-		me->light = bestLight;
-		VectorCopy4( me->shown, rows[VK_RT_LAMP_ROW + i] );
+		// the shares the cell asks for: the three best by their score, of the light they give together; a panel only
+		// about on the side of the grid (its score below its light) leaves the grid the part it does not have
+		float total = 0.0f;
+		for ( int c = 0; c < numCandidates; c++ ) {
+			candidateScore[c] = VK_RT_LampScore( &( *vk_patches )[candidate[c]], middle, dir, candidateLight[c] );
+		}
+		for ( int pass = 0; pass < numCandidates; pass++ ) {
+			for ( int c = pass + 1; c < numCandidates; c++ ) {
+				if ( candidateScore[c] > candidateScore[pass] ) {
+					const int		n = candidate[c];
+					const float		l = candidateLight[c], sc = candidateScore[c];
+
+					candidate[c] = candidate[pass];
+					candidateLight[c] = candidateLight[pass];
+					candidateScore[c] = candidateScore[pass];
+					candidate[pass] = n;
+					candidateLight[pass] = l;
+					candidateScore[pass] = sc;
+				}
+			}
+		}
+		for ( int c = 0; c < numCandidates && c < VK_RT_LAMP_SHOWN; c++ ) {
+			if ( candidateScore[c] > 0.0f ) {
+				total += candidateLight[c];
+			}
+		}
+		// every panel of the frame before and of the cell moves its share towards that
+		for ( int c = 0; c < numCandidates; c++ ) {
+			const float target = ( c < VK_RT_LAMP_SHOWN && total > 0.0f ) ? candidateScore[c] / total : 0.0f;
+			float share = 0.0f;
+
+			for ( int k = 0; was && k < was->count; k++ ) {
+				if ( was->lamp[k] == candidate[c] ) {
+					share = was->share[k];
+					break;
+				}
+			}
+			share += ( target - share ) * follow;
+			if ( share < 0.01f && target <= 0.0f ) {
+				continue;	// faded out
+			}
+			// (kept by the largest shares)
+			int at = me->count;
+			if ( at == VK_RT_LAMP_KEPT ) {
+				at = 0;
+				for ( int k = 1; k < VK_RT_LAMP_KEPT; k++ ) {
+					if ( me->share[k] < me->share[at] ) {
+						at = k;
+					}
+				}
+				if ( me->share[at] >= share ) {
+					continue;
+				}
+			} else {
+				me->count++;
+			}
+			me->lamp[at] = candidate[c];
+			me->light[at] = candidateLight[c];
+			me->share[at] = share;
+		}
+		// the three largest go to the shader; what the others had stays with them, the grid has the rest
+		int order[VK_RT_LAMP_KEPT];
+		float all = 0.0f;
+		for ( int k = 0; k < me->count; k++ ) {
+			order[k] = k;
+			all += me->share[k];
+		}
+		for ( int a = 0; a < me->count; a++ ) {
+			for ( int b = a + 1; b < me->count; b++ ) {
+				if ( me->share[order[b]] > me->share[order[a]] ) {
+					const int t = order[a];
+					order[a] = order[b];
+					order[b] = t;
+				}
+			}
+		}
+		float shown = 0.0f;
+		for ( int k = 0; k < me->count && k < VK_RT_LAMP_SHOWN; k++ ) {
+			shown += me->share[order[k]];
+		}
+		const float scale = shown > 0.0f ? Q_min( all, 1.0f ) / shown : 0.0f;
+		for ( int k = 0; k < me->count && k < VK_RT_LAMP_SHOWN; k++ ) {
+			const vkPatch_t *patch = &( *vk_patches )[me->lamp[order[k]]];
+
+			VectorCopy( patch->origin, out[k] );
+			out[k][3] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
+			out[3][k] = me->share[order[k]] * scale;
+		}
+		out[3][3] = Com_Clamp( 0.0f, 1.0f, 1.0f - all );
 	}
 	memcpy( last, now, sizeof( vkLampMemory_t ) * count );
 	lastCount = count;

@@ -15,7 +15,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[271];
+	vec4	rt[319];
 } globals;
 layout( set = 1, binding = 4 ) uniform sampler2D u_atlas;	// the depth of the shadow maps
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel

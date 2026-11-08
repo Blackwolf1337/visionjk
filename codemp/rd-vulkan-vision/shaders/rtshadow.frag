@@ -18,8 +18,8 @@
 //      w the strength of the sun
 //   16-19 the view and projection of the frame before, 20 its eye, w 1 when the mask of that frame can be used
 //   21 x how many players follow, 22-37 each as a sphere: middle and radius
-//   255-270 the panel that casts the shadow of each player: where it is, w the radius of its disk, 0: none
-//      (VK_RT_PickLamps)
+//   255 on, four for each player (VK_RT_PickLamps): three panels that cast his shadow (where it is, w the radius of
+//      its disk), then their shares of his light in x, y, z and the share of the direction of the grid in w
 //
 // The mask of the frame before (set 3, the same pixels: the mask in red, how far the point was from the eye in green,
 // blue and alpha) is where this frame's rays are added to: the point seen in a pixel is looked up where it was then,
@@ -33,7 +33,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[271];
+	vec4	rt[319];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
@@ -53,6 +53,7 @@ layout( set = 3, binding = 0 ) uniform sampler2D u_history;	// the mask of the f
 
 #define W		globals.rt
 #define LAMPS	255
+#define LAMP_ROWS	4
 #define LIST	8
 #define NONE	0xffffffffu
 
@@ -151,15 +152,33 @@ bool NearCaster( vec3 origin, vec3 dir, float len, float tangent ) {
 	return false;
 }
 
-// 1 at the feet of player i (about 32 below the middle of his sphere), 0 from 160 units on, from 256 when a panel
-// casts his shadow (its length is real then)
+// 1 at the feet of player i (about 32 below the middle of his sphere), 0 from 160 units on, up to 256 as far as
+// panels cast his shadow (its length is real then)
 float FeetFade( vec3 p, int i ) {
-	return 1.0 - smoothstep( 48.0, W[LAMPS + i].w > 0.0 ? 256.0 : 160.0, distance( p, W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 ) ) );
+	float end = mix( 256.0, 160.0, W[LAMPS + i * LAMP_ROWS + 3].w );
+	return 1.0 - smoothstep( 48.0, end, distance( p, W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 ) ) );
 }
 
-// The shadows from the light of the grid, rays from origin. Each player has one light: the panel that glows on the
-// side the grid has his light from, where there is one (rows 255 on, VK_RT_PickLamps), from where it is, soft by its
-// size; else the grid at him, as his lighting has it (ent->lightDir). How dark is the strength of the grid there.
+// how much of the light from dir (up to len, a cone of tangent) player s takes from origin, 0 to 1, by rays
+// rays; 0 where the surface turns away from that light
+float TakenFrom( vec3 origin, vec3 normal, vec3 dir, float len, float tangent, vec4 s, int rays ) {
+	float facing = dot( normal, dir );
+
+	if ( facing <= 0.0 || !NearSphere( origin, dir, len, tangent, s ) ) {
+		return 0.0;
+	}
+	float blocked = 0.0;
+	for ( int k = 0; k < rays; k++ ) {
+		blocked += Blocked( origin, InCone( dir, tangent, uint( k ) ), len, 0x02u ) ? 1.0 : 0.0;
+	}
+	return blocked / float( rays ) * smoothstep( 0.0, 0.25, facing );
+}
+
+// The shadows from the light of the grid, rays from origin. A player's light is shared between up to three panels
+// that glow on the side the grid has his light from (rows 255 on, VK_RT_PickLamps), each casting a shadow of its
+// share from where it is, soft by its size, and the direction of the grid at him for the rest. One panel for all
+// of it made the shadow jump from lamp to lamp as he walked (2026-11-08); the shares change slowly. How dark all of
+// it is together is the strength of the grid there.
 // Not the grid at the point: its direction is an average of many lamps that changes from cell to cell, and a shadow
 // whose every pixel went its own way bent into hooks and ended in lines where the cells changed (2026-11-08, under
 // the lamps of mp/ffa3). It is dark at his feet and fades out within a few steps: a long shadow along an averaged
@@ -177,34 +196,31 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 		float ambient, directed;
 		vec3 gridDir;
 		GridAt( s.xyz, ambient, directed, gridDir );
-		if ( dot( gridDir, gridDir ) < 1e-4 ) {
-			continue;
-		}
-		vec3 light = normalize( gridDir );
-		// how much of his light comes from that direction, 0 to 1
+		// how much of his light comes from one side, 0 to 1
 		float ratio = directed / ( ambient + directed + 1.0 );
-		// the cone: wide where the light is mostly ambient, as narrow as v_rtLightSize says where most of it comes
-		// from one side
-		float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
-		float len = reach;
-		vec4 lamp = W[LAMPS + i];
-		if ( lamp.w > 0.0 ) {
-			// towards the panel from this point, the cone its disk, the rays end before it
+		vec4 shares = W[LAMPS + i * LAMP_ROWS + 3];
+		float taken = 0.0;
+		// the share of the grid: its direction, the cone wide where the light is mostly ambient, as narrow as
+		// v_rtLightSize says where most of it comes from one side
+		if ( shares.w > 0.01 && dot( gridDir, gridDir ) > 1e-4 ) {
+			float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
+			taken += shares.w * TakenFrom( origin, normal, normalize( gridDir ), reach, tangent, s,
+				max( 1, int( ceil( float( rays ) * shares.w ) ) ) );
+		}
+		// the panels: towards each from this point, the cone its disk, the rays end before it (fewer rays for a small
+		// share, the frames before add up the rest)
+		for ( int k = 0; k < 3; k++ ) {
+			float share = shares[k];
+			if ( share <= 0.01 ) {
+				continue;
+			}
+			vec4 lamp = W[LAMPS + i * LAMP_ROWS + k];
 			vec3 to = lamp.xyz - origin;
 			float d = max( length( to ), 1.0 );
-			light = to / d;
-			tangent = clamp( lamp.w / d, 0.01, 0.5 );
-			len = min( max( d - lamp.w, 1.0 ), reach );
+			taken += share * TakenFrom( origin, normal, to / d, min( max( d - lamp.w, 1.0 ), reach ), clamp( lamp.w / d, 0.01, 0.5 ), s,
+				max( 1, int( ceil( float( rays ) * share ) ) ) );
 		}
-		float facing = dot( normal, light );
-		if ( facing <= 0.0 || !NearSphere( origin, light, len, tangent, s ) ) {
-			continue;
-		}
-		float blocked = 0.0;
-		for ( int k = 0; k < rays; k++ ) {
-			blocked += Blocked( origin, InCone( light, tangent, uint( k ) ), len, 0x02u ) ? 1.0 : 0.0;
-		}
-		dark = max( dark, min( ratio, 0.85 ) * blocked / float( rays ) * smoothstep( 0.0, 0.25, facing ) * fade );
+		dark = max( dark, min( ratio, 0.85 ) * taken * fade );
 	}
 	return dark;
 }
