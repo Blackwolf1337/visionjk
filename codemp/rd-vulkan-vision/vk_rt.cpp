@@ -63,8 +63,14 @@ static const uint32_t vk_rtShadowFrag[] =
 static const uint32_t vk_rtResolveFrag[] =
 #include "shaders/rtresolve_frag.inc"
 ;
-static const uint32_t vk_rtLightsFrag[] =
-#include "shaders/rtlights_frag.inc"
+static const uint32_t vk_smDepthVert[] =
+#include "shaders/smdepth_vert.inc"
+;
+static const uint32_t vk_smShadowFrag[] =
+#include "shaders/smshadow_frag.inc"
+;
+static const uint32_t vk_smLightsFrag[] =
+#include "shaders/smlights_frag.inc"
 ;
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
@@ -77,6 +83,14 @@ static const uint32_t vk_rtCellsComp[] =
 #define VK_RT_LOCAL_INDEXES			( 1024 * 1024 )	// the triangles of the model surfaces they have, counted in the surface
 #define VK_RT_CASTER_BYTES			( 32 << 20 )	// their acceleration structures in one frame
 #define VK_RT_ACCEL_ALIGN			256				// where an acceleration structure may begin in its buffer
+
+// the shadow maps of a device without ray tracing: tiles of one atlas, one for each caster (in the light of the grid
+// at his feet) and six for each of the two moving lights (a cube)
+#define VK_SM_TILE					256
+#define VK_SM_COLUMNS				8
+#define VK_SM_TILES					( VK_RT_MAX_CASTERS + 12 )
+#define VK_SM_ROWS					( ( VK_SM_TILES + VK_SM_COLUMNS - 1 ) / VK_SM_COLUMNS )
+#define VK_SM_FIRST_ROW				47				// of the rt globals: four a tile, its view and projection
 
 cvar_t	*v_rtDebug;
 static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
@@ -175,7 +189,8 @@ static struct {
 	VkPipeline					shadowPipeline, resolvePipeline;
 	int							frameNumber;	// the noise of the rays changes with it
 
-	// The shadows of the players from the moving lights (shaders/rtlights.frag): for the two strongest lights near
+	// The shadows of the players from the moving lights (shaders/smlights.frag, from the cubes of the shadow maps on
+	// both ways): for the two strongest lights near
 	// a player, how much the players take of each at every pixel, red and green. Made after the solid part of the
 	// level, so the light passes of the NEXT frame read it (generic.frag DynamicLight), through the texture table
 	// (tr.rtLightImage), at the place the point had in the view it was made in. One mask is written while the
@@ -187,9 +202,33 @@ static struct {
 	vkRtLight_t					readLights[2];	// the lights of the mask the light passes read now
 	float						readView[5][4];	// the view and projection it was made with, its rect on the target
 	qboolean					readValid;
-	VkShaderModule				lightsFragment;
-	VkPipeline					lightsPipeline;
+
+	// A device without ray tracing (or v_rayTracing 0): the same masks from shadow maps of the players, drawn from
+	// the skinned positions into an atlas (VK_SM_*), read by shaders/smshadow.frag and smlights.frag in place of the
+	// rays. The level casts nothing there: its shadows are in the lightmaps.
+	qboolean					maps;
+	vkTarget_t					atlas;
+	VkPipelineLayout			depthLayout;
+	VkPipeline					depthPipeline;
+	VkShaderModule				depthVertex;
+	VkShaderModule				smShadowFragment, smLightsFragment;
+	VkPipeline					smShadowPipeline, smLightsPipeline;
 } rt;
+
+static void VK_SM_Create( void );
+
+// a combined image sampler into binding of a set
+static void VK_WriteSetBinding( VkDescriptorSet set, uint32_t binding, VkSampler sampler, VkImageView view, VkImageLayout layout ) {
+	VkDescriptorImageInfo	image = { sampler, view, layout };
+	VkWriteDescriptorSet	write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+	write.dstSet = set;
+	write.dstBinding = binding;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write.pImageInfo = &image;
+	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+}
 
 static VkDeviceAddress VK_RT_Address( const vkBuffer_t *buf ) {
 	VkBufferDeviceAddressInfo info = { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
@@ -747,6 +786,9 @@ static void VK_RT_PrepareLevel( void ) {
 	rt.world = tr.world;
 	rt.levelScratch = 0;
 	rt.previousValid = qfalse;
+	if ( rt.maps ) {
+		return;		// the shadow maps need the light grid of the level alone
+	}
 	vk_patches->clear();
 
 	VK_RT_LevelTriangles( positions, indexes );
@@ -1036,6 +1078,14 @@ static VkDeviceSize VK_RT_PrepareCasters( void ) {
 			continue;
 		}
 		vk_numParts[kept] = n;
+		if ( rt.maps ) {
+			// the shadow maps draw the parts as they are, nothing is built
+			if ( kept != c ) {
+				rt.casters[kept] = *caster;
+			}
+			kept++;
+			continue;
+		}
 		VK_RT_CasterBuildInfo( kept );
 		qvkGetAccelerationStructureBuildSizesKHR( vk.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vk_casterBuild[kept],
 			counts, &sizes );
@@ -1095,9 +1145,14 @@ static void VK_RT_SkinCasters( VkCommandBuffer cmd ) {
 			qvkCmdDispatch( cmd, ( part->numVertexes + 63 ) / 64, 1, 1 );
 		}
 	}
-	// the builds read the positions
-	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
-		VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_SHADER_READ_BIT );
+	// the builds read the positions, or the shadow maps draw them
+	if ( rt.maps ) {
+		VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+			VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT );
+	} else {
+		VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT,
+			VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_SHADER_READ_BIT );
+	}
 }
 
 static void VK_RT_RecordCasters( VkCommandBuffer cmd ) {
@@ -1222,8 +1277,9 @@ static void VK_RT_CreateTop( void ) {
 }
 
 static void VK_RT_CreateCasters( void ) {
-	const VkBufferUsageFlags		input = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
-		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	// (the shadow maps draw the positions with the triangles of localIndexes)
+	const VkBufferUsageFlags		input = ( rt.maps ? 0 : VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR )
+		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	VkPushConstantRange				push;
 	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
@@ -1232,8 +1288,10 @@ static void VK_RT_CreateCasters( void ) {
 	VK_CreateBuffer( &rt.localIndexes, sizeof( uint32_t ) * VK_RT_LOCAL_INDEXES, input, qtrue );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		VK_CreateBuffer( &rt.skinned[i], sizeof( float ) * 3 * VK_RT_SKIN_VERTEXES, input | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qfalse );
-		VK_CreateBuffer( &rt.arena[i], VK_RT_CASTER_BYTES, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
-			| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qfalse );
+		if ( !rt.maps ) {
+			VK_CreateBuffer( &rt.arena[i], VK_RT_CASTER_BYTES, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
+				| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qfalse );
+		}
 	}
 
 	// shaders/rtskin.comp finds everything by its address, the push constants hold them
@@ -1279,7 +1337,7 @@ static void VK_RT_CreateLights( void ) {
 }
 
 static void VK_RT_CreateLayouts( void ) {
-	VkDescriptorSetLayoutBinding			bindings[4];
+	VkDescriptorSetLayoutBinding			bindings[5];
 	VkDescriptorSetLayoutCreateInfo			setInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	VkDescriptorPoolSize					sizes[3];
 	VkDescriptorPoolCreateInfo				pool = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -1289,7 +1347,8 @@ static void VK_RT_CreateLayouts( void ) {
 	// the globals of the frame, the top level and what the level has, the depth of the scene, the mask before
 	VkDescriptorSetLayout					passSets[4];
 
-	// the top level, the light grid, the light patches of the level and the lists of the cells
+	// the top level, the light grid, the light patches of the level and the lists of the cells; with the shadow maps
+	// the light grid and the atlas in binding 4
 	memset( bindings, 0, sizeof( bindings ) );
 	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	bindings[0].descriptorCount = 1;
@@ -1302,19 +1361,38 @@ static void VK_RT_CreateLayouts( void ) {
 	bindings[2].binding = 2;
 	bindings[3] = bindings[1];
 	bindings[3].binding = 3;
-	setInfo.bindingCount = 4;
+	if ( rt.maps ) {
+		bindings[0] = bindings[1];
+		bindings[1].binding = 4;
+		bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		setInfo.bindingCount = 2;
+	} else {
+		// (the atlas of the shadow maps, which the shadows from the moving lights read on both ways)
+		bindings[4] = bindings[1];
+		bindings[4].binding = 4;
+		bindings[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		setInfo.bindingCount = 5;
+	}
 	setInfo.pBindings = bindings;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &setInfo, NULL, &rt.setLayout ) );
 
 	// those for each frame, and the shadow mask as a texture
-	sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-	sizes[0].descriptorCount = VK_FRAMES;
-	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	sizes[1].descriptorCount = VK_FRAMES * 3;
-	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	sizes[2].descriptorCount = 2;
+	if ( rt.maps ) {
+		sizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		sizes[0].descriptorCount = VK_FRAMES;
+		sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		sizes[1].descriptorCount = VK_FRAMES + 2;
+		pool.poolSizeCount = 2;
+	} else {
+		sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		sizes[0].descriptorCount = VK_FRAMES;
+		sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		sizes[1].descriptorCount = VK_FRAMES * 3;
+		sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		sizes[2].descriptorCount = VK_FRAMES + 2;
+		pool.poolSizeCount = 3;
+	}
 	pool.maxSets = VK_FRAMES + 2;
-	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &rt.pool ) );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
@@ -1349,15 +1427,26 @@ void VK_RT_Init( void ) {
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
 	memset( &rt, 0, sizeof( rt ) );
-	if ( !vk.rayTracing || !vk.depthReadable ) {
+	// the players are skinned by their addresses on both ways; without ray tracing they cast their shadows from shadow
+	// maps (VK_SM_*)
+	if ( !vk.depthReadable || !vk.deviceAddress ) {
+		return;
+	}
+	rt.maps = (qboolean)!vk.rayTracing;
+	VK_RT_CreateLayouts();
+	VK_RT_CreateCasters();
+	rt.resolveFragment = VK_CreateShader( vk_rtResolveFrag, sizeof( vk_rtResolveFrag ) );
+	rt.resolvePipeline = VK_CreatePipeline( vk.postVertexShader, rt.resolveFragment, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO, 8, VKP_GENERIC );
+	// the shadow maps: the shadows from the moving lights on both ways (rays to them cost over a millisecond with a
+	// saber in the hand, the cube of a light 0.03 ms), everything without ray tracing
+	VK_SM_Create();
+	if ( rt.maps ) {
 		return;
 	}
 	qvkGetPhysicalDeviceProperties2( vk.physicalDevice, &props );
 	rt.scratchAlign = accel.minAccelerationStructureScratchOffsetAlignment ? accel.minAccelerationStructureScratchOffsetAlignment : 1;
 
-	VK_RT_CreateLayouts();
 	VK_RT_CreateTop();
-	VK_RT_CreateCasters();
 	VK_RT_CreateLights();
 	rt.debugFragment = VK_CreateShader( vk_rtDebugFrag, sizeof( vk_rtDebugFrag ) );
 	// (8: over the level with the samples of the frame, nothing from a vertex buffer)
@@ -1366,12 +1455,7 @@ void VK_RT_Init( void ) {
 	// the mask: a pass into a target of its own (7: one sample, nothing blended); laid on by the depth with the sets
 	// of the screen effects (8), multiplied into the frame
 	rt.shadowFragment = VK_CreateShader( vk_rtShadowFrag, sizeof( vk_rtShadowFrag ) );
-	rt.resolveFragment = VK_CreateShader( vk_rtResolveFrag, sizeof( vk_rtResolveFrag ) );
 	rt.shadowPipeline = VK_CreatePipeline( vk.postVertexShader, rt.shadowFragment, 0, 7, VKP_GENERIC, rt.layout );
-	rt.resolvePipeline = VK_CreatePipeline( vk.postVertexShader, rt.resolveFragment, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO, 8, VKP_GENERIC );
-	// the shadows from the moving lights: a pass into a target of its own as the mask
-	rt.lightsFragment = VK_CreateShader( vk_rtLightsFrag, sizeof( vk_rtLightsFrag ) );
-	rt.lightsPipeline = VK_CreatePipeline( vk.postVertexShader, rt.lightsFragment, 0, 7, VKP_GENERIC, rt.layout );
 }
 
 // the two shadow masks in the size of the frame, made again when that changes (only while no frame is on its way);
@@ -1411,13 +1495,20 @@ void VK_RT_Shutdown( void ) {
 	VK_DestroyTarget( &rt.mask[1] );
 	VK_DestroyTarget( &rt.lightMask[0] );
 	VK_DestroyTarget( &rt.lightMask[1] );
-	qvkDestroyPipeline( vk.device, rt.lightsPipeline, NULL );
-	qvkDestroyShaderModule( vk.device, rt.lightsFragment, NULL );
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
 	qvkDestroyPipelineLayout( vk.device, rt.cellsLayout, NULL );
 	delete vk_patches;
+	vk_patches = NULL;
+	VK_DestroyTarget( &rt.atlas );
+	qvkDestroyPipeline( vk.device, rt.depthPipeline, NULL );
+	qvkDestroyPipeline( vk.device, rt.smShadowPipeline, NULL );
+	qvkDestroyPipeline( vk.device, rt.smLightsPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.depthVertex, NULL );
+	qvkDestroyShaderModule( vk.device, rt.smShadowFragment, NULL );
+	qvkDestroyShaderModule( vk.device, rt.smLightsFragment, NULL );
+	qvkDestroyPipelineLayout( vk.device, rt.depthLayout, NULL );
 	qvkDestroyPipeline( vk.device, rt.skinPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.skinShader, NULL );
 	qvkDestroyPipelineLayout( vk.device, rt.skinLayout, NULL );
@@ -1440,6 +1531,266 @@ void VK_RT_Shutdown( void ) {
 	qvkDestroyDescriptorPool( vk.device, rt.pool, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, rt.setLayout, NULL );
 	memset( &rt, 0, sizeof( rt ) );
+}
+
+
+/*
+===============================================================================
+
+THE SHADOW MAPS (a device without ray tracing)
+
+The players are drawn from their skinned positions (VK_RT_SkinCasters) into tiles of one depth atlas: each into a
+tile of his own, seen along the light of the grid at his feet (the direction that lit his model, ent->lightDir), and
+all near the two moving lights of VK_RT_PickLights into the six tiles of a cube around each. The views of the tiles
+go to the shaders in the rt globals from row VK_SM_FIRST_ROW, four a tile. shaders/smshadow.frag and smlights.frag
+look the points of the view up in them and write the same masks the rays write.
+
+===============================================================================
+*/
+
+// m = a * b, 4 x 4, the columns one after the other
+static void VK_SM_Multiply( const float *a, const float *b, float *m ) {
+	for ( int c = 0; c < 4; c++ ) {
+		for ( int r = 0; r < 4; r++ ) {
+			m[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
+		}
+	}
+}
+
+// the matrix whose rows are the four given (a row: xyz and the constant)
+static void VK_SM_FromRows( const float *r0, const float *r1, const float *r2, const float *r3, float *m ) {
+	const float *rows[4] = { r0, r1, r2, r3 };
+
+	for ( int r = 0; r < 4; r++ ) {
+		for ( int c = 0; c < 4; c++ ) {
+			m[c * 4 + r] = rows[r][c];
+		}
+	}
+}
+
+#define VK_SM_EXTENT	80.0f		// half the width of the tile of a player, in units
+#define VK_SM_DEPTH		640.0f		// how far before and behind him it reaches along the light
+
+// the tile of a player: looking along the light that comes from dir (towards the light), around center
+static void VK_SM_PlayerView( const vec3_t center, const vec3_t dir, float *m ) {
+	vec3_t	f, r, u;
+	float	r0[4], r1[4], r2[4], r3[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	VectorNegate( dir, f );
+	VectorNormalize( f );
+	PerpendicularVector( r, f );
+	CrossProduct( r, f, u );
+	VectorScale( r, 1.0f / VK_SM_EXTENT, r0 );
+	r0[3] = -DotProduct( center, r ) / VK_SM_EXTENT;
+	VectorScale( u, 1.0f / VK_SM_EXTENT, r1 );
+	r1[3] = -DotProduct( center, u ) / VK_SM_EXTENT;
+	// the depth 0 to 1 from VK_SM_DEPTH before him to as far behind
+	VectorScale( f, 0.5f / VK_SM_DEPTH, r2 );
+	r2[3] = ( -DotProduct( center, f ) + VK_SM_DEPTH ) * 0.5f / VK_SM_DEPTH;
+	VK_SM_FromRows( r0, r1, r2, r3, m );
+}
+
+// face of a cube around center (0 +x, 1 -x, 2 +y, 3 -y, 4 +z, 5 -z, as smlights.frag picks them), 90 degrees
+static void VK_SM_FaceView( const vec3_t center, int face, float zFar, float *m ) {
+	const float	zNear = 4.0f;
+	const float	a = zFar / ( zFar - zNear ), b = -zFar * zNear / ( zFar - zNear );
+	vec3_t		f = { 0.0f, 0.0f, 0.0f }, r, u;
+	float		r0[4], r1[4], r2[4], r3[4];
+
+	f[face >> 1] = ( face & 1 ) ? -1.0f : 1.0f;
+	PerpendicularVector( r, f );
+	CrossProduct( r, f, u );
+	VectorCopy( r, r0 );
+	r0[3] = -DotProduct( center, r );
+	VectorCopy( u, r1 );
+	r1[3] = -DotProduct( center, u );
+	VectorScale( f, a, r2 );
+	r2[3] = -DotProduct( center, f ) * a + b;
+	VectorCopy( f, r3 );
+	r3[3] = -DotProduct( center, f );
+	VK_SM_FromRows( r0, r1, r2, r3, m );
+}
+
+// the place of an entity: its axes and origin, from its space into the world
+static void VK_SM_Model( const vkCaster_t *caster, float *m ) {
+	for ( int c = 0; c < 3; c++ ) {
+		VectorCopy( caster->axis[c], m + c * 4 );
+		m[c * 4 + 3] = 0.0f;
+	}
+	VectorCopy( caster->origin, m + 12 );
+	m[15] = 1.0f;
+}
+
+static void VK_SM_Create( void ) {
+	VkPushConstantRange								push = { VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( float ) * 16 };
+	VkPipelineLayoutCreateInfo						layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkPipelineShaderStageCreateInfo					stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+	VkVertexInputBindingDescription					binding = { 0, sizeof( float ) * 3, VK_VERTEX_INPUT_RATE_VERTEX };
+	VkVertexInputAttributeDescription				attribute = { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
+	VkPipelineVertexInputStateCreateInfo			input = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+	VkPipelineInputAssemblyStateCreateInfo			assembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+	VkPipelineViewportStateCreateInfo				viewport = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+	VkPipelineRasterizationStateCreateInfo			raster = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+	VkPipelineMultisampleStateCreateInfo			multisample = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+	VkPipelineDepthStencilStateCreateInfo			depth = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+	VkPipelineColorBlendStateCreateInfo				blend = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+	const VkDynamicState							dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	VkPipelineDynamicStateCreateInfo				dynamic = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+	VkPipelineRenderingCreateInfo					rendering = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+	VkGraphicsPipelineCreateInfo					info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
+
+	VK_CreateTarget( &rt.atlas, VK_SM_COLUMNS * VK_SM_TILE, VK_SM_ROWS * VK_SM_TILE, VK_FORMAT_D32_SFLOAT,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_DEPTH_BIT, VK_SAMPLE_COUNT_1_BIT );
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VK_WriteSetBinding( rt.sets[i], 4, vk.postSampler, rt.atlas.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	}
+
+	// the depth of the players, nothing else: one vertex stream of positions, no fragment shader
+	layout.pushConstantRangeCount = 1;
+	layout.pPushConstantRanges = &push;
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.depthLayout ) );
+	rt.depthVertex = VK_CreateShader( vk_smDepthVert, sizeof( vk_smDepthVert ) );
+	stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	stage.module = rt.depthVertex;
+	stage.pName = "main";
+	input.vertexBindingDescriptionCount = 1;
+	input.pVertexBindingDescriptions = &binding;
+	input.vertexAttributeDescriptionCount = 1;
+	input.pVertexAttributeDescriptions = &attribute;
+	assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	viewport.viewportCount = viewport.scissorCount = 1;
+	raster.polygonMode = VK_POLYGON_MODE_FILL;
+	raster.cullMode = VK_CULL_MODE_NONE;
+	raster.lineWidth = 1.0f;
+	// (against the stripes of a surface that shadows itself)
+	raster.depthBiasEnable = VK_TRUE;
+	raster.depthBiasConstantFactor = 2.0f;
+	raster.depthBiasSlopeFactor = 2.0f;
+	multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	depth.depthTestEnable = depth.depthWriteEnable = VK_TRUE;
+	depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	dynamic.dynamicStateCount = 2;
+	dynamic.pDynamicStates = dynamicStates;
+	rendering.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
+	info.stageCount = 1;
+	info.pStages = &stage;
+	info.pVertexInputState = &input;
+	info.pInputAssemblyState = &assembly;
+	info.pViewportState = &viewport;
+	info.pRasterizationState = &raster;
+	info.pMultisampleState = &multisample;
+	info.pDepthStencilState = &depth;
+	info.pColorBlendState = &blend;
+	info.pDynamicState = &dynamic;
+	info.layout = rt.depthLayout;
+	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.depthPipeline ) );
+
+	// the masks from the atlas, as the rays write them
+	rt.smShadowFragment = VK_CreateShader( vk_smShadowFrag, sizeof( vk_smShadowFrag ) );
+	rt.smShadowPipeline = VK_CreatePipeline( vk.postVertexShader, rt.smShadowFragment, 0, 7, VKP_GENERIC, rt.layout );
+	rt.smLightsFragment = VK_CreateShader( vk_smLightsFrag, sizeof( vk_smLightsFrag ) );
+	rt.smLightsPipeline = VK_CreatePipeline( vk.postVertexShader, rt.smLightsFragment, 0, 7, VKP_GENERIC, rt.layout );
+}
+
+// the parts of caster c into the tile that is set up, with the view m of that tile
+static void VK_SM_DrawCaster( VkCommandBuffer cmd, int c, const float *view ) {
+	float model[16], mvp[16];
+
+	VK_SM_Model( &rt.casters[c], model );
+	VK_SM_Multiply( view, model, mvp );
+	qvkCmdPushConstants( cmd, rt.depthLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( mvp ), mvp );
+	for ( int i = 0; i < vk_numParts[c]; i++ ) {
+		const vkCasterPart_t *part = &vk_parts[c][i];
+
+		qvkCmdDrawIndexed( cmd, part->numTriangles * 3, 1, part->localFirst, (int32_t)part->skinned, 0 );
+	}
+}
+
+static void VK_SM_Tile( VkCommandBuffer cmd, int tile ) {
+	const VkViewport	viewport = { (float)( ( tile % VK_SM_COLUMNS ) * VK_SM_TILE ), (float)( ( tile / VK_SM_COLUMNS ) * VK_SM_TILE ),
+		(float)VK_SM_TILE, (float)VK_SM_TILE, 0.0f, 1.0f };
+	const VkRect2D		scissor = { { ( tile % VK_SM_COLUMNS ) * VK_SM_TILE, ( tile / VK_SM_COLUMNS ) * VK_SM_TILE }, { VK_SM_TILE, VK_SM_TILE } };
+
+	qvkCmdSetViewport( cmd, 0, 1, &viewport );
+	qvkCmdSetScissor( cmd, 0, 1, &scissor );
+}
+
+/*
+===============
+VK_SM_DrawAtlas
+
+The players of this frame into the atlas, the views of the tiles into rows (the rt globals of the frame). After
+VK_RT_SkinCasters and VK_RT_PickLights. No target is begun before and after.
+===============
+*/
+static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
+	VkRenderingAttachmentInfo	depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	VkRenderingInfo				info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
+	const VkDeviceSize			zero = 0;
+	float						view[16];
+
+	VK_TargetLayout( cmd, &rt.atlas, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	depthInfo.imageView = rt.atlas.view;
+	depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depthInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depthInfo.clearValue.depthStencil.depth = 1.0f;
+	info.renderArea.extent.width = (uint32_t)rt.atlas.width;
+	info.renderArea.extent.height = (uint32_t)rt.atlas.height;
+	info.layerCount = 1;
+	info.pDepthAttachment = &depthInfo;
+	qvkCmdBeginRendering( cmd, &info );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.depthPipeline );
+	vk.boundPipeline = rt.depthPipeline;
+	qvkCmdBindVertexBuffers( cmd, 0, 1, &rt.skinned[vk.frameIndex].buffer, &zero );
+	qvkCmdBindIndexBuffer( cmd, rt.localIndexes.buffer, 0, VK_INDEX_TYPE_UINT32 );
+	vk.boundVertexBuffer = vk.boundIndexBuffer = VK_NULL_HANDLE;
+
+	// each player in the light of the grid at his feet
+	for ( int c = 0; c < rt.numCasters; c++ ) {
+		const trRefEntity_t	*ent = &backEnd.refdef.entities[rt.casters[c].entityNum];
+		vec3_t				center, dir;
+
+		VectorCopy( rt.casters[c].origin, center );
+		center[2] += 8.0f;
+		// (ent->lightDir is in the space of the entity, as R_SetupEntityLighting leaves it: back into the world)
+		VectorScale( ent->e.axis[0], ent->lightDir[0], dir );
+		VectorMA( dir, ent->lightDir[1], ent->e.axis[1], dir );
+		VectorMA( dir, ent->lightDir[2], ent->e.axis[2], dir );
+		if ( VectorNormalize( dir ) < 0.001f ) {
+			VectorSet( dir, 0.0f, 0.0f, 1.0f );
+		}
+		VK_SM_PlayerView( center, dir, view );
+		memcpy( rows[VK_SM_FIRST_ROW + c * 4], view, sizeof( view ) );
+		VK_SM_Tile( cmd, c );
+		VK_SM_DrawCaster( cmd, c, view );
+	}
+	// every player that a moving light reaches into the cube around it
+	for ( int k = 0; k < 2; k++ ) {
+		const vkRtLight_t *light = &rt.lights[k];
+		vec3_t center;
+
+		if ( !light->active ) {
+			continue;
+		}
+		VectorAdd( light->start, light->end, center );
+		VectorScale( center, 0.5f, center );
+		const float zFar = light->range + 0.5f * Distance( light->start, light->end ) + 64.0f;
+		for ( int face = 0; face < 6; face++ ) {
+			const int tile = VK_RT_MAX_CASTERS + k * 6 + face;
+
+			VK_SM_FaceView( center, face, zFar, view );
+			memcpy( rows[VK_SM_FIRST_ROW + tile * 4], view, sizeof( view ) );
+			VK_SM_Tile( cmd, tile );
+			for ( int c = 0; c < rt.numCasters; c++ ) {
+				if ( Distance( rt.casters[c].origin, center ) < zFar ) {
+					VK_SM_DrawCaster( cmd, c, view );
+				}
+			}
+		}
+	}
+	qvkCmdEndRendering( cmd );
+	VK_TargetLayout( cmd, &rt.atlas, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
 /*
@@ -1539,6 +1890,10 @@ int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
 	return 0;
 }
 
+qboolean VK_RT_Ready( void ) {
+	return (qboolean)( rt.layout != VK_NULL_HANDLE );
+}
+
 // the view of the level asks for a pass that traces
 qboolean VK_RT_Wanted( void ) {
 	return (qboolean)( rt.layout && tr.world && ( v_rtDebug->integer > 0 || v_rtShadows->integer ) );
@@ -1570,24 +1925,29 @@ void VK_RT_Pass( void ) {
 	}
 	casterScratch = VK_RT_PrepareCasters();
 	VK_RT_EnsureMask();
-	VK_RT_EnsureScratch( Q_max( Q_max( rt.levelPending ? rt.levelScratch : 0, casterScratch ), rt.topScratch ) );
-	// the frame that traced the cells is done when its place comes round again
-	if ( rt.cellState == 2 && rt.cellFrame == vk.frameIndex ) {
-		VK_RT_FitPatches();
-		rt.cellState = 0;
-	}
+	if ( rt.maps ) {
+		// the shadow maps draw the skinned players, nothing is built
+		VK_RT_SkinCasters( cmd );
+	} else {
+		VK_RT_EnsureScratch( Q_max( Q_max( rt.levelPending ? rt.levelScratch : 0, casterScratch ), rt.topScratch ) );
+		// the frame that traced the cells is done when its place comes round again
+		if ( rt.cellState == 2 && rt.cellFrame == vk.frameIndex ) {
+			VK_RT_FitPatches();
+			rt.cellState = 0;
+		}
 
-	// the builds of the frame before may still use the scratch memory
-	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
-		VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR );
-	if ( rt.levelPending ) {
-		VK_RT_RecordLevel( cmd );
-	}
-	VK_RT_SkinCasters( cmd );
-	VK_RT_RecordCasters( cmd );
-	VK_RT_RecordTop( cmd );
-	if ( rt.cellState == 1 && rt.levelReady ) {
-		VK_RT_TraceCells( cmd );
+		// the builds of the frame before may still use the scratch memory
+		VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+			VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR );
+		if ( rt.levelPending ) {
+			VK_RT_RecordLevel( cmd );
+		}
+		VK_RT_SkinCasters( cmd );
+		VK_RT_RecordCasters( cmd );
+		VK_RT_RecordTop( cmd );
+		if ( rt.cellState == 1 && rt.levelReady ) {
+			VK_RT_TraceCells( cmd );
+		}
 	}
 	VK_GpuMark( "rt builds" );
 
@@ -1632,10 +1992,19 @@ void VK_RT_Pass( void ) {
 	// the view of the frame before, to find the points of this one in its mask
 	memcpy( rows[16], rt.previous, sizeof( rt.previous ) );
 	rows[20][3] = rt.previousValid ? 1.0f : 0.0f;
+	if ( rt.maps ) {
+		// The shadow maps know the players alone, not whether the level hides the sun from a point: the sun would
+		// darken the shade of the walls too. They take the light of the grid everywhere (smshadow.frag).
+		rows[11][3] = 0.0f;
+	}
+	if ( rt.numCasters ) {
+		VK_SM_DrawAtlas( cmd, rows );
+		VK_GpuMark( "shadow maps" );
+	}
 	globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	memcpy( globals->rt, rows, sizeof( globals->rt ) );
 
-	if ( v_rtDebug->integer > 0 ) {
+	if ( v_rtDebug->integer > 0 && !rt.maps ) {
 		const VkDescriptorSet sets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
 
 		VK_BeginOverLevel( cmd );
@@ -1658,8 +2027,8 @@ void VK_RT_Pass( void ) {
 		// be in the layout for reading first (the validation layer: the set of the depth expects it)
 		VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );
-		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.shadowPipeline );
-		vk.boundPipeline = rt.shadowPipeline;
+		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.maps ? rt.smShadowPipeline : rt.shadowPipeline );
+		vk.boundPipeline = rt.maps ? rt.smShadowPipeline : rt.shadowPipeline;
 		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 0, NULL );
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
@@ -1674,8 +2043,8 @@ void VK_RT_Pass( void ) {
 			const int				slot = (int)tr.rtLightImage[rt.lightWrite]->texnum;
 
 			VK_BeginTarget( target, NULL, 1, qfalse );
-			qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.lightsPipeline );
-			vk.boundPipeline = rt.lightsPipeline;
+			qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.smLightsPipeline );
+			vk.boundPipeline = rt.smLightsPipeline;
 			qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
 			VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 			qvkCmdDraw( cmd, 3, 1, 0, 0 );

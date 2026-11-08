@@ -352,6 +352,16 @@ static void VK_CreateDevice( void ) {
 	f12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 	f12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
 	vk.rayTracing = VK_RayTracingUsable();
+	// the players are skinned for their shadows by a compute shader that finds its buffers by their addresses, on
+	// the shadow maps of a device without ray tracing as well (vk_rt.cpp)
+	{
+		VkPhysicalDeviceVulkan12Features has12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+		VkPhysicalDeviceFeatures2 has = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &has12 };
+
+		qvkGetPhysicalDeviceFeatures2( vk.physicalDevice, &has );
+		vk.deviceAddress = (qboolean)( has12.bufferDeviceAddress != VK_FALSE );
+		f12.bufferDeviceAddress = has12.bufferDeviceAddress;
+	}
 	if ( vk.rayTracing ) {
 		extensions[numExtensions++] = VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
 		extensions[numExtensions++] = VK_KHR_RAY_QUERY_EXTENSION_NAME;
@@ -636,8 +646,6 @@ qboolean VK_InitVulkan( void ) {
 		return qfalse;
 	}
 	VK_CreateDevice();
-	ri.Cvar_Get( "v_rtAvailable", "0", CVAR_ROM, "Whether the renderer traces rays on this graphics card (v_rayTracing)" );
-	ri.Cvar_Set( "v_rtAvailable", vk.rayTracing ? "1" : "0" );
 	VK_InitMemory();
 	VK_CreateSwapchain();
 
@@ -658,6 +666,10 @@ qboolean VK_InitVulkan( void ) {
 	VK_InitImages();
 	VK_InitModels();
 	VK_RT_Init();
+	// the cgame asks for the shadows of the players where the renderer has them (with traced rays, or with shadow maps
+	// where the card has no ray tracing, vk_rt.cpp)
+	ri.Cvar_Get( "v_rtAvailable", "0", CVAR_ROM, "Whether the renderer draws the shadows of the players itself on this graphics card (cg_shadows 2): by rays, or by shadow maps" );
+	ri.Cvar_Set( "v_rtAvailable", VK_RT_Ready() ? "1" : "0" );
 
 	// what the engine, cgame and ui want to know about the renderer
 	Com_sprintf( vk_versionString, sizeof( vk_versionString ), "Vulkan %i.%i.%i", VK_API_VERSION_MAJOR( vk.properties.apiVersion ),

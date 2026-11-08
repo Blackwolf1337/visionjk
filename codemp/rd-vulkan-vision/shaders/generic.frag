@@ -378,7 +378,7 @@ vec4 DynamicLight( Draw d ) {
 	float fall = window * window / ( 1.0 + 4.0 * x * x ) * 1.6;
 	vec3 radiance = pow( d.baseColor.rgb * fall, vec3( 2.2 ) );
 #ifndef VK_GLES
-	// The shadows of the players from this light, traced a frame ago into a mask (vk_rt.cpp, rtlights.frag): grid1.w
+	// The shadows of the players from this light, made a frame ago into a mask (vk_rt.cpp, smlights.frag): grid1.w
 	// says the channel, tex1 shows the mask; the point is looked up where it was in the view the mask was made in
 	// (globals.rt 42-45, its rect 46).
 	int channel = int( d.grid1.w + 0.5 );

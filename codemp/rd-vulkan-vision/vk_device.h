@@ -59,7 +59,7 @@ typedef VkBufferUsageFlags	vkBufferUsage_t;
 #define VKB_INDEXES			( VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT )
 #define VKB_STAGING			VK_BUFFER_USAGE_TRANSFER_SRC_BIT
 // the vertices of the models, which the shadows of the players also read by their address (vk_rt.cpp)
-#define VKB_MODELS			( VKB_VERTEXES | ( vk.rayTracing ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0 ) )
+#define VKB_MODELS			( VKB_VERTEXES | ( vk.deviceAddress ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0 ) )
 
 typedef struct vkAlloc_s {
 	int				block;			// -1: nothing allocated
@@ -161,6 +161,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
 	qboolean					depthReadable;		// the device lets its format be read in a shader
 	qboolean					rayTracing;			// acceleration structures and ray queries are on (vk_rt.cpp)
+	qboolean					deviceAddress;		// buffers have device addresses (the skinning of the players for their shadows, vk_rt.cpp)
 	VkImageView					depthView;			// of the depth alone, without the stencil
 	VkDescriptorSet				depthSet;
 	// v_wetMirror: the view mirrored at the floor of the puddles (VK_BeginPuddle), traded with color, colorMS, depth
@@ -294,6 +295,8 @@ VkPipeline	VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 void		VK_RT_Init( void );
 void		VK_RT_Shutdown( void );
 qboolean	VK_RT_Wanted( void );
+// the shadows of the players can be drawn on this device (by rays or by shadow maps)
+qboolean	VK_RT_Ready( void );
 // the channel of the mask of the shadows from the moving lights for dl (1, 2, 0: none) and its slot in the texture table
 int			VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot );
 void		VK_RT_Pass( void );

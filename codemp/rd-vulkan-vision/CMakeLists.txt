@@ -228,10 +228,12 @@ set(MPVulkanVisionRTShaders
 	generic.tese
 	rtcells.comp
 	rtdebug.frag
-	rtlights.frag
 	rtresolve.frag
 	rtshadow.frag
 	rtskin.comp
+	smdepth.vert
+	smlights.frag
+	smshadow.frag
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"

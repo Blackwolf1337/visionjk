@@ -125,6 +125,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkDeviceWaitIdle ) \
 	X( vkEndCommandBuffer ) \
 	X( vkFreeMemory ) \
+	X( vkGetBufferDeviceAddress ) \
 	X( vkGetBufferMemoryRequirements ) \
 	X( vkGetDeviceQueue ) \
 	X( vkGetImageMemoryRequirements ) \
@@ -145,8 +146,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCreateAccelerationStructureKHR ) \
 	X( vkDestroyAccelerationStructureKHR ) \
 	X( vkGetAccelerationStructureBuildSizesKHR ) \
-	X( vkGetAccelerationStructureDeviceAddressKHR ) \
-	X( vkGetBufferDeviceAddress )
+	X( vkGetAccelerationStructureDeviceAddressKHR )
 
 #define X( name )	extern PFN_##name q##name;
 VK_FUNCTIONS_GLOBAL( X )

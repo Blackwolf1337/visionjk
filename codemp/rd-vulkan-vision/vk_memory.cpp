@@ -158,8 +158,9 @@ void VK_AllocMemory( const VkMemoryRequirements *req, VkMemoryPropertyFlags flag
 	VkMemoryAllocateInfo info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	VkMemoryAllocateFlagsInfo addressed = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO };
 
-	// the inputs and results of the acceleration structures are found by their address (vk_rt.cpp)
-	if ( vk.rayTracing ) {
+	// the inputs and results of the acceleration structures, and what the skinning of the players for their shadows
+	// reads and writes, are found by their address (vk_rt.cpp)
+	if ( vk.deviceAddress ) {
 		addressed.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 		info.pNext = &addressed;
 	}

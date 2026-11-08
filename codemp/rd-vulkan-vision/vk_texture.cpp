@@ -68,8 +68,13 @@ void VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect
 }
 
 void VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to ) {
-	const VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
+	VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
 		? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT ) : VK_IMAGE_ASPECT_COLOR_BIT;
+
+	// a depth without stencil (the atlas of the shadow maps, vk_rt.cpp)
+	if ( target->format == VK_FORMAT_D32_SFLOAT || target->format == VK_FORMAT_D16_UNORM ) {
+		aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
 
 	VK_SetLayout( cmd, target->image, aspect, target->layout, to );
 	target->layout = to;
