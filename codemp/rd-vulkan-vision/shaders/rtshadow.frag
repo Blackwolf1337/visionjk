@@ -199,15 +199,16 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 		// how much of his light comes from one side, 0 to 1
 		float ratio = directed / ( ambient + directed + 1.0 );
 		vec4 shares = W[LAMPS + i * LAMP_ROWS + 3];
+		float strength = min( ratio, 0.85 );
 		float taken = 0.0;
 		// the share of the grid: its direction, the cone wide where the light is mostly ambient, as narrow as
 		// v_rtLightSize says where most of it comes from one side
 		if ( shares.w > 0.01 && dot( gridDir, gridDir ) > 1e-4 ) {
 			float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
-			taken += shares.w * TakenFrom( origin, normal, normalize( gridDir ), reach, tangent, s,
+			taken += strength * shares.w * TakenFrom( origin, normal, normalize( gridDir ), reach, tangent, s,
 				max( 1, int( ceil( float( rays ) * shares.w ) ) ) );
 		}
-		// the panels: towards each from this point, the cone its disk, the rays end before it (fewer rays for a small
+		// the panels: towards each from this point, the cone from its disk, the rays end before it (fewer rays for a small
 		// share, the frames before add up the rest)
 		for ( int k = 0; k < 3; k++ ) {
 			float share = shares[k];
@@ -217,10 +218,16 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 			vec4 lamp = W[LAMPS + i * LAMP_ROWS + k];
 			vec3 to = lamp.xyz - origin;
 			float d = max( length( to ), 1.0 );
-			taken += share * TakenFrom( origin, normal, to / d, min( max( d - lamp.w, 1.0 ), reach ), clamp( lamp.w / d, 0.01, 0.5 ), s,
+			// A panel right by him gives a clear shadow even where the grid has the light mostly ambient: by the
+			// grid alone the shadow of the lamp beside him was too faint to see (2026-11-08)
+			float near = 1.0 - smoothstep( 96.0, 192.0, distance( lamp.xyz, s.xyz ) );
+			// (the cone a quarter of the disk: the whole disk of a panel beside him, 40 units, made the shadow of a
+			// player 16 units wide so soft that nothing of it was left, 2026-11-08)
+			taken += max( strength, 0.6 * near ) * share * TakenFrom( origin, normal, to / d, min( max( d - lamp.w, 1.0 ), reach ),
+				clamp( 0.25 * lamp.w / d, 0.005, 0.06 ), s,
 				max( 1, int( ceil( float( rays ) * share ) ) ) );
 		}
-		dark = max( dark, min( ratio, 0.85 ) * taken * fade );
+		dark = max( dark, taken * fade );
 	}
 	return dark;
 }
