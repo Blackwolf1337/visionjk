@@ -3545,36 +3545,6 @@ static int CG_RagAnimForPositioning(centity_t *cent)
 	}
 }
 
-// VisionJK (cg_slice.c): ghoul2, the part a saber cut off the body of cent, in a ragdoll of its own, drawn at origin
-// and angles; velocity throws it (zero once it is on its way). As CG_RagDoll does it for a body, every frame.
-void CG_SliceRag( centity_t *cent, void *ghoul2, const vec3_t origin, const vec3_t angles, const vec3_t velocity )
-{
-	sharedRagDollParams_t		tParms;
-	sharedRagDollUpdateParams_t	tuParms;
-	const animation_t			*anim = &bgAllAnims[cent->localAnimIndex].anims[CG_RagAnimForPositioning( cent )];
-
-	memset( &tParms, 0, sizeof( tParms ) );
-	memset( &tuParms, 0, sizeof( tuParms ) );
-	tParms.startFrame = anim->firstFrame;
-	tParms.endFrame = anim->firstFrame + anim->numFrames;
-	VectorCopy( angles, tParms.angles );
-	VectorCopy( origin, tParms.position );
-	VectorCopy( cent->modelScale, tParms.scale );
-	tParms.me = cent->currentState.number;
-	tParms.collisionType = 1;
-	tParms.RagPhase = RP_DEATH_COLLISION;
-	tParms.fShotStrength = 4;
-	trap->G2API_SetRagDoll( ghoul2, &tParms );
-
-	VectorCopy( angles, tuParms.angles );
-	VectorCopy( origin, tuParms.position );
-	VectorCopy( cent->modelScale, tuParms.scale );
-	tuParms.me = cent->currentState.number;
-	tuParms.settleFrame = tParms.endFrame - 1;
-	VectorCopy( velocity, tuParms.velocity );
-	trap->G2API_AnimateG2Models( ghoul2, cg.time, &tuParms );
-}
-
 //rww - cgame interface for the ragdoll stuff.
 //Returns qtrue if the entity is now in a ragdoll state, otherwise qfalse.
 qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
@@ -3582,11 +3552,14 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 	vec3_t usedOrg;
 	qboolean inSomething = qfalse;
 	int ragAnim;//BOTH_DEAD1; //BOTH_DEATH1;
-	// VisionJK: a body a saber cut through goes limp at once, broadsword or not: the death animation of a whole body
-	// did not fit one in two parts (their word 2026-11-08, cg_slice.c)
-	const qboolean sliced = CG_Sliced( cent->currentState.number );
 
-	if (!broadsword.integer && !sliced)
+	if (!broadsword.integer)
+	{
+		return qfalse;
+	}
+
+	// VisionJK: a body a saber cut through is drawn in its parts, each in a ragdoll of its own (cg_slice.c, cg_ragdoll.c)
+	if (CG_Sliced((int)(cent - cg_entities)))
 	{
 		return qfalse;
 	}
@@ -3625,7 +3598,7 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 			}
 		}
 
-		if (broadsword.integer > 1 || sliced)
+		if (broadsword.integer > 1)
 		{
 			inSomething = qtrue;
 		}
@@ -9845,6 +9818,7 @@ void CG_Player( centity_t *cent ) {
 	qboolean		drawPlayerSaber = qfalse;
 	qboolean		checkDroidShields = qfalse;
 	qboolean		shadow = qfalse;
+	qboolean		slicedBody = qfalse;	// VisionJK: cut by a saber, drawn in its parts (cg_slice.c)
 
 	//first if we are not an npc and we are using an emplaced gun then make sure our
 	//angles are visually capped to the constraints (otherwise it's possible to lerp
@@ -12148,6 +12122,10 @@ stillDoSaber:
 		cent->miscTime = 0;
 	}
 
+	// VisionJK: a body a saber cut through is drawn in its parts (cg_slice.c, cg_ragdoll.c), never whole: not cloaking,
+	// not with its hat, weapon or the shells of force powers
+	slicedBody = CG_SliceDrawBody( cent, &legs, rootAngles );
+
 	if (cent->currentState.powerups & (1 << PW_CLOAKED))
 	{
 		if (!cent->cloaked)
@@ -12162,7 +12140,10 @@ stillDoSaber:
 		cent->uncloaking = cg.time + 2000;
 	}
 
-	if (cent->uncloaking > cg.time)
+	if (slicedBody)
+	{
+	}
+	else if (cent->uncloaking > cg.time)
 	{//in the middle of cloaking
 		if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE))
 			&& cg.snap->ps.clientNum != cent->currentState.number)
@@ -12256,15 +12237,15 @@ stillDoSaber:
 	if (!(cent->currentState.powerups & (1 << PW_CLOAKED)))
 	{ //don't add the normal model if cloaked
 		CG_CheckThirdPersonAlpha( cent, &legs );
-		// (VisionJK: a body a saber cut through is drawn in its two parts, cg_slice.c)
-		if ( !CG_SliceDrawBody( cent, &legs, rootAngles ) )
+		if ( !slicedBody )
 			trap->R_AddRefEntityToScene(&legs);
 		// the tracker of the disruptor's scope follows him (scope/cg_scope.c)
 		CG_ScopeEntity( cent );
 	}
 
 	// hats and capes (look/cg_look.c)
-	CG_LookDraw( cent, ci, &legs );
+	if ( !slicedBody )
+		CG_LookDraw( cent, ci, &legs );
 
 	//cent->frame_minus2 = cent->frame_minus1;
 	VectorCopy(cent->frame_minus1, cent->frame_minus2);
@@ -12284,7 +12265,7 @@ stillDoSaber:
 		cent->frame_hold_time = cg.time + 254;
 	}
 
-	if (cent->frame_hold_time >= cg.time)
+	if (cent->frame_hold_time >= cg.time && !slicedBody)
 	{
 		refEntity_t reframe_hold;
 
@@ -12333,14 +12314,14 @@ stillDoSaber:
 	//
 	// add the gun / barrel / flash
 	//
-	if (cent->currentState.weapon != WP_EMPLACED_GUN)
+	if (cent->currentState.weapon != WP_EMPLACED_GUN && !slicedBody)
 	{
 		CG_AddPlayerWeapon( &legs, NULL, cent, ci->team, rootAngles, qtrue );
 	}
 	// add powerups floating behind the player
 	CG_PlayerPowerups( cent, &legs );
 
-	if ((cent->currentState.forcePowersActive & (1 << FP_RAGE)) &&
+	if (!slicedBody && (cent->currentState.forcePowersActive & (1 << FP_RAGE)) &&
 		(cg.renderingThirdPerson || cent->currentState.number != cg.snap->ps.clientNum))
 	{
 		//legs.customShader = cgs.media.rageShader;
@@ -12408,7 +12389,7 @@ stillDoSaber:
 	}
 	//For now, these two are using the old shield shader. This is just so that you
 	//can tell it apart from the JM/duel shaders, but it's still very obvious.
-	if (cent->currentState.forcePowersActive & (1 << FP_PROTECT))
+	if (!slicedBody && (cent->currentState.forcePowersActive & (1 << FP_PROTECT)))
 	{ //aborb is represented by green..
 		refEntity_t prot;
 
@@ -12439,8 +12420,8 @@ stillDoSaber:
 	//Showing only when the power has been active (absorbed something) recently now, instead of always.
 	//AND
 	//always show if it is you with the absorb on
-	if ((cent->currentState.number == cg.predictedPlayerState.clientNum && (cg.predictedPlayerState.fd.forcePowersActive & (1<<FP_ABSORB))) ||
-		(cent->teamPowerEffectTime > cg.time && cent->teamPowerType == 3))
+	if (!slicedBody && ((cent->currentState.number == cg.predictedPlayerState.clientNum && (cg.predictedPlayerState.fd.forcePowersActive & (1<<FP_ABSORB))) ||
+		(cent->teamPowerEffectTime > cg.time && cent->teamPowerType == 3)))
 	{ //aborb is represented by blue..
 		legs.shaderRGBA[0] = 0;
 		legs.shaderRGBA[1] = 0;

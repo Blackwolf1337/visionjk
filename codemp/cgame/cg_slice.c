@@ -24,55 +24,44 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // never looks at the blade. Here every client works it out for itself: when a player is killed by a saber
 // (EV_OBITUARY, MOD_SABER) and the blade of the killer passed through his body in the last moment (the blade
 // history of cg_players.c, CG_SaberCutNear), the plane of that swing (the blade and the way it swept) cuts the body.
-// The part that holds the feet stays with the body, the other part is a copy of the model in the pose of the moment;
-// both go limp in the ragdoll of the engine (the body at once, broadsword or not: CG_RagDoll; the part thrown off along
-// the swing), each with its cut tied to its own bone nearest the cut, so the cut moves with the part as it slumps. The
-// death animation of a whole body did not fit one in two parts (their word 2026-11-08). Both are drawn cut by the plane
-// (the renderer's ext.R_AddCutEntity, rd-vulkan-vision), each once more with its back faces alone in a glowing colour
-// (gfx/vision/slice/cut), which fills the opening: the burnt cut face, orange hot at first, fading through red to dark
-// (the afterglow). With v_gore 1 blood runs out on the floor under the cut, a wet place of the kind WET_BLOOD
-// (ext.R_AddWet). The copy of the body the server leaves when the victim comes back (CG_BodyQueueCopy) stays cut. It all
-// goes when the body goes.
+// The first time the body is drawn after that, it is split at the plane into ragdolls of their own (cg_ragdoll.c), one
+// copy of the model per part, and from then on the body itself is never drawn whole again: not the dead player, not
+// the copy the server leaves when he comes back (CG_BodyQueueCopy), not while it fades. Each part is drawn cut by the
+// plane where its bone at the cut is now (the renderer's ext.R_AddCutEntity, rd-vulkan-vision), and once more with its
+// back faces alone in a glowing colour (gfx/vision/slice/cut), which fills the opening: the burnt cut face, orange hot
+// at first, fading through red to dark (the afterglow). With v_gore 1 blood runs out on the floor under the cut, a wet
+// place of the kind WET_BLOOD (ext.R_AddWet). The parts stay as long as the body would, and fade with it.
 //
-// Only a VisionJK client on a renderer that cuts (v_cgameCutEntity) sees it; everyone else sees the stock death, and
-// the server is not asked for anything. The stock limbs of a body that was cut are not drawn.
+// Only a VisionJK client on a renderer that cuts and places bones (v_cgameCutEntity, v_cgameSetBones) sees it;
+// everyone else sees the stock death, and the server is not asked for anything. The stock limbs of a body that was cut
+// are not drawn.
 
 #include "cg_local.h"
 #include "ghoul2/G2.h"
 
-#define SLICE_MAX			16
+#define SLICE_MAX			10
 #define SLICE_REACH			48.0f		// units: how near the middle of the body the blade must have come
 #define SLICE_GLOW_MSEC		10000		// the afterglow of the cut face
 #define SLICE_BLOOD_MSEC	5000		// how long the blood takes to run out
-#define SLICE_LOST_MSEC		3000		// a body not drawn for this long is gone
-#define SLICE_PIECE_SPEED	160.0f		// units a second the part cut off is thrown along the swing,
-#define SLICE_PIECE_THROW	120			//	for this many milliseconds of its ragdoll
-
-// a part of the body and the cut on it, tied to the bone of that part nearest the cut
-typedef struct slicePart_s {
-	void		*boundG2;		// the ghoul2 instance the bone is of
-	int			bolt;			// -1: the plane stays in the world
-	vec3_t		localN, localP;	// the plane in the frame of that bone
-	vec4_t		plane;			// in the world, as drawn last; what lies on the side the normal points to is kept
-} slicePart_t;
+#define SLICE_LIFE_MSEC		60000		// parts without a body (it came back without a copy) stay this long at most,
+#define SLICE_ORPHAN_MSEC	30000		//	or this long after the body went
+#define SLICE_FADE_MSEC		2000
 
 typedef struct slice_s {
 	qboolean	active;
 	int			victim;			// client number
 	int			body;			// the entity that has the body now: the victim while he is dead, then the copy of his body
 								// (ET_BODY, CG_SliceBodyCopied), -1 when he came back without one
+	qboolean	revived;		// the victim was seen alive again since the cut: his entity is his own again
 	int			time;			// cg.time of the cut
-	int			drawn;			// cg.time the body was last drawn
+	int			gone;			// cg.time the body went (0: it is still there), the parts fade a while later
+	int			copied;			// cg.time the body copy was named (CG_SliceBodyCopied)
+	qboolean	seen;			//	and whether it was in a snapshot since
+	vec4_t		plane;			// the normal towards the side with the feet
 	vec3_t		sweep;			// which way the blade swept
-	vec3_t		centre;			// the middle of the cut, when it was drawn first
-	slicePart_t	part;			// the part with the feet
-
-	// the part that was cut off, a ragdoll of its own
-	void		*pieceG2;
-	refEntity_t	pieceEnt;		// as the body was drawn when it was cut
-	vec3_t		pieceAngles;
-	int			pieceTime;		// cg.time its ragdoll began
-	slicePart_t	piece;
+	int			rag;			// the ragdolls of the parts (cg_ragdoll.c), -1 until the body was drawn once
+	refEntity_t	ent;			// as the body was drawn when it was split
+	float		alpha;			// 1, less while the body fades
 
 	// the blood
 	qboolean	blood;
@@ -86,12 +75,11 @@ static qhandle_t sliceCutShader;
 void CG_SliceInit( void ) {
 	int i;
 
-	for ( i = 0; i < SLICE_MAX; i++ ) {
-		if ( slices[i].pieceG2 && trap->G2_HaveWeGhoul2Models( slices[i].pieceG2 ) ) {
-			trap->G2API_CleanGhoul2Models( &slices[i].pieceG2 );
-		}
-	}
+	CG_RagInit();
 	memset( slices, 0, sizeof( slices ) );
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		slices[i].rag = -1;
+	}
 	sliceCutShader = trap->R_RegisterShader( "gfx/vision/slice/cut" );
 }
 
@@ -103,16 +91,17 @@ static qboolean CG_SliceOn( void ) {
 		char value[8];
 
 		trap->Cvar_VariableStringBuffer( "v_cgameCutEntity", value, sizeof( value ) );
-		has = ( atoi( value ) && trap->ext.R_AddCutEntity ) ? 1 : 0;
+		has = ( atoi( value ) && trap->ext.R_AddCutEntity && CG_RagOn() ) ? 1 : 0;
 	}
 	return (qboolean)( has > 0 && v_slice.integer );
 }
 
 static void CG_SliceFree( slice_t *s ) {
-	if ( s->pieceG2 && trap->G2_HaveWeGhoul2Models( s->pieceG2 ) ) {
-		trap->G2API_CleanGhoul2Models( &s->pieceG2 );
+	if ( s->rag >= 0 ) {
+		CG_RagFree( s->rag );
 	}
 	memset( s, 0, sizeof( *s ) );
+	s->rag = -1;
 }
 
 // a free slot, else the oldest
@@ -132,16 +121,29 @@ static slice_t *CG_SliceNew( void ) {
 	return oldest;
 }
 
-// whether client num was cut and is still lying there: the stock limbs of his body are not drawn then (cg_ents.c)
-qboolean CG_Sliced( int num ) {
+// the cut that holds the body of entity num: the copy of his body, or the dead victim himself until he was seen alive
+static slice_t *CG_SliceOf( int num ) {
 	int i;
 
 	for ( i = 0; i < SLICE_MAX; i++ ) {
-		if ( slices[i].active && slices[i].body == num ) {
-			return qtrue;
+		slice_t *s = &slices[i];
+
+		if ( !s->active || s->gone ) {
+			continue;
+		}
+		if ( s->body == num && num != s->victim ) {
+			return s;
+		}
+		if ( s->victim == num && !s->revived && ( cg_entities[num].currentState.eFlags & EF_DEAD ) ) {
+			return s;
 		}
 	}
-	return qfalse;
+	return NULL;
+}
+
+// whether the body of entity num was cut: it is drawn in its parts, never whole (cg_players.c, cg_ents.c)
+qboolean CG_Sliced( int num ) {
+	return (qboolean)( CG_SliceOf( num ) != NULL );
 }
 
 // Starts a cut of the body of victim by plane (the normal towards what stays with the body after the flip below),
@@ -186,12 +188,11 @@ static qboolean CG_SliceStart( int victim, const vec4_t planeIn, const vec3_t sw
 	s->active = qtrue;
 	s->victim = victim;
 	s->body = victim;
-	s->time = s->drawn = cg.time;
-	VectorCopy4( plane, s->part.plane );
-	VectorScale( plane, -1.0f, s->piece.plane );
-	s->piece.plane[3] = -plane[3];
+	s->time = cg.time;
+	s->rag = -1;
+	s->alpha = 1.0f;
+	VectorCopy4( plane, s->plane );
 	VectorCopy( sweep, s->sweep );
-	s->part.bolt = s->piece.bolt = -1;
 	s->bloodSeed = Q_flrand( 0.0f, 1.0f );
 	s->bloodRadius = Q_flrand( 18.0f, 26.0f );
 	return qtrue;
@@ -296,85 +297,6 @@ void CG_SliceTest_f( void ) {
 	Com_Printf( "v_sliceTest: client %i %s\n", victim, CG_SliceStart( victim, plane, sweep ) ? "cut" : "missed" );
 }
 
-// the frame of a bone into the world
-static void CG_SliceBoltFrame( mdxaBone_t *m, vec3_t origin, vec3_t axis[3] ) {
-	BG_GiveMeVectorFromMatrix( m, ORIGIN, origin );
-	BG_GiveMeVectorFromMatrix( m, POSITIVE_X, axis[0] );
-	BG_GiveMeVectorFromMatrix( m, POSITIVE_Y, axis[1] );
-	BG_GiveMeVectorFromMatrix( m, POSITIVE_Z, axis[2] );
-}
-
-/*
-=================
-CG_SliceBind
-
-The cut of a part tied to the bone of ghoul2 (drawn at origin and angles) nearest the middle of the cut on the side the
-part keeps, so the cut moves with that part (one bone for the whole body, the pelvis, made a cut through the legs slide
-over them as the body fell). No such bone: the plane stays in the world.
-=================
-*/
-static void CG_SliceBind( slicePart_t *part, void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale,
-	const vec3_t centre ) {
-	static const char *bones[] = { "pelvis", "lower_lumbar", "upper_lumbar", "thoracic", "cervical", "cranium",
-		"lhumerus", "rhumerus", "lradius", "rradius", "lfemurYZ", "rfemurYZ", "ltibia", "rtibia" };
-	mdxaBone_t	m;
-	vec3_t		at, axis[3], point;
-	float		best = 1e9f;
-	int			i;
-
-	part->boundG2 = ghoul2;
-	part->bolt = -1;
-	for ( i = 0; i < (int)ARRAY_LEN( bones ); i++ ) {
-		const int bolt = trap->G2API_AddBolt( ghoul2, 0, bones[i] );
-		float d;
-
-		if ( bolt < 0 || !trap->G2API_GetBoltMatrix( ghoul2, 0, bolt, &m, angles, origin, cg.time, cgs.gameModels, (float *)scale ) ) {
-			continue;
-		}
-		BG_GiveMeVectorFromMatrix( &m, ORIGIN, at );
-		d = Distance( at, centre );
-		if ( DotProduct( at, part->plane ) - part->plane[3] > 1.0f && d < best ) {
-			best = d;
-			part->bolt = bolt;
-		}
-	}
-	if ( part->bolt < 0 || !trap->G2API_GetBoltMatrix( ghoul2, 0, part->bolt, &m, angles, origin, cg.time, cgs.gameModels,
-		(float *)scale ) ) {
-		part->bolt = -1;
-		return;
-	}
-	CG_SliceBoltFrame( &m, at, axis );
-	VectorScale( part->plane, part->plane[3], point );
-	VectorSubtract( point, at, point );
-	for ( i = 0; i < 3; i++ ) {
-		part->localN[i] = DotProduct( part->plane, axis[i] ) / Q_max( VectorLengthSquared( axis[i] ), 1e-6f );
-		part->localP[i] = DotProduct( point, axis[i] ) / Q_max( VectorLengthSquared( axis[i] ), 1e-6f );
-	}
-}
-
-// the plane of a part where its bone is now
-static void CG_SliceFollow( slicePart_t *part, void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale ) {
-	mdxaBone_t	m;
-	vec3_t		at, axis[3], point, normal;
-	int			i;
-
-	if ( part->bolt < 0 || !trap->G2API_GetBoltMatrix( ghoul2, 0, part->bolt, &m, angles, origin, cg.time, cgs.gameModels,
-		(float *)scale ) ) {
-		return;
-	}
-	CG_SliceBoltFrame( &m, at, axis );
-	VectorClear( normal );
-	VectorCopy( at, point );
-	for ( i = 0; i < 3; i++ ) {
-		VectorMA( normal, part->localN[i], axis[i], normal );
-		VectorMA( point, part->localP[i], axis[i], point );
-	}
-	if ( VectorNormalize( normal ) > 0.1f ) {
-		VectorCopy( normal, part->plane );
-		part->plane[3] = DotProduct( normal, point );
-	}
-}
-
 // The colour of the cut face: orange hot, then red, and dark (the afterglow). It started white hot, and a body cut
 // lengthwise shows a large face: the whole half looked on fire.
 static void CG_SliceGlow( const slice_t *s, byte *rgba ) {
@@ -410,156 +332,192 @@ static void CG_SliceAdd( const slice_t *s, const refEntity_t *ent, const vec4_t 
 	face.customSkin = 0;
 	face.renderfx &= ~( RF_FORCE_ENT_ALPHA | RF_RGB_TINT | RF_SHADOW_PLANE | RF_MINLIGHT );
 	CG_SliceGlow( s, face.shaderRGBA );
+	if ( s->alpha < 1.0f ) {
+		face.shaderRGBA[0] = (byte)( face.shaderRGBA[0] * s->alpha );
+		face.shaderRGBA[1] = (byte)( face.shaderRGBA[1] * s->alpha );
+		face.shaderRGBA[2] = (byte)( face.shaderRGBA[2] * s->alpha );
+	}
 	trap->ext.R_AddCutEntity( &face, plane );
-}
-
-// the part that was cut off, made the first time the body is drawn cut: a copy of the model in the pose of now, which
-// goes into a ragdoll of its own (CG_SlicePiece)
-static void CG_SliceMakePiece( slice_t *s, centity_t *cent, const refEntity_t *ent, const vec3_t angles ) {
-	static const char *bones[] = { "model_root", "lower_lumbar", "Motion" };
-	int i;
-
-	if ( !ent->ghoul2 || !trap->G2_HaveWeGhoul2Models( ent->ghoul2 ) ) {
-		return;
-	}
-	trap->G2API_DuplicateGhoul2Instance( ent->ghoul2, &s->pieceG2 );
-	if ( !s->pieceG2 ) {
-		return;
-	}
-	// (its animation held in the frame it is in now, as CG_RagDoll does before the ragdoll begins)
-	for ( i = 0; i < (int)ARRAY_LEN( bones ); i++ ) {
-		float frame;
-
-		if ( trap->G2API_DoesBoneExist( s->pieceG2, 0, bones[i] )
-			&& trap->G2API_GetBoneFrame( s->pieceG2, bones[i], cg.time, &frame, cgs.gameModels, 0 ) ) {
-			trap->G2API_SetBoneAnim( s->pieceG2, 0, bones[i], (int)frame, (int)frame + 1, BONE_ANIM_OVERRIDE_FREEZE, 1.0f, cg.time,
-				frame, 0 );
-		}
-	}
-	s->pieceEnt = *ent;
-	s->pieceEnt.ghoul2 = s->pieceG2;
-	VectorCopy( angles, s->pieceAngles );
-	s->pieceTime = cg.time;
-	CG_SliceBind( &s->piece, s->pieceG2, s->pieceAngles, s->pieceEnt.origin, cent->modelScale, s->centre );
 }
 
 /*
 =================
 CG_SliceDrawBody
 
-The body of a cent that was cut (the victim while he is dead, then the copy of his body): drawn cut and its cut face,
-in place of R_AddRefEntityToScene. angles and the origin of ent are the ones its ghoul2 is drawn with. qfalse: not cut,
-draw it as always.
+Where the body of cent would be drawn (the dead player in CG_Player, the copy of his body in CG_General), with ent as
+it would be drawn and angles its ghoul2 is drawn with. qtrue: it was cut, do not draw it (nor anything that shows the
+whole body); the first time it is split into its parts here. qfalse: not cut, draw it as always.
 =================
 */
 qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles ) {
-	const int	num = cent->currentState.number;
-	slice_t		*s = NULL;
-	int			i;
+	const int	num = (int)( cent - cg_entities );
+	slice_t		*s;
+	vec3_t		centre, velocity, down;
+	trace_t		tr;
 
-	if ( !CG_SliceOn() || !ent->ghoul2 ) {
+	if ( !CG_SliceOn() || !( s = CG_SliceOf( num ) ) ) {
 		return qfalse;
 	}
-	for ( i = 0; i < SLICE_MAX && !s; i++ ) {
-		if ( slices[i].active && slices[i].body == num && ( cent->currentState.eType == ET_BODY
-			|| ( cent->currentState.eFlags & EF_DEAD ) ) ) {
-			s = &slices[i];
-		}
+	if ( s->rag >= 0 ) {
+		return qtrue;
 	}
-	if ( !s ) {
+	if ( !ent->ghoul2 ) {
 		return qfalse;
 	}
-	s->drawn = cg.time;
-
-	if ( s->part.boundG2 != ent->ghoul2 ) {
-		if ( !s->pieceG2 && s->body == s->victim ) {
-			// the middle of the cut, and from there the part cut off and the blood
-			vec3_t	down;
-			trace_t	tr;
-
-			VectorMA( cent->lerpOrigin, -( DotProduct( cent->lerpOrigin, s->part.plane ) - s->part.plane[3] ), s->part.plane,
-				s->centre );
-			CG_SliceMakePiece( s, cent, ent, angles );
-			VectorCopy( s->centre, down );
-			down[2] -= 160.0f;
-			CG_Trace( &tr, s->centre, NULL, NULL, down, num, MASK_SOLID );
-			if ( tr.fraction < 1.0f && tr.plane.normal[2] > 0.7f ) {
-				s->blood = qtrue;
-				VectorCopy( tr.endpos, s->bloodOrigin );
-				VectorCopy( tr.plane.normal, s->bloodNormal );
-			}
-		}
-		// (the copy of the body: tied to its own bones, from where the cut was drawn last)
-		CG_SliceBind( &s->part, ent->ghoul2, angles, ent->origin, cent->modelScale, s->centre );
+	// the middle of the cut, the speed of the body
+	VectorMA( cent->lerpOrigin, -( DotProduct( cent->lerpOrigin, s->plane ) - s->plane[3] ), s->plane, centre );
+	if ( cg.snap && num == cg.snap->ps.clientNum ) {
+		VectorCopy( cg.predictedPlayerState.velocity, velocity );
+	} else if ( cent->currentState.pos.trType != TR_STATIONARY ) {
+		VectorCopy( cent->currentState.pos.trDelta, velocity );
 	} else {
-		CG_SliceFollow( &s->part, ent->ghoul2, angles, ent->origin, cent->modelScale );
+		VectorClear( velocity );
 	}
-	CG_SliceAdd( s, ent, s->part.plane );
+	s->rag = CG_RagSplit( ent->ghoul2, angles, ent->origin, cent->modelScale, s->plane, centre, velocity, s->sweep );
+	if ( s->rag < 0 ) {
+		CG_SliceFree( s );		// (no humanoid skeleton: the stock death)
+		return qfalse;
+	}
+	s->ent = *ent;
+	s->ent.ghoul2 = NULL;
+	s->ent.renderfx &= ~( RF_THIRD_PERSON | RF_FIRST_PERSON | RF_FORCE_ENT_ALPHA | RF_RGB_TINT );
+	s->ent.renderfx |= RF_LIGHTING_ORIGIN;
+	s->ent.shaderRGBA[3] = 255;
+
+	// the blood runs out under the cut
+	VectorCopy( centre, down );
+	down[2] -= 160.0f;
+	CG_Trace( &tr, centre, NULL, NULL, down, num, MASK_SOLID );
+	if ( tr.fraction < 1.0f && tr.plane.normal[2] > 0.7f ) {
+		s->blood = qtrue;
+		VectorCopy( tr.endpos, s->bloodOrigin );
+		VectorCopy( tr.plane.normal, s->bloodNormal );
+	}
 	return qtrue;
 }
 
-// the copy of the body of clientNum the server leaves when he comes back (CG_BodyQueueCopy): it stays cut
+// The copy of the body of clientNum the server leaves when he comes back (CG_BodyQueueCopy, body is its entity): the
+// parts belong to it now. A cut whose body copy the server used again for another body is over.
 void CG_SliceBodyCopied( int clientNum, int body ) {
 	int i;
 
 	for ( i = 0; i < SLICE_MAX; i++ ) {
-		// (also when his coming back was seen before the copy)
-		if ( slices[i].active && ( slices[i].body == clientNum || ( slices[i].body < 0 && slices[i].victim == clientNum ) ) ) {
-			slices[i].body = body;
-			slices[i].part.boundG2 = NULL;
-			slices[i].drawn = cg.time;
+		slice_t *s = &slices[i];
+
+		if ( s->active && s->body == body && body != s->victim && !s->gone ) {
+			s->gone = cg.time;
 		}
 	}
-}
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		slice_t *s = &slices[i];
 
-// the part that was cut off: its ragdoll, thrown along the swing at first, and its cut where its bone is now
-static void CG_SlicePiece( slice_t *s ) {
-	centity_t	*victim = &cg_entities[s->victim];
-	vec3_t		velocity;
-
-	VectorClear( velocity );
-	if ( cg.time - s->pieceTime < SLICE_PIECE_THROW ) {
-		VectorScale( s->sweep, SLICE_PIECE_SPEED, velocity );
-		velocity[2] += 60.0f;
+		// (also when his coming back was seen before the copy)
+		if ( s->active && !s->gone && s->victim == clientNum && ( s->body == clientNum || s->body < 0 ) ) {
+			s->body = body;
+			s->copied = cg.time;
+			s->seen = qfalse;
+		}
 	}
-	CG_SliceRag( victim, s->pieceG2, s->pieceEnt.origin, s->pieceAngles, velocity );
-	CG_SliceFollow( &s->piece, s->pieceG2, s->pieceAngles, s->pieceEnt.origin, victim->modelScale );
-	CG_SliceAdd( s, &s->pieceEnt, s->piece.plane );
 }
 
 /*
 =================
 CG_SliceScene
 
-Every frame (cg_view.c): the pieces that were cut off, the blood, and the end of the cuts whose body is gone
+Every frame (cg_view.c): the ragdolls of the parts and the parts, the blood, and the end of the cuts whose body is gone
 =================
 */
 void CG_SliceScene( void ) {
 	wetSpot_t	spots[SLICE_MAX];
-	int			i, numSpots = 0;
+	int			i, n, numSpots = 0;
 
 	for ( i = 0; i < SLICE_MAX; i++ ) {
-		slice_t *s = &slices[i];
+		slice_t			*s = &slices[i];
+		const centity_t	*victim;
 
 		if ( !s->active ) {
 			continue;
 		}
-		// the victim came back: his body is his body copy now, still to be found
-		if ( s->body == s->victim && !( cg_entities[s->victim].currentState.eFlags & EF_DEAD ) ) {
-			s->body = -1;
-			s->drawn = cg.time;
-		}
-		if ( cg.time - s->drawn > SLICE_LOST_MSEC || cg.time < s->time ) {
-			CG_SliceFree( s );
+		if ( cg.time < s->time ) {
+			CG_SliceFree( s );		// (time went back: a demo was wound back)
 			continue;
 		}
-		if ( !CG_SliceOn() ) {
+		victim = &cg_entities[s->victim];
+		// the victim alive again (the dead flag may come a moment after the kill)
+		if ( !s->revived && cg.time - s->time > 1000 && ( victim->currentValid || ( cg.snap && s->victim == cg.snap->ps.clientNum ) )
+			&& !( victim->currentState.eFlags & EF_DEAD ) ) {
+			s->revived = qtrue;
+			if ( s->body == s->victim ) {
+				s->body = -1;		// his body copy may still come
+			}
+		}
+		// the body copy went, or never came
+		if ( !s->gone ) {
+			if ( s->body >= 0 && s->body != s->victim ) {
+				const centity_t	*body = &cg_entities[s->body];
+				const qboolean	there = (qboolean)( body->currentValid && body->currentState.eType == ET_BODY );
+
+				// (the snapshot with the copy may come a moment after the command that names it)
+				if ( there ) {
+					s->seen = qtrue;
+				} else if ( s->seen || cg.time - s->copied > 3000 ) {
+					s->gone = cg.time;
+				}
+			} else if ( s->body < 0 && cg.time - s->time > SLICE_LIFE_MSEC ) {
+				s->gone = cg.time - SLICE_ORPHAN_MSEC;
+			}
+		}
+		// fading with the body, or a while after it went
+		s->alpha = 1.0f;
+		if ( s->gone ) {
+			const int left = s->gone + SLICE_ORPHAN_MSEC + SLICE_FADE_MSEC - cg.time;
+
+			if ( left <= 0 ) {
+				CG_SliceFree( s );
+				continue;
+			}
+			s->alpha = Com_Clamp( 0.0f, 1.0f, (float)left / SLICE_FADE_MSEC );
+		} else if ( s->body >= 0 && s->body != s->victim && cg_entities[s->body].bodyFadeTime > cg.time ) {
+			// (as CG_General fades a body)
+			const int since = cg.time + 60000 - cg_entities[s->body].bodyFadeTime;
+
+			s->alpha = Com_Clamp( 0.0f, 1.0f, ( 254.0f - since * 0.08f ) / 255.0f );
+			if ( s->alpha <= 0.0f ) {
+				CG_SliceFree( s );
+				continue;
+			}
+		}
+	}
+
+	if ( !CG_SliceOn() ) {
+		return;
+	}
+	CG_RagFrame();
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		slice_t *s = &slices[i];
+
+		if ( !s->active || s->rag < 0 ) {
 			continue;
 		}
-		if ( s->pieceG2 ) {
-			CG_SlicePiece( s );
+		for ( n = 0; n < CG_RagParts( s->rag ); n++ ) {
+			refEntity_t	ent = s->ent;
+			vec4_t		plane;
+
+			if ( !CG_RagPart( s->rag, n, &ent.ghoul2, ent.origin, plane ) ) {
+				continue;
+			}
+			VectorCopy( ent.origin, ent.oldorigin );
+			VectorCopy( ent.origin, ent.lightingOrigin );
+			AxisClear( ent.axis );
+			if ( s->alpha < 1.0f ) {
+				ent.renderfx |= RF_FORCE_ENT_ALPHA;
+				ent.shaderRGBA[3] = (byte)( 255.0f * s->alpha );
+			}
+			if ( ent.shaderRGBA[3] ) {
+				CG_SliceAdd( s, &ent, plane );
+			}
 		}
-		if ( s->blood && v_gore.integer && trap->ext.R_AddWet ) {
+		if ( s->blood && v_gore.integer && trap->ext.R_AddWet && numSpots < SLICE_MAX ) {
 			wetSpot_t *w = &spots[numSpots++];
 			const float grow = Com_Clamp( 0.0f, 1.0f, (float)( cg.time - s->time ) / SLICE_BLOOD_MSEC );
 
@@ -568,7 +526,7 @@ void CG_SliceScene( void ) {
 			VectorCopy( s->bloodNormal, w->normal );
 			VectorCopy( s->bloodOrigin, w->hit );
 			w->radius = s->bloodRadius;
-			w->wet = 1.0f - ( 1.0f - grow ) * ( 1.0f - grow );		// fast at first, slower as it spreads
+			w->wet = ( 1.0f - ( 1.0f - grow ) * ( 1.0f - grow ) ) * s->alpha;	// fast at first, slower as it spreads
 			w->seed = s->bloodSeed;
 			w->kind = WET_BLOOD;
 		}

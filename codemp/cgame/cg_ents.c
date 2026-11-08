@@ -1513,6 +1513,12 @@ Ghoul2 Insert End
 		//trap->R_AddRefEntityToScene( &ent );
 	}
 
+	// VisionJK: the copy of a body a saber cut through is drawn in its parts (cg_slice.c), never whole, nor fading whole
+	if ( cent->currentState.eType == ET_BODY && CG_SliceDrawBody( cent, &ent, cent->lerpAngles ) )
+	{
+		return;
+	}
+
 	if ((cent->currentState.eFlags & EF_DISINTEGRATION) && cent->currentState.eType == ET_BODY)
 	{
 		if (!cent->dustTrailTime)
@@ -1662,9 +1668,8 @@ Ghoul2 Insert End
 		return;
 	}
 
-	// add to refresh list (VisionJK: the copy of a body a saber cut through in its two parts, cg_slice.c)
-	if ( s1->eType != ET_BODY || !CG_SliceDrawBody( cent, &ent, cent->lerpAngles ) )
-		trap->R_AddRefEntityToScene (&ent);
+	// add to refresh list
+	trap->R_AddRefEntityToScene (&ent);
 
 	if (cent->bolt3 == 999)
 	{ //this is an in-flight saber being rendered manually

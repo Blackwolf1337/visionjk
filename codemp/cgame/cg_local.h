@@ -1999,9 +1999,18 @@ void CG_SliceKill( int victim, int killer );
 qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles );
 qboolean CG_Sliced( int num );
 void CG_SliceBodyCopied( int clientNum, int body );
-void CG_SliceRag( centity_t *cent, void *ghoul2, const vec3_t origin, const vec3_t angles, const vec3_t velocity );
 void CG_SliceScene( void );
 void CG_SliceTest_f( void );
+// cg_ragdoll.c (VisionJK): the ragdolls of the parts of cut bodies
+void CG_RagInit( void );
+qboolean CG_RagOn( void );
+int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale, const vec4_t plane,
+	const vec3_t centre, const vec3_t velocity, const vec3_t throwDir );
+void CG_RagFree( int handle );
+void CG_RagFrame( void );
+int CG_RagParts( int handle );
+qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
+void CG_RagExplosion( const vec3_t origin, float radius );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );
