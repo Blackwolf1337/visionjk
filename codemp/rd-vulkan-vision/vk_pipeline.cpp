@@ -29,6 +29,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
+#include <atomic>
+#include <thread>
+#include <vector>
+
 // SPIR-V from shaders/*.vert and *.frag, glslc writes them as initializer lists while building
 static const uint32_t vk_genericVert[] =
 #include "shaders/generic_vert.inc"
@@ -513,8 +517,170 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	} else {
 		info.layout = ( post == 3 || post == 12 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	}
-	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &pipeline ) );
+	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &pipeline ) );
 	return pipeline;
+}
+
+/*
+===============================================================================
+
+THE PIPELINES KEPT IN THE PROFILE
+
+A pipeline of generic.frag takes the driver about half a second to make, and VK_FindPipeline() makes them while a
+frame is drawn, the first time a state is asked for: after a vid_restart that switched ray tracing (a device with
+other features, the cache of the driver had nothing for it) the game stood for seconds (their report of
+2026-11-08). The pipelines the driver made go into a pipeline cache that is kept in the profile, one for each kind
+of device (ray tracing on or off), and the states the last session asked for are made again at the start, by several
+threads at once, so a new build or a switch costs a moment at the start and not seconds in the game. The driver
+checks the cache (device, driver, its version) and drops one that does not fit.
+
+===============================================================================
+*/
+
+#define VK_PIPECACHE_MAGIC		0x43504b56	// "VKPC"
+#define VK_PIPECACHE_VERSION	1
+
+typedef struct {
+	uint32_t	magic, version;
+	uint32_t	numKeys;		// the states of VK_FindPipeline(), then the data of the driver
+	uint32_t	dataSize;
+} vkPipeCacheHeader_t;
+
+static uint32_t	vk_pipeKeys[VK_MAX_PIPELINES];
+static int		vk_numPipeKeys;
+static int		vk_savedPipelines;		// how many states the file has: it is written again when there are more
+
+static void VK_PipeCachePath( char *path, int size ) {
+	Com_sprintf( path, size, "vulkan/pipelines%s.dat", vk.rayTracing ? "_rt" : "" );
+}
+
+static void VK_LoadPipelineCache( void ) {
+	VkPipelineCacheCreateInfo	info = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+	char						path[MAX_QPATH];
+	void						*file = NULL;
+	int							sourceLength, sourceChecksum;
+
+	vk_numPipeKeys = 0;
+	vk_savedPipelines = 0;
+	VK_PipeCachePath( path, sizeof( path ) );
+	// (only the file of the profile, as the textures that are kept)
+	if ( ri.FS_FileSource( path, &sourceLength, &sourceChecksum ) == FS_SOURCE_DIRECTORY ) {
+		const int length = ri.FS_ReadFile( path, &file );
+		vkPipeCacheHeader_t header;
+
+		if ( file && length >= (int)sizeof( header ) ) {
+			memcpy( &header, file, sizeof( header ) );
+			if ( header.magic == VK_PIPECACHE_MAGIC && header.version == VK_PIPECACHE_VERSION && header.numKeys <= VK_MAX_PIPELINES
+				&& (size_t)length == sizeof( header ) + header.numKeys * sizeof( uint32_t ) + header.dataSize ) {
+				vk_numPipeKeys = (int)header.numKeys;
+				memcpy( vk_pipeKeys, (const byte *)file + sizeof( header ), header.numKeys * sizeof( uint32_t ) );
+				info.initialDataSize = header.dataSize;
+				info.pInitialData = header.dataSize ? (const byte *)file + sizeof( header ) + header.numKeys * sizeof( uint32_t ) : NULL;
+			}
+		}
+	}
+	if ( qvkCreatePipelineCache( vk.device, &info, NULL, &vk.pipelineCache ) != VK_SUCCESS ) {
+		info.initialDataSize = 0;
+		info.pInitialData = NULL;
+		if ( qvkCreatePipelineCache( vk.device, &info, NULL, &vk.pipelineCache ) != VK_SUCCESS ) {
+			vk.pipelineCache = VK_NULL_HANDLE;
+		}
+	}
+	if ( file ) {
+		ri.FS_FreeFile( file );
+	}
+}
+
+/*
+===============
+VK_SavePipelineCache
+
+The states asked for and what the driver made, into the profile: at the end always (after a new build the data of
+the file did not fit, the driver made everything again), and when a level is loaded while there are more states than
+the file has (a game that crashes keeps what it had by then).
+===============
+*/
+static void VK_WritePipelineCache( qboolean always ) {
+	vkPipeCacheHeader_t	header;
+	char				path[MAX_QPATH];
+	size_t				dataSize = 0;
+
+	if ( !vk.device || !vk.pipelineCache || ( !always && vk.numPipelines <= vk_savedPipelines ) ) {
+		return;
+	}
+	if ( qvkGetPipelineCacheData( vk.device, vk.pipelineCache, &dataSize, NULL ) != VK_SUCCESS ) {
+		return;
+	}
+	std::vector<byte> out( sizeof( header ) + vk.numPipelines * sizeof( uint32_t ) + dataSize );
+	if ( dataSize && qvkGetPipelineCacheData( vk.device, vk.pipelineCache, &dataSize, out.data() + sizeof( header )
+		+ vk.numPipelines * sizeof( uint32_t ) ) != VK_SUCCESS ) {
+		return;
+	}
+	header.magic = VK_PIPECACHE_MAGIC;
+	header.version = VK_PIPECACHE_VERSION;
+	header.numKeys = (uint32_t)vk.numPipelines;
+	header.dataSize = (uint32_t)dataSize;
+	memcpy( out.data(), &header, sizeof( header ) );
+	for ( int i = 0; i < vk.numPipelines; i++ ) {
+		memcpy( out.data() + sizeof( header ) + i * sizeof( uint32_t ), &vk.pipelines[i].key, sizeof( uint32_t ) );
+	}
+	out.resize( sizeof( header ) + vk.numPipelines * sizeof( uint32_t ) + dataSize );
+	VK_PipeCachePath( path, sizeof( path ) );
+	ri.FS_WriteFile( path, out.data(), (int)out.size() );
+	vk_savedPipelines = vk.numPipelines;
+}
+
+void VK_SavePipelineCache( void ) {
+	VK_WritePipelineCache( qfalse );
+}
+
+// the states of the file made now, by several threads (making pipelines is safe from several at once)
+static void VK_PrewarmPipelines( void ) {
+	uint32_t			keys[VK_MAX_PIPELINES];
+	VkPipeline			made[VK_MAX_PIPELINES];
+	std::atomic<int>	next( 0 );
+	std::thread			workers[7];
+	int					count = 0, numWorkers;
+
+	for ( int i = 0; i < vk_numPipeKeys; i++ ) {
+		const uint32_t program = vk_pipeKeys[i] >> 24;
+		bool known = false;
+
+		if ( program >= VKP_NUM_PROGRAMS || !vk.vertexShaders[program] || !vk.fragmentShaders[program]
+			|| ( vk_pipeKeys[i] & 0x00ffffffu & ~(uint32_t)VK_PIPELINE_BITS ) ) {
+			continue;		// (of another build)
+		}
+		for ( int j = 0; j < count && !known; j++ ) {
+			known = keys[j] == vk_pipeKeys[i];
+		}
+		if ( !known ) {
+			keys[count++] = vk_pipeKeys[i];
+		}
+	}
+	if ( !count ) {
+		return;
+	}
+	auto work = [&]() {
+		for ( int i; ( i = next++ ) < count; ) {
+			const vkProgram_t program = (vkProgram_t)( keys[i] >> 24 );
+
+			made[i] = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program], keys[i] & VK_PIPELINE_BITS, qfalse, program );
+		}
+	};
+	numWorkers = Com_Clampi( 0, (int)ARRAY_LEN( workers ), (int)std::thread::hardware_concurrency() / 2 - 1 );
+	numWorkers = Q_min( numWorkers, count - 1 );
+	for ( int i = 0; i < numWorkers; i++ ) {
+		workers[i] = std::thread( work );
+	}
+	work();
+	for ( int i = 0; i < numWorkers; i++ ) {
+		workers[i].join();
+	}
+	for ( int i = 0; i < count; i++ ) {
+		vk.pipelines[vk.numPipelines].key = keys[i];
+		vk.pipelines[vk.numPipelines++].pipeline = made[i];
+	}
+	vk_savedPipelines = vk.numPipelines;
 }
 
 /*
@@ -540,14 +706,22 @@ VkPipeline VK_FindPipeline( vkProgram_t program, uint32_t stateBits ) {
 	}
 	vk.pipelines[vk.numPipelines].key = key;
 	ri.LoadPush( "pipeline", va( "state %08x", key ) );
+	const int start = ri.Milliseconds();
 	vk.pipelines[vk.numPipelines].pipeline = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program],
 		stateBits, qfalse, program );
+	// (made while a frame is drawn: what takes long here is a stall in the game, developer 1 names it)
+	const int took = ri.Milliseconds() - start;
+	vk.statPipelineMs += took;
+	if ( took >= 20 ) {
+		ri.Printf( PRINT_DEVELOPER, "pipeline %08x made in %i ms (%i ms for all %i so far)\n", key, took, vk.statPipelineMs, vk.numPipelines + 1 );
+	}
 	ri.LoadPop();
 	vk.lastPipelineKey = key;
 	return vk.lastPipeline = vk.pipelines[vk.numPipelines++].pipeline;
 }
 
 void VK_InitPipelines( void ) {
+	VK_LoadPipelineCache();
 	VK_CreateLayouts();
 	vk.vertexShaders[VKP_GENERIC] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
 	vk.fragmentShaders[VKP_GENERIC] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
@@ -622,9 +796,11 @@ void VK_InitPipelines( void ) {
 	vk.saberPortalPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberPortalShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 	vk.saberGlowShader = VK_CreateShader( vk_saberglowFrag, sizeof( vk_saberglowFrag ) );
 	vk.saberGlowPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberGlowShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
+	VK_PrewarmPipelines();
 }
 
 void VK_ShutdownPipelines( void ) {
+	VK_WritePipelineCache( qtrue );
 	for ( int i = 0; i < vk.numPipelines; i++ ) {
 		qvkDestroyPipeline( vk.device, vk.pipelines[i].pipeline, NULL );
 	}
@@ -669,6 +845,10 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.saberPortalShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberGlowPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberGlowShader, NULL );
+	if ( vk.pipelineCache ) {
+		qvkDestroyPipelineCache( vk.device, vk.pipelineCache, NULL );
+		vk.pipelineCache = VK_NULL_HANDLE;
+	}
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );

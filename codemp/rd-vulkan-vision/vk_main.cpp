@@ -45,6 +45,25 @@ void VK_WaitIdle( void ) {
 }
 
 /*
+===============
+VK_StageTime
+
+VisionJK: how long the steps of starting and stopping the renderer take, with developer 1, one line a step since
+the step before (name NULL: only starts the clock). For their stall at vid_restart after switching ray tracing off
+(2026-11-08); kept for the next one.
+===============
+*/
+void VK_StageTime( const char *name ) {
+	static int last;
+	const int now = ri.Milliseconds();
+
+	if ( name ) {
+		ri.Printf( PRINT_DEVELOPER, "renderer start and stop: %s %i ms\n", name, now - last );
+	}
+	last = now;
+}
+
+/*
 A machine that can not run this renderer (no Vulkan, an older one, no device that fits): VK_InitVulkan() says why
 in the console and returns qfalse, with the reason as glConfig.renderer_string and no window size, and the engine
 stops with it (CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the
@@ -631,6 +650,7 @@ qboolean VK_InitVulkan( void ) {
 
 	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
 
+	VK_StageTime( NULL );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 	memset( &vk, 0, sizeof( vk ) );
 	window = ri.WIN_Init( &windowDesc, &glConfig );
@@ -640,6 +660,7 @@ qboolean VK_InitVulkan( void ) {
 	}
 	vk.width = glConfig.vidWidth;
 	vk.height = glConfig.vidHeight;
+	VK_StageTime( "window" );
 
 	if ( !VK_CreateInstance() ) {
 		VK_DestroyInstance();
@@ -654,8 +675,10 @@ qboolean VK_InitVulkan( void ) {
 		VK_DestroyInstance();
 		return qfalse;
 	}
+	VK_StageTime( "instance" );
 	VK_CreateDevice();
 	VK_InitMemory();
+	VK_StageTime( "device" );
 	VK_CreateSwapchain();
 
 	{
@@ -668,13 +691,17 @@ qboolean VK_InitVulkan( void ) {
 	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginRendering()
 	vk.samples = VK_SampleCount();
 	VK_CreateFrameTargets();
+	VK_StageTime( "swapchain and targets" );
 
 	VK_InitPipelines();
+	VK_StageTime( "pipelines" );
 	VK_InitPost();
 	VK_InitFrames();
 	VK_InitImages();
 	VK_InitModels();
+	VK_StageTime( "post, frames, images" );
 	VK_RT_Init();
+	VK_StageTime( "ray tracing and shadow maps" );
 	// the cgame asks for the shadows of the players where the renderer has them (with traced rays, or with shadow maps
 	// where the card has no ray tracing, vk_rt.cpp)
 	ri.Cvar_Get( "v_rtAvailable", "0", CVAR_ROM, "Whether the renderer draws the shadows of the players itself on this graphics card (cg_shadows 2): by rays, or by shadow maps" );
@@ -708,7 +735,9 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	if ( !vk.device ) {
 		return;
 	}
+	VK_StageTime( NULL );
 	qvkDeviceWaitIdle( vk.device );
+	VK_StageTime( "waiting for the device at the end" );
 	if ( !destroyWindow ) {
 		return;
 	}
@@ -726,6 +755,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );
 	qvkDestroyDevice( vk.device, NULL );
 	VK_DestroyInstance();
+	VK_StageTime( "shutdown" );
 }
 
 // The end of the instance and of what hangs on it alone, and of what the renderer knows about the window. Also
@@ -773,8 +803,8 @@ void VK_GfxInfo_f( void ) {
 	// they are kept over a restart of the renderer: a number that grows with every map is a leak
 	ri.Printf( PRINT_ALL, "ghoul2 instances: %i of 1024 slots in use, %i of them without a model\n", G2API_SlotsInUse(),
 		G2API_ListSlots( (qboolean)( ri.Cvar_VariableIntegerValue( "developer" ) != 0 ) ) );
-	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES,
-		numBlockImages, vk.numPipelines, vk.numSamplers );
+	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i (made in %i ms), samplers: %i\n", numImages,
+		VK_MAX_IMAGES, numBlockImages, vk.numPipelines, vk.statPipelineMs, vk.numSamplers );
 	VK_FrameInfo_f();
 	VK_MemoryInfo_f();
 	ri.Printf( PRINT_ALL, "validation layer: %s", vk.validation ? "on" : "off" );

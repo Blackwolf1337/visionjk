@@ -76,6 +76,14 @@ static int VK_SampleCount( void ) {
 	return 1;
 }
 
+// the timer of the steps of a start and the pipelines kept in the profile are the Vulkan device's (vk_main.cpp,
+// vk_pipeline.cpp); this one has neither
+void VK_StageTime( const char *name ) {
+}
+
+void VK_SavePipelineCache( void ) {
+}
+
 /*
 ===============
 VK_InitVulkan

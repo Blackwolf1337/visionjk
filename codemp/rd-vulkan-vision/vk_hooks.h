@@ -28,6 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // vk_main.cpp
 qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the renderer
 void VK_ShutdownVulkan( qboolean destroyWindow );
+void VK_StageTime( const char *name );
+void VK_SavePipelineCache( void );	// the pipelines made so far into the profile, when there are new ones		// developer 1: how long the step since the one before took
 void VK_GfxInfo_f( void );
 // the window has that size now: the frame follows it between two frames. qfalse: this device can not, the engine
 // restarts the renderer instead

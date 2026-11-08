@@ -856,7 +856,9 @@ void R_Init( void ) {
 	ri.Cvar_Set( "v_2dBiasY", va( "%f", R_2DBiasY() ) );
 
 	R_InitImages();
+	VK_StageTime( "images of the renderer" );
 	R_InitShaders(qfalse);
+	VK_StageTime( "shader scripts" );
 	R_InitSkins();
 
 	R_InitFonts();
@@ -869,6 +871,7 @@ void R_Init( void ) {
 
 
 	RestoreGhoul2InfoArray();
+	VK_StageTime( "skins, fonts, models" );
 	// print info
 	GfxInfo_f();
 

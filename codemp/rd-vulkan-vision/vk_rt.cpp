@@ -1377,7 +1377,7 @@ static void VK_RT_CreateCasters( void ) {
 	info.stage.module = rt.skinShader;
 	info.stage.pName = "main";
 	info.layout = rt.skinLayout;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.skinPipeline ) );
+	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.skinPipeline ) );
 }
 
 // shaders/rtcells.comp
@@ -1403,12 +1403,12 @@ static void VK_RT_CreateLights( void ) {
 	info.stage.module = rt.cellsShader;
 	info.stage.pName = "main";
 	info.layout = rt.cellsLayout;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.cellsPipeline ) );
+	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.cellsPipeline ) );
 
 	// shaders/rtlamps.comp in the same layout
 	rt.lampsShader = VK_CreateShader( vk_rtLampsComp, sizeof( vk_rtLampsComp ) );
 	info.stage.module = rt.lampsShader;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.lampsPipeline ) );
+	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.lampsPipeline ) );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		VK_CreateBuffer( &rt.lampRays[i], ( sizeof( float ) * 12 + sizeof( float ) ) * VK_RT_LAMP_RAYS,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
@@ -1826,7 +1826,7 @@ static void VK_SM_Create( void ) {
 	info.pColorBlendState = &blend;
 	info.pDynamicState = &dynamic;
 	info.layout = rt.depthLayout;
-	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.depthPipeline ) );
+	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.depthPipeline ) );
 
 	// the masks from the atlas, as the rays write them
 	rt.smShadowFragment = VK_CreateShader( vk_smShadowFrag, sizeof( vk_smShadowFrag ) );

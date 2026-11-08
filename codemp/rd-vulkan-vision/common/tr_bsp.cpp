@@ -2204,9 +2204,13 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 //
 void RE_LoadWorldMap( const char *name )
 {
+	// (what the level before made, while the game is loading anyway)
+	VK_SavePipelineCache();
+	VK_StageTime( NULL );
 	ri.CM_SetUsingCache( qtrue );
 	RE_LoadWorldMap_Actual( name, s_worldData, 0 );
 	ri.CM_SetUsingCache( qfalse );
 	// VisionJK: the sun of this level is the one an override gives way to (tr_material.cpp)
 	R_MaterialWorldLoaded();
+	VK_StageTime( "level" );
 }

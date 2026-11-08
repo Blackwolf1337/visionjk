@@ -230,6 +230,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					saberGlowPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
+	VkPipelineCache				pipelineCache;		// kept in the profile, see VK_LoadPipelineCache()
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered
@@ -259,6 +260,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkBuffer					boundIndexBuffer;
 
 	int							statSwapchains;		// how many swapchains this window has had
+	int							statPipelineMs;		// how long making the pipelines of VK_FindPipeline took, all together
 	int							statFramesNotShown;	// frames that found no image of the swapchain to go to
 
 	qboolean					validation;

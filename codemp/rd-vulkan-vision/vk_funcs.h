@@ -99,6 +99,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCreateDescriptorSetLayout ) \
 	X( vkCreateFence ) \
 	X( vkCreateGraphicsPipelines ) \
+	X( vkCreatePipelineCache ) \
 	X( vkCreateImage ) \
 	X( vkCreateImageView ) \
 	X( vkCreatePipelineLayout ) \
@@ -116,6 +117,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkDestroyImage ) \
 	X( vkDestroyImageView ) \
 	X( vkDestroyPipeline ) \
+	X( vkDestroyPipelineCache ) \
 	X( vkDestroyPipelineLayout ) \
 	X( vkDestroyQueryPool ) \
 	X( vkDestroySampler ) \
@@ -129,6 +131,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkGetBufferMemoryRequirements ) \
 	X( vkGetDeviceQueue ) \
 	X( vkGetImageMemoryRequirements ) \
+	X( vkGetPipelineCacheData ) \
 	X( vkGetQueryPoolResults ) \
 	X( vkGetSwapchainImagesKHR ) \
 	X( vkMapMemory ) \
