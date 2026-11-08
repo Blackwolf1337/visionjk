@@ -5652,6 +5652,59 @@ static qboolean CG_SaberPastAt( const saberPast_t *p, int time, vec3_t base, vec
 	return qfalse;
 }
 
+// VisionJK (cg_slice.c): of the blades of a player (ci), the place in their history of the last moment where one came
+// nearest point, within reach: the blade there (base, tip) and which way its tip moved from the sample before. qfalse:
+// none of his blades came that near (or none was drawn, the history knows only drawn blades).
+qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep )
+{
+	qboolean	found = qfalse;
+	float		best = reach;
+	int			s, b, i, k;
+
+	for ( s = 0; s < MAX_SABERS; s++ )
+	{
+		for ( b = 0; b < ci->saber[s].numBlades && b < MAX_BLADES; b++ )
+		{
+			const saberTrail_t	*trail = &ci->saber[s].blade[b].trail;
+			const saberPast_t	*p = NULL;
+
+			for ( i = 0; i < SABER_PAST_SLOTS && !p; i++ )
+			{
+				if ( cg_saberPast[i].trail == trail )
+					p = &cg_saberPast[i];
+			}
+			if ( !p || p->count < 2 )
+				continue;
+			for ( k = 0; k < p->count - 1; k++ )
+			{
+				const int	a = ( p->head + SABER_PAST - k ) % SABER_PAST, older = ( a + SABER_PAST - 1 ) % SABER_PAST;
+				vec3_t		seg, rel, nearest;
+				float		u, len2, d;
+
+				if ( cg.time - p->time[a] > 300 )
+					break;
+				VectorSubtract( p->tip[a], p->base[a], seg );
+				VectorSubtract( point, p->base[a], rel );
+				len2 = DotProduct( seg, seg );
+				u = len2 > 1e-4f ? Com_Clamp( 0.0f, 1.0f, DotProduct( rel, seg ) / len2 ) : 0.0f;
+				VectorMA( p->base[a], u, seg, nearest );
+				d = Distance( point, nearest );
+				if ( d < best )
+				{
+					best = d;
+					found = qtrue;
+					VectorCopy( p->base[a], base );
+					VectorCopy( p->tip[a], tip );
+					VectorSubtract( p->tip[a], p->tip[older], sweep );
+					if ( VectorLengthSquared( sweep ) < 0.25f )
+						VectorSubtract( p->base[a], p->base[older], sweep );
+				}
+			}
+		}
+	}
+	return found;
+}
+
 // v_saber3D: the place the blade (from start to end) swept since a moment ago, and how bright it is: the faster the
 // blade, the brighter. As long as the trail of the SFX look is at 144 frames a second (CG_SFXSaberTrail: a share of
 // the last frame, half of it for a move without a trail, the hilt end half as far as the tip), but by the clock, so
@@ -12169,7 +12222,9 @@ stillDoSaber:
 	if (!(cent->currentState.powerups & (1 << PW_CLOAKED)))
 	{ //don't add the normal model if cloaked
 		CG_CheckThirdPersonAlpha( cent, &legs );
-		trap->R_AddRefEntityToScene(&legs);
+		// (VisionJK: a body a saber cut through is drawn in its two parts, cg_slice.c)
+		if ( !CG_SliceDrawBody( cent, &legs, rootAngles ) )
+			trap->R_AddRefEntityToScene(&legs);
 		// the tracker of the disruptor's scope follows him (scope/cg_scope.c)
 		CG_ScopeEntity( cent );
 	}

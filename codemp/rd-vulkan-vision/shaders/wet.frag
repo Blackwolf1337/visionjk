@@ -55,6 +55,9 @@ layout( location = 0 ) out vec4 o_color;
 #define WET_FOOT_RIGHT	2
 #define WET_TRACK		4
 #define WET_SNOW		5
+#define WET_BLOOD		6
+#define BLOOD_DEEP		vec3( 0.20, 0.008, 0.006 )	// the colour of a pool of blood where it is deep,
+#define BLOOD_THIN		vec3( 0.42, 0.03, 0.02 )	//	of a drop and of the thin edge
 #define SNOW_ALBEDO		vec3( 0.93, 0.95, 0.98 )
 #define SNOW_HOLLOW		vec3( 0.72, 0.81, 0.95 )
 
@@ -188,7 +191,7 @@ void main() {
 
 	// all places here: their edges joined, their light and size by how near they are, the slopes of their water
 	float edgeWet = FAR, sizeWet = 0.0, placeWeights = 0.0, weights = 0.0, water = 0.0, fade = 0.0, streak = 0.0, prints = 0.0;
-	float flowNear = 0.0, snow = 0.0, snowHeight = 0.0, snowMelt = 0.0;
+	float flowNear = 0.0, snow = 0.0, snowHeight = 0.0, snowMelt = 0.0, blood = 0.0, bloodDeep = 0.0;
 	vec2 snowAt = vec2( 0.0 );
 	vec3 snowN = vec3( 0.0, 0.0, 1.0 ), snowT = vec3( 1.0, 0.0, 0.0 ), snowB = vec3( 0.0, 1.0, 0.0 );
 	vec3 ambient = vec3( 0.0 ), directed = vec3( 0.0 ), lightDir = vec3( 0.0 );
@@ -255,6 +258,38 @@ void main() {
 				snowN = nj;
 				snowT = t;
 				snowB = b;
+			}
+			continue;
+		}
+		if ( kind == WET_BLOOD ) {
+			// A pool of blood (the saber slicing, cgame/cg_slice.c): it runs out to radius as wet goes from 0 to 1, its
+			// edge ragged and rounded as a thick liquid's is, and round it droplets thrown off by the cut, in cells of
+			// two and a half units, fewer and smaller the farther out. Deep in the middle, thin at its edge.
+			vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
+			vec2 q = local + seed * 131.0;
+			float d = r - radius * wet + ( ( Fbm( q * 0.09 ) - 0.47 ) * 0.7 + ( Noise( q * 0.5 ) - 0.5 ) * 0.08 ) * radius;
+			float cover = 1.0 - smoothstep( -0.05 * radius, 0.02 * radius, d );
+			float deep = 1.0 - smoothstep( -0.45 * radius, -0.05 * radius, d );
+			const float CELL = 2.5;
+			vec2 cell = floor( local / CELL );
+			for ( int cy = -1; cy <= 1; cy++ ) {
+				for ( int cx = -1; cx <= 1; cx++ ) {
+					vec2 c = cell + vec2( cx, cy );
+					uvec3 hs = Pcg3( uvec3( ivec3( ivec2( c ) + 4096, int( seed * 4096.0 ) ) ) );
+					vec3 rs = vec3( hs & 0xffffu ) / 65535.0;
+					vec2 at = ( c + 0.2 + 0.6 * rs.xy ) * CELL;
+					float out_ = length( at ) / ( radius * 1.8 );
+					if ( out_ > 1.0 || rs.z > 0.55 * ( 1.0 - out_ ) * smoothstep( 0.1, 0.5, wet ) ) {
+						continue;
+					}
+					float size = ( 0.25 + 0.65 * fract( rs.z * 13.7 ) ) * ( 1.0 - 0.6 * out_ );
+					cover = max( cover, 1.0 - smoothstep( size - 0.12, size + 0.08, length( local - at ) ) );
+				}
+			}
+			cover *= smoothstep( 0.0, 0.1, wet );
+			if ( cover > blood ) {
+				blood = cover;
+				bloodDeep = deep;
 			}
 			continue;
 		}
@@ -345,7 +380,8 @@ void main() {
 	mask = max( max( mask, streak ), prints * 0.85 );
 	mask *= fade;
 	snow *= fade;
-	if ( max( mask, snow ) <= 0.002 ) {
+	blood *= fade;
+	if ( max( max( mask, snow ), blood ) <= 0.002 ) {
 		discard;
 	}
 
@@ -401,6 +437,23 @@ void main() {
 		// the mirror of a real one is seen against ground that is darker than the floors of most levels)
 		vec3 pond = mix( under, seen, clamp( wFresnel * 2.0 + mirror, 0.0, 0.92 ) ) + glint;
 		color = mix( color, pond, pool );
+	}
+
+	// Blood: a thick liquid, nearly flat with a little lumpiness, dark where it is deep, the ground showing through at its
+	// thin edge; a tight shine of the light of the level and a little of the room in it at a low angle
+	if ( blood > 0.002 ) {
+		vec3 bn = normalize( n + ( t * ( Noise( uv * 1.3 ) - 0.5 ) + b * ( Noise( uv * 1.3 + 5.0 ) - 0.5 ) ) * 0.08 );
+		vec3 l2 = normalize( lightDir );
+		vec3 h2 = normalize( l2 - view );
+		float bf = clamp( dot( -view, bn ), 0.0, 1.0 );
+		float bFresnel = 0.03 + 0.97 * pow( 1.0 - bf, 5.0 );
+		vec3 albedo = mix( BLOOD_THIN, BLOOD_DEEP, bloodDeep );
+		vec3 lit = albedo * ( ambient + directed * max( dot( n, l2 ), 0.0 ) );
+		vec3 stain = mix( base * albedo * 2.2, lit, 0.4 + 0.6 * bloodDeep );
+		vec3 shine = directed * pow( clamp( dot( bn, h2 ), 0.0, 1.0 ), 250.0 ) * 2.0 * ( 0.04 + 0.96 * pow( 1.0 - clamp( dot( h2, -view ), 0.0, 1.0 ), 5.0 ) );
+		vec3 room = ( ambient * 0.75 + directed * 0.3 ) * bFresnel * 0.5;
+		color = mix( color, stain + shine + room, blood );
+		mask = max( mask, blood );
 	}
 
 	// Snow over all of it: its clumps as bumps (the slope of their noise), lit as the snow of the ball is (light

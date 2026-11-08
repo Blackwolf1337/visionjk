@@ -2721,6 +2721,7 @@ Ghoul2 Insert End
 	CG_BubbleInit();
 	CG_StatusInit();
 	CG_LookInit();
+	CG_SliceInit();
 	CG_PeerInit();
 	CG_SelectInit();
 	CG_ToolsInit();

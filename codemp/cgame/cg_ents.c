@@ -1068,6 +1068,11 @@ static void CG_General( centity_t *cent ) {
 				return;
 			}
 
+			if ( clEnt && CG_Sliced( clEnt->currentState.number ) )
+			{ // VisionJK: his body was cut through along the swing (cg_slice.c), the limb would be one more
+				return;
+			}
+
 
 			if (clEnt && !(clEnt->currentState.eFlags & EF_DEAD))
 			{ //death flag hasn't made it through yet for the limb owner, we cannot create the limb until he's flagged as dead
@@ -1657,8 +1662,9 @@ Ghoul2 Insert End
 		return;
 	}
 
-	// add to refresh list
-	trap->R_AddRefEntityToScene (&ent);
+	// add to refresh list (VisionJK: the copy of a body a saber cut through in its two parts, cg_slice.c)
+	if ( s1->eType != ET_BODY || !CG_SliceDrawBody( cent, &ent, cent->lerpAngles ) )
+		trap->R_AddRefEntityToScene (&ent);
 
 	if (cent->bolt3 == 999)
 	{ //this is an in-flight saber being rendered manually

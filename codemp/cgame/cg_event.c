@@ -144,6 +144,11 @@ static void CG_Obituary( entityState_t *ent ) {
 	ci = &cgs.clientinfo[target];
 	CG_JPReplyObituary( target );
 
+	// VisionJK: a saber kill may cut the body through along the swing (cg_slice.c)
+	if ( mod == MOD_SABER ) {
+		CG_SliceKill( target, attacker );
+	}
+
 	// tay_killSound, as jaPRO's cg_killSounds: the own player killed somebody else
 	if ( tay_killSound.integer && cg.snap && !( cg.snap->ps.pm_flags & PMF_FOLLOW ) && attacker == cg.snap->ps.clientNum && target != attacker ) {
 		trap->S_StartLocalSound( cgs.media.tayKillSound, CHAN_LOCAL_SOUND );

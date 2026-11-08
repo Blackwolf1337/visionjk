@@ -212,6 +212,7 @@ typedef struct liquidSegment_s {
 #define WET_RING		3		// radius: how far it runs out, wet: how strong, flow: 0 to 1 of its life
 #define WET_TRACK		4		// a piece of the track of a wet tire from 2 origin - hit to hit, seed: half its width
 #define WET_SNOW		5		// a splat of snow, slid down to origin from hit, wet: how much of it is left
+#define WET_BLOOD		6		// a pool of blood with droplets round it (cgame/cg_slice.c), wet: how far it has run out
 
 typedef struct wetSpot_s {
 	vec3_t		origin;

@@ -106,6 +106,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_marks.c"
 	"${MPDir}/cgame/cg_newDraw.c"
 	"${MPDir}/cgame/cg_players.c"
+	"${MPDir}/cgame/cg_slice.c"
 	"${MPDir}/cgame/cg_playerstate.c"
 	"${MPDir}/cgame/cg_predict.c"
 	"${MPDir}/cgame/cg_saga.c"
