@@ -2121,6 +2121,13 @@ void G2_TransformGhoulBones(boneInfo_v &rootBoneList,mdxaBone_t &rootMatrix, CGh
 	{
 		ghoul2.mBoneCache->mSmoothFactor=1.0f;
 	}
+	if (ghoul2.mFlags & GHOUL2_VJK_PLACED)
+	{
+		// VisionJK: as placed by the cgame, which moves them smoothly itself (G2API_VJK_SetBonesWorld)
+		ghoul2.mBoneCache->mSmoothingActive=false;
+		ghoul2.mBoneCache->mUnsquash=false;
+		ghoul2.mBoneCache->mSmoothFactor=1.0f;
+	}
 
 	ghoul2.mBoneCache->mCurrentTouch++;
 

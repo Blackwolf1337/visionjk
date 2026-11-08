@@ -1708,8 +1708,10 @@ qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t ang
 		{
 			blist[i].flags &= ~BONE_ANGLES_MODEL;
 		}
+		ghlInfo->mFlags &= ~GHOUL2_VJK_PLACED;
 		return qtrue;
 	}
+	ghlInfo->mFlags |= GHOUL2_VJK_PLACED;
 
 	G2_GenerateWorldMatrix( angles, origin );
 	for ( int n = 0; n < count; n++ )

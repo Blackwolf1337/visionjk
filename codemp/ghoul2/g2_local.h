@@ -33,6 +33,9 @@ class CRagDollUpdateParams;
 class IHeapAllocator;
 
 #define		GHOUL2_CRAZY_SMOOTH						0x2000		//hack for smoothing during ugly situations. forgive me.
+// VisionJK: bones placed whole by the cgame (G2API_VJK_SetBonesWorld): drawn as placed, not smoothed, since the
+// smoothing scales every bone back to full size and a bone shrunk to nothing would show again
+#define		GHOUL2_VJK_PLACED						0x4000
 
 class IGhoul2InfoArray
 {
