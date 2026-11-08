@@ -825,6 +825,16 @@ vec4 PbrStage( Draw d ) {
 	return vec4( pow( color, vec3( 1.0 / 2.2 ) ), alpha );
 }
 
+// What goes into the frame: no NaN, no infinity, nothing below zero. In the 8 bit frame such a value was cut to
+// black or white where it fell; in the 16 bit frame of v_hdr it stays and every blend and blur over it spreads it
+// (white blotches over walls and the HUD, 2026-11-08).
+vec4 SafeColor( vec4 c ) {
+	if ( any( isnan( c ) ) || any( isinf( c ) ) ) {
+		return vec4( 0.0 );
+	}
+	return clamp( c, vec4( 0.0 ), vec4( 64.0 ) );
+}
+
 void main() {
 	Draw d = DRAWS( v_draw );
 
@@ -835,7 +845,7 @@ void main() {
 	}
 #endif
 	if ( DLIGHT( d.flags ) ) {
-		o_color = DynamicLight( d );
+		o_color = SafeColor( DynamicLight( d ) );
 		return;
 	}
 
@@ -891,5 +901,5 @@ void main() {
 		}
 		color.rgb = mix( d.fogColor.rgb, color.rgb, clamp( f, 0.0, 1.0 ) );
 	}
-	o_color = color;
+	o_color = SafeColor( color );
 }

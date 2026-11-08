@@ -214,6 +214,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					wetPipeline;		// the wet places of RE_AddWet (VK_WetPass)
 	VkPipeline					paintPipeline;		// the sprayed pictures of RE_AddPaint (VK_PaintPass)
 	VkShaderModule				smaaEdgeShader, smaaWeightShader, smaaBlendShader;
+	VkShaderModule				tonemapShader;
+	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;

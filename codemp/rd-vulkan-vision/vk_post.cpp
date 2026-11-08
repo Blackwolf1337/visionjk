@@ -36,6 +36,8 @@ void myGlMultMatrix( const float *a, const float *b, float *out );
 
 cvar_t	*v_wetMirror;
 cvar_t	*v_smaa;
+cvar_t	*v_tonemap;
+cvar_t	*v_exposure;
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
@@ -43,6 +45,9 @@ void VK_InitPost( void ) {
 
 	v_wetMirror = ri.Cvar_Get( "v_wetMirror", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
 		"Puddles of the water gun mirror the room: the level is drawn once more, mirrored at their floor. 0: they mirror only what is on the screen" );
+	v_tonemap = ri.Cvar_Get( "v_tonemap", "1", CVAR_ARCHIVE_ND,
+		"How the level is put onto the screen at the end of its view (with v_hdr light brighter than white is there). 1: the original look, bright light glows out softly instead of clipping. 2: filmic (AgX) as modern games. 0: cut off at white as before" );
+	v_exposure = ri.Cvar_Get( "v_exposure", "1", CVAR_ARCHIVE_ND, "How bright the level is before it is tone mapped (v_tonemap), 1 as it is" );
 	v_smaa = ri.Cvar_Get( "v_smaa", "0", CVAR_ARCHIVE_ND,
 		"Smooths the edges of the level after it is drawn (SMAA 1x), far cheaper than r_ext_multisample and sharper than a blur; with r_ext_multisample 2 it also catches thin lines. Vulkan only. 0: off" );
 	VK_CreatePostTargets( width, height );
@@ -242,6 +247,37 @@ void VK_Smaa( void ) {
 	}
 	VK_EndTarget();
 	VK_SmaaPass( 0.1f / (float)( 1 << tr.overbrightBits ) );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
+}
+
+/*
+===============
+VK_Tonemap
+
+v_tonemap, for the view of the level only, after tay_bloom (which takes the light above white with it) and before
+SMAA (which finds the edges in the colours of the screen) and the 2D. Without v_hdr nothing is above white: the
+soft shoulder would only take the brightest whites down a little, so it runs only with v_hdr; the filmic curve
+changes the colours too and runs on either.
+===============
+*/
+void VK_Tonemap( void ) {
+#ifndef RD_VISION_GLES
+	const int curve = Com_Clampi( 0, 2, v_tonemap->integer );
+	float parm[3];
+
+	if ( !vk.frame || !curve || ( curve == 1 && vk.color.format == VK_FORMAT_R8G8B8A8_UNORM ) ) {
+		return;
+	}
+	parm[0] = Com_Clamp( 0.05f, 16.0f, v_exposure->value );
+	parm[1] = (float)curve;
+	parm[2] = (float)( 1 << tr.overbrightBits );
+	VK_EndTarget();
+	VK_TonemapPass( parm );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();

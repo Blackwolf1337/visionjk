@@ -111,6 +111,9 @@ static const uint32_t vk_smaaWeightFrag[] =
 static const uint32_t vk_smaaBlendFrag[] =
 #include "shaders/smaa_blend_frag.inc"
 ;
+static const uint32_t vk_tonemapFrag[] =
+#include "shaders/tonemap_frag.inc"
+;
 
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -592,6 +595,9 @@ void VK_InitPipelines( void ) {
 	vk.smaaEdgePipeline = VK_CreatePipeline( vk.postVertexShader, vk.smaaEdgeShader, 0, 10, VKP_GENERIC );
 	vk.smaaWeightPipeline = VK_CreatePipeline( vk.postVertexShader, vk.smaaWeightShader, 0, 10, VKP_GENERIC );
 	vk.smaaBlendPipeline = VK_CreatePipeline( vk.postVertexShader, vk.smaaBlendShader, 0, 11, VKP_GENERIC );
+	// v_tonemap: the copy of the frame back over it, as the last pass of SMAA (the same layout, one set)
+	vk.tonemapShader = VK_CreateShader( vk_tonemapFrag, sizeof( vk_tonemapFrag ) );
+	vk.tonemapPipeline = VK_CreatePipeline( vk.postVertexShader, vk.tonemapShader, 0, 11, VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -631,6 +637,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.smaaEdgeShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.smaaWeightShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.smaaBlendShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.tonemapPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {

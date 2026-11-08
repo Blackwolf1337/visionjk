@@ -985,6 +985,22 @@ void VK_SmaaPass( float threshold ) {
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
+// v_tonemap: the frame through shaders/tonemap.frag from a copy of it (vk.screen); parm: exposure, curve, 2 ^
+// overbright bits. Leaves vk.color begun with vk.depth, as VK_SmaaPass() does.
+void VK_TonemapPass( const float *parm ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	float push[8] = { 0.0f, 0.0f, 0.0f, 0.0f, parm[0], parm[1], parm[2], 0.0f };
+
+	VK_CopyTarget( &vk.color, &vk.screen );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.tonemapPipeline );
+	vk.boundPipeline = vk.tonemapPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 1, &vk.screenSet, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( push ), push );
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+}
+
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sourceSet = VK_PostSet( source );

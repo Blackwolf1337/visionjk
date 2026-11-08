@@ -10,6 +10,11 @@
 vec3 bright( vec2 at ) {
 	vec3 color = texture( u_image, at ).rgb;
 
+	// (a NaN of the 16 bit frame would spread over the whole blur)
+	if ( any( isnan( color ) ) || any( isinf( color ) ) ) {
+		color = vec3( 0.0 );
+	}
+
 	if ( PARM.w > 0.0 ) {
 		color = max( color - vec3( PARM.w ), vec3( 0.0 ) ) / ( 1.0 - PARM.w );
 	}

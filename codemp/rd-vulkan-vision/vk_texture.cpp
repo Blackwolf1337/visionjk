@@ -505,12 +505,13 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VkDescriptorSet *sets[7] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1], &vk.softSets[0], &vk.softSets[1], &vk.smokeSets[0], &vk.smokeSets[1] };
 	vkTarget_t *targets[7] = { &vk.glow, &vk.blur[0], &vk.blur[1], &vk.soft[0], &vk.soft[1], &vk.smoke[0], &vk.smoke[1] };
 
-	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	// (the glowing stages are drawn with the pipelines of the level, so in the format of the frame)
+	VK_CreateTarget( &vk.glow, vk.width, vk.height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
 		// the glowing stages are drawn over the depth of the scene, so with as many samples
-		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 	}
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
+	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
 		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an

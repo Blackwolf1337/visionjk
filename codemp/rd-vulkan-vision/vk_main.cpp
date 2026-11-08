@@ -29,6 +29,7 @@ static cvar_t	*v_vkDebug;			// 1: validation layer and its messages, if the laye
 static cvar_t	*r_swapIntervalVk;	// r_swapInterval of the engine
 static cvar_t	*r_multisampleVk;	// r_ext_multisample of the engine
 static cvar_t	*v_rayTracing;		// 0: no ray tracing even where the device has it (vk_rt.cpp)
+static cvar_t	*v_hdr;				// the frame in 16 bit floats, tone mapped at the end of the view of the level
 
 static char		vk_versionString[64];
 static char		vk_driverString[64];
@@ -543,8 +544,14 @@ static VkSampleCountFlagBits VK_SampleCount( void ) {
 
 // the targets of the frame in the size of the window: what the scene and the 2D are drawn into, and the picture
 // after the gamma pass that is copied to the window
+// the format of the frame and of everything the level is drawn into: 16 bit floats with v_hdr (light above 1 stays
+// until the tone map of vk_post.cpp), else 8 bits
+static VkFormat VK_FrameFormat( void ) {
+	return v_hdr->integer ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_R8G8B8A8_UNORM;
+}
+
 static void VK_CreateFrameTargets( void ) {
-	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
+	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FrameFormat(),
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
@@ -554,7 +561,7 @@ static void VK_CreateFrameTargets( void ) {
 			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FrameFormat(), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
@@ -614,6 +621,8 @@ qboolean VK_InitVulkan( void ) {
 	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
+	v_hdr = ri.Cvar_Get( "v_hdr", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"The level is drawn with light brighter than white (16 bit floats), and tone mapped to the screen at its end (v_tonemap, v_exposure): sabers, glows and lamps glow out instead of clipping. 0: 8 bits as rd-vanilla" );
 	v_rayTracing = ri.Cvar_Get( "v_rayTracing", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
 		"Ray tracing where the graphics card has it, for the shadows of the players. 0: off" );
 	if ( VK_InitShared() ) {

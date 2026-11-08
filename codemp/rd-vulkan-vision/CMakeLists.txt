@@ -251,6 +251,7 @@ set(MPVulkanVisionVulkanShaders
 	smaa_edge.frag
 	smaa_weight.frag
 	smaa_blend.frag
+	tonemap.frag
 	)
 set(MPVulkanVisionVulkanShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/smaa.glsl"
