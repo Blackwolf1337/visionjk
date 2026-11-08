@@ -1513,8 +1513,12 @@ void RB_EndSurface( void ) {
 		Com_Error( ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit" );
 	}
 
+	// A batch that is skipped is emptied all the same: the end of a view sets tess.shader to NULL (RB_DrawSurfs),
+	// and the next flush of what was left behind read that NULL. rd-vanilla keeps the shader and never noticed.
+	// Happened with a sky portal that the server adds to a level (JoF on t2_rancor, 2026-11-08).
 	// for debugging of sort order issues, stop rendering after a given sort value
 	if ( r_debugSort->integer && r_debugSort->integer < tess.shader->sort ) {
+		tess.numIndexes = 0;
 		return;
 	}
 	if ( skyboxportal ) {
@@ -1522,6 +1526,7 @@ void RB_EndSurface( void ) {
 		if ( !( backEnd.refdef.rdflags & RDF_SKYBOXPORTAL ) ) {
 			if ( tess.currentStageIteratorFunc == RB_StageIteratorSky ) {
 				// don't process these tris at all
+				tess.numIndexes = 0;
 				return;
 			}
 		}
@@ -1529,6 +1534,7 @@ void RB_EndSurface( void ) {
 		else if ( !drawskyboxportal ) {
 			if ( tess.currentStageIteratorFunc != RB_StageIteratorSky ) {
 				// /only/ process sky tris
+				tess.numIndexes = 0;
 				return;
 			}
 		}
