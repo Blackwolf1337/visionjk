@@ -3545,6 +3545,36 @@ static int CG_RagAnimForPositioning(centity_t *cent)
 	}
 }
 
+// VisionJK (cg_slice.c): ghoul2, the part a saber cut off the body of cent, in a ragdoll of its own, drawn at origin
+// and angles; velocity throws it (zero once it is on its way). As CG_RagDoll does it for a body, every frame.
+void CG_SliceRag( centity_t *cent, void *ghoul2, const vec3_t origin, const vec3_t angles, const vec3_t velocity )
+{
+	sharedRagDollParams_t		tParms;
+	sharedRagDollUpdateParams_t	tuParms;
+	const animation_t			*anim = &bgAllAnims[cent->localAnimIndex].anims[CG_RagAnimForPositioning( cent )];
+
+	memset( &tParms, 0, sizeof( tParms ) );
+	memset( &tuParms, 0, sizeof( tuParms ) );
+	tParms.startFrame = anim->firstFrame;
+	tParms.endFrame = anim->firstFrame + anim->numFrames;
+	VectorCopy( angles, tParms.angles );
+	VectorCopy( origin, tParms.position );
+	VectorCopy( cent->modelScale, tParms.scale );
+	tParms.me = cent->currentState.number;
+	tParms.collisionType = 1;
+	tParms.RagPhase = RP_DEATH_COLLISION;
+	tParms.fShotStrength = 4;
+	trap->G2API_SetRagDoll( ghoul2, &tParms );
+
+	VectorCopy( angles, tuParms.angles );
+	VectorCopy( origin, tuParms.position );
+	VectorCopy( cent->modelScale, tuParms.scale );
+	tuParms.me = cent->currentState.number;
+	tuParms.settleFrame = tParms.endFrame - 1;
+	VectorCopy( velocity, tuParms.velocity );
+	trap->G2API_AnimateG2Models( ghoul2, cg.time, &tuParms );
+}
+
 //rww - cgame interface for the ragdoll stuff.
 //Returns qtrue if the entity is now in a ragdoll state, otherwise qfalse.
 qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
@@ -3552,8 +3582,11 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 	vec3_t usedOrg;
 	qboolean inSomething = qfalse;
 	int ragAnim;//BOTH_DEAD1; //BOTH_DEATH1;
+	// VisionJK: a body a saber cut through goes limp at once, broadsword or not: the death animation of a whole body
+	// did not fit one in two parts (their word 2026-11-08, cg_slice.c)
+	const qboolean sliced = CG_Sliced( cent->currentState.number );
 
-	if (!broadsword.integer)
+	if (!broadsword.integer && !sliced)
 	{
 		return qfalse;
 	}
@@ -3592,7 +3625,7 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 			}
 		}
 
-		if (broadsword.integer > 1)
+		if (broadsword.integer > 1 || sliced)
 		{
 			inSomething = qtrue;
 		}

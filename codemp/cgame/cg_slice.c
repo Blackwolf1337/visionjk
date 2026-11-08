@@ -24,12 +24,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // never looks at the blade. Here every client works it out for itself: when a player is killed by a saber
 // (EV_OBITUARY, MOD_SABER) and the blade of the killer passed through his body in the last moment (the blade
 // history of cg_players.c, CG_SaberCutNear), the plane of that swing (the blade and the way it swept) cuts the body.
-// The part that holds the feet stays with the body, tied to its pelvis so the cut bends with the death animation;
-// the other part is a copy of the model in the pose of the moment that is thrown off along the swing, tips over and
-// comes to rest on the floor. Both are drawn cut by the plane (the renderer's ext.R_AddCutEntity, rd-vulkan-vision),
-// each once more with its back faces alone in a glowing colour (gfx/vision/slice/cut), which fills the opening: the
-// burnt cut face, orange hot at first, fading through red to dark (the afterglow). With v_gore 1 blood runs out on
-// the floor under the cut, a wet place of the kind WET_BLOOD (ext.R_AddWet). It all goes when the body goes.
+// The part that holds the feet stays with the body, the other part is a copy of the model in the pose of the moment;
+// both go limp in the ragdoll of the engine (the body at once, broadsword or not: CG_RagDoll; the part thrown off along
+// the swing), each with its cut tied to its own bone nearest the cut, so the cut moves with the part as it slumps. The
+// death animation of a whole body did not fit one in two parts (their word 2026-11-08). Both are drawn cut by the plane
+// (the renderer's ext.R_AddCutEntity, rd-vulkan-vision), each once more with its back faces alone in a glowing colour
+// (gfx/vision/slice/cut), which fills the opening: the burnt cut face, orange hot at first, fading through red to dark
+// (the afterglow). With v_gore 1 blood runs out on the floor under the cut, a wet place of the kind WET_BLOOD
+// (ext.R_AddWet). The copy of the body the server leaves when the victim comes back (CG_BodyQueueCopy) stays cut. It all
+// goes when the body goes.
 //
 // Only a VisionJK client on a renderer that cuts (v_cgameCutEntity) sees it; everyone else sees the stock death, and
 // the server is not asked for anything. The stock limbs of a body that was cut are not drawn.
@@ -42,35 +45,34 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SLICE_GLOW_MSEC		10000		// the afterglow of the cut face
 #define SLICE_BLOOD_MSEC	5000		// how long the blood takes to run out
 #define SLICE_LOST_MSEC		3000		// a body not drawn for this long is gone
-#define SLICE_PIECE_SPEED	90.0f		// units a second the piece is thrown off along the swing
-#define SLICE_PIECE_SPIN	160.0f		// degrees a second it tips over,
-#define SLICE_PIECE_TURN	95.0f		//	at most this far
+#define SLICE_PIECE_SPEED	160.0f		// units a second the part cut off is thrown along the swing,
+#define SLICE_PIECE_THROW	120			//	for this many milliseconds of its ragdoll
+
+// a part of the body and the cut on it, tied to the bone of that part nearest the cut
+typedef struct slicePart_s {
+	void		*boundG2;		// the ghoul2 instance the bone is of
+	int			bolt;			// -1: the plane stays in the world
+	vec3_t		localN, localP;	// the plane in the frame of that bone
+	vec4_t		plane;			// in the world, as drawn last; what lies on the side the normal points to is kept
+} slicePart_t;
 
 typedef struct slice_s {
 	qboolean	active;
 	int			victim;			// client number
-	int			body;			// the entity that has the body now: the victim while he is dead, his body copy (ET_BODY)
-								// after he came back, -1 while that copy is not found yet
+	int			body;			// the entity that has the body now: the victim while he is dead, then the copy of his body
+								// (ET_BODY, CG_SliceBodyCopied), -1 when he came back without one
 	int			time;			// cg.time of the cut
 	int			drawn;			// cg.time the body was last drawn
-	vec3_t		lastOrigin;		//	and where
-	vec4_t		plane;			// in the world, as drawn last; what lies on the side the normal points to stays
 	vec3_t		sweep;			// which way the blade swept
+	vec3_t		centre;			// the middle of the cut, when it was drawn first
+	slicePart_t	part;			// the part with the feet
 
-	// the plane in the frame of the pelvis of the ghoul2 instance that is drawn
-	void		*boundG2;
-	int			bolt;
-	vec3_t		localN, localP;
-
-	// the part that was cut off
+	// the part that was cut off, a ragdoll of its own
 	void		*pieceG2;
 	refEntity_t	pieceEnt;		// as the body was drawn when it was cut
-	vec3_t		pieceCentre0;	// the point it turns round, when it was cut
-	vec3_t		pieceCentre, pieceVel, pieceSpinAxis;
-	vec3_t		piecePoint0;	// a point of its cut, when it was cut
-	float		pieceSpin;
-	qboolean	pieceRest;
-	int			piecePhys;
+	vec3_t		pieceAngles;
+	int			pieceTime;		// cg.time its ragdoll began
+	slicePart_t	piece;
 
 	// the blood
 	qboolean	blood;
@@ -185,9 +187,11 @@ static qboolean CG_SliceStart( int victim, const vec4_t planeIn, const vec3_t sw
 	s->victim = victim;
 	s->body = victim;
 	s->time = s->drawn = cg.time;
-	VectorCopy4( plane, s->plane );
+	VectorCopy4( plane, s->part.plane );
+	VectorScale( plane, -1.0f, s->piece.plane );
+	s->piece.plane[3] = -plane[3];
 	VectorCopy( sweep, s->sweep );
-	s->bolt = -1;
+	s->part.bolt = s->piece.bolt = -1;
 	s->bloodSeed = Q_flrand( 0.0f, 1.0f );
 	s->bloodRadius = Q_flrand( 18.0f, 26.0f );
 	return qtrue;
@@ -292,12 +296,83 @@ void CG_SliceTest_f( void ) {
 	Com_Printf( "v_sliceTest: client %i %s\n", victim, CG_SliceStart( victim, plane, sweep ) ? "cut" : "missed" );
 }
 
-// the plane from the frame of the bolt (the pelvis) into the world and back
+// the frame of a bone into the world
 static void CG_SliceBoltFrame( mdxaBone_t *m, vec3_t origin, vec3_t axis[3] ) {
 	BG_GiveMeVectorFromMatrix( m, ORIGIN, origin );
 	BG_GiveMeVectorFromMatrix( m, POSITIVE_X, axis[0] );
 	BG_GiveMeVectorFromMatrix( m, POSITIVE_Y, axis[1] );
 	BG_GiveMeVectorFromMatrix( m, POSITIVE_Z, axis[2] );
+}
+
+/*
+=================
+CG_SliceBind
+
+The cut of a part tied to the bone of ghoul2 (drawn at origin and angles) nearest the middle of the cut on the side the
+part keeps, so the cut moves with that part (one bone for the whole body, the pelvis, made a cut through the legs slide
+over them as the body fell). No such bone: the plane stays in the world.
+=================
+*/
+static void CG_SliceBind( slicePart_t *part, void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale,
+	const vec3_t centre ) {
+	static const char *bones[] = { "pelvis", "lower_lumbar", "upper_lumbar", "thoracic", "cervical", "cranium",
+		"lhumerus", "rhumerus", "lradius", "rradius", "lfemurYZ", "rfemurYZ", "ltibia", "rtibia" };
+	mdxaBone_t	m;
+	vec3_t		at, axis[3], point;
+	float		best = 1e9f;
+	int			i;
+
+	part->boundG2 = ghoul2;
+	part->bolt = -1;
+	for ( i = 0; i < (int)ARRAY_LEN( bones ); i++ ) {
+		const int bolt = trap->G2API_AddBolt( ghoul2, 0, bones[i] );
+		float d;
+
+		if ( bolt < 0 || !trap->G2API_GetBoltMatrix( ghoul2, 0, bolt, &m, angles, origin, cg.time, cgs.gameModels, (float *)scale ) ) {
+			continue;
+		}
+		BG_GiveMeVectorFromMatrix( &m, ORIGIN, at );
+		d = Distance( at, centre );
+		if ( DotProduct( at, part->plane ) - part->plane[3] > 1.0f && d < best ) {
+			best = d;
+			part->bolt = bolt;
+		}
+	}
+	if ( part->bolt < 0 || !trap->G2API_GetBoltMatrix( ghoul2, 0, part->bolt, &m, angles, origin, cg.time, cgs.gameModels,
+		(float *)scale ) ) {
+		part->bolt = -1;
+		return;
+	}
+	CG_SliceBoltFrame( &m, at, axis );
+	VectorScale( part->plane, part->plane[3], point );
+	VectorSubtract( point, at, point );
+	for ( i = 0; i < 3; i++ ) {
+		part->localN[i] = DotProduct( part->plane, axis[i] ) / Q_max( VectorLengthSquared( axis[i] ), 1e-6f );
+		part->localP[i] = DotProduct( point, axis[i] ) / Q_max( VectorLengthSquared( axis[i] ), 1e-6f );
+	}
+}
+
+// the plane of a part where its bone is now
+static void CG_SliceFollow( slicePart_t *part, void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale ) {
+	mdxaBone_t	m;
+	vec3_t		at, axis[3], point, normal;
+	int			i;
+
+	if ( part->bolt < 0 || !trap->G2API_GetBoltMatrix( ghoul2, 0, part->bolt, &m, angles, origin, cg.time, cgs.gameModels,
+		(float *)scale ) ) {
+		return;
+	}
+	CG_SliceBoltFrame( &m, at, axis );
+	VectorClear( normal );
+	VectorCopy( at, point );
+	for ( i = 0; i < 3; i++ ) {
+		VectorMA( normal, part->localN[i], axis[i], normal );
+		VectorMA( point, part->localP[i], axis[i], point );
+	}
+	if ( VectorNormalize( normal ) > 0.1f ) {
+		VectorCopy( normal, part->plane );
+		part->plane[3] = DotProduct( normal, point );
+	}
 }
 
 // The colour of the cut face: orange hot, then red, and dark (the afterglow). It started white hot, and a body cut
@@ -338,8 +413,9 @@ static void CG_SliceAdd( const slice_t *s, const refEntity_t *ent, const vec4_t 
 	trap->ext.R_AddCutEntity( &face, plane );
 }
 
-// the part that was cut off, made the first time the body is drawn cut: a copy of the model in the pose of now
-static void CG_SliceMakePiece( slice_t *s, const refEntity_t *ent, const vec3_t centre ) {
+// the part that was cut off, made the first time the body is drawn cut: a copy of the model in the pose of now, which
+// goes into a ragdoll of its own (CG_SlicePiece)
+static void CG_SliceMakePiece( slice_t *s, centity_t *cent, const refEntity_t *ent, const vec3_t angles ) {
 	static const char *bones[] = { "model_root", "lower_lumbar", "Motion" };
 	int i;
 
@@ -350,7 +426,7 @@ static void CG_SliceMakePiece( slice_t *s, const refEntity_t *ent, const vec3_t 
 	if ( !s->pieceG2 ) {
 		return;
 	}
-	// (frozen in the frame it is in now)
+	// (its animation held in the frame it is in now, as CG_RagDoll does before the ragdoll begins)
 	for ( i = 0; i < (int)ARRAY_LEN( bones ); i++ ) {
 		float frame;
 
@@ -362,183 +438,93 @@ static void CG_SliceMakePiece( slice_t *s, const refEntity_t *ent, const vec3_t 
 	}
 	s->pieceEnt = *ent;
 	s->pieceEnt.ghoul2 = s->pieceG2;
-	// it turns round a point a little into it from the cut, thrown off along the swing and a little up, tipping over
-	// along the swing
-	VectorCopy( centre, s->piecePoint0 );
-	VectorMA( centre, -12.0f, s->plane, s->pieceCentre0 );
-	VectorCopy( s->pieceCentre0, s->pieceCentre );
-	VectorScale( s->sweep, SLICE_PIECE_SPEED, s->pieceVel );
-	s->pieceVel[2] += 40.0f;
-	{
-		vec3_t up = { 0.0f, 0.0f, 1.0f };
-
-		CrossProduct( s->sweep, up, s->pieceSpinAxis );
-		if ( VectorNormalize( s->pieceSpinAxis ) < 0.1f ) {
-			PerpendicularVector( s->pieceSpinAxis, s->plane );
-		}
-		VectorScale( s->pieceSpinAxis, -1.0f, s->pieceSpinAxis );
-	}
-	s->pieceSpin = 0.0f;
-	s->pieceRest = qfalse;
-	s->piecePhys = cg.time;
+	VectorCopy( angles, s->pieceAngles );
+	s->pieceTime = cg.time;
+	CG_SliceBind( &s->piece, s->pieceG2, s->pieceAngles, s->pieceEnt.origin, cent->modelScale, s->centre );
 }
 
 /*
 =================
 CG_SliceDrawBody
 
-The body of a cent that was cut (the victim while he is dead, then his body copy): drawn cut and its cut face, in
-place of R_AddRefEntityToScene. angles and the origin of ent are the ones its ghoul2 is drawn with. qfalse: not cut,
+The body of a cent that was cut (the victim while he is dead, then the copy of his body): drawn cut and its cut face,
+in place of R_AddRefEntityToScene. angles and the origin of ent are the ones its ghoul2 is drawn with. qfalse: not cut,
 draw it as always.
 =================
 */
 qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles ) {
 	const int	num = cent->currentState.number;
 	slice_t		*s = NULL;
-	mdxaBone_t	m;
-	vec3_t		origin, axis[3];
 	int			i;
 
 	if ( !CG_SliceOn() || !ent->ghoul2 ) {
 		return qfalse;
 	}
 	for ( i = 0; i < SLICE_MAX && !s; i++ ) {
-		slice_t *t = &slices[i];
-
-		if ( !t->active ) {
-			continue;
-		}
-		if ( cent->currentState.eType == ET_BODY ) {
-			if ( t->body == num ) {
-				s = t;
-			}
-		} else if ( t->body == num && ( cent->currentState.eFlags & EF_DEAD ) ) {
-			s = t;
-		}
-	}
-	if ( !s && cent->currentState.eType == ET_BODY ) {
-		// the copy of the body of a victim who came back: at the place his body lay
-		for ( i = 0; i < SLICE_MAX && !s; i++ ) {
-			slice_t *t = &slices[i];
-
-			if ( t->active && t->body < 0 && Distance( t->lastOrigin, cent->lerpOrigin ) < 80.0f ) {
-				s = t;
-				s->body = num;
-				s->boundG2 = NULL;
-			}
+		if ( slices[i].active && slices[i].body == num && ( cent->currentState.eType == ET_BODY
+			|| ( cent->currentState.eFlags & EF_DEAD ) ) ) {
+			s = &slices[i];
 		}
 	}
 	if ( !s ) {
 		return qfalse;
 	}
 	s->drawn = cg.time;
-	VectorCopy( cent->lerpOrigin, s->lastOrigin );
 
-	// the plane in the frame of the pelvis of this instance: bound the first time, from the world plane of the last draw
-	if ( s->boundG2 != ent->ghoul2 ) {
-		s->boundG2 = ent->ghoul2;
-		s->bolt = trap->G2API_AddBolt( ent->ghoul2, 0, "pelvis" );
-		if ( s->bolt >= 0 && trap->G2API_GetBoltMatrix( ent->ghoul2, 0, s->bolt, &m, angles, ent->origin, cg.time, cgs.gameModels,
-			cent->modelScale ) ) {
-			vec3_t point;
-
-			CG_SliceBoltFrame( &m, origin, axis );
-			VectorScale( s->plane, s->plane[3], point );
-			VectorSubtract( point, origin, point );
-			for ( i = 0; i < 3; i++ ) {
-				s->localN[i] = DotProduct( s->plane, axis[i] ) / Q_max( VectorLengthSquared( axis[i] ), 1e-6f );
-				s->localP[i] = DotProduct( point, axis[i] ) / Q_max( VectorLengthSquared( axis[i] ), 1e-6f );
-			}
-		} else {
-			s->bolt = -1;
-		}
+	if ( s->part.boundG2 != ent->ghoul2 ) {
 		if ( !s->pieceG2 && s->body == s->victim ) {
-			// the cut point at the middle of the body, and the piece and the blood from there
-			vec3_t centre, down;
-			trace_t tr;
+			// the middle of the cut, and from there the part cut off and the blood
+			vec3_t	down;
+			trace_t	tr;
 
-			VectorMA( cent->lerpOrigin, -( DotProduct( cent->lerpOrigin, s->plane ) - s->plane[3] ), s->plane, centre );
-			CG_SliceMakePiece( s, ent, centre );
-			VectorCopy( centre, down );
+			VectorMA( cent->lerpOrigin, -( DotProduct( cent->lerpOrigin, s->part.plane ) - s->part.plane[3] ), s->part.plane,
+				s->centre );
+			CG_SliceMakePiece( s, cent, ent, angles );
+			VectorCopy( s->centre, down );
 			down[2] -= 160.0f;
-			CG_Trace( &tr, centre, NULL, NULL, down, num, MASK_SOLID );
+			CG_Trace( &tr, s->centre, NULL, NULL, down, num, MASK_SOLID );
 			if ( tr.fraction < 1.0f && tr.plane.normal[2] > 0.7f ) {
 				s->blood = qtrue;
 				VectorCopy( tr.endpos, s->bloodOrigin );
 				VectorCopy( tr.plane.normal, s->bloodNormal );
 			}
 		}
-	} else if ( s->bolt >= 0 && trap->G2API_GetBoltMatrix( ent->ghoul2, 0, s->bolt, &m, angles, ent->origin, cg.time, cgs.gameModels,
-		cent->modelScale ) ) {
-		// it bends with the body
-		vec3_t point, normal;
-
-		CG_SliceBoltFrame( &m, origin, axis );
-		VectorClear( normal );
-		VectorCopy( origin, point );
-		for ( i = 0; i < 3; i++ ) {
-			VectorMA( normal, s->localN[i], axis[i], normal );
-			VectorMA( point, s->localP[i], axis[i], point );
-		}
-		if ( VectorNormalize( normal ) > 0.1f ) {
-			VectorCopy( normal, s->plane );
-			s->plane[3] = DotProduct( normal, point );
-		}
+		// (the copy of the body: tied to its own bones, from where the cut was drawn last)
+		CG_SliceBind( &s->part, ent->ghoul2, angles, ent->origin, cent->modelScale, s->centre );
+	} else {
+		CG_SliceFollow( &s->part, ent->ghoul2, angles, ent->origin, cent->modelScale );
 	}
-	CG_SliceAdd( s, ent, s->plane );
+	CG_SliceAdd( s, ent, s->part.plane );
 	return qtrue;
 }
 
-// the part that was cut off: it flies, tips over and comes to rest
-static void CG_SlicePiece( slice_t *s ) {
-	static const vec3_t mins = { -8.0f, -8.0f, -6.0f }, maxs = { 8.0f, 8.0f, 6.0f };
-	refEntity_t	ent;
-	vec3_t		rel, point;
-	vec4_t		plane;
-	float		dt;
-	int			i;
+// the copy of the body of clientNum the server leaves when he comes back (CG_BodyQueueCopy): it stays cut
+void CG_SliceBodyCopied( int clientNum, int body ) {
+	int i;
 
-	dt = Com_Clamp( 0.0f, 0.1f, ( cg.time - s->piecePhys ) * 0.001f );
-	s->piecePhys = cg.time;
-	if ( !s->pieceRest && dt > 0.0f ) {
-		vec3_t	next;
-		trace_t	tr;
-
-		s->pieceVel[2] -= 800.0f * dt;
-		VectorMA( s->pieceCentre, dt, s->pieceVel, next );
-		CG_Trace( &tr, s->pieceCentre, mins, maxs, next, s->body >= 0 ? s->body : ENTITYNUM_NONE, MASK_SOLID );
-		VectorCopy( tr.endpos, s->pieceCentre );
-		if ( tr.fraction < 1.0f ) {
-			if ( tr.plane.normal[2] > 0.6f ) {
-				s->pieceRest = qtrue;
-				VectorClear( s->pieceVel );
-			} else {
-				// off a wall
-				VectorMA( s->pieceVel, -1.3f * DotProduct( s->pieceVel, tr.plane.normal ), tr.plane.normal, s->pieceVel );
-				VectorScale( s->pieceVel, 0.5f, s->pieceVel );
-			}
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		// (also when his coming back was seen before the copy)
+		if ( slices[i].active && ( slices[i].body == clientNum || ( slices[i].body < 0 && slices[i].victim == clientNum ) ) ) {
+			slices[i].body = body;
+			slices[i].part.boundG2 = NULL;
+			slices[i].drawn = cg.time;
 		}
-		s->pieceSpin = Q_min( SLICE_PIECE_TURN, s->pieceSpin + SLICE_PIECE_SPIN * dt );
 	}
+}
 
-	// the model turned round the centre by the spin and carried with it
-	ent = s->pieceEnt;
-	VectorSubtract( s->pieceEnt.origin, s->pieceCentre0, rel );
-	RotatePointAroundVector( point, s->pieceSpinAxis, rel, s->pieceSpin );
-	VectorAdd( s->pieceCentre, point, ent.origin );
-	for ( i = 0; i < 3; i++ ) {
-		RotatePointAroundVector( ent.axis[i], s->pieceSpinAxis, s->pieceEnt.axis[i], s->pieceSpin );
+// the part that was cut off: its ragdoll, thrown along the swing at first, and its cut where its bone is now
+static void CG_SlicePiece( slice_t *s ) {
+	centity_t	*victim = &cg_entities[s->victim];
+	vec3_t		velocity;
+
+	VectorClear( velocity );
+	if ( cg.time - s->pieceTime < SLICE_PIECE_THROW ) {
+		VectorScale( s->sweep, SLICE_PIECE_SPEED, velocity );
+		velocity[2] += 60.0f;
 	}
-	VectorCopy( ent.origin, ent.lightingOrigin );
-	VectorCopy( ent.origin, ent.oldorigin );
-	// its plane: the other side of the cut, turned and carried the same
-	RotatePointAroundVector( plane, s->pieceSpinAxis, s->plane, s->pieceSpin );
-	VectorScale( plane, -1.0f, plane );
-	VectorSubtract( s->piecePoint0, s->pieceCentre0, rel );
-	RotatePointAroundVector( point, s->pieceSpinAxis, rel, s->pieceSpin );
-	VectorAdd( s->pieceCentre, point, point );
-	plane[3] = DotProduct( plane, point );
-	CG_SliceAdd( s, &ent, plane );
+	CG_SliceRag( victim, s->pieceG2, s->pieceEnt.origin, s->pieceAngles, velocity );
+	CG_SliceFollow( &s->piece, s->pieceG2, s->pieceAngles, s->pieceEnt.origin, victim->modelScale );
+	CG_SliceAdd( s, &s->pieceEnt, s->piece.plane );
 }
 
 /*

@@ -1998,6 +1998,8 @@ void CG_SliceInit( void );
 void CG_SliceKill( int victim, int killer );
 qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles );
 qboolean CG_Sliced( int num );
+void CG_SliceBodyCopied( int clientNum, int body );
+void CG_SliceRag( centity_t *cent, void *ghoul2, const vec3_t origin, const vec3_t angles, const vec3_t velocity );
 void CG_SliceScene( void );
 void CG_SliceTest_f( void );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
