@@ -341,6 +341,11 @@ public:
 	bool			mUnsquash;
 	float			mSmoothFactor;
 
+	// VisionJK: a part of a body a saber cut through (G2_VJK_StoreCut): for each bone the cut in the space of the
+	// skinned vertex as the bone moved it at the moment of the cut (a plane, 4 floats) and whether the bone belongs
+	// to another part (4 floats, x 1). Empty: none.
+	std::vector<float>	vjkCut;
+
 	CBoneCache(const model_t *amod,const mdxaHeader_t *aheader) :
 		header(aheader),
 		mod(amod)
@@ -666,6 +671,45 @@ float G2_VJK_BoneScale(CGhoul2Info &ghoul2, int boneNum)
 	Multiply_3x4Matrix(&bolt, (mdxaBone_t *)&boneCache.EvalUnsmooth(boneNum), &skel->BasePoseMat);
 	const float s = sqrtf(bolt.matrix[0][0] * bolt.matrix[0][0] + bolt.matrix[1][0] * bolt.matrix[1][0] + bolt.matrix[2][0] * bolt.matrix[2][0]);
 	return (s > 0.01f && s < 100.0f) ? s : 1.0f;
+}
+
+// VisionJK (G2API_VJK_SetBonesWorld): the cut of a part, taken in the pose of the skeleton built last (the moment
+// of the cut). plane in model space keeps what lies on the side its normal points to; hidden[bone] a bone of another
+// part on the same side. Each vertex is tested where that pose put it, so it stays on its side however the part
+// bends afterwards (a plane that moved with one bone cut through the others differently as they turned).
+void G2_VJK_StoreCut(CGhoul2Info &ghoul2, const float *plane, const unsigned char *hidden)
+{
+	if (!ghoul2.mBoneCache)
+	{
+		return;
+	}
+	CBoneCache &boneCache = *ghoul2.mBoneCache;
+	const int numBones = boneCache.header->numBones;
+
+	boneCache.vjkCut.assign(numBones * 8, 0.0f);
+	for (int i = 0; i < numBones; i++)
+	{
+		const mdxaBone_t &m = boneCache.EvalUnsmooth(i);
+		float *out = &boneCache.vjkCut[i * 8];
+
+		// dot( n, R v + t ) - d = dot( R^T n, v ) + dot( n, t ) - d
+		out[0] = m.matrix[0][0] * plane[0] + m.matrix[1][0] * plane[1] + m.matrix[2][0] * plane[2];
+		out[1] = m.matrix[0][1] * plane[0] + m.matrix[1][1] * plane[1] + m.matrix[2][1] * plane[2];
+		out[2] = m.matrix[0][2] * plane[0] + m.matrix[1][2] * plane[1] + m.matrix[2][2] * plane[2];
+		out[3] = m.matrix[0][3] * plane[0] + m.matrix[1][3] * plane[1] + m.matrix[2][3] * plane[2] - plane[3];
+		out[4] = hidden[i] ? 1.0f : 0.0f;
+	}
+}
+
+// the cut of a part for the renderer: 8 floats a bone, NULL when it has none
+const float *G2_VJK_CutData(CBoneCache *boneCache, int *numBones)
+{
+	if (!boneCache || boneCache->vjkCut.empty())
+	{
+		return NULL;
+	}
+	*numBones = (int)boneCache->vjkCut.size() / 8;
+	return boneCache->vjkCut.data();
 }
 
 void G2_GetBoneMatrixLow(CGhoul2Info &ghoul2,int boneNum,const vec3_t scale,mdxaBone_t &retMatrix,mdxaBone_t *&retBasepose,mdxaBone_t *&retBaseposeInv)

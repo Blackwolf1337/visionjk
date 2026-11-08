@@ -172,6 +172,8 @@ typedef struct vkDraw_s {		// once per draw
 	float		pbr3[4];			// VKD_PBR: emission colour times strength, the threshold of the brightness that gives off
 	float		tess[4];			// VKP_TESS: units of the height, where the polygon lies in it, pixels an edge is cut
 									//	down to, the most pieces an edge is cut into
+	uint32_t	cutBones;			// skinned, a part of a body a saber cut through: where its cut is in the bones of the
+	uint32_t	pad[3];				//	frame, in rows (VK_CutBones), 0: none
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -403,6 +405,7 @@ void		VK_ModelsBeginFrame( void );
 int			VK_SkinnedSurface( const mdxmSurface_t *surface );
 int			VK_SkinnedFirstVertex( const mdxmSurface_t *surface, const vkBuffer_t **vertexes );
 qboolean	VK_SkeletonBones( CBoneCache *boneCache, uint32_t *bones );
+uint32_t	VK_CutBones( uint32_t bones );
 int			VK_StaticMeshSurface( const md3Surface_t *surface );
 int			VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData );
 qboolean	VK_UploadGoreBatch( CBoneCache *boneCache, uint32_t *bones );

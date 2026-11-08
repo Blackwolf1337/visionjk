@@ -348,8 +348,10 @@ typedef struct refexport_s {
 		int					(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
 		// Bones of model modelIndex placed whole in the world (count 3x4 matrices in world, in the frame
 		// G2API_GetBoltMatrix gives for the same angles, origin and scale); bones not listed follow their parent.
-		// count 0 hands them all back to the animation. NULL: the renderer has none.
-		qboolean			(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world );
+		// count 0 hands them all back to the animation. cut (or NULL): on the first call the cut of a part of a cut body
+		// in the world (keeps the side the normal points to) and hidden[count] the bones of another part: each vertex
+		// keeps the side it had in this first pose. NULL: the renderer has none.
+		qboolean			(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
 	} ext;
 
 } refexport_t;

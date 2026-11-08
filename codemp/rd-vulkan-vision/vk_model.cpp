@@ -70,7 +70,10 @@ static int				vk_numBatchRanges;
 static struct {
 	const CBoneCache	*cache;
 	uint32_t			base;
+	uint32_t			cut;		// rows of the cut of a part of a cut body (G2_VJK_CutData), 0: none
 } vk_frameSkeletons[VK_MAX_FRAME_SKELETONS];
+
+const float *G2_VJK_CutData( CBoneCache *boneCache, int *numBones );
 static int				vk_numFrameSkeletons;
 static int				vk_identityBone;			// where the bone that does nothing is in the frame, -1: not yet
 
@@ -432,15 +435,39 @@ static qboolean VK_FrameSkeleton( CBoneCache *boneCache, uint32_t *bones ) {
 		return qfalse;
 	}
 	const int numBones = G2_BoneMatrices( boneCache, (float *)( frame->bones.mapped + sizeof( float ) * 12 * first ), 256 );
+	int cutBones = 0, extra = 0;
+	const float *cut = G2_VJK_CutData( boneCache, &cutBones );
+	uint32_t cutRows = 0;
 
+	// VisionJK: after the bones the cut of a part of a cut body, two rows a bone (in room of bones of three rows)
+	if ( cut && cutBones == numBones ) {
+		extra = ( numBones * 2 + 2 ) / 3;
+		if ( first + numBones + extra <= VK_MAX_BONES ) {
+			memcpy( frame->bones.mapped + sizeof( float ) * 12 * ( first + numBones ), cut, sizeof( float ) * 8 * numBones );
+			cutRows = (uint32_t)( first + numBones ) * 3;
+		} else {
+			extra = 0;
+		}
+	}
 	if ( vk_numFrameSkeletons < VK_MAX_FRAME_SKELETONS ) {
 		vk_frameSkeletons[vk_numFrameSkeletons].cache = boneCache;
 		vk_frameSkeletons[vk_numFrameSkeletons].base = (uint32_t)first * 3;
+		vk_frameSkeletons[vk_numFrameSkeletons].cut = cutRows;
 		vk_numFrameSkeletons++;
 	}
 	*bones = (uint32_t)first * 3;
-	frame->numBones = first + numBones;
+	frame->numBones = first + numBones + extra;
 	return qtrue;
+}
+
+// VisionJK: where the cut of the skeleton that starts at row bones is in the frame, 0: it has none
+uint32_t VK_CutBones( uint32_t bones ) {
+	for ( int i = 0; i < vk_numFrameSkeletons; i++ ) {
+		if ( vk_frameSkeletons[i].base == bones ) {
+			return vk_frameSkeletons[i].cut;
+		}
+	}
+	return 0;
 }
 
 // the same for those who do not draw (the shadows of the players, vk_rt.cpp)

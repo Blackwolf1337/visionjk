@@ -739,6 +739,7 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 	memset( draw, 0, sizeof( *draw ) );
 	draw->transform = transform;
 	draw->bones = bones;
+	draw->cutBones = VK_CutBones( bones );
 	draw->flags = vk_deform.flags;
 	VectorCopy4( vk_deform.wave, draw->deformWave );
 	VectorCopy4( vk_deform.vec, draw->deformVec );

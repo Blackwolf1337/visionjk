@@ -193,6 +193,8 @@ void main() {
 	// all places here: their edges joined, their light and size by how near they are, the slopes of their water
 	float edgeWet = FAR, sizeWet = 0.0, placeWeights = 0.0, weights = 0.0, water = 0.0, fade = 0.0, streak = 0.0, prints = 0.0;
 	float flowNear = 0.0, snow = 0.0, snowHeight = 0.0, snowMelt = 0.0, blood = 0.0, bloodDeep = 0.0;
+	// pools of blood run into one as the water places do: their edges joined (bloodEdge), the depth from the nearest
+	float bloodEdge = FAR, bloodRadius = 1.0;
 	vec2 snowAt = vec2( 0.0 );
 	vec3 snowN = vec3( 0.0, 0.0, 1.0 ), snowT = vec3( 1.0, 0.0, 0.0 ), snowB = vec3( 0.0, 1.0, 0.0 );
 	vec3 ambient = vec3( 0.0 ), directed = vec3( 0.0 ), lightDir = vec3( 0.0 );
@@ -279,8 +281,12 @@ void main() {
 					d = min( d, max( dx, local.y - run ) );
 				}
 			}
-			float cover = 1.0 - smoothstep( -0.05 * radius, 0.02 * radius, d );
-			float deep = 1.0 - smoothstep( -0.45 * radius, -0.05 * radius, d );
+			if ( d < bloodEdge ) {
+				bloodRadius = radius;
+			}
+			bloodEdge = SoftMin( bloodEdge, d, JOIN * 0.6 );
+			float cover = 0.0;
+			float deep = 0.0;
 			const float CELL = 2.5;
 			vec2 cell = floor( local / CELL );
 			for ( int cy = -1; cy <= 1; cy++ ) {
@@ -417,6 +423,15 @@ void main() {
 	mask = max( max( mask, streak ), prints * 0.85 );
 	mask *= fade;
 	snow *= fade;
+	// the pools of blood, joined
+	if ( bloodEdge < FAR * 0.5 ) {
+		float poolCover = 1.0 - smoothstep( -0.05 * bloodRadius, 0.02 * bloodRadius, bloodEdge );
+		float poolDeep = 1.0 - smoothstep( -0.45 * bloodRadius, -0.05 * bloodRadius, bloodEdge );
+		if ( poolCover > blood ) {
+			blood = poolCover;
+		}
+		bloodDeep = max( bloodDeep, poolDeep * poolCover );
+	}
 	blood *= fade;
 	if ( max( max( mask, snow ), blood ) <= 0.002 ) {
 		discard;
@@ -489,6 +504,13 @@ void main() {
 		vec3 stain = mix( base * albedo * 2.2, lit, 0.4 + 0.6 * bloodDeep );
 		vec3 shine = directed * pow( clamp( dot( bn, h2 ), 0.0, 1.0 ), 250.0 ) * 2.0 * ( 0.04 + 0.96 * pow( 1.0 - clamp( dot( h2, -view ), 0.0, 1.0 ), 5.0 ) );
 		vec3 room = ( ambient * 0.75 + directed * 0.3 ) * bFresnel * 0.5;
+		// a pool of fresh blood is a dark mirror: the room in it, tinted red, more at a glancing look
+		if ( bloodDeep > 0.05 ) {
+			vec3 mirrored = reflect( view, bn );
+			vec3 fallback = room * 2.0;
+			vec3 seen = Mirror( p + n * 0.5, mirrored, fallback );
+			room = mix( room, seen * vec3( 0.55, 0.12, 0.1 ) * ( 0.12 + 0.88 * bFresnel ), bloodDeep * 0.75 );
+		}
 		color = mix( color, stain + shine + room, blood );
 		mask = max( mask, blood );
 	}

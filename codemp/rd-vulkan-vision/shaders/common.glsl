@@ -55,6 +55,8 @@ struct Draw {
 	vec4	pbr3;			// PBR: emission colour times strength, the threshold of the brightness that gives off
 	vec4	tess;			// generic.tesc/.tese: units of the height, where the polygon lies in it, pixels an edge is
 							//	cut down to, the most pieces an edge is cut into
+	uint	cutBones;		// skinned, a part of a body a saber cut through: where its cut is in the bones, in rows, 0: none
+	uint	pad0, pad1, pad2;
 };
 
 BINDING( 0, 0 ) uniform Globals {

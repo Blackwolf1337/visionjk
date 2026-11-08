@@ -1637,6 +1637,7 @@ qboolean G2API_SetBoneAnglesMatrix(CGhoul2Info *ghlInfo, const char *boneName, c
 
 int G2_Add_Bone( const model_t *mod, boneInfo_v &blist, const char *boneName );
 float G2_VJK_BoneScale( CGhoul2Info &ghoul2, int boneNum );
+void G2_VJK_StoreCut( CGhoul2Info &ghoul2, const float *plane, const unsigned char *hidden );
 void G2_ConstructGhoulSkeleton( CGhoul2Info_v &ghoul2, const int frameNum, bool checkForNewOrigin, const vec3_t scale );
 
 static mdxaSkel_t *G2_VJK_Skel( const CGhoul2Info *ghlInfo, int boneNum )
@@ -1694,7 +1695,7 @@ int G2API_VJK_BoneNumber( void *ghoul2, int modelIndex, const char *boneName, in
 // a bolt comes back as the same pose. Bones not listed follow their parent with their own animation. count 0 hands
 // all such bones back to the animation.
 qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin,
-	const vec3_t scale, int count, const int *bones, const float *world )
+	const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden )
 {
 	CGhoul2Info *ghlInfo = G2_VJK_Model( ghoul2, modelIndex );
 	if ( !ghlInfo )
@@ -1796,6 +1797,43 @@ qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t ang
 		blist[index].flags |= BONE_ANGLES_MODEL;
 		blist[index].matrix = final;
 		blist[index].newMatrix = final;
+	}
+
+	// the cut, in the pose just placed: into model space (the part is drawn at origin, turned by angles, its axes
+	// scaled by scale as ScaleModelAxis does), each bone of the skeleton marked when it or the listed bone above it
+	// belongs to another part
+	if ( cut && first )
+	{
+		const vec3_t	one = { 1.0f, 1.0f, 1.0f };
+		const int		numBones = ghlInfo->aHeader->numBones;
+		unsigned char	mask[256];
+		signed char		listed[256];
+		float			plane[4];
+
+		memset( listed, -1, sizeof( listed ) );
+		for ( int n = 0; n < count; n++ )
+		{
+			if ( bones[n] >= 0 && bones[n] < 256 )
+			{
+				listed[bones[n]] = ( hidden && hidden[n] ) ? 1 : 0;
+			}
+		}
+		for ( int b = 0; b < numBones && b < 256; b++ )
+		{
+			const int parent = G2_VJK_Skel( ghlInfo, b )->parent;
+
+			mask[b] = listed[b] >= 0 ? (unsigned char)listed[b] : ( parent >= 0 && parent < b ) ? mask[parent] : 0;
+		}
+		for ( int j = 0; j < 3; j++ )
+		{
+			const float s = ( scale && scale[j] ) ? scale[j] : 1.0f;
+
+			plane[j] = s * ( worldMatrix.matrix[0][j] * cut[0] + worldMatrix.matrix[1][j] * cut[1] + worldMatrix.matrix[2][j] * cut[2] );
+		}
+		plane[3] = cut[3] - ( cut[0] * origin[0] + cut[1] * origin[1] + cut[2] * origin[2] );
+		G2_ConstructGhoulSkeleton( *(CGhoul2Info_v *)ghoul2, G2API_GetTime( 0 ), true, one );
+		G2_VJK_StoreCut( *ghlInfo, plane, mask );
+		ghlInfo->mSkelFrameNum = 0;
 	}
 	return qtrue;
 }

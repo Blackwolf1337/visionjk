@@ -176,6 +176,7 @@ typedef struct {
 	qboolean	asleep;
 	qboolean	posed;				// asleep and its bones placed
 	qboolean	checked;			// (developer: the bone round trip was looked at)
+	qboolean	cutSent;			// the renderer has the cut of the first pose (ext.G2_SetBonesWorld)
 	vec3_t		restX[BD_BODIES];	// where its bodies were when it last moved, for the sleep test
 	vec4_t		restQ[BD_BODIES];
 } ragPart_t;
@@ -1625,7 +1626,9 @@ static void Rag_Pose( ragBody_t *rag, ragPart_t *part, int partNum ) {
 	vec4_t		turn, c;
 	int			i;
 
-	// how the body at the cut turned since the cut: the bodies of the other side follow it
+	int			hidden[RB_BONES];
+
+	// how the body at the cut turned since the cut
 	Q_Conj( rag->bq0[a], c );
 	Q_Mul( rag->body[a].dq, c, turn );
 	VectorCopy( rag->body[a].dx, part->origin );
@@ -1633,21 +1636,49 @@ static void Rag_Pose( ragBody_t *rag, ragPart_t *part, int partNum ) {
 		const int			bd = rag->boneBody[i];
 		const ragRigid_t	*b = &rag->body[bd];
 
+		hidden[i] = 0;
 		if ( b->part == partNum ) {
 			Rag_BoneFrame( rag, i, b->dx, b->dq, qfalse, world[i] );
 		} else {
-			// as it was at the cut, carried along with the body at the cut; another part on this side is not drawn here
+			// as it was at the cut, carried along with the own body it was joined to (else the body at the cut), so
+			// skin hanging on both does not stretch; the renderer leaves it out (the cut of the first pose, and the
+			// bones of another part on this side, hidden)
+			int		g = a, j;
 			vec3_t	off, x;
-			vec4_t	q;
+			vec4_t	q, turnG, cg;
 
-			VectorSubtract( rag->bx0[bd], rag->bx0[a], off );
-			Q_Rotate( turn, off, off );
-			VectorAdd( rag->body[a].dx, off, x );
-			Q_Mul( turn, rag->bq0[bd], q );
-			Rag_BoneFrame( rag, i, x, q, (qboolean)( rag->part[b->part].side == part->side ), world[i] );
+			for ( j = 0; j < RAG_JOINTS; j++ ) {
+				const int other = ragJointDefs[j].child == bd ? ragJointDefs[j].parent : ragJointDefs[j].parent == bd ? ragJointDefs[j].child : -1;
+
+				if ( other >= 0 && rag->body[other].part == partNum ) {
+					g = other;
+					break;
+				}
+			}
+			Q_Conj( rag->bq0[g], cg );
+			Q_Mul( rag->body[g].dq, cg, turnG );
+			VectorSubtract( rag->bx0[bd], rag->bx0[g], off );
+			Q_Rotate( turnG, off, off );
+			VectorAdd( rag->body[g].dx, off, x );
+			Q_Mul( turnG, rag->bq0[bd], q );
+			Rag_BoneFrame( rag, i, x, q, qfalse, world[i] );
+			hidden[i] = ( rag->part[b->part].side == part->side ) ? 1 : 0;
 		}
 	}
-	trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, part->origin, rag->scale, RB_BONES, rag->boneNum, &world[0][0] );
+	if ( !part->cutSent ) {
+		// the first pose: the cut where it is now, kept by the renderer for every vertex from here on
+		vec4_t	plane;
+		void	*g2;
+		vec3_t	o;
+
+		part->cutSent = qtrue;
+		CG_RagPart( (int)( rag - rags ), partNum, &g2, o, plane );
+		trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, part->origin, rag->scale, RB_BONES, rag->boneNum, &world[0][0],
+			plane, hidden );
+	} else {
+		trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, part->origin, rag->scale, RB_BONES, rag->boneNum, &world[0][0],
+			NULL, NULL );
+	}
 
 	// (developer 1: the bone at the cut must come back where it was put)
 	if ( !part->checked ) {

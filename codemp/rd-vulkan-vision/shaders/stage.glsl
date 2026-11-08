@@ -161,6 +161,10 @@ vec2 ModTexCoord( vec2 st, vec4 mat[2], vec4 turb, StageInput v ) {
 // VisionJK: how much of a skinned vertex hangs on bones placed with no axes (skinned.vert): such bones belong to another
 // part of a body a saber cut through, drawn by its own copy (cgame/cg_ragdoll.c); more than half of it is not drawn
 float stageHidden = 0.0;
+// and with the cut of such a part: how far in front of the cut the vertex lay at the moment of the cut, which keeps it
+// on its side however the part bends (skinned.vert, Draw.cutBones)
+bool stageHasCut = false;
+float stageCut = 0.0;
 
 void StageVertex( StageInput v ) {
 	Draw d = DRAWS( DRAW );
@@ -176,6 +180,9 @@ void StageVertex( StageInput v ) {
 	// the view through a portal or mirror must not show what lies between the eye and the portal
 	CLIP_DISTANCE = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
 		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;
+	if ( stageHasCut ) {
+		CLIP_DISTANCE = stageCut;
+	}
 	if ( stageHidden > 0.0 ) {
 		CLIP_DISTANCE = min( CLIP_DISTANCE, 0.5 - stageHidden );
 	}
