@@ -1010,7 +1010,8 @@ static void R_PuddleView( void ) {
 		const wetSpot_t *spot = &r_wet[i];
 		float score;
 
-		if ( spot->puddle < 0.05f || spot->normal[2] < 0.9f || spot->radius <= 0.0f
+		// (a streak of blood carries its width in puddle, it is no puddle to mirror)
+		if ( spot->kind == WET_BLOOD_STREAK || spot->puddle < 0.05f || spot->normal[2] < 0.9f || spot->radius <= 0.0f
 			|| R_CullPointAndRadius( spot->origin, spot->radius ) == CULL_OUT ) {
 			continue;
 		}
