@@ -49,19 +49,21 @@ layout( location = 0 ) out vec4 o_color;
 #include "scene.glsl"
 
 // The nearest points of the ray eye + dir t (t from 0) and the blade a + seg u (u 0 to 1): u, t, how far apart, and
-// how far along the blade the nearest point of its line is before the clamp (below 0: behind the hilt).
+// where along the blade the nearest point of the ray lies, not clamped (below 0: behind the hilt). (Not from the line
+// to line solution: seen along the blade that divides by almost nothing, jumped about and cut a hole in the middle of
+// the round point the blade is then, their "O" of 2026-11-08.)
 void Nearest( vec3 eye, vec3 dir, vec3 a, vec3 seg, out float u, out float t, out float d, out float along ) {
 	float len2 = max( dot( seg, seg ), 1e-4 );
 	vec3 r = eye - a;
 	float bd = dot( dir, seg ), dd = dot( dir, r ), ee = dot( seg, r );
 	float denom = len2 - bd * bd;
 
-	along = denom > 1e-4 ? ( ee - bd * dd ) / denom : 0.5;
-	u = clamp( along, 0.0, 1.0 );
+	u = denom > 1e-4 * len2 ? clamp( ( ee - bd * dd ) / denom, 0.0, 1.0 ) : 0.5;
 	t = max( dot( a + seg * u - eye, dir ), 0.0 );
 	u = clamp( dot( eye + dir * t - a, seg ) / len2, 0.0, 1.0 );
 	t = max( dot( a + seg * u - eye, dir ), 0.0 );
 	d = distance( eye + dir * t, a + seg * u );
+	along = dot( eye + dir * t - a, seg ) / len2;
 }
 
 // the blade at s between now (0) and a moment ago (1): its hilt moved straight, its way to the tip turned
@@ -122,7 +124,7 @@ void main() {
 		float px = pixel * max( t, 1.0 );
 		float core = max( a.w, px * 0.4 ), glow = max( b.w, px * 1.5 );
 #ifdef GLOW_PASS
-		glow *= 2.0;		// (the blur spreads it further, as the wide glow sprites of the flat blade)
+		glow *= 1.5;		// (the blur spreads it further, as the wide glow sprites of the flat blade)
 #endif
 		// the glow ends at the hilt, it does not spill back over it
 		float hilt = smoothstep( -glow * 0.6, 0.0, along * length( seg ) );
@@ -172,7 +174,7 @@ void main() {
 				float spx = pixel * max( st, 1.0 );
 				float sglow = max( b.w, spx * 1.5 ), score = max( a.w, spx * 0.4 );
 #ifdef GLOW_PASS
-				sglow *= 2.0;
+				sglow *= 1.5;
 #endif
 				float shilt = smoothstep( -sglow * 0.6, 0.0, salong * length( sseg ) );
 				float hot = 1.0 - smoothstep( score - spx, score + spx, sd );
@@ -198,5 +200,8 @@ void main() {
 			}
 		}
 	}
+#ifdef GLOW_PASS
+	light *= 0.45;		// (at full strength the halo was too much, their word 2026-11-08)
+#endif
 	o_color = vec4( light, 0.0 );
 }
