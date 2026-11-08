@@ -65,7 +65,7 @@ BINDING( 0, 0 ) uniform Globals {
 #ifndef VK_GLES
 	vec4	wet[779];		// (wet.frag, paint.frag, the ray tracing shaders read these)
 	vec4	paint[459];
-	vec4	rt[21];
+	vec4	rt[38];
 	vec4	lights[34];		// light to judge materials by (VK_LightRows of vk_frame.cpp, VK_LIGHT_VEC4S); not on GLES
 #endif
 } globals;

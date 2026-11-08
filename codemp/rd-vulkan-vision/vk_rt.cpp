@@ -80,7 +80,6 @@ static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
 static cvar_t	*v_rtShadowRays;	// rays a pixel
 static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
-static cvar_t	*v_rtLights;		// 0: the sun and the direction of the light grid alone, not the light patches, 2: the patches of the materials alone
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -459,7 +458,9 @@ static float VK_RT_StageColor( const shaderStage_t *stage ) {
 /* How much light the surfaces of a shader give, 0: none. A shader with a material of the material tool of jka.vision
    says it itself (emissive <light> <r> <g> <b> [noshadows], in the units of q3map_surfacelight; one that gives light
    but no shadows is no patch, its light stays a part of the light of the grid). For the others it is guessed from
-   what glows of them and from q3map_surfacelight, unless v_rtLights is 2 (the materials alone). */
+   what glows of them and from q3map_surfacelight. The patches cast no shadows of the players since 2026-11-08
+   (the lights they guessed did not agree with the lightmaps): they only give the strength of the sun in the units
+   of the grid (VK_RT_FitPatches). */
 static float VK_RT_Emission( const shader_t *shader ) {
 	float emission = 0.0f;
 
@@ -473,9 +474,6 @@ static float VK_RT_Emission( const shader_t *shader ) {
 		}
 		// (q3map_surfacelight 1000 gives about the light of a white texture, as below)
 		return shader->emissive[3] * 0.001f * ( shader->emissive[0] * 0.3f + shader->emissive[1] * 0.59f + shader->emissive[2] * 0.11f );
-	}
-	if ( v_rtLights->integer == 2 ) {
-		return 0.0f;
 	}
 	for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
 		const shaderStage_t	*stage = &shader->stages[i];
@@ -1324,7 +1322,6 @@ void VK_RT_Init( void ) {
 	v_rtShadows = ri.Cvar_Get( "v_rtShadows", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players where the graphics card traces rays (cg_shadows 2). 0: none" );
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
-	v_rtLights = ri.Cvar_Get( "v_rtLights", "1", CVAR_ARCHIVE_ND, "Traced shadows from the textures that give light: as their materials say (emissive of the material tool of jka.vision), guessed for the textures that have none yet. 2: from the materials alone. 0: from the sun and the light grid alone" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
 	memset( &rt, 0, sizeof( rt ) );
 	if ( !vk.rayTracing || !vk.depthReadable ) {
@@ -1441,9 +1438,7 @@ void VK_RT_Pass( void ) {
 	VK_EndTarget();
 
 	// what has to be built this frame and how much scratch memory that needs, before anything is recorded
-	// (v_rtLights 2 or back leaves out or brings back the guessed lights: the patches are made again)
-	if ( rt.world != tr.world || v_rtLights->modified ) {
-		v_rtLights->modified = qfalse;
+	if ( rt.world != tr.world ) {
 		VK_RT_PrepareLevel();
 	}
 	casterScratch = VK_RT_PrepareCasters();
@@ -1489,7 +1484,14 @@ void VK_RT_Pass( void ) {
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
-		v_rtLights->integer ? vk_patchScale : 0.0f, vk_sunStrength );
+		0.0f, vk_sunStrength );
+	// the players as spheres: a pixel whose light passes none of them traces nothing
+	rows[21][0] = (float)Q_min( rt.numCasters, VK_RT_CASTERS );
+	for ( int i = 0; i < rt.numCasters && i < VK_RT_CASTERS; i++ ) {
+		VectorCopy( rt.casters[i].origin, rows[22 + i] );
+		rows[22 + i][2] += 8.0f;
+		rows[22 + i][3] = 64.0f;		// the model and a saber held out
+	}
 	// the view of the frame before, to find the points of this one in its mask
 	memcpy( rows[16], rt.previous, sizeof( rt.previous ) );
 	rows[20][3] = rt.previousValid ? 1.0f : 0.0f;
@@ -1514,7 +1516,9 @@ void VK_RT_Pass( void ) {
 		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet, rt.maskSets[now ^ 1] };
 		const VkDescriptorSet	resolveSets[3] = { vk.frame->set, rt.maskSets[now], vk.depthSet };
 
-		// the rays into the mask of this frame, onto the one before
+		// the rays into the mask of this frame, onto the one before; they read the depth of the scene, which has to
+		// be in the layout for reading first (the validation layer: the set of the depth expects it)
+		VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.shadowPipeline );
 		vk.boundPipeline = rt.shadowPipeline;
