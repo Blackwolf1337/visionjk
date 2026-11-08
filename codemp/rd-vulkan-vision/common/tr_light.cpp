@@ -50,6 +50,16 @@ void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori) {
 		dl->transformed[0] = DotProduct( temp, ori->axis[0] );
 		dl->transformed[1] = DotProduct( temp, ori->axis[1] );
 		dl->transformed[2] = DotProduct( temp, ori->axis[2] );
+		if ( dl->lineRange > 0.0f ) {
+			VectorSubtract( dl->lineStart, ori->origin, temp );
+			dl->lineStartTransformed[0] = DotProduct( temp, ori->axis[0] );
+			dl->lineStartTransformed[1] = DotProduct( temp, ori->axis[1] );
+			dl->lineStartTransformed[2] = DotProduct( temp, ori->axis[2] );
+			VectorSubtract( dl->lineEnd, ori->origin, temp );
+			dl->lineEndTransformed[0] = DotProduct( temp, ori->axis[0] );
+			dl->lineEndTransformed[1] = DotProduct( temp, ori->axis[1] );
+			dl->lineEndTransformed[2] = DotProduct( temp, ori->axis[2] );
+		}
 	}
 }
 

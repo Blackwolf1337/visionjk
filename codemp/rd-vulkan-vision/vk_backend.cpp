@@ -97,6 +97,7 @@ qboolean VK_InitShared( void ) {
 	v_vkMerge = ri.Cvar_Get( "v_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
 	v_vkSprites = ri.Cvar_Get( "v_vkSprites", "1", CVAR_CHEAT, "Sprites, the glow of blades, lines and bolts made in the vertex shader. 0: their corners are built on the CPU every frame" );
 	v_vkGrass = ri.Cvar_Get( "v_vkGrass", "1", CVAR_CHEAT | CVAR_LATCH, "Surface sprites of the level placed once and drawn from the device. 0: placed on the CPU every frame, and the surfaces under them too" );
+	v_dlightScale = ri.Cvar_Get( "v_dlightScale", "1", CVAR_ARCHIVE_ND, "How bright the moving lights (sabers, shots, explosions) are on the surfaces they light, 1 as meant" );
 	v_pbrEnergy = ri.Cvar_Get( "v_pbrEnergy", "1", CVAR_ARCHIVE_ND, "Surfaces with a material lose of their diffuse light what their shine takes, as light does (energy conserving). 0: shine on top of the full diffuse light, as before" );
 	v_tessellation = ri.Cvar_Get( "v_tessellation", "1", CVAR_ARCHIVE_ND, "Materials with tessellation get real bumps: their triangles cut finer and moved on the graphics card (Vulkan, a card with tessellation shaders). 0: they keep their parallax instead" );
 	v_pbrProbes = ri.Cvar_Get( "v_pbrProbes", "1", CVAR_ARCHIVE_ND, "Surfaces with a material mirror the level around them: it is drawn from up to 32 points in all directions while it loads. 0: they mirror the light of their lightmap" );

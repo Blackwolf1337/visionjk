@@ -742,6 +742,7 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 
 cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
 cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
+cvar_t	*v_dlightScale;	// the brightness of the moving lights (generic.frag DynamicLight)
 cvar_t	*v_pbrEnergy;	// 0: their diffuse light is not lessened by what the shine takes
 cvar_t	*v_tessellation;	// 0: materials with tessellation keep their parallax
 
@@ -1005,6 +1006,26 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		}
 	}
 
+	// VisionJK: the stage with a material gives the light its bumps and its shine, and its texture is what the light
+	// shines on, also where it is laid over the lightmap by a blend (the stages of the level). Not one that adds
+	// its colour (a sign, a glowing decal): that is light itself.
+	const shaderStage_t *matStage = NULL;
+	if ( v_pbr->integer && !r_lightmap->integer ) {
+		for ( int i = 0; i < shader->numUnfoggedPasses && !matStage; i++ ) {
+			const shaderStage_t *pStage = &shader->stages[i];
+			const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
+
+			if ( pStage->mat && ( pStage->mat->pbr || pStage->mat->normalMap ) && pStage->bundle[0].image && !pStage->bundle[0].isLightmap
+				&& dst != GLS_DSTBLEND_ONE && dst != GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+				matStage = pStage;
+			}
+		}
+		if ( matStage ) {
+			textured = matStage;
+			bundle = &matStage->bundle[0];
+		}
+	}
+
 	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
 		const dlight_t *dl = &backEnd.refdef.dlights[l];
 		vkDraw_t draw;
@@ -1017,9 +1038,20 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		VK_IdentityTexCoords( &draw );
 		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
 		draw.tex1 = tr.dlightImage->texnum;
-		VectorCopy( dl->color, draw.baseColor );
+		if ( matStage && VK_PbrDraw( matStage, shader, qfalse, &draw ) ) {
+			// its normal map, rmo map and numbers; the grid and the probes are no part of a lamp
+			draw.pbrFlags &= ~VKP_GRID;
+		}
+		VectorScale( dl->color, Com_Clamp( 0.0f, 8.0f, v_dlightScale->value ), draw.baseColor );
 		VectorCopy( dl->transformed, draw.parm );
 		draw.parm[3] = dl->radius;
+		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
+		draw.grid0[3] = 0.0f;
+		if ( dl->lineRange > 0.0f ) {
+			VectorCopy( dl->lineStartTransformed, draw.grid0 );
+			draw.grid0[3] = dl->lineRange;
+			VectorCopy( dl->lineEndTransformed, draw.grid1 );
+		}
 		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}

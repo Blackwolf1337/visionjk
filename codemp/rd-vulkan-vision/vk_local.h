@@ -376,6 +376,7 @@ extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;
 extern cvar_t	*v_pbrEnergy;
+extern cvar_t	*v_dlightScale;
 extern cvar_t	*v_tessellation;
 extern cvar_t	*v_vkGrass;
 qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );

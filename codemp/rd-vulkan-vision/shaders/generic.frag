@@ -45,44 +45,6 @@ VARYING( 5 ) flat in uint v_draw;
 
 layout( location = 0 ) out vec4 o_color;
 
-// One dynamic light on what is already drawn there, added by a pass of its own. rd-vanilla projects the round
-// light image onto every triangle along its normal and fades it with the distance of the light from the plane
-// of the triangle (tr_shade.cpp ProjectDlightTexture2). The same per pixel: tex0 is the texture of the surface,
-// tex1 the light image.
-vec4 DynamicLight( Draw d ) {
-	// The normal of the vertices, exact for the faces of the level. The one of the plane of the pixels, from how the
-	// position changes from one pixel to the next, only where they have none: far from the middle of a level and
-	// on a floor seen flat that one is rough.
-	vec3 normal = dot( v_normal, v_normal ) > 0.25 ? normalize( v_normal ) : normalize( cross( dFdx( v_position ), dFdy( v_position ) ) );
-	vec3 toLight = d.parm.xyz - v_position;
-	float radius = d.parm.w;
-
-	// the side of the triangle that is looked at
-	if ( dot( normal, TRANSFORMS( d.transform ).viewOrigin.xyz - v_position ) < 0.0 ) {
-		normal = -normal;
-	}
-	// A light a little below the plane still lights it: the light of an explosion lies just under the floor it hit,
-	// and two faces of a map a hair apart (which never show that they fight over the depth) would light up in rows
-	// where the lower one wins, as on mp/ffa4.
-	float fac = dot( normal, toLight );
-	if ( fac <= -12.0 || fac >= radius ) {
-		discard;
-	}
-	fac = max( abs( fac ), 0.001 );
-	float modulate = 1.0 - ( fac * fac ) / ( radius * radius );
-
-	// where the pixel is in the plane, seen from the point under the light. The image is round, any axes do.
-	vec3 inPlane = normal * fac - toLight;
-	vec3 e1 = normalize( abs( normal.z ) < 0.9 ? cross( normal, vec3( 0.0, 0.0, 1.0 ) ) : cross( normal, vec3( 1.0, 0.0, 0.0 ) ) );
-	vec3 e2 = cross( normal, e1 );
-	vec2 st = vec2( dot( inPlane, e1 ), dot( inPlane, e2 ) ) * ( 0.5 / sqrt( radius * radius - fac * fac ) ) + 0.5;
-	if ( any( lessThan( st, vec2( 0.0 ) ) ) || any( greaterThan( st, vec2( 1.0 ) ) ) ) {
-		discard;
-	}
-	vec3 light = texture( TEX1( d ), st ).rgb * d.baseColor.rgb * modulate;
-	return vec4( texture( TEX0( d ), v_texCoord0 ).rgb * light, 1.0 );
-}
-
 // The tangent frame of a pixel from how its position and its texture coordinates change to the next pixel (Schüler,
 // "Followup: Normal mapping without precomputed tangents", 2013): the vertices carry no tangents
 mat3 CotangentFrame( vec3 n, vec3 p, vec2 uv ) {
@@ -358,6 +320,123 @@ vec3 SurfaceLight( Surface s, vec3 l, vec3 radiance, float minRoughness, inout v
 	}
 	diffuse += s.albedo * ( 1.0 - s.metalness ) * radiance * nl * ( 1.0 - coatFresnel );
 	return radiance * ( shine * nl * ( 1.0 - coatFresnel ) + coat );
+}
+
+// the point of the segment from a to b nearest p
+vec3 NearestOnSegment( vec3 a, vec3 b, vec3 p ) {
+	vec3 ab = b - a;
+	return a + ab * clamp( dot( p - a, ab ) / max( dot( ab, ab ), 1e-4 ), 0.0, 1.0 );
+}
+
+// the point of the segment from a to b nearest the ray from p along r (Karis 2013, the representative point of a
+// tube light for its shine)
+vec3 NearestToRay( vec3 a, vec3 b, vec3 p, vec3 r ) {
+	vec3 l0 = a - p, ld = b - a;
+	float rd = dot( r, ld );
+	float t = ( dot( r, l0 ) * rd - dot( l0, ld ) ) / max( dot( ld, ld ) - rd * rd, 1e-4 );
+	return a + ld * clamp( t, 0.0, 1.0 );
+}
+
+/* One dynamic light on what is already drawn there, added by a pass of its own (vk_shade.cpp, the loop over
+   tess.dlightBits): a point (parm: where in the space of the model, w how far it reaches) or a tube from grid0.xyz to
+   grid1.xyz reaching grid0.w from it (a saber blade, ext.AddLineLightToScene). Until 2026-11-08 this was rd-vanilla's
+   round light image projected along the normal of the triangle (ProjectDlightTexture2): flat, no bumps, no shine.
+   Now the light falls off smoothly to nothing at its reach and is brighter close by; the surface takes it by the
+   angle it meets it, with the normal map and the shine of its material where the stage has one (VKD_PBR, the
+   textures and numbers VK_PbrDraw gives a stage), else with a faint shine of its own. For a tube the diffuse light
+   comes from the nearest point of the tube and the shine from the point nearest the mirrored ray, so the highlight on
+   a floor runs along the blade. Worked out in linear light; the light colour and its fall in the light of the game
+   as before. tex0: the texture of the surface (white where the frame already holds it: then the pass multiplies). */
+vec4 DynamicLight( Draw d ) {
+	Transform t = TRANSFORMS( d.transform );
+	// The normal of the vertices, exact for the faces of the level. The one of the plane of the pixels, from how the
+	// position changes from one pixel to the next, only where they have none.
+	vec3 flat_ = dot( v_normal, v_normal ) > 0.25 ? normalize( v_normal ) : normalize( cross( dFdx( v_position ), dFdy( v_position ) ) );
+	vec3 toEye = normalize( t.viewOrigin.xyz - v_position );
+	if ( dot( flat_, toEye ) < 0.0 ) {
+		flat_ = -flat_;		// the side of the triangle that is looked at
+	}
+	bool tube = d.grid0.w > 0.0;
+	float range = tube ? d.grid0.w : d.parm.w;
+	vec3 lightPos = tube ? NearestOnSegment( d.grid0.xyz, d.grid1.xyz, v_position ) : d.parm.xyz;
+	vec3 toLight = lightPos - v_position;
+	float dist = length( toLight );
+	if ( dist >= range ) {
+		discard;
+	}
+	// A light a little below the plane still lights it: the light of an explosion lies just under the floor it hit,
+	// a blade on the floor lies in it. It is taken as standing a hand above the plane for the angle.
+	float above = dot( flat_, toLight );
+	if ( above <= -12.0 ) {
+		discard;
+	}
+	vec3 l = normalize( toLight + flat_ * max( 16.0 - above, 0.0 ) );
+
+	float x = dist / range;
+	float window = clamp( 1.0 - x * x * x * x, 0.0, 1.0 );
+	// (about what the round light image of rd-vanilla gave halfway out, brighter close by)
+	float fall = window * window / ( 1.0 + 4.0 * x * x ) * 1.6;
+	vec3 radiance = pow( d.baseColor.rgb * fall, vec3( 2.2 ) );
+
+	vec2 uv = v_texCoord0;
+	vec3 albedo = pow( texture( TEX0( d ), uv ).rgb, vec3( 2.2 ) );
+	Surface s;
+	s.flat_ = flat_;
+	s.v = toEye;
+	s.n = flat_;
+	s.albedo = albedo;
+	s.metalness = 0.0;
+	s.roughness = 0.6;
+	s.f0 = vec3( 0.04 );
+	s.coat = 0.0;
+	s.coatRoughness = 0.0;
+	s.sheen = vec3( 0.0 );
+	s.sheenRoughness = 0.0;
+	s.along = vec3( 1.0, 0.0, 0.0 );
+	s.anisotropy = 0.0;
+	float occlusion = 1.0;
+	if ( PBR( d.flags ) ) {
+		mat3 frame = CotangentFrame( flat_, v_position, uv );
+		if ( ( d.pbrFlags & PBR_NORMAL ) != 0u ) {
+			vec3 bump = texture( TEX2( d ), uv ).xyz * 2.0 - 1.0;
+			bump.xy *= d.material2.y;
+			s.n = normalize( frame * bump );
+		}
+		vec3 rmo = vec3( d.pbr.x, d.pbr.y, 1.0 );
+		if ( ( d.pbrFlags & PBR_RMO_RELATIVE ) != 0u ) {
+			vec3 made = texture( TEX3( d ), uv ).rgb;
+			rmo = vec3( clamp( d.pbr.x + made.r * 2.0 - 1.0, 0.05, 1.0 ), d.pbr.y, made.b );
+		} else if ( ( d.pbrFlags & PBR_RMO ) != 0u ) {
+			rmo = texture( TEX3( d ), uv ).rgb;
+			if ( ( d.pbrFlags & PBR_ORM ) != 0u ) {
+				rmo = rmo.gbr;
+			}
+		}
+		s.roughness = max( rmo.r, 0.04 );
+		s.metalness = rmo.g;
+		occlusion = rmo.b;
+		s.f0 = mix( vec3( d.material2.z > 0.0 ? d.material2.z : 0.04 ), albedo, s.metalness );
+		s.coat = d.pbr2.y;
+		s.coatRoughness = d.pbr2.z;
+		s.along = cos( d.material2.x ) * frame[0] + sin( d.material2.x ) * frame[1];
+		s.anisotropy = d.pbr2.w;
+	}
+
+	vec3 diffuse = vec3( 0.0 );
+	vec3 shine;
+	if ( tube ) {
+		// the diffuse light from the nearest point, the shine from the one nearest the mirrored ray; a tube is no
+		// point, its highlight is a little wider
+		vec3 unused = vec3( 0.0 );
+		vec3 r = reflect( -toEye, s.n );
+		vec3 specPos = NearestToRay( d.grid0.xyz, d.grid1.xyz, v_position, r );
+		vec3 ls = normalize( specPos - v_position + flat_ * max( 16.0 - dot( flat_, specPos - v_position ), 0.0 ) );
+		SurfaceLight( s, l, radiance, 0.0, diffuse );
+		shine = SurfaceLight( s, ls, radiance, 0.15, unused );
+	} else {
+		shine = SurfaceLight( s, l, radiance, 0.0, diffuse );
+	}
+	return vec4( pow( diffuse * occlusion + shine, vec3( 1.0 / 2.2 ) ), 1.0 );
 }
 
 #ifndef VK_GLES

@@ -359,6 +359,36 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	dl->color[1] = g;
 	dl->color[2] = b;
 	dl->additive = additive;
+	dl->lineRange = 0.0f;
+}
+
+/*
+=====================
+RE_AddLineLightToScene
+
+VisionJK: a tube of light (a saber blade). The tests of the front end see a point light in its middle that reaches
+the whole of it; the backend lights from the nearest point of the tube (vk_shade.cpp, generic.frag DynamicLight).
+=====================
+*/
+void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b ) {
+	dlight_t	*dl;
+	vec3_t		half;
+
+	if ( !tr.registered || r_numdlights >= MAX_DLIGHTS || range <= 0.0f ) {
+		return;
+	}
+	dl = &backEndData->dlights[r_numdlights++];
+	VectorSubtract( end, start, half );
+	VectorScale( half, 0.5f, half );
+	VectorAdd( start, half, dl->origin );
+	dl->radius = range + VectorLength( half );
+	dl->color[0] = r;
+	dl->color[1] = g;
+	dl->color[2] = b;
+	dl->additive = qfalse;
+	dl->lineRange = range;
+	VectorCopy( start, dl->lineStart );
+	VectorCopy( end, dl->lineEnd );
 }
 
 /*

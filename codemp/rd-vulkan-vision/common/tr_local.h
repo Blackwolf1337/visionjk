@@ -108,6 +108,13 @@ typedef struct dlight_s {
 	vec3_t			mTransDirection;
 	vec3_t			mTransBasis2;
 	vec3_t			mTransBasis3;
+
+	// VisionJK: a tube of light from lineStart to lineEnd (a saber blade, ext.AddLineLightToScene) that reaches
+	// lineRange units from the tube; 0: a point light at origin. For the tests of what it lights, origin and radius
+	// are the middle and the reach of the whole.
+	float			lineRange;
+	vec3_t			lineStart, lineEnd;
+	vec3_t			lineStartTransformed, lineEndTransformed;	// in the local coordinate system as transformed
 } dlight_t;
 
 
@@ -1740,6 +1747,7 @@ void RE_AddMiniRefEntityToScene( const miniRefEntity_t *ent );
 void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
+void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 void RE_RenderScene( const refdef_t *fd );
 
 /*

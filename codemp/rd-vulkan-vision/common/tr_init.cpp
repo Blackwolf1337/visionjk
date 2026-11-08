@@ -1208,6 +1208,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.LevelView						= RE_LevelView;
 	re.ext.UiTexture						= RE_UiTexture;
 	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;
+	re.ext.AddLineLightToScene				= RE_AddLineLightToScene;
 
 	return &re;
 }

@@ -333,6 +333,9 @@ typedef struct refexport_s {
 		// and the colours of the vertices, cut to clip (left, top, right, bottom pixels, NULL none); drawn in the 2D
 		// of this frame where the call comes, flat on the window also while the 2D is on a plane.
 		void				(*DrawTriangles2D)						( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t shader, const int *clip );
+		// A tube of light from start to end for the scene of this frame (a saber blade), reaching range units from
+		// the tube, colour 0 to 1, between ClearScene and RenderScene; it takes one of the dynamic lights.
+		void				(*AddLineLightToScene)					( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 	} ext;
 
 } refexport_t;
