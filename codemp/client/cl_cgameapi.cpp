@@ -2055,6 +2055,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_AddPaint						= CL_AddPaint;
 		cgi.ext.S_AddLoopingSoundVolume			= S_AddLoopingSoundVolume;
 		cgi.ext.R_AddLineLight					= re->ext.AddLineLightToScene;
+		cgi.ext.R_AddSaberBlade					= re->ext.AddSaberBladeToScene;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

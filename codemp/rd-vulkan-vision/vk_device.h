@@ -222,6 +222,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							ssrShown;			// the slot of the texture table it was written into, -1: none
 	VkShaderModule				ssrPrepShader;
 	VkPipeline					ssrPrepPipeline;
+	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)
+	VkPipeline					saberPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
@@ -315,6 +317,6 @@ void		VK_RT_SunChanged( void );
 
 // vk_cmd.cpp
 // begins vk.color over the level with the depth of the scene only read, for the passes over it (VK_WetPass)
-void		VK_BeginOverLevel( VkCommandBuffer cmd );
+void		VK_BeginOverLevel( VkCommandBuffer cmd, const int *area = NULL );	// area: x, y, width, height from the upper left, NULL all
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );

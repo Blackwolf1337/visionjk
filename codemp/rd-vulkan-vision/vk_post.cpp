@@ -338,6 +338,103 @@ void VK_SsrPrep( void ) {
 
 /*
 ===============
+VK_SaberBlades
+
+The saber blades of the scene (ext.AddSaberBladeToScene) in 3D over the view of the level, added onto the frame
+before the screen reflections and the bloom (shaders/saber.frag): their numbers in globals.blades, one pass over the
+screen for all of them
+===============
+*/
+void VK_SaberBlades( void ) {
+#ifndef RD_VISION_GLES
+	const int	count = Q_min( backEnd.refdef.numSaberBlades, MAX_SABER_BLADES );
+	float		rows[VK_WET_HEADER][4];
+	int			viewport[4];
+
+	if ( !vk.frame || count <= 0 || !vk.depthReadable || !vk.saberPipeline ) {
+		return;
+	}
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	VK_ViewRows( rows, viewport );
+	memcpy( globals->blades, rows, sizeof( rows ) );
+	VectorSet4( globals->blades[VK_WET_HEADER], (float)count, 0.0f, 0.0f, 0.0f );
+	for ( int i = 0; i < count; i++ ) {
+		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
+		float				( *r )[4] = &globals->blades[VK_WET_HEADER + 1 + i * 3];
+
+		VectorCopy( blade->start, r[0] );
+		r[0][3] = blade->core;
+		VectorCopy( blade->end, r[1] );
+		r[1][3] = blade->glow;
+		VectorCopy( blade->rgb, r[2] );
+		r[2][3] = 1.0f;
+	}
+
+	// The part of the view the blades and their glow cover, from the upper left (as rows[8]); the pass is drawn there
+	// alone: over all of the view, with many samples, it cost about a millisecond (most of it resolving the samples)
+	const float	left = rows[8][0], top = rows[8][1], right = rows[8][0] + rows[8][2], bottom = rows[8][1] + rows[8][3];
+	float		x0 = right, y0 = bottom, x1 = left, y1 = top;
+	for ( int i = 0; i < count; i++ ) {
+		const saberBlade_t *blade = &backEnd.refdef.saberBlades[i];
+
+		for ( int e = 0; e < 2; e++ ) {
+			const float	*q = e ? blade->end : blade->start;
+			float		clip[4];
+
+			for ( int k = 0; k < 4; k++ ) {
+				clip[k] = rows[0][k] * q[0] + rows[1][k] * q[1] + rows[2][k] * q[2] + rows[3][k];
+			}
+			if ( clip[3] < 4.0f ) {
+				x0 = left; y0 = top; x1 = right; y1 = bottom;		// (by the eye or behind it: all of the view)
+				continue;
+			}
+			// (the glow fades out within about four times its radius, at least a few pixels)
+			const float	px = rows[8][2] * 0.5f * clip[0] / clip[3] + left + rows[8][2] * 0.5f;
+			const float	py = top + rows[8][3] * 0.5f - rows[8][3] * 0.5f * clip[1] / clip[3];
+			const float	reach = Q_max( blade->glow * 4.0f / ( clip[3] * rows[5][3] ) * rows[8][3] * 0.5f, 8.0f );
+			x0 = Q_min( x0, px - reach );
+			y0 = Q_min( y0, py - reach );
+			x1 = Q_max( x1, px + reach );
+			y1 = Q_max( y1, py + reach );
+		}
+	}
+	const int area[4] = { (int)Q_max( left, floorf( x0 ) ), (int)Q_max( top, floorf( y0 ) ),
+		(int)( Q_min( right, ceilf( x1 ) ) - Q_max( left, floorf( x0 ) ) ), (int)( Q_min( bottom, ceilf( y1 ) ) - Q_max( top, floorf( y0 ) ) ) };
+	if ( area[2] <= 0 || area[3] <= 0 ) {
+		return;		// nothing of them in the view
+	}
+
+	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.depthSet, vk.depthSet };
+	VkCommandBuffer			cmd = vk.frame->cmd;
+
+	VK_EndTarget();
+	VK_BeginOverLevel( cmd, area );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.saberPipeline );
+	vk.boundPipeline = vk.saberPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+	{
+		// (the scissor to the part, the viewport stays the view)
+		VkRect2D scissor;
+		scissor.offset.x = area[0];
+		scissor.offset.y = area[1];
+		scissor.extent.width = (uint32_t)area[2];
+		scissor.extent.height = (uint32_t)area[3];
+		qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	}
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_EndTarget();
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
+}
+
+/*
+===============
 VK_HasScope
 
 Whether RE_SetScopeEffect() is drawn: it reads the depth of the scene

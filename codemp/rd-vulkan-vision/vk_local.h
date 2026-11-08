@@ -72,6 +72,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
 #define VK_RT_CASTERS		16		// players whose spheres the shadow pass tests before it traces (VK_RT_MAX_CASTERS)
 #define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 52 * 4 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (52: the tiles of the shadow maps, VK_SM_TILES), then the panels of each player
+#define VK_BLADE_VEC4S		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * 3 )	// shaders/saber.frag: the view, how many, three a blade
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame
@@ -84,6 +85,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		rt[VK_RT_VEC4S][4];			// what the passes that trace rays were given (vk_rt.cpp)
 	float		lights[VK_LIGHT_VEC4S][4];	// light to judge materials by, see VK_LightRows()
 	float		ssr[7][4];					// v_ssr: the picture of the level of the frame before, see VK_SsrPrep()
+	float		blades[VK_BLADE_VEC4S][4];	// the saber blades drawn in 3D, see VK_SaberBlades()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -430,6 +432,7 @@ void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
+void		VK_SaberBlades( void );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );

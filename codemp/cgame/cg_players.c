@@ -5532,6 +5532,48 @@ static float CG_SaberScale( const vmCvar_t *cv )
 	return Com_Clamp( 0.25f, 3.0f, cv->value );
 }
 
+// whether the engine and the renderer draw saber blades in 3D (ext.R_AddSaberBlade, v_cgameSaberBlade), asked once
+static qboolean CG_HasSaberBlade( void )
+{
+	static int has = -1;
+
+	if ( has < 0 )
+	{
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameSaberBlade", value, sizeof( value ) );
+		has = ( atoi( value ) && trap->ext.R_AddSaberBlade ) ? 1 : 0;
+	}
+	return (qboolean)( has > 0 );
+}
+
+// VisionJK: the blade from origin along dir as the renderer draws it in 3D, a white core in a glow of its colour
+// (their choice 2026-11-08: movie style, for every blade, the SFX and custom ones too), in place of the flat glow
+// sprites and core strip that fell apart seen along the blade. qfalse: the renderer has none, or the blade is black
+// (light can only be added, a black blade keeps its texture); draw it as before.
+static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color )
+{
+	vec3_t	end, rgb = { 1.0f, 1.0f, 1.0f };
+	float	flare;
+
+	if ( !CG_HasSaberBlade() || (int)color == SABER_BLACK )
+	{
+		return qfalse;
+	}
+	if ( length < 0.5f )
+	{
+		return qtrue;
+	}
+	CG_RGBForSaberColor( color, rgb );
+	// (the halo as the blade comes out, as the flat glow had it; and its hum)
+	flare = length < lengthMax ? 1.0f + 2.0f / length : 1.0f;
+	flare *= 0.96f + Q_flrand( 0.0f, 1.0f ) * 0.08f;
+	VectorMA( origin, length, dir, end );
+	trap->ext.R_AddSaberBlade( origin, end, radius * 0.22f * CG_SaberScale( &v_saberCoreScale ) * flare,
+		radius * 1.5f * CG_SaberScale( &v_saberGlowScale ) * flare, rgb[0], rgb[1], rgb[2] );
+	return qtrue;
+}
+
 void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight )
 {
 	vec3_t		mid;
@@ -5557,6 +5599,11 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 		vec3_t rgb={1,1,1};
 		CG_RGBForSaberColor( color, rgb );
 		trap->R_AddLightToScene( mid, (length*1.4f) + (Q_flrand(0.0f, 1.0f)*3.0f), rgb[0], rgb[1], rgb[2] );
+	}
+
+	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color ) )
+	{
+		return;
 	}
 
 	memset( &saber, 0, sizeof( refEntity_t ));
@@ -5718,7 +5765,10 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 	fx.renderfx = rfx;
 	fx.coreScale = CG_SaberScale( &v_saberCoreScale );
 	fx.glowScale = CG_SaberScale( &v_saberGlowScale );
-	SaberFX_Draw( &fx );
+	if ( !CG_AddSaberBlade3D( muzzle, dir, blade->length, blade->lengthMax, blade->radius, color ) )
+	{
+		SaberFX_Draw( &fx );
+	}
 	if ( trail )
 		CG_SFXSaberTrailFill( &fx, color );
 

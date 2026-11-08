@@ -114,6 +114,9 @@ static const uint32_t vk_smaaBlendFrag[] =
 static const uint32_t vk_tonemapFrag[] =
 #include "shaders/tonemap_frag.inc"
 ;
+static const uint32_t vk_saberFrag[] =
+#include "shaders/saber_frag.inc"
+;
 static const uint32_t vk_ssrPrepFrag[] =
 #include "shaders/ssrprep_frag.inc"
 ;
@@ -606,6 +609,9 @@ void VK_InitPipelines( void ) {
 	// the frame, the frame and the depth as the depth of field reads them)
 	vk.ssrPrepShader = VK_CreateShader( vk_ssrPrepFrag, sizeof( vk_ssrPrepFrag ) );
 	vk.ssrPrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.ssrPrepShader, 0, 12, VKP_GENERIC );
+	// the saber blades in 3D, added onto the frame over the level (8: with the samples of the frame)
+	vk.saberShader = VK_CreateShader( vk_saberFrag, sizeof( vk_saberFrag ) );
+	vk.saberPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -647,6 +653,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.smaaBlendShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.tonemapPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.ssrPrepPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.saberPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.saberShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );

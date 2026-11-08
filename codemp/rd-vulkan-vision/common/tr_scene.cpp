@@ -31,6 +31,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static	int			r_firstSceneDrawSurf;
 
 static	int			r_numdlights;
+static	int			r_numSaberBlades;		// VisionJK: ext.AddSaberBladeToScene
+static	int			r_firstSceneSaberBlade;
 static	int			r_firstSceneDlight;
 
 static	int			r_numentities;
@@ -60,6 +62,8 @@ void R_InitNextFrame( void ) {
 
 	r_numdlights = 0;
 	r_firstSceneDlight = 0;
+	r_numSaberBlades = 0;
+	r_firstSceneSaberBlade = 0;
 
 	r_numentities = 0;
 	r_firstSceneEntity = 0;
@@ -82,6 +86,7 @@ RE_ClearScene
 */
 void RE_ClearScene( void ) {
 	r_firstSceneDlight = r_numdlights;
+	r_firstSceneSaberBlade = r_numSaberBlades;
 	r_firstSceneEntity = r_numentities;
 	r_firstScenePoly = r_numpolys;
 	refEntParent = -1;
@@ -393,6 +398,27 @@ void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, 
 
 /*
 =====================
+RE_AddSaberBladeToScene
+
+VisionJK: a saber blade the renderer draws in 3D (vk_post.cpp VK_SaberBlades)
+=====================
+*/
+void RE_AddSaberBladeToScene( const vec3_t start, const vec3_t end, float coreRadius, float glowRadius, float r, float g, float b ) {
+	saberBlade_t *blade;
+
+	if ( !tr.registered || r_numSaberBlades >= MAX_SABER_BLADES || glowRadius <= 0.0f ) {
+		return;
+	}
+	blade = &backEndData->saberBlades[r_numSaberBlades++];
+	VectorCopy( start, blade->start );
+	VectorCopy( end, blade->end );
+	blade->core = coreRadius;
+	blade->glow = glowRadius;
+	VectorSet( blade->rgb, r, g, b );
+}
+
+/*
+=====================
 RE_AddLightToScene
 
 =====================
@@ -525,6 +551,8 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
 	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
+	tr.refdef.numSaberBlades = r_numSaberBlades - r_firstSceneSaberBlade;
+	tr.refdef.saberBlades = &backEndData->saberBlades[r_firstSceneSaberBlade];
 
 	// Add the decals here because decals add polys and we need to ensure
 	// that the polys are added before the the renderer is prepared

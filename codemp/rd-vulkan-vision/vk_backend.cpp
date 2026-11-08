@@ -1262,6 +1262,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// tay_bloom, v_tonemap and v_smaa: the view of the level itself, as the focus below. The bloom takes the light
 	// above white before the tone map, SMAA finds its edges in the colours of the screen after it.
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_SaberBlades();
+		VK_GpuMark( "saber blades" );
 		VK_SsrPrep();
 		VK_GpuMark( "ssr picture" );
 		VK_Bloom();

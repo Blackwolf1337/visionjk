@@ -257,6 +257,7 @@ set(MPVulkanVisionVulkanShaders
 	smaa_blend.frag
 	tonemap.frag
 	ssrprep.frag
+	saber.frag
 	)
 set(MPVulkanVisionVulkanShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/smaa.glsl"

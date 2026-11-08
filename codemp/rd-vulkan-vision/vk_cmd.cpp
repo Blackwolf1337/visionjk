@@ -853,7 +853,7 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 // reading: no test, nothing written (the stencil goes with it). With several samples a pixel the frame is drawn into
 // the targets that stand in for color and depth, and the depth the shader reads is the plain one, which has their
 // first sample since the scene ended.
-void VK_BeginOverLevel( VkCommandBuffer cmd ) {
+void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area ) {
 	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
@@ -882,6 +882,13 @@ void VK_BeginOverLevel( VkCommandBuffer cmd ) {
 	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
 	info.renderArea.extent.width = (uint32_t)vk.color.width;
 	info.renderArea.extent.height = (uint32_t)vk.color.height;
+	// (a part only: with many samples a pass over all of it resolves all of it again)
+	if ( area ) {
+		info.renderArea.offset.x = area[0];
+		info.renderArea.offset.y = area[1];
+		info.renderArea.extent.width = (uint32_t)area[2];
+		info.renderArea.extent.height = (uint32_t)area[3];
+	}
 	info.layerCount = 1;
 	info.colorAttachmentCount = 1;
 	info.pColorAttachments = &colorInfo;
