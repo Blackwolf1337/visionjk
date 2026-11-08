@@ -227,19 +227,31 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/scene.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	)
+# Shaders of the Vulkan device alone, not made into GLSL ES: the passes of v_smaa, which include SMAA.hlsl of
+# lib/smaa
+set(MPVulkanVisionVulkanShaders
+	smaa_edge.frag
+	smaa_weight.frag
+	smaa_blend.frag
+	)
+set(MPVulkanVisionVulkanShaderIncludes
+	"${MPDir}/rd-vulkan-vision/shaders/smaa.glsl"
+	"${VisionJKLibDir}/smaa/SMAA.hlsl"
+	)
 set(MPVulkanVisionShaderOutputs)
 if(MPVulkanVisionVulkanTarget)
 	# GLSL to SPIR-V as a C initializer list, one .inc per shader, included by vk_pipeline.cpp. glslc runs on the
 	# build machine, so this also works when cross compiling.
-	foreach(shader ${MPVulkanVisionShaders})
+	foreach(shader ${MPVulkanVisionShaders} ${MPVulkanVisionVulkanShaders})
 		set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
 		string(REPLACE "." "_" shaderName ${shader})
 		set(shaderOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}.inc")
 		add_custom_command(
 			OUTPUT ${shaderOut}
 			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
-			COMMAND ${GLSLC} --target-env=vulkan1.3 -O -mfmt=c -I "${MPDir}/rd-vulkan-vision/shaders" -o ${shaderOut} ${shaderIn}
-			DEPENDS ${shaderIn} ${MPVulkanVisionShaderIncludes}
+			COMMAND ${GLSLC} --target-env=vulkan1.3 -O -mfmt=c -I "${MPDir}/rd-vulkan-vision/shaders" -I "${VisionJKLibDir}/smaa"
+				-o ${shaderOut} ${shaderIn}
+			DEPENDS ${shaderIn} ${MPVulkanVisionShaderIncludes} ${MPVulkanVisionVulkanShaderIncludes}
 			COMMENT "glslc ${shader}"
 			VERBATIM)
 		list(APPEND MPVulkanVisionShaderOutputs ${shaderOut})

@@ -799,6 +799,48 @@ void VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const f
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
+// one pass of v_smaa into target (cleared to zero), reading count sets
+static void VK_SmaaStep( VkPipeline pipeline, vkTarget_t *target, const VkDescriptorSet *sets, int count, const float *push ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+	vk.boundPipeline = pipeline;
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_BeginRendering( cmd, target, NULL, 1, qfalse );
+	VK_FullTarget( cmd, target );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, (uint32_t)count, sets, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 8, push );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+// The copy of the frame is what the first and the last pass read: the frame itself is the target of the last.
+// With r_ext_multisample the last pass writes every sample of vk.colorMS, which the end of the target resolves
+// into vk.color again, so what is drawn over the frame later (the 2D) keeps it.
+void VK_SmaaPass( float threshold ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const float push[8] = { 1.0f / vk.width, 1.0f / vk.height, (float)vk.width, (float)vk.height, threshold, 0.0f, 0.0f, 0.0f };
+	const VkDescriptorSet weightSets[3] = { vk.smaaEdgesSet, vk.smaaAreaSet, vk.smaaSearchSet };
+	VkDescriptorSet blendSets[2];
+
+	VK_CreateSmaaTargets();
+	blendSets[0] = vk.smaaColorSet;
+	blendSets[1] = vk.smaaWeightsSet;
+
+	VK_CopyTarget( &vk.color, &vk.smaaColor );
+	VK_SmaaStep( vk.smaaEdgePipeline, &vk.smaaEdges, &vk.smaaColorSet, 1, push );
+	VK_SmaaStep( vk.smaaWeightPipeline, &vk.smaaWeights, weightSets, 3, push );
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaBlendPipeline );
+	vk.boundPipeline = vk.smaaBlendPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 2, blendSets, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 8, push );
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+}
+
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sourceSet = VK_PostSet( source );

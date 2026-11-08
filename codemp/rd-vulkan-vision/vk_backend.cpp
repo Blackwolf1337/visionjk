@@ -1034,8 +1034,9 @@ static const void *RB_DrawSurfs( const void *data ) {
 		tess.shader = NULL;
 		return (const void *)( cmd + 1 );
 	}
-	// tay_bloom: the view of the level itself, as the focus below
+	// v_smaa and tay_bloom: the view of the level itself, as the focus below
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_Smaa();
 		VK_Bloom();
 	}
 	// RE_SetScreenEffect(): the view of the level itself, before the scope, which lays its lens over it
