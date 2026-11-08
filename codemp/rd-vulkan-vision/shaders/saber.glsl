@@ -8,8 +8,8 @@
 // the blade (2026-11-08, movie style on their choice). The core is brighter than white for the bloom of the HDR frame.
 //
 // A blade that moved has swept the place between where it is and where it was a moment ago: the pixel takes the
-// nearest of the blades in between (the hilt and the way to the tip turned from one to the other), glowing less the
-// older it is, as the SFX blade smears its glow over the swing. What lies in front of the blade (by the depth of the
+// nearest of the blades in between (the hilt and the way to the tip turned from one to the other), filled white with
+// a coloured glow round it, as the trail of the SFX blade. What lies in front of the blade (by the depth of the
 // scene) hides it; where a wall or the floor hides it, the glow goes on on the wall from the part of the blade in
 // front of it, so a blade that strikes a wall does not end in a hard edge.
 //
@@ -179,8 +179,10 @@ void main() {
 				float shilt = smoothstep( -sglow * 0.6, 0.0, salong * length( sseg ) );
 				float hot = 1.0 - smoothstep( score - spx, score + spx, sd );
 				float inner = exp( -3.0 * ( sd * sd ) / ( sglow * sglow ) );
-				float glowWeight = ( 1.0 - s ) * ( 0.35 + 0.4 * oa.w );
-				float hotWeight = pow( 1.0 - s, 3.0 ) * 0.4 * oa.w;
+				// as the SFX trail: the swept place filled white evenly, fading only at the old blade, with the coloured
+				// glow round its edges (their choice 2026-11-08)
+				float glowWeight = ( 0.8 + 0.2 * ( 1.0 - s ) ) * ( 0.6 + 0.4 * oa.w );
+				float hotWeight = 0.75 * sqrt( oa.w ) * ( 1.0 - smoothstep( 0.8, 1.0, s ) );
 				sweep = ( c.rgb * inner * 1.1 * glowWeight + hotColour * hot * 2.5 * hotWeight ) * shilt * sseen;
 			}
 		}

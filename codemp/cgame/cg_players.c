@@ -5652,25 +5652,29 @@ static qboolean CG_SaberPastAt( const saberPast_t *p, int time, vec3_t base, vec
 	return qfalse;
 }
 
-// v_saber3D: the place the blade (from start to end) swept since a moment ago, as long a moment as its trail, and how
-// bright it is: the faster the blade, the brighter. Nothing when it rests or has no trail (past NULL).
+// v_saber3D: the place the blade (from start to end) swept since a moment ago, and how bright it is: the faster the
+// blade, the brighter. As long as the trail of the SFX look is at 144 frames a second (CG_SFXSaberTrail: a share of
+// the last frame, half of it for a move without a trail, the hilt end half as far as the tip), but by the clock, so
+// it is the same at any frame rate (their choice 2026-11-08: the 3D trail like the SFX one). Nothing when it rests
+// or has no trail (past NULL).
 static void CG_SaberSweep( const saberPast_t *past, qboolean trailMove, saberBlade3D_t *blade )
 {
-	const float	ms = ( trailMove ? 24.0f : 10.0f ) * Com_Clamp( 0.0f, 4.0f, v_saberTrailLength.value );
+	const float	ms = ( trailMove ? 6.5f : 3.25f ) * Com_Clamp( 0.0f, 4.0f, v_saberTrailLength.value );
 	vec3_t		base, tip;
 	float		moved;
 
 	VectorCopy( blade->start, blade->oldStart );
 	VectorCopy( blade->end, blade->oldEnd );
 	blade->sweep = 0.0f;
-	if ( !past || ms < 1.0f || !CG_SaberPastAt( past, cg.time - (int)ms, base, tip ) )
+	if ( !past || ms < 1.0f || !CG_SaberPastAt( past, cg.time - (int)( ms + 0.5f ), base, tip ) )
 		return;
 	moved = Q_max( Distance( tip, blade->end ), Distance( base, blade->start ) );
-	if ( moved < 1.0f || moved > 400.0f )
+	if ( moved < 0.5f || moved > 400.0f )
 		return;
-	VectorCopy( base, blade->oldStart );
+	VectorAdvance( blade->start, 0.5f, base, blade->oldStart );
 	VectorCopy( tip, blade->oldEnd );
-	blade->sweep = Com_Clamp( 0.0f, 1.0f, ( moved - 1.0f ) / 24.0f );
+	// (as the glow of the SFX blade: full from about six units on)
+	blade->sweep = Com_Clamp( 0.0f, 1.0f, ( moved - 0.5f ) / 6.0f );
 }
 
 // how the blade hums this frame, 0.82 to 1: its light and its 3D blade flicker by it in step
