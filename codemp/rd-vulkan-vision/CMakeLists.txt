@@ -227,6 +227,7 @@ set(MPVulkanVisionRTShaders
 	generic.tesc
 	generic.tese
 	rtcells.comp
+	rtlamps.comp
 	rtdebug.frag
 	rtresolve.frag
 	rtshadow.frag

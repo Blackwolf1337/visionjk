@@ -75,9 +75,14 @@ static const uint32_t vk_smLightsFrag[] =
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
 ;
+static const uint32_t vk_rtLampsComp[] =
+#include "shaders/rtlamps_comp.inc"
+;
 
 #define VK_RT_MAX_INSTANCES			64
 #define VK_RT_MAX_CASTERS			16				// players with a shadow in one frame
+#define VK_RT_LAMP_RAYS				256				// panels a frame asks whether a player sees them (shaders/rtlamps.comp)
+#define VK_RT_LAMP_ASKED			16				// of them for one player
 #define VK_RT_MAX_CASTER_SURFACES	64				// surfaces of one of them, saber and weapon included
 #define VK_RT_SKIN_VERTEXES			( 256 * 1024 )	// their skinned vertices in one frame
 #define VK_RT_LOCAL_INDEXES			( 1024 * 1024 )	// the triangles of the model surfaces they have, counted in the surface
@@ -152,6 +157,14 @@ static struct {
 	VkPipelineLayout			cellsLayout;
 	VkPipeline					cellsPipeline;
 	VkShaderModule				cellsShader;
+	// whether the players see the panels near them (shaders/rtlamps.comp with the layout of the cells), asked in a
+	// frame and read when its place comes round again: three vec4 a question, then a float an answer
+	VkPipeline					lampsPipeline;
+	VkShaderModule				lampsShader;
+	vkBuffer_t					lampRays[VK_FRAMES];
+	int							lampAsked[VK_FRAMES];
+	vec3_t						lampAskedFrom[VK_FRAMES][VK_RT_LAMP_RAYS];	// where the player stood
+	int							lampAskedPatch[VK_FRAMES][VK_RT_LAMP_RAYS];
 
 	vkBuffer_t					scratch;		// for every build of a frame
 	VkDeviceSize				scratchAlign;
@@ -388,6 +401,30 @@ static void VK_RT_SurfaceTriangles( const msurface_t *surf, std::vector<float> &
 	}
 }
 
+// the side each vertex of a surface shows, in the order of VK_RT_SurfaceTriangles: the plane of a face, the normals
+// of the vertices of the others
+static void VK_RT_SurfaceNormals( const msurface_t *surf, std::vector<float> &normals ) {
+	if ( *surf->data == SF_FACE ) {
+		const srfSurfaceFace_t *face = (const srfSurfaceFace_t *)surf->data;
+
+		for ( int j = 0; j < face->numPoints; j++ ) {
+			normals.insert( normals.end(), face->plane.normal, face->plane.normal + 3 );
+		}
+	} else if ( *surf->data == SF_TRIANGLES ) {
+		const srfTriangles_t *tris = (const srfTriangles_t *)surf->data;
+
+		for ( int j = 0; j < tris->numVerts; j++ ) {
+			normals.insert( normals.end(), tris->verts[j].normal, tris->verts[j].normal + 3 );
+		}
+	} else if ( *surf->data == SF_GRID ) {
+		const srfGridMesh_t *grid = (const srfGridMesh_t *)surf->data;
+
+		for ( int j = 0; j < grid->width * grid->height; j++ ) {
+			normals.insert( normals.end(), grid->verts[j].normal, grid->verts[j].normal + 3 );
+		}
+	}
+}
+
 // the triangles of the solid surfaces of the world model (not doors, lifts and the other brush models, which move)
 static void VK_RT_LevelTriangles( std::vector<float> &positions, std::vector<uint32_t> &indexes ) {
 	const bmodel_t *model = &tr.world->bmodels[0];
@@ -570,7 +607,7 @@ The patches of the level, the most powerful VK_RT_MAX_PATCHES of them.
 */
 static void VK_RT_Patches( std::vector<vkPatch_t> &patches ) {
 	const bmodel_t			*model = &tr.world->bmodels[0];
-	std::vector<float>		positions;
+	std::vector<float>		positions, normals;
 	std::vector<uint32_t>	indexes;
 
 	for ( int i = 0; i < model->numSurfaces; i++ ) {
@@ -582,8 +619,10 @@ static void VK_RT_Patches( std::vector<vkPatch_t> &patches ) {
 			continue;
 		}
 		positions.clear();
+		normals.clear();
 		indexes.clear();
 		VK_RT_SurfaceTriangles( surf, positions, indexes );
+		VK_RT_SurfaceNormals( surf, normals );
 		for ( size_t t = 0; t + 2 < indexes.size(); t += 3 ) {
 			const float	*v[3] = { &positions[indexes[t] * 3], &positions[indexes[t + 1] * 3], &positions[indexes[t + 2] * 3] };
 			vec3_t		ab, ac, cross, center, side;
@@ -596,6 +635,19 @@ static void VK_RT_Patches( std::vector<vkPatch_t> &patches ) {
 
 			if ( area < 0.01f ) {
 				continue;
+			}
+			// The side it lights is the one the surface shows, as the map has it. Not the winding: the triangles of the
+			// maps go clockwise seen from the side they show, so the cross product points into the wall, and every
+			// panel on a wall lit the side behind it: standing before one, it did not count (2026-11-08).
+			if ( normals.size() == positions.size() ) {
+				vec3_t shown = { 0.0f, 0.0f, 0.0f };
+
+				for ( int k = 0; k < 3; k++ ) {
+					VectorAdd( shown, &normals[indexes[t + k] * 3], shown );
+				}
+				if ( DotProduct( shown, cross ) < 0.0f ) {
+					VectorNegate( cross, cross );
+				}
 			}
 			VectorCopy( cross, side );
 			VectorNormalize( side );
@@ -1337,6 +1389,16 @@ static void VK_RT_CreateLights( void ) {
 	info.stage.pName = "main";
 	info.layout = rt.cellsLayout;
 	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.cellsPipeline ) );
+
+	// shaders/rtlamps.comp in the same layout
+	rt.lampsShader = VK_CreateShader( vk_rtLampsComp, sizeof( vk_rtLampsComp ) );
+	info.stage.module = rt.lampsShader;
+	VK_CHECK( qvkCreateComputePipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &rt.lampsPipeline ) );
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VK_CreateBuffer( &rt.lampRays[i], ( sizeof( float ) * 12 + sizeof( float ) ) * VK_RT_LAMP_RAYS,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
+		rt.lampAsked[i] = 0;
+	}
 }
 
 static void VK_RT_CreateLayouts( void ) {
@@ -1502,6 +1564,11 @@ void VK_RT_Shutdown( void ) {
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
+	qvkDestroyPipeline( vk.device, rt.lampsPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.lampsShader, NULL );
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		VK_DestroyBuffer( &rt.lampRays[i] );
+	}
 	qvkDestroyPipelineLayout( vk.device, rt.cellsLayout, NULL );
 	delete vk_patches;
 	vk_patches = NULL;
@@ -1914,68 +1981,104 @@ in x, y, z and the share of the direction of the grid in w.
 
 The levels keep no lights: what lit their lightmaps were mostly light entities that q3map2 left out, and a panel
 that glows may have given none. The light grid knows from where the light at a player came, but as an average of
-the cell. So of the panels the cell of the player sees (its list, shaders/rtcells.comp) those that give light from
-about that side cast his shadow from where they are, each by its share of the light they give him together: the
-shadows have the length a lamp gives and spread under one above him. One more than 80 degrees off the grid casts
-nothing (their choice 2026-11-08: the panels checked by the grid; the grid has the average of all the lights, so a
-panel on one side of a room is often 60 degrees off it). Where no panel fits, the grid casts it.
+the cell. So the panels near him (the lists of the eight cells around him, shaders/rtcells.comp) that give light
+from about that side cast his shadow from where they are, each by its share of the light they give him together:
+the shadows have the length a lamp gives and spread under one above him. Where no panel fits, the grid casts it.
 
-The shares follow what the cell says over about 0.15 s, and a panel of the frames before stays in them by the
-light it gave him when the cell he stepped into does not list it (the next cell sees other panels first). One
-panel for all of the light made the shadow jump from lamp to lamp as he walked (2026-11-08).
+- How much light a panel gives him is worked out where he stands, every frame, as rtcells.comp does it for the
+  middle of a cell (its power, the side it lights, the square of the distance): the light of a cell's list is that
+  of its middle, 64 units or more away, and the panel right before him lost to one further off (2026-11-08).
+- A panel more than 80 degrees off the grid casts nothing (their choice 2026-11-08: the panels checked by the grid;
+  the grid has the average of all the lights, so a panel on one side of a room is often 60 degrees off it), but one
+  within 96 units that lights his side counts whatever the grid says, and from there to 192 units less and less so:
+  before a panel on a wall its direction is flat and the grid points up.
+- Whether he sees it is asked of the device from where he stands (shaders/rtlamps.comp, VK_RT_TraceLamps), the
+  answer read when that frame is done, VK_FRAMES later; until then a panel of a list counts as seen (the middle of
+  that cell sees it).
+- The shares follow over about 0.15 s, so the shadows hand over from lamp to lamp; one panel for all of the light
+  made the shadow jump as he walked (2026-11-08).
 ===============
 */
 #define VK_RT_LAMP_ROWS		4
 #define VK_RT_LAMP_ROW		( VK_RT_VEC4S - VK_RT_CASTERS * VK_RT_LAMP_ROWS )
 #define VK_RT_LAMP_SHOWN	3		// panels a player casts from in the shader
 #define VK_RT_LAMP_KEPT		6		// panels he remembers with their shares
+#define VK_RT_LAMP_CANDIDATES	( 8 * VK_RT_CELL_LIST + VK_RT_LAMP_KEPT )
 
 // what a player had the frame before: found again by where he stands
 typedef struct vkLampMemory_s {
 	vec3_t	origin;
 	int		count;
 	int		lamp[VK_RT_LAMP_KEPT];		// the patches
-	float	light[VK_RT_LAMP_KEPT];		// how much light each gave him by the list of his cell
-	float	share[VK_RT_LAMP_KEPT];		// its share of his light now
+	float	share[VK_RT_LAMP_KEPT];		// the share of his light of each
 } vkLampMemory_t;
 
-// how much a patch counts as the light of a player whose light the grid has from dir: its light where it lies on
-// that side, 0 for one that turns away from him (a panel lights the side its normal shows, a zero normal all sides)
-static float VK_RT_LampScore( const vkPatch_t *patch, const vec3_t middle, const vec3_t dir, float light ) {
-	vec3_t to;
+// a panel for a player: the light it gives him where he stands, and how far it counts as coming from the side of
+// the grid (0 to 1)
+static void VK_RT_LampLight( const vkPatch_t *patch, const vec3_t middle, const vec3_t dir, float *light, float *side ) {
+	vec3_t		to;
+	float		facing = 1.0f;
 
+	*light = *side = 0.0f;
 	VectorSubtract( patch->origin, middle, to );
-	if ( VectorNormalize( to ) < 1.0f || DotProduct( patch->normal, to ) > -0.05f ) {
-		return 0.0f;
+	const float d = VectorNormalize( to );
+	if ( d < 1.0f ) {
+		return;
 	}
-	// 1 within 60 degrees of the grid, 0 from 80 on
-	const float t = Com_Clamp( 0.0f, 1.0f, ( DotProduct( to, dir ) - 0.17f ) / ( 0.5f - 0.17f ) );
-	return light * t * t * ( 3.0f - 2.0f * t );
+	// (a panel lights the side its normal shows, a zero normal all sides)
+	if ( VectorLengthSquared( patch->normal ) > 0.5f ) {
+		facing = -DotProduct( patch->normal, to );
+		if ( facing <= 0.05f ) {
+			return;
+		}
+	}
+	const float radius = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
+	*light = patch->emission * patch->area * facing / Q_max( d * d, radius * radius + 16.0f );
+	// 1 within 60 degrees of the grid, 0 from 80 on; near it counts anyway
+	float t = Com_Clamp( 0.0f, 1.0f, ( DotProduct( to, dir ) - 0.17f ) / ( 0.5f - 0.17f ) );
+	float n = Com_Clamp( 0.0f, 1.0f, ( 192.0f - d ) / ( 192.0f - 96.0f ) );
+	t = t * t * ( 3.0f - 2.0f * t );
+	n = n * n * ( 3.0f - 2.0f * n );
+	*side = Q_max( t, n );
 }
 
 static void VK_RT_PickLamps( float (*rows)[4] ) {
 	static vkLampMemory_t	last[VK_RT_CASTERS];
 	static int				lastCount;
 	static float			lastTime;
+	static vec3_t			answerFrom[VK_RT_LAMP_RAYS];
+	static int				answerPatch[VK_RT_LAMP_RAYS];
+	static float			answer[VK_RT_LAMP_RAYS];
 	vkLampMemory_t			now[VK_RT_CASTERS];
 	const world_t			*world = tr.world;
 	const int				count = Q_min( rt.numCasters, VK_RT_CASTERS );
+	const int				f = vk.frameIndex;
 	const qboolean			ready = (qboolean)( v_rtLamps->integer && !rt.maps && world && world->lightGridData && vk_patches
-		&& !vk_patches->empty() && vk_patchScale > 0.0f && rt.cellState == 0 && rt.cellLists.mapped );
+		&& !vk_patches->empty() && vk_patchScale > 0.0f && rt.cellState == 0 && rt.cellLists.mapped && rt.lampRays[f].mapped );
 	const float				dt = Com_Clamp( 0.0f, 0.25f, backEnd.refdef.floatTime - lastTime );
 	const float				follow = 1.0f - expf( -dt / 0.15f );
+	int						answers = 0;
+	float					*ask = ready ? (float *)rt.lampRays[f].mapped : NULL;
 
 	lastTime = backEnd.refdef.floatTime;
+	// what the frame that last had this place asked, answered now (it is done)
+	if ( ready ) {
+		answers = rt.lampAsked[f];
+		memcpy( answerFrom, rt.lampAskedFrom[f], sizeof( vec3_t ) * answers );
+		memcpy( answerPatch, rt.lampAskedPatch[f], sizeof( int ) * answers );
+		memcpy( answer, ask + VK_RT_LAMP_RAYS * 12, sizeof( float ) * answers );
+	}
+	rt.lampAsked[f] = 0;
+
 	for ( int i = 0; i < count; i++ ) {
 		float					(*out)[4] = &rows[VK_RT_LAMP_ROW + i * VK_RT_LAMP_ROWS];
 		vkLampMemory_t			*me = &now[i];
 		const vkLampMemory_t	*was = NULL;
-		// what the cell says now: up to its list and the panels remembered, with their light and their score
-		int						candidate[VK_RT_CELL_LIST + VK_RT_LAMP_KEPT];
-		float					candidateLight[VK_RT_CELL_LIST + VK_RT_LAMP_KEPT], candidateScore[VK_RT_CELL_LIST + VK_RT_LAMP_KEPT];
+		int						candidate[VK_RT_LAMP_CANDIDATES];
+		float					light[VK_RT_LAMP_CANDIDATES], side[VK_RT_LAMP_CANDIDATES], score[VK_RT_LAMP_CANDIDATES];
 		int						numCandidates = 0;
-		vec3_t					middle, dir, g;
-		int						cell[3];
+		vec3_t					middle, dir, eye, g;
+		int						base[3];
 
 		memset( out, 0, sizeof( float ) * 4 * VK_RT_LAMP_ROWS );
 		out[3][3] = 1.0f;		// all of it the grid
@@ -1992,67 +2095,122 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 		}
 		VectorCopy( me->origin, middle );
 		middle[2] += 8.0f;		// as the sphere of the player (VK_RT_Pass)
+		VectorCopy( middle, eye );
+		eye[2] += 16.0f;		// where he sees the panels from: his chest
 		VK_RT_GridDirection( middle, dir );
+
+		// the panels of the lists of the eight cells around him, and those he had
 		VectorSubtract( middle, world->lightGridOrigin, g );
 		for ( int k = 0; k < 3; k++ ) {
-			cell[k] = Com_Clampi( 0, world->lightGridBounds[k] - 1, (int)floorf( g[k] * world->lightGridInverseSize[k] + 0.5f ) );
+			base[k] = (int)floorf( g[k] * world->lightGridInverseSize[k] );
 		}
-		const uint32_t *list = (const uint32_t *)rt.cellLists.mapped
-			+ ( cell[0] + cell[1] * world->lightGridBounds[0] + cell[2] * world->lightGridBounds[0] * world->lightGridBounds[1] ) * VK_RT_LIST_WORDS;
+		for ( int corner = 0; corner < 8; corner++ ) {
+			int c[3];
 
-		for ( int k = 0; k < VK_RT_CELL_LIST; k++ ) {
-			const uint32_t n = list[k];
-
-			if ( n >= (uint32_t)vk_patches->size() ) {
-				break;		// (all bits: the end of the list)
+			for ( int k = 0; k < 3; k++ ) {
+				c[k] = Com_Clampi( 0, world->lightGridBounds[k] - 1, base[k] + ( ( corner >> k ) & 1 ) );
 			}
-			candidate[numCandidates] = (int)n;
-			memcpy( &candidateLight[numCandidates], &list[VK_RT_CELL_LIST + k], sizeof( float ) );
-			numCandidates++;
-		}
-		for ( int k = 0; was && k < was->count; k++ ) {
-			int c = 0;
+			const uint32_t *list = (const uint32_t *)rt.cellLists.mapped
+				+ ( c[0] + c[1] * world->lightGridBounds[0] + c[2] * world->lightGridBounds[0] * world->lightGridBounds[1] ) * VK_RT_LIST_WORDS;
+			for ( int k = 0; k < VK_RT_CELL_LIST; k++ ) {
+				const uint32_t n = list[k];
+				int at = 0;
 
-			while ( c < numCandidates && candidate[c] != was->lamp[k] ) {
-				c++;
-			}
-			if ( c == numCandidates ) {
-				candidate[numCandidates] = was->lamp[k];
-				candidateLight[numCandidates] = was->light[k];
-				numCandidates++;
-			}
-		}
-		// the shares the cell asks for: the three best by their score, of the light they give together; a panel only
-		// about on the side of the grid (its score below its light) leaves the grid the part it does not have
-		float total = 0.0f;
-		for ( int c = 0; c < numCandidates; c++ ) {
-			candidateScore[c] = VK_RT_LampScore( &( *vk_patches )[candidate[c]], middle, dir, candidateLight[c] );
-		}
-		for ( int pass = 0; pass < numCandidates; pass++ ) {
-			for ( int c = pass + 1; c < numCandidates; c++ ) {
-				if ( candidateScore[c] > candidateScore[pass] ) {
-					const int		n = candidate[c];
-					const float		l = candidateLight[c], sc = candidateScore[c];
-
-					candidate[c] = candidate[pass];
-					candidateLight[c] = candidateLight[pass];
-					candidateScore[c] = candidateScore[pass];
-					candidate[pass] = n;
-					candidateLight[pass] = l;
-					candidateScore[pass] = sc;
+				if ( n >= (uint32_t)vk_patches->size() ) {
+					break;		// (all bits: the end of the list)
+				}
+				while ( at < numCandidates && candidate[at] != (int)n ) {
+					at++;
+				}
+				if ( at == numCandidates ) {
+					candidate[numCandidates++] = (int)n;
 				}
 			}
 		}
-		for ( int c = 0; c < numCandidates && c < VK_RT_LAMP_SHOWN; c++ ) {
-			if ( candidateScore[c] > 0.0f ) {
-				total += candidateLight[c];
+		for ( int k = 0; was && k < was->count; k++ ) {
+			int at = 0;
+
+			while ( at < numCandidates && candidate[at] != was->lamp[k] ) {
+				at++;
+			}
+			if ( at == numCandidates ) {
+				candidate[numCandidates++] = was->lamp[k];
 			}
 		}
-		// every panel of the frame before and of the cell moves its share towards that
-		for ( int c = 0; c < numCandidates; c++ ) {
-			const float target = ( c < VK_RT_LAMP_SHOWN && total > 0.0f ) ? candidateScore[c] / total : 0.0f;
-			float share = 0.0f;
 
+		// their light where he stands, by how much he sees of them
+		for ( int c = 0; c < numCandidates; c++ ) {
+			float seen = 1.0f;
+
+			VK_RT_LampLight( &( *vk_patches )[candidate[c]], middle, dir, &light[c], &side[c] );
+			for ( int k = 0; k < answers; k++ ) {
+				if ( answerPatch[k] == candidate[c] && Distance( answerFrom[k], eye ) < 64.0f ) {
+					seen = answer[k];
+					break;
+				}
+			}
+			score[c] = light[c] * side[c];		// (what is asked of the device below goes by this)
+			light[c] *= seen;
+		}
+		// sorted by what they would give him if he saw them all
+		for ( int a = 0; a < numCandidates; a++ ) {
+			for ( int b = a + 1; b < numCandidates; b++ ) {
+				if ( score[b] > score[a] ) {
+					const int		n = candidate[a];
+					const float		l = light[a], sd = side[a], sc = score[a];
+
+					candidate[a] = candidate[b];
+					light[a] = light[b];
+					side[a] = side[b];
+					score[a] = score[b];
+					candidate[b] = n;
+					light[b] = l;
+					side[b] = sd;
+					score[b] = sc;
+				}
+			}
+		}
+		// the best of them are asked of the device for the frames after
+		for ( int c = 0; c < numCandidates && c < VK_RT_LAMP_ASKED && score[c] > 0.0f && rt.lampAsked[f] < VK_RT_LAMP_RAYS; c++ ) {
+			const vkPatch_t	*patch = &( *vk_patches )[candidate[c]];
+			const int		q = rt.lampAsked[f]++;
+			float			*row = ask + q * 12;
+
+			VectorCopy( eye, row );
+			row[3] = 0.0f;
+			VectorCopy( patch->origin, row + 4 );
+			row[7] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
+			VectorCopy( patch->normal, row + 8 );
+			row[11] = 0.0f;
+			VectorCopy( eye, rt.lampAskedFrom[f][q] );
+			rt.lampAskedPatch[f][q] = candidate[c];
+		}
+		// the shares asked for now: the three best by what he sees of them, of the light they give him together; one
+		// only about on the side of the grid leaves the grid the part it does not have
+		for ( int c = 0; c < numCandidates; c++ ) {
+			score[c] = light[c] * side[c];
+		}
+		int best[VK_RT_LAMP_SHOWN] = { -1, -1, -1 };
+		float total = 0.0f;
+		for ( int k = 0; k < VK_RT_LAMP_SHOWN; k++ ) {
+			for ( int c = 0; c < numCandidates; c++ ) {
+				if ( score[c] > 0.0f && ( best[k] < 0 || score[c] > score[best[k]] ) && ( k < 1 || c != best[0] ) && ( k < 2 || c != best[1] ) ) {
+					best[k] = c;
+				}
+			}
+			if ( best[k] >= 0 ) {
+				total += light[best[k]];
+			}
+		}
+		// every panel he had and every candidate moves its share towards that
+		for ( int c = 0; c < numCandidates; c++ ) {
+			float target = 0.0f, share = 0.0f;
+
+			for ( int k = 0; k < VK_RT_LAMP_SHOWN; k++ ) {
+				if ( best[k] == c && total > 0.0f ) {
+					target = score[c] / total;
+				}
+			}
 			for ( int k = 0; was && k < was->count; k++ ) {
 				if ( was->lamp[k] == candidate[c] ) {
 					share = was->share[k];
@@ -2079,7 +2237,6 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 				me->count++;
 			}
 			me->lamp[at] = candidate[c];
-			me->light[at] = candidateLight[c];
 			me->share[at] = share;
 		}
 		// the three largest go to the shader; what the others had stays with them, the grid has the rest
@@ -2114,6 +2271,33 @@ static void VK_RT_PickLamps( float (*rows)[4] ) {
 	}
 	memcpy( last, now, sizeof( vkLampMemory_t ) * count );
 	lastCount = count;
+}
+
+// shaders/rtlamps.comp over what VK_RT_PickLamps asked in this frame, after the top level of the frame is built
+static void VK_RT_TraceLamps( VkCommandBuffer cmd ) {
+	const int f = vk.frameIndex;
+	struct {
+		uint32_t	addresses[4];
+		uint32_t	count;
+	} push;
+
+	if ( rt.maps || !rt.lampsPipeline || !rt.lampAsked[f] ) {
+		return;
+	}
+	const VkDeviceAddress rays = VK_RT_Address( &rt.lampRays[f] );
+	const VkDeviceAddress seen = rays + sizeof( float ) * 12 * VK_RT_LAMP_RAYS;
+
+	push.addresses[0] = (uint32_t)rays;
+	push.addresses[1] = (uint32_t)( rays >> 32 );
+	push.addresses[2] = (uint32_t)seen;
+	push.addresses[3] = (uint32_t)( seen >> 32 );
+	push.count = (uint32_t)rt.lampAsked[f];
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.lampsPipeline );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, rt.cellsLayout, 0, 1, &rt.sets[f], 0, NULL );
+	qvkCmdPushConstants( cmd, rt.cellsLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), &push );
+	qvkCmdDispatch( cmd, ( push.count + 63 ) / 64, 1, 1 );
+	// the CPU reads the answers when the frame is done
+	VK_RT_Barrier( cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_HOST_BIT, VK_ACCESS_HOST_READ_BIT );
 }
 
 /*
@@ -2252,6 +2436,7 @@ void VK_RT_Pass( void ) {
 		rows[22 + i][3] = 64.0f;		// the model and a saber held out
 	}
 	VK_RT_PickLamps( rows );
+	VK_RT_TraceLamps( vk.frame->cmd );
 	// the view of the frame before, to find the points of this one in its mask
 	memcpy( rows[16], rt.previous, sizeof( rt.previous ) );
 	rows[20][3] = rt.previousValid ? 1.0f : 0.0f;
