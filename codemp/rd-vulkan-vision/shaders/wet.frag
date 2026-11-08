@@ -56,6 +56,7 @@ layout( location = 0 ) out vec4 o_color;
 #define WET_TRACK		4
 #define WET_SNOW		5
 #define WET_BLOOD		6
+#define WET_BLOOD_STREAK	7
 #define BLOOD_DEEP		vec3( 0.20, 0.008, 0.006 )	// the colour of a pool of blood where it is deep,
 #define BLOOD_THIN		vec3( 0.42, 0.03, 0.02 )	//	of a drop and of the thin edge
 #define SNOW_ALBEDO		vec3( 0.93, 0.95, 0.98 )
@@ -268,6 +269,16 @@ void main() {
 			vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
 			vec2 q = local + seed * 131.0;
 			float d = r - radius * wet + ( ( Fbm( q * 0.09 ) - 0.47 ) * 0.7 + ( Noise( q * 0.5 ) - 0.5 ) * 0.08 ) * radius;
+			if ( wall && local.y > 0.0 && abs( local.x ) < radius * 0.6 ) {
+				// on a wall some runs go down from it in columns of 2.2 units, the longer the wetter, thinner at the end
+				float col = floor( local.x / 2.2 );
+				float h = fract( sin( col * 12.9898 + seed * 78.233 ) * 43758.5453 );
+				if ( h > 0.6 ) {
+					float run = radius * wet * ( 0.8 + 5.0 * ( h - 0.6 ) );
+					float dx = abs( local.x - ( col + 0.5 ) * 2.2 ) - 0.4 * ( 1.0 - 0.7 * local.y / max( run, 0.01 ) );
+					d = min( d, max( dx, local.y - run ) );
+				}
+			}
 			float cover = 1.0 - smoothstep( -0.05 * radius, 0.02 * radius, d );
 			float deep = 1.0 - smoothstep( -0.45 * radius, -0.05 * radius, d );
 			const float CELL = 2.5;
@@ -290,6 +301,32 @@ void main() {
 			if ( cover > blood ) {
 				blood = cover;
 				bloodDeep = deep;
+			}
+			continue;
+		}
+		if ( kind == WET_BLOOD_STREAK ) {
+			// A smear of blood where a cut-off part was dragged over the level (cgame/cg_slice.c): a piece from
+			// 2 centre - hit to hit, puddle its half width, wet how fresh and full it is. Ragged edges, thin streaks
+			// along the way it went, darker down its middle; the pieces of one drag are joined end to end.
+			vec3 b_ = hit - nj * dot( hit - centre, nj );
+			vec3 a_ = centre * 2.0 - b_;
+			vec3 ab = b_ - a_;
+			float len = length( ab );
+			vec3 dir = ab / max( len, 1e-3 );
+			vec3 ap = rel + centre - a_;
+			ap -= nj * dot( ap, nj );
+			float along = dot( ap, dir );
+			float side = dot( ap, cross( nj, dir ) );
+			float half_ = max( puddle, 0.5 );
+			vec2 q = vec2( along, side ) + seed * 97.0;
+			float d = length( ap - dir * clamp( along, 0.0, len ) ) - half_ * ( 0.75 + 0.5 * Fbm( q * 0.12 ) );
+			float lines = Noise( vec2( along * 0.04 + seed * 11.0, side * 1.3 / half_ ) );
+			float cover = ( 1.0 - smoothstep( -0.1 * half_, 0.08 * half_, d ) ) * ( 0.45 + 0.55 * smoothstep( 0.25, 0.7, lines ) );
+			float deep = ( 1.0 - smoothstep( -0.8 * half_, -0.1 * half_, d ) ) * 0.7;
+			cover *= smoothstep( 0.0, 0.15, wet ) * ( 0.6 + 0.4 * wet );
+			if ( cover > blood ) {
+				blood = cover;
+				bloodDeep = deep * wet;
 			}
 			continue;
 		}

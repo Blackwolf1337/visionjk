@@ -148,6 +148,9 @@ typedef struct scopeEffect_s {
 #define SCREENFX_SNOW		9		// a clump of snow on the view at a, radius its size, strength how much of it is
 										// left as it melts, seed its shape. Only with an engine that sets the cvar
 										// v_screenFxSnow to 1.
+#define SCREENFX_BLOOD		10		// a splat of blood on the view at a, radius its size, width the trail above it where it
+										// ran down, strength how wet it still is, seed its shape. Only with an engine that sets
+										// the cvar v_screenFxBlood to 1 (a cut close by, cgame/cg_slice.c).
 #define SCREENFX_MAX_SOURCES	48
 
 typedef struct screenFxSource_s {
@@ -213,6 +216,8 @@ typedef struct liquidSegment_s {
 #define WET_TRACK		4		// a piece of the track of a wet tire from 2 origin - hit to hit, seed: half its width
 #define WET_SNOW		5		// a splat of snow, slid down to origin from hit, wet: how much of it is left
 #define WET_BLOOD		6		// a pool of blood with droplets round it (cgame/cg_slice.c), wet: how far it has run out
+#define WET_BLOOD_STREAK	7	// a smear of blood from 2 origin - hit to hit where a cut part was dragged, puddle: half
+								// its width, wet: how fresh and full, seed: the shape of its edge
 
 typedef struct wetSpot_s {
 	vec3_t		origin;
