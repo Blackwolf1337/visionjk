@@ -349,6 +349,14 @@ REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
 LANG_ENGLISH        "Smooths the edges, costs speed."
 LANG_SPANISH        "Suaviza los bordes, pero reduce el rendimiento."
 
+REFERENCE           SMAA
+LANG_ENGLISH        "SMAA"
+LANG_SPANISH        "#same"
+
+REFERENCE           SMOOTHS_THE_JAGGED_EDGES_OF_THE_LEVE
+LANG_ENGLISH        "Smooths the jagged edges of the level after it is drawn. Far cheaper than anti-aliasing and works with it: anti-aliasing 2x with this looks close to 8x."
+LANG_SPANISH        "Suaviza los bordes dentados del nivel una vez dibujado. Mucho más barato que el antialiasing y compatible con él: antialiasing 2x con esto se ve casi como 8x."
+
 REFERENCE           FRAME_LIMIT
 LANG_ENGLISH        "Frame Limit"
 LANG_SPANISH        "Límite de FPS"

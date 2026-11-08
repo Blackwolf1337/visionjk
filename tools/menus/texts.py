@@ -135,6 +135,9 @@ TR = {
     'Borderless': 'Rahmenlos',
     'Anti-Aliasing': 'Kantenglättung',
     'Smooths the edges, costs speed.': 'Glättet Kanten, kostet Leistung.',
+    'SMAA': 'SMAA',
+    'Smooths the jagged edges of the level after it is drawn. Far cheaper than anti-aliasing and works with it: anti-aliasing 2x with this looks close to 8x.':
+        'Glättet die gezackten Kanten des Levels, nachdem es gezeichnet ist. Kostet viel weniger als Kantenglättung und lässt sich mit ihr verbinden: 2x Kantenglättung mit SMAA sieht fast aus wie 8x.',
     'Frame Limit': 'FPS-Limit',
     'The most frames a second the game draws.': 'Maximale Bilder pro Sekunde.',
     'None': 'Keine',

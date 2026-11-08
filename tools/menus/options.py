@@ -79,8 +79,10 @@ class Layout:
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
-        ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample',
-                          'r_swapinterval')),
+        ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample')),
+        ('yesno', 'SMAA', 'v_smaa',
+         'Smooths the jagged edges of the level after it is drawn. Far cheaper than anti-aliasing and works with it: anti-aliasing 2x with this looks close to 8x.'),
+        ('old', 'video', ('r_swapinterval',)),
         ('multi', 'Frame Limit', 'com_maxfps', (('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240),
                                                 ('None', 0)), 'The most frames a second the game draws.'),
         ('old', 'video2', ('r_gamma',)),
