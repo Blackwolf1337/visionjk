@@ -847,10 +847,13 @@ static void VK_SmaaStep( VkPipeline pipeline, vkTarget_t *target, const VkDescri
 void VK_SmaaPass( float threshold ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const float push[8] = { 1.0f / vk.width, 1.0f / vk.height, (float)vk.width, (float)vk.height, threshold, 0.0f, 0.0f, 0.0f };
-	const VkDescriptorSet weightSets[3] = { vk.smaaEdgesSet, vk.smaaAreaSet, vk.smaaSearchSet };
-	VkDescriptorSet blendSets[2];
+	VkDescriptorSet weightSets[3], blendSets[2];
 
+	// (before the sets are taken: the first time they are made here)
 	VK_CreateSmaaTargets();
+	weightSets[0] = vk.smaaEdgesSet;
+	weightSets[1] = vk.smaaAreaSet;
+	weightSets[2] = vk.smaaSearchSet;
 	blendSets[0] = vk.smaaColorSet;
 	blendSets[1] = vk.smaaWeightsSet;
 
