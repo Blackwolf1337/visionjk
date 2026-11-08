@@ -1467,6 +1467,7 @@ void VK_RT_Pass( void ) {
 	if ( rt.cellState == 1 && rt.levelReady ) {
 		VK_RT_TraceCells( cmd );
 	}
+	VK_GpuMark( "rt builds" );
 
 	memset( rows, 0, sizeof( rows ) );
 	VK_ViewRows( rows, viewport );
@@ -1521,6 +1522,7 @@ void VK_RT_Pass( void ) {
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
+		VK_GpuMark( "rt trace" );
 		VK_TargetLayout( cmd, &rt.mask[now], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		memcpy( rt.previous, rows[0], sizeof( float ) * 16 );
 		VectorCopy( rows[4], rt.previous[4] );

@@ -89,12 +89,18 @@ typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the
 	vkAlloc_t		alloc;
 } vkDeviceImage_t;
 
+#define VK_GPU_MARKS		48			// timestamps in one frame
+
 typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkCommandBuffer	cmd;
 	VkFence			fence;
 	VkSemaphore		acquired;
 	VkDescriptorSet	set;			// globals, transforms and draws of this frame
 	vkBuffer_t		probes;			// 4 bytes of depth per probe, written by the device
+	// v_gpuTimes: a timestamp at each VK_GpuMark() of the frame, read back when the frame comes round again
+	VkQueryPool		timestamps;
+	const char		*markNames[VK_GPU_MARKS];	// what ends at that mark, [0] is the start of the frame
+	int				numMarks;
 } vkDeviceFrame_t;
 
 // ------------------------------------------------------------------------------------------------------------

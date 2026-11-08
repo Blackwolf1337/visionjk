@@ -29,6 +29,98 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static vkBuffer_t	vk_readback;		// where the device copies a finished frame for the CPU to read
 
+/*
+===============================================================================
+
+V_GPUTIMES
+
+How long the device takes for the parts of a frame: a timestamp at every VK_GpuMark(), the time from one mark to
+the next added to the name of the later one. A name marked several times in a frame (the level of a portal, of
+the puddle view and of the main view) gets the sum. v_gpuTimes prints the averages since it was called last.
+
+===============================================================================
+*/
+
+#define VK_GPU_NAMES	32
+
+static struct {
+	const char	*name;
+	double		ms;				// summed over the frames
+} vk_gpuNames[VK_GPU_NAMES];
+static int		vk_numGpuNames;
+static double	vk_gpuFrameMs;		// from the first mark of a frame to its last, summed
+static int		vk_gpuFrames;
+
+static qboolean VK_GpuTimed( void ) {
+	return (qboolean)( vk.properties.limits.timestampComputeAndGraphics && vk.properties.limits.timestampPeriod > 0.0f );
+}
+
+static void VK_GpuAdd( const char *name, double ms ) {
+	int i;
+
+	for ( i = 0; i < vk_numGpuNames; i++ ) {
+		if ( vk_gpuNames[i].name == name || !strcmp( vk_gpuNames[i].name, name ) ) {
+			break;
+		}
+	}
+	if ( i == vk_numGpuNames ) {
+		if ( vk_numGpuNames == VK_GPU_NAMES ) {
+			return;
+		}
+		vk_gpuNames[vk_numGpuNames].name = name;
+		vk_gpuNames[vk_numGpuNames++].ms = 0.0;
+	}
+	vk_gpuNames[i].ms += ms;
+}
+
+// the marks of the frame the device finished, into the sums
+static void VK_GpuRead( vkFrame_t *frame ) {
+	uint64_t ticks[VK_GPU_MARKS];
+	const double msPerTick = (double)vk.properties.limits.timestampPeriod / 1000000.0;
+
+	if ( !frame->timestamps || frame->numMarks < 2 ) {
+		return;
+	}
+	if ( qvkGetQueryPoolResults( vk.device, frame->timestamps, 0, (uint32_t)frame->numMarks, sizeof( ticks ), ticks, sizeof( uint64_t ),
+		VK_QUERY_RESULT_64_BIT ) != VK_SUCCESS ) {
+		return;
+	}
+	for ( int i = 1; i < frame->numMarks; i++ ) {
+		VK_GpuAdd( frame->markNames[i], (double)( ticks[i] - ticks[i - 1] ) * msPerTick );
+	}
+	vk_gpuFrameMs += (double)( ticks[frame->numMarks - 1] - ticks[0] ) * msPerTick;
+	vk_gpuFrames++;
+}
+
+void VK_GpuMark( const char *name ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || !frame->timestamps || frame->numMarks == VK_GPU_MARKS ) {
+		return;
+	}
+	qvkCmdWriteTimestamp( frame->cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frame->timestamps, (uint32_t)frame->numMarks );
+	frame->markNames[frame->numMarks++] = name;
+}
+
+void VK_GpuTimes_f( void ) {
+	if ( !VK_GpuTimed() ) {
+		ri.Printf( PRINT_ALL, "v_gpuTimes: this device has no timestamps\n" );
+		return;
+	}
+	if ( !vk_gpuFrames ) {
+		ri.Printf( PRINT_ALL, "v_gpuTimes: no frame since the last call\n" );
+		return;
+	}
+	ri.Printf( PRINT_ALL, "device time a frame over %i frames, %ix%i, %i samples:\n", vk_gpuFrames, vk.width, vk.height, (int)vk.samples );
+	for ( int i = 0; i < vk_numGpuNames; i++ ) {
+		ri.Printf( PRINT_ALL, "  %-16s %7.3f ms\n", vk_gpuNames[i].name, vk_gpuNames[i].ms / vk_gpuFrames );
+	}
+	ri.Printf( PRINT_ALL, "  %-16s %7.3f ms\n", "whole frame", vk_gpuFrameMs / vk_gpuFrames );
+	vk_numGpuNames = 0;
+	vk_gpuFrameMs = 0.0;
+	vk_gpuFrames = 0;
+}
+
 void VK_InitFrames( void ) {
 	VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	VkFenceCreateInfo fence = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -60,6 +152,15 @@ void VK_InitFrames( void ) {
 			| ( vk.rayTracing ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0 ), qtrue );
 		VK_CreateBuffer( &frame->probes, sizeof( uint32_t ) * VK_MAX_FLARES, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
 		frame->numProbes = frame->numProbesCopied = 0;
+		frame->timestamps = VK_NULL_HANDLE;
+		frame->numMarks = 0;
+		if ( VK_GpuTimed() ) {
+			VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+
+			query.queryType = VK_QUERY_TYPE_TIMESTAMP;
+			query.queryCount = VK_GPU_MARKS;
+			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->timestamps ) );
+		}
 
 		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
 		buffers[0].buffer = frame->globals.buffer;
@@ -94,6 +195,10 @@ void VK_ShutdownFrames( void ) {
 		VK_DestroyBuffer( &frame->probes );
 		VK_DestroyBuffer( &frame->draws );
 		VK_DestroyBuffer( &frame->bones );
+		if ( frame->timestamps ) {
+			qvkDestroyQueryPool( vk.device, frame->timestamps, NULL );
+			frame->timestamps = VK_NULL_HANDLE;
+		}
 	}
 	VK_DestroyBuffer( &vk_readback );
 	vk.frame = NULL;
@@ -296,6 +401,14 @@ void VK_BeginCommands( vkFrame_t *frame ) {
 	VK_CHECK( qvkBeginCommandBuffer( frame->cmd, &begin ) );
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.boundVertexBuffer = vk.boundIndexBuffer = VK_NULL_HANDLE;
+	// (the fence says the device is through with what this frame recorded the last time)
+	VK_GpuRead( frame );
+	frame->numMarks = 0;
+	if ( frame->timestamps ) {
+		qvkCmdResetQueryPool( frame->cmd, frame->timestamps, 0, VK_GPU_MARKS );
+		qvkCmdWriteTimestamp( frame->cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frame->timestamps, 0 );
+		frame->markNames[frame->numMarks++] = "start";
+	}
 }
 
 // How long a frame waits for an image of the swapchain, in nanoseconds. With r_swapInterval 1 that wait is what
@@ -363,6 +476,7 @@ void VK_PresentFrame( const float *gamma ) {
 	uint32_t imageIndex = 0;
 	qboolean present;
 
+	VK_GpuMark( "2d and other" );
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, &vk.final, NULL, 0, qfalse );
@@ -398,6 +512,7 @@ void VK_PresentFrame( const float *gamma ) {
 	} else {
 		vk.statFramesNotShown++;
 	}
+	VK_GpuMark( "gamma and window" );
 	VK_CHECK( qvkEndCommandBuffer( cmd ) );
 
 	// textures this frame draws with have to be on the device before it runs

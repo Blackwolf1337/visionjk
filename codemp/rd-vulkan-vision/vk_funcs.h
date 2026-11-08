@@ -79,6 +79,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdEndRendering ) \
 	X( vkCmdPipelineBarrier ) \
 	X( vkCmdPushConstants ) \
+	X( vkCmdResetQueryPool ) \
 	X( vkCmdSetCullMode ) \
 	X( vkCmdSetDepthBias ) \
 	X( vkCmdSetDepthBiasEnable ) \
@@ -90,6 +91,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdSetStencilReference ) \
 	X( vkCmdSetStencilTestEnable ) \
 	X( vkCmdSetViewport ) \
+	X( vkCmdWriteTimestamp ) \
 	X( vkCreateBuffer ) \
 	X( vkCreateCommandPool ) \
 	X( vkCreateComputePipelines ) \
@@ -100,6 +102,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCreateImage ) \
 	X( vkCreateImageView ) \
 	X( vkCreatePipelineLayout ) \
+	X( vkCreateQueryPool ) \
 	X( vkCreateSampler ) \
 	X( vkCreateSemaphore ) \
 	X( vkCreateShaderModule ) \
@@ -114,6 +117,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkDestroyImageView ) \
 	X( vkDestroyPipeline ) \
 	X( vkDestroyPipelineLayout ) \
+	X( vkDestroyQueryPool ) \
 	X( vkDestroySampler ) \
 	X( vkDestroySemaphore ) \
 	X( vkDestroyShaderModule ) \
@@ -124,6 +128,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkGetBufferMemoryRequirements ) \
 	X( vkGetDeviceQueue ) \
 	X( vkGetImageMemoryRequirements ) \
+	X( vkGetQueryPoolResults ) \
 	X( vkGetSwapchainImagesKHR ) \
 	X( vkMapMemory ) \
 	X( vkQueuePresentKHR ) \

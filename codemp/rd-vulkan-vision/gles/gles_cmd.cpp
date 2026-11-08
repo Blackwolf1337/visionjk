@@ -1209,6 +1209,14 @@ void VK_PresentFrame( const float *gamma ) {
 	}
 }
 
+// v_gpuTimes: the OpenGL ES device has no timestamps of its own here
+void VK_GpuMark( const char *name ) {
+}
+
+void VK_GpuTimes_f( void ) {
+	ri.Printf( PRINT_ALL, "v_gpuTimes: only on the Vulkan device\n" );
+}
+
 /*
 ===============
 VK_ReadFrame

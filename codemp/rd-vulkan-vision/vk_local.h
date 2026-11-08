@@ -540,6 +540,10 @@ void		VK_PresentFrame( const float *gamma );
 // A rectangle of vk.final as it is on the device now: 4 bytes a pixel, red first, the top row first. Stays until
 // the next call.
 const byte	*VK_ReadFrame( int x, int y, int width, int height );
+// v_gpuTimes: a timestamp in the commands of the frame, the time since the mark before goes to name (a string that
+// stays: the names are kept as pointers until the frame is read back). Nothing on a device without timestamps.
+void		VK_GpuMark( const char *name );
+void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.
 void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );

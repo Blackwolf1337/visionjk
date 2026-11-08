@@ -822,10 +822,13 @@ static void RB_DrawWet( int depthRange ) {
 		return;
 	}
 	rb_wetLater = qfalse;
+	VK_GpuMark( "level" );
 #ifndef RD_VISION_GLES
 	VK_RT_Pass();
+	VK_GpuMark( "rt shadows" );
 #endif
 	VK_DrawWet();
+	VK_GpuMark( "wet and paint" );
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
 		RB_SetDepthRange( depthRange );
@@ -1119,6 +1122,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
 	}
+	VK_GpuMark( "2d and other" );
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 	// the view mirrored at the floor of the puddles goes into targets of its own, which the wet places read
@@ -1159,6 +1163,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( levelView && r_numLiquids ) {
 		VK_DrawLiquids();
 	}
+	VK_GpuMark( probeFace ? "probe faces" : ( puddle ? "puddle view" : ( levelView ? "level" : "portals and models" ) ) );
 	if ( probeFace ) {
 		VK_EndProbe( probeFace - 1, backEnd.viewParms.probeIndex, tr.numProbes );
 		tess.shader = NULL;
@@ -1179,6 +1184,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 			RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 			rb_lateEntities = false;
 		}
+		VK_GpuMark( "glow" );
 	}
 	rb_glowView = false;
 	if ( puddle ) {
@@ -1189,7 +1195,9 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// v_smaa and tay_bloom: the view of the level itself, as the focus below
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		VK_Smaa();
+		VK_GpuMark( "smaa" );
 		VK_Bloom();
+		VK_GpuMark( "bloom" );
 	}
 	// RE_SetScreenEffect(): the view of the level itself, before the scope, which lays its lens over it
 	if ( r_screenFxSet && !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )
@@ -1236,6 +1244,7 @@ static const void *RB_WorldEffects( const void *data ) {
 		RB_EndSurface();
 	}
 	RB_RenderWorldEffects();
+	VK_GpuMark( "weather" );
 	if ( tess.shader ) {
 		RB_BeginSurface( tess.shader, tess.fogNum );
 	}

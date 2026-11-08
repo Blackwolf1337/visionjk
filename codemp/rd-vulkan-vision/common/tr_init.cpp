@@ -37,6 +37,7 @@ glstate_t	glState;
 window_t	window;
 
 static void GfxInfo_f( void );
+void VK_GpuTimes_f( void );		// v_gpuTimes, vk_cmd.cpp (gles_cmd.cpp on the other device)
 
 cvar_t	*r_verbose;
 
@@ -624,6 +625,7 @@ static consoleCommand_t	commands[] = {
 	{ "screenshot_png",		R_ScreenShotPNG_f },
 	{ "screenshot_tga",		R_ScreenShotTGA_f },
 	{ "gfxinfo",			GfxInfo_f },
+	{ "v_gpuTimes",			VK_GpuTimes_f },
 	{ "r_atihack",			R_AtiHackToggle_f },
 	{ "r_we",				R_WorldEffect_f },
 	{ "imagecacheinfo",		RE_RegisterImages_Info_f },
