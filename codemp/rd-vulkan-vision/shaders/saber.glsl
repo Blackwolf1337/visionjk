@@ -157,15 +157,23 @@ void main() {
 			vec3 sa, sseg;
 			float su, st, sd, salong;
 
-			for ( int k = 1; k <= 6; k++ ) {
-				Swept( a.xyz, seg, oa.xyz, oseg, float( k ) / 6.0, sa, sseg );
+			// (the glow pass is blurred afterwards: three steps and no closer search are enough there)
+#ifdef GLOW_PASS
+			const int STEPS = 3;
+			const float FINEST = 0.1;
+#else
+			const int STEPS = 6;
+			const float FINEST = 0.01;
+#endif
+			for ( int k = 1; k <= STEPS; k++ ) {
+				Swept( a.xyz, seg, oa.xyz, oseg, float( k ) / float( STEPS ), sa, sseg );
 				Nearest( eye, dir, sa, sseg, su, st, sd, salong );
 				if ( sd < best ) {
 					best = sd;
-					s = float( k ) / 6.0;
+					s = float( k ) / float( STEPS );
 				}
 			}
-			for ( float step = 1.0 / 12.0; step > 0.01; step *= 0.5 ) {
+			for ( float step = 0.5 / float( STEPS ); step > FINEST; step *= 0.5 ) {
 				float centre = s;
 				for ( int side = -1; side <= 1; side += 2 ) {
 					float ts = clamp( centre + step * float( side ), 0.01, 1.0 );
@@ -198,7 +206,8 @@ void main() {
 		}
 		light += max( blade, sweep );
 
-		// on the surface that hides it: the glow of the part of the blade in front of it
+		// on the surface that hides it: the glow of the part of the blade in front of it (not in the glow pass)
+#ifndef GLOW_PASS
 		if ( seen < 1.0 && sceneDist < 8192.0 ) {
 			if ( !haveNormal ) {
 				normal = SceneSurface( gl_FragCoord.xy, p, -dir );
@@ -211,6 +220,7 @@ void main() {
 				light += c.rgb * ( inner * 1.1 + outer ) * 0.6 * ( 1.0 - seen );
 			}
 		}
+#endif
 	}
 #ifdef GLOW_PASS
 	light *= 0.45;		// (at full strength the halo was too much, their word 2026-11-08)

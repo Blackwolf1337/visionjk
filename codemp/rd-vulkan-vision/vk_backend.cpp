@@ -1289,6 +1289,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( r_screenFxSet && !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )
 		&& VK_HasScope() ) {
 		VK_ScreenFx( &r_screenFx );
+		VK_GpuMark( "screen effects" );
 	}
 	if ( scope ) {
 		// the boxes of the tracker into the glow buffer, where the lens keeps the colours of the level
