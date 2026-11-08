@@ -336,6 +336,56 @@ void VK_SsrPrep( void ) {
 #endif
 }
 
+#ifndef RD_VISION_GLES
+// The rectangle of the target (left, top, right, bottom) a blade and its glow cover in the view of rows, within frame,
+// empty where it is not seen: its four points (now and a moment ago) on the target, where an edge between two of them
+// passes the plane a little in front of the eye the point there in place of the one behind it, and round each the
+// reach of the glow (six times its radius: the glow pass draws it half as wide again).
+static void VK_BladeArea( const saberBlade_t *blade, const float ( *rows )[4], const float *frame, float *out ) {
+	const float	nearPlane = 4.0f;
+	const float	*points[4] = { blade->start, blade->end, blade->oldStart, blade->oldEnd };
+	float		clip[4][4];
+	float		x0 = frame[2], y0 = frame[3], x1 = frame[0], y1 = frame[1];
+
+	auto add = [&]( const float *c ) {
+		const float px = rows[8][0] + rows[8][2] * 0.5f * ( 1.0f + c[0] / c[3] );
+		const float py = rows[8][1] + rows[8][3] * 0.5f * ( 1.0f - c[1] / c[3] );
+		const float reach = Q_max( blade->glow * 6.0f / ( c[3] * rows[5][3] ) * rows[8][3] * 0.5f, 8.0f );
+
+		x0 = Q_min( x0, px - reach );
+		y0 = Q_min( y0, py - reach );
+		x1 = Q_max( x1, px + reach );
+		y1 = Q_max( y1, py + reach );
+	};
+	for ( int e = 0; e < 4; e++ ) {
+		for ( int k = 0; k < 4; k++ ) {
+			clip[e][k] = rows[0][k] * points[e][0] + rows[1][k] * points[e][1] + rows[2][k] * points[e][2] + rows[3][k];
+		}
+		if ( clip[e][3] >= nearPlane ) {
+			add( clip[e] );
+		}
+	}
+	for ( int a = 0; a < 4; a++ ) {
+		for ( int b = a + 1; b < 4; b++ ) {
+			if ( ( clip[a][3] >= nearPlane ) != ( clip[b][3] >= nearPlane ) ) {
+				const float	t = ( nearPlane - clip[a][3] ) / ( clip[b][3] - clip[a][3] );
+				float		c[4];
+
+				for ( int k = 0; k < 4; k++ ) {
+					c[k] = clip[a][k] + ( clip[b][k] - clip[a][k] ) * t;
+				}
+				c[3] = nearPlane;
+				add( c );
+			}
+		}
+	}
+	out[0] = Q_max( x0, frame[0] );
+	out[1] = Q_max( y0, frame[1] );
+	out[2] = Q_min( x1, frame[2] );
+	out[3] = Q_min( y1, frame[3] );
+}
+#endif
+
 /*
 ===============
 VK_SaberBlades
@@ -392,44 +442,32 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 		r[4][3] = (float)( ( ( blade->renderfx & RF_THIRD_PERSON ) ? 0 : 1 ) | ( ( blade->renderfx & RF_FIRST_PERSON ) ? 0 : 2 ) );
 	}
 
-	// The part of the view the blades, the places they swept and their glow cover, from the upper left (as rows[8]);
-	// the pass is drawn there alone: over all of the view, with many samples, it cost about a millisecond (most of it
-	// resolving the samples)
+	// The part of the view the blades, the places they swept and their glow cover, from the upper left (as rows[8]),
+	// each blade's own in its rows for the shader, which leaves a blade at once outside it, and the pass is drawn
+	// over all of them alone: over all of the view, with many samples, it cost about a millisecond (most of it
+	// resolving the samples). A blade behind the eye had made it all of the view, with every blade worked out at
+	// every pixel twice (the glow as well): 3 ms a frame with seven players that were not even in view.
 	// (and within the frame: after the window was resized the view of the cgame can be larger than the frame until it
 	// learns the new size, and a render area past the image lost the device, their crash of 2026-11-08 18:53)
-	const float	left = Q_max( rows[8][0], 0.0f ), top = Q_max( rows[8][1], 0.0f );
-	const float	right = Q_min( rows[8][0] + rows[8][2], (float)vk.color.width ), bottom = Q_min( rows[8][1] + rows[8][3], (float)vk.color.height );
-	float		x0 = right, y0 = bottom, x1 = left, y1 = top;
+	const float	frame[4] = { Q_max( rows[8][0], 0.0f ), Q_max( rows[8][1], 0.0f ),
+		Q_min( rows[8][0] + rows[8][2], (float)vk.color.width ), Q_min( rows[8][1] + rows[8][3], (float)vk.color.height ) };
+	float		x0 = frame[2], y0 = frame[3], x1 = frame[0], y1 = frame[1];
 	for ( int i = 0; i < count; i++ ) {
-		const saberBlade_t *blade = &backEnd.refdef.saberBlades[i];
+		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
+		float				*rect = globals->blades[VK_WET_HEADER + 1 + i * VK_BLADE_ROWS + ( portal ? 6 : 5 )];
 
-		if ( blade->renderfx & hidden ) {
+		VK_BladeArea( blade, rows, frame, rect );
+		if ( ( blade->renderfx & hidden ) || rect[0] >= rect[2] || rect[1] >= rect[3] ) {
+			VectorSet4( rect, 1.0f, 1.0f, 0.0f, 0.0f );
 			continue;
 		}
-		for ( int e = 0; e < 4; e++ ) {
-			const float	*q = e == 0 ? blade->start : ( e == 1 ? blade->end : ( e == 2 ? blade->oldStart : blade->oldEnd ) );
-			float		clip[4];
-
-			for ( int k = 0; k < 4; k++ ) {
-				clip[k] = rows[0][k] * q[0] + rows[1][k] * q[1] + rows[2][k] * q[2] + rows[3][k];
-			}
-			if ( clip[3] < 4.0f ) {
-				x0 = left; y0 = top; x1 = right; y1 = bottom;		// (by the eye or behind it: all of the view)
-				continue;
-			}
-			// (the glow fades out within about four times its radius, at least a few pixels)
-			const float	px = rows[8][2] * 0.5f * clip[0] / clip[3] + left + rows[8][2] * 0.5f;
-			const float	py = top + rows[8][3] * 0.5f - rows[8][3] * 0.5f * clip[1] / clip[3];
-			const float	reach = Q_max( blade->glow * 4.0f / ( clip[3] * rows[5][3] ) * rows[8][3] * 0.5f, 8.0f );
-			x0 = Q_min( x0, px - reach );
-			y0 = Q_min( y0, py - reach );
-			x1 = Q_max( x1, px + reach );
-			y1 = Q_max( y1, py + reach );
-		}
+		x0 = Q_min( x0, rect[0] );
+		y0 = Q_min( y0, rect[1] );
+		x1 = Q_max( x1, rect[2] );
+		y1 = Q_max( y1, rect[3] );
 	}
-	const int area[4] = { (int)Q_max( left, floorf( x0 ) ), (int)Q_max( top, floorf( y0 ) ),
-		(int)( Q_min( right, ceilf( x1 ) ) - Q_max( left, floorf( x0 ) ) ), (int)( Q_min( bottom, ceilf( y1 ) ) - Q_max( top, floorf( y0 ) ) ) };
-	if ( area[2] <= 0 || area[3] <= 0 ) {
+	const int area[4] = { (int)floorf( x0 ), (int)floorf( y0 ), (int)ceilf( x1 ) - (int)floorf( x0 ), (int)ceilf( y1 ) - (int)floorf( y0 ) };
+	if ( x0 >= x1 || y0 >= y1 || area[2] <= 0 || area[3] <= 0 ) {
 		return;		// nothing of them in the view
 	}
 

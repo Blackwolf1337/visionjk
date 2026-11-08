@@ -13,10 +13,12 @@
 // scene) hides it; where a wall or the floor hides it, the glow goes on on the wall from the part of the blade in
 // front of it, so a blade that strikes a wall does not end in a hard edge.
 //
-// globals.blades: 0-10 the view as VK_ViewRows puts it, 11 x how many blades; five rows a blade (VK_BLADE_ROWS): its
+// globals.blades: 0-10 the view as VK_ViewRows puts it, 11 x how many blades; seven rows a blade (VK_BLADE_ROWS): its
 // start and the radius of the core, its end and the radius of the glow, where its start was a moment ago and how
 // bright the swept place is, where its end was, its colour and in w the views it is in (1 the level, 2 a mirror or
-// portal). After the blades (VK_BLADE_PORTAL) the view of the mirror or portal as rows 0-10 have it for the level.
+// portal), and the rectangle of the target it and its glow cover in the view of the level and in the mirror or portal
+// (left, top, right, bottom; empty where it is not seen): a pixel outside leaves the blade at once. After the blades
+// (VK_BLADE_PORTAL) the view of the mirror or portal as rows 0-10 have it for the level.
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -28,7 +30,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[319];
 	vec4	lights[34];
 	vec4	ssr[7];
-	vec4	blades[172];
+	vec4	blades[236];
 	vec4	bladeView[11];
 } globals;
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
@@ -42,7 +44,7 @@ layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the sc
 #define VIEW	1
 #endif
 #define BLADES	32
-#define ROWS	5
+#define ROWS	7
 
 layout( location = 0 ) out vec4 o_color;
 
@@ -106,6 +108,14 @@ void main() {
 	bool haveNormal = false;
 
 	for ( int i = 0; i < count; i++ ) {
+#ifdef PORTAL_VIEW
+		vec4 area = B[18 + i * ROWS];
+#else
+		vec4 area = B[17 + i * ROWS];
+#endif
+		if ( any( lessThan( gl_FragCoord.xy, area.xy ) ) || any( greaterThan( gl_FragCoord.xy, area.zw ) ) ) {
+			continue;
+		}
 		vec4 a = B[12 + i * ROWS], b = B[13 + i * ROWS], oa = B[14 + i * ROWS], ob = B[15 + i * ROWS], c = B[16 + i * ROWS];
 		if ( ( int( c.w ) & VIEW ) == 0 ) {
 			continue;
