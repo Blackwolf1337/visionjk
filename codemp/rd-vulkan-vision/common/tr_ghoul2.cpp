@@ -1473,9 +1473,9 @@ void G2_TransformBone (int child,CBoneCache &BC)
 	boneListIndex = G2_Find_Bone_In_List(boneList, child);
 	if (boneListIndex != -1 && (boneList[boneListIndex].flags & BONE_ANGLES_MODEL))
 	{
-		// VisionJK: the whole bone given in model space (G2API_VJK_SetBonesWorld)
-		Multiply_3x4Matrix(&BC.mFinalBones[child].boneMatrix, &BC.rootMatrix,
-			HackadelicOnClient ? &boneList[boneListIndex].newMatrix : &boneList[boneListIndex].matrix);
+		// VisionJK: the whole bone given in model space (G2API_VJK_SetBonesWorld). Not through the root matrix: its
+		// "identity" turns the skeleton by 90 degrees, which the bones placed from world matrices already have.
+		BC.mFinalBones[child].boneMatrix = HackadelicOnClient ? boneList[boneListIndex].newMatrix : boneList[boneListIndex].matrix;
 		return;
 	}
 	if (boneListIndex != -1)
