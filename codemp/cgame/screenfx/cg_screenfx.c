@@ -60,6 +60,7 @@ qboolean CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle );		// cg_weapons.c
 #define DROP_SLIDE			0.013f		// a drop larger than this (of the height of the view) runs down
 #define DROP_DRY_MSEC		1500		// the last of its life it dries
 #define FX_SNOWS			8			// clumps of snow a snowball left on the view (SCREENFX_SNOW)
+#define FX_BLOODS			14			// splats of blood a cut close by left on the view (SCREENFX_BLOOD)
 #define FX_SMOKES			128
 #define PROTECT_HIT_MSEC	600
 #define ABSORB_PULSE_MSEC	500
@@ -141,12 +142,23 @@ typedef struct {
 	float		seed;
 } fxSnow_t;
 
+typedef struct {
+	qboolean	active;
+	int			born, life;		// cg.time it landed, msec it takes to dry and fade
+	float		x, y, radius;	// as a drop
+	float		speed;			// it runs down slowly, thick as it is
+	float		trail;			// how far above it its trail reaches
+	float		seed;
+} fxBlood_t;
+
 static struct {
 	qboolean			has;			// the engine and the renderer have R_SetScreenEffect
 	qboolean			hasDrops;		//	and draw SCREENFX_DROP
 	qboolean			hasSnow;		//	and SCREENFX_SNOW
+	qboolean			hasBlood;		//	and SCREENFX_BLOOD
 	fxDrop_t			drops[FX_DROPS];
 	fxSnow_t			snows[FX_SNOWS];
+	fxBlood_t			bloods[FX_BLOODS];
 	fxBlast_t			blasts[FX_BLASTS];
 	int					nextBlast;
 	float				split;			// the colours part, 0 to 1, from splitTime on
@@ -204,6 +216,8 @@ void CG_ScreenFxInit( void ) {
 		sfx.hasDrops = (qboolean)( sfx.has && atoi( value ) == 1 );
 		trap->Cvar_VariableStringBuffer( "v_screenFxSnow", value, sizeof( value ) );
 		sfx.hasSnow = (qboolean)( sfx.hasDrops && atoi( value ) == 1 );
+		trap->Cvar_VariableStringBuffer( "v_screenFxBlood", value, sizeof( value ) );
+		sfx.hasBlood = (qboolean)( sfx.has && atoi( value ) == 1 );
 	}
 	sfx.beatSound = trap->S_RegisterSound( "sound/vision/heartbeat.wav" );
 	sfx.rageSound = trap->S_RegisterSound( "sound/vision/rage_hum.wav" );
@@ -579,6 +593,99 @@ qboolean CG_ScreenFxSnow( const vec3_t velocity ) {
 		s->seed = Q_flrand( 0.0f, 1.0f );
 	}
 	return qtrue;
+}
+
+/*
+=================
+CG_ScreenFxBlood
+
+Blood of a cut close by (cg_slice.c) flew onto the view from origin, strength 0 to 1: splats land where it came from
+(a cut on the left on the left side), one to three large ones and smaller spray around them, more and larger the
+stronger. They run down slowly, leave a thin trail, dry darker and fade after some seconds (CG_ScreenFxBloods).
+=================
+*/
+void CG_ScreenFxBlood( const vec3_t origin, float strength ) {
+	vec3_t	dir;
+	float	cx, cy;
+	int		i, count, large;
+
+	if ( !sfx.hasBlood || !v_screenFx.integer || strength <= 0.0f
+		|| ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+		return;
+	}
+	strength = Com_Clamp( 0.0f, 1.0f, strength );
+	VectorSubtract( origin, cg.refdef.vieworg, dir );
+	VectorNormalize( dir );
+	// (axis 1 points to the left, axis 2 up)
+	cx = Com_Clamp( 0.15f, 0.85f, 0.5f - 0.38f * DotProduct( dir, cg.refdef.viewaxis[1] ) + Q_flrand( -0.08f, 0.08f ) );
+	cy = Com_Clamp( 0.15f, 0.8f, 0.48f - 0.32f * DotProduct( dir, cg.refdef.viewaxis[2] ) + Q_flrand( -0.08f, 0.08f ) );
+	count = 3 + (int)( strength * 5.0f + Q_flrand( 0.0f, 1.0f ) );
+	large = 1 + (int)( strength * 2.0f );
+	for ( i = 0; i < count; i++ ) {
+		fxBlood_t	*b = &sfx.bloods[0];
+		const int	big = i < large;
+		int			k;
+
+		// a free one, else the oldest
+		for ( k = 0; k < FX_BLOODS; k++ ) {
+			if ( !sfx.bloods[k].active ) {
+				b = &sfx.bloods[k];
+				break;
+			}
+			if ( sfx.bloods[k].born < b->born ) {
+				b = &sfx.bloods[k];
+			}
+		}
+		memset( b, 0, sizeof( *b ) );
+		b->active = qtrue;
+		b->born = cg.time;
+		b->life = (int)Q_flrand( 6000.0f, 9000.0f );
+		b->x = cx + Q_flrand( -1.0f, 1.0f ) * ( big ? 0.07f : 0.2f );
+		b->y = cy + Q_flrand( -1.0f, 1.0f ) * ( big ? 0.06f : 0.16f );
+		b->radius = big ? Q_flrand( 0.05f, 0.1f ) * ( 0.6f + 0.6f * strength ) : Q_flrand( 0.01f, 0.025f );
+		b->seed = Q_flrand( 0.0f, 1.0f );
+	}
+}
+
+// The splats of blood on the view: a large one runs down slowly after a moment and leaves its trail, all of them dry
+// and fade. Each is a source of the frame.
+static void CG_ScreenFxBloods( void ) {
+	const float	dt = Com_Clamp( 0.0f, 0.1f, cg.frametime * 0.001f );
+	int			i;
+
+	for ( i = 0; i < FX_BLOODS; i++ ) {
+		fxBlood_t			*b = &sfx.bloods[i];
+		screenFxSource_t	*src;
+		const int			age = cg.time - b->born;
+		float				left;
+
+		if ( !b->active ) {
+			continue;
+		}
+		if ( age >= b->life || age < 0 || b->y - b->radius > 1.05f || !v_gore.integer
+			|| ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
+			b->active = qfalse;
+			continue;
+		}
+		left = 1.0f - (float)age / b->life;
+		if ( age > 400 && b->radius > 0.025f ) {
+			b->speed = Q_min( b->radius * 0.35f, b->speed + b->radius * 0.4f * dt );
+			b->y += b->speed * dt;
+			b->trail = Q_min( 0.25f, b->trail + b->speed * dt );
+		}
+		src = CG_ScreenFxSource();
+		if ( !src ) {
+			break;
+		}
+		src->kind = SCREENFX_BLOOD;
+		src->a[0] = src->b[0] = b->x;
+		src->a[1] = src->b[1] = b->y;
+		src->radius = b->radius;
+		src->width = b->trail;
+		src->strength = Com_Clamp( 0.0f, 1.0f, left * 1.3f );
+		src->distance = 0.0f;
+		src->seed = b->seed;
+	}
 }
 
 // The clumps of snow on the view: they slide down slowly, melt, and when little is left turn into drops where they are
@@ -1187,6 +1294,7 @@ void CG_ScreenFxScene( void ) {
 		CG_ScreenFxSnows();
 		CG_ScreenFxDrops();
 	}
+	CG_ScreenFxBloods();
 	split = sfx.split * ( 1.0f - ( cg.time - sfx.splitTime ) / (float)SPLIT_MSEC );
 
 	memset( &fx, 0, sizeof( fx ) );

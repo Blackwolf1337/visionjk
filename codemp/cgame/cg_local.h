@@ -1823,6 +1823,7 @@ void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
 void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength );
 void		CG_ScreenFxWet( const vec3_t velocity );
 qboolean	CG_ScreenFxSnow( const vec3_t velocity );	// a snowball in the face, qfalse: draw the picture instead
+void		CG_ScreenFxBlood( const vec3_t origin, float strength );	// blood of a cut close by on the view
 qboolean	CG_ScreenFxSightDrawn( void );
 void		CG_ScreenFxGhostBody( refEntity_t *body );
 void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );
@@ -2012,6 +2013,7 @@ int CG_RagParts( int handle );
 qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
 void CG_RagExplosion( const vec3_t origin, float radius );
 void CG_RagDump_f( void );
+qboolean CG_RagBleed( int handle, int n, vec3_t cutCentre, vec3_t velocity, vec3_t floorAt, float *slide );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );

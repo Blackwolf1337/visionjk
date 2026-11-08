@@ -1180,7 +1180,7 @@ static void Rag_Movers( ragBody_t *rag, ragRigid_t *b, float h ) {
 			VectorSubtract( at, b->x, r );
 			VectorScale( d, Q_min( reach - len, 0.6f ), corr );
 			// (a little upward too: a foot lifts a limb instead of pressing it into the floor)
-			corr[2] += 0.15f * Q_min( reach - len, 0.6f );
+			corr[2] += 0.05f * Q_min( reach - len, 0.6f );
 			Rag_Positional( b, r, NULL, vec3_origin, corr, 0.0f, h );
 		}
 	}
@@ -1812,6 +1812,63 @@ void CG_RagDump_f( void ) {
 				VectorLength( b->v ), VectorLength( b->w ) );
 		}
 	}
+}
+
+/*
+=================
+CG_RagBleed
+
+Where part n of a ragdoll bleeds (cg_slice.c): the middle of its cut and the speed of its body at the cut; and when
+that body lies on a floor, where it touches it and how fast it slides along it. qtrue: it touches a floor.
+=================
+*/
+qboolean CG_RagBleed( int handle, int n, vec3_t cutCentre, vec3_t velocity, vec3_t floorAt, float *slide ) {
+	const ragBody_t		*rag;
+	const ragPart_t		*part;
+	const ragRigid_t	*b;
+	vec4_t				turn, c;
+	vec3_t				centre;
+	int					s, best = -1;
+
+	*slide = 0.0f;
+	if ( handle < 0 || handle >= RAG_MAX || !rags[handle].active || n < 0 || n >= rags[handle].numParts ) {
+		return qfalse;
+	}
+	rag = &rags[handle];
+	part = &rag->part[n];
+	b = &rag->body[part->anchor];
+	Q_Conj( rag->bq0[part->anchor], c );
+	Q_Mul( b->dq, c, turn );
+	VectorSubtract( rag->centre, rag->bx0[part->anchor], centre );
+	Q_Rotate( turn, centre, centre );
+	VectorAdd( centre, b->dx, cutCentre );
+	VectorCopy( b->v, velocity );
+	if ( part->asleep ) {
+		return qfalse;
+	}
+	// the lowest sphere of the body that lies on a floor
+	{
+		float lowest = 1e9f;
+
+		for ( s = 0; s < b->numSpheres; s++ ) {
+			if ( b->touched[s] && b->contactNormal[s][2] > 0.6f ) {
+				vec3_t at;
+
+				Rag_SphereWorld( b, s, at );
+				VectorMA( at, -b->radius[s], b->contactNormal[s], at );
+				if ( at[2] < lowest ) {
+					lowest = at[2];
+					VectorCopy( at, floorAt );
+					best = s;
+				}
+			}
+		}
+	}
+	if ( best < 0 ) {
+		return qfalse;
+	}
+	*slide = sqrtf( b->v[0] * b->v[0] + b->v[1] * b->v[1] );
+	return qtrue;
 }
 
 int CG_RagParts( int handle ) {
