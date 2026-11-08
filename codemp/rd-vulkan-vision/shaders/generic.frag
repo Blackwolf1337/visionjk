@@ -389,7 +389,8 @@ vec4 DynamicLight( Draw d ) {
 			vec2 ndc = clip.xy / clip.w;
 			vec4 rect = globals.rt[46];
 			vec2 pixel = vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
-			vec4 mask = texture( TEX1( d ), pixel / vec2( textureSize( TEX1( d ), 0 ) ) );
+			// (the mask is half the size of the frame, globals.rt[15].z)
+			vec4 mask = texture( TEX1( d ), pixel / ( vec2( textureSize( TEX1( d ), 0 ) ) * max( globals.rt[15].z, 1.0 ) ) );
 			radiance *= 1.0 - ( channel == 1 ? mask.r : mask.g );
 		}
 	}

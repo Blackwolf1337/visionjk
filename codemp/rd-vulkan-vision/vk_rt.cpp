@@ -111,6 +111,7 @@ static cvar_t	*v_rtShadowRays;	// rays a pixel
 static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
 static cvar_t	*v_rtLamps;			// 0: the shadows indoors go by the light grid alone, not by the panels that glow
+static cvar_t	*v_rtMaskScale;		// 2: the rays and the masks of the moving lights at half the size of the frame
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -1510,6 +1511,7 @@ void VK_RT_Init( void ) {
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
+	v_rtMaskScale = ri.Cvar_Get( "v_rtMaskScale", "2", CVAR_ARCHIVE_ND, "The shadows of the players (cg_shadows 2) and of the saber light worked out at half the size of the frame (2, a quarter of the cost) or at its full size (1)" );
 	v_rtLamps = ri.Cvar_Get( "v_rtLamps", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players indoors from the panels that glow, where the light grid says the light comes from one. 0: from the light grid alone" );
 	memset( &rt, 0, sizeof( rt ) );
 	// the players are skinned by their addresses on both ways; without ray tracing they cast their shadows from shadow
@@ -1546,10 +1548,32 @@ void VK_RT_Init( void ) {
 	rt.shadowPipeline = VK_CreatePipeline( vk.postVertexShader, rt.shadowFragment, 0, 7, VKP_GENERIC, rt.layout );
 }
 
-// the two shadow masks in the size of the frame, made again when that changes (only while no frame is on its way);
-// they are readable from the start, what is in them is not used until a frame has drawn one
+// The rays of the shadows of the players and the masks of the moving lights are drawn at half the size of the frame
+// (each pixel for the upper left one of its four, shaders/rtmask.glsl), a quarter of the pixels: the shadows are soft,
+// and the frames before smooth them (rtaccum.frag). At the full size (v_rtMaskScale 1) the rays cost 0.68 ms against
+// 0.18, laying them on 0.33 against 0.17 and the moving lights 0.17 against 0.11 at 2560 x 1440.
+static int VK_RT_MaskScale( void ) {
+	return Com_Clampi( 1, 2, v_rtMaskScale->integer );
+}
+
+// a pass over all of a target of its own size
+static void VK_RT_WholeTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
+	VkViewport	viewport = { 0.0f, 0.0f, (float)target->width, (float)target->height, 0.0f, 1.0f };
+	VkRect2D	scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
+
+	qvkCmdSetViewport( cmd, 0, 1, &viewport );
+	qvkCmdSetScissor( cmd, 0, 1, &scissor );
+}
+
+// the two shadow masks in the size of the frame and the targets of the rays and of the moving lights at the size of
+// v_rtMaskScale, made again when that changes (only while no frame is on its way); they are readable from the start,
+// what is in them is not used until a frame has drawn one
 static void VK_RT_EnsureMask( void ) {
-	if ( rt.mask[0].image && rt.mask[0].width == vk.width && rt.mask[0].height == vk.height ) {
+	const int scale = VK_RT_MaskScale();
+	const int halfWidth = ( vk.width + scale - 1 ) / scale, halfHeight = ( vk.height + scale - 1 ) / scale;
+
+	if ( rt.mask[0].image && rt.mask[0].width == vk.width && rt.mask[0].height == vk.height && rt.raw.width == halfWidth
+		&& rt.raw.height == halfHeight ) {
 		return;
 	}
 	VK_WaitIdle();
@@ -1560,13 +1584,13 @@ static void VK_RT_EnsureMask( void ) {
 		VK_TargetLayout( vk.frame->cmd, &rt.mask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		VK_WriteSet( rt.maskSets[i], vk.postSampler, rt.mask[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		VK_DestroyTarget( &rt.lightMask[i] );
-		VK_CreateTarget( &rt.lightMask[i], vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_CreateTarget( &rt.lightMask[i], halfWidth, halfHeight, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 		VK_TargetLayout( vk.frame->cmd, &rt.lightMask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		rt.lightShown[i] = -1;
 	}
 	VK_DestroyTarget( &rt.raw );
-	VK_CreateTarget( &rt.raw, vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	VK_CreateTarget( &rt.raw, halfWidth, halfHeight, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_TargetLayout( vk.frame->cmd, &rt.raw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_WriteSet( rt.rawSet, vk.postSampler, rt.raw.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -2418,6 +2442,8 @@ void VK_RT_Pass( void ) {
 	}
 	cmd = vk.frame->cmd;
 	VK_EndTarget();
+	// (the end of the level resolves its samples: a mark of its own, else the builds seem to cost it)
+	VK_GpuMark( "level resolve" );
 
 	// what has to be built this frame and how much scratch memory that needs, before anything is recorded
 	if ( rt.world != tr.world || rt.worldLoads != r_worldLoads ) {
@@ -2471,7 +2497,7 @@ void VK_RT_Pass( void ) {
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
-		0.0f, vk_sunStrength );
+		(float)VK_RT_MaskScale(), vk_sunStrength );
 	// the moving lights whose shadows are traced this frame (38-41), and the view the mask the light passes read
 	// was made in (42-46: view and projection, its rect)
 	VK_RT_PickLights();
@@ -2534,7 +2560,7 @@ void VK_RT_Pass( void ) {
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.maps ? rt.smShadowPipeline : rt.shadowPipeline );
 		vk.boundPipeline = rt.maps ? rt.smShadowPipeline : rt.shadowPipeline;
 		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 0, NULL );
-		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+		VK_RT_WholeTarget( cmd, &rt.raw );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
 		VK_GpuMark( "rt trace" );
@@ -2559,7 +2585,7 @@ void VK_RT_Pass( void ) {
 			qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.smLightsPipeline );
 			vk.boundPipeline = rt.smLightsPipeline;
 			qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
-			VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+			VK_RT_WholeTarget( cmd, target );
 			qvkCmdDraw( cmd, 3, 1, 0, 0 );
 			VK_EndTarget();
 			VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );

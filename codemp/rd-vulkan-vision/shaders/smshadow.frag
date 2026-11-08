@@ -123,15 +123,11 @@ float Shadow( vec3 p, vec3 normal ) {
 	return dark;
 }
 
-// a distance from the eye in green, blue and alpha, 24 bits up to 8192 units
-vec3 PackDistance( float d ) {
-	uint v = uint( clamp( d / 8192.0, 0.0, 1.0 ) * 16777215.0 );
-
-	return vec3( float( ( v >> 16u ) & 255u ), float( ( v >> 8u ) & 255u ), float( v & 255u ) ) / 255.0;
-}
+#include "rtmask.glsl"
 
 void main() {
-	vec3 p = ScenePoint( gl_FragCoord.xy );
+	vec2 pixel = FramePixel();
+	vec3 p = ScenePoint( pixel );
 	vec3 eye = W[4].xyz;
 	float d = distance( p, eye );
 
@@ -140,6 +136,6 @@ void main() {
 		return;
 	}
 	// (what the frames before had is added by shaders/rtaccum.frag)
-	float mask = Shadow( p, SceneSurface( gl_FragCoord.xy, p, normalize( eye - p ) ) );
+	float mask = Shadow( p, SceneSurface( pixel, p, normalize( eye - p ) ) );
 	o_color = vec4( mask, PackDistance( d ) );
 }

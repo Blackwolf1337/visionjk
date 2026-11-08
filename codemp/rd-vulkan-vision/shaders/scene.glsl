@@ -2,6 +2,20 @@
 // level after it is drawn (wet.frag, paint.frag). Before it is included W names the numbers of the pass, whose
 // first eleven rows are the view as VK_DrawWet() puts it (wet.vert), and u_depth the depth of the scene.
 
+// A distance from the eye in green, blue and alpha of a mask (shaders/rtshadow.frag, smshadow.frag, rtaccum.frag), 24
+// bits up to 8192 units
+vec3 PackDistance( float d ) {
+	uint v = uint( clamp( d / 8192.0, 0.0, 1.0 ) * 16777215.0 );
+
+	return vec3( float( ( v >> 16u ) & 255u ), float( ( v >> 8u ) & 255u ), float( v & 255u ) ) / 255.0;
+}
+
+float UnpackDistance( vec3 c ) {
+	uvec3 b = uvec3( round( c * 255.0 ) );
+
+	return float( ( b.x << 16u ) | ( b.y << 8u ) | b.z ) / 16777215.0 * 8192.0;
+}
+
 // how far in front of the eye the scene is at a pixel of the target
 float SceneDistance( vec2 pixel ) {
 	ivec2 size = textureSize( u_depth, 0 );

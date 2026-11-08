@@ -14,7 +14,8 @@
 //   12 where the light grid begins, w how far a player may be from a point and still shadow it
 //   13 1 / the size of a cell of the grid, w a number that changes every frame (the noise of the rays)
 //   14 the cells of the grid along x, y, z, w the tangent of half the cone of the sun
-//   15 x rays a pixel, y the tangent of half the cone of the grid light, z 0,
+//   15 x rays a pixel, y the tangent of half the cone of the grid light, z how many pixels of the frame a pixel of the
+//      mask is wide (rtmask.glsl),
 //      w the strength of the sun
 //   16-19 the view and projection of the frame before, 20 its eye, w 1 when the mask of that frame can be used
 //   21 x how many players follow, 22-37 each as a sphere: middle and radius
@@ -309,15 +310,11 @@ float Shadow( vec3 p, vec3 normal ) {
 	return mix( gridDark, sunDark, sunReach );
 }
 
-// a distance from the eye in green, blue and alpha, 24 bits up to 8192 units
-vec3 PackDistance( float d ) {
-	uint v = uint( clamp( d / 8192.0, 0.0, 1.0 ) * 16777215.0 );
-
-	return vec3( float( ( v >> 16u ) & 255u ), float( ( v >> 8u ) & 255u ), float( v & 255u ) ) / 255.0;
-}
+#include "rtmask.glsl"
 
 void main() {
-	vec3 p = ScenePoint( gl_FragCoord.xy );
+	vec2 pixel = FramePixel();
+	vec3 p = ScenePoint( pixel );
 	vec3 eye = W[4].xyz;
 	float d = distance( p, eye );
 
@@ -326,6 +323,6 @@ void main() {
 		return;
 	}
 	// (what the frames before had is added by shaders/rtaccum.frag)
-	float mask = Shadow( p, SceneSurface( gl_FragCoord.xy, p, normalize( eye - p ) ) );
+	float mask = Shadow( p, SceneSurface( pixel, p, normalize( eye - p ) ) );
 	o_color = vec4( mask, PackDistance( d ) );
 }

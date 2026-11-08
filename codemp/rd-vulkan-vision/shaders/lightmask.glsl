@@ -124,14 +124,17 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 	return 1.0 - ( 1.0 - players / 3.0 ) * ( 1.0 - LevelTaken( q, p, normal, a.xyz, b.xyz ) );
 }
 
+#include "rtmask.glsl"
+
 void main() {
-	vec3 p = ScenePoint( gl_FragCoord.xy );
+	vec2 pixel = FramePixel();
+	vec3 p = ScenePoint( pixel );
 	vec3 eye = W[4].xyz;
 
 	if ( distance( p, eye ) > 8192.0 ) {
 		o_color = vec4( 0.0 );
 		return;
 	}
-	vec3 normal = SceneSurface( gl_FragCoord.xy, p, normalize( eye - p ) );
+	vec3 normal = SceneSurface( pixel, p, normalize( eye - p ) );
 	o_color = vec4( LightShadow( 0, p, normal ), LightShadow( 1, p, normal ), 0.0, 0.0 );
 }

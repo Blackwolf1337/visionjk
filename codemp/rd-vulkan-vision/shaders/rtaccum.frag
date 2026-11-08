@@ -29,17 +29,13 @@ layout( location = 0 ) out vec4 o_color;
 
 #include "scene.glsl"
 
-float UnpackDistance( vec3 c ) {
-	uvec3 b = uvec3( round( c * 255.0 ) );
-
-	return float( ( b.x << 16u ) | ( b.y << 8u ) | b.z ) / 16777215.0 * 8192.0;
-}
-
 void main() {
-	ivec2 pixel = ivec2( gl_FragCoord.xy );
+	// (the mask of the rays is half the size of the frame, W[15].z, vk_rt.cpp; the distance of this pixel is its own)
+	ivec2 pixel = ivec2( gl_FragCoord.xy ) / max( int( W[15].z ), 1 );
 	ivec2 size = textureSize( u_raw, 0 );
-	vec4 now = texelFetch( u_raw, pixel, 0 );
+	vec4 now = texelFetch( u_raw, min( pixel, size - 1 ), 0 );
 	float mask = now.r;
+	vec3 here = ScenePoint( gl_FragCoord.xy );
 
 	// the range of this frame around the pixel
 	float lo = mask, hi = mask;
@@ -53,7 +49,7 @@ void main() {
 
 	// onto what the frame before had for this point, where it saw it
 	if ( W[20].w > 0.0 ) {
-		vec3 p = ScenePoint( gl_FragCoord.xy );
+		vec3 p = here;
 		vec4 clip = mat4( W[16], W[17], W[18], W[19] ) * vec4( p, 1.0 );
 
 		if ( clip.w > 1.0 ) {
@@ -71,5 +67,5 @@ void main() {
 			}
 		}
 	}
-	o_color = vec4( mask, now.gba );
+	o_color = vec4( mask, PackDistance( distance( here, W[4].xyz ) ) );
 }

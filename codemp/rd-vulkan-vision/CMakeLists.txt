@@ -245,6 +245,7 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/lightmask.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/rtmask.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/scene.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/skin.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
