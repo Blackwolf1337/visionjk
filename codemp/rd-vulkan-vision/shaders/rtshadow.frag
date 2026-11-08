@@ -177,27 +177,43 @@ float Shadow( vec3 p, vec3 normal ) {
 		return 0.0;
 	}
 
-	// the sun, where nothing of the level is in the way
-	if ( nearSun && !Blocked( origin, sun, 65536.0, 0x01u ) ) {
-		float sunLight = W[15].w * dot( normal, sun );
-		float taken = 0.0;
+	// How much of the sun reaches the point, from rays in a cone against the level. Not one ray: the shade of a
+	// wall in the lightmap has a soft edge (a texel of a lightmap is 16 units or more), and a point that took either
+	// the sun shadow or the grid one by a single ray cut the shadow of a player along a hard line where it ran into
+	// that shade (2026-11-08). The cone is wider than the sun for that: about the softness of the lightmap's edges
+	// a few hundred units from the wall.
+	float sunReach = 0.0;
+	float sunDark = 0.0;
+	if ( sunUp ) {
+		const float LIGHTMAP_SOFTNESS = 0.06;	// tangent of half the cone of the rays against the level
+		float reached = 0.0, taken = 0.0;
 
 		for ( int k = 0; k < count; k++ ) {
-			taken += Blocked( origin, InCone( sun, W[14].w, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
+			if ( !Blocked( origin, InCone( sun, max( W[14].w, LIGHTMAP_SOFTNESS ), uint( k ) + 16u ), 65536.0, 0x01u ) ) {
+				reached += 1.0;
+				if ( nearSun && Blocked( origin, InCone( sun, W[14].w, uint( k ) ), reach, 0x02u ) ) {
+					taken += 1.0;
+				}
+			}
 		}
-		return min( sunLight * taken / float( count ) / ( sunLight + ambient + 1.0 ), 0.9 );
-	}
-	if ( !nearGrid ) {
-		return 0.0;
+		sunReach = reached / float( count );
+		if ( reached > 0.0 ) {
+			float sunLight = W[15].w * dot( normal, sun );
+			sunDark = min( sunLight * ( taken / reached ) / ( sunLight + ambient + 1.0 ), 0.9 );
+		}
 	}
 
-	// the direction of the grid
-	float strength = min( ratio, 0.85 );
-	float blocked = 0.0;
-	for ( int k = 0; k < count; k++ ) {
-		blocked += Blocked( origin, InCone( light, gridTangent, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
+	// the direction of the grid, for what the sun does not reach
+	float gridDark = 0.0;
+	if ( nearGrid && sunReach < 1.0 ) {
+		float strength = min( ratio, 0.85 );
+		float blocked = 0.0;
+		for ( int k = 0; k < count; k++ ) {
+			blocked += Blocked( origin, InCone( light, gridTangent, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
+		}
+		gridDark = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
 	}
-	return strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
+	return mix( gridDark, sunDark, sunReach );
 }
 
 // a distance from the eye in green, blue and alpha, 24 bits up to 8192 units
