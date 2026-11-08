@@ -1109,7 +1109,6 @@ typedef struct trGlobals_s {
 
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
 	image_t					*ssrImage;			// VisionJK: the slot of the texture table that shows the picture of v_ssr (vk_post.cpp)
-	image_t					*rtPanelImage;		// VisionJK: the slot of the texture table that shows how much of the panels each pixel sees (vk_rt.cpp)
 	image_t					*rtLightImage[2];	// VisionJK: slots of the texture table that show the masks of the shadows from the moving lights (vk_rt.cpp)
 
 	// Handle to the Glow Effect Vertex Shader. - AReis

@@ -75,9 +75,6 @@ static const uint32_t vk_smLightsFrag[] =
 static const uint32_t vk_rtLightMaskFrag[] =
 #include "shaders/rtlightmask_frag.inc"
 ;
-static const uint32_t vk_rtPanelsFrag[] =
-#include "shaders/rtpanels_frag.inc"
-;
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
 ;
@@ -111,7 +108,6 @@ static cvar_t	*v_rtShadowRays;	// rays a pixel
 static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
 static cvar_t	*v_rtLamps;			// 0: the shadows indoors go by the light grid alone, not by the panels that glow
-static cvar_t	*v_panelShine;		// how bright the panels that glow shine on materials, 0: not at all (VK_RT_PickPanels)
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -220,18 +216,6 @@ static struct {
 	// (tr.rtLightImage), at the place the point had in the view it was made in. One mask is written while the
 	// other is read.
 	vkTarget_t					lightMask[2];
-	// v_panelShine: the panels that shine on the materials (VK_RT_PickPanels), how much of each the pixels see
-	// (shaders/rtpanels.frag, read by the next frame), the view it was made in
-	struct {
-		int		patch;			// -1: none
-		float	fade;			// 0 to 1, it comes and goes over a quarter of a second
-	}							panelSlot[VK_PANELS];
-	vkTarget_t					panelMask;
-	int							panelShown;		// the texture slot it was last shown in, -1: none
-	float						panelView[5][4];
-	qboolean					panelViewValid;
-	VkShaderModule				panelsFragment;
-	VkPipeline					panelsPipeline;
 	int							lightShown[2];	// the texture slot each was last written into, -1: none
 	int							lightWrite;		// the one this frame writes
 	vkRtLight_t					lights[2];		// the lights of this frame's mask
@@ -1512,7 +1496,6 @@ void VK_RT_Init( void ) {
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
-	v_panelShine = ri.Cvar_Get( "v_panelShine", "0", CVAR_ARCHIVE_ND, "How bright the panels that glow shine on materials where the graphics card traces rays (cg_shadows 2, v_pbr 1). 0: not at all" );
 	v_rtLamps = ri.Cvar_Get( "v_rtLamps", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players indoors from the panels that glow, where the light grid says the light comes from one. 0: from the light grid alone" );
 	memset( &rt, 0, sizeof( rt ) );
 	// the players are skinned by their addresses on both ways; without ray tracing they cast their shadows from shadow
@@ -1539,12 +1522,6 @@ void VK_RT_Init( void ) {
 	rt.debugFragment = VK_CreateShader( vk_rtDebugFrag, sizeof( vk_rtDebugFrag ) );
 	// (8: over the level with the samples of the frame, nothing from a vertex buffer)
 	rt.debugPipeline = VK_CreatePipeline( vk.postVertexShader, rt.debugFragment, 0, 8, VKP_GENERIC, rt.layout );
-	// v_panelShine: how much of the panels the pixels see, into a target of its own (7) as the light masks
-	rt.panelsFragment = VK_CreateShader( vk_rtPanelsFrag, sizeof( vk_rtPanelsFrag ) );
-	rt.panelsPipeline = VK_CreatePipeline( vk.postVertexShader, rt.panelsFragment, 0, 7, VKP_GENERIC, rt.layout );
-	for ( int i = 0; i < VK_PANELS; i++ ) {
-		rt.panelSlot[i].patch = -1;
-	}
 
 	// the mask: a pass into a target of its own (7: one sample, nothing blended); laid on by the depth with the sets
 	// of the screen effects (8), multiplied into the frame
@@ -1571,14 +1548,6 @@ static void VK_RT_EnsureMask( void ) {
 		VK_TargetLayout( vk.frame->cmd, &rt.lightMask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		rt.lightShown[i] = -1;
 	}
-	if ( !rt.maps ) {
-		VK_DestroyTarget( &rt.panelMask );
-		VK_CreateTarget( &rt.panelMask, vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-		VK_TargetLayout( vk.frame->cmd, &rt.panelMask, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-		rt.panelShown = -1;
-		rt.panelViewValid = qfalse;
-	}
 	rt.previousValid = qfalse;
 	rt.readValid = qfalse;
 }
@@ -1597,9 +1566,6 @@ void VK_RT_Shutdown( void ) {
 	VK_DestroyTarget( &rt.mask[1] );
 	VK_DestroyTarget( &rt.lightMask[0] );
 	VK_DestroyTarget( &rt.lightMask[1] );
-	VK_DestroyTarget( &rt.panelMask );
-	qvkDestroyPipeline( vk.device, rt.panelsPipeline, NULL );
-	qvkDestroyShaderModule( vk.device, rt.panelsFragment, NULL );
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
@@ -2084,7 +2050,7 @@ static void VK_RT_LampLight( const vkPatch_t *patch, const vec3_t middle, const 
 }
 
 // what shaders/rtlamps.comp answered for the frame that last had this place (VK_RT_TakeAnswers): from where, which
-// patch, how much of it was seen; asked by VK_RT_PickLamps for the players and VK_RT_PickPanels for the eye
+// patch, how much of it was seen; asked by VK_RT_PickLamps for the players
 static vec3_t	answerFrom[VK_RT_LAMP_RAYS];
 static int		answerPatch[VK_RT_LAMP_RAYS];
 static float	answer[VK_RT_LAMP_RAYS];
@@ -2364,198 +2330,6 @@ static void VK_RT_TraceLamps( VkCommandBuffer cmd ) {
 
 /*
 ===============
-VK_RT_PickPanels
-
-v_panelShine: the panels that glow shine on the materials (generic.frag PanelShine), the shine alone: what they
-give of even light is in the lightmap already, and drawn again it would be there twice. The materials had nothing
-to shine by but the light of the grid, an average from all around, and the moving lights, so their shine hardly
-showed (2026-11-08). Four at once, those that give the eye the most light (their power, the square of the distance)
-and that it sees (shaders/rtlamps.comp, asked here); each comes and goes over a quarter of a second, and a slot takes
-a new panel only once its old one is gone, so the mask the materials read (made a frame before for the same slots)
-fits. The colour of a panel is that of the light of the grid before it: a texture keeps only how bright it is.
-
-out: the rows of globals.panels (VK_PANEL_VEC4S, common.glsl)
-===============
-*/
-static void VK_RT_PickPanels( const vec3_t eye, float (*out)[4] ) {
-	static float	lastTime;
-	const float		dt = Com_Clamp( 0.0f, 0.25f, backEnd.refdef.floatTime - lastTime );
-	const qboolean	ready = (qboolean)( v_panelShine->value > 0.0f && v_pbr->integer && !rt.maps && rt.panelsPipeline && rt.levelReady
-		&& vk_patches && !vk_patches->empty() && rt.grid.mapped && tr.world && tr.world->lightGridData );
-	int				best[VK_PANELS];
-	float			bestScore[VK_PANELS];
-	int				asked = 0;
-
-	lastTime = backEnd.refdef.floatTime;
-	memset( out, 0, sizeof( float ) * 4 * VK_PANEL_VEC4S );
-	if ( !ready ) {
-		for ( int i = 0; i < VK_PANELS; i++ ) {
-			rt.panelSlot[i].patch = -1;
-			rt.panelSlot[i].fade = 0.0f;
-		}
-		return;
-	}
-	// the panels that give the eye the most light, those that face it first; the strongest are asked whether it sees
-	// them
-	for ( int k = 0; k < VK_PANELS; k++ ) {
-		best[k] = -1;
-		bestScore[k] = 0.0f;
-	}
-	struct { int patch; float score; } top[16];
-	int numTop = 0;
-	for ( int n = 0; n < (int)vk_patches->size(); n++ ) {
-		const vkPatch_t	*p = &( *vk_patches )[n];
-		const float		d2 = DistanceSquared( p->origin, eye );
-		const float		radius = Com_Clamp( 1.0f, 32.0f, sqrtf( p->area / M_PI ) );
-
-		if ( d2 > 1536.0f * 1536.0f ) {
-			continue;
-		}
-		// (one that turns away from the eye lights what it does not see: a strip on a ledge that lights the ceiling)
-		vec3_t toEye;
-		VectorSubtract( eye, p->origin, toEye );
-		VectorNormalize( toEye );
-		const float facing = VectorLengthSquared( p->normal ) > 0.5f ? Com_Clamp( 0.15f, 1.0f, DotProduct( p->normal, toEye ) ) : 1.0f;
-		const float score = p->emission * p->area * facing / Q_max( d2, radius * radius + 16.0f );
-		if ( numTop < 16 || score > top[numTop - 1].score ) {
-			int at = numTop < 16 ? numTop++ : 15;
-			while ( at > 0 && top[at - 1].score < score ) {
-				top[at] = top[at - 1];
-				at--;
-			}
-			top[at].patch = n;
-			top[at].score = score;
-		}
-	}
-	for ( int t = 0; t < numTop; t++ ) {
-		const float seen = VK_RT_Seen( top[t].patch, eye );
-		const float score = top[t].score * ( seen < 0.0f ? 0.5f : seen );
-
-		if ( asked++ < 8 ) {
-			VK_RT_AskSeen( top[t].patch, eye );
-		}
-		for ( int k = 0; k < VK_PANELS; k++ ) {
-			if ( score > bestScore[k] ) {
-				for ( int j = VK_PANELS - 1; j > k; j-- ) {
-					best[j] = best[j - 1];
-					bestScore[j] = bestScore[j - 1];
-				}
-				best[k] = top[t].patch;
-				bestScore[k] = score;
-				break;
-			}
-		}
-	}
-	// the slots come and go towards them
-	for ( int i = 0; i < VK_PANELS; i++ ) {
-		qboolean wanted = qfalse;
-
-		if ( rt.panelSlot[i].patch < 0 ) {
-			continue;
-		}
-		for ( int k = 0; k < VK_PANELS; k++ ) {
-			wanted = (qboolean)( wanted || best[k] == rt.panelSlot[i].patch );
-		}
-		rt.panelSlot[i].fade = Com_Clamp( 0.0f, 1.0f, rt.panelSlot[i].fade + ( wanted ? dt : -dt ) * 4.0f );
-		if ( !wanted && rt.panelSlot[i].fade <= 0.0f ) {
-			rt.panelSlot[i].patch = -1;
-		}
-	}
-	for ( int k = 0; k < VK_PANELS; k++ ) {
-		int free = -1;
-		qboolean held = qfalse;
-
-		if ( best[k] < 0 ) {
-			continue;
-		}
-		for ( int i = 0; i < VK_PANELS; i++ ) {
-			held = (qboolean)( held || rt.panelSlot[i].patch == best[k] );
-			if ( free < 0 && rt.panelSlot[i].patch < 0 ) {
-				free = i;
-			}
-		}
-		if ( !held && free >= 0 ) {
-			rt.panelSlot[free].patch = best[k];
-			rt.panelSlot[free].fade = 0.0f;
-		}
-	}
-
-	// the rows: the head, the view of the mask the materials read (made a frame before), the panels
-	out[0][0] = (float)VK_PANELS;
-	out[0][1] = ( rt.panelViewValid && tr.rtPanelImage && rt.panelShown == (int)tr.rtPanelImage->texnum ) ? (float)rt.panelShown + 1.0f : 0.0f;
-	out[0][2] = v_pbr->integer ? v_panelShine->value : 0.0f;
-	memcpy( out[1], rt.panelView, sizeof( rt.panelView ) );
-	for ( int i = 0; i < VK_PANELS; i++ ) {
-		float		(*r)[4] = &out[6 + i * 4];
-		vec3_t		g, colour;
-		int			c[3];
-		float		bright = 0.0f;
-
-		if ( rt.panelSlot[i].patch < 0 ) {
-			continue;
-		}
-		const vkPatch_t *p = &( *vk_patches )[rt.panelSlot[i].patch];
-		VectorCopy( p->origin, r[0] );
-		r[0][3] = Com_Clamp( 1.0f, 32.0f, sqrtf( p->area / M_PI ) );
-		VectorCopy( p->normal, r[1] );
-		r[1][3] = rt.panelSlot[i].fade;
-		// the colour of the light of the grid a little before it (ambient and directed), at its brightest 1
-		VectorMA( p->origin, 16.0f, p->normal, g );
-		VectorSubtract( g, tr.world->lightGridOrigin, g );
-		for ( int k = 0; k < 3; k++ ) {
-			c[k] = Com_Clampi( 0, tr.world->lightGridBounds[k] - 1, (int)floorf( g[k] * tr.world->lightGridInverseSize[k] + 0.5f ) );
-		}
-		const float *cell = (const float *)rt.grid.mapped
-			+ ( c[0] + c[1] * tr.world->lightGridBounds[0] + c[2] * tr.world->lightGridBounds[0] * tr.world->lightGridBounds[1] ) * 12;
-		VectorAdd( cell, cell + 4, colour );
-		bright = Q_max( colour[0], Q_max( colour[1], colour[2] ) );
-		if ( cell[3] == 0.0f || bright <= 0.0f ) {
-			VectorSet( colour, 1.0f, 1.0f, 1.0f );
-			bright = 1.0f;
-		}
-		// in linear light, by how bright the panel is and how large (a white texture of 32 x 32 is 1), coming and going
-		const float strength = Com_Clamp( 0.25f, 4.0f, p->emission * sqrtf( p->area / 1024.0f ) ) * rt.panelSlot[i].fade;
-		for ( int k = 0; k < 3; k++ ) {
-			r[2][k] = powf( colour[k] / bright, 2.2f ) * strength;
-		}
-		r[2][3] = p->emission * p->area;		// its power, as shaders/rtcells.comp counts it
-		r[3][0] = (float)rt.panelSlot[i].patch;
-	}
-}
-
-// shaders/rtpanels.frag: how much of the panels of globals.panels the pixels see, for the materials of the next frame
-static void VK_RT_PanelPass( VkCommandBuffer cmd, const float (*rows)[4], const int *viewport, const vkGlobals_t *globals ) {
-	const VkDescriptorSet sets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
-	qboolean any = qfalse;
-
-	for ( int i = 0; i < VK_PANELS; i++ ) {
-		any = (qboolean)( any || VectorLengthSquared( globals->panels[8 + i * 4] ) > 0.0f );
-	}
-	if ( !any || !rt.panelMask.image || !tr.rtPanelImage ) {
-		rt.panelViewValid = qfalse;
-		return;
-	}
-	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
-	VK_BeginTarget( &rt.panelMask, NULL, 1, qfalse );
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.panelsPipeline );
-	vk.boundPipeline = rt.panelsPipeline;
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, sets, 0, NULL );
-	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
-	qvkCmdDraw( cmd, 3, 1, 0, 0 );
-	VK_EndTarget();
-	VK_TargetLayout( cmd, &rt.panelMask, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_GpuMark( "panel shine" );
-	if ( rt.panelShown != (int)tr.rtPanelImage->texnum ) {
-		VK_ShowTarget( (int)tr.rtPanelImage->texnum, &rt.panelMask );
-		rt.panelShown = (int)tr.rtPanelImage->texnum;
-	}
-	memcpy( rt.panelView, rows[0], sizeof( float ) * 16 );
-	memcpy( rt.panelView[4], rows[8], sizeof( float ) * 4 );
-	rt.panelViewValid = qtrue;
-}
-
-/*
-===============
 VK_RT_LightChannel
 
 For the light pass of a moving light in the view of the level: which channel of the mask the light passes read
@@ -2706,14 +2480,6 @@ void VK_RT_Pass( void ) {
 	}
 	globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	memcpy( globals->rt, rows, sizeof( globals->rt ) );
-	// v_panelShine: the panels of this frame (its materials read them and the mask of the frame before), and the mask
-	// for the next one
-	VK_RT_PickPanels( rows[4], globals->panels );
-	if ( !rt.maps && globals->panels[0][2] > 0.0f ) {
-		VK_RT_PanelPass( cmd, rows, viewport, globals );
-	} else {
-		rt.panelViewValid = qfalse;
-	}
 
 	if ( v_rtDebug->integer > 0 && !rt.maps ) {
 		const VkDescriptorSet sets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
