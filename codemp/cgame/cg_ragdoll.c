@@ -1423,6 +1423,12 @@ static void Rag_Step( ragBody_t *rag, float gravity, float hold ) {
 			if ( b->part != i ) {
 				continue;
 			}
+			// fell out of the level through a gap in its floor: it stops down there instead of falling for ever
+			if ( b->x[2] < rag->centre[2] - 2048.0f ) {
+				part->still = RAG_SLEEP_STEPS;
+				moved = qfalse;
+				break;
+			}
 			Q_Delta( part->restQ[k], b->q, turn );
 			if ( Distance( part->restX[k], b->x ) > 0.75f || VectorLength( turn ) > DEG2RAD( 4.0f ) ) {
 				moved = qtrue;
