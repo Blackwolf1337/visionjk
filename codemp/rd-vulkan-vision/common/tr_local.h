@@ -734,6 +734,11 @@ Ghoul2 Insert End
 typedef struct drawSurf_s {
 	uint64_t			sort;			// bit combination for fast compares
 	surfaceType_t		*surface;		// any of surface*_t
+	// VisionJK: the moving lights that reach a surface of the level in this view (R_AddWorldSurface). The bits on
+	// the surface itself are those of the last view that added it, and the frontend makes every view of a frame
+	// before the backend draws one: a portal, a puddle or a probe face after the view of the level took the lights
+	// from pieces of its floor (RB_RenderDrawSurfList gives the surface these back before it is drawn).
+	int					dlightBits;
 } drawSurf_t;
 
 #define	MAX_FACE_POINTS		64
@@ -853,6 +858,7 @@ BRUSH MODELS
 
 typedef struct msurface_s {
 	int					viewCount;		// if == tr.viewCount, already added
+	int					drawSurfNum;	// VisionJK: in the view of viewCount its place in tr.refdef.drawSurfs, -1: none
 	struct shader_s		*shader;
 	int					fogIndex;
 

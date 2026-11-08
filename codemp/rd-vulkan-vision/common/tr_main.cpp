@@ -1234,6 +1234,7 @@ void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader,
 	tr.refdef.drawSurfs[index].sort = ((uint64_t)shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
 		| tr.shiftedEntityNum | ( fogIndex << QSORT_FOGNUM_SHIFT ) | (int)dlightMap;
 	tr.refdef.drawSurfs[index].surface = surface;
+	tr.refdef.drawSurfs[index].dlightBits = 0;
 	tr.refdef.numDrawSurfs++;
 }
 

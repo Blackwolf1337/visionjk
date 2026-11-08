@@ -832,6 +832,27 @@ static qboolean		rb_entityReset;		// the run of the light passes set other entit
 
 static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs );
 
+// A surface of the level gets the moving lights it has in this view back from its draw surface before it is drawn
+// (tess.dlightBits takes them from the surface): the frontend made the other views of the frame after this one,
+// and the last of them left its own bits on the surface (drawSurf_t dlightBits). That took the saber light from
+// pieces of a floor, along their edges (2026-11-08).
+static void RB_AddDrawSurf( const drawSurf_t *drawSurf ) {
+	switch ( *drawSurf->surface ) {
+	case SF_FACE:
+		( (srfSurfaceFace_t *)drawSurf->surface )->dlightBits = drawSurf->dlightBits;
+		break;
+	case SF_GRID:
+		( (srfGridMesh_t *)drawSurf->surface )->dlightBits = drawSurf->dlightBits;
+		break;
+	case SF_TRIANGLES:
+		( (srfTriangles_t *)drawSurf->surface )->dlightBits = drawSurf->dlightBits;
+		break;
+	default:
+		break;
+	}
+	VK_AddSurface( drawSurf->surface );
+}
+
 static void RB_DrawWet( int depthRange ) {
 	if ( !rb_wetLater ) {
 		return;
@@ -916,7 +937,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
 		if ( drawSurf->sort == oldSort ) {
 			// fast path, same as previous sort
-			VK_AddSurface( drawSurf->surface );
+			RB_AddDrawSurf( drawSurf );
 			continue;
 		}
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
@@ -942,7 +963,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		// the run of the light passes: only what a light reaches, and nothing that the end of the list draws (their
 		// light passes come with them there)
-		const qboolean notLit = (qboolean)( rb_dlightsOnly && ( !dlighted || ( entityNum != REFENTITYNUM_WORLD
+		const qboolean notLit = (qboolean)( rb_dlightsOnly && ( !drawSurf->dlightBits || ( entityNum != REFENTITYNUM_WORLD
 			&& ( backEnd.refdef.entities[entityNum].e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) ) ) ) );
 		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) || wrongRun || notLit ) {
 			shader = oldShader;
@@ -1044,7 +1065,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 
 		// add the triangles for this surface
-		VK_AddSurface( drawSurf->surface );
+		RB_AddDrawSurf( drawSurf );
 	}
 	backEnd.refdef.floatTime = originalTime;
 
@@ -1081,7 +1102,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		RB_SetDepthRange( post->depthRange );
 		depthRange = post->depthRange;
-		VK_AddSurface( post->drawSurf->surface );
+		RB_AddDrawSurf( post->drawSurf );
 		RB_EndSurface();
 	}
 	VK_SetRefraction( qfalse, 0, 0, 0 );
@@ -1142,7 +1163,7 @@ static void RB_RenderOverSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		} else if ( !over ) {
 			continue;
 		}
-		VK_AddSurface( drawSurf->surface );
+		RB_AddDrawSurf( drawSurf );
 	}
 	if ( oldShader != NULL ) {
 		RB_EndSurface();
