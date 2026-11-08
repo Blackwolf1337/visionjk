@@ -1774,7 +1774,7 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 	// 2026-11-08: they wanted it to jitter with the light).
 	float along[VK_SM_POINTS];
 	for ( int point = 0; point < VK_SM_POINTS; point++ ) {
-		along[point] = ( (float)point + 0.1f + 0.8f * random() ) / (float)VK_SM_POINTS;
+		along[point] = ( (float)point + 0.1f + 0.8f * Q_flrand( 0.0f, 1.0f ) ) / (float)VK_SM_POINTS;
 		rows[21][1 + point] = along[point];
 	}
 	for ( int k = 0; k < 2; k++ ) {
