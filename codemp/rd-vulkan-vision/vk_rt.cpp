@@ -99,6 +99,7 @@ static cvar_t	*v_rtShadows;		// 0: the players cast no traced shadows
 static cvar_t	*v_rtShadowRays;	// rays a pixel
 static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
+static cvar_t	*v_rtLamps;			// 0: the shadows indoors go by the light grid alone, not by the panels that glow
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -1428,6 +1429,7 @@ void VK_RT_Init( void ) {
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
+	v_rtLamps = ri.Cvar_Get( "v_rtLamps", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players indoors from the panels that glow, where the light grid says the light comes from one. 0: from the light grid alone" );
 	memset( &rt, 0, sizeof( rt ) );
 	// the players are skinned by their addresses on both ways; without ray tracing they cast their shadows from shadow
 	// maps (VK_SM_*)
@@ -1572,6 +1574,47 @@ static void VK_SM_FromRows( const float *r0, const float *r1, const float *r2, c
 
 #define VK_SM_EXTENT	80.0f		// half the width of the tile of a player, in units
 #define VK_SM_DEPTH		640.0f		// how far before and behind him it reaches along the light
+
+// The direction the light of the grid comes from at p, between its eight cells and without those in walls, as
+// shaders/rtshadow.frag GridAt has it (rt.grid, VK_RT_UploadGrid); straight up where there is none. Not
+// ent->lightDir: R_SetupEntityLighting adds the moving lights to it, and the saber in his hand turned a player's
+// light towards itself.
+static void VK_RT_GridDirection( const vec3_t p, vec3_t dir ) {
+	const world_t	*world = tr.world;
+	const float		*cells = (const float *)rt.grid.mapped;
+	vec3_t			g;
+	int				base[3];
+	float			f[3];
+
+	VectorClear( dir );
+	if ( world && world->lightGridData && cells ) {
+		VectorSubtract( p, world->lightGridOrigin, g );
+		for ( int k = 0; k < 3; k++ ) {
+			g[k] *= world->lightGridInverseSize[k];
+			base[k] = (int)floorf( g[k] );
+			f[k] = g[k] - (float)base[k];
+		}
+		for ( int i = 0; i < 8; i++ ) {
+			int c[3];
+			float w = 1.0f;
+
+			for ( int k = 0; k < 3; k++ ) {
+				const int corner = ( i >> k ) & 1;
+
+				c[k] = Com_Clampi( 0, world->lightGridBounds[k] - 1, base[k] + corner );
+				w *= corner ? f[k] : 1.0f - f[k];
+			}
+			const float *cell = cells + ( c[0] + c[1] * world->lightGridBounds[0] + c[2] * world->lightGridBounds[0] * world->lightGridBounds[1] ) * 12;
+			if ( cell[3] == 0.0f ) {
+				continue;	// in a wall
+			}
+			VectorMA( dir, w, cell + 8, dir );
+		}
+	}
+	if ( VectorNormalize( dir ) < 0.001f ) {
+		VectorSet( dir, 0.0f, 0.0f, 1.0f );
+	}
+}
 
 // the tile of a player: looking along the light that comes from dir (towards the light), around center
 static void VK_SM_PlayerView( const vec3_t center, const vec3_t dir, float *m ) {
@@ -1750,18 +1793,11 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 
 	// each player in the light of the grid at his feet
 	for ( int c = 0; c < rt.numCasters; c++ ) {
-		const trRefEntity_t	*ent = &backEnd.refdef.entities[rt.casters[c].entityNum];
 		vec3_t				center, dir;
 
 		VectorCopy( rt.casters[c].origin, center );
 		center[2] += 8.0f;
-		// (ent->lightDir is in the space of the entity, as R_SetupEntityLighting leaves it: back into the world)
-		VectorScale( ent->e.axis[0], ent->lightDir[0], dir );
-		VectorMA( dir, ent->lightDir[1], ent->e.axis[1], dir );
-		VectorMA( dir, ent->lightDir[2], ent->e.axis[2], dir );
-		if ( VectorNormalize( dir ) < 0.001f ) {
-			VectorSet( dir, 0.0f, 0.0f, 1.0f );
-		}
+		VK_RT_GridDirection( center, dir );
 		VK_SM_PlayerView( center, dir, view );
 		memcpy( rows[VK_SM_FIRST_ROW + c * 4], view, sizeof( view ) );
 		VK_SM_Tile( cmd, c );
@@ -1866,6 +1902,148 @@ static void VK_RT_PickLights( void ) {
 			rt.lights[1] = light;
 		}
 	}
+}
+
+/*
+===============
+VK_RT_PickLamps
+
+rows 255 + i (VK_RT_LAMP_ROW): the panel that casts the shadow of player i (shaders/rtshadow.frag GridShadow), where
+it is and the radius of its disk in w, 0 for none (his shadow goes along the light of the grid then).
+
+The levels keep no lights: what lit their lightmaps were mostly light entities that q3map2 left out, and a panel
+that glows may have given none. The light grid knows from where the light at a player came, but as an average of
+the cell. So of the panels the cell of the player sees (its list, shaders/rtcells.comp) the one that gives the
+most light from about that side casts his shadow from where it is: the shadow has the length a lamp gives and
+spreads under one above him. One whose direction is more than 80 degrees off the grid casts nothing (their choice
+2026-11-08: the panels checked by the grid; the grid has the average of all the lights, so a panel on one side of
+a room is often 60 degrees off it). The panel of the frame before is kept while it gives at least 70 per
+cent of the best one, so a shadow does not jump between two lamps.
+===============
+*/
+#define VK_RT_LAMP_ROW		( VK_RT_VEC4S - VK_RT_CASTERS )
+
+// what a player had the frame before: found again by where he stands
+typedef struct vkLampMemory_s {
+	vec3_t	origin;
+	int		lamp;			// the patch, -1: none
+	float	light;			// how much light it gave him by the list of his cell
+	vec4_t	shown;			// where the shader was told it is, and the radius of its disk
+} vkLampMemory_t;
+
+// how much a patch counts as the light of a player whose light the grid has from dir: its light where it lies on
+// that side, 0 for one that turns away from him (a panel lights the side its normal shows, a zero normal all sides)
+static float VK_RT_LampScore( const vkPatch_t *patch, const vec3_t middle, const vec3_t dir, float light ) {
+	vec3_t to;
+
+	VectorSubtract( patch->origin, middle, to );
+	if ( VectorNormalize( to ) < 1.0f || DotProduct( patch->normal, to ) > -0.05f ) {
+		return 0.0f;
+	}
+	// 1 within 60 degrees of the grid, 0 from 80 on: the grid has the average of the lights, and between two panels
+	// on facing walls it points up, 55 to 65 degrees from each (the hall of mp/ffa3)
+	const float t = Com_Clamp( 0.0f, 1.0f, ( DotProduct( to, dir ) - 0.17f ) / ( 0.5f - 0.17f ) );
+	return light * t * t * ( 3.0f - 2.0f * t );
+}
+
+static void VK_RT_PickLamps( float (*rows)[4] ) {
+	static vkLampMemory_t	last[VK_RT_CASTERS];
+	static int				lastCount;
+	static float			lastTime;
+	vkLampMemory_t			now[VK_RT_CASTERS];
+	const world_t			*world = tr.world;
+	const int				count = Q_min( rt.numCasters, VK_RT_CASTERS );
+	const qboolean			ready = (qboolean)( v_rtLamps->integer && !rt.maps && world && world->lightGridData && vk_patches
+		&& !vk_patches->empty() && vk_patchScale > 0.0f && rt.cellState == 0 && rt.cellLists.mapped );
+	// a light that moves to another panel gets there in about a tenth of a second
+	const float				dt = Com_Clamp( 0.0f, 0.25f, backEnd.refdef.floatTime - lastTime );
+	const float				follow = 1.0f - expf( -dt / 0.1f );
+
+	lastTime = backEnd.refdef.floatTime;
+	for ( int i = 0; i < count; i++ ) {
+		vkLampMemory_t		*me = &now[i];
+		const vkLampMemory_t *was = NULL;
+		vec3_t				middle, dir, g;
+		int					cell[3], best = -1;
+		float				bestScore = 0.0f, bestLight = 0.0f, previousScore = 0.0f, previousLight = 0.0f;
+		qboolean			listed = qfalse;
+
+		VectorCopy( rt.casters[i].origin, me->origin );
+		me->lamp = -1;
+		me->light = 0.0f;
+		VectorSet4( me->shown, 0.0f, 0.0f, 0.0f, 0.0f );
+		VectorSet4( rows[VK_RT_LAMP_ROW + i], 0.0f, 0.0f, 0.0f, 0.0f );
+		if ( !ready ) {
+			continue;
+		}
+		for ( int k = 0; k < lastCount; k++ ) {
+			if ( Distance( last[k].origin, me->origin ) < 64.0f ) {
+				was = &last[k];
+				break;
+			}
+		}
+		VectorCopy( me->origin, middle );
+		middle[2] += 8.0f;		// as the sphere of the player (VK_RT_Pass)
+		VK_RT_GridDirection( middle, dir );
+		VectorSubtract( middle, world->lightGridOrigin, g );
+		for ( int k = 0; k < 3; k++ ) {
+			cell[k] = Com_Clampi( 0, world->lightGridBounds[k] - 1, (int)floorf( g[k] * world->lightGridInverseSize[k] + 0.5f ) );
+		}
+		const uint32_t *list = (const uint32_t *)rt.cellLists.mapped
+			+ ( cell[0] + cell[1] * world->lightGridBounds[0] + cell[2] * world->lightGridBounds[0] * world->lightGridBounds[1] ) * VK_RT_LIST_WORDS;
+
+		for ( int k = 0; k < VK_RT_CELL_LIST; k++ ) {
+			const uint32_t	n = list[k];
+			float			light;
+
+			if ( n >= (uint32_t)vk_patches->size() ) {
+				break;		// (all bits: the end of the list)
+			}
+			memcpy( &light, &list[VK_RT_CELL_LIST + k], sizeof( light ) );
+			const float score = VK_RT_LampScore( &( *vk_patches )[n], middle, dir, light );
+			if ( was && (int)n == was->lamp ) {
+				previousScore = score;
+				previousLight = light;
+				listed = qtrue;
+			}
+			if ( score > bestScore ) {
+				bestScore = score;
+				bestLight = light;
+				best = (int)n;
+			}
+		}
+		// The panel of the frame before stays while it gives at least 70 per cent of the best one, so a shadow does
+		// not jump between two lamps; also when the cell he stepped into does not list it (the next cell sees other
+		// panels first), by the light it gave him before.
+		if ( was && was->lamp >= 0 && !listed ) {
+			previousLight = was->light;
+			previousScore = VK_RT_LampScore( &( *vk_patches )[was->lamp], middle, dir, previousLight );
+		}
+		if ( was && was->lamp >= 0 && previousScore > 0.0f && previousScore >= bestScore * 0.7f ) {
+			best = was->lamp;
+			bestLight = previousLight;
+		}
+		if ( best < 0 ) {
+			continue;
+		}
+		const vkPatch_t *patch = &( *vk_patches )[best];
+		vec4_t target;
+
+		VectorCopy( patch->origin, target );
+		target[3] = Com_Clamp( 1.0f, 32.0f, sqrtf( patch->area / M_PI ) );
+		if ( was && was->shown[3] > 0.0f ) {
+			for ( int k = 0; k < 4; k++ ) {
+				me->shown[k] = was->shown[k] + ( target[k] - was->shown[k] ) * follow;
+			}
+		} else {
+			VectorCopy4( target, me->shown );
+		}
+		me->lamp = best;
+		me->light = bestLight;
+		VectorCopy4( me->shown, rows[VK_RT_LAMP_ROW + i] );
+	}
+	memcpy( last, now, sizeof( vkLampMemory_t ) * count );
+	lastCount = count;
 }
 
 /*
@@ -2003,6 +2181,7 @@ void VK_RT_Pass( void ) {
 		rows[22 + i][2] += 8.0f;
 		rows[22 + i][3] = 64.0f;		// the model and a saber held out
 	}
+	VK_RT_PickLamps( rows );
 	// the view of the frame before, to find the points of this one in its mask
 	memcpy( rows[16], rt.previous, sizeof( rt.previous ) );
 	rows[20][3] = rt.previousValid ? 1.0f : 0.0f;

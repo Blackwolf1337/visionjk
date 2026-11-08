@@ -18,6 +18,8 @@
 //      w the strength of the sun
 //   16-19 the view and projection of the frame before, 20 its eye, w 1 when the mask of that frame can be used
 //   21 x how many players follow, 22-37 each as a sphere: middle and radius
+//   255-270 the panel that casts the shadow of each player: where it is, w the radius of its disk, 0: none
+//      (VK_RT_PickLamps)
 //
 // The mask of the frame before (set 3, the same pixels: the mask in red, how far the point was from the eye in green,
 // blue and alpha) is where this frame's rays are added to: the point seen in a pixel is looked up where it was then,
@@ -31,7 +33,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[255];
+	vec4	rt[271];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
@@ -50,6 +52,7 @@ layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the sc
 layout( set = 3, binding = 0 ) uniform sampler2D u_history;	// the mask of the frame before, read pixel for pixel
 
 #define W		globals.rt
+#define LAMPS	255
 #define LIST	8
 #define NONE	0xffffffffu
 
@@ -148,23 +151,26 @@ bool NearCaster( vec3 origin, vec3 dir, float len, float tangent ) {
 	return false;
 }
 
-// 1 at the feet of a player (about 32 below the middle of his sphere), 0 from 160 units on
-float FeetFade( vec3 p, vec4 s ) {
-	return 1.0 - smoothstep( 48.0, 160.0, distance( p, s.xyz - vec3( 0.0, 0.0, 32.0 ) ) );
+// 1 at the feet of player i (about 32 below the middle of his sphere), 0 from 160 units on, from 256 when a panel
+// casts his shadow (its length is real then)
+float FeetFade( vec3 p, int i ) {
+	return 1.0 - smoothstep( 48.0, W[LAMPS + i].w > 0.0 ? 256.0 : 160.0, distance( p, W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 ) ) );
 }
 
-// The shadows from the light of the grid, rays from origin. Each player has one light: the grid at him, as his
-// lighting has it (ent->lightDir), with its strength there. Not the grid at the point: its direction is an average of
-// many lamps that changes from cell to cell, and a shadow whose every pixel went its own way bent into hooks and
-// ended in lines where the cells changed (2026-11-08, under the lamps of mp/ffa3). It is dark at his feet and fades
-// out within a few steps: a long shadow along an averaged direction is nothing real.
+// The shadows from the light of the grid, rays from origin. Each player has one light: the panel that glows on the
+// side the grid has his light from, where there is one (rows 255 on, VK_RT_PickLamps), from where it is, soft by its
+// size; else the grid at him, as his lighting has it (ent->lightDir). How dark is the strength of the grid there.
+// Not the grid at the point: its direction is an average of many lamps that changes from cell to cell, and a shadow
+// whose every pixel went its own way bent into hooks and ended in lines where the cells changed (2026-11-08, under
+// the lamps of mp/ffa3). It is dark at his feet and fades out within a few steps: a long shadow along an averaged
+// direction is nothing real.
 float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 	int count = int( W[21].x );
 	float dark = 0.0;
 
 	for ( int i = 0; i < count; i++ ) {
 		vec4 s = W[22 + i];
-		float fade = FeetFade( origin, s );
+		float fade = FeetFade( origin, i );
 		if ( fade <= 0.0 ) {
 			continue;
 		}
@@ -175,18 +181,28 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 			continue;
 		}
 		vec3 light = normalize( gridDir );
-		float facing = dot( normal, light );
 		// how much of his light comes from that direction, 0 to 1
 		float ratio = directed / ( ambient + directed + 1.0 );
 		// the cone: wide where the light is mostly ambient, as narrow as v_rtLightSize says where most of it comes
 		// from one side
 		float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
-		if ( facing <= 0.0 || !NearSphere( origin, light, reach, tangent, s ) ) {
+		float len = reach;
+		vec4 lamp = W[LAMPS + i];
+		if ( lamp.w > 0.0 ) {
+			// towards the panel from this point, the cone its disk, the rays end before it
+			vec3 to = lamp.xyz - origin;
+			float d = max( length( to ), 1.0 );
+			light = to / d;
+			tangent = clamp( lamp.w / d, 0.01, 0.5 );
+			len = min( max( d - lamp.w, 1.0 ), reach );
+		}
+		float facing = dot( normal, light );
+		if ( facing <= 0.0 || !NearSphere( origin, light, len, tangent, s ) ) {
 			continue;
 		}
 		float blocked = 0.0;
 		for ( int k = 0; k < rays; k++ ) {
-			blocked += Blocked( origin, InCone( light, tangent, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
+			blocked += Blocked( origin, InCone( light, tangent, uint( k ) ), len, 0x02u ) ? 1.0 : 0.0;
 		}
 		dark = max( dark, min( ratio, 0.85 ) * blocked / float( rays ) * smoothstep( 0.0, 0.25, facing ) * fade );
 	}
@@ -210,7 +226,7 @@ float Shadow( vec3 p, vec3 normal ) {
 	// (GridShadow tests each player itself, here only whether one stands near enough)
 	bool nearGrid = false;
 	for ( int i = 0; i < int( W[21].x ) && !nearGrid; i++ ) {
-		nearGrid = FeetFade( origin, W[22 + i] ) > 0.0;
+		nearGrid = FeetFade( origin, i ) > 0.0;
 	}
 	if ( !nearSun && !nearGrid ) {
 		return 0.0;

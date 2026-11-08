@@ -16,7 +16,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[255];
+	vec4	rt[271];
 } globals;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
 layout( set = 1, binding = 1, std430 ) readonly buffer Grid {
