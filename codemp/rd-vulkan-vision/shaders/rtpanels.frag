@@ -16,7 +16,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	rt[319];
 	vec4	lights[34];
 	vec4	ssr[7];
-	vec4	panels[18];
+	vec4	panels[22];
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
@@ -51,9 +51,9 @@ void main() {
 	int count = min( int( globals.panels[0].x ), 4 );
 
 	for ( int k = 0; k < count; k++ ) {
-		vec4 lamp = globals.panels[6 + k * 3];
-		vec3 side = globals.panels[7 + k * 3].xyz;
-		vec3 colour = globals.panels[8 + k * 3].rgb;
+		vec4 lamp = globals.panels[6 + k * 4];
+		vec3 side = globals.panels[7 + k * 4].xyz;
+		vec3 colour = globals.panels[8 + k * 4].rgb;
 
 		if ( dot( colour, colour ) <= 0.0 ) {
 			continue;

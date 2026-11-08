@@ -73,7 +73,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_RT_CASTERS		16		// players whose spheres the shadow pass tests before it traces (VK_RT_MAX_CASTERS)
 #define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 52 * 4 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (52: the tiles of the shadow maps, VK_SM_TILES), then the panels of each player
 #define VK_PANELS			4		// panels that shine on materials at once (vk_rt.cpp VK_RT_PickPanels)
-#define VK_PANEL_VEC4S		( 6 + VK_PANELS * 3 )	// their rows for generic.frag PanelShine: a head, the view of their mask, three a panel
+#define VK_PANEL_VEC4S		( 6 + VK_PANELS * 4 )	// their rows (common.glsl panels): a head, the view of their mask, four a panel
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame

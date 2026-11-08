@@ -536,12 +536,12 @@ vec3 PanelShine( Transform t, Surface s ) {
 	vec3 shine = vec3( 0.0 ), unused = vec3( 0.0 );
 
 	for ( int k = 0; k < 4; k++ ) {
-		vec3 colour = globals.panels[8 + k * 3].rgb;
+		vec3 colour = globals.panels[8 + k * 4].rgb;
 		if ( seen[k] <= 0.0 || dot( colour, colour ) <= 0.0 ) {
 			continue;
 		}
-		vec4 lamp = globals.panels[6 + k * 3];
-		vec3 side = globals.panels[7 + k * 3].xyz;
+		vec4 lamp = globals.panels[6 + k * 4];
+		vec3 side = globals.panels[7 + k * 4].xyz;
 		vec3 toLamp = lamp.xyz - world;
 		float dist = length( toLamp );
 		if ( dist <= lamp.w ) {

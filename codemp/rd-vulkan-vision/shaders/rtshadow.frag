@@ -34,6 +34,9 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	wet[779];
 	vec4	paint[459];
 	vec4	rt[319];
+	vec4	lights[34];
+	vec4	ssr[7];
+	vec4	panels[22];		// the panels near the eye (vk_rt.cpp VK_RT_PickPanels): PanelShadow
 } globals;
 layout( set = 1, binding = 0 ) uniform accelerationStructureEXT u_top;
 // three vec4 a cell: ambient light (w 1, 0 in a wall), directed light, its direction
@@ -253,6 +256,98 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 	return dark;
 }
 
+// whether one of the eight cells of the light grid around p has the patch which in its list (shaders/rtcells.comp: what the
+// middle of the cell sees, nothing of the level between)
+bool CellsSee( vec3 p, uint which ) {
+	vec3 g = ( p - W[12].xyz ) * W[13].xyz;
+	ivec3 bounds = ivec3( W[14].xyz );
+	ivec3 base = ivec3( floor( g ) );
+
+	for ( int i = 0; i < 8; i++ ) {
+		ivec3 c = clamp( base + ivec3( i & 1, ( i >> 1 ) & 1, ( i >> 2 ) & 1 ), ivec3( 0 ), bounds - 1 );
+		int cell = c.x + c.y * bounds.x + c.z * bounds.x * bounds.y;
+		for ( int k = 0; k < LIST; k++ ) {
+			uint n = lists[cell * 16 + k];
+			if ( n == NONE ) {
+				break;
+			}
+			if ( n == which ) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// v_panelShadows (globals.panels[0].w): the shadows of the level from the panels that glow near the eye (vk_rt.cpp
+// VK_RT_PickPanels: four, each coming and going by row 7 + 4 k w). The lightmap has the shadows of the lights the map
+// was lit with, mostly light entities that q3map2 left out, not of the panels themselves; these are the ones of the
+// panels, laid over it (their wish 2026-11-08). A point that a panel does not reach for the level darkens by the share
+// of that panel in the light the four give it there (its power, the side it lights, the square of the distance, the
+// side the point faces), times the strength: between two panels the shadow from one is half, by one alone it is full.
+// Only within 640 units (full to 192) and where the cells of the grid around the point see the panel: the rooms
+// behind the walls, lit by their own lamps, keep their light. One ray a frame to a point of the disk of each panel
+// against the level, the frames before (the mask is built up) make it soft; the ray stops short of the panel, whose
+// housing is no shadow of the level.
+float PanelShadow( vec3 p, vec3 normal, vec3 origin ) {
+	float strength = globals.panels[0].w;
+	float light[4], total = 0.0, dark = 0.0;
+
+	if ( strength <= 0.0 ) {
+		return 0.0;
+	}
+	for ( int k = 0; k < 4; k++ ) {
+		vec4 lamp = globals.panels[6 + k * 4];
+		vec4 side = globals.panels[7 + k * 4];
+		float power = globals.panels[8 + k * 4].w;
+		bool sided = dot( side.xyz, side.xyz ) > 0.5;
+
+		light[k] = 0.0;
+		if ( side.w <= 0.0 || power <= 0.0 ) {
+			continue;
+		}
+		vec3 to = lamp.xyz - origin;
+		float d = length( to );
+		if ( d <= lamp.w || d >= 640.0 ) {
+			continue;
+		}
+		vec3 dir = to / d;
+		float facing = dot( normal, dir );
+		float lit = sided ? dot( side.xyz, -dir ) : 1.0;
+		if ( facing <= 0.05 || lit <= 0.05 ) {
+			continue;
+		}
+		light[k] = power * lit * smoothstep( 0.05, 0.3, facing ) / max( d * d, lamp.w * lamp.w + 16.0 ) * side.w;
+		total += light[k];
+	}
+	for ( int k = 0; k < 4 && total > 0.0; k++ ) {
+		if ( light[k] <= 0.0 ) {
+			continue;
+		}
+		vec4 lamp = globals.panels[6 + k * 4];
+		vec3 side = globals.panels[7 + k * 4].xyz;
+		bool sided = dot( side, side ) > 0.5;
+		vec3 middle = lamp.xyz + ( sided ? side * 2.0 : vec3( 0.0 ) );
+		float d = distance( middle, origin );
+		float w = strength * light[k] / total * ( 1.0 - smoothstep( 192.0, 640.0, d ) );
+		if ( w < 0.01 || !CellsSee( p + normal * 8.0, uint( globals.panels[9 + k * 4].x + 0.5 ) ) ) {
+			continue;
+		}
+		vec3 axis = sided ? side : normalize( middle - origin );
+		vec3 t = normalize( cross( axis, abs( axis.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+		vec3 b = cross( axis, t );
+		float r = sqrt( Noise( uint( 12 + k ) ) ) * lamp.w * 0.7;
+		float a = Noise( uint( 8 + k ) ) * 6.2831853;
+		vec3 to2 = middle + ( t * cos( a ) + b * sin( a ) ) * r - origin;
+		float d2 = length( to2 );
+		float stop = d2 - lamp.w - 8.0;
+		if ( stop > 2.0 && Blocked( origin, to2 / d2, stop, 0x01u ) ) {
+			dark += w;
+		}
+	}
+	return min( dark, strength );
+}
+
 // how much the players darken the point p of this pixel, facing normal, by the rays of this frame. The light is the
 // one the lightmap was made with as far as the level still knows it: the sun where it reaches the point, else the
 // light of the grid at each player (GridShadow). How dark and how sharp follows how much of the light comes from
@@ -265,6 +360,8 @@ float Shadow( vec3 p, vec3 normal ) {
 	int count = int( W[15].x );
 	float reach = W[12].w;
 
+	// (the shadows of the panels are laid over all, those of the players below)
+	float panelDark = PanelShadow( p, normal, origin );
 	bool sunUp = W[11].w > 0.0 && W[15].w > 0.0 && dot( normal, sun ) > 0.0;
 	bool nearSun = sunUp && NearCaster( origin, sun, reach, W[14].w );
 	// (GridShadow tests each player itself, here only whether one stands near enough)
@@ -273,7 +370,7 @@ float Shadow( vec3 p, vec3 normal ) {
 		nearGrid = FeetFade( origin, i ) > 0.0;
 	}
 	if ( !nearSun && !nearGrid ) {
-		return 0.0;
+		return panelDark;
 	}
 	float ambient, directed;
 	vec3 gridDir;
@@ -309,7 +406,7 @@ float Shadow( vec3 p, vec3 normal ) {
 
 	// the light of the grid, for what the sun does not reach
 	float gridDark = ( nearGrid && sunReach < 1.0 ) ? GridShadow( origin, normal, reach, count ) : 0.0;
-	return mix( gridDark, sunDark, sunReach );
+	return 1.0 - ( 1.0 - mix( gridDark, sunDark, sunReach ) ) * ( 1.0 - panelDark );
 }
 
 // a distance from the eye in green, blue and alpha, 24 bits up to 8192 units

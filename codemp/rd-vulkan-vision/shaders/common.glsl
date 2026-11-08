@@ -69,9 +69,11 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	lights[34];		// light to judge materials by (VK_LightRows of vk_frame.cpp, VK_LIGHT_VEC4S); not on GLES
 	vec4	ssr[7];			// v_ssr (VK_SsrPrep of vk_post.cpp): 0-3 the view of the frame before, 4 its rect, 5 its eye
 							//	and w the slot of its picture + 1 (0: none), 6 its forward and w the strength; not on GLES
-	vec4	panels[18];		// v_panelShine (VK_RT_PanelRows of vk_rt.cpp, VK_PANEL_VEC4S): 0 x how many, y the slot of
-							//	their mask + 1, z the strength; 1-4 the view the mask was made in, 5 its rect; three a
-							//	panel: where it is and its radius, the side it lights, its colour; not on GLES
+	vec4	panels[22];		// v_panelShine, v_panelShadows (VK_RT_PickPanels of vk_rt.cpp, VK_PANEL_VEC4S): 0 x how
+							//	many, y the slot of their mask + 1, z the strength of the shine, w of the shadows; 1-4
+							//	the view the mask was made in, 5 its rect; four a panel: where it is and its radius,
+							//	the side it lights and w how far it has come, its colour and w its power, x the patch;
+							//	not on GLES
 #endif
 } globals;
 
