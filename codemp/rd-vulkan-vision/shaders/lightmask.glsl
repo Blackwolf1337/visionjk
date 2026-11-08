@@ -59,22 +59,39 @@ float CubeShadow( int first, vec3 center, vec3 q ) {
 	return blocked / 9.0;
 }
 
-// what is taken of the light from center at q, the players taking players of it: with LEVEL_RAYS (the device traces
-// rays, shaders/rtlightmask.frag) the level as well, by one ray from q to center against it (mask 1). Without, the
-// light of a saber went through the walls, pillars and ledges between it and a surface (2026-11-08).
-float Taken( float players, vec3 q, vec3 center ) {
+// how much the level hides of the light from a to b (a point when b is a) at q, by rays against it (mask 1) with
+// LEVEL_RAYS (the device traces rays, shaders/rtlightmask.frag); without, nothing: the light of a saber went through
+// the walls, pillars and ledges between it and a surface (2026-11-08). A blade is a line of light: each pixel takes
+// four points of its own along it (one in each quarter, at another place in each pixel and frame), so the shadow of a
+// pillar fades out over what the blade spans; from three points the same for every pixel it ended in a hard line.
+float LevelTaken( vec3 q, vec3 a, vec3 b ) {
 #ifdef LEVEL_RAYS
-	vec3 to = center - q;
-	float d = length( to );
+	const int POINTS = 4;
+	uvec3 v = uvec3( uvec2( gl_FragCoord.xy ), uint( W[13].w ) );
+	float hidden = 0.0;
 
-	if ( d > 2.0 && LevelBlocks( q, to / d, d - 2.0 ) ) {
-		return 1.0;
+	v = v * 1664525u + 1013904223u;
+	v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+	v ^= v >> 16u;
+	for ( int i = 0; i < POINTS; i++ ) {
+		v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+		float along = ( float( i ) + float( v.x & 0xffffu ) / 65536.0 ) / float( POINTS );
+		vec3 to = mix( a, b, along ) - q;
+		float d = length( to );
+
+		if ( d > 2.0 && LevelBlocks( q, to / d, d - 2.0 ) ) {
+			hidden += 1.0;
+		}
 	}
+	return hidden / float( POINTS );
+#else
+	return 0.0;
 #endif
-	return players;
 }
 
-// how much of light k the players (and with LEVEL_RAYS the level) take at p: a blade from three points along it (as VK_SM_DrawAtlas has its cubes), blended, so the shadow is soft along the blade and sweeps as it turns
+// how much of light k the players and the level take at p: the players from the cubes at three points along a blade
+// (as VK_SM_DrawAtlas has them), blended, so their shadow is soft along the blade and sweeps as it turns; the level by
+// LevelTaken. What the one does not take the other may.
 float LightShadow( int k, vec3 p, vec3 normal ) {
 	vec4 a = W[38 + k * 2], b = W[39 + k * 2];
 	float range = a.w;
@@ -87,16 +104,16 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 		return 0.0;
 	}
 	vec3 q = p + normal * 3.0;
+	float players = 0.0;
 	if ( b.w <= 0.0 ) {
-		return Taken( CubeShadow( 16 + k * 18, a.xyz, q ), q, a.xyz );
+		players = CubeShadow( 16 + k * 18, a.xyz, q );
+		return 1.0 - ( 1.0 - players ) * ( 1.0 - LevelTaken( q, a.xyz, a.xyz ) );
 	}
 	// (where along the blade the three are this frame: rows[21] y, z, w, they jump every frame, VK_SM_DrawAtlas)
-	float blocked = 0.0;
 	for ( int i = 0; i < 3; i++ ) {
-		vec3 center = mix( a.xyz, b.xyz, W[21][1 + i] );
-		blocked += Taken( CubeShadow( 16 + ( k * 3 + i ) * 6, center, q ), q, center );
+		players += CubeShadow( 16 + ( k * 3 + i ) * 6, mix( a.xyz, b.xyz, W[21][1 + i] ), q );
 	}
-	return blocked / 3.0;
+	return 1.0 - ( 1.0 - players / 3.0 ) * ( 1.0 - LevelTaken( q, a.xyz, b.xyz ) );
 }
 
 void main() {
