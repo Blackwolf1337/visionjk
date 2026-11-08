@@ -343,15 +343,16 @@ VK_SaberBlades
 The saber blades of the scene (ext.AddSaberBladeToScene) in 3D, added onto the frame (shaders/saber.glsl): their
 numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them after its
 solid surfaces and before what is transparent (RB_DrawWet), portal qtrue a mirror or portal in it at its end; of
-those only the first of a frame, the globals have room for one more view.
+those only the first of a frame, the globals have room for one more view. glow qtrue: into the buffer of r_DynamicGlow
+of the view of the level (shaders/saberglow.frag), for the soft halo the flat blades get from their glow stages.
 ===============
 */
-void VK_SaberBlades( qboolean portal ) {
+void VK_SaberBlades( qboolean portal, qboolean glow ) {
 #ifndef RD_VISION_GLES
 	static int	portalFrame = -1;
 	const int	count = Q_min( backEnd.refdef.numSaberBlades, MAX_SABER_BLADES );
 	const int	hidden = portal ? RF_FIRST_PERSON : RF_THIRD_PERSON;
-	const VkPipeline pipeline = portal ? vk.saberPortalPipeline : vk.saberPipeline;
+	const VkPipeline pipeline = glow ? vk.saberGlowPipeline : ( portal ? vk.saberPortalPipeline : vk.saberPipeline );
 	float		rows[VK_WET_HEADER][4];
 	int			viewport[4];
 	int			shown = 0;
@@ -364,8 +365,8 @@ void VK_SaberBlades( qboolean portal ) {
 			shown++;
 		}
 	}
-	if ( !shown || ( portal && portalFrame == backEnd.viewParms.frameCount ) ) {
-		return;
+	if ( !shown || ( portal && ( glow || portalFrame == backEnd.viewParms.frameCount ) ) ) {
+		return;		// (the glow of the level alone)
 	}
 	if ( portal ) {
 		portalFrame = backEnd.viewParms.frameCount;
@@ -433,7 +434,7 @@ void VK_SaberBlades( qboolean portal ) {
 	VkCommandBuffer			cmd = vk.frame->cmd;
 
 	VK_EndTarget();
-	VK_BeginOverLevel( cmd, area );
+	VK_BeginOverLevel( cmd, area, glow );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 	vk.boundPipeline = pipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
@@ -450,7 +451,7 @@ void VK_SaberBlades( qboolean portal ) {
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	VK_EndTarget();
 
-	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_BeginTarget( glow ? &vk.glow : &vk.color, &vk.depth, 2, qtrue );
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;

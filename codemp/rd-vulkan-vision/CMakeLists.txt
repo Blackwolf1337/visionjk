@@ -259,6 +259,7 @@ set(MPVulkanVisionVulkanShaders
 	ssrprep.frag
 	saber.frag
 	saberportal.frag
+	saberglow.frag
 	)
 set(MPVulkanVisionVulkanShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/saber.glsl"

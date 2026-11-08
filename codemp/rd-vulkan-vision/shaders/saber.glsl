@@ -1,5 +1,6 @@
 // Saber blades in 3D (vk_post.cpp VK_SaberBlades, ext.AddSaberBladeToScene), for shaders/saber.frag (the view of the
-// level) and shaders/saberportal.frag (a mirror or portal in it, PORTAL_VIEW). Drawn after the solid level and
+// level), shaders/saberportal.frag (a mirror or portal in it, PORTAL_VIEW) and shaders/saberglow.frag (into the buffer
+// of r_DynamicGlow, GLOW_PASS, which blurs it into the soft halo the flat blades get). Drawn after the solid level and
 // before what is transparent, so sparks and flashes come in front. Each pixel takes the nearest the ray from the eye
 // through it comes to each blade, in the space of the level and not on the screen: a white hot core where it passes
 // within the core, a glow in the colour of the blade falling off round it. From the side a blade is a line, seen
@@ -109,6 +110,10 @@ void main() {
 		}
 		vec3 seg = b.xyz - a.xyz, oseg = ob.xyz - oa.xyz;
 		vec3 hotColour = mix( c.rgb, vec3( 1.0 ), 0.85 );
+#ifdef GLOW_PASS
+		// (into the glow buffer in its colour: the halo round a blade is coloured, not white)
+		hotColour = c.rgb * 0.6;
+#endif
 		float u, t, d, along;
 
 		// the blade now
@@ -116,6 +121,9 @@ void main() {
 		// (at least a pixel of core and a little glow, so a blade far away does not get lost)
 		float px = pixel * max( t, 1.0 );
 		float core = max( a.w, px * 0.4 ), glow = max( b.w, px * 1.5 );
+#ifdef GLOW_PASS
+		glow *= 2.0;		// (the blur spreads it further, as the wide glow sprites of the flat blade)
+#endif
 		// the glow ends at the hilt, it does not spill back over it
 		float hilt = smoothstep( -glow * 0.6, 0.0, along * length( seg ) );
 		// hidden where that point lies behind what the pixel shows
@@ -163,6 +171,9 @@ void main() {
 			if ( sseen > 0.0 ) {
 				float spx = pixel * max( st, 1.0 );
 				float sglow = max( b.w, spx * 1.5 ), score = max( a.w, spx * 0.4 );
+#ifdef GLOW_PASS
+				sglow *= 2.0;
+#endif
 				float shilt = smoothstep( -sglow * 0.6, 0.0, salong * length( sseg ) );
 				float hot = 1.0 - smoothstep( score - spx, score + spx, sd );
 				float inner = exp( -3.0 * ( sd * sd ) / ( sglow * sglow ) );

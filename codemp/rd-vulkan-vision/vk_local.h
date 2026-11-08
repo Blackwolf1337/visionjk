@@ -434,7 +434,7 @@ void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
-void		VK_SaberBlades( qboolean portal );
+void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );

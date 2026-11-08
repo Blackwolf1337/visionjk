@@ -853,25 +853,26 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 // reading: no test, nothing written (the stencil goes with it). With several samples a pixel the frame is drawn into
 // the targets that stand in for color and depth, and the depth the shader reads is the plain one, which has their
 // first sample since the scene ended.
-void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area ) {
+void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
+	vkTarget_t *color = glow ? &vk.glow : &vk.color, *colorMS = glow ? &vk.glowMS : &vk.colorMS;
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
 
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_TargetLayout( cmd, color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	if ( multi ) {
-		VK_TargetLayout( cmd, &vk.colorMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+		VK_TargetLayout( cmd, colorMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 		VK_TargetLayout( cmd, &vk.depthMS, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	}
 
-	colorInfo.imageView = multi ? vk.colorMS.view : vk.color.view;
+	colorInfo.imageView = multi ? colorMS->view : color->view;
 	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	if ( multi ) {
 		colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorInfo.resolveImageView = vk.color.view;
+		colorInfo.resolveImageView = color->view;
 		colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
 	colorInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -880,8 +881,8 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area ) {
 	depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	depthInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
-	info.renderArea.extent.width = (uint32_t)vk.color.width;
-	info.renderArea.extent.height = (uint32_t)vk.color.height;
+	info.renderArea.extent.width = (uint32_t)color->width;
+	info.renderArea.extent.height = (uint32_t)color->height;
 	// (a part only: with many samples a pass over all of it resolves all of it again)
 	if ( area ) {
 		info.renderArea.offset.x = area[0];

@@ -120,6 +120,9 @@ static const uint32_t vk_saberFrag[] =
 static const uint32_t vk_saberportalFrag[] =
 #include "shaders/saberportal_frag.inc"
 ;
+static const uint32_t vk_saberglowFrag[] =
+#include "shaders/saberglow_frag.inc"
+;
 static const uint32_t vk_ssrPrepFrag[] =
 #include "shaders/ssrprep_frag.inc"
 ;
@@ -617,6 +620,8 @@ void VK_InitPipelines( void ) {
 	vk.saberPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 	vk.saberPortalShader = VK_CreateShader( vk_saberportalFrag, sizeof( vk_saberportalFrag ) );
 	vk.saberPortalPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberPortalShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
+	vk.saberGlowShader = VK_CreateShader( vk_saberglowFrag, sizeof( vk_saberglowFrag ) );
+	vk.saberGlowPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberGlowShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -662,6 +667,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.saberShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPortalPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberPortalShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.saberGlowPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.saberGlowShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );

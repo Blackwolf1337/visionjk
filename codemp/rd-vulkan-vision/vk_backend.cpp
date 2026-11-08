@@ -1254,6 +1254,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 		g_bRenderGlowingObjects = true;
 		RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 		g_bRenderGlowingObjects = false;
+		// the 3D saber blades in their colour, so they get the halo of the flat ones
+		if ( levelView ) {
+			VK_SaberBlades( qfalse, qtrue );
+		}
 		VK_EndGlow();
 		// the entities that lie on that glow (RF_AFTERGLOW), into the frame and against the depth that are there
 		if ( rb_sawLate ) {

@@ -226,6 +226,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					saberPipeline;
 	VkShaderModule				saberPortalShader;	// the same in a mirror or portal
 	VkPipeline					saberPortalPipeline;
+	VkShaderModule				saberGlowShader;	// and into the buffer of r_DynamicGlow
+	VkPipeline					saberGlowPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
@@ -319,6 +321,6 @@ void		VK_RT_SunChanged( void );
 
 // vk_cmd.cpp
 // begins vk.color over the level with the depth of the scene only read, for the passes over it (VK_WetPass)
-void		VK_BeginOverLevel( VkCommandBuffer cmd, const int *area = NULL );	// area: x, y, width, height from the upper left, NULL all
+void		VK_BeginOverLevel( VkCommandBuffer cmd, const int *area = NULL, qboolean glow = qfalse );	// area: x, y, width, height from the upper left, NULL all; glow: into vk.glow
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );
