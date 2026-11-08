@@ -18,192 +18,324 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cg_ragdoll.c -- VisionJK: the ragdoll of the bodies a saber cut through (cg_slice.c), their wish 2026-11-08: the
-// engine's ragdoll (broadsword) felt old, and as it moves the whole skeleton in every copy, the two halves of a cut
-// body stayed tied to each other by the hidden half of each and showed it when it swung across the cut.
+// cg_ragdoll.c -- VisionJK: the ragdoll of the bodies a saber cut through (cg_slice.c), their wish 2026-11-08.
 //
-// Here the body is split at the cut. Every bone of the humanoid skeleton that matters (pelvis to cranium, arms, legs)
-// is a point; the points are held together by distances (the bones, and braces that keep pelvis and chest rigid) and
-// by limits on the angles between them (knees and elbows bend one way only, the spine and the neck within cones), and
-// fall under gravity, traced against the level (position based dynamics, fixed steps of 1/60 s). At the cut every
-// bone goes to the side of the plane its joint lies on; the links across the plane are dropped and every group still
-// linked becomes a part of its own (two, or more when a bent arm crosses the plane twice), with its own copy of the
-// model. Nothing cut stays connected.
+// The body is twelve rigid bodies (pelvis, belly, chest, head, upper arms, forearms with the hands, thighs, shins with
+// the feet), each a capsule measured from the bones at the moment of the cut, with mass and inertia, joined by joints
+// with the limits of a body: cones and twist for spine, neck, shoulders and hips, one-sided hinges for elbows and
+// knees. They are moved by extended position based dynamics (XPBD, Mueller et al. 2020, "Detailed Rigid Body Simulation
+// with Extended Position Based Dynamics"): fixed steps of 1/60 s in four substeps, each moving the bodies and then
+// correcting positions and turns once for every joint and contact, then friction on the speeds. A first version of
+// points held together (Verlet) had no turn of its own and folded oddly (their word 2026-11-08: "the body
+// physics/ragdolls are bad").
 //
-// A part is drawn with its own bones where its points are (ext.G2_SetBonesWorld, rd-vulkan-vision); the bones of the
-// other side follow its bone at the cut as they were at the moment of the cut (they lie behind the plane and are
-// clipped away, and the cut stays clean), and bones of another part on the same side are shrunk to nothing, so no
-// piece is drawn twice. For half a second the angles hold the pose of the moment, then the body goes limp. Players and
-// NPCs walking through a part push it, and so do force push, force pull and explosions. All of it is decided on this
-// client alone; the server's body does not move.
+// The level is felt by traces: once a step every body's spheres (ends and middle of its capsule) are traced along
+// the way they are going, and what they hit becomes a contact plane for the substeps, with static and sliding
+// friction. Bodies that are not joined keep apart from each other, the parts of one cut too. Players and NPCs push
+// them, as do force push, force pull and explosions. For 0.4 s the joints pull toward the pose of the moment, weaker
+// and weaker, so the body slumps instead of folding; a part that has come to rest sleeps until something pushes it.
+//
+// At the cut every body goes to the side of the plane its middle lies on; the joints across the plane are dropped and
+// every group still joined is a part of its own (two, or more when a bent arm crosses the plane twice), with its own
+// copy of the model. A part is drawn with its own bones where its bodies are (ext.G2_SetBonesWorld, rd-vulkan-vision);
+// the bones of the other side follow its body at the cut as they were at the moment of the cut (behind the plane,
+// clipped away), and the bones of another part on the same side are placed with no axes, which the renderer's skinning
+// takes as "not drawn here" (shaders/skinned.vert). All of it is decided on this client alone.
 
 #include "cg_local.h"
 #include "ghoul2/G2.h"
 
-#define RAG_MAX			10			// bodies
+#define RAG_MAX			10			// cut bodies
 #define RAG_PARTS		4
 #define RAG_STEP		( 1.0f / 60.0f )
+#define RAG_SUBSTEPS	4
 #define RAG_MAX_STEPS	4
-#define RAG_ITER		8
-#define RAG_CONS		72
-#define RAG_HOLD_MSEC	500			// the angles hold the pose of the cut for this long, weaker and weaker
-#define RAG_SLEEP_STEPS	30			// steps without motion before a part sleeps
-#define RAG_FRICTION	0.55f		// of the speed along a surface lost each step a point touches it
+#define RAG_HOLD_MSEC	400			// the joints pull toward the pose of the cut for this long, weaker and weaker
+#define RAG_SLEEP_STEPS	30			// steps at rest before a part sleeps
+#define RAG_MU_STATIC	0.8f
+#define RAG_MU_SLIDE	0.6f
 #define RAG_MAX_SPEED	900.0f
+#define RAG_MAX_SPIN	12.0f		// radians a second
+#define RAG_SPHERES		4			// a body's spheres for contact
+#define RAG_PLANES		2			// contact planes a sphere keeps
 
+// the bones of the skeleton the ragdoll places
 enum {
 	RB_PELVIS, RB_LLUMBAR, RB_ULUMBAR, RB_THORACIC, RB_CERVICAL, RB_CRANIUM,
 	RB_LHUMERUS, RB_LRADIUS, RB_LHAND, RB_RHUMERUS, RB_RRADIUS, RB_RHAND,
 	RB_LFEMUR, RB_LTIBIA, RB_LTALUS, RB_RFEMUR, RB_RTIBIA, RB_RTALUS,
-	RB_BONES,
-	// points that are no bone: the top of the head, the tips of the hands, the toes (for collision and the frames)
+	RB_BONES
+};
+
+static const char *ragBoneNames[RB_BONES] = {
+	"pelvis", "lower_lumbar", "upper_lumbar", "thoracic", "cervical", "cranium",
+	"lhumerus", "lradius", "lhand", "rhumerus", "rradius", "rhand",
+	"lfemurYZ", "ltibia", "ltalus", "rfemurYZ", "rtibia", "rtalus",
+};
+
+// the rigid bodies
+enum {
+	BD_PELVIS, BD_BELLY, BD_CHEST, BD_HEAD,
+	BD_LUARM, BD_LFARM, BD_RUARM, BD_RFARM,
+	BD_LTHIGH, BD_LSHIN, BD_RTHIGH, BD_RSHIN,
+	BD_BODIES
+};
+
+// points the capsules are measured between, besides the bones
+enum {
 	RP_HEADTOP = RB_BONES, RP_LHANDTIP, RP_RHANDTIP, RP_LTOE, RP_RTOE,
 	RP_POINTS
 };
 
 static const struct {
-	const char	*name;
-	int			parent;
-	float		radius;		// of the flesh around it, for collision
-	float		mass;
-	int			u0, u1;		// the frame of the bone turns with u0 -> u1,
-	int			w0, w1;		//	and its roll with w0 -> w1 (-1: none)
-} ragBones[RB_BONES] = {
-	{ "pelvis",			-1,				7.0f,	3.0f,	RB_PELVIS, RB_LLUMBAR,		RB_LFEMUR, RB_RFEMUR },
-	{ "lower_lumbar",	RB_PELVIS,		6.0f,	3.0f,	RB_LLUMBAR, RB_ULUMBAR,		RB_LFEMUR, RB_RFEMUR },
-	{ "upper_lumbar",	RB_LLUMBAR,		7.0f,	3.0f,	RB_ULUMBAR, RB_THORACIC,	RB_LHUMERUS, RB_RHUMERUS },
-	{ "thoracic",		RB_ULUMBAR,		8.0f,	3.0f,	RB_THORACIC, RB_CERVICAL,	RB_LHUMERUS, RB_RHUMERUS },
-	{ "cervical",		RB_THORACIC,	4.0f,	1.5f,	RB_CERVICAL, RB_CRANIUM,	RB_LHUMERUS, RB_RHUMERUS },
-	{ "cranium",		RB_CERVICAL,	5.0f,	1.5f,	RB_CRANIUM, RP_HEADTOP,		RB_LHUMERUS, RB_RHUMERUS },
-	{ "lhumerus",		RB_THORACIC,	4.0f,	1.0f,	RB_LHUMERUS, RB_LRADIUS,	-1, -1 },
-	{ "lradius",		RB_LHUMERUS,	3.5f,	1.0f,	RB_LRADIUS, RB_LHAND,		-1, -1 },
-	{ "lhand",			RB_LRADIUS,		3.0f,	0.7f,	RB_LHAND, RP_LHANDTIP,		-1, -1 },
-	{ "rhumerus",		RB_THORACIC,	4.0f,	1.0f,	RB_RHUMERUS, RB_RRADIUS,	-1, -1 },
-	{ "rradius",		RB_RHUMERUS,	3.5f,	1.0f,	RB_RRADIUS, RB_RHAND,		-1, -1 },
-	{ "rhand",			RB_RRADIUS,		3.0f,	0.7f,	RB_RHAND, RP_RHANDTIP,		-1, -1 },
-	{ "lfemurYZ",		RB_PELVIS,		6.0f,	2.0f,	RB_LFEMUR, RB_LTIBIA,		-1, -1 },
-	{ "ltibia",			RB_LFEMUR,		4.0f,	1.5f,	RB_LTIBIA, RB_LTALUS,		-1, -1 },
-	{ "ltalus",			RB_LTIBIA,		3.5f,	1.0f,	RB_LTALUS, RP_LTOE,			-1, -1 },
-	{ "rfemurYZ",		RB_PELVIS,		6.0f,	2.0f,	RB_RFEMUR, RB_RTIBIA,		-1, -1 },
-	{ "rtibia",			RB_RFEMUR,		4.0f,	1.5f,	RB_RTIBIA, RB_RTALUS,		-1, -1 },
-	{ "rtalus",			RB_RTIBIA,		3.5f,	1.0f,	RB_RTALUS, RP_RTOE,			-1, -1 },
+	int		bones[2];		// the bones that move with it (-1: none)
+	int		from, to;		// its capsule
+	float	radius, mass;
+	int		extra;			// one more sphere at this point (-1: none)
+	float	extraRadius;
+} ragBodyDefs[BD_BODIES] = {
+	{ { RB_PELVIS, -1 },			RB_LFEMUR, RB_RFEMUR,		6.5f, 12.0f,	RB_PELVIS, 7.0f },
+	{ { RB_LLUMBAR, RB_ULUMBAR },	RB_LLUMBAR, RB_THORACIC,	6.5f, 10.0f,	-1, 0.0f },
+	{ { RB_THORACIC, -1 },			RB_LHUMERUS, RB_RHUMERUS,	6.0f, 15.0f,	RB_THORACIC, 7.5f },
+	{ { RB_CERVICAL, RB_CRANIUM },	RB_CERVICAL, RP_HEADTOP,	4.5f, 5.0f,		-1, 0.0f },
+	{ { RB_LHUMERUS, -1 },			RB_LHUMERUS, RB_LRADIUS,	3.2f, 2.5f,		-1, 0.0f },
+	{ { RB_LRADIUS, RB_LHAND },		RB_LRADIUS, RP_LHANDTIP,	2.8f, 2.0f,		-1, 0.0f },
+	{ { RB_RHUMERUS, -1 },			RB_RHUMERUS, RB_RRADIUS,	3.2f, 2.5f,		-1, 0.0f },
+	{ { RB_RRADIUS, RB_RHAND },		RB_RRADIUS, RP_RHANDTIP,	2.8f, 2.0f,		-1, 0.0f },
+	{ { RB_LFEMUR, -1 },			RB_LFEMUR, RB_LTIBIA,		4.5f, 7.0f,		-1, 0.0f },
+	{ { RB_LTIBIA, RB_LTALUS },		RB_LTIBIA, RB_LTALUS,		3.6f, 4.0f,		RP_LTOE, 2.5f },
+	{ { RB_RFEMUR, -1 },			RB_RFEMUR, RB_RTIBIA,		4.5f, 7.0f,		-1, 0.0f },
+	{ { RB_RTIBIA, RB_RTALUS },		RB_RTIBIA, RB_RTALUS,		3.6f, 4.0f,		RP_RTOE, 2.5f },
 };
 
-// the points that are no bone: the bone they belong to, the radius
-static const struct { int owner; float radius; } ragTips[RP_POINTS - RB_BONES] = {
-	{ RB_CRANIUM, 6.0f }, { RB_LHAND, 2.5f }, { RB_RHAND, 2.5f }, { RB_LTALUS, 2.5f }, { RB_RTALUS, 2.5f },
+typedef enum { RJ_CONE, RJ_HINGE } ragJointKind_t;
+
+// the joints: child body, parent body, the point they are joined at, and the limits (degrees)
+static const struct {
+	int				child, parent, at;
+	ragJointKind_t	kind;
+	float			swing, twist;	// RJ_CONE
+	float			bend;			// RJ_HINGE: 0 straight to this
+} ragJointDefs[] = {
+	{ BD_BELLY,	BD_PELVIS,	RB_LLUMBAR,		RJ_CONE,	25.0f, 20.0f, 0.0f },
+	{ BD_CHEST,	BD_BELLY,	RB_THORACIC,	RJ_CONE,	25.0f, 20.0f, 0.0f },
+	{ BD_HEAD,	BD_CHEST,	RB_CERVICAL,	RJ_CONE,	40.0f, 40.0f, 0.0f },
+	{ BD_LUARM,	BD_CHEST,	RB_LHUMERUS,	RJ_CONE,	100.0f, 70.0f, 0.0f },
+	{ BD_RUARM,	BD_CHEST,	RB_RHUMERUS,	RJ_CONE,	100.0f, 70.0f, 0.0f },
+	{ BD_LFARM,	BD_LUARM,	RB_LRADIUS,		RJ_HINGE,	0.0f, 0.0f, 145.0f },
+	{ BD_RFARM,	BD_RUARM,	RB_RRADIUS,		RJ_HINGE,	0.0f, 0.0f, 145.0f },
+	{ BD_LTHIGH, BD_PELVIS,	RB_LFEMUR,		RJ_CONE,	65.0f, 35.0f, 0.0f },
+	{ BD_RTHIGH, BD_PELVIS,	RB_RFEMUR,		RJ_CONE,	65.0f, 35.0f, 0.0f },
+	{ BD_LSHIN,	BD_LTHIGH,	RB_LTIBIA,		RJ_HINGE,	0.0f, 0.0f, 145.0f },
+	{ BD_RSHIN,	BD_RTHIGH,	RB_RTIBIA,		RJ_HINGE,	0.0f, 0.0f, 145.0f },
 };
-
-typedef enum {
-	RC_DIST,		// |a b| stays as it was
-	RC_RANGE,		// |a b| between lo and hi (an angle limit at the joint between them); held at rest at first
-	RC_HINGE,		// the joint a bends to one side of the line b c only: sign of the forward of frame
-	RC_FRONT		// a stays in front of b by at least lo along the forward of frame
-} ragKind_t;
-
-// the frames of the body the one-sided limits look at
-enum { RF_PELVIS, RF_CHEST };
+#define RAG_JOINTS	( (int)ARRAY_LEN( ragJointDefs ) )
 
 typedef struct {
-	byte		kind, a, b, c, frame;
-	signed char	sign;
-	float		lo, hi, rest;
-} ragCon_t;
+	vec3_t		x, v, w;			// centre of mass, speed, spin (world)
+	vec4_t		q;					// turn from the body frame into the world (x, y, z, w)
+	vec3_t		px;					// at the start of the substep
+	vec4_t		pq;
+	vec3_t		sx;					// at the start of the step, for drawing between steps
+	vec4_t		sq;
+	vec3_t		dx;					// as drawn
+	vec4_t		dq;
+	float		invMass;
+	vec3_t		invInertia;			// in the body frame
+	int			numSpheres;
+	vec3_t		sphere[RAG_SPHERES];	// in the body frame
+	float		radius[RAG_SPHERES];
+	vec3_t		planeN[RAG_SPHERES][RAG_PLANES];	// contact planes of this step: normal and distance
+	float		planeD[RAG_SPHERES][RAG_PLANES];
+	int			numPlanes[RAG_SPHERES];
+	float		contactLambda[RAG_SPHERES];			// normal correction of the substep, for the sliding friction
+	vec3_t		contactNormal[RAG_SPHERES];
+	vec3_t		contactR[RAG_SPHERES];
+	qboolean	touched[RAG_SPHERES];
+	int			part;
+} ragRigid_t;
 
 typedef struct {
 	qboolean	used;
-	qboolean	own[RP_POINTS];
-	vec3_t		x[RP_POINTS];		// where the points are
-	vec3_t		old[RP_POINTS];		// where they were a step ago (the speed)
-	vec3_t		prev[RP_POINTS];	// where they were before the last step, for drawing between steps
-	vec3_t		draw[RP_POINTS];
-	vec3_t		normal[RP_POINTS];	// of the surface a point touches in this step
-	qboolean	touch[RP_POINTS];
-	float		turn[RB_BONES][3][3];	// how each own bone turned since the cut
-	byte		u0[RB_BONES], u1[RB_BONES];	// the line of points each own bone turns with (u0 == u1: with the anchor)
-	vec3_t		lastU[RB_BONES];
-	ragCon_t	con[RAG_CONS];
-	int			numCons;
-	int			anchor;				// its bone nearest the cut
+	int			child, parent;
+	ragJointKind_t kind;
+	vec3_t		rc, rp;				// the point of the joint in each body frame
+	vec3_t		axisC, axisP;		// cone: the child's line and its neutral line in the parent; hinge: the axis
+	vec3_t		refC, refP;			// cone: twist references; hinge: the lines the bend is measured between
+	float		swing, twist, lo, hi;	// radians
+	vec4_t		rest;				// the turn of the child against the parent at the cut, for the pose hold
+} ragJoint_t;
+
+typedef struct {
+	qboolean	used;
 	int			side;				// 1: the side the normal of the cut points to
+	int			anchor;				// its body nearest the cut
 	void		*ghoul2;
 	vec3_t		origin;				// drawn at, angles 0
 	int			still;
 	qboolean	asleep;
-	qboolean	checked;			// (developer: the bone round trip was looked at)
 	qboolean	posed;				// asleep and its bones placed
+	qboolean	checked;			// (developer: the bone round trip was looked at)
+	vec3_t		restX[BD_BODIES];	// where its bodies were when it last moved, for the sleep test
+	vec4_t		restQ[BD_BODIES];
 } ragPart_t;
 
 typedef struct {
 	qboolean	active;
 	int			start;
-	float		acc;				// seconds not stepped yet
-	int			boneNum[RB_BONES];	// in the skeleton of the model
-	float		rest[RB_BONES][3][3];	// the axes of each bone at the cut (columns, as G2API_GetBoltMatrix gives them)
+	float		acc;
+	int			boneNum[RB_BONES];
+	float		boneRot[RB_BONES][3][3];	// each bone in the frame of its body
+	vec3_t		bonePos[RB_BONES];
+	int			boneBody[RB_BONES];
 	vec3_t		p0[RP_POINTS];		// the points at the cut
-	float		invMass[RP_POINTS];
-	float		radius[RP_POINTS];
+	vec3_t		bx0[BD_BODIES];		// the bodies at the cut
+	vec4_t		bq0[BD_BODIES];
 	vec3_t		scale;
 	vec4_t		plane;				// the cut, the normal towards side 1
 	vec3_t		centre;
-	int			partOf[RB_BONES];
+	ragRigid_t	body[BD_BODIES];
+	ragJoint_t	joint[RAG_JOINTS];
+	qboolean	apart[BD_BODIES][BD_BODIES];	// bodies that keep apart (not joined, not touching at the cut)
 	int			numParts;
 	ragPart_t	part[RAG_PARTS];
 } ragBody_t;
 
 static ragBody_t	rags[RAG_MAX];
 
-// the limits of the body, made into constraints with the lengths of the moment of the cut
-typedef struct { byte kind, a, b, c, frame; signed char sign; float lo, hi; } ragTemplate_t;
+// ------------------------------------------------------------------------------------------------ maths
 
-static const ragTemplate_t ragLimits[] = {
-	// spine and neck bend within cones (degrees from straight)
-	{ RC_RANGE, RB_PELVIS, RB_LLUMBAR, RB_ULUMBAR, 0, 0,		0.0f, 30.0f },
-	{ RC_RANGE, RB_LLUMBAR, RB_ULUMBAR, RB_THORACIC, 0, 0,		0.0f, 30.0f },
-	{ RC_RANGE, RB_THORACIC, RB_CERVICAL, RB_CRANIUM, 0, 0,		0.0f, 55.0f },
-	{ RC_RANGE, RB_CERVICAL, RB_CRANIUM, RP_HEADTOP, 0, 0,		0.0f, 35.0f },
-	// shoulders nearly free, elbows and wrists
-	{ RC_RANGE, RB_THORACIC, RB_LHUMERUS, RB_LRADIUS, 0, 0,		0.0f, 165.0f },
-	{ RC_RANGE, RB_THORACIC, RB_RHUMERUS, RB_RRADIUS, 0, 0,		0.0f, 165.0f },
-	{ RC_RANGE, RB_LHUMERUS, RB_LRADIUS, RB_LHAND, 0, 0,		0.0f, 150.0f },
-	{ RC_RANGE, RB_RHUMERUS, RB_RRADIUS, RB_RHAND, 0, 0,		0.0f, 150.0f },
-	{ RC_RANGE, RB_LRADIUS, RB_LHAND, RP_LHANDTIP, 0, 0,		0.0f, 80.0f },
-	{ RC_RANGE, RB_RRADIUS, RB_RHAND, RP_RHANDTIP, 0, 0,		0.0f, 80.0f },
-	// hips, knees, ankles
-	{ RC_RANGE, RB_LLUMBAR, RB_LFEMUR, RB_LTIBIA, 0, 0,			0.0f, 120.0f },
-	{ RC_RANGE, RB_LLUMBAR, RB_RFEMUR, RB_RTIBIA, 0, 0,			0.0f, 120.0f },
-	{ RC_RANGE, RB_LFEMUR, RB_LTIBIA, RB_LTALUS, 0, 0,			0.0f, 150.0f },
-	{ RC_RANGE, RB_RFEMUR, RB_RTIBIA, RB_RTALUS, 0, 0,			0.0f, 150.0f },
-	{ RC_RANGE, RB_LTIBIA, RB_LTALUS, RP_LTOE, 0, 0,			50.0f, 130.0f },
-	{ RC_RANGE, RB_RTIBIA, RB_RTALUS, RP_RTOE, 0, 0,			50.0f, 130.0f },
-	// knees bend forward, elbows backward; legs not far behind the body, the back not far backward
-	{ RC_HINGE, RB_LTIBIA, RB_LFEMUR, RB_LTALUS, RF_PELVIS, 1,	0.0f, 0.0f },
-	{ RC_HINGE, RB_RTIBIA, RB_RFEMUR, RB_RTALUS, RF_PELVIS, 1,	0.0f, 0.0f },
-	{ RC_HINGE, RB_LRADIUS, RB_LHUMERUS, RB_LHAND, RF_CHEST, -1,	0.0f, 0.0f },
-	{ RC_HINGE, RB_RRADIUS, RB_RHUMERUS, RB_RHAND, RF_CHEST, -1,	0.0f, 0.0f },
-	{ RC_FRONT, RB_LTIBIA, RB_LFEMUR, 0, RF_PELVIS, 0,			-0.45f, 0.0f },
-	{ RC_FRONT, RB_RTIBIA, RB_RFEMUR, 0, RF_PELVIS, 0,			-0.45f, 0.0f },
-	{ RC_FRONT, RB_CERVICAL, RB_PELVIS, 0, RF_PELVIS, 0,		-0.35f, 0.0f },
-};
+static void Q_Mul( const vec4_t a, const vec4_t b, vec4_t out ) {
+	vec4_t t;
 
-// the rigid braces of pelvis and chest, and the twist of the spine
-static const byte ragBraces[][2] = {
-	{ RB_LFEMUR, RB_RFEMUR }, { RB_LFEMUR, RB_LLUMBAR }, { RB_RFEMUR, RB_LLUMBAR },
-	{ RB_LHUMERUS, RB_RHUMERUS }, { RB_LHUMERUS, RB_CERVICAL }, { RB_RHUMERUS, RB_CERVICAL },
-	{ RB_LHUMERUS, RB_ULUMBAR }, { RB_RHUMERUS, RB_ULUMBAR }, { RB_ULUMBAR, RB_CERVICAL },
-};
-static const byte ragTwist[][2] = {
-	{ RB_LHUMERUS, RB_LFEMUR }, { RB_RHUMERUS, RB_RFEMUR }, { RB_LHUMERUS, RB_RFEMUR }, { RB_RHUMERUS, RB_LFEMUR },
-};
-
-// ------------------------------------------------------------------------------------------------ small maths
-
-static void Rag_Identity( float m[3][3] ) {
-	memset( m, 0, sizeof( float ) * 9 );
-	m[0][0] = m[1][1] = m[2][2] = 1.0f;
+	t[0] = a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1];
+	t[1] = a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0];
+	t[2] = a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3];
+	t[3] = a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2];
+	VectorCopy4( t, out );
 }
 
-static void Rag_Mul( const float a[3][3], const float b[3][3], float out[3][3] ) {
+static void Q_Conj( const vec4_t q, vec4_t out ) {
+	out[0] = -q[0];
+	out[1] = -q[1];
+	out[2] = -q[2];
+	out[3] = q[3];
+}
+
+static void Q_Normalize( vec4_t q ) {
+	const float l = sqrtf( q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3] );
+
+	if ( l > 0.000001f ) {
+		q[0] /= l;
+		q[1] /= l;
+		q[2] /= l;
+		q[3] /= l;
+	} else {
+		q[0] = q[1] = q[2] = 0.0f;
+		q[3] = 1.0f;
+	}
+}
+
+static void Q_Rotate( const vec4_t q, const vec3_t v, vec3_t out ) {
+	// v + 2 q.xyz x ( q.xyz x v + w v )
+	vec3_t	t, u;
+
+	CrossProduct( q, v, t );
+	VectorMA( t, q[3], v, t );
+	CrossProduct( q, t, u );
+	VectorMA( v, 2.0f, u, out );
+}
+
+static void Q_Unrotate( const vec4_t q, const vec3_t v, vec3_t out ) {
+	vec4_t c;
+
+	Q_Conj( q, c );
+	Q_Rotate( c, v, out );
+}
+
+// columns of the matrix are the axes of the frame
+static void Q_ToMatrix( const vec4_t q, float m[3][3] ) {
+	const float x = q[0], y = q[1], z = q[2], w = q[3];
+
+	m[0][0] = 1.0f - 2.0f * ( y * y + z * z );	m[0][1] = 2.0f * ( x * y - z * w );			m[0][2] = 2.0f * ( x * z + y * w );
+	m[1][0] = 2.0f * ( x * y + z * w );			m[1][1] = 1.0f - 2.0f * ( x * x + z * z );	m[1][2] = 2.0f * ( y * z - x * w );
+	m[2][0] = 2.0f * ( x * z - y * w );			m[2][1] = 2.0f * ( y * z + x * w );			m[2][2] = 1.0f - 2.0f * ( x * x + y * y );
+}
+
+static void Q_FromMatrix( const float m[3][3], vec4_t q ) {
+	const float tr = m[0][0] + m[1][1] + m[2][2];
+
+	if ( tr > 0.0f ) {
+		const float s = sqrtf( tr + 1.0f ) * 2.0f;
+
+		q[3] = 0.25f * s;
+		q[0] = ( m[2][1] - m[1][2] ) / s;
+		q[1] = ( m[0][2] - m[2][0] ) / s;
+		q[2] = ( m[1][0] - m[0][1] ) / s;
+	} else if ( m[0][0] > m[1][1] && m[0][0] > m[2][2] ) {
+		const float s = sqrtf( 1.0f + m[0][0] - m[1][1] - m[2][2] ) * 2.0f;
+
+		q[3] = ( m[2][1] - m[1][2] ) / s;
+		q[0] = 0.25f * s;
+		q[1] = ( m[0][1] + m[1][0] ) / s;
+		q[2] = ( m[0][2] + m[2][0] ) / s;
+	} else if ( m[1][1] > m[2][2] ) {
+		const float s = sqrtf( 1.0f + m[1][1] - m[0][0] - m[2][2] ) * 2.0f;
+
+		q[3] = ( m[0][2] - m[2][0] ) / s;
+		q[0] = ( m[0][1] + m[1][0] ) / s;
+		q[1] = 0.25f * s;
+		q[2] = ( m[1][2] + m[2][1] ) / s;
+	} else {
+		const float s = sqrtf( 1.0f + m[2][2] - m[0][0] - m[1][1] ) * 2.0f;
+
+		q[3] = ( m[1][0] - m[0][1] ) / s;
+		q[0] = ( m[0][2] + m[2][0] ) / s;
+		q[1] = ( m[1][2] + m[2][1] ) / s;
+		q[2] = 0.25f * s;
+	}
+	Q_Normalize( q );
+}
+
+// the turn from a to b as a rotation vector
+static void Q_Delta( const vec4_t from, const vec4_t to, vec3_t rot ) {
+	vec4_t	c, d;
+	float	s, angle;
+
+	Q_Conj( from, c );
+	Q_Mul( to, c, d );
+	if ( d[3] < 0.0f ) {
+		d[0] = -d[0];
+		d[1] = -d[1];
+		d[2] = -d[2];
+		d[3] = -d[3];
+	}
+	s = VectorLength( d );
+	if ( s < 0.000001f ) {
+		VectorClear( rot );
+		return;
+	}
+	angle = 2.0f * atan2f( s, d[3] );
+	VectorScale( d, angle / s, rot );
+}
+
+// q turned by the rotation vector r times scale (small turns)
+static void Q_AddRotation( vec4_t q, const vec3_t r, float scale ) {
+	vec4_t w, d;
+
+	w[0] = r[0] * scale;
+	w[1] = r[1] * scale;
+	w[2] = r[2] * scale;
+	w[3] = 0.0f;
+	Q_Mul( w, q, d );
+	q[0] += 0.5f * d[0];
+	q[1] += 0.5f * d[1];
+	q[2] += 0.5f * d[2];
+	q[3] += 0.5f * d[3];
+	Q_Normalize( q );
+}
+
+static void M_Mul( const float a[3][3], const float b[3][3], float out[3][3] ) {
 	float	t[3][3];
 	int		i, j;
 
@@ -215,65 +347,123 @@ static void Rag_Mul( const float a[3][3], const float b[3][3], float out[3][3] )
 	memcpy( out, t, sizeof( t ) );
 }
 
-static void Rag_Apply( const float m[3][3], const vec3_t v, vec3_t out ) {
-	vec3_t t;
+static void M_TransposeMul( const float a[3][3], const float b[3][3], float out[3][3] ) {
+	float	t[3][3];
+	int		i, j;
 
-	t[0] = m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2];
-	t[1] = m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2];
-	t[2] = m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2];
-	VectorCopy( t, out );
+	for ( i = 0; i < 3; i++ ) {
+		for ( j = 0; j < 3; j++ ) {
+			t[i][j] = a[0][i] * b[0][j] + a[1][i] * b[1][j] + a[2][i] * b[2][j];
+		}
+	}
+	memcpy( out, t, sizeof( t ) );
 }
 
-// the shortest turn from unit a to unit b
-static void Rag_Arc( const vec3_t a, const vec3_t b, float m[3][3] ) {
-	vec3_t	v;
-	float	c = DotProduct( a, b ), k;
+// the shortest turn taking unit a to unit b, applied to v
+static void V_TurnLike( const vec3_t a, const vec3_t b, const vec3_t v, vec3_t out ) {
+	vec3_t	axis;
+	float	s, c;
+	vec4_t	q;
 
-	if ( c < -0.9995f ) {
-		// half a turn about any axis across a
-		vec3_t axis;
-
-		PerpendicularVector( axis, a );
-		m[0][0] = 2.0f * axis[0] * axis[0] - 1.0f; m[0][1] = 2.0f * axis[0] * axis[1]; m[0][2] = 2.0f * axis[0] * axis[2];
-		m[1][0] = 2.0f * axis[1] * axis[0]; m[1][1] = 2.0f * axis[1] * axis[1] - 1.0f; m[1][2] = 2.0f * axis[1] * axis[2];
-		m[2][0] = 2.0f * axis[2] * axis[0]; m[2][1] = 2.0f * axis[2] * axis[1]; m[2][2] = 2.0f * axis[2] * axis[2] - 1.0f;
+	CrossProduct( a, b, axis );
+	s = VectorNormalize( axis );
+	c = DotProduct( a, b );
+	if ( s < 0.00001f ) {
+		VectorCopy( v, out );
 		return;
 	}
-	CrossProduct( a, b, v );
-	k = 1.0f / ( 1.0f + c );
-	m[0][0] = c + v[0] * v[0] * k;			m[0][1] = v[0] * v[1] * k - v[2];	m[0][2] = v[0] * v[2] * k + v[1];
-	m[1][0] = v[1] * v[0] * k + v[2];		m[1][1] = c + v[1] * v[1] * k;		m[1][2] = v[1] * v[2] * k - v[0];
-	m[2][0] = v[2] * v[0] * k - v[1];		m[2][1] = v[2] * v[1] * k + v[0];	m[2][2] = c + v[2] * v[2] * k;
+	{
+		const float half = 0.5f * atan2f( s, c );
+		const float sh = sinf( half );
+
+		q[0] = axis[0] * sh;
+		q[1] = axis[1] * sh;
+		q[2] = axis[2] * sh;
+		q[3] = cosf( half );
+	}
+	Q_Rotate( q, v, out );
 }
 
-// an orthonormal frame (columns) out of a direction and a second one across it; qfalse when they are in line
-static qboolean Rag_Basis( const vec3_t u, const vec3_t w, float m[3][3] ) {
-	vec3_t e1, e2, e3;
+// ------------------------------------------------------------------------------------------------ the corrections
 
-	VectorCopy( u, e1 );
-	if ( VectorNormalize( e1 ) < 0.001f ) {
-		return qfalse;
+static void Rag_InvInertiaWorld( const ragRigid_t *b, const vec3_t v, vec3_t out ) {
+	vec3_t l;
+
+	Q_Unrotate( b->q, v, l );
+	l[0] *= b->invInertia[0];
+	l[1] *= b->invInertia[1];
+	l[2] *= b->invInertia[2];
+	Q_Rotate( b->q, l, out );
+}
+
+// how hard a body is to move at the offset r along n (inverse mass seen there)
+static float Rag_GenInvMass( const ragRigid_t *b, const vec3_t r, const vec3_t n ) {
+	vec3_t rn, irn;
+
+	if ( !b ) {
+		return 0.0f;
 	}
-	CrossProduct( e1, w, e3 );
-	if ( VectorNormalize( e3 ) < 0.05f * VectorLength( w ) + 0.0001f ) {
-		return qfalse;
+	CrossProduct( r, n, rn );
+	Rag_InvInertiaWorld( b, rn, irn );
+	return b->invMass + DotProduct( rn, irn );
+}
+
+// Moves the point of a (offset ra from its centre) by corr against the point of b (ra, rb in the world; b may be
+// NULL: the level). compliance 0: all of it. Returns the size of the correction (lambda).
+static float Rag_Positional( ragRigid_t *a, const vec3_t ra, ragRigid_t *b, const vec3_t rb, const vec3_t corr,
+	float compliance, float h ) {
+	vec3_t	n, p, t, it;
+	float	c, w, lambda;
+
+	VectorCopy( corr, n );
+	c = VectorNormalize( n );
+	if ( c < 0.00001f ) {
+		return 0.0f;
 	}
-	CrossProduct( e3, e1, e2 );
-	m[0][0] = e1[0]; m[0][1] = e2[0]; m[0][2] = e3[0];
-	m[1][0] = e1[1]; m[1][1] = e2[1]; m[1][2] = e3[1];
-	m[2][0] = e1[2]; m[2][1] = e2[2]; m[2][2] = e3[2];
-	return qtrue;
+	w = Rag_GenInvMass( a, ra, n ) + Rag_GenInvMass( b, rb, n );
+	if ( w <= 0.0f ) {
+		return 0.0f;
+	}
+	lambda = c / ( w + compliance / ( h * h ) );
+	VectorScale( n, lambda, p );
+	VectorMA( a->x, a->invMass, p, a->x );
+	CrossProduct( ra, p, t );
+	Rag_InvInertiaWorld( a, t, it );
+	Q_AddRotation( a->q, it, 1.0f );
+	if ( b ) {
+		VectorMA( b->x, -b->invMass, p, b->x );
+		CrossProduct( rb, p, t );
+		Rag_InvInertiaWorld( b, t, it );
+		Q_AddRotation( b->q, it, -1.0f );
+	}
+	return lambda;
+}
+
+// Turns a by the rotation vector corr against b (shared by their inertia); compliance 0: all of it
+static void Rag_Angular( ragRigid_t *a, ragRigid_t *b, const vec3_t corr, float compliance, float h ) {
+	vec3_t	n, ia, ib, p;
+	float	theta, w, lambda;
+
+	VectorCopy( corr, n );
+	theta = VectorNormalize( n );
+	if ( theta < 0.00001f ) {
+		return;
+	}
+	Rag_InvInertiaWorld( a, n, ia );
+	Rag_InvInertiaWorld( b, n, ib );
+	w = DotProduct( n, ia ) + DotProduct( n, ib );
+	if ( w <= 0.0f ) {
+		return;
+	}
+	lambda = theta / ( w + compliance / ( h * h ) );
+	VectorScale( n, lambda, p );
+	Rag_InvInertiaWorld( a, p, ia );
+	Rag_InvInertiaWorld( b, p, ib );
+	Q_AddRotation( a->q, ia, 1.0f );
+	Q_AddRotation( b->q, ib, -1.0f );
 }
 
 // ------------------------------------------------------------------------------------------------ building
-
-static float Rag_PointRadius( int p ) {
-	return p < RB_BONES ? ragBones[p].radius : ragTips[p - RB_BONES].radius;
-}
-
-static int Rag_PointBone( int p ) {
-	return p < RB_BONES ? p : ragTips[p - RB_BONES].owner;
-}
 
 static void Rag_FreePart( ragPart_t *part ) {
 	if ( part->ghoul2 && trap->G2_HaveWeGhoul2Models( part->ghoul2 ) ) {
@@ -317,139 +507,209 @@ qboolean CG_RagOn( void ) {
 	return (qboolean)( has > 0 );
 }
 
-static float Rag_Bend( float l1, float l2, float degrees ) {
-	const float c = cosf( DEG2RAD( degrees ) );
+// a world point of a body at the cut into its frame
+static void Rag_ToBody( const ragBody_t *rag, int body, const vec3_t world, vec3_t local ) {
+	vec3_t d;
 
-	return sqrtf( Q_max( l1 * l1 + l2 * l2 + 2.0f * l1 * l2 * c, 0.0f ) );
+	VectorSubtract( world, rag->bx0[body], d );
+	Q_Unrotate( rag->bq0[body], d, local );
 }
 
-static void Rag_AddCon( ragBody_t *rag, ragPart_t *part, ragKind_t kind, int a, int b, int c, int frame, int sign, float lo,
-	float hi ) {
-	ragCon_t *con;
-
-	if ( part->numCons >= RAG_CONS ) {
-		return;
-	}
-	con = &part->con[part->numCons++];
-	con->kind = (byte)kind;
-	con->a = (byte)a;
-	con->b = (byte)b;
-	con->c = (byte)c;
-	con->frame = (byte)frame;
-	con->sign = (signed char)sign;
-	con->lo = lo;
-	con->hi = hi;
-	con->rest = Distance( rag->p0[a], rag->p0[b] );
+static void Rag_DirToBody( const ragBody_t *rag, int body, const vec3_t world, vec3_t local ) {
+	Q_Unrotate( rag->bq0[body], world, local );
 }
 
-// the forward of a frame of the body (x of the model: up x right)
-static void Rag_Forward( const vec3_t *x, int frame, vec3_t forward ) {
-	vec3_t up, right;
-
-	if ( frame == RF_PELVIS ) {
-		VectorSubtract( x[RB_LLUMBAR], x[RB_PELVIS], up );
-		VectorSubtract( x[RB_RFEMUR], x[RB_LFEMUR], right );
-	} else {
-		VectorSubtract( x[RB_CERVICAL], x[RB_ULUMBAR], up );
-		VectorSubtract( x[RB_RHUMERUS], x[RB_LHUMERUS], right );
-	}
-	CrossProduct( up, right, forward );
-	VectorNormalize( forward );
-}
-
-// whether the points of a frame of the body are all in the part
-static qboolean Rag_HasFrame( const ragPart_t *part, int frame ) {
-	if ( frame == RF_PELVIS ) {
-		return (qboolean)( part->own[RB_PELVIS] && part->own[RB_LLUMBAR] && part->own[RB_LFEMUR] && part->own[RB_RFEMUR] );
-	}
-	return (qboolean)( part->own[RB_ULUMBAR] && part->own[RB_CERVICAL] && part->own[RB_LHUMERUS] && part->own[RB_RHUMERUS] );
-}
-
-// the line of points an own bone turns with: its own, else from its parent, a child or a tip in the part
-static void Rag_TurnLine( ragPart_t *part, int bone ) {
-	int i;
-
-	part->u0[bone] = part->u1[bone] = (byte)bone;
-	if ( part->own[ragBones[bone].u0] && part->own[ragBones[bone].u1] ) {
-		part->u0[bone] = (byte)ragBones[bone].u0;
-		part->u1[bone] = (byte)ragBones[bone].u1;
-		return;
-	}
-	if ( ragBones[bone].parent >= 0 && part->own[ragBones[bone].parent] ) {
-		part->u0[bone] = (byte)ragBones[bone].parent;
-		return;
-	}
-	for ( i = 0; i < RP_POINTS; i++ ) {
-		if ( part->own[i] && i != bone && ( i < RB_BONES ? ragBones[i].parent : ragTips[i - RB_BONES].owner ) == bone ) {
-			part->u1[bone] = (byte)i;
-			return;
-		}
+// a unit vector across a, as near to hint as can be
+static void Rag_Across( const vec3_t a, const vec3_t hint, vec3_t out ) {
+	VectorMA( hint, -DotProduct( hint, a ), a, out );
+	if ( VectorNormalize( out ) < 0.01f ) {
+		PerpendicularVector( out, a );
 	}
 }
 
-static void Rag_MakeCons( ragBody_t *rag, ragPart_t *part ) {
-	int i;
+// the body frames and capsules from the points of the cut
+static void Rag_MakeBodies( ragBody_t *rag, const vec3_t forward, const vec3_t right ) {
+	int i, j;
 
-	part->numCons = 0;
-	// the bones, and the points that are no bone on theirs
-	for ( i = 1; i < RB_BONES; i++ ) {
-		if ( part->own[i] && part->own[ragBones[i].parent] ) {
-			Rag_AddCon( rag, part, RC_DIST, i, ragBones[i].parent, 0, 0, 0, 0.0f, 0.0f );
+	for ( i = 0; i < BD_BODIES; i++ ) {
+		ragRigid_t	*b = &rag->body[i];
+		vec3_t		axis, across, third, start, end;
+		float		m[3][3], half, r = ragBodyDefs[i].radius, length, cyl;
+
+		VectorCopy( rag->p0[ragBodyDefs[i].from], start );
+		VectorCopy( rag->p0[ragBodyDefs[i].to], end );
+		if ( i == BD_CHEST ) {
+			// (the shoulder joints are at the ends of the chest: a little inside)
+			vec3_t d;
+
+			VectorSubtract( end, start, d );
+			VectorMA( start, 0.15f, d, start );
+			VectorMA( end, -0.15f, d, end );
 		}
+		VectorSubtract( end, start, axis );
+		length = VectorNormalize( axis );
+		if ( length < 1.0f ) {
+			VectorCopy( forward, axis );
+			length = 1.0f;
+		}
+		Rag_Across( axis, ( i == BD_PELVIS || i == BD_CHEST ) ? forward : right, across );
+		CrossProduct( axis, across, third );
+		for ( j = 0; j < 3; j++ ) {
+			m[j][0] = axis[j];
+			m[j][1] = across[j];
+			m[j][2] = third[j];
+		}
+		Q_FromMatrix( m, rag->bq0[i] );
+		VectorAdd( start, end, rag->bx0[i] );
+		VectorScale( rag->bx0[i], 0.5f, rag->bx0[i] );
+
+		half = 0.5f * length;
+		b->numSpheres = 0;
+		VectorSet( b->sphere[b->numSpheres], -half, 0.0f, 0.0f );
+		b->radius[b->numSpheres++] = r;
+		VectorSet( b->sphere[b->numSpheres], 0.0f, 0.0f, 0.0f );
+		b->radius[b->numSpheres++] = r;
+		VectorSet( b->sphere[b->numSpheres], half, 0.0f, 0.0f );
+		b->radius[b->numSpheres++] = r;
+		if ( ragBodyDefs[i].extra >= 0 ) {
+			Rag_ToBody( rag, i, rag->p0[ragBodyDefs[i].extra], b->sphere[b->numSpheres] );
+			b->radius[b->numSpheres++] = ragBodyDefs[i].extraRadius;
+		}
+
+		// a solid cylinder of the capsule's length and radius
+		b->invMass = 1.0f / ragBodyDefs[i].mass;
+		cyl = ragBodyDefs[i].mass * ( 3.0f * r * r + length * length ) / 12.0f;
+		b->invInertia[0] = 1.0f / ( 0.5f * ragBodyDefs[i].mass * r * r );
+		b->invInertia[1] = b->invInertia[2] = 1.0f / Q_max( cyl, 0.0001f );
+
+		VectorCopy( rag->bx0[i], b->x );
+		VectorCopy4( rag->bq0[i], b->q );
 	}
-	for ( i = RB_BONES; i < RP_POINTS; i++ ) {
-		if ( part->own[i] && part->own[ragTips[i - RB_BONES].owner] ) {
-			Rag_AddCon( rag, part, RC_DIST, i, ragTips[i - RB_BONES].owner, 0, 0, 0, 0.0f, 0.0f );
+}
+
+// the joints, with the limits widened to the pose of the cut where it is past them
+static void Rag_MakeJoints( ragBody_t *rag, const vec3_t forward, const vec3_t right, const vec3_t up ) {
+	vec3_t	chestUp, chestRight, chestForward;
+	int		i;
+
+	VectorSubtract( rag->p0[RB_CERVICAL], rag->p0[RB_THORACIC], chestUp );
+	VectorNormalize( chestUp );
+	VectorSubtract( rag->p0[RB_RHUMERUS], rag->p0[RB_LHUMERUS], chestRight );
+	VectorNormalize( chestRight );
+	CrossProduct( chestUp, chestRight, chestForward );
+	VectorNormalize( chestForward );
+
+	for ( i = 0; i < RAG_JOINTS; i++ ) {
+		ragJoint_t	*j = &rag->joint[i];
+		const int	c = ragJointDefs[i].child, p = ragJointDefs[i].parent;
+		vec3_t		at, childLine, neutral, ref, childRef;
+		vec4_t		cc;
+
+		j->used = qtrue;
+		j->child = c;
+		j->parent = p;
+		j->kind = ragJointDefs[i].kind;
+		VectorCopy( rag->p0[ragJointDefs[i].at], at );
+		Rag_ToBody( rag, c, at, j->rc );
+		Rag_ToBody( rag, p, at, j->rp );
+		Q_Conj( rag->bq0[p], cc );
+		Q_Mul( cc, rag->bq0[c], j->rest );
+
+		// the line of the child away from the joint
+		switch ( c ) {
+		case BD_BELLY:	VectorSubtract( rag->p0[RB_THORACIC], rag->p0[RB_LLUMBAR], childLine ); break;
+		case BD_CHEST:	VectorCopy( chestUp, childLine ); break;
+		case BD_HEAD:	VectorSubtract( rag->p0[RP_HEADTOP], rag->p0[RB_CERVICAL], childLine ); break;
+		default:		VectorSubtract( rag->p0[ragBodyDefs[c].to], rag->p0[ragBodyDefs[c].from], childLine ); break;
 		}
-	}
-	for ( i = 0; i < (int)ARRAY_LEN( ragBraces ); i++ ) {
-		if ( part->own[ragBraces[i][0]] && part->own[ragBraces[i][1]] ) {
-			Rag_AddCon( rag, part, RC_DIST, ragBraces[i][0], ragBraces[i][1], 0, 0, 0, 0.0f, 0.0f );
-		}
-	}
-	for ( i = 0; i < (int)ARRAY_LEN( ragTwist ); i++ ) {
-		if ( part->own[ragTwist[i][0]] && part->own[ragTwist[i][1]] ) {
-			const float d = Distance( rag->p0[ragTwist[i][0]], rag->p0[ragTwist[i][1]] );
+		VectorNormalize( childLine );
 
-			Rag_AddCon( rag, part, RC_RANGE, ragTwist[i][0], ragTwist[i][1], 0, 0, 0, d * 0.85f, d * 1.1f );
-		}
-	}
-	for ( i = 0; i < (int)ARRAY_LEN( ragLimits ); i++ ) {
-		const ragTemplate_t *t = &ragLimits[i];
+		if ( j->kind == RJ_CONE ) {
+			float now;
 
-		if ( !part->own[t->a] || !part->own[t->b] || ( t->kind != RC_FRONT && !part->own[t->c] ) ) {
-			continue;
-		}
-		if ( t->kind == RC_RANGE ) {
-			// the angle at b between a b and b c: a and c kept within the distances of those angles, the angle of the
-			// moment of the cut always allowed
-			const float l1 = Distance( rag->p0[t->a], rag->p0[t->b] ), l2 = Distance( rag->p0[t->b], rag->p0[t->c] );
-			const float now = Distance( rag->p0[t->a], rag->p0[t->c] );
-			const float lo = Q_min( Rag_Bend( l1, l2, t->hi ), now ), hi = Q_max( Rag_Bend( l1, l2, t->lo ), now );
+			// where the child points when it is at rest
+			switch ( c ) {
+			case BD_BELLY:	VectorCopy( up, neutral ); break;
+			case BD_CHEST:	VectorSubtract( rag->p0[RB_THORACIC], rag->p0[RB_LLUMBAR], neutral ); break;
+			case BD_HEAD:	VectorCopy( chestUp, neutral ); break;
+			case BD_LUARM:	VectorScale( chestRight, -0.7f, neutral ); VectorMA( neutral, -0.7f, chestUp, neutral ); break;
+			case BD_RUARM:	VectorScale( chestRight, 0.7f, neutral ); VectorMA( neutral, -0.7f, chestUp, neutral ); break;
+			default:		VectorScale( up, -1.0f, neutral ); VectorMA( neutral, 0.45f, forward, neutral ); break;	// thighs
+			}
+			VectorNormalize( neutral );
+			Rag_DirToBody( rag, c, childLine, j->axisC );
+			Rag_DirToBody( rag, p, neutral, j->axisP );
+			// twist references: across the neutral line, and the same carried the shortest way onto the child's
+			Rag_Across( neutral, ( c == BD_LUARM || c == BD_RUARM ) ? chestForward : forward, ref );
+			V_TurnLike( neutral, childLine, ref, childRef );
+			Rag_DirToBody( rag, p, ref, j->refP );
+			Rag_DirToBody( rag, c, childRef, j->refC );
+			now = acosf( Com_Clamp( -1.0f, 1.0f, DotProduct( neutral, childLine ) ) );
+			j->swing = Q_max( DEG2RAD( ragJointDefs[i].swing ), now + DEG2RAD( 5.0f ) );
+			j->twist = DEG2RAD( ragJointDefs[i].twist );
+		} else {
+			// a hinge: the axis is the one it bends about now if it is bent, else across the parent and the body's side;
+			// it bends from 0 (straight) the way it is bent, or forward (elbow) or backward (knee) when straight
+			vec3_t	parentLine, axis, bendDir;
+			float	bend, s;
 
-			Rag_AddCon( rag, part, RC_RANGE, t->a, t->c, 0, 0, 0, lo, hi );
-		} else if ( Rag_HasFrame( part, t->frame ) ) {
-			vec3_t f, d;
-
-			Rag_Forward( rag->p0, t->frame, f );
-			if ( t->kind == RC_FRONT ) {
-				VectorSubtract( rag->p0[t->a], rag->p0[t->b], d );
-				Rag_AddCon( rag, part, RC_FRONT, t->a, t->b, 0, t->frame, 0, 0.0f, 0.0f );
-				part->con[part->numCons - 1].lo = Q_min( t->lo * part->con[part->numCons - 1].rest, DotProduct( d, f ) - 0.5f );
-			} else {
-				// (not when the joint is bent the other way already at the cut: it would snap over)
-				vec3_t line, at;
-				float t2;
-
-				VectorSubtract( rag->p0[t->c], rag->p0[t->b], line );
-				VectorSubtract( rag->p0[t->a], rag->p0[t->b], at );
-				t2 = Com_Clamp( 0.0f, 1.0f, DotProduct( at, line ) / Q_max( DotProduct( line, line ), 0.0001f ) );
-				VectorMA( rag->p0[t->b], t2, line, at );
-				VectorSubtract( rag->p0[t->a], at, at );
-				if ( DotProduct( at, f ) * t->sign > -1.0f ) {
-					Rag_AddCon( rag, part, (ragKind_t)t->kind, t->a, t->b, t->c, t->frame, t->sign, 0.0f, 0.0f );
+			VectorSubtract( rag->p0[ragBodyDefs[p].to], rag->p0[ragBodyDefs[p].from], parentLine );
+			VectorNormalize( parentLine );
+			CrossProduct( parentLine, childLine, axis );
+			s = VectorNormalize( axis );
+			if ( s < sinf( DEG2RAD( 20.0f ) ) ) {
+				// bending turns the forearm forward, the shin backward
+				if ( c == BD_LFARM || c == BD_RFARM ) {
+					VectorCopy( chestForward, bendDir );
+				} else {
+					VectorScale( forward, -1.0f, bendDir );
+				}
+				CrossProduct( parentLine, bendDir, axis );
+				if ( VectorNormalize( axis ) < 0.01f ) {
+					Rag_Across( parentLine, right, axis );
 				}
 			}
+			Rag_DirToBody( rag, p, axis, j->axisP );
+			Rag_DirToBody( rag, c, axis, j->axisC );
+			Rag_DirToBody( rag, p, parentLine, j->refP );
+			Rag_DirToBody( rag, c, childLine, j->refC );
+			bend = atan2f( s, DotProduct( parentLine, childLine ) );
+			j->lo = 0.0f;
+			j->hi = Q_max( DEG2RAD( ragJointDefs[i].bend ), bend + DEG2RAD( 5.0f ) );
+		}
+	}
+}
+
+// Which bodies keep apart: not those joined, nor those already touching in the pose of the cut (an upper arm against
+// the belly would push it away for ever)
+static void Rag_MakeApart( ragBody_t *rag ) {
+	int a, b, sa, sb, j;
+
+	for ( a = 0; a < BD_BODIES; a++ ) {
+		for ( b = 0; b < BD_BODIES; b++ ) {
+			const ragRigid_t	*ba = &rag->body[a], *bb = &rag->body[b];
+			qboolean			apart = (qboolean)( a != b );
+
+			for ( j = 0; j < RAG_JOINTS && apart; j++ ) {
+				if ( ( ragJointDefs[j].child == a && ragJointDefs[j].parent == b )
+					|| ( ragJointDefs[j].child == b && ragJointDefs[j].parent == a ) ) {
+					apart = qfalse;
+				}
+			}
+			for ( sa = 0; sa < ba->numSpheres && apart; sa++ ) {
+				for ( sb = 0; sb < bb->numSpheres && apart; sb++ ) {
+					vec3_t pa, pb;
+
+					Q_Rotate( ba->q, ba->sphere[sa], pa );
+					VectorAdd( pa, ba->x, pa );
+					Q_Rotate( bb->q, bb->sphere[sb], pb );
+					VectorAdd( pb, bb->x, pb );
+					if ( Distance( pa, pb ) < ba->radius[sa] + bb->radius[sb] + 1.0f ) {
+						apart = qfalse;
+					}
+				}
+			}
+			rag->apart[a][b] = apart;
 		}
 	}
 }
@@ -466,10 +726,10 @@ skeleton, a renderer that can not place bones).
 */
 int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale, const vec4_t plane,
 	const vec3_t centre, const vec3_t velocity, const vec3_t throwDir ) {
-	ragBody_t	*rag = NULL;
-	vec3_t		before[RB_BONES], forward, up, right;
-	int			side[RB_BONES], count[RAG_PARTS], i, j, handle = -1, oldest = 0;
-	qboolean	any[2];
+	ragBody_t	*rag;
+	vec3_t		before[RB_BONES], forward, up, right, d;
+	float		rotNow[RB_BONES][3][3], rotBefore[RB_BONES][3][3];
+	int			side[BD_BODIES], count[RAG_PARTS], i, j, k, handle = -1, oldest = 0;
 
 	if ( !CG_RagOn() || !ghoul2 || !trap->G2_HaveWeGhoul2Models( ghoul2 ) ) {
 		return -1;
@@ -495,122 +755,182 @@ int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const v
 
 	// the bones now and a moment ago (the speed of the animation)
 	for ( i = 0; i < RB_BONES; i++ ) {
-		const int	bolt = trap->G2API_AddBolt( ghoul2, 0, ragBones[i].name );
+		const int	bolt = trap->G2API_AddBolt( ghoul2, 0, ragBoneNames[i] );
 		mdxaBone_t	m;
-		vec3_t		axis;
 
-		rag->boneNum[i] = trap->ext.G2_BoneNumber( ghoul2, 0, ragBones[i].name, NULL );
+		rag->boneNum[i] = trap->ext.G2_BoneNumber( ghoul2, 0, ragBoneNames[i], NULL );
 		if ( bolt < 0 || rag->boneNum[i] < 0 ) {
 			return -1;
 		}
-		trap->G2API_GetBoltMatrix( ghoul2, 0, bolt, &m, angles, origin, cg.time - 25, cgs.gameModels, (float *)scale );
-		BG_GiveMeVectorFromMatrix( &m, ORIGIN, before[i] );
-		trap->G2API_GetBoltMatrix( ghoul2, 0, bolt, &m, angles, origin, cg.time, cgs.gameModels, (float *)scale );
-		BG_GiveMeVectorFromMatrix( &m, ORIGIN, rag->p0[i] );
-		for ( j = 0; j < 3; j++ ) {
-			axis[0] = m.matrix[0][j];
-			axis[1] = m.matrix[1][j];
-			axis[2] = m.matrix[2][j];
-			VectorNormalize( axis );
-			rag->rest[i][0][j] = axis[0];
-			rag->rest[i][1][j] = axis[1];
-			rag->rest[i][2][j] = axis[2];
-		}
-	}
-	// the points that are no bone
-	VectorSubtract( rag->p0[RB_LLUMBAR], rag->p0[RB_PELVIS], up );
-	VectorSubtract( rag->p0[RB_RFEMUR], rag->p0[RB_LFEMUR], right );
-	CrossProduct( up, right, forward );
-	VectorNormalize( forward );
-	VectorNormalize( up );
-	{
-		vec3_t d;
+		for ( k = 0; k < 2; k++ ) {
+			float ( *rot )[3] = k ? rotNow[i] : rotBefore[i];
 
-		VectorSubtract( rag->p0[RB_CRANIUM], rag->p0[RB_CERVICAL], d );
-		VectorNormalize( d );
-		VectorMA( rag->p0[RB_CRANIUM], 9.0f, d, rag->p0[RP_HEADTOP] );
-		VectorSubtract( rag->p0[RB_LHAND], rag->p0[RB_LRADIUS], d );
-		VectorNormalize( d );
-		VectorMA( rag->p0[RB_LHAND], 5.0f, d, rag->p0[RP_LHANDTIP] );
-		VectorSubtract( rag->p0[RB_RHAND], rag->p0[RB_RRADIUS], d );
-		VectorNormalize( d );
-		VectorMA( rag->p0[RB_RHAND], 5.0f, d, rag->p0[RP_RHANDTIP] );
-		VectorMA( rag->p0[RB_LTALUS], 6.0f, forward, rag->p0[RP_LTOE] );
-		VectorMA( rag->p0[RP_LTOE], -1.5f, up, rag->p0[RP_LTOE] );
-		VectorMA( rag->p0[RB_RTALUS], 6.0f, forward, rag->p0[RP_RTOE] );
-		VectorMA( rag->p0[RP_RTOE], -1.5f, up, rag->p0[RP_RTOE] );
-	}
-	for ( i = 0; i < RP_POINTS; i++ ) {
-		rag->radius[i] = Rag_PointRadius( i );
-		rag->invMass[i] = 1.0f / ( i < RB_BONES ? ragBones[i].mass : 0.5f );
-	}
+			trap->G2API_GetBoltMatrix( ghoul2, 0, bolt, &m, angles, origin, k ? cg.time : cg.time - 25, cgs.gameModels,
+				(float *)scale );
+			BG_GiveMeVectorFromMatrix( &m, ORIGIN, k ? rag->p0[i] : before[i] );
+			for ( j = 0; j < 3; j++ ) {
+				vec3_t axis;
 
-	// the side of every bone; a side without one (a cut through the top of the head, the fingers) takes the bone
-	// reaching furthest into it
-	any[0] = any[1] = qfalse;
-	for ( i = 0; i < RB_BONES; i++ ) {
-		side[i] = ( DotProduct( rag->p0[i], plane ) - plane[3] >= 0.0f ) ? 1 : 0;
-		any[side[i]] = qtrue;
-	}
-	for ( j = 0; j < 2; j++ ) {
-		float	best = 0.0f;
-		int		pick = -1;
-
-		if ( any[j] ) {
-			continue;
-		}
-		for ( i = 0; i < RP_POINTS; i++ ) {
-			const float d = ( DotProduct( rag->p0[i], plane ) - plane[3] ) * ( j ? 1.0f : -1.0f );
-			// the bone a point hangs from
-			const int bone = i < RB_BONES ? ragBones[i].parent : ragTips[i - RB_BONES].owner;
-
-			if ( bone >= 0 && d > best ) {
-				best = d;
-				pick = bone;
+				axis[0] = m.matrix[0][j];
+				axis[1] = m.matrix[1][j];
+				axis[2] = m.matrix[2][j];
+				VectorNormalize( axis );
+				rot[0][j] = axis[0];
+				rot[1][j] = axis[1];
+				rot[2][j] = axis[2];
 			}
 		}
-		if ( pick < 0 ) {
-			return -1;		// (the plane misses the skeleton)
-		}
-		side[pick] = j;
 	}
 
-	// the groups still linked on each side are the parts
-	for ( i = 0; i < RB_BONES; i++ ) {
-		rag->partOf[i] = -1;
+	// the frame of the body and the points that are no bone
+	VectorSubtract( rag->p0[RB_LLUMBAR], rag->p0[RB_PELVIS], up );
+	VectorNormalize( up );
+	VectorSubtract( rag->p0[RB_RFEMUR], rag->p0[RB_LFEMUR], right );
+	VectorNormalize( right );
+	CrossProduct( up, right, forward );
+	VectorNormalize( forward );
+	VectorSubtract( rag->p0[RB_CRANIUM], rag->p0[RB_CERVICAL], d );
+	VectorNormalize( d );
+	VectorMA( rag->p0[RB_CRANIUM], 9.0f, d, rag->p0[RP_HEADTOP] );
+	VectorSubtract( rag->p0[RB_LHAND], rag->p0[RB_LRADIUS], d );
+	VectorNormalize( d );
+	VectorMA( rag->p0[RB_LHAND], 5.0f, d, rag->p0[RP_LHANDTIP] );
+	VectorSubtract( rag->p0[RB_RHAND], rag->p0[RB_RRADIUS], d );
+	VectorNormalize( d );
+	VectorMA( rag->p0[RB_RHAND], 5.0f, d, rag->p0[RP_RHANDTIP] );
+	VectorMA( rag->p0[RB_LTALUS], 6.0f, forward, rag->p0[RP_LTOE] );
+	VectorMA( rag->p0[RP_LTOE], -1.5f, up, rag->p0[RP_LTOE] );
+	VectorMA( rag->p0[RB_RTALUS], 6.0f, forward, rag->p0[RP_RTOE] );
+	VectorMA( rag->p0[RP_RTOE], -1.5f, up, rag->p0[RP_RTOE] );
+
+	Rag_MakeBodies( rag, forward, right );
+	Rag_MakeJoints( rag, forward, right, up );
+	Rag_MakeApart( rag );
+
+	// every bone in the frame of its body
+	for ( i = 0; i < BD_BODIES; i++ ) {
+		for ( j = 0; j < 2; j++ ) {
+			const int bone = ragBodyDefs[i].bones[j];
+			float bq[3][3];
+
+			if ( bone < 0 ) {
+				continue;
+			}
+			rag->boneBody[bone] = i;
+			Q_ToMatrix( rag->bq0[i], bq );
+			M_TransposeMul( bq, rotNow[bone], rag->boneRot[bone] );
+			Rag_ToBody( rag, i, rag->p0[bone], rag->bonePos[bone] );
+		}
+	}
+
+	// the speed and spin of every body from its first bone now and a moment ago
+	for ( i = 0; i < BD_BODIES; i++ ) {
+		ragRigid_t	*b = &rag->body[i];
+		const int	bone = ragBodyDefs[i].bones[0];
+		vec4_t		qa, qb;
+		vec3_t		spin;
+		float		speed;
+
+		VectorSubtract( rag->p0[bone], before[bone], b->v );
+		VectorScale( b->v, 1000.0f / 25.0f, b->v );
+		VectorAdd( b->v, velocity, b->v );
+		Q_FromMatrix( rotBefore[bone], qa );
+		Q_FromMatrix( rotNow[bone], qb );
+		Q_Delta( qa, qb, spin );
+		VectorScale( spin, 1000.0f / 25.0f, b->w );
+		speed = VectorLength( b->w );
+		if ( speed > RAG_MAX_SPIN ) {
+			VectorScale( b->w, RAG_MAX_SPIN / speed, b->w );
+		}
+	}
+
+	// the side of every body by its middle; a side without one takes the body reaching furthest into it
+	{
+		qboolean any[2] = { qfalse, qfalse };
+
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			side[i] = ( DotProduct( rag->bx0[i], plane ) - plane[3] >= 0.0f ) ? 1 : 0;
+			any[side[i]] = qtrue;
+		}
+		for ( j = 0; j < 2; j++ ) {
+			float	best = 0.0f;
+			int		pick = -1;
+
+			if ( any[j] ) {
+				continue;
+			}
+			for ( i = 0; i < BD_BODIES; i++ ) {
+				ragRigid_t *b = &rag->body[i];
+
+				for ( k = 0; k < b->numSpheres; k++ ) {
+					vec3_t	at;
+					float	dist;
+
+					Q_Rotate( b->q, b->sphere[k], at );
+					VectorAdd( at, b->x, at );
+					dist = ( DotProduct( at, plane ) - plane[3] ) * ( j ? 1.0f : -1.0f ) + b->radius[k];
+					if ( dist > best ) {
+						best = dist;
+						pick = i;
+					}
+				}
+			}
+			if ( pick < 0 ) {
+				return -1;		// (the plane misses the body)
+			}
+			side[pick] = j;
+		}
+	}
+
+	// the groups still joined on each side are the parts; the joints across the cut go
+	for ( i = 0; i < BD_BODIES; i++ ) {
+		rag->body[i].part = -1;
+	}
+	for ( i = 0; i < RAG_JOINTS; i++ ) {
+		if ( side[rag->joint[i].child] != side[rag->joint[i].parent] ) {
+			rag->joint[i].used = qfalse;
+		}
 	}
 	memset( count, 0, sizeof( count ) );
-	for ( i = 0; i < RB_BONES; i++ ) {
-		int stack[RB_BONES], top = 0, p;
+	for ( i = 0; i < BD_BODIES; i++ ) {
+		int stack[BD_BODIES], top = 0, p;
 
-		if ( rag->partOf[i] >= 0 ) {
+		if ( rag->body[i].part >= 0 ) {
 			continue;
 		}
 		if ( rag->numParts < RAG_PARTS ) {
 			p = rag->numParts++;
 		} else {
-			// more groups than parts (rare): to the largest part of the same side
-			p = -1;
+			// more groups than parts (rare): to the largest part of the same side, joined to it no more than before
+			p = 0;
 			for ( j = 0; j < RAG_PARTS; j++ ) {
-				if ( rag->part[j].side == side[i] && ( p < 0 || count[j] > count[p] ) ) {
+				if ( rag->part[j].side == side[i] && count[j] > count[p] ) {
 					p = j;
 				}
 			}
-			if ( p < 0 ) {
-				p = 0;
-			}
 		}
 		rag->part[p].side = side[i];
-		rag->partOf[i] = p;
+		rag->body[i].part = p;
 		stack[top++] = i;
 		while ( top ) {
 			const int b = stack[--top];
 
 			count[p]++;
-			for ( j = 0; j < RB_BONES; j++ ) {
-				if ( rag->partOf[j] < 0 && side[j] == side[b] && ( ragBones[j].parent == b || ragBones[b].parent == j ) ) {
-					rag->partOf[j] = p;
-					stack[top++] = j;
+			for ( j = 0; j < RAG_JOINTS; j++ ) {
+				const ragJoint_t *jt = &rag->joint[j];
+				int other = -1;
+
+				if ( !jt->used ) {
+					continue;
+				}
+				if ( jt->child == b ) {
+					other = jt->parent;
+				} else if ( jt->parent == b ) {
+					other = jt->child;
+				}
+				if ( other >= 0 && rag->body[other].part < 0 ) {
+					rag->body[other].part = p;
+					stack[top++] = other;
 				}
 			}
 		}
@@ -618,65 +938,43 @@ int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const v
 
 	for ( i = 0; i < rag->numParts; i++ ) {
 		ragPart_t	*part = &rag->part[i];
-		vec3_t		push, tip;
-		float		best = 1e9f, low;
-		static const struct { int model, bone; } extra[] = { { 1, RB_RHAND }, { 2, RB_LHAND }, { 3, RB_THORACIC } };
+		float		best = 1e9f;
+		vec3_t		tip;
+		static const struct { int model, body; } extra[] = { { 1, BD_RFARM }, { 2, BD_LFARM }, { 3, BD_CHEST } };
 
 		part->used = qtrue;
-		for ( j = 0; j < RP_POINTS; j++ ) {
-			part->own[j] = (qboolean)( rag->partOf[Rag_PointBone( j )] == i );
-		}
-		VectorCopy( velocity, push );
-		if ( !part->side && throwDir ) {
-			VectorMA( push, 160.0f, throwDir, push );
-			push[2] += 60.0f;
-		}
-		// a small tip to a random side, more the higher a point is: a leg cut off a standing body stood on its foot
+		// the part away from the feet thrown along the swing, every part tipped a little to a random side (a leg
+		// cut off a standing body stood on its foot)
 		{
 			const float yaw = Q_flrand( 0.0f, 2.0f * M_PI );
 
 			VectorSet( tip, cosf( yaw ), sinf( yaw ), 0.0f );
-			low = 1e9f;
-			for ( j = 0; j < RP_POINTS; j++ ) {
-				if ( part->own[j] ) {
-					low = Q_min( low, rag->p0[j][2] );
-				}
-			}
 		}
-		for ( j = 0; j < RP_POINTS; j++ ) {
-			vec3_t v;
+		for ( j = 0; j < BD_BODIES; j++ ) {
+			ragRigid_t *b = &rag->body[j];
+			float speed;
 
-			if ( j < RB_BONES ) {
-				VectorSubtract( rag->p0[j], before[j], v );
-				VectorScale( v, 1000.0f / 25.0f, v );
-			} else {
-				VectorSubtract( rag->p0[ragTips[j - RB_BONES].owner], before[ragTips[j - RB_BONES].owner], v );
-				VectorScale( v, 1000.0f / 25.0f, v );
+			if ( b->part != i ) {
+				continue;
 			}
-			VectorAdd( v, push, v );
-			VectorMA( v, 30.0f * Com_Clamp( 0.0f, 1.0f, ( rag->p0[j][2] - low ) / 40.0f ), tip, v );
-			if ( VectorLength( v ) > RAG_MAX_SPEED ) {
-				VectorNormalize( v );
-				VectorScale( v, RAG_MAX_SPEED, v );
+			if ( !part->side && throwDir ) {
+				VectorMA( b->v, 100.0f, throwDir, b->v );
+				b->v[2] += 50.0f;
 			}
-			VectorCopy( rag->p0[j], part->x[j] );
-			VectorCopy( rag->p0[j], part->prev[j] );
-			VectorCopy( rag->p0[j], part->draw[j] );
-			VectorMA( rag->p0[j], -RAG_STEP, v, part->old[j] );
-		}
-		for ( j = 0; j < RB_BONES; j++ ) {
-			Rag_Identity( part->turn[j] );
-			if ( part->own[j] ) {
-				Rag_TurnLine( part, j );
-				VectorSubtract( rag->p0[part->u1[j]], rag->p0[part->u0[j]], part->lastU[j] );
-				VectorNormalize( part->lastU[j] );
+			VectorMA( b->v, 20.0f, tip, b->v );
+			speed = VectorLength( b->v );
+			if ( speed > RAG_MAX_SPEED ) {
+				VectorScale( b->v, RAG_MAX_SPEED / speed, b->v );
 			}
-			if ( part->own[j] && Distance( rag->p0[j], centre ) < best ) {
-				best = Distance( rag->p0[j], centre );
+			VectorCopy( b->x, b->sx );
+			VectorCopy( b->x, b->dx );
+			VectorCopy4( b->q, b->sq );
+			VectorCopy4( b->q, b->dq );
+			if ( Distance( b->x, centre ) < best ) {
+				best = Distance( b->x, centre );
 				part->anchor = j;
 			}
 		}
-		Rag_MakeCons( rag, part );
 
 		// its own copy of the model, the animation held, the weapons kept only by the part with the hand
 		trap->G2API_DuplicateGhoul2Instance( ghoul2, &part->ghoul2 );
@@ -699,11 +997,11 @@ int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const v
 			}
 		}
 		for ( j = 0; j < (int)ARRAY_LEN( extra ); j++ ) {
-			if ( rag->partOf[extra[j].bone] != i && trap->G2API_HasGhoul2ModelOnIndex( &part->ghoul2, extra[j].model ) ) {
+			if ( rag->body[extra[j].body].part != i && trap->G2API_HasGhoul2ModelOnIndex( &part->ghoul2, extra[j].model ) ) {
 				trap->G2API_RemoveGhoul2Model( &part->ghoul2, extra[j].model );
 			}
 		}
-		VectorCopy( rag->p0[part->anchor], part->origin );
+		VectorCopy( rag->body[part->anchor].x, part->origin );
 	}
 	rag->active = qtrue;
 	rag->start = cg.time;
@@ -716,7 +1014,7 @@ typedef struct {
 	vec3_t	origin, velocity;
 } ragMover_t;
 
-static ragMover_t	ragMovers[MAX_GENTITIES / 8];
+static ragMover_t	ragMovers[64];
 static int			ragNumMovers;
 
 static void Rag_Wake( ragPart_t *part ) {
@@ -725,177 +1023,150 @@ static void Rag_Wake( ragPart_t *part ) {
 	part->still = 0;
 }
 
-// whether a player or an NPC stands in a sleeping part
-static qboolean Rag_Touched( const ragBody_t *rag, const ragPart_t *part ) {
-	int i, k;
+static void Rag_SphereWorld( const ragRigid_t *b, int s, vec3_t out ) {
+	Q_Rotate( b->q, b->sphere[s], out );
+	VectorAdd( out, b->x, out );
+}
+
+// once a step: the planes of the level each sphere may touch on its way
+static void Rag_FindContacts( ragRigid_t *b, float gravity ) {
+	int s;
+
+	for ( s = 0; s < b->numSpheres; s++ ) {
+		trace_t	tr;
+		vec3_t	from, to, way, mins, maxs, r;
+		float	half = Q_max( b->radius[s] * 0.8f, 1.5f ), len;
+
+		Rag_SphereWorld( b, s, from );
+		// where it is heading this step, with a margin
+		VectorSubtract( from, b->x, r );
+		CrossProduct( b->w, r, way );
+		VectorAdd( way, b->v, way );
+		VectorScale( way, RAG_STEP, way );
+		way[2] -= gravity * RAG_STEP * RAG_STEP + 0.5f;
+		len = VectorLength( way );
+		VectorMA( from, ( len + 1.0f ) / Q_max( len, 0.001f ), way, to );
+		VectorSet( mins, -half, -half, -half );
+		VectorSet( maxs, half, half, half );
+		CG_Trace( &tr, from, mins, maxs, to, ENTITYNUM_NONE, MASK_SOLID );
+		if ( tr.allsolid || tr.fraction >= 1.0f ) {
+			if ( !tr.allsolid ) {
+				b->numPlanes[s] = 0;
+			}
+			continue;
+		}
+		// the newest plane first, the one before kept when it differs (a corner)
+		if ( b->numPlanes[s] && DotProduct( b->planeN[s][0], tr.plane.normal ) < 0.95f ) {
+			VectorCopy( b->planeN[s][0], b->planeN[s][1] );
+			b->planeD[s][1] = b->planeD[s][0];
+			b->numPlanes[s] = 2;
+		} else {
+			b->numPlanes[s] = 1;
+		}
+		VectorCopy( tr.plane.normal, b->planeN[s][0] );
+		// (the distance of the sphere's centre where it touches)
+		b->planeD[s][0] = DotProduct( tr.endpos, tr.plane.normal ) + ( b->radius[s] - half );
+	}
+}
+
+static void Rag_Contacts( ragBody_t *rag, ragRigid_t *b, float h ) {
+	int s, k;
+
+	for ( s = 0; s < b->numSpheres; s++ ) {
+		b->touched[s] = qfalse;
+		b->contactLambda[s] = 0.0f;
+		for ( k = 0; k < b->numPlanes[s]; k++ ) {
+			vec3_t	at, r, corr, prevAt, move, tangent;
+			float	depth, lambda, slide;
+
+			Rag_SphereWorld( b, s, at );
+			depth = b->planeD[s][k] - DotProduct( at, b->planeN[s][k] );
+			if ( depth <= 0.0f ) {
+				continue;
+			}
+			VectorSubtract( at, b->x, r );
+			VectorScale( b->planeN[s][k], depth, corr );
+			lambda = Rag_Positional( b, r, NULL, vec3_origin, corr, 0.0f, h );
+
+			// static friction: the point does not slide while the push into the surface is large enough
+			Rag_SphereWorld( b, s, at );
+			Q_Rotate( b->pq, b->sphere[s], prevAt );
+			VectorAdd( prevAt, b->px, prevAt );
+			VectorSubtract( at, prevAt, move );
+			VectorMA( move, -DotProduct( move, b->planeN[s][k] ), b->planeN[s][k], tangent );
+			slide = VectorLength( tangent );
+			if ( slide > 0.0f && slide < RAG_MU_STATIC * depth ) {
+				VectorSubtract( at, b->x, r );
+				VectorScale( tangent, -1.0f, corr );
+				Rag_Positional( b, r, NULL, vec3_origin, corr, 0.0f, h );
+			}
+			b->touched[s] = qtrue;
+			b->contactLambda[s] += lambda;
+			VectorCopy( b->planeN[s][k], b->contactNormal[s] );
+			Rag_SphereWorld( b, s, at );
+			VectorSubtract( at, b->x, b->contactR[s] );
+		}
+	}
+	(void)rag;
+}
+
+// spheres of bodies that are not joined keep apart (the parts of one cut too)
+static void Rag_BodyContacts( ragBody_t *rag, float h ) {
+	int a, b, sa, sb;
+
+	for ( a = 0; a < BD_BODIES; a++ ) {
+		ragRigid_t *ba = &rag->body[a];
+
+		for ( b = a + 1; b < BD_BODIES; b++ ) {
+			ragRigid_t	*bb = &rag->body[b];
+
+			if ( !rag->apart[a][b] || ( rag->part[ba->part].asleep && rag->part[bb->part].asleep ) ) {
+				continue;
+			}
+			for ( sa = 0; sa < ba->numSpheres; sa++ ) {
+				for ( sb = 0; sb < bb->numSpheres; sb++ ) {
+					vec3_t	pa, pb, d, ra, rb, corr;
+					float	dist, overlap;
+
+					Rag_SphereWorld( ba, sa, pa );
+					Rag_SphereWorld( bb, sb, pb );
+					VectorSubtract( pa, pb, d );
+					dist = VectorNormalize( d );
+					overlap = ba->radius[sa] + bb->radius[sb] - dist;
+					if ( overlap <= 0.0f || dist < 0.0001f ) {
+						continue;
+					}
+					VectorSubtract( pa, ba->x, ra );
+					VectorSubtract( pb, bb->x, rb );
+					VectorScale( d, overlap, corr );
+					Rag_Positional( ba, ra, bb, rb, corr, 0.0f, h );
+					if ( rag->part[ba->part].asleep || rag->part[bb->part].asleep ) {
+						Rag_Wake( &rag->part[ba->part] );
+						Rag_Wake( &rag->part[bb->part] );
+					}
+				}
+			}
+		}
+	}
+}
+
+// players and NPCs push spheres out sideways and hand over some of their speed
+static void Rag_Movers( ragBody_t *rag, ragRigid_t *b, float h ) {
+	int s, k;
 
 	for ( k = 0; k < ragNumMovers; k++ ) {
 		const ragMover_t *m = &ragMovers[k];
 
-		for ( i = 0; i < RP_POINTS; i++ ) {
-			const float reach = 15.0f + rag->radius[i];
+		for ( s = 0; s < b->numSpheres; s++ ) {
+			vec3_t	at, d, r, corr;
+			float	len, reach = 15.0f + b->radius[s];
 
-			if ( part->own[i] && part->x[i][2] > m->origin[2] - 24.0f - rag->radius[i]
-				&& part->x[i][2] < m->origin[2] + 40.0f + rag->radius[i]
-				&& Square( part->x[i][0] - m->origin[0] ) + Square( part->x[i][1] - m->origin[1] ) < reach * reach ) {
-				return qtrue;
-			}
-		}
-	}
-	return qfalse;
-}
-
-// a push of speed at point p of a part
-static void Rag_Kick( ragPart_t *part, int p, const vec3_t dir, float speed ) {
-	VectorMA( part->old[p], -speed * RAG_STEP, dir, part->old[p] );
-	Rag_Wake( part );
-}
-
-static void Rag_SolveDist( ragBody_t *rag, ragPart_t *part, int a, int b, float target, float stiffness ) {
-	vec3_t	d;
-	float	len, w, diff;
-
-	VectorSubtract( part->x[b], part->x[a], d );
-	len = VectorLength( d );
-	w = rag->invMass[a] + rag->invMass[b];
-	if ( len < 0.0001f || w <= 0.0f ) {
-		return;
-	}
-	diff = ( len - target ) / len * stiffness / w;
-	VectorMA( part->x[a], diff * rag->invMass[a], d, part->x[a] );
-	VectorMA( part->x[b], -diff * rag->invMass[b], d, part->x[b] );
-}
-
-static void Rag_Solve( ragBody_t *rag, ragPart_t *part, float hold ) {
-	vec3_t	forward[2];
-	int		i;
-
-	if ( Rag_HasFrame( part, RF_PELVIS ) ) {
-		Rag_Forward( part->x, RF_PELVIS, forward[RF_PELVIS] );
-	}
-	if ( Rag_HasFrame( part, RF_CHEST ) ) {
-		Rag_Forward( part->x, RF_CHEST, forward[RF_CHEST] );
-	}
-	for ( i = 0; i < part->numCons; i++ ) {
-		const ragCon_t *con = &part->con[i];
-
-		switch ( con->kind ) {
-		case RC_DIST:
-			Rag_SolveDist( rag, part, con->a, con->b, con->rest, 1.0f );
-			break;
-		case RC_RANGE: {
-			const float len = Distance( part->x[con->a], part->x[con->b] );
-
-			if ( len < con->lo ) {
-				Rag_SolveDist( rag, part, con->a, con->b, con->lo, 1.0f );
-			} else if ( len > con->hi ) {
-				Rag_SolveDist( rag, part, con->a, con->b, con->hi, 1.0f );
-			}
-			if ( hold > 0.0f ) {
-				Rag_SolveDist( rag, part, con->a, con->b, con->rest, hold );
-			}
-			break;
-		}
-		case RC_HINGE: {
-			const float	*f = forward[con->frame];
-			vec3_t		line, at, corr;
-			float		t, e, wa, wbc;
-
-			VectorSubtract( part->x[con->c], part->x[con->b], line );
-			t = DotProduct( line, line );
-			if ( t < 0.0001f ) {
-				break;
-			}
-			VectorSubtract( part->x[con->a], part->x[con->b], at );
-			t = Com_Clamp( 0.0f, 1.0f, DotProduct( at, line ) / t );
-			VectorMA( part->x[con->b], t, line, at );
-			VectorSubtract( part->x[con->a], at, at );
-			e = DotProduct( at, f ) * con->sign;
-			if ( e >= 0.0f ) {
-				break;
-			}
-			VectorScale( f, -e * con->sign, corr );
-			wa = rag->invMass[con->a];
-			wbc = 0.5f * ( rag->invMass[con->b] + rag->invMass[con->c] );
-			VectorMA( part->x[con->a], wa / ( wa + wbc ), corr, part->x[con->a] );
-			VectorMA( part->x[con->b], -0.5f * wbc / ( wa + wbc ), corr, part->x[con->b] );
-			VectorMA( part->x[con->c], -0.5f * wbc / ( wa + wbc ), corr, part->x[con->c] );
-			break;
-		}
-		case RC_FRONT: {
-			const float	*f = forward[con->frame];
-			vec3_t		d;
-			float		e, wa, wb;
-
-			VectorSubtract( part->x[con->a], part->x[con->b], d );
-			e = DotProduct( d, f ) - con->lo;
-			if ( e >= 0.0f ) {
-				break;
-			}
-			wa = rag->invMass[con->a];
-			wb = rag->invMass[con->b];
-			VectorMA( part->x[con->a], -e * wa / ( wa + wb ), f, part->x[con->a] );
-			VectorMA( part->x[con->b], e * wb / ( wa + wb ), f, part->x[con->b] );
-			break;
-		}
-		}
-	}
-}
-
-// a point from where it was to where it wants to be, stopped by the level
-static void Rag_Collide( ragBody_t *rag, ragPart_t *part, int p, const vec3_t from ) {
-	trace_t	tr;
-	vec3_t	mins, maxs;
-	float	r = Q_max( rag->radius[p] * 0.7f, 1.5f );
-
-	if ( VectorCompare( from, part->x[p] ) ) {
-		return;
-	}
-	VectorSet( mins, -r, -r, -r );
-	VectorSet( maxs, r, r, r );
-	CG_Trace( &tr, from, mins, maxs, part->x[p], ENTITYNUM_NONE, MASK_SOLID );
-	if ( tr.allsolid ) {
-		return;		// (inside a wall from the start: the bones pull it out)
-	}
-	if ( tr.fraction < 1.0f ) {
-		VectorMA( tr.endpos, 0.1f, tr.plane.normal, part->x[p] );
-		VectorCopy( tr.plane.normal, part->normal[p] );
-		part->touch[p] = qtrue;
-	}
-}
-
-static void Rag_Step( ragBody_t *rag, ragPart_t *part, float gravity, float hold ) {
-	vec3_t	moved[RP_POINTS];
-	float	most = 0.0f;
-	int		i, k;
-
-	for ( i = 0; i < RP_POINTS; i++ ) {
-		vec3_t v;
-
-		if ( !part->own[i] ) {
-			continue;
-		}
-		VectorCopy( part->x[i], part->prev[i] );
-		VectorSubtract( part->x[i], part->old[i], v );
-		VectorScale( v, 0.998f, v );
-		VectorCopy( part->x[i], part->old[i] );
-		VectorAdd( part->x[i], v, part->x[i] );
-		part->x[i][2] -= gravity * RAG_STEP * RAG_STEP;
-		part->touch[i] = qfalse;
-		Rag_Collide( rag, part, i, part->old[i] );
-
-		// players and NPCs push it aside, and give it some of their speed
-		for ( k = 0; k < ragNumMovers; k++ ) {
-			const ragMover_t	*m = &ragMovers[k];
-			const float			reach = 15.0f + rag->radius[i];
-			vec3_t				d;
-			float				len, along, want;
-
-			if ( part->x[i][2] < m->origin[2] - 24.0f - rag->radius[i] || part->x[i][2] > m->origin[2] + 40.0f + rag->radius[i] ) {
+			Rag_SphereWorld( b, s, at );
+			if ( at[2] < m->origin[2] - 24.0f - b->radius[s] || at[2] > m->origin[2] + 40.0f + b->radius[s] ) {
 				continue;
 			}
-			d[0] = part->x[i][0] - m->origin[0];
-			d[1] = part->x[i][1] - m->origin[1];
+			d[0] = at[0] - m->origin[0];
+			d[1] = at[1] - m->origin[1];
 			d[2] = 0.0f;
 			len = VectorNormalize( d );
 			if ( len >= reach ) {
@@ -904,62 +1175,322 @@ static void Rag_Step( ragBody_t *rag, ragPart_t *part, float gravity, float hold
 			if ( len < 0.01f ) {
 				VectorSet( d, 1.0f, 0.0f, 0.0f );
 			}
-			VectorMA( part->x[i], reach - len, d, part->x[i] );
-			along = ( DotProduct( part->x[i], d ) - DotProduct( part->old[i], d ) ) / RAG_STEP;
-			want = Q_max( DotProduct( m->velocity, d ), 60.0f );
-			if ( along < want ) {
-				VectorMA( part->old[i], -( want - along ) * RAG_STEP, d, part->old[i] );
-			}
-			Rag_Wake( part );
+			// pushed out a little each substep, about as fast as a player walks: all of it at once would be a speed of
+			// thousands of units a second (the speed of position based dynamics comes from how far a body moved)
+			VectorSubtract( at, b->x, r );
+			VectorScale( d, Q_min( reach - len, 0.6f ), corr );
+			// (a little upward too: a foot lifts a limb instead of pressing it into the floor)
+			corr[2] += 0.15f * Q_min( reach - len, 0.6f );
+			Rag_Positional( b, r, NULL, vec3_origin, corr, 0.0f, h );
 		}
-		VectorCopy( part->x[i], moved[i] );
 	}
-	for ( k = 0; k < RAG_ITER; k++ ) {
-		Rag_Solve( rag, part, hold );
-	}
-	for ( i = 0; i < RP_POINTS; i++ ) {
-		vec3_t v;
-		float vn;
+	(void)rag;
+}
 
-		if ( !part->own[i] ) {
+static void Rag_Joints( ragBody_t *rag, float h, float hold ) {
+	int i;
+
+	for ( i = 0; i < RAG_JOINTS; i++ ) {
+		ragJoint_t	*j = &rag->joint[i];
+		ragRigid_t	*c, *p;
+		vec3_t		rc, rp, pc, pp, corr;
+
+		if ( !j->used || rag->part[rag->body[j->child].part].asleep ) {
 			continue;
 		}
-		// what the bones moved, stopped by the level too
-		Rag_Collide( rag, part, i, moved[i] );
-		if ( part->touch[i] ) {
-			// it slides less, and does not bounce
-			VectorSubtract( part->x[i], part->old[i], v );
-			vn = DotProduct( v, part->normal[i] );
-			VectorMA( v, -vn, part->normal[i], v );
-			if ( VectorLength( v ) < 0.05f ) {
-				VectorClear( v );
-			} else {
-				VectorScale( v, 1.0f - RAG_FRICTION, v );
-			}
-			if ( vn > 0.0f ) {
-				VectorMA( v, vn * 0.2f, part->normal[i], v );
-			}
-			VectorSubtract( part->x[i], v, part->old[i] );
+		c = &rag->body[j->child];
+		p = &rag->body[j->parent];
+
+		// the pose of the cut, weaker and weaker
+		if ( hold > 0.0f ) {
+			vec4_t want;
+
+			Q_Mul( p->q, j->rest, want );
+			Q_Delta( c->q, want, corr );
+			VectorScale( corr, hold, corr );
+			Rag_Angular( c, p, corr, 0.0f, h );
 		}
-		most = Q_max( most, Distance( part->x[i], part->prev[i] ) );
-	}
-	if ( most < 0.04f ) {
-		if ( ++part->still > RAG_SLEEP_STEPS ) {
-			part->asleep = qtrue;
-			for ( i = 0; i < RP_POINTS; i++ ) {
-				VectorCopy( part->x[i], part->old[i] );
-				VectorCopy( part->x[i], part->prev[i] );
+
+		if ( j->kind == RJ_CONE ) {
+			vec3_t	a, n, m, u, v, axis;
+			float	angle, twist;
+
+			Q_Rotate( c->q, j->axisC, a );
+			Q_Rotate( p->q, j->axisP, n );
+			angle = acosf( Com_Clamp( -1.0f, 1.0f, DotProduct( a, n ) ) );
+			if ( angle > j->swing ) {
+				CrossProduct( a, n, axis );
+				if ( VectorNormalize( axis ) > 0.0001f ) {
+					VectorScale( axis, angle - j->swing, corr );
+					Rag_Angular( c, p, corr, 0.0f, h );
+				}
+			}
+			// the twist about the middle of both lines
+			Q_Rotate( c->q, j->axisC, a );
+			Q_Rotate( p->q, j->axisP, n );
+			VectorAdd( a, n, m );
+			if ( VectorNormalize( m ) > 0.001f ) {
+				Q_Rotate( p->q, j->refP, u );
+				Q_Rotate( c->q, j->refC, v );
+				VectorMA( u, -DotProduct( u, m ), m, u );
+				VectorMA( v, -DotProduct( v, m ), m, v );
+				if ( VectorNormalize( u ) > 0.001f && VectorNormalize( v ) > 0.001f ) {
+					vec3_t cr;
+
+					CrossProduct( u, v, cr );
+					twist = atan2f( DotProduct( cr, m ), DotProduct( u, v ) );
+					if ( fabsf( twist ) > j->twist ) {
+						VectorScale( m, ( twist > 0.0f ? j->twist : -j->twist ) - twist, corr );
+						Rag_Angular( c, p, corr, 0.0f, h );
+					}
+				}
+			}
+		} else {
+			vec3_t	hc, hp, lc, lp, cr;
+			float	bend, want;
+
+			// the axes in line
+			Q_Rotate( c->q, j->axisC, hc );
+			Q_Rotate( p->q, j->axisP, hp );
+			CrossProduct( hc, hp, corr );
+			{
+				const float s = VectorLength( corr );
+
+				if ( s > 0.00001f ) {
+					VectorScale( corr, asinf( Com_Clamp( 0.0f, 1.0f, s ) ) / s, corr );
+					Rag_Angular( c, p, corr, 0.0f, h );
+				}
+			}
+			// the bend within its range
+			Q_Rotate( p->q, j->axisP, hp );
+			Q_Rotate( p->q, j->refP, lp );
+			Q_Rotate( c->q, j->refC, lc );
+			CrossProduct( lp, lc, cr );
+			bend = atan2f( DotProduct( cr, hp ), DotProduct( lp, lc ) );
+			want = Com_Clamp( j->lo, j->hi, bend );
+			if ( want != bend ) {
+				VectorScale( hp, want - bend, corr );
+				Rag_Angular( c, p, corr, 0.0f, h );
 			}
 		}
-	} else {
-		part->still = 0;
+
+		// the points of the joint together
+		Q_Rotate( c->q, j->rc, rc );
+		Q_Rotate( p->q, j->rp, rp );
+		VectorAdd( c->x, rc, pc );
+		VectorAdd( p->x, rp, pp );
+		VectorSubtract( pp, pc, corr );
+		Rag_Positional( c, rc, p, rp, corr, 0.0f, h );
 	}
 }
 
+// sliding friction and no bounce on the speeds, after a substep
+static void Rag_ContactSpeeds( ragRigid_t *b, float h ) {
+	qboolean	any = qfalse;
+	int			s;
+
+	for ( s = 0; s < b->numSpheres; s++ ) {
+		vec3_t	v, vt, dv, p, t, it;
+		float	vn, vtl, friction, w;
+		const float *n = b->contactNormal[s];
+
+		if ( !b->touched[s] ) {
+			continue;
+		}
+		any = qtrue;
+		CrossProduct( b->w, b->contactR[s], v );
+		VectorAdd( v, b->v, v );
+		vn = DotProduct( v, n );
+		VectorMA( v, -vn, n, vt );
+		vtl = VectorLength( vt );
+		VectorClear( dv );
+		if ( vtl > 0.0001f ) {
+			// the push into the surface over the substep is the normal force
+			friction = Q_min( RAG_MU_SLIDE * b->contactLambda[s] / h, vtl );
+			VectorMA( dv, -friction / vtl, vt, dv );
+		}
+		if ( vn > 0.0f ) {
+			VectorMA( dv, -vn * 0.8f, n, dv );		// (leaving the surface fast: damped, no bounce)
+		}
+		{
+			vec3_t dir;
+			float len;
+
+			VectorCopy( dv, dir );
+			len = VectorNormalize( dir );
+			if ( len < 0.00001f ) {
+				continue;
+			}
+			w = Rag_GenInvMass( b, b->contactR[s], dir );
+			if ( w <= 0.0f ) {
+				continue;
+			}
+			VectorScale( dir, len / w, p );
+		}
+		VectorMA( b->v, b->invMass, p, b->v );
+		CrossProduct( b->contactR[s], p, t );
+		Rag_InvInertiaWorld( b, t, it );
+		VectorAdd( b->w, it, b->w );
+	}
+	// rolling resistance: a limb on the floor does not roll on for ever
+	if ( any ) {
+		VectorScale( b->w, 1.0f / ( 1.0f + 6.0f * h ), b->w );
+	}
+}
+
+static void Rag_Step( ragBody_t *rag, float gravity, float hold ) {
+	const float	h = RAG_STEP / RAG_SUBSTEPS;
+	int			i, s;
+	qboolean	awake[RAG_PARTS];
+
+	for ( i = 0; i < rag->numParts; i++ ) {
+		awake[i] = (qboolean)!rag->part[i].asleep;
+	}
+	for ( i = 0; i < BD_BODIES; i++ ) {
+		ragRigid_t *b = &rag->body[i];
+
+		VectorCopy( b->x, b->sx );
+		VectorCopy4( b->q, b->sq );
+		if ( awake[b->part] ) {
+			Rag_FindContacts( b, gravity );
+		}
+	}
+	for ( s = 0; s < RAG_SUBSTEPS; s++ ) {
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			ragRigid_t *b = &rag->body[i];
+
+			if ( !awake[b->part] ) {
+				continue;
+			}
+			VectorCopy( b->x, b->px );
+			VectorCopy4( b->q, b->pq );
+			b->v[2] -= gravity * h;
+			VectorMA( b->x, h, b->v, b->x );
+			Q_AddRotation( b->q, b->w, h );
+		}
+		Rag_Joints( rag, h, hold );
+		Rag_BodyContacts( rag, h );
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			ragRigid_t *b = &rag->body[i];
+
+			if ( !awake[b->part] ) {
+				continue;
+			}
+			Rag_Movers( rag, b, h );
+			Rag_Contacts( rag, b, h );
+		}
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			ragRigid_t	*b = &rag->body[i];
+			float		speed;
+
+			if ( !awake[b->part] ) {
+				continue;
+			}
+			VectorSubtract( b->x, b->px, b->v );
+			VectorScale( b->v, 1.0f / h, b->v );
+			Q_Delta( b->pq, b->q, b->w );
+			VectorScale( b->w, 1.0f / h, b->w );
+			Rag_ContactSpeeds( b, h );
+			// a little damping, more on the turns
+			VectorScale( b->v, 1.0f / ( 1.0f + 0.05f * h ), b->v );
+			VectorScale( b->w, 1.0f / ( 1.0f + 1.5f * h ), b->w );
+			speed = VectorLength( b->v );
+			if ( speed > RAG_MAX_SPEED ) {
+				VectorScale( b->v, RAG_MAX_SPEED / speed, b->v );
+			}
+			speed = VectorLength( b->w );
+			if ( speed > RAG_MAX_SPIN * 2.0f ) {
+				VectorScale( b->w, RAG_MAX_SPIN * 2.0f / speed, b->w );
+			}
+		}
+	}
+
+	// a part that has stayed where it is for a while sleeps (by how far it moved, not by its speed: two limbs on the
+	// floor can tremble in place without going anywhere)
+	for ( i = 0; i < rag->numParts; i++ ) {
+		ragPart_t	*part = &rag->part[i];
+		qboolean	moved = qfalse;
+		int			k;
+
+		if ( part->asleep ) {
+			continue;
+		}
+		for ( k = 0; k < BD_BODIES; k++ ) {
+			const ragRigid_t	*b = &rag->body[k];
+			vec3_t				turn;
+
+			if ( b->part != i ) {
+				continue;
+			}
+			Q_Delta( part->restQ[k], b->q, turn );
+			if ( Distance( part->restX[k], b->x ) > 0.75f || VectorLength( turn ) > DEG2RAD( 4.0f ) ) {
+				moved = qtrue;
+			}
+		}
+		if ( moved || part->still == 0 || cg.time - rag->start < RAG_HOLD_MSEC ) {
+			for ( k = 0; k < BD_BODIES; k++ ) {
+				VectorCopy( rag->body[k].x, part->restX[k] );
+				VectorCopy4( rag->body[k].q, part->restQ[k] );
+			}
+			part->still = moved ? 0 : 1;
+			continue;
+		}
+		if ( ++part->still > RAG_SLEEP_STEPS ) {
+			part->asleep = qtrue;
+			for ( k = 0; k < BD_BODIES; k++ ) {
+				if ( rag->body[k].part == i ) {
+					VectorClear( rag->body[k].v );
+					VectorClear( rag->body[k].w );
+				}
+			}
+		}
+	}
+}
+
+// whether a player or an NPC stands in a sleeping part
+static qboolean Rag_Touched( const ragBody_t *rag, int partNum ) {
+	int i, s, k;
+
+	for ( k = 0; k < ragNumMovers; k++ ) {
+		const ragMover_t *m = &ragMovers[k];
+
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			const ragRigid_t *b = &rag->body[i];
+
+			if ( b->part != partNum ) {
+				continue;
+			}
+			for ( s = 0; s < b->numSpheres; s++ ) {
+				vec3_t		at;
+				const float	reach = 15.0f + b->radius[s];
+
+				Rag_SphereWorld( b, s, at );
+				if ( at[2] > m->origin[2] - 24.0f - b->radius[s] && at[2] < m->origin[2] + 40.0f + b->radius[s]
+					&& Square( at[0] - m->origin[0] ) + Square( at[1] - m->origin[1] ) < reach * reach ) {
+					return qtrue;
+				}
+			}
+		}
+	}
+	return qfalse;
+}
+
+// a push of speed along dir at the centre of every body of a part near a point (force powers, explosions)
+static void Rag_Kick( ragBody_t *rag, int body, const vec3_t dir, float speed ) {
+	ragRigid_t	*b = &rag->body[body];
+	vec3_t		spin;
+
+	VectorMA( b->v, speed, dir, b->v );
+	// (a turn too, as if it was hit off its middle)
+	VectorSet( spin, Q_flrand( -1.0f, 1.0f ), Q_flrand( -1.0f, 1.0f ), Q_flrand( -1.0f, 1.0f ) );
+	VectorMA( b->w, speed * 0.004f, spin, b->w );
+	Rag_Wake( &rag->part[b->part] );
+}
+
 // the players and NPCs that push parts this frame, and force push and pull
-static void Rag_Movers( void ) {
+static void Rag_GatherMovers( void ) {
 	static int	pushing[MAX_CLIENTS];
-	int			i, b, p, k;
+	int			i, b, k;
 
 	ragNumMovers = 0;
 	for ( i = 0; i < MAX_GENTITIES && ragNumMovers < (int)ARRAY_LEN( ragMovers ); i++ ) {
@@ -989,7 +1520,7 @@ static void Rag_Movers( void ) {
 		}
 	}
 
-	// force push and pull: when the hand effect of a player begins (PW_DISINT_4, PW_PULL for pull), the parts in front
+	// force push and pull: when the hand effect of a player begins (PW_DISINT_4, PW_PULL for pull), the bodies in front
 	// of him within reach
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		const centity_t	*cent = &cg_entities[i];
@@ -1016,29 +1547,23 @@ static void Rag_Movers( void ) {
 			if ( !rags[b].active ) {
 				continue;
 			}
-			for ( p = 0; p < rags[b].numParts; p++ ) {
-				ragPart_t *part = &rags[b].part[p];
+			for ( k = 0; k < BD_BODIES; k++ ) {
+				vec3_t	d;
+				float	len, speed;
 
-				for ( k = 0; k < RP_POINTS; k++ ) {
-					vec3_t	d;
-					float	len, speed;
-
-					if ( !part->own[k] ) {
-						continue;
-					}
-					VectorSubtract( part->x[k], from, d );
-					len = VectorNormalize( d );
-					if ( len > 512.0f || DotProduct( d, forward ) < 0.5f ) {
-						continue;
-					}
-					speed = 150.0f + 500.0f * ( 1.0f - len / 512.0f );
-					if ( pull ) {
-						VectorScale( d, -1.0f, d );
-						speed = Q_min( speed, len * 3.0f );
-					}
-					d[2] += 0.25f;
-					Rag_Kick( part, k, d, speed );
+				VectorSubtract( rags[b].body[k].x, from, d );
+				len = VectorNormalize( d );
+				if ( len > 512.0f || DotProduct( d, forward ) < 0.5f ) {
+					continue;
 				}
+				speed = 150.0f + 450.0f * ( 1.0f - len / 512.0f );
+				if ( pull ) {
+					VectorScale( d, -1.0f, d );
+					speed = Q_min( speed, len * 3.0f );
+				}
+				d[2] += 0.3f;
+				VectorNormalize( d );
+				Rag_Kick( &rags[b], k, d, speed );
 			}
 		}
 	}
@@ -1048,123 +1573,78 @@ static void Rag_Movers( void ) {
 =================
 CG_RagExplosion
 
-An explosion at origin throws the parts within radius away (cg_weapons.c)
+An explosion at origin throws the bodies within radius away (cg_weapons.c)
 =================
 */
 void CG_RagExplosion( const vec3_t origin, float radius ) {
-	int b, p, k;
+	int b, k;
 
 	for ( b = 0; b < RAG_MAX; b++ ) {
 		if ( !rags[b].active ) {
 			continue;
 		}
-		for ( p = 0; p < rags[b].numParts; p++ ) {
-			ragPart_t *part = &rags[b].part[p];
+		for ( k = 0; k < BD_BODIES; k++ ) {
+			vec3_t	d;
+			float	len;
 
-			for ( k = 0; k < RP_POINTS; k++ ) {
-				vec3_t	d;
-				float	len;
-
-				if ( !part->own[k] ) {
-					continue;
-				}
-				VectorSubtract( part->x[k], origin, d );
-				len = VectorNormalize( d );
-				if ( len > radius ) {
-					continue;
-				}
-				d[2] += 0.4f;
-				VectorNormalize( d );
-				Rag_Kick( part, k, d, 100.0f + 700.0f * ( 1.0f - len / radius ) );
+			VectorSubtract( rags[b].body[k].x, origin, d );
+			len = VectorNormalize( d );
+			if ( len > radius ) {
+				continue;
 			}
+			d[2] += 0.5f;
+			VectorNormalize( d );
+			Rag_Kick( &rags[b], k, d, 80.0f + 420.0f * ( 1.0f - len / radius ) );
 		}
 	}
 }
 
 // ------------------------------------------------------------------------------------------------ drawing
 
-// how an own bone turned since the cut, from its points
-static void Rag_Turn( ragBody_t *rag, ragPart_t *part, int bone ) {
-	const int	u0 = part->u0[bone], u1 = part->u1[bone], w0 = ragBones[bone].w0, w1 = ragBones[bone].w1;
-	vec3_t		u, w, u0v, w0v;
-	float		now[3][3], then[3][3], step[3][3];
-
-	if ( u0 == u1 ) {
-		// (no second point in this part: it turns with the bone of the part at the cut)
-		memcpy( part->turn[bone], part->turn[part->anchor], sizeof( part->turn[bone] ) );
-		return;
-	}
-	VectorSubtract( part->draw[u1], part->draw[u0], u );
-	if ( VectorNormalize( u ) < 0.01f ) {
-		return;
-	}
-	// pelvis, spine, neck, head: their roll from the line of the hips or the shoulders
-	if ( w0 >= 0 && u0 == ragBones[bone].u0 && u1 == ragBones[bone].u1 && part->own[w0] && part->own[w1] ) {
-		VectorSubtract( part->draw[w1], part->draw[w0], w );
-		VectorSubtract( rag->p0[u1], rag->p0[u0], u0v );
-		VectorSubtract( rag->p0[w1], rag->p0[w0], w0v );
-		if ( Rag_Basis( u, w, now ) && Rag_Basis( u0v, w0v, then ) ) {
-			int i, j;
-
-			for ( i = 0; i < 3; i++ ) {
-				for ( j = 0; j < 3; j++ ) {
-					part->turn[bone][i][j] = now[i][0] * then[j][0] + now[i][1] * then[j][1] + now[i][2] * then[j][2];
-				}
-			}
-			VectorCopy( u, part->lastU[bone] );
-			return;
-		}
-	}
-	// arms and legs: turned the shortest way from where they pointed (their roll carried along, no jumps)
-	Rag_Arc( part->lastU[bone], u, step );
-	Rag_Mul( step, part->turn[bone], part->turn[bone] );
-	VectorCopy( u, part->lastU[bone] );
-}
-
-static void Rag_Frame( const float rest[3][3], const float turn[3][3], const vec3_t at, float *out ) {
-	float	axes[3][3];
+static void Rag_BoneFrame( const ragBody_t *rag, int bone, const vec3_t x, const vec4_t q, qboolean hidden, float *out ) {
+	float	bq[3][3], axes[3][3];
+	vec3_t	at;
 	int		i;
 
-	Rag_Mul( turn, rest, axes );
+	Q_ToMatrix( q, bq );
+	M_Mul( bq, rag->boneRot[bone], axes );
+	Q_Rotate( q, rag->bonePos[bone], at );
+	VectorAdd( at, x, at );
 	for ( i = 0; i < 3; i++ ) {
-		out[i * 4 + 0] = axes[i][0];
-		out[i * 4 + 1] = axes[i][1];
-		out[i * 4 + 2] = axes[i][2];
+		out[i * 4 + 0] = hidden ? 0.0f : axes[i][0];
+		out[i * 4 + 1] = hidden ? 0.0f : axes[i][1];
+		out[i * 4 + 2] = hidden ? 0.0f : axes[i][2];
 		out[i * 4 + 3] = at[i];
 	}
 }
 
 // the bones of a part placed on its copy of the model
 static void Rag_Pose( ragBody_t *rag, ragPart_t *part, int partNum ) {
-	static const float	zero[3][3] = { { 0 } };
-	float				world[RB_BONES][12];
-	const int			a = part->anchor;
-	int					i;
+	float		world[RB_BONES][12];
+	const int	a = part->anchor;
+	vec4_t		turn, c;
+	int			i;
 
-	// the anchor first: the others may turn with it
-	Rag_Turn( rag, part, a );
+	// how the body at the cut turned since the cut: the bodies of the other side follow it
+	Q_Conj( rag->bq0[a], c );
+	Q_Mul( rag->body[a].dq, c, turn );
+	VectorCopy( rag->body[a].dx, part->origin );
 	for ( i = 0; i < RB_BONES; i++ ) {
-		if ( part->own[i] && i != a ) {
-			Rag_Turn( rag, part, i );
-		}
-	}
-	VectorCopy( part->draw[a], part->origin );
-	for ( i = 0; i < RB_BONES; i++ ) {
-		if ( part->own[i] ) {
-			Rag_Frame( rag->rest[i], part->turn[i], part->draw[i], world[i] );
+		const int			bd = rag->boneBody[i];
+		const ragRigid_t	*b = &rag->body[bd];
+
+		if ( b->part == partNum ) {
+			Rag_BoneFrame( rag, i, b->dx, b->dq, qfalse, world[i] );
 		} else {
-			// the bones of the other side follow the bone at the cut as they were then (behind the plane, clipped);
-			// another part on this side is shrunk to nothing, it is drawn by its own copy
-			vec3_t off, at;
+			// as it was at the cut, carried along with the body at the cut; another part on this side is not drawn here
+			vec3_t	off, x;
+			vec4_t	q;
 
-			VectorSubtract( rag->p0[i], rag->p0[a], off );
-			Rag_Apply( part->turn[a], off, off );
-			VectorAdd( part->draw[a], off, at );
-			if ( rag->part[rag->partOf[i]].side == part->side ) {
-				Rag_Frame( rag->rest[i], zero, at, world[i] );
-			} else {
-				Rag_Frame( rag->rest[i], part->turn[a], at, world[i] );
-			}
+			VectorSubtract( rag->bx0[bd], rag->bx0[a], off );
+			Q_Rotate( turn, off, off );
+			VectorAdd( rag->body[a].dx, off, x );
+			Q_Mul( turn, rag->bq0[bd], q );
+			Rag_BoneFrame( rag, i, x, q, (qboolean)( rag->part[b->part].side == part->side ), world[i] );
 		}
 	}
 	trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, part->origin, rag->scale, RB_BONES, rag->boneNum, &world[0][0] );
@@ -1176,15 +1656,19 @@ static void Rag_Pose( ragBody_t *rag, ragPart_t *part, int partNum ) {
 		part->checked = qtrue;
 		trap->Cvar_VariableStringBuffer( "developer", value, sizeof( value ) );
 		if ( atoi( value ) ) {
-			const int	bolt = trap->G2API_AddBolt( part->ghoul2, 0, ragBones[a].name );
+			const int	bone = ragBodyDefs[a].bones[0];
+			const int	bolt = trap->G2API_AddBolt( part->ghoul2, 0, ragBoneNames[bone] );
 			mdxaBone_t	m;
 			vec3_t		got;
 
 			if ( bolt >= 0 && trap->G2API_GetBoltMatrix( part->ghoul2, 0, bolt, &m, vec3_origin, part->origin, cg.time,
 				cgs.gameModels, rag->scale ) ) {
+				vec3_t want;
+
 				BG_GiveMeVectorFromMatrix( &m, ORIGIN, got );
-				Com_Printf( "v_slice: part %i (%s, %i parts) bone round trip off by %.2f units\n", partNum, ragBones[a].name,
-					rag->numParts, Distance( got, part->draw[a] ) );
+				VectorSet( want, world[bone][3], world[bone][7], world[bone][11] );
+				Com_Printf( "v_slice: part %i (%s, %i parts) bone round trip off by %.2f units\n", partNum, ragBoneNames[bone],
+					rag->numParts, Distance( got, want ) );
 			}
 		}
 	}
@@ -1198,24 +1682,31 @@ Every frame, before the parts are drawn (cg_slice.c): the steps of all ragdolls 
 =================
 */
 void CG_RagFrame( void ) {
-	float	gravity = cg.predictedPlayerState.gravity > 0 ? (float)cg.predictedPlayerState.gravity : 800.0f;
-	int		b, p, s, i;
-	qboolean any = qfalse;
+	const float	gravity = cg.predictedPlayerState.gravity > 0 ? (float)cg.predictedPlayerState.gravity : 800.0f;
+	qboolean	any = qfalse;
+	int			r, p, s, i;
 
-	for ( b = 0; b < RAG_MAX; b++ ) {
-		any |= rags[b].active;
+	for ( r = 0; r < RAG_MAX; r++ ) {
+		any |= rags[r].active;
 	}
 	if ( !any ) {
 		return;
 	}
-	Rag_Movers();
-	for ( b = 0; b < RAG_MAX; b++ ) {
-		ragBody_t	*rag = &rags[b];
+	Rag_GatherMovers();
+	for ( r = 0; r < RAG_MAX; r++ ) {
+		ragBody_t	*rag = &rags[r];
 		int			steps;
 		float		alpha, hold;
+		qboolean	awake = qfalse;
 
 		if ( !rag->active ) {
 			continue;
+		}
+		for ( p = 0; p < rag->numParts; p++ ) {
+			if ( rag->part[p].asleep && Rag_Touched( rag, p ) ) {
+				Rag_Wake( &rag->part[p] );
+			}
+			awake |= !rag->part[p].asleep;
 		}
 		rag->acc += Com_Clamp( 0.0f, 0.1f, cg.frametime * 0.001f );
 		steps = (int)( rag->acc / RAG_STEP );
@@ -1223,29 +1714,38 @@ void CG_RagFrame( void ) {
 		if ( steps > RAG_MAX_STEPS ) {
 			steps = RAG_MAX_STEPS;
 		}
-		hold = 0.5f * ( 1.0f - Com_Clamp( 0.0f, 1.0f, (float)( cg.time - rag->start ) / RAG_HOLD_MSEC ) );
+		hold = 0.3f * ( 1.0f - Com_Clamp( 0.0f, 1.0f, (float)( cg.time - rag->start ) / RAG_HOLD_MSEC ) );
+		for ( s = 0; s < steps && awake; s++ ) {
+			Rag_Step( rag, gravity, hold );
+		}
+
+		// drawn between the last two steps
+		alpha = Com_Clamp( 0.0f, 1.0f, rag->acc / RAG_STEP );
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			ragRigid_t *b = &rag->body[i];
+
+			if ( rag->part[b->part].asleep ) {
+				VectorCopy( b->x, b->dx );
+				VectorCopy4( b->q, b->dq );
+			} else {
+				VectorAdvance( b->sx, alpha, b->x, b->dx );
+				b->dq[0] = b->sq[0] + alpha * ( b->q[0] - b->sq[0] );
+				b->dq[1] = b->sq[1] + alpha * ( b->q[1] - b->sq[1] );
+				b->dq[2] = b->sq[2] + alpha * ( b->q[2] - b->sq[2] );
+				b->dq[3] = b->sq[3] + alpha * ( b->q[3] - b->sq[3] );
+				if ( b->sq[0] * b->q[0] + b->sq[1] * b->q[1] + b->sq[2] * b->q[2] + b->sq[3] * b->q[3] < 0.0f ) {
+					VectorCopy4( b->q, b->dq );
+				}
+				Q_Normalize( b->dq );
+			}
+		}
 		for ( p = 0; p < rag->numParts; p++ ) {
 			ragPart_t *part = &rag->part[p];
 
-			if ( part->asleep && Rag_Touched( rag, part ) ) {
-				Rag_Wake( part );
-			}
-			for ( s = 0; s < steps && !part->asleep; s++ ) {
-				Rag_Step( rag, part, gravity, hold );
-			}
 			if ( part->asleep && part->posed ) {
 				continue;
 			}
 			part->posed = part->asleep;
-			// drawn between the last two steps
-			alpha = Com_Clamp( 0.0f, 1.0f, rag->acc / RAG_STEP );
-			for ( i = 0; i < RP_POINTS; i++ ) {
-				if ( part->asleep ) {
-					VectorCopy( part->x[i], part->draw[i] );
-				} else {
-					VectorAdvance( part->prev[i], alpha, part->x[i], part->draw[i] );
-				}
-			}
 			Rag_Pose( rag, part, p );
 		}
 	}
@@ -1263,6 +1763,7 @@ qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t pla
 	const ragBody_t	*rag;
 	const ragPart_t	*part;
 	vec3_t			normal, centre;
+	vec4_t			turn, c;
 
 	if ( handle < 0 || handle >= RAG_MAX || !rags[handle].active || n < 0 || n >= rags[handle].numParts ) {
 		return qfalse;
@@ -1274,17 +1775,43 @@ qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t pla
 	}
 	*ghoul2 = part->ghoul2;
 	VectorCopy( part->origin, origin );
-	// the cut turns and moves with the bone of the part at the cut
-	Rag_Apply( part->turn[part->anchor], rag->plane, normal );
-	VectorSubtract( rag->centre, rag->p0[part->anchor], centre );
-	Rag_Apply( part->turn[part->anchor], centre, centre );
-	VectorAdd( centre, part->draw[part->anchor], centre );
+	// the cut turns and moves with the body of the part at the cut
+	Q_Conj( rag->bq0[part->anchor], c );
+	Q_Mul( rag->body[part->anchor].dq, c, turn );
+	Q_Rotate( turn, rag->plane, normal );
+	VectorSubtract( rag->centre, rag->bx0[part->anchor], centre );
+	Q_Rotate( turn, centre, centre );
+	VectorAdd( centre, rag->body[part->anchor].dx, centre );
 	if ( !part->side ) {
 		VectorScale( normal, -1.0f, normal );
 	}
 	VectorCopy( normal, plane );
 	plane[3] = DotProduct( normal, centre );
 	return qtrue;
+}
+
+// "v_ragDump" (developer): every body of every ragdoll, for tests
+void CG_RagDump_f( void ) {
+	int r, i;
+
+	for ( r = 0; r < RAG_MAX; r++ ) {
+		const ragBody_t *rag = &rags[r];
+
+		if ( !rag->active ) {
+			continue;
+		}
+		Com_Printf( "ragdoll %i: %i parts, %i ms old\n", r, rag->numParts, cg.time - rag->start );
+		for ( i = 0; i < rag->numParts; i++ ) {
+			Com_Printf( "  part %i side %i anchor %i %s\n", i, rag->part[i].side, rag->part[i].anchor,
+				rag->part[i].asleep ? "asleep" : "awake" );
+		}
+		for ( i = 0; i < BD_BODIES; i++ ) {
+			const ragRigid_t *b = &rag->body[i];
+
+			Com_Printf( "  body %2i part %i at %7.1f %7.1f %6.1f speed %6.1f spin %5.2f\n", i, b->part, b->x[0], b->x[1], b->x[2],
+				VectorLength( b->v ), VectorLength( b->w ) );
+		}
+	}
 }
 
 int CG_RagParts( int handle ) {

@@ -2011,6 +2011,7 @@ void CG_RagFrame( void );
 int CG_RagParts( int handle );
 qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
 void CG_RagExplosion( const vec3_t origin, float radius );
+void CG_RagDump_f( void );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );

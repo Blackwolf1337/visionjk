@@ -515,6 +515,7 @@ static consoleCommand_t	commands[] = {
 	{ "v_levelDump",				CG_LevelDump_f },
 	{ "v_project",					CG_Project_f },
 	{ "v_sliceTest",				CG_SliceTest_f },
+	{ "v_ragDump",				CG_RagDump_f },
 	{ "v_voice_devices",				CG_VoiceDevices_f },
 	{ "v_voice_mute",					CG_VoiceMute_f },
 	{ "v_voice_status",				CG_VoiceStatus_f },
