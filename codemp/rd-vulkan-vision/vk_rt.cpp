@@ -112,7 +112,6 @@ static cvar_t	*v_rtSunSize;		// degrees of the sun, how soft its shadows get
 static cvar_t	*v_rtLightSize;		// the same for the light of the light grid
 static cvar_t	*v_rtLamps;			// 0: the shadows indoors go by the light grid alone, not by the panels that glow
 static cvar_t	*v_panelShine;		// how bright the panels that glow shine on materials, 0: not at all (VK_RT_PickPanels)
-static cvar_t	*v_panelShadows;	// how dark the shadows of the level from the panels that glow get at most, 0: none (rtshadow.frag)
 
 typedef struct vkAccel_s {
 	VkAccelerationStructureKHR	as;
@@ -1513,7 +1512,6 @@ void VK_RT_Init( void ) {
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
-	v_panelShadows = ri.Cvar_Get( "v_panelShadows", "0", CVAR_ARCHIVE_ND, "How dark the shadows of the level from the panels that glow get at most where the graphics card traces rays (cg_shadows 2), 0 to 1. 0: none" );
 	v_panelShine = ri.Cvar_Get( "v_panelShine", "0", CVAR_ARCHIVE_ND, "How bright the panels that glow shine on materials where the graphics card traces rays (cg_shadows 2, v_pbr 1). 0: not at all" );
 	v_rtLamps = ri.Cvar_Get( "v_rtLamps", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players indoors from the panels that glow, where the light grid says the light comes from one. 0: from the light grid alone" );
 	memset( &rt, 0, sizeof( rt ) );
@@ -2673,7 +2671,7 @@ void VK_RT_Pass( void ) {
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
-		rt.maps ? 0.0f : Com_Clamp( 0.0f, 1.0f, v_panelShadows->value ), vk_sunStrength );
+		0.0f, vk_sunStrength );
 	// the moving lights whose shadows are traced this frame (38-41), and the view the mask the light passes read
 	// was made in (42-46: view and projection, its rect)
 	VK_RT_PickLights();
@@ -2727,8 +2725,8 @@ void VK_RT_Pass( void ) {
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );
-	} else if ( !rt.numCasters && rows[15][2] <= 0.0f ) {
-		// nothing in the mask this frame (no player, no shadows of the panels): the next one starts it again
+	} else if ( !rt.numCasters ) {
+		// nothing in the mask this frame: the next one starts it again
 		rt.previousValid = qfalse;
 		rt.readValid = qfalse;
 	} else {
