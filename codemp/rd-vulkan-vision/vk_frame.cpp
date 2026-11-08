@@ -134,6 +134,12 @@ void VK_BeginFrame( void ) {
 	globals->screen[0] = (float)vk.width;
 	globals->screen[1] = (float)vk.height;
 	VK_LightRows( globals->lights );
+#ifndef RD_VISION_GLES
+	// v_ssr: the picture of the level of the frame before, if it made one (VK_SsrPrep)
+	if ( vk.ssrReady && v_ssr->integer ) {
+		memcpy( globals->ssr, vk.ssrRows, sizeof( globals->ssr ) );
+	}
+#endif
 
 	vk.frame = frame;
 	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );

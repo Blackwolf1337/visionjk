@@ -38,6 +38,7 @@ cvar_t	*v_wetMirror;
 cvar_t	*v_smaa;
 cvar_t	*v_tonemap;
 cvar_t	*v_exposure;
+cvar_t	*v_ssr;
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
@@ -48,6 +49,8 @@ void VK_InitPost( void ) {
 	v_tonemap = ri.Cvar_Get( "v_tonemap", "1", CVAR_ARCHIVE_ND,
 		"How the level is put onto the screen at the end of its view (with v_hdr light brighter than white is there). 1: the original look, bright light glows out softly instead of clipping. 2: filmic (AgX) as modern games. 0: cut off at white as before" );
 	v_exposure = ri.Cvar_Get( "v_exposure", "1", CVAR_ARCHIVE_ND, "How bright the level is before it is tone mapped (v_tonemap), 1 as it is" );
+	v_ssr = ri.Cvar_Get( "v_ssr", "1", CVAR_ARCHIVE_ND,
+		"Smooth surfaces with a material mirror what is on the screen (screen space reflections, from the frame before), over what the reflection probes give. 0: the probes alone" );
 	v_smaa = ri.Cvar_Get( "v_smaa", "0", CVAR_ARCHIVE_ND,
 		"Smooths the edges of the level after it is drawn (SMAA 1x), far cheaper than r_ext_multisample and sharper than a blur; with r_ext_multisample 2 it also catches thin lines. Vulkan only. 0: off" );
 	VK_CreatePostTargets( width, height );
@@ -279,6 +282,53 @@ void VK_Tonemap( void ) {
 	VK_EndTarget();
 	VK_TonemapPass( parm );
 
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
+}
+
+/*
+===============
+VK_SsrPrep
+
+v_ssr, for the view of the level only, before tay_bloom: the level as it is drawn now and how far each pixel is from
+the eye go into vk.ssrColor, shown in the texture table (tr.ssrImage), and its view into vk.ssrRows. The surfaces
+with a material of the next frame mirror it (generic.frag ScreenReflection), found where the point was in this view.
+One frame late: what moves fast shows a frame behind in the mirror.
+===============
+*/
+void VK_SsrPrep( void ) {
+#ifndef RD_VISION_GLES
+	float	rows[VK_WET_HEADER][4];
+	float	parm[4];
+	int		viewport[4];
+
+	if ( !vk.frame || !v_ssr->integer || !v_pbr->integer || !vk.depthReadable || !vk.ssrColor.image || !tr.ssrImage ) {
+		vk.ssrReady = qfalse;
+		return;
+	}
+	VK_ViewRows( rows, viewport );
+	parm[0] = rows[6][3];
+	parm[1] = rows[7][3];
+	parm[2] = parm[3] = 0.0f;
+	VK_EndTarget();
+	VK_SsrPrepPass( parm );
+	if ( vk.ssrShown != (int)tr.ssrImage->texnum ) {
+		VK_ShowTarget( (int)tr.ssrImage->texnum, &vk.ssrColor );
+		vk.ssrShown = (int)tr.ssrImage->texnum;
+	}
+	// for the globals of the next frame: the view and projection, the rect, the eye and the slot, the forward
+	memcpy( vk.ssrRows[0], rows[0], sizeof( float ) * 16 );
+	VectorCopy4( rows[8], vk.ssrRows[4] );
+	VectorCopy( rows[4], vk.ssrRows[5] );
+	vk.ssrRows[5][3] = (float)tr.ssrImage->texnum + 1.0f;
+	VectorCopy( rows[5], vk.ssrRows[6] );
+	vk.ssrRows[6][3] = 1.0f;
+	vk.ssrReady = qtrue;
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;

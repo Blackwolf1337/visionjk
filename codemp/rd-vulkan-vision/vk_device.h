@@ -215,6 +215,13 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					paintPipeline;		// the sprayed pictures of RE_AddPaint (VK_PaintPass)
 	VkShaderModule				smaaEdgeShader, smaaWeightShader, smaaBlendShader;
 	VkShaderModule				tonemapShader;
+	// v_ssr: the level of this frame with how far each pixel is (alpha), for the screen reflections of the next frame
+	vkTarget_t					ssrColor;
+	float						ssrRows[7][4];		// its view for the globals of the next frame
+	qboolean					ssrReady;
+	int							ssrShown;			// the slot of the texture table it was written into, -1: none
+	VkShaderModule				ssrPrepShader;
+	VkPipeline					ssrPrepPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];

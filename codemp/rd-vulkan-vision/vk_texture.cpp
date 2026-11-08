@@ -511,6 +511,10 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		// the glowing stages are drawn over the depth of the scene, so with as many samples
 		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 	}
+	// v_ssr: the level and how far each pixel is, in the format of the frame (vk_post.cpp VK_SsrPrep)
+	VK_CreateTarget( &vk.ssrColor, vk.width, vk.height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.ssrShown = -1;
+	vk.ssrReady = qfalse;
 	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
@@ -655,6 +659,8 @@ void VK_CreateSmaaTargets( void ) {
 }
 
 void VK_DestroyPostTargets( void ) {
+	VK_DestroyTarget( &vk.ssrColor );
+	vk.ssrReady = qfalse;
 	VK_DestroyTarget( &vk.probeColor );
 	VK_DestroyTarget( &vk.probeColorMS );
 	VK_DestroyTarget( &vk.probeDepth );

@@ -602,6 +602,53 @@ vec4 GlassStage( Draw d ) {
 }
 #endif
 
+#ifndef VK_GLES
+/* v_ssr: what a smooth surface mirrors of the level on the screen. The picture is that of the frame before (vk_post.cpp
+   VK_SsrPrep: its colours and how far each pixel was, the view it was seen in in globals.ssr), so the ray from world
+   along dir is marched in steps that grow, each point looked up where it was in that view, until it lies a little
+   behind what was there. Returns that colour (in the values of the frame) and how much to trust it: less towards the
+   edges of the screen, the farther the hit and the rougher the surface; 0 where nothing was found or the ray left the
+   screen, which leaves the probes. */
+vec4 ScreenReflection( vec3 world, vec3 dir, float roughness ) {
+	vec4 r5 = globals.ssr[5];
+
+	if ( r5.w < 0.5 || roughness > 0.6 ) {
+		return vec4( 0.0 );
+	}
+	uint slot = uint( r5.w - 0.5 );
+	mat4 view = mat4( globals.ssr[0], globals.ssr[1], globals.ssr[2], globals.ssr[3] );
+	vec4 rect = globals.ssr[4];
+	vec3 forward = globals.ssr[6].xyz;
+	const int STEPS = 24;
+	float stepLength = 6.0;
+	// (each pixel starts a little further along, so the steps do not show as bands)
+	float t = 2.0 + stepLength * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
+
+	for ( int i = 0; i < STEPS; i++ ) {
+		vec3 q = world + dir * t;
+		vec4 clip = view * vec4( q, 1.0 );
+		if ( clip.w < 1.0 ) {
+			break;
+		}
+		vec2 ndc = clip.xy / clip.w;
+		if ( any( greaterThan( abs( ndc ), vec2( 1.0 ) ) ) ) {
+			break;
+		}
+		ivec2 pixel = ivec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
+		vec4 seen = texelFetch( u_textures[nonuniformEXT( slot )], pixel, 0 );
+		float behind = dot( q - r5.xyz, forward ) - seen.a;
+		if ( behind > 0.0 && behind < max( stepLength * 1.5, 12.0 ) ) {
+			vec2 edge = 1.0 - smoothstep( vec2( 0.8 ), vec2( 1.0 ), abs( ndc ) );
+			float trust = edge.x * edge.y * ( 1.0 - smoothstep( 0.25, 0.6, roughness ) ) * ( 1.0 - float( i ) / float( STEPS ) );
+			return vec4( seen.rgb, trust * globals.ssr[6].w );
+		}
+		t += stepLength;
+		stepLength *= 1.25;
+	}
+	return vec4( 0.0 );
+}
+#endif
+
 vec4 PbrStage( Draw d ) {
 #ifndef VK_GLES
 	if ( ( d.pbrFlags & PBR_GLASS ) != 0u ) {
@@ -802,13 +849,29 @@ vec4 PbrStage( Draw d ) {
 		if ( localLum > 1e-4 ) {
 			around = mix( around, local * ( dot( around, vec3( 0.2126, 0.7152, 0.0722 ) ) / localLum ), 0.5 );
 		}
+#ifndef VK_GLES
+		// what the screen shows along the mirror, where it finds it, over what the probe gives (v_ssr)
+		vec4 screen = ScreenReflection( world + normalize( mat3( t.model ) * flat_ ) * 2.0, mirror, roughness );
+		if ( screen.a > 0.0 ) {
+			around = mix( around, pow( screen.rgb, vec3( 2.2 ) ), screen.a );
+		}
+#endif
 		envColor = around * specOcclusion * envShine * ( 1.0 - coatEnv );
 		if ( s.coat > 0.0 ) {
 			vec3 coatMirror = normalize( mat3( t.model ) * reflect( -toEye, flat_ ) );
 			envColor += pow( ProbesAround( d, world, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * match * coatEnv;
 		}
 	} else {
-		envColor = ambient * specOcclusion * envShine * ( 1.0 - coatEnv ) + ambient * coatEnv;
+		vec3 around = ambient;
+#ifndef VK_GLES
+		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+		vec4 screen = ScreenReflection( world + normalize( mat3( t.model ) * flat_ ) * 2.0, normalize( mat3( t.model ) * reflect( -toEye, mirrorNormal ) ),
+			roughness );
+		if ( screen.a > 0.0 ) {
+			around = mix( around, pow( screen.rgb, vec3( 2.2 ) ), screen.a );
+		}
+#endif
+		envColor = around * specOcclusion * envShine * ( 1.0 - coatEnv ) + ambient * coatEnv;
 	}
 	// v_pbr 12: what it mirrors of the light around it, alone
 	if ( d.pbr.w == 12.0 ) {

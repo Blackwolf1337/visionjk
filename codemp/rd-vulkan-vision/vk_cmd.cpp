@@ -774,6 +774,10 @@ static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *t
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
+void VK_SsrPrepPass( const float *parm ) {
+	VK_DepthPass( vk.ssrPrepPipeline, &vk.color, &vk.ssrColor, parm );
+}
+
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_DepthPass( vk.focusPipeline, source, target, parm );
 }

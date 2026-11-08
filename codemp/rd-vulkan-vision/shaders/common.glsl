@@ -67,6 +67,8 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	paint[459];
 	vec4	rt[159];
 	vec4	lights[34];		// light to judge materials by (VK_LightRows of vk_frame.cpp, VK_LIGHT_VEC4S); not on GLES
+	vec4	ssr[7];			// v_ssr (VK_SsrPrep of vk_post.cpp): 0-3 the view of the frame before, 4 its rect, 5 its eye
+							//	and w the slot of its picture + 1 (0: none), 6 its forward and w the strength; not on GLES
 #endif
 } globals;
 

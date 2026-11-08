@@ -114,6 +114,9 @@ static const uint32_t vk_smaaBlendFrag[] =
 static const uint32_t vk_tonemapFrag[] =
 #include "shaders/tonemap_frag.inc"
 ;
+static const uint32_t vk_ssrPrepFrag[] =
+#include "shaders/ssrprep_frag.inc"
+;
 
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -344,7 +347,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
 	VkPipeline pipeline;
 	// a pass into a target of its own: one sample a pixel, no depth, nothing blended
-	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 || post == 10 );
+	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 || post == 10 || post == 12 );
 
 	memset( stages, 0, sizeof( stages ) );
 	stages[0].sType = stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -467,7 +470,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	dynamic.pDynamicStates = dynamicStates;
 
 	rendering.colorAttachmentCount = 1;
-	rendering.pColorAttachmentFormats = alone ? &vk.final.format : &vk.color.format;
+	// (12: a target of its own in the format of the frame, the picture of v_ssr)
+	rendering.pColorAttachmentFormats = ( alone && post != 12 ) ? &vk.final.format : &vk.color.format;
 	if ( !alone ) {
 		rendering.depthAttachmentFormat = vk.depth.format;
 		rendering.stencilAttachmentFormat = vk.depth.format;
@@ -498,7 +502,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		// v_smaa: its first two passes into targets of their own, its last one into the frame
 		info.layout = vk.smaaPipelineLayout;
 	} else {
-		info.layout = ( post == 3 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
+		info.layout = ( post == 3 || post == 12 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	}
 	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &pipeline ) );
 	return pipeline;
@@ -598,6 +602,10 @@ void VK_InitPipelines( void ) {
 	// v_tonemap: the copy of the frame back over it, as the last pass of SMAA (the same layout, one set)
 	vk.tonemapShader = VK_CreateShader( vk_tonemapFrag, sizeof( vk_tonemapFrag ) );
 	vk.tonemapPipeline = VK_CreatePipeline( vk.postVertexShader, vk.tonemapShader, 0, 11, VKP_GENERIC );
+	// v_ssr: the frame and its depth into the picture of the screen reflections (12: a target of its own, the format of
+	// the frame, the frame and the depth as the depth of field reads them)
+	vk.ssrPrepShader = VK_CreateShader( vk_ssrPrepFrag, sizeof( vk_ssrPrepFrag ) );
+	vk.ssrPrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.ssrPrepShader, 0, 12, VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -638,6 +646,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.smaaWeightShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.smaaBlendShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.tonemapPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.ssrPrepPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );

@@ -83,6 +83,7 @@ typedef struct vkGlobals_s {	// once per frame
 	float		paint[VK_PAINT_VEC4S][4];	// what VK_PaintPass() was given
 	float		rt[VK_RT_VEC4S][4];			// what the passes that trace rays were given (vk_rt.cpp)
 	float		lights[VK_LIGHT_VEC4S][4];	// light to judge materials by, see VK_LightRows()
+	float		ssr[7][4];					// v_ssr: the picture of the level of the frame before, see VK_SsrPrep()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -357,6 +358,7 @@ extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
 extern cvar_t	*v_tonemap;			// vk_post.cpp
 extern cvar_t	*v_exposure;		// vk_post.cpp
+extern cvar_t	*v_ssr;				// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -425,6 +427,7 @@ void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
+void		VK_SsrPrep( void );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
@@ -583,6 +586,9 @@ void		VK_SmaaPass( float threshold );
 // v_tonemap over the frame (vk_post.cpp VK_Tonemap), parm: exposure, curve, 2 ^ overbright bits. Not on the OpenGL ES
 // device. vk.color must not be begun before; it is begun with vk.depth after.
 void		VK_TonemapPass( const float *parm );
+// v_ssr: vk.color and its depth into vk.ssrColor (shaders/ssrprep.frag), parm: the depth to the distance. No target is
+// begun before and after.
+void		VK_SsrPrepPass( const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;
