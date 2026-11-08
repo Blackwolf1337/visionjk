@@ -322,10 +322,12 @@ float PanelShadow( vec3 p, vec3 normal, vec3 origin ) {
 		vec3 dir = to / d;
 		float facing = dot( normal, dir );
 		float lit = dot( b.xyz, b.xyz ) > 0.5 ? dot( b.xyz, -dir ) : 1.0;
-		if ( facing <= 0.05 || lit <= 0.05 ) {
+		// (a surface that faces the panel only at a slant gets no shadow from it: its ray runs along the surface and
+		// meets the next piece of it, in the curve where a wall runs into the ceiling, 2026-11-08)
+		if ( facing <= 0.25 || lit <= 0.05 ) {
 			continue;
 		}
-		float l = a.w * lit * smoothstep( 0.05, 0.3, facing ) / max( d * d, b.w * b.w + 16.0 );
+		float l = a.w * lit * smoothstep( 0.25, 0.5, facing ) / max( d * d, b.w * b.w + 16.0 );
 		if ( l > given[0] ) {
 			given[1] = given[0];
 			which[1] = which[0];
@@ -360,7 +362,9 @@ float PanelShadow( vec3 p, vec3 normal, vec3 origin ) {
 		vec3 to2 = to + ( t * cos( an ) + bt * sin( an ) ) * r;
 		float d2 = length( to2 );
 		float stop = d2 - b.w - 8.0;
-		if ( stop > 2.0 && Blocked( origin, to2 / d2, stop, 0x01u ) ) {
+		// (from further off the surface than the rays of the players, for the same reason)
+		vec3 from = origin + normal * 4.0;
+		if ( stop > 6.0 && Blocked( from, normalize( to2 - normal * 4.0 ), stop - 4.0, 0x01u ) ) {
 			dark += w;
 		}
 	}

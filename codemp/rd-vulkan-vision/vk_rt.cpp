@@ -1513,7 +1513,7 @@ void VK_RT_Init( void ) {
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
 	v_rtLightSize = ri.Cvar_Get( "v_rtLightSize", "8", CVAR_ARCHIVE_ND, "How large the light of the light grid is in degrees: the softness of the traced shadows indoors" );
-	v_panelShadows = ri.Cvar_Get( "v_panelShadows", "0.6", CVAR_ARCHIVE_ND, "How dark the shadows of the level from the panels that glow get at most where the graphics card traces rays (cg_shadows 2), 0 to 1. 0: none" );
+	v_panelShadows = ri.Cvar_Get( "v_panelShadows", "0", CVAR_ARCHIVE_ND, "How dark the shadows of the level from the panels that glow get at most where the graphics card traces rays (cg_shadows 2), 0 to 1. 0: none" );
 	v_panelShine = ri.Cvar_Get( "v_panelShine", "0", CVAR_ARCHIVE_ND, "How bright the panels that glow shine on materials where the graphics card traces rays (cg_shadows 2, v_pbr 1). 0: not at all" );
 	v_rtLamps = ri.Cvar_Get( "v_rtLamps", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players indoors from the panels that glow, where the light grid says the light comes from one. 0: from the light grid alone" );
 	memset( &rt, 0, sizeof( rt ) );
