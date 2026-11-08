@@ -377,6 +377,23 @@ vec4 DynamicLight( Draw d ) {
 	// (about what the round light image of rd-vanilla gave halfway out, brighter close by)
 	float fall = window * window / ( 1.0 + 4.0 * x * x ) * 1.6;
 	vec3 radiance = pow( d.baseColor.rgb * fall, vec3( 2.2 ) );
+#ifndef VK_GLES
+	// The shadows of the players from this light, traced a frame ago into a mask (vk_rt.cpp, rtlights.frag): grid1.w
+	// says the channel, tex1 shows the mask; the point is looked up where it was in the view the mask was made in
+	// (globals.rt 42-45, its rect 46).
+	int channel = int( d.grid1.w + 0.5 );
+	if ( channel > 0 ) {
+		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+		vec4 clip = mat4( globals.rt[42], globals.rt[43], globals.rt[44], globals.rt[45] ) * vec4( world, 1.0 );
+		if ( clip.w > 1.0 ) {
+			vec2 ndc = clip.xy / clip.w;
+			vec4 rect = globals.rt[46];
+			vec2 pixel = vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
+			vec4 mask = texture( TEX1( d ), pixel / vec2( textureSize( TEX1( d ), 0 ) ) );
+			radiance *= 1.0 - ( channel == 1 ? mask.r : mask.g );
+		}
+	}
+#endif
 
 	vec2 uv = v_texCoord0;
 	vec3 albedo = pow( texture( TEX0( d ), uv ).rgb, vec3( 2.2 ) );

@@ -294,6 +294,8 @@ VkPipeline	VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 void		VK_RT_Init( void );
 void		VK_RT_Shutdown( void );
 qboolean	VK_RT_Wanted( void );
+// the channel of the mask of the shadows from the moving lights for dl (1, 2, 0: none) and its slot in the texture table
+int			VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot );
 void		VK_RT_Pass( void );
 void		VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface );
 void		VK_RT_ModelsChanged( void );

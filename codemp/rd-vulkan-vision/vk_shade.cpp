@@ -1026,6 +1026,9 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		}
 	}
 
+	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+
 	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
 		const dlight_t *dl = &backEnd.refdef.dlights[l];
 		vkDraw_t draw;
@@ -1052,6 +1055,20 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 			draw.grid0[3] = dl->lineRange;
 			VectorCopy( dl->lineEndTransformed, draw.grid1 );
 		}
+		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
+		// and tex1; only in the view of the level itself, the one the mask was made for
+		draw.grid1[3] = 0.0f;
+#ifndef RD_VISION_GLES
+		if ( levelView ) {
+			uint32_t slot;
+			const int channel = VK_RT_LightChannel( dl, &slot );
+
+			if ( channel ) {
+				draw.tex1 = slot;
+				draw.grid1[3] = (float)channel;
+			}
+		}
+#endif
 		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}

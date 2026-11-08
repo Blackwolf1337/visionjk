@@ -63,6 +63,9 @@ static const uint32_t vk_rtShadowFrag[] =
 static const uint32_t vk_rtResolveFrag[] =
 #include "shaders/rtresolve_frag.inc"
 ;
+static const uint32_t vk_rtLightsFrag[] =
+#include "shaders/rtlights_frag.inc"
+;
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
 ;
@@ -91,6 +94,13 @@ typedef struct vkCasterSurface_s {
 	const mdxmSurface_t			*surface;
 	CBoneCache					*bones;
 } vkCasterSurface_t;
+
+typedef struct vkRtLight_s {		// a moving light whose players' shadows are traced
+	qboolean					active;
+	qboolean					tube;
+	vec3_t						start, end;		// a point light has both at its place
+	float						range;			// how far it reaches from that point or tube
+} vkRtLight_t;
 
 typedef struct vkCaster_s {
 	int							entityNum;
@@ -164,6 +174,21 @@ static struct {
 	VkShaderModule				shadowFragment, resolveFragment;
 	VkPipeline					shadowPipeline, resolvePipeline;
 	int							frameNumber;	// the noise of the rays changes with it
+
+	// The shadows of the players from the moving lights (shaders/rtlights.frag): for the two strongest lights near
+	// a player, how much the players take of each at every pixel, red and green. Made after the solid part of the
+	// level, so the light passes of the NEXT frame read it (generic.frag DynamicLight), through the texture table
+	// (tr.rtLightImage), at the place the point had in the view it was made in. One mask is written while the
+	// other is read.
+	vkTarget_t					lightMask[2];
+	int							lightShown[2];	// the texture slot each was last written into, -1: none
+	int							lightWrite;		// the one this frame writes
+	vkRtLight_t					lights[2];		// the lights of this frame's mask
+	vkRtLight_t					readLights[2];	// the lights of the mask the light passes read now
+	float						readView[5][4];	// the view and projection it was made with, its rect on the target
+	qboolean					readValid;
+	VkShaderModule				lightsFragment;
+	VkPipeline					lightsPipeline;
 } rt;
 
 static VkDeviceAddress VK_RT_Address( const vkBuffer_t *buf ) {
@@ -1344,6 +1369,9 @@ void VK_RT_Init( void ) {
 	rt.resolveFragment = VK_CreateShader( vk_rtResolveFrag, sizeof( vk_rtResolveFrag ) );
 	rt.shadowPipeline = VK_CreatePipeline( vk.postVertexShader, rt.shadowFragment, 0, 7, VKP_GENERIC, rt.layout );
 	rt.resolvePipeline = VK_CreatePipeline( vk.postVertexShader, rt.resolveFragment, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO, 8, VKP_GENERIC );
+	// the shadows from the moving lights: a pass into a target of its own as the mask
+	rt.lightsFragment = VK_CreateShader( vk_rtLightsFrag, sizeof( vk_rtLightsFrag ) );
+	rt.lightsPipeline = VK_CreatePipeline( vk.postVertexShader, rt.lightsFragment, 0, 7, VKP_GENERIC, rt.layout );
 }
 
 // the two shadow masks in the size of the frame, made again when that changes (only while no frame is on its way);
@@ -1359,8 +1387,14 @@ static void VK_RT_EnsureMask( void ) {
 			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 		VK_TargetLayout( vk.frame->cmd, &rt.mask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		VK_WriteSet( rt.maskSets[i], vk.postSampler, rt.mask[i].view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		VK_DestroyTarget( &rt.lightMask[i] );
+		VK_CreateTarget( &rt.lightMask[i], vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+		VK_TargetLayout( vk.frame->cmd, &rt.lightMask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		rt.lightShown[i] = -1;
 	}
 	rt.previousValid = qfalse;
+	rt.readValid = qfalse;
 }
 
 void VK_RT_Shutdown( void ) {
@@ -1375,6 +1409,10 @@ void VK_RT_Shutdown( void ) {
 	qvkDestroyShaderModule( vk.device, rt.resolveFragment, NULL );
 	VK_DestroyTarget( &rt.mask[0] );
 	VK_DestroyTarget( &rt.mask[1] );
+	VK_DestroyTarget( &rt.lightMask[0] );
+	VK_DestroyTarget( &rt.lightMask[1] );
+	qvkDestroyPipeline( vk.device, rt.lightsPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.lightsFragment, NULL );
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
@@ -1411,6 +1449,95 @@ THE PASSES
 
 ===============================================================================
 */
+
+/*
+===============
+VK_RT_PickLights
+
+The two moving lights whose shadows of the players are traced this frame: of the lights that reach a player, the
+brightest and nearest to the eye (a saber in the hand of the player, the bolt flying past).
+===============
+*/
+static void VK_RT_PickLights( void ) {
+	float best[2] = { 0.0f, 0.0f };
+
+	memset( rt.lights, 0, sizeof( rt.lights ) );
+	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
+		const dlight_t *dl = &backEnd.refdef.dlights[l];
+		vkRtLight_t light;
+		float score, nearest = 1e9f;
+
+		memset( &light, 0, sizeof( light ) );
+		light.active = qtrue;
+		light.tube = (qboolean)( dl->lineRange > 0.0f );
+		if ( light.tube ) {
+			VectorCopy( dl->lineStart, light.start );
+			VectorCopy( dl->lineEnd, light.end );
+			light.range = dl->lineRange;
+		} else {
+			VectorCopy( dl->origin, light.start );
+			VectorCopy( dl->origin, light.end );
+			light.range = dl->radius;
+		}
+		// it has to reach a player for him to cast a shadow from it
+		for ( int c = 0; c < rt.numCasters; c++ ) {
+			nearest = Q_min( nearest, Distance( dl->origin, rt.casters[c].origin ) );
+		}
+		if ( nearest > dl->radius + 64.0f ) {
+			continue;
+		}
+		score = ( dl->color[0] * 0.3f + dl->color[1] * 0.59f + dl->color[2] * 0.11f ) * light.range
+			/ ( 1.0f + Distance( dl->origin, backEnd.viewParms.ori.origin ) / 512.0f );
+		if ( score <= 0.0f ) {
+			continue;
+		}
+		if ( score > best[0] ) {
+			best[1] = best[0];
+			rt.lights[1] = rt.lights[0];
+			best[0] = score;
+			rt.lights[0] = light;
+		} else if ( score > best[1] ) {
+			best[1] = score;
+			rt.lights[1] = light;
+		}
+	}
+}
+
+/*
+===============
+VK_RT_LightChannel
+
+For the light pass of a moving light in the view of the level: which channel of the mask the light passes read
+now has its shadows (1 red, 2 green, 0 none), found by where it was a frame ago, and the slot of the texture table
+that shows that mask
+===============
+*/
+int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
+	if ( !rt.readValid || !VK_RT_Wanted() || !tr.rtLightImage[0] ) {
+		return 0;
+	}
+	const int read = rt.lightWrite ^ 1;
+
+	if ( rt.lightShown[read] != (int)tr.rtLightImage[read]->texnum ) {
+		return 0;
+	}
+	for ( int k = 0; k < 2; k++ ) {
+		const vkRtLight_t *was = &rt.readLights[k];
+		vec3_t middle;
+
+		if ( !was->active ) {
+			continue;
+		}
+		VectorAdd( was->start, was->end, middle );
+		VectorScale( middle, 0.5f, middle );
+		// (a saber swings: the middle of its blade moves a hand's width in a frame at most)
+		if ( Distance( middle, dl->origin ) < 24.0f && (qboolean)( dl->lineRange > 0.0f ) == was->tube ) {
+			*slot = tr.rtLightImage[read]->texnum;
+			return k + 1;
+		}
+	}
+	return 0;
+}
 
 // the view of the level asks for a pass that traces
 qboolean VK_RT_Wanted( void ) {
@@ -1485,6 +1612,16 @@ void VK_RT_Pass( void ) {
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
 		0.0f, vk_sunStrength );
+	// the moving lights whose shadows are traced this frame (38-41), and the view the mask the light passes read
+	// was made in (42-46: view and projection, its rect)
+	VK_RT_PickLights();
+	for ( int k = 0; k < 2; k++ ) {
+		VectorCopy( rt.lights[k].start, rows[38 + k * 2] );
+		rows[38 + k * 2][3] = rt.lights[k].active ? rt.lights[k].range : 0.0f;
+		VectorCopy( rt.lights[k].end, rows[39 + k * 2] );
+		rows[39 + k * 2][3] = rt.lights[k].tube ? 1.0f : 0.0f;
+	}
+	memcpy( rows[42], rt.readView, sizeof( rt.readView ) );
 	// the players as spheres: a pixel whose light passes none of them traces nothing
 	rows[21][0] = (float)Q_min( rt.numCasters, VK_RT_CASTERS );
 	for ( int i = 0; i < rt.numCasters && i < VK_RT_CASTERS; i++ ) {
@@ -1511,6 +1648,7 @@ void VK_RT_Pass( void ) {
 	} else if ( !rt.numCasters ) {
 		// nothing in the mask this frame: the next one starts it again
 		rt.previousValid = qfalse;
+		rt.readValid = qfalse;
 	} else {
 		const int				now = rt.frameNumber & 1;
 		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet, rt.maskSets[now ^ 1] };
@@ -1528,6 +1666,35 @@ void VK_RT_Pass( void ) {
 		VK_EndTarget();
 		VK_GpuMark( "rt trace" );
 		VK_TargetLayout( cmd, &rt.mask[now], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+
+		// the shadows from the moving lights, for the light passes of the next frame
+		if ( rt.lights[0].active || rt.lights[1].active ) {
+			const VkDescriptorSet	lightSets[3] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet };
+			vkTarget_t				*target = &rt.lightMask[rt.lightWrite];
+			const int				slot = (int)tr.rtLightImage[rt.lightWrite]->texnum;
+
+			VK_BeginTarget( target, NULL, 1, qfalse );
+			qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.lightsPipeline );
+			vk.boundPipeline = rt.lightsPipeline;
+			qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 3, lightSets, 0, NULL );
+			VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+			qvkCmdDraw( cmd, 3, 1, 0, 0 );
+			VK_EndTarget();
+			VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+			VK_GpuMark( "rt light shadows" );
+			if ( rt.lightShown[rt.lightWrite] != slot ) {
+				VK_ShowTarget( slot, target );
+				rt.lightShown[rt.lightWrite] = slot;
+			}
+			memcpy( rt.readLights, rt.lights, sizeof( rt.readLights ) );
+			memcpy( rt.readView, rows[0], sizeof( float ) * 16 );
+			memcpy( rt.readView[4], rows[8], sizeof( float ) * 4 );
+			rt.readValid = qtrue;
+			rt.lightWrite ^= 1;
+		} else {
+			rt.readValid = qfalse;
+		}
+
 		memcpy( rt.previous, rows[0], sizeof( float ) * 16 );
 		VectorCopy( rows[4], rt.previous[4] );
 		rt.previousValid = qtrue;
