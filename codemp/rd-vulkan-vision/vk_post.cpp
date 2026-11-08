@@ -395,7 +395,10 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 	// The part of the view the blades, the places they swept and their glow cover, from the upper left (as rows[8]);
 	// the pass is drawn there alone: over all of the view, with many samples, it cost about a millisecond (most of it
 	// resolving the samples)
-	const float	left = rows[8][0], top = rows[8][1], right = rows[8][0] + rows[8][2], bottom = rows[8][1] + rows[8][3];
+	// (and within the frame: after the window was resized the view of the cgame can be larger than the frame until it
+	// learns the new size, and a render area past the image lost the device, their crash of 2026-11-08 18:53)
+	const float	left = Q_max( rows[8][0], 0.0f ), top = Q_max( rows[8][1], 0.0f );
+	const float	right = Q_min( rows[8][0] + rows[8][2], (float)vk.color.width ), bottom = Q_min( rows[8][1] + rows[8][3], (float)vk.color.height );
 	float		x0 = right, y0 = bottom, x1 = left, y1 = top;
 	for ( int i = 0; i < count; i++ ) {
 		const saberBlade_t *blade = &backEnd.refdef.saberBlades[i];

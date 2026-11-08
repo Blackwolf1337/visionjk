@@ -883,12 +883,15 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
 	info.renderArea.extent.width = (uint32_t)color->width;
 	info.renderArea.extent.height = (uint32_t)color->height;
-	// (a part only: with many samples a pass over all of it resolves all of it again)
+	// (a part only: with many samples a pass over all of it resolves all of it again; never past the image, which
+	// loses the device)
 	if ( area ) {
-		info.renderArea.offset.x = area[0];
-		info.renderArea.offset.y = area[1];
-		info.renderArea.extent.width = (uint32_t)area[2];
-		info.renderArea.extent.height = (uint32_t)area[3];
+		const int x = Com_Clampi( 0, color->width, area[0] ), y = Com_Clampi( 0, color->height, area[1] );
+
+		info.renderArea.offset.x = x;
+		info.renderArea.offset.y = y;
+		info.renderArea.extent.width = (uint32_t)Com_Clampi( 0, color->width - x, area[2] );
+		info.renderArea.extent.height = (uint32_t)Com_Clampi( 0, color->height - y, area[3] );
 	}
 	info.layerCount = 1;
 	info.colorAttachmentCount = 1;
