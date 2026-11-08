@@ -356,6 +356,8 @@ extern cvar_t	*v_vkStatic;
 extern cvar_t	*v_vkMerge;
 extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
+extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
+extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
 extern cvar_t	*v_tonemap;			// vk_post.cpp
 extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp

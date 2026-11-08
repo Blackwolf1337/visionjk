@@ -818,6 +818,20 @@ static qboolean	rb_overLater, rb_sawOver;
 // rb_wetLater: this run of the list still has to draw them.
 static qboolean	rb_wetLater;
 
+// VisionJK: the moving lights of the solid surfaces wait for the shadows of the players (vk_rt.cpp): those multiply
+// into the frame, which darkened the light of a saber as well where a player stood between the light of the level
+// and the floor. With rb_deferDlights the first run of the list draws no light pass; RB_DrawWet runs the list again
+// with rb_dlightsOnly after the shadows, for the light passes of the solid surfaces alone, before anything
+// transparent. They then also read the shadows from the moving lights of this frame, not of the one before. (Fog
+// over a surface lies under its light then: a limit.)
+qboolean			rb_deferDlights;
+qboolean			rb_dlightsOnly;
+static drawSurf_t	*rb_sweepSurfs;
+static int			rb_sweepCount;
+static qboolean		rb_entityReset;		// the run of the light passes set other entities: the run it came from sets its own again
+
+static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs );
+
 static void RB_DrawWet( int depthRange ) {
 	if ( !rb_wetLater ) {
 		return;
@@ -830,6 +844,14 @@ static void RB_DrawWet( int depthRange ) {
 #endif
 	VK_DrawWet();
 	VK_GpuMark( "wet and paint" );
+	if ( rb_deferDlights ) {
+		rb_deferDlights = qfalse;
+		rb_dlightsOnly = qtrue;
+		RB_RenderDrawSurfList( rb_sweepSurfs, rb_sweepCount );
+		rb_dlightsOnly = qfalse;
+		rb_entityReset = qtrue;
+		VK_GpuMark( "moving lights" );
+	}
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
 		RB_SetDepthRange( depthRange );
@@ -881,12 +903,15 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	vk_glassReady = qfalse;
 #endif
 
-	RB_BeginDrawingView();
-	if ( backEnd.isHyperspace ) {
-		return;
+	// (the run of the light passes keeps the view, its depth and its stencil as the first run left them)
+	if ( !rb_dlightsOnly ) {
+		RB_BeginDrawingView();
+		if ( backEnd.isHyperspace ) {
+			return;
+		}
+		backEnd.pc.c_surfaces += numDrawSurfs;
 	}
 	backEnd.currentEntity = &tr.worldEntity;
-	backEnd.pc.c_surfaces += numDrawSurfs;
 
 	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
 		if ( drawSurf->sort == oldSort ) {
@@ -912,7 +937,14 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				rb_sawLate = qtrue;
 			}
 		}
-		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) || wrongRun ) {
+		if ( rb_dlightsOnly && shader->sort > SS_OPAQUE ) {
+			break;		// the light passes are for the solid surfaces alone, and the list has them first
+		}
+		// the run of the light passes: only what a light reaches, and nothing that the end of the list draws (their
+		// light passes come with them there)
+		const qboolean notLit = (qboolean)( rb_dlightsOnly && ( !dlighted || ( entityNum != REFENTITYNUM_WORLD
+			&& ( backEnd.refdef.entities[entityNum].e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) ) ) ) );
+		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) || wrongRun || notLit ) {
 			shader = oldShader;
 			entityNum = oldEntityNum;
 			fogNum = oldFogNum;
@@ -971,6 +1003,11 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				RB_EndSurface();
 				if ( shader->sort > SS_BANNER ) {
 					RB_DrawWet( oldDepthRange );
+					if ( rb_entityReset ) {
+						rb_entityReset = qfalse;
+						oldEntityNum = -1;
+						mergedEntity = qfalse;
+					}
 				}
 			}
 #ifndef RD_VISION_GLES
@@ -1014,6 +1051,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// draw the contents of the last shader batch
 	if ( oldShader != NULL ) {
 		RB_EndSurface();
+	}
+	if ( rb_dlightsOnly ) {
+		return;		// the run of the light passes is done, the rest belongs to the first run
 	}
 #ifndef RD_VISION_GLES
 	vk_glassReady = qfalse;
@@ -1158,9 +1198,14 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() ) );
+	// the moving lights after the shadows of the players (RB_DrawWet)
+	rb_deferDlights = (qboolean)( levelView && VK_RT_Wanted() );
+	rb_sweepSurfs = cmd->drawSurfs;
+	rb_sweepCount = cmd->numDrawSurfs;
 #endif
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 	rb_wetLater = qfalse;
+	rb_deferDlights = qfalse;
 	if ( levelView && r_numLiquids ) {
 		VK_DrawLiquids();
 	}

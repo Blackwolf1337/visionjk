@@ -1360,6 +1360,14 @@ void RB_StageIteratorGeneric( void ) {
 			VectorSet( draw.fogColor, c, c, c );
 		}
 
+		// the run of the light passes draws no stage, it only keeps the tessellated one for VK_DynamicLights
+		if ( rb_dlightsOnly ) {
+			if ( stageProgram == VKP_TESS ) {
+				tessDraw = draw;
+				haveTessDraw = qtrue;
+			}
+			continue;
+		}
 		if ( shader == tr.distortionShader && !pStage->bundle[1].image ) {
 			// The game asks for this shader by its number, 2: a cloaked player, the trail of cg_saberTrail 2. Such a
 			// surface is not drawn. It marks its shape in the stencil buffer, both sides, where nothing is in front
@@ -1387,8 +1395,13 @@ void RB_StageIteratorGeneric( void ) {
 	// now do any dynamic lighting needed. Also in the glow pass, as rd-vanilla does: a surface whose shader has a
 	// stage that glows gets the light on its texture added to the glow as well, so it shines more where a blade
 	// lights it.
-	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) ) ) {
+	// (the first run of the list leaves them to the run of the light passes after the shadows, rb_deferDlights)
+	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
+		&& ( rb_dlightsOnly || g_bRenderGlowingObjects || !rb_deferDlights ) ) {
 		VK_DynamicLights( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
+	}
+	if ( rb_dlightsOnly ) {
+		return;
 	}
 	// now do fog
 	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum
