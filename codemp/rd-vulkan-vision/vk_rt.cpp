@@ -84,11 +84,13 @@ static const uint32_t vk_rtCellsComp[] =
 #define VK_RT_CASTER_BYTES			( 32 << 20 )	// their acceleration structures in one frame
 #define VK_RT_ACCEL_ALIGN			256				// where an acceleration structure may begin in its buffer
 
-// the shadow maps of a device without ray tracing: tiles of one atlas, one for each caster (in the light of the grid
-// at his feet) and six for each of the two moving lights (a cube)
+// the shadow maps: tiles of one atlas, one for each caster (in the light of the grid at his feet, without ray tracing)
+// and for each of the two moving lights a cube (six) at each of VK_SM_POINTS points along it (a blade: near the hilt,
+// the middle, the tip; a point light uses the first alone)
 #define VK_SM_TILE					256
 #define VK_SM_COLUMNS				8
-#define VK_SM_TILES					( VK_RT_MAX_CASTERS + 12 )
+#define VK_SM_POINTS				3
+#define VK_SM_TILES					( VK_RT_MAX_CASTERS + 2 * VK_SM_POINTS * 6 )
 #define VK_SM_ROWS					( ( VK_SM_TILES + VK_SM_COLUMNS - 1 ) / VK_SM_COLUMNS )
 #define VK_SM_FIRST_ROW				47				// of the rt globals: four a tile, its view and projection
 
@@ -1765,26 +1767,31 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 		VK_SM_Tile( cmd, c );
 		VK_SM_DrawCaster( cmd, c, view );
 	}
-	// every player that a moving light reaches into the cube around it
+	// every player that a moving light reaches into the cubes along it: a blade casts from near its hilt, its middle
+	// and its tip, so the shadow is soft along the blade and sweeps as it turns (smlights.frag blends the three)
 	for ( int k = 0; k < 2; k++ ) {
-		const vkRtLight_t *light = &rt.lights[k];
-		vec3_t center;
+		const vkRtLight_t	*light = &rt.lights[k];
+		const float			along[VK_SM_POINTS] = { 0.15f, 0.5f, 0.85f };
 
 		if ( !light->active ) {
 			continue;
 		}
-		VectorAdd( light->start, light->end, center );
-		VectorScale( center, 0.5f, center );
-		const float zFar = light->range + 0.5f * Distance( light->start, light->end ) + 64.0f;
-		for ( int face = 0; face < 6; face++ ) {
-			const int tile = VK_RT_MAX_CASTERS + k * 6 + face;
+		const float zFar = light->range + Distance( light->start, light->end ) + 64.0f;
+		for ( int point = 0; point < ( light->tube ? VK_SM_POINTS : 1 ); point++ ) {
+			vec3_t center;
 
-			VK_SM_FaceView( center, face, zFar, view );
-			memcpy( rows[VK_SM_FIRST_ROW + tile * 4], view, sizeof( view ) );
-			VK_SM_Tile( cmd, tile );
-			for ( int c = 0; c < rt.numCasters; c++ ) {
-				if ( Distance( rt.casters[c].origin, center ) < zFar ) {
-					VK_SM_DrawCaster( cmd, c, view );
+			VectorSubtract( light->end, light->start, center );
+			VectorMA( light->start, light->tube ? along[point] : 0.0f, center, center );
+			for ( int face = 0; face < 6; face++ ) {
+				const int tile = VK_RT_MAX_CASTERS + ( k * VK_SM_POINTS + point ) * 6 + face;
+
+				VK_SM_FaceView( center, face, zFar, view );
+				memcpy( rows[VK_SM_FIRST_ROW + tile * 4], view, sizeof( view ) );
+				VK_SM_Tile( cmd, tile );
+				for ( int c = 0; c < rt.numCasters; c++ ) {
+					if ( Distance( rt.casters[c].origin, center ) < zFar ) {
+						VK_SM_DrawCaster( cmd, c, view );
+					}
 				}
 			}
 		}
@@ -1881,8 +1888,8 @@ int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
 		}
 		VectorAdd( was->start, was->end, middle );
 		VectorScale( middle, 0.5f, middle );
-		// (a saber swings: the middle of its blade moves a hand's width in a frame at most)
-		if ( Distance( middle, dl->origin ) < 24.0f && (qboolean)( dl->lineRange > 0.0f ) == was->tube ) {
+		// (a saber swings: the middle of its blade moves up to two hands' width in a frame of a fast swing)
+		if ( Distance( middle, dl->origin ) < 48.0f && (qboolean)( dl->lineRange > 0.0f ) == was->tube ) {
 			*slot = tr.rtLightImage[read]->texnum;
 			return k + 1;
 		}

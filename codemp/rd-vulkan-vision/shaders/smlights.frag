@@ -2,11 +2,11 @@
 
 // The shadows of the players from the moving lights on every device (vk_rt.cpp, the shadow maps; rays to them cost
 // over a millisecond with a saber in the hand): the mask (red and green: how much the players take of light 0 and 1),
-// from the six tiles of the cube around each light (a blade is taken as a point in its middle). The light passes of the
-// next frame read it (generic.frag DynamicLight).
+// from cubes of six tiles around each light (a blade has three along it: near the hilt, in the middle, at the tip).
+// The light passes of the next frame read it (generic.frag DynamicLight).
 //
 // rows 38 + 2k: the start of light k and its reach (0: none), 39 + 2k: its end; rows 47 + 4 t: the view and
-// projection of tile t, the cube of light k in the tiles 16 + 6 k on (+x, -x, +y, -y, +z, -z)
+// projection of tile t, the cubes of light k in the tiles 16 + 18 k on, six each (+x, -x, +y, -y, +z, -z)
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -15,7 +15,7 @@ layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	styles[64];
 	vec4	wet[779];
 	vec4	paint[459];
-	vec4	rt[159];
+	vec4	rt[255];
 } globals;
 layout( set = 1, binding = 4 ) uniform sampler2D u_atlas;	// the depth of the shadow maps
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
@@ -33,19 +33,8 @@ vec3 NearestOnSegment( vec3 a, vec3 b, vec3 p ) {
 	return a + ab * clamp( dot( p - a, ab ) / max( dot( ab, ab ), 1e-4 ), 0.0, 1.0 );
 }
 
-float LightShadow( int k, vec3 p, vec3 normal ) {
-	vec4 a = W[38 + k * 2], b = W[39 + k * 2];
-	float range = a.w;
-
-	if ( range <= 0.0 ) {
-		return 0.0;
-	}
-	vec3 nearest = NearestOnSegment( a.xyz, b.xyz, p );
-	if ( distance( nearest, p ) >= range || dot( normal, nearest - p ) < -12.0 ) {
-		return 0.0;
-	}
-	vec3 center = ( a.xyz + b.xyz ) * 0.5;
-	vec3 q = p + normal * 3.0;
+// how much of a cube (its six tiles from first on, around center) lies in front of the point q, 3 x 3 pixels
+float CubeShadow( int first, vec3 center, vec3 q ) {
 	vec3 d = q - center, ad = abs( d );
 	int face;
 	if ( ad.x >= ad.y && ad.x >= ad.z ) {
@@ -55,7 +44,7 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 	} else {
 		face = d.z > 0.0 ? 4 : 5;
 	}
-	int t = 16 + k * 6 + face;
+	int t = first + face;
 	vec4 clip = mat4( W[47 + t * 4], W[48 + t * 4], W[49 + t * 4], W[50 + t * 4] ) * vec4( q, 1.0 );
 	if ( clip.w <= 4.0 ) {
 		return 0.0;
@@ -74,6 +63,31 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 		}
 	}
 	return blocked / 9.0;
+}
+
+// how much of light k the players take at p: a blade from three points along it (near the hilt, the middle, the
+// tip, as VK_SM_DrawAtlas has its cubes), blended, so the shadow is soft along the blade and sweeps as it turns
+float LightShadow( int k, vec3 p, vec3 normal ) {
+	vec4 a = W[38 + k * 2], b = W[39 + k * 2];
+	float range = a.w;
+
+	if ( range <= 0.0 ) {
+		return 0.0;
+	}
+	vec3 nearest = NearestOnSegment( a.xyz, b.xyz, p );
+	if ( distance( nearest, p ) >= range || dot( normal, nearest - p ) < -12.0 ) {
+		return 0.0;
+	}
+	vec3 q = p + normal * 3.0;
+	if ( b.w <= 0.0 ) {
+		return CubeShadow( 16 + k * 18, a.xyz, q );
+	}
+	const float along[3] = float[3]( 0.15, 0.5, 0.85 );
+	float blocked = 0.0;
+	for ( int i = 0; i < 3; i++ ) {
+		blocked += CubeShadow( 16 + ( k * 3 + i ) * 6, mix( a.xyz, b.xyz, along[i] ), q );
+	}
+	return blocked / 3.0;
 }
 
 void main() {
