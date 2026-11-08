@@ -670,6 +670,33 @@ output). Both shadow paths were compared in pictures: the legs cut a shadow out 
 with traced shadows off the floor fills with the light. Not checked: Windows, a card without ray tracing (only
 `v_rayTracing 0` on the RTX), online play with many players, and the OpenGL ES device (it does not get these parts).
 
+### Cost and caching
+
+Pipelines are kept in the profile. The renderer uses a `VkPipelineCache` for every pipeline and saves it, with the list
+of pipeline states the session used, to `vulkan/pipelines.dat` in the profile (`vulkan/pipelines_rt.dat` for a device
+with ray tracing, because the driver treats it as another device). At start the listed states are created again by
+several threads at once. A pipeline of `generic.frag` takes the driver about half a second to make, and they used to be
+made during the first frames, so after an install or after switching `v_rayTracing` the game froze for seconds. With a
+fitting file the pipelines take a few milliseconds at start. With data that does not fit (a new build) they take about
+1.4 s at start and nothing during play. The file is written at every renderer shutdown and when a level loads while
+there are new states. With `developer 1` the renderer prints how long each step of starting and stopping took
+("renderer start and stop: ...") and every pipeline that took 20 ms or more to make. `gfxinfo` shows the total time
+spent making pipelines.
+
+The shadows of the players (`cg_shadows 2`, ray traced or shadow maps) and the shadow masks of the moving lights (saber
+light) are worked out at half the size of the frame, each mask pixel standing for the upper left of four frame pixels.
+The accumulation pass keeps the full size. `v_rtMaskScale` 2 is the default, 1 gives the full size back. Measured at
+2560x1440 with MSAA 2: the rays 0.68 to 0.18 ms, laying them on 0.33 to 0.17 ms, the saber light masks 0.17 to 0.11 ms.
+
+The 3D saber blades have a screen rectangle each (blade, swept place and glow). A blade behind the eye is left out and
+one passing the eye is cut at a plane in front of it. Before, a blade behind the camera made the pass cover the whole
+view, which cost about 3 ms a frame with seven saber players. The pass of the blades into the `r_DynamicGlow` buffer
+uses a coarser search of the swept place and no glow on surfaces.
+
+`v_gpuTimes` has two more marks: "level resolve" (the end of the level pass resolving its samples, which used to be
+counted as "rt builds") and "screen effects" (heat over lit blades, rings, drops, which used to be counted as
+"weather").
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and
