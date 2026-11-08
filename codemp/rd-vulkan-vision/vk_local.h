@@ -315,6 +315,9 @@ typedef struct vkState_s : vkDeviceState_t {
 	int							statDraws[2];
 	int							statTransforms[2];
 	int							statBones[2];
+	int							statSkeletons[2];		// skeletons put into the frame
+	int							statSkeletonsLost[2];	// models not drawn: no room for their skeleton
+	int							statDrawSurfs[2];		// surfaces of all views of the frame (MAX_DRAWSURFS)
 	int							statCpuVertexes[2];	// vertices that were built on the CPU and uploaded
 	int							statCpuIndexes[2];
 	int							statStaticIndexes[2];	// indexes into vertices that are on the device

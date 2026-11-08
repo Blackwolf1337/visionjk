@@ -46,6 +46,7 @@ qboolean VK_HasScope( void );
 // whether RE_AddWet() is drawn, and whether its puddles mirror a view of their own (R_PuddleView of tr_main.cpp)
 qboolean VK_HasWet( void );
 qboolean VK_PuddleMirror( void );
+void VK_NoteDrawSurfs( int numDrawSurfs );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );
 

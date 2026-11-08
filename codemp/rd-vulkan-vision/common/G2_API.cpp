@@ -1638,6 +1638,8 @@ qboolean G2API_SetBoneAnglesMatrix(CGhoul2Info *ghlInfo, const char *boneName, c
 int G2_Add_Bone( const model_t *mod, boneInfo_v &blist, const char *boneName );
 float G2_VJK_BoneScale( CGhoul2Info &ghoul2, int boneNum );
 void G2_VJK_StoreCut( CGhoul2Info &ghoul2, const float *plane, const unsigned char *hidden );
+float G2_VJK_KeptScale( CGhoul2Info &ghoul2, int boneNum );
+void G2_VJK_KeepScale( CGhoul2Info &ghoul2, int boneNum, float scale );
 void G2_ConstructGhoulSkeleton( CGhoul2Info_v &ghoul2, const int frameNum, bool checkForNewOrigin, const vec3_t scale );
 
 static mdxaSkel_t *G2_VJK_Skel( const CGhoul2Info *ghlInfo, int boneNum )
@@ -1731,10 +1733,16 @@ qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t ang
 		{
 			continue;
 		}
+		const float kept = first ? 0.0f : G2_VJK_KeptScale( *ghlInfo, bones[n] );
+		if ( kept > 0.0f )
+		{
+			boneScale[n] = kept;
+			continue;
+		}
 		const int index = G2_Find_Bone_In_List( blist, bones[n] );
 		if ( index != -1 && ( blist[index].flags & BONE_ANGLES_MODEL ) )
 		{
-			// (placed before: its size is in the matrix kept)
+			// (placed before, but its bone cache was made again: its size from the matrix kept, once)
 			mdxaBone_t m;
 			Multiply_3x4Matrix( &m, &blist[index].matrix, &G2_VJK_Skel( ghlInfo, bones[n] )->BasePoseMat );
 			const float s = sqrtf( m.matrix[0][0] * m.matrix[0][0] + m.matrix[1][0] * m.matrix[1][0] + m.matrix[2][0] * m.matrix[2][0] );
@@ -1744,6 +1752,7 @@ qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t ang
 		{
 			boneScale[n] = G2_VJK_BoneScale( *ghlInfo, bones[n] );
 		}
+		G2_VJK_KeepScale( *ghlInfo, bones[n], boneScale[n] );
 	}
 	if ( first && ri.Cvar_VariableIntegerValue( "developer" ) )
 	{

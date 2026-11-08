@@ -345,6 +345,8 @@ public:
 	// skinned vertex as the bone moved it at the moment of the cut (a plane, 4 floats) and whether the bone belongs
 	// to another part (4 floats, x 1). Empty: none.
 	std::vector<float>	vjkCut;
+	// VisionJK: the size of each bone placed by G2API_VJK_SetBonesWorld, kept from the first placement (0: not yet)
+	std::vector<float>	vjkScale;
 
 	CBoneCache(const model_t *amod,const mdxaHeader_t *aheader) :
 		header(aheader),
@@ -699,6 +701,32 @@ void G2_VJK_StoreCut(CGhoul2Info &ghoul2, const float *plane, const unsigned cha
 		out[3] = m.matrix[0][3] * plane[0] + m.matrix[1][3] * plane[1] + m.matrix[2][3] * plane[2] - plane[3];
 		out[4] = hidden[i] ? 1.0f : 0.0f;
 	}
+}
+
+// VisionJK (G2API_VJK_SetBonesWorld): the size a placed bone is drawn at, kept once. Read back from the matrix of the
+// frame before, it grew by the error of the axes the cgame hands in (not quite unit length) every frame, so the
+// parts of a cut body that lay a while became giant and filled the view (their report 2026-11-09: own player gone
+// when many parts lay around). 0: none kept.
+float G2_VJK_KeptScale(CGhoul2Info &ghoul2, int boneNum)
+{
+	if (!ghoul2.mBoneCache || boneNum < 0 || boneNum >= (int)ghoul2.mBoneCache->vjkScale.size())
+	{
+		return 0.0f;
+	}
+	return ghoul2.mBoneCache->vjkScale[boneNum];
+}
+
+void G2_VJK_KeepScale(CGhoul2Info &ghoul2, int boneNum, float scale)
+{
+	if (!ghoul2.mBoneCache || boneNum < 0 || boneNum >= ghoul2.mBoneCache->header->numBones)
+	{
+		return;
+	}
+	if ((int)ghoul2.mBoneCache->vjkScale.size() != ghoul2.mBoneCache->header->numBones)
+	{
+		ghoul2.mBoneCache->vjkScale.assign(ghoul2.mBoneCache->header->numBones, 0.0f);
+	}
+	ghoul2.mBoneCache->vjkScale[boneNum] = scale;
 }
 
 // the cut of a part for the renderer: 8 floats a bone, NULL when it has none

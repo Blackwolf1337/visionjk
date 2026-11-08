@@ -432,6 +432,7 @@ static qboolean VK_FrameSkeleton( CBoneCache *boneCache, uint32_t *bones ) {
 	const int first = VK_SkeletonStart( frame );
 
 	if ( first + 256 > VK_MAX_BONES ) {
+		vk.statSkeletonsLost[0]++;
 		return qfalse;
 	}
 	const int numBones = G2_BoneMatrices( boneCache, (float *)( frame->bones.mapped + sizeof( float ) * 12 * first ), 256 );
@@ -457,6 +458,7 @@ static qboolean VK_FrameSkeleton( CBoneCache *boneCache, uint32_t *bones ) {
 	}
 	*bones = (uint32_t)first * 3;
 	frame->numBones = first + numBones + extra;
+	vk.statSkeletons[0]++;
 	return qtrue;
 }
 

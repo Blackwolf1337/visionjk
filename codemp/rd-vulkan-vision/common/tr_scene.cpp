@@ -625,6 +625,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	// the next scene rendered in this frame will tack on after this one
 	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;
+	VK_NoteDrawSurfs( r_firstSceneDrawSurf );
 	r_firstSceneEntity = r_numentities;
 	r_firstSceneMiniEntity = r_numminientities;
 	r_firstSceneDlight = r_numdlights;

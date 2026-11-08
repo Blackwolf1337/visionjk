@@ -180,6 +180,10 @@ void VK_EndFrame( void ) {
 	vk.statDraws[1] = frame->numDraws;
 	vk.statTransforms[1] = frame->numTransforms;
 	vk.statBones[1] = frame->numBones;
+	vk.statSkeletons[1] = vk.statSkeletons[0];
+	vk.statSkeletonsLost[1] = vk.statSkeletonsLost[0];
+	vk.statDrawSurfs[1] = vk.statDrawSurfs[0];
+	vk.statSkeletons[0] = vk.statSkeletonsLost[0] = vk.statDrawSurfs[0] = 0;
 	vk.statCpuVertexes[1] = vk.statCpuVertexes[0];
 	vk.statCpuIndexes[1] = vk.statCpuIndexes[0];
 	vk.statStaticIndexes[1] = vk.statStaticIndexes[0];
@@ -190,6 +194,11 @@ void VK_EndFrame( void ) {
 	vk.finalValid = qtrue;
 	vk.frame = NULL;
 	vk.frameIndex = ( vk.frameIndex + 1 ) % VK_FRAMES;
+}
+
+// the surfaces the views of this frame put into the list so far (RE_RenderScene)
+void VK_NoteDrawSurfs( int numDrawSurfs ) {
+	vk.statDrawSurfs[0] = numDrawSurfs;
 }
 
 /*
@@ -208,6 +217,8 @@ void VK_FrameInfo_f( void ) {
 		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
 	ri.Printf( PRINT_ALL, "  room in a frame: %i draws, %i vertices built on the CPU\n", VK_MAX_DRAWS, (int)VK_STREAM_VERTEXES );
 	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );
+	ri.Printf( PRINT_ALL, "  %i skeletons, %i models left out for want of room, %i of %i surfaces of all views\n", vk.statSkeletons[1],
+		vk.statSkeletonsLost[1], vk.statDrawSurfs[1], MAX_DRAWSURFS );
 	// the shaders with the most triangles from the CPU
 	for ( int n = 0; n < 8; n++ ) {
 		vkStatShader_t *most = NULL;
