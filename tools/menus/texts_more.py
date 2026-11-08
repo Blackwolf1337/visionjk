@@ -86,6 +86,10 @@ MORE = {
     'Borderless': ('Sans bordure', 'Sin borde'),
     'Anti-Aliasing': ('Anticrénelage', 'Antialiasing'),
     'Smooths the edges, costs speed.': ('Lisse les contours, coûte des performances.', 'Suaviza los bordes, pero reduce el rendimiento.'),
+    'SMAA': ('SMAA', 'SMAA'),
+    'Smooths the jagged edges of the level after it is drawn. Far cheaper than anti-aliasing and works with it: anti-aliasing 2x with this looks close to 8x.':
+        ("Lisse les contours crénelés du niveau une fois dessiné. Bien moins coûteux que l'anticrénelage et compatible avec lui : l'anticrénelage 2x avec ceci ressemble presque à 8x.",
+         'Suaviza los bordes dentados del nivel una vez dibujado. Mucho más barato que el antialiasing y compatible con él: antialiasing 2x con esto se ve casi como 8x.'),
     'Frame Limit': ('Limite de FPS', 'Límite de FPS'),
     'The most frames a second the game draws.': ("Nombre maximal d'images par seconde.", 'Máximo de fotogramas por segundo.'),
     'None': ('Aucune', 'Ninguno'),

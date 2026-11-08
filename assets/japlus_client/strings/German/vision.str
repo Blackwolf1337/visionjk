@@ -349,6 +349,14 @@ REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
 LANG_ENGLISH        "Smooths the edges, costs speed."
 LANG_GERMAN         "Glättet Kanten, kostet Leistung."
 
+REFERENCE           SMAA
+LANG_ENGLISH        "SMAA"
+LANG_GERMAN         "#same"
+
+REFERENCE           SMOOTHS_THE_JAGGED_EDGES_OF_THE_LEVE
+LANG_ENGLISH        "Smooths the jagged edges of the level after it is drawn. Far cheaper than anti-aliasing and works with it: anti-aliasing 2x with this looks close to 8x."
+LANG_GERMAN         "Glättet die gezackten Kanten des Levels, nachdem es gezeichnet ist. Kostet viel weniger als Kantenglättung und lässt sich mit ihr verbinden: 2x Kantenglättung mit SMAA sieht fast aus wie 8x."
+
 REFERENCE           FRAME_LIMIT
 LANG_ENGLISH        "Frame Limit"
 LANG_GERMAN         "FPS-Limit"

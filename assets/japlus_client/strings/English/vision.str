@@ -263,6 +263,12 @@ LANG_ENGLISH        "Anti-Aliasing"
 REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
 LANG_ENGLISH        "Smooths the edges, costs speed."
 
+REFERENCE           SMAA
+LANG_ENGLISH        "SMAA"
+
+REFERENCE           SMOOTHS_THE_JAGGED_EDGES_OF_THE_LEVE
+LANG_ENGLISH        "Smooths the jagged edges of the level after it is drawn. Far cheaper than anti-aliasing and works with it: anti-aliasing 2x with this looks close to 8x."
+
 REFERENCE           FRAME_LIMIT
 LANG_ENGLISH        "Frame Limit"
 

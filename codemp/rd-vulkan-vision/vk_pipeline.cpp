@@ -102,6 +102,15 @@ static const uint32_t vk_screenFxFogFrag[] =
 static const uint32_t vk_screenFxSmokeFrag[] =
 #include "shaders/screenfxsmoke_frag.inc"
 ;
+static const uint32_t vk_smaaEdgeFrag[] =
+#include "shaders/smaa_edge_frag.inc"
+;
+static const uint32_t vk_smaaWeightFrag[] =
+#include "shaders/smaa_weight_frag.inc"
+;
+static const uint32_t vk_smaaBlendFrag[] =
+#include "shaders/smaa_blend_frag.inc"
+;
 
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -178,11 +187,11 @@ static void VK_CreateLayouts( void ) {
 	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of v_menuBlur,
-	// the two of the smoke of the screen effects, the copy of the frame the scope reads, the mirror of the puddles
-	// and the depth
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 11;
+	// the two of the smoke of the screen effects, the copy of the frame the scope reads, the mirror of the puddles,
+	// the depth, and the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures)
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 16;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 12;
+	pool.maxSets = VK_FRAMES + 17;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -216,6 +225,15 @@ static void VK_CreateLayouts( void ) {
 		layout.setLayoutCount = 4;
 		layout.pSetLayouts = scopeSets;
 		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.scopePipelineLayout ) );
+	}
+	// the passes of v_smaa read up to three targets and get eight numbers
+	{
+		const VkDescriptorSetLayout smaaSets[3] = { vk.postSetLayout, vk.postSetLayout, vk.postSetLayout };
+
+		push.size = sizeof( float ) * 8;
+		layout.setLayoutCount = 3;
+		layout.pSetLayouts = smaaSets;
+		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.smaaPipelineLayout ) );
 	}
 	// the screen effects read their numbers from the globals of the frame (vkGlobals_t::screenFx), they are too
 	// many to be pushed, and four targets; their mist reads the same numbers and the depth, their smoke the same
@@ -323,7 +341,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
 	VkPipeline pipeline;
 	// a pass into a target of its own: one sample a pixel, no depth, nothing blended
-	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 );
+	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 || post == 10 );
 
 	memset( stages, 0, sizeof( stages ) );
 	stages[0].sType = stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -473,6 +491,9 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		info.layout = vk.fogPipelineLayout;
 	} else if ( post == 9 ) {
 		info.layout = vk.paintPipelineLayout;
+	} else if ( post == 10 || post == 11 ) {
+		// v_smaa: its first two passes into targets of their own, its last one into the frame
+		info.layout = vk.smaaPipelineLayout;
 	} else {
 		info.layout = ( post == 3 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	}
@@ -564,6 +585,13 @@ void VK_InitPipelines( void ) {
 	vk.paintFragmentShader = VK_CreateShader( vk_paintFrag, sizeof( vk_paintFrag ) );
 	vk.paintPipeline = VK_CreatePipeline( vk.paintVertexShader, vk.paintFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 9,
 		VKP_GENERIC );
+	// v_smaa: edges and weights into targets of their own, the blend over the frame, nothing blended
+	vk.smaaEdgeShader = VK_CreateShader( vk_smaaEdgeFrag, sizeof( vk_smaaEdgeFrag ) );
+	vk.smaaWeightShader = VK_CreateShader( vk_smaaWeightFrag, sizeof( vk_smaaWeightFrag ) );
+	vk.smaaBlendShader = VK_CreateShader( vk_smaaBlendFrag, sizeof( vk_smaaBlendFrag ) );
+	vk.smaaEdgePipeline = VK_CreatePipeline( vk.postVertexShader, vk.smaaEdgeShader, 0, 10, VKP_GENERIC );
+	vk.smaaWeightPipeline = VK_CreatePipeline( vk.postVertexShader, vk.smaaWeightShader, 0, 10, VKP_GENERIC );
+	vk.smaaBlendPipeline = VK_CreatePipeline( vk.postVertexShader, vk.smaaBlendShader, 0, 11, VKP_GENERIC );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -597,6 +625,12 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.paintPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.paintVertexShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.paintFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.smaaEdgePipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.smaaWeightPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.smaaBlendPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.smaaEdgeShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.smaaWeightShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.smaaBlendShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {
@@ -615,6 +649,7 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipelineLayout( vk.device, vk.screenFxPipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.fogPipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.paintPipelineLayout, NULL );
+	qvkDestroyPipelineLayout( vk.device, vk.smaaPipelineLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.frameSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.textureSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.postSetLayout, NULL );

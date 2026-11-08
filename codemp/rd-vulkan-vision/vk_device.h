@@ -178,6 +178,12 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipelineLayout			screenFxPipelineLayout;	// the sets of the frame and four of the kind of postSet (VK_ScreenFxPass)
 	VkPipelineLayout			fogPipelineLayout;		// the sets of the frame and the depth (VK_ScreenFxFogPass)
 	VkPipelineLayout			paintPipelineLayout;	// the frame, the copy of it, the depth, the textures (VK_PaintPass)
+	VkPipelineLayout			smaaPipelineLayout;	// three sets of the kind of postSet and eight numbers (VK_SmaaPass)
+	// v_smaa: its targets in the size of the frame, made when it is first drawn, and its two lookup textures
+	vkTarget_t					smaaEdges, smaaWeights;
+	vkTarget_t					smaaColor;			// a copy of the frame, which its last pass reads while it writes the frame
+	vkTarget_t					smaaArea, smaaSearch;	// (filled from lib/smaa, never drawn into)
+	VkDescriptorSet				smaaEdgesSet, smaaWeightsSet, smaaColorSet, smaaAreaSet, smaaSearchSet;
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
@@ -200,6 +206,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkShaderModule				paintVertexShader, paintFragmentShader;
 	VkPipeline					wetPipeline;		// the wet places of RE_AddWet (VK_WetPass)
 	VkPipeline					paintPipeline;		// the sprayed pictures of RE_AddPaint (VK_PaintPass)
+	VkShaderModule				smaaEdgeShader, smaaWeightShader, smaaBlendShader;
+	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered
@@ -262,6 +270,8 @@ void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspec
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
 void		VK_ShowImage( int slot, VkImageView view, qboolean mipmapped );
 void		VK_DestroyPostTargets( void );
+// the targets and lookup textures of v_smaa, once until VK_DestroyPostTargets()
+void		VK_CreateSmaaTargets( void );
 // a combined image sampler set of one image
 void		VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkImageLayout layout );
 
