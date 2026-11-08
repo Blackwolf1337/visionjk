@@ -75,6 +75,9 @@ static const uint32_t vk_smLightsFrag[] =
 static const uint32_t vk_rtLightMaskFrag[] =
 #include "shaders/rtlightmask_frag.inc"
 ;
+static const uint32_t vk_rtAccumFrag[] =
+#include "shaders/rtaccum_frag.inc"
+;
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
 ;
@@ -203,6 +206,13 @@ static struct {
 	// points were from the eye with it; the view of the frame before for shaders/rtshadow.frag to find them again
 	vkTarget_t					mask[2];
 	VkDescriptorSet				maskSets[2];
+	// the rays of this frame alone (rtshadow.frag, smshadow.frag), laid onto the mask of the frame before by
+	// shaders/rtaccum.frag (its layout: the sets of the frame, of the raw mask, of the depth, of the mask before)
+	vkTarget_t					raw;
+	VkDescriptorSet				rawSet;
+	VkPipelineLayout			accumLayout;
+	VkShaderModule				accumFragment;
+	VkPipeline					accumPipeline;
 	float						previous[5][4];		// its view and projection, its eye
 	qboolean					previousValid;
 	VkShaderModule				shadowFragment, resolveFragment;
@@ -1451,7 +1461,7 @@ static void VK_RT_CreateLayouts( void ) {
 		sizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		sizes[0].descriptorCount = VK_FRAMES;
 		sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sizes[1].descriptorCount = VK_FRAMES + 2;
+		sizes[1].descriptorCount = VK_FRAMES + 3;
 		pool.poolSizeCount = 2;
 	} else {
 		sizes[0].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
@@ -1459,10 +1469,10 @@ static void VK_RT_CreateLayouts( void ) {
 		sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		sizes[1].descriptorCount = VK_FRAMES * 3;
 		sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sizes[2].descriptorCount = VK_FRAMES + 2;
+		sizes[2].descriptorCount = VK_FRAMES + 3;
 		pool.poolSizeCount = 3;
 	}
-	pool.maxSets = VK_FRAMES + 2;
+	pool.maxSets = VK_FRAMES + 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &rt.pool ) );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
@@ -1475,6 +1485,8 @@ static void VK_RT_CreateLayouts( void ) {
 	layouts[0] = layouts[1] = vk.postSetLayout;
 	alloc.descriptorSetCount = 2;
 	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, rt.maskSets ) );
+	alloc.descriptorSetCount = 1;
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &rt.rawSet ) );
 
 	passSets[0] = vk.frameSetLayout;
 	passSets[1] = rt.setLayout;
@@ -1483,6 +1495,8 @@ static void VK_RT_CreateLayouts( void ) {
 	layout.setLayoutCount = 4;
 	layout.pSetLayouts = passSets;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.layout ) );
+	passSets[1] = vk.postSetLayout;
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.accumLayout ) );
 }
 
 void VK_RT_Init( void ) {
@@ -1508,6 +1522,9 @@ void VK_RT_Init( void ) {
 	VK_RT_CreateCasters();
 	rt.resolveFragment = VK_CreateShader( vk_rtResolveFrag, sizeof( vk_rtResolveFrag ) );
 	rt.resolvePipeline = VK_CreatePipeline( vk.postVertexShader, rt.resolveFragment, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO, 8, VKP_GENERIC );
+	// the mask of this frame onto the one before, into a target of its own (7)
+	rt.accumFragment = VK_CreateShader( vk_rtAccumFrag, sizeof( vk_rtAccumFrag ) );
+	rt.accumPipeline = VK_CreatePipeline( vk.postVertexShader, rt.accumFragment, 0, 7, VKP_GENERIC, rt.accumLayout );
 	// the shadow maps: the shadows from the moving lights on both ways (rays to them cost over a millisecond with a
 	// saber in the hand, the cube of a light 0.03 ms), everything without ray tracing
 	VK_SM_Create();
@@ -1548,6 +1565,11 @@ static void VK_RT_EnsureMask( void ) {
 		VK_TargetLayout( vk.frame->cmd, &rt.lightMask[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 		rt.lightShown[i] = -1;
 	}
+	VK_DestroyTarget( &rt.raw );
+	VK_CreateTarget( &rt.raw, vk.width, vk.height, vk.final.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_TargetLayout( vk.frame->cmd, &rt.raw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_WriteSet( rt.rawSet, vk.postSampler, rt.raw.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	rt.previousValid = qfalse;
 	rt.readValid = qfalse;
 }
@@ -1566,6 +1588,10 @@ void VK_RT_Shutdown( void ) {
 	VK_DestroyTarget( &rt.mask[1] );
 	VK_DestroyTarget( &rt.lightMask[0] );
 	VK_DestroyTarget( &rt.lightMask[1] );
+	VK_DestroyTarget( &rt.raw );
+	qvkDestroyPipeline( vk.device, rt.accumPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, rt.accumFragment, NULL );
+	qvkDestroyPipelineLayout( vk.device, rt.accumLayout, NULL );
 	VK_DestroyBuffer( &rt.grid );
 	qvkDestroyPipeline( vk.device, rt.cellsPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.cellsShader, NULL );
@@ -2498,12 +2524,13 @@ void VK_RT_Pass( void ) {
 	} else {
 		const int				now = rt.frameNumber & 1;
 		const VkDescriptorSet	traceSets[4] = { vk.frame->set, rt.sets[vk.frameIndex], vk.depthSet, rt.maskSets[now ^ 1] };
+		const VkDescriptorSet	accumSets[4] = { vk.frame->set, rt.rawSet, vk.depthSet, rt.maskSets[now ^ 1] };
 		const VkDescriptorSet	resolveSets[3] = { vk.frame->set, rt.maskSets[now], vk.depthSet };
 
-		// the rays into the mask of this frame, onto the one before; they read the depth of the scene, which has to
-		// be in the layout for reading first (the validation layer: the set of the depth expects it)
+		// the rays of this frame (rt.raw); they read the depth of the scene, which has to be in the layout for reading
+		// first (the validation layer: the set of the depth expects it)
 		VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
-		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );
+		VK_BeginTarget( &rt.raw, NULL, 1, qfalse );
 		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.maps ? rt.smShadowPipeline : rt.shadowPipeline );
 		vk.boundPipeline = rt.maps ? rt.smShadowPipeline : rt.shadowPipeline;
 		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.layout, 0, 4, traceSets, 0, NULL );
@@ -2511,6 +2538,15 @@ void VK_RT_Pass( void ) {
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		VK_EndTarget();
 		VK_GpuMark( "rt trace" );
+		VK_TargetLayout( cmd, &rt.raw, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		// onto the mask of the frame before, into the mask of this frame (shaders/rtaccum.frag)
+		VK_BeginTarget( &rt.mask[now], NULL, 1, qfalse );
+		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumPipeline );
+		vk.boundPipeline = rt.accumPipeline;
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, rt.accumLayout, 0, 4, accumSets, 0, NULL );
+		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+		qvkCmdDraw( cmd, 3, 1, 0, 0 );
+		VK_EndTarget();
 		VK_TargetLayout( cmd, &rt.mask[now], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
 		// the shadows from the moving lights, for the light passes of the next frame

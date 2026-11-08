@@ -21,10 +21,8 @@
 //   255 on, four for each player (VK_RT_PickLamps): three panels that cast his shadow (where it is, w the radius of
 //      its disk), then their shares of his light in x, y, z and the share of the direction of the grid in w
 //
-// The mask of the frame before (set 3, the same pixels: the mask in red, how far the point was from the eye in green,
-// blue and alpha) is where this frame's rays are added to: the point seen in a pixel is looked up where it was then,
-// and if that pixel saw the same point (by its distance), a fifth of this frame goes onto it. So the few rays a pixel
-// has become many over a few frames.
+// It writes the rays of this frame alone (the mask in red, how far the point is from the eye in green, blue and alpha);
+// shaders/rtaccum.frag lays them onto the frames before, so the few rays a pixel has become many.
 
 layout( set = 0, binding = 0 ) uniform Globals {
 	vec4	gamma;
@@ -49,7 +47,6 @@ layout( set = 1, binding = 3, std430 ) readonly buffer Lists {
 	uint	lists[];
 };
 layout( set = 2, binding = 0 ) uniform sampler2D u_depth;	// the depth of the scene, read pixel for pixel
-layout( set = 3, binding = 0 ) uniform sampler2D u_history;	// the mask of the frame before, read pixel for pixel
 
 #define W		globals.rt
 #define LAMPS	255
@@ -319,12 +316,6 @@ vec3 PackDistance( float d ) {
 	return vec3( float( ( v >> 16u ) & 255u ), float( ( v >> 8u ) & 255u ), float( v & 255u ) ) / 255.0;
 }
 
-float UnpackDistance( vec3 c ) {
-	uvec3 b = uvec3( round( c * 255.0 ) );
-
-	return float( ( b.x << 16u ) | ( b.y << 8u ) | b.z ) / 16777215.0 * 8192.0;
-}
-
 void main() {
 	vec3 p = ScenePoint( gl_FragCoord.xy );
 	vec3 eye = W[4].xyz;
@@ -334,26 +325,7 @@ void main() {
 		o_color = vec4( 0.0, PackDistance( 8192.0 ) );
 		return;
 	}
+	// (what the frames before had is added by shaders/rtaccum.frag)
 	float mask = Shadow( p, SceneSurface( gl_FragCoord.xy, p, normalize( eye - p ) ) );
-
-	// onto what the frame before had for this point, where it saw it
-	if ( W[20].w > 0.0 ) {
-		vec4 clip = mat4( W[16], W[17], W[18], W[19] ) * vec4( p, 1.0 );
-
-		if ( clip.w > 1.0 ) {
-			vec2 ndc = clip.xy / clip.w;
-			vec4 rect = W[8];
-			ivec2 at = ivec2( floor( vec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w ) ) );
-
-			if ( all( greaterThanEqual( at, ivec2( rect.xy ) ) ) && all( lessThan( at, ivec2( rect.xy + rect.zw ) ) ) ) {
-				vec4 before = texelFetch( u_history, at, 0 );
-				float then = distance( p, W[20].xyz );
-
-				if ( abs( UnpackDistance( before.gba ) - then ) < then * 0.02 + 2.0 ) {
-					mask = mix( before.r, mask, 0.2 );
-				}
-			}
-		}
-	}
 	o_color = vec4( mask, PackDistance( d ) );
 }
