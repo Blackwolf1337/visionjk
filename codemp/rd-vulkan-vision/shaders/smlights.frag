@@ -2,7 +2,7 @@
 
 // The shadows of the players from the moving lights on every device (vk_rt.cpp, the shadow maps; rays to them cost
 // over a millisecond with a saber in the hand): the mask (red and green: how much the players take of light 0 and 1),
-// from cubes of six tiles around each light (a blade has three along it: near the hilt, in the middle, at the tip).
+// from cubes of six tiles around each light (a blade has three along it, one in each third, at a new place every frame).
 // The light passes of the next frame read it (generic.frag DynamicLight).
 //
 // rows 38 + 2k: the start of light k and its reach (0: none), 39 + 2k: its end; rows 47 + 4 t: the view and
@@ -65,8 +65,7 @@ float CubeShadow( int first, vec3 center, vec3 q ) {
 	return blocked / 9.0;
 }
 
-// how much of light k the players take at p: a blade from three points along it (near the hilt, the middle, the
-// tip, as VK_SM_DrawAtlas has its cubes), blended, so the shadow is soft along the blade and sweeps as it turns
+// how much of light k the players take at p: a blade from three points along it (as VK_SM_DrawAtlas has its cubes), blended, so the shadow is soft along the blade and sweeps as it turns
 float LightShadow( int k, vec3 p, vec3 normal ) {
 	vec4 a = W[38 + k * 2], b = W[39 + k * 2];
 	float range = a.w;
@@ -82,10 +81,10 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 	if ( b.w <= 0.0 ) {
 		return CubeShadow( 16 + k * 18, a.xyz, q );
 	}
-	const float along[3] = float[3]( 0.15, 0.5, 0.85 );
+	// (where along the blade the three are this frame: rows[21] y, z, w, they jump every frame, VK_SM_DrawAtlas)
 	float blocked = 0.0;
 	for ( int i = 0; i < 3; i++ ) {
-		blocked += CubeShadow( 16 + ( k * 3 + i ) * 6, mix( a.xyz, b.xyz, along[i] ), q );
+		blocked += CubeShadow( 16 + ( k * 3 + i ) * 6, mix( a.xyz, b.xyz, W[21][1 + i] ), q );
 	}
 	return blocked / 3.0;
 }

@@ -1767,11 +1767,18 @@ static void VK_SM_DrawAtlas( VkCommandBuffer cmd, float (*rows)[4] ) {
 		VK_SM_Tile( cmd, c );
 		VK_SM_DrawCaster( cmd, c, view );
 	}
-	// every player that a moving light reaches into the cubes along it: a blade casts from near its hilt, its middle
-	// and its tip, so the shadow is soft along the blade and sweeps as it turns (smlights.frag blends the three)
+	// every player that a moving light reaches into the cubes along it: a blade casts from three points along it, so
+	// the shadow is soft along the blade and sweeps as it turns (smlights.frag blends the three). Each point jumps to
+	// a new place in its third of the blade every frame (rows[21] y, z, w for the shader): the light of a blade
+	// flickers, and a shadow from fixed points stood still and hard like the old stencil shadows (their word
+	// 2026-11-08: they wanted it to jitter with the light).
+	float along[VK_SM_POINTS];
+	for ( int point = 0; point < VK_SM_POINTS; point++ ) {
+		along[point] = ( (float)point + 0.1f + 0.8f * random() ) / (float)VK_SM_POINTS;
+		rows[21][1 + point] = along[point];
+	}
 	for ( int k = 0; k < 2; k++ ) {
 		const vkRtLight_t	*light = &rt.lights[k];
-		const float			along[VK_SM_POINTS] = { 0.15f, 0.5f, 0.85f };
 
 		if ( !light->active ) {
 			continue;
@@ -1866,8 +1873,8 @@ static void VK_RT_PickLights( void ) {
 VK_RT_LightChannel
 
 For the light pass of a moving light in the view of the level: which channel of the mask the light passes read
-now has its shadows (1 red, 2 green, 0 none), found by where it was a frame ago, and the slot of the texture table
-that shows that mask
+now has its shadows (1 red, 2 green, 0 none), found by where the light was when the mask was made (this frame: the
+light passes wait for the shadows, rb_deferDlights), and the slot of the texture table that shows that mask
 ===============
 */
 int VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot ) {
@@ -2067,6 +2074,10 @@ void VK_RT_Pass( void ) {
 			memcpy( rt.readView[4], rows[8], sizeof( float ) * 4 );
 			rt.readValid = qtrue;
 			rt.lightWrite ^= 1;
+			// The light passes of the solid surfaces run after this (vk_backend.cpp rb_deferDlights) and read the mask
+			// of this frame: they need its view too. (The globals are read when the frame runs on the device, so this
+			// is what every draw of the frame sees.)
+			memcpy( globals->rt[42], rt.readView, sizeof( rt.readView ) );
 		} else {
 			rt.readValid = qfalse;
 		}
