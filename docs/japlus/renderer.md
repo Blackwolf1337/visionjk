@@ -592,14 +592,29 @@ from the direction of the light grid at the point. The sun shadow and the grid s
 sun reaches the point. How dark the shadow is follows the share of directed light in the grid. The grid shadow is dark
 at the feet and fades out within 160 units (`CasterFade`), because the grid direction is an average that changes from
 cell to cell, and long shadows along it ended in a line. Before tracing, the ray to the light is tested against
-spheres around the players (globals rt rows 21 on), so most pixels trace nothing. The light patches guessed from
-glowing textures no longer cast shadows, since they disagreed with the lightmaps, and `v_rtLights` was removed. Among
-the stock MP maps these have a sun: ctf1, ctf3, duel1, duel9, ffa2, siege_desert.
+spheres around the players (globals rt rows 21 on), so most pixels trace nothing. The grid direction is now one per
+player, read from the grid itself (`VK_RT_GridDirection`), not from `ent->lightDir`, because the engine adds moving
+lights (his own saber) into that. Before, the grid shadow took the direction at each floor pixel, which bent the
+shadows into hooks under lamps. The light patches guessed from glowing textures once cast shadows on their own and
+disagreed with the lightmaps, so `v_rtLights` was removed. Among the stock MP maps these have a sun: ctf1, ctf3, duel1,
+duel9, ffa2, siege_desert.
+
+Indoors the patches are used again, but only where they agree with the grid. `VK_RT_PickLamps` (`vk_rt.cpp`) looks, for
+each player, at the patches (glowing or `q3map_surfacelight` surfaces, built per level by `VK_RT_PrepareLevel` and
+listed per grid cell by `shaders/rtcells.comp`) that the cell of the player sees. It picks the one that gives the most
+light from the side the grid says his light comes from (within about 80 degrees; the grid holds the average of all
+lights, so between panels on facing walls it points up, 55 to 65 degrees from each). That panel casts the shadow from
+its real position, soft by its size, so the shadow has the length a lamp gives. If no panel fits, the shadow follows the
+grid direction at the player and fades within a few steps, as before. There is one shadow per player and its darkness
+still comes from the grid, so it matches the lightmap. The pick runs on the CPU. It keeps the previous panel while that
+gives at least 70 percent of the best one (also when the next cell does not list it) and moves the light to a new panel
+over about 0.1 s, so the shadows do not jump. `v_rtLamps` (default 1, archived): 0 uses the grid alone. This is only on
+the ray tracing path, the shadow maps keep the grid direction per player.
 
 Without ray tracing (or with `v_rayTracing 0`, latched) the shadows come from shadow maps. The players are skinned by
 the same compute shader (`shaders/rtskin.comp`, which needs buffer device addresses, now switched on wherever the card
 has them) and drawn depth only (`shaders/smdepth.vert`) into tiles of one 2048x1024 atlas. There is one tile per
-player, along the light of the grid at his feet (`ent->lightDir`, which is in the space of the entity), and six tiles
+player, along the light of the grid at his feet (`VK_RT_GridDirection`, in world space), and six tiles
 per moving light (a cube). `shaders/smshadow.frag` writes the same mask the rays write. The sun is not used there,
 since the maps do not know where the level hides it. `v_rtAvailable` (read only, set after `VK_RT_Init`) says whether
 the renderer draws the player shadows at all.
@@ -611,14 +626,19 @@ dlight draw), and with a faint shine elsewhere. Saber blades are tubes of light:
 `ext.AddLineLightToScene` (`dlight_t` with `lineStart`, `lineEnd` and `lineRange`), and the cgame has
 `ext.R_AddLineLight` when the engine sets `v_cgameLineLight`. The diffuse part comes from the nearest point of the
 tube, the shine from the point nearest the mirrored ray (Karis 2013). `v_dlightScale` (default 1) gives about the old
-brightness halfway out. About 0.15 ms for one saber at 2560x1440.
+brightness halfway out. About 0.15 ms for one saber at 2560x1440. On solid surfaces the moving lights are drawn in a
+second pass over the surface list, right after the player shadows, so the traced or grid shadow does not darken saber
+light. Known limit: fog over a surface lies under its moving light. The light bits are kept per draw surface
+(`drawSurf_t` `dlightBits`) and not on the shared surface, because a later view of the same frame (portal, puddle,
+probe face) overwrote them and pieces of floor lost the saber light.
 
 Shadows from moving lights: the light passes draw before the shadow pass in a frame, so they read the mask of the
 frame before. Two masks are written and read in turn (shown in the texture table as `tr.rtLightImage`). The point is
 taken at the place it had in the view the mask was made in (globals rt 42 to 46), and the light is found again by where
 it was (`VK_RT_LightChannel`). The mask comes from the cube shadow maps on every card (`shaders/smlights.frag`): rays to
 the lights cost over a millisecond with a saber in the hand at 1920x1080, the cubes 0.03 ms. The shadow is one frame
-late.
+late. For a saber the three points of the cube maps along the blade jump to a new place in their third of the blade
+every frame, so the shadow flickers with the light.
 
 HDR: `v_hdr` (default 1, latched). `vk.color`, `vk.glow` and `vk.screen` are R16G16B16A16_SFLOAT, so light above white
 stays, and the probes and the puddle mirror follow the format of the frame. `VK_Tonemap` in `vk_post.cpp` runs at the
