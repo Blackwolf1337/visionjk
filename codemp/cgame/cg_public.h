@@ -830,6 +830,10 @@ typedef struct cgameImport_s {
 		// the renderer in 3D for the scene of this frame (saberBlade3D_t: a white core in a coloured glow, and the
 		// place it swept), in place of the flat RT_SABER_GLOW and RT_LINE. NULL: the renderer has none.
 		void			(*R_AddSaberBlade)						( const saberBlade3D_t *blade );
+		// Only an engine that sets the cvar v_cgameCutEntity to 1 has this one, the same way. An entity drawn cut by
+		// plane (in the world: normal, distance; the side the normal points to is kept), otherwise as
+		// R_AddRefEntityToScene: the halves of a body a saber cut through (cg_slice.c). NULL: the renderer has none.
+		void			(*R_AddCutEntity)						( const refEntity_t *ent, const float *plane );
 	} ext;
 } cgameImport_t;
 

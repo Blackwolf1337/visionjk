@@ -984,7 +984,8 @@ void VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface ) {
 	const int			entityNum = (int)( ent - backEnd.refdef.entities );
 	vkCaster_t			*caster = NULL;
 
-	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE )
+	// (a body cut in two is no caster: each half would cast the whole body)
+	if ( !rt.skinPipeline || !ent || ent == &tr.worldEntity || !( ent->e.renderfx & RF_SHADOW_PLANE ) || ent->cut
 		|| backEnd.viewParms.isPortal || ( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		return;
 	}

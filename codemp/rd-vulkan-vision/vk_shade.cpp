@@ -92,6 +92,10 @@ uint32_t VK_CurrentTransform( void ) {
 			// glClipPlane of rd-vanilla: clip anything behind the portal surface
 			VectorCopy( backEnd.viewParms.portalPlane.normal, t.clipPlane );
 			t.clipPlane[3] = backEnd.viewParms.portalPlane.dist;
+		} else if ( ent && ent->cut && !backEnd.projection2D ) {
+			// VisionJK: a body a saber cut through keeps the side the plane points to (ext.AddCutEntityToScene); one
+			// clip distance, so in a mirror or portal its plane wins and the body is whole there
+			VectorCopy4( ent->cutPlane, t.clipPlane );
 		}
 		if ( ent ) {
 			VectorCopy( ent->lightDir, t.lightDir );

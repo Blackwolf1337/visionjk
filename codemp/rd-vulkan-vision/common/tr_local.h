@@ -143,6 +143,9 @@ typedef struct trRefEntity_s {
 	int			ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
 	int			dlightBits;
+	// VisionJK: drawn cut by a plane (ext.AddCutEntityToScene): what lies on the side the normal points to is kept
+	qboolean	cut;
+	vec4_t		cutPlane;		// in the world: normal, distance
 } trRefEntity_t;
 
 
@@ -1769,6 +1772,7 @@ void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, fl
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
+void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );
 void RE_RenderScene( const refdef_t *fd );
 
 /*

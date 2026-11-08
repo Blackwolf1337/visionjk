@@ -2056,6 +2056,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.S_AddLoopingSoundVolume			= S_AddLoopingSoundVolume;
 		cgi.ext.R_AddLineLight					= re->ext.AddLineLightToScene;
 		cgi.ext.R_AddSaberBlade					= re->ext.AddSaberBladeToScene;
+		cgi.ext.R_AddCutEntity					= re->ext.AddCutEntityToScene;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

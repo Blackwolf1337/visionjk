@@ -250,6 +250,7 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 
 	backEndData->entities[r_numentities].e = *ent;
 	backEndData->entities[r_numentities].lightingCalculated = qfalse;
+	backEndData->entities[r_numentities].cut = qfalse;
 
 	if (ent->ghoul2)
 	{
@@ -275,6 +276,25 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 	//}
 
 	r_numentities++;
+}
+
+/*
+=====================
+RE_AddCutEntityToScene
+
+VisionJK: an entity drawn cut by plane (in the world: normal, distance), only what lies on the side the normal
+points to is drawn (vk_shade.cpp VK_CurrentTransform puts it into the clip plane): the halves of a body a saber cut
+through (cgame/cg_slice.c)
+=====================
+*/
+void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane ) {
+	const int index = r_numentities;
+
+	RE_AddRefEntityToScene( ent );
+	if ( r_numentities == index + 1 && plane ) {
+		backEndData->entities[index].cut = qtrue;
+		VectorCopy4( plane, backEndData->entities[index].cutPlane );
+	}
 }
 
 

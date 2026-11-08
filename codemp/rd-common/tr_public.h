@@ -340,6 +340,9 @@ typedef struct refexport_s {
 		// moment ago) for the scene of this frame, between ClearScene and RenderScene; NULL: the cgame draws the flat
 		// blade as before.
 		void				(*AddSaberBladeToScene)					( const saberBlade3D_t *blade );
+		// An entity drawn cut by plane (in the world: normal, distance; what lies on the side the normal points to is
+		// kept), for the scene of this frame; otherwise as AddRefEntityToScene. NULL: the renderer cuts nothing.
+		void				(*AddCutEntityToScene)					( const refEntity_t *ent, const float *plane );
 	} ext;
 
 } refexport_t;
