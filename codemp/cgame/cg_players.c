@@ -5939,7 +5939,8 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 			// the shadows the players cast in it (the renderer traces them from the blade) pulse with it.
 			vec3_t tip;
 
-			VectorMA( muzzle, blade->length, dir, tip );
+			// (to where the blade ends when it strikes a wall or the floor, as the blade itself)
+			VectorMA( muzzle, Q_max( 0.5f, Q_min( blade->length, Distance( muzzle, end ) - 1.0f ) ), dir, tip );
 			trap->ext.R_AddLineLight( muzzle, tip, blade->length * 1.6f + Q_flrand( 0.0f, 1.0f ) * 6.0f, rgb[0] * hum, rgb[1] * hum, rgb[2] * hum );
 		}
 		else

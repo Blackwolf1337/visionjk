@@ -64,11 +64,14 @@ float CubeShadow( int first, vec3 center, vec3 q ) {
 // the walls, pillars and ledges between it and a surface (2026-11-08). A blade is a line of light: each pixel takes
 // four points of its own along it (one in each quarter, at another place in each pixel and frame), so the shadow of a
 // pillar fades out over what the blade spans; from three points the same for every pixel it ended in a hard line.
-float LevelTaken( vec3 q, vec3 a, vec3 b ) {
+// Only the points in front of the surface (p, normal) count: a blade that dips into the floor has points under it,
+// which give it no light anyway, and every ray to them hit the floor itself, so the floor round the blade was
+// shadowed (their picture 2026-11-08: a dark hole in the light where the tip touched the floor).
+float LevelTaken( vec3 q, vec3 p, vec3 normal, vec3 a, vec3 b ) {
 #ifdef LEVEL_RAYS
 	const int POINTS = 4;
 	uvec3 v = uvec3( uvec2( gl_FragCoord.xy ), uint( W[13].w ) );
-	float hidden = 0.0;
+	float hidden = 0.0, counted = 0.0;
 
 	v = v * 1664525u + 1013904223u;
 	v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
@@ -76,14 +79,19 @@ float LevelTaken( vec3 q, vec3 a, vec3 b ) {
 	for ( int i = 0; i < POINTS; i++ ) {
 		v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
 		float along = ( float( i ) + float( v.x & 0xffffu ) / 65536.0 ) / float( POINTS );
-		vec3 to = mix( a, b, along ) - q;
+		vec3 point = mix( a, b, along );
+		vec3 to = point - q;
 		float d = length( to );
 
+		if ( dot( normal, point - p ) <= 0.0 ) {
+			continue;
+		}
+		counted += 1.0;
 		if ( d > 2.0 && LevelBlocks( q, to / d, d - 2.0 ) ) {
 			hidden += 1.0;
 		}
 	}
-	return hidden / float( POINTS );
+	return counted > 0.0 ? hidden / counted : 0.0;
 #else
 	return 0.0;
 #endif
@@ -107,13 +115,13 @@ float LightShadow( int k, vec3 p, vec3 normal ) {
 	float players = 0.0;
 	if ( b.w <= 0.0 ) {
 		players = CubeShadow( 16 + k * 18, a.xyz, q );
-		return 1.0 - ( 1.0 - players ) * ( 1.0 - LevelTaken( q, a.xyz, a.xyz ) );
+		return 1.0 - ( 1.0 - players ) * ( 1.0 - LevelTaken( q, p, normal, a.xyz, a.xyz ) );
 	}
 	// (where along the blade the three are this frame: rows[21] y, z, w, they jump every frame, VK_SM_DrawAtlas)
 	for ( int i = 0; i < 3; i++ ) {
 		players += CubeShadow( 16 + ( k * 3 + i ) * 6, mix( a.xyz, b.xyz, W[21][1 + i] ), q );
 	}
-	return 1.0 - ( 1.0 - players / 3.0 ) * ( 1.0 - LevelTaken( q, a.xyz, b.xyz ) );
+	return 1.0 - ( 1.0 - players / 3.0 ) * ( 1.0 - LevelTaken( q, p, normal, a.xyz, b.xyz ) );
 }
 
 void main() {
