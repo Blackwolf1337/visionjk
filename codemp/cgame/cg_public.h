@@ -834,6 +834,13 @@ typedef struct cgameImport_s {
 		// plane (in the world: normal, distance; the side the normal points to is kept), otherwise as
 		// R_AddRefEntityToScene: the halves of a body a saber cut through (cg_slice.c). NULL: the renderer has none.
 		void			(*R_AddCutEntity)						( const refEntity_t *ent, const float *plane );
+		// Only an engine that sets the cvar v_cgameSetBones to 1 has these two, the same way. G2_BoneNumber: the
+		// number of a bone in the skeleton of model modelIndex (-1: none), parent gets its parent's (-1: the root).
+		// G2_SetBonesWorld: bones placed whole in the world, count 3x4 matrices in the frame G2API_GetBoltMatrix
+		// gives for the same angles, origin and scale; bones not listed follow their parent; count 0 hands them all
+		// back to the animation (the ragdoll of the cut bodies, cg_ragdoll.c). NULL: the renderer has none.
+		int				(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
+		qboolean		(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world );
 	} ext;
 } cgameImport_t;
 

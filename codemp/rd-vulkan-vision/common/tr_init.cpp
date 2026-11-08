@@ -1214,6 +1214,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.AddLineLightToScene				= RE_AddLineLightToScene;
 	re.ext.AddSaberBladeToScene				= RE_AddSaberBladeToScene;
 	re.ext.AddCutEntityToScene				= RE_AddCutEntityToScene;
+	re.ext.G2_BoneNumber					= G2API_VJK_BoneNumber;
+	re.ext.G2_SetBonesWorld					= G2API_VJK_SetBonesWorld;
 
 	return &re;
 }

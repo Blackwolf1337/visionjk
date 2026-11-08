@@ -1773,6 +1773,10 @@ void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, flo
 void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
 void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );
+// VisionJK: bones placed by the cgame (G2_API.cpp, ext.G2_BoneNumber and ext.G2_SetBonesWorld)
+int G2API_VJK_BoneNumber( void *ghoul2, int modelIndex, const char *boneName, int *parent );
+qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin,
+	const vec3_t scale, int count, const int *bones, const float *world );
 void RE_RenderScene( const refdef_t *fd );
 
 /*

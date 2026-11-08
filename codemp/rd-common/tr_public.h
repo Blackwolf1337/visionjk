@@ -343,6 +343,13 @@ typedef struct refexport_s {
 		// An entity drawn cut by plane (in the world: normal, distance; what lies on the side the normal points to is
 		// kept), for the scene of this frame; otherwise as AddRefEntityToScene. NULL: the renderer cuts nothing.
 		void				(*AddCutEntityToScene)					( const refEntity_t *ent, const float *plane );
+		// The number of a bone in the skeleton of model modelIndex of a ghoul2 instance (-1: none), parent gets the
+		// number of its parent (-1 for the root). NULL: the renderer has none.
+		int					(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
+		// Bones of model modelIndex placed whole in the world (count 3x4 matrices in world, in the frame
+		// G2API_GetBoltMatrix gives for the same angles, origin and scale); bones not listed follow their parent.
+		// count 0 hands them all back to the animation. NULL: the renderer has none.
+		qboolean			(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world );
 	} ext;
 
 } refexport_t;

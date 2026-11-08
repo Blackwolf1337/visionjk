@@ -2972,6 +2972,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameSaberBlade", "1", CVAR_ROM, "" );
 	// ext.R_AddCutEntity: a body drawn cut by a plane (cgame/cg_slice.c)
 	Cvar_Get( "v_cgameCutEntity", "1", CVAR_ROM, "" );
+	// ext.G2_BoneNumber and ext.G2_SetBonesWorld: the ragdoll of cut bodies (cgame/cg_ragdoll.c)
+	Cvar_Get( "v_cgameSetBones", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)
