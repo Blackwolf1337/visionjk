@@ -72,6 +72,9 @@ static const uint32_t vk_smShadowFrag[] =
 static const uint32_t vk_smLightsFrag[] =
 #include "shaders/smlights_frag.inc"
 ;
+static const uint32_t vk_rtLightMaskFrag[] =
+#include "shaders/rtlightmask_frag.inc"
+;
 static const uint32_t vk_rtCellsComp[] =
 #include "shaders/rtcells_comp.inc"
 ;
@@ -1802,7 +1805,9 @@ static void VK_SM_Create( void ) {
 	// the masks from the atlas, as the rays write them
 	rt.smShadowFragment = VK_CreateShader( vk_smShadowFrag, sizeof( vk_smShadowFrag ) );
 	rt.smShadowPipeline = VK_CreatePipeline( vk.postVertexShader, rt.smShadowFragment, 0, 7, VKP_GENERIC, rt.layout );
-	rt.smLightsFragment = VK_CreateShader( vk_smLightsFrag, sizeof( vk_smLightsFrag ) );
+	// (where the device traces rays the level takes the light of the moving lights as well, shaders/rtlightmask.frag)
+	rt.smLightsFragment = rt.maps ? VK_CreateShader( vk_smLightsFrag, sizeof( vk_smLightsFrag ) )
+		: VK_CreateShader( vk_rtLightMaskFrag, sizeof( vk_rtLightMaskFrag ) );
 	rt.smLightsPipeline = VK_CreatePipeline( vk.postVertexShader, rt.smLightsFragment, 0, 7, VKP_GENERIC, rt.layout );
 }
 

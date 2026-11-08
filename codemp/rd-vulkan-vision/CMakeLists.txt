@@ -233,6 +233,7 @@ set(MPVulkanVisionRTShaders
 	rtshadow.frag
 	rtskin.comp
 	smdepth.vert
+	rtlightmask.frag
 	smlights.frag
 	smshadow.frag
 	)
@@ -240,6 +241,7 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/lightmask.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/scene.glsl"
