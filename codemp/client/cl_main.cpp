@@ -2966,6 +2966,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgamePaint", "1", CVAR_ROM, "" );
 	// and looping sounds at a volume of their own (ext.S_AddLoopingSoundVolume, the motor of the RC car)
 	Cvar_Get( "v_cgameLoopVolume", "1", CVAR_ROM, "" );
+	// and tubes of light for the saber blades (ext.R_AddLineLight)
+	Cvar_Get( "v_cgameLineLight", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)

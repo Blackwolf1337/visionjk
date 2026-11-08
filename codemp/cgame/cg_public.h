@@ -821,6 +821,11 @@ typedef struct cgameImport_s {
 		// draws marks with the shader.
 		qhandle_t		(*R_PaintPicture)						( int slot, const char *name, paintPicture_t *out );
 		qboolean		(*R_AddPaint)							( const paintDecal_t *decals, int count );
+		// Only an engine that sets the cvar v_cgameLineLight to 1 has this one, the same way. A tube of light from
+		// start to end for the scene of this frame (a saber blade), reaching range units from it, between
+		// R_ClearScene and R_RenderScene, in place of R_AddLightToScene. NULL: the renderer has none, the cgame
+		// adds a point light as before.
+		void			(*R_AddLineLight)						( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 	} ext;
 } cgameImport_t;
 
