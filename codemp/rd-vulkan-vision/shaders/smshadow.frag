@@ -3,9 +3,9 @@
 // cg_shadows 2 on a device without ray tracing (vk_rt.cpp, the shadow maps): the same mask as shaders/rtshadow.frag
 // writes (red: how much the players darken the point, green to alpha: how far it is from the eye), from the tiles of
 // the atlas in place of rays. Each player has a tile seen along the light of the grid at his feet; a point darkens
-// where it lies behind him in that tile. How dark follows the light of the grid at the point, as the rays have it
-// (dark where the light comes from one side, faint where it is ambient), and the shadow fades out within a few steps
-// of his feet. The sun is not used here (rows[11].w 0): the maps do not know where the level hides it.
+// where it lies behind him in that tile. How dark follows the light of the grid at him, as the rays have it (dark
+// where the light comes from one side, faint where it is ambient), and the shadow fades out within a few steps of
+// his feet. The sun is not used here (rows[11].w 0): the maps do not know where the level hides it.
 //
 // rows 47 + 4 t: the view and projection of tile t (VK_SM_FIRST_ROW), the tiles 256 pixels in rows of 8
 
@@ -74,17 +74,6 @@ void GridAt( vec3 p, out float ambient, out float directed, out vec3 dir ) {
 }
 
 
-// 1 at the feet of the nearest player, 0 from 160 units on
-float CasterFade( vec3 p ) {
-	int count = int( W[21].x );
-	float nearest = 1e6;
-
-	for ( int i = 0; i < count; i++ ) {
-		nearest = min( nearest, distance( p, W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 ) ) );
-	}
-	return 1.0 - smoothstep( 48.0, 160.0, nearest );
-}
-
 // how much of tile t lies in front of the point q (0 to 1, 3 x 3 pixels around it)
 float TileShadow( int t, vec3 q ) {
 	vec4 clip = mat4( W[47 + t * 4], W[48 + t * 4], W[49 + t * 4], W[50 + t * 4] ) * vec4( q, 1.0 );
@@ -104,28 +93,35 @@ float TileShadow( int t, vec3 q ) {
 	return blocked / 9.0;
 }
 
+// The light of each player is the grid at him, as his tile is (shaders/rtshadow.frag GridShadow says why not the
+// grid at the point)
 float Shadow( vec3 p, vec3 normal ) {
-	float ambient, directed;
-	vec3 gridDir;
-
-	GridAt( p + normal * 8.0, ambient, directed, gridDir );
-	if ( dot( gridDir, gridDir ) < 1e-4 ) {
-		return 0.0;
-	}
-	float facing = dot( normal, normalize( gridDir ) );
-	float fade = CasterFade( p );
-	if ( facing <= 0.0 || fade <= 0.0 ) {
-		return 0.0;
-	}
 	// (a little off the surface, against the stripes of a surface that shadows itself)
 	vec3 q = p + normal * 3.0;
 	float dark = 0.0;
 	int count = int( W[21].x );
+
 	for ( int i = 0; i < count; i++ ) {
-		dark = max( dark, TileShadow( i, q ) );
+		vec3 middle = W[22 + i].xyz;
+		// 1 at his feet (about 32 below the middle), 0 from 160 units on
+		float fade = 1.0 - smoothstep( 48.0, 160.0, distance( p, middle - vec3( 0.0, 0.0, 32.0 ) ) );
+		if ( fade <= 0.0 ) {
+			continue;
+		}
+		float ambient, directed;
+		vec3 gridDir;
+		GridAt( middle, ambient, directed, gridDir );
+		if ( dot( gridDir, gridDir ) < 1e-4 ) {
+			continue;
+		}
+		float facing = dot( normal, normalize( gridDir ) );
+		if ( facing <= 0.0 ) {
+			continue;
+		}
+		float ratio = directed / ( ambient + directed + 1.0 );
+		dark = max( dark, min( ratio, 0.85 ) * TileShadow( i, q ) * smoothstep( 0.0, 0.25, facing ) * fade );
 	}
-	float ratio = directed / ( ambient + directed + 1.0 );
-	return min( ratio, 0.85 ) * dark * smoothstep( 0.0, 0.25, facing ) * fade;
+	return dark;
 }
 
 // a distance from the eye in green, blue and alpha, 24 bits up to 8192 units

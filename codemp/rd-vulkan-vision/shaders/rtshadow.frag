@@ -127,68 +127,99 @@ vec3 InCone( vec3 dir, float tangent, uint k ) {
 	return normalize( dir + t * ( cos( a ) * r ) + b * ( sin( a ) * r ) );
 }
 
-// whether the ray from origin along dir (up to len, widening by tangent a unit) passes near one of the players:
-// their spheres in rows 22 on, as many as row 21 x. Most pixels of a view pass none and trace nothing.
+// whether the ray from origin along dir (up to len, widening by tangent a unit) passes near the sphere s of a player
+bool NearSphere( vec3 origin, vec3 dir, float len, float tangent, vec4 s ) {
+	float t = clamp( dot( s.xyz - origin, dir ), 0.0, len );
+	vec3 closest = origin + dir * t - s.xyz;
+
+	return dot( closest, closest ) < ( s.w + tangent * t ) * ( s.w + tangent * t );
+}
+
+// whether it passes near one of the players: their spheres in rows 22 on, as many as row 21 x. Most pixels of a view
+// pass none and trace nothing.
 bool NearCaster( vec3 origin, vec3 dir, float len, float tangent ) {
 	int count = int( W[21].x );
 
 	for ( int i = 0; i < count; i++ ) {
-		vec4 s = W[22 + i];
-		float t = clamp( dot( s.xyz - origin, dir ), 0.0, len );
-		vec3 closest = origin + dir * t - s.xyz;
-
-		if ( dot( closest, closest ) < ( s.w + tangent * t ) * ( s.w + tangent * t ) ) {
+		if ( NearSphere( origin, dir, len, tangent, W[22 + i] ) ) {
 			return true;
 		}
 	}
 	return false;
 }
 
-// 1 at the feet of the nearest player, 0 from 160 units on (the shadows from the light of the grid)
-float CasterFade( vec3 p ) {
+// 1 at the feet of a player (about 32 below the middle of his sphere), 0 from 160 units on
+float FeetFade( vec3 p, vec4 s ) {
+	return 1.0 - smoothstep( 48.0, 160.0, distance( p, s.xyz - vec3( 0.0, 0.0, 32.0 ) ) );
+}
+
+// The shadows from the light of the grid, rays from origin. Each player has one light: the grid at him, as his
+// lighting has it (ent->lightDir), with its strength there. Not the grid at the point: its direction is an average of
+// many lamps that changes from cell to cell, and a shadow whose every pixel went its own way bent into hooks and
+// ended in lines where the cells changed (2026-11-08, under the lamps of mp/ffa3). It is dark at his feet and fades
+// out within a few steps: a long shadow along an averaged direction is nothing real.
+float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 	int count = int( W[21].x );
-	float nearest = 1e6;
+	float dark = 0.0;
 
 	for ( int i = 0; i < count; i++ ) {
-		// (the middle of the sphere is a little above the origin of the player: his feet are about 32 below it)
-		vec3 feet = W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 );
-		nearest = min( nearest, distance( p, feet ) );
+		vec4 s = W[22 + i];
+		float fade = FeetFade( origin, s );
+		if ( fade <= 0.0 ) {
+			continue;
+		}
+		float ambient, directed;
+		vec3 gridDir;
+		GridAt( s.xyz, ambient, directed, gridDir );
+		if ( dot( gridDir, gridDir ) < 1e-4 ) {
+			continue;
+		}
+		vec3 light = normalize( gridDir );
+		float facing = dot( normal, light );
+		// how much of his light comes from that direction, 0 to 1
+		float ratio = directed / ( ambient + directed + 1.0 );
+		// the cone: wide where the light is mostly ambient, as narrow as v_rtLightSize says where most of it comes
+		// from one side
+		float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
+		if ( facing <= 0.0 || !NearSphere( origin, light, reach, tangent, s ) ) {
+			continue;
+		}
+		float blocked = 0.0;
+		for ( int k = 0; k < rays; k++ ) {
+			blocked += Blocked( origin, InCone( light, tangent, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
+		}
+		dark = max( dark, min( ratio, 0.85 ) * blocked / float( rays ) * smoothstep( 0.0, 0.25, facing ) * fade );
 	}
-	return 1.0 - smoothstep( 48.0, 160.0, nearest );
+	return dark;
 }
 
 // how much the players darken the point p of this pixel, facing normal, by the rays of this frame. The light is the
 // one the lightmap was made with as far as the level still knows it: the sun where it reaches the point, else the
-// direction of the light grid there. How dark and how sharp follows how much of the light at the point comes from
+// light of the grid at each player (GridShadow). How dark and how sharp follows how much of the light comes from
 // that direction: outdoors in the sun dark and sharp, indoors where the grid is mostly ambient light faint and soft.
 // (The light patches of the textures that glow cast no shadows since 2026-11-08: the lamps they guessed did not
 // agree with the lightmaps, and every one gave a shadow of its own in its own direction.)
 float Shadow( vec3 p, vec3 normal ) {
-	float ambient, directed;
-	vec3 gridDir;
-
-	// (a little off the surface: the cells on it may be in the wall it is)
-	GridAt( p + normal * 8.0, ambient, directed, gridDir );
 	vec3 origin = p + normal * 1.5;
 	vec3 sun = W[11].xyz;
 	int count = int( W[15].x );
 	float reach = W[12].w;
-	// how much of the light comes from the direction of the grid, 0 to 1
-	float ratio = directed / ( ambient + directed + 1.0 );
 
 	bool sunUp = W[11].w > 0.0 && W[15].w > 0.0 && dot( normal, sun ) > 0.0;
-	bool gridUp = dot( gridDir, gridDir ) > 1e-4;
-	vec3 light = gridUp ? normalize( gridDir ) : vec3( 0.0, 0.0, 1.0 );
-	float facing = dot( normal, light );
-	// the cone of the grid light: wide where the light is mostly ambient, as narrow as v_rtLightSize says where
-	// most of it comes from one side
-	float gridTangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
-
 	bool nearSun = sunUp && NearCaster( origin, sun, reach, W[14].w );
-	bool nearGrid = gridUp && facing > 0.0 && NearCaster( origin, light, reach, gridTangent );
+	// (GridShadow tests each player itself, here only whether one stands near enough)
+	bool nearGrid = false;
+	for ( int i = 0; i < int( W[21].x ) && !nearGrid; i++ ) {
+		nearGrid = FeetFade( origin, W[22 + i] ) > 0.0;
+	}
 	if ( !nearSun && !nearGrid ) {
 		return 0.0;
 	}
+	float ambient, directed;
+	vec3 gridDir;
+	// the light at the point, for how bright the sun is against the rest (a little off the surface: the cells on it
+	// may be in the wall it is)
+	GridAt( p + normal * 8.0, ambient, directed, gridDir );
 
 	// How much of the sun reaches the point, from rays in a cone against the level. Not one ray: the shade of a
 	// wall in the lightmap has a soft edge (a texel of a lightmap is 16 units or more), and a point that took either
@@ -216,19 +247,8 @@ float Shadow( vec3 p, vec3 normal ) {
 		}
 	}
 
-	// the direction of the grid, for what the sun does not reach
-	float gridDark = 0.0;
-	if ( nearGrid && sunReach < 1.0 ) {
-		float strength = min( ratio, 0.85 );
-		float blocked = 0.0;
-		for ( int k = 0; k < count; k++ ) {
-			blocked += Blocked( origin, InCone( light, gridTangent, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
-		}
-		// The grid light is many lamps taken together, its direction an average that changes from cell to cell: a
-		// long shadow along it is nothing real, and where the direction or the strength changed under it the shadow
-		// ended in a line (2026-11-08, mp/ffa3). It is dark at the feet and fades out within a few steps.
-		gridDark = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing ) * CasterFade( p );
-	}
+	// the light of the grid, for what the sun does not reach
+	float gridDark = ( nearGrid && sunReach < 1.0 ) ? GridShadow( origin, normal, reach, count ) : 0.0;
 	return mix( gridDark, sunDark, sunReach );
 }
 
