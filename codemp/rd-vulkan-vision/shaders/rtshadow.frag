@@ -144,6 +144,19 @@ bool NearCaster( vec3 origin, vec3 dir, float len, float tangent ) {
 	return false;
 }
 
+// 1 at the feet of the nearest player, 0 from 160 units on (the shadows from the light of the grid)
+float CasterFade( vec3 p ) {
+	int count = int( W[21].x );
+	float nearest = 1e6;
+
+	for ( int i = 0; i < count; i++ ) {
+		// (the middle of the sphere is a little above the origin of the player: his feet are about 32 below it)
+		vec3 feet = W[22 + i].xyz - vec3( 0.0, 0.0, 32.0 );
+		nearest = min( nearest, distance( p, feet ) );
+	}
+	return 1.0 - smoothstep( 48.0, 160.0, nearest );
+}
+
 // how much the players darken the point p of this pixel, facing normal, by the rays of this frame. The light is the
 // one the lightmap was made with as far as the level still knows it: the sun where it reaches the point, else the
 // direction of the light grid there. How dark and how sharp follows how much of the light at the point comes from
@@ -211,7 +224,10 @@ float Shadow( vec3 p, vec3 normal ) {
 		for ( int k = 0; k < count; k++ ) {
 			blocked += Blocked( origin, InCone( light, gridTangent, uint( k ) ), reach, 0x02u ) ? 1.0 : 0.0;
 		}
-		gridDark = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing );
+		// The grid light is many lamps taken together, its direction an average that changes from cell to cell: a
+		// long shadow along it is nothing real, and where the direction or the strength changed under it the shadow
+		// ended in a line (2026-11-08, mp/ffa3). It is dark at the feet and fades out within a few steps.
+		gridDark = strength * blocked / float( count ) * smoothstep( 0.0, 0.25, facing ) * CasterFade( p );
 	}
 	return mix( gridDark, sunDark, sunReach );
 }
