@@ -38,7 +38,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/G2.h"
 
 #define SLICE_MAX			16
-#define SLICE_REACH			40.0f		// units: how near the middle of the body the blade must have come
+#define SLICE_REACH			48.0f		// units: how near the middle of the body the blade must have come
 #define SLICE_GLOW_MSEC		10000		// the afterglow of the cut face
 #define SLICE_BLOOD_MSEC	5000		// how long the blood takes to run out
 #define SLICE_LOST_MSEC		3000		// a body not drawn for this long is gone
@@ -202,13 +202,22 @@ moment, the body is cut along that swing
 =================
 */
 void CG_SliceKill( int victim, int killer ) {
-	vec3_t	base, tip, sweep, axis, across;
-	vec4_t	plane;
+	qboolean	tell;
+	vec3_t		base, tip, sweep, axis, across;
+	vec4_t		plane;
+	char		value[8];
 
 	if ( !CG_SliceOn() || victim < 0 || victim >= MAX_CLIENTS || killer < 0 || killer >= MAX_CLIENTS || victim == killer ) {
 		return;
 	}
+	// (developer 1 says why a saber kill was not cut)
+	trap->Cvar_VariableStringBuffer( "developer", value, sizeof( value ) );
+	tell = (qboolean)( atoi( value ) != 0 );
 	if ( !CG_SaberCutNear( &cgs.clientinfo[killer], cg_entities[victim].lerpOrigin, SLICE_REACH, base, tip, sweep ) ) {
+		if ( tell ) {
+			Com_Printf( "v_slice: client %i not cut, no blade of client %i came within %.0f units in the last 600 ms\n", victim,
+				killer, SLICE_REACH );
+		}
 		return;
 	}
 	// the plane of the blade and of the way it swept; a stab (along the blade) cuts nothing
@@ -218,12 +227,21 @@ void CG_SliceKill( int victim, int killer ) {
 	}
 	VectorMA( sweep, -DotProduct( sweep, axis ), axis, across );
 	if ( VectorNormalize( across ) < 1.0f ) {
+		if ( tell ) {
+			Com_Printf( "v_slice: client %i not cut, a stab\n", victim );
+		}
 		return;
 	}
 	CrossProduct( axis, across, plane );
 	VectorNormalize( plane );
 	plane[3] = DotProduct( plane, base );
-	CG_SliceStart( victim, plane, across );
+	if ( !CG_SliceStart( victim, plane, across ) ) {
+		if ( tell ) {
+			Com_Printf( "v_slice: client %i not cut, the plane of the swing misses his body\n", victim );
+		}
+	} else if ( tell ) {
+		Com_Printf( "v_slice: client %i cut by client %i\n", victim, killer );
+	}
 }
 
 /*

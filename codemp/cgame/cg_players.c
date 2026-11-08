@@ -5557,7 +5557,7 @@ static qboolean CG_Saber3D( void )
 // (CG_SaberSweep) and the curve of the classic trail (CG_SaberTrailArc). Found by the trail of the blade, which lives
 // with the blade; a slot nobody asked for longest goes to a new blade. A new sample at least every 4 ms, so the
 // samples reach back far enough also at a high frame rate.
-#define SABER_PAST			16
+#define SABER_PAST			64		// (the saber slicing looks back past the delay of the kill message, cg_slice.c)
 #define SABER_PAST_SLOTS	64
 #define SABER_PAST_STEP		4
 
@@ -5681,7 +5681,8 @@ qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec
 				vec3_t		seg, rel, nearest;
 				float		u, len2, d;
 
-				if ( cg.time - p->time[a] > 300 )
+				// (the kill message comes a ping and the delay of the snapshots after the hit)
+				if ( cg.time - p->time[a] > 600 )
 					break;
 				VectorSubtract( p->tip[a], p->base[a], seg );
 				VectorSubtract( point, p->base[a], rel );
