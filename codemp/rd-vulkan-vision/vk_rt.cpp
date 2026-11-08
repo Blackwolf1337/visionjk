@@ -139,6 +139,7 @@ typedef struct vkCaster_s {
 static struct {
 	// the level
 	const world_t				*world;			// what the structure of the level was built for
+	int							worldLoads;		// and r_worldLoads then: the pointer is the same for every level
 	qboolean					levelReady;		// built, or its build is recorded before the first use
 	qboolean					levelPending;	// its build still has to be recorded this frame
 	vkBuffer_t					positions;		// the inputs of its build
@@ -839,6 +840,7 @@ static void VK_RT_PrepareLevel( void ) {
 	VK_RT_DestroyLevel();
 	VK_RT_UploadGrid();
 	rt.world = tr.world;
+	rt.worldLoads = r_worldLoads;
 	rt.levelScratch = 0;
 	rt.previousValid = qfalse;
 	if ( rt.maps ) {
@@ -2366,7 +2368,7 @@ void VK_RT_Pass( void ) {
 	VK_EndTarget();
 
 	// what has to be built this frame and how much scratch memory that needs, before anything is recorded
-	if ( rt.world != tr.world ) {
+	if ( rt.world != tr.world || rt.worldLoads != r_worldLoads ) {
 		VK_RT_PrepareLevel();
 	}
 	casterScratch = VK_RT_PrepareCasters();

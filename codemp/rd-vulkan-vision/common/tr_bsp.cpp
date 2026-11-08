@@ -35,6 +35,8 @@ void RE_LoadWorldMap( const char *name );
 */
 
 static	world_t		s_worldData;
+// VisionJK: counts the levels loaded (r_worldLoads in tr_local.h)
+int					r_worldLoads;
 static	byte		*fileBase;
 
 int			c_subdivisions;
@@ -2178,6 +2180,7 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 
 		// only set tr.world now that we know the entire level has loaded properly
 		tr.world = &worldData;
+		r_worldLoads++;
 
 		char sMapName[MAX_QPATH];
 		COM_StripExtension( name, sMapName, sizeof( sMapName ) );

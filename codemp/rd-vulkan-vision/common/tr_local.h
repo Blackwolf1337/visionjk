@@ -1219,6 +1219,11 @@ void	 R_Images_DeleteImage(image_t *pImage);
 
 extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
+// VisionJK: how many levels were loaded since the program started. tr.world is the same pointer for every level
+// (s_worldData) and tr is cleared when the renderer starts again between levels, so what keeps something for a
+// level (the ray tracing in vk_rt.cpp, the materials) knows a new one by this: by the pointer the ray tracing kept
+// the first level of a session for all the others, its walls, light grid and panels (2026-11-08).
+extern int			r_worldLoads;
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 extern window_t		window;

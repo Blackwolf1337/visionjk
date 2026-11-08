@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static vec3_t			levelViewOrigin;
 static vec3_t			levelViewAxis[3];
 static const world_t	*levelViewWorld;
+static int				levelViewLoads;		// r_worldLoads when it was set
 
 // square units of the surfaces of the level per shader, and the shaders of the level and all shaders as one handle
 // per name, made again when the level or the number of shaders changed
@@ -40,6 +41,7 @@ static qhandle_t		levelList[MAX_SHADERS];
 static qhandle_t		allList[MAX_SHADERS];
 static int				levelCount, allCount;
 static const world_t	*listWorld;
+static int				listLoads;
 static int				listShaders = -1;
 
 /*
@@ -100,7 +102,7 @@ void RE_SetLightOverride( const lightOverride_t *light ) {
 }
 
 qboolean RE_LevelView( vec3_t origin, vec3_t forward ) {
-	if ( !tr.world || levelViewWorld != tr.world ) {
+	if ( !tr.world || levelViewWorld != tr.world || levelViewLoads != r_worldLoads ) {
 		return qfalse;
 	}
 	VectorCopy( levelViewOrigin, origin );
@@ -115,6 +117,7 @@ void R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] )
 	VectorCopy( axis[1], levelViewAxis[1] );
 	VectorCopy( axis[2], levelViewAxis[2] );
 	levelViewWorld = tr.world;
+	levelViewLoads = r_worldLoads;
 	R_ApplySun();
 }
 
@@ -224,10 +227,11 @@ static int QDECL CompareArea( const void *a, const void *b )
 
 static void MakeLists( void )
 {
-	if ( listWorld == tr.world && listShaders == tr.numShaders ) {
+	if ( listWorld == tr.world && listLoads == r_worldLoads && listShaders == tr.numShaders ) {
 		return;
 	}
 	listWorld = tr.world;
+	listLoads = r_worldLoads;
 	listShaders = tr.numShaders;
 
 	memset( shaderArea, 0, sizeof( shaderArea ) );
@@ -411,7 +415,7 @@ qboolean RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *
 		VectorCopy( start, ray.start );
 		VectorSubtract( end, start, ray.dir );
 	} else {
-		if ( levelViewWorld != tr.world ) {
+		if ( levelViewWorld != tr.world || levelViewLoads != r_worldLoads ) {
 			return qfalse;
 		}
 		VectorCopy( levelViewOrigin, ray.start );
