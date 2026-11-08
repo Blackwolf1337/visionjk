@@ -593,6 +593,12 @@ LANG_ENGLISH        "Classic"
 REFERENCE           SFX
 LANG_ENGLISH        "SFX"
 
+REFERENCE           3D_BLADES
+LANG_ENGLISH        "3D Blades"
+
+REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
+LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 

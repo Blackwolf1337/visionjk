@@ -580,6 +580,8 @@ MORE = {
     'Blade Look': ('Aspect de la lame', 'Aspecto de la hoja'),
     'Classic': ('Classique', 'Clásico'),
     'SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic.': ('SFX : un fin cœur blanc dans une lueur étirée sur le mouvement. Les styles RGB et le noir restent classiques.', 'SFX: un fino núcleo blanco en un brillo que se estira sobre el golpe. Los estilos RGB y el negro siguen clásicos.'),
+    '3D Blades': ('Lames en 3D', 'Hojas en 3D'),
+    'Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above.': ("Les lames en lumière 3D avec le rendu Vulkan, elles s'arrêtent aux murs et brillent sur le mouvement. Désactivé : la lame plate de l'aspect ci-dessus.", 'Hojas como luz 3D con el renderizador Vulkan, se detienen en las paredes y brillan sobre el golpe. Desactivado: la hoja plana del aspecto de arriba.'),
     'Trail Length': ('Longueur de la traînée', 'Longitud de la estela'),
     'How long the trail behind a swinging blade is.': ('La longueur de la traînée derrière une lame en mouvement.', 'Longitud de la estela tras una hoja en movimiento.'),
     'Blade Core': ('Cœur de la lame', 'Núcleo de la hoja'),

@@ -827,9 +827,9 @@ typedef struct cgameImport_s {
 		// adds a point light as before.
 		void			(*R_AddLineLight)						( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
 		// Only an engine that sets the cvar v_cgameSaberBlade to 1 has this one, the same way. A saber blade drawn by
-		// the renderer in 3D for the scene of this frame: a white core of coreRadius in a glow of glowRadius from
-		// start to end, colour 0 to 1, in place of the flat RT_SABER_GLOW and RT_LINE. NULL: the renderer has none.
-		void			(*R_AddSaberBlade)						( const vec3_t start, const vec3_t end, float coreRadius, float glowRadius, float r, float g, float b );
+		// the renderer in 3D for the scene of this frame (saberBlade3D_t: a white core in a coloured glow, and the
+		// place it swept), in place of the flat RT_SABER_GLOW and RT_LINE. NULL: the renderer has none.
+		void			(*R_AddSaberBlade)						( const saberBlade3D_t *blade );
 	} ext;
 } cgameImport_t;
 

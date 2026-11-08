@@ -258,8 +258,10 @@ set(MPVulkanVisionVulkanShaders
 	tonemap.frag
 	ssrprep.frag
 	saber.frag
+	saberportal.frag
 	)
 set(MPVulkanVisionVulkanShaderIncludes
+	"${MPDir}/rd-vulkan-vision/shaders/saber.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/smaa.glsl"
 	"${VisionJKLibDir}/smaa/SMAA.hlsl"
 	)

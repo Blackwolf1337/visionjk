@@ -481,6 +481,16 @@ typedef struct miniRefEntity_s
 
 } miniRefEntity_t;
 
+// VisionJK: a saber blade the renderer draws in 3D (refexport_t ext.AddSaberBladeToScene)
+typedef struct saberBlade3D_s {
+	vec3_t		start, end;			// the blade now, from the hilt to the tip
+	vec3_t		oldStart, oldEnd;	// where it was a moment ago, the place it swept glows between (the same: it rests)
+	float		core, glow;			// the radius of the white core, of the coloured glow round it
+	float		sweep;				// how bright the swept place is, 0 to 1
+	vec3_t		rgb;				// 0 to 1
+	int			renderfx;			// RF_THIRD_PERSON: only in mirrors and portals, RF_FIRST_PERSON: not in them
+} saberBlade3D_t;
+
 typedef struct refEntity_s {
 	// this stucture must remain identical as the miniRefEntity_t
 	//

@@ -5547,16 +5547,153 @@ static qboolean CG_HasSaberBlade( void )
 	return (qboolean)( has > 0 );
 }
 
+// whether the blades are drawn in 3D: the renderer has them and v_saber3D is on
+static qboolean CG_Saber3D( void )
+{
+	return (qboolean)( CG_HasSaberBlade() && v_saber3D.integer );
+}
+
+// VisionJK: where each blade was in the last frames (the time, its hilt and its tip), for the place a 3D blade swept
+// (CG_SaberSweep) and the curve of the classic trail (CG_SaberTrailArc). Found by the trail of the blade, which lives
+// with the blade; a slot nobody asked for longest goes to a new blade. A new sample at least every 4 ms, so the
+// samples reach back far enough also at a high frame rate.
+#define SABER_PAST			16
+#define SABER_PAST_SLOTS	64
+#define SABER_PAST_STEP		4
+
+typedef struct saberPast_s {
+	const saberTrail_t	*trail;
+	int					used;			// cg.time it was last asked for
+	int					count, head;	// head: the newest
+	int					time[SABER_PAST];
+	vec3_t				base[SABER_PAST], tip[SABER_PAST];
+} saberPast_t;
+
+static saberPast_t cg_saberPast[SABER_PAST_SLOTS];
+
+static saberPast_t *CG_SaberPast( const saberTrail_t *trail, const vec3_t base, const vec3_t tip )
+{
+	saberPast_t	*p = NULL, *oldest = &cg_saberPast[0];
+	int			i;
+
+	for ( i = 0; i < SABER_PAST_SLOTS; i++ )
+	{
+		if ( cg_saberPast[i].trail == trail )
+		{
+			p = &cg_saberPast[i];
+			break;
+		}
+		if ( cg_saberPast[i].used < oldest->used )
+			oldest = &cg_saberPast[i];
+	}
+	if ( !p )
+	{
+		p = oldest;
+		memset( p, 0, sizeof( *p ) );
+		p->trail = trail;
+	}
+	p->used = cg.time;
+	if ( p->count )
+	{
+		const int newest = p->time[p->head];
+
+		// a jump back in time, a long gap, or the blade jumped (a respawn, a teleport): start anew
+		if ( cg.time < newest || cg.time - newest > 250 || Distance( base, p->base[p->head] ) > 160.0f )
+			p->count = 0;
+		else if ( cg.time == newest || ( p->count > 1
+			&& newest - p->time[( p->head + SABER_PAST - 1 ) % SABER_PAST] < SABER_PAST_STEP ) )
+			p->count--;		// (the newest is moved on in place)
+		else
+			p->head = ( p->head + 1 ) % SABER_PAST;
+	}
+	p->time[p->head] = cg.time;
+	VectorCopy( base, p->base[p->head] );
+	VectorCopy( tip, p->tip[p->head] );
+	p->count = Q_min( p->count + 1, SABER_PAST );
+	return p;
+}
+
+// Where the blade was at time, between the two samples round it: the hilt straight, the way to the tip turned. Older
+// than all of them: the oldest. qfalse: none.
+static qboolean CG_SaberPastAt( const saberPast_t *p, int time, vec3_t base, vec3_t tip )
+{
+	int k;
+
+	if ( !p || !p->count )
+		return qfalse;
+	for ( k = 0; k < p->count; k++ )
+	{
+		const int a = ( p->head + SABER_PAST - k ) % SABER_PAST;
+
+		if ( p->time[a] <= time || k == p->count - 1 )
+		{
+			const int	b = ( a + 1 ) % SABER_PAST;
+			vec3_t		wayA, wayB, way;
+			float		f, lenA, lenB;
+
+			if ( k == 0 || p->time[a] >= time )
+			{
+				VectorCopy( p->base[a], base );
+				VectorCopy( p->tip[a], tip );
+				return qtrue;
+			}
+			f = (float)( time - p->time[a] ) / (float)Q_max( 1, p->time[b] - p->time[a] );
+			VectorSubtract( p->tip[a], p->base[a], wayA );
+			VectorSubtract( p->tip[b], p->base[b], wayB );
+			lenA = VectorNormalize( wayA );
+			lenB = VectorNormalize( wayB );
+			VectorAdvance( wayA, f, wayB, way );
+			VectorNormalize( way );
+			VectorAdvance( p->base[a], f, p->base[b], base );
+			VectorMA( base, lenA + ( lenB - lenA ) * f, way, tip );
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+// v_saber3D: the place the blade (from start to end) swept since a moment ago, as long a moment as its trail, and how
+// bright it is: the faster the blade, the brighter. Nothing when it rests or has no trail (past NULL).
+static void CG_SaberSweep( const saberPast_t *past, qboolean trailMove, saberBlade3D_t *blade )
+{
+	const float	ms = ( trailMove ? 24.0f : 10.0f ) * Com_Clamp( 0.0f, 4.0f, v_saberTrailLength.value );
+	vec3_t		base, tip;
+	float		moved;
+
+	VectorCopy( blade->start, blade->oldStart );
+	VectorCopy( blade->end, blade->oldEnd );
+	blade->sweep = 0.0f;
+	if ( !past || ms < 1.0f || !CG_SaberPastAt( past, cg.time - (int)ms, base, tip ) )
+		return;
+	moved = Q_max( Distance( tip, blade->end ), Distance( base, blade->start ) );
+	if ( moved < 1.0f || moved > 400.0f )
+		return;
+	VectorCopy( base, blade->oldStart );
+	VectorCopy( tip, blade->oldEnd );
+	blade->sweep = Com_Clamp( 0.0f, 1.0f, ( moved - 1.0f ) / 24.0f );
+}
+
+// how the blade hums this frame, 0.82 to 1: its light and its 3D blade flicker by it in step
+static float CG_SaberHum( void )
+{
+	return 0.82f + Q_flrand( 0.0f, 1.0f ) * 0.18f;
+}
+
 // VisionJK: the blade from origin along dir as the renderer draws it in 3D, a white core in a glow of its colour
 // (their choice 2026-11-08: movie style, for every blade, the SFX and custom ones too), in place of the flat glow
-// sprites and core strip that fell apart seen along the blade. qfalse: the renderer has none, or the blade is black
-// (light can only be added, a black blade keeps its texture); draw it as before.
-static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color )
+// sprites and core strip that fell apart seen along the blade. It behaves as the flat blade does: it ends where it
+// strikes a wall (length), hums with its light, glows more and leaves the place it swept glowing while it swings
+// (past: where it was, NULL without a trail), and shows in mirrors as the model holding it does (renderfx). qfalse:
+// the renderer has none, v_saber3D is off, or the blade is black (light can only be added, a black blade keeps its
+// texture); draw it as before.
+static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float length, float lengthMax, float radius,
+	saber_colors_t color, const saberPast_t *past, qboolean trailMove, float hum, int renderfx )
 {
-	vec3_t	end, rgb = { 1.0f, 1.0f, 1.0f };
-	float	flare;
+	saberBlade3D_t	blade;
+	vec3_t			rgb = { 1.0f, 1.0f, 1.0f };
+	float			flare, h;
 
-	if ( !CG_HasSaberBlade() || (int)color == SABER_BLACK )
+	if ( !CG_Saber3D() || (int)color == SABER_BLACK )
 	{
 		return qfalse;
 	}
@@ -5564,18 +5701,27 @@ static qboolean CG_AddSaberBlade3D( const vec3_t origin, const vec3_t dir, float
 	{
 		return qtrue;
 	}
+	memset( &blade, 0, sizeof( blade ) );
 	CG_RGBForSaberColor( color, rgb );
-	// (the halo as the blade comes out, as the flat glow had it; and its hum)
+	VectorCopy( origin, blade.start );
+	VectorMA( origin, length, dir, blade.end );
+	CG_SaberSweep( past, trailMove, &blade );
+	// (the halo as the blade comes out, as the flat glow had it)
 	flare = length < lengthMax ? 1.0f + 2.0f / length : 1.0f;
-	flare *= 0.96f + Q_flrand( 0.0f, 1.0f ) * 0.08f;
-	VectorMA( origin, length, dir, end );
-	trap->ext.R_AddSaberBlade( origin, end, radius * 0.22f * CG_SaberScale( &v_saberCoreScale ) * flare,
-		radius * 1.5f * CG_SaberScale( &v_saberGlowScale ) * flare, rgb[0], rgb[1], rgb[2] );
+	h = Com_Clamp( 0.0f, 1.0f, ( hum - 0.82f ) / 0.18f );
+	blade.core = radius * 0.22f * CG_SaberScale( &v_saberCoreScale ) * flare * ( 0.95f + 0.1f * h );
+	blade.glow = radius * 1.5f * CG_SaberScale( &v_saberGlowScale ) * flare * ( 0.97f + 0.06f * h ) * ( 1.0f + 0.3f * blade.sweep );
+	VectorScale( rgb, ( 0.88f + 0.12f * h ) * ( 1.0f + 0.25f * blade.sweep ), blade.rgb );
+	blade.renderfx = renderfx & ( RF_THIRD_PERSON | RF_FIRST_PERSON );
+	trap->ext.R_AddSaberBlade( &blade );
 	return qtrue;
 }
 
-void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight )
+// past and trailMove: see CG_AddSaberBlade3D
+void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight,
+	const saberPast_t *past, qboolean trailMove )
 {
+	const float	hum = CG_SaberHum();
 	vec3_t		mid;
 	qhandle_t	blade = 0, glow = 0;
 	refEntity_t saber;
@@ -5598,10 +5744,13 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	{	// always add a light because sabers cast a nice glow before they slice you in half!!  or something...
 		vec3_t rgb={1,1,1};
 		CG_RGBForSaberColor( color, rgb );
+		// (VisionJK: its brightness hums with the 3D blade)
+		if ( CG_Saber3D() )
+			VectorScale( rgb, hum, rgb );
 		trap->R_AddLightToScene( mid, (length*1.4f) + (Q_flrand(0.0f, 1.0f)*3.0f), rgb[0], rgb[1], rgb[2] );
 	}
 
-	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color ) )
+	if ( CG_AddSaberBlade3D( origin, dir, length, lengthMax, radius, color, past, trailMove, hum, rfx ) )
 	{
 		return;
 	}
@@ -5737,9 +5886,11 @@ static void CG_SFXSaberTrailFill( const saberFX_t *fx, saber_colors_t color )
 }
 
 // v_saberStyle 1 (ui/ui_saberfx.c). trail NULL: the blade without the place it was a moment ago.
+// past and trailMove: see CG_AddSaberBlade3D
 static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, saber_colors_t color, const vec3_t muzzle,
-	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx )
+	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx, const saberPast_t *past, qboolean trailMove )
 {
+	const float			hum = CG_SaberHum();
 	const bladeInfo_t	*blade = &client->saber[saberNum].blade[bladeNum];
 	saberFX_t			fx;
 	qhandle_t			core;
@@ -5765,12 +5916,15 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 	fx.renderfx = rfx;
 	fx.coreScale = CG_SaberScale( &v_saberCoreScale );
 	fx.glowScale = CG_SaberScale( &v_saberGlowScale );
-	if ( !CG_AddSaberBlade3D( muzzle, dir, blade->length, blade->lengthMax, blade->radius, color ) )
+	// (the 3D blade ends where it strikes a wall, as the flat one; end is a unit past the tip, see CG_AddSaberBlade; and
+	// it glows over the place it swept itself, the flat fill of that place is not drawn then)
+	if ( !CG_AddSaberBlade3D( muzzle, dir, Distance( muzzle, end ) - 1.0f, blade->lengthMax, blade->radius, color, past, trailMove,
+		hum, rfx ) )
 	{
 		SaberFX_Draw( &fx );
+		if ( trail )
+			CG_SFXSaberTrailFill( &fx, color );
 	}
-	if ( trail )
-		CG_SFXSaberTrailFill( &fx, color );
 
 	if ( client->saber[saberNum].numBlades < 3 && !( client->saber[saberNum].saberFlags2 & SFL2_NO_DLIGHT ) && blade->length >= 0.5f )
 	{
@@ -5784,7 +5938,6 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 			// The blade hums: its light flickers in brightness too, not only in reach, so the light on the walls and
 			// the shadows the players cast in it (the renderer traces them from the blade) pulse with it.
 			vec3_t tip;
-			const float hum = 0.82f + Q_flrand( 0.0f, 1.0f ) * 0.18f;
 
 			VectorMA( muzzle, blade->length, dir, tip );
 			trap->ext.R_AddLineLight( muzzle, tip, blade->length * 1.6f + Q_flrand( 0.0f, 1.0f ) * 6.0f, rgb[0] * hum, rgb[1] * hum, rgb[2] * hum );
@@ -6415,6 +6568,91 @@ static void CG_SFXSaberTrail( const centity_t *cent, saberTrail_t *trail, const 
 	trail->lastTime = cg.time;
 }
 
+// the point at t (0 to 1) of the curve from p1 to p2 that comes from p0 and goes on to p3 (Catmull-Rom)
+static void CG_SaberCurve( const vec3_t p0, const vec3_t p1, const vec3_t p2, const vec3_t p3, float t, vec3_t out )
+{
+	const float	t2 = t * t, t3 = t2 * t;
+	int			i;
+
+	for ( i = 0; i < 3; i++ )
+	{
+		out[i] = 0.5f * ( 2.0f * p1[i] + ( p2[i] - p0[i] ) * t + ( 2.0f * p0[i] - 5.0f * p1[i] + 4.0f * p2[i] - p3[i] ) * t2
+			+ ( 3.0f * p1[i] - p0[i] - 3.0f * p2[i] + p3[i] ) * t3 );
+	}
+}
+
+// VisionJK: the classic trail of this frame (fx: the blade now in corners 0 and 1, where it was at the last slice in
+// corners 3 and 2) cut into up to four slices along a curve through where the blade was before that, so a fast swing
+// leaves an arc and not a fan of straight pieces (their word 2026-11-08: "they look kinda jaggy sometimes"). The hilt
+// follows the curve, the way to the tip turns along it. past: where the blade was (CG_SaberPast), lastTime: when
+// the last slice was.
+static void CG_SaberTrailArc( const effectTrailArgStruct_t *fx, const saberPast_t *past, int lastTime )
+{
+	effectTrailArgStruct_t	slice;
+	vec3_t					base[4], way[4], b0, t0;
+	float					len1, len2, angle, oldST;
+	int						slices, k, c;
+
+	VectorCopy( fx->mVerts[3].origin, base[1] );
+	VectorSubtract( fx->mVerts[2].origin, base[1], way[1] );
+	VectorCopy( fx->mVerts[0].origin, base[2] );
+	VectorSubtract( fx->mVerts[1].origin, base[2], way[2] );
+	len1 = VectorNormalize( way[1] );
+	len2 = VectorNormalize( way[2] );
+	// a slice for every 6 degrees the blade turned or 12 units its hilt moved
+	angle = RAD2DEG( acosf( Com_Clamp( -1.0f, 1.0f, DotProduct( way[1], way[2] ) ) ) );
+	slices = (int)ceilf( Q_max( angle / 6.0f, Distance( base[1], base[2] ) / 12.0f ) );
+	slices = Q_min( Q_max( slices, 1 ), 4 );
+	if ( slices == 1 || len1 < 1.0f || len2 < 1.0f )
+	{
+		trap->FX_AddPrimitive( (effectTrailArgStruct_t *)fx );
+		return;
+	}
+	// before: where it was as long before the last slice as that is before now; else straight on
+	if ( CG_SaberPastAt( past, lastTime - ( cg.time - lastTime ), b0, t0 ) )
+	{
+		VectorCopy( b0, base[0] );
+		VectorSubtract( t0, b0, way[0] );
+		VectorNormalize( way[0] );
+	}
+	else
+	{
+		VectorScale( base[1], 2.0f, base[0] );
+		VectorSubtract( base[0], base[2], base[0] );
+		VectorScale( way[1], 2.0f, way[0] );
+		VectorSubtract( way[0], way[2], way[0] );
+		VectorNormalize( way[0] );
+	}
+	VectorScale( base[2], 2.0f, base[3] );
+	VectorSubtract( base[3], base[1], base[3] );
+	VectorScale( way[2], 2.0f, way[3] );
+	VectorSubtract( way[3], way[1], way[3] );
+	VectorNormalize( way[3] );
+
+	oldST = fx->mVerts[2].ST[0];
+	for ( k = 0; k < slices; k++ )
+	{
+		slice = *fx;
+		for ( c = 0; c < 4; c++ )
+		{
+			// corners 0 and 1 the newer edge of the slice, 3 and 2 the older; f 0 now, 1 the last slice
+			const float	f = (float)( c == 0 || c == 1 ? k : k + 1 ) / (float)slices;
+			vec3_t		b, w;
+
+			CG_SaberCurve( base[0], base[1], base[2], base[3], 1.0f - f, b );
+			CG_SaberCurve( way[0], way[1], way[2], way[3], 1.0f - f, w );
+			VectorNormalize( w );
+			if ( c == 0 || c == 3 )
+				VectorCopy( b, slice.mVerts[c].origin );
+			else
+				VectorMA( b, len2 + ( len1 - len2 ) * f, w, slice.mVerts[c].origin );
+			slice.mVerts[c].ST[0] = f * oldST;
+			slice.mVerts[c].destST[0] = 1.0f + f * oldST;
+		}
+		trap->FX_AddPrimitive( &slice );
+	}
+}
+
 void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, int renderfx, int modelIndex, int saberNum, int bladeNum, vec3_t origin, vec3_t angles, qboolean fromSaber, qboolean dontDraw)
 {
 	vec3_t	org_, end, v,
@@ -6433,6 +6671,9 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	int scolor = 0;
 	int	useModelIndex = 0;
 	qboolean sfxStyle, sfxTrail = qfalse;
+	// VisionJK: where the blade was (CG_SaberPast), and whether it leaves a trail and the move one (CG_SaberSweep)
+	saberPast_t *past;
+	qboolean trailShown = qfalse, trailMove;
 	int bladeRenderfx;
 
 	if (cent->currentState.eType == ET_NPC)
@@ -6695,6 +6936,16 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	}
 CheckTrail:
 
+	{
+		vec3_t tip;
+		const int move = cent->currentState.saberMove;
+
+		VectorMA( org_, saberLen, axis_[0], tip );
+		past = CG_SaberPast( &client->saber[saberNum].blade[bladeNum].trail, org_, tip );
+		trailMove = (qboolean)( ( move >= 0 && move < LS_MOVE_MAX && saberMoveData[move].trailLength > 0 )
+			|| BG_SuperBreakWinAnim( cent->currentState.torsoAnim ) || ( cent->currentState.saberInFlight && saberNum == 0 ) );
+	}
+
 	if (!cg_saberTrail.integer)
 	{ //don't do the trail in this case
 		goto JustDoIt;
@@ -6709,6 +6960,7 @@ CheckTrail:
 	//FIXME: if trailStyle is 1, use the motion blur instead
 
 	saberTrail = &client->saber[saberNum].blade[bladeNum].trail;
+	trailShown = qtrue;
 
 	if ( sfxStyle )
 	{
@@ -6908,7 +7160,7 @@ CheckTrail:
 						}
 						*/
 
-						trap->FX_AddPrimitive(&fx);
+						CG_SaberTrailArc( &fx, past, saberTrail->lastTime );
 					}
 				}
 			}
@@ -6945,12 +7197,13 @@ JustDoIt:
 	if ( sfxStyle )
 	{
 		CG_DoSFXSaber( client, saberNum, bladeNum, (saber_colors_t)scolor, org_, end, axis_[0], sfxTrail ? saberTrail : NULL,
-			bladeRenderfx );
+			bladeRenderfx, trailShown ? past : NULL, trailMove );
 		return;
 	}
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 		scolor, bladeRenderfx,
-		(qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)) );
+		(qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)),
+		trailShown ? past : NULL, trailMove );
 }
 
 int CG_IsMindTricked(int trickIndex1, int trickIndex2, int trickIndex3, int trickIndex4, int client)

@@ -224,6 +224,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					ssrPrepPipeline;
 	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)
 	VkPipeline					saberPipeline;
+	VkShaderModule				saberPortalShader;	// the same in a mirror or portal
+	VkPipeline					saberPortalPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];

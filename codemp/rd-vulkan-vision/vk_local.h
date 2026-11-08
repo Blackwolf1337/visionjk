@@ -72,7 +72,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
 #define VK_RT_CASTERS		16		// players whose spheres the shadow pass tests before it traces (VK_RT_MAX_CASTERS)
 #define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 52 * 4 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (52: the tiles of the shadow maps, VK_SM_TILES), then the panels of each player
-#define VK_BLADE_VEC4S		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * 3 )	// shaders/saber.frag: the view, how many, three a blade
+#define VK_BLADE_ROWS		5		// shaders/saber.glsl: five rows a blade
+#define VK_BLADE_PORTAL		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * VK_BLADE_ROWS )	// where the view of a mirror or portal is
+#define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal
 #define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame
@@ -432,7 +434,7 @@ void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
-void		VK_SaberBlades( void );
+void		VK_SaberBlades( qboolean portal );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );

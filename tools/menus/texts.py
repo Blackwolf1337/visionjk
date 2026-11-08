@@ -548,6 +548,8 @@ TR = {
     'Classic': 'Klassisch',
     'SFX': 'SFX',
     'SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic.': 'SFX: ein dünner weißer Kern in einem Leuchten, das über den Schwung gezogen wird. RGB-Stile und Schwarz bleiben klassisch.',
+    '3D Blades': '3D-Klingen',
+    'Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above.': 'Klingen als 3D-Licht mit dem Vulkan-Renderer, sie enden an Wänden und leuchten über den Schwung. Aus: die flache Klinge der Optik darüber.',
     'Trail Length': 'Spurlänge',
     'How long the trail behind a swinging blade is.': 'Wie lang die Spur hinter einer schwingenden Klinge ist.',
     'Blade Core': 'Klingenkern',

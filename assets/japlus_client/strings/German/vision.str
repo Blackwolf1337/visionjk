@@ -789,6 +789,14 @@ REFERENCE           SFX
 LANG_ENGLISH        "SFX"
 LANG_GERMAN         "#same"
 
+REFERENCE           3D_BLADES
+LANG_ENGLISH        "3D Blades"
+LANG_GERMAN         "3D-Klingen"
+
+REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
+LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
+LANG_GERMAN         "Klingen als 3D-Licht mit dem Vulkan-Renderer, sie enden an Wänden und leuchten über den Schwung. Aus: die flache Klinge der Optik darüber."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_GERMAN         "Spurlänge"

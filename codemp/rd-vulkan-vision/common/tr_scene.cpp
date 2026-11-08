@@ -403,18 +403,11 @@ RE_AddSaberBladeToScene
 VisionJK: a saber blade the renderer draws in 3D (vk_post.cpp VK_SaberBlades)
 =====================
 */
-void RE_AddSaberBladeToScene( const vec3_t start, const vec3_t end, float coreRadius, float glowRadius, float r, float g, float b ) {
-	saberBlade_t *blade;
-
-	if ( !tr.registered || r_numSaberBlades >= MAX_SABER_BLADES || glowRadius <= 0.0f ) {
+void RE_AddSaberBladeToScene( const saberBlade3D_t *blade ) {
+	if ( !tr.registered || !blade || r_numSaberBlades >= MAX_SABER_BLADES || blade->glow <= 0.0f ) {
 		return;
 	}
-	blade = &backEndData->saberBlades[r_numSaberBlades++];
-	VectorCopy( start, blade->start );
-	VectorCopy( end, blade->end );
-	blade->core = coreRadius;
-	blade->glow = glowRadius;
-	VectorSet( blade->rgb, r, g, b );
+	backEndData->saberBlades[r_numSaberBlades++] = *blade;
 }
 
 /*

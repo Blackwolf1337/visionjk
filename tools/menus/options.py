@@ -153,6 +153,7 @@ SETUP = [
         ('head', 'Lightsabers'),
         ('multi', 'Blade Look', 'v_saberStyle', (('Classic', 0), ('SFX', 1)),
          'SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic.'),
+        ('yesno', '3D Blades', 'v_saber3D', 'Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above.'),
         ('slider', 'Trail Length', 'v_saberTrailLength', 1, 0, 4, 'How long the trail behind a swinging blade is.'),
         ('slider', 'Blade Core', 'v_saberCoreScale', 1, 0.25, 3, 'How thick the white core of a blade is.'),
         ('slider', 'Blade Glow', 'v_saberGlowScale', 1, 0.25, 3, 'How wide the glow around a blade is.'),

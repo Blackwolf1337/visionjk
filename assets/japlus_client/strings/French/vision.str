@@ -789,6 +789,14 @@ REFERENCE           SFX
 LANG_ENGLISH        "SFX"
 LANG_FRENCH         "#same"
 
+REFERENCE           3D_BLADES
+LANG_ENGLISH        "3D Blades"
+LANG_FRENCH         "Lames en 3D"
+
+REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
+LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
+LANG_FRENCH         "Les lames en lumière 3D avec le rendu Vulkan, elles s'arrêtent aux murs et brillent sur le mouvement. Désactivé : la lame plate de l'aspect ci-dessus."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_FRENCH         "Longueur de la traînée"

@@ -340,45 +340,70 @@ void VK_SsrPrep( void ) {
 ===============
 VK_SaberBlades
 
-The saber blades of the scene (ext.AddSaberBladeToScene) in 3D over the view of the level, added onto the frame
-before the screen reflections and the bloom (shaders/saber.frag): their numbers in globals.blades, one pass over the
-screen for all of them
+The saber blades of the scene (ext.AddSaberBladeToScene) in 3D, added onto the frame (shaders/saber.glsl): their
+numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them after its
+solid surfaces and before what is transparent (RB_DrawWet), portal qtrue a mirror or portal in it at its end; of
+those only the first of a frame, the globals have room for one more view.
 ===============
 */
-void VK_SaberBlades( void ) {
+void VK_SaberBlades( qboolean portal ) {
 #ifndef RD_VISION_GLES
+	static int	portalFrame = -1;
 	const int	count = Q_min( backEnd.refdef.numSaberBlades, MAX_SABER_BLADES );
+	const int	hidden = portal ? RF_FIRST_PERSON : RF_THIRD_PERSON;
+	const VkPipeline pipeline = portal ? vk.saberPortalPipeline : vk.saberPipeline;
 	float		rows[VK_WET_HEADER][4];
 	int			viewport[4];
+	int			shown = 0;
 
-	if ( !vk.frame || count <= 0 || !vk.depthReadable || !vk.saberPipeline ) {
+	if ( !vk.frame || count <= 0 || !vk.depthReadable || !pipeline ) {
 		return;
+	}
+	for ( int i = 0; i < count; i++ ) {
+		if ( !( backEnd.refdef.saberBlades[i].renderfx & hidden ) ) {
+			shown++;
+		}
+	}
+	if ( !shown || ( portal && portalFrame == backEnd.viewParms.frameCount ) ) {
+		return;
+	}
+	if ( portal ) {
+		portalFrame = backEnd.viewParms.frameCount;
 	}
 	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
 	VK_ViewRows( rows, viewport );
-	memcpy( globals->blades, rows, sizeof( rows ) );
+	memcpy( portal ? globals->blades[VK_BLADE_PORTAL] : globals->blades[0], rows, sizeof( rows ) );
+	// (the blades the same for both views, in w of their colour the views each is in)
 	VectorSet4( globals->blades[VK_WET_HEADER], (float)count, 0.0f, 0.0f, 0.0f );
 	for ( int i = 0; i < count; i++ ) {
 		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
-		float				( *r )[4] = &globals->blades[VK_WET_HEADER + 1 + i * 3];
+		float				( *r )[4] = &globals->blades[VK_WET_HEADER + 1 + i * VK_BLADE_ROWS];
 
 		VectorCopy( blade->start, r[0] );
 		r[0][3] = blade->core;
 		VectorCopy( blade->end, r[1] );
 		r[1][3] = blade->glow;
-		VectorCopy( blade->rgb, r[2] );
-		r[2][3] = 1.0f;
+		VectorCopy( blade->oldStart, r[2] );
+		r[2][3] = Com_Clamp( 0.0f, 1.0f, blade->sweep );
+		VectorCopy( blade->oldEnd, r[3] );
+		r[3][3] = 0.0f;
+		VectorCopy( blade->rgb, r[4] );
+		r[4][3] = (float)( ( ( blade->renderfx & RF_THIRD_PERSON ) ? 0 : 1 ) | ( ( blade->renderfx & RF_FIRST_PERSON ) ? 0 : 2 ) );
 	}
 
-	// The part of the view the blades and their glow cover, from the upper left (as rows[8]); the pass is drawn there
-	// alone: over all of the view, with many samples, it cost about a millisecond (most of it resolving the samples)
+	// The part of the view the blades, the places they swept and their glow cover, from the upper left (as rows[8]);
+	// the pass is drawn there alone: over all of the view, with many samples, it cost about a millisecond (most of it
+	// resolving the samples)
 	const float	left = rows[8][0], top = rows[8][1], right = rows[8][0] + rows[8][2], bottom = rows[8][1] + rows[8][3];
 	float		x0 = right, y0 = bottom, x1 = left, y1 = top;
 	for ( int i = 0; i < count; i++ ) {
 		const saberBlade_t *blade = &backEnd.refdef.saberBlades[i];
 
-		for ( int e = 0; e < 2; e++ ) {
-			const float	*q = e ? blade->end : blade->start;
+		if ( blade->renderfx & hidden ) {
+			continue;
+		}
+		for ( int e = 0; e < 4; e++ ) {
+			const float	*q = e == 0 ? blade->start : ( e == 1 ? blade->end : ( e == 2 ? blade->oldStart : blade->oldEnd ) );
 			float		clip[4];
 
 			for ( int k = 0; k < 4; k++ ) {
@@ -409,8 +434,8 @@ void VK_SaberBlades( void ) {
 
 	VK_EndTarget();
 	VK_BeginOverLevel( cmd, area );
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.saberPipeline );
-	vk.boundPipeline = vk.saberPipeline;
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+	vk.boundPipeline = pipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 	{
@@ -430,6 +455,7 @@ void VK_SaberBlades( void ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_InvalidateTransform();
 #endif
 }
 

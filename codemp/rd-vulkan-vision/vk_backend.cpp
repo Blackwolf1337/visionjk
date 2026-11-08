@@ -873,6 +873,9 @@ static void RB_DrawWet( int depthRange ) {
 		rb_entityReset = qtrue;
 		VK_GpuMark( "moving lights" );
 	}
+	// the saber blades over the solid level, under the sparks and flashes of their clashes (shaders/saber.glsl)
+	VK_SaberBlades( qfalse );
+	VK_GpuMark( "saber blades" );
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
 		RB_SetDepthRange( depthRange );
@@ -1218,7 +1221,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 #ifdef RD_VISION_GLES
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
-	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() ) );
+	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)
 	rb_deferDlights = (qboolean)( levelView && VK_RT_Wanted() );
 	rb_sweepSurfs = cmd->drawSurfs;
@@ -1236,6 +1239,13 @@ static const void *RB_DrawSurfs( const void *data ) {
 		tess.shader = NULL;
 		return (const void *)( cmd + 1 );
 	}
+#ifndef RD_VISION_GLES
+	// the saber blades in a mirror or portal of the level (the view of the level draws them in RB_DrawWet)
+	if ( backEnd.viewParms.isPortal && !puddle && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_SaberBlades( qtrue );
+		VK_GpuMark( "saber blades in a portal" );
+	}
+#endif
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();
 	// the stages that glow once more, into a buffer that is blurred and added to the scene (vk_post.cpp)
@@ -1262,8 +1272,6 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// tay_bloom, v_tonemap and v_smaa: the view of the level itself, as the focus below. The bloom takes the light
 	// above white before the tone map, SMAA finds its edges in the colours of the screen after it.
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
-		VK_SaberBlades();
-		VK_GpuMark( "saber blades" );
 		VK_SsrPrep();
 		VK_GpuMark( "ssr picture" );
 		VK_Bloom();

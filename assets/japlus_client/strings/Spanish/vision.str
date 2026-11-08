@@ -789,6 +789,14 @@ REFERENCE           SFX
 LANG_ENGLISH        "SFX"
 LANG_SPANISH        "#same"
 
+REFERENCE           3D_BLADES
+LANG_ENGLISH        "3D Blades"
+LANG_SPANISH        "Hojas en 3D"
+
+REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
+LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
+LANG_SPANISH        "Hojas como luz 3D con el renderizador Vulkan, se detienen en las paredes y brillan sobre el golpe. Desactivado: la hoja plana del aspecto de arriba."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_SPANISH        "Longitud de la estela"

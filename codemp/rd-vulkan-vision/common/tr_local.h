@@ -87,11 +87,7 @@ Ghoul2 Insert End
 
 // VisionJK: a saber blade drawn by the renderer in 3D (ext.AddSaberBladeToScene, vk_post.cpp VK_SaberBlades)
 #define MAX_SABER_BLADES	32
-typedef struct saberBlade_s {
-	vec3_t		start, end;
-	float		core, glow;			// the radius of the white core, of the coloured glow round it
-	vec3_t		rgb;				// 0 to 1
-} saberBlade_t;
+typedef saberBlade3D_t saberBlade_t;
 
 typedef struct dlight_s {
 	eDLightTypes	mType;
@@ -655,7 +651,7 @@ typedef struct trRefdef_s {
 	struct dlight_s	*dlights;
 
 	int			numSaberBlades;			// VisionJK: the blades drawn in 3D (ext.AddSaberBladeToScene, vk_post.cpp)
-	struct saberBlade_s	*saberBlades;
+	saberBlade_t		*saberBlades;
 
 	int			numPolys;
 	struct srfPoly_s	*polys;
@@ -1772,7 +1768,7 @@ void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *vert
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
-void RE_AddSaberBladeToScene( const vec3_t start, const vec3_t end, float coreRadius, float glowRadius, float r, float g, float b );
+void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
 void RE_RenderScene( const refdef_t *fd );
 
 /*

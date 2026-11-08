@@ -336,10 +336,10 @@ typedef struct refexport_s {
 		// A tube of light from start to end for the scene of this frame (a saber blade), reaching range units from
 		// the tube, colour 0 to 1, between ClearScene and RenderScene; it takes one of the dynamic lights.
 		void				(*AddLineLightToScene)					( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
-		// A saber blade as the renderer draws it in 3D (a white core of coreRadius in a glow of glowRadius from the
-		// segment start to end, colour 0 to 1) for the scene of this frame, between ClearScene and RenderScene; NULL:
-		// the cgame draws the flat blade as before.
-		void				(*AddSaberBladeToScene)					( const vec3_t start, const vec3_t end, float coreRadius, float glowRadius, float r, float g, float b );
+		// A saber blade as the renderer draws it in 3D (a white core in a coloured glow, and the place it swept since a
+		// moment ago) for the scene of this frame, between ClearScene and RenderScene; NULL: the cgame draws the flat
+		// blade as before.
+		void				(*AddSaberBladeToScene)					( const saberBlade3D_t *blade );
 	} ext;
 
 } refexport_t;
