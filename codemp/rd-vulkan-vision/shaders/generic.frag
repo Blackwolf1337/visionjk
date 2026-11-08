@@ -504,6 +504,58 @@ vec3 DebugLights( Transform t, Surface s, inout vec3 diffuse ) {
 	return shine;
 }
 
+// v_panelShine (globals.panels, vk_rt.cpp VK_RT_PickPanels): the shine of the panels that glow, the shine alone
+// (what they give of even light is in the lightmap already). How much of each this point sees comes from the mask the
+// ray tracing made in the frame before (shaders/rtpanels.frag), looked up where the point was in that view; a point
+// outside that view gets nothing. A panel is a disk: its shine is the wider the larger it looks (as Karis widens the
+// lobe for a lamp of a size). The light falls off with the square of the distance in hundreds of units, as the lamps
+// of DebugLights. Lit in the space of the world.
+vec3 PanelShine( Transform t, Surface s ) {
+	if ( globals.panels[0].y < 0.5 ) {
+		return vec3( 0.0 );
+	}
+	uint slot = uint( globals.panels[0].y - 0.5 );
+	vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
+	vec4 clip = mat4( globals.panels[1], globals.panels[2], globals.panels[3], globals.panels[4] ) * vec4( world, 1.0 );
+	if ( clip.w <= 1.0 ) {
+		return vec3( 0.0 );
+	}
+	vec2 ndc = clip.xy / clip.w;
+	if ( any( greaterThan( abs( ndc ), vec2( 1.0 ) ) ) ) {
+		return vec3( 0.0 );
+	}
+	vec4 rect = globals.panels[5];
+	ivec2 pixel = ivec2( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w );
+	vec4 seen = texelFetch( u_textures[nonuniformEXT( slot )], pixel, 0 );
+	mat3 toWorld = mat3( t.model );
+	Surface w = s;
+	w.n = normalize( toWorld * s.n );
+	w.flat_ = normalize( toWorld * s.flat_ );
+	w.v = normalize( toWorld * s.v );
+	w.along = toWorld * s.along;
+	vec3 shine = vec3( 0.0 ), unused = vec3( 0.0 );
+
+	for ( int k = 0; k < 4; k++ ) {
+		vec3 colour = globals.panels[8 + k * 3].rgb;
+		if ( seen[k] <= 0.0 || dot( colour, colour ) <= 0.0 ) {
+			continue;
+		}
+		vec4 lamp = globals.panels[6 + k * 3];
+		vec3 side = globals.panels[7 + k * 3].xyz;
+		vec3 toLamp = lamp.xyz - world;
+		float dist = length( toLamp );
+		if ( dist <= lamp.w ) {
+			continue;
+		}
+		vec3 l = toLamp / dist;
+		float facing = dot( side, side ) > 0.5 ? max( dot( side, -l ), 0.0 ) : 1.0;
+		float hundreds = dist * 0.01;
+		float fall = 1.0 / max( hundreds * hundreds, 0.04 );
+		shine += SurfaceLight( w, l, colour * ( globals.panels[0].z * fall * facing * seen[k] ), clamp( lamp.w / dist, 0.05, 0.4 ), unused );
+	}
+	return shine;
+}
+
 /* Glass (VK_GlassDraw, material keywords transmission, ior, thickness, absorption): the copy of the frame in tex1
    behind the surface. Where it shows it is bent: the ray from the eye through the surface (refract by ior) against
    the straight one, both carried thickness units on (a thin pane 4) and projected to the screen. It is blurred by the
@@ -770,6 +822,7 @@ vec4 PbrStage( Draw d ) {
 	vec3 shine = SurfaceLight( s, l, directed, 0.4, color );
 #ifndef VK_GLES
 	shine += DebugLights( t, s, color );
+	shine += PanelShine( t, s );
 #endif
 	// v_pbr 2: albedo times the light alone (as without a material), 3: the shine alone, 4: the normal, 5: the share
 	// and direction of the light of the grid, 6: roughness, metalness and occlusion, 7: has an rmo map (red), a normal

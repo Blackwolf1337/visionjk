@@ -234,6 +234,7 @@ set(MPVulkanVisionRTShaders
 	rtskin.comp
 	smdepth.vert
 	rtlightmask.frag
+	rtpanels.frag
 	smlights.frag
 	smshadow.frag
 	)
