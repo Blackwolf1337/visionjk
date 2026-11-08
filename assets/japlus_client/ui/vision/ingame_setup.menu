@@ -673,7 +673,7 @@
 			name					vision_head
 			rect					296 550 412 100
 			visible					1
-			text					@VISION_SCREEN_EFFECTS
+			text					@VISION_BLOOM
 			font					7
 			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
@@ -688,17 +688,17 @@
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
 			action { play "sound/interface/button1.wav" ; }
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_yesno_v_screenfx
+			name					vision_yesno_tay_bloom
 			type					ITEM_TYPE_YESNO
-			text					@VISION_SCREEN_EFFECTS
-			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
-			cvar					"v_screenFx"
+			text					@VISION_BLOOM
+			descText				@VISION_BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
+			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
 			rect					306 650 392 52
 			page					1
 			scroll					1
@@ -708,17 +708,17 @@
 			forecolor				0.86 0.90 0.945 1
 			visible					1
 			column					0
-			advanced				1
 		}
 
 		itemDef
 		{
-			name					vision_yesno_v_fxblast
-			type					ITEM_TYPE_YESNO
-			text					@VISION_EXPLOSION_WAVES
-			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
-			cvar					"v_fxBlast"
+			name					vision_slider_tay_bloomintensity
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLOOM_STRENGTH
+			descText				@VISION_HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
+			cvarfloat				"tay_bloomIntensity" 0.6 0 2
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
 			rect					306 702 392 52
 			page					1
 			scroll					1
@@ -733,113 +733,14 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_soundtinnitus
-			type					ITEM_TYPE_YESNO
-			text					@VISION_RINGING_EARS
-			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
-			cvar					"v_soundTinnitus"
+			name					vision_slider_tay_bloomthreshold
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLOOM_THRESHOLD
+			descText				@VISION_HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
+			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
+			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
 			rect					306 754 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxheat
-			type					ITEM_TYPE_YESNO
-			text					@VISION_HEAT_HAZE
-			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
-			cvar					"v_fxHeat"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 806 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxhit
-			type					ITEM_TYPE_YESNO
-			text					@VISION_HIT_FEEDBACK
-			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
-			cvar					"v_fxHit"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 858 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxwater
-			type					ITEM_TYPE_YESNO
-			text					@VISION_UNDER_WATER
-			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
-			cvar					"v_fxWater"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 910 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxforce
-			type					ITEM_TYPE_YESNO
-			text					@VISION_FORCE_LOOKS
-			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
-			cvar					"v_fxForce"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 962 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxsaber
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SABER_CLASH_AND_HEAT
-			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
-			cvar					"v_fxSaber"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1014 392 52
 			page					1
 			scroll					1
 			row						1
@@ -921,7 +822,7 @@
 			name					vision_head
 			rect					732 290 412 100
 			visible					1
-			text					@VISION_BLOOM
+			text					@VISION_LIGHTING
 			font					7
 			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
@@ -940,13 +841,13 @@
 
 		itemDef
 		{
-			name					vision_yesno_tay_bloom
-			type					ITEM_TYPE_YESNO
-			text					@VISION_BLOOM
-			descText				@VISION_BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
-			cvar					"tay_bloom"
+			name					vision_multi_cg_shadows
+			type					ITEM_TYPE_MULTI
+			text					@VISION_SHADOWS
+			descText				@VISION_REAL_THE_PLAYERS_CAST_SHADOWS_FROM_T
+			cvar					"cg_shadows"
+			cvarFloatList { @VISION_OFF 0 @VISION_BLOB 1 @VISION_REAL 2 }
 			action { play "sound/interface/button1.wav" ; }
-			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
 			rect					742 390 392 52
 			page					1
 			scroll					1
@@ -960,14 +861,32 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_bloomintensity
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_BLOOM_STRENGTH
-			descText				@VISION_HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
-			cvarfloat				"tay_bloomIntensity" 0.6 0 2
+			name					vision_yesno_v_pbr
+			type					ITEM_TYPE_YESNO
+			text					@VISION_MATERIALS
+			descText				@VISION_SURFACES_WITH_A_MATERIAL_ARE_LIT_WIT
+			cvar					"v_pbr"
 			action { play "sound/interface/button1.wav" ; }
-			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
 			rect					742 442 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_dlightscale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_MOVING_LIGHTS
+			descText				@VISION_HOW_BRIGHT_SABERS_SHOTS_AND_EXPLOSIO
+			cvarfloat				"v_dlightScale" 1 0 3
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 494 392 52
 			page					1
 			scroll					1
 			row						1
@@ -981,14 +900,254 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_bloomthreshold
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_BLOOM_THRESHOLD
-			descText				@VISION_HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
-			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
+			name					vision_yesno_v_ssr
+			type					ITEM_TYPE_YESNO
+			text					@VISION_REFLECTIONS
+			descText				@VISION_SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
+			cvar					"v_ssr"
 			action { play "sound/interface/button1.wav" ; }
-			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
-			rect					742 494 392 52
+			rect					742 546 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_hdr
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HDR
+			descText				@VISION_LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
+			cvar					"v_hdr"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 598 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_tonemap
+			type					ITEM_TYPE_MULTI
+			text					@VISION_TONE_MAPPING
+			descText				@VISION_HOW_BRIGHT_LIGHT_IS_PUT_ON_THE_SCREE
+			cvar					"v_tonemap"
+			cvarFloatList { @VISION_OFF 0 @VISION_ORIGINAL_LOOK 1 @VISION_FILMIC 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 650 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_exposure
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_EXPOSURE
+			descText				@VISION_HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
+			cvarfloat				"v_exposure" 1 0.5 2
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 702 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					732 754 412 100
+			visible					1
+			text					@VISION_SCREEN_EFFECTS
+			font					7
+			textscale				0.89
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				54.5
+			caps					1
+			fold					5
+			page					1
+			scroll					1
+			column					1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_screenfx
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SCREEN_EFFECTS
+			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+			cvar					"v_screenFx"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 854 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxblast
+			type					ITEM_TYPE_YESNO
+			text					@VISION_EXPLOSION_WAVES
+			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+			cvar					"v_fxBlast"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 906 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_soundtinnitus
+			type					ITEM_TYPE_YESNO
+			text					@VISION_RINGING_EARS
+			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
+			cvar					"v_soundTinnitus"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 958 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxheat
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HEAT_HAZE
+			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+			cvar					"v_fxHeat"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 1010 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxhit
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HIT_FEEDBACK
+			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+			cvar					"v_fxHit"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 1062 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxwater
+			type					ITEM_TYPE_YESNO
+			text					@VISION_UNDER_WATER
+			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
+			cvar					"v_fxWater"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 1114 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxforce
+			type					ITEM_TYPE_YESNO
+			text					@VISION_FORCE_LOOKS
+			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+			cvar					"v_fxForce"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 1166 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxsaber
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SABER_CLASH_AND_HEAT
+			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
+			cvar					"v_fxSaber"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 1218 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1013,7 +1172,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					5
+			fold					6
 			page					2
 			scroll					1
 			column					0
@@ -1114,7 +1273,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					6
+			fold					7
 			page					2
 			scroll					1
 			column					0
@@ -1177,7 +1336,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					7
+			fold					8
 			page					2
 			scroll					1
 			column					0
@@ -1400,7 +1559,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					8
+			fold					9
 			page					2
 			scroll					1
 			column					1
@@ -1635,7 +1794,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					9
+			fold					10
 			page					2
 			scroll					1
 			column					1
@@ -1695,7 +1854,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					10
+			fold					11
 			page					3
 			scroll					1
 			column					0
@@ -1894,7 +2053,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					11
+			fold					12
 			page					3
 			scroll					1
 			column					0
@@ -1958,7 +2117,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					12
+			fold					13
 			page					3
 			scroll					1
 			column					0
@@ -2024,7 +2183,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					13
+			fold					14
 			page					3
 			scroll					1
 			column					1
@@ -2124,7 +2283,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					14
+			fold					15
 			page					3
 			scroll					1
 			column					1
@@ -2261,7 +2420,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					15
+			fold					16
 			page					3
 			scroll					1
 			column					1
@@ -2417,7 +2576,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					16
+			fold					17
 			page					4
 			scroll					1
 			column					0
@@ -2534,7 +2693,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					17
+			fold					18
 			page					4
 			scroll					1
 			column					0
@@ -2708,7 +2867,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					18
+			fold					19
 			page					4
 			scroll					1
 			column					1
@@ -2787,7 +2946,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					19
+			fold					20
 			page					4
 			scroll					1
 			column					1
@@ -2890,7 +3049,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					20
+			fold					21
 			page					4
 			scroll					1
 			column					1
@@ -3074,7 +3233,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					21
+			fold					22
 			page					5
 			scroll					1
 			column					0
@@ -3247,7 +3406,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					22
+			fold					23
 			page					5
 			scroll					1
 			column					0
@@ -3327,7 +3486,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					23
+			fold					24
 			page					5
 			scroll					1
 			column					0
@@ -3411,7 +3570,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					24
+			fold					25
 			page					5
 			scroll					1
 			column					1
@@ -3518,7 +3677,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					25
+			fold					26
 			page					5
 			scroll					1
 			column					1
@@ -3693,7 +3852,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					26
+			fold					27
 			page					5
 			scroll					1
 			column					1
@@ -3738,7 +3897,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					27
+			fold					28
 			page					6
 			scroll					1
 			column					0
@@ -3892,7 +4051,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					28
+			fold					29
 			page					6
 			scroll					1
 			column					1
@@ -3936,7 +4095,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					29
+			fold					30
 			page					6
 			scroll					1
 			column					1

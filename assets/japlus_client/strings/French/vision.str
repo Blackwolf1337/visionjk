@@ -377,6 +377,82 @@ REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 LANG_FRENCH         "Les sabres laser et les lumières brillent."
 
+REFERENCE           SHADOWS
+LANG_ENGLISH        "Shadows"
+LANG_FRENCH         "Ombres"
+
+REFERENCE           REAL_THE_PLAYERS_CAST_SHADOWS_FROM_T
+LANG_ENGLISH        "Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them."
+LANG_FRENCH         "Réelles : les joueurs projettent des ombres dans la lumière du niveau et celle des sabres et des tirs (rayons tracés si la carte graphique le permet, sinon shadow maps). Tache : une tache sombre sous eux."
+
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+LANG_FRENCH         "Désactivé"
+
+REFERENCE           BLOB
+LANG_ENGLISH        "Blob"
+LANG_FRENCH         "Tache"
+
+REFERENCE           REAL
+LANG_ENGLISH        "Real"
+LANG_FRENCH         "Réelles"
+
+REFERENCE           MATERIALS
+LANG_ENGLISH        "Materials"
+LANG_FRENCH         "Matériaux"
+
+REFERENCE           SURFACES_WITH_A_MATERIAL_ARE_LIT_WIT
+LANG_ENGLISH        "Surfaces with a material are lit with their bumps, roughness and metal: they shine, and smooth ones mirror the room."
+LANG_FRENCH         "Les surfaces dotées d'un matériau sont éclairées avec leur relief, leur rugosité et leur métal : elles brillent, et les plus lisses reflètent la pièce."
+
+REFERENCE           MOVING_LIGHTS
+LANG_ENGLISH        "Moving Lights"
+LANG_FRENCH         "Lumières mobiles"
+
+REFERENCE           HOW_BRIGHT_SABERS_SHOTS_AND_EXPLOSIO
+LANG_ENGLISH        "How bright sabers, shots and explosions light the walls and the floor. 1 as meant."
+LANG_FRENCH         "Intensité avec laquelle sabres, tirs et explosions éclairent murs et sol. 1 comme prévu."
+
+REFERENCE           REFLECTIONS
+LANG_ENGLISH        "Reflections"
+LANG_FRENCH         "Reflets"
+
+REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
+LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
+LANG_FRENCH         "Les surfaces lisses dotées d'un matériau reflètent ce qui est à l'écran, en plus des reflets de la pièce."
+
+REFERENCE           HDR
+LANG_ENGLISH        "HDR"
+LANG_FRENCH         "#same"
+
+REFERENCE           LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
+LANG_ENGLISH        "Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed."
+LANG_FRENCH         "La lumière plus vive que le blanc est conservée : sabres, lueurs et lampes rayonnent au lieu d'être écrêtés. Nécessite un redémarrage de la vidéo. Coûte un peu de performances."
+
+REFERENCE           TONE_MAPPING
+LANG_ENGLISH        "Tone Mapping"
+LANG_FRENCH         "Mappage des tons"
+
+REFERENCE           HOW_BRIGHT_LIGHT_IS_PUT_ON_THE_SCREE
+LANG_ENGLISH        "How bright light is put on the screen. Original Look: as the game was, bright light glows out softly. Filmic: as modern games, richer highlights and more contrast."
+LANG_FRENCH         "Comment la lumière vive est affichée. Aspect original : comme le jeu d'origine, la lumière vive rayonne doucement. Cinématique : comme les jeux modernes, des hautes lumières plus riches et plus de contraste."
+
+REFERENCE           ORIGINAL_LOOK
+LANG_ENGLISH        "Original Look"
+LANG_FRENCH         "Aspect original"
+
+REFERENCE           FILMIC
+LANG_ENGLISH        "Filmic"
+LANG_FRENCH         "Cinématique"
+
+REFERENCE           EXPOSURE
+LANG_ENGLISH        "Exposure"
+LANG_FRENCH         "Exposition"
+
+REFERENCE           HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
+LANG_ENGLISH        "How bright the level is before it is tone mapped. 1 as it is."
+LANG_FRENCH         "Luminosité du niveau avant le mappage des tons. 1 tel quel."
+
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 LANG_FRENCH         "#same"
@@ -552,10 +628,6 @@ LANG_FRENCH         "Échos individuels"
 REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
 LANG_FRENCH         "Nombre de sons parmi les plus forts qui résonnent sur les murs autour d'eux. Plus il y en a, plus chaque image coûte cher."
-
-REFERENCE           OFF
-LANG_ENGLISH        "Off"
-LANG_FRENCH         "Désactivé"
 
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
@@ -1636,6 +1708,10 @@ LANG_FRENCH         "Écran"
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
 LANG_FRENCH         "Détails"
+
+REFERENCE           LIGHTING
+LANG_ENGLISH        "Lighting"
+LANG_FRENCH         "Éclairage"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"

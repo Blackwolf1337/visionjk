@@ -284,6 +284,63 @@ LANG_ENGLISH        "Dynamic Glow"
 REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 
+REFERENCE           SHADOWS
+LANG_ENGLISH        "Shadows"
+
+REFERENCE           REAL_THE_PLAYERS_CAST_SHADOWS_FROM_T
+LANG_ENGLISH        "Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them."
+
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+
+REFERENCE           BLOB
+LANG_ENGLISH        "Blob"
+
+REFERENCE           REAL
+LANG_ENGLISH        "Real"
+
+REFERENCE           MATERIALS
+LANG_ENGLISH        "Materials"
+
+REFERENCE           SURFACES_WITH_A_MATERIAL_ARE_LIT_WIT
+LANG_ENGLISH        "Surfaces with a material are lit with their bumps, roughness and metal: they shine, and smooth ones mirror the room."
+
+REFERENCE           MOVING_LIGHTS
+LANG_ENGLISH        "Moving Lights"
+
+REFERENCE           HOW_BRIGHT_SABERS_SHOTS_AND_EXPLOSIO
+LANG_ENGLISH        "How bright sabers, shots and explosions light the walls and the floor. 1 as meant."
+
+REFERENCE           REFLECTIONS
+LANG_ENGLISH        "Reflections"
+
+REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
+LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
+
+REFERENCE           HDR
+LANG_ENGLISH        "HDR"
+
+REFERENCE           LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
+LANG_ENGLISH        "Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed."
+
+REFERENCE           TONE_MAPPING
+LANG_ENGLISH        "Tone Mapping"
+
+REFERENCE           HOW_BRIGHT_LIGHT_IS_PUT_ON_THE_SCREE
+LANG_ENGLISH        "How bright light is put on the screen. Original Look: as the game was, bright light glows out softly. Filmic: as modern games, richer highlights and more contrast."
+
+REFERENCE           ORIGINAL_LOOK
+LANG_ENGLISH        "Original Look"
+
+REFERENCE           FILMIC
+LANG_ENGLISH        "Filmic"
+
+REFERENCE           EXPOSURE
+LANG_ENGLISH        "Exposure"
+
+REFERENCE           HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
+LANG_ENGLISH        "How bright the level is before it is tone mapped. 1 as it is."
+
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 
@@ -415,9 +472,6 @@ LANG_ENGLISH        "Echoes of Their Own"
 
 REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
-
-REFERENCE           OFF
-LANG_ENGLISH        "Off"
 
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
@@ -1228,6 +1282,9 @@ LANG_ENGLISH        "Screen"
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
+
+REFERENCE           LIGHTING
+LANG_ENGLISH        "Lighting"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"

@@ -90,6 +90,20 @@ SETUP = [
         ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
         ('old', 'video2', ('advancedvideo',)),
+        ('head', 'Lighting'),
+        ('multi', 'Shadows', 'cg_shadows', (('Off', 0), ('Blob', 1), ('Real', 2)),
+         'Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them.'),
+        ('yesno', 'Materials', 'v_pbr',
+         'Surfaces with a material are lit with their bumps, roughness and metal: they shine, and smooth ones mirror the room.'),
+        ('slider', 'Moving Lights', 'v_dlightScale', 1.0, 0, 3,
+         'How bright sabers, shots and explosions light the walls and the floor. 1 as meant.'),
+        ('yesno', 'Reflections', 'v_ssr',
+         'Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room.'),
+        ('yesno', 'HDR', 'v_hdr',
+         'Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed.'),
+        ('multi', 'Tone Mapping', 'v_tonemap', (('Off', 0), ('Original Look', 1), ('Filmic', 2)),
+         'How bright light is put on the screen. Original Look: as the game was, bright light glows out softly. Filmic: as modern games, richer highlights and more contrast.'),
+        ('slider', 'Exposure', 'v_exposure', 1.0, 0.5, 2, 'How bright the level is before it is tone mapped. 1 as it is.'),
         ('head', 'Bloom'),
         ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
@@ -832,7 +846,7 @@ def window_frame(m, L):
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
 ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
-ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold'}
+ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold', 'v_dlightscale', 'v_exposure'}
 
 
 def page_sections(m, content, folds):

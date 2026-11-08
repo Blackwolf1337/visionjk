@@ -377,6 +377,82 @@ REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 LANG_SPANISH        "Los sables de luz y las luces brillan."
 
+REFERENCE           SHADOWS
+LANG_ENGLISH        "Shadows"
+LANG_SPANISH        "Sombras"
+
+REFERENCE           REAL_THE_PLAYERS_CAST_SHADOWS_FROM_T
+LANG_ENGLISH        "Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them."
+LANG_SPANISH        "Reales: los jugadores proyectan sombras con la luz del nivel y la de los sables y disparos (rayos trazados si la tarjeta gráfica puede, si no shadow maps). Mancha: una mancha oscura debajo de ellos."
+
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+LANG_SPANISH        "Desactivado"
+
+REFERENCE           BLOB
+LANG_ENGLISH        "Blob"
+LANG_SPANISH        "Mancha"
+
+REFERENCE           REAL
+LANG_ENGLISH        "Real"
+LANG_SPANISH        "Reales"
+
+REFERENCE           MATERIALS
+LANG_ENGLISH        "Materials"
+LANG_SPANISH        "Materiales"
+
+REFERENCE           SURFACES_WITH_A_MATERIAL_ARE_LIT_WIT
+LANG_ENGLISH        "Surfaces with a material are lit with their bumps, roughness and metal: they shine, and smooth ones mirror the room."
+LANG_SPANISH        "Las superficies con material se iluminan con su relieve, su rugosidad y su metal: brillan, y las lisas reflejan la sala."
+
+REFERENCE           MOVING_LIGHTS
+LANG_ENGLISH        "Moving Lights"
+LANG_SPANISH        "Luces en movimiento"
+
+REFERENCE           HOW_BRIGHT_SABERS_SHOTS_AND_EXPLOSIO
+LANG_ENGLISH        "How bright sabers, shots and explosions light the walls and the floor. 1 as meant."
+LANG_SPANISH        "Con qué intensidad los sables, disparos y explosiones iluminan paredes y suelo. 1 como está previsto."
+
+REFERENCE           REFLECTIONS
+LANG_ENGLISH        "Reflections"
+LANG_SPANISH        "Reflejos"
+
+REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
+LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
+LANG_SPANISH        "Las superficies lisas con material reflejan lo que hay en pantalla, además de los reflejos de la sala."
+
+REFERENCE           HDR
+LANG_ENGLISH        "HDR"
+LANG_SPANISH        "#same"
+
+REFERENCE           LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
+LANG_ENGLISH        "Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed."
+LANG_SPANISH        "Se conserva la luz más intensa que el blanco: los sables, brillos y lámparas resplandecen en lugar de recortarse. Requiere reiniciar el vídeo. Cuesta algo de rendimiento."
+
+REFERENCE           TONE_MAPPING
+LANG_ENGLISH        "Tone Mapping"
+LANG_SPANISH        "Mapeo de tonos"
+
+REFERENCE           HOW_BRIGHT_LIGHT_IS_PUT_ON_THE_SCREE
+LANG_ENGLISH        "How bright light is put on the screen. Original Look: as the game was, bright light glows out softly. Filmic: as modern games, richer highlights and more contrast."
+LANG_SPANISH        "Cómo se muestra la luz intensa. Aspecto original: como era el juego, la luz intensa resplandece suavemente. Cinematográfico: como los juegos modernos, luces más ricas y más contraste."
+
+REFERENCE           ORIGINAL_LOOK
+LANG_ENGLISH        "Original Look"
+LANG_SPANISH        "Aspecto original"
+
+REFERENCE           FILMIC
+LANG_ENGLISH        "Filmic"
+LANG_SPANISH        "Cinematográfico"
+
+REFERENCE           EXPOSURE
+LANG_ENGLISH        "Exposure"
+LANG_SPANISH        "Exposición"
+
+REFERENCE           HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
+LANG_ENGLISH        "How bright the level is before it is tone mapped. 1 as it is."
+LANG_SPANISH        "Brillo del nivel antes del mapeo de tonos. 1 tal cual."
+
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 LANG_SPANISH        "#same"
@@ -552,10 +628,6 @@ LANG_SPANISH        "Ecos individuales"
 REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
 LANG_SPANISH        "Cuántos de los sonidos más fuertes rebotan en las paredes cercanas. Más eco consume más rendimiento por fotograma."
-
-REFERENCE           OFF
-LANG_ENGLISH        "Off"
-LANG_SPANISH        "Desactivado"
 
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
@@ -1636,6 +1708,10 @@ LANG_SPANISH        "Pantalla"
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
 LANG_SPANISH        "Detalles"
+
+REFERENCE           LIGHTING
+LANG_ENGLISH        "Lighting"
+LANG_SPANISH        "Iluminación"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
