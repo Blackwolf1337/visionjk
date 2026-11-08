@@ -650,6 +650,24 @@ void G2_RagGetBoneBasePoseMatrixLow(CGhoul2Info &ghoul2, int boneNum, mdxaBone_t
 	VectorNormalize((float*)&retMatrix.matrix[2]);
 }
 
+// VisionJK: the size a bone of the skeleton built last is drawn at (G2API_VJK_SetBonesWorld keeps it; the bolt
+// matrices hand out bones with their axes made unit length)
+float G2_VJK_BoneScale(CGhoul2Info &ghoul2, int boneNum)
+{
+	if (!ghoul2.mBoneCache || boneNum < 0 || boneNum >= ghoul2.mBoneCache->header->numBones)
+	{
+		return 1.0f;
+	}
+	CBoneCache &boneCache = *ghoul2.mBoneCache;
+	mdxaSkelOffsets_t *offsets = (mdxaSkelOffsets_t *)((byte *)boneCache.header + sizeof(mdxaHeader_t));
+	mdxaSkel_t *skel = (mdxaSkel_t *)((byte *)boneCache.header + sizeof(mdxaHeader_t) + offsets->offsets[boneNum]);
+	mdxaBone_t bolt;
+
+	Multiply_3x4Matrix(&bolt, (mdxaBone_t *)&boneCache.EvalUnsmooth(boneNum), &skel->BasePoseMat);
+	const float s = sqrtf(bolt.matrix[0][0] * bolt.matrix[0][0] + bolt.matrix[1][0] * bolt.matrix[1][0] + bolt.matrix[2][0] * bolt.matrix[2][0]);
+	return (s > 0.01f && s < 100.0f) ? s : 1.0f;
+}
+
 void G2_GetBoneMatrixLow(CGhoul2Info &ghoul2,int boneNum,const vec3_t scale,mdxaBone_t &retMatrix,mdxaBone_t *&retBasepose,mdxaBone_t *&retBaseposeInv)
 {
 	if (!ghoul2.mBoneCache)

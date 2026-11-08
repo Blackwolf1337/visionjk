@@ -380,6 +380,7 @@ qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angle
 	}
 	s->ent = *ent;
 	s->ent.ghoul2 = NULL;
+	VectorCopy( cent->modelScale, s->ent.modelScale );		// (the scale the ragdoll placed the bones for)
 	s->ent.renderfx &= ~( RF_THIRD_PERSON | RF_FIRST_PERSON | RF_FORCE_ENT_ALPHA | RF_RGB_TINT );
 	s->ent.renderfx |= RF_LIGHTING_ORIGIN;
 	s->ent.shaderRGBA[3] = 255;
@@ -508,7 +509,10 @@ void CG_SliceScene( void ) {
 			}
 			VectorCopy( ent.origin, ent.oldorigin );
 			VectorCopy( ent.origin, ent.lightingOrigin );
+			// scaled as CG_Player scales a player (the bones were placed for this scale, cg_ragdoll.c)
 			AxisClear( ent.axis );
+			ent.nonNormalizedAxes = qfalse;
+			ScaleModelAxis( &ent );
 			if ( s->alpha < 1.0f ) {
 				ent.renderfx |= RF_FORCE_ENT_ALPHA;
 				ent.shaderRGBA[3] = (byte)( 255.0f * s->alpha );
