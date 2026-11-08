@@ -75,6 +75,18 @@ bool Blocked( vec3 origin, vec3 dir, float tMax, uint mask ) {
 	return rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT;
 }
 
+// how far along dir the ray from origin found something of what mask selects before tMax (one of them, not
+// always the nearest), -1 for nothing
+float HitAt( vec3 origin, vec3 dir, float tMax, uint mask ) {
+	rayQueryEXT query;
+
+	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, mask, origin, 0.5, dir, tMax );
+	while ( rayQueryProceedEXT( query ) ) {
+	}
+	return rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT
+		? rayQueryGetIntersectionTEXT( query, true ) : -1.0;
+}
+
 // the light grid at p between its eight cells, leaving out those in walls as R_SetupEntityLightingGrid() does
 void GridAt( vec3 p, out float ambient, out float directed, out vec3 dir ) {
 	vec3 g = ( p - W[12].xyz ) * W[13].xyz;
@@ -160,8 +172,12 @@ float FeetFade( vec3 p, int i ) {
 }
 
 // how much of the light from dir (up to len, a cone of tangent) player s takes from origin, 0 to 1, by rays
-// rays; 0 where the surface turns away from that light
-float TakenFrom( vec3 origin, vec3 normal, vec3 dir, float len, float tangent, vec4 s, int rays ) {
+// rays; 0 where the surface turns away from that light. The level counts as well: where it stands between the
+// point and the player he casts nothing there (his shadow went through the ledge he stood on, onto the floor below,
+// 2026-11-08), and for a light whose place is known (lightKnown: a panel) also where the level hides the light
+// from the point anyway (its shadow is in the lightmap already). Not beyond him along the direction of the grid:
+// that is an average of many lamps and runs into walls where the light comes from elsewhere.
+float TakenFrom( vec3 origin, vec3 normal, vec3 dir, float len, float tangent, vec4 s, int rays, bool lightKnown ) {
 	float facing = dot( normal, dir );
 
 	if ( facing <= 0.0 || !NearSphere( origin, dir, len, tangent, s ) ) {
@@ -169,7 +185,12 @@ float TakenFrom( vec3 origin, vec3 normal, vec3 dir, float len, float tangent, v
 	}
 	float blocked = 0.0;
 	for ( int k = 0; k < rays; k++ ) {
-		blocked += Blocked( origin, InCone( dir, tangent, uint( k ) ), len, 0x02u ) ? 1.0 : 0.0;
+		vec3 ray = InCone( dir, tangent, uint( k ) );
+		float atPlayer = HitAt( origin, ray, len, 0x02u );
+
+		if ( atPlayer > 0.0 && !Blocked( origin, ray, lightKnown ? len : atPlayer, 0x01u ) ) {
+			blocked += 1.0;
+		}
 	}
 	return blocked / float( rays ) * smoothstep( 0.0, 0.25, facing );
 }
@@ -206,7 +227,7 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 		if ( shares.w > 0.01 && dot( gridDir, gridDir ) > 1e-4 ) {
 			float tangent = W[15].y * mix( 3.0, 1.0, clamp( ratio * 1.5, 0.0, 1.0 ) );
 			taken += strength * shares.w * TakenFrom( origin, normal, normalize( gridDir ), reach, tangent, s,
-				max( 1, int( ceil( float( rays ) * shares.w ) ) ) );
+				max( 1, int( ceil( float( rays ) * shares.w ) ) ), false );
 		}
 		// the panels: towards each from this point, the cone from its disk, the rays end before it (fewer rays for a small
 		// share, the frames before add up the rest)
@@ -225,7 +246,7 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 			// player 16 units wide so soft that nothing of it was left, 2026-11-08)
 			taken += max( strength, 0.6 * near ) * share * TakenFrom( origin, normal, to / d, min( max( d - lamp.w, 1.0 ), reach ),
 				clamp( 0.25 * lamp.w / d, 0.005, 0.06 ), s,
-				max( 1, int( ceil( float( rays ) * share ) ) ) );
+				max( 1, int( ceil( float( rays ) * share ) ) ), true );
 		}
 		dark = max( dark, taken * fade );
 	}
