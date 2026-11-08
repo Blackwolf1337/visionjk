@@ -488,6 +488,26 @@ typedef struct miniRefEntity_s
 } miniRefEntity_t;
 
 // VisionJK: a saber blade the renderer draws in 3D (refexport_t ext.AddSaberBladeToScene)
+// The GPU profiler of the client (ext.GpuProfile, v_profiler): what the device took for the parts of the frames of
+// the last window of about half a second
+#define GPU_PROFILE_PASSES		32
+#define GPU_PROFILE_HISTORY		120
+#define GPU_PROFILE_NAME		24
+
+typedef struct gpuProfile_s {
+	int		serial;								// windows closed so far, 0: none yet
+	int		frames;								// in the last window
+	int		width, height, samples;				// of the frame
+	char	device[64];
+	int		numPasses;
+	char	passNames[GPU_PROFILE_PASSES][GPU_PROFILE_NAME];
+	float	passMs[GPU_PROFILE_PASSES];			// average a frame
+	float	passMaxMs[GPU_PROFILE_PASSES];		// the most of one frame
+	float	frameMs, frameMaxMs;				// the whole frame on the device
+	float	history[GPU_PROFILE_HISTORY];		// the whole frame on the device of the last frames, oldest first
+	int		draws, triangles, cpuTriangles, transforms, bones, skeletons;	// of the last frame
+} gpuProfile_t;
+
 typedef struct saberBlade3D_s {
 	vec3_t		start, end;			// the blade now, from the hilt to the tip
 	vec3_t		oldStart, oldEnd;	// where it was a moment ago, the place it swept glows between (the same: it rests)

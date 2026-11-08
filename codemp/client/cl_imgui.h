@@ -27,12 +27,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 typedef struct debugWindow_s {
 	const char	*name;
 	qboolean	open;
+	qboolean	overlay;		// a panel over the game: drawn while open, takes neither keys nor the mouse
 	void		( *draw )( struct debugWindow_s *window );
 } debugWindow_t;
 
 void		CL_ImGui_Register( debugWindow_t *window );
-// opens or closes it; open takes the keys and frees the mouse
+// opens or closes it; open takes the keys and frees the mouse (not an overlay)
 void		CL_ImGui_Toggle( debugWindow_t *window );
+void		CL_ImGui_SetOpen( debugWindow_t *window, qboolean open );
+// a debug menu that takes the keys and the mouse is open
 qboolean	CL_ImGui_Active( void );
 // after the renderer started again (a level, vid_restart): its pictures are made again
 void		CL_ImGui_RendererStarted( void );
@@ -42,6 +45,10 @@ void		CL_ImGui_Frame( void );
 qboolean	CL_ImGui_KeyEvent( int key, qboolean down );
 qboolean	CL_ImGui_CharEvent( int ch );
 void		CL_ImGui_Shutdown( void );
+
+// cl_profiler.cpp: the GPU profiler (v_profiler)
+void		CL_Profiler_Init( void );
+void		CL_Profiler_Frame( void );
 
 // cl_matdebug.cpp, cl_matlight.cpp
 void		CL_MatDebug_Init( void );

@@ -47,6 +47,8 @@ qboolean VK_HasScope( void );
 qboolean VK_HasWet( void );
 qboolean VK_PuddleMirror( void );
 void VK_NoteDrawSurfs( int numDrawSurfs );
+// ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
+qboolean RE_GpuProfile( gpuProfile_t *out );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );
 

@@ -352,6 +352,9 @@ typedef struct refexport_s {
 		// in the world (keeps the side the normal points to) and hidden[count] the bones of another part: each vertex
 		// keeps the side it had in this first pose. NULL: the renderer has none.
 		qboolean			(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
+		// What the device took for the parts of the last frames (gpuProfile_t of tr_types.h, the GPU profiler of the
+		// client). qfalse: the device has no timestamps.
+		qboolean			(*GpuProfile)							( gpuProfile_t *out );
 	} ext;
 
 } refexport_t;

@@ -3083,6 +3083,7 @@ void CL_Init( void ) {
 	CL_ModelsInit();
 	CL_ClipboardInit();
 	CL_MatDebug_Init();
+	CL_Profiler_Init();
 
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 

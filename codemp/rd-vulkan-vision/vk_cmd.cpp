@@ -51,6 +51,21 @@ static int		vk_numGpuNames;
 static double	vk_gpuFrameMs;		// from the first mark of a frame to its last, summed
 static int		vk_gpuFrames;
 
+// the GPU profiler of the client (ext.GpuProfile): the same sums over windows of about half a second, apart from
+// those of v_gpuTimes, and the whole frame of each of the last frames
+#define VK_PROFILE_MSEC	500
+
+static struct {
+	const char	*name;
+	double		ms, maxMs;
+} vk_profNames[GPU_PROFILE_PASSES];
+static int			vk_numProfNames;
+static double		vk_profFrameMs, vk_profFrameMaxMs;
+static int			vk_profFrames, vk_profStart;
+static float		vk_profHistory[GPU_PROFILE_HISTORY];
+static int			vk_profHistoryAt;
+static gpuProfile_t	vk_profile;			// the last window closed
+
 static qboolean VK_GpuTimed( void ) {
 	return (qboolean)( vk.properties.limits.timestampComputeAndGraphics && vk.properties.limits.timestampPeriod > 0.0f );
 }
@@ -73,6 +88,86 @@ static void VK_GpuAdd( const char *name, double ms ) {
 	vk_gpuNames[i].ms += ms;
 }
 
+// the window of the profiler closes: its averages become what ext.GpuProfile hands out
+static void VK_ProfileClose( void ) {
+	gpuProfile_t *p = &vk_profile;
+
+	p->serial++;
+	p->frames = vk_profFrames;
+	p->width = vk.width;
+	p->height = vk.height;
+	p->samples = (int)vk.samples;
+	Q_strncpyz( p->device, vk.properties.deviceName, sizeof( p->device ) );
+	p->numPasses = vk_numProfNames;
+	for ( int i = 0; i < vk_numProfNames; i++ ) {
+		Q_strncpyz( p->passNames[i], vk_profNames[i].name, sizeof( p->passNames[i] ) );
+		p->passMs[i] = (float)( vk_profNames[i].ms / vk_profFrames );
+		p->passMaxMs[i] = (float)vk_profNames[i].maxMs;
+	}
+	p->frameMs = (float)( vk_profFrameMs / vk_profFrames );
+	p->frameMaxMs = (float)vk_profFrameMaxMs;
+	// (a pass that ended takes no row any more; the others start again from nothing)
+	vk_numProfNames = 0;
+	vk_profFrameMs = vk_profFrameMaxMs = 0.0;
+	vk_profFrames = 0;
+}
+
+// a finished frame into the window of the profiler
+static void VK_ProfileFrame( const vkFrame_t *frame, const uint64_t *ticks, double msPerTick ) {
+	const int	now = ri.Milliseconds();
+	const double whole = (double)( ticks[frame->numMarks - 1] - ticks[0] ) * msPerTick;
+
+	for ( int i = 1; i < frame->numMarks; i++ ) {
+		const double	ms = (double)( ticks[i] - ticks[i - 1] ) * msPerTick;
+		const char		*name = frame->markNames[i];
+		int				n;
+
+		for ( n = 0; n < vk_numProfNames; n++ ) {
+			if ( vk_profNames[n].name == name || !strcmp( vk_profNames[n].name, name ) ) {
+				break;
+			}
+		}
+		if ( n == vk_numProfNames ) {
+			if ( n == GPU_PROFILE_PASSES ) {
+				continue;
+			}
+			vk_profNames[n].name = name;
+			vk_profNames[n].ms = vk_profNames[n].maxMs = 0.0;
+			vk_numProfNames++;
+		}
+		vk_profNames[n].ms += ms;
+		// (a name marked several times in a frame: its most is that of one piece, near enough)
+		vk_profNames[n].maxMs = Q_max( vk_profNames[n].maxMs, ms );
+	}
+	vk_profFrameMs += whole;
+	vk_profFrameMaxMs = Q_max( vk_profFrameMaxMs, whole );
+	vk_profHistory[vk_profHistoryAt] = (float)whole;
+	vk_profHistoryAt = ( vk_profHistoryAt + 1 ) % GPU_PROFILE_HISTORY;
+	if ( !vk_profFrames++ ) {
+		vk_profStart = now;
+	}
+	if ( now - vk_profStart >= VK_PROFILE_MSEC ) {
+		VK_ProfileClose();
+	}
+}
+
+qboolean RE_GpuProfile( gpuProfile_t *out ) {
+	if ( !out || !vk.device || !VK_GpuTimed() ) {
+		return qfalse;
+	}
+	*out = vk_profile;
+	for ( int i = 0; i < GPU_PROFILE_HISTORY; i++ ) {
+		out->history[i] = vk_profHistory[( vk_profHistoryAt + i ) % GPU_PROFILE_HISTORY];
+	}
+	out->draws = vk.statDraws[1];
+	out->triangles = vk.statStaticIndexes[1] / 3;
+	out->cpuTriangles = vk.statCpuIndexes[1] / 3;
+	out->transforms = vk.statTransforms[1];
+	out->bones = vk.statBones[1];
+	out->skeletons = vk.statSkeletons[1];
+	return qtrue;
+}
+
 // the marks of the frame the device finished, into the sums
 static void VK_GpuRead( vkFrame_t *frame ) {
 	uint64_t ticks[VK_GPU_MARKS];
@@ -90,6 +185,7 @@ static void VK_GpuRead( vkFrame_t *frame ) {
 	}
 	vk_gpuFrameMs += (double)( ticks[frame->numMarks - 1] - ticks[0] ) * msPerTick;
 	vk_gpuFrames++;
+	VK_ProfileFrame( frame, ticks, msPerTick );
 }
 
 void VK_GpuMark( const char *name ) {

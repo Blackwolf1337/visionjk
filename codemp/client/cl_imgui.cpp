@@ -45,6 +45,16 @@ void CL_ImGui_Register( debugWindow_t *window ) {
 
 qboolean CL_ImGui_Active( void ) {
 	for ( int i = 0; i < numWindows; i++ ) {
+		if ( windows[i]->open && !windows[i]->overlay ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+// anything to draw, overlays too
+static qboolean ImGui_AnyOpen( void ) {
+	for ( int i = 0; i < numWindows; i++ ) {
 		if ( windows[i]->open ) {
 			return qtrue;
 		}
@@ -298,7 +308,8 @@ CL_ImGui_Frame
 void CL_ImGui_Frame( void ) {
 	int x, y;
 
-	if ( !CL_ImGui_Active() || !contextMade || !cls.glconfig.vidWidth ) {
+	CL_Profiler_Frame();
+	if ( !ImGui_AnyOpen() || !contextMade || !cls.glconfig.vidWidth ) {
 		return;
 	}
 
@@ -306,7 +317,9 @@ void CL_ImGui_Frame( void ) {
 
 	io.DisplaySize = ImVec2( (float)cls.glconfig.vidWidth, (float)cls.glconfig.vidHeight );
 	io.DeltaTime = Q_max( cls.realFrametime, 1 ) * 0.001f;
-	if ( IN_MousePosition( &x, &y ) ) {
+	if ( !CL_ImGui_Active() ) {
+		io.AddMousePosEvent( -FLT_MAX, -FLT_MAX );		// (only overlays: the mouse belongs to the game)
+	} else if ( IN_MousePosition( &x, &y ) ) {
 		io.AddMousePosEvent( (float)x, (float)y );
 	}
 	// text as large on a big window as on a 1080 one, and what v_debugMenuScale adds
@@ -328,13 +341,23 @@ void CL_ImGui_Frame( void ) {
 }
 
 void CL_ImGui_Toggle( debugWindow_t *window ) {
-	if ( !window->open && !ImGui_MakeContext() ) {
+	CL_ImGui_SetOpen( window, (qboolean)!window->open );
+}
+
+void CL_ImGui_SetOpen( debugWindow_t *window, qboolean open ) {
+	if ( open == window->open ) {
+		return;
+	}
+	if ( open && !ImGui_MakeContext() ) {
 		return;
 	}
 	if ( !v_debugMenuScale ) {
-		v_debugMenuScale = Cvar_Get( "v_debugMenuScale", "1", CVAR_ARCHIVE_ND, "Size of the debug menus of the client (v_matdebug), 1 as on a window of 1080 rows" );
+		v_debugMenuScale = Cvar_Get( "v_debugMenuScale", "1", CVAR_ARCHIVE_ND, "Size of the debug menus of the client (v_matdebug, v_profiler), 1 as on a window of 1080 rows" );
 	}
-	window->open = (qboolean)!window->open;
+	window->open = open;
+	if ( window->overlay ) {
+		return;
+	}
 	// what was held stops (the menu takes the keys), and the menu gets no half pressed keys either
 	Key_ClearStates();
 	if ( contextMade ) {

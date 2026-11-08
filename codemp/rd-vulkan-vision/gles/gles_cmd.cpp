@@ -1217,6 +1217,10 @@ void VK_GpuTimes_f( void ) {
 	ri.Printf( PRINT_ALL, "v_gpuTimes: only on the Vulkan device\n" );
 }
 
+qboolean RE_GpuProfile( gpuProfile_t *out ) {
+	return qfalse;
+}
+
 /*
 ===============
 VK_ReadFrame
