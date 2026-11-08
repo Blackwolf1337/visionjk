@@ -2382,7 +2382,7 @@ out: the rows of globals.panels (VK_PANEL_VEC4S, common.glsl)
 static void VK_RT_PickPanels( const vec3_t eye, float (*out)[4] ) {
 	static float	lastTime;
 	const float		dt = Com_Clamp( 0.0f, 0.25f, backEnd.refdef.floatTime - lastTime );
-	const qboolean	ready = (qboolean)( ( ( v_panelShine->value > 0.0f && v_pbr->integer ) || v_panelShadows->value > 0.0f ) && !rt.maps && rt.panelsPipeline && rt.levelReady
+	const qboolean	ready = (qboolean)( v_panelShine->value > 0.0f && v_pbr->integer && !rt.maps && rt.panelsPipeline && rt.levelReady
 		&& vk_patches && !vk_patches->empty() && rt.grid.mapped && tr.world && tr.world->lightGridData );
 	int				best[VK_PANELS];
 	float			bestScore[VK_PANELS];
@@ -2486,7 +2486,6 @@ static void VK_RT_PickPanels( const vec3_t eye, float (*out)[4] ) {
 	out[0][0] = (float)VK_PANELS;
 	out[0][1] = ( rt.panelViewValid && tr.rtPanelImage && rt.panelShown == (int)tr.rtPanelImage->texnum ) ? (float)rt.panelShown + 1.0f : 0.0f;
 	out[0][2] = v_pbr->integer ? v_panelShine->value : 0.0f;
-	out[0][3] = Com_Clamp( 0.0f, 1.0f, v_panelShadows->value );
 	memcpy( out[1], rt.panelView, sizeof( rt.panelView ) );
 	for ( int i = 0; i < VK_PANELS; i++ ) {
 		float		(*r)[4] = &out[6 + i * 4];
@@ -2674,7 +2673,7 @@ void VK_RT_Pass( void ) {
 	VectorSet4( rows[14], (float)tr.world->lightGridBounds[0], (float)tr.world->lightGridBounds[1], (float)tr.world->lightGridBounds[2],
 		tanf( DEG2RAD( Com_Clamp( 0.0f, 20.0f, v_rtSunSize->value ) * 0.5f ) ) );
 	VectorSet4( rows[15], (float)Com_Clampi( 1, 16, v_rtShadowRays->integer ), tanf( DEG2RAD( Com_Clamp( 0.0f, 60.0f, v_rtLightSize->value ) * 0.5f ) ),
-		0.0f, vk_sunStrength );
+		rt.maps ? 0.0f : Com_Clamp( 0.0f, 1.0f, v_panelShadows->value ), vk_sunStrength );
 	// the moving lights whose shadows are traced this frame (38-41), and the view the mask the light passes read
 	// was made in (42-46: view and projection, its rect)
 	VK_RT_PickLights();
@@ -2728,7 +2727,7 @@ void VK_RT_Pass( void ) {
 		VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
 		qvkCmdDraw( cmd, 3, 1, 0, 0 );
 		qvkCmdEndRendering( cmd );
-	} else if ( !rt.numCasters && globals->panels[0][3] <= 0.0f ) {
+	} else if ( !rt.numCasters && rows[15][2] <= 0.0f ) {
 		// nothing in the mask this frame (no player, no shadows of the panels): the next one starts it again
 		rt.previousValid = qfalse;
 		rt.readValid = qfalse;

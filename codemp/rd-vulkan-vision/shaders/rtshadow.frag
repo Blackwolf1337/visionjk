@@ -14,7 +14,8 @@
 //   12 where the light grid begins, w how far a player may be from a point and still shadow it
 //   13 1 / the size of a cell of the grid, w a number that changes every frame (the noise of the rays)
 //   14 the cells of the grid along x, y, z, w the tangent of half the cone of the sun
-//   15 x rays a pixel, y the tangent of half the cone of the grid light, z 0 (was the scale of the light patches),
+//   15 x rays a pixel, y the tangent of half the cone of the grid light, z the strength of the shadows of the panels
+//      (v_panelShadows, PanelShadow),
 //      w the strength of the sun
 //   16-19 the view and projection of the frame before, 20 its eye, w 1 when the mask of that frame can be used
 //   21 x how many players follow, 22-37 each as a sphere: middle and radius
@@ -256,91 +257,109 @@ float GridShadow( vec3 origin, vec3 normal, float reach, int rays ) {
 	return dark;
 }
 
-// whether one of the eight cells of the light grid around p has the patch which in its list (shaders/rtcells.comp: what the
-// middle of the cell sees, nothing of the level between)
-bool CellsSee( vec3 p, uint which ) {
-	vec3 g = ( p - W[12].xyz ) * W[13].xyz;
-	ivec3 bounds = ivec3( W[14].xyz );
-	ivec3 base = ivec3( floor( g ) );
-
-	for ( int i = 0; i < 8; i++ ) {
-		ivec3 c = clamp( base + ivec3( i & 1, ( i >> 1 ) & 1, ( i >> 2 ) & 1 ), ivec3( 0 ), bounds - 1 );
-		int cell = c.x + c.y * bounds.x + c.z * bounds.x * bounds.y;
-		for ( int k = 0; k < LIST; k++ ) {
-			uint n = lists[cell * 16 + k];
-			if ( n == NONE ) {
-				break;
-			}
-			if ( n == which ) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-// v_panelShadows (globals.panels[0].w): the shadows of the level from the panels that glow near the eye (vk_rt.cpp
-// VK_RT_PickPanels: four, each coming and going by row 7 + 4 k w). The lightmap has the shadows of the lights the map
-// was lit with, mostly light entities that q3map2 left out, not of the panels themselves; these are the ones of the
-// panels, laid over it (their wish 2026-11-08). A point that a panel does not reach for the level darkens by the share
-// of that panel in the light the four give it there (its power, the side it lights, the square of the distance, the
-// side the point faces), times the strength: between two panels the shadow from one is half, by one alone it is full.
-// Only within 640 units (full to 192) and where the cells of the grid around the point see the panel: the rooms
-// behind the walls, lit by their own lamps, keep their light. One ray a frame to a point of the disk of each panel
-// against the level, the frames before (the mask is built up) make it soft; the ray stops short of the panel, whose
-// housing is no shadow of the level.
+// v_panelShadows (row 15 z): the shadows of the level from the panels that glow, laid over the lightmap (their wish
+// 2026-11-08). The lightmap has the shadows of the lights the map was lit with, mostly light entities that q3map2 left
+// out; where a panel is hidden the lightmap may be lit by one of those, and a shadow there is wrong. So only where the
+// light grid at the point has its light mostly from one side (directed against ambient) and from about the side of the
+// panel, within 20 degrees fully, nothing from 40 on: near a lamp that lit the place, not in a room lit from all round.
+// Each point takes its own panels, the two of the list of the cell of the grid nearest it (shaders/rtcells.comp: what
+// the middle of the cell sees) that give it the most light, so nothing depends on where the eye is: picked near the eye
+// the shadows came and went as it moved (2026-11-08). A hidden panel darkens the point by its share of the light of
+// the two, times the strength, within 640 units (full to 192). One ray a frame to a point of the disk of each against
+// the level, the frames before make it soft; the ray stops short of the panel, whose housing is no shadow.
 float PanelShadow( vec3 p, vec3 normal, vec3 origin ) {
-	float strength = globals.panels[0].w;
-	float light[4], total = 0.0, dark = 0.0;
+	float strength = W[15].z;
 
 	if ( strength <= 0.0 ) {
 		return 0.0;
 	}
-	for ( int k = 0; k < 4; k++ ) {
-		vec4 lamp = globals.panels[6 + k * 4];
-		vec4 side = globals.panels[7 + k * 4];
-		float power = globals.panels[8 + k * 4].w;
-		bool sided = dot( side.xyz, side.xyz ) > 0.5;
+	vec3 q = p + normal * 8.0;
+	float ambient, directed;
+	vec3 gridDir;
+	GridAt( q, ambient, directed, gridDir );
+	float oneSide = smoothstep( 0.25, 0.5, directed / ( ambient + directed + 1.0 ) );
+	if ( oneSide <= 0.0 || dot( gridDir, gridDir ) < 1e-4 ) {
+		return 0.0;
+	}
+	vec3 light = normalize( gridDir );
 
-		light[k] = 0.0;
-		if ( side.w <= 0.0 || power <= 0.0 ) {
-			continue;
+	// the cell nearest q that is not in a wall
+	vec3 g = ( q - W[12].xyz ) * W[13].xyz;
+	ivec3 bounds = ivec3( W[14].xyz );
+	ivec3 base = ivec3( floor( g ) );
+	vec3 f = fract( g );
+	int cell = -1;
+	float nearest = 0.0;
+	for ( int i = 0; i < 8; i++ ) {
+		ivec3 corner = ivec3( i & 1, ( i >> 1 ) & 1, ( i >> 2 ) & 1 );
+		ivec3 c = clamp( base + corner, ivec3( 0 ), bounds - 1 );
+		vec3 w3 = mix( 1.0 - f, f, vec3( corner ) );
+		float w = w3.x * w3.y * w3.z;
+		int at = c.x + c.y * bounds.x + c.z * bounds.x * bounds.y;
+		if ( w > nearest && cells[at * 3].w != 0.0 ) {
+			nearest = w;
+			cell = at;
 		}
-		vec3 to = lamp.xyz - origin;
+	}
+	if ( cell < 0 ) {
+		return 0.0;
+	}
+
+	// the two panels of its list that give the point the most light
+	uint which[2] = uint[2]( NONE, NONE );
+	float given[2] = float[2]( 0.0, 0.0 );
+	for ( int k = 0; k < LIST; k++ ) {
+		uint n = lists[cell * 16 + k];
+		if ( n == NONE ) {
+			break;
+		}
+		vec4 a = patches[n * 3u], b = patches[n * 3u + 1u];
+		vec3 to = a.xyz - origin;
 		float d = length( to );
-		if ( d <= lamp.w || d >= 640.0 ) {
+		if ( d <= b.w || d >= 640.0 ) {
 			continue;
 		}
 		vec3 dir = to / d;
 		float facing = dot( normal, dir );
-		float lit = sided ? dot( side.xyz, -dir ) : 1.0;
+		float lit = dot( b.xyz, b.xyz ) > 0.5 ? dot( b.xyz, -dir ) : 1.0;
 		if ( facing <= 0.05 || lit <= 0.05 ) {
 			continue;
 		}
-		light[k] = power * lit * smoothstep( 0.05, 0.3, facing ) / max( d * d, lamp.w * lamp.w + 16.0 ) * side.w;
-		total += light[k];
+		float l = a.w * lit * smoothstep( 0.05, 0.3, facing ) / max( d * d, b.w * b.w + 16.0 );
+		if ( l > given[0] ) {
+			given[1] = given[0];
+			which[1] = which[0];
+			given[0] = l;
+			which[0] = n;
+		} else if ( l > given[1] ) {
+			given[1] = l;
+			which[1] = n;
+		}
 	}
-	for ( int k = 0; k < 4 && total > 0.0; k++ ) {
-		if ( light[k] <= 0.0 ) {
+	float total = given[0] + given[1];
+	float dark = 0.0;
+	for ( int j = 0; j < 2 && total > 0.0; j++ ) {
+		if ( which[j] == NONE ) {
 			continue;
 		}
-		vec4 lamp = globals.panels[6 + k * 4];
-		vec3 side = globals.panels[7 + k * 4].xyz;
-		bool sided = dot( side, side ) > 0.5;
-		vec3 middle = lamp.xyz + ( sided ? side * 2.0 : vec3( 0.0 ) );
-		float d = distance( middle, origin );
-		float w = strength * light[k] / total * ( 1.0 - smoothstep( 192.0, 640.0, d ) );
-		if ( w < 0.01 || !CellsSee( p + normal * 8.0, uint( globals.panels[9 + k * 4].x + 0.5 ) ) ) {
+		vec4 a = patches[which[j] * 3u], b = patches[which[j] * 3u + 1u];
+		bool sided = dot( b.xyz, b.xyz ) > 0.5;
+		vec3 middle = a.xyz + ( sided ? b.xyz * 2.0 : vec3( 0.0 ) );
+		vec3 to = middle - origin;
+		float d = length( to );
+		float agree = smoothstep( 0.77, 0.94, dot( light, to / d ) );
+		float w = strength * given[j] / total * oneSide * agree * ( 1.0 - smoothstep( 192.0, 640.0, d ) );
+		if ( w < 0.01 ) {
 			continue;
 		}
-		vec3 axis = sided ? side : normalize( middle - origin );
+		vec3 axis = sided ? b.xyz : to / d;
 		vec3 t = normalize( cross( axis, abs( axis.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
-		vec3 b = cross( axis, t );
-		float r = sqrt( Noise( uint( 12 + k ) ) ) * lamp.w * 0.7;
-		float a = Noise( uint( 8 + k ) ) * 6.2831853;
-		vec3 to2 = middle + ( t * cos( a ) + b * sin( a ) ) * r - origin;
+		vec3 bt = cross( axis, t );
+		float r = sqrt( Noise( uint( 12 + j ) ) ) * b.w * 0.7;
+		float an = Noise( uint( 8 + j ) ) * 6.2831853;
+		vec3 to2 = to + ( t * cos( an ) + bt * sin( an ) ) * r;
 		float d2 = length( to2 );
-		float stop = d2 - lamp.w - 8.0;
+		float stop = d2 - b.w - 8.0;
 		if ( stop > 2.0 && Blocked( origin, to2 / d2, stop, 0x01u ) ) {
 			dark += w;
 		}
