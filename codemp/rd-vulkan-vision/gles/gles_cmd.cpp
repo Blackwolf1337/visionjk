@@ -1228,6 +1228,10 @@ qboolean RE_GpuProfile( gpuProfile_t *out ) {
 	return qfalse;
 }
 
+qboolean VK_RT_PlayerLamps( const vec3_t origin, vec3_t dir, float *share ) {
+	return qfalse;
+}
+
 /*
 ===============
 VK_ReadFrame

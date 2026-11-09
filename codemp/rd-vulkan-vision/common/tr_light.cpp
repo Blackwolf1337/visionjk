@@ -627,6 +627,22 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 		}
 	}
 
+	// VisionJK (v_panelLight): a player near the lamp panels his traced shadow comes from (vk_rt.cpp VK_RT_PickLamps)
+	// is lit from them too: the direction of the light of the grid turns towards them by their share. The amount stays
+	// the grid's, which has their light in it already, so his light and his shadow come from the same side.
+	if ( v_panelLight && v_panelLight->integer && !( refdef->rdflags & RDF_NOWORLDMODEL ) ) {
+		vec3_t	panels, mixed;
+		float	share;
+
+		if ( VK_RT_PlayerLamps( lightOrigin, panels, &share ) ) {
+			VectorScale( ent->lightDir, 1.0f - share, mixed );
+			VectorMA( mixed, share, panels, mixed );
+			if ( VectorNormalize( mixed ) > 0.01f ) {
+				VectorCopy( mixed, ent->lightDir );
+			}
+		}
+	}
+
 	//
 	// modify the light by dynamic lights
 	//

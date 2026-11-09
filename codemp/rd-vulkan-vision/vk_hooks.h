@@ -49,6 +49,8 @@ qboolean VK_PuddleMirror( void );
 void VK_NoteDrawSurfs( int numDrawSurfs );
 // ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
 qboolean RE_GpuProfile( gpuProfile_t *out );
+// vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the traced shadow of the player at origin came from (v_panelLight)
+qboolean VK_RT_PlayerLamps( const vec3_t origin, vec3_t dir, float *share );
 qboolean VK_ProbesSupported( void );
 qboolean VK_ProbesLost( void );
 
