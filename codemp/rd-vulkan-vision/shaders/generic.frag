@@ -172,27 +172,53 @@ vec3 ProbeSample( Draw d, float probe, vec3 dir, float level ) {
 	return textureLod( TEX6( d ), vec2( ( face + st.x ) / 6.0, ( probe + st.y ) / float( d.probeCount ) ), level ).rgb;
 }
 
-// What the probes around a point of the world see in a direction: the eight cells of the grid around it, each with
-// the probe it takes, weighed as the light grid is (by how near the point is to each), so the mirror goes over from
-// one probe to the next across a cell and not at its edge. Where all eight take the same probe it is read once.
-vec3 ProbesAround( Draw d, vec3 world, vec3 dir, float level ) {
+// The probes of the eight cells of the grid around a point of the world, each weighed as the light grid is (by how
+// near the point is to it), so the mirror goes over from one probe to the next across a cell and not at its edge.
+// Cells that take the same probe give their weight to the first of them, so a probe is read once however many cells
+// take it (mostly one or two). Found once for all the reads of the probes a pixel makes.
+struct ProbeSet {
+	float	probe[8];
+	float	weight[8];
+};
+
+ProbeSet ProbesNear( Draw d, vec3 world ) {
+	ProbeSet set;
 	vec3 g = ( world - d.grid0.xyz ) * d.grid1.xyz;
 	vec3 base = floor( g ), f = g - base;
-	float probes[8];
-	bool same = true;
 	for ( int i = 0; i < 8; i++ ) {
-		probes[i] = ProbeOfCell( d, ivec3( base ) + ivec3( i & 1, ( i >> 1 ) & 1, ( i >> 2 ) & 1 ) );
-		same = same && probes[i] == probes[0];
+		vec3 corner = vec3( float( i & 1 ), float( ( i >> 1 ) & 1 ), float( ( i >> 2 ) & 1 ) );
+		vec3 w3 = mix( 1.0 - f, f, corner );
+		set.probe[i] = ProbeOfCell( d, ivec3( base ) + ivec3( corner ) );
+		set.weight[i] = w3.x * w3.y * w3.z;
 	}
-	if ( same ) {
-		return ProbeSample( d, probes[0], dir, level );
+	// (fixed bounds, so the arrays stay in registers)
+	for ( int i = 1; i < 8; i++ ) {
+		for ( int j = 0; j < i; j++ ) {
+			if ( set.weight[i] > 0.0 && set.probe[j] == set.probe[i] ) {
+				set.weight[j] += set.weight[i];
+				set.weight[i] = 0.0;
+			}
+		}
 	}
+	return set;
+}
+
+// what the probes of set see in a direction of the world, at a level for the roughness; a probe with almost no
+// weight here is not read
+vec3 ProbesSee( Draw d, ProbeSet set, vec3 dir, float level ) {
 	vec3 sum = vec3( 0.0 );
+	float total = 0.0;
 	for ( int i = 0; i < 8; i++ ) {
-		vec3 w3 = mix( 1.0 - f, f, vec3( float( i & 1 ), float( ( i >> 1 ) & 1 ), float( ( i >> 2 ) & 1 ) ) );
-		sum += ProbeSample( d, probes[i], dir, level ) * ( w3.x * w3.y * w3.z );
+		if ( set.weight[i] > 0.02 ) {
+			sum += ProbeSample( d, set.probe[i], dir, level ) * set.weight[i];
+			total += set.weight[i];
+		}
 	}
-	return sum;
+	return total > 0.0 ? sum / total : sum;
+}
+
+vec3 ProbesAround( Draw d, vec3 world, vec3 dir, float level ) {
+	return ProbesSee( d, ProbesNear( d, world ), dir, level );
 }
 
 float D_GGX( float nh, float a ) {
@@ -209,8 +235,8 @@ float D_GGX( float nh, float a ) {
 // the frame of the texture, z out of the surface. The texture is read with the slopes of the pixel, the loop is not
 // the same for neighbouring pixels. The steps follow the angle: 8 looking straight down, 32 at a flat angle, where
 // few steps cut the bumps into slices.
-vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth, float plane ) {
-	int STEPS = int( mix( 32.0, 8.0, clamp( e.z, 0.0, 1.0 ) ) + 0.5 );
+vec2 Parallax( Draw d, vec2 uv, vec3 e, float depth, float plane, float stepScale ) {
+	int STEPS = max( 4, int( mix( 32.0, 8.0, clamp( e.z, 0.0, 1.0 ) ) * stepScale + 0.5 ) );
 	vec2 dx = dFdx( uv ), dy = dFdy( uv );
 	vec2 through = -e.xy / max( e.z, 0.2 ) * depth;
 	vec2 delta = through / float( STEPS );
@@ -613,14 +639,15 @@ vec4 GlassStage( Draw d ) {
 vec4 ScreenReflection( vec3 world, vec3 dir, float roughness ) {
 	vec4 r5 = globals.ssr[5];
 
-	if ( r5.w < 0.5 || roughness > 0.6 ) {
+	// (far off a pixel is small and its mirror hardly shows)
+	if ( r5.w < 0.5 || roughness > 0.6 || v_depth > 2500.0 ) {
 		return vec4( 0.0 );
 	}
 	uint slot = uint( r5.w - 0.5 );
 	mat4 view = mat4( globals.ssr[0], globals.ssr[1], globals.ssr[2], globals.ssr[3] );
 	vec4 rect = globals.ssr[4];
 	vec3 forward = globals.ssr[6].xyz;
-	const int STEPS = 24;
+	const int STEPS = 16;		// (growing by 1.38 they reach about 2700 units, as 24 by 1.25 reached the far edge of most rooms)
 	float stepLength = 6.0;
 	// (each pixel starts a little further along, so the steps do not show as bands)
 	float t = 2.0 + stepLength * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
@@ -644,7 +671,7 @@ vec4 ScreenReflection( vec3 world, vec3 dir, float roughness ) {
 			return vec4( seen.rgb, trust * globals.ssr[6].w );
 		}
 		t += stepLength;
-		stepLength *= 1.25;
+		stepLength *= 1.38;
 	}
 	return vec4( 0.0 );
 }
@@ -669,7 +696,10 @@ vec4 PbrStage( Draw d ) {
 	// beyond, where its few pixels cost the loop for nothing
 	float parallax = d.pbr.z * clamp( ( 1536.0 - v_depth ) / 768.0, 0.0, 1.0 );
 	if ( ( d.pbrFlags & PBR_HEIGHT ) != 0u && parallax > 0.0 ) {
-		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), parallax, d.pbr2.x );
+		// (the steps get fewer with the distance, as the bumps get smaller on the screen: all of them within 320 units,
+		// half at 640, a quarter from 1280 on)
+		uv = Parallax( d, uv, vec3( dot( frame[0], toEye ), dot( frame[1], toEye ), dot( flat_, toEye ) ), parallax, d.pbr2.x,
+			clamp( 320.0 / max( v_depth, 1.0 ), 0.25, 1.0 ) );
 	}
 
 	vec4 base = texture( TEX0( d ), uv );
@@ -829,12 +859,13 @@ vec4 PbrStage( Draw d ) {
 	if ( ( d.pbrFlags & PBR_PROBES ) != 0u ) {
 		vec3 world = ( t.model * vec4( v_position, 1.0 ) ).xyz;
 		vec3 mirror = normalize( mat3( t.model ) * reflect( -toEye, mirrorNormal ) );
-		vec3 around = pow( ProbesAround( d, world, mirror, roughness * 5.0 ), vec3( 2.2 ) );
+		ProbeSet probes = ProbesNear( d, world );
+		vec3 around = pow( ProbesSee( d, probes, mirror, roughness * 5.0 ), vec3( 2.2 ) );
 		// The probe saw the light where it stands, not here: a wall in the shade beside a bright opening mirrored the
 		// bright opening as if it stood in it. So what it mirrors is scaled down to the light this surface gets (its
 		// lightmap, the grid, its entity) as far as the probe, blurred round this normal, is brighter than that
 		// (normalising the probe by the light of the place, as many engines do).
-		vec3 seen = pow( ProbesAround( d, world, normalize( mat3( t.model ) * n ), 5.0 ), vec3( 2.2 ) );
+		vec3 seen = pow( ProbesSee( d, probes, normalize( mat3( t.model ) * n ), 5.0 ), vec3( 2.2 ) );
 		float here = dot( ambient + directed * 0.5, vec3( 0.2126, 0.7152, 0.0722 ) );
 		float there = dot( seen, vec3( 0.2126, 0.7152, 0.0722 ) );
 		float match = clamp( here / max( there, 1e-3 ), 0.0, 1.0 );
@@ -860,7 +891,7 @@ vec4 PbrStage( Draw d ) {
 		envColor = around * specOcclusion * envShine * ( 1.0 - coatEnv );
 		if ( s.coat > 0.0 ) {
 			vec3 coatMirror = normalize( mat3( t.model ) * reflect( -toEye, flat_ ) );
-			envColor += pow( ProbesAround( d, world, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * match * coatEnv;
+			envColor += pow( ProbesSee( d, probes, coatMirror, s.coatRoughness * 5.0 ), vec3( 2.2 ) ) * match * coatEnv;
 		}
 	} else {
 		vec3 around = ambient;
