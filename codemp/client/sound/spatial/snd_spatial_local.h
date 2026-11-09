@@ -779,6 +779,7 @@ void S_SpatialGpuTakeLevel( void );
 qboolean S_SpatialGpuReady( void );
 qboolean S_SpatialGpuBeginPass( void );
 void S_SpatialGpuBatchInfo( int *batches, int *usec, int *answered );
+qboolean S_SpatialGpuTimes( double *gpuMs, int *batches );
 
 // snd_spatial_sim.cpp
 int S_SpatialRays( void );

@@ -27,6 +27,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_imgui.h"
 #include "imgui/imgui.h"
 
+#ifdef JP_SPATIAL
+// sound/spatial/snd_spatial_gpu.cpp: the echo of v_spatial traced on the graphics card, by a Vulkan device of its own
+// that the timestamps of the renderer do not see
+qboolean S_SpatialGpuTimes( double *gpuMs, int *batches );
+#endif
+
 #define PROF_HISTORY	GPU_PROFILE_HISTORY
 #define PROF_MSEC		500			// as the window of the renderer (vk_cmd.cpp VK_PROFILE_MSEC)
 
@@ -41,6 +47,14 @@ static struct {
 	int		historyAt;
 	int		lastTime;
 } cpu;
+
+// the echo of the sound on the graphics card (v_spatialGpu), over the same windows
+static struct {
+	qboolean	on, primed;
+	double		lastMs;
+	int			lastBatches;
+	float		msPerFrame, tripsPerSecond;
+} snd;
 
 static const ImU32	colGood = IM_COL32( 76, 217, 100, 255 );
 static const ImU32	colFair = IM_COL32( 255, 204, 0, 255 );
@@ -76,6 +90,19 @@ static void Prof_CpuFrame( void ) {
 	cpu.sumMs += ms;
 	cpu.maxMs = Q_max( cpu.maxMs, ms );
 	if ( now - cpu.start >= PROF_MSEC && cpu.frames ) {
+#ifdef JP_SPATIAL
+		double	soundMs;
+		int		soundBatches;
+
+		snd.on = S_SpatialGpuTimes( &soundMs, &soundBatches );
+		if ( snd.on && snd.primed ) {
+			snd.msPerFrame = (float)( ( soundMs - snd.lastMs ) / cpu.frames );
+			snd.tripsPerSecond = ( soundBatches - snd.lastBatches ) * 1000.0f / Q_max( cpu.sumMs, 1 );
+		}
+		snd.primed = snd.on;
+		snd.lastMs = soundMs;
+		snd.lastBatches = soundBatches;
+#endif
 		cpu.fps = cpu.frames * 1000.0f / Q_max( cpu.sumMs, 1 );
 		cpu.frameMs = (float)cpu.sumMs / cpu.frames;
 		cpu.frameMaxMs = (float)cpu.maxMs;
@@ -275,6 +302,12 @@ static void Prof_Draw( debugWindow_t *window ) {
 		Com_sprintf( value, sizeof( value ), "%.2f ms", gpu->frameMs );
 		Com_sprintf( remark, sizeof( remark ), "max %.1f", gpu->frameMaxMs );
 		Prof_Row( "GPU", colGpu, value, remark );
+	}
+	if ( snd.on ) {
+		// (on a device of its own, not in the GPU time above: the echo of v_spatial, v_spatialGpu)
+		Com_sprintf( value, sizeof( value ), "%.3f ms", snd.msPerFrame );
+		Com_sprintf( remark, sizeof( remark ), "%.0f trips/s", snd.tripsPerSecond );
+		Prof_Row( "Sound GPU", colGpu, value, remark );
 	}
 	Prof_Graph( gpu, width, fs * 3.0f );
 
