@@ -93,6 +93,9 @@ typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the
 
 typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkCommandBuffer	cmd;
+	// the copy into the image of the window alone, submitted after cmd: only it waits until that image is free
+	// (a wait of the whole frame held its first copy of an image, a millisecond and more wherever it fell)
+	VkCommandBuffer	presentCmd;
 	VkFence			fence;
 	VkSemaphore		acquired;
 	VkDescriptorSet	set;			// globals, transforms and draws of this frame

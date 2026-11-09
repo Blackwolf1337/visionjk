@@ -295,6 +295,7 @@ void VK_InitFrames( void ) {
 		VkWriteDescriptorSet writes[4];
 
 		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &frame->cmd ) );
+		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &frame->presentCmd ) );
 		VK_CHECK( qvkCreateFence( vk.device, &fence, NULL, &frame->fence ) );
 		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->acquired ) );
 		VK_CreateBuffer( &frame->vertexes, VK_VERTEX_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, qtrue );
@@ -662,8 +663,35 @@ void VK_PresentFrame( const float *gamma ) {
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 
+	VK_GpuMark( "gamma and window" );
+	VK_CHECK( qvkEndCommandBuffer( cmd ) );
+
+	// textures this frame draws with have to be on the device before it runs
+	VK_FlushUploads();
+	VK_CHECK( qvkResetFences( vk.device, 1, &frame->fence ) );
+
+	// the frame runs at once, also while the image of the window is waited for; the copy into that image waits for
+	// it alone, and the fence after the copy covers both (it takes in what was submitted before it)
+	submit.commandBufferCount = 1;
+	submit.pCommandBuffers = &cmd;
+	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
+
 	present = VK_AcquireImage( frame, &imageIndex );
-	if ( present ) {
+	if ( !present ) {
+		vk.statFramesNotShown++;
+		submit.commandBufferCount = 0;
+		VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
+		VK_InvalidateTransform();
+		return;
+	}
+
+	VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+
+	cmd = frame->presentCmd;
+	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	VK_CHECK( qvkResetCommandBuffer( cmd, 0 ) );
+	VK_CHECK( qvkBeginCommandBuffer( cmd, &begin ) );
+	{
 		VkImageBlit blit;
 		const qboolean sameSize = (qboolean)( (int)vk.swapExtent.width == vk.width && (int)vk.swapExtent.height == vk.height );
 
@@ -682,28 +710,17 @@ void VK_PresentFrame( const float *gamma ) {
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, sameSize ? VK_FILTER_NEAREST : VK_FILTER_LINEAR );
 		VK_SetLayout( cmd, vk.swapImages[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-	} else {
-		vk.statFramesNotShown++;
 	}
-	VK_GpuMark( "gamma and window" );
 	VK_CHECK( qvkEndCommandBuffer( cmd ) );
-
-	// textures this frame draws with have to be on the device before it runs
-	VK_FlushUploads();
-
-	VK_CHECK( qvkResetFences( vk.device, 1, &frame->fence ) );
-	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
-	if ( present ) {
-		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &frame->acquired;
-		submit.pWaitDstStageMask = &waitStage;
-		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &vk.swapReady[imageIndex];
-	}
+	submit.waitSemaphoreCount = 1;
+	submit.pWaitSemaphores = &frame->acquired;
+	submit.pWaitDstStageMask = &waitStage;
+	submit.signalSemaphoreCount = 1;
+	submit.pSignalSemaphores = &vk.swapReady[imageIndex];
 	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
 
-	if ( present ) {
+	{
 		VkPresentInfoKHR info = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 		VkResult result;
 
@@ -720,6 +737,7 @@ void VK_PresentFrame( const float *gamma ) {
 			VK_Fatal( "vkQueuePresentKHR", result );
 		}
 	}
+	VK_InvalidateTransform();
 }
 
 /*
