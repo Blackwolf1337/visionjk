@@ -31,13 +31,18 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
+
 #define MATGEN_VERSION	2
 #define MATGEN_MAGIC	0x314e4756		// "VGN1"
 #define MATGEN_MOST		1024			// pixels each way at most, halved until it fits
 
 typedef struct {
 	int		width, height;
-	byte	*data;						// RGBA, Z_Malloc
+	byte	*data;						// RGBA, Gen_Alloc
 } genImage_t;
 
 typedef struct {
@@ -54,8 +59,20 @@ void R_DefaultMaterialGen( materialGen_t *gen ) {
 	gen->normalDetail = 0.3f;
 }
 
+// The buffers of the steps come from the heap, not from the zone of the engine: the steps also run on the worker
+// thread of the materials made at load (Gen_Queue), and the zone is the main thread's alone. Their sizes are those of
+// the textures.
 static byte *Gen_Alloc( int bytes ) {
-	return (byte *)Z_Malloc( bytes, TAG_TEMP_WORKSPACE, qfalse );
+	byte *p = (byte *)malloc( (size_t)bytes );
+
+	if ( !p ) {
+		ri.Error( ERR_FATAL, "Gen_Alloc: %i bytes", bytes );
+	}
+	return p;
+}
+
+static void Gen_Free( void *p ) {
+	free( p );
 }
 
 // 0 to 1 into a byte, rounded as the Uint8ClampedArray of images.js does
@@ -64,7 +81,7 @@ static byte Gen_Byte( float v ) {
 }
 
 static float *Gen_Floats( int count ) {
-	return (float *)Z_Malloc( count * (int)sizeof( float ), TAG_TEMP_WORKSPACE, qfalse );
+	return (float *)Gen_Alloc( count * (int)sizeof( float ) );
 }
 
 /*
@@ -88,7 +105,7 @@ static void Gen_Capped( genImage_t *img ) {
 				}
 			}
 		}
-		Z_Free( img->data );
+		Gen_Free( img->data );
 		img->data = out;
 		img->width = w;
 		img->height = h;
@@ -159,7 +176,7 @@ static float *Gen_Blur( const float *src, int w, int h, float radius ) {
 			}
 		}
 	}
-	Z_Free( b );
+	Gen_Free( b );
 	return a;
 }
 
@@ -206,9 +223,9 @@ static qboolean Gen_Albedo( const genImage_t *base, const materialGen_t *g, genI
 		}
 		out->data[i * 4 + 3] = base->data[i * 4 + 3];
 	}
-	Z_Free( lum );
+	Gen_Free( lum );
 	if ( broad ) {
-		Z_Free( broad );
+		Gen_Free( broad );
 	}
 	return qtrue;
 }
@@ -249,9 +266,9 @@ static void Gen_Normal( const genImage_t *albedo, const materialGen_t *g, genIma
 		}
 	}
 #undef H
-	Z_Free( lum );
-	Z_Free( smooth );
-	Z_Free( height );
+	Gen_Free( lum );
+	Gen_Free( smooth );
+	Gen_Free( height );
 }
 
 // The rmo map: in red the change of the roughness as variation says (darker cracks and dirt rougher, bright smooth
@@ -276,9 +293,9 @@ static void Gen_Rmo( const genImage_t *albedo, const materialGen_t *g, genImage_
 		out->data[i * 4 + 2] = Gen_Byte( occlusion );
 		out->data[i * 4 + 3] = 255;
 	}
-	Z_Free( lum );
-	Z_Free( around );
-	Z_Free( soft );
+	Gen_Free( lum );
+	Gen_Free( around );
+	Gen_Free( soft );
 }
 
 /*
@@ -350,7 +367,7 @@ static void Gen_CacheWrite( const char *path, const genImage_t *img ) {
 	header->height = img->height;
 	memcpy( header + 1, img->data, (size_t)img->width * img->height * 4 );
 	ri.FS_WriteFile( path, buffer, size );
-	Z_Free( buffer );
+	Gen_Free( buffer );
 }
 
 /*
@@ -367,13 +384,214 @@ static image_t *Gen_Image( const stageMaterial_t *mat, char kind, genImage_t *im
 
 	Com_sprintf( name, sizeof( name ), "*gen%c%d_%08x", kind, mat->sourceStage, (unsigned)( Gen_Hash( mat->shaderName ) & 0xffffffffu ) );
 	image = R_MadeImage( name, img->data, img->width, img->height );
-	Z_Free( img->data );
+	Gen_Free( img->data );
 	img->data = NULL;
 	return image;
 }
 
 static qboolean Gen_IsMade( const image_t *image ) {
 	return (qboolean)( image && !Q_strncmp( image->imgName, "*gen", 4 ) );
+}
+
+// the texture of the stage, read from its file and halved until it fits; qfalse (said why) when no maps can be made
+static qboolean Gen_LoadSource( const stageMaterial_t *mat, const image_t *base, genImage_t *src ) {
+	byte *pic = NULL;
+	int width = 0, height = 0;
+
+	R_LoadImage( base->imgName, &pic, &width, &height );
+	if ( !pic ) {
+		ri.Printf( PRINT_WARNING, "WARNING: the maps of %s can not be made, its texture %s could not be read\n", mat->shaderName, base->imgName );
+		return qfalse;
+	}
+	// (into a buffer of the steps: the picture of the loader is of the zone)
+	src->width = width;
+	src->height = height;
+	src->data = Gen_Alloc( width * height * 4 );
+	memcpy( src->data, pic, (size_t)width * height * 4 );
+	Z_Free( pic );
+	Gen_Capped( src );
+	if ( ( src->width & ( src->width - 1 ) ) || ( src->height & ( src->height - 1 ) ) ) {
+		ri.Printf( PRINT_WARNING, "WARNING: the maps of %s are not made, its texture is %i x %i, not a power of two\n", mat->shaderName, src->width, src->height );
+		Gen_Free( src->data );
+		src->data = NULL;
+		return qfalse;
+	}
+	return qtrue;
+}
+
+// the maps of g that made[] has not got yet, from src, which is used up; no engine call, so the worker thread can run it
+static void Gen_Compute( const materialGen_t *g, genImage_t *src, genImage_t *made ) {
+	genImage_t albedo;
+
+	memset( &albedo, 0, sizeof( albedo ) );
+	const qboolean hasAlbedo = Gen_Albedo( src, g, &albedo );
+	const genImage_t *from = hasAlbedo ? &albedo : src;
+
+	if ( ( g->flags & MATGEN_NORMAL ) && !made[1].data ) {
+		Gen_Normal( from, g, &made[1] );
+	}
+	if ( ( g->flags & MATGEN_RMO ) && !made[2].data ) {
+		Gen_Rmo( from, g, &made[2] );
+	}
+	if ( hasAlbedo && !made[0].data ) {
+		made[0] = albedo;
+		albedo.data = NULL;
+	}
+	Gen_Free( albedo.data );
+	Gen_Free( src->data );
+	src->data = NULL;
+}
+
+// the maps into the images of the record, used up
+static void Gen_Apply( stageMaterial_t *mat, genImage_t *made ) {
+	mat->albedoMap = made[0].data ? Gen_Image( mat, 'a', &made[0] ) : NULL;
+	if ( made[1].data ) {
+		mat->normalMap = Gen_Image( mat, 'n', &made[1] );
+		mat->normalHeight = true;
+	}
+	if ( made[2].data ) {
+		mat->rmoMap = Gen_Image( mat, 'r', &made[2] );
+		mat->ormOrder = false;
+		mat->rmoRelative = true;
+	}
+}
+
+/*
+===============
+The worker thread of the materials made at load
+
+A level seen for the first time has its materials made from textures nobody made maps of yet, about 60 ms each
+(siege_hoth: 1.1 s for 18). Those are made here, one after the other, while the game runs: the main thread reads
+the texture (the file system is its alone), the worker runs the steps, and the main thread writes the cache and
+uploads the maps at the start of a frame (R_MaterialGenFrame), two a frame. A record is found again by its name,
+so what was made for a level that is gone is kept in the cache and dropped, or given to the same texture of the next.
+===============
+*/
+typedef struct genJob_s {
+	char			shaderName[MAX_QPATH];
+	int				sourceStage;
+	materialGen_t	gen;
+	genImage_t		src;
+	genImage_t		made[3];
+	char			paths[3][MAX_QPATH];
+	qboolean		kept[3];
+} genJob_t;
+
+static std::mutex				genLock;
+static std::condition_variable	genWake;
+static std::deque<genJob_t *>	genTodo, genDone;
+static std::thread				genThread;
+static bool						genQuit;
+
+static void Gen_Worker( void ) {
+	for ( ;; ) {
+		genJob_t *job;
+		{
+			std::unique_lock<std::mutex> lock( genLock );
+
+			genWake.wait( lock, [] { return genQuit || !genTodo.empty(); } );
+			if ( genQuit ) {
+				return;
+			}
+			job = genTodo.front();
+			genTodo.pop_front();
+		}
+		Gen_Compute( &job->gen, &job->src, job->made );
+		std::lock_guard<std::mutex> lock( genLock );
+		genDone.push_back( job );
+	}
+}
+
+static void Gen_FreeJob( genJob_t *job ) {
+	Gen_Free( job->src.data );
+	for ( int i = 0; i < 3; i++ ) {
+		Gen_Free( job->made[i].data );
+	}
+	delete job;
+}
+
+// src and made[] go to the job; qfalse: none made (no thread), the caller makes them itself
+static qboolean Gen_Queue( const stageMaterial_t *mat, genImage_t *src, genImage_t *made, char paths[3][MAX_QPATH], const qboolean *kept ) {
+	genJob_t *job = new genJob_t;
+
+	Q_strncpyz( job->shaderName, mat->shaderName, sizeof( job->shaderName ) );
+	job->sourceStage = mat->sourceStage;
+	job->gen = mat->gen;
+	job->src = *src;
+	for ( int i = 0; i < 3; i++ ) {
+		job->made[i] = made[i];
+		Q_strncpyz( job->paths[i], paths[i], sizeof( job->paths[i] ) );
+		job->kept[i] = kept[i];
+	}
+	std::lock_guard<std::mutex> lock( genLock );
+	if ( !genThread.joinable() ) {
+		genQuit = false;
+		try {
+			genThread = std::thread( Gen_Worker );
+		} catch ( ... ) {
+			delete job;
+			return qfalse;
+		}
+	}
+	genTodo.push_back( job );
+	genWake.notify_one();
+	return qtrue;
+}
+
+/*
+===============
+R_MaterialGenFrame
+
+At the start of a frame: the maps the worker thread finished into the cache and onto their records
+===============
+*/
+void R_MaterialGenFrame( void ) {
+	for ( int n = 0; n < 2; n++ ) {
+		genJob_t *job;
+		{
+			std::lock_guard<std::mutex> lock( genLock );
+
+			if ( genDone.empty() ) {
+				return;
+			}
+			job = genDone.front();
+			genDone.pop_front();
+		}
+		for ( int i = 0; i < 3; i++ ) {
+			if ( job->made[i].data && job->kept[i] ) {
+				Gen_CacheWrite( job->paths[i], &job->made[i] );
+			}
+		}
+		stageMaterial_t *mat = R_MaterialFor( job->shaderName, job->sourceStage, qfalse, NULL );
+
+		if ( mat && mat->autoMade && !mat->normalMap && !mat->rmoMap ) {
+			Gen_Apply( mat, job->made );
+		}
+		Gen_FreeJob( job );
+	}
+}
+
+// the renderer goes: what waits is dropped, the job in hand is finished first
+void R_MaterialGenShutdown( void ) {
+	{
+		std::lock_guard<std::mutex> lock( genLock );
+
+		genQuit = true;
+		genWake.notify_all();
+	}
+	if ( genThread.joinable() ) {
+		genThread.join();
+	}
+	std::lock_guard<std::mutex> lock( genLock );
+	for ( genJob_t *job : genTodo ) {
+		Gen_FreeJob( job );
+	}
+	for ( genJob_t *job : genDone ) {
+		Gen_FreeJob( job );
+	}
+	genTodo.clear();
+	genDone.clear();
+	genQuit = false;
 }
 
 /*
@@ -427,67 +645,25 @@ void R_MakeMaterialMaps( stageMaterial_t *mat, image_t *base ) {
 	}
 
 	if ( missing ) {
-		genImage_t src, albedo;
-		byte *pic = NULL;
-		int width = 0, height = 0;
+		genImage_t src;
 
-		R_LoadImage( base->imgName, &pic, &width, &height );
-		if ( !pic ) {
-			ri.Printf( PRINT_WARNING, "WARNING: the maps of %s can not be made, its texture %s could not be read\n", mat->shaderName, base->imgName );
+		if ( !Gen_LoadSource( mat, base, &src ) ) {
 			for ( int i = 0; i < 3; i++ ) {
-				if ( made[i].data ) {
-					Z_Free( made[i].data );
-				}
+				Gen_Free( made[i].data );
 			}
 			return;
 		}
-		src.width = width;
-		src.height = height;
-		src.data = pic;
-		Gen_Capped( &src );
-		if ( ( src.width & ( src.width - 1 ) ) || ( src.height & ( src.height - 1 ) ) ) {
-			ri.Printf( PRINT_WARNING, "WARNING: the maps of %s are not made, its texture is %i x %i, not a power of two\n", mat->shaderName, src.width, src.height );
-			Z_Free( src.data );
-			for ( int i = 0; i < 3; i++ ) {
-				if ( made[i].data ) {
-					Z_Free( made[i].data );
-				}
-			}
+		// a material made at load (v_autoMaterials) on a texture seen for the first time gets its maps on the worker
+		// thread: the level does not wait for them, the surface has its roughness at once and its bumps a moment later
+		if ( mat->autoMade && Gen_Queue( mat, &src, made, paths, kept ) ) {
 			return;
 		}
-		memset( &albedo, 0, sizeof( albedo ) );
-		const qboolean hasAlbedo = Gen_Albedo( &src, g, &albedo );
-		const genImage_t *from = hasAlbedo ? &albedo : &src;
-
-		if ( ( g->flags & MATGEN_NORMAL ) && !made[1].data ) {
-			Gen_Normal( from, g, &made[1] );
-		}
-		if ( ( g->flags & MATGEN_RMO ) && !made[2].data ) {
-			Gen_Rmo( from, g, &made[2] );
-		}
-		if ( hasAlbedo && !made[0].data ) {
-			made[0] = albedo;
-			albedo.data = NULL;
-		}
-		if ( albedo.data ) {
-			Z_Free( albedo.data );
-		}
-		Z_Free( src.data );
+		Gen_Compute( g, &src, made );
 		for ( int i = 0; i < 3; i++ ) {
 			if ( made[i].data && kept[i] ) {
 				Gen_CacheWrite( paths[i], &made[i] );
 			}
 		}
 	}
-
-	mat->albedoMap = made[0].data ? Gen_Image( mat, 'a', &made[0] ) : NULL;
-	if ( made[1].data ) {
-		mat->normalMap = Gen_Image( mat, 'n', &made[1] );
-		mat->normalHeight = true;
-	}
-	if ( made[2].data ) {
-		mat->rmoMap = Gen_Image( mat, 'r', &made[2] );
-		mat->ormOrder = false;
-		mat->rmoRelative = true;
-	}
+	Gen_Apply( mat, made );
 }

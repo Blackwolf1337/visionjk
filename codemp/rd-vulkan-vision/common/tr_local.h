@@ -478,7 +478,20 @@ typedef struct stageMaterial_s {
 	bool			rmoRelative;
 	image_t			*baseImage;
 	image_t			*albedoMap;
+	// made at load by tr_automat.cpp (v_autoMaterials), not written in a shader file; a save makes it a written one
+	bool			autoMade;
 } stageMaterial_t;
+
+// tr_automat.cpp: what a texture of the level gets when it has no material (v_autoMaterials)
+typedef struct {
+	const char	*className;
+	float		roughness, metalness;
+	float		normalStrength;
+	float		rmoVariation, rmoOcclusion;
+} autoMaterial_t;
+
+extern cvar_t	*v_autoMaterials;
+qboolean	R_AutoMaterialClass( const char *shaderName, const image_t *image, autoMaterial_t *out );
 
 typedef struct shaderStage_s {
 	bool			active;
@@ -1558,6 +1571,8 @@ void		R_MaterialStageImage( shaderStage_t *stage );
 // tr_matgen.cpp: the maps made from the texture of a stage
 //
 void		R_MakeMaterialMaps( stageMaterial_t *mat, image_t *base );
+void		R_MaterialGenFrame( void );		// the maps the worker thread made, onto their records (RE_BeginFrame)
+void		R_MaterialGenShutdown( void );
 void		R_DefaultMaterialGen( materialGen_t *gen );
 void		R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height );
 image_t		*R_MadeImage( const char *name, byte *pic, int width, int height );

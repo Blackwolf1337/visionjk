@@ -356,6 +356,7 @@ typedef struct materialParms_s {
 #define MATS_GLOW				(1 << 3)	// in the pass of the dynamic glow
 #define MATS_MATERIAL			(1 << 4)	// it has a material
 #define MATS_ENTITY				(1 << 5)	// lit by the light of its entity (models)
+#define MATS_AUTO				(1 << 6)	// its material was made at load (v_autoMaterials), no shader file has it
 
 typedef struct materialStage_s {
 	int			sourceStage;

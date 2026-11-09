@@ -552,6 +552,8 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	if ( !tr.registered ) {
 		return;
 	}
+	// VisionJK: the maps of materials made at load that the worker thread finished (tr_matgen.cpp)
+	R_MaterialGenFrame();
 
 	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect(), RE_SetScreenEffect() and
 	// RE_AddLiquid(), RE_AddWet() and RE_AddPaint() was for the frame before

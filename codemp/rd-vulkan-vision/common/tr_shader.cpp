@@ -3338,6 +3338,56 @@ Returns a freshly allocated shader with all the needed info
 from the current global working shader
 =========================
 */
+/*
+===================
+AutoMaterial
+
+VisionJK (v_autoMaterials): a plain surface of the level, its texture times its lightmap in one stage, that has no
+material of a shader file gets one made from its texture (tr_automat.cpp). Shaders with more stages, blends, glows,
+moving or generated texture coordinates, lamps, skies and fog are left as they are.
+===================
+*/
+static void AutoMaterial( void ) {
+	shaderStage_t *st = &stages[0];
+	const image_t *image = st->bundle[0].image;
+	autoMaterial_t made;
+
+	if ( !v_autoMaterials || !v_autoMaterials->integer || shader.numUnfoggedPasses != 1 || shader.lightmapIndex[0] < 0
+		|| shader.sort != SS_OPAQUE || shader.sky || ( shader.surfaceFlags & ( SURF_SKY | SURF_NODRAW ) )
+		|| ( shader.contentFlags & CONTENTS_FOG ) || shader.surfaceLight > 0.0f || shader.emissiveSet ) {
+		return;
+	}
+	if ( !st->active || st->mat || st->glow || st->glowOnly || st->bundle[0].isLightmap || !image
+		|| !st->bundle[1].image || !st->bundle[1].isLightmap || shader.multitextureEnv != GL_MODULATE
+		|| st->bundle[0].tcGen != TCGEN_TEXTURE || st->bundle[0].numTexMods || st->bundle[0].numImageAnimations > 1
+		|| st->bundle[0].isVideoMap || ( st->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
+		return;
+	}
+	// (the maps are made from the file, which has to be a power of two)
+	if ( image->imgName[0] == '*' || ( image->width & ( image->width - 1 ) ) || ( image->height & ( image->height - 1 ) ) ) {
+		return;
+	}
+	if ( !R_AutoMaterialClass( shader.name, image, &made ) ) {
+		return;
+	}
+
+	stageMaterial_t *mat = StageMaterial( st );
+
+	mat->pbr = true;
+	mat->autoMade = true;
+	mat->roughness = made.roughness;
+	mat->metalness = made.metalness;
+	mat->gen.flags = MATGEN_NORMAL;
+	mat->gen.normalStrength = made.normalStrength;
+	mat->gen.normalBlur = 2.0f;
+	mat->gen.normalDetail = 0.3f;
+	if ( made.rmoVariation > 0.0f || made.rmoOcclusion > 0.0f ) {
+		mat->gen.flags |= MATGEN_RMO;
+		mat->gen.rmoVariation = made.rmoVariation;
+		mat->gen.rmoOcclusion = made.rmoOcclusion;
+	}
+}
+
 static shader_t *FinishShader( void ) {
 	int				stage, lmStage, stageIndex; //rwwRMG - stageIndex for AGEN_BLEND
 	qboolean		hasLightmapStage;
@@ -3659,6 +3709,7 @@ static shader_t *FinishShader( void ) {
 		}
 	}
 
+	AutoMaterial();
 	return GeneratePermanentShader();
 }
 

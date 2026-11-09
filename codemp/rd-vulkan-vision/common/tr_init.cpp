@@ -672,6 +672,7 @@ void R_Register( void )
 	r_texturebitslm						= ri.Cvar_Get( "r_texturebitslm",					"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_overBrightBits					= ri.Cvar_Get( "r_overBrightBits",					"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_mapOverBrightBits					= ri.Cvar_Get( "r_mapOverBrightBits",				"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
+	v_autoMaterials						= ri.Cvar_Get( "v_autoMaterials",					"1",						CVAR_ARCHIVE_ND|CVAR_LATCH, "Surfaces of a level without a material get one made from their texture at load (its class from the name and brightness of the texture), so every level shows the materials. Shader files still win. 0: only written materials (vid_restart)" );
 	r_simpleMipMaps						= ri.Cvar_Get( "r_simpleMipMaps",					"1",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_vertexLight						= ri.Cvar_Get( "r_vertexLight",					"0",						CVAR_ARCHIVE|CVAR_LATCH, "" );
 	r_uiFullScreen						= ri.Cvar_Get( "r_uifullscreen",					"0",						CVAR_NONE, "" );
@@ -893,6 +894,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 	R_ShutdownWorldEffects();
 	R_ShutdownFonts();
+	R_MaterialGenShutdown();
 	if ( tr.registered ) {
 		R_IssuePendingRenderCommands();
 		if (destroyWindow)

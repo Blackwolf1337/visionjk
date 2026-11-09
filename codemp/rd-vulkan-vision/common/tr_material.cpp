@@ -515,6 +515,9 @@ static int StageFlags( const shaderStage_t *st )
 	}
 	if ( st->mat ) {
 		flags |= MATS_MATERIAL;
+		if ( st->mat->autoMade ) {
+			flags |= MATS_AUTO;
+		}
 	}
 	if ( st->rgbGen == CGEN_LIGHTING_DIFFUSE || st->rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY ) {
 		flags |= MATS_ENTITY;
@@ -1184,5 +1187,11 @@ qboolean RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err,
 		return qfalse;
 	}
 	ri.FS_WriteFile( file, merged, out.length );
+	// (a material made at load is a written one from now on)
+	for ( int i = 0; i < tr.shaders[shader]->numUnfoggedPasses; i++ ) {
+		if ( tr.shaders[shader]->stages[i].mat ) {
+			tr.shaders[shader]->stages[i].mat->autoMade = false;
+		}
+	}
 	return qtrue;
 }

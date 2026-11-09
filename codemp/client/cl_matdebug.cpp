@@ -1042,7 +1042,7 @@ static void MatDebug_DrawShader( void ) {
 		char label[MAX_QPATH + 64];
 
 		Com_sprintf( label, sizeof( label ), "%d  %s%s%s%s%s%s", st->sourceStage, st->image,
-			( st->flags & MATS_MATERIAL ) ? "  [material]" : "", ( st->flags & MATS_LIGHTMAP ) ? "  lightmap" : "",
+			( st->flags & MATS_AUTO ) ? "  [auto material]" : ( st->flags & MATS_MATERIAL ) ? "  [material]" : "", ( st->flags & MATS_LIGHTMAP ) ? "  lightmap" : "",
 			( st->flags & MATS_ENTITY ) ? "  entity light" : "", ( st->flags & MATS_ADD ) ? "  adds" : "",
 			( st->flags & MATS_GLOW ) ? "  glow" : "" );
 		if ( ImGui::RadioButton( label, st->sourceStage == selStage ) ) {
