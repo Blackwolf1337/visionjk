@@ -101,7 +101,7 @@ qboolean VK_InitShared( void ) {
 	v_pbrEnergy = ri.Cvar_Get( "v_pbrEnergy", "1", CVAR_ARCHIVE_ND, "Surfaces with a material lose of their diffuse light what their shine takes, as light does (energy conserving). 0: shine on top of the full diffuse light, as before" );
 	v_tessellation = ri.Cvar_Get( "v_tessellation", "1", CVAR_ARCHIVE_ND, "Materials with tessellation get real bumps: their triangles cut finer and moved on the graphics card (Vulkan, a card with tessellation shaders). 0: they keep their parallax instead" );
 	v_pbrProbes = ri.Cvar_Get( "v_pbrProbes", "1", CVAR_ARCHIVE_ND, "Surfaces with a material mirror the level around them: it is drawn from up to 32 points in all directions while it loads. 0: they mirror the light of their lightmap" );
-	v_depthPrepass = ri.Cvar_Get( "v_depthPrepass", "1", CVAR_ARCHIVE_ND, "The solid surfaces of the level go into the depth buffer first, so each pixel of them is shaded once (materials cost less). 0: drawn as before" );
+	v_depthPrepass = ri.Cvar_Get( "v_depthPrepass", "1", CVAR_ARCHIVE_ND, "The solid surfaces of the level go into the depth buffer first, so each pixel of them is shaded once (materials cost less); only while v_pbr is on, where it pays. 0: drawn as before" );
 	v_parallax = ri.Cvar_Get( "v_parallax", "1", CVAR_ARCHIVE_ND, "Surfaces with a height in their normal map look carved (parallax occlusion, up to 32 reads of the texture a pixel). 0: flat, faster" );
 	v_pbr = ri.Cvar_Get( "v_pbr", "1", CVAR_ARCHIVE_ND, "Surfaces with a material (material keywords of shaders, v_matdebug) lit with their normal map, roughness and metalness. 0: drawn as without it. Views to check them: 2 the light alone as without a material, 3 the shine alone, 4 the normals, 5 the direction of the light of the grid, 6 roughness, metalness and occlusion, 7 which maps a surface has, 8 the surfaces as mirrors of the reflection probes, 9 the albedo checked against real surfaces (blue too dark, red too bright, magenta a dark metal), 10 roughness alone, 11 metalness alone, 12 the mirror of the light around alone" );
 	v_lodPixels = ri.Cvar_Get( "v_lodPixels", "1", CVAR_ARCHIVE_ND, "Models keep their detail by how many pixels they cover, as at 640 x 480 (R_LodScale). 0: by the share of the screen they cover, as before" );
@@ -1024,8 +1024,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		backEnd.pc.c_surfaces += numDrawSurfs;
 #ifndef RD_VISION_GLES
-		// (after the clear of the view, before its first surface)
-		if ( rb_prepassWanted && !g_bRenderGlowingObjects && v_depthPrepass->integer ) {
+		// (after the clear of the view, before its first surface; only while the materials are lit per pixel: a
+		// texture times its lightmap costs about what the pre-pass costs, so without them it gains nothing)
+		if ( rb_prepassWanted && !g_bRenderGlowingObjects && v_depthPrepass->integer && v_pbr->integer ) {
 			RB_DepthPrepass( drawSurfs, numDrawSurfs );
 		}
 #endif
