@@ -747,6 +747,7 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 
 cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
 cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
+cvar_t	*v_parallax;	// 0: no parallax on surfaces with a height in their normal map (generic.frag Parallax)
 cvar_t	*v_dlightScale;	// the brightness of the moving lights (generic.frag DynamicLight)
 cvar_t	*v_pbrEnergy;	// 0: their diffuse light is not lessened by what the shine takes
 cvar_t	*v_tessellation;	// 0: materials with tessellation keep their parallax
@@ -826,7 +827,7 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	draw->material2[3] = 0.0f;
 	draw->pbr[0] = mat->pbr ? mat->roughness : 0.8f;
 	draw->pbr[1] = mat->metalness;
-	draw->pbr[2] = mat->parallaxDepth;
+	draw->pbr[2] = v_parallax->integer ? mat->parallaxDepth : 0.0f;
 	draw->pbr2[0] = mat->parallaxPlane;
 	// a face of a reflection probe is always drawn with the materials as they look, never in a debug view of v_pbr,
 	// or the surfaces mirror that view until the level is loaded again

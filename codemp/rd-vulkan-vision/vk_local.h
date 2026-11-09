@@ -390,6 +390,7 @@ qboolean	VK_TessBorders( uint32_t *bones );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;
+extern cvar_t	*v_parallax;
 extern cvar_t	*v_pbrEnergy;
 extern cvar_t	*v_dlightScale;
 extern cvar_t	*v_tessellation;
