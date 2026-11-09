@@ -283,6 +283,11 @@ static void Prof_Draw( debugWindow_t *window ) {
 		Prof_Passes( gpu, width );
 		Prof_Separator();
 		Com_sprintf( remark, sizeof( remark ), "%s CPU", Prof_Count( gpu->cpuTriangles ) );
+		if ( gpu->levelOverdraw > 0.0f ) {
+			// (how often the fragment shader ran for the opaque level a pixel: 1 would be each pixel shaded once)
+			Com_sprintf( value, sizeof( value ), "%.2fx", gpu->levelOverdraw );
+			Prof_Row( "Overdraw", gpu->levelOverdraw > 3.0f ? colBad : gpu->levelOverdraw > 2.0f ? colFair : colGood, value, "level" );
+		}
 		Prof_Row( "Draws", colText, Prof_Count( gpu->draws ), "" );
 		Prof_Row( "Triangles", colText, Prof_Count( gpu->triangles ), remark );
 		Com_sprintf( remark, sizeof( remark ), "%i skeletons", gpu->skeletons );

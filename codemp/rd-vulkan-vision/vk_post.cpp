@@ -769,6 +769,7 @@ void VK_CaptureFrame( void ) {
 	if ( !vk.frame || !tr.screenImage ) {
 		return;
 	}
+	VK_LevelFragments( qfalse );
 	VK_EndTarget();
 	VK_CopyTarget( &vk.color, &vk.screen );
 

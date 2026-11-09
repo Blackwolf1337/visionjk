@@ -1217,6 +1217,9 @@ qboolean VK_GpuFirstMark( void ) {
 	return qfalse;
 }
 
+void VK_LevelFragments( qboolean begin ) {
+}
+
 void VK_GpuTimes_f( void ) {
 	ri.Printf( PRINT_ALL, "v_gpuTimes: only on the Vulkan device\n" );
 }

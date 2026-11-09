@@ -505,6 +505,7 @@ typedef struct gpuProfile_s {
 	float	passMaxMs[GPU_PROFILE_PASSES];		// the most of one frame
 	float	frameMs, frameMaxMs;				// the whole frame on the device
 	float	history[GPU_PROFILE_HISTORY];		// the whole frame on the device of the last frames, oldest first
+	float	levelOverdraw;						// runs of the fragment shader for the opaque level a pixel, 0: not counted
 	int		draws, triangles, cpuTriangles, transforms, bones, skeletons;	// of the last frame
 } gpuProfile_t;
 

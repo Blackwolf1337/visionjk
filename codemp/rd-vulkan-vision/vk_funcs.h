@@ -79,6 +79,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdEndRendering ) \
 	X( vkCmdPipelineBarrier ) \
 	X( vkCmdPushConstants ) \
+	X( vkCmdBeginQuery ) \
+	X( vkCmdEndQuery ) \
 	X( vkCmdResetQueryPool ) \
 	X( vkCmdSetCullMode ) \
 	X( vkCmdSetDepthBias ) \

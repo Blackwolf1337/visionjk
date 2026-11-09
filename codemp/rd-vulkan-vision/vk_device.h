@@ -101,6 +101,9 @@ typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkQueryPool		timestamps;
 	const char		*markNames[VK_GPU_MARKS];	// what ends at that mark, [0] is the start of the frame
 	int				numMarks;
+	// and how often the fragment shader ran while the level was drawn (VK_LevelFragments)
+	VkQueryPool		fragments;
+	qboolean		fragmentsActive, fragmentsUsed;
 } vkDeviceFrame_t;
 
 // ------------------------------------------------------------------------------------------------------------

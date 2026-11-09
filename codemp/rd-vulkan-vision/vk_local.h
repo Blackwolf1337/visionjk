@@ -326,6 +326,7 @@ typedef struct vkState_s : vkDeviceState_t {
 
 	qboolean					wireframe;			// the device can draw triangles as lines (r_showtris)
 	qboolean					tessellation;		// and has tessellation shaders (VKP_TESS); never on GLES
+	qboolean					pipelineStats;		// can count the runs of the fragment shader (v_gpuTimes, the overdraw of the level)
 	qboolean					anisotropy;			// and filter textures along the direction they are seen in
 	qboolean					bcTextures;			// r_ext_compress_textures on a device that takes BC1 and BC3 blocks
 	double						statBcPixels;		// what packing textures into blocks has cost since the window was made
@@ -566,6 +567,7 @@ const byte	*VK_ReadFrame( int x, int y, int width, int height );
 // stays: the names are kept as pointers until the frame is read back). Nothing on a device without timestamps.
 void		VK_GpuMark( const char *name );
 qboolean	VK_GpuFirstMark( void );
+void		VK_LevelFragments( qboolean begin );
 void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.

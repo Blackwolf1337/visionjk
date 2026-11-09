@@ -859,6 +859,7 @@ static void RB_DrawWet( int depthRange ) {
 		return;
 	}
 	rb_wetLater = qfalse;
+	VK_LevelFragments( qfalse );
 	VK_GpuMark( "level" );
 #ifndef RD_VISION_GLES
 	VK_RT_Pass();
@@ -1230,7 +1231,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_sweepSurfs = cmd->drawSurfs;
 	rb_sweepCount = cmd->numDrawSurfs;
 #endif
+	if ( levelView ) {
+		VK_LevelFragments( qtrue );
+	}
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+	VK_LevelFragments( qfalse );
 	rb_wetLater = qfalse;
 	rb_deferDlights = qfalse;
 	if ( levelView && r_numLiquids ) {

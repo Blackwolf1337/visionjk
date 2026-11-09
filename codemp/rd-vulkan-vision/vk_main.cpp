@@ -359,6 +359,8 @@ static void VK_CreateDevice( void ) {
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
 	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
 	features.features.tessellationShader = available.tessellationShader;
+	features.features.pipelineStatisticsQuery = available.pipelineStatisticsQuery;
+	vk.pipelineStats = (qboolean)( available.pipelineStatisticsQuery != VK_FALSE );
 	vk.tessellation = (qboolean)( available.tessellationShader != VK_FALSE );
 	features.features.textureCompressionBC = available.textureCompressionBC;
 	vk.bcTextures = (qboolean)( available.textureCompressionBC != VK_FALSE && r_ext_compressed_textures->integer );

@@ -50,6 +50,8 @@ static struct {
 static int		vk_numGpuNames;
 static double	vk_gpuFrameMs;		// from the first mark of a frame to its last, summed
 static int		vk_gpuFrames;
+static double	vk_gpuFragments;	// runs of the fragment shader for the level, summed over the frames that counted them
+static int		vk_gpuFragmentFrames;
 
 // the GPU profiler of the client (ext.GpuProfile): the same sums over windows of about half a second, apart from
 // those of v_gpuTimes, and the whole frame of each of the last frames
@@ -62,6 +64,8 @@ static struct {
 static int			vk_numProfNames;
 static double		vk_profFrameMs, vk_profFrameMaxMs;
 static int			vk_profFrames, vk_profStart;
+static double		vk_profFragments;
+static int			vk_profFragmentFrames;
 static float		vk_profHistory[GPU_PROFILE_HISTORY];
 static int			vk_profHistoryAt;
 static gpuProfile_t	vk_profile;			// the last window closed
@@ -106,6 +110,10 @@ static void VK_ProfileClose( void ) {
 	}
 	p->frameMs = (float)( vk_profFrameMs / vk_profFrames );
 	p->frameMaxMs = (float)vk_profFrameMaxMs;
+	p->levelOverdraw = vk_profFragmentFrames && vk.width > 0 && vk.height > 0
+		? (float)( vk_profFragments / vk_profFragmentFrames / ( (double)vk.width * vk.height ) ) : 0.0f;
+	vk_profFragments = 0.0;
+	vk_profFragmentFrames = 0;
 	// (a pass that ended takes no row any more; the others start again from nothing)
 	vk_numProfNames = 0;
 	vk_profFrameMs = vk_profFrameMaxMs = 0.0;
@@ -173,6 +181,18 @@ static void VK_GpuRead( vkFrame_t *frame ) {
 	uint64_t ticks[VK_GPU_MARKS];
 	const double msPerTick = (double)vk.properties.limits.timestampPeriod / 1000000.0;
 
+	if ( frame->fragments && frame->fragmentsUsed ) {
+		uint64_t count = 0;
+
+		if ( qvkGetQueryPoolResults( vk.device, frame->fragments, 0, 1, sizeof( count ), &count, sizeof( count ), VK_QUERY_RESULT_64_BIT )
+			== VK_SUCCESS ) {
+			vk_gpuFragments += (double)count;
+			vk_gpuFragmentFrames++;
+			vk_profFragments += (double)count;
+			vk_profFragmentFrames++;
+		}
+	}
+
 	if ( !frame->timestamps || frame->numMarks < 2 ) {
 		return;
 	}
@@ -186,6 +206,33 @@ static void VK_GpuRead( vkFrame_t *frame ) {
 	vk_gpuFrameMs += (double)( ticks[frame->numMarks - 1] - ticks[0] ) * msPerTick;
 	vk_gpuFrames++;
 	VK_ProfileFrame( frame, ticks, msPerTick );
+}
+
+/*
+===============
+VK_LevelFragments
+
+How often the fragment shader runs while the opaque level of the main view is drawn, against the pixels of the frame:
+its overdraw (v_gpuTimes, v_profiler). Counted inside the render pass of the level, which every pass that leaves
+it ends first (VK_LevelFragments( qfalse ) is called before that, and the count stops there).
+===============
+*/
+void VK_LevelFragments( qboolean begin ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || !frame->fragments ) {
+		return;
+	}
+	if ( begin ) {
+		if ( !frame->fragmentsActive && !frame->fragmentsUsed ) {
+			qvkCmdBeginQuery( frame->cmd, frame->fragments, 0, 0 );
+			frame->fragmentsActive = qtrue;
+		}
+	} else if ( frame->fragmentsActive ) {
+		qvkCmdEndQuery( frame->cmd, frame->fragments, 0 );
+		frame->fragmentsActive = qfalse;
+		frame->fragmentsUsed = qtrue;
+	}
 }
 
 // no mark of the frame yet but its start
@@ -217,6 +264,12 @@ void VK_GpuTimes_f( void ) {
 		ri.Printf( PRINT_ALL, "  %-16s %7.3f ms\n", vk_gpuNames[i].name, vk_gpuNames[i].ms / vk_gpuFrames );
 	}
 	ri.Printf( PRINT_ALL, "  %-16s %7.3f ms\n", "whole frame", vk_gpuFrameMs / vk_gpuFrames );
+	if ( vk_gpuFragmentFrames ) {
+		ri.Printf( PRINT_ALL, "level overdraw: the fragment shader ran %.2f times a pixel of the frame\n",
+			vk_gpuFragments / vk_gpuFragmentFrames / ( (double)vk.width * vk.height ) );
+	}
+	vk_gpuFragments = 0.0;
+	vk_gpuFragmentFrames = 0;
 	vk_numGpuNames = 0;
 	vk_gpuFrameMs = 0.0;
 	vk_gpuFrames = 0;
@@ -262,6 +315,16 @@ void VK_InitFrames( void ) {
 			query.queryCount = VK_GPU_MARKS;
 			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->timestamps ) );
 		}
+		frame->fragments = VK_NULL_HANDLE;
+		frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+		if ( vk.pipelineStats ) {
+			VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+
+			query.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+			query.queryCount = 1;
+			query.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
+			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->fragments ) );
+		}
 
 		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
 		buffers[0].buffer = frame->globals.buffer;
@@ -299,6 +362,10 @@ void VK_ShutdownFrames( void ) {
 		if ( frame->timestamps ) {
 			qvkDestroyQueryPool( vk.device, frame->timestamps, NULL );
 			frame->timestamps = VK_NULL_HANDLE;
+		}
+		if ( frame->fragments ) {
+			qvkDestroyQueryPool( vk.device, frame->fragments, NULL );
+			frame->fragments = VK_NULL_HANDLE;
 		}
 	}
 	VK_DestroyBuffer( &vk_readback );
@@ -505,6 +572,10 @@ void VK_BeginCommands( vkFrame_t *frame ) {
 	// (the fence says the device is through with what this frame recorded the last time)
 	VK_GpuRead( frame );
 	frame->numMarks = 0;
+	frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+	if ( frame->fragments ) {
+		qvkCmdResetQueryPool( frame->cmd, frame->fragments, 0, 1 );
+	}
 	if ( frame->timestamps ) {
 		qvkCmdResetQueryPool( frame->cmd, frame->timestamps, 0, VK_GPU_MARKS );
 		qvkCmdWriteTimestamp( frame->cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frame->timestamps, 0 );
