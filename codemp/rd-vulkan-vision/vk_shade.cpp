@@ -817,7 +817,8 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	draw->pbr2[1] = mat->clearcoat;
 	draw->pbr2[2] = mat->clearcoatRoughness;
 	draw->pbr2[3] = mat->anisotropy;
-	VectorScale( mat->emission, mat->emissionStrength, draw->pbr3 );
+	// (the glow of a lamp panel made at load follows v_panelGlow at once)
+	VectorScale( mat->emission, mat->autoLamp ? Com_Clamp( 0.0f, 16.0f, v_panelGlow->value ) : mat->emissionStrength, draw->pbr3 );
 	draw->pbr3[3] = mat->emissionThreshold;
 	VectorCopy( mat->sheen, draw->material );
 	draw->material[3] = mat->sheenRoughness;
@@ -1371,6 +1372,14 @@ void RB_StageIteratorGeneric( void ) {
 			}
 		}
 		draw.flags |= VK_AlphaTest( stateBits );
+		// VisionJK: the glow map of a lamp panel (a stage added onto it) shines brighter than its texture (v_panelGlow)
+		if ( shader->lampPanel && v_panelGlow->value > 0.0f ) {
+			const uint32_t dst = stateBits & GLS_DSTBLEND_BITS;
+
+			if ( dst == GLS_DSTBLEND_ONE || dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+				draw.brighten = 1.0f + Com_Clamp( 0.0f, 16.0f, v_panelGlow->value );
+			}
+		}
 		VK_GoreDraw( pStage, &draw );
 		if ( isStatic ) {
 			draw.styles = VK_StaticStyles();

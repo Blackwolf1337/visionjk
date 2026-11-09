@@ -972,6 +972,11 @@ void main() {
 		}
 	}
 
+	// the glow map of a lamp panel brighter than its texture (v_panelGlow): with HDR it glows out
+	if ( d.brighten > 0.0 ) {
+		color.rgb *= d.brighten;
+	}
+
 	uint atest = ATEST( d.flags );
 	if ( atest == 1u && color.a <= 0.0 ) {
 		discard;

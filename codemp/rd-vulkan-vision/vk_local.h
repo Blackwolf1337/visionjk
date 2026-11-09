@@ -173,7 +173,10 @@ typedef struct vkDraw_s {		// once per draw
 	float		tess[4];			// VKP_TESS: units of the height, where the polygon lies in it, pixels an edge is cut
 									//	down to, the most pieces an edge is cut into
 	uint32_t	cutBones;			// skinned, a part of a body a saber cut through: where its cut is in the bones of the
-	uint32_t	pad[3];				//	frame, in rows (VK_CutBones), 0: none
+									//	frame, in rows (VK_CutBones), 0: none
+	float		brighten;			// the colour of the stage times this after its texture, past white (the glow map of
+									//	a lamp panel, v_panelGlow); 0: as it is
+	uint32_t	pad[2];
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert

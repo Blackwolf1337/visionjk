@@ -3347,20 +3347,96 @@ material of a shader file gets one made from its texture (tr_automat.cpp). Shade
 moving or generated texture coordinates, lamps, skies and fog are left as they are.
 ===================
 */
+// the shader being parsed is a plain surface of the level: its texture times its lightmap in one stage
+static qboolean PlainLitShader( void ) {
+	const shaderStage_t *st = &stages[0];
+
+	if ( shader.numUnfoggedPasses != 1 || shader.lightmapIndex[0] < 0 || shader.sort != SS_OPAQUE || shader.sky
+		|| ( shader.surfaceFlags & ( SURF_SKY | SURF_NODRAW ) ) || ( shader.contentFlags & CONTENTS_FOG ) ) {
+		return qfalse;
+	}
+	return (qboolean)( st->active && !st->glow && !st->glowOnly && !st->bundle[0].isLightmap && st->bundle[0].image
+		&& st->bundle[1].image && st->bundle[1].isLightmap && shader.multitextureEnv == GL_MODULATE
+		&& st->bundle[0].tcGen == TCGEN_TEXTURE && !st->bundle[0].numTexMods && st->bundle[0].numImageAnimations <= 1
+		&& !st->bundle[0].isVideoMap && !( st->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) );
+}
+
+/*
+===================
+LampPanel
+
+VisionJK: whether the shader being parsed is a lamp of the level (shader.lampPanel): one the map was lit with
+(q3map_surfacelight, emissive), or a plain lit surface whose texture is named as a lamp and is bright. Its glow
+comes from v_panelGlow (AutoMaterial), its light on the players from vk_rt.cpp (v_panelLight).
+===================
+*/
+static const char *lampWords[] = { "light", "lamp", "fluor", "neon", "glow", "bulb", "lite" };
+// (and not a light coloured surface: "concrete_floor_light" of ffa3)
+static const char *lampNotWords[] = { "glass", "window", "water", "sky", "fog", "decal", "flare", "spot", "beam", "shaft",
+	"floor", "concrete", "stone", "wall", "sand", "rock", "metal", "wood", "brick", "tile", "ground", "dirt", "marble", "plaster" };
+
+static qboolean LampPanel( const char **why ) {
+	const image_t *image = stages[0].bundle[0].image;
+	char name[MAX_QPATH];
+	qboolean named = qfalse;
+
+	if ( shader.sky || ( shader.surfaceFlags & ( SURF_SKY | SURF_NODRAW ) ) || ( shader.contentFlags & CONTENTS_FOG )
+		|| shader.sort == SS_PORTAL ) {
+		return qfalse;
+	}
+	if ( shader.surfaceLight > 0.0f ) {
+		*why = "q3map_surfacelight";
+		return qtrue;
+	}
+	if ( shader.emissiveSet && shader.emissive[3] > 0.0f ) {
+		*why = "emissive";
+		return qtrue;
+	}
+	if ( !PlainLitShader() || !image || image->averageLuma < 0.5f ) {
+		return qfalse;
+	}
+	Q_strncpyz( name, shader.name, sizeof( name ) );
+	Q_strlwr( name );
+	for ( size_t i = 0; i < ARRAY_LEN( lampNotWords ); i++ ) {
+		if ( strstr( name, lampNotWords[i] ) ) {
+			return qfalse;
+		}
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( lampWords ); i++ ) {
+		named = (qboolean)( named || strstr( name, lampWords[i] ) );
+	}
+	if ( named ) {
+		*why = "named as a lamp and bright";
+	}
+	return named;
+}
+
 static void AutoMaterial( void ) {
 	shaderStage_t *st = &stages[0];
 	const image_t *image = st->bundle[0].image;
 	autoMaterial_t made;
 
-	if ( !v_autoMaterials || !v_autoMaterials->integer || shader.numUnfoggedPasses != 1 || shader.lightmapIndex[0] < 0
-		|| shader.sort != SS_OPAQUE || shader.sky || ( shader.surfaceFlags & ( SURF_SKY | SURF_NODRAW ) )
-		|| ( shader.contentFlags & CONTENTS_FOG ) || shader.surfaceLight > 0.0f || shader.emissiveSet ) {
+	if ( shader.lampPanel ) {
+		// a lamp glows: the bright parts of its texture give off light, as strong as v_panelGlow says (from then on
+		// at once, vk_shade.cpp), a smooth surface; with HDR they go past white and glow out
+		if ( !PlainLitShader() || st->mat ) {
+			return;
+		}
+		stageMaterial_t *mat = StageMaterial( st );
+
+		mat->pbr = true;
+		mat->autoMade = true;
+		mat->autoLamp = true;
+		mat->roughness = 0.3f;
+		mat->metalness = 0.0f;
+		VectorSet( mat->emission, 1.0f, 1.0f, 1.0f );
+		mat->emissionStrength = v_panelGlow ? Com_Clamp( 0.0f, 16.0f, v_panelGlow->value ) : 2.0f;
+		mat->emissionThreshold = 0.5f;
+		mat->gen.flags = 0;
 		return;
 	}
-	if ( !st->active || st->mat || st->glow || st->glowOnly || st->bundle[0].isLightmap || !image
-		|| !st->bundle[1].image || !st->bundle[1].isLightmap || shader.multitextureEnv != GL_MODULATE
-		|| st->bundle[0].tcGen != TCGEN_TEXTURE || st->bundle[0].numTexMods || st->bundle[0].numImageAnimations > 1
-		|| st->bundle[0].isVideoMap || ( st->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
+	if ( !v_autoMaterials || !v_autoMaterials->integer || !PlainLitShader() || shader.surfaceLight > 0.0f || shader.emissiveSet
+		|| st->mat ) {
 		return;
 	}
 	// (the maps are made from the file, which has to be a power of two)
@@ -3709,6 +3785,14 @@ static shader_t *FinishShader( void ) {
 		}
 	}
 
+	{
+		const char *why = NULL;
+
+		shader.lampPanel = (bool)LampPanel( &why );
+		if ( shader.lampPanel && shader.lightmapIndex[0] >= 0 ) {
+			ri.Printf( PRINT_DEVELOPER, "lamp panel: %s (%s)\n", shader.name, why );
+		}
+	}
 	AutoMaterial();
 	return GeneratePermanentShader();
 }

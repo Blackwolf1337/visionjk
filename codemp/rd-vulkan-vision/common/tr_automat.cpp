@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "tr_local.h"
 
 cvar_t *v_autoMaterials;
+cvar_t *v_panelGlow;
+cvar_t *v_panelLight;
 
 typedef struct {
 	const char	*name;

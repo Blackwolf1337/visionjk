@@ -480,6 +480,8 @@ typedef struct stageMaterial_s {
 	image_t			*albedoMap;
 	// made at load by tr_automat.cpp (v_autoMaterials), not written in a shader file; a save makes it a written one
 	bool			autoMade;
+	// the glow of a lamp panel made at load: its emission strength follows v_panelGlow (vk_shade.cpp VK_PbrDraw)
+	bool			autoLamp;
 } stageMaterial_t;
 
 // tr_automat.cpp: what a texture of the level gets when it has no material (v_autoMaterials)
@@ -491,6 +493,8 @@ typedef struct {
 } autoMaterial_t;
 
 extern cvar_t	*v_autoMaterials;
+extern cvar_t	*v_panelGlow;		// tr_init.cpp: how bright lamp panels glow (emission strength), 0: as the texture is
+extern cvar_t	*v_panelLight;		// tr_init.cpp: players are lit from the lamp panels their shadow comes from
 qboolean	R_AutoMaterialClass( const char *shaderName, const image_t *image, autoMaterial_t *out );
 
 typedef struct shaderStage_s {
@@ -585,6 +589,7 @@ typedef struct shader_s {
 	float		emissive[4];
 	bool		entityMergable;			// merge across entites optimizable (smoke, blood)
 	float		surfaceLight;			// VisionJK: q3map_surfacelight, the light its surfaces gave when the map was lit (vk_rt.cpp)
+	bool		lampPanel;				// VisionJK: a lamp of the level (LampPanel in tr_shader.cpp): it glows (v_panelGlow)
 
 	skyParms_t	*sky;
 	fogParms_t	*fogParms;

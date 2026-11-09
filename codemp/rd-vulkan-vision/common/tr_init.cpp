@@ -672,6 +672,8 @@ void R_Register( void )
 	r_texturebitslm						= ri.Cvar_Get( "r_texturebitslm",					"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_overBrightBits					= ri.Cvar_Get( "r_overBrightBits",					"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_mapOverBrightBits					= ri.Cvar_Get( "r_mapOverBrightBits",				"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
+	v_panelGlow							= ri.Cvar_Get( "v_panelGlow",						"2",						CVAR_ARCHIVE_ND, "Lamp panels of a level glow as light sources: the bright parts of their texture give off light this strong (with HDR they glow out, with bloom they shine). 0: they look as their texture" );
+	v_panelLight						= ri.Cvar_Get( "v_panelLight",						"1",						CVAR_ARCHIVE_ND, "Players near lamp panels are lit from them, from the panels their traced shadow comes from (ray tracing, cg_shadows 2). 0: from the light grid alone" );
 	v_autoMaterials						= ri.Cvar_Get( "v_autoMaterials",					"1",						CVAR_ARCHIVE_ND|CVAR_LATCH, "Surfaces of a level without a material get one made from their texture at load (its class from the name and brightness of the texture), so every level shows the materials. Shader files still win. 0: only written materials (vid_restart)" );
 	r_simpleMipMaps						= ri.Cvar_Get( "r_simpleMipMaps",					"1",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_vertexLight						= ri.Cvar_Get( "r_vertexLight",					"0",						CVAR_ARCHIVE|CVAR_LATCH, "" );
