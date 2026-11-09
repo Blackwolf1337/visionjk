@@ -1161,7 +1161,6 @@ typedef struct trGlobals_s {
 
 	int						numLightmaps;
 	image_t					*lightmaps[MAX_LIGHTMAPS];
-	byte					*lightmapPixels[MAX_LIGHTMAPS];	// VisionJK: each page as it was loaded, RGBA (the bake adds to it, vk_bake.cpp)
 	// VisionJK: the light grid of the level as a picture for the stages with a material (R_CreatePbrGrid): its
 	// layers side by side, pbrGridTiles of them across. NULL: the level has no grid
 	image_t					*pbrGrid;

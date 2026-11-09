@@ -177,8 +177,7 @@ static void VK_CreateLayouts( void ) {
 	memset( &texture, 0, sizeof( texture ) );
 	texture.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	texture.descriptorCount = VK_MAX_IMAGES;
-	// (and compute: the bake reads the textures and lightmaps of the surfaces its rays meet, vk_bake.cpp)
-	texture.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+	texture.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	if ( vk.tessellation ) {
 		// and the height in the normal map where it moves the vertices
 		texture.stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;

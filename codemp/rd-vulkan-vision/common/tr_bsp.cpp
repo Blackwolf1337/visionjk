@@ -245,12 +245,6 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 				image[j*4+3] = 255;
 			}
 		}
-		// VisionJK: kept as it came, the light the level adds to it (vk_bake.cpp) is added to this
-		tr.lightmapPixels[i] = NULL;
-		if ( r_lightmap->integer != 2 ) {
-			tr.lightmapPixels[i] = (byte *)ri.Hunk_Alloc( LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4, h_low );
-			memcpy( tr.lightmapPixels[i], image, LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4 );
-		}
 		tr.lightmaps[i] = R_CreateImage( va("*%s/lightmap%d",sMapName,i), image,
 			LIGHTMAP_SIZE, LIGHTMAP_SIZE, GL_RGBA, qfalse, qfalse, (qboolean)r_ext_compressed_lightmaps->integer, GL_CLAMP );
 	}
