@@ -46,6 +46,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // green where it goes past it), 3 the rays towards the sun against the players alone: their sun shadows.
 
 #include "vk_local.h"
+#include "vk_bake.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -438,6 +439,30 @@ static void VK_RT_SurfaceNormals( const msurface_t *surf, std::vector<float> &no
 			normals.insert( normals.end(), grid->verts[j].normal, grid->verts[j].normal + 3 );
 		}
 	}
+}
+
+// vk_bake.cpp: the surfaces VK_RT_LevelTriangles takes, in its order
+void VK_RT_LevelSurfaces( std::vector<const msurface_t *> &surfaces ) {
+	const bmodel_t *model = &tr.world->bmodels[0];
+
+	for ( int i = 0; i < model->numSurfaces; i++ ) {
+		if ( VK_RT_StopsLight( model->firstSurface[i].shader ) ) {
+			surfaces.push_back( &model->firstSurface[i] );
+		}
+	}
+}
+
+qboolean VK_RT_BakeSet( VkDescriptorSet *set, VkDescriptorSetLayout *layout ) {
+	if ( !rt.layout || rt.maps || !rt.levelReady || rt.world != tr.world || rt.worldLoads != r_worldLoads ) {
+		return qfalse;
+	}
+	*set = rt.sets[vk.frameIndex];
+	*layout = rt.setLayout;
+	return qtrue;
+}
+
+VkDeviceAddress VK_RT_BufferAddress( const vkBuffer_t *buf ) {
+	return VK_RT_Address( buf );
 }
 
 // the triangles of the solid surfaces of the world model (not doors, lifts and the other brush models, which move)
@@ -1508,6 +1533,7 @@ void VK_RT_Init( void ) {
 	v_rtDebug = ri.Cvar_Get( "v_rtDebug", "0", CVAR_CHEAT,
 		"What the rays of the ray tracing see. 1: towards the sun, 2: from the eye against the depth, 3: the players towards the sun, "
 		"4: the light patches, 5: the direction of the strongest light" );
+	VK_Bake_Register();
 	v_rtShadows = ri.Cvar_Get( "v_rtShadows", "1", CVAR_ARCHIVE_ND, "Traced shadows of the players where the graphics card traces rays (cg_shadows 2). 0: none" );
 	v_rtShadowRays = ri.Cvar_Get( "v_rtShadowRays", "4", CVAR_ARCHIVE_ND, "Rays a pixel for the traced shadows of the players, 1 to 16" );
 	v_rtSunSize = ri.Cvar_Get( "v_rtSunSize", "1.5", CVAR_ARCHIVE_ND, "How large the sun is in degrees: the softness of its traced shadows" );
@@ -1603,6 +1629,7 @@ void VK_RT_Shutdown( void ) {
 	if ( !rt.layout ) {
 		return;
 	}
+	VK_Bake_Shutdown();
 	qvkDestroyPipeline( vk.device, rt.debugPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, rt.debugFragment, NULL );
 	qvkDestroyPipeline( vk.device, rt.shadowPipeline, NULL );
@@ -2475,6 +2502,8 @@ void VK_RT_Pass( void ) {
 		if ( rt.cellState == 1 && rt.levelReady ) {
 			VK_RT_TraceCells( cmd );
 		}
+		// the light the level adds to its lightmaps, a slice a frame while it is made (vk_bake.cpp)
+		VK_Bake_Record( cmd );
 	}
 	VK_GpuMark( "rt builds" );
 

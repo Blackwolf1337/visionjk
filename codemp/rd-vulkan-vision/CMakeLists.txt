@@ -108,6 +108,8 @@ set(MPVulkanVisionVulkanFiles
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_rt.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_bake.h"
+	"${MPDir}/rd-vulkan-vision/vk_bake.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	)
 source_group("vulkan" FILES ${MPVulkanVisionVulkanFiles})
@@ -229,6 +231,7 @@ set(MPVulkanVisionRTShaders
 	generic.tese
 	rtaccum.frag
 	rtcells.comp
+	bake.comp
 	rtlamps.comp
 	rtdebug.frag
 	rtresolve.frag
