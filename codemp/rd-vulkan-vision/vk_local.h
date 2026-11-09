@@ -565,6 +565,7 @@ const byte	*VK_ReadFrame( int x, int y, int width, int height );
 // v_gpuTimes: a timestamp in the commands of the frame, the time since the mark before goes to name (a string that
 // stays: the names are kept as pointers until the frame is read back). Nothing on a device without timestamps.
 void		VK_GpuMark( const char *name );
+qboolean	VK_GpuFirstMark( void );
 void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.

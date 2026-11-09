@@ -1188,7 +1188,9 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
 	}
-	VK_GpuMark( "2d and other" );
+	// what came before this view: the start of the frame (uploads, passes of their own) before the first one, the 2D
+	// between two scenes (the models of the HUD and the menus) before the others
+	VK_GpuMark( VK_GpuFirstMark() ? "frame start" : "2d between views" );
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 	// the view mirrored at the floor of the puddles goes into targets of its own, which the wet places read

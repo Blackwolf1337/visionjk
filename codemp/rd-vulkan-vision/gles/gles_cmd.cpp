@@ -1213,6 +1213,10 @@ void VK_PresentFrame( const float *gamma ) {
 void VK_GpuMark( const char *name ) {
 }
 
+qboolean VK_GpuFirstMark( void ) {
+	return qfalse;
+}
+
 void VK_GpuTimes_f( void ) {
 	ri.Printf( PRINT_ALL, "v_gpuTimes: only on the Vulkan device\n" );
 }

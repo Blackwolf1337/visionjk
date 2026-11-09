@@ -188,6 +188,11 @@ static void VK_GpuRead( vkFrame_t *frame ) {
 	VK_ProfileFrame( frame, ticks, msPerTick );
 }
 
+// no mark of the frame yet but its start
+qboolean VK_GpuFirstMark( void ) {
+	return (qboolean)( vk.frame && vk.frame->numMarks <= 1 );
+}
+
 void VK_GpuMark( const char *name ) {
 	vkFrame_t *frame = vk.frame;
 
@@ -572,7 +577,8 @@ void VK_PresentFrame( const float *gamma ) {
 	uint32_t imageIndex = 0;
 	qboolean present;
 
-	VK_GpuMark( "2d and other" );
+	// (after the last view: the HUD, the menus, the console and the debug menus of the client)
+	VK_GpuMark( "2d and hud" );
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, &vk.final, NULL, 0, qfalse );
