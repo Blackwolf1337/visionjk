@@ -35,29 +35,21 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (VK_FRAMES later) the sums are read, blurred within each page where the surface is the same, kept in
 // vulkan/bake/ of the profile, and added to the pages. A level seen before is added from that file at once.
 //
-// The light grid gets the same, traced all round from the middle of each cell, into the ambient light of its first
-// style, so players and models stand in it too. Its cells share their records where their light was the same; a
-// shared record gets the mean of its cells.
-//
-// Not touched: the light styles 1 to 3 (switched and flickering lights), surfaces lit by their vertices, the
-// directions of the grid and its picture for the materials (tr.pbrGrid). Doors and lifts are not in the acceleration structure: they neither block nor
+// Not touched: the light styles 1 to 3 (switched and flickering lights), surfaces lit by their vertices, the light
+// grid (models are lit as before). Doors and lifts are not in the acceleration structure: they neither block nor
 // bounce. The sky's light is in the lightmaps already, a ray that leaves the level adds nothing.
 
 #include "vk_local.h"
 #include "vk_bake.h"
-
-#include <algorithm>
 
 static const uint32_t vk_bakeComp[] =
 #include "shaders/bake_comp.inc"
 ;
 
 #define BAKE_PAGE			128
-#define BAKE_ROWS			4			// vec4 a triangle, as bake.comp
-#define BAKE_PATCH_SIZE		32.0f		// units a patch of a new emitter reaches across at most
-#define BAKE_MAX_PATCHES	2048
+#define BAKE_ROWS			6			// vec4 a triangle, as bake.comp
 #define BAKE_RAYS_A_FRAME	600000		// rays traced each frame while a level bakes, about 1 ms on an RTX 4070 SUPER
-#define BAKE_VERSION		3
+#define BAKE_VERSION		1
 #define BAKE_MAGIC			0x314b4256	// "VBK1"
 
 cvar_t *v_bake;
@@ -70,7 +62,6 @@ enum { BAKE_NEW, BAKE_TRACING, BAKE_READING, BAKE_DONE, BAKE_NONE };
 typedef struct {
 	int		magic, version;
 	int		numPages, numTexels;
-	int		numGrid;					// records of the light grid after the texels, 0: none
 	float	scale;						// a stored unit is this much light
 } bakeFileHeader_t;
 
@@ -81,61 +72,24 @@ static struct {
 	std::vector<uint32_t>	where;			// page << 16 | y << 8 | x of each texel
 	std::vector<float>		bounce, glow;	// 3 a texel of the pages (numPages x 128 x 128), after the blur and the spread
 	std::vector<byte>		covered;		// a texel of the pages that has light added
-	uint32_t				numCells;		// of the light grid, traced after the texels
-	std::vector<float>		gridBounce, gridGlow;	// 3 a record of the light grid
-	std::vector<mgrid_t>	gridOriginal;	// the records as they came
 	uint32_t				next;			// the first texel of the next slice
 	int						readAt;			// frameNumber from which the sums can be read
 	int						frameNumber;
 	int						started;		// ms
 	char					cachePath[MAX_QPATH];
-	vkBuffer_t				texelBuffer, triangleBuffer, resultBuffer, patchBuffer;
-	uint32_t				numPatches;
+	vkBuffer_t				texelBuffer, triangleBuffer, resultBuffer;
 	VkPipelineLayout		layout;
 	VkPipeline				pipeline;
 	VkShaderModule			shader;
 	// what the pages have now: 0 the originals, else the strengths that were added
 	qboolean				applied;
 	float					appliedBounce, appliedEmit;
-	qboolean				redo;			// v_bakeRedo: the next begin does not read the cache
 } bake = { -1 };
-
-static void VK_Bake_Apply( qboolean on );
-
-// v_bakeRedo: the level is traced again (the pages go back to the originals first, the bounce reads them)
-static void VK_Bake_Redo_f( void ) {
-	if ( !tr.world ) {
-		return;
-	}
-	VK_Bake_Apply( qfalse );
-	bake.redo = qtrue;
-	bake.loads = -1;
-	ri.Printf( PRINT_ALL, "v_bake: %s is traced again\n", tr.world->baseName );
-}
-
-static void VK_Bake_Info_f( void ) {
-	static const char *states[] = { "not begun", "tracing", "reading back", "done", "nothing to bake" };
-
-	if ( !tr.world || bake.loads != r_worldLoads ) {
-		ri.Printf( PRINT_ALL, "v_bake: nothing for this level yet (it needs the ray tracing of the shadows, cg_shadows 2)\n" );
-		return;
-	}
-	ri.Printf( PRINT_ALL, "v_bake: %s, %s", tr.world->baseName, states[bake.state] );
-	if ( bake.state == BAKE_TRACING ) {
-		const uint32_t total = (uint32_t)bake.where.size() + bake.numCells;
-
-		ri.Printf( PRINT_ALL, ", %u of %u texels and cells", bake.next, total );
-	}
-	ri.Printf( PRINT_ALL, "\n  %s\n  added now: bounce %.2f, glow %.2f%s\n", bake.cachePath, bake.appliedBounce, bake.appliedEmit,
-		bake.applied ? "" : " (the lightmaps as they came)" );
-}
 
 void VK_Bake_Register( void ) {
 	v_bake = ri.Cvar_Get( "v_bake", "1", CVAR_ARCHIVE_ND, "Light the level adds to its lightmaps, traced on the graphics card when a level is first seen (a few seconds, then kept in vulkan/bake/): one bounce of the baked light and the light of surfaces that glow. 0: the lightmaps as they came" );
 	v_bakeBounce = ri.Cvar_Get( "v_bakeBounce", "0.6", CVAR_ARCHIVE_ND, "v_bake: how much of the bounced light is added (0 none, 1 all of it)" );
 	v_bakeEmit = ri.Cvar_Get( "v_bakeEmit", "1", CVAR_ARCHIVE_ND, "v_bake: how much light surfaces that glow give (0 none)" );
-	ri.Cmd_AddCommand( "v_bakeRedo", VK_Bake_Redo_f, "v_bake: trace the light of this level again, not from the cache" );
-	ri.Cmd_AddCommand( "v_bakeInfo", VK_Bake_Info_f, "v_bake: what the light of this level is at" );
 	v_bakeRays = ri.Cvar_Get( "v_bakeRays", "128", CVAR_ARCHIVE_ND, "v_bake: rays from each texel of the lightmaps (more: less noise, longer to make); a level baked with another number is baked again" );
 }
 
@@ -143,12 +97,9 @@ static void VK_Bake_FreeBuffers( void ) {
 	VK_DestroyBuffer( &bake.texelBuffer );
 	VK_DestroyBuffer( &bake.triangleBuffer );
 	VK_DestroyBuffer( &bake.resultBuffer );
-	VK_DestroyBuffer( &bake.patchBuffer );
 }
 
 void VK_Bake_Shutdown( void ) {
-	ri.Cmd_RemoveCommand( "v_bakeRedo" );
-	ri.Cmd_RemoveCommand( "v_bakeInfo" );
 	if ( vk.device ) {
 		VK_Bake_FreeBuffers();
 		if ( bake.pipeline ) {
@@ -169,9 +120,6 @@ void VK_Bake_Shutdown( void ) {
 	bake.bounce.clear();
 	bake.glow.clear();
 	bake.covered.clear();
-	bake.gridBounce.clear();
-	bake.gridGlow.clear();
-	bake.gridOriginal.clear();
 	bake.loads = -1;
 	bake.state = BAKE_NEW;
 	bake.applied = qfalse;
@@ -188,7 +136,7 @@ static qboolean VK_Bake_Pipeline( VkDescriptorSetLayout setLayout ) {
 	}
 	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 	push.offset = 0;
-	push.size = sizeof( uint32_t ) * 28;
+	push.size = sizeof( uint32_t ) * 24;
 	layout.setLayoutCount = 2;
 	layout.pSetLayouts = sets;
 	layout.pushConstantRangeCount = 1;
@@ -333,7 +281,7 @@ static qboolean VK_Bake_Fullbright( const shader_t *shader ) {
 		&& ( st->rgbGen == CGEN_IDENTITY || st->rgbGen == CGEN_IDENTITY_LIGHTING ) && !st->bundle[0].isLightmap );
 }
 
-// the four rows of each triangle of the acceleration structure of the level, in its order (bake.comp)
+// the six rows of each triangle of the acceleration structure of the level, in its order (bake.comp)
 static void VK_Bake_Triangles( std::vector<float> &rows ) {
 	std::vector<const msurface_t *> surfaces;
 
@@ -342,11 +290,24 @@ static void VK_Bake_Triangles( std::vector<float> &rows ) {
 		const shader_t	*shader = surf->shader;
 		const int		page = VK_Bake_Page( shader );
 		const image_t	*texture = VK_Bake_Texture( shader );
+		const image_t	*glow = VK_Bake_Glow( shader );
 		// a lamp of the light the level was compiled with: its light is in the lightmaps
 		const qboolean	lamp = (qboolean)( shader->surfaceLight > 0.0f || ( shader->emissiveSet && shader->emissive[3] > 0.0f ) );
+		float			emission[4] = { 0.0f, 0.0f, 0.0f, 0.7f };
+		float			glowScale = 1.0f;
 
-		if ( VK_Bake_Fullbright( shader ) ) {
-			texture = NULL;		// (it shows its own colour, nothing it is lit by; it is a new emitter instead)
+		for ( int i = 0; i < shader->numUnfoggedPasses && shader->stages[i].active; i++ ) {
+			const stageMaterial_t *mat = shader->stages[i].mat;
+
+			if ( mat && mat->emissionStrength > 0.0f ) {
+				VectorScale( mat->emission, mat->emissionStrength, emission );
+				emission[3] = mat->emissionThreshold;
+			}
+		}
+		if ( !glow && VK_Bake_Fullbright( shader ) && !lamp ) {
+			// drawn at full brightness: it shows its own colour, it is lit by nothing
+			glow = texture;
+			texture = NULL;
 		}
 		VK_Bake_ForTriangles( surf, [&]( const bakeCorner_t *c ) {
 			const float r[BAKE_ROWS * 4] = {
@@ -354,131 +315,12 @@ static void VK_Bake_Triangles( std::vector<float> &rows ) {
 				c[2].lm[0], c[2].lm[1], (float)page, page >= 0 ? (float)tr.lightmaps[page]->texnum : -1.0f,
 				c[0].st[0], c[0].st[1], c[1].st[0], c[1].st[1],
 				c[2].st[0], c[2].st[1], texture ? (float)texture->texnum : -1.0f, lamp ? 2.0f : 0.0f,
+				emission[0], emission[1], emission[2], emission[3],
+				( glow && !lamp ) ? (float)glow->texnum : -1.0f, glowScale, 0.0f, 0.0f,
 			};
 
 			rows.insert( rows.end(), r, r + BAKE_ROWS * 4 );
 		} );
-	}
-}
-
-// a patch of a surface that is a new emitter
-typedef struct {
-	vec3_t		middle, normal;		// area weighted
-	float		area;
-	vec2_t		st;					// of the middle, area weighted
-	const msurface_t *surf;
-} bakePatch_t;
-
-// The new emitters of the world as patches of up to BAKE_PATCH_SIZE (bake.comp Emitters): surfaces with a stage that
-// glows or is added to what is under it, surfaces at full brightness and stages with the emission of a material, not
-// the lamps the level was lit with, the sky or what reflects a fake environment. The strongest BAKE_MAX_PATCHES.
-static void VK_Bake_Emitters( std::vector<float> &rows ) {
-	const bmodel_t		*model = &tr.world->bmodels[0];
-	std::vector<bakePatch_t> patches;
-	std::vector<float>	power;
-
-	for ( int s = 0; s < model->numSurfaces; s++ ) {
-		const msurface_t	*surf = &model->firstSurface[s];
-		const shader_t		*shader = surf->shader;
-		const image_t		*image = VK_Bake_Glow( shader );
-		float				strength = 1.0f;
-
-		if ( shader->sky || ( shader->surfaceFlags & ( SURF_SKY | SURF_NODRAW ) ) || shader->surfaceLight > 0.0f
-			|| ( shader->emissiveSet && shader->emissive[3] > 0.0f ) || ( shader->contentFlags & CONTENTS_FOG ) ) {
-			continue;
-		}
-		if ( !image && VK_Bake_Fullbright( shader ) ) {
-			image = VK_Bake_Texture( shader );
-		}
-		for ( int i = 0; !image && i < shader->numUnfoggedPasses && shader->stages[i].active; i++ ) {
-			const stageMaterial_t *mat = shader->stages[i].mat;
-
-			if ( mat && mat->emissionStrength > 0.0f ) {
-				image = VK_Bake_Texture( shader );
-				strength = mat->emissionStrength * ( mat->emission[0] + mat->emission[1] + mat->emission[2] ) / 3.0f;
-			}
-		}
-		if ( !image || image->averageLuma <= 0.01f ) {
-			continue;
-		}
-		const size_t first = patches.size();
-
-		VK_Bake_ForTriangles( surf, [&]( const bakeCorner_t *c ) {
-			vec3_t e1, e2, n, mid;
-			vec2_t st;
-
-			VectorSubtract( c[1].xyz, c[0].xyz, e1 );
-			VectorSubtract( c[2].xyz, c[0].xyz, e2 );
-			CrossProduct( e1, e2, n );
-			const float area = VectorNormalize( n ) * 0.5f;
-
-			if ( area < 0.01f ) {
-				return;
-			}
-			// the side it shows: the plane of a face, the normals of the vertices of the others
-			if ( DotProduct( n, c[0].normal ) < 0.0f ) {
-				VectorScale( n, -1.0f, n );
-			}
-			for ( int a = 0; a < 3; a++ ) {
-				mid[a] = ( c[0].xyz[a] + c[1].xyz[a] + c[2].xyz[a] ) / 3.0f;
-			}
-			st[0] = ( c[0].st[0] + c[1].st[0] + c[2].st[0] ) / 3.0f;
-			st[1] = ( c[0].st[1] + c[1].st[1] + c[2].st[1] ) / 3.0f;
-			for ( size_t p = first; p < patches.size(); p++ ) {
-				bakePatch_t *patch = &patches[p];
-
-				if ( DotProduct( patch->normal, n ) > 0.7f && Distance( patch->middle, mid ) < BAKE_PATCH_SIZE * 0.5f ) {
-					const float total = patch->area + area;
-
-					for ( int a = 0; a < 3; a++ ) {
-						patch->middle[a] = ( patch->middle[a] * patch->area + mid[a] * area ) / total;
-						patch->normal[a] = patch->normal[a] * patch->area + n[a] * area;
-					}
-					VectorNormalize( patch->normal );
-					patch->st[0] = ( patch->st[0] * patch->area + st[0] * area ) / total;
-					patch->st[1] = ( patch->st[1] * patch->area + st[1] * area ) / total;
-					patch->area = total;
-					return;
-				}
-			}
-			bakePatch_t patch;
-
-			VectorCopy( mid, patch.middle );
-			VectorCopy( n, patch.normal );
-			patch.area = area;
-			patch.st[0] = st[0];
-			patch.st[1] = st[1];
-			patch.surf = surf;
-			patches.push_back( patch );
-		} );
-		for ( size_t p = first; p < patches.size(); p++ ) {
-			power.push_back( patches[p].area * image->averageLuma * strength );
-		}
-	}
-	// the strongest
-	std::vector<int> order( patches.size() );
-
-	for ( size_t i = 0; i < order.size(); i++ ) {
-		order[i] = (int)i;
-	}
-	std::sort( order.begin(), order.end(), [&]( int a, int b ) { return power[a] > power[b]; } );
-	if ( order.size() > BAKE_MAX_PATCHES ) {
-		order.resize( BAKE_MAX_PATCHES );
-	}
-	for ( int i : order ) {
-		const bakePatch_t	*patch = &patches[i];
-		const image_t		*image = VK_Bake_Glow( patch->surf->shader );
-
-		if ( !image ) {
-			image = VK_Bake_Texture( patch->surf->shader );
-		}
-		const float r[12] = {
-			patch->middle[0], patch->middle[1], patch->middle[2], patch->area,
-			patch->normal[0], patch->normal[1], patch->normal[2], Q_max( 1.0f, sqrtf( patch->area / (float)M_PI ) ),
-			image ? (float)image->texnum : -1.0f, patch->st[0], patch->st[1], power[i],
-		};
-
-		rows.insert( rows.end(), r, r + 12 );
 	}
 }
 
@@ -592,32 +434,6 @@ static void VK_Bake_Apply( qboolean on ) {
 		}
 		R_ReplaceImagePixels( tr.lightmaps[p], page, BAKE_PAGE, BAKE_PAGE );
 	}
-	// the ambient light of the first style of the grid, as the pages
-	world_t *w = tr.world;
-
-	if ( w && w->lightGridData && (int)bake.gridOriginal.size() == w->numGridDataElements ) {
-		const qboolean add = (qboolean)( on && (int)bake.gridBounce.size() == w->numGridDataElements * 3 );
-
-		for ( int e = 0; e < w->numGridDataElements; e++ ) {
-			mgrid_t *g = &w->lightGridData[e];
-
-			*g = bake.gridOriginal[e];
-			if ( !add || g->styles[0] == LS_LSNONE ) {
-				continue;
-			}
-			float c[3], most = 0.0f;
-
-			for ( int k = 0; k < 3; k++ ) {
-				c[k] = g->ambientLight[0][k] + ( bake.gridBounce[e * 3 + k] * sb + bake.gridGlow[e * 3 + k] * se ) * 255.0f;
-				most = Q_max( most, c[k] );
-			}
-			const float scale = most > 255.0f ? 255.0f / most : 1.0f;
-
-			for ( int k = 0; k < 3; k++ ) {
-				g->ambientLight[0][k] = (byte)Com_Clampi( 0, 255, (int)( c[k] * scale + 0.5f ) );
-			}
-		}
-	}
 	bake.applied = on;
 	bake.appliedBounce = sb;
 	bake.appliedEmit = se;
@@ -720,34 +536,6 @@ static void VK_Bake_Take( const float *results ) {
 	}
 }
 
-// the sums of the cells (after the texels in results) into the records of the grid, the mean of the cells of each
-static void VK_Bake_TakeGrid( const float *results ) {
-	const world_t	*w = tr.world;
-	std::vector<int> counts( w->numGridDataElements, 0 );
-
-	bake.gridBounce.assign( (size_t)w->numGridDataElements * 3, 0.0f );
-	bake.gridGlow.assign( (size_t)w->numGridDataElements * 3, 0.0f );
-	for ( uint32_t c = 0; c < bake.numCells; c++ ) {
-		const int e = w->lightGridArray[c];
-		const float *r = &results[( bake.where.size() + c ) * 8];
-
-		if ( e < 0 || e >= w->numGridDataElements || w->lightGridData[e].styles[0] == LS_LSNONE ) {
-			continue;
-		}
-		for ( int k = 0; k < 3; k++ ) {
-			bake.gridBounce[e * 3 + k] += r[k];
-			bake.gridGlow[e * 3 + k] += r[4 + k];
-		}
-		counts[e]++;
-	}
-	for ( int e = 0; e < w->numGridDataElements; e++ ) {
-		for ( int k = 0; counts[e] && k < 3; k++ ) {
-			bake.gridBounce[e * 3 + k] /= counts[e];
-			bake.gridGlow[e * 3 + k] /= counts[e];
-		}
-	}
-}
-
 /*
 ===============================================================================
 
@@ -800,24 +588,11 @@ static void VK_Bake_Write( void ) {
 		out.insert( out.end(), (const byte *)v, (const byte *)v + sizeof( v ) );
 		count++;
 	}
-	// then the records of the grid, six sums each
-	const int numGrid = (int)( bake.gridBounce.size() / 3 );
-
-	for ( int e = 0; e < numGrid; e++ ) {
-		uint16_t v[6];
-
-		for ( int k = 0; k < 3; k++ ) {
-			v[k] = (uint16_t)Com_Clampi( 0, 65535, (int)( bake.gridBounce[e * 3 + k] * 4096.0f + 0.5f ) );
-			v[3 + k] = (uint16_t)Com_Clampi( 0, 65535, (int)( bake.gridGlow[e * 3 + k] * 4096.0f + 0.5f ) );
-		}
-		out.insert( out.end(), (const byte *)v, (const byte *)v + sizeof( v ) );
-	}
 	header = (bakeFileHeader_t *)out.data();
 	header->magic = BAKE_MAGIC;
 	header->version = BAKE_VERSION;
 	header->numPages = tr.numLightmaps;
 	header->numTexels = count;
-	header->numGrid = numGrid;
 	header->scale = 1.0f / 4096.0f;
 	ri.FS_WriteFile( bake.cachePath, out.data(), (int)out.size() );
 }
@@ -832,7 +607,7 @@ static qboolean VK_Bake_Read( void ) {
 		const size_t total = (size_t)tr.numLightmaps * BAKE_PAGE * BAKE_PAGE;
 
 		if ( header->magic == BAKE_MAGIC && header->version == BAKE_VERSION && header->numPages == tr.numLightmaps
-			&& length == (long)( sizeof( *header ) + (size_t)header->numTexels * 16 + (size_t)header->numGrid * 12 ) ) {
+			&& length == (long)( sizeof( *header ) + (size_t)header->numTexels * 16 ) ) {
 			const uint16_t *v = (const uint16_t *)( header + 1 );
 
 			bake.bounce.assign( total * 3, 0.0f );
@@ -852,16 +627,6 @@ static qboolean VK_Bake_Read( void ) {
 					bake.glow[place * 3 + k] = v[5 + k] * header->scale;
 				}
 				bake.covered[place] = 1;
-			}
-			if ( ok && tr.world->lightGridData && header->numGrid == tr.world->numGridDataElements ) {
-				bake.gridBounce.assign( (size_t)header->numGrid * 3, 0.0f );
-				bake.gridGlow.assign( (size_t)header->numGrid * 3, 0.0f );
-				for ( int e = 0; e < header->numGrid; e++, v += 6 ) {
-					for ( int k = 0; k < 3; k++ ) {
-						bake.gridBounce[e * 3 + k] = v[k] * header->scale;
-						bake.gridGlow[e * 3 + k] = v[3 + k] * header->scale;
-					}
-				}
 			}
 		}
 	}
@@ -888,68 +653,44 @@ static void VK_Bake_Begin( void ) {
 	bake.bounce.clear();
 	bake.glow.clear();
 	bake.covered.clear();
-	bake.gridBounce.clear();
-	bake.gridGlow.clear();
-	bake.gridOriginal.clear();
-	bake.numCells = 0;
-	if ( tr.world->lightGridData && tr.world->lightGridArray && tr.world->numGridDataElements > 0 ) {
-		bake.gridOriginal.assign( tr.world->lightGridData, tr.world->lightGridData + tr.world->numGridDataElements );
-		bake.numCells = (uint32_t)( tr.world->lightGridBounds[0] * tr.world->lightGridBounds[1] * tr.world->lightGridBounds[2] );
-	}
 	VK_Bake_FreeBuffers();
 	VK_Bake_CachePath();
-	if ( !bake.redo && VK_Bake_Read() ) {
+	if ( VK_Bake_Read() ) {
 		ri.Printf( PRINT_DEVELOPER, "v_bake: %s from the cache\n", tr.world->baseName );
 		bake.state = BAKE_DONE;
 		return;
 	}
-	bake.redo = qfalse;
 	bake.started = ri.Milliseconds();
 	VK_Bake_Texels();
 	VK_Bake_Triangles( rows );
-	std::vector<float> patches;
-
-	VK_Bake_Emitters( patches );
-	bake.numPatches = (uint32_t)( patches.size() / 12 );
-	if ( patches.empty() ) {
-		patches.assign( 12, 0.0f );		// (a buffer with something in it)
-	}
-	VK_CreateBuffer( &bake.patchBuffer, patches.size() * sizeof( float ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
-	memcpy( bake.patchBuffer.mapped, patches.data(), patches.size() * sizeof( float ) );
 	if ( bake.where.empty() || rows.empty() ) {
 		bake.state = BAKE_NONE;
 		return;
 	}
 	VK_CreateBuffer( &bake.texelBuffer, bake.texels.size() * sizeof( float ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
 	VK_CreateBuffer( &bake.triangleBuffer, rows.size() * sizeof( float ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
-	VK_CreateBuffer( &bake.resultBuffer, ( bake.where.size() + bake.numCells ) * sizeof( float ) * 8, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
+	VK_CreateBuffer( &bake.resultBuffer, bake.where.size() * sizeof( float ) * 8, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
 	memcpy( bake.texelBuffer.mapped, bake.texels.data(), bake.texels.size() * sizeof( float ) );
 	memcpy( bake.triangleBuffer.mapped, rows.data(), rows.size() * sizeof( float ) );
 	bake.next = 0;
 	bake.state = BAKE_TRACING;
-	ri.Printf( PRINT_DEVELOPER, "v_bake: %s, %i texels, %i cells, %i triangles, %i patches of new emitters, prepared in %i ms\n",
-		tr.world->baseName, (int)bake.where.size(), (int)bake.numCells, (int)( rows.size() / ( BAKE_ROWS * 4 ) ), (int)bake.numPatches,
-		ri.Milliseconds() - bake.started );
+	ri.Printf( PRINT_DEVELOPER, "v_bake: %s, %i texels, %i triangles, prepared in %i ms\n", tr.world->baseName, (int)bake.where.size(),
+		(int)( rows.size() / ( BAKE_ROWS * 4 ) ), ri.Milliseconds() - bake.started );
 }
 
 // a slice of the texels through bake.comp
 static void VK_Bake_Slice( VkCommandBuffer cmd, VkDescriptorSet set ) {
 	const uint32_t	rays = (uint32_t)Com_Clampi( 8, 1024, v_bakeRays->integer );
-	const uint32_t	numTexels = (uint32_t)bake.where.size();
-	const uint32_t	total = numTexels + bake.numCells;
-	const uint32_t	most = Q_max( 256u, (uint32_t)BAKE_RAYS_A_FRAME / rays );
-	const qboolean	cells = (qboolean)( bake.next >= numTexels );
-	const uint32_t	count = cells ? Q_min( total - bake.next, most ) : Q_min( numTexels - bake.next, most );
+	const uint32_t	total = (uint32_t)bake.where.size();
+	const uint32_t	count = Q_min( total - bake.next, Q_max( 256u, (uint32_t)BAKE_RAYS_A_FRAME / rays ) );
 	const VkDeviceAddress texels = VK_RT_BufferAddress( &bake.texelBuffer ), triangles = VK_RT_BufferAddress( &bake.triangleBuffer );
 	const VkDeviceAddress results = VK_RT_BufferAddress( &bake.resultBuffer );
 	const VkDescriptorSet sets[2] = { set, vk.textureSet };
 	VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-	const VkDeviceAddress patches = VK_RT_BufferAddress( &bake.patchBuffer );
 	struct {
-		uint32_t	addresses[8];
+		uint32_t	addresses[6];
 		uint32_t	first, count, rays, seed, sphere;
 		float		reach;
-		uint32_t	numPatches, pad;
 		float		gridOrigin[4], gridSize[4];
 		uint32_t	gridBounds[4];
 	} push;
@@ -961,23 +702,11 @@ static void VK_Bake_Slice( VkCommandBuffer cmd, VkDescriptorSet set ) {
 	push.addresses[3] = (uint32_t)( triangles >> 32 );
 	push.addresses[4] = (uint32_t)results;
 	push.addresses[5] = (uint32_t)( results >> 32 );
-	push.addresses[6] = (uint32_t)patches;
-	push.addresses[7] = (uint32_t)( patches >> 32 );
-	push.numPatches = bake.numPatches;
-	push.first = cells ? bake.next - numTexels : bake.next;
+	push.first = bake.next;
 	push.count = count;
 	push.rays = rays;
 	push.seed = 0x9e3779b9u;
 	push.reach = 4096.0f;
-	if ( cells ) {
-		push.sphere = 1;
-		VectorCopy( tr.world->lightGridOrigin, push.gridOrigin );
-		VectorCopy( tr.world->lightGridSize, push.gridSize );
-		for ( int k = 0; k < 3; k++ ) {
-			push.gridBounds[k] = (uint32_t)tr.world->lightGridBounds[k];
-		}
-		push.gridBounds[3] = numTexels;		// (the results of the cells come after those of the texels)
-	}
 
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bake.pipeline );
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, bake.layout, 0, 2, sets, 0, NULL );
@@ -1033,32 +762,7 @@ void VK_Bake_Record( VkCommandBuffer cmd ) {
 		if ( bake.frameNumber < bake.readAt ) {
 			return;
 		}
-		{
-			// (developer 1: how much was found, for the strengths)
-			const float *r = (const float *)bake.resultBuffer.mapped;
-			double sums[2] = { 0, 0 };
-			float most[2] = { 0, 0 };
-			size_t where = 0;
-
-			for ( size_t i = 0; i < bake.where.size(); i++ ) {
-				for ( int h = 0; h < 2; h++ ) {
-					const float v = ( r[i * 8 + h * 4] + r[i * 8 + h * 4 + 1] + r[i * 8 + h * 4 + 2] ) / 3.0f;
-
-					sums[h] += v;
-					if ( v > most[h] ) {
-						most[h] = v;
-						where = h ? i : where;
-					}
-				}
-			}
-			ri.Printf( PRINT_DEVELOPER, "v_bake: bounce mean %.4f most %.3f, new emitters mean %.5f most %.3f at %.0f %.0f %.0f\n",
-				sums[0] / Q_max( 1, (int)bake.where.size() ), most[0], sums[1] / Q_max( 1, (int)bake.where.size() ), most[1],
-				bake.texels[where * 8], bake.texels[where * 8 + 1], bake.texels[where * 8 + 2] );
-		}
 		VK_Bake_Take( (const float *)bake.resultBuffer.mapped );
-		if ( bake.numCells ) {
-			VK_Bake_TakeGrid( (const float *)bake.resultBuffer.mapped );
-		}
 		VK_Bake_FreeBuffers();
 		bake.texels.clear();
 		bake.where.clear();

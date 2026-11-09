@@ -1910,7 +1910,6 @@ void R_LoadLightGrid( lump_t *l, world_t &worldData ) {
 	int numGridDataElements = l->filelen / sizeof(*w->lightGridData);
 
 	w->lightGridData = (mgrid_t *)Hunk_Alloc( l->filelen, h_low );
-	w->numGridDataElements = numGridDataElements;
 	memcpy( w->lightGridData, (void *)(fileBase + l->fileofs), l->filelen );
 
 	// deal with overbright bits

@@ -966,7 +966,6 @@ typedef struct world_s {
 	vec3_t		lightGridStep;
 
 	mgrid_t			*lightGridData;
-	int				numGridDataElements;	// VisionJK: of lightGridData (the bake adds to them, vk_bake.cpp)
 	word		*lightGridArray;
 	int			numGridArrayElements;
 

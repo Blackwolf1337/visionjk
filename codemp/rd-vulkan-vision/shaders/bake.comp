@@ -4,17 +4,12 @@
 #extension GL_EXT_buffer_reference_uvec2 : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-// The light the level adds to its own lightmaps (vk_bake.cpp, v_bake), for each texel of a lightmap or the middle of
-// each cell of the light grid:
-// - the bounce: rays all round (a hemisphere along the normal of a texel, the whole sphere for a cell) against the
-//   level alone (mask 1); where one meets a surface it takes what that surface shows, its texture times its own
-//   lightmap (one bounce of all the baked light). Lamps that were lamps when the level was lit (q3map_surfacelight)
-//   give nothing: their light is in the lightmaps already.
-// - the new emitters: surfaces that glow and were no lamps (glow and additive stages, surfaces at full brightness,
-//   the emission of materials), as patches; many are blended and so not in the acceleration structure, and small
-//   ones a ray seldom meets, so each texel picks some of them by the light they would give it (stratified over the
-//   sum of all) and sends a shadow ray to a point on each.
-// The two sums go out apart, so their strengths stay free.
+// The light the level adds to its own lightmaps (vk_bake.cpp, v_bake): from each texel of a lightmap, or from the
+// middle of a cell of the light grid, rays all round (a hemisphere along the normal of a texel, the whole sphere for
+// a cell), against the level alone (mask 1). Where a ray meets a surface it takes what that surface shows: its texture
+// times its own lightmap, the light bouncing off it (one bounce of all the baked light), or the colour of a surface
+// that glows and was no lamp when the level was lit (a new emitter). Lamps that were (q3map_surfacelight) give
+// nothing: their light is in the lightmaps already. The two sums go out apart, so their strengths stay free.
 
 layout( local_size_x = 64 ) in;
 
@@ -25,36 +20,29 @@ layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer 
 	vec4	rows[];			// two a texel: where it is (w unused), its normal
 };
 layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Triangles {
-	vec4	rows[];			// four a triangle of the level, see vk_bake.cpp VK_Bake_Triangles
+	vec4	rows[];			// six a triangle of the level, see vk_bake.cpp VK_Bake_Triangles
 };
 layout( buffer_reference, std430, buffer_reference_align = 16 ) writeonly buffer Results {
 	vec4	rows[];			// two a texel or cell: the bounce, the new emitters
-};
-layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Patches {
-	vec4	rows[];			// three a patch: middle and area, normal and radius, slot of its texture, s, t, power (area x
-							// brightness x strength)
 };
 
 layout( push_constant ) uniform Bake {
 	uvec2	texels;
 	uvec2	triangles;
 	uvec2	results;
-	uvec2	patches;
 	uint	first;			// the first texel or cell of this slice
 	uint	count;			// of the slice
 	uint	rays;
 	uint	seed;
 	uint	sphere;			// 1: cells of the grid (rays all round, from where they are), 0: texels
 	float	reach;
-	uint	numPatches;
-	uint	pad;
 	vec4	gridOrigin;		// sphere: the middle of the first cell
 	vec4	gridSize;
-	uvec4	gridBounds;		// w: where the results of this slice start (the cells come after the texels)
+	uvec4	gridBounds;
 } u;
 
 #define FLAG_DARK		2.0		// a lamp of the baked light: nothing
-#define ROWS			4u
+#define ROWS			6u
 
 uint Hash( uint x ) {
 	x ^= x >> 16;
@@ -81,71 +69,6 @@ vec3 Sphere( uint i, uint n, float rot ) {
 	float r = sqrt( max( 0.0, 1.0 - z * z ) );
 
 	return vec3( r * cos( phi ), r * sin( phi ), z );
-}
-
-#define PICKS	4
-
-// how much a patch would light the point (its power, both angles at its middle, the distance), 0: none
-float Weight( vec4 a, vec4 b, vec4 c, vec3 p, vec3 n, bool sphere ) {
-	vec3 d = a.xyz - p;
-	float dist2 = max( dot( d, d ), b.w * b.w );
-	vec3 dir = d * inversesqrt( dist2 );
-	float cr = sphere ? 1.0 : dot( n, dir ), ce = -dot( b.xyz, dir );
-
-	return ( cr > 0.0 && ce > 0.0 ) ? c.w * cr * ce / dist2 : 0.0;
-}
-
-// the light the new emitters give the point, PICKS shadow rays to patches picked by Weight over their sum
-vec3 Emitters( vec3 p, vec3 n, bool sphere, float rot ) {
-	Patches pat = Patches( u.patches );
-	float total = 0.0;
-
-	for ( uint i = 0u; i < u.numPatches; i++ ) {
-		total += Weight( pat.rows[i * 3u], pat.rows[i * 3u + 1u], pat.rows[i * 3u + 2u], p, n, sphere );
-	}
-	if ( total <= 0.0 ) {
-		return vec3( 0.0 );
-	}
-	vec3 sum = vec3( 0.0 );
-	float cum = 0.0;
-	uint k = 0u;
-
-	for ( uint i = 0u; i < u.numPatches && k < uint( PICKS ); i++ ) {
-		vec4 a = pat.rows[i * 3u], b = pat.rows[i * 3u + 1u], c = pat.rows[i * 3u + 2u];
-		float w = Weight( a, b, c, p, n, sphere );
-
-		cum += w;
-		// the picks that fall into this patch (the strata (k + rot) / PICKS of the sum)
-		while ( k < uint( PICKS ) && ( float( k ) + rot ) / float( PICKS ) * total <= cum ) {
-			// a point of its disk
-			float r1 = fract( rot * 7.31 + float( k ) * 0.618034 ), r2 = fract( rot * 3.17 + float( k ) * 0.381966 );
-			vec3 t = normalize( abs( b.z ) < 0.9 ? cross( b.xyz, vec3( 0.0, 0.0, 1.0 ) ) : cross( b.xyz, vec3( 1.0, 0.0, 0.0 ) ) );
-			vec3 q = a.xyz + ( t * cos( 6.2831853 * r2 ) + cross( b.xyz, t ) * sin( 6.2831853 * r2 ) ) * b.w * sqrt( r1 );
-			vec3 d = q - p;
-			float dist2 = max( dot( d, d ), 1.0 ), dist = sqrt( dist2 );
-			vec3 dir = d / dist;
-			float cr = sphere ? 1.0 : dot( n, dir ), ce = -dot( b.xyz, dir );
-
-			k++;
-			if ( cr <= 0.0 || ce <= 0.0 || w <= 0.0 ) {
-				continue;
-			}
-			rayQueryEXT query;
-
-			rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0x01u, p, 0.25, dir,
-				max( dist - 2.0, 0.5 ) );
-			while ( rayQueryProceedEXT( query ) ) {
-			}
-			if ( rayQueryGetIntersectionTypeEXT( query, true ) != gl_RayQueryCommittedIntersectionNoneEXT ) {
-				continue;
-			}
-			vec3 shown = c.x >= 0.0 ? textureLod( u_textures[nonuniformEXT( uint( c.x ) )], c.yz, 4.0 ).rgb : vec3( 1.0 );
-			float brightness = max( dot( shown, vec3( 0.2126, 0.7152, 0.0722 ) ), 1e-3 );
-			// E / pi of the disk seen from here, over the chance it was picked (w / total); power = area x brightness x strength
-			sum += shown / brightness * c.w * cr * ce / ( 3.14159265 * dist2 ) / ( w / total );
-		}
-	}
-	return sum / float( PICKS );
 }
 
 void main() {
@@ -189,19 +112,28 @@ void main() {
 		vec2 bc = rayQueryGetIntersectionBarycentricsEXT( query, true );
 		vec3 w = vec3( 1.0 - bc.x - bc.y, bc.x, bc.y );
 		// r0, r1: the lightmap coordinates of the corners, the page, the slot of the page (-1: lit by its vertices);
-		// r2, r3: the texture coordinates, the slot of the texture (-1: none), flags
-		vec4 r0 = tris.rows[prim], r1 = tris.rows[prim + 1u], r2 = tris.rows[prim + 2u], r3 = tris.rows[prim + 3u];
+		// r2, r3: the texture coordinates, the slot of the texture (-1: none), flags; r4: the emission of its
+		// material (colour times strength, threshold); r5: the slot of a stage that glows on it (-1: none), its strength
+		vec4 r0 = tris.rows[prim], r1 = tris.rows[prim + 1u], r2 = tris.rows[prim + 2u];
+		vec4 r3 = tris.rows[prim + 3u], r4 = tris.rows[prim + 4u], r5 = tris.rows[prim + 5u];
 
 		if ( r3.w == FLAG_DARK ) {
 			continue;
 		}
 		vec2 st = r2.xy * w.x + r2.zw * w.y + r3.xy * w.z;
 
+		if ( r5.x >= 0.0 ) {
+			glow += textureLod( u_textures[nonuniformEXT( uint( r5.x ) )], st, 3.0 ).rgb * r5.y;
+		}
 		if ( r3.z < 0.0 ) {
 			continue;
 		}
 		vec3 albedo = textureLod( u_textures[nonuniformEXT( uint( r3.z ) )], st, 3.0 ).rgb;
 
+		if ( dot( r4.rgb, r4.rgb ) > 0.0 ) {
+			// the parts brighter than the threshold give off the colour (as PbrStage does)
+			glow += albedo * r4.rgb * clamp( ( dot( albedo, vec3( 0.2126, 0.7152, 0.0722 ) ) - r4.w ) / 0.1, 0.0, 1.0 );
+		}
 		if ( r1.w < 0.0 ) {
 			continue;		// (lit by its vertices: no bounce from it here)
 		}
@@ -209,11 +141,8 @@ void main() {
 
 		bounce += albedo * textureLod( u_textures[nonuniformEXT( uint( r1.w ) )], lm, 0.0 ).rgb;
 	}
-	glow = Emitters( origin, normal, u.sphere != 0u, fract( rot * 13.37 ) );
-
 	Results results = Results( u.results );
-	uint slot = index + u.gridBounds.w;
 
-	results.rows[slot * 2u] = vec4( bounce / float( u.rays ), 1.0 );
-	results.rows[slot * 2u + 1u] = vec4( glow, 1.0 );
+	results.rows[index * 2u] = vec4( bounce / float( u.rays ), 1.0 );
+	results.rows[index * 2u + 1u] = vec4( glow / float( u.rays ), 1.0 );
 }
