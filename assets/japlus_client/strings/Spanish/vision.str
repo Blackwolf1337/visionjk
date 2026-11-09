@@ -421,6 +421,38 @@ REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
 LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
 LANG_SPANISH        "Las superficies lisas con material reflejan lo que hay en pantalla, además de los reflejos de la sala."
 
+REFERENCE           AUTOMATIC_MATERIALS
+LANG_ENGLISH        "Automatic Materials"
+LANG_SPANISH        "Materiales automáticos"
+
+REFERENCE           LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
+LANG_ENGLISH        "Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video."
+LANG_SPANISH        "Los niveles sin materiales los reciben hechos a partir de sus texturas, así todos los niveles los muestran. Requiere reiniciar el vídeo."
+
+REFERENCE           BAKED_LIGHT
+LANG_ENGLISH        "Baked Light"
+LANG_SPANISH        "Luz precalculada"
+
+REFERENCE           EACH_LEVEL_GETS_MORE_LIGHT_TRACED_ON
+LANG_ENGLISH        "Each level gets more light, traced on the graphics card the first time it is played: light bounces off walls and floors, and glowing surfaces light the room. Kept for later visits."
+LANG_SPANISH        "Cada nivel recibe más luz, calculada en la tarjeta gráfica la primera vez que se juega: la luz rebota en paredes y suelos, y las superficies que brillan iluminan la sala. Se guarda para las siguientes visitas."
+
+REFERENCE           BOUNCE_STRENGTH
+LANG_ENGLISH        "Bounce Strength"
+LANG_SPANISH        "Fuerza del rebote"
+
+REFERENCE           HOW_MUCH_OF_THE_LIGHT_THAT_BOUNCES_O
+LANG_ENGLISH        "How much of the light that bounces off walls and floors is added."
+LANG_SPANISH        "Cuánta de la luz que rebota en paredes y suelos se añade."
+
+REFERENCE           GLOW_LIGHT
+LANG_ENGLISH        "Glow Light"
+LANG_SPANISH        "Luz de las superficies que brillan"
+
+REFERENCE           HOW_STRONGLY_GLOWING_SURFACES_LIGHT
+LANG_ENGLISH        "How strongly glowing surfaces light the room around them."
+LANG_SPANISH        "Con qué fuerza las superficies que brillan iluminan la sala a su alrededor."
+
 REFERENCE           HDR
 LANG_ENGLISH        "HDR"
 LANG_SPANISH        "#same"

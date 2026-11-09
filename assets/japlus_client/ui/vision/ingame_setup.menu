@@ -755,6 +755,189 @@
 		itemDef
 		{
 			name					vision_head
+			rect					296 806 412 100
+			visible					1
+			text					@VISION_SCREEN_EFFECTS
+			font					7
+			textscale				0.89
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				54.5
+			caps					1
+			fold					3
+			page					1
+			scroll					1
+			column					0
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_screenfx
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SCREEN_EFFECTS
+			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+			cvar					"v_screenFx"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 906 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxblast
+			type					ITEM_TYPE_YESNO
+			text					@VISION_EXPLOSION_WAVES
+			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+			cvar					"v_fxBlast"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 958 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_soundtinnitus
+			type					ITEM_TYPE_YESNO
+			text					@VISION_RINGING_EARS
+			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
+			cvar					"v_soundTinnitus"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1010 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxheat
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HEAT_HAZE
+			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+			cvar					"v_fxHeat"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1062 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxhit
+			type					ITEM_TYPE_YESNO
+			text					@VISION_HIT_FEEDBACK
+			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+			cvar					"v_fxHit"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1114 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxwater
+			type					ITEM_TYPE_YESNO
+			text					@VISION_UNDER_WATER
+			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
+			cvar					"v_fxWater"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1166 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxforce
+			type					ITEM_TYPE_YESNO
+			text					@VISION_FORCE_LOOKS
+			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+			cvar					"v_fxForce"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1218 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_fxsaber
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SABER_CLASH_AND_HEAT
+			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
+			cvar					"v_fxSaber"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 1270 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+			advanced				1
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					732 120 412 66
 			visible					1
 			text					@VISION_DETAIL
@@ -765,7 +948,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					3
+			fold					4
 			page					1
 			scroll					1
 			column					1
@@ -830,7 +1013,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					4
+			fold					5
 			page					1
 			scroll					1
 			column					1
@@ -919,13 +1102,89 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_automaterials
+			type					ITEM_TYPE_YESNO
+			text					@VISION_AUTOMATIC_MATERIALS
+			descText				@VISION_LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
+			cvar					"v_autoMaterials"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 598 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_bake
+			type					ITEM_TYPE_YESNO
+			text					@VISION_BAKED_LIGHT
+			descText				@VISION_EACH_LEVEL_GETS_MORE_LIGHT_TRACED_ON
+			cvar					"v_bake"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 650 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_bakebounce
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BOUNCE_STRENGTH
+			descText				@VISION_HOW_MUCH_OF_THE_LIGHT_THAT_BOUNCES_O
+			cvarfloat				"v_bakeBounce" 0.6 0 1
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 702 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_bakeemit
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_GLOW_LIGHT
+			descText				@VISION_HOW_STRONGLY_GLOWING_SURFACES_LIGHT
+			cvarfloat				"v_bakeEmit" 1 0 4
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 754 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_hdr
 			type					ITEM_TYPE_YESNO
 			text					@VISION_HDR
 			descText				@VISION_LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
 			cvar					"v_hdr"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 598 392 52
+			rect					742 806 392 52
 			page					1
 			scroll					1
 			row						1
@@ -945,7 +1204,7 @@
 			cvar					"v_tonemap"
 			cvarFloatList { @VISION_OFF 0 @VISION_ORIGINAL_LOOK 1 @VISION_FILMIC 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 650 392 52
+			rect					742 858 392 52
 			page					1
 			scroll					1
 			row						1
@@ -964,190 +1223,7 @@
 			descText				@VISION_HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
 			cvarfloat				"v_exposure" 1 0.5 2
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 702 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_head
-			rect					732 754 412 100
-			visible					1
-			text					@VISION_SCREEN_EFFECTS
-			font					7
-			textscale				0.89
-			forecolor				0.56 0.64 0.74 1
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				22
-			textaligny				54.5
-			caps					1
-			fold					5
-			page					1
-			scroll					1
-			column					1
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			action { play "sound/interface/button1.wav" ; }
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_screenfx
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SCREEN_EFFECTS
-			descText				@VISION_MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
-			cvar					"v_screenFx"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 854 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxblast
-			type					ITEM_TYPE_YESNO
-			text					@VISION_EXPLOSION_WAVES
-			descText				@VISION_EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
-			cvar					"v_fxBlast"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 906 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_soundtinnitus
-			type					ITEM_TYPE_YESNO
-			text					@VISION_RINGING_EARS
-			descText				@VISION_AFTER_AN_EXPLOSION_CLOSE_BY_THE_SOUN
-			cvar					"v_soundTinnitus"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 958 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxheat
-			type					ITEM_TYPE_YESNO
-			text					@VISION_HEAT_HAZE
-			descText				@VISION_THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
-			cvar					"v_fxHeat"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1010 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxhit
-			type					ITEM_TYPE_YESNO
-			text					@VISION_HIT_FEEDBACK
-			descText				@VISION_A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
-			cvar					"v_fxHit"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1062 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxwater
-			type					ITEM_TYPE_YESNO
-			text					@VISION_UNDER_WATER
-			descText				@VISION_UNDER_WATER_THE_PICTURE_SWAYS_FADES
-			cvar					"v_fxWater"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1114 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxforce
-			type					ITEM_TYPE_YESNO
-			text					@VISION_FORCE_LOOKS
-			descText				@VISION_LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
-			cvar					"v_fxForce"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1166 392 52
-			page					1
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-			advanced				1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_fxsaber
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SABER_CLASH_AND_HEAT
-			descText				@VISION_CLASHING_BLADES_FLASH_THE_AIR_AROUND
-			cvar					"v_fxSaber"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1218 392 52
+			rect					742 910 392 52
 			page					1
 			scroll					1
 			row						1

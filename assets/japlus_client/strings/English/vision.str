@@ -317,6 +317,30 @@ LANG_ENGLISH        "Reflections"
 REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
 LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
 
+REFERENCE           AUTOMATIC_MATERIALS
+LANG_ENGLISH        "Automatic Materials"
+
+REFERENCE           LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
+LANG_ENGLISH        "Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video."
+
+REFERENCE           BAKED_LIGHT
+LANG_ENGLISH        "Baked Light"
+
+REFERENCE           EACH_LEVEL_GETS_MORE_LIGHT_TRACED_ON
+LANG_ENGLISH        "Each level gets more light, traced on the graphics card the first time it is played: light bounces off walls and floors, and glowing surfaces light the room. Kept for later visits."
+
+REFERENCE           BOUNCE_STRENGTH
+LANG_ENGLISH        "Bounce Strength"
+
+REFERENCE           HOW_MUCH_OF_THE_LIGHT_THAT_BOUNCES_O
+LANG_ENGLISH        "How much of the light that bounces off walls and floors is added."
+
+REFERENCE           GLOW_LIGHT
+LANG_ENGLISH        "Glow Light"
+
+REFERENCE           HOW_STRONGLY_GLOWING_SURFACES_LIGHT
+LANG_ENGLISH        "How strongly glowing surfaces light the room around them."
+
 REFERENCE           HDR
 LANG_ENGLISH        "HDR"
 

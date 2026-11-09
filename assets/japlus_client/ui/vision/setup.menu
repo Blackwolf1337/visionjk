@@ -1266,13 +1266,89 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_automaterials
+			type					ITEM_TYPE_YESNO
+			text					@VISION_AUTOMATIC_MATERIALS
+			descText				@VISION_LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
+			cvar					"v_autoMaterials"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 722 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_bake
+			type					ITEM_TYPE_YESNO
+			text					@VISION_BAKED_LIGHT
+			descText				@VISION_EACH_LEVEL_GETS_MORE_LIGHT_TRACED_ON
+			cvar					"v_bake"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 774 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_bakebounce
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BOUNCE_STRENGTH
+			descText				@VISION_HOW_MUCH_OF_THE_LIGHT_THAT_BOUNCES_O
+			cvarfloat				"v_bakeBounce" 0.6 0 1
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 826 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_bakeemit
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_GLOW_LIGHT
+			descText				@VISION_HOW_STRONGLY_GLOWING_SURFACES_LIGHT
+			cvarfloat				"v_bakeEmit" 1 0 4
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 878 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_hdr
 			type					ITEM_TYPE_YESNO
 			text					@VISION_HDR
 			descText				@VISION_LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
 			cvar					"v_hdr"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 722 432 52
+			rect					782 930 432 52
 			page					1
 			scroll					1
 			row						1
@@ -1292,7 +1368,7 @@
 			cvar					"v_tonemap"
 			cvarFloatList { @VISION_OFF 0 @VISION_ORIGINAL_LOOK 1 @VISION_FILMIC 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 774 432 52
+			rect					782 982 432 52
 			page					1
 			scroll					1
 			row						1
@@ -1311,7 +1387,7 @@
 			descText				@VISION_HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
 			cvarfloat				"v_exposure" 1 0.5 2
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 826 432 52
+			rect					782 1034 432 52
 			page					1
 			scroll					1
 			row						1

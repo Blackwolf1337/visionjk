@@ -421,6 +421,38 @@ REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
 LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
 LANG_FRENCH         "Les surfaces lisses dotées d'un matériau reflètent ce qui est à l'écran, en plus des reflets de la pièce."
 
+REFERENCE           AUTOMATIC_MATERIALS
+LANG_ENGLISH        "Automatic Materials"
+LANG_FRENCH         "Matériaux automatiques"
+
+REFERENCE           LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
+LANG_ENGLISH        "Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video."
+LANG_FRENCH         "Les niveaux sans matériaux en reçoivent, faits à partir de leurs textures, ainsi chaque niveau les montre. Nécessite un redémarrage de la vidéo."
+
+REFERENCE           BAKED_LIGHT
+LANG_ENGLISH        "Baked Light"
+LANG_FRENCH         "Lumière précalculée"
+
+REFERENCE           EACH_LEVEL_GETS_MORE_LIGHT_TRACED_ON
+LANG_ENGLISH        "Each level gets more light, traced on the graphics card the first time it is played: light bounces off walls and floors, and glowing surfaces light the room. Kept for later visits."
+LANG_FRENCH         "Chaque niveau reçoit plus de lumière, calculée par la carte graphique la première fois qu'il est joué : la lumière rebondit sur les murs et les sols, et les surfaces lumineuses éclairent la pièce. Gardée pour les visites suivantes."
+
+REFERENCE           BOUNCE_STRENGTH
+LANG_ENGLISH        "Bounce Strength"
+LANG_FRENCH         "Force du rebond"
+
+REFERENCE           HOW_MUCH_OF_THE_LIGHT_THAT_BOUNCES_O
+LANG_ENGLISH        "How much of the light that bounces off walls and floors is added."
+LANG_FRENCH         "Quelle part de la lumière qui rebondit sur les murs et les sols est ajoutée."
+
+REFERENCE           GLOW_LIGHT
+LANG_ENGLISH        "Glow Light"
+LANG_FRENCH         "Lumière des surfaces lumineuses"
+
+REFERENCE           HOW_STRONGLY_GLOWING_SURFACES_LIGHT
+LANG_ENGLISH        "How strongly glowing surfaces light the room around them."
+LANG_FRENCH         "Avec quelle force les surfaces lumineuses éclairent la pièce autour d'elles."
+
 REFERENCE           HDR
 LANG_ENGLISH        "HDR"
 LANG_FRENCH         "#same"

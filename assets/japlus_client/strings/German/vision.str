@@ -421,6 +421,38 @@ REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
 LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
 LANG_GERMAN         "Glatte Flächen mit Material spiegeln, was auf dem Bildschirm ist, zusätzlich zu den Spiegelungen des Raums."
 
+REFERENCE           AUTOMATIC_MATERIALS
+LANG_ENGLISH        "Automatic Materials"
+LANG_GERMAN         "Automatische Materialien"
+
+REFERENCE           LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
+LANG_ENGLISH        "Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video."
+LANG_GERMAN         "Level ohne Materialien bekommen welche aus ihren Texturen, so zeigt jedes Level sie. Braucht einen Neustart des Videos."
+
+REFERENCE           BAKED_LIGHT
+LANG_ENGLISH        "Baked Light"
+LANG_GERMAN         "Gebackenes Licht"
+
+REFERENCE           EACH_LEVEL_GETS_MORE_LIGHT_TRACED_ON
+LANG_ENGLISH        "Each level gets more light, traced on the graphics card the first time it is played: light bounces off walls and floors, and glowing surfaces light the room. Kept for later visits."
+LANG_GERMAN         "Jedes Level bekommt mehr Licht, beim ersten Spielen auf der Grafikkarte berechnet: Licht prallt von Wänden und Böden ab, und leuchtende Flächen erhellen den Raum. Für spätere Besuche gespeichert."
+
+REFERENCE           BOUNCE_STRENGTH
+LANG_ENGLISH        "Bounce Strength"
+LANG_GERMAN         "Stärke des Abprallens"
+
+REFERENCE           HOW_MUCH_OF_THE_LIGHT_THAT_BOUNCES_O
+LANG_ENGLISH        "How much of the light that bounces off walls and floors is added."
+LANG_GERMAN         "Wie viel des Lichts, das von Wänden und Böden abprallt, hinzukommt."
+
+REFERENCE           GLOW_LIGHT
+LANG_ENGLISH        "Glow Light"
+LANG_GERMAN         "Licht leuchtender Flächen"
+
+REFERENCE           HOW_STRONGLY_GLOWING_SURFACES_LIGHT
+LANG_ENGLISH        "How strongly glowing surfaces light the room around them."
+LANG_GERMAN         "Wie stark leuchtende Flächen den Raum um sie herum erhellen."
+
 REFERENCE           HDR
 LANG_ENGLISH        "HDR"
 LANG_GERMAN         "#same"
