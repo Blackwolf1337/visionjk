@@ -101,6 +101,7 @@ qboolean VK_InitShared( void ) {
 	v_pbrEnergy = ri.Cvar_Get( "v_pbrEnergy", "1", CVAR_ARCHIVE_ND, "Surfaces with a material lose of their diffuse light what their shine takes, as light does (energy conserving). 0: shine on top of the full diffuse light, as before" );
 	v_tessellation = ri.Cvar_Get( "v_tessellation", "1", CVAR_ARCHIVE_ND, "Materials with tessellation get real bumps: their triangles cut finer and moved on the graphics card (Vulkan, a card with tessellation shaders). 0: they keep their parallax instead" );
 	v_pbrProbes = ri.Cvar_Get( "v_pbrProbes", "1", CVAR_ARCHIVE_ND, "Surfaces with a material mirror the level around them: it is drawn from up to 32 points in all directions while it loads. 0: they mirror the light of their lightmap" );
+	v_depthPrepass = ri.Cvar_Get( "v_depthPrepass", "1", CVAR_ARCHIVE_ND, "The solid surfaces of the level go into the depth buffer first, so each pixel of them is shaded once (materials cost less). 0: drawn as before" );
 	v_parallax = ri.Cvar_Get( "v_parallax", "1", CVAR_ARCHIVE_ND, "Surfaces with a height in their normal map look carved (parallax occlusion, up to 32 reads of the texture a pixel). 0: flat, faster" );
 	v_pbr = ri.Cvar_Get( "v_pbr", "1", CVAR_ARCHIVE_ND, "Surfaces with a material (material keywords of shaders, v_matdebug) lit with their normal map, roughness and metalness. 0: drawn as without it. Views to check them: 2 the light alone as without a material, 3 the shine alone, 4 the normals, 5 the direction of the light of the grid, 6 roughness, metalness and occlusion, 7 which maps a surface has, 8 the surfaces as mirrors of the reflection probes, 9 the albedo checked against real surfaces (blue too dark, red too bright, magenta a dark metal), 10 roughness alone, 11 metalness alone, 12 the mirror of the light around alone" );
 	v_lodPixels = ri.Cvar_Get( "v_lodPixels", "1", CVAR_ARCHIVE_ND, "Models keep their detail by how many pixels they cover, as at 640 x 480 (R_LodScale). 0: by the share of the screen they cover, as before" );
@@ -833,6 +834,92 @@ static qboolean		rb_entityReset;		// the run of the light passes set other entit
 
 static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs );
 
+/*
+===============
+RB_DepthPrepass
+
+VisionJK (v_depthPrepass): the solid surfaces of the level of the main view go into the depth buffer first, alone
+(VKP_DEPTH: no fragment shader, no colour). Their first stage is then drawn with an equal test and no depth write,
+so the costly shading of a material (generic.frag PbrStage) runs once a pixel and not for every surface the sort
+by shader happens to draw before the nearest one (2.3 times a pixel on ffa3, v_gpuTimes). Only surfaces of the
+world whose shader is solid: sort opaque, a first stage that writes depth, not blended, no alpha test, no polygon
+offset, no deform, no sky, no glass and no tessellation (which moves the triangles on the device). A shader is
+marked when it was drawn into the pre-pass, and only marked shaders test equal, so the two runs can not disagree.
+===============
+*/
+cvar_t				*v_depthPrepass;
+qboolean			rb_prepassWanted;	// set by RB_DrawSurfs: this run of the list is the view of the level
+qboolean			rb_depthPrepass;
+qboolean			rb_prepassOn;
+static int			rb_prepassView;
+static int			rb_prepassShaders[MAX_SHADERS];
+
+static qboolean RB_PrepassShader( const shader_t *shader ) {
+	if ( shader->sort != SS_OPAQUE || shader->sky || shader->polygonOffset || shader->numDeforms || shader == tr.distortionShader
+		|| shader->numUnfoggedPasses < 1 ) {
+		return qfalse;
+	}
+	const shaderStage_t *first = &shader->stages[0];
+	const uint32_t bits = first->stateBits;
+	const uint32_t blend = bits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
+
+	if ( !first->active || first->glowOnly || ( first->ss && first->ss->surfaceSpriteType ) || !( bits & GLS_DEPTHMASK_TRUE )
+		|| ( bits & ( GLS_ATEST_BITS | GLS_DEPTHFUNC_EQUAL | GLS_DEPTHTEST_DISABLE ) )
+		|| ( blend && blend != ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO ) ) ) {
+		return qfalse;
+	}
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
+		const stageMaterial_t *mat = shader->stages[i].mat;
+
+		if ( shader->stages[i].active && mat && ( mat->tessHeight > 0.0f || mat->transmission > 0.0f ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
+qboolean RB_ShaderPrepassed( const shader_t *shader ) {
+	return (qboolean)( rb_prepassOn && rb_prepassShaders[shader->index] == rb_prepassView );
+}
+
+void RB_MarkPrepassed( const shader_t *shader ) {
+	rb_prepassShaders[shader->index] = rb_prepassView;
+}
+
+static void RB_DepthPrepass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	shader_t	*shader, *oldShader = NULL;
+	int			entityNum, fogNum, dlighted;
+
+	if ( ++rb_prepassView == 0 ) {
+		memset( rb_prepassShaders, 0, sizeof( rb_prepassShaders ) );
+		rb_prepassView = 1;
+	}
+	backEnd.currentEntity = &tr.worldEntity;
+	backEnd.ori = backEnd.viewParms.world;
+	VK_InvalidateTransform();
+	rb_depthPrepass = qtrue;
+	for ( int i = 0; i < numDrawSurfs; i++ ) {
+		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
+		if ( entityNum != REFENTITYNUM_WORLD || !RB_PrepassShader( shader ) ) {
+			continue;
+		}
+		if ( shader != oldShader ) {
+			if ( oldShader ) {
+				RB_EndSurface();
+			}
+			RB_BeginSurface( shader, fogNum );
+			oldShader = shader;
+		}
+		VK_AddSurface( drawSurfs[i].surface );
+	}
+	if ( oldShader ) {
+		RB_EndSurface();
+	}
+	rb_depthPrepass = qfalse;
+	rb_prepassOn = qtrue;
+	VK_InvalidateTransform();
+}
+
 // A surface of the level gets the moving lights it has in this view back from its draw surface before it is drawn
 // (tess.dlightBits takes them from the surface): the frontend made the other views of the frame after this one,
 // and the last of them left its own bits on the surface (drawSurf_t dlightBits). That took the saber light from
@@ -936,6 +1023,12 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			return;
 		}
 		backEnd.pc.c_surfaces += numDrawSurfs;
+#ifndef RD_VISION_GLES
+		// (after the clear of the view, before its first surface)
+		if ( rb_prepassWanted && !g_bRenderGlowingObjects && v_depthPrepass->integer ) {
+			RB_DepthPrepass( drawSurfs, numDrawSurfs );
+		}
+#endif
 	}
 	backEnd.currentEntity = &tr.worldEntity;
 
@@ -1234,7 +1327,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( levelView ) {
 		VK_LevelFragments( qtrue );
 	}
+	rb_prepassOn = qfalse;
+	rb_prepassWanted = levelView;
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+	rb_prepassWanted = qfalse;
 	VK_LevelFragments( qfalse );
 	rb_wetLater = qfalse;
 	rb_deferDlights = qfalse;

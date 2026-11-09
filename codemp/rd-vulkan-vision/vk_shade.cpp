@@ -1223,6 +1223,18 @@ void RB_StageIteratorGeneric( void ) {
 	transform = VK_CurrentTransform();
 	cullMode = VK_CullMode( shader->cullType );
 	VK_BatchDeform();
+	// the depth pre-pass of the level (vk_backend.cpp RB_DepthPrepass): the depth of the batch alone
+	if ( rb_depthPrepass ) {
+		if ( program == VKP_GENERIC ) {
+			vkDraw_t draw;
+
+			VK_InitDraw( &draw, transform, bones );
+			VK_DrawTess( &draw, VKP_DEPTH, GLS_DEPTHMASK_TRUE, cullMode, qfalse );
+			RB_MarkPrepassed( shader );
+		}
+		return;
+	}
+	const qboolean prepassed = (qboolean)( !g_bRenderGlowingObjects && backEnd.currentEntity == &tr.worldEntity && RB_ShaderPrepassed( shader ) );
 	const qboolean refract = (qboolean)( vk_refraction && tr.screenImage && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) );
 	// the tessellated stage of the batch, for the passes after the stages (VK_TessPass)
 	vkDraw_t tessDraw;
@@ -1256,6 +1268,10 @@ void RB_StageIteratorGeneric( void ) {
 		if ( ent->e.renderfx & RF_DISINTEGRATE1 ) {
 			// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
 			stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
+		}
+		if ( stage == 0 && prepassed ) {
+			// its depth is there already: only where it is the nearest, and nothing written
+			stateBits = ( stateBits & ~GLS_DEPTHMASK_TRUE ) | GLS_DEPTHFUNC_EQUAL;
 		}
 		if ( ent->e.renderfx & RF_RGB_TINT ) {
 			// VisionJK: a lit stage stays lit, with the colour of the entity on it (a prop the toolgun coloured,

@@ -3,6 +3,10 @@
 // vertices in the layout of the tess arrays of the back end: geometry that was built on the CPU this frame, and
 // the surfaces of the level that lie in a buffer on the device
 
+// The same depth in the depth pre-pass of the level (VKP_DEPTH, this shader without a fragment shader) as when the
+// level is shaded against it with an equal test: the position worked out the same way in both pipelines.
+invariant gl_Position;
+
 #include "stage.glsl"
 
 layout( location = 0 ) in vec3 a_position;

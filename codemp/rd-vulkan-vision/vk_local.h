@@ -206,6 +206,8 @@ typedef enum {
 	VKP_LIQUID,						// no vertices: the pieces of water of RE_AddLiquid, from records in the bone buffer
 	VKP_TESS,						// as VKP_GENERIC, the triangles cut and moved on the device (a material with
 									// tessellation, shaders/generic.tesc and .tese); Vulkan only, never sent to GLES
+	VKP_DEPTH,						// as VKP_GENERIC, depth alone: no fragment shader, no colour (the depth pre-pass
+									// of the level, RB_DepthPrepass); Vulkan only
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -368,6 +370,10 @@ extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
 extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
 extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
+extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
+extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
+qboolean	RB_ShaderPrepassed( const shader_t *shader );
+void		RB_MarkPrepassed( const shader_t *shader );
 extern cvar_t	*v_tonemap;			// vk_post.cpp
 extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
@@ -391,6 +397,7 @@ qboolean	VK_TessBorders( uint32_t *bones );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;
+extern cvar_t	*v_depthPrepass;	// vk_backend.cpp
 extern cvar_t	*v_parallax;
 extern cvar_t	*v_pbrEnergy;
 extern cvar_t	*v_dlightScale;

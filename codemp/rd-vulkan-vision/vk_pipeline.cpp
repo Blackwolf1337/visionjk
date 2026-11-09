@@ -372,6 +372,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	stages[1].pName = "main";
 	// VKP_TESS: the triangles go through generic.tesc and generic.tese between the two, as patches of three
 	const qboolean tess = (qboolean)( !post && program == VKP_TESS );
+	// VKP_DEPTH: the vertex shader alone, its depth is all that is written
+	const qboolean depthOnly = (qboolean)( !post && program == VKP_DEPTH );
 	if ( tess ) {
 		stages[2].sType = stages[3].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		stages[2].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
@@ -469,8 +471,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	depth.front.writeMask = depth.back.writeMask = 0xff;
 
 	memset( &attachment, 0, sizeof( attachment ) );
-	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	if ( !alone && ( stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
+	attachment.colorWriteMask = depthOnly ? 0 : VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	if ( !alone && !depthOnly && ( stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
 		attachment.blendEnable = VK_TRUE;
 		attachment.srcColorBlendFactor = attachment.srcAlphaBlendFactor = VK_SrcBlend( stateBits );
 		attachment.dstColorBlendFactor = attachment.dstAlphaBlendFactor = VK_DstBlend( stateBits );
@@ -490,7 +492,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		rendering.stencilAttachmentFormat = vk.depth.format;
 	}
 
-	info.stageCount = tess ? 4 : 2;
+	info.stageCount = tess ? 4 : depthOnly ? 1 : 2;
 	info.pStages = stages;
 	info.pTessellationState = tess ? &tessellation : NULL;
 	info.pVertexInputState = &input;
@@ -646,7 +648,7 @@ static void VK_PrewarmPipelines( void ) {
 		const uint32_t program = vk_pipeKeys[i] >> 24;
 		bool known = false;
 
-		if ( program >= VKP_NUM_PROGRAMS || !vk.vertexShaders[program] || !vk.fragmentShaders[program]
+		if ( program >= VKP_NUM_PROGRAMS || !vk.vertexShaders[program] || ( !vk.fragmentShaders[program] && program != VKP_DEPTH )
 			|| ( vk_pipeKeys[i] & 0x00ffffffu & ~(uint32_t)VK_PIPELINE_BITS ) ) {
 			continue;		// (of another build)
 		}
@@ -739,6 +741,7 @@ void VK_InitPipelines( void ) {
 		vk.tessControlShader = VK_CreateShader( vk_genericTesc, sizeof( vk_genericTesc ) );
 		vk.tessEvalShader = VK_CreateShader( vk_genericTese, sizeof( vk_genericTese ) );
 	}
+	vk.vertexShaders[VKP_DEPTH] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );
