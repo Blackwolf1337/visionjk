@@ -421,6 +421,22 @@ REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
 LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
 LANG_GERMAN         "Glatte Flächen mit Material spiegeln, was auf dem Bildschirm ist, zusätzlich zu den Spiegelungen des Raums."
 
+REFERENCE           GLOWING_PANELS
+LANG_ENGLISH        "Glowing Panels"
+LANG_GERMAN         "Leuchtende Lampen"
+
+REFERENCE           HOW_BRIGHTLY_THE_LAMP_PANELS_OF_A_LE
+LANG_ENGLISH        "How brightly the lamp panels of a level glow as light sources. With HDR they glow out past white. 0: as their texture."
+LANG_GERMAN         "Wie hell die Lampen eines Levels als Lichtquellen leuchten. Mit HDR strahlen sie über Weiß hinaus. 0: wie ihre Textur."
+
+REFERENCE           PANEL_LIGHT_ON_PLAYERS
+LANG_ENGLISH        "Panel Light on Players"
+LANG_GERMAN         "Lampenlicht auf Spielern"
+
+REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
+LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
+LANG_GERMAN         "Spieler nahe an Lampen werden von ihnen beleuchtet, von der Seite, von der ihr Schatten wegfällt. Braucht echte Schatten mit Raytracing."
+
 REFERENCE           AUTOMATIC_MATERIALS
 LANG_ENGLISH        "Automatic Materials"
 LANG_GERMAN         "Automatische Materialien"

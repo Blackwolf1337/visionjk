@@ -317,6 +317,18 @@ LANG_ENGLISH        "Reflections"
 REFERENCE           SMOOTH_SURFACES_WITH_A_MATERIAL_MIRR
 LANG_ENGLISH        "Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room."
 
+REFERENCE           GLOWING_PANELS
+LANG_ENGLISH        "Glowing Panels"
+
+REFERENCE           HOW_BRIGHTLY_THE_LAMP_PANELS_OF_A_LE
+LANG_ENGLISH        "How brightly the lamp panels of a level glow as light sources. With HDR they glow out past white. 0: as their texture."
+
+REFERENCE           PANEL_LIGHT_ON_PLAYERS
+LANG_ENGLISH        "Panel Light on Players"
+
+REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
+LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
+
 REFERENCE           AUTOMATIC_MATERIALS
 LANG_ENGLISH        "Automatic Materials"
 

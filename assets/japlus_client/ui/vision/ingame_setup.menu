@@ -1102,13 +1102,51 @@
 
 		itemDef
 		{
+			name					vision_slider_v_panelglow
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_GLOWING_PANELS
+			descText				@VISION_HOW_BRIGHTLY_THE_LAMP_PANELS_OF_A_LE
+			cvarfloat				"v_panelGlow" 2 0 4
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 598 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_panellight
+			type					ITEM_TYPE_YESNO
+			text					@VISION_PANEL_LIGHT_ON_PLAYERS
+			descText				@VISION_PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
+			cvar					"v_panelLight"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 650 392 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_automaterials
 			type					ITEM_TYPE_YESNO
 			text					@VISION_AUTOMATIC_MATERIALS
 			descText				@VISION_LEVELS_WITHOUT_MATERIALS_GET_THEM_MA
 			cvar					"v_autoMaterials"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 598 392 52
+			rect					742 702 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1127,7 +1165,7 @@
 			descText				@VISION_LIGHT_BRIGHTER_THAN_WHITE_IS_KEPT_SA
 			cvar					"v_hdr"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 650 392 52
+			rect					742 754 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1147,7 +1185,7 @@
 			cvar					"v_tonemap"
 			cvarFloatList { @VISION_OFF 0 @VISION_ORIGINAL_LOOK 1 @VISION_FILMIC 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 702 392 52
+			rect					742 806 392 52
 			page					1
 			scroll					1
 			row						1
@@ -1166,7 +1204,7 @@
 			descText				@VISION_HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
 			cvarfloat				"v_exposure" 1 0.5 2
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 754 392 52
+			rect					742 858 392 52
 			page					1
 			scroll					1
 			row						1
