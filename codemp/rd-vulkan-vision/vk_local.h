@@ -604,7 +604,7 @@ void		VK_ScreenFxFogPass( vkTarget_t *target, const float *fx );
 // shaders/wet.vert and wet.frag: a quad for each of count wet places over the view of the level (viewport as OpenGL
 // counts it), with the VK_WET_VEC4S numbers of wet; they read vk.screen and the depth of the scene, which is begun
 // with the frame but only read. Not on the OpenGL ES device. vk.color must not be begun, it is not begun after.
-void		VK_WetPass( const float *wet, int count, const int *viewport );
+void		VK_WetPass( const float *wet, int count, const int *viewport, const int *area );
 void		VK_PaintPass( const float *paint, int count, const int *viewport );
 // v_smaa, SMAA 1x over the whole frame: its edges and their weights into targets of its own, then the frame mixed
 // with its neighbours by them, from a copy of it. threshold: of the edges, in the colours of vk.color. Not on the

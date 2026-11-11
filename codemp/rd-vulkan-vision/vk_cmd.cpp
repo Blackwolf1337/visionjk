@@ -1092,7 +1092,9 @@ void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 	qvkCmdBeginRendering( cmd, &info );
 }
 
-void VK_WetPass( const float *wet, int count, const int *viewport ) {
+// (area: the part of the target the boxes of the places cover, VK_DrawWet(); with several samples a pixel only that
+// part is resolved again)
+void VK_WetPass( const float *wet, int count, const int *viewport, const int *area ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
 	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.reflect.image ? vk.reflectSet : vk.screenSet };
@@ -1102,12 +1104,22 @@ void VK_WetPass( const float *wet, int count, const int *viewport ) {
 	if ( vk.reflect.image ) {
 		VK_TargetLayout( cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	}
-	VK_BeginOverLevel( cmd );
+	VK_BeginOverLevel( cmd, area );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.wetPipeline );
 	vk.boundPipeline = vk.wetPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 0, NULL );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
-	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
+	{
+		// (the scissor to the part, the viewport stays the view)
+		VkRect2D scissor;
+		scissor.offset.x = area[0];
+		scissor.offset.y = area[1];
+		scissor.extent.width = (uint32_t)area[2];
+		scissor.extent.height = (uint32_t)area[3];
+		qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	}
+	// six faces of two triangles a place (wet.vert)
+	qvkCmdDraw( cmd, 36, (uint32_t)count, 0, 0 );
 	qvkCmdEndRendering( cmd );
 }
 

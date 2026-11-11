@@ -925,21 +925,73 @@ void VK_ViewRows( float ( *rows )[4], int *viewport ) {
 }
 #endif
 
+#ifndef RD_VISION_GLES
+// How far the pixels of a wet place may lie from it: its ball along its plane, the slab off it (InPlace of wet.frag),
+// with the margin of the box wet.vert draws.
+static float VK_WetReach( float radius ) {
+	return radius * 2.0f + 8.0f;
+}
+
+/*
+The part of the target the box of a wet place covers (wet.vert, the same axes), added to bounds (left, top, right,
+bottom in pixels of the target from the upper left, as OnTarget of scene.glsl has them). qfalse: a corner lies at or
+behind the eye, the place may cover all of the view.
+*/
+static qboolean VK_WetArea( const float ( *rows )[4], const vec3_t origin, const vec3_t normal, float radius, float *bounds ) {
+	const float	reach = VK_WetReach( radius ) + 2.0f, thick = 4.0f + radius * 0.12f;
+	vec3_t		t, b;
+
+	if ( fabsf( normal[2] ) < 0.9f ) {
+		const vec3_t z = { 0.0f, 0.0f, 1.0f };
+		CrossProduct( normal, z, t );
+	} else {
+		const vec3_t x = { 1.0f, 0.0f, 0.0f };
+		CrossProduct( normal, x, t );
+	}
+	VectorNormalize( t );
+	CrossProduct( normal, t, b );
+	for ( int corner = 0; corner < 8; corner++ ) {
+		vec3_t	p;
+		float	clip[4];
+
+		VectorMA( origin, ( corner & 1 ) ? reach : -reach, t, p );
+		VectorMA( p, ( corner & 2 ) ? reach : -reach, b, p );
+		VectorMA( p, ( corner & 4 ) ? thick : -thick, normal, p );
+		for ( int k = 0; k < 4; k++ ) {
+			clip[k] = rows[0][k] * p[0] + rows[1][k] * p[1] + rows[2][k] * p[2] + rows[3][k];
+		}
+		if ( clip[3] < 1.0f ) {
+			return qfalse;
+		}
+		const float x = rows[8][0] + ( clip[0] / clip[3] * 0.5f + 0.5f ) * rows[8][2];
+		const float y = rows[8][1] + ( 0.5f - clip[1] / clip[3] * 0.5f ) * rows[8][3];
+		bounds[0] = Q_min( bounds[0], x );
+		bounds[1] = Q_min( bounds[1], y );
+		bounds[2] = Q_max( bounds[2], x );
+		bounds[3] = Q_max( bounds[3], y );
+	}
+	return qtrue;
+}
+#endif
+
 void VK_DrawWet( void ) {
 #ifndef RD_VISION_GLES
 	static float	wet[VK_WET_VEC4S][4];
 	static float	paint[VK_PAINT_VEC4S][4];
-	const int		count = Q_min( r_numWet, WET_MAX_SPOTS );
+	int				count = 0;
 	int				numPaint = 0;
 	int				viewport[4];
+	// the part of the view the wet places cover, and whether one of them may cover all of it
+	float			bounds[4] = { 1e9f, 1e9f, -1e9f, -1e9f };
+	qboolean		whole = qfalse;
 
-	if ( !vk.frame || ( count <= 0 && r_numPaint <= 0 ) || !tr.screenImage || !VK_HasWet() ) {
+	if ( !vk.frame || ( r_numWet <= 0 && r_numPaint <= 0 ) || !tr.screenImage || !VK_HasWet() ) {
 		return;
 	}
 	memset( wet, 0, sizeof( wet ) );
 	VK_ViewRows( wet, viewport );
 	VectorSet4( wet[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
-		(float)count );
+		0.0f );
 	VectorSet4( wet[10], vk.reflectHeight, vk.reflectFrame == backEnd.viewParms.frameCount ? 1.0f : 0.0f, 0.0f, 0.0f );
 
 	// the pictures whose sheet is on the device
@@ -974,27 +1026,50 @@ void VK_DrawWet( void ) {
 		numPaint++;
 	}
 	paint[9][3] = (float)numPaint;
-	if ( count <= 0 && numPaint <= 0 ) {
+	if ( r_numWet <= 0 && numPaint <= 0 ) {
 		return;
 	}
 
-	for ( int i = 0; i < count; i++ ) {
+	// The places of which something may be in the view, in their order (the first that holds a pixel draws it): one
+	// whose ball lies wholly outside holds no pixel of it. Each pixel of the shader looks at all places that touch its
+	// own, so fewer of them are fewer looks for every pixel.
+	for ( int i = 0; i < Q_min( r_numWet, WET_MAX_SPOTS ); i++ ) {
 		const wetSpot_t	*spot = &r_wet[i];
-		float			( *row )[4] = wet + VK_WET_HEADER + i * VK_WET_ROWS;
+		float			( *row )[4] = wet + VK_WET_HEADER + count * VK_WET_ROWS;
+		const float		radius = Com_Clamp( 1.0f, 512.0f, spot->radius );
 		vec3_t			normal, ambient, directed, dir;
+		int				plane;
 
+		for ( plane = 0; plane < 4; plane++ ) {
+			const cplane_t *frust = &backEnd.viewParms.frustum[plane];
+
+			if ( DotProduct( spot->origin, frust->normal ) - frust->dist < -VK_WetReach( radius ) ) {
+				break;
+			}
+		}
+		if ( plane < 4 ) {
+			continue;
+		}
 		VectorCopy( spot->normal, normal );
 		if ( VectorNormalize( normal ) < 0.5f ) {
 			VectorSet( normal, 0.0f, 0.0f, 1.0f );
 		}
+		if ( !whole && !VK_WetArea( wet, spot->origin, normal, radius, bounds ) ) {
+			whole = qtrue;
+		}
+		count++;
 		VK_LiquidLight( spot->origin, ambient, directed, dir );
 		VectorNormalize( dir );
-		VectorSet4( row[0], spot->origin[0], spot->origin[1], spot->origin[2], Com_Clamp( 1.0f, 512.0f, spot->radius ) );
+		VectorSet4( row[0], spot->origin[0], spot->origin[1], spot->origin[2], radius );
 		VectorSet4( row[1], normal[0], normal[1], normal[2], Com_Clamp( 0.0f, 1.0f, spot->wet ) );
 		VectorSet4( row[2], spot->hit[0], spot->hit[1], spot->hit[2], Com_Clamp( 0.0f, 1.0f, spot->puddle ) );
 		VectorSet4( row[3], ambient[0] / 255.0f, ambient[1] / 255.0f, ambient[2] / 255.0f, Com_Clamp( 0.0f, 1.0f, spot->flow ) );
 		VectorSet4( row[4], directed[0] / 255.0f, directed[1] / 255.0f, directed[2] / 255.0f, spot->seed );
 		VectorSet4( row[5], dir[0], dir[1], dir[2], (float)spot->kind );
+	}
+	wet[9][3] = (float)count;
+	if ( count <= 0 && numPaint <= 0 ) {
+		return;
 	}
 
 	VK_EndTarget();
@@ -1003,8 +1078,18 @@ void VK_DrawWet( void ) {
 		VK_PaintPass( paint[0], numPaint, viewport );
 	}
 	if ( count > 0 ) {
-		VK_CopyTarget( &vk.color, &vk.screen );
-		VK_WetPass( wet[0], count, viewport );
+		// the part of the view, a pixel more round it, or all of it
+		const float	left = wet[8][0], top = wet[8][1], right = wet[8][0] + wet[8][2], bottom = wet[8][1] + wet[8][3];
+		const int	x0 = (int)floorf( whole ? left : Q_max( left, bounds[0] - 1.0f ) );
+		const int	y0 = (int)floorf( whole ? top : Q_max( top, bounds[1] - 1.0f ) );
+		const int	x1 = (int)ceilf( whole ? right : Q_min( right, bounds[2] + 1.0f ) );
+		const int	y1 = (int)ceilf( whole ? bottom : Q_min( bottom, bounds[3] + 1.0f ) );
+		const int	area[4] = { x0, y0, x1 - x0, y1 - y0 };
+
+		if ( area[2] > 0 && area[3] > 0 ) {
+			VK_CopyTarget( &vk.color, &vk.screen );
+			VK_WetPass( wet[0], count, viewport, area );
+		}
 	}
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 
