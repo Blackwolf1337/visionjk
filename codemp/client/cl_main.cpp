@@ -37,6 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_uiapi.h"
 #include "cl_lan.h"
 #include "cl_imgui.h"
+#include "cl_cache.h"
 #include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
@@ -2687,6 +2688,8 @@ void CL_InitRef( void ) {
 	ri.LoadPop = Com_LoadPop;
 	ri.FS_FileSource = FS_FileSource;
 	ri.FontFile = CL_FontFile;
+	ri.Cache_Read = Cache_Read;
+	ri.Cache_Write = Cache_Write;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 
@@ -2849,6 +2852,7 @@ void CL_Init( void ) {
 	cls.realtime = 0;
 
 	CL_InitInput ();
+	Cache_Init();
 
 	//
 	// register our variables

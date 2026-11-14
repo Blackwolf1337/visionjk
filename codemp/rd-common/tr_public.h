@@ -473,6 +473,12 @@ typedef struct refimport_s {
 	// characters the fonts of the game do not have, 1 the one with a fixed width. NULL when there is none. The
 	// bytes stay where they are until the program ends.
 	const byte *	(*FontFile)							( int font, int *length );
+
+	// The folder cache of the profile (client/cl_cache.cpp), for what rd-vulkan-vision keeps: name is
+	// "<kind>/<file>". Cache_Read: the file in a buffer for FS_FreeFile and its length, -1 when it is not there.
+	// At the end of the table.
+	long			(*Cache_Read)						( const char *name, void **buffer );
+	qboolean		(*Cache_Write)						( const char *name, const void *data, int size );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

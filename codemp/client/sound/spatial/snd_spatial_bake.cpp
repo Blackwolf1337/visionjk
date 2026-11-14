@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and the echo at the probes (v_spatialEcho). See snd_spatial.cpp.
 
 #include "snd_spatial_local.h"
+#include "client/cl_cache.h"
 
 #ifdef JP_SPATIAL
 
@@ -231,16 +232,12 @@ qboolean S_SpatialLoadBaked( spatialBaked_t *baked ) {
 	IPLSerializedObjectSettings serialized;
 	IPLSerializedObject object = NULL;
 	void *data = NULL;
-	int sourceLength, sourceChecksum;
 	int size;
 	qboolean loaded = qfalse;
 
-	// Only the file of the profile, where S_SpatialBake wrote it: FS_ReadFile looks in paks too, and Steam Audio
-	// reads the file without checking it.
-	if ( FS_FileSource( baked->file, &sourceLength, &sourceChecksum ) != FS_SOURCE_DIRECTORY ) {
-		return qfalse;
-	}
-	size = FS_ReadFile( baked->file, &data );
+	// Only the file of the folder cache of the profile, where S_SpatialTakeBake wrote it (cl_cache.cpp, kind
+	// steamaudio): never one of a pak, Steam Audio reads the file without checking it.
+	size = (int)Cache_Read( baked->file, &data );
 	if ( size <= 0 || !data ) {
 		return qfalse;
 	}
@@ -301,7 +298,7 @@ static void S_SpatialTakeBake( void ) {
 
 	// (a bake of a sound system before this one has a number of its own: spatialBakeCancel)
 	if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
-		FS_WriteFile( baked->file, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
+		Cache_Write( baked->file, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
 		if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
 			baked->next = spatialBake.batch;
 			baked->numProbes = spatialBake.numProbes;

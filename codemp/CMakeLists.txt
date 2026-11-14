@@ -608,6 +608,8 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_matdebug.cpp"
 		"${MPDir}/client/cl_matlight.cpp"
 		"${MPDir}/client/cl_profiler.cpp"
+		"${MPDir}/client/cl_cache.cpp"
+		"${MPDir}/client/cl_cache.h"
 		"${VisionJKLibDir}/imgui/imgui.cpp"
 		"${VisionJKLibDir}/imgui/imgui.h"
 		"${VisionJKLibDir}/imgui/imgui_draw.cpp"
