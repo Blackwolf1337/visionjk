@@ -761,22 +761,6 @@ REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 LANG_FRENCH         "Ce qui s'approche ou s'éloigne change de hauteur."
 
-REFERENCE           HIT_SOUNDS
-LANG_ENGLISH        "Hit Sounds"
-LANG_FRENCH         "Son d'impact"
-
-REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
-LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
-LANG_FRENCH         "Un petit tic quand vos tirs ou votre lame touchent quelqu'un."
-
-REFERENCE           KILL_SOUND
-LANG_ENGLISH        "Kill Sound"
-LANG_FRENCH         "Son d'élimination"
-
-REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
-LANG_ENGLISH        "Two notes when you kill someone."
-LANG_FRENCH         "Deux notes quand vous éliminez quelqu'un."
-
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"
 LANG_FRENCH         "Chat vocal"
@@ -929,22 +913,6 @@ REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
 LANG_FRENCH         "La largeur de la lueur autour d'une lame."
 
-REFERENCE           SABER_TEAM_COLOURS
-LANG_ENGLISH        "Saber Team Colours"
-LANG_FRENCH         "Couleurs d'équipe des sabres"
-
-REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
-LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
-LANG_FRENCH         "En équipe, chaque lame prend la couleur de son équipe. Désactivé : les lames gardent leur couleur."
-
-REFERENCE           TWO_COLOURED_STAFF
-LANG_ENGLISH        "Two-Coloured Staff"
-LANG_FRENCH         "Bâton bicolore"
-
-REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
-LANG_ENGLISH        "The second blade of a staff in the second saber colour."
-LANG_FRENCH         "La seconde lame du bâton dans la seconde couleur de sabre."
-
 REFERENCE           OTHERS_IN_A_DUEL
 LANG_ENGLISH        "Others in a Duel"
 LANG_FRENCH         "Autres en duel"
@@ -996,46 +964,6 @@ LANG_FRENCH         "Leurs lames"
 REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
 LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
 LANG_FRENCH         "Les lames des joueurs dans un duel dont vous ne faites pas partie."
-
-REFERENCE           ENEMY_MODEL
-LANG_ENGLISH        "Enemy Model"
-LANG_FRENCH         "Modèle des ennemis"
-
-REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
-LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
-LANG_FRENCH         "Chaque adversaire est montré avec le modèle choisi. Leur choix: chacun garde le sien."
-
-REFERENCE           ALLY_MODEL
-LANG_ENGLISH        "Ally Model"
-LANG_FRENCH         "Modèle des alliés"
-
-REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
-LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
-LANG_FRENCH         "Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien."
-
-REFERENCE           JEDI_OUTCAST_SHOTS
-LANG_ENGLISH        "Jedi Outcast Shots"
-LANG_FRENCH         "Tirs comme dans Jedi Outcast"
-
-REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
-LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
-LANG_FRENCH         "Tirs nets comme dans Jedi Outcast. Pris en compte au prochain niveau."
-
-REFERENCE           DISRUPTOR_BEAM
-LANG_ENGLISH        "Disruptor Beam"
-LANG_FRENCH         "Rayon du disrupteur"
-
-REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
-LANG_ENGLISH        "How the shot of the disruptor looks."
-LANG_FRENCH         "L'aspect du tir du disrupteur."
-
-REFERENCE           LINE
-LANG_ENGLISH        "Line"
-LANG_FRENCH         "Ligne"
-
-REFERENCE           SPIRAL
-LANG_ENGLISH        "Spiral"
-LANG_FRENCH         "Spirale"
 
 REFERENCE           SCOPE_LENS
 LANG_ENGLISH        "Scope Lens"
@@ -1117,54 +1045,6 @@ REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_FRENCH         "La taille du viseur."
 
-REFERENCE           CROSSHAIR_COLOUR
-LANG_ENGLISH        "Crosshair Colour"
-LANG_FRENCH         "Couleur du viseur"
-
-REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
-LANG_ENGLISH        "The colour of the crosshair with nothing under it."
-LANG_FRENCH         "La couleur du viseur quand il ne vise rien."
-
-REFERENCE           WHITE
-LANG_ENGLISH        "White"
-LANG_FRENCH         "Blanc"
-
-REFERENCE           CYAN
-LANG_ENGLISH        "Cyan"
-LANG_FRENCH         "#same"
-
-REFERENCE           YELLOW
-LANG_ENGLISH        "Yellow"
-LANG_FRENCH         "Jaune"
-
-REFERENCE           ORANGE
-LANG_ENGLISH        "Orange"
-LANG_FRENCH         "#same"
-
-REFERENCE           PINK
-LANG_ENGLISH        "Pink"
-LANG_FRENCH         "Rose"
-
-REFERENCE           NAME_OPACITY
-LANG_ENGLISH        "Name Opacity"
-LANG_FRENCH         "Opacité des noms"
-
-REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
-LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
-LANG_FRENCH         "Visibilité du nom du joueur visé."
-
-REFERENCE           LEAD_INDICATOR
-LANG_ENGLISH        "Lead Indicator"
-LANG_FRENCH         "Indicateur d'anticipation"
-
-REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
-LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
-LANG_FRENCH         "Où viser pour qu'un tir touche un adversaire en mouvement. Beaucoup de serveurs y voient une aide à la visée."
-
-REFERENCE           WITH_OWN_PING
-LANG_ENGLISH        "With Own Ping"
-LANG_FRENCH         "Avec son propre ping"
-
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
 LANG_FRENCH         "Afficher les FPS"
@@ -1181,22 +1061,6 @@ REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 LANG_ENGLISH        "The time of the level in the corner of the screen."
 LANG_FRENCH         "Le temps du niveau dans un coin de l'écran."
 
-REFERENCE           TIMER_MILLISECONDS
-LANG_ENGLISH        "Timer Milliseconds"
-LANG_FRENCH         "Chrono en millisecondes"
-
-REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
-LANG_ENGLISH        "The timer of the level with milliseconds."
-LANG_FRENCH         "Le chrono du niveau avec les millisecondes."
-
-REFERENCE           TIMER_COUNTS_DOWN
-LANG_ENGLISH        "Timer Counts Down"
-LANG_FRENCH         "Compte à rebours"
-
-REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
-LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
-LANG_FRENCH         "Le chrono affiche le temps restant avant la limite de temps, s'il y en a une."
-
 REFERENCE           SHOW_LAGOMETER
 LANG_ENGLISH        "Show Lagometer"
 LANG_FRENCH         "Afficher le lagomètre"
@@ -1204,102 +1068,6 @@ LANG_FRENCH         "Afficher le lagomètre"
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 LANG_FRENCH         "Un graphique de votre connexion."
-
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-LANG_FRENCH         "#same"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-LANG_FRENCH         "Qui a éliminé qui, et avec quoi, en haut à droite."
-
-REFERENCE           TEAM_OVERLAY_SIZE
-LANG_ENGLISH        "Team Overlay Size"
-LANG_FRENCH         "Taille de la liste d'équipe"
-
-REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-LANG_ENGLISH        "How large the list of your team mates is."
-LANG_FRENCH         "Taille de la liste de vos coéquipiers."
-
-REFERENCE           SPECTATOR_MAP
-LANG_ENGLISH        "Spectator Map"
-LANG_FRENCH         "Carte du spectateur"
-
-REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-LANG_FRENCH         "En spectateur, affiche en haut à droite une carte des joueurs proches."
-
-REFERENCE           SPEEDOMETER
-LANG_ENGLISH        "Speedometer"
-LANG_FRENCH         "Compteur de vitesse"
-
-REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
-LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
-LANG_FRENCH         "Votre vitesse sous le viseur, et celle de vos derniers sauts."
-
-REFERENCE           STRAFE_HELPER
-LANG_ENGLISH        "Strafe Helper"
-LANG_FRENCH         "Aide au strafe"
-
-REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
-LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
-LANG_FRENCH         "Une barre sous le viseur qui montre où tourner pour gagner de la vitesse."
-
-REFERENCE           SNAP_HUD
-LANG_ENGLISH        "Snap HUD"
-LANG_FRENCH         "Affichage du snap"
-
-REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
-LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
-LANG_FRENCH         "En l'air, les angles où l'arrondi du jeu donne un peu plus de vitesse."
-
-REFERENCE           PITCH_HUD
-LANG_ENGLISH        "Pitch HUD"
-LANG_FRENCH         "Repère d'inclinaison"
-
-REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
-LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
-LANG_FRENCH         "Un repère à l'endroit où votre vue serait pour une inclinaison donnée."
-
-REFERENCE           STRAFE_TRAILS
-LANG_ENGLISH        "Strafe Trails"
-LANG_FRENCH         "Traces de course"
-
-REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
-LANG_ENGLISH        "A fading line on the ground along where players ran."
-LANG_FRENCH         "Une ligne qui s'efface au sol, là où les joueurs ont couru."
-
-REFERENCE           MINE
-LANG_ENGLISH        "Mine"
-LANG_FRENCH         "Moi seulement"
-
-REFERENCE           EVERYBODY
-LANG_ENGLISH        "Everybody"
-LANG_FRENCH         "Tout le monde"
-
-REFERENCE           MOVEMENT_KEYS
-LANG_ENGLISH        "Movement Keys"
-LANG_FRENCH         "Touches de déplacement"
-
-REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
-LANG_ENGLISH        "The keys you move with on the screen, lit while held."
-LANG_FRENCH         "Affiche à l'écran les touches de déplacement, allumées tant qu'elles sont enfoncées."
-
-REFERENCE           START_GOAL
-LANG_ENGLISH        "Start Goal"
-LANG_FRENCH         "Objectif de départ"
-
-REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
-LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
-LANG_FRENCH         "Le compteur devient doré à partir de cette vitesse. 0 : désactivé."
-
-REFERENCE           JUMP_GOAL
-LANG_ENGLISH        "Jump Goal"
-LANG_FRENCH         "Objectif de saut"
-
-REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
-LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
-LANG_FRENCH         "Les sauts au moins aussi rapides sont dorés dans la liste des sauts. 0 : désactivé."
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
@@ -1364,6 +1132,554 @@ LANG_FRENCH         "Tableau fixe (double appui)"
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 LANG_FRENCH         "Appuyer deux fois vite sur la touche du tableau des scores le garde ouvert, souris libre pour cliquer sur un joueur."
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+LANG_FRENCH         "Saisie de chat propre"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_FRENCH         "Taille du chat"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_FRENCH         "Taille du chat et de son texte. Dans le chat ouvert, Ctrl + molette la modifie aussi."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_FRENCH         "Largeur du chat"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_FRENCH         "La largeur du chat."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_FRENCH         "Lignes du chat"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_FRENCH         "Nombre de lignes du chat ouvert. Vous pouvez aussi tirer son coin supérieur droit à la souris."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+LANG_FRENCH         "Bip du chat"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_FRENCH         "#same"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_FRENCH         "Messages privés, votre nom dans le chat, lignes de la boombox et nouvelles versions apparaissent à gauche."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_FRENCH         "Affichées"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_FRENCH         "Affichées avec son"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_FRENCH         "Durée d'affichage"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_FRENCH         "Durée d'affichage d'une notification, en millisecondes."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_FRENCH         "Taille des notifications"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_FRENCH         "La taille des notifications."
+
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+LANG_FRENCH         "Taille du texte de la console"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+LANG_FRENCH         "La taille du texte de la console."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+LANG_FRENCH         "Opacité de la console"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+LANG_FRENCH         "La part du jeu visible à travers la console."
+
+REFERENCE           NEW_DRAIN_EFFECT
+LANG_ENGLISH        "New Drain Effect"
+LANG_FRENCH         "Nouvel effet de drain"
+
+REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
+LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
+LANG_FRENCH         "Le drain de Force montre le nouvel effet large. Désactivé : l'effet du jeu."
+
+REFERENCE           NEW_FORCE_EFFECTS
+LANG_ENGLISH        "New Force Effects"
+LANG_FRENCH         "Nouveaux effets de Force"
+
+REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
+LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
+LANG_FRENCH         "Les effets des animations de Force du mode solo et des prises."
+
+REFERENCE           NEW_FORCE_SIGHT
+LANG_ENGLISH        "New Force Sight"
+LANG_FRENCH         "Nouvelle vision de Force"
+
+REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
+LANG_ENGLISH        "The look of Force Sight of the plugin."
+LANG_FRENCH         "L'apparence de la vision de Force du plugin."
+
+REFERENCE           NEW_OTHER_DIMENSION_LOOK
+LANG_ENGLISH        "New Other Dimension Look"
+LANG_FRENCH         "Nouvelle autre dimension"
+
+REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
+LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
+LANG_FRENCH         "L'apparence de l'autre dimension du plugin. Désactivé : un simple voile sur l'écran."
+
+REFERENCE           SEE_BLACK_SABERS
+LANG_ENGLISH        "See Black Sabers"
+LANG_FRENCH         "Voir les sabres noirs"
+
+REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
+LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
+LANG_FRENCH         "Les lames noires sont noires. Désactivé : elles sont rouges."
+
+REFERENCE           SABERS_ON_THE_BODY
+LANG_ENGLISH        "Sabers on the Body"
+LANG_FRENCH         "Sabres sur le corps"
+
+REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
+LANG_ENGLISH        "Sabers that are not drawn hang on the body."
+LANG_FRENCH         "Les sabres rangés pendent au corps."
+
+REFERENCE           NEW_DEATH_MESSAGES
+LANG_ENGLISH        "New Death Messages"
+LANG_FRENCH         "Nouveaux messages de mort"
+
+REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
+LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
+LANG_FRENCH         "Désactivé : les messages du jeu pour les morts dans l'eau, la lave et les chutes."
+
+REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
+LANG_ENGLISH        "Hide Players of Other Duels"
+LANG_FRENCH         "Masquer les joueurs d'autres duels"
+
+REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
+LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
+LANG_FRENCH         "Les joueurs dans un duel dont vous ne faites pas partie s'estompent et votre viseur les ignore."
+
+REFERENCE           CAMERA_TURN_AFTER_A_DUEL
+LANG_ENGLISH        "Camera Turn After a Duel"
+LANG_FRENCH         "Rotation de caméra après un duel"
+
+REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
+LANG_ENGLISH        "When your private duel ends the camera turns around you."
+LANG_FRENCH         "Quand votre duel privé se termine, la caméra tourne autour de vous."
+
+REFERENCE           AUTO_REPLIER
+LANG_ENGLISH        "Auto Replier"
+LANG_FRENCH         "Réponse automatique"
+
+REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
+LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
+LANG_FRENCH         "Répond aux messages privés avec les textes du fichier de réponse pendant votre absence."
+
+REFERENCE           LEDGE_GRAB
+LANG_ENGLISH        "Ledge Grab"
+LANG_FRENCH         "Saisie des rebords"
+
+REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
+LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
+LANG_FRENCH         "Saisit les rebords vers lesquels vous sautez et vous hisse. Seulement sur les serveurs JA+ qui le permettent."
+
+REFERENCE           NEW_DFA_PRIMARY
+LANG_ENGLISH        "New DFA Primary"
+LANG_FRENCH         "Nouveau DFA primaire"
+
+REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
+LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_FRENCH         "Le death from above du plugin avec l'attaque primaire. Seulement sur les serveurs JA+ qui le permettent."
+
+REFERENCE           NEW_DFA_SECONDARY
+LANG_ENGLISH        "New DFA Secondary"
+LANG_FRENCH         "Nouveau DFA secondaire"
+
+REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
+LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_FRENCH         "Le death from above du plugin avec l'attaque secondaire. Seulement sur les serveurs JA+ qui le permettent."
+
+REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
+LANG_ENGLISH        "No Single Player Cartwheel"
+LANG_FRENCH         "Pas de roue du mode solo"
+
+REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
+LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
+LANG_FRENCH         "La roue sans le mouvement du mode solo. Seulement sur les serveurs JA+ qui le permettent."
+
+REFERENCE           CLAN_PASSWORD
+LANG_ENGLISH        "Clan Password"
+LANG_FRENCH         "Mot de passe du clan"
+
+REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
+LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même mot de passe. Le serveur le voit."
+
+REFERENCE           ADMIN_PASSWORD
+LANG_ENGLISH        "Admin Password"
+LANG_FRENCH         "Mot de passe admin"
+
+REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
+LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
+LANG_FRENCH         "Envoyé à un serveur JA+ quand vous le rejoignez, pour vous connecter en admin."
+
+REFERENCE           OTHER_DIMENSION_PLAYERS
+LANG_ENGLISH        "Other Dimension Players"
+LANG_FRENCH         "Joueurs de l'autre dimension"
+
+REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
+LANG_ENGLISH        "How visible players of the other dimension are."
+LANG_FRENCH         "La visibilité des joueurs de l'autre dimension."
+
+REFERENCE           HIT_SOUNDS
+LANG_ENGLISH        "Hit Sounds"
+LANG_FRENCH         "Son d'impact"
+
+REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
+LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
+LANG_FRENCH         "Un petit tic quand vos tirs ou votre lame touchent quelqu'un."
+
+REFERENCE           KILL_SOUND
+LANG_ENGLISH        "Kill Sound"
+LANG_FRENCH         "Son d'élimination"
+
+REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
+LANG_ENGLISH        "Two notes when you kill someone."
+LANG_FRENCH         "Deux notes quand vous éliminez quelqu'un."
+
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+LANG_FRENCH         "Couleurs d'équipe des sabres"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+LANG_FRENCH         "En équipe, chaque lame prend la couleur de son équipe. Désactivé : les lames gardent leur couleur."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+LANG_FRENCH         "Bâton bicolore"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+LANG_FRENCH         "La seconde lame du bâton dans la seconde couleur de sabre."
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+LANG_FRENCH         "Modèle des ennemis"
+
+REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
+LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
+LANG_FRENCH         "Chaque adversaire est montré avec le modèle choisi. Leur choix: chacun garde le sien."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+LANG_FRENCH         "Modèle des alliés"
+
+REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
+LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
+LANG_FRENCH         "Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+LANG_FRENCH         "Tirs comme dans Jedi Outcast"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+LANG_FRENCH         "Tirs nets comme dans Jedi Outcast. Pris en compte au prochain niveau."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+LANG_FRENCH         "Rayon du disrupteur"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+LANG_FRENCH         "L'aspect du tir du disrupteur."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+LANG_FRENCH         "Ligne"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+LANG_FRENCH         "Spirale"
+
+REFERENCE           DISRUPTOR_COLOUR
+LANG_ENGLISH        "Disruptor Colour"
+LANG_FRENCH         "Couleur du disrupteur"
+
+REFERENCE           THE_COLOUR_OF_THE_DISRUPTOR_SHOT_IN
+LANG_ENGLISH        "The colour of the disruptor shot. In team games the colour of the team."
+LANG_FRENCH         "La couleur du tir du disrupteur. En équipe, la couleur de l'équipe."
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+LANG_FRENCH         "Blanc"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+LANG_FRENCH         "Jaune"
+
+REFERENCE           PURPLE
+LANG_ENGLISH        "Purple"
+LANG_FRENCH         "Violet"
+
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+LANG_FRENCH         "Couleur du viseur"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+LANG_FRENCH         "La couleur du viseur quand il ne vise rien."
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+LANG_FRENCH         "#same"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+LANG_FRENCH         "Rose"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+LANG_FRENCH         "Opacité des noms"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+LANG_FRENCH         "Visibilité du nom du joueur visé."
+
+REFERENCE           LEAD_INDICATOR
+LANG_ENGLISH        "Lead Indicator"
+LANG_FRENCH         "Indicateur d'anticipation"
+
+REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
+LANG_FRENCH         "Où viser pour qu'un tir touche un adversaire en mouvement. Beaucoup de serveurs y voient une aide à la visée."
+
+REFERENCE           WITH_OWN_PING
+LANG_ENGLISH        "With Own Ping"
+LANG_FRENCH         "Avec son propre ping"
+
+REFERENCE           TIMER_MILLISECONDS
+LANG_ENGLISH        "Timer Milliseconds"
+LANG_FRENCH         "Chrono en millisecondes"
+
+REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+LANG_ENGLISH        "The timer of the level with milliseconds."
+LANG_FRENCH         "Le chrono du niveau avec les millisecondes."
+
+REFERENCE           TIMER_COUNTS_DOWN
+LANG_ENGLISH        "Timer Counts Down"
+LANG_FRENCH         "Compte à rebours"
+
+REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
+LANG_FRENCH         "Le chrono affiche le temps restant avant la limite de temps, s'il y en a une."
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_FRENCH         "Qui a éliminé qui, et avec quoi, en haut à droite."
+
+REFERENCE           KILLFEED_SIZE
+LANG_ENGLISH        "Killfeed Size"
+LANG_FRENCH         "Taille du fil des morts"
+
+REFERENCE           HOW_LARGE_THE_KILLFEED_IS
+LANG_ENGLISH        "How large the killfeed is."
+LANG_FRENCH         "La taille du fil des morts."
+
+REFERENCE           KILLFEED_TIME
+LANG_ENGLISH        "Killfeed Time"
+LANG_FRENCH         "Durée du fil des morts"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
+LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
+LANG_FRENCH         "Combien de millisecondes une ligne du fil des morts reste affichée."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+LANG_FRENCH         "Taille de la liste d'équipe"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+LANG_FRENCH         "Taille de la liste de vos coéquipiers."
+
+REFERENCE           TEAM_OVERLAY_WEAPONS
+LANG_ENGLISH        "Team Overlay Weapons"
+LANG_FRENCH         "Armes dans la liste d'équipe"
+
+REFERENCE           THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
+LANG_ENGLISH        "The weapon each team mate holds, after the numbers."
+LANG_FRENCH         "L'arme que tient chaque coéquipier, après les chiffres."
+
+REFERENCE           TEAM_OVERLAY_BARS
+LANG_ENGLISH        "Team Overlay Bars"
+LANG_FRENCH         "Barres dans la liste d'équipe"
+
+REFERENCE           HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
+LANG_ENGLISH        "Health and armour of team mates as a thin bar under the numbers."
+LANG_FRENCH         "La santé et l'armure des coéquipiers en fine barre sous les chiffres."
+
+REFERENCE           SPECTATOR_MAP
+LANG_ENGLISH        "Spectator Map"
+LANG_FRENCH         "Carte du spectateur"
+
+REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
+LANG_FRENCH         "En spectateur, affiche en haut à droite une carte des joueurs proches."
+
+REFERENCE           SPECTATOR_MAP_SIZE
+LANG_ENGLISH        "Spectator Map Size"
+LANG_FRENCH         "Taille de la carte spectateur"
+
+REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
+LANG_ENGLISH        "How large the map of the players is while you watch."
+LANG_FRENCH         "La taille de la carte des joueurs quand vous regardez."
+
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+LANG_FRENCH         "Compteur de vitesse"
+
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+LANG_FRENCH         "Votre vitesse sous le viseur, et celle de vos derniers sauts."
+
+REFERENCE           SPEEDOMETER_SIZE
+LANG_ENGLISH        "Speedometer Size"
+LANG_FRENCH         "Taille du compteur de vitesse"
+
+REFERENCE           HOW_LARGE_THE_SPEEDOMETER_IS
+LANG_ENGLISH        "How large the speedometer is."
+LANG_FRENCH         "La taille du compteur de vitesse."
+
+REFERENCE           JUMPS_SHOWN
+LANG_ENGLISH        "Jumps Shown"
+LANG_FRENCH         "Sauts affichés"
+
+REFERENCE           HOW_MANY_OF_YOUR_LAST_JUMPS_THE_SPEE
+LANG_ENGLISH        "How many of your last jumps the speedometer lists with their speed."
+LANG_FRENCH         "Combien de vos derniers sauts le compteur liste avec leur vitesse."
+
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+LANG_FRENCH         "Aide au strafe"
+
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+LANG_FRENCH         "Une barre sous le viseur qui montre où tourner pour gagner de la vitesse."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+LANG_FRENCH         "Affichage du snap"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+LANG_FRENCH         "En l'air, les angles où l'arrondi du jeu donne un peu plus de vitesse."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+LANG_FRENCH         "Repère d'inclinaison"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+LANG_FRENCH         "Un repère à l'endroit où votre vue serait pour une inclinaison donnée."
+
+REFERENCE           PITCH_HUD_ANGLE
+LANG_ENGLISH        "Pitch HUD Angle"
+LANG_FRENCH         "Angle du HUD de tangage"
+
+REFERENCE           THE_PITCH_THE_MARK_OF_THE_PITCH_HUD
+LANG_ENGLISH        "The pitch the mark of the pitch HUD stands at."
+LANG_FRENCH         "L'inclinaison où se trouve la marque du HUD de tangage."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+LANG_FRENCH         "Traces de course"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+LANG_FRENCH         "Une ligne qui s'efface au sol, là où les joueurs ont couru."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+LANG_FRENCH         "Moi seulement"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+LANG_FRENCH         "Tout le monde"
+
+REFERENCE           STRAFE_TRAIL_TIME
+LANG_ENGLISH        "Strafe Trail Time"
+LANG_FRENCH         "Durée des traces de strafe"
+
+REFERENCE           HOW_MANY_SECONDS_A_STRAFE_TRAIL_TAKE
+LANG_ENGLISH        "How many seconds a strafe trail takes to fade."
+LANG_FRENCH         "Combien de secondes une trace de strafe met à s'effacer."
+
+REFERENCE           MOVEMENT_KEYS
+LANG_ENGLISH        "Movement Keys"
+LANG_FRENCH         "Touches de déplacement"
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
+LANG_ENGLISH        "The keys you move with on the screen, lit while held."
+LANG_FRENCH         "Affiche à l'écran les touches de déplacement, allumées tant qu'elles sont enfoncées."
+
+REFERENCE           MOVEMENT_KEYS_SIZE
+LANG_ENGLISH        "Movement Keys Size"
+LANG_FRENCH         "Taille des touches de mouvement"
+
+REFERENCE           HOW_LARGE_THE_MOVEMENT_KEYS_ON_THE_S
+LANG_ENGLISH        "How large the movement keys on the screen are."
+LANG_FRENCH         "La taille des touches de mouvement à l'écran."
+
+REFERENCE           START_GOAL
+LANG_ENGLISH        "Start Goal"
+LANG_FRENCH         "Objectif de départ"
+
+REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
+LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
+LANG_FRENCH         "Le compteur devient doré à partir de cette vitesse. 0 : désactivé."
+
+REFERENCE           JUMP_GOAL
+LANG_ENGLISH        "Jump Goal"
+LANG_FRENCH         "Objectif de saut"
+
+REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
+LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
+LANG_FRENCH         "Les sauts au moins aussi rapides sont dorés dans la liste des sauts. 0 : désactivé."
 
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
@@ -1533,46 +1849,6 @@ REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 LANG_FRENCH         "Un bonnet de Noël à Noël et une citrouille à Halloween pour ceux qui n'ont pas de chapeau."
 
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-LANG_FRENCH         "Saisie de chat propre"
-
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
-
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_FRENCH         "Taille du chat"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_FRENCH         "Taille du chat et de son texte. Dans le chat ouvert, Ctrl + molette la modifie aussi."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_FRENCH         "Largeur du chat"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_FRENCH         "La largeur du chat."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_FRENCH         "Lignes du chat"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_FRENCH         "Nombre de lignes du chat ouvert. Vous pouvez aussi tirer son coin supérieur droit à la souris."
-
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-LANG_FRENCH         "Bip du chat"
-
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
-
 REFERENCE           CHAT_EMOJI
 LANG_ENGLISH        "Chat Emoji"
 LANG_FRENCH         "Émojis du chat"
@@ -1605,53 +1881,13 @@ REFERENCE           MARKED_AND_SOUND
 LANG_ENGLISH        "Marked and Sound"
 LANG_FRENCH         "Marquée avec son"
 
-REFERENCE           NOTIFICATIONS
-LANG_ENGLISH        "Notifications"
-LANG_FRENCH         "#same"
+REFERENCE           NAME_ALERT_WORDS
+LANG_ENGLISH        "Name Alert Words"
+LANG_FRENCH         "Mots de l'alerte de nom"
 
-REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_FRENCH         "Messages privés, votre nom dans le chat, lignes de la boombox et nouvelles versions apparaissent à gauche."
-
-REFERENCE           SHOWN
-LANG_ENGLISH        "Shown"
-LANG_FRENCH         "Affichées"
-
-REFERENCE           SHOWN_AND_SOUND
-LANG_ENGLISH        "Shown and Sound"
-LANG_FRENCH         "Affichées avec son"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-LANG_FRENCH         "Durée d'affichage"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_FRENCH         "Durée d'affichage d'une notification, en millisecondes."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-LANG_FRENCH         "Taille des notifications"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-LANG_FRENCH         "La taille des notifications."
-
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-LANG_FRENCH         "Taille du texte de la console"
-
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-LANG_FRENCH         "La taille du texte de la console."
-
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-LANG_FRENCH         "Opacité de la console"
-
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
-LANG_FRENCH         "La part du jeu visible à travers la console."
+REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
+LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
+LANG_FRENCH         "D'autres mots que votre nom qui marquent une ligne de chat en or. Séparés par des espaces ou des virgules."
 
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
@@ -1668,142 +1904,6 @@ LANG_FRENCH         "Heure"
 REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
 LANG_FRENCH         "Date et heure"
-
-REFERENCE           NEW_DRAIN_EFFECT
-LANG_ENGLISH        "New Drain Effect"
-LANG_FRENCH         "Nouvel effet de drain"
-
-REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
-LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
-LANG_FRENCH         "Le drain de Force montre le nouvel effet large. Désactivé : l'effet du jeu."
-
-REFERENCE           NEW_FORCE_EFFECTS
-LANG_ENGLISH        "New Force Effects"
-LANG_FRENCH         "Nouveaux effets de Force"
-
-REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
-LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
-LANG_FRENCH         "Les effets des animations de Force du mode solo et des prises."
-
-REFERENCE           NEW_FORCE_SIGHT
-LANG_ENGLISH        "New Force Sight"
-LANG_FRENCH         "Nouvelle vision de Force"
-
-REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
-LANG_ENGLISH        "The look of Force Sight of the plugin."
-LANG_FRENCH         "L'apparence de la vision de Force du plugin."
-
-REFERENCE           NEW_OTHER_DIMENSION_LOOK
-LANG_ENGLISH        "New Other Dimension Look"
-LANG_FRENCH         "Nouvelle autre dimension"
-
-REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
-LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
-LANG_FRENCH         "L'apparence de l'autre dimension du plugin. Désactivé : un simple voile sur l'écran."
-
-REFERENCE           SEE_BLACK_SABERS
-LANG_ENGLISH        "See Black Sabers"
-LANG_FRENCH         "Voir les sabres noirs"
-
-REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
-LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
-LANG_FRENCH         "Les lames noires sont noires. Désactivé : elles sont rouges."
-
-REFERENCE           SABERS_ON_THE_BODY
-LANG_ENGLISH        "Sabers on the Body"
-LANG_FRENCH         "Sabres sur le corps"
-
-REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
-LANG_ENGLISH        "Sabers that are not drawn hang on the body."
-LANG_FRENCH         "Les sabres rangés pendent au corps."
-
-REFERENCE           NEW_DEATH_MESSAGES
-LANG_ENGLISH        "New Death Messages"
-LANG_FRENCH         "Nouveaux messages de mort"
-
-REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
-LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
-LANG_FRENCH         "Désactivé : les messages du jeu pour les morts dans l'eau, la lave et les chutes."
-
-REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
-LANG_ENGLISH        "Hide Players of Other Duels"
-LANG_FRENCH         "Masquer les joueurs d'autres duels"
-
-REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
-LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
-LANG_FRENCH         "Les joueurs dans un duel dont vous ne faites pas partie s'estompent et votre viseur les ignore."
-
-REFERENCE           CAMERA_TURN_AFTER_A_DUEL
-LANG_ENGLISH        "Camera Turn After a Duel"
-LANG_FRENCH         "Rotation de caméra après un duel"
-
-REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
-LANG_ENGLISH        "When your private duel ends the camera turns around you."
-LANG_FRENCH         "Quand votre duel privé se termine, la caméra tourne autour de vous."
-
-REFERENCE           AUTO_REPLIER
-LANG_ENGLISH        "Auto Replier"
-LANG_FRENCH         "Réponse automatique"
-
-REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
-LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
-LANG_FRENCH         "Répond aux messages privés avec les textes du fichier de réponse pendant votre absence."
-
-REFERENCE           LEDGE_GRAB
-LANG_ENGLISH        "Ledge Grab"
-LANG_FRENCH         "Saisie des rebords"
-
-REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
-LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
-LANG_FRENCH         "Saisit les rebords vers lesquels vous sautez et vous hisse. Seulement sur les serveurs JA+ qui le permettent."
-
-REFERENCE           NEW_DFA_PRIMARY
-LANG_ENGLISH        "New DFA Primary"
-LANG_FRENCH         "Nouveau DFA primaire"
-
-REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
-LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
-LANG_FRENCH         "Le death from above du plugin avec l'attaque primaire. Seulement sur les serveurs JA+ qui le permettent."
-
-REFERENCE           NEW_DFA_SECONDARY
-LANG_ENGLISH        "New DFA Secondary"
-LANG_FRENCH         "Nouveau DFA secondaire"
-
-REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
-LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
-LANG_FRENCH         "Le death from above du plugin avec l'attaque secondaire. Seulement sur les serveurs JA+ qui le permettent."
-
-REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
-LANG_ENGLISH        "No Single Player Cartwheel"
-LANG_FRENCH         "Pas de roue du mode solo"
-
-REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
-LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
-LANG_FRENCH         "La roue sans le mouvement du mode solo. Seulement sur les serveurs JA+ qui le permettent."
-
-REFERENCE           CLAN_PASSWORD
-LANG_ENGLISH        "Clan Password"
-LANG_FRENCH         "Mot de passe du clan"
-
-REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
-LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même mot de passe. Le serveur le voit."
-
-REFERENCE           ADMIN_PASSWORD
-LANG_ENGLISH        "Admin Password"
-LANG_FRENCH         "Mot de passe admin"
-
-REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
-LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
-LANG_FRENCH         "Envoyé à un serveur JA+ quand vous le rejoignez, pour vous connecter en admin."
-
-REFERENCE           OTHER_DIMENSION_PLAYERS
-LANG_ENGLISH        "Other Dimension Players"
-LANG_FRENCH         "Joueurs de l'autre dimension"
-
-REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
-LANG_ENGLISH        "How visible players of the other dimension are."
-LANG_FRENCH         "La visibilité des joueurs de l'autre dimension."
 
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
@@ -1989,10 +2089,6 @@ REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 LANG_FRENCH         "#same"
 
-REFERENCE           HITS
-LANG_ENGLISH        "Hits"
-LANG_FRENCH         "Impacts"
-
 REFERENCE           BOOMBOX
 LANG_ENGLISH        "Boombox"
 LANG_FRENCH         "#same"
@@ -2004,10 +2100,6 @@ LANG_FRENCH         "Le jeu, les sabres laser, les duels et l'apparence des joue
 REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
 LANG_FRENCH         "#same"
-
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_FRENCH         "Joueurs"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
@@ -2033,10 +2125,6 @@ REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 LANG_FRENCH         "Viseur"
 
-REFERENCE           MOVEMENT
-LANG_ENGLISH        "Movement"
-LANG_FRENCH         "Mouvement"
-
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 LANG_FRENCH         "Vue"
@@ -2053,13 +2141,13 @@ REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_FRENCH         "Chat, bulles et infos au-dessus des têtes."
 
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_FRENCH         "Joueurs"
+
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_FRENCH         "#same"
-
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_FRENCH         "Chapeaux et capes"
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
@@ -2080,6 +2168,30 @@ LANG_FRENCH         "Apparence"
 REFERENCE           CLAN_AND_ADMIN
 LANG_ENGLISH        "Clan and Admin"
 LANG_FRENCH         "Clan et admin"
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+LANG_FRENCH         "Mouvement"
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
+LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
+LANG_FRENCH         "Ce qui vient de TaystJK : touches, sabres, HUD, mouvement, cosmétiques et chat."
+
+REFERENCE           HITS
+LANG_ENGLISH        "Hits"
+LANG_FRENCH         "Impacts"
+
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
+LANG_FRENCH         "Sabres"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_FRENCH         "Chapeaux et capes"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -2124,18 +2236,6 @@ LANG_FRENCH         "#same"
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
 LANG_FRENCH         "Dossiers de jeu contenant d'autres mods."
-
-REFERENCE           ESSENTIALS
-LANG_ENGLISH        "Essentials"
-LANG_FRENCH         "Essentiel"
-
-REFERENCE           ALL_SETTINGS
-LANG_ENGLISH        "All Settings"
-LANG_FRENCH         "Tous les réglages"
-
-REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
-LANG_ENGLISH        "Shows the settings that matter, or all of them."
-LANG_FRENCH         "Affiche les réglages importants, ou tous."
 
 REFERENCE           DISCARD
 LANG_ENGLISH        "Discard"
@@ -2308,10 +2408,6 @@ LANG_FRENCH         "Souris : tourner. Molette : distance. Gauche : focus. 1-5 :
 REFERENCE           DEFAULT
 LANG_ENGLISH        "Default"
 LANG_FRENCH         "Par défaut"
-
-REFERENCE           TAYSTJK
-LANG_ENGLISH        "TaystJK"
-LANG_FRENCH         "#same"
 
 REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
 LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
@@ -2912,6 +3008,18 @@ LANG_FRENCH         "Jamais utilisé"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_FRENCH         "il y a %i jours"
+
+REFERENCE           ESSENTIALS
+LANG_ENGLISH        "Essentials"
+LANG_FRENCH         "Essentiel"
+
+REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
+LANG_ENGLISH        "Shows the settings that matter, or all of them."
+LANG_FRENCH         "Affiche les réglages importants, ou tous."
+
+REFERENCE           ALL_SETTINGS
+LANG_ENGLISH        "All Settings"
+LANG_FRENCH         "Tous les réglages"
 
 REFERENCE           CHANGED_FROM_DEFAULT
 LANG_ENGLISH        "Changed from default"

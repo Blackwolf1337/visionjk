@@ -19,6 +19,7 @@ HEAD_SIZE = 16              # the heading of a card on a canvas, in its pixels (
 ROWS = 16                   # rows the window of a list shows
 RAIL_ROWS = 17              #	and with the pages at the left
 ROW_SCALE = 0.7
+PAGE_SEARCH = 23            # the page of an item that shows while a search is on (PAGE_SEARCH of codemp/ui/ui_shared.h)
 CLICK = ['play', '"sound/interface/button1.wav"', ';']
 WINDOW = ['0.031', '0.055', '0.11', '0.97']
 BAND = ['0.02', '0.04', '0.08', '0.50']         # the row of tabs and the bar at the bottom, as pages.FOOT
@@ -159,9 +160,6 @@ SETUP = [
         ('yesno', 'Physically Based Sound', 'v_spatialPhysical',
          'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.'),
         ('yesno', 'Doppler Effect', 's_doppler', 'What comes closer or goes away changes its pitch.'),
-        ('head', 'Hits'),
-        ('yesno', 'Hit Sounds', 'tay_hitSounds', 'A short tick when your shots or your blade hit someone.'),
-        ('yesno', 'Kill Sound', 'tay_killSound', 'Two notes when you kill someone.'),
         ('head', 'Voice Chat'),
         ('old', 'voicechat'),
         ('head', 'Boombox'),
@@ -180,20 +178,13 @@ SETUP = [
         ('slider', 'Trail Length', 'v_saberTrailLength', 1, 0, 4, 'How long the trail behind a swinging blade is.'),
         ('slider', 'Blade Core', 'v_saberCoreScale', 1, 0.25, 3, 'How thick the white core of a blade is.'),
         ('slider', 'Blade Glow', 'v_saberGlowScale', 1, 0.25, 3, 'How wide the glow around a blade is.'),
-        ('yesno', 'Saber Team Colours', 'tay_saberTeamColors', 'In team games every blade in the colour of its team. Off: blades keep their colour.'),
-        ('yesno', 'Two-Coloured Staff', 'tay_saberStaffColors', 'The second blade of a staff in the second saber colour.'),
         ('head', 'Duels'),
         ('multi', 'Others in a Duel', 'v_duelEffect',
          (('Game', 0), ('Tinted', 1), ('Shield', 2), ('Damaged Shield', 3), ('Force Shell', 4), ('Sight Shell', 5),
           ('Half Shield', 6), ('Cloaked', 7), ('Sight Bubble', 8)),
          'How players look who are in a duel you are not part of. Their colour is v_duelColour in the console.'),
         ('yesno', 'Their Blades', 'v_duelShowSabers', 'The blades of players who are in a duel you are not part of.'),
-        ('head', 'Players'),
-        ('pick', 'Enemy Model', 'tay_forceEnemyModel', 'Every opponent is shown in the model you pick. As They Chose: each keeps his own.'),
-        ('pick', 'Ally Model', 'tay_forceAllyModel', 'Every team mate is shown in the model you pick. As They Chose: each keeps his own.'),
         ('head', 'Weapons'),
-        ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
-        ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
         ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask.'),
         ('yesno', 'Zoom with Mouse Wheel', 'v_scopeWheelZoom', 'While the disruptor zoom is locked, the mouse wheel zooms in and out.'),
         ('slider', 'Motion Tracker Speed', 'v_motionThreshold', 40, 10, 200, 'The speed a player needs before the tracker of the disruptor scope picks him up.'),
@@ -209,32 +200,10 @@ SETUP = [
         ('yesno', 'Smooth Camera', 'cg_smoothCamera', 'The camera behind you follows the same at every frame rate. It trails a little further behind.'),
         ('head', 'Crosshair'),
         ('slider', 'Crosshair Size', 'cg_crosshairSize', 24, 12, 64, 'The size of the crosshair.'),
-        ('multistr', 'Crosshair Colour', 'tay_crosshairColor',
-         (('White', ''), ('Green', '0.2 1 0.3 1'), ('Cyan', '0.2 0.9 1 1'), ('Yellow', '1 0.9 0.2 1'), ('Orange', '1 0.5 0 1'),
-          ('Red', '1 0.2 0.2 1'), ('Pink', '1 0.4 0.9 1')),
-         'The colour of the crosshair with nothing under it.'),
-        ('slider', 'Name Opacity', 'tay_crosshairNamesOpacity', 0.5, 0, 1, 'How clearly the name of the player under the crosshair shows.'),
-        ('multi', 'Lead Indicator', 'tay_leadIndicator', (('Off', 0), ('On', 1), ('With Own Ping', 2)),
-         'Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid.'),
         ('head', 'On Screen'),
         ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second in the corner of the screen.'),
         ('yesno', 'Show Timer', 'cg_drawTimer', 'The time of the level in the corner of the screen.'),
-        ('yesno', 'Timer Milliseconds', 'tay_timerMsec', 'The timer of the level with milliseconds.'),
-        ('yesno', 'Timer Counts Down', 'tay_timerCountdown', 'The timer shows what is left of the time limit, if there is one.'),
         ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
-        ('yesno', 'Killfeed', 'tay_killfeed', 'Who killed whom with what, at the upper right.'),
-        ('slider', 'Team Overlay Size', 'tay_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
-        ('yesno', 'Spectator Map', 'tay_specHud', 'While you watch, a map of the players around at the upper right.'),
-        ('head', 'Movement'),
-        ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
-        ('yesno', 'Strafe Helper', 'tay_strafeHelper', 'A bar under the crosshair that shows where to turn to gain speed.'),
-        ('yesno', 'Snap HUD', 'tay_snapHud', 'In the air, the angles where the rounding of the game gives a little more speed.'),
-        ('yesno', 'Pitch HUD', 'tay_pitchHud', 'A mark where your view would be at a chosen pitch.'),
-        ('multi', 'Strafe Trails', 'tay_strafeTrail', (('Off', 0), ('Mine', 1), ('Everybody', 2)),
-         'A fading line on the ground along where players ran.'),
-        ('yesno', 'Movement Keys', 'tay_movementKeys', 'The keys you move with on the screen, lit while held.'),
-        ('slider', 'Start Goal', 'tay_startGoal', 0, 0, 1500, 'The speedometer turns gold from this speed on. 0: off.'),
-        ('slider', 'Jump Goal', 'tay_jumpGoal', 0, 0, 1500, 'Jumps at least this fast are gold in the list of jumps. 0: off.'),
     ]),
     ('Chat & Social', 'The chat box, bubbles and what stands above the heads.', [
         ('head', 'Players'),
@@ -249,22 +218,6 @@ SETUP = [
         ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
         ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
          'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
-        ('head', 'Hats and Capes'),
-        ('multistr', 'Hat', 'tay_hat',
-         (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),
-          ('Crown', 'crown'), ('Fedora', 'fedora'), ('Fedora 2', 'fedora2'), ('Fedora 3', 'fedora3'), ('Fedora 4', 'fedora4'),
-          ('Glasses', 'glasses'), ('Graduation Cap', 'gradcap'), ('Headcrab', 'headcrab'), ('Horns', 'horns'),
-          ('Mario Cap', 'mario'), ('Mask', 'mask'), ('Metal Helmet', 'metalhelm'), ('Plague Mask', 'plaguemask'),
-          ('Predator Helmet', 'predatorhelm'), ('Pumpkin', 'pumpkin'), ('Santa Hat', 'santahat'), ('Sombrero', 'sombrero'),
-          ('Super Saiyan Hair', 'supersaiyan'), ('Top Hat', 'tophat')),
-         'What you wear on your head. Other players of VisionJK see it.'),
-        ('multistr', 'Cape', 'tay_cape',
-         (('None', ''), ('Royal Cape', 'royalcape'), ('Vader Cape', 'vadercape'), ('Yoda', 'yodacape'), ('Grogu', 'grogucape'),
-          ('Goose', 'goose'), ('Crowbar', 'crowbar'), ('AK-47', 'ak47'), ('Rocket Launcher', 'rpg')),
-         'What you wear on your back. Other players of VisionJK see it.'),
-        ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
-         'What players wear on their heads and backs. Only players of VisionJK wear them.'),
-        ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
         ('head', 'Chat'),
         ('yesno', 'Own Chat Line', 'v_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
         ('slider', 'Chat Box Size', 'v_chatBoxScale', 0.85, 0.6, 1.6,
@@ -273,10 +226,6 @@ SETUP = [
         ('slider', 'Chat Box Rows', 'v_chatBoxRows', 10, 4, 24,
          'How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse.'),
         ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
-        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
-        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
-        ('multi', 'Name Alert', 'tay_notify', (('Off', 0), ('Marked', 1), ('Marked and Sound', 2)),
-         'A chat line with your name is marked gold. More words with tay_notifyWords in the console.'),
         ('head', 'Notifications'),
         ('multi', 'Notifications', 'v_notify', (('Off', 0), ('Shown', 1), ('Shown and Sound', 2)),
          'Tells, your name in the chat, boombox lines and new versions slide in at the left.'),
@@ -285,7 +234,6 @@ SETUP = [
         ('head', 'Console'),
         ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
         ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
-        ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
     ]),
     ('JA+', 'The features of the JA+ client plugin, clan and admin login.', [
         ('head', 'Looks'),
@@ -310,6 +258,80 @@ SETUP = [
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
         ('secret', 'Admin Password', 'cp_login', 32, 'Sent to a JA+ server when you join, to log you in as admin.'),
         ('slider', 'Other Dimension Players', 'cp_altDimAlpha', 40, 0, 255, 'How visible players of the other dimension are.'),
+    ]),
+    ('TaystJK', 'What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat.', [
+        ('head', 'Hits'),
+        ('yesno', 'Hit Sounds', 'tay_hitSounds', 'A short tick when your shots or your blade hit someone.'),
+        ('yesno', 'Kill Sound', 'tay_killSound', 'Two notes when you kill someone.'),
+        ('head', 'Sabers'),
+        ('yesno', 'Saber Team Colours', 'tay_saberTeamColors', 'In team games every blade in the colour of its team. Off: blades keep their colour.'),
+        ('yesno', 'Two-Coloured Staff', 'tay_saberStaffColors', 'The second blade of a staff in the second saber colour.'),
+        ('head', 'Players'),
+        ('pick', 'Enemy Model', 'tay_forceEnemyModel', 'Every opponent is shown in the model you pick. As They Chose: each keeps his own.'),
+        ('pick', 'Ally Model', 'tay_forceAllyModel', 'Every team mate is shown in the model you pick. As They Chose: each keeps his own.'),
+        ('head', 'Weapons'),
+        ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
+        ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
+        ('multistr', 'Disruptor Colour', 'tay_disruptorColor',
+         (('Cyan', ''), ('White', '1 1 1'), ('Red', '1 0.2 0.2'), ('Green', '0.2 1 0.3'), ('Yellow', '1 0.9 0.2'), ('Purple', '0.7 0.3 1')),
+         'The colour of the disruptor shot. In team games the colour of the team.'),
+        ('head', 'Crosshair'),
+        ('multistr', 'Crosshair Colour', 'tay_crosshairColor',
+         (('White', ''), ('Green', '0.2 1 0.3 1'), ('Cyan', '0.2 0.9 1 1'), ('Yellow', '1 0.9 0.2 1'), ('Orange', '1 0.5 0 1'),
+          ('Red', '1 0.2 0.2 1'), ('Pink', '1 0.4 0.9 1')),
+         'The colour of the crosshair with nothing under it.'),
+        ('slider', 'Name Opacity', 'tay_crosshairNamesOpacity', 0.5, 0, 1, 'How clearly the name of the player under the crosshair shows.'),
+        ('multi', 'Lead Indicator', 'tay_leadIndicator', (('Off', 0), ('On', 1), ('With Own Ping', 2)),
+         'Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid.'),
+        ('head', 'HUD'),
+        ('yesno', 'Timer Milliseconds', 'tay_timerMsec', 'The timer of the level with milliseconds.'),
+        ('yesno', 'Timer Counts Down', 'tay_timerCountdown', 'The timer shows what is left of the time limit, if there is one.'),
+        ('yesno', 'Killfeed', 'tay_killfeed', 'Who killed whom with what, at the upper right.'),
+        ('slider', 'Killfeed Size', 'tay_killfeedSize', 1, 0.5, 2, 'How large the killfeed is.'),
+        ('slider', 'Killfeed Time', 'tay_killfeedTime', 5000, 1000, 15000, 'How many milliseconds a line of the killfeed stays.'),
+        ('slider', 'Team Overlay Size', 'tay_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
+        ('yesno', 'Team Overlay Weapons', 'tay_teamOverlayWeapons', 'The weapon each team mate holds, after the numbers.'),
+        ('yesno', 'Team Overlay Bars', 'tay_teamOverlayBar', 'Health and armour of team mates as a thin bar under the numbers.'),
+        ('yesno', 'Spectator Map', 'tay_specHud', 'While you watch, a map of the players around at the upper right.'),
+        ('slider', 'Spectator Map Size', 'tay_specHudScale', 1, 0.5, 2, 'How large the map of the players is while you watch.'),
+        ('head', 'Movement'),
+        ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
+        ('slider', 'Speedometer Size', 'tay_speedometerSize', 1, 0.5, 2, 'How large the speedometer is.'),
+        ('slider', 'Jumps Shown', 'tay_speedometerJumps', 5, 0, 16, 'How many of your last jumps the speedometer lists with their speed.'),
+        ('yesno', 'Strafe Helper', 'tay_strafeHelper', 'A bar under the crosshair that shows where to turn to gain speed.'),
+        ('yesno', 'Snap HUD', 'tay_snapHud', 'In the air, the angles where the rounding of the game gives a little more speed.'),
+        ('yesno', 'Pitch HUD', 'tay_pitchHud', 'A mark where your view would be at a chosen pitch.'),
+        ('slider', 'Pitch HUD Angle', 'tay_pitchHudAngle', 15, -90, 90, 'The pitch the mark of the pitch HUD stands at.'),
+        ('multi', 'Strafe Trails', 'tay_strafeTrail', (('Off', 0), ('Mine', 1), ('Everybody', 2)),
+         'A fading line on the ground along where players ran.'),
+        ('slider', 'Strafe Trail Time', 'tay_strafeTrailLife', 3, 0.5, 30, 'How many seconds a strafe trail takes to fade.'),
+        ('yesno', 'Movement Keys', 'tay_movementKeys', 'The keys you move with on the screen, lit while held.'),
+        ('slider', 'Movement Keys Size', 'tay_movementKeysSize', 1, 0.5, 2, 'How large the movement keys on the screen are.'),
+        ('slider', 'Start Goal', 'tay_startGoal', 0, 0, 1500, 'The speedometer turns gold from this speed on. 0: off.'),
+        ('slider', 'Jump Goal', 'tay_jumpGoal', 0, 0, 1500, 'Jumps at least this fast are gold in the list of jumps. 0: off.'),
+        ('head', 'Hats and Capes'),
+        ('multistr', 'Hat', 'tay_hat',
+         (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),
+          ('Crown', 'crown'), ('Fedora', 'fedora'), ('Fedora 2', 'fedora2'), ('Fedora 3', 'fedora3'), ('Fedora 4', 'fedora4'),
+          ('Glasses', 'glasses'), ('Graduation Cap', 'gradcap'), ('Headcrab', 'headcrab'), ('Horns', 'horns'),
+          ('Mario Cap', 'mario'), ('Mask', 'mask'), ('Metal Helmet', 'metalhelm'), ('Plague Mask', 'plaguemask'),
+          ('Predator Helmet', 'predatorhelm'), ('Pumpkin', 'pumpkin'), ('Santa Hat', 'santahat'), ('Sombrero', 'sombrero'),
+          ('Super Saiyan Hair', 'supersaiyan'), ('Top Hat', 'tophat')),
+         'What you wear on your head. Other players of VisionJK see it.'),
+        ('multistr', 'Cape', 'tay_cape',
+         (('None', ''), ('Royal Cape', 'royalcape'), ('Vader Cape', 'vadercape'), ('Yoda', 'yodacape'), ('Grogu', 'grogucape'),
+          ('Goose', 'goose'), ('Crowbar', 'crowbar'), ('AK-47', 'ak47'), ('Rocket Launcher', 'rpg')),
+         'What you wear on your back. Other players of VisionJK see it.'),
+        ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
+         'What players wear on their heads and backs. Only players of VisionJK wear them.'),
+        ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
+        ('head', 'Chat'),
+        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
+        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
+        ('multi', 'Name Alert', 'tay_notify', (('Off', 0), ('Marked', 1), ('Marked and Sound', 2)),
+         'A chat line with your name is marked gold. More words with tay_notifyWords in the console.'),
+        ('edit', 'Name Alert Words', 'tay_notifyWords', 64, 'More words that mark a chat line gold, besides your name. Separated by blanks or commas.'),
+        ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
     ]),
     ('Network', 'Downloads, the connection and security.', [
         ('head', 'Downloads'),
@@ -679,6 +701,14 @@ NEEDS = {
     'v_scopewheelzoom': ('v_scope', ('0',)),
     'v_motionthreshold': ('v_scope', ('0',)),
     'tay_startgoal': ('tay_speedometer', ('0',)),
+    'tay_speedometersize': ('tay_speedometer', ('0',)),
+    'tay_speedometerjumps': ('tay_speedometer', ('0',)),
+    'tay_killfeedsize': ('tay_killfeed', ('0',)),
+    'tay_killfeedtime': ('tay_killfeed', ('0',)),
+    'tay_spechudscale': ('tay_specHud', ('0',)),
+    'tay_pitchhudangle': ('tay_pitchHud', ('0',)),
+    'tay_strafetraillife': ('tay_strafeTrail', ('0',)),
+    'tay_movementkeyssize': ('tay_movementKeys', ('0',)),
     'tay_jumpgoal': ('tay_speedometer', ('0',)),
 }
 
@@ -926,8 +956,8 @@ def build(m, name, ingame, nav):
     # the pages of their own that buttons among the rows open: after the tabs and the page of the defaults
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
-        # (two pages of their own follow: the last must stay under PAGE_SEARCH, 15 in ui_shared.h)
-        assert first + 1 < 15, 'Setup has %d pages, page 15 is the search' % (first + 1)
+        # (two pages of their own follow: the last must stay under PAGE_SEARCH)
+        assert first + 1 < PAGE_SEARCH, 'Setup has %d pages, page %d is the search' % (first + 1, PAGE_SEARCH)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
         updates = next(n for n, (title, _, _) in enumerate(pages) if title == 'VisionJK') + 1
         new.extend(music_page(first, chat, L))
@@ -977,9 +1007,10 @@ def window_frame(m, L):
 # ---- the redesign of 2026-11-02: Setup and Controls as the board "Setup, decluttered" of the canvas VisionJK Settings,
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
-# parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
-ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold', 'v_dlightscale', 'v_exposure'}
+# parts whose settings were shown only with all settings ("advanced 1"). The switch Essentials / All Settings went
+# on their word of 2026-11-14 ("its just confusing"): every setting shows, these stay empty
+ADVANCED_HEADS = set()
+ADVANCED_CVARS = set()
 
 
 def page_sections(m, content, folds):
@@ -1099,7 +1130,7 @@ def build_canvas(m, name, ingame):
     tabs_y = top + 92
     # over the list while a search is on: "Search" (the titles of the pages are on their pages, which a search leaves)
     new.append(cv.text('vision_search_title', (main_x + 36, top + 28, main_w - 380, 41), ref('Search'), 30, BRIGHT, 'left', 0, FONT,
-                       ('caps', 1), ('decoration',), ('page', 15)))  # (PAGE_SEARCH of ui_shared.h)
+                       ('caps', 1), ('decoration',), ('page', PAGE_SEARCH)))
 
     pages, folds, made_pages = [], [], []
     for title, about, content in screen:
@@ -1199,12 +1230,6 @@ def build_canvas(m, name, ingame):
                 made_pages.append(canvas_row(b, page, (x + cv.CARD_PAD - 12, cursor[col], col_w - 2 * (cv.CARD_PAD - 12), cv.ROW), col, adv))
                 cursor[col] += cv.ROW
 
-    # the switch between the settings that matter and all of them, over the list (a row without a name is its widget)
-    if setup:
-        new.append(cv.item('vision_all', (main_x + main_w - 36 - 270, top + 36, 270, 40), ('type', 'ITEM_TYPE_MULTI'),
-                           ('text', '""'), ('cvar', quoted('v_setupAll')), ('row', 1), ('font', FONT), ('textscale', cv.scale(17)),
-                           ('forecolor', *TEXT), ('cvarFloatList', [ref('Essentials'), '0', ref('All Settings'), '1']),
-                           ('descText', ref('Shows the settings that matter, or all of them.')), ('action', list(CLICK))))
     new += made_pages
     # (the bar in the margin beside the cards, clear of their edge)
     new.append(cv.item('vision_scroll', (list_x + list_w + 15, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
@@ -1291,8 +1316,8 @@ def build_canvas(m, name, ingame):
     # the pages of their own that buttons among the rows open, after the tabs and the page of the defaults
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
-        # (two pages of their own follow: the last must stay under PAGE_SEARCH, 15 in ui_shared.h)
-        assert first + 1 < 15, 'Setup has %d pages, page 15 is the search' % (first + 1)
+        # (two pages of their own follow: the last must stay under PAGE_SEARCH)
+        assert first + 1 < PAGE_SEARCH, 'Setup has %d pages, page %d is the search' % (first + 1, PAGE_SEARCH)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
         updates = next(n for n, (title, _, _) in enumerate(pages) if title == 'VisionJK') + 1
         L0 = Layout(ingame)
@@ -1351,5 +1376,4 @@ def build_canvas(m, name, ingame):
         mf.put(m, 'foldCvar', 'v_setupFolds' if setup else 'v_controlsFolds')
     mf.put(m, 'searchCvar', search_cvar)
     if setup:
-        mf.put(m, 'advancedCvar', 'v_setupAll')
         mf.put(m, 'changesCvar', 'v_setupChanges')

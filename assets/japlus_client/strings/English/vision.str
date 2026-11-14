@@ -572,18 +572,6 @@ LANG_ENGLISH        "Doppler Effect"
 REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 
-REFERENCE           HIT_SOUNDS
-LANG_ENGLISH        "Hit Sounds"
-
-REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
-LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
-
-REFERENCE           KILL_SOUND
-LANG_ENGLISH        "Kill Sound"
-
-REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
-LANG_ENGLISH        "Two notes when you kill someone."
-
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"
 
@@ -698,18 +686,6 @@ LANG_ENGLISH        "Blade Glow"
 REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
 
-REFERENCE           SABER_TEAM_COLOURS
-LANG_ENGLISH        "Saber Team Colours"
-
-REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
-LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
-
-REFERENCE           TWO_COLOURED_STAFF
-LANG_ENGLISH        "Two-Coloured Staff"
-
-REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
-LANG_ENGLISH        "The second blade of a staff in the second saber colour."
-
 REFERENCE           OTHERS_IN_A_DUEL
 LANG_ENGLISH        "Others in a Duel"
 
@@ -748,36 +724,6 @@ LANG_ENGLISH        "Their Blades"
 
 REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
 LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
-
-REFERENCE           ENEMY_MODEL
-LANG_ENGLISH        "Enemy Model"
-
-REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
-LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
-
-REFERENCE           ALLY_MODEL
-LANG_ENGLISH        "Ally Model"
-
-REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
-LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
-
-REFERENCE           JEDI_OUTCAST_SHOTS
-LANG_ENGLISH        "Jedi Outcast Shots"
-
-REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
-LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
-
-REFERENCE           DISRUPTOR_BEAM
-LANG_ENGLISH        "Disruptor Beam"
-
-REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
-LANG_ENGLISH        "How the shot of the disruptor looks."
-
-REFERENCE           LINE
-LANG_ENGLISH        "Line"
-
-REFERENCE           SPIRAL
-LANG_ENGLISH        "Spiral"
 
 REFERENCE           SCOPE_LENS
 LANG_ENGLISH        "Scope Lens"
@@ -839,42 +785,6 @@ LANG_ENGLISH        "Crosshair Size"
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 
-REFERENCE           CROSSHAIR_COLOUR
-LANG_ENGLISH        "Crosshair Colour"
-
-REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
-LANG_ENGLISH        "The colour of the crosshair with nothing under it."
-
-REFERENCE           WHITE
-LANG_ENGLISH        "White"
-
-REFERENCE           CYAN
-LANG_ENGLISH        "Cyan"
-
-REFERENCE           YELLOW
-LANG_ENGLISH        "Yellow"
-
-REFERENCE           ORANGE
-LANG_ENGLISH        "Orange"
-
-REFERENCE           PINK
-LANG_ENGLISH        "Pink"
-
-REFERENCE           NAME_OPACITY
-LANG_ENGLISH        "Name Opacity"
-
-REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
-LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
-
-REFERENCE           LEAD_INDICATOR
-LANG_ENGLISH        "Lead Indicator"
-
-REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
-LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
-
-REFERENCE           WITH_OWN_PING
-LANG_ENGLISH        "With Own Ping"
-
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
 
@@ -887,95 +797,11 @@ LANG_ENGLISH        "Show Timer"
 REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 LANG_ENGLISH        "The time of the level in the corner of the screen."
 
-REFERENCE           TIMER_MILLISECONDS
-LANG_ENGLISH        "Timer Milliseconds"
-
-REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
-LANG_ENGLISH        "The timer of the level with milliseconds."
-
-REFERENCE           TIMER_COUNTS_DOWN
-LANG_ENGLISH        "Timer Counts Down"
-
-REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
-LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
-
 REFERENCE           SHOW_LAGOMETER
 LANG_ENGLISH        "Show Lagometer"
 
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
-
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-
-REFERENCE           TEAM_OVERLAY_SIZE
-LANG_ENGLISH        "Team Overlay Size"
-
-REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-LANG_ENGLISH        "How large the list of your team mates is."
-
-REFERENCE           SPECTATOR_MAP
-LANG_ENGLISH        "Spectator Map"
-
-REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-
-REFERENCE           SPEEDOMETER
-LANG_ENGLISH        "Speedometer"
-
-REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
-LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
-
-REFERENCE           STRAFE_HELPER
-LANG_ENGLISH        "Strafe Helper"
-
-REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
-LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
-
-REFERENCE           SNAP_HUD
-LANG_ENGLISH        "Snap HUD"
-
-REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
-LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
-
-REFERENCE           PITCH_HUD
-LANG_ENGLISH        "Pitch HUD"
-
-REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
-LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
-
-REFERENCE           STRAFE_TRAILS
-LANG_ENGLISH        "Strafe Trails"
-
-REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
-LANG_ENGLISH        "A fading line on the ground along where players ran."
-
-REFERENCE           MINE
-LANG_ENGLISH        "Mine"
-
-REFERENCE           EVERYBODY
-LANG_ENGLISH        "Everybody"
-
-REFERENCE           MOVEMENT_KEYS
-LANG_ENGLISH        "Movement Keys"
-
-REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
-LANG_ENGLISH        "The keys you move with on the screen, lit while held."
-
-REFERENCE           START_GOAL
-LANG_ENGLISH        "Start Goal"
-
-REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
-LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
-
-REFERENCE           JUMP_GOAL
-LANG_ENGLISH        "Jump Goal"
-
-REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
-LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
@@ -1024,6 +850,417 @@ LANG_ENGLISH        "Keep Scoreboard on Double Tap"
 
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+
+REFERENCE           NEW_DRAIN_EFFECT
+LANG_ENGLISH        "New Drain Effect"
+
+REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
+LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
+
+REFERENCE           NEW_FORCE_EFFECTS
+LANG_ENGLISH        "New Force Effects"
+
+REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
+LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
+
+REFERENCE           NEW_FORCE_SIGHT
+LANG_ENGLISH        "New Force Sight"
+
+REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
+LANG_ENGLISH        "The look of Force Sight of the plugin."
+
+REFERENCE           NEW_OTHER_DIMENSION_LOOK
+LANG_ENGLISH        "New Other Dimension Look"
+
+REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
+LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
+
+REFERENCE           SEE_BLACK_SABERS
+LANG_ENGLISH        "See Black Sabers"
+
+REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
+LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
+
+REFERENCE           SABERS_ON_THE_BODY
+LANG_ENGLISH        "Sabers on the Body"
+
+REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
+LANG_ENGLISH        "Sabers that are not drawn hang on the body."
+
+REFERENCE           NEW_DEATH_MESSAGES
+LANG_ENGLISH        "New Death Messages"
+
+REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
+LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
+
+REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
+LANG_ENGLISH        "Hide Players of Other Duels"
+
+REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
+LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
+
+REFERENCE           CAMERA_TURN_AFTER_A_DUEL
+LANG_ENGLISH        "Camera Turn After a Duel"
+
+REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
+LANG_ENGLISH        "When your private duel ends the camera turns around you."
+
+REFERENCE           AUTO_REPLIER
+LANG_ENGLISH        "Auto Replier"
+
+REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
+LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
+
+REFERENCE           LEDGE_GRAB
+LANG_ENGLISH        "Ledge Grab"
+
+REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
+LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
+
+REFERENCE           NEW_DFA_PRIMARY
+LANG_ENGLISH        "New DFA Primary"
+
+REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
+LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+
+REFERENCE           NEW_DFA_SECONDARY
+LANG_ENGLISH        "New DFA Secondary"
+
+REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
+LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+
+REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
+LANG_ENGLISH        "No Single Player Cartwheel"
+
+REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
+LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
+
+REFERENCE           CLAN_PASSWORD
+LANG_ENGLISH        "Clan Password"
+
+REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
+
+REFERENCE           ADMIN_PASSWORD
+LANG_ENGLISH        "Admin Password"
+
+REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
+LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
+
+REFERENCE           OTHER_DIMENSION_PLAYERS
+LANG_ENGLISH        "Other Dimension Players"
+
+REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
+LANG_ENGLISH        "How visible players of the other dimension are."
+
+REFERENCE           HIT_SOUNDS
+LANG_ENGLISH        "Hit Sounds"
+
+REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
+LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
+
+REFERENCE           KILL_SOUND
+LANG_ENGLISH        "Kill Sound"
+
+REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
+LANG_ENGLISH        "Two notes when you kill someone."
+
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+
+REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
+LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+
+REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
+LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+
+REFERENCE           DISRUPTOR_COLOUR
+LANG_ENGLISH        "Disruptor Colour"
+
+REFERENCE           THE_COLOUR_OF_THE_DISRUPTOR_SHOT_IN
+LANG_ENGLISH        "The colour of the disruptor shot. In team games the colour of the team."
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+
+REFERENCE           PURPLE
+LANG_ENGLISH        "Purple"
+
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+
+REFERENCE           LEAD_INDICATOR
+LANG_ENGLISH        "Lead Indicator"
+
+REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
+
+REFERENCE           WITH_OWN_PING
+LANG_ENGLISH        "With Own Ping"
+
+REFERENCE           TIMER_MILLISECONDS
+LANG_ENGLISH        "Timer Milliseconds"
+
+REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+LANG_ENGLISH        "The timer of the level with milliseconds."
+
+REFERENCE           TIMER_COUNTS_DOWN
+LANG_ENGLISH        "Timer Counts Down"
+
+REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+
+REFERENCE           KILLFEED_SIZE
+LANG_ENGLISH        "Killfeed Size"
+
+REFERENCE           HOW_LARGE_THE_KILLFEED_IS
+LANG_ENGLISH        "How large the killfeed is."
+
+REFERENCE           KILLFEED_TIME
+LANG_ENGLISH        "Killfeed Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
+LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+
+REFERENCE           TEAM_OVERLAY_WEAPONS
+LANG_ENGLISH        "Team Overlay Weapons"
+
+REFERENCE           THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
+LANG_ENGLISH        "The weapon each team mate holds, after the numbers."
+
+REFERENCE           TEAM_OVERLAY_BARS
+LANG_ENGLISH        "Team Overlay Bars"
+
+REFERENCE           HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
+LANG_ENGLISH        "Health and armour of team mates as a thin bar under the numbers."
+
+REFERENCE           SPECTATOR_MAP
+LANG_ENGLISH        "Spectator Map"
+
+REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
+
+REFERENCE           SPECTATOR_MAP_SIZE
+LANG_ENGLISH        "Spectator Map Size"
+
+REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
+LANG_ENGLISH        "How large the map of the players is while you watch."
+
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+
+REFERENCE           SPEEDOMETER_SIZE
+LANG_ENGLISH        "Speedometer Size"
+
+REFERENCE           HOW_LARGE_THE_SPEEDOMETER_IS
+LANG_ENGLISH        "How large the speedometer is."
+
+REFERENCE           JUMPS_SHOWN
+LANG_ENGLISH        "Jumps Shown"
+
+REFERENCE           HOW_MANY_OF_YOUR_LAST_JUMPS_THE_SPEE
+LANG_ENGLISH        "How many of your last jumps the speedometer lists with their speed."
+
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+
+REFERENCE           PITCH_HUD_ANGLE
+LANG_ENGLISH        "Pitch HUD Angle"
+
+REFERENCE           THE_PITCH_THE_MARK_OF_THE_PITCH_HUD
+LANG_ENGLISH        "The pitch the mark of the pitch HUD stands at."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+
+REFERENCE           STRAFE_TRAIL_TIME
+LANG_ENGLISH        "Strafe Trail Time"
+
+REFERENCE           HOW_MANY_SECONDS_A_STRAFE_TRAIL_TAKE
+LANG_ENGLISH        "How many seconds a strafe trail takes to fade."
+
+REFERENCE           MOVEMENT_KEYS
+LANG_ENGLISH        "Movement Keys"
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
+LANG_ENGLISH        "The keys you move with on the screen, lit while held."
+
+REFERENCE           MOVEMENT_KEYS_SIZE
+LANG_ENGLISH        "Movement Keys Size"
+
+REFERENCE           HOW_LARGE_THE_MOVEMENT_KEYS_ON_THE_S
+LANG_ENGLISH        "How large the movement keys on the screen are."
+
+REFERENCE           START_GOAL
+LANG_ENGLISH        "Start Goal"
+
+REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
+LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
+
+REFERENCE           JUMP_GOAL
+LANG_ENGLISH        "Jump Goal"
+
+REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
+LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
 
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
@@ -1151,36 +1388,6 @@ LANG_ENGLISH        "Seasonal Hats"
 REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-
 REFERENCE           CHAT_EMOJI
 LANG_ENGLISH        "Chat Emoji"
 
@@ -1205,41 +1412,11 @@ LANG_ENGLISH        "Marked"
 REFERENCE           MARKED_AND_SOUND
 LANG_ENGLISH        "Marked and Sound"
 
-REFERENCE           NOTIFICATIONS
-LANG_ENGLISH        "Notifications"
+REFERENCE           NAME_ALERT_WORDS
+LANG_ENGLISH        "Name Alert Words"
 
-REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-
-REFERENCE           SHOWN
-LANG_ENGLISH        "Shown"
-
-REFERENCE           SHOWN_AND_SOUND
-LANG_ENGLISH        "Shown and Sound"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
+REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
+LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
 
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
@@ -1252,108 +1429,6 @@ LANG_ENGLISH        "Time"
 
 REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
-
-REFERENCE           NEW_DRAIN_EFFECT
-LANG_ENGLISH        "New Drain Effect"
-
-REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
-LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
-
-REFERENCE           NEW_FORCE_EFFECTS
-LANG_ENGLISH        "New Force Effects"
-
-REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
-LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
-
-REFERENCE           NEW_FORCE_SIGHT
-LANG_ENGLISH        "New Force Sight"
-
-REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
-LANG_ENGLISH        "The look of Force Sight of the plugin."
-
-REFERENCE           NEW_OTHER_DIMENSION_LOOK
-LANG_ENGLISH        "New Other Dimension Look"
-
-REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
-LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
-
-REFERENCE           SEE_BLACK_SABERS
-LANG_ENGLISH        "See Black Sabers"
-
-REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
-LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
-
-REFERENCE           SABERS_ON_THE_BODY
-LANG_ENGLISH        "Sabers on the Body"
-
-REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
-LANG_ENGLISH        "Sabers that are not drawn hang on the body."
-
-REFERENCE           NEW_DEATH_MESSAGES
-LANG_ENGLISH        "New Death Messages"
-
-REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
-LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
-
-REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
-LANG_ENGLISH        "Hide Players of Other Duels"
-
-REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
-LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
-
-REFERENCE           CAMERA_TURN_AFTER_A_DUEL
-LANG_ENGLISH        "Camera Turn After a Duel"
-
-REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
-LANG_ENGLISH        "When your private duel ends the camera turns around you."
-
-REFERENCE           AUTO_REPLIER
-LANG_ENGLISH        "Auto Replier"
-
-REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
-LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
-
-REFERENCE           LEDGE_GRAB
-LANG_ENGLISH        "Ledge Grab"
-
-REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
-LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
-
-REFERENCE           NEW_DFA_PRIMARY
-LANG_ENGLISH        "New DFA Primary"
-
-REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
-LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
-
-REFERENCE           NEW_DFA_SECONDARY
-LANG_ENGLISH        "New DFA Secondary"
-
-REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
-LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
-
-REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
-LANG_ENGLISH        "No Single Player Cartwheel"
-
-REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
-LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
-
-REFERENCE           CLAN_PASSWORD
-LANG_ENGLISH        "Clan Password"
-
-REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
-LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-
-REFERENCE           ADMIN_PASSWORD
-LANG_ENGLISH        "Admin Password"
-
-REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
-LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
-
-REFERENCE           OTHER_DIMENSION_PLAYERS
-LANG_ENGLISH        "Other Dimension Players"
-
-REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
-LANG_ENGLISH        "How visible players of the other dimension are."
 
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
@@ -1493,9 +1568,6 @@ LANG_ENGLISH        "Slicing"
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 
-REFERENCE           HITS
-LANG_ENGLISH        "Hits"
-
 REFERENCE           BOOMBOX
 LANG_ENGLISH        "Boombox"
 
@@ -1504,9 +1576,6 @@ LANG_ENGLISH        "The game, lightsabers, duels and what players and weapons l
 
 REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
-
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
@@ -1526,9 +1595,6 @@ LANG_ENGLISH        "What the screen shows around the level, the view and the cr
 REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 
-REFERENCE           MOVEMENT
-LANG_ENGLISH        "Movement"
-
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 
@@ -1541,11 +1607,11 @@ LANG_ENGLISH        "Chat & Social"
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
-
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
@@ -1561,6 +1627,24 @@ LANG_ENGLISH        "Looks"
 
 REFERENCE           CLAN_AND_ADMIN
 LANG_ENGLISH        "Clan and Admin"
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+
+REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
+LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
+
+REFERENCE           HITS
+LANG_ENGLISH        "Hits"
+
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1594,15 +1678,6 @@ LANG_ENGLISH        "Menus"
 
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
-
-REFERENCE           ESSENTIALS
-LANG_ENGLISH        "Essentials"
-
-REFERENCE           ALL_SETTINGS
-LANG_ENGLISH        "All Settings"
-
-REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
-LANG_ENGLISH        "Shows the settings that matter, or all of them."
 
 REFERENCE           DISCARD
 LANG_ENGLISH        "Discard"
@@ -1732,9 +1807,6 @@ LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Rig
 
 REFERENCE           DEFAULT
 LANG_ENGLISH        "Default"
-
-REFERENCE           TAYSTJK
-LANG_ENGLISH        "TaystJK"
 
 REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
 LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
@@ -2185,6 +2257,15 @@ LANG_ENGLISH        "Never used"
 
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
+
+REFERENCE           ESSENTIALS
+LANG_ENGLISH        "Essentials"
+
+REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
+LANG_ENGLISH        "Shows the settings that matter, or all of them."
+
+REFERENCE           ALL_SETTINGS
+LANG_ENGLISH        "All Settings"
 
 REFERENCE           CHANGED_FROM_DEFAULT
 LANG_ENGLISH        "Changed from default"

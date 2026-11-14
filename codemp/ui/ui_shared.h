@@ -384,8 +384,8 @@ typedef struct itemDef_s {
 	} canvas;
 } itemDef_t;
 
-#define MENU_PAGES		16					// pages of a menu, counted from 1
-#define PAGE_SEARCH		( MENU_PAGES - 1 )	// "page 15": an item that shows while a search of the menu is on
+#define MENU_PAGES		24					// pages of a menu, counted from 1 (VisionJK: 16 until Setup got its 12th page)
+#define PAGE_SEARCH		( MENU_PAGES - 1 )	// "page 23": an item that shows while a search of the menu is on (PAGE_SEARCH of tools/menus/options.py)
 
 typedef struct menuDef_s {
 	windowDef_t window;
