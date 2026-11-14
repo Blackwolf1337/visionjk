@@ -28,6 +28,8 @@ vkState_t	vk;
 static cvar_t	*v_vkDebug;			// 1: validation layer and its messages, if the layer is installed
 static cvar_t	*r_swapIntervalVk;	// r_swapInterval of the engine
 static cvar_t	*r_multisampleVk;	// r_ext_multisample of the engine
+static cvar_t	*v_rayTracing;		// 0: no ray tracing even where the device has it (vk_rt.cpp)
+static cvar_t	*v_hdr;				// the frame in 16 bit floats, tone mapped at the end of the view of the level
 
 static char		vk_versionString[64];
 static char		vk_driverString[64];
@@ -40,6 +42,25 @@ void VK_WaitIdle( void ) {
 	if ( vk.device ) {
 		qvkDeviceWaitIdle( vk.device );
 	}
+}
+
+/*
+===============
+VK_StageTime
+
+VisionJK: how long the steps of starting and stopping the renderer take, with developer 1, one line a step since
+the step before (name NULL: only starts the clock). For their stall at vid_restart after switching ray tracing off
+(2026-11-08); kept for the next one.
+===============
+*/
+void VK_StageTime( const char *name ) {
+	static int last;
+	const int now = ri.Milliseconds();
+
+	if ( name ) {
+		ri.Printf( PRINT_DEVELOPER, "renderer start and stop: %s %i ms\n", name, now - last );
+	}
+	last = now;
 }
 
 /*
@@ -92,6 +113,7 @@ THE FUNCTIONS OF VULKAN
 VK_FUNCTIONS_GLOBAL( X )
 VK_FUNCTIONS_INSTANCE( X )
 VK_FUNCTIONS_DEVICE( X )
+VK_FUNCTIONS_RT( X )
 #undef X
 PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;
@@ -123,6 +145,9 @@ static qboolean VK_LoadInstanceFunctions( void ) {
 static void VK_LoadDeviceFunctions( void ) {
 #define X( name )	q##name = (PFN_##name)qvkGetDeviceProcAddr( vk.device, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
 	VK_FUNCTIONS_DEVICE( X )
+	if ( vk.rayTracing ) {
+		VK_FUNCTIONS_RT( X )
+	}
 #undef X
 }
 
@@ -275,10 +300,52 @@ static qboolean VK_PickDevice( void ) {
 	return qtrue;
 }
 
+/*
+===============
+VK_RayTracingUsable
+
+The device builds acceleration structures and its shaders trace rays through them (VK_KHR_ray_query): RTX 20 and
+later, Radeon RX 6000 and later, Intel Arc and many newer integrated GPUs. The shadows of the players are traced
+there (vk_rt.cpp); every other device draws them without.
+===============
+*/
+static qboolean VK_RayTracingUsable( void ) {
+	const char *needed[] = { VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, VK_KHR_RAY_QUERY_EXTENSION_NAME,
+		VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME };
+	VkExtensionProperties available[512];
+	uint32_t count = ARRAY_LEN( available );
+	VkPhysicalDeviceRayQueryFeaturesKHR query = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accel = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, &query };
+	VkPhysicalDeviceVulkan12Features f12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &accel };
+	VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &f12 };
+
+	if ( !v_rayTracing->integer ) {
+		return qfalse;
+	}
+	// (VK_INCOMPLETE leaves the list as long as the array, the ones needed are rarely at its end)
+	if ( qvkEnumerateDeviceExtensionProperties( vk.physicalDevice, NULL, &count, available ) < 0 ) {
+		return qfalse;
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( needed ); i++ ) {
+		uint32_t j;
+
+		for ( j = 0; j < count && strcmp( available[j].extensionName, needed[i] ); j++ ) {
+		}
+		if ( j == count ) {
+			return qfalse;
+		}
+	}
+	qvkGetPhysicalDeviceFeatures2( vk.physicalDevice, &features );
+	return (qboolean)( accel.accelerationStructure && query.rayQuery && f12.bufferDeviceAddress );
+}
+
 static void VK_CreateDevice( void ) {
 	const float priority = 1.0f;
-	const char *extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const char *extensions[4] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	uint32_t numExtensions = 1;
 	VkDeviceQueueCreateInfo queue = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+	VkPhysicalDeviceRayQueryFeaturesKHR query = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accel = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, &query };
 	VkPhysicalDeviceVulkan13Features f13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 	VkPhysicalDeviceVulkan12Features f12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &f13 };
 	VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &f12 };
@@ -291,6 +358,10 @@ static void VK_CreateDevice( void ) {
 	vk.anisotropy = (qboolean)( available.samplerAnisotropy != VK_FALSE );
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
 	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
+	features.features.tessellationShader = available.tessellationShader;
+	features.features.pipelineStatisticsQuery = available.pipelineStatisticsQuery;
+	vk.pipelineStats = (qboolean)( available.pipelineStatisticsQuery != VK_FALSE );
+	vk.tessellation = (qboolean)( available.tessellationShader != VK_FALSE );
 	features.features.textureCompressionBC = available.textureCompressionBC;
 	vk.bcTextures = (qboolean)( available.textureCompressionBC != VK_FALSE && r_ext_compressed_textures->integer );
 	features.features.shaderClipDistance = VK_TRUE;
@@ -302,13 +373,33 @@ static void VK_CreateDevice( void ) {
 	f12.descriptorBindingPartiallyBound = VK_TRUE;
 	f12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 	f12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+	vk.rayTracing = VK_RayTracingUsable();
+	// the players are skinned for their shadows by a compute shader that finds its buffers by their addresses, on
+	// the shadow maps of a device without ray tracing as well (vk_rt.cpp)
+	{
+		VkPhysicalDeviceVulkan12Features has12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+		VkPhysicalDeviceFeatures2 has = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &has12 };
+
+		qvkGetPhysicalDeviceFeatures2( vk.physicalDevice, &has );
+		vk.deviceAddress = (qboolean)( has12.bufferDeviceAddress != VK_FALSE );
+		f12.bufferDeviceAddress = has12.bufferDeviceAddress;
+	}
+	if ( vk.rayTracing ) {
+		extensions[numExtensions++] = VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME;
+		extensions[numExtensions++] = VK_KHR_RAY_QUERY_EXTENSION_NAME;
+		extensions[numExtensions++] = VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME;
+		accel.accelerationStructure = VK_TRUE;
+		query.rayQuery = VK_TRUE;
+		f12.bufferDeviceAddress = VK_TRUE;
+		f13.pNext = &accel;
+	}
 
 	queue.queueFamilyIndex = vk.queueFamily;
 	queue.queueCount = 1;
 	queue.pQueuePriorities = &priority;
 	info.queueCreateInfoCount = 1;
 	info.pQueueCreateInfos = &queue;
-	info.enabledExtensionCount = ARRAY_LEN( extensions );
+	info.enabledExtensionCount = numExtensions;
 	info.ppEnabledExtensionNames = extensions;
 	VK_CHECK( qvkCreateDevice( vk.physicalDevice, &info, NULL, &vk.device ) );
 	VK_LoadDeviceFunctions();
@@ -474,8 +565,14 @@ static VkSampleCountFlagBits VK_SampleCount( void ) {
 
 // the targets of the frame in the size of the window: what the scene and the 2D are drawn into, and the picture
 // after the gamma pass that is copied to the window
+// the format of the frame and of everything the level is drawn into: 16 bit floats with v_hdr (light above 1 stays
+// until the tone map of vk_post.cpp), else 8 bits
+static VkFormat VK_FrameFormat( void ) {
+	return v_hdr->integer ? VK_FORMAT_R16G16B16A16_SFLOAT : VK_FORMAT_R8G8B8A8_UNORM;
+}
+
 static void VK_CreateFrameTargets( void ) {
-	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
+	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FrameFormat(),
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
@@ -485,7 +582,7 @@ static void VK_CreateFrameTargets( void ) {
 			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FrameFormat(), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
@@ -545,12 +642,17 @@ qboolean VK_InitVulkan( void ) {
 	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
+	v_hdr = ri.Cvar_Get( "v_hdr", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"The level is drawn with light brighter than white (16 bit floats), and tone mapped to the screen at its end (v_tonemap, v_exposure): sabers, glows and lamps glow out instead of clipping. 0: 8 bits as rd-vanilla" );
+	v_rayTracing = ri.Cvar_Get( "v_rayTracing", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
+		"Ray tracing where the graphics card has it, for the shadows of the players. 0: off" );
 	if ( VK_InitShared() ) {
 		return qtrue;
 	}
 
 	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
 
+	VK_StageTime( NULL );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 	memset( &vk, 0, sizeof( vk ) );
 	window = ri.WIN_Init( &windowDesc, &glConfig );
@@ -560,6 +662,7 @@ qboolean VK_InitVulkan( void ) {
 	}
 	vk.width = glConfig.vidWidth;
 	vk.height = glConfig.vidHeight;
+	VK_StageTime( "window" );
 
 	if ( !VK_CreateInstance() ) {
 		VK_DestroyInstance();
@@ -574,8 +677,10 @@ qboolean VK_InitVulkan( void ) {
 		VK_DestroyInstance();
 		return qfalse;
 	}
+	VK_StageTime( "instance" );
 	VK_CreateDevice();
 	VK_InitMemory();
+	VK_StageTime( "device" );
 	VK_CreateSwapchain();
 
 	{
@@ -588,12 +693,21 @@ qboolean VK_InitVulkan( void ) {
 	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginRendering()
 	vk.samples = VK_SampleCount();
 	VK_CreateFrameTargets();
+	VK_StageTime( "swapchain and targets" );
 
 	VK_InitPipelines();
+	VK_StageTime( "pipelines" );
 	VK_InitPost();
 	VK_InitFrames();
 	VK_InitImages();
 	VK_InitModels();
+	VK_StageTime( "post, frames, images" );
+	VK_RT_Init();
+	VK_StageTime( "ray tracing and shadow maps" );
+	// the cgame asks for the shadows of the players where the renderer has them (with traced rays, or with shadow maps
+	// where the card has no ray tracing, vk_rt.cpp)
+	ri.Cvar_Get( "v_rtAvailable", "0", CVAR_ROM, "Whether the renderer draws the shadows of the players itself on this graphics card (cg_shadows 2): by rays, or by shadow maps" );
+	ri.Cvar_Set( "v_rtAvailable", VK_RT_Ready() ? "1" : "0" );
 
 	// what the engine, cgame and ui want to know about the renderer
 	Com_sprintf( vk_versionString, sizeof( vk_versionString ), "Vulkan %i.%i.%i", VK_API_VERSION_MAJOR( vk.properties.apiVersion ),
@@ -623,11 +737,14 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	if ( !vk.device ) {
 		return;
 	}
+	VK_StageTime( NULL );
 	qvkDeviceWaitIdle( vk.device );
+	VK_StageTime( "waiting for the device at the end" );
 	if ( !destroyWindow ) {
 		return;
 	}
 
+	VK_RT_Shutdown();
 	VK_ShutdownWorld();
 	VK_ShutdownModels();
 	VK_ShutdownImages();
@@ -640,6 +757,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );
 	qvkDestroyDevice( vk.device, NULL );
 	VK_DestroyInstance();
+	VK_StageTime( "shutdown" );
 }
 
 // The end of the instance and of what hangs on it alone, and of what the renderer knows about the window. Also
@@ -687,8 +805,8 @@ void VK_GfxInfo_f( void ) {
 	// they are kept over a restart of the renderer: a number that grows with every map is a leak
 	ri.Printf( PRINT_ALL, "ghoul2 instances: %i of 1024 slots in use, %i of them without a model\n", G2API_SlotsInUse(),
 		G2API_ListSlots( (qboolean)( ri.Cvar_VariableIntegerValue( "developer" ) != 0 ) ) );
-	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES,
-		numBlockImages, vk.numPipelines, vk.numSamplers );
+	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i (made in %i ms), samplers: %i\n", numImages,
+		VK_MAX_IMAGES, numBlockImages, vk.numPipelines, vk.statPipelineMs, vk.numSamplers );
 	VK_FrameInfo_f();
 	VK_MemoryInfo_f();
 	ri.Printf( PRINT_ALL, "validation layer: %s", vk.validation ? "on" : "off" );

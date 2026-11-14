@@ -39,14 +39,17 @@ BINDING( 0, 0 ) uniform Globals {
 #endif
 
 VARYING( 0 ) flat in uint v_spot;
+VARYING( 1 ) flat in uvec4 v_near;		// the places whose balls touch this one (wet.vert), only they can hold the pixel
 layout( location = 0 ) out vec4 o_color;
 
 #define DARKEN		0.55	// of the colour of soaked ground
 #define UNDER		0.36	//	and of the ground under standing water
 #define MIRROR		0.2		// of the room in standing water seen from above, on top of Fresnel,
 #define MIRROR_VIEW	0.4		//	and where the puddle view gives the whole room, not only what is on the screen
-#define MARCH		32		// steps of the mirrored ray, each longer than the one before: about 2000 units
-#define REFINE		5		//	and halvings where it went behind the scene
+#define MARCH		32		// steps of the mirrored ray in water, each longer than the one before: about 2000 units,
+#define REFINE		5		//	and halvings where it went behind the scene;
+#define BLOOD_MARCH	14		//	in blood, dark and red, fewer and longer (about 600 units)
+#define BLOOD_REFINE	3
 #define JOIN		8.0		// units over which the edges of two places run into one
 #define POOL		0.25	// of the water of the places added up where it stands (one full place: at 0.7 of its radius)
 #define FAR			1e6
@@ -55,22 +58,43 @@ layout( location = 0 ) out vec4 o_color;
 #define WET_FOOT_RIGHT	2
 #define WET_TRACK		4
 #define WET_SNOW		5
+#define WET_BLOOD		6
+#define WET_BLOOD_STREAK	7
+#define WET_BLOOD_FOOT_LEFT	8
+#define WET_BLOOD_FOOT_RIGHT	9
+#define BLOOD_DEEP		vec3( 0.20, 0.008, 0.006 )	// the colour of a pool of blood where it is deep,
+#define BLOOD_THIN		vec3( 0.42, 0.03, 0.02 )	//	of a drop and of the thin edge
 #define SNOW_ALBEDO		vec3( 0.93, 0.95, 0.98 )
 #define SNOW_HOLLOW		vec3( 0.72, 0.81, 0.95 )
 
 #include "scene.glsl"
 
-// what the ray from o along dir meets in the picture, fallback where it leaves it or finds nothing
-vec3 Mirror( vec3 o, vec3 dir, vec3 fallback ) {
+// the lowest bit that is set (bits not 0)
+uint LowBit( uint bits ) {
+#ifdef VK_GLES
+	uint i = 0u;
+	while ( ( bits & 1u ) == 0u ) {
+		bits >>= 1u;
+		i++;
+	}
+	return i;
+#else
+	return uint( findLSB( bits ) );
+#endif
+}
+
+// what the ray from o along dir meets in the picture, fallback where it leaves it or finds nothing; steps that grow
+// by growth each, refine halvings at a hit
+vec3 Mirror( vec3 o, vec3 dir, vec3 fallback, int steps, float growth, int refine ) {
 	vec4 rect = W[8];
 	vec3 q = o;
 	vec3 last = o;
 	float stride = 2.0;
 
-	for ( int i = 0; i < MARCH; i++ ) {
+	for ( int i = 0; i < steps; i++ ) {
 		last = q;
 		q += dir * stride;
-		stride *= 1.18;
+		stride *= growth;
 		vec3 s = OnTarget( q );
 		if ( s.z <= 0.0 || s.x < rect.x || s.y < rect.y || s.x >= rect.x + rect.z || s.y >= rect.y + rect.w ) {
 			break;
@@ -82,7 +106,7 @@ vec3 Mirror( vec3 o, vec3 dir, vec3 fallback ) {
 		}
 		vec3 a = last;
 		vec3 b = q;
-		for ( int k = 0; k < REFINE; k++ ) {
+		for ( int k = 0; k < refine; k++ ) {
 			vec3 m = ( a + b ) * 0.5;
 			vec3 sm = OnTarget( m );
 			if ( sm.z - SceneDistance( sm.xy ) > 0.0 ) {
@@ -152,22 +176,32 @@ bool InPlace( uint j, vec3 p, vec3 surface ) {
 }
 
 void main() {
-	uint count = uint( W[9].w );
 	vec3 eye = W[4].xyz;
 	float time = W[9].z;
 	vec4 rect = W[8];
 
-	// the level under the pixel, and the way its surface faces
+	// the level under the pixel, and the way its surface faces (that from four more depths, so only for a pixel
+	// that lies in the slab of the place at all: not the player who stands in a pool)
 	vec3 p = ScenePoint( gl_FragCoord.xy );
+	vec3 fromSpot = p - W[11u + v_spot * 6u].xyz;
+	if ( abs( dot( fromSpot, W[11u + v_spot * 6u + 1u].xyz ) ) > 3.0 + max( W[11u + v_spot * 6u].w, 1.0 ) * 0.12 ) {
+		discard;
+	}
 	vec3 surface = SceneSurface( gl_FragCoord.xy, p, W[11u + v_spot * 6u + 1u].xyz );
 
 	// the first place that holds the pixel draws it, the others leave it
 	if ( !InPlace( v_spot, p, surface ) ) {
 		discard;
 	}
-	for ( uint j = 0u; j < v_spot; j++ ) {
-		if ( InPlace( j, p, surface ) ) {
-			discard;
+	for ( uint w = 0u; w <= ( v_spot >> 5u ); w++ ) {
+		// (the bits of the places before this one)
+		uint bits = v_near[w] & ( w < ( v_spot >> 5u ) ? 0xffffffffu : ( 1u << ( v_spot & 31u ) ) - 1u );
+		while ( bits != 0u ) {
+			uint j = w * 32u + LowBit( bits );
+			bits &= bits - 1u;
+			if ( InPlace( j, p, surface ) ) {
+				discard;
+			}
 		}
 	}
 
@@ -188,80 +222,137 @@ void main() {
 
 	// all places here: their edges joined, their light and size by how near they are, the slopes of their water
 	float edgeWet = FAR, sizeWet = 0.0, placeWeights = 0.0, weights = 0.0, water = 0.0, fade = 0.0, streak = 0.0, prints = 0.0;
-	float flowNear = 0.0, snow = 0.0, snowHeight = 0.0, snowMelt = 0.0;
+	float flowNear = 0.0, snow = 0.0, snowHeight = 0.0, snowMelt = 0.0, blood = 0.0, bloodDeep = 0.0;
+	// pools of blood run into one as the water places do: their edges joined (bloodEdge), the depth from the nearest
+	float bloodEdge = FAR, bloodRadius = 1.0;
 	vec2 snowAt = vec2( 0.0 );
 	vec3 snowN = vec3( 0.0, 0.0, 1.0 ), snowT = vec3( 1.0, 0.0, 0.0 ), snowB = vec3( 0.0, 1.0, 0.0 );
 	vec3 ambient = vec3( 0.0 ), directed = vec3( 0.0 ), lightDir = vec3( 0.0 );
 	vec2 slope = vec2( 0.0 );
-	for ( uint j = 0u; j < count; j++ ) {
-		if ( !InPlace( j, p, surface ) ) {
-			continue;
-		}
-		uint row = 11u + j * 6u;
-		vec3 centre = W[row].xyz;
-		float radius = max( W[row].w, 1.0 );
-		vec3 nj = W[row + 1u].xyz;
-		float wet = W[row + 1u].w;
-		vec3 hit = W[row + 2u].xyz;
-		float puddle = W[row + 2u].w;
-		float flow = W[row + 3u].w;
-		float seed = W[row + 4u].w;
-		int kind = int( W[row + 5u].w + 0.5 );
-		vec3 rel = p - centre;
-		float off = dot( rel, nj );
-		float thick = 3.0 + radius * 0.12;
-		vec3 planar = rel - nj * off;
-		float r = length( planar );
-		float w = max( 1.0 - r / ( radius * 1.5 ), 0.02 );
-
-		weights += w;
-		ambient += W[row + 3u].rgb * w;
-		directed += W[row + 4u].rgb * w;
-		lightDir += W[row + 5u].xyz * w;
-		fade = max( fade, smoothstep( 0.6, 0.85, dot( surface, nj ) ) * ( 1.0 - smoothstep( thick * 0.6, thick, abs( off ) ) ) );
-
-		if ( kind == WET_RING ) {
-			// a ring that runs out over standing water from where something came into it, slower as it goes: a few
-			// crests that flatten (flow: how far through its life, wet: how strong)
-			float front = radius * ( 1.0 - ( 1.0 - flow ) * ( 1.0 - flow ) );
-			float d = r - front;
-			float width = 2.5 + 5.0 * flow;
-			vec2 out_ = vec2( dot( planar, t ), dot( planar, b ) ) / max( r, 1e-3 );
-			slope += out_ * cos( d * 1.3 ) * exp( -d * d / ( width * width ) ) * wet * ( 1.0 - flow ) * ( 1.0 - flow ) * 0.9;
-			continue;
-		}
-		if ( kind == WET_SNOW ) {
-			// A splat of snow: a lump where it is now and, on a wall, a smear above it from where it hit and slid down
-			// from (hit). Thick in the middle and in clumps, ragged at the edge; it melts from the thin parts in as wet
-			// goes from 1 to 0. The splat that is thickest here draws the pixel.
-			vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
-			vec3 h0 = hit - centre;
-			h0 -= nj * dot( h0, nj );
-			vec2 from = vec2( dot( h0, t ), dot( h0, b ) );
-			vec2 seg = -from;
-			float len2 = dot( seg, seg );
-			float k = len2 > 1e-4 ? clamp( dot( local - from, seg ) / len2, 0.0, 1.0 ) : 1.0;
-			float dSmear = length( local - from - seg * k ) / ( radius * ( 0.3 + 0.45 * k ) );
-			float d = min( length( local * vec2( 1.0, 0.85 ) ) / radius, dSmear );
-			vec2 q = local + seed * 97.0;
-			float height = ( 1.0 - d ) * 1.25 + ( Fbm( q * 0.45 ) - 0.5 ) * 0.9 + ( Noise( q * 1.7 ) - 0.5 ) * 0.12;
-			float melt = ( 1.0 - wet ) * 1.15;
-			float cover = smoothstep( melt, melt + 0.08, height );
-			if ( cover > snow ) {
-				snow = cover;
-				snowHeight = height;
-				snowMelt = melt;
-				snowAt = q;
-				snowN = nj;
-				snowT = t;
-				snowB = b;
+	for ( uint word = 0u; word < 4u; word++ ) {
+		uint bits = v_near[word];
+		while ( bits != 0u ) {
+			uint j = word * 32u + LowBit( bits );
+			bits &= bits - 1u;
+			if ( !InPlace( j, p, surface ) ) {
+				continue;
 			}
-			continue;
-		}
-		if ( kind == WET_TRACK ) {
-			// a piece of the track of a wet tire, from 2 centre - hit to hit, half as wide as seed: the knobs of the
-			// tread wetter than between them, drying from the edge in
-			if ( !wall ) {
+			uint row = 11u + j * 6u;
+			vec3 centre = W[row].xyz;
+			float radius = max( W[row].w, 1.0 );
+			vec3 nj = W[row + 1u].xyz;
+			float wet = W[row + 1u].w;
+			vec3 hit = W[row + 2u].xyz;
+			float puddle = W[row + 2u].w;
+			float flow = W[row + 3u].w;
+			float seed = W[row + 4u].w;
+			int kind = int( W[row + 5u].w + 0.5 );
+			vec3 rel = p - centre;
+			float off = dot( rel, nj );
+			float thick = 3.0 + radius * 0.12;
+			vec3 planar = rel - nj * off;
+			float r = length( planar );
+			float w = max( 1.0 - r / ( radius * 1.5 ), 0.02 );
+
+			weights += w;
+			ambient += W[row + 3u].rgb * w;
+			directed += W[row + 4u].rgb * w;
+			lightDir += W[row + 5u].xyz * w;
+			fade = max( fade, smoothstep( 0.6, 0.85, dot( surface, nj ) ) * ( 1.0 - smoothstep( thick * 0.6, thick, abs( off ) ) ) );
+
+			if ( kind == WET_RING ) {
+				// a ring that runs out over standing water from where something came into it, slower as it goes: a few
+				// crests that flatten (flow: how far through its life, wet: how strong)
+				float front = radius * ( 1.0 - ( 1.0 - flow ) * ( 1.0 - flow ) );
+				float d = r - front;
+				float width = 2.5 + 5.0 * flow;
+				vec2 out_ = vec2( dot( planar, t ), dot( planar, b ) ) / max( r, 1e-3 );
+				slope += out_ * cos( d * 1.3 ) * exp( -d * d / ( width * width ) ) * wet * ( 1.0 - flow ) * ( 1.0 - flow ) * 0.9;
+				continue;
+			}
+			if ( kind == WET_SNOW ) {
+				// A splat of snow: a lump where it is now and, on a wall, a smear above it from where it hit and slid down
+				// from (hit). Thick in the middle and in clumps, ragged at the edge; it melts from the thin parts in as wet
+				// goes from 1 to 0. The splat that is thickest here draws the pixel.
+				vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
+				vec3 h0 = hit - centre;
+				h0 -= nj * dot( h0, nj );
+				vec2 from = vec2( dot( h0, t ), dot( h0, b ) );
+				vec2 seg = -from;
+				float len2 = dot( seg, seg );
+				float k = len2 > 1e-4 ? clamp( dot( local - from, seg ) / len2, 0.0, 1.0 ) : 1.0;
+				float dSmear = length( local - from - seg * k ) / ( radius * ( 0.3 + 0.45 * k ) );
+				float d = min( length( local * vec2( 1.0, 0.85 ) ) / radius, dSmear );
+				vec2 q = local + seed * 97.0;
+				float height = ( 1.0 - d ) * 1.25 + ( Fbm( q * 0.45 ) - 0.5 ) * 0.9 + ( Noise( q * 1.7 ) - 0.5 ) * 0.12;
+				float melt = ( 1.0 - wet ) * 1.15;
+				float cover = smoothstep( melt, melt + 0.08, height );
+				if ( cover > snow ) {
+					snow = cover;
+					snowHeight = height;
+					snowMelt = melt;
+					snowAt = q;
+					snowN = nj;
+					snowT = t;
+					snowB = b;
+				}
+				continue;
+			}
+			if ( kind == WET_BLOOD ) {
+				// A pool of blood (the saber slicing, cgame/cg_slice.c): it runs out to radius as wet goes from 0 to 1, its
+				// edge ragged and rounded as a thick liquid's is, and round it droplets thrown off by the cut, in cells of
+				// two and a half units, fewer and smaller the farther out. Deep in the middle, thin at its edge.
+				vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
+				vec2 q = local + seed * 131.0;
+				float d = r - radius * wet + ( ( Fbm( q * 0.09 ) - 0.47 ) * 0.7 + ( Noise( q * 0.5 ) - 0.5 ) * 0.08 ) * radius;
+				if ( wall && local.y > 0.0 && abs( local.x ) < radius * 0.6 ) {
+					// on a wall some runs go down from it in columns of 2.2 units, the longer the wetter, thinner at the end
+					float col = floor( local.x / 2.2 );
+					float h = fract( sin( col * 12.9898 + seed * 78.233 ) * 43758.5453 );
+					if ( h > 0.6 ) {
+						float run = radius * wet * ( 0.8 + 5.0 * ( h - 0.6 ) );
+						float dx = abs( local.x - ( col + 0.5 ) * 2.2 ) - 0.4 * ( 1.0 - 0.7 * local.y / max( run, 0.01 ) );
+						d = min( d, max( dx, local.y - run ) );
+					}
+				}
+				if ( d < bloodEdge ) {
+					bloodRadius = radius;
+				}
+				bloodEdge = SoftMin( bloodEdge, d, JOIN * 0.6 );
+				// no droplet lies farther out than 1.8 radius (and none is wider than a unit), and deep in the pool the
+				// pool covers all
+				if ( r > radius * 1.8 + 1.5 || d < -0.25 * radius ) {
+					continue;
+				}
+				float cover = 0.0;
+				float deep = 0.0;
+				const float CELL = 2.5;
+				vec2 cell = floor( local / CELL );
+				for ( int cy = -1; cy <= 1; cy++ ) {
+					for ( int cx = -1; cx <= 1; cx++ ) {
+						vec2 c = cell + vec2( cx, cy );
+						uvec3 hs = Pcg3( uvec3( ivec3( ivec2( c ) + 4096, int( seed * 4096.0 ) ) ) );
+						vec3 rs = vec3( hs & 0xffffu ) / 65535.0;
+						vec2 at = ( c + 0.2 + 0.6 * rs.xy ) * CELL;
+						float out_ = length( at ) / ( radius * 1.8 );
+						if ( out_ > 1.0 || rs.z > 0.55 * ( 1.0 - out_ ) * smoothstep( 0.1, 0.5, wet ) ) {
+							continue;
+						}
+						float size = ( 0.25 + 0.65 * fract( rs.z * 13.7 ) ) * ( 1.0 - 0.6 * out_ );
+						cover = max( cover, 1.0 - smoothstep( size - 0.12, size + 0.08, length( local - at ) ) );
+					}
+				}
+				cover *= smoothstep( 0.0, 0.1, wet );
+				if ( cover > blood ) {
+					blood = cover;
+					bloodDeep = deep;
+				}
+				continue;
+			}
+			if ( kind == WET_BLOOD_STREAK ) {
+				// A smear of blood where a cut-off part was dragged over the level (cgame/cg_slice.c): a piece from
+				// 2 centre - hit to hit, puddle its half width, wet how fresh and full it is. Ragged edges, thin streaks
+				// along the way it went, darker down its middle; the pieces of one drag are joined end to end.
 				vec3 b_ = hit - nj * dot( hit - centre, nj );
 				vec3 a_ = centre * 2.0 - b_;
 				vec3 ab = b_ - a_;
@@ -271,68 +362,114 @@ void main() {
 				ap -= nj * dot( ap, nj );
 				float along = dot( ap, dir );
 				float side = dot( ap, cross( nj, dir ) );
-				float d = length( ap - dir * clamp( along, 0.0, len ) ) - seed;
-				float knob = step( 0.32, fract( along / 3.1 + ( side > 0.0 ? 0.5 : 0.0 ) ) );
-				d += ( Noise( uv * 1.2 ) - 0.5 ) * 0.3 * seed + ( 1.0 - wet ) * 0.6 * seed;
-				prints = max( prints, ( 1.0 - smoothstep( -0.15 * seed, 0.1 * seed, d ) ) * smoothstep( 0.0, 0.15, wet ) * ( 0.55 + 0.45 * knob ) );
-			}
-			continue;
-		}
-		if ( kind == WET_FOOT_LEFT || kind == WET_FOOT_RIGHT ) {
-			// the print of a wet foot: it dries from its edge in, the thin arch first
-			if ( !wall ) {
-				float a = seed * 6.2831853;
-				vec3 ahead = vec3( cos( a ), sin( a ), 0.0 );
-				ahead = normalize( ahead - nj * dot( ahead, nj ) );
-				vec3 inside = cross( nj, ahead ) * ( kind == WET_FOOT_LEFT ? -1.0 : 1.0 );
-				float d = Footprint( vec2( dot( planar, ahead ), dot( planar, inside ) ), radius );
-				d += ( Noise( uv * 1.4 + seed * 50.0 ) - 0.5 ) * 0.14 * radius + ( 1.0 - wet ) * 0.3 * radius;
-				prints = max( prints, ( 1.0 - smoothstep( -0.1 * radius, 0.06 * radius, d ) ) * smoothstep( 0.0, 0.15, wet ) );
-			}
-			continue;
-		}
-		edgeWet = SoftMin( edgeWet, r - radius * wet, JOIN );
-		sizeWet += radius * w;
-		placeWeights += w;
-
-		if ( wall ) {
-			// Rivulets that run down from the wet patch: in strips of the wall across, a strip has one or none, where
-			// in the strip, how wide and how far down its hash says. It wanders a little sideways on its way and ends
-			// in a drop that is a little wider. They grow with the patch and dry with it.
-			const float STRIP = 4.5;
-			vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
-			for ( int k = -1; k <= 1; k++ ) {
-				float strip = floor( local.x / STRIP ) + float( k );
-				uvec3 hs = Pcg3( uvec3( ivec3( int( strip ), int( seed * 4096.0 ), 23 ) ) );
-				vec3 rs = vec3( hs & 0xffffu ) / 65535.0;
-				if ( rs.x > 0.5 || abs( strip * STRIP + STRIP * 0.5 ) > radius * 0.8 ) {
-					continue;
+				float half_ = max( puddle, 0.5 );
+				vec2 q = vec2( along, side ) + seed * 97.0;
+				float d = length( ap - dir * clamp( along, 0.0, len ) ) - half_ * ( 0.75 + 0.5 * Fbm( q * 0.12 ) );
+				float lines = Noise( vec2( along * 0.04 + seed * 11.0, side * 1.3 / half_ ) );
+				float cover = ( 1.0 - smoothstep( -0.1 * half_, 0.08 * half_, d ) ) * ( 0.45 + 0.55 * smoothstep( 0.25, 0.7, lines ) );
+				float deep = ( 1.0 - smoothstep( -0.8 * half_, -0.1 * half_, d ) ) * 0.7;
+				cover *= smoothstep( 0.0, 0.15, wet ) * ( 0.6 + 0.4 * wet );
+				if ( cover > blood ) {
+					blood = cover;
+					bloodDeep = deep * wet;
 				}
-				float reach = radius * wet * ( 0.6 + 1.2 * rs.y );
-				float x = ( strip + 0.2 + 0.6 * rs.z ) * STRIP + ( Noise( vec2( local.y * 0.07, strip * 3.1 + seed * 9.0 ) ) - 0.5 ) * 2.4;
-				float width = 0.45 + 0.6 * fract( rs.y * 7.3 );
-				float tip = smoothstep( reach - 3.0, reach - 0.5, local.y ) * ( 1.0 - smoothstep( reach - 0.5, reach + 0.6, local.y ) );
-				float runs = smoothstep( -radius * 0.1, radius * 0.25, local.y ) * ( 1.0 - smoothstep( reach - 0.6, reach + 0.6, local.y ) );
-				float across = 1.0 - smoothstep( width * ( 1.0 + 1.2 * tip ), width * ( 1.0 + 1.2 * tip ) + 0.5, abs( local.x - x ) );
-				streak = max( streak, across * max( runs, tip ) * smoothstep( 0.0, 0.1, wet ) );
+				continue;
 			}
-		} else if ( puddle > 0.0 ) {
-			// standing water adds up: a bump for each place, high in its middle, so between two near ones it fills
-			float x = min( r / radius, 1.0 );
-			water += puddle * ( 1.0 - x * x ) * ( 1.0 - x * x );
+			if ( kind == WET_TRACK ) {
+				// a piece of the track of a wet tire, from 2 centre - hit to hit, half as wide as seed: the knobs of the
+				// tread wetter than between them, drying from the edge in
+				if ( !wall ) {
+					vec3 b_ = hit - nj * dot( hit - centre, nj );
+					vec3 a_ = centre * 2.0 - b_;
+					vec3 ab = b_ - a_;
+					float len = length( ab );
+					vec3 dir = ab / max( len, 1e-3 );
+					vec3 ap = rel + centre - a_;
+					ap -= nj * dot( ap, nj );
+					float along = dot( ap, dir );
+					float side = dot( ap, cross( nj, dir ) );
+					float d = length( ap - dir * clamp( along, 0.0, len ) ) - seed;
+					float knob = step( 0.32, fract( along / 3.1 + ( side > 0.0 ? 0.5 : 0.0 ) ) );
+					d += ( Noise( uv * 1.2 ) - 0.5 ) * 0.3 * seed + ( 1.0 - wet ) * 0.6 * seed;
+					prints = max( prints, ( 1.0 - smoothstep( -0.15 * seed, 0.1 * seed, d ) ) * smoothstep( 0.0, 0.15, wet ) * ( 0.55 + 0.45 * knob ) );
+				}
+				continue;
+			}
+			if ( kind == WET_BLOOD_FOOT_LEFT || kind == WET_BLOOD_FOOT_RIGHT ) {
+				// the print of a foot that stepped in blood: the shape of a wet one, red and thin, the sole fuller than
+				// the arch, fading as wet goes down (cgame/cg_slice.c CG_SliceStep)
+				if ( !wall ) {
+					float a = seed * 6.2831853;
+					vec3 ahead = vec3( cos( a ), sin( a ), 0.0 );
+					ahead = normalize( ahead - nj * dot( ahead, nj ) );
+					vec3 inside = cross( nj, ahead ) * ( kind == WET_BLOOD_FOOT_LEFT ? -1.0 : 1.0 );
+					float d = Footprint( vec2( dot( planar, ahead ), dot( planar, inside ) ), radius );
+					d += ( Noise( uv * 1.6 + seed * 50.0 ) - 0.5 ) * 0.08 * radius + ( 1.0 - wet ) * 0.12 * radius;
+					float cover = ( 1.0 - smoothstep( -0.08 * radius, 0.06 * radius, d ) ) * smoothstep( 0.0, 0.08, wet )
+						* ( 0.75 + 0.25 * wet );
+					if ( cover > blood ) {
+						blood = cover;
+						bloodDeep = 0.15 * wet;
+					}
+				}
+				continue;
+			}
+			if ( kind == WET_FOOT_LEFT || kind == WET_FOOT_RIGHT ) {
+				// the print of a wet foot: it dries from its edge in, the thin arch first
+				if ( !wall ) {
+					float a = seed * 6.2831853;
+					vec3 ahead = vec3( cos( a ), sin( a ), 0.0 );
+					ahead = normalize( ahead - nj * dot( ahead, nj ) );
+					vec3 inside = cross( nj, ahead ) * ( kind == WET_FOOT_LEFT ? -1.0 : 1.0 );
+					float d = Footprint( vec2( dot( planar, ahead ), dot( planar, inside ) ), radius );
+					d += ( Noise( uv * 1.4 + seed * 50.0 ) - 0.5 ) * 0.14 * radius + ( 1.0 - wet ) * 0.3 * radius;
+					prints = max( prints, ( 1.0 - smoothstep( -0.1 * radius, 0.06 * radius, d ) ) * smoothstep( 0.0, 0.15, wet ) );
+				}
+				continue;
+			}
+			edgeWet = SoftMin( edgeWet, r - radius * wet, JOIN );
+			sizeWet += radius * w;
+			placeWeights += w;
 
-			// the rings of the jet run out from where it lands, and close to it the water is all chop (they are not
-			// even: the water lands a little here and a little there, so their phase wanders with the noise of where
-			// they are and of the time)
-			vec3 fromHit = rel - ( hit - centre );
-			vec2 h = vec2( dot( fromHit, t ), dot( fromHit, b ) );
-			float hr = length( h );
-			float wave = hr * 0.75 - time * 9.0 + ( Noise( uv * 0.12 + vec2( time * 0.7, 0.0 ) ) - 0.5 ) * 5.0;
-			float calm = exp( -hr / ( radius * 0.28 ) ) * flow;
-			float chop = flow * ( 1.0 - smoothstep( 2.0, 7.0, hr ) );
-			slope += h / max( hr, 1e-3 ) * cos( wave ) * calm * 0.2;
-			slope += ( vec2( Noise( uv * 0.9 + time * 6.0 ), Noise( uv * 0.9 - time * 6.0 + 13.0 ) ) - 0.5 ) * chop * 0.8;
-			flowNear = max( flowNear, flow * exp( -hr / ( radius * 0.6 ) ) );
+			if ( wall ) {
+				// Rivulets that run down from the wet patch: in strips of the wall across, a strip has one or none, where
+				// in the strip, how wide and how far down its hash says. It wanders a little sideways on its way and ends
+				// in a drop that is a little wider. They grow with the patch and dry with it.
+				const float STRIP = 4.5;
+				vec2 local = vec2( dot( planar, t ), dot( planar, b ) );
+				for ( int k = -1; k <= 1; k++ ) {
+					float strip = floor( local.x / STRIP ) + float( k );
+					uvec3 hs = Pcg3( uvec3( ivec3( int( strip ), int( seed * 4096.0 ), 23 ) ) );
+					vec3 rs = vec3( hs & 0xffffu ) / 65535.0;
+					if ( rs.x > 0.5 || abs( strip * STRIP + STRIP * 0.5 ) > radius * 0.8 ) {
+						continue;
+					}
+					float reach = radius * wet * ( 0.6 + 1.2 * rs.y );
+					float x = ( strip + 0.2 + 0.6 * rs.z ) * STRIP + ( Noise( vec2( local.y * 0.07, strip * 3.1 + seed * 9.0 ) ) - 0.5 ) * 2.4;
+					float width = 0.45 + 0.6 * fract( rs.y * 7.3 );
+					float tip = smoothstep( reach - 3.0, reach - 0.5, local.y ) * ( 1.0 - smoothstep( reach - 0.5, reach + 0.6, local.y ) );
+					float runs = smoothstep( -radius * 0.1, radius * 0.25, local.y ) * ( 1.0 - smoothstep( reach - 0.6, reach + 0.6, local.y ) );
+					float across = 1.0 - smoothstep( width * ( 1.0 + 1.2 * tip ), width * ( 1.0 + 1.2 * tip ) + 0.5, abs( local.x - x ) );
+					streak = max( streak, across * max( runs, tip ) * smoothstep( 0.0, 0.1, wet ) );
+				}
+			} else if ( puddle > 0.0 ) {
+				// standing water adds up: a bump for each place, high in its middle, so between two near ones it fills
+				float x = min( r / radius, 1.0 );
+				water += puddle * ( 1.0 - x * x ) * ( 1.0 - x * x );
+
+				// the rings of the jet run out from where it lands, and close to it the water is all chop (they are not
+				// even: the water lands a little here and a little there, so their phase wanders with the noise of where
+				// they are and of the time)
+				vec3 fromHit = rel - ( hit - centre );
+				vec2 h = vec2( dot( fromHit, t ), dot( fromHit, b ) );
+				float hr = length( h );
+				float wave = hr * 0.75 - time * 9.0 + ( Noise( uv * 0.12 + vec2( time * 0.7, 0.0 ) ) - 0.5 ) * 5.0;
+				float calm = exp( -hr / ( radius * 0.28 ) ) * flow;
+				float chop = flow * ( 1.0 - smoothstep( 2.0, 7.0, hr ) );
+				slope += h / max( hr, 1e-3 ) * cos( wave ) * calm * 0.2;
+				slope += ( vec2( Noise( uv * 0.9 + time * 6.0 ), Noise( uv * 0.9 - time * 6.0 + 13.0 ) ) - 0.5 ) * chop * 0.8;
+				flowNear = max( flowNear, flow * exp( -hr / ( radius * 0.6 ) ) );
+			}
 		}
 	}
 	sizeWet = placeWeights > 0.0 ? sizeWet / placeWeights : 1.0;
@@ -345,7 +482,17 @@ void main() {
 	mask = max( max( mask, streak ), prints * 0.85 );
 	mask *= fade;
 	snow *= fade;
-	if ( max( mask, snow ) <= 0.002 ) {
+	// the pools of blood, joined
+	if ( bloodEdge < FAR * 0.5 ) {
+		float poolCover = 1.0 - smoothstep( -0.05 * bloodRadius, 0.02 * bloodRadius, bloodEdge );
+		float poolDeep = 1.0 - smoothstep( -0.45 * bloodRadius, -0.05 * bloodRadius, bloodEdge );
+		if ( poolCover > blood ) {
+			blood = poolCover;
+		}
+		bloodDeep = max( bloodDeep, poolDeep * poolCover );
+	}
+	blood *= fade;
+	if ( max( max( mask, snow ), blood ) <= 0.002 ) {
 		discard;
 	}
 
@@ -391,7 +538,7 @@ void main() {
 			seen = texture( u_reflect, ( gl_FragCoord.xy + shift ) * W[9].xy ).rgb;
 			mirror = MIRROR_VIEW;
 		} else {
-			seen = Mirror( p + n * 0.5, mirrored, fallback );
+			seen = Mirror( p + n * 0.5, mirrored, fallback, MARCH, 1.18, REFINE );
 		}
 		// the ground under the water, bent a little by the rings
 		vec2 bend = vec2( -dot( water - n, W[6].xyz ), -dot( water - n, W[7].xyz ) ) * 0.015;
@@ -401,6 +548,30 @@ void main() {
 		// the mirror of a real one is seen against ground that is darker than the floors of most levels)
 		vec3 pond = mix( under, seen, clamp( wFresnel * 2.0 + mirror, 0.0, 0.92 ) ) + glint;
 		color = mix( color, pond, pool );
+	}
+
+	// Blood: a thick liquid, nearly flat with a little lumpiness, dark where it is deep, the ground showing through at its
+	// thin edge; a tight shine of the light of the level and a little of the room in it at a low angle
+	if ( blood > 0.002 ) {
+		vec3 bn = normalize( n + ( t * ( Noise( uv * 1.3 ) - 0.5 ) + b * ( Noise( uv * 1.3 + 5.0 ) - 0.5 ) ) * 0.08 );
+		vec3 l2 = normalize( lightDir );
+		vec3 h2 = normalize( l2 - view );
+		float bf = clamp( dot( -view, bn ), 0.0, 1.0 );
+		float bFresnel = 0.03 + 0.97 * pow( 1.0 - bf, 5.0 );
+		vec3 albedo = mix( BLOOD_THIN, BLOOD_DEEP, bloodDeep );
+		vec3 lit = albedo * ( ambient + directed * max( dot( n, l2 ), 0.0 ) );
+		vec3 stain = mix( base * albedo * 2.2, lit, 0.4 + 0.6 * bloodDeep );
+		vec3 shine = directed * pow( clamp( dot( bn, h2 ), 0.0, 1.0 ), 250.0 ) * 2.0 * ( 0.04 + 0.96 * pow( 1.0 - clamp( dot( h2, -view ), 0.0, 1.0 ), 5.0 ) );
+		vec3 room = ( ambient * 0.75 + directed * 0.3 ) * bFresnel * 0.5;
+		// a pool of fresh blood is a dark mirror: the room in it, tinted red, more at a glancing look
+		if ( bloodDeep > 0.05 ) {
+			vec3 mirrored = reflect( view, bn );
+			vec3 fallback = room * 2.0;
+			vec3 seen = Mirror( p + n * 0.5, mirrored, fallback, BLOOD_MARCH, 1.4, BLOOD_REFINE );
+			room = mix( room, seen * vec3( 0.55, 0.12, 0.1 ) * ( 0.12 + 0.88 * bFresnel ), bloodDeep * 0.75 );
+		}
+		color = mix( color, stain + shine + room, blood );
+		mask = max( mask, blood );
 	}
 
 	// Snow over all of it: its clumps as bumps (the slope of their noise), lit as the snow of the ball is (light

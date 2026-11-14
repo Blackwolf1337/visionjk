@@ -1,0 +1,17 @@
+// materials of the material debug menu (v_matdebug) for zz_mat_rail_roof.oshader, read after the shader files
+
+textures/rail/rail_pipe
+{
+	q3map_material HollowMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/rail/rail_pipe
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.5
+		metalness 0.3
+	}
+}

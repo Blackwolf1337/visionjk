@@ -28,6 +28,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static char *s_shaderText;
 
+// VisionJK: where each shader file starts in s_shaderText, for the file a shader came from (R_ShaderTextFile)
+typedef struct {
+	int		start;
+	char	name[MAX_QPATH];
+} shaderTextFile_t;
+static shaderTextFile_t	*shaderTextFiles;
+static int				numShaderTextFiles;
+
 // the shader is parsed into these global variables, then copied into
 // dynamically allocated memory if it is valid.
 static	shaderStage_t	stages[MAX_SHADER_STAGES];
@@ -44,6 +52,11 @@ static	texModInfo_t	texMods[MAX_SHADER_STAGES][TR_MAX_TEXMODS];
 
 #define FILE_HASH_SIZE		1024
 static	shader_t*		hashTable[FILE_HASH_SIZE];
+
+// VisionJK: the materials of the stages while a shader is parsed (stages[i].mat points here), and the table of the
+// finished ones by shader name and number of the stage in the text (R_MaterialFor), on the hunk with the shaders
+static	stageMaterial_t	parseMaterials[MAX_SHADER_STAGES];
+static	stageMaterial_t	*materialHash[FILE_HASH_SIZE];
 
 #define MAX_SHADERTEXT_HASH		2048
 static char **shaderTextHashTable[MAX_SHADERTEXT_HASH] = { 0 };
@@ -1179,6 +1192,321 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 ParseStage
 ===================
 */
+/*
+===================
+ParseMaterialKeyword
+
+VisionJK: the keywords of a stage with a material, as the material tool of jka.vision (site/materials/ of the
+website) writes them, with the names of rend2 so that packs made for it work too:
+	normalHeightMap <image>		a normal map with the height in its alpha, for parallaxDepth
+	rmoMap <image>				roughness, metalness and occlusion in red, green and blue
+	ormMap <image>				the same as occlusion, roughness, metalness
+	roughness <0..1>, gloss <0..1> (1 - roughness), metalness <0..1>, parallaxDepth <depth>
+	parallaxPlane <0..1>		where the polygon lies in the height of the parallax, 0 bottom to 1 top, 0.5 when not
+								given; 1 carves the surface into the polygon, so feet float over its hollows
+and the maps the renderer makes from the texture of the stage when it loads (tr_matgen.cpp, materialGen_t), so a
+material needs no picture files:
+	albedoGen <rrggbb> <delight> <saturation>			the texture with its painted light taken out, tinted
+	normalGen <strength> <blur> <detail> [invert]		bumps from its brightness, the height in alpha
+	rmoGen <variation> <occlusion>						roughness that varies with it, occlusion in its cracks
+and glass, the screen behind the surface bent and tinted (VK_GlassDraw):
+	transmission <0..1>									how much of what is behind shows through, 1 clear glass
+	ior <n>												1.5 glass, 1.33 water, 1.0 nothing bends
+	thickness <units>									0 a thin pane, else a solid of that depth
+	absorption <r g b> <distance>						what is left of each colour after that many units in it
+and more of the surface:
+	clearcoat <amount> [roughness]						a clear coat over it: varnish, lacquer, car paint
+	sheen <r g b> [roughness]							the sheen of cloth at a flat angle
+	anisotropy <-1..1> [degrees]						shine drawn out along a direction: brushed metal
+	emission <r g b> <strength> [threshold]				the parts brighter than threshold give off light
+and real bumps in place of the parallax (Vulkan, a device with tessellation shaders, v_tessellation):
+	tessellation <units> [plane] [pixels]				the triangles cut until an edge is that many pixels (8),
+														each vertex moved by the height of normalHeight times units;
+														plane 0 (default) rises out of the polygon, 1 sinks into it
+rend2's own, read as rend2 does: specMap or specularMap <image> (spec/gloss: F0 in rgb, gloss in alpha),
+specularReflectance <value>, normalScale <x> [y] [height], cloth (sheen of the albedo).
+These (but rend2's) are not rend2's: only in .oshader files, which rend2 does not read (it drops a shader with a word it does
+not know).
+The other material keywords of rend2 are read and left out. 1: it was one of them, 0: it was not, -1: it was
+one but wrong.
+===================
+*/
+static int DefaultStages( image_t *image, int first, int *base );
+
+/*
+===================
+StageMaterial
+
+VisionJK: the material of a stage of the shader being parsed (one of stages[]), made empty the first time
+===================
+*/
+static stageMaterial_t *StageMaterial( shaderStage_t *stage )
+{
+	if ( !stage->mat ) {
+		stageMaterial_t *mat = &parseMaterials[stage - stages];
+
+		memset( mat, 0, sizeof( *mat ) );
+		mat->roughness = 0.8f;
+		mat->parallaxPlane = 0.5f;
+		mat->tessDensity = 8.0f;
+		mat->ior = 1.5f;
+		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
+		mat->absorptionDistance = 64.0f;
+		mat->clearcoatRoughness = 0.1f;
+		mat->sheenRoughness = 0.5f;
+		VectorSet( mat->emission, 1.0f, 1.0f, 1.0f );
+		mat->emissionThreshold = 0.7f;
+		mat->normalScale = 1.0f;
+		R_DefaultMaterialGen( &mat->gen );
+		mat->sourceStage = stage->sourceStage;
+		stage->mat = mat;
+	}
+	return stage->mat;
+}
+
+/*
+===================
+R_MaterialFor
+
+VisionJK: the record of the material of stage sourceStage of the shader text name, which all shaders of that name
+share. create: made from init (copied, NULL for an empty one) when there is none yet; a record that is there keeps
+what it has, so a lightmap variant loaded later does not undo a change of the menu. NULL when there is none and
+create is qfalse.
+===================
+*/
+stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean create, const stageMaterial_t *init )
+{
+	const int hash = generateHashValue( name, FILE_HASH_SIZE );
+	stageMaterial_t *mat;
+
+	for ( mat = materialHash[hash]; mat; mat = mat->next ) {
+		if ( mat->sourceStage == sourceStage && !Q_stricmp( mat->shaderName, name ) ) {
+			return mat;
+		}
+	}
+	if ( !create ) {
+		return NULL;
+	}
+	mat = (stageMaterial_t *)ri.Hunk_Alloc( sizeof( *mat ), h_low );
+	if ( init ) {
+		*mat = *init;
+	} else {
+		memset( mat, 0, sizeof( *mat ) );
+		mat->roughness = 0.8f;
+		mat->parallaxPlane = 0.5f;
+		mat->tessDensity = 8.0f;
+		mat->ior = 1.5f;
+		VectorSet( mat->absorption, 1.0f, 1.0f, 1.0f );
+		mat->absorptionDistance = 64.0f;
+		mat->clearcoatRoughness = 0.1f;
+		mat->sheenRoughness = 0.5f;
+		VectorSet( mat->emission, 1.0f, 1.0f, 1.0f );
+		mat->emissionThreshold = 0.7f;
+		mat->normalScale = 1.0f;
+		R_DefaultMaterialGen( &mat->gen );
+	}
+	Q_strncpyz( mat->shaderName, name, sizeof( mat->shaderName ) );
+	mat->sourceStage = sourceStage;
+	mat->next = materialHash[hash];
+	materialHash[hash] = mat;
+	return mat;
+}
+
+/*
+===================
+R_ShadersNamed
+
+VisionJK: the loaded shaders of that name (its lightmap variants), up to max of them in out; answers how many
+===================
+*/
+int R_ShadersNamed( const char *name, shader_t **out, int max )
+{
+	const int hash = generateHashValue( name, FILE_HASH_SIZE );
+	int count = 0;
+
+	for ( shader_t *sh = hashTable[hash]; sh && count < max; sh = sh->next ) {
+		if ( !Q_stricmp( sh->name, name ) ) {
+			out[count++] = sh;
+		}
+	}
+	return count;
+}
+
+/*
+===================
+R_MaterialStageImage
+
+VisionJK: the texture of a stage with a material: the made albedo where there is one, else the texture it was made
+from (after the albedo was taken off in the menu)
+===================
+*/
+void R_MaterialStageImage( shaderStage_t *stage )
+{
+	const stageMaterial_t *mat = stage->mat;
+	textureBundle_t *bundle = ( stage->bundle[0].isLightmap && stage->bundle[1].image ) ? &stage->bundle[1] : &stage->bundle[0];
+
+	if ( !mat || !mat->baseImage ) {
+		return;
+	}
+	bundle->image = mat->albedoMap ? mat->albedoMap : mat->baseImage;
+}
+
+static int ParseMaterialKeyword( const char *word, const char **text, shaderStage_t *stage )
+{
+	static const char *rend2Only[] = { "specularExponent", "specularScale", "parallaxBias", "rmosMap", "moxrMap", "mosrMap",
+		"ormsMap", NULL };
+	char keyword[MAX_TOKEN_CHARS];	// (word is the buffer of COM_ParseExt, which the parameter overwrites)
+	char *token;
+
+	Q_strncpyz( keyword, word, sizeof( keyword ) );
+
+	for ( int i = 0; rend2Only[i]; i++ ) {
+		if ( !Q_stricmp( keyword, rend2Only[i] ) ) {
+			SkipRestOfLine( text );
+			return 1;
+		}
+	}
+	// rend2's cloth: a word alone, the sheen of the albedo
+	if ( !Q_stricmp( keyword, "cloth" ) ) {
+		stageMaterial_t *mat = StageMaterial( stage );
+
+		if ( !mat->pbr ) {
+			mat->pbr = true;
+			mat->roughness = 0.8f;
+		}
+		mat->sheenAlbedo = true;
+		return 1;
+	}
+	if ( Q_stricmp( keyword, "normalHeightMap" ) && Q_stricmp( keyword, "rmoMap" ) && Q_stricmp( keyword, "ormMap" )
+		&& Q_stricmp( keyword, "clearcoat" ) && Q_stricmp( keyword, "sheen" ) && Q_stricmp( keyword, "anisotropy" )
+		&& Q_stricmp( keyword, "emission" ) && Q_stricmp( keyword, "specMap" ) && Q_stricmp( keyword, "specularMap" )
+		&& Q_stricmp( keyword, "specularReflectance" ) && Q_stricmp( keyword, "normalScale" )
+		&& Q_stricmp( keyword, "roughness" ) && Q_stricmp( keyword, "gloss" ) && Q_stricmp( keyword, "metalness" )
+		&& Q_stricmp( keyword, "parallaxDepth" ) && Q_stricmp( keyword, "parallaxPlane" ) && Q_stricmp( keyword, "albedoGen" )
+		&& Q_stricmp( keyword, "normalGen" ) && Q_stricmp( keyword, "rmoGen" ) && Q_stricmp( keyword, "transmission" )
+		&& Q_stricmp( keyword, "ior" ) && Q_stricmp( keyword, "thickness" ) && Q_stricmp( keyword, "absorption" )
+		&& Q_stricmp( keyword, "tessellation" ) ) {
+		return 0;
+	}
+	stageMaterial_t *mat = StageMaterial( stage );
+	if ( !mat->pbr ) {
+		// a material without a roughness of its own is a dull one
+		mat->pbr = true;
+		mat->roughness = 0.8f;
+	}
+	token = COM_ParseExt( text, qfalse );
+	if ( !token[0] ) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: missing parameter for '%s' keyword in shader '%s'\n", keyword, shader.name );
+		return -1;
+	}
+	if ( !Q_stricmp( keyword, "normalHeightMap" ) || !Q_stricmp( keyword, "rmoMap" ) || !Q_stricmp( keyword, "ormMap" ) ) {
+		image_t *image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+
+		if ( !image ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+		} else if ( !Q_stricmp( keyword, "normalHeightMap" ) ) {
+			mat->normalMap = image;
+			mat->normalHeight = true;
+		} else {
+			mat->rmoMap = image;
+			mat->ormOrder = !Q_stricmp( keyword, "ormMap" );
+		}
+	} else if ( !Q_stricmp( keyword, "roughness" ) ) {
+		mat->roughness = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "gloss" ) ) {
+		mat->roughness = Com_Clamp( 0.0f, 1.0f, 1.0f - atof( token ) );
+	} else if ( !Q_stricmp( keyword, "metalness" ) ) {
+		mat->metalness = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "parallaxPlane" ) ) {
+		mat->parallaxPlane = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "albedoGen" ) ) {
+		const unsigned rgb = (unsigned)strtoul( token, NULL, 16 );
+
+		mat->gen.flags |= MATGEN_ALBEDO;
+		mat->gen.tint[0] = ( ( rgb >> 16 ) & 255 ) / 255.0f;
+		mat->gen.tint[1] = ( ( rgb >> 8 ) & 255 ) / 255.0f;
+		mat->gen.tint[2] = ( rgb & 255 ) / 255.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.delight = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.saturation = token[0] ? Com_Clamp( 0.0f, 2.0f, atof( token ) ) : 1.0f;
+	} else if ( !Q_stricmp( keyword, "normalGen" ) ) {
+		mat->gen.flags |= MATGEN_NORMAL;
+		mat->gen.normalStrength = Com_Clamp( 0.0f, 8.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.normalBlur = token[0] ? Com_Clamp( 0.0f, 8.0f, atof( token ) ) : 1.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.normalDetail = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.3f;
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.normalInvert = !Q_stricmp( token, "invert" ) ? qtrue : qfalse;
+	} else if ( !Q_stricmp( keyword, "clearcoat" ) ) {
+		mat->clearcoat = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->clearcoatRoughness = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.1f;
+	} else if ( !Q_stricmp( keyword, "sheen" ) ) {
+		mat->sheen[0] = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		for ( int c = 1; c < 3; c++ ) {
+			token = COM_ParseExt( text, qfalse );
+			mat->sheen[c] = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : mat->sheen[0];
+		}
+		token = COM_ParseExt( text, qfalse );
+		mat->sheenRoughness = token[0] ? Com_Clamp( 0.05f, 1.0f, atof( token ) ) : 0.5f;
+	} else if ( !Q_stricmp( keyword, "anisotropy" ) ) {
+		mat->anisotropy = Com_Clamp( -1.0f, 1.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->anisotropyRotation = token[0] ? atof( token ) : 0.0f;
+	} else if ( !Q_stricmp( keyword, "emission" ) ) {
+		mat->emission[0] = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		for ( int c = 1; c < 3; c++ ) {
+			token = COM_ParseExt( text, qfalse );
+			mat->emission[c] = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : mat->emission[0];
+		}
+		token = COM_ParseExt( text, qfalse );
+		mat->emissionStrength = token[0] ? Com_Clamp( 0.0f, 16.0f, atof( token ) ) : 1.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->emissionThreshold = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.7f;
+	} else if ( !Q_stricmp( keyword, "specMap" ) || !Q_stricmp( keyword, "specularMap" ) ) {
+		mat->specGlossMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+		if ( !mat->specGlossMap ) {
+			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+		}
+	} else if ( !Q_stricmp( keyword, "specularReflectance" ) ) {
+		mat->specularReflectance = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "normalScale" ) ) {
+		// rend2 gives x, y and the height; one strength for the bumps here
+		mat->normalScale = Com_Clamp( 0.0f, 8.0f, atof( token ) );
+		SkipRestOfLine( text );
+	} else if ( !Q_stricmp( keyword, "transmission" ) ) {
+		mat->transmission = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "ior" ) ) {
+		mat->ior = Com_Clamp( 1.0f, 3.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "thickness" ) ) {
+		mat->thickness = Com_Clamp( 0.0f, 512.0f, atof( token ) );
+	} else if ( !Q_stricmp( keyword, "absorption" ) ) {
+		mat->absorption[0] = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		for ( int c = 1; c < 3; c++ ) {
+			token = COM_ParseExt( text, qfalse );
+			mat->absorption[c] = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : mat->absorption[0];
+		}
+		token = COM_ParseExt( text, qfalse );
+		mat->absorptionDistance = token[0] ? Com_Clamp( 1.0f, 4096.0f, atof( token ) ) : 64.0f;
+	} else if ( !Q_stricmp( keyword, "rmoGen" ) ) {
+		mat->gen.flags |= MATGEN_RMO;
+		mat->gen.rmoVariation = Com_Clamp( 0.0f, 1.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->gen.rmoOcclusion = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
+	} else if ( !Q_stricmp( keyword, "tessellation" ) ) {
+		mat->tessHeight = Com_Clamp( 0.0f, 64.0f, atof( token ) );
+		token = COM_ParseExt( text, qfalse );
+		mat->tessPlane = token[0] ? Com_Clamp( 0.0f, 1.0f, atof( token ) ) : 0.0f;
+		token = COM_ParseExt( text, qfalse );
+		mat->tessDensity = token[0] ? Com_Clamp( 2.0f, 64.0f, atof( token ) ) : 8.0f;
+	} else {
+		mat->parallaxDepth = Com_Clamp( 0.0f, 0.2f, atof( token ) );
+	}
+	return 1;
+}
+
 static qboolean ParseStage( shaderStage_t *stage, const char **text )
 {
 	char *token;
@@ -1199,6 +1527,16 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		if ( token[0] == '}' )
 		{
 			break;
+		}
+		//
+		// VisionJK: the keywords of a material (normalHeightMap, rmoMap, roughness, ...)
+		//
+		else if ( int material = ParseMaterialKeyword( token, text, stage ) )
+		{
+			if ( material < 0 )
+			{
+				return qfalse;
+			}
 		}
 		//
 		// map <name>
@@ -1254,8 +1592,8 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'normalMap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
-			stage->normalMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
-			if ( !stage->normalMap )
+			StageMaterial( stage )->normalMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+			if ( !stage->mat->normalMap )
 			{
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 			}
@@ -1268,7 +1606,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			for ( int i = 0; i < 3; i++ )
 			{
 				token = COM_ParseExt( text, qfalse );
-				stage->specular[i] = token[0] ? atof( token ) : 0.0f;
+				StageMaterial( stage )->specular[i] = token[0] ? atof( token ) : 0.0f;
 			}
 		}
 		//
@@ -1277,12 +1615,12 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		else if ( !Q_stricmp( token, "wrapLight" ) )
 		{
 			token = COM_ParseExt( text, qfalse );
-			stage->wrapLight = token[0] ? atof( token ) : 0.0f;
+			StageMaterial( stage )->wrapLight = token[0] ? atof( token ) : 0.0f;
 		}
 		else if ( !Q_stricmp( token, "sparkle" ) )
 		{
 			token = COM_ParseExt( text, qfalse );
-			stage->sparkle = token[0] ? atof( token ) : 0.0f;
+			StageMaterial( stage )->sparkle = token[0] ? atof( token ) : 0.0f;
 		}
 		//
 		// clampmap <name>
@@ -2162,6 +2500,7 @@ static qboolean ParseShader( const char **text )
 	char *token;
 	const char *begin = *text;
 	int s;
+	int implicitBase = -1;		// the stage of the texture of implicitMap
 
 	s = 0;
 
@@ -2194,6 +2533,7 @@ static qboolean ParseShader( const char **text )
 				return qfalse;
 			}
 
+			stages[s].sourceStage = s;
 			if ( !ParseStage( &stages[s], text ) )
 			{
 				return qfalse;
@@ -2204,6 +2544,62 @@ static qboolean ParseShader( const char **text )
 				shader.hasGlow = true;
 			}
 			s++;
+			continue;
+		}
+		//
+		// VisionJK: implicitMap <image>, the stages the engine makes for a texture without a shader (R_FindShader),
+		// so that a shader of the material tool of jka.vision can give such a texture a material; the material
+		// keywords after it in the shader are the ones of the stage of that texture
+		//
+		else if ( !Q_stricmp( token, "implicitMap" ) )
+		{
+			char name[MAX_QPATH];
+			image_t *image;
+
+			token = COM_ParseExt( text, qfalse );
+			COM_StripExtension( token[0] == '-' || !token[0] ? shader.name : token, name, sizeof( name ) );
+			image = R_FindImageFile( name, qtrue, qtrue, qtrue, GL_REPEAT );
+			if ( !image ) {
+				ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", name, shader.name );
+				return qfalse;
+			}
+			if ( s + 2 > MAX_SHADER_STAGES ) {
+				ri.Printf( PRINT_WARNING, "WARNING: too many stages in shader %s (max is %i)\n", shader.name, MAX_SHADER_STAGES );
+				return qfalse;
+			}
+			s += DefaultStages( image, s, &implicitBase );
+			continue;
+		}
+		else if ( implicitBase >= 0 && !Q_stricmp( token, "normalMap" ) )
+		{
+			token = COM_ParseExt( text, qfalse );
+			StageMaterial( &stages[implicitBase] )->normalMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+			continue;
+		}
+		else if ( implicitBase >= 0 && ParseMaterialKeyword( token, text, &stages[implicitBase] ) )
+		{
+			continue;
+		}
+		//
+		// VisionJK: emissive <light> [<r> <g> <b>] [noshadows], what the surface gives off as light for the shadows
+		// of the renderer, in the units of q3map_surfacelight; 0 for a surface that gives none
+		//
+		else if ( !Q_stricmp( token, "emissive" ) )
+		{
+			shader.emissiveSet = true;
+			shader.emissiveShadows = true;
+			VectorSet( shader.emissive, 1.0f, 1.0f, 1.0f );
+			// (an empty word is the end of the line: one more read would take the first word of the next one)
+			token = COM_ParseExt( text, qfalse );
+			shader.emissive[3] = atof( token );
+			for ( int i = 0; i < 4 && token[0]; i++ ) {
+				token = COM_ParseExt( text, qfalse );
+				if ( !Q_stricmp( token, "noshadows" ) ) {
+					shader.emissiveShadows = false;
+				} else if ( token[0] && i < 3 ) {
+					shader.emissive[i] = atof( token );
+				}
+			}
 			continue;
 		}
 		// skip stuff that only the QuakeEdRadient needs
@@ -2253,6 +2649,7 @@ static qboolean ParseShader( const char **text )
 		{
 			token = COM_ParseExt( text, qfalse );
 			tr.sunSurfaceLight = atoi( token );
+			shader.surfaceLight = (float)atof( token );
 		}
 		else if ( !Q_stricmp( token, "lightColor" ) )
 		{
@@ -2580,6 +2977,12 @@ static qboolean CollapseMultitexture( void ) {
 		tmpBundle = stages[0].bundle[0];
 		stages[0].bundle[0] = stages[1].bundle[0];
 		stages[0].bundle[1] = tmpBundle;
+		// VisionJK: and the material of the stage of the texture with it
+		stages[0].sourceStage = stages[1].sourceStage;
+		if ( stages[1].mat )
+		{
+			stages[0].mat = stages[1].mat;
+		}
 	}
 	else
 	{
@@ -2682,6 +3085,12 @@ static void FixRenderCommandList( int newShader ) {
 					curCmd = (const void *)(sb_cmd + 1);
 					break;
 					}
+				case RC_DRAW_TRIS_2D:
+					{
+					const drawTris2DCommand_t *tc_cmd = (const drawTris2DCommand_t *)curCmd;
+					curCmd = (const void *)(tc_cmd + 1);
+					break;
+					}
 				case RC_END_OF_LIST:
 				default:
 					return;
@@ -2769,6 +3178,18 @@ static shader_t *GeneratePermanentShader( void ) {
 			break;
 		}
 		newShader->stages[i] = stages[i];
+		if ( stages[i].mat ) {
+			// VisionJK: the record all shaders of this name share, its made maps made once for all of them
+			stageMaterial_t *mat = R_MaterialFor( newShader->name, stages[i].mat->sourceStage, qtrue, stages[i].mat );
+
+			newShader->stages[i].mat = mat;
+			if ( mat->gen.flags && !mat->genDone ) {
+				const textureBundle_t *bundle = ( stages[i].bundle[0].isLightmap && stages[i].bundle[1].image ) ? &stages[i].bundle[1] : &stages[i].bundle[0];
+
+				R_MakeMaterialMaps( mat, bundle->image );
+			}
+			R_MaterialStageImage( &newShader->stages[i] );
+		}
 
 		for ( b = 0 ; b < NUM_TEXTURE_BUNDLES ; b++ ) {
 			if (newShader->stages[i].bundle[b].numTexMods)
@@ -2917,6 +3338,132 @@ Returns a freshly allocated shader with all the needed info
 from the current global working shader
 =========================
 */
+/*
+===================
+AutoMaterial
+
+VisionJK (v_autoMaterials): a plain surface of the level, its texture times its lightmap in one stage, that has no
+material of a shader file gets one made from its texture (tr_automat.cpp). Shaders with more stages, blends, glows,
+moving or generated texture coordinates, lamps, skies and fog are left as they are.
+===================
+*/
+// the shader being parsed is a plain surface of the level: its texture times its lightmap in one stage
+static qboolean PlainLitShader( void ) {
+	const shaderStage_t *st = &stages[0];
+
+	if ( shader.numUnfoggedPasses != 1 || shader.lightmapIndex[0] < 0 || shader.sort != SS_OPAQUE || shader.sky
+		|| ( shader.surfaceFlags & ( SURF_SKY | SURF_NODRAW ) ) || ( shader.contentFlags & CONTENTS_FOG ) ) {
+		return qfalse;
+	}
+	return (qboolean)( st->active && !st->glow && !st->glowOnly && !st->bundle[0].isLightmap && st->bundle[0].image
+		&& st->bundle[1].image && st->bundle[1].isLightmap && shader.multitextureEnv == GL_MODULATE
+		&& st->bundle[0].tcGen == TCGEN_TEXTURE && !st->bundle[0].numTexMods && st->bundle[0].numImageAnimations <= 1
+		&& !st->bundle[0].isVideoMap && !( st->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) );
+}
+
+/*
+===================
+LampPanel
+
+VisionJK: whether the shader being parsed is a lamp of the level (shader.lampPanel): one the map was lit with
+(q3map_surfacelight, emissive), or a plain lit surface whose texture is named as a lamp and is bright. Its glow
+comes from v_panelGlow (AutoMaterial), its light on the players from vk_rt.cpp (v_panelLight).
+===================
+*/
+static const char *lampWords[] = { "light", "lamp", "fluor", "neon", "glow", "bulb", "lite" };
+// (and not a light coloured surface: "concrete_floor_light" of ffa3)
+static const char *lampNotWords[] = { "glass", "window", "water", "sky", "fog", "decal", "flare", "spot", "beam", "shaft",
+	"floor", "concrete", "stone", "wall", "sand", "rock", "metal", "wood", "brick", "tile", "ground", "dirt", "marble", "plaster" };
+
+static qboolean LampPanel( const char **why ) {
+	const image_t *image = stages[0].bundle[0].image;
+	char name[MAX_QPATH];
+	qboolean named = qfalse;
+
+	if ( shader.sky || ( shader.surfaceFlags & ( SURF_SKY | SURF_NODRAW ) ) || ( shader.contentFlags & CONTENTS_FOG )
+		|| shader.sort == SS_PORTAL ) {
+		return qfalse;
+	}
+	if ( shader.surfaceLight > 0.0f ) {
+		*why = "q3map_surfacelight";
+		return qtrue;
+	}
+	if ( shader.emissiveSet && shader.emissive[3] > 0.0f ) {
+		*why = "emissive";
+		return qtrue;
+	}
+	if ( !PlainLitShader() || !image || image->averageLuma < 0.5f ) {
+		return qfalse;
+	}
+	Q_strncpyz( name, shader.name, sizeof( name ) );
+	Q_strlwr( name );
+	for ( size_t i = 0; i < ARRAY_LEN( lampNotWords ); i++ ) {
+		if ( strstr( name, lampNotWords[i] ) ) {
+			return qfalse;
+		}
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( lampWords ); i++ ) {
+		named = (qboolean)( named || strstr( name, lampWords[i] ) );
+	}
+	if ( named ) {
+		*why = "named as a lamp and bright";
+	}
+	return named;
+}
+
+static void AutoMaterial( void ) {
+	shaderStage_t *st = &stages[0];
+	const image_t *image = st->bundle[0].image;
+	autoMaterial_t made;
+
+	if ( shader.lampPanel ) {
+		// a lamp glows: the bright parts of its texture give off light, as strong as v_panelGlow says (from then on
+		// at once, vk_shade.cpp), a smooth surface; with HDR they go past white and glow out
+		if ( !PlainLitShader() || st->mat ) {
+			return;
+		}
+		stageMaterial_t *mat = StageMaterial( st );
+
+		mat->pbr = true;
+		mat->autoMade = true;
+		mat->autoLamp = true;
+		mat->roughness = 0.3f;
+		mat->metalness = 0.0f;
+		VectorSet( mat->emission, 1.0f, 1.0f, 1.0f );
+		mat->emissionStrength = v_panelGlow ? Com_Clamp( 0.0f, 16.0f, v_panelGlow->value ) : 2.0f;
+		mat->emissionThreshold = 0.5f;
+		mat->gen.flags = 0;
+		return;
+	}
+	if ( !v_autoMaterials || !v_autoMaterials->integer || !PlainLitShader() || shader.surfaceLight > 0.0f || shader.emissiveSet
+		|| st->mat ) {
+		return;
+	}
+	// (the maps are made from the file, which has to be a power of two)
+	if ( image->imgName[0] == '*' || ( image->width & ( image->width - 1 ) ) || ( image->height & ( image->height - 1 ) ) ) {
+		return;
+	}
+	if ( !R_AutoMaterialClass( shader.name, image, &made ) ) {
+		return;
+	}
+
+	stageMaterial_t *mat = StageMaterial( st );
+
+	mat->pbr = true;
+	mat->autoMade = true;
+	mat->roughness = made.roughness;
+	mat->metalness = made.metalness;
+	mat->gen.flags = MATGEN_NORMAL;
+	mat->gen.normalStrength = made.normalStrength;
+	mat->gen.normalBlur = 2.0f;
+	mat->gen.normalDetail = 0.3f;
+	if ( made.rmoVariation > 0.0f || made.rmoOcclusion > 0.0f ) {
+		mat->gen.flags |= MATGEN_RMO;
+		mat->gen.rmoVariation = made.rmoVariation;
+		mat->gen.rmoOcclusion = made.rmoOcclusion;
+	}
+}
+
 static shader_t *FinishShader( void ) {
 	int				stage, lmStage, stageIndex; //rwwRMG - stageIndex for AGEN_BLEND
 	qboolean		hasLightmapStage;
@@ -3238,6 +3785,15 @@ static shader_t *FinishShader( void ) {
 		}
 	}
 
+	{
+		const char *why = NULL;
+
+		shader.lampPanel = (bool)LampPanel( &why );
+		if ( shader.lampPanel && shader.lightmapIndex[0] >= 0 ) {
+			ri.Printf( PRINT_DEVELOPER, "lamp panel: %s (%s)\n", shader.name, why );
+		}
+	}
+	AutoMaterial();
 	return GeneratePermanentShader();
 }
 
@@ -3255,6 +3811,67 @@ return NULL if not found
 If found, it will return a valid shader
 =====================
 */
+static const char *FindShaderInShaderText( const char *shadername );
+
+/*
+===============
+R_ShaderTextOf
+
+VisionJK: the text of the shader of that name as it is loaded (from its '{' on, comments taken out), NULL when it
+has none; *file is the shader file it came from (e.g. "desert.shader")
+===============
+*/
+const char *R_ShaderTextOf( const char *name, const char **file )
+{
+	const char *text = FindShaderInShaderText( name );
+
+	*file = "";
+	if ( text && shaderTextFiles ) {
+		const int at = (int)( text - s_shaderText );
+
+		for ( int i = 0; i < numShaderTextFiles; i++ ) {
+			if ( shaderTextFiles[i].start <= at ) {
+				*file = shaderTextFiles[i].name;
+			}
+		}
+	}
+	return text;
+}
+
+/*
+===============
+R_CheckShaderText
+
+VisionJK: the text of a shader (its name, then its braces) parsed as a shader of that lightmap would be, without
+making one: qfalse and err when it does not parse. *materials is the material of each source stage it gives, NULL
+where it gives none (pointers into the globals of the parse, valid until the next shader is parsed).
+===============
+*/
+qboolean R_CheckShaderText( const char *text, const int *lightmapIndex, const stageMaterial_t **materials, char *err, int errSize )
+{
+	const char *p = text;
+	char *token;
+
+	ClearGlobalShader();
+	token = COM_ParseExt( &p, qtrue );
+	Q_strncpyz( shader.name, token, sizeof( shader.name ) );
+	memcpy( shader.lightmapIndex, lightmapIndex, sizeof( shader.lightmapIndex ) );
+	memcpy( shader.styles, stylesDefault, sizeof( shader.styles ) );
+	for ( int i = 0; i < MATERIAL_MAX_STAGES; i++ ) {
+		materials[i] = NULL;
+	}
+	if ( !ParseShader( &p ) ) {
+		Com_sprintf( err, errSize, "the text of %s does not parse, the console says why", shader.name );
+		return qfalse;
+	}
+	for ( int i = 0; i < MAX_SHADER_STAGES; i++ ) {
+		if ( stages[i].active && stages[i].mat && stages[i].mat->sourceStage >= 0 && stages[i].mat->sourceStage < MATERIAL_MAX_STAGES ) {
+			materials[stages[i].mat->sourceStage] = stages[i].mat;
+		}
+	}
+	return qtrue;
+}
+
 static const char *FindShaderInShaderText( const char *shadername ) {
 	char *token;
 	const char *p;
@@ -3416,6 +4033,76 @@ static inline const int *R_FindLightmap( const int *lightmapIndex )
 
 /*
 ===============
+DefaultStages
+
+The stages of a texture that has no shader, by how the surface is lit (R_FindShader), from stages[first] on. Answers
+how many there are; *base is the one of the texture.
+===============
+*/
+static int DefaultStages( image_t *image, int first, int *base )
+{
+	stages[first].sourceStage = first;
+	stages[first + 1].sourceStage = first + 1;
+	if ( shader.lightmapIndex[0] == LIGHTMAP_NONE ) {
+		// dynamic colors at vertexes
+		stages[first].bundle[0].image = image;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_LIGHTING_DIFFUSE;
+		stages[first].stateBits = GLS_DEFAULT;
+	} else if ( shader.lightmapIndex[0] == LIGHTMAP_BY_VERTEX ) {
+		// explicit colors at vertexes
+		stages[first].bundle[0].image = image;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_EXACT_VERTEX;
+		stages[first].alphaGen = AGEN_SKIP;
+		stages[first].stateBits = GLS_DEFAULT;
+	} else if ( shader.lightmapIndex[0] == LIGHTMAP_2D ) {
+		// GUI elements
+		stages[first].bundle[0].image = image;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_VERTEX;
+		stages[first].alphaGen = AGEN_VERTEX;
+		stages[first].stateBits = GLS_DEPTHTEST_DISABLE |
+			  GLS_SRCBLEND_SRC_ALPHA |
+			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+	} else if ( shader.lightmapIndex[0] == LIGHTMAP_WHITEIMAGE ) {
+		// fullbright level
+		stages[first].bundle[0].image = tr.whiteImage;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_IDENTITY_LIGHTING;
+		stages[first].stateBits = GLS_DEFAULT;
+
+		stages[first + 1].bundle[0].image = image;
+		stages[first + 1].active = qtrue;
+		stages[first + 1].rgbGen = CGEN_IDENTITY;
+		stages[first + 1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+	} else {
+		// two pass lightmap
+		stages[first].bundle[0].image = tr.lightmaps[shader.lightmapIndex[0]];
+		stages[first].bundle[0].isLightmap = qtrue;
+		stages[first].active = qtrue;
+		stages[first].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation
+													// for identitylight
+		stages[first].stateBits = GLS_DEFAULT;
+
+		stages[first + 1].bundle[0].image = image;
+		stages[first + 1].active = qtrue;
+		stages[first + 1].rgbGen = CGEN_IDENTITY;
+		stages[first + 1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
+	}
+	if ( shader.lightmapIndex[0] == LIGHTMAP_WHITEIMAGE || shader.lightmapIndex[0] >= 0 ) {
+		*base = first + 1;
+		return 2;
+	}
+	// the stage of the texture has the same number with and without a lightmap, so all shaders of that name share
+	// its material (R_MaterialFor)
+	stages[first].sourceStage = first + 1;
+	*base = first;
+	return 1;
+}
+
+/*
+===============
 R_FindShader
 
 Will always return a valid shader, but it might be the
@@ -3538,53 +4225,8 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	//
 	// create the default shading commands
 	//
-	if ( shader.lightmapIndex[0] == LIGHTMAP_NONE ) {
-		// dynamic colors at vertexes
-		stages[0].bundle[0].image = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_LIGHTING_DIFFUSE;
-		stages[0].stateBits = GLS_DEFAULT;
-	} else if ( shader.lightmapIndex[0] == LIGHTMAP_BY_VERTEX ) {
-		// explicit colors at vertexes
-		stages[0].bundle[0].image = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_EXACT_VERTEX;
-		stages[0].alphaGen = AGEN_SKIP;
-		stages[0].stateBits = GLS_DEFAULT;
-	} else if ( shader.lightmapIndex[0] == LIGHTMAP_2D ) {
-		// GUI elements
-		stages[0].bundle[0].image = image;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_VERTEX;
-		stages[0].alphaGen = AGEN_VERTEX;
-		stages[0].stateBits = GLS_DEPTHTEST_DISABLE |
-			  GLS_SRCBLEND_SRC_ALPHA |
-			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-	} else if ( shader.lightmapIndex[0] == LIGHTMAP_WHITEIMAGE ) {
-		// fullbright level
-		stages[0].bundle[0].image = tr.whiteImage;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_IDENTITY_LIGHTING;
-		stages[0].stateBits = GLS_DEFAULT;
-
-		stages[1].bundle[0].image = image;
-		stages[1].active = qtrue;
-		stages[1].rgbGen = CGEN_IDENTITY;
-		stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-	} else {
-		// two pass lightmap
-		stages[0].bundle[0].image = tr.lightmaps[shader.lightmapIndex[0]];
-		stages[0].bundle[0].isLightmap = qtrue;
-		stages[0].active = qtrue;
-		stages[0].rgbGen = CGEN_IDENTITY;	// lightmaps are scaled on creation
-													// for identitylight
-		stages[0].stateBits = GLS_DEFAULT;
-
-		stages[1].bundle[0].image = image;
-		stages[1].active = qtrue;
-		stages[1].rgbGen = CGEN_IDENTITY;
-		stages[1].stateBits |= GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO;
-	}
+	int base;
+	DefaultStages( image, 0, &base );
 
 	return FinishShader();
 }
@@ -4101,6 +4743,11 @@ a single large text block that can be scanned for shader names
 =====================
 */
 #define	MAX_SHADER_FILES	4096
+static int QDECL CompareFileNames( const void *a, const void *b )
+{
+	return Q_stricmp( *(const char *const *)a, *(const char *const *)b );
+}
+
 static void ScanAndLoadShaderFiles( void )
 {
 	char **shaderFiles, **overrideFiles;
@@ -4135,6 +4782,12 @@ static void ScanAndLoadShaderFiles( void )
 	// name in any .shader file, without a copy of the rest of that file. The text is put together from the last
 	// file to the first and the first shader of a name in it is used, so the overrides go last.
 	overrideFiles = ri.FS_ListFiles( "shaders", ".oshader", &numOverrideFiles );
+	// VisionJK: by name, so of two overrides of one shader the file later in the alphabet wins wherever each lies
+	// (the list comes in the order of the search path, the profile first): zz_mat_*.oshader of the material debug
+	// menu after the others
+	if ( overrideFiles && numOverrideFiles > 1 ) {
+		qsort( overrideFiles, numOverrideFiles, sizeof( overrideFiles[0] ), CompareFileNames );
+	}
 	for ( i = 0; i < numOverrideFiles && numShaderFiles < MAX_SHADER_FILES; i++ ) {
 		names[numShaderFiles++] = overrideFiles[i];
 	}
@@ -4211,19 +4864,24 @@ static void ScanAndLoadShaderFiles( void )
 	s_shaderText[ 0 ] = '\0';
 	textEnd = s_shaderText;
 
-	// free in reverse order, so the temp files are all dumped
+	// free in reverse order, so the temp files are all dumped. VisionJK: each file is compressed on its own (as the
+	// whole text was before), so where it starts in the text is known
+	shaderTextFiles = (shaderTextFile_t *)ri.Hunk_Alloc( sizeof( *shaderTextFiles ) * Q_max( numShaderFiles, 1 ), h_low );
+	numShaderTextFiles = 0;
 	for ( i = numShaderFiles - 1; i >= 0 ; i-- )
 	{
 		if ( !buffers[i] )
 			continue;
 
+		COM_CompressShader( buffers[i] );
+		shaderTextFiles[numShaderTextFiles].start = (int)( textEnd - s_shaderText );
+		Q_strncpyz( shaderTextFiles[numShaderTextFiles].name, names[i], sizeof( shaderTextFiles[0].name ) );
+		numShaderTextFiles++;
 		strcat( textEnd, buffers[i] );
 		strcat( textEnd, "\n" );
 		textEnd += strlen( textEnd );
 		ri.FS_FreeFile( buffers[i] );
 	}
-
-	COM_CompressShader( s_shaderText );
 
 	// free up memory
 	ri.FS_FreeFileList( shaderFiles );
@@ -4338,6 +4996,7 @@ void R_InitShaders(qboolean server)
 	//ri.Printf( PRINT_ALL, "Initializing Shaders\n" );
 
 	memset(hashTable, 0, sizeof(hashTable));
+	memset(materialHash, 0, sizeof(materialHash));
 
 	if ( !server )
 	{

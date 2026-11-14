@@ -58,6 +58,8 @@ typedef VkBufferUsageFlags	vkBufferUsage_t;
 #define VKB_VERTEXES		( VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT )
 #define VKB_INDEXES			( VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT )
 #define VKB_STAGING			VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+// the vertices of the models, which the shadows of the players also read by their address (vk_rt.cpp)
+#define VKB_MODELS			( VKB_VERTEXES | ( vk.deviceAddress ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0 ) )
 
 typedef struct vkAlloc_s {
 	int				block;			// -1: nothing allocated
@@ -87,12 +89,24 @@ typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the
 	vkAlloc_t		alloc;
 } vkDeviceImage_t;
 
+#define VK_GPU_MARKS		48			// timestamps in one frame
+
 typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	VkCommandBuffer	cmd;
+	// the copy into the image of the window alone, submitted after cmd: only it waits until that image is free
+	// (a wait of the whole frame held its first copy of an image, a millisecond and more wherever it fell)
+	VkCommandBuffer	presentCmd;
 	VkFence			fence;
 	VkSemaphore		acquired;
 	VkDescriptorSet	set;			// globals, transforms and draws of this frame
 	vkBuffer_t		probes;			// 4 bytes of depth per probe, written by the device
+	// v_gpuTimes: a timestamp at each VK_GpuMark() of the frame, read back when the frame comes round again
+	VkQueryPool		timestamps;
+	const char		*markNames[VK_GPU_MARKS];	// what ends at that mark, [0] is the start of the frame
+	int				numMarks;
+	// and how often the fragment shader ran while the level was drawn (VK_LevelFragments)
+	VkQueryPool		fragments;
+	qboolean		fragmentsActive, fragmentsUsed;
 } vkDeviceFrame_t;
 
 // ------------------------------------------------------------------------------------------------------------
@@ -152,6 +166,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkSampler					linearSampler;
 	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
 	qboolean					depthReadable;		// the device lets its format be read in a shader
+	qboolean					rayTracing;			// acceleration structures and ray queries are on (vk_rt.cpp)
+	qboolean					deviceAddress;		// buffers have device addresses (the skinning of the players for their shadows, vk_rt.cpp)
 	VkImageView					depthView;			// of the depth alone, without the stencil
 	VkDescriptorSet				depthSet;
 	// v_wetMirror: the view mirrored at the floor of the puddles (VK_BeginPuddle), traded with color, colorMS, depth
@@ -160,6 +176,15 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				reflectSet;
 	int							reflectFrame;		// frameCount of the view that was drawn last
 	float						reflectHeight;		// the height of its floor
+	// the faces of the reflection probes of the level (VK_BeginProbe, VK_EndProbe): drawn into probeColor and
+	// probeDepth (traded with color and depth as the puddle view), copied to their places in probeAtlas (a probe a row
+	// of six faces, with its smaller levels for rough surfaces), which the texture table shows for tr.probeImage
+	vkTarget_t					probeColor, probeColorMS, probeDepth, probeDepthMS;
+	VkImage						probeAtlas;
+	VkImageView					probeAtlasView;
+	vkAlloc_t					probeAtlasAlloc;
+	int							probeAtlasProbes;	// probes it has room for, 0: there is none
+	qboolean					probesLost;			// the faces that were drawn went with the targets
 	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
 	VkPipelineLayout			scopePipelineLayout;	// four sets of that kind and sixteen numbers (VK_ScopePass)
 	VkDescriptorSet				screenSet;			// vk.screen for it
@@ -175,6 +200,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
+	VkShaderModule				tessControlShader;	// VKP_TESS, with vk.tessellation
+	VkShaderModule				tessEvalShader;
 	VkShaderModule				postVertexShader;
 	VkShaderModule				gammaFragmentShader;
 	VkPipeline					gammaPipeline;
@@ -193,7 +220,23 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					wetPipeline;		// the wet places of RE_AddWet (VK_WetPass)
 	VkPipeline					paintPipeline;		// the sprayed pictures of RE_AddPaint (VK_PaintPass)
 	VkShaderModule				smaaEdgeShader, smaaWeightShader, smaaBlendShader;
+	VkShaderModule				tonemapShader;
+	// v_ssr: the level of this frame with how far each pixel is (alpha), for the screen reflections of the next frame
+	vkTarget_t					ssrColor;
+	float						ssrRows[7][4];		// its view for the globals of the next frame
+	qboolean					ssrReady;
+	int							ssrShown;			// the slot of the texture table it was written into, -1: none
+	VkShaderModule				ssrPrepShader;
+	VkPipeline					ssrPrepPipeline;
+	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)
+	VkPipeline					saberPipeline;
+	VkShaderModule				saberPortalShader;	// the same in a mirror or portal
+	VkPipeline					saberPortalPipeline;
+	VkShaderModule				saberGlowShader;	// and into the buffer of r_DynamicGlow
+	VkPipeline					saberGlowPipeline;
+	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
+	VkPipelineCache				pipelineCache;		// kept in the profile, see VK_LoadPipelineCache()
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered
@@ -223,6 +266,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkBuffer					boundIndexBuffer;
 
 	int							statSwapchains;		// how many swapchains this window has had
+	int							statPipelineMs;		// how long making the pipelines of VK_FindPipeline took, all together
 	int							statFramesNotShown;	// frames that found no image of the swapchain to go to
 
 	qboolean					validation;
@@ -254,6 +298,7 @@ void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat forma
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
+void		VK_ShowImage( int slot, VkImageView view, qboolean mipmapped );
 void		VK_DestroyPostTargets( void );
 // the targets and lookup textures of v_smaa, once until VK_DestroyPostTargets()
 void		VK_CreateSmaaTargets( void );
@@ -264,7 +309,26 @@ void		VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkI
 void		VK_InitPipelines( void );
 void		VK_ShutdownPipelines( void );
 VkPipeline	VK_FindPipeline( vkProgram_t program, uint32_t stateBits );
+VkShaderModule VK_CreateShader( const uint32_t *code, size_t size );
+// post: 0 a stage of the level, else one of the passes (see there); layout: one of its own instead of the one post has
+VkPipeline	VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program,
+				VkPipelineLayout layout = VK_NULL_HANDLE );
+
+// vk_rt.cpp
+void		VK_RT_Init( void );
+void		VK_RT_Shutdown( void );
+qboolean	VK_RT_Wanted( void );
+// the shadows of the players can be drawn on this device (by rays or by shadow maps)
+qboolean	VK_RT_Ready( void );
+// the channel of the mask of the shadows from the moving lights for dl (1, 2, 0: none) and its slot in the texture table
+int			VK_RT_LightChannel( const dlight_t *dl, uint32_t *slot );
+void		VK_RT_Pass( void );
+void		VK_RT_AddCaster( CBoneCache *bones, const mdxmSurface_t *surface );
+void		VK_RT_ModelsChanged( void );
+void		VK_RT_SunChanged( void );
 
 // vk_cmd.cpp
+// begins vk.color over the level with the depth of the scene only read, for the passes over it (VK_WetPass)
+void		VK_BeginOverLevel( VkCommandBuffer cmd, const int *area = NULL, qboolean glow = qfalse );	// area: x, y, width, height from the upper left, NULL all; glow: into vk.glow
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );

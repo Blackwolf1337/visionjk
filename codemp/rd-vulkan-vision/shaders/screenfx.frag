@@ -41,6 +41,7 @@ BINDING( 0, 0 ) uniform Globals {
 #define GHOSTSMOKE	7.0
 #define DROP		8.0
 #define SNOW		9.0
+#define BLOOD		10.0
 
 VARYING( 0 ) in vec2 v_texCoord;
 layout( location = 0 ) out vec4 o_color;
@@ -182,6 +183,9 @@ void main() {
 	float clear = 0.0;		//	but not through a drop, which is a clear lens
 	float snow = 0.0;		// a clump of snow on the view: how much of the pixel it covers,
 	vec3 snowColor = vec3( 0.0 );	//	and its colour
+	float blood = 0.0;		// blood on the view: how much of the pixel it covers,
+	float bloodThick = 0.0;	//	how thick it is there,
+	float bloodFresh = 0.0;	//	and how wet still
 
 	for ( int i = 0; i < SOURCES; i++ ) {
 		if ( i >= count ) {
@@ -234,6 +238,60 @@ void main() {
 				float glint = step( 0.985, Noise( q * 22.0 ) ) * lit;
 				snow = cover;
 				snowColor = albedo * ( 0.45 + 0.65 * lit ) * level + vec3( glint * 0.8 );
+			}
+			continue;
+		}
+
+		// Blood on the view (a cut close by, cgame/cg_slice.c and screenfx/cg_screenfx.c): a splat with a ragged edge
+		// and droplets thrown round it, thick in the middle, a thin trail above where it ran down. Fresh it is a dark
+		// red film that bends the picture a little and shines; drying (strength going) it goes darker and thinner.
+		if ( abs( kind - BLOOD ) < 0.5 ) {
+			vec2 d = ( v_texCoord - ends.xy ) * aspect;
+			float rad = max( size.x, 0.0005 );
+			vec2 q = d / rad + vec2( more.y * 61.0, more.y * 23.0 );
+			float r = length( d / rad );
+			float cover = 0.0, thick = 0.0;
+
+			if ( r < 2.4 ) {
+				float edge = ( Fbm( q * 1.4 ) - 0.5 ) * 0.7 + ( Noise( q * 5.0 ) - 0.5 ) * 0.12;
+				cover = 1.0 - smoothstep( 0.85, 1.0, r + edge );
+				thick = cover * clamp( 1.0 - r - edge * 0.5, 0.0, 1.0 );
+				// droplets thrown round it, fewer and smaller the farther out
+				vec2 qc = d / rad * 2.2;
+				vec2 cell = floor( qc );
+				for ( int cy = -1; cy <= 1; cy++ ) {
+					for ( int cx = -1; cx <= 1; cx++ ) {
+						vec2 c = cell + vec2( cx, cy );
+						vec2 h = fract( sin( vec2( dot( c, vec2( 127.1, 311.7 ) ), dot( c, vec2( 269.5, 183.3 ) ) ) + more.y * 43.0 ) * 43758.5453 );
+						vec2 at = c + 0.2 + 0.6 * h;
+						float out_ = length( at ) / 5.0;
+						if ( out_ > 1.0 || out_ < 0.35 || h.x > 0.8 * ( 1.0 - out_ ) ) {
+							continue;
+						}
+						float s = ( 0.1 + 0.22 * h.y ) * ( 1.0 - 0.5 * out_ );
+						float dot_ = 1.0 - smoothstep( s * 0.75, s, length( qc - at ) );
+						cover = max( cover, dot_ );
+						thick = max( thick, dot_ * 0.6 );
+					}
+				}
+			}
+			// the trail above it, where it ran down
+			if ( size.y > 0.0 && d.y < 0.0 && -d.y < size.y ) {
+				float up = -d.y;
+				float x = d.x - ( Noise( vec2( up / rad * 0.3, more.y * 31.0 ) ) - 0.5 ) * rad * 0.5;
+				float width = rad * ( 0.35 - 0.2 * up / size.y );
+				float line = ( 1.0 - smoothstep( width * 0.6, width, abs( x ) ) ) * ( 1.0 - smoothstep( size.y * 0.6, size.y, up ) );
+				cover = max( cover, line * 0.8 );
+				thick = max( thick, line * 0.35 );
+			}
+			cover *= smoothstep( 0.0, 0.25, size.z );
+			if ( cover > 0.002 ) {
+				offset -= d / aspect * thick * 0.6 * size.z;
+				if ( cover > blood ) {
+					blood = cover;
+					bloodThick = thick;
+					bloodFresh = size.z;
+				}
 			}
 			continue;
 		}
@@ -427,6 +485,15 @@ void main() {
 	}
 	// the snow on the view over it
 	color = mix( color, snowColor, snow );
+	// and blood: the picture seen through a red film, dark where it is thick, a shine on it while it is wet
+	if ( blood > 0.0 ) {
+		// (a red of its own as well, or it only darkens a dark room)
+		vec3 through = color * vec3( 0.85, 0.1, 0.08 ) + vec3( 0.16, 0.004, 0.003 ) * FX[0].z;
+		vec3 dark = vec3( 0.3, 0.012, 0.01 ) * FX[0].z;
+		vec3 film_ = mix( through, dark, clamp( bloodThick * 1.6 + ( 1.0 - bloodFresh ) * 0.5, 0.0, 1.0 ) );
+		float shine = smoothstep( 0.55, 0.95, Noise( ( v_texCoord * aspect ) * 60.0 ) ) * bloodThick * bloodFresh * 0.3;
+		color = mix( color, film_ + vec3( shine ) * FX[0].z, blood * ( 0.8 + 0.2 * bloodFresh ) );
+	}
 
 	// streaks towards the middle of the view, longer towards its edges
 	if ( FX[4].y > 0.0 ) {

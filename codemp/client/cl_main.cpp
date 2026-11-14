@@ -36,6 +36,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
 #include "cl_lan.h"
+#include "cl_imgui.h"
+#include "cl_cache.h"
 #include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
@@ -2502,6 +2504,9 @@ void CL_InitRenderer( void ) {
 
 	cls.cursorShader = re->RegisterShaderNoMip("cursor");
 	cls.menuFont = re->RegisterFont( "ocr_a" );
+
+	// the pictures of the debug menus went with the renderer
+	CL_ImGui_RendererStarted();
 }
 
 /*
@@ -2683,6 +2688,8 @@ void CL_InitRef( void ) {
 	ri.LoadPop = Com_LoadPop;
 	ri.FS_FileSource = FS_FileSource;
 	ri.FontFile = CL_FontFile;
+	ri.Cache_Read = Cache_Read;
+	ri.Cache_Write = Cache_Write;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 
@@ -2845,6 +2852,7 @@ void CL_Init( void ) {
 	cls.realtime = 0;
 
 	CL_InitInput ();
+	Cache_Init();
 
 	//
 	// register our variables
@@ -2962,10 +2970,20 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgamePaint", "1", CVAR_ROM, "" );
 	// and looping sounds at a volume of their own (ext.S_AddLoopingSoundVolume, the motor of the RC car)
 	Cvar_Get( "v_cgameLoopVolume", "1", CVAR_ROM, "" );
+	// and tubes of light for the saber blades (ext.R_AddLineLight)
+	Cvar_Get( "v_cgameLineLight", "1", CVAR_ROM, "" );
+	// and saber blades drawn by the renderer in 3D (ext.R_AddSaberBlade; NULL with a renderer that has none)
+	Cvar_Get( "v_cgameSaberBlade", "1", CVAR_ROM, "" );
+	// ext.R_AddCutEntity: a body drawn cut by a plane (cgame/cg_slice.c)
+	Cvar_Get( "v_cgameCutEntity", "1", CVAR_ROM, "" );
+	// ext.G2_BoneNumber and ext.G2_SetBonesWorld: the ragdoll of cut bodies (cgame/cg_ragdoll.c)
+	Cvar_Get( "v_cgameSetBones", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)
 	Cvar_Get( "v_screenFxSnow", "1", CVAR_ROM, "" );
+	// SCREENFX_BLOOD: blood on the view (cgame/screenfx/cg_screenfx.c, a cut close by)
+	Cvar_Get( "v_screenFxBlood", "1", CVAR_ROM, "" );
 	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test
 	Cvar_Get( "v_tvService", "https://jka.vision/tv/", CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
 	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())
@@ -2986,6 +3004,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_uiCvarInfo", "1", CVAR_ROM, "" );
 	// and ext.R_Font_DrawStringF and ext.R_Font_InkBox after that
 	Cvar_Get( "v_uiFontInk", "1", CVAR_ROM, "" );
+	// and ext.Cache_List and ext.Cache_Clear after that
+	Cvar_Get( "v_uiCache", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );
@@ -3068,6 +3088,8 @@ void CL_Init( void ) {
 	CL_UpdateInit();
 	CL_ModelsInit();
 	CL_ClipboardInit();
+	CL_MatDebug_Init();
+	CL_Profiler_Init();
 
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 
@@ -3105,6 +3127,8 @@ void CL_Shutdown( void ) {
 	CL_IDS_Shutdown();
 	CL_MemWatchShutdown();
 	CL_MasterShutdown();
+	CL_MatDebug_Shutdown();
+	CL_ImGui_Shutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );

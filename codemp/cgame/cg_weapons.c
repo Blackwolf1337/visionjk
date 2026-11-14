@@ -2044,6 +2044,21 @@ CG_MissileHitWall
 Caused by an EV_MISSILE_MISS event, or directly by local bullet tracing
 =================
 */
+// VisionJK: how far the blast of an explosive throws the parts of cut bodies (cg_ragdoll.c), about its splash
+// radius in the game module; 0 for what does not explode
+static float CG_BlastRadius( int weapon, qboolean altFire ) {
+	switch ( weapon ) {
+	case WP_ROCKET_LAUNCHER:	return 160.0f;
+	case WP_THERMAL:			return 128.0f;
+	case WP_CONCUSSION:			return altFire ? 0.0f : 200.0f;
+	case WP_REPEATER:			return altFire ? 128.0f : 0.0f;
+	case WP_FLECHETTE:			return altFire ? 128.0f : 0.0f;
+	case WP_DET_PACK:
+	case WP_TRIP_MINE:			return 256.0f;
+	default:					return 0.0f;
+	}
+}
+
 void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, impactSound_t soundType, qboolean altFire, int charge)
 {
 	int parm;
@@ -2053,6 +2068,8 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
+	if ( CG_BlastRadius( weapon, altFire ) > 0.0f )
+		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
 	// VisionJK: into standing water of the water gun (toys/cg_water.c), explosives harder
 	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
 		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
@@ -2169,6 +2186,8 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
+	if ( CG_BlastRadius( weapon, altFire ) > 0.0f )
+		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
 
 	/*
 	// NOTENOTE Non-portable code from single player

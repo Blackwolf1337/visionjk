@@ -6460,6 +6460,11 @@ static void UI_RunMenuScript(char **args)
 		} else if (Q_stricmp(name, "CvarCleanRemove") == 0 || Q_stricmp(name, "CvarCleanRemoveAll") == 0) {
 			UI_CvarCleanRemove( (qboolean)!Q_stricmp( name, "CvarCleanRemoveAll" ) );
 			Menu_SetFeederSelection(NULL, FEEDER_CVARCLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "CacheClean") == 0) {	// VisionJK: the window "Clear Caches" (ui_cacheclean.c)
+			UI_CacheCleanLoad();
+			Menu_SetFeederSelection(NULL, FEEDER_CACHECLEAN, 0, NULL);
+		} else if (Q_stricmp(name, "CacheCleanClear") == 0 || Q_stricmp(name, "CacheCleanAll") == 0) {
+			UI_CacheCleanClear( (qboolean)!Q_stricmp( name, "CacheCleanAll" ) );
 		} else if (Q_stricmp(name, "ModelPickOpen") == 0) {	// VisionJK: the window of the model picker
 			UI_ModelPickOpen();
 		} else if (Q_stricmp(name, "ModelPickClear") == 0) {
@@ -8562,6 +8567,8 @@ static int UI_FeederCount(float feederID)
 
 		case FEEDER_CVARCLEAN:
 			return UI_CvarCleanCount();
+		case FEEDER_CACHECLEAN:
+			return UI_CacheCleanCount();
 
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
@@ -8999,6 +9006,8 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 		return UI_ChangelogText( index );
 	} else if (feederID == FEEDER_CVARCLEAN) {
 		return UI_CvarCleanText( index, column );
+	} else if (feederID == FEEDER_CACHECLEAN) {
+		return UI_CacheCleanText( index, column );
 	} else if (feederID == FEEDER_MODS) {
 		if (index >= 0 && index < uiInfo.modCount) {
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr) {
@@ -9413,6 +9422,10 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 	}
 	if ( feederID == FEEDER_CVARCLEAN ) {
 		UI_CvarCleanSelect( index );
+		return qtrue;
+	}
+	if ( feederID == FEEDER_CACHECLEAN ) {
+		UI_CacheCleanSelect( index );
 		return qtrue;
 	}
 

@@ -1,0 +1,68 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+
+// Every frame (vk_rt.cpp, VK_RT_PickLamps): how much of a panel that glows a player sees from where he stands,
+// nothing of the level (mask 1) between, by four rays to points of its disk. The lists of the cells of the grid
+// (shaders/rtcells.comp) only know what the middle of a cell sees. The CPU reads the answers when the frame is done
+// and picks the panels that cast his shadow by them.
+
+layout( local_size_x = 64 ) in;
+
+layout( set = 0, binding = 0 ) uniform accelerationStructureEXT u_top;
+
+layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Rays {
+	vec4	rows[];			// three a ray: where the player sees from, the middle of the panel and the radius of its
+							// disk, the side it lights (zero: all sides)
+};
+layout( buffer_reference, std430, buffer_reference_align = 4 ) writeonly buffer Seen {
+	float	seen[];			// one a ray: 0 to 1
+};
+
+layout( push_constant ) uniform Lamps {
+	uvec2	rays;
+	uvec2	seen;
+	uint	count;
+} u;
+
+// whether nothing of the level is on the way from origin along dir before reach
+bool Clear( vec3 origin, vec3 dir, float reach ) {
+	rayQueryEXT query;
+
+	rayQueryInitializeEXT( query, u_top, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0x01u, origin, 0.0, dir, reach );
+	while ( rayQueryProceedEXT( query ) ) {
+	}
+	return rayQueryGetIntersectionTypeEXT( query, true ) == gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+void main() {
+	uint i = gl_GlobalInvocationID.x;
+
+	if ( i >= u.count ) {
+		return;
+	}
+	Rays rays = Rays( u.rays );
+	Seen seen = Seen( u.seen );
+	vec3 from = rays.rows[i * 3u].xyz;
+	vec4 lamp = rays.rows[i * 3u + 1u];
+	vec3 side = rays.rows[i * 3u + 2u].xyz;
+	// (a little in front of the panel: it may be a part of the level itself)
+	vec3 middle = lamp.xyz + ( dot( side, side ) > 0.5 ? side * 2.0 : vec3( 0.0 ) );
+	vec3 axis = dot( side, side ) > 0.5 ? side : normalize( middle - from );
+	vec3 t = normalize( cross( axis, abs( axis.z ) < 0.9 ? vec3( 0.0, 0.0, 1.0 ) : vec3( 1.0, 0.0, 0.0 ) ) );
+	vec3 b = cross( axis, t );
+	float r = lamp.w * 0.5;
+	float clear = 0.0;
+
+	for ( int k = 0; k < 4; k++ ) {
+		vec3 point = middle + ( k < 2 ? t : b ) * ( ( k & 1 ) == 0 ? r : -r );
+		vec3 to = point - from;
+		float d = length( to );
+
+		if ( d <= 2.0 || Clear( from, to / d, d - 1.0 ) ) {
+			clear += 0.25;
+		}
+	}
+	seen.seen[i] = clear;
+}

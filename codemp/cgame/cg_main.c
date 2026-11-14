@@ -2590,6 +2590,13 @@ Ghoul2 Insert End
 
 	cgs.processedSnapshotNum = serverMessageNum;
 	cgs.serverCommandSequence = serverCommandSequence;
+	// the renderer traces the shadows of the players (cg_shadows 2)
+	{
+		char rtAvailable[8];
+
+		trap->Cvar_VariableStringBuffer( "v_rtAvailable", rtAvailable, sizeof( rtAvailable ) );
+		cgs.rtShadows = (qboolean)( atoi( rtAvailable ) == 1 );
+	}
 
 	cg.loadLCARSStage		= 0;
 
@@ -2714,6 +2721,7 @@ Ghoul2 Insert End
 	CG_BubbleInit();
 	CG_StatusInit();
 	CG_LookInit();
+	CG_SliceInit();
 	CG_PeerInit();
 	CG_SelectInit();
 	CG_ToolsInit();

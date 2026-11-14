@@ -465,20 +465,63 @@ static qboolean S_SpatialPassOnGpu( void ) {
 	return (qboolean)( v_spatialGpu->integer && spatial.gpuSimulator && !S_SpatialEchoBaked() && S_SpatialGpuReady() );
 }
 
+// more than a tenth of a millimetre apart: Steam Audio begins its sum anew for a listener that moved that far
+static qboolean S_SpatialPointMoved( const IPLVector3 *a, const IPLVector3 *b ) {
+	const float dx = a->x - b->x, dy = a->y - b->y, dz = a->z - b->z;
+
+	return (qboolean)( dx * dx + dy * dy + dz * dz > 1e-8f );
+}
+
+// Whether the next pass would trace anything else than the last one: the listener, a sound with reflections of
+// its own or a sound that looks for a way round the corners moved, or one of them came or went. Reads what the
+// last pass was given (spatialPass), which only the thread of the game writes.
+static qboolean S_SpatialMovedSincePass( void ) {
+	IPLCoordinateSpace3 listener;
+
+	S_SpatialListener( &listener );
+	if ( S_SpatialPointMoved( &listener.origin, &spatial.settledOrigin ) ) {
+		return qtrue;
+	}
+	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
+		const spatialVoice_t *v = spatial.reflects[i].voice;
+		IPLVector3 origin;
+
+		if ( (qboolean)( v != NULL ) != spatialPass.own[i] ) {
+			return qtrue;
+		}
+		if ( v ) {
+			S_SpatialPoint( v->simOrigin, &origin );
+			if ( S_SpatialPointMoved( &origin, &spatialPass.source[i].origin ) ) {
+				return qtrue;
+			}
+		}
+	}
+	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
+		const spatialVoice_t *v = &spatial.voices[i];
+		IPLVector3 origin;
+
+		if ( v->pathing != spatialPass.path[i] ) {
+			return qtrue;
+		}
+		if ( v->pathing ) {
+			S_SpatialPoint( v->simOrigin, &origin );
+			if ( S_SpatialPointMoved( &origin, &spatialPass.pathOrigin[i] ) ) {
+				return qtrue;
+			}
+		}
+	}
+	return qfalse;
+}
+
 // In the thread of the game, while the thread of the reflections is idle: what the next pass is to start from.
 static void S_SpatialFillPass( void ) {
 	const int passes = spatialReflectPasses.load();
 	const qboolean gpu = S_SpatialPassOnGpu();
 
+	// (before spatialPass is filled anew: it is what the last pass had)
+	spatial.settledPasses = ( S_SpatialMovedSincePass() || gpu != spatial.reflectGpu ) ? 0 : spatial.settledPasses + 1;
 	S_SpatialFillPaths();
-	// Steam Audio begins its sum anew when the listener moved by more than a tenth of a millimetre
-	{
-		const IPLVector3 *o = &spatialPass.listener.origin;
-		const float dx = o->x - spatial.settledOrigin.x, dy = o->y - spatial.settledOrigin.y, dz = o->z - spatial.settledOrigin.z;
-
-		spatial.settledPasses = ( dx * dx + dy * dy + dz * dz > 1e-8f ) ? 0 : spatial.settledPasses + 1;
-		spatial.settledOrigin = *o;
-	}
+	spatial.settledOrigin = spatialPass.listener.origin;
 	spatialPass.rays = S_SpatialRays();
 	spatialPass.bounces = S_SpatialBounces();
 	spatialPass.reverb = v_spatialReflections->integer ? qtrue : qfalse;
@@ -589,6 +632,13 @@ void S_SpatialAskPass( void ) {
 		return;
 	}
 #endif
+	// Resting: nothing plays, or nothing moved for SPATIAL_SETTLED_PASSES passes and the sum Steam Audio keeps of
+	// them is good by then. The rays ran 20 times a second in a quiet room and kept the graphics card busy
+	// (v_spatialGpu, about 9 W on an RTX 4070 SUPER, 2026-11-14). A sound that starts or anything that moves ends it.
+	if ( now - spatial.reflectAsked < SPATIAL_REFLECT_REST_MSEC
+		&& ( !spatial.numVoices || ( spatial.settledPasses >= SPATIAL_SETTLED_PASSES && !S_SpatialMovedSincePass() ) ) ) {
+		return;
+	}
 	// the thread reads these only after it was woken
 	if ( spatialWorkerState.load() == WORKER_IDLE ) {
 		S_SpatialTakeVis();

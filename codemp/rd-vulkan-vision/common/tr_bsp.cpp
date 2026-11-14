@@ -35,6 +35,8 @@ void RE_LoadWorldMap( const char *name );
 */
 
 static	world_t		s_worldData;
+// VisionJK: counts the levels loaded (r_worldLoads in tr_local.h)
+int					r_worldLoads;
 static	byte		*fileBase;
 
 int			c_subdivisions;
@@ -525,7 +527,7 @@ static void ParseMesh ( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, worl
 ParseTriSurf
 ===============
 */
-static void ParseTriSurf( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, int *indexes, world_t &worldData, int index ) {
+static void ParseTriSurf( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, int *indexes, world_t &worldData, int index, const int *lightmaps = lightmapsVertex ) {
 	srfTriangles_t	*tri;
 	int				i, j, k;
 	int				numVerts, numIndexes;
@@ -538,7 +540,7 @@ static void ParseTriSurf( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, in
 	}
 
 	// get shader
-	surf->shader = ShaderForShaderNum( ds->shaderNum, lightmapsVertex, ds->lightmapStyles, ds->vertexStyles, worldData );
+	surf->shader = ShaderForShaderNum( ds->shaderNum, lightmaps, ds->lightmapStyles, ds->vertexStyles, worldData );
 	if ( r_singleShader->integer && !surf->shader->sky ) {
 		surf->shader = tr.defaultShader;
 	}
@@ -1439,6 +1441,19 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 			numTriSurfs++;
 			break;
 		case MST_PLANAR:
+			// VisionJK: q3map2 -meta writes the lightmapped triangles of a misc_model that are not flat as a planar
+			// surface with a plane normal of 0. As a face it would have that normal at every vertex (no light per
+			// pixel, nothing for a material); as triangles with its lightmap it keeps the normals of its vertices.
+			if ( VectorLengthSquared( in->lightmapVecs[2] ) < 0.25f ) {
+				int lightmaps[MAXLIGHTMAPS];
+
+				for ( int k = 0; k < MAXLIGHTMAPS; k++ ) {
+					lightmaps[k] = LittleLong( in->lightmapNum[k] );
+				}
+				ParseTriSurf( in, dv, out, indexes, worldData, index, lightmaps );
+				numTriSurfs++;
+				break;
+			}
 			ParseFace( in, dv, out, indexes, worldData, index );
 			numFaces++;
 			break;
@@ -2165,6 +2180,12 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 
 		// only set tr.world now that we know the entire level has loaded properly
 		tr.world = &worldData;
+		r_worldLoads++;
+
+		char sMapName[MAX_QPATH];
+		COM_StripExtension( name, sMapName, sizeof( sMapName ) );
+		R_CreatePbrGrid( sMapName );
+		R_CreateProbes( sMapName );
 	}
 
 	if (ri.CM_GetCachedMapDiskImage())
@@ -2183,7 +2204,13 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 //
 void RE_LoadWorldMap( const char *name )
 {
+	// (what the level before made, while the game is loading anyway)
+	VK_SavePipelineCache();
+	VK_StageTime( NULL );
 	ri.CM_SetUsingCache( qtrue );
 	RE_LoadWorldMap_Actual( name, s_worldData, 0 );
 	ri.CM_SetUsingCache( qfalse );
+	// VisionJK: the sun of this level is the one an override gives way to (tr_material.cpp)
+	R_MaterialWorldLoaded();
+	VK_StageTime( "level" );
 }

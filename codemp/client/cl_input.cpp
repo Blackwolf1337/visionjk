@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
+#include "cl_imgui.h"
 #ifndef _WIN32
 #include <cmath>
 #endif
@@ -922,6 +923,10 @@ CL_MouseEvent
 =================
 */
 void CL_MouseEvent( int dx, int dy, int time ) {
+	if ( !( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) && CL_ImGui_Active() ) {
+		// a debug menu of the client is open: it reads the mouse of the window (IN_MousePosition)
+		return;
+	}
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) {
 		// the console is down: the mouse moves its cursor, with which text is selected
 		Con_MouseEvent( dx, dy );

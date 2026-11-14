@@ -92,6 +92,10 @@ uint32_t VK_CurrentTransform( void ) {
 			// glClipPlane of rd-vanilla: clip anything behind the portal surface
 			VectorCopy( backEnd.viewParms.portalPlane.normal, t.clipPlane );
 			t.clipPlane[3] = backEnd.viewParms.portalPlane.dist;
+		} else if ( ent && ent->cut && !backEnd.projection2D ) {
+			// VisionJK: a body a saber cut through keeps the side the plane points to (ext.AddCutEntityToScene); one
+			// clip distance, so in a mirror or portal its plane wins and the body is whole there
+			VectorCopy4( ent->cutPlane, t.clipPlane );
 		}
 		if ( ent ) {
 			VectorCopy( ent->lightDir, t.lightDir );
@@ -735,9 +739,169 @@ static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
 	memset( draw, 0, sizeof( *draw ) );
 	draw->transform = transform;
 	draw->bones = bones;
+	draw->cutBones = VK_CutBones( bones );
 	draw->flags = vk_deform.flags;
 	VectorCopy4( vk_deform.wave, draw->deformWave );
 	VectorCopy4( vk_deform.vec, draw->deformVec );
+}
+
+cvar_t	*v_pbr;		// 0: the stages with a material are drawn as they were without it
+cvar_t	*v_pbrProbes;	// 0: they mirror the light of their lightmap, not the reflection probes
+cvar_t	*v_parallax;	// 0: no parallax on surfaces with a height in their normal map (generic.frag Parallax)
+cvar_t	*v_dlightScale;	// the brightness of the moving lights (generic.frag DynamicLight)
+cvar_t	*v_pbrEnergy;	// 0: their diffuse light is not lessened by what the shine takes
+cvar_t	*v_tessellation;	// 0: materials with tessellation keep their parallax
+
+/*
+===============
+VK_PbrDraw
+
+VisionJK: the draw of a stage with a material (shaderStage_t::pbr, or a normal map on a stage of the level): which
+light it is lit by and its maps (VKP_* of vk_local.h). qfalse for a stage that is drawn as it always was: one of a
+model whose light is not the one of its entity, a second texture that is not the lightmap, a stage that adds its
+colour, the glow pass, r_lightmap.
+===============
+*/
+// the reflection probes of the level for a draw with a material (tex5, tex6), where there are any
+static void VK_PbrProbes( vkDraw_t *draw ) {
+	if ( tr.probesReady && tr.pbrProbes && VK_ProbesSupported() && tr.world ) {
+		draw->pbrFlags |= VKP_PROBES;
+		draw->tex5 = tr.pbrProbes->texnum;
+		draw->tex6 = tr.probeImage->texnum;
+		draw->probeSize = PROBE_SIZE;
+		draw->probeCount = (uint32_t)tr.numProbes;
+	} else {
+		draw->tex5 = draw->tex6 = draw->tex0;
+	}
+}
+
+static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader, qboolean refract, vkDraw_t *draw ) {
+	const uint32_t rgbGen = ( draw->flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK;
+	const textureBundle_t *second = &pStage->bundle[1];
+
+	if ( !v_pbr->integer || g_bRenderGlowingObjects || refract || r_lightmap->integer ) {
+		return qfalse;
+	}
+	const stageMaterial_t *mat = pStage->mat;
+
+	if ( !mat || ( !mat->pbr && !( mat->normalMap && second->image && second->isLightmap ) ) ) {
+		return qfalse;
+	}
+	// a stage that adds its colour to what is under it is light itself (a sign, a glowing decal), not a surface lit
+	const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
+	if ( dst == GLS_DSTBLEND_ONE || dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+		return qfalse;
+	}
+	if ( rgbGen ) {
+		draw->pbrFlags = VKP_ENTITY;
+	} else if ( second->image ) {
+		if ( !second->isLightmap || shader->multitextureEnv != GL_MODULATE ) {
+			return qfalse;
+		}
+		draw->pbrFlags = VKP_LIGHTMAP;
+	}
+	draw->flags |= VKD_PBR;
+	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
+	if ( mat->normalMap ) {
+		draw->tex2 = mat->normalMap->texnum;
+		draw->pbrFlags |= VKP_NORMAL | ( mat->normalHeight ? VKP_HEIGHT : 0u );
+	}
+	if ( mat->rmoMap ) {
+		draw->tex3 = mat->rmoMap->texnum;
+		draw->pbrFlags |= VKP_RMO | ( mat->ormOrder ? VKP_ORM : 0u ) | ( mat->rmoRelative ? VKP_RMO_RELATIVE : 0u );
+	} else if ( mat->specGlossMap ) {
+		draw->tex3 = mat->specGlossMap->texnum;
+		draw->pbrFlags |= VKP_SPECGLOSS;
+	}
+	draw->pbrFlags |= ( mat->sheenAlbedo ? VKP_SHEEN_ALBEDO : 0u ) | ( v_pbrEnergy->integer ? VKP_ENERGY : 0u );
+	draw->pbr2[1] = mat->clearcoat;
+	draw->pbr2[2] = mat->clearcoatRoughness;
+	draw->pbr2[3] = mat->anisotropy;
+	// (the glow of a lamp panel made at load follows v_panelGlow at once)
+	VectorScale( mat->emission, mat->autoLamp ? Com_Clamp( 0.0f, 16.0f, v_panelGlow->value ) : mat->emissionStrength, draw->pbr3 );
+	draw->pbr3[3] = mat->emissionThreshold;
+	VectorCopy( mat->sheen, draw->material );
+	draw->material[3] = mat->sheenRoughness;
+	draw->material2[0] = DEG2RAD( mat->anisotropyRotation );
+	draw->material2[1] = mat->normalScale;
+	draw->material2[2] = mat->specularReflectance;
+	draw->material2[3] = 0.0f;
+	draw->pbr[0] = mat->pbr ? mat->roughness : 0.8f;
+	draw->pbr[1] = mat->metalness;
+	draw->pbr[2] = v_parallax->integer ? mat->parallaxDepth : 0.0f;
+	draw->pbr2[0] = mat->parallaxPlane;
+	// a face of a reflection probe is always drawn with the materials as they look, never in a debug view of v_pbr,
+	// or the surfaces mirror that view until the level is loaded again
+	draw->pbr[3] = backEnd.viewParms.probeFace ? 1.0f : (float)v_pbr->integer;
+	if ( !( draw->pbrFlags & VKP_ENTITY ) && tr.pbrGrid && tr.world ) {
+		draw->tex4 = tr.pbrGrid->texnum;
+		draw->pbrFlags |= VKP_GRID;
+		VectorCopy( tr.world->lightGridOrigin, draw->grid0 );
+		draw->grid0[3] = (float)tr.pbrGridTiles;
+		VectorCopy( tr.world->lightGridInverseSize, draw->grid1 );
+		draw->grid1[3] = (float)tr.pbrGrid->height;
+		for ( int i = 0; i < 3; i++ ) {
+			draw->grid2[i] = (float)tr.world->lightGridBounds[i];
+		}
+		draw->grid2[3] = (float)tr.pbrGrid->width;
+	}
+	if ( draw->pbrFlags & VKP_GRID ) {
+		VK_PbrProbes( draw );
+	} else {
+		draw->tex5 = draw->tex6 = draw->tex0;
+	}
+	return qtrue;
+}
+
+#ifndef RD_VISION_GLES
+// VisionJK: glass may be drawn bent (VK_GlassDraw): the backend copied the frame for it in this view
+qboolean vk_glassReady;
+#endif
+
+/*
+===============
+VK_GlassDraw
+
+VisionJK: a stage whose material is glass (transmission > 0) is drawn as the copy of the frame behind it, bent by
+its normal and ior, blurred by its roughness and tinted, with what it mirrors of the probes (generic.frag GlassStage),
+in place of blending its texture over the scene. Only where the backend copied the frame for this view
+(vk_glassReady); else, and on GLES, the stage is drawn as its text says.
+===============
+*/
+static qboolean VK_GlassDraw( const shaderStage_t *pStage, qboolean refract, vkDraw_t *draw, uint32_t *stateBits ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	const stageMaterial_t *mat = pStage->mat;
+
+	if ( !mat || mat->transmission <= 0.0f || !vk_glassReady || !v_pbr->integer || g_bRenderGlowingObjects || refract
+		|| !tr.screenImage ) {
+		return qfalse;
+	}
+	draw->flags |= VKD_PBR;
+	draw->pbrFlags = VKP_GLASS;
+	draw->tex1 = tr.screenImage->texnum;
+	draw->tex2 = draw->tex3 = draw->tex4 = draw->tex5 = draw->tex6 = draw->tex0;
+	if ( mat->normalMap ) {
+		draw->tex2 = mat->normalMap->texnum;
+		draw->pbrFlags |= VKP_NORMAL;
+	}
+	draw->pbr[0] = mat->roughness;
+	draw->pbr[1] = 0.0f;
+	draw->pbr[2] = mat->ior;
+	draw->pbr[3] = (float)v_pbr->integer;
+	draw->pbr2[0] = mat->transmission;
+	draw->pbr2[1] = mat->thickness;
+	draw->pbr2[2] = mat->absorptionDistance;
+	draw->pbr2[3] = 0.0f;
+	VectorCopy( mat->absorption, draw->material );
+	draw->material[3] = 0.0f;
+	VK_PbrProbes( draw );
+	// not blended: what it shows of the scene is in its colour. Its depth is written, so what is drawn after it and
+	// lies behind it is not drawn over it (R_SortGlass draws glass far to near, before the other transparent things)
+	*stateBits = GLS_DEPTHMASK_TRUE;
+	return qtrue;
+#endif
 }
 
 static void VK_IdentityTexCoords( vkDraw_t *draw ) {
@@ -797,7 +961,32 @@ One more pass over the batch for every dynamic light that reaches it. The light 
 generic.frag and added to what the stages left there, times the texture of the surface.
 ===============
 */
-static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones ) {
+/*
+===============
+VK_TessPass
+
+A pass after the stages (dynamic light, fog) on a batch whose material stage was tessellated: drawn through the same
+tessellation with the same height, so its depth is the same and the depth test EQUAL holds on the bumps too. The
+texture coordinates the height is read with go into the second texture of the pass (the passes need the first
+for themselves), tess.w below 0 says so to generic.tese. The program for the pass.
+===============
+*/
+static vkProgram_t VK_TessPass( vkDraw_t *draw, const vkDraw_t *from, vkProgram_t program ) {
+	if ( !from ) {
+		return program;
+	}
+	draw->tex2 = from->tex2;
+	draw->bones = from->bones;
+	VectorCopy4( from->tess, draw->tess );
+	draw->tess[3] = -fabsf( from->tess[3] );
+	draw->flags = ( draw->flags & ~( 15u << VKD_TCGEN1_SHIFT ) ) | ( ( ( from->flags >> VKD_TCGEN0_SHIFT ) & 15u ) << VKD_TCGEN1_SHIFT );
+	memcpy( draw->texMat1, from->texMat0, sizeof( draw->texMat1 ) );
+	memcpy( draw->texTurb1, from->texTurb0, sizeof( draw->texTurb1 ) );
+	memcpy( draw->tcGenVec1, from->tcGenVec0, sizeof( draw->tcGenVec1 ) );
+	return VKP_TESS;
+}
+
+static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	const shader_t *shader = tess.shader;
 	const shaderStage_t *textured = NULL;
 	const textureBundle_t *bundle = NULL;
@@ -824,6 +1013,29 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		}
 	}
 
+	// VisionJK: the stage with a material gives the light its bumps and its shine, and its texture is what the light
+	// shines on, also where it is laid over the lightmap by a blend (the stages of the level). Not one that adds
+	// its colour (a sign, a glowing decal): that is light itself.
+	const shaderStage_t *matStage = NULL;
+	if ( v_pbr->integer && !r_lightmap->integer ) {
+		for ( int i = 0; i < shader->numUnfoggedPasses && !matStage; i++ ) {
+			const shaderStage_t *pStage = &shader->stages[i];
+			const uint32_t dst = pStage->stateBits & GLS_DSTBLEND_BITS;
+
+			if ( pStage->mat && ( pStage->mat->pbr || pStage->mat->normalMap ) && pStage->bundle[0].image && !pStage->bundle[0].isLightmap
+				&& dst != GLS_DSTBLEND_ONE && dst != GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+				matStage = pStage;
+			}
+		}
+		if ( matStage ) {
+			textured = matStage;
+			bundle = &matStage->bundle[0];
+		}
+	}
+
+	const qboolean levelView = (qboolean)( !backEnd.viewParms.isPortal && !backEnd.viewParms.isPuddle && !backEnd.viewParms.probeFace
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+
 	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
 		const dlight_t *dl = &backEnd.refdef.dlights[l];
 		vkDraw_t draw;
@@ -836,10 +1048,35 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		VK_IdentityTexCoords( &draw );
 		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
 		draw.tex1 = tr.dlightImage->texnum;
-		VectorCopy( dl->color, draw.baseColor );
+		if ( matStage && VK_PbrDraw( matStage, shader, qfalse, &draw ) ) {
+			// its normal map, rmo map and numbers; the grid and the probes are no part of a lamp
+			draw.pbrFlags &= ~VKP_GRID;
+		}
+		VectorScale( dl->color, Com_Clamp( 0.0f, 8.0f, v_dlightScale->value ), draw.baseColor );
 		VectorCopy( dl->transformed, draw.parm );
 		draw.parm[3] = dl->radius;
-		VK_DrawTess( &draw, program, ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
+		// a tube (generic.frag DynamicLight): its ends in grid0 and grid1, its reach in grid0.w, 0 for a point
+		draw.grid0[3] = 0.0f;
+		if ( dl->lineRange > 0.0f ) {
+			VectorCopy( dl->lineStartTransformed, draw.grid0 );
+			draw.grid0[3] = dl->lineRange;
+			VectorCopy( dl->lineEndTransformed, draw.grid1 );
+		}
+		// the shadows of the players from it, traced a frame ago (vk_rt.cpp): which channel of which mask, in grid1.w
+		// and tex1; only in the view of the level itself, the one the mask was made for
+		draw.grid1[3] = 0.0f;
+#ifndef RD_VISION_GLES
+		if ( levelView ) {
+			uint32_t slot;
+			const int channel = VK_RT_LightChannel( dl, &slot );
+
+			if ( channel ) {
+				draw.tex1 = slot;
+				draw.grid1[3] = (float)channel;
+			}
+		}
+#endif
+		VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}
 }
@@ -852,7 +1089,7 @@ A surface inside a fog volume gets the fog as one more pass: the fog color, with
 way through the fog. The alpha comes from the fog image, the coordinates into it from stage.glsl.
 ===============
 */
-static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones ) {
+static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	const fog_t *fog = tr.world->fogs + tess.fogNum;
 	vkDraw_t draw;
 
@@ -862,7 +1099,7 @@ static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, u
 	VK_FogVectors( &draw );
 	draw.tex0 = draw.tex1 = tr.fogImage->texnum;
 	VK_ByteColor( (const byte *)&fog->colorInt, draw.baseColor );
-	VK_DrawTess( &draw, program, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
+	VK_DrawTess( &draw, VK_TessPass( &draw, tessFrom, program ), GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
 		| ( tess.shader->fogPass == FP_EQUAL ? GLS_DEPTHFUNC_EQUAL : 0 ), cullMode, (qboolean)tess.shader->polygonOffset );
 }
 
@@ -939,7 +1176,7 @@ static void VK_DrawGrass( uint32_t transform ) {
 		VK_DrawTess( &draw, VKP_GRASS, pStage->stateBits, VKC_NONE, qfalse );
 		if ( tess.fogNum && shader->fogPass && r_drawfog->value
 			&& ( r_drawfog->integer != 2 || tess.fogNum != tr.world->globalFog ) ) {
-			VK_FogPass( transform, VKC_NONE, VKP_GRASS, bones );
+			VK_FogPass( transform, VKC_NONE, VKP_GRASS, bones, NULL );
 		}
 	}
 }
@@ -987,7 +1224,22 @@ void RB_StageIteratorGeneric( void ) {
 	transform = VK_CurrentTransform();
 	cullMode = VK_CullMode( shader->cullType );
 	VK_BatchDeform();
+	// the depth pre-pass of the level (vk_backend.cpp RB_DepthPrepass): the depth of the batch alone
+	if ( rb_depthPrepass ) {
+		if ( program == VKP_GENERIC ) {
+			vkDraw_t draw;
+
+			VK_InitDraw( &draw, transform, bones );
+			VK_DrawTess( &draw, VKP_DEPTH, GLS_DEPTHMASK_TRUE, cullMode, qfalse );
+			RB_MarkPrepassed( shader );
+		}
+		return;
+	}
+	const qboolean prepassed = (qboolean)( !g_bRenderGlowingObjects && backEnd.currentEntity == &tr.worldEntity && RB_ShaderPrepassed( shader ) );
 	const qboolean refract = (qboolean)( vk_refraction && tr.screenImage && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) );
+	// the tessellated stage of the batch, for the passes after the stages (VK_TessPass)
+	vkDraw_t tessDraw;
+	qboolean haveTessDraw = qfalse;
 
 	for ( int stage = 0; stage < shader->numUnfoggedPasses; stage++ ) {
 		const shaderStage_t *pStage = &tess.xstages[stage];
@@ -1017,6 +1269,10 @@ void RB_StageIteratorGeneric( void ) {
 		if ( ent->e.renderfx & RF_DISINTEGRATE1 ) {
 			// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
 			stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
+		}
+		if ( stage == 0 && prepassed ) {
+			// its depth is there already: only where it is the nearest, and nothing written
+			stateBits = ( stateBits & ~GLS_DEPTHMASK_TRUE ) | GLS_DEPTHFUNC_EQUAL;
 		}
 		if ( ent->e.renderfx & RF_RGB_TINT ) {
 			// VisionJK: a lit stage stays lit, with the colour of the entity on it (a prop the toolgun coloured,
@@ -1082,20 +1338,48 @@ void RB_StageIteratorGeneric( void ) {
 				stateBits |= GLS_DEPTHMASK_TRUE;
 			}
 		}
-		// VisionJK: a lit stage with a normal map or a shine (shader keywords normalMap and specular) is lit per
-		// pixel, see generic.frag; the second texture is the normal map then
-		if ( ( pStage->normalMap || pStage->specular[0] > 0.0f || pStage->specular[2] > 0.0f || pStage->wrapLight > 0.0f
-			|| pStage->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
+		// VisionJK: a stage with a material of the material tool (shader keywords rmoMap, roughness, metalness ...)
+		// is lit per pixel with GGX by the light it gets anyway, see generic.frag PbrStage
+		const stageMaterial_t *mat = pStage->mat;
+		vkProgram_t stageProgram = program;
+		if ( VK_GlassDraw( pStage, refract, &draw, &stateBits ) ) {
+		} else if ( VK_PbrDraw( pStage, shader, refract, &draw ) ) {
+			// Tessellation: the triangles of this stage cut on the device and moved by the height of the normal map,
+			// which takes the place of the parallax. Only geometry in the layout of the tess arrays, not in a
+			// mirror or probe view (their faces stay cheap), and only where the normal map has a height.
+			// The borders of the batch go into the frame for generic.tese (VK_TessBorders), so only surfaces of
+			// the level.
+			uint32_t borders = 0;
+			if ( mat->tessHeight > 0.0f && program == VKP_GENERIC && vk.tessellation && v_tessellation->integer
+				&& ( draw.pbrFlags & VKP_HEIGHT ) && !backEnd.viewParms.probeFace && VK_TessBorders( &borders ) ) {
+				stageProgram = VKP_TESS;
+				draw.bones = borders;
+				draw.pbr[2] = 0.0f;
+				draw.tess[0] = mat->tessHeight;
+				draw.tess[1] = mat->tessPlane;
+				draw.tess[2] = mat->tessDensity;
+				draw.tess[3] = 64.0f;
+			}
+		} else if ( mat && ( mat->normalMap || mat->specular[0] > 0.0f || mat->specular[2] > 0.0f || mat->wrapLight > 0.0f
+			|| mat->sparkle > 0.0f ) && !pStage->bundle[1].image && ( ( draw.flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK ) ) {
 			draw.flags |= VKD_MATERIAL;
-			VectorCopy( pStage->specular, draw.material );
-			draw.material2[0] = pStage->wrapLight;
-			draw.material2[1] = pStage->sparkle;
-			if ( pStage->normalMap ) {
-				draw.tex1 = pStage->normalMap->texnum;
+			VectorCopy( mat->specular, draw.material );
+			draw.material2[0] = mat->wrapLight;
+			draw.material2[1] = mat->sparkle;
+			if ( mat->normalMap ) {
+				draw.tex1 = mat->normalMap->texnum;
 				draw.material[3] = 1.0f;
 			}
 		}
 		draw.flags |= VK_AlphaTest( stateBits );
+		// VisionJK: the glow map of a lamp panel (a stage added onto it) shines brighter than its texture (v_panelGlow)
+		if ( shader->lampPanel && v_panelGlow->value > 0.0f ) {
+			const uint32_t dst = stateBits & GLS_DSTBLEND_BITS;
+
+			if ( dst == GLS_DSTBLEND_ONE || dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+				draw.brighten = 1.0f + Com_Clamp( 0.0f, 16.0f, v_panelGlow->value );
+			}
+		}
 		VK_GoreDraw( pStage, &draw );
 		if ( isStatic ) {
 			draw.styles = VK_StaticStyles();
@@ -1107,6 +1391,14 @@ void RB_StageIteratorGeneric( void ) {
 			VectorSet( draw.fogColor, c, c, c );
 		}
 
+		// the run of the light passes draws no stage, it only keeps the tessellated one for VK_DynamicLights
+		if ( rb_dlightsOnly ) {
+			if ( stageProgram == VKP_TESS ) {
+				tessDraw = draw;
+				haveTessDraw = qtrue;
+			}
+			continue;
+		}
 		if ( shader == tr.distortionShader && !pStage->bundle[1].image ) {
 			// The game asks for this shader by its number, 2: a cloaked player, the trail of cg_saberTrail 2. Such a
 			// surface is not drawn. It marks its shape in the stencil buffer, both sides, where nothing is in front
@@ -1120,8 +1412,12 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
-		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
+		VK_DrawTess( &draw, stageProgram, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );
+		if ( stageProgram == VKP_TESS && !g_bRenderGlowingObjects ) {
+			tessDraw = draw;
+			haveTessDraw = qtrue;
+		}
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
 		}
@@ -1130,13 +1426,18 @@ void RB_StageIteratorGeneric( void ) {
 	// now do any dynamic lighting needed. Also in the glow pass, as rd-vanilla does: a surface whose shader has a
 	// stage that glows gets the light on its texture added to the glow as well, so it shines more where a blade
 	// lights it.
-	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) ) ) {
-		VK_DynamicLights( transform, cullMode, program, bones );
+	// (the first run of the list leaves them to the run of the light passes after the shadows, rb_deferDlights)
+	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
+		&& ( rb_dlightsOnly || g_bRenderGlowingObjects || !rb_deferDlights ) ) {
+		VK_DynamicLights( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
+	}
+	if ( rb_dlightsOnly ) {
+		return;
 	}
 	// now do fog
 	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum
 		&& shader->fogPass ) {
-		VK_FogPass( transform, cullMode, program, bones );
+		VK_FogPass( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
 	}
 	// draw debugging stuff: the triangles of the batch as white lines over everything (DrawTris of rd-vanilla)
 	if ( r_showtris->integer && vk.wireframe ) {

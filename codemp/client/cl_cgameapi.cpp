@@ -2054,6 +2054,11 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_PaintPicture					= CL_PaintPicture;
 		cgi.ext.R_AddPaint						= CL_AddPaint;
 		cgi.ext.S_AddLoopingSoundVolume			= S_AddLoopingSoundVolume;
+		cgi.ext.R_AddLineLight					= re->ext.AddLineLightToScene;
+		cgi.ext.R_AddSaberBlade					= re->ext.AddSaberBladeToScene;
+		cgi.ext.R_AddCutEntity					= re->ext.AddCutEntityToScene;
+		cgi.ext.G2_BoneNumber					= re->ext.G2_BoneNumber;
+		cgi.ext.G2_SetBonesWorld				= re->ext.G2_SetBonesWorld;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

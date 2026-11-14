@@ -1,0 +1,65 @@
+// materials of the material debug menu (v_matdebug) for vjun.shader, read after the shader files
+
+textures/vjun/wall_saberroom
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjun/wall_saberroom
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/vjun/wall_saberroom_glw
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+	}
+}
+
+textures/vjun/hangardoor
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjun/hangardoor
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		map textures/vjun/hangardoor_glw
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen wave sin 0 1 0.125 0.5
+	}
+}
+
+textures/vjun/door1_onoff
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/vjun/door1_onoff
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+	{
+		oneshotanimMap 1 textures/vjun/door1_onoffr textures/vjun/door1_onoffg
+		blendFunc GL_ONE GL_ONE
+		glow
+		rgbGen identity
+		alphaGen identity
+	}
+}

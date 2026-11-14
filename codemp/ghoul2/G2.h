@@ -34,6 +34,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BONE_ANGLES_RAGDOLL			0x2000  // the rag flags give more details
 //rww - RAGDOLL_END
 #define BONE_ANGLES_IK				0x4000  // the rag flags give more details
+// VisionJK: the whole bone given in model space (rd-vulkan-vision ext.G2_SetBonesWorld, the ragdoll of the cgame's
+// cut bodies); only that renderer sets or reads it
+#define BONE_ANGLES_MODEL			0x0100
 
 #define BONE_ANGLES_TOTAL			( BONE_ANGLES_PREMULT | BONE_ANGLES_POSTMULT | BONE_ANGLES_REPLACE )
 #define BONE_ANIM_OVERRIDE			0x0008

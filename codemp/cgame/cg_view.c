@@ -2718,6 +2718,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_BoomboxScene();
 		// the snowballs in the air, which are no entities either (toys/cg_toys.c)
 		CG_ToysScene();
+		// the parts cut off bodies by a saber, and their blood (cg_slice.c)
+		CG_SliceScene();
 	}
 	CG_AddViewWeapon( &cg.predictedPlayerState );
 

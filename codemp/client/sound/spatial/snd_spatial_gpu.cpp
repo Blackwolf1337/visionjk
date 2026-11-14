@@ -109,6 +109,8 @@ static const uint32_t spatialRaysComp[] =
 	X( vkCmdBindPipeline ) \
 	X( vkCmdBuildAccelerationStructuresKHR ) \
 	X( vkCmdDispatch ) \
+	X( vkCmdResetQueryPool ) \
+	X( vkCmdWriteTimestamp ) \
 	X( vkCmdPipelineBarrier ) \
 	X( vkCmdPushConstants ) \
 	X( vkCreateAccelerationStructureKHR ) \
@@ -119,6 +121,7 @@ static const uint32_t spatialRaysComp[] =
 	X( vkCreateDescriptorSetLayout ) \
 	X( vkCreateFence ) \
 	X( vkCreatePipelineLayout ) \
+	X( vkCreateQueryPool ) \
 	X( vkCreateShaderModule ) \
 	X( vkDestroyAccelerationStructureKHR ) \
 	X( vkDestroyBuffer ) \
@@ -129,6 +132,7 @@ static const uint32_t spatialRaysComp[] =
 	X( vkDestroyFence ) \
 	X( vkDestroyPipeline ) \
 	X( vkDestroyPipelineLayout ) \
+	X( vkDestroyQueryPool ) \
 	X( vkDestroyShaderModule ) \
 	X( vkDeviceWaitIdle ) \
 	X( vkEndCommandBuffer ) \
@@ -140,6 +144,7 @@ static const uint32_t spatialRaysComp[] =
 	X( vkGetBufferMemoryRequirements ) \
 	X( vkGetDeviceQueue ) \
 	X( vkGetFenceStatus ) \
+	X( vkGetQueryPoolResults ) \
 	X( vkMapMemory ) \
 	X( vkQueueSubmit ) \
 	X( vkResetCommandBuffer ) \
@@ -188,6 +193,7 @@ typedef struct {
 	VkCommandPool		pool;
 	VkCommandBuffer		cmd;
 	VkFence				done;
+	VkQueryPool			times;			// when its dispatch began and ended on the graphics card (the GPU profiler)
 	VkDescriptorSet		set;
 	int					level;			// spatialGpu.levelNumber its set has, 0: none yet
 	int					walls;			// rays of the last batch of closest walls, whose ways to the sources are in hits
@@ -257,6 +263,13 @@ typedef struct {
 	// Audio, and the same of the last finished pass (S_SpatialGpuBeginPass)
 	std::atomic<int>	batches, batchUsec, answered;
 	int					lastBatches, lastBatchUsec, lastAnswered;
+
+	// for the GPU profiler of the client (S_SpatialGpuTimes): what the batches took on the graphics card, all of them
+	// since the device was made
+	qboolean			timed;				// its queue has timestamps
+	double				nsPerTick;
+	std::atomic<uint64_t>	gpuNs;
+	std::atomic<int>	allBatches;
 } spatialGpuState_t;
 
 // what made the passes leave the graphics card. Set in the threads of Steam Audio, which print nothing
@@ -474,6 +487,8 @@ static qboolean S_SpatialGpuPickDevice( void ) {
 			S_SpatialGpuWhy( "%s has no queue for compute", spatialGpu.name );
 			return qfalse;
 		}
+		spatialGpu.timed = (qboolean)( families[family].timestampValidBits > 0 && props.limits.timestampPeriod > 0.0f );
+		spatialGpu.nsPerTick = (double)props.limits.timestampPeriod;
 		spatialGpu.queueFamily = (uint32_t)family;
 	}
 	{
@@ -641,6 +656,16 @@ static qboolean S_SpatialGpuCreateSlot( spatialGpuSlot_t *s ) {
 		s->done = VK_NULL_HANDLE;
 		return qfalse;
 	}
+	s->times = VK_NULL_HANDLE;
+	if ( spatialGpu.timed ) {
+		VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+
+		query.queryType = VK_QUERY_TYPE_TIMESTAMP;
+		query.queryCount = 2;
+		if ( qvkCreateQueryPool( spatialGpu.device, &query, NULL, &s->times ) != VK_SUCCESS ) {
+			s->times = VK_NULL_HANDLE;
+		}
+	}
 	setInfo.descriptorPool = spatialGpu.descriptorPool;
 	setInfo.descriptorSetCount = 1;
 	setInfo.pSetLayouts = &spatialGpu.setLayout;
@@ -701,6 +726,10 @@ void S_SpatialGpuShutdown( void ) {
 			S_SpatialGpuFreeBuffer( &s->hits );
 			if ( s->done ) {
 				qvkDestroyFence( spatialGpu.device, s->done, NULL );
+			}
+			if ( s->times ) {
+				qvkDestroyQueryPool( spatialGpu.device, s->times, NULL );
+				s->times = VK_NULL_HANDLE;
 			}
 			if ( s->pool ) {
 				qvkDestroyCommandPool( spatialGpu.device, s->pool, NULL );
@@ -1310,10 +1339,17 @@ static qboolean S_SpatialGpuBatch( spatialGpuSlot_t *s, int numRays, const IPLRa
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	qvkBeginCommandBuffer( s->cmd, &begin );
 	S_SpatialGpuBuildBarrier( s->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT );
+	if ( s->times ) {
+		qvkCmdResetQueryPool( s->cmd, s->times, 0, 2 );
+		qvkCmdWriteTimestamp( s->cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, s->times, 0 );
+	}
 	qvkCmdBindPipeline( s->cmd, VK_PIPELINE_BIND_POINT_COMPUTE, spatialGpu.pipeline );
 	qvkCmdBindDescriptorSets( s->cmd, VK_PIPELINE_BIND_POINT_COMPUTE, spatialGpu.pipelineLayout, 0, 1, &s->set, 0, NULL );
 	qvkCmdPushConstants( s->cmd, spatialGpu.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( push ), push );
 	qvkCmdDispatch( s->cmd, (uint32_t)( ( numRays + SPATIAL_GPU_GROUP - 1 ) / SPATIAL_GPU_GROUP ), 1, 1 );
+	if ( s->times ) {
+		qvkCmdWriteTimestamp( s->cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, s->times, 1 );
+	}
 	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
 	qvkCmdPipelineBarrier( s->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &barrier, 0, NULL, 0, NULL );
@@ -1330,10 +1366,27 @@ static qboolean S_SpatialGpuBatch( spatialGpuSlot_t *s, int numRays, const IPLRa
 		return qfalse;
 	}
 	qvkResetFences( spatialGpu.device, 1, &s->done );
+	if ( s->times ) {
+		uint64_t ticks[2];
+
+		if ( qvkGetQueryPoolResults( spatialGpu.device, s->times, 0, 2, sizeof( ticks ), ticks, sizeof( uint64_t ), VK_QUERY_RESULT_64_BIT )
+			== VK_SUCCESS && ticks[1] >= ticks[0] ) {
+			spatialGpu.gpuNs.fetch_add( (uint64_t)( (double)( ticks[1] - ticks[0] ) * spatialGpu.nsPerTick ) );
+		}
+	}
+	spatialGpu.allBatches.fetch_add( 1 );
 	s->walls = anyHit ? 0 : numRays;
 	spatialGpu.batches.fetch_add( 1 );
 	spatialGpu.batchUsec.fetch_add( S_SpatialUsec() - start );
 	return qtrue;
+}
+
+// the GPU profiler of the client: what the batches of the echo took on the graphics card since the device was made,
+// and how many there were. qfalse: no device, or one without timestamps.
+qboolean S_SpatialGpuTimes( double *gpuMs, int *batches ) {
+	*gpuMs = spatialGpu.gpuNs.load() * 1e-6;
+	*batches = spatialGpu.allBatches.load();
+	return (qboolean)( spatialGpu.device && spatialGpu.timed && !spatialGpu.lost.load() );
 }
 
 // for v_spatialInfo: how many batches the last pass on the graphics card had, how long one took on average, and how
@@ -1491,6 +1544,7 @@ void S_SpatialGpuTakeLevel( void ) {}
 qboolean S_SpatialGpuReady( void ) { return qfalse; }
 qboolean S_SpatialGpuBeginPass( void ) { return qfalse; }
 void S_SpatialGpuBatchInfo( int *batches, int *usec, int *answered ) { *batches = *usec = *answered = 0; }
+qboolean S_SpatialGpuTimes( double *gpuMs, int *batches ) { *gpuMs = 0.0; *batches = 0; return qfalse; }
 void S_SpatialGpuSceneSettings( IPLSceneSettings *settings ) { memset( settings, 0, sizeof( *settings ) ); }
 
 #endif

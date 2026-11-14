@@ -1091,6 +1091,9 @@ static void CG_BodyQueueCopy(centity_t *cent, int clientNum, int knownWeapon)
 	cent->dustTrailTime = source->dustTrailTime;
 
 	trap->G2API_DuplicateGhoul2Instance(source->ghoul2, &cent->ghoul2);
+	// VisionJK: a body a saber cut through stays cut in its copy (cg_slice.c); by its place in cg_entities, its state
+	// may not have come in a snapshot yet
+	CG_SliceBodyCopied( clientNum, (int)( cent - cg_entities ) );
 
 	if (source->isRagging)
 	{ //just reset it now.

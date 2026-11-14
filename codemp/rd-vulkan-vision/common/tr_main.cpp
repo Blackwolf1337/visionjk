@@ -1010,7 +1010,8 @@ static void R_PuddleView( void ) {
 		const wetSpot_t *spot = &r_wet[i];
 		float score;
 
-		if ( spot->puddle < 0.05f || spot->normal[2] < 0.9f || spot->radius <= 0.0f
+		// (a streak of blood carries its width in puddle, it is no puddle to mirror)
+		if ( spot->kind == WET_BLOOD_STREAK || spot->puddle < 0.05f || spot->normal[2] < 0.9f || spot->radius <= 0.0f
 			|| R_CullPointAndRadius( spot->origin, spot->radius ) == CULL_OUT ) {
 			continue;
 		}
@@ -1039,10 +1040,88 @@ static void R_PuddleView( void ) {
 	for ( i = 0; i < 3; i++ ) {
 		newParms.ori.axis[i][2] = -oldParms.ori.axis[i][2];
 	}
+	// Into targets of half the size each way (VK_PuddleSize): the view halved, at the top left of the frame as the
+	// device counts (the viewport counts from the bottom, VK_SetViewport turns it with the height of the frame).
+	// The wet places read it at their pixel over the size of the frame, so it covers the same part of their picture.
+	{
+		const int top = glConfig.vidHeight - ( oldParms.viewportY + oldParms.viewportHeight );
+
+		newParms.viewportX = oldParms.viewportX / 2;
+		newParms.viewportWidth = VK_PuddleSize( oldParms.viewportWidth );
+		newParms.viewportHeight = VK_PuddleSize( oldParms.viewportHeight );
+		newParms.viewportY = glConfig.vidHeight - ( top / 2 + newParms.viewportHeight );
+	}
 
 	R_RenderView( &newParms );
 
 	tr.viewParms = oldParms;
+}
+
+/*
+========================
+R_ProbeViews
+
+VisionJK: one face of the next reflection probe of the level (R_CreateProbes) is drawn before the view of the level,
+a square of PROBE_SIZE at the corner of the frame, 90 degrees each way, the level alone (no entity, no light of an
+entity, no mark): rd-vulkan-vision draws it into targets of its own and copies it to its place among the faces
+(VK_BeginProbe, VK_EndProbe). One face a frame, so a frame keeps all of its room for the view itself; with 32
+probes all of them are drawn in 192 frames. The faces look along +x, -x, +y, -y, +z, -z (the same table in
+generic.frag ProbeFace). Done again from the start when the device lost them (a new window size).
+========================
+*/
+static const float probeAxes[6][3][3] = {	// forward, left, up
+	{ { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+	{ { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, 1 } },
+	{ { 0, 1, 0 }, { -1, 0, 0 }, { 0, 0, 1 } },
+	{ { 0, -1, 0 }, { 1, 0, 0 }, { 0, 0, 1 } },
+	{ { 0, 0, 1 }, { 0, 1, 0 }, { -1, 0, 0 } },
+	{ { 0, 0, -1 }, { 0, 1, 0 }, { 1, 0, 0 } },
+};
+
+void R_ProbeViews( const viewParms_t *main ) {
+	viewParms_t	parms;
+	int			face, probe, entities, dlights, polys;
+
+	if ( !tr.world || !tr.numProbes || !VK_ProbesSupported() ) {
+		return;
+	}
+	if ( VK_ProbesLost() ) {
+		tr.probeNext = 0;
+		tr.probesReady = qfalse;
+	}
+	if ( tr.probesReady ) {
+		return;
+	}
+	probe = tr.probeNext / 6;
+	face = tr.probeNext % 6;
+
+	memset( &parms, 0, sizeof( parms ) );
+	parms.viewportX = 0;
+	parms.viewportY = glConfig.vidHeight - PROBE_SIZE;
+	parms.viewportWidth = parms.viewportHeight = PROBE_SIZE;
+	parms.fovX = parms.fovY = 90.0f;
+	parms.isPortal = qtrue;
+	parms.probeFace = face + 1;
+	parms.probeIndex = probe;
+	VectorCopy( tr.probes[probe], parms.ori.origin );
+	VectorCopy( tr.probes[probe], parms.pvsOrigin );
+	for ( int i = 0; i < 3; i++ ) {
+		VectorCopy( probeAxes[face][i], parms.ori.axis[i] );
+	}
+
+	entities = tr.refdef.num_entities;
+	dlights = tr.refdef.num_dlights;
+	polys = tr.refdef.numPolys;
+	tr.refdef.num_entities = tr.refdef.num_dlights = tr.refdef.numPolys = 0;
+	R_RenderView( &parms );
+	tr.refdef.num_entities = entities;
+	tr.refdef.num_dlights = dlights;
+	tr.refdef.numPolys = polys;
+	tr.viewParms = *main;
+
+	if ( ++tr.probeNext == tr.numProbes * 6 ) {
+		tr.probesReady = qtrue;
+	}
 }
 
 /*
@@ -1167,6 +1246,7 @@ void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader,
 	tr.refdef.drawSurfs[index].sort = ((uint64_t)shader->sortedIndex << QSORT_SHADERNUM_SHIFT)
 		| tr.shiftedEntityNum | ( fogIndex << QSORT_FOGNUM_SHIFT ) | (int)dlightMap;
 	tr.refdef.drawSurfs[index].surface = surface;
+	tr.refdef.drawSurfs[index].dlightBits = 0;
 	tr.refdef.numDrawSurfs++;
 }
 
@@ -1188,6 +1268,117 @@ void R_DecomposeSort( uint64_t sort, int *entityNum, shader_t **shader,
 R_SortDrawSurfs
 =================
 */
+/*
+=================
+R_SortGlass
+
+VisionJK: the surfaces whose material is glass (VK_GlassDraw) shows the scene drawn before them and are drawn
+without blending, so they go far to near, together, where the first of them was in the order of the shaders: the
+glass behind glass shows through the nearer. Only they move; the order of everything else stays as it was.
+=================
+*/
+#define MAX_SORTED_GLASS	1024
+
+static qboolean R_IsGlass( const shader_t *shader ) {
+	const shader_t *state = shader->remappedShader ? shader->remappedShader : shader;
+
+	for ( int i = 0; i < state->numUnfoggedPasses; i++ ) {
+		if ( state->stages[i].active && state->stages[i].mat && state->stages[i].mat->transmission > 0.0f ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+// where a surface is, for its distance from the view
+static void R_DrawSurfCenter( const drawSurf_t *drawSurf, int entityNum, vec3_t center ) {
+	const surfaceType_t *surface = drawSurf->surface;
+
+	VectorClear( center );
+	if ( entityNum != REFENTITYNUM_WORLD ) {
+		VectorCopy( tr.refdef.entities[entityNum].e.origin, center );
+		return;
+	}
+	switch ( *surface ) {
+	case SF_FACE: {
+		const srfSurfaceFace_t *face = (const srfSurfaceFace_t *)surface;
+
+		for ( int i = 0; i < face->numPoints; i++ ) {
+			VectorAdd( center, face->points[i], center );
+		}
+		if ( face->numPoints ) {
+			VectorScale( center, 1.0f / face->numPoints, center );
+		}
+		break;
+	}
+	case SF_GRID: {
+		const srfGridMesh_t *grid = (const srfGridMesh_t *)surface;
+
+		VectorAdd( grid->meshBounds[0], grid->meshBounds[1], center );
+		VectorScale( center, 0.5f, center );
+		break;
+	}
+	case SF_TRIANGLES: {
+		const srfTriangles_t *tris = (const srfTriangles_t *)surface;
+
+		VectorAdd( tris->bounds[0], tris->bounds[1], center );
+		VectorScale( center, 0.5f, center );
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+static void R_SortGlass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	static drawSurf_t	glass[MAX_SORTED_GLASS];
+	static float		distance[MAX_SORTED_GLASS];
+	int					numGlass = 0, first = -1, out;
+
+	for ( int i = 0; i < numDrawSurfs && numGlass < MAX_SORTED_GLASS; i++ ) {
+		shader_t *shader;
+		int entityNum, fogNum, dlighted;
+		vec3_t center;
+
+		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
+		if ( !R_IsGlass( shader ) ) {
+			continue;
+		}
+		if ( first < 0 ) {
+			first = i;
+		}
+		R_DrawSurfCenter( &drawSurfs[i], entityNum, center );
+		// (insertion, far first: there are few)
+		const float d = DistanceSquared( center, tr.viewParms.ori.origin );
+		int at = numGlass;
+
+		while ( at > 0 && distance[at - 1] < d ) {
+			glass[at] = glass[at - 1];
+			distance[at] = distance[at - 1];
+			at--;
+		}
+		glass[at] = drawSurfs[i];
+		distance[at] = d;
+		numGlass++;
+		// taken out: marked by a surface of NULL until the list is put together again
+		drawSurfs[i].surface = NULL;
+	}
+	if ( numGlass < 2 ) {
+		if ( numGlass == 1 ) {
+			drawSurfs[first] = glass[0];
+		}
+		return;
+	}
+	// the others after the first glass close up, from the end backwards, and the glass goes in at the first place
+	out = numDrawSurfs - 1;
+	for ( int i = numDrawSurfs - 1; i >= first; i-- ) {
+		if ( drawSurfs[i].surface ) {
+			drawSurfs[out--] = drawSurfs[i];
+		}
+	}
+	memcpy( &drawSurfs[first], glass, sizeof( glass[0] ) * numGlass );
+}
+
 void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	shader_t		*shader;
 	int				fogNum;
@@ -1211,6 +1402,7 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	// sort the drawsurfs by sort type, then orientation, then shader
 	R_RadixSort( drawSurfs, numDrawSurfs );
+	R_SortGlass( drawSurfs, numDrawSurfs );
 
 	R_PuddleView();
 

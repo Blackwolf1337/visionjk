@@ -107,6 +107,7 @@ set(MPVulkanVisionVulkanFiles
 	"${MPDir}/rd-vulkan-vision/vk_main.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_rt.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	)
 source_group("vulkan" FILES ${MPVulkanVisionVulkanFiles})
@@ -140,6 +141,9 @@ set(MPVulkanVisionSceneFiles
 	"${MPDir}/rd-vulkan-vision/common/tr_local.h"
 	"${MPDir}/rd-vulkan-vision/common/tr_main.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_marks.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_material.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_matgen.cpp"
+	"${MPDir}/rd-vulkan-vision/common/tr_automat.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_mesh.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_model.cpp"
 	"${MPDir}/rd-vulkan-vision/common/tr_scene.cpp"
@@ -218,13 +222,33 @@ set(MPVulkanVisionShaders
 	paint.vert
 	paint.frag
 	)
+# the shaders that trace rays (vk_rt.cpp): Vulkan only, GLSL ES has no ray queries; and the tessellation of
+# materials (VKP_TESS), which GLSL ES 3.00 has not either
+set(MPVulkanVisionRTShaders
+	generic.tesc
+	generic.tese
+	rtaccum.frag
+	rtcells.comp
+	rtlamps.comp
+	rtdebug.frag
+	rtresolve.frag
+	rtshadow.frag
+	rtskin.comp
+	smdepth.vert
+	rtlightmask.frag
+	smlights.frag
+	smshadow.frag
+	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/lightmask.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/rtmask.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/scene.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/skin.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	)
 # Shaders of the Vulkan device alone, not made into GLSL ES: the passes of v_smaa, which include SMAA.hlsl of
@@ -233,8 +257,14 @@ set(MPVulkanVisionVulkanShaders
 	smaa_edge.frag
 	smaa_weight.frag
 	smaa_blend.frag
+	tonemap.frag
+	ssrprep.frag
+	saber.frag
+	saberportal.frag
+	saberglow.frag
 	)
 set(MPVulkanVisionVulkanShaderIncludes
+	"${MPDir}/rd-vulkan-vision/shaders/saber.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/smaa.glsl"
 	"${VisionJKLibDir}/smaa/SMAA.hlsl"
 	)
@@ -242,7 +272,7 @@ set(MPVulkanVisionShaderOutputs)
 if(MPVulkanVisionVulkanTarget)
 	# GLSL to SPIR-V as a C initializer list, one .inc per shader, included by vk_pipeline.cpp. glslc runs on the
 	# build machine, so this also works when cross compiling.
-	foreach(shader ${MPVulkanVisionShaders} ${MPVulkanVisionVulkanShaders})
+	foreach(shader ${MPVulkanVisionShaders} ${MPVulkanVisionRTShaders} ${MPVulkanVisionVulkanShaders})
 		set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
 		string(REPLACE "." "_" shaderName ${shader})
 		set(shaderOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}.inc")

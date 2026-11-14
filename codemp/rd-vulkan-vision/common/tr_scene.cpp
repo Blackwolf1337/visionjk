@@ -31,6 +31,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static	int			r_firstSceneDrawSurf;
 
 static	int			r_numdlights;
+static	int			r_numSaberBlades;		// VisionJK: ext.AddSaberBladeToScene
+static	int			r_firstSceneSaberBlade;
 static	int			r_firstSceneDlight;
 
 static	int			r_numentities;
@@ -60,6 +62,8 @@ void R_InitNextFrame( void ) {
 
 	r_numdlights = 0;
 	r_firstSceneDlight = 0;
+	r_numSaberBlades = 0;
+	r_firstSceneSaberBlade = 0;
 
 	r_numentities = 0;
 	r_firstSceneEntity = 0;
@@ -82,6 +86,7 @@ RE_ClearScene
 */
 void RE_ClearScene( void ) {
 	r_firstSceneDlight = r_numdlights;
+	r_firstSceneSaberBlade = r_numSaberBlades;
 	r_firstSceneEntity = r_numentities;
 	r_firstScenePoly = r_numpolys;
 	refEntParent = -1;
@@ -245,6 +250,7 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 
 	backEndData->entities[r_numentities].e = *ent;
 	backEndData->entities[r_numentities].lightingCalculated = qfalse;
+	backEndData->entities[r_numentities].cut = qfalse;
 
 	if (ent->ghoul2)
 	{
@@ -270,6 +276,25 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 	//}
 
 	r_numentities++;
+}
+
+/*
+=====================
+RE_AddCutEntityToScene
+
+VisionJK: an entity drawn cut by plane (in the world: normal, distance), only what lies on the side the normal
+points to is drawn (vk_shade.cpp VK_CurrentTransform puts it into the clip plane): the halves of a body a saber cut
+through (cgame/cg_slice.c)
+=====================
+*/
+void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane ) {
+	const int index = r_numentities;
+
+	RE_AddRefEntityToScene( ent );
+	if ( r_numentities == index + 1 && plane ) {
+		backEndData->entities[index].cut = qtrue;
+		VectorCopy4( plane, backEndData->entities[index].cutPlane );
+	}
 }
 
 
@@ -359,6 +384,50 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	dl->color[1] = g;
 	dl->color[2] = b;
 	dl->additive = additive;
+	dl->lineRange = 0.0f;
+}
+
+/*
+=====================
+RE_AddLineLightToScene
+
+VisionJK: a tube of light (a saber blade). The tests of the front end see a point light in its middle that reaches
+the whole of it; the backend lights from the nearest point of the tube (vk_shade.cpp, generic.frag DynamicLight).
+=====================
+*/
+void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b ) {
+	dlight_t	*dl;
+	vec3_t		half;
+
+	if ( !tr.registered || r_numdlights >= MAX_DLIGHTS || range <= 0.0f ) {
+		return;
+	}
+	dl = &backEndData->dlights[r_numdlights++];
+	VectorSubtract( end, start, half );
+	VectorScale( half, 0.5f, half );
+	VectorAdd( start, half, dl->origin );
+	dl->radius = range + VectorLength( half );
+	dl->color[0] = r;
+	dl->color[1] = g;
+	dl->color[2] = b;
+	dl->additive = qfalse;
+	dl->lineRange = range;
+	VectorCopy( start, dl->lineStart );
+	VectorCopy( end, dl->lineEnd );
+}
+
+/*
+=====================
+RE_AddSaberBladeToScene
+
+VisionJK: a saber blade the renderer draws in 3D (vk_post.cpp VK_SaberBlades)
+=====================
+*/
+void RE_AddSaberBladeToScene( const saberBlade3D_t *blade ) {
+	if ( !tr.registered || !blade || r_numSaberBlades >= MAX_SABER_BLADES || blade->glow <= 0.0f ) {
+		return;
+	}
+	backEndData->saberBlades[r_numSaberBlades++] = *blade;
 }
 
 /*
@@ -495,6 +564,8 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
 	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
+	tr.refdef.numSaberBlades = r_numSaberBlades - r_firstSceneSaberBlade;
+	tr.refdef.saberBlades = &backEndData->saberBlades[r_firstSceneSaberBlade];
 
 	// Add the decals here because decals add polys and we need to ensure
 	// that the polys are added before the the renderer is prepared
@@ -544,10 +615,17 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	VectorCopy( fd->vieworg, parms.pvsOrigin );
 
+	// VisionJK: a face of a reflection probe of the level while they are not all drawn, before the view of the level
+	if ( !( tr.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		R_ProbeViews( &parms );
+		// and the view the material debug menu picks along (ext.MaterialPick)
+		R_MaterialLevelView( fd->vieworg, fd->viewaxis );
+	}
 	R_RenderView( &parms );
 
 	// the next scene rendered in this frame will tack on after this one
 	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;
+	VK_NoteDrawSurfs( r_firstSceneDrawSurf );
 	r_firstSceneEntity = r_numentities;
 	r_firstSceneMiniEntity = r_numminientities;
 	r_firstSceneDlight = r_numdlights;

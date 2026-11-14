@@ -1,0 +1,210 @@
+// materials of the material debug menu (v_matdebug) for zz_mat_desert.oshader, read after the shader files
+
+textures/desert/stucco
+{
+	q3map_material Plaster
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/stucco
+		blendFunc GL_DST_COLOR GL_ZERO
+		albedoGen cccccc 0 1
+		normalGen 0.5 1 0.3
+		roughness 0.85
+		metalness 0
+	}
+	{
+		map textures/common/detail5
+		blendFunc GL_DST_COLOR GL_ONE
+		rgbGen identity
+		tcMod scale 3 3
+	}
+}
+
+textures/desert/stucco_top_grime
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/stucco_top_grime
+		blendFunc GL_DST_COLOR GL_ZERO
+		albedoGen cccccc 0 1
+		normalGen 0.5 1 0.3
+		roughness 0.85
+		metalness 0
+	}
+	{
+		map textures/common/detail5
+		blendFunc GL_DST_COLOR GL_ONE
+		rgbGen identity
+		tcMod scale 3 3
+	}
+}
+
+textures/desert/stucco_grime
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/stucco_grime
+		blendFunc GL_DST_COLOR GL_ZERO
+		albedoGen cccccc 0 1
+		normalGen 0.5 1 0.3
+		roughness 0.85
+		metalness 0
+	}
+	{
+		map textures/common/detail5
+		blendFunc GL_DST_COLOR GL_ONE
+		rgbGen identity
+		tcMod scale 3 1
+	}
+}
+
+textures/desert/s_basic
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/s_basic
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.6 1 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+}
+
+textures/desert/s_basic_floor
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/s_basic_floor
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.6 1 0.3
+		rmoGen 0.2 0.4
+		roughness 0.65
+		metalness 0.1
+	}
+}
+
+textures/desert/s_floor_elevator
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/s_floor_elevator
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.6 1 0.3
+		rmoGen 0.2 0.4
+		roughness 0.65
+		metalness 0.1
+	}
+}
+
+textures/desert/s_floor1
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/s_floor1
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.5 0.5 0
+		rmoGen 0.3 0.5
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.02
+		parallaxPlane 0.5
+	}
+}
+
+textures/desert/outerhull
+{
+	q3map_material HollowMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/outerhull
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.5 2 0.3
+		rmoGen 0.3 0.5
+		roughness 0.8
+		metalness 0
+	}
+}
+
+textures/desert/s_floor_lrg
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/s_floor_lrg
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.5 2 0.3
+		rmoGen 0.3 0.5
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.01
+		parallaxPlane 0.5
+	}
+}
+
+textures/desert/sandfloor2b
+{
+	q3map_shadeangle 150
+	qer_editorimage textures/desert/sandfloor2b
+	q3map_material Sand
+	q3map_nonplanar
+	q3map_splotchfix
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map textures/desert/sandfloor2b
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+		normalGen 0.3 2 0.3 invert
+		rmoGen 0.3 0.3
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.015
+		parallaxPlane 0.5
+	}
+}
+
+textures/desert/stucco_grime_top_bottom
+{
+	{
+		map $lightmap
+	}
+	{
+		map textures/desert/stucco_grime_top_bottom
+		blendFunc GL_DST_COLOR GL_ZERO
+		albedoGen cccccc 0 1
+		normalGen 0.5 1 0.3
+		roughness 0.85
+		metalness 0
+	}
+	{
+		map textures/common/detail5
+		blendFunc GL_DST_COLOR GL_ONE
+		rgbGen identity
+		tcMod scale 3 3
+	}
+}

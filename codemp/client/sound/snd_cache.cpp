@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // An MP3 outside sound/chars is unpacked to samples when it is registered (snd_mem.cpp): weapons, effects, the
 // sounds of the players. That was most of the sounds of a level, 182 of 256 ms when a server with 29 players
-// was joined, and it comes out the same every time. So the samples are kept, a file per sound, in soundcache/
+// was joined, and it comes out the same every time. So the samples are kept, a file per sound, in cache/sound/
 // of the profile, and the next time they are read instead of unpacked.
 //
 // As the textures of rd-vulkan-vision (vk_texcache.cpp): a file is named after what it was made from, the path
@@ -32,6 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // before they are brought to the rate of the mixer, so s_khz is not in the name.
 
 #include "snd_local.h"
+#include "client/cl_cache.h"
 
 #define SNDCACHE_MAGIC		0x31444E53		// "SND1"
 #define SNDCACHE_VERSION	1				// of the file: another one, another name
@@ -51,7 +52,7 @@ static struct {
 static cvar_t *v_soundCache;
 
 void S_SoundCacheInit( void ) {
-	v_soundCache = Cvar_Get( "v_soundCache", "1", CVAR_ARCHIVE_ND, "Sounds that were unpacked from MP3 files are kept in soundcache/ of the profile and not unpacked again. 0: every one is unpacked" );
+	v_soundCache = Cvar_Get( "v_soundCache", "1", CVAR_ARCHIVE_ND, "Sounds that were unpacked from MP3 files are kept in cache/sound/ of the profile and not unpacked again. 0: every one is unpacked" );
 }
 
 // FNV-1a, 64 bit
@@ -65,7 +66,7 @@ static unsigned long long S_SoundCacheHash( const char *text ) {
 }
 
 static void S_SoundCachePath( char *path, int pathSize ) {
-	Com_sprintf( path, pathSize, "soundcache/%016llx.dat", S_SoundCacheHash( sndCache.key ) );
+	Com_sprintf( path, pathSize, "sound/%016llx.dat", S_SoundCacheHash( sndCache.key ) );
 }
 
 /*
@@ -92,12 +93,8 @@ const byte *S_SoundCacheFind( const char *file, wavinfo_t *info, void **kept ) {
 	sndCache.pending = qtrue;
 
 	S_SoundCachePath( path, sizeof( path ) );
-	// (only the file of the profile: a pak could have one under the same name, FS_ReadFile looks in paks too)
-	if ( FS_FileSource( path, &length, &checksum ) != FS_SOURCE_DIRECTORY ) {
-		return NULL;
-	}
 	Com_LoadPush( "sound kept", file );
-	size = FS_ReadFile( path, &buffer );
+	size = Cache_Read( path, &buffer );
 	Com_LoadPop();
 	if ( size <= 0 || !buffer ) {
 		return NULL;
@@ -137,7 +134,6 @@ After S_SoundCacheFind() found nothing: the samples the unpacker made, bytes of 
 void S_SoundCacheKeep( const wavinfo_t *info, const byte *data, int bytes ) {
 	sndCacheHeader_t	header;
 	char				path[MAX_QPATH];
-	fileHandle_t		f;
 
 	if ( !sndCache.pending ) {
 		return;
@@ -156,12 +152,17 @@ void S_SoundCacheKeep( const wavinfo_t *info, const byte *data, int bytes ) {
 
 	S_SoundCachePath( path, sizeof( path ) );
 	Com_LoadPush( "sound kept: written", NULL );
-	f = FS_FOpenFileWrite( path );
-	if ( f ) {
-		FS_Write( &header, sizeof( header ), f );
-		FS_Write( sndCache.key, header.keyLength, f );
-		FS_Write( data + info->dataofs, info->samples * info->width, f );
-		FS_FCloseFile( f );
+	{
+		// (one block for Cache_Write, as large as the sound: the zone, for this call)
+		const int	sampleBytes = info->samples * info->width;
+		const int	size = (int)sizeof( header ) + header.keyLength + sampleBytes;
+		byte		*out = (byte *)Z_Malloc( size, TAG_TEMP_WORKSPACE, qfalse );
+
+		memcpy( out, &header, sizeof( header ) );
+		memcpy( out + sizeof( header ), sndCache.key, header.keyLength );
+		memcpy( out + sizeof( header ) + header.keyLength, data + info->dataofs, sampleBytes );
+		Cache_Write( path, out, size );
+		Z_Free( out );
 	}
 	Com_LoadPop();
 }

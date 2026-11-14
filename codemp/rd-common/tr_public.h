@@ -299,6 +299,62 @@ typedef struct refexport_s {
 		// The pixels the letters of a text cover when it is drawn at 0,0: box is left, top, right, bottom in units.
 		// qfalse for a font of the game, which does not know them.
 		qboolean			(*Font_InkBox)							( const char *text, const int setIndex, const float scale, float *box );
+		// The material debug menu (materialParms_t of tr_types.h). A material is the one of a stage of a shader
+		// text, named by the number of the stage in the text (materialStage_t sourceStage); all loaded shaders of
+		// that name share it, and a change shows from the next frame on. NULL in a renderer without them.
+		// The surface of the level a ray hits: start NULL is the middle of the last view of the level.
+		qboolean			(*MaterialPick)							( const vec3_t start, const vec3_t end, materialPick_t *out );
+		// The shaders as one handle per name, those the level uses (largest area first) or all loaded ones: handles
+		// from first on, up to max of them, into out; answers how many there are.
+		int					(*MaterialList)							( qboolean all, int first, qhandle_t *out, int max );
+		// A loaded shader by name (any of its lightmap variants), 0 for none. It is never loaded by this.
+		qhandle_t			(*MaterialFind)							( const char *name );
+		qboolean			(*MaterialInfo)							( qhandle_t shader, materialInfo_t *out );
+		// The material of a stage; a stage without one gives the empty material. qfalse: there is no such stage.
+		qboolean			(*MaterialGet)							( qhandle_t shader, int sourceStage, materialParms_t *out );
+		// Writes the fields of in that fields says (MATP_*); a stage without a material gets one.
+		qboolean			(*MaterialSet)							( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
+		// The text of the shader with the materials it has now, and the shader file it came from ("" for a shader
+		// without text). qfalse when it does not fit.
+		qboolean			(*MaterialText)							( qhandle_t shader, char *buf, int size, char *file, int fileSize );
+		// That text into shaders/zz_mat_<file>.oshader of the profile, read after the shader files from the next
+		// level on; path is the file. qfalse and err when the text would not give the materials shown now.
+		qboolean			(*MaterialSave)							( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
+		// Light to judge materials by (lightOverride_t of tr_types.h), until it is called again; NULL: the light of
+		// the level as it is. Kept over a change of level.
+		void				(*SetLightOverride)						( const lightOverride_t *light );
+		// Where the last view of the level was seen from and where it looked. qfalse before the first one.
+		qboolean			(*LevelView)							( vec3_t origin, vec3_t forward );
+		// A picture of the debug menu of the client (its font atlas): slot 0 to UI_TEXTURES - 1, width x height
+		// RGBA, sides powers of two; the same slot again takes the new pixels. Answers a shader for DrawTriangles2D
+		// (colours of the vertices, alpha blended), 0 when it could not be made.
+		qhandle_t			(*UiTexture)							( int slot, const byte *rgba, int width, int height );
+		// Triangles in pixels of the window, x right and y down (xyz[2] is not used), with the picture of shader
+		// and the colours of the vertices, cut to clip (left, top, right, bottom pixels, NULL none); drawn in the 2D
+		// of this frame where the call comes, flat on the window also while the 2D is on a plane.
+		void				(*DrawTriangles2D)						( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t shader, const int *clip );
+		// A tube of light from start to end for the scene of this frame (a saber blade), reaching range units from
+		// the tube, colour 0 to 1, between ClearScene and RenderScene; it takes one of the dynamic lights.
+		void				(*AddLineLightToScene)					( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
+		// A saber blade as the renderer draws it in 3D (a white core in a coloured glow, and the place it swept since a
+		// moment ago) for the scene of this frame, between ClearScene and RenderScene; NULL: the cgame draws the flat
+		// blade as before.
+		void				(*AddSaberBladeToScene)					( const saberBlade3D_t *blade );
+		// An entity drawn cut by plane (in the world: normal, distance; what lies on the side the normal points to is
+		// kept), for the scene of this frame; otherwise as AddRefEntityToScene. NULL: the renderer cuts nothing.
+		void				(*AddCutEntityToScene)					( const refEntity_t *ent, const float *plane );
+		// The number of a bone in the skeleton of model modelIndex of a ghoul2 instance (-1: none), parent gets the
+		// number of its parent (-1 for the root). NULL: the renderer has none.
+		int					(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
+		// Bones of model modelIndex placed whole in the world (count 3x4 matrices in world, in the frame
+		// G2API_GetBoltMatrix gives for the same angles, origin and scale); bones not listed follow their parent.
+		// count 0 hands them all back to the animation. cut (or NULL): on the first call the cut of a part of a cut body
+		// in the world (keeps the side the normal points to) and hidden[count] the bones of another part: each vertex
+		// keeps the side it had in this first pose. NULL: the renderer has none.
+		qboolean			(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
+		// What the device took for the parts of the last frames (gpuProfile_t of tr_types.h, the GPU profiler of the
+		// client). qfalse: the device has no timestamps.
+		qboolean			(*GpuProfile)							( gpuProfile_t *out );
 	} ext;
 
 } refexport_t;
@@ -417,6 +473,12 @@ typedef struct refimport_s {
 	// characters the fonts of the game do not have, 1 the one with a fixed width. NULL when there is none. The
 	// bytes stay where they are until the program ends.
 	const byte *	(*FontFile)							( int font, int *length );
+
+	// The folder cache of the profile (client/cl_cache.cpp), for what rd-vulkan-vision keeps: name is
+	// "<kind>/<file>". Cache_Read: the file in a buffer for FS_FreeFile and its length, -1 when it is not there.
+	// At the end of the table.
+	long			(*Cache_Read)						( const char *name, void **buffer );
+	qboolean		(*Cache_Write)						( const char *name, const void *data, int size );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

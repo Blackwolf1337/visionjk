@@ -1068,6 +1068,11 @@ static void CG_General( centity_t *cent ) {
 				return;
 			}
 
+			if ( clEnt && CG_Sliced( clEnt->currentState.number ) )
+			{ // VisionJK: his body was cut through along the swing (cg_slice.c), the limb would be one more
+				return;
+			}
+
 
 			if (clEnt && !(clEnt->currentState.eFlags & EF_DEAD))
 			{ //death flag hasn't made it through yet for the limb owner, we cannot create the limb until he's flagged as dead
@@ -1506,6 +1511,12 @@ Ghoul2 Insert End
 	{
 		ent.customShader = trap->R_RegisterShader( "models/map_objects/imp_mine/turret_chair_dmg.tga" );
 		//trap->R_AddRefEntityToScene( &ent );
+	}
+
+	// VisionJK: the copy of a body a saber cut through is drawn in its parts (cg_slice.c), never whole, nor fading whole
+	if ( cent->currentState.eType == ET_BODY && CG_SliceDrawBody( cent, &ent, cent->lerpAngles ) )
+	{
+		return;
 	}
 
 	if ((cent->currentState.eFlags & EF_DISINTEGRATION) && cent->currentState.eType == ET_BODY)

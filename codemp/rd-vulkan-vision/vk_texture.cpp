@@ -68,8 +68,13 @@ void VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect
 }
 
 void VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to ) {
-	const VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
+	VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
 		? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT ) : VK_IMAGE_ASPECT_COLOR_BIT;
+
+	// a depth without stencil (the atlas of the shadow maps, vk_rt.cpp)
+	if ( target->format == VK_FORMAT_D32_SFLOAT || target->format == VK_FORMAT_D16_UNORM ) {
+		aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
 
 	VK_SetLayout( cmd, target->image, aspect, target->layout, to );
 	target->layout = to;
@@ -296,6 +301,20 @@ void VK_WriteTexture( int slot ) {
 	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 }
 
+// an image of the device in a place of the texture table, filtered across its levels when it has them
+void VK_ShowImage( int slot, VkImageView view, qboolean mipmapped ) {
+	VkDescriptorImageInfo image = { mipmapped ? VK_FindSampler( GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR, GL_CLAMP, 1.0f ) : vk.linearSampler,
+		view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+	write.dstSet = vk.textureSet;
+	write.dstArrayElement = (uint32_t)slot;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write.pImageInfo = &image;
+	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+}
+
 void VK_ShowTarget( int slot, const vkTarget_t *target ) {
 	VkDescriptorImageInfo image = { vk.linearSampler, target->view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -486,12 +505,17 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VkDescriptorSet *sets[7] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1], &vk.softSets[0], &vk.softSets[1], &vk.smokeSets[0], &vk.smokeSets[1] };
 	vkTarget_t *targets[7] = { &vk.glow, &vk.blur[0], &vk.blur[1], &vk.soft[0], &vk.soft[1], &vk.smoke[0], &vk.smoke[1] };
 
-	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	// (the glowing stages are drawn with the pipelines of the level, so in the format of the frame)
+	VK_CreateTarget( &vk.glow, vk.width, vk.height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
 		// the glowing stages are drawn over the depth of the scene, so with as many samples
-		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 	}
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
+	// v_ssr: the level and how far each pixel is, in the format of the frame (vk_post.cpp VK_SsrPrep)
+	VK_CreateTarget( &vk.ssrColor, vk.width, vk.height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.ssrShown = -1;
+	vk.ssrReady = qfalse;
+	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
 		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
@@ -531,24 +555,43 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_WritePostSet( vk.screenSet, vk.screen.view );
 
 	// v_wetMirror: the view mirrored at the floor of the puddles, with the formats and the samples of the frame, so
-	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all.
+	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all. Half the size of the
+	// frame each way (R_PuddleView): the mirror is rippled and blurred, and drawing the level a second time at full
+	// size cost 0.5 ms of a 2.7 ms frame on an RTX 4070 SUPER (2026-11-14).
 	if ( v_wetMirror->integer && vk.depthReadable ) {
 		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		const int mirrorWidth = VK_PuddleSize( vk.width ), mirrorHeight = VK_PuddleSize( vk.height );
 
-		VK_CreateTarget( &vk.reflect, vk.width, vk.height, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_CreateTarget( &vk.reflect, mirrorWidth, mirrorHeight, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_SAMPLE_COUNT_1_BIT );
-		VK_CreateTarget( &vk.reflectDepth, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+		VK_CreateTarget( &vk.reflectDepth, mirrorWidth, mirrorHeight, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
 			| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthAspect, VK_SAMPLE_COUNT_1_BIT );
 		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-			VK_CreateTarget( &vk.reflectMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_CreateTarget( &vk.reflectMS, mirrorWidth, mirrorHeight, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
 				vk.samples );
-			VK_CreateTarget( &vk.reflectDepthMS, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+			VK_CreateTarget( &vk.reflectDepthMS, mirrorWidth, mirrorHeight, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
 				vk.samples );
 		}
 		VK_PostSetOnce( &vk.reflectSet );
 		VK_WritePostSet( vk.reflectSet, vk.reflect.view );
 	}
 	vk.reflectFrame = -1;
+
+	// the faces of the reflection probes, with the formats and the samples of the frame as the puddle view
+	{
+		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		VK_CreateTarget( &vk.probeColor, PROBE_SIZE, PROBE_SIZE, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_SAMPLE_COUNT_1_BIT );
+		VK_CreateTarget( &vk.probeDepth, PROBE_SIZE, PROBE_SIZE, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+			VK_SAMPLE_COUNT_1_BIT );
+		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+			VK_CreateTarget( &vk.probeColorMS, PROBE_SIZE, PROBE_SIZE, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+				vk.samples );
+			VK_CreateTarget( &vk.probeDepthMS, PROBE_SIZE, PROBE_SIZE, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+				vk.samples );
+		}
+	}
 
 	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
 	// pixel (not every device filters a depth format) while nothing draws into it.
@@ -619,6 +662,13 @@ void VK_CreateSmaaTargets( void ) {
 }
 
 void VK_DestroyPostTargets( void ) {
+	VK_DestroyTarget( &vk.ssrColor );
+	vk.ssrReady = qfalse;
+	VK_DestroyTarget( &vk.probeColor );
+	VK_DestroyTarget( &vk.probeColorMS );
+	VK_DestroyTarget( &vk.probeDepth );
+	VK_DestroyTarget( &vk.probeDepthMS );
+	VK_DestroyProbeAtlas();
 	VK_DestroyTarget( &vk.smaaEdges );
 	VK_DestroyTarget( &vk.smaaWeights );
 	VK_DestroyTarget( &vk.smaaColor );

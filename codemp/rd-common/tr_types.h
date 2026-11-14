@@ -52,7 +52,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 									// for lighting.  This allows entities to sink into the floor
 									// with their origin going solid, and allows all parts of a
 									// player to get the same lighting
-#define	RF_SHADOW_PLANE		0x00100	// use refEntity->shadowPlane
+#define	RF_SHADOW_PLANE		0x00100	// VisionJK: casts a shadow the renderer traces from the lights of the level (cg_shadows 2)
 #define	RF_WRAP_FRAMES		0x00200	// mod the model frames by the maxframes to allow continuous
 										// animation without needing to know the frame count
 
@@ -148,6 +148,9 @@ typedef struct scopeEffect_s {
 #define SCREENFX_SNOW		9		// a clump of snow on the view at a, radius its size, strength how much of it is
 										// left as it melts, seed its shape. Only with an engine that sets the cvar
 										// v_screenFxSnow to 1.
+#define SCREENFX_BLOOD		10		// a splat of blood on the view at a, radius its size, width the trail above it where it
+										// ran down, strength how wet it still is, seed its shape. Only with an engine that sets
+										// the cvar v_screenFxBlood to 1 (a cut close by, cgame/cg_slice.c).
 #define SCREENFX_MAX_SOURCES	48
 
 typedef struct screenFxSource_s {
@@ -212,6 +215,11 @@ typedef struct liquidSegment_s {
 #define WET_RING		3		// radius: how far it runs out, wet: how strong, flow: 0 to 1 of its life
 #define WET_TRACK		4		// a piece of the track of a wet tire from 2 origin - hit to hit, seed: half its width
 #define WET_SNOW		5		// a splat of snow, slid down to origin from hit, wet: how much of it is left
+#define WET_BLOOD		6		// a pool of blood with droplets round it (cgame/cg_slice.c), wet: how far it has run out
+#define WET_BLOOD_STREAK	7	// a smear of blood from 2 origin - hit to hit where a cut part was dragged, puddle: half
+								// its width, wet: how fresh and full, seed: the shape of its edge
+#define WET_BLOOD_FOOT_LEFT		8	// the print of a foot that stepped in blood (cgame/cg_slice.c), as WET_FOOT_LEFT
+#define WET_BLOOD_FOOT_RIGHT	9
 
 typedef struct wetSpot_s {
 	vec3_t		origin;
@@ -255,6 +263,166 @@ typedef struct paintPicture_s {
 	int			sheet;				// pixels of the sheet each way
 	int			delays[PAINT_FRAMES];	// msec each frame is shown
 } paintPicture_t;
+
+// VisionJK: the material debug menu (refexport_t ext.Material*). A material belongs to a stage of a shader text,
+// named by the number of that stage in the text (sourceStage), and all shaders of that name share it.
+#define MATERIAL_MAX_STAGES		8
+
+// pictures of the debug menu of the client (refexport_t ext.UiTexture): its font atlas and such
+#define UI_TEXTURES				8
+
+// the fields of materialParms_t that ext.MaterialSet writes
+#define MATP_PBR				(1 << 0)
+#define MATP_ROUGHNESS			(1 << 1)
+#define MATP_METALNESS			(1 << 2)
+#define MATP_PARALLAX			(1 << 3)	// parallaxDepth and parallaxPlane
+#define MATP_SPECULAR			(1 << 4)
+#define MATP_WRAPLIGHT			(1 << 5)
+#define MATP_SPARKLE			(1 << 6)
+#define MATP_NORMALMAP			(1 << 7)	// normalMap and normalHeight
+#define MATP_RMOMAP				(1 << 8)	// rmoMap and ormOrder
+#define MATP_GEN				(1 << 9)	// gen: the maps are made again
+#define MATP_GLASS				(1 << 10)	// transmission, ior, thickness, absorption
+#define MATP_SURFACE			(1 << 11)	// clearcoat, sheen, anisotropy, emission, specGlossMap, specularReflectance, normalScale
+#define MATP_TESS				(1 << 12)	// tessHeight, tessPlane, tessDensity
+#define MATP_ALL				0x1fff
+
+// the maps the renderer makes from the texture of a stage when it loads (shader keywords albedoGen, normalGen,
+// rmoGen of .oshader files, tr_matgen.cpp), so a material needs no picture files
+#define MATGEN_ALBEDO			(1 << 0)
+#define MATGEN_NORMAL			(1 << 1)
+#define MATGEN_RMO				(1 << 2)
+
+typedef struct materialGen_s {
+	int			flags;				// MATGEN_*
+	// albedoGen <rrggbb> <delight> <saturation>: the light painted into the texture taken out (0 to 1), tinted,
+	// its colour stronger or weaker (0 to 2)
+	float		tint[3];
+	float		delight;
+	float		saturation;
+	// normalGen <strength> <blur> <detail> [invert]: the bumps from the brightness of the texture (bright stands
+	// out), the height in the alpha for parallax
+	float		normalStrength;		// 0 to 8
+	float		normalBlur;			// 0 to 8 pixels
+	float		normalDetail;		// 0 to 1, the fine detail mixed into the blurred height
+	qboolean	normalInvert;		// dark stands out
+	// rmoGen <variation> <occlusion>: roughness that varies with the texture around the roughness of the material
+	// (darker cracks rougher), and occlusion in what lies lower than its surroundings
+	float		rmoVariation;		// 0 to 1
+	float		rmoOcclusion;		// 0 to 1
+} materialGen_t;
+
+typedef struct materialParms_s {
+	qboolean	pbr;				// lit per pixel with GGX
+	float		roughness;			// 0 to 1
+	float		metalness;			// 0 to 1
+	float		parallaxDepth;		// 0 to 0.2, needs normalHeight
+	float		parallaxPlane;		// where the polygon lies in the height, 0 bottom to 1 top
+	float		tessHeight;			// tessellation: units the height moves the surface, 0 none (needs normalHeight)
+	float		tessPlane;			//	where the polygon lies in that height, 0 bottom (the surface rises out of it) to 1 top
+	float		tessDensity;		//	pixels a triangle edge is cut down to on the screen
+	float		specular[3];		// strength, exponent, clear coat (stages of models, not pbr)
+	float		wrapLight;
+	float		sparkle;
+	char		normalMap[MAX_QPATH];	// image name, "" none
+	qboolean	normalHeight;		// the height is in the alpha of the normal map
+	char		rmoMap[MAX_QPATH];	// image name, "" none
+	qboolean	ormOrder;			// occlusion, roughness, metalness instead of roughness, metalness, occlusion
+	materialGen_t	gen;			// what is made from the texture; a made map stands before the named one
+	// glass: the screen behind shows through, bent and tinted (transmission > 0)
+	float		transmission;		// 0 to 1
+	float		ior;				// 1 to 3, 1.5 glass
+	float		thickness;			// units, 0 a thin pane
+	float		absorption[3];		// what is left of each colour after absorptionDistance units in it
+	float		absorptionDistance;
+	// more of the surface
+	float		clearcoat;			// 0 to 1, a clear coat over it
+	float		clearcoatRoughness;
+	float		sheen[3];			// cloth: the colour of its sheen, 0 none
+	float		sheenRoughness;
+	qboolean	sheenAlbedo;		// the sheen has the colour of the albedo (rend2's cloth)
+	float		anisotropy;			// -1 to 1, brushed metal
+	float		anisotropyRotation;	// degrees
+	float		emission[3];		// the colour the bright parts give off
+	float		emissionStrength;	// 0 none
+	float		emissionThreshold;	// 0 to 1, how bright a part must be to give off light
+	char		specGlossMap[MAX_QPATH];	// rend2's specular map (F0 in rgb, gloss in alpha), "" none
+	float		specularReflectance;	// F0 of what is not metal, 0 for 0.04
+	float		normalScale;		// strength of the bumps, 1 as the map has them
+} materialParms_t;
+
+// what a stage is (materialStage_t flags)
+#define MATS_LIGHTMAP			(1 << 0)	// lit by the lightmap of the level
+#define MATS_ADD				(1 << 1)	// adds its colour to what is under it (a sign, a glow)
+#define MATS_BLEND				(1 << 2)	// blended in some other way
+#define MATS_GLOW				(1 << 3)	// in the pass of the dynamic glow
+#define MATS_MATERIAL			(1 << 4)	// it has a material
+#define MATS_ENTITY				(1 << 5)	// lit by the light of its entity (models)
+#define MATS_AUTO				(1 << 6)	// its material was made at load (v_autoMaterials), no shader file has it
+
+typedef struct materialStage_s {
+	int			sourceStage;
+	int			flags;				// MATS_*
+	char		image[MAX_QPATH];	// its texture
+	float		luma;				// how bright the texture is on average, of its sRGB values, 0 to 1
+} materialStage_t;
+
+// what a shader is (materialInfo_t flags)
+#define MATI_SCRIPT				(1 << 0)	// from the text of a .shader or .oshader file
+#define MATI_SKY				(1 << 1)
+#define MATI_FOG				(1 << 2)
+#define MATI_NODRAW				(1 << 3)	// no stage is drawn
+#define MATI_LEVEL				(1 << 4)	// surfaces of the level have it
+
+typedef struct materialInfo_s {
+	qhandle_t	shader;
+	char		name[MAX_QPATH];
+	int			flags;				// MATI_*
+	float		area;				// square units of the surfaces of the level with it
+	float		emissive[4];		// emissive light: r, g, b and the light, all 0 when it gives none
+	float		surfaceLight;		// q3map_surfacelight
+	int			numStages;
+	materialStage_t	stages[MATERIAL_MAX_STAGES];
+} materialInfo_t;
+
+typedef struct materialPick_s {
+	qhandle_t	shader;
+	vec3_t		point;
+	vec3_t		normal;				// of the surface, towards the start of the ray
+	float		distance;			// from the start of the ray, units
+} materialPick_t;
+
+// VisionJK: light to judge materials by (refexport_t ext.SetLightOverride): lamps lit per pixel on every surface
+// with a material, the light of the lightmap swapped for an even one, another sun, another exposure
+#define DEBUG_LIGHTS			8
+
+typedef enum {
+	DLT_POINT,
+	DLT_SPOT,
+	DLT_DIRECTIONAL
+} debugLightType_t;
+
+typedef struct debugLight_s {
+	int			type;				// debugLightType_t
+	vec3_t		origin;				// point and spot
+	vec3_t		direction;			// where it shines (spot, directional), length 1
+	vec3_t		color;				// 0 to 1
+	float		intensity;			// the light it gives at 100 units, 1 as bright as white at full light
+	float		range;				// units it reaches, 0 without end (point, spot)
+	float		innerAngle;			// spot: full light within this half angle, degrees
+	float		outerAngle;			//	none beyond this one
+} debugLight_t;
+
+typedef struct lightOverride_s {
+	int			numLights;
+	debugLight_t lights[DEBUG_LIGHTS];
+	qboolean	replaceLight;		// the lightmap and the light grid of the surfaces with a material give way to ambient
+	vec3_t		ambient;			//	an even light from all round, 0 to 1
+	qboolean	sun;				// another sun for the shadows the renderer traces and the models
+	vec3_t		sunDirection;		//	towards the sun, length 1
+	vec3_t		sunColor;			//	0 to 1
+	float		exposure;			// the whole picture times this, 1 as it is
+} lightOverride_t;
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;
@@ -321,6 +489,37 @@ typedef struct miniRefEntity_s
 	int			frame;				// also used as MODEL_BEAM's diameter
 
 } miniRefEntity_t;
+
+// VisionJK: a saber blade the renderer draws in 3D (refexport_t ext.AddSaberBladeToScene)
+// The GPU profiler of the client (ext.GpuProfile, v_profiler): what the device took for the parts of the frames of
+// the last window of about half a second
+#define GPU_PROFILE_PASSES		32
+#define GPU_PROFILE_HISTORY		120
+#define GPU_PROFILE_NAME		24
+
+typedef struct gpuProfile_s {
+	int		serial;								// windows closed so far, 0: none yet
+	int		frames;								// in the last window
+	int		width, height, samples;				// of the frame
+	char	device[64];
+	int		numPasses;
+	char	passNames[GPU_PROFILE_PASSES][GPU_PROFILE_NAME];
+	float	passMs[GPU_PROFILE_PASSES];			// average a frame
+	float	passMaxMs[GPU_PROFILE_PASSES];		// the most of one frame
+	float	frameMs, frameMaxMs;				// the whole frame on the device
+	float	history[GPU_PROFILE_HISTORY];		// the whole frame on the device of the last frames, oldest first
+	float	levelOverdraw;						// runs of the fragment shader for the opaque level a pixel, 0: not counted
+	int		draws, triangles, cpuTriangles, transforms, bones, skeletons;	// of the last frame
+} gpuProfile_t;
+
+typedef struct saberBlade3D_s {
+	vec3_t		start, end;			// the blade now, from the hilt to the tip
+	vec3_t		oldStart, oldEnd;	// where it was a moment ago, the place it swept glows between (the same: it rests)
+	float		core, glow;			// the radius of the white core, of the coloured glow round it
+	float		sweep;				// how bright the swept place is, 0 to 1
+	vec3_t		rgb;				// 0 to 1
+	int			renderfx;			// RF_THIRD_PERSON: only in mirrors and portals, RF_FIRST_PERSON: not in them
+} saberBlade3D_t;
 
 typedef struct refEntity_s {
 	// this stucture must remain identical as the miniRefEntity_t

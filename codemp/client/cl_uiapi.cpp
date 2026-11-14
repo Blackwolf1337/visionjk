@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/timing.h"
 #include "client.h"
 #include "cl_lan.h"
+#include "cl_cache.h"
 #include "botlib/botlib.h"
 #include "client/sound/snd_ambient.h"
 #include "client/fx/FXExport.h"
@@ -1513,6 +1514,8 @@ void CL_BindUI( void ) {
 		uii.ext.Cvar_Info						= Cvar_Info;
 		uii.ext.R_Font_DrawStringF				= re->ext.Font_DrawStringF;
 		uii.ext.R_Font_InkBox					= re->ext.Font_InkBox;
+		uii.ext.Cache_List						= Cache_List;
+		uii.ext.Cache_Clear						= Cache_Clear;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

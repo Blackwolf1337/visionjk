@@ -272,18 +272,45 @@ static qboolean GLES_RowsFromTop( int x, int y, int width, int height, int *out 
 	return (qboolean)( right > left && down > up );
 }
 
+// the last viewport, for VK_Scissor()
+static int		glesViewport[4];
+static float	glesDepthRange[2];
+
 void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth, float maxDepth ) {
 	glesCommand_t *cmd = GLES_Command( GC_VIEWPORT );
 
+	glesViewport[0] = x;
+	glesViewport[1] = vk.height - ( y + height );
+	glesViewport[2] = width;
+	glesViewport[3] = height;
+	glesDepthRange[0] = minDepth;
+	glesDepthRange[1] = maxDepth;
 	if ( cmd ) {
-		cmd->viewport.rect[0] = x;
-		cmd->viewport.rect[1] = vk.height - ( y + height );
-		cmd->viewport.rect[2] = width;
-		cmd->viewport.rect[3] = height;
+		memcpy( cmd->viewport.rect, glesViewport, sizeof( glesViewport ) );
 		GLES_RowsFromTop( x, y, width, height, cmd->viewport.scissor );
 		cmd->viewport.minDepth = minDepth;
 		cmd->viewport.maxDepth = maxDepth;
 	}
+}
+
+// VisionJK: the scissor alone, in pixels of the window from its upper left corner (see vk_cmd.cpp)
+void VK_Scissor( int left, int top, int right, int bottom ) {
+	glesCommand_t *cmd;
+
+	if ( !vk.frame || ( cmd = GLES_Command( GC_VIEWPORT ) ) == NULL ) {
+		return;
+	}
+	left = Q_max( left, 0 );
+	top = Q_max( top, 0 );
+	right = Q_min( right, vk.width );
+	bottom = Q_min( bottom, vk.height );
+	memcpy( cmd->viewport.rect, glesViewport, sizeof( glesViewport ) );
+	cmd->viewport.scissor[0] = left;
+	cmd->viewport.scissor[1] = top;
+	cmd->viewport.scissor[2] = Q_max( right - left, 0 );
+	cmd->viewport.scissor[3] = Q_max( bottom - top, 0 );
+	cmd->viewport.minDepth = glesDepthRange[0];
+	cmd->viewport.maxDepth = glesDepthRange[1];
 }
 
 void VK_ClearDepth( int x, int y, int width, int height ) {
@@ -968,6 +995,11 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 	}
 	GLES_Texture( 0, VK_SlotTexture( draw->tex0 ) );
 	GLES_Texture( 1, VK_SlotTexture( draw->tex1 ) );
+	if ( draw->flags & VKD_PBR ) {
+		GLES_Texture( GLES_UNIT_TEX2, VK_SlotTexture( draw->tex2 ) );
+		GLES_Texture( GLES_UNIT_TEX3, VK_SlotTexture( draw->tex3 ) );
+		GLES_Texture( GLES_UNIT_TEX4, VK_SlotTexture( draw->tex4 ) );
+	}
 
 	if ( cmd->draw.numRanges ) {
 		// surfaces of models: their triangles are in an index buffer on the device
@@ -1175,6 +1207,29 @@ void VK_PresentFrame( const float *gamma ) {
 			}
 		}
 	}
+}
+
+// v_gpuTimes: the OpenGL ES device has no timestamps of its own here
+void VK_GpuMark( const char *name ) {
+}
+
+qboolean VK_GpuFirstMark( void ) {
+	return qfalse;
+}
+
+void VK_LevelFragments( qboolean begin ) {
+}
+
+void VK_GpuTimes_f( void ) {
+	ri.Printf( PRINT_ALL, "v_gpuTimes: only on the Vulkan device\n" );
+}
+
+qboolean RE_GpuProfile( gpuProfile_t *out ) {
+	return qfalse;
+}
+
+qboolean VK_RT_PlayerLamps( const vec3_t origin, vec3_t dir, float *share ) {
+	return qfalse;
 }
 
 /*

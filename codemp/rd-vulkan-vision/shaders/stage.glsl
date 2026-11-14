@@ -158,6 +158,14 @@ vec2 ModTexCoord( vec2 st, vec4 mat[2], vec4 turb, StageInput v ) {
 	return result;
 }
 
+// VisionJK: how much of a skinned vertex hangs on bones placed with no axes (skinned.vert): such bones belong to another
+// part of a body a saber cut through, drawn by its own copy (cgame/cg_ragdoll.c); more than half of it is not drawn
+float stageHidden = 0.0;
+// and with the cut of such a part: how far in front of the cut the vertex lay at the moment of the cut, which keeps it
+// on its side however the part bends (skinned.vert, Draw.cutBones)
+bool stageHasCut = false;
+float stageCut = 0.0;
+
 void StageVertex( StageInput v ) {
 	Draw d = DRAWS( DRAW );
 	Transform t = TRANSFORMS( d.transform );
@@ -172,6 +180,12 @@ void StageVertex( StageInput v ) {
 	// the view through a portal or mirror must not show what lies between the eye and the portal
 	CLIP_DISTANCE = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
 		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;
+	if ( stageHasCut ) {
+		CLIP_DISTANCE = stageCut;
+	}
+	if ( stageHidden > 0.0 ) {
+		CLIP_DISTANCE = min( CLIP_DISTANCE, 0.5 - stageHidden );
+	}
 	v_depth = gl_Position.w;
 #ifdef VK_GLES
 	// The targets of that device have the top row first, as the images of Vulkan have it, and OpenGL ES counts its
@@ -196,7 +210,14 @@ void StageVertex( StageInput v ) {
 		// lightingDiffuseEntity (RB_CalcDiffuseColor and RB_CalcDiffuseEntityColor of rd-vanilla). A stage with a
 		// material is lit per pixel instead (generic.frag).
 		float incoming = max( dot( v.normal, t.lightDir.xyz ), 0.0 );
-		vec3 light = MATERIAL( d.flags ) ? vec3( 1.0 ) : min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
+		bool perPixel = MATERIAL( d.flags ) || ( PBR( d.flags ) && ( d.pbrFlags & PBR_ENTITY ) != 0u );
+		vec3 light = perPixel ? vec3( 1.0 ) : min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
+		// VisionJK: a model baked into the level (misc_model, q3map_nolightmap) keeps its rgbGen lightingDiffuse, but
+		// the level has no light of an entity, so rd-vanilla draws it black (the cart and the air purifier of
+		// mp/ffa3). The light q3map2 baked into its vertices stands in for it.
+		if ( !perPixel && t.lightDir.w == 0.0 && t.ambientLight.rgb == vec3( 0.0 ) && t.directedLight.rgb == vec3( 0.0 ) ) {
+			light = v.color.rgb;
+		}
 
 		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * v.color.a, 0.0, 1.0 ) );
 	} else {
@@ -206,7 +227,7 @@ void StageVertex( StageInput v ) {
 			// ComputeFinalVertexColor() of rd-vanilla: the color of each light style of the vertex times the color of
 			// that style. The ones after the first are in lightmap1 and lightmap2, three bytes in a float each
 			// (VK_PackStyles in vk_world.cpp).
-			float packed[3] = float[3]( v.lightmap1.x, v.lightmap1.y, v.lightmap2.x );
+			float more[3] = float[3]( v.lightmap1.x, v.lightmap1.y, v.lightmap2.x );	// (not "packed": a reserved word of GLSL ES)
 			vec3 sum = v.color.rgb * globals.styles[( d.styles & 255u ) - 1u].rgb;
 
 			for ( int k = 1; k < 4; k++ ) {
@@ -215,7 +236,7 @@ void StageVertex( StageInput v ) {
 				if ( style == 0u ) {
 					break;
 				}
-				uint p = uint( packed[k - 1] );
+				uint p = uint( more[k - 1] );
 				sum += vec3( uvec3( p, p >> 8, p >> 16 ) & 255u ) / 255.0 * globals.styles[style - 1u].rgb;
 			}
 			color.rgb = min( sum, vec3( 1.0 ) );

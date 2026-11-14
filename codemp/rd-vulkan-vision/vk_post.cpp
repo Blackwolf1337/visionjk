@@ -36,6 +36,9 @@ void myGlMultMatrix( const float *a, const float *b, float *out );
 
 cvar_t	*v_wetMirror;
 cvar_t	*v_smaa;
+cvar_t	*v_tonemap;
+cvar_t	*v_exposure;
+cvar_t	*v_ssr;
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
@@ -43,6 +46,11 @@ void VK_InitPost( void ) {
 
 	v_wetMirror = ri.Cvar_Get( "v_wetMirror", "1", CVAR_ARCHIVE_ND | CVAR_LATCH,
 		"Puddles of the water gun mirror the room: the level is drawn once more, mirrored at their floor. 0: they mirror only what is on the screen" );
+	v_tonemap = ri.Cvar_Get( "v_tonemap", "1", CVAR_ARCHIVE_ND,
+		"How the level is put onto the screen at the end of its view (with v_hdr light brighter than white is there). 1: the original look, bright light glows out softly instead of clipping. 2: filmic (AgX) as modern games. 0: cut off at white as before" );
+	v_exposure = ri.Cvar_Get( "v_exposure", "1", CVAR_ARCHIVE_ND, "How bright the level is before it is tone mapped (v_tonemap), 1 as it is" );
+	v_ssr = ri.Cvar_Get( "v_ssr", "1", CVAR_ARCHIVE_ND,
+		"Smooth surfaces with a material mirror what is on the screen (screen space reflections, from the frame before), over what the reflection probes give. 0: the probes alone" );
 	v_smaa = ri.Cvar_Get( "v_smaa", "0", CVAR_ARCHIVE_ND,
 		"Smooths the edges of the level after it is drawn (SMAA 1x), far cheaper than r_ext_multisample and sharper than a blur; with r_ext_multisample 2 it also catches thin lines. Vulkan only. 0: off" );
 	VK_CreatePostTargets( width, height );
@@ -247,6 +255,249 @@ void VK_Smaa( void ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
+}
+
+/*
+===============
+VK_Tonemap
+
+v_tonemap, for the view of the level only, after tay_bloom (which takes the light above white with it) and before
+SMAA (which finds the edges in the colours of the screen) and the 2D. Without v_hdr nothing is above white: the
+soft shoulder would only take the brightest whites down a little, so it runs only with v_hdr; the filmic curve
+changes the colours too and runs on either.
+===============
+*/
+void VK_Tonemap( void ) {
+#ifndef RD_VISION_GLES
+	const int curve = Com_Clampi( 0, 2, v_tonemap->integer );
+	float parm[3];
+
+	if ( !vk.frame || !curve || ( curve == 1 && vk.color.format == VK_FORMAT_R8G8B8A8_UNORM ) ) {
+		return;
+	}
+	parm[0] = Com_Clamp( 0.05f, 16.0f, v_exposure->value );
+	parm[1] = (float)curve;
+	parm[2] = (float)( 1 << tr.overbrightBits );
+	VK_EndTarget();
+	VK_TonemapPass( parm );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
+}
+
+/*
+===============
+VK_SsrPrep
+
+v_ssr, for the view of the level only, before tay_bloom: the level as it is drawn now and how far each pixel is from
+the eye go into vk.ssrColor, shown in the texture table (tr.ssrImage), and its view into vk.ssrRows. The surfaces
+with a material of the next frame mirror it (generic.frag ScreenReflection), found where the point was in this view.
+One frame late: what moves fast shows a frame behind in the mirror.
+===============
+*/
+void VK_SsrPrep( void ) {
+#ifndef RD_VISION_GLES
+	float	rows[VK_WET_HEADER][4];
+	float	parm[4];
+	int		viewport[4];
+
+	if ( !vk.frame || !v_ssr->integer || !v_pbr->integer || !vk.depthReadable || !vk.ssrColor.image || !tr.ssrImage ) {
+		vk.ssrReady = qfalse;
+		return;
+	}
+	VK_ViewRows( rows, viewport );
+	parm[0] = rows[6][3];
+	parm[1] = rows[7][3];
+	parm[2] = parm[3] = 0.0f;
+	VK_EndTarget();
+	VK_SsrPrepPass( parm );
+	if ( vk.ssrShown != (int)tr.ssrImage->texnum ) {
+		VK_ShowTarget( (int)tr.ssrImage->texnum, &vk.ssrColor );
+		vk.ssrShown = (int)tr.ssrImage->texnum;
+	}
+	// for the globals of the next frame: the view and projection, the rect, the eye and the slot, the forward
+	memcpy( vk.ssrRows[0], rows[0], sizeof( float ) * 16 );
+	VectorCopy4( rows[8], vk.ssrRows[4] );
+	VectorCopy( rows[4], vk.ssrRows[5] );
+	vk.ssrRows[5][3] = (float)tr.ssrImage->texnum + 1.0f;
+	VectorCopy( rows[5], vk.ssrRows[6] );
+	vk.ssrRows[6][3] = 1.0f;
+	vk.ssrReady = qtrue;
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
+}
+
+#ifndef RD_VISION_GLES
+// The rectangle of the target (left, top, right, bottom) a blade and its glow cover in the view of rows, within frame,
+// empty where it is not seen: its four points (now and a moment ago) on the target, where an edge between two of them
+// passes the plane a little in front of the eye the point there in place of the one behind it, and round each the
+// reach of the glow (six times its radius: the glow pass draws it half as wide again).
+static void VK_BladeArea( const saberBlade_t *blade, const float ( *rows )[4], const float *frame, float *out ) {
+	const float	nearPlane = 4.0f;
+	const float	*points[4] = { blade->start, blade->end, blade->oldStart, blade->oldEnd };
+	float		clip[4][4];
+	float		x0 = frame[2], y0 = frame[3], x1 = frame[0], y1 = frame[1];
+
+	auto add = [&]( const float *c ) {
+		const float px = rows[8][0] + rows[8][2] * 0.5f * ( 1.0f + c[0] / c[3] );
+		const float py = rows[8][1] + rows[8][3] * 0.5f * ( 1.0f - c[1] / c[3] );
+		const float reach = Q_max( blade->glow * 6.0f / ( c[3] * rows[5][3] ) * rows[8][3] * 0.5f, 8.0f );
+
+		x0 = Q_min( x0, px - reach );
+		y0 = Q_min( y0, py - reach );
+		x1 = Q_max( x1, px + reach );
+		y1 = Q_max( y1, py + reach );
+	};
+	for ( int e = 0; e < 4; e++ ) {
+		for ( int k = 0; k < 4; k++ ) {
+			clip[e][k] = rows[0][k] * points[e][0] + rows[1][k] * points[e][1] + rows[2][k] * points[e][2] + rows[3][k];
+		}
+		if ( clip[e][3] >= nearPlane ) {
+			add( clip[e] );
+		}
+	}
+	for ( int a = 0; a < 4; a++ ) {
+		for ( int b = a + 1; b < 4; b++ ) {
+			if ( ( clip[a][3] >= nearPlane ) != ( clip[b][3] >= nearPlane ) ) {
+				const float	t = ( nearPlane - clip[a][3] ) / ( clip[b][3] - clip[a][3] );
+				float		c[4];
+
+				for ( int k = 0; k < 4; k++ ) {
+					c[k] = clip[a][k] + ( clip[b][k] - clip[a][k] ) * t;
+				}
+				c[3] = nearPlane;
+				add( c );
+			}
+		}
+	}
+	out[0] = Q_max( x0, frame[0] );
+	out[1] = Q_max( y0, frame[1] );
+	out[2] = Q_min( x1, frame[2] );
+	out[3] = Q_min( y1, frame[3] );
+}
+#endif
+
+/*
+===============
+VK_SaberBlades
+
+The saber blades of the scene (ext.AddSaberBladeToScene) in 3D, added onto the frame (shaders/saber.glsl): their
+numbers in globals.blades, one pass over the part of the view they cover. The view of the level draws them after its
+solid surfaces and before what is transparent (RB_DrawWet), portal qtrue a mirror or portal in it at its end; of
+those only the first of a frame, the globals have room for one more view. glow qtrue: into the buffer of r_DynamicGlow
+of the view of the level (shaders/saberglow.frag), for the soft halo the flat blades get from their glow stages.
+===============
+*/
+void VK_SaberBlades( qboolean portal, qboolean glow ) {
+#ifndef RD_VISION_GLES
+	static int	portalFrame = -1;
+	const int	count = Q_min( backEnd.refdef.numSaberBlades, MAX_SABER_BLADES );
+	const int	hidden = portal ? RF_FIRST_PERSON : RF_THIRD_PERSON;
+	const VkPipeline pipeline = glow ? vk.saberGlowPipeline : ( portal ? vk.saberPortalPipeline : vk.saberPipeline );
+	float		rows[VK_WET_HEADER][4];
+	int			viewport[4];
+	int			shown = 0;
+
+	if ( !vk.frame || count <= 0 || !vk.depthReadable || !pipeline ) {
+		return;
+	}
+	for ( int i = 0; i < count; i++ ) {
+		if ( !( backEnd.refdef.saberBlades[i].renderfx & hidden ) ) {
+			shown++;
+		}
+	}
+	if ( !shown || ( portal && ( glow || portalFrame == backEnd.viewParms.frameCount ) ) ) {
+		return;		// (the glow of the level alone)
+	}
+	if ( portal ) {
+		portalFrame = backEnd.viewParms.frameCount;
+	}
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+	VK_ViewRows( rows, viewport );
+	memcpy( portal ? globals->blades[VK_BLADE_PORTAL] : globals->blades[0], rows, sizeof( rows ) );
+	// (the blades the same for both views, in w of their colour the views each is in)
+	VectorSet4( globals->blades[VK_WET_HEADER], (float)count, 0.0f, 0.0f, 0.0f );
+	for ( int i = 0; i < count; i++ ) {
+		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
+		float				( *r )[4] = &globals->blades[VK_WET_HEADER + 1 + i * VK_BLADE_ROWS];
+
+		VectorCopy( blade->start, r[0] );
+		r[0][3] = blade->core;
+		VectorCopy( blade->end, r[1] );
+		r[1][3] = blade->glow;
+		VectorCopy( blade->oldStart, r[2] );
+		r[2][3] = Com_Clamp( 0.0f, 1.0f, blade->sweep );
+		VectorCopy( blade->oldEnd, r[3] );
+		r[3][3] = 0.0f;
+		VectorCopy( blade->rgb, r[4] );
+		r[4][3] = (float)( ( ( blade->renderfx & RF_THIRD_PERSON ) ? 0 : 1 ) | ( ( blade->renderfx & RF_FIRST_PERSON ) ? 0 : 2 ) );
+	}
+
+	// The part of the view the blades, the places they swept and their glow cover, from the upper left (as rows[8]),
+	// each blade's own in its rows for the shader, which leaves a blade at once outside it, and the pass is drawn
+	// over all of them alone: over all of the view, with many samples, it cost about a millisecond (most of it
+	// resolving the samples). A blade behind the eye had made it all of the view, with every blade worked out at
+	// every pixel twice (the glow as well): 3 ms a frame with seven players that were not even in view.
+	// (and within the frame: after the window was resized the view of the cgame can be larger than the frame until it
+	// learns the new size, and a render area past the image lost the device, their crash of 2026-11-08 18:53)
+	const float	frame[4] = { Q_max( rows[8][0], 0.0f ), Q_max( rows[8][1], 0.0f ),
+		Q_min( rows[8][0] + rows[8][2], (float)vk.color.width ), Q_min( rows[8][1] + rows[8][3], (float)vk.color.height ) };
+	float		x0 = frame[2], y0 = frame[3], x1 = frame[0], y1 = frame[1];
+	for ( int i = 0; i < count; i++ ) {
+		const saberBlade_t	*blade = &backEnd.refdef.saberBlades[i];
+		float				*rect = globals->blades[VK_WET_HEADER + 1 + i * VK_BLADE_ROWS + ( portal ? 6 : 5 )];
+
+		VK_BladeArea( blade, rows, frame, rect );
+		if ( ( blade->renderfx & hidden ) || rect[0] >= rect[2] || rect[1] >= rect[3] ) {
+			VectorSet4( rect, 1.0f, 1.0f, 0.0f, 0.0f );
+			continue;
+		}
+		x0 = Q_min( x0, rect[0] );
+		y0 = Q_min( y0, rect[1] );
+		x1 = Q_max( x1, rect[2] );
+		y1 = Q_max( y1, rect[3] );
+	}
+	const int area[4] = { (int)floorf( x0 ), (int)floorf( y0 ), (int)ceilf( x1 ) - (int)floorf( x0 ), (int)ceilf( y1 ) - (int)floorf( y0 ) };
+	if ( x0 >= x1 || y0 >= y1 || area[2] <= 0 || area[3] <= 0 ) {
+		return;		// nothing of them in the view
+	}
+
+	const VkDescriptorSet	sets[3] = { vk.frame->set, vk.depthSet, vk.depthSet };
+	VkCommandBuffer			cmd = vk.frame->cmd;
+
+	VK_EndTarget();
+	VK_BeginOverLevel( cmd, area, glow );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+	vk.boundPipeline = pipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
+	{
+		// (the scissor to the part, the viewport stays the view)
+		VkRect2D scissor;
+		scissor.offset.x = area[0];
+		scissor.offset.y = area[1];
+		scissor.extent.width = (uint32_t)area[2];
+		scissor.extent.height = (uint32_t)area[3];
+		qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	}
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_EndTarget();
+
+	VK_BeginTarget( glow ? &vk.glow : &vk.color, &vk.depth, 2, qtrue );
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_InvalidateTransform();
 #endif
 }
 
@@ -518,6 +769,7 @@ void VK_CaptureFrame( void ) {
 	if ( !vk.frame || !tr.screenImage ) {
 		return;
 	}
+	VK_LevelFragments( qfalse );
 	VK_EndTarget();
 	VK_CopyTarget( &vk.color, &vk.screen );
 
@@ -648,37 +900,98 @@ shows. The numbers of the view and of every picture and place go into the global
 of the level at its middle.
 ===============
 */
+#ifndef RD_VISION_GLES
+void VK_ViewRows( float ( *rows )[4], int *viewport ) {
+	const float	*projection = backEnd.viewParms.projectionMatrix;
+	const int	x = backEnd.viewParms.viewportX, y = backEnd.viewParms.viewportY;
+	const int	width = backEnd.viewParms.viewportWidth, height = backEnd.viewParms.viewportHeight;
+
+	myGlMultMatrix( backEnd.viewParms.world.modelMatrix, projection, rows[0] );
+	VectorCopy( backEnd.viewParms.ori.origin, rows[4] );
+	rows[4][3] = tanf( DEG2RAD( backEnd.viewParms.fovX * 0.5f ) );
+	VectorCopy( backEnd.viewParms.ori.axis[0], rows[5] );
+	rows[5][3] = tanf( DEG2RAD( backEnd.viewParms.fovY * 0.5f ) );
+	// the distance in front of the eye to the depth, as VK_BlurFrame() has it
+	VectorCopy( backEnd.viewParms.ori.axis[1], rows[6] );
+	rows[6][3] = projection[14] * 0.5f;
+	VectorCopy( backEnd.viewParms.ori.axis[2], rows[7] );
+	rows[7][3] = ( projection[10] - 1.0f ) * 0.5f;
+	// the view in pixels of the target from the upper left corner, as VK_ViewportAndScissor() puts it there
+	VectorSet4( rows[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
+	viewport[0] = x;
+	viewport[1] = y;
+	viewport[2] = width;
+	viewport[3] = height;
+}
+#endif
+
+#ifndef RD_VISION_GLES
+// How far the pixels of a wet place may lie from it: its ball along its plane, the slab off it (InPlace of wet.frag),
+// with the margin of the box wet.vert draws.
+static float VK_WetReach( float radius ) {
+	return radius * 2.0f + 8.0f;
+}
+
+/*
+The part of the target the box of a wet place covers (wet.vert, the same axes), added to bounds (left, top, right,
+bottom in pixels of the target from the upper left, as OnTarget of scene.glsl has them). qfalse: a corner lies at or
+behind the eye, the place may cover all of the view.
+*/
+static qboolean VK_WetArea( const float ( *rows )[4], const vec3_t origin, const vec3_t normal, float radius, float *bounds ) {
+	const float	reach = VK_WetReach( radius ) + 2.0f, thick = 4.0f + radius * 0.12f;
+	vec3_t		t, b;
+
+	if ( fabsf( normal[2] ) < 0.9f ) {
+		const vec3_t z = { 0.0f, 0.0f, 1.0f };
+		CrossProduct( normal, z, t );
+	} else {
+		const vec3_t x = { 1.0f, 0.0f, 0.0f };
+		CrossProduct( normal, x, t );
+	}
+	VectorNormalize( t );
+	CrossProduct( normal, t, b );
+	for ( int corner = 0; corner < 8; corner++ ) {
+		vec3_t	p;
+		float	clip[4];
+
+		VectorMA( origin, ( corner & 1 ) ? reach : -reach, t, p );
+		VectorMA( p, ( corner & 2 ) ? reach : -reach, b, p );
+		VectorMA( p, ( corner & 4 ) ? thick : -thick, normal, p );
+		for ( int k = 0; k < 4; k++ ) {
+			clip[k] = rows[0][k] * p[0] + rows[1][k] * p[1] + rows[2][k] * p[2] + rows[3][k];
+		}
+		if ( clip[3] < 1.0f ) {
+			return qfalse;
+		}
+		const float x = rows[8][0] + ( clip[0] / clip[3] * 0.5f + 0.5f ) * rows[8][2];
+		const float y = rows[8][1] + ( 0.5f - clip[1] / clip[3] * 0.5f ) * rows[8][3];
+		bounds[0] = Q_min( bounds[0], x );
+		bounds[1] = Q_min( bounds[1], y );
+		bounds[2] = Q_max( bounds[2], x );
+		bounds[3] = Q_max( bounds[3], y );
+	}
+	return qtrue;
+}
+#endif
+
 void VK_DrawWet( void ) {
 #ifndef RD_VISION_GLES
 	static float	wet[VK_WET_VEC4S][4];
 	static float	paint[VK_PAINT_VEC4S][4];
-	const float		*projection = backEnd.viewParms.projectionMatrix;
-	const int		count = Q_min( r_numWet, WET_MAX_SPOTS );
+	int				count = 0;
 	int				numPaint = 0;
-	int				viewport[4], x, y, width, height;
+	int				viewport[4];
+	// the part of the view the wet places cover, and whether one of them may cover all of it
+	float			bounds[4] = { 1e9f, 1e9f, -1e9f, -1e9f };
+	qboolean		whole = qfalse;
 
-	if ( !vk.frame || ( count <= 0 && r_numPaint <= 0 ) || !tr.screenImage || !VK_HasWet() ) {
+	if ( !vk.frame || ( r_numWet <= 0 && r_numPaint <= 0 ) || !tr.screenImage || !VK_HasWet() ) {
 		return;
 	}
 	memset( wet, 0, sizeof( wet ) );
-	myGlMultMatrix( backEnd.viewParms.world.modelMatrix, projection, wet[0] );
-	VectorCopy( backEnd.viewParms.ori.origin, wet[4] );
-	wet[4][3] = tanf( DEG2RAD( backEnd.viewParms.fovX * 0.5f ) );
-	VectorCopy( backEnd.viewParms.ori.axis[0], wet[5] );
-	wet[5][3] = tanf( DEG2RAD( backEnd.viewParms.fovY * 0.5f ) );
-	// the distance in front of the eye to the depth, as VK_BlurFrame() has it
-	VectorCopy( backEnd.viewParms.ori.axis[1], wet[6] );
-	wet[6][3] = projection[14] * 0.5f;
-	VectorCopy( backEnd.viewParms.ori.axis[2], wet[7] );
-	wet[7][3] = ( projection[10] - 1.0f ) * 0.5f;
-	// the view in pixels of the target from the upper left corner, as VK_ViewportAndScissor() puts it there
-	viewport[0] = x = backEnd.viewParms.viewportX;
-	viewport[1] = y = backEnd.viewParms.viewportY;
-	viewport[2] = width = backEnd.viewParms.viewportWidth;
-	viewport[3] = height = backEnd.viewParms.viewportHeight;
-	VectorSet4( wet[8], (float)x, (float)( vk.height - ( y + height ) ), (float)width, (float)height );
+	VK_ViewRows( wet, viewport );
 	VectorSet4( wet[9], 1.0f / (float)vk.screen.width, 1.0f / (float)vk.screen.height, (float)fmod( backEnd.refdef.floatTime, 1000.0 ),
-		(float)count );
+		0.0f );
 	VectorSet4( wet[10], vk.reflectHeight, vk.reflectFrame == backEnd.viewParms.frameCount ? 1.0f : 0.0f, 0.0f, 0.0f );
 
 	// the pictures whose sheet is on the device
@@ -713,27 +1026,50 @@ void VK_DrawWet( void ) {
 		numPaint++;
 	}
 	paint[9][3] = (float)numPaint;
-	if ( count <= 0 && numPaint <= 0 ) {
+	if ( r_numWet <= 0 && numPaint <= 0 ) {
 		return;
 	}
 
-	for ( int i = 0; i < count; i++ ) {
+	// The places of which something may be in the view, in their order (the first that holds a pixel draws it): one
+	// whose ball lies wholly outside holds no pixel of it. Each pixel of the shader looks at all places that touch its
+	// own, so fewer of them are fewer looks for every pixel.
+	for ( int i = 0; i < Q_min( r_numWet, WET_MAX_SPOTS ); i++ ) {
 		const wetSpot_t	*spot = &r_wet[i];
-		float			( *row )[4] = wet + VK_WET_HEADER + i * VK_WET_ROWS;
+		float			( *row )[4] = wet + VK_WET_HEADER + count * VK_WET_ROWS;
+		const float		radius = Com_Clamp( 1.0f, 512.0f, spot->radius );
 		vec3_t			normal, ambient, directed, dir;
+		int				plane;
 
+		for ( plane = 0; plane < 4; plane++ ) {
+			const cplane_t *frust = &backEnd.viewParms.frustum[plane];
+
+			if ( DotProduct( spot->origin, frust->normal ) - frust->dist < -VK_WetReach( radius ) ) {
+				break;
+			}
+		}
+		if ( plane < 4 ) {
+			continue;
+		}
 		VectorCopy( spot->normal, normal );
 		if ( VectorNormalize( normal ) < 0.5f ) {
 			VectorSet( normal, 0.0f, 0.0f, 1.0f );
 		}
+		if ( !whole && !VK_WetArea( wet, spot->origin, normal, radius, bounds ) ) {
+			whole = qtrue;
+		}
+		count++;
 		VK_LiquidLight( spot->origin, ambient, directed, dir );
 		VectorNormalize( dir );
-		VectorSet4( row[0], spot->origin[0], spot->origin[1], spot->origin[2], Com_Clamp( 1.0f, 512.0f, spot->radius ) );
+		VectorSet4( row[0], spot->origin[0], spot->origin[1], spot->origin[2], radius );
 		VectorSet4( row[1], normal[0], normal[1], normal[2], Com_Clamp( 0.0f, 1.0f, spot->wet ) );
 		VectorSet4( row[2], spot->hit[0], spot->hit[1], spot->hit[2], Com_Clamp( 0.0f, 1.0f, spot->puddle ) );
 		VectorSet4( row[3], ambient[0] / 255.0f, ambient[1] / 255.0f, ambient[2] / 255.0f, Com_Clamp( 0.0f, 1.0f, spot->flow ) );
 		VectorSet4( row[4], directed[0] / 255.0f, directed[1] / 255.0f, directed[2] / 255.0f, spot->seed );
 		VectorSet4( row[5], dir[0], dir[1], dir[2], (float)spot->kind );
+	}
+	wet[9][3] = (float)count;
+	if ( count <= 0 && numPaint <= 0 ) {
+		return;
 	}
 
 	VK_EndTarget();
@@ -742,8 +1078,18 @@ void VK_DrawWet( void ) {
 		VK_PaintPass( paint[0], numPaint, viewport );
 	}
 	if ( count > 0 ) {
-		VK_CopyTarget( &vk.color, &vk.screen );
-		VK_WetPass( wet[0], count, viewport );
+		// the part of the view, a pixel more round it, or all of it
+		const float	left = wet[8][0], top = wet[8][1], right = wet[8][0] + wet[8][2], bottom = wet[8][1] + wet[8][3];
+		const int	x0 = (int)floorf( whole ? left : Q_max( left, bounds[0] - 1.0f ) );
+		const int	y0 = (int)floorf( whole ? top : Q_max( top, bounds[1] - 1.0f ) );
+		const int	x1 = (int)ceilf( whole ? right : Q_min( right, bounds[2] + 1.0f ) );
+		const int	y1 = (int)ceilf( whole ? bottom : Q_min( bottom, bounds[3] + 1.0f ) );
+		const int	area[4] = { x0, y0, x1 - x0, y1 - y0 };
+
+		if ( area[2] > 0 && area[3] > 0 ) {
+			VK_CopyTarget( &vk.color, &vk.screen );
+			VK_WetPass( wet[0], count, viewport, area );
+		}
 	}
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 
@@ -817,6 +1163,214 @@ void VK_EndPuddle( void ) {
 	VK_EndTarget();
 	VK_SwapPuddleTargets();
 	VK_TargetLayout( vk.frame->cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_InvalidateTransform();
+#endif
+}
+
+/*
+===============================================================================
+
+REFLECTION PROBES
+
+The faces of the reflection probes of the level (R_ProbeViews of tr_main.cpp): each is drawn as the puddle view into
+targets of its own of PROBE_SIZE, traded with the ones of the frame, and copied to its place in probeAtlas: a probe
+a row, its six faces side by side. When the last face is in, the smaller levels of the atlas are made by halving
+(a rough surface reads one of them, generic.frag ProbeSample) and tr.probeImage shows the atlas from then on. The
+OpenGL ES device has none of it.
+
+===============================================================================
+*/
+
+#define PROBE_LEVELS	6			// 128 down to 4 pixels a face
+
+qboolean VK_ProbesSupported( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	return (qboolean)( v_pbr->integer && v_pbrProbes->integer && vk.probeColor.image && tr.probeImage );
+#endif
+}
+
+// whether the faces that were drawn are gone (new targets), once
+qboolean VK_ProbesLost( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	const qboolean lost = vk.probesLost;
+
+	vk.probesLost = qfalse;
+	return lost;
+#endif
+}
+
+#ifndef RD_VISION_GLES
+// the targets of a face take the places of color, depth and their samples, or give them back
+static void VK_SwapProbeTargets( void ) {
+	vkTarget_t target;
+
+#define VK_SWAP( a, b )	( target = a, a = b, b = target )
+	VK_SWAP( vk.color, vk.probeColor );
+	VK_SWAP( vk.colorMS, vk.probeColorMS );
+	VK_SWAP( vk.depth, vk.probeDepth );
+	VK_SWAP( vk.depthMS, vk.probeDepthMS );
+#undef VK_SWAP
+}
+
+// levels of the atlas from one layout to another
+static void VK_AtlasLayout( VkCommandBuffer cmd, int level, int count, VkImageLayout from, VkImageLayout to, VkAccessFlags fromAccess,
+	VkAccessFlags toAccess ) {
+	VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+	barrier.srcAccessMask = fromAccess;
+	barrier.dstAccessMask = toAccess;
+	barrier.oldLayout = from;
+	barrier.newLayout = to;
+	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = vk.probeAtlas;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = (uint32_t)level;
+	barrier.subresourceRange.levelCount = (uint32_t)count;
+	barrier.subresourceRange.layerCount = 1;
+	qvkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, NULL, 0, NULL, 1, &barrier );
+}
+
+// an atlas for numProbes probes, its levels ready to be copied to
+static void VK_CreateProbeAtlas( int numProbes ) {
+	VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+	VkMemoryRequirements req;
+
+	VK_DestroyProbeAtlas();
+	vk.probesLost = qfalse;		// (a new atlas while the faces are being drawn anyway)
+	info.imageType = VK_IMAGE_TYPE_2D;
+	info.format = vk.color.format;
+	info.extent.width = PROBE_SIZE * 6;
+	info.extent.height = (uint32_t)( PROBE_SIZE * numProbes );
+	info.extent.depth = 1;
+	info.mipLevels = PROBE_LEVELS;
+	info.arrayLayers = 1;
+	info.samples = VK_SAMPLE_COUNT_1_BIT;
+	info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VK_CHECK( qvkCreateImage( vk.device, &info, NULL, &vk.probeAtlas ) );
+	qvkGetImageMemoryRequirements( vk.device, vk.probeAtlas, &req );
+	VK_AllocMemory( &req, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vk.probeAtlasAlloc );
+	VK_CHECK( qvkBindImageMemory( vk.device, vk.probeAtlas, VK_MemoryOf( &vk.probeAtlasAlloc ), vk.probeAtlasAlloc.offset ) );
+	view.image = vk.probeAtlas;
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = info.format;
+	view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view.subresourceRange.levelCount = PROBE_LEVELS;
+	view.subresourceRange.layerCount = 1;
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.probeAtlasView ) );
+	vk.probeAtlasProbes = numProbes;
+}
+#endif
+
+void VK_DestroyProbeAtlas( void ) {
+#ifndef RD_VISION_GLES
+	if ( vk.probeAtlas ) {
+		// (the texture table may still name it: it is not read until the faces are drawn again)
+		qvkDestroyImageView( vk.device, vk.probeAtlasView, NULL );
+		qvkDestroyImage( vk.device, vk.probeAtlas, NULL );
+		VK_FreeMemory( &vk.probeAtlasAlloc );
+		vk.probeAtlas = VK_NULL_HANDLE;
+		vk.probeAtlasView = VK_NULL_HANDLE;
+		vk.probesLost = qtrue;
+	}
+	vk.probeAtlasProbes = 0;
+#endif
+}
+
+/*
+===============
+VK_BeginProbe
+
+A face of a reflection probe is drawn into the targets of the faces, begun empty. qfalse: it is not drawn.
+===============
+*/
+qboolean VK_BeginProbe( void ) {
+#ifdef RD_VISION_GLES
+	return qfalse;
+#else
+	if ( !vk.frame || !VK_ProbesSupported() ) {
+		return qfalse;
+	}
+	VK_EndTarget();
+	VK_SwapProbeTargets();
+	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	return qtrue;
+#endif
+}
+
+/*
+===============
+VK_EndProbe
+
+The face that was drawn goes to its place in the atlas (a new atlas with the first face of the first probe); after
+the last face of the last probe the smaller levels are made and the texture table shows the atlas.
+===============
+*/
+void VK_EndProbe( int face, int probe, int numProbes ) {
+#ifndef RD_VISION_GLES
+	VkCommandBuffer cmd = vk.frame->cmd;
+	VkImageCopy region;
+
+	VK_EndTarget();
+	VK_SwapProbeTargets();
+	if ( face == 0 && probe == 0 ) {
+		if ( vk.probeAtlasProbes != numProbes ) {
+			VK_CreateProbeAtlas( numProbes );
+		}
+		VK_AtlasLayout( cmd, 0, PROBE_LEVELS, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT );
+	}
+	if ( vk.probeAtlas && probe < vk.probeAtlasProbes ) {
+		memset( &region, 0, sizeof( region ) );
+		region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.srcSubresource.layerCount = region.dstSubresource.layerCount = 1;
+		region.dstOffset.x = face * PROBE_SIZE;
+		region.dstOffset.y = probe * PROBE_SIZE;
+		region.extent.width = region.extent.height = PROBE_SIZE;
+		region.extent.depth = 1;
+		VK_TargetLayout( cmd, &vk.probeColor, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+		qvkCmdCopyImage( cmd, vk.probeColor.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.probeAtlas, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &region );
+		VK_TargetLayout( cmd, &vk.probeColor, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+
+		if ( face == 5 && probe == numProbes - 1 ) {
+			// each level half of the one before it
+			for ( int level = 1; level < PROBE_LEVELS; level++ ) {
+				VkImageBlit blit;
+
+				VK_AtlasLayout( cmd, level - 1, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT );
+				memset( &blit, 0, sizeof( blit ) );
+				blit.srcSubresource.aspectMask = blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blit.srcSubresource.mipLevel = (uint32_t)( level - 1 );
+				blit.dstSubresource.mipLevel = (uint32_t)level;
+				blit.srcSubresource.layerCount = blit.dstSubresource.layerCount = 1;
+				blit.srcOffsets[1].x = ( PROBE_SIZE * 6 ) >> ( level - 1 );
+				blit.srcOffsets[1].y = ( PROBE_SIZE * numProbes ) >> ( level - 1 );
+				blit.srcOffsets[1].z = 1;
+				blit.dstOffsets[1].x = ( PROBE_SIZE * 6 ) >> level;
+				blit.dstOffsets[1].y = ( PROBE_SIZE * numProbes ) >> level;
+				blit.dstOffsets[1].z = 1;
+				qvkCmdBlitImage( cmd, vk.probeAtlas, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.probeAtlas, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1, &blit, VK_FILTER_LINEAR );
+			}
+			VK_AtlasLayout( cmd, 0, PROBE_LEVELS - 1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT );
+			VK_AtlasLayout( cmd, PROBE_LEVELS - 1, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT );
+			VK_ShowImage( (int)tr.probeImage->texnum, vk.probeAtlasView, qtrue );
+		}
+	}
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;

@@ -1002,6 +1002,18 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	image->width = width;
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
+	if ( pic ) {
+		double sum = 0.0;
+
+		// (by the alpha too: an additive stage adds the colour as its alpha lets it, a cut out one shows only that)
+		for ( int i = 0; i < width * height; i++ ) {
+			const byte *p = pic + i * 4;
+
+			sum += ( p[0] * 0.3 + p[1] * 0.59 + p[2] * 0.11 ) * p[3] / ( 255.0 * 255.0 );
+		}
+		image->averageLuma = (float)( sum / ( width * height ) );
+		VK_TexCacheLuma( image->averageLuma );
+	}
 
 	if ( qglActiveTextureARB ) {
 		GL_SelectTexture( 0 );
@@ -1083,6 +1095,7 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 	// decoded nor packed again, and the image is made without pixels.
 	if ( VK_TexCacheFind( name, mipmap, allowPicmip, allowTC, &width, &height ) ) {
 		image = R_CreateImage( ( char * ) name, NULL, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
+		image->averageLuma = VK_TexCacheFoundLuma();
 		VK_TexCacheEnd();
 		return image;
 	}
@@ -1308,6 +1321,11 @@ void R_CreateBuiltinImages( void ) {
 	tr.whiteImage = R_CreateImage("*white", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT);
 
 	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
+	tr.ssrImage = R_CreateImage("*ssr", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.rtLightImage[0] = R_CreateImage("*rtlights0", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.rtLightImage[1] = R_CreateImage("*rtlights1", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	// VisionJK: the place of the faces of the reflection probes in the texture table (VK_EndProbe)
+	tr.probeImage = R_CreateImage( "*probes", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
 
 
 	// with overbright bits active, we need an image which is some fraction of full color,
@@ -1448,4 +1466,78 @@ qhandle_t RE_PaintImage( int slot, const byte *rgba, int size ) {
 		Upload32( (unsigned *)pixels, GL_RGBA, qtrue, qfalse, qfalse, qfalse, &image->internalFormat, &image->width, &image->height );
 	}
 	return RE_RegisterSceneShader( image->imgName, image, RGBA_SHADER_DECAL, SS_DECAL );
+}
+
+/*
+===============
+R_ReplaceImagePixels
+
+VisionJK: new pixels for an image that is there (the made maps of tr_matgen.cpp), with its own mip and picmip
+settings; pic is used up by the upload. A new size makes the device wait once.
+===============
+*/
+void R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height ) {
+	image->width = (word)width;
+	image->height = (word)height;
+	GL_Bind( image );
+	Upload32( (unsigned *)pic, GL_RGBA, (qboolean)image->mipmap, (qboolean)image->allowPicmip, qfalse, qfalse, &image->internalFormat, &image->width, &image->height );
+}
+
+/*
+===============
+R_MadeImage
+
+VisionJK: an image the renderer made itself by that name (mipmapped, repeated, never packed into blocks): made the
+first time, its pixels replaced when it is there already (also when it is left from an earlier level). pic is used
+up by the upload.
+===============
+*/
+image_t *R_MadeImage( const char *name, byte *pic, int width, int height ) {
+	image_t *image = R_FindImageFile_NoLoad( name, qtrue, qtrue, qfalse, GL_REPEAT );
+
+	if ( image ) {
+		R_ReplaceImagePixels( image, pic, width, height );
+		return image;
+	}
+	return R_CreateImage( name, pic, width, height, GL_RGBA, qtrue, qtrue, qfalse, GL_REPEAT );
+}
+
+/*
+===============
+RE_UiTexture
+
+VisionJK: a picture of the debug menu of the client for RE_DrawTriangles2D (its font atlas): slot 0 to
+UI_TEXTURES - 1, width x height RGBA, sides powers of two. The same slot again takes the new pixels into the same
+image. Answers its shader for the 2D (vertex colours, alpha blended), 0 when it could not be made.
+===============
+*/
+qhandle_t RE_UiTexture( int slot, const byte *rgba, int width, int height ) {
+	image_t	*image;
+	byte	*pixels;
+	int		lightmapIndex[MAXLIGHTMAPS];
+	byte	styles[MAXLIGHTMAPS];
+
+	if ( slot < 0 || slot >= UI_TEXTURES || !rgba || width < 1 || height < 1 || width > 4096 || height > 4096
+		|| ( width & ( width - 1 ) ) || ( height & ( height - 1 ) ) ) {
+		return 0;
+	}
+	// Upload32() makes the smaller levels in place, so it gets a copy (sized by the picture)
+	pixels = (byte *)Z_Malloc( width * height * 4, TAG_TEMP_WORKSPACE, qfalse );
+	memcpy( pixels, rgba, (size_t)width * height * 4 );
+	image = tr.uiImage[slot];
+	if ( !image ) {
+		image = tr.uiImage[slot] = R_CreateImage( va( "*ui%d", slot ), pixels, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	} else {
+		image->width = (word)width;
+		image->height = (word)height;
+		GL_Bind( image );
+		Upload32( (unsigned *)pixels, GL_RGBA, qfalse, qfalse, qfalse, qfalse, &image->internalFormat, &image->width, &image->height );
+	}
+	Z_Free( pixels );
+	if ( !image ) {
+		return 0;
+	}
+	memcpy( lightmapIndex, lightmaps2d, sizeof( lightmapIndex ) );
+	memcpy( styles, stylesDefault, sizeof( styles ) );
+	return RE_RegisterShaderFromImage( image->imgName, lightmapIndex, styles, image, qfalse );
 }

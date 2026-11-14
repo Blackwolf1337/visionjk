@@ -821,6 +821,28 @@ typedef struct cgameImport_s {
 		// draws marks with the shader.
 		qhandle_t		(*R_PaintPicture)						( int slot, const char *name, paintPicture_t *out );
 		qboolean		(*R_AddPaint)							( const paintDecal_t *decals, int count );
+		// Only an engine that sets the cvar v_cgameLineLight to 1 has this one, the same way. A tube of light from
+		// start to end for the scene of this frame (a saber blade), reaching range units from it, between
+		// R_ClearScene and R_RenderScene, in place of R_AddLightToScene. NULL: the renderer has none, the cgame
+		// adds a point light as before.
+		void			(*R_AddLineLight)						( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
+		// Only an engine that sets the cvar v_cgameSaberBlade to 1 has this one, the same way. A saber blade drawn by
+		// the renderer in 3D for the scene of this frame (saberBlade3D_t: a white core in a coloured glow, and the
+		// place it swept), in place of the flat RT_SABER_GLOW and RT_LINE. NULL: the renderer has none.
+		void			(*R_AddSaberBlade)						( const saberBlade3D_t *blade );
+		// Only an engine that sets the cvar v_cgameCutEntity to 1 has this one, the same way. An entity drawn cut by
+		// plane (in the world: normal, distance; the side the normal points to is kept), otherwise as
+		// R_AddRefEntityToScene: the halves of a body a saber cut through (cg_slice.c). NULL: the renderer has none.
+		void			(*R_AddCutEntity)						( const refEntity_t *ent, const float *plane );
+		// Only an engine that sets the cvar v_cgameSetBones to 1 has these two, the same way. G2_BoneNumber: the
+		// number of a bone in the skeleton of model modelIndex (-1: none), parent gets its parent's (-1: the root).
+		// G2_SetBonesWorld: bones placed whole in the world, count 3x4 matrices in the frame G2API_GetBoltMatrix
+		// gives for the same angles, origin and scale; bones not listed follow their parent; count 0 hands them all
+		// back to the animation (the ragdoll of the cut bodies, cg_ragdoll.c). NULL: the renderer has none.
+		int				(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
+		// cut (or NULL): on the first call the cut of the part in the world and hidden[count] the bones of another part;
+		// each vertex keeps the side it had in that first pose
+		qboolean		(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
 	} ext;
 } cgameImport_t;
 

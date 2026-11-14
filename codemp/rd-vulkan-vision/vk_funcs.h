@@ -38,9 +38,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCreateDevice ) \
 	X( vkDestroyInstance ) \
 	X( vkDestroySurfaceKHR ) \
+	X( vkEnumerateDeviceExtensionProperties ) \
 	X( vkEnumeratePhysicalDevices ) \
 	X( vkGetPhysicalDeviceFeatures ) \
 	X( vkGetPhysicalDeviceFeatures2 ) \
+	X( vkGetPhysicalDeviceProperties2 ) \
 	X( vkGetPhysicalDeviceFormatProperties ) \
 	X( vkGetPhysicalDeviceMemoryProperties ) \
 	X( vkGetPhysicalDeviceProperties ) \
@@ -71,11 +73,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdCopyBufferToImage ) \
 	X( vkCmdCopyImage ) \
 	X( vkCmdCopyImageToBuffer ) \
+	X( vkCmdDispatch ) \
 	X( vkCmdDraw ) \
 	X( vkCmdDrawIndexed ) \
 	X( vkCmdEndRendering ) \
 	X( vkCmdPipelineBarrier ) \
 	X( vkCmdPushConstants ) \
+	X( vkCmdBeginQuery ) \
+	X( vkCmdEndQuery ) \
+	X( vkCmdResetQueryPool ) \
 	X( vkCmdSetCullMode ) \
 	X( vkCmdSetDepthBias ) \
 	X( vkCmdSetDepthBiasEnable ) \
@@ -87,15 +93,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdSetStencilReference ) \
 	X( vkCmdSetStencilTestEnable ) \
 	X( vkCmdSetViewport ) \
+	X( vkCmdWriteTimestamp ) \
 	X( vkCreateBuffer ) \
 	X( vkCreateCommandPool ) \
+	X( vkCreateComputePipelines ) \
 	X( vkCreateDescriptorPool ) \
 	X( vkCreateDescriptorSetLayout ) \
 	X( vkCreateFence ) \
 	X( vkCreateGraphicsPipelines ) \
+	X( vkCreatePipelineCache ) \
 	X( vkCreateImage ) \
 	X( vkCreateImageView ) \
 	X( vkCreatePipelineLayout ) \
+	X( vkCreateQueryPool ) \
 	X( vkCreateSampler ) \
 	X( vkCreateSemaphore ) \
 	X( vkCreateShaderModule ) \
@@ -109,7 +119,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkDestroyImage ) \
 	X( vkDestroyImageView ) \
 	X( vkDestroyPipeline ) \
+	X( vkDestroyPipelineCache ) \
 	X( vkDestroyPipelineLayout ) \
+	X( vkDestroyQueryPool ) \
 	X( vkDestroySampler ) \
 	X( vkDestroySemaphore ) \
 	X( vkDestroyShaderModule ) \
@@ -117,9 +129,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkDeviceWaitIdle ) \
 	X( vkEndCommandBuffer ) \
 	X( vkFreeMemory ) \
+	X( vkGetBufferDeviceAddress ) \
 	X( vkGetBufferMemoryRequirements ) \
 	X( vkGetDeviceQueue ) \
 	X( vkGetImageMemoryRequirements ) \
+	X( vkGetPipelineCacheData ) \
+	X( vkGetQueryPoolResults ) \
 	X( vkGetSwapchainImagesKHR ) \
 	X( vkMapMemory ) \
 	X( vkQueuePresentKHR ) \
@@ -130,10 +145,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkUpdateDescriptorSets ) \
 	X( vkWaitForFences )
 
+// asked from the device when it traces rays (vk.rayTracing, vk_rt.cpp)
+#define VK_FUNCTIONS_RT( X ) \
+	X( vkCmdBuildAccelerationStructuresKHR ) \
+	X( vkCreateAccelerationStructureKHR ) \
+	X( vkDestroyAccelerationStructureKHR ) \
+	X( vkGetAccelerationStructureBuildSizesKHR ) \
+	X( vkGetAccelerationStructureDeviceAddressKHR )
+
 #define X( name )	extern PFN_##name q##name;
 VK_FUNCTIONS_GLOBAL( X )
 VK_FUNCTIONS_INSTANCE( X )
 VK_FUNCTIONS_DEVICE( X )
+VK_FUNCTIONS_RT( X )
 #undef X
 extern PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
 extern PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;

@@ -1,0 +1,20 @@
+// materials of the material debug menu (v_matdebug) for zz_mat_mp4.oshader, read after the shader files
+
+textures/mp/h_sandstone
+{
+	qer_editorimage textures/quicktrip/rock_sandstone.tga
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map textures/quicktrip/rock_sandstone.tga
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+		normalGen 0.3 1 0.3 invert
+		roughness 0.85
+		metalness 0
+		parallaxDepth 0.013
+		parallaxPlane 0.5
+	}
+}

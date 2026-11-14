@@ -29,6 +29,252 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static vkBuffer_t	vk_readback;		// where the device copies a finished frame for the CPU to read
 
+/*
+===============================================================================
+
+V_GPUTIMES
+
+How long the device takes for the parts of a frame: a timestamp at every VK_GpuMark(), the time from one mark to
+the next added to the name of the later one. A name marked several times in a frame (the level of a portal, of
+the puddle view and of the main view) gets the sum. v_gpuTimes prints the averages since it was called last.
+
+===============================================================================
+*/
+
+#define VK_GPU_NAMES	32
+
+static struct {
+	const char	*name;
+	double		ms;				// summed over the frames
+} vk_gpuNames[VK_GPU_NAMES];
+static int		vk_numGpuNames;
+static double	vk_gpuFrameMs;		// from the first mark of a frame to its last, summed
+static int		vk_gpuFrames;
+static double	vk_gpuFragments;	// runs of the fragment shader for the level, summed over the frames that counted them
+static int		vk_gpuFragmentFrames;
+
+// the GPU profiler of the client (ext.GpuProfile): the same sums over windows of about half a second, apart from
+// those of v_gpuTimes, and the whole frame of each of the last frames
+#define VK_PROFILE_MSEC	500
+
+static struct {
+	const char	*name;
+	double		ms, maxMs;
+} vk_profNames[GPU_PROFILE_PASSES];
+static int			vk_numProfNames;
+static double		vk_profFrameMs, vk_profFrameMaxMs;
+static int			vk_profFrames, vk_profStart;
+static double		vk_profFragments;
+static int			vk_profFragmentFrames;
+static float		vk_profHistory[GPU_PROFILE_HISTORY];
+static int			vk_profHistoryAt;
+static gpuProfile_t	vk_profile;			// the last window closed
+
+static qboolean VK_GpuTimed( void ) {
+	return (qboolean)( vk.properties.limits.timestampComputeAndGraphics && vk.properties.limits.timestampPeriod > 0.0f );
+}
+
+static void VK_GpuAdd( const char *name, double ms ) {
+	int i;
+
+	for ( i = 0; i < vk_numGpuNames; i++ ) {
+		if ( vk_gpuNames[i].name == name || !strcmp( vk_gpuNames[i].name, name ) ) {
+			break;
+		}
+	}
+	if ( i == vk_numGpuNames ) {
+		if ( vk_numGpuNames == VK_GPU_NAMES ) {
+			return;
+		}
+		vk_gpuNames[vk_numGpuNames].name = name;
+		vk_gpuNames[vk_numGpuNames++].ms = 0.0;
+	}
+	vk_gpuNames[i].ms += ms;
+}
+
+// the window of the profiler closes: its averages become what ext.GpuProfile hands out
+static void VK_ProfileClose( void ) {
+	gpuProfile_t *p = &vk_profile;
+
+	p->serial++;
+	p->frames = vk_profFrames;
+	p->width = vk.width;
+	p->height = vk.height;
+	p->samples = (int)vk.samples;
+	Q_strncpyz( p->device, vk.properties.deviceName, sizeof( p->device ) );
+	p->numPasses = vk_numProfNames;
+	for ( int i = 0; i < vk_numProfNames; i++ ) {
+		Q_strncpyz( p->passNames[i], vk_profNames[i].name, sizeof( p->passNames[i] ) );
+		p->passMs[i] = (float)( vk_profNames[i].ms / vk_profFrames );
+		p->passMaxMs[i] = (float)vk_profNames[i].maxMs;
+	}
+	p->frameMs = (float)( vk_profFrameMs / vk_profFrames );
+	p->frameMaxMs = (float)vk_profFrameMaxMs;
+	p->levelOverdraw = vk_profFragmentFrames && vk.width > 0 && vk.height > 0
+		? (float)( vk_profFragments / vk_profFragmentFrames / ( (double)vk.width * vk.height ) ) : 0.0f;
+	vk_profFragments = 0.0;
+	vk_profFragmentFrames = 0;
+	// (a pass that ended takes no row any more; the others start again from nothing)
+	vk_numProfNames = 0;
+	vk_profFrameMs = vk_profFrameMaxMs = 0.0;
+	vk_profFrames = 0;
+}
+
+// a finished frame into the window of the profiler
+static void VK_ProfileFrame( const vkFrame_t *frame, const uint64_t *ticks, double msPerTick ) {
+	const int	now = ri.Milliseconds();
+	const double whole = (double)( ticks[frame->numMarks - 1] - ticks[0] ) * msPerTick;
+
+	for ( int i = 1; i < frame->numMarks; i++ ) {
+		const double	ms = (double)( ticks[i] - ticks[i - 1] ) * msPerTick;
+		const char		*name = frame->markNames[i];
+		int				n;
+
+		for ( n = 0; n < vk_numProfNames; n++ ) {
+			if ( vk_profNames[n].name == name || !strcmp( vk_profNames[n].name, name ) ) {
+				break;
+			}
+		}
+		if ( n == vk_numProfNames ) {
+			if ( n == GPU_PROFILE_PASSES ) {
+				continue;
+			}
+			vk_profNames[n].name = name;
+			vk_profNames[n].ms = vk_profNames[n].maxMs = 0.0;
+			vk_numProfNames++;
+		}
+		vk_profNames[n].ms += ms;
+		// (a name marked several times in a frame: its most is that of one piece, near enough)
+		vk_profNames[n].maxMs = Q_max( vk_profNames[n].maxMs, ms );
+	}
+	vk_profFrameMs += whole;
+	vk_profFrameMaxMs = Q_max( vk_profFrameMaxMs, whole );
+	vk_profHistory[vk_profHistoryAt] = (float)whole;
+	vk_profHistoryAt = ( vk_profHistoryAt + 1 ) % GPU_PROFILE_HISTORY;
+	if ( !vk_profFrames++ ) {
+		vk_profStart = now;
+	}
+	if ( now - vk_profStart >= VK_PROFILE_MSEC ) {
+		VK_ProfileClose();
+	}
+}
+
+qboolean RE_GpuProfile( gpuProfile_t *out ) {
+	if ( !out || !vk.device || !VK_GpuTimed() ) {
+		return qfalse;
+	}
+	*out = vk_profile;
+	for ( int i = 0; i < GPU_PROFILE_HISTORY; i++ ) {
+		out->history[i] = vk_profHistory[( vk_profHistoryAt + i ) % GPU_PROFILE_HISTORY];
+	}
+	out->draws = vk.statDraws[1];
+	out->triangles = vk.statStaticIndexes[1] / 3;
+	out->cpuTriangles = vk.statCpuIndexes[1] / 3;
+	out->transforms = vk.statTransforms[1];
+	out->bones = vk.statBones[1];
+	out->skeletons = vk.statSkeletons[1];
+	return qtrue;
+}
+
+// the marks of the frame the device finished, into the sums
+static void VK_GpuRead( vkFrame_t *frame ) {
+	uint64_t ticks[VK_GPU_MARKS];
+	const double msPerTick = (double)vk.properties.limits.timestampPeriod / 1000000.0;
+
+	if ( frame->fragments && frame->fragmentsUsed ) {
+		uint64_t count = 0;
+
+		if ( qvkGetQueryPoolResults( vk.device, frame->fragments, 0, 1, sizeof( count ), &count, sizeof( count ), VK_QUERY_RESULT_64_BIT )
+			== VK_SUCCESS ) {
+			vk_gpuFragments += (double)count;
+			vk_gpuFragmentFrames++;
+			vk_profFragments += (double)count;
+			vk_profFragmentFrames++;
+		}
+	}
+
+	if ( !frame->timestamps || frame->numMarks < 2 ) {
+		return;
+	}
+	if ( qvkGetQueryPoolResults( vk.device, frame->timestamps, 0, (uint32_t)frame->numMarks, sizeof( ticks ), ticks, sizeof( uint64_t ),
+		VK_QUERY_RESULT_64_BIT ) != VK_SUCCESS ) {
+		return;
+	}
+	for ( int i = 1; i < frame->numMarks; i++ ) {
+		VK_GpuAdd( frame->markNames[i], (double)( ticks[i] - ticks[i - 1] ) * msPerTick );
+	}
+	vk_gpuFrameMs += (double)( ticks[frame->numMarks - 1] - ticks[0] ) * msPerTick;
+	vk_gpuFrames++;
+	VK_ProfileFrame( frame, ticks, msPerTick );
+}
+
+/*
+===============
+VK_LevelFragments
+
+How often the fragment shader runs while the opaque level of the main view is drawn, against the pixels of the frame:
+its overdraw (v_gpuTimes, v_profiler). Counted inside the render pass of the level, which every pass that leaves
+it ends first (VK_LevelFragments( qfalse ) is called before that, and the count stops there).
+===============
+*/
+void VK_LevelFragments( qboolean begin ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || !frame->fragments ) {
+		return;
+	}
+	if ( begin ) {
+		if ( !frame->fragmentsActive && !frame->fragmentsUsed ) {
+			qvkCmdBeginQuery( frame->cmd, frame->fragments, 0, 0 );
+			frame->fragmentsActive = qtrue;
+		}
+	} else if ( frame->fragmentsActive ) {
+		qvkCmdEndQuery( frame->cmd, frame->fragments, 0 );
+		frame->fragmentsActive = qfalse;
+		frame->fragmentsUsed = qtrue;
+	}
+}
+
+// no mark of the frame yet but its start
+qboolean VK_GpuFirstMark( void ) {
+	return (qboolean)( vk.frame && vk.frame->numMarks <= 1 );
+}
+
+void VK_GpuMark( const char *name ) {
+	vkFrame_t *frame = vk.frame;
+
+	if ( !frame || !frame->timestamps || frame->numMarks == VK_GPU_MARKS ) {
+		return;
+	}
+	qvkCmdWriteTimestamp( frame->cmd, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frame->timestamps, (uint32_t)frame->numMarks );
+	frame->markNames[frame->numMarks++] = name;
+}
+
+void VK_GpuTimes_f( void ) {
+	if ( !VK_GpuTimed() ) {
+		ri.Printf( PRINT_ALL, "v_gpuTimes: this device has no timestamps\n" );
+		return;
+	}
+	if ( !vk_gpuFrames ) {
+		ri.Printf( PRINT_ALL, "v_gpuTimes: no frame since the last call\n" );
+		return;
+	}
+	ri.Printf( PRINT_ALL, "device time a frame over %i frames, %ix%i, %i samples:\n", vk_gpuFrames, vk.width, vk.height, (int)vk.samples );
+	for ( int i = 0; i < vk_numGpuNames; i++ ) {
+		ri.Printf( PRINT_ALL, "  %-16s %7.3f ms\n", vk_gpuNames[i].name, vk_gpuNames[i].ms / vk_gpuFrames );
+	}
+	ri.Printf( PRINT_ALL, "  %-16s %7.3f ms\n", "whole frame", vk_gpuFrameMs / vk_gpuFrames );
+	if ( vk_gpuFragmentFrames ) {
+		ri.Printf( PRINT_ALL, "level overdraw: the fragment shader ran %.2f times a pixel of the frame\n",
+			vk_gpuFragments / vk_gpuFragmentFrames / ( (double)vk.width * vk.height ) );
+	}
+	vk_gpuFragments = 0.0;
+	vk_gpuFragmentFrames = 0;
+	vk_numGpuNames = 0;
+	vk_gpuFrameMs = 0.0;
+	vk_gpuFrames = 0;
+}
+
 void VK_InitFrames( void ) {
 	VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	VkFenceCreateInfo fence = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -49,6 +295,7 @@ void VK_InitFrames( void ) {
 		VkWriteDescriptorSet writes[4];
 
 		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &frame->cmd ) );
+		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &frame->presentCmd ) );
 		VK_CHECK( qvkCreateFence( vk.device, &fence, NULL, &frame->fence ) );
 		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->acquired ) );
 		VK_CreateBuffer( &frame->vertexes, VK_VERTEX_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, qtrue );
@@ -56,9 +303,29 @@ void VK_InitFrames( void ) {
 		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->transforms, sizeof( vkTransform_t ) * VK_MAX_TRANSFORMS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->draws, sizeof( vkDraw_t ) * VK_MAX_DRAWS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
-		VK_CreateBuffer( &frame->bones, sizeof( float ) * 12 * VK_MAX_BONES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
+		VK_CreateBuffer( &frame->bones, sizeof( float ) * 12 * VK_MAX_BONES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+			| ( vk.deviceAddress ? VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT : 0 ), qtrue );
 		VK_CreateBuffer( &frame->probes, sizeof( uint32_t ) * VK_MAX_FLARES, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
 		frame->numProbes = frame->numProbesCopied = 0;
+		frame->timestamps = VK_NULL_HANDLE;
+		frame->numMarks = 0;
+		if ( VK_GpuTimed() ) {
+			VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+
+			query.queryType = VK_QUERY_TYPE_TIMESTAMP;
+			query.queryCount = VK_GPU_MARKS;
+			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->timestamps ) );
+		}
+		frame->fragments = VK_NULL_HANDLE;
+		frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+		if ( vk.pipelineStats ) {
+			VkQueryPoolCreateInfo query = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+
+			query.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+			query.queryCount = 1;
+			query.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
+			VK_CHECK( qvkCreateQueryPool( vk.device, &query, NULL, &frame->fragments ) );
+		}
 
 		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
 		buffers[0].buffer = frame->globals.buffer;
@@ -93,6 +360,14 @@ void VK_ShutdownFrames( void ) {
 		VK_DestroyBuffer( &frame->probes );
 		VK_DestroyBuffer( &frame->draws );
 		VK_DestroyBuffer( &frame->bones );
+		if ( frame->timestamps ) {
+			qvkDestroyQueryPool( vk.device, frame->timestamps, NULL );
+			frame->timestamps = VK_NULL_HANDLE;
+		}
+		if ( frame->fragments ) {
+			qvkDestroyQueryPool( vk.device, frame->fragments, NULL );
+			frame->fragments = VK_NULL_HANDLE;
+		}
 	}
 	VK_DestroyBuffer( &vk_readback );
 	vk.frame = NULL;
@@ -204,6 +479,31 @@ void VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth,
 	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
 
+/*
+===============
+VK_Scissor
+
+VisionJK: the scissor alone, in pixels of the window from its upper left corner (the clip rectangles of the debug
+menu of the client). VK_SetViewport() puts it back to the viewport.
+===============
+*/
+void VK_Scissor( int left, int top, int right, int bottom ) {
+	VkRect2D scissor;
+
+	if ( !vk.frame ) {
+		return;
+	}
+	left = Q_max( left, 0 );
+	top = Q_max( top, 0 );
+	right = Q_min( right, vk.width );
+	bottom = Q_min( bottom, vk.height );
+	scissor.offset.x = left;
+	scissor.offset.y = top;
+	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
+	scissor.extent.height = (uint32_t)Q_max( bottom - top, 0 );
+	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
+}
+
 static void VK_ClearRect( int x, int y, int width, int height, const VkClearAttachment *attachment ) {
 	VkClearRect rect;
 
@@ -270,6 +570,18 @@ void VK_BeginCommands( vkFrame_t *frame ) {
 	VK_CHECK( qvkBeginCommandBuffer( frame->cmd, &begin ) );
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.boundVertexBuffer = vk.boundIndexBuffer = VK_NULL_HANDLE;
+	// (the fence says the device is through with what this frame recorded the last time)
+	VK_GpuRead( frame );
+	frame->numMarks = 0;
+	frame->fragmentsActive = frame->fragmentsUsed = qfalse;
+	if ( frame->fragments ) {
+		qvkCmdResetQueryPool( frame->cmd, frame->fragments, 0, 1 );
+	}
+	if ( frame->timestamps ) {
+		qvkCmdResetQueryPool( frame->cmd, frame->timestamps, 0, VK_GPU_MARKS );
+		qvkCmdWriteTimestamp( frame->cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frame->timestamps, 0 );
+		frame->markNames[frame->numMarks++] = "start";
+	}
 }
 
 // How long a frame waits for an image of the swapchain, in nanoseconds. With r_swapInterval 1 that wait is what
@@ -337,6 +649,8 @@ void VK_PresentFrame( const float *gamma ) {
 	uint32_t imageIndex = 0;
 	qboolean present;
 
+	// (after the last view: the HUD, the menus, the console and the debug menus of the client)
+	VK_GpuMark( "2d and hud" );
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, &vk.final, NULL, 0, qfalse );
@@ -349,8 +663,35 @@ void VK_PresentFrame( const float *gamma ) {
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 
+	VK_GpuMark( "gamma and window" );
+	VK_CHECK( qvkEndCommandBuffer( cmd ) );
+
+	// textures this frame draws with have to be on the device before it runs
+	VK_FlushUploads();
+	VK_CHECK( qvkResetFences( vk.device, 1, &frame->fence ) );
+
+	// the frame runs at once, also while the image of the window is waited for; the copy into that image waits for
+	// it alone, and the fence after the copy covers both (it takes in what was submitted before it)
+	submit.commandBufferCount = 1;
+	submit.pCommandBuffers = &cmd;
+	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
+
 	present = VK_AcquireImage( frame, &imageIndex );
-	if ( present ) {
+	if ( !present ) {
+		vk.statFramesNotShown++;
+		submit.commandBufferCount = 0;
+		VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
+		VK_InvalidateTransform();
+		return;
+	}
+
+	VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+
+	cmd = frame->presentCmd;
+	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	VK_CHECK( qvkResetCommandBuffer( cmd, 0 ) );
+	VK_CHECK( qvkBeginCommandBuffer( cmd, &begin ) );
+	{
 		VkImageBlit blit;
 		const qboolean sameSize = (qboolean)( (int)vk.swapExtent.width == vk.width && (int)vk.swapExtent.height == vk.height );
 
@@ -369,27 +710,17 @@ void VK_PresentFrame( const float *gamma ) {
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, sameSize ? VK_FILTER_NEAREST : VK_FILTER_LINEAR );
 		VK_SetLayout( cmd, vk.swapImages[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-	} else {
-		vk.statFramesNotShown++;
 	}
 	VK_CHECK( qvkEndCommandBuffer( cmd ) );
-
-	// textures this frame draws with have to be on the device before it runs
-	VK_FlushUploads();
-
-	VK_CHECK( qvkResetFences( vk.device, 1, &frame->fence ) );
-	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
-	if ( present ) {
-		submit.waitSemaphoreCount = 1;
-		submit.pWaitSemaphores = &frame->acquired;
-		submit.pWaitDstStageMask = &waitStage;
-		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &vk.swapReady[imageIndex];
-	}
+	submit.waitSemaphoreCount = 1;
+	submit.pWaitSemaphores = &frame->acquired;
+	submit.pWaitDstStageMask = &waitStage;
+	submit.signalSemaphoreCount = 1;
+	submit.pSignalSemaphores = &vk.swapReady[imageIndex];
 	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
 
-	if ( present ) {
+	{
 		VkPresentInfoKHR info = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 		VkResult result;
 
@@ -406,6 +737,7 @@ void VK_PresentFrame( const float *gamma ) {
 			VK_Fatal( "vkQueuePresentKHR", result );
 		}
 	}
+	VK_InvalidateTransform();
 }
 
 /*
@@ -633,6 +965,10 @@ static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *t
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
+void VK_SsrPrepPass( const float *parm ) {
+	VK_DepthPass( vk.ssrPrepPipeline, &vk.color, &vk.ssrColor, parm );
+}
+
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_DepthPass( vk.focusPipeline, source, target, parm );
 }
@@ -708,25 +1044,26 @@ void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, cons
 // reading: no test, nothing written (the stencil goes with it). With several samples a pixel the frame is drawn into
 // the targets that stand in for color and depth, and the depth the shader reads is the plain one, which has their
 // first sample since the scene ended.
-static void VK_BeginOverLevel( VkCommandBuffer cmd ) {
+void VK_BeginOverLevel( VkCommandBuffer cmd, const int *area, qboolean glow ) {
 	const qboolean multi = (qboolean)( vk.samples > VK_SAMPLE_COUNT_1_BIT );
+	vkTarget_t *color = glow ? &vk.glow : &vk.color, *colorMS = glow ? &vk.glowMS : &vk.colorMS;
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
 
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_TargetLayout( cmd, color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	if ( multi ) {
-		VK_TargetLayout( cmd, &vk.colorMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+		VK_TargetLayout( cmd, colorMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 		VK_TargetLayout( cmd, &vk.depthMS, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	}
 
-	colorInfo.imageView = multi ? vk.colorMS.view : vk.color.view;
+	colorInfo.imageView = multi ? colorMS->view : color->view;
 	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	if ( multi ) {
 		colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorInfo.resolveImageView = vk.color.view;
+		colorInfo.resolveImageView = color->view;
 		colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	}
 	colorInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -735,8 +1072,18 @@ static void VK_BeginOverLevel( VkCommandBuffer cmd ) {
 	depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	depthInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
-	info.renderArea.extent.width = (uint32_t)vk.color.width;
-	info.renderArea.extent.height = (uint32_t)vk.color.height;
+	info.renderArea.extent.width = (uint32_t)color->width;
+	info.renderArea.extent.height = (uint32_t)color->height;
+	// (a part only: with many samples a pass over all of it resolves all of it again; never past the image, which
+	// loses the device)
+	if ( area ) {
+		const int x = Com_Clampi( 0, color->width, area[0] ), y = Com_Clampi( 0, color->height, area[1] );
+
+		info.renderArea.offset.x = x;
+		info.renderArea.offset.y = y;
+		info.renderArea.extent.width = (uint32_t)Com_Clampi( 0, color->width - x, area[2] );
+		info.renderArea.extent.height = (uint32_t)Com_Clampi( 0, color->height - y, area[3] );
+	}
 	info.layerCount = 1;
 	info.colorAttachmentCount = 1;
 	info.pColorAttachments = &colorInfo;
@@ -745,7 +1092,9 @@ static void VK_BeginOverLevel( VkCommandBuffer cmd ) {
 	qvkCmdBeginRendering( cmd, &info );
 }
 
-void VK_WetPass( const float *wet, int count, const int *viewport ) {
+// (area: the part of the target the boxes of the places cover, VK_DrawWet(); with several samples a pixel only that
+// part is resolved again)
+void VK_WetPass( const float *wet, int count, const int *viewport, const int *area ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	// (without the puddle view the copy of the frame stands in for its picture, the shader does not read it then)
 	const VkDescriptorSet sets[4] = { vk.frame->set, vk.screenSet, vk.depthSet, vk.reflect.image ? vk.reflectSet : vk.screenSet };
@@ -755,12 +1104,22 @@ void VK_WetPass( const float *wet, int count, const int *viewport ) {
 	if ( vk.reflect.image ) {
 		VK_TargetLayout( cmd, &vk.reflect, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	}
-	VK_BeginOverLevel( cmd );
+	VK_BeginOverLevel( cmd, area );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.wetPipeline );
 	vk.boundPipeline = vk.wetPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 4, sets, 0, NULL );
 	VK_ViewportAndScissor( viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, 1.0f );
-	qvkCmdDraw( cmd, 6, (uint32_t)count, 0, 0 );
+	{
+		// (the scissor to the part, the viewport stays the view)
+		VkRect2D scissor;
+		scissor.offset.x = area[0];
+		scissor.offset.y = area[1];
+		scissor.extent.width = (uint32_t)area[2];
+		scissor.extent.height = (uint32_t)area[3];
+		qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	}
+	// six faces of two triangles a place (wet.vert)
+	qvkCmdDraw( cmd, 36, (uint32_t)count, 0, 0 );
 	qvkCmdEndRendering( cmd );
 }
 
@@ -840,6 +1199,22 @@ void VK_SmaaPass( float threshold ) {
 	vk.boundPipeline = vk.smaaBlendPipeline;
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 2, blendSets, 0, NULL );
 	qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 8, push );
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+}
+
+// v_tonemap: the frame through shaders/tonemap.frag from a copy of it (vk.screen); parm: exposure, curve, 2 ^
+// overbright bits. Leaves vk.color begun with vk.depth, as VK_SmaaPass() does.
+void VK_TonemapPass( const float *parm ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	float push[8] = { 0.0f, 0.0f, 0.0f, 0.0f, parm[0], parm[1], parm[2], 0.0f };
+
+	VK_CopyTarget( &vk.color, &vk.screen );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.tonemapPipeline );
+	vk.boundPipeline = vk.tonemapPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 1, &vk.screenSet, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( push ), push );
 	VK_FullTarget( cmd, &vk.color );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }

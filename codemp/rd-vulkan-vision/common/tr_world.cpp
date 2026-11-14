@@ -383,6 +383,10 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 		if ( surf->viewCount == tr.viewCount )
 		{
 			// already in this view, but lets make sure all the dlight bits are set
+			if ( surf->drawSurfNum >= 0 )
+			{
+				tr.refdef.drawSurfs[surf->drawSurfNum].dlightBits |= dlightBits;
+			}
 			if ( *surf->data == SF_FACE )
 			{
 				((srfSurfaceFace_t *)surf->data)->dlightBits |= dlightBits;
@@ -398,6 +402,7 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 			return;
 		}
 		surf->viewCount = tr.viewCount;
+		surf->drawSurfNum = -1;
 		// FIXME: bmodel fog?
 	}
 
@@ -412,9 +417,11 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 	}
 
 	// check for dlighting
+	// (the lights it has in this view go with its draw surface, below)
+	int litBits = 0;
 	if ( dlightBits ) {
-		dlightBits = R_DlightSurface( surf, dlightBits );
-		dlightBits = ( dlightBits != 0 );
+		litBits = R_DlightSurface( surf, dlightBits );
+		dlightBits = ( litBits != 0 );
 	}
 
 #ifdef _ALT_AUTOMAP_METHOD
@@ -506,7 +513,17 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 	else
 #endif
 	{
+		const int before = tr.refdef.numDrawSurfs;
+
 		R_AddDrawSurf( surf->data, surf->shader, surf->fogIndex, dlightBits );
+		if ( tr.refdef.numDrawSurfs != before ) {
+			const int index = before & DRAWSURF_MASK;
+
+			tr.refdef.drawSurfs[index].dlightBits = litBits;
+			if ( !noViewCount ) {
+				surf->drawSurfNum = index;
+			}
+		}
 	}
 }
 

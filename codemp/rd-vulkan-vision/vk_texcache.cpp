@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // An image file is read, decoded, scaled, given its mip levels and packed into blocks (vk_bc.cpp) every time a
 // level asks for it for the first time since the program started: for mp/ffa3 that is half of the load, and
 // for a player who joins in the middle of a game most of the frame his skin is loaded in. What comes out of it
-// only depends on the file and on a few settings. So it is kept, a file per texture, in vulkan/tex/ of the
+// only depends on the file and on a few settings. So it is kept, a file per texture, in cache/textures/ of the
 // profile, and the next time the blocks are read and handed to the device as they are.
 //
 // A file of the cache is named after what it was made from: the path of the image file, its length and the
@@ -47,7 +47,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "vk_local.h"
 #include <vector>
 
-#define TEXCACHE_MAGIC		0x31585456		// "VTX1"
+#define TEXCACHE_MAGIC		0x32585456		// "VTX2": with the brightness of the image
 #define TEXCACHE_VERSION	1				// of the file and of what the packer makes: another one, another name
 #define TEXCACHE_MAX_LEVELS	16
 #define TEXCACHE_KEY		256
@@ -58,6 +58,7 @@ typedef struct texCacheHeader_s {
 	int		format;					// VKF_BC1 or VKF_BC3
 	int		mipLevels;
 	int		keyLength;				// the key follows, then the levels one after the other
+	float	averageLuma;			// image_t::averageLuma, which needs the pixels the image is made without
 } texCacheHeader_t;
 
 static struct {
@@ -77,7 +78,7 @@ static struct {
 static cvar_t *v_vkTexCache;
 
 void VK_TexCacheInit( void ) {
-	v_vkTexCache = ri.Cvar_Get( "v_vkTexCache", "1", CVAR_ARCHIVE_ND, "Textures that were packed into blocks are kept in vulkan/tex/ of the profile and not made again. 0: every one is made from its image file" );
+	v_vkTexCache = ri.Cvar_Get( "v_vkTexCache", "1", CVAR_ARCHIVE_ND, "Textures that were packed into blocks are kept in cache/textures/ of the profile and not made again. 0: every one is made from its image file" );
 }
 
 // FNV-1a, 64 bit
@@ -91,25 +92,26 @@ static unsigned long long VK_TexCacheHash( const char *text ) {
 }
 
 static void VK_TexCachePath( char *path, int pathSize ) {
-	Com_sprintf( path, pathSize, "vulkan/tex/%016llx.dat", VK_TexCacheHash( texCache.key ) );
+	Com_sprintf( path, pathSize, "textures/%016llx.dat", VK_TexCacheHash( texCache.key ) );
 }
 
 /*
 ===============
-VK_TexCacheKey
+VK_ImageFileOf
 
 Which file R_LoadImage() would take for the name, as it looks for it: the extension of the name first, then
-the kinds it knows in its order. qfalse when that file is of a directory or there is none, else the key of
-what is made from it.
+the kinds it knows in its order. qfalse when that file is of a directory or there is none, else file is its
+name with its length and the checksum of its pak (also for the generated maps of tr_matgen.cpp).
 
-The settings in the key are the ones Upload32() and VK_LevelFormat() look at.
+VK_TexCacheKey: the key of what is made from it. The settings in the key are the ones Upload32() and
+VK_LevelFormat() look at.
 ===============
 */
-static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allowPicmip ) {
+qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *checksum ) {
 	static const char *const kinds[] = { "jpg", "png", "tga" };
-	char		stripped[MAX_QPATH], file[MAX_QPATH];
+	char		stripped[MAX_QPATH];
 	const char	*given = COM_GetExtension( name );
-	int			length = 0, checksum = 0, first = -1;
+	int			first = -1;
 
 	COM_StripExtension( name, stripped, sizeof( stripped ) );
 	for ( int i = 0; i < (int)ARRAY_LEN( kinds ); i++ ) {
@@ -124,8 +126,8 @@ static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allo
 		if ( kind < 0 || ( i >= 0 && kind == first ) ) {
 			continue;
 		}
-		Com_sprintf( file, sizeof( file ), "%s.%s", stripped, kinds[kind] );
-		source = ri.FS_FileSource( file, &length, &checksum );
+		Com_sprintf( file, fileSize, "%s.%s", stripped, kinds[kind] );
+		source = ri.FS_FileSource( file, length, checksum );
 		if ( source == FS_SOURCE_NONE ) {
 			continue;
 		}
@@ -133,6 +135,16 @@ static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allo
 			return qfalse;
 		}
 		Q_strlwr( file );
+		return qtrue;
+	}
+	return qfalse;
+}
+
+static qboolean VK_TexCacheKey( const char *name, qboolean mipmap, qboolean allowPicmip ) {
+	char	file[MAX_QPATH];
+	int		length = 0, checksum = 0;
+
+	if ( VK_ImageFileOf( name, file, sizeof( file ), &length, &checksum ) ) {
 		Com_sprintf( texCache.key, sizeof( texCache.key ), "%s %i %08x v%i m%i p%i s%i c%i t%i x%i o%i i%g g%g", file, length,
 			(unsigned)checksum, TEXCACHE_VERSION, mipmap ? 1 : 0, allowPicmip ? r_picmip->integer : 0,
 			r_simpleMipMaps->integer, r_colorMipLevels->integer, r_texturebits->integer, glConfig.maxTextureSize, tr.overbrightBits,
@@ -168,16 +180,7 @@ qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmi
 
 	VK_TexCachePath( path, sizeof( path ) );
 	ri.LoadPush( "texture kept", name );
-	// (only the file of the profile: a pak could have one under the same name, FS_ReadFile looks in paks too)
-	{
-		int sourceLength, sourceChecksum;
-
-		if ( ri.FS_FileSource( path, &sourceLength, &sourceChecksum ) != FS_SOURCE_DIRECTORY ) {
-			ri.LoadPop();
-			return qfalse;
-		}
-	}
-	length = ri.FS_ReadFile( path, &texCache.file );
+	length = ri.Cache_Read( path, &texCache.file );
 	ri.LoadPop();
 	if ( length <= 0 || !texCache.file ) {
 		texCache.file = NULL;
@@ -243,6 +246,18 @@ qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height ) {
 	return qtrue;
 }
 
+// R_CreateImage(): how bright the pixels of the image are that is being kept
+void VK_TexCacheLuma( float luma ) {
+	if ( texCache.pending ) {
+		texCache.recorded.averageLuma = luma;
+	}
+}
+
+// how bright the pixels were of the image VK_TexCacheFind() found, until VK_TexCacheEnd()
+float VK_TexCacheFoundLuma( void ) {
+	return texCache.file ? texCache.header.averageLuma : 0.0f;
+}
+
 // the levels of the image that R_CreateImage() makes next are kept, if it is one VK_TexCacheFind() did not find
 void VK_TexCacheRecord( void ) {
 	if ( !texCache.pending ) {
@@ -303,7 +318,7 @@ void VK_TexCacheEnd( void ) {
 		memcpy( out.data() + sizeof( texCache.recorded ) + texCache.recorded.keyLength, texCache.blocks.data(), texCache.blocks.size() );
 		VK_TexCachePath( path, sizeof( path ) );
 		ri.LoadPush( "texture kept: written", NULL );
-		ri.FS_WriteFile( path, out.data(), (int)out.size() );
+		ri.Cache_Write( path, out.data(), (int)out.size() );
 		ri.LoadPop();
 	}
 	texCache.recording = texCache.pending = qfalse;

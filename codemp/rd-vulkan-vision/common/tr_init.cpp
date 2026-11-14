@@ -37,6 +37,7 @@ glstate_t	glState;
 window_t	window;
 
 static void GfxInfo_f( void );
+void VK_GpuTimes_f( void );		// v_gpuTimes, vk_cmd.cpp (gles_cmd.cpp on the other device)
 
 cvar_t	*r_verbose;
 
@@ -624,6 +625,7 @@ static consoleCommand_t	commands[] = {
 	{ "screenshot_png",		R_ScreenShotPNG_f },
 	{ "screenshot_tga",		R_ScreenShotTGA_f },
 	{ "gfxinfo",			GfxInfo_f },
+	{ "v_gpuTimes",			VK_GpuTimes_f },
 	{ "r_atihack",			R_AtiHackToggle_f },
 	{ "r_we",				R_WorldEffect_f },
 	{ "imagecacheinfo",		RE_RegisterImages_Info_f },
@@ -670,6 +672,9 @@ void R_Register( void )
 	r_texturebitslm						= ri.Cvar_Get( "r_texturebitslm",					"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_overBrightBits					= ri.Cvar_Get( "r_overBrightBits",					"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_mapOverBrightBits					= ri.Cvar_Get( "r_mapOverBrightBits",				"0",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
+	v_panelGlow							= ri.Cvar_Get( "v_panelGlow",						"2",						CVAR_ARCHIVE_ND, "Lamp panels of a level glow as light sources: the bright parts of their texture give off light this strong (with HDR they glow out, with bloom they shine). 0: they look as their texture" );
+	v_panelLight						= ri.Cvar_Get( "v_panelLight",						"1",						CVAR_ARCHIVE_ND, "Players near lamp panels are lit from them, from the panels their traced shadow comes from (ray tracing, cg_shadows 2). 0: from the light grid alone" );
+	v_autoMaterials						= ri.Cvar_Get( "v_autoMaterials",					"1",						CVAR_ARCHIVE_ND|CVAR_LATCH, "Surfaces of a level without a material get one made from their texture at load (its class from the name and brightness of the texture), so every level shows the materials. Shader files still win. 0: only written materials (vid_restart)" );
 	r_simpleMipMaps						= ri.Cvar_Get( "r_simpleMipMaps",					"1",						CVAR_ARCHIVE_ND|CVAR_LATCH, "" );
 	r_vertexLight						= ri.Cvar_Get( "r_vertexLight",					"0",						CVAR_ARCHIVE|CVAR_LATCH, "" );
 	r_uiFullScreen						= ri.Cvar_Get( "r_uifullscreen",					"0",						CVAR_NONE, "" );
@@ -854,7 +859,9 @@ void R_Init( void ) {
 	ri.Cvar_Set( "v_2dBiasY", va( "%f", R_2DBiasY() ) );
 
 	R_InitImages();
+	VK_StageTime( "images of the renderer" );
 	R_InitShaders(qfalse);
+	VK_StageTime( "shader scripts" );
 	R_InitSkins();
 
 	R_InitFonts();
@@ -867,6 +874,7 @@ void R_Init( void ) {
 
 
 	RestoreGhoul2InfoArray();
+	VK_StageTime( "skins, fonts, models" );
 	// print info
 	GfxInfo_f();
 
@@ -888,6 +896,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 	R_ShutdownWorldEffects();
 	R_ShutdownFonts();
+	R_MaterialGenShutdown();
 	if ( tr.registered ) {
 		R_IssuePendingRenderCommands();
 		if (destroyWindow)
@@ -1194,6 +1203,24 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.AddWet							= RE_AddWet;
 	re.ext.PaintImage						= RE_PaintImage;
 	re.ext.AddPaint							= RE_AddPaint;
+	re.ext.MaterialPick						= RE_MaterialPick;
+	re.ext.MaterialList						= RE_MaterialList;
+	re.ext.MaterialFind						= RE_MaterialFind;
+	re.ext.MaterialInfo						= RE_MaterialInfo;
+	re.ext.MaterialGet						= RE_MaterialGet;
+	re.ext.MaterialSet						= RE_MaterialSet;
+	re.ext.MaterialText						= RE_MaterialText;
+	re.ext.MaterialSave						= RE_MaterialSave;
+	re.ext.SetLightOverride					= RE_SetLightOverride;
+	re.ext.LevelView						= RE_LevelView;
+	re.ext.UiTexture						= RE_UiTexture;
+	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;
+	re.ext.AddLineLightToScene				= RE_AddLineLightToScene;
+	re.ext.AddSaberBladeToScene				= RE_AddSaberBladeToScene;
+	re.ext.AddCutEntityToScene				= RE_AddCutEntityToScene;
+	re.ext.G2_BoneNumber					= G2API_VJK_BoneNumber;
+	re.ext.G2_SetBonesWorld					= G2API_VJK_SetBonesWorld;
+	re.ext.GpuProfile						= RE_GpuProfile;
 
 	return &re;
 }

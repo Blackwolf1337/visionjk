@@ -85,6 +85,10 @@ Ghoul2 Insert End
 	qboolean	bspInstance;
 } model_t;
 
+// VisionJK: a saber blade drawn by the renderer in 3D (ext.AddSaberBladeToScene, vk_post.cpp VK_SaberBlades)
+#define MAX_SABER_BLADES	32
+typedef saberBlade3D_t saberBlade_t;
+
 typedef struct dlight_s {
 	eDLightTypes	mType;
 
@@ -108,6 +112,13 @@ typedef struct dlight_s {
 	vec3_t			mTransDirection;
 	vec3_t			mTransBasis2;
 	vec3_t			mTransBasis3;
+
+	// VisionJK: a tube of light from lineStart to lineEnd (a saber blade, ext.AddLineLightToScene) that reaches
+	// lineRange units from the tube; 0: a point light at origin. For the tests of what it lights, origin and radius
+	// are the middle and the reach of the whole.
+	float			lineRange;
+	vec3_t			lineStart, lineEnd;
+	vec3_t			lineStartTransformed, lineEndTransformed;	// in the local coordinate system as transformed
 } dlight_t;
 
 
@@ -132,6 +143,9 @@ typedef struct trRefEntity_s {
 	int			ambientLightInt;	// 32 bit rgba packed
 	vec3_t		directedLight;
 	int			dlightBits;
+	// VisionJK: drawn cut by a plane (ext.AddCutEntityToScene): what lies on the side the normal points to is kept
+	qboolean	cut;
+	vec4_t		cutPlane;		// in the world: normal, distance
 } trRefEntity_t;
 
 
@@ -158,6 +172,7 @@ typedef struct image_s {
 
 	short		iLastLevelUsedOn;
 
+	float		averageLuma;		// VisionJK: how bright its pixels are on average, 0 to 1 (the light of emissive textures, vk_rt.cpp)
 } image_t;
 
 //===============================================================================
@@ -400,6 +415,88 @@ typedef struct textureBundle_s {
 
 #define NUM_TEXTURE_BUNDLES 2
 
+// VisionJK: the material of a stage, one record for a stage of a shader text that all shaders of that name share
+// (the lightmap variants of a level), so a change of the material debug menu (ext.MaterialSet) is one write. Kept
+// in a table by shader name and the number of the stage in the text (R_MaterialFor).
+typedef struct stageMaterial_s {
+	char			shaderName[MAX_QPATH];
+	int				sourceStage;
+	struct stageMaterial_s *next;
+
+	// a stage of a model lit per pixel. normalMap: the bumps of the surface (normalMap <image>), specular:
+	// strength, exponent and clear coat of its shine (specular <strength> <exponent> <coat>)
+	image_t			*normalMap;
+	float			specular[3];
+	// and a light that wraps round the surface into its shadow, as through snow (wrapLight <amount>), and crystals
+	// that glint in it (sparkle <strength>)
+	float			wrapLight, sparkle;
+
+	// a stage with a material (the keywords of rend2, see ParseMaterialKeyword): lit per pixel with GGX on top of
+	// its lightmap or the light of its entity (generic.frag PbrLight). rmoMap: roughness, metalness and occlusion
+	// in red, green and blue (ormMap: occlusion first), else roughness and metalness alone; normalHeightMap has
+	// the height in the alpha of the normal map, for parallax.
+	bool			pbr;
+	bool			normalHeight;
+	bool			ormOrder;
+	image_t			*rmoMap;
+	float			roughness, metalness, parallaxDepth;
+	// where the polygon lies in the height of the parallax, 0 bottom to 1 top (parallaxPlane, 0.5 when not given):
+	// 1 carves the surface into it, so what stands on it floats over the hollows
+	float			parallaxPlane;
+	// tessellation (tessellation <height> [plane] [density]): the triangles of the stage are cut on the device until
+	// an edge is density pixels on the screen, and each new vertex moves along the normal by the height of the normal
+	// map (normalHeight) times height units; plane is where the polygon lies in it, 0 (the default) the surface rises
+	// out of it, so nothing goes below what the player stands on and what the shadows are traced against. Vulkan
+	// only, the stage then has no parallax (vk_shade.cpp, shaders/generic.tesc and .tese).
+	float			tessHeight, tessPlane, tessDensity;
+
+	// glass (transmission > 0, VK_GlassDraw): the screen behind it shows through, bent by ior over thickness units (0:
+	// a thin pane), blurred by the roughness, coloured by absorption: what is left of each colour after
+	// absorptionDistance units in it
+	float			transmission, ior, thickness;
+	float			absorption[3], absorptionDistance;
+
+	// more of a surface (generic.frag Surface): a clear coat over it (varnish, lacquer: its amount and roughness),
+	// sheen (cloth: its colour, or the albedo with rend2's cloth, and roughness), anisotropy (brushed metal: -1 to 1
+	// and the turn of its direction in degrees), emission (the parts of the texture brighter than emissionThreshold
+	// give off their colour times emission times emissionStrength), rend2's specular map (spec/gloss: F0 in rgb,
+	// gloss in alpha), specularReflectance (F0 of what is not metal, 0 for 0.04) and normalScale
+	float			clearcoat, clearcoatRoughness;
+	float			sheen[3], sheenRoughness;
+	bool			sheenAlbedo;
+	float			anisotropy, anisotropyRotation;
+	float			emission[3], emissionStrength, emissionThreshold;
+	image_t			*specGlossMap;
+	float			specularReflectance, normalScale;
+
+	// the maps made from the texture of the stage (albedoGen, normalGen, rmoGen, tr_matgen.cpp): made once for the
+	// record (genDone), into images of the record that a change of the menu fills again. albedoMap takes the place
+	// of baseImage in the stages; a made rmo map has the change of the roughness in red (rmoRelative), so the
+	// roughness and metalness of the material stay live.
+	materialGen_t	gen;
+	bool			genDone;
+	bool			rmoRelative;
+	image_t			*baseImage;
+	image_t			*albedoMap;
+	// made at load by tr_automat.cpp (v_autoMaterials), not written in a shader file; a save makes it a written one
+	bool			autoMade;
+	// the glow of a lamp panel made at load: its emission strength follows v_panelGlow (vk_shade.cpp VK_PbrDraw)
+	bool			autoLamp;
+} stageMaterial_t;
+
+// tr_automat.cpp: what a texture of the level gets when it has no material (v_autoMaterials)
+typedef struct {
+	const char	*className;
+	float		roughness, metalness;
+	float		normalStrength;
+	float		rmoVariation, rmoOcclusion;
+} autoMaterial_t;
+
+extern cvar_t	*v_autoMaterials;
+extern cvar_t	*v_panelGlow;		// tr_init.cpp: how bright lamp panels glow (emission strength), 0: as the texture is
+extern cvar_t	*v_panelLight;		// tr_init.cpp: players are lit from the lamp panels their shadow comes from
+qboolean	R_AutoMaterialClass( const char *shaderName, const image_t *image, autoMaterial_t *out );
+
 typedef struct shaderStage_s {
 	bool			active;
 	bool			isDetail;
@@ -430,14 +527,10 @@ typedef struct shaderStage_s {
 	// and whether it is drawn in the pass of the dynamic glow only (RGBA_SHADER_BLUR)
 	bool			glowOnly;
 
-	// VisionJK: a stage of a model lit per pixel. normalMap: the
-	// bumps of the surface (normalMap <image>), specular: strength, exponent and clear coat of its shine
-	// (specular <strength> <exponent> <coat>)
-	image_t			*normalMap;
-	float			specular[3];
-	// and a light that wraps round the surface into its shadow, as through snow (wrapLight <amount>), and crystals
-	// that glint in it (sparkle <strength>)
-	float			wrapLight, sparkle;
+	// VisionJK: the number of the stage in the shader text (stages are moved and merged when the shader is
+	// finished), and its material, NULL for a stage without one
+	byte			sourceStage;
+	stageMaterial_t	*mat;
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -489,7 +582,14 @@ typedef struct shader_s {
 										// something calls RE_RegisterShader again with
 										// the same name, we don't try looking for it again
 	bool		explicitlyDefined;		// found in a .shader file
+	// VisionJK: what the surface gives off as light for the shadows of the renderer (emissive <light> <r> <g> <b>
+	// [noshadows], the units of q3map_surfacelight): emissive[3] is the light, 0 for a surface that gives none
+	bool		emissiveSet;
+	bool		emissiveShadows;
+	float		emissive[4];
 	bool		entityMergable;			// merge across entites optimizable (smoke, blood)
+	float		surfaceLight;			// VisionJK: q3map_surfacelight, the light its surfaces gave when the map was lit (vk_rt.cpp)
+	bool		lampPanel;				// VisionJK: a lamp of the level (LampPanel in tr_shader.cpp): it glows (v_panelGlow)
 
 	skyParms_t	*sky;
 	fogParms_t	*fogParms;
@@ -571,6 +671,9 @@ typedef struct trRefdef_s {
 	int			num_dlights;
 	struct dlight_s	*dlights;
 
+	int			numSaberBlades;			// VisionJK: the blades drawn in 3D (ext.AddSaberBladeToScene, vk_post.cpp)
+	saberBlade_t		*saberBlades;
+
 	int			numPolys;
 	struct srfPoly_s	*polys;
 
@@ -600,6 +703,9 @@ typedef struct fog_s {
 	float		surface[4];
 } fog_t;
 
+#define MAX_PROBES		32			// VisionJK: reflection probes of a level (R_CreateProbes)
+#define PROBE_SIZE		128			//	pixels a face of one each way
+
 typedef struct viewParms_s {
 	orientationr_t	ori;				// Can't use "or" as it is a reserved word with gcc DREWS 2/2/2002
 	orientationr_t	world;
@@ -607,6 +713,8 @@ typedef struct viewParms_s {
 	qboolean	isPortal;			// true if this view is through a portal
 	qboolean	isMirror;			// the portal is a mirror, invert the face culling
 	qboolean	isPuddle;			// VisionJK: the mirror at the floor of the puddles of RE_AddWet (R_PuddleView)
+	int			probeFace;			// VisionJK: 1 to 6 for a face of a reflection probe (R_ProbeViews), 0 else
+	int			probeIndex;			//	and which probe
 	int			frameSceneNum;		// copied from tr.frameSceneNum
 	int			frameCount;			// copied from tr.frameCount
 	cplane_t	portalPlane;		// clip anything behind this if mirroring
@@ -654,6 +762,11 @@ Ghoul2 Insert End
 typedef struct drawSurf_s {
 	uint64_t			sort;			// bit combination for fast compares
 	surfaceType_t		*surface;		// any of surface*_t
+	// VisionJK: the moving lights that reach a surface of the level in this view (R_AddWorldSurface). The bits on
+	// the surface itself are those of the last view that added it, and the frontend makes every view of a frame
+	// before the backend draws one: a portal, a puddle or a probe face after the view of the level took the lights
+	// from pieces of its floor (RB_RenderDrawSurfList gives the surface these back before it is drawn).
+	int					dlightBits;
 } drawSurf_t;
 
 #define	MAX_FACE_POINTS		64
@@ -773,6 +886,7 @@ BRUSH MODELS
 
 typedef struct msurface_s {
 	int					viewCount;		// if == tr.viewCount, already added
+	int					drawSurfNum;	// VisionJK: in the view of viewCount its place in tr.refdef.drawSurfs, -1: none
 	struct shader_s		*shader;
 	int					fogIndex;
 
@@ -1014,6 +1128,7 @@ typedef struct trGlobals_s {
 	image_t					*defaultImage;
 	image_t					*scratchImage[NUM_SCRATCH_IMAGES];
 	image_t					*paintImage[PAINT_SLOTS];	// the pictures of the sprays (RE_PaintImage), NULL until the first
+	image_t					*uiImage[UI_TEXTURES];		// the pictures of the debug menu of the client (RE_UiTexture)
 	image_t					*fogImage;
 	image_t					*dlightImage;	// inverse-quare highlight for projective adding
 	image_t					*flareImage;
@@ -1021,6 +1136,8 @@ typedef struct trGlobals_s {
 	image_t					*identityLightImage;	// full of tr.identityLightByte
 
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
+	image_t					*ssrImage;			// VisionJK: the slot of the texture table that shows the picture of v_ssr (vk_post.cpp)
+	image_t					*rtLightImage[2];	// VisionJK: slots of the texture table that show the masks of the shadows from the moving lights (vk_rt.cpp)
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
 	GLuint					glowVShader;
@@ -1049,6 +1166,20 @@ typedef struct trGlobals_s {
 
 	int						numLightmaps;
 	image_t					*lightmaps[MAX_LIGHTMAPS];
+	// VisionJK: the light grid of the level as a picture for the stages with a material (R_CreatePbrGrid): its
+	// layers side by side, pbrGridTiles of them across. NULL: the level has no grid
+	image_t					*pbrGrid;
+	int						pbrGridTiles;
+	// VisionJK: the reflection probes of the level (R_CreateProbes): points in the open the level is drawn from in all
+	// six directions while it loads (R_ProbeViews, one face a frame), which the stages with a material mirror. pbrProbes
+	// says which probe each cell of the light grid takes, in the layout of pbrGrid; probeImage is the place of all the
+	// faces in the texture table (VK_EndProbe). probeNext: the next face to draw, probesReady once all are drawn.
+	int						numProbes;
+	vec3_t					probes[MAX_PROBES];
+	image_t					*pbrProbes;
+	image_t					*probeImage;
+	int						probeNext;
+	qboolean				probesReady;
 
 	trRefEntity_t			*currentEntity;
 	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
@@ -1116,6 +1247,11 @@ void	 R_Images_DeleteImage(image_t *pImage);
 
 extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
+// VisionJK: how many levels were loaded since the program started. tr.world is the same pointer for every level
+// (s_worldData) and tr is cleared when the renderer starts again between levels, so what keeps something for a
+// level (the ray tracing in vk_rt.cpp, the materials) knows a new one by this: by the pointer the ray tracing kept
+// the first level of a session for all the others, its walls, light grid and panels (2026-11-08).
+extern int			r_worldLoads;
 extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 extern window_t		window;
@@ -1430,6 +1566,38 @@ shader_t *R_FindShaderByName( const char *name );
 void		R_InitShaders(qboolean server);
 void		R_ShaderList_f( void );
 void    R_RemapShader(const char *oldShader, const char *newShader, const char *timeOffset);
+stageMaterial_t *R_MaterialFor( const char *name, int sourceStage, qboolean create, const stageMaterial_t *init );
+int			R_ShadersNamed( const char *name, shader_t **out, int max );
+const char	*R_ShaderTextOf( const char *name, const char **file );
+qboolean	R_CheckShaderText( const char *text, const int *lightmapIndex, const stageMaterial_t **materials, char *err, int errSize );
+void		R_MaterialStageImage( shaderStage_t *stage );
+
+//
+// tr_matgen.cpp: the maps made from the texture of a stage
+//
+void		R_MakeMaterialMaps( stageMaterial_t *mat, image_t *base );
+void		R_MaterialGenFrame( void );		// the maps the worker thread made, onto their records (RE_BeginFrame)
+void		R_MaterialGenShutdown( void );
+void		R_DefaultMaterialGen( materialGen_t *gen );
+void		R_ReplaceImagePixels( image_t *image, byte *pic, int width, int height );
+image_t		*R_MadeImage( const char *name, byte *pic, int width, int height );
+
+//
+// tr_material.cpp: the material debug menu (refexport_t ext.Material*)
+//
+void		R_MaterialLevelView( const vec3_t origin, const vec3_t axis[3] );
+void		R_MaterialWorldLoaded( void );
+qboolean	RE_MaterialPick( const vec3_t start, const vec3_t end, materialPick_t *out );
+int			RE_MaterialList( qboolean all, int first, qhandle_t *out, int max );
+qhandle_t	RE_MaterialFind( const char *name );
+qboolean	RE_MaterialInfo( qhandle_t shader, materialInfo_t *out );
+qboolean	RE_MaterialGet( qhandle_t shader, int sourceStage, materialParms_t *out );
+qboolean	RE_MaterialSet( qhandle_t shader, int sourceStage, const materialParms_t *in, int fields );
+qboolean	RE_MaterialText( qhandle_t shader, char *buf, int size, char *file, int fileSize );
+qboolean	RE_MaterialSave( qhandle_t shader, char *path, int pathSize, char *err, int errSize );
+void		RE_SetLightOverride( const lightOverride_t *light );
+qboolean	RE_LevelView( vec3_t origin, vec3_t forward );
+const lightOverride_t *R_LightOverride( void );
 
 //
 // tr_arb.c
@@ -1544,6 +1712,9 @@ LIGHTS
 
 void R_DlightBmodel( bmodel_t *bmodel, bool NoLight );
 void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent );
+void R_CreatePbrGrid( const char *mapName );
+void R_CreateProbes( const char *mapName );
+void R_ProbeViews( const viewParms_t *main );
 void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori );
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
 
@@ -1619,6 +1790,13 @@ void RE_AddMiniRefEntityToScene( const miniRefEntity_t *ent );
 void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *verts, int num );
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b );
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b );
+void RE_AddLineLightToScene( const vec3_t start, const vec3_t end, float range, float r, float g, float b );
+void RE_AddSaberBladeToScene( const saberBlade3D_t *blade );
+void RE_AddCutEntityToScene( const refEntity_t *ent, const float *plane );
+// VisionJK: bones placed by the cgame (G2_API.cpp, ext.G2_BoneNumber and ext.G2_SetBonesWorld)
+int G2API_VJK_BoneNumber( void *ghoul2, int modelIndex, const char *boneName, int *parent );
+qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin,
+	const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
 void RE_RenderScene( const refdef_t *fd );
 
 /*
@@ -1834,8 +2012,22 @@ typedef enum {
 	RC_WORLD_EFFECTS,
 	RC_AUTO_MAP,
 	RC_VIDEOFRAME,
-	RC_SET_2D_PLANE
+	RC_SET_2D_PLANE,
+	RC_DRAW_TRIS_2D
 } renderCommand_t;
+
+// VisionJK: triangles in pixels of the window (RE_DrawTriangles2D, the debug menu of the client); verts and
+// indexes are in the arena of the frame in tr_cmds.cpp
+typedef struct drawTris2DCommand_s {
+	int				commandId;
+	shader_t		*shader;
+	const polyVert_t	*verts;
+	int				numVerts;
+	const int		*indexes;
+	int				numIndexes;
+	qboolean		clipped;
+	int				clip[4];		// left, top, right, bottom
+} drawTris2DCommand_t;
 
 
 // all of the information needed by the back end must be
@@ -1843,6 +2035,7 @@ typedef enum {
 typedef struct backEndData_s {
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 	dlight_t	dlights[MAX_DLIGHTS];
+	saberBlade_t	saberBlades[MAX_SABER_BLADES];
 	trRefEntity_t	entities[MAX_REFENTITIES];
 	trMiniRefEntity_t	miniEntities[MAX_MINI_ENTITIES];
 	srfPoly_t	*polys;//[MAX_POLYS];
@@ -1863,6 +2056,8 @@ void R_IssuePendingRenderCommands( void );
 void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 
 void RE_SetColor( const float *rgba );
+void RE_DrawTriangles2D( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t hShader, const int *clip );
+qhandle_t RE_UiTexture( int slot, const byte *rgba, int width, int height );
 void RE_StretchPic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_RotatePic ( float x, float y, float w, float h,

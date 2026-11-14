@@ -1,0 +1,17 @@
+// materials of the material debug menu (v_matdebug) for factory.shader, read after the shader files
+
+textures/factory/basic3
+{
+	q3map_material SolidMetal
+	{
+		map $lightmap
+	}
+	{
+		map textures/factory/basic3
+		blendFunc GL_DST_COLOR GL_ZERO
+		normalGen 0.4 2 0.3
+		rmoGen 0.2 0.4
+		roughness 0.6
+		metalness 0.1
+	}
+}

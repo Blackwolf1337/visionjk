@@ -580,6 +580,123 @@ effects").
 
 Checked: built for Linux, Windows and the OpenGL ES device. The screen effects pass ran for Force Sight and photo mode (the paragraph on the window under "Checked"). The scope lens, the binoculars and the rocket lock-on were not run in the game.
 
+## Lighting: player shadows, moving lights, HDR, reflections (2026-11-08)
+
+The stock maps (checked: mp/ffa1, ffa3, ffa5, duel1, ctf4) have no light entities left, since q3map2 strips them.
+What they keep is the lightmaps (22 to 60 pages of 128x128) and the light grid (ambient colour, directed colour and one
+direction per cell). The maps can not be relit. What can change is light that moves and effects in screen space.
+
+Player shadows (`cg_shadows 2`, `vk_rt.cpp`). With ray tracing, `shaders/rtshadow.frag` takes the light from the sun of
+the sky shader where rays in a cone reach it (the cone is about as wide as the soft edge of a lightmap's shade), else
+from the direction of the light grid at the point. The sun shadow and the grid shadow are blended by how much of the
+sun reaches the point. How dark the shadow is follows the share of directed light in the grid. The grid shadow is dark
+at the feet and fades out within 160 units (`CasterFade`), because the grid direction is an average that changes from
+cell to cell, and long shadows along it ended in a line. Before tracing, the ray to the light is tested against
+spheres around the players (globals rt rows 21 on), so most pixels trace nothing. The grid direction is now one per
+player, read from the grid itself (`VK_RT_GridDirection`), not from `ent->lightDir`, because the engine adds moving
+lights (his own saber) into that. Before, the grid shadow took the direction at each floor pixel, which bent the
+shadows into hooks under lamps. The light patches guessed from glowing textures once cast shadows on their own and
+disagreed with the lightmaps, so `v_rtLights` was removed. Among the stock MP maps these have a sun: ctf1, ctf3, duel1,
+duel9, ffa2, siege_desert.
+
+Indoors the patches are used again, but only where they agree with the grid. `VK_RT_PickLamps` (`vk_rt.cpp`) looks, for
+each player, at the patches (glowing or `q3map_surfacelight` surfaces, built per level by `VK_RT_PrepareLevel` and
+listed per grid cell by `shaders/rtcells.comp`) that the cell of the player sees. It picks the one that gives the most
+light from the side the grid says his light comes from (within about 80 degrees; the grid holds the average of all
+lights, so between panels on facing walls it points up, 55 to 65 degrees from each). That panel casts the shadow from
+its real position, soft by its size, so the shadow has the length a lamp gives. If no panel fits, the shadow follows the
+grid direction at the player and fades within a few steps, as before. There is one shadow per player and its darkness
+still comes from the grid, so it matches the lightmap. The pick runs on the CPU. It keeps the previous panel while that
+gives at least 70 percent of the best one (also when the next cell does not list it) and moves the light to a new panel
+over about 0.1 s, so the shadows do not jump. `v_rtLamps` (default 1, archived): 0 uses the grid alone. This is only on
+the ray tracing path, the shadow maps keep the grid direction per player.
+
+Without ray tracing (or with `v_rayTracing 0`, latched) the shadows come from shadow maps. The players are skinned by
+the same compute shader (`shaders/rtskin.comp`, which needs buffer device addresses, now switched on wherever the card
+has them) and drawn depth only (`shaders/smdepth.vert`) into tiles of one 2048x1024 atlas. There is one tile per
+player, along the light of the grid at his feet (`VK_RT_GridDirection`, in world space), and six tiles
+per moving light (a cube). `shaders/smshadow.frag` writes the same mask the rays write. The sun is not used there,
+since the maps do not know where the level hides it. `v_rtAvailable` (read only, set after `VK_RT_Init`) says whether
+the renderer draws the player shadows at all.
+
+Moving lights: `DynamicLight` in `generic.frag` replaced the projected round light image of rd-vanilla
+(`ProjectDlightTexture2`). The light falls off smoothly to nothing at its reach and is brighter close by. The surface
+takes it by the angle with the normal map and by the GGX shine of the stage that has a material (`VK_PbrDraw` fills the
+dlight draw), and with a faint shine elsewhere. Saber blades are tubes of light: the renderer has
+`ext.AddLineLightToScene` (`dlight_t` with `lineStart`, `lineEnd` and `lineRange`), and the cgame has
+`ext.R_AddLineLight` when the engine sets `v_cgameLineLight`. The diffuse part comes from the nearest point of the
+tube, the shine from the point nearest the mirrored ray (Karis 2013). `v_dlightScale` (default 1) gives about the old
+brightness halfway out. About 0.15 ms for one saber at 2560x1440. On solid surfaces the moving lights are drawn in a
+second pass over the surface list, right after the player shadows, so the traced or grid shadow does not darken saber
+light. Known limit: fog over a surface lies under its moving light. The light bits are kept per draw surface
+(`drawSurf_t` `dlightBits`) and not on the shared surface, because a later view of the same frame (portal, puddle,
+probe face) overwrote them and pieces of floor lost the saber light.
+
+Shadows from moving lights: the light passes draw before the shadow pass in a frame, so they read the mask of the
+frame before. Two masks are written and read in turn (shown in the texture table as `tr.rtLightImage`). The point is
+taken at the place it had in the view the mask was made in (globals rt 42 to 46), and the light is found again by where
+it was (`VK_RT_LightChannel`). The mask comes from the cube shadow maps on every card (`shaders/smlights.frag`): rays to
+the lights cost over a millisecond with a saber in the hand at 1920x1080, the cubes 0.03 ms. The shadow is one frame
+late. For a saber the three points of the cube maps along the blade jump to a new place in their third of the blade
+every frame, so the shadow flickers with the light.
+
+HDR: `v_hdr` (default 1, latched). `vk.color`, `vk.glow` and `vk.screen` are R16G16B16A16_SFLOAT, so light above white
+stays, and the probes and the puddle mirror follow the format of the frame. `VK_Tonemap` in `vk_post.cpp` runs at the
+end of the view of the level, after `tay_bloom` and before SMAA and the 2D (`shaders/tonemap.frag`, from a copy in
+`vk.screen`). `v_tonemap` 1 keeps the original look up to 0.6 and rolls off softly above, 2 is AgX (filmic), 0 cuts at
+white. `v_exposure` scales first. There is no automatic exposure. About 0.1 ms at 1920x1080. The level shader writes no
+NaN, infinity or negative value any more (`SafeColor`), and the tone map and the blur drop them too: in 8 bits they
+were black pixels, in 16 bits blending spread them into white blotches.
+
+Screen space reflections: `v_ssr` (default 1). At the end of the view of the level, before the bloom,
+`shaders/ssrprep.frag` stores the frame, with the distance of each pixel from the eye in alpha, into `vk.ssrColor`
+(format of the frame, shown in the texture table as `tr.ssrImage`). Its view goes into the globals of the next frame
+(`globals.ssr`). `ScreenReflection` in `generic.frag` marches the mirrored ray of a material surface with roughness
+below 0.6 in up to 24 growing steps through that picture and blends what it finds over the probe reflection, trusted
+less towards the screen edges, with distance and with roughness. No second attachment of the level was needed. The
+reflection is one frame late. About 0.05 ms for the picture plus 0.1 ms in the level with a large smooth floor in view
+at 1920x1080.
+
+`v_gpuTimes` (`vk_cmd.cpp`) writes timestamps at the passes (level, rt builds, shadow maps, rt trace, rt light shadows,
+rt shadows, glow, ssr picture, bloom, tonemap, smaa, weather, 2d and other, gamma and window) and prints the averages
+since the last call.
+
+Setup: the video page has a part Lighting (Shadows, Materials, Reflections, HDR, Tone Mapping; with all settings also
+Moving Lights and Exposure).
+
+Checked: in hidden runs on mp/ffa3, mp/ffa2 and mp/siege_desert at 1920x1080 and 2560x1440 on an RTX 4070 SUPER under
+the Vulkan validation layer (only the known messages of the swapchain extension of gamescope and an unused tessellation
+output). Both shadow paths were compared in pictures: the legs cut a shadow out of the saber light on the floor, and
+with traced shadows off the floor fills with the light. Not checked: Windows, a card without ray tracing (only
+`v_rayTracing 0` on the RTX), online play with many players, and the OpenGL ES device (it does not get these parts).
+
+### Cost and caching
+
+Pipelines are kept in the profile. The renderer uses a `VkPipelineCache` for every pipeline and saves it, with the list
+of pipeline states the session used, to `vulkan/pipelines.dat` in the profile (`vulkan/pipelines_rt.dat` for a device
+with ray tracing, because the driver treats it as another device). At start the listed states are created again by
+several threads at once. A pipeline of `generic.frag` takes the driver about half a second to make, and they used to be
+made during the first frames, so after an install or after switching `v_rayTracing` the game froze for seconds. With a
+fitting file the pipelines take a few milliseconds at start. With data that does not fit (a new build) they take about
+1.4 s at start and nothing during play. The file is written at every renderer shutdown and when a level loads while
+there are new states. With `developer 1` the renderer prints how long each step of starting and stopping took
+("renderer start and stop: ...") and every pipeline that took 20 ms or more to make. `gfxinfo` shows the total time
+spent making pipelines.
+
+The shadows of the players (`cg_shadows 2`, ray traced or shadow maps) and the shadow masks of the moving lights (saber
+light) are worked out at half the size of the frame, each mask pixel standing for the upper left of four frame pixels.
+The accumulation pass keeps the full size. `v_rtMaskScale` 2 is the default, 1 gives the full size back. Measured at
+2560x1440 with MSAA 2: the rays 0.68 to 0.18 ms, laying them on 0.33 to 0.17 ms, the saber light masks 0.17 to 0.11 ms.
+
+The 3D saber blades have a screen rectangle each (blade, swept place and glow). A blade behind the eye is left out and
+one passing the eye is cut at a plane in front of it. Before, a blade behind the camera made the pass cover the whole
+view, which cost about 3 ms a frame with seven saber players. The pass of the blades into the `r_DynamicGlow` buffer
+uses a coarser search of the swept place and no glow on surfaces.
+
+`v_gpuTimes` has two more marks: "level resolve" (the end of the level pass resolving its samples, which used to be
+counted as "rt builds") and "screen effects" (heat over lit blades, rings, drops, which used to be counted as
+"weather").
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and

@@ -1413,6 +1413,12 @@ def popups(m, menu):
         middle(one('cvarclean_none'), (28, 24 + 46 + 160, 900 - 56, 40), 16, 'center')
         mf.put(one('cvarclean_none').block, 'forecolor', *cv.MUTED)
         return True
+    if menu == 'cacheclean_popmenu':
+        lst = one('cacheclean_list')
+        dialog(m, 900, 460, None, one('cacheclean_title'), [(lst, 220, 14), (one('cacheclean_about'), 0, 14)],
+               [one('cacheclean_clear'), one('cacheclean_clearall')], one('cacheclean_done'))
+        text_list(lst)
+        return True
     if menu == 'videodrivermenu':
         info = one('game_version')
         dialog(m, 760, 400, None, None, [(info, 260, 14)], [], one('driver_done'))

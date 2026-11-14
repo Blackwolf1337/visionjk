@@ -70,6 +70,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_WET_VEC4S		( VK_WET_HEADER + WET_MAX_SPOTS * VK_WET_ROWS )
 #define VK_PAINT_ROWS		7		// shaders/paint.vert and paint.frag: the same view, then this many for each picture
 #define VK_PAINT_VEC4S		( VK_WET_HEADER + PAINT_MAX_DECALS * VK_PAINT_ROWS )
+#define VK_RT_CASTERS		16		// players whose spheres the shadow pass tests before it traces (VK_RT_MAX_CASTERS)
+#define VK_RT_VEC4S			( VK_WET_HEADER + 11 + VK_RT_CASTERS + 9 + 52 * 4 + VK_RT_CASTERS * 4 )	// the shadows of the players (vk_rt.cpp): the same view, then their own (52: the tiles of the shadow maps, VK_SM_TILES), then the panels of each player
+#define VK_BLADE_ROWS		7		// shaders/saber.glsl: seven rows a blade
+#define VK_BLADE_PORTAL		( VK_WET_HEADER + 1 + MAX_SABER_BLADES * VK_BLADE_ROWS )	// where the view of a mirror or portal is
+#define VK_BLADE_VEC4S		( VK_BLADE_PORTAL + VK_WET_HEADER )	// shaders/saber.glsl: the view, how many, the blades, the view of a portal
+#define VK_LIGHT_VEC4S		( 2 + DEBUG_LIGHTS * 4 )	// ext.SetLightOverride for generic.frag: a head of two, four a lamp
 
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
@@ -78,6 +84,10 @@ typedef struct vkGlobals_s {	// once per frame
 	float		styles[MAX_LIGHT_STYLES][4];	// the colors of the light styles over 256 (styleColors), for vertex lit surfaces
 	float		wet[VK_WET_VEC4S][4];		// what VK_WetPass() was given
 	float		paint[VK_PAINT_VEC4S][4];	// what VK_PaintPass() was given
+	float		rt[VK_RT_VEC4S][4];			// what the passes that trace rays were given (vk_rt.cpp)
+	float		lights[VK_LIGHT_VEC4S][4];	// light to judge materials by, see VK_LightRows()
+	float		ssr[7][4];					// v_ssr: the picture of the level of the frame before, see VK_SsrPrep()
+	float		blades[VK_BLADE_VEC4S][4];	// the saber blades drawn in 3D, see VK_SaberBlades()
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -105,6 +115,22 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
 #define VKD_MATERIAL		0x08000000u		// lit per pixel with material (normal map in tex1, shine), see generic.frag
+#define VKD_PBR				0x10000000u		// lit per pixel with a material of GGX (VKP_*), see generic.frag PbrStage
+
+// vkDraw_t.pbrFlags: what a stage with VKD_PBR has and how it is lit
+#define VKP_NORMAL			0x01u			// a normal map in tex2
+#define VKP_RMO				0x02u			// roughness, metalness and occlusion in tex3
+#define VKP_ORM				0x04u			//	in the order occlusion, roughness, metalness
+#define VKP_HEIGHT			0x08u			// the height in the alpha of the normal map, for parallax
+#define VKP_ENTITY			0x10u			// lit by the light of its entity (ambient, directed, its direction)
+#define VKP_LIGHTMAP		0x20u			// lit by its lightmap in tex1; without this nor VKP_ENTITY by its vertex colors
+#define VKP_GRID			0x40u			// the light grid of the level in tex4 (grid*), for the direction of that light
+#define VKP_PROBES			0x80u			// the reflection probes of the level in tex5 and tex6 (R_CreateProbes)
+#define VKP_RMO_RELATIVE	0x100u			// the rmo map was made (rmoGen): red is the change of the roughness, 0.5 none
+#define VKP_GLASS			0x200u			// glass: the copy of the frame in tex1 bent and tinted (VK_GlassDraw)
+#define VKP_SPECGLOSS		0x400u			// rend2's specular map in tex3: F0 in rgb, gloss in alpha
+#define VKP_SHEEN_ALBEDO	0x800u			// the sheen has the colour of the albedo (rend2's cloth)
+#define VKP_ENERGY			0x1000u			// diffuse loses what the shine takes (v_pbrEnergy)
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector,
 											// 3 autosprite, 4 autosprite2 (level surfaces prepared for it, vk_world.cpp)
 
@@ -112,6 +138,11 @@ typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
 	uint32_t	tex0, tex1;			// indices into the texture table
 	uint32_t	flags;				// VKD_*
+	uint32_t	tex2, tex3, tex4;	// VKD_PBR: the normal map, the rmo map and the light grid of the level
+	uint32_t	pbrFlags;			//	VKP_*
+	uint32_t	tex5, tex6;			//	VKP_PROBES: which probe a cell of the grid takes, the faces of the probes
+	uint32_t	probeSize;			//	pixels a face each way
+	uint32_t	probeCount;			//	probes in the atlas
 	float		baseColor[4];		// color = baseColor + vertColor * vertex color
 	float		vertColor[4];
 	float		texMat0[8];			// two rows: s' = dot( row0.xy, st ) + row0.z, row0.w: phase of the turbulence
@@ -132,6 +163,20 @@ typedef struct vkDraw_s {		// once per draw
 	uint32_t	styles;				// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 	float		material[4];		// VKD_MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
 	float		material2[4];		//	and light wrapped into the shadow, glints of crystals
+	float		pbr[4];				// VKD_PBR: roughness, metalness, parallax depth, v_pbr (2 and up: debug views)
+	float		grid0[4];			//	VKP_GRID: the origin of the light grid in the world, its layers across
+	float		grid1[4];			//	1 / the size of a cell, w the height of its picture
+	float		grid2[4];			//	how many cells it has each way, w the width of its picture
+	float		pbr2[4];			// VKD_PBR: where the surface lies in the height of the parallax, clear coat and its
+									//	roughness, anisotropy (glass: transmission, thickness, absorption distance)
+	float		pbr3[4];			// VKD_PBR: emission colour times strength, the threshold of the brightness that gives off
+	float		tess[4];			// VKP_TESS: units of the height, where the polygon lies in it, pixels an edge is cut
+									//	down to, the most pieces an edge is cut into
+	uint32_t	cutBones;			// skinned, a part of a body a saber cut through: where its cut is in the bones of the
+									//	frame, in rows (VK_CutBones), 0: none
+	float		brighten;			// the colour of the stage times this after its texture, past white (the glow map of
+									//	a lamp panel, v_panelGlow); 0: as it is
+	uint32_t	pad[2];
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -162,6 +207,10 @@ typedef enum {
 	VKP_SPRITE,						// no vertices: sprites made in the vertex shader from records in the bone buffer
 	VKP_GRASS,						// surface sprites of the level, vkGrassVertex_t
 	VKP_LIQUID,						// no vertices: the pieces of water of RE_AddLiquid, from records in the bone buffer
+	VKP_TESS,						// as VKP_GENERIC, the triangles cut and moved on the device (a material with
+									// tessellation, shaders/generic.tesc and .tese); Vulkan only, never sent to GLES
+	VKP_DEPTH,						// as VKP_GENERIC, depth alone: no fragment shader, no colour (the depth pre-pass
+									// of the level, RB_DepthPrepass); Vulkan only
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -271,6 +320,9 @@ typedef struct vkState_s : vkDeviceState_t {
 	int							statDraws[2];
 	int							statTransforms[2];
 	int							statBones[2];
+	int							statSkeletons[2];		// skeletons put into the frame
+	int							statSkeletonsLost[2];	// models not drawn: no room for their skeleton
+	int							statDrawSurfs[2];		// surfaces of all views of the frame (MAX_DRAWSURFS)
 	int							statCpuVertexes[2];	// vertices that were built on the CPU and uploaded
 	int							statCpuIndexes[2];
 	int							statStaticIndexes[2];	// indexes into vertices that are on the device
@@ -278,6 +330,8 @@ typedef struct vkState_s : vkDeviceState_t {
 	int							statNumCpuShaders[2];
 
 	qboolean					wireframe;			// the device can draw triangles as lines (r_showtris)
+	qboolean					tessellation;		// and has tessellation shaders (VKP_TESS); never on GLES
+	qboolean					pipelineStats;		// can count the runs of the fragment shader (v_gpuTimes, the overdraw of the level)
 	qboolean					anisotropy;			// and filter textures along the direction they are seen in
 	qboolean					bcTextures;			// r_ext_compress_textures on a device that takes BC1 and BC3 blocks
 	double						statBcPixels;		// what packing textures into blocks has cost since the window was made
@@ -317,6 +371,15 @@ extern cvar_t	*v_vkStatic;
 extern cvar_t	*v_vkMerge;
 extern cvar_t	*v_wetMirror;		// vk_post.cpp
 extern cvar_t	*v_smaa;			// vk_post.cpp
+extern qboolean	rb_deferDlights;	// vk_backend.cpp: the light passes of the solid surfaces wait for the shadows of the players
+extern qboolean	rb_dlightsOnly;		// vk_backend.cpp: the run of the list that draws those light passes alone
+extern qboolean	rb_depthPrepass;	// vk_backend.cpp: the run of the depth pre-pass of the level (RB_DepthPrepass)
+extern qboolean	rb_prepassOn;		// vk_backend.cpp: this view had one, its shaders test against its depth
+qboolean	RB_ShaderPrepassed( const shader_t *shader );
+void		RB_MarkPrepassed( const shader_t *shader );
+extern cvar_t	*v_tonemap;			// vk_post.cpp
+extern cvar_t	*v_exposure;		// vk_post.cpp
+extern cvar_t	*v_ssr;				// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -333,7 +396,15 @@ void		VK_QuadRecord( vec4_t *row, int kind, const vec3_t a, float aw, const vec3
 				const float *st, const float *color, const vec3_t d );
 void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
 qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
+qboolean	VK_TessBorders( uint32_t *bones );
 extern cvar_t	*v_vkSprites;
+extern cvar_t	*v_pbr;			// vk_shade.cpp
+extern cvar_t	*v_pbrProbes;
+extern cvar_t	*v_depthPrepass;	// vk_backend.cpp
+extern cvar_t	*v_parallax;
+extern cvar_t	*v_pbrEnergy;
+extern cvar_t	*v_dlightScale;
+extern cvar_t	*v_tessellation;
 extern cvar_t	*v_vkGrass;
 qboolean	VK_BindGrass( const shaderStage_t *pStage, int stage, uint32_t *bones );
 void		VK_AddSurface( surfaceType_t *surface );
@@ -347,6 +418,9 @@ void		VK_InitModels( void );
 void		VK_ShutdownModels( void );
 void		VK_ModelsBeginFrame( void );
 int			VK_SkinnedSurface( const mdxmSurface_t *surface );
+int			VK_SkinnedFirstVertex( const mdxmSurface_t *surface, const vkBuffer_t **vertexes );
+qboolean	VK_SkeletonBones( CBoneCache *boneCache, uint32_t *bones );
+uint32_t	VK_CutBones( uint32_t bones );
 int			VK_StaticMeshSurface( const md3Surface_t *surface );
 int			VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData );
 qboolean	VK_UploadGoreBatch( CBoneCache *boneCache, uint32_t *bones );
@@ -376,6 +450,9 @@ void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
+void		VK_Tonemap( void );
+void		VK_SsrPrep( void );
+void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
@@ -384,8 +461,14 @@ void		VK_CaptureFrame( void );
 void		VK_DrawLiquids( void );
 qboolean	VK_HasWet( void );
 void		VK_DrawWet( void );
+// the first nine rows of the passes over the view of the level (shaders/scene.glsl, ball.glsl), and the view as
+// VK_ViewportAndScissor() takes it
+void		VK_ViewRows( float ( *rows )[4], int *viewport );
 qboolean	VK_BeginPuddle( void );
 void		VK_EndPuddle( void );
+qboolean	VK_BeginProbe( void );
+void		VK_EndProbe( int face, int probe, int numProbes );
+void		VK_DestroyProbeAtlas( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );
@@ -395,6 +478,10 @@ void		VK_BeginFrame( void );
 void		VK_EndFrame( void );
 void		VK_WriteVideoFrame( void );
 void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth );
+void		VK_Scissor( int left, int top, int right, int bottom );
+#ifndef RD_VISION_GLES
+extern qboolean	vk_glassReady;		// the frame was copied for the glass of this view (vk_backend.cpp, VK_GlassDraw)
+#endif
 void		VK_FrameInfo_f( void );
 int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
@@ -486,6 +573,12 @@ void		VK_PresentFrame( const float *gamma );
 // A rectangle of vk.final as it is on the device now: 4 bytes a pixel, red first, the top row first. Stays until
 // the next call.
 const byte	*VK_ReadFrame( int x, int y, int width, int height );
+// v_gpuTimes: a timestamp in the commands of the frame, the time since the mark before goes to name (a string that
+// stays: the names are kept as pointers until the frame is read back). Nothing on a device without timestamps.
+void		VK_GpuMark( const char *name );
+qboolean	VK_GpuFirstMark( void );
+void		VK_LevelFragments( qboolean begin );
+void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.
 void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
@@ -511,12 +604,18 @@ void		VK_ScreenFxFogPass( vkTarget_t *target, const float *fx );
 // shaders/wet.vert and wet.frag: a quad for each of count wet places over the view of the level (viewport as OpenGL
 // counts it), with the VK_WET_VEC4S numbers of wet; they read vk.screen and the depth of the scene, which is begun
 // with the frame but only read. Not on the OpenGL ES device. vk.color must not be begun, it is not begun after.
-void		VK_WetPass( const float *wet, int count, const int *viewport );
+void		VK_WetPass( const float *wet, int count, const int *viewport, const int *area );
 void		VK_PaintPass( const float *paint, int count, const int *viewport );
 // v_smaa, SMAA 1x over the whole frame: its edges and their weights into targets of its own, then the frame mixed
 // with its neighbours by them, from a copy of it. threshold: of the edges, in the colours of vk.color. Not on the
 // OpenGL ES device. vk.color must not be begun before; it is begun with vk.depth after, as by VK_ScopePass().
 void		VK_SmaaPass( float threshold );
+// v_tonemap over the frame (vk_post.cpp VK_Tonemap), parm: exposure, curve, 2 ^ overbright bits. Not on the OpenGL ES
+// device. vk.color must not be begun before; it is begun with vk.depth after.
+void		VK_TonemapPass( const float *parm );
+// v_ssr: vk.color and its depth into vk.ssrColor (shaders/ssrprep.frag), parm: the depth to the distance. No target is
+// begun before and after.
+void		VK_SsrPrepPass( const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

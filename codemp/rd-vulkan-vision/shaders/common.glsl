@@ -21,6 +21,11 @@ struct Draw {
 	uint	transform;
 	uint	tex0, tex1;
 	uint	flags;
+	uint	tex2, tex3, tex4;	// PBR: normal map, rmo map, light grid
+	uint	pbrFlags;
+	uint	tex5, tex6;			//	which probe a cell takes, the faces of the probes
+	uint	probeSize;
+	uint	probeCount;
 	vec4	baseColor;		// color = baseColor + vertColor * vertex color
 	vec4	vertColor;
 	vec4	texMat0[2];		// s' = dot( row0.xy, st ) + row0.z, row0.w: phase of the turbulence
@@ -41,6 +46,18 @@ struct Draw {
 	uint	styles;			// a vertex lit surface of several light styles: the styles + 1, a byte each, 0: not one
 	vec4	material;		// MATERIAL: shine strength, exponent, clear coat, 1 with a normal map in tex1
 	vec4	material2;		//	and light wrapped into the shadow, glints of crystals
+	vec4	pbr;			// PBR: roughness, metalness, parallax depth
+	vec4	grid0;			//	the light grid: origin, w its layers across
+	vec4	grid1;			//	1 / the size of a cell, w the height of its picture
+	vec4	grid2;			//	cells each way, w the width of its picture
+	vec4	pbr2;			// PBR: where the surface lies in the height of the parallax (0 bottom to 1 top), clear coat,
+							//	its roughness, anisotropy; glass: transmission, thickness, absorption distance
+	vec4	pbr3;			// PBR: emission colour times strength, the threshold of the brightness that gives off
+	vec4	tess;			// generic.tesc/.tese: units of the height, where the polygon lies in it, pixels an edge is
+							//	cut down to, the most pieces an edge is cut into
+	uint	cutBones;		// skinned, a part of a body a saber cut through: where its cut is in the bones, in rows, 0: none
+	float	brighten;		// the colour times this after the texture, past white (a lamp panel's glow map), 0: as it is
+	uint	pad1, pad2;
 };
 
 BINDING( 0, 0 ) uniform Globals {
@@ -48,6 +65,14 @@ BINDING( 0, 0 ) uniform Globals {
 	vec4	screen;
 	vec4	screenFx[160];	// only screenfx.frag reads them (VK_SCREENFX_VEC4S)
 	vec4	styles[64];		// the colors of the light styles over 256 (MAX_LIGHT_STYLES)
+#ifndef VK_GLES
+	vec4	wet[779];		// (wet.frag, paint.frag, the ray tracing shaders read these)
+	vec4	paint[459];
+	vec4	rt[319];
+	vec4	lights[34];		// light to judge materials by (VK_LightRows of vk_frame.cpp, VK_LIGHT_VEC4S); not on GLES
+	vec4	ssr[7];			// v_ssr (VK_SsrPrep of vk_post.cpp): 0-3 the view of the frame before, 4 its rect, 5 its eye
+							//	and w the slot of its picture + 1 (0: none), 6 its forward and w the strength; not on GLES
+#endif
 } globals;
 
 #ifdef VK_GLES
@@ -91,6 +116,22 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
 #define DEFORM( flags )		( ( ( flags ) >> 24 ) & 7u )
 #define MATERIAL( flags )	( ( ( flags ) & 0x08000000u ) != 0u )
+#define PBR( flags )		( ( ( flags ) & 0x10000000u ) != 0u )
+
+// Draw.pbrFlags (VKP_* of vk_local.h)
+#define PBR_NORMAL		0x01u
+#define PBR_RMO			0x02u
+#define PBR_ORM			0x04u
+#define PBR_HEIGHT		0x08u
+#define PBR_ENTITY		0x10u
+#define PBR_LIGHTMAP	0x20u
+#define PBR_GRID		0x40u
+#define PBR_PROBES		0x80u
+#define PBR_RMO_RELATIVE	0x100u
+#define PBR_GLASS		0x200u
+#define PBR_SPECGLOSS	0x400u
+#define PBR_SHEEN_ALBEDO	0x800u
+#define PBR_ENERGY		0x1000u
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

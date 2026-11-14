@@ -90,6 +90,26 @@ SETUP = [
         ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
         ('old', 'video2', ('advancedvideo',)),
+        ('head', 'Lighting'),
+        ('multi', 'Shadows', 'cg_shadows', (('Off', 0), ('Blob', 1), ('Real', 2)),
+         'Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them.'),
+        ('yesno', 'Materials', 'v_pbr',
+         'Surfaces with a material are lit with their bumps, roughness and metal: they shine, and smooth ones mirror the room.'),
+        ('slider', 'Moving Lights', 'v_dlightScale', 1.0, 0, 3,
+         'How bright sabers, shots and explosions light the walls and the floor. 1 as meant.'),
+        ('yesno', 'Reflections', 'v_ssr',
+         'Smooth surfaces with a material mirror what is on the screen, on top of the reflections of the room.'),
+        ('slider', 'Glowing Panels', 'v_panelGlow', 2.0, 0, 4,
+         'How brightly the lamp panels of a level glow as light sources. With HDR they glow out past white. 0: as their texture.'),
+        ('yesno', 'Panel Light on Players', 'v_panelLight',
+         'Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing.'),
+        ('yesno', 'Automatic Materials', 'v_autoMaterials',
+         'Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video.'),
+        ('yesno', 'HDR', 'v_hdr',
+         'Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed.'),
+        ('multi', 'Tone Mapping', 'v_tonemap', (('Off', 0), ('Original Look', 1), ('Filmic', 2)),
+         'How bright light is put on the screen. Original Look: as the game was, bright light glows out softly. Filmic: as modern games, richer highlights and more contrast.'),
+        ('slider', 'Exposure', 'v_exposure', 1.0, 0.5, 2, 'How bright the level is before it is tone mapped. 1 as it is.'),
         ('head', 'Bloom'),
         ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
@@ -139,6 +159,12 @@ SETUP = [
         ('head', 'Lightsabers'),
         ('multi', 'Blade Look', 'v_saberStyle', (('Classic', 0), ('SFX', 1)),
          'SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic.'),
+        ('yesno', '3D Blades', 'v_saber3D', 'Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above.'),
+        ('yesno', 'Slice Bodies', 'v_slice', 'A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer.'),
+        ('multi', 'Blood', 'v_gore', (('Off', 0), ('Screen and Ground', 1), ('Ground Only', 2)),
+         'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.'),
+        ('multi', 'Remove Cut Parts', 'v_sliceTime', (('As Long as the Body', 0), ('After 15 s', 15), ('After 30 s', 30), ('After 60 s', 60)),
+         'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
         ('slider', 'Trail Length', 'v_saberTrailLength', 1, 0, 4, 'How long the trail behind a swinging blade is.'),
         ('slider', 'Blade Core', 'v_saberCoreScale', 1, 0.25, 3, 'How thick the white core of a blade is.'),
         ('slider', 'Blade Glow', 'v_saberGlowScale', 1, 0.25, 3, 'How wide the glow around a blade is.'),
@@ -263,6 +289,7 @@ SETUP = [
          'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
         ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
         ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings no code used for a month, from older versions and other mods.'),
+        ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
         ('old', 'options', ('cl_allowdownload',)),
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),
@@ -832,7 +859,7 @@ def window_frame(m, L):
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
 ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
-ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold'}
+ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold', 'v_dlightscale', 'v_exposure'}
 
 
 def page_sections(m, content, folds):

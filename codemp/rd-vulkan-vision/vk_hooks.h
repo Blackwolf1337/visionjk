@@ -28,6 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // vk_main.cpp
 qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the renderer
 void VK_ShutdownVulkan( qboolean destroyWindow );
+void VK_StageTime( const char *name );
+void VK_SavePipelineCache( void );	// the pipelines made so far into the profile, when there are new ones		// developer 1: how long the step since the one before took
 void VK_GfxInfo_f( void );
 // the window has that size now: the frame follows it between two frames. qfalse: this device can not, the engine
 // restarts the renderer instead
@@ -44,6 +46,15 @@ qboolean VK_HasScope( void );
 // whether RE_AddWet() is drawn, and whether its puddles mirror a view of their own (R_PuddleView of tr_main.cpp)
 qboolean VK_HasWet( void );
 qboolean VK_PuddleMirror( void );
+// the size of the targets of that view each way, for a frame of frame pixels: half of it (vk_texture.cpp)
+static inline int VK_PuddleSize( int frame ) { return ( frame + 1 ) / 2; }
+void VK_NoteDrawSurfs( int numDrawSurfs );
+// ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
+qboolean RE_GpuProfile( gpuProfile_t *out );
+// vk_rt.cpp (gles_cmd.cpp: none): the lamp panels the traced shadow of the player at origin came from (v_panelLight)
+qboolean VK_RT_PlayerLamps( const vec3_t origin, vec3_t dir, float *share );
+qboolean VK_ProbesSupported( void );
+qboolean VK_ProbesLost( void );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );
@@ -76,8 +87,12 @@ void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );	
 
 // vk_texcache.cpp: the texture of an image file as an earlier run packed it, see there for the order of the calls
 qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );
+qboolean VK_ImageFileOf( const char *name, char *file, int fileSize, int *length, int *checksum );
+void VK_SunChanged( void );
 qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
 void VK_TexCacheRecord( void );
+void VK_TexCacheLuma( float luma );
+float VK_TexCacheFoundLuma( void );
 void VK_TexCacheEnd( void );
 
 // The few OpenGL calls left in the shared files, by where they are:

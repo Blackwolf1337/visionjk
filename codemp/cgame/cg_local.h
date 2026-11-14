@@ -1660,6 +1660,9 @@ typedef struct cgs_s {
 	int					numMiscStaticModels;
 	cg_staticmodel_t	miscStaticModels[MAX_STATIC_MODELS];
 
+	// the renderer traces the shadows of the players from the lights of the level (v_rtAvailable, cg_shadows 2)
+	qboolean			rtShadows;
+
 } cgs_t;
 
 typedef struct siegeExtended_s
@@ -1820,6 +1823,7 @@ void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
 void		CG_ScreenFxRefract( const vec3_t a, const vec3_t b, float radius, float strength );
 void		CG_ScreenFxWet( const vec3_t velocity );
 qboolean	CG_ScreenFxSnow( const vec3_t velocity );	// a snowball in the face, qfalse: draw the picture instead
+void		CG_ScreenFxBlood( const vec3_t origin, float strength );	// blood of a cut close by on the view
 qboolean	CG_ScreenFxSightDrawn( void );
 void		CG_ScreenFxGhostBody( refEntity_t *body );
 void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );
@@ -1989,6 +1993,31 @@ void CG_SpatialMovers( void );
 
 // look/cg_look.c: hats and capes
 void CG_LookInit( void );
+
+// cg_slice.c: a saber kill cuts the body through along the killing swing
+void CG_SliceInit( void );
+void CG_SliceKill( int victim, int killer );
+qboolean CG_GoreAir( void );
+qboolean CG_GoreGround( void );
+void CG_SliceStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right );
+qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles );
+qboolean CG_Sliced( int num );
+void CG_SliceBodyCopied( int clientNum, int body );
+void CG_SliceScene( void );
+void CG_SliceTest_f( void );
+// cg_ragdoll.c (VisionJK): the ragdolls of the parts of cut bodies
+void CG_RagInit( void );
+qboolean CG_RagOn( void );
+int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const vec3_t scale, const vec4_t plane,
+	const vec3_t centre, const vec3_t velocity, const vec3_t throwDir );
+void CG_RagFree( int handle );
+void CG_RagFrame( void );
+int CG_RagParts( int handle );
+qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
+void CG_RagExplosion( const vec3_t origin, float radius );
+void CG_RagDump_f( void );
+qboolean CG_RagBleed( int handle, int n, vec3_t cutCentre, vec3_t velocity, vec3_t floorAt, float *slide );
+qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );
 // toys/cg_toys.c: the snowball and the other toys of issue #9
