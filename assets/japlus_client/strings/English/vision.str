@@ -1949,6 +1949,57 @@ LANG_ENGLISH        "Mute"
 REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
 
+REFERENCE           SYNC_AUDIOPLAYER
+LANG_ENGLISH        "Sync audioplayer ..."
+
+REFERENCE           LOOKING_FOR_MUSIC_PLAYERS
+LANG_ENGLISH        "Looking for music players ..."
+
+REFERENCE           PAUSE_OR_PLAY_S
+LANG_ENGLISH        "Pause or play %s"
+
+REFERENCE           NEXT_SONG
+LANG_ENGLISH        "Next song"
+
+REFERENCE           HEAR_IT_FROM_THE_BOX
+LANG_ENGLISH        "Hear it from the box"
+
+REFERENCE           HEAR_YOUR_PLAYER_AGAIN_NOT_THE_BOX
+LANG_ENGLISH        "Hear your player again, not the box"
+
+REFERENCE           STOP_SYNC
+LANG_ENGLISH        "Stop sync"
+
+REFERENCE           CANCEL
+LANG_ENGLISH        "Cancel"
+
+REFERENCE           SYNC
+LANG_ENGLISH        "Sync"
+
+REFERENCE           SYNCED
+LANG_ENGLISH        "Synced"
+
+REFERENCE           FROM_YOUR_MUSIC_PLAYER
+LANG_ENGLISH        "From your music player"
+
+REFERENCE           FROM_THE_MUSIC_PLAYER_OF_S
+LANG_ENGLISH        "From the music player of %s"
+
+REFERENCE           WAITS_S
+LANG_ENGLISH        "Waits: %s"
+
+REFERENCE           NO_MUSIC_PLAYER_PLAYS_ANYTHING_RIGHT
+LANG_ENGLISH        "No music player plays anything right now. Start a song and try again."
+
+REFERENCE           THE_SOUND_OF_YOUR_MUSIC_PLAYER_CAN_N
+LANG_ENGLISH        "The sound of your music player can not be taken (no PulseAudio or PipeWire)"
+
+REFERENCE           THE_SOUND_OF_S_WAS_NOT_FOUND_THE_SYN
+LANG_ENGLISH        "The sound of %s was not found, the sync ends"
+
+REFERENCE           S_IS_GONE_THE_SYNC_ENDS
+LANG_ENGLISH        "%s is gone, the sync ends"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 

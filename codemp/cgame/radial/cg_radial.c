@@ -59,7 +59,8 @@ typedef enum {
 	RAD_PLACE_SYSTEM,			// the slice above it: or RAD_REMOVE on a box
 	RAD_MOVE,
 	RAD_REMOVE,
-	RAD_PLACE_TV				// the slice after it, with nothing on a box
+	RAD_PLACE_TV,				// the slice after it: or RAD_SYNC on a box
+	RAD_SYNC					// Sync audioplayer, or Stop sync (boombox/cg_boombox_sync.c)
 } radialAct_t;
 
 static struct {
@@ -101,7 +102,7 @@ static void Radial_Build( void ) {
 	if ( rad.piece >= 0 ) {
 		rad.acts[6] = RAD_MOVE;		rad.usable[6] = qtrue;
 		rad.acts[7] = RAD_REMOVE;	rad.usable[7] = qtrue;
-		rad.acts[8] = RAD_PLACE_TV;	rad.usable[8] = qfalse;
+		rad.acts[8] = RAD_SYNC;		rad.usable[8] = (qboolean)( have && ( info.synced || CG_BoxSyncOffered( rad.box ) ) );
 	} else {
 		rad.acts[6] = RAD_PLACE_BOX;	rad.usable[6] = on;
 		rad.acts[7] = RAD_PLACE_SYSTEM;	rad.usable[7] = CG_BoomboxSystems();
@@ -128,6 +129,7 @@ static const char *Radial_Short( radialAct_t act ) {
 	case RAD_PLACE_TV:		return CG_VisionText( "TV" );
 	case RAD_MOVE:			return CG_VisionText( "Move it" );
 	case RAD_REMOVE:		return CG_VisionText( "Remove" );
+	case RAD_SYNC:			return CG_VisionText( info.synced ? "Stop sync" : "Sync" );
 	}
 	return "";
 }
@@ -152,6 +154,7 @@ static const char *Radial_Long( radialAct_t act ) {
 	case RAD_MOVE:			return CG_VisionText( "Move it" );
 	case RAD_REMOVE:		return CG_VisionText( ( rad.confirmTime && cg.time - rad.confirmTime < RADIAL_CONFIRM_MSEC )
 								? "Click again to take it away" : "Take it away" );
+	case RAD_SYNC:			return CG_VisionText( info.synced ? "Stop sync" : "Sync audioplayer ..." );
 	}
 	return "";
 }
@@ -232,6 +235,13 @@ static qboolean Radial_Run( radialAct_t act ) {
 			return qfalse;
 		}
 		CG_BoomboxDo( box, "remove" );
+		break;
+	case RAD_SYNC:
+		// (of several players the wheel takes the first that plays: the card offers the choice)
+		if ( CG_BoomboxInfo( box, &info ) && info.synced )
+			CG_BoxSyncStop( box );
+		else
+			CG_BoxSyncChoose( box, qtrue );
 		break;
 	}
 	return qtrue;

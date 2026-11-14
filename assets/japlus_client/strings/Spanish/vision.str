@@ -2597,6 +2597,74 @@ REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
 LANG_SPANISH        "Activar sonido"
 
+REFERENCE           SYNC_AUDIOPLAYER
+LANG_ENGLISH        "Sync audioplayer ..."
+LANG_SPANISH        "Sincronizar el reproductor ..."
+
+REFERENCE           LOOKING_FOR_MUSIC_PLAYERS
+LANG_ENGLISH        "Looking for music players ..."
+LANG_SPANISH        "Buscando reproductores de música ..."
+
+REFERENCE           PAUSE_OR_PLAY_S
+LANG_ENGLISH        "Pause or play %s"
+LANG_SPANISH        "Pausar o reproducir %s"
+
+REFERENCE           NEXT_SONG
+LANG_ENGLISH        "Next song"
+LANG_SPANISH        "Siguiente canción"
+
+REFERENCE           HEAR_IT_FROM_THE_BOX
+LANG_ENGLISH        "Hear it from the box"
+LANG_SPANISH        "Oírlo desde la boombox"
+
+REFERENCE           HEAR_YOUR_PLAYER_AGAIN_NOT_THE_BOX
+LANG_ENGLISH        "Hear your player again, not the box"
+LANG_SPANISH        "Volver a oír tu reproductor, no la boombox"
+
+REFERENCE           STOP_SYNC
+LANG_ENGLISH        "Stop sync"
+LANG_SPANISH        "Parar la sincronización"
+
+REFERENCE           CANCEL
+LANG_ENGLISH        "Cancel"
+LANG_SPANISH        "Cancelar"
+
+REFERENCE           SYNC
+LANG_ENGLISH        "Sync"
+LANG_SPANISH        "Sincronizar"
+
+REFERENCE           SYNCED
+LANG_ENGLISH        "Synced"
+LANG_SPANISH        "Sincronizado"
+
+REFERENCE           FROM_YOUR_MUSIC_PLAYER
+LANG_ENGLISH        "From your music player"
+LANG_SPANISH        "Desde tu reproductor de música"
+
+REFERENCE           FROM_THE_MUSIC_PLAYER_OF_S
+LANG_ENGLISH        "From the music player of %s"
+LANG_SPANISH        "Desde el reproductor de música de %s"
+
+REFERENCE           WAITS_S
+LANG_ENGLISH        "Waits: %s"
+LANG_SPANISH        "En espera: %s"
+
+REFERENCE           NO_MUSIC_PLAYER_PLAYS_ANYTHING_RIGHT
+LANG_ENGLISH        "No music player plays anything right now. Start a song and try again."
+LANG_SPANISH        "Ningún reproductor de música suena ahora. Pon una canción y vuelve a intentarlo."
+
+REFERENCE           THE_SOUND_OF_YOUR_MUSIC_PLAYER_CAN_N
+LANG_ENGLISH        "The sound of your music player can not be taken (no PulseAudio or PipeWire)"
+LANG_SPANISH        "No se puede tomar el sonido de tu reproductor (sin PulseAudio ni PipeWire)"
+
+REFERENCE           THE_SOUND_OF_S_WAS_NOT_FOUND_THE_SYN
+LANG_ENGLISH        "The sound of %s was not found, the sync ends"
+LANG_SPANISH        "No se encontró el sonido de %s, la sincronización termina"
+
+REFERENCE           S_IS_GONE_THE_SYNC_ENDS
+LANG_ENGLISH        "%s is gone, the sync ends"
+LANG_SPANISH        "%s ya no está, la sincronización termina"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 LANG_SPANISH        "Archivos del servidor"

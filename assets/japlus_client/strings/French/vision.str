@@ -2597,6 +2597,74 @@ REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
 LANG_FRENCH         "Réactiver"
 
+REFERENCE           SYNC_AUDIOPLAYER
+LANG_ENGLISH        "Sync audioplayer ..."
+LANG_FRENCH         "Synchroniser le lecteur audio ..."
+
+REFERENCE           LOOKING_FOR_MUSIC_PLAYERS
+LANG_ENGLISH        "Looking for music players ..."
+LANG_FRENCH         "Recherche des lecteurs de musique ..."
+
+REFERENCE           PAUSE_OR_PLAY_S
+LANG_ENGLISH        "Pause or play %s"
+LANG_FRENCH         "Pause ou lecture de %s"
+
+REFERENCE           NEXT_SONG
+LANG_ENGLISH        "Next song"
+LANG_FRENCH         "Morceau suivant"
+
+REFERENCE           HEAR_IT_FROM_THE_BOX
+LANG_ENGLISH        "Hear it from the box"
+LANG_FRENCH         "L'entendre depuis la boombox"
+
+REFERENCE           HEAR_YOUR_PLAYER_AGAIN_NOT_THE_BOX
+LANG_ENGLISH        "Hear your player again, not the box"
+LANG_FRENCH         "Réentendre votre lecteur, pas la boombox"
+
+REFERENCE           STOP_SYNC
+LANG_ENGLISH        "Stop sync"
+LANG_FRENCH         "Arrêter la synchro"
+
+REFERENCE           CANCEL
+LANG_ENGLISH        "Cancel"
+LANG_FRENCH         "Annuler"
+
+REFERENCE           SYNC
+LANG_ENGLISH        "Sync"
+LANG_FRENCH         "Synchro"
+
+REFERENCE           SYNCED
+LANG_ENGLISH        "Synced"
+LANG_FRENCH         "Synchronisé"
+
+REFERENCE           FROM_YOUR_MUSIC_PLAYER
+LANG_ENGLISH        "From your music player"
+LANG_FRENCH         "Depuis votre lecteur de musique"
+
+REFERENCE           FROM_THE_MUSIC_PLAYER_OF_S
+LANG_ENGLISH        "From the music player of %s"
+LANG_FRENCH         "Depuis le lecteur de musique de %s"
+
+REFERENCE           WAITS_S
+LANG_ENGLISH        "Waits: %s"
+LANG_FRENCH         "En attente : %s"
+
+REFERENCE           NO_MUSIC_PLAYER_PLAYS_ANYTHING_RIGHT
+LANG_ENGLISH        "No music player plays anything right now. Start a song and try again."
+LANG_FRENCH         "Aucun lecteur de musique ne joue en ce moment. Lancez un morceau et réessayez."
+
+REFERENCE           THE_SOUND_OF_YOUR_MUSIC_PLAYER_CAN_N
+LANG_ENGLISH        "The sound of your music player can not be taken (no PulseAudio or PipeWire)"
+LANG_FRENCH         "Le son de votre lecteur de musique ne peut pas être capté (ni PulseAudio ni PipeWire)"
+
+REFERENCE           THE_SOUND_OF_S_WAS_NOT_FOUND_THE_SYN
+LANG_ENGLISH        "The sound of %s was not found, the sync ends"
+LANG_FRENCH         "Le son de %s est introuvable, la synchro s'arrête"
+
+REFERENCE           S_IS_GONE_THE_SYNC_ENDS
+LANG_ENGLISH        "%s is gone, the sync ends"
+LANG_FRENCH         "%s n'est plus là, la synchro s'arrête"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 LANG_FRENCH         "Fichiers du serveur"

@@ -2597,6 +2597,74 @@ REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
 LANG_GERMAN         "Ton an"
 
+REFERENCE           SYNC_AUDIOPLAYER
+LANG_ENGLISH        "Sync audioplayer ..."
+LANG_GERMAN         "Audioplayer synchronisieren ..."
+
+REFERENCE           LOOKING_FOR_MUSIC_PLAYERS
+LANG_ENGLISH        "Looking for music players ..."
+LANG_GERMAN         "Suche Musikplayer ..."
+
+REFERENCE           PAUSE_OR_PLAY_S
+LANG_ENGLISH        "Pause or play %s"
+LANG_GERMAN         "%s pausieren oder abspielen"
+
+REFERENCE           NEXT_SONG
+LANG_ENGLISH        "Next song"
+LANG_GERMAN         "Nächster Song"
+
+REFERENCE           HEAR_IT_FROM_THE_BOX
+LANG_ENGLISH        "Hear it from the box"
+LANG_GERMAN         "Aus der Box hören"
+
+REFERENCE           HEAR_YOUR_PLAYER_AGAIN_NOT_THE_BOX
+LANG_ENGLISH        "Hear your player again, not the box"
+LANG_GERMAN         "Wieder den Player hören, nicht die Box"
+
+REFERENCE           STOP_SYNC
+LANG_ENGLISH        "Stop sync"
+LANG_GERMAN         "Sync beenden"
+
+REFERENCE           CANCEL
+LANG_ENGLISH        "Cancel"
+LANG_GERMAN         "Abbrechen"
+
+REFERENCE           SYNC
+LANG_ENGLISH        "Sync"
+LANG_GERMAN         "#same"
+
+REFERENCE           SYNCED
+LANG_ENGLISH        "Synced"
+LANG_GERMAN         "Synchronisiert"
+
+REFERENCE           FROM_YOUR_MUSIC_PLAYER
+LANG_ENGLISH        "From your music player"
+LANG_GERMAN         "Von deinem Musikplayer"
+
+REFERENCE           FROM_THE_MUSIC_PLAYER_OF_S
+LANG_ENGLISH        "From the music player of %s"
+LANG_GERMAN         "Vom Musikplayer von %s"
+
+REFERENCE           WAITS_S
+LANG_ENGLISH        "Waits: %s"
+LANG_GERMAN         "Wartet: %s"
+
+REFERENCE           NO_MUSIC_PLAYER_PLAYS_ANYTHING_RIGHT
+LANG_ENGLISH        "No music player plays anything right now. Start a song and try again."
+LANG_GERMAN         "Gerade spielt kein Musikplayer etwas. Starte einen Song und versuche es nochmal."
+
+REFERENCE           THE_SOUND_OF_YOUR_MUSIC_PLAYER_CAN_N
+LANG_ENGLISH        "The sound of your music player can not be taken (no PulseAudio or PipeWire)"
+LANG_GERMAN         "Der Ton deines Musikplayers kann nicht abgegriffen werden (kein PulseAudio oder PipeWire)"
+
+REFERENCE           THE_SOUND_OF_S_WAS_NOT_FOUND_THE_SYN
+LANG_ENGLISH        "The sound of %s was not found, the sync ends"
+LANG_GERMAN         "Der Ton von %s wurde nicht gefunden, der Sync endet"
+
+REFERENCE           S_IS_GONE_THE_SYNC_ENDS
+LANG_ENGLISH        "%s is gone, the sync ends"
+LANG_GERMAN         "%s ist weg, der Sync endet"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 LANG_GERMAN         "Dateien des Servers"

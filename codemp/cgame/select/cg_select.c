@@ -86,7 +86,16 @@ typedef enum {
 	ACT_BOX_LOUDER,
 	ACT_BOX_MUTE,
 	ACT_BOX_MOVE,
-	ACT_BOX_REMOVE
+	ACT_BOX_REMOVE,
+	ACT_BOX_SYNC,			// Sync audioplayer (boombox/cg_boombox_sync.c)
+	ACT_BOX_SYNC_WAIT,		//	the players of music are asked
+	ACT_BOX_SYNC_PICK,		//	one of them to choose, ACT_BOX_SYNC_PICK + its number
+	ACT_BOX_SYNC_PICK_LAST = ACT_BOX_SYNC_PICK + 7,
+	ACT_BOX_SYNC_CANCEL,
+	ACT_BOX_SYNC_PAUSE,		// to the player of this player's own sync
+	ACT_BOX_SYNC_NEXT,
+	ACT_BOX_SYNC_HEAR,		//	whether he hears it from the box (v_boxSyncHear)
+	ACT_BOX_UNSYNC
 } selectAct_t;
 
 #define SELECT_BESIDE		21.0f	// how far beside the middle of a player his card and his name stand, in units of the level,
@@ -800,25 +809,54 @@ static qboolean Board_Pointer( const selectBoard_t *b, float *x, float *y ) {
 	return qtrue;
 }
 
-// what the card of a box of the boombox offers: everybody may do everything with every box
+// What the card of a box of the boombox offers: everybody may do everything with every box. While a box plays
+// the music player of a player (Sync audioplayer), its line waits: the others can only end the sync, the one it
+// is synced with has his player on the card.
 static void Select_BoxRows( int box ) {
-	boomboxInfo_t info;
+	boomboxInfo_t	info;
+	const int		choices = CG_BoxSyncChoices( box );
+	int				i;
 
 	if ( !CG_BoomboxInfo( box, &info ) ) {
 		return;
 	}
+	// the players of music to choose from
+	if ( choices >= 0 ) {
+		if ( !choices ) {
+			sel.rows[sel.numRows++] = ACT_BOX_SYNC_WAIT;
+		}
+		for ( i = 0; i < choices && i <= ACT_BOX_SYNC_PICK_LAST - ACT_BOX_SYNC_PICK; i++ ) {
+			sel.rows[sel.numRows++] = (selectAct_t)( ACT_BOX_SYNC_PICK + i );
+		}
+		sel.rows[sel.numRows++] = ACT_BOX_SYNC_CANCEL;
+		return;
+	}
 	sel.rows[sel.numRows++] = ACT_BOX_WINDOW;
 	sel.rows[sel.numRows++] = ACT_BOX_PLAY;
-	if ( info.flags & BOX_PLAYING ) {
-		sel.rows[sel.numRows++] = ACT_BOX_PAUSE;
-		sel.rows[sel.numRows++] = ACT_BOX_SKIP;
-		sel.rows[sel.numRows++] = ACT_BOX_STOP;
+	if ( info.synced ) {
+		if ( info.syncedHere ) {
+			sel.rows[sel.numRows++] = ACT_BOX_SYNC_PAUSE;
+			sel.rows[sel.numRows++] = ACT_BOX_SYNC_NEXT;
+			sel.rows[sel.numRows++] = ACT_BOX_SYNC_HEAR;
+		}
+		sel.rows[sel.numRows++] = ACT_BOX_UNSYNC;
+	} else {
+		if ( info.flags & BOX_PLAYING ) {
+			sel.rows[sel.numRows++] = ACT_BOX_PAUSE;
+			sel.rows[sel.numRows++] = ACT_BOX_SKIP;
+			sel.rows[sel.numRows++] = ACT_BOX_STOP;
+		}
+		if ( CG_BoxSyncOffered( box ) ) {
+			sel.rows[sel.numRows++] = ACT_BOX_SYNC;
+		}
 	}
 	sel.rows[sel.numRows++] = ACT_BOX_QUIETER;
 	sel.rows[sel.numRows++] = ACT_BOX_LOUDER;
 	sel.rows[sel.numRows++] = ACT_BOX_MUTE;
 	sel.rows[sel.numRows++] = ACT_BOX_MOVE;
-	sel.rows[sel.numRows++] = ACT_BOX_REMOVE;
+	if ( !info.synced ) {
+		sel.rows[sel.numRows++] = ACT_BOX_REMOVE;
+	}
 }
 
 // what the card of a player offers, in this order
@@ -880,6 +918,13 @@ static const char *Select_Label( selectAct_t act, int clientNum ) {
 	case ACT_BOX_MUTE:		return CG_VisionText( info.muted ? "Hear it again" : "Mute it for me" );
 	case ACT_BOX_MOVE:		return CG_VisionText( "Move it" );
 	case ACT_BOX_REMOVE:	return CG_VisionText( ( sel.confirmTime && cg.time - sel.confirmTime < SELECT_CONFIRM_MSEC ) ? "Click again to take it away" : "Take it away" );
+	case ACT_BOX_SYNC:		return CG_VisionText( "Sync audioplayer ..." );
+	case ACT_BOX_SYNC_WAIT:	return CG_VisionText( "Looking for music players ..." );
+	case ACT_BOX_SYNC_CANCEL:	return CG_VisionText( "Cancel" );
+	case ACT_BOX_SYNC_PAUSE:	return CG_VisionTextWith( "Pause or play %s", CG_BoxSyncPlayerName() );
+	case ACT_BOX_SYNC_NEXT:	return CG_VisionText( "Next song" );
+	case ACT_BOX_SYNC_HEAR:	return CG_VisionText( v_boxSyncHear.integer ? "Hear your player again, not the box" : "Hear it from the box" );
+	case ACT_BOX_UNSYNC:	return CG_VisionText( "Stop sync" );
 	case ACT_MUTE:			return CG_VisionText( CG_VoiceMuted( clientNum ) ? "Hear his voice again" : "Mute his voice" );
 	case ACT_QUIETER:		return CG_VisionTextWith( "Voice quieter (%i %%)", va( "%i", CG_VoiceLouder( clientNum, 0 ) ) );
 	case ACT_LOUDER:		return CG_VisionTextWith( "Voice louder (%i %%)", va( "%i", CG_VoiceLouder( clientNum, 0 ) ) );
@@ -894,6 +939,11 @@ static const char *Select_Label( selectAct_t act, int clientNum ) {
 	case ACT_ADMIN_SLAP:	return CG_VisionText( "Admin: slap" );
 	case ACT_ADMIN_GOTO:	return CG_VisionText( "Admin: go to him" );
 	case ACT_ADMIN_BRING:	return CG_VisionText( "Admin: bring him here" );
+	default:
+		if ( act >= ACT_BOX_SYNC_PICK && act <= ACT_BOX_SYNC_PICK_LAST ) {
+			return CG_BoxSyncChoiceName( act - ACT_BOX_SYNC_PICK );
+		}
+		break;
 	}
 	return "";
 }
@@ -931,7 +981,17 @@ static void Select_BoxHead( int box ) {
 	if ( !CG_BoomboxInfo( box, &info ) ) {
 		return;
 	}
-	if ( info.flags & BOX_PLAYING ) {
+	if ( info.synced ) {
+		// the music player of a player: no time, and the line waits
+		Select_HeadLine( CG_VisionText( "Synced" ), selectDim );
+		Select_HeadLine( info.title, selectAccent );
+		if ( info.by[0] ) {
+			Select_HeadLine( info.syncedHere ? CG_VisionText( "From your music player" ) : CG_VisionTextWith( "From the music player of %s", info.by ), selectDim );
+		}
+		if ( info.waiting > 0 ) {
+			Select_HeadLine( CG_VisionTextWith( "Waits: %s", info.next ), selectDim );
+		}
+	} else if ( info.flags & BOX_PLAYING ) {
 		Select_HeadLine( CG_VisionText( ( info.flags & BOX_LOADING ) ? "Loading ..." : ( info.flags & BOX_PAUSED ) ? "Paused" : "Plays" ), selectDim );
 		Com_sprintf( sel.head[0].more, sizeof( sel.head[0].more ), "%s / %s", Select_Time( info.msec / 1000 ), Select_Time( info.length ) );
 		sel.head[0].moreColor = selectGold;
@@ -1072,6 +1132,27 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		}
 		CG_BoomboxDo( box, "remove" );
 		break;
+	case ACT_BOX_SYNC:
+		CG_BoxSyncChoose( box, qfalse );
+		return;
+	case ACT_BOX_SYNC_WAIT:
+		return;
+	case ACT_BOX_SYNC_CANCEL:
+		CG_BoxSyncPick( -1 );
+		return;
+	case ACT_BOX_SYNC_PAUSE:
+		CG_BoxSyncControl( "PlayPause" );
+		return;
+	case ACT_BOX_SYNC_NEXT:
+		CG_BoxSyncControl( "Next" );
+		return;
+	case ACT_BOX_SYNC_HEAR:
+		trap->Cvar_Set( "v_boxSyncHear", v_boxSyncHear.integer ? "0" : "1" );
+		trap->Cvar_Update( &v_boxSyncHear );
+		return;
+	case ACT_BOX_UNSYNC:
+		CG_BoxSyncStop( box );
+		return;
 	case ACT_MUTE:
 		trap->SendConsoleCommand( va( "%s %i\n", CG_VoiceMuted( clientNum ) ? "v_voice_unmute" : "v_voice_mute", clientNum ) );
 		return;
@@ -1124,6 +1205,13 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 	case ACT_ADMIN_BRING:
 		trap->SendClientCommand( va( "amtele %i %i", clientNum, cg.clientNum ) );
 		CG_ScoresLetGo();
+		break;
+	default:
+		// a player of music for Sync audioplayer: the card stays, it shows the sync from now on
+		if ( act >= ACT_BOX_SYNC_PICK && act <= ACT_BOX_SYNC_PICK_LAST ) {
+			CG_BoxSyncPick( act - ACT_BOX_SYNC_PICK );
+			return;
+		}
 		break;
 	}
 	Select_Close();

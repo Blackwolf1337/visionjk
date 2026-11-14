@@ -177,7 +177,9 @@ void CG_BoomboxWindowDraw( void ) {
 	Win_Line( x + WIN_PAD, y - 4.0f, inner );
 
 	// the song, who asked for it, and what the box does
-	if ( info.flags & BOX_LOOKING ) {
+	if ( info.synced ) {
+		status = CG_VisionText( "Synced" );
+	} else if ( info.flags & BOX_LOOKING ) {
 		status = CG_VisionText( "Looking a song up ..." );
 	} else if ( !playing ) {
 		status = CG_VisionText( "Silent" );
@@ -191,7 +193,8 @@ void CG_BoomboxWindowDraw( void ) {
 	Win_Text( x + WIN_W - WIN_PAD, y + 2.0f, 0.5f, winGold, 1, status, 110.0f );
 	Win_Text( x + WIN_PAD, y + 16.0f, 0.68f, playing ? winAccent : winDim, 0, playing ? info.title : CG_VisionText( "Nothing plays" ), inner );
 	if ( playing && info.by[0] ) {
-		Win_Text( x + WIN_PAD, y + 30.0f, 0.5f, winDim, 0, CG_VisionTextWith( "Asked for by %s", info.by ), inner );
+		Win_Text( x + WIN_PAD, y + 30.0f, 0.5f, winDim, 0, info.synced ? CG_VisionTextWith( "From the music player of %s", info.by )
+			: CG_VisionTextWith( "Asked for by %s", info.by ), inner );
 	}
 	y += 40.0f;
 
