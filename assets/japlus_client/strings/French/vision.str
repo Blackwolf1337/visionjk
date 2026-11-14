@@ -853,6 +853,30 @@ REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
 LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
 LANG_FRENCH         "Un corps tranché tressaille encore un moment et s'étouffe, gargouille ou gémit, selon l'endroit de la coupe."
 
+REFERENCE           REMOVE_CUT_PARTS
+LANG_ENGLISH        "Remove Cut Parts"
+LANG_FRENCH         "Retirer les morceaux"
+
+REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
+LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
+LANG_FRENCH         "Quand les morceaux d'un corps tranché et leur sang disparaissent. Plus tôt aide sur les serveurs chargés."
+
+REFERENCE           AS_LONG_AS_THE_BODY
+LANG_ENGLISH        "As Long as the Body"
+LANG_FRENCH         "Tant que le corps reste"
+
+REFERENCE           AFTER_15_S
+LANG_ENGLISH        "After 15 s"
+LANG_FRENCH         "Après 15 s"
+
+REFERENCE           AFTER_30_S
+LANG_ENGLISH        "After 30 s"
+LANG_FRENCH         "Après 30 s"
+
+REFERENCE           AFTER_60_S
+LANG_ENGLISH        "After 60 s"
+LANG_FRENCH         "Après 60 s"
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_FRENCH         "Longueur de la traînée"
@@ -1809,6 +1833,10 @@ REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_FRENCH         "Joueurs"
 
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_FRENCH         "Armes"
+
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_FRENCH         "Langue"
@@ -1816,10 +1844,6 @@ LANG_FRENCH         "Langue"
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_FRENCH         "Sabres laser"
-
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_FRENCH         "Armes"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"

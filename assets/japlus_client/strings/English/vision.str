@@ -641,6 +641,24 @@ LANG_ENGLISH        "Death Throes"
 REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
 LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
 
+REFERENCE           REMOVE_CUT_PARTS
+LANG_ENGLISH        "Remove Cut Parts"
+
+REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
+LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
+
+REFERENCE           AS_LONG_AS_THE_BODY
+LANG_ENGLISH        "As Long as the Body"
+
+REFERENCE           AFTER_15_S
+LANG_ENGLISH        "After 15 s"
+
+REFERENCE           AFTER_30_S
+LANG_ENGLISH        "After 30 s"
+
+REFERENCE           AFTER_60_S
+LANG_ENGLISH        "After 60 s"
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 
@@ -1358,14 +1376,14 @@ LANG_ENGLISH        "Duels"
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
-
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"

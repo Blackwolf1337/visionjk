@@ -54,6 +54,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SLICE_PRINTS		32			// bloody footprints at once, the oldest goes
 #define SLICE_PRINT_MSEC	30000		// a bloody footprint fades in this time
 #define SLICE_PRINT_STEPS	8			// steps out of a pool that leave prints, fainter with each
+#define SLICE_SMOKE_MSEC	3000		// the hot cut smokes this long, less and less
 #define SLICE_FOOT			6.5f		// half the length of a print (a little more than WATER_FOOT of toys/cg_water.c: blood spreads)
 
 typedef struct slice_s {
@@ -89,7 +90,12 @@ typedef struct slice_s {
 	int			throeStart;		// cg.time they start, after the death cry of the server's event
 	int			throeCue;		// the next sound of throe
 	int			nextTwitch;
+	int			nextSmoke;		// cg.time of the next wisp from the cuts
+	qboolean	expired;		// v_sliceTime ran out: parts and blood gone, the slot keeps the body from being drawn whole
 } slice_t;
+
+static sfxHandle_t	sliceFrySound;		// the cut sizzles once (sound/player/fry.wav)
+static fxHandle_t	sliceSmokeFx;		//	and smokes a while (a stock wisp)
 
 /*
 The death throes of a cut body: what the cut took off the trunk (CG_RagCutKind) picks one of these by weight, so two
@@ -152,6 +158,27 @@ static const sliceThroe_t *CG_SlicePickThroe( int kind ) {
 }
 
 // once a frame before the ragdolls step: the twitches and the sounds that are due
+// The hot cut smokes: a wisp from the cut of each part now and then, rarer as it cools (SLICE_SMOKE_MSEC). Not blood, so
+// not under v_gore.
+static void CG_SliceSmoke( slice_t *s ) {
+	const int	since = cg.time - s->time;
+	vec3_t		up = { 0.0f, 0.0f, 1.0f };
+	int			n;
+
+	if ( !sliceSmokeFx || s->rag < 0 || s->gone || since >= SLICE_SMOKE_MSEC || cg.time < s->nextSmoke ) {
+		return;
+	}
+	for ( n = 0; n < CG_RagParts( s->rag ) && n < SLICE_PARTS; n++ ) {
+		vec3_t	cut, velocity, floorAt;
+		float	slide;
+
+		CG_RagBleed( s->rag, n, cut, velocity, floorAt, &slide );
+		trap->FX_PlayEffectID( sliceSmokeFx, cut, up, -1, -1, qfalse );
+	}
+	// (every 120 ms at first, every 400 ms at the end)
+	s->nextSmoke = cg.time + 120 + 280 * since / SLICE_SMOKE_MSEC;
+}
+
 // developer 1 tells which throes were picked and when their sounds come
 static qboolean CG_SliceTell( void ) {
 	char value[8];
@@ -249,6 +276,8 @@ void CG_SliceInit( void ) {
 		slices[i].rag = -1;
 	}
 	sliceCutShader = trap->R_RegisterShader( "gfx/vision/slice/cut" );
+	sliceFrySound = trap->S_RegisterSound( "sound/player/fry.wav" );
+	sliceSmokeFx = trap->FX_RegisterEffect( "effects/emitter/small_smoke_trail.efx" );
 }
 
 // whether bodies are cut here: the player wants it and the renderer can
@@ -274,14 +303,17 @@ qboolean CG_GoreGround( void ) {
 	return (qboolean)( v_gore.integer == 1 || v_gore.integer == 2 );
 }
 
-static void CG_SliceFree( slice_t *s ) {
+// the parts and the blood of a cut go (CG_SliceFree, and when v_sliceTime runs out)
+static void CG_SliceClear( slice_t *s ) {
 	const int	owner = (int)( s - slices );
 	int			i;
 
 	if ( s->rag >= 0 ) {
 		CG_RagFree( s->rag );
 	}
-	// its blood goes with it
+	s->rag = -1;
+	s->blood = qfalse;
+	s->throe = NULL;
 	for ( i = 0; i < SLICE_MARKS; i++ ) {
 		if ( sliceMarks[i].owner == owner ) {
 			sliceMarks[i].active = qfalse;
@@ -292,6 +324,10 @@ static void CG_SliceFree( slice_t *s ) {
 			sliceDrops[i].active = qfalse;
 		}
 	}
+}
+
+static void CG_SliceFree( slice_t *s ) {
+	CG_SliceClear( s );
 	memset( s, 0, sizeof( *s ) );
 	s->rag = -1;
 }
@@ -649,7 +685,7 @@ qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angle
 	if ( !CG_SliceOn() || !( s = CG_SliceOf( num ) ) ) {
 		return qfalse;
 	}
-	if ( s->rag >= 0 ) {
+	if ( s->rag >= 0 || s->expired ) {
 		return qtrue;
 	}
 	if ( !ent->ghoul2 ) {
@@ -681,6 +717,11 @@ qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angle
 	s->throeStart = Q_max( cg.time, s->time + SLICE_THROE_DELAY );
 	s->throeCue = 0;
 	s->nextTwitch = s->throeStart;
+	// the hot cut sizzles, and smokes from the first frame on (CG_SliceSmoke)
+	if ( sliceFrySound ) {
+		trap->S_StartSound( centre, ENTITYNUM_WORLD, CHAN_AUTO, sliceFrySound );
+	}
+	s->nextSmoke = cg.time;
 	if ( CG_SliceTell() ) {
 		trap->Print( "slice throes: cut kind %i, %s\n", CG_RagCutKind( s->rag ),
 			s->throe ? ( s->throe->sounds[0] ? s->throe->sounds[0] : "no sound" ) : "none" );
@@ -1076,6 +1117,18 @@ void CG_SliceScene( void ) {
 				continue;
 			}
 		}
+		// v_sliceTime: the parts and their blood fade that many seconds after the cut, also while the body is still
+		// there; the slot stays until the body goes, else it would be drawn whole again
+		if ( v_sliceTime.integer > 0 && s->rag >= 0 ) {
+			const int left = s->time + v_sliceTime.integer * 1000 + SLICE_FADE_MSEC - cg.time;
+
+			if ( left <= 0 ) {
+				CG_SliceClear( s );
+				s->expired = qtrue;
+			} else {
+				s->alpha = Q_min( s->alpha, (float)left / SLICE_FADE_MSEC );
+			}
+		}
 	}
 
 	if ( !CG_SliceOn() ) {
@@ -1084,6 +1137,7 @@ void CG_SliceScene( void ) {
 	for ( i = 0; i < SLICE_MAX; i++ ) {
 		if ( slices[i].active ) {
 			CG_SliceThroes( &slices[i] );
+			CG_SliceSmoke( &slices[i] );
 		}
 	}
 	CG_RagFrame();
