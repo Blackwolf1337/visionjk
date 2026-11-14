@@ -741,6 +741,13 @@ TR = {
     'How large the movement keys on the screen are.': 'Wie groß die Bewegungstasten auf dem Bildschirm sind.',
     'Name Alert Words': 'Wörter für den Namensalarm',
     'More words that mark a chat line gold, besides your name. Separated by blanks or commas.': 'Weitere Wörter außer deinem Namen, die eine Chatzeile golden markieren. Getrennt durch Leerzeichen oder Kommas.',
+    'The chat box, alerts, what stands above the heads, your music and clicking players.': 'Der Chat, Hinweise, was über den Köpfen steht, deine Musik und das Anklicken von Spielern.',
+    'Chat Box': 'Chatfenster',
+    'Alerts': 'Hinweise',
+    'Above the Heads': 'Über den Köpfen',
+    'My Music': 'Meine Musik',
+    'Clicking Players': 'Spieler anklicken',
+    'A chat line with your name or one of the words below is marked gold.': 'Eine Chatzeile mit deinem Namen oder einem der Wörter darunter wird golden markiert.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.

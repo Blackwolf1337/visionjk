@@ -803,6 +803,102 @@ LANG_ENGLISH        "Show Lagometer"
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+
+REFERENCE           NAME_ALERT
+LANG_ENGLISH        "Name Alert"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_OR_ONE_OF
+LANG_ENGLISH        "A chat line with your name or one of the words below is marked gold."
+
+REFERENCE           MARKED
+LANG_ENGLISH        "Marked"
+
+REFERENCE           MARKED_AND_SOUND
+LANG_ENGLISH        "Marked and Sound"
+
+REFERENCE           NAME_ALERT_WORDS
+LANG_ENGLISH        "Name Alert Words"
+
+REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
+LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
 
@@ -850,72 +946,6 @@ LANG_ENGLISH        "Keep Scoreboard on Double Tap"
 
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-
-REFERENCE           NOTIFICATIONS
-LANG_ENGLISH        "Notifications"
-
-REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-
-REFERENCE           SHOWN
-LANG_ENGLISH        "Shown"
-
-REFERENCE           SHOWN_AND_SOUND
-LANG_ENGLISH        "Shown and Sound"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
 
 REFERENCE           NEW_DRAIN_EFFECT
 LANG_ENGLISH        "New Drain Effect"
@@ -1388,36 +1418,6 @@ LANG_ENGLISH        "Seasonal Hats"
 REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 
-REFERENCE           CHAT_EMOJI
-LANG_ENGLISH        "Chat Emoji"
-
-REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
-LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
-
-REFERENCE           CHAT_LOG
-LANG_ENGLISH        "Chat Log"
-
-REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
-LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
-
-REFERENCE           NAME_ALERT
-LANG_ENGLISH        "Name Alert"
-
-REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
-LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
-
-REFERENCE           MARKED
-LANG_ENGLISH        "Marked"
-
-REFERENCE           MARKED_AND_SOUND
-LANG_ENGLISH        "Marked and Sound"
-
-REFERENCE           NAME_ALERT_WORDS
-LANG_ENGLISH        "Name Alert Words"
-
-REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
-LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
-
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
 
@@ -1595,6 +1595,9 @@ LANG_ENGLISH        "What the screen shows around the level, the view and the cr
 REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 
@@ -1604,17 +1607,23 @@ LANG_ENGLISH        "On Screen"
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
 
-REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
-LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+REFERENCE           THE_CHAT_BOX_ALERTS_WHAT_STANDS_ABOV
+LANG_ENGLISH        "The chat box, alerts, what stands above the heads, your music and clicking players."
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
+REFERENCE           CHAT_BOX
+LANG_ENGLISH        "Chat Box"
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
+REFERENCE           ABOVE_THE_HEADS
+LANG_ENGLISH        "Above the Heads"
 
-REFERENCE           CHAT
-LANG_ENGLISH        "Chat"
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
+
+REFERENCE           CLICKING_PLAYERS
+LANG_ENGLISH        "Clicking Players"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -1639,6 +1648,9 @@ LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosme
 
 REFERENCE           HITS
 LANG_ENGLISH        "Hits"
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
 
 REFERENCE           SABERS
 LANG_ENGLISH        "Sabers"
@@ -1769,11 +1781,17 @@ LANG_ENGLISH        "Interface"
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 
+REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
+LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+
 REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
 LANG_ENGLISH        "Updates, downloads and security."
 
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
 
 REFERENCE           CLAN
 LANG_ENGLISH        "Clan"
@@ -1813,6 +1831,9 @@ LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and 
 
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
+LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."

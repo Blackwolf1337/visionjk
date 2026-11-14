@@ -204,36 +204,43 @@ SETUP = [
         ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second in the corner of the screen.'),
         ('yesno', 'Show Timer', 'cg_drawTimer', 'The time of the level in the corner of the screen.'),
         ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
+        ('head', 'Console'),
+        ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
+        ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
     ]),
-    ('Chat & Social', 'The chat box, bubbles and what stands above the heads.', [
-        ('head', 'Players'),
-        ('yesno', 'Chat Bubbles', 'v_chatBubbles', 'What a player says stands above his head.'),
-        ('slider', 'Bubble Range', 'v_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
-        ('yesno', 'Player Statuses', 'v_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
-        ('yesno', 'Show My Music', 'v_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
-        ('open', 'Choose Players of My Music ...', 'musicplayers',
-         'Which players of music may be told: only the songs of the ones you tick are shown to the others.'),
-        ('yesno', 'Select Players', 'v_selectPlayers',
-         'With the mouse free, a click on a player opens a card with what you can do with him.'),
-        ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
-        ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
-         'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
-        ('head', 'Chat'),
+    ('Chat & Social', 'The chat box, alerts, what stands above the heads, your music and clicking players.', [
+        ('head', 'Chat Box'),
         ('yesno', 'Own Chat Line', 'v_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
         ('slider', 'Chat Box Size', 'v_chatBoxScale', 0.85, 0.6, 1.6,
          'How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too.'),
         ('slider', 'Chat Box Width', 'v_chatBoxWidth', 380, 200, 600, 'How wide the chat box is.'),
         ('slider', 'Chat Box Rows', 'v_chatBoxRows', 10, 4, 24,
          'How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse.'),
+        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
+        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
+        ('head', 'Alerts'),
         ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
-        ('head', 'Notifications'),
+        ('multi', 'Name Alert', 'tay_notify', (('Off', 0), ('Marked', 1), ('Marked and Sound', 2)),
+         'A chat line with your name or one of the words below is marked gold.'),
+        ('edit', 'Name Alert Words', 'tay_notifyWords', 64, 'More words that mark a chat line gold, besides your name. Separated by blanks or commas.'),
         ('multi', 'Notifications', 'v_notify', (('Off', 0), ('Shown', 1), ('Shown and Sound', 2)),
          'Tells, your name in the chat, boombox lines and new versions slide in at the left.'),
         ('slider', 'Notification Time', 'v_notifyTime', 6000, 2000, 20000, 'How many milliseconds a notification stays.'),
         ('slider', 'Notification Size', 'v_notifyScale', 1, 0.5, 2, 'How large the notifications are.'),
-        ('head', 'Console'),
-        ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
-        ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
+        ('head', 'Above the Heads'),
+        ('yesno', 'Chat Bubbles', 'v_chatBubbles', 'What a player says stands above his head.'),
+        ('slider', 'Bubble Range', 'v_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
+        ('yesno', 'Player Statuses', 'v_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
+        ('head', 'My Music'),
+        ('yesno', 'Show My Music', 'v_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
+        ('open', 'Choose Players of My Music ...', 'musicplayers',
+         'Which players of music may be told: only the songs of the ones you tick are shown to the others.'),
+        ('head', 'Clicking Players'),
+        ('yesno', 'Select Players', 'v_selectPlayers',
+         'With the mouse free, a click on a player opens a card with what you can do with him.'),
+        ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
+        ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
+         'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
     ]),
     ('JA+', 'The features of the JA+ client plugin, clan and admin login.', [
         ('head', 'Looks'),
@@ -325,12 +332,7 @@ SETUP = [
         ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
          'What players wear on their heads and backs. Only players of VisionJK wear them.'),
         ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
-        ('head', 'Chat'),
-        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
-        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
-        ('multi', 'Name Alert', 'tay_notify', (('Off', 0), ('Marked', 1), ('Marked and Sound', 2)),
-         'A chat line with your name is marked gold. More words with tay_notifyWords in the console.'),
-        ('edit', 'Name Alert Words', 'tay_notifyWords', 64, 'More words that mark a chat line gold, besides your name. Separated by blanks or commas.'),
+        ('head', 'Console'),
         ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
     ]),
     ('Network', 'Downloads, the connection and security.', [
@@ -624,8 +626,12 @@ PAGE_MARK = '@@PAGE_%s@@'
 def open_row(spec):
     """A button among the rows that opens a page of its own (PAGES)."""
     _, text, page, about = spec
-    return [Entry('name', ['vision_open_' + page]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
-            Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['setpage', PAGE_MARK % page, ';'])]
+    b = [Entry('name', ['vision_open_' + page]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+         Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['setpage', PAGE_MARK % page, ';'])]
+    need = OPEN_NEEDS.get(page)
+    if need:
+        b += [Entry('cvarTest', [quoted(need[0])]), Entry('disableCvar', [], [quoted(v) for v in need[1]])]
+    return b
 
 
 def music_page(page, back, L):
@@ -693,6 +699,9 @@ NEEDS = {
     'v_downloadkeep': ('cl_allowDownload', ('0',)),
     'v_downloadhttp': ('cl_allowDownload', ('0',)),
     'v_bubblerange': ('v_chatBubbles', ('0',)),
+    'v_selectoutline': ('v_selectPlayers', ('0',)),
+    'v_scorespick': ('v_selectPlayers', ('0',)),
+    'tay_notifywords': ('tay_notify', ('0',)),
     'v_notifytime': ('v_notify', ('0',)),
     'v_notifyscale': ('v_notify', ('0',)),
     'v_menu3dscale': ('v_immersiveMenu', ('0',)),
@@ -711,6 +720,10 @@ NEEDS = {
     'tay_movementkeyssize': ('tay_movementKeys', ('0',)),
     'tay_jumpgoal': ('tay_speedometer', ('0',)),
 }
+
+
+# the same for a button that opens a page of its own (it has no cvar), by that page
+OPEN_NEEDS = {'musicplayers': ('v_shareMusic', ('0',))}
 
 
 def needs(b):

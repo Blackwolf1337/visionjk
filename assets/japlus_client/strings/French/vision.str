@@ -1069,6 +1069,134 @@ REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 LANG_FRENCH         "Un graphique de votre connexion."
 
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+LANG_FRENCH         "Taille du texte de la console"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+LANG_FRENCH         "La taille du texte de la console."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+LANG_FRENCH         "Opacité de la console"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+LANG_FRENCH         "La part du jeu visible à travers la console."
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+LANG_FRENCH         "Saisie de chat propre"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_FRENCH         "Taille du chat"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_FRENCH         "Taille du chat et de son texte. Dans le chat ouvert, Ctrl + molette la modifie aussi."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_FRENCH         "Largeur du chat"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_FRENCH         "La largeur du chat."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_FRENCH         "Lignes du chat"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_FRENCH         "Nombre de lignes du chat ouvert. Vous pouvez aussi tirer son coin supérieur droit à la souris."
+
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+LANG_FRENCH         "Émojis du chat"
+
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+LANG_FRENCH         "Les codes comme :smile: sont affichés en images dans la boîte de chat."
+
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+LANG_FRENCH         "Journal du chat"
+
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+LANG_FRENCH         "Chaque ligne du chat est écrite dans le dossier chatlogs, avec l'heure."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+LANG_FRENCH         "Bip du chat"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
+
+REFERENCE           NAME_ALERT
+LANG_ENGLISH        "Name Alert"
+LANG_FRENCH         "Alerte de mention"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_OR_ONE_OF
+LANG_ENGLISH        "A chat line with your name or one of the words below is marked gold."
+LANG_FRENCH         "Une ligne de chat avec votre nom ou l'un des mots ci-dessous est marquée en or."
+
+REFERENCE           MARKED
+LANG_ENGLISH        "Marked"
+LANG_FRENCH         "Marquée"
+
+REFERENCE           MARKED_AND_SOUND
+LANG_ENGLISH        "Marked and Sound"
+LANG_FRENCH         "Marquée avec son"
+
+REFERENCE           NAME_ALERT_WORDS
+LANG_ENGLISH        "Name Alert Words"
+LANG_FRENCH         "Mots de l'alerte de nom"
+
+REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
+LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
+LANG_FRENCH         "D'autres mots que votre nom qui marquent une ligne de chat en or. Séparés par des espaces ou des virgules."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_FRENCH         "#same"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_FRENCH         "Messages privés, votre nom dans le chat, lignes de la boombox et nouvelles versions apparaissent à gauche."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_FRENCH         "Affichées"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_FRENCH         "Affichées avec son"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_FRENCH         "Durée d'affichage"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_FRENCH         "Durée d'affichage d'une notification, en millisecondes."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_FRENCH         "Taille des notifications"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_FRENCH         "La taille des notifications."
+
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
 LANG_FRENCH         "Bulles de chat"
@@ -1132,94 +1260,6 @@ LANG_FRENCH         "Tableau fixe (double appui)"
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 LANG_FRENCH         "Appuyer deux fois vite sur la touche du tableau des scores le garde ouvert, souris libre pour cliquer sur un joueur."
-
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-LANG_FRENCH         "Saisie de chat propre"
-
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
-
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_FRENCH         "Taille du chat"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_FRENCH         "Taille du chat et de son texte. Dans le chat ouvert, Ctrl + molette la modifie aussi."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_FRENCH         "Largeur du chat"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_FRENCH         "La largeur du chat."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_FRENCH         "Lignes du chat"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_FRENCH         "Nombre de lignes du chat ouvert. Vous pouvez aussi tirer son coin supérieur droit à la souris."
-
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-LANG_FRENCH         "Bip du chat"
-
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
-
-REFERENCE           NOTIFICATIONS
-LANG_ENGLISH        "Notifications"
-LANG_FRENCH         "#same"
-
-REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_FRENCH         "Messages privés, votre nom dans le chat, lignes de la boombox et nouvelles versions apparaissent à gauche."
-
-REFERENCE           SHOWN
-LANG_ENGLISH        "Shown"
-LANG_FRENCH         "Affichées"
-
-REFERENCE           SHOWN_AND_SOUND
-LANG_ENGLISH        "Shown and Sound"
-LANG_FRENCH         "Affichées avec son"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-LANG_FRENCH         "Durée d'affichage"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_FRENCH         "Durée d'affichage d'une notification, en millisecondes."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-LANG_FRENCH         "Taille des notifications"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-LANG_FRENCH         "La taille des notifications."
-
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-LANG_FRENCH         "Taille du texte de la console"
-
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-LANG_FRENCH         "La taille du texte de la console."
-
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-LANG_FRENCH         "Opacité de la console"
-
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
-LANG_FRENCH         "La part du jeu visible à travers la console."
 
 REFERENCE           NEW_DRAIN_EFFECT
 LANG_ENGLISH        "New Drain Effect"
@@ -1849,46 +1889,6 @@ REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 LANG_FRENCH         "Un bonnet de Noël à Noël et une citrouille à Halloween pour ceux qui n'ont pas de chapeau."
 
-REFERENCE           CHAT_EMOJI
-LANG_ENGLISH        "Chat Emoji"
-LANG_FRENCH         "Émojis du chat"
-
-REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
-LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
-LANG_FRENCH         "Les codes comme :smile: sont affichés en images dans la boîte de chat."
-
-REFERENCE           CHAT_LOG
-LANG_ENGLISH        "Chat Log"
-LANG_FRENCH         "Journal du chat"
-
-REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
-LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
-LANG_FRENCH         "Chaque ligne du chat est écrite dans le dossier chatlogs, avec l'heure."
-
-REFERENCE           NAME_ALERT
-LANG_ENGLISH        "Name Alert"
-LANG_FRENCH         "Alerte de mention"
-
-REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
-LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
-LANG_FRENCH         "Une ligne du chat contenant votre nom est marquée en doré. Autres mots avec tay_notifyWords dans la console."
-
-REFERENCE           MARKED
-LANG_ENGLISH        "Marked"
-LANG_FRENCH         "Marquée"
-
-REFERENCE           MARKED_AND_SOUND
-LANG_ENGLISH        "Marked and Sound"
-LANG_FRENCH         "Marquée avec son"
-
-REFERENCE           NAME_ALERT_WORDS
-LANG_ENGLISH        "Name Alert Words"
-LANG_FRENCH         "Mots de l'alerte de nom"
-
-REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
-LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
-LANG_FRENCH         "D'autres mots que votre nom qui marquent une ligne de chat en or. Séparés par des espaces ou des virgules."
-
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
 LANG_FRENCH         "Horloge de la console"
@@ -2125,6 +2125,10 @@ REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 LANG_FRENCH         "Viseur"
 
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_FRENCH         "#same"
+
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 LANG_FRENCH         "Vue"
@@ -2137,21 +2141,29 @@ REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
 LANG_FRENCH         "Chat et social"
 
-REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
-LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
-LANG_FRENCH         "Chat, bulles et infos au-dessus des têtes."
+REFERENCE           THE_CHAT_BOX_ALERTS_WHAT_STANDS_ABOV
+LANG_ENGLISH        "The chat box, alerts, what stands above the heads, your music and clicking players."
+LANG_FRENCH         "Le chat, les alertes, ce qui s'affiche au-dessus des têtes, votre musique et le clic sur les joueurs."
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_FRENCH         "Joueurs"
+REFERENCE           CHAT_BOX
+LANG_ENGLISH        "Chat Box"
+LANG_FRENCH         "Fenêtre de chat"
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_FRENCH         "#same"
+REFERENCE           ABOVE_THE_HEADS
+LANG_ENGLISH        "Above the Heads"
+LANG_FRENCH         "Au-dessus des têtes"
 
-REFERENCE           CHAT
-LANG_ENGLISH        "Chat"
-LANG_FRENCH         "#same"
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+LANG_FRENCH         "Alertes"
+
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
+LANG_FRENCH         "Ma musique"
+
+REFERENCE           CLICKING_PLAYERS
+LANG_ENGLISH        "Clicking Players"
+LANG_FRENCH         "Cliquer sur les joueurs"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -2184,6 +2196,10 @@ LANG_FRENCH         "Ce qui vient de TaystJK : touches, sabres, HUD, mouvement, 
 REFERENCE           HITS
 LANG_ENGLISH        "Hits"
 LANG_FRENCH         "Impacts"
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_FRENCH         "Joueurs"
 
 REFERENCE           SABERS
 LANG_ENGLISH        "Sabers"
@@ -2357,6 +2373,10 @@ REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 LANG_FRENCH         "L'apparence des menus, du HUD et de la caméra."
 
+REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
+LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+LANG_FRENCH         "Chat, bulles et infos au-dessus des têtes."
+
 REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
 LANG_ENGLISH        "Updates, downloads and security."
 LANG_FRENCH         "Mises à jour, téléchargements et sécurité."
@@ -2364,6 +2384,10 @@ LANG_FRENCH         "Mises à jour, téléchargements et sécurité."
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
 LANG_FRENCH         "Menus et HUD"
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+LANG_FRENCH         "#same"
 
 REFERENCE           CLAN
 LANG_ENGLISH        "Clan"
@@ -2416,6 +2440,10 @@ LANG_FRENCH         "Fonctions issues du client TaystJK : HUD, mouvement, chapea
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_FRENCH         "Chat et console"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
+LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
+LANG_FRENCH         "Une ligne du chat contenant votre nom est marquée en doré. Autres mots avec tay_notifyWords dans la console."
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."

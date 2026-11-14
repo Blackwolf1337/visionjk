@@ -922,4 +922,11 @@ MORE = {
     'How large the movement keys on the screen are.': ('La taille des touches de mouvement à l\'écran.', 'El tamaño de las teclas de movimiento en pantalla.'),
     'Name Alert Words': ('Mots de l\'alerte de nom', 'Palabras de la alerta de nombre'),
     'More words that mark a chat line gold, besides your name. Separated by blanks or commas.': ('D\'autres mots que votre nom qui marquent une ligne de chat en or. Séparés par des espaces ou des virgules.', 'Más palabras, además de tu nombre, que marcan una línea del chat en dorado. Separadas por espacios o comas.'),
+    'The chat box, alerts, what stands above the heads, your music and clicking players.': ('Le chat, les alertes, ce qui s\'affiche au-dessus des têtes, votre musique et le clic sur les joueurs.', 'El chat, los avisos, lo que aparece sobre las cabezas, tu música y hacer clic en jugadores.'),
+    'Chat Box': ('Fenêtre de chat', 'Ventana de chat'),
+    'Alerts': ('Alertes', 'Avisos'),
+    'Above the Heads': ('Au-dessus des têtes', 'Sobre las cabezas'),
+    'My Music': ('Ma musique', 'Mi música'),
+    'Clicking Players': ('Cliquer sur les joueurs', 'Clic en jugadores'),
+    'A chat line with your name or one of the words below is marked gold.': ('Une ligne de chat avec votre nom ou l\'un des mots ci-dessous est marquée en or.', 'Una línea del chat con tu nombre o una de las palabras de abajo se marca en dorado.'),
 }
