@@ -1253,7 +1253,10 @@ void Con_DrawSolidConsole( float frac ) {
 		// asked for the menus of before (v_classic 1)
 		if ( !Cvar_VariableIntegerValue( "v_classic" ) )
 		{
-			const vec4_t glass = { 0.02f, 0.04f, 0.08f, 0.94f * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
+			// frosted: what is behind the console blurred first (v_backdropBlur of the renderer), then thinner glass
+			const qboolean frosted = (qboolean)( frac < 1.0f && re->ext.DrawBackdrop
+				&& re->ext.DrawBackdrop( -cls.bias2D, -cls.bias2DY, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y + cls.bias2DY, 0.0f ) );
+			const vec4_t glass = { 0.02f, 0.04f, 0.08f, ( frosted ? 0.72f : 0.94f ) * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
 
 			SCR_FillRect( -cls.bias2D, -cls.bias2DY, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y + cls.bias2DY, glass );
 			themed = qtrue;

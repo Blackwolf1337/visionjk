@@ -3037,6 +3037,12 @@ static void FixRenderCommandList( int newShader ) {
 					curCmd = (const void *)(sp_cmd + 1);
 					break;
 					}
+				case RC_BACKDROP:
+					{
+					const backdropCommand_t *bd_cmd = (const backdropCommand_t *)curCmd;
+					curCmd = (const void *)(bd_cmd + 1);
+					break;
+					}
 				case RC_ROTATE_PIC:
 					{
 					const rotatePicCommand_t *sp_cmd = (const rotatePicCommand_t *)curCmd;

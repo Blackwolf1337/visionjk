@@ -118,6 +118,9 @@ static const uint32_t vk_smaaBlendFrag[] =
 static const uint32_t vk_tonemapFrag[] =
 #include "shaders/tonemap_frag.inc"
 ;
+static const uint32_t vk_backdropFrag[] =
+#include "shaders/backdrop_frag.inc"
+;
 static const uint32_t vk_saberFrag[] =
 #include "shaders/saber_frag.inc"
 ;
@@ -787,6 +790,10 @@ void VK_InitPipelines( void ) {
 	// v_tonemap: the copy of the frame back over it, as the last pass of SMAA (the same layout, one set)
 	vk.tonemapShader = VK_CreateShader( vk_tonemapFrag, sizeof( vk_tonemapFrag ) );
 	vk.tonemapPipeline = VK_CreatePipeline( vk.postVertexShader, vk.tonemapShader, 0, 11, VKP_GENERIC );
+	// frosted glass behind a panel: the blurred frame laid over the frame by the alpha of its rounded rect
+	vk.backdropShader = VK_CreateShader( vk_backdropFrag, sizeof( vk_backdropFrag ) );
+	vk.backdropPipeline = VK_CreatePipeline( vk.postVertexShader, vk.backdropShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA,
+		11, VKP_GENERIC );
 	// v_ssr: the frame and its depth into the picture of the screen reflections (12: a target of its own, the format of
 	// the frame, the frame and the depth as the depth of field reads them)
 	vk.ssrPrepShader = VK_CreateShader( vk_ssrPrepFrag, sizeof( vk_ssrPrepFrag ) );
@@ -840,6 +847,7 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.smaaWeightShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.smaaBlendShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.tonemapPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.backdropPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.ssrPrepPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberShader, NULL );
@@ -853,6 +861,7 @@ void VK_ShutdownPipelines( void ) {
 	}
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.backdropShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {

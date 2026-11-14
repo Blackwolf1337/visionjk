@@ -751,6 +751,8 @@ TR = {
     'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': 'Die Bewegungswerkzeuge von TaystJK: Tachometer, Strafe-Hilfe, Spuren und Ziele.',
     'Killfeed and Team': 'Killfeed und Team',
     'Goals': 'Ziele',
+    'Blur Behind Panels': 'Unschärfe hinter Feldern',
+    'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.': 'Milchglas: was hinter den HUD-Feldern, dem Chatfenster und der Konsole liegt, wird unscharf. 0: aus. Braucht den Vulkan-Renderer.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.

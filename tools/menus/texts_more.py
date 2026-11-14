@@ -932,4 +932,6 @@ MORE = {
     'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': ('Les outils de mouvement de TaystJK : compteur de vitesse, aide au strafe, traces et objectifs.', 'Las herramientas de movimiento de TaystJK: velocímetro, ayuda de strafe, estelas y objetivos.'),
     'Killfeed and Team': ('Fil des morts et équipe', 'Registro de muertes y equipo'),
     'Goals': ('Objectifs', 'Objetivos'),
+    'Blur Behind Panels': ('Flou derrière les panneaux', 'Desenfoque tras los paneles'),
+    'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.': ('Verre dépoli : ce qui se trouve derrière les panneaux du HUD, la fenêtre de chat et la console est flou. 0 : désactivé. Nécessite le moteur de rendu Vulkan.', 'Cristal esmerilado: lo que hay detrás de los paneles del HUD, la ventana de chat y la consola se desenfoca. 0: desactivado. Necesita el renderizador Vulkan.'),
 }

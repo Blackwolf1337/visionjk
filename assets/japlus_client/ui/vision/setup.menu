@@ -3276,8 +3276,27 @@
 
 		itemDef
 		{
+			name					vision_slider_v_backdropblur
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLUR_BEHIND_PANELS
+			descText				@VISION_FROSTED_GLASS_WHAT_IS_BEHIND_THE_HUD
+			cvarfloat				"v_backdropBlur" 1 0 3
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 310 432 52
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					296 310 452 100
+			rect					296 362 452 100
 			visible					1
 			text					@VISION_CROSSHAIR
 			font					7
@@ -3304,7 +3323,7 @@
 			descText				@VISION_THE_SIZE_OF_THE_CROSSHAIR
 			cvarfloat				"cg_crosshairSize" 24 12 64
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 410 432 52
+			rect					306 462 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3327,7 +3346,7 @@
 				@VISION_WHITE "" @VISION_GREEN "0.2 1 0.3 1" @VISION_CYAN "0.2 0.9 1 1" @VISION_YELLOW "1 0.9 0.2 1" @VISION_ORANGE "1 0.5 0 1" @VISION_RED "1 0.2 0.2 1" @VISION_PINK "1 0.4 0.9 1"
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 462 432 52
+			rect					306 514 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3346,7 +3365,7 @@
 			descText				@VISION_HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
 			cvarfloat				"tay_crosshairNamesOpacity" 0.5 0 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 514 432 52
+			rect					306 566 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3366,7 +3385,7 @@
 			cvar					"tay_leadIndicator"
 			cvarFloatList { @VISION_OFF 0 "On" 1 @VISION_WITH_OWN_PING 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 566 432 52
+			rect					306 618 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3380,7 +3399,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 618 452 100
+			rect					296 670 452 100
 			visible					1
 			text					@VISION_KILLFEED_AND_TEAM
 			font					7
@@ -3407,7 +3426,7 @@
 			descText				@VISION_WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
 			cvar					"tay_killfeed"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 718 432 52
+			rect					306 770 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3428,7 +3447,7 @@
 			action { play "sound/interface/button1.wav" ; }
 			cvarTest				"tay_killfeed"
 			disableCvar { "0" }
-			rect					306 770 432 52
+			rect					306 822 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3449,7 +3468,7 @@
 			action { play "sound/interface/button1.wav" ; }
 			cvarTest				"tay_killfeed"
 			disableCvar { "0" }
-			rect					306 822 432 52
+			rect					306 874 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3468,7 +3487,7 @@
 			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 			cvarfloat				"tay_teamOverlayScale" 1 0.5 2.5
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 874 432 52
+			rect					306 926 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3487,7 +3506,7 @@
 			descText				@VISION_THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
 			cvar					"tay_teamOverlayWeapons"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 926 432 52
+			rect					306 978 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3506,7 +3525,7 @@
 			descText				@VISION_HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
 			cvar					"tay_teamOverlayBar"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 978 432 52
+			rect					306 1030 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3525,7 +3544,7 @@
 			descText				@VISION_WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
 			cvar					"tay_specHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 1030 432 52
+			rect					306 1082 432 52
 			page					6
 			scroll					1
 			row						1
@@ -3546,7 +3565,7 @@
 			action { play "sound/interface/button1.wav" ; }
 			cvarTest				"tay_specHud"
 			disableCvar { "0" }
-			rect					306 1082 432 52
+			rect					306 1134 432 52
 			page					6
 			scroll					1
 			row						1

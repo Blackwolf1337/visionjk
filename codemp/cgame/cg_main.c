@@ -2334,6 +2334,7 @@ static void CG_DisplaySetup( void )
 	cgDC.registerModel					= trap->R_RegisterModel;
 	cgDC.modelBounds					= trap->R_ModelBounds;
 	cgDC.fillRect						= &CG_FillRect;
+	cgDC.drawBackdrop					= &CG_DrawBackdrop;
 	cgDC.drawRect						= &CG_DrawRect;
 	cgDC.drawSides						= &CG_DrawSides;
 	cgDC.drawTopBottom					= &CG_DrawTopBottom;

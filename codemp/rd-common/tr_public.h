@@ -355,6 +355,10 @@ typedef struct refexport_s {
 		// What the device took for the parts of the last frames (gpuProfile_t of tr_types.h, the GPU profiler of the
 		// client). qfalse: the device has no timestamps.
 		qboolean			(*GpuProfile)							( gpuProfile_t *out );
+		// Frosted glass: what the frame holds now inside the rect (coordinates of DrawStretchPic, radius of the
+		// rounded corners in the same units) is drawn back blurred, as the backdrop of a panel drawn next. qtrue: it
+		// will be (v_backdropBlur above 0 and a device that can), the caller may make its panel more transparent.
+		qboolean			(*DrawBackdrop)							( float x, float y, float w, float h, float radius );
 	} ext;
 
 } refexport_t;

@@ -926,8 +926,8 @@ static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
 	return vk.blurSets[source - vk.blur];
 }
 
-// the pipeline stays bound from one pass of the blur to the next
-void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+// the pipeline stays bound from one pass of the blur to the next. area: only these pixels of the target (NULL: all)
+static void VK_BlurPassArea( vkTarget_t *source, vkTarget_t *target, const float *parm, const VkRect2D *area ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sourceSet = VK_PostSet( source );
 
@@ -939,11 +939,88 @@ void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
 	VK_FullTarget( cmd, target );
+	if ( area ) {
+		qvkCmdSetScissor( cmd, 0, 1, area );
+	}
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
 	qvkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 4, parm );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	VK_BlurPassArea( source, target, parm, NULL );
+}
+
+/*
+===============
+VK_BackdropPass
+
+Frosted glass behind a panel (RE_DrawBackdrop): what the frame holds now is blurred into vk.soft and laid back over
+the frame inside the rect x0 y0 x1 y1 (pixels of the frame), rounded by radius, by shaders/backdrop.frag. The
+passes are those of VK_BlurFrame, but only over the rect and as far around it as the blur reaches, so a small
+panel costs little. vk.color is begun before and begun with vk.depth after; the caller sets its state again.
+===============
+*/
+void VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float strength ) {
+	VkCommandBuffer	cmd = vk.frame->cmd;
+	const int		passes = Com_Clampi( 1, 12, (int)( strength * 4.0f + 0.5f ) );
+	vkTarget_t		*source = &vk.color;
+	const int		sw = vk.soft[0].width, sh = vk.soft[0].height;
+	float			reach = 2.0f;
+	VkRect2D		area, rect;
+
+	x0 = Com_Clampi( 0, vk.color.width, x0 );
+	x1 = Com_Clampi( 0, vk.color.width, x1 );
+	y0 = Com_Clampi( 0, vk.color.height, y0 );
+	y1 = Com_Clampi( 0, vk.color.height, y1 );
+	if ( x1 <= x0 || y1 <= y0 ) {
+		return;
+	}
+	// how far the passes reach, in pixels of the half size: each one half a pixel further out than the one before
+	for ( int i = 1; i <= passes; i++ ) {
+		reach += i - 0.5f;
+	}
+	{
+		const int ax0 = Com_Clampi( 0, sw, (int)( x0 * sw / (float)vk.color.width - reach ) );
+		const int ay0 = Com_Clampi( 0, sh, (int)( y0 * sh / (float)vk.color.height - reach ) );
+		const int ax1 = Com_Clampi( 0, sw, (int)( x1 * sw / (float)vk.color.width + reach + 1.0f ) );
+		const int ay1 = Com_Clampi( 0, sh, (int)( y1 * sh / (float)vk.color.height + reach + 1.0f ) );
+
+		area.offset.x = ax0;
+		area.offset.y = ay0;
+		area.extent.width = (uint32_t)Q_max( 1, ax1 - ax0 );
+		area.extent.height = (uint32_t)Q_max( 1, ay1 - ay0 );
+	}
+
+	VK_EndTarget();
+	for ( int i = 0; i <= passes; i++ ) {
+		vkTarget_t	*target = &vk.soft[i & 1];
+		const float	offset = i ? i - 0.5f : 0.5f;
+		const float	parm[4] = { offset / source->width, offset / source->height, 0.25f, 0.0f };
+
+		VK_BlurPassArea( source, target, parm, &area );
+		source = target;
+	}
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	{
+		const VkDescriptorSet	set = VK_PostSet( source );
+		const float				push[8] = { (float)x0, (float)y0, (float)x1, (float)y1, radius, 0.0f, 0.0f, 0.0f };
+
+		rect.offset.x = x0;
+		rect.offset.y = y0;
+		rect.extent.width = (uint32_t)( x1 - x0 );
+		rect.extent.height = (uint32_t)( y1 - y0 );
+		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.backdropPipeline );
+		vk.boundPipeline = vk.backdropPipeline;
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.smaaPipelineLayout, 0, 1, &set, 0, NULL );
+		qvkCmdPushConstants( cmd, vk.smaaPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( push ), push );
+		VK_FullTarget( cmd, &vk.color );
+		qvkCmdSetScissor( cmd, 0, 1, &rect );
+		qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	}
 }
 
 // The depth is not drawn into while the pass reads it: the pass that follows takes it back (VK_BeginTarget).

@@ -159,6 +159,9 @@ typedef struct windowDef_s {
   float shadow;
   float sheen;
   vec4_t glowColor;
+  // VisionJK "backdrop <alpha scale>": frosted glass behind the panel (DC->drawBackdrop), and its own colour this
+  // much as opaque while the glass is drawn. 0: none
+  float backdrop;
   qboolean wide;					// "wide 1": reaches the sides of a screen that is wider than the 640 units of a menu
 } windowDef_t;
 
@@ -615,6 +618,9 @@ typedef struct displayContextDef_s {
 		// qfalse for a font of the game: not known.
 		qboolean		(*textInk)							( const char *text, float scale, int iMenuFont, float *box );
 	} ext;
+	// VisionJK: frosted glass behind a panel drawn next (the cgame: ext.R_DrawBackdrop). qtrue: it is drawn. NULL in the
+	// ui module, whose menus in the level have the menu blur.
+	qboolean		(*drawBackdrop)						( float x, float y, float w, float h, float radius );
 } displayContextDef_t;
 
 

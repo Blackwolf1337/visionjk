@@ -1109,6 +1109,14 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Originalspiels."
 
+REFERENCE           BLUR_BEHIND_PANELS
+LANG_ENGLISH        "Blur Behind Panels"
+LANG_GERMAN         "Unschärfe hinter Feldern"
+
+REFERENCE           FROSTED_GLASS_WHAT_IS_BEHIND_THE_HUD
+LANG_ENGLISH        "Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer."
+LANG_GERMAN         "Milchglas: was hinter den HUD-Feldern, dem Chatfenster und der Konsole liegt, wird unscharf. 0: aus. Braucht den Vulkan-Renderer."
+
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
 LANG_GERMAN         "Sichtfeld"

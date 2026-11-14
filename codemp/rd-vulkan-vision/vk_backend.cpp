@@ -277,6 +277,33 @@ static const void *RB_StretchPic( const void *data ) {
 	return (const void *)( cmd + 1 );
 }
 
+// VisionJK: frosted glass behind a panel (RE_DrawBackdrop): the rect of the 2D in pixels of the frame, as the
+// projection of RB_SetGL2D() puts it there, and the frame blurred inside it. Not on a 2D plane in the level.
+static const void *RB_Backdrop( const void *data ) {
+	const backdropCommand_t *cmd = (const backdropCommand_t *)data;
+#ifndef RD_VISION_GLES
+	const float bias = R_2DBias(), biasY = R_2DBiasY();
+	const float sx = vk.color.width / ( 640.0f + 2.0f * bias ), sy = vk.color.height / ( 480.0f + 2.0f * biasY );
+
+	VK_BeginFrame();
+	if ( backEnd.plane2D ) {
+		return (const void *)( cmd + 1 );
+	}
+	// what waits to be drawn is behind the panel
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	VK_BackdropPass( (int)floorf( ( cmd->x + bias ) * sx ), (int)floorf( ( cmd->y + biasY ) * sy ),
+		(int)ceilf( ( cmd->x + cmd->w + bias ) * sx ), (int)ceilf( ( cmd->y + cmd->h + biasY ) * sy ), cmd->radius * sx,
+		Com_Clamp( 0.0f, 3.0f, v_backdropBlur->value ) );
+	// the 2D goes on with its own state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	RB_SetGL2D();
+#endif
+	return (const void *)( cmd + 1 );
+}
+
 // a picture turned around its upper right corner (centered: around its middle)
 static const void *RB_RotatePic( const void *data, qboolean centered ) {
 	const rotatePicCommand_t *cmd = (const rotatePicCommand_t *)data;
@@ -1558,6 +1585,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
+			break;
+		case RC_BACKDROP:
+			data = RB_Backdrop( data );
 			break;
 		case RC_ROTATE_PIC:
 			data = RB_RotatePic( data, qfalse );

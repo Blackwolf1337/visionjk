@@ -1500,7 +1500,14 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		const vec4_t shade = { 0.0f, 0.0f, 0.0f, 0.4f };
 
 		Skin_Soft( boxX, boxY + 3.0f, boxW, boxH, 10.0f, shade );
-		Skin_Panel( boxX, boxY, boxW, boxH, 6.0f, chatGlass, chatRim );
+		// frosted glass: what is behind the box blurred, and the glass thinner over it
+		if ( CG_DrawBackdrop( boxX, boxY, boxW, boxH, 6.0f ) ) {
+			const vec4_t frosted = { chatGlass[0], chatGlass[1], chatGlass[2], 0.45f };
+
+			Skin_Panel( boxX, boxY, boxW, boxH, 6.0f, frosted, chatRim );
+		} else {
+			Skin_Panel( boxX, boxY, boxW, boxH, 6.0f, chatGlass, chatRim );
+		}
 	} else {
 		CG_FillRect( boxX, boxY, boxW, boxH, backColor );
 		CG_DrawRect( boxX, boxY, boxW, boxH, 1.0f, frameColor );

@@ -906,6 +906,11 @@ static void CL_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelInde
 }
 
 // ext.R_LoadImageFit: a picture file for the cgame (the drawing board, cgame/toys/cg_board.c)
+// frosted glass behind a panel of the cgame; a renderer without it draws none
+static qboolean CL_DrawBackdrop( float x, float y, float w, float h, float radius ) {
+	return (qboolean)( re && re->ext.DrawBackdrop && re->ext.DrawBackdrop( x, y, w, h, radius ) );
+}
+
 static qboolean CL_LoadImageFit( const char *name, byte *rgba, int width, int height ) {
 	if ( !re || !re->ext.LoadImageFit || !name || !rgba || width < 1 || height < 1 || width > 512 || height > 512 )
 		return qfalse;
@@ -2059,6 +2064,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_AddCutEntity					= re->ext.AddCutEntityToScene;
 		cgi.ext.G2_BoneNumber					= re->ext.G2_BoneNumber;
 		cgi.ext.G2_SetBonesWorld				= re->ext.G2_SetBonesWorld;
+		cgi.ext.R_DrawBackdrop					= CL_DrawBackdrop;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

@@ -207,6 +207,8 @@ SETUP = [
     ('HUD', 'What the screen shows around the level, the view and the crosshair.', [
         ('head', 'HUD'),
         ('yesno', 'New HUD', 'v_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
+        ('slider', 'Blur Behind Panels', 'v_backdropBlur', 1, 0, 3,
+         'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.'),
         ('head', 'View'),
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
         ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),

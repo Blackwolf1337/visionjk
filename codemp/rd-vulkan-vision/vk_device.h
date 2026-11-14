@@ -235,6 +235,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkShaderModule				saberGlowShader;	// and into the buffer of r_DynamicGlow
 	VkPipeline					saberGlowPipeline;
 	VkPipeline					tonemapPipeline;	// v_tonemap over the frame, with the layout of SMAA
+	VkShaderModule				backdropShader;		// frosted glass behind a panel (VK_BackdropPass), the layout of SMAA
+	VkPipeline					backdropPipeline;
 	VkPipeline					smaaEdgePipeline, smaaWeightPipeline, smaaBlendPipeline;
 	VkPipelineCache				pipelineCache;		// kept in the profile, see VK_LoadPipelineCache()
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];

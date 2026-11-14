@@ -833,6 +833,12 @@ LANG_ENGLISH        "New HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 
+REFERENCE           BLUR_BEHIND_PANELS
+LANG_ENGLISH        "Blur Behind Panels"
+
+REFERENCE           FROSTED_GLASS_WHAT_IS_BEHIND_THE_HUD
+LANG_ENGLISH        "Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer."
+
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
 

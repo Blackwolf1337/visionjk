@@ -408,6 +408,39 @@ void RE_StretchPic ( float x, float y, float w, float h,
 
 /*
 =============
+RE_DrawBackdrop
+
+VisionJK (ext.DrawBackdrop): frosted glass behind a panel. What the frame holds at this point of the 2D, the level
+and what was drawn before, is blurred inside the rect and drawn back with rounded corners (RB_Backdrop). Not on
+the OpenGL ES device, not on a 2D plane in the level.
+=============
+*/
+qboolean RE_DrawBackdrop( float x, float y, float w, float h, float radius ) {
+#ifdef RD_VISION_GLES
+	(void)x; (void)y; (void)w; (void)h; (void)radius;
+	return qfalse;
+#else
+	backdropCommand_t *cmd;
+
+	if ( !tr.registered || v_backdropBlur->value <= 0.0f || w <= 0.0f || h <= 0.0f ) {
+		return qfalse;
+	}
+	cmd = (backdropCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return qfalse;
+	}
+	cmd->commandId = RC_BACKDROP;
+	cmd->x = x;
+	cmd->y = y;
+	cmd->w = w;
+	cmd->h = h;
+	cmd->radius = radius;
+	return qtrue;
+#endif
+}
+
+/*
+=============
 RE_DrawTriangles2D
 
 VisionJK: triangles in pixels of the window, x to the right and y down, with the picture of hShader and the

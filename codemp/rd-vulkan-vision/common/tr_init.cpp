@@ -141,6 +141,7 @@ cvar_t	*r_marksOnTriangleMeshes;
 
 cvar_t	*r_aspectCorrectFonts;
 cvar_t	*v_menuBlur;
+cvar_t	*v_backdropBlur;
 cvar_t	*tay_bloom;
 cvar_t	*tay_bloomIntensity;
 cvar_t	*tay_bloomThreshold;
@@ -741,6 +742,7 @@ void R_Register( void )
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()
 	v_menuBlur							= ri.Cvar_Get( "v_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus: 0 not at all, 1 normal, up to 4" );
+	v_backdropBlur						= ri.Cvar_Get( "v_backdropBlur",					"1",						CVAR_ARCHIVE, "Frosted glass behind the HUD panels, the chat box and the console: what is behind them is blurred. 0 off, 1 normal, up to 3" );
 	// what the Vulkan renderer of TaystJK has and rd-vulkan-vision took from it (2026-10-19)
 	tay_bloom							= ri.Cvar_Get( "tay_bloom",						"0",						CVAR_ARCHIVE, "Bright parts of the level shine over their surroundings" );
 	tay_bloomIntensity					= ri.Cvar_Get( "tay_bloomIntensity",				"0.6",						CVAR_ARCHIVE, "How strongly the bright parts shine with tay_bloom, 0 to 2" );
@@ -1221,6 +1223,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.G2_BoneNumber					= G2API_VJK_BoneNumber;
 	re.ext.G2_SetBonesWorld					= G2API_VJK_SetBonesWorld;
 	re.ext.GpuProfile						= RE_GpuProfile;
+	re.ext.DrawBackdrop						= RE_DrawBackdrop;
 
 	return &re;
 }

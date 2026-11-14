@@ -843,6 +843,9 @@ typedef struct cgameImport_s {
 		// cut (or NULL): on the first call the cut of the part in the world and hidden[count] the bones of another part;
 		// each vertex keeps the side it had in that first pose
 		qboolean		(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
+		// frosted glass behind a panel drawn next (ext.DrawBackdrop of the renderer): qtrue when it is drawn. Only
+		// where the ROM cvar v_cgameBackdrop is 1, an older engine ends this table before.
+		qboolean		(*R_DrawBackdrop)						( float x, float y, float w, float h, float radius );
 	} ext;
 } cgameImport_t;
 

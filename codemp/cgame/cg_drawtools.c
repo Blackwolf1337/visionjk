@@ -218,6 +218,27 @@ void CG_FillRect2( float x, float y, float width, float height, const float *col
 
 /*
 ================
+CG_DrawBackdrop
+
+Frosted glass behind a panel drawn next (ext.R_DrawBackdrop, VisionJK): what is behind the rect blurred, in the
+coordinates of CG_FillRect. qtrue: it is drawn, the panel may be thinner. Not on an engine without it.
+================
+*/
+qboolean CG_DrawBackdrop( float x, float y, float width, float height, float radius ) {
+	static int has = -1;
+
+	if ( has < 0 ) {
+		char value[8];
+
+		// (the ROM cvar first: an older engine ends the table of ext before R_DrawBackdrop)
+		trap->Cvar_VariableStringBuffer( "v_cgameBackdrop", value, sizeof( value ) );
+		has = ( atoi( value ) && trap->ext.R_DrawBackdrop ) ? 1 : 0;
+	}
+	return (qboolean)( has > 0 && trap->ext.R_DrawBackdrop( x + cgs.shift2D, y, width, height, radius ) );
+}
+
+/*
+================
 CG_FillRect
 
 Coordinates are 640*480 virtual values. A fill of the whole 640 x 480 (a fade, a tint) covers a wide window too.

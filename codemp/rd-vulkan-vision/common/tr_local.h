@@ -1374,6 +1374,7 @@ extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
 extern	cvar_t	*v_menuBlur;
+extern	cvar_t	*v_backdropBlur;
 extern	cvar_t	*tay_bloom;
 extern	cvar_t	*tay_bloomIntensity;
 extern	cvar_t	*tay_bloomThreshold;
@@ -2013,8 +2014,16 @@ typedef enum {
 	RC_AUTO_MAP,
 	RC_VIDEOFRAME,
 	RC_SET_2D_PLANE,
-	RC_DRAW_TRIS_2D
+	RC_DRAW_TRIS_2D,
+	RC_BACKDROP
 } renderCommand_t;
+
+// VisionJK: the frame blurred inside a rect, the backdrop of a panel (RE_DrawBackdrop, coordinates of RC_STRETCH_PIC)
+typedef struct backdropCommand_s {
+	int		commandId;
+	float	x, y, w, h;
+	float	radius;
+} backdropCommand_t;
 
 // VisionJK: triangles in pixels of the window (RE_DrawTriangles2D, the debug menu of the client); verts and
 // indexes are in the arena of the frame in tr_cmds.cpp
@@ -2058,6 +2067,7 @@ void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 void RE_SetColor( const float *rgba );
 void RE_DrawTriangles2D( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t hShader, const int *clip );
 qhandle_t RE_UiTexture( int slot, const byte *rgba, int width, int height );
+qboolean RE_DrawBackdrop( float x, float y, float w, float h, float radius );
 void RE_StretchPic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_RotatePic ( float x, float y, float w, float h,

@@ -582,6 +582,10 @@ void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.
 void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// Frosted glass behind a panel: the frame blurred and laid back over it inside the rect x0 y0 x1 y1 (pixels of the
+// frame), rounded by radius pixels; strength as v_backdropBlur. Not on the OpenGL ES device. vk.color is begun
+// before and after (with vk.depth), the caller sets its 2D state again.
+void		VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float strength );
 // The same with shaders/focus.frag, which reads the depth of the scene (vk.depth) next to source. Only with
 // vk.depthReadable.
 void		VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
