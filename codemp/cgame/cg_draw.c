@@ -1813,7 +1813,7 @@ void CG_DrawInvenSelect( void )
 			list[n].icon = 0;
 			n++;
 		}
-		CG_Select3D( list, n, selected, cg.invenSelectTime );
+		CG_Select3D( SELECT3D_ITEMS, list, n, selected, cg.invenSelectTime );
 		return;
 	}
 

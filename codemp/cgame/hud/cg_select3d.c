@@ -19,20 +19,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_select3d.c -- VisionJK (issue #17): the selection of a weapon or an item of the inventory with the new HUD as a
-// row of frosted glass cards, each with the 3D model of what it is: the selected card bigger, its model turning, its
-// name and ammo under it. Up to three cards either side, in the order and with the wrap of the stock row
-// (CG_DrawWeaponSelect, CG_DrawInvenSelect), which stays for the HUD of the game (v_hud 0). Not from JA+.
+// carousel of frosted glass cards, each with the 3D model of what it is: the cards stand on a ring, the selected one
+// in front, biggest, its model turning, its name and ammo under it; the ring turns to a new selection the shortest way
+// round. In the order of the stock row (CG_DrawWeaponSelect, CG_DrawInvenSelect), which stays for the HUD of the game
+// (v_hud 0). The models are loaded with the level (CG_Select3DPreload). Not from JA+.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 
-#define SELECT_SIDE			3			// cards at most either side of the selected one
-#define SELECT_SMALL		52.0f		// a side card, in units of the 640 x 480 screen
-#define SELECT_BIG			92.0f		// the selected card
-#define SELECT_PAD			8.0f
-#define SELECT_MIDDLE_Y		368.0f		// the middle of the row: over the panels of the HUD (ui/vision/hud.menu, y 432)
-#define SELECT_RADIUS		8.0f
+#define SELECT_SMALL		40.0f		// a card beside the front one, in units of the 640 x 480 screen
+#define SELECT_BIG			70.0f		// the card in front
+#define SELECT_MIDDLE_Y		376.0f		// the middle of the row: over the panels of the HUD (ui/vision/hud.menu, y 432)
+#define SELECT_RADIUS		7.0f
+#define SELECT_RING			150.0f		// half the width of the ring, in units of the screen
+#define SELECT_STEP			27.0f		// degrees of the ring between two cards
+#define SELECT_REACH		3.4f		// cards shown at most this many places from the front
+#define SELECT_SWIPE_MSEC	110.0f		// how fast the ring turns to the selection (time constant)
 #define SELECT_FOV			30.0f
 #define SELECT_TURN_MSEC	6000.0f		// one turn of the model of the selected card
 #define SELECT_IN_MSEC		120.0f
@@ -79,6 +82,17 @@ static const selectModel_t *Select3D_Model( const gitem_t *item ) {
 		trap->G2API_InitGhoul2Model( &m->ghoul2, path, 0, 0, 0, 0, 0 );
 	}
 	return m;
+}
+
+// the models of every weapon and item, when the level loads: a card shows at once, the first time too
+void CG_Select3DPreload( void ) {
+	const gitem_t *item;
+
+	for ( item = bg_itemlist + 1; item->classname; item++ ) {
+		if ( item->giType == IT_WEAPON || item->giType == IT_HOLDABLE ) {
+			Select3D_Model( item );
+		}
+	}
 }
 
 void CG_Select3DShutdown( void ) {
@@ -176,7 +190,8 @@ static const char *Select3D_Name( const gitem_t *item ) {
 	return item->classname;
 }
 
-static void Select3D_Card( const select3dItem_t *it, float x, float y, float size, qboolean selected, float alpha ) {
+// ringYaw: how far round the ring the card stands, in degrees (its model turns with it)
+static void Select3D_Card( const select3dItem_t *it, float x, float y, float size, qboolean selected, float alpha, float ringYaw ) {
 	const selectModel_t	*m = Select3D_Model( it->item );
 	const float			inset = size * 0.08f;
 	vec4_t				glass, rim;
@@ -196,16 +211,16 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 	}
 	Skin_Panel( x, y, size, size, SELECT_RADIUS, glass, rim );
 
-	if ( it->icon && alpha > 0.3f ) {
+	if ( it->icon && alpha > 0.2f ) {
 		// no model of its own (melee, which the item list gives the model of the stun baton): its picture
 		const float s = size * 0.62f;
 
 		trap->R_SetColor( NULL );
 		CG_DrawPic( x + ( size - s ) * 0.5f, y + ( size - s ) * 0.5f, s, s, it->icon );
-	} else if ( m && alpha > 0.3f ) {
+	} else if ( m && alpha > 0.2f ) {
 		// the selected one turns, the others are shown from the side (the models lie along their y axis, the muzzle
 		// to -y: at yaw 0 it points to the right), turned a little towards the viewer
-		const float yaw = selected ? 360.0f * fmodf( cg.time / SELECT_TURN_MSEC, 1.0f ) : 20.0f;
+		const float yaw = selected ? 360.0f * fmodf( cg.time / SELECT_TURN_MSEC, 1.0f ) : 20.0f - ringYaw;
 
 		Select3D_DrawModel( m, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset, yaw, selected ? 12.0f : 10.0f );
 	}
@@ -221,22 +236,25 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 =================
 CG_Select3D
 
-The row of cards: count items, selected the index of the one that is selected, since the time the row was asked
-for (cg.weaponSelectTime, cg.invenSelectTime). As many either side as the stock row shows (holdCount / 2 left, the
-rest right, at most SELECT_SIDE), walking round the list.
+The carousel of row (SELECT3D_WEAPONS, SELECT3D_ITEMS): count items, selected the index of the one that is
+selected, since the time the row was asked for (cg.weaponSelectTime, cg.invenSelectTime). Each card stands on a ring
+at its place from the front; where the front is follows the selection (pos of the row), turning the shortest way
+round, also when the row comes up again; a list that changed starts at the selection. Drawn from the back to the
+front.
 =================
 */
-void CG_Select3D( const select3dItem_t *items, int count, int selected, int since ) {
-	const float	shown = (float)( cg.time - since );
-	const float	left = (float)( since + WEAPON_SELECT_TIME - cg.time );
-	float		alpha = Com_Clamp( 0.0f, 1.0f, shown / SELECT_IN_MSEC );
-	float		rise, x, y;
-	int			sideLeft, sideRight, i;
+void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since ) {
+	static float	pos[SELECT3D_ROWS];
+	static int		lastCount[SELECT3D_ROWS], lastDraw[SELECT3D_ROWS];
+	const float		shown = (float)( cg.time - since );
+	const float		left = (float)( since + WEAPON_SELECT_TIME - cg.time );
+	float			alpha = Com_Clamp( 0.0f, 1.0f, shown / SELECT_IN_MSEC );
+	float			offsets[64], delta, rise;
+	int				order[64], n = 0, i, j;
 
-	if ( count <= 0 || selected < 0 || selected >= count ) {
+	if ( count <= 0 || count > (int)ARRAY_LEN( order ) || selected < 0 || selected >= count || row < 0 || row >= SELECT3D_ROWS ) {
 		return;
 	}
-
 	if ( left < SELECT_OUT_MSEC ) {
 		alpha *= Com_Clamp( 0.0f, 1.0f, left / SELECT_OUT_MSEC );
 	}
@@ -244,22 +262,79 @@ void CG_Select3D( const select3dItem_t *items, int count, int selected, int sinc
 		return;
 	}
 	rise = ( 1.0f - alpha ) * 8.0f;
-	if ( count - 1 > 2 * SELECT_SIDE ) {
-		sideLeft = sideRight = SELECT_SIDE;
-	} else {
-		sideLeft = ( count - 1 ) / 2;
-		sideRight = count - 1 - sideLeft;
+
+	// where the front of the ring is: it stays where it was while the row is away, so the next switch swipes from the
+	// weapon before to the new one; a list that changed starts at the selection
+	if ( count != lastCount[row] || cg.time < lastDraw[row] ) {
+		pos[row] = (float)selected;
+	}
+	lastCount[row] = count;
+	lastDraw[row] = cg.time;
+	delta = (float)selected - pos[row];
+	while ( delta > count * 0.5f ) {
+		delta -= count;
+	}
+	while ( delta < -count * 0.5f ) {
+		delta += count;
+	}
+	pos[row] += delta * ( 1.0f - expf( -(float)cg.frametime / SELECT_SWIPE_MSEC ) );
+	if ( fabsf( delta ) < 0.002f ) {
+		pos[row] = (float)selected;
+	}
+	pos[row] = fmodf( pos[row] + count, (float)count );
+
+	// the place of each card from the front, the ones far round left out, the farthest first
+	for ( i = 0; i < count; i++ ) {
+		float o = (float)i - pos[row];
+
+		while ( o > count * 0.5f ) {
+			o -= count;
+		}
+		while ( o < -count * 0.5f ) {
+			o += count;
+		}
+		if ( fabsf( o ) > SELECT_REACH ) {
+			continue;
+		}
+		offsets[n] = o;
+		order[n++] = i;
+	}
+	for ( i = 1; i < n; i++ ) {
+		for ( j = i; j > 0 && fabsf( offsets[j - 1] ) < fabsf( offsets[j] ); j-- ) {
+			const float	o = offsets[j];
+			const int	k = order[j];
+
+			offsets[j] = offsets[j - 1];
+			order[j] = order[j - 1];
+			offsets[j - 1] = o;
+			order[j - 1] = k;
+		}
 	}
 
-	// the selected card in the middle, its name and ammo under it
-	x = 320.0f - SELECT_BIG * 0.5f;
-	y = SELECT_MIDDLE_Y - SELECT_BIG * 0.5f + rise;
-	Select3D_Card( &items[selected], x, y, SELECT_BIG, qtrue, alpha );
+	for ( i = 0; i < n; i++ ) {
+		const float	o = offsets[i];
+		const float	angle = DEG2RAD( o * SELECT_STEP );
+		const float	depth = cosf( angle );		// 1 in front, less round the ring
+		const float	front = Com_Clamp( 0.0f, 1.0f, 1.0f - fabsf( o ) );
+		const float	size = ( SELECT_SMALL + ( SELECT_BIG - SELECT_SMALL ) * front ) * ( 0.8f + 0.2f * depth );
+		const float	x = 320.0f + SELECT_RING * sinf( angle ) - size * 0.5f;
+		// (the ring seen a little from above: what is farther back stands higher)
+		const float	y = SELECT_MIDDLE_Y - size * 0.5f - ( 1.0f - depth ) * 14.0f + rise;
+		const float	fade = alpha * Com_Clamp( 0.0f, 1.0f, ( SELECT_REACH - fabsf( o ) ) * 1.2f ) * ( 0.55f + 0.45f * depth );
+
+		// (not a card too faint for its model: that was an empty frame at the ends of the ring)
+		if ( depth <= 0.0f || fade <= 0.25f ) {
+			continue;
+		}
+		Select3D_Card( &items[order[i]], x, y, size, (qboolean)( order[i] == selected ), fade, o * SELECT_STEP );
+	}
+
+	// the name and the ammo of the selection under the front of the ring
 	{
 		const char	*name = Select3D_Name( items[selected].item );
-		const float	scale = 0.42f;
+		const float	scale = 0.36f;
 		vec4_t		text = { 0.92f, 0.95f, 1.0f, alpha };
-		float		ty = y + SELECT_BIG + 6.0f;
+		float		ty = SELECT_MIDDLE_Y + SELECT_BIG * 0.5f + 4.0f + rise;
 
 		CG_Text_Paint( 320.0f - CG_Text_Width( name, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, name, 0, 0, 0, SKIN_FONT_SANS );
 		if ( items[selected].count >= 0 ) {
@@ -267,24 +342,9 @@ void CG_Select3D( const select3dItem_t *items, int count, int selected, int sinc
 
 			memcpy( text, selectAccent, sizeof( text ) );
 			text[3] = alpha;
-			ty += 13.0f;
+			ty += 11.0f;
 			CG_Text_Paint( 320.0f - CG_Text_Width( ammo, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, ammo, 0, 0, 0, SKIN_FONT_SANS );
 		}
-	}
-
-	// the side cards, from the selected one outwards
-	y = SELECT_MIDDLE_Y - SELECT_SMALL * 0.5f + rise;
-	for ( i = 1; i <= sideLeft; i++ ) {
-		const int n = ( selected - i + count * 4 ) % count;
-
-		x = 320.0f - SELECT_BIG * 0.5f - i * ( SELECT_SMALL + SELECT_PAD );
-		Select3D_Card( &items[n], x, y, SELECT_SMALL, qfalse, alpha * ( 1.0f - 0.15f * ( i - 1 ) ) );
-	}
-	for ( i = 1; i <= sideRight; i++ ) {
-		const int n = ( selected + i ) % count;
-
-		x = 320.0f + SELECT_BIG * 0.5f + SELECT_PAD + ( i - 1 ) * ( SELECT_SMALL + SELECT_PAD );
-		Select3D_Card( &items[n], x, y, SELECT_SMALL, qfalse, alpha * ( 1.0f - 0.15f * ( i - 1 ) ) );
 	}
 	trap->R_SetColor( NULL );
 }

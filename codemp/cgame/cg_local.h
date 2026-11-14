@@ -2106,7 +2106,11 @@ typedef struct select3dItem_s {
 	int				count;		// the ammo under the selected card, -1: none
 	qhandle_t		icon;		// a picture in place of the model (melee), 0: the model
 } select3dItem_t;
-void CG_Select3D( const select3dItem_t *items, int count, int selected, int since );
+#define SELECT3D_WEAPONS	0			// the rows, each with a carousel of its own
+#define SELECT3D_ITEMS		1
+#define SELECT3D_ROWS		2
+void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since );
+void CG_Select3DPreload( void );
 void CG_Select3DShutdown( void );
 void CG_FillRect( float x, float y, float width, float height, const float *color );
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader );

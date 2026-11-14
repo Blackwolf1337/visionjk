@@ -1508,6 +1508,7 @@ Ghoul2 Insert Start
 //	CG_LoadingString("weapons");
 
 	CG_InitG2Weapons();
+	CG_Select3DPreload();
 
 /*
 Ghoul2 Insert End

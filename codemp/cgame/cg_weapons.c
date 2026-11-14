@@ -1141,9 +1141,12 @@ void CG_DrawWeaponSelect( void ) {
 				continue;
 			}
 			for ( k = 0; k < 2; k++ ) {
-				const int weap = order[k];
+				const int		weap = order[k];
+				const gitem_t	*item = weap ? BG_FindItemForWeapon( (weapon_t)weap ) : NULL;
 
-				if ( !weap || !( bits & ( 1 << weap ) ) || !cg_weapons[weap].item ) {
+				// (the item of the list, not cg_weapons[].item: that one is only there once the weapon was
+				// registered, and a card of a weapon not yet held left out was what the first version did)
+				if ( !item || !( bits & ( 1 << weap ) ) ) {
 					continue;
 				}
 				if ( !CG_WeaponSelectable( weap ) && ( weap == WP_THERMAL || weap == WP_TRIP_MINE ) && weap != cg.weaponSelect ) {
@@ -1153,7 +1156,7 @@ void CG_DrawWeaponSelect( void ) {
 				if ( weap == cg.weaponSelect ) {
 					selected = n;
 				}
-				list[n].item = cg_weapons[weap].item;
+				list[n].item = item;
 				list[n].dim = (qboolean)!CG_WeaponCheck( weap );
 				list[n].count = weaponData[weap].ammoIndex != AMMO_NONE
 					? cg.predictedPlayerState.ammo[weaponData[weap].ammoIndex] : -1;
@@ -1161,7 +1164,7 @@ void CG_DrawWeaponSelect( void ) {
 				n++;
 			}
 		}
-		CG_Select3D( list, n, selected, cg.weaponSelectTime );
+		CG_Select3D( SELECT3D_WEAPONS, list, n, selected, cg.weaponSelectTime );
 		return;
 	}
 
