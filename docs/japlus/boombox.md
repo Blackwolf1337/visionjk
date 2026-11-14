@@ -217,6 +217,83 @@ packets have unit tests (`tv_packets` in `tests/vjk/boombox.cpp`).
 Not tested: the masterserver path in a real game (a server without the game module), real YouTube videos (this
 machine has no yt-dlp), Windows, the light in a real game, and nginx on the host before the deploy.
 
+## Sync audioplayer
+
+A player can sync a boombox or a sound system (not a TV) with the music player that runs on their own computer:
+Spotify, YouTube Music, Quince, any player that speaks MPRIS. Everybody near the box then hears what that player
+plays, from the box, in 3D. YouTube links and the line keep working: while a box is synced its line waits, and
+the song goes on where it stopped when the sync ends.
+
+### For players
+
+Open the card of the box and pick "Sync audioplayer ...". If one player plays, it is taken at once. With several
+the card lists them and you pick one. On the quick wheel a box has the slice "Sync", which takes the first player
+that plays. The console does the same:
+
+```
+v_boombox sync [box]        the box near you, or that number
+v_boombox unsync [box]
+```
+
+While a box is synced its card says "Synced", the title of what the player plays (it changes with the song, also
+while paused) and whose player it is. Everybody can press "Stop sync". Only the one who synced gets "Pause or play
+<player>" and "Next song", which go to their player over MPRIS, and "Hear it from the box". Pause, Skip, Stop, a
+jump in the song and Take it away are refused for everybody while the box is synced ("it is synced with the
+player of X, end the sync first"). The volume, Move it and adding songs to the line still work.
+
+The one who synced hears their player directly, as always. The server does not send the box back to them. With
+`v_boxSyncHear 1` (default 0) their own box plays for them locally as well. Muting the music player, or setting
+its volume to 0 in the mixer of the system, also silences what the game captures (measured on PipeWire). To
+hear it only from the box, set the output of the player to a device you do not listen to: the capture follows the
+program, not the device.
+
+A sync ends when:
+
+- someone presses Stop sync,
+- the one who synced leaves,
+- nothing arrives from them for 5 seconds,
+- they sync another box,
+- the box is removed,
+- the sound of their player is not found within 8 seconds,
+- the music player is gone from the desktop bus for 10 seconds.
+
+`v_voice_status` shows the sync ("Sync audioplayer: box N plays <player>, its sound is found, X frames of sound
+and Y of silence sent") and every box channel with the frames heard.
+
+Linux only for now: PulseAudio, or PipeWire through pipewire-pulse. Windows is planned (process loopback) and not
+built. A player in a browser (YouTube Music in Firefox) sends the sound of the whole browser. It works on a server
+with the game module of this tree (`vs_box on` says `BOX_CAP_SYNC`) and through the masterserver
+(`VOICE_FLAG_SYNC`). A server or master of an earlier version does not offer it, and the row is hidden.
+
+### How it works
+
+`cgame/boombox/cg_boombox_sync.c` (the sync), `cgame/voice/cg_voice_feed.c` (capture and encoding),
+`ui/ui_music.c` (the players on the desktop bus, MPRIS), `cgame/select/cg_select.c` (the card), `game/boombox/bg_boombox_core.c` (`Box_Sync()`, `Box_Feed()`),
+`game/boombox/g_boombox.c`, `game/voice/g_voice.c`, `master/ms_boombox.c` and `master/ms_relay.c`. Branch
+`feature/box-sync`.
+
+The client captures only the stream of the player: a PulseAudio record stream that monitors one sink input
+(`pa_stream_set_monitor_stream`). `libpulse.so.0` and `libdbus-1.so.3` are loaded at run time, nothing is needed
+to build. The sink input is matched by process, in this order: the PID of the MPRIS name owner
+(`GetConnectionUnixProcessID`), a child process of it (Chromium, Electron and browsers play from a child), the PID
+that the client of the stream states (native PipeWire programs such as mpv and Quince only state it there), and
+last the program name against the MPRIS name.
+
+The sound is encoded like the song of a box: Opus, 48 kHz, 20 ms frames, 64 kbit/s a channel, music signal,
+in-band FEC. A boombox gets a mono mix, a sound system left and right apart. While nothing comes (the player is
+paused), silence frames go out by the clock, a few bytes each, so the sync does not time out.
+
+The frames go in the new datagram `RELAY_FEED` (type 9), from the client to the relay or master only: the usual
+head, one byte (the box in the low 4 bits, the channel in the high 4) and the Opus frame. The relay takes it only
+from the player the box is synced with, under its own limit (`VOICE_FEED_PPS` 110, `VOICE_FEED_BPS` 22000), and
+sends each frame unchanged as `RELAY_AUDIO` of the speaker of that box, with the sequence number of the client, to
+everybody in range except the one who synced. A listener needs no new client for it.
+
+The commands are `vs_boxaction sync <box> "<title>"`, `synctitle <box> "<title>"` and `unsync <box>`. Through the
+master they are `BOX_DO_SYNC` 16, `BOX_DO_SYNCTITLE` 17 (the title as text) and `BOX_DO_UNSYNC` 18. `vs_box set`
+of a synced box has the flags `BOX_PLAYING | BOX_SYNCED` (16), msec and length 0, the title as sent and the name
+of the one who synced as `by`. `BOX_SYNC_QUIET` is 5000 ms.
+
 ## For server owners
 
 The server fetches every song itself and needs three programs for it, in the `PATH` of the server or named by
