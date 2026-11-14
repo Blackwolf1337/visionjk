@@ -28,12 +28,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 
-#define SELECT_SMALL		40.0f		// a card beside the front one, in units of the 640 x 480 screen
-#define SELECT_BIG			70.0f		// the card in front
-#define SELECT_MIDDLE_Y		410.0f		// the middle of the row, at the bottom of the screen between the panels of the HUD
+#define SELECT_SMALL		28.0f		// a card beside the front one, in units of the 640 x 480 screen
+#define SELECT_BIG			50.0f		// the card in front
+#define SELECT_MIDDLE_Y		420.0f		// the middle of the row, at the bottom of the screen between the panels of the HUD
 										// (ui/vision/hud.menu, at the edges), the name and ammo under it
-#define SELECT_RADIUS		7.0f
-#define SELECT_RING			150.0f		// half the width of the ring, in units of the screen
+#define SELECT_RADIUS		6.0f
+#define SELECT_RING			110.0f		// half the width of the ring, in units of the screen
 #define SELECT_STEP			27.0f		// degrees of the ring between two cards
 #define SELECT_REACH		3.4f		// cards shown at most this many places from the front
 #define SELECT_SWIPE_MSEC	110.0f		// how fast the ring turns to the selection (time constant)
@@ -333,7 +333,7 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 	// the name and the ammo of the selection under the front of the ring
 	{
 		const char	*name = Select3D_Name( items[selected].item );
-		const float	scale = 0.36f;
+		const float	scale = 0.32f;
 		vec4_t		text = { 0.92f, 0.95f, 1.0f, alpha };
 		float		ty = SELECT_MIDDLE_Y + SELECT_BIG * 0.5f + 4.0f + rise;
 
@@ -343,7 +343,7 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 
 			memcpy( text, selectAccent, sizeof( text ) );
 			text[3] = alpha;
-			ty += 11.0f;
+			ty += 10.0f;
 			CG_Text_Paint( 320.0f - CG_Text_Width( ammo, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, ammo, 0, 0, 0, SKIN_FONT_SANS );
 		}
 	}
