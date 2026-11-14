@@ -425,6 +425,14 @@ REFERENCE           REAL
 LANG_ENGLISH        "Real"
 LANG_SPANISH        "Reales"
 
+REFERENCE           RAY_TRACING
+LANG_ENGLISH        "Ray Tracing"
+LANG_SPANISH        "Trazado de rayos"
+
+REFERENCE           SHADOWS_OF_THE_PLAYERS_TRACED_BY_RAY
+LANG_ENGLISH        "Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video."
+LANG_SPANISH        "Sombras de los jugadores trazadas por rayos donde la tarjeta gráfica puede. Desactivado: mapas de sombras, que cuestan menos. Necesita reiniciar el vídeo."
+
 REFERENCE           MATERIALS
 LANG_ENGLISH        "Materials"
 LANG_SPANISH        "Materiales"

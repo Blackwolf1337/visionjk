@@ -711,6 +711,8 @@ TR = {
     'Changed from default, click the dot to reset': 'Vom Standard geändert, Klick auf den Punkt setzt zurück',
     'Takes effect after a restart': 'Gilt nach einem Neustart',
     'Apply and Restart': 'Übernehmen und neu starten',
+    'Ray Tracing': 'Raytracing',
+    'Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video.': 'Schatten der Spieler, mit Strahlen verfolgt, wo die Grafikkarte es kann. Aus: Shadow Maps, die weniger kosten. Braucht einen Neustart des Videos.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.

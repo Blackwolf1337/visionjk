@@ -425,6 +425,14 @@ REFERENCE           REAL
 LANG_ENGLISH        "Real"
 LANG_FRENCH         "Réelles"
 
+REFERENCE           RAY_TRACING
+LANG_ENGLISH        "Ray Tracing"
+LANG_FRENCH         "Lancer de rayons"
+
+REFERENCE           SHADOWS_OF_THE_PLAYERS_TRACED_BY_RAY
+LANG_ENGLISH        "Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video."
+LANG_FRENCH         "Ombres des joueurs tracées par rayons là où la carte graphique le peut. Désactivé : des shadow maps, moins coûteuses. Nécessite un redémarrage de la vidéo."
+
 REFERENCE           MATERIALS
 LANG_ENGLISH        "Materials"
 LANG_FRENCH         "Matériaux"

@@ -1034,13 +1034,34 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_raytracing
+			type					ITEM_TYPE_YESNO
+			text					@VISION_RAY_TRACING
+			descText				@VISION_SHADOWS_OF_THE_PLAYERS_TRACED_BY_RAY
+			cvar					"v_rayTracing"
+			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"cg_shadows"
+			disableCvar { "0" "1" }
+			rect					306 238 392 52
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_pbr
 			type					ITEM_TYPE_YESNO
 			text					@VISION_MATERIALS
 			descText				@VISION_SURFACES_WITH_A_MATERIAL_ARE_LIT_WIT
 			cvar					"v_pbr"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 238 392 52
+			rect					306 290 392 52
 			page					2
 			scroll					1
 			row						1
@@ -1059,7 +1080,7 @@
 			descText				@VISION_HOW_BRIGHT_SABERS_SHOTS_AND_EXPLOSIO
 			cvarfloat				"v_dlightScale" 1 0 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 290 392 52
+			rect					306 342 392 52
 			page					2
 			scroll					1
 			row						1
@@ -1081,7 +1102,7 @@
 			action { play "sound/interface/button1.wav" ; }
 			cvarTest				"v_pbr"
 			disableCvar { "0" }
-			rect					306 342 392 52
+			rect					306 394 392 52
 			page					2
 			scroll					1
 			row						1
@@ -1100,7 +1121,7 @@
 			descText				@VISION_HOW_BRIGHTLY_THE_LAMP_PANELS_OF_A_LE
 			cvarfloat				"v_panelGlow" 2 0 4
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 394 392 52
+			rect					306 446 392 52
 			page					2
 			scroll					1
 			row						1
@@ -1121,7 +1142,7 @@
 			action { play "sound/interface/button1.wav" ; }
 			cvarTest				"cg_shadows"
 			disableCvar { "0" "1" }
-			rect					306 446 392 52
+			rect					306 498 392 52
 			page					2
 			scroll					1
 			row						1
@@ -1142,7 +1163,7 @@
 			action { play "sound/interface/button1.wav" ; }
 			cvarTest				"v_pbr"
 			disableCvar { "0" }
-			rect					306 498 392 52
+			rect					306 550 392 52
 			page					2
 			scroll					1
 			row						1

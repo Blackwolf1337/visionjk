@@ -893,4 +893,6 @@ MORE = {
     'Needs %s': ('Nécessite %s', 'Necesita %s'),
     'Not in this version': ('Absent de cette version', 'No está en esta versión'),
     'Renamed to %s': ('Renommé en %s', 'Renombrado a %s'),
+    'Ray Tracing': ('Lancer de rayons', 'Trazado de rayos'),
+    'Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video.': ('Ombres des joueurs tracées par rayons là où la carte graphique le peut. Désactivé : des shadow maps, moins coûteuses. Nécessite un redémarrage de la vidéo.', 'Sombras de los jugadores trazadas por rayos donde la tarjeta gráfica puede. Desactivado: mapas de sombras, que cuestan menos. Necesita reiniciar el vídeo.'),
 }

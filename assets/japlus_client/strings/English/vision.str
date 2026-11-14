@@ -320,6 +320,12 @@ LANG_ENGLISH        "Blob"
 REFERENCE           REAL
 LANG_ENGLISH        "Real"
 
+REFERENCE           RAY_TRACING
+LANG_ENGLISH        "Ray Tracing"
+
+REFERENCE           SHADOWS_OF_THE_PLAYERS_TRACED_BY_RAY
+LANG_ENGLISH        "Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video."
+
 REFERENCE           MATERIALS
 LANG_ENGLISH        "Materials"
 
