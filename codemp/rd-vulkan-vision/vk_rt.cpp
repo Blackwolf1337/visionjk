@@ -2502,6 +2502,16 @@ void VK_RT_Pass( void ) {
 	if ( !vk.frame || !VK_RT_Wanted() ) {
 		return;
 	}
+	// Nothing to trace this frame: no player casts a shadow (VK_RT_AddCaster ran during the level), the level is
+	// built and its cells are traced, no debug view. Splitting the level, resolving its samples and building the
+	// top structure cost about 0.1 ms a frame for nothing (2026-11-14).
+	if ( v_rtDebug->integer <= 0 && ( rt.castersFrame != backEnd.viewParms.frameCount || !rt.numCasters )
+		&& rt.world == tr.world && rt.worldLoads == r_worldLoads && !rt.levelPending && rt.cellState == 0 ) {
+		rt.numCasters = 0;
+		rt.previousValid = qfalse;
+		rt.readValid = qfalse;
+		return;
+	}
 	cmd = vk.frame->cmd;
 	VK_EndTarget();
 	// (the end of the level resolves its samples: a mark of its own, else the builds seem to cost it)
