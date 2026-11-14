@@ -79,7 +79,119 @@ typedef struct slice_s {
 	vec3_t		dripLast[SLICE_PARTS];	// a part in the air drips from its cut: where it last was,
 	float		dripLeft[SLICE_PARTS];	//	and units to go to the next drop
 	float		airSpeed[SLICE_PARTS];	// how fast it flew while in the air (a hard landing splashes)
+
+	// the death throes (v_sliceThroes), picked when the body is split
+	const struct sliceThroe_s *throe;
+	int			throeStart;		// cg.time they start, after the death cry of the server's event
+	int			throeCue;		// the next sound of throe
+	int			nextTwitch;
 } slice_t;
+
+/*
+The death throes of a cut body: what the cut took off the trunk (CG_RagCutKind) picks one of these by weight, so two
+cuts alike do not always end alike. The limbs on the part with the head (and with legs those on the part with the
+pelvis) twitch for msec, less and less, and the custom sounds of the victim's model come from where the head is,
+at those times after the start. All stock sounds of the player models, with the fallback of CG_CustomSound.
+*/
+#define SLICE_THROE_DELAY	700			// ms after the cut: the death cry of EV_DEATH comes first
+#define SLICE_THROE_CUES	4
+
+typedef struct sliceThroe_s {
+	int			kind;			// RAG_CUT_HEAD ...
+	int			weight;
+	int			msec;			// how long the limbs twitch
+	float		twitch;			// how hard at first (units a second)
+	qboolean	legs;			// the legs too
+	const char	*sounds[SLICE_THROE_CUES];
+	int			at[SLICE_THROE_CUES];
+} sliceThroe_t;
+
+static const sliceThroe_t sliceThroes[] = {
+	// the head off: dead at once, one jerk, now and then a last gurgle
+	{ RAG_CUT_HEAD,		70,	600,	60.0f,	qfalse,	{ NULL },								{ 0 } },
+	{ RAG_CUT_HEAD,		30,	900,	70.0f,	qfalse,	{ "*gurp1" },							{ 300 } },
+	// through the chest: choking on the blood
+	{ RAG_CUT_CHEST,	45,	2500,	110.0f,	qfalse,	{ "*choke1", "*gurp1" },				{ 0, 1300 } },
+	{ RAG_CUT_CHEST,	30,	3000,	120.0f,	qfalse,	{ "*choke2", "*choke3", "*gurp2" },		{ 0, 1000, 2200 } },
+	{ RAG_CUT_CHEST,	25,	1800,	90.0f,	qfalse,	{ "*gurp2" },							{ 200 } },
+	// through the waist: moaning a while
+	{ RAG_CUT_WAIST,	40,	5000,	90.0f,	qtrue,	{ "*pain50", "*pain25", "*pain25" },	{ 0, 1800, 3600 } },
+	{ RAG_CUT_WAIST,	35,	4000,	80.0f,	qtrue,	{ "*pain25", "*choke1" },				{ 0, 2000 } },
+	{ RAG_CUT_WAIST,	25,	6000,	70.0f,	qtrue,	{ "*pain50", "*pain50", "*pain25" },	{ 0, 2200, 4400 } },
+	// a limb off, the trunk whole: the longest
+	{ RAG_CUT_LIMB,		50,	7000,	90.0f,	qtrue,	{ "*pain75", "*pain50", "*pain25", "*pain25" },	{ 0, 1800, 3800, 5800 } },
+	{ RAG_CUT_LIMB,		50,	6000,	80.0f,	qtrue,	{ "*pain50", "*pain25", "*pain25" },	{ 0, 2200, 4400 } },
+};
+
+static const sliceThroe_t *CG_SlicePickThroe( int kind ) {
+	int total = 0, pick, i;
+
+	for ( i = 0; i < (int)ARRAY_LEN( sliceThroes ); i++ ) {
+		if ( sliceThroes[i].kind == kind ) {
+			total += sliceThroes[i].weight;
+		}
+	}
+	if ( total <= 0 ) {
+		return NULL;
+	}
+	pick = rand() % total;
+	for ( i = 0; i < (int)ARRAY_LEN( sliceThroes ); i++ ) {
+		if ( sliceThroes[i].kind != kind ) {
+			continue;
+		}
+		if ( pick < sliceThroes[i].weight ) {
+			return &sliceThroes[i];
+		}
+		pick -= sliceThroes[i].weight;
+	}
+	return NULL;
+}
+
+// once a frame before the ragdolls step: the twitches and the sounds that are due
+// developer 1 tells which throes were picked and when their sounds come
+static qboolean CG_SliceTell( void ) {
+	char value[8];
+
+	trap->Cvar_VariableStringBuffer( "developer", value, sizeof( value ) );
+	return (qboolean)( atoi( value ) != 0 );
+}
+
+static void CG_SliceThroes( slice_t *s ) {
+	const sliceThroe_t	*t = s->throe;
+	int					since;
+
+	if ( !t || s->rag < 0 || s->gone || !v_sliceThroes.integer ) {
+		return;
+	}
+	since = cg.time - s->throeStart;
+	if ( since < 0 ) {
+		return;
+	}
+	if ( since >= t->msec && ( s->throeCue >= SLICE_THROE_CUES || !t->sounds[s->throeCue] ) ) {
+		s->throe = NULL;
+		return;
+	}
+	if ( since < t->msec && cg.time >= s->nextTwitch ) {
+		const float left = 1.0f - (float)since / t->msec;
+
+		CG_RagTwitch( s->rag, (qboolean)( t->legs && ( rand() & 1 ) ), t->twitch * left * Q_flrand( 0.6f, 1.0f ) );
+		s->nextTwitch = cg.time + Q_irand( 150, 450 );
+	}
+	while ( s->throeCue < SLICE_THROE_CUES && t->sounds[s->throeCue] && since >= t->at[s->throeCue] ) {
+		const sfxHandle_t	sfx = CG_CustomSound( s->victim, t->sounds[s->throeCue] );
+		vec3_t				head;
+
+		// (the world with an origin, on no channel of the victim: he may be back, his steps would cut it off)
+		if ( sfx > 0 && CG_RagHeadOrigin( s->rag, head ) ) {
+			trap->S_StartSound( head, ENTITYNUM_WORLD, CHAN_AUTO, sfx );
+		}
+		if ( CG_SliceTell() ) {
+			trap->Print( "slice throes: %s at %i ms\n", t->sounds[s->throeCue], since );
+		}
+		s->throeCue++;
+	}
+}
+
 
 // blood left on the level by a cut: a splat (WET_BLOOD) or a piece of a smear (WET_BLOOD_STREAK)
 typedef struct {
@@ -313,14 +425,15 @@ void CG_SliceKill( int victim, int killer ) {
 =================
 CG_SliceTest_f
 
-"v_sliceTest [pitch yaw]" (cheats): the nearest dead player cut through his middle by a plane whose normal has these
-angles (default: across the waist), for the tests of hidden runs
+"v_sliceTest [pitch yaw [height]]" (cheats): the nearest dead player cut through his middle by a plane whose normal has
+these angles (default: across the waist), height units above it (e.g. 20 the chest, 34 the neck), for the tests of
+hidden runs
 =================
 */
 void CG_SliceTest_f( void ) {
 	vec3_t	angles = { -90.0f, 0.0f, 0.0f }, normal, sweep, up = { 0.0f, 0.0f, 1.0f };
 	vec4_t	plane;
-	float	best = 1024.0f;
+	float	best = 1024.0f, height = 0.0f;
 	int		i, victim = -1;
 	char	value[8];
 
@@ -332,6 +445,9 @@ void CG_SliceTest_f( void ) {
 	if ( trap->Cmd_Argc() >= 3 ) {
 		angles[PITCH] = atof( CG_Argv( 1 ) );
 		angles[YAW] = atof( CG_Argv( 2 ) );
+	}
+	if ( trap->Cmd_Argc() >= 4 ) {
+		height = atof( CG_Argv( 3 ) );
 	}
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		const centity_t *cent = &cg_entities[i];
@@ -349,7 +465,7 @@ void CG_SliceTest_f( void ) {
 	}
 	AngleVectors( angles, normal, NULL, NULL );
 	VectorCopy( normal, plane );
-	plane[3] = DotProduct( normal, cg_entities[victim].lerpOrigin ) + 4.0f * normal[2];
+	plane[3] = DotProduct( normal, cg_entities[victim].lerpOrigin ) + ( 4.0f + height ) * normal[2];
 	CrossProduct( normal, up, sweep );
 	if ( VectorNormalize( sweep ) < 0.1f ) {
 		VectorSet( sweep, 1.0f, 0.0f, 0.0f );
@@ -538,6 +654,16 @@ qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angle
 	s->ent.renderfx &= ~( RF_THIRD_PERSON | RF_FIRST_PERSON | RF_FORCE_ENT_ALPHA | RF_RGB_TINT );
 	s->ent.renderfx |= RF_LIGHTING_ORIGIN;
 	s->ent.shaderRGBA[3] = 255;
+
+	// the death throes, by what the cut took off
+	s->throe = CG_SlicePickThroe( CG_RagCutKind( s->rag ) );
+	s->throeStart = Q_max( cg.time, s->time + SLICE_THROE_DELAY );
+	s->throeCue = 0;
+	s->nextTwitch = s->throeStart;
+	if ( CG_SliceTell() ) {
+		trap->Print( "slice throes: cut kind %i, %s\n", CG_RagCutKind( s->rag ),
+			s->throe ? ( s->throe->sounds[0] ? s->throe->sounds[0] : "no sound" ) : "none" );
+	}
 
 	// the blood runs out under the cut
 	VectorCopy( centre, down );
@@ -825,6 +951,11 @@ void CG_SliceScene( void ) {
 
 	if ( !CG_SliceOn() ) {
 		return;
+	}
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		if ( slices[i].active ) {
+			CG_SliceThroes( &slices[i] );
+		}
 	}
 	CG_RagFrame();
 	for ( i = 0; i < SLICE_MAX; i++ ) {

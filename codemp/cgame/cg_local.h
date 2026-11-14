@@ -2014,6 +2014,15 @@ void CG_RagFrame( void );
 int CG_RagParts( int handle );
 qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
 void CG_RagExplosion( const vec3_t origin, float radius );
+// what a cut took off the trunk (CG_RagCutKind), for the death throes of cg_slice.c
+#define RAG_CUT_NONE	0
+#define RAG_CUT_HEAD	1
+#define RAG_CUT_CHEST	2
+#define RAG_CUT_WAIST	3
+#define RAG_CUT_LIMB	4
+int CG_RagCutKind( int handle );
+qboolean CG_RagHeadOrigin( int handle, vec3_t out );
+void CG_RagTwitch( int handle, qboolean legs, float speed );
 void CG_RagDump_f( void );
 qboolean CG_RagBleed( int handle, int n, vec3_t cutCentre, vec3_t velocity, vec3_t floorAt, float *slide );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );

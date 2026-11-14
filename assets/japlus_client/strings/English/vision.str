@@ -635,6 +635,12 @@ LANG_ENGLISH        "Screen and Ground"
 REFERENCE           GROUND_ONLY
 LANG_ENGLISH        "Ground Only"
 
+REFERENCE           DEATH_THROES
+LANG_ENGLISH        "Death Throes"
+
+REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
+LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 

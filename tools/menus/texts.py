@@ -562,6 +562,8 @@ TR = {
     'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.': 'Blut eines zerteilten Körpers. Nur Boden: Lachen und Schlieren, kein Spritzen und kein Blut auf dem Bildschirm. Aus: der Schnitt bleibt.',
     'Screen and Ground': 'Bildschirm und Boden',
     'Ground Only': 'Nur Boden',
+    'Death Throes': 'Todeszuckungen',
+    'A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went.': 'Ein zerteilter Körper zuckt noch eine Weile und röchelt, gurgelt oder stöhnt, je nachdem, wo der Schnitt war.',
     'Trail Length': 'Spurlänge',
     'How long the trail behind a swinging blade is.': 'Wie lang die Spur hinter einer schwingenden Klinge ist.',
     'Blade Core': 'Klingenkern',

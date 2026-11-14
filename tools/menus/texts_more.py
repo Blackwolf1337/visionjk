@@ -594,6 +594,8 @@ MORE = {
     'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.': ("Le sang d'un corps tranché. Sol seulement : flaques et traînées, sans projections ni sang à l'écran. Désactivé : la coupe reste.", 'La sangre de un cuerpo cortado. Solo suelo: charcos y regueros, sin salpicaduras ni sangre en la pantalla. Desactivado: el corte queda.'),
     'Screen and Ground': ('Écran et sol', 'Pantalla y suelo'),
     'Ground Only': ('Sol seulement', 'Solo suelo'),
+    'Death Throes': ("Convulsions d'agonie", 'Estertores'),
+    'A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went.': ("Un corps tranché tressaille encore un moment et s'étouffe, gargouille ou gémit, selon l'endroit de la coupe.", 'Un cuerpo cortado se agita un rato y se ahoga, gorgotea o gime, según por dónde fue el corte.'),
     'Trail Length': ('Longueur de la traînée', 'Longitud de la estela'),
     'How long the trail behind a swinging blade is.': ('La longueur de la traînée derrière une lame en mouvement.', 'Longitud de la estela tras una hoja en movimiento.'),
     'Blade Core': ('Cœur de la lame', 'Núcleo de la hoja'),

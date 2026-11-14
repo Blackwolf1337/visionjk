@@ -845,6 +845,14 @@ REFERENCE           GROUND_ONLY
 LANG_ENGLISH        "Ground Only"
 LANG_SPANISH        "Solo suelo"
 
+REFERENCE           DEATH_THROES
+LANG_ENGLISH        "Death Throes"
+LANG_SPANISH        "Estertores"
+
+REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
+LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
+LANG_SPANISH        "Un cuerpo cortado se agita un rato y se ahoga, gorgotea o gime, según por dónde fue el corte."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_SPANISH        "Longitud de la estela"

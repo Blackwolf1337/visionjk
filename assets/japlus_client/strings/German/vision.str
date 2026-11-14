@@ -845,6 +845,14 @@ REFERENCE           GROUND_ONLY
 LANG_ENGLISH        "Ground Only"
 LANG_GERMAN         "Nur Boden"
 
+REFERENCE           DEATH_THROES
+LANG_ENGLISH        "Death Throes"
+LANG_GERMAN         "Todeszuckungen"
+
+REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
+LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
+LANG_GERMAN         "Ein zerteilter Körper zuckt noch eine Weile und röchelt, gurgelt oder stöhnt, je nachdem, wo der Schnitt war."
+
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_GERMAN         "Spurlänge"

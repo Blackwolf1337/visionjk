@@ -1606,6 +1606,89 @@ void CG_RagExplosion( const vec3_t origin, float radius ) {
 	}
 }
 
+// ------------------------------------------------------------------------------------------------ death throes
+
+static ragBody_t *Rag_Active( int handle ) {
+	if ( handle < 0 || handle >= RAG_MAX || !rags[handle].active ) {
+		return NULL;
+	}
+	return &rags[handle];
+}
+
+/*
+=================
+CG_RagCutKind
+
+What the cut took off the part with the pelvis, for the death throes of cg_slice.c: RAG_CUT_HEAD (the head alone),
+RAG_CUT_CHEST (the chest and what is above it), RAG_CUT_WAIST (the belly and above), RAG_CUT_LIMB (an arm or a leg,
+the trunk whole), RAG_CUT_NONE for a ragdoll that is not split or not there.
+=================
+*/
+int CG_RagCutKind( int handle ) {
+	const ragBody_t	*rag = Rag_Active( handle );
+	int				trunk;
+
+	if ( !rag || rag->numParts < 2 ) {
+		return RAG_CUT_NONE;
+	}
+	trunk = rag->body[BD_PELVIS].part;
+	if ( rag->body[BD_BELLY].part != trunk ) {
+		return RAG_CUT_WAIST;
+	}
+	if ( rag->body[BD_CHEST].part != trunk ) {
+		return RAG_CUT_CHEST;
+	}
+	if ( rag->body[BD_HEAD].part != trunk ) {
+		return RAG_CUT_HEAD;
+	}
+	return RAG_CUT_LIMB;
+}
+
+// where the head is now, the sounds of the throes come from there
+qboolean CG_RagHeadOrigin( int handle, vec3_t out ) {
+	const ragBody_t *rag = Rag_Active( handle );
+
+	if ( !rag ) {
+		return qfalse;
+	}
+	VectorCopy( rag->body[BD_HEAD].x, out );
+	return qtrue;
+}
+
+/*
+=================
+CG_RagTwitch
+
+A twitch of the death throes: a small push on one limb picked at random, an arm on the part with the head, or with
+legs a leg on the part with the pelvis. It wakes the part, which falls asleep again a moment after the last one.
+=================
+*/
+void CG_RagTwitch( int handle, qboolean legs, float speed ) {
+	static const int	arms[] = { BD_LFARM, BD_RFARM, BD_LUARM, BD_RUARM };
+	static const int	shins[] = { BD_LSHIN, BD_RSHIN, BD_LTHIGH, BD_RTHIGH };
+	ragBody_t			*rag = Rag_Active( handle );
+	const int			*pick = legs ? shins : arms;
+	int					part, tries;
+
+	if ( !rag || speed <= 0.0f ) {
+		return;
+	}
+	part = rag->body[legs ? BD_PELVIS : BD_HEAD].part;
+	for ( tries = 0; tries < 4; tries++ ) {
+		const int	body = pick[rand() & 3];
+		vec3_t		dir;
+
+		if ( rag->body[body].part != part ) {
+			continue;
+		}
+		// (mostly up and to a side: a jerk of the limb, not a throw)
+		VectorSet( dir, Q_flrand( -1.0f, 1.0f ), Q_flrand( -1.0f, 1.0f ), Q_flrand( 0.4f, 1.0f ) );
+		VectorNormalize( dir );
+		Rag_Kick( rag, body, dir, speed );
+		return;
+	}
+}
+
 // ------------------------------------------------------------------------------------------------ drawing
 
 static void Rag_BoneFrame( const ragBody_t *rag, int bone, const vec3_t x, const vec4_t q, qboolean hidden, float *out ) {
