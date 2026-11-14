@@ -241,11 +241,16 @@ while paused) and whose player it is. Everybody can press "Stop sync". Only the 
 jump in the song and Take it away are refused for everybody while the box is synced ("it is synced with the
 player of X, end the sync first"). The volume, Move it and adding songs to the line still work.
 
-The one who synced hears their player directly, as always. The server does not send the box back to them. With
-`v_boxSyncHear 1` (default 0) their own box plays for them locally as well. Muting the music player, or setting
-its volume to 0 in the mixer of the system, also silences what the game captures (measured on PipeWire). To
-hear it only from the box, set the output of the player to a device you do not listen to: the capture follows the
-program, not the device.
+The one who synced hears their player directly, as always. The server does not send the box back to them.
+"Hear it from the box" on the card (`v_boxSyncHear`, default 0) makes them hear it only from the box: the game
+moves the music player onto a silent output of its own, "VisionJK Sync", takes the sound from there and plays it
+on their box locally. Turning it off, Stop sync, or the end of the sync moves the player back to the output it
+had before. That output belongs to the game process. If the game quits or crashes during a sync, PipeWire
+removes it and moves the player to the default output by itself, after a few seconds (measured: about 5 s of
+silence after a crash). Muting the music player in the system mixer, or setting its volume to 0, still silences
+what everybody hears (PipeWire mutes inside the stream of the player, before the game gets it). Use "Hear it
+from the box" instead. The moving needs PipeWire. With PulseAudio alone the player is not moved, and "Hear it
+from the box" only plays it on the box as well.
 
 A sync ends when:
 
@@ -282,6 +287,13 @@ last the program name against the MPRIS name.
 The sound is encoded like the song of a box: Opus, 48 kHz, 20 ms frames, 64 kbit/s a channel, music signal,
 in-band FEC. A boombox gets a mono mix, a sound system left and right apart. While nothing comes (the player is
 paused), silence frames go out by the clock, a few bytes each, so the sync does not time out.
+
+For "Hear it from the box", `cgame/voice/cg_voice_feed.c` loads `libpipewire-0.3.so.0` at run time and creates a
+node of `media.class` `Audio/Sink` named `visionjk_sync` ("VisionJK Sync", lowest priority, so it never becomes a
+default) as a `pw_stream` of this process. The sink input of the player is moved there with
+`pa_context_move_sink_input_by_name` and moved back by index to the sink it came from. A player whose stream
+comes anew is moved again. The PID of a player is asked on every round, so a restarted player (same bus name,
+new process) is found again.
 
 The frames go in the new datagram `RELAY_FEED` (type 9), from the client to the relay or master only: the usual
 head, one byte (the box in the low 4 bits, the channel in the high 4) and the Opus frame. The relay takes it only
