@@ -474,9 +474,10 @@ static void Music_NextPlayer( void ) {
 	music.state = MUSIC_IDLE;
 }
 
-// After what a player plays: its process, the first time it is seen (Sync audioplayer), or the next player
+// After what a player plays: its process (Sync audioplayer), every round: a player that was started again keeps
+// its name on the bus and has another process. Then the next player.
 static void Music_AfterMeta( void ) {
-	if ( music.scanAll && !music.live[music.player].pid
+	if ( music.scanAll
 		&& Music_Ask( "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionUnixProcessID", music.players[music.player], NULL ) ) {
 		music.state = MUSIC_PID;
 		return;
@@ -600,7 +601,7 @@ static void Music_Answer( DBusMessage *reply ) {
 		if ( good && music.message_iter_get_arg_type( &iter ) == DBUS_TYPE_UINT32 ) {
 			music.message_iter_get_basic( &iter, &pid );
 		}
-		// (-1: asked and not known, so it is not asked again)
+		// (-1: asked and not known)
 		music.live[music.player].pid = pid ? (int)pid : -1;
 		Music_NextPlayer();
 		break;

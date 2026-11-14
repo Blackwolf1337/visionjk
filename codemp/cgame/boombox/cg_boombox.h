@@ -141,7 +141,10 @@ void		CG_FeedStop( void );
 qboolean	CG_FeedFound( void );
 void		CG_FeedShutdown( void );
 void		CG_FeedFrame( int now, feedOut_t out );
-void		CG_FeedCounts( int *sound, int *quiet );
+void		CG_FeedCounts( int *sound, int *quiet, int *peak );
+void		CG_FeedRoute( qboolean onlyInGame );
+void		CG_FeedPid( int pid );
+qboolean	CG_FeedRouted( void );
 
 // voice/cg_voice.c: the songs as they are played, and the way to the masterserver
 float		CG_VoiceBoxBeat( int channel );

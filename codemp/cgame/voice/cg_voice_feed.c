@@ -33,6 +33,12 @@ child process; a program of PipeWire itself says its process only on its client)
 the name of the player. The library works in a thread of its own
 (threaded mainloop); the thread of the game takes what came, under its lock, once a frame, and never waits.
 
+"Hear it from the box" (CG_FeedRoute): the player is then moved to a sink of the game's own, "VisionJK Sync", made
+through libpipewire (loaded at run time as well) and heard only from the box. That sink is a node of this
+process: when the game ends, or breaks off, PipeWire takes it away and the player goes back to an output that is
+there by itself. Muting the player can not do the same: PipeWire mutes inside its stream, before anybody records
+it. Without PipeWire (PulseAudio alone) the player is not moved.
+
 Windows and the other systems: nothing yet (CG_FeedSupported).
 */
 
@@ -97,6 +103,8 @@ typedef struct paClient_s {
 #define PA_STREAM_ADJUST_LATENCY	8192
 #define PA_OPERATION_RUNNING	0
 
+typedef void ( *paSuccessCb_t )( void *context, int success, void *user );
+
 typedef void ( *paSinkInputCb_t )( void *context, const paSinkInput_t *info, int eol, void *user );
 typedef void ( *paClientCb_t )( void *context, const paClient_t *info, int eol, void *user );
 
@@ -131,12 +139,221 @@ static struct {
 	int			( *stream_drop )( void *s );
 	int			( *stream_disconnect )( void *s );
 	void		( *stream_unref )( void *s );
+	void		*( *context_move_sink_input_by_name )( void *c, uint32_t input, const char *sink, paSuccessCb_t cb, void *user );
+	void		*( *context_move_sink_input_by_index )( void *c, uint32_t input, uint32_t sink, paSuccessCb_t cb, void *user );
+	void		*moveOp;		// a move of the player to the sink of the game or back
 } pa;
+
+/*
+===============================================================================
+
+The sink of the game (libpipewire): "Hear it from the box"
+
+What is used of libpipewire and SPA, declared here so the game builds without their headers. The layouts are the
+ones of pipewire/stream.h, spa/buffer/buffer.h and spa/param/audio/raw.h (checked against them on 64 bit; the
+pointers keep them right on 32 bit).
+
+===============================================================================
+*/
+
+#define PW_SINK_NAME			"visionjk_sync"
+#define PW_DIRECTION_INPUT		0
+#define PW_ID_ANY				0xffffffffu
+#define PW_STREAM_FLAG_MAP_BUFFERS	4
+#define FEED_SINK_RING			( VOICE_RATE / 2 )	// stereo samples the sink keeps until a frame takes them
+
+typedef struct spaChunk_s { uint32_t offset, size; int32_t stride, flags; } spaChunk_t;
+typedef struct spaData_s {
+	uint32_t	type, flags;
+	int64_t		fd;
+	uint32_t	mapoffset, maxsize;
+	void		*data;
+	spaChunk_t	*chunk;
+} spaData_t;
+typedef struct spaBuffer_s { uint32_t n_metas, n_datas; void *metas; spaData_t *datas; } spaBuffer_t;
+typedef struct pwBuffer_s { spaBuffer_t *buffer; } pwBuffer_t;		// (more after it, which is not used)
+typedef struct pwStreamEvents_s {
+	uint32_t	version;
+	void		( *destroy )( void *data );
+	void		( *state_changed )( void *data, int old, int state, const char *error );
+	void		( *control_info )( void *data, uint32_t id, const void *control );
+	void		( *io_changed )( void *data, uint32_t id, void *area, uint32_t size );
+	void		( *param_changed )( void *data, uint32_t id, const void *param );
+	void		( *add_buffer )( void *data, pwBuffer_t *buffer );
+	void		( *remove_buffer )( void *data, pwBuffer_t *buffer );
+	void		( *process )( void *data );
+	void		( *drained )( void *data );
+	void		( *command )( void *data, const void *command );
+	void		( *trigger_done )( void *data );
+} pwStreamEvents_t;
+
+// The format the sink offers: SPA_PARAM_EnumFormat, audio, raw, S16LE, 48000 Hz, two channels FL FR. The bytes
+// spa_format_audio_raw_build() makes of it (a SPA POD object, in the byte order of the machine).
+static const uint32_t pwSinkFormat[] = {
+	0x000000a0, 0x0000000f, 0x00040003, 0x00000003,
+	0x00000001, 0x00000000, 0x00000004, 0x00000003, 0x00000001, 0x00000000,		// mediaType audio
+	0x00000002, 0x00000000, 0x00000004, 0x00000003, 0x00000001, 0x00000000,		// mediaSubtype raw
+	0x00010001, 0x00000000, 0x00000004, 0x00000003, 0x00000103, 0x00000000,		// format S16LE
+	0x00010003, 0x00000000, 0x00000004, 0x00000004, 0x0000bb80, 0x00000000,		// rate 48000
+	0x00010004, 0x00000000, 0x00000004, 0x00000004, 0x00000002, 0x00000000,		// channels 2
+	0x00010005, 0x00000000, 0x00000010, 0x0000000d, 0x00000004, 0x00000003,		// position: an array of ids,
+	0x00000003, 0x00000004														//	FL FR
+};
+
+static struct {
+	void		*library;
+	qboolean	failed;			// no PipeWire: the player is never moved
+	qboolean	inited;
+	void		*loop, *stream;
+	int			state;			// of the stream, PW_STREAM_STATE_* (2 and up: the sound server has the node)
+	short		ring[FEED_SINK_RING * 2];
+	unsigned	read, write;	// stereo samples, written in the thread of the loop, under its lock
+
+	void		( *init )( int *argc, char ***argv );
+	void		*( *thread_loop_new )( const char *name, const void *props );
+	void		*( *thread_loop_get_loop )( void *loop );
+	int			( *thread_loop_start )( void *loop );
+	void		( *thread_loop_stop )( void *loop );
+	void		( *thread_loop_destroy )( void *loop );
+	void		( *thread_loop_lock )( void *loop );
+	void		( *thread_loop_unlock )( void *loop );
+	void		*( *properties_new )( const char *key, ... );
+	void		*( *stream_new_simple )( void *loop, const char *name, void *props, const pwStreamEvents_t *events, void *data );
+	int			( *stream_connect )( void *stream, int direction, uint32_t target, int flags, const void **params, uint32_t numParams );
+	pwBuffer_t	*( *stream_dequeue_buffer )( void *stream );
+	int			( *stream_queue_buffer )( void *stream, pwBuffer_t *buffer );
+	void		( *stream_destroy )( void *stream );
+} pw;
+
+static void Feed_SinkState( void *data, int old, int state, const char *error ) {
+	(void)data;
+	(void)old;
+	(void)error;
+	pw.state = state;
+}
+
+// the thread of the loop: what the player played into the sink, into the ring
+static void Feed_SinkProcess( void *data ) {
+	pwBuffer_t	*b;
+	(void)data;
+
+	while ( ( b = pw.stream_dequeue_buffer( pw.stream ) ) != NULL ) {
+		const spaData_t *d = b->buffer->n_datas ? &b->buffer->datas[0] : NULL;
+
+		if ( d && d->data && d->chunk ) {
+			const uint32_t	offset = d->chunk->offset < d->maxsize ? d->chunk->offset : d->maxsize;
+			const uint32_t	size = ( d->chunk->size < d->maxsize - offset ) ? d->chunk->size : d->maxsize - offset;
+			const short		*in = (const short *)( (const byte *)d->data + offset );
+			const int		count = (int)( size / ( 2 * sizeof( short ) ) );
+			int				i;
+
+			for ( i = 0; i < count; i++ ) {
+				if ( pw.write - pw.read >= FEED_SINK_RING )
+					pw.read++;
+				pw.ring[( pw.write % FEED_SINK_RING ) * 2] = in[i * 2];
+				pw.ring[( pw.write % FEED_SINK_RING ) * 2 + 1] = in[i * 2 + 1];
+				pw.write++;
+			}
+		}
+		pw.stream_queue_buffer( pw.stream, b );
+	}
+}
+
+static const pwStreamEvents_t pwSinkEvents = { 2, NULL, Feed_SinkState, NULL, NULL, NULL, NULL, NULL, Feed_SinkProcess, NULL, NULL, NULL };
+
+static qboolean Feed_PwOpen( void ) {
+	if ( pw.failed )
+		return qfalse;
+	if ( pw.inited )
+		return qtrue;
+
+#define PW_SYMBOL( name ) \
+	*(void **)&pw.name = dlsym( pw.library, "pw_" #name ); \
+	if ( !pw.name ) { pw.failed = qtrue; return qfalse; }
+
+	// (it stays loaded: the library keeps threads and state of its own)
+	pw.library = dlopen( "libpipewire-0.3.so.0", RTLD_NOW | RTLD_LOCAL );
+	if ( !pw.library ) {
+		pw.failed = qtrue;
+		return qfalse;
+	}
+	PW_SYMBOL( init )
+	PW_SYMBOL( thread_loop_new )
+	PW_SYMBOL( thread_loop_get_loop )
+	PW_SYMBOL( thread_loop_start )
+	PW_SYMBOL( thread_loop_stop )
+	PW_SYMBOL( thread_loop_destroy )
+	PW_SYMBOL( thread_loop_lock )
+	PW_SYMBOL( thread_loop_unlock )
+	PW_SYMBOL( properties_new )
+	PW_SYMBOL( stream_new_simple )
+	PW_SYMBOL( stream_connect )
+	PW_SYMBOL( stream_dequeue_buffer )
+	PW_SYMBOL( stream_queue_buffer )
+	PW_SYMBOL( stream_destroy )
+#undef PW_SYMBOL
+	pw.init( NULL, NULL );
+	pw.inited = qtrue;
+	return qtrue;
+}
+
+// The sink of the game, if there is none yet. It never becomes the output of anything by itself: the lowest
+// priority, and nothing is linked to it but the player this file moves there. qfalse: no PipeWire.
+static qboolean Feed_SinkStart( void ) {
+	const void	*params[1] = { pwSinkFormat };
+	void		*props;
+
+	if ( pw.stream )
+		return qtrue;
+	if ( !Feed_PwOpen() )
+		return qfalse;
+	pw.loop = pw.thread_loop_new( "visionjk-sync", NULL );
+	if ( !pw.loop )
+		return qfalse;
+	props = pw.properties_new( "media.type", "Audio", "media.category", "Capture", "media.class", "Audio/Sink",
+		"node.name", PW_SINK_NAME, "node.description", "VisionJK Sync", "node.virtual", "true", "node.want-driver", "true",
+		"priority.session", "0", "priority.driver", "0", "audio.position", "FL,FR", (const char *)NULL );
+	pw.read = pw.write = 0;
+	pw.state = 0;
+	pw.thread_loop_lock( pw.loop );
+	pw.stream = props ? pw.stream_new_simple( pw.thread_loop_get_loop( pw.loop ), "VisionJK Sync", props, &pwSinkEvents, NULL ) : NULL;
+	if ( pw.stream && pw.stream_connect( pw.stream, PW_DIRECTION_INPUT, PW_ID_ANY, PW_STREAM_FLAG_MAP_BUFFERS, params, 1 ) < 0 ) {
+		pw.stream_destroy( pw.stream );
+		pw.stream = NULL;
+	}
+	pw.thread_loop_unlock( pw.loop );
+	if ( !pw.stream || pw.thread_loop_start( pw.loop ) < 0 ) {
+		if ( pw.stream ) {
+			pw.stream_destroy( pw.stream );
+			pw.stream = NULL;
+		}
+		pw.thread_loop_destroy( pw.loop );
+		pw.loop = NULL;
+		return qfalse;
+	}
+	return qtrue;
+}
+
+// The sink goes. A player still on it is moved by PipeWire to an output that is there by itself.
+static void Feed_SinkStop( void ) {
+	if ( !pw.loop )
+		return;
+	pw.thread_loop_lock( pw.loop );
+	if ( pw.stream ) {
+		pw.stream_destroy( pw.stream );
+		pw.stream = NULL;
+	}
+	pw.thread_loop_unlock( pw.loop );
+	pw.thread_loop_stop( pw.loop );
+	pw.thread_loop_destroy( pw.loop );
+	pw.loop = NULL;
+}
 
 // what the last look through the sink inputs found (written in the thread of the library, under its lock)
 typedef struct feedCandidate_s {
 	uint32_t	index;
 	uint32_t	client;			// of the sound server: a program of PipeWire itself says its process only there
+	uint32_t	sink;			// where it plays now
 	int			pid;
 	int			corked;
 	char		name[64];		// application.name
@@ -150,6 +367,10 @@ static struct {
 	int				channels;			// 1: a boombox, mixed down; 2: a sound system, left and right
 	uint32_t		input;				// the sink input the stream records, -1: none
 	int				lookTime;
+	qboolean		route;				// "Hear it from the box": the player plays into the sink of the game,
+	uint32_t		routed;				//	this sink input of it does, -1: none,
+	uint32_t		routedFrom;			//	and this is where it played before, -1: not known (the default then)
+	uint32_t		ownSink;			// the sink of the game as the sound server numbers it, -1: not known yet
 	feedCandidate_t	found[FEED_CANDIDATES];
 	int				numFound;
 	qboolean		looked;				// the look that ran is through
@@ -167,6 +388,8 @@ static struct {
 	int				quietSent;			//	this many frames of it so far
 	int				seq;
 	int				soundFrames, quietFrames;	// what went out of this sync: frames of sound and of silence
+	int				peak;				// the loudest sample of the last second of sound, 0 to 32767
+	int				peakTime;
 	union {
 		double	align;
 		void	*alignToo;
@@ -182,6 +405,10 @@ static void Feed_Close( qboolean failed ) {
 			pa.operation_cancel( pa.op );
 			pa.operation_unref( pa.op );
 			pa.op = NULL;
+		}
+		if ( pa.moveOp ) {
+			pa.operation_unref( pa.moveOp );
+			pa.moveOp = NULL;
 		}
 		if ( pa.clientOp ) {
 			pa.operation_cancel( pa.clientOp );
@@ -209,6 +436,8 @@ static void Feed_Close( qboolean failed ) {
 	}
 	pa.failed = failed;
 	feed.input = (uint32_t)-1;
+	Feed_SinkStop();
+	feed.routed = feed.ownSink = (uint32_t)-1;
 }
 
 // The library, its thread and the connection to the sound server, which comes up by itself. qfalse: none of it.
@@ -253,6 +482,8 @@ static qboolean Feed_Open( void ) {
 	FEED_SYMBOL( stream_drop )
 	FEED_SYMBOL( stream_disconnect )
 	FEED_SYMBOL( stream_unref )
+	FEED_SYMBOL( context_move_sink_input_by_name )
+	FEED_SYMBOL( context_move_sink_input_by_index )
 #undef FEED_SYMBOL
 
 	pa.loop = pa.threaded_mainloop_new();
@@ -272,7 +503,7 @@ static qboolean Feed_Open( void ) {
 		Feed_Close( qtrue );
 		return qfalse;
 	}
-	feed.input = (uint32_t)-1;
+	feed.input = feed.routed = feed.ownSink = (uint32_t)-1;
 	return qtrue;
 }
 
@@ -334,6 +565,7 @@ static void Feed_SinkInput( void *context, const paSinkInput_t *info, int eol, v
 	memset( c, 0, sizeof( *c ) );
 	c->index = info->index;
 	c->client = info->client;
+	c->sink = info->sink;
 	c->corked = info->corked;
 	if ( info->proplist ) {
 		value = pa.proplist_gets( info->proplist, "application.process.id" );
@@ -402,8 +634,9 @@ static uint32_t Feed_Pick( void ) {
 	return best;
 }
 
-// records the stream of that sink input from now on (the one before ends). Under the lock.
-static void Feed_Record( uint32_t input ) {
+// Records the stream of that sink input from now on (the one before ends). monitor: with a record stream of the
+// sound server; without one, its sound comes from the sink of the game, where it plays. Under the lock.
+static void Feed_Record( uint32_t input, qboolean monitor ) {
 	const paSpec_t	spec = { PA_SAMPLE_S16LE, VOICE_RATE, 2 };
 	paAttr_t		attr;
 
@@ -413,7 +646,7 @@ static void Feed_Record( uint32_t input ) {
 		pa.stream = NULL;
 	}
 	feed.input = input;
-	if ( input == (uint32_t)-1 )
+	if ( input == (uint32_t)-1 || !monitor )
 		return;
 	pa.stream = pa.stream_new( pa.context, "Sync audioplayer", &spec, NULL );
 	if ( !pa.stream )
@@ -427,6 +660,82 @@ static void Feed_Record( uint32_t input ) {
 		pa.stream_unref( pa.stream );
 		pa.stream = NULL;
 	}
+}
+
+// the thread of the library: a move ended (success 0: that sink input or sink is gone, tried again with a look)
+static void Feed_Moved( void *context, int success, void *user ) {
+	(void)context;
+	(void)success;
+	(void)user;
+}
+
+static const feedCandidate_t *Feed_Found( uint32_t input ) {
+	int i;
+
+	for ( i = 0; i < feed.numFound; i++ ) {
+		if ( feed.found[i].index == input )
+			return &feed.found[i];
+	}
+	return NULL;
+}
+
+// The player goes back to where it played before it was moved to the sink of the game, or to the default output.
+// Under the lock. The move is not waited for.
+static void Feed_Unroute( void ) {
+	if ( feed.routed == (uint32_t)-1 )
+		return;
+	if ( pa.moveOp )
+		pa.operation_unref( pa.moveOp );
+	pa.moveOp = ( feed.routedFrom != (uint32_t)-1 )
+		? pa.context_move_sink_input_by_index( pa.context, feed.routed, feed.routedFrom, Feed_Moved, NULL )
+		: pa.context_move_sink_input_by_name( pa.context, feed.routed, "@DEFAULT_SINK@", Feed_Moved, NULL );
+	feed.routed = (uint32_t)-1;
+}
+
+/*
+=================
+Feed_Route
+
+After a look through the sink inputs, under the lock: where the player should play. "Hear it from the box": in
+the sink of the game, which is made for it, and its sound is taken from there; else where it was, recorded with a
+monitor stream. A player whose stream comes anew (the next song of some players) is moved again.
+=================
+*/
+static void Feed_Route( uint32_t input ) {
+	const feedCandidate_t	*c = ( input != (uint32_t)-1 ) ? Feed_Found( input ) : NULL;
+	qboolean				onOwn;
+
+	if ( !feed.route || input == (uint32_t)-1 || !Feed_SinkStart() ) {
+		Feed_Unroute();
+		// (the sink goes once the player is back where it was: else PipeWire would move it first, to the default)
+		if ( pw.stream && !feed.route && ( !pa.moveOp || pa.operation_get_state( pa.moveOp ) != PA_OPERATION_RUNNING ) )
+			Feed_SinkStop();
+		if ( input != feed.input || !pa.stream || pa.stream_get_state( pa.stream ) >= PA_STREAM_FAILED )
+			Feed_Record( input, qtrue );
+		return;
+	}
+	// (the number of the sink of the game: where the player plays that was moved there)
+	if ( feed.routed == input && c && ( !pa.moveOp || pa.operation_get_state( pa.moveOp ) != PA_OPERATION_RUNNING ) )
+		feed.ownSink = c->sink;
+	onOwn = ( c && feed.ownSink != (uint32_t)-1 && c->sink == feed.ownSink ) ? qtrue : qfalse;
+	if ( feed.routed != input || !onOwn ) {
+		// a move on its way is waited for, one that failed is tried again with the next look
+		if ( pa.moveOp && pa.operation_get_state( pa.moveOp ) == PA_OPERATION_RUNNING )
+			return;
+		if ( pa.moveOp ) {
+			pa.operation_unref( pa.moveOp );
+			pa.moveOp = NULL;
+		}
+		if ( pw.state < 2 )
+			return;		// (the sink is not there for the sound server yet: PW_STREAM_STATE_PAUSED or STREAMING)
+		if ( feed.routed != input )
+			feed.routedFrom = ( c && !onOwn ) ? c->sink : (uint32_t)-1;
+		feed.routed = input;
+		pa.moveOp = pa.context_move_sink_input_by_name( pa.context, input, PW_SINK_NAME, Feed_Moved, NULL );
+	}
+	// its sound comes from the sink now, the monitor stream ends
+	if ( feed.input != input || pa.stream )
+		Feed_Record( input, qfalse );
 }
 
 /*
@@ -513,19 +822,38 @@ qboolean CG_FeedStart( int pid, const char *key, int channels ) {
 	feed.lookTime = 0;
 	feed.soundFrames = feed.quietFrames = 0;
 	pa.threaded_mainloop_lock( pa.loop );
-	Feed_Record( (uint32_t)-1 );
+	Feed_Record( (uint32_t)-1, qtrue );
 	pa.threaded_mainloop_unlock( pa.loop );
 	return qtrue;
 }
 
-// no more: the stream ends, the connection to the sound server stays for the next sync
+// no more: the player goes back where it played, the stream ends, the connection to the sound server stays
 void CG_FeedStop( void ) {
 	feed.on = qfalse;
+	feed.route = qfalse;
 	if ( pa.loop ) {
 		pa.threaded_mainloop_lock( pa.loop );
-		Feed_Record( (uint32_t)-1 );
+		Feed_Unroute();
+		Feed_Record( (uint32_t)-1, qtrue );
 		pa.threaded_mainloop_unlock( pa.loop );
 	}
+	Feed_SinkStop();
+}
+
+// the player was started again: another process (the next look finds its stream by it)
+void CG_FeedPid( int pid ) {
+	if ( pid > 0 )
+		feed.pid = pid;
+}
+
+// "Hear it from the box": the player plays into the sink of the game (with the next look), or back where it was
+void CG_FeedRoute( qboolean onlyInGame ) {
+	feed.route = onlyInGame;
+}
+
+// the player plays into the sink of the game now
+qboolean CG_FeedRouted( void ) {
+	return ( feed.on && feed.routed != (uint32_t)-1 && feed.routed == feed.input && pw.stream ) ? qtrue : qfalse;
 }
 
 // the sound of the player is found and recorded
@@ -533,15 +861,24 @@ qboolean CG_FeedFound( void ) {
 	return ( feed.on && feed.input != (uint32_t)-1 ) ? qtrue : qfalse;
 }
 
+// The module goes. A player in the sink of the game is sent back (not waited for); if that does not reach the
+// sound server before the connection ends, PipeWire moves it when the sink goes.
 void CG_FeedShutdown( void ) {
 	feed.on = qfalse;
+	if ( pa.loop ) {
+		pa.threaded_mainloop_lock( pa.loop );
+		if ( pa.context && pa.context_get_state( pa.context ) == PA_CONTEXT_READY )
+			Feed_Unroute();
+		pa.threaded_mainloop_unlock( pa.loop );
+	}
 	Feed_Close( qfalse );
 }
 
 // for v_voice_status: frames of sound and of silence that went out of this sync
-void CG_FeedCounts( int *sound, int *quiet ) {
+void CG_FeedCounts( int *sound, int *quiet, int *peak ) {
 	*sound = feed.soundFrames;
 	*quiet = feed.quietFrames;
+	*peak = ( trap->Milliseconds() - feed.peakTime < 2000 ) ? feed.peak : 0;
 }
 
 /*
@@ -577,12 +914,8 @@ void CG_FeedFrame( int now, feedOut_t out ) {
 				pa.operation_unref( pa.clientOp );
 				pa.clientOp = NULL;
 			}
-			if ( feed.looked ) {
-				const uint32_t input = Feed_Pick();
-
-				if ( input != feed.input || ( pa.stream && pa.stream_get_state( pa.stream ) >= PA_STREAM_FAILED ) )
-					Feed_Record( input );
-			}
+			if ( feed.looked )
+				Feed_Route( Feed_Pick() );
 		}
 		if ( !pa.op && now - feed.lookTime >= FEED_LOOK_MSEC ) {
 			feed.lookTime = now;
@@ -617,12 +950,34 @@ void CG_FeedFrame( int now, feedOut_t out ) {
 	}
 	pa.threaded_mainloop_unlock( pa.loop );
 
+	// what the player played into the sink of the game
+	if ( pw.loop ) {
+		pw.thread_loop_lock( pw.loop );
+		while ( pw.read != pw.write ) {
+			if ( feed.write - feed.read >= FEED_RING )
+				feed.read++;
+			feed.ring[( feed.write % FEED_RING ) * 2] = pw.ring[( pw.read % FEED_SINK_RING ) * 2];
+			feed.ring[( feed.write % FEED_RING ) * 2 + 1] = pw.ring[( pw.read % FEED_SINK_RING ) * 2 + 1];
+			feed.write++;
+			pw.read++;
+		}
+		pw.thread_loop_unlock( pw.loop );
+	}
+
 	// the sound that came, a frame at a time
 	while ( feed.write - feed.read >= VOICE_FRAME_SAMPLES ) {
 		for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ ) {
 			frame[i * 2] = feed.ring[( feed.read % FEED_RING ) * 2];
 			frame[i * 2 + 1] = feed.ring[( feed.read % FEED_RING ) * 2 + 1];
 			feed.read++;
+		}
+		for ( i = 0; i < VOICE_FRAME_SAMPLES * 2; i++ ) {
+			const int v = abs( frame[i] );
+
+			if ( v > feed.peak || now - feed.peakTime > 1000 ) {
+				feed.peak = v;
+				feed.peakTime = now;
+			}
 		}
 		Feed_Send( frame, out );
 		feed.soundFrames++;
@@ -654,6 +1009,9 @@ void CG_FeedStop( void ) {}
 qboolean CG_FeedFound( void ) { return qfalse; }
 void CG_FeedShutdown( void ) {}
 void CG_FeedFrame( int now, feedOut_t out ) { (void)now; (void)out; }
-void CG_FeedCounts( int *sound, int *quiet ) { *sound = *quiet = 0; }
+void CG_FeedCounts( int *sound, int *quiet, int *peak ) { *sound = *quiet = *peak = 0; }
+void CG_FeedRoute( qboolean onlyInGame ) { (void)onlyInGame; }
+void CG_FeedPid( int pid ) { (void)pid; }
+qboolean CG_FeedRouted( void ) { return qfalse; }
 
 #endif

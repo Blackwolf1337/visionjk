@@ -2155,11 +2155,12 @@ void CG_VoiceStatus_f( void ) {
 	}
 	// a box synced with a music player of this computer (boombox/cg_boombox_sync.c)
 	if ( CG_BoxSyncBox() >= 0 ) {
-		int sound, quiet;
+		int sound, quiet, peak;
 
-		CG_FeedCounts( &sound, &quiet );
-		trap->Print( "Sync audioplayer: box %i plays %s, %s, %i frames of sound and %i of silence sent\n", CG_BoxSyncBox(), CG_BoxSyncPlayerName(),
-			CG_FeedFound() ? "its sound is found" : "its sound is not found (yet)", sound, quiet );
+		CG_FeedCounts( &sound, &quiet, &peak );
+		trap->Print( "Sync audioplayer: box %i plays %s, %s%s, %i frames of sound and %i of silence sent\n", CG_BoxSyncBox(), CG_BoxSyncPlayerName(),
+			CG_FeedFound() ? "its sound is found" : "its sound is not found (yet)", CG_FeedRouted() ? ", heard only from the box" : "", sound, quiet );
+		trap->Print( "  its level now: %.0f dB\n", peak > 0 ? 20.0 * log10( peak / 32767.0 ) : -99.0 );
 	}
 	// the songs of the boxes of the boombox, a channel each
 	for ( i = 0; i < BOX_CHANNELS; i++ ) {

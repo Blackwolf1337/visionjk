@@ -27,7 +27,8 @@ Music, Quince ...), for everybody near it. Not from JA+, see docs/japlus/boombox
 is told (BOX_DO_SYNC with the title), and voice/cg_voice_feed.c takes the sound of that player from the sound
 server, codes it and hands it here a frame at a time, which goes to the server as RELAY_FEED. The server sends it
 to everybody who hears the box, but not back here: this player hears his music player himself, unless he wants it
-from the box (v_boxSyncHear), which then gets the frames here, without the way to the server and back.
+from the box (v_boxSyncHear), which then gets the frames here, without the way to the server and back; the music
+player is then moved to a silent sink of the game, so it is heard only from the box (voice/cg_voice_feed.c).
 
 What the player plays is said again when it changes (BOX_DO_SYNCTITLE). The sync ends when this player ends it,
 when somebody else does or the server ends it (the box is no longer BOX_SYNCED), when the box is gone, when the
@@ -42,7 +43,7 @@ sound of the player is not found, and when the player leaves the bus.
 #define SYNC_NONE_MSEC		3000		// and nothing plays after this long: the player is told so
 #define SYNC_CHOOSE_MSEC	20000		// a choice on the card is put away after this long
 #define SYNC_ANSWER_MSEC	4000		// the box says BOX_SYNCED within this long after the sync went out
-#define SYNC_FIND_MSEC		8000		// the sound of the player is found within this long, or the sync ends
+#define SYNC_FIND_MSEC		8000		// the sound of the player is not found for this long: the sync ends
 #define SYNC_GONE_MSEC		10000		// the player is not on the bus for this long: the sync ends
 #define SYNC_TITLE_MSEC		1500		// a new title goes out at most this often (the flood protection of the server)
 #define SYNC_CHOICES		MUSIC_MAX_PLAYERS
@@ -64,6 +65,7 @@ static struct {
 	int				titleTime;
 	int				seenTime;			// when the player was last on the bus
 	qboolean		answered;			// the box said BOX_SYNCED since
+	int				foundTime;			// when the sound of the player was last found (or the sync began)
 
 	// the choice on the card
 	int				chooseBox;			// -1: none
@@ -149,7 +151,7 @@ static qboolean Sync_Start( int box, const syncPlayer_t *p ) {
 	}
 	bs.box = box;
 	bs.player = *p;
-	bs.startTime = bs.titleTime = bs.seenTime = trap->Milliseconds();
+	bs.startTime = bs.titleTime = bs.seenTime = bs.foundTime = trap->Milliseconds();
 	bs.answered = qfalse;
 	Sync_Title( p, title, sizeof( title ) );
 	Q_strncpyz( bs.sentTitle, title, sizeof( bs.sentTitle ) );
@@ -290,11 +292,16 @@ void CG_BoxSyncFrame( void ) {
 		Sync_End( qfalse );
 		return;
 	}
-	if ( !CG_FeedFound() && now - bs.startTime > SYNC_FIND_MSEC ) {
+	// (not found for a while: at the start, or after its stream went; a move between two outputs is a moment)
+	if ( CG_FeedFound() )
+		bs.foundTime = now;
+	else if ( now - bs.foundTime > SYNC_FIND_MSEC ) {
 		Sync_Say( CG_VisionTextWith( "The sound of %s was not found, the sync ends", bs.player.name ) );
 		Sync_End( qtrue );
 		return;
 	}
+	// "Hear it from the box": the player plays into a sink of the game, heard only from the box (cg_voice_feed.c)
+	CG_FeedRoute( (qboolean)( v_boxSyncHear.integer != 0 ) );
 	CG_FeedFrame( now, Sync_Out );
 
 	// what it plays now, and whether it is still there
@@ -305,6 +312,11 @@ void CG_BoxSyncFrame( void ) {
 		char title[BOX_TITLE];
 
 		bs.seenTime = now;
+		// (started again: same name on the bus, another process)
+		if ( live[i].pid > 0 && live[i].pid != bs.player.pid ) {
+			bs.player.pid = live[i].pid;
+			CG_FeedPid( live[i].pid );
+		}
 		if ( live[i].now[0] )
 			Q_strncpyz( bs.player.now, live[i].now, sizeof( bs.player.now ) );
 		Sync_Title( &bs.player, title, sizeof( title ) );
