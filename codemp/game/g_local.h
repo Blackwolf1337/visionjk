@@ -1327,6 +1327,7 @@ void G_BoomboxInit( qboolean restart );
 void G_BoomboxShutdown( qboolean restart );
 void G_BoomboxFrame( void );
 void G_BoomboxClientGone( int clientNum );
+qboolean G_BoomboxFeed( int clientNum, int seq, const byte *data, int len );
 void Cmd_JPBox_f( gentity_t *ent );
 void Cmd_Boombox_f( gentity_t *ent );
 void Svcmd_Boombox_f( void );

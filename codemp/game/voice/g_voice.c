@@ -53,6 +53,7 @@ typedef struct voiceClient_s {
 	struct in_addr		gameAddr;	// where his game connection comes from
 	qboolean			gameAddrKnown;
 	voiceLimit_t		limit;
+	voiceLimit_t		feedLimit;	// of his RELAY_FEED, the music player a box is synced with
 	int					relayed;	// datagrams of his that were handed on, since he asked
 	int					dropped;	//	and those over the limit
 } voiceClient_t;
@@ -392,7 +393,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 	// (only what a client sends this relay: the others are for the masterserver, and what is passed on keeps its
 	// type, so anything else would reach the other clients as if a master had sent it)
 	if ( from->sin_family != AF_INET || !BG_VoiceUnpack( datagram, len, qfalse, &p )
-		|| ( p.type != RELAY_HELLO && p.type != RELAY_AUDIO && p.type != RELAY_RADIO ) || p.client >= level.maxclients ) {
+		|| ( p.type != RELAY_HELLO && p.type != RELAY_AUDIO && p.type != RELAY_RADIO && p.type != RELAY_FEED ) || p.client >= level.maxclients ) {
 		voiceRefused++;
 		return qfalse;
 	}
@@ -423,7 +424,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 		}
 		return qfalse;
 	}
-	if ( !BG_VoiceLimit( &vc->limit, now, len ) ) {
+	if ( p.type == RELAY_FEED ? !BG_VoiceLimitTo( &vc->feedLimit, now, len, VOICE_FEED_PPS, VOICE_FEED_BPS ) : !BG_VoiceLimit( &vc->limit, now, len ) ) {
 		vc->dropped++;
 		return qtrue;
 	}
@@ -446,6 +447,10 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 			G_VoiceSend( vc, out, outLen );
 	} else if ( p.type == RELAY_RADIO ) {
 		G_VoiceRadio( p.client, &p );
+	} else if ( p.type == RELAY_FEED ) {
+		// (the music player of a synced box, boombox/g_boombox.c: handed on as the song of the box)
+		if ( !G_BoomboxFeed( p.client, p.seq, p.data, p.dataLen ) )
+			vc->dropped++;
 	} else {
 		G_VoiceRelay( p.client, &p );
 	}

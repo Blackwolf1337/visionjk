@@ -98,6 +98,17 @@ there only for a client that said BOX_CAP_TV in its hello (or BOX_STATE_TVS in i
 set" ends as the one of a sound system, with the kind and eight zeros, and then the video of its song (11
 characters, or - for none). Its picture comes from the TV of the masterserver over HTTPS.
 
+Sync audioplayer (since 2026-11-14, BOX_CAP_SYNC): a player syncs a boombox or a sound system with the music player
+on his computer (Spotify, YouTube Music, Quince ...). His cgame takes what that player plays, codes it as a song
+is coded and sends it as RELAY_FEED (bg_voice.h); the server hands it on to whoever hears the box, as the song of
+that box. Its line waits meanwhile: the song that played goes on where it was when the sync ends. Commands:
+sync <box> "<title>", synctitle <box> "<title>" (the player plays something else), unsync <box>. Anybody may end
+a sync, only the one it is with may change its title; while a box is synced nobody pauses, skips, seeks or takes
+it away. It ends by itself when nothing came for BOX_SYNC_QUIET, or when that player leaves or syncs another box.
+"vs_box set" of a synced box: BOX_PLAYING | BOX_SYNCED, msec and length 0, the title the player sent, by: who it
+is synced with. Through the master: BOX_DO_SYNC and BOX_DO_SYNCTITLE with the title as text, BOX_DO_UNSYNC with
+nothing, to a master that says VOICE_FLAG_SYNC.
+
 The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
 know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
 box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are whole units.
@@ -173,6 +184,9 @@ looks at the bits of its four boxes only.
 #define BOX_DO_SYSTEM		13			// since 0.2.4
 #define BOX_DO_PART			14
 #define BOX_DO_TV			15			// since 0.2.9, to a master that said BOX_CAP_TV: a new TV, as BOX_DO_PLACE
+#define BOX_DO_SYNC			16			// since 2026-11-14, to a master that says VOICE_FLAG_SYNC: Sync audioplayer
+#define BOX_DO_SYNCTITLE	17
+#define BOX_DO_UNSYNC		18
 
 // what the masterserver says to a client
 #define BOX_SAY_SET			1
@@ -191,12 +205,16 @@ looks at the bits of its four boxes only.
 #define BOX_CAP_MORE		1			// who put a box down, its line, seek, drop, watch
 #define BOX_CAP_SYSTEM		2			// the sound system (since 0.2.4). Also what a client says in its hello
 #define BOX_CAP_TV			4			// the TV (since 0.2.9), the same
+#define BOX_CAP_SYNC		8			// Sync audioplayer (since 2026-11-14): the server takes RELAY_FEED
 
 // the flags of "vs_box set"
 #define BOX_PLAYING			1			// a song plays, or is about to
 #define BOX_PAUSED			2
 #define BOX_LOADING			4			// the song is being fetched: nothing is heard yet
 #define BOX_LOOKING			8			// a song that was asked for is being looked up
+#define BOX_SYNCED			16			// it plays the music player of a player (Sync audioplayer)
+
+#define BOX_SYNC_QUIET		5000		// msec without a RELAY_FEED after which a sync ends by itself
 
 // a RELAY_BOX to the master, unpacked
 typedef struct boxDo_s {

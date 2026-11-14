@@ -74,7 +74,9 @@ const char *Box_Length( int seconds ) {
 int Box_Flags( const box_t *box ) {
 	int flags = 0;
 
-	if ( box->numSongs ) {
+	if ( box->syncWith ) {
+		flags |= BOX_PLAYING | BOX_SYNCED;
+	} else if ( box->numSongs ) {
 		flags |= BOX_PLAYING;
 		if ( box->paused )
 			flags |= BOX_PAUSED;
@@ -88,7 +90,34 @@ int Box_Flags( const box_t *box ) {
 
 // how far into its song a box is, in milliseconds: what was jumped over and what went out
 int Box_Msec( const box_t *box ) {
+	if ( box->syncWith )
+		return 0;
 	return (int)( (long long)box->offset * 1000 / BOX_RATE ) + box->frames * VOICE_FRAME_MSEC;
+}
+
+// What the clients are told plays, its length (0: none, or not known), the title of the next song and who asked
+// for what plays. A synced box plays the music player of a player: its title is what his cgame said, and the song
+// that waits at the front of its line is the next one.
+const char *Box_Title( const box_t *box ) {
+	if ( box->syncWith )
+		return box->syncTitle;
+	return box->numSongs ? box->songs[0].title : "";
+}
+
+const char *Box_NextTitle( const box_t *box ) {
+	const int next = box->syncWith ? 0 : 1;
+
+	return ( box->numSongs > next ) ? box->songs[next].title : "";
+}
+
+const char *Box_By( const box_t *box ) {
+	if ( box->syncWith )
+		return box->syncName;
+	return box->numSongs ? box->songs[0].by : "";
+}
+
+int Box_Seconds( const box_t *box ) {
+	return ( !box->syncWith && box->numSongs ) ? box->songs[0].seconds : 0;
 }
 
 // a sound system plays its songs in stereo
@@ -132,7 +161,7 @@ qboolean Box_Crowded( const box_t *boxes, int numBoxes, const vec3_t spot, qbool
 
 // how many songs wait after the one that plays: in the line, and of playlists behind it
 int Box_Waiting( const box_t *box ) {
-	return Q_max( 0, box->numSongs - 1 ) + box->listNum - box->listAt;
+	return Q_max( 0, box->numSongs - ( box->syncWith ? 0 : 1 ) ) + box->listNum - box->listAt;
 }
 
 // what waits of playlists moves into the line as far as it has room
@@ -196,6 +225,121 @@ void Box_Remove( boxHost_t *host, int b ) {
 	Box_GiveBack( &host->boxes[b] );
 	memset( &host->boxes[b], 0, sizeof( host->boxes[b] ) );
 	host->tell( host, b );
+}
+
+/*
+===============================================================================
+
+Sync audioplayer: a box plays what the music player on the computer of a player plays. His cgame codes it and
+sends it (RELAY_FEED of bg_voice.h), the host hands every frame to Box_Feed(), and it goes out as the song of the
+box would. Nothing of it is fetched or coded here.
+
+===============================================================================
+*/
+
+/*
+=================
+Box_Sync
+
+The box plays the player of client from now on (name: as he is called, title: what it plays). The song that
+played stops where it is and goes on from there when the sync ends; a box he synced before ends its sync.
+qfalse: not this box, why says why.
+=================
+*/
+qboolean Box_Sync( boxHost_t *host, int b, int client, const char *name, const char *title, int now, char *why, int whySize ) {
+	box_t	*box = &host->boxes[b];
+	int		i;
+
+	if ( !box->inuse || box->kind == BOX_KIND_TV ) {
+		Q_strncpyz( why, "a TV can not be synced with a music player", whySize );
+		return qfalse;
+	}
+	if ( box->syncWith && box->syncWith != client + 1 ) {
+		Q_strncpyz( why, Box_Va( "it is synced with the player of %s", box->syncName ), whySize );
+		return qfalse;
+	}
+	for ( i = 0; i < host->numBoxes; i++ ) {
+		if ( i != b && host->boxes[i].inuse && host->boxes[i].syncWith == client + 1 )
+			Box_Unsync( host, i, NULL );
+	}
+	// (the song stops where it is, and begins there again: Box_Begin)
+	if ( box->streaming ) {
+		Box_StreamStop( &box->player->stream );
+		box->offset += box->frames * VOICE_FRAME_SAMPLES;
+		box->frames = 0;
+		box->streaming = box->started = qfalse;
+	}
+	box->syncWith = client + 1;
+	Q_strncpyz( box->syncName, name, sizeof( box->syncName ) );
+	Q_strncpyz( box->syncTitle, title, sizeof( box->syncTitle ) );
+	box->syncLast = now;
+	Box_Tell( host, b );
+	return qtrue;
+}
+
+// what the player of a synced box plays now, from the one it is synced with only
+void Box_SyncTitle( boxHost_t *host, int b, int client, const char *title ) {
+	box_t *box = &host->boxes[b];
+
+	if ( !box->inuse || box->syncWith != client + 1 || !strcmp( box->syncTitle, title ) )
+		return;
+	Q_strncpyz( box->syncTitle, title, sizeof( box->syncTitle ) );
+	Box_Tell( host, b );
+}
+
+// The sync ends: the line goes on where it was. why: what the players near the box are told, NULL nothing.
+void Box_Unsync( boxHost_t *host, int b, const char *why ) {
+	box_t *box = &host->boxes[b];
+
+	if ( !box->inuse || !box->syncWith )
+		return;
+	if ( why )
+		host->note( host, b, -1, Box_Va( "^5Boombox^7: the sync with the player of %s ended, %s", box->syncName, why ) );
+	box->syncWith = 0;
+	box->syncName[0] = box->syncTitle[0] = '\0';
+	Box_Tell( host, b );
+}
+
+// he is gone: what he synced ends
+void Box_UnsyncClient( boxHost_t *host, int client ) {
+	int i;
+
+	for ( i = 0; i < host->numBoxes; i++ ) {
+		if ( host->boxes[i].inuse && host->boxes[i].syncWith == client + 1 )
+			Box_Unsync( host, i, "the player left" );
+	}
+}
+
+// Pause, skip, seek, stop and remove wait while a box is synced: client is told so. qtrue: refused.
+qboolean Box_SyncRefuses( boxHost_t *host, int b, int client ) {
+	const box_t *box = &host->boxes[b];
+
+	if ( !box->syncWith )
+		return qfalse;
+	host->note( host, -1, client, Box_Va( "^5Boombox^7: it is synced with the player of %s, end the sync first", box->syncName ) );
+	return qtrue;
+}
+
+/*
+=================
+Box_Feed
+
+A frame of the music player a box is synced with, as client sent it (RELAY_FEED): handed to whoever hears the
+box, with the sequence number it came with. qfalse: the box is not synced with him, or has no such channel.
+=================
+*/
+qboolean Box_Feed( boxHost_t *host, int b, int client, int channel, int seq, const byte *frame, int len, int now ) {
+	box_t *box;
+
+	if ( b < 0 || b >= host->numBoxes )
+		return qfalse;
+	box = &host->boxes[b];
+	if ( !box->inuse || box->syncWith != client + 1 || channel < 0 || channel >= Box_Channels( box ) || len <= 0 || len > VOICE_MAX_FRAME )
+		return qfalse;
+	box->syncLast = now;
+	box->seq = seq & 0xffff;
+	host->send( host, b, channel, frame, len );
+	return qtrue;
 }
 
 void Box_Pause( boxHost_t *host, int b, qboolean pause, int now ) {
@@ -384,6 +528,12 @@ void Box_Run( boxHost_t *host, int b, int now ) {
 	char		why[128];
 	int			due;
 
+	// (synced: the frames come from the player it is synced with, Box_Feed)
+	if ( box->inuse && box->syncWith ) {
+		if ( now - box->syncLast > BOX_SYNC_QUIET || now < box->syncLast )
+			Box_Unsync( host, b, "nothing came from it any more" );
+		return;
+	}
 	if ( !box->inuse || !box->numSongs )
 		return;
 	if ( !box->streaming ) {
