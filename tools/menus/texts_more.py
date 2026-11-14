@@ -929,4 +929,7 @@ MORE = {
     'My Music': ('Ma musique', 'Mi música'),
     'Clicking Players': ('Cliquer sur les joueurs', 'Clic en jugadores'),
     'A chat line with your name or one of the words below is marked gold.': ('Une ligne de chat avec votre nom ou l\'un des mots ci-dessous est marquée en or.', 'Una línea del chat con tu nombre o una de las palabras de abajo se marca en dorado.'),
+    'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': ('Les outils de mouvement de TaystJK : compteur de vitesse, aide au strafe, traces et objectifs.', 'Las herramientas de movimiento de TaystJK: velocímetro, ayuda de strafe, estelas y objetivos.'),
+    'Killfeed and Team': ('Fil des morts et équipe', 'Registro de muertes y equipo'),
+    'Goals': ('Objectifs', 'Objetivos'),
 }

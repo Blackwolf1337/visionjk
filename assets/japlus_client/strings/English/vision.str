@@ -572,6 +572,18 @@ LANG_ENGLISH        "Doppler Effect"
 REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 
+REFERENCE           HIT_SOUNDS
+LANG_ENGLISH        "Hit Sounds"
+
+REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
+LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
+
+REFERENCE           KILL_SOUND
+LANG_ENGLISH        "Kill Sound"
+
+REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
+LANG_ENGLISH        "Two notes when you kill someone."
+
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"
 
@@ -686,6 +698,18 @@ LANG_ENGLISH        "Blade Glow"
 REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
 
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+
 REFERENCE           OTHERS_IN_A_DUEL
 LANG_ENGLISH        "Others in a Duel"
 
@@ -724,6 +748,54 @@ LANG_ENGLISH        "Their Blades"
 
 REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
 LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+
+REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
+LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+
+REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
+LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+
+REFERENCE           DISRUPTOR_COLOUR
+LANG_ENGLISH        "Disruptor Colour"
+
+REFERENCE           THE_COLOUR_OF_THE_DISRUPTOR_SHOT_IN
+LANG_ENGLISH        "The colour of the disruptor shot. In team games the colour of the team."
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+
+REFERENCE           PURPLE
+LANG_ENGLISH        "Purple"
 
 REFERENCE           SCOPE_LENS
 LANG_ENGLISH        "Scope Lens"
@@ -785,6 +857,33 @@ LANG_ENGLISH        "Crosshair Size"
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+
+REFERENCE           LEAD_INDICATOR
+LANG_ENGLISH        "Lead Indicator"
+
+REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
+
+REFERENCE           WITH_OWN_PING
+LANG_ENGLISH        "With Own Ping"
+
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
 
@@ -797,11 +896,71 @@ LANG_ENGLISH        "Show Timer"
 REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 LANG_ENGLISH        "The time of the level in the corner of the screen."
 
+REFERENCE           TIMER_MILLISECONDS
+LANG_ENGLISH        "Timer Milliseconds"
+
+REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+LANG_ENGLISH        "The timer of the level with milliseconds."
+
+REFERENCE           TIMER_COUNTS_DOWN
+LANG_ENGLISH        "Timer Counts Down"
+
+REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
+
 REFERENCE           SHOW_LAGOMETER
 LANG_ENGLISH        "Show Lagometer"
 
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+
+REFERENCE           KILLFEED_SIZE
+LANG_ENGLISH        "Killfeed Size"
+
+REFERENCE           HOW_LARGE_THE_KILLFEED_IS
+LANG_ENGLISH        "How large the killfeed is."
+
+REFERENCE           KILLFEED_TIME
+LANG_ENGLISH        "Killfeed Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
+LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+
+REFERENCE           TEAM_OVERLAY_WEAPONS
+LANG_ENGLISH        "Team Overlay Weapons"
+
+REFERENCE           THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
+LANG_ENGLISH        "The weapon each team mate holds, after the numbers."
+
+REFERENCE           TEAM_OVERLAY_BARS
+LANG_ENGLISH        "Team Overlay Bars"
+
+REFERENCE           HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
+LANG_ENGLISH        "Health and armour of team mates as a thin bar under the numbers."
+
+REFERENCE           SPECTATOR_MAP
+LANG_ENGLISH        "Spectator Map"
+
+REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
+
+REFERENCE           SPECTATOR_MAP_SIZE
+LANG_ENGLISH        "Spectator Map Size"
+
+REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
+LANG_ENGLISH        "How large the map of the players is while you watch."
 
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"
@@ -814,6 +973,18 @@ LANG_ENGLISH        "Console Opacity"
 
 REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 LANG_ENGLISH        "How much of the game shows through the console."
+
+REFERENCE           CONSOLE_CLOCK
+LANG_ENGLISH        "Console Clock"
+
+REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+LANG_ENGLISH        "A clock in the corner of the console."
+
+REFERENCE           TIME
+LANG_ENGLISH        "Time"
+
+REFERENCE           DATE_AND_TIME
+LANG_ENGLISH        "Date and Time"
 
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
@@ -916,6 +1087,132 @@ LANG_ENGLISH        "Player Statuses"
 
 REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
+
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 
 REFERENCE           SHOW_MY_MUSIC
 LANG_ENGLISH        "Show My Music"
@@ -1049,165 +1346,6 @@ LANG_ENGLISH        "Other Dimension Players"
 REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
 LANG_ENGLISH        "How visible players of the other dimension are."
 
-REFERENCE           HIT_SOUNDS
-LANG_ENGLISH        "Hit Sounds"
-
-REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
-LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
-
-REFERENCE           KILL_SOUND
-LANG_ENGLISH        "Kill Sound"
-
-REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
-LANG_ENGLISH        "Two notes when you kill someone."
-
-REFERENCE           SABER_TEAM_COLOURS
-LANG_ENGLISH        "Saber Team Colours"
-
-REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
-LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
-
-REFERENCE           TWO_COLOURED_STAFF
-LANG_ENGLISH        "Two-Coloured Staff"
-
-REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
-LANG_ENGLISH        "The second blade of a staff in the second saber colour."
-
-REFERENCE           ENEMY_MODEL
-LANG_ENGLISH        "Enemy Model"
-
-REFERENCE           EVERY_OPPONENT_IS_SHOWN_IN_THE_MODEL
-LANG_ENGLISH        "Every opponent is shown in the model you pick. As They Chose: each keeps his own."
-
-REFERENCE           ALLY_MODEL
-LANG_ENGLISH        "Ally Model"
-
-REFERENCE           EVERY_TEAM_MATE_IS_SHOWN_IN_THE_MODE
-LANG_ENGLISH        "Every team mate is shown in the model you pick. As They Chose: each keeps his own."
-
-REFERENCE           JEDI_OUTCAST_SHOTS
-LANG_ENGLISH        "Jedi Outcast Shots"
-
-REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
-LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
-
-REFERENCE           DISRUPTOR_BEAM
-LANG_ENGLISH        "Disruptor Beam"
-
-REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
-LANG_ENGLISH        "How the shot of the disruptor looks."
-
-REFERENCE           LINE
-LANG_ENGLISH        "Line"
-
-REFERENCE           SPIRAL
-LANG_ENGLISH        "Spiral"
-
-REFERENCE           DISRUPTOR_COLOUR
-LANG_ENGLISH        "Disruptor Colour"
-
-REFERENCE           THE_COLOUR_OF_THE_DISRUPTOR_SHOT_IN
-LANG_ENGLISH        "The colour of the disruptor shot. In team games the colour of the team."
-
-REFERENCE           CYAN
-LANG_ENGLISH        "Cyan"
-
-REFERENCE           WHITE
-LANG_ENGLISH        "White"
-
-REFERENCE           YELLOW
-LANG_ENGLISH        "Yellow"
-
-REFERENCE           PURPLE
-LANG_ENGLISH        "Purple"
-
-REFERENCE           CROSSHAIR_COLOUR
-LANG_ENGLISH        "Crosshair Colour"
-
-REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
-LANG_ENGLISH        "The colour of the crosshair with nothing under it."
-
-REFERENCE           ORANGE
-LANG_ENGLISH        "Orange"
-
-REFERENCE           PINK
-LANG_ENGLISH        "Pink"
-
-REFERENCE           NAME_OPACITY
-LANG_ENGLISH        "Name Opacity"
-
-REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
-LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
-
-REFERENCE           LEAD_INDICATOR
-LANG_ENGLISH        "Lead Indicator"
-
-REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
-LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
-
-REFERENCE           WITH_OWN_PING
-LANG_ENGLISH        "With Own Ping"
-
-REFERENCE           TIMER_MILLISECONDS
-LANG_ENGLISH        "Timer Milliseconds"
-
-REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
-LANG_ENGLISH        "The timer of the level with milliseconds."
-
-REFERENCE           TIMER_COUNTS_DOWN
-LANG_ENGLISH        "Timer Counts Down"
-
-REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
-LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
-
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-
-REFERENCE           KILLFEED_SIZE
-LANG_ENGLISH        "Killfeed Size"
-
-REFERENCE           HOW_LARGE_THE_KILLFEED_IS
-LANG_ENGLISH        "How large the killfeed is."
-
-REFERENCE           KILLFEED_TIME
-LANG_ENGLISH        "Killfeed Time"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
-LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
-
-REFERENCE           TEAM_OVERLAY_SIZE
-LANG_ENGLISH        "Team Overlay Size"
-
-REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-LANG_ENGLISH        "How large the list of your team mates is."
-
-REFERENCE           TEAM_OVERLAY_WEAPONS
-LANG_ENGLISH        "Team Overlay Weapons"
-
-REFERENCE           THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
-LANG_ENGLISH        "The weapon each team mate holds, after the numbers."
-
-REFERENCE           TEAM_OVERLAY_BARS
-LANG_ENGLISH        "Team Overlay Bars"
-
-REFERENCE           HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
-LANG_ENGLISH        "Health and armour of team mates as a thin bar under the numbers."
-
-REFERENCE           SPECTATOR_MAP
-LANG_ENGLISH        "Spectator Map"
-
-REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-
-REFERENCE           SPECTATOR_MAP_SIZE
-LANG_ENGLISH        "Spectator Map Size"
-
-REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
-LANG_ENGLISH        "How large the map of the players is while you watch."
-
 REFERENCE           SPEEDOMETER
 LANG_ENGLISH        "Speedometer"
 
@@ -1291,144 +1429,6 @@ LANG_ENGLISH        "Jump Goal"
 
 REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
 LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
-
-REFERENCE           HAT
-LANG_ENGLISH        "Hat"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
-LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
-
-REFERENCE           AFRO
-LANG_ENGLISH        "Afro"
-
-REFERENCE           BEARD
-LANG_ENGLISH        "Beard"
-
-REFERENCE           BUCKET
-LANG_ENGLISH        "Bucket"
-
-REFERENCE           CAP
-LANG_ENGLISH        "Cap"
-
-REFERENCE           PROPELLER_CAP
-LANG_ENGLISH        "Propeller Cap"
-
-REFERENCE           CROWN
-LANG_ENGLISH        "Crown"
-
-REFERENCE           FEDORA
-LANG_ENGLISH        "Fedora"
-
-REFERENCE           FEDORA_2
-LANG_ENGLISH        "Fedora 2"
-
-REFERENCE           FEDORA_3
-LANG_ENGLISH        "Fedora 3"
-
-REFERENCE           FEDORA_4
-LANG_ENGLISH        "Fedora 4"
-
-REFERENCE           GLASSES
-LANG_ENGLISH        "Glasses"
-
-REFERENCE           GRADUATION_CAP
-LANG_ENGLISH        "Graduation Cap"
-
-REFERENCE           HEADCRAB
-LANG_ENGLISH        "Headcrab"
-
-REFERENCE           HORNS
-LANG_ENGLISH        "Horns"
-
-REFERENCE           MARIO_CAP
-LANG_ENGLISH        "Mario Cap"
-
-REFERENCE           MASK
-LANG_ENGLISH        "Mask"
-
-REFERENCE           METAL_HELMET
-LANG_ENGLISH        "Metal Helmet"
-
-REFERENCE           PLAGUE_MASK
-LANG_ENGLISH        "Plague Mask"
-
-REFERENCE           PREDATOR_HELMET
-LANG_ENGLISH        "Predator Helmet"
-
-REFERENCE           PUMPKIN
-LANG_ENGLISH        "Pumpkin"
-
-REFERENCE           SANTA_HAT
-LANG_ENGLISH        "Santa Hat"
-
-REFERENCE           SOMBRERO
-LANG_ENGLISH        "Sombrero"
-
-REFERENCE           SUPER_SAIYAN_HAIR
-LANG_ENGLISH        "Super Saiyan Hair"
-
-REFERENCE           TOP_HAT
-LANG_ENGLISH        "Top Hat"
-
-REFERENCE           CAPE
-LANG_ENGLISH        "Cape"
-
-REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
-LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
-
-REFERENCE           ROYAL_CAPE
-LANG_ENGLISH        "Royal Cape"
-
-REFERENCE           VADER_CAPE
-LANG_ENGLISH        "Vader Cape"
-
-REFERENCE           YODA
-LANG_ENGLISH        "Yoda"
-
-REFERENCE           GROGU
-LANG_ENGLISH        "Grogu"
-
-REFERENCE           GOOSE
-LANG_ENGLISH        "Goose"
-
-REFERENCE           CROWBAR
-LANG_ENGLISH        "Crowbar"
-
-REFERENCE           AK_47
-LANG_ENGLISH        "AK-47"
-
-REFERENCE           ROCKET_LAUNCHER
-LANG_ENGLISH        "Rocket Launcher"
-
-REFERENCE           SHOW_THEM
-LANG_ENGLISH        "Show Them"
-
-REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
-LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
-
-REFERENCE           EVERYBODY_S
-LANG_ENGLISH        "Everybody's"
-
-REFERENCE           MINE_ON_EVERYBODY
-LANG_ENGLISH        "Mine on Everybody"
-
-REFERENCE           SEASONAL_HATS
-LANG_ENGLISH        "Seasonal Hats"
-
-REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
-LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
-
-REFERENCE           CONSOLE_CLOCK
-LANG_ENGLISH        "Console Clock"
-
-REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
-LANG_ENGLISH        "A clock in the corner of the console."
-
-REFERENCE           TIME
-LANG_ENGLISH        "Time"
-
-REFERENCE           DATE_AND_TIME
-LANG_ENGLISH        "Date and Time"
 
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
@@ -1568,6 +1568,9 @@ LANG_ENGLISH        "Slicing"
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 
+REFERENCE           HITS
+LANG_ENGLISH        "Hits"
+
 REFERENCE           BOOMBOX
 LANG_ENGLISH        "Boombox"
 
@@ -1576,6 +1579,9 @@ LANG_ENGLISH        "The game, lightsabers, duels and what players and weapons l
 
 REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
@@ -1595,14 +1601,17 @@ LANG_ENGLISH        "What the screen shows around the level, the view and the cr
 REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
+REFERENCE           KILLFEED_AND_TEAM
+LANG_ENGLISH        "Killfeed and Team"
 
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -1616,11 +1625,14 @@ LANG_ENGLISH        "Chat Box"
 REFERENCE           ABOVE_THE_HEADS
 LANG_ENGLISH        "Above the Heads"
 
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
+
 REFERENCE           ALERTS
 LANG_ENGLISH        "Alerts"
 
-REFERENCE           MY_MUSIC
-LANG_ENGLISH        "My Music"
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
 
 REFERENCE           CLICKING_PLAYERS
 LANG_ENGLISH        "Clicking Players"
@@ -1643,20 +1655,11 @@ LANG_ENGLISH        "Movement"
 REFERENCE           TAYSTJK
 LANG_ENGLISH        "TaystJK"
 
-REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
-LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
+REFERENCE           THE_MOVEMENT_TOOLS_OF_TAYSTJK_SPEEDO
+LANG_ENGLISH        "The movement tools of TaystJK: speedometer, strafe helper, trails and goals."
 
-REFERENCE           HITS
-LANG_ENGLISH        "Hits"
-
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-
-REFERENCE           SABERS
-LANG_ENGLISH        "Sabers"
-
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
+REFERENCE           GOALS
+LANG_ENGLISH        "Goals"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -2644,6 +2647,12 @@ LANG_ENGLISH        "Not in this version"
 
 REFERENCE           RENAMED_TO_S
 LANG_ENGLISH        "Renamed to %s"
+
+REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
+LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
+
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
 
 
 ENDMARKER

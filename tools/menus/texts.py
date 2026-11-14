@@ -748,6 +748,9 @@ TR = {
     'My Music': 'Meine Musik',
     'Clicking Players': 'Spieler anklicken',
     'A chat line with your name or one of the words below is marked gold.': 'Eine Chatzeile mit deinem Namen oder einem der Wörter darunter wird golden markiert.',
+    'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': 'Die Bewegungswerkzeuge von TaystJK: Tachometer, Strafe-Hilfe, Spuren und Ziele.',
+    'Killfeed and Team': 'Killfeed und Team',
+    'Goals': 'Ziele',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
