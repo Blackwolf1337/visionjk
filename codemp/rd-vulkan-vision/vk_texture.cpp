@@ -555,18 +555,21 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_WritePostSet( vk.screenSet, vk.screen.view );
 
 	// v_wetMirror: the view mirrored at the floor of the puddles, with the formats and the samples of the frame, so
-	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all.
+	// every pipeline fits it (VK_BeginPuddle). Only where the wet places are drawn at all. Half the size of the
+	// frame each way (R_PuddleView): the mirror is rippled and blurred, and drawing the level a second time at full
+	// size cost 0.5 ms of a 2.7 ms frame on an RTX 4070 SUPER (2026-11-14).
 	if ( v_wetMirror->integer && vk.depthReadable ) {
 		const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		const int mirrorWidth = VK_PuddleSize( vk.width ), mirrorHeight = VK_PuddleSize( vk.height );
 
-		VK_CreateTarget( &vk.reflect, vk.width, vk.height, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_CreateTarget( &vk.reflect, mirrorWidth, mirrorHeight, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_SAMPLE_COUNT_1_BIT );
-		VK_CreateTarget( &vk.reflectDepth, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
+		VK_CreateTarget( &vk.reflectDepth, mirrorWidth, mirrorHeight, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
 			| VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthAspect, VK_SAMPLE_COUNT_1_BIT );
 		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-			VK_CreateTarget( &vk.reflectMS, vk.width, vk.height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_CreateTarget( &vk.reflectMS, mirrorWidth, mirrorHeight, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
 				vk.samples );
-			VK_CreateTarget( &vk.reflectDepthMS, vk.width, vk.height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
+			VK_CreateTarget( &vk.reflectDepthMS, mirrorWidth, mirrorHeight, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect,
 				vk.samples );
 		}
 		VK_PostSetOnce( &vk.reflectSet );

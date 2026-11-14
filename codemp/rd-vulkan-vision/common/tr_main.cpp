@@ -1040,6 +1040,17 @@ static void R_PuddleView( void ) {
 	for ( i = 0; i < 3; i++ ) {
 		newParms.ori.axis[i][2] = -oldParms.ori.axis[i][2];
 	}
+	// Into targets of half the size each way (VK_PuddleSize): the view halved, at the top left of the frame as the
+	// device counts (the viewport counts from the bottom, VK_SetViewport turns it with the height of the frame).
+	// The wet places read it at their pixel over the size of the frame, so it covers the same part of their picture.
+	{
+		const int top = glConfig.vidHeight - ( oldParms.viewportY + oldParms.viewportHeight );
+
+		newParms.viewportX = oldParms.viewportX / 2;
+		newParms.viewportWidth = VK_PuddleSize( oldParms.viewportWidth );
+		newParms.viewportHeight = VK_PuddleSize( oldParms.viewportHeight );
+		newParms.viewportY = glConfig.vidHeight - ( top / 2 + newParms.viewportHeight );
+	}
 
 	R_RenderView( &newParms );
 

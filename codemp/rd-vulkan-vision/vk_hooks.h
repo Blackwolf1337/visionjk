@@ -46,6 +46,8 @@ qboolean VK_HasScope( void );
 // whether RE_AddWet() is drawn, and whether its puddles mirror a view of their own (R_PuddleView of tr_main.cpp)
 qboolean VK_HasWet( void );
 qboolean VK_PuddleMirror( void );
+// the size of the targets of that view each way, for a frame of frame pixels: half of it (vk_texture.cpp)
+static inline int VK_PuddleSize( int frame ) { return ( frame + 1 ) / 2; }
 void VK_NoteDrawSurfs( int numDrawSurfs );
 // ext.GpuProfile (vk_cmd.cpp, gles_cmd.cpp)
 qboolean RE_GpuProfile( gpuProfile_t *out );

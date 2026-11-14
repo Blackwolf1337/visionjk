@@ -1309,7 +1309,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 
 	rb_overLater = focus;
 	rb_sawOver = qfalse;
-	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !probeFace;
+	// (not the puddle view: its targets are half the size of the glow buffer, VK_PuddleSize)
+	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !probeFace && !puddle;
 	rb_sawLate = qfalse;
 	// the sprayed pictures of RE_AddPaint, the wet places of RE_AddWet and the water of RE_AddLiquid: the view of the
 	// level itself, before its glow. Paint and wet ground in the list before what is transparent (RB_DrawWet), the
@@ -1354,7 +1355,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();
 	// the stages that glow once more, into a buffer that is blurred and added to the scene (vk_post.cpp)
-	if ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer ) {
+	if ( rb_glowView ) {
 		VK_BeginGlow();
 		g_bRenderGlowingObjects = true;
 		RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
