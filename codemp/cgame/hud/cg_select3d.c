@@ -191,24 +191,34 @@ static const char *Select3D_Name( const gitem_t *item ) {
 	return item->classname;
 }
 
-// ringYaw: how far round the ring the card stands, in degrees (its model turns with it)
-static void Select3D_Card( const select3dItem_t *it, float x, float y, float size, qboolean selected, float alpha, float ringYaw ) {
+/*
+A card. front: how much it is the one in front, 0 to 1 as it comes round the ring, so its rim, its glow and the turn
+of its model come and go with the ring and do not jump at a switch. alpha: how much it shows (its place on the ring
+and the fading of the row), appear: the fading of the row alone. ringYaw: how far round the ring it stands, in
+degrees (its model turns with it). turn: the turn of the model in front, in degrees.
+*/
+static void Select3D_Card( const select3dItem_t *it, float x, float y, float size, float front, float alpha, float appear, float ringYaw,
+		float turn ) {
 	const selectModel_t	*m = Select3D_Model( it->item );
 	const float			inset = size * 0.08f;
 	vec4_t				glass, rim;
+	int					i;
 
 	memcpy( glass, selectGlass, sizeof( glass ) );
-	memcpy( rim, selected ? selectAccent : selectRim, sizeof( rim ) );
-	// frosted glass behind it once it is there; the glass thinner over it
-	if ( alpha > 0.6f && CG_DrawBackdrop( x, y, size, size, SELECT_RADIUS ) ) {
+	for ( i = 0; i < 3; i++ ) {
+		rim[i] = selectRim[i] + ( selectAccent[i] - selectRim[i] ) * front;
+	}
+	rim[3] = ( selectRim[3] + ( 0.9f - selectRim[3] ) * front ) * alpha;
+	// frosted glass behind it once the row is there (not by its place on the ring: the glass can not fade, it
+	// would pop in and out at the ends while the ring turns); the glass thinner over it
+	if ( appear > 0.6f && CG_DrawBackdrop( x, y, size, size, SELECT_RADIUS ) ) {
 		glass[3] = 0.45f;
 	}
 	glass[3] *= alpha;
-	rim[3] *= alpha * ( selected ? 0.9f : 1.0f );
-	if ( selected ) {
-		const vec4_t glow = { selectAccent[0], selectAccent[1], selectAccent[2], 0.3f * alpha };
+	if ( front > 0.01f ) {
+		const vec4_t glow = { selectAccent[0], selectAccent[1], selectAccent[2], 0.3f * alpha * front };
 
-		Skin_Soft( x, y, size, size, 10.0f, glow );
+		Skin_Soft( x, y, size, size, 8.0f, glow );
 	}
 	Skin_Panel( x, y, size, size, SELECT_RADIUS, glass, rim );
 
@@ -221,9 +231,9 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 	} else if ( m && alpha > 0.2f ) {
 		// the selected one turns, the others are shown from the side (the models lie along their y axis, the muzzle
 		// to -y: at yaw 0 it points to the right), turned a little towards the viewer
-		const float yaw = selected ? 360.0f * fmodf( cg.time / SELECT_TURN_MSEC, 1.0f ) : 20.0f - ringYaw;
+		const float yaw = 20.0f - ringYaw + front * turn;
 
-		Select3D_DrawModel( m, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset, yaw, selected ? 12.0f : 10.0f );
+		Select3D_DrawModel( m, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset, yaw, 10.0f + 2.0f * front );
 	}
 	if ( it->dim ) {
 		// nothing to shoot with: the card darkened over its model
@@ -245,32 +255,41 @@ front.
 =================
 */
 void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since ) {
-	static float	pos[SELECT3D_ROWS];
-	static int		lastCount[SELECT3D_ROWS], lastDraw[SELECT3D_ROWS];
-	const float		shown = (float)( cg.time - since );
+	static float	pos[SELECT3D_ROWS], turn[SELECT3D_ROWS];
+	static int		lastCount[SELECT3D_ROWS], lastDraw[SELECT3D_ROWS], visibleSince[SELECT3D_ROWS];
 	const float		left = (float)( since + WEAPON_SELECT_TIME - cg.time );
-	float			alpha = Com_Clamp( 0.0f, 1.0f, shown / SELECT_IN_MSEC );
-	float			offsets[64], delta, rise;
+	float			alpha, offsets[64], delta, rise, appear;
 	int				order[64], n = 0, i, j;
 
 	if ( count <= 0 || count > (int)ARRAY_LEN( order ) || selected < 0 || selected >= count || row < 0 || row >= SELECT3D_ROWS ) {
 		return;
 	}
+	// The row fades in when it comes up, not at every switch while it is there (each switch sets since again: the
+	// whole row flashed in anew, which looked as if it blinked)
+	if ( cg.time - lastDraw[row] > 100 || cg.time < lastDraw[row] ) {
+		visibleSince[row] = cg.time;
+	}
+	// (before anything returns: on its first frame the row is not seen yet, and it would come up anew every frame)
+	if ( count != lastCount[row] || cg.time < lastDraw[row] ) {
+		pos[row] = (float)selected;
+	}
+	lastCount[row] = count;
+	lastDraw[row] = cg.time;
+	appear = Com_Clamp( 0.0f, 1.0f, (float)( cg.time - visibleSince[row] ) / SELECT_IN_MSEC );
+	alpha = appear;
 	if ( left < SELECT_OUT_MSEC ) {
 		alpha *= Com_Clamp( 0.0f, 1.0f, left / SELECT_OUT_MSEC );
 	}
 	if ( alpha <= 0.0f ) {
 		return;
 	}
-	rise = ( 1.0f - alpha ) * 8.0f;
+	rise = ( 1.0f - appear ) * 8.0f;
+	// the turn of the model in front goes on while the row is there, between -180 and 180 degrees: a card that leaves
+	// the front turns back to the side by the shorter way
+	turn[row] = fmodf( turn[row] + 360.0f * (float)cg.frametime / SELECT_TURN_MSEC + 180.0f, 360.0f ) - 180.0f;
 
 	// where the front of the ring is: it stays where it was while the row is away, so the next switch swipes from the
-	// weapon before to the new one; a list that changed starts at the selection
-	if ( count != lastCount[row] || cg.time < lastDraw[row] ) {
-		pos[row] = (float)selected;
-	}
-	lastCount[row] = count;
-	lastDraw[row] = cg.time;
+	// weapon before to the new one; a list that changed starts at the selection (above)
 	delta = (float)selected - pos[row];
 	while ( delta > count * 0.5f ) {
 		delta -= count;
@@ -327,7 +346,7 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 		if ( depth <= 0.0f || fade <= 0.25f ) {
 			continue;
 		}
-		Select3D_Card( &items[order[i]], x, y, size, (qboolean)( order[i] == selected ), fade, o * SELECT_STEP );
+		Select3D_Card( &items[order[i]], x, y, size, front, fade, appear, o * SELECT_STEP, turn[row] );
 	}
 
 	// the name and the ammo of the selection under the front of the ring
