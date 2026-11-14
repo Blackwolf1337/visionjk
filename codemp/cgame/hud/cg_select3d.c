@@ -30,7 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define SELECT_SMALL		40.0f		// a card beside the front one, in units of the 640 x 480 screen
 #define SELECT_BIG			70.0f		// the card in front
-#define SELECT_MIDDLE_Y		376.0f		// the middle of the row: over the panels of the HUD (ui/vision/hud.menu, y 432)
+#define SELECT_MIDDLE_Y		410.0f		// the middle of the row, at the bottom of the screen between the panels of the HUD
+										// (ui/vision/hud.menu, at the edges), the name and ammo under it
 #define SELECT_RADIUS		7.0f
 #define SELECT_RING			150.0f		// half the width of the ring, in units of the screen
 #define SELECT_STEP			27.0f		// degrees of the ring between two cards
@@ -318,8 +319,8 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 		const float	front = Com_Clamp( 0.0f, 1.0f, 1.0f - fabsf( o ) );
 		const float	size = ( SELECT_SMALL + ( SELECT_BIG - SELECT_SMALL ) * front ) * ( 0.8f + 0.2f * depth );
 		const float	x = 320.0f + SELECT_RING * sinf( angle ) - size * 0.5f;
-		// (the ring seen a little from above: what is farther back stands higher)
-		const float	y = SELECT_MIDDLE_Y - size * 0.5f - ( 1.0f - depth ) * 14.0f + rise;
+		// (all on one line: the ring is seen from its side, nothing stands higher, their word 2026-11-14)
+		const float	y = SELECT_MIDDLE_Y - size * 0.5f + rise;
 		const float	fade = alpha * Com_Clamp( 0.0f, 1.0f, ( SELECT_REACH - fabsf( o ) ) * 1.2f ) * ( 0.55f + 0.45f * depth );
 
 		// (not a card too faint for its model: that was an empty frame at the ends of the ring)
