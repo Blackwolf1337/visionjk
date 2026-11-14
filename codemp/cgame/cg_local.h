@@ -2098,6 +2098,16 @@ float CG_SpecHudDraw( float y );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 qboolean CG_DrawBackdrop( float x, float y, float width, float height, float radius );
+
+// hud/cg_select3d.c: the weapon and item selection of the new HUD as glass cards with 3D models (issue #17)
+typedef struct select3dItem_s {
+	const gitem_t	*item;
+	qboolean		dim;		// out of ammo: the card darkened
+	int				count;		// the ammo under the selected card, -1: none
+	qhandle_t		icon;		// a picture in place of the model (melee), 0: the model
+} select3dItem_t;
+void CG_Select3D( const select3dItem_t *items, int count, int selected, int since );
+void CG_Select3DShutdown( void );
 void CG_FillRect( float x, float y, float width, float height, const float *color );
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader );
 void CG_DrawRotatePic( float x, float y, float width, float height,float angle, qhandle_t hShader );

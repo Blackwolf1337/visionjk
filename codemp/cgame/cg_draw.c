@@ -1792,6 +1792,31 @@ void CG_DrawInvenSelect( void )
 		cg.itemSelect = bg_itemlist[cg.snap->ps.stats[STAT_HOLDABLE_ITEM]].giTag;
 	}
 
+	if ( CG_HudNewLook() ) {
+		// VisionJK: glass cards with the 3D models of the items (hud/cg_select3d.c)
+		select3dItem_t	list[HI_NUM_HOLDABLE];
+		int				n = 0, selected = -1;
+
+		for ( i = 0; i < HI_NUM_HOLDABLE; i++ ) {
+			const int index = BG_GetItemIndexByTag( i, IT_HOLDABLE );
+
+			if ( !( cg.snap->ps.stats[STAT_HOLDABLE_ITEMS] & ( 1 << i ) ) || !BG_IsItemSelectable( &cg.predictedPlayerState, i )
+				|| index <= 0 ) {
+				continue;
+			}
+			if ( i == cg.itemSelect ) {
+				selected = n;
+			}
+			list[n].item = &bg_itemlist[index];
+			list[n].dim = qfalse;
+			list[n].count = -1;
+			list[n].icon = 0;
+			n++;
+		}
+		CG_Select3D( list, n, selected, cg.invenSelectTime );
+		return;
+	}
+
 //const int bits = cg.snap->ps.stats[ STAT_ITEMS ];
 
 	// count the number of items owned

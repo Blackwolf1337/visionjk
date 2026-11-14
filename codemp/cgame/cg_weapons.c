@@ -1126,6 +1126,45 @@ void CG_DrawWeaponSelect( void ) {
 
 	bits = cg.predictedPlayerState.stats[ STAT_WEAPONS ];
 
+	if ( CG_HudNewLook() ) {
+		// VisionJK: glass cards with the 3D models (hud/cg_select3d.c), in the order of the stock row: the
+		// concussion rifle between the flechette and the rocket launcher, thermals and trip mines only while there
+		// are some, unless one of them is the selected one
+		select3dItem_t	list[WP_NUM_WEAPONS];
+		int				n = 0, selected = -1, w;
+
+		for ( w = 1; w <= LAST_USEABLE_WEAPON; w++ ) {
+			const int	order[2] = { w, w == WP_FLECHETTE ? WP_CONCUSSION : 0 };
+			int			k;
+
+			if ( w == WP_CONCUSSION ) {
+				continue;
+			}
+			for ( k = 0; k < 2; k++ ) {
+				const int weap = order[k];
+
+				if ( !weap || !( bits & ( 1 << weap ) ) || !cg_weapons[weap].item ) {
+					continue;
+				}
+				if ( !CG_WeaponSelectable( weap ) && ( weap == WP_THERMAL || weap == WP_TRIP_MINE ) && weap != cg.weaponSelect ) {
+					continue;
+				}
+				CG_RegisterWeapon( weap );
+				if ( weap == cg.weaponSelect ) {
+					selected = n;
+				}
+				list[n].item = cg_weapons[weap].item;
+				list[n].dim = (qboolean)!CG_WeaponCheck( weap );
+				list[n].count = weaponData[weap].ammoIndex != AMMO_NONE
+					? cg.predictedPlayerState.ammo[weaponData[weap].ammoIndex] : -1;
+				list[n].icon = weap == WP_MELEE ? cgs.media.weaponIcons[WP_MELEE] : 0;
+				n++;
+			}
+		}
+		CG_Select3D( list, n, selected, cg.weaponSelectTime );
+		return;
+	}
+
 	// count the number of weapons owned
 	count = 0;
 

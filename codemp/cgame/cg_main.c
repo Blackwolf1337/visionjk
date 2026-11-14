@@ -2824,6 +2824,7 @@ void CG_DestroyAllGhoul2(void)
 
 	//Clean the weapon instances
 	CG_ShutDownG2Weapons();
+	CG_Select3DShutdown();
 	CG_JPHolsterShutdown();
 
 	//and now for items
