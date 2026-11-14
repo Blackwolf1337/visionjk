@@ -321,6 +321,34 @@ REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
 LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
 LANG_SPANISH        "Muestra los ajustes de todas las páginas cuyo nombre o descripción tiene estas palabras."
 
+REFERENCE           QUALITY
+LANG_ENGLISH        "Quality"
+LANG_SPANISH        "Calidad"
+
+REFERENCE           SETS_ANTI_ALIASING_SHADOWS_MATERIALS
+LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
+LANG_SPANISH        "Ajusta el antialiasing, las sombras, los materiales, los reflejos, el HDR y el bloom de una vez. Bajo es lo más silencioso para la tarjeta gráfica. Personalizado: lo que ajustaste tú."
+
+REFERENCE           LOW
+LANG_ENGLISH        "Low"
+LANG_SPANISH        "Bajo"
+
+REFERENCE           MEDIUM
+LANG_ENGLISH        "Medium"
+LANG_SPANISH        "Medio"
+
+REFERENCE           HIGH
+LANG_ENGLISH        "High"
+LANG_SPANISH        "Alto"
+
+REFERENCE           ULTRA
+LANG_ENGLISH        "Ultra"
+LANG_SPANISH        "#same"
+
+REFERENCE           CUSTOM
+LANG_ENGLISH        "Custom"
+LANG_SPANISH        "Personalizado"
+
 REFERENCE           DISPLAY_MODE
 LANG_ENGLISH        "Display Mode"
 LANG_SPANISH        "Modo de pantalla"
@@ -564,6 +592,54 @@ LANG_SPANISH        "Choque y calor del sable"
 REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
 LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
 LANG_SPANISH        "Las hojas que chocan destellan. El aire alrededor de una hoja encendida está caliente."
+
+REFERENCE           SLICE_BODIES
+LANG_ENGLISH        "Slice Bodies"
+LANG_SPANISH        "Cortar cuerpos"
+
+REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
+LANG_SPANISH        "Un golpe de sable mortal corta el cuerpo a lo largo del golpe, con un corte quemado que brilla. Necesita el renderizador Vulkan."
+
+REFERENCE           BLOOD
+LANG_ENGLISH        "Blood"
+LANG_SPANISH        "Sangre"
+
+REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
+LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
+LANG_SPANISH        "La sangre de un cuerpo cortado. Solo suelo: charcos y regueros, sin salpicaduras ni sangre en la pantalla. Desactivado: el corte queda."
+
+REFERENCE           SCREEN_AND_GROUND
+LANG_ENGLISH        "Screen and Ground"
+LANG_SPANISH        "Pantalla y suelo"
+
+REFERENCE           GROUND_ONLY
+LANG_ENGLISH        "Ground Only"
+LANG_SPANISH        "Solo suelo"
+
+REFERENCE           REMOVE_CUT_PARTS
+LANG_ENGLISH        "Remove Cut Parts"
+LANG_SPANISH        "Quitar las partes"
+
+REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
+LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
+LANG_SPANISH        "Cuándo desaparecen las partes de un cuerpo cortado y su sangre. Antes ayuda en servidores llenos."
+
+REFERENCE           AS_LONG_AS_THE_BODY
+LANG_ENGLISH        "As Long as the Body"
+LANG_SPANISH        "Mientras quede el cuerpo"
+
+REFERENCE           AFTER_15_S
+LANG_ENGLISH        "After 15 s"
+LANG_SPANISH        "Tras 15 s"
+
+REFERENCE           AFTER_30_S
+LANG_ENGLISH        "After 30 s"
+LANG_SPANISH        "Tras 30 s"
+
+REFERENCE           AFTER_60_S
+LANG_ENGLISH        "After 60 s"
+LANG_SPANISH        "Tras 60 s"
 
 REFERENCE           SOUND_IN_THE_BACKGROUND
 LANG_ENGLISH        "Sound in the Background"
@@ -821,54 +897,6 @@ REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
 LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
 LANG_SPANISH        "Hojas como luz 3D con el renderizador Vulkan, se detienen en las paredes y brillan sobre el golpe. Desactivado: la hoja plana del aspecto de arriba."
 
-REFERENCE           SLICE_BODIES
-LANG_ENGLISH        "Slice Bodies"
-LANG_SPANISH        "Cortar cuerpos"
-
-REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
-LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
-LANG_SPANISH        "Un golpe de sable mortal corta el cuerpo a lo largo del golpe, con un corte quemado que brilla. Necesita el renderizador Vulkan."
-
-REFERENCE           BLOOD
-LANG_ENGLISH        "Blood"
-LANG_SPANISH        "Sangre"
-
-REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
-LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
-LANG_SPANISH        "La sangre de un cuerpo cortado. Solo suelo: charcos y regueros, sin salpicaduras ni sangre en la pantalla. Desactivado: el corte queda."
-
-REFERENCE           SCREEN_AND_GROUND
-LANG_ENGLISH        "Screen and Ground"
-LANG_SPANISH        "Pantalla y suelo"
-
-REFERENCE           GROUND_ONLY
-LANG_ENGLISH        "Ground Only"
-LANG_SPANISH        "Solo suelo"
-
-REFERENCE           REMOVE_CUT_PARTS
-LANG_ENGLISH        "Remove Cut Parts"
-LANG_SPANISH        "Quitar las partes"
-
-REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
-LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
-LANG_SPANISH        "Cuándo desaparecen las partes de un cuerpo cortado y su sangre. Antes ayuda en servidores llenos."
-
-REFERENCE           AS_LONG_AS_THE_BODY
-LANG_ENGLISH        "As Long as the Body"
-LANG_SPANISH        "Mientras quede el cuerpo"
-
-REFERENCE           AFTER_15_S
-LANG_ENGLISH        "After 15 s"
-LANG_SPANISH        "Tras 15 s"
-
-REFERENCE           AFTER_30_S
-LANG_ENGLISH        "After 30 s"
-LANG_SPANISH        "Tras 30 s"
-
-REFERENCE           AFTER_60_S
-LANG_ENGLISH        "After 60 s"
-LANG_SPANISH        "Tras 60 s"
-
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_SPANISH        "Longitud de la estela"
@@ -1048,38 +1076,6 @@ LANG_SPANISH        "Nuevo HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_SPANISH        "El HUD de VisionJK. Desactivado: el HUD del juego."
-
-REFERENCE           CLASSIC_MENUS
-LANG_ENGLISH        "Classic Menus"
-LANG_SPANISH        "Menús clásicos"
-
-REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
-LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
-LANG_SPANISH        "Los menús originales del juego. Se aplica en el próximo inicio."
-
-REFERENCE           3D_MENU
-LANG_ENGLISH        "3D Menu"
-LANG_SPANISH        "Menú 3D"
-
-REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
-LANG_ENGLISH        "In a game an open menu stands in the level next to you."
-LANG_SPANISH        "Durante la partida, un menú abierto aparece en el nivel junto a ti."
-
-REFERENCE           MENU_BLUR
-LANG_ENGLISH        "Menu Blur"
-LANG_SPANISH        "Desenfoque del menú"
-
-REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
-LANG_ENGLISH        "How far the level behind an open menu is out of focus."
-LANG_SPANISH        "Cuánto se desenfoca el nivel detrás de un menú abierto."
-
-REFERENCE           MENU_SIZE
-LANG_ENGLISH        "Menu Size"
-LANG_SPANISH        "Tamaño del menú"
-
-REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
-LANG_ENGLISH        "How big the menu is that stands in the level."
-LANG_SPANISH        "Qué tan grande es el menú dentro del nivel."
 
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
@@ -1665,6 +1661,118 @@ REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
 LANG_SPANISH        "Fecha y hora"
 
+REFERENCE           NEW_DRAIN_EFFECT
+LANG_ENGLISH        "New Drain Effect"
+LANG_SPANISH        "Nuevo efecto de drenaje"
+
+REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
+LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
+LANG_SPANISH        "El drenaje de la Fuerza muestra el nuevo efecto amplio. Desactivado: el efecto del juego."
+
+REFERENCE           NEW_FORCE_EFFECTS
+LANG_ENGLISH        "New Force Effects"
+LANG_SPANISH        "Nuevos efectos de la Fuerza"
+
+REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
+LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
+LANG_SPANISH        "Los efectos de las animaciones de la Fuerza del modo un jugador y de los agarres."
+
+REFERENCE           NEW_FORCE_SIGHT
+LANG_ENGLISH        "New Force Sight"
+LANG_SPANISH        "Nueva visión de la Fuerza"
+
+REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
+LANG_ENGLISH        "The look of Force Sight of the plugin."
+LANG_SPANISH        "El aspecto de la visión de la Fuerza del plugin."
+
+REFERENCE           NEW_OTHER_DIMENSION_LOOK
+LANG_ENGLISH        "New Other Dimension Look"
+LANG_SPANISH        "Nueva otra dimensión"
+
+REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
+LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
+LANG_SPANISH        "El aspecto de la otra dimensión del plugin. Desactivado: una capa simple sobre la pantalla."
+
+REFERENCE           SEE_BLACK_SABERS
+LANG_ENGLISH        "See Black Sabers"
+LANG_SPANISH        "Ver sables negros"
+
+REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
+LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
+LANG_SPANISH        "Las hojas negras se ven negras. Desactivado: se ven rojas."
+
+REFERENCE           SABERS_ON_THE_BODY
+LANG_ENGLISH        "Sabers on the Body"
+LANG_SPANISH        "Sables en el cuerpo"
+
+REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
+LANG_ENGLISH        "Sabers that are not drawn hang on the body."
+LANG_SPANISH        "Los sables guardados cuelgan del cuerpo."
+
+REFERENCE           NEW_DEATH_MESSAGES
+LANG_ENGLISH        "New Death Messages"
+LANG_SPANISH        "Nuevos mensajes de muerte"
+
+REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
+LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
+LANG_SPANISH        "Desactivado: los mensajes del juego para muertes en agua, lava y caídas."
+
+REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
+LANG_ENGLISH        "Hide Players of Other Duels"
+LANG_SPANISH        "Ocultar jugadores de otros duelos"
+
+REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
+LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
+LANG_SPANISH        "Los jugadores en un duelo en el que no participas se desvanecen y tu mira los ignora."
+
+REFERENCE           CAMERA_TURN_AFTER_A_DUEL
+LANG_ENGLISH        "Camera Turn After a Duel"
+LANG_SPANISH        "Giro de cámara tras un duelo"
+
+REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
+LANG_ENGLISH        "When your private duel ends the camera turns around you."
+LANG_SPANISH        "Cuando tu duelo privado termina, la cámara gira a tu alrededor."
+
+REFERENCE           AUTO_REPLIER
+LANG_ENGLISH        "Auto Replier"
+LANG_SPANISH        "Respuesta automática"
+
+REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
+LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
+LANG_SPANISH        "Responde a los mensajes privados con los textos del archivo de respuestas mientras estás ausente."
+
+REFERENCE           LEDGE_GRAB
+LANG_ENGLISH        "Ledge Grab"
+LANG_SPANISH        "Agarrar bordes"
+
+REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
+LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
+LANG_SPANISH        "Agarra los bordes hacia los que saltas y te sube. Solo en servidores JA+ que lo permiten."
+
+REFERENCE           NEW_DFA_PRIMARY
+LANG_ENGLISH        "New DFA Primary"
+LANG_SPANISH        "Nuevo DFA primario"
+
+REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
+LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_SPANISH        "El death from above del plugin con el ataque primario. Solo en servidores JA+ que lo permiten."
+
+REFERENCE           NEW_DFA_SECONDARY
+LANG_ENGLISH        "New DFA Secondary"
+LANG_SPANISH        "Nuevo DFA secundario"
+
+REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
+LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_SPANISH        "El death from above del plugin con el ataque secundario. Solo en servidores JA+ que lo permiten."
+
+REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
+LANG_ENGLISH        "No Single Player Cartwheel"
+LANG_SPANISH        "Sin voltereta del modo un jugador"
+
+REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
+LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
+LANG_SPANISH        "La voltereta sin el movimiento del modo un jugador. Solo en servidores JA+ que lo permiten."
+
 REFERENCE           CLAN_PASSWORD
 LANG_ENGLISH        "Clan Password"
 LANG_SPANISH        "Contraseña del clan"
@@ -1673,53 +1781,21 @@ REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_SPANISH        "El chat y la radio del clan llegan a todos en el servidor que tengan la misma. El servidor la ve."
 
-REFERENCE           CHECK_FOR_UPDATES
-LANG_ENGLISH        "Check for Updates"
-LANG_SPANISH        "Buscar actualizaciones"
+REFERENCE           ADMIN_PASSWORD
+LANG_ENGLISH        "Admin Password"
+LANG_SPANISH        "Contraseña de admin"
 
-REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
-LANG_ENGLISH        "Ask at every start whether a newer version is out."
-LANG_SPANISH        "Preguntar en cada inicio si hay una versión más nueva."
+REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
+LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
+LANG_SPANISH        "Se envía a un servidor JA+ al unirte, para iniciar sesión como admin."
 
-REFERENCE           UPDATE_CHANNEL
-LANG_ENGLISH        "Update Channel"
-LANG_SPANISH        "Canal de actualización"
+REFERENCE           OTHER_DIMENSION_PLAYERS
+LANG_ENGLISH        "Other Dimension Players"
+LANG_SPANISH        "Jugadores de la otra dimensión"
 
-REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
-LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
-LANG_SPANISH        "Estable: las versiones publicadas. Desarrollo: versiones de prueba tempranas, y las publicadas cuando son más nuevas."
-
-REFERENCE           STABLE
-LANG_ENGLISH        "Stable"
-LANG_SPANISH        "Estable"
-
-REFERENCE           DEVELOPMENT
-LANG_ENGLISH        "Development"
-LANG_SPANISH        "Desarrollo"
-
-REFERENCE           CHANGELOG
-LANG_ENGLISH        "Changelog"
-LANG_SPANISH        "Registro de cambios"
-
-REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
-LANG_ENGLISH        "What changed in each version, and what a new version brings."
-LANG_SPANISH        "Qué cambió en cada versión y qué trae una versión nueva."
-
-REFERENCE           CLEAN_UP_SETTINGS
-LANG_ENGLISH        "Clean Up Settings"
-LANG_SPANISH        "Limpiar ajustes"
-
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
-LANG_SPANISH        "Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods."
-
-REFERENCE           CLEAR_CACHES
-LANG_ENGLISH        "Clear Caches"
-LANG_SPANISH        "Vaciar cachés"
-
-REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
-LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
-LANG_SPANISH        "Liberar espacio en disco: texturas, materiales, sonidos y rutas de sonido que el juego guarda."
+REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
+LANG_ENGLISH        "How visible players of the other dimension are."
+LANG_SPANISH        "Lo visibles que son los jugadores de la otra dimensión."
 
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
@@ -1789,17 +1865,117 @@ REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
 LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
 LANG_SPANISH        "El archivo con la clave para el inicio de admin, si ningún agente la tiene."
 
-REFERENCE           SCREEN
-LANG_ENGLISH        "Screen"
-LANG_SPANISH        "Pantalla"
+REFERENCE           CHECK_FOR_UPDATES
+LANG_ENGLISH        "Check for Updates"
+LANG_SPANISH        "Buscar actualizaciones"
+
+REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
+LANG_ENGLISH        "Ask at every start whether a newer version is out."
+LANG_SPANISH        "Preguntar en cada inicio si hay una versión más nueva."
+
+REFERENCE           UPDATE_CHANNEL
+LANG_ENGLISH        "Update Channel"
+LANG_SPANISH        "Canal de actualización"
+
+REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
+LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
+LANG_SPANISH        "Estable: las versiones publicadas. Desarrollo: versiones de prueba tempranas, y las publicadas cuando son más nuevas."
+
+REFERENCE           STABLE
+LANG_ENGLISH        "Stable"
+LANG_SPANISH        "Estable"
+
+REFERENCE           DEVELOPMENT
+LANG_ENGLISH        "Development"
+LANG_SPANISH        "Desarrollo"
+
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_SPANISH        "Registro de cambios"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_SPANISH        "Qué cambió en cada versión y qué trae una versión nueva."
+
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+LANG_SPANISH        "Limpiar ajustes"
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+LANG_SPANISH        "Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods."
+
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+LANG_SPANISH        "Vaciar cachés"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+LANG_SPANISH        "Liberar espacio en disco: texturas, materiales, sonidos y rutas de sonido que el juego guarda."
+
+REFERENCE           CLASSIC_MENUS
+LANG_ENGLISH        "Classic Menus"
+LANG_SPANISH        "Menús clásicos"
+
+REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
+LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
+LANG_SPANISH        "Los menús originales del juego. Se aplica en el próximo inicio."
+
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
+LANG_SPANISH        "Menú 3D"
+
+REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
+LANG_ENGLISH        "In a game an open menu stands in the level next to you."
+LANG_SPANISH        "Durante la partida, un menú abierto aparece en el nivel junto a ti."
+
+REFERENCE           MENU_BLUR
+LANG_ENGLISH        "Menu Blur"
+LANG_SPANISH        "Desenfoque del menú"
+
+REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
+LANG_ENGLISH        "How far the level behind an open menu is out of focus."
+LANG_SPANISH        "Cuánto se desenfoca el nivel detrás de un menú abierto."
+
+REFERENCE           MENU_SIZE
+LANG_ENGLISH        "Menu Size"
+LANG_SPANISH        "Tamaño del menú"
+
+REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
+LANG_ENGLISH        "How big the menu is that stands in the level."
+LANG_SPANISH        "Qué tan grande es el menú dentro del nivel."
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
 LANG_SPANISH        "Detalles"
 
+REFERENCE           SCREEN
+LANG_ENGLISH        "Screen"
+LANG_SPANISH        "Pantalla"
+
 REFERENCE           LIGHTING
 LANG_ENGLISH        "Lighting"
 LANG_SPANISH        "Iluminación"
+
+REFERENCE           SHADOWS_MATERIALS_REFLECTIONS_HDR_AN
+LANG_ENGLISH        "Shadows, materials, reflections, HDR and bloom."
+LANG_SPANISH        "Sombras, materiales, reflejos, HDR y bloom."
+
+REFERENCE           SHADOWS_AND_MATERIALS
+LANG_ENGLISH        "Shadows and Materials"
+LANG_SPANISH        "Sombras y materiales"
+
+REFERENCE           EFFECTS
+LANG_ENGLISH        "Effects"
+LANG_SPANISH        "Efectos"
+
+REFERENCE           SCREEN_EFFECTS_SABER_SLICING_AND_BLO
+LANG_ENGLISH        "Screen effects, saber slicing and blood."
+LANG_SPANISH        "Efectos de pantalla, cortes con el sable y sangre."
+
+REFERENCE           SLICING
+LANG_ENGLISH        "Slicing"
+LANG_SPANISH        "Cortes"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
@@ -1845,18 +2021,6 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_SPANISH        "Lo que muestra la pantalla alrededor del nivel, la vista y la mira."
 
-REFERENCE           MENUS_AND_HUD
-LANG_ENGLISH        "Menus and HUD"
-LANG_SPANISH        "Menús y HUD"
-
-REFERENCE           ON_SCREEN
-LANG_ENGLISH        "On Screen"
-LANG_SPANISH        "En pantalla"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_SPANISH        "Vista"
-
 REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 LANG_SPANISH        "Mira"
@@ -1864,6 +2028,14 @@ LANG_SPANISH        "Mira"
 REFERENCE           MOVEMENT
 LANG_ENGLISH        "Movement"
 LANG_SPANISH        "Movimiento"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_SPANISH        "Vista"
+
+REFERENCE           ON_SCREEN
+LANG_ENGLISH        "On Screen"
+LANG_SPANISH        "En pantalla"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -1885,21 +2057,33 @@ REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 LANG_SPANISH        "#same"
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
+REFERENCE           JA
+LANG_ENGLISH        "JA+"
 LANG_SPANISH        "#same"
+
+REFERENCE           THE_FEATURES_OF_THE_JA_CLIENT_PLUGIN
+LANG_ENGLISH        "The features of the JA+ client plugin, clan and admin login."
+LANG_SPANISH        "Las funciones del plugin de cliente JA+, clan e inicio de sesión de admin."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_SPANISH        "Apariencia"
+
+REFERENCE           CLAN_AND_ADMIN
+LANG_ENGLISH        "Clan and Admin"
+LANG_SPANISH        "Clan y admin"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
 LANG_SPANISH        "Red"
 
-REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
-LANG_ENGLISH        "Updates, downloads and security."
-LANG_SPANISH        "Actualizaciones, descargas y seguridad."
+REFERENCE           DOWNLOADS_THE_CONNECTION_AND_SECURIT
+LANG_ENGLISH        "Downloads, the connection and security."
+LANG_SPANISH        "Descargas, conexión y seguridad."
 
-REFERENCE           UPDATES_AND_DOWNLOADS
-LANG_ENGLISH        "Updates and Downloads"
-LANG_SPANISH        "Actualizaciones y descargas"
+REFERENCE           DOWNLOADS
+LANG_ENGLISH        "Downloads"
+LANG_SPANISH        "Descargas"
 
 REFERENCE           CONNECTION
 LANG_ENGLISH        "Connection"
@@ -1908,6 +2092,26 @@ LANG_SPANISH        "Conexión"
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_SPANISH        "Seguridad"
+
+REFERENCE           VISIONJK
+LANG_ENGLISH        "VisionJK"
+LANG_SPANISH        "#same"
+
+REFERENCE           UPDATES_THE_CHANGELOG_CLEANING_UP_AN
+LANG_ENGLISH        "Updates, the changelog, cleaning up and the menus."
+LANG_SPANISH        "Actualizaciones, registro de cambios, limpieza y menús."
+
+REFERENCE           UPDATES
+LANG_ENGLISH        "Updates"
+LANG_SPANISH        "Actualizaciones"
+
+REFERENCE           MAINTENANCE
+LANG_ENGLISH        "Maintenance"
+LANG_SPANISH        "Mantenimiento"
+
+REFERENCE           MENUS
+LANG_ENGLISH        "Menus"
+LANG_SPANISH        "Menús"
 
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
@@ -1925,9 +2129,29 @@ REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
 LANG_ENGLISH        "Shows the settings that matter, or all of them."
 LANG_SPANISH        "Muestra los ajustes importantes o todos."
 
-REFERENCE           CHANGED_FROM_DEFAULT
-LANG_ENGLISH        "Changed from default"
-LANG_SPANISH        "Cambiado respecto al valor predeterminado"
+REFERENCE           DISCARD
+LANG_ENGLISH        "Discard"
+LANG_SPANISH        "Descartar"
+
+REFERENCE           CLOSES_THE_SETTINGS_AND_SETS_BACK_WH
+LANG_ENGLISH        "Closes the settings and sets back what you changed. Apply keeps it."
+LANG_SPANISH        "Cierra los ajustes y deshace lo que cambiaste. Aplicar lo conserva."
+
+REFERENCE           RESET_PAGE
+LANG_ENGLISH        "Reset Page"
+LANG_SPANISH        "Restablecer página"
+
+REFERENCE           SETS_THE_SETTINGS_OF_THIS_PAGE_TO_TH
+LANG_ENGLISH        "Sets the settings of this page to their defaults. Revert brings them back."
+LANG_SPANISH        "Pone los ajustes de esta página por defecto. Revertir los recupera."
+
+REFERENCE           CHANGED_FROM_DEFAULT_CLICK_THE_DOT_T
+LANG_ENGLISH        "Changed from default, click the dot to reset"
+LANG_SPANISH        "Cambiado, haz clic en el punto para restablecer"
+
+REFERENCE           TAKES_EFFECT_AFTER_A_RESTART
+LANG_ENGLISH        "Takes effect after a restart"
+LANG_SPANISH        "Se aplica tras reiniciar"
 
 REFERENCE           SOME_CHANGES_APPLY_AFTER_A_RESTART
 LANG_ENGLISH        "Some changes apply after a restart"
@@ -1940,6 +2164,10 @@ LANG_SPANISH        "Revertir"
 REFERENCE           APPLY
 LANG_ENGLISH        "Apply"
 LANG_SPANISH        "Aplicar"
+
+REFERENCE           APPLY_AND_RESTART
+LANG_ENGLISH        "Apply and Restart"
+LANG_SPANISH        "Aplicar y reiniciar"
 
 REFERENCE           PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Players of My Music"
@@ -2021,6 +2249,22 @@ REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 LANG_SPANISH        "El aspecto de los menús, el HUD y la cámara."
 
+REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
+LANG_ENGLISH        "Updates, downloads and security."
+LANG_SPANISH        "Actualizaciones, descargas y seguridad."
+
+REFERENCE           MENUS_AND_HUD
+LANG_ENGLISH        "Menus and HUD"
+LANG_SPANISH        "Menús y HUD"
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_SPANISH        "#same"
+
+REFERENCE           UPDATES_AND_DOWNLOADS
+LANG_ENGLISH        "Updates and Downloads"
+LANG_SPANISH        "Actualizaciones y descargas"
+
 REFERENCE           TEXT
 LANG_ENGLISH        "Text"
 LANG_SPANISH        "Texto"
@@ -2068,10 +2312,6 @@ LANG_SPANISH        "Funciones del cliente TaystJK: HUD, movimiento, sombreros, 
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_SPANISH        "Chat y consola"
-
-REFERENCE           LOOKS
-LANG_ENGLISH        "Looks"
-LANG_SPANISH        "Apariencia"
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."
@@ -2665,6 +2905,10 @@ REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_SPANISH        "hace %i días"
 
+REFERENCE           CHANGED_FROM_DEFAULT
+LANG_ENGLISH        "Changed from default"
+LANG_SPANISH        "Cambiado respecto al valor predeterminado"
+
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
 LANG_SPANISH        "Ningún ajuste tiene estas palabras."
@@ -3124,6 +3368,10 @@ LANG_SPANISH        "Su elección"
 REFERENCE           PICK_A_MODEL
 LANG_ENGLISH        "Pick a Model"
 LANG_SPANISH        "Elegir modelo"
+
+REFERENCE           NEEDS_S
+LANG_ENGLISH        "Needs %s"
+LANG_SPANISH        "Necesita %s"
 
 
 ENDMARKER

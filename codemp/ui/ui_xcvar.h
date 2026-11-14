@@ -42,6 +42,7 @@ XCVAR_DEF( cg_marks,						"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_setupFolds,					"",						NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_controlsFolds,				"",						NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_setupSearch,					"",						NULL,				CVAR_INTERNAL )
+XCVAR_DEF( v_quality,						"4",					NULL,				CVAR_ARCHIVE )		// Setup, Video: the preset the settings are (UI_QualityFrame), 4 none
 XCVAR_DEF( cg_selectedPlayer,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( cg_selectedPlayerName,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 // the voice chat of the cgame, for the setup menu: there they have to be there before a level was loaded.

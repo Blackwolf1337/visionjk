@@ -1788,6 +1788,8 @@ static void Menu_RunCloseScript(menuDef_t *menu) {
 	}
 }
 
+static void Menu_ChangesClose( menuDef_t *menu );
+
 void Menus_CloseByName ( const char *p )
 {
 	menuDef_t *menu = Menus_FindByName(p);
@@ -1797,6 +1799,8 @@ void Menus_CloseByName ( const char *p )
 	{
 		return;
 	}
+
+	Menu_ChangesClose( menu );
 
 	// Run the close script for the menu
 	Menu_RunCloseScript(menu);
@@ -1834,6 +1838,7 @@ void Menus_CloseAll()
 
 	for (i = 0; i < menuCount; i++)
 	{
+		Menu_ChangesClose( &Menus[i] );
 		Menu_RunCloseScript ( &Menus[i] );
 		Menus[i].window.flags &= ~(WINDOW_HASFOCUS | WINDOW_VISIBLE);
 	}
@@ -2655,6 +2660,8 @@ void Item_RunScript(itemDef_t *item, const char *s)
 }
 
 
+static qboolean Value_Same( const char *a, const char *b );
+
 qboolean Item_EnableShowViaCvar(itemDef_t *item, int flag) {
   char script[2048], *p;
   if (item && item->enableCvar && *item->enableCvar && item->cvarTest && *item->cvarTest) {
@@ -2674,14 +2681,14 @@ qboolean Item_EnableShowViaCvar(itemDef_t *item, int flag) {
         continue;
       }
 
-			// enable it if any of the values are true
+			// enable it if any of the values are true (VisionJK: "1" is also "1.000000", as a multi row writes it)
 			if (item->cvarFlags & flag) {
-        if (Q_stricmp(buff, val) == 0) {
+        if (Q_stricmp(buff, val) == 0 || Value_Same(buff, val)) {
 					return qtrue;
 				}
 			} else {
 				// disable it if any of the values are true
-        if (Q_stricmp(buff, val) == 0) {
+        if (Q_stricmp(buff, val) == 0 || Value_Same(buff, val)) {
 					return qfalse;
 				}
 			}
@@ -2969,6 +2976,14 @@ static qboolean Item_IsRow( const itemDef_t *item ) {
 static qboolean Item_Off( itemDef_t *item ) {
 	return (qboolean)( item->disabled
 		|| ( ( item->cvarFlags & ( CVAR_ENABLE | CVAR_DISABLE ) ) && !Item_EnableShowViaCvar( item, CVAR_ENABLE ) ) );
+}
+
+// a row of a menu with a canvas that its cvar test greys out still takes the focus, so the pane says what it needs
+// (Item_Desc_Paint); its keys and clicks stay off (Item_Off in Menu_HandleKey)
+static qboolean Item_GreyRow( itemDef_t *item ) {
+	const menuDef_t *menu = (const menuDef_t *)item->parent;
+
+	return (qboolean)( menu && menu->canvasW > 0.0f && Item_IsRow( item ) && !item->disabled );
 }
 
 // where the widget of a row is: at its right end, on the middle of its height
@@ -3451,7 +3466,7 @@ qboolean Item_SetFocus(itemDef_t *item, float x, float y) {
 	}
 
 	// items can be enabled and disabled based on cvars
-	if (item->cvarFlags & (CVAR_ENABLE | CVAR_DISABLE) && !Item_EnableShowViaCvar(item, CVAR_ENABLE)) {
+	if (item->cvarFlags & (CVAR_ENABLE | CVAR_DISABLE) && !Item_EnableShowViaCvar(item, CVAR_ENABLE) && !Item_GreyRow(item)) {
 		return qfalse;
 	}
 
@@ -4482,12 +4497,15 @@ qboolean Item_ListBox_HandleKey(itemDef_t *item, int key, qboolean down, qboolea
 	return qfalse;
 }
 
+static qboolean Item_YesNo_On( const itemDef_t *item );
+static void Item_YesNo_Set( const itemDef_t *item, qboolean on );
+
 qboolean Item_YesNo_HandleKey(itemDef_t *item, int key) {
   if (Rect_ContainsPoint(&item->window.rect, DC->cursorx, DC->cursory) && item->window.flags & WINDOW_HASFOCUS && item->cvar)
 	{
 		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3)
 		{
-	    DC->setCVar(item->cvar, va("%i", !DC->getCVarValue(item->cvar)));
+		Item_YesNo_Set( item, (qboolean)!Item_YesNo_On( item ) );
 		  return qtrue;
 		}
   }
@@ -5128,6 +5146,45 @@ static qboolean Value_Same( const char *a, const char *b ) {
 	return qfalse;
 }
 
+// a row on one bit of its cvar ("cvarBit", the rows of the JA+ plugin features): that bit of a value
+static int Value_Bit( const itemDef_t *item, const char *value ) {
+	return ( atoi( value ) >> ( item->cvarBit - 1 ) ) & 1;
+}
+
+// are two values of the cvar of a row the same setting of that row (for a bit row: the same bit)
+static qboolean Item_ValueSame( const itemDef_t *item, const char *a, const char *b ) {
+	if ( item->cvarBit > 0 ) {
+		return (qboolean)( Value_Bit( item, a ) == Value_Bit( item, b ) );
+	}
+	return Value_Same( a, b );
+}
+
+// is a yes/no item on (invertYesNo, cvarBit)
+static qboolean Item_YesNo_On( const itemDef_t *item ) {
+	char		value[MAX_CVAR_VALUE_STRING];
+	qboolean	set;
+
+	if ( !item->cvar ) {
+		return qfalse;
+	}
+	DC->getCVarString( item->cvar, value, sizeof( value ) );
+	set = item->cvarBit > 0 ? (qboolean)Value_Bit( item, value ) : (qboolean)( atof( value ) != 0.0 );
+	return (qboolean)( item->invertYesNo ? !set : set );
+}
+
+static void Item_YesNo_Set( const itemDef_t *item, qboolean on ) {
+	const qboolean set = (qboolean)( item->invertYesNo ? !on : on );
+
+	if ( item->cvarBit > 0 ) {
+		const int	mask = 1 << ( item->cvarBit - 1 );
+		const int	bits = (int)DC->getCVarValue( item->cvar );
+
+		DC->setCVar( item->cvar, va( "%i", set ? ( bits | mask ) : ( bits & ~mask ) ) );
+	} else {
+		DC->setCVar( item->cvar, set ? "1" : "0" );
+	}
+}
+
 // does a change of this cvar take effect only after a restart
 static qboolean Cvar_NeedsRestart( const char *cvar ) {
 	char		value[8];
@@ -5164,7 +5221,12 @@ static void Item_ValueText( const itemDef_t *item, const char *value, char *out,
 			}
 		}
 	} else if ( item->type == ITEM_TYPE_YESNO ) {
-		Q_strncpyz( out, Vision_Text( atof( value ) != 0.0 ? "On" : "Off" ), size );
+		qboolean on = item->cvarBit > 0 ? (qboolean)Value_Bit( item, value ) : (qboolean)( atof( value ) != 0.0 );
+
+		if ( item->invertYesNo ) {
+			on = (qboolean)!on;
+		}
+		Q_strncpyz( out, Vision_Text( on ? "On" : "Off" ), size );
 		return;
 	} else if ( item->type == ITEM_TYPE_SLIDER ) {
 		const float v = (float)atof( value );
@@ -5207,7 +5269,7 @@ static qboolean Changes_Row( int n ) {
 	char now[MENU_CHANGE_VALUE];
 
 	DC->getCVarString( menuChanges.rows[n].item->cvar, now, sizeof( now ) );
-	return (qboolean)!Value_Same( now, menuChanges.rows[n].value );
+	return (qboolean)!Item_ValueSame( menuChanges.rows[n].item, now, menuChanges.rows[n].value );
 }
 
 static void Menu_ChangesFrame( menuDef_t *menu ) {
@@ -5249,7 +5311,16 @@ static int Menu_ChangesOnPage( const menuDef_t *menu, int page ) {
 }
 
 static void Changes_Undo( int n ) {
-	DC->setCVar( menuChanges.rows[n].item->cvar, menuChanges.rows[n].value );
+	const itemDef_t *item = menuChanges.rows[n].item;
+
+	if ( item->cvarBit > 0 ) {
+		// (only its bit: the other rows of the cvar keep theirs)
+		const qboolean set = (qboolean)Value_Bit( item, menuChanges.rows[n].value );
+
+		Item_YesNo_Set( item, (qboolean)( item->invertYesNo ? !set : set ) );
+		return;
+	}
+	DC->setCVar( item->cvar, menuChanges.rows[n].value );
 }
 
 void Menu_ChangesRevert( void ) {
@@ -5260,6 +5331,30 @@ void Menu_ChangesRevert( void ) {
 			Changes_Undo( i );
 		}
 	}
+}
+
+/*
+=================
+Menu_ChangesClose
+
+The screen of settings closes: what it changed and Apply did not keep goes back, as Revert (their word of
+2026-11-14: the settings change while you click them, closing throws the changes away). A menu opened over it (the
+changelog, the model picker) is no close: it stays visible under that one.
+=================
+*/
+static void Menu_ChangesClose( menuDef_t *menu ) {
+	if ( !menu || menu != menuChanges.menu || !( menu->window.flags & WINDOW_VISIBLE ) ) {
+		return;
+	}
+	Menu_ChangesRevert();
+	// (the video settings are what the renderer has again: no question about restarting it)
+	DC->setCVar( "ui_r_modified", "0" );
+	menuChanges.menu = NULL;
+	menuChanges.changed = 0;
+	menuChanges.restart = qfalse;
+	DC->setCVar( menu->changesCvar, "0" );
+	DC->setCVar( va( "%sRestart", menu->changesCvar ), "0" );
+	DC->setCVar( va( "%sState", menu->changesCvar ), "0" );
 }
 
 void Menu_ChangesApply( void ) {
@@ -5569,11 +5664,9 @@ static qboolean Item_Row_Toggle( itemDef_t *item, const rectDef_t *widget, char 
 	float		widest;
 
 	if ( item->type == ITEM_TYPE_YESNO ) {
-		const qboolean set = (qboolean)( item->cvar && DC->getCVarValue( item->cvar ) != 0 );
-
 		Text_Word( "@MENUS_OFF", names[0], 64, qtrue, qfalse );
 		Text_Word( "@MENUS_ON", names[1], 64, qtrue, qfalse );
-		*sel = ( item->invertYesNo ? !set : set ) ? 1 : 0;
+		*sel = Item_YesNo_On( item ) ? 1 : 0;
 	} else if ( item->type == ITEM_TYPE_MULTI && item->typeData.multi && item->typeData.multi->count == 2 && !item->special ) {
 		Text_Word( item->typeData.multi->cvarList[0], names[0], 64, qtrue, qfalse );
 		Text_Word( item->typeData.multi->cvarList[1], names[1], 64, qtrue, qfalse );
@@ -5602,6 +5695,79 @@ sets that state, one on an arrow of a choice goes that way, and one on the track
 right do the same from the keys. True: the setting was changed (the caller runs its action script).
 =================
 */
+/*
+=================
+Item_SetDefault
+
+A setting back to its default: the dot before the name of its row, and Reset Page (for a bit row only its bit).
+=================
+*/
+static qboolean Item_IsDefault( const itemDef_t *item, char *def, int size ) {
+	char		now[MENU_CHANGE_VALUE];
+	uint32_t	flags;
+
+	if ( !item->cvar || !DC->getCVarInfo || !DC->getCVarInfo( item->cvar, def, size, &flags ) ) {
+		return qtrue;
+	}
+	DC->getCVarString( item->cvar, now, sizeof( now ) );
+	return Item_ValueSame( item, now, def );
+}
+
+static void Item_SetDefault( const itemDef_t *item ) {
+	char def[MENU_CHANGE_VALUE];
+
+	if ( Item_IsDefault( item, def, sizeof( def ) ) ) {
+		return;
+	}
+	if ( item->cvarBit > 0 ) {
+		const qboolean set = (qboolean)Value_Bit( item, def );
+
+		Item_YesNo_Set( item, (qboolean)( item->invertYesNo ? !set : set ) );
+		return;
+	}
+	DC->setCVar( item->cvar, def );
+}
+
+// is the pointer on the dot of a row that is not its default (Item_Row_Paint draws it before the name)
+static qboolean Item_Row_OnDot( const itemDef_t *item, float cx ) {
+	const menuDef_t	*menu = (const menuDef_t *)item->parent;
+	char			def[MENU_CHANGE_VALUE];
+	float			x;
+
+	if ( !menu || menu->canvasW <= 0.0f || ( item->window.flags & WINDOW_DECORATION ) ) {
+		return qfalse;
+	}
+	x = item->window.rect.x + Item_RowSize( item, 12.0f, ROW_PAD );
+	if ( cx < x - 4.0f * menu->canvasUnit || cx > x + 14.0f * menu->canvasUnit ) {
+		return qfalse;
+	}
+	return (qboolean)!Item_IsDefault( item, def, sizeof( def ) );
+}
+
+/*
+=================
+Menu_ResetPage
+
+Every setting of the page the screen shows back to its default (uiScript resetPage). Text fields keep what they
+have: they hold passwords and names, not settings of the look.
+=================
+*/
+void Menu_ResetPage( menuDef_t *menu ) {
+	int i;
+
+	if ( !menu || menu->page <= 0 || menu->page >= PAGE_SEARCH ) {
+		return;
+	}
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		const itemDef_t *item = menu->items[i];
+
+		if ( item->page == menu->page && Item_IsSetting( item ) && item->type != ITEM_TYPE_EDITFIELD
+			&& item->type != ITEM_TYPE_NUMERICFIELD && !Item_Off( (itemDef_t *)item ) ) {
+			Item_SetDefault( item );
+		}
+	}
+}
+
 static qboolean Item_Row_HandleKey( itemDef_t *item, int key ) {
 	const qboolean	mouse = (qboolean)( key == A_MOUSE1 || key == A_MOUSE2 || key == A_MOUSE3 );
 	const qboolean	left = (qboolean)( key == A_CURSOR_LEFT || key == A_KP_4 ), right = (qboolean)( key == A_CURSOR_RIGHT || key == A_KP_6 );
@@ -5618,6 +5784,10 @@ static qboolean Item_Row_HandleKey( itemDef_t *item, int key ) {
 	}
 	if ( mouse && !Rect_ContainsPoint( &item->window.rect, DC->cursorx, DC->cursory ) ) {
 		return qfalse;
+	}
+	if ( key == A_MOUSE1 && Item_Row_OnDot( item, cx ) ) {
+		Item_SetDefault( item );
+		return qtrue;
 	}
 	Item_Row_Widget( item, &widget );
 	over = (qboolean)( mouse && cx >= widget.x && cx <= widget.x + widget.w );
@@ -5657,7 +5827,7 @@ static qboolean Item_Row_HandleKey( itemDef_t *item, int key ) {
 			return qfalse;
 		}
 		if ( item->type == ITEM_TYPE_YESNO ) {
-			DC->setCVar( item->cvar, va( "%i", item->invertYesNo ? !to : to ) );
+			Item_YesNo_Set( item, (qboolean)to );
 		} else {
 			Item_Multi_Set( item, to );
 		}
@@ -6020,8 +6190,8 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 		}
 	}
 
-	// Ignore if disabled
-	if (item && item->disabled)
+	// Ignore if disabled (VisionJK: also a row greyed by its cvar test, which keeps the focus, Item_GreyRow)
+	if (item && Item_Off(item))
 	{
 		return;
 	}
@@ -6820,24 +6990,18 @@ void Item_YesNo_Paint(itemDef_t *item) {
 	char	sYES[20];
 	char	sNO[20];
 	vec4_t color;
-	float value;
 	const char *yesnovalue;
-
-	value = (item->cvar) ? DC->getCVarValue(item->cvar) : 0;
 
 	trap->SE_GetStringTextString("MENUS_YES",sYES, sizeof(sYES));
 	trap->SE_GetStringTextString("MENUS_NO", sNO,  sizeof(sNO));
 
 //JLFYESNO MPMOVED
-	if (item->invertYesNo)
-		yesnovalue = (value == 0) ? sYES : sNO;
-	else
-		yesnovalue = (value != 0) ? sYES : sNO;
+	yesnovalue = Item_YesNo_On( item ) ? sYES : sNO;
 
 	Item_TextColor(item, &color);
 	if ( Item_Skinned( item ) ) {
 		// a switch in place of the word
-		const qboolean	on = (qboolean)( item->invertYesNo ? ( value == 0 ) : ( value != 0 ) );
+		const qboolean	on = Item_YesNo_On( item );
 		float			lineY, lineH;
 
 		if ( item->text ) {
@@ -7511,7 +7675,7 @@ static void Item_Row_Paint( itemDef_t *item ) {
 			if ( item->cvar && !( item->window.flags & WINDOW_DECORATION ) && DC->getCVarInfo
 				&& DC->getCVarInfo( item->cvar, def, sizeof( def ), &flags ) ) {
 				DC->getCVarString( item->cvar, now, sizeof( now ) );
-				if ( !Value_Same( now, def ) ) {
+				if ( !Item_ValueSame( item, now, def ) ) {
 					Skin_Disc( x + 3.0f * parent->canvasUnit, mid, 3.0f * parent->canvasUnit, accent );
 				}
 			}
@@ -7523,8 +7687,19 @@ static void Item_Row_Paint( itemDef_t *item ) {
 							&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_SLIDER && item->type != ITEM_TYPE_BIND
 							&& item->type != ITEM_TYPE_EDITFIELD && item->type != ITEM_TYPE_NUMERICFIELD
 							&& !( item->type == ITEM_TYPE_BUTTON && item->cvar ) );
-		const float		end = arrowOnly ? widget.x + widget.w - arrow : widget.x;
+		float			end = arrowOnly ? widget.x + widget.w - arrow : widget.x;
 
+		if ( parent->canvasW > 0.0f && item->cvar && Item_IsSetting( item ) && Cvar_NeedsRestart( item->cvar ) ) {
+			// a setting that takes effect after a restart: a dot in the colour of the warning before its widget (the
+			// colour of "Some changes apply after a restart" in the bar, canvas.WARN)
+			static const vec4_t warn = { 0.91f, 0.77f, 0.42f, 1.0f };
+			vec4_t				mark;
+
+			memcpy( mark, warn, sizeof( mark ) );
+			mark[3] = off ? 0.4f : 1.0f;
+			Skin_Disc( end - 10.0f * parent->canvasUnit, mid, 2.5f * parent->canvasUnit, mark );
+			end -= 16.0f * parent->canvasUnit;
+		}
 		Row_Name( x, r->y, r->h - 1.0f, end - pad - x, item->textscale, text, word, font );
 	}
 
@@ -8087,6 +8262,22 @@ static void Item_Desc_Paint( itemDef_t *item ) {
 	}
 	Skin_Color( color, parent->descColor, item->skinValue );
 	y = Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, about->descPic[0] ? 6 : 12 );
+	if ( Item_Off( about ) && about->cvarTest && about->cvarTest[0] ) {
+		// a greyed row: the row of the setting it hangs on ("Needs Bloom")
+		for ( i = 0; i < parent->itemCount; i++ ) {
+			const itemDef_t *it = parent->items[i];
+
+			if ( it != about && it->cvar && it->text && Item_IsSetting( it ) && !Q_stricmp( it->cvar, about->cvarTest ) ) {
+				char need[256], line[320];
+
+				Text_Word( it->text, need, sizeof( need ), qfalse, qtrue );
+				Com_sprintf( line, sizeof( line ), Vision_Text( "Needs %s" ), need );
+				Skin_Color( color, parent->focusColor, item->skinValue );
+				y = Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, line, item->iMenuFont, 2 );
+				break;
+			}
+		}
+	}
 	if ( about->descPic[0] ) {
 		Item_DescPic_Paint( item, about, item->skinValue );
 	} else if ( parent->canvasW > 0.0f && ( about->type == ITEM_TYPE_BIND || ( Item_IsSetting( about ) && DC->getCVarInfo ) ) ) {
@@ -10148,7 +10339,7 @@ void Menu_HandleMouseMove(menuDef_t *menu, float x, float y) {
 			}
 
 			// items can be enabled and disabled based on cvars
-			if (menu->items[i]->cvarFlags & (CVAR_ENABLE | CVAR_DISABLE) && !Item_EnableShowViaCvar(menu->items[i], CVAR_ENABLE)) {
+			if (menu->items[i]->cvarFlags & (CVAR_ENABLE | CVAR_DISABLE) && !Item_EnableShowViaCvar(menu->items[i], CVAR_ENABLE) && !Item_GreyRow(menu->items[i])) {
 				continue;
 			}
 
@@ -11740,6 +11931,17 @@ qboolean ItemParse_textstyle( itemDef_t *item, int handle ) {
 ItemParse_invertyesno
 ===============
 */
+// VisionJK: "cvarBit <n>": a yes/no row on bit n of its cvar (the JA+ cp_pluginDisable rows)
+qboolean ItemParse_cvarBit( itemDef_t *item, int handle ) {
+	int bit;
+
+	if ( !PC_Int_Parse( handle, &bit ) || bit < 0 || bit > 30 ) {
+		return qfalse;
+	}
+	item->cvarBit = bit + 1;
+	return qtrue;
+}
+
 //JLFYESNO MPMOVED
 qboolean ItemParse_invertyesno( itemDef_t *item, int handle)
 {
@@ -12526,6 +12728,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"maxLineChars",	ItemParse_maxLineChars,		NULL	},
 	{"lineHeight",		ItemParse_lineHeight,		NULL	},
 	{"invertyesno",		ItemParse_invertyesno,		NULL	},
+	{"cvarBit",			ItemParse_cvarBit,			NULL	},
 	//JLF MPMOVED
 	{"scrollhidden",	ItemParse_scrollhidden,		NULL	},
 	{"xoffset		",	ItemParse_xoffset,			NULL	},

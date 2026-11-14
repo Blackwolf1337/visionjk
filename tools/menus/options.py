@@ -72,12 +72,16 @@ class Layout:
 #   ('multistr', name, cvar, ((name, text), ...), what for)  the same for a cvar that holds a text
 #   ('edit' | 'secret', name, cvar, letters, what for)
 #   ('bind', name, command, what for)
+#   ('bit', name, cvar, bit, what for)           on while that bit of the cvar is clear (the JA+ cp_pluginDisable)
 #   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
 #   ('menu', name, menu, what for)                a button that opens a window of its own (a menu of the lists)
 #   ('pick', name, cvar, what for)                a button that shows a model the cvar holds and opens the model picker
 #                                               (modelpick.menu), which writes the model it is given into that cvar
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
+        ('head', 'Quality'),
+        ('multi', 'Quality', 'v_quality', (('Low', 0), ('Medium', 1), ('High', 2), ('Ultra', 3), ('Custom', 4)),
+         'Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.'),
         ('head', 'Screen'),
         ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample')),
         ('yesno', 'SMAA', 'v_smaa',
@@ -90,7 +94,9 @@ SETUP = [
         ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
         ('old', 'video2', ('advancedvideo',)),
-        ('head', 'Lighting'),
+    ]),
+    ('Lighting', 'Shadows, materials, reflections, HDR and bloom.', [
+        ('head', 'Shadows and Materials'),
         ('multi', 'Shadows', 'cg_shadows', (('Off', 0), ('Blob', 1), ('Real', 2)),
          'Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them.'),
         ('yesno', 'Materials', 'v_pbr',
@@ -105,6 +111,7 @@ SETUP = [
          'Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing.'),
         ('yesno', 'Automatic Materials', 'v_autoMaterials',
          'Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video.'),
+        ('head', 'HDR'),
         ('yesno', 'HDR', 'v_hdr',
          'Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed.'),
         ('multi', 'Tone Mapping', 'v_tonemap', (('Off', 0), ('Original Look', 1), ('Filmic', 2)),
@@ -114,6 +121,8 @@ SETUP = [
         ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
         ('slider', 'Bloom Threshold', 'tay_bloomThreshold', 0.5, 0, 0.95, 'How bright a part has to be to shine.'),
+    ]),
+    ('Effects', 'Screen effects, saber slicing and blood.', [
         ('head', 'Screen Effects'),
         ('yesno', 'Screen Effects', 'v_screenFx', 'Master switch for all screen effects.'),
         ('yesno', 'Explosion Waves', 'v_fxBlast', 'Explosions send a wave through the air that bends the picture. Close by, the colours split.'),
@@ -123,6 +132,12 @@ SETUP = [
         ('yesno', 'Under Water', 'v_fxWater', 'Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface.'),
         ('yesno', 'Force Looks', 'v_fxForce', 'Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound.'),
         ('yesno', 'Saber Clash and Heat', 'v_fxSaber', 'Clashing blades flash. The air around a lit blade is hot.'),
+        ('head', 'Slicing'),
+        ('yesno', 'Slice Bodies', 'v_slice', 'A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer.'),
+        ('multi', 'Blood', 'v_gore', (('Off', 0), ('Screen and Ground', 1), ('Ground Only', 2)),
+         'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.'),
+        ('multi', 'Remove Cut Parts', 'v_sliceTime', (('As Long as the Body', 0), ('After 15 s', 15), ('After 30 s', 30), ('After 60 s', 60)),
+         'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
     ]),
     ('@MENUS_SOUND', '@MENUS_CONFIGURE_SOUND_SETTINGS', [
         ('head', 'Volume'),
@@ -160,11 +175,6 @@ SETUP = [
         ('multi', 'Blade Look', 'v_saberStyle', (('Classic', 0), ('SFX', 1)),
          'SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic.'),
         ('yesno', '3D Blades', 'v_saber3D', 'Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above.'),
-        ('yesno', 'Slice Bodies', 'v_slice', 'A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer.'),
-        ('multi', 'Blood', 'v_gore', (('Off', 0), ('Screen and Ground', 1), ('Ground Only', 2)),
-         'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.'),
-        ('multi', 'Remove Cut Parts', 'v_sliceTime', (('As Long as the Body', 0), ('After 15 s', 15), ('After 30 s', 30), ('After 60 s', 60)),
-         'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
         ('slider', 'Trail Length', 'v_saberTrailLength', 1, 0, 4, 'How long the trail behind a swinging blade is.'),
         ('slider', 'Blade Core', 'v_saberCoreScale', 1, 0.25, 3, 'How thick the white core of a blade is.'),
         ('slider', 'Blade Glow', 'v_saberGlowScale', 1, 0.25, 3, 'How wide the glow around a blade is.'),
@@ -189,12 +199,8 @@ SETUP = [
         ('yesno', 'Rocket Lock-On', 'v_lockOn', 'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.'),
     ]),
     ('HUD', 'What the screen shows around the level, the view and the crosshair.', [
-        ('head', 'Menus and HUD'),
+        ('head', 'HUD'),
         ('yesno', 'New HUD', 'v_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
-        ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
-        ('yesno', '3D Menu', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
-        ('slider', 'Menu Blur', 'v_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
-        ('slider', 'Menu Size', 'v_menu3dScale', 1, 0.5, 1.5, 'How big the menu is that stands in the level.'),
         ('head', 'View'),
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
         ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
@@ -278,18 +284,33 @@ SETUP = [
         ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
         ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
         ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
-        ('head', 'Clan'),
+    ]),
+    ('JA+', 'The features of the JA+ client plugin, clan and admin login.', [
+        ('head', 'Looks'),
+        ('bit', 'New Drain Effect', 'cp_pluginDisable', 0, 'Force drain shows the wide new effect. Off: the effect of the game.'),
+        ('bit', 'New Force Effects', 'cp_pluginDisable', 5, 'The effects of the single player force animations and of the grabs.'),
+        ('bit', 'New Force Sight', 'cp_pluginDisable', 7, 'The look of Force Sight of the plugin.'),
+        ('bit', 'New Other Dimension Look', 'cp_pluginDisable', 8, 'The look of the other dimension of the plugin. Off: a plain overlay over the screen.'),
+        ('bit', 'See Black Sabers', 'cp_pluginDisable', 3, 'Black blades are shown black. Off: they are shown red.'),
+        ('bit', 'Sabers on the Body', 'cp_pluginDisable', 9, 'Sabers that are not drawn hang on the body.'),
+        ('bit', 'New Death Messages', 'cp_pluginDisable', 6, 'Off: the messages of the game for deaths in water, lava and falls.'),
+        ('head', 'Duels'),
+        ('bit', 'Hide Players of Other Duels', 'cp_pluginDisable', 1, 'Players in a duel you are not part of fade out and your crosshair ignores them.'),
+        ('bit', 'Camera Turn After a Duel', 'cp_pluginDisable', 2, 'When your private duel ends the camera turns around you.'),
+        ('bit', 'Auto Replier', 'cp_pluginDisable', 4, 'Answers tells with the texts of the auto replier file while you are away.'),
+        ('head', 'Movement'),
+        ('bit', 'Ledge Grab', 'cp_pluginDisable', 10, 'Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it.'),
+        ('bit', 'New DFA Primary', 'cp_pluginDisable', 11, 'Primary attack: the death from above of the plugin. Only on JA+ servers that allow it.'),
+        ('bit', 'New DFA Secondary', 'cp_pluginDisable', 12, 'Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it.'),
+        ('bit', 'No Single Player Cartwheel', 'cp_pluginDisable', 13, 'The cartwheel without the single player move. Only on JA+ servers that allow it.'),
+        ('head', 'Clan and Admin'),
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
+        ('secret', 'Admin Password', 'cp_login', 32, 'Sent to a JA+ server when you join, to log you in as admin.'),
+        ('slider', 'Other Dimension Players', 'cp_altDimAlpha', 40, 0, 255, 'How visible players of the other dimension are.'),
     ]),
-    ('Network', 'Updates, downloads and security.', [
-        ('head', 'Updates and Downloads'),
-        ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
-        ('multistr', 'Update Channel', 'v_updateChannel', (('Stable', 'stable'), ('Development', 'dev')),
-         'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
-        ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
-        ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings no code used for a month, from older versions and other mods.'),
-        ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
+    ('Network', 'Downloads, the connection and security.', [
+        ('head', 'Downloads'),
         ('old', 'options', ('cl_allowdownload',)),
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),
@@ -304,6 +325,21 @@ SETUP = [
          'Write down what a server sends that no server of the game does, and leave one that keeps at it.'),
         ('yesno', 'Key Login by Agent', 'v_authAgent', 'The admin login asks your ssh-agent for the key (1Password, OpenSSH).'),
         ('edit', 'Key File', 'v_authKeyFile', 120, 'The file with the key for the admin login, where no agent has it.'),
+    ]),
+    ('VisionJK', 'Updates, the changelog, cleaning up and the menus.', [
+        ('head', 'Updates'),
+        ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
+        ('multistr', 'Update Channel', 'v_updateChannel', (('Stable', 'stable'), ('Development', 'dev')),
+         'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
+        ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
+        ('head', 'Maintenance'),
+        ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings no code used for a month, from older versions and other mods.'),
+        ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
+        ('head', 'Menus'),
+        ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
+        ('yesno', '3D Menu', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
+        ('slider', 'Menu Blur', 'v_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
+        ('slider', 'Menu Size', 'v_menu3dScale', 1, 0.5, 1.5, 'How big the menu is that stands in the level.'),
     ]),
     ('@MENUS_MODS', 'Game folders with other mods.', [('mods',)]),
 ]
@@ -450,6 +486,21 @@ def centered(rect, scale):
             ('textaligny', mf.fmt((rect[3] - 18.0 * scale) / 2)))
 
 
+def no_video_warning(words):
+    """A script without "defer VideoSetup videowarningMenu": the screen of the redesign throws away what Apply did not
+    keep when it closes (Menu_ChangesClose in ui_shared.c), so there is nothing to ask about."""
+    out, i = [], 0
+    while i < len(words):
+        if words[i].lower() == 'defer' and i + 2 < len(words) and words[i + 1].lower() == 'videosetup':
+            i += 3
+            while i < len(words) and words[i] in (mf.NL, ';'):
+                i += 1
+            continue
+        out.append(words[i])
+        i += 1
+    return out
+
+
 def clean(words):
     """A script without the commands that showed, hid and marked the tabs of the old menu."""
     out, i = [], 0
@@ -515,6 +566,10 @@ def as_row(block, page, y, L):
 
 
 def old_rows(m, group, only=None, skip=()):
+    return [needs(b) for b in _old_rows(m, group, only, skip)]
+
+
+def _old_rows(m, group, only=None, skip=()):
     """The settings of a group of the old menu, as new items."""
     found = []
     for e in items(m):
@@ -587,8 +642,60 @@ def pick_row(spec):
             Entry('action', [], list(CLICK) + ['setcvar', 'ui_modelPickTarget', cvar, ';', 'open', 'modelpick_popmenu', ';'])]
 
 
+# Rows that do nothing while another setting is off: greyed out (cvarTest and disableCvar, Item_Off in
+# codemp/ui/ui_shared.c), and the pane says which row they need. By the cvar of the row: the cvar it hangs on and the
+# values of that one that grey it out.
+NEEDS = {
+    'tay_bloomintensity': ('tay_bloom', ('0',)),
+    'tay_bloomthreshold': ('tay_bloom', ('0',)),
+    'v_panellight': ('cg_shadows', ('0', '1')),
+    'v_ssr': ('v_pbr', ('0',)),
+    'v_automaterials': ('v_pbr', ('0',)),
+    'v_exposure': ('v_tonemap', ('0',)),
+    'v_fxblast': ('v_screenFx', ('0',)),
+    'v_soundtinnitus': ('v_screenFx', ('0',)),
+    'v_fxheat': ('v_screenFx', ('0',)),
+    'v_fxhit': ('v_screenFx', ('0',)),
+    'v_fxwater': ('v_screenFx', ('0',)),
+    'v_fxforce': ('v_screenFx', ('0',)),
+    'v_fxsaber': ('v_screenFx', ('0',)),
+    'v_gore': ('v_slice', ('0',)),
+    'v_slicetime': ('v_slice', ('0',)),
+    'v_spatialgpu': ('v_spatialEcho', ('1',)),
+    'v_spatialsources': ('v_spatialEcho', ('1',)),
+    'v_boomboxvolume': ('v_boomboxes', ('0',)),
+    'v_downloadreview': ('cl_allowDownload', ('0',)),
+    'v_downloadkeep': ('cl_allowDownload', ('0',)),
+    'v_downloadhttp': ('cl_allowDownload', ('0',)),
+    'v_bubblerange': ('v_chatBubbles', ('0',)),
+    'v_notifytime': ('v_notify', ('0',)),
+    'v_notifyscale': ('v_notify', ('0',)),
+    'v_menu3dscale': ('v_immersiveMenu', ('0',)),
+    'tay_timermsec': ('cg_drawTimer', ('0',)),
+    'tay_timercountdown': ('cg_drawTimer', ('0',)),
+    'v_scopewheelzoom': ('v_scope', ('0',)),
+    'v_motionthreshold': ('v_scope', ('0',)),
+    'tay_startgoal': ('tay_speedometer', ('0',)),
+    'tay_jumpgoal': ('tay_speedometer', ('0',)),
+}
+
+
+def needs(b):
+    """The row greyed out while the setting it hangs on is off (NEEDS)."""
+    need = NEEDS.get(cvar_of(b))
+    if need and not mf.get(b, 'cvartest'):
+        parent, off = need
+        b.append(Entry('cvarTest', [quoted(parent)]))
+        b.append(Entry('disableCvar', [], [quoted(v) for v in off]))
+    return b
+
+
 def new_row(spec):
     """A setting the old menus did not have."""
+    return needs(_new_row(spec))
+
+
+def _new_row(spec):
     kind, text, cvar = spec[:3]
     if kind == 'open':
         return open_row(spec)
@@ -596,6 +703,11 @@ def new_row(spec):
         return menu_row(spec)
     if kind == 'pick':
         return pick_row(spec)
+    if kind == 'bit':
+        # one bit of the cvar, on while the bit is clear (cp_pluginDisable: a set bit turns a feature off)
+        return [Entry('name', ['vision_bit_%s_%d' % (cvar.lower(), spec[3])]), Entry('type', ['ITEM_TYPE_YESNO']),
+                Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])]), Entry('cvar', [quoted(cvar)]),
+                Entry('cvarBit', [str(spec[3])]), Entry('invertyesno', ['1']), Entry('action', [], list(CLICK))]
     b = [Entry('name', ['vision_%s_%s' % (kind, cvar.lower().replace(' ', '_').replace('+', ''))]), Entry('type', [TYPES[kind]]),
          Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])])]
     if kind == 'slider':
@@ -618,6 +730,9 @@ def new_row(spec):
     if cvar.lower() in SOUND_PRESET_CVARS:
         # the row "3D Sound" says which preset the cvars are (UI_GetSoundSetup), also after this one changed
         action += ['uiScript', 'getsoundsetup', ';']
+    if cvar == 'v_quality':
+        # the preset sets its settings (UI_Update in codemp/ui/ui_main.c)
+        action += ['uiScript', 'update', 'v_quality', ';']
     if cvar == 'v_updateChannel':
         # the development builds only after the warning of channel_page (UI_RunMenuScript sets it back and opens it)
         action += ['uiScript', 'updateChannel', PAGE_MARK % 'updatechannel', ';']
@@ -808,10 +923,12 @@ def build(m, name, ingame, nav):
     # the pages of their own that buttons among the rows open: after the tabs and the page of the defaults
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
+        # (two pages of their own follow: the last must stay under PAGE_SEARCH, 15 in ui_shared.h)
+        assert first + 1 < 15, 'Setup has %d pages, page 15 is the search' % (first + 1)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
-        network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
+        updates = next(n for n, (title, _, _) in enumerate(pages) if title == 'VisionJK') + 1
         new.extend(music_page(first, chat, L))
-        new.extend(channel_page(first + 1, network, L))
+        new.extend(channel_page(first + 1, updates, L))
         marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
         for e in new:
             act = mf.find(e.block, 'action') if e.k == 'itemdef' else None
@@ -858,7 +975,7 @@ def window_frame(m, L):
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
 # parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
+ADVANCED_HEADS = {'3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
 ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold', 'v_dlightscale', 'v_exposure'}
 
 
@@ -948,7 +1065,7 @@ def build_canvas(m, name, ingame):
     setup = screen is SETUP
     old = list(m)
     esc = mf.find(m, 'onesc')
-    back = clean(list(esc.block)) if esc and isinstance(esc.block, list) else list(CLICK)
+    back = no_video_warning(clean(list(esc.block))) if esc and isinstance(esc.block, list) else list(CLICK)
     w = cv.IN_W - 80 if ingame else cv.W
     top = 0 if ingame else cv.HEAD_H
     bottom = (cv.IN_H - 110 - cv.FOOT_H) if ingame else cv.H - cv.FOOT_H
@@ -1107,7 +1224,17 @@ def build_canvas(m, name, ingame):
     # the bar at the bottom
     new += cv.footer(bottom, w, not ingame)
     fy = bottom + 12
-    new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK'))
+    if setup:
+        # (closing the screen throws away what Apply did not keep, Menu_ChangesClose: while something is changed the
+        # button says so)
+        changed = (('cvarTest', 'v_setupChangesState'),)
+        new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK', *changed,
+                             ('showCvar', [], ['"0"'])))
+        new.append(cv.button('vision_discard', (32, fy, 100, 44), ref('Discard'), back, 18, 'plain',
+                             ref('Closes the settings and sets back what you changed. Apply keeps it.'), *changed,
+                             ('hideCvar', [], ['"0"'])))
+    else:
+        new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK'))
     made = defaults_page(old, len(pages) + 1, Layout(ingame)) if setup else []
     if setup:
         if made:
@@ -1120,25 +1247,34 @@ def build_canvas(m, name, ingame):
                              None, [('default_no', '@MENUS_NO', list(CLICK), '@MENUS_DO_NOT_RESET_DEFAULT', False, (('tab', 1),)),
                                     ('default_yes', '@MENUS_YES', clean(mf.find(yes.block, 'action').block) if yes else list(CLICK),
                                      '@MENUS_USE_DEFAULT_SETTINGS', True, ())])
-        new.append(cv.item('vision_dot', (310, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 3),
+        new.append(cv.button('vision_resetpage', (284, fy, 150, 44), ref('Reset Page'), list(CLICK) + ['uiScript', 'resetPage', ';'],
+                             18, 'plain', ref('Sets the settings of this page to their defaults. Revert brings them back.')))
+        new.append(cv.item('vision_dot', (454, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 3),
                            ('decoration',)))
-        new.append(cv.text('vision_dot_text', (324, fy, 300, 44), ref('Changed from default'), 13, cv.MUTED, 'left', 0, FONT,
-                           ('decoration',)))
+        new.append(cv.text('vision_dot_text', (468, fy, 360, 44), ref('Changed from default, click the dot to reset'), 13, cv.MUTED,
+                           'left', 0, FONT, ('decoration',)))
+        # (the dot in the colour of the warning before the widget of a row, Item_Row_Paint; hidden while the warning of
+        # the bar shows, which stands where it would)
+        new.append(cv.item('vision_rdot', (836, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *cv.WARN), ('radius', 3),
+                           ('decoration',), ('cvarTest', 'v_setupChangesState'), ('hideCvar', [], ['"2"'])))
+        new.append(cv.text('vision_rdot_text', (850, fy, 260, 44), ref('Takes effect after a restart'), 13, cv.MUTED, 'left', 0, FONT,
+                           ('decoration',), ('cvarTest', 'v_setupChangesState'), ('hideCvar', [], ['"2"'])))
         # Revert and Apply, which the state of the changes shows and hides (changesCvar: v_setupChangesState 0 none,
         # 1 changed, 2 changed and a restart needed)
-        apply_x, revert_x = w - 48 - 150, w - 48 - 150 - 14 - 120
+        apply_w = 210
+        apply_x, revert_x = w - 48 - apply_w, w - 48 - apply_w - 14 - 120
         state = (('cvarTest', 'v_setupChangesState'),)
-        new.append(cv.text('vision_restart', (revert_x - 420, fy, 400, 44), ref('Some changes apply after a restart'), 14, cv.WARN,
+        new.append(cv.text('vision_restart', (revert_x - 320, fy, 300, 44), ref('Some changes apply after a restart'), 14, cv.WARN,
                            'right', 0, FONT, ('decoration',), *state, ('showCvar', [], ['"2"'])))
         new.append(cv.button('vision_revert', (revert_x, fy, 120, 44), ref('Revert'), list(CLICK) + ['uiScript', 'changesRevert', ';'],
                              15, 'outline', None, *state, ('hideCvar', [], ['"0"'])))
         yes = next((e for e in items(old) if name_of(e.block) == 'vidrestart_yes'), None)
         restart = clean(list(mf.find(yes.block, 'action').block)) if yes else CLICK + ['uiScript', 'updatevideosetup', ';']
-        new.append(cv.button('vision_apply', (apply_x, fy, 150, 44), ref('Apply'), list(CLICK) + ['uiScript', 'changesApply', ';'], 15,
+        new.append(cv.button('vision_apply', (apply_x, fy, apply_w, 44), ref('Apply'), list(CLICK) + ['uiScript', 'changesApply', ';'], 15,
                              'primary', None, *state, ('showCvar', [], ['"1"'])))
-        new.append(cv.button('vision_apply_restart', (apply_x, fy, 150, 44), ref('Apply'),
+        new.append(cv.button('vision_apply_restart', (apply_x, fy, apply_w, 44), ref('Apply and Restart'),
                              ['uiScript', 'changesApply', ';'] + restart, 15, 'primary', None, *state, ('showCvar', [], ['"2"'])))
-        off = cv.button('vision_apply_off', (apply_x, fy, 150, 44), ref('Apply'), list(CLICK), 15, 'outline', None, *state,
+        off = cv.button('vision_apply_off', (apply_x, fy, apply_w, 44), ref('Apply'), list(CLICK), 15, 'outline', None, *state,
                         ('showCvar', [], ['"0"']), ('decoration',))
         mf.put(off.block, 'forecolor', *cv.MUTED)
         new.append(off)
@@ -1152,8 +1288,10 @@ def build_canvas(m, name, ingame):
     # the pages of their own that buttons among the rows open, after the tabs and the page of the defaults
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
+        # (two pages of their own follow: the last must stay under PAGE_SEARCH, 15 in ui_shared.h)
+        assert first + 1 < 15, 'Setup has %d pages, page 15 is the search' % (first + 1)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
-        network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
+        updates = next(n for n, (title, _, _) in enumerate(pages) if title == 'VisionJK') + 1
         L0 = Layout(ingame)
         music = cv.item('vision_music_list', (0, 0, 1, 1), ('type', 'ITEM_TYPE_LISTBOX'), ('style', 'WINDOW_STYLE_PANEL'),
                         ('elementwidth', 120), ('elementheight', 40), ('font', FONT), ('textscale', cv.scale(16)),
@@ -1170,10 +1308,10 @@ def build_canvas(m, name, ingame):
                           (ref('They can crash, corrupt your configs or not work on some servers.'), False),
                           (ref('You can switch back to Stable at any time.'), True)],
                          None,
-                         [('vision_channel_no', ref('Stay on Stable'), list(CLICK) + ['setpage', str(network), ';'], ref('Keep the releases.'),
+                         [('vision_channel_no', ref('Stay on Stable'), list(CLICK) + ['setpage', str(updates), ';'], ref('Keep the releases.'),
                            False, ()),
                           ('vision_channel_yes', ref('Switch to Development'),
-                           list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(network), ';'],
+                           list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(updates), ';'],
                            ref('Update to the development builds from now on.'), True, ())])
         marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
         for e in new:
@@ -1185,7 +1323,7 @@ def build_canvas(m, name, ingame):
     for key in ('onopen', 'onclose', 'onesc'):
         e = mf.find(m, key)
         if e and isinstance(e.block, list):
-            e.block = clean(e.block)
+            e.block = no_video_warning(clean(e.block)) if key == 'onesc' and setup else clean(e.block)
     if setup:
         e = mf.find(m, 'onopen')
         if e and isinstance(e.block, list):

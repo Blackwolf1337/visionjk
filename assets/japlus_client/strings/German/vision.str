@@ -321,6 +321,34 @@ REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
 LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
 LANG_GERMAN         "Zeigt die Einstellungen aller Seiten, in deren Name oder Beschreibung diese Wörter vorkommen."
 
+REFERENCE           QUALITY
+LANG_ENGLISH        "Quality"
+LANG_GERMAN         "Qualität"
+
+REFERENCE           SETS_ANTI_ALIASING_SHADOWS_MATERIALS
+LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
+LANG_GERMAN         "Stellt Kantenglättung, Schatten, Materialien, Spiegelungen, HDR und Bloom auf einmal ein. Niedrig ist am leisesten für die Grafikkarte. Eigene: was du selbst eingestellt hast."
+
+REFERENCE           LOW
+LANG_ENGLISH        "Low"
+LANG_GERMAN         "Niedrig"
+
+REFERENCE           MEDIUM
+LANG_ENGLISH        "Medium"
+LANG_GERMAN         "Mittel"
+
+REFERENCE           HIGH
+LANG_ENGLISH        "High"
+LANG_GERMAN         "Hoch"
+
+REFERENCE           ULTRA
+LANG_ENGLISH        "Ultra"
+LANG_GERMAN         "#same"
+
+REFERENCE           CUSTOM
+LANG_ENGLISH        "Custom"
+LANG_GERMAN         "Eigene"
+
 REFERENCE           DISPLAY_MODE
 LANG_ENGLISH        "Display Mode"
 LANG_GERMAN         "Anzeigemodus"
@@ -564,6 +592,54 @@ LANG_GERMAN         "Klingenschlag und Hitze"
 REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
 LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
 LANG_GERMAN         "Aufeinandertreffende Klingen blitzen auf. Die Luft um eine eingeschaltete Klinge ist heiß."
+
+REFERENCE           SLICE_BODIES
+LANG_ENGLISH        "Slice Bodies"
+LANG_GERMAN         "Körper zerteilen"
+
+REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
+LANG_GERMAN         "Ein Lichtschwert-Treffer, der tötet, schneidet den Körper entlang des Schwungs durch, mit einem verbrannten, glühenden Schnitt. Braucht den Vulkan-Renderer."
+
+REFERENCE           BLOOD
+LANG_ENGLISH        "Blood"
+LANG_GERMAN         "Blut"
+
+REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
+LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
+LANG_GERMAN         "Blut eines zerteilten Körpers. Nur Boden: Lachen und Schlieren, kein Spritzen und kein Blut auf dem Bildschirm. Aus: der Schnitt bleibt."
+
+REFERENCE           SCREEN_AND_GROUND
+LANG_ENGLISH        "Screen and Ground"
+LANG_GERMAN         "Bildschirm und Boden"
+
+REFERENCE           GROUND_ONLY
+LANG_ENGLISH        "Ground Only"
+LANG_GERMAN         "Nur Boden"
+
+REFERENCE           REMOVE_CUT_PARTS
+LANG_ENGLISH        "Remove Cut Parts"
+LANG_GERMAN         "Teile entfernen"
+
+REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
+LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
+LANG_GERMAN         "Wann die Teile eines zerteilten Körpers und ihr Blut verblassen. Früher hilft auf vollen Servern."
+
+REFERENCE           AS_LONG_AS_THE_BODY
+LANG_ENGLISH        "As Long as the Body"
+LANG_GERMAN         "Solange der Körper bleibt"
+
+REFERENCE           AFTER_15_S
+LANG_ENGLISH        "After 15 s"
+LANG_GERMAN         "Nach 15 s"
+
+REFERENCE           AFTER_30_S
+LANG_ENGLISH        "After 30 s"
+LANG_GERMAN         "Nach 30 s"
+
+REFERENCE           AFTER_60_S
+LANG_ENGLISH        "After 60 s"
+LANG_GERMAN         "Nach 60 s"
 
 REFERENCE           SOUND_IN_THE_BACKGROUND
 LANG_ENGLISH        "Sound in the Background"
@@ -821,54 +897,6 @@ REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
 LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
 LANG_GERMAN         "Klingen als 3D-Licht mit dem Vulkan-Renderer, sie enden an Wänden und leuchten über den Schwung. Aus: die flache Klinge der Optik darüber."
 
-REFERENCE           SLICE_BODIES
-LANG_ENGLISH        "Slice Bodies"
-LANG_GERMAN         "Körper zerteilen"
-
-REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
-LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
-LANG_GERMAN         "Ein Lichtschwert-Treffer, der tötet, schneidet den Körper entlang des Schwungs durch, mit einem verbrannten, glühenden Schnitt. Braucht den Vulkan-Renderer."
-
-REFERENCE           BLOOD
-LANG_ENGLISH        "Blood"
-LANG_GERMAN         "Blut"
-
-REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
-LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
-LANG_GERMAN         "Blut eines zerteilten Körpers. Nur Boden: Lachen und Schlieren, kein Spritzen und kein Blut auf dem Bildschirm. Aus: der Schnitt bleibt."
-
-REFERENCE           SCREEN_AND_GROUND
-LANG_ENGLISH        "Screen and Ground"
-LANG_GERMAN         "Bildschirm und Boden"
-
-REFERENCE           GROUND_ONLY
-LANG_ENGLISH        "Ground Only"
-LANG_GERMAN         "Nur Boden"
-
-REFERENCE           REMOVE_CUT_PARTS
-LANG_ENGLISH        "Remove Cut Parts"
-LANG_GERMAN         "Teile entfernen"
-
-REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
-LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
-LANG_GERMAN         "Wann die Teile eines zerteilten Körpers und ihr Blut verblassen. Früher hilft auf vollen Servern."
-
-REFERENCE           AS_LONG_AS_THE_BODY
-LANG_ENGLISH        "As Long as the Body"
-LANG_GERMAN         "Solange der Körper bleibt"
-
-REFERENCE           AFTER_15_S
-LANG_ENGLISH        "After 15 s"
-LANG_GERMAN         "Nach 15 s"
-
-REFERENCE           AFTER_30_S
-LANG_ENGLISH        "After 30 s"
-LANG_GERMAN         "Nach 30 s"
-
-REFERENCE           AFTER_60_S
-LANG_ENGLISH        "After 60 s"
-LANG_GERMAN         "Nach 60 s"
-
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_GERMAN         "Spurlänge"
@@ -1048,38 +1076,6 @@ LANG_GERMAN         "Neues HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Originalspiels."
-
-REFERENCE           CLASSIC_MENUS
-LANG_ENGLISH        "Classic Menus"
-LANG_GERMAN         "Klassische Menüs"
-
-REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
-LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
-LANG_GERMAN         "Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart."
-
-REFERENCE           3D_MENU
-LANG_ENGLISH        "3D Menu"
-LANG_GERMAN         "3D-Menü"
-
-REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
-LANG_ENGLISH        "In a game an open menu stands in the level next to you."
-LANG_GERMAN         "Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir."
-
-REFERENCE           MENU_BLUR
-LANG_ENGLISH        "Menu Blur"
-LANG_GERMAN         "Menü-Unschärfe"
-
-REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
-LANG_ENGLISH        "How far the level behind an open menu is out of focus."
-LANG_GERMAN         "Wie unscharf das Level hinter einem offenen Menü ist."
-
-REFERENCE           MENU_SIZE
-LANG_ENGLISH        "Menu Size"
-LANG_GERMAN         "Menügröße"
-
-REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
-LANG_ENGLISH        "How big the menu is that stands in the level."
-LANG_GERMAN         "Wie groß das Menü im Level ist."
 
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
@@ -1665,6 +1661,118 @@ REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
 LANG_GERMAN         "Datum und Uhrzeit"
 
+REFERENCE           NEW_DRAIN_EFFECT
+LANG_ENGLISH        "New Drain Effect"
+LANG_GERMAN         "Neuer Drain-Effekt"
+
+REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
+LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
+LANG_GERMAN         "Force Drain zeigt den breiten neuen Effekt. Aus: der Effekt des Spiels."
+
+REFERENCE           NEW_FORCE_EFFECTS
+LANG_ENGLISH        "New Force Effects"
+LANG_GERMAN         "Neue Macht-Effekte"
+
+REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
+LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
+LANG_GERMAN         "Die Effekte der Macht-Animationen aus dem Einzelspieler und der Griffe."
+
+REFERENCE           NEW_FORCE_SIGHT
+LANG_ENGLISH        "New Force Sight"
+LANG_GERMAN         "Neue Machtsicht"
+
+REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
+LANG_ENGLISH        "The look of Force Sight of the plugin."
+LANG_GERMAN         "Das Aussehen der Machtsicht des Plugins."
+
+REFERENCE           NEW_OTHER_DIMENSION_LOOK
+LANG_ENGLISH        "New Other Dimension Look"
+LANG_GERMAN         "Neue andere Dimension"
+
+REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
+LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
+LANG_GERMAN         "Das Aussehen der anderen Dimension des Plugins. Aus: eine einfache Überlagerung des Bildschirms."
+
+REFERENCE           SEE_BLACK_SABERS
+LANG_ENGLISH        "See Black Sabers"
+LANG_GERMAN         "Schwarze Saber sehen"
+
+REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
+LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
+LANG_GERMAN         "Schwarze Klingen werden schwarz gezeigt. Aus: sie werden rot gezeigt."
+
+REFERENCE           SABERS_ON_THE_BODY
+LANG_ENGLISH        "Sabers on the Body"
+LANG_GERMAN         "Saber am Körper"
+
+REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
+LANG_ENGLISH        "Sabers that are not drawn hang on the body."
+LANG_GERMAN         "Saber, die nicht gezogen sind, hängen am Körper."
+
+REFERENCE           NEW_DEATH_MESSAGES
+LANG_ENGLISH        "New Death Messages"
+LANG_GERMAN         "Neue Todesmeldungen"
+
+REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
+LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
+LANG_GERMAN         "Aus: die Meldungen des Spiels für Tode in Wasser, Lava und durch Stürze."
+
+REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
+LANG_ENGLISH        "Hide Players of Other Duels"
+LANG_GERMAN         "Spieler anderer Duelle ausblenden"
+
+REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
+LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
+LANG_GERMAN         "Spieler in einem Duell, an dem du nicht teilnimmst, verblassen und dein Fadenkreuz ignoriert sie."
+
+REFERENCE           CAMERA_TURN_AFTER_A_DUEL
+LANG_ENGLISH        "Camera Turn After a Duel"
+LANG_GERMAN         "Kameradrehung nach einem Duell"
+
+REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
+LANG_ENGLISH        "When your private duel ends the camera turns around you."
+LANG_GERMAN         "Wenn dein privates Duell endet, dreht sich die Kamera um dich."
+
+REFERENCE           AUTO_REPLIER
+LANG_ENGLISH        "Auto Replier"
+LANG_GERMAN         "Automatische Antwort"
+
+REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
+LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
+LANG_GERMAN         "Beantwortet private Nachrichten mit den Texten der Antwortdatei, während du weg bist."
+
+REFERENCE           LEDGE_GRAB
+LANG_ENGLISH        "Ledge Grab"
+LANG_GERMAN         "Kanten greifen"
+
+REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
+LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
+LANG_GERMAN         "Greift Kanten, auf die du springst, und zieht dich hoch. Nur auf JA+ Servern, die es erlauben."
+
+REFERENCE           NEW_DFA_PRIMARY
+LANG_ENGLISH        "New DFA Primary"
+LANG_GERMAN         "Neuer DFA primär"
+
+REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
+LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_GERMAN         "Der Death from Above des Plugins mit dem Primärangriff. Nur auf JA+ Servern, die es erlauben."
+
+REFERENCE           NEW_DFA_SECONDARY
+LANG_ENGLISH        "New DFA Secondary"
+LANG_GERMAN         "Neuer DFA sekundär"
+
+REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
+LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_GERMAN         "Der Death from Above des Plugins mit dem Sekundärangriff. Nur auf JA+ Servern, die es erlauben."
+
+REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
+LANG_ENGLISH        "No Single Player Cartwheel"
+LANG_GERMAN         "Kein Rad aus dem Einzelspieler"
+
+REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
+LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
+LANG_GERMAN         "Das Rad ohne die Bewegung aus dem Einzelspieler. Nur auf JA+ Servern, die es erlauben."
+
 REFERENCE           CLAN_PASSWORD
 LANG_ENGLISH        "Clan Password"
 LANG_GERMAN         "Clan-Passwort"
@@ -1673,53 +1781,21 @@ REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_GERMAN         "Clan-Chat und Clan-Funk erreichen alle auf dem Server mit demselben Passwort. Der Server sieht es."
 
-REFERENCE           CHECK_FOR_UPDATES
-LANG_ENGLISH        "Check for Updates"
-LANG_GERMAN         "Nach Updates suchen"
+REFERENCE           ADMIN_PASSWORD
+LANG_ENGLISH        "Admin Password"
+LANG_GERMAN         "Admin-Passwort"
 
-REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
-LANG_ENGLISH        "Ask at every start whether a newer version is out."
-LANG_GERMAN         "Fragt bei jedem Start, ob eine neuere Version da ist."
+REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
+LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
+LANG_GERMAN         "Wird beim Beitreten an einen JA+ Server gesendet, um dich als Admin anzumelden."
 
-REFERENCE           UPDATE_CHANNEL
-LANG_ENGLISH        "Update Channel"
-LANG_GERMAN         "Update-Kanal"
+REFERENCE           OTHER_DIMENSION_PLAYERS
+LANG_ENGLISH        "Other Dimension Players"
+LANG_GERMAN         "Spieler der anderen Dimension"
 
-REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
-LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
-LANG_GERMAN         "Stabil: die Releases. Entwicklung: frühe Testversionen und die Releases, wenn sie neuer sind."
-
-REFERENCE           STABLE
-LANG_ENGLISH        "Stable"
-LANG_GERMAN         "Stabil"
-
-REFERENCE           DEVELOPMENT
-LANG_ENGLISH        "Development"
-LANG_GERMAN         "Entwicklung"
-
-REFERENCE           CHANGELOG
-LANG_ENGLISH        "Changelog"
-LANG_GERMAN         "#same"
-
-REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
-LANG_ENGLISH        "What changed in each version, and what a new version brings."
-LANG_GERMAN         "Was sich in jeder Version geändert hat und was eine neue Version bringt."
-
-REFERENCE           CLEAN_UP_SETTINGS
-LANG_ENGLISH        "Clean Up Settings"
-LANG_GERMAN         "Einstellungen aufräumen"
-
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
-LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods."
-
-REFERENCE           CLEAR_CACHES
-LANG_ENGLISH        "Clear Caches"
-LANG_GERMAN         "Caches leeren"
-
-REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
-LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
-LANG_GERMAN         "Speicherplatz freigeben: Texturen, Materialien, Sounds und Schallwege, die das Spiel aufbewahrt."
+REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
+LANG_ENGLISH        "How visible players of the other dimension are."
+LANG_GERMAN         "Wie sichtbar Spieler der anderen Dimension sind."
 
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
@@ -1789,17 +1865,117 @@ REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
 LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
 LANG_GERMAN         "Datei mit dem Schlüssel für den Admin-Login, falls kein Agent ihn hat."
 
-REFERENCE           SCREEN
-LANG_ENGLISH        "Screen"
-LANG_GERMAN         "Bildschirm"
+REFERENCE           CHECK_FOR_UPDATES
+LANG_ENGLISH        "Check for Updates"
+LANG_GERMAN         "Nach Updates suchen"
+
+REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
+LANG_ENGLISH        "Ask at every start whether a newer version is out."
+LANG_GERMAN         "Fragt bei jedem Start, ob eine neuere Version da ist."
+
+REFERENCE           UPDATE_CHANNEL
+LANG_ENGLISH        "Update Channel"
+LANG_GERMAN         "Update-Kanal"
+
+REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
+LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
+LANG_GERMAN         "Stabil: die Releases. Entwicklung: frühe Testversionen und die Releases, wenn sie neuer sind."
+
+REFERENCE           STABLE
+LANG_ENGLISH        "Stable"
+LANG_GERMAN         "Stabil"
+
+REFERENCE           DEVELOPMENT
+LANG_ENGLISH        "Development"
+LANG_GERMAN         "Entwicklung"
+
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_GERMAN         "#same"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_GERMAN         "Was sich in jeder Version geändert hat und was eine neue Version bringt."
+
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+LANG_GERMAN         "Einstellungen aufräumen"
+
+REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods."
+
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+LANG_GERMAN         "Caches leeren"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+LANG_GERMAN         "Speicherplatz freigeben: Texturen, Materialien, Sounds und Schallwege, die das Spiel aufbewahrt."
+
+REFERENCE           CLASSIC_MENUS
+LANG_ENGLISH        "Classic Menus"
+LANG_GERMAN         "Klassische Menüs"
+
+REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
+LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
+LANG_GERMAN         "Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart."
+
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
+LANG_GERMAN         "3D-Menü"
+
+REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
+LANG_ENGLISH        "In a game an open menu stands in the level next to you."
+LANG_GERMAN         "Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir."
+
+REFERENCE           MENU_BLUR
+LANG_ENGLISH        "Menu Blur"
+LANG_GERMAN         "Menü-Unschärfe"
+
+REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
+LANG_ENGLISH        "How far the level behind an open menu is out of focus."
+LANG_GERMAN         "Wie unscharf das Level hinter einem offenen Menü ist."
+
+REFERENCE           MENU_SIZE
+LANG_ENGLISH        "Menu Size"
+LANG_GERMAN         "Menügröße"
+
+REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
+LANG_ENGLISH        "How big the menu is that stands in the level."
+LANG_GERMAN         "Wie groß das Menü im Level ist."
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
 LANG_GERMAN         "Details"
 
+REFERENCE           SCREEN
+LANG_ENGLISH        "Screen"
+LANG_GERMAN         "Bildschirm"
+
 REFERENCE           LIGHTING
 LANG_ENGLISH        "Lighting"
 LANG_GERMAN         "Licht"
+
+REFERENCE           SHADOWS_MATERIALS_REFLECTIONS_HDR_AN
+LANG_ENGLISH        "Shadows, materials, reflections, HDR and bloom."
+LANG_GERMAN         "Schatten, Materialien, Spiegelungen, HDR und Bloom."
+
+REFERENCE           SHADOWS_AND_MATERIALS
+LANG_ENGLISH        "Shadows and Materials"
+LANG_GERMAN         "Schatten und Materialien"
+
+REFERENCE           EFFECTS
+LANG_ENGLISH        "Effects"
+LANG_GERMAN         "Effekte"
+
+REFERENCE           SCREEN_EFFECTS_SABER_SLICING_AND_BLO
+LANG_ENGLISH        "Screen effects, saber slicing and blood."
+LANG_GERMAN         "Bildschirmeffekte, Zerteilen mit dem Saber und Blut."
+
+REFERENCE           SLICING
+LANG_ENGLISH        "Slicing"
+LANG_GERMAN         "Zerteilen"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
@@ -1845,18 +2021,6 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_GERMAN         "Was der Bildschirm um den Level herum zeigt, die Sicht und das Fadenkreuz."
 
-REFERENCE           MENUS_AND_HUD
-LANG_ENGLISH        "Menus and HUD"
-LANG_GERMAN         "Menüs und HUD"
-
-REFERENCE           ON_SCREEN
-LANG_ENGLISH        "On Screen"
-LANG_GERMAN         "Auf dem Bildschirm"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_GERMAN         "Sicht"
-
 REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 LANG_GERMAN         "Fadenkreuz"
@@ -1864,6 +2028,14 @@ LANG_GERMAN         "Fadenkreuz"
 REFERENCE           MOVEMENT
 LANG_ENGLISH        "Movement"
 LANG_GERMAN         "Bewegung"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_GERMAN         "Sicht"
+
+REFERENCE           ON_SCREEN
+LANG_ENGLISH        "On Screen"
+LANG_GERMAN         "Auf dem Bildschirm"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -1885,21 +2057,33 @@ REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 LANG_GERMAN         "#same"
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
+REFERENCE           JA
+LANG_ENGLISH        "JA+"
 LANG_GERMAN         "#same"
+
+REFERENCE           THE_FEATURES_OF_THE_JA_CLIENT_PLUGIN
+LANG_ENGLISH        "The features of the JA+ client plugin, clan and admin login."
+LANG_GERMAN         "Die Funktionen des JA+ Client-Plugins, Clan und Admin-Login."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_GERMAN         "Aussehen"
+
+REFERENCE           CLAN_AND_ADMIN
+LANG_ENGLISH        "Clan and Admin"
+LANG_GERMAN         "Clan und Admin"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
 LANG_GERMAN         "Netzwerk"
 
-REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
-LANG_ENGLISH        "Updates, downloads and security."
-LANG_GERMAN         "Updates, Downloads und Sicherheit."
+REFERENCE           DOWNLOADS_THE_CONNECTION_AND_SECURIT
+LANG_ENGLISH        "Downloads, the connection and security."
+LANG_GERMAN         "Downloads, die Verbindung und Sicherheit."
 
-REFERENCE           UPDATES_AND_DOWNLOADS
-LANG_ENGLISH        "Updates and Downloads"
-LANG_GERMAN         "Updates und Downloads"
+REFERENCE           DOWNLOADS
+LANG_ENGLISH        "Downloads"
+LANG_GERMAN         "#same"
 
 REFERENCE           CONNECTION
 LANG_ENGLISH        "Connection"
@@ -1908,6 +2092,26 @@ LANG_GERMAN         "Verbindung"
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_GERMAN         "Sicherheit"
+
+REFERENCE           VISIONJK
+LANG_ENGLISH        "VisionJK"
+LANG_GERMAN         "#same"
+
+REFERENCE           UPDATES_THE_CHANGELOG_CLEANING_UP_AN
+LANG_ENGLISH        "Updates, the changelog, cleaning up and the menus."
+LANG_GERMAN         "Updates, das Changelog, Aufräumen und die Menüs."
+
+REFERENCE           UPDATES
+LANG_ENGLISH        "Updates"
+LANG_GERMAN         "#same"
+
+REFERENCE           MAINTENANCE
+LANG_ENGLISH        "Maintenance"
+LANG_GERMAN         "Wartung"
+
+REFERENCE           MENUS
+LANG_ENGLISH        "Menus"
+LANG_GERMAN         "Menüs"
 
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
@@ -1925,9 +2129,29 @@ REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
 LANG_ENGLISH        "Shows the settings that matter, or all of them."
 LANG_GERMAN         "Zeigt die wichtigen Einstellungen oder alle."
 
-REFERENCE           CHANGED_FROM_DEFAULT
-LANG_ENGLISH        "Changed from default"
-LANG_GERMAN         "Vom Standard geändert"
+REFERENCE           DISCARD
+LANG_ENGLISH        "Discard"
+LANG_GERMAN         "Verwerfen"
+
+REFERENCE           CLOSES_THE_SETTINGS_AND_SETS_BACK_WH
+LANG_ENGLISH        "Closes the settings and sets back what you changed. Apply keeps it."
+LANG_GERMAN         "Schließt die Einstellungen und setzt zurück, was du geändert hast. Übernehmen behält es."
+
+REFERENCE           RESET_PAGE
+LANG_ENGLISH        "Reset Page"
+LANG_GERMAN         "Seite zurücksetzen"
+
+REFERENCE           SETS_THE_SETTINGS_OF_THIS_PAGE_TO_TH
+LANG_ENGLISH        "Sets the settings of this page to their defaults. Revert brings them back."
+LANG_GERMAN         "Setzt die Einstellungen dieser Seite auf ihren Standard. Rückgängig holt sie zurück."
+
+REFERENCE           CHANGED_FROM_DEFAULT_CLICK_THE_DOT_T
+LANG_ENGLISH        "Changed from default, click the dot to reset"
+LANG_GERMAN         "Vom Standard geändert, Klick auf den Punkt setzt zurück"
+
+REFERENCE           TAKES_EFFECT_AFTER_A_RESTART
+LANG_ENGLISH        "Takes effect after a restart"
+LANG_GERMAN         "Gilt nach einem Neustart"
 
 REFERENCE           SOME_CHANGES_APPLY_AFTER_A_RESTART
 LANG_ENGLISH        "Some changes apply after a restart"
@@ -1940,6 +2164,10 @@ LANG_GERMAN         "Zurücksetzen"
 REFERENCE           APPLY
 LANG_ENGLISH        "Apply"
 LANG_GERMAN         "Übernehmen"
+
+REFERENCE           APPLY_AND_RESTART
+LANG_ENGLISH        "Apply and Restart"
+LANG_GERMAN         "Übernehmen und neu starten"
 
 REFERENCE           PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Players of My Music"
@@ -2021,6 +2249,22 @@ REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 LANG_GERMAN         "Aussehen von Menüs, HUD und Kamera."
 
+REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
+LANG_ENGLISH        "Updates, downloads and security."
+LANG_GERMAN         "Updates, Downloads und Sicherheit."
+
+REFERENCE           MENUS_AND_HUD
+LANG_ENGLISH        "Menus and HUD"
+LANG_GERMAN         "Menüs und HUD"
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_GERMAN         "#same"
+
+REFERENCE           UPDATES_AND_DOWNLOADS
+LANG_ENGLISH        "Updates and Downloads"
+LANG_GERMAN         "Updates und Downloads"
+
 REFERENCE           TEXT
 LANG_ENGLISH        "Text"
 LANG_GERMAN         "#same"
@@ -2068,10 +2312,6 @@ LANG_GERMAN         "Funktionen aus dem TaystJK-Client: HUD, Bewegung, Hüte, Umh
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_GERMAN         "Chat und Konsole"
-
-REFERENCE           LOOKS
-LANG_ENGLISH        "Looks"
-LANG_GERMAN         "Aussehen"
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."
@@ -2665,6 +2905,10 @@ REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_GERMAN         "vor %i Tagen"
 
+REFERENCE           CHANGED_FROM_DEFAULT
+LANG_ENGLISH        "Changed from default"
+LANG_GERMAN         "Vom Standard geändert"
+
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
 LANG_GERMAN         "Keine Einstellung hat diese Wörter."
@@ -3124,6 +3368,10 @@ LANG_GERMAN         "Wie gewählt"
 REFERENCE           PICK_A_MODEL
 LANG_ENGLISH        "Pick a Model"
 LANG_GERMAN         "Modell wählen"
+
+REFERENCE           NEEDS_S
+LANG_ENGLISH        "Needs %s"
+LANG_GERMAN         "Braucht %s"
 
 
 ENDMARKER

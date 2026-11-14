@@ -326,6 +326,7 @@ typedef struct itemDef_s {
 	int			iMenuFont;					// FONT_SMALL,FONT_MEDIUM,FONT_LARGE	// changed from 'font' so I could see what didn't compile, and differentiate between font handles returned from RegisterFont -ste
 	qboolean	disabled;					// Does this item ignore mouse and keyboard focus
 	int			invertYesNo;
+	int			cvarBit;					// VisionJK: a yes/no on bit cvarBit - 1 of its cvar, 0: the whole cvar
 	int			xoffset;
 
 	qboolean disabledHidden;				// hide the item when 'disabled' is true (for generic image items)
@@ -630,6 +631,7 @@ void Menu_ChangesRevert( void );
 void Menus_Dump( void );
 qboolean Item_Dumped( const itemDef_t *item );
 void Menu_ChangesApply( void );
+void Menu_ResetPage( menuDef_t *menu );
 float Menu_Unit( const menuDef_t *menu );
 qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty );
 void Menu_SetPage( menuDef_t *menu, int page );
