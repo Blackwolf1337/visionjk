@@ -601,9 +601,9 @@ TR = {
     'All of it is in ids.log in the game folder.': 'Alles steht in ids.log im Spielordner.',
     # the window Clean Up Settings of Setup, Network (ui/jamp/cvarclean.menu, ui_cvarclean.c)
     'Clean Up Settings': 'Einstellungen aufräumen',
-    'Settings no code used for a month, from older versions and other mods.': 'Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods.',
+    'Settings this version does not have, old names of settings, and settings no code used for a month.': 'Einstellungen, die diese Version nicht hat, alte Namen von Einstellungen und Einstellungen, die einen Monat lang kein Code benutzt hat.',
     'Nothing to clean up.': 'Nichts aufzuräumen.',
-    'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': 'Einstellungen, die einen Monat lang kein Code benutzt hat: übrig aus älteren Versionen und anderen Mods. Entfernen nimmt eine aus der Config.',
+    'Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month.': 'Entfernen nimmt eine Einstellung aus der Konfiguration: solche, die diese Version nicht hat, alte Namen und solche, die einen Monat lang kein Code benutzt hat.',
     'Remove All': 'Alle entfernen',
     # the window Clear Caches of Setup, Network (ui/jamp/cacheclean.menu, ui_cacheclean.c, client/cl_cache.cpp)
     'Clear Caches': 'Caches leeren',
@@ -986,6 +986,8 @@ CGAME = {
     'Melee + Drain level 2 or higher, in front of an enemy': 'Nahkampf + Macht-Entzug ab Stufe 2, vor einem Feind',
     'Melee or Staff + Forward + Left + Alt Attack': 'Nahkampf oder Stab + Vorwärts + Links + 2. Feuermodus',
     'Needs %s': 'Braucht %s',
+    'Not in this version': 'Nicht in dieser Version',
+    'Renamed to %s': 'Umbenannt in %s',
 }
 
 # names that are the same in every language

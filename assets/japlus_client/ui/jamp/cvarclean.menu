@@ -1,6 +1,6 @@
 //----------------------------------------------------------------------------------------------
 //
-//	CLEAN UP SETTINGS (VisionJK): the cvars of the config no code used for a month, from older
+//	CLEAN UP SETTINGS (VisionJK): the cvars of the config this version does not have, old names, and ones no code used for a month, from older
 //	versions and other mods (FEEDER_CVARCLEAN, ui/ui_cvarclean.c, cvar_cleanup of the engine).
 //	Opened by the row of Setup, Network. The texts are the ones of the new look
 //	(strings/<language>/vision.str).
@@ -70,7 +70,7 @@
 			forecolor			1 1 1 1
 			elementtype			LISTBOX_TEXT
 			feeder				FEEDER_CVARCLEAN
-			columns				3	4 20 216	230 20 216	456 20 104
+			columns				3	4 20 200	214 20 150	374 20 186
 			visible				1
 			textaligny			14
 		}
@@ -100,7 +100,7 @@
 			name				cvarclean_about
 			group				none
 			style				WINDOW_STYLE_EMPTY
-			text				@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+			text				@VISION_REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
 			rect				36 360 568 30
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			284

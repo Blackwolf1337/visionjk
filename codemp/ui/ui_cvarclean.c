@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // ui_cvarclean.c -- the window "Clean Up Settings" of Setup (ui/jamp/cvarclean.menu, FEEDER_CVARCLEAN): the cvars of
-// the config no code used for a month, as the engine notes them (qcommon/cvar/cvar_cleanup.cpp, ext.Cvar_UnusedList), with
+// the config this version does not have or no code used for a month, as the engine finds them (qcommon/cvar/cvar_cleanup.cpp, ext.Cvar_UnusedList), with
 // their value and when they were used last. Removing one runs cvar_cleanup of the engine, which also writes the
 // config again without it. Not from JA+.
 
@@ -34,6 +34,7 @@ typedef struct {
 	const char	*name;
 	const char	*value;
 	int			day;			// days since 1970, 0 for never
+	const char	*reason;		// "gone", "renamed <new name>", or "" for the days alone
 } cleanRow_t;
 
 static char			cleanText[CLEAN_LIST];
@@ -51,9 +52,9 @@ void UI_CvarCleanLoad( void ) {
 	if ( trap->Cvar_VariableValue( "v_uiCvarClean" ) == 1.0f && trap->ext.Cvar_UnusedList )
 		trap->ext.Cvar_UnusedList( cleanText, sizeof( cleanText ) );
 
-	// "name<tab>value<tab>day" a line
+	// "name<tab>value<tab>day<tab>reason" a line (an older engine has no reason)
 	for ( line = cleanText; *line && cleanCount < CLEAN_MOST; line = next ) {
-		char *value, *day;
+		char *value, *day, *reason;
 
 		next = strchr( line, '\n' );
 		if ( !next )
@@ -65,6 +66,10 @@ void UI_CvarCleanLoad( void ) {
 			continue;
 		*value++ = '\0';
 		*day++ = '\0';
+		reason = strchr( day, '\t' );
+		if ( reason )
+			*reason++ = '\0';
+		cleanRows[cleanCount].reason = reason ? reason : "";
 		cleanRows[cleanCount].name = line;
 		cleanRows[cleanCount].value = value;
 		cleanRows[cleanCount].day = atoi( day );
@@ -77,7 +82,7 @@ int UI_CvarCleanCount( void ) {
 	return cleanCount;
 }
 
-// the columns: the name, the value, when it was used last
+// the columns: the name, the value, why it can go (not in this version, renamed, or when it was used last)
 const char *UI_CvarCleanText( int index, int column ) {
 	const cleanRow_t *row;
 
@@ -88,6 +93,10 @@ const char *UI_CvarCleanText( int index, int column ) {
 		return row->name;
 	if ( column == 1 )
 		return row->value;
+	if ( !Q_stricmp( row->reason, "gone" ) )
+		return Vision_Text( "Not in this version" );
+	if ( !Q_stricmpn( row->reason, "renamed ", 8 ) )
+		return va( Vision_Text( "Renamed to %s" ), row->reason + 8 );
 	if ( !row->day )
 		return Vision_Text( "Never used" );
 	return va( Vision_Text( "%i days ago" ), (int)( time( NULL ) / ( 24 * 60 * 60 ) ) - row->day );

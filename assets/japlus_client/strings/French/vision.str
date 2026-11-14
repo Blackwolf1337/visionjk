@@ -1901,9 +1901,9 @@ REFERENCE           CLEAN_UP_SETTINGS
 LANG_ENGLISH        "Clean Up Settings"
 LANG_FRENCH         "Nettoyer les paramètres"
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
-LANG_FRENCH         "Paramètres qu'aucun code n'a utilisés depuis un mois, issus d'anciennes versions et d'autres mods."
+REFERENCE           SETTINGS_THIS_VERSION_DOES_NOT_HAVE
+LANG_ENGLISH        "Settings this version does not have, old names of settings, and settings no code used for a month."
+LANG_FRENCH         "Paramètres que cette version n'a pas, anciens noms de paramètres et paramètres qu'aucun code n'a utilisés depuis un mois."
 
 REFERENCE           CLEAR_CACHES
 LANG_ENGLISH        "Clear Caches"
@@ -2853,9 +2853,9 @@ REFERENCE           NOTHING_TO_CLEAN_UP
 LANG_ENGLISH        "Nothing to clean up."
 LANG_FRENCH         "Rien à nettoyer."
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
-LANG_FRENCH         "Paramètres qu'aucun code n'a utilisés depuis un mois : restes d'anciennes versions et d'autres mods. Enlever en retire un de la config."
+REFERENCE           REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
+LANG_ENGLISH        "Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month."
+LANG_FRENCH         "Supprimer retire un paramètre de la configuration : ceux que cette version n'a pas, les anciens noms et ceux qu'aucun code n'a utilisés depuis un mois."
 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
@@ -3372,6 +3372,14 @@ LANG_FRENCH         "Choisir un modèle"
 REFERENCE           NEEDS_S
 LANG_ENGLISH        "Needs %s"
 LANG_FRENCH         "Nécessite %s"
+
+REFERENCE           NOT_IN_THIS_VERSION
+LANG_ENGLISH        "Not in this version"
+LANG_FRENCH         "Absent de cette version"
+
+REFERENCE           RENAMED_TO_S
+LANG_ENGLISH        "Renamed to %s"
+LANG_FRENCH         "Renommé en %s"
 
 
 ENDMARKER

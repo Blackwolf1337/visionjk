@@ -1201,15 +1201,21 @@ The days are in `cvarseen.txt` in `fs_homepath`, for all mods together: `start <
 saved once a minute at most, when something changed, and at shutdown. It keeps 8192 names, and when it is full the
 oldest eighth is dropped.
 
-A cvar is unused when you made it and no code used it for 30 days, or when no code ever used it and the tracking has
-run 30 days. So nothing is offered in the first month. A name that stands behind `vstr` in any cvar value or key
+Since 2026-11-14 the build also lists every cvar name it can use: `tools/cvars/known.py` reads the string literals and
+`XCVAR_DEF` names of all sources in `codemp/`, the cvar words of the menus and the `seta` lines of the asset configs,
+and writes `cvar_known.h` into the build folder (CMake target `MPCvarKnownList`, needs Python 3; without it the list is
+empty and only the days count). The old names of `cvar_renames.h` are left out. In a folder of VisionJK itself
+(`base`, `japlus`) a cvar you made that a config stores is offered at once when it is an old name ("renamed to") or
+none of the names of the list ("not in this version"); a name of the list is never offered. In the folder of another
+mod the list says nothing about that mod's code, there the days alone count: a cvar is unused when you made it and
+no code used it for 30 days, or when no code ever used it and the tracking has run 30 days. A name that stands behind `vstr` in any cvar value or key
 binding is never offered, it is a script.
 
-`cvar_cleanup` lists name, value and last used. `cvar_cleanup remove <name ...|all>` unsets them (cvars made by the
+`cvar_cleanup` lists name, value and why (renamed to, not in this version, or last used). `cvar_cleanup remove <name ...|all>` unsets them (cvars made by the
 user only) and writes `visionjk.cfg` again. `autoexec.cfg` and other files you wrote are not edited.
 
-Setup, Network has a row "Clean Up Settings" that opens a window, in the classic menus and in the new look
-(`ui/jamp/cvarclean.menu`, `ui_cvarclean.c`, `FEEDER_CVARCLEAN`). The list has name, value and last used, and the
+Setup, VisionJK has a row "Clean Up Settings" that opens a window, in the classic menus and in the new look
+(`ui/jamp/cvarclean.menu`, `ui_cvarclean.c`, `FEEDER_CVARCLEAN`). The list has name, value and why, and the
 buttons are Remove (the selected row), Remove All and Done. The texts are in English, German, French and Spanish. It
 needs the import `ext.Cvar_UnusedList` of the engine (ROM cvar `v_uiCvarClean` 1). Tested headless: the command lists
 and removes, a name in a binding behind `vstr` is kept, the window opens, lists, and Remove takes the selected row

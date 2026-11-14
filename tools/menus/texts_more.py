@@ -643,9 +643,9 @@ MORE = {
     'The changelog is not there. It comes with the next update.': ('Le journal des modifications est absent. Il arrive avec la prochaine mise à jour.', 'Falta el registro de cambios. Llegará con la próxima actualización.'),
     # the window Clean Up Settings (ui_cvarclean.c)
     'Clean Up Settings': ('Nettoyer les paramètres', 'Limpiar ajustes'),
-    'Settings no code used for a month, from older versions and other mods.': ("Paramètres qu'aucun code n'a utilisés depuis un mois, issus d'anciennes versions et d'autres mods.", 'Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods.'),
+    'Settings this version does not have, old names of settings, and settings no code used for a month.': ('Paramètres que cette version n\'a pas, anciens noms de paramètres et paramètres qu\'aucun code n\'a utilisés depuis un mois.', 'Ajustes que esta versión no tiene, nombres antiguos de ajustes y ajustes que ningún código ha usado en un mes.'),
     'Nothing to clean up.': ('Rien à nettoyer.', 'Nada que limpiar.'),
-    'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': ("Paramètres qu'aucun code n'a utilisés depuis un mois : restes d'anciennes versions et d'autres mods. Enlever en retire un de la config.", 'Ajustes que ningún código ha usado en un mes: restos de versiones anteriores y de otros mods. Quitar saca uno de la configuración.'),
+    'Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month.': ('Supprimer retire un paramètre de la configuration : ceux que cette version n\'a pas, les anciens noms et ceux qu\'aucun code n\'a utilisés depuis un mois.', 'Eliminar quita un ajuste de la configuración: los que esta versión no tiene, los nombres antiguos y los que ningún código ha usado en un mes.'),
     'Remove All': ('Tout enlever', 'Quitar todo'),
     # the window Clear Caches (ui_cacheclean.c)
     'Clear Caches': ('Vider les caches', 'Vaciar cachés'),
@@ -891,4 +891,6 @@ MORE = {
     'Takes effect after a restart': ('Pris en compte après un redémarrage', 'Se aplica tras reiniciar'),
     'Apply and Restart': ('Appliquer et redémarrer', 'Aplicar y reiniciar'),
     'Needs %s': ('Nécessite %s', 'Necesita %s'),
+    'Not in this version': ('Absent de cette version', 'No está en esta versión'),
+    'Renamed to %s': ('Renommé en %s', 'Renombrado a %s'),
 }

@@ -333,7 +333,7 @@ SETUP = [
          'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
         ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
         ('head', 'Maintenance'),
-        ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings no code used for a month, from older versions and other mods.'),
+        ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings this version does not have, old names of settings, and settings no code used for a month.'),
         ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
         ('head', 'Menus'),
         ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),

@@ -1427,8 +1427,8 @@ LANG_ENGLISH        "What changed in each version, and what a new version brings
 REFERENCE           CLEAN_UP_SETTINGS
 LANG_ENGLISH        "Clean Up Settings"
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
+REFERENCE           SETTINGS_THIS_VERSION_DOES_NOT_HAVE
+LANG_ENGLISH        "Settings this version does not have, old names of settings, and settings no code used for a month."
 
 REFERENCE           CLEAR_CACHES
 LANG_ENGLISH        "Clear Caches"
@@ -2141,8 +2141,8 @@ LANG_ENGLISH        "The changelog is not there. It comes with the next update."
 REFERENCE           NOTHING_TO_CLEAN_UP
 LANG_ENGLISH        "Nothing to clean up."
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
+REFERENCE           REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
+LANG_ENGLISH        "Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month."
 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
@@ -2530,6 +2530,12 @@ LANG_ENGLISH        "Pick a Model"
 
 REFERENCE           NEEDS_S
 LANG_ENGLISH        "Needs %s"
+
+REFERENCE           NOT_IN_THIS_VERSION
+LANG_ENGLISH        "Not in this version"
+
+REFERENCE           RENAMED_TO_S
+LANG_ENGLISH        "Renamed to %s"
 
 
 ENDMARKER

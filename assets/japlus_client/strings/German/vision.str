@@ -1901,9 +1901,9 @@ REFERENCE           CLEAN_UP_SETTINGS
 LANG_ENGLISH        "Clean Up Settings"
 LANG_GERMAN         "Einstellungen aufräumen"
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
-LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods."
+REFERENCE           SETTINGS_THIS_VERSION_DOES_NOT_HAVE
+LANG_ENGLISH        "Settings this version does not have, old names of settings, and settings no code used for a month."
+LANG_GERMAN         "Einstellungen, die diese Version nicht hat, alte Namen von Einstellungen und Einstellungen, die einen Monat lang kein Code benutzt hat."
 
 REFERENCE           CLEAR_CACHES
 LANG_ENGLISH        "Clear Caches"
@@ -2853,9 +2853,9 @@ REFERENCE           NOTHING_TO_CLEAN_UP
 LANG_ENGLISH        "Nothing to clean up."
 LANG_GERMAN         "Nichts aufzuräumen."
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
-LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat: übrig aus älteren Versionen und anderen Mods. Entfernen nimmt eine aus der Config."
+REFERENCE           REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
+LANG_ENGLISH        "Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month."
+LANG_GERMAN         "Entfernen nimmt eine Einstellung aus der Konfiguration: solche, die diese Version nicht hat, alte Namen und solche, die einen Monat lang kein Code benutzt hat."
 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
@@ -3372,6 +3372,14 @@ LANG_GERMAN         "Modell wählen"
 REFERENCE           NEEDS_S
 LANG_ENGLISH        "Needs %s"
 LANG_GERMAN         "Braucht %s"
+
+REFERENCE           NOT_IN_THIS_VERSION
+LANG_ENGLISH        "Not in this version"
+LANG_GERMAN         "Nicht in dieser Version"
+
+REFERENCE           RENAMED_TO_S
+LANG_ENGLISH        "Renamed to %s"
+LANG_GERMAN         "Umbenannt in %s"
 
 
 ENDMARKER

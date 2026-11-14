@@ -25,9 +25,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (registered it, or a module read it by name) in cvarseen.txt of the home path, for all mods together, and
 // offers the ones no code used for CVARSEEN_DAYS (cvar_seen.c). A name behind a vstr in a cvar or a key binding
 // is never offered: it is a script, which nothing registers.
+//
+// Since 2026-11-14 it also checks what is in the game (their idea): the build lists every cvar name its code and
+// menus can use (tools/cvars/known.py, cvar_known.h). In a folder of VisionJK itself a stored cvar that is an old
+// name of cvar_renames.h, or none of those names, is offered at once; a known name never. In the folder of another
+// mod the list says nothing about its code, there the days alone count.
 
 #include "qcommon/qcommon.h"
 #include "cvar_seen.h"
+#include "cvar_known.h"		// generated at the build (codemp/CMakeLists.txt)
 
 #ifndef DEDICATED
 	#include "client/keys.h"		// the bindings, which can run a script
@@ -155,9 +161,68 @@ static qboolean Cvar_IsScript( const char *name ) {
 	return qfalse;
 }
 
+// is a name one of the cvars of this build (cvarKnown is sorted and in small letters)
+static qboolean Cvar_Known( const char *name ) {
+#if CVAR_KNOWN_COUNT > 0
+	char	lower[MAX_CVAR_VALUE_STRING];
+	int		low = 0, high = CVAR_KNOWN_COUNT - 1;
+
+	Q_strncpyz( lower, name, sizeof( lower ) );
+	Q_strlwr( lower );
+	while ( low <= high ) {
+		const int mid = ( low + high ) / 2, cmp = strcmp( lower, cvarKnown[mid] );
+
+		if ( !cmp )
+			return qtrue;
+		if ( cmp < 0 )
+			high = mid - 1;
+		else
+			low = mid + 1;
+	}
+	return qfalse;
+#else
+	(void)name;
+	return qtrue;
+#endif
+}
+
+// is the list of the build good for the folder the game runs in: VisionJK's own (base, japlus), not another mod
+static qboolean Cvar_KnownApplies( void ) {
+	const char *game = Cvar_VariableString( "fs_game" );
+
+	return (qboolean)( CVAR_KNOWN_COUNT > 0 && ( !game[0] || !Q_stricmp( game, BASEGAME ) || !Q_stricmp( game, "japlus" ) ) );
+}
+
+typedef enum {
+	UNUSED_NO,			// keep it
+	UNUSED_RENAMED,		// an old name, the value went to the new one
+	UNUSED_GONE,		// no code of this version has it
+	UNUSED_DAYS			// no code used it for CVARSEEN_DAYS
+} unusedWhy_t;
+
+static unusedWhy_t Cvar_UnusedWhy( const cvar_t *var, int today ) {
+	unusedWhy_t why = UNUSED_NO;
+
+	if ( !var->name || !( var->flags & CVAR_USER_CREATED ) )
+		return UNUSED_NO;
+	if ( Cvar_KnownApplies() && ( var->flags & CVAR_ARCHIVE ) ) {
+		// (only what a config stores: a server sets cvars of its own for the session)
+		if ( Cvar_RenamedTo( var->name ) )
+			why = UNUSED_RENAMED;
+		else if ( !Cvar_Known( var->name ) )
+			why = UNUSED_GONE;
+		else
+			return UNUSED_NO;
+	} else if ( CvarSeen_Unused( var->name, today ) ) {
+		why = UNUSED_DAYS;
+	}
+	if ( why != UNUSED_NO && Cvar_IsScript( var->name ) )
+		return UNUSED_NO;
+	return why;
+}
+
 static qboolean Cvar_IsUnused( const cvar_t *var, int today ) {
-	return (qboolean)( var->name && ( var->flags & CVAR_USER_CREATED ) && CvarSeen_Unused( var->name, today )
-		&& !Cvar_IsScript( var->name ) );
+	return (qboolean)( Cvar_UnusedWhy( var, today ) != UNUSED_NO );
 }
 
 int Cvar_UnusedList( char *buf, int size ) {
@@ -168,18 +233,24 @@ int Cvar_UnusedList( char *buf, int size ) {
 		return 0;
 	buf[0] = '\0';
 	for ( const cvar_t *var = cvar_vars; var; var = var->next ) {
-		char	line[MAX_CVAR_VALUE_STRING + 96], value[MAX_CVAR_VALUE_STRING];
-		int		n;
+		char				line[MAX_CVAR_VALUE_STRING * 2 + 96], value[MAX_CVAR_VALUE_STRING], reason[MAX_CVAR_VALUE_STRING + 16];
+		const unusedWhy_t	why = Cvar_UnusedWhy( var, today );
+		int					n;
 
-		if ( !Cvar_IsUnused( var, today ) )
+		if ( why == UNUSED_NO )
 			continue;
+		// (a fourth column, which an older ui does not read: why it is offered)
+		if ( why == UNUSED_RENAMED )
+			Com_sprintf( reason, sizeof( reason ), "renamed %s", Cvar_RenamedTo( var->name ) );
+		else
+			Q_strncpyz( reason, why == UNUSED_GONE ? "gone" : "", sizeof( reason ) );
 		// a tab in the value would be a column more
 		Q_strncpyz( value, var->string, sizeof( value ) );
 		for ( char *t = value; *t; t++ ) {
 			if ( *t == '\t' || *t == '\n' || *t == '\r' )
 				*t = ' ';
 		}
-		n = Com_sprintf( line, sizeof( line ), "%s\t%s\t%i\n", var->name, value, CvarSeen_Day( var->name ) );
+		n = Com_sprintf( line, sizeof( line ), "%s\t%s\t%i\t%s\n", var->name, value, CvarSeen_Day( var->name ), reason );
 		if ( len + n >= size )
 			break;
 		memcpy( buf + len, line, n + 1 );
@@ -234,22 +305,29 @@ static void Cvar_Cleanup_f( void ) {
 	}
 
 	for ( const cvar_t *var = cvar_vars; var; var = var->next ) {
-		int day;
+		const unusedWhy_t	why = Cvar_UnusedWhy( var, today );
+		int					day;
 
-		if ( !Cvar_IsUnused( var, today ) )
+		if ( why == UNUSED_NO )
 			continue;
 		day = CvarSeen_Day( var->name );
-		if ( day )
+		if ( why == UNUSED_RENAMED )
+			Com_Printf( "%-32s \"%s" S_COLOR_WHITE "\"  renamed to %s\n", var->name, var->string, Cvar_RenamedTo( var->name ) );
+		else if ( why == UNUSED_GONE )
+			Com_Printf( "%-32s \"%s" S_COLOR_WHITE "\"  not in this version\n", var->name, var->string );
+		else if ( day )
 			Com_Printf( "%-32s \"%s" S_COLOR_WHITE "\"  last used %i days ago\n", var->name, var->string, today - day );
 		else
 			Com_Printf( "%-32s \"%s" S_COLOR_WHITE "\"  never used\n", var->name, var->string );
 		count++;
 	}
-	if ( CvarSeen_Start() && today - CvarSeen_Start() < CVARSEEN_DAYS )
+	if ( Cvar_KnownApplies() )
+		Com_Printf( "Checked against the %i cvars of this version.\n", CVAR_KNOWN_COUNT );
+	else if ( CvarSeen_Start() && today - CvarSeen_Start() < CVARSEEN_DAYS )
 		Com_Printf( "The use of cvars is noted since %i days, a cvar never used is listed after %i.\n", today - CvarSeen_Start(), CVARSEEN_DAYS );
-	Com_Printf( "%i cvars no code used for %i days. cvar_cleanup remove <name ...|all> takes them out of the config.\n", count, CVARSEEN_DAYS );
+	Com_Printf( "%i cvars to remove. cvar_cleanup remove <name ...|all> takes them out of the config.\n", count );
 }
 
 void Cvar_CleanupInit( void ) {
-	Cmd_AddCommand( "cvar_cleanup", Cvar_Cleanup_f, "Lists the cvars no code used for a month, or removes them: cvar_cleanup remove <name ...|all>" );
+	Cmd_AddCommand( "cvar_cleanup", Cvar_Cleanup_f, "Lists the stored cvars this version does not have, or no code used for a month, or removes them: cvar_cleanup remove <name ...|all>" );
 }

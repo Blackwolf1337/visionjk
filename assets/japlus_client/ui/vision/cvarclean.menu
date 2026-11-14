@@ -81,7 +81,7 @@
 			forecolor				0.86 0.90 0.945 1
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_CVARCLEAN
-			columns					3 4 20 216 230 20 216 456 20 104
+			columns					3 4 20 200 214 20 150 374 20 186
 			visible					1
 			textaligny				14.9
 			radius					6
@@ -93,7 +93,7 @@
 			name					cvarclean_about
 			group					none
 			style					WINDOW_STYLE_EMPTY
-			text					@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
+			text					@VISION_REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
 			rect					28 457.4 844 22
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0

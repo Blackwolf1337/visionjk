@@ -1901,9 +1901,9 @@ REFERENCE           CLEAN_UP_SETTINGS
 LANG_ENGLISH        "Clean Up Settings"
 LANG_SPANISH        "Limpiar ajustes"
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
-LANG_SPANISH        "Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods."
+REFERENCE           SETTINGS_THIS_VERSION_DOES_NOT_HAVE
+LANG_ENGLISH        "Settings this version does not have, old names of settings, and settings no code used for a month."
+LANG_SPANISH        "Ajustes que esta versión no tiene, nombres antiguos de ajustes y ajustes que ningún código ha usado en un mes."
 
 REFERENCE           CLEAR_CACHES
 LANG_ENGLISH        "Clear Caches"
@@ -2853,9 +2853,9 @@ REFERENCE           NOTHING_TO_CLEAN_UP
 LANG_ENGLISH        "Nothing to clean up."
 LANG_SPANISH        "Nada que limpiar."
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
-LANG_SPANISH        "Ajustes que ningún código ha usado en un mes: restos de versiones anteriores y de otros mods. Quitar saca uno de la configuración."
+REFERENCE           REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
+LANG_ENGLISH        "Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month."
+LANG_SPANISH        "Eliminar quita un ajuste de la configuración: los que esta versión no tiene, los nombres antiguos y los que ningún código ha usado en un mes."
 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
@@ -3372,6 +3372,14 @@ LANG_SPANISH        "Elegir modelo"
 REFERENCE           NEEDS_S
 LANG_ENGLISH        "Needs %s"
 LANG_SPANISH        "Necesita %s"
+
+REFERENCE           NOT_IN_THIS_VERSION
+LANG_ENGLISH        "Not in this version"
+LANG_SPANISH        "No está en esta versión"
+
+REFERENCE           RENAMED_TO_S
+LANG_ENGLISH        "Renamed to %s"
+LANG_SPANISH        "Renombrado a %s"
 
 
 ENDMARKER

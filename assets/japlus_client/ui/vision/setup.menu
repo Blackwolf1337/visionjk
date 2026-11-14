@@ -5174,7 +5174,7 @@
 			name					vision_menu_cvarclean_popmenu
 			type					ITEM_TYPE_BUTTON
 			text					@VISION_CLEAN_UP_SETTINGS
-			descText				@VISION_SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
+			descText				@VISION_SETTINGS_THIS_VERSION_DOES_NOT_HAVE
 			action { play "sound/interface/button1.wav" ; open cvarclean_popmenu ; }
 			rect					782 258 432 52
 			page					10
