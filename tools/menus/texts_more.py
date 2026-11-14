@@ -639,6 +639,18 @@ MORE = {
     'Nothing to clean up.': ('Rien à nettoyer.', 'Nada que limpiar.'),
     'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': ("Paramètres qu'aucun code n'a utilisés depuis un mois : restes d'anciennes versions et d'autres mods. Enlever en retire un de la config.", 'Ajustes que ningún código ha usado en un mes: restos de versiones anteriores y de otros mods. Quitar saca uno de la configuración.'),
     'Remove All': ('Tout enlever', 'Quitar todo'),
+    # the window Clear Caches (ui_cacheclean.c)
+    'Clear Caches': ('Vider les caches', 'Vaciar cachés'),
+    'Free disk space: textures, materials, sounds and sound paths the game keeps.': ("Libérer de l'espace disque : textures, matériaux, sons et chemins sonores que le jeu conserve.", 'Liberar espacio en disco: texturas, materiales, sonidos y rutas de sonido que el juego guarda.'),
+    'Files the game makes again when they are gone. Clearing frees disk space, the next loads take longer.': ("Fichiers que le jeu recrée quand ils manquent. Vider libère de l'espace disque, les prochains chargements sont plus longs.", 'Archivos que el juego vuelve a crear cuando faltan. Vaciar libera espacio en disco, las próximas cargas tardan más.'),
+    'Clear': ('Vider', 'Vaciar'),
+    'Clear All': ('Tout vider', 'Vaciar todo'),
+    'Graphics Pipelines': ('Pipelines graphiques', 'Pipelines gráficos'),
+    'Textures': ('Textures', 'Texturas'),
+    'Sounds': ('Sons', 'Sonidos'),
+    'Sound Paths of Levels': ('Chemins sonores des niveaux', 'Rutas de sonido de los niveles'),
+    '%i files': ('%i fichiers', '%i archivos'),
+    '1 file': ('1 fichier', '1 archivo'),
     'Never used': ('Jamais utilisé', 'Nunca usado'),
     '%i days ago': ('il y a %i jours', 'hace %i días'),
     # the search of Setup

@@ -454,6 +454,16 @@ void UI_CvarCleanSelect( int index );
 void UI_CvarCleanRemove( qboolean all );
 
 //
+// ui_cacheclean.c
+//
+
+void UI_CacheCleanLoad( void );
+int UI_CacheCleanCount( void );
+const char *UI_CacheCleanText( int index, int column );
+void UI_CacheCleanSelect( int index );
+void UI_CacheCleanClear( qboolean all );
+
+//
 // ui_update.c
 //
 

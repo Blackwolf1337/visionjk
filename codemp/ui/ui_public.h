@@ -395,6 +395,11 @@ typedef struct uiImport_s {
 		// 0,0 (box: left, top, right, bottom in units; qfalse for a font of the game, which does not know them).
 		void			(*R_Font_DrawStringF)					( float ox, float oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 		qboolean		(*R_Font_InkBox)						( const char *text, const int setIndex, const float scale, float *box );
+		// Only an engine that sets the cvar v_uiCache to 1 has these two, after ext.R_Font_InkBox: the kinds of the
+		// folder cache of the profile (client/cl_cache.cpp), one "id\tlabel\tbytes\tfiles\n" a line, returns the
+		// length; and a kind emptied by its id, or all of them with "all" (ui_cacheclean.c).
+		int				(*Cache_List)							( char *buf, int size );
+		qboolean		(*Cache_Clear)							( const char *id );
 	} ext;
 } uiImport_t;
 

@@ -4238,6 +4238,24 @@
 
 		itemDef
 		{
+			name					vision_menu_cacheclean_popmenu
+			type					ITEM_TYPE_BUTTON
+			text					@VISION_CLEAR_CACHES
+			descText				@VISION_FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+			action { play "sound/interface/button1.wav" ; open cacheclean_popmenu ; }
+			rect					306 466 432 52
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					allowdownload
 			group					options
 			type					ITEM_TYPE_MULTI
@@ -4246,7 +4264,7 @@
 			cvar					"cl_allowDownload"
 			cvarFloatList { @MENUS_OFF 0 @MENUS_ON 1 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 466 432 52
+			rect					306 518 432 52
 			page					6
 			scroll					1
 			row						1
@@ -4265,7 +4283,7 @@
 			descText				@VISION_BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
 			cvar					"v_downloadReview"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 518 432 52
+			rect					306 570 432 52
 			page					6
 			scroll					1
 			row						1
@@ -4284,7 +4302,7 @@
 			descText				@VISION_KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 			cvar					"v_downloadKeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 570 432 52
+			rect					306 622 432 52
 			page					6
 			scroll					1
 			row						1
@@ -4303,7 +4321,7 @@
 			descText				@VISION_FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 			cvar					"v_downloadHttp"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 622 432 52
+			rect					306 674 432 52
 			page					6
 			scroll					1
 			row						1

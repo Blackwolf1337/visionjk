@@ -286,6 +286,7 @@ SETUP = [
          'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
         ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
         ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings no code used for a month, from older versions and other mods.'),
+        ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
         ('old', 'options', ('cl_allowdownload',)),
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),

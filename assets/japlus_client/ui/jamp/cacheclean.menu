@@ -1,0 +1,210 @@
+//----------------------------------------------------------------------------------------------
+//
+//	CLEAR CACHES (VisionJK): the kinds of the folder cache of the profile with their size, and
+//	buttons to empty one or all (FEEDER_CACHECLEAN, ui/ui_cacheclean.c, client/cl_cache.cpp).
+//	Opened by the row of Setup, Network. The texts are the ones of the new look
+//	(strings/<language>/vision.str).
+//
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name					"cacheclean_popmenu"
+		visible					0
+		fullScreen				0
+		rect					0 0 640 480
+		focusColor				1 1 1 1
+		outOfBoundsClick
+		popup
+		onOpen
+		{
+			uiScript			CacheClean ;
+			setfocus			cacheclean_list
+		}
+		onESC
+		{
+			play				"sound/interface/esc.wav" ;
+			close				cacheclean_popmenu ;
+		}
+		itemDef
+		{
+			name				cacheclean_background
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				20 40 600 400
+			background			"gfx/menus/main_centerblue"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cacheclean_title
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_CLEAR_CACHES
+			rect				20 52 600 20
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			300
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cacheclean_list
+			group				none
+			rect				36 82 568 270
+			type				ITEM_TYPE_LISTBOX
+			style				WINDOW_STYLE_FILLED
+			elementwidth		568
+			elementheight		18
+			font				2
+			textscale			0.6
+			backcolor			0 0 0 .5
+			border				1
+			bordersize			1
+			bordercolor			.5 .5 .5 1
+			forecolor			1 1 1 1
+			elementtype			LISTBOX_TEXT
+			feeder				FEEDER_CACHECLEAN
+			columns				3	4 20 216	230 20 216	456 20 104
+			visible				1
+			textaligny			14
+		}
+		itemDef
+		{
+			name				cacheclean_about
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			text				@VISION_FILES_THE_GAME_MAKES_AGAIN_WHEN_THEY
+			rect				36 360 568 30
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			284
+			font				2
+			textscale			0.6
+			forecolor			.7 .7 .7 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				cacheclean_clear_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				40 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				cacheclean_clear
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				40 400 180 24
+			text				@VISION_CLEAR
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			cacheclean_clear_glow
+			}
+			mouseExit
+			{
+				hide			cacheclean_clear_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				uiScript		CacheCleanClear ;
+			}
+		}
+		itemDef
+		{
+			name				cacheclean_clearall_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				230 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				cacheclean_clearall
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				230 400 180 24
+			text				@VISION_CLEAR_ALL
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			cacheclean_clearall_glow
+			}
+			mouseExit
+			{
+				hide			cacheclean_clearall_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				uiScript		CacheCleanAll ;
+			}
+		}
+		itemDef
+		{
+			name				cacheclean_done_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				420 400 180 24
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+		itemDef
+		{
+			name				cacheclean_done
+			group				none
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_BUTTON
+			rect				420 400 180 24
+			text				@MENUS_DONE_CAPS
+			font				3
+			textscale			0.75
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			90
+			forecolor			1 .682 0 1
+			visible				1
+			mouseEnter
+			{
+				show			cacheclean_done_glow
+			}
+			mouseExit
+			{
+				hide			cacheclean_done_glow
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				close			cacheclean_popmenu ;
+			}
+		}
+	}
+}

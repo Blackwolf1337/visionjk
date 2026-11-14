@@ -1681,6 +1681,14 @@ REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
 LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
 LANG_SPANISH        "Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods."
 
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+LANG_SPANISH        "Vaciar cachés"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+LANG_SPANISH        "Liberar espacio en disco: texturas, materiales, sonidos y rutas de sonido que el juego guarda."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_SPANISH        "Elegir las descargas"
@@ -2580,6 +2588,42 @@ LANG_SPANISH        "Ajustes que ningún código ha usado en un mes: restos de ver
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
 LANG_SPANISH        "Quitar todo"
+
+REFERENCE           FILES_THE_GAME_MAKES_AGAIN_WHEN_THEY
+LANG_ENGLISH        "Files the game makes again when they are gone. Clearing frees disk space, the next loads take longer."
+LANG_SPANISH        "Archivos que el juego vuelve a crear cuando faltan. Vaciar libera espacio en disco, las próximas cargas tardan más."
+
+REFERENCE           CLEAR
+LANG_ENGLISH        "Clear"
+LANG_SPANISH        "Vaciar"
+
+REFERENCE           CLEAR_ALL
+LANG_ENGLISH        "Clear All"
+LANG_SPANISH        "Vaciar todo"
+
+REFERENCE           GRAPHICS_PIPELINES
+LANG_ENGLISH        "Graphics Pipelines"
+LANG_SPANISH        "Pipelines gráficos"
+
+REFERENCE           TEXTURES
+LANG_ENGLISH        "Textures"
+LANG_SPANISH        "Texturas"
+
+REFERENCE           SOUNDS
+LANG_ENGLISH        "Sounds"
+LANG_SPANISH        "Sonidos"
+
+REFERENCE           SOUND_PATHS_OF_LEVELS
+LANG_ENGLISH        "Sound Paths of Levels"
+LANG_SPANISH        "Rutas de sonido de los niveles"
+
+REFERENCE           I_FILES
+LANG_ENGLISH        "%i files"
+LANG_SPANISH        "%i archivos"
+
+REFERENCE           1_FILE
+LANG_ENGLISH        "1 file"
+LANG_SPANISH        "1 archivo"
 
 REFERENCE           NEVER_USED
 LANG_ENGLISH        "Never used"
