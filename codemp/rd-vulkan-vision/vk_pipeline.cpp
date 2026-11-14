@@ -553,24 +553,23 @@ static int		vk_numPipeKeys;
 static int		vk_savedPipelines;		// how many states the file has: it is written again when there are more
 
 static void VK_PipeCachePath( char *path, int size ) {
-	Com_sprintf( path, size, "vulkan/pipelines%s.dat", vk.rayTracing ? "_rt" : "" );
+	Com_sprintf( path, size, "pipelines/pipelines%s.dat", vk.rayTracing ? "_rt" : "" );
 }
 
 static void VK_LoadPipelineCache( void ) {
 	VkPipelineCacheCreateInfo	info = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 	char						path[MAX_QPATH];
 	void						*file = NULL;
-	int							sourceLength, sourceChecksum;
 
 	vk_numPipeKeys = 0;
 	vk_savedPipelines = 0;
 	VK_PipeCachePath( path, sizeof( path ) );
-	// (only the file of the profile, as the textures that are kept)
-	if ( ri.FS_FileSource( path, &sourceLength, &sourceChecksum ) == FS_SOURCE_DIRECTORY ) {
-		const int length = ri.FS_ReadFile( path, &file );
+	// (the folder cache of the profile, as the textures that are kept)
+	{
+		const long length = ri.Cache_Read( path, &file );
 		vkPipeCacheHeader_t header;
 
-		if ( file && length >= (int)sizeof( header ) ) {
+		if ( file && length >= (long)sizeof( header ) ) {
 			memcpy( &header, file, sizeof( header ) );
 			if ( header.magic == VK_PIPECACHE_MAGIC && header.version == VK_PIPECACHE_VERSION && header.numKeys <= VK_MAX_PIPELINES
 				&& (size_t)length == sizeof( header ) + header.numKeys * sizeof( uint32_t ) + header.dataSize ) {
@@ -628,7 +627,7 @@ static void VK_WritePipelineCache( qboolean always ) {
 	}
 	out.resize( sizeof( header ) + vk.numPipelines * sizeof( uint32_t ) + dataSize );
 	VK_PipeCachePath( path, sizeof( path ) );
-	ri.FS_WriteFile( path, out.data(), (int)out.size() );
+	ri.Cache_Write( path, out.data(), (int)out.size() );
 	vk_savedPipelines = vk.numPipelines;
 }
 

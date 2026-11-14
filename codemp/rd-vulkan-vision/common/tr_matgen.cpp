@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // has the change of the roughness in red (0.5 none), not the roughness, so the roughness and metalness of the
 // material stay live (generic.frag, PBR_RMO_RELATIVE).
 //
-// What is made is kept in vulkan/gen/ of the profile, by the file of the texture (its length and the checksum of
+// What is made is kept in cache/materials/ of the profile, by the file of the texture (its length and the checksum of
 // its pak, as vk_texcache.cpp names them) and the settings; a texture of a directory is made every time.
 
 #include "tr_local.h"
@@ -330,13 +330,13 @@ static qboolean Gen_CachePath( const image_t *base, char kind, const materialGen
 		MATGEN_VERSION, MATGEN_MOST, kind, albedo, g->tint[0], g->tint[1], g->tint[2], g->delight, g->saturation,
 		kind == 'n' ? g->normalStrength : 0.0f, kind == 'n' ? g->normalBlur : 0.0f, kind == 'n' ? g->normalDetail : 0.0f,
 		kind == 'n' ? g->normalInvert : 0, kind == 'r' ? g->rmoVariation : 0.0f, kind == 'r' ? g->rmoOcclusion : 0.0f );
-	Com_sprintf( path, pathSize, "vulkan/gen/%016llx.dat", Gen_Hash( key ) );
+	Com_sprintf( path, pathSize, "materials/%016llx.dat", Gen_Hash( key ) );
 	return qtrue;
 }
 
 static qboolean Gen_CacheRead( const char *path, genImage_t *out ) {
 	void *buffer = NULL;
-	const long length = ri.FS_ReadFile( path, &buffer );
+	const long length = ri.Cache_Read( path, &buffer );
 	qboolean ok = qfalse;
 
 	if ( length > (long)sizeof( genCacheHeader_t ) && buffer ) {
@@ -366,7 +366,7 @@ static void Gen_CacheWrite( const char *path, const genImage_t *img ) {
 	header->width = img->width;
 	header->height = img->height;
 	memcpy( header + 1, img->data, (size_t)img->width * img->height * 4 );
-	ri.FS_WriteFile( path, buffer, size );
+	ri.Cache_Write( path, buffer, size );
 	Gen_Free( buffer );
 }
 

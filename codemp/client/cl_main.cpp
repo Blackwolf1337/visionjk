@@ -37,6 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_uiapi.h"
 #include "cl_lan.h"
 #include "cl_imgui.h"
+#include "cl_cache.h"
 #include "client/sound/snd_local.h"
 #include "sys/sys_loadlib.h"
 
@@ -2687,6 +2688,8 @@ void CL_InitRef( void ) {
 	ri.LoadPop = Com_LoadPop;
 	ri.FS_FileSource = FS_FileSource;
 	ri.FontFile = CL_FontFile;
+	ri.Cache_Read = Cache_Read;
+	ri.Cache_Write = Cache_Write;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 
@@ -2849,6 +2852,7 @@ void CL_Init( void ) {
 	cls.realtime = 0;
 
 	CL_InitInput ();
+	Cache_Init();
 
 	//
 	// register our variables
@@ -3000,6 +3004,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_uiCvarInfo", "1", CVAR_ROM, "" );
 	// and ext.R_Font_DrawStringF and ext.R_Font_InkBox after that
 	Cvar_Get( "v_uiFontInk", "1", CVAR_ROM, "" );
+	// and ext.Cache_List and ext.Cache_Clear after that
+	Cvar_Get( "v_uiCache", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

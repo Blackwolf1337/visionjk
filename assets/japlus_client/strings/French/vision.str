@@ -1681,6 +1681,14 @@ REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
 LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
 LANG_FRENCH         "Paramètres qu'aucun code n'a utilisés depuis un mois, issus d'anciennes versions et d'autres mods."
 
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+LANG_FRENCH         "Vider les caches"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+LANG_FRENCH         "Libérer de l'espace disque : textures, matériaux, sons et chemins sonores que le jeu conserve."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_FRENCH         "Choisir les téléchargements"
@@ -2580,6 +2588,42 @@ LANG_FRENCH         "Paramètres qu'aucun code n'a utilisés depuis un mois : rest
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
 LANG_FRENCH         "Tout enlever"
+
+REFERENCE           FILES_THE_GAME_MAKES_AGAIN_WHEN_THEY
+LANG_ENGLISH        "Files the game makes again when they are gone. Clearing frees disk space, the next loads take longer."
+LANG_FRENCH         "Fichiers que le jeu recrée quand ils manquent. Vider libère de l'espace disque, les prochains chargements sont plus longs."
+
+REFERENCE           CLEAR
+LANG_ENGLISH        "Clear"
+LANG_FRENCH         "Vider"
+
+REFERENCE           CLEAR_ALL
+LANG_ENGLISH        "Clear All"
+LANG_FRENCH         "Tout vider"
+
+REFERENCE           GRAPHICS_PIPELINES
+LANG_ENGLISH        "Graphics Pipelines"
+LANG_FRENCH         "Pipelines graphiques"
+
+REFERENCE           TEXTURES
+LANG_ENGLISH        "Textures"
+LANG_FRENCH         "#same"
+
+REFERENCE           SOUNDS
+LANG_ENGLISH        "Sounds"
+LANG_FRENCH         "Sons"
+
+REFERENCE           SOUND_PATHS_OF_LEVELS
+LANG_ENGLISH        "Sound Paths of Levels"
+LANG_FRENCH         "Chemins sonores des niveaux"
+
+REFERENCE           I_FILES
+LANG_ENGLISH        "%i files"
+LANG_FRENCH         "%i fichiers"
+
+REFERENCE           1_FILE
+LANG_ENGLISH        "1 file"
+LANG_FRENCH         "1 fichier"
 
 REFERENCE           NEVER_USED
 LANG_ENGLISH        "Never used"

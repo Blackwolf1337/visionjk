@@ -1262,6 +1262,12 @@ LANG_ENGLISH        "Clean Up Settings"
 REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
 LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
 
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 
@@ -1936,6 +1942,33 @@ LANG_ENGLISH        "Settings no code used for a month: left from older versions
 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
+
+REFERENCE           FILES_THE_GAME_MAKES_AGAIN_WHEN_THEY
+LANG_ENGLISH        "Files the game makes again when they are gone. Clearing frees disk space, the next loads take longer."
+
+REFERENCE           CLEAR
+LANG_ENGLISH        "Clear"
+
+REFERENCE           CLEAR_ALL
+LANG_ENGLISH        "Clear All"
+
+REFERENCE           GRAPHICS_PIPELINES
+LANG_ENGLISH        "Graphics Pipelines"
+
+REFERENCE           TEXTURES
+LANG_ENGLISH        "Textures"
+
+REFERENCE           SOUNDS
+LANG_ENGLISH        "Sounds"
+
+REFERENCE           SOUND_PATHS_OF_LEVELS
+LANG_ENGLISH        "Sound Paths of Levels"
+
+REFERENCE           I_FILES
+LANG_ENGLISH        "%i files"
+
+REFERENCE           1_FILE
+LANG_ENGLISH        "1 file"
 
 REFERENCE           NEVER_USED
 LANG_ENGLISH        "Never used"

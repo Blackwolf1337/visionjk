@@ -597,6 +597,18 @@ TR = {
     'Nothing to clean up.': 'Nichts aufzuräumen.',
     'Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config.': 'Einstellungen, die einen Monat lang kein Code benutzt hat: übrig aus älteren Versionen und anderen Mods. Entfernen nimmt eine aus der Config.',
     'Remove All': 'Alle entfernen',
+    # the window Clear Caches of Setup, Network (ui/jamp/cacheclean.menu, ui_cacheclean.c, client/cl_cache.cpp)
+    'Clear Caches': 'Caches leeren',
+    'Free disk space: textures, materials, sounds and sound paths the game keeps.': 'Speicherplatz freigeben: Texturen, Materialien, Sounds und Schallwege, die das Spiel aufbewahrt.',
+    'Files the game makes again when they are gone. Clearing frees disk space, the next loads take longer.': 'Dateien, die das Spiel neu erstellt, wenn sie fehlen. Leeren gibt Speicherplatz frei, die nächsten Ladezeiten sind länger.',
+    'Clear': 'Leeren',
+    'Clear All': 'Alle leeren',
+    'Graphics Pipelines': 'Grafik-Pipelines',
+    'Textures': 'Texturen',
+    'Sounds': 'Sounds',
+    'Sound Paths of Levels': 'Schallwege der Level',
+    '%i files': '%i Dateien',
+    '1 file': '1 Datei',
     # the search of Setup
     'Search': 'Suchen',
     'Shows the settings of all pages whose name or description has these words.': 'Zeigt die Einstellungen aller Seiten, in deren Name oder Beschreibung diese Wörter vorkommen.',

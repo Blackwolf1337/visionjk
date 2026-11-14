@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // An image file is read, decoded, scaled, given its mip levels and packed into blocks (vk_bc.cpp) every time a
 // level asks for it for the first time since the program started: for mp/ffa3 that is half of the load, and
 // for a player who joins in the middle of a game most of the frame his skin is loaded in. What comes out of it
-// only depends on the file and on a few settings. So it is kept, a file per texture, in vulkan/tex/ of the
+// only depends on the file and on a few settings. So it is kept, a file per texture, in cache/textures/ of the
 // profile, and the next time the blocks are read and handed to the device as they are.
 //
 // A file of the cache is named after what it was made from: the path of the image file, its length and the
@@ -78,7 +78,7 @@ static struct {
 static cvar_t *v_vkTexCache;
 
 void VK_TexCacheInit( void ) {
-	v_vkTexCache = ri.Cvar_Get( "v_vkTexCache", "1", CVAR_ARCHIVE_ND, "Textures that were packed into blocks are kept in vulkan/tex/ of the profile and not made again. 0: every one is made from its image file" );
+	v_vkTexCache = ri.Cvar_Get( "v_vkTexCache", "1", CVAR_ARCHIVE_ND, "Textures that were packed into blocks are kept in cache/textures/ of the profile and not made again. 0: every one is made from its image file" );
 }
 
 // FNV-1a, 64 bit
@@ -92,7 +92,7 @@ static unsigned long long VK_TexCacheHash( const char *text ) {
 }
 
 static void VK_TexCachePath( char *path, int pathSize ) {
-	Com_sprintf( path, pathSize, "vulkan/tex/%016llx.dat", VK_TexCacheHash( texCache.key ) );
+	Com_sprintf( path, pathSize, "textures/%016llx.dat", VK_TexCacheHash( texCache.key ) );
 }
 
 /*
@@ -180,16 +180,7 @@ qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmi
 
 	VK_TexCachePath( path, sizeof( path ) );
 	ri.LoadPush( "texture kept", name );
-	// (only the file of the profile: a pak could have one under the same name, FS_ReadFile looks in paks too)
-	{
-		int sourceLength, sourceChecksum;
-
-		if ( ri.FS_FileSource( path, &sourceLength, &sourceChecksum ) != FS_SOURCE_DIRECTORY ) {
-			ri.LoadPop();
-			return qfalse;
-		}
-	}
-	length = ri.FS_ReadFile( path, &texCache.file );
+	length = ri.Cache_Read( path, &texCache.file );
 	ri.LoadPop();
 	if ( length <= 0 || !texCache.file ) {
 		texCache.file = NULL;
@@ -327,7 +318,7 @@ void VK_TexCacheEnd( void ) {
 		memcpy( out.data() + sizeof( texCache.recorded ) + texCache.recorded.keyLength, texCache.blocks.data(), texCache.blocks.size() );
 		VK_TexCachePath( path, sizeof( path ) );
 		ri.LoadPush( "texture kept: written", NULL );
-		ri.FS_WriteFile( path, out.data(), (int)out.size() );
+		ri.Cache_Write( path, out.data(), (int)out.size() );
 		ri.LoadPop();
 	}
 	texCache.recording = texCache.pending = qfalse;

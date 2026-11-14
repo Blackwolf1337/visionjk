@@ -1681,6 +1681,14 @@ REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
 LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
 LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat, aus älteren Versionen und anderen Mods."
 
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+LANG_GERMAN         "Caches leeren"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+LANG_GERMAN         "Speicherplatz freigeben: Texturen, Materialien, Sounds und Schallwege, die das Spiel aufbewahrt."
+
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
 LANG_GERMAN         "Downloads auswählen"
@@ -2580,6 +2588,42 @@ LANG_GERMAN         "Einstellungen, die einen Monat lang kein Code benutzt hat: 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
 LANG_GERMAN         "Alle entfernen"
+
+REFERENCE           FILES_THE_GAME_MAKES_AGAIN_WHEN_THEY
+LANG_ENGLISH        "Files the game makes again when they are gone. Clearing frees disk space, the next loads take longer."
+LANG_GERMAN         "Dateien, die das Spiel neu erstellt, wenn sie fehlen. Leeren gibt Speicherplatz frei, die nächsten Ladezeiten sind länger."
+
+REFERENCE           CLEAR
+LANG_ENGLISH        "Clear"
+LANG_GERMAN         "Leeren"
+
+REFERENCE           CLEAR_ALL
+LANG_ENGLISH        "Clear All"
+LANG_GERMAN         "Alle leeren"
+
+REFERENCE           GRAPHICS_PIPELINES
+LANG_ENGLISH        "Graphics Pipelines"
+LANG_GERMAN         "Grafik-Pipelines"
+
+REFERENCE           TEXTURES
+LANG_ENGLISH        "Textures"
+LANG_GERMAN         "Texturen"
+
+REFERENCE           SOUNDS
+LANG_ENGLISH        "Sounds"
+LANG_GERMAN         "#same"
+
+REFERENCE           SOUND_PATHS_OF_LEVELS
+LANG_ENGLISH        "Sound Paths of Levels"
+LANG_GERMAN         "Schallwege der Level"
+
+REFERENCE           I_FILES
+LANG_ENGLISH        "%i files"
+LANG_GERMAN         "%i Dateien"
+
+REFERENCE           1_FILE
+LANG_ENGLISH        "1 file"
+LANG_GERMAN         "1 Datei"
 
 REFERENCE           NEVER_USED
 LANG_ENGLISH        "Never used"
