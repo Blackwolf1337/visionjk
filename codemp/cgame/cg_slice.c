@@ -29,8 +29,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the copy the server leaves when he comes back (CG_BodyQueueCopy), not while it fades. Each part is drawn cut by the
 // plane where its bone at the cut is now (the renderer's ext.R_AddCutEntity, rd-vulkan-vision), and once more with its
 // back faces alone in a glowing colour (gfx/vision/slice/cut), which fills the opening: the burnt cut face, orange hot
-// at first, fading through red to dark (the afterglow). With v_gore 1 blood runs out on the floor under the cut, a wet
-// place of the kind WET_BLOOD (ext.R_AddWet). The parts stay as long as the body would, and fade with it.
+// at first, fading through red to dark (the afterglow). With v_gore 1 or 2 blood runs out on the floor under the cut, a
+// wet place of the kind WET_BLOOD (ext.R_AddWet); 1 also sprays it at the cut and onto the view (CG_GoreAir). The parts stay as long as the body would, and fade with it.
 //
 // Only a VisionJK client on a renderer that cuts and places bones (v_cgameCutEntity, v_cgameSetBones) sees it;
 // everyone else sees the stock death, and the server is not asked for anything. The stock limbs of a body that was cut
@@ -129,6 +129,16 @@ static qboolean CG_SliceOn( void ) {
 		has = ( atoi( value ) && trap->ext.R_AddCutEntity && CG_RagOn() ) ? 1 : 0;
 	}
 	return (qboolean)( has > 0 && v_slice.integer );
+}
+
+// v_gore: 0 no blood (the burnt cut stays), 1 on the screen and on the ground, 2 on the ground alone: the pools,
+// the drips of flying parts, the streaks and the marks, without the spray at the cut and the blood on the view
+qboolean CG_GoreAir( void ) {
+	return (qboolean)( v_gore.integer == 1 );
+}
+
+qboolean CG_GoreGround( void ) {
+	return (qboolean)( v_gore.integer == 1 || v_gore.integer == 2 );
 }
 
 static void CG_SliceFree( slice_t *s ) {
@@ -547,7 +557,7 @@ qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angle
 			VectorCopy( centre, s->dripLast[k] );
 		}
 	}
-	if ( v_gore.integer ) {
+	if ( CG_GoreAir() ) {
 		CG_SliceSpray( s, centre );
 		CG_SliceBloodOnView( s, centre );
 	}
@@ -844,10 +854,10 @@ void CG_SliceScene( void ) {
 				CG_SliceAdd( s, &ent, plane );
 			}
 		}
-		if ( v_gore.integer ) {
+		if ( CG_GoreGround() ) {
 			CG_SliceBleed( s );
 		}
-		if ( s->blood && v_gore.integer && trap->ext.R_AddWet && numSpots < SLICE_SPOTS ) {
+		if ( s->blood && CG_GoreGround() && trap->ext.R_AddWet && numSpots < SLICE_SPOTS ) {
 			wetSpot_t *w = &spots[numSpots++];
 			const float grow = Com_Clamp( 0.0f, 1.0f, (float)( cg.time - s->time ) / SLICE_BLOOD_MSEC );
 
@@ -861,7 +871,7 @@ void CG_SliceScene( void ) {
 			w->kind = WET_BLOOD;
 		}
 	}
-	if ( v_gore.integer ) {
+	if ( CG_GoreGround() ) {
 		CG_SliceDrops();
 		numSpots = CG_SliceMarkSpots( spots, numSpots );
 	}

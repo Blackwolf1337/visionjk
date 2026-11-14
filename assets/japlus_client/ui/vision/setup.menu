@@ -2550,11 +2550,12 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_gore
-			type					ITEM_TYPE_YESNO
+			name					vision_multi_v_gore
+			type					ITEM_TYPE_MULTI
 			text					@VISION_BLOOD
-			descText				@VISION_BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
+			descText				@VISION_BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
 			cvar					"v_gore"
+			cvarFloatList { @VISION_OFF 0 @VISION_SCREEN_AND_GROUND 1 @VISION_GROUND_ONLY 2 }
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 670 432 52
 			page					3

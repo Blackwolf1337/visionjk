@@ -1997,6 +1997,8 @@ void CG_LookInit( void );
 // cg_slice.c: a saber kill cuts the body through along the killing swing
 void CG_SliceInit( void );
 void CG_SliceKill( int victim, int killer );
+qboolean CG_GoreAir( void );
+qboolean CG_GoreGround( void );
 qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles );
 qboolean CG_Sliced( int num );
 void CG_SliceBodyCopied( int clientNum, int body );

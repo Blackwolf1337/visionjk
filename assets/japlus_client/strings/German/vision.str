@@ -833,9 +833,17 @@ REFERENCE           BLOOD
 LANG_ENGLISH        "Blood"
 LANG_GERMAN         "Blut"
 
-REFERENCE           BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
-LANG_ENGLISH        "Blood runs out under a body that was cut. Off: the cut stays, without any blood."
-LANG_GERMAN         "Unter einem zerteilten Körper läuft Blut aus. Aus: der Schnitt bleibt, ohne Blut."
+REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
+LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
+LANG_GERMAN         "Blut eines zerteilten Körpers. Nur Boden: Lachen und Schlieren, kein Spritzen und kein Blut auf dem Bildschirm. Aus: der Schnitt bleibt."
+
+REFERENCE           SCREEN_AND_GROUND
+LANG_ENGLISH        "Screen and Ground"
+LANG_GERMAN         "Bildschirm und Boden"
+
+REFERENCE           GROUND_ONLY
+LANG_ENGLISH        "Ground Only"
+LANG_GERMAN         "Nur Boden"
 
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"

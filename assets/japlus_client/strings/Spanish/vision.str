@@ -833,9 +833,17 @@ REFERENCE           BLOOD
 LANG_ENGLISH        "Blood"
 LANG_SPANISH        "Sangre"
 
-REFERENCE           BLOOD_RUNS_OUT_UNDER_A_BODY_THAT_WAS
-LANG_ENGLISH        "Blood runs out under a body that was cut. Off: the cut stays, without any blood."
-LANG_SPANISH        "Bajo un cuerpo cortado se extiende la sangre. Desactivado: el corte queda, sin sangre."
+REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
+LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
+LANG_SPANISH        "La sangre de un cuerpo cortado. Solo suelo: charcos y regueros, sin salpicaduras ni sangre en la pantalla. Desactivado: el corte queda."
+
+REFERENCE           SCREEN_AND_GROUND
+LANG_ENGLISH        "Screen and Ground"
+LANG_SPANISH        "Pantalla y suelo"
+
+REFERENCE           GROUND_ONLY
+LANG_ENGLISH        "Ground Only"
+LANG_SPANISH        "Solo suelo"
 
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"

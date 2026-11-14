@@ -662,7 +662,7 @@ static void CG_ScreenFxBloods( void ) {
 		if ( !b->active ) {
 			continue;
 		}
-		if ( age >= b->life || age < 0 || b->y - b->radius > 1.05f || !v_gore.integer
+		if ( age >= b->life || age < 0 || b->y - b->radius > 1.05f || !CG_GoreAir()
 			|| ( cg.refdef.viewContents & ( CONTENTS_WATER | CONTENTS_SLIME | CONTENTS_LAVA ) ) ) {
 			b->active = qfalse;
 			continue;
