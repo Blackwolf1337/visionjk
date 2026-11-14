@@ -1142,6 +1142,9 @@ static int Select_RowAt( void ) {
 	return ( row < sel.numRows ) ? row : -1;
 }
 
+// the card in the level has frosted glass behind it this frame (CG_SelectOverScene): its fill thinner
+static qboolean selectCardFrosted;
+
 // the card of the player that was clicked, on its board
 static void Select_DrawCard( const selectBoard_t *b ) {
 	const vec4_t		fill = { 0.035f, 0.07f, 0.12f, 0.88f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f };
@@ -1156,9 +1159,10 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 
 		Skin_Soft( b->corner[0], b->corner[1] + 3.0f * b->unit, SELECT_CARD_W * b->unit, height * b->unit, 10.0f * b->unit, dark );
 	}
-	// frosted glass behind the flat card (not the one in the level), its fill thinner over it
-	if ( !b->world && Skin_Ready()
-		&& CG_DrawBackdrop( b->corner[0], b->corner[1], SELECT_CARD_W * b->unit, height * b->unit, 6.0f * b->unit ) ) {
+	// frosted glass behind the card, its fill thinner over it: the flat card here, the one in the level before its
+	// scene (CG_SelectOverScene)
+	if ( ( b->world && selectCardFrosted ) || ( !b->world && Skin_Ready()
+		&& CG_DrawBackdrop( b->corner[0], b->corner[1], SELECT_CARD_W * b->unit, height * b->unit, 6.0f * b->unit ) ) ) {
 		vec4_t thin;
 
 		memcpy( thin, fill, sizeof( thin ) );
@@ -1362,6 +1366,19 @@ void CG_SelectOverScene( void ) {
 
 	if ( ( !tag && !card ) || !Select_Free() || !Select_World() ) {
 		return;
+	}
+	// Frosted glass behind the card: the picture of the level is finished and the scene of the card comes after it,
+	// so the 2D asked for now blurs the place of the card on the screen first (the card is turned to the camera, its
+	// corners on the screen are a rectangle).
+	selectCardFrosted = qfalse;
+	if ( card ) {
+		const float	height = sel.headH + sel.numRows * SELECT_ROW_H + ( sel.numRows ? 5.0f : 0.0f );
+		float		x0, y0, x1, y1;
+
+		if ( Board_Screen( &sel.shown, 0.0f, 0.0f, &x0, &y0 ) && Board_Screen( &sel.shown, SELECT_CARD_W, height, &x1, &y1 )
+			&& x1 > x0 && y1 > y0 ) {
+			selectCardFrosted = CG_DrawBackdrop( x0, y0, x1 - x0, y1 - y0, 6.0f * ( x1 - x0 ) / SELECT_CARD_W );
+		}
 	}
 	trap->R_ClearScene();
 	if ( tag ) {
