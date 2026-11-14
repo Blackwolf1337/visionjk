@@ -60,6 +60,8 @@ layout( location = 0 ) out vec4 o_color;
 #define WET_SNOW		5
 #define WET_BLOOD		6
 #define WET_BLOOD_STREAK	7
+#define WET_BLOOD_FOOT_LEFT	8
+#define WET_BLOOD_FOOT_RIGHT	9
 #define BLOOD_DEEP		vec3( 0.20, 0.008, 0.006 )	// the colour of a pool of blood where it is deep,
 #define BLOOD_THIN		vec3( 0.42, 0.03, 0.02 )	//	of a drop and of the thin edge
 #define SNOW_ALBEDO		vec3( 0.93, 0.95, 0.98 )
@@ -390,6 +392,25 @@ void main() {
 					float knob = step( 0.32, fract( along / 3.1 + ( side > 0.0 ? 0.5 : 0.0 ) ) );
 					d += ( Noise( uv * 1.2 ) - 0.5 ) * 0.3 * seed + ( 1.0 - wet ) * 0.6 * seed;
 					prints = max( prints, ( 1.0 - smoothstep( -0.15 * seed, 0.1 * seed, d ) ) * smoothstep( 0.0, 0.15, wet ) * ( 0.55 + 0.45 * knob ) );
+				}
+				continue;
+			}
+			if ( kind == WET_BLOOD_FOOT_LEFT || kind == WET_BLOOD_FOOT_RIGHT ) {
+				// the print of a foot that stepped in blood: the shape of a wet one, red and thin, the sole fuller than
+				// the arch, fading as wet goes down (cgame/cg_slice.c CG_SliceStep)
+				if ( !wall ) {
+					float a = seed * 6.2831853;
+					vec3 ahead = vec3( cos( a ), sin( a ), 0.0 );
+					ahead = normalize( ahead - nj * dot( ahead, nj ) );
+					vec3 inside = cross( nj, ahead ) * ( kind == WET_BLOOD_FOOT_LEFT ? -1.0 : 1.0 );
+					float d = Footprint( vec2( dot( planar, ahead ), dot( planar, inside ) ), radius );
+					d += ( Noise( uv * 1.6 + seed * 50.0 ) - 0.5 ) * 0.08 * radius + ( 1.0 - wet ) * 0.12 * radius;
+					float cover = ( 1.0 - smoothstep( -0.08 * radius, 0.06 * radius, d ) ) * smoothstep( 0.0, 0.08, wet )
+						* ( 0.75 + 0.25 * wet );
+					if ( cover > blood ) {
+						blood = cover;
+						bloodDeep = 0.15 * wet;
+					}
 				}
 				continue;
 			}

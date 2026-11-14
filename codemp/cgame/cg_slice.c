@@ -51,6 +51,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SLICE_SPOTS			90			// wet spots a frame the blood may take of WET_MAX_SPOTS
 #define SLICE_BLEED_MSEC	20000		// a cut part bleeds less and less for this long
 #define SLICE_PARTS			4			// (as RAG_PARTS of cg_ragdoll.c)
+#define SLICE_PRINTS		32			// bloody footprints at once, the oldest goes
+#define SLICE_PRINT_MSEC	30000		// a bloody footprint fades in this time
+#define SLICE_PRINT_STEPS	8			// steps out of a pool that leave prints, fainter with each
+#define SLICE_FOOT			6.5f		// half the length of a print (a little more than WATER_FOOT of toys/cg_water.c: blood spreads)
 
 typedef struct slice_s {
 	qboolean	active;
@@ -212,7 +216,21 @@ typedef struct {
 	float		size;
 } sliceDrop_t;
 
+// the print of a foot that stepped in blood (CG_SliceStep)
+typedef struct {
+	qboolean	active;
+	qboolean	right;
+	int			born;
+	vec3_t		origin, normal;
+	float		yaw, wet;
+} slicePrint_t;
+
 static slice_t		slices[SLICE_MAX];
+static slicePrint_t	slicePrints[SLICE_PRINTS];
+static int			sliceNextPrint;
+static float		sliceFeet[MAX_GENTITIES];	// how bloody the feet of an entity are, 1 just out of a pool
+static vec3_t		sliceLastStep[MAX_GENTITIES];	// where its last foot came down,
+static int			sliceLastStepTime[MAX_GENTITIES];	//	and when
 static sliceMark_t	sliceMarks[SLICE_MARKS];
 static sliceDrop_t	sliceDrops[SLICE_DROPS];
 static qhandle_t sliceCutShader;
@@ -224,6 +242,9 @@ void CG_SliceInit( void ) {
 	memset( slices, 0, sizeof( slices ) );
 	memset( sliceMarks, 0, sizeof( sliceMarks ) );
 	memset( sliceDrops, 0, sizeof( sliceDrops ) );
+	memset( slicePrints, 0, sizeof( slicePrints ) );
+	memset( sliceFeet, 0, sizeof( sliceFeet ) );
+	memset( sliceLastStepTime, 0, sizeof( sliceLastStepTime ) );
 	for ( i = 0; i < SLICE_MAX; i++ ) {
 		slices[i].rag = -1;
 	}
@@ -882,6 +903,114 @@ static int CG_SliceMarkSpots( wetSpot_t *spots, int numSpots ) {
 
 /*
 =================
+CG_SliceStep
+
+A foot of an entity came down at "at" (_PlayerFootStep of cg_players.c, beside CG_WaterStep). Where the way from its last
+step went through a pool of blood that has run out the feet get bloody (a running stride is longer than a pool is
+wide); out of it a bloody foot leaves a print for SLICE_PRINT_STEPS steps, fainter with each. Only where the blood
+lies on the ground (CG_GoreGround).
+=================
+*/
+void CG_SliceStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right ) {
+	const int		num = (int)( cent - cg_entities );
+	slicePrint_t	*print;
+	vec3_t			from;
+	qboolean		inside = qfalse;
+	int				i;
+
+	if ( !CG_SliceOn() || !CG_GoreGround() || normal[2] < 0.7f || num < 0 || num >= MAX_GENTITIES ) {
+		return;
+	}
+	// (from the last step if it was a moment ago and near, else from here)
+	if ( cg.time - sliceLastStepTime[num] < 1000 && cg.time >= sliceLastStepTime[num] && Distance( sliceLastStep[num], at ) < 96.0f ) {
+		VectorCopy( sliceLastStep[num], from );
+	} else {
+		VectorCopy( at, from );
+	}
+	VectorCopy( at, sliceLastStep[num] );
+	sliceLastStepTime[num] = cg.time;
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		const slice_t	*s = &slices[i];
+		vec3_t			way, toPool, nearest;
+		float			grow, reach, along, length;
+
+		if ( !s->active || !s->blood || s->gone ) {
+			continue;
+		}
+		grow = Com_Clamp( 0.0f, 1.0f, (float)( cg.time - s->time ) / SLICE_BLOOD_MSEC );
+		grow = 1.0f - ( 1.0f - grow ) * ( 1.0f - grow );
+		reach = s->bloodRadius * grow * 0.85f;
+		if ( fabsf( at[2] - s->bloodOrigin[2] ) > 12.0f ) {
+			continue;
+		}
+		if ( Distance( at, s->bloodOrigin ) < reach ) {
+			inside = qtrue;
+			break;
+		}
+		// the way from the last step, the point of it nearest the middle of the pool
+		VectorSubtract( at, from, way );
+		way[2] = 0.0f;
+		length = VectorNormalize( way );
+		VectorSubtract( s->bloodOrigin, from, toPool );
+		toPool[2] = 0.0f;
+		along = Com_Clamp( 0.0f, length, DotProduct( toPool, way ) );
+		VectorMA( from, along, way, nearest );
+		nearest[2] = s->bloodOrigin[2];
+		if ( Distance( nearest, s->bloodOrigin ) < reach ) {
+			sliceFeet[num] = 1.0f;
+		}
+	}
+	if ( inside ) {
+		sliceFeet[num] = 1.0f;
+		return;
+	}
+	if ( sliceFeet[num] <= 0.0f ) {
+		return;
+	}
+	print = &slicePrints[sliceNextPrint];
+	sliceNextPrint = ( sliceNextPrint + 1 ) % SLICE_PRINTS;
+	memset( print, 0, sizeof( *print ) );
+	print->active = qtrue;
+	print->right = right;
+	print->born = cg.time;
+	print->yaw = yaw;
+	print->wet = sliceFeet[num];
+	VectorCopy( at, print->origin );
+	VectorCopy( normal, print->normal );
+	sliceFeet[num] -= 1.0f / SLICE_PRINT_STEPS;
+}
+
+// the bloody footprints into the wet places of the frame, fading
+static int CG_SlicePrintSpots( wetSpot_t *spots, int numSpots ) {
+	int i;
+
+	for ( i = 0; i < SLICE_PRINTS && numSpots < SLICE_SPOTS; i++ ) {
+		slicePrint_t	*p = &slicePrints[i];
+		const int		age = cg.time - p->born;
+		wetSpot_t		*w;
+
+		if ( !p->active ) {
+			continue;
+		}
+		if ( age >= SLICE_PRINT_MSEC || age < 0 ) {
+			p->active = qfalse;
+			continue;
+		}
+		w = &spots[numSpots++];
+		memset( w, 0, sizeof( *w ) );
+		VectorCopy( p->origin, w->origin );
+		VectorCopy( p->normal, w->normal );
+		VectorCopy( p->origin, w->hit );
+		w->radius = SLICE_FOOT;
+		w->wet = p->wet * ( 1.0f - (float)age / SLICE_PRINT_MSEC );
+		w->seed = AngleNormalize360( p->yaw ) / 360.0f;
+		w->kind = p->right ? WET_BLOOD_FOOT_RIGHT : WET_BLOOD_FOOT_LEFT;
+	}
+	return numSpots;
+}
+
+/*
+=================
 CG_SliceScene
 
 Every frame (cg_view.c): the ragdolls of the parts and the parts, the blood, and the end of the cuts whose body is gone
@@ -1005,6 +1134,7 @@ void CG_SliceScene( void ) {
 	if ( CG_GoreGround() ) {
 		CG_SliceDrops();
 		numSpots = CG_SliceMarkSpots( spots, numSpots );
+		numSpots = CG_SlicePrintSpots( spots, numSpots );
 	}
 	if ( numSpots ) {
 		trap->ext.R_AddWet( spots, numSpots );

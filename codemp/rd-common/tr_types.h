@@ -218,6 +218,8 @@ typedef struct liquidSegment_s {
 #define WET_BLOOD		6		// a pool of blood with droplets round it (cgame/cg_slice.c), wet: how far it has run out
 #define WET_BLOOD_STREAK	7	// a smear of blood from 2 origin - hit to hit where a cut part was dragged, puddle: half
 								// its width, wet: how fresh and full, seed: the shape of its edge
+#define WET_BLOOD_FOOT_LEFT		8	// the print of a foot that stepped in blood (cgame/cg_slice.c), as WET_FOOT_LEFT
+#define WET_BLOOD_FOOT_RIGHT	9
 
 typedef struct wetSpot_s {
 	vec3_t		origin;

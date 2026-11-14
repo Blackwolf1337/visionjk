@@ -1999,6 +1999,7 @@ void CG_SliceInit( void );
 void CG_SliceKill( int victim, int killer );
 qboolean CG_GoreAir( void );
 qboolean CG_GoreGround( void );
+void CG_SliceStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right );
 qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angles );
 qboolean CG_Sliced( int num );
 void CG_SliceBodyCopied( int clientNum, int body );

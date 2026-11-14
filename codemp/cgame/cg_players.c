@@ -2072,6 +2072,9 @@ static void _PlayerFootStep( const vec3_t origin,
 		return;
 	}
 
+	// VisionJK: out of a pool of blood of a cut body a foot leaves bloody prints (cg_slice.c)
+	CG_SliceStep( cent, trace.endpos, trace.plane.normal, orientation,
+		(qboolean)( footStepType == FOOTSTEP_R || footStepType == FOOTSTEP_HEAVY_R ) );
 	// VisionJK: into standing water of the water gun a foot splashes, out of it a wet foot leaves prints
 	if ( CG_WaterStep( cent, trace.endpos, trace.plane.normal, orientation,
 		(qboolean)( footStepType == FOOTSTEP_R || footStepType == FOOTSTEP_HEAVY_R ),
