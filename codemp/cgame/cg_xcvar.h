@@ -280,6 +280,7 @@ XCVAR_DEF( cg_viewsize,							"100",					NULL,					CVAR_ARCHIVE )
 // the boombox (boombox/cg_boombox.c): its boxes are seen and heard, and how loud their songs are
 XCVAR_DEF( v_boomboxes,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_boomboxVolume,					"0.6",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_boxSyncHear,						"0",					NULL,					CVAR_ARCHIVE )
 // the scope of the disruptor (scope/cg_scope.c): the lens of the renderer, the wheel, the motion view
 XCVAR_DEF( v_scope,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_scopeWheelZoom,					"1",					NULL,					CVAR_ARCHIVE )

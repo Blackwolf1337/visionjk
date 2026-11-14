@@ -2846,6 +2846,7 @@ void CG_Shutdown( void )
 {
 	// first of all: the threads of the voice chat run code of this module
 	CG_VoiceShutdown();
+	CG_BoxSyncShutdown();		// (the thread of the sound server too, boombox/cg_boombox_sync.c)
 	CG_MusicShutdown();
 
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine

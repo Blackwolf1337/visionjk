@@ -147,6 +147,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCgameFiles})
 set(MPCGameVoiceFiles
 	"${MPDir}/cgame/voice/cg_voice.c"
 	"${MPDir}/cgame/voice/cg_voice_audio.c"
+	"${MPDir}/cgame/voice/cg_voice_feed.c"
 	"${MPDir}/cgame/voice/cg_voice.h"
 	)
 if(BuildJPVoice AND NOT EMSCRIPTEN)
@@ -271,6 +272,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameToysFiles})
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
+	"${MPDir}/cgame/boombox/cg_boombox_sync.c"
 	"${MPDir}/cgame/boombox/cg_tv.c"
 	"${MPDir}/cgame/boombox/cg_boombox_ui.c"
 	"${MPDir}/cgame/boombox/cg_boombox.h"

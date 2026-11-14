@@ -43,6 +43,8 @@ typedef struct boomboxInfo_s {
 	const char	*by;			// who asked for the song that plays, "": not known
 	const char	*note;			// the last line of the server for this player while it is new, "": none
 	qboolean	muted;			// for this player (CG_VoiceBoxMute)
+	qboolean	synced;			// it plays the music player of a player (BOX_SYNCED), by: who
+	qboolean	syncedHere;		//	of this one
 } boomboxInfo_t;
 
 void		CG_BoomboxInit( void );
@@ -115,6 +117,32 @@ void		CG_TvScene( void );
 qboolean	CG_TvBody( const vec3_t origin, float yaw, refEntity_t *ent );
 void		CG_TvSize( float *halfDepth, float *halfWidth, float *height );
 
+// Sync audioplayer: cg_boombox_sync.c, the sync of a box with a music player on this computer
+void		CG_BoxSyncFrame( void );
+void		CG_BoxSyncShutdown( void );
+qboolean	CG_BoxSyncOffered( int box );					// the card offers the sync: server and computer can
+qboolean	CG_BoxSyncWantsMusic( void );					// every player of music is asked (ui/ui_music.c)
+void		CG_BoxSyncChoose( int box, qboolean first );	// "Sync audioplayer" of the card (first: of the wheel, the first that plays)
+int			CG_BoxSyncChoices( int box );					// the players it offers to choose from, -1: no choice open
+const char	*CG_BoxSyncChoiceName( int index );
+void		CG_BoxSyncPick( int index );					//	that one, -1: none
+int			CG_BoxSyncBox( void );							// the box this player synced, -1: none
+void		CG_BoxSyncControl( const char *method );		// "PlayPause", "Next" to his player
+const char	*CG_BoxSyncPlayerName( void );
+void		CG_BoxSyncStop( int box );						// the sync of that box ends (anybody's)
+void		CG_BoomboxSyncSend( int what, int box, const char *title );		// cg_boombox.c: BOX_DO_SYNC and the others
+qboolean	CG_BoomboxSyncs( void );						// the server or the master takes RELAY_FEED
+
+// voice/cg_voice_feed.c: the sound of one music player, coded as the song of a box
+typedef void ( *feedOut_t )( int channel, int seq, const byte *frame, int len );
+qboolean	CG_FeedSupported( void );
+qboolean	CG_FeedStart( int pid, const char *key, int channels );
+void		CG_FeedStop( void );
+qboolean	CG_FeedFound( void );
+void		CG_FeedShutdown( void );
+void		CG_FeedFrame( int now, feedOut_t out );
+void		CG_FeedCounts( int *sound, int *quiet );
+
 // voice/cg_voice.c: the songs as they are played, and the way to the masterserver
 float		CG_VoiceBoxBeat( int channel );
 qboolean	CG_VoiceBoxSend( const boxDo_t *d );
@@ -123,3 +151,6 @@ qboolean	CG_VoiceMasterBoxList( void );
 qboolean	CG_VoiceBoxMuted( int box );
 void		CG_VoiceBoxMute( int box, qboolean mute );
 void		CG_VoiceBoxReset( int box );
+qboolean	CG_VoiceMasterSync( void );
+qboolean	CG_VoiceFeedSend( int box, int channel, int seq, const byte *frame, int len );
+void		CG_VoiceFeedLocal( int box, int channel, int seq, const byte *frame, int len );

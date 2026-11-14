@@ -59,14 +59,18 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static char		musicNow[MUSIC_TEXT];		// what plays, empty: nothing
 static int		musicAskTime;				// when it is asked next
 
-// puts source and title together. artist and source may be empty.
-static void Music_Set( const char *source, const char *artist, const char *title ) {
+// puts source and title together into out. artist and source may be empty.
+static void Music_Join( char *out, int outSize, const char *source, const char *artist, const char *title ) {
 	if ( !title || !title[0] ) {
-		musicNow[0] = '\0';
+		out[0] = '\0';
 		return;
 	}
-	Com_sprintf( musicNow, sizeof( musicNow ), "%s%s%s%s%s", ( source && source[0] ) ? source : "", ( source && source[0] ) ? ": " : "",
+	Com_sprintf( out, outSize, "%s%s%s%s%s", ( source && source[0] ) ? source : "", ( source && source[0] ) ? ": " : "",
 		( artist && artist[0] ) ? artist : "", ( artist && artist[0] ) ? " - " : "", title );
+}
+
+static void Music_Set( const char *source, const char *artist, const char *title ) {
+	Music_Join( musicNow, sizeof( musicNow ), source, artist, title );
 }
 
 const char *Music_NowPlaying( void ) {
@@ -136,6 +140,7 @@ void Music_PlayerName( const char *key, char *out, int outSize ) {
 		{ "chrome", "Chrome" }, { "brave", "Brave" }, { "vivaldi", "Vivaldi" }, { "opera", "Opera" }, { "vlc", "VLC" },
 		{ "mpv", "mpv" }, { "plasma-browser-integration", "Browser (Plasma)" }, { "elisa", "Elisa" }, { "rhythmbox", "Rhythmbox" },
 		{ "strawberry", "Strawberry" }, { "clementine", "Clementine" }, { "audacious", "Audacious" }, { "tidal-hifi", "TIDAL" },
+		{ "quince", "Quince" }, { "youtube-music", "YouTube Music" }, { "youtubemusic", "YouTube Music" },
 	};
 	int i;
 
@@ -231,6 +236,20 @@ int Music_Players( char keys[MUSIC_MAX_PLAYERS][MUSIC_KEY] ) {
 	return 2;
 }
 
+// (Sync audioplayer is not built for Windows yet)
+void Music_SyncScan( qboolean all ) {
+	(void)all;
+}
+
+int Music_Live( const musicLive_t **live ) {
+	*live = NULL;
+	return 0;
+}
+
+void Music_Control( const char *bus, const char *method ) {
+	(void)bus; (void)method;
+}
+
 #elif defined(__APPLE__) || defined(__EMSCRIPTEN__)
 
 void Music_Frame( int now, qboolean playing, qboolean players, const char *allow ) {
@@ -243,6 +262,19 @@ void Music_Shutdown( void ) {
 int Music_Players( char keys[MUSIC_MAX_PLAYERS][MUSIC_KEY] ) {
 	(void)keys;
 	return 0;
+}
+
+void Music_SyncScan( qboolean all ) {
+	(void)all;
+}
+
+int Music_Live( const musicLive_t **live ) {
+	*live = NULL;
+	return 0;
+}
+
+void Music_Control( const char *bus, const char *method ) {
+	(void)bus; (void)method;
 }
 
 #else
@@ -274,6 +306,7 @@ typedef struct {
 #define DBUS_BUS_SESSION				0
 #define DBUS_TYPE_INVALID				0
 #define DBUS_TYPE_STRING				's'
+#define DBUS_TYPE_UINT32				'u'
 #define DBUS_TYPE_ARRAY					'a'
 #define DBUS_TYPE_VARIANT				'v'
 #define DBUS_TYPE_DICT_ENTRY			'e'
@@ -289,7 +322,8 @@ enum {
 	MUSIC_IDLE,
 	MUSIC_NAMES,		// asked the bus who is there
 	MUSIC_STATUS,		// asked a player whether it plays
-	MUSIC_META			// asked it what
+	MUSIC_META,			// asked it what
+	MUSIC_PID			// asked the bus for the process of a player (Sync audioplayer)
 };
 
 static struct {
@@ -303,6 +337,9 @@ static struct {
 	char			allow[MAX_CVAR_VALUE_STRING];		// the players that may be asked what they play
 	qboolean		playing;							// what plays is wanted
 	int				listTime;							// when the players are asked for next
+	qboolean		scanAll;							// Sync audioplayer: every player is asked, and for its process
+	qboolean		roundFound;							// what plays was found in this round of questions
+	musicLive_t		live[MUSIC_MAX_PLAYERS];			// what each of players[] said, by the same index
 
 	void			(*error_init)( DBusError *error );
 	void			(*error_free)( DBusError *error );
@@ -311,6 +348,7 @@ static struct {
 	dbus_bool_t		(*connection_read_write)( DBusConnection *connection, int timeoutMsec );
 	int				(*connection_dispatch)( DBusConnection *connection );
 	dbus_bool_t		(*connection_send_with_reply)( DBusConnection *connection, DBusMessage *message, DBusPendingCall **pending, int timeoutMsec );
+	dbus_bool_t		(*connection_send)( DBusConnection *connection, DBusMessage *message, unsigned int *serial );
 	void			(*connection_close)( DBusConnection *connection );
 	void			(*connection_unref)( DBusConnection *connection );
 	DBusMessage		*(*message_new_method_call)( const char *destination, const char *path, const char *iface, const char *method );
@@ -366,6 +404,7 @@ static void Music_Open( void ) {
 	MUSIC_SYMBOL( connection_read_write )
 	MUSIC_SYMBOL( connection_dispatch )
 	MUSIC_SYMBOL( connection_send_with_reply )
+	MUSIC_SYMBOL( connection_send )
 	MUSIC_SYMBOL( connection_close )
 	MUSIC_SYMBOL( connection_unref )
 	MUSIC_SYMBOL( message_new_method_call )
@@ -404,6 +443,8 @@ static qboolean Music_Ask( const char *destination, const char *path, const char
 	}
 	if ( arg1 && arg2 ) {
 		music.message_append_args( message, DBUS_TYPE_STRING, &arg1, DBUS_TYPE_STRING, &arg2, DBUS_TYPE_INVALID );
+	} else if ( arg1 ) {
+		music.message_append_args( message, DBUS_TYPE_STRING, &arg1, DBUS_TYPE_INVALID );
 	}
 	sent = music.connection_send_with_reply( music.connection, message, &music.pending, MUSIC_REPLY_MSEC );
 	music.message_unref( message );
@@ -419,14 +460,32 @@ static qboolean Music_AskPlayer( const char *property, int state ) {
 	return qtrue;
 }
 
-// The next player that may be asked is asked whether it plays. When there is none left, nothing plays (of them).
+// The next player that may be asked is asked whether it plays (all of them for Sync audioplayer). When there is
+// none left and none of the allowed ones played, nothing plays (of them).
 static void Music_NextPlayer( void ) {
-	for ( music.player++; music.playing && music.player < music.numPlayers; music.player++ ) {
-		if ( Music_Allowed( music.allow, music.keys[music.player] ) && Music_AskPlayer( "PlaybackStatus", MUSIC_STATUS ) ) {
+	for ( music.player++; ( music.playing || music.scanAll ) && music.player < music.numPlayers; music.player++ ) {
+		if ( ( music.scanAll || Music_Allowed( music.allow, music.keys[music.player] ) ) && Music_AskPlayer( "PlaybackStatus", MUSIC_STATUS ) ) {
 			return;
 		}
 	}
-	musicNow[0] = '\0';
+	if ( !music.roundFound ) {
+		musicNow[0] = '\0';
+	}
+	music.state = MUSIC_IDLE;
+}
+
+// After what a player plays: its process, the first time it is seen (Sync audioplayer), or the next player
+static void Music_AfterMeta( void ) {
+	if ( music.scanAll && !music.live[music.player].pid
+		&& Music_Ask( "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetConnectionUnixProcessID", music.players[music.player], NULL ) ) {
+		music.state = MUSIC_PID;
+		return;
+	}
+	if ( music.scanAll || !music.roundFound ) {
+		Music_NextPlayer();
+		return;
+	}
+	// (only what plays was wanted, and it was found)
 	music.state = MUSIC_IDLE;
 }
 
@@ -480,8 +539,15 @@ static void Music_Answer( DBusMessage *reply ) {
 	char			text[128];
 
 	switch ( music.state ) {
-	case MUSIC_NAMES:
-		// who is on the bus: the players of music have names that begin alike
+	case MUSIC_NAMES: {
+		// who is on the bus: the players of music have names that begin alike. (What the ones that were there before
+		// said is kept until they say it again: the list never shows them all silent between two rounds.)
+		static musicLive_t was[MUSIC_MAX_PLAYERS];
+		const int wasNum = music.numPlayers;
+
+		memcpy( was, music.live, sizeof( was ) );
+		memset( music.live, 0, sizeof( music.live ) );
+		music.roundFound = qfalse;
 		music.numPlayers = 0;
 		if ( good && music.message_iter_get_arg_type( &iter ) == DBUS_TYPE_ARRAY ) {
 			music.message_iter_recurse( &iter, &list );
@@ -493,6 +559,16 @@ static void Music_Answer( DBusMessage *reply ) {
 					Q_strncpyz( music.players[music.numPlayers], name, sizeof( music.players[0] ) );
 					Music_Key( name, music.keys[music.numPlayers], sizeof( music.keys[0] ) );
 					if ( music.keys[music.numPlayers][0] ) {
+						musicLive_t	*l = &music.live[music.numPlayers];
+						int			k;
+
+						Q_strncpyz( l->bus, name, sizeof( l->bus ) );
+						Q_strncpyz( l->key, music.keys[music.numPlayers], sizeof( l->key ) );
+						for ( k = 0; k < wasNum; k++ ) {
+							if ( !strcmp( was[k].bus, name ) ) {
+								*l = was[k];
+							}
+						}
 						music.numPlayers++;
 					}
 				}
@@ -504,13 +580,31 @@ static void Music_Answer( DBusMessage *reply ) {
 		music.player = -1;
 		Music_NextPlayer();
 		break;
+	}
 
 	case MUSIC_STATUS:
-		if ( good && Music_String( &iter, text, sizeof( text ) ) && !strcmp( text, "Playing" ) && Music_AskPlayer( "Metadata", MUSIC_META ) ) {
+		if ( !good || !Music_String( &iter, text, sizeof( text ) ) ) {
+			text[0] = '\0';
+		}
+		music.live[music.player].playing = (qboolean)!strcmp( text, "Playing" );
+		// (for Sync audioplayer a paused one too: its title still changes when it is skipped)
+		if ( ( music.live[music.player].playing || ( music.scanAll && !strcmp( text, "Paused" ) ) ) && Music_AskPlayer( "Metadata", MUSIC_META ) ) {
 			break;
 		}
 		Music_NextPlayer();
 		break;
+
+	case MUSIC_PID: {
+		unsigned int pid = 0;
+
+		if ( good && music.message_iter_get_arg_type( &iter ) == DBUS_TYPE_UINT32 ) {
+			music.message_iter_get_basic( &iter, &pid );
+		}
+		// (-1: asked and not known, so it is not asked again)
+		music.live[music.player].pid = pid ? (int)pid : -1;
+		Music_NextPlayer();
+		break;
+	}
 
 	case MUSIC_META: {
 		char title[128] = "", artist[128] = "", url[256] = "";
@@ -552,8 +646,12 @@ static void Music_Answer( DBusMessage *reply ) {
 		} else if ( strstr( url, "music.youtube.com" ) ) {
 			source = "YT Music";
 		}
-		Music_Set( source, artist, title );
-		music.state = MUSIC_IDLE;
+		Music_Join( music.live[music.player].now, sizeof( music.live[0].now ), source, artist, title );
+		if ( !music.roundFound && music.live[music.player].playing && Music_Allowed( music.allow, music.keys[music.player] ) ) {
+			Music_Set( source, artist, title );
+			music.roundFound = qtrue;
+		}
+		Music_AfterMeta();
 		break;
 	}
 
@@ -565,7 +663,7 @@ static void Music_Answer( DBusMessage *reply ) {
 void Music_Frame( int now, qboolean playing, qboolean players, const char *allow ) {
 	int i;
 
-	if ( !playing && !players ) {
+	if ( !playing && !players && !music.scanAll ) {
 		if ( music.state > MUSIC_FAILED ) {
 			Music_Close( MUSIC_NONE );
 		}
@@ -614,7 +712,7 @@ void Music_Frame( int now, qboolean playing, qboolean players, const char *allow
 		music.state = MUSIC_IDLE;		// a question that could not be sent
 	}
 	// what plays every few seconds, the players a little more often while somebody looks at their list
-	if ( ( !playing || now - musicAskTime < 0 ) && ( !players || now - music.listTime < 0 ) ) {
+	if ( ( !playing || now - musicAskTime < 0 ) && ( ( !players && !music.scanAll ) || now - music.listTime < 0 ) ) {
 		return;
 	}
 	musicAskTime = now + MUSIC_ASK_MSEC;
@@ -627,6 +725,31 @@ void Music_Frame( int now, qboolean playing, qboolean players, const char *allow
 void Music_Shutdown( void ) {
 	if ( music.state > MUSIC_FAILED ) {
 		Music_Close( MUSIC_NONE );
+	}
+}
+
+// Sync audioplayer: all players are asked from now on, with their processes, as often as the list of Setup is
+void Music_SyncScan( qboolean all ) {
+	music.scanAll = all;
+}
+
+// every player on the bus as the last round of questions found it
+int Music_Live( const musicLive_t **live ) {
+	*live = music.live;
+	return ( music.state > MUSIC_FAILED ) ? music.numPlayers : 0;
+}
+
+// a command to a player, without waiting for an answer: it goes out with the next frame
+void Music_Control( const char *bus, const char *method ) {
+	DBusMessage *message;
+
+	if ( music.state <= MUSIC_FAILED || !music.connection || !bus[0] ) {
+		return;
+	}
+	message = music.message_new_method_call( bus, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player", method );
+	if ( message ) {
+		music.connection_send( music.connection, message, NULL );
+		music.message_unref( message );
 	}
 }
 
