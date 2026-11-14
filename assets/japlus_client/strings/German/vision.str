@@ -845,14 +845,6 @@ REFERENCE           GROUND_ONLY
 LANG_ENGLISH        "Ground Only"
 LANG_GERMAN         "Nur Boden"
 
-REFERENCE           DEATH_THROES
-LANG_ENGLISH        "Death Throes"
-LANG_GERMAN         "Todeszuckungen"
-
-REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
-LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
-LANG_GERMAN         "Ein zerteilter Körper zuckt noch eine Weile und röchelt, gurgelt oder stöhnt, je nachdem, wo der Schnitt war."
-
 REFERENCE           REMOVE_CUT_PARTS
 LANG_ENGLISH        "Remove Cut Parts"
 LANG_GERMAN         "Teile entfernen"
@@ -1833,10 +1825,6 @@ REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_GERMAN         "Spieler"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-LANG_GERMAN         "Waffen"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_GERMAN         "Sprache"
@@ -1844,6 +1832,10 @@ LANG_GERMAN         "Sprache"
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
 LANG_GERMAN         "Lichtschwerter"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
+LANG_GERMAN         "Waffen"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"

@@ -2374,162 +2374,6 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 1030 452 100
-			visible					1
-			text					@VISION_WEAPONS
-			font					7
-			textscale				0.89
-			forecolor				0.56 0.64 0.74 1
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				22
-			textaligny				54.5
-			caps					1
-			fold					14
-			page					3
-			scroll					1
-			column					0
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					vision_yesno_tay_jk2effects
-			type					ITEM_TYPE_YESNO
-			text					@VISION_JEDI_OUTCAST_SHOTS
-			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
-			cvar					"tay_jk2Effects"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1130 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_multi_tay_disruptorbeam
-			type					ITEM_TYPE_MULTI
-			text					@VISION_DISRUPTOR_BEAM
-			descText				@VISION_HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
-			cvar					"tay_disruptorBeam"
-			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1182 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_scope
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SCOPE_LENS
-			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
-			cvar					"v_scope"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1234 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_scopewheelzoom
-			type					ITEM_TYPE_YESNO
-			text					@VISION_ZOOM_WITH_MOUSE_WHEEL
-			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
-			cvar					"v_scopeWheelZoom"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1286 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_slider_v_motionthreshold
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_MOTION_TRACKER_SPEED
-			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
-			cvarfloat				"v_motionThreshold" 40 10 200
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1338 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_binoculars
-			type					ITEM_TYPE_YESNO
-			text					@VISION_BINOCULAR_LENS
-			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
-			cvar					"v_binoculars"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1390 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_lockon
-			type					ITEM_TYPE_YESNO
-			text					@VISION_ROCKET_LOCK_ON
-			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
-			cvar					"v_lockOn"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 1442 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_head
 			rect					772 192 452 66
 			visible					1
 			text					@VISION_LANGUAGE
@@ -2540,7 +2384,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					15
+			fold					14
 			page					3
 			scroll					1
 			column					1
@@ -2637,7 +2481,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					16
+			fold					15
 			page					3
 			scroll					1
 			column					1
@@ -2726,25 +2570,6 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_slicethroes
-			type					ITEM_TYPE_YESNO
-			text					@VISION_DEATH_THROES
-			descText				@VISION_A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
-			cvar					"v_sliceThroes"
-			action { play "sound/interface/button1.wav" ; }
-			rect					782 722 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
 			name					vision_multi_v_slicetime
 			type					ITEM_TYPE_MULTI
 			text					@VISION_REMOVE_CUT_PARTS
@@ -2752,7 +2577,7 @@
 			cvar					"v_sliceTime"
 			cvarFloatList { @VISION_AS_LONG_AS_THE_BODY 0 @VISION_AFTER_15_S 15 @VISION_AFTER_30_S 30 @VISION_AFTER_60_S 60 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 774 432 52
+			rect					782 722 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2771,7 +2596,7 @@
 			descText				@VISION_HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
 			cvarfloat				"v_saberTrailLength" 1 0 4
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 826 432 52
+			rect					782 774 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2790,7 +2615,7 @@
 			descText				@VISION_HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
 			cvarfloat				"v_saberCoreScale" 1 0.25 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 878 432 52
+			rect					782 826 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2809,7 +2634,7 @@
 			descText				@VISION_HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 			cvarfloat				"v_saberGlowScale" 1 0.25 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 930 432 52
+			rect					782 878 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2828,7 +2653,7 @@
 			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 			cvar					"tay_saberTeamColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 982 432 52
+			rect					782 930 432 52
 			page					3
 			scroll					1
 			row						1
@@ -2847,7 +2672,163 @@
 			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 			cvar					"tay_saberStaffColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 1034 432 52
+			rect					782 982 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					772 1034 452 100
+			visible					1
+			text					@VISION_WEAPONS
+			font					7
+			textscale				0.89
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				54.5
+			caps					1
+			fold					16
+			page					3
+			scroll					1
+			column					1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_jk2effects
+			type					ITEM_TYPE_YESNO
+			text					@VISION_JEDI_OUTCAST_SHOTS
+			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+			cvar					"tay_jk2Effects"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1134 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_disruptorbeam
+			type					ITEM_TYPE_MULTI
+			text					@VISION_DISRUPTOR_BEAM
+			descText				@VISION_HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+			cvar					"tay_disruptorBeam"
+			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1186 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_scope
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SCOPE_LENS
+			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
+			cvar					"v_scope"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1238 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_scopewheelzoom
+			type					ITEM_TYPE_YESNO
+			text					@VISION_ZOOM_WITH_MOUSE_WHEEL
+			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
+			cvar					"v_scopeWheelZoom"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1290 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_motionthreshold
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_MOTION_TRACKER_SPEED
+			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
+			cvarfloat				"v_motionThreshold" 40 10 200
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1342 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_binoculars
+			type					ITEM_TYPE_YESNO
+			text					@VISION_BINOCULAR_LENS
+			descText				@VISION_THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
+			cvar					"v_binoculars"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1394 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_lockon
+			type					ITEM_TYPE_YESNO
+			text					@VISION_ROCKET_LOCK_ON
+			descText				@VISION_THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
+			cvar					"v_lockOn"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 1446 432 52
 			page					3
 			scroll					1
 			row						1

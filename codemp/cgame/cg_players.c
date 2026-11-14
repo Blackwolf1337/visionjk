@@ -64,8 +64,6 @@ char	*cg_customSoundNames[MAX_CUSTOM_SOUNDS] = {
 	"*gasp",
 	"*land1",
 	"*taunt",
-	"*gurp1",		// VisionJK: the death throes of a cut body (cg_slice.c)
-	"*gurp2",
 	NULL
 };
 

@@ -163,7 +163,6 @@ SETUP = [
         ('yesno', 'Slice Bodies', 'v_slice', 'A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer.'),
         ('multi', 'Blood', 'v_gore', (('Off', 0), ('Screen and Ground', 1), ('Ground Only', 2)),
          'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.'),
-        ('yesno', 'Death Throes', 'v_sliceThroes', 'A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went.'),
         ('multi', 'Remove Cut Parts', 'v_sliceTime', (('As Long as the Body', 0), ('After 15 s', 15), ('After 30 s', 30), ('After 60 s', 60)),
          'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
         ('slider', 'Trail Length', 'v_saberTrailLength', 1, 0, 4, 'How long the trail behind a swinging blade is.'),

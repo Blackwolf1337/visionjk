@@ -635,12 +635,6 @@ LANG_ENGLISH        "Screen and Ground"
 REFERENCE           GROUND_ONLY
 LANG_ENGLISH        "Ground Only"
 
-REFERENCE           DEATH_THROES
-LANG_ENGLISH        "Death Throes"
-
-REFERENCE           A_BODY_THAT_WAS_CUT_TWITCHES_A_WHILE
-LANG_ENGLISH        "A body that was cut twitches a while and chokes, gurgles or moans, by where the cut went."
-
 REFERENCE           REMOVE_CUT_PARTS
 LANG_ENGLISH        "Remove Cut Parts"
 
@@ -1376,14 +1370,14 @@ LANG_ENGLISH        "Duels"
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 
-REFERENCE           WEAPONS
-LANG_ENGLISH        "Weapons"
-
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 
 REFERENCE           LIGHTSABERS
 LANG_ENGLISH        "Lightsabers"
+
+REFERENCE           WEAPONS
+LANG_ENGLISH        "Weapons"
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
