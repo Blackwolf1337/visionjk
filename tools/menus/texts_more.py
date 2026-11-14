@@ -832,7 +832,7 @@ MORE = {
     'Every opponent is shown in the model you pick. As They Chose: each keeps his own.': ('Chaque adversaire est montré avec le modèle choisi. Leur choix: chacun garde le sien.', 'Cada rival se muestra con el modelo que elijas. Su elección: cada uno conserva el suyo.'),
     'Every team mate is shown in the model you pick. As They Chose: each keeps his own.': ('Chaque coéquipier est montré avec le modèle choisi. Leur choix: chacun garde le sien.', 'Cada compañero se muestra con el modelo que elijas. Su elección: cada uno conserva el suyo.'),
     'Quality': ('Qualité', 'Calidad'),
-    'Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.': ('Règle l\'anticrénelage, les ombres, les matériaux, les reflets, le HDR et le bloom d\'un coup. Bas est le plus silencieux pour la carte graphique. Personnalisé : ce que vous avez réglé vous-même.', 'Ajusta el antialiasing, las sombras, los materiales, los reflejos, el HDR y el bloom de una vez. Bajo es lo más silencioso para la tarjeta gráfica. Personalizado: lo que ajustaste tú.'),
+    'Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.': ('Règle l\'anticrénelage, les ombres, les matériaux, les reflets et le bloom d\'un coup. Bas est le plus silencieux pour la carte graphique. Personnalisé : ce que vous avez réglé vous-même.', 'Ajusta el antialiasing, las sombras, los materiales, los reflejos y el bloom de una vez. Bajo es lo más silencioso para la tarjeta gráfica. Personalizado: lo que ajustaste tú.'),
     'Low': ('Bas', 'Bajo'),
     'Medium': ('Moyen', 'Medio'),
     'High': ('Élevé', 'Alto'),

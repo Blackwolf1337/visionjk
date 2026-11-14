@@ -246,7 +246,7 @@ REFERENCE           QUALITY
 LANG_ENGLISH        "Quality"
 
 REFERENCE           SETS_ANTI_ALIASING_SHADOWS_MATERIALS
-LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
+LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
 
 REFERENCE           LOW
 LANG_ENGLISH        "Low"

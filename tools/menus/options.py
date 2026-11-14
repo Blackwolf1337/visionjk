@@ -81,7 +81,7 @@ SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Quality'),
         ('multi', 'Quality', 'v_quality', (('Low', 0), ('Medium', 1), ('High', 2), ('Ultra', 3), ('Custom', 4)),
-         'Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.'),
+         'Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.'),
         ('head', 'Screen'),
         ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample')),
         ('yesno', 'SMAA', 'v_smaa',

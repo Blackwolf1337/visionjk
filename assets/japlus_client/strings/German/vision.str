@@ -326,8 +326,8 @@ LANG_ENGLISH        "Quality"
 LANG_GERMAN         "Qualität"
 
 REFERENCE           SETS_ANTI_ALIASING_SHADOWS_MATERIALS
-LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
-LANG_GERMAN         "Stellt Kantenglättung, Schatten, Materialien, Spiegelungen, HDR und Bloom auf einmal ein. Niedrig ist am leisesten für die Grafikkarte. Eigene: was du selbst eingestellt hast."
+LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
+LANG_GERMAN         "Stellt Kantenglättung, Schatten, Materialien, Spiegelungen und Bloom auf einmal ein. Niedrig ist am leisesten für die Grafikkarte. Eigene: was du selbst eingestellt hast."
 
 REFERENCE           LOW
 LANG_ENGLISH        "Low"

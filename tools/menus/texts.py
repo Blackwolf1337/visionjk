@@ -653,7 +653,7 @@ TR = {
     'Include servers on which only bots play': 'Server einbeziehen, auf denen nur Bots spielen',
     # Setup of 2026-11-14: more pages, JA+ plugin features, Apply, presets
     'Quality': 'Qualität',
-    'Sets anti-aliasing, shadows, materials, reflections, HDR and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.': 'Stellt Kantenglättung, Schatten, Materialien, Spiegelungen, HDR und Bloom auf einmal ein. Niedrig ist am leisesten für die Grafikkarte. Eigene: was du selbst eingestellt hast.',
+    'Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.': 'Stellt Kantenglättung, Schatten, Materialien, Spiegelungen und Bloom auf einmal ein. Niedrig ist am leisesten für die Grafikkarte. Eigene: was du selbst eingestellt hast.',
     'Low': 'Niedrig',
     'Medium': 'Mittel',
     'High': 'Hoch',

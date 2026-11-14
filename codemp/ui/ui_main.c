@@ -4998,17 +4998,17 @@ static void UI_GetSoundSetup( void ) {
 
 /*
 The presets of the row "Quality" of Setup, Video (v_quality): the settings that cost the graphics card the most.
-Frame limit and video sync are not part of them. The last value of v_quality, Custom, is none of them.
+Frame limit, video sync and HDR are not part of them. The last value of v_quality, Custom, is none of them.
 */
 static const char *uiQualityCvars[] = {
-	"ui_r_ext_multisample", "v_smaa", "cg_shadows", "v_pbr", "v_ssr", "v_hdr", "tay_bloom", "v_autoMaterials", "v_panelLight"
+	"ui_r_ext_multisample", "v_smaa", "cg_shadows", "v_pbr", "v_ssr", "tay_bloom", "v_autoMaterials", "v_panelLight"
 };
 
 static const int uiQualityPresets[][ARRAY_LEN( uiQualityCvars )] = {
-	{ 0, 1, 1, 0, 0, 0, 0, 0, 0 },		// low
-	{ 0, 1, 2, 1, 0, 0, 1, 0, 0 },		// medium
-	{ 2, 1, 2, 1, 1, 1, 1, 0, 1 },		// high
-	{ 4, 1, 2, 1, 1, 1, 1, 1, 1 },		// ultra
+	{ 0, 1, 1, 0, 0, 0, 0, 0 },		// low
+	{ 0, 1, 2, 1, 0, 1, 0, 0 },		// medium
+	{ 2, 1, 2, 1, 1, 1, 0, 1 },		// high
+	{ 4, 1, 2, 1, 1, 1, 1, 1 },		// ultra
 };
 
 #define QUALITY_CUSTOM	( (int)ARRAY_LEN( uiQualityPresets ) )
