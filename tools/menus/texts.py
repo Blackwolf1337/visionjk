@@ -753,6 +753,8 @@ TR = {
     'Goals': 'Ziele',
     'Blur Behind Panels': 'Unschärfe hinter Feldern',
     'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.': 'Milchglas: was hinter den HUD-Feldern, dem Chatfenster und der Konsole liegt, wird unscharf. 0: aus. Braucht den Vulkan-Renderer.',
+    'Current Vote': 'Laufende Abstimmung',
+    'Votes on the vote that runs now.': 'Stimmt bei der laufenden Abstimmung ab.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.

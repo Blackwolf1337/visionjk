@@ -814,8 +814,11 @@ def solo_page(m, menu):
 # the buttons of the bar in a game, in the order of the redesign: the match, the player, the settings; the ways
 # out at the right. Buttons that share a place (join and the class of a siege, the profile and the objectives,
 # voice chat and adding a bot) stay together.
-INGAME_LEFT = ('join', 'class', 'vote', 'callvote', 'chat', 'addbot', 'player', 'objectives', 'controls', 'setup', 'photo')
-INGAME_RIGHT = ('about', 'servers', 'leave')
+INGAME_LEFT = ('join', 'class', 'callvote', 'chat', 'addbot', 'player', 'objectives', 'controls', 'setup', 'photo')
+INGAME_RIGHT = ('servers', 'leave')
+# (their word of 2026-11-14: Vote and Call Vote are one window, the one of calling a vote with the yes and no of the
+# vote that runs at its top; About shows in the empty place under the bar when the menu opens, not as a tab)
+INGAME_GONE = ('vote', 'about')
 
 
 def quit_page(m):
@@ -868,6 +871,19 @@ def ingame_bar(m):
     photo.block.append(Entry('action', [], options.CLICK + [mf.NL, 'close', 'all', ';', mf.NL, 'exec', '"v_photo"', ';']))
     m.insert(m.index(setup) + 1, photo)
     buttons = {name_of(e.block): e for e in items(m) if mf.get(e.block, 'text') is not None}
+    for n in INGAME_GONE:
+        if n in buttons:
+            m.remove(buttons.pop(n))
+    # (the hover pictures of the old menu that belonged to them)
+    m[:] = [e for e in m if not (e.k == 'itemdef' and name_of(e.block) in ('voteButton', 'aboutButton'))]
+    if 'callvote' in buttons:
+        mf.put(buttons['callvote'].block, 'text', '@MENUS_VOTE')
+    e = mf.find(m, 'onopen')
+    if e and isinstance(e.block, list):
+        e.block = e.block + [';', 'open', 'ingame_about']
+    else:
+        mf.put(m, 'onOpen')
+        mf.find(m, 'onopen').block = ['open', 'ingame_about']
     left = [buttons[n] for n in INGAME_LEFT if n in buttons]
     right = [buttons[n] for n in INGAME_RIGHT if n in buttons]
     rest = [e for e in buttons.values() if e not in left and e not in right]

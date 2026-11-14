@@ -934,4 +934,6 @@ MORE = {
     'Goals': ('Objectifs', 'Objetivos'),
     'Blur Behind Panels': ('Flou derrière les panneaux', 'Desenfoque tras los paneles'),
     'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.': ('Verre dépoli : ce qui se trouve derrière les panneaux du HUD, la fenêtre de chat et la console est flou. 0 : désactivé. Nécessite le moteur de rendu Vulkan.', 'Cristal esmerilado: lo que hay detrás de los paneles del HUD, la ventana de chat y la consola se desenfoca. 0: desactivado. Necesita el renderizador Vulkan.'),
+    'Current Vote': ('Vote en cours', 'Votación actual'),
+    'Votes on the vote that runs now.': ('Vote pour le vote en cours.', 'Vota en la votación en curso.'),
 }

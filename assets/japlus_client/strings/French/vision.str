@@ -2357,6 +2357,14 @@ REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_FRENCH         "Style de lame"
 
+REFERENCE           CURRENT_VOTE
+LANG_ENGLISH        "Current Vote"
+LANG_FRENCH         "Vote en cours"
+
+REFERENCE           VOTES_ON_THE_VOTE_THAT_RUNS_NOW
+LANG_ENGLISH        "Votes on the vote that runs now."
+LANG_FRENCH         "Vote pour le vote en cours."
+
 REFERENCE           PHOTO
 LANG_ENGLISH        "Photo"
 LANG_FRENCH         "#same"

@@ -2357,6 +2357,14 @@ REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_SPANISH        "Estilo de hoja"
 
+REFERENCE           CURRENT_VOTE
+LANG_ENGLISH        "Current Vote"
+LANG_SPANISH        "Votación actual"
+
+REFERENCE           VOTES_ON_THE_VOTE_THAT_RUNS_NOW
+LANG_ENGLISH        "Votes on the vote that runs now."
+LANG_SPANISH        "Vota en la votación en curso."
+
 REFERENCE           PHOTO
 LANG_ENGLISH        "Photo"
 LANG_SPANISH        "Foto"
