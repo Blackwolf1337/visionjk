@@ -621,6 +621,9 @@ typedef struct displayContextDef_s {
 	// VisionJK: frosted glass behind a panel drawn next (the cgame: ext.R_DrawBackdrop). qtrue: it is drawn. NULL in the
 	// ui module, whose menus in the level have the menu blur.
 	qboolean		(*drawBackdrop)						( float x, float y, float w, float h, float radius );
+	// every translucent WINDOW_STYLE_PANEL gets frosted glass, not only those with "frosted" (the ui module: all
+	// panels of the menus when they are flat, their word of 2026-11-14)
+	qboolean		frostPanels;
 } displayContextDef_t;
 
 

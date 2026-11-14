@@ -784,6 +784,15 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 			// a line of the new look: one pixel, and whole on a menu that stands in the level (Skin_Line)
 			Skin_Line( fillRect.x, fillRect.y, fillRect.w, w->backColor );
 		}
+		else if ( w->frosted > 0.0f && w->backColor[3] > 0.0f && DC->drawBackdrop
+			&& DC->drawBackdrop( fillRect.x, fillRect.y, fillRect.w, fillRect.h, 0.0f ) ) {
+			// frosted glass behind a filled box that asks for it ("frosted", the bar of the menu in a game)
+			vec4_t back;
+
+			memcpy( back, w->backColor, sizeof( back ) );
+			back[3] *= w->frosted;
+			DC->fillRect( fillRect.x, fillRect.y, fillRect.w, fillRect.h, back );
+		}
 		else {
 			DC->fillRect( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->backColor );
 		}
@@ -805,10 +814,16 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 			vec4_t back;
 
 			memcpy( back, w->backColor, sizeof( back ) );
-			// frosted glass first: what is behind the panel blurred, and the panel thinner over it
-			if ( w->frosted > 0.0f && back[3] > 0.0f && DC->drawBackdrop
-				&& DC->drawBackdrop( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius ) ) {
-				back[3] *= w->frosted;
+			// frosted glass first: what is behind the panel blurred, and the panel thinner over it. A panel of a menu
+			// of the ui (frostPanels) gets it when it lets something through and is not a sliver
+			{
+				const float frost = w->frosted > 0.0f ? w->frosted
+					: ( DC->frostPanels && back[3] > 0.05f && back[3] < 0.98f && w->rect.w >= 20.0f && w->rect.h >= 16.0f ) ? 0.7f : 0.0f;
+
+				if ( frost > 0.0f && back[3] > 0.0f && DC->drawBackdrop
+					&& DC->drawBackdrop( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius ) ) {
+					back[3] *= frost;
+				}
 			}
 			Skin_Panel( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius, back, w->borderColor );
 			if ( w->sheen > 0.0f && w->rect.w > 2.0f * w->radius ) {

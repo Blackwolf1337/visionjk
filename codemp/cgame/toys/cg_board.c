@@ -853,7 +853,7 @@ void CG_BoardDraw( void ) {
 		Board_Show( qfalse );
 	}
 	board.hits.num = 0;
-	Win_Panel( board.x, board.y, BOARD_WIN_W, BOARD_WIN_H, 6.0f, winFill, winEdge );
+	Win_Glass( board.x, board.y, BOARD_WIN_W, BOARD_WIN_H, 6.0f, winFill, winEdge );
 	Win_Text( board.x + 12.0f, board.y + 8.0f, 0.6f, winText, ITEM_ALIGN_LEFT, "Drawing board", 300.0f );
 	Win_Button( &board.hits, BOARD_PART_CLOSE, 0, board.x + BOARD_WIN_W - 64.0f, board.y + 7.0f, 52.0f, "Close", winText, qtrue );
 	// the picture itself, as the stream of the engine shows it

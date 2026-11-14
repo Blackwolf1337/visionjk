@@ -206,10 +206,13 @@ column as OpenGL has them. A module makes it from where the plane is and from th
 again. The engine sets it around the menus when the cgame shows them in the level.
 =============
 */
+static qboolean	r_plane2D;	// the 2D goes onto a plane in the level now (RE_DrawBackdrop draws nothing then)
+
 void	RE_Set2DPlane( const float *matrix ) {
 	set2DPlaneCommand_t	*cmd;
 
 	R_FontTTF_Plane( matrix );
+	r_plane2D = matrix ? qtrue : qfalse;
 	if ( !tr.registered ) {
 		return;
 	}
@@ -422,7 +425,8 @@ qboolean RE_DrawBackdrop( float x, float y, float w, float h, float radius ) {
 #else
 	backdropCommand_t *cmd;
 
-	if ( !tr.registered || v_backdropBlur->value <= 0.0f || w <= 0.0f || h <= 0.0f ) {
+	// (not on a plane in the level, the menus of the 3D menu: there the caller keeps its panel as it is)
+	if ( !tr.registered || v_backdropBlur->value <= 0.0f || w <= 0.0f || h <= 0.0f || r_plane2D ) {
 		return qfalse;
 	}
 	cmd = (backdropCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );

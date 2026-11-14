@@ -859,7 +859,9 @@ def ingame_bar(m):
     """The row of buttons at the top of the screen in a game: a bar behind it, its buttons as wide as their words, the
     match first, then the player and the settings, the ways out last with leaving in red."""
     new = [
+        # (frosted glass behind it while the menu is flat, its colour then 0.6 as opaque: Window_Paint)
         item('vision_bar', (0, 0, 640, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.016', '0.031', '0.063', '0.8'),
+             ('frosted', '0.6'),
              ('wide', 1), ('decoration',)),
         item('vision_bar_line', (0, 26, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *BAR_LINE),
              ('wide', 1), ('decoration',)),

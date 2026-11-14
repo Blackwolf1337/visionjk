@@ -550,6 +550,18 @@ UI_FillRect
 Coordinates are 640*480 virtual values
 =================
 */
+// frosted glass behind a panel of the menus (DC->drawBackdrop): not on an engine without ext.R_DrawBackdrop, and
+// nothing while the menus stand in the level (the renderer refuses on a 2D plane)
+qboolean UI_DrawBackdrop( float x, float y, float width, float height, float radius ) {
+	static int has = -1;
+
+	if ( has < 0 ) {
+		// (the ROM cvar first: an older engine ends the table of ext before R_DrawBackdrop)
+		has = ( trap->Cvar_VariableValue( "v_uiBackdrop" ) == 1.0f && trap->ext.R_DrawBackdrop ) ? 1 : 0;
+	}
+	return (qboolean)( has > 0 && trap->ext.R_DrawBackdrop( x, y, width, height, radius ) );
+}
+
 void UI_FillRect( float x, float y, float width, float height, const float *color ) {
 	trap->R_SetColor( color );
 	trap->R_DrawStretchPic( x, y, width, height, 0, 0, 0, 0, uiInfo.uiDC.whiteShader );

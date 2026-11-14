@@ -163,7 +163,7 @@ void CG_BoomboxWindowDraw( void ) {
 
 		Skin_Soft( x, y + 4.0f, WIN_W, h, 14.0f, dark );
 	}
-	Win_Panel( x, y, WIN_W, h, 8.0f, winFill, winEdge );
+	Win_Glass( x, y, WIN_W, h, 8.0f, winFill, winEdge );
 	Win_Hit( &win.hits, PART_LINE, -1, x, y, WIN_W, h );
 
 	// the head: what it is, who put it down, and the cross

@@ -378,7 +378,16 @@ void CG_RadialDraw( void ) {
 	// the ring and its hole
 	if ( Skin_Ready() ) {
 		Skin_Soft( cx - RADIAL_OUTER - 24.0f, cy - RADIAL_OUTER - 24.0f, 2.0f * RADIAL_OUTER + 48.0f, 2.0f * RADIAL_OUTER + 48.0f, 24.0f, hole );
-		Skin_Disc( cx, cy, RADIAL_OUTER, ring );
+		// frosted glass behind the ring: a rounded rect as round as it is wide is a disc
+		if ( CG_DrawBackdrop( cx - RADIAL_OUTER, cy - RADIAL_OUTER, 2.0f * RADIAL_OUTER, 2.0f * RADIAL_OUTER, RADIAL_OUTER ) ) {
+			vec4_t thin;
+
+			memcpy( thin, ring, sizeof( thin ) );
+			thin[3] *= 0.65f;
+			Skin_Disc( cx, cy, RADIAL_OUTER, thin );
+		} else {
+			Skin_Disc( cx, cy, RADIAL_OUTER, ring );
+		}
 		Skin_Disc( cx, cy, RADIAL_INNER, hole );
 	} else {
 		for ( k = 0; k < RADIAL_SLICES; k++ ) {

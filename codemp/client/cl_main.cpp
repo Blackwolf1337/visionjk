@@ -3008,6 +3008,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_uiFontInk", "1", CVAR_ROM, "" );
 	// and ext.Cache_List and ext.Cache_Clear after that
 	Cvar_Get( "v_uiCache", "1", CVAR_ROM, "" );
+	// and ext.R_DrawBackdrop after them: frosted glass behind the panels of the menus
+	Cvar_Get( "v_uiBackdrop", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

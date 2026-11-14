@@ -10762,6 +10762,8 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.registerModel					= trap->R_RegisterModel;
 	uiInfo.uiDC.modelBounds						= trap->R_ModelBounds;
 	uiInfo.uiDC.fillRect						= &UI_FillRect;
+	uiInfo.uiDC.drawBackdrop					= &UI_DrawBackdrop;
+	uiInfo.uiDC.frostPanels						= qtrue;
 	uiInfo.uiDC.drawRect						= &_UI_DrawRect;
 	uiInfo.uiDC.drawSides						= &_UI_DrawSides;
 	uiInfo.uiDC.drawTopBottom					= &_UI_DrawTopBottom;

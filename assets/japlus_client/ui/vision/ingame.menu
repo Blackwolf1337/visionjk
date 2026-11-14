@@ -49,6 +49,7 @@
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.016 0.031 0.063 0.8
+			frosted					0.6
 			wide					1
 			decoration
 		}

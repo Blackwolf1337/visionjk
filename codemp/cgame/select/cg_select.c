@@ -1156,7 +1156,17 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 
 		Skin_Soft( b->corner[0], b->corner[1] + 3.0f * b->unit, SELECT_CARD_W * b->unit, height * b->unit, 10.0f * b->unit, dark );
 	}
-	Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, fill, edge );
+	// frosted glass behind the flat card (not the one in the level), its fill thinner over it
+	if ( !b->world && Skin_Ready()
+		&& CG_DrawBackdrop( b->corner[0], b->corner[1], SELECT_CARD_W * b->unit, height * b->unit, 6.0f * b->unit ) ) {
+		vec4_t thin;
+
+		memcpy( thin, fill, sizeof( thin ) );
+		thin[3] *= 0.65f;
+		Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, thin, edge );
+	} else {
+		Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, fill, edge );
+	}
 	Board_TextFit( b, 8.0f, 5.0f, 0.78f, colorWhite, Select_Name( n ), SELECT_CARD_W - 16.0f );
 	for ( i = 0; i < sel.numHead; i++ ) {
 		const float	lineY = SELECT_HEAD_NAME + i * SELECT_HEAD_LINE;

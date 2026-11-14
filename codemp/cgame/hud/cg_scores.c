@@ -577,6 +577,10 @@ qboolean CG_ScoresDraw( void ) {
 		vec4_t edge;
 
 		Skin_Color( edge, scoresEdge, fade );
+		// frosted glass behind the board once it is there, its fill thinner over it
+		if ( fade > 0.6f && CG_DrawBackdrop( x, SCORES_TOP, SCORES_W, height, 8.0f ) ) {
+			c[3] *= 0.65f;
+		}
 		Skin_Panel( x, SCORES_TOP, SCORES_W, height, 8.0f, c, edge );
 	}
 	Scores_Head( x, SCORES_TOP, fade );
