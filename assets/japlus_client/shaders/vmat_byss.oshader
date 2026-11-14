@@ -107,8 +107,10 @@ textures/byss/floor_byss
 		blendFunc GL_DST_COLOR GL_ZERO
 		normalGen 0.4 2 0.3
 		rmoGen 0.2 0.4
-		roughness 1
+		roughness 0.8
 		metalness 0
+		parallaxDepth 0.009
+		parallaxPlane 0.5
 		specularReflectance 0.015
 	}
 	{
@@ -116,5 +118,7 @@ textures/byss/floor_byss
 		blendFunc GL_SRC_ALPHA GL_ONE
 		alphaGen const 0.25
 		tcGen environment
+		roughness 0.8
+		metalness 0
 	}
 }

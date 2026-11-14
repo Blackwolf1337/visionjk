@@ -1037,30 +1037,6 @@ models/map_objects/factory/window_brace
 	metalness 0.1
 }
 
-models/map_objects/korriban/statue_sith_lord03
-{
-	implicitMap -
-	normalGen 0.3 2 0.3
-	roughness 0.8
-	metalness 0
-}
-
-models/map_objects/korriban/statue_sith_lord01
-{
-	implicitMap -
-	normalGen 0.3 2 0.3
-	roughness 0.8
-	metalness 0
-}
-
-models/map_objects/korriban/statue_sith_lord02
-{
-	implicitMap -
-	normalGen 0.3 2 0.3
-	roughness 0.8
-	metalness 0
-}
-
 models/map_objects/korriban/coffin_slab
 {
 	implicitMap -
@@ -1070,14 +1046,6 @@ models/map_objects/korriban/coffin_slab
 }
 
 models/map_objects/korriban/torch_hang
-{
-	implicitMap -
-	normalGen 0.3 2 0.3
-	roughness 0.8
-	metalness 0
-}
-
-models/map_objects/korriban/statue_guard01
 {
 	implicitMap -
 	normalGen 0.3 2 0.3
@@ -1226,18 +1194,6 @@ textures/impdetention/crate7
 	metalness 0.1
 	parallaxDepth 0.018
 	parallaxPlane 0.5
-}
-
-textures/cairn/c_crate2
-{
-	implicitMap -
-	normalGen 0.6 1 0.3 invert
-	rmoGen 0.2 0.4
-	roughness 0.6
-	metalness 0.1
-	parallaxDepth 0.02
-	parallaxPlane 0.5
-	specularReflectance 0.034
 }
 
 textures/impgarrison/metal
@@ -1734,16 +1690,6 @@ textures/korriban/os_rock
 	parallaxPlane 0.5
 }
 
-textures/korriban/os_outsidebasec
-{
-	implicitMap -
-	normalGen 0 2.55 0 invert
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.04
-	parallaxPlane 0.5
-}
-
 textures/korriban/entrance_side
 {
 	implicitMap -
@@ -1752,14 +1698,6 @@ textures/korriban/entrance_side
 	metalness 0
 	parallaxDepth 0.045
 	parallaxPlane 0.5
-}
-
-models/map_objects/korriban/statue_guard02
-{
-	implicitMap -
-	normalGen 0.4 2 0 invert
-	roughness 0.85
-	metalness 0
 }
 
 textures/korriban/k_wall7
@@ -1792,16 +1730,6 @@ textures/korriban/k_ceiling2
 	parallaxPlane 0.5
 }
 
-textures/korriban/os_basic_walkway
-{
-	implicitMap -
-	normalGen 0.4 0.66 0 invert
-	roughness 0.85
-	metalness 0
-	parallaxDepth 0.035
-	parallaxPlane 0.5
-}
-
 textures/korriban/k_ceiling
 {
 	implicitMap -
@@ -1828,4 +1756,80 @@ textures/korriban/k_wall2plain
 	normalGen 0.4 2 0
 	roughness 0.85
 	metalness 0
+}
+
+models/map_objects/korriban/statue_sith_lord01
+{
+	implicitMap -
+	normalGen 0.3 2 0.3
+	roughness 0.25
+	metalness 1
+}
+
+textures/korriban/os_basic_walkway
+{
+	implicitMap -
+	normalGen 0.4 0.66 0 invert
+	roughness 0.95
+	metalness 0
+	parallaxDepth 0.035
+	parallaxPlane 0.5
+}
+
+textures/korriban/os_outsidebasec
+{
+	implicitMap -
+	normalGen 0 2.55 0 invert
+	roughness 1
+	metalness 0
+	parallaxDepth 0.04
+	parallaxPlane 0.5
+}
+
+models/map_objects/korriban/statue_sith_lord03
+{
+	implicitMap -
+	normalGen 0.3 2 0.3 invert
+	roughness 0.25
+	metalness 0.75
+	anisotropy 0.9 120
+}
+
+models/map_objects/korriban/statue_sith_lord02
+{
+	implicitMap -
+	normalGen 0.3 2 0.3 invert
+	roughness 0.25
+	metalness 0.75
+	anisotropy 0.9 120
+}
+
+models/map_objects/korriban/statue_guard01
+{
+	implicitMap -
+	normalGen 0.3 2 0.3 invert
+	roughness 0.75
+	metalness 0.5
+	anisotropy 0.88 120
+}
+
+models/map_objects/korriban/statue_guard02
+{
+	implicitMap -
+	normalGen 0.3 2 0.3 invert
+	roughness 0.75
+	metalness 0.5
+	anisotropy 0.88 120
+}
+
+textures/cairn/c_crate2
+{
+	implicitMap -
+	normalGen 0.6 1 0.3 invert
+	rmoGen 0.2 0.4
+	roughness 0.6
+	metalness 0.1
+	parallaxDepth 0.025
+	parallaxPlane 0.5
+	specularReflectance 0.034
 }
