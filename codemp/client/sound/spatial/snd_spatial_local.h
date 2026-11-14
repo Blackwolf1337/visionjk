@@ -214,6 +214,8 @@ extern int				spatialTableCount;		// shaders in it
 #define SPATIAL_DIFFUSE_SAMPLES		32
 #define SPATIAL_REFLECT_MSEC		50		// a new pass of the rays is not started sooner than this after the last one,
 #define SPATIAL_REFLECT_DUTY		2		//	nor before this many times what the last one took: the threads rest
+#define SPATIAL_REFLECT_REST_MSEC	500		// the same while nothing plays, or after this many passes in which nothing
+#define SPATIAL_SETTLED_PASSES		40		//	moved (S_SpatialAskPass)
 #define SPATIAL_DRY					8192	// samples of each voice that are kept for the reverb, a power of two
 
 // Reflections of a sound of its own (Valve's guide, "Reflections"): the rays from the listener also find what
