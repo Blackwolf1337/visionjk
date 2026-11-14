@@ -806,9 +806,9 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 
 			memcpy( back, w->backColor, sizeof( back ) );
 			// frosted glass first: what is behind the panel blurred, and the panel thinner over it
-			if ( w->backdrop > 0.0f && back[3] > 0.0f && DC->drawBackdrop
+			if ( w->frosted > 0.0f && back[3] > 0.0f && DC->drawBackdrop
 				&& DC->drawBackdrop( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius ) ) {
-				back[3] *= w->backdrop;
+				back[3] *= w->frosted;
 			}
 			Skin_Panel( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius, back, w->borderColor );
 			if ( w->sheen > 0.0f && w->rect.w > 2.0f * w->radius ) {
@@ -11704,8 +11704,8 @@ qboolean ItemParse_glowcolor( itemDef_t *item, int handle ) {
 	return PC_Color_Parse( handle, &item->window.glowColor );
 }
 
-qboolean ItemParse_backdrop( itemDef_t *item, int handle ) {
-	return PC_Float_Parse( handle, &item->window.backdrop );
+qboolean ItemParse_frosted( itemDef_t *item, int handle ) {
+	return PC_Float_Parse( handle, &item->window.frosted );
 }
 
 // stat <name>: the number of the game an ITEM_TYPE_BAR or ITEM_TYPE_VALUE shows. showStat <name>: the item is
@@ -12705,7 +12705,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"shadow",			ItemParse_shadow,			NULL	},
 	{"sheen",			ItemParse_sheen,			NULL	},
 	{"glowcolor",		ItemParse_glowcolor,		NULL	},
-	{"backdrop",		ItemParse_backdrop,			NULL	},
+	{"frosted",			ItemParse_frosted,			NULL	},
 	{"stat",			ItemParse_stat,				NULL	},
 	{"showStat",		ItemParse_showStat,			NULL	},
 	{"caps",			ItemParse_caps,				NULL	},
@@ -13662,7 +13662,6 @@ keywordHash_t menuParseKeywords[] = {
 	{"shadow",				ItemParse_shadow,		NULL	},
 	{"sheen",				ItemParse_sheen,		NULL	},
 	{"glowcolor",			ItemParse_glowcolor,	NULL	},
-	{"backdrop",			ItemParse_backdrop,		NULL	},
 	{"style",				MenuParse_style,		NULL	},
 	{"visible",				MenuParse_visible,		NULL	},
 	{0,						0,						0		}

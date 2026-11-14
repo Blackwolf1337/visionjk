@@ -159,9 +159,9 @@ typedef struct windowDef_s {
   float shadow;
   float sheen;
   vec4_t glowColor;
-  // VisionJK "backdrop <alpha scale>": frosted glass behind the panel (DC->drawBackdrop), and its own colour this
-  // much as opaque while the glass is drawn. 0: none
-  float backdrop;
+  // VisionJK "frosted <alpha scale>" of an item: frosted glass behind the panel (DC->drawBackdrop), and its own colour
+  // this much as opaque while the glass is drawn. 0: none. (Not "backdrop", which is the sky behind a whole menu.)
+  float frosted;
   qboolean wide;					// "wide 1": reaches the sides of a screen that is wider than the 640 units of a menu
 } windowDef_t;
 
