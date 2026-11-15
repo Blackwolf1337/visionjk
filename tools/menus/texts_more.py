@@ -453,6 +453,9 @@ MORE = {
     'Jedi Master': ('Maître Jedi', 'Maestro Jedi'),
     # interface
     'New HUD': ('Nouveau HUD', 'Nuevo HUD'),
+    'Feed Lines': ('Lignes du fil', 'Líneas del feed'),
+    'How many lines the feed at the upper left shows at most. Needs the new HUD.': ('Combien de lignes le fil en haut à gauche affiche au maximum. Nécessite le nouveau HUD.', 'Cuántas líneas muestra como máximo el feed arriba a la izquierda. Necesita el nuevo HUD.'),
+    'Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left.': ('Les messages privés, votre nom dans le chat, les lignes de la boombox et les nouvelles versions apparaissent dans le fil en haut à gauche.', 'Los mensajes privados, tu nombre en el chat, las líneas de la boombox y las nuevas versiones aparecen en el feed arriba a la izquierda.'),
     'Match Card': ('Carte du match', 'Tarjeta de partida'),
     'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': ('La carte en haut à droite avec le mode de jeu, l\'horloge, votre place et le premier. Nécessite le nouveau HUD.', 'La tarjeta arriba a la derecha con el modo de juego, el reloj, tu puesto y el líder. Necesita el nuevo HUD.'),
     'The HUD of VisionJK. Off: the HUD of the game.': ('Le HUD de VisionJK. Désactivé : le HUD du jeu.', 'El HUD de VisionJK. Desactivado: el HUD del juego.'),
@@ -725,7 +728,6 @@ MORE = {
     'Notifications': ('Notifications', 'Notificaciones'),
     'Shown': ('Affichées', 'Mostradas'),
     'Shown and Sound': ('Affichées avec son', 'Mostradas con sonido'),
-    'Tells, your name in the chat, boombox lines and new versions slide in at the left.': ('Messages privés, votre nom dans le chat, lignes de la boombox et nouvelles versions apparaissent à gauche.', 'Mensajes privados, tu nombre en el chat, líneas de la boombox y nuevas versiones aparecen a la izquierda.'),
     'Notification Time': ("Durée d'affichage", 'Duración del aviso'),
     'How many milliseconds a notification stays.': ("Durée d'affichage d'une notification, en millisecondes.", 'Cuántos milisegundos permanece visible una notificación.'),
     'Notification Size': ('Taille des notifications', 'Tamaño de las notificaciones'),

@@ -379,6 +379,9 @@ TR = {
 
     # interface
     'New HUD': 'Neues HUD',
+    'Feed Lines': 'Feed-Zeilen',
+    'How many lines the feed at the upper left shows at most. Needs the new HUD.': 'Wie viele Zeilen der Feed oben links höchstens zeigt. Braucht das neue HUD.',
+    'Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left.': 'Privatnachrichten, dein Name im Chat, Boombox-Zeilen und neue Versionen erscheinen im Feed oben links.',
     'Match Card': 'Spielkarte',
     'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': 'Die Karte oben rechts mit Spielmodus, Uhr, deinem Platz und dem Führenden. Braucht das neue HUD.',
     'The HUD of VisionJK. Off: the HUD of the game.': 'Das HUD von VisionJK. Aus: das HUD des Originalspiels.',
@@ -616,7 +619,6 @@ TR = {
     'Notifications': 'Benachrichtigungen',
     'Shown': 'Angezeigt',
     'Shown and Sound': 'Angezeigt mit Ton',
-    'Tells, your name in the chat, boombox lines and new versions slide in at the left.': 'Private Nachrichten, dein Name im Chat, Boombox-Zeilen und neue Versionen erscheinen links am Bildschirmrand.',
     'Notification Time': 'Anzeigedauer',
     'How many milliseconds a notification stays.': 'Wie viele Millisekunden eine Benachrichtigung sichtbar bleibt.',
     'Notification Size': 'Größe der Benachrichtigungen',

@@ -117,7 +117,8 @@ const char	*CG_PlaceString( int rank ) {
 
 qboolean CG_ThereIsAMaster(void);
 
-// VisionJK: with the one feed (hud/cg_killfeed.c) a kill is a line of it, so its sentence goes to the console only
+// VisionJK: with the one feed (hud/cg_killfeed.c) a kill is a line of it, so its sentence goes to the console only.
+// The same for what was picked up: the new HUD has a card for it.
 static const char *CG_ObituaryPrefix( void ) {
 	return CG_HudFeedActive() ? "[skipnotify]" : "";
 }
@@ -701,11 +702,11 @@ static void CG_ItemPickup( int itemNum ) {
 
 		if ( trap->SE_GetStringTextString( va("SP_INGAME_%s",Q_strupr(upperKey)), text, sizeof( text )))
 		{
-			Com_Printf("%s %s\n", CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), text);
+			Com_Printf("%s%s %s\n", CG_ObituaryPrefix(), CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), text);
 		}
 		else
 		{
-			Com_Printf("%s %s\n", CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), bg_itemlist[itemNum].classname);
+			Com_Printf("%s%s %s\n", CG_ObituaryPrefix(), CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), bg_itemlist[itemNum].classname);
 		}
 	}
 }

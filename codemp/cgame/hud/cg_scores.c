@@ -205,7 +205,7 @@ static void Scores_Standing( char *out, int outSize ) {
 	}
 }
 
-// what stands above the board: who won the duel, who fights it, or who killed the own player
+// what stands above the board: who won the duel, or who fights it
 static void Scores_Above( char *out, int outSize ) {
 	const qboolean duel = (qboolean)( cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL );
 	const qboolean over = (qboolean)( cg.predictedPlayerState.pm_type == PM_INTERMISSION );
@@ -221,9 +221,8 @@ static void Scores_Above( char *out, int outSize ) {
 			Com_sprintf( out, outSize, "%s^7 %s %s", cgs.clientinfo[cgs.duelist1].name, CG_GetStringEdString( "MP_INGAME", "SPECHUD_VERSUS" ),
 				cgs.clientinfo[cgs.duelist2].name );
 		}
-	} else if ( cg.killerName[0] ) {
-		Com_sprintf( out, outSize, "%s %s", CG_GetStringEdString( "MP_INGAME", "KILLEDBY" ), cg.killerName );
 	}
+	// (who killed the own player is on the card of the death, hud/cg_hudtop.c)
 }
 
 // a line of text on a dark pill, its middle at x

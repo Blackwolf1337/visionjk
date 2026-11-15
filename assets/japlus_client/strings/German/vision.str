@@ -1201,6 +1201,14 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Originalspiels."
 
+REFERENCE           FEED_LINES
+LANG_ENGLISH        "Feed Lines"
+LANG_GERMAN         "Feed-Zeilen"
+
+REFERENCE           HOW_MANY_LINES_THE_FEED_AT_THE_UPPER
+LANG_ENGLISH        "How many lines the feed at the upper left shows at most. Needs the new HUD."
+LANG_GERMAN         "Wie viele Zeilen der Feed oben links höchstens zeigt. Braucht das neue HUD."
+
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 LANG_GERMAN         "Spielkarte"
@@ -1482,8 +1490,8 @@ LANG_ENGLISH        "Notifications"
 LANG_GERMAN         "Benachrichtigungen"
 
 REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_GERMAN         "Private Nachrichten, dein Name im Chat, Boombox-Zeilen und neue Versionen erscheinen links am Bildschirmrand."
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left."
+LANG_GERMAN         "Privatnachrichten, dein Name im Chat, Boombox-Zeilen und neue Versionen erscheinen im Feed oben links."
 
 REFERENCE           SHOWN
 LANG_ENGLISH        "Shown"
@@ -1492,22 +1500,6 @@ LANG_GERMAN         "Angezeigt"
 REFERENCE           SHOWN_AND_SOUND
 LANG_ENGLISH        "Shown and Sound"
 LANG_GERMAN         "Angezeigt mit Ton"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-LANG_GERMAN         "Anzeigedauer"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_GERMAN         "Wie viele Millisekunden eine Benachrichtigung sichtbar bleibt."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-LANG_GERMAN         "Größe der Benachrichtigungen"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-LANG_GERMAN         "Wie groß die Benachrichtigungen sind."
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
@@ -2217,18 +2209,6 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_GERMAN         "Was der Bildschirm um den Level herum zeigt, die Sicht und das Fadenkreuz."
 
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-LANG_GERMAN         "Fadenkreuz"
-
-REFERENCE           TEAM
-LANG_ENGLISH        "Team"
-LANG_GERMAN         "#same"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_GERMAN         "Sicht"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 LANG_GERMAN         "Auf dem Bildschirm"
@@ -2236,6 +2216,18 @@ LANG_GERMAN         "Auf dem Bildschirm"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_GERMAN         "Konsole"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_GERMAN         "Sicht"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_GERMAN         "Fadenkreuz"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+LANG_GERMAN         "#same"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -2249,18 +2241,6 @@ REFERENCE           CHAT_BOX
 LANG_ENGLISH        "Chat Box"
 LANG_GERMAN         "Chatfenster"
 
-REFERENCE           ABOVE_THE_HEADS
-LANG_ENGLISH        "Above the Heads"
-LANG_GERMAN         "Über den Köpfen"
-
-REFERENCE           MY_MUSIC
-LANG_ENGLISH        "My Music"
-LANG_GERMAN         "Meine Musik"
-
-REFERENCE           ALERTS
-LANG_ENGLISH        "Alerts"
-LANG_GERMAN         "Hinweise"
-
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 LANG_GERMAN         "Hüte und Umhänge"
@@ -2268,6 +2248,18 @@ LANG_GERMAN         "Hüte und Umhänge"
 REFERENCE           CLICKING_PLAYERS
 LANG_ENGLISH        "Clicking Players"
 LANG_GERMAN         "Spieler anklicken"
+
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+LANG_GERMAN         "Hinweise"
+
+REFERENCE           ABOVE_THE_HEADS
+LANG_ENGLISH        "Above the Heads"
+LANG_GERMAN         "Über den Köpfen"
+
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
+LANG_GERMAN         "Meine Musik"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -3332,6 +3324,22 @@ LANG_GERMAN         "Gerade läuft kein Musikplayer"
 REFERENCE           NOT_RUNNING
 LANG_ENGLISH        "not running"
 LANG_GERMAN         "läuft nicht"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_GERMAN         "Anzeigedauer"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_GERMAN         "Wie viele Millisekunden eine Benachrichtigung sichtbar bleibt."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_GERMAN         "Größe der Benachrichtigungen"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_GERMAN         "Wie groß die Benachrichtigungen sind."
 
 REFERENCE           INTRUSIONS
 LANG_ENGLISH        "Intrusions"

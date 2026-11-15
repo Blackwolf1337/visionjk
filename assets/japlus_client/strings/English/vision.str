@@ -902,6 +902,12 @@ LANG_ENGLISH        "New HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 
+REFERENCE           FEED_LINES
+LANG_ENGLISH        "Feed Lines"
+
+REFERENCE           HOW_MANY_LINES_THE_FEED_AT_THE_UPPER
+LANG_ENGLISH        "How many lines the feed at the upper left shows at most. Needs the new HUD."
+
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 
@@ -1113,25 +1119,13 @@ REFERENCE           NOTIFICATIONS
 LANG_ENGLISH        "Notifications"
 
 REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left."
 
 REFERENCE           SHOWN
 LANG_ENGLISH        "Shown"
 
 REFERENCE           SHOWN_AND_SOUND
 LANG_ENGLISH        "Shown and Sound"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
@@ -1664,20 +1658,20 @@ LANG_ENGLISH        "HUD"
 REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-
-REFERENCE           TEAM
-LANG_ENGLISH        "Team"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -1688,20 +1682,20 @@ LANG_ENGLISH        "The chat box, alerts, what stands above the heads, your mus
 REFERENCE           CHAT_BOX
 LANG_ENGLISH        "Chat Box"
 
-REFERENCE           ABOVE_THE_HEADS
-LANG_ENGLISH        "Above the Heads"
-
-REFERENCE           MY_MUSIC
-LANG_ENGLISH        "My Music"
-
-REFERENCE           ALERTS
-LANG_ENGLISH        "Alerts"
-
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 
 REFERENCE           CLICKING_PLAYERS
 LANG_ENGLISH        "Clicking Players"
+
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+
+REFERENCE           ABOVE_THE_HEADS
+LANG_ENGLISH        "Above the Heads"
+
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -2500,6 +2494,18 @@ LANG_ENGLISH        "No player of music runs right now"
 
 REFERENCE           NOT_RUNNING
 LANG_ENGLISH        "not running"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
 
 REFERENCE           INTRUSIONS
 LANG_ENGLISH        "Intrusions"

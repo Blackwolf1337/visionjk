@@ -1201,6 +1201,14 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_SPANISH        "El HUD de VisionJK. Desactivado: el HUD del juego."
 
+REFERENCE           FEED_LINES
+LANG_ENGLISH        "Feed Lines"
+LANG_SPANISH        "Líneas del feed"
+
+REFERENCE           HOW_MANY_LINES_THE_FEED_AT_THE_UPPER
+LANG_ENGLISH        "How many lines the feed at the upper left shows at most. Needs the new HUD."
+LANG_SPANISH        "Cuántas líneas muestra como máximo el feed arriba a la izquierda. Necesita el nuevo HUD."
+
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 LANG_SPANISH        "Tarjeta de partida"
@@ -1482,8 +1490,8 @@ LANG_ENGLISH        "Notifications"
 LANG_SPANISH        "Notificaciones"
 
 REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_SPANISH        "Mensajes privados, tu nombre en el chat, líneas de la boombox y nuevas versiones aparecen a la izquierda."
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left."
+LANG_SPANISH        "Los mensajes privados, tu nombre en el chat, las líneas de la boombox y las nuevas versiones aparecen en el feed arriba a la izquierda."
 
 REFERENCE           SHOWN
 LANG_ENGLISH        "Shown"
@@ -1492,22 +1500,6 @@ LANG_SPANISH        "Mostradas"
 REFERENCE           SHOWN_AND_SOUND
 LANG_ENGLISH        "Shown and Sound"
 LANG_SPANISH        "Mostradas con sonido"
-
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-LANG_SPANISH        "Duración del aviso"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_SPANISH        "Cuántos milisegundos permanece visible una notificación."
-
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-LANG_SPANISH        "Tamaño de las notificaciones"
-
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-LANG_SPANISH        "Tamaño de las notificaciones."
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
@@ -2217,18 +2209,6 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_SPANISH        "Lo que muestra la pantalla alrededor del nivel, la vista y la mira."
 
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-LANG_SPANISH        "Mira"
-
-REFERENCE           TEAM
-LANG_ENGLISH        "Team"
-LANG_SPANISH        "Equipo"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_SPANISH        "Vista"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 LANG_SPANISH        "En pantalla"
@@ -2236,6 +2216,18 @@ LANG_SPANISH        "En pantalla"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_SPANISH        "Consola"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_SPANISH        "Vista"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_SPANISH        "Mira"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+LANG_SPANISH        "Equipo"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -2249,18 +2241,6 @@ REFERENCE           CHAT_BOX
 LANG_ENGLISH        "Chat Box"
 LANG_SPANISH        "Ventana de chat"
 
-REFERENCE           ABOVE_THE_HEADS
-LANG_ENGLISH        "Above the Heads"
-LANG_SPANISH        "Sobre las cabezas"
-
-REFERENCE           MY_MUSIC
-LANG_ENGLISH        "My Music"
-LANG_SPANISH        "Mi música"
-
-REFERENCE           ALERTS
-LANG_ENGLISH        "Alerts"
-LANG_SPANISH        "Avisos"
-
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 LANG_SPANISH        "Sombreros y capas"
@@ -2268,6 +2248,18 @@ LANG_SPANISH        "Sombreros y capas"
 REFERENCE           CLICKING_PLAYERS
 LANG_ENGLISH        "Clicking Players"
 LANG_SPANISH        "Clic en jugadores"
+
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+LANG_SPANISH        "Avisos"
+
+REFERENCE           ABOVE_THE_HEADS
+LANG_ENGLISH        "Above the Heads"
+LANG_SPANISH        "Sobre las cabezas"
+
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
+LANG_SPANISH        "Mi música"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -3332,6 +3324,22 @@ LANG_SPANISH        "No hay ningún reproductor de música abierto"
 REFERENCE           NOT_RUNNING
 LANG_ENGLISH        "not running"
 LANG_SPANISH        "cerrado"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_SPANISH        "Duración del aviso"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_SPANISH        "Cuántos milisegundos permanece visible una notificación."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_SPANISH        "Tamaño de las notificaciones"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_SPANISH        "Tamaño de las notificaciones."
 
 REFERENCE           INTRUSIONS
 LANG_ENGLISH        "Intrusions"

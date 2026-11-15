@@ -28,6 +28,7 @@ HUD of its own gets them drawn as it always did, see "For mods".
 |------|---------|---------|
 | `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
 | `v_hud` | 1 | 0: the HUD of the game |
+| `v_hudFeedLines` | 6 | how many lines the feed at the upper left shows at most, 1 to 12 |
 | `v_hudMatchCard` | 1 | 0: no card of the match at the upper right (the clock moves into the line of frames and ping) |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 

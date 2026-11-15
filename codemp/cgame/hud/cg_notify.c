@@ -59,6 +59,9 @@ void CG_NotifyAdd( notifyKind_t kind, const char *text ) {
 	// with the one feed it is a line of it (hud/cg_killfeed.c)
 	if ( CG_HudFeedActive() ) {
 		CG_HudFeedAdd( kind == NOTIFY_IDS ? FEED_ERROR : FEED_ALERT, text );
+		if ( v_notify.integer >= 2 ) {
+			trap->S_StartLocalSound( cgs.media.tayNotifySound, CHAN_LOCAL_SOUND );
+		}
 		return;
 	}
 	if ( notifyCount == NOTIFY_MAX ) {

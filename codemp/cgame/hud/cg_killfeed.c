@@ -35,7 +35,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "cg_hudkit.h"
 
-#define KILLFEED_MAX		8
+#define KILLFEED_MAX		12			// kept; the feed shows v_hudFeedLines of them, the killfeed at the right 8
+#define KILLFEED_RIGHT		8
 #define FEED_WIDTH			300.0f		// a line of text is cut at this
 #define FEED_LIFE			6000		// ms a line of the feed stays
 #define KILLFEED_FADE		1000		// the last milliseconds of a line fade it out
@@ -250,7 +251,15 @@ void CG_HudFeedPoll( void ) {
 		seq = trap->ext.Con_FeedNewest();
 	}
 	while ( ( next = trap->ext.Con_FeedRead( seq, &level, text, sizeof( text ) ) ) != 0 ) {
+		const char *ch;
+
 		seq = next;
+		// a line that says nothing (the rows of stars and dashes round a banner) is left to the console
+		for ( ch = text; *ch && !isalnum( (unsigned char)*ch ); ch++ ) {
+		}
+		if ( !*ch ) {
+			continue;
+		}
 		CG_HudFeedAdd( level == 2 ? FEED_ERROR : level == 1 ? FEED_ALERT : FEED_INFO, text );
 	}
 }
@@ -310,7 +319,8 @@ static float Killfeed_DrawNew( float y, float size, int life, qboolean atLeft ) 
 	const int	self = cg.snap->ps.clientNum;
 	int			i;
 
-	for ( i = 0; i < killfeedCount; i++ ) {
+	// the newest ones: as many as the feed is set to, or as the killfeed at the right has
+	for ( i = Q_max( 0, killfeedCount - ( atLeft ? Q_max( 1, Q_min( KILLFEED_MAX, v_hudFeedLines.integer ) ) : KILLFEED_RIGHT ) ); i < killfeedCount; i++ ) {
 		const killfeedLine_t	*line = &killfeed[i];
 		const int				left = life - ( cg.time - line->time );
 		const float				alpha = left < KILLFEED_FADE ? (float)left / KILLFEED_FADE : 1.0f;
@@ -428,7 +438,7 @@ float CG_KillfeedDraw( float y ) {
 	if ( CG_HudNewLook() ) {
 		return Killfeed_DrawNew( y, size, life, qfalse );
 	}
-	for ( i = 0; i < killfeedCount; i++ ) {
+	for ( i = Q_max( 0, killfeedCount - KILLFEED_RIGHT ); i < killfeedCount; i++ ) {
 		const killfeedLine_t	*line = &killfeed[i];
 		const int				left = life - ( cg.time - line->time );
 		const float				alpha = left < KILLFEED_FADE ? (float)left / KILLFEED_FADE : 1.0f;
