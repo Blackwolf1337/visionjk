@@ -74,70 +74,10 @@
 
 		itemDef
 		{
-			name					vision_vote_label
-			rect					584 20 248 52
-			visible					1
-			text					@VISION_CURRENT_VOTE
-			font					5
-			textscale				1.11
-			forecolor				0.56 0.64 0.74 1
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				248
-			textaligny				16
-			decoration
-			caps					1
-		}
-
-		itemDef
-		{
-			name					vision_vote_yes
-			rect					844 20 150 52
-			visible					1
-			text					@MENUS_YES
-			font					7
-			textscale				1.11
-			forecolor				0.016 0.071 0.122 1
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				75
-			textaligny				16
-			type					ITEM_TYPE_BUTTON
-			caps					1
-			action { play "sound/interface/button1.wav" ; exec "vote yes" ; uiScript closeingame }
-			descText				@VISION_VOTES_ON_THE_VOTE_THAT_RUNS_NOW
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.36 0.78 0.96 1
-			bordercolor				0.36 0.78 0.96 1
-			radius					6
-		}
-
-		itemDef
-		{
-			name					vision_vote_no
-			rect					1006 20 150 52
-			visible					1
-			text					@MENUS_NO
-			font					5
-			textscale				1.11
-			forecolor				0.86 0.90 0.945 1
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				75
-			textaligny				16
-			type					ITEM_TYPE_BUTTON
-			caps					1
-			action { play "sound/interface/button1.wav" ; exec "vote no" ; uiScript closeingame }
-			descText				@VISION_VOTES_ON_THE_VOTE_THAT_RUNS_NOW
-			style					WINDOW_STYLE_PANEL
-			backcolor				0 0 0 0
-			bordercolor				0.153 0.251 0.373 1
-			radius					6
-		}
-
-		itemDef
-		{
 			name					playerconfigtitle
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_CALL_FOR_VOTES
-			rect					28 20 550 52
+			rect					28 20 850 52
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
 			textaligny				15

@@ -35,7 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "cg_hudkit.h"
 
-#define KILLFEED_MAX		12			// kept; the feed shows v_hudFeedLines of them, the killfeed at the right 8
+#define KILLFEED_MAX		16			// kept; the feed shows v_hudFeedLines of them, the killfeed at the right 8
 #define KILLFEED_RIGHT		8
 #define FEED_WIDTH			300.0f		// a line of text is cut at this
 #define FEED_LIFE			6000		// ms a line of the feed stays
@@ -320,7 +320,7 @@ static float Killfeed_DrawNew( float y, float size, int life, qboolean atLeft ) 
 	int			i;
 
 	// the newest ones: as many as the feed is set to, or as the killfeed at the right has
-	for ( i = Q_max( 0, killfeedCount - ( atLeft ? Q_max( 1, Q_min( KILLFEED_MAX, v_hudFeedLines.integer ) ) : KILLFEED_RIGHT ) ); i < killfeedCount; i++ ) {
+	for ( i = Q_max( 0, killfeedCount - ( atLeft ? Q_max( 1, Q_min( KILLFEED_MAX, (int)( v_hudFeedLines.value + 0.5f ) ) ) : KILLFEED_RIGHT ) ); i < killfeedCount; i++ ) {
 		const killfeedLine_t	*line = &killfeed[i];
 		const int				left = life - ( cg.time - line->time );
 		const float				alpha = left < KILLFEED_FADE ? (float)left / KILLFEED_FADE : 1.0f;

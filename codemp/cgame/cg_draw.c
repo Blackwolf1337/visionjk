@@ -4608,6 +4608,18 @@ void CG_DrawDisconnectAt( float cardY ) {
 CG_DrawLagometer
 ==============
 */
+// VisionJK: a snapshot of the lagometer, `back` snapshots before the newest: its ping, -1 one that never came,
+// -2 there is none that far back; flags its SNAPFLAG_ bits. For the line of the ping in the new HUD.
+int CG_LagSnapshot( int back, int *flags ) {
+	const int i = ( lagometer.snapshotCount - 1 - back ) & ( LAG_SAMPLES - 1 );
+
+	if ( back < 0 || back >= LAG_SAMPLES || back >= lagometer.snapshotCount ) {
+		return -2;
+	}
+	*flags = lagometer.snapshotFlags[i];
+	return lagometer.snapshotSamples[i];
+}
+
 static void CG_DrawLagometer( void ) {
 	int		a, x, y, i;
 	float	v;
@@ -4615,7 +4627,9 @@ static void CG_DrawLagometer( void ) {
 	int		color;
 	float	vscale;
 
-	if ( !cg_lagometer.integer || cgs.localServer ) {
+	// (the new HUD has the course of the ping in its line of frames and ping, hud/cg_hudcombat.c, and a card for
+	// a connection that broke)
+	if ( !cg_lagometer.integer || cgs.localServer || CG_HudNewLook() ) {
 		CG_DrawDisconnect();
 		return;
 	}
@@ -6936,10 +6950,66 @@ A vote as a panel of the new look, at the left edge: what it is about, how it st
 that is said, and a bar that empties with the time it still runs.
 =================
 */
+static qboolean CG_TeamVoteShown( void );
+
+/*
+=================
+CG_VoteKeys
+
+Does the engine take F1 and F2 for the answer to a vote right now (v_voteKeys, client/cl_keys.cpp): 1 for the vote,
+2 for the vote of the team, 0 neither. While a vote runs that the player has not answered with them, with an
+engine of this tree; what is bound to the two keys rests for that long. Every frame, from CG_Draw2D.
+=================
+*/
+static int CG_VoteKeys( void ) {
+	static int	has = -1, told = -1, answeredVote, answeredTeam;
+	const int	team = cgs.clientinfo[cg.clientNum].team == TEAM_BLUE ? 1 : 0;
+	int			want = 0;
+
+	if ( has < 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameVoteKeys", value, sizeof( value ) );
+		has = atoi( value ) ? 1 : 0;
+	}
+	if ( !has ) {
+		return 0;
+	}
+	// The server does not say whether the player voted: the engine clears v_voteKeys when a key answered, and
+	// that vote (by the time it began) counts as answered here.
+	if ( told > 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_voteKeys", value, sizeof( value ) );
+		if ( !atoi( value ) ) {
+			if ( told == 1 ) {
+				answeredVote = cgs.voteTime;
+			} else {
+				answeredTeam = cgs.teamVoteTime[team];
+			}
+			told = 0;
+		}
+	}
+	if ( cg.snap && !cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR ) {
+		if ( cgs.voteTime && cgs.voteTime != answeredVote ) {
+			want = 1;
+		} else if ( CG_TeamVoteShown() && cgs.teamVoteTime[team] != answeredTeam ) {
+			want = 2;
+		}
+	}
+	if ( want != told ) {
+		trap->Cvar_Set( "v_voteKeys", va( "%i", want ) );
+		told = want;
+	}
+	return want;
+}
+
 static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no,
 	const char *hint, const float *tint ) {
 	const float	x = 6.0f, w = 170.0f, box = ( w - 18.0f - 4.0f ) * 0.5f;
-	const char	*yesKey = CG_KeyLabel( trap->Key_GetKey( "vote yes" ) ), *noKey = CG_KeyLabel( trap->Key_GetKey( "vote no" ) );
+	// (F1 and F2 while the engine takes them for the vote, CG_VoteKeys; else what is bound to a vote)
+	const qboolean	fkeys = (qboolean)( CG_VoteKeys() != 0 );
+	const char	*yesKey = fkeys ? "F1" : CG_KeyLabel( trap->Key_GetKey( "vote yes" ) ), *noKey = fkeys ? "F2" : CG_KeyLabel( trap->Key_GetKey( "vote no" ) );
 	// (the hint of the game, "or press ESC then click Vote", only when no key is bound to a vote)
 	const char	*say = ( hint && hint[0] && ( !yesKey || !noKey ) ) ? hint : NULL;
 	const float	h = say ? 60.0f : 50.0f;
@@ -8617,6 +8687,7 @@ static void CG_Draw2D( void ) {
 	}
 
 	CG_Place2D( PLACE_LEFT );
+	CG_VoteKeys();
 	CG_HudFeedPoll();
 	// the one feed at the upper left; a vote stands there first, and the feed under it
 	{

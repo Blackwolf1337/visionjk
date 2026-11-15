@@ -1313,9 +1313,9 @@ REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
 LANG_SPANISH        "Mostrar FPS"
 
-REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
-LANG_ENGLISH        "Frames a second in the corner of the screen."
-LANG_SPANISH        "Fotogramas por segundo en la esquina de la pantalla."
+REFERENCE           FRAMES_A_SECOND_THE_PING_AND_ITS_COU
+LANG_ENGLISH        "Frames a second, the ping and its course in the corner of the screen."
+LANG_SPANISH        "Fotogramas por segundo, el ping y su evolución en la esquina de la pantalla."
 
 REFERENCE           SHOW_TIMER
 LANG_ENGLISH        "Show Timer"
@@ -1340,14 +1340,6 @@ LANG_SPANISH        "Cuenta atrás"
 REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
 LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
 LANG_SPANISH        "El temporizador muestra el tiempo que queda hasta el límite, si lo hay."
-
-REFERENCE           SHOW_LAGOMETER
-LANG_ENGLISH        "Show Lagometer"
-LANG_SPANISH        "Mostrar lagómetro"
-
-REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
-LANG_ENGLISH        "A graph of your connection."
-LANG_SPANISH        "Un gráfico de tu conexión."
 
 REFERENCE           TEAM_OVERLAY_SIZE
 LANG_ENGLISH        "Team Overlay Size"
@@ -2421,14 +2413,6 @@ REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_SPANISH        "Estilo de hoja"
 
-REFERENCE           CURRENT_VOTE
-LANG_ENGLISH        "Current Vote"
-LANG_SPANISH        "Votación actual"
-
-REFERENCE           VOTES_ON_THE_VOTE_THAT_RUNS_NOW
-LANG_ENGLISH        "Votes on the vote that runs now."
-LANG_SPANISH        "Vota en la votación en curso."
-
 REFERENCE           PHOTO
 LANG_ENGLISH        "Photo"
 LANG_SPANISH        "Foto"
@@ -3120,6 +3104,14 @@ LANG_SPANISH        "#same"
 REFERENCE           BINOCULARS_AND_ROCKETS
 LANG_ENGLISH        "Binoculars and Rockets"
 LANG_SPANISH        "Prismáticos y cohetes"
+
+REFERENCE           SHOW_LAGOMETER
+LANG_ENGLISH        "Show Lagometer"
+LANG_SPANISH        "Mostrar lagómetro"
+
+REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
+LANG_ENGLISH        "A graph of your connection."
+LANG_SPANISH        "Un gráfico de tu conexión."
 
 REFERENCE           CHAT_BOX_WIDTH
 LANG_ENGLISH        "Chat Box Width"
@@ -3996,6 +3988,14 @@ LANG_SPANISH        "Duración del registro de muertes"
 REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
 LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
 LANG_SPANISH        "Cuántos milisegundos permanece una línea del registro de muertes."
+
+REFERENCE           CURRENT_VOTE
+LANG_ENGLISH        "Current Vote"
+LANG_SPANISH        "Votación actual"
+
+REFERENCE           VOTES_ON_THE_VOTE_THAT_RUNS_NOW
+LANG_ENGLISH        "Votes on the vote that runs now."
+LANG_SPANISH        "Vota en la votación en curso."
 
 
 ENDMARKER

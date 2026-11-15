@@ -436,7 +436,7 @@ TR = {
     'The speed a player needs before the tracker of the disruptor scope picks him up.': 'Das Tempo, ab dem der Bewegungsmelder des Disruptor-Zielfernrohrs einen Spieler erfasst.',
     'The size of the crosshair.': 'Die Größe des Fadenkreuzes.',
     'Show Frame Rate': 'FPS anzeigen',
-    'Frames a second in the corner of the screen.': 'Bilder pro Sekunde in der Bildschirmecke.',
+    'Frames a second, the ping and its course in the corner of the screen.': 'Bilder pro Sekunde, der Ping und sein Verlauf in der Ecke des Bildschirms.',
     'Show Timer': 'Timer anzeigen',
     'The time of the level in the corner of the screen.': 'Die Zeit des Levels in der Bildschirmecke.',
     'Show Lagometer': 'Lagometer anzeigen',

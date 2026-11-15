@@ -236,11 +236,44 @@ void CG_HudPickup( void ) {
 	Hud_TextMid( x + h + 2.0f, y + h * 0.5f, HUD_BODY, hudBright, fade[3], HUD_LEFT, name, w - h - 8.0f );
 }
 
+// The course of the ping in the line of frames and ping, in place of the lagometer: the newest snapshots from the
+// right, each a dot as high as its ping; one the server held back for the rate an amber tick, one that never came
+// a red one.
+#define PERF_GRAPH_W	34.0f
+
+static void Combat_PingGraph( float x, float y, float h ) {
+	const int	samples = (int)PERF_GRAPH_W;
+	int			i, flags, most = 80;
+
+	for ( i = 0; i < samples; i++ ) {
+		most = Q_max( most, CG_LagSnapshot( i, &flags ) );
+	}
+	for ( i = 0; i < samples; i++ ) {
+		const int	ping = CG_LagSnapshot( i, &flags );
+		const float	sx = x + PERF_GRAPH_W - 1.0f - i;
+		vec4_t		c;
+
+		if ( ping == -2 ) {
+			break;
+		}
+		if ( ping < 0 ) {
+			Hud_Color( c, hudRed, 1.0f );
+			Skin_Panel( sx, y, 1.0f, h, 0.0f, c, NULL );
+		} else if ( flags & SNAPFLAG_RATE_DELAYED ) {
+			Hud_Color( c, hudWarm, 1.0f );
+			Skin_Panel( sx, y + h * 0.25f, 1.0f, h * 0.75f, 0.0f, c, NULL );
+		} else {
+			Hud_Color( c, hudGreen, 0.9f );
+			Skin_Panel( sx, y + ( h - 1.2f ) * ( 1.0f - (float)ping / most ), 1.0f, 1.2f, 0.0f, c, NULL );
+		}
+	}
+}
+
 /*
 =================
 CG_HudPerfLine
 
-The frames, the ping, the clock and the snapshot numbers that are switched on, as one glass line at the right edge
+The frames, the ping with its course, the clock and the snapshot numbers that are switched on, as one glass line at the right edge
 from y. Returns the y under it. clock qfalse: the card of the match over it shows the clock already.
 =================
 */
@@ -267,6 +300,9 @@ float CG_HudPerfLine( float y, qboolean clock ) {
 	if ( !count ) {
 		return y;
 	}
+	if ( cg_drawFPS.integer ) {
+		w += PERF_GRAPH_W + gap;
+	}
 	for ( i = 0; i < count; i++ ) {
 		w += Hud_TextWidth( parts[i][0], HUD_SMALL ) + ( parts[i][1][0] ? Hud_TextWidth( parts[i][1], HUD_CAPS ) + 3.0f : 0.0f ) + ( i ? gap : 0.0f );
 	}
@@ -279,6 +315,11 @@ float CG_HudPerfLine( float y, qboolean clock ) {
 			x += 3.0f + Hud_Caps( x + 3.0f, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, parts[i][1] );
 		}
 		x += gap;
+		// (after the ping, its course)
+		if ( cg_drawFPS.integer && i == 1 ) {
+			Combat_PingGraph( x, y + 3.0f, h - 6.0f );
+			x += PERF_GRAPH_W + gap;
+		}
 	}
 	return y + h + HUD_GAP;
 }

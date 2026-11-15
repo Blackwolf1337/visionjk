@@ -28,7 +28,7 @@ HUD of its own gets them drawn as it always did, see "For mods".
 |------|---------|---------|
 | `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
 | `v_hud` | 1 | 0: the HUD of the game |
-| `v_hudFeedLines` | 6 | how many lines the feed at the upper left shows at most, 1 to 12 |
+| `v_hudFeedLines` | 6 | how many lines the feed at the upper left shows at most, 1 to 16 |
 | `v_hudMatchCard` | 1 | 0: no card of the match at the upper right. The clock of the card follows `cg_drawTimer` and the settings beside it (count down, milliseconds) and is not shown with `cg_drawTimer 0`. With the card off the clock is in the line of frames and ping |
 | `v_remaps` | 1 | 0: none of the texture swaps of the server are done |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |

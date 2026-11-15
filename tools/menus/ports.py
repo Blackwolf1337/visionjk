@@ -1169,14 +1169,8 @@ def callvote(m):
     new = [cv.panel('vision_window', (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16),
            cv.panel('vision_rail', (pad, top, rail_w, h - top - pad), cv.FIELD, cv.EDGE, 10),
            cv.panel('vision_pane', (px_, py_, pw_, ph_), cv.FIELD, cv.EDGE, 10)]
-    # the vote that runs: yes and no at the right of the title (the window Vote of before, ingame_vote.menu)
-    vote_w = 150
-    new.append(cv.text('vision_vote_label', (w - pad - 2 * vote_w - 12 - 260, 20, 248, 52), texts.ref('Current Vote'), 20, cv.MUTED,
-                       'right', 0, FONT, ('decoration',), ('caps', 1)))
-    for k, (name, word, cmd) in enumerate((('vision_vote_yes', '@MENUS_YES', 'vote yes'), ('vision_vote_no', '@MENUS_NO', 'vote no'))):
-        new.append(cv.button(name, (w - pad - (2 - k) * vote_w - (1 - k) * 12, 20, vote_w, 52), word,
-                             ['play', '"sound/interface/button1.wav"', ';', 'exec', '"%s"' % cmd, ';', 'uiScript', 'closeingame'],
-                             20, 'primary' if k == 0 else 'outline', texts.ref('Votes on the vote that runs now.')))
+    # (the vote that runs is answered with F1 and F2 on its panel in the level, cgame CG_VoteKeys: no buttons here)
+    vote_w = 0
     for e in its.get('playerconfigtitle', []):
         middle(e, (pad + 4, 20, w - 2 * pad - 2 * vote_w - 12 - 270, 52), 22, 'left')
         mf.put(e.block, 'font', cv.BOLD)

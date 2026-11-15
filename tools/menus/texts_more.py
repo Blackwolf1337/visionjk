@@ -512,7 +512,7 @@ MORE = {
     'The speed a player needs before the tracker of the disruptor scope picks him up.': ('La vitesse à partir de laquelle le détecteur de mouvement de la lunette du disrupteur repère un joueur.', 'La velocidad a partir de la cual el rastreador de movimiento de la mira del disruptor detecta a un jugador.'),
     'The size of the crosshair.': ('La taille du viseur.', 'El tamaño de la mira.'),
     'Show Frame Rate': ('Afficher les FPS', 'Mostrar FPS'),
-    'Frames a second in the corner of the screen.': ("Images par seconde, dans un coin de l'écran.", 'Fotogramas por segundo en la esquina de la pantalla.'),
+    'Frames a second, the ping and its course in the corner of the screen.': ('Images par seconde, le ping et son évolution dans le coin de l\'écran.', 'Fotogramas por segundo, el ping y su evolución en la esquina de la pantalla.'),
     'Show Timer': ('Afficher le chronomètre', 'Mostrar cronómetro'),
     'The time of the level in the corner of the screen.': ("Le temps du niveau dans un coin de l'écran.", 'El tiempo del nivel en la esquina de la pantalla.'),
     'Show Lagometer': ('Afficher le lagomètre', 'Mostrar lagómetro'),

@@ -3404,7 +3404,7 @@
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_FEED_LINES
 			descText				@VISION_HOW_MANY_LINES_THE_FEED_AT_THE_UPPER
-			cvarfloat				"v_hudFeedLines" 6 1 12
+			cvarfloat				"v_hudFeedLines" 6 1 16
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 238 392 52
 			page					6
@@ -3482,7 +3482,7 @@
 			name					vision_yesno_cg_drawfps
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SHOW_FRAME_RATE
-			descText				@VISION_FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
+			descText				@VISION_FRAMES_A_SECOND_THE_PING_AND_ITS_COU
 			cvar					"cg_drawFPS"
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 494 392 52
@@ -3559,27 +3559,8 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_lagometer
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SHOW_LAGOMETER
-			descText				@VISION_A_GRAPH_OF_YOUR_CONNECTION
-			cvar					"cg_lagometer"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 702 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
 			name					vision_head
-			rect					296 754 412 100
+			rect					296 702 412 100
 			visible					1
 			text					@VISION_CONSOLE
 			font					7
@@ -3606,7 +3587,7 @@
 			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 854 392 52
+			rect					306 802 392 52
 			page					6
 			scroll					1
 			row						1
@@ -3625,7 +3606,7 @@
 			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 			cvarfloat				"con_opacity" 1 0.2 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 906 392 52
+			rect					306 854 392 52
 			page					6
 			scroll					1
 			row						1
@@ -3645,7 +3626,7 @@
 			cvar					"tay_consoleClock"
 			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 958 392 52
+			rect					306 906 392 52
 			page					6
 			scroll					1
 			row						1
