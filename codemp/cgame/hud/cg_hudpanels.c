@@ -58,6 +58,7 @@ static void Panels_Slot( const rectDef_t *r ) {
 	const int			fp = Panels_SelectedPower();
 	const vec4_t		inside = { 0.0f, 0.0f, 0.0f, 0.30f };
 	const float			*tint = hudAccent;
+	const gitem_t		*item = NULL;
 	qhandle_t			icon = 0;
 	int					cost = 0;
 	vec4_t				rim;
@@ -76,15 +77,22 @@ static void Panels_Slot( const rectDef_t *r ) {
 		}
 	} else if ( ps->weapon > WP_NONE && ps->weapon < WP_NUM_WEAPONS ) {
 		icon = cgs.media.weaponIcons[ps->weapon];
+		// (melee has the model of the stun baton in the item list: its picture)
+		item = ps->weapon != WP_MELEE ? BG_FindItemForWeapon( (weapon_t)ps->weapon ) : NULL;
 	}
 	if ( !icon ) {
 		return;
 	}
 	Hud_Color( rim, tint, 0.9f );
 	Skin_Panel( r->x, r->y, r->w, r->h, 3.5f, inside, rim );
-	size = r->h * ( cost > 0 ? 0.62f : 0.74f );
+	// in 3D as the cards of the selection rows have it (hud/cg_select3d.c): a power as the turning holo disc, a
+	// weapon as its model; the picture where there is no model
+	size = r->h * ( fp >= 0 ? 0.74f : 0.86f );
 	trap->R_SetColor( NULL );
-	CG_DrawPic( r->x + ( r->w - size ) * 0.5f, r->y + r->h * ( cost > 0 ? 0.08f : 0.13f ), size, size, icon );
+	if ( !CG_Select3DIcon( r->x + ( r->w - size ) * 0.5f, r->y + r->h * ( fp >= 0 ? 0.02f : 0.07f ), size, size, item, fp >= 0 ? icon : 0, tint ) ) {
+		size = r->h * 0.74f;
+		CG_DrawPic( r->x + ( r->w - size ) * 0.5f, r->y + r->h * 0.13f, size, size, icon );
+	}
 	if ( cost > 0 ) {
 		Hud_TextMid( r->x + r->w * 0.5f, r->y + r->h * 0.85f, HUD_CAPS, tint, 1.0f, HUD_CENTER, va( "%i", cost ), 0.0f );
 		if ( ps->fd.forcePower < cost ) {

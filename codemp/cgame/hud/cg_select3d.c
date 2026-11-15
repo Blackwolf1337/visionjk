@@ -41,6 +41,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SELECT_SWIPE_MSEC	110.0f		// how fast the ring turns to the selection (time constant)
 #define SELECT_FOV			30.0f
 #define SELECT_TURN_MSEC	6000.0f		// one turn of the model of the selected card
+#define SELECT_SLOT_TURN_MSEC	14000.0f	//	and of the one in a slot of the HUD, which is always there
 #define SELECT_IN_MSEC		120.0f
 #define SELECT_OUT_MSEC		200.0f
 #define SELECT_DISC_RADIUS	10.0f		// the disc of a force power, in units of its scene
@@ -373,6 +374,34 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 			Skin_Panel( px + i * ( pip + gap ), py, pip, pip, pip * 0.5f, fill, NULL );
 		}
 	}
+}
+
+/*
+=================
+CG_Select3DIcon
+
+One thing in the rect as the cards of the rows show it, for a slot of the HUD (hud/cg_hudpanels.c): the model of
+an item, turning slowly, or a picture as the holo disc in the tint, swinging. qfalse: there is no model, the caller
+draws the picture.
+=================
+*/
+qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint ) {
+	const float yaw = fmodf( (float)cg.time * 360.0f / SELECT_SLOT_TURN_MSEC, 360.0f ) - 180.0f;
+
+	if ( disc ) {
+		// (it swings and never stands edge on: what the slot holds has to be read at any time)
+		Select3D_DrawDisc( disc, tint ? tint : selectAccent, 1.0f, x, y, w, h, 38.0f * sinf( DEG2RAD( yaw ) ) );
+		return qtrue;
+	}
+	if ( item ) {
+		const selectModel_t *m = Select3D_Model( item );
+
+		if ( m && ( m->model || m->ghoul2 ) ) {
+			Select3D_DrawModel( m, x, y, w, h, 20.0f + yaw, 12.0f );
+			return qtrue;
+		}
+	}
+	return qfalse;
 }
 
 /*

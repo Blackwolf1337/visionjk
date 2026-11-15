@@ -2132,6 +2132,7 @@ typedef struct select3dItem_s {
 #define SELECT3D_FORCE		2
 #define SELECT3D_ROWS		3
 void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since );
+qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint );
 void CG_Select3DPreload( void );
 void CG_Select3DShutdown( void );
 // hud/cg_powers.c: the powers that run as glass chips above the panel of the health
