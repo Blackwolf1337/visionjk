@@ -1,0 +1,46 @@
+// melt that falls off a wall where a lightsaber cuts it (cg_saberscar.c): one or two small heavy drops, not thrown,
+// they fall, land and die out
+Particle
+{
+	name				melt
+
+	flags				usePhysics
+
+	count				1 2
+
+	life				900 1600
+
+	cullrange			1200
+
+	bounce				0.1 0.2
+
+	velocity			4 -6 -6 14 6 6
+
+	gravity				-650 -500
+
+	rgb
+	{
+		start			1 0.85 0.5
+		end				0.9 0.3 0.05
+		flags			linear
+	}
+
+	alpha
+	{
+		end				0
+		parm			70
+		flags			nonlinear
+	}
+
+	size
+	{
+		start			0.3 0.5
+		end				0.12 0.2
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/effects/whiteGlow
+	]
+}

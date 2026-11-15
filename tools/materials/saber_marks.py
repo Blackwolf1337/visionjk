@@ -14,9 +14,12 @@ the narrow one of the molten core, the wide one of the char, its soot and the he
                        by how hot each part is (white, yellow, orange); the vertices scale it by the heat.
   saberembers.tga      white, in alpha the flecks of the core that glow on longest as it cools (embers).
   saberhalo.tga        the heat around a fresh cut, wide, added: soft.
-  saberdrip.tga        a drop of melt running down a wall (t down), added, alpha its shape; clampmap, so beyond its
-                       end nothing: the cgame lets it run by its texture coordinates.
-  saberdrip_scar.tga   what a drop leaves, as saberscar.
+  saberbead0..3.tga    a bead of slag that sags down a wall from the cut (t down), added, alpha its shape: four lumps
+                       of their own outline, no two alike; clampmap, nothing at the border: the cgame moves it by its
+                       texture coordinates. saberbead0..3_scar.tga the hardened lump it becomes, as saberscar,
+                       saberbead0..3_h.tga its height (raised).
+  sabertrail.tga       the thin smear a bead leaves behind it (t down, drawn over what it ran so far), added;
+                       sabertrail_scar.tga what stays of it.
   saberpool.tga        the melt pool where a blade rests, round, added.
   saberpool_scar.tga   the crater it leaves, as saberscar; saberpool_h.tga its height.
 
@@ -111,11 +114,11 @@ def byte(v):
 
 # ---------------------------------------------------------------- the scar
 
-SCAR_CORE = 0.17	# half the width of the groove, of the half width of the wide band (d = |t - 0.5| * 2)
-SCAR_LIP = 0.27		# where the lip is highest
+SCAR_CORE = 0.15	# half the width of the groove, of the half width of the wide band (d = |t - 0.5| * 2)
+SCAR_LIP = 0.39		# where the lip is highest
 
 
-def scar(width=256, height=128):
+def scar(width=512, height=128):
     edge = octaves(31, 6, 1, 3)		# how far the soot reaches, along the scar
     blot = octaves(32, 6, 2, 3)		# blotches of soot
     spray = octaves(34, 14, 1, 3)		# where the soot was thrown further out across the cut
@@ -135,13 +138,16 @@ def scar(width=256, height=128):
             g = fbm(grain, u, v)
             # the soot: blotchy, with streaks thrown out across the cut, gone at its reach
             r = reach * (0.85 + 0.3 * streak)
-            s = (1.0 - smoothstep(core, r, d)) ** 1.6 * (0.3 + 0.7 * fbm(blot, u, v))
+            # (thin and broken up: a cut in a film leaves little soot)
+            s = (1.0 - smoothstep(core, r, d)) ** 2.2 * smoothstep(0.25, 0.75, fbm(blot, u, v))
             near = 1.0 - smoothstep(core, core * 2.4, d)		# brown where it was hottest
             tint = (0.82 - 0.1 * near, 0.9 - 0.04 * near, 1.0)		# (blue darkened most: brown soot)
-            fr = [1.0 - 0.86 * s * c for c in tint]
+            fr = [1.0 - 0.6 * s * c for c in tint]
             # a low lip of melted rock, a little lighter than the soot on it
-            lip = math.exp(-((d - core * 1.55) / 0.06) ** 2) * (0.6 + 0.4 * g)
-            fr = [c + (0.5 + 0.12 * g - c) * lip * 0.45 for c in fr]
+            # (slag pushed out of the cut: uneven along it, in beads here and there)
+            bead = smoothstep(0.35, 0.8, fbm(spray, u + 0.37, 0.0))
+            lip = math.exp(-((d - core * 1.5) / (0.07 + 0.04 * bead)) ** 2) * (0.45 + 0.55 * bead) * (0.7 + 0.3 * g)
+            fr = [c + (0.42 + 0.1 * g - c) * lip * 0.6 for c in fr]
             # the groove: black glass with a warm cast, its edge not a line
             # (its edge wanders slowly; a fine noise there read as the teeth of a tread)
             gedge = core * (0.95 + 0.12 * (fbm(blot, u, 0.5) - 0.5))
@@ -152,7 +158,7 @@ def scar(width=256, height=128):
             # height: a wide soft dent, a low lip, boiling in the dent, flat beyond
             h = 0.5
             h -= 0.42 * (1.0 - smoothstep(0.0, core * 1.35, d)) ** 2
-            h += 0.08 * lip
+            h += 0.14 * lip
             h += 0.06 * (g - 0.5) * groove
             b = byte(h)
             ph[x, y] = (b, b, b, 255)
@@ -164,10 +170,10 @@ def heat_ramp(i):
     return (i, i ** 1.7, i ** 3.2)
 
 
-def molten(width=256, height=64):
-    flow = octaves(42, 6, 1, 3)		# drawn out along the cut: the melt runs that way (broad, not grainy)
-    ridge = octaves(43, 8, 1, 2)
-    fleckN = octaves(44, 40, 12, 2)		# (round flecks: as many cells across the band as its width takes)
+def molten(width=512, height=64):
+    flow = octaves(42, 12, 1, 3)		# drawn out along the cut: the melt runs that way (broad, not grainy)
+    ridge = octaves(43, 20, 1, 3)
+    fleckN = octaves(44, 80, 12, 2)		# (round flecks: as many cells across the band as its width takes)
     img = Image.new('RGBA', (width, height))
     emb = Image.new('RGBA', (width, height))
     px, pe = img.load(), emb.load()
@@ -180,10 +186,11 @@ def molten(width=256, height=64):
             # streaks of brighter melt where a ridged noise peaks, bent by the flow
             rn = fbm(ridge, u + 0.03 * (w - 0.5), v + 0.25 * (w - 0.5))
             streak = (1.0 - abs(2.0 * rn - 1.0)) ** 4
-            spine = math.exp(-(d / (0.16 + 0.08 * (w - 0.5))) ** 2)
-            body = math.exp(-(d / 0.5) ** 2) * (1.0 - smoothstep(0.8, 1.0, d))
+            # a thin white line in the groove, its width uneven; beside it only a narrow rim of dimmer melt
+            spine = math.exp(-(d / (0.11 + 0.07 * (w - 0.5))) ** 2)
+            body = math.exp(-(d / 0.3) ** 2) * (1.0 - smoothstep(0.7, 0.95, d))
             # (below white, so the streaks still show at full heat)
-            i = min(1.0, spine * (0.55 + 0.25 * w) + body * (0.3 + 0.2 * w + 0.2 * streak))
+            i = min(1.0, spine * (0.7 + 0.3 * w) + body * (0.16 + 0.14 * w + 0.06 * streak))
             r, g, b = heat_ramp(i)
             # embers: small flecks of the body that glow on longest
             fl = smoothstep(0.62, 0.78, fbm(fleckN, u, v)) * body
@@ -202,31 +209,76 @@ def halo(width=128, height=64):
         k = 0.85 + 0.3 * (fbm(swell, u, 0.0) - 0.5)
         for y in range(height):
             d = abs((y + 0.5) / height - 0.5) * 2.0
-            i = math.exp(-(d / (0.42 * k)) ** 2) * (1.0 - smoothstep(0.8, 1.0, d))
+            i = math.exp(-(d / (0.3 * k)) ** 2) * (1.0 - smoothstep(0.75, 1.0, d))
             px[x, y] = (byte(i), byte(i), byte(i), 255)
     return img
 
 
-def drip(width=32, height=128):
-    """t down: a thin trail from the top, the drop at 0.82..0.95, nothing on the last rows and the sides."""
+BEADS = (
+    ((0.50, 0.22, 0.060), (0.53, 0.34, 0.075), (0.48, 0.50, 0.115), (0.51, 0.68, 0.150)),
+    ((0.38, 0.28, 0.105), (0.46, 0.45, 0.050), (0.59, 0.63, 0.140)),
+    ((0.49, 0.16, 0.040), (0.52, 0.28, 0.045), (0.48, 0.40, 0.050), (0.50, 0.53, 0.055), (0.53, 0.70, 0.110)),
+    ((0.43, 0.50, 0.150), (0.62, 0.56, 0.115), (0.27, 0.60, 0.050), (0.77, 0.34, 0.035), (0.50, 0.76, 0.045)),
+)
+
+
+def bead(seed, size=64):
+    """A lump of slag, t down: a few round masses run together, the heaviest below, its outline bent by noise.
+    Returns the glow (white, alpha the shape with a brighter thick middle), the hardened lump and its height."""
+    warp = octaves(seed * 7 + 1, 5, 5, 3)
+    grain = octaves(seed * 7 + 2, 10, 10, 2)
+    # the masses (x, y, radius) of each kind: a pear with a neck, two lumps on a thin bridge, a long run with a knob
+    # at its end, a flat spatter with small ones thrown off
+    balls = BEADS[seed % len(BEADS)]
+    glow = Image.new('RGBA', (size, size))
+    scr = Image.new('RGBA', (size, size))
+    hgt = Image.new('RGBA', (size, size))
+    pg, ps, ph = glow.load(), scr.load(), hgt.load()
+    for py in range(size):
+        for px in range(size):
+            u, v = (px + 0.5) / size, (py + 0.5) / size
+            wu = u + 0.11 * (fbm(warp, u, v) - 0.5)
+            wv = v + 0.11 * (fbm(warp, v, u) - 0.5)
+            # metaballs: the field is 1 on the outline
+            field = sum((br * br) / ((wu - bx) ** 2 + (wv - by) ** 2 + 1e-6) for bx, by, br in balls)
+            shape = smoothstep(0.95, 1.2, field)
+            thick = smoothstep(1.0, 3.5, field)			# how much melt stands there
+            g = fbm(grain, u, v)
+            # (nothing at the border: the picture is clamped, what its last rows hold would smear beyond it)
+            edge = max(abs(u - 0.5), abs(v - 0.5)) * 2.0
+            keep = 1.0 - smoothstep(0.78, 0.92, edge)
+            shape *= keep
+            thick *= keep
+            # the glow: the thick middle stays bright, the thin rim is dimmer (it cools first)
+            pg[px, py] = (255, 255, 255, byte(shape * (0.45 + 0.55 * thick)))
+            # hardened: dark grey slag, a little lighter on top where the light catches it, a thin soot rim around
+            rim = smoothstep(0.45, 0.85, field) * (1.0 - shape) * keep
+            f = 1.0 - 0.35 * rim
+            lump = 0.16 + 0.1 * g + 0.12 * thick * (1.0 - smoothstep(0.3, 0.7, v))
+            f = f * (1.0 - shape) + lump * shape
+            ps[px, py] = factor_pixel([f * k if shape > 0.5 else 1.0 - (1.0 - f) * k for k in (1.0, 0.97, 0.94)])
+            h = 0.5 + 0.4 * shape * (0.35 + 0.65 * thick) + 0.04 * (g - 0.5) * shape
+            ph[px, py] = (byte(h),) * 3 + (255,)
+    return glow, scr, hgt
+
+
+def trail(width=32, height=64):
+    """t down: the smear behind a bead, thin and uneven, nothing on the last rows and at the sides."""
+    wander = octaves(71, 1, 6, 3)
     img = Image.new('RGBA', (width, height))
     scr = Image.new('RGBA', (width, height))
     px, ps = img.load(), scr.load()
     for y in range(height):
         v = (y + 0.5) / height
-        trail = 0.07 + 0.30 * v * v		# thin at the top, swelling into the drop
+        mid = 0.5 + 0.12 * (fbm(wander, 0.0, v) - 0.5)
+        half = 0.03 + 0.09 * v * fbm(wander, 0.5, v)
         for x in range(width):
-            d = abs((x + 0.5) / width - 0.5) * 2.0
-            shape = (1.0 - smoothstep(trail * 0.55, trail, d)) * smoothstep(0.0, 0.1, v) * (1.0 - smoothstep(0.88, 0.93, v))
-            # the drop: a tear, round below, drawn into the trail above
-            dy = v - 0.86
-            rad = 0.34 if dy > 0 else 0.34 * (1.0 + dy / 0.25)
-            head = 1.0 - smoothstep(rad * 0.75, rad, math.hypot(d, max(dy, 0.0) / 0.075 * 0.34)) if rad > 0 else 0.0
-            a = max(shape * (0.55 + 0.35 * v), head)
-            if v > 0.96 or d > 0.95:
+            d = abs((x + 0.5) / width - mid)
+            a = (1.0 - smoothstep(half * 0.4, half, d)) * smoothstep(0.0, 0.25, v) * (0.15 + 0.45 * v * v)
+            if v > 0.95 or x == 0 or x == width - 1:
                 a = 0.0
             px[x, y] = (255, 255, 255, byte(a))
-            ps[x, y] = factor_pixel([1.0 - 0.55 * a * k for k in (1.0, 1.04, 1.08)])
+            ps[x, y] = factor_pixel([1.0 - 0.22 * a * k for k in (1.0, 1.04, 1.08)])
     return img, scr
 
 
@@ -273,14 +325,19 @@ def main():
     m.save(os.path.join(OUT, 'sabermolten.tga'))
     e.save(os.path.join(OUT, 'saberembers.tga'))
     halo().save(os.path.join(OUT, 'saberhalo.tga'))
-    d, ds = drip()
-    d.save(os.path.join(OUT, 'saberdrip.tga'))
-    ds.save(os.path.join(OUT, 'saberdrip_scar.tga'))
+    for k in range(4):
+        bg, bs, bh = bead(k)
+        bg.save(os.path.join(OUT, 'saberbead%d.tga' % k))
+        bs.save(os.path.join(OUT, 'saberbead%d_scar.tga' % k))
+        bh.save(os.path.join(OUT, 'saberbead%d_h.tga' % k))
+    t, ts = trail()
+    t.save(os.path.join(OUT, 'sabertrail.tga'))
+    ts.save(os.path.join(OUT, 'sabertrail_scar.tga'))
     p, ps, ph = pool()
     p.save(os.path.join(OUT, 'saberpool.tga'))
     ps.save(os.path.join(OUT, 'saberpool_scar.tga'))
     ph.save(os.path.join(OUT, 'saberpool_h.tga'))
-    for old in ('saberburn.tga', 'saberglow.tga'):
+    for old in ('saberburn.tga', 'saberglow.tga', 'saberdrip.tga', 'saberdrip_scar.tga'):
         if os.path.exists(os.path.join(OUT, old)):
             os.remove(os.path.join(OUT, old))
     print('wrote the saber scar pictures into', OUT)

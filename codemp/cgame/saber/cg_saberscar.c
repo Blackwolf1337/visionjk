@@ -51,15 +51,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_PIECES			1024		// short pieces of all scars; the oldest are written over
 #define SCAR_STREAMS		32			// blades touching the level at one time
 #define SCAR_STEP			1.6f		// the longest short piece
-#define SCAR_WIDE			3.6f		// the wide band, times the width of the cut
+#define SCAR_WIDE			2.4f		// the wide band, times the width of the cut
 #define SCAR_REPEAT_NARROW	10.0f		// units along the cut that the picture of a band covers once
 #define SCAR_REPEAT_WIDE	16.0f
 #define SCAR_TAPER			3.0f		// units over which the cut opens where the blade went in
 #define SCAR_FADE			2000		// msec the char takes to fade at the end of its time
-#define SCAR_HOT			16000		// msec until the core has cooled completely
-#define SCAR_HALO			6000		// msec of the heat around a fresh cut
-#define SCAR_DRIP_RUN		900			// msec a drop takes to run its length
-#define SCAR_DRIP_HOT		8000		// msec until a drop has cooled
+#define SCAR_HOT			9000		// msec until the core has cooled completely
+#define SCAR_HALO			2500		// msec of the heat around a fresh cut
+#define SCAR_BEADS			4			// outlines of a bead of slag (saberbead0..3)
+#define SCAR_BEAD_HOT		6000		// msec until a bead has cooled
+#define SCAR_BEAD_HARD		2500		// msec until its hardened lump shows fully
 #define SCAR_DRIP_AFTER		8.0f		// units a cut must have gone before it drips
 #define SCAR_SPOT_UNDER		4.0f		// a cut that got no further than this from where the blade went in leaves only the round burn there
 #define SCAR_DWELL_MOVE		0.75f		// a blade moving less than this a frame rests in the wall
@@ -96,6 +97,9 @@ typedef struct {
 	// its fragments in the ring of fragments: the first (a count that only grows, modulo SCAR_FRAG_RING) and how many
 	unsigned	firstFrag[2];
 	int			numFrags[2];
+	// a bead of slag (SCAR_DRIP): it sags travel units down the wall, fast at first, by exp( -age / tau )
+	float		beadTravel, beadLength, beadTau;
+	int			beadShape;
 } scarPiece_t;
 
 // a fragment of a band of a piece: its corners in the ring of corners (a count that only grows, modulo SCAR_VERTS)
@@ -135,10 +139,17 @@ typedef struct {
 	vec3_t		start;						// where the blade went in
 	float		far;						// the furthest the cut got from there
 	// smoke, embers and heat haze while it is hot
-	int			nextSmoke, nextEmbers;
+	int			nextSmoke, nextEmbers, nextMelt;
 	vec3_t		hotAt, hotNormal;
 	int			hotUntil;
 } scarStream_t;
+
+// what CG_SaberScarsRegister loads (kept over CG_SaberScarsInit)
+typedef struct {
+	qhandle_t		charShader, moltenShader, haloShader, poolShader, poolCharShader;
+	qhandle_t		beadShader[SCAR_BEADS], beadCharShader[SCAR_BEADS], trailShader, trailCharShader;
+	fxHandle_t		smokeFx, embersFx, meltFx;
+} scarMedia_t;
 
 static struct {
 	scarPiece_t		pieces[SCAR_PIECES];
@@ -147,8 +158,7 @@ static struct {
 	unsigned		nextVert, nextFrag;
 	int				next, serial;
 	scarStream_t	streams[SCAR_STREAMS];
-	qhandle_t		charShader, moltenShader, haloShader, dripShader, dripCharShader, poolShader, poolCharShader;
-	fxHandle_t		smokeFx, embersFx;
+	scarMedia_t		m;
 	int				cuts;
 } scar;
 
@@ -192,27 +202,27 @@ the heat around it. As hot metal cools: white, yellow, orange, cherry red, dark 
 =================
 */
 static void CG_ScarHeat( int msec, float heat, vec3_t core, float *embers, vec3_t halo ) {
-	// (slow, as a thick cut in stone or metal cools: white for a moment, orange for seconds, a dull red glow long after;
+	// (as the cut of a blade in a film: white for a moment, orange within two seconds, a dull red line for a few more;
 	// the keys are eased in between, so it never jumps)
 	static const scarKey_t coreKeys[] = {
 		{ 0,		{ 1.0f, 1.0f, 1.0f } },
-		{ 600,		{ 1.0f, 0.82f, 0.55f } },
-		{ 2000,		{ 1.0f, 0.55f, 0.22f } },
-		{ 4500,		{ 0.9f, 0.3f, 0.07f } },
-		{ 8000,		{ 0.55f, 0.11f, 0.02f } },
-		{ 12000,	{ 0.22f, 0.03f, 0.0f } },
+		{ 250,		{ 1.0f, 0.97f, 0.88f } },
+		{ 700,		{ 1.0f, 0.8f, 0.42f } },
+		{ 1800,		{ 1.0f, 0.5f, 0.16f } },
+		{ 3500,		{ 0.8f, 0.2f, 0.04f } },
+		{ 6000,		{ 0.36f, 0.05f, 0.005f } },
 		{ SCAR_HOT,	{ 0.0f, 0.0f, 0.0f } },
 	};
 	static const scarKey_t emberKeys[] = {
-		{ 3000,		{ 0.0f } },
-		{ 7000,		{ 0.7f } },
-		{ 12000,	{ 0.5f } },
+		{ 2000,		{ 0.0f } },
+		{ 4500,		{ 0.6f } },
+		{ 7000,		{ 0.4f } },
 		{ SCAR_HOT,	{ 0.0f } },
 	};
 	static const scarKey_t haloKeys[] = {
-		{ 0,		{ 0.8f, 0.48f, 0.18f } },
-		{ 1200,		{ 0.5f, 0.2f, 0.05f } },
-		{ 3500,		{ 0.22f, 0.05f, 0.0f } },
+		{ 0,		{ 0.45f, 0.27f, 0.1f } },
+		{ 600,		{ 0.26f, 0.1f, 0.025f } },
+		{ 1500,		{ 0.1f, 0.025f, 0.0f } },
 		{ SCAR_HALO, { 0.0f, 0.0f, 0.0f } },
 	};
 	// a cut made cooler is further along the way
@@ -334,23 +344,36 @@ static void Scar_QuadSt( const vec3_t xyz, const void *data, float *st ) {
 	k2 = Scar_Cross2( g, f );
 	k1 = Scar_Cross2( e, f ) + Scar_Cross2( h, g );
 	k0 = Scar_Cross2( h, e );
-	if ( fabsf( k2 ) < 1e-6f ) {
-		v = fabsf( k1 ) > 1e-9f ? -k0 / k1 : 0.0f;
-	} else {
-		float w = k1 * k1 - 4.0f * k0 * k2;
-
-		w = sqrtf( Q_max( w, 0.0f ) );
-		v = ( -k1 - w ) / ( 2.0f * k2 );
-		if ( v < -0.05f || v > 1.05f ) {
-			v = ( -k1 + w ) / ( 2.0f * k2 );
-		}
-	}
-	// u from the component that is not near 0 (on a piece whose first side is one point, e is 0 and g carries it)
+	// The map has two answers on a piece that is a wedge (its ends not parallel: every piece of a curve). The second
+	// lies beyond the point where the lines of its two ends meet, and on a tight curve that point is close: both can
+	// look right by v alone. The one whose u and v both lie in the piece is it.
 	{
-		const float dx = e[0] + g[0] * v, dy = e[1] + g[1] * v;
+		float	roots[2], best = 0.0f;
+		int		numRoots = 0;
 
-		u = fabsf( dx ) > fabsf( dy ) ? ( fabsf( dx ) > 1e-9f ? ( h[0] - f[0] * v ) / dx : 0.0f )
-			: ( fabsf( dy ) > 1e-9f ? ( h[1] - f[1] * v ) / dy : 0.0f );
+		if ( fabsf( k2 ) < 1e-6f * Q_max( fabsf( k1 ), 1.0f ) ) {
+			roots[numRoots++] = fabsf( k1 ) > 1e-9f ? -k0 / k1 : 0.0f;
+		} else {
+			const float w = sqrtf( Q_max( k1 * k1 - 4.0f * k0 * k2, 0.0f ) );
+
+			roots[numRoots++] = ( -k1 - w ) / ( 2.0f * k2 );
+			roots[numRoots++] = ( -k1 + w ) / ( 2.0f * k2 );
+		}
+		u = v = 0.0f;
+		for ( int r = 0; r < numRoots; r++ ) {
+			// u from the component that is not near 0 (on a piece whose first side is one point, e is 0 and g carries it)
+			const float rv = roots[r];
+			const float dx = e[0] + g[0] * rv, dy = e[1] + g[1] * rv;
+			const float ru = fabsf( dx ) > fabsf( dy ) ? ( fabsf( dx ) > 1e-9f ? ( h[0] - f[0] * rv ) / dx : 0.0f )
+				: ( fabsf( dy ) > 1e-9f ? ( h[1] - f[1] * rv ) / dy : 0.0f );
+			const float out = Q_max( Q_max( -ru, ru - 1.0f ), 0.0f ) + Q_max( Q_max( -rv, rv - 1.0f ), 0.0f );
+
+			if ( !r || out < best ) {
+				best = out;
+				u = ru;
+				v = rv;
+			}
+		}
 	}
 	u = Com_Clamp( -0.2f, 1.2f, u );
 	v = Com_Clamp( -0.2f, 1.2f, v );
@@ -516,7 +539,7 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 	Scar_Curve( p0, p1, p2, p3, 0.0f, prev );
 	if ( !s->haveEdge ) {
 		// the first edge of the cut: across the way it goes
-		Scar_Curve( p0, p1, p2, p3, 0.02f, next );
+		Scar_Curve( p0, p1, p2, p3, 0.25f, next );
 		VectorSubtract( next, prev, tangent );
 		CrossProduct( tangent, normal, side );
 		if ( VectorNormalize( side ) < 0.0001f ) {
@@ -541,14 +564,17 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 		float width, len;
 
 		Scar_Curve( p0, p1, p2, p3, t, cur );
-		// the direction through this point, from a little before to a little after
-		Scar_Curve( p0, p1, p2, p3, Q_max( t - 0.02f, 0.0f ), prev );
-		if ( t < 1.0f ) {
-			Scar_Curve( p0, p1, p2, p3, Q_min( t + 0.02f, 1.0f ), next );
+		// the direction through this point, from before it to after it. Not from too near: the points of a slow cut
+		// lie under a unit apart, and a difference of hundredths of that is lost in the digits of a float at the
+		// coordinates of a level; the edges then tilted at random, pieces stopped fitting their neighbours and began
+		// edges of their own (gaps on the outside of a curve: dark rays across the glow).
+		Scar_Curve( p0, p1, p2, p3, Q_max( t - 0.25f, 0.0f ), prev );
+		if ( t + 0.25f <= 1.0f ) {
+			Scar_Curve( p0, p1, p2, p3, t + 0.25f, next );
 		} else {
 			// past the end of this piece: toward p3
 			VectorSubtract( p3, p2, next );
-			VectorMA( cur, 0.02f, next, next );
+			VectorMA( p2, t + 0.25f - 1.0f, next, next );
 		}
 		VectorSubtract( next, prev, tangent );
 		CrossProduct( tangent, normal, side );
@@ -610,14 +636,14 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 		s->length = fmodf( s->length + len, SCAR_REPEAT_NARROW * SCAR_REPEAT_WIDE * 8.0f );
 		VectorCopy( cur, s->hotAt );
 
-		// a drop of melt on a steep wall, every 5 to 12 units; none where the cut is still opening or closes (a blade
-		// that only brushed the wall left a drop under a cut too thin to see)
+		// a bead of slag on a steep wall, every 9 to 22 units of a cut made hot; none where the cut is still opening or
+		// closes (a blade that only brushed the wall left one under a cut too thin to see)
 		s->run += len;
-		if ( steep && !end && s->run >= SCAR_DRIP_AFTER && s->far >= SCAR_SPOT_UNDER ) {
+		if ( steep && !end && heat >= 0.5f && s->run >= SCAR_DRIP_AFTER && s->far >= SCAR_SPOT_UNDER ) {
 			s->dripLength += len;
 			if ( s->dripLength >= s->nextDrip ) {
 				s->dripLength = 0.0f;
-				s->nextDrip = flrand( 5.0f, 12.0f );
+				s->nextDrip = flrand( 9.0f, 22.0f );
 				Scar_Drip( s, cur, normal, heat );
 			}
 		}
@@ -628,13 +654,15 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 =================
 Scar_Drip
 
-A drop of melt that runs down a steep wall from at: laid at its whole length now, it runs by its texture coordinates
-(CG_SaberScarsAdd), clamped so nothing shows below its end.
+A bead of slag that sags down a steep wall from at. Its quad is laid now over the whole way it will go, with texture
+coordinates in units (s across, 0 to 1; t down from the top); CG_SaberScarsAdd moves the picture of the bead along t
+as it sags and draws the smear it leaves over the way gone so far. Both pictures are clamped: nothing beside them.
 =================
 */
 typedef struct {
 	vec3_t	top, down, side;
-	float	length, width;
+	float	width;
+	qboolean mirror;
 } scarDrip_t;
 
 static void Scar_DripSt( const vec3_t xyz, const void *data, float *st ) {
@@ -643,13 +671,17 @@ static void Scar_DripSt( const vec3_t xyz, const void *data, float *st ) {
 
 	VectorSubtract( xyz, d->top, rel );
 	st[0] = 0.5f + DotProduct( rel, d->side ) / d->width;
-	st[1] = DotProduct( rel, d->down ) / d->length;
+	if ( d->mirror ) {
+		st[0] = 1.0f - st[0];
+	}
+	st[1] = DotProduct( rel, d->down );
 }
 
 static void Scar_Drip( scarStream_t *s, const vec3_t at, const vec3_t normal, float heat ) {
 	static const vec3_t	gravity = { 0.0f, 0.0f, -1.0f };
 	scarDrip_t			d;
 	vec3_t				corners[4], centre;
+	float				travel, length, total;
 
 	// down along the wall
 	VectorMA( gravity, -DotProduct( gravity, normal ), normal, d.down );
@@ -658,19 +690,38 @@ static void Scar_Drip( scarStream_t *s, const vec3_t at, const vec3_t normal, fl
 	}
 	CrossProduct( d.down, normal, d.side );
 	VectorNormalize( d.side );
-	d.length = flrand( 2.5f, 6.5f );
-	d.width = s->width * flrand( 0.4f, 0.6f );
-	VectorMA( at, s->width * 0.25f, d.down, d.top );
+	// (each its own size and shape; most sag only a little, a few run further)
+	d.width = s->width * flrand( 0.4f, 0.85f );
+	length = d.width * flrand( 0.9f, 1.5f );
+	travel = flrand( 0.0f, 1.0f );
+	travel = 0.3f + 2.2f * travel * travel;
+	total = travel + length;
+	d.mirror = (qboolean)( Q_irand( 0, 1 ) );
+	// (the picture has a free border: the lump itself begins in the groove)
+	VectorMA( at, -0.2f * length, d.down, d.top );
+	VectorMA( d.top, flrand( -0.2f, 0.2f ) * s->width, d.side, d.top );
 	VectorMA( d.top, -0.5f * d.width, d.side, corners[0] );
-	VectorMA( corners[0], d.length, d.down, corners[1] );
+	VectorMA( corners[0], total, d.down, corners[1] );
 	VectorMA( corners[1], d.width, d.side, corners[2] );
 	VectorMA( d.top, 0.5f * d.width, d.side, corners[3] );
-	VectorMA( d.top, 0.5f * d.length, d.down, centre );
+	VectorMA( d.top, 0.5f * total, d.down, centre );
 
 	scarPiece_t *piece = Scar_NewPiece( SCAR_DRIP, heat, centre );
 	// (it starts a little after the cut passed)
 	piece->born += Q_irand( 0, 250 );
+	piece->beadTravel = travel;
+	piece->beadLength = length;
+	piece->beadTau = flrand( 350.0f, 900.0f );
+	piece->beadShape = Q_irand( 0, SCAR_BEADS - 1 );
 	Scar_Lay( piece, 0, 4, corners, normal, Scar_DripSt, &d );
+
+	// and now and then some of the melt falls off the wall
+	if ( v_saberScarFx.integer && scar.m.meltFx && Q_irand( 0, 1 ) ) {
+		vec3_t off;
+
+		VectorMA( at, 1.0f, normal, off );
+		trap->FX_PlayEffectID( scar.m.meltFx, off, (float *)normal, -1, -1, qfalse );
+	}
 }
 
 /*
@@ -697,11 +748,19 @@ static void Scar_PoolSt( const vec3_t xyz, const void *data, float *st ) {
 static void Scar_Pool( scarStream_t *s ) {
 	const int	last = s->count - 1;
 	const float	grow = Com_Clamp( 0.0f, 1.0f, (float)( s->dwell - SCAR_DWELL_POOL ) / SCAR_POOL_GROW );
-	const float	radius = s->width * ( 0.6f + 0.9f * grow ) * SCAR_WIDE * 0.5f;
+	const float	radius = s->width * ( 0.6f + 0.9f * grow ) * 1.8f;
 	scarPiece_t	*piece = ( s->pool >= 0 && scar.pieces[s->pool].serial == s->poolSerial ) ? &scar.pieces[s->pool] : NULL;
 
 	if ( s->dwell < SCAR_DWELL_POOL || last < 0 ) {
 		return;
+	}
+	// melt falls from where the blade rests
+	if ( v_saberScarFx.integer && scar.m.meltFx && cg.time >= s->nextMelt ) {
+		vec3_t off;
+
+		VectorMA( s->p[last], 1.0f, s->n[last], off );
+		trap->FX_PlayEffectID( scar.m.meltFx, off, s->n[last], -1, -1, qfalse );
+		s->nextMelt = cg.time + Q_irand( 250, 500 );
 	}
 	if ( piece && radius - s->poolRadius < 0.3f ) {
 		piece->born = cg.time;		// still hot
@@ -886,14 +945,14 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 
 	// smoke rises and embers fall from where it cuts
 	if ( v_saberScarFx.integer ) {
-		if ( cg.time >= s->nextSmoke && scar.smokeFx ) {
-			trap->FX_PlayEffectID( scar.smokeFx, (float *)pos, (float *)normal, -1, -1, qfalse );
+		if ( cg.time >= s->nextSmoke && scar.m.smokeFx ) {
+			trap->FX_PlayEffectID( scar.m.smokeFx, (float *)pos, (float *)normal, -1, -1, qfalse );
 			s->nextSmoke = cg.time + 70;
 		}
-		if ( cg.time >= s->nextEmbers && scar.embersFx ) {
+		if ( cg.time >= s->nextEmbers && scar.m.embersFx ) {
 			// (the sparks the renderer simulates where it can, else the embers of the effect)
 			if ( !CG_GpuSparks( pos, normal, GPUSPARKS_SABER, 1.0f ) ) {
-				trap->FX_PlayEffectID( scar.embersFx, (float *)pos, (float *)normal, -1, -1, qfalse );
+				trap->FX_PlayEffectID( scar.m.embersFx, (float *)pos, (float *)normal, -1, -1, qfalse );
 			}
 			s->nextEmbers = cg.time + Q_irand( 40, 90 );
 		}
@@ -989,7 +1048,8 @@ Drawing
 
 static int scarPolys, scarVerts, scarMaxPolys, scarMaxVerts;
 
-static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, const byte color[4], float dripRun ) {
+// tScale > 0: the picture is moved along t, t = ( t - tOff ) * tScale (a bead that sags, the smear behind it)
+static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, const byte color[4], float tOff, float tScale ) {
 	polyVert_t verts[MAX_VERTS_ON_POLY];
 
 	if ( !shader ) {
@@ -1011,8 +1071,7 @@ static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, cons
 
 			VectorCopy( in->xyz, verts[v].xyz );
 			verts[v].st[0] = in->st[0];
-			// a drop runs down: its texture drawn over the part it has run so far, nothing below (clampmap)
-			verts[v].st[1] = dripRun > 0.0f ? in->st[1] / dripRun : in->st[1];
+			verts[v].st[1] = tScale > 0.0f ? ( in->st[1] - tOff ) * tScale : in->st[1];
 			memcpy( verts[v].modulate, color, 4 );
 		}
 		if ( scarVerts + numVerts > scarMaxVerts ) {
@@ -1103,14 +1162,14 @@ void CG_SaberScarsAdd( void ) {
 			// (the char fades with rgb and alpha together, to the surface)
 			VectorScale( white, fade, charColor );
 			Scar_Color( color, charColor, fade );
-			Scar_Add( piece, BAND_WIDE, scar.charShader, color, 0.0f );
+			Scar_Add( piece, BAND_WIDE, scar.m.charShader, color, 0.0f, 0.0f );
 			if ( age < SCAR_HOT ) {
 				Scar_Color( color, core, embers );
-				Scar_Add( piece, BAND_NARROW, scar.moltenShader, color, 0.0f );
+				Scar_Add( piece, BAND_NARROW, scar.m.moltenShader, color, 0.0f, 0.0f );
 			}
 			if ( age < SCAR_HALO ) {
 				Scar_Color( color, halo, 1.0f );
-				Scar_Add( piece, BAND_WIDE, scar.haloShader, color, 0.0f );
+				Scar_Add( piece, BAND_WIDE, scar.m.haloShader, color, 0.0f, 0.0f );
 			}
 			break;
 		}
@@ -1120,28 +1179,39 @@ void CG_SaberScarsAdd( void ) {
 
 			VectorScale( white, fade, charColor );
 			Scar_Color( color, charColor, fade );
-			Scar_Add( piece, 0, scar.poolCharShader, color, 0.0f );
+			Scar_Add( piece, 0, scar.m.poolCharShader, color, 0.0f, 0.0f );
 			if ( age < SCAR_HOT ) {
 				Scar_Color( color, core, 1.0f );
-				Scar_Add( piece, 0, scar.poolShader, color, 0.0f );
+				Scar_Add( piece, 0, scar.m.poolShader, color, 0.0f, 0.0f );
 			}
 			break;
 		}
 		case SCAR_DRIP: {
-			const float run = Com_Clamp( 0.05f, 1.0f, 1.0f - ( 1.0f - Com_Clamp( 0.0f, 1.0f, (float)age / SCAR_DRIP_RUN ) )
-				* ( 1.0f - Com_Clamp( 0.0f, 1.0f, (float)age / SCAR_DRIP_RUN ) ) );
+			// how far it has sagged: quick at first, then it creeps to a stop
+			const float gone = piece->beadTravel * ( 1.0f - expf( -(float)age / piece->beadTau ) );
+			const float hard = Com_Clamp( 0.0f, 1.0f, (float)age / SCAR_BEAD_HARD ) * fade;
+			const float smear = gone + 0.45f * piece->beadLength;
+			const int shape = piece->beadShape % SCAR_BEADS;
 			const vec3_t white = { 1.0f, 1.0f, 1.0f };
-			vec3_t charColor, dripHeat;
-			float dripEmbers;
+			vec3_t charColor, beadHeat;
+			float beadEmbers;
 
+			// what stays: the smear at once, the lump as it hardens
 			VectorScale( white, fade, charColor );
 			Scar_Color( color, charColor, fade );
-			Scar_Add( piece, 0, scar.dripCharShader, color, run );
-			if ( age < SCAR_DRIP_HOT ) {
-				// a drop is thin and cools faster than the cut
-				CG_ScarHeat( age * 2, piece->heat, dripHeat, &dripEmbers, halo );
-				Scar_Color( color, dripHeat, 1.0f );
-				Scar_Add( piece, 0, scar.dripShader, color, run );
+			Scar_Add( piece, 0, scar.m.trailCharShader, color, 0.0f, 1.0f / smear );
+			VectorScale( white, hard, charColor );
+			Scar_Color( color, charColor, hard );
+			Scar_Add( piece, 0, scar.m.beadCharShader[shape], color, gone, 1.0f / piece->beadLength );
+			if ( age < SCAR_BEAD_HOT ) {
+				// the smear is thin and cools first, the lump after it
+				CG_ScarHeat( 900 + age * 4, piece->heat, beadHeat, &beadEmbers, halo );
+				Scar_Color( color, beadHeat, 1.0f );
+				Scar_Add( piece, 0, scar.m.trailShader, color, 0.0f, 1.0f / smear );
+				// (never white: a bead is melt that already left the cut)
+				CG_ScarHeat( 500 + age * 3 / 2, piece->heat, beadHeat, &beadEmbers, halo );
+				Scar_Color( color, beadHeat, 1.0f );
+				Scar_Add( piece, 0, scar.m.beadShader[shape], color, gone, 1.0f / piece->beadLength );
 			}
 			break;
 		}
@@ -1158,33 +1228,28 @@ sorts decals of one sort by when their shader was made, and the hot light belong
 =================
 */
 void CG_SaberScarsInit( void ) {
-	const qhandle_t shaders[7] = { scar.charShader, scar.moltenShader, scar.haloShader, scar.dripShader, scar.dripCharShader,
-		scar.poolShader, scar.poolCharShader };
-	const fxHandle_t smoke = scar.smokeFx, embers = scar.embersFx;
+	const scarMedia_t media = scar.m;
 
 	memset( &scar, 0, sizeof( scar ) );
-	scar.charShader = shaders[0];
-	scar.moltenShader = shaders[1];
-	scar.haloShader = shaders[2];
-	scar.dripShader = shaders[3];
-	scar.dripCharShader = shaders[4];
-	scar.poolShader = shaders[5];
-	scar.poolCharShader = shaders[6];
-	scar.smokeFx = smoke;
-	scar.embersFx = embers;
+	scar.m = media;
 	for ( int i = 0; i < SCAR_STREAMS; i++ ) {
 		scar.streams[i].pool = -1;
 	}
 }
 
 void CG_SaberScarsRegister( void ) {
-	scar.charShader = trap->R_RegisterShader( "gfx/vision/saberscar" );
-	scar.poolCharShader = trap->R_RegisterShader( "gfx/vision/saberpool_scar" );
-	scar.dripCharShader = trap->R_RegisterShader( "gfx/vision/saberdrip_scar" );
-	scar.moltenShader = trap->R_RegisterShader( "gfx/vision/sabermolten" );
-	scar.haloShader = trap->R_RegisterShader( "gfx/vision/saberhalo" );
-	scar.poolShader = trap->R_RegisterShader( "gfx/vision/saberpool" );
-	scar.dripShader = trap->R_RegisterShader( "gfx/vision/saberdrip" );
-	scar.smokeFx = trap->FX_RegisterEffect( "vision/saber_scorch_smoke.efx" );
-	scar.embersFx = trap->FX_RegisterEffect( "vision/saber_embers.efx" );
+	scar.m.charShader = trap->R_RegisterShader( "gfx/vision/saberscar" );
+	scar.m.poolCharShader = trap->R_RegisterShader( "gfx/vision/saberpool_scar" );
+	scar.m.moltenShader = trap->R_RegisterShader( "gfx/vision/sabermolten" );
+	scar.m.haloShader = trap->R_RegisterShader( "gfx/vision/saberhalo" );
+	scar.m.poolShader = trap->R_RegisterShader( "gfx/vision/saberpool" );
+	for ( int i = 0; i < SCAR_BEADS; i++ ) {
+		scar.m.beadShader[i] = trap->R_RegisterShader( va( "gfx/vision/saberbead%i", i ) );
+		scar.m.beadCharShader[i] = trap->R_RegisterShader( va( "gfx/vision/saberbead%i_scar", i ) );
+	}
+	scar.m.trailShader = trap->R_RegisterShader( "gfx/vision/sabertrail" );
+	scar.m.trailCharShader = trap->R_RegisterShader( "gfx/vision/sabertrail_scar" );
+	scar.m.smokeFx = trap->FX_RegisterEffect( "vision/saber_scorch_smoke.efx" );
+	scar.m.embersFx = trap->FX_RegisterEffect( "vision/saber_embers.efx" );
+	scar.m.meltFx = trap->FX_RegisterEffect( "vision/saber_melt.efx" );
 }
