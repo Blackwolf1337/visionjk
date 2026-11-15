@@ -47,16 +47,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_MARK_POINTS	64			// points and fragments one short piece may give (they are small)
 #define SCAR_MARK_FRAGS		16
 #define SCAR_PIECES			1024		// short pieces of all scars; the oldest are written over
-#define SCAR_FRAGS			2			// fragments of one band of a piece (a piece on the edge of two polygons)
+#define SCAR_FRAGS			4			// fragments of one band of a piece (it may lie on several polygons of the level)
 #define SCAR_STREAMS		32			// blades touching the level at one time
 #define SCAR_STEP			1.6f		// the longest short piece
-#define SCAR_WIDE			3.2f		// the wide band, times the width of the cut
+#define SCAR_WIDE			3.6f		// the wide band, times the width of the cut
 #define SCAR_REPEAT_NARROW	10.0f		// units along the cut that the picture of a band covers once
 #define SCAR_REPEAT_WIDE	16.0f
 #define SCAR_TAPER			3.0f		// units over which the cut opens where the blade went in
 #define SCAR_FADE			2000		// msec the char takes to fade at the end of its time
 #define SCAR_HOT			6000		// msec until the core has cooled completely
-#define SCAR_HALO			1500		// msec of the heat around a fresh cut
+#define SCAR_HALO			2400		// msec of the heat around a fresh cut
 #define SCAR_DRIP_RUN		900			// msec a drop takes to run its length
 #define SCAR_DRIP_HOT		2200		// msec until a drop has cooled
 #define SCAR_DWELL_MOVE		0.75f		// a blade moving less than this a frame rests in the wall
@@ -90,6 +90,14 @@ typedef struct {
 	scarVert_t	verts[2][SCAR_FRAGS][MAX_VERTS_ON_POLY];
 } scarPiece_t;
 
+// The edge of a band of a cut where one short piece ends and the next begins: its two corners (0 on the first side,
+// 1 on the second) and the texture across the band there (t, 0 to 1 over the whole width), and how far each corner
+// lies from the middle of the cut.
+typedef struct {
+	vec3_t		corner[2];
+	float		t[2], half[2];
+} scarEdge_t;
+
 typedef struct {
 	const void	*key;
 	int			index;
@@ -101,7 +109,7 @@ typedef struct {
 	float		width;					// of the cut
 	qboolean	haveEdge;				// the end of the last short piece, where the next begins
 	vec3_t		edgeCentre, edgeSide;
-	float		edgeWidth;
+	scarEdge_t	edge[2];						// of each band there
 	// the blade resting in the wall
 	int			dwell;
 	int			pool, poolSerial;
@@ -176,8 +184,9 @@ static void CG_ScarHeat( int msec, float heat, vec3_t core, float *embers, vec3_
 		{ SCAR_HOT,	{ 0.0f } },
 	};
 	static const scarKey_t haloKeys[] = {
-		{ 0,		{ 0.55f, 0.32f, 0.12f } },
-		{ 500,		{ 0.32f, 0.11f, 0.02f } },
+		{ 0,		{ 0.95f, 0.55f, 0.2f } },
+		{ 400,		{ 0.6f, 0.2f, 0.04f } },
+		{ 1200,		{ 0.28f, 0.05f, 0.0f } },
 		{ SCAR_HALO, { 0.0f, 0.0f, 0.0f } },
 	};
 	// a cut made cooler is further along the way
@@ -220,13 +229,13 @@ and keeps its fragments as band of piece, each corner with its texture coordinat
 */
 typedef void ( *scarSt_t )( const vec3_t xyz, const void *data, float *st );
 
-static void Scar_Lay( scarPiece_t *piece, int band, vec3_t corners[4], const vec3_t normal, scarSt_t st, const void *data ) {
+static void Scar_Lay( scarPiece_t *piece, int band, int numCorners, vec3_t corners[4], const vec3_t normal, scarSt_t st, const void *data ) {
 	vec3_t			points[SCAR_MARK_POINTS], projection;
 	markFragment_t	fragments[SCAR_MARK_FRAGS];
 	int				numFragments;
 
 	VectorScale( normal, -1.0f, projection );
-	numFragments = trap->R_MarkFragments( 4, (const float (*)[3])corners, projection, SCAR_MARK_POINTS, points[0],
+	numFragments = trap->R_MarkFragments( numCorners, (const float (*)[3])corners, projection, SCAR_MARK_POINTS, points[0],
 		SCAR_MARK_FRAGS, fragments );
 	piece->numFrags[band] = 0;
 	for ( int f = 0; f < numFragments && piece->numFrags[band] < SCAR_FRAGS; f++ ) {
@@ -246,66 +255,148 @@ static void Scar_Lay( scarPiece_t *piece, int band, vec3_t corners[4], const vec
 	}
 }
 
-// a short piece of a cut from edge a to edge b: its centres, sides (unit) and widths of the band, where its texture
-// begins along the cut
+// A short piece of a band from edge ea to edge eb, whose middles are a and b; where its texture begins along the cut.
 typedef struct {
-	vec3_t		a, b, sideA, sideB;
-	float		widthA, widthB;
+	vec3_t		a, b;
+	scarEdge_t	ea, eb;
 	float		s, repeat;
+	vec3_t		axisX, axisY;		// of its plane, for Scar_QuadSt
 } scarQuad_t;
 
-static void Scar_QuadSt( const vec3_t xyz, const void *data, float *st ) {
-	const scarQuad_t	*q = (const scarQuad_t *)data;
-	vec3_t				dir, rel, centre, side;
-	float				len, u, width;
-
-	VectorSubtract( q->b, q->a, dir );
-	len = VectorNormalize( dir );
-	VectorSubtract( xyz, q->a, rel );
-	u = len > 0.001f ? Com_Clamp( 0.0f, 1.0f, DotProduct( rel, dir ) / len ) : 0.0f;
-	for ( int k = 0; k < 3; k++ ) {
-		centre[k] = q->a[k] + u * ( q->b[k] - q->a[k] );
-		side[k] = q->sideA[k] + u * ( q->sideB[k] - q->sideA[k] );
-	}
-	VectorNormalize( side );
-	width = q->widthA + u * ( q->widthB - q->widthA );
-	VectorSubtract( xyz, centre, rel );
-	st[0] = ( q->s + u * len ) / q->repeat;
-	st[1] = 0.5f + DotProduct( rel, side ) / Q_max( width, 0.01f );
+// its corners in the order 0 (a, first side), 1 (b, first side), 2 (b, second side), 3 (a, second side)
+static void Scar_QuadPoints( const scarQuad_t *q, vec3_t corners[4] ) {
+	VectorCopy( q->ea.corner[0], corners[0] );
+	VectorCopy( q->eb.corner[0], corners[1] );
+	VectorCopy( q->eb.corner[1], corners[2] );
+	VectorCopy( q->ea.corner[1], corners[3] );
 }
 
-// the quad of a band from edge a to edge b; where the two ends turn so far apart that it would not be convex, both
-// take the side between them
-static void Scar_QuadCorners( scarQuad_t *q, const vec3_t normal, vec3_t corners[4] ) {
-	vec3_t e[4], c;
-	int sign = 0, k;
+static float Scar_Cross2( const float *a, const float *b ) {
+	return a[0] * b[1] - a[1] * b[0];
+}
 
-	VectorMA( q->a, -0.5f * q->widthA, q->sideA, corners[0] );
-	VectorMA( q->b, -0.5f * q->widthB, q->sideB, corners[1] );
-	VectorMA( q->b, 0.5f * q->widthB, q->sideB, corners[2] );
-	VectorMA( q->a, 0.5f * q->widthA, q->sideA, corners[3] );
-	for ( k = 0; k < 4; k++ ) {
+// The texture coordinates of a point of the piece: where it lies in it, the inverse of the bilinear map of its
+// corners (Quilez, "Inverse bilinear interpolation"), u along it from a to b, v across from the first side to the
+// second, and from those the texture its corners have. Exact along every edge, so neighbours that share one agree.
+static void Scar_QuadSt( const vec3_t xyz, const void *data, float *st ) {
+	const scarQuad_t	*q = (const scarQuad_t *)data;
+	float				c[4][2], p[2], e[2], f[2], g[2], h[2], k0, k1, k2, u, v;
+	vec3_t				corners[4], rel;
+
+	Scar_QuadPoints( q, corners );
+	for ( int k = 0; k < 4; k++ ) {
+		VectorSubtract( corners[k], corners[0], rel );
+		c[k][0] = DotProduct( rel, q->axisX );
+		c[k][1] = DotProduct( rel, q->axisY );
+	}
+	VectorSubtract( xyz, corners[0], rel );
+	p[0] = DotProduct( rel, q->axisX );
+	p[1] = DotProduct( rel, q->axisY );
+	for ( int k = 0; k < 2; k++ ) {
+		e[k] = c[1][k] - c[0][k];
+		f[k] = c[3][k] - c[0][k];
+		g[k] = c[0][k] - c[1][k] + c[2][k] - c[3][k];
+		h[k] = p[k] - c[0][k];
+	}
+	k2 = Scar_Cross2( g, f );
+	k1 = Scar_Cross2( e, f ) + Scar_Cross2( h, g );
+	k0 = Scar_Cross2( h, e );
+	if ( fabsf( k2 ) < 1e-6f ) {
+		v = fabsf( k1 ) > 1e-9f ? -k0 / k1 : 0.0f;
+	} else {
+		float w = k1 * k1 - 4.0f * k0 * k2;
+
+		w = sqrtf( Q_max( w, 0.0f ) );
+		v = ( -k1 - w ) / ( 2.0f * k2 );
+		if ( v < -0.05f || v > 1.05f ) {
+			v = ( -k1 + w ) / ( 2.0f * k2 );
+		}
+	}
+	// u from the component that is not near 0 (on a piece whose first side is one point, e is 0 and g carries it)
+	{
+		const float dx = e[0] + g[0] * v, dy = e[1] + g[1] * v;
+
+		u = fabsf( dx ) > fabsf( dy ) ? ( fabsf( dx ) > 1e-9f ? ( h[0] - f[0] * v ) / dx : 0.0f )
+			: ( fabsf( dy ) > 1e-9f ? ( h[1] - f[1] * v ) / dy : 0.0f );
+	}
+	u = Com_Clamp( -0.2f, 1.2f, u );
+	v = Com_Clamp( -0.2f, 1.2f, v );
+	st[0] = ( q->s + u * Distance( q->a, q->b ) ) / q->repeat;
+	st[1] = ( 1.0f - u ) * ( q->ea.t[0] + v * ( q->ea.t[1] - q->ea.t[0] ) ) + u * ( q->eb.t[0] + v * ( q->eb.t[1] - q->eb.t[0] ) );
+}
+
+// whether the piece is convex (a corner shared by both ends counts as convex: it is a triangle)
+static qboolean Scar_QuadConvex( const scarQuad_t *q, const vec3_t normal ) {
+	vec3_t corners[4], e[4], c;
+	int sign = 0;
+
+	Scar_QuadPoints( q, corners );
+	for ( int k = 0; k < 4; k++ ) {
 		VectorSubtract( corners[( k + 1 ) % 4], corners[k], e[k] );
 	}
-	for ( k = 0; k < 4; k++ ) {
+	for ( int k = 0; k < 4; k++ ) {
+		if ( VectorLengthSquared( e[k] ) < 1e-6f || VectorLengthSquared( e[( k + 1 ) % 4] ) < 1e-6f ) {
+			continue;
+		}
 		CrossProduct( e[k], e[( k + 1 ) % 4], c );
-		const int s = DotProduct( c, normal ) >= 0.0f ? 1 : -1;
-		if ( sign && s != sign ) {
-			break;
+		const int si = DotProduct( c, normal ) >= 0.0f ? 1 : -1;
+		if ( sign && si != sign ) {
+			return qfalse;
 		}
-		sign = s;
+		sign = si;
 	}
-	if ( k < 4 ) {
-		vec3_t side;
+	return qtrue;
+}
 
-		VectorAdd( q->sideA, q->sideB, side );
-		if ( VectorNormalize( side ) < 0.001f ) {
-			VectorCopy( q->sideB, side );
-		}
-		VectorCopy( side, q->sideA );
-		VectorCopy( side, q->sideB );
-		Scar_QuadCorners( q, normal, corners );
+// Edge eb of a band that is full units wide at b (side: across the cut there): as far to both sides as half of it, at
+// most grow more than at ea (so it widens again slowly after a curve). On a curve tighter than the band the corners
+// on its inside would cross: there the inside corner stays where it was (the piece is a triangle that turns round
+// it), with its texture, so the texture is never squeezed into rays and the edges stay the ones the neighbours
+// share. qfalse: even so not convex, the piece is left out.
+static qboolean Scar_FitEdge( scarQuad_t *q, const vec3_t side, float full, float grow, const vec3_t normal ) {
+	for ( int k = 0; k < 2; k++ ) {
+		const float sign = k ? 1.0f : -1.0f;
+
+		q->eb.half[k] = Q_min( 0.5f * full, q->ea.half[k] + grow );
+		VectorMA( q->b, sign * q->eb.half[k], side, q->eb.corner[k] );
+		q->eb.t[k] = 0.5f + sign * q->eb.half[k] / Q_max( full, 0.01f );
 	}
+	if ( Scar_QuadConvex( q, normal ) ) {
+		return qtrue;
+	}
+	// the inside: where the corners of the two edges come closer
+	const int inner = Distance( q->ea.corner[0], q->eb.corner[0] ) < Distance( q->ea.corner[1], q->eb.corner[1] ) ? 0 : 1;
+	vec3_t rel;
+
+	VectorCopy( q->ea.corner[inner], q->eb.corner[inner] );
+	q->eb.t[inner] = q->ea.t[inner];
+	VectorSubtract( q->eb.corner[inner], q->b, rel );
+	q->eb.half[inner] = Q_max( 0.0f, ( inner ? 1.0f : -1.0f ) * DotProduct( rel, side ) );
+	return Scar_QuadConvex( q, normal );
+}
+
+// the corners of the piece for R_MarkFragments (three where one end is one point) and the axes of its plane
+static int Scar_QuadCorners( scarQuad_t *q, const vec3_t normal, vec3_t corners[4] ) {
+	vec3_t all[4];
+	int n = 0;
+
+	Scar_QuadPoints( q, all );
+	for ( int k = 0; k < 4; k++ ) {
+		if ( n && DistanceSquared( all[k], corners[n - 1] ) < 1e-6f ) {
+			continue;
+		}
+		VectorCopy( all[k], corners[n++] );
+	}
+	if ( n > 1 && DistanceSquared( corners[0], corners[n - 1] ) < 1e-6f ) {
+		n--;
+	}
+	VectorSubtract( q->b, q->a, q->axisX );
+	VectorMA( q->axisX, -DotProduct( q->axisX, normal ), normal, q->axisX );
+	if ( VectorNormalize( q->axisX ) < 0.0001f ) {
+		PerpendicularVector( q->axisX, normal );
+	}
+	CrossProduct( normal, q->axisX, q->axisY );
+	return n;
 }
 
 /*
@@ -400,7 +491,16 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 		}
 		VectorCopy( prev, s->edgeCentre );
 		VectorCopy( side, s->edgeSide );
-		s->edgeWidth = Scar_Width( s, s->length );
+		for ( int band = 0; band < 2; band++ ) {
+			const float full = Scar_Width( s, s->length ) * ( band == BAND_WIDE ? SCAR_WIDE : 1.0f );
+			scarEdge_t *e = &s->edge[band];
+
+			for ( int c = 0; c < 2; c++ ) {
+				e->half[c] = 0.5f * full;
+				e->t[c] = (float)c;
+				VectorMA( prev, ( c ? 0.5f : -0.5f ) * full, side, e->corner[c] );
+			}
+		}
 		s->haveEdge = qtrue;
 	}
 	for ( int k = 1; k <= steps; k++ ) {
@@ -435,34 +535,33 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 			width *= 1.0f - 0.85f * t;
 		}
 
-		scarQuad_t q;
 		vec3_t corners[4], centre;
 		VectorAdd( s->edgeCentre, cur, centre );
 		VectorScale( centre, 0.5f, centre );
 		scarPiece_t *piece = Scar_NewPiece( SCAR_CUT, heat, centre );
 
-		VectorCopy( s->edgeCentre, q.a );
-		VectorCopy( cur, q.b );
-		VectorCopy( s->edgeSide, q.sideA );
-		VectorCopy( side, q.sideB );
-		q.widthA = s->edgeWidth;
-		q.widthB = width;
-		q.s = s->length;
-		q.repeat = SCAR_REPEAT_NARROW;
-		Scar_QuadCorners( &q, normal, corners );
-		Scar_Lay( piece, BAND_NARROW, corners, normal, Scar_QuadSt, &q );
+		// both bands as ribbons that share their edges (Scar_FitEdge): the narrow one of the molten core and the wide
+		// one of the char, its soot and the heat
+		for ( int band = 0; band < 2; band++ ) {
+			scarQuad_t q;
 
-		VectorCopy( s->edgeSide, q.sideA );
-		VectorCopy( side, q.sideB );
-		q.widthA = s->edgeWidth * SCAR_WIDE;
-		q.widthB = width * SCAR_WIDE;
-		q.repeat = SCAR_REPEAT_WIDE;
-		Scar_QuadCorners( &q, normal, corners );
-		Scar_Lay( piece, BAND_WIDE, corners, normal, Scar_QuadSt, &q );
+			VectorCopy( s->edgeCentre, q.a );
+			VectorCopy( cur, q.b );
+			q.ea = s->edge[band];
+			q.s = s->length;
+			q.repeat = band == BAND_WIDE ? SCAR_REPEAT_WIDE : SCAR_REPEAT_NARROW;
+			if ( Scar_FitEdge( &q, side, width * ( band == BAND_WIDE ? SCAR_WIDE : 1.0f ), len, normal ) ) {
+				const int numCorners = Scar_QuadCorners( &q, normal, corners );
+
+				if ( numCorners >= 3 ) {
+					Scar_Lay( piece, band, numCorners, corners, normal, Scar_QuadSt, &q );
+				}
+			}
+			s->edge[band] = q.eb;
+		}
 
 		VectorCopy( cur, s->edgeCentre );
 		VectorCopy( side, s->edgeSide );
-		s->edgeWidth = width;
 		s->length = fmodf( s->length + len, SCAR_REPEAT_NARROW * SCAR_REPEAT_WIDE * 8.0f );
 		VectorCopy( cur, s->hotAt );
 
@@ -524,7 +623,7 @@ static void Scar_Drip( scarStream_t *s, const vec3_t at, const vec3_t normal, fl
 	scarPiece_t *piece = Scar_NewPiece( SCAR_DRIP, heat, centre );
 	// (it starts a little after the cut passed)
 	piece->born += Q_irand( 0, 250 );
-	Scar_Lay( piece, 0, corners, normal, Scar_DripSt, &d );
+	Scar_Lay( piece, 0, 4, corners, normal, Scar_DripSt, &d );
 }
 
 /*
@@ -572,7 +671,8 @@ static void Scar_Pool( scarStream_t *s ) {
 	vec3_t corners[4];
 	VectorCopy( s->p[last], p.centre );
 	PerpendicularVector( p.u, s->n[last] );
-	CrossProduct( s->n[last], p.u, p.v );
+	// (wound as the game's marks are, clockwise seen along the normal: the other way R_MarkFragments clips all away)
+	CrossProduct( p.u, s->n[last], p.v );
 	p.radius = radius;
 	for ( int k = 0; k < 4; k++ ) {
 		const float a = ( k == 0 || k == 3 ) ? -1.0f : 1.0f, b = ( k < 2 ) ? -1.0f : 1.0f;
@@ -580,7 +680,7 @@ static void Scar_Pool( scarStream_t *s ) {
 		VectorMA( p.centre, a * radius, p.u, corners[k] );
 		VectorMA( corners[k], b * radius, p.v, corners[k] );
 	}
-	Scar_Lay( piece, 0, corners, s->n[last], Scar_PoolSt, &p );
+	Scar_Lay( piece, 0, 4, corners, s->n[last], Scar_PoolSt, &p );
 	s->poolRadius = radius;
 }
 
@@ -657,7 +757,7 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 	s->lastTime = cg.time;
 	s->dwell = 0;
 	s->pool = -1;
-	s->width = Com_Clamp( 1.4f, 3.5f, 2.2f * bladeRadius / 3.0f );
+	s->width = Com_Clamp( 1.8f, 4.5f, 3.0f * bladeRadius / 3.0f );
 	if ( !s->count ) {
 		s->nextDrip = flrand( 3.0f, 8.0f );
 	}
@@ -723,6 +823,68 @@ void CG_SaberScarRelease( const void *key, int index ) {
 }
 
 /*
+=================
+CG_SaberScarTest_f
+
+v_saberScarTest [rest msec] [length] [msec]: a blade cuts an S into the wall in front of the view, length units wide
+(48) in msec (600), resting rest msec in the wall where it went in (0) first, as a blade of the standard radius would.
+To look at the scars without a fight (CG_SaberScarsAdd feeds it a point a frame).
+=================
+*/
+static struct {
+	int		start, rest, msec;
+	float	length;
+	vec3_t	at, normal, right, up;
+} scarTest;
+
+void CG_SaberScarTest_f( void ) {
+	trace_t	tr;
+	vec3_t	end;
+
+	VectorMA( cg.refdef.vieworg, 512.0f, cg.refdef.viewaxis[0], end );
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.snap ? cg.snap->ps.clientNum : 0, MASK_SOLID );
+	if ( tr.fraction >= 1.0f ) {
+		Com_Printf( "v_saberScarTest: no wall in front of the view\n" );
+		return;
+	}
+	scarTest.rest = atoi( CG_Argv( 1 ) );
+	scarTest.length = trap->Cmd_Argc() > 2 ? atof( CG_Argv( 2 ) ) : 48.0f;
+	scarTest.msec = trap->Cmd_Argc() > 3 ? Q_max( atoi( CG_Argv( 3 ) ), 50 ) : 600;
+	scarTest.start = cg.time;
+	VectorCopy( tr.endpos, scarTest.at );
+	VectorCopy( tr.plane.normal, scarTest.normal );
+	// across the wall as the view sees it
+	CrossProduct( tr.plane.normal, axisDefault[2], scarTest.right );
+	if ( VectorNormalize( scarTest.right ) < 0.1f ) {
+		VectorCopy( cg.refdef.viewaxis[1], scarTest.right );
+	}
+	CrossProduct( scarTest.right, tr.plane.normal, scarTest.up );
+	VectorNormalize( scarTest.up );
+}
+
+static void Scar_TestFrame( void ) {
+	const int t = cg.time - scarTest.start;
+	float u;
+	vec3_t pos;
+
+	if ( !scarTest.start ) {
+		return;
+	}
+	if ( t > scarTest.rest + scarTest.msec ) {
+		CG_SaberScarRelease( &scarTest, 0 );
+		if ( t > scarTest.rest + scarTest.msec + 200 ) {
+			scarTest.start = 0;
+		}
+		return;
+	}
+	u = t < scarTest.rest ? 0.0f : (float)( t - scarTest.rest ) / scarTest.msec;
+	// an S: across the wall, up and down once
+	VectorMA( scarTest.at, ( u - 0.5f ) * scarTest.length, scarTest.right, pos );
+	VectorMA( pos, sinf( u * 2.0f * M_PI ) * scarTest.length * 0.2f, scarTest.up, pos );
+	CG_SaberScarContact( &scarTest, 0, pos, scarTest.normal, 3.0f );
+}
+
+/*
 ===============================================================================
 
 Drawing
@@ -774,6 +936,7 @@ void CG_SaberScarsAdd( void ) {
 	const int	charTime = Com_Clampi( 5, 600, v_saberScarTime.integer ) * 1000;
 	const float	range = SCAR_DRAW_RANGE * SCAR_DRAW_RANGE;
 
+	Scar_TestFrame();
 	// blades that stopped being fed (the player died, the saber went off) close their cuts
 	for ( int i = 0; i < SCAR_STREAMS; i++ ) {
 		scarStream_t *s = &scar.streams[i];

@@ -30,3 +30,5 @@ void	CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 void	CG_SaberScarRelease( const void *key, int index );
 // the scars into the scene, once a frame
 void	CG_SaberScarsAdd( void );
+// v_saberScarTest [rest msec] [length] [msec]: a cut into the wall in front of the view, to look at
+void	CG_SaberScarTest_f( void );

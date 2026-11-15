@@ -126,7 +126,7 @@ def scar(width=256, height=128):
     px, ph = img.load(), hgt.load()
     for x in range(width):
         u = (x + 0.5) / width
-        reach = 0.78 + 0.34 * (fbm(edge, u, 0.0) - 0.5)
+        reach = 0.9 + 0.2 * (fbm(edge, u, 0.0) - 0.5)
         core = SCAR_CORE * (1.0 + 0.45 * (fbm(wobble, u, 0.5) - 0.5))
         streak = fbm(spray, u, 0.0)
         for y in range(height):
@@ -138,12 +138,13 @@ def scar(width=256, height=128):
             s = (1.0 - smoothstep(core, r, d)) ** 1.6 * (0.3 + 0.7 * fbm(blot, u, v))
             near = 1.0 - smoothstep(core, core * 2.4, d)		# brown where it was hottest
             tint = (0.82 - 0.1 * near, 0.9 - 0.04 * near, 1.0)		# (blue darkened most: brown soot)
-            fr = [1.0 - 0.72 * s * c for c in tint]
+            fr = [1.0 - 0.86 * s * c for c in tint]
             # a low lip of melted rock, a little lighter than the soot on it
             lip = math.exp(-((d - core * 1.55) / 0.06) ** 2) * (0.6 + 0.4 * g)
             fr = [c + (0.5 + 0.12 * g - c) * lip * 0.45 for c in fr]
             # the groove: black glass with a warm cast, its edge not a line
-            gedge = core * (0.9 + 0.25 * (g - 0.5))
+            # (its edge wanders slowly; a fine noise there read as the teeth of a tread)
+            gedge = core * (0.95 + 0.12 * (fbm(blot, u, 0.5) - 0.5))
             groove = 1.0 - smoothstep(gedge * 0.7, gedge * 1.1, d)
             dark = 0.04 + 0.07 * g
             fr = [c * (1.0 - groove) + dark * k * groove for c, k in zip(fr, (1.15, 0.95, 0.8))]
@@ -166,7 +167,7 @@ def heat_ramp(i):
 def molten(width=256, height=64):
     flow = octaves(42, 10, 1, 4)		# drawn out along the cut: the melt runs that way
     ridge = octaves(43, 18, 2, 3)
-    fleckN = octaves(44, 40, 6, 2)
+    fleckN = octaves(44, 40, 12, 2)		# (round flecks: as many cells across the band as its width takes)
     img = Image.new('RGBA', (width, height))
     emb = Image.new('RGBA', (width, height))
     px, pe = img.load(), emb.load()

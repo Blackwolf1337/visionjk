@@ -960,6 +960,11 @@ vec4 Groove( Draw d, vec4 c ) {
 	vec3 r1 = cross( dpdy, n ), r2 = cross( n, dpdx );
 	float det = dot( dpdx, r1 );
 	vec3 slope = abs( det ) > 1e-12 ? ( dFdx( h ) * r1 + dFdy( h ) * r2 ) / det : vec3( 0.0 );
+	// (a slope from neighbours on another sliver of the mark can be anything: a dent is never steeper than this)
+	float steep = length( slope );
+	if ( steep > 1.2 ) {
+		slope *= 1.2 / steep;
+	}
 	vec3 bent = normalize( n - slope );
 
 	vec4 grid = PbrGrid( d, ( t.model * vec4( p, 1.0 ) ).xyz );
@@ -970,7 +975,7 @@ vec4 Groove( Draw d, vec4 c ) {
 	vec3 l = normalize( transpose( mat3( t.model ) ) * grid.xyz );
 	float flatLit = max( 1.0 - k + k * max( dot( n, l ), 0.0 ), 0.2 );
 	float bentLit = 1.0 - k + k * max( dot( bent, l ), 0.0 );
-	return TimesSurface( f * clamp( bentLit / flatLit, 0.3, 1.8 ) );
+	return TimesSurface( f * clamp( bentLit / flatLit, 0.5, 1.4 ) );
 }
 
 // the marks of DECALS, four rows each from d.decals on (vk_shade.cpp VK_PaintMarks)
@@ -1073,8 +1078,12 @@ vec4 Decals( Draw d ) {
 					hy = dot( textureGrad( TEX0( d ), moved + texLinear * gy, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
 				}
 				vec3 slope = ( ( hx - h0 ) * r1 + ( hy - h0 ) * r2 ) * ( 2.0 * grooveDepth / faceDet );
+				float steep = length( slope );
+				if ( steep > 1.2 ) {
+					slope *= 1.2 / steep;
+				}
 				vec3 bent = normalize( face - slope );
-				float ratio = clamp( ( 1.0 - lightShare + lightShare * max( dot( bent, toLight ), 0.0 ) ) / flatLit, 0.3, 1.8 );
+				float ratio = clamp( ( 1.0 - lightShare + lightShare * max( dot( bent, toLight ), 0.0 ) ) / flatLit, 0.5, 1.4 );
 				col = TimesSurface( ( col.rgb + 1.0 - col.a ) * ratio );
 			}
 
