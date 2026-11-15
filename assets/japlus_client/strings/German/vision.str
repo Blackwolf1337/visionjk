@@ -473,6 +473,22 @@ REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
 LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
 LANG_GERMAN         "Spieler nahe an Lampen werden von ihnen beleuchtet, von der Seite, von der ihr Schatten wegfällt. Braucht echte Schatten mit Raytracing."
 
+REFERENCE           TESSELLATION
+LANG_ENGLISH        "Tessellation"
+LANG_GERMAN         "#same"
+
+REFERENCE           MATERIALS_WITH_A_HEIGHT_IN_THEIR_BUM
+LANG_ENGLISH        "Materials with a height in their bump map get real bumps: the graphics card cuts their surfaces finer and lifts them. Off: they look carved by parallax instead, which costs less. Needs a graphics card with tessellation."
+LANG_GERMAN         "Materialien mit einer Höhe in ihrer Bump-Map bekommen echte Erhebungen: die Grafikkarte teilt ihre Flächen feiner und hebt sie an. Aus: sie wirken stattdessen per Parallax eingeschnitten, das kostet weniger. Braucht eine Grafikkarte mit Tessellation."
+
+REFERENCE           PARALLAX
+LANG_ENGLISH        "Parallax"
+LANG_GERMAN         "#same"
+
+REFERENCE           SURFACES_WITH_A_MATERIAL_AND_A_HEIGH
+LANG_ENGLISH        "Surfaces with a material and a height in their bump map look carved. Off: flat, faster."
+LANG_GERMAN         "Flächen mit Material und einer Höhe in ihrer Bump-Map wirken eingeschnitten. Aus: flach, schneller."
+
 REFERENCE           AUTOMATIC_MATERIALS
 LANG_ENGLISH        "Automatic Materials"
 LANG_GERMAN         "Automatische Materialien"
