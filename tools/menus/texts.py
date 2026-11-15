@@ -786,6 +786,12 @@ TR = {
 # here), so none of these may need a number behind its key.
 CGAME = {
     # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Hacking': 'Hacken',
+    'Locked': 'Erfasst',
+    'Locking %i %%': 'Erfasse %i %%',
+    'Last hit by': 'Zuletzt getroffen von',
+    'Out of ammo': 'Keine Munition',
+    'Low ammo': 'Wenig Munition',
     'Cloak': 'Tarnung',
     'At base': 'In der Basis',
     'Dropped': 'Liegt am Boden',

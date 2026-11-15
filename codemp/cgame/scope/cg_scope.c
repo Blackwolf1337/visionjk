@@ -952,5 +952,9 @@ void CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep ) {
 		VectorSet4( color, 1.0f, locked ? 0.15f : 0.75f, locked ? 0.1f : 0.25f, i < step ? box.alpha : 0.25f );
 		CG_FillRect( ( box.rect[0] + box.rect[2] ) * 0.5f - LOCK_STEPS * 2.5f + i * 5.0f, box.rect[3] + 3.0f, 4.0f, 2.0f, color );
 	}
+	// the new HUD names it under the steps (hud/cg_hudcombat.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudLockCaption( ( box.rect[0] + box.rect[2] ) * 0.5f, box.rect[3] + 8.0f, t, locked );
+	}
 	trap->R_SetColor( NULL );
 }

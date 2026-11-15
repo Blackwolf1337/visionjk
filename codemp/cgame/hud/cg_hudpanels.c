@@ -173,6 +173,9 @@ void CG_HudRightStrip( void ) {
 	if ( ps->pm_flags & PMF_FOLLOW ) {
 		x -= Hud_Chip( x, y, STRIP_H, 0, cgs.clientinfo[ps->clientNum].name, hudWarm, 1.0f, HUD_RIGHT, -1.0f ) + HUD_GAP;
 	}
+	if ( CG_HudAmmoWarning() ) {
+		x -= Hud_Chip( x, y, STRIP_H, 0, CG_HudAmmoWarning(), cg.lowAmmoWarning == 2 ? hudRed : hudWarm, 1.0f, HUD_RIGHT, -1.0f ) + HUD_GAP;
+	}
 	if ( cg.predictedPlayerState.emplacedIndex > 0 ) {
 		const centity_t *eweb = &cg_entities[cg.predictedPlayerState.emplacedIndex];
 

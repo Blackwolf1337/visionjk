@@ -6,6 +6,12 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Hacking': ('Piratage', 'Hackeo'),
+    'Locked': ('Verrouillé', 'Fijado'),
+    'Locking %i %%': ('Verrouillage %i %%', 'Fijando %i %%'),
+    'Last hit by': ('Dernier coup de', 'Último golpe de'),
+    'Out of ammo': ('Plus de munitions', 'Sin munición'),
+    'Low ammo': ('Peu de munitions', 'Poca munición'),
     'Cloak': ('Camouflage', 'Camuflaje'),
     'At base': ('À la base', 'En la base'),
     'Dropped': ('Au sol', 'En el suelo'),

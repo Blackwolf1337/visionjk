@@ -2481,6 +2481,30 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           HACKING
+LANG_ENGLISH        "Hacking"
+LANG_GERMAN         "Hacken"
+
+REFERENCE           LOCKED
+LANG_ENGLISH        "Locked"
+LANG_GERMAN         "Erfasst"
+
+REFERENCE           LOCKING_I
+LANG_ENGLISH        "Locking %i %%"
+LANG_GERMAN         "Erfasse %i %%"
+
+REFERENCE           LAST_HIT_BY
+LANG_ENGLISH        "Last hit by"
+LANG_GERMAN         "Zuletzt getroffen von"
+
+REFERENCE           OUT_OF_AMMO
+LANG_ENGLISH        "Out of ammo"
+LANG_GERMAN         "Keine Munition"
+
+REFERENCE           LOW_AMMO
+LANG_ENGLISH        "Low ammo"
+LANG_GERMAN         "Wenig Munition"
+
 REFERENCE           CLOAK
 LANG_ENGLISH        "Cloak"
 LANG_GERMAN         "Tarnung"

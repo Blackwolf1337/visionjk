@@ -2481,6 +2481,30 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           HACKING
+LANG_ENGLISH        "Hacking"
+LANG_FRENCH         "Piratage"
+
+REFERENCE           LOCKED
+LANG_ENGLISH        "Locked"
+LANG_FRENCH         "Verrouillé"
+
+REFERENCE           LOCKING_I
+LANG_ENGLISH        "Locking %i %%"
+LANG_FRENCH         "Verrouillage %i %%"
+
+REFERENCE           LAST_HIT_BY
+LANG_ENGLISH        "Last hit by"
+LANG_FRENCH         "Dernier coup de"
+
+REFERENCE           OUT_OF_AMMO
+LANG_ENGLISH        "Out of ammo"
+LANG_FRENCH         "Plus de munitions"
+
+REFERENCE           LOW_AMMO
+LANG_ENGLISH        "Low ammo"
+LANG_FRENCH         "Peu de munitions"
+
 REFERENCE           CLOAK
 LANG_ENGLISH        "Cloak"
 LANG_FRENCH         "Camouflage"

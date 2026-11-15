@@ -2481,6 +2481,30 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           HACKING
+LANG_ENGLISH        "Hacking"
+LANG_SPANISH        "Hackeo"
+
+REFERENCE           LOCKED
+LANG_ENGLISH        "Locked"
+LANG_SPANISH        "Fijado"
+
+REFERENCE           LOCKING_I
+LANG_ENGLISH        "Locking %i %%"
+LANG_SPANISH        "Fijando %i %%"
+
+REFERENCE           LAST_HIT_BY
+LANG_ENGLISH        "Last hit by"
+LANG_SPANISH        "Último golpe de"
+
+REFERENCE           OUT_OF_AMMO
+LANG_ENGLISH        "Out of ammo"
+LANG_SPANISH        "Sin munición"
+
+REFERENCE           LOW_AMMO
+LANG_ENGLISH        "Low ammo"
+LANG_SPANISH        "Poca munición"
+
 REFERENCE           CLOAK
 LANG_ENGLISH        "Cloak"
 LANG_SPANISH        "Camuflaje"

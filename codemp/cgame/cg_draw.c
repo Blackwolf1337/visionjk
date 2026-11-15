@@ -3347,16 +3347,19 @@ CG_DrawFPS
 ==================
 */
 #define	FPS_FRAMES	16
-static float CG_DrawFPS( float y ) {
-	char		*s;
-	int			w;
+/*
+=================
+CG_FpsValue
+
+The frames a second, averaged over the last few (sampled every 50 ms at most). Once a frame by whoever shows it.
+=================
+*/
+int CG_FpsValue( void ) {
 	static unsigned short previousTimes[FPS_FRAMES];
 	static unsigned short index;
 	static int	previous, lastupdate;
-	int		t, i, fps, total;
+	int		t, i, total;
 	unsigned short frameTime;
-	const int		xOffset = 0;
-
 
 	// don't use serverTime, because that will be drifting to
 	// correct for internet lag changes, timescales, timedemos, etc
@@ -3369,6 +3372,7 @@ static float CG_DrawFPS( float y ) {
 		previousTimes[index % FPS_FRAMES] = frameTime;
 		index++;
 	}
+
 	// average multiple frames together to smooth changes out a bit
 	total = 0;
 	for ( i = 0 ; i < FPS_FRAMES ; i++ ) {
@@ -3377,12 +3381,14 @@ static float CG_DrawFPS( float y ) {
 	if ( !total ) {
 		total = 1;
 	}
-	fps = 1000 * FPS_FRAMES / total;
+	return 1000 * FPS_FRAMES / total;
+}
 
-	s = va( "%ifps", fps );
-	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
+static float CG_DrawFPS( float y ) {
+	const char	*s = va( "%ifps", CG_FpsValue() );
+	const int	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 
-	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
+	CG_DrawBigString( 635 - w, y + 2, s, 1.0F);
 
 	return y + BIGCHAR_HEIGHT + 4;
 }
@@ -4011,33 +4017,35 @@ float CG_DrawRadar ( float y )
 CG_DrawTimer
 =================
 */
-static float CG_DrawTimer( float y ) {
-	char		*s;
-	int			w;
-	int			mins, seconds, tens;
-	int			msec;
-	int			xOffset = 0;
+/*
+=================
+CG_TimerText
 
-	msec = cg.time - cgs.levelStartTime;
+The clock of cg_drawTimer: how long the level runs, with tay_timerCountdown what is left of its time limit, with
+tay_timerMsec to the millisecond
+=================
+*/
+const char *CG_TimerText( void ) {
+	int msec = cg.time - cgs.levelStartTime, seconds, mins;
+
 	// tay_timerCountdown: what is left of the time limit, when there is one
 	if ( tay_timerCountdown.integer && cgs.timelimit > 0 ) {
 		msec = Q_max( 0, cgs.timelimit * 60000 - msec );
 	}
-
 	seconds = msec / 1000;
 	mins = seconds / 60;
 	seconds -= mins * 60;
-	tens = seconds / 10;
-	seconds -= tens * 10;
-
 	if ( tay_timerMsec.integer ) {
-		s = va( "%i:%i%i.%03i", mins, tens, seconds, msec % 1000 );
-	} else {
-		s = va( "%i:%i%i", mins, tens, seconds );
+		return va( "%i:%02i.%03i", mins, seconds, msec % 1000 );
 	}
-	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
+	return va( "%i:%02i", mins, seconds );
+}
 
-	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
+static float CG_DrawTimer( float y ) {
+	const char	*s = CG_TimerText();
+	const int	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
+
+	CG_DrawBigString( 635 - w, y + 2, s, 1.0F);
 
 	return y + BIGCHAR_HEIGHT + 4;
 }
@@ -4310,17 +4318,11 @@ static void CG_DrawUpperRight( void ) {
 		// VisionJK: the card of the match first (hud/cg_matchcard.c), what else stands here under it; the leader of
 		// the enemy info and the score line are on the card
 		y = CG_MatchCardDraw( HUD_EDGE_Y );
+		y = CG_HudPowerups( y );
+		y = CG_HudAttacker( y );
+		y = CG_HudPerfLine( y );
 		if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
 			y = CG_DrawTeamOverlay( y, qtrue, qtrue );
-		}
-		if ( cg_drawSnapshot.integer ) {
-			y = CG_DrawSnapshot( y );
-		}
-		if ( cg_drawFPS.integer ) {
-			y = CG_DrawFPS( y );
-		}
-		if ( cg_drawTimer.integer ) {
-			y = CG_DrawTimer( y );
 		}
 		if ( ( cgs.gametype >= GT_TEAM || cg.predictedPlayerState.m_iVehicleNum ) && cg_drawRadar.integer ) {
 			y = CG_DrawRadar( y );
@@ -4329,8 +4331,7 @@ static void CG_DrawUpperRight( void ) {
 		if ( CG_SpecHudShown() ) {
 			y = CG_SpecHudDraw( y );
 		}
-		y = CG_KillfeedDraw( y );
-		CG_DrawPowerupIcons( y );
+		CG_KillfeedDraw( y );
 		return;
 	}
 
@@ -5575,6 +5576,23 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 		}
 	}
 
+	if ( CG_HudNewLook() )
+	{
+		// VisionJK: as cards under the crosshair (hud/cg_hudcombat.c)
+		int slot = 0;
+
+		if ( cg.predictedPlayerState.hackingTime > cg.time && cg.predictedPlayerState.hackingBaseTime > 0 )
+		{
+			CG_HudProgress( slot++, cgs.media.hackerIconShader, CG_VisionText( "Hacking" ),
+				1.0f - (float)( cg.predictedPlayerState.hackingTime - cg.time ) / cg.predictedPlayerState.hackingBaseTime, NULL );
+		}
+		if ( cg_genericTimerBar > cg.time && cg_genericTimerDur > 0 )
+		{
+			CG_HudProgress( slot, 0, NULL, (float)( cg_genericTimerBar - cg.time ) / cg_genericTimerDur, cg_genericTimerColor );
+		}
+	}
+	else
+	{
 	if (cg.predictedPlayerState.hackingTime)
 	{ //hacking something
 		CG_DrawHaqrBar(chX, chY, w, h);
@@ -5585,6 +5603,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 		CG_Place2D( PLACE_RIGHT );
 		CG_DrawGenericTimerBar();
 		CG_Place2D( PLACE_CENTER );
+	}
 	}
 
 	if ( corona ) // drawing extra bits
@@ -6752,6 +6771,16 @@ static void CG_DrawCrosshairNames( void ) {
 	tcolor[1] = colorTable[baseColor][1];
 	tcolor[2] = colorTable[baseColor][2];
 	tcolor[3] = color[3] * Com_Clamp( 0.0f, 1.0f, tay_crosshairNamesOpacity.value );	// the game had 0.5
+
+	// VisionJK: under the crosshair, in the font of the new HUD, with the health where it is known (hud/cg_hudcombat.c)
+	if ( CG_HudNewLook() ) {
+		const float *tint = baseColor == CT_GREEN ? hudGreen : baseColor == CT_RED ? hudRed : baseColor == CT_BLACK ? hudDim : hudBright;
+
+		CG_HudTargetName( name, isVeh, tint, color[3] * Com_Clamp( 0.0f, 1.0f, tay_crosshairNamesOpacity.value * 2.0f ),
+			isVeh ? -1 : cg.crosshairClientNum );
+		trap->R_SetColor( NULL );
+		return;
+	}
 
 	if (isVeh)
 	{
@@ -8463,7 +8492,11 @@ static void CG_Draw2D( void ) {
 			}
 
 			CG_Place2D( PLACE_RIGHT );
-			CG_DrawPickupItem();
+			if ( CG_HudNewLook() ) {
+				CG_HudPickup();
+			} else {
+				CG_DrawPickupItem();
+			}
 			CG_Place2D( PLACE_CENTER );
 			//Do we want to use this system again at some point?
 			//CG_DrawReward();

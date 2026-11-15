@@ -1862,6 +1862,24 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           HACKING
+LANG_ENGLISH        "Hacking"
+
+REFERENCE           LOCKED
+LANG_ENGLISH        "Locked"
+
+REFERENCE           LOCKING_I
+LANG_ENGLISH        "Locking %i %%"
+
+REFERENCE           LAST_HIT_BY
+LANG_ENGLISH        "Last hit by"
+
+REFERENCE           OUT_OF_AMMO
+LANG_ENGLISH        "Out of ammo"
+
+REFERENCE           LOW_AMMO
+LANG_ENGLISH        "Low ammo"
+
 REFERENCE           CLOAK
 LANG_ENGLISH        "Cloak"
 
