@@ -233,7 +233,9 @@ def join(m):
             old_words(e)
     table = (36, y0 + 106, 1128, FOOT_Y - 24 - (y0 + 106))
     tx, ty, tw, th = table
-    m.insert(next(i for i, e in enumerate(m) if e.k == 'itemdef' and (mf.get(e.block, 'name') or [''])[0] == 'serverlist'),
+    # (before the headings that stand on it, not before the list: its frosted glass blurs what was drawn before it)
+    m.insert(next(i for i, e in enumerate(m) if e.k == 'itemdef'
+                  and (mf.get(e.block, 'name') or [''])[0].lower() in ('server', 'map', 'players', 'type', 'ping', 'serverlist')),
              cv.panel('vision_table', table, cv.CARD, cv.CARD_EDGE, 10))
     # the columns from the left of the list (10 into the table), the headings over them at the same places; the last
     # one ends inside the filled row (which stops before the bar of the list)
