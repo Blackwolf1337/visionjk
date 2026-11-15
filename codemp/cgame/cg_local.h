@@ -1997,6 +1997,8 @@ void CG_LookInit( void );
 // cg_slice.c: a saber kill cuts the body through along the killing swing
 void CG_SliceInit( void );
 void CG_SliceKill( int victim, int killer );
+void CG_SliceBlastKill( int victim, int mod );
+void CG_SliceExplosion( const vec3_t origin );
 qboolean CG_GoreAir( void );
 qboolean CG_GoreGround( void );
 void CG_SliceStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right );
@@ -2015,9 +2017,14 @@ void CG_RagFrame( void );
 int CG_RagParts( int handle );
 qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
 void CG_RagExplosion( const vec3_t origin, float radius );
+void CG_RagExplosionScaled( const vec3_t origin, float radius, float strength );
 void CG_RagDump_f( void );
 qboolean CG_RagBleed( int handle, int n, vec3_t cutCentre, vec3_t velocity, vec3_t floorAt, float *slide );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
+qboolean CG_SaberCutNearWithin( clientInfo_t *ci, const vec3_t point, float reach, int msec, vec3_t base, vec3_t tip, vec3_t sweep );
+qboolean CG_RagJoint( int handle, int j, vec3_t at, int *partNum );
+int CG_RagJoints( void );
+int CG_RagCutJoint( int handle, int j, const vec3_t dir, float speed );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );
 // toys/cg_toys.c: the snowball and the other toys of issue #9

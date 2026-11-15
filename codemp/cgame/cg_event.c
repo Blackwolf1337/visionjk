@@ -148,6 +148,8 @@ static void CG_Obituary( entityState_t *ent ) {
 	if ( mod == MOD_SABER ) {
 		CG_SliceKill( target, attacker );
 	}
+	// and a kill by an explosion right at the body bursts it into pieces
+	CG_SliceBlastKill( target, mod );
 
 	// tay_killSound, as jaPRO's cg_killSounds: the own player killed somebody else
 	if ( tay_killSound.integer && cg.snap && !( cg.snap->ps.pm_flags & PMF_FOLLOW ) && attacker == cg.snap->ps.clientNum && target != attacker ) {

@@ -703,6 +703,22 @@ void G2_VJK_StoreCut(CGhoul2Info &ghoul2, const float *plane, const unsigned cha
 	}
 }
 
+// VisionJK (G2API_VJK_SetBonesWorld): which bones belong to another part, again, for a cut stored before (G2_VJK_StoreCut)
+void G2_VJK_StoreHidden(CGhoul2Info &ghoul2, const unsigned char *hidden)
+{
+	if (!ghoul2.mBoneCache || ghoul2.mBoneCache->vjkCut.empty())
+	{
+		return;
+	}
+	CBoneCache &boneCache = *ghoul2.mBoneCache;
+	const int numBones = (int)boneCache.vjkCut.size() / 8;
+
+	for (int i = 0; i < numBones && i < 256; i++)
+	{
+		boneCache.vjkCut[i * 8 + 4] = hidden[i] ? 1.0f : 0.0f;
+	}
+}
+
 // VisionJK (G2API_VJK_SetBonesWorld): the size a placed bone is drawn at, kept once. Read back from the matrix of the
 // frame before, it grew by the error of the axes the cgame hands in (not quite unit length) every frame, so the
 // parts of a cut body that lay a while became giant and filled the view (their report 2026-11-09: own player gone

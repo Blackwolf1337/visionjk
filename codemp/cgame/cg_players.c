@@ -5667,6 +5667,13 @@ static qboolean CG_SaberPastAt( const saberPast_t *p, int time, vec3_t base, vec
 // none of his blades came that near (or none was drawn, the history knows only drawn blades).
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep )
 {
+	// (the kill message comes a ping and the delay of the snapshots after the hit)
+	return CG_SaberCutNearWithin( ci, point, reach, 600, base, tip, sweep );
+}
+
+// as CG_SaberCutNear, the blade looked at only for the last msec (a cut of a body that lies there, cg_slice.c)
+qboolean CG_SaberCutNearWithin( clientInfo_t *ci, const vec3_t point, float reach, int msec, vec3_t base, vec3_t tip, vec3_t sweep )
+{
 	qboolean	found = qfalse;
 	float		best = reach;
 	int			s, b, i, k;
@@ -5691,8 +5698,7 @@ qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec
 				vec3_t		seg, rel, nearest;
 				float		u, len2, d;
 
-				// (the kill message comes a ping and the delay of the snapshots after the hit)
-				if ( cg.time - p->time[a] > 600 )
+				if ( cg.time - p->time[a] > msec )
 					break;
 				VectorSubtract( p->tip[a], p->base[a], seg );
 				VectorSubtract( point, p->base[a], rel );

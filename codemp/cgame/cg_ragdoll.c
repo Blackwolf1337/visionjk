@@ -46,7 +46,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/G2.h"
 
 #define RAG_MAX			10			// cut bodies
-#define RAG_PARTS		4
+#define RAG_PARTS		8			// (a cut, then joints cut by later hits on the lying parts, CG_RagCutJoint)
 #define RAG_STEP		( 1.0f / 60.0f )
 #define RAG_SUBSTEPS	4
 #define RAG_MAX_STEPS	4
@@ -177,6 +177,7 @@ typedef struct {
 	qboolean	posed;				// asleep and its bones placed
 	qboolean	checked;			// (developer: the bone round trip was looked at)
 	qboolean	cutSent;			// the renderer has the cut of the first pose (ext.G2_SetBonesWorld)
+	qboolean	hiddenResend;		// a joint of it was cut: the bones of the new part are to be hidden on it too
 	vec3_t		restX[BD_BODIES];	// where its bodies were when it last moved, for the sleep test
 	vec4_t		restQ[BD_BODIES];
 } ragPart_t;
@@ -715,6 +716,19 @@ static void Rag_MakeApart( ragBody_t *rag ) {
 	}
 }
 
+// the models bolted on (weapons) stay only on the part with the hand or chest that holds them
+static void Rag_KeepWeapons( ragBody_t *rag, int partNum ) {
+	static const struct { int model, body; } extra[] = { { 1, BD_RFARM }, { 2, BD_LFARM }, { 3, BD_CHEST } };
+	ragPart_t	*part = &rag->part[partNum];
+	int			j;
+
+	for ( j = 0; j < (int)ARRAY_LEN( extra ); j++ ) {
+		if ( rag->body[extra[j].body].part != partNum && trap->G2API_HasGhoul2ModelOnIndex( &part->ghoul2, extra[j].model ) ) {
+			trap->G2API_RemoveGhoul2Model( &part->ghoul2, extra[j].model );
+		}
+	}
+}
+
 /*
 =================
 CG_RagSplit
@@ -941,7 +955,6 @@ int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const v
 		ragPart_t	*part = &rag->part[i];
 		float		best = 1e9f;
 		vec3_t		tip;
-		static const struct { int model, body; } extra[] = { { 1, BD_RFARM }, { 2, BD_LFARM }, { 3, BD_CHEST } };
 
 		part->used = qtrue;
 		// the part away from the feet thrown along the swing, every part tipped a little to a random side (a leg
@@ -997,11 +1010,7 @@ int CG_RagSplit( void *ghoul2, const vec3_t angles, const vec3_t origin, const v
 				}
 			}
 		}
-		for ( j = 0; j < (int)ARRAY_LEN( extra ); j++ ) {
-			if ( rag->body[extra[j].body].part != i && trap->G2API_HasGhoul2ModelOnIndex( &part->ghoul2, extra[j].model ) ) {
-				trap->G2API_RemoveGhoul2Model( &part->ghoul2, extra[j].model );
-			}
-		}
+		Rag_KeepWeapons( rag, i );
 		VectorCopy( rag->body[part->anchor].x, part->origin );
 	}
 	rag->active = qtrue;
@@ -1578,12 +1587,159 @@ static void Rag_GatherMovers( void ) {
 
 /*
 =================
+CG_RagJoint
+
+Joint j of a ragdoll (cg_slice.c, the later cuts of a lying body): qtrue while it holds two bodies together, at the
+point where it is now, and the part it belongs to.
+=================
+*/
+qboolean CG_RagJoint( int handle, int j, vec3_t at, int *partNum ) {
+	const ragBody_t		*rag;
+	const ragJoint_t	*jt;
+	const ragRigid_t	*p;
+
+	if ( handle < 0 || handle >= RAG_MAX || !rags[handle].active || j < 0 || j >= RAG_JOINTS ) {
+		return qfalse;
+	}
+	rag = &rags[handle];
+	jt = &rag->joint[j];
+	if ( !jt->used ) {
+		return qfalse;
+	}
+	p = &rag->body[jt->parent];
+	Q_Rotate( p->dq, jt->rp, at );
+	VectorAdd( at, p->dx, at );
+	if ( partNum ) {
+		*partNum = p->part;
+	}
+	return qtrue;
+}
+
+int CG_RagJoints( void ) {
+	return RAG_JOINTS;
+}
+
+/*
+=================
+CG_RagCutJoint
+
+A saber went through joint j of a lying part (cg_slice.c): the joint goes, and the bodies on the side away from the
+first cut become a part of their own, a copy of the model of the part they were on, thrown along dir at speed. The
+part they leave hides their bones from now on. Returns the new part, -1 when it can not be cut (no such joint, no room
+for another part).
+=================
+*/
+int CG_RagCutJoint( int handle, int j, const vec3_t dir, float speed ) {
+	ragBody_t	*rag;
+	ragJoint_t	*jt;
+	ragPart_t	*from, *part;
+	int			stack[BD_BODIES], top = 0, group[BD_BODIES], numGroup = 0, start, oldPart, n, i, k;
+	qboolean	inGroup[BD_BODIES], hasAnchor = qfalse;
+	vec3_t		at;
+
+	if ( !CG_RagJoint( handle, j, at, &oldPart ) ) {
+		return -1;
+	}
+	rag = &rags[handle];
+	if ( rag->numParts >= RAG_PARTS ) {
+		return -1;
+	}
+	jt = &rag->joint[j];
+	from = &rag->part[oldPart];
+	jt->used = qfalse;
+
+	// the bodies still joined to the child without that joint; the side with the anchor of the part (the body at the
+	// first cut) stays the old part, so the new one never holds the first cut
+	for ( k = 0; k < 2; k++ ) {
+		memset( inGroup, 0, sizeof( inGroup ) );
+		numGroup = 0;
+		hasAnchor = qfalse;
+		start = k ? jt->parent : jt->child;
+		stack[top++] = start;
+		inGroup[start] = qtrue;
+		while ( top ) {
+			const int b = stack[--top];
+
+			group[numGroup++] = b;
+			hasAnchor |= ( b == from->anchor );
+			for ( i = 0; i < RAG_JOINTS; i++ ) {
+				const ragJoint_t *o = &rag->joint[i];
+				int other = -1;
+
+				if ( !o->used ) {
+					continue;
+				}
+				if ( o->child == b ) {
+					other = o->parent;
+				} else if ( o->parent == b ) {
+					other = o->child;
+				}
+				if ( other >= 0 && !inGroup[other] && rag->body[other].part == oldPart ) {
+					inGroup[other] = qtrue;
+					stack[top++] = other;
+				}
+			}
+		}
+		if ( !hasAnchor ) {
+			break;
+		}
+	}
+	if ( hasAnchor ) {
+		jt->used = qtrue;		// (both sides hold the anchor: still joined some other way)
+		return -1;
+	}
+
+	n = rag->numParts;
+	part = &rag->part[n];
+	memset( part, 0, sizeof( *part ) );
+	trap->G2API_DuplicateGhoul2Instance( from->ghoul2, &part->ghoul2 );
+	if ( !part->ghoul2 ) {
+		jt->used = qtrue;
+		return -1;
+	}
+	rag->numParts++;
+	// its copy takes the cut again in its own first pose
+	trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, vec3_origin, rag->scale, 0, NULL, NULL, NULL, NULL );
+	part->used = qtrue;
+	part->side = from->side;
+	{
+		float best = 1e9f;
+
+		for ( i = 0; i < numGroup; i++ ) {
+			const float d = Distance( rag->body[group[i]].x, at );
+
+			rag->body[group[i]].part = n;
+			if ( d < best ) {
+				best = d;
+				part->anchor = group[i];
+			}
+		}
+	}
+	for ( i = 0; i < numGroup; i++ ) {
+		Rag_Kick( rag, group[i], dir, speed );
+	}
+	VectorCopy( rag->body[part->anchor].x, part->origin );
+	Rag_KeepWeapons( rag, n );
+	Rag_KeepWeapons( rag, oldPart );
+	from->hiddenResend = qtrue;
+	Rag_Wake( from );
+	Rag_Wake( part );
+	return n;
+}
+
+/*
+=================
 CG_RagExplosion
 
 An explosion at origin throws the bodies within radius away (cg_weapons.c)
 =================
 */
 void CG_RagExplosion( const vec3_t origin, float radius ) {
+	CG_RagExplosionScaled( origin, radius, 1.0f );
+}
+
+// as CG_RagExplosion, the throw times strength (a body that bursts by the explosion, cg_slice.c)
+void CG_RagExplosionScaled( const vec3_t origin, float radius, float strength ) {
 	int b, k;
 
 	for ( b = 0; b < RAG_MAX; b++ ) {
@@ -1601,7 +1757,7 @@ void CG_RagExplosion( const vec3_t origin, float radius ) {
 			}
 			d[2] += 0.5f;
 			VectorNormalize( d );
-			Rag_Kick( &rags[b], k, d, 80.0f + 420.0f * ( 1.0f - len / radius ) );
+			Rag_Kick( &rags[b], k, d, ( 80.0f + 420.0f * ( 1.0f - len / radius ) ) * strength );
 		}
 	}
 }
@@ -1678,6 +1834,16 @@ static void Rag_Pose( ragBody_t *rag, ragPart_t *part, int partNum ) {
 		vec3_t	o;
 
 		part->cutSent = qtrue;
+		CG_RagPart( (int)( rag - rags ), partNum, &g2, o, plane );
+		trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, part->origin, rag->scale, RB_BONES, rag->boneNum, &world[0][0],
+			plane, hidden );
+	} else if ( part->hiddenResend ) {
+		// a joint of it was cut: the bones that went with the new part are hidden here from now on
+		vec4_t	plane;
+		void	*g2;
+		vec3_t	o;
+
+		part->hiddenResend = qfalse;
 		CG_RagPart( (int)( rag - rags ), partNum, &g2, o, plane );
 		trap->ext.G2_SetBonesWorld( part->ghoul2, 0, vec3_origin, part->origin, rag->scale, RB_BONES, rag->boneNum, &world[0][0],
 			plane, hidden );

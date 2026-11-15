@@ -2110,8 +2110,10 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
-	if ( CG_BlastRadius( weapon, altFire ) > 0.0f )
+	if ( CG_BlastRadius( weapon, altFire ) > 0.0f ) {
 		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
+		CG_SliceExplosion( origin );
+	}
 	// VisionJK: into standing water of the water gun (toys/cg_water.c), explosives harder
 	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
 		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
@@ -2230,8 +2232,10 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
-	if ( CG_BlastRadius( weapon, altFire ) > 0.0f )
+	if ( CG_BlastRadius( weapon, altFire ) > 0.0f ) {
 		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
+		CG_SliceExplosion( origin );
+	}
 
 	/*
 	// NOTENOTE Non-portable code from single player
