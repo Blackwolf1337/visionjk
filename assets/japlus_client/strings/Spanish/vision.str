@@ -2497,6 +2497,10 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           COMMANDS
+LANG_ENGLISH        "Commands"
+LANG_SPANISH        "Comandos"
+
 REFERENCE           READY
 LANG_ENGLISH        "Ready"
 LANG_SPANISH        "Listo"

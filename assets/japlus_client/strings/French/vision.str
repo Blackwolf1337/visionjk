@@ -2497,6 +2497,10 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           COMMANDS
+LANG_ENGLISH        "Commands"
+LANG_FRENCH         "Commandes"
+
 REFERENCE           READY
 LANG_ENGLISH        "Ready"
 LANG_FRENCH         "Prêt"

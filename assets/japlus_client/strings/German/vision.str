@@ -2497,6 +2497,10 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           COMMANDS
+LANG_ENGLISH        "Commands"
+LANG_GERMAN         "Befehle"
+
 REFERENCE           READY
 LANG_ENGLISH        "Ready"
 LANG_GERMAN         "Bereit melden"

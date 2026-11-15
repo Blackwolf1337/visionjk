@@ -6,6 +6,7 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Commands': ('Commandes', 'Comandos'),
     'Ready': ('Prêt', 'Listo'),
     'Staff': ('Bâton', 'Bastón'),
     'Dual': ('Double', 'Doble'),

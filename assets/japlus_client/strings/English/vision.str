@@ -1874,6 +1874,9 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           COMMANDS
+LANG_ENGLISH        "Commands"
+
 REFERENCE           READY
 LANG_ENGLISH        "Ready"
 
