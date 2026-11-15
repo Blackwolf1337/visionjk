@@ -121,12 +121,20 @@ Both are in Setup, HUD, under Menus and HUD.
   new HUD it is a glass pill per talker, the own one with the accent rim.
 - One feed (since 2026-11-15, always with the new HUD): the lines of the console, the notices of `v_notify` and the kills are
   one list at the upper left (`hud/cg_killfeed.c`). The engine keeps every notify line whole with a level (line,
-  warning, error: a line that starts yellow or with WARNING is a warning, red or ERROR an error) and hands them
+  warning, error: a line is a warning or an error when it was printed with `Com_PrintWarning` or `Com_PrintError`
+  (`qcommon/q_shared.c`), or by the renderer with `PRINT_WARNING` or `PRINT_ERROR`. The colour of a line says
+  nothing) and hands them
   to the cgame through `ext.Con_FeedRead` and `ext.Con_FeedNewest` (ROM cvar `v_cgameFeed`). The cgame sets
   `v_feedHandler`, and the engine then draws no notify lines of its own. A warning has an amber rim, an error a
   red one. The sentence of a kill goes to the console only, the feed has the kill. A vote panel stands above the
   feed while it runs. It has no switch of its own and a line stays 6 seconds; `v_hud 0` puts everything back. A kill shows
   the model of the weapon between the two names. The old killfeed is described in client.md.
+- `Com_PrintWarning` and `Com_PrintError` (`qcommon/q_shared.h`) are for code in this tree. They write "WARNING: " in
+  yellow or "ERROR: " in red themselves, so the call passes only the message. They mark the line with a tag that
+  `Com_Printf` of the engine takes off again. A module writes the tag only where the engine sets the ROM cvar
+  `v_printLevels`, so in another engine the line is just the coloured text. `Com_PrintError` only prints,
+  `Com_Error` is still the one that stops. A new warning or error should use them, not `Com_Printf` with a colour
+  and the word.
 - The line on the first page that says a new version is out, and the button for what is new beside it, are boxes like the outlined buttons, lit with the accent under the mouse (`ui_update.c`), in the middle of the bar at the bottom.
 - Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
