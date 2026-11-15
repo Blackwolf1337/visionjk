@@ -61,6 +61,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_DRIP_RUN		900			// msec a drop takes to run its length
 #define SCAR_DRIP_HOT		8000		// msec until a drop has cooled
 #define SCAR_DRIP_AFTER		8.0f		// units a cut must have gone before it drips
+#define SCAR_SPOT_UNDER		4.0f		// a cut that got no further than this from where the blade went in leaves only the round burn there
 #define SCAR_DWELL_MOVE		0.75f		// a blade moving less than this a frame rests in the wall
 #define SCAR_DWELL_POOL		120			// msec of rest before the pool begins
 #define SCAR_POOL_GROW		1500		// msec until the pool is as large as it gets
@@ -90,6 +91,7 @@ typedef struct {
 	int			serial;
 	scarKind_t	kind;
 	float		heat;					// 0 to 1, how hot it was made (a fast swing heats less)
+	int			cut;					// a piece of a cut: which one (scarStream_t cut)
 	vec3_t		centre;
 	// its fragments in the ring of fragments: the first (a count that only grows, modulo SCAR_FRAG_RING) and how many
 	unsigned	firstFrag[2];
@@ -129,6 +131,9 @@ typedef struct {
 	// a drop of melt every so many units on a steep wall
 	float		dripLength, nextDrip;
 	float		run;						// units the cut has gone since the blade went in
+	int			cut;						// its number, for its pieces
+	vec3_t		start;						// where the blade went in
+	float		far;						// the furthest the cut got from there
 	// smoke, embers and heat haze while it is hot
 	int			nextSmoke, nextEmbers;
 	vec3_t		hotAt, hotNormal;
@@ -144,6 +149,7 @@ static struct {
 	scarStream_t	streams[SCAR_STREAMS];
 	qhandle_t		charShader, moltenShader, haloShader, dripShader, dripCharShader, poolShader, poolCharShader;
 	fxHandle_t		smokeFx, embersFx;
+	int				cuts;
 } scar;
 
 /*
@@ -234,6 +240,7 @@ static scarPiece_t *Scar_NewPiece( scarKind_t kind, float heat, const vec3_t cen
 	piece->born = cg.time ? cg.time : 1;
 	piece->serial = ++scar.serial;
 	piece->kind = kind;
+	piece->cut = 0;
 	piece->heat = heat;
 	VectorCopy( centre, piece->centre );
 	return piece;
@@ -565,6 +572,7 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 		VectorAdd( s->edgeCentre, cur, centre );
 		VectorScale( centre, 0.5f, centre );
 		scarPiece_t *piece = Scar_NewPiece( SCAR_CUT, heat, centre );
+		piece->cut = s->cut;
 
 		// both bands as ribbons that share their edges (Scar_FitEdge): the narrow one of the molten core and the wide
 		// one of the char, its soot and the heat
@@ -605,7 +613,7 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 		// a drop of melt on a steep wall, every 5 to 12 units; none where the cut is still opening or closes (a blade
 		// that only brushed the wall left a drop under a cut too thin to see)
 		s->run += len;
-		if ( steep && !end && s->run >= SCAR_DRIP_AFTER ) {
+		if ( steep && !end && s->run >= SCAR_DRIP_AFTER && s->far >= SCAR_SPOT_UNDER ) {
 			s->dripLength += len;
 			if ( s->dripLength >= s->nextDrip ) {
 				s->dripLength = 0.0f;
@@ -723,6 +731,35 @@ static void Scar_Pool( scarStream_t *s ) {
 	s->poolRadius = radius;
 }
 
+/*
+=================
+Scar_Spot
+
+Where the blade goes into the wall: a small round burn, and the cut leaves from it. A cut opens from a hair, so
+without it a touch of a few frames left a speck with frayed edges, like a drop of melt with no cut.
+=================
+*/
+static void Scar_Spot( const scarStream_t *s ) {
+	const int	last = s->count - 1;
+	scarPool_t	p;
+	vec3_t		corners[4];
+
+	if ( last < 0 ) {
+		return;
+	}
+	VectorCopy( s->p[last], p.centre );
+	PerpendicularVector( p.u, s->n[last] );
+	CrossProduct( p.u, s->n[last], p.v );
+	p.radius = s->width * 0.8f;
+	for ( int k = 0; k < 4; k++ ) {
+		const float a = ( k == 0 || k == 3 ) ? -1.0f : 1.0f, b = ( k < 2 ) ? -1.0f : 1.0f;
+
+		VectorMA( p.centre, a * p.radius, p.u, corners[k] );
+		VectorMA( corners[k], b * p.radius, p.v, corners[k] );
+	}
+	Scar_Lay( Scar_NewPiece( SCAR_POOL, 0.8f, p.centre ), 0, 4, corners, s->n[last], Scar_PoolSt, &p );
+}
+
 static void Scar_Forget( scarStream_t *s ) {
 	const int hotUntil = s->hotUntil;
 	vec3_t at, normal;
@@ -754,6 +791,15 @@ static void Scar_End( scarStream_t *s ) {
 		VectorAdd( s->n[a], s->n[b], normal );
 		VectorNormalize( normal );
 		Scar_Piece( s, before, s->p[a], s->p[b], after, normal, qtrue, s->pTime[b] - s->pTime[a] );
+	}
+	// a cut that stayed inside the burn where the blade went in (a stab, or the blade went in and back the way it
+	// came): the burn alone
+	if ( s->cut && s->far < SCAR_SPOT_UNDER ) {
+		for ( int i = 0; i < SCAR_PIECES; i++ ) {
+			if ( scar.pieces[i].kind == SCAR_CUT && scar.pieces[i].cut == s->cut ) {
+				scar.pieces[i].born = 0;
+			}
+		}
 	}
 	s->hotUntil = cg.time + 3000;
 	Scar_Forget( s );
@@ -799,6 +845,7 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 	s->width = Com_Clamp( 1.8f, 4.5f, 3.0f * bladeRadius / 3.0f );
 	if ( !s->count ) {
 		s->nextDrip = flrand( 3.0f, 8.0f );
+		s->cut = ++scar.cuts;
 	}
 	if ( s->count == 4 ) {
 		memmove( s->p, s->p + 1, sizeof( s->p[0] ) * 3 );
@@ -810,6 +857,11 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 	VectorCopy( normal, s->n[s->count] );
 	s->pTime[s->count] = cg.time;
 	s->count++;
+	if ( s->count == 1 ) {
+		VectorCopy( pos, s->start );
+		Scar_Spot( s );
+	}
+	s->far = Q_max( s->far, Distance( pos, s->start ) );
 	VectorCopy( pos, s->hotAt );
 	VectorCopy( normal, s->hotNormal );
 	s->hotUntil = cg.time + 3000;
