@@ -1429,30 +1429,6 @@ REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
 LANG_SPANISH        "Escribe en el chat de VisionJK, con historial y enlaces."
 
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_SPANISH        "Tamaño del chat"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_SPANISH        "Tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda del ratón también lo cambian."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_SPANISH        "Anchura del chat"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_SPANISH        "La anchura del chat."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_SPANISH        "Líneas del chat"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_SPANISH        "Cuántas líneas muestra el chat abierto. También puedes arrastrar su esquina superior derecha con el ratón."
-
 REFERENCE           CHAT_EMOJI
 LANG_ENGLISH        "Chat Emoji"
 LANG_SPANISH        "Emojis del chat"
@@ -2257,18 +2233,6 @@ REFERENCE           CHAT_BOX
 LANG_ENGLISH        "Chat Box"
 LANG_SPANISH        "Ventana de chat"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_SPANISH        "Sombreros y capas"
-
-REFERENCE           CLICKING_PLAYERS
-LANG_ENGLISH        "Clicking Players"
-LANG_SPANISH        "Clic en jugadores"
-
-REFERENCE           ALERTS
-LANG_ENGLISH        "Alerts"
-LANG_SPANISH        "Avisos"
-
 REFERENCE           ABOVE_THE_HEADS
 LANG_ENGLISH        "Above the Heads"
 LANG_SPANISH        "Sobre las cabezas"
@@ -2276,6 +2240,18 @@ LANG_SPANISH        "Sobre las cabezas"
 REFERENCE           MY_MUSIC
 LANG_ENGLISH        "My Music"
 LANG_SPANISH        "Mi música"
+
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+LANG_SPANISH        "Avisos"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_SPANISH        "Sombreros y capas"
+
+REFERENCE           CLICKING_PLAYERS
+LANG_ENGLISH        "Clicking Players"
+LANG_SPANISH        "Clic en jugadores"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -2757,6 +2733,22 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_SPANISH        "Reiniciar los gráficos con estos ajustes."
 
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_SPANISH        "Tamaño del chat"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_SPANISH        "Tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda del ratón también lo cambian."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_SPANISH        "Líneas del chat"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_SPANISH        "Cuántas líneas muestra el chat abierto. También puedes arrastrar su esquina superior derecha con el ratón."
+
 REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
 LANG_ENGLISH        "Picture saved to the screenshots folder."
 LANG_SPANISH        "Foto guardada en la carpeta de capturas."
@@ -3116,6 +3108,14 @@ LANG_SPANISH        "#same"
 REFERENCE           BINOCULARS_AND_ROCKETS
 LANG_ENGLISH        "Binoculars and Rockets"
 LANG_SPANISH        "Prismáticos y cohetes"
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_SPANISH        "Anchura del chat"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_SPANISH        "La anchura del chat."
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

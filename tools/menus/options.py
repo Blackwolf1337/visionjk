@@ -263,11 +263,6 @@ SETUP = [
     ('Chat & Social', 'The chat box, alerts, what stands above the heads, your music and clicking players.', [
         ('head', 'Chat Box'),
         ('yesno', 'Own Chat Line', 'v_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
-        ('slider', 'Chat Box Size', 'v_chatBoxScale', 0.85, 0.6, 1.6,
-         'How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too.'),
-        ('slider', 'Chat Box Width', 'v_chatBoxWidth', 380, 200, 600, 'How wide the chat box is.'),
-        ('slider', 'Chat Box Rows', 'v_chatBoxRows', 10, 4, 24,
-         'How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse.'),
         ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
         ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
         ('head', 'Alerts'),

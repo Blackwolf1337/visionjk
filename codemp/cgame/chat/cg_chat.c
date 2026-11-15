@@ -42,8 +42,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // How large it is (2026-10-12): v_chatBoxScale is the size of the box with everything in it, the letters first
 // of all; v_chatBoxWidth how wide it is at a size of 1; v_chatBoxRows how many rows of history the open box
-// has. All three are in Setup. With the box open they are also set by hand: its upper right corner is dragged
-// (width and rows), and Ctrl with the wheel changes the size.
+// has. They are set by hand with the box open: its upper right corner is dragged (width and rows), and Ctrl with
+// the wheel changes the size. (Until 2026-11-16 Setup had a row for each.)
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"

@@ -1429,30 +1429,6 @@ REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
 LANG_GERMAN         "Im Chatfenster von VisionJK tippen, mit Verlauf und Links."
 
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_GERMAN         "Chatgröße"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_GERMAN         "Wie groß der Chat und sein Text sind. Im geöffneten Chat ändern auch Strg und das Mausrad die Größe."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_GERMAN         "Chatbreite"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_GERMAN         "Wie breit die Chatbox ist."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_GERMAN         "Chatzeilen"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_GERMAN         "Wie viele Zeilen der geöffnete Chat zeigt. Du kannst auch die obere rechte Ecke mit der Maus ziehen."
-
 REFERENCE           CHAT_EMOJI
 LANG_ENGLISH        "Chat Emoji"
 LANG_GERMAN         "Emojis im Chat"
@@ -2257,18 +2233,6 @@ REFERENCE           CHAT_BOX
 LANG_ENGLISH        "Chat Box"
 LANG_GERMAN         "Chatfenster"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_GERMAN         "Hüte und Umhänge"
-
-REFERENCE           CLICKING_PLAYERS
-LANG_ENGLISH        "Clicking Players"
-LANG_GERMAN         "Spieler anklicken"
-
-REFERENCE           ALERTS
-LANG_ENGLISH        "Alerts"
-LANG_GERMAN         "Hinweise"
-
 REFERENCE           ABOVE_THE_HEADS
 LANG_ENGLISH        "Above the Heads"
 LANG_GERMAN         "Über den Köpfen"
@@ -2276,6 +2240,18 @@ LANG_GERMAN         "Über den Köpfen"
 REFERENCE           MY_MUSIC
 LANG_ENGLISH        "My Music"
 LANG_GERMAN         "Meine Musik"
+
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+LANG_GERMAN         "Hinweise"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_GERMAN         "Hüte und Umhänge"
+
+REFERENCE           CLICKING_PLAYERS
+LANG_ENGLISH        "Clicking Players"
+LANG_GERMAN         "Spieler anklicken"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -2757,6 +2733,22 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_GERMAN         "Grafik mit diesen Einstellungen neu starten."
 
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_GERMAN         "Chatgröße"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_GERMAN         "Wie groß der Chat und sein Text sind. Im geöffneten Chat ändern auch Strg und das Mausrad die Größe."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_GERMAN         "Chatzeilen"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_GERMAN         "Wie viele Zeilen der geöffnete Chat zeigt. Du kannst auch die obere rechte Ecke mit der Maus ziehen."
+
 REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
 LANG_ENGLISH        "Picture saved to the screenshots folder."
 LANG_GERMAN         "Foto im Screenshot-Ordner gespeichert."
@@ -3116,6 +3108,14 @@ LANG_GERMAN         "#same"
 REFERENCE           BINOCULARS_AND_ROCKETS
 LANG_ENGLISH        "Binoculars and Rockets"
 LANG_GERMAN         "Fernglas und Raketen"
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_GERMAN         "Chatbreite"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_GERMAN         "Wie breit die Chatbox ist."
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

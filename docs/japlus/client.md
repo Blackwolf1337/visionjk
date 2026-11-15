@@ -310,8 +310,8 @@ calls them `delay`, `waitf`, `ifCvar`, `strSub` ..., so a script of TaystJK need
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
 
-The size of the box is set in Setup (Chat & Social: Chat Box Size, Width and Rows) and by hand while it is
-open: its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
+The size of the box is set by hand while it is open (its three rows left Setup on 2026-11-16, the cvars remain):
+its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
 wider, upwards it gets more rows), and Ctrl with the wheel makes the box and its letters larger or smaller in
 steps of 5 %. Both write the three cvars. `v_chatDrag <dx> <dy>` moves the corner for a script. The box is
 never wider than the screen, whatever width and size say together.
