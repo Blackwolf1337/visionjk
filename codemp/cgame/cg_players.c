@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_players.c -- handle the media and animation for player entities
 #include "cg_local.h"
 #include "ui/ui_saberfx.h"
+#include "cgame/saber/cg_saberscar.h"
 #include "ghoul2/G2.h"
 #include "game/bg/bg_saga.h"
 
@@ -6048,13 +6049,7 @@ void CG_GetTagWorldPosition( refEntity_t *model, char *tag, vec3_t pos, matrix3_
 #define	MAX_MARK_POINTS		384
 extern markPoly_t *CG_AllocMark();
 
-// VisionJK: a saber mark is one line along the whole swing: each piece (from the point of the last frame to this one)
-// takes the picture on from where the one before ended (length, trail.markLength), across it from edge to edge, in
-// place of a spot of the picture picked at random for each corner (which showed every piece). The burn fades to the
-// wall, the hot core cools from white to dark red (CG_AddMarks, vision_fx.shader).
-#define SABER_MARK_RADIUS	1.1f		// half the width of a saber mark
-#define SABER_MARK_REPEAT	28.0f		// units along the swing that the picture of the burn covers once
-void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length )
+void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal )
 {
 //	byte			colors[4];
 	int				i, j;
@@ -6066,9 +6061,7 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length
 	markPoly_t		*mark;
 	markFragment_t	markFragments[MAX_MARK_FRAGMENTS], *mf;
 
-	const float	radius = SABER_MARK_RADIUS;
-	float		gameSt[MAX_VERTS_ON_POLY][2];		// the texture coordinates of the game, for cg_saberDynamicMarks
-	float		pieceLength;
+	float	radius = 0.65f;
 
 	if ( !cg_marks.integer )
 	{
@@ -6076,11 +6069,7 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length
 	}
 
 	VectorSubtract( end, start, axis[1] );
-	pieceLength = VectorNormalize( axis[1] );
-	if ( pieceLength < 0.05f )
-	{
-		return;
-	}
+	VectorNormalize( axis[1] );
 
 	// create the texture axis
 	VectorCopy( normal, axis[0] );
@@ -6088,12 +6077,11 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length
 
 	// create the full polygon that we'll project
 	for ( i = 0 ; i < 3 ; i++ )
-	{	// (VisionJK: half a width over each end, which closes the gap where the swing turns; a whole width doubled
-		// the burn at every joint)
-		originalPoints[0][i] = start[i] - 0.5f * radius * axis[1][i] - radius * axis[2][i];
-		originalPoints[1][i] = end[i] + 0.5f * radius * axis[1][i] - radius * axis[2][i];
-		originalPoints[2][i] = end[i] + 0.5f * radius * axis[1][i] + radius * axis[2][i];
-		originalPoints[3][i] = start[i] - 0.5f * radius * axis[1][i] + radius * axis[2][i];
+	{	// stretch a bit more in the direction that we are traveling in...  debateable as to whether this makes things better or worse
+		originalPoints[0][i] = start[i] - radius * axis[1][i] - radius * axis[2][i];
+		originalPoints[1][i] = end[i] + radius * axis[1][i] - radius * axis[2][i];
+		originalPoints[2][i] = end[i] + radius * axis[1][i] + radius * axis[2][i];
+		originalPoints[3][i] = start[i] - radius * axis[1][i] + radius * axis[2][i];
 	}
 
 	VectorScale( normal, -1, projection );
@@ -6120,12 +6108,8 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length
 			VectorScale( mid, 0.5f, mid );
 			VectorSubtract( v->xyz, mid, delta );
 
-			gameSt[j][0] = 0.5 + DotProduct( delta, axis[1] ) * (0.05f + Q_flrand(0.0f, 1.0f) * 0.03f);
-			gameSt[j][1] = 0.5 + DotProduct( delta, axis[2] ) * (0.15f + Q_flrand(0.0f, 1.0f) * 0.05f);
-			// VisionJK: along the swing from where the piece before ended, across it from edge to edge
-			VectorSubtract( v->xyz, start, delta );
-			v->st[0] = ( *length + DotProduct( delta, axis[1] ) ) / SABER_MARK_REPEAT;
-			v->st[1] = 0.5f + DotProduct( delta, axis[2] ) / ( 2.0f * radius );
+			v->st[0] = 0.5 + DotProduct( delta, axis[1] ) * (0.05f + Q_flrand(0.0f, 1.0f) * 0.03f);
+			v->st[1] = 0.5 + DotProduct( delta, axis[2] ) * (0.15f + Q_flrand(0.0f, 1.0f) * 0.05f);
 		}
 
 		if (cg_saberDynamicMarks.integer)
@@ -6157,7 +6141,7 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length
 			{
 				while (i_2 < 2)
 				{
-					apArgs.ev[i][i_2] = gameSt[i][i_2];
+					apArgs.ev[i][i_2] = verts[i].st[i_2];
 
 					i_2++;
 				}
@@ -6213,27 +6197,28 @@ void CG_CreateSaberMarks( vec3_t start, vec3_t end, vec3_t normal, float *length
 		else
 		{
 			// save it persistantly, do burn first
-			// (VisionJK: the burn and the hot core of vision_fx.shader, see CG_AddMarks for how they age)
 			mark = CG_AllocMark();
 			mark->time = cg.time;
-			mark->style = MARK_STYLE_BURN;
-			mark->markShader = cgs.media.saberBurnShader;
+			mark->alphaFade = qtrue;
+			mark->markShader = cgs.media.rivetMarkShader;
 			mark->poly.numVerts = mf->numPoints;
+			// (VisionJK: the colour of a mark is 0 to 1, see CG_AddMarks)
 			mark->color[0] = mark->color[1] = mark->color[2] = mark->color[3] = 1.0f;
 			memcpy( mark->verts, verts, mf->numPoints * sizeof( verts[0] ) );
 
-			// And now do a glow pass, that cools
+			// And now do a glow pass
+			// by moving the start time back, we can hack it to fade out way before the burn does
 			mark = CG_AllocMark();
-			mark->time = cg.time;
-			mark->style = MARK_STYLE_COOL;
-			mark->markShader = cgs.media.saberGlowShader;
+			mark->time = cg.time - 8500;
+			mark->alphaFade = qfalse;
+			mark->markShader = cgs.media.mSaberDamageGlow;
 			mark->poly.numVerts = mf->numPoints;
-			mark->color[0] = mark->color[1] = mark->color[2] = mark->color[3] = 1.0f;
+			mark->color[0] = ( 215 + Q_flrand(0.0f, 1.0f) * 40.0f ) / 255.0f;
+			mark->color[1] = ( 96 + Q_flrand(0.0f, 1.0f) * 32.0f ) / 255.0f;
+			mark->color[2] = mark->color[3] = Q_flrand(0.0f, 1.0f)*15.0f / 255.0f;
 			memcpy( mark->verts, verts, mf->numPoints * sizeof( verts[0] ) );
 		}
 	}
-	// (kept short, so the texture coordinates keep their precision over a long fight)
-	*length = fmodf( *length + pieceLength, SABER_MARK_REPEAT * 64.0f );
 }
 
 qboolean CG_G2TraceCollide(trace_t *tr, vec3_t const mins, vec3_t const maxs, const vec3_t lastValidStart, const vec3_t lastValidEnd)
@@ -6972,15 +6957,26 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 				}
 				else
 				{//draw marks if we hit a wall
+					const qboolean architecture = (qboolean)( trace.entityNum == ENTITYNUM_WORLD
+						|| cg_entities[trace.entityNum].currentState.eType == ET_TERRAIN || (cg_entities[trace.entityNum].currentState.eFlags & EF_PERMANENT) );
+
+					// VisionJK: the scars that melt into the wall, one curve a contact (saber/cg_saberscar.c)
+					if ( v_saberScars.integer && architecture )
+					{
+						CG_SaberScarContact( &client->saber[saberNum].blade[bladeNum].trail, i, trace.endpos, trace.plane.normal,
+							client->saber[saberNum].blade[bladeNum].radius );
+					}
 					// All I need is a bool to mark whether I have a previous point to work with.
 					//....come up with something better..
 					if ( client->saber[saberNum].blade[bladeNum].trail.haveOldPos[i] )
 					{
-						if ( trace.entityNum == ENTITYNUM_WORLD || cg_entities[trace.entityNum].currentState.eType == ET_TERRAIN || (cg_entities[trace.entityNum].currentState.eFlags & EF_PERMANENT) )
+						if ( architecture )
 						{//only put marks on architecture
 							// Let's do some cool burn/glowing mark bits!!!
-							CG_CreateSaberMarks( client->saber[saberNum].blade[bladeNum].trail.oldPos[i], trace.endpos, trace.plane.normal,
-								&client->saber[saberNum].blade[bladeNum].trail.markLength[i] );
+							if ( !v_saberScars.integer )
+							{
+								CG_CreateSaberMarks( client->saber[saberNum].blade[bladeNum].trail.oldPos[i], trace.endpos, trace.plane.normal );
+							}
 
 							//make a sound
 							if ( cg.time - client->saber[saberNum].blade[bladeNum].hitWallDebounceTime >= 100 )
@@ -6994,7 +6990,6 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 					{
 						// if we impact next frame, we'll mark a slash mark
 						client->saber[saberNum].blade[bladeNum].trail.haveOldPos[i] = qtrue;
-						client->saber[saberNum].blade[bladeNum].trail.markLength[i] = 0.0f;
 		//				CG_ImpactMark( cgs.media.rivetMarkShader, client->saber[saberNum].blade[bladeNum].trail.oldPos[i], client->saber[saberNum].blade[bladeNum].trail.oldNormal[i],
 		//						0.0f, 1.0f, 1.0f, 1.0f, 1.0f, qfalse, 1.1f, qfalse );
 					}
@@ -7017,6 +7012,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 
 				// we aren't impacting, so turn off our mark tracking mechanism
 				client->saber[saberNum].blade[bladeNum].trail.haveOldPos[i] = qfalse;
+				CG_SaberScarRelease( &client->saber[saberNum].blade[bladeNum].trail, i );
 			}
 		}
 	}

@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "ui/ui_saberfx.h"
+#include "cgame/saber/cg_saberscar.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -2683,8 +2684,7 @@ Ghoul2 Insert End
 	cgs.media.bdecal_saberglow = trap->R_RegisterShader("gfx/damage/saberglowmark");
 	cgs.media.bdecal_burn1 = trap->R_RegisterShader("gfx/damage/bodybigburnmark1");
 	cgs.media.mSaberDamageGlow = trap->R_RegisterShader("gfx/effects/saberDamageGlow");
-	cgs.media.saberBurnShader = trap->R_RegisterShader( "gfx/vision/saberburn" );
-	cgs.media.saberGlowShader = trap->R_RegisterShader( "gfx/vision/saberglow" );
+	CG_SaberScarsRegister();
 
 	CG_RegisterCvars();
 
@@ -2768,6 +2768,7 @@ Ghoul2 Insert End
 	CG_InitLocalEntities();
 
 	CG_InitMarkPolys();
+	CG_SaberScarsInit();
 
 	// remove the last loading update
 	cg.infoScreenText[0] = 0;

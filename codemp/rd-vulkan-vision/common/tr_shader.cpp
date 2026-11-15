@@ -1220,7 +1220,8 @@ and more of the surface:
 	anisotropy <-1..1> [degrees]						shine drawn out along a direction: brushed metal
 	emission <r g b> <strength> [threshold]				the parts brighter than threshold give off light
 and a burn mark cut into the surface (Vulkan, blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA, no material otherwise):
-	groove <depth>										its darkness a dent that many units deep, lit by the light grid
+	groove <depth> [height map]							a dent that many units deep, lit by the light grid: its height
+														the red of the map (0.5 the surface), else its darkness
 and real bumps in place of the parallax (Vulkan, a device with tessellation shaders, v_tessellation):
 	tessellation <units> [plane] [pixels]				the triangles cut until an edge is that many pixels (8),
 														each vertex moved by the height of normalHeight times units;
@@ -1368,12 +1369,19 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 			return 1;
 		}
 	}
-	// VisionJK: a burn mark as a groove (groove <depth>), not a material of the surface: no pbr
+	// VisionJK: a burn mark as a groove (groove <depth> [height map]), not a material of the surface: no pbr
 	if ( !Q_stricmp( keyword, "groove" ) ) {
 		stageMaterial_t *mat = StageMaterial( stage );
 
 		token = COM_ParseExt( text, qfalse );
 		mat->groove = token[0] ? Com_Clamp( 0.0f, 16.0f, atof( token ) ) : 1.0f;
+		token = COM_ParseExt( text, qfalse );
+		if ( token[0] ) {
+			mat->grooveMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+			if ( !mat->grooveMap ) {
+				ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: could not find groove height map '%s' in shader '%s'\n", token, shader.name );
+			}
+		}
 		return 1;
 	}
 	// rend2's cloth: a word alone, the sheen of the albedo

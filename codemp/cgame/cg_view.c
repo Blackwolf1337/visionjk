@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_view.c -- setup all the parameters (position, angle, etc)
 // for a 3D rendering
 #include "cg_local.h"
+#include "cgame/saber/cg_saberscar.h"
 #include "game/bg/bg_saga.h"
 
 #define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
@@ -2714,6 +2715,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	if ( !cg.hyperspace ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
+		CG_SaberScarsAdd();
 		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
 		CG_BoomboxScene();
 		// the snowballs in the air, which are no entities either (toys/cg_toys.c)

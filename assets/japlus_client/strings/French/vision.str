@@ -649,6 +649,38 @@ REFERENCE           AFTER_60_S
 LANG_ENGLISH        "After 60 s"
 LANG_FRENCH         "Après 60 s"
 
+REFERENCE           SABER_SCARS
+LANG_ENGLISH        "Saber Scars"
+LANG_FRENCH         "Cicatrices de sabre"
+
+REFERENCE           A_BLADE_MELTS_A_GLOWING_CUT_INTO_WAL
+LANG_ENGLISH        "A blade melts a glowing cut into walls and floors. It cools from white to red and leaves a charred groove. Off: the marks of the game."
+LANG_FRENCH         "Une lame fait fondre une entaille incandescente dans les murs et les sols. Elle refroidit du blanc au rouge et laisse un sillon calciné. Désactivé : les marques du jeu."
+
+REFERENCE           SCARS_STAY
+LANG_ENGLISH        "Scars Stay"
+LANG_FRENCH         "Durée des cicatrices"
+
+REFERENCE           HOW_LONG_THE_CHARRED_CUTS_STAY_BEFOR
+LANG_ENGLISH        "How long the charred cuts stay before they fade."
+LANG_FRENCH         "Combien de temps les entailles calcinées restent avant de disparaître."
+
+REFERENCE           AFTER_10_S
+LANG_ENGLISH        "After 10 s"
+LANG_FRENCH         "Après 10 s"
+
+REFERENCE           AFTER_2_MIN
+LANG_ENGLISH        "After 2 min"
+LANG_FRENCH         "Après 2 min"
+
+REFERENCE           SMOKE_AND_EMBERS
+LANG_ENGLISH        "Smoke and Embers"
+LANG_FRENCH         "Fumée et braises"
+
+REFERENCE           SMOKE_RISES_EMBERS_FALL_AND_THE_AIR
+LANG_ENGLISH        "Smoke rises, embers fall and the air shimmers over a fresh cut."
+LANG_FRENCH         "La fumée monte, des braises tombent et l'air ondule au-dessus d'une entaille fraîche."
+
 REFERENCE           SOUND_IN_THE_BACKGROUND
 LANG_ENGLISH        "Sound in the Background"
 LANG_FRENCH         "Son en arrière-plan"

@@ -1289,9 +1289,10 @@ VK_PaintMarks
 VisionJK: the marks on the tessellated surface of this batch (srfPoly_t tessShader, tr_marks.cpp) painted onto
 its bumps. A mark laid flat as its polys lies under the bumps, and a poly cut into other triangles than the
 surface never follows them exactly. So the surface itself is drawn again, through the same tessellation as its
-stage (VK_TessPass, depth EQUAL), once for each shader of marks on it. generic.frag Decals() finds the poly a
-pixel lies in, seen along the normal of the poly, and its texture coordinates as the poly would have had them
-there; generic.tesc leaves out the triangles no poly reaches. Only the first stage of a mark's shader.
+stage (VK_TessPass, depth EQUAL), once for each stage of each shader of marks on it. generic.frag Decals() finds
+the poly a pixel lies in, seen along the normal of the poly, and its texture coordinates as the poly would have had
+them there, moved as the stage says (tcMod), coloured as the stage says (rgbGen, alphaGen), lit as a groove where
+the stage is one; generic.tesc leaves out the triangles no poly reaches.
 ===============
 */
 #define VK_MAX_PAINTED_MARKS	1024
@@ -1316,20 +1317,18 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 		}
 		const qhandle_t hShader = marks[i]->hShader;
 		const shader_t *markShader = R_GetShaderByHandle( hShader );
-		const shaderStage_t *stage;
 		int rows = 0, count = 0;
 
 		if ( markShader->remappedShader ) {
 			markShader = markShader->remappedShader;
 		}
-		stage = &markShader->stages[0];
 		for ( int j = i; j < numMarks; j++ ) {
 			if ( marks[j] && marks[j]->hShader == hShader ) {
 				rows += VK_MarkRows( marks[j], reach, NULL );
 			}
 		}
 		uint32_t first;
-		float *out = ( rows && stage->active && stage->bundle[0].image ) ? VK_FrameRows( rows, &first ) : NULL;
+		float *out = ( rows && markShader->stages[0].active ) ? VK_FrameRows( rows, &first ) : NULL;
 		for ( int j = i; j < numMarks; j++ ) {
 			if ( marks[j] && marks[j]->hShader == hShader ) {
 				if ( out ) {
@@ -1345,35 +1344,54 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 			continue;
 		}
 
-		// how the marks of a pass are put together in generic.frag Decals(), from the blend of the stage:
-		// 0 the colour takes away (filter), 1 times (modulate), 2 over by alpha, 3 added, 4 times rgb + 1 - alpha
-		// (the saber burn), 5 times twice the colour
-		const uint32_t blend = stage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
-		const uint32_t src = blend & GLS_SRCBLEND_BITS, dst = blend & GLS_DSTBLEND_BITS;
-		float kind = 2.0f;
-		if ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) {
-			kind = 4.0f;
-		} else if ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_SRC_COLOR ) {
-			kind = 5.0f;
-		} else if ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
-			kind = 0.0f;
-		} else if ( ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ZERO ) || ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_SRC_COLOR ) ) {
-			kind = 1.0f;
-		} else if ( src == GLS_SRCBLEND_ONE && dst == GLS_DSTBLEND_ONE ) {
-			kind = 3.0f;
-		}
+		// a pass for each stage of the shader of the marks
+		for ( int st = 0; st < markShader->numUnfoggedPasses && markShader->stages[st].active; st++ ) {
+			const shaderStage_t *pass = &markShader->stages[st];
 
-		vkDraw_t draw;
-		VK_InitDraw( &draw, transform, bones );
-		const vkProgram_t passProgram = VK_TessPass( &draw, tessFrom, program );
-		draw.flags |= VKD_DECALS;
-		draw.tex0 = draw.tex1 = VK_BundleTexture( &stage->bundle[0] );
-		draw.decals = first;
-		draw.numDecals = (uint32_t)count;
-		draw.parm[0] = kind;
-		draw.parm[1] = reach;
-		VK_DrawTess( &draw, passProgram, ( blend ? blend : ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
-			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)surface->polygonOffset );
+			if ( !pass->bundle[0].image ) {
+				continue;
+			}
+			// how the marks of a pass are put together in generic.frag Decals(), from the blend of the stage:
+			// 0 the colour takes away (filter), 1 times (modulate), 2 over by alpha, 3 added, 4 times rgb + 1 - alpha
+			// (the saber scars), 5 times twice the colour
+			const uint32_t blend = pass->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
+			const uint32_t src = blend & GLS_SRCBLEND_BITS, dst = blend & GLS_DSTBLEND_BITS;
+			float kind = 2.0f;
+			if ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) {
+				kind = 4.0f;
+			} else if ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_SRC_COLOR ) {
+				kind = 5.0f;
+			} else if ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+				kind = 0.0f;
+			} else if ( ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ZERO ) || ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_SRC_COLOR ) ) {
+				kind = 1.0f;
+			} else if ( dst == GLS_DSTBLEND_ONE ) {
+				// added, by its alpha or as it is
+				kind = ( src == GLS_SRCBLEND_SRC_ALPHA ) ? 6.0f : 3.0f;
+			}
+
+			vkDraw_t draw;
+			VK_InitDraw( &draw, transform, bones );
+			const vkProgram_t passProgram = VK_TessPass( &draw, tessFrom, program );
+			// its colours as baseColor + vertColor times the colour of the mark (rgbGen and alphaGen of the stage)
+			VK_StageColors( pass, 0, &draw );
+			draw.flags |= VKD_DECALS;
+			draw.tex0 = draw.tex1 = VK_BundleTexture( &pass->bundle[0] );
+			// its texture moving as the stage says (tcMod), read by Decals() from texMat0 and texTurb0
+			VK_BundleTexCoords( &pass->bundle[0], draw.texMat0, draw.texTurb0 );
+			draw.decals = first;
+			draw.numDecals = (uint32_t)count;
+			draw.parm[0] = kind;
+			draw.parm[1] = reach;
+			// a groove (stageMaterial_t groove): its height map in tex3 (tex2 is the height of the surface), lit by the grid
+			if ( pass->mat && pass->mat->groove > 0.0f && kind == 4.0f && v_pbr->integer && VK_GridDraw( &draw ) ) {
+				draw.parm[2] = pass->mat->groove;
+				draw.parm[3] = pass->mat->grooveMap ? 1.0f : 0.0f;
+				draw.tex3 = pass->mat->grooveMap ? pass->mat->grooveMap->texnum : draw.tex0;
+			}
+			VK_DrawTess( &draw, passProgram, ( blend ? blend : ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
+				| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)surface->polygonOffset );
+		}
 	}
 }
 
@@ -1579,6 +1597,10 @@ void RB_StageIteratorGeneric( void ) {
 			&& v_pbr->integer && VK_GridDraw( &draw ) ) {
 			draw.flags |= VKD_GROOVE;
 			draw.material[0] = mat->groove;
+			if ( mat->grooveMap ) {
+				draw.tex2 = mat->grooveMap->texnum;
+				draw.material[1] = 1.0f;
+			}
 		}
 #endif
 		draw.flags |= VK_AlphaTest( stateBits );

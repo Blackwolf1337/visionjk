@@ -40,36 +40,122 @@ gfx/vision/ghost
 	}
 }
 
-// The marks a saber leaves on a wall (codemp/cgame/cg_players.c CG_CreateSaberMarks), laid along the whole swing.
-// The burn: the wall times rgb + 1 - alpha (the picture is premultiplied, tools/materials/saber_marks.py), so the
-// colour of the vertices fades it to nothing (rgb and alpha to 0) and not to black. The renderer of VisionJK also
-// lights it as a groove cut into the wall (vmat_vision_fx.oshader).
-gfx/vision/saberburn
+// The scars a saber melts into what it cuts (codemp/cgame/saber/cg_saberscar.c, pictures by
+// tools/materials/saber_marks.py). Laid along the cut: s along it, t across it. The char layers multiply the surface
+// by rgb + 1 - alpha (premultiplied), so the vertex colour (rgb and alpha together) fades them to the surface; the
+// hot layers are added and glow (bloom), coloured by the vertices as they cool. The renderer of VisionJK lights the
+// chars as grooves (vmat_vision_fx.oshader).
+
+// the char, on the wide band: black glass in the groove, a low lip, uneven brown soot
+gfx/vision/saberscar
 {
 	polygonOffset
 	surfaceparm	nomarks
 	surfaceparm	trans
 	q3map_nolightmap
 	{
-		map gfx/vision/saberburn
+		map gfx/vision/saberscar
 		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
 		rgbGen vertex
 		alphaGen vertex
 	}
 }
 
-// The hot core of a fresh cut, added; the cgame gives it the colour of the cooling metal (white, orange, dark red)
-// and it glows (bloom).
-gfx/vision/saberglow
+// the molten core, on the narrow band: the melt runs slowly along the cut; the embers (dark red flecks, their
+// strength the alpha of the vertices) glow on after the rest has cooled
+gfx/vision/sabermolten
 {
 	polygonOffset
 	surfaceparm	nomarks
 	surfaceparm	trans
 	q3map_nolightmap
 	{
-		map gfx/vision/saberglow
+		map gfx/vision/sabermolten
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		tcMod scroll 0.09 0
+		glow
+	}
+	{
+		map gfx/vision/saberembers
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen const ( 0.95 0.22 0.04 )
+		alphaGen vertex
+		tcMod scroll -0.025 0
+		glow
+	}
+}
+
+// the heat around a fresh cut, on the wide band
+gfx/vision/saberhalo
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		map gfx/vision/saberhalo
 		blendFunc GL_ONE GL_ONE
 		rgbGen vertex
 		glow
+	}
+}
+
+// a drop of melt running down a wall (the cgame moves its texture coordinates), and what it leaves
+gfx/vision/saberdrip
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberdrip
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen vertex
+		alphaGen vertex
+		glow
+	}
+}
+
+gfx/vision/saberdrip_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberdrip_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+// the melt pool where a blade rests in the wall, and the crater it leaves
+gfx/vision/saberpool
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberpool
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}
+
+gfx/vision/saberpool_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberpool_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
 	}
 }

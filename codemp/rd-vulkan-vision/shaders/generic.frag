@@ -954,7 +954,9 @@ vec4 Groove( Draw d, vec4 c ) {
 		n = -n;
 	}
 	vec3 f = c.rgb + 1.0 - c.a;
-	float h = -( 1.0 - clamp( dot( f, vec3( 1.0 / 3.0 ) ), 0.0, 1.0 ) ) * d.material.x;
+	// the height: from its map (red, 0.5 the surface) where it has one, else as deep as it is dark
+	float h = d.material.y > 0.5 ? ( texture( TEX2( d ), v_texCoord0 ).r - 0.5 ) * 2.0 * d.material.x
+		: -( 1.0 - clamp( dot( f, vec3( 1.0 / 3.0 ) ), 0.0, 1.0 ) ) * d.material.x;
 	vec3 r1 = cross( dpdy, n ), r2 = cross( n, dpdx );
 	float det = dot( dpdx, r1 );
 	vec3 slope = abs( det ) > 1e-12 ? ( dFdx( h ) * r1 + dFdy( h ) * r2 ) / det : vec3( 0.0 );
@@ -976,17 +978,49 @@ layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 	vec4	bones[];
 };
 
-// DECALS: the marks on a tessellated surface, painted onto its bumps in a pass over the surface (depth EQUAL), each
-// poly of a mark as it would have been drawn flat, seen along its normal (vk_shade.cpp VK_MarkRows has the rows):
-// the poly the pixel lies in, and its texture coordinates from its corners there. Further from the plane of a poly
-// than the bumps reach (its sphere), nothing of it. The polys of the pass are put together as their blend would have
-// put them over each other, by d.parm.x: 0 the colour takes away (one minus the product of what each leaves), 1
-// times, 2 over by alpha, 3 added. A pixel with no mark is left alone.
+// DECALS: the marks on a tessellated surface, painted onto its bumps in a pass over the surface (depth EQUAL) for each
+// stage of their shader, each poly of a mark as it would have been drawn flat, seen along its normal (vk_shade.cpp
+// VK_MarkRows has the rows): the poly the pixel lies in, its texture coordinates from its corners there, moved as
+// the stage moves them (texMat0, texTurb0), its colour as the stage makes it from the colour of the mark (baseColor +
+// vertColor times it). Further from the plane of a poly than the bumps reach (its sphere), nothing of it. The polys
+// of the pass are put together as their blend would have put them over each other, by d.parm.x: 0 the colour takes
+// away (one minus the product of what each leaves), 1 times, 2 over by alpha, 3 added, 4 times rgb + 1 - alpha, 5
+// times twice the colour, 6 added by alpha. A groove (d.parm.z units deep, kind 4) is lit as Groove() does, its
+// height from tex3 (d.parm.w) or from its darkness. A pixel with no mark is left alone.
 vec4 Decals( Draw d ) {
 	uint kind = uint( d.parm.x + 0.5 );
 	vec3 p = v_position;
 	// (the gradients for the texture come from the place, outside the loop: inside it they are not defined)
 	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
+	mat2 texLinear = mat2( d.texMat0[0].x, d.texMat0[1].x, d.texMat0[0].y, d.texMat0[1].y );
+	vec2 texOffset = vec2( d.texMat0[0].z, d.texMat0[1].z );
+	if ( d.texTurb0 != vec4( 0.0 ) ) {
+		float sinS = sin( ( ( p.x + p.z ) * ( 0.125 / 128.0 ) + d.texMat0[0].w ) * 6.2831853 );
+		float sinT = sin( ( p.y * ( 0.125 / 128.0 ) + d.texMat0[0].w ) * 6.2831853 );
+		texOffset += vec2( d.texTurb0.x * sinS + d.texTurb0.y * sinT, d.texTurb0.z * sinS + d.texTurb0.w * sinT );
+	}
+	// the groove: the face of the surface and the light of the level there
+	float grooveDepth = ( kind == 4u ) ? d.parm.z : 0.0;
+	vec3 face = vec3( 0.0, 0.0, 1.0 ), toLight = vec3( 0.0, 0.0, 1.0 ), r1 = vec3( 0.0 ), r2 = vec3( 0.0 );
+	float lightShare = 0.0, flatLit = 1.0, faceDet = 0.0;
+	if ( grooveDepth > 0.0 ) {
+		Transform t = TRANSFORMS( d.transform );
+		face = normalize( cross( dpdx, dpdy ) );
+		if ( dot( face, t.viewOrigin.xyz - p ) < 0.0 ) {
+			face = -face;
+		}
+		vec4 grid = PbrGrid( d, p );
+		lightShare = min( length( grid.xyz ), 0.95 );
+		if ( lightShare > 0.001 ) {
+			toLight = normalize( grid.xyz );
+			flatLit = max( 1.0 - lightShare + lightShare * max( dot( face, toLight ), 0.0 ), 0.2 );
+			r1 = cross( dpdy, face );
+			r2 = cross( face, dpdx );
+			faceDet = dot( dpdx, r1 );
+		} else {
+			grooveDepth = 0.0;
+		}
+	}
 	vec4 sum = ( kind == 1u || kind == 4u || kind == 5u ) ? vec4( 1.0 ) : vec4( 0.0 );
 	bool hit = false;
 	uint r = d.decals;
@@ -995,7 +1029,7 @@ vec4 Decals( Draw d ) {
 		vec4 U = bones[r], V = bones[r + 1u], P = bones[r + 2u], S = bones[r + 4u];
 		uint corners = uint( bones[r + 5u].x + 0.5 );
 		uint first = r + 6u;
-		vec4 C = bones[r + 3u];
+		vec4 C = d.baseColor + d.vertColor * bones[r + 3u];
 
 		r = first + corners;
 		if ( abs( dot( P.xyz, p ) - P.w ) > d.parm.y || distance( p, S.xyz ) > S.w ) {
@@ -1023,7 +1057,26 @@ vec4 Decals( Draw d ) {
 			mat2 toST = mat2( b.zw - a.zw, c.zw - a.zw );
 			vec2 gx = toST * ( toXY * vec2( dot( U.xyz, dpdx ), dot( V.xyz, dpdx ) ) );
 			vec2 gy = toST * ( toXY * vec2( dot( U.xyz, dpdy ), dot( V.xyz, dpdy ) ) );
-			vec4 col = textureGrad( TEX0( d ), st, gx, gy ) * C;
+			vec2 moved = texLinear * st + texOffset;
+			vec4 col = textureGrad( TEX0( d ), moved, texLinear * gx, texLinear * gy ) * C;
+
+			if ( grooveDepth > 0.0 && abs( faceDet ) > 1e-12 ) {
+				// the height here and one pixel over each way, the slope of the dent from them, its light against the flat
+				float h0, hx, hy;
+				if ( d.parm.w > 0.5 ) {
+					h0 = textureGrad( TEX3( d ), st, gx, gy ).r;
+					hx = textureGrad( TEX3( d ), st + gx, gx, gy ).r;
+					hy = textureGrad( TEX3( d ), st + gy, gx, gy ).r;
+				} else {
+					h0 = dot( textureGrad( TEX0( d ), moved, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+					hx = dot( textureGrad( TEX0( d ), moved + texLinear * gx, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+					hy = dot( textureGrad( TEX0( d ), moved + texLinear * gy, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+				}
+				vec3 slope = ( ( hx - h0 ) * r1 + ( hy - h0 ) * r2 ) * ( 2.0 * grooveDepth / faceDet );
+				vec3 bent = normalize( face - slope );
+				float ratio = clamp( ( 1.0 - lightShare + lightShare * max( dot( bent, toLight ), 0.0 ) ) / flatLit, 0.3, 1.8 );
+				col = TimesSurface( ( col.rgb + 1.0 - col.a ) * ratio );
+			}
 
 			hit = true;
 			if ( kind == 0u ) {
@@ -1037,6 +1090,8 @@ vec4 Decals( Draw d ) {
 				sum.rgb *= col.rgb + 1.0 - col.a;
 			} else if ( kind == 5u ) {
 				sum.rgb *= 2.0 * col.rgb;
+			} else if ( kind == 6u ) {
+				sum.rgb += col.rgb * col.a;
 			} else {
 				sum.rgb = col.rgb * col.a + sum.rgb * ( 1.0 - col.a );
 				sum.a = col.a + sum.a * ( 1.0 - col.a );
@@ -1053,6 +1108,9 @@ vec4 Decals( Draw d ) {
 		sum = TimesSurface( sum.rgb );
 	} else if ( kind == 5u ) {
 		sum = vec4( clamp( sum.rgb * 0.5, vec3( 0.0 ), vec3( 1.0 ) ), 1.0 );
+	} else if ( kind == 6u ) {
+		// (its alpha is in the colour already; the blend takes it times alpha)
+		sum.a = 1.0;
 	}
 	return sum;
 }

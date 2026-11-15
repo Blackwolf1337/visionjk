@@ -176,6 +176,11 @@ XCVAR_DEF( v_slice,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_gore,							"1",					NULL,					CVAR_ARCHIVE )
 // seconds after a cut its parts and blood fade, 0: as long as the body stays (cg_slice.c)
 XCVAR_DEF( v_sliceTime,							"0",					NULL,					CVAR_ARCHIVE )
+// the scars a saber melts into walls (saber/cg_saberscar.c), 0: the marks of the game; how many seconds they stay;
+// smoke, embers and heat haze over a fresh cut
+XCVAR_DEF( v_saberScars,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_saberScarTime,						"30",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_saberScarFx,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelEffect,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelColour,						"50 50 255 100 0",		NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_duelShowSabers,					"1",					NULL,					CVAR_ARCHIVE )

@@ -1585,7 +1585,6 @@ typedef struct saberTrail_s {
 	vec3_t		oldPos[2];
 	vec3_t		oldNormal[2];	// store this in case we don't have a connect-the-dots situation
 								//	..then we'll need the normal to project a mark blob onto the impact point
-	float		markLength[2];	// VisionJK: how long the mark of this swing is so far, for its texture along it (cgame)
 } saberTrail_t;
 
 typedef struct bladeInfo_s {

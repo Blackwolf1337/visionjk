@@ -1653,6 +1653,90 @@
 		itemDef
 		{
 			name					vision_head
+			rect					732 342 412 100
+			visible					1
+			text					@VISION_SABER_SCARS
+			font					7
+			textscale				0.89
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				54.5
+			caps					1
+			fold					9
+			page					3
+			scroll					1
+			column					1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_saberscars
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SABER_SCARS
+			descText				@VISION_A_BLADE_MELTS_A_GLOWING_CUT_INTO_WAL
+			cvar					"v_saberScars"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 442 392 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_saberscartime
+			type					ITEM_TYPE_MULTI
+			text					@VISION_SCARS_STAY
+			descText				@VISION_HOW_LONG_THE_CHARRED_CUTS_STAY_BEFOR
+			cvar					"v_saberScarTime"
+			cvarFloatList { @VISION_AFTER_10_S 10 @VISION_AFTER_30_S 30 @VISION_AFTER_60_S 60 @VISION_AFTER_2_MIN 120 }
+			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"v_saberScars"
+			disableCvar { "0" }
+			rect					742 494 392 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_saberscarfx
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SMOKE_AND_EMBERS
+			descText				@VISION_SMOKE_RISES_EMBERS_FALL_AND_THE_AIR
+			cvar					"v_saberScarFx"
+			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"v_saberScars"
+			disableCvar { "0" }
+			rect					742 546 392 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					296 120 412 66
 			visible					1
 			text					@VISION_VOLUME
@@ -1663,7 +1747,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					9
+			fold					10
 			page					4
 			scroll					1
 			column					0
@@ -1764,7 +1848,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					10
+			fold					11
 			page					4
 			scroll					1
 			column					0
@@ -1824,7 +1908,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					11
+			fold					12
 			page					4
 			scroll					1
 			column					0
@@ -2047,7 +2131,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					12
+			fold					13
 			page					4
 			scroll					1
 			column					1
@@ -2275,7 +2359,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					13
+			fold					14
 			page					4
 			scroll					1
 			column					1
@@ -2337,7 +2421,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					14
+			fold					15
 			page					5
 			scroll					1
 			column					0
@@ -2536,7 +2620,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					15
+			fold					16
 			page					5
 			scroll					1
 			column					0
@@ -2600,7 +2684,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					16
+			fold					17
 			page					5
 			scroll					1
 			column					0
@@ -2666,7 +2750,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					17
+			fold					18
 			page					5
 			scroll					1
 			column					1
@@ -2766,7 +2850,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					18
+			fold					19
 			page					5
 			scroll					1
 			column					1
@@ -2922,7 +3006,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					19
+			fold					20
 			page					5
 			scroll					1
 			column					1
@@ -3105,7 +3189,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					20
+			fold					21
 			page					6
 			scroll					1
 			column					0
@@ -3165,7 +3249,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					21
+			fold					22
 			page					6
 			scroll					1
 			column					0
@@ -3268,7 +3352,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					22
+			fold					23
 			page					6
 			scroll					1
 			column					0
@@ -3448,7 +3532,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					23
+			fold					24
 			page					6
 			scroll					1
 			column					1
@@ -3527,7 +3611,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					24
+			fold					25
 			page					6
 			scroll					1
 			column					1
@@ -3648,7 +3732,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					25
+			fold					26
 			page					6
 			scroll					1
 			column					1
@@ -3728,7 +3812,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					26
+			fold					27
 			page					7
 			scroll					1
 			column					0
@@ -3864,7 +3948,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					27
+			fold					28
 			page					7
 			scroll					1
 			column					0
@@ -3945,7 +4029,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					28
+			fold					29
 			page					7
 			scroll					1
 			column					0
@@ -4006,7 +4090,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					29
+			fold					30
 			page					7
 			scroll					1
 			column					1
@@ -4152,7 +4236,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					30
+			fold					31
 			page					7
 			scroll					1
 			column					1
@@ -4259,7 +4343,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					31
+			fold					32
 			page					7
 			scroll					1
 			column					1
@@ -4342,7 +4426,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					32
+			fold					33
 			page					8
 			scroll					1
 			column					0
@@ -4511,7 +4595,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					33
+			fold					34
 			page					8
 			scroll					1
 			column					0
@@ -4594,7 +4678,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					34
+			fold					35
 			page					8
 			scroll					1
 			column					1
@@ -4679,7 +4763,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					35
+			fold					36
 			page					8
 			scroll					1
 			column					1
@@ -4785,7 +4869,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					36
+			fold					37
 			page					9
 			scroll					1
 			column					0
@@ -5027,7 +5111,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					37
+			fold					38
 			page					9
 			scroll					1
 			column					1
@@ -5091,7 +5175,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					38
+			fold					39
 			page					10
 			scroll					1
 			column					0
@@ -5176,7 +5260,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					39
+			fold					40
 			page					10
 			scroll					1
 			column					1
@@ -5218,7 +5302,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					40
+			fold					41
 			page					10
 			scroll					1
 			column					1
@@ -5299,7 +5383,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					41
+			fold					42
 			page					11
 			scroll					1
 			column					0
@@ -5378,7 +5462,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					42
+			fold					43
 			page					11
 			scroll					1
 			column					1
@@ -5436,7 +5520,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					43
+			fold					44
 			page					11
 			scroll					1
 			column					1

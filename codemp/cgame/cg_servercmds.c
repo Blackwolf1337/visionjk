@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // be a valid snapshot this frame
 
 #include "cg_local.h"
+#include "cgame/saber/cg_saberscar.h"
 #include "game/bg/bg_public.h"
 #include "ui/menudef.h"
 #include "ghoul2/G2.h"
@@ -983,6 +984,7 @@ static void CG_MapRestart( void ) {
 
 	CG_InitLocalEntities();
 	CG_InitMarkPolys();
+	CG_SaberScarsInit();
 	CG_KillCEntityInstances();
 
 	// make sure the "3 frags left" warnings play again

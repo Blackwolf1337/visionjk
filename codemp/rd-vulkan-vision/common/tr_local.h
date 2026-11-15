@@ -449,10 +449,12 @@ typedef struct stageMaterial_s {
 	// out of it, so nothing goes below what the player stands on and what the shadows are traced against. Vulkan
 	// only, the stage then has no parallax (vk_shade.cpp, shaders/generic.tesc and .tese).
 	float			tessHeight, tessPlane, tessDensity;
-	// a burn mark cut into the surface (groove <depth>): a stage of blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA whose
-	// darkness is a dent that deep in units, lit by the light grid of the level (VKD_GROOVE, generic.frag Groove()).
+	// a burn mark cut into the surface (groove <depth> [height map]): a stage of blendFunc GL_DST_COLOR
+	// GL_ONE_MINUS_SRC_ALPHA, a dent that deep in units, lit by the light grid of the level (VKD_GROOVE, generic.frag
+	// Groove()). Its height from the red of grooveMap (0.5 the surface, a lip above), else from how dark the stage is.
 	// Vulkan only; not a material of the surface (no pbr)
 	float			groove;
+	image_t			*grooveMap;
 
 	// glass (transmission > 0, VK_GlassDraw): the screen behind it shows through, bent by ior over thickness units (0:
 	// a thin pane), blurred by the roughness, coloured by absorption: what is left of each colour after

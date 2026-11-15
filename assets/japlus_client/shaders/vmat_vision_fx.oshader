@@ -1,17 +1,32 @@
-// The burn of a saber (vision_fx.shader) for the renderer of VisionJK: its darkness is a groove cut into the wall,
-// lit by the light of the level there (groove <depth>, rd-vulkan-vision): the edge that faces the light bright,
-// the other dark. Other renderers read only vision_fx.shader.
-gfx/vision/saberburn
+// The chars of the saber scars (vision_fx.shader) for the renderer of VisionJK: lit as grooves melted into the
+// surface, by the light of the level there (groove <depth> <height map>, rd-vulkan-vision): the dent in the middle
+// dark on the side away from the light, the lip catching it. Other renderers read only vision_fx.shader.
+gfx/vision/saberscar
 {
 	polygonOffset
 	surfaceparm	nomarks
 	surfaceparm	trans
 	q3map_nolightmap
 	{
-		map gfx/vision/saberburn
+		map gfx/vision/saberscar
 		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
 		rgbGen vertex
 		alphaGen vertex
-		groove 1.5
+		groove 2 gfx/vision/saberscar_h
+	}
+}
+
+gfx/vision/saberpool_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberpool_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+		groove 3 gfx/vision/saberpool_h
 	}
 }
