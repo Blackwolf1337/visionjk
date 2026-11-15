@@ -665,6 +665,14 @@ REFERENCE           SABER_HITS_CLASHES_SHOTS_AND_EXPLOSI
 LANG_ENGLISH        "Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only."
 LANG_FRENCH         "Les coups de sabre, les chocs de lames, les tirs et les explosions projettent des étincelles calculées par la carte graphique : des centaines à la fois, incandescentes, qui refroidissent et rebondissent sur les murs et les sols. Vulkan uniquement."
 
+REFERENCE           SPARK_EMBERS
+LANG_ENGLISH        "Spark Embers"
+LANG_FRENCH         "Braises des étincelles"
+
+REFERENCE           HOW_LONG_SPARKS_THAT_LAND_ON_THE_FLO
+LANG_ENGLISH        "How long sparks that land on the floor lie there glowing as embers before they go out. 1 as meant, 0 not at all. Vulkan only."
+LANG_FRENCH         "Combien de temps les étincelles tombées au sol y restent comme des braises rougeoyantes avant de s'éteindre. 1 comme prévu, 0 pas du tout. Vulkan uniquement."
+
 REFERENCE           LIT_PARTICLES
 LANG_ENGLISH        "Lit Particles"
 LANG_FRENCH         "Particules éclairées"

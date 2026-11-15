@@ -1796,13 +1796,32 @@
 
 		itemDef
 		{
+			name					vision_slider_v_gpusparksembers
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_SPARK_EMBERS
+			descText				@VISION_HOW_LONG_SPARKS_THAT_LAND_ON_THE_FLO
+			cvarfloat				"v_gpuSparksEmbers" 1 0 3
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 546 392 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_litparticles
 			type					ITEM_TYPE_YESNO
 			text					@VISION_LIT_PARTICLES
 			descText				@VISION_SMOKE_DUST_AND_STEAM_TAKE_THE_LIGHT
 			cvar					"v_litParticles"
 			action { play "sound/interface/button1.wav" ; }
-			rect					742 546 392 52
+			rect					742 598 392 52
 			page					3
 			scroll					1
 			row						1

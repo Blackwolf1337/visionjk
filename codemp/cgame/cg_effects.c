@@ -1345,28 +1345,28 @@ qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, 
 	VectorCopy( dir, b.dir );
 	switch ( kind ) {
 	case GPUSPARKS_SABER:
-		// a blade cutting a wall: a spray of white hot bits off the cut, bouncing along the floor
-		b.count = 12; b.speed = 280.0f; b.spread = 0.9f; b.life = 0.7f; b.size = 0.35f;
-		b.gravity = 700.0f; b.drag = 1.2f; b.bounce = 0.45f; b.cooling = 1.4f;
+		// a blade cutting a wall: a spray of white hot bits off the cut, bouncing along the floor and lying there glowing
+		b.count = 16; b.speed = 280.0f; b.spread = 0.9f; b.life = 1.0f; b.size = 0.35f;
+		b.gravity = 700.0f; b.drag = 1.2f; b.bounce = 0.45f; b.cooling = 1.4f; b.rest = 2.5f;
 		VectorSet( b.color, 4.0f, 2.8f, 1.4f );
 		break;
 	case GPUSPARKS_CLASH:
 		// blades meeting: a burst all round, brighter and more
 		b.count = 80; b.speed = 420.0f; b.spread = 2.0f; b.life = 0.8f; b.size = 0.4f;
-		b.gravity = 650.0f; b.drag = 1.5f; b.bounce = 0.4f; b.cooling = 1.2f;
+		b.gravity = 650.0f; b.drag = 1.5f; b.bounce = 0.4f; b.cooling = 1.2f; b.rest = 3.0f;
 		VectorSet( b.color, 5.0f, 4.2f, 3.0f );
 		break;
 	case GPUSPARKS_BLASTER:
 		// a bolt on a wall: a few short hot bits
 		b.count = 16; b.speed = 230.0f; b.spread = 0.8f; b.life = 0.45f; b.size = 0.3f;
-		b.gravity = 600.0f; b.drag = 2.0f; b.bounce = 0.35f; b.cooling = 1.5f;
+		b.gravity = 600.0f; b.drag = 2.0f; b.bounce = 0.35f; b.cooling = 1.5f; b.rest = 1.2f;
 		VectorSet( b.color, 4.0f, 1.8f, 0.6f );
 		break;
 	case GPUSPARKS_EXPLOSION:
 	default:
 		// burning bits thrown out of a blast, raining down and bouncing
 		b.count = 150; b.speed = 520.0f; b.spread = 1.6f; b.life = 1.8f; b.size = 0.55f;
-		b.gravity = 500.0f; b.drag = 1.0f; b.bounce = 0.5f; b.cooling = 0.9f;
+		b.gravity = 500.0f; b.drag = 1.0f; b.bounce = 0.5f; b.cooling = 0.9f; b.rest = 5.0f;
 		VectorSet( b.color, 4.5f, 2.4f, 0.8f );
 		break;
 	}

@@ -571,6 +571,8 @@ TR = {
     'Particles': 'Partikel',
     'GPU Sparks': 'GPU-Funken',
     'Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only.': 'Lichtschwert-Treffer, Klingenkontakte, Schüsse und Explosionen sprühen Funken, die die Grafikkarte berechnet: Hunderte auf einmal, glühend, abkühlend und von Wänden und Böden abprallend. Nur Vulkan.',
+    'Spark Embers': 'Funken-Glut',
+    'How long sparks that land on the floor lie there glowing as embers before they go out. 1 as meant, 0 not at all. Vulkan only.': 'Wie lange Funken, die auf dem Boden landen, dort als Glut liegen und glühen, bevor sie ausgehen. 1 wie gedacht, 0 gar nicht. Nur Vulkan.',
     'Soft Particles': 'Weiche Partikel',
     'Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only.': 'Rauch, Staub und Feuer blenden dort weich aus, wo sie auf Wände und Boden treffen, statt mit harter Kante hineinzuschneiden. Nur Vulkan.',
     'Lit Particles': 'Beleuchtete Partikel',

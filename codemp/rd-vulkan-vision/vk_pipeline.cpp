@@ -199,11 +199,12 @@ static void VK_CreateLayouts( void ) {
 	info.pBindings = &texture;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.textureSetLayout ) );
 
-	// the frame as a texture for the gamma pass
+	// the frame as a texture for the gamma pass (and a target for a compute shader: the distance of the level for the
+	// sparks, vk_sparks.cpp; a set its stage is not named for reads nothing there)
 	memset( &post, 0, sizeof( post ) );
 	post.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	post.descriptorCount = 1;
-	post.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	post.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 	info.pNext = NULL;
 	info.flags = 0;
 	info.pBindings = &post;

@@ -22,7 +22,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // to the renderer (ext.EmitSparks, sparkBurst_t of tr_types.h); they live in a ring of VK_SPARKS on the device,
 // shaders/sparks.comp moves them once a frame before the level is drawn (falling, slowed by the air, bouncing off
 // what the distance of the level of the frame before shows, vk.softDepth) and shaders/sparks.vert draws them over the
-// solid level as streaks along their flight, added into the frame of HDR (the bloom takes the hot ones). Tens of
+// solid level as streaks along their flight, added into the frame of HDR (the bloom takes the hot ones). Those that
+// come to rest on a floor lie there as embers for a while (sparkBurst_t rest, v_gpuSparksEmbers), glowing, cooling
+// and throwing a faint glow onto the floor round them. Tens of
 // thousands at once cost the CPU nothing. Needs buffers with device addresses (vk.deviceAddress); without them, or
 // with v_gpuSparks 0, EmitSparks says no and the cgame plays its effects as before.
 
@@ -35,13 +37,14 @@ static const uint32_t vk_sparksComp[] =
 ;
 
 #define VK_SPARKS			65536		// slots of the ring, a power of two (shaders/sparks.comp u.count)
-#define VK_SPARK_ROWS		4			// vec4 a spark
+#define VK_SPARK_ROWS		5			// vec4 a spark (shaders/sparks.comp)
 #define VK_SPARK_BURSTS		128			// bursts a frame
 #define VK_SPARK_HEADER		12			// rows before the bursts in the frame buffer: the view, the numbers of the frame
 #define VK_SPARK_BURST_ROWS	5
 
 cvar_t	*v_gpuSparks;
 static cvar_t	*v_gpuSparksAmount;
+static cvar_t	*v_gpuSparksEmbers;
 
 static struct {
 	qboolean		ready;
@@ -59,6 +62,7 @@ static struct {
 	int				counts[VK_SPARK_BURSTS];
 	int				numBursts;
 	int				aliveUntil;			// ri.Milliseconds() until which a spark may live: no work after it
+	int				embersUntil;		//	and an ember lie: no glow on the floors after it
 	float			view[VK_WET_HEADER][4];	// the view of the distance in vk.softDepth (VK_SparksView)
 	qboolean		viewValid;
 	int				lastTime;
@@ -80,6 +84,8 @@ void VK_SparksInit( void ) {
 	v_gpuSparks = ri.Cvar_Get( "v_gpuSparks", "1", CVAR_ARCHIVE_ND,
 		"Sparks, embers and bits of saber hits, clashes, shots and explosions simulated by the graphics card: thousands of them, glowing, cooling and bouncing off walls and floors. Vulkan only. 0: the sparks of the effects as before" );
 	v_gpuSparksAmount = ri.Cvar_Get( "v_gpuSparksAmount", "1", CVAR_ARCHIVE_ND, "How many of them (v_gpuSparks), 1 as meant, 0.25 to 3" );
+	v_gpuSparksEmbers = ri.Cvar_Get( "v_gpuSparksEmbers", "1", CVAR_ARCHIVE_ND,
+		"How long the sparks (v_gpuSparks) that land on a floor lie there glowing as embers: 1 as meant, 0 not at all, up to 3 times as long" );
 	memset( &sp, 0, sizeof( sp ) );
 	if ( !vk.deviceAddress ) {
 		return;
@@ -150,7 +156,13 @@ qboolean RE_EmitSparks( const sparkBurst_t *burst ) {
 	sp.counts[sp.numBursts] = count;
 	sp.numBursts++;
 	sp.head = ( sp.head + count ) & ( VK_SPARKS - 1 );
-	sp.aliveUntil = Q_max( sp.aliveUntil, ri.Milliseconds() + (int)( Com_Clamp( 0.05f, 10.0f, burst->life ) * 1000.0f ) + 500 );
+	// (the embers' time once, when the burst is taken, so a change of the cvar never cuts a burst in two)
+	sp.bursts[sp.numBursts - 1].rest = Com_Clamp( 0.0f, 10.0f, burst->rest * Com_Clamp( 0.0f, 3.0f, v_gpuSparksEmbers->value ) );
+	const int rest = (int)( sp.bursts[sp.numBursts - 1].rest * 1000.0f );
+	sp.aliveUntil = Q_max( sp.aliveUntil, ri.Milliseconds() + (int)( Com_Clamp( 0.05f, 10.0f, burst->life ) * 1000.0f ) + rest + 500 );
+	if ( rest ) {
+		sp.embersUntil = sp.aliveUntil;
+	}
 	return qtrue;
 }
 
@@ -194,7 +206,7 @@ void VK_SparksSimulate( void ) {
 		Vector4Set4( e[1], s->dir[0], s->dir[1], s->dir[2], (float)sp.counts[b] );
 		Vector4Set4( e[2], s->color[0], s->color[1], s->color[2], Com_Clamp( 0.05f, 10.0f, s->life ) );
 		Vector4Set4( e[3], s->speed, Com_Clamp( 0.0f, 2.0f, s->spread ), Com_Clamp( 0.1f, 16.0f, s->size ), s->gravity );
-		Vector4Set4( e[4], Com_Clamp( 0.0f, 20.0f, s->drag ), Com_Clamp( 0.0f, 1.0f, s->bounce ), Com_Clamp( 0.1f, 8.0f, s->cooling ), 0.0f );
+		Vector4Set4( e[4], Com_Clamp( 0.0f, 20.0f, s->drag ), Com_Clamp( 0.0f, 1.0f, s->bounce ), Com_Clamp( 0.1f, 8.0f, s->cooling ), s->rest );
 	}
 	sp.numBursts = 0;
 
@@ -233,7 +245,8 @@ void VK_SparksSimulate( void ) {
 VK_SparksDraw
 
 Over the solid level of the view of the level (vk_backend.cpp RB_DrawWet): the ring as streaks, added, through
-generic.frag with the round falloff of the dynamic lights as their picture. transform: the one of the level.
+generic.frag with the round falloff of the dynamic lights as their picture, then the glow of the embers on their
+floors (probeCount 1 for shaders/sparks.vert). transform: the one of the level.
 ===============
 */
 void VK_SparksDraw( uint32_t transform ) {
@@ -254,5 +267,9 @@ void VK_SparksDraw( uint32_t transform ) {
 	draw.texMat1[0] = draw.texMat1[5] = 1.0f;
 	vk.drawVertices = VK_SPARKS * 6;
 	VK_DrawTess( &draw, VKP_SPARKS, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, VKC_NONE, qfalse );
+	if ( ri.Milliseconds() <= sp.embersUntil ) {
+		draw.probeCount = 1;
+		VK_DrawTess( &draw, VKP_SPARKS, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, VKC_NONE, qfalse );
+	}
 	vk.drawVertices = 0;
 }

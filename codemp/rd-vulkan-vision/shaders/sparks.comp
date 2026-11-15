@@ -2,14 +2,18 @@
 #extension GL_EXT_buffer_reference : require
 
 // v_gpuSparks (vk_sparks.cpp): the sparks, embers and bits of the effects, simulated on the device once a frame. Each
-// is four rows in a ring of VK_SPARKS: place and life left (seconds), velocity and its whole life, its hot colour and
-// size, its gravity, drag, bounce and how fast it cools. Those that the bursts of this frame give (the frame buffer,
-// after the view) are made anew; the rest fall, slow and bounce off the scene where the distance of the level of the
-// frame before (vk.softDepth, VK_SoftDepth) says there is a surface: the surface from three of its pixels, the speed
-// reflected off it.
+// is five rows in a ring of VK_SPARKS: place and life left (seconds), velocity and its whole life, its hot colour and
+// size, its gravity, drag, bounce and how fast it cools, and the surface it lies on (while it flies x: how often it hit
+// a floor) with w: minus the seconds it will lie glowing once it lands (0: it never does), plus its whole time there
+// once it lies (an ember: then the life left is the time left there and the gravity row's x its heat when it landed).
+// Those that the bursts of this frame give (the frame buffer, after the view) are made anew; the rest fall, slow and
+// bounce off the scene where the distance of the level of the frame before (vk.softDepth, VK_SoftDepth) says there is a
+// surface: the surface from three of its pixels, the speed reflected off it. A spark that may lie and comes down on a
+// floor flat or a second time becomes an ember: it stays where it landed, cools and goes out (shaders/sparks.vert draws
+// it as a glowing dot and its glow on the floor).
 //   frame rows 0-10: the view of that depth as VK_ViewRows has it; 11: seconds since the last frame, 1 when the depth
 //   is there, the number of bursts, a seed; then five rows a burst: origin and first slot, direction and count, colour
-//   and life, speed spread size gravity, drag bounce cooling 0
+//   and life, speed spread size gravity, drag bounce cooling rest (seconds an ember lies, v_gpuSparksEmbers applied)
 
 layout( local_size_x = 256 ) in;
 
@@ -74,7 +78,7 @@ void main() {
 	}
 	vec4 parm = W( 11 );
 	uint bursts = uint( parm.z + 0.5 );
-	uint row = i * 4u;
+	uint row = i * 5u;
 
 	// made by a burst of this frame
 	for ( uint b = 0u; b < bursts; b++ ) {
@@ -102,6 +106,7 @@ void main() {
 		u.sparks.rows[row + 1u] = vec4( dir * e3.x * ( 0.35 + 0.65 * Random( state ) ), life );
 		u.sparks.rows[row + 2u] = vec4( e2.rgb, e3.z * ( 0.6 + 0.8 * Random( state ) ) );
 		u.sparks.rows[row + 3u] = vec4( e3.w, e4.x, e4.y, e4.z );
+		u.sparks.rows[row + 4u] = vec4( 0.0, 0.0, 0.0, -e4.w * ( 0.5 + 0.5 * Random( state ) ) );
 		return;
 	}
 
@@ -109,9 +114,16 @@ void main() {
 	if ( a.w <= 0.0 ) {
 		return;
 	}
+	vec4 lie = u.sparks.rows[row + 4u];
+	float dt = parm.x;
+
+	// an ember: only its time runs out
+	if ( lie.w > 0.0 ) {
+		u.sparks.rows[row].w = a.w - dt;
+		return;
+	}
 	vec4 v = u.sparks.rows[row + 1u];
 	vec4 m = u.sparks.rows[row + 3u];
-	float dt = parm.x;
 
 	a.w -= dt;
 	v.z -= m.x * dt;
@@ -136,10 +148,30 @@ void main() {
 					if ( dot( n, W( 4 ).xyz - p0 ) < 0.0 ) {
 						n = -n;
 					}
+					bool floor = n.z > 0.6;
 					v.xyz = reflect( v.xyz, n ) * m.z;
-					// (along the surface it keeps more of its speed than off it)
+					// (along the surface it keeps more of its speed than off it, but a floor rubs it: it slides a little)
 					v.xyz -= n * dot( v.xyz, n ) * 0.3;
+					if ( floor ) {
+						vec3 off = n * dot( v.xyz, n );
+						v.xyz = off + ( v.xyz - off ) * 0.55;
+					}
 					next = p0 + n * 0.5;
+					// (lying down after a flat landing or the second bounce on a floor: few live long enough to slow to a
+					// stop on their own)
+					if ( floor && lie.w < 0.0 ) {
+						lie.x += 1.0;
+						u.sparks.rows[row + 4u].x = lie.x;
+					}
+					if ( floor && lie.w < 0.0 && ( lie.x >= 2.0 || dot( v.xyz, n ) < 90.0 ) ) {
+						// it lies down: as hot as it still is, but glowing at least orange red
+						float heat = pow( clamp( a.w / max( v.w, 0.001 ), 0.0, 1.0 ), max( m.w, 0.1 ) );
+						u.sparks.rows[row] = vec4( p0 + n * 0.4, -lie.w );
+						u.sparks.rows[row + 1u] = vec4( 0.0, 0.0, 0.0, v.w );
+						u.sparks.rows[row + 3u].x = max( heat, 0.45 );
+						u.sparks.rows[row + 4u] = vec4( n, -lie.w );
+						return;
+					}
 					if ( dot( v.xyz, v.xyz ) < 400.0 ) {
 						a.w = min( a.w, 0.25 );
 					}

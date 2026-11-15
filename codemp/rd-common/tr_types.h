@@ -543,6 +543,7 @@ typedef struct sparkBurst_s {
 	float		bounce;				// the speed kept off a surface, 0 to 1
 	float		cooling;			// 1: they cool over their life, above 1 sooner, below later
 	vec3_t		color;				// hot, may be above 1 for the bloom of HDR
+	float		rest;				// seconds those that land on a floor lie there glowing, each 50 to 100% of it, 0: none
 } sparkBurst_t;
 
 typedef struct refEntity_s {

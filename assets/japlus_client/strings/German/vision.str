@@ -665,6 +665,14 @@ REFERENCE           SABER_HITS_CLASHES_SHOTS_AND_EXPLOSI
 LANG_ENGLISH        "Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only."
 LANG_GERMAN         "Lichtschwert-Treffer, Klingenkontakte, Schüsse und Explosionen sprühen Funken, die die Grafikkarte berechnet: Hunderte auf einmal, glühend, abkühlend und von Wänden und Böden abprallend. Nur Vulkan."
 
+REFERENCE           SPARK_EMBERS
+LANG_ENGLISH        "Spark Embers"
+LANG_GERMAN         "Funken-Glut"
+
+REFERENCE           HOW_LONG_SPARKS_THAT_LAND_ON_THE_FLO
+LANG_ENGLISH        "How long sparks that land on the floor lie there glowing as embers before they go out. 1 as meant, 0 not at all. Vulkan only."
+LANG_GERMAN         "Wie lange Funken, die auf dem Boden landen, dort als Glut liegen und glühen, bevor sie ausgehen. 1 wie gedacht, 0 gar nicht. Nur Vulkan."
+
 REFERENCE           LIT_PARTICLES
 LANG_ENGLISH        "Lit Particles"
 LANG_GERMAN         "Beleuchtete Partikel"
