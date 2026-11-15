@@ -98,58 +98,50 @@ static float Top_Watch( float y ) {
 	return y + TOP_H + HUD_GAP;
 }
 
-// one fighter of the duel header: name, the two numbers and bars; health < 0 when the client does not know it
-static void Top_Fighter( float x, float y, float w, int client, int health, int armor, int maxHealth, qboolean right ) {
-	const float	*name = right ? hudRed : hudBright;
-	const int	align = right ? HUD_RIGHT : HUD_LEFT;
-	const float	nx = right ? x + w : x;
-
-	Hud_TextMid( nx, y + 5.0f, HUD_BODY, name, 1.0f, align, cgs.clientinfo[client].name, w * 0.65f );
-	if ( health < 0 ) {
-		return;
-	}
-	Hud_TextMid( right ? x : x + w, y + 5.0f, HUD_SMALL, hudText, 1.0f, right ? HUD_LEFT : HUD_RIGHT,
-		armor >= 0 ? va( "%i  ^5%i", health, armor ) : va( "%i", health ), 0.0f );
-	Hud_Bar( x, y + 12.0f, w, 3.5f, (float)health / Q_max( 1, maxHealth ),
-		health <= maxHealth / 4 ? hudRed : health <= maxHealth / 2 ? hudWarm : hudGreen, 1.0f, right );
-	if ( armor >= 0 ) {
-		Hud_Bar( x, y + 17.5f, w, 2.0f, (float)armor / Q_max( 1, maxHealth ), hudAccent, 1.0f, right );
-	}
-}
-
 /*
 =================
 Top_Duel
 
-Both fighters of a duel with their health and shield as far as the client knows them (its own, the other one's
-where the server sends the health of the duelists), the score between them in the duel game type.
+A duel as a small card: the head of the other one as he is right now (hud/cg_select3d.c, his picture while he is
+out of sight), that one duels, his name, and his health where the server sends the health of the duelists. What
+is elsewhere is not repeated: the own health is in the panel at the bottom, the score of the duel game type on
+the card of the match.
 =================
 */
 static float Top_Duel( float y ) {
 	const playerState_t	*ps = &cg.snap->ps;
-	const float			x = SCREEN_WIDTH * 0.5f - 200.0f, w = 400.0f, side = 150.0f;
-	int					other = -1, otherHealth = -1, center;
+	const float			face = TOP_H - 8.0f;
+	const qboolean		score = (qboolean)( cgs.gametype == GT_DUEL );
+	const float			w = 160.0f, x = SCREEN_WIDTH * 0.5f - w * 0.5f, tx = x + 4.0f + face + 7.0f;
+	const float			room = x + w - CARD_PAD - tx;
+	const vec4_t		inside = { 0.0f, 0.0f, 0.0f, 0.30f };
+	int					other = -1, otherHealth = -1;
+	vec4_t				rim;
 
 	if ( ps->duelInProgress ) {
 		other = ps->duelIndex;
-	} else if ( cgs.gametype == GT_DUEL && cgs.clientinfo[ps->clientNum].team != TEAM_SPECTATOR ) {
+	} else if ( score && cgs.clientinfo[ps->clientNum].team != TEAM_SPECTATOR ) {
 		other = ps->clientNum == cgs.duelist1 ? cgs.duelist2 : ps->clientNum == cgs.duelist2 ? cgs.duelist1 : -1;
 	}
 	if ( other < 0 || other >= MAX_CLIENTS || !cgs.clientinfo[other].infoValid || ps->stats[STAT_HEALTH] <= 0 ) {
 		return y;
 	}
-	if ( cgs.gametype == GT_DUEL && cgs.showDuelHealths >= 1 ) {
+	if ( score && cgs.showDuelHealths >= 1 ) {
 		otherHealth = other == cgs.duelist1 ? cgs.duelist1health : other == cgs.duelist2 ? cgs.duelist2health : -1;
 	}
 	Hud_Glass( x, y, w, TOP_H, 6.0f, 1.0f, NULL, qfalse );
-	Top_Fighter( x + CARD_PAD, y + 7.0f, side, ps->clientNum, ps->stats[STAT_HEALTH], ps->stats[STAT_ARMOR],
-		ps->stats[STAT_MAX_HEALTH], qfalse );
-	Top_Fighter( x + w - CARD_PAD - side, y + 7.0f, side, other, otherHealth, -1, 100, qtrue );
-	center = (int)( x + w * 0.5f );
-	Hud_Caps( center, y + 9.0f, hudDim, 1.0f, HUD_CENTER, CG_GetStringEdString( "MP_INGAME", "DUELING" ) );
-	if ( cgs.gametype == GT_DUEL ) {
-		Hud_TextMid( center, y + 23.0f, HUD_LARGE, hudBright, 1.0f, HUD_CENTER,
-			va( "%i : %i", cgs.clientinfo[ps->clientNum].score, cgs.clientinfo[other].score ), 0.0f );
+	// his head, in a slot with a red rim
+	Hud_Color( rim, hudRed, 0.9f );
+	Skin_Panel( x + 4.0f, y + 4.0f, face, face, 3.5f, inside, rim );
+	trap->R_SetColor( NULL );
+	if ( !CG_Select3DHead( x + 5.0f, y + 5.0f, face - 2.0f, face - 2.0f, other ) && cgs.clientinfo[other].modelIcon ) {
+		CG_DrawPic( x + 6.0f, y + 6.0f, face - 4.0f, face - 4.0f, cgs.clientinfo[other].modelIcon );
+	}
+	CG_Place2D( PLACE_CENTER );		// (the scene of the head changed what is drawn where)
+	Hud_Caps( tx, y + 9.0f, hudRed, 1.0f, HUD_LEFT, CG_GetStringEdString( "MP_INGAME", "DUELING" ) );
+	Hud_TextMid( tx, y + ( otherHealth >= 0 ? 20.0f : 24.0f ), HUD_BODY, hudBright, 1.0f, HUD_LEFT, cgs.clientinfo[other].name, room );
+	if ( otherHealth >= 0 ) {
+		Hud_Bar( tx, y + 29.0f, room, 3.0f, otherHealth / 100.0f, otherHealth <= 25 ? hudRed : otherHealth <= 50 ? hudWarm : hudGreen, 1.0f, qfalse );
 	}
 	return y + TOP_H + HUD_GAP;
 }

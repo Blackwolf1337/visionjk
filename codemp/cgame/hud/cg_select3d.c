@@ -382,6 +382,64 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 	}
 }
 
+/*
+=================
+CG_Select3DHead
+
+The head of a player in the rect (units of the screen), as he is in the level right now: his model in the pose it
+has, in a scene of its own, the camera before his face. For the card of a duel (hud/cg_hudtop.c). qfalse: he is
+not in sight or has no model yet, the caller draws his picture.
+=================
+*/
+qboolean CG_Select3DHead( float x, float y, float w, float h, int client ) {
+	const float			yawSeen = 155.0f;		// he looks at the camera, turned a little
+	centity_t			*cent;
+	const clientInfo_t	*ci;
+	refEntity_t			ent;
+	mdxaBone_t			matrix;
+	vec3_t				angles, head, light;
+	float				scale, dist;
+
+	if ( client < 0 || client >= MAX_CLIENTS ) {
+		return qfalse;
+	}
+	cent = &cg_entities[client];
+	ci = &cgs.clientinfo[client];
+	if ( !cent->currentValid || !cent->ghoul2 || !ci->infoValid || ci->bolt_head < 0 || ( cent->currentState.eFlags & EF_NODRAW ) ) {
+		return qfalse;
+	}
+	CG_AdjustFrom640( &x, &y, &w, &h );
+	// where the top of his head is with the model at the origin, turned as it is shown
+	VectorSet( angles, 0.0f, yawSeen, 0.0f );
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_head, &matrix, angles, vec3_origin, cg.time, cgs.gameModels, cent->modelScale );
+	BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, head );
+	scale = cent->modelScale[2] > 0.0f ? cent->modelScale[2] : 1.0f;
+	head[2] -= 5.0f * scale;		// the face, not the crown
+	// (a head is about 7 units from its middle to its edge, with a little room)
+	dist = 8.5f * scale / tanf( DEG2RAD( SELECT_FOV * 0.5f ) );
+
+	memset( &ent, 0, sizeof( ent ) );
+	AnglesToAxis( angles, ent.axis );
+	VectorSet( ent.origin, dist - head[0], -head[1], -head[2] );
+	VectorCopy( ent.origin, ent.lightingOrigin );
+	VectorCopy( ent.origin, ent.oldorigin );
+	VectorCopy( cent->modelScale, ent.modelScale );
+	ent.ghoul2 = cent->ghoul2;
+	ent.radius = 64;
+	ent.renderfx = RF_NOSHADOW | RF_LIGHTING_ORIGIN;
+	ent.shaderRGBA[0] = ent.shaderRGBA[1] = ent.shaderRGBA[2] = ent.shaderRGBA[3] = 255;
+
+	trap->R_ClearScene();
+	trap->R_AddRefEntityToScene( &ent );
+	// a white key light in front and above, the accent from behind his left side
+	VectorSet( light, dist - 30.0f * scale, -12.0f * scale, 16.0f * scale );
+	trap->R_AddLightToScene( light, 160.0f * scale, 1.0f, 1.0f, 1.0f );
+	VectorSet( light, dist + 14.0f * scale, 18.0f * scale, 10.0f * scale );
+	trap->R_AddLightToScene( light, 110.0f * scale, selectAccent[0], selectAccent[1], selectAccent[2] );
+	Select3D_Render( x, y, w, h );
+	return qtrue;
+}
+
 // has the item a model the cards can show
 qboolean CG_Select3DModelFor( const gitem_t *item ) {
 	const selectModel_t *m = item ? Select3D_Model( item ) : NULL;
