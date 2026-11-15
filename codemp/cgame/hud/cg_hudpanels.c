@@ -21,7 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_hudpanels.c -- VisionJK: what C adds to the two panels of the new HUD that its menus (ui/vision/hud.menu)
 // draw. In the right panel the slot of the force power that the key of the force uses (with what it costs), or
 // the weapon where the player knows no force, and the name of the weapon; round both panels the colour of the
-// team; above the right panel a strip of chips: whom one watches, the fuel of the jetpack and of the cloak, the
+// team; above the right panel a strip of chips: the fuel of the jetpack and of the cloak, the
 // e-web one stands at. The parts stand at the rects of items of the menu file (force_slot, weapon_label, panel),
 // so it can move them. The strip above the left panel is cg_powers.c. Not from JA+.
 
@@ -199,8 +199,8 @@ void CG_HudPanelsDraw( void ) {
 =================
 CG_HudRightStrip
 
-The chips above the right panel, from its right edge to the left, each only while it says something: whom one
-watches, the e-web, the cloak and the jetpack while they are not full. The caller has set PLACE_RIGHT.
+The chips above the right panel, from its right edge to the left, each only while it says something: the
+ammo warning, the e-web, the cloak and the jetpack while they are not full. The caller has set PLACE_RIGHT.
 =================
 */
 void CG_HudRightStrip( void ) {
@@ -214,9 +214,6 @@ void CG_HudRightStrip( void ) {
 	Hud_PanelRect( qtrue, &panel );
 	x = panel.x + panel.w;
 	y = panel.y - HUD_GAP - STRIP_H;
-	if ( ps->pm_flags & PMF_FOLLOW ) {
-		x -= Hud_Chip( x, y, STRIP_H, 0, cgs.clientinfo[ps->clientNum].name, hudWarm, 1.0f, HUD_RIGHT, -1.0f ) + HUD_GAP;
-	}
 	if ( CG_HudAmmoWarning() ) {
 		x -= Hud_Chip( x, y, STRIP_H, 0, CG_HudAmmoWarning(), cg.lowAmmoWarning == 2 ? hudRed : hudWarm, 1.0f, HUD_RIGHT, -1.0f ) + HUD_GAP;
 	}

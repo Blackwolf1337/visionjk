@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg/bg_saga.h"
 #include "cg_hudkit.h"
 
+extern const char *CG_GetLocationString( const char *loc );	// cg_main.c
+
 #define SIEGE_OBJECTIVES	16
 
 extern int	cg_siegeDeathTime;		// cg_draw.c: when one comes back after a death in siege
@@ -162,7 +164,8 @@ float CG_HudTeamList( float y ) {
 		const clientInfo_t	*ci = &cgs.clientinfo[rows[i]];
 		const float			mid = y + 4.0f + i * rowH + rowH * 0.5f;
 		const float			alpha = ci->health > 0 ? 1.0f : 0.5f;
-		const char			*place = ci->location > 0 ? CG_ConfigString( CS_LOCATIONS + ci->location ) : "";
+		// (a name that starts with @ is a reference into the texts of the game)
+		const char			*place = ci->location > 0 ? CG_GetLocationString( CG_ConfigString( CS_LOCATIONS + ci->location ) ) : "";
 		float				nx = x + 6.0f;
 		char				upper[64];
 
@@ -181,6 +184,37 @@ float CG_HudTeamList( float y ) {
 
 static const float *Siege_HullColor( float f ) {
 	return f <= 0.25f ? hudRed : f <= 0.5f ? hudWarm : hudBright;
+}
+
+/*
+=================
+CG_HudRadarLegend
+
+Under the radar, from the right edge: what its colours are. The radar marks the own team green and the other one
+red, whatever the colour of the team is; an objective has its own picture. Returns the y under it.
+=================
+*/
+float CG_HudRadarLegend( float y ) {
+	const float	h = 11.0f, dot = 3.5f, gap = 9.0f;
+	const vec4_t green = { 0.2f, 1.0f, 0.3f, 1.0f }, red = { 1.0f, 0.25f, 0.2f, 1.0f };
+	char		team[48], enemy[48];
+	float		w, x;
+
+	Q_strncpyz( team, CG_VisionText( "Team" ), sizeof( team ) );
+	Q_strncpyz( enemy, CG_VisionText( "Enemy" ), sizeof( enemy ) );
+	Q_strupr( team );
+	Q_strupr( enemy );
+	w = 6.0f + dot + 3.0f + Hud_TextWidth( team, HUD_CAPS ) + gap + dot + 3.0f + Hud_TextWidth( enemy, HUD_CAPS ) + 6.0f;
+	x = SCREEN_WIDTH - HUD_EDGE - w;
+	y += 2.0f;
+	Hud_Glass( x, y, w, h, 3.0f, 1.0f, NULL, qtrue );
+	x += 6.0f;
+	Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, dot * 0.5f, green, NULL );
+	x += dot + 3.0f;
+	x += Hud_Caps( x, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, team ) + gap;
+	Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, dot * 0.5f, red, NULL );
+	Hud_Caps( x + dot + 3.0f, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, enemy );
+	return y + h + HUD_GAP;
 }
 
 /*

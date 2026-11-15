@@ -6,6 +6,9 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Write a message': ('Écrire un message', 'Escribir un mensaje'),
+    'Limit reached after %s': ('Limite atteinte après %s', 'Límite alcanzado tras %s'),
+    'Enemy': ('Ennemi', 'Enemigo'),
     'Commands': ('Commandes', 'Comandos'),
     'Ready': ('Prêt', 'Listo'),
     'Staff': ('Bâton', 'Bastón'),

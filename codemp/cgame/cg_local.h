@@ -2166,6 +2166,7 @@ int CG_FpsValue( void );
 const char *CG_TimerText( void );
 void CG_HudTargetName( const char *name, qboolean pilot, const float *tint, float alpha, int client );
 void CG_HudProgress( int slot, qhandle_t icon, const char *caption, float fraction, const float *rgb );
+float CG_HudRadarLegend( float y );
 void CG_HudLockOn( float cx, float cy, float hw, float hh, float fraction, qboolean locked );
 float CG_HudPowerups( float y );
 float CG_HudAttacker( float y );

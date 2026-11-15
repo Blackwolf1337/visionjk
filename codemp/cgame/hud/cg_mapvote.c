@@ -117,16 +117,40 @@ At the end of a level, after the scoreboard: the winner over it, the vote under 
 */
 void CG_HudIntermission( void ) {
 	mapVoteState_t	state;
-	char			title[160], about[160];
+	static int		endTime;
+	char			title[160], about[256];
 	int				i, total = 0;
 
+	// how long the level ran: from its start to the first frame of its end (a limit ended it)
+	{
+		static int endStart;
+
+		if ( endStart != cgs.levelStartTime || !endTime || endTime > cg.time ) {
+			endStart = cgs.levelStartTime;
+			endTime = cg.time;
+		}
+	}
 	MapVote_Winner( title, sizeof( title ) );
+	Com_sprintf( about, sizeof( about ), "%s  |  %s  |  %s", CG_VisionText( "Match over" ), BG_GetGametypeString( cgs.gametype ),
+		Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "mapname" ) );
+	if ( endTime > cgs.levelStartTime ) {
+		Q_strcat( about, sizeof( about ), "  |  " );
+		Q_strcat( about, sizeof( about ), CG_VisionTextWith( "Limit reached after %s", Hud_Clock( endTime - cgs.levelStartTime ) ) );
+	}
+	Q_strupr( about );
+	Hud_Caps( SCREEN_WIDTH * 0.5f, 22.0f, hudAccent, 1.0f, HUD_CENTER, about );
 	if ( title[0] ) {
-		Com_sprintf( about, sizeof( about ), "%s  |  %s  |  %s", CG_VisionText( "Match over" ), BG_GetGametypeString( cgs.gametype ),
-			Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "mapname" ) );
-		Q_strupr( about );
-		Hud_Caps( SCREEN_WIDTH * 0.5f, 22.0f, hudAccent, 1.0f, HUD_CENTER, about );
 		Hud_TextMid( SCREEN_WIDTH * 0.5f, 42.0f, HUD_HUGE * 1.2f, hudBright, 1.0f, HUD_CENTER, title, 400.0f );
+	}
+	// how to write to the others, at the lower left where the chat is
+	if ( !cg.demoPlayback ) {
+		const char	*key = Hud_KeyFor( "messagemode", "T" ), *what = CG_VisionText( "Write a message" );
+		const float	w = Hud_KeyHintWidth( key, what ) + 12.0f, h = 14.0f;
+
+		CG_Place2D( PLACE_LEFT );
+		Hud_Glass( HUD_EDGE, SCREEN_HEIGHT - HUD_EDGE - h, w, h, 3.5f, 1.0f, NULL, qtrue );
+		Hud_KeyHint( HUD_EDGE + 6.0f, SCREEN_HEIGHT - HUD_EDGE - h * 0.5f, key, what, 1.0f );
+		CG_Place2D( PLACE_CENTER );
 	}
 	// how to say one is ready for the next level, until one has: over the vote, or at the bottom edge
 	if ( cg.snap && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR && !cg.demoPlayback

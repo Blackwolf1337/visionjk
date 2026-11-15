@@ -21,8 +21,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_matchcard.c -- VisionJK: the card of the match at the upper right of the new HUD, in place of the score line
 // and the leader of the game (CG_DrawMiniScoreboard, CG_DrawEnemyInfo): the game type and the clock, the place
 // and the points of the player with the leader under them; in a team game the two teams with their score and
-// where their flag is; in a duel the two duelists. Siege has its own timers and no card. Hidden while the
-// scoreboard shows, which says the same. Not from JA+.
+// where their flag is; in a duel the two duelists. Siege has its own timers and no card. It stays
+// while the scoreboard shows. Not from JA+.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -114,7 +114,8 @@ float CG_MatchCardDraw( float y ) {
 	char				gametype[64], value[128], label[64];
 	float				h, cy;
 
-	if ( !v_hudMatchCard.integer || cgs.gametype == GT_SIEGE || cg.showScores || CG_ScoresShown() ) {
+	// (it stays while the scoreboard shows)
+	if ( !v_hudMatchCard.integer || cgs.gametype == GT_SIEGE ) {
 		return y;
 	}
 

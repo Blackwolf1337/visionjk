@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // stays for v_hud 0): the picture of the power, the rim in the colour of its side, pulsing; a chip slides in when
 // its power starts and fades away when it ends. The recovery after rage is a chip with a bar that runs down (the
 // server sends when it ends; how long another power still runs it does not send). The strip also has the tags of
-// the player's state after the powers: whom one watches (first), the alternate dimension of JA+, the flag one
+// the player's state after the powers: the alternate dimension of JA+, the flag one
 // carries. It stands above the panel where the menu file puts it. Not from JA+.
 
 #include "cgame/cg_local.h"
@@ -102,10 +102,7 @@ void CG_PowerChips( void ) {
 	Hud_PanelRect( qfalse, &panel );
 	x = panel.x;
 	bottom = panel.y - HUD_GAP;
-	// whom one watches, before what runs on him
-	if ( ps->pm_flags & PMF_FOLLOW ) {
-		x += Hud_Chip( x, bottom - CHIP_SIZE, CHIP_SIZE, 0, cgs.clientinfo[ps->clientNum].name, hudWarm, 1.0f, HUD_LEFT, -1.0f ) + CHIP_GAP;
-	}
+	// (whom one watches is in the bar at the top, hud/cg_hudtop.c, and nowhere else)
 	if ( ps->fd.forceRageRecoveryTime > cg.time && ps->fd.forceRageRecoveryTime != rageEnd ) {
 		rageEnd = ps->fd.forceRageRecoveryTime;
 		rageStart = cg.time;

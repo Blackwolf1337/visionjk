@@ -2449,6 +2449,18 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           WRITE_A_MESSAGE
+LANG_ENGLISH        "Write a message"
+LANG_FRENCH         "Écrire un message"
+
+REFERENCE           LIMIT_REACHED_AFTER_S
+LANG_ENGLISH        "Limit reached after %s"
+LANG_FRENCH         "Limite atteinte après %s"
+
+REFERENCE           ENEMY
+LANG_ENGLISH        "Enemy"
+LANG_FRENCH         "Ennemi"
+
 REFERENCE           COMMANDS
 LANG_ENGLISH        "Commands"
 LANG_FRENCH         "Commandes"

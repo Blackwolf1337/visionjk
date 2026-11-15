@@ -4338,7 +4338,12 @@ static void CG_DrawUpperRight( void ) {
 			y = CG_HudTeamList( y );
 		}
 		if ( ( cgs.gametype >= GT_TEAM || cg.predictedPlayerState.m_iVehicleNum ) && cg_drawRadar.integer ) {
+			const float before = y;
+
 			y = CG_DrawRadar( y );
+			if ( y != before ) {
+				y = CG_HudRadarLegend( y );
+			}
 		}
 		// (the other duelist is in the header of the duel, CG_HudTopDraw, the jedi master on the card)
 		if ( CG_SpecHudShown() ) {
@@ -5040,6 +5045,16 @@ void CG_DrawHealthBar(centity_t *cent, float chX, float chY, float chW, float ch
 	float percent = ((float)cent->currentState.health/(float)cent->currentState.maxhealth)*HEALTH_WIDTH;
 	if (percent <= 0)
 	{
+		return;
+	}
+
+	// VisionJK: in the new HUD a slim bar as the one under a name has it: amber for what belongs to nobody, green
+	// for what is the own team's, red for the other one's (an objective of a siege, a turret, a vehicle)
+	if ( CG_HudNewLook() ) {
+		const float	*tint = ( !cent->currentState.teamowner || cgs.gametype < GT_TEAM ) ? hudWarm
+			: cent->currentState.teamowner == cg.predictedPlayerState.persistant[PERS_TEAM] ? hudGreen : hudRed;
+
+		Hud_Bar( chX + chW * 0.5f - 34.0f, y, 68.0f, 2.6f, (float)cent->currentState.health / (float)cent->currentState.maxhealth, tint, 1.0f, qfalse );
 		return;
 	}
 
@@ -8477,6 +8492,10 @@ static void CG_Draw2D( void ) {
 		CG_DrawCrosshairNames();
 		CG_SaberClashFlare();
 	} else {
+		// VisionJK: the panels of the new HUD stay where they are under its scoreboard
+		if ( cg.showScores && cg.snap->ps.stats[STAT_HEALTH] > 0 && cg_drawStatus.integer && CG_HudNewLook() ) {
+			CG_DrawStats();
+		}
 		// don't draw any status if dead or the scoreboard is being explicitly shown
 		if ( !cg.showScores && cg.snap->ps.stats[STAT_HEALTH] > 0 ) {
 
