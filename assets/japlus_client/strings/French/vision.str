@@ -622,8 +622,20 @@ LANG_ENGLISH        "Slice Bodies"
 LANG_FRENCH         "Trancher les corps"
 
 REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
-LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
-LANG_FRENCH         "Un coup de sabre mortel tranche le corps le long du mouvement, avec une coupe brûlée qui rougeoie. Demande le rendu Vulkan."
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. A body that lies on the ground can be cut again by a swing through it: several times, once, or not at all. Needs the Vulkan renderer."
+LANG_FRENCH         "Un coup de sabre mortel tranche le corps le long du mouvement, avec une coupe brûlée qui rougeoie. Un corps étendu au sol peut être tranché de nouveau par un coup qui le traverse : plusieurs fois, une fois ou pas du tout. Demande le rendu Vulkan."
+
+REFERENCE           ON_LYING_BODIES_OFTEN
+LANG_ENGLISH        "On, Lying Bodies Often"
+LANG_FRENCH         "Activé, corps au sol souvent"
+
+REFERENCE           ON_LYING_BODIES_ONCE
+LANG_ENGLISH        "On, Lying Bodies Once"
+LANG_FRENCH         "Activé, corps au sol une fois"
+
+REFERENCE           ON_NOT_LYING_BODIES
+LANG_ENGLISH        "On, Not Lying Bodies"
+LANG_FRENCH         "Activé, pas les corps au sol"
 
 REFERENCE           BLOOD
 LANG_ENGLISH        "Blood"

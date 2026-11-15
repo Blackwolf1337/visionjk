@@ -1879,11 +1879,15 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_slice
-			type					ITEM_TYPE_YESNO
+			name					vision_multi_v_slice
+			type					ITEM_TYPE_MULTI
 			text					@VISION_SLICE_BODIES
 			descText				@VISION_A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
 			cvar					"v_slice"
+			cvarFloatList
+			{
+				@VISION_OFF 0 @VISION_ON_LYING_BODIES_OFTEN 1 @VISION_ON_LYING_BODIES_ONCE 2 @VISION_ON_NOT_LYING_BODIES 3
+			}
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 258 432 52
 			page					3
