@@ -48,8 +48,8 @@ static int Panels_SelectedPower( void ) {
 =================
 Panels_Slot
 
-The slot at the left of the right panel: the selected force power on dark glass, the rim in the colour of its
-side, what it costs under it and darkened while the force is too low, a glow while it runs. Without a force power
+The slot at the left of the right panel: the selected force power on dark glass in the middle of it, the rim in
+the colour of its side, darkened while the force is too low for it, a glow while it runs. Without a force power
 the weapon in hand.
 =================
 */
@@ -87,19 +87,17 @@ static void Panels_Slot( const rectDef_t *r ) {
 	Skin_Panel( r->x, r->y, r->w, r->h, 3.5f, inside, rim );
 	// in 3D as the cards of the selection rows have it (hud/cg_select3d.c): a power as the turning holo disc, a
 	// weapon as its model; the picture where there is no model
-	size = r->h * ( fp >= 0 ? 0.74f : 0.86f );
+	size = r->h * 0.86f;
 	trap->R_SetColor( NULL );
-	if ( !CG_Select3DIcon( r->x + ( r->w - size ) * 0.5f, r->y + r->h * ( fp >= 0 ? 0.02f : 0.07f ), size, size, item, fp >= 0 ? icon : 0, tint, qfalse, 1.0f ) ) {
+	if ( !CG_Select3DIcon( r->x + ( r->w - size ) * 0.5f, r->y + ( r->h - size ) * 0.5f, size, size, item, fp >= 0 ? icon : 0, tint, qfalse, 1.0f ) ) {
 		size = r->h * 0.74f;
-		CG_DrawPic( r->x + ( r->w - size ) * 0.5f, r->y + r->h * 0.13f, size, size, icon );
+		CG_DrawPic( r->x + ( r->w - size ) * 0.5f, r->y + ( r->h - size ) * 0.5f, size, size, icon );
 	}
-	if ( cost > 0 ) {
-		Hud_TextMid( r->x + r->w * 0.5f, r->y + r->h * 0.85f, HUD_CAPS, tint, 1.0f, HUD_CENTER, va( "%i", cost ), 0.0f );
-		if ( ps->fd.forcePower < cost ) {
-			const vec4_t shade = { 0.02f, 0.03f, 0.06f, 0.6f };
+	// (what the power costs is not written: the slot is darkened while the force is too low for it)
+	if ( cost > 0 && ps->fd.forcePower < cost ) {
+		const vec4_t shade = { 0.02f, 0.03f, 0.06f, 0.6f };
 
-			Skin_Panel( r->x, r->y, r->w, r->h, 3.5f, shade, NULL );
-		}
+		Skin_Panel( r->x, r->y, r->w, r->h, 3.5f, shade, NULL );
 	}
 }
 
