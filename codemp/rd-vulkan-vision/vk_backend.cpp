@@ -1061,7 +1061,10 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	backEnd.currentEntity = &tr.worldEntity;
 
 	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
-		if ( drawSurf->sort == oldSort ) {
+		// VisionJK: marks on a tessellated surface are a batch of their own for each such surface (srfPoly_t tessShader)
+		shader_t *markTess = ( *drawSurf->surface == SF_POLY ) ? ( (srfPoly_t *)drawSurf->surface )->tessShader : NULL;
+
+		if ( drawSurf->sort == oldSort && markTess == tess.markTess ) {
 			// fast path, same as previous sort
 			RB_AddDrawSurf( drawSurf );
 			continue;
@@ -1145,7 +1148,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		// change the tess parameters if needed. A "entityMergable" shader is a shader that can have surfaces
 		// from separate entities merged into a single batch, like smoke and blood puff sprites
 		if ( shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
-			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) ) {
+			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) || markTess != tess.markTess ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
 				if ( shader->sort > SS_BANNER ) {
@@ -1169,6 +1172,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			}
 #endif
 			RB_BeginSurface( shader, fogNum );
+			tess.markTess = markTess;
 			oldShader = shader;
 			oldFogNum = fogNum;
 			oldDlighted = dlighted;

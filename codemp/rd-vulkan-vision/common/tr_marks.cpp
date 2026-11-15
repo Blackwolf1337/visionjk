@@ -31,6 +31,149 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MARKER_OFFSET			0	// 1
 
 /*
+===============================================================================
+
+VisionJK: marks on tessellated surfaces
+
+A tessellated stage (keyword tessellation, vk_shade.cpp) moves its surface along the normal by the height of its
+normal map, so a mark laid flat on the polygon lies under the bumps and shows only where they are low. While a mark
+is clipped onto such a surface, every point it gets is kept here with the texture coordinates and the normal of the
+surface there. The cgame copies those points into its poly unchanged (cg_marks.c), so RE_AddPolyToScene finds them
+again and the poly is drawn through the same tessellation and height (srfPoly_t tessShader).
+
+===============================================================================
+*/
+
+#define MARK_TESS_SIZE			16384	// points kept, a power of two; the oldest are written over
+#define MARK_TESS_PROBES		16
+
+typedef struct {
+	vec3_t			xyz;
+	float			st[2];
+	vec3_t			normal;
+	const shader_t	*shader;			// NULL: empty
+} markTessPoint_t;
+
+static markTessPoint_t	markTess[MARK_TESS_SIZE];
+static const world_t	*markTessWorld;
+static qboolean			markTessAny;
+
+/*
+=================
+R_TessStage
+
+The stage of a shader that is tessellated, NULL for none.
+=================
+*/
+const shaderStage_t *R_TessStage( const shader_t *shader ) {
+	if ( shader->remappedShader ) {
+		shader = shader->remappedShader;
+	}
+	for ( int i = 0; i < shader->numUnfoggedPasses && shader->stages[i].active; i++ ) {
+		const shaderStage_t *stage = &shader->stages[i];
+
+		if ( stage->mat && stage->mat->tessHeight > 0.0f ) {
+			return stage;
+		}
+	}
+	return NULL;
+}
+
+static uint32_t R_MarkTessHash( const vec3_t xyz ) {
+	uint32_t bits[3];
+
+	memcpy( bits, xyz, sizeof( bits ) );
+	return ( ( bits[0] * 73856093u ) ^ ( bits[1] * 19349663u ) ^ ( bits[2] * 83492791u ) ) & ( MARK_TESS_SIZE - 1 );
+}
+
+/*
+=================
+R_MarkTessFind
+
+The surface under a point of a mark on a tessellated surface, its texture coordinates and its normal there.
+qfalse: the point was never given out by R_MarkFragments on such a surface.
+=================
+*/
+qboolean R_MarkTessFind( const vec3_t xyz, shader_t **shader, float *st, vec3_t normal ) {
+	if ( !markTessAny || markTessWorld != tr.world ) {
+		return qfalse;
+	}
+	for ( uint32_t i = 0, h = R_MarkTessHash( xyz ); i < MARK_TESS_PROBES; i++, h = ( h + 1 ) & ( MARK_TESS_SIZE - 1 ) ) {
+		const markTessPoint_t *p = &markTess[h];
+
+		if ( !p->shader ) {
+			return qfalse;
+		}
+		if ( !memcmp( p->xyz, xyz, sizeof( vec3_t ) ) ) {
+			*shader = (shader_t *)p->shader;
+			st[0] = p->st[0];
+			st[1] = p->st[1];
+			VectorCopy( p->normal, normal );
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+/*
+=================
+R_MarkTessKeep
+
+The points R_AddMarkFragments() just gave out from the triangle xyz of a tessellated surface: their texture
+coordinates and normals from those of the corners, by where they lie in it.
+=================
+*/
+static void R_MarkTessKeep( const shader_t *shader, const float *points, int numPoints, const float *xyz[3], const float *st[3],
+	const float *normals[3] ) {
+	vec3_t	e0, e1, e2;
+	float	d00, d01, d11, denom;
+
+	if ( markTessWorld != tr.world ) {
+		memset( markTess, 0, sizeof( markTess ) );
+		markTessWorld = tr.world;
+	}
+	VectorSubtract( xyz[1], xyz[0], e0 );
+	VectorSubtract( xyz[2], xyz[0], e1 );
+	d00 = DotProduct( e0, e0 );
+	d01 = DotProduct( e0, e1 );
+	d11 = DotProduct( e1, e1 );
+	denom = d00 * d11 - d01 * d01;
+	if ( fabsf( denom ) < 1e-6f ) {
+		return;
+	}
+	for ( int n = 0; n < numPoints; n++ ) {
+		const float	*point = points + n * 3;
+		float		b[3], d20, d21;
+		uint32_t	h = R_MarkTessHash( point ), slot = h;
+
+		VectorSubtract( point, xyz[0], e2 );
+		d20 = DotProduct( e2, e0 );
+		d21 = DotProduct( e2, e1 );
+		b[1] = ( d11 * d20 - d01 * d21 ) / denom;
+		b[2] = ( d00 * d21 - d01 * d20 ) / denom;
+		b[0] = 1.0f - b[1] - b[2];
+		// an empty place or this point again, else the first place is written over
+		for ( int i = 0; i < MARK_TESS_PROBES; i++, h = ( h + 1 ) & ( MARK_TESS_SIZE - 1 ) ) {
+			if ( !markTess[h].shader || !memcmp( markTess[h].xyz, point, sizeof( vec3_t ) ) ) {
+				slot = h;
+				break;
+			}
+		}
+		markTessPoint_t *p = &markTess[slot];
+		VectorCopy( point, p->xyz );
+		p->st[0] = b[0] * st[0][0] + b[1] * st[1][0] + b[2] * st[2][0];
+		p->st[1] = b[0] * st[0][1] + b[1] * st[1][1] + b[2] * st[2][1];
+		VectorClear( p->normal );
+		for ( int c = 0; c < 3; c++ ) {
+			VectorMA( p->normal, b[c], normals[c], p->normal );
+		}
+		VectorNormalize( p->normal );
+		p->shader = shader;
+		markTessAny = qtrue;
+	}
+}
+
+/*
 =============
 R_ChopPolyBehindPlane
 
@@ -133,7 +276,7 @@ R_BoxSurfaces_r
 
 =================
 */
-void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **list, int listsize, int *listlength, vec3_t dir) {
+void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **list, shader_t **shaders, int listsize, int *listlength, vec3_t dir) {
 
 	int			s, c;
 	msurface_t	*surf, **mark;
@@ -146,7 +289,7 @@ void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **li
 		} else if (s == 2) {
 			node = node->children[1];
 		} else {
-			R_BoxSurfaces_r(node->children[0], mins, maxs, list, listsize, listlength, dir);
+			R_BoxSurfaces_r(node->children[0], mins, maxs, list, shaders, listsize, listlength, dir);
 			node = node->children[1];
 		}
 	}
@@ -183,6 +326,7 @@ void R_BoxSurfaces_r(mnode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t **li
 		if (surf->viewCount != tr.viewCount) {
 			surf->viewCount = tr.viewCount;
 			list[*listlength] = (surfaceType_t *) surf->data;
+			shaders[*listlength] = surf->shader;
 			(*listlength)++;
 		}
 		mark++;
@@ -291,6 +435,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	int				numsurfaces, numPlanes;
 	int				i, j, k, m, n;
 	surfaceType_t	*surfaces[64];
+	shader_t		*surfaceShaders[64];
 	vec3_t			mins, maxs;
 	int				returnedFragments;
 	int				returnedPoints;
@@ -343,7 +488,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	numPlanes = numPoints + 2;
 
 	numsurfaces = 0;
-	R_BoxSurfaces_r(tr.world->nodes, mins, maxs, surfaces, 64, &numsurfaces, projectionDir);
+	R_BoxSurfaces_r(tr.world->nodes, mins, maxs, surfaces, surfaceShaders, 64, &numsurfaces, projectionDir);
 	//assert(numsurfaces <= 64);
 	//assert(numsurfaces != 64);
 
@@ -351,6 +496,10 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	returnedFragments = 0;
 
 	for ( i = 0 ; i < numsurfaces ; i++ ) {
+		// VisionJK: the points on a tessellated surface are kept (R_MarkTessKeep)
+		const shader_t	*tessShader = R_TessStage( surfaceShaders[i] ) ? surfaceShaders[i] : NULL;
+		const float		*cornerXyz[3], *cornerSt[3], *cornerNormal[3];
+		int				before;
 
 		if (*surfaces[i] == SF_GRID) {
 
@@ -407,11 +556,22 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorNormalizeFast(normal);
 					if (DotProduct(normal, projectionDir) < -0.1) {
 						// add the fragments of this triangle
+						before = returnedPoints;
 						R_AddMarkFragments(numClipPoints, clipPoints,
 										   numPlanes, normals, dists,
 										   maxPoints, pointBuffer,
 										   maxFragments, fragmentBuffer,
 										   &returnedPoints, &returnedFragments, mins, maxs);
+						if ( tessShader && returnedPoints > before ) {
+							const drawVert_t *c[3] = { &dv[0], &dv[cv->width], &dv[1] };
+
+							for ( j = 0; j < 3; j++ ) {
+								cornerXyz[j] = c[j]->xyz;
+								cornerSt[j] = c[j]->st;
+								cornerNormal[j] = c[j]->normal;
+							}
+							R_MarkTessKeep( tessShader, pointBuffer + before * 3, returnedPoints - before, cornerXyz, cornerSt, cornerNormal );
+						}
 
 						if ( returnedFragments == maxFragments ) {
 							return returnedFragments;	// not enough space for more fragments
@@ -431,11 +591,22 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorNormalizeFast(normal);
 					if (DotProduct(normal, projectionDir) < -0.05) {
 						// add the fragments of this triangle
+						before = returnedPoints;
 						R_AddMarkFragments(numClipPoints, clipPoints,
 										   numPlanes, normals, dists,
 										   maxPoints, pointBuffer,
 										   maxFragments, fragmentBuffer,
 										   &returnedPoints, &returnedFragments, mins, maxs);
+						if ( tessShader && returnedPoints > before ) {
+							const drawVert_t *c[3] = { &dv[1], &dv[cv->width], &dv[cv->width + 1] };
+
+							for ( j = 0; j < 3; j++ ) {
+								cornerXyz[j] = c[j]->xyz;
+								cornerSt[j] = c[j]->st;
+								cornerNormal[j] = c[j]->normal;
+							}
+							R_MarkTessKeep( tessShader, pointBuffer + before * 3, returnedPoints - before, cornerXyz, cornerSt, cornerNormal );
+						}
 
 						if ( returnedFragments == maxFragments ) {
 							return returnedFragments;	// not enough space for more fragments
@@ -462,11 +633,20 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					continue;
 				}
 				// add the fragments of this face
+				before = returnedPoints;
 				R_AddMarkFragments( 3 , clipPoints,
 								   numPlanes, normals, dists,
 								   maxPoints, pointBuffer,
 								   maxFragments, fragmentBuffer,
 								   &returnedPoints, &returnedFragments, mins, maxs);
+				if ( tessShader && returnedPoints > before ) {
+					for ( j = 0; j < 3; j++ ) {
+						cornerXyz[j] = surf->points[indexes[k + j]];
+						cornerSt[j] = surf->points[indexes[k + j]] + 3;
+						cornerNormal[j] = surf->plane.normal;
+					}
+					R_MarkTessKeep( tessShader, pointBuffer + before * 3, returnedPoints - before, cornerXyz, cornerSt, cornerNormal );
+				}
 				if ( returnedFragments == maxFragments ) {
 					return returnedFragments;	// not enough space for more fragments
 				}
@@ -489,10 +669,21 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 				}
 
 				// add the fragments of this face
+				before = returnedPoints;
 				R_AddMarkFragments(3, clipPoints,
 								   numPlanes, normals, dists,
 								   maxPoints, pointBuffer,
 								   maxFragments, fragmentBuffer, &returnedPoints, &returnedFragments, mins, maxs);
+				if ( tessShader && returnedPoints > before ) {
+					for ( j = 0; j < 3; j++ ) {
+						const drawVert_t *c = &surf->verts[surf->indexes[k + j]];
+
+						cornerXyz[j] = c->xyz;
+						cornerSt[j] = c->st;
+						cornerNormal[j] = c->normal;
+					}
+					R_MarkTessKeep( tessShader, pointBuffer + before * 3, returnedPoints - before, cornerXyz, cornerSt, cornerNormal );
+				}
 				if(returnedFragments == maxFragments)
 				{
 					return returnedFragments;	// not enough space for more fragments

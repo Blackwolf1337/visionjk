@@ -377,7 +377,8 @@ qboolean VK_UploadTess( void ) {
 		stat[i].indexes += tess.numIndexes;
 	}
 	// the normals only for a stage that takes them, see VK_UploadGeometry()
-	qboolean normals = qfalse;
+	// (and for marks on a tessellated surface: their bumps go along the normal, srfPoly_t tessShader)
+	qboolean normals = (qboolean)( tess.markTess != NULL );
 
 	for ( i = 0; i < tess.shader->numUnfoggedPasses && tess.xstages[i].active && !normals; i++ ) {
 		const shaderStage_t *pStage = &tess.xstages[i];

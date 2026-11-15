@@ -782,7 +782,13 @@ typedef struct srfPoly_s {
 	int				fogIndex;
 	int				numVerts;
 	polyVert_t		*verts;
+	// VisionJK: a mark on a tessellated surface of the level (R_MarkTessFind): that surface's shader, and for each
+	// vertex its texture coordinates and normal there (POLY_TESS_FLOATS), so the mark follows the bumps; else NULL
+	struct shader_s	*tessShader;
+	float			*tessVerts;
 } srfPoly_t;
+
+#define POLY_TESS_FLOATS	5		// s, t, normal
 
 typedef struct srfDisplayList_s {
 	surfaceType_t	surfaceType;
@@ -1665,6 +1671,10 @@ struct shaderCommands_s
 
 	//rww - doing a fade, don't compute shader color/alpha overrides
 	bool		fading;
+
+	// VisionJK: a batch of marks on a tessellated surface (srfPoly_t tessShader): that surface's shader, the texture
+	// coordinates there in texCoords[][1] and its normals in normal
+	shader_t	*markTess;
 };
 
 #ifdef _MSC_VER
@@ -1773,6 +1783,8 @@ MARKERS, POLYGON PROJECTION ON WORLD POLYGONS
 */
 
 int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projection, int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer );
+qboolean R_MarkTessFind( const vec3_t xyz, shader_t **shader, float *st, vec3_t normal );
+const shaderStage_t *R_TessStage( const shader_t *shader );
 
 
 /*
@@ -2049,6 +2061,7 @@ typedef struct backEndData_s {
 	trMiniRefEntity_t	miniEntities[MAX_MINI_ENTITIES];
 	srfPoly_t	*polys;//[MAX_POLYS];
 	polyVert_t	*polyVerts;//[MAX_POLYVERTS];
+	float		*polyTessVerts;		// POLY_TESS_FLOATS for each of polyVerts
 	renderCommandList_t	commands;
 } backEndData_t;
 

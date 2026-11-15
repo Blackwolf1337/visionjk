@@ -164,6 +164,32 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 
 		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
 
+		// VisionJK: a mark whose points R_MarkFragments gave out on a tessellated surface follows its bumps
+		poly->tessShader = NULL;
+		poly->tessVerts = NULL;
+		if ( tr.world ) {
+			const shader_t *sh = R_GetShaderByHandle( hShader );
+
+			if ( sh->polygonOffset || sh->sort == SS_DECAL ) {
+				float *out = &backEndData->polyTessVerts[r_numpolyverts * POLY_TESS_FLOATS];
+				shader_t *surface = NULL;
+
+				for ( i = 0; i < numVerts; i++ ) {
+					shader_t *found;
+
+					if ( !R_MarkTessFind( poly->verts[i].xyz, &found, out + i * POLY_TESS_FLOATS, out + i * POLY_TESS_FLOATS + 2 )
+						|| ( surface && found != surface ) ) {
+						break;
+					}
+					surface = found;
+				}
+				if ( i == numVerts && surface ) {
+					poly->tessShader = surface;
+					poly->tessVerts = out;
+				}
+			}
+		}
+
 		// done.
 		r_numpolys++;
 		r_numpolyverts += numVerts;

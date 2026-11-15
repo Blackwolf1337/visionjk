@@ -63,7 +63,10 @@ void RB_CheckOverflow( int verts, int indexes ) {
 		Com_Error(ERR_DROP, "RB_CheckOverflow: indices > MAX (%d > %d)", indexes, SHADER_MAX_INDEXES );
 	}
 
+	shader_t *markTess = tess.markTess;
+
 	RB_BeginSurface(tess.shader, tess.fogNum );
+	tess.markTess = markTess;
 }
 
 
@@ -255,6 +258,16 @@ void RB_SurfacePolychain( srfPoly_t *p ) {
 		VectorCopy( p->verts[i].xyz, tess.xyz[numv] );
 		tess.texCoords[numv][0][0] = p->verts[i].st[0];
 		tess.texCoords[numv][0][1] = p->verts[i].st[1];
+		// VisionJK: on a tessellated surface the texture coordinates and normal of that surface (srfPoly_t tessShader);
+		// the batch has only marks on that one (RB_RenderDrawSurfList)
+		if ( p->tessVerts ) {
+			const float *t = p->tessVerts + i * POLY_TESS_FLOATS;
+
+			tess.texCoords[numv][1][0] = t[0];
+			tess.texCoords[numv][1][1] = t[1];
+			VectorCopy( t + 2, tess.normal[numv] );
+			tess.normal[numv][3] = 0.0f;
+		}
 		byteAlias_t *baDest = (byteAlias_t *)&tess.vertexColors[numv++],
 			*baSource = (byteAlias_t *)&p->verts[ i ].modulate;
 		baDest->i = baSource->i;
