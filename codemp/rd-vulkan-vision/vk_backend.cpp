@@ -929,7 +929,10 @@ static void RB_DepthPrepass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	rb_depthPrepass = qtrue;
 	for ( int i = 0; i < numDrawSurfs; i++ ) {
 		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
-		if ( entityNum != REFENTITYNUM_WORLD || !RB_PrepassShader( shader ) ) {
+		// (what the shader is remapped to decides, as it is what gets drawn: a server that remaps a texture to a
+		// shader without stages, a sky, makes the surface invisible, and its depth alone would leave it standing
+		// there in black)
+		if ( entityNum != REFENTITYNUM_WORLD || !RB_PrepassShader( shader->remappedShader ? shader->remappedShader : shader ) ) {
 			continue;
 		}
 		if ( shader != oldShader ) {
