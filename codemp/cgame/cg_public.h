@@ -841,7 +841,7 @@ typedef struct cgameImport_s {
 		// back to the animation (the ragdoll of the cut bodies, cg_ragdoll.c). NULL: the renderer has none.
 		int				(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
 		// cut (or NULL): on the first call the cut of the part in the world and hidden[count] the bones of another part;
-		// each vertex keeps the side it had in that first pose
+		// each vertex keeps the side it had in that first pose. A later call with a cut takes only hidden again.
 		qboolean		(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
 		// frosted glass behind a panel drawn next (ext.DrawBackdrop of the renderer): qtrue when it is drawn. Only
 		// where the ROM cvar v_cgameBackdrop is 1, an older engine ends this table before.

@@ -1539,6 +1539,14 @@ Ghoul2 Insert End
 			int curTimeDif = ((cg.time + 60000) - cent->bodyFadeTime);
 			int tMult = curTimeDif*0.08;
 
+			// VisionJK: the body is faded and burnt away (BODY_GONE_MSEC of g_client.c BodySink), nothing of it is left
+			// to draw. A server without that change keeps the entity 18 s more: drawn it still showed in passes that
+			// take every model of the frame.
+			if ( curTimeDif > 6000 )
+			{
+				return;
+			}
+
 			ent.renderfx |= RF_FORCE_ENT_ALPHA;
 
 			/*

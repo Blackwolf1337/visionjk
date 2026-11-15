@@ -50,7 +50,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SLICE_DROPS			64			// drops of blood in flight
 #define SLICE_SPOTS			90			// wet spots a frame the blood may take of WET_MAX_SPOTS
 #define SLICE_BLEED_MSEC	20000		// a cut part bleeds less and less for this long
-#define SLICE_PARTS			4			// (as RAG_PARTS of cg_ragdoll.c)
+#define SLICE_PARTS			8			// (as RAG_PARTS of cg_ragdoll.c)
+#define SLICE_MAX_CUTS		6			// joints a lying body can be cut at after its first cut (their choice 2026-11-15)
+#define SLICE_CUT_PAUSE		250			// msec between two such cuts of one body, and after the first cut
+#define SLICE_LYING_REACH	20.0f		// a blade this near the pelvis of a lying body cuts it
+#define SLICE_JOINT_REACH	8.0f		// a blade this near a joint of a cut body cuts it there
+#define SLICE_LYING_MSEC	150			// how recent the blade has to be for those
+#define SLICE_BLAST_REACH	72.0f		// an explosion this near a body that dies by it bursts it (their choice 2026-11-15)
+#define SLICE_BLAST_MSEC	400			// the kill message and the explosion this far apart still go together
 #define SLICE_PRINTS		32			// bloody footprints at once, the oldest goes
 #define SLICE_PRINT_MSEC	30000		// a bloody footprint fades in this time
 #define SLICE_PRINT_STEPS	8			// steps out of a pool that leave prints, fainter with each
@@ -85,6 +92,11 @@ typedef struct slice_s {
 	float		airSpeed[SLICE_PARTS];	// how fast it flew while in the air (a hard landing splashes)
 
 	qboolean	expired;		// v_sliceTime ran out: parts and blood gone, the slot keeps the body from being drawn whole
+
+	int			cuts;			// joints cut since, by sabers through the lying parts
+	int			nextCut;		// cg.time from which the next of those may come
+	qboolean	gib;			// burst by an explosion: more joints go at the split, the parts are thrown from gibOrigin
+	vec3_t		gibOrigin;
 } slice_t;
 
 
@@ -238,8 +250,17 @@ qboolean CG_Sliced( int num ) {
 
 // Starts a cut of the body of victim by plane (the normal towards what stays with the body after the flip below),
 // the blade having swept along sweep. qfalse: the plane misses the body.
+static qboolean CG_SliceStartAt( int victim, int body, int killer, const vec4_t planeIn, const vec3_t sweep, const vec3_t keep );
+
 static qboolean CG_SliceStart( int victim, int killer, const vec4_t planeIn, const vec3_t sweep ) {
-	const centity_t	*cent = &cg_entities[victim];
+	return CG_SliceStartAt( victim, victim, killer, planeIn, sweep, NULL );
+}
+
+// victim: the client whose body it is, body: the entity that shows it now (the dead player himself, or the copy the
+// server left). keep: the point whose side stays the body (NULL: his feet, standing; and the plane has to pass through
+// his box). A body lying there has no box to test, the ragdoll split tells whether the plane misses it.
+static qboolean CG_SliceStartAt( int victim, int body, int killer, const vec4_t planeIn, const vec3_t sweep, const vec3_t keep ) {
+	const centity_t	*cent = &cg_entities[body];
 	vec4_t			plane;
 	vec3_t			feet;
 	int				i, above = 0, below = 0;
@@ -247,7 +268,7 @@ static qboolean CG_SliceStart( int victim, int killer, const vec4_t planeIn, con
 
 	VectorCopy4( planeIn, plane );
 	// it has to pass through the body: the corners of his box on both sides
-	for ( i = 0; i < 8; i++ ) {
+	for ( i = 0; i < 8 && !keep; i++ ) {
 		vec3_t corner;
 
 		corner[0] = cent->lerpOrigin[0] + ( ( i & 1 ) ? 15.0f : -15.0f );
@@ -259,18 +280,22 @@ static qboolean CG_SliceStart( int victim, int killer, const vec4_t planeIn, con
 			below++;
 		}
 	}
-	if ( !above || !below ) {
+	if ( !keep && ( !above || !below ) ) {
 		return qfalse;
 	}
 	// the side of his feet stays with the body
-	VectorCopy( cent->lerpOrigin, feet );
-	feet[2] -= 22.0f;
+	if ( keep ) {
+		VectorCopy( keep, feet );
+	} else {
+		VectorCopy( cent->lerpOrigin, feet );
+		feet[2] -= 22.0f;
+	}
 	if ( DotProduct( feet, plane ) < plane[3] ) {
 		VectorScale( plane, -1.0f, plane );
 		plane[3] = -plane[3];
 	}
 	for ( i = 0; i < SLICE_MAX; i++ ) {
-		if ( slices[i].active && slices[i].body == victim ) {
+		if ( slices[i].active && slices[i].body == body ) {
 			CG_SliceFree( &slices[i] );		// (a new death of his while the old body is still his)
 		}
 	}
@@ -278,7 +303,12 @@ static qboolean CG_SliceStart( int victim, int killer, const vec4_t planeIn, con
 	s->active = qtrue;
 	s->victim = victim;
 	s->killer = killer;
-	s->body = victim;
+	s->body = body;
+	if ( body != victim ) {
+		s->copied = cg.time;		// (the copy is there already)
+		s->seen = qtrue;
+	}
+	s->nextCut = cg.time + SLICE_CUT_PAUSE;
 	s->time = cg.time;
 	s->rag = -1;
 	s->alpha = 1.0f;
@@ -592,11 +622,333 @@ qboolean CG_SliceDrawBody( centity_t *cent, refEntity_t *ent, const vec3_t angle
 			VectorCopy( centre, s->dripLast[k] );
 		}
 	}
+	if ( s->gib ) {
+		// burst by an explosion: two to four more of the limbs off at their joints, and every part thrown from it
+		static const int limbs[] = { 2, 3, 4, 7, 8, 5, 6, 9, 10 };	// (cg_ragdoll.c ragJointDefs: neck, shoulders, hips, elbows, knees)
+		int		order[ARRAY_LEN( limbs )], want = 2 + rand() % 3, cut = 0, j;
+		vec3_t	away;
+
+		for ( j = 0; j < (int)ARRAY_LEN( limbs ); j++ ) {
+			order[j] = limbs[j];
+		}
+		for ( j = (int)ARRAY_LEN( limbs ) - 1; j > 0; j-- ) {
+			const int r = rand() % ( j + 1 ), t = order[j];
+
+			order[j] = order[r];
+			order[r] = t;
+		}
+		VectorSubtract( centre, s->gibOrigin, away );
+		away[2] = Q_max( away[2], 0.0f ) + 16.0f;
+		VectorNormalize( away );
+		for ( j = 0; j < (int)ARRAY_LEN( limbs ) && cut < want; j++ ) {
+			const int n = CG_RagCutJoint( s->rag, order[j], away, 90.0f );
+
+			if ( n >= 0 && n < SLICE_PARTS ) {
+				CG_RagJoint( s->rag, order[j], s->dripLast[n], NULL );
+				cut++;
+			}
+		}
+		s->cuts = SLICE_MAX_CUTS;		// (in pieces already)
+		CG_RagExplosionScaled( s->gibOrigin, 160.0f, 0.45f );
+	}
 	if ( CG_GoreAir() ) {
 		CG_SliceSpray( s, centre );
+		if ( s->gib ) {
+			CG_SliceSpray( s, centre );
+		}
 		CG_SliceBloodOnView( s, centre );
 	}
 	return qtrue;
+}
+
+// ------------------------------------------------------------------------------------------------ cuts after the kill
+
+// A client who swings a lit saber now: his blade history may cut a body that lies there
+static qboolean CG_SliceSwinging( int client ) {
+	const centity_t	*cent = &cg_entities[client];
+	int				move, holstered, weapon;
+
+	if ( !cgs.clientinfo[client].infoValid ) {
+		return qfalse;
+	}
+	if ( cg.snap && client == cg.snap->ps.clientNum ) {
+		if ( cg.predictedPlayerState.stats[STAT_HEALTH] <= 0 ) {
+			return qfalse;
+		}
+		move = cg.predictedPlayerState.saberMove;
+		holstered = cg.predictedPlayerState.saberHolstered;
+		weapon = cg.predictedPlayerState.weapon;
+	} else {
+		if ( !cent->currentValid || ( cent->currentState.eFlags & EF_DEAD ) ) {
+			return qfalse;
+		}
+		move = cent->currentState.saberMove;
+		holstered = cent->currentState.saberHolstered;
+		weapon = cent->currentState.weapon;
+	}
+	return (qboolean)( weapon == WP_SABER && holstered < 2 && ( BG_SaberInAttack( move ) || BG_SaberInSpecial( move ) ) );
+}
+
+static void CG_SliceSwingOrigin( int client, vec3_t out ) {
+	if ( cg.snap && client == cg.snap->ps.clientNum ) {
+		VectorCopy( cg.predictedPlayerState.origin, out );
+	} else {
+		VectorCopy( cg_entities[client].lerpOrigin, out );
+	}
+}
+
+// the plane of a blade and the way it swept (as CG_SliceKill), qfalse for a stab
+static qboolean CG_SlicePlane( const vec3_t base, const vec3_t tip, const vec3_t sweep, vec4_t plane, vec3_t across ) {
+	vec3_t axis;
+
+	VectorSubtract( tip, base, axis );
+	if ( VectorNormalize( axis ) < 1.0f ) {
+		return qfalse;
+	}
+	VectorMA( sweep, -DotProduct( sweep, axis ), axis, across );
+	if ( VectorNormalize( across ) < 1.0f ) {
+		return qfalse;
+	}
+	CrossProduct( axis, across, plane );
+	VectorNormalize( plane );
+	plane[3] = DotProduct( plane, base );
+	return qtrue;
+}
+
+// a bolt of a model as it is drawn now
+static qboolean CG_SliceBolt( centity_t *cent, const char *name, vec3_t out ) {
+	mdxaBone_t	m;
+	const int	bolt = cent->ghoul2 ? trap->G2API_AddBolt( cent->ghoul2, 0, name ) : -1;
+
+	if ( bolt < 0 || !trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt, &m, cent->lerpAngles, cent->lerpOrigin, cg.time,
+		cgs.gameModels, cent->modelScale ) ) {
+		return qfalse;
+	}
+	BG_GiveMeVectorFromMatrix( &m, ORIGIN, out );
+	return qtrue;
+}
+
+/*
+=================
+CG_SliceLying
+
+Every frame (CG_SliceScene): sabers swung through bodies that lie there after the kill (their wish 2026-11-15). A dead
+player or a body the server left, not cut yet, is cut along the swing that went through it; a cut body is cut again at
+the joint a blade went through, up to SLICE_MAX_CUTS joints, each part a ragdoll of its own.
+=================
+*/
+static void CG_SliceLying( void ) {
+	int		swingers[MAX_CLIENTS], numSwingers = 0, i, k, j;
+	vec3_t	swingAt[MAX_CLIENTS];
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		if ( CG_SliceSwinging( i ) ) {
+			CG_SliceSwingOrigin( i, swingAt[numSwingers] );
+			swingers[numSwingers++] = i;
+		}
+	}
+	if ( !numSwingers || !cg.snap ) {
+		return;
+	}
+
+	// bodies not cut yet: the dead players and the bodies the server left
+	for ( i = -1; i < cg.snap->numEntities; i++ ) {
+		const int	num = i < 0 ? -1 : cg.snap->entities[i].number;
+		centity_t	*cent;
+		vec3_t		pelvis, feet, base, tip, sweep, across;
+		vec4_t		plane;
+		int			victim;
+
+		if ( num < 0 ) {
+			continue;
+		}
+		cent = &cg_entities[num];
+		if ( !cent->ghoul2 || CG_Sliced( num ) ) {
+			continue;
+		}
+		if ( num < MAX_CLIENTS && cent->currentState.eType == ET_PLAYER && ( cent->currentState.eFlags & EF_DEAD ) ) {
+			victim = num;
+		} else if ( cent->currentState.eType == ET_BODY && !cent->bodyFadeTime ) {
+			victim = cent->currentState.clientNum;
+			if ( victim < 0 || victim >= MAX_CLIENTS ) {
+				continue;
+			}
+		} else {
+			continue;
+		}
+		for ( k = 0; k < numSwingers; k++ ) {
+			if ( swingers[k] == victim || DistanceSquared( swingAt[k], cent->lerpOrigin ) > 200.0f * 200.0f ) {
+				continue;
+			}
+			if ( !CG_SliceBolt( cent, "pelvis", pelvis ) || !CG_SliceBolt( cent, "ltalus", feet ) ) {
+				break;
+			}
+			if ( CG_SaberCutNearWithin( &cgs.clientinfo[swingers[k]], pelvis, SLICE_LYING_REACH, SLICE_LYING_MSEC, base, tip, sweep )
+				&& CG_SlicePlane( base, tip, sweep, plane, across ) ) {
+				vec3_t chest, axis;
+
+				// A swing along a lying body would split it lengthwise: cut it across the waist instead.
+				if ( CG_SliceBolt( cent, "thoracic", chest ) ) {
+					VectorSubtract( chest, pelvis, axis );
+					if ( VectorNormalize( axis ) > 1.0f && fabsf( DotProduct( plane, axis ) ) < 0.5f ) {
+						VectorCopy( axis, plane );
+						plane[3] = DotProduct( plane, pelvis );
+					}
+				}
+				CG_SliceStartAt( victim, num, swingers[k], plane, across, feet );
+				break;
+			}
+		}
+	}
+
+	// cut bodies: a blade through one of the joints of a part
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		slice_t *s = &slices[i];
+
+		if ( !s->active || s->rag < 0 || s->expired || s->cuts >= SLICE_MAX_CUTS || cg.time < s->nextCut ) {
+			continue;
+		}
+		for ( j = 0; j < CG_RagJoints(); j++ ) {
+			vec3_t	at, base, tip, sweep;
+			int		part, n = -1;
+
+			if ( !CG_RagJoint( s->rag, j, at, &part ) ) {
+				continue;
+			}
+			for ( k = 0; k < numSwingers && n < 0; k++ ) {
+				if ( DistanceSquared( swingAt[k], at ) > 150.0f * 150.0f
+					|| !CG_SaberCutNearWithin( &cgs.clientinfo[swingers[k]], at, SLICE_JOINT_REACH, SLICE_LYING_MSEC, base, tip, sweep ) ) {
+					continue;
+				}
+				if ( VectorNormalize( sweep ) < 0.01f ) {
+					VectorSet( sweep, 0.0f, 0.0f, 1.0f );
+				}
+				n = CG_RagCutJoint( s->rag, j, sweep, 140.0f );
+				if ( n >= 0 ) {
+					s->cuts++;
+					s->nextCut = cg.time + SLICE_CUT_PAUSE;
+					if ( n < SLICE_PARTS ) {
+						s->streakMark[n] = -1;
+						s->dripLeft[n] = Q_flrand( 8.0f, 20.0f );
+						VectorCopy( at, s->dripLast[n] );
+					}
+					if ( CG_GoreAir() ) {
+						VectorCopy( sweep, s->sweep );
+						CG_SliceSpray( s, at );
+					}
+				}
+			}
+			if ( n >= 0 ) {
+				break;		// (one joint a frame)
+			}
+		}
+	}
+}
+
+// ------------------------------------------------------------------------------------------------ explosions
+
+static struct {
+	vec3_t	origin;
+	int		time;
+} sliceBlasts[8];
+static int	sliceNextBlast;
+static int	sliceBlastDeath[MAX_CLIENTS];	// cg.time of a death by an explosion whose explosion has not come yet
+
+static qboolean CG_SliceBlastMod( int mod ) {
+	switch ( mod ) {
+	case MOD_REPEATER_ALT:
+	case MOD_REPEATER_ALT_SPLASH:
+	case MOD_FLECHETTE_ALT_SPLASH:
+	case MOD_ROCKET:
+	case MOD_ROCKET_SPLASH:
+	case MOD_ROCKET_HOMING:
+	case MOD_ROCKET_HOMING_SPLASH:
+	case MOD_THERMAL:
+	case MOD_THERMAL_SPLASH:
+	case MOD_TRIP_MINE_SPLASH:
+	case MOD_TIMED_MINE_SPLASH:
+	case MOD_DET_PACK_SPLASH:
+	case MOD_CONC:
+	case MOD_CONC_ALT:
+		return qtrue;
+	default:
+		return qfalse;
+	}
+}
+
+// the body of victim bursts by the explosion at origin: cut through the waist, the rest at the split (CG_SliceDrawBody)
+static void CG_SliceBurst( int victim, const vec3_t origin ) {
+	const centity_t	*cent = &cg_entities[victim];
+	vec4_t			plane;
+	vec3_t			feet, away;
+	int				i;
+
+	VectorSet( plane, Q_flrand( -0.3f, 0.3f ), Q_flrand( -0.3f, 0.3f ), 1.0f );
+	VectorNormalize( plane );
+	plane[3] = DotProduct( plane, cent->lerpOrigin ) + Q_flrand( -4.0f, 8.0f );
+	VectorCopy( cent->lerpOrigin, feet );
+	feet[2] -= 22.0f;
+	VectorSubtract( cent->lerpOrigin, origin, away );
+	away[2] = Q_max( away[2], 0.0f ) + 16.0f;
+	VectorNormalize( away );
+	if ( !CG_SliceStartAt( victim, victim, -1, plane, away, NULL ) ) {
+		return;
+	}
+	for ( i = 0; i < SLICE_MAX; i++ ) {
+		if ( slices[i].active && slices[i].body == victim ) {
+			slices[i].gib = qtrue;
+			VectorCopy( origin, slices[i].gibOrigin );
+		}
+	}
+}
+
+/*
+=================
+CG_SliceBlastKill
+
+EV_OBITUARY (cg_event.c): a kill by an explosion that went off right at the body bursts it into pieces, if that
+explosion was seen here a moment ago; else it is waited for (CG_SliceExplosion).
+=================
+*/
+void CG_SliceBlastKill( int victim, int mod ) {
+	int i;
+
+	if ( !CG_SliceOn() || victim < 0 || victim >= MAX_CLIENTS || !CG_SliceBlastMod( mod ) ) {
+		return;
+	}
+	for ( i = 0; i < (int)ARRAY_LEN( sliceBlasts ); i++ ) {
+		if ( sliceBlasts[i].time && cg.time - sliceBlasts[i].time <= SLICE_BLAST_MSEC && cg.time >= sliceBlasts[i].time
+			&& Distance( sliceBlasts[i].origin, cg_entities[victim].lerpOrigin ) <= SLICE_BLAST_REACH ) {
+			CG_SliceBurst( victim, sliceBlasts[i].origin );
+			return;
+		}
+	}
+	sliceBlastDeath[victim] = cg.time;
+}
+
+/*
+=================
+CG_SliceExplosion
+
+An explosion went off at origin (cg_weapons.c): kept a moment for the kill message, and a death waiting for it bursts
+=================
+*/
+void CG_SliceExplosion( const vec3_t origin ) {
+	int i;
+
+	VectorCopy( origin, sliceBlasts[sliceNextBlast].origin );
+	sliceBlasts[sliceNextBlast].time = cg.time;
+	sliceNextBlast = ( sliceNextBlast + 1 ) % ARRAY_LEN( sliceBlasts );
+	if ( !CG_SliceOn() ) {
+		return;
+	}
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		if ( sliceBlastDeath[i] && cg.time - sliceBlastDeath[i] <= SLICE_BLAST_MSEC && cg.time >= sliceBlastDeath[i]
+			&& Distance( origin, cg_entities[i].lerpOrigin ) <= SLICE_BLAST_REACH ) {
+			sliceBlastDeath[i] = 0;
+			CG_SliceBurst( i, origin );
+		}
+	}
 }
 
 // The copy of the body of clientNum the server leaves when he comes back (CG_BodyQueueCopy, body is its entity): the
@@ -981,6 +1333,7 @@ void CG_SliceScene( void ) {
 	if ( !CG_SliceOn() ) {
 		return;
 	}
+	CG_SliceLying();
 	CG_RagFrame();
 	for ( i = 0; i < SLICE_MAX; i++ ) {
 		slice_t *s = &slices[i];
