@@ -873,6 +873,7 @@ typedef struct cg_s {
 	int			centerPrintY;
 	char		centerPrint[1024];
 	int			centerPrintLines;
+	int			centerPrintRepeats;		// VisionJK: how often it was printed again soon after the last one
 
 	int			oldammo;
 	int			oldAmmoTime;
@@ -2134,6 +2135,13 @@ qboolean CG_IsDurationPower( int power );
 void CG_HudPanelsDraw( void );
 void CG_HudRightStrip( void );
 float CG_MatchCardDraw( float y );
+void CG_HudTopDraw( void );
+void CG_HudCenterString( void );
+void CG_HudDeathCard( void );
+float CG_HudNoticeCard( float y, const char *caption, const char *text, const float *tint, qhandle_t icon, qboolean blink );
+void CG_DrawDisconnectAt( float cardY );
+int CG_WarmupTick( void );
+qboolean CG_KillfeedLastDeath( int *killer, int *weapon, const char **text, int *time );
 qboolean ForcePower_Valid( int i );
 int CG_ForceSelectRank( int fp );
 const char *CG_ItemName( const gitem_t *item );

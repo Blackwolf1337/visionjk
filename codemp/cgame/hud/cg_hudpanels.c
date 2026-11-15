@@ -34,7 +34,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // the power the key of the force uses: what was picked while the row is up, else what the server has
 static int Panels_SelectedPower( void ) {
-	if ( cg.forceSelect >= 0 && cg.forceSelect < NUM_FORCE_POWERS && ForcePower_Valid( cg.forceSelect ) ) {
+	// (watching somebody: his, not what one picked oneself before)
+	if ( !( cg.snap->ps.pm_flags & PMF_FOLLOW ) && cg.forceSelect >= 0 && cg.forceSelect < NUM_FORCE_POWERS && ForcePower_Valid( cg.forceSelect ) ) {
 		return cg.forceSelect;
 	}
 	if ( ForcePower_Valid( cg.snap->ps.fd.forcePowerSelected ) ) {

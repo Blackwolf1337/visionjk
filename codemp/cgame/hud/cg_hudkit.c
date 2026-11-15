@@ -153,10 +153,15 @@ Hud_Key
 The cap of a key with its name in it, its middle at midY. align as Hud_Text. Returns its width.
 =================
 */
-float Hud_Key( float x, float midY, const char *name, float alpha, int align ) {
+float Hud_Key( float x, float midY, const char *text, float alpha, int align ) {
 	const float	h = 8.0f, pad = 3.0f;
-	const float	w = Q_max( h, Hud_TextWidth( name, HUD_CAPS ) + 2.0f * pad );
+	char		name[64];
+	float		w;
 	vec4_t		edge;
+
+	Q_strncpyz( name, text, sizeof( name ) );
+	Q_strupr( name );
+	w = Q_max( h, Hud_TextWidth( name, HUD_CAPS ) + 2.0f * pad );
 
 	if ( align == HUD_RIGHT ) {
 		x -= w;
@@ -191,7 +196,11 @@ float Hud_KeyHint( float x, float midY, const char *key, const char *what, float
 
 // how wide Hud_KeyHint draws that
 float Hud_KeyHintWidth( const char *key, const char *what ) {
-	return Q_max( 8.0f, Hud_TextWidth( key, HUD_CAPS ) + 6.0f ) + 3.0f + Hud_TextWidth( what, HUD_SMALL );
+	char name[64];
+
+	Q_strncpyz( name, key, sizeof( name ) );
+	Q_strupr( name );
+	return Q_max( 8.0f, Hud_TextWidth( name, HUD_CAPS ) + 6.0f ) + 3.0f + Hud_TextWidth( what, HUD_SMALL );
 }
 
 /*

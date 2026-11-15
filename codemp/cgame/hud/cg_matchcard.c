@@ -186,9 +186,16 @@ float CG_MatchCardDraw( float y ) {
 			px += Hud_TextMid( px, mid, HUD_LARGE, hudBright, 1.0f, HUD_LEFT, va( "%i.", rank ), 0.0f ) + 4.0f;
 			Hud_Caps( px, mid + 1.0f, hudDim, 1.0f, HUD_LEFT, CG_VisionTextWith( "of %i", va( "%i", Card_Players() ) ) );
 		}
-		Q_strncpyz( points, CG_GetStringEdString( "MP_INGAME", "SCORE" ), sizeof( points ) );
-		px = x + CARD_W - CARD_PAD - Hud_Caps( x + CARD_W - CARD_PAD, mid + 1.0f, hudDim, 1.0f, HUD_RIGHT, points ) - 4.0f;
-		Hud_TextMid( px, mid, HUD_LARGE * 0.85f, hudBright, 1.0f, HUD_RIGHT, va( "%i", ps->persistant[PERS_SCORE] ), 0.0f );
+		if ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR && !( ps->pm_flags & PMF_FOLLOW ) ) {
+			// one who flies free has no points: how many play
+			Q_strncpyz( points, CG_VisionText( "Players" ), sizeof( points ) );
+			px = x + CARD_W - CARD_PAD - Hud_Caps( x + CARD_W - CARD_PAD, mid + 1.0f, hudDim, 1.0f, HUD_RIGHT, points ) - 4.0f;
+			Hud_TextMid( px, mid, HUD_LARGE * 0.85f, hudBright, 1.0f, HUD_RIGHT, va( "%i", Card_Players() ), 0.0f );
+		} else {
+			Q_strncpyz( points, CG_GetStringEdString( "MP_INGAME", "SCORE" ), sizeof( points ) );
+			px = x + CARD_W - CARD_PAD - Hud_Caps( x + CARD_W - CARD_PAD, mid + 1.0f, hudDim, 1.0f, HUD_RIGHT, points ) - 4.0f;
+			Hud_TextMid( px, mid, HUD_LARGE * 0.85f, hudBright, 1.0f, HUD_RIGHT, va( "%i", ps->persistant[PERS_SCORE] ), 0.0f );
+		}
 		cy += CARD_BIG;
 	}
 

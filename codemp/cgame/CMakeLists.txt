@@ -290,6 +290,7 @@ set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_killfeed.c"
 	"${MPDir}/cgame/hud/cg_hudkit.c"
 	"${MPDir}/cgame/hud/cg_hudpanels.c"
+	"${MPDir}/cgame/hud/cg_hudtop.c"
 	"${MPDir}/cgame/hud/cg_matchcard.c"
 	"${MPDir}/cgame/hud/cg_powers.c"
 	"${MPDir}/cgame/hud/cg_select3d.c"

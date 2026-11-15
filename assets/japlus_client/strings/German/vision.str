@@ -2525,6 +2525,46 @@ REFERENCE           YOU_CARRY_THE_FLAG
 LANG_ENGLISH        "You carry the flag"
 LANG_GERMAN         "Du trägst die Flagge"
 
+REFERENCE           ATTACK
+LANG_ENGLISH        "Attack"
+LANG_GERMAN         "Angriff"
+
+REFERENCE           NEXT_PLAYER
+LANG_ENGLISH        "Next player"
+LANG_GERMAN         "Nächster Spieler"
+
+REFERENCE           JUMP
+LANG_ENGLISH        "Jump"
+LANG_GERMAN         "Springen"
+
+REFERENCE           FLY_FREE
+LANG_ENGLISH        "Fly free"
+LANG_GERMAN         "Frei fliegen"
+
+REFERENCE           FLYING_FREE
+LANG_ENGLISH        "Flying free"
+LANG_GERMAN         "Frei fliegend"
+
+REFERENCE           FOLLOW_A_PLAYER
+LANG_ENGLISH        "Follow a player"
+LANG_GERMAN         "Einem Spieler folgen"
+
+REFERENCE           WARMUP
+LANG_ENGLISH        "Warmup"
+LANG_GERMAN         "Aufwärmen"
+
+REFERENCE           KILLED_BY
+LANG_ENGLISH        "Killed by"
+LANG_GERMAN         "Getötet von"
+
+REFERENCE           YOU_DIED
+LANG_ENGLISH        "You died"
+LANG_GERMAN         "Du bist gestorben"
+
+REFERENCE           RESPAWN
+LANG_ENGLISH        "Respawn"
+LANG_GERMAN         "Wiedereinstieg"
+
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
 LANG_GERMAN         "Oberfläche"

@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "cg_hudkit.h"
 
 #define KILLFEED_MAX		8
 #define KILLFEED_FADE		1000		// the last milliseconds of a line fade it out
@@ -42,8 +43,16 @@ typedef struct {
 static killfeedLine_t	killfeed[KILLFEED_MAX];
 static int				killfeedCount;
 
-// the icon of what killed: a weapon of the game, the sentry, the dark force; 0 for the rest
-static qhandle_t Killfeed_Icon( int mod ) {
+// the last death of the player himself, for the card while he is dead (hud/cg_hudtop.c), also with tay_killfeed 0
+static struct {
+	int		killer;			// -1: nobody
+	int		weapon;			// WP_NONE: none to name
+	char	text[128];
+	int		time;
+} lastDeath;
+
+// the weapon of the game that killed, WP_NONE for what is no weapon
+static int Killfeed_Weapon( int mod ) {
 	int weapon;
 
 	switch ( mod ) {
@@ -75,11 +84,41 @@ static qhandle_t Killfeed_Icon( int mod ) {
 	case MOD_DET_PACK_SPLASH:		weapon = WP_DET_PACK;			break;
 	case MOD_CONC:
 	case MOD_CONC_ALT:				weapon = WP_CONCUSSION;			break;
-	case MOD_SENTRY:				return trap->R_RegisterShaderNoMip( "gfx/hud/i_icon_sentrygun" );
-	case MOD_FORCE_DARK:			return trap->R_RegisterShaderNoMip( "gfx/mp/f_icon_dk_l1" );
-	default:						return 0;
+	default:						weapon = WP_NONE;				break;
 	}
-	return cgs.media.weaponIcons[weapon];
+	return weapon;
+}
+
+// the icon of what killed: a weapon of the game, the sentry, the dark force; 0 for the rest
+static qhandle_t Killfeed_Icon( int mod ) {
+	const int weapon = Killfeed_Weapon( mod );
+
+	if ( mod == MOD_SENTRY ) {
+		return trap->R_RegisterShaderNoMip( "gfx/hud/i_icon_sentrygun" );
+	}
+	if ( mod == MOD_FORCE_DARK ) {
+		return trap->R_RegisterShaderNoMip( "gfx/mp/f_icon_dk_l1" );
+	}
+	return weapon != WP_NONE ? cgs.media.weaponIcons[weapon] : 0;
+}
+
+/*
+=================
+CG_KillfeedLastDeath
+
+How the player died last: the client that killed him (-1 nobody), the weapon (WP_NONE), the sentence of the
+console, when. qfalse: he has not died on this level.
+=================
+*/
+qboolean CG_KillfeedLastDeath( int *killer, int *weapon, const char **text, int *time ) {
+	if ( !lastDeath.time || lastDeath.time > cg.time ) {
+		return qfalse;
+	}
+	*killer = lastDeath.killer;
+	*weapon = lastDeath.weapon;
+	*text = lastDeath.text;
+	*time = lastDeath.time;
+	return qtrue;
 }
 
 /*
@@ -93,6 +132,12 @@ somebody who killed, else the sentence for when there is no icon for what killed
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text ) {
 	killfeedLine_t *line;
 
+	if ( cg.snap && victim == cg.snap->ps.clientNum ) {
+		lastDeath.killer = ( killer >= 0 && killer < MAX_CLIENTS && killer != victim ) ? killer : -1;
+		lastDeath.weapon = Killfeed_Weapon( mod );
+		Q_strncpyz( lastDeath.text, text ? text : "", sizeof( lastDeath.text ) );
+		lastDeath.time = cg.time;
+	}
 	if ( !tay_killfeed.integer || victim < 0 || victim >= MAX_CLIENTS ) {
 		return;
 	}
@@ -139,6 +184,72 @@ static void Killfeed_Box( float x, float y, float w, float h, const vec4_t fill 
 	}
 }
 
+// the colour of a name in a line of the new look: oneself bright, a team its colour
+static const float *Killfeed_NameTint( int client ) {
+	if ( cg.snap && client == cg.snap->ps.clientNum ) {
+		return hudBright;
+	}
+	if ( cgs.gametype >= GT_TEAM && Hud_TeamColor( cgs.clientinfo[client].team ) ) {
+		return Hud_TeamColor( cgs.clientinfo[client].team );
+	}
+	return hudText;
+}
+
+/*
+=================
+Killfeed_DrawNew
+
+The lines in the new look: one glass panel each, killer, icon, victim. A kill of the player himself has the rim
+of the accent and a +1, his death a red rim, a death without a killer a cross and the sentence, fainter.
+=================
+*/
+static float Killfeed_DrawNew( float y, float size, int life ) {
+	const float	lineH = 15.0f * size, pad = 5.0f * size, scale = HUD_BODY * size;
+	const int	self = cg.snap->ps.clientNum;
+	int			i;
+
+	for ( i = 0; i < killfeedCount; i++ ) {
+		const killfeedLine_t	*line = &killfeed[i];
+		const int				left = life - ( cg.time - line->time );
+		const float				alpha = left < KILLFEED_FADE ? (float)left / KILLFEED_FADE : 1.0f;
+		const float				mid = y + lineH * 0.5f, right = SCREEN_WIDTH - HUD_EDGE - tay_killfeedX.value;
+		const qboolean			world = (qboolean)( line->killer == ENTITYNUM_WORLD || !line->icon );
+		const float				*rim = line->killer == self ? hudAccent : line->victim == self ? hudRed : NULL;
+		float					w, x;
+
+		if ( world ) {
+			const char *text = line->text[0] ? line->text : cgs.clientinfo[line->victim].name;
+
+			w = lineH * 0.6f + 4.0f + Hud_TextWidth( text, scale ) + 2.0f * pad;
+			x = right - w;
+			Hud_Glass( x, y, w, lineH, 3.5f, alpha * 0.8f, rim, qtrue );
+			Hud_TextMid( x + pad, mid, scale * 0.9f, hudDim, alpha, HUD_LEFT, "x", 0.0f );
+			Hud_TextMid( x + pad + lineH * 0.6f + 4.0f, mid, scale, hudDim, alpha, HUD_LEFT, text, 0.0f );
+		} else {
+			const char	*killer = cgs.clientinfo[line->killer].name, *victim = cgs.clientinfo[line->victim].name;
+			const float	kw = Hud_TextWidth( killer, scale ), vw = Hud_TextWidth( victim, scale ), iconW = lineH * 1.3f;
+			const char	*plus = line->killer == self ? "+1" : NULL;
+			const float	pw = plus ? Hud_TextWidth( plus, HUD_CAPS ) + 5.0f : 0.0f;
+			vec4_t		white;
+
+			w = kw + vw + iconW + 8.0f + pw + 2.0f * pad;
+			x = right - w;
+			Hud_Glass( x, y, w, lineH, 3.5f, alpha, rim, qtrue );
+			Hud_TextMid( x + pad, mid, scale, Killfeed_NameTint( line->killer ), alpha, HUD_LEFT, killer, 0.0f );
+			Hud_Color( white, colorWhite, alpha );
+			trap->R_SetColor( white );
+			CG_DrawPic( x + pad + kw + 4.0f, y + lineH * 0.1f, iconW, lineH * 0.8f, line->icon );
+			trap->R_SetColor( NULL );
+			Hud_TextMid( x + pad + kw + 8.0f + iconW, mid, scale, Killfeed_NameTint( line->victim ), alpha, HUD_LEFT, victim, 0.0f );
+			if ( plus ) {
+				Hud_Caps( x + w - pad, mid, hudAccent, alpha, HUD_RIGHT, plus );
+			}
+		}
+		y += lineH + 3.0f;
+	}
+	return y;
+}
+
 /*
 =================
 CG_KillfeedDraw
@@ -167,6 +278,9 @@ float CG_KillfeedDraw( float y ) {
 	killfeedCount = keep;
 
 	y += 4.0f + tay_killfeedY.value;
+	if ( CG_HudNewLook() ) {
+		return Killfeed_DrawNew( y, size, life );
+	}
 	for ( i = 0; i < killfeedCount; i++ ) {
 		const killfeedLine_t	*line = &killfeed[i];
 		const int				left = life - ( cg.time - line->time );

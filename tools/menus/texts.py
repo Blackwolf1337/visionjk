@@ -797,6 +797,16 @@ CGAME = {
     'You carry the red flag': 'Du trägst die rote Flagge',
     'You carry the blue flag': 'Du trägst die blaue Flagge',
     'You carry the flag': 'Du trägst die Flagge',
+    'Attack': 'Angriff',
+    'Next player': 'Nächster Spieler',
+    'Jump': 'Springen',
+    'Fly free': 'Frei fliegen',
+    'Flying free': 'Frei fliegend',
+    'Follow a player': 'Einem Spieler folgen',
+    'Warmup': 'Aufwärmen',
+    'Killed by': 'Getötet von',
+    'You died': 'Du bist gestorben',
+    'Respawn': 'Wiedereinstieg',
     # the photo mode
     'Picture saved to the screenshots folder.': 'Foto im Screenshot-Ordner gespeichert.',
     'Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave.':

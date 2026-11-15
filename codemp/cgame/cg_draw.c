@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "hud/cg_hudkit.h"
 #include "ui/ui_public.h"
 
 extern float CG_RadiusForCent( centity_t *cent );
@@ -4324,11 +4325,9 @@ static void CG_DrawUpperRight( void ) {
 		if ( ( cgs.gametype >= GT_TEAM || cg.predictedPlayerState.m_iVehicleNum ) && cg_drawRadar.integer ) {
 			y = CG_DrawRadar( y );
 		}
+		// (the other duelist is in the header of the duel, CG_HudTopDraw, the jedi master on the card)
 		if ( CG_SpecHudShown() ) {
 			y = CG_SpecHudDraw( y );
-		} else if ( cg.snap->ps.duelInProgress || ( ( cgs.gametype == GT_DUEL || cgs.gametype == GT_JEDIMASTER )
-			&& cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR ) ) {
-			y = CG_DrawEnemyInfo( y );
 		}
 		y = CG_KillfeedDraw( y );
 		CG_DrawPowerupIcons( y );
@@ -4510,6 +4509,21 @@ Should we draw something different for long lag vs no packets?
 ==============
 */
 static void CG_DrawDisconnect( void ) {
+	// (the new HUD has it as a card at the top, CG_HudTopDraw)
+	if ( !CG_HudNewLook() ) {
+		CG_DrawDisconnectAt( 0.0f );
+	}
+}
+
+/*
+=================
+CG_DrawDisconnectAt
+
+That the level changes or the connection is lost: in the new HUD a card at the top with its top at y, else the
+text and the blinking icon of the game
+=================
+*/
+void CG_DrawDisconnectAt( float cardY ) {
 	float		x, y;
 	int			cmdNum;
 	usercmd_t	cmd;
@@ -4518,6 +4532,13 @@ static void CG_DrawDisconnect( void ) {
 
 	if (cg.mMapChange)
 	{
+		if ( CG_HudNewLook() ) {
+			char caption[128];
+
+			Q_strncpyz( caption, CG_GetStringEdString( "MP_INGAME", "SERVER_CHANGING_MAPS" ), sizeof( caption ) );
+			CG_HudNoticeCard( cardY, caption, CG_GetStringEdString( "MP_INGAME", "PLEASE_WAIT" ), hudAccent, 0, qfalse );
+			return;
+		}
 		s = CG_GetStringEdString("MP_INGAME", "SERVER_CHANGING_MAPS");	// s = "Server Changing Maps";
 		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString( 320 - w/2, 100, s, 1.0F);
@@ -4536,6 +4557,11 @@ static void CG_DrawDisconnect( void ) {
 		return;
 	}
 
+	if ( CG_HudNewLook() ) {
+		CG_HudNoticeCard( cardY, CG_VisionText( "Connection" ), CG_GetStringEdString( "MP_INGAME", "CONNECTION_INTERRUPTED" ),
+			hudRed, trap->R_RegisterShader( "gfx/2d/net.tga" ), qtrue );
+		return;
+	}
 	// also add text in center of screen
 	s = CG_GetStringEdString("MP_INGAME", "CONNECTION_INTERRUPTED"); // s = "Connection Interrupted"; // bk 010215 - FIXME
 	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
@@ -4719,6 +4745,9 @@ void CG_CenterPrint( const char *str, int y, int charWidth ) {
 
 	Q_strncpyz( cg.centerPrint, str, sizeof(cg.centerPrint) );
 
+	// VisionJK: printed again soon after the last one (a server that counts down in its message, every frame of a
+	// countdown): the card of the new HUD shows no bar of its time then
+	cg.centerPrintRepeats = ( cg.centerPrintTime && cg.time - cg.centerPrintTime < 1500 ) ? cg.centerPrintRepeats + 1 : 0;
 	cg.centerPrintTime = cg.time;
 	cg.centerPrintY = y;
 	cg.centerPrintCharWidth = charWidth;
@@ -4765,6 +4794,11 @@ static void CG_DrawCenterString( void ) {
 	const float scale = 1.0; //0.5
 
 	if ( !cg.centerPrintTime ) {
+		return;
+	}
+	// VisionJK: as a card in the new HUD (hud/cg_hudtop.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudCenterString();
 		return;
 	}
 
@@ -7172,22 +7206,65 @@ static void CG_DrawAmmoWarning( void ) {
 CG_DrawWarmup
 =================
 */
+/*
+=================
+CG_WarmupTick
+
+The seconds of the warmup until the match starts, with the count of the announcer at the last three: -1 while it
+waits for players, -2 without a warmup. Once a frame, by the stock warmup or the card of the new HUD.
+=================
+*/
+int CG_WarmupTick( void ) {
+	int sec = cg.warmup;
+
+	if ( !sec ) {
+		return -2;
+	}
+	if ( sec < 0 ) {
+		cg.warmupCount = 0;
+		return -1;
+	}
+	sec = ( sec - cg.time ) / 1000;
+	if ( sec < 0 ) {
+		cg.warmup = 0;
+		sec = 0;
+	}
+	if ( sec != cg.warmupCount ) {
+		cg.warmupCount = sec;
+		if ( cgs.gametype != GT_SIEGE ) {
+			switch ( sec ) {
+			case 0:
+				trap->S_StartLocalSound( cgs.media.count1Sound, CHAN_ANNOUNCER );
+				break;
+			case 1:
+				trap->S_StartLocalSound( cgs.media.count2Sound, CHAN_ANNOUNCER );
+				break;
+			case 2:
+				trap->S_StartLocalSound( cgs.media.count3Sound, CHAN_ANNOUNCER );
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	return sec;
+}
+
 static void CG_DrawWarmup( void ) {
 	int			w, sec, i;
 	float		scale;
 	const char	*s;
 
-	sec = cg.warmup;
-	if ( !sec ) {
+	sec = CG_WarmupTick();
+	if ( sec == -2 ) {
 		return;
 	}
 
-	if ( sec < 0 ) {
+	if ( sec == -1 ) {
 //		s = "Waiting for players";
 		s = CG_GetStringEdString("MP_INGAME", "WAITING_FOR_PLAYERS");
 		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString(320 - w / 2, 24, s, 1.0F);
-		cg.warmupCount = 0;
 		return;
 	}
 
@@ -7254,33 +7331,8 @@ static void CG_DrawWarmup( void ) {
 		CG_Text_Paint(320 - w / 2, 90, 1.5f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE,FONT_MEDIUM);
 	}
 
-	sec = ( sec - cg.time ) / 1000;
-	if ( sec < 0 ) {
-		cg.warmup = 0;
-		sec = 0;
-	}
-//	s = va( "Starts in: %i", sec + 1 );
 	s = va( "%s: %i",CG_GetStringEdString("MP_INGAME", "STARTS_IN"), sec + 1 );
-	if ( sec != cg.warmupCount ) {
-		cg.warmupCount = sec;
 
-		if (cgs.gametype != GT_SIEGE)
-		{
-			switch ( sec ) {
-			case 0:
-				trap->S_StartLocalSound( cgs.media.count1Sound, CHAN_ANNOUNCER );
-				break;
-			case 1:
-				trap->S_StartLocalSound( cgs.media.count2Sound, CHAN_ANNOUNCER );
-				break;
-			case 2:
-				trap->S_StartLocalSound( cgs.media.count3Sound, CHAN_ANNOUNCER );
-				break;
-			default:
-				break;
-			}
-		}
-	}
 	scale = 0.45f;
 	switch ( cg.warmupCount ) {
 	case 0:
@@ -8334,7 +8386,10 @@ static void CG_Draw2D( void ) {
 	}
 */
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
-		CG_DrawSpectator();
+		// (the new HUD says it in the bar at the top, CG_HudTopDraw)
+		if ( !CG_HudNewLook() ) {
+			CG_DrawSpectator();
+		}
 		CG_DrawCrosshair(NULL, 0);
 		CG_DrawCrosshairNames();
 		CG_SaberClashFlare();
@@ -8489,7 +8544,10 @@ static void CG_Draw2D( void ) {
 		CG_Place2D( PLACE_CENTER );
 	}
 
-	if ( !CG_DrawFollow() ) {
+	if ( CG_HudNewLook() ) {
+		// VisionJK: whom one watches, a duel, the warmup, a lost connection as cards at the top (hud/cg_hudtop.c)
+		CG_HudTopDraw();
+	} else if ( !CG_DrawFollow() ) {
 		CG_DrawWarmup();
 	}
 
@@ -8671,6 +8729,10 @@ static void CG_Draw2D( void ) {
 	cg.scoreBoardShowing = CG_DrawScoreboard();
 	if ( !cg.scoreBoardShowing) {
 		CG_DrawCenterString();
+	}
+	// VisionJK: who killed one while one is dead, under the scoreboard that opens then (hud/cg_hudtop.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudDeathCard();
 	}
 
 	// always draw chat
