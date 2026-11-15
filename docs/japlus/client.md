@@ -365,7 +365,9 @@ Taken over from TaystJK on 2026-10-17. They are drawn by this tree's cgame, so t
 on, and nobody has to download anything for them.
 
 The killfeed (`cgame/hud/cg_killfeed.c`, after TaystJK's `hud_obituary.c`) is at the right edge, under the FPS,
-the timer and the team overlay. Each line shows who killed whom with what, and fades out. The icons are the weapon
+the timer and the team overlay. With `v_hudFeed 1` and the new HUD it is part of the one feed at the upper left
+(see ui.md), and `tay_killfeedX` and `tay_killfeedY` only move the old right-hand killfeed, while
+`tay_killfeedSize` and `tay_killfeedTime` still set size and time. Each line shows who killed whom with what, and fades out. The icons are the weapon
 icons of the game, plus the sentry and the dark force. A death without a weapon to show (a fall, lava, a
 telefrag, a death by oneself) is the console's sentence, in the language of the game. The box behind a name has
 the team colour, green for oneself and grey for everyone else. The obituary line in the console stays as it was.

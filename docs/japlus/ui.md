@@ -97,10 +97,12 @@ Both are in Setup, HUD, under Menus and HUD.
   three sliders is moved it gets the plain style of a mixed blade (`UI_SaberMixFrame`), so no slider of the
   page is without effect, and a click on one of the seven colours makes it a fixed one again.
 - The scoreboard (`v_hud 1`, since 2026-10-12): one panel in the middle of the screen. At its head the server,
-  the kind of game and the level, at the right who leads or where one stands. Then a row for every player with
-  the picture of his model (or the flag he carries, his class in a siege), his name, score (with deaths on a
-  JA+ server), ping and time, by team in a team game with a line for each team and what it has, and who
-  watches at the end. The own row is marked. Before the name of a player with a client of this tree stands the
+  the kind of game and the level, at the right who leads or where one stands (in a team game: for which team one
+  plays). Then a row for every player with his place number, the picture of his model (or the flag he carries,
+  his class in a siege), his name, score, deaths (a column of its own, where the server sends them, JA+ 2.1 on),
+  ping and time. At the end of a level the last column says Ready or Waiting instead of the time. With teams red
+  and blue stand side by side, each half under a band with the score of the team. Spectators are one line at the
+  bottom, each name still clickable, with the key hint for picking a player beside it. The own row is marked. Before the name of a player with a client of this tree stands the
   icon of the game, and what stands above his head is written after his name. Rows are as high as there is
   room, down to a limit, and everybody the server knows is listed, also who is not in the scores it sends. The
   rows can be clicked: see client.md, "Clickable players". The score of the leader at the upper right has the
@@ -116,14 +118,23 @@ Both are in Setup, HUD, under Menus and HUD.
   the bars, the flags, the radar, the health of a duel, everything of siege) are the pictures of the game.
 - A vote is a panel at the left edge: what it is about, how it stands, how to answer, and a bar that empties
   with the time it still runs. The team vote is a line in the new letters.
-- The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do.
+- The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do. With the
+  new HUD it is a glass pill per talker, the own one with the accent rim.
+- One feed (since 2026-11-15, `v_hudFeed 1`): the lines of the console, the notices of `v_notify` and the kills are
+  one list at the upper left (`hud/cg_killfeed.c`). The engine keeps every notify line whole with a level (line,
+  warning, error: a line that starts yellow or with WARNING is a warning, red or ERROR an error) and hands them
+  to the cgame through `ext.Con_FeedRead` and `ext.Con_FeedNewest` (ROM cvar `v_cgameFeed`). The cgame sets
+  `v_feedHandler`, and the engine then draws no notify lines of its own. A warning has an amber rim, an error a
+  red one. The sentence of a kill goes to the console only, the feed has the kill. A vote panel stands above the
+  feed while it runs. `v_hudFeed 0` or `v_hud 0` puts everything back. The old killfeed is described in client.md.
 - The line on the first page that says a new version is out, and the button for what is new beside it, are boxes like the outlined buttons, lit with the accent under the mouse (`ui_update.c`), in the middle of the bar at the bottom.
 - Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
 - The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `v_classic` off
   and `v_hud` on and restarts the video. Without it the way back was the console.
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
-  stance of the saber under it, the score above. The health bar turns amber below half and red below a
+  stance of the saber under it (three steps: one lit for fast, two for medium, three for strong, all three for
+  the other stances, with the name of the stance under them), the score above. The health bar turns amber below half and red below a
   quarter.
 - The selection of a weapon, of an inventory item and of a force power (`v_hud 1`, Vulkan renderer
   rd-vulkan-vision) is a carousel of frosted glass cards at the bottom of the screen: the cards stand on a ring,
@@ -183,7 +194,8 @@ Both are in Setup, HUD, under Menus and HUD.
   Photo mode has its key line on a glass strip.
 - At the end of a level the scoreboard has who won over it (best player, better team, or a draw). Under it is the
   vote for the next map (`hud/cg_mapvote.c`): a box per map with its long name, votes, bar and key, the own vote
-  marked, and the time left. The keys 1 to 4 (the weapon keys) vote. The server side is in
+  marked, and the time left. The keys 1 to 4 (the weapon keys) vote. A key hint says how to report ready, shown until
+  one has, and the caption over the winner names the level too. The server side is in
   [server.md](server.md), "Map vote".
 - Setup has seven pages in place of eleven tabs, by topic: Video, Sound (with the 3D sound and the voice chat),
   Game (with the language), HUD, Chat & Social, Network and Mods. See "The Setup screen" below. Controls has
@@ -490,6 +502,7 @@ A menu like the one of Half-Life and the AG mod: numbered lists at the left of t
 (issue #2). `v_commandmenu` opens it, or closes it when it is open. Controls, Extras has a row "Command Menu" for
 its key, which is not bound by default.
 
+- With the new HUD every list is one glass panel, the first with a caption, and each number is a key cap.
 - The first list stands at the left of the screen. An entry that opens a list has an arrow at its right, and its list
   stands beside it, at the height of that entry. A number key (the keypad too) picks the entry with that number in the
   last list that is open.
