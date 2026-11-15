@@ -39,7 +39,9 @@ static const uint32_t vk_sparksComp[] =
 #define VK_SPARKS			65536		// slots of the ring, a power of two (shaders/sparks.comp u.count)
 #define VK_SPARK_ROWS		5			// vec4 a spark (shaders/sparks.comp)
 #define VK_SPARK_BURSTS		128			// bursts a frame
-#define VK_SPARK_HEADER		12			// rows before the bursts in the frame buffer: the view, the numbers of the frame
+#define VK_SPARK_BODIES		32			// characters of the frame nothing lies on (shaders/sparks.comp OnBody)
+#define VK_SPARK_HEADER		( 12 + VK_SPARK_BODIES )	// rows before the bursts in the frame buffer: the view, the numbers
+													// of the frame, the bodies
 #define VK_SPARK_BURST_ROWS	5
 
 cvar_t	*v_gpuSparks;
@@ -64,6 +66,7 @@ static struct {
 	int				aliveUntil;			// ri.Milliseconds() until which a spark may live: no work after it
 	int				embersUntil;		//	and an ember lie: no glow on the floors after it
 	float			view[VK_WET_HEADER][4];	// the view of the distance in vk.softDepth (VK_SparksView)
+	float			bodies[VK_SPARK_BODIES][4];	//	and the characters in it: their middle and how far round
 	qboolean		viewValid;
 	int				lastTime;
 	uint32_t		seed;
@@ -167,11 +170,25 @@ qboolean RE_EmitSparks( const sparkBurst_t *burst ) {
 }
 
 // the view whose distance vk.softDepth now holds (vk_post.cpp VK_SoftDepth), for the bounces of the next frame
+// and the characters seen in it, which the distance has as well: an ember on a shoulder would hang in the air once
+// the player walks on (shaders/sparks.comp OnBody)
 void VK_SparksView( void ) {
 	int viewport[4];
+	int	count = 0;
 
 	VK_ViewRows( sp.view, viewport );
 	sp.viewValid = qtrue;
+	memset( sp.bodies, 0, sizeof( sp.bodies ) );
+	for ( int i = 0; i < backEnd.refdef.num_entities && count < VK_SPARK_BODIES; i++ ) {
+		const refEntity_t *e = &backEnd.refdef.entities[i].e;
+
+		// (the own body seen from its eyes is not drawn, so not in the distance)
+		if ( e->reType != RT_MODEL || !e->ghoul2 || ( ( e->renderfx & RF_THIRD_PERSON ) && !backEnd.viewParms.isPortal ) ) {
+			continue;
+		}
+		Vector4Set4( sp.bodies[count], e->origin[0], e->origin[1], e->origin[2], 28.0f );
+		count++;
+	}
 }
 
 /*
@@ -197,6 +214,7 @@ void VK_SparksSimulate( void ) {
 	VkMemoryBarrier	barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 
 	memcpy( rows, sp.view, sizeof( sp.view ) );
+	memcpy( rows + 12, sp.bodies, sizeof( sp.bodies ) );
 	Vector4Set4( rows[11], dt, depth ? 1.0f : 0.0f, (float)sp.numBursts, (float)( ++sp.seed & 0xffffff ) );
 	for ( int b = 0; b < sp.numBursts; b++ ) {
 		const sparkBurst_t	*s = &sp.bursts[b];

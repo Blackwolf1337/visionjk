@@ -62,7 +62,7 @@ void main() {
 	if ( ember ) {
 		float left = clamp( a.w / lie.w, 0.0, 1.0 );		// 1 just landed, 0 out
 		// cooling fast at first to a dark red that lasts, out over the last quarter
-		float heat = mix( 0.3, m.x, left * left ) * smoothstep( 0.0, 0.25, left );
+		float heat = mix( 0.3, v.x, left * left ) * smoothstep( 0.0, 0.25, left );
 		// flickering, each ember its own way
 		float phase = float( id ) * 1.618;
 		float flicker = 0.8 + 0.12 * sin( a.w * 11.0 + phase ) + 0.08 * sin( a.w * 23.0 + phase * 3.7 );

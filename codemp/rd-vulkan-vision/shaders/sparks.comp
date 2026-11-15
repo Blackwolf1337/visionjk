@@ -5,14 +5,15 @@
 // is five rows in a ring of VK_SPARKS: place and life left (seconds), velocity and its whole life, its hot colour and
 // size, its gravity, drag, bounce and how fast it cools, and the surface it lies on (while it flies x: how often it hit
 // a floor) with w: minus the seconds it will lie glowing once it lands (0: it never does), plus its whole time there
-// once it lies (an ember: then the life left is the time left there and the gravity row's x its heat when it landed).
+// once it lies (an ember: then the life left is the time left there and the velocity row's x its heat when it landed).
 // Those that the bursts of this frame give (the frame buffer, after the view) are made anew; the rest fall, slow and
 // bounce off the scene where the distance of the level of the frame before (vk.softDepth, VK_SoftDepth) says there is a
 // surface: the surface from three of its pixels, the speed reflected off it. A spark that may lie and comes down on a
 // floor flat or a second time becomes an ember: it stays where it landed, cools and goes out (shaders/sparks.vert draws
 // it as a glowing dot and its glow on the floor).
 //   frame rows 0-10: the view of that depth as VK_ViewRows has it; 11: seconds since the last frame, 1 when the depth
-//   is there, the number of bursts, a seed; then five rows a burst: origin and first slot, direction and count, colour
+//   is there, the number of bursts, a seed; 12-43: the bodies of the frame (VK_SparksView: the middle of a character
+//   and how far round, 0 for none), nothing lies on them; then five rows a burst: origin and first slot, direction and count, colour
 //   and life, speed spread size gravity, drag bounce cooling rest (seconds an ember lies, v_gpuSparksEmbers applied)
 
 layout( local_size_x = 256 ) in;
@@ -71,6 +72,21 @@ vec3 ScenePoint( vec2 pixel, out float dist ) {
 	return W( 4 ).xyz + ray * dist;
 }
 
+#define BODIES		12u
+#define NUM_BODIES	32u
+#define BURSTS		( BODIES + NUM_BODIES )
+
+// on or in a character (a player, a bot, a part of a cut body): they move away, so nothing may lie there
+bool OnBody( vec3 p ) {
+	for ( uint k = 0u; k < NUM_BODIES; k++ ) {
+		vec4 b = W( BODIES + k );
+		if ( b.w > 0.0 && distance( p.xy, b.xy ) < b.w && p.z > b.z - 48.0 && p.z < b.z + 72.0 ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void main() {
 	uint i = gl_GlobalInvocationID.x;
 	if ( i >= u.count ) {
@@ -82,7 +98,7 @@ void main() {
 
 	// made by a burst of this frame
 	for ( uint b = 0u; b < bursts; b++ ) {
-		uint e = 12u + b * 5u;
+		uint e = BURSTS + b * 5u;
 		vec4 e0 = W( e ), e1 = W( e + 1u ), e2 = W( e + 2u ), e3 = W( e + 3u ), e4 = W( e + 4u );
 		uint first = uint( e0.w + 0.5 ), made = uint( e1.w + 0.5 );
 
@@ -117,13 +133,33 @@ void main() {
 	vec4 lie = u.sparks.rows[row + 4u];
 	float dt = parm.x;
 
-	// an ember: only its time runs out
-	if ( lie.w > 0.0 ) {
-		u.sparks.rows[row].w = a.w - dt;
-		return;
-	}
 	vec4 v = u.sparks.rows[row + 1u];
 	vec4 m = u.sparks.rows[row + 3u];
+
+	// an ember: its time runs out; where what it lies on is gone (a body that walked off, a door, a lift: a character
+	// there, or the distance behind it well below the surface it lay on) it falls again, cooling on from its heat
+	if ( lie.w > 0.0 ) {
+		a.w -= dt;
+		bool fall = OnBody( a.xyz );
+		if ( !fall && parm.y > 0.5 ) {
+			vec3 t = OnTarget( a.xyz );
+			vec4 rect = W( 8 );
+			if ( t.z > 0.0 && t.x >= rect.x && t.y >= rect.y && t.x < rect.x + rect.z && t.y < rect.y + rect.w ) {
+				float d0;
+				vec3 behind = ScenePoint( t.xy, d0 );
+				fall = d0 > t.z - 1.0 && dot( behind - a.xyz, lie.xyz ) < -3.0;
+			}
+		}
+		if ( fall && a.w > 0.1 ) {
+			float left = min( a.w, 1.5 );
+			u.sparks.rows[row] = vec4( a.xyz, left );
+			u.sparks.rows[row + 1u] = vec4( 0.0, 0.0, 0.0, left / max( pow( v.x, 1.0 / max( m.w, 0.1 ) ), 0.05 ) );
+			u.sparks.rows[row + 4u] = vec4( 0.0, 0.0, 0.0, -a.w );
+			return;
+		}
+		u.sparks.rows[row].w = a.w;
+		return;
+	}
 
 	a.w -= dt;
 	v.z -= m.x * dt;
@@ -163,12 +199,11 @@ void main() {
 						lie.x += 1.0;
 						u.sparks.rows[row + 4u].x = lie.x;
 					}
-					if ( floor && lie.w < 0.0 && ( lie.x >= 2.0 || dot( v.xyz, n ) < 90.0 ) ) {
+					if ( floor && lie.w < 0.0 && ( lie.x >= 2.0 || dot( v.xyz, n ) < 90.0 ) && !OnBody( p0 ) ) {
 						// it lies down: as hot as it still is, but glowing at least orange red
 						float heat = pow( clamp( a.w / max( v.w, 0.001 ), 0.0, 1.0 ), max( m.w, 0.1 ) );
 						u.sparks.rows[row] = vec4( p0 + n * 0.4, -lie.w );
-						u.sparks.rows[row + 1u] = vec4( 0.0, 0.0, 0.0, v.w );
-						u.sparks.rows[row + 3u].x = max( heat, 0.45 );
+						u.sparks.rows[row + 1u] = vec4( max( heat, 0.45 ), 0.0, 0.0, v.w );
 						u.sparks.rows[row + 4u] = vec4( n, -lie.w );
 						return;
 					}
