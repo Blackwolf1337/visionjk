@@ -3363,32 +3363,13 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_hudfeed
-			type					ITEM_TYPE_YESNO
-			text					@VISION_ONE_FEED
-			descText				@VISION_THE_LINES_OF_THE_CONSOLE_THE_NOTICES
-			cvar					"v_hudFeed"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 238 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
 			name					vision_yesno_v_hudmatchcard
 			type					ITEM_TYPE_YESNO
 			text					@VISION_MATCH_CARD
 			descText				@VISION_THE_CARD_AT_THE_UPPER_RIGHT_WITH_THE
 			cvar					"v_hudMatchCard"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 290 392 52
+			rect					306 238 392 52
 			page					6
 			scroll					1
 			row						1
@@ -3407,7 +3388,7 @@
 			descText				@VISION_FROSTED_GLASS_WHAT_IS_BEHIND_THE_HUD
 			cvarfloat				"v_backdropBlur" 1 0 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 342 392 52
+			rect					306 290 392 52
 			page					6
 			scroll					1
 			row						1
@@ -3421,9 +3402,9 @@
 		itemDef
 		{
 			name					vision_head
-			rect					296 394 412 100
+			rect					296 342 412 100
 			visible					1
-			text					@VISION_ON_SCREEN
+			text					@VISION_CROSSHAIR
 			font					7
 			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
@@ -3442,11 +3423,34 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_drawfps
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SHOW_FRAME_RATE
-			descText				@VISION_FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
-			cvar					"cg_drawFPS"
+			name					vision_slider_cg_crosshairsize
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CROSSHAIR_SIZE
+			descText				@VISION_THE_SIZE_OF_THE_CROSSHAIR
+			cvarfloat				"cg_crosshairSize" 24 12 64
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 442 392 52
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_multistr_tay_crosshaircolor
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CROSSHAIR_COLOUR
+			descText				@VISION_THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+			cvar					"tay_crosshairColor"
+			cvarStrList
+			{
+				@VISION_WHITE "" @VISION_GREEN "0.2 1 0.3 1" @VISION_CYAN "0.2 0.9 1 1" @VISION_YELLOW "1 0.9 0.2 1" @VISION_ORANGE "1 0.5 0 1" @VISION_RED "1 0.2 0.2 1" @VISION_PINK "1 0.4 0.9 1"
+			}
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 494 392 52
 			page					6
@@ -3461,11 +3465,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_drawtimer
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SHOW_TIMER
-			descText				@VISION_THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
-			cvar					"cg_drawTimer"
+			name					vision_slider_tay_crosshairnamesopacity
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_NAME_OPACITY
+			descText				@VISION_HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+			cvarfloat				"tay_crosshairNamesOpacity" 0.5 0 1
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 546 392 52
 			page					6
@@ -3480,14 +3484,13 @@
 
 		itemDef
 		{
-			name					vision_yesno_tay_timermsec
-			type					ITEM_TYPE_YESNO
-			text					@VISION_TIMER_MILLISECONDS
-			descText				@VISION_THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
-			cvar					"tay_timerMsec"
+			name					vision_multi_tay_leadindicator
+			type					ITEM_TYPE_MULTI
+			text					@VISION_LEAD_INDICATOR
+			descText				@VISION_WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+			cvar					"tay_leadIndicator"
+			cvarFloatList { @VISION_OFF 0 "On" 1 @VISION_WITH_OWN_PING 2 }
 			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"cg_drawTimer"
-			disableCvar { "0" }
 			rect					306 598 392 52
 			page					6
 			scroll					1
@@ -3501,50 +3504,10 @@
 
 		itemDef
 		{
-			name					vision_yesno_tay_timercountdown
-			type					ITEM_TYPE_YESNO
-			text					@VISION_TIMER_COUNTS_DOWN
-			descText				@VISION_THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
-			cvar					"tay_timerCountdown"
-			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"cg_drawTimer"
-			disableCvar { "0" }
-			rect					306 650 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
-			name					vision_yesno_cg_lagometer
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SHOW_LAGOMETER
-			descText				@VISION_A_GRAPH_OF_YOUR_CONNECTION
-			cvar					"cg_lagometer"
-			action { play "sound/interface/button1.wav" ; }
-			rect					306 702 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					0
-		}
-
-		itemDef
-		{
 			name					vision_head
-			rect					296 754 412 100
+			rect					296 650 412 100
 			visible					1
-			text					@VISION_CONSOLE
+			text					@VISION_TEAM
 			font					7
 			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
@@ -3563,11 +3526,49 @@
 
 		itemDef
 		{
-			name					vision_slider_con_scale
+			name					vision_slider_tay_teamoverlayscale
 			type					ITEM_TYPE_SLIDER
-			text					@VISION_CONSOLE_TEXT_SIZE
-			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-			cvarfloat				"con_scale" 1 0.5 3
+			text					@VISION_TEAM_OVERLAY_SIZE
+			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+			cvarfloat				"tay_teamOverlayScale" 1 0.5 2.5
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 750 392 52
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_teamoverlayweapons
+			type					ITEM_TYPE_YESNO
+			text					@VISION_TEAM_OVERLAY_WEAPONS
+			descText				@VISION_THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
+			cvar					"tay_teamOverlayWeapons"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 802 392 52
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_teamoverlaybar
+			type					ITEM_TYPE_YESNO
+			text					@VISION_TEAM_OVERLAY_BARS
+			descText				@VISION_HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
+			cvar					"tay_teamOverlayBar"
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 854 392 52
 			page					6
@@ -3582,11 +3583,11 @@
 
 		itemDef
 		{
-			name					vision_slider_con_opacity
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_CONSOLE_OPACITY
-			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-			cvarfloat				"con_opacity" 1 0.2 1
+			name					vision_yesno_tay_spechud
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SPECTATOR_MAP
+			descText				@VISION_WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+			cvar					"tay_specHud"
 			action { play "sound/interface/button1.wav" ; }
 			rect					306 906 392 52
 			page					6
@@ -3601,13 +3602,14 @@
 
 		itemDef
 		{
-			name					vision_multi_tay_consoleclock
-			type					ITEM_TYPE_MULTI
-			text					@VISION_CONSOLE_CLOCK
-			descText				@VISION_A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
-			cvar					"tay_consoleClock"
-			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
+			name					vision_slider_tay_spechudscale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_SPECTATOR_MAP_SIZE
+			descText				@VISION_HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
+			cvarfloat				"tay_specHudScale" 1 0.5 2
 			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"tay_specHud"
+			disableCvar { "0" }
 			rect					306 958 392 52
 			page					6
 			scroll					1
@@ -3703,7 +3705,7 @@
 			name					vision_head
 			rect					732 342 412 100
 			visible					1
-			text					@VISION_CROSSHAIR
+			text					@VISION_ON_SCREEN
 			font					7
 			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
@@ -3722,11 +3724,11 @@
 
 		itemDef
 		{
-			name					vision_slider_cg_crosshairsize
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_CROSSHAIR_SIZE
-			descText				@VISION_THE_SIZE_OF_THE_CROSSHAIR
-			cvarfloat				"cg_crosshairSize" 24 12 64
+			name					vision_yesno_cg_drawfps
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SHOW_FRAME_RATE
+			descText				@VISION_FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
+			cvar					"cg_drawFPS"
 			action { play "sound/interface/button1.wav" ; }
 			rect					742 442 392 52
 			page					6
@@ -3741,15 +3743,11 @@
 
 		itemDef
 		{
-			name					vision_multistr_tay_crosshaircolor
-			type					ITEM_TYPE_MULTI
-			text					@VISION_CROSSHAIR_COLOUR
-			descText				@VISION_THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
-			cvar					"tay_crosshairColor"
-			cvarStrList
-			{
-				@VISION_WHITE "" @VISION_GREEN "0.2 1 0.3 1" @VISION_CYAN "0.2 0.9 1 1" @VISION_YELLOW "1 0.9 0.2 1" @VISION_ORANGE "1 0.5 0 1" @VISION_RED "1 0.2 0.2 1" @VISION_PINK "1 0.4 0.9 1"
-			}
+			name					vision_yesno_cg_drawtimer
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SHOW_TIMER
+			descText				@VISION_THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
+			cvar					"cg_drawTimer"
 			action { play "sound/interface/button1.wav" ; }
 			rect					742 494 392 52
 			page					6
@@ -3764,12 +3762,14 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_crosshairnamesopacity
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_NAME_OPACITY
-			descText				@VISION_HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
-			cvarfloat				"tay_crosshairNamesOpacity" 0.5 0 1
+			name					vision_yesno_tay_timermsec
+			type					ITEM_TYPE_YESNO
+			text					@VISION_TIMER_MILLISECONDS
+			descText				@VISION_THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+			cvar					"tay_timerMsec"
 			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"cg_drawTimer"
+			disableCvar { "0" }
 			rect					742 546 392 52
 			page					6
 			scroll					1
@@ -3783,13 +3783,14 @@
 
 		itemDef
 		{
-			name					vision_multi_tay_leadindicator
-			type					ITEM_TYPE_MULTI
-			text					@VISION_LEAD_INDICATOR
-			descText				@VISION_WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
-			cvar					"tay_leadIndicator"
-			cvarFloatList { @VISION_OFF 0 "On" 1 @VISION_WITH_OWN_PING 2 }
+			name					vision_yesno_tay_timercountdown
+			type					ITEM_TYPE_YESNO
+			text					@VISION_TIMER_COUNTS_DOWN
+			descText				@VISION_THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+			cvar					"tay_timerCountdown"
 			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"cg_drawTimer"
+			disableCvar { "0" }
 			rect					742 598 392 52
 			page					6
 			scroll					1
@@ -3803,10 +3804,29 @@
 
 		itemDef
 		{
-			name					vision_head
-			rect					732 650 412 100
+			name					vision_yesno_cg_lagometer
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SHOW_LAGOMETER
+			descText				@VISION_A_GRAPH_OF_YOUR_CONNECTION
+			cvar					"cg_lagometer"
+			action { play "sound/interface/button1.wav" ; }
+			rect					742 650 392 52
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
 			visible					1
-			text					@VISION_KILLFEED_AND_TEAM
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					732 702 412 100
+			visible					1
+			text					@VISION_CONSOLE
 			font					7
 			textscale				0.89
 			forecolor				0.56 0.64 0.74 1
@@ -3825,33 +3845,12 @@
 
 		itemDef
 		{
-			name					vision_yesno_tay_killfeed
-			type					ITEM_TYPE_YESNO
-			text					@VISION_KILLFEED
-			descText				@VISION_WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-			cvar					"tay_killfeed"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 750 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_slider_tay_killfeedsize
+			name					vision_slider_con_scale
 			type					ITEM_TYPE_SLIDER
-			text					@VISION_KILLFEED_SIZE
-			descText				@VISION_HOW_LARGE_THE_KILLFEED_IS
-			cvarfloat				"tay_killfeedSize" 1 0.5 2
+			text					@VISION_CONSOLE_TEXT_SIZE
+			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"tay_killfeed"
-			disableCvar { "0" }
 			rect					742 802 392 52
 			page					6
 			scroll					1
@@ -3865,14 +3864,12 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_killfeedtime
+			name					vision_slider_con_opacity
 			type					ITEM_TYPE_SLIDER
-			text					@VISION_KILLFEED_TIME
-			descText				@VISION_HOW_MANY_MILLISECONDS_A_LINE_OF_THE
-			cvarfloat				"tay_killfeedTime" 5000 1000 15000
+			text					@VISION_CONSOLE_OPACITY
+			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+			cvarfloat				"con_opacity" 1 0.2 1
 			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"tay_killfeed"
-			disableCvar { "0" }
 			rect					742 854 392 52
 			page					6
 			scroll					1
@@ -3886,91 +3883,14 @@
 
 		itemDef
 		{
-			name					vision_slider_tay_teamoverlayscale
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_TEAM_OVERLAY_SIZE
-			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-			cvarfloat				"tay_teamOverlayScale" 1 0.5 2.5
+			name					vision_multi_tay_consoleclock
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CONSOLE_CLOCK
+			descText				@VISION_A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+			cvar					"tay_consoleClock"
+			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
 			action { play "sound/interface/button1.wav" ; }
 			rect					742 906 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_tay_teamoverlayweapons
-			type					ITEM_TYPE_YESNO
-			text					@VISION_TEAM_OVERLAY_WEAPONS
-			descText				@VISION_THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
-			cvar					"tay_teamOverlayWeapons"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 958 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_tay_teamoverlaybar
-			type					ITEM_TYPE_YESNO
-			text					@VISION_TEAM_OVERLAY_BARS
-			descText				@VISION_HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
-			cvar					"tay_teamOverlayBar"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1010 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_tay_spechud
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SPECTATOR_MAP
-			descText				@VISION_WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-			cvar					"tay_specHud"
-			action { play "sound/interface/button1.wav" ; }
-			rect					742 1062 392 52
-			page					6
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_slider_tay_spechudscale
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_SPECTATOR_MAP_SIZE
-			descText				@VISION_HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
-			cvarfloat				"tay_specHudScale" 1 0.5 2
-			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"tay_specHud"
-			disableCvar { "0" }
-			rect					742 1114 392 52
 			page					6
 			scroll					1
 			row						1

@@ -380,8 +380,6 @@ TR = {
     # interface
     'New HUD': 'Neues HUD',
     'Match Card': 'Spielkarte',
-    'One Feed': 'Ein Feed',
-    'The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD.': 'Konsolenzeilen, Hinweise und Kills als ein Feed oben links. Aus: jedes an seinem eigenen Platz. Braucht das neue HUD.',
     'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': 'Die Karte oben rechts mit Spielmodus, Uhr, deinem Platz und dem Führenden. Braucht das neue HUD.',
     'The HUD of VisionJK. Off: the HUD of the game.': 'Das HUD von VisionJK. Aus: das HUD des Originalspiels.',
     'Classic Menus': 'Klassische Menüs',
@@ -777,7 +775,7 @@ TR = {
     'Clicking Players': 'Spieler anklicken',
     'A chat line with your name or one of the words below is marked gold.': 'Eine Chatzeile mit deinem Namen oder einem der Wörter darunter wird golden markiert.',
     'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': 'Die Bewegungswerkzeuge von TaystJK: Tachometer, Strafe-Hilfe, Spuren und Ziele.',
-    'Killfeed and Team': 'Killfeed und Team',
+    'Team': 'Team',
     'Goals': 'Ziele',
     'Blur Behind Panels': 'Unschärfe hinter Feldern',
     'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.': 'Milchglas: was hinter den HUD-Feldern, dem Chatfenster und der Konsole liegt, wird unscharf. 0: aus. Braucht den Vulkan-Renderer.',

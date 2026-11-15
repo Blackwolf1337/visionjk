@@ -382,11 +382,11 @@ CG_Select3DIcon
 
 One thing in the rect as the cards of the rows show it, for a slot of the HUD (hud/cg_hudpanels.c): the model of
 an item, turning slowly, or a picture as the holo disc in the tint, swinging. qfalse: there is no model, the caller
-draws the picture.
+draws the picture. still: it does not move (a line of the feed), a model seen from the side.
 =================
 */
-qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint ) {
-	const float yaw = fmodf( (float)cg.time * 360.0f / SELECT_SLOT_TURN_MSEC, 360.0f ) - 180.0f;
+qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still ) {
+	const float yaw = still ? 0.0f : fmodf( (float)cg.time * 360.0f / SELECT_SLOT_TURN_MSEC, 360.0f ) - 180.0f;
 
 	if ( disc ) {
 		// (it swings and never stands edge on: what the slot holds has to be read at any time)
@@ -397,7 +397,7 @@ qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *ite
 		const selectModel_t *m = Select3D_Model( item );
 
 		if ( m && ( m->model || m->ghoul2 ) ) {
-			Select3D_DrawModel( m, x, y, w, h, 20.0f + yaw, 12.0f );
+			Select3D_DrawModel( m, x, y, w, h, ( still ? 0.0f : 20.0f ) + yaw, still ? 6.0f : 12.0f );
 			return qtrue;
 		}
 	}

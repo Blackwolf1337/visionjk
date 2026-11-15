@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // downloaded. A death without a weapon to show (a fall, lava, a telefrag) is the sentence of the console, in the
 // language of the game. The obituary line in the console stays as it was.
 //
-// The feed (v_hudFeed, 2026-11-15): with the HUD of the new look and an engine of this tree (ext.Con_FeedRead)
+// The feed (2026-11-15): with the HUD of the new look and an engine of this tree (ext.Con_FeedRead)
 // these lines, the lines the engine would write at the top of the window and the notices (hud/cg_notify.c) are
 // one feed at the upper left: a kill with its icon, a line of the console as it is, a warning with an amber
 // rim, an error with a red one. The engine draws no lines of its own then (v_feedHandler), and the sentence of
@@ -37,12 +37,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define KILLFEED_MAX		8
 #define FEED_WIDTH			300.0f		// a line of text is cut at this
+#define FEED_LIFE			6000		// ms a line of the feed stays
 #define KILLFEED_FADE		1000		// the last milliseconds of a line fade it out
 
 typedef struct {
 	int			level;				// FEED_KILL, or what a line of text is
 	int			killer;				// ENTITYNUM_WORLD: nobody, the line is `text`
 	int			victim;
+	int			weapon;				// what killed, for its model in the feed; WP_NONE: none
 	qhandle_t	icon;
 	char		text[128];
 	int			time;
@@ -159,7 +161,7 @@ void CG_KillfeedAdd( int killer, int victim, int mod, const char *text ) {
 		Q_strncpyz( lastDeath.text, text ? text : "", sizeof( lastDeath.text ) );
 		lastDeath.time = cg.time;
 	}
-	if ( !tay_killfeed.integer || victim < 0 || victim >= MAX_CLIENTS ) {
+	if ( ( !tay_killfeed.integer && !CG_HudFeedActive() ) || victim < 0 || victim >= MAX_CLIENTS ) {
 		return;
 	}
 	line = Killfeed_NewLine();
@@ -167,6 +169,7 @@ void CG_KillfeedAdd( int killer, int victim, int mod, const char *text ) {
 	line->killer = ( killer >= 0 && killer < MAX_CLIENTS && killer != victim ) ? killer : ENTITYNUM_WORLD;
 	line->victim = victim;
 	line->icon = line->killer != ENTITYNUM_WORLD ? Killfeed_Icon( mod ) : 0;
+	line->weapon = Killfeed_Weapon( mod );
 	Q_strncpyz( line->text, text ? text : "", sizeof( line->text ) );
 }
 
@@ -182,8 +185,9 @@ The feed
 =================
 CG_HudFeedActive
 
-Are the lines of the console, the notices and the kills one feed: the new look, v_hudFeed, and an engine that
-hands its lines over.
+Are the lines of the console, the notices and the kills one feed: the new look and an engine that hands its
+lines over. It has no switch and no settings of its own: tay_killfeed and the cvars beside it are for the killfeed
+at the right edge, which the HUD of the game and an engine without the feed still have.
 =================
 */
 qboolean CG_HudFeedActive( void ) {
@@ -196,7 +200,7 @@ qboolean CG_HudFeedActive( void ) {
 		trap->Cvar_VariableStringBuffer( "v_cgameFeed", value, sizeof( value ) );
 		has = ( atoi( value ) && trap->ext.Con_FeedRead && trap->ext.Con_FeedNewest ) ? 1 : 0;
 	}
-	return (qboolean)( has > 0 && v_hudFeed.integer && CG_HudNewLook() );
+	return (qboolean)( has > 0 && CG_HudNewLook() );
 }
 
 // a line of text for the feed: colour codes stay, a line break ends it
@@ -348,9 +352,20 @@ static float Killfeed_DrawNew( float y, float size, int life, qboolean atLeft ) 
 			Hud_Glass( x, y, w, lineH, 3.5f, alpha, rim, qtrue );
 			Hud_TextMid( x + pad, mid, scale, Killfeed_NameTint( line->killer ), alpha, HUD_LEFT, killer, 0.0f );
 			Hud_Color( white, colorWhite, alpha );
-			trap->R_SetColor( white );
-			CG_DrawPic( x + pad + kw + 4.0f, y + lineH * 0.1f, iconW, lineH * 0.8f, line->icon );
-			trap->R_SetColor( NULL );
+			// what killed as its model where it has one (hud/cg_select3d.c), seen from the side and standing
+			// still, the muzzle towards the victim; else its picture (also the saber: a hilt stands upright and
+			// is a thin line at this size)
+			{
+				const gitem_t *item = ( atLeft && alpha > 0.5f && line->weapon > WP_NONE && line->weapon != WP_MELEE
+					&& line->weapon != WP_SABER )
+					? BG_FindItemForWeapon( (weapon_t)line->weapon ) : NULL;
+
+				trap->R_SetColor( white );
+				if ( !item || !CG_Select3DIcon( x + pad + kw + 4.0f, y - lineH * 0.15f, iconW, lineH * 1.3f, item, 0, NULL, qtrue ) ) {
+					CG_DrawPic( x + pad + kw + 4.0f, y + lineH * 0.1f, iconW, lineH * 0.8f, line->icon );
+				}
+				trap->R_SetColor( NULL );
+			}
 			Hud_TextMid( x + pad + kw + 8.0f + iconW, mid, scale, Killfeed_NameTint( line->victim ), alpha, HUD_LEFT, victim, 0.0f );
 			if ( plus ) {
 				Hud_Caps( x + w - pad, mid, hudAccent, alpha, HUD_RIGHT, plus );
@@ -381,13 +396,11 @@ The one feed at the left edge (CG_Place2D( PLACE_LEFT ) is set) from y down.
 =================
 */
 void CG_HudFeedDraw( float y ) {
-	const int life = Q_max( 1000, tay_killfeedTime.integer );
-
 	if ( !cg.snap || !CG_HudFeedActive() ) {
 		return;
 	}
-	Killfeed_Expire( life );
-	Killfeed_DrawNew( y, Com_Clamp( 0.5f, 2.0f, tay_killfeedSize.value ), life, qtrue );
+	Killfeed_Expire( FEED_LIFE );
+	Killfeed_DrawNew( y, 1.0f, FEED_LIFE, qtrue );
 }
 
 /*

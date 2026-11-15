@@ -902,12 +902,6 @@ LANG_ENGLISH        "New HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 
-REFERENCE           ONE_FEED
-LANG_ENGLISH        "One Feed"
-
-REFERENCE           THE_LINES_OF_THE_CONSOLE_THE_NOTICES
-LANG_ENGLISH        "The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD."
-
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 
@@ -1000,24 +994,6 @@ LANG_ENGLISH        "Show Lagometer"
 
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
-
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-
-REFERENCE           KILLFEED_SIZE
-LANG_ENGLISH        "Killfeed Size"
-
-REFERENCE           HOW_LARGE_THE_KILLFEED_IS
-LANG_ENGLISH        "How large the killfeed is."
-
-REFERENCE           KILLFEED_TIME
-LANG_ENGLISH        "Killfeed Time"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
-LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
 
 REFERENCE           TEAM_OVERLAY_SIZE
 LANG_ENGLISH        "Team Overlay Size"
@@ -1688,20 +1664,20 @@ LANG_ENGLISH        "HUD"
 REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-
-REFERENCE           KILLFEED_AND_TEAM
-LANG_ENGLISH        "Killfeed and Team"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -2102,6 +2078,12 @@ LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and 
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+
 REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
 LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
 
@@ -2452,9 +2434,6 @@ LANG_ENGLISH        "radio"
 
 REFERENCE           ALL
 LANG_ENGLISH        "All"
-
-REFERENCE           TEAM
-LANG_ENGLISH        "Team"
 
 REFERENCE           PRIVATE
 LANG_ENGLISH        "Private"
@@ -2971,6 +2950,18 @@ LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosme
 
 REFERENCE           SABERS
 LANG_ENGLISH        "Sabers"
+
+REFERENCE           KILLFEED_SIZE
+LANG_ENGLISH        "Killfeed Size"
+
+REFERENCE           HOW_LARGE_THE_KILLFEED_IS
+LANG_ENGLISH        "How large the killfeed is."
+
+REFERENCE           KILLFEED_TIME
+LANG_ENGLISH        "Killfeed Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
+LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
 
 
 ENDMARKER

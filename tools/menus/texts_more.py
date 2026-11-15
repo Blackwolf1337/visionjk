@@ -454,8 +454,6 @@ MORE = {
     # interface
     'New HUD': ('Nouveau HUD', 'Nuevo HUD'),
     'Match Card': ('Carte du match', 'Tarjeta de partida'),
-    'One Feed': ('Un seul fil', 'Un solo feed'),
-    'The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD.': ('Les lignes de la console, les notifications et les kills dans un seul fil en haut à gauche. Désactivé : chacun à sa place. Nécessite le nouveau HUD.', 'Las líneas de la consola, los avisos y las bajas como un solo feed arriba a la izquierda. Desactivado: cada uno en su sitio. Necesita el nuevo HUD.'),
     'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': ('La carte en haut à droite avec le mode de jeu, l\'horloge, votre place et le premier. Nécessite le nouveau HUD.', 'La tarjeta arriba a la derecha con el modo de juego, el reloj, tu puesto y el líder. Necesita el nuevo HUD.'),
     'The HUD of VisionJK. Off: the HUD of the game.': ('Le HUD de VisionJK. Désactivé : le HUD du jeu.', 'El HUD de VisionJK. Desactivado: el HUD del juego.'),
     'Classic Menus': ('Menus classiques', 'Menús clásicos'),
@@ -1035,7 +1033,6 @@ MORE = {
     'Clicking Players': ('Cliquer sur les joueurs', 'Clic en jugadores'),
     'A chat line with your name or one of the words below is marked gold.': ('Une ligne de chat avec votre nom ou l\'un des mots ci-dessous est marquée en or.', 'Una línea del chat con tu nombre o una de las palabras de abajo se marca en dorado.'),
     'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': ('Les outils de mouvement de TaystJK : compteur de vitesse, aide au strafe, traces et objectifs.', 'Las herramientas de movimiento de TaystJK: velocímetro, ayuda de strafe, estelas y objetivos.'),
-    'Killfeed and Team': ('Fil des morts et équipe', 'Registro de muertes y equipo'),
     'Goals': ('Objectifs', 'Objetivos'),
     'Blur Behind Panels': ('Flou derrière les panneaux', 'Desenfoque tras los paneles'),
     'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.': ('Verre dépoli : ce qui se trouve derrière les panneaux du HUD, la fenêtre de chat et la console est flou. 0 : désactivé. Nécessite le moteur de rendu Vulkan.', 'Cristal esmerilado: lo que hay detrás de los paneles del HUD, la ventana de chat y la consola se desenfoca. 0: desactivado. Necesita el renderizador Vulkan.'),

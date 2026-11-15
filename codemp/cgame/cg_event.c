@@ -119,7 +119,7 @@ qboolean CG_ThereIsAMaster(void);
 
 // VisionJK: with the one feed (hud/cg_killfeed.c) a kill is a line of it, so its sentence goes to the console only
 static const char *CG_ObituaryPrefix( void ) {
-	return ( CG_HudFeedActive() && tay_killfeed.integer ) ? "[skipnotify]" : "";
+	return CG_HudFeedActive() ? "[skipnotify]" : "";
 }
 
 /*

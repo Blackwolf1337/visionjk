@@ -1201,14 +1201,6 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_FRENCH         "Le HUD de VisionJK. Désactivé : le HUD du jeu."
 
-REFERENCE           ONE_FEED
-LANG_ENGLISH        "One Feed"
-LANG_FRENCH         "Un seul fil"
-
-REFERENCE           THE_LINES_OF_THE_CONSOLE_THE_NOTICES
-LANG_ENGLISH        "The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD."
-LANG_FRENCH         "Les lignes de la console, les notifications et les kills dans un seul fil en haut à gauche. Désactivé : chacun à sa place. Nécessite le nouveau HUD."
-
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 LANG_FRENCH         "Carte du match"
@@ -1332,30 +1324,6 @@ LANG_FRENCH         "Afficher le lagomètre"
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 LANG_FRENCH         "Un graphique de votre connexion."
-
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-LANG_FRENCH         "#same"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-LANG_FRENCH         "Qui a éliminé qui, et avec quoi, en haut à droite."
-
-REFERENCE           KILLFEED_SIZE
-LANG_ENGLISH        "Killfeed Size"
-LANG_FRENCH         "Taille du fil des morts"
-
-REFERENCE           HOW_LARGE_THE_KILLFEED_IS
-LANG_ENGLISH        "How large the killfeed is."
-LANG_FRENCH         "La taille du fil des morts."
-
-REFERENCE           KILLFEED_TIME
-LANG_ENGLISH        "Killfeed Time"
-LANG_FRENCH         "Durée du fil des morts"
-
-REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
-LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
-LANG_FRENCH         "Combien de millisecondes une ligne du fil des morts reste affichée."
 
 REFERENCE           TEAM_OVERLAY_SIZE
 LANG_ENGLISH        "Team Overlay Size"
@@ -2249,6 +2217,18 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_FRENCH         "Ce que l'écran affiche autour du niveau, la vue et le viseur."
 
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_FRENCH         "Viseur"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+LANG_FRENCH         "Équipe"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_FRENCH         "Vue"
+
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 LANG_FRENCH         "À l'écran"
@@ -2256,18 +2236,6 @@ LANG_FRENCH         "À l'écran"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_FRENCH         "#same"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_FRENCH         "Vue"
-
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-LANG_FRENCH         "Viseur"
-
-REFERENCE           KILLFEED_AND_TEAM
-LANG_ENGLISH        "Killfeed and Team"
-LANG_FRENCH         "Fil des morts et équipe"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
@@ -2801,6 +2769,14 @@ REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_FRENCH         "Chat et console"
 
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_FRENCH         "Qui a éliminé qui, et avec quoi, en haut à droite."
+
 REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
 LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
 LANG_FRENCH         "Une ligne du chat contenant votre nom est marquée en doré. Autres mots avec tay_notifyWords dans la console."
@@ -3268,10 +3244,6 @@ LANG_FRENCH         "#same"
 REFERENCE           ALL
 LANG_ENGLISH        "All"
 LANG_FRENCH         "Tous"
-
-REFERENCE           TEAM
-LANG_ENGLISH        "Team"
-LANG_FRENCH         "Équipe"
 
 REFERENCE           PRIVATE
 LANG_ENGLISH        "Private"
@@ -3960,6 +3932,22 @@ LANG_FRENCH         "Ce qui vient de TaystJK : touches, sabres, HUD, mouvement, 
 REFERENCE           SABERS
 LANG_ENGLISH        "Sabers"
 LANG_FRENCH         "Sabres"
+
+REFERENCE           KILLFEED_SIZE
+LANG_ENGLISH        "Killfeed Size"
+LANG_FRENCH         "Taille du fil des morts"
+
+REFERENCE           HOW_LARGE_THE_KILLFEED_IS
+LANG_ENGLISH        "How large the killfeed is."
+LANG_FRENCH         "La taille du fil des morts."
+
+REFERENCE           KILLFEED_TIME
+LANG_ENGLISH        "Killfeed Time"
+LANG_FRENCH         "Durée du fil des morts"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
+LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
+LANG_FRENCH         "Combien de millisecondes une ligne du fil des morts reste affichée."
 
 
 ENDMARKER

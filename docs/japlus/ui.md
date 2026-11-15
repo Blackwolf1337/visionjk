@@ -28,7 +28,6 @@ HUD of its own gets them drawn as it always did, see "For mods".
 |------|---------|---------|
 | `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
 | `v_hud` | 1 | 0: the HUD of the game |
-| `v_hudFeed` | 1 | 0: the lines of the console, the notices and the killfeed each in their own place, as before |
 | `v_hudMatchCard` | 1 | 0: no card of the match at the upper right (the clock moves into the line of frames and ping) |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 
@@ -120,13 +119,14 @@ Both are in Setup, HUD, under Menus and HUD.
   with the time it still runs. The team vote is a line in the new letters.
 - The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do. With the
   new HUD it is a glass pill per talker, the own one with the accent rim.
-- One feed (since 2026-11-15, `v_hudFeed 1`): the lines of the console, the notices of `v_notify` and the kills are
+- One feed (since 2026-11-15, always with the new HUD): the lines of the console, the notices of `v_notify` and the kills are
   one list at the upper left (`hud/cg_killfeed.c`). The engine keeps every notify line whole with a level (line,
   warning, error: a line that starts yellow or with WARNING is a warning, red or ERROR an error) and hands them
   to the cgame through `ext.Con_FeedRead` and `ext.Con_FeedNewest` (ROM cvar `v_cgameFeed`). The cgame sets
   `v_feedHandler`, and the engine then draws no notify lines of its own. A warning has an amber rim, an error a
   red one. The sentence of a kill goes to the console only, the feed has the kill. A vote panel stands above the
-  feed while it runs. `v_hudFeed 0` or `v_hud 0` puts everything back. The old killfeed is described in client.md.
+  feed while it runs. It has no switch of its own and a line stays 6 seconds; `v_hud 0` puts everything back. A kill shows
+  the model of the weapon between the two names. The old killfeed is described in client.md.
 - The line on the first page that says a new version is out, and the button for what is new beside it, are boxes like the outlined buttons, lit with the accent under the mouse (`ui_update.c`), in the middle of the bar at the bottom.
 - Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
