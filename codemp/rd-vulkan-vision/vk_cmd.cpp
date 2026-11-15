@@ -1284,13 +1284,55 @@ void VK_SmaaPass( float threshold ) {
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
-// v_tonemap: the frame through shaders/tonemap.frag from a copy of it (vk.screen); parm: exposure, curve, 2 ^
-// overbright bits. Leaves vk.color begun with vk.depth, as VK_SmaaPass() does.
-void VK_TonemapPass( const float *parm ) {
+// v_autoExposure: the copy of the frame (vk.screen) into the cells of vk.lum and those into the buffer of this frame
+// in flight, which the CPU reads when the frame comes round again (vk_post.cpp VK_AutoExposure)
+void VK_LumPass( void ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
-	float push[8] = { 0.0f, 0.0f, 0.0f, 0.0f, parm[0], parm[1], parm[2], 0.0f };
+	const VkDescriptorSet sets[2] = { vk.screenSet, vk.screenSet };
+	const float parm[4] = { (float)vk.screen.width, (float)vk.screen.height, 0.0f, 0.0f };
+	VkBufferImageCopy region;
+	VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
 
+	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.lumPipeline );
+	vk.boundPipeline = vk.lumPipeline;
+	VK_TargetLayout( cmd, &vk.lum, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_BeginRendering( cmd, &vk.lum, NULL, 0, qfalse );
+	VK_FullTarget( cmd, &vk.lum );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.focusPipelineLayout, 0, 2, sets, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.focusPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( parm ), parm );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
+
+	memset( &region, 0, sizeof( region ) );
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.layerCount = 1;
+	region.imageExtent.width = VK_LUM_WIDTH;
+	region.imageExtent.height = VK_LUM_HEIGHT;
+	region.imageExtent.depth = 1;
+	VK_TargetLayout( cmd, &vk.lum, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	qvkCmdCopyImageToBuffer( cmd, vk.lum.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.lumRead[vk.frameIndex].buffer, 1, &region );
+	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+	barrier.srcQueueFamilyIndex = barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.buffer = vk.lumRead[vk.frameIndex].buffer;
+	barrier.size = VK_WHOLE_SIZE;
+	qvkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, NULL, 1, &barrier, 0, NULL );
+	vk.lumWritten[vk.frameIndex] = qtrue;
+}
+
+// v_tonemap: the frame through shaders/tonemap.frag from a copy of it (vk.screen); parm: exposure, curve, 2 ^
+// overbright bits, 1: the cells of v_autoExposure from that copy too. look: the twelve numbers of the look of the
+// level (shaders/tonemap.frag look0 to look2). Leaves vk.color begun with vk.depth, as VK_SmaaPass() does.
+void VK_TonemapPass( const float *parm, const float *look ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	float push[20] = { 0.0f, 0.0f, 0.0f, 0.0f, parm[0], parm[1], parm[2], 0.0f };
+
+	memcpy( push + 8, look, sizeof( float ) * 12 );
 	VK_CopyTarget( &vk.color, &vk.screen );
+	if ( parm[3] > 0.0f ) {
+		VK_LumPass();
+	}
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.tonemapPipeline );
 	vk.boundPipeline = vk.tonemapPipeline;

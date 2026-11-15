@@ -387,6 +387,8 @@ extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
 extern cvar_t	*v_softParticles;	// vk_post.cpp
 extern cvar_t	*v_litParticles;	// vk_post.cpp
+extern cvar_t	*v_autoExposure;	// vk_post.cpp
+extern cvar_t	*v_colorGrade;		// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -625,12 +627,16 @@ void		VK_PaintPass( const float *paint, int count, const int *viewport );
 void		VK_SmaaPass( float threshold );
 // v_tonemap over the frame (vk_post.cpp VK_Tonemap), parm: exposure, curve, 2 ^ overbright bits. Not on the OpenGL ES
 // device. vk.color must not be begun before; it is begun with vk.depth after.
-void		VK_TonemapPass( const float *parm );
+void		VK_TonemapPass( const float *parm, const float *look );
 // v_ssr: vk.color and its depth into vk.ssrColor (shaders/ssrprep.frag), parm: the depth to the distance. No target is
 // begun before and after.
 void		VK_SsrPrepPass( const float *parm );
 // v_softParticles: the distance of the solid level into vk.softDepth (shaders/softdepth.frag), parm as VK_SsrPrepPass
 void		VK_SoftDepthPass( const float *parm );
+// v_autoExposure: the copy of the frame (vk.screen) into the cells of vk.lum (shaders/lumdown.frag), copied for the CPU
+#define VK_LUM_WIDTH		64
+#define VK_LUM_HEIGHT		36
+void		VK_LumPass( void );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

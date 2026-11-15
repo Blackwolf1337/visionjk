@@ -136,6 +136,9 @@ static const uint32_t vk_ssrPrepFrag[] =
 static const uint32_t vk_softDepthFrag[] =
 #include "shaders/softdepth_frag.inc"
 ;
+static const uint32_t vk_lumDownFrag[] =
+#include "shaders/lumdown_frag.inc"
+;
 
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -255,7 +258,8 @@ static void VK_CreateLayouts( void ) {
 	{
 		const VkDescriptorSetLayout smaaSets[3] = { vk.postSetLayout, vk.postSetLayout, vk.postSetLayout };
 
-		push.size = sizeof( float ) * 8;
+		// (the tone map that shares the layout pushes twenty: its look, v_colorGrade)
+		push.size = sizeof( float ) * 20;
 		layout.setLayoutCount = 3;
 		layout.pSetLayouts = smaaSets;
 		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.smaaPipelineLayout ) );
@@ -807,6 +811,9 @@ void VK_InitPipelines( void ) {
 	// v_softParticles: the distance of the solid level, one float a pixel (13)
 	vk.softDepthShader = VK_CreateShader( vk_softDepthFrag, sizeof( vk_softDepthFrag ) );
 	vk.softDepthPipeline = VK_CreatePipeline( vk.postVertexShader, vk.softDepthShader, 0, 13, VKP_GENERIC );
+	// v_autoExposure: the frame into cells of the log of its brightness, one float each (13)
+	vk.lumShader = VK_CreateShader( vk_lumDownFrag, sizeof( vk_lumDownFrag ) );
+	vk.lumPipeline = VK_CreatePipeline( vk.postVertexShader, vk.lumShader, 0, 13, VKP_GENERIC );
 	// the saber blades in 3D, added onto the frame over the level (8: with the samples of the frame)
 	vk.saberShader = VK_CreateShader( vk_saberFrag, sizeof( vk_saberFrag ) );
 	vk.saberPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
@@ -859,6 +866,7 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.backdropPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.ssrPrepPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.softDepthPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.lumPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPortalPipeline, NULL );
@@ -871,6 +879,7 @@ void VK_ShutdownPipelines( void ) {
 	}
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.softDepthShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.lumShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.backdropShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );

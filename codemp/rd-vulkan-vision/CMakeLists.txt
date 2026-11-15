@@ -260,6 +260,7 @@ set(MPVulkanVisionVulkanShaders
 	tonemap.frag
 	ssrprep.frag
 	softdepth.frag
+	lumdown.frag
 	saber.frag
 	saberportal.frag
 	saberglow.frag

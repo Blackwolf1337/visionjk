@@ -1148,6 +1148,8 @@ static void MatDebug_DrawList( void ) {
 	}
 }
 
+static bool lookOpen;			// the window of the look of the level (MatDebug_DrawLook)
+
 static void MatDebug_DrawViews( void ) {
 	static const char *views[] = { "Off (as without materials)", "Materials", "Light alone", "Shine alone", "Normals",
 		"Light direction of the grid", "Roughness, metalness, occlusion", "Which maps", "Mirror of the probes",
@@ -1168,6 +1170,89 @@ static void MatDebug_DrawViews( void ) {
 		CL_MatLight_Toggle();
 	}
 	ImGui::SetItemTooltip( "Light to judge materials by: presets, lamps, another sun, exposure, sky (v_matlight)" );
+	ImGui::SameLine();
+	if ( ImGui::Button( "Look..." ) ) {
+		lookOpen = !lookOpen;
+	}
+	ImGui::SetItemTooltip( "The colour look of this level (v_colorGrade): contrast, saturation, warmth, tint of shadows and highlights, saved as maps/<level>.look" );
+}
+
+/*
+===============
+MatDebug_DrawLook
+
+The colour look of the level (rd-vulkan-vision v_colorGrade, the tone map): the cvars v_look* the renderer set from
+maps/<level>.look when the level was loaded, changed live here. Save writes them into that file of the profile, which
+the next load of the level reads; a pk3 of the level can carry it the same way.
+===============
+*/
+static void MatDebug_LookSlider( const char *label, const char *cvar, float low, float high, const char *tip ) {
+	float value = Cvar_VariableValue( cvar );
+
+	ImGui::SetNextItemWidth( 260.0f );
+	if ( ImGui::SliderFloat( label, &value, low, high, "%.2f" ) ) {
+		Cvar_Set( cvar, va( "%.3f", value ) );
+	}
+	ImGui::SetItemTooltip( "%s", tip );
+}
+
+static void MatDebug_LookColor( const char *label, const char *cvar, float low, float high, const char *tip ) {
+	char	text[64];
+	float	rgb[3] = { 0.0f, 0.0f, 0.0f };
+
+	Cvar_VariableStringBuffer( cvar, text, sizeof( text ) );
+	sscanf( text, "%f %f %f", &rgb[0], &rgb[1], &rgb[2] );
+	ImGui::SetNextItemWidth( 260.0f );
+	if ( ImGui::SliderFloat3( label, rgb, low, high, "%.3f" ) ) {
+		Cvar_Set( cvar, va( "%.3f %.3f %.3f", rgb[0], rgb[1], rgb[2] ) );
+	}
+	ImGui::SetItemTooltip( "%s", tip );
+}
+
+static void MatDebug_DrawLook( void ) {
+	char path[MAX_QPATH];
+
+	ImGui::SetNextWindowSize( ImVec2( 440.0f, 300.0f ), ImGuiCond_FirstUseEver );
+	if ( !ImGui::Begin( "Look of the level", &lookOpen ) ) {
+		ImGui::End();
+		return;
+	}
+	COM_StripExtension( cl.mapname, path, sizeof( path ) );
+	Q_strcat( path, sizeof( path ), ".look" );
+	ImGui::TextUnformatted( path );
+	if ( !Cvar_VariableIntegerValue( "v_colorGrade" ) ) {
+		ImGui::TextColored( ImVec4( 1.0f, 0.7f, 0.3f, 1.0f ), "v_colorGrade is 0: the look is not shown" );
+	}
+	MatDebug_LookSlider( "Contrast", "v_lookContrast", 0.5f, 2.0f, "Around a mid grey. 1: as it is" );
+	MatDebug_LookSlider( "Saturation", "v_lookSaturation", 0.0f, 2.0f, "1: as it is, 0: grey" );
+	MatDebug_LookSlider( "Warmth", "v_lookWarmth", -1.0f, 1.0f, "-1 cold (blue) to 1 warm (orange)" );
+	MatDebug_LookSlider( "Tint", "v_lookTint", -1.0f, 1.0f, "-1 green to 1 magenta" );
+	MatDebug_LookColor( "Shadows", "v_lookShadows", -0.2f, 0.2f, "Red, green, blue added where it is dark (lift). 0 0 0: as they are" );
+	MatDebug_LookColor( "Highlights", "v_lookHighlights", 0.5f, 1.5f, "Red, green, blue times where it is bright (gain). 1 1 1: as they are" );
+	if ( ImGui::Button( "Save" ) ) {
+		char	shadows[64], highlights[64];
+		const char *text;
+
+		Cvar_VariableStringBuffer( "v_lookShadows", shadows, sizeof( shadows ) );
+		Cvar_VariableStringBuffer( "v_lookHighlights", highlights, sizeof( highlights ) );
+		text = va( "// the colour look of this level (rd-vulkan-vision v_colorGrade), made in the Material Lab\n"
+			"contrast %.3f\nsaturation %.3f\nwarmth %.3f\ntint %.3f\nshadows %s\nhighlights %s\n",
+			Cvar_VariableValue( "v_lookContrast" ), Cvar_VariableValue( "v_lookSaturation" ), Cvar_VariableValue( "v_lookWarmth" ),
+			Cvar_VariableValue( "v_lookTint" ), shadows, highlights );
+		FS_WriteFile( path, text, (int)strlen( text ) );
+		MatDebug_Message( qfalse, "Saved %s", path );
+	}
+	ImGui::SameLine();
+	if ( ImGui::Button( "Neutral" ) ) {
+		Cvar_Set( "v_lookContrast", "1" );
+		Cvar_Set( "v_lookSaturation", "1" );
+		Cvar_Set( "v_lookWarmth", "0" );
+		Cvar_Set( "v_lookTint", "0" );
+		Cvar_Set( "v_lookShadows", "0 0 0" );
+		Cvar_Set( "v_lookHighlights", "1 1 1" );
+	}
+	ImGui::SetItemTooltip( "Everything as the game is; Save then writes a file that changes nothing" );
+	ImGui::End();
 }
 
 // Closing with unsaved materials asks once: they stay live after it, until the level changes or the game quits
@@ -1214,6 +1299,9 @@ static void MatDebug_Draw( debugWindow_t *window ) {
 		ImGui::EndChild();
 	}
 	ImGui::End();
+	if ( lookOpen ) {
+		MatDebug_DrawLook();
+	}
 	if ( !open ) {
 		MatDebug_Close();
 	}

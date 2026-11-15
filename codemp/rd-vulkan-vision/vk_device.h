@@ -234,6 +234,13 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					softDepthPipeline;
 	qboolean					softReady;			// drawn for the view that is being drawn
 	int							softShown;			// the slot of the texture table it was written into, -1: none
+	// v_autoExposure (vk_post.cpp VK_AutoExposure): the log of the brightness of the frame in 64 x 36 cells, and for
+	// each frame in flight where it is copied for the CPU
+	vkTarget_t					lum;
+	VkShaderModule				lumShader;
+	VkPipeline					lumPipeline;
+	vkBuffer_t					lumRead[VK_FRAMES];
+	qboolean					lumWritten[VK_FRAMES];
 	VkPipeline					ssrPrepPipeline;
 	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)
 	VkPipeline					saberPipeline;

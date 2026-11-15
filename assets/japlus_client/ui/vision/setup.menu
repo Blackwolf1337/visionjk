@@ -1457,8 +1457,47 @@
 
 		itemDef
 		{
+			name					vision_multi_v_autoexposure
+			type					ITEM_TYPE_MULTI
+			text					@VISION_EYE_ADAPTATION
+			descText				@VISION_THE_PICTURE_ADAPTS_LIKE_AN_EYE_DARK
+			cvar					"v_autoExposure"
+			cvarFloatList { @VISION_OFF 0 @VISION_GENTLE 1 @VISION_STRONG 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 414 432 52
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_colorgrade
+			type					ITEM_TYPE_YESNO
+			text					@VISION_LEVEL_COLOUR_LOOK
+			descText				@VISION_LEVELS_CAN_COME_WITH_A_COLOUR_LOOK_O
+			cvar					"v_colorGrade"
+			action { play "sound/interface/button1.wav" ; }
+			rect					782 466 432 52
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					1
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					772 414 452 100
+			rect					772 518 452 100
 			visible					1
 			text					@VISION_BLOOM
 			font					7
@@ -1486,7 +1525,7 @@
 			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
 			descPic					"gfx/menus/vision/setup/bloom" @MENUS_OFF @MENUS_ON
-			rect					782 514 432 52
+			rect					782 618 432 52
 			page					2
 			scroll					1
 			row						1
@@ -1508,7 +1547,7 @@
 			cvarTest				"tay_bloom"
 			disableCvar { "0" }
 			descPic					"gfx/menus/vision/setup/bloomstrength" 0.3 1.2
-			rect					782 566 432 52
+			rect					782 670 432 52
 			page					2
 			scroll					1
 			row						1
@@ -1530,7 +1569,7 @@
 			cvarTest				"tay_bloom"
 			disableCvar { "0" }
 			descPic					"gfx/menus/vision/setup/bloomthreshold" 0.8 0.3
-			rect					782 618 432 52
+			rect					782 722 432 52
 			page					2
 			scroll					1
 			row						1

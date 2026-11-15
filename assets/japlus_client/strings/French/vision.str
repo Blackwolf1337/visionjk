@@ -513,6 +513,30 @@ REFERENCE           HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
 LANG_ENGLISH        "How bright the level is before it is tone mapped. 1 as it is."
 LANG_FRENCH         "Luminosité du niveau avant le mappage des tons. 1 tel quel."
 
+REFERENCE           EYE_ADAPTATION
+LANG_ENGLISH        "Eye Adaptation"
+LANG_FRENCH         "Adaptation de l'œil"
+
+REFERENCE           THE_PICTURE_ADAPTS_LIKE_AN_EYE_DARK
+LANG_ENGLISH        "The picture adapts like an eye: dark corridors brighten a little, bright yards darken, over a moment. Gentle: up to one stop. Vulkan only."
+LANG_FRENCH         "L'image s'adapte comme un œil : les couloirs sombres s'éclaircissent un peu, les cours lumineuses s'assombrissent, en un instant. Douce : jusqu'à un diaphragme. Vulkan uniquement."
+
+REFERENCE           GENTLE
+LANG_ENGLISH        "Gentle"
+LANG_FRENCH         "Douce"
+
+REFERENCE           STRONG
+LANG_ENGLISH        "Strong"
+LANG_FRENCH         "Forte"
+
+REFERENCE           LEVEL_COLOUR_LOOK
+LANG_ENGLISH        "Level Colour Look"
+LANG_FRENCH         "Ambiance colorée du niveau"
+
+REFERENCE           LEVELS_CAN_COME_WITH_A_COLOUR_LOOK_O
+LANG_ENGLISH        "Levels can come with a colour look of their own: contrast, saturation, warmth and the tint of shadows and highlights. Off: the colours as they are. Vulkan only."
+LANG_FRENCH         "Les niveaux peuvent avoir leur propre ambiance colorée : contraste, saturation, chaleur et teinte des ombres et des hautes lumières. Désactivé : les couleurs telles quelles. Vulkan uniquement."
+
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 LANG_FRENCH         "#same"

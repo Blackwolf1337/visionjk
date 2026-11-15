@@ -386,6 +386,24 @@ LANG_ENGLISH        "Exposure"
 REFERENCE           HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
 LANG_ENGLISH        "How bright the level is before it is tone mapped. 1 as it is."
 
+REFERENCE           EYE_ADAPTATION
+LANG_ENGLISH        "Eye Adaptation"
+
+REFERENCE           THE_PICTURE_ADAPTS_LIKE_AN_EYE_DARK
+LANG_ENGLISH        "The picture adapts like an eye: dark corridors brighten a little, bright yards darken, over a moment. Gentle: up to one stop. Vulkan only."
+
+REFERENCE           GENTLE
+LANG_ENGLISH        "Gentle"
+
+REFERENCE           STRONG
+LANG_ENGLISH        "Strong"
+
+REFERENCE           LEVEL_COLOUR_LOOK
+LANG_ENGLISH        "Level Colour Look"
+
+REFERENCE           LEVELS_CAN_COME_WITH_A_COLOUR_LOOK_O
+LANG_ENGLISH        "Levels can come with a colour look of their own: contrast, saturation, warmth and the tint of shadows and highlights. Off: the colours as they are. Vulkan only."
+
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 

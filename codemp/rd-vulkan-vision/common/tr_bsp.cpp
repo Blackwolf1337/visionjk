@@ -2212,5 +2212,7 @@ void RE_LoadWorldMap( const char *name )
 	ri.CM_SetUsingCache( qfalse );
 	// VisionJK: the sun of this level is the one an override gives way to (tr_material.cpp)
 	R_MaterialWorldLoaded();
+	// VisionJK: its colour look, v_colorGrade (vk_post.cpp)
+	VK_LoadLook( name );
 	VK_StageTime( "level" );
 }
