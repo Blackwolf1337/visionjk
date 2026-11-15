@@ -1874,6 +1874,27 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           READY
+LANG_ENGLISH        "Ready"
+
+REFERENCE           STAFF
+LANG_ENGLISH        "Staff"
+
+REFERENCE           DUAL
+LANG_ENGLISH        "Dual"
+
+REFERENCE           TAVION
+LANG_ENGLISH        "Tavion"
+
+REFERENCE           DESANN
+LANG_ENGLISH        "Desann"
+
+REFERENCE           STRONG
+LANG_ENGLISH        "Strong"
+
+REFERENCE           FAST
+LANG_ENGLISH        "Fast"
+
 REFERENCE           YOU_PLAY_FOR_S
 LANG_ENGLISH        "You play for %s"
 

@@ -790,6 +790,13 @@ TR = {
 # here), so none of these may need a number behind its key.
 CGAME = {
     # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Ready': 'Bereit melden',
+    'Staff': 'Stab',
+    'Dual': 'Doppelt',
+    'Tavion': 'Tavion',
+    'Desann': 'Desann',
+    'Strong': 'Stark',
+    'Fast': 'Schnell',
     'You play for %s': 'Du spielst für %s',
     'twice: pick a player': 'zweimal: Spieler auswählen',
     'Waiting': 'Wartet',

@@ -190,17 +190,8 @@
 		}
 		itemDef
 		{
-			name				style_bar
-			type				ITEM_TYPE_BAR
+			name				saber_steps
 			rect				498 451 90 4
-			stat				saberstyle
-			showStat			saberstyle
-			align				ITEM_ALIGN_RIGHT
-			forecolor			0.43 0.83 1 1
-			backcolor			1 1 1 0.10
-			addColorRange		1 1 0.43 0.83 1 1
-			addColorRange		2 2 1 0.92 0.45 1
-			addColorRange		3 7 1 0.38 0.33 1
 			visible				1
 			decoration
 		}

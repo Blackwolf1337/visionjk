@@ -2497,6 +2497,34 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           READY
+LANG_ENGLISH        "Ready"
+LANG_SPANISH        "Listo"
+
+REFERENCE           STAFF
+LANG_ENGLISH        "Staff"
+LANG_SPANISH        "Bastón"
+
+REFERENCE           DUAL
+LANG_ENGLISH        "Dual"
+LANG_SPANISH        "Doble"
+
+REFERENCE           TAVION
+LANG_ENGLISH        "Tavion"
+LANG_SPANISH        "#same"
+
+REFERENCE           DESANN
+LANG_ENGLISH        "Desann"
+LANG_SPANISH        "#same"
+
+REFERENCE           STRONG
+LANG_ENGLISH        "Strong"
+LANG_SPANISH        "Fuerte"
+
+REFERENCE           FAST
+LANG_ENGLISH        "Fast"
+LANG_SPANISH        "Rápido"
+
 REFERENCE           YOU_PLAY_FOR_S
 LANG_ENGLISH        "You play for %s"
 LANG_SPANISH        "Juegas para %s"

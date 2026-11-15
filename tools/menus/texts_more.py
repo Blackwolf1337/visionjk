@@ -6,6 +6,13 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Ready': ('Prêt', 'Listo'),
+    'Staff': ('Bâton', 'Bastón'),
+    'Dual': ('Double', 'Doble'),
+    'Tavion': ('Tavion', 'Tavion'),
+    'Desann': ('Desann', 'Desann'),
+    'Strong': ('Fort', 'Fuerte'),
+    'Fast': ('Rapide', 'Rápido'),
     'You play for %s': ('Vous jouez pour %s', 'Juegas para %s'),
     'twice: pick a player': ('deux fois : choisir un joueur', 'dos veces: elegir un jugador'),
     'Waiting': ('En attente', 'Esperando'),

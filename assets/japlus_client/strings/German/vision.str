@@ -2497,6 +2497,34 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           READY
+LANG_ENGLISH        "Ready"
+LANG_GERMAN         "Bereit melden"
+
+REFERENCE           STAFF
+LANG_ENGLISH        "Staff"
+LANG_GERMAN         "Stab"
+
+REFERENCE           DUAL
+LANG_ENGLISH        "Dual"
+LANG_GERMAN         "Doppelt"
+
+REFERENCE           TAVION
+LANG_ENGLISH        "Tavion"
+LANG_GERMAN         "#same"
+
+REFERENCE           DESANN
+LANG_ENGLISH        "Desann"
+LANG_GERMAN         "#same"
+
+REFERENCE           STRONG
+LANG_ENGLISH        "Strong"
+LANG_GERMAN         "Stark"
+
+REFERENCE           FAST
+LANG_ENGLISH        "Fast"
+LANG_GERMAN         "Schnell"
+
 REFERENCE           YOU_PLAY_FOR_S
 LANG_ENGLISH        "You play for %s"
 LANG_GERMAN         "Du spielst für %s"

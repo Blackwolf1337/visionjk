@@ -100,7 +100,20 @@ static void Panels_WeaponName( const rectDef_t *r ) {
 	const playerState_t	*ps = &cg.predictedPlayerState;
 	const gitem_t		*item;
 
-	if ( ps->weapon <= WP_NONE || ps->weapon >= WP_NUM_WEAPONS || ps->weapon == WP_SABER ) {
+	if ( ps->weapon == WP_SABER ) {
+		// how the saber is held, the steps over it say the same (Panels_SaberSteps)
+		static const char *stances[] = { "", "Fast", "Medium", "Strong", "Desann", "Tavion", "Dual", "Staff" };
+		const int	level = ps->fd.saberDrawAnimLevel;
+		char		name[64];
+
+		if ( level >= 1 && level < (int)ARRAY_LEN( stances ) ) {
+			Q_strncpyz( name, CG_VisionText( stances[level] ), sizeof( name ) );
+			Q_strupr( name );
+			Hud_TextMid( r->x + r->w, r->y + r->h * 0.5f, HUD_CAPS, hudDim, 1.0f, HUD_RIGHT, name, r->w );
+		}
+		return;
+	}
+	if ( ps->weapon <= WP_NONE || ps->weapon >= WP_NUM_WEAPONS ) {
 		return;
 	}
 	item = BG_FindItemForWeapon( (weapon_t)ps->weapon );
@@ -111,6 +124,28 @@ static void Panels_WeaponName( const rectDef_t *r ) {
 		Q_strncpyz( name, CG_ItemName( item ), sizeof( name ) );
 		Q_strupr( name );
 		Hud_TextMid( r->x + r->w, r->y + r->h * 0.5f, HUD_CAPS, hudDim, 1.0f, HUD_RIGHT, name, r->w );
+	}
+}
+
+// The stance of the saber as three steps from the right, so many lit as it is heavy (fast, medium, strong), in the
+// colour of the stance; the stances beyond those (two blades, a staff, the ones of Desann and Tavion) light all.
+static void Panels_SaberSteps( const rectDef_t *r ) {
+	static const vec4_t	fast = { 0.43f, 0.83f, 1.0f, 1.0f }, medium = { 1.0f, 0.92f, 0.45f, 1.0f }, strong = { 1.0f, 0.38f, 0.33f, 1.0f };
+	static const vec4_t	off = { 1.0f, 1.0f, 1.0f, 0.10f };
+	const playerState_t	*ps = &cg.predictedPlayerState;
+	const int			level = ps->fd.saberDrawAnimLevel, lit = Q_min( 3, level );
+	const float			*tint = level <= 1 ? fast : level == 2 ? medium : level == 3 ? strong : hudAccent;
+	const float			gap = 2.0f, w = ( r->w - 2.0f * gap ) / 3.0f;
+	int					i;
+
+	if ( ps->weapon != WP_SABER || level < 1 ) {
+		return;
+	}
+	for ( i = 0; i < 3; i++ ) {
+		vec4_t c;
+
+		Hud_Color( c, i < lit ? tint : off, i < lit ? 1.0f : off[3] );
+		Skin_Panel( r->x + r->w - ( i + 1 ) * w - i * gap, r->y, w, r->h, r->h * 0.5f, c, NULL );
 	}
 }
 
@@ -144,6 +179,9 @@ void CG_HudPanelsDraw( void ) {
 	}
 	if ( Hud_ItemRect( "visionhud_right", "force_slot", &r ) ) {
 		Panels_Slot( &r );
+	}
+	if ( Hud_ItemRect( "visionhud_right", "saber_steps", &r ) ) {
+		Panels_SaberSteps( &r );
 	}
 	if ( Hud_ItemRect( "visionhud_right", "weapon_label", &r ) ) {
 		Panels_WeaponName( &r );

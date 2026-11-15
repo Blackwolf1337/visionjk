@@ -122,9 +122,22 @@ void CG_HudIntermission( void ) {
 
 	MapVote_Winner( title, sizeof( title ) );
 	if ( title[0] ) {
-		Com_sprintf( about, sizeof( about ), "%s  |  %s", CG_VisionText( "Match over" ), BG_GetGametypeString( cgs.gametype ) );
+		Com_sprintf( about, sizeof( about ), "%s  |  %s  |  %s", CG_VisionText( "Match over" ), BG_GetGametypeString( cgs.gametype ),
+			Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "mapname" ) );
+		Q_strupr( about );
 		Hud_Caps( SCREEN_WIDTH * 0.5f, 22.0f, hudAccent, 1.0f, HUD_CENTER, about );
 		Hud_TextMid( SCREEN_WIDTH * 0.5f, 42.0f, HUD_HUGE * 1.2f, hudBright, 1.0f, HUD_CENTER, title, 400.0f );
+	}
+	// how to say one is ready for the next level, until one has: over the vote, or at the bottom edge
+	if ( cg.snap && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR && !cg.demoPlayback
+		&& !( cg.snap->ps.stats[STAT_CLIENTS_READY] & ( 1 << cg.snap->ps.clientNum ) ) ) {
+		const qboolean	vote = MapVote_Open( &state );
+		const char		*key = Hud_KeyFor( "+attack", "ATTACK" ), *what = CG_VisionText( "Ready" );
+		const float		w = Hud_KeyHintWidth( key, what ) + 12.0f, h = 14.0f;
+		const float		x = SCREEN_WIDTH * 0.5f - w * 0.5f, y = SCREEN_HEIGHT - HUD_EDGE - h - ( vote ? 58.0f + HUD_GAP : 0.0f );
+
+		Hud_Glass( x, y, w, h, 3.5f, 1.0f, NULL, qtrue );
+		Hud_KeyHint( x + 6.0f, y + h * 0.5f, key, what, 1.0f );
 	}
 	if ( !MapVote_Open( &state ) ) {
 		return;
