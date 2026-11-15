@@ -67,5 +67,27 @@ void main() {
 		gl_TessLevelOuter[1] = EdgeLevel( d, t, 2, 0 );
 		gl_TessLevelOuter[2] = EdgeLevel( d, t, 0, 1 );
 		gl_TessLevelInner[0] = max( gl_TessLevelOuter[0], max( gl_TessLevelOuter[1], gl_TessLevelOuter[2] ) );
+
+		// the pass of marks painted onto the surface (DECALS, generic.frag Decals()): a triangle no mark reaches is
+		// left out (levels 0), so the pixels of the rest of the surface do not look through all the marks. The
+		// sphere of each mark (row 4 of it, vk_shade.cpp VK_MarkRows) against the box of the triangle, grown by
+		// the height the bumps may reach (tess.x).
+		if ( DECALS( d.flags ) ) {
+			vec3 lo = min( v_position[0], min( v_position[1], v_position[2] ) ) - vec3( d.tess.x );
+			vec3 hi = max( v_position[0], max( v_position[1], v_position[2] ) ) + vec3( d.tess.x );
+			bool reached = false;
+			uint r = d.decals;
+
+			for ( uint i = 0u; i < d.numDecals && !reached; i++ ) {
+				vec4 sphere = bones[r + 4u];
+
+				reached = distance( clamp( sphere.xyz, lo, hi ), sphere.xyz ) <= sphere.w;
+				r += 6u + uint( bones[r + 5u].x + 0.5 );
+			}
+			if ( !reached ) {
+				gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 0.0;
+				gl_TessLevelInner[0] = 0.0;
+			}
+		}
 	}
 }

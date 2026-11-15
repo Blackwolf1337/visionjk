@@ -1204,49 +1204,93 @@ static qboolean VK_SurfaceTessellated( const shader_t *surface ) {
 
 /*
 ===============
+VK_MarkRows
+
+One poly of a mark for generic.frag Decals(), into out (NULL: only how many rows it takes). Rows: the two axes of its
+plane with their offsets (u = dot( row0.xyz, p ) - row0.w, v likewise), its plane (normal, distance), its colour, a
+sphere around it and the reach of the bumps (centre, radius), its number of corners, then each corner as u, v, s, t.
+0: a poly too thin to have a plane.
+===============
+*/
+#define VK_MARK_HEADER_ROWS		6
+static int VK_MarkRows( const srfPoly_t *poly, float reach, float *out ) {
+	const polyVert_t	*v = poly->verts;
+	vec3_t				e1, e2, cross, n, u, w, centre;
+	float				area = 0.0f, radius = 0.0f;
+	int					best = -1;
+
+	// the plane from the largest triangle of the fan
+	for ( int i = 1; i < poly->numVerts - 1; i++ ) {
+		VectorSubtract( v[i].xyz, v[0].xyz, e1 );
+		VectorSubtract( v[i + 1].xyz, v[0].xyz, e2 );
+		CrossProduct( e1, e2, cross );
+		const float a = VectorLength( cross );
+		if ( a > area ) {
+			area = a;
+			best = i;
+			VectorCopy( cross, n );
+		}
+	}
+	if ( best < 0 || area < 1e-4f ) {
+		return 0;
+	}
+	if ( !out ) {
+		return VK_MARK_HEADER_ROWS + poly->numVerts;
+	}
+	VectorNormalize( n );
+	PerpendicularVector( u, n );
+	CrossProduct( n, u, w );
+	VectorClear( centre );
+	for ( int i = 0; i < poly->numVerts; i++ ) {
+		VectorAdd( centre, v[i].xyz, centre );
+	}
+	VectorScale( centre, 1.0f / poly->numVerts, centre );
+	for ( int i = 0; i < poly->numVerts; i++ ) {
+		radius = Q_max( radius, Distance( centre, v[i].xyz ) );
+	}
+
+	VectorCopy( u, out );		out[3] = DotProduct( u, v[0].xyz );
+	VectorCopy( w, out + 4 );	out[7] = DotProduct( w, v[0].xyz );
+	VectorCopy( n, out + 8 );	out[11] = DotProduct( n, v[0].xyz );
+	for ( int c = 0; c < 4; c++ ) {
+		out[12 + c] = v[0].modulate[c] / 255.0f;
+	}
+	VectorCopy( centre, out + 16 );	out[19] = sqrtf( radius * radius + reach * reach );
+	out[20] = (float)poly->numVerts;	out[21] = out[22] = out[23] = 0.0f;
+	out += 4 * VK_MARK_HEADER_ROWS;
+	for ( int i = 0; i < poly->numVerts; i++, out += 4 ) {
+		out[0] = DotProduct( u, v[i].xyz ) - DotProduct( u, v[0].xyz );
+		out[1] = DotProduct( w, v[i].xyz ) - DotProduct( w, v[0].xyz );
+		out[2] = v[i].st[0];
+		out[3] = v[i].st[1];
+	}
+	return VK_MARK_HEADER_ROWS + poly->numVerts;
+}
+
+/*
+===============
 VK_PaintMarks
 
 VisionJK: the marks on the tessellated surface of this batch (srfPoly_t tessShader, tr_marks.cpp) painted onto
 its bumps. A mark laid flat as its polys lies under the bumps, and a poly cut into other triangles than the
 surface never follows them exactly. So the surface itself is drawn again, through the same tessellation as its
-stage (VK_TessPass, depth EQUAL), once for each shader of marks on it, and generic.frag Decals() works out
-which marks a pixel lies in from their mappings. Only the first stage of a mark's shader, with its blend.
+stage (VK_TessPass, depth EQUAL), once for each shader of marks on it. generic.frag Decals() finds the poly a
+pixel lies in, seen along the normal of the poly, and its texture coordinates as the poly would have had them
+there; generic.tesc leaves out the triangles no poly reaches. Only the first stage of a mark's shader.
 ===============
 */
-#define VK_MAX_PAINTED_MARKS	512
+#define VK_MAX_PAINTED_MARKS	1024
 static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
 	static const srfPoly_t	*marks[VK_MAX_PAINTED_MARKS];
 	const shader_t			*surface = tess.shader;
+	// how far from the plane of a poly the bumps reach, so it does not paint another floor above or below it
+	const float				reach = tessFrom->tess[0] + 4.0f;
 	int						numMarks = 0;
 
 	for ( int i = 0; i < backEnd.refdef.numPolys && numMarks < VK_MAX_PAINTED_MARKS; i++ ) {
 		const srfPoly_t *poly = &backEnd.refdef.polys[i];
-		int j;
 
-		if ( !poly->tessShader || ( poly->tessShader != surface && poly->tessShader->remappedShader != surface ) ) {
-			continue;
-		}
-		// a mark is a poly for each triangle of the surface it was cut on, all with the same mapping: once
-		for ( j = 0; j < numMarks; j++ ) {
-			const srfPoly_t *other = marks[j];
-			int k;
-
-			if ( other->hShader != poly->hShader ) {
-				continue;
-			}
-			// (the offsets of the texture coordinates to a hundredth of the mark, the plane to half a unit)
-			for ( k = 0; k < 16; k++ ) {
-				const float most = ( k == 3 || k == 7 ) ? 1e-2f : ( k == 11 ? 0.5f : 1e-3f );
-
-				if ( fabsf( other->decal[k] - poly->decal[k] ) > most ) {
-					break;
-				}
-			}
-			if ( k == 16 ) {
-				break;
-			}
-		}
-		if ( j == numMarks ) {
+		if ( poly->tessShader && ( poly->tessShader == surface || poly->tessShader->remappedShader == surface ) ) {
 			marks[numMarks++] = poly;
 		}
 	}
@@ -1258,27 +1302,31 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 		const qhandle_t hShader = marks[i]->hShader;
 		const shader_t *markShader = R_GetShaderByHandle( hShader );
 		const shaderStage_t *stage;
-		int count = 0;
+		int rows = 0, count = 0;
 
 		if ( markShader->remappedShader ) {
 			markShader = markShader->remappedShader;
 		}
 		stage = &markShader->stages[0];
 		for ( int j = i; j < numMarks; j++ ) {
-			count += ( marks[j] && marks[j]->hShader == hShader );
+			if ( marks[j] && marks[j]->hShader == hShader ) {
+				rows += VK_MarkRows( marks[j], reach, NULL );
+			}
 		}
 		uint32_t first;
-		float *out = ( stage->active && stage->bundle[0].image ) ? VK_FrameRows( count * 4, &first ) : NULL;
+		float *out = ( rows && stage->active && stage->bundle[0].image ) ? VK_FrameRows( rows, &first ) : NULL;
 		for ( int j = i; j < numMarks; j++ ) {
 			if ( marks[j] && marks[j]->hShader == hShader ) {
 				if ( out ) {
-					memcpy( out, marks[j]->decal, sizeof( marks[j]->decal ) );
-					out += 16;
+					const int n = VK_MarkRows( marks[j], reach, out );
+
+					out += 4 * n;
+					count += ( n > 0 );
 				}
 				marks[j] = NULL;
 			}
 		}
-		if ( !out ) {
+		if ( !count ) {
 			continue;
 		}
 
@@ -1303,8 +1351,7 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 		draw.decals = first;
 		draw.numDecals = (uint32_t)count;
 		draw.parm[0] = kind;
-		// how far from the plane of a mark the bumps reach, so a mark does not paint another floor below it
-		draw.parm[1] = tessFrom->tess[0] + 4.0f;
+		draw.parm[1] = reach;
 		VK_DrawTess( &draw, passProgram, ( blend ? blend : ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)surface->polygonOffset );
 	}

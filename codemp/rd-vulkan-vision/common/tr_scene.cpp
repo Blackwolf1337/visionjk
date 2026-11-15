@@ -126,17 +126,15 @@ void R_AddPolygonSurfaces( void ) {
 =====================
 R_TessMark
 
-VisionJK: a poly of a mark whose points all lie on one tessellated surface (R_MarkTessFind) gets that surface and
-the mapping of its texture (srfPoly_t decal): the texture coordinates as a function of the place that does not
-change along the normal of the mark, so the surface can paint it onto its bumps as if from above.
+VisionJK: a poly of a mark whose points all lie on one tessellated surface (R_MarkTessFind) gets that surface, which
+paints it onto its bumps (vk_shade.cpp VK_PaintMarks).
 =====================
 */
 static void R_TessMark( srfPoly_t *poly ) {
 	const shader_t	*sh;
 	shader_t		*surface = NULL;
-	float			st[2], area = 0.0f;
-	vec3_t			normal, e1, e2, cross, n;
-	int				i, best = -1;
+	float			st[2];
+	vec3_t			normal;
 
 	poly->tessShader = NULL;
 	if ( !tr.world || poly->numVerts < 3 ) {
@@ -146,56 +144,13 @@ static void R_TessMark( srfPoly_t *poly ) {
 	if ( !sh->polygonOffset && sh->sort != SS_DECAL ) {
 		return;
 	}
-	for ( i = 0; i < poly->numVerts; i++ ) {
+	for ( int i = 0; i < poly->numVerts; i++ ) {
 		shader_t *found;
 
 		if ( !R_MarkTessFind( poly->verts[i].xyz, &found, st, normal ) || ( surface && found != surface ) ) {
 			return;
 		}
 		surface = found;
-	}
-	// the corner of the fan with the largest triangle, for the plane and the mapping
-	for ( i = 1; i < poly->numVerts - 1; i++ ) {
-		float a;
-
-		VectorSubtract( poly->verts[i].xyz, poly->verts[0].xyz, e1 );
-		VectorSubtract( poly->verts[i + 1].xyz, poly->verts[0].xyz, e2 );
-		CrossProduct( e1, e2, cross );
-		a = VectorLength( cross );
-		if ( a > area ) {
-			area = a;
-			best = i;
-		}
-	}
-	if ( best < 0 || area < 0.01f ) {
-		return;
-	}
-	const polyVert_t *v0 = &poly->verts[0], *v1 = &poly->verts[best], *v2 = &poly->verts[best + 1];
-	VectorSubtract( v1->xyz, v0->xyz, e1 );
-	VectorSubtract( v2->xyz, v0->xyz, e2 );
-	CrossProduct( e1, e2, n );
-	VectorNormalize( n );
-	// the gradient g of s with g.n = 0 and s1 - s0 = g.e1, s2 - s0 = g.e2: g = ( ds1 ( e2 x n ) + ds2 ( n x e1 ) ) / det
-	vec3_t	e2n, ne1;
-	CrossProduct( e2, n, e2n );
-	CrossProduct( n, e1, ne1 );
-	const float det = DotProduct( e1, e2n );
-	if ( fabsf( det ) < 1e-6f ) {
-		return;
-	}
-	for ( int c = 0; c < 2; c++ ) {
-		float *g = &poly->decal[c * 4];
-		const float d1 = v1->st[c] - v0->st[c], d2 = v2->st[c] - v0->st[c];
-
-		for ( int k = 0; k < 3; k++ ) {
-			g[k] = ( d1 * e2n[k] + d2 * ne1[k] ) / det;
-		}
-		g[3] = v0->st[c] - DotProduct( g, v0->xyz );
-	}
-	VectorCopy( n, &poly->decal[8] );
-	poly->decal[11] = DotProduct( n, v0->xyz );
-	for ( int c = 0; c < 4; c++ ) {
-		poly->decal[12 + c] = v0->modulate[c] / 255.0f;
 	}
 	poly->tessShader = surface;
 }

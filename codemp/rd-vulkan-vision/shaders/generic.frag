@@ -936,12 +936,12 @@ layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 	vec4	bones[];
 };
 
-// DECALS: the marks on a tessellated surface, painted onto its bumps in a pass over the surface (depth EQUAL). Each
-// mark gives its texture coordinates from the place of the pixel, the same along its normal, so it lies on the
-// bumps as if seen from above; a pixel outside its square, or further from its plane than the bumps reach
-// (d.parm.y), has nothing of it. The marks of the pass are put together as their blend would have put them over
-// each other, by d.parm.x: 0 the colour takes away (one minus the product of what each leaves), 1 times, 2 over by
-// alpha, 3 added. A pixel with no mark is left alone.
+// DECALS: the marks on a tessellated surface, painted onto its bumps in a pass over the surface (depth EQUAL), each
+// poly of a mark as it would have been drawn flat, seen along its normal (vk_shade.cpp VK_MarkRows has the rows):
+// the poly the pixel lies in, and its texture coordinates from its corners there. Further from the plane of a poly
+// than the bumps reach (its sphere), nothing of it. The polys of the pass are put together as their blend would have
+// put them over each other, by d.parm.x: 0 the colour takes away (one minus the product of what each leaves), 1
+// times, 2 over by alpha, 3 added. A pixel with no mark is left alone.
 vec4 Decals( Draw d ) {
 	uint kind = uint( d.parm.x + 0.5 );
 	vec3 p = v_position;
@@ -949,31 +949,55 @@ vec4 Decals( Draw d ) {
 	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
 	vec4 sum = ( kind == 1u ) ? vec4( 1.0 ) : vec4( 0.0 );
 	bool hit = false;
+	uint r = d.decals;
 
 	for ( uint i = 0u; i < d.numDecals; i++ ) {
-		uint r = d.decals + i * 4u;
-		vec4 S = bones[r], T = bones[r + 1u], P = bones[r + 2u], C = bones[r + 3u];
+		vec4 U = bones[r], V = bones[r + 1u], P = bones[r + 2u], S = bones[r + 4u];
+		uint corners = uint( bones[r + 5u].x + 0.5 );
+		uint first = r + 6u;
+		vec4 C = bones[r + 3u];
 
-		if ( abs( dot( P.xyz, p ) - P.w ) > d.parm.y ) {
+		r = first + corners;
+		if ( abs( dot( P.xyz, p ) - P.w ) > d.parm.y || distance( p, S.xyz ) > S.w ) {
 			continue;
 		}
-		vec2 st = vec2( dot( S.xyz, p ) + S.w, dot( T.xyz, p ) + T.w );
-		if ( any( lessThan( st, vec2( 0.0 ) ) ) || any( greaterThan( st, vec2( 1.0 ) ) ) ) {
-			continue;
-		}
-		vec4 c = textureGrad( TEX0( d ), st, vec2( dot( S.xyz, dpdx ), dot( T.xyz, dpdx ) ),
-			vec2( dot( S.xyz, dpdy ), dot( T.xyz, dpdy ) ) ) * C;
-		hit = true;
-		if ( kind == 0u ) {
-			sum.rgb = 1.0 - ( 1.0 - sum.rgb ) * ( 1.0 - c.rgb );
-			sum.a = 1.0;
-		} else if ( kind == 1u ) {
-			sum *= c;
-		} else if ( kind == 3u ) {
-			sum += c;
-		} else {
-			sum.rgb = c.rgb * c.a + sum.rgb * ( 1.0 - c.a );
-			sum.a = c.a + sum.a * ( 1.0 - c.a );
+		vec2 q = vec2( dot( U.xyz, p ) - U.w, dot( V.xyz, p ) - V.w );
+		vec4 a = bones[first];
+		for ( uint k = 1u; k + 1u < corners; k++ ) {
+			vec4 b = bones[first + k], c = bones[first + k + 1u];
+			vec2 e1 = b.xy - a.xy, e2 = c.xy - a.xy, e = q - a.xy;
+			float det = e1.x * e2.y - e1.y * e2.x;
+
+			if ( abs( det ) < 1e-8 ) {
+				continue;
+			}
+			// where q lies in the triangle a b c: q = a + x e1 + y e2
+			float x = ( e.x * e2.y - e.y * e2.x ) / det;
+			float y = ( e1.x * e.y - e1.y * e.x ) / det;
+			if ( x < 0.0 || y < 0.0 || x + y > 1.0 ) {
+				continue;
+			}
+			// the texture coordinates there, and how they change across the triangle for the mip level
+			vec2 st = a.zw + x * ( b.zw - a.zw ) + y * ( c.zw - a.zw );
+			mat2 toXY = mat2( e2.y, -e1.y, -e2.x, e1.x ) / det;		// (du, dv) to (dx, dy)
+			mat2 toST = mat2( b.zw - a.zw, c.zw - a.zw );
+			vec2 gx = toST * ( toXY * vec2( dot( U.xyz, dpdx ), dot( V.xyz, dpdx ) ) );
+			vec2 gy = toST * ( toXY * vec2( dot( U.xyz, dpdy ), dot( V.xyz, dpdy ) ) );
+			vec4 col = textureGrad( TEX0( d ), st, gx, gy ) * C;
+
+			hit = true;
+			if ( kind == 0u ) {
+				sum.rgb = 1.0 - ( 1.0 - sum.rgb ) * ( 1.0 - col.rgb );
+				sum.a = 1.0;
+			} else if ( kind == 1u ) {
+				sum *= col;
+			} else if ( kind == 3u ) {
+				sum += col;
+			} else {
+				sum.rgb = col.rgb * col.a + sum.rgb * ( 1.0 - col.a );
+				sum.a = col.a + sum.a * ( 1.0 - col.a );
+			}
+			break;
 		}
 	}
 	if ( !hit ) {
