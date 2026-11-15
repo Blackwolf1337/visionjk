@@ -379,6 +379,8 @@ TR = {
 
     # interface
     'New HUD': 'Neues HUD',
+    'Match Card': 'Spielkarte',
+    'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': 'Die Karte oben rechts mit Spielmodus, Uhr, deinem Platz und dem Führenden. Braucht das neue HUD.',
     'The HUD of VisionJK. Off: the HUD of the game.': 'Das HUD von VisionJK. Aus: das HUD des Originalspiels.',
     'Classic Menus': 'Klassische Menüs',
     'The menus of the game as they were. Counts from the next start of the game.':

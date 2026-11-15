@@ -902,6 +902,12 @@ LANG_ENGLISH        "New HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 
+REFERENCE           MATCH_CARD
+LANG_ENGLISH        "Match Card"
+
+REFERENCE           THE_CARD_AT_THE_UPPER_RIGHT_WITH_THE
+LANG_ENGLISH        "The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD."
+
 REFERENCE           BLUR_BEHIND_PANELS
 LANG_ENGLISH        "Blur Behind Panels"
 

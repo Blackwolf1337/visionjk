@@ -1201,6 +1201,14 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_SPANISH        "El HUD de VisionJK. Desactivado: el HUD del juego."
 
+REFERENCE           MATCH_CARD
+LANG_ENGLISH        "Match Card"
+LANG_SPANISH        "Tarjeta de partida"
+
+REFERENCE           THE_CARD_AT_THE_UPPER_RIGHT_WITH_THE
+LANG_ENGLISH        "The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD."
+LANG_SPANISH        "La tarjeta arriba a la derecha con el modo de juego, el reloj, tu puesto y el líder. Necesita el nuevo HUD."
+
 REFERENCE           BLUR_BEHIND_PANELS
 LANG_ENGLISH        "Blur Behind Panels"
 LANG_SPANISH        "Desenfoque tras los paneles"

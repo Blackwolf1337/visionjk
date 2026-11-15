@@ -207,10 +207,10 @@ void CG_HudPickup( void ) {
 CG_HudPerfLine
 
 The frames, the ping, the clock and the snapshot numbers that are switched on, as one glass line at the right edge
-from y. Returns the y under it.
+from y. Returns the y under it. clock qfalse: the card of the match over it shows the clock already.
 =================
 */
-float CG_HudPerfLine( float y ) {
+float CG_HudPerfLine( float y, qboolean clock ) {
 	const float	h = 14.0f, gap = 8.0f;
 	char		parts[4][2][64];
 	int			count = 0, i;
@@ -222,7 +222,7 @@ float CG_HudPerfLine( float y ) {
 		Com_sprintf( parts[count][0], sizeof( parts[0][0] ), "%i", cg.snap->ping );
 		Q_strncpyz( parts[count++][1], "MS", sizeof( parts[0][1] ) );
 	}
-	if ( cg_drawTimer.integer ) {
+	if ( clock && cg_drawTimer.integer ) {
 		Q_strncpyz( parts[count][0], CG_TimerText(), sizeof( parts[0][0] ) );
 		parts[count++][1][0] = '\0';
 	}
@@ -272,22 +272,15 @@ static float Combat_Readout( float x, float y, int align, const char *caption, c
 CG_HudScopeReadouts
 
 With the lens of a scope (scope/cg_scope.c) on the dark beside it: the zoom and the range to what is in the middle
-at the left, the ammo and health with shield at the right.
+at the left. Ammo, health and shield stay in the panels at the bottom, which the lens leaves alone.
 =================
 */
 void CG_HudScopeReadouts( float radius, float times, int meters ) {
-	const playerState_t	*ps = &cg.predictedPlayerState;
-	const float			left = SCREEN_WIDTH * 0.5f - radius * 1.12f - 12.0f, right = SCREEN_WIDTH * 0.5f + radius * 1.12f + 12.0f;
-	float				y = 200.0f, value, most;
+	const float	left = SCREEN_WIDTH * 0.5f - radius * 1.12f - 12.0f;
+	float		y = 200.0f;
 
 	y = Combat_Readout( left, y, HUD_RIGHT, CG_VisionText( "Zoom" ), va( "%.1fx", times ), hudBright, Com_Clamp( 0.0f, 1.0f, times / 8.0f ) );
 	Combat_Readout( left, y, HUD_RIGHT, CG_VisionText( "Range" ), meters >= 0 ? va( "%i m", meters ) : "---", hudBright, -1.0f );
-	y = 200.0f;
-	if ( CG_StatValue( "ammo", &value, &most ) ) {
-		y = Combat_Readout( right, y, HUD_LEFT, CG_VisionText( "Ammo" ), va( "%i", (int)value ), hudAmmo, most > 0.0f ? value / most : 0.0f );
-	}
-	Combat_Readout( right, y, HUD_LEFT, CG_VisionText( "Health" ), va( "%i  ^5%i", Q_max( 0, ps->stats[STAT_HEALTH] ), ps->stats[STAT_ARMOR] ),
-		ps->stats[STAT_HEALTH] <= 25 ? hudRed : hudBright, -1.0f );
 }
 
 // the line of the photo mode on a strip of glass at the bottom

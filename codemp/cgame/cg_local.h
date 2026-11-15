@@ -2149,7 +2149,7 @@ void CG_HudLockCaption( float x, float y, float fraction, qboolean locked );
 float CG_HudPowerups( float y );
 float CG_HudAttacker( float y );
 void CG_HudPickup( void );
-float CG_HudPerfLine( float y );
+float CG_HudPerfLine( float y, qboolean clock );
 const char *CG_HudAmmoWarning( void );
 extern int cg_hudSiegeTime;
 extern qboolean cg_hudSiegeMine;

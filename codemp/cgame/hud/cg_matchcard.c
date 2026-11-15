@@ -115,7 +115,7 @@ float CG_MatchCardDraw( float y ) {
 	char				gametype[64], value[128], label[64];
 	float				h, cy;
 
-	if ( cgs.gametype == GT_SIEGE || cg.showScores || CG_ScoresShown() ) {
+	if ( !v_hudMatchCard.integer || cgs.gametype == GT_SIEGE || cg.showScores || CG_ScoresShown() ) {
 		return y;
 	}
 

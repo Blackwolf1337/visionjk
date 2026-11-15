@@ -441,6 +441,8 @@ MORE = {
     'Jedi Master': ('Maître Jedi', 'Maestro Jedi'),
     # interface
     'New HUD': ('Nouveau HUD', 'Nuevo HUD'),
+    'Match Card': ('Carte du match', 'Tarjeta de partida'),
+    'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': ('La carte en haut à droite avec le mode de jeu, l\'horloge, votre place et le premier. Nécessite le nouveau HUD.', 'La tarjeta arriba a la derecha con el modo de juego, el reloj, tu puesto y el líder. Necesita el nuevo HUD.'),
     'The HUD of VisionJK. Off: the HUD of the game.': ('Le HUD de VisionJK. Désactivé : le HUD du jeu.', 'El HUD de VisionJK. Desactivado: el HUD del juego.'),
     'Classic Menus': ('Menus classiques', 'Menús clásicos'),
     'The menus of the game as they were. Counts from the next start of the game.': ("Les menus d'origine du jeu. Pris en compte au prochain lancement.", 'Los menús originales del juego. Se aplica en el próximo inicio.'),
