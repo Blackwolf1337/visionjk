@@ -158,3 +158,47 @@ gfx/vision/saberpool_scar
 		alphaGen vertex
 	}
 }
+
+// the flipbooks of the effects (tools/materials/flipbooks.py, keyword frames of the .efx, rd-vulkan-vision only:
+// effects/vision/fb). Smoke and dust blended by their alpha, lit by the level there (v_litParticles); the fireball
+// added. The vertices tint and fade them.
+gfx/vision/fb/smoke
+{
+	cull	twosided
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		map gfx/vision/fb/smoke
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/fb/dust
+{
+	cull	twosided
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		map gfx/vision/fb/dust
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/fb/fireball
+{
+	cull	twosided
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		map gfx/vision/fb/fireball
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+	}
+}

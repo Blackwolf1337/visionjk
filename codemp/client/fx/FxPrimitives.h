@@ -285,6 +285,11 @@ protected:
 
 	vec3_t		mOrgOffset;
 
+	// VisionJK: a sheet of tiles it goes through (CPrimitiveTemplate mFlipCols), 0 0: not one
+	short		mFlipCols, mFlipRows;
+	float		mFlipFps;
+	void		UpdateFlipbook();
+
 	vec3_t		mVel;
 	vec3_t		mAccel;
 
@@ -325,8 +330,11 @@ public:
 		mBoltNum = boltNum;
 	}
 
+	inline void SetFlipbook( int cols, int rows, float fps )	{ mFlipCols = (short)cols; mFlipRows = (short)rows; mFlipFps = fps; }
+
 	inline CParticle(void)
 	{
+		mFlipCols = mFlipRows = 0; mFlipFps = 0.0f;
 		mRefEnt.reType = RT_SPRITE; mEntNum = -1; mModelNum = -1; mBoltNum = -1;
 	}
 

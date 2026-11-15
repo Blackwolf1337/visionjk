@@ -191,6 +191,11 @@ public:
 
 	EMatImpactEffect	mMatImpactFX;
 
+	// VisionJK: frames <cols> <rows> [fps]: the shader is a sheet of tiles a particle goes through, over its life or
+	// at fps tiles a second (RF_FLIPBOOK); 0 0: not one
+	int				mFlipCols, mFlipRows;
+	float			mFlipFps;
+
 	vec3_t			mMin;
 	vec3_t			mMax;
 

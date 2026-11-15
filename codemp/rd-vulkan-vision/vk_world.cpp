@@ -1061,14 +1061,30 @@ static void VK_AddQuad( int kind, const vec3_t a, float aw, const vec3_t b, floa
 	tess.numIndexes += 6;
 }
 
-// a sprite as DoSprite() of rd-vanilla has it: turned by rotation degrees to the eye, the texture over all of it
-static void VK_AddSprite( const vec3_t origin, float radius, float rotation, const byte *color ) {
-	static const float	st[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+// a sprite as DoSprite() of rd-vanilla has it: turned by rotation degrees to the eye, the texture over all of it (or
+// the part st, a tile of a flipbook)
+static void VK_AddSprite( const vec3_t origin, float radius, float rotation, const byte *color, const float *st = NULL ) {
+	static const float	whole[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 	const float			angle = (float)M_PI * rotation / 180.0f;
 	vec3_t				turn;
 
 	VectorSet( turn, rotation ? cosf( angle ) : 1.0f, rotation ? sinf( angle ) : 0.0f, 0.0f );
-	VK_AddQuad( 0, origin, radius, turn, 0.0f, vec3_origin, st, color );
+	VK_AddQuad( 0, origin, radius, turn, 0.0f, vec3_origin, st ? st : whole, color );
+}
+
+// RF_FLIPBOOK: the part of the texture its tile is, left to right and top to bottom; qfalse: the whole of it
+static qboolean VK_FlipbookTile( const refEntity_t *e, float *st ) {
+	const int cols = RF_FLIPBOOK_COLS( e->frame ), rows = RF_FLIPBOOK_ROWS( e->frame );
+
+	if ( !( e->renderfx & RF_FLIPBOOK ) || cols < 1 || rows < 1 ) {
+		return qfalse;
+	}
+	const int tile = RF_FLIPBOOK_TILE( e->frame ) % ( cols * rows );
+	st[0] = (float)( tile % cols ) / cols;
+	st[1] = (float)( tile / cols ) / rows;
+	st[2] = (float)( tile % cols + 1 ) / cols;
+	st[3] = (float)( tile / cols + 1 ) / rows;
+	return qtrue;
 }
 
 // the entities whose surface sprite.vert makes
@@ -1085,7 +1101,7 @@ static void VK_AddEntityQuads( refEntity_t *e ) {
 
 	switch ( e->reType ) {
 	case RT_SPRITE:
-		VK_AddSprite( e->origin, e->radius, e->rotation, e->shaderRGBA );
+		VK_AddSprite( e->origin, e->radius, e->rotation, e->shaderRGBA, VK_FlipbookTile( e, st ) ? st : NULL );
 		break;
 	case RT_SABER_GLOW:
 		// the glow along the blade, from its tip down, and the halo of the hilt. The radius grows on the entity
@@ -1116,7 +1132,7 @@ static void VK_AddEntityQuads( refEntity_t *e ) {
 		if ( backEnd.viewParms.isMirror ) {
 			VectorSubtract( vec3_origin, left, left );
 		}
-		VK_AddQuad( 1, e->origin, 0.0f, left, 0.0f, up, whole, e->shaderRGBA );
+		VK_AddQuad( 1, e->origin, 0.0f, left, 0.0f, up, VK_FlipbookTile( e, st ) ? st : whole, e->shaderRGBA );
 		break;
 	case RT_LINE:
 		VK_AddQuad( 2, e->origin, e->radius, e->oldorigin, e->radius, vec3_origin, whole, e->shaderRGBA );

@@ -42,6 +42,8 @@ CPrimitiveTemplate::CPrimitiveTemplate()
 
 	mFlags = mSpawnFlags = 0;
 	mElasticity.SetRange(0.1f, 0.1f);
+	mFlipCols = mFlipRows = 0;
+	mFlipFps = 0.0f;
 
 	mSoundVolume = -1;
 	mSoundRadius = -1;
@@ -95,6 +97,9 @@ CPrimitiveTemplate &CPrimitiveTemplate::operator=(const CPrimitiveTemplate &that
 
 	mSpawnDelay			= that.mSpawnDelay;
 	mSpawnCount			= that.mSpawnCount;
+	mFlipCols			= that.mFlipCols;
+	mFlipRows			= that.mFlipRows;
+	mFlipFps			= that.mFlipFps;
 	mLife				= that.mLife;
 	mCullRange			= that.mCullRange;
 
@@ -2120,6 +2125,16 @@ bool CPrimitiveTemplate::ParsePrimitive( CGPGroup *grp )
 			ParsePlayFxStrings( pairs );
 		else if ( !Q_stricmp( key, "life" ) )
 			ParseLife( val );
+		else if ( !Q_stricmp( key, "frames" ) ) {
+			// VisionJK: a sheet of tiles (CPrimitiveTemplate mFlipCols), "cols rows [fps]"
+			int cols = 0, rows = 0;
+			float fps = 0.0f;
+
+			sscanf( val, "%d %d %f", &cols, &rows, &fps );
+			mFlipCols = Com_Clampi( 0, 255, cols );
+			mFlipRows = Com_Clampi( 0, 255, rows );
+			mFlipFps = Com_Clamp( 0.0f, 240.0f, fps );
+		}
 		else if ( !Q_stricmp( key, "delay" ) )
 			ParseDelay( val );
 		else if ( !Q_stricmp( key, "cullrange" ) ) {

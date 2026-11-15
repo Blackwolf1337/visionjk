@@ -318,6 +318,25 @@ int CFxScheduler::RegisterEffect( const char *file, bool bHasCorrectPath /*= fal
 		finalFilename += strTemp;
 	}
 
+	// VisionJK: with rd-vulkan-vision an effect of the game may come in a version of its own, effects/vision/fb/<the
+	// same path>, that uses what that renderer adds (flipbooks, RF_FLIPBOOK); rd-vanilla keeps the effect of the game
+	if ( Q_stristr( Cvar_VariableString( "cl_renderer" ), "vulkan" ) && finalFilename.compare( 0, 8, "effects/" ) == 0
+		&& finalFilename.compare( 0, 15, "effects/vision/" ) != 0 )
+	{
+		const std::string own = "effects/vision/fb/" + finalFilename.substr( 8 );
+		fileHandle_t ownHandle;
+
+		if ( theFxHelper.OpenFile( own.c_str(), &ownHandle, FS_READ ) > 0 )
+		{
+			theFxHelper.CloseFile( ownHandle );
+			finalFilename = own;
+		}
+		else if ( ownHandle )
+		{
+			theFxHelper.CloseFile( ownHandle );
+		}
+	}
+
 	len = theFxHelper.OpenFile( finalFilename.c_str(), &fh, FS_READ );
 
 	/*
@@ -1484,8 +1503,8 @@ void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, ma
 	//---------
 	case Particle:
 	//---------
-
-		FX_AddParticle( org, vel, accel,
+	{
+		CParticle *particle = FX_AddParticle( org, vel, accel,
 						fx->mSizeStart.GetVal(), fx->mSizeEnd.GetVal(), fx->mSizeParm.GetVal(),
 						fx->mAlphaStart.GetVal(), fx->mAlphaEnd.GetVal(), fx->mAlphaParm.GetVal(),
 						sRGB, eRGB, fx->mRGBParm.GetVal(),
@@ -1494,7 +1513,12 @@ void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, ma
 						fx->mDeathFxHandles.GetHandle(), fx->mImpactFxHandles.GetHandle(),
 						fx->mLife.GetVal(), fx->mMediaHandles.GetHandle(), flags, fx->mMatImpactFX, fxParm,
 						ghoul2, entNum, modelNum, boltNum );
+		if ( particle && fx->mFlipCols * fx->mFlipRows > 1 )
+		{
+			particle->SetFlipbook( fx->mFlipCols, fx->mFlipRows, fx->mFlipFps );
+		}
 		break;
+	}
 
 	//---------
 	case Line:
@@ -1662,7 +1686,8 @@ void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, ma
 	case OrientedParticle:
 	//-------------------
 
-		FX_AddOrientedParticle( org, ax[0], vel, accel,
+	{
+		COrientedParticle *particle = FX_AddOrientedParticle( org, ax[0], vel, accel,
 					fx->mSizeStart.GetVal(), fx->mSizeEnd.GetVal(), fx->mSizeParm.GetVal(),
 					fx->mAlphaStart.GetVal(), fx->mAlphaEnd.GetVal(), fx->mAlphaParm.GetVal(),
 					sRGB, eRGB, fx->mRGBParm.GetVal(),
@@ -1671,7 +1696,12 @@ void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, ma
 					fx->mDeathFxHandles.GetHandle(), fx->mImpactFxHandles.GetHandle(),
 					fx->mLife.GetVal(), fx->mMediaHandles.GetHandle(), flags, fx->mMatImpactFX, fxParm,
 					ghoul2, entNum, modelNum, boltNum);
+		if ( particle && fx->mFlipCols * fx->mFlipRows > 1 )
+		{
+			particle->SetFlipbook( fx->mFlipCols, fx->mFlipRows, fx->mFlipFps );
+		}
 		break;
+	}
 
 	//---------
 	case Sound:

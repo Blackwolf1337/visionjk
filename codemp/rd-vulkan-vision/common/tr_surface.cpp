@@ -187,6 +187,16 @@ static void RB_SurfaceSprite( void ) {
 		VectorSubtract( vec3_origin, left, left );
 	}
 
+	// VisionJK: a tile of a flipbook (RF_FLIPBOOK, vk_world.cpp VK_FlipbookTile has the same)
+	const refEntity_t *e = &backEnd.currentEntity->e;
+	const int cols = RF_FLIPBOOK_COLS( e->frame ), rows = RF_FLIPBOOK_ROWS( e->frame );
+	if ( ( e->renderfx & RF_FLIPBOOK ) && cols > 0 && rows > 0 ) {
+		const int tile = RF_FLIPBOOK_TILE( e->frame ) % ( cols * rows );
+
+		RB_AddQuadStampExt( backEnd.currentEntity->e.origin, left, up, backEnd.currentEntity->e.shaderRGBA,
+			(float)( tile % cols ) / cols, (float)( tile / cols ) / rows, (float)( tile % cols + 1 ) / cols, (float)( tile / cols + 1 ) / rows );
+		return;
+	}
 	RB_AddQuadStamp( backEnd.currentEntity->e.origin, left, up, backEnd.currentEntity->e.shaderRGBA );
 }
 

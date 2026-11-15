@@ -109,8 +109,33 @@ bool CParticle::Cull(void)
 }
 
 //----------------------------
+// VisionJK: the tile of its sheet now, over its life or at its rate (RF_FLIPBOOK)
+void CParticle::UpdateFlipbook( void )
+{
+	const int tiles = mFlipCols * mFlipRows;
+
+	if ( tiles <= 1 )
+	{
+		return;
+	}
+	const int age = theFxHelper.mTime - mTimeStart, life = mTimeEnd - mTimeStart;
+	int tile;
+
+	if ( mFlipFps > 0.0f )
+	{
+		tile = (int)( age * mFlipFps * 0.001f ) % tiles;
+	}
+	else
+	{
+		tile = ( life > 0 ) ? Com_Clampi( 0, tiles - 1, age * tiles / life ) : 0;
+	}
+	mRefEnt.renderfx |= RF_FLIPBOOK;
+	mRefEnt.frame = RF_FLIPBOOK_FRAME( Q_max( tile, 0 ), mFlipCols, mFlipRows );
+}
+
 void CParticle::Draw(void)
 {
+	UpdateFlipbook();
 	if ( mFlags & FX_DEPTH_HACK )
 	{
 		// Not sure if first person needs to be set, but it can't hurt?
@@ -640,6 +665,7 @@ bool COrientedParticle::Cull(void)
 //----------------------------
 void COrientedParticle::Draw(void)
 {
+	UpdateFlipbook();
 	if ( mFlags & FX_DEPTH_HACK )
 	{
 		// Not sure if first person needs to be set
