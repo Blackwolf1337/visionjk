@@ -387,8 +387,8 @@ void CG_RadialDraw( void ) {
 
 	// the ring and its hole
 	if ( Skin_Ready() ) {
-		Skin_Soft( cx - RADIAL_OUTER - 24.0f, cy - RADIAL_OUTER - 24.0f, 2.0f * RADIAL_OUTER + 48.0f, 2.0f * RADIAL_OUTER + 48.0f, 24.0f, hole );
-		// frosted glass behind the ring: a rounded rect as round as it is wide is a disc
+		// frosted glass behind the ring: a rounded rect as round as it is wide is a disc. With the glass no shadow,
+		// as Win_Glass: a dark shadow under the thinner ring made the wheel black.
 		if ( CG_DrawBackdrop( cx - RADIAL_OUTER, cy - RADIAL_OUTER, 2.0f * RADIAL_OUTER, 2.0f * RADIAL_OUTER, RADIAL_OUTER ) ) {
 			vec4_t thin;
 
@@ -396,6 +396,8 @@ void CG_RadialDraw( void ) {
 			thin[3] *= 0.65f;
 			Skin_Disc( cx, cy, RADIAL_OUTER, thin );
 		} else {
+			// a box of no size: the whole soft light, a round shadow (with a size it is a square one)
+			Skin_Soft( cx, cy, 0.0f, 0.0f, RADIAL_OUTER + 32.0f, hole );
 			Skin_Disc( cx, cy, RADIAL_OUTER, ring );
 		}
 		Skin_Disc( cx, cy, RADIAL_INNER, hole );
