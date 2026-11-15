@@ -254,6 +254,11 @@ void CG_PhotoDraw2D( void ) {
 	} else {
 		text = CG_VisionText( "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave." );
 	}
+	// VisionJK: in the new HUD the line on a strip of glass (hud/cg_hudcombat.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudPhotoLine( text );
+		return;
+	}
 	CG_Text_Paint( 320.0f - CG_Text_Width( text, 0.45f, FONT_SMALL ) * 0.5f, 450.0f, 0.45f, color, text, 0, 0, ITEM_TEXTSTYLE_SHADOWED,
 		FONT_SMALL );
 }

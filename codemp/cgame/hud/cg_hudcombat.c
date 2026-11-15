@@ -256,3 +256,44 @@ const char *CG_HudAmmoWarning( void ) {
 	}
 	return CG_VisionText( cg.lowAmmoWarning == 2 ? "Out of ammo" : "Low ammo" );
 }
+
+// a readout beside the lens: a caption, the value large, a bar (fraction < 0: none)
+static float Combat_Readout( float x, float y, int align, const char *caption, const char *value, const float *rgb, float fraction ) {
+	Hud_Caps( x, y, hudDim, 1.0f, align, caption );
+	Hud_TextMid( x, y + 13.0f, HUD_HUGE, rgb, 1.0f, align, value, 0.0f );
+	if ( fraction >= 0.0f ) {
+		Hud_Bar( align == HUD_RIGHT ? x - 70.0f : x, y + 25.0f, 70.0f, 2.0f, fraction, rgb, 1.0f, align == HUD_RIGHT );
+	}
+	return y + 38.0f;
+}
+
+/*
+=================
+CG_HudScopeReadouts
+
+With the lens of a scope (scope/cg_scope.c) on the dark beside it: the zoom and the range to what is in the middle
+at the left, the ammo and health with shield at the right.
+=================
+*/
+void CG_HudScopeReadouts( float radius, float times, int meters ) {
+	const playerState_t	*ps = &cg.predictedPlayerState;
+	const float			left = SCREEN_WIDTH * 0.5f - radius * 1.12f - 12.0f, right = SCREEN_WIDTH * 0.5f + radius * 1.12f + 12.0f;
+	float				y = 200.0f, value, most;
+
+	y = Combat_Readout( left, y, HUD_RIGHT, CG_VisionText( "Zoom" ), va( "%.1fx", times ), hudBright, Com_Clamp( 0.0f, 1.0f, times / 8.0f ) );
+	Combat_Readout( left, y, HUD_RIGHT, CG_VisionText( "Range" ), meters >= 0 ? va( "%i m", meters ) : "---", hudBright, -1.0f );
+	y = 200.0f;
+	if ( CG_StatValue( "ammo", &value, &most ) ) {
+		y = Combat_Readout( right, y, HUD_LEFT, CG_VisionText( "Ammo" ), va( "%i", (int)value ), hudAmmo, most > 0.0f ? value / most : 0.0f );
+	}
+	Combat_Readout( right, y, HUD_LEFT, CG_VisionText( "Health" ), va( "%i  ^5%i", Q_max( 0, ps->stats[STAT_HEALTH] ), ps->stats[STAT_ARMOR] ),
+		ps->stats[STAT_HEALTH] <= 25 ? hudRed : hudBright, -1.0f );
+}
+
+// the line of the photo mode on a strip of glass at the bottom
+void CG_HudPhotoLine( const char *text ) {
+	const float w = Hud_TextWidth( text, HUD_SMALL ) + 20.0f, h = 18.0f;
+
+	Hud_Glass( SCREEN_WIDTH * 0.5f - w * 0.5f, SCREEN_HEIGHT - HUD_EDGE - h, w, h, 5.0f, 1.0f, NULL, qtrue );
+	Hud_TextMid( SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT - HUD_EDGE - h * 0.5f, HUD_SMALL, hudText, 1.0f, HUD_CENTER, text, 0.0f );
+}

@@ -6,6 +6,10 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Zoom': ('Zoom', 'Zoom'),
+    'Range': ('Distance', 'Distancia'),
+    'Ammo': ('Munitions', 'Munición'),
+    'Health': ('Santé', 'Salud'),
     'Draw': ('Égalité', 'Empate'),
     '%s wins': ('%s gagne', '%s gana'),
     'Match over': ('Partie terminée', 'Partida terminada'),

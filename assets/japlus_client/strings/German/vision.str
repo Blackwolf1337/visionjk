@@ -2481,6 +2481,22 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           ZOOM
+LANG_ENGLISH        "Zoom"
+LANG_GERMAN         "#same"
+
+REFERENCE           RANGE
+LANG_ENGLISH        "Range"
+LANG_GERMAN         "Entfernung"
+
+REFERENCE           AMMO
+LANG_ENGLISH        "Ammo"
+LANG_GERMAN         "Munition"
+
+REFERENCE           HEALTH
+LANG_ENGLISH        "Health"
+LANG_GERMAN         "Leben"
+
 REFERENCE           DRAW
 LANG_ENGLISH        "Draw"
 LANG_GERMAN         "Unentschieden"

@@ -2481,6 +2481,22 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           ZOOM
+LANG_ENGLISH        "Zoom"
+LANG_SPANISH        "#same"
+
+REFERENCE           RANGE
+LANG_ENGLISH        "Range"
+LANG_SPANISH        "Distancia"
+
+REFERENCE           AMMO
+LANG_ENGLISH        "Ammo"
+LANG_SPANISH        "Munición"
+
+REFERENCE           HEALTH
+LANG_ENGLISH        "Health"
+LANG_SPANISH        "Salud"
+
 REFERENCE           DRAW
 LANG_ENGLISH        "Draw"
 LANG_SPANISH        "Empate"

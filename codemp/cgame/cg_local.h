@@ -2155,6 +2155,8 @@ extern int cg_hudSiegeTime;
 extern qboolean cg_hudSiegeMine;
 float CG_HudSiegeTop( float y );
 void CG_HudIntermission( void );
+void CG_HudScopeReadouts( float radius, float times, int meters );
+void CG_HudPhotoLine( const char *text );
 qboolean CG_MapVoteKey( int n );
 float CG_HudTeamList( float y );
 qboolean CG_HudVehicle( const centity_t *veh );

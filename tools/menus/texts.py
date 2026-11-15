@@ -786,6 +786,10 @@ TR = {
 # here), so none of these may need a number behind its key.
 CGAME = {
     # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Zoom': 'Zoom',
+    'Range': 'Entfernung',
+    'Ammo': 'Munition',
+    'Health': 'Leben',
     'Draw': 'Unentschieden',
     '%s wins': '%s gewinnt',
     'Match over': 'Spiel beendet',

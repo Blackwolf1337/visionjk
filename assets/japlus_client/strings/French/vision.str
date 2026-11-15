@@ -2481,6 +2481,22 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           ZOOM
+LANG_ENGLISH        "Zoom"
+LANG_FRENCH         "#same"
+
+REFERENCE           RANGE
+LANG_ENGLISH        "Range"
+LANG_FRENCH         "Distance"
+
+REFERENCE           AMMO
+LANG_ENGLISH        "Ammo"
+LANG_FRENCH         "Munitions"
+
+REFERENCE           HEALTH
+LANG_ENGLISH        "Health"
+LANG_FRENCH         "Santé"
+
 REFERENCE           DRAW
 LANG_ENGLISH        "Draw"
 LANG_FRENCH         "Égalité"

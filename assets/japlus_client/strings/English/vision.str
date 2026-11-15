@@ -1862,6 +1862,18 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           ZOOM
+LANG_ENGLISH        "Zoom"
+
+REFERENCE           RANGE
+LANG_ENGLISH        "Range"
+
+REFERENCE           AMMO
+LANG_ENGLISH        "Ammo"
+
+REFERENCE           HEALTH
+LANG_ENGLISH        "Health"
+
 REFERENCE           DRAW
 LANG_ENGLISH        "Draw"
 

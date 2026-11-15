@@ -827,7 +827,17 @@ void CG_ScopeDrawHUD( void ) {
 	vec4_t		color;
 	int			i;
 
-	if ( scope.drawn ) {
+	if ( scope.drawn && CG_HudNewLook() ) {
+		// VisionJK: in the new HUD readouts on the dark beside the lens (hud/cg_hudcombat.c)
+		const float times = tanf( DEG2RAD( cg_fov.value * 0.5f ) ) / tanf( DEG2RAD( Q_max( zoomFov, 1.0f ) * 0.5f ) );
+		trace_t		tr;
+		vec3_t		end;
+
+		VectorMA( cg.refdef.vieworg, 16384.0f, cg.refdef.viewaxis[0], end );
+		CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.predictedPlayerState.clientNum, MASK_SHOT );
+		CG_HudScopeReadouts( radius, times, ( tr.fraction < 1.0f && !( tr.surfaceFlags & SURF_SKY ) )
+			? (int)( tr.fraction * 16384.0f / UNITS_PER_METER + 0.5f ) : -1 );
+	} else if ( scope.drawn ) {
 		// how many times larger than without the zoom, next to the arc of the zoom on the left
 		const float	times = tanf( DEG2RAD( cg_fov.value * 0.5f ) ) / tanf( DEG2RAD( Q_max( zoomFov, 1.0f ) * 0.5f ) );
 		const char	*text = va( "%.1fx", times );
