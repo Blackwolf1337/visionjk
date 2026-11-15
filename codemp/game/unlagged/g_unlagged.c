@@ -153,6 +153,24 @@ static qboolean Unlagged_At( const unlagged_t *u, int time, unlaggedPoint_t *out
 
 /*
 =================
+G_UnlaggedOrigin
+
+Where a client was at time, from its trail; where it is now for a time the trail does not reach back to or a
+time that is not over yet. Shifts nothing (the aimbot check of anticheat/g_anticheat.c).
+=================
+*/
+void G_UnlaggedOrigin( const gentity_t *ent, int time, vec3_t origin ) {
+	unlaggedPoint_t p;
+
+	if ( ent->client && Unlagged_At( &ent->client->unlagged, time, &p ) ) {
+		VectorCopy( p.origin, origin );
+		return;
+	}
+	VectorCopy( ent->r.currentOrigin, origin );
+}
+
+/*
+=================
 G_UnlaggedShift
 
 Moves every other client in the level back to where the shooter saw it. what is one of UNLAGGED_*: nothing is

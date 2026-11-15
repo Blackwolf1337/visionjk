@@ -30,6 +30,10 @@ typedef struct acSample_s {
 	float	speed;					// degrees per second since the move before
 	float	enemyErr;				// yaw minus the bearing to the nearest enemy in reach, 999 for none
 	byte	engaged;				// attacking with an enemy in reach
+	float	aimErr;					// yaw minus the bearing to the aim target where the client saw it, 999 for none
+	float	aimRate;				// degrees per second the bearing to that target turned
+	short	aimTarget;				// its client number, -1 for none
+	byte	aimVisible;				// no wall between the eye and it
 } acSample_t;
 
 typedef struct anticheat_s {
@@ -51,6 +55,25 @@ typedef struct anticheat_s {
 	int			windowIntervals;	// how many reversal intervals are summed below
 	float		windowIntervalSum, windowIntervalSq;
 	int			windowsBad;			// windows in a row over the limit
+
+	// the aimbot (G_AC_Aim)
+	int			aimTarget;			// client number of the last aim target, -1 for none
+	float		aimLastBearing;		// the bearing to it at the last move
+	int			aimWindowStart;		// serverTime the window began
+	int			aimFastMs;			// msec of it the target crossed the view fast
+	int			aimLockMs;			// msec of those the view sat on it
+	int			aimWindowsBad;
+	int			turnStart;			// serverTime a fast turn began, 0 while none
+	float		turnAccum;			// degrees it turned so far
+	int			turnDir;
+	int			snapTimes[4];		// serverTime of the last snaps onto a target
+	int			snapActTimes[4];	// serverTime of the last snaps followed by a shot or a force power
+	int			lastSnapTime;		// serverTime of the last snap, for the shot after it
+	int			lastActTime;		// serverTime of the last shot or aimed force power, for the snap after it
+	int			lastButtons;		// buttons of the move before
+	int			aimFlags;
+	int			aimLogTime;			// level.time of the last aim line
+	int			aimWarnTime;		// level.time the player was last warned
 
 	int			blockUntil;			// level.time until which the saber hurts no player
 	int			flags;				// how often this player was flagged

@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // g_anticheat.c -- moves that no hand makes. Not in JA+ and not in OpenJK.
 //
-// Two things, both server side, so they hold for every client, stock and legacy ones included:
+// Three things, all server side, so they hold for every client, stock and legacy ones included:
 //
 // - The time of one move (G_AC_MoveTime, vs_antiSpeed). A stock client sends a move for every frame it draws,
 //   8 to 33 ms. The game ran whatever time a move claimed, up to a second (Pmove), so a client that held its moves
@@ -38,6 +38,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   reversals a second. vs_antiWiggle 2: his saber then hurts no player for vs_wiggleBlockTime seconds (the
 //   swing goes on, so a false alarm costs a few seconds of damage). 3: kicked after the third flag.
 //   It is a guess from the moves: a bot that wiggles slowly and unevenly looks like a hand.
+//
+// - The aimbot (G_AC_Aim, vs_antiAim), for the saber, force powers and guns alike. An aimbot turns the view onto
+//   an enemy where the client sees him, which is behind the server by the lag: the enemy is taken from his trail
+//   at the time of the move (G_UnlaggedOrigin), so the check sees what the client saw. Two signs, yaw only (an
+//   aimbot may aim at the head or the chest, that is a pitch the check cannot know):
+//   Lock: while the enemy crosses the view faster than AC_AIM_FAST degrees a second, the view stays within
+//   AC_AIM_EXACT of him for most of that time, in two two-second windows in a row. A hand lags behind a target
+//   that fast and overshoots it.
+//   Snap: a turn of AC_AIM_SNAP_TURN degrees or more within AC_AIM_SNAP_MSEC that stops dead on an enemy, three
+//   times in AC_AIM_SNAP_SPAN, or twice with an attack or an aimed force power (grip, lightning, drain, push,
+//   pull, mind trick) within AC_AIM_ACT_MSEC of it (a trigger bot fires with the turn).
+//   vs_antiAim 1 writes it down, 2 (default) also tells the player that his aim was flagged and logged. Nothing is
+//   blocked: good players track closely too, this needs numbers from real cheats first.
 //
 // Each flag is a line in the security log and on the console. The first in a minute also writes the last moves to
 // anticheat/<date>_<address>_<what>.csv in the game folder, so the limits can be set from what a cheat really does.
@@ -58,11 +71,28 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AC_WIGGLE_KICK_FLAGS	3
 #define AC_DUMP_MSEC			60000
 
+#define AC_AIM_RANGE			4096.0f	// enemies farther away are not looked at
+#define AC_AIM_CONE				30.0f	// degrees of yaw: an enemy this far off the view is no aim target
+#define AC_AIM_EXACT			1.0f	// degrees of yaw: on the enemy, as an aimbot puts the view
+#define AC_AIM_FAST				90.0f	// degrees a second: an enemy crossing the view at least this fast
+#define AC_AIM_WINDOW			2000	// msec of moves per window of the lock check
+#define AC_AIM_MIN_FAST			500		// msec of a window the enemy has to cross fast for it to count
+#define AC_AIM_LOCK_RATIO		0.8f	// of that time on him
+#define AC_AIM_TURN				300.0f	// degrees a second: a turn this fast may become a snap
+#define AC_AIM_SNAP_TURN		25.0f	// degrees a snap turns
+#define AC_AIM_SNAP_MSEC		40		// within that time
+#define AC_AIM_SNAP_SPAN		10000	// snaps counted in this time
+#define AC_AIM_SNAPS			3
+#define AC_AIM_SNAP_ACTS		2		// snaps with an attack or force power within AC_AIM_ACT_MSEC of them
+#define AC_AIM_ACT_MSEC			150		// before or after the snap
+#define AC_AIM_LOG_MSEC			5000	// at most one aim line a player in this time
+#define AC_AIM_WARN_MSEC		60000	// at most one warning a player in this time
+
 /*
 =================
 G_AC_Dump
 
-Writes the moves of the wiggle check of a player as a table.
+Writes the last moves of a player as a table, with what the wiggle and the aim check saw in each.
 =================
 */
 static void G_AC_Dump( gentity_t *ent, const char *what, const char *why ) {
@@ -94,15 +124,15 @@ static void G_AC_Dump( gentity_t *ent, const char *what, const char *why ) {
 
 	Com_sprintf( line, sizeof( line ), "# %s^7, client %i, %s\n", ent->client->pers.netname, ent->s.number, why );
 	trap->FS_Write( line, (int)strlen( line ), f );
-	Q_strncpyz( line, "time,yaw,speed,enemyErr,engaged\n", sizeof( line ) );
+	Q_strncpyz( line, "time,yaw,speed,enemyErr,engaged,aimTarget,aimErr,aimRate,aimVisible\n", sizeof( line ) );
 	trap->FS_Write( line, (int)strlen( line ), f );
 
 	first = ( ac->head - ac->count + AC_WIGGLE_SAMPLES ) % AC_WIGGLE_SAMPLES;
 	for ( i = 0; i < ac->count; i++ ) {
 		const acSample_t *s = &ac->samples[( first + i ) % AC_WIGGLE_SAMPLES];
 
-		Com_sprintf( line, sizeof( line ), "%i,%.1f,%.0f,%.1f,%i\n", s->time - ac->samples[first].time, s->yaw, s->speed,
-			s->enemyErr, s->engaged );
+		Com_sprintf( line, sizeof( line ), "%i,%.1f,%.0f,%.1f,%i,%i,%.2f,%.0f,%i\n", s->time - ac->samples[first].time, s->yaw,
+			s->speed, s->enemyErr, s->engaged, s->aimTarget, s->aimErr, s->aimRate, s->aimVisible );
 		trap->FS_Write( line, (int)strlen( line ), f );
 	}
 	trap->FS_Close( f );
@@ -245,6 +275,212 @@ static void G_AC_WindowEnd( gentity_t *ent ) {
 
 /*
 =================
+G_AC_AimTarget
+
+The enemy closest to the view in yaw, where the client saw him at time: his client number and the yaw from the eye
+to him, -1 for none within AC_AIM_CONE and AC_AIM_RANGE.
+=================
+*/
+static int G_AC_AimTarget( const gentity_t *ent, const vec3_t eye, float viewYaw, int time, float *bearing, vec3_t where ) {
+	float	best = AC_AIM_CONE;
+	int		i, found = -1;
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		const gentity_t	*other = &g_entities[i];
+		vec3_t			origin, d;
+		float			yaw, err;
+
+		if ( other == ent || !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED
+			|| other->health <= 0 || other->client->sess.sessionTeam == TEAM_SPECTATOR || other->client->tempSpectate >= level.time ) {
+			continue;
+		}
+		if ( level.gametype >= GT_TEAM && other->client->sess.sessionTeam == ent->client->sess.sessionTeam ) {
+			continue;
+		}
+		G_UnlaggedOrigin( other, time, origin );
+		VectorSubtract( origin, eye, d );
+		if ( VectorLengthSquared( d ) > AC_AIM_RANGE * AC_AIM_RANGE ) {
+			continue;
+		}
+		yaw = vectoyaw( d );
+		err = fabsf( AngleDelta( viewYaw, yaw ) );
+		if ( err < best ) {
+			best = err;
+			found = i;
+			*bearing = yaw;
+			VectorCopy( origin, where );
+		}
+	}
+	return found;
+}
+
+static void G_AC_AimFlag( gentity_t *ent, const char *why ) {
+	anticheat_t *ac = &ent->client->pers.anticheat;
+
+	ac->aimFlags++;
+	if ( !ac->aimLogTime || level.time - ac->aimLogTime >= AC_AIM_LOG_MSEC || level.time < ac->aimLogTime ) {
+		ac->aimLogTime = level.time;
+		G_AC_Log( ent, va( "aims like an aimbot: %s, flag %i", why, ac->aimFlags ) );
+		G_AC_Dump( ent, "aim", why );
+	}
+	if ( vs_antiAim.integer >= 2
+		&& ( !ac->aimWarnTime || level.time - ac->aimWarnTime >= AC_AIM_WARN_MSEC || level.time < ac->aimWarnTime ) ) {
+		ac->aimWarnTime = level.time;
+		trap->SendServerCommand( ent->s.number, "cp \"^3Your aim was flagged as automated.\nThis was logged.\"" );
+		trap->SendServerCommand( ent->s.number, "print \"^3Your aim was flagged as automated by the server. This was logged.\n\"" );
+	}
+}
+
+// keeps the times of the last snaps, returns how many lie within AC_AIM_SNAP_SPAN
+static int G_AC_AddSnap( int *times, int count, int now ) {
+	int i, n = 0;
+
+	for ( i = count - 1; i > 0; i-- ) {
+		times[i] = times[i - 1];
+	}
+	times[0] = now;
+	for ( i = 0; i < count; i++ ) {
+		if ( times[i] && now - times[i] <= AC_AIM_SNAP_SPAN && now >= times[i] ) {
+			n++;
+		}
+	}
+	return n;
+}
+
+// a snap with a shot or an aimed force power within AC_AIM_ACT_MSEC of it
+static void G_AC_SnapAct( gentity_t *ent, int now ) {
+	anticheat_t	*ac = &ent->client->pers.anticheat;
+	const int	acts = G_AC_AddSnap( ac->snapActTimes, ARRAY_LEN( ac->snapActTimes ), now );
+
+	ac->lastSnapTime = 0;
+	ac->lastActTime = 0;
+	if ( acts >= AC_AIM_SNAP_ACTS ) {
+		memset( ac->snapActTimes, 0, sizeof( ac->snapActTimes ) );
+		G_AC_AimFlag( ent, va( "%i snaps onto an enemy with an attack or force power within %i ms of them, in %i s", acts,
+			AC_AIM_ACT_MSEC, AC_AIM_SNAP_SPAN / 1000 ) );
+	}
+}
+
+/*
+=================
+G_AC_Aim
+
+G_AC_Think, for every move: the lock and the snap of an aimbot. s is the sample of the move, its aim fields are
+filled in here.
+=================
+*/
+static void G_AC_Aim( gentity_t *ent, const usercmd_t *ucmd, acSample_t *s, int dt, float yaw, float dyaw ) {
+	gclient_t	*client = ent->client;
+	anticheat_t	*ac = &client->pers.anticheat;
+	const float	turn = dyaw * 1000.0f / dt;
+	const int	pressed = ucmd->buttons & ~ac->lastButtons;
+	// a shot or an aimed force power started with this move
+	const qboolean acted = ( pressed & ( BUTTON_ATTACK | BUTTON_ALT_ATTACK | BUTTON_FORCEPOWER | BUTTON_FORCEGRIP
+		| BUTTON_FORCE_LIGHTNING | BUTTON_FORCE_DRAIN ) ) || ucmd->generic_cmd == GENCMD_FORCE_THROW
+		|| ucmd->generic_cmd == GENCMD_FORCE_PULL || ucmd->generic_cmd == GENCMD_FORCE_DISTRACT;
+	vec3_t		eye, where;
+	float		bearing = 0.0f, err = 999.0f, rate = 0.0f;
+	qboolean	visible = qfalse;
+	int			target;
+
+	s->aimTarget = -1;
+	s->aimErr = 999.0f;
+	s->aimRate = 0.0f;
+	s->aimVisible = 0;
+	ac->lastButtons = ucmd->buttons;
+
+	if ( ent->health <= 0 || client->sess.sessionTeam == TEAM_SPECTATOR || client->ps.pm_type != PM_NORMAL ) {
+		ac->aimTarget = -1;
+		ac->turnStart = 0;
+		return;
+	}
+
+	VectorCopy( client->ps.origin, eye );
+	eye[2] += client->ps.viewheight;
+	target = G_AC_AimTarget( ent, eye, yaw, ucmd->serverTime, &bearing, where );
+	if ( target >= 0 ) {
+		err = fabsf( AngleDelta( yaw, bearing ) );
+		if ( target == ac->aimTarget ) {
+			rate = fabsf( AngleDelta( bearing, ac->aimLastBearing ) ) * 1000.0f / dt;
+		}
+		if ( err < AC_AIM_EXACT ) {
+			trace_t tr;
+
+			where[2] += 16.0f;		// the chest rather than the waist
+			trap->Trace( &tr, eye, NULL, NULL, where, ent->s.number, CONTENTS_SOLID, qfalse, 0, 0 );
+			visible = (qboolean)( tr.fraction >= 1.0f );
+		}
+		s->aimTarget = (short)target;
+		s->aimErr = err;
+		s->aimRate = rate;
+		s->aimVisible = (byte)visible;
+	}
+	ac->aimTarget = target;
+	ac->aimLastBearing = bearing;
+
+	// the lock: the view on an enemy who crosses it fast
+	if ( target >= 0 && rate >= AC_AIM_FAST ) {
+		ac->aimFastMs += dt;
+		if ( err < AC_AIM_EXACT && visible ) {
+			ac->aimLockMs += dt;
+		}
+	}
+	if ( ucmd->serverTime - ac->aimWindowStart >= AC_AIM_WINDOW ) {
+		if ( ac->aimFastMs >= AC_AIM_MIN_FAST ) {
+			const float ratio = (float)ac->aimLockMs / ac->aimFastMs;
+
+			ac->aimWindowsBad = ratio >= AC_AIM_LOCK_RATIO ? ac->aimWindowsBad + 1 : 0;
+			if ( ac->aimWindowsBad >= 2 ) {
+				ac->aimWindowsBad = 0;
+				G_AC_AimFlag( ent, va( "the view sat within %.1f degrees on an enemy crossing it fast for %i of %i ms",
+					AC_AIM_EXACT, ac->aimLockMs, ac->aimFastMs ) );
+			}
+		}
+		ac->aimWindowStart = ucmd->serverTime;
+		ac->aimFastMs = ac->aimLockMs = 0;
+	}
+
+	// the snap: a fast turn that stops dead on an enemy
+	// (no limit on the size of one step: a teleport or a respawn turns delta_angles, not the angles of the move, and
+	// an aimbot may turn half round in one move)
+	if ( fabsf( turn ) >= AC_AIM_TURN
+		&& ( !ac->turnStart || ( turn > 0.0f ? 1 : -1 ) == ac->turnDir ) ) {
+		if ( !ac->turnStart ) {
+			ac->turnStart = ucmd->serverTime - dt;
+			ac->turnAccum = 0.0f;
+			ac->turnDir = turn > 0.0f ? 1 : -1;
+		}
+		ac->turnAccum += fabsf( dyaw );
+	} else if ( ac->turnStart ) {
+		// the turn is over (it ended with the move before this one)
+		if ( ac->turnAccum >= AC_AIM_SNAP_TURN && s->time - dt - ac->turnStart <= AC_AIM_SNAP_MSEC
+			&& fabsf( turn ) < AC_AIM_TURN * 0.25f && target >= 0 && err < AC_AIM_EXACT && visible ) {
+			const int snaps = G_AC_AddSnap( ac->snapTimes, ARRAY_LEN( ac->snapTimes ), ucmd->serverTime );
+
+			ac->lastSnapTime = ucmd->serverTime;
+			if ( ac->lastActTime && ucmd->serverTime - ac->lastActTime <= AC_AIM_ACT_MSEC && ucmd->serverTime >= ac->lastActTime ) {
+				G_AC_SnapAct( ent, ucmd->serverTime );		// fired with the turn or just before it ended
+			}
+			if ( snaps >= AC_AIM_SNAPS ) {
+				memset( ac->snapTimes, 0, sizeof( ac->snapTimes ) );
+				G_AC_AimFlag( ent, va( "%i snaps of %.0f degrees or more onto an enemy in %i s", snaps, AC_AIM_SNAP_TURN,
+					AC_AIM_SNAP_SPAN / 1000 ) );
+			}
+		}
+		ac->turnStart = 0;
+	}
+
+	// a shot or an aimed force power right after a snap
+	if ( acted ) {
+		ac->lastActTime = ucmd->serverTime;
+		if ( ac->lastSnapTime && ucmd->serverTime - ac->lastSnapTime <= AC_AIM_ACT_MSEC && ucmd->serverTime >= ac->lastSnapTime ) {
+			G_AC_SnapAct( ent, ucmd->serverTime );
+		}
+	}
+}
+
+/*
+=================
 G_AC_Think
 
 ClientThink_real, after Pmove ran a move a client sent.
@@ -259,7 +495,7 @@ void G_AC_Think( gentity_t *ent, const usercmd_t *ucmd ) {
 	qboolean	engaged = qfalse, enemy;
 	int			dir;
 
-	if ( vs_antiWiggle.integer <= 0 ) {
+	if ( vs_antiWiggle.integer <= 0 && vs_antiAim.integer <= 0 ) {
 		return;
 	}
 	if ( !ac->lastTime || dt <= 0 || dt > 250 ) {
@@ -270,6 +506,11 @@ void G_AC_Think( gentity_t *ent, const usercmd_t *ucmd ) {
 		ac->windowStart = ucmd->serverTime;
 		ac->windowEngaged = ac->windowRevs = ac->windowIntervals = 0;
 		ac->windowIntervalSum = ac->windowIntervalSq = 0.0f;
+		ac->aimTarget = -1;
+		ac->turnStart = 0;
+		ac->aimWindowStart = ucmd->serverTime;
+		ac->aimFastMs = ac->aimLockMs = 0;
+		ac->lastButtons = ucmd->buttons;
 		return;
 	}
 
@@ -295,6 +536,18 @@ void G_AC_Think( gentity_t *ent, const usercmd_t *ucmd ) {
 	ac->head = ( ac->head + 1 ) % AC_WIGGLE_SAMPLES;
 	if ( ac->count < AC_WIGGLE_SAMPLES ) {
 		ac->count++;
+	}
+
+	if ( vs_antiAim.integer > 0 ) {
+		G_AC_Aim( ent, ucmd, s, dt, yaw, dyaw );
+	} else {
+		s->aimTarget = -1;
+		s->aimErr = 999.0f;
+		s->aimRate = 0.0f;
+		s->aimVisible = 0;
+	}
+	if ( vs_antiWiggle.integer <= 0 ) {
+		return;
 	}
 
 	if ( fabsf( dyaw ) > AC_WIGGLE_JUMP ) {
