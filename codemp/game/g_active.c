@@ -1882,6 +1882,10 @@ If "g_synchronousClients 1" is set, this will be called exactly
 once for each server frame, which makes for smooth demo recording.
 ==============
 */
+// qtrue while ClientThink_real runs a move the client sent: not the null move G_RunClient makes for a client that
+// went quiet, not bots and NPCs (anticheat/g_anticheat.c looks at these moves only)
+static qboolean clientThinkFromCmd;
+
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t	*client;
 	pmove_t		pmove;
@@ -2049,6 +2053,14 @@ void ClientThink_real( gentity_t *ent ) {
 	// to check for follow toggles
 	if ( msec < 1 && client->sess.spectatorState != SPECTATOR_FOLLOW ) {
 		return;
+	}
+
+	// one move covers one frame of the client: a move far longer was held back (anticheat/g_anticheat.c)
+	if ( clientThinkFromCmd && !isNPC ) {
+		msec = G_AC_MoveTime( ent, ucmd, msec );
+		if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED ) {
+			return;		// kicked
+		}
 	}
 
 	if ( msec > 200 ) {
@@ -3106,6 +3118,10 @@ void ClientThink_real( gentity_t *ent ) {
 	G_PropGunCmd( ent, &pmove.cmd );
 	Pmove (&pmove);
 
+	if ( clientThinkFromCmd && !isNPC ) {
+		G_AC_Think( ent, ucmd );	// the wiggle bot (anticheat/g_anticheat.c)
+	}
+
 	if (ent->client->solidHack)
 	{
 		if (ent->client->solidHack > level.time)
@@ -3666,7 +3682,9 @@ void ClientThink( int clientNum, usercmd_t *ucmd ) {
 	}
 */
 	if ( !(ent->r.svFlags & SVF_BOT) && !g_synchronousClients.integer ) {
+		clientThinkFromCmd = (qboolean)( clientNum < MAX_CLIENTS );
 		ClientThink_real( ent );
+		clientThinkFromCmd = qfalse;
 	}
 	// vehicles are clients and when running synchronous they still need to think here
 	// so special case them.

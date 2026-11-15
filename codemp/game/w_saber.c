@@ -3697,6 +3697,11 @@ void WP_SaberApplyDamage( gentity_t *self )
 
 		victim = &g_entities[victimEntityNum[i]];
 
+		if ( G_AC_SaberBlocked( self, victim ) )
+		{//flagged as a wiggle bot a moment ago (anticheat/g_anticheat.c)
+			continue;
+		}
+
 // nmckenzie: SABER_DAMAGE_WALLS
 		if ( !victim->client )
 		{

@@ -68,6 +68,8 @@ XCVAR_DEF( duel_fraglimit,				"10",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CV
 XCVAR_DEF( fraglimit,					"20",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 XCVAR_DEF( g_adaptRespawn,				"1",			NULL,						CVAR_NONE,										qtrue )
 // seconds without a key or a turn after which a player counts as away (status/g_status.c), 0: never
+XCVAR_DEF( vs_antiSpeed,				"2",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_antiWiggle,				"2",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_afkTime,					"60",			NULL,						CVAR_ARCHIVE,									qtrue )
 // lag compensation (unlagged/g_unlagged.c): 1 hitscan, 2 projectiles, 4 push and pull; at most this many ms back
 XCVAR_DEF( tay_unlagged,				"7",			NULL,						CVAR_ARCHIVE,									qtrue )
@@ -122,9 +124,12 @@ XCVAR_DEF( g_jediVmerc,					"0",			NULL,						CVAR_SERVERINFO|CVAR_LATCH|CVAR_AR
 XCVAR_DEF( g_knockback,					"1000",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_locationBasedDamage,		"1",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_log,						"games.log",	NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_maxCmdMsec,				"100",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_logClientCmds,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 // vs_sandbox 1: every player may use amsandbox (physgun, toolgun, gravity gun), not only the admins (g_props.c)
 XCVAR_DEF( vs_sandbox,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_wiggleBlockTime,			"3",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_wiggleRate,				"14",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_logClientInfo,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_logSync,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_maxConnPerIP,				"3",			NULL,						CVAR_ARCHIVE,									qfalse )

@@ -133,6 +133,25 @@ typedef struct {
 
 #define FLOOD_QUEUE_SIZE	16		// most commands that wait per client (sv_floodQueue), 16 KB each
 
+// sv_movecheck.cpp: the packets of a player for the timing of his moves
+#define MOVECHECK_RING	512		// a few seconds of packets
+
+typedef struct moveCheckPacket_s {
+	int		arrival;			// Sys_Milliseconds when it was read
+	int		svTime;				// sv.time then
+	int		newest;				// serverTime of its newest move, 0 for a packet without moves
+	short	newCmds;			// moves that were newer than the last one run
+	short	cmdCount;			// moves it carried
+} moveCheckPacket_t;
+
+typedef struct moveCheck_s {
+	moveCheckPacket_t	ring[MOVECHECK_RING];
+	int		head, count;
+	int		lastNewest;			// the newest move time seen
+	int		noMove;				// packets in a row without a move
+	int		dumpTime;			// the last csv
+} moveCheck_t;
+
 typedef struct client_s {
 	clientState_t	state;
 	char			userinfo[MAX_INFO_STRING];		// name, etc
@@ -198,6 +217,8 @@ typedef struct client_s {
 	qboolean		csUpdated[MAX_CONFIGSTRINGS];
 
 	demoInfo_t		demo;
+
+	moveCheck_t		moveCheck;			// sv_movecheck.cpp
 } client_t;
 
 //=============================================================================
@@ -475,6 +496,8 @@ typedef enum idsEvent_e {
 	IDS_TEXT_PATH,
 	IDS_TEXT_BINARY,
 	IDS_USERINFO,
+	IDS_CMD_WARP,
+	IDS_CMD_NOMOVE,
 	IDS_NUM_EVENTS
 } idsEvent_t;
 
@@ -483,6 +506,10 @@ void		SV_IDS_Shutdown( void );
 qboolean	SV_IDS_Blocked( const netadr_t *from );
 void		SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const char *detail );
 void		SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo );
+
+// sv_movecheck.cpp: the timing of the moves of a player
+void		SV_MoveCheck_Moves( client_t *cl, const usercmd_t *cmds, int cmdCount );
+void		SV_MoveCheck_NoMove( client_t *cl );
 
 #ifdef VISIONJK_IDS_TEST
 // sv_idstest.cpp: the test server that misbehaves on purpose (visionjkded-idstest only)
