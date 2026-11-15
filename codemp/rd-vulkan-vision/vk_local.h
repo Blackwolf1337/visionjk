@@ -176,7 +176,9 @@ typedef struct vkDraw_s {		// once per draw
 									//	frame, in rows (VK_CutBones), 0: none
 	float		brighten;			// the colour of the stage times this after its texture, past white (the glow map of
 									//	a lamp panel, v_panelGlow); 0: as it is
-	uint32_t	pad[2];
+	float		towardEye;			// VKP_TESS: units each new vertex moves toward the eye, which changes its depth and not
+									//	where it is on the screen (marks on a tessellated surface); 0: none
+	uint32_t	pad;
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert

@@ -95,6 +95,13 @@ void main() {
 
 		position += normalize( normal ) * ( height - d.tess.y ) * d.tess.x * fade;
 	}
+	// a mark on a tessellated surface is cut into other triangles than the surface, so the two follow the height a
+	// little differently; nearer to the eye along its own line of sight it stays where it is on the screen and wins
+	// the depth test (vk_shade.cpp markFrom)
+	if ( d.towardEye > 0.0 ) {
+		vec3 toEye = t.viewOrigin.xyz - position;
+		position += toEye * min( d.towardEye / max( length( toEye ), 1.0 ), 0.5 );
+	}
 
 	gl_Position = t.mvp * vec4( position, 1.0 );
 	gl_ClipDistance[0] = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0

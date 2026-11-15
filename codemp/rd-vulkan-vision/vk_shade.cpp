@@ -979,6 +979,7 @@ static vkProgram_t VK_TessPass( vkDraw_t *draw, const vkDraw_t *from, vkProgram_
 	draw->bones = from->bones;
 	VectorCopy4( from->tess, draw->tess );
 	draw->tess[3] = -fabsf( from->tess[3] );
+	draw->towardEye = from->towardEye;
 	draw->flags = ( draw->flags & ~( 15u << VKD_TCGEN1_SHIFT ) ) | ( ( ( from->flags >> VKD_TCGEN0_SHIFT ) & 15u ) << VKD_TCGEN1_SHIFT );
 	memcpy( draw->texMat1, from->texMat0, sizeof( draw->texMat1 ) );
 	memcpy( draw->texTurb1, from->texTurb0, sizeof( draw->texTurb1 ) );
@@ -1257,16 +1258,16 @@ void RB_StageIteratorGeneric( void ) {
 			if ( VK_PbrDraw( surfStage, surfShader, qfalse, &markFrom ) && ( markFrom.pbrFlags & VKP_HEIGHT )
 				&& VK_TessBorders( &noBorders, qtrue ) ) {
 				const stageMaterial_t *mat = surfStage->mat;
-				// a little above the surface: the mark is cut into other triangles than the surface under it, so the
-				// two follow the height a little differently (tess.y lowered by lift units)
-				const float lift = 0.5f + 0.05f * mat->tessHeight;
 
 				VK_BundleTexCoords( &surfStage->bundle[0], markFrom.texMat0, markFrom.texTurb0 );
 				memset( markFrom.tcGenVec0, 0, sizeof( markFrom.tcGenVec0 ) );
 				markFrom.flags = ( markFrom.flags & ~( 15u << VKD_TCGEN0_SHIFT ) ) | ( (uint32_t)TCGEN_LIGHTMAP << VKD_TCGEN0_SHIFT );
 				markFrom.bones = noBorders;
 				markFrom.tess[0] = mat->tessHeight;
-				markFrom.tess[1] = mat->tessPlane - lift / mat->tessHeight;
+				markFrom.tess[1] = mat->tessPlane;
+				// the mark is cut into other triangles than the surface under it, so the two follow the height a little
+				// differently: nearer to the eye by a third of the bumps it wins the depth test where they differ
+				markFrom.towardEye = 1.0f + mat->tessHeight / 3.0f;
 				markFrom.tess[2] = mat->tessDensity;
 				markFrom.tess[3] = 64.0f;
 				haveMarkFrom = qtrue;
