@@ -95,6 +95,7 @@ typedef struct slice_s {
 
 	int			cuts;			// joints cut since, by sabers through the lying parts
 	int			nextCut;		// cg.time from which the next of those may come
+	qboolean	lying;			// its first cut came when it lay there already (CG_SliceLying)
 	qboolean	gib;			// burst by an explosion: more joints go at the split, the parts are thrown from gibOrigin
 	vec3_t		gibOrigin;
 } slice_t;
@@ -734,13 +735,25 @@ CG_SliceLying
 
 Every frame (CG_SliceScene): sabers swung through bodies that lie there after the kill (their wish 2026-11-15). A dead
 player or a body the server left, not cut yet, is cut along the swing that went through it; a cut body is cut again at
-the joint a blade went through, up to SLICE_MAX_CUTS joints, each part a ragdoll of its own.
+the joint a blade went through, up to SLICE_MAX_CUTS joints, each part a ragdoll of its own. How many of those cuts a
+body takes is the value of v_slice (CG_SliceLyingCuts).
 =================
 */
+static int CG_SliceLyingCuts( const slice_t *s ) {
+	// v_slice 1: several, 2: a body takes one cut once it lies (the one that split it there counts), 3: none
+	if ( v_slice.integer == 2 ) {
+		return s->lying ? 0 : 1;
+	}
+	return v_slice.integer == 1 ? SLICE_MAX_CUTS : 0;
+}
+
 static void CG_SliceLying( void ) {
 	int		swingers[MAX_CLIENTS], numSwingers = 0, i, k, j;
 	vec3_t	swingAt[MAX_CLIENTS];
 
+	if ( v_slice.integer != 1 && v_slice.integer != 2 ) {
+		return;
+	}
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		if ( CG_SliceSwinging( i ) ) {
 			CG_SliceSwingOrigin( i, swingAt[numSwingers] );
@@ -795,7 +808,13 @@ static void CG_SliceLying( void ) {
 						plane[3] = DotProduct( plane, pelvis );
 					}
 				}
-				CG_SliceStartAt( victim, num, swingers[k], plane, across, feet );
+				if ( CG_SliceStartAt( victim, num, swingers[k], plane, across, feet ) ) {
+					for ( j = 0; j < SLICE_MAX; j++ ) {
+						if ( slices[j].active && slices[j].body == num ) {
+							slices[j].lying = qtrue;
+						}
+					}
+				}
 				break;
 			}
 		}
@@ -805,7 +824,7 @@ static void CG_SliceLying( void ) {
 	for ( i = 0; i < SLICE_MAX; i++ ) {
 		slice_t *s = &slices[i];
 
-		if ( !s->active || s->rag < 0 || s->expired || s->cuts >= SLICE_MAX_CUTS || cg.time < s->nextCut ) {
+		if ( !s->active || s->rag < 0 || s->expired || s->cuts >= CG_SliceLyingCuts( s ) || cg.time < s->nextCut ) {
 			continue;
 		}
 		for ( j = 0; j < CG_RagJoints(); j++ ) {

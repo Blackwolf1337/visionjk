@@ -622,8 +622,20 @@ LANG_ENGLISH        "Slice Bodies"
 LANG_GERMAN         "Körper zerteilen"
 
 REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
-LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
-LANG_GERMAN         "Ein Lichtschwert-Treffer, der tötet, schneidet den Körper entlang des Schwungs durch, mit einem verbrannten, glühenden Schnitt. Braucht den Vulkan-Renderer."
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. A body that lies on the ground can be cut again by a swing through it: several times, once, or not at all. Needs the Vulkan renderer."
+LANG_GERMAN         "Ein Lichtschwert-Treffer, der tötet, schneidet den Körper entlang des Schwungs durch, mit einem verbrannten, glühenden Schnitt. Ein Körper, der am Boden liegt, kann durch einen Schwung erneut zerteilt werden: mehrmals, einmal oder gar nicht. Braucht den Vulkan-Renderer."
+
+REFERENCE           ON_LYING_BODIES_OFTEN
+LANG_ENGLISH        "On, Lying Bodies Often"
+LANG_GERMAN         "An, Liegende mehrmals"
+
+REFERENCE           ON_LYING_BODIES_ONCE
+LANG_ENGLISH        "On, Lying Bodies Once"
+LANG_GERMAN         "An, Liegende einmal"
+
+REFERENCE           ON_NOT_LYING_BODIES
+LANG_ENGLISH        "On, Not Lying Bodies"
+LANG_GERMAN         "An, Liegende nicht"
 
 REFERENCE           BLOOD
 LANG_ENGLISH        "Blood"

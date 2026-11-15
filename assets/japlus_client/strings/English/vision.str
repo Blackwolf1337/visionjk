@@ -468,7 +468,16 @@ REFERENCE           SLICE_BODIES
 LANG_ENGLISH        "Slice Bodies"
 
 REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
-LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. A body that lies on the ground can be cut again by a swing through it: several times, once, or not at all. Needs the Vulkan renderer."
+
+REFERENCE           ON_LYING_BODIES_OFTEN
+LANG_ENGLISH        "On, Lying Bodies Often"
+
+REFERENCE           ON_LYING_BODIES_ONCE
+LANG_ENGLISH        "On, Lying Bodies Once"
+
+REFERENCE           ON_NOT_LYING_BODIES
+LANG_ENGLISH        "On, Not Lying Bodies"
 
 REFERENCE           BLOOD
 LANG_ENGLISH        "Blood"
