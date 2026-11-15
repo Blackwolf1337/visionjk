@@ -288,6 +288,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameBoomboxFiles})
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"
 	"${MPDir}/cgame/hud/cg_killfeed.c"
+	"${MPDir}/cgame/hud/cg_powers.c"
 	"${MPDir}/cgame/hud/cg_select3d.c"
 	"${MPDir}/cgame/hud/cg_notify.c"
 	"${MPDir}/cgame/hud/cg_movehud.c"

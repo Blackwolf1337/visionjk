@@ -1688,7 +1688,6 @@ void CG_DrawForceSelect( void )
 		// order forcenext goes through them (BG_CycleForce): the card in the colour of its side, glowing while it
 		// runs, and where the rank is known (CG_ForceSelectRank) the rank as pips, what using it costs at that rank
 		// and the card darkened while the force is too low for it
-		static const vec3_t		light = { 0.36f, 0.78f, 0.96f }, dark = { 1.0f, 0.32f, 0.26f }, neutral = { 0.88f, 0.92f, 1.0f };
 		const playerState_t		*ps = &cg.predictedPlayerState;
 		const int				wanted = ( cg.forceSelect >= 0 && cg.forceSelect < NUM_FORCE_POWERS && ForcePower_Valid( cg.forceSelect ) )
 									? cg.forceSelect : cg.snap->ps.fd.forcePowerSelected;
@@ -1714,8 +1713,7 @@ void CG_DrawForceSelect( void )
 				list[n].pipsMax = FORCE_LEVEL_3;
 			}
 			list[n].active = (qboolean)( ( ps->fd.forcePowersActive & ( 1 << fp ) ) != 0 );
-			list[n].tint = forcePowerDarkLight[fp] == FORCE_LIGHTSIDE ? light
-				: forcePowerDarkLight[fp] == FORCE_DARKSIDE ? dark : neutral;
+			list[n].tint = CG_ForceSideColor( fp );
 			if ( fp == wanted ) {
 				selected = n;
 				list[n].name = showPowersName[fp] ? CG_GetStringEdString( "SP_INGAME", showPowersName[fp] ) : "";
@@ -5951,7 +5949,7 @@ static void CG_DrawHolocronIcons(void)
 	}
 }
 
-static qboolean CG_IsDurationPower(int power)
+qboolean CG_IsDurationPower(int power)
 {
 	if (power == FP_HEAL ||
 		power == FP_SPEED ||
@@ -5965,6 +5963,15 @@ static qboolean CG_IsDurationPower(int power)
 	}
 
 	return qfalse;
+}
+
+// the picture over the screen while seeing runs
+static void CG_DrawSightOverlay( void )
+{
+	if ( !(cp_pluginDisable.integer & (1 << 7)) )
+	{ // JA+ client plugin: Plugin_NewForceSight_effect
+		CG_DrawPicWide( cgs.media.jpSense );
+	}
 }
 
 //--------------------------------------------------------------
@@ -5996,9 +6003,9 @@ static void CG_DrawActivePowers(void)
 		if ((cg.snap->ps.fd.forcePowersActive & (1 << forcePowerSorted[i])) &&
 			CG_IsDurationPower(forcePowerSorted[i]))
 		{
-			if ( forcePowerSorted[i] == FP_SEE && !(cp_pluginDisable.integer & (1 << 7)) )
-			{ // JA+ client plugin: Plugin_NewForceSight_effect
-				CG_DrawPicWide( cgs.media.jpSense );
+			if ( forcePowerSorted[i] == FP_SEE )
+			{
+				CG_DrawSightOverlay();
 			}
 			CG_DrawPic( startx, starty, endx, endy, cgs.media.forcePowerIcons[forcePowerSorted[i]]);
 			startx += (icon_size+2); //+2 for spacing
@@ -8235,7 +8242,20 @@ static void CG_Draw2D( void ) {
 		CG_DrawHolocronIcons();
 		CG_Place2D( PLACE_CENTER );
 	}
-	if (cg.snap->ps.fd.forcePowersActive || cg.snap->ps.fd.forceRageRecoveryTime > cg.time)
+	if ( CG_HudNewLook() )
+	{
+		// VisionJK: glass chips above the panel of the health (hud/cg_powers.c), every frame: a chip fades away
+		// after its power ended
+		if ( ( cg.snap->ps.fd.forcePowersActive & ( 1 << FP_SEE ) ) && !cg.snap->ps.zoomMode
+			&& cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR )
+		{
+			CG_DrawSightOverlay();
+		}
+		CG_Place2D( PLACE_LEFT );
+		CG_PowerChips();
+		CG_Place2D( PLACE_CENTER );
+	}
+	else if (cg.snap->ps.fd.forcePowersActive || cg.snap->ps.fd.forceRageRecoveryTime > cg.time)
 	{
 		CG_Place2D( PLACE_LEFT );
 		CG_DrawActivePowers();
