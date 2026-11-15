@@ -2142,7 +2142,8 @@ typedef struct select3dItem_s {
 #define SELECT3D_FORCE		2
 #define SELECT3D_ROWS		3
 void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since );
-qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still );
+qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still, float alpha );
+qboolean CG_Select3DModelFor( const gitem_t *item );
 void CG_Select3DPreload( void );
 void CG_Select3DShutdown( void );
 // hud/cg_powers.c: the powers that run as glass chips above the panel of the health
@@ -2164,7 +2165,7 @@ int CG_FpsValue( void );
 const char *CG_TimerText( void );
 void CG_HudTargetName( const char *name, qboolean pilot, const float *tint, float alpha, int client );
 void CG_HudProgress( int slot, qhandle_t icon, const char *caption, float fraction, const float *rgb );
-void CG_HudLockCaption( float x, float y, float fraction, qboolean locked );
+void CG_HudLockOn( float cx, float cy, float hw, float hh, float fraction, qboolean locked );
 float CG_HudPowerups( float y );
 float CG_HudAttacker( float y );
 void CG_HudPickup( void );

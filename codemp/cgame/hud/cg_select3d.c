@@ -141,7 +141,8 @@ with cg_draw3DIcons) and framed by its bounds: its middle in front of the camera
 A white key light and one in the colour of the accent from behind.
 =================
 */
-static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float w, float h, float yaw, float pitch ) {
+// roll: turned about the line of sight (a hilt that stands upright lies down); alpha: of what it stands on
+static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float w, float h, float yaw, float pitch, float roll, float alpha ) {
 	refEntity_t	ent;
 	vec3_t		angles, mid, light, axis[3];
 	float		radius, dist;
@@ -159,7 +160,7 @@ static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float 
 	dist = radius / tanf( DEG2RAD( SELECT_FOV * 0.5f ) ) * 0.98f;
 
 	memset( &ent, 0, sizeof( ent ) );
-	VectorSet( angles, pitch, yaw, 0.0f );
+	VectorSet( angles, pitch, yaw, roll );
 	AnglesToAxis( angles, axis );
 	// the middle of the model, turned with it, on the axis of the camera
 	VectorAdd( m->mins, m->maxs, mid );
@@ -180,6 +181,11 @@ static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float 
 	ent.ghoul2 = m->ghoul2;
 	ent.radius = (int)( radius * 2.0f );
 	ent.renderfx = RF_NOSHADOW;
+	// (a model of a scene of its own can not fade: forced to an alpha it is drawn black. It stays as it is until
+	// what it stands on is nearly gone, and goes then.)
+	if ( alpha < 0.2f ) {
+		return;
+	}
 
 	trap->R_ClearScene();
 	trap->R_AddRefEntityToScene( &ent );
@@ -354,7 +360,7 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 		// to -y: at yaw 0 it points to the right), turned a little towards the viewer
 		const float yaw = 20.0f - ringYaw + front * turn;
 
-		Select3D_DrawModel( m, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset, yaw, 10.0f + 2.0f * front );
+		Select3D_DrawModel( m, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset, yaw, 10.0f + 2.0f * front, 0.0f, 1.0f );
 	}
 	if ( it->dim ) {
 		// nothing to shoot with: the card darkened over its model
@@ -376,28 +382,38 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 	}
 }
 
+// has the item a model the cards can show
+qboolean CG_Select3DModelFor( const gitem_t *item ) {
+	const selectModel_t *m = item ? Select3D_Model( item ) : NULL;
+
+	return (qboolean)( m && ( m->model || m->ghoul2 ) );
+}
+
 /*
 =================
 CG_Select3DIcon
 
 One thing in the rect as the cards of the rows show it, for a slot of the HUD (hud/cg_hudpanels.c): the model of
 an item, turning slowly, or a picture as the holo disc in the tint, swinging. qfalse: there is no model, the caller
-draws the picture. still: it does not move (a line of the feed), a model seen from the side.
+draws the picture. still: it does not move (a line of the feed), a model seen from the side. alpha: it fades.
 =================
 */
-qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still ) {
+qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still, float alpha ) {
 	const float yaw = still ? 0.0f : fmodf( (float)cg.time * 360.0f / SELECT_SLOT_TURN_MSEC, 360.0f ) - 180.0f;
 
 	if ( disc ) {
 		// (it swings and never stands edge on: what the slot holds has to be read at any time)
-		Select3D_DrawDisc( disc, tint ? tint : selectAccent, 1.0f, x, y, w, h, 38.0f * sinf( DEG2RAD( yaw ) ) );
+		Select3D_DrawDisc( disc, tint ? tint : selectAccent, alpha, x, y, w, h, 38.0f * sinf( DEG2RAD( yaw ) ) );
 		return qtrue;
 	}
 	if ( item ) {
 		const selectModel_t *m = Select3D_Model( item );
 
 		if ( m && ( m->model || m->ghoul2 ) ) {
-			Select3D_DrawModel( m, x, y, w, h, ( still ? 0.0f : 20.0f ) + yaw, still ? 6.0f : 12.0f );
+			// (standing still the saber lies across the rect: its hilt stands upright and would be a thin line)
+			const float roll = ( still && item->giType == IT_WEAPON && item->giTag == WP_SABER ) ? 55.0f : 0.0f;
+
+			Select3D_DrawModel( m, x, y, w, h, ( still ? 0.0f : 20.0f ) + yaw, still ? 6.0f : 12.0f, roll, alpha );
 			return qtrue;
 		}
 	}

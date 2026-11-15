@@ -363,16 +363,19 @@ static float Killfeed_DrawNew( float y, float size, int life, qboolean atLeft ) 
 			Hud_TextMid( x + pad, mid, scale, Killfeed_NameTint( line->killer ), alpha, HUD_LEFT, killer, 0.0f );
 			Hud_Color( white, colorWhite, alpha );
 			// what killed as its model where it has one (hud/cg_select3d.c), seen from the side and standing
-			// still, the muzzle towards the victim; else its picture (also the saber: a hilt stands upright and
-			// is a thin line at this size)
+			// still, the muzzle towards the victim, until the line is nearly gone; else its picture
 			{
-				const gitem_t *item = ( atLeft && alpha > 0.5f && line->weapon > WP_NONE && line->weapon != WP_MELEE
-					&& line->weapon != WP_SABER )
+				const gitem_t *item = ( atLeft && line->weapon > WP_NONE && line->weapon != WP_MELEE )
 					? BG_FindItemForWeapon( (weapon_t)line->weapon ) : NULL;
 
 				trap->R_SetColor( white );
-				if ( !item || !CG_Select3DIcon( x + pad + kw + 4.0f, y - lineH * 0.15f, iconW, lineH * 1.3f, item, 0, NULL, qtrue ) ) {
-					CG_DrawPic( x + pad + kw + 4.0f, y + lineH * 0.1f, iconW, lineH * 0.8f, line->icon );
+				if ( item && CG_Select3DModelFor( item ) ) {
+					CG_Select3DIcon( x + pad + kw + 4.0f, y - lineH * 0.15f, iconW, lineH * 1.3f, item, 0, NULL, qtrue, alpha );
+				} else {
+					// (square, as the pictures of the game are, in the middle of the room of the model)
+					const float side = lineH * 0.86f;
+
+					CG_DrawPic( x + pad + kw + 4.0f + ( iconW - side ) * 0.5f, y + ( lineH - side ) * 0.5f, side, side, line->icon );
 				}
 				trap->R_SetColor( NULL );
 			}

@@ -89,7 +89,7 @@ static void Panels_Slot( const rectDef_t *r ) {
 	// weapon as its model; the picture where there is no model
 	size = r->h * ( fp >= 0 ? 0.74f : 0.86f );
 	trap->R_SetColor( NULL );
-	if ( !CG_Select3DIcon( r->x + ( r->w - size ) * 0.5f, r->y + r->h * ( fp >= 0 ? 0.02f : 0.07f ), size, size, item, fp >= 0 ? icon : 0, tint, qfalse ) ) {
+	if ( !CG_Select3DIcon( r->x + ( r->w - size ) * 0.5f, r->y + r->h * ( fp >= 0 ? 0.02f : 0.07f ), size, size, item, fp >= 0 ? icon : 0, tint, qfalse, 1.0f ) ) {
 		size = r->h * 0.74f;
 		CG_DrawPic( r->x + ( r->w - size ) * 0.5f, r->y + r->h * 0.13f, size, size, icon );
 	}

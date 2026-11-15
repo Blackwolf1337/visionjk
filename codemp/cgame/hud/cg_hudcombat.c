@@ -99,16 +99,50 @@ void CG_HudProgress( int slot, qhandle_t icon, const char *caption, float fracti
 	Hud_Caps( x + w - 6.0f, y + h * 0.5f, hudDim, 1.0f, HUD_RIGHT, va( "%i %%", (int)( fraction * 100.0f ) ) );
 }
 
-// a caption under the brackets of a lock (scope/cg_scope.c): how far it is, or that it holds
-void CG_HudLockCaption( float x, float y, float fraction, qboolean locked ) {
-	const char *text = locked ? CG_VisionText( "Locked" ) : CG_VisionTextWith( "Locking %i %%", va( "%i", (int)( fraction * 100.0f ) ) );
-	char upper[128];
+/*
+=================
+CG_HudLockOn
 
+The lock of the rocket launcher in the new HUD (scope/cg_scope.c CG_ScopeDrawLockOn), on the box of the target
+(its middle and half its size, in units of the screen): a bracket at each corner, in the middle a ring that closes
+with the lock (fraction 0 to 1), and under the box how far it is on a chip of glass. Locked: red, with a pulse.
+=================
+*/
+#define LOCK_RING_DOTS	48
+
+void CG_HudLockOn( float cx, float cy, float hw, float hh, float fraction, qboolean locked ) {
+	static const vec4_t	pale = { 1.0f, 0.62f, 0.59f, 1.0f };
+	const float			pulse = locked ? 0.7f + 0.3f * sinf( (float)cg.time * 0.03f ) : 1.0f;
+	const float			*tint = locked ? hudRed : pale;
+	const float			leg = Com_Clamp( 4.0f, 10.0f, Q_min( hw, hh ) * 0.45f ), thick = 1.2f;
+	const float			radius = Com_Clamp( 7.0f, 20.0f, Q_min( hw, hh ) * 0.55f ), dot = 1.5f;
+	const int			lit = (int)( Com_Clamp( 0.0f, 1.0f, fraction ) * LOCK_RING_DOTS + 0.5f );
+	const char			*text = locked ? CG_VisionText( "Locked" ) : CG_VisionTextWith( "Locking %i %%", va( "%i", (int)( fraction * 100.0f ) ) );
+	char				upper[128];
+	vec4_t				c, faint;
+	int					i;
+
+	Hud_Color( c, tint, pulse );
+	// the brackets: two legs at each corner
+	for ( i = 0; i < 4; i++ ) {
+		const float	x = ( i & 1 ) ? cx + hw : cx - hw, y = ( i & 2 ) ? cy + hh : cy - hh;
+
+		Skin_Panel( ( i & 1 ) ? x - leg : x, ( i & 2 ) ? y - thick : y, leg, thick, 0.0f, c, NULL );
+		Skin_Panel( ( i & 1 ) ? x - thick : x, ( i & 2 ) ? y - leg : y, thick, leg, 0.0f, c, NULL );
+	}
+	// the ring: from the top, clockwise, as far as the lock is
+	Hud_Color( faint, colorWhite, 0.18f );
+	for ( i = 0; i < LOCK_RING_DOTS; i++ ) {
+		const float angle = 2.0f * M_PI * i / LOCK_RING_DOTS;
+
+		Skin_Panel( cx + sinf( angle ) * radius - dot * 0.5f, cy - cosf( angle ) * radius - dot * 0.5f, dot, dot, dot * 0.5f,
+			i < lit ? c : faint, NULL );
+	}
 	Q_strncpyz( upper, text, sizeof( upper ) );
 	Q_strupr( upper );
-	Hud_Glass( x - Hud_TextWidth( upper, HUD_CAPS ) * 0.5f - 5.0f, y, Hud_TextWidth( upper, HUD_CAPS ) + 10.0f, 10.0f, 3.0f, 1.0f,
+	Hud_Glass( cx - Hud_TextWidth( upper, HUD_CAPS ) * 0.5f - 5.0f, cy + hh + 4.0f, Hud_TextWidth( upper, HUD_CAPS ) + 10.0f, 10.0f, 3.0f, 1.0f,
 		locked ? hudRed : NULL, qtrue );
-	Hud_TextMid( x, y + 5.0f, HUD_CAPS, hudRed, 1.0f, HUD_CENTER, upper, 0.0f );
+	Hud_TextMid( cx, cy + hh + 9.0f, HUD_CAPS, tint, 1.0f, HUD_CENTER, upper, 0.0f );
 }
 
 /*

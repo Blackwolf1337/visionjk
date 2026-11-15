@@ -953,6 +953,13 @@ void CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep ) {
 		memset( &box, 0, sizeof( box ) );
 		VectorSet4( box.rect, cx - hw, cy - hh, cx + hw, cy + hh );
 	}
+	// the new HUD has its own: brackets on the target, a ring that closes, the caption (hud/cg_hudcombat.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudLockOn( ( rect[0] + rect[2] ) * 0.5f, ( rect[1] + rect[3] ) * 0.5f, Q_max( 8.0f, ( rect[2] - rect[0] ) * 0.5f ),
+			Q_max( 10.0f, ( rect[3] - rect[1] ) * 0.5f ), t, locked );
+		trap->R_SetColor( NULL );
+		return;
+	}
 	box.alpha = locked ? 0.7f + 0.3f * sinf( cg.time * 0.03f ) : 0.5f + 0.5f * t;
 	box.locked = locked;
 	CG_ScopeBox( &box );
@@ -961,10 +968,6 @@ void CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep ) {
 
 		VectorSet4( color, 1.0f, locked ? 0.15f : 0.75f, locked ? 0.1f : 0.25f, i < step ? box.alpha : 0.25f );
 		CG_FillRect( ( box.rect[0] + box.rect[2] ) * 0.5f - LOCK_STEPS * 2.5f + i * 5.0f, box.rect[3] + 3.0f, 4.0f, 2.0f, color );
-	}
-	// the new HUD names it under the steps (hud/cg_hudcombat.c)
-	if ( CG_HudNewLook() ) {
-		CG_HudLockCaption( ( box.rect[0] + box.rect[2] ) * 0.5f, box.rect[3] + 8.0f, t, locked );
 	}
 	trap->R_SetColor( NULL );
 }
