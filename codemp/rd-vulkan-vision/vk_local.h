@@ -117,6 +117,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_MATERIAL		0x08000000u		// lit per pixel with material (normal map in tex1, shine), see generic.frag
 #define VKD_PBR				0x10000000u		// lit per pixel with a material of GGX (VKP_*), see generic.frag PbrStage
 #define VKD_DECALS			0x20000000u		// marks painted onto a tessellated surface (VK_PaintMarks), see generic.frag
+#define VKD_GROOVE			0x40000000u		// a burn mark lit as a groove (stageMaterial_t groove), see generic.frag Groove()
 
 // vkDraw_t.pbrFlags: what a stage with VKD_PBR has and how it is lit
 #define VKP_NORMAL			0x01u			// a normal map in tex2

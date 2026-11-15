@@ -39,3 +39,37 @@ gfx/vision/ghost
 		alphaGen const 0.3
 	}
 }
+
+// The marks a saber leaves on a wall (codemp/cgame/cg_players.c CG_CreateSaberMarks), laid along the whole swing.
+// The burn: the wall times rgb + 1 - alpha (the picture is premultiplied, tools/materials/saber_marks.py), so the
+// colour of the vertices fades it to nothing (rgb and alpha to 0) and not to black. The renderer of VisionJK also
+// lights it as a groove cut into the wall (vmat_vision_fx.oshader).
+gfx/vision/saberburn
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		map gfx/vision/saberburn
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+// The hot core of a fresh cut, added; the cgame gives it the colour of the cooling metal (white, orange, dark red)
+// and it glows (bloom).
+gfx/vision/saberglow
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		map gfx/vision/saberglow
+		blendFunc GL_ONE GL_ONE
+		rgbGen vertex
+		glow
+	}
+}

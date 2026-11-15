@@ -775,6 +775,30 @@ static void VK_PbrProbes( vkDraw_t *draw ) {
 	}
 }
 
+/*
+===============
+VK_GridDraw
+
+The light grid of the level for a draw (generic.frag PbrGrid): its picture in tex4, its place and size in grid0 to
+grid2. qfalse: the level has none.
+===============
+*/
+static qboolean VK_GridDraw( vkDraw_t *draw ) {
+	if ( !tr.pbrGrid || !tr.world ) {
+		return qfalse;
+	}
+	draw->tex4 = tr.pbrGrid->texnum;
+	VectorCopy( tr.world->lightGridOrigin, draw->grid0 );
+	draw->grid0[3] = (float)tr.pbrGridTiles;
+	VectorCopy( tr.world->lightGridInverseSize, draw->grid1 );
+	draw->grid1[3] = (float)tr.pbrGrid->height;
+	for ( int i = 0; i < 3; i++ ) {
+		draw->grid2[i] = (float)tr.world->lightGridBounds[i];
+	}
+	draw->grid2[3] = (float)tr.pbrGrid->width;
+	return qtrue;
+}
+
 static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader, qboolean refract, vkDraw_t *draw ) {
 	const uint32_t rgbGen = ( draw->flags >> VKD_RGBGEN_SHIFT ) & VKD_RGBGEN_MASK;
 	const textureBundle_t *second = &pStage->bundle[1];
@@ -833,17 +857,8 @@ static qboolean VK_PbrDraw( const shaderStage_t *pStage, const shader_t *shader,
 	// a face of a reflection probe is always drawn with the materials as they look, never in a debug view of v_pbr,
 	// or the surfaces mirror that view until the level is loaded again
 	draw->pbr[3] = backEnd.viewParms.probeFace ? 1.0f : (float)v_pbr->integer;
-	if ( !( draw->pbrFlags & VKP_ENTITY ) && tr.pbrGrid && tr.world ) {
-		draw->tex4 = tr.pbrGrid->texnum;
+	if ( !( draw->pbrFlags & VKP_ENTITY ) && VK_GridDraw( draw ) ) {
 		draw->pbrFlags |= VKP_GRID;
-		VectorCopy( tr.world->lightGridOrigin, draw->grid0 );
-		draw->grid0[3] = (float)tr.pbrGridTiles;
-		VectorCopy( tr.world->lightGridInverseSize, draw->grid1 );
-		draw->grid1[3] = (float)tr.pbrGrid->height;
-		for ( int i = 0; i < 3; i++ ) {
-			draw->grid2[i] = (float)tr.world->lightGridBounds[i];
-		}
-		draw->grid2[3] = (float)tr.pbrGrid->width;
 	}
 	if ( draw->pbrFlags & VKP_GRID ) {
 		VK_PbrProbes( draw );
@@ -1331,11 +1346,16 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 		}
 
 		// how the marks of a pass are put together in generic.frag Decals(), from the blend of the stage:
-		// 0 the colour takes away (filter), 1 times (modulate), 2 over by alpha, 3 added
+		// 0 the colour takes away (filter), 1 times (modulate), 2 over by alpha, 3 added, 4 times rgb + 1 - alpha
+		// (the saber burn), 5 times twice the colour
 		const uint32_t blend = stage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
 		const uint32_t src = blend & GLS_SRCBLEND_BITS, dst = blend & GLS_DSTBLEND_BITS;
 		float kind = 2.0f;
-		if ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+		if ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) {
+			kind = 4.0f;
+		} else if ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_SRC_COLOR ) {
+			kind = 5.0f;
+		} else if ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
 			kind = 0.0f;
 		} else if ( ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ZERO ) || ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_SRC_COLOR ) ) {
 			kind = 1.0f;
@@ -1552,6 +1572,15 @@ void RB_StageIteratorGeneric( void ) {
 				draw.material[3] = 1.0f;
 			}
 		}
+		// VisionJK: a burn mark lit as a groove cut into the surface (groove <depth>), by the light grid of the level
+#ifndef RD_VISION_GLES
+		if ( mat && mat->groove > 0.0f && stageProgram == program && !refract && !g_bRenderGlowingObjects
+			&& ( stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) == ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA )
+			&& v_pbr->integer && VK_GridDraw( &draw ) ) {
+			draw.flags |= VKD_GROOVE;
+			draw.material[0] = mat->groove;
+		}
+#endif
 		draw.flags |= VK_AlphaTest( stateBits );
 		// VisionJK: the glow map of a lamp panel (a stage added onto it) shines brighter than its texture (v_panelGlow)
 		if ( shader->lampPanel && v_panelGlow->value > 0.0f ) {

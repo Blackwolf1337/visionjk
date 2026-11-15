@@ -254,6 +254,33 @@ CG_AddMarks
 */
 #define	MARK_TOTAL_TIME		10000
 #define	MARK_FADE_TIME		1000
+#define	MARK_COOL_TIME		3000		// VisionJK: the hot core of a saber cut, until it has cooled
+
+/*
+===================
+CG_MarkHeat
+
+VisionJK: the colour of the hot core of a saber cut msec after it was made: white hot, orange, dark red, nothing
+by MARK_COOL_TIME (as hot metal cools; the shader adds it and lets it glow).
+===================
+*/
+static void CG_MarkHeat( int msec, vec3_t out ) {
+	static const struct { int msec; float rgb[3]; } heat[] = {
+		{ 0,	{ 1.0f, 0.92f, 0.70f } },
+		{ 200,	{ 1.0f, 0.62f, 0.22f } },
+		{ 800,	{ 0.85f, 0.24f, 0.04f } },
+		{ 1800,	{ 0.35f, 0.05f, 0.01f } },
+		{ MARK_COOL_TIME, { 0.0f, 0.0f, 0.0f } },
+	};
+	int i;
+
+	for ( i = 1; i < (int)ARRAY_LEN( heat ) - 1 && msec > heat[i].msec; i++ )
+		;
+	const float f = Com_Clamp( 0.0f, 1.0f, (float)( msec - heat[i - 1].msec ) / ( heat[i].msec - heat[i - 1].msec ) );
+	for ( int c = 0; c < 3; c++ ) {
+		out[c] = heat[i - 1].rgb[c] + f * ( heat[i].rgb[c] - heat[i - 1].rgb[c] );
+	}
+}
 
 void CG_AddMarks( void ) {
 	int			j;
@@ -272,8 +299,35 @@ void CG_AddMarks( void ) {
 		next = mp->nextMark;
 
 		// see if it is time to completely remove it
-		if ( cg.time > mp->time + MARK_TOTAL_TIME ) {
+		if ( cg.time > mp->time + ( mp->style == MARK_STYLE_COOL ? MARK_COOL_TIME : MARK_TOTAL_TIME ) ) {
 			CG_FreeMarkPoly( mp );
+			continue;
+		}
+		// VisionJK: the styles of the saber marks
+		if ( mp->style != MARK_STYLE_GAME ) {
+			byte	c[4];
+
+			if ( mp->style == MARK_STYLE_COOL ) {
+				vec3_t heat;
+
+				CG_MarkHeat( cg.time - mp->time, heat );
+				for ( j = 0; j < 3; j++ ) {
+					c[j] = (byte)( Com_Clamp( 0.0f, 1.0f, heat[j] * mp->color[j] ) * 255.0f );
+				}
+				c[3] = 255;
+			} else {
+				// the burn: colour and alpha together, so it fades to the wall and not to black
+				t = mp->time + MARK_TOTAL_TIME - cg.time;
+				const float f = ( t < MARK_FADE_TIME ) ? (float)t / MARK_FADE_TIME : 1.0f;
+
+				for ( j = 0; j < 4; j++ ) {
+					c[j] = (byte)( Com_Clamp( 0.0f, 1.0f, mp->color[j] * f ) * 255.0f );
+				}
+			}
+			for ( j = 0; j < mp->poly.numVerts; j++ ) {
+				memcpy( mp->verts[j].modulate, c, sizeof( c ) );
+			}
+			trap->R_AddPolysToScene( mp->markShader, mp->poly.numVerts, mp->verts, 1 );
 			continue;
 		}
 

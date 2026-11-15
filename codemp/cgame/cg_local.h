@@ -479,10 +479,18 @@ typedef struct centity_s {
 // local entities are created as a result of events or predicted actions,
 // and live independently from all server transmitted entities
 
+// VisionJK: how a mark changes with its age (CG_AddMarks)
+typedef enum {
+	MARK_STYLE_GAME,			// as the game has it: the last second fades its alpha or its colour (alphaFade)
+	MARK_STYLE_BURN,			// a saber burn: colour and alpha fade together, to nothing (blend dst * ( rgb + 1 - a ))
+	MARK_STYLE_COOL				// the hot core of a saber cut: white, orange, dark red, gone (MARK_COOL_TIME)
+} markStyle_t;
+
 typedef struct markPoly_s {
 	struct markPoly_s	*prevMark, *nextMark;
 	int			time;
 	qhandle_t	markShader;
+	markStyle_t	style;
 	qboolean	alphaFade;		// fade alpha instead of rgb
 	float		color[4];
 	poly_t		poly;
@@ -1402,6 +1410,8 @@ typedef struct cgMedia_s {
 	qhandle_t	bdecal_saberglow;
 	qhandle_t	bdecal_burn1;
 	qhandle_t	mSaberDamageGlow;
+	qhandle_t	saberBurnShader;		// VisionJK: the burn and the hot core of a saber mark (vision_fx.shader)
+	qhandle_t	saberGlowShader;
 
 	// For vehicles only now
 	sfxHandle_t	noAmmoSound;

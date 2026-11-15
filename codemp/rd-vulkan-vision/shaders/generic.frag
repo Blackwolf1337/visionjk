@@ -931,6 +931,46 @@ vec4 SafeColor( vec4 c ) {
 }
 
 #ifndef VK_GLES
+// What blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA has to be given for the surface to come out times f (each colour 0
+// to 2): rgb + 1 - alpha = f, with rgb and alpha both 0 to 1.
+vec4 TimesSurface( vec3 f ) {
+	f = clamp( f, vec3( 0.0 ), vec3( 2.0 ) );
+	float a = clamp( 1.5 - 0.5 * ( min( f.r, min( f.g, f.b ) ) + max( f.r, max( f.g, f.b ) ) ), 0.0, 1.0 );
+
+	return vec4( clamp( f - 1.0 + a, vec3( 0.0 ), vec3( 1.0 ) ), a );
+}
+
+// GROOVE: a burn mark of blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA (the surface times rgb + 1 - alpha) lit as a
+// groove cut into the surface: as deep as it is dark, d.material.x units at the darkest. Its slopes come from how
+// that depth changes to the next pixel, along the surface (the surface gradient of Mikkelsen, "Bump Mapping
+// Unparametrized Surfaces on the GPU", 2010), and are lit by the light grid of the level against the flat surface:
+// the side that faces the light brighter, the other darker. A poly of a mark has no normals: the face from the place.
+vec4 Groove( Draw d, vec4 c ) {
+	Transform t = TRANSFORMS( d.transform );
+	vec3 p = v_position;
+	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
+	vec3 n = normalize( cross( dpdx, dpdy ) );
+	if ( dot( n, t.viewOrigin.xyz - p ) < 0.0 ) {
+		n = -n;
+	}
+	vec3 f = c.rgb + 1.0 - c.a;
+	float h = -( 1.0 - clamp( dot( f, vec3( 1.0 / 3.0 ) ), 0.0, 1.0 ) ) * d.material.x;
+	vec3 r1 = cross( dpdy, n ), r2 = cross( n, dpdx );
+	float det = dot( dpdx, r1 );
+	vec3 slope = abs( det ) > 1e-12 ? ( dFdx( h ) * r1 + dFdy( h ) * r2 ) / det : vec3( 0.0 );
+	vec3 bent = normalize( n - slope );
+
+	vec4 grid = PbrGrid( d, ( t.model * vec4( p, 1.0 ) ).xyz );
+	float k = min( length( grid.xyz ), 0.95 );
+	if ( k < 0.001 ) {
+		return c;
+	}
+	vec3 l = normalize( transpose( mat3( t.model ) ) * grid.xyz );
+	float flatLit = max( 1.0 - k + k * max( dot( n, l ), 0.0 ), 0.2 );
+	float bentLit = 1.0 - k + k * max( dot( bent, l ), 0.0 );
+	return TimesSurface( f * clamp( bentLit / flatLit, 0.3, 1.8 ) );
+}
+
 // the marks of DECALS, four rows each from d.decals on (vk_shade.cpp VK_PaintMarks)
 layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 	vec4	bones[];
@@ -947,7 +987,7 @@ vec4 Decals( Draw d ) {
 	vec3 p = v_position;
 	// (the gradients for the texture come from the place, outside the loop: inside it they are not defined)
 	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
-	vec4 sum = ( kind == 1u ) ? vec4( 1.0 ) : vec4( 0.0 );
+	vec4 sum = ( kind == 1u || kind == 4u || kind == 5u ) ? vec4( 1.0 ) : vec4( 0.0 );
 	bool hit = false;
 	uint r = d.decals;
 
@@ -993,6 +1033,10 @@ vec4 Decals( Draw d ) {
 				sum *= col;
 			} else if ( kind == 3u ) {
 				sum += col;
+			} else if ( kind == 4u ) {
+				sum.rgb *= col.rgb + 1.0 - col.a;
+			} else if ( kind == 5u ) {
+				sum.rgb *= 2.0 * col.rgb;
 			} else {
 				sum.rgb = col.rgb * col.a + sum.rgb * ( 1.0 - col.a );
 				sum.a = col.a + sum.a * ( 1.0 - col.a );
@@ -1005,6 +1049,10 @@ vec4 Decals( Draw d ) {
 	}
 	if ( kind == 2u ) {
 		sum.rgb = ( sum.a > 0.0 ) ? sum.rgb / sum.a : vec3( 0.0 );
+	} else if ( kind == 4u ) {
+		sum = TimesSurface( sum.rgb );
+	} else if ( kind == 5u ) {
+		sum = vec4( clamp( sum.rgb * 0.5, vec3( 0.0 ), vec3( 1.0 ) ), 1.0 );
 	}
 	return sum;
 }
@@ -1057,6 +1105,12 @@ void main() {
 			color = second;
 		}
 	}
+
+#ifndef VK_GLES
+	if ( GROOVE( d.flags ) ) {
+		color = Groove( d, color );
+	}
+#endif
 
 	// the glow map of a lamp panel brighter than its texture (v_panelGlow): with HDR it glows out
 	if ( d.brighten > 0.0 ) {

@@ -2683,6 +2683,8 @@ Ghoul2 Insert End
 	cgs.media.bdecal_saberglow = trap->R_RegisterShader("gfx/damage/saberglowmark");
 	cgs.media.bdecal_burn1 = trap->R_RegisterShader("gfx/damage/bodybigburnmark1");
 	cgs.media.mSaberDamageGlow = trap->R_RegisterShader("gfx/effects/saberDamageGlow");
+	cgs.media.saberBurnShader = trap->R_RegisterShader( "gfx/vision/saberburn" );
+	cgs.media.saberGlowShader = trap->R_RegisterShader( "gfx/vision/saberglow" );
 
 	CG_RegisterCvars();
 

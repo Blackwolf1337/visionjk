@@ -119,6 +119,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define MATERIAL( flags )	( ( ( flags ) & 0x08000000u ) != 0u )
 #define PBR( flags )		( ( ( flags ) & 0x10000000u ) != 0u )
 #define DECALS( flags )		( ( ( flags ) & 0x20000000u ) != 0u )
+#define GROOVE( flags )		( ( ( flags ) & 0x40000000u ) != 0u )
 
 // Draw.pbrFlags (VKP_* of vk_local.h)
 #define PBR_NORMAL		0x01u
