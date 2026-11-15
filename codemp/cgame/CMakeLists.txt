@@ -241,6 +241,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCmdMenuFiles})
 set(MPCGameSandboxFiles
 	"${MPDir}/cgame/sandbox/cg_tools.c"
 	"${MPDir}/cgame/sandbox/cg_tools_ui.c"
+	"${MPDir}/cgame/look/cg_remaps.c"
 	)
 source_group("cgame/sandbox" FILES ${MPCGameSandboxFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSandboxFiles})

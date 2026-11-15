@@ -405,6 +405,22 @@ REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 LANG_FRENCH         "Les sabres laser et les lumières brillent."
 
+REFERENCE           TEXTURE_SWAPS_OF_THE_SERVER
+LANG_ENGLISH        "Texture Swaps of the Server"
+LANG_FRENCH         "Échanges de textures du serveur"
+
+REFERENCE           A_SERVER_CAN_SWAP_A_TEXTURE_OF_THE_L
+LANG_ENGLISH        "A server can swap a texture of the level for another one, or hide something that way. Off: none of that, you see the level as it is."
+LANG_FRENCH         "Un serveur peut remplacer une texture du niveau par une autre, ou cacher quelque chose ainsi. Désactivé : rien de cela, vous voyez le niveau tel qu'il est."
+
+REFERENCE           LIST_OF_TEXTURE_SWAPS
+LANG_ENGLISH        "List of Texture Swaps ..."
+LANG_FRENCH         "Liste des échanges de textures ..."
+
+REFERENCE           IN_A_LEVEL_EVERY_TEXTURE_THE_SERVER
+LANG_ENGLISH        "In a level: every texture the server swaps, each with its own switch."
+LANG_FRENCH         "Dans un niveau : chaque texture que le serveur échange, chacune avec son interrupteur."
+
 REFERENCE           SHADOWS
 LANG_ENGLISH        "Shadows"
 LANG_FRENCH         "Ombres"
@@ -3080,6 +3096,18 @@ LANG_FRENCH         "Chevalier Jedi"
 REFERENCE           JEDI_MASTER
 LANG_ENGLISH        "Jedi Master"
 LANG_FRENCH         "Maître Jedi"
+
+REFERENCE           TEXTURE_SWAPS
+LANG_ENGLISH        "Texture Swaps"
+LANG_FRENCH         "Échanges de textures"
+
+REFERENCE           SWAPS_OF_THIS_SERVER
+LANG_ENGLISH        "Swaps of this server"
+LANG_FRENCH         "Échanges de ce serveur"
+
+REFERENCE           THIS_SERVER_SWAPS_NO_TEXTURES
+LANG_ENGLISH        "This server swaps no textures."
+LANG_FRENCH         "Ce serveur n'échange aucune texture."
 
 REFERENCE           DISRUPTOR
 LANG_ENGLISH        "Disruptor"

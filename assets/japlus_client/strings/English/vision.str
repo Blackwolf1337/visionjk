@@ -305,6 +305,18 @@ LANG_ENGLISH        "Dynamic Glow"
 REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 
+REFERENCE           TEXTURE_SWAPS_OF_THE_SERVER
+LANG_ENGLISH        "Texture Swaps of the Server"
+
+REFERENCE           A_SERVER_CAN_SWAP_A_TEXTURE_OF_THE_L
+LANG_ENGLISH        "A server can swap a texture of the level for another one, or hide something that way. Off: none of that, you see the level as it is."
+
+REFERENCE           LIST_OF_TEXTURE_SWAPS
+LANG_ENGLISH        "List of Texture Swaps ..."
+
+REFERENCE           IN_A_LEVEL_EVERY_TEXTURE_THE_SERVER
+LANG_ENGLISH        "In a level: every texture the server swaps, each with its own switch."
+
 REFERENCE           SHADOWS
 LANG_ENGLISH        "Shadows"
 
@@ -2311,6 +2323,15 @@ LANG_ENGLISH        "Jedi Knight"
 
 REFERENCE           JEDI_MASTER
 LANG_ENGLISH        "Jedi Master"
+
+REFERENCE           TEXTURE_SWAPS
+LANG_ENGLISH        "Texture Swaps"
+
+REFERENCE           SWAPS_OF_THIS_SERVER
+LANG_ENGLISH        "Swaps of this server"
+
+REFERENCE           THIS_SERVER_SWAPS_NO_TEXTURES
+LANG_ENGLISH        "This server swaps no textures."
 
 REFERENCE           DISRUPTOR
 LANG_ENGLISH        "Disruptor"

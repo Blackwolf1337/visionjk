@@ -983,6 +983,43 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_remaps
+			type					ITEM_TYPE_YESNO
+			text					@VISION_TEXTURE_SWAPS_OF_THE_SERVER
+			descText				@VISION_A_SERVER_CAN_SWAP_A_TEXTURE_OF_THE_L
+			cvar					"v_remaps"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 514 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_exec_v_remaps_window
+			type					ITEM_TYPE_BUTTON
+			text					@VISION_LIST_OF_TEXTURE_SWAPS
+			descText				@VISION_IN_A_LEVEL_EVERY_TEXTURE_THE_SERVER
+			action { play "sound/interface/button1.wav" ; exec "v_remaps_window" ; uiScript closeingame ; }
+			rect					306 566 432 52
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					advancedvideo
 			group					video2
 			type					ITEM_TYPE_BUTTON
@@ -993,7 +1030,7 @@
 				play "sound/interface/button1.wav"
 				open videodriverMenu
 			}
-			rect					306 514 432 52
+			rect					306 618 432 52
 			page					1
 			scroll					1
 			row						1

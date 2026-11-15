@@ -464,6 +464,7 @@ static consoleCommand_t	commands[] = {
 	{ "v_chatOpen",				CG_ChatOpen_f },
 	{ "v_commandmenu",				CG_CmdMenu_f },
 	{ "v_tools",						CG_ToolWindow_f },
+	{ "v_remaps_window",			CG_RemapsWindow_f },
 	{ "v_cgKey",						CG_Key_f },
 	{ "v_cgMouse",					CG_Mouse_f },
 	{ "clientlist",					CG_ClientList_f },

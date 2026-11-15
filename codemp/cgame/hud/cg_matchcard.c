@@ -48,11 +48,10 @@ static int Card_Players( void ) {
 	return n;
 }
 
-// the clock of the match: what is left of the time limit, without one how long it runs
+// the clock of the match, as cg_drawTimer and the settings beside it have it (CG_TimerText: counting down with
+// tay_timerCountdown, with milliseconds with tay_timerMsec); "" with cg_drawTimer 0
 static const char *Card_Clock( void ) {
-	const int run = cg.time - cgs.levelStartTime;
-
-	return cgs.timelimit > 0 ? Hud_Clock( cgs.timelimit * 60000 - run ) : Hud_Clock( run );
+	return cg_drawTimer.integer ? CG_TimerText() : "";
 }
 
 // who carries the flag that powerup stands for, -1: nobody the client knows of

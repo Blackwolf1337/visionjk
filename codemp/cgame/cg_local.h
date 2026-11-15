@@ -1901,6 +1901,16 @@ qboolean	CG_ToolWindowShown( void );
 qboolean	CG_ToolWindowPointerOver( void );
 void		CG_ToolWindowDraw( void );
 qboolean	CG_ToolWindowKey( int key, qboolean down );
+// look/cg_remaps.c: the texture swaps of the server, and the window that lists them
+void		CG_RemapsChanged( void );
+void		CG_RemapsFrame( void );
+void		CG_RemapsInit( void );
+void		CG_RemapsWindow_f( void );				// v_remaps_window
+void		CG_RemapsWindowClose( void );
+qboolean	CG_RemapsWindowShown( void );
+qboolean	CG_RemapsWindowPointerOver( void );
+void		CG_RemapsWindowDraw( void );
+qboolean	CG_RemapsWindowKey( int key, qboolean down );
 // modelstore/cg_modelstore.c: the window of the model store of the site
 void		CG_ModelStore_f( void );				// v_modelbrowser
 void		CG_ModelStoreClose( void );

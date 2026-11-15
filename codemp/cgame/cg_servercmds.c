@@ -345,45 +345,8 @@ CG_ShaderStateChanged
 =====================
 */
 void CG_ShaderStateChanged(void) {
-	char originalShader[MAX_QPATH];
-	char newShader[MAX_QPATH];
-	char timeOffset[16];
-	const char *o;
-	char *n,*t;
-
-	o = CG_ConfigString( CS_SHADERSTATE );
-	while (o && *o) {
-		n = strstr(o, "=");
-		if (n && *n) {
-			// (the lengths are distances in a configstring of the server: what does not fit ends the list)
-			if ( n - o >= (int)sizeof( originalShader ) ) {
-				break;
-			}
-			Q_strncpyz( originalShader, o, (int)( n - o ) + 1 );
-			n++;
-			t = strstr(n, ":");
-			if (t && *t) {
-				if ( t - n >= (int)sizeof( newShader ) ) {
-					break;
-				}
-				Q_strncpyz( newShader, n, (int)( t - n ) + 1 );
-			} else {
-				break;
-			}
-			t++;
-			o = strstr(t, "@");
-			if (o) {
-				if ( o - t >= (int)sizeof( timeOffset ) ) {
-					break;
-				}
-				Q_strncpyz( timeOffset, t, (int)( o - t ) + 1 );
-				o++;
-				trap->R_RemapShader( originalShader, newShader, timeOffset );
-			}
-		} else {
-			break;
-		}
-	}
+	// VisionJK: the swaps go through a list the player decides about (look/cg_remaps.c)
+	CG_RemapsChanged();
 }
 
 extern char *cg_customSoundNames[MAX_CUSTOM_SOUNDS];

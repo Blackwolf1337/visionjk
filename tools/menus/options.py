@@ -76,6 +76,7 @@ class Layout:
 #   ('bit', name, cvar, bit, what for)           on while that bit of the cvar is clear (the JA+ cp_pluginDisable)
 #   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
 #   ('menu', name, menu, what for)                a button that opens a window of its own (a menu of the lists)
+#   ('exec', name, command, what for)             a button that runs a command of the game and closes the menus (in a level)
 #   ('pick', name, cvar, what for)                a button that shows a model the cvar holds and opens the model picker
 #                                               (modelpick.menu), which writes the model it is given into that cvar
 SETUP = [
@@ -94,6 +95,8 @@ SETUP = [
         ('head', 'Detail'),
         ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
+        ('yesno', 'Texture Swaps of the Server', 'v_remaps', 'A server can swap a texture of the level for another one, or hide something that way. Off: none of that, you see the level as it is.'),
+        ('exec', 'List of Texture Swaps ...', 'v_remaps_window', 'In a level: every texture the server swaps, each with its own switch.'),
         ('old', 'video2', ('advancedvideo',)),
     ]),
     ('Lighting', 'Shadows, materials, reflections, HDR and bloom.', [
@@ -676,6 +679,13 @@ def menu_row(spec):
             Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['open', menu, ';'])]
 
 
+def exec_row(spec):
+    """A button among the rows that runs a console command and closes the in-game menus: a window of the cgame."""
+    _, text, command, about = spec
+    return [Entry('name', ['vision_exec_' + command.lower()]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+            Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['exec', quoted(command), ';', 'uiScript', 'closeingame', ';'])]
+
+
 def pick_row(spec):
     """A button among the rows that shows the model its cvar holds and opens the model picker for that cvar."""
     _, text, cvar, about = spec
@@ -761,6 +771,8 @@ def _new_row(spec):
         return menu_row(spec)
     if kind == 'pick':
         return pick_row(spec)
+    if kind == 'exec':
+        return exec_row(spec)
     if kind == 'bit':
         # one bit of the cvar, on while the bit is clear (cp_pluginDisable: a set bit turns a feature off)
         return [Entry('name', ['vision_bit_%s_%d' % (cvar.lower(), spec[3])]), Entry('type', ['ITEM_TYPE_YESNO']),

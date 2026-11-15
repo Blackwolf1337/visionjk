@@ -191,7 +191,7 @@ void CG_SelectInit( void ) {
 // Is the mouse free for pointing at players. Also for the quick wheel (radial/cg_radial.c), the command menu
 // (cmdmenu/cg_cmdmenu.c) and a box that is carried, without the selection of players.
 static qboolean Select_Free( void ) {
-	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || CG_CmdMenuOpen() || CG_ToolWindowShown() || CG_ModelStoreShown() || CG_BoardShown() || sel.carrying || ( v_selectPlayers.integer
+	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || CG_CmdMenuOpen() || CG_ToolWindowShown() || CG_RemapsWindowShown() || CG_ModelStoreShown() || CG_BoardShown() || sel.carrying || ( v_selectPlayers.integer
 		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() || CG_BoomboxWindowShown() ) ) ) );
 }
 
@@ -1540,6 +1540,7 @@ void CG_SelectDraw( void ) {
 		CG_ScoresLetGo();
 		CG_BoomboxWindowClose();
 		CG_ToolWindowClose();
+		CG_RemapsWindowClose();
 		CG_ModelStoreClose();
 		CG_BoardClose();
 		CG_RadialClose();
@@ -1603,7 +1604,7 @@ void CG_SelectDraw( void ) {
 		Select_LetBoxGo( qfalse );
 	}
 	// (nobody is picked in the level through the card, the scoreboard or the window of a box, or while a box is carried)
-	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || CG_BoomboxWindowPointerOver() || CG_ToolWindowPointerOver()
+	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || CG_BoomboxWindowPointerOver() || CG_ToolWindowPointerOver() || CG_RemapsWindowPointerOver()
 		|| CG_ModelStorePointerOver() || CG_BoardPointerOver() || Select_Held() >= 0 ) ? -1 : Select_Pick();
 	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
 		Select_Hull();
@@ -1634,6 +1635,7 @@ void CG_SelectDraw( void ) {
 	// the window of a box and the tool window, and the pointer on everything, on the card and the windows as well
 	CG_BoomboxWindowDraw();
 	CG_ToolWindowDraw();
+	CG_RemapsWindowDraw();
 	CG_ModelStoreDraw();
 	CG_BoardDraw();
 	CG_SelectDrawCursor();
@@ -1666,7 +1668,7 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 		return qtrue;
 	}
 	// the window of a box, while it is open: what is on it, and Escape and the right button for it
-	if ( CG_BoomboxWindowKey( key, down ) || CG_ToolWindowKey( key, down ) || CG_ModelStoreKey( key, down ) || CG_BoardKey( key, down ) ) {
+	if ( CG_BoomboxWindowKey( key, down ) || CG_ToolWindowKey( key, down ) || CG_RemapsWindowKey( key, down ) || CG_ModelStoreKey( key, down ) || CG_BoardKey( key, down ) ) {
 		return qtrue;
 	}
 	if ( !down ) {
@@ -1770,6 +1772,7 @@ void CG_SelectLetGo( void ) {
 	CG_ScoresLetGo();
 	CG_BoomboxWindowClose();
 	CG_ToolWindowClose();
+	CG_RemapsWindowClose();
 	CG_ModelStoreClose();
 	CG_BoardClose();
 }

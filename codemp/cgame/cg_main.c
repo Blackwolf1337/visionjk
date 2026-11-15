@@ -2722,6 +2722,7 @@ Ghoul2 Insert End
 	CG_BoomboxInit();	//	and boxes of the boombox
 	CG_ChatInit();
 	CG_NotifyInit();
+	CG_RemapsInit();
 	CG_BubbleInit();
 	CG_StatusInit();
 	CG_LookInit();
