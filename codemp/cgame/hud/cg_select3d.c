@@ -336,8 +336,11 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 	Skin_Panel( x, y, size, size, SELECT_RADIUS, glass, rim );
 
 	if ( it->icon && it->disc && alpha > 0.2f ) {
-		// the one in front turns, the others face the viewer, turned a little with the ring
-		Select3D_DrawDisc( it->icon, accent, alpha, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset,
+		// the one in front turns, the others face the viewer, turned a little with the ring; smaller than a model
+		// and a little higher, the pips have their place under it
+		const float d = size * 0.13f;
+
+		Select3D_DrawDisc( it->icon, accent, alpha, x + d, y + d - size * 0.04f, size - 2.0f * d, size - 2.0f * d,
 			-0.6f * ringYaw + front * turn );
 	} else if ( it->icon && alpha > 0.2f ) {
 		// no model of its own (melee, which the item list gives the model of the stun baton): its picture
@@ -362,7 +365,7 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 		// pips along the bottom, over the shade: the ones reached in the accent, the rest faint
 		const float		pip = size * 0.07f, gap = pip * 0.7f;
 		const float		px = x + ( size - ( it->pipsMax * pip + ( it->pipsMax - 1 ) * gap ) ) * 0.5f;
-		const float		py = y + size - pip - size * 0.07f;
+		const float		py = y + size - pip - size * 0.05f;
 
 		for ( i = 0; i < it->pipsMax; i++ ) {
 			const vec4_t fill = { accent[0], accent[1], accent[2], ( i < it->pips ? 0.95f : 0.2f ) * alpha };

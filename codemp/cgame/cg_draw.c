@@ -1611,6 +1611,47 @@ qboolean ForcePower_Valid(int i)
 }
 
 /*
+The rank of a power of the player, for the cards of the selection, -1: not known. The server sends the ranks of
+jump and seeing only (msg.cpp), so the rest is what the client can know by itself: the class in siege, rank 3 for a
+holocron held, else what the own forcepowers string asked for. A server may have lowered that (its rank limit), so
+it is the best guess, and there is none for a player followed.
+*/
+static int CG_ForceSelectRank( int fp ) {
+	const playerState_t	*ps = &cg.snap->ps;
+	char				powers[128];
+	const char			*digits;
+
+	if ( fp == FP_SEE || fp == FP_LEVITATION ) {
+		return ps->fd.forcePowerLevel[fp];
+	}
+	if ( cgs.gametype == GT_SIEGE ) {
+		const int index = cgs.clientinfo[ps->clientNum].siegeIndex;
+
+		if ( index >= 0 && index < bgNumSiegeClasses && bgSiegeClasses[index].forcePowerLevels[fp] > 0 ) {
+			return bgSiegeClasses[index].forcePowerLevels[fp];
+		}
+		return -1;
+	}
+	if ( cgs.gametype == GT_HOLOCRON ) {
+		return ( ps->holocronBits & ( 1 << fp ) ) ? FORCE_LEVEL_3 : -1;
+	}
+	if ( ps->clientNum != cg.clientNum ) {
+		return -1;
+	}
+	// "rank-side-digits", a digit for each power
+	trap->Cvar_VariableStringBuffer( "forcepowers", powers, sizeof( powers ) );
+	digits = strchr( powers, '-' );
+	digits = digits ? strchr( digits + 1, '-' ) : NULL;
+	if ( !digits || (int)strlen( digits + 1 ) <= fp ) {
+		return -1;
+	}
+	if ( digits[1 + fp] >= '1' && digits[1 + fp] <= '0' + FORCE_LEVEL_3 ) {
+		return digits[1 + fp] - '0';
+	}
+	return -1;
+}
+
+/*
 ===================
 CG_DrawForceSelect
 ===================
@@ -1644,8 +1685,9 @@ void CG_DrawForceSelect( void )
 
 	if ( CG_HudNewLook() ) {
 		// VisionJK: glass cards as for the weapons (hud/cg_select3d.c), the picture of each power on a disc, in the
-		// order forcenext goes through them (BG_CycleForce): the card in the colour of its side, its rank as pips,
-		// what using it costs at that rank, darkened while the force is too low for it, glowing while it runs
+		// order forcenext goes through them (BG_CycleForce): the card in the colour of its side, glowing while it
+		// runs, and where the rank is known (CG_ForceSelectRank) the rank as pips, what using it costs at that rank
+		// and the card darkened while the force is too low for it
 		static const vec3_t		light = { 0.36f, 0.78f, 0.96f }, dark = { 1.0f, 0.32f, 0.26f }, neutral = { 0.88f, 0.92f, 1.0f };
 		const playerState_t		*ps = &cg.predictedPlayerState;
 		const int				wanted = ( cg.forceSelect >= 0 && cg.forceSelect < NUM_FORCE_POWERS && ForcePower_Valid( cg.forceSelect ) )
@@ -1660,18 +1702,17 @@ void CG_DrawForceSelect( void )
 			if ( !ForcePower_Valid( fp ) ) {
 				continue;
 			}
-			level = ps->fd.forcePowerLevel[fp];
-			if ( level < 0 || level >= NUM_FORCE_POWER_LEVELS ) {
-				level = 0;
-			}
-			cost = forcePowerNeeded[level][fp];
+			level = CG_ForceSelectRank( fp );
+			cost = level > 0 ? forcePowerNeeded[level][fp] : 0;
 			memset( &list[n], 0, sizeof( list[n] ) );
 			list[n].icon = cgs.media.forcePowerIcons[fp];
 			list[n].disc = qtrue;
 			list[n].count = cost > 0 ? cost : -1;
 			list[n].dim = (qboolean)( ps->fd.forcePower < cost );
-			list[n].pips = level;
-			list[n].pipsMax = NUM_FORCE_POWER_LEVELS - 1;
+			if ( level > 0 ) {
+				list[n].pips = level;
+				list[n].pipsMax = FORCE_LEVEL_3;
+			}
 			list[n].active = (qboolean)( ( ps->fd.forcePowersActive & ( 1 << fp ) ) != 0 );
 			list[n].tint = forcePowerDarkLight[fp] == FORCE_LIGHTSIDE ? light
 				: forcePowerDarkLight[fp] == FORCE_DARKSIDE ? dark : neutral;
