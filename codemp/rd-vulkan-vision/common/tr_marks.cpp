@@ -44,7 +44,12 @@ again and the poly is drawn through the same tessellation and height (srfPoly_t 
 ===============================================================================
 */
 
-#define MARK_TESS_SIZE			16384	// points kept, a power of two; the oldest are written over
+// The points kept, a power of two. A poly is painted only while every one of its points is found here, each frame
+// anew. With 16384 places and the first of a full row written over, the scars of a few saber cuts (20 to 40 points a
+// short piece) pushed out the points of marks still on the wall: those were drawn flat again, under the bumps, and
+// showed in bits or not at all, the thin drops under a cut longer than the cut. So: room for all the marks a scene
+// can hold, and where a row is full the point goes that no poly has asked for the longest.
+#define MARK_TESS_SIZE			131072
 #define MARK_TESS_PROBES		16
 
 typedef struct {
@@ -52,6 +57,7 @@ typedef struct {
 	float			st[2];
 	vec3_t			normal;
 	const shader_t	*shader;			// NULL: empty
+	int				frame;				// tr.frameCount when it was kept or a poly asked for it last
 } markTessPoint_t;
 
 static markTessPoint_t	markTess[MARK_TESS_SIZE];
@@ -99,12 +105,13 @@ qboolean R_MarkTessFind( const vec3_t xyz, shader_t **shader, float *st, vec3_t 
 		return qfalse;
 	}
 	for ( uint32_t i = 0, h = R_MarkTessHash( xyz ); i < MARK_TESS_PROBES; i++, h = ( h + 1 ) & ( MARK_TESS_SIZE - 1 ) ) {
-		const markTessPoint_t *p = &markTess[h];
+		markTessPoint_t *p = &markTess[h];
 
 		if ( !p->shader ) {
 			return qfalse;
 		}
 		if ( !memcmp( p->xyz, xyz, sizeof( vec3_t ) ) ) {
+			p->frame = tr.frameCount;
 			*shader = (shader_t *)p->shader;
 			st[0] = p->st[0];
 			st[1] = p->st[1];
@@ -152,11 +159,14 @@ static void R_MarkTessKeep( const shader_t *shader, const float *points, int num
 		b[1] = ( d11 * d20 - d01 * d21 ) / denom;
 		b[2] = ( d00 * d21 - d01 * d20 ) / denom;
 		b[0] = 1.0f - b[1] - b[2];
-		// an empty place or this point again, else the first place is written over
+		// an empty place or this point again, else the place of the point no poly has asked for the longest
 		for ( int i = 0; i < MARK_TESS_PROBES; i++, h = ( h + 1 ) & ( MARK_TESS_SIZE - 1 ) ) {
 			if ( !markTess[h].shader || !memcmp( markTess[h].xyz, point, sizeof( vec3_t ) ) ) {
 				slot = h;
 				break;
+			}
+			if ( markTess[h].frame < markTess[slot].frame ) {
+				slot = h;
 			}
 		}
 		markTessPoint_t *p = &markTess[slot];
@@ -169,6 +179,7 @@ static void R_MarkTessKeep( const shader_t *shader, const float *points, int num
 		}
 		VectorNormalize( p->normal );
 		p->shader = shader;
+		p->frame = tr.frameCount;
 		markTessAny = qtrue;
 	}
 }
