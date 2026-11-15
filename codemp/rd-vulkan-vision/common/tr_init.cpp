@@ -148,9 +148,10 @@ cvar_t	*tay_bloomThreshold;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
-// were 600 and 3000. Text in the scene is a polygon a glyph (RE_Font_Text3D), next to the effects that take them.
-#define	DEFAULT_MAX_POLYS		4096
-#define	DEFAULT_MAX_POLYVERTS	16384
+// were 600 and 3000, then 4096 and 16384 (the scars of the sabers take a few thousand). Text in the scene is a
+// polygon a glyph (RE_Font_Text3D), next to the effects that take them.
+#define	DEFAULT_MAX_POLYS		16384
+#define	DEFAULT_MAX_POLYVERTS	81920
 cvar_t	*r_maxpolys;
 cvar_t	*r_maxpolyverts;
 int		max_polys;

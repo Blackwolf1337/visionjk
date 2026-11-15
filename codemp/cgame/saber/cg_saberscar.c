@@ -66,6 +66,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_SHARE			0.4f		// of the polys and their corners a scene may have (r_maxpolys, r_maxpolyverts), what the
 										//	scars take at most, the newest first: past those limits the renderer drops polys without
 										//	a word, and it was the newest marks and the effects that went missing
+#define SCAR_MAX_POLYS		4096		// and no more than this of each, whatever the limits: the renderer lays every poly on a
+#define SCAR_MAX_VERTS		20480		//	tessellated surface into a table each frame (rd-vulkan-vision VK_PaintBuild)
 #define SCAR_DRAW_RANGE		3000.0f		// units from the eye beyond which no scar is drawn
 #define SCAR_HEAT_ID		( 1 << 22 )	// the ids of the heat haze (CG_ScreenFxEmit), above those of the entities
 
@@ -1010,9 +1012,9 @@ void CG_SaberScarsAdd( void ) {
 		char value[16];
 
 		trap->Cvar_VariableStringBuffer( "r_maxpolys", value, sizeof( value ) );
-		scarMaxPolys = (int)( SCAR_SHARE * Q_max( atoi( value ), 600 ) );
+		scarMaxPolys = Q_min( (int)( SCAR_SHARE * Q_max( atoi( value ), 600 ) ), SCAR_MAX_POLYS );
 		trap->Cvar_VariableStringBuffer( "r_maxpolyverts", value, sizeof( value ) );
-		scarMaxVerts = (int)( SCAR_SHARE * Q_max( atoi( value ), 3000 ) );
+		scarMaxVerts = Q_min( (int)( SCAR_SHARE * Q_max( atoi( value ), 3000 ) ), SCAR_MAX_VERTS );
 	}
 	for ( int k = 0; k < SCAR_PIECES && scarPolys < scarMaxPolys; k++ ) {
 		scarPiece_t *piece = &scar.pieces[( scar.next - 1 - k + SCAR_PIECES ) % SCAR_PIECES];

@@ -68,25 +68,18 @@ void main() {
 		gl_TessLevelOuter[2] = EdgeLevel( d, t, 0, 1 );
 		gl_TessLevelInner[0] = max( gl_TessLevelOuter[0], max( gl_TessLevelOuter[1], gl_TessLevelOuter[2] ) );
 
-		// the pass of marks painted onto the surface (DECALS, generic.frag Decals()): a triangle no mark reaches is
-		// left out (levels 0), so the pixels of the rest of the surface do not look through all the marks. The
-		// sphere of each mark (row 4 of it, vk_shade.cpp VK_MarkRows) against the box of the triangle, grown by
-		// the height the bumps may reach (tess.x).
+		// the passes of marks painted onto the surface (DECALS, generic.frag Decals()): a triangle outside the box of
+		// the pass (material, material2, vk_shade.cpp VK_PaintMarks) is left out (levels 0). The box of the triangle,
+		// grown by what its bumps may move it (tess.x along its normals, so a floor grows up and down only).
 		if ( DECALS( d.flags ) ) {
-			vec3 lo = min( v_position[0], min( v_position[1], v_position[2] ) ) - vec3( d.tess.x );
-			vec3 hi = max( v_position[0], max( v_position[1], v_position[2] ) ) + vec3( d.tess.x );
-			// first the box round all marks of the pass (material, material2), then each of them
-			bool reached = all( lessThanEqual( lo, d.material2.xyz ) ) && all( greaterThanEqual( hi, d.material.xyz ) );
-			uint count = reached ? d.numDecals : 0u;
-			reached = false;
-			uint r = d.decals;
-
-			for ( uint i = 0u; i < count && !reached; i++ ) {
-				vec4 sphere = bones[r + 4u];
-
-				reached = distance( clamp( sphere.xyz, lo, hi ), sphere.xyz ) <= sphere.w;
-				r += 6u + uint( bones[r + 5u].x + 0.5 );
+			vec3 along = vec3( 1.0 );
+			if ( dot( v_normal[0], v_normal[0] ) > 0.0 && dot( v_normal[1], v_normal[1] ) > 0.0 && dot( v_normal[2], v_normal[2] ) > 0.0 ) {
+				along = min( max( abs( normalize( v_normal[0] ) ), max( abs( normalize( v_normal[1] ) ), abs( normalize( v_normal[2] ) ) ) ) * 1.1 + 0.05, vec3( 1.0 ) );
 			}
+			vec3 lo = min( v_position[0], min( v_position[1], v_position[2] ) ) - d.tess.x * along;
+			vec3 hi = max( v_position[0], max( v_position[1], v_position[2] ) ) + d.tess.x * along;
+			bool reached = all( lessThanEqual( lo, d.material2.xyz ) ) && all( greaterThanEqual( hi, d.material.xyz ) );
+
 			if ( !reached ) {
 				gl_TessLevelOuter[0] = gl_TessLevelOuter[1] = gl_TessLevelOuter[2] = 0.0;
 				gl_TessLevelInner[0] = 0.0;

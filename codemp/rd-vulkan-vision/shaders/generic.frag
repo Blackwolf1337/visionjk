@@ -978,41 +978,39 @@ vec4 Groove( Draw d, vec4 c ) {
 	return TimesSurface( f * clamp( bentLit / flatLit, 0.5, 1.4 ) );
 }
 
-// the marks of DECALS, four rows each from d.decals on (vk_shade.cpp VK_PaintMarks)
+// the rows of DECALS from d.decals on (vk_shade.cpp VK_PaintMarks)
 layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 	vec4	bones[];
 };
 
-// DECALS: the marks on a tessellated surface, painted onto its bumps in a pass over the surface (depth EQUAL) for each
-// stage of their shader, each poly of a mark as it would have been drawn flat, seen along its normal (vk_shade.cpp
-// VK_MarkRows has the rows): the poly the pixel lies in, its texture coordinates from its corners there, moved as
-// the stage moves them (texMat0, texTurb0), its colour as the stage makes it from the colour of the mark (baseColor +
-// vertColor times it). Further from the plane of a poly than the bumps reach (its sphere), nothing of it. The polys
-// of the pass are put together as their blend would have put them over each other, by d.parm.x: 0 the colour takes
-// away (one minus the product of what each leaves), 1 times, 2 over by alpha, 3 added, 4 times rgb + 1 - alpha, 5
-// times twice the colour, 6 added by alpha. A groove (d.parm.z units deep, kind 4) is lit as Groove() does, its
-// height from tex3 (d.parm.w) or from its darkness. A pixel with no mark is left alone.
+// DECALS: the marks on a tessellated surface, painted onto its bumps in two passes over the surface (depth EQUAL):
+// d.parm.x 0 what they take from it and lay over it (the surface times the colour this gives, TimesSurface), 1 the
+// light they add, dimmed by what lies over it. vk_shade.cpp VK_PaintMarks has the rows: the marks of a pixel come
+// from a table, one bucket for each axis with marks, by the cell of d.parm.z units the pixel lies in across it. Each
+// poly of a mark as it would have been drawn flat, seen along its normal: the poly the pixel lies in, its texture
+// coordinates from its corners there, and for each stage of its shader (a style) the texture moved as the stage
+// moves it, its colour as the stage makes it from the colour of the mark (baseColor + vertColor times it), put
+// together as the blend of the stage says, by its kind: 0 the colour takes away, 1 times, 2 over by alpha, 3 added,
+// 4 times rgb + 1 - alpha, 5 times twice the colour, 6 added by alpha. A groove (kind 4 with a depth) is lit as
+// Groove() does, its height from its map or from its darkness. Further from the plane of a poly than the bumps
+// reach (d.parm.y), nothing of it. A pixel with no mark is left alone. d.numDecals: the cluster of
+// marks the pass is for + 1 (it has the scissor of that cluster), 0 all marks.
+#define DECAL_STYLE_ROWS	6u		// VK_PAINT_STYLE_ROWS
+
 vec4 Decals( Draw d ) {
-	uint kind = uint( d.parm.x + 0.5 );
+	bool adding = d.parm.x > 0.5;
 	vec3 p = v_position;
-	// outside the box round the marks of this pass (vk_shade.cpp VK_PaintMarks): nothing, at once
+	// outside the box of the pass: nothing, at once
 	if ( any( lessThan( p, d.material.xyz ) ) || any( greaterThan( p, d.material2.xyz ) ) ) {
 		discard;
 	}
-	// (the gradients for the texture come from the place, outside the loop: inside it they are not defined)
+	// (the gradients for the texture come from the place, outside the loops: inside them they are not defined)
 	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
-	mat2 texLinear = mat2( d.texMat0[0].x, d.texMat0[1].x, d.texMat0[0].y, d.texMat0[1].y );
-	vec2 texOffset = vec2( d.texMat0[0].z, d.texMat0[1].z );
-	if ( d.texTurb0 != vec4( 0.0 ) ) {
-		float sinS = sin( ( ( p.x + p.z ) * ( 0.125 / 128.0 ) + d.texMat0[0].w ) * 6.2831853 );
-		float sinT = sin( ( p.y * ( 0.125 / 128.0 ) + d.texMat0[0].w ) * 6.2831853 );
-		texOffset += vec2( d.texTurb0.x * sinS + d.texTurb0.y * sinT, d.texTurb0.z * sinS + d.texTurb0.w * sinT );
-	}
-	// the groove: the face of the surface and the light of the level there
-	float grooveDepth = ( kind == 4u ) ? d.parm.z : 0.0;
+	// the grooves: the face of the surface and the light of the level there
+	bool grooves = d.parm.w > 0.5 && !adding;
 	vec3 face = vec3( 0.0, 0.0, 1.0 ), toLight = vec3( 0.0, 0.0, 1.0 ), r1 = vec3( 0.0 ), r2 = vec3( 0.0 );
 	float lightShare = 0.0, flatLit = 1.0, faceDet = 0.0;
-	if ( grooveDepth > 0.0 ) {
+	if ( grooves ) {
 		Transform t = TRANSFORMS( d.transform );
 		face = normalize( cross( dpdx, dpdy ) );
 		if ( dot( face, t.viewOrigin.xyz - p ) < 0.0 ) {
@@ -1026,106 +1024,161 @@ vec4 Decals( Draw d ) {
 			r1 = cross( dpdy, face );
 			r2 = cross( face, dpdx );
 			faceDet = dot( dpdx, r1 );
-		} else {
-			grooveDepth = 0.0;
 		}
+		grooves = lightShare > 0.001 && abs( faceDet ) > 1e-12;
 	}
-	vec4 sum = ( kind == 1u || kind == 4u || kind == 5u ) ? vec4( 1.0 ) : vec4( 0.0 );
-	bool hit = false;
-	uint r = d.decals;
+	// the surface times this, plus that
+	vec3 times = vec3( 1.0 ), plus = vec3( 0.0 );
+	bool taken = false;
 
-	for ( uint i = 0u; i < d.numDecals; i++ ) {
-		vec4 U = bones[r], V = bones[r + 1u], P = bones[r + 2u], S = bones[r + 4u];
-		uint corners = uint( bones[r + 5u].x + 0.5 );
-		uint first = r + 6u;
-		vec4 C = d.baseColor + d.vertColor * bones[r + 3u];
+	// how many buckets each axis has (a power of two, 0: no marks across it)
+	vec4 sizes = bones[d.decals];
+	uint base = 0u;
 
-		r = first + corners;
-		if ( abs( dot( P.xyz, p ) - P.w ) > d.parm.y || distance( p, S.xyz ) > S.w ) {
+	for ( uint axis = 0u; axis < 3u; axis++ ) {
+		uint size = uint( sizes[axis] + 0.5 );
+		if ( size == 0u ) {
 			continue;
 		}
-		vec2 q = vec2( dot( U.xyz, p ) - U.w, dot( V.xyz, p ) - V.w );
-		vec4 a = bones[first];
-		for ( uint k = 1u; k + 1u < corners; k++ ) {
-			vec4 b = bones[first + k], c = bones[first + k + 1u];
-			vec2 e1 = b.xy - a.xy, e2 = c.xy - a.xy, e = q - a.xy;
-			float det = e1.x * e2.y - e1.y * e2.x;
+		vec2 across = ( axis == 0u ) ? p.yz : ( ( axis == 1u ) ? p.xz : p.xy );
+		ivec2 cell = ivec2( floor( across / d.parm.z ) );
+		uint bucket = base + ( ( uint( cell.x ) * 73856093u ^ uint( cell.y ) * 19349663u ) & ( size - 1u ) );
+		vec4 pair = bones[d.decals + 1u + bucket / 2u];
+		base += size;
+		uint element = uint( ( ( bucket & 1u ) == 0u ? pair.x : pair.z ) + 0.5 );
+		uint count = uint( ( ( bucket & 1u ) == 0u ? pair.y : pair.w ) + 0.5 );
 
-			if ( abs( det ) < 1e-8 ) {
+		for ( uint i = 0u; i < count; i++, element++ ) {
+			uint r = uint( bones[element / 4u][element % 4u] + 0.5 );
+			vec4 U = bones[r], V = bones[r + 1u], box = bones[r + 6u];
+			vec2 q = vec2( dot( U.xyz, p ) - U.w, dot( V.xyz, p ) - V.w );
+
+			// (the box round its corners first: it turns away the neighbours in the cell and the marks of far cells
+			// that share the bucket, with three rows)
+			if ( any( lessThan( q, box.xy ) ) || any( greaterThan( q, box.zw ) ) ) {
 				continue;
 			}
-			// where q lies in the triangle a b c: q = a + x e1 + y e2
-			float x = ( e.x * e2.y - e.y * e2.x ) / det;
-			float y = ( e1.x * e.y - e1.y * e.x ) / det;
-			if ( x < 0.0 || y < 0.0 || x + y > 1.0 ) {
+			vec4 P = bones[r + 2u];
+			if ( abs( dot( P.xyz, p ) - P.w ) > d.parm.y ) {
 				continue;
 			}
-			// the texture coordinates there, and how they change across the triangle for the mip level
-			vec2 st = a.zw + x * ( b.zw - a.zw ) + y * ( c.zw - a.zw );
-			mat2 toXY = mat2( e2.y, -e1.y, -e2.x, e1.x ) / det;		// (du, dv) to (dx, dy)
-			mat2 toST = mat2( b.zw - a.zw, c.zw - a.zw );
-			vec2 gx = toST * ( toXY * vec2( dot( U.xyz, dpdx ), dot( V.xyz, dpdx ) ) );
-			vec2 gy = toST * ( toXY * vec2( dot( U.xyz, dpdy ), dot( V.xyz, dpdy ) ) );
-			vec2 moved = texLinear * st + texOffset;
-			vec4 col = textureGrad( TEX0( d ), moved, texLinear * gx, texLinear * gy ) * C;
+			vec4 info = bones[r + 5u];
+			// (a pass for one cluster of marks paints those alone: the others have passes of their own)
+			if ( d.numDecals != 0u && uint( info.w + 0.5 ) + 1u != d.numDecals ) {
+				continue;
+			}
+			uint corners = uint( info.x + 0.5 );
+			uint first = r + 7u;
+			vec4 a = bones[first];
+			vec2 st = vec2( 0.0 ), gx = vec2( 0.0 ), gy = vec2( 0.0 );
+			bool inside = false;
 
-			if ( grooveDepth > 0.0 && abs( faceDet ) > 1e-12 ) {
-				// the height here and one pixel over each way, the slope of the dent from them, its light against the flat
-				float h0, hx, hy;
-				if ( d.parm.w > 0.5 ) {
-					h0 = textureGrad( TEX3( d ), st, gx, gy ).r;
-					hx = textureGrad( TEX3( d ), st + gx, gx, gy ).r;
-					hy = textureGrad( TEX3( d ), st + gy, gx, gy ).r;
+			for ( uint k = 1u; k + 1u < corners && !inside; k++ ) {
+				vec4 b = bones[first + k], c = bones[first + k + 1u];
+				vec2 e1 = b.xy - a.xy, e2 = c.xy - a.xy, e = q - a.xy;
+				float det = e1.x * e2.y - e1.y * e2.x;
+
+				if ( abs( det ) < 1e-8 ) {
+					continue;
+				}
+				// where q lies in the triangle a b c: q = a + x e1 + y e2
+				float x = ( e.x * e2.y - e.y * e2.x ) / det;
+				float y = ( e1.x * e.y - e1.y * e.x ) / det;
+				if ( x < 0.0 || y < 0.0 || x + y > 1.0 ) {
+					continue;
+				}
+				// the texture coordinates there, and how they change across the triangle for the mip level
+				mat2 toXY = mat2( e2.y, -e1.y, -e2.x, e1.x ) / det;		// (du, dv) to (dx, dy)
+				mat2 toST = mat2( b.zw - a.zw, c.zw - a.zw );
+				st = a.zw + x * ( b.zw - a.zw ) + y * ( c.zw - a.zw );
+				gx = toST * ( toXY * vec2( dot( U.xyz, dpdx ), dot( V.xyz, dpdx ) ) );
+				gy = toST * ( toXY * vec2( dot( U.xyz, dpdy ), dot( V.xyz, dpdy ) ) );
+				inside = true;
+			}
+			if ( !inside ) {
+				continue;
+			}
+			vec4 markColor = bones[r + 3u];
+			uint style = uint( info.y + 0.5 ), styles = uint( info.z + 0.5 );
+
+			for ( uint s = 0u; s < styles; s++, style += DECAL_STYLE_ROWS ) {
+				vec4 head = bones[style], m0 = bones[style + 3u], m1 = bones[style + 4u], turb = bones[style + 5u];
+				uint kind = uint( head.y + 0.5 );
+				bool adds = kind == 3u || kind == 6u;
+
+				// (the pass of what is taken has no use for the light, but the other one needs all that lies over it)
+				if ( adds && !adding ) {
+					continue;
+				}
+				uint tex = uint( head.x + 0.5 );
+				mat2 texLinear = mat2( m0.x, m1.x, m0.y, m1.y );
+				vec2 texOffset = vec2( m0.z, m1.z );
+				if ( turb != vec4( 0.0 ) ) {
+					float sinS = sin( ( ( p.x + p.z ) * ( 0.125 / 128.0 ) + m0.w ) * 6.2831853 );
+					float sinT = sin( ( p.y * ( 0.125 / 128.0 ) + m0.w ) * 6.2831853 );
+					texOffset += vec2( turb.x * sinS + turb.y * sinT, turb.z * sinS + turb.w * sinT );
+				}
+				vec2 moved = texLinear * st + texOffset;
+				vec4 col = textureGrad( u_textures[nonuniformEXT( tex )], moved, texLinear * gx, texLinear * gy )
+					* ( bones[style + 1u] + bones[style + 2u] * markColor );
+
+				if ( adds ) {
+					plus += ( kind == 6u ) ? col.rgb * col.a : col.rgb;
+					continue;
+				}
+				vec3 f;
+				if ( kind == 0u ) {
+					f = 1.0 - col.rgb;
+				} else if ( kind == 1u ) {
+					f = col.rgb;
+				} else if ( kind == 5u ) {
+					f = 2.0 * col.rgb;
+				} else if ( kind == 2u ) {
+					f = vec3( 1.0 - col.a );
 				} else {
-					h0 = dot( textureGrad( TEX0( d ), moved, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
-					hx = dot( textureGrad( TEX0( d ), moved + texLinear * gx, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
-					hy = dot( textureGrad( TEX0( d ), moved + texLinear * gy, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+					f = col.rgb + 1.0 - col.a;
+					if ( grooves && head.z > 0.0 ) {
+						// the height here and one pixel over each way, the slope of the dent from them, its light
+						// against the flat
+						float h0, hx, hy;
+						if ( head.w >= 0.0 ) {
+							uint map = uint( head.w + 0.5 );
+							h0 = textureGrad( u_textures[nonuniformEXT( map )], st, gx, gy ).r;
+							hx = textureGrad( u_textures[nonuniformEXT( map )], st + gx, gx, gy ).r;
+							hy = textureGrad( u_textures[nonuniformEXT( map )], st + gy, gx, gy ).r;
+						} else {
+							h0 = dot( textureGrad( u_textures[nonuniformEXT( tex )], moved, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+							hx = dot( textureGrad( u_textures[nonuniformEXT( tex )], moved + texLinear * gx, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+							hy = dot( textureGrad( u_textures[nonuniformEXT( tex )], moved + texLinear * gy, gx, gy ).rgb, vec3( 1.0 / 3.0 ) );
+						}
+						vec3 slope = ( ( hx - h0 ) * r1 + ( hy - h0 ) * r2 ) * ( 2.0 * head.z / faceDet );
+						float steep = length( slope );
+						if ( steep > 1.2 ) {
+							slope *= 1.2 / steep;
+						}
+						vec3 bent = normalize( face - slope );
+						f *= clamp( ( 1.0 - lightShare + lightShare * max( dot( bent, toLight ), 0.0 ) ) / flatLit, 0.5, 1.4 );
+					}
 				}
-				vec3 slope = ( ( hx - h0 ) * r1 + ( hy - h0 ) * r2 ) * ( 2.0 * grooveDepth / faceDet );
-				float steep = length( slope );
-				if ( steep > 1.2 ) {
-					slope *= 1.2 / steep;
+				times *= f;
+				plus *= f;
+				if ( kind == 2u ) {
+					plus += col.rgb * col.a;
 				}
-				vec3 bent = normalize( face - slope );
-				float ratio = clamp( ( 1.0 - lightShare + lightShare * max( dot( bent, toLight ), 0.0 ) ) / flatLit, 0.5, 1.4 );
-				col = TimesSurface( ( col.rgb + 1.0 - col.a ) * ratio );
+				taken = true;
 			}
-
-			hit = true;
-			if ( kind == 0u ) {
-				sum.rgb = 1.0 - ( 1.0 - sum.rgb ) * ( 1.0 - col.rgb );
-				sum.a = 1.0;
-			} else if ( kind == 1u ) {
-				sum *= col;
-			} else if ( kind == 3u ) {
-				sum += col;
-			} else if ( kind == 4u ) {
-				sum.rgb *= col.rgb + 1.0 - col.a;
-			} else if ( kind == 5u ) {
-				sum.rgb *= 2.0 * col.rgb;
-			} else if ( kind == 6u ) {
-				sum.rgb += col.rgb * col.a;
-			} else {
-				sum.rgb = col.rgb * col.a + sum.rgb * ( 1.0 - col.a );
-				sum.a = col.a + sum.a * ( 1.0 - col.a );
-			}
-			break;
 		}
 	}
-	if ( !hit ) {
+	if ( adding ) {
+		if ( plus == vec3( 0.0 ) ) {
+			discard;
+		}
+		return vec4( plus, 1.0 );
+	}
+	if ( !taken ) {
 		discard;
 	}
-	if ( kind == 2u ) {
-		sum.rgb = ( sum.a > 0.0 ) ? sum.rgb / sum.a : vec3( 0.0 );
-	} else if ( kind == 4u ) {
-		sum = TimesSurface( sum.rgb );
-	} else if ( kind == 5u ) {
-		sum = vec4( clamp( sum.rgb * 0.5, vec3( 0.0 ), vec3( 1.0 ) ), 1.0 );
-	} else if ( kind == 6u ) {
-		// (its alpha is in the colour already; the blend takes it times alpha)
-		sum.a = 1.0;
-	}
-	return sum;
+	return TimesSurface( times );
 }
 #endif
 
