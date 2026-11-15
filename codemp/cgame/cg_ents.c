@@ -834,7 +834,7 @@ void CG_AddRadarEnt(centity_t *cent)
 	if (cg.radarEntityCount >= numRadarEnts)
 	{
 #ifdef _DEBUG
-		Com_Printf("^3Warning: CG_AddRadarEnt full. (%d max)\n", numRadarEnts);
+		Com_PrintWarning( "CG_AddRadarEnt full. (%d max)\n", numRadarEnts);
 #endif
 		return;
 	}
@@ -847,7 +847,7 @@ void CG_AddBracketedEnt(centity_t *cent)
 	if (cg.bracketedEntityCount >= numBracketEnts)
 	{
 #ifdef _DEBUG
-		Com_Printf("^3Warning: CG_AddBracketedEnt full. (%d max)\n", numBracketEnts);
+		Com_PrintWarning( "CG_AddBracketedEnt full. (%d max)\n", numBracketEnts);
 #endif
 		return;
 	}
@@ -3901,11 +3901,11 @@ defaultoffsetposition:
 	{
 		if (type[0])
 		{
-			Com_Printf("^3Warning: \"%s\" is an invalid ROFF notetrack function\n", type);
+			Com_PrintWarning( "\"%s\" is an invalid ROFF notetrack function\n", type);
 		}
 		else
 		{
-			Com_Printf("^3Warning: Notetrack is missing function and/or arguments\n");
+			Com_PrintWarning( "Notetrack is missing function and/or arguments\n");
 		}
 	}
 

@@ -754,7 +754,7 @@ void SaveGhoul2InfoArray()
 #endif
 	if ( !ri.PD_Store (PERSISTENT_G2DATA, data, size) )
 	{
-		Com_Printf (S_COLOR_RED "ERROR: Failed to store persistent renderer data.\n");
+		Com_PrintError( "Failed to store persistent renderer data.\n" );
 	}
 }
 

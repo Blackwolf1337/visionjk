@@ -497,7 +497,7 @@ void CL_InitCGame( void ) {
 
 	int clRate = Cvar_VariableIntegerValue( "rate" );
 	if ( clRate == 4000 ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: Old default /rate value detected (4000). Suggest typing /rate 25000 into console for a smoother connection!\n" );
+		Com_PrintWarning( "Old default /rate value detected (4000). Suggest typing /rate 25000 into console for a smoother connection!\n" );
 	}
 
 	// reset any CVAR_CHEAT cvars registered by cgame

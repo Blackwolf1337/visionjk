@@ -641,7 +641,7 @@ sfxHandle_t	S_RegisterSound( const char *name)
 #ifndef FINAL_BUILD
 		if (!s_shutUp)
 		{
-			Com_Printf( S_COLOR_YELLOW "WARNING: could not find %s - using default\n", sfx->sSoundName );
+			Com_PrintWarning( "could not find %s - using default\n", sfx->sSoundName );
 		}
 #endif
 		return 0;
@@ -656,7 +656,7 @@ void S_memoryLoad(sfx_t	*sfx)
 	//
 	if ( !S_LoadSound( sfx ) )
 	{
-//		Com_Printf( S_COLOR_YELLOW "WARNING: couldn't load sound: %s\n", sfx->sSoundName );
+//		Com_PrintWarning( "couldn't load sound: %s\n", sfx->sSoundName );
 		sfx->bDefaultSound = qtrue;
 	}
 	sfx->bInMemory = qtrue;
@@ -2903,7 +2903,7 @@ static qboolean S_StartBackgroundTrack_Actual( MusicInfo_t *pMusicInfo, qboolean
 		//
 		FS_FOpenFileRead( name, &pMusicInfo->s_backgroundFile, qtrue );
 		if ( !pMusicInfo->s_backgroundFile ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: couldn't open music file %s\n", name );
+			Com_PrintWarning( "couldn't open music file %s\n", name );
 			return qfalse;
 		}
 
@@ -2912,7 +2912,7 @@ static qboolean S_StartBackgroundTrack_Actual( MusicInfo_t *pMusicInfo, qboolean
 		FS_Read(dump, 12, pMusicInfo->s_backgroundFile);
 
 		if ( !S_FindWavChunk( pMusicInfo->s_backgroundFile, "fmt " ) ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: No fmt chunk in %s\n", name );
+			Com_PrintWarning( "No fmt chunk in %s\n", name );
 			FS_FCloseFile( pMusicInfo->s_backgroundFile );
 			pMusicInfo->s_backgroundFile = 0;
 			return qfalse;
@@ -2929,18 +2929,18 @@ static qboolean S_StartBackgroundTrack_Actual( MusicInfo_t *pMusicInfo, qboolean
 		if ( pMusicInfo->s_backgroundInfo.format != WAV_FORMAT_PCM ) {
 			FS_FCloseFile( pMusicInfo->s_backgroundFile );
 			pMusicInfo->s_backgroundFile = 0;
-			Com_Printf(S_COLOR_YELLOW "WARNING: Not a microsoft PCM format wav: %s\n", name);
+			Com_PrintWarning( "Not a microsoft PCM format wav: %s\n", name);
 			return qfalse;
 		}
 
 		if ( pMusicInfo->s_backgroundInfo.channels != 2 || pMusicInfo->s_backgroundInfo.rate != 22050 ) {
-			Com_Printf(S_COLOR_YELLOW "WARNING: music file %s is not 22k stereo\n", name );
+			Com_PrintWarning( "music file %s is not 22k stereo\n", name );
 		}
 
 		if ( ( len = S_FindWavChunk( pMusicInfo->s_backgroundFile, "data" ) ) == 0 ) {
 			FS_FCloseFile( pMusicInfo->s_backgroundFile );
 			pMusicInfo->s_backgroundFile = 0;
-			Com_Printf(S_COLOR_YELLOW "WARNING: No data chunk in %s\n", name);
+			Com_PrintWarning( "No data chunk in %s\n", name);
 			return qfalse;
 		}
 

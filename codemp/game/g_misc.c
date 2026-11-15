@@ -2532,7 +2532,7 @@ void SP_fx_runner( gentity_t *ent )
 
 	if ( !fxFile || !fxFile[0] )
 	{
-		Com_Printf( S_COLOR_RED"ERROR: fx_runner %s at %s has no fxFile specified\n", ent->targetname, vtos(ent->s.origin) );
+		Com_PrintError( "fx_runner %s at %s has no fxFile specified\n", ent->targetname, vtos(ent->s.origin) );
 		G_FreeEntity( ent );
 		return;
 	}
@@ -3063,7 +3063,7 @@ tagOwner_t *FirstFreeTagOwner(void)
 		i++;
 	}
 
-	Com_Printf("WARNING: MAX_TAG_OWNERS (%i) REF TAG LIMIT HIT\n", MAX_TAG_OWNERS);
+	Com_PrintWarning( "MAX_TAG_OWNERS (%i) REF TAG LIMIT HIT\n", MAX_TAG_OWNERS);
 	return NULL;
 }
 
@@ -3082,7 +3082,7 @@ reference_tag_t *FirstFreeRefTag(tagOwner_t *tagOwner)
 		i++;
 	}
 
-	Com_Printf("WARNING: MAX_TAGS (%i) REF TAG LIMIT HIT\n", MAX_TAGS);
+	Com_PrintWarning( "MAX_TAGS (%i) REF TAG LIMIT HIT\n", MAX_TAGS);
 	return NULL;
 }
 
@@ -3249,7 +3249,7 @@ reference_tag_t	*TAG_Add( const char *name, const char *owner, vec3_t origin, ve
 
 	if ( !name || !name[0] )
 	{
-		Com_Printf(S_COLOR_RED"ERROR: Nameless ref_tag found at (%i %i %i)\n", (int)origin[0], (int)origin[1], (int)origin[2]);
+		Com_PrintError( "Nameless ref_tag found at (%i %i %i)\n", (int)origin[0], (int)origin[1], (int)origin[2]);
 		return NULL;
 	}
 
@@ -3448,7 +3448,7 @@ void ref_link ( gentity_t *ent )
 		}
 		else
 		{
-			Com_Printf( S_COLOR_RED"ERROR: ref_tag (%s) has invalid target (%s)\n", ent->targetname, ent->target );
+			Com_PrintError( "ref_tag (%s) has invalid target (%s)\n", ent->targetname, ent->target );
 		}
 	}
 

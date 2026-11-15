@@ -399,7 +399,7 @@ int UI_ParseAnimationFile(const char *filename, animation_t *animset, qboolean i
 		{
 //#ifndef FINAL_BUILD
 #ifdef _DEBUG
-			//Com_Printf(S_COLOR_RED"WARNING: Unknown token %s in %s\n", token, filename);
+			//Com_PrintWarning( "Unknown token %s in %s\n", token, filename);
 #endif
 			continue;
 		}
@@ -4729,7 +4729,7 @@ static void UI_LoadDemosInDirectory( loadDemoContext_t *ctx, const char *directo
 		if ( !ctx->warned )
 		{
 			ctx->warned = qtrue;
-			Com_Printf( S_COLOR_YELLOW "WARNING: Maximum demo folder depth (%d) was reached.\n", MAX_DEMO_FOLDER_DEPTH );
+			Com_PrintWarning( "Maximum demo folder depth (%d) was reached.\n", MAX_DEMO_FOLDER_DEPTH );
 		}
 
 		return;
@@ -10516,7 +10516,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 	dirlist = malloc(DIR_LIST_SIZE);
 	if ( !dirlist )
 	{
-		Com_Printf(S_COLOR_YELLOW "WARNING: Failed to allocate %u bytes of memory for player model "
+		Com_PrintWarning( "Failed to allocate %u bytes of memory for player model "
 			"directory list. Using stack allocated buffer of %u bytes instead.",
 			DIR_LIST_SIZE, sizeof(stackDirList));
 
@@ -11609,6 +11609,13 @@ Q_EXPORT uiExport_t* QDECL GetModuleAPI( int apiVersion, uiImport_t *import )
 	trap = import;
 	Com_Printf	= trap->Print;
 	Com_Error	= trap->Error;
+	// does the engine read the tags of Com_PrintWarning and Com_PrintError (q_shared.h)
+	{
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_printLevels", value, sizeof( value ) );
+		com_printTags = (qboolean)( atoi( value ) != 0 );
+	}
 
 	memset( &uie, 0, sizeof( uie ) );
 

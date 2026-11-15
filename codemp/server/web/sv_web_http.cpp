@@ -693,13 +693,13 @@ static void SV_WebManifestBuild( void ) {
 	SV_WebManifestAdd( "]}" );
 
 	if ( manifestCut ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: web host: the manifest has no room for %d pk3 files\n", count );
+		Com_PrintWarning( "web host: the manifest has no room for %d pk3 files\n", count );
 	}
 	if ( !manifestBuilt || manifestLen != oldLen || Com_BlockChecksum( manifestText, manifestLen ) != oldSum ) {
 		manifestGen++;
 		// (said once for a list, not every time it is put together)
 		if ( unnamed ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: web host: %d pk3 files are not handed out, their names are too long or have characters "
+			Com_PrintWarning( "web host: %d pk3 files are not handed out, their names are too long or have characters "
 				"a page can not ask for (developer 1 names them)\n", unnamed );
 		}
 	}

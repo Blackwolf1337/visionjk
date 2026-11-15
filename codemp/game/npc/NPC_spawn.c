@@ -1403,7 +1403,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 
 	if ( newent == NULL )
 	{
-		Com_Printf ( S_COLOR_RED "ERROR: NPC G_Spawn failed\n" );
+		Com_PrintError( "NPC G_Spawn failed\n" );
 		return NULL;
 	}
 
@@ -1412,7 +1412,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 	newent->NPC = New_NPC_t(newent->s.number);
 	if ( newent->NPC == NULL )
 	{
-		Com_Printf ( S_COLOR_RED "ERROR: NPC G_Alloc NPC failed\n" );
+		Com_PrintError( "NPC G_Alloc NPC failed\n" );
 		goto finish;
 	//	return NULL;
 	}
@@ -1435,7 +1435,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 
 	if ( newent->client == NULL )
 	{
-		Com_Printf ( S_COLOR_RED "ERROR: NPC BG_Alloc client failed\n" );
+		Com_PrintError( "NPC BG_Alloc client failed\n" );
 		goto finish;
 	//	return NULL;
 	}
@@ -1512,7 +1512,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 				break;
 
 			default:
-				Com_Printf ( S_COLOR_RED "ERROR: Couldn't spawn NPC %s\n", ent->NPC_type );
+				Com_PrintError( "Couldn't spawn NPC %s\n", ent->NPC_type );
 				G_FreeEntity( newent );
 				//get rid of the spawner, too, I guess
 				G_FreeEntity( ent );
@@ -1576,7 +1576,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 	//NOTE: on vehicles, anything in the .npc file will STOMP data on the NPC that's set by the vehicle
 	if ( !NPC_ParseParms( ent->NPC_type, newent ) )
 	{
-		Com_Printf ( S_COLOR_RED "ERROR: Couldn't spawn NPC %s\n", ent->NPC_type );
+		Com_PrintError( "Couldn't spawn NPC %s\n", ent->NPC_type );
 		G_FreeEntity( newent );
 		//get rid of the spawner, too, I guess
 		G_FreeEntity( ent );
@@ -4317,7 +4317,7 @@ void Cmd_NPC_f( gentity_t *ent )
 			}
 			else
 			{
-				Com_Printf( "ERROR: NPC score - no such NPC %s\n", cmd2 );
+				Com_PrintError( "NPC score - no such NPC %s\n", cmd2 );
 			}
 		}
 	}

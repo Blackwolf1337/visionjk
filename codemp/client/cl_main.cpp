@@ -351,7 +351,7 @@ void CL_Record_f( void ) {
 
 	// sync 0 doesn't prevent recording, so not forcing it off .. everyone does g_sync 1 ; record ; g_sync 0 ..
 	if ( NET_IsLocalAddress( &clc.serverAddress ) && !Cvar_VariableValue( "g_synchronousClients" ) ) {
-		Com_Printf (S_COLOR_YELLOW "WARNING: You should set 'g_synchronousClients 1' for smoother demo recording\n");
+		Com_PrintWarning( "You should set 'g_synchronousClients 1' for smoother demo recording\n");
 	}
 
 	if ( Cmd_Argc() == 2 ) {
@@ -375,7 +375,7 @@ void CL_Record_f( void ) {
 	Com_Printf ("recording to %s.\n", name);
 	clc.demofile = FS_FOpenFileWrite( name );
 	if ( !clc.demofile ) {
-		Com_Printf ("ERROR: couldn't open.\n");
+		Com_PrintError( "couldn't open.\n");
 		return;
 	}
 	clc.demorecording = qtrue;
@@ -2447,7 +2447,9 @@ void QDECL CL_RefPrintf( int print_level, const char *fmt, ...) {
 	if ( print_level == PRINT_ALL ) {
 		Com_Printf ("%s", msg);
 	} else if ( print_level == PRINT_WARNING ) {
-		Com_Printf (S_COLOR_YELLOW "%s", msg);		// yellow
+		Com_Printf( PRINT_TAG_WARNING S_COLOR_YELLOW "%s", msg );		// yellow
+	} else if ( print_level == PRINT_ERROR ) {
+		Com_Printf( PRINT_TAG_ERROR S_COLOR_RED "%s", msg );
 	} else if ( print_level == PRINT_DEVELOPER ) {
 		Com_DPrintf (S_COLOR_RED "%s", msg);		// red
 	}
@@ -3117,7 +3119,7 @@ void CL_Shutdown( void ) {
 	//Com_Printf( "----- CL_Shutdown -----\n" );
 
 	if ( recursive ) {
-		Com_Printf ("WARNING: Recursive CL_Shutdown called!\n");
+		Com_PrintWarning( "Recursive CL_Shutdown called!\n");
 		return;
 	}
 	recursive = qtrue;

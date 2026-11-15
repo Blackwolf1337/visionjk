@@ -296,7 +296,7 @@ bool ICARUS_ValidEnt( sharedEntity_t *ent )
 	{
 		if VALIDSTRING( ent->behaviorSet[i] )
 		{
-			//Com_Printf( "WARNING: Entity %d (%s) has behaviorSet but no script_targetname -- using targetname\n", ent->s.number, ent->targetname );
+			//Com_PrintWarning( "Entity %d (%s) has behaviorSet but no script_targetname -- using targetname\n", ent->s.number, ent->targetname );
 
 			//ent->script_targetname = ent->targetname;
 			//rww - You CANNOT do things like this now. We're switching memory around to be able to read this memory from vm land,

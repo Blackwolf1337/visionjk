@@ -309,7 +309,7 @@ int VEH_LoadVehWeapon( const char *vehWeaponName )
 		token = COM_ParseExt( &p, qtrue );
 		if ( !token[0] )
 		{
-			Com_Printf( S_COLOR_RED"ERROR: unexpected EOF while parsing Vehicle Weapon '%s'\n", vehWeaponName );
+			Com_PrintError( "unexpected EOF while parsing Vehicle Weapon '%s'\n", vehWeaponName );
 			return VEH_WEAPON_NONE;
 		}
 
@@ -321,13 +321,13 @@ int VEH_LoadVehWeapon( const char *vehWeaponName )
 		value = COM_ParseExt( &p, qtrue );
 		if ( !value || !value[0] )
 		{
-			Com_Printf( S_COLOR_RED"ERROR: Vehicle Weapon token '%s' has no value!\n", parmName );
+			Com_PrintError( "Vehicle Weapon token '%s' has no value!\n", parmName );
 		}
 		else
 		{
 			if ( !BG_ParseVehWeaponParm( vehWeapon, parmName, value ) )
 			{
-				Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle Weapon key/value pair '%s','%s'!\n", parmName, value );
+				Com_PrintError( "Unknown Vehicle Weapon key/value pair '%s','%s'!\n", parmName, value );
 			}
 		}
 	}
@@ -353,7 +353,7 @@ int VEH_VehWeaponIndexForName( const char *vehWeaponName )
 	int vw;
 	if ( !vehWeaponName || !vehWeaponName[0] )
 	{
-		Com_Printf( S_COLOR_RED"ERROR: Trying to read Vehicle Weapon with no name!\n" );
+		Com_PrintError( "Trying to read Vehicle Weapon with no name!\n" );
 		return VEH_WEAPON_NONE;
 	}
 	for ( vw = VEH_WEAPON_BASE; vw < numVehicleWeapons; vw++ )
@@ -367,7 +367,7 @@ int VEH_VehWeaponIndexForName( const char *vehWeaponName )
 	//haven't loaded it yet
 	if ( vw >= MAX_VEH_WEAPONS )
 	{//no more room!
-		Com_Printf( S_COLOR_RED"ERROR: Too many Vehicle Weapons (max 16), aborting load on %s!\n", vehWeaponName );
+		Com_PrintError( "Too many Vehicle Weapons (max 16), aborting load on %s!\n", vehWeaponName );
 		return VEH_WEAPON_NONE;
 	}
 	//we have room for another one, load it up and return the index
@@ -375,7 +375,7 @@ int VEH_VehWeaponIndexForName( const char *vehWeaponName )
 	vw = VEH_LoadVehWeapon( vehWeaponName );
 	if ( vw == VEH_WEAPON_NONE )
 	{
-		Com_Printf( S_COLOR_RED"ERROR: Could not find Vehicle Weapon %s!\n", vehWeaponName );
+		Com_PrintError( "Could not find Vehicle Weapon %s!\n", vehWeaponName );
 	}
 	return vw;
 }
@@ -963,7 +963,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		token = COM_ParseExt( &p, qtrue );
 		if ( !token[0] )
 		{
-			Com_Printf( S_COLOR_RED"ERROR: unexpected EOF while parsing Vehicle '%s'\n", vehicleName );
+			Com_PrintError( "unexpected EOF while parsing Vehicle '%s'\n", vehicleName );
 			return VEHICLE_NONE;
 		}
 
@@ -975,7 +975,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		value = COM_ParseExt( &p, qtrue );
 		if ( !value || !value[0] )
 		{
-			Com_Printf( S_COLOR_RED"ERROR: Vehicle token '%s' has no value!\n", parmName );
+			Com_PrintError( "Vehicle token '%s' has no value!\n", parmName );
 		}
 		else if ( Q_stricmp( "weap1", parmName ) == 0 )
 		{//hmm, store this off because we don't want to call another one of these text parsing routines while we're in the middle of one...
@@ -1030,7 +1030,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 			if ( !BG_ParseVehicleParm( vehicle, parmName, value ) )
 			{
 #ifndef FINAL_BUILD
-				Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair '%s', '%s'!\n", parmName, value );
+				Com_PrintError( "Unknown Vehicle key/value pair '%s', '%s'!\n", parmName, value );
 #endif
 			}
 		}
@@ -1041,7 +1041,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weap1", weap1 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weap1', '%s'!\n", weap1 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weap1', '%s'!\n", weap1 );
 #endif
 		}
 	}
@@ -1050,7 +1050,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weap2", weap2 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weap2', '%s'!\n", weap2 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weap2', '%s'!\n", weap2 );
 #endif
 		}
 	}
@@ -1059,7 +1059,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle1", weapMuzzle1 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle1', '%s'!\n", weapMuzzle1 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle1', '%s'!\n", weapMuzzle1 );
 #endif
 		}
 	}
@@ -1068,7 +1068,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle2", weapMuzzle2 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle2', '%s'!\n", weapMuzzle2 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle2', '%s'!\n", weapMuzzle2 );
 #endif
 		}
 	}
@@ -1077,7 +1077,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle3", weapMuzzle3 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle3', '%s'!\n", weapMuzzle3 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle3', '%s'!\n", weapMuzzle3 );
 #endif
 		}
 	}
@@ -1086,7 +1086,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle4", weapMuzzle4 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle4', '%s'!\n", weapMuzzle4 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle4', '%s'!\n", weapMuzzle4 );
 #endif
 		}
 	}
@@ -1095,7 +1095,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle5", weapMuzzle5 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle5', '%s'!\n", weapMuzzle5 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle5', '%s'!\n", weapMuzzle5 );
 #endif
 		}
 	}
@@ -1104,7 +1104,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle6", weapMuzzle6 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle6', '%s'!\n", weapMuzzle6 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle6', '%s'!\n", weapMuzzle6 );
 #endif
 		}
 	}
@@ -1113,7 +1113,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle7", weapMuzzle7 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle7', '%s'!\n", weapMuzzle7 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle7', '%s'!\n", weapMuzzle7 );
 #endif
 		}
 	}
@@ -1122,7 +1122,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle8", weapMuzzle8 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle8', '%s'!\n", weapMuzzle8 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle8', '%s'!\n", weapMuzzle8 );
 #endif
 		}
 	}
@@ -1131,7 +1131,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle9", weapMuzzle9 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle9', '%s'!\n", weapMuzzle9 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle9', '%s'!\n", weapMuzzle9 );
 #endif
 		}
 	}
@@ -1140,7 +1140,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 		if ( !BG_ParseVehicleParm( vehicle, "weapMuzzle10", weapMuzzle10 ) )
 		{
 #ifndef FINAL_BUILD
-			Com_Printf( S_COLOR_RED"ERROR: Unknown Vehicle key/value pair 'weapMuzzle10', '%s'!\n", weapMuzzle10 );
+			Com_PrintError( "Unknown Vehicle key/value pair 'weapMuzzle10', '%s'!\n", weapMuzzle10 );
 #endif
 		}
 	}
@@ -1241,7 +1241,7 @@ int VEH_VehicleIndexForName( const char *vehicleName )
 	int v;
 	if ( !vehicleName || !vehicleName[0] )
 	{
-		Com_Printf( S_COLOR_RED"ERROR: Trying to read Vehicle with no name!\n" );
+		Com_PrintError( "Trying to read Vehicle with no name!\n" );
 		return VEHICLE_NONE;
 	}
 	for (  v = VEHICLE_BASE; v < numVehicles; v++ )
@@ -1255,7 +1255,7 @@ int VEH_VehicleIndexForName( const char *vehicleName )
 	//haven't loaded it yet
 	if ( v >= MAX_VEHICLES )
 	{//no more room!
-		Com_Printf( S_COLOR_RED"ERROR: Too many Vehicles (max %d), aborting load on %s!\n", MAX_VEHICLES, vehicleName );
+		Com_PrintError( "Too many Vehicles (max %d), aborting load on %s!\n", MAX_VEHICLES, vehicleName );
 		return VEHICLE_NONE;
 	}
 	//we have room for another one, load it up and return the index
@@ -1263,7 +1263,7 @@ int VEH_VehicleIndexForName( const char *vehicleName )
 	v = VEH_LoadVehicle( vehicleName );
  	if ( v == VEHICLE_NONE )
 	{
-		Com_Printf( S_COLOR_RED"ERROR: Could not find Vehicle %s!\n", vehicleName );
+		Com_PrintError( "Could not find Vehicle %s!\n", vehicleName );
 	}
 	return v;
 }

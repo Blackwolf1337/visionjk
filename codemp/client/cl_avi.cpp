@@ -390,7 +390,7 @@ qboolean CL_OpenAVIForWriting( const char *fileName )
     while( ( afd.a.rate % suggestRate ) && suggestRate >= 1 )
       suggestRate--;
 
-    Com_Printf( S_COLOR_YELLOW "WARNING: cl_aviFrameRate is not a divisor "
+    Com_PrintWarning( "cl_aviFrameRate is not a divisor "
         "of the audio rate, suggest %d\n", suggestRate );
   }
 
@@ -402,7 +402,7 @@ qboolean CL_OpenAVIForWriting( const char *fileName )
   {
     if( afd.a.bits != 16 || afd.a.channels != 2 )
     {
-      Com_Printf( S_COLOR_YELLOW "WARNING: Audio format of %d bit/%d channels not supported",
+      Com_PrintWarning( "Audio format of %d bit/%d channels not supported",
           afd.a.bits, afd.a.channels );
       afd.audio = qfalse;
     }
@@ -530,8 +530,7 @@ void CL_WriteAVIAudioFrame( const byte *pcmBuffer, int size )
 
   if( bytesInBuffer + size > PCM_BUFFER_SIZE )
   {
-    Com_Printf( S_COLOR_YELLOW
-        "WARNING: Audio capture buffer overflow -- truncating\n" );
+    Com_PrintWarning( "Audio capture buffer overflow -- truncating\n" );
     size = PCM_BUFFER_SIZE - bytesInBuffer;
   }
 

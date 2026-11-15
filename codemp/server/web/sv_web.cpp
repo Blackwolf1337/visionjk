@@ -543,7 +543,7 @@ static void SV_WebListen( void ) {
 
 	if ( port <= 0 || port > 65535 ) {
 		if ( port ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: web host: vs_clientWebPort %d is no port\n", port );
+			Com_PrintWarning( "web host: vs_clientWebPort %d is no port\n", port );
 		}
 		for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 			if ( connections[i].state != WEB_FREE ) {
@@ -567,13 +567,13 @@ static void SV_WebListen( void ) {
 		} else {
 			bindTo = "127.0.0.1";
 			address.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
-			Com_Printf( S_COLOR_YELLOW "WARNING: web host: vs_clientWebBind \"%s\" is no IPv4 address, taking %s\n",
+			Com_PrintWarning( "web host: vs_clientWebBind \"%s\" is no IPv4 address, taking %s\n",
 				vs_clientWebBind->string, bindTo );
 		}
 	}
 
 	if ( ( listenSocket = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP ) ) == INVALID_SOCKET ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: web host: socket: %s\n", NET_ErrorString() );
+		Com_PrintWarning( "web host: socket: %s\n", NET_ErrorString() );
 		return;
 	}
 
@@ -585,7 +585,7 @@ static void SV_WebListen( void ) {
 #endif
 
 	if ( !SV_WebSocketFits( listenSocket ) ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: web host: too many files are open, select() can not wait on another socket\n" );
+		Com_PrintWarning( "web host: too many files are open, select() can not wait on another socket\n" );
 		closesocket( listenSocket );
 		listenSocket = INVALID_SOCKET;
 		return;
@@ -593,7 +593,7 @@ static void SV_WebListen( void ) {
 	if ( !SV_WebNonBlocking( listenSocket )
 		|| bind( listenSocket, (const struct sockaddr *)&address, sizeof( address ) ) == SOCKET_ERROR
 		|| listen( listenSocket, 32 ) == SOCKET_ERROR ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: web host: could not listen on %s:%d: %s\n", bindTo, port, NET_ErrorString() );
+		Com_PrintWarning( "web host: could not listen on %s:%d: %s\n", bindTo, port, NET_ErrorString() );
 		closesocket( listenSocket );
 		listenSocket = INVALID_SOCKET;
 		return;

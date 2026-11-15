@@ -1316,7 +1316,7 @@ void SP_waypoint ( gentity_t *ent )
 			ent->r.maxs[2] = CROUCH_MAXS_2;
 			if(G_CheckInSolid (ent, qtrue))
 			{
-				Com_Printf(S_COLOR_RED"ERROR: Waypoint %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+				Com_PrintError( "Waypoint %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 				assert(0 && "Waypoint in solid!");
 				G_FreeEntity(ent);
 				return;
@@ -1357,7 +1357,7 @@ void SP_waypoint_small (gentity_t *ent)
 			ent->r.maxs[2] = CROUCH_MAXS_2;
 			if ( G_CheckInSolid( ent, qtrue ) )
 			{
-				Com_Printf(S_COLOR_RED"ERROR: Waypoint_small %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+				Com_PrintError( "Waypoint_small %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 				assert(0);
 				G_FreeEntity(ent);
 				return;
@@ -1398,7 +1398,7 @@ void SP_waypoint_navgoal( gentity_t *ent )
 	ent->s.origin[2] += 0.125;
 	if ( !(ent->spawnflags&1) && G_CheckInSolid( ent, qfalse ) )
 	{
-		Com_Printf(S_COLOR_RED"ERROR: Waypoint_navgoal %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+		Com_PrintError( "Waypoint_navgoal %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 		assert(0);
 	}
 	TAG_Add( ent->targetname, NULL, ent->s.origin, ent->s.angles, radius, RTF_NAVGOAL );
@@ -1428,7 +1428,7 @@ void SP_waypoint_navgoal_8( gentity_t *ent )
 	ent->s.origin[2] += 0.125;
 	if ( !(ent->spawnflags&1) && G_CheckInSolid( ent, qfalse ) )
 	{
-		Com_Printf(S_COLOR_RED"ERROR: Waypoint_navgoal_8 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+		Com_PrintError( "Waypoint_navgoal_8 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 		assert(0);
 	}
 
@@ -1459,7 +1459,7 @@ void SP_waypoint_navgoal_4( gentity_t *ent )
 	ent->s.origin[2] += 0.125;
 	if ( !(ent->spawnflags&1) && G_CheckInSolid( ent, qfalse ) )
 	{
-		Com_Printf(S_COLOR_RED"ERROR: Waypoint_navgoal_4 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+		Com_PrintError( "Waypoint_navgoal_4 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 		assert(0);
 	}
 
@@ -1490,7 +1490,7 @@ void SP_waypoint_navgoal_2( gentity_t *ent )
 	ent->s.origin[2] += 0.125;
 	if ( !(ent->spawnflags&1) && G_CheckInSolid( ent, qfalse ) )
 	{
-		Com_Printf(S_COLOR_RED"ERROR: Waypoint_navgoal_2 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+		Com_PrintError( "Waypoint_navgoal_2 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 		assert(0);
 	}
 
@@ -1521,7 +1521,7 @@ void SP_waypoint_navgoal_1( gentity_t *ent )
 	ent->s.origin[2] += 0.125;
 	if ( !(ent->spawnflags&1) && G_CheckInSolid( ent, qfalse ) )
 	{
-		Com_Printf(S_COLOR_RED"ERROR: Waypoint_navgoal_1 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
+		Com_PrintError( "Waypoint_navgoal_1 %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
 		assert(0);
 	}
 

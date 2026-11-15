@@ -295,11 +295,11 @@ void QDECL BotImport_Print(int type, char *fmt, ...)
 			break;
 		}
 		case PRT_WARNING: {
-			Com_Printf(S_COLOR_YELLOW "Warning: %s", str);
+			Com_PrintWarning( "%s", str);
 			break;
 		}
 		case PRT_ERROR: {
-			Com_Printf(S_COLOR_RED "Error: %s", str);
+			Com_PrintError( "%s", str);
 			break;
 		}
 		case PRT_FATAL: {
@@ -618,7 +618,7 @@ int SV_BotLibSetup( void ) {
 	}
 
 	if ( !botlib_export ) {
-		Com_Printf( S_COLOR_RED "Error: SV_BotLibSetup without SV_BotInitBotLib\n" );
+		Com_PrintError( "SV_BotLibSetup without SV_BotInitBotLib\n" );
 		return -1;
 	}
 

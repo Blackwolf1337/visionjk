@@ -404,13 +404,13 @@ static SOCKET NET_IPSocket( const char *net_interface, int port, int *err ) {
 
 	if( ( newsocket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP ) ) == INVALID_SOCKET ) {
 		*err = socketError;
-		Com_Printf( "WARNING: NET_IPSocket: socket: %s\n", NET_ErrorString() );
+		Com_PrintWarning( "NET_IPSocket: socket: %s\n", NET_ErrorString() );
 		return newsocket;
 	}
 
 	// make it non-blocking
 	if( ioctlsocket( newsocket, FIONBIO, &_true ) == SOCKET_ERROR ) {
-		Com_Printf( "WARNING: NET_IPSocket: ioctl FIONBIO: %s\n", NET_ErrorString() );
+		Com_PrintWarning( "NET_IPSocket: ioctl FIONBIO: %s\n", NET_ErrorString() );
 		*err = socketError;
 		closesocket( newsocket );
 		return INVALID_SOCKET;
@@ -418,7 +418,7 @@ static SOCKET NET_IPSocket( const char *net_interface, int port, int *err ) {
 
 	// make it broadcast capable
 	if( setsockopt( newsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i) ) == SOCKET_ERROR ) {
-		Com_Printf( "WARNING: NET_IPSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString() );
+		Com_PrintWarning( "NET_IPSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString() );
 	}
 
 	if( !net_interface || !net_interface[0] || !Q_stricmp(net_interface, "localhost") ) {
@@ -441,7 +441,7 @@ static SOCKET NET_IPSocket( const char *net_interface, int port, int *err ) {
 	}
 
 	if( bind( newsocket, (const struct sockaddr *)&address, sizeof(address) ) == SOCKET_ERROR ) {
-		Com_Printf( "WARNING: NET_IPSocket: bind: %s\n", NET_ErrorString() );
+		Com_PrintWarning( "NET_IPSocket: bind: %s\n", NET_ErrorString() );
 		*err = socketError;
 		closesocket( newsocket );
 		return INVALID_SOCKET;
@@ -638,7 +638,7 @@ void NET_OpenIP( void )
 			}
 		}
 		if ( ip_socket == INVALID_SOCKET )
-			Com_Printf( "WARNING: Couldn't bind to a v4 ip address.\n");
+			Com_PrintWarning( "Couldn't bind to a v4 ip address.\n");
 	}
 }
 
@@ -737,7 +737,7 @@ void NET_Init( void ) {
 #ifdef _WIN32
 	int r = WSAStartup( MAKEWORD( 1, 1 ), &winsockdata );
 	if( r ) {
-		Com_Printf( "WARNING: Winsock initialization failed, returned %d\n", r );
+		Com_PrintWarning( "Winsock initialization failed, returned %d\n", r );
 		return;
 	}
 
@@ -867,7 +867,7 @@ void NET_Sleep( int msec ) {
 #else
 	if(retval == SOCKET_ERROR && socketError != EINTR)
 #endif
-		Com_Printf("Warning: select() syscall failed: %s\n", NET_ErrorString());
+		Com_PrintWarning( "select() syscall failed: %s\n", NET_ErrorString());
 	else if(retval > 0)
 		NET_Event(&fdset);
 

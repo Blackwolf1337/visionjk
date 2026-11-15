@@ -242,7 +242,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		if ( level.logFile )
 			trap->Print( "Logging to %s\n", g_log.string );
 		else
-			trap->Print( "WARNING: Couldn't open logfile: %s\n", g_log.string );
+			Com_PrintWarning( "Couldn't open logfile: %s\n", g_log.string );
 	}
 	else
 		trap->Print( "Not logging game events to disk.\n" );
@@ -261,7 +261,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		if ( level.security.log )
 			trap->Print( "Logging to "SECURITY_LOG"\n" );
 		else
-			trap->Print( "WARNING: Couldn't open logfile: "SECURITY_LOG"\n" );
+			Com_PrintWarning( "Couldn't open logfile: "SECURITY_LOG"\n" );
 	}
 	else
 		trap->Print( "Not logging security events to disk.\n" );
@@ -3665,6 +3665,8 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	trap = WebAdmin_WrapImport( import );
 	Com_Printf	= trap->Print;
 	Com_Error	= trap->Error;
+	// does the engine read the tags of Com_PrintWarning and Com_PrintError (q_shared.h)
+	com_printTags = (qboolean)( trap->Cvar_VariableIntegerValue( "v_printLevels" ) != 0 );
 
 	memset( &ge, 0, sizeof( ge ) );
 

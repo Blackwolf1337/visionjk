@@ -90,7 +90,7 @@ void *B_Alloc(int size)
 	{
 		//If this happens we'll have to rely on this chunk being freed manually with B_Free, which it hopefully will be
 #ifdef DEBUG
-		trap->Print("WARNING: MAXIMUM B_ALLOC ALLOCATIONS EXCEEDED\n");
+		Com_PrintWarning( "MAXIMUM B_ALLOC ALLOCATIONS EXCEEDED\n");
 #endif
 	}
 
@@ -145,7 +145,7 @@ void B_Free(void *ptr)
 	{
 		//Likely because the limit was exceeded and we're now freeing the chunk manually as we hoped would happen
 #ifdef DEBUG
-		trap->Print("WARNING: Freeing allocation which is not in the allocation structure\n");
+		Com_PrintWarning( "Freeing allocation which is not in the allocation structure\n");
 #endif
 	}
 
@@ -606,7 +606,7 @@ int ReadChatGroups(bot_state_t *bs, char *buf)
 
 	if (strlen(cgroupbegin) >= MAX_CHAT_BUFFER_SIZE)
 	{
-		trap->Print(S_COLOR_RED "Error: Personality chat section exceeds max size\n");
+		Com_PrintError( "Personality chat section exceeds max size\n");
 		return 0;
 	}
 
@@ -647,7 +647,7 @@ void BotUtilizePersonality(bot_state_t *bs)
 
 	if (!f)
 	{
-		trap->Print(S_COLOR_RED "Error: Specified personality not found\n");
+		Com_PrintError( "Specified personality not found\n");
 		B_TempFree(131072); //buf
 		return;
 	}

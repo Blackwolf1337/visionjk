@@ -595,7 +595,7 @@ void BotInputToUserCommand(bot_input_t *bi, usercmd_t *ucmd, int delta_angles[3]
 	if (bi->weapon == WP_NONE)
 	{
 #ifdef _DEBUG
-//		Com_Printf("WARNING: Bot tried to use WP_NONE!\n");
+//		Com_PrintWarning( "Bot tried to use WP_NONE!\n");
 #endif
 		bi->weapon = WP_BRYAR_PISTOL;
 	}

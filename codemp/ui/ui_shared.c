@@ -332,7 +332,7 @@ void PC_SourceWarning(int handle, char *format, ...) {
 	line = 0;
 	trap->PC_SourceFileAndLine(handle, filename, &line);
 
-	Com_Printf(S_COLOR_YELLOW "WARNING: %s, line %d: %s\n", filename, line, string);
+	Com_PrintWarning( "%s, line %d: %s\n", filename, line, string);
 }
 #endif
 
@@ -355,7 +355,7 @@ void PC_SourceError(int handle, char *format, ...) {
 	line = 0;
 	trap->PC_SourceFileAndLine(handle, filename, &line);
 
-	Com_Printf(S_COLOR_RED "ERROR: %s, line %d: %s\n", filename, line, string);
+	Com_PrintError( "%s, line %d: %s\n", filename, line, string);
 }
 
 /*
@@ -612,7 +612,7 @@ qboolean PC_Script_Parse(int handle, const char **out) {
 
 		if (Q_stricmp(token.string, "}") == 0) {
 			if ( cut ) {
-				Com_Printf( S_COLOR_YELLOW "WARNING: a menu script is longer than %i characters, its end is lost\n", (int)sizeof( script ) - 1 );
+				Com_PrintWarning( "a menu script is longer than %i characters, its end is lost\n", (int)sizeof( script ) - 1 );
 			}
 			*out = String_Alloc(script);
 			return qtrue;
@@ -1315,7 +1315,7 @@ int Menu_ItemsMatchingGroup(menuDef_t *menu, const char *name) {
 
 	for ( i=0; i<menu->itemCount; i++ ) {
 		if ( !VALIDSTRING( menu->items[i]->window.name ) && !VALIDSTRING( menu->items[i]->window.group ) ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: item has neither name or group\n" );
+			Com_PrintWarning( "item has neither name or group\n" );
 			continue;
 		}
 
@@ -1465,7 +1465,7 @@ qboolean Script_SetItemRectCvar(itemDef_t *item, char **args)
 		item2->window.rectClient.h = 0;
 	}
 
-//	Com_Printf(S_COLOR_YELLOW"WARNING: SetItemRectCvar: problems. Set cvar to 0's\n" );
+//	Com_PrintWarning( "SetItemRectCvar: problems. Set cvar to 0's\n" );
 
 	return qtrue;
 }
@@ -2309,7 +2309,7 @@ qboolean Script_Transition2(itemDef_t *item, char **args)
 		}
 		else
 		{
-			Com_Printf(S_COLOR_YELLOW"WARNING: Script_Transition2: error parsing '%s'\n", name );
+			Com_PrintWarning( "Script_Transition2: error parsing '%s'\n", name );
 		}
 	}
 
@@ -2390,7 +2390,7 @@ qboolean Script_Transition3(itemDef_t *item, char **args)
 		}
 	}
 	if ( name ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: Script_Transition2: error parsing '%s'\n", name );
+		Com_PrintWarning( "Script_Transition2: error parsing '%s'\n", name );
 	}
 	return qtrue;
 }

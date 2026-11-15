@@ -248,7 +248,7 @@ vec3_t cg_skyOriPos;
 float cg_skyOriScale = 0.0f;
 void SP_misc_skyportal_orient( void ) {
 	if( cg_skyOri )
-		trap->Print( S_COLOR_YELLOW "WARNING: multiple misc_skyportal_orients found.\n" );
+		Com_PrintWarning( "multiple misc_skyportal_orients found.\n" );
 
 	cg_skyOri = qtrue;
 	CG_SpawnVector( "origin", "0 0 0", cg_skyOriPos );

@@ -203,7 +203,40 @@ void COM_ParseError( char *format, ... )
 	Q_vsnprintf (string, sizeof( string ), format, argptr);
 	va_end (argptr);
 
-	Com_Printf("ERROR: %s, line %d: %s\n", com_parsename, COM_GetCurrentParseLine(), string);
+	Com_PrintError( "%s, line %d: %s\n", com_parsename, COM_GetCurrentParseLine(), string );
+}
+
+/*
+==============
+Com_PrintWarning, Com_PrintError
+
+See q_shared.h. Through Com_Printf of whoever links this file: the engine, the renderer, a module.
+==============
+*/
+#if defined( _GAME ) || defined( _CGAME ) || defined( UI_BUILD )
+qboolean com_printTags = qfalse;
+#else
+qboolean com_printTags = qtrue;
+#endif
+
+void QDECL Com_PrintWarning( const char *fmt, ... ) {
+	va_list	argptr;
+	char	text[4096];
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+	Com_Printf( "%s" S_COLOR_YELLOW "WARNING: %s", com_printTags ? PRINT_TAG_WARNING : "", text );
+}
+
+void QDECL Com_PrintError( const char *fmt, ... ) {
+	va_list	argptr;
+	char	text[4096];
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+	Com_Printf( "%s" S_COLOR_RED "ERROR: %s", com_printTags ? PRINT_TAG_ERROR : "", text );
 }
 
 void COM_ParseWarning( char *format, ... )
@@ -215,7 +248,7 @@ void COM_ParseWarning( char *format, ... )
 	Q_vsnprintf (string, sizeof(string), format, argptr);
 	va_end (argptr);
 
-	Com_Printf("WARNING: %s, line %d: %s\n", com_parsename, COM_GetCurrentParseLine(), string);
+	Com_PrintWarning( "%s, line %d: %s\n", com_parsename, COM_GetCurrentParseLine(), string );
 }
 
 /*

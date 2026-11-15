@@ -2862,7 +2862,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			if (es->eventParm < MAX_CLIENTS)
 			{ //You try to do very bad thing!
 #ifdef _DEBUG
-				Com_Printf("WARNING: Tried to kill a client ghoul2 instance with a server event!\n");
+				Com_PrintWarning( "Tried to kill a client ghoul2 instance with a server event!\n");
 #endif
 				break;
 			}

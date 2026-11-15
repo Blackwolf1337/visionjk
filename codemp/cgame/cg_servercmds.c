@@ -1197,7 +1197,7 @@ static void CG_NewForceRank_f( void ) {
 
 	if ( trap->Cmd_Argc() < 3 ) {
 #ifdef _DEBUG
-		trap->Print("WARNING: Invalid newForceRank string\n");
+		Com_PrintWarning( "Invalid newForceRank string\n");
 #endif
 		return;
 	}
@@ -1235,7 +1235,7 @@ static void CG_KillGhoul2_f( void ) {
 		if ( cg_entities[indexNum].ghoul2 && trap->G2_HaveWeGhoul2Models( cg_entities[indexNum].ghoul2 ) ) {
 			if ( indexNum < MAX_CLIENTS ) { //You try to do very bad thing!
 #ifdef _DEBUG
-				Com_Printf("WARNING: Tried to kill a client ghoul2 instance with a kg2 command!\n");
+				Com_PrintWarning( "Tried to kill a client ghoul2 instance with a kg2 command!\n");
 #endif
 				return;
 			}

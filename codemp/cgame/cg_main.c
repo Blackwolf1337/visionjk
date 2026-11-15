@@ -3123,6 +3123,13 @@ Q_EXPORT cgameExport_t* QDECL GetModuleAPI( int apiVersion, cgameImport_t *impor
 	trap = import;
 	Com_Printf	= trap->Print;
 	Com_Error	= trap->Error;
+	// does the engine read the tags of Com_PrintWarning and Com_PrintError (q_shared.h)
+	{
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_printLevels", value, sizeof( value ) );
+		com_printTags = (qboolean)( atoi( value ) != 0 );
+	}
 
 	memset( &cge, 0, sizeof( cge ) );
 

@@ -1711,13 +1711,13 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 	} else if ( c == clc_EOF ) {
 		SV_MoveCheck_NoMove( cl );
 	} else {
-		Com_Printf( "WARNING: bad command byte for client %i\n", cl - svs.clients );
+		Com_PrintWarning( "bad command byte for client %i\n", cl - svs.clients );
 		// clc_nop: in the protocol, but no client of the game writes it
 		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_MESSAGE, va( "command byte %i%s", c,
 			c == clc_nop ? " (a no-op no stock client sends)" : "" ) );
 	}
 //	if ( msg->readcount != msg->cursize ) {
-//		Com_Printf( "WARNING: Junk at end of packet for client %i\n", cl - svs.clients );
+//		Com_PrintWarning( "Junk at end of packet for client %i\n", cl - svs.clients );
 //	}
 }
 

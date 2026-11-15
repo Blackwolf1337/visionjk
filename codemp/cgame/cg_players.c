@@ -463,7 +463,7 @@ retryModel:
 	{
 		if (modelName && modelName[0])
 		{
-			Com_Printf("WARNING: Attempted to load an unsupported multiplayer model %s! (bad or missing bone, or missing animation sequence)\n", modelName);
+			Com_PrintWarning( "Attempted to load an unsupported multiplayer model %s! (bad or missing bone, or missing animation sequence)\n", modelName);
 		}
 
 		modelName = DEFAULT_MODEL;
@@ -3168,7 +3168,7 @@ static void CG_SetLerpFrameAnimation( centity_t *cent, clientInfo_t *ci, lerpFra
 				if (!trap->G2API_RemoveBone(cent->ghoul2, "lhumerus", 0))
 				{
 					assert(0);
-					Com_Printf("WARNING: Failed to remove lhumerus\n");
+					Com_PrintWarning( "Failed to remove lhumerus\n");
 				}
 			}
 
@@ -3189,7 +3189,7 @@ static void CG_SetLerpFrameAnimation( centity_t *cent, clientInfo_t *ci, lerpFra
 				if (!trap->G2API_RemoveBone(cent->ghoul2, brokenBone, 0))
 				{
 					assert(0);
-					Com_Printf("WARNING: Failed to remove %s\n", brokenBone);
+					Com_PrintWarning( "Failed to remove %s\n", brokenBone);
 				}
 				ci->brokenLimbs &= ~broken;
 			}
@@ -10078,7 +10078,7 @@ void CG_Player( centity_t *cent ) {
 	if (!cent->ghoul2)
 	{ //not ready yet?
 #ifdef _DEBUG
-		Com_Printf("WARNING: Client %i has a null ghoul2 instance\n", cent->currentState.number);
+		Com_PrintWarning( "Client %i has a null ghoul2 instance\n", cent->currentState.number);
 #endif
 		trap->G2API_ClearAttachedInstance(cent->currentState.number);
 

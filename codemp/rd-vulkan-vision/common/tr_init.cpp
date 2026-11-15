@@ -800,7 +800,7 @@ void R_Init( void ) {
 
 #ifndef FINAL_BUILD
 	if ( (intptr_t)tess.xyz & 15 ) {
-		ri.Printf( PRINT_ALL, "WARNING: tess.xyz not 16 byte aligned\n" );
+		ri.Printf( PRINT_WARNING, "WARNING: tess.xyz not 16 byte aligned\n" );
 	}
 #endif
 	//

@@ -154,7 +154,7 @@ void Use_Target_Print (gentity_t *ent, gentity_t *other, gentity_t *activator)
 {
 	if (!ent || !ent->inuse)
 	{
-		Com_Printf("ERROR: Bad ent in Use_Target_Print");
+		Com_PrintError( "Bad ent in Use_Target_Print");
 		return;
 	}
 
@@ -208,7 +208,7 @@ void Use_Target_Print (gentity_t *ent, gentity_t *other, gentity_t *activator)
 	{//private, to one client only
 		if (!activator || !activator->inuse)
 		{
-			Com_Printf("ERROR: Bad activator in Use_Target_Print");
+			Com_PrintError( "Bad activator in Use_Target_Print");
 		}
 		if ( activator && activator->client )
 		{//make sure there's a valid client ent to send it to

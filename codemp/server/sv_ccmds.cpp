@@ -791,7 +791,7 @@ static void SV_AddBanToList( qboolean isexception )
 
 	if ( serverBansCount >= (int)ARRAY_LEN( serverBans ) )
 	{
-		Com_Printf( "Error: Maximum number of bans/exceptions exceeded.\n" );
+		Com_PrintError( "Maximum number of bans/exceptions exceeded.\n" );
 		return;
 	}
 
@@ -803,7 +803,7 @@ static void SV_AddBanToList( qboolean isexception )
 
 		if ( SV_ParseCIDRNotation( &ip, &mask, banstring ) )
 		{
-			Com_Printf( "Error: Invalid address %s\n", banstring );
+			Com_PrintError( "Invalid address %s\n", banstring );
 			return;
 		}
 	}
@@ -817,7 +817,7 @@ static void SV_AddBanToList( qboolean isexception )
 
 		if ( !cl )
 		{
-			Com_Printf( "Error: Playernum %s does not exist.\n", Cmd_Argv( 1 ) );
+			Com_PrintError( "Playernum %s does not exist.\n", Cmd_Argv( 1 ) );
 			return;
 		}
 
@@ -847,7 +847,7 @@ static void SV_AddBanToList( qboolean isexception )
 
 	if ( ip.type != NA_IP )
 	{
-		Com_Printf( "Error: Can ban players connected via the internet only.\n" );
+		Com_PrintError( "Can ban players connected via the internet only.\n" );
 		return;
 	}
 
@@ -862,7 +862,7 @@ static void SV_AddBanToList( qboolean isexception )
 			{
 				Q_strncpyz( addy2, NET_AdrToString( &ip ), sizeof( addy2 ) );
 
-				Com_Printf( "Error: %s %s/%d supersedes %s %s/%d\n", curban->isexception ? "Exception" : "Ban",
+				Com_PrintError( "%s %s/%d supersedes %s %s/%d\n", curban->isexception ? "Exception" : "Ban",
 					NET_AdrToString( &curban->ip ), curban->subnet,
 					isexception ? "exception" : "ban", addy2, mask );
 				return;
@@ -874,7 +874,7 @@ static void SV_AddBanToList( qboolean isexception )
 			{
 				Q_strncpyz( addy2, NET_AdrToString( &curban->ip ), sizeof( addy2 ) );
 
-				Com_Printf( "Error: %s %s/%d supersedes already existing %s %s/%d\n", isexception ? "Exception" : "Ban",
+				Com_PrintError( "%s %s/%d supersedes already existing %s %s/%d\n", isexception ? "Exception" : "Ban",
 					NET_AdrToString( &ip ), mask,
 					curban->isexception ? "exception" : "ban", addy2, curban->subnet );
 				return;
@@ -940,7 +940,7 @@ static void SV_DelBanFromList( qboolean isexception )
 
 		if ( SV_ParseCIDRNotation( &ip, &mask, banstring ) )
 		{
-			Com_Printf( "Error: Invalid address %s\n", banstring );
+			Com_PrintError( "Invalid address %s\n", banstring );
 			return;
 		}
 
@@ -970,7 +970,7 @@ static void SV_DelBanFromList( qboolean isexception )
 
 		if ( todel < 1 || todel > serverBansCount )
 		{
-			Com_Printf( "Error: Invalid ban number given\n" );
+			Com_PrintError( "Invalid ban number given\n" );
 			return;
 		}
 
@@ -1652,7 +1652,7 @@ void SV_RecordDemo( client_t *cl, char *demoName ) {
 	Com_Printf( "recording to %s.\n", name );
 	cl->demo.demofile = FS_FOpenFileWrite( name );
 	if ( !cl->demo.demofile ) {
-		Com_Printf ("ERROR: couldn't open.\n");
+		Com_PrintError( "couldn't open.\n");
 		return;
 	}
 	cl->demo.demorecording = qtrue;

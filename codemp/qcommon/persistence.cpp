@@ -62,7 +62,7 @@ bool PD_Store ( const char *name, const void *data, size_t size )
 	persisentData_t *store = FindEmptyStore (persistentData, MAX_PERSISENT_DATA_STORES);
 	if ( store == NULL )
 	{
-		Com_Printf (S_COLOR_YELLOW "WARNING: No persistent data store found.\n");
+		Com_PrintWarning( "No persistent data store found.\n");
 		return false;
 	}
 

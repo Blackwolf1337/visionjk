@@ -577,7 +577,7 @@ void Team_ReturnFlagSound( gentity_t *ent, int team ) {
 	gentity_t	*te;
 
 	if (ent == NULL) {
-		trap->Print ("Warning:  NULL passed to Team_ReturnFlagSound\n");
+		Com_PrintWarning( " NULL passed to Team_ReturnFlagSound\n");
 		return;
 	}
 
@@ -595,7 +595,7 @@ void Team_TakeFlagSound( gentity_t *ent, int team ) {
 	gentity_t	*te;
 
 	if (ent == NULL) {
-		trap->Print ("Warning:  NULL passed to Team_TakeFlagSound\n");
+		Com_PrintWarning( " NULL passed to Team_TakeFlagSound\n");
 		return;
 	}
 
@@ -633,7 +633,7 @@ void Team_CaptureFlagSound( gentity_t *ent, int team ) {
 	gentity_t	*te;
 
 	if (ent == NULL) {
-		trap->Print ("Warning:  NULL passed to Team_CaptureFlagSound\n");
+		Com_PrintWarning( " NULL passed to Team_CaptureFlagSound\n");
 		return;
 	}
 

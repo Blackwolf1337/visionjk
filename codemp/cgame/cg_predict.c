@@ -1707,7 +1707,7 @@ void CG_PredictPlayerState( void ) {
 
 	if ( cg_showMiss.integer ) {
 		if (cg.predictedPlayerState.eventSequence > oldPlayerState.eventSequence + MAX_PS_EVENTS) {
-			trap->Print("WARNING: dropped event\n");
+			Com_PrintWarning( "dropped event\n");
 		}
 	}
 
@@ -1718,7 +1718,7 @@ void CG_PredictPlayerState( void ) {
 
 	if ( cg_showMiss.integer ) {
 		if (cg.eventSequence > cg.predictedPlayerState.eventSequence) {
-			trap->Print("WARNING: double event\n");
+			Com_PrintWarning( "double event\n");
 			cg.eventSequence = cg.predictedPlayerState.eventSequence;
 		}
 	}

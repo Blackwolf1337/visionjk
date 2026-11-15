@@ -408,7 +408,7 @@ void CL_ParseSetGame( msg_t *msg )
 
 	if(CL_BadGameDir(newGameDir))
 	{
-		Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", newGameDir);
+		Com_PrintWarning( "Server sent invalid fs_game value %s\n", newGameDir);
 		CL_IDS_Event( CLIDS_GAMEDIR, NULL, newGameDir );
 		return;
 	}
@@ -490,7 +490,7 @@ void CL_SystemInfoChanged( void ) {
 		if ( !Q_stricmp( key, "fs_game" ) ) {
 			if(CL_BadGameDir(value))
 			{
-				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", value);
+				Com_PrintWarning( "Server sent invalid fs_game value %s\n", value);
 				CL_IDS_Event( CLIDS_GAMEDIR, NULL, value );
 				continue;
 			}

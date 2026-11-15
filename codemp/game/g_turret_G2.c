@@ -95,7 +95,7 @@ void G2Tur_SetBoneAngles(gentity_t *ent, char *bone, vec3_t angles)
 	{ //didn't find it, create it
 		if (!firstFree)
 		{ //no free bones.. can't do a thing then.
-			Com_Printf("WARNING: NPC has no free bone indexes\n");
+			Com_PrintWarning( "NPC has no free bone indexes\n");
 			return;
 		}
 

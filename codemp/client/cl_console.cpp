@@ -257,7 +257,7 @@ void Con_Dump_f (void)
 	f = FS_FOpenFileWrite( filename );
 	if (!f)
 	{
-		Com_Printf ("ERROR: couldn't open %s.\n", filename);
+		Com_PrintError( "couldn't open %s.\n", filename);
 		return;
 	}
 
@@ -628,7 +628,8 @@ static void Con_Linefeed (qboolean skipnotify)
 The feed
 
 VisionJK: every line that would stand at the top of the game window (the notify lines) is kept here whole, with
-its colours and a level: 0 a line, 1 a warning, 2 an error. A cgame of this tree draws them itself, in one feed
+its colours and a level: 0 a line, 1 a warning, 2 an error, as Com_PrintWarning and Com_PrintError said it
+(com_printLevel; the colour of a line says nothing). A cgame of this tree draws them itself, in one feed
 with its kills (cgame/hud/cg_killfeed.c): it reads them with ext.Con_FeedRead and says so by setting
 v_feedHandler, which the engine clears whenever a cgame is loaded. Con_DrawNotify leaves the lines out then.
 ================
@@ -645,32 +646,8 @@ static struct {
 	char	pending[CON_FEED_TEXT];			// the line that has no end yet
 	int		pendingLen;
 	qboolean pendingSkip;					//	and something of it is not for the notify lines
+	int		pendingLevel;					//	the highest level of what it was printed with
 } conFeed;
-
-// a warning or an error by how the engine and the modules write them: yellow or red from the start, or the word
-static int Con_FeedLevel( const char *text ) {
-	while ( *text == ' ' ) {
-		text++;
-	}
-	if ( Q_IsColorString( (const unsigned char *)text ) ) {
-		const int color = ColorIndex( text[1] );
-
-		if ( color == ColorIndex( COLOR_RED ) ) {
-			return 2;
-		}
-		if ( color == ColorIndex( COLOR_YELLOW ) ) {
-			return 1;
-		}
-		text += 2;
-	}
-	if ( !Q_stricmpn( text, "ERROR", 5 ) ) {
-		return 2;
-	}
-	if ( !Q_stricmpn( text, "WARNING", 7 ) ) {
-		return 1;
-	}
-	return 0;
-}
 
 static void Con_FeedAdd( const char *txt, qboolean skipnotify ) {
 	for ( ; *txt; txt++ ) {
@@ -679,15 +656,19 @@ static void Con_FeedAdd( const char *txt, qboolean skipnotify ) {
 			if ( !conFeed.pendingSkip && conFeed.pendingLen > 0 ) {
 				const int slot = ++conFeed.seq % CON_FEED_LINES;
 
-				conFeed.lines[slot].level = Con_FeedLevel( conFeed.pending );
+				conFeed.lines[slot].level = conFeed.pendingLevel;
 				Q_strncpyz( conFeed.lines[slot].text, conFeed.pending, sizeof( conFeed.lines[0].text ) );
 			}
 			conFeed.pendingLen = 0;
 			conFeed.pendingSkip = qfalse;
+			conFeed.pendingLevel = 0;
 			continue;
 		}
 		if ( skipnotify ) {
 			conFeed.pendingSkip = qtrue;
+		}
+		if ( com_printLevel > conFeed.pendingLevel ) {
+			conFeed.pendingLevel = com_printLevel;
 		}
 		if ( *txt != '\r' && conFeed.pendingLen < CON_FEED_TEXT - 1 ) {
 			conFeed.pending[conFeed.pendingLen++] = *txt;

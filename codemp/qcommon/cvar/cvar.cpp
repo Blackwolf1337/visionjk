@@ -275,7 +275,7 @@ static const char *Cvar_Validate( cvar_t *var, const char *value, qboolean warn 
 			if( !Q_isintegral( valuef ) )
 			{
 				if( warn )
-					Com_Printf( "WARNING: cvar '%s' must be integral", var->name );
+					Com_PrintWarning( "cvar '%s' must be integral", var->name );
 
 				valuef = (int)valuef;
 				changed = qtrue;
@@ -285,7 +285,7 @@ static const char *Cvar_Validate( cvar_t *var, const char *value, qboolean warn 
 	else
 	{
 		if( warn )
-			Com_Printf( "WARNING: cvar '%s' must be numeric", var->name );
+			Com_PrintWarning( "cvar '%s' must be numeric", var->name );
 
 		valuef = atof( var->resetString );
 		changed = qtrue;
@@ -298,7 +298,7 @@ static const char *Cvar_Validate( cvar_t *var, const char *value, qboolean warn 
 			if( changed )
 				Com_Printf( " and is" );
 			else
-				Com_Printf( "WARNING: cvar '%s'", var->name );
+				Com_PrintWarning( "cvar '%s'", var->name );
 
 			if( Q_isintegral( var->min ) )
 				Com_Printf( " out of range (min %d)", (int)var->min );
@@ -316,7 +316,7 @@ static const char *Cvar_Validate( cvar_t *var, const char *value, qboolean warn 
 			if( changed )
 				Com_Printf( " and is" );
 			else
-				Com_Printf( "WARNING: cvar '%s'", var->name );
+				Com_PrintWarning( "cvar '%s'", var->name );
 
 			if( Q_isintegral( var->max ) )
 				Com_Printf( " out of range (max %d)", (int)var->max );
@@ -886,7 +886,7 @@ cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 	// registered by the cgame, after the first systeminfo (v_authKeyFile names a file to open). A server that
 	// created one before would keep its value, archived.
 	if ( !Q_stricmpn( var_name, "v_", 2 ) && !( flags != CVAR_NONEXISTENT && ( flags & CVAR_SYSTEMINFO ) ) ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", var_name, value );
+		Com_PrintWarning( "server is not allowed to set %s=%s\n", var_name, value );
 		return CVAR_SERVER_REFUSED;
 	}
 
@@ -905,7 +905,7 @@ cvarServerSet_t Cvar_Server_Set( const char *var_name, const char *value )
 		if(!(flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED)))
 		{
 			if ( !FindLegacyCvar( var_name ) ) {
-				Com_Printf(S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", var_name, value);
+				Com_PrintWarning( "server is not allowed to set %s=%s\n", var_name, value);
 				return CVAR_SERVER_REFUSED;
 			}
 		}
@@ -1309,7 +1309,7 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 			// write the latched value, even if it hasn't taken effect yet
 			if ( var->latchedString ) {
 				if( strlen( var->name ) + strlen( var->latchedString ) + 10 > sizeof( buffer ) ) {
-					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable "
+					Com_PrintWarning( "value of variable "
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
@@ -1317,13 +1317,13 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 					continue;
 				}
 				if ( !Cvar_ConfigValue( var->latchedString, value, sizeof( value ) - strlen( var->name ) - 10 ) ) {
-					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable \"%s\" too long to write to file\n", var->name );
+					Com_PrintWarning( "value of variable \"%s\" too long to write to file\n", var->name );
 					continue;
 				}
 				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, value);
 			} else {
 				if( strlen( var->name ) + strlen( var->string ) + 10 > sizeof( buffer ) ) {
-					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable "
+					Com_PrintWarning( "value of variable "
 							"\"%s\" too long to write to file\n", var->name );
 					continue;
 				}
@@ -1331,7 +1331,7 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 					continue;
 				}
 				if ( !Cvar_ConfigValue( var->string, value, sizeof( value ) - strlen( var->name ) - 10 ) ) {
-					Com_Printf( S_COLOR_YELLOW "WARNING: value of variable \"%s\" too long to write to file\n", var->name );
+					Com_PrintWarning( "value of variable \"%s\" too long to write to file\n", var->name );
 					continue;
 				}
 				Com_sprintf (buffer, sizeof(buffer), "seta %s \"%s\"\n", var->name, value);
@@ -1497,7 +1497,7 @@ void Cvar_Unset_f(void)
 	if(cv->flags & CVAR_USER_CREATED)
 		Cvar_Unset(cv);
 	else
-		Com_Printf("Error: %s: Variable %s is not user created.\n", Cmd_Argv(0), cv->name);
+		Com_PrintError( "%s: Variable %s is not user created.\n", Cmd_Argv(0), cv->name);
 }
 
 void Cvar_UnsetUserCreated_f(void)
