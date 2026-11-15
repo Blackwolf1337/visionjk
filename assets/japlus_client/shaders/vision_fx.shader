@@ -61,8 +61,8 @@ gfx/vision/saberscar
 	}
 }
 
-// the molten core, on the narrow band: the melt runs slowly along the cut; the embers (dark red flecks, their
-// strength the alpha of the vertices) glow on after the rest has cooled
+// the molten core, on the narrow band: the melt creeps along the cut, barely; the embers (dark red flecks, their
+// strength the alpha of the vertices) glow on, still, after the rest has cooled
 gfx/vision/sabermolten
 {
 	polygonOffset
@@ -73,7 +73,7 @@ gfx/vision/sabermolten
 		map gfx/vision/sabermolten
 		blendFunc GL_ONE GL_ONE
 		rgbGen vertex
-		tcMod scroll 0.09 0
+		tcMod scroll 0.01 0
 		glow
 	}
 	{
@@ -81,7 +81,6 @@ gfx/vision/sabermolten
 		blendFunc GL_SRC_ALPHA GL_ONE
 		rgbGen const ( 0.95 0.22 0.04 )
 		alphaGen vertex
-		tcMod scroll -0.025 0
 		glow
 	}
 }

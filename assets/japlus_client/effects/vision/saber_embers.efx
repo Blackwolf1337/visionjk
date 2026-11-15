@@ -4,7 +4,7 @@ Tail
 
 	flags				usePhysics
 
-	count				1 3
+	count				0 1
 
 	life				350 800
 
@@ -32,8 +32,8 @@ Tail
 
 	length
 	{
-		start			1.5 3.5
-		end				0.4 1
+		start			0.8 1.6
+		end				0.2 0.5
 		flags			linear
 	}
 

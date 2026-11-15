@@ -117,9 +117,9 @@ SCAR_LIP = 0.27		# where the lip is highest
 
 def scar(width=256, height=128):
     edge = octaves(31, 6, 1, 3)		# how far the soot reaches, along the scar
-    blot = octaves(32, 8, 3, 4)		# blotches of soot
+    blot = octaves(32, 6, 2, 3)		# blotches of soot
     spray = octaves(34, 14, 1, 3)		# where the soot was thrown further out across the cut
-    grain = octaves(33, 32, 8, 3)
+    grain = octaves(33, 16, 4, 2)		# (soft: a fine grain read as a jagged edge)
     wobble = octaves(35, 10, 1, 3)		# the groove a little wider and narrower along the scar
     img = Image.new('RGBA', (width, height))
     hgt = Image.new('RGBA', (width, height))
@@ -165,8 +165,8 @@ def heat_ramp(i):
 
 
 def molten(width=256, height=64):
-    flow = octaves(42, 10, 1, 4)		# drawn out along the cut: the melt runs that way
-    ridge = octaves(43, 18, 2, 3)
+    flow = octaves(42, 6, 1, 3)		# drawn out along the cut: the melt runs that way (broad, not grainy)
+    ridge = octaves(43, 8, 1, 2)
     fleckN = octaves(44, 40, 12, 2)		# (round flecks: as many cells across the band as its width takes)
     img = Image.new('RGBA', (width, height))
     emb = Image.new('RGBA', (width, height))
@@ -183,7 +183,7 @@ def molten(width=256, height=64):
             spine = math.exp(-(d / (0.16 + 0.08 * (w - 0.5))) ** 2)
             body = math.exp(-(d / 0.5) ** 2) * (1.0 - smoothstep(0.8, 1.0, d))
             # (below white, so the streaks still show at full heat)
-            i = min(1.0, spine * (0.45 + 0.35 * w) + body * (0.25 + 0.25 * w + 0.4 * streak))
+            i = min(1.0, spine * (0.55 + 0.25 * w) + body * (0.3 + 0.2 * w + 0.2 * streak))
             r, g, b = heat_ramp(i)
             # embers: small flecks of the body that glow on longest
             fl = smoothstep(0.62, 0.78, fbm(fleckN, u, v)) * body

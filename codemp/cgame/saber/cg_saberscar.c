@@ -44,10 +44,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "cgame/saber/cg_saberscar.h"
 
-#define SCAR_MARK_POINTS	64			// points and fragments one short piece may give (they are small)
-#define SCAR_MARK_FRAGS		16
+#define SCAR_MARK_POINTS	384			// points and fragments one short piece may give (on a curved wall of many small
+#define SCAR_MARK_FRAGS		64			//	triangles the wide band crosses a lot of them)
+#define SCAR_VERTS			131072		// corners of the fragments of all pieces, a ring (SCAR_PIECES pieces use them in turn)
+#define SCAR_FRAG_RING		32768		// fragments of all pieces, a ring
 #define SCAR_PIECES			1024		// short pieces of all scars; the oldest are written over
-#define SCAR_FRAGS			4			// fragments of one band of a piece (it may lie on several polygons of the level)
 #define SCAR_STREAMS		32			// blades touching the level at one time
 #define SCAR_STEP			1.6f		// the longest short piece
 #define SCAR_WIDE			3.6f		// the wide band, times the width of the cut
@@ -55,10 +56,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_REPEAT_WIDE	16.0f
 #define SCAR_TAPER			3.0f		// units over which the cut opens where the blade went in
 #define SCAR_FADE			2000		// msec the char takes to fade at the end of its time
-#define SCAR_HOT			6000		// msec until the core has cooled completely
-#define SCAR_HALO			2400		// msec of the heat around a fresh cut
+#define SCAR_HOT			16000		// msec until the core has cooled completely
+#define SCAR_HALO			6000		// msec of the heat around a fresh cut
 #define SCAR_DRIP_RUN		900			// msec a drop takes to run its length
-#define SCAR_DRIP_HOT		2200		// msec until a drop has cooled
+#define SCAR_DRIP_HOT		8000		// msec until a drop has cooled
 #define SCAR_DWELL_MOVE		0.75f		// a blade moving less than this a frame rests in the wall
 #define SCAR_DWELL_POOL		120			// msec of rest before the pool begins
 #define SCAR_POOL_GROW		1500		// msec until the pool is as large as it gets
@@ -85,10 +86,16 @@ typedef struct {
 	scarKind_t	kind;
 	float		heat;					// 0 to 1, how hot it was made (a fast swing heats less)
 	vec3_t		centre;
-	byte		numFrags[2];
-	byte		numVerts[2][SCAR_FRAGS];
-	scarVert_t	verts[2][SCAR_FRAGS][MAX_VERTS_ON_POLY];
+	// its fragments in the ring of fragments: the first (a count that only grows, modulo SCAR_FRAG_RING) and how many
+	unsigned	firstFrag[2];
+	int			numFrags[2];
 } scarPiece_t;
+
+// a fragment of a band of a piece: its corners in the ring of corners (a count that only grows, modulo SCAR_VERTS)
+typedef struct {
+	unsigned	firstVert;
+	int			numVerts;
+} scarFrag_t;
 
 // The edge of a band of a cut where one short piece ends and the next begins: its two corners (0 on the first side,
 // 1 on the second) and the texture across the band there (t, 0 to 1 over the whole width), and how far each corner
@@ -124,6 +131,9 @@ typedef struct {
 
 static struct {
 	scarPiece_t		pieces[SCAR_PIECES];
+	scarVert_t		verts[SCAR_VERTS];
+	scarFrag_t		frags[SCAR_FRAG_RING];
+	unsigned		nextVert, nextFrag;
 	int				next, serial;
 	scarStream_t	streams[SCAR_STREAMS];
 	qhandle_t		charShader, moltenShader, haloShader, dripShader, dripCharShader, poolShader, poolCharShader;
@@ -152,7 +162,8 @@ static void Scar_Ramp( const scarKey_t *keys, int numKeys, int msec, float *out,
 	}
 	for ( i = 1; i < numKeys - 1 && msec > keys[i].msec; i++ )
 		;
-	const float f = Com_Clamp( 0.0f, 1.0f, (float)( msec - keys[i - 1].msec ) / (float)( keys[i].msec - keys[i - 1].msec ) );
+	float f = Com_Clamp( 0.0f, 1.0f, (float)( msec - keys[i - 1].msec ) / (float)( keys[i].msec - keys[i - 1].msec ) );
+	f = f * f * ( 3.0f - 2.0f * f );
 	for ( int c = 0; c < count; c++ ) {
 		out[c] = keys[i - 1].v[c] + f * ( keys[i].v[c] - keys[i - 1].v[c] );
 	}
@@ -169,28 +180,31 @@ the heat around it. As hot metal cools: white, yellow, orange, cherry red, dark 
 =================
 */
 static void CG_ScarHeat( int msec, float heat, vec3_t core, float *embers, vec3_t halo ) {
+	// (slow, as a thick cut in stone or metal cools: white for a moment, orange for seconds, a dull red glow long after;
+	// the keys are eased in between, so it never jumps)
 	static const scarKey_t coreKeys[] = {
 		{ 0,		{ 1.0f, 1.0f, 1.0f } },
-		{ 250,		{ 1.0f, 0.8f, 0.55f } },
-		{ 700,		{ 1.0f, 0.5f, 0.2f } },
-		{ 1600,		{ 0.8f, 0.22f, 0.05f } },
-		{ 2800,		{ 0.38f, 0.07f, 0.01f } },
-		{ 4000,		{ 0.0f, 0.0f, 0.0f } },
+		{ 600,		{ 1.0f, 0.82f, 0.55f } },
+		{ 2000,		{ 1.0f, 0.55f, 0.22f } },
+		{ 4500,		{ 0.9f, 0.3f, 0.07f } },
+		{ 8000,		{ 0.55f, 0.11f, 0.02f } },
+		{ 12000,	{ 0.22f, 0.03f, 0.0f } },
+		{ SCAR_HOT,	{ 0.0f, 0.0f, 0.0f } },
 	};
 	static const scarKey_t emberKeys[] = {
-		{ 500,		{ 0.0f } },
-		{ 1500,		{ 1.0f } },
-		{ 3500,		{ 0.75f } },
+		{ 3000,		{ 0.0f } },
+		{ 7000,		{ 0.7f } },
+		{ 12000,	{ 0.5f } },
 		{ SCAR_HOT,	{ 0.0f } },
 	};
 	static const scarKey_t haloKeys[] = {
-		{ 0,		{ 0.95f, 0.55f, 0.2f } },
-		{ 400,		{ 0.6f, 0.2f, 0.04f } },
-		{ 1200,		{ 0.28f, 0.05f, 0.0f } },
+		{ 0,		{ 0.8f, 0.48f, 0.18f } },
+		{ 1200,		{ 0.5f, 0.2f, 0.05f } },
+		{ 3500,		{ 0.22f, 0.05f, 0.0f } },
 		{ SCAR_HALO, { 0.0f, 0.0f, 0.0f } },
 	};
 	// a cut made cooler is further along the way
-	const int along = msec + (int)( ( 1.0f - heat ) * 600.0f );
+	const int along = msec + (int)( ( 1.0f - heat ) * 1500.0f );
 
 	Scar_Ramp( coreKeys, ARRAY_LEN( coreKeys ), along, core, 3 );
 	Scar_Ramp( emberKeys, ARRAY_LEN( emberKeys ), along, embers, 1 );
@@ -237,20 +251,26 @@ static void Scar_Lay( scarPiece_t *piece, int band, int numCorners, vec3_t corne
 	VectorScale( normal, -1.0f, projection );
 	numFragments = trap->R_MarkFragments( numCorners, (const float (*)[3])corners, projection, SCAR_MARK_POINTS, points[0],
 		SCAR_MARK_FRAGS, fragments );
+	piece->firstFrag[band] = scar.nextFrag;
 	piece->numFrags[band] = 0;
-	for ( int f = 0; f < numFragments && piece->numFrags[band] < SCAR_FRAGS; f++ ) {
+	for ( int f = 0; f < numFragments; f++ ) {
 		const markFragment_t *mf = &fragments[f];
 		const int numVerts = Q_min( mf->numPoints, MAX_VERTS_ON_POLY );
-		scarVert_t *out = piece->verts[band][piece->numFrags[band]];
+		scarFrag_t *frag = &scar.frags[scar.nextFrag % SCAR_FRAG_RING];
 
 		if ( numVerts < 3 ) {
 			continue;
 		}
+		frag->firstVert = scar.nextVert;
+		frag->numVerts = numVerts;
 		for ( int v = 0; v < numVerts; v++ ) {
-			VectorCopy( points[mf->firstPoint + v], out[v].xyz );
-			st( out[v].xyz, data, out[v].st );
+			scarVert_t *out = &scar.verts[( scar.nextVert + v ) % SCAR_VERTS];
+
+			VectorCopy( points[mf->firstPoint + v], out->xyz );
+			st( out->xyz, data, out->st );
 		}
-		piece->numVerts[band][piece->numFrags[band]] = (byte)numVerts;
+		scar.nextVert += numVerts;
+		scar.nextFrag++;
 		piece->numFrags[band]++;
 	}
 }
@@ -550,7 +570,18 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 			q.ea = s->edge[band];
 			q.s = s->length;
 			q.repeat = band == BAND_WIDE ? SCAR_REPEAT_WIDE : SCAR_REPEAT_NARROW;
-			if ( Scar_FitEdge( &q, side, width * ( band == BAND_WIDE ? SCAR_WIDE : 1.0f ), len, normal ) ) {
+			const float full = width * ( band == BAND_WIDE ? SCAR_WIDE : 1.0f );
+			if ( !Scar_FitEdge( &q, side, full, len, normal ) ) {
+				// a turn so sharp that not even a triangle round the inside fits: this piece begins an edge of its own
+				// across the new direction (it may overlap the last one a little; a hole would show more)
+				for ( int c = 0; c < 2; c++ ) {
+					q.ea.half[c] = q.eb.half[c] = 0.5f * full;
+					q.ea.t[c] = q.eb.t[c] = (float)c;
+					VectorMA( q.a, ( c ? 0.5f : -0.5f ) * full, side, q.ea.corner[c] );
+					VectorMA( q.b, ( c ? 0.5f : -0.5f ) * full, side, q.eb.corner[c] );
+				}
+			}
+			{
 				const int numCorners = Scar_QuadCorners( &q, normal, corners );
 
 				if ( numCorners >= 3 ) {
@@ -716,7 +747,7 @@ static void Scar_End( scarStream_t *s ) {
 		VectorNormalize( normal );
 		Scar_Piece( s, before, s->p[a], s->p[b], after, normal, qtrue, s->pTime[b] - s->pTime[a] );
 	}
-	s->hotUntil = cg.time + 1500;
+	s->hotUntil = cg.time + 3000;
 	Scar_Forget( s );
 }
 
@@ -750,7 +781,7 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 			Scar_Pool( s );
 			VectorCopy( pos, s->hotAt );
 			VectorCopy( normal, s->hotNormal );
-			s->hotUntil = cg.time + 1500;
+			s->hotUntil = cg.time + 3000;
 			return;
 		}
 	}
@@ -773,7 +804,7 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 	s->count++;
 	VectorCopy( pos, s->hotAt );
 	VectorCopy( normal, s->hotNormal );
-	s->hotUntil = cg.time + 1500;
+	s->hotUntil = cg.time + 3000;
 
 	// one frame late: the piece before the newest point, with the points around it
 	{
@@ -810,14 +841,15 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 =================
 CG_SaberScarRelease
 
-The blade of key and index touches nothing this frame. Its cut closes only after a moment without a touch: a blade
-that grazes the wall touches it every other frame, and every touch would open and close a cut of its own.
+The blade of key and index touches nothing this frame. Its cut closes only after a moment without a touch (300 msec):
+a blade that grazes the wall misses it now and then, and every touch would open and close a cut of its own, with
+narrow spots between them.
 =================
 */
 void CG_SaberScarRelease( const void *key, int index ) {
 	scarStream_t *s = Scar_Stream( key, index, qfalse );
 
-	if ( s && cg.time - s->lastTime > 100 ) {
+	if ( s && cg.time - s->lastTime > 300 ) {
 		Scar_End( s );
 	}
 }
@@ -900,11 +932,19 @@ static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, cons
 	if ( !shader ) {
 		return;
 	}
+	// (written over in the rings by newer pieces: gone)
+	if ( scar.nextFrag - piece->firstFrag[band] > SCAR_FRAG_RING ) {
+		return;
+	}
 	for ( int f = 0; f < piece->numFrags[band] && scarPolys < SCAR_POLYS; f++ ) {
-		const int numVerts = piece->numVerts[band][f];
+		const scarFrag_t *frag = &scar.frags[( piece->firstFrag[band] + f ) % SCAR_FRAG_RING];
+		const int numVerts = frag->numVerts;
 
+		if ( scar.nextVert - frag->firstVert > SCAR_VERTS ) {
+			continue;
+		}
 		for ( int v = 0; v < numVerts; v++ ) {
-			const scarVert_t *in = &piece->verts[band][f][v];
+			const scarVert_t *in = &scar.verts[( frag->firstVert + v ) % SCAR_VERTS];
 
 			VectorCopy( in->xyz, verts[v].xyz );
 			verts[v].st[0] = in->st[0];
@@ -941,17 +981,17 @@ void CG_SaberScarsAdd( void ) {
 	for ( int i = 0; i < SCAR_STREAMS; i++ ) {
 		scarStream_t *s = &scar.streams[i];
 
-		if ( s->lastTime && cg.time - s->lastTime > 150 ) {
+		if ( s->lastTime && cg.time - s->lastTime > 350 ) {
 			Scar_End( s );
 		}
 		// the air shimmers over what is still hot (the heat haze of the screen effects)
 		if ( v_saberScarFx.integer && s->hotUntil > cg.time ) {
-			const float strength = Com_Clamp( 0.0f, 1.0f, ( s->hotUntil - cg.time ) / 1500.0f );
-			const vec3_t rise = { 0.0f, 0.0f, 28.0f };
+			const float strength = Com_Clamp( 0.0f, 1.0f, ( s->hotUntil - cg.time ) / 3000.0f );
+			const vec3_t rise = { 0.0f, 0.0f, 16.0f };
 			vec3_t at;
 
 			VectorMA( s->hotAt, 1.5f, s->hotNormal, at );
-			CG_ScreenFxEmit( SCAR_HEAT_ID + i, at, rise, 4.0f, 0.7f * strength, 0.0f );
+			CG_ScreenFxEmit( SCAR_HEAT_ID + i, at, rise, 4.0f, 0.3f * strength, 0.0f );
 		}
 	}
 	if ( !v_saberScars.integer || !cg_marks.integer ) {
