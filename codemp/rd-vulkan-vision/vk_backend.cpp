@@ -1007,9 +1007,6 @@ static void RB_DrawWet( int depthRange ) {
 
 		backEnd.currentEntity = &tr.worldEntity;
 		backEnd.ori = backEnd.viewParms.world;
-		// v_volumetric: the haze over the solid level first, the sparks glow in front of it
-		VK_Volumetric( VK_CurrentTransform() );
-		VK_GpuMark( "haze" );
 		VK_SparksDraw( VK_CurrentTransform() );
 		backEnd.currentEntity = entity;
 		backEnd.ori = ori;
@@ -1377,8 +1374,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
 	// (the sparks bounce off it: v_gpuSparks wants it too)
-	rb_softLater = (qboolean)( levelView && ( v_softParticles->integer || v_gpuSparks->integer || v_volumetric->value > 0.0f )
-		&& vk.depthReadable && !probeFace && !puddle );
+	rb_softLater = (qboolean)( levelView && ( v_softParticles->integer || v_gpuSparks->integer ) && vk.depthReadable && !probeFace && !puddle );
 	vk.softReady = qfalse;
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 || rb_softLater ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)

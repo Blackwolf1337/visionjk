@@ -513,38 +513,6 @@ REFERENCE           HOW_BRIGHT_THE_LEVEL_IS_BEFORE_IT_IS
 LANG_ENGLISH        "How bright the level is before it is tone mapped. 1 as it is."
 LANG_GERMAN         "Wie hell das Level ist, bevor das Tonemapping greift. 1 wie es ist."
 
-REFERENCE           EYE_ADAPTATION
-LANG_ENGLISH        "Eye Adaptation"
-LANG_GERMAN         "Augenanpassung"
-
-REFERENCE           THE_PICTURE_ADAPTS_LIKE_AN_EYE_DARK
-LANG_ENGLISH        "The picture adapts like an eye: dark corridors brighten a little, bright yards darken, over a moment. Gentle: up to one stop. Vulkan only."
-LANG_GERMAN         "Das Bild passt sich an wie ein Auge: dunkle Gänge werden etwas heller, helle Höfe dunkler, über einen Moment. Sanft: bis zu einer Blendenstufe. Nur Vulkan."
-
-REFERENCE           GENTLE
-LANG_ENGLISH        "Gentle"
-LANG_GERMAN         "Sanft"
-
-REFERENCE           STRONG
-LANG_ENGLISH        "Strong"
-LANG_GERMAN         "Stark"
-
-REFERENCE           HAZE
-LANG_ENGLISH        "Haze"
-LANG_GERMAN         "Dunst"
-
-REFERENCE           HAZE_IN_THE_AIR_LIT_BY_THE_LIGHT_THA
-LANG_ENGLISH        "Haze in the air, lit by the light that reaches it: soft beams where the sun or a lamp shines in, a glow round sabers and shots, far halls fading. 0: off. Vulkan only."
-LANG_GERMAN         "Dunst in der Luft, beleuchtet von dem Licht, das ihn erreicht: weiche Strahlen, wo Sonne oder Lampen hineinscheinen, ein Schein um Lichtschwerter und Schüsse, ferne Hallen verblassen. 0: aus. Nur Vulkan."
-
-REFERENCE           LEVEL_COLOUR_LOOK
-LANG_ENGLISH        "Level Colour Look"
-LANG_GERMAN         "Farblook des Levels"
-
-REFERENCE           LEVELS_CAN_COME_WITH_A_COLOUR_LOOK_O
-LANG_ENGLISH        "Levels can come with a colour look of their own: contrast, saturation, warmth and the tint of shadows and highlights. Off: the colours as they are. Vulkan only."
-LANG_GERMAN         "Levels können einen eigenen Farblook mitbringen: Kontrast, Sättigung, Wärme und die Tönung von Schatten und Lichtern. Aus: die Farben wie sie sind. Nur Vulkan."
-
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
 LANG_GERMAN         "#same"

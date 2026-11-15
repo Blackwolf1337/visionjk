@@ -520,12 +520,6 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	vk.softReady = qfalse;
 	VK_PostSetOnce( &vk.softSet );
 	VK_WriteSet( vk.softSet, vk.postSampler, vk.softDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_CreateTarget( &vk.lum, VK_LUM_WIDTH, VK_LUM_HEIGHT, VK_FORMAT_R32_SFLOAT, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	for ( int i = 0; i < VK_FRAMES; i++ ) {
-		VK_CreateBuffer( &vk.lumRead[i], sizeof( float ) * VK_LUM_WIDTH * VK_LUM_HEIGHT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
-		vk.lumWritten[i] = qfalse;
-	}
 	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
@@ -677,11 +671,6 @@ void VK_DestroyPostTargets( void ) {
 	vk.ssrReady = qfalse;
 	VK_DestroyTarget( &vk.softDepth );
 	vk.softReady = qfalse;
-	VK_DestroyTarget( &vk.lum );
-	for ( int i = 0; i < VK_FRAMES; i++ ) {
-		VK_DestroyBuffer( &vk.lumRead[i] );
-		vk.lumWritten[i] = qfalse;
-	}
 	VK_DestroyTarget( &vk.probeColor );
 	VK_DestroyTarget( &vk.probeColorMS );
 	VK_DestroyTarget( &vk.probeDepth );

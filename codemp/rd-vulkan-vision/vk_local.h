@@ -218,8 +218,6 @@ typedef enum {
 									// of the level, RB_DepthPrepass); Vulkan only
 	VKP_SPARKS,						// no vertices: the sparks of v_gpuSparks from their ring on the device, six vertices
 									// each without indexes (shaders/sparks.vert, vk_sparks.cpp); Vulkan only
-	VKP_VOLUME,						// no vertices: one triangle over the view, the haze of v_volumetric (shaders/volume.vert
-									// and .frag, vk_post.cpp VK_Volumetric); Vulkan only
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -392,8 +390,6 @@ extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
 extern cvar_t	*v_softParticles;	// vk_post.cpp
 extern cvar_t	*v_litParticles;	// vk_post.cpp
-extern cvar_t	*v_autoExposure;	// vk_post.cpp
-extern cvar_t	*v_colorGrade;		// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -468,8 +464,6 @@ void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
 void		VK_SoftDepth( void );
-extern cvar_t	*v_volumetric;		// vk_post.cpp
-void		VK_Volumetric( uint32_t transform );
 
 // vk_sparks.cpp (v_gpuSparks)
 extern cvar_t	*v_gpuSparks;
@@ -643,16 +637,12 @@ void		VK_PaintPass( const float *paint, int count, const int *viewport );
 void		VK_SmaaPass( float threshold );
 // v_tonemap over the frame (vk_post.cpp VK_Tonemap), parm: exposure, curve, 2 ^ overbright bits. Not on the OpenGL ES
 // device. vk.color must not be begun before; it is begun with vk.depth after.
-void		VK_TonemapPass( const float *parm, const float *look );
+void		VK_TonemapPass( const float *parm );
 // v_ssr: vk.color and its depth into vk.ssrColor (shaders/ssrprep.frag), parm: the depth to the distance. No target is
 // begun before and after.
 void		VK_SsrPrepPass( const float *parm );
 // v_softParticles: the distance of the solid level into vk.softDepth (shaders/softdepth.frag), parm as VK_SsrPrepPass
 void		VK_SoftDepthPass( const float *parm );
-// v_autoExposure: the copy of the frame (vk.screen) into the cells of vk.lum (shaders/lumdown.frag), copied for the CPU
-#define VK_LUM_WIDTH		64
-#define VK_LUM_HEIGHT		36
-void		VK_LumPass( void );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

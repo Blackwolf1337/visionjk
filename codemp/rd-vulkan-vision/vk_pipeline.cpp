@@ -139,15 +139,6 @@ static const uint32_t vk_softDepthFrag[] =
 static const uint32_t vk_sparksVert[] =
 #include "shaders/sparks_vert.inc"
 ;
-static const uint32_t vk_volumeVert[] =
-#include "shaders/volume_vert.inc"
-;
-static const uint32_t vk_volumeFrag[] =
-#include "shaders/volume_frag.inc"
-;
-static const uint32_t vk_lumDownFrag[] =
-#include "shaders/lumdown_frag.inc"
-;
 
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -268,8 +259,7 @@ static void VK_CreateLayouts( void ) {
 	{
 		const VkDescriptorSetLayout smaaSets[3] = { vk.postSetLayout, vk.postSetLayout, vk.postSetLayout };
 
-		// (the tone map that shares the layout pushes twenty: its look, v_colorGrade)
-		push.size = sizeof( float ) * 20;
+		push.size = sizeof( float ) * 8;
 		layout.setLayoutCount = 3;
 		layout.pSetLayouts = smaaSets;
 		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.smaaPipelineLayout ) );
@@ -407,7 +397,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		tessellation.patchControlPoints = 3;
 	}
 
-	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID || program == VKP_SPARKS || program == VKP_VOLUME ) ) {
+	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID || program == VKP_SPARKS ) ) {
 		// nothing comes from a vertex buffer, see shaders/sprite.vert and liquid.vert
 	} else if ( !post && program == VKP_GRASS ) {
 		// vkGrassVertex_t, three vec4
@@ -766,8 +756,6 @@ void VK_InitPipelines( void ) {
 	vk.vertexShaders[VKP_DEPTH] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
 	vk.vertexShaders[VKP_SPARKS] = VK_CreateShader( vk_sparksVert, sizeof( vk_sparksVert ) );
 	vk.fragmentShaders[VKP_SPARKS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
-	vk.vertexShaders[VKP_VOLUME] = VK_CreateShader( vk_volumeVert, sizeof( vk_volumeVert ) );
-	vk.fragmentShaders[VKP_VOLUME] = VK_CreateShader( vk_volumeFrag, sizeof( vk_volumeFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );
@@ -825,9 +813,6 @@ void VK_InitPipelines( void ) {
 	// v_softParticles: the distance of the solid level, one float a pixel (13)
 	vk.softDepthShader = VK_CreateShader( vk_softDepthFrag, sizeof( vk_softDepthFrag ) );
 	vk.softDepthPipeline = VK_CreatePipeline( vk.postVertexShader, vk.softDepthShader, 0, 13, VKP_GENERIC );
-	// v_autoExposure: the frame into cells of the log of its brightness, one float each (13)
-	vk.lumShader = VK_CreateShader( vk_lumDownFrag, sizeof( vk_lumDownFrag ) );
-	vk.lumPipeline = VK_CreatePipeline( vk.postVertexShader, vk.lumShader, 0, 13, VKP_GENERIC );
 	// the saber blades in 3D, added onto the frame over the level (8: with the samples of the frame)
 	vk.saberShader = VK_CreateShader( vk_saberFrag, sizeof( vk_saberFrag ) );
 	vk.saberPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
@@ -880,7 +865,6 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.backdropPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.ssrPrepPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.softDepthPipeline, NULL );
-	qvkDestroyPipeline( vk.device, vk.lumPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPortalPipeline, NULL );
@@ -893,7 +877,6 @@ void VK_ShutdownPipelines( void ) {
 	}
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.softDepthShader, NULL );
-	qvkDestroyShaderModule( vk.device, vk.lumShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.backdropShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );

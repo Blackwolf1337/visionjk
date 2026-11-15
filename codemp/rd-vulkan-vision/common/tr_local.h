@@ -1147,7 +1147,6 @@ typedef struct trGlobals_s {
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
 	image_t					*ssrImage;			// VisionJK: the slot of the texture table that shows the picture of v_ssr (vk_post.cpp)
 	image_t					*softDepthImage;	// VisionJK: and the one that shows the distance of v_softParticles
-	image_t					*volumeGrid;		// VisionJK: the light of each cell of the light grid (v_volumetric), laid out as pbrGrid
 	image_t					*rtLightImage[2];	// VisionJK: slots of the texture table that show the masks of the shadows from the moving lights (vk_rt.cpp)
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
@@ -1732,8 +1731,6 @@ void R_CreateProbes( const char *mapName );
 void R_ProbeViews( const viewParms_t *main );
 void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori );
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
-// VisionJK: the colour look of a level from maps/<level>.look (vk_post.cpp, v_colorGrade), when it is loaded
-void VK_LoadLook( const char *mapName );
 // VisionJK: a burst of sparks the device simulates (vk_sparks.cpp, v_gpuSparks), ext.EmitSparks
 qboolean RE_EmitSparks( const sparkBurst_t *burst );
 

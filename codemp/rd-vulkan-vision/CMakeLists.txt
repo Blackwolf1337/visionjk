@@ -237,8 +237,6 @@ set(MPVulkanVisionRTShaders
 	rtskin.comp
 	sparks.comp
 	sparks.vert
-	volume.vert
-	volume.frag
 	smdepth.vert
 	rtlightmask.frag
 	smlights.frag
@@ -265,7 +263,6 @@ set(MPVulkanVisionVulkanShaders
 	tonemap.frag
 	ssrprep.frag
 	softdepth.frag
-	lumdown.frag
 	saber.frag
 	saberportal.frag
 	saberglow.frag

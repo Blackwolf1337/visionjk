@@ -8,18 +8,11 @@
 //      several lights on one wall glow out instead of clipping
 //   2: AgX (Sobotka; the polynomial fit of Wrensch 2023), the filmic curve of modern games, in linear light: richer
 //      highlights, less saturated whites, a little more contrast
-// push.parm: x the exposure (v_exposure times the one of v_autoExposure), y the curve, z 2 ^ overbright bits.
-// The look of the level after the curve (v_colorGrade, vk_post.cpp VK_LookNumbers), where look1.w is 1:
-//   look0: contrast (around a grey of 0.45), saturation, warmth (blue to orange, -1 to 1), tint (green to magenta)
-//   look1: lift of the shadows (rgb added where it is dark)
-//   look2: gain of the highlights (rgb times where it is bright)
+// push.parm: x the exposure (v_exposure), y the curve, z 2 ^ overbright bits.
 
 layout( push_constant ) uniform Push {
 	vec4	metrics;
 	vec4	parm;
-	vec4	look0;
-	vec4	look1;
-	vec4	look2;
 } push;
 
 layout( set = 0, binding = 0 ) uniform sampler2D u_frame;
@@ -55,20 +48,6 @@ vec3 Agx( vec3 color ) {
 	return pow( max( v, vec3( 0.0 ) ), vec3( 2.2 ) );
 }
 
-// the look of the level on a colour of the screen (0 to 1, as it will be shown)
-vec3 Look( vec3 c ) {
-	const vec3 luma = vec3( 0.2126, 0.7152, 0.0722 );
-	float warm = push.look0.z, tint = push.look0.w;
-	vec3 balance = vec3( 1.0 + 0.12 * warm, 1.0 - 0.10 * tint, 1.0 - 0.12 * warm ) * vec3( 1.0 + 0.05 * tint, 1.0, 1.0 + 0.05 * tint );
-
-	// (the balance keeps the brightness of grey)
-	c *= balance / dot( balance, luma );
-	c = push.look1.rgb + c * ( push.look2.rgb - push.look1.rgb );
-	c = 0.45 + ( c - 0.45 ) * push.look0.x;
-	c = mix( vec3( dot( c, luma ) ), c, push.look0.y );
-	return clamp( c, vec3( 0.0 ), vec3( 1.0 ) );
-}
-
 void main() {
 	vec3 color = texture( u_frame, v_texCoord ).rgb * push.parm.z * push.parm.x;
 
@@ -81,12 +60,8 @@ void main() {
 	if ( push.parm.y > 1.5 ) {
 		// (AgX puts the grey of a scene at 0.18 in linear light: the frame's 0.5 is about that)
 		color = pow( Agx( pow( color, vec3( 2.2 ) ) * 1.0 ), vec3( 1.0 / 2.2 ) );
-	} else if ( push.parm.y > 0.5 ) {
+	} else {
 		color = Shoulder( color );
-	}
-	// (curve 0: none, the pass is there for the exposure of v_autoExposure and the look alone)
-	if ( push.look1.w > 0.5 ) {
-		color = Look( clamp( color, vec3( 0.0 ), vec3( 1.0 ) ) );
 	}
 	o_color = vec4( color / push.parm.z, 1.0 );
 }

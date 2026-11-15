@@ -41,11 +41,6 @@ cvar_t	*v_exposure;
 cvar_t	*v_ssr;
 cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
-cvar_t	*v_autoExposure;
-cvar_t	*v_colorGrade;
-cvar_t	*v_volumetric;
-static cvar_t	*v_lookHaze;
-static cvar_t	*v_lookContrast, *v_lookSaturation, *v_lookWarmth, *v_lookTint, *v_lookShadows, *v_lookHighlights;
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
@@ -64,230 +59,8 @@ void VK_InitPost( void ) {
 		"Smoke, dust and fire of the effects fade out where they meet walls and the floor and right in front of the eye, instead of cutting into them with a hard edge. Vulkan only. 0: off. Above 1: the units over which they fade (1: 10)" );
 	v_litParticles = ri.Cvar_Get( "v_litParticles", "1", CVAR_ARCHIVE_ND,
 		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
-	v_autoExposure = ri.Cvar_Get( "v_autoExposure", "1", CVAR_ARCHIVE_ND,
-		"The eye adapts: in a dark corridor the picture brightens a little, looking into a bright yard it darkens, over a moment. 1: up to one stop either way, 2: up to two. Vulkan only. 0: off" );
-	v_colorGrade = ri.Cvar_Get( "v_colorGrade", "1", CVAR_ARCHIVE_ND,
-		"The colour look a level comes with (maps/<level>.look: contrast, saturation, warmth, tint of shadows and highlights), made in the Material Lab. Vulkan only. 0: the colours as they are" );
-	// the look of the level now: set from its file when it is loaded (VK_LoadLook), changed by the Material Lab
-	v_lookContrast = ri.Cvar_Get( "v_lookContrast", "1", CVAR_TEMP, "The look of this level (v_colorGrade): contrast, 1 as it is" );
-	v_lookSaturation = ri.Cvar_Get( "v_lookSaturation", "1", CVAR_TEMP, "The look of this level (v_colorGrade): saturation, 1 as it is, 0 grey" );
-	v_lookWarmth = ri.Cvar_Get( "v_lookWarmth", "0", CVAR_TEMP, "The look of this level (v_colorGrade): -1 cold (blue) to 1 warm (orange)" );
-	v_lookTint = ri.Cvar_Get( "v_lookTint", "0", CVAR_TEMP, "The look of this level (v_colorGrade): -1 green to 1 magenta" );
-	v_lookShadows = ri.Cvar_Get( "v_lookShadows", "0 0 0", CVAR_TEMP, "The look of this level (v_colorGrade): red green blue added to the shadows, 0 0 0 as they are" );
-	v_lookHighlights = ri.Cvar_Get( "v_lookHighlights", "1 1 1", CVAR_TEMP, "The look of this level (v_colorGrade): red green blue the highlights are multiplied with, 1 1 1 as they are" );
-	v_volumetric = ri.Cvar_Get( "v_volumetric", "0.25", CVAR_ARCHIVE_ND,
-		"Haze in the air, lit by the light that reaches it: soft beams where the sun or a lamp shines through a window or a door, a glow round sabers and shots, the far end of a hall fading. 0 to 1: how thick. A level's look can make it thicker or thinner. Vulkan only. 0: off" );
-	v_lookHaze = ri.Cvar_Get( "v_lookHaze", "1", CVAR_TEMP, "The look of this level: how thick its haze is, times v_volumetric, 1 as it is" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
-}
-
-static float	vk_exposureStops;		// v_autoExposure: where the adaptation is, in stops (VK_AutoExposure)
-
-/*
-===============
-VK_LoadLook
-
-v_colorGrade: the look of the level from maps/<level>.look, lines of a key and its value(s): contrast, saturation,
-warmth, tint (one number each), shadows, highlights (red green blue). What the file does not name, or a level without
-one, is as the game is. Into the cvars of the look (v_look*), which the tone map reads every frame.
-===============
-*/
-void VK_LoadLook( const char *mapName ) {
-	char		path[MAX_QPATH];
-	char		*text = NULL;
-	const char	*p, *token;
-
-	// (the eye of the new level starts unadapted)
-	vk_exposureStops = 0.0f;
-	if ( !v_lookContrast ) {
-		return;
-	}
-	ri.Cvar_Set( "v_lookContrast", "1" );
-	ri.Cvar_Set( "v_lookSaturation", "1" );
-	ri.Cvar_Set( "v_lookWarmth", "0" );
-	ri.Cvar_Set( "v_lookTint", "0" );
-	ri.Cvar_Set( "v_lookShadows", "0 0 0" );
-	ri.Cvar_Set( "v_lookHighlights", "1 1 1" );
-	ri.Cvar_Set( "v_lookHaze", "1" );
-	COM_StripExtension( mapName, path, sizeof( path ) );
-	Q_strcat( path, sizeof( path ), ".look" );
-	if ( ri.FS_ReadFile( path, (void **)&text ) <= 0 || !text ) {
-		return;
-	}
-	p = text;
-	while ( ( token = COM_ParseExt( &p, qtrue ) ) != NULL && token[0] ) {
-		char key[32], value[64] = "";
-
-		Q_strncpyz( key, token, sizeof( key ) );
-		// the rest of the line
-		for ( int n = 0; n < 3; n++ ) {
-			token = COM_ParseExt( &p, qfalse );
-			if ( !token[0] ) {
-				break;
-			}
-			if ( n ) {
-				Q_strcat( value, sizeof( value ), " " );
-			}
-			Q_strcat( value, sizeof( value ), token );
-		}
-		if ( !Q_stricmp( key, "contrast" ) ) {
-			ri.Cvar_Set( "v_lookContrast", value );
-		} else if ( !Q_stricmp( key, "saturation" ) ) {
-			ri.Cvar_Set( "v_lookSaturation", value );
-		} else if ( !Q_stricmp( key, "warmth" ) ) {
-			ri.Cvar_Set( "v_lookWarmth", value );
-		} else if ( !Q_stricmp( key, "tint" ) ) {
-			ri.Cvar_Set( "v_lookTint", value );
-		} else if ( !Q_stricmp( key, "shadows" ) ) {
-			ri.Cvar_Set( "v_lookShadows", value );
-		} else if ( !Q_stricmp( key, "highlights" ) ) {
-			ri.Cvar_Set( "v_lookHighlights", value );
-		} else if ( !Q_stricmp( key, "haze" ) ) {
-			ri.Cvar_Set( "v_lookHaze", value );
-		}
-	}
-	ri.FS_FreeFile( text );
-}
-
-// the twelve numbers of the look for shaders/tonemap.frag (look0 to look2), look1.w 0 where it changes nothing
-static void VK_LookNumbers( float *look ) {
-	vec3_t lift = { 0.0f, 0.0f, 0.0f }, gain = { 1.0f, 1.0f, 1.0f };
-
-	sscanf( v_lookShadows->string, "%f %f %f", &lift[0], &lift[1], &lift[2] );
-	sscanf( v_lookHighlights->string, "%f %f %f", &gain[0], &gain[1], &gain[2] );
-	look[0] = Com_Clamp( 0.5f, 2.0f, v_lookContrast->value );
-	look[1] = Com_Clamp( 0.0f, 2.0f, v_lookSaturation->value );
-	look[2] = Com_Clamp( -1.0f, 1.0f, v_lookWarmth->value );
-	look[3] = Com_Clamp( -1.0f, 1.0f, v_lookTint->value );
-	for ( int c = 0; c < 3; c++ ) {
-		look[4 + c] = Com_Clamp( -0.2f, 0.2f, lift[c] );
-		look[8 + c] = Com_Clamp( 0.5f, 1.5f, gain[c] );
-	}
-	look[11] = 0.0f;
-	look[7] = ( v_colorGrade->integer && ( look[0] != 1.0f || look[1] != 1.0f || look[2] != 0.0f || look[3] != 0.0f
-		|| !VectorCompare( look + 4, vec3_origin ) || look[8] != 1.0f || look[9] != 1.0f || look[10] != 1.0f ) ) ? 1.0f : 0.0f;
-}
-
-/*
-===============
-VK_AutoExposure
-
-v_autoExposure: what the exposure of the tone map is multiplied with now. The cells of the brightness this frame in
-flight copied when it was drawn last (VK_LumPass, a few frames ago: its fence has been waited for), the middle of the
-view weighed most, against the brightness of a lit room of the game (0.16, measured on ffa3: 0.125 in its halls,
-0.18 in its yard), so such a room stays as it is: the exposure goes half the way toward it, at most v_autoExposure
-stops (one by default), brighter over a second and a half and darker over half a second, as
-an eye adapts. A new level or the switch turned on starts from 1.
-===============
-*/
-static float VK_AutoExposure( void ) {
-	static int		lastTime;
-	float			&stops = vk_exposureStops;
-	const int		now = ri.Milliseconds();
-	const float		range = Com_Clamp( 0.0f, 3.0f, v_autoExposure->value );
-	float			sum = 0.0f, weights = 0.0f;
-
-	if ( !vk.lumRead[vk.frameIndex].mapped || range <= 0.0f ) {
-		stops = 0.0f;
-		return 1.0f;
-	}
-	if ( vk.lumWritten[vk.frameIndex] ) {
-		const float *cells = (const float *)vk.lumRead[vk.frameIndex].mapped;
-
-		for ( int y = 0; y < VK_LUM_HEIGHT; y++ ) {
-			for ( int x = 0; x < VK_LUM_WIDTH; x++ ) {
-				const float dx = ( x + 0.5f ) / VK_LUM_WIDTH * 2.0f - 1.0f, dy = ( y + 0.5f ) / VK_LUM_HEIGHT * 2.0f - 1.0f;
-				const float w = Q_max( 0.1f, 1.0f - 0.7f * ( dx * dx + dy * dy ) );
-				const float v = cells[y * VK_LUM_WIDTH + x];
-
-				if ( v == v ) {
-					sum += w * v;
-					weights += w;
-				}
-			}
-		}
-	}
-	if ( weights > 0.0f ) {
-		const float want = Com_Clamp( -range, range, 0.5f * ( log2f( 0.16f ) - sum / weights ) );
-		const float dt = lastTime ? Com_Clamp( 0.0f, 0.25f, ( now - lastTime ) * 0.001f ) : 0.0f;
-		const float tau = ( want > stops ) ? 1.5f : 0.5f;
-
-		stops += ( want - stops ) * ( 1.0f - expf( -dt / tau ) );
-	}
-	lastTime = now;
-	return powf( 2.0f, stops );
-}
-
-/*
-===============
-VK_Volumetric
-
-v_volumetric, for the view of the level, over its solid surfaces once their distance is in vk.softDepth (vk_backend.cpp
-RB_DrawWet): the haze of shaders/volume.frag over the whole view, the frame times what of it still shows plus the
-light gathered. transform: the one of the level. The light of the cells from tr.volumeGrid, the moving lights of the
-scene in rows of the frame. About 0.3 ms at 1080p with 20 steps.
-===============
-*/
-void VK_Volumetric( uint32_t transform ) {
-#ifndef RD_VISION_GLES
-	const float	density = Com_Clamp( 0.0f, 1.0f, v_volumetric->value ) * Com_Clamp( 0.0f, 4.0f, v_lookHaze->value ) * 0.0012f;
-	float		rows[VK_WET_HEADER][4];
-	int			viewport[4];
-	vkDraw_t	draw;
-
-	if ( !vk.frame || density <= 0.0f || !vk.softReady || !tr.volumeGrid || !tr.world || !tr.softDepthImage ) {
-		return;
-	}
-	VK_ViewRows( rows, viewport );
-	memset( &draw, 0, sizeof( draw ) );
-	draw.transform = transform;
-	draw.tex4 = tr.volumeGrid->texnum;
-	draw.tex5 = tr.softDepthImage->texnum;
-	VectorCopy( tr.world->lightGridOrigin, draw.grid0 );
-	draw.grid0[3] = (float)tr.pbrGridTiles;
-	VectorCopy( tr.world->lightGridInverseSize, draw.grid1 );
-	draw.grid1[3] = (float)tr.volumeGrid->height;
-	for ( int i = 0; i < 3; i++ ) {
-		draw.grid2[i] = (float)tr.world->lightGridBounds[i];
-	}
-	draw.grid2[3] = (float)tr.volumeGrid->width;
-	// forward, left, up with the tangents of the view (VK_ViewRows), the density and how it thins up from the bottom
-	// of the light grid, how far, the steps
-	VectorCopy( rows[5], draw.texMat0 );		draw.texMat0[3] = rows[4][3];
-	VectorCopy( rows[6], draw.texMat0 + 4 );	draw.texMat0[7] = rows[5][3];
-	VectorCopy( rows[7], draw.texMat1 );		draw.texMat1[3] = density;
-	draw.texMat1[4] = 1.0f / 700.0f;
-	draw.texMat1[5] = tr.world->lightGridOrigin[2] + 64.0f;
-	draw.texMat1[6] = 2400.0f;
-	draw.texMat1[7] = 20.0f;
-	VectorSet4( draw.fogColor, 1.0f, 0.96f, 0.9f, 1.0f );
-	VectorCopy4( rows[8], draw.parm );
-	// the moving lights: origin and reach, colour
-	if ( backEnd.refdef.num_dlights ) {
-		uint32_t first;
-		const int count = Q_min( backEnd.refdef.num_dlights, 32 );
-		float *out = VK_FrameRows( count * 2, &first );
-
-		if ( out ) {
-			for ( int i = 0; i < count; i++, out += 8 ) {
-				const dlight_t *dl = &backEnd.refdef.dlights[i];
-
-				VectorCopy( dl->origin, out );
-				out[3] = Q_max( dl->radius, 1.0f );
-				VectorScale( dl->color, Com_Clamp( 0.0f, 3.0f, v_dlightScale->value ), out + 4 );
-				out[7] = 0.0f;
-			}
-			draw.decals = first;
-			draw.numDecals = (uint32_t)count;
-		}
-	}
-	vk.drawVertices = 3;
-	VK_DrawTess( &draw, VKP_VOLUME, GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_SRC_ALPHA, VKC_NONE, qfalse );
-	vk.drawVertices = 0;
-#else
-	(void)transform;
-#endif
 }
 
 /*
@@ -544,25 +317,16 @@ changes the colours too and runs on either.
 void VK_Tonemap( void ) {
 #ifndef RD_VISION_GLES
 	const int curve = Com_Clampi( 0, 2, v_tonemap->integer );
-	float parm[4];
+	float parm[3];
 
-	float look[12];
-
-	if ( !vk.frame ) {
+	if ( !vk.frame || !curve || ( curve == 1 && vk.color.format == VK_FORMAT_R8G8B8A8_UNORM ) ) {
 		return;
 	}
-	// (the curve wants light above white, so the frame of v_hdr; the exposure and the look work on any frame)
-	VK_LookNumbers( look );
-	const int shaped = ( curve == 1 && vk.color.format == VK_FORMAT_R8G8B8A8_UNORM ) ? 0 : curve;
-	if ( !shaped && v_autoExposure->value <= 0.0f && look[7] == 0.0f ) {
-		return;
-	}
-	parm[0] = Com_Clamp( 0.05f, 16.0f, v_exposure->value ) * VK_AutoExposure();
-	parm[1] = (float)shaped;
+	parm[0] = Com_Clamp( 0.05f, 16.0f, v_exposure->value );
+	parm[1] = (float)curve;
 	parm[2] = (float)( 1 << tr.overbrightBits );
-	parm[3] = v_autoExposure->value > 0.0f ? 1.0f : 0.0f;
 	VK_EndTarget();
-	VK_TonemapPass( parm, look );
+	VK_TonemapPass( parm );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();

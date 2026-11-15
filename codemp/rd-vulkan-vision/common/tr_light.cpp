@@ -323,7 +323,6 @@ void R_CreatePbrGrid( const char *mapName ) {
 	char			name[MAX_QPATH];
 
 	tr.pbrGrid = NULL;
-	tr.volumeGrid = NULL;
 	tr.pbrGridTiles = 0;
 	if ( !w || !w->lightGridData || !w->lightGridArray ) {
 		return;
@@ -342,9 +341,6 @@ void R_CreatePbrGrid( const char *mapName ) {
 	}
 
 	pic = (byte *)Z_Malloc( width * height * 4, TAG_TEMP_WORKSPACE, qtrue );
-	// VisionJK: and the light of each cell itself for the haze of v_volumetric (vk_post.cpp VK_Volumetric): what
-	// reaches the air there, the directed light and half the ambient, 0 to 255 (a bright cell of the game is about 200)
-	byte *haze = (byte *)Z_Malloc( width * height * 4, TAG_TEMP_WORKSPACE, qtrue );
 	for ( int z = 0; z < w->lightGridBounds[2]; z++ ) {
 		for ( int y = 0; y < w->lightGridBounds[1]; y++ ) {
 			for ( int x = 0; x < w->lightGridBounds[0]; x++ ) {
@@ -384,11 +380,6 @@ void R_CreatePbrGrid( const char *mapName ) {
 					out[c] = (byte)Com_Clamp( 0.0f, 255.0f, ( dir[c] * share * 0.5f + 0.5f ) * 255.0f + 0.5f );
 				}
 				out[3] = 255;
-				out = haze + ( out - pic );
-				for ( int c = 0; c < 3; c++ ) {
-					out[c] = (byte)Com_Clamp( 0.0f, 255.0f, directed[c] + 0.5f * ambient[c] + 0.5f );
-				}
-				out[3] = 255;
 			}
 		}
 	}
@@ -396,10 +387,7 @@ void R_CreatePbrGrid( const char *mapName ) {
 	R_IssuePendingRenderCommands();
 	Com_sprintf( name, sizeof( name ), "*%s/pbrgrid", mapName );
 	tr.pbrGrid = R_CreateImage( name, pic, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
-	Com_sprintf( name, sizeof( name ), "*%s/hazegrid", mapName );
-	tr.volumeGrid = R_CreateImage( name, haze, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
 	tr.pbrGridTiles = tiles;
-	Z_Free( haze );
 	Z_Free( pic );
 }
 
