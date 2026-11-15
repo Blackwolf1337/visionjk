@@ -6291,6 +6291,15 @@ void PM_FinishWeaponChange( void ) {
 		weapon = WP_NONE;
 	}
 
+	// A change only starts towards a weapon that is owned (PM_BeginWeaponChange), so a cmd that names
+	// no weapon or one not owned by the time the old one is down did not come from the selection of a
+	// stock client: the old h_weaponbug cheat starts a change and sends WP_NONE one frame later to end
+	// up holding nothing. Keep the old weapon while it is still owned.
+	if ( weapon == WP_NONE && pm->ps->weapon > WP_NONE && pm->ps->weapon < WP_NUM_WEAPONS
+		&& (pm->ps->stats[STAT_WEAPONS] & ( 1 << pm->ps->weapon )) ) {
+		weapon = pm->ps->weapon;
+	}
+
 	if (weapon == WP_SABER)
 	{
 		PM_SetSaberMove(LS_DRAW);
