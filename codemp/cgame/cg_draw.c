@@ -6900,10 +6900,6 @@ static void CG_DrawSpectator(void)
 CG_DrawVote
 =================
 */
-static float CG_VoteWidth( const char *text, void *arg ) {
-	return (float)CG_Text_Width( text, *(const float *)arg, SKIN_FONT_SANS );
-}
-
 /*
 =================
 CG_DrawVotePanel
@@ -6912,28 +6908,40 @@ A vote as a panel of the new look, at the left edge: what it is about, how it st
 that is said, and a bar that empties with the time it still runs.
 =================
 */
-static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no, const char *hint ) {
-	static const vec4_t	fill = { 0.035f, 0.07f, 0.12f, 0.82f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f }, track = { 1.0f, 1.0f, 1.0f, 0.08f };
-	static vec4_t		accent = { 0.43f, 0.83f, 1.0f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f }, bright = { 0.86f, 0.92f, 0.97f, 1.0f };
-	const float			x = 6.0f, most = 300.0f, h = ( hint && hint[0] ) ? 50.0f : 41.0f;
-	float				headScale = 0.46f, askScale = 0.6f, countScale = 0.5f, hintScale = 0.42f, w;
-	char				head[64], ask[160], counts[96], say[160];
+static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no,
+	const char *hint, const float *tint ) {
+	const float	x = 6.0f, w = 170.0f, box = ( w - 18.0f - 4.0f ) * 0.5f;
+	const char	*yesKey = CG_KeyLabel( trap->Key_GetKey( "vote yes" ) ), *noKey = CG_KeyLabel( trap->Key_GetKey( "vote no" ) );
+	// (the hint of the game, "or press ESC then click Vote", only when no key is bound to a vote)
+	const char	*say = ( hint && hint[0] && ( !yesKey || !noKey ) ) ? hint : NULL;
+	const float	h = say ? 60.0f : 50.0f;
+	vec4_t		fill, edge;
+	int			i;
 
-	Com_sprintf( head, sizeof( head ), "%s   %i s", title, sec );
-	Q_strupr( head );
-	Com_sprintf( counts, sizeof( counts ), "%s %i      %s %i", yesWord, yes, noWord, no );
-	CG_TextCut( question, most, CG_VoteWidth, &askScale, ask, sizeof( ask ) );
-	CG_TextCut( ( hint && hint[0] ) ? hint : "", most, CG_VoteWidth, &hintScale, say, sizeof( say ) );
-	w = Q_max( Q_max( CG_VoteWidth( head, &headScale ), CG_VoteWidth( ask, &askScale ) ), Q_max( CG_VoteWidth( counts, &countScale ), CG_VoteWidth( say, &hintScale ) ) ) + 18.0f;
+	Hud_Glass( x, y, w, h, 6.0f, 1.0f, tint, qfalse );
+	Hud_Caps( x + 9.0f, y + 7.0f, tint ? tint : hudAccent, 1.0f, HUD_LEFT, title );
+	Hud_Caps( x + w - 9.0f, y + 7.0f, hudDim, 1.0f, HUD_RIGHT, va( "%i s", sec ) );
+	Hud_TextMid( x + 9.0f, y + 17.0f, HUD_BODY, hudBright, 1.0f, HUD_LEFT, question, w - 18.0f );
+	// the two answers: their key, their word, how many said so
+	for ( i = 0; i < 2; i++ ) {
+		const float	bx = x + 9.0f + i * ( box + 4.0f ), by = y + 24.0f;
+		const float	*rgb = i ? hudRed : hudGreen;
+		const char	*key = i ? noKey : yesKey;
+		float		tx = bx + 5.0f;
 
-	Skin_Panel( x, y, w, h, 5.0f, fill, edge );
-	CG_Text_Paint( x + 9.0f, y + 4.0f, headScale, accent, head, 0, 0, 0, SKIN_FONT_SANS );
-	CG_Text_Paint( x + 9.0f, y + 13.0f, askScale, colorWhite, ask, 0, 0, 0, SKIN_FONT_SANS );
-	CG_Text_Paint( x + 9.0f, y + 25.5f, countScale, bright, counts, 0, 0, 0, SKIN_FONT_SANS );
-	if ( say[0] ) {
-		CG_Text_Paint( x + 9.0f, y + 35.5f, hintScale, dim, say, 0, 0, 0, SKIN_FONT_SANS );
+		Hud_Color( fill, rgb, 0.13f );
+		Hud_Color( edge, rgb, 0.55f );
+		Skin_Panel( bx, by, box, 17.0f, 3.0f, fill, edge );
+		if ( key ) {
+			tx += Hud_Key( tx, by + 8.5f, key, 1.0f, HUD_LEFT ) + 4.0f;
+		}
+		Hud_TextMid( tx, by + 8.5f, HUD_SMALL, hudText, 1.0f, HUD_LEFT, i ? noWord : yesWord, box - ( tx - bx ) - 16.0f );
+		Hud_TextMid( bx + box - 5.0f, by + 8.5f, HUD_BODY, hudBright, 1.0f, HUD_RIGHT, va( "%i", i ? no : yes ), 0.0f );
 	}
-	Skin_Bar( x + 9.0f, y + h - 4.5f, w - 18.0f, 1.5f, Com_Clamp( 0.0f, 1.0f, sec * 1000.0f / VOTE_TIME ), accent, track );
+	if ( say ) {
+		Hud_TextMid( x + 9.0f, y + 49.0f, HUD_CAPS, hudDim, 1.0f, HUD_LEFT, say, w - 18.0f );
+	}
+	Hud_Bar( x + 6.0f, y + h - 3.0f, w - 12.0f, 1.5f, Com_Clamp( 0.0f, 1.0f, sec * 1000.0f / VOTE_TIME ), tint ? tint : hudAccent, 1.0f, qfalse );
 	trap->R_SetColor( NULL );
 }
 
@@ -7012,7 +7020,7 @@ static void CG_DrawVote(void) {
 
 		Q_strncpyz( ask, ( sParm && sParm[0] ) ? va( "%s %s", sCmd, sParm ) : sCmd, sizeof( ask ) );
 		CG_DrawVotePanel( 56.0f, sVote, ask, sec, sYes, cgs.voteYes, sNo, cgs.voteNo,
-			( cgs.clientinfo[cg.clientNum].team != TEAM_SPECTATOR ) ? CG_GetStringEdString( "MP_INGAME", "OR_PRESS_ESC_THEN_CLICK_VOTE" ) : "" );
+			( cgs.clientinfo[cg.clientNum].team != TEAM_SPECTATOR ) ? CG_GetStringEdString( "MP_INGAME", "OR_PRESS_ESC_THEN_CLICK_VOTE" ) : "", NULL );
 		return;
 	}
 	if (sParm && sParm[0])
@@ -7082,6 +7090,18 @@ static void CG_DrawTeamVote(void) {
 
 			voteIndex = atoi(voteIndexStr);
 
+			if ( CG_HudNewLook() )
+			{
+				// VisionJK: the panel of the vote, under it, in the colour of the team
+				char yesWord[20], noWord[20];
+
+				trap->SE_GetStringTextString( "MENUS_YES", yesWord, sizeof( yesWord ) );
+				trap->SE_GetStringTextString( "MENUS_NO", noWord, sizeof( noWord ) );
+				CG_DrawVotePanel( cgs.voteTime ? 112.0f : 56.0f, CG_VisionText( "Team vote" ),
+					CG_VisionTextWith( "Make %s the team leader", cgs.clientinfo[voteIndex].name ), sec, yesWord,
+					cgs.teamVoteYes[cs_offset], noWord, cgs.teamVoteNo[cs_offset], NULL, Hud_TeamColor( cgs.clientinfo[cg.clientNum].team ) );
+				return;
+			}
 			s = va("TEAMVOTE(%i):(Make %s the new team leader) yes:%i no:%i", sec, cgs.clientinfo[voteIndex].name,
 									cgs.teamVoteYes[cs_offset], cgs.teamVoteNo[cs_offset] );
 		}
@@ -7095,6 +7115,16 @@ static void CG_DrawTeamVote(void) {
 	{
 		s = va("TEAMVOTE(%i):%s yes:%i no:%i", sec, cgs.teamVoteString[cs_offset],
 								cgs.teamVoteYes[cs_offset], cgs.teamVoteNo[cs_offset] );
+	}
+	if ( CG_HudNewLook() )
+	{
+		char yesWord[20], noWord[20];
+
+		trap->SE_GetStringTextString( "MENUS_YES", yesWord, sizeof( yesWord ) );
+		trap->SE_GetStringTextString( "MENUS_NO", noWord, sizeof( noWord ) );
+		CG_DrawVotePanel( cgs.voteTime ? 112.0f : 56.0f, CG_VisionText( "Team vote" ), cgs.teamVoteString[cs_offset], sec, yesWord,
+			cgs.teamVoteYes[cs_offset], noWord, cgs.teamVoteNo[cs_offset], NULL, Hud_TeamColor( cgs.clientinfo[cg.clientNum].team ) );
+		return;
 	}
 	CG_DrawSmallString( 4, 90, s, 1.0F );
 }

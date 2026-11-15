@@ -6,6 +6,9 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Team vote': ("Vote d'équipe", 'Votación de equipo'),
+    'Make %s the team leader': ("Nommer %s chef d'équipe", 'Hacer a %s líder del equipo'),
+    'u/s': ('u/s', 'u/s'),
     'Hacking': ('Piratage', 'Hackeo'),
     'Locked': ('Verrouillé', 'Fijado'),
     'Locking %i %%': ('Verrouillage %i %%', 'Fijando %i %%'),

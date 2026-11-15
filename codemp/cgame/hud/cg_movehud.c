@@ -34,6 +34,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "game/bg/bg_local.h"
 #include "ui/menudef.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
+#include "cg_hudkit.h"
 
 static struct {
 	qboolean	wasOnGround;
@@ -275,6 +278,30 @@ static void MoveHud_Speedometer( const playerState_t *ps ) {
 	} else if ( v > ps->speed * 1.05f ) {
 		VectorSet( color, 0.4f, 1.0f, 0.5f );
 	}
+	if ( CG_HudNewLook() ) {
+		// VisionJK: a glass card with the speed, a bar towards the goal (tay_startGoal, else twice the speed of
+		// running) and the speeds of the last jumps under it
+		const float	goal = tay_startGoal.integer > 0 ? tay_startGoal.value : ps->speed * 2.0f;
+		const float	w = 70.0f * size, h = ( tay_speedometerJumps.integer > 0 && moveHud.numJumps ? 32.0f : 24.0f ) * size;
+		const float	cx = x - w * 0.5f;
+		float		nw;
+
+		Hud_Glass( cx, y, w, h, 4.0f, 1.0f, NULL, qtrue );
+		nw = Hud_TextWidth( text, HUD_LARGE * size );
+		Hud_TextMid( cx + 6.0f * size, y + 9.0f * size, HUD_LARGE * size, color, 1.0f, HUD_LEFT, text, 0.0f );
+		Hud_Caps( cx + 9.0f * size + nw, y + 10.0f * size, hudDim, 1.0f, HUD_LEFT, CG_VisionText( "u/s" ) );
+		Hud_Bar( cx + 6.0f * size, y + 18.0f * size, w - 12.0f * size, 2.0f * size, goal > 0.0f ? v / goal : 0.0f, color, 1.0f, qfalse );
+		if ( tay_speedometerJumps.integer > 0 && moveHud.numJumps ) {
+			jumps[0] = '\0';
+			for ( i = 0; i < moveHud.numJumps && i < tay_speedometerJumps.integer && i < 4; i++ ) {
+				const char *mark = ( tay_jumpGoal.integer > 0 && moveHud.jumps[i] >= tay_jumpGoal.integer ) ? S_COLOR_YELLOW : S_COLOR_WHITE;
+
+				Q_strcat( jumps, sizeof( jumps ), va( i ? "  %s%i" : "%s%i", mark, moveHud.jumps[i] ) );
+			}
+			Hud_TextMid( x, y + 26.5f * size, HUD_CAPS * 1.1f * size, hudText, 1.0f, HUD_CENTER, jumps, w - 8.0f );
+		}
+		return;
+	}
 	CG_Text_Paint( x - CG_Text_Width( text, 0.8f * size, FONT_SMALL ) * 0.5f, y, 0.8f * size, color, text, 0, 0,
 		ITEM_TEXTSTYLE_SHADOWED, FONT_SMALL );
 
@@ -301,6 +328,14 @@ static void MoveHud_Key( float x, float y, float w, float h, const char *label, 
 	vec4_t			text;
 
 	VectorCopy4( held ? litText : dimText, text );
+	if ( CG_HudNewLook() ) {
+		// VisionJK: rounded glass, the accent while held
+		const vec4_t glassEdge = { 0.43f, 0.83f, 1.0f, 0.3f };
+
+		Skin_Panel( x, y, w, h, h * 0.18f, held ? hudAccent : hudSoftFill, held ? hudAccent : glassEdge );
+		Hud_TextMid( x + w * 0.5f, y + h * 0.5f, HUD_BODY * h / 16.0f, held ? text : hudDim, 1.0f, HUD_CENTER, label, 0.0f );
+		return;
+	}
 	CG_FillRect( x, y, w, h, held ? litFill : dimFill );
 	CG_DrawRect( x, y, w, h, 1.0f, edge );
 	CG_Text_Paint( x + ( w - CG_Text_Width( label, scale, FONT_SMALL ) ) * 0.5f, y + ( h - CG_Text_Height( label, scale, FONT_SMALL ) ) * 0.5f - 1.0f,

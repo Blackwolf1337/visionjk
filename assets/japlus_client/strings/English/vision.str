@@ -1862,6 +1862,15 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           TEAM_VOTE
+LANG_ENGLISH        "Team vote"
+
+REFERENCE           MAKE_S_THE_TEAM_LEADER
+LANG_ENGLISH        "Make %s the team leader"
+
+REFERENCE           U_S
+LANG_ENGLISH        "u/s"
+
 REFERENCE           HACKING
 LANG_ENGLISH        "Hacking"
 

@@ -2481,6 +2481,18 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           TEAM_VOTE
+LANG_ENGLISH        "Team vote"
+LANG_FRENCH         "Vote d'équipe"
+
+REFERENCE           MAKE_S_THE_TEAM_LEADER
+LANG_ENGLISH        "Make %s the team leader"
+LANG_FRENCH         "Nommer %s chef d'équipe"
+
+REFERENCE           U_S
+LANG_ENGLISH        "u/s"
+LANG_FRENCH         "#same"
+
 REFERENCE           HACKING
 LANG_ENGLISH        "Hacking"
 LANG_FRENCH         "Piratage"

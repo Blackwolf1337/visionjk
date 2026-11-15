@@ -786,6 +786,9 @@ TR = {
 # here), so none of these may need a number behind its key.
 CGAME = {
     # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Team vote': 'Teamabstimmung',
+    'Make %s the team leader': '%s zum Teamleiter machen',
+    'u/s': 'E/s',
     'Hacking': 'Hacken',
     'Locked': 'Erfasst',
     'Locking %i %%': 'Erfasse %i %%',

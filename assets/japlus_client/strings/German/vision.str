@@ -2481,6 +2481,18 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           TEAM_VOTE
+LANG_ENGLISH        "Team vote"
+LANG_GERMAN         "Teamabstimmung"
+
+REFERENCE           MAKE_S_THE_TEAM_LEADER
+LANG_ENGLISH        "Make %s the team leader"
+LANG_GERMAN         "%s zum Teamleiter machen"
+
+REFERENCE           U_S
+LANG_ENGLISH        "u/s"
+LANG_GERMAN         "E/s"
+
 REFERENCE           HACKING
 LANG_ENGLISH        "Hacking"
 LANG_GERMAN         "Hacken"
