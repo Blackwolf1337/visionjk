@@ -123,6 +123,20 @@ Both are in Setup, HUD, under Menus and HUD.
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
+- The selection of a weapon, of an inventory item and of a force power (`v_hud 1`, Vulkan renderer
+  rd-vulkan-vision) is a carousel of frosted glass cards at the bottom of the screen: the cards stand on a ring,
+  the selected one in front and the biggest, and the ring turns the shortest way to a new selection
+  (`CG_Select3D` in `cgame/hud/cg_select3d.c`, called from `CG_DrawWeaponSelect`, `CG_DrawInvenSelect` and
+  `CG_DrawForceSelect`). `v_hud 0` keeps the icon rows of the game. It has no cvar or Setup row of its own.
+  Weapons and items show their 3D model, the one in front turning, with the name and the ammo under it. A weapon
+  without ammo is darkened. A force power (selected with `forcenext` and `forceprev`) has no model: its picture
+  stands on a disc that turns. The card has the colour of the side of the power (blue for light, red for dark,
+  pale for neutral), glows while the power runs, and shows the rank as up to three pips and under the name what
+  the power costs at that rank. It is darkened while the force is too low for it. The server sends the client
+  only the ranks of jump and seeing. For the other powers the client knows the rank by itself: the class in a
+  siege, rank 3 for a held holocron, otherwise the `forcepowers` setting of the player. A server that lowered
+  the ranks is not noticed. When following another player there is no rank, so a card has no pips, no cost and
+  is not darkened. Only the client changes: the selection is sent as before, so it works on every server.
 - Setup has seven pages in place of eleven tabs, by topic: Video, Sound (with the 3D sound and the voice chat),
   Game (with the language), HUD, Chat & Social, Network and Mods. See "The Setup screen" below. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
