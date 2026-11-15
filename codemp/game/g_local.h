@@ -37,6 +37,7 @@ typedef struct gclient_s gclient_t;
 
 #include "game/japlus/g_japlus.h"
 #include "game/unlagged/g_unlagged.h"
+#include "game/anticheat/g_anticheat.h"
 
 //npc stuff
 #include "game/npc/b_public.h"
@@ -514,6 +515,7 @@ typedef struct clientPersistant_s {
 	char		guid[33];
 
 	jpClient_t	jp;					// JA+ additions
+	anticheat_t	anticheat;		// moves no hand makes, kept over respawns (anticheat/g_anticheat.c)
 } clientPersistant_t;
 
 typedef struct renderInfo_s
