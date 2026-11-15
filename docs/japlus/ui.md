@@ -144,6 +144,45 @@ Both are in Setup, HUD, under Menus and HUD.
   and fades away when it ends. The recovery after rage is a chip with a bar that runs down. The other chips have
   no countdown, because the server does not send how long a power still runs. The row moves up above the line
   of the alternate dimension while that line is shown.
+- The panels of `ui/vision/hud.menu` were laid out anew (`v_hud 1`, Vulkan renderer). C draws extra parts at the
+  rects of items of that menu file: `force_slot` and `weapon_label` (`hud/cg_hudpanels.c`). The right panel has
+  a slot with the selected force power, its cost and a dimmed card when the force is too low (the weapon when the
+  player knows no force), and the name of the weapon under the ammo bar. In team games both panels get a rim in
+  the team colour. The health number turns amber below 51 and red below 26.
+- Above the left panel the strip of running powers also has tags for whom one watches, the JA+ alternate
+  dimension and a carried flag. Above the right panel are chips for low or no ammo, the e-web, the cloak and the
+  jetpack while not full.
+- A match card at the upper right (`hud/cg_matchcard.c`) shows game type, clock, place, points and the leader. In
+  team games it shows both teams with their score and where their flag is, in duels the two duelists. Under it
+  are the powerups with seconds left, a card of who hit the player last (`cg_drawEnemyInfo`, 10 seconds), and
+  one glass line with frames, ping, clock and snapshot numbers (`cg_drawFPS`, `cg_drawTimer`,
+  `cg_drawSnapshot`). The team overlay (`cg_drawTeamOverlay`) is a glass list with name, location and health.
+  All of it is hidden in siege and while the scoreboard shows.
+- The top centre has cards one under the other (`hud/cg_hudtop.c`): whom one watches with the keys to the next
+  player and to flying free, or the spectator with the key to follow. The siege objective has a step per
+  objective and the round time, and the respawn countdown (`hud/cg_hudsiege.c`). The two fighters of a duel
+  show health and shield as far as the client knows them. Then come the warmup countdown and a lost connection
+  or a map change.
+- Center prints (server messages, MOTD) are glass cards with a bar of their time. There is no bar when the
+  server prints the same text again every second. While dead, a card at the bottom says who killed the player
+  with what, or the sentence of the console, and the keys to respawn and to the scores.
+- Kill feed lines are one glass panel each. The player's own kill has an accent rim and +1, his death a red rim.
+  A death without a killer is fainter, with a cross.
+- Under the crosshair is the target name in the colour the game gives it, with a health bar for team mates and
+  duelists. Hacking and other timed actions are cards with a bar and a percentage. A caption sits under the
+  lock-on brackets. The item picked up last is a card at the right edge for three seconds.
+- Vote panels are glass with a box for yes and no, each with its key (bound to vote yes and vote no), the count
+  and a time bar. Team votes look the same, in the team colour.
+- With `tay_speedometer` and `tay_movementKeys` there is a glass speed card with a bar towards `tay_startGoal`
+  (else twice the running speed) and the last jumps. The movement keys are rounded glass keys lit in the accent.
+- In a vehicle that hides its rider, two panels replace the player's: hull and shields, speed, turbo and ammo. On
+  a swoop or an animal a small card above the selection row shows hull and speed. The disruptor scope shows the
+  zoom with a bar and the range to the target at the left of the lens, ammo and health with shield at the right.
+  Photo mode has its key line on a glass strip.
+- At the end of a level the scoreboard has who won over it (best player, better team, or a draw). Under it is the
+  vote for the next map (`hud/cg_mapvote.c`): a box per map with its long name, votes, bar and key, the own vote
+  marked, and the time left. The keys 1 to 4 (the weapon keys) vote. The server side is in
+  [server.md](server.md), "Map vote".
 - Setup has seven pages in place of eleven tabs, by topic: Video, Sound (with the 3D sound and the voice chat),
   Game (with the language), HUD, Chat & Social, Network and Mods. See "The Setup screen" below. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
