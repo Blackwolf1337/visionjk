@@ -1544,6 +1544,11 @@ void Svcmd_AddBot_f( void );
 void Svcmd_BotList_f( void );
 void BotInterbreedEndMatch( void );
 qboolean G_DoesMapSupportGametype(const char *mapname, int gametype);
+// g_mapvote.c: the vote for the next map at the end of a level
+void G_MapVoteStart( void );
+qboolean G_MapVoteRunning( void );
+const char *G_MapVoteNextMap( void );
+void Cmd_MapVote_f( gentity_t *ent );
 const char *G_RefreshNextMap(int gametype, qboolean forced);
 void G_LoadArenas( void );
 

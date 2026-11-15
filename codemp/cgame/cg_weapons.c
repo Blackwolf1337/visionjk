@@ -1593,6 +1593,10 @@ void CG_Weapon_f( void ) {
 	if ( !cg.snap ) {
 		return;
 	}
+	// VisionJK: at the end of a level the keys of the weapons vote for the next map (hud/cg_mapvote.c)
+	if ( cg.snap->ps.pm_type == PM_INTERMISSION && CG_MapVoteKey( atoi( CG_Argv( 1 ) ) ) ) {
+		return;
+	}
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
 		return;
 	}

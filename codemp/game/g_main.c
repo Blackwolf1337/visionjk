@@ -1397,6 +1397,8 @@ void BeginIntermission( void ) {
 	}
 
 	level.intermissiontime = level.time;
+	// VisionJK: the vote for the next map (g_mapvote.c)
+	G_MapVoteStart();
 
 	// move all clients to the intermission point
 	for (i=0 ; i< level.maxclients ; i++) {
@@ -1495,6 +1497,10 @@ void ExitLevel (void) {
 		g_siegePersistant.beatingTime)
 	{ //restart same map...
 		trap->SendConsoleCommand( EXEC_APPEND, "map_restart 0\n" );
+	}
+	else if ( G_MapVoteNextMap() )
+	{ // VisionJK: the map the players voted for (g_mapvote.c)
+		trap->SendConsoleCommand( EXEC_APPEND, va( "map %s\n", G_MapVoteNextMap() ) );
 	}
 	else
 	{
@@ -1880,6 +1886,11 @@ void CheckIntermissionExit( void ) {
 			continue;
 		}
 		cl->ps.stats[STAT_CLIENTS_READY] = readyMask;
+	}
+
+	// VisionJK: the vote for the next map holds the intermission while it runs (g_mapvote.c)
+	if ( G_MapVoteRunning() ) {
+		return;
 	}
 
 	// never exit in less than five seconds

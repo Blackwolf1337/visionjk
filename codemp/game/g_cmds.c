@@ -3792,6 +3792,7 @@ command_t commands[] = {
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "vs_toy",				Cmd_Toy_f,					CMD_NOINTERMISSION },
+	{ "vs_mapvote",			Cmd_MapVote_f,				0 },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );

@@ -6,6 +6,12 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Draw': ('Égalité', 'Empate'),
+    '%s wins': ('%s gagne', '%s gana'),
+    'Match over': ('Partie terminée', 'Partida terminada'),
+    'Next map': ('Carte suivante', 'Siguiente mapa'),
+    'Next in rotation': ('Suivante de la liste', 'Siguiente de la lista'),
+    'Your vote': ('Ton vote', 'Tu voto'),
     'Objective': ('Objectif', 'Objetivo'),
     'All objectives done': ('Tous les objectifs remplis', 'Todos los objetivos cumplidos'),
     'Round time': ('Temps de manche', 'Tiempo de ronda'),

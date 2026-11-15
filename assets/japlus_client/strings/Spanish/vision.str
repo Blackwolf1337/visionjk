@@ -2481,6 +2481,30 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           DRAW
+LANG_ENGLISH        "Draw"
+LANG_SPANISH        "Empate"
+
+REFERENCE           S_WINS
+LANG_ENGLISH        "%s wins"
+LANG_SPANISH        "%s gana"
+
+REFERENCE           MATCH_OVER
+LANG_ENGLISH        "Match over"
+LANG_SPANISH        "Partida terminada"
+
+REFERENCE           NEXT_MAP
+LANG_ENGLISH        "Next map"
+LANG_SPANISH        "Siguiente mapa"
+
+REFERENCE           NEXT_IN_ROTATION
+LANG_ENGLISH        "Next in rotation"
+LANG_SPANISH        "Siguiente de la lista"
+
+REFERENCE           YOUR_VOTE
+LANG_ENGLISH        "Your vote"
+LANG_SPANISH        "Tu voto"
+
 REFERENCE           OBJECTIVE
 LANG_ENGLISH        "Objective"
 LANG_SPANISH        "Objetivo"

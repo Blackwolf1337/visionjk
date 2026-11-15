@@ -2154,6 +2154,8 @@ const char *CG_HudAmmoWarning( void );
 extern int cg_hudSiegeTime;
 extern qboolean cg_hudSiegeMine;
 float CG_HudSiegeTop( float y );
+void CG_HudIntermission( void );
+qboolean CG_MapVoteKey( int n );
 float CG_HudTeamList( float y );
 qboolean CG_HudVehicle( const centity_t *veh );
 qboolean CG_KillfeedLastDeath( int *killer, int *weapon, const char **text, int *time );

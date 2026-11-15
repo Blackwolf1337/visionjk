@@ -7162,6 +7162,10 @@ static void CG_DrawIntermission( void ) {
 	//}
 	cg.scoreFadeTime = cg.time;
 	cg.scoreBoardShowing = CG_DrawScoreboard();
+	// VisionJK: who won and the vote for the next map (hud/cg_mapvote.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudIntermission();
+	}
 }
 
 /*
