@@ -786,6 +786,11 @@ TR = {
 # here), so none of these may need a number behind its key.
 CGAME = {
     # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Objective': 'Ziel',
+    'All objectives done': 'Alle Ziele erfüllt',
+    'Round time': 'Rundenzeit',
+    'Respawn in %i s': 'Wiedereinstieg in %i s',
+    'Speed': 'Tempo',
     'Team vote': 'Teamabstimmung',
     'Make %s the team leader': '%s zum Teamleiter machen',
     'u/s': 'E/s',

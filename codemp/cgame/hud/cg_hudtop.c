@@ -236,6 +236,7 @@ void CG_HudTopDraw( void ) {
 	float y = HUD_EDGE_Y;
 
 	y = Top_Watch( y );
+	y = CG_HudSiegeTop( y );
 	y = Top_Duel( y );
 	y = Top_Warmup( y );
 	CG_DrawDisconnectAt( y );

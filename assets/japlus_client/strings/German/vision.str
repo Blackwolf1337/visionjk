@@ -2481,6 +2481,26 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           OBJECTIVE
+LANG_ENGLISH        "Objective"
+LANG_GERMAN         "Ziel"
+
+REFERENCE           ALL_OBJECTIVES_DONE
+LANG_ENGLISH        "All objectives done"
+LANG_GERMAN         "Alle Ziele erfüllt"
+
+REFERENCE           ROUND_TIME
+LANG_ENGLISH        "Round time"
+LANG_GERMAN         "Rundenzeit"
+
+REFERENCE           RESPAWN_IN_I_S
+LANG_ENGLISH        "Respawn in %i s"
+LANG_GERMAN         "Wiedereinstieg in %i s"
+
+REFERENCE           SPEED
+LANG_ENGLISH        "Speed"
+LANG_GERMAN         "Tempo"
+
 REFERENCE           TEAM_VOTE
 LANG_ENGLISH        "Team vote"
 LANG_GERMAN         "Teamabstimmung"

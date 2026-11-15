@@ -6,6 +6,11 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Objective': ('Objectif', 'Objetivo'),
+    'All objectives done': ('Tous les objectifs remplis', 'Todos los objetivos cumplidos'),
+    'Round time': ('Temps de manche', 'Tiempo de ronda'),
+    'Respawn in %i s': ('Réapparition dans %i s', 'Reaparición en %i s'),
+    'Speed': ('Vitesse', 'Velocidad'),
     'Team vote': ("Vote d'équipe", 'Votación de equipo'),
     'Make %s the team leader': ("Nommer %s chef d'équipe", 'Hacer a %s líder del equipo'),
     'u/s': ('u/s', 'u/s'),

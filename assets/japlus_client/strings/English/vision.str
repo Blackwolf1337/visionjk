@@ -1862,6 +1862,21 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           OBJECTIVE
+LANG_ENGLISH        "Objective"
+
+REFERENCE           ALL_OBJECTIVES_DONE
+LANG_ENGLISH        "All objectives done"
+
+REFERENCE           ROUND_TIME
+LANG_ENGLISH        "Round time"
+
+REFERENCE           RESPAWN_IN_I_S
+LANG_ENGLISH        "Respawn in %i s"
+
+REFERENCE           SPEED
+LANG_ENGLISH        "Speed"
+
 REFERENCE           TEAM_VOTE
 LANG_ENGLISH        "Team vote"
 

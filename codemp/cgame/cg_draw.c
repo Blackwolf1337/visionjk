@@ -2885,6 +2885,12 @@ qboolean CG_DrawVehicleHud( const centity_t *cent )
 		return qtrue;	// Draw player HUD
 	}
 
+	// VisionJK: panels of the vehicle in the new look (hud/cg_hudsiege.c)
+	if ( CG_HudNewLook() )
+	{
+		return CG_HudVehicle( veh );
+	}
+
 	CG_DrawVehicleTurboRecharge( menuHUD, veh );
 	CG_DrawVehicleWeaponsLinked( menuHUD, veh );
 
@@ -3488,6 +3494,12 @@ float CG_DrawRadar ( float y )
 	if ( !local->infoValid )
 	{
 		return y;
+	}
+
+	// VisionJK: a round glass under it in the new HUD
+	if ( CG_HudNewLook() )
+	{
+		Hud_Glass( RADAR_X + xOffset, y, RADAR_RADIUS*2, RADAR_RADIUS*2, RADAR_RADIUS, 1.0f, NULL, qfalse );
 	}
 
 	// Draw the radar background image
@@ -4322,7 +4334,7 @@ static void CG_DrawUpperRight( void ) {
 		y = CG_HudAttacker( y );
 		y = CG_HudPerfLine( y );
 		if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
-			y = CG_DrawTeamOverlay( y, qtrue, qtrue );
+			y = CG_HudTeamList( y );
 		}
 		if ( ( cgs.gametype >= GT_TEAM || cg.predictedPlayerState.m_iVehicleNum ) && cg_drawRadar.integer ) {
 			y = CG_DrawRadar( y );
@@ -8614,6 +8626,7 @@ static void CG_Draw2D( void ) {
 		CG_DrawWarmup();
 	}
 
+	cg_hudSiegeTime = -1;
 	if (cgSiegeRoundState)
 	{
 		char pStr[1024];
@@ -8757,10 +8770,19 @@ static void CG_Draw2D( void ) {
 				isMyTeam = qtrue;
 			}
 
+			if ( CG_HudNewLook() )
+			{
+				// VisionJK: on the card of the objective at the top (hud/cg_hudsiege.c)
+				cg_hudSiegeTime = timeRemaining;
+				cg_hudSiegeMine = isMyTeam;
+			}
+			else
+			{
 			// the timer of the HUD file stands at the right edge of the 640, on a wide window it goes to the edge
 			CG_Place2D( PLACE_RIGHT );
 			CG_DrawSiegeTimer(timeRemaining, isMyTeam);
 			CG_Place2D( PLACE_CENTER );
+			}
 		}
 	}
 	else
@@ -8783,9 +8805,13 @@ static void CG_Draw2D( void ) {
 			timeRemaining /= 1000;
 		}
 
-		CG_Place2D( PLACE_RIGHT );
-		CG_DrawSiegeDeathTimer( timeRemaining );
-		CG_Place2D( PLACE_CENTER );
+		// (the new HUD has it as a card at the top, CG_HudSiegeTop)
+		if ( !CG_HudNewLook() )
+		{
+			CG_Place2D( PLACE_RIGHT );
+			CG_DrawSiegeDeathTimer( timeRemaining );
+			CG_Place2D( PLACE_CENTER );
+		}
 	}
 
 	// don't draw center string if scoreboard is up
