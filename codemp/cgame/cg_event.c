@@ -117,6 +117,11 @@ const char	*CG_PlaceString( int rank ) {
 
 qboolean CG_ThereIsAMaster(void);
 
+// VisionJK: with the one feed (hud/cg_killfeed.c) a kill is a line of it, so its sentence goes to the console only
+static const char *CG_ObituaryPrefix( void ) {
+	return ( CG_HudFeedActive() && tay_killfeed.integer ) ? "[skipnotify]" : "";
+}
+
 /*
 =============
 CG_Obituary
@@ -292,7 +297,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		}
 		message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
-		trap->Print( "%s %s\n", targetName, message);
+		trap->Print( "%s%s %s\n", CG_ObituaryPrefix(), targetName, message);
 		CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, message ) );
 		return;
 	}
@@ -471,7 +476,7 @@ clientkilled:
 		if (message) {
 			message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
-			trap->Print( "%s %s %s\n",
+			trap->Print( "%s%s %s %s\n", CG_ObituaryPrefix(),
 				targetName, message, attackerName);
 			CG_KillfeedAdd( attacker, target, mod, va( "%s %s %s", targetName, message, attackerName ) );
 			return;
@@ -479,7 +484,7 @@ clientkilled:
 	}
 
 	// we don't know what it was
-	trap->Print( "%s %s\n", targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
+	trap->Print( "%s%s %s\n", CG_ObituaryPrefix(), targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
 	CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, CG_GetStringEdString( "MP_INGAME", "DIED_GENERIC" ) ) );
 }
 

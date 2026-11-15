@@ -223,6 +223,7 @@ SETUP = [
     ('HUD', 'What the screen shows around the level, the view and the crosshair.', [
         ('head', 'HUD'),
         ('yesno', 'New HUD', 'v_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
+        ('yesno', 'One Feed', 'v_hudFeed', 'The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD.'),
         ('yesno', 'Match Card', 'v_hudMatchCard', 'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.'),
         ('slider', 'Blur Behind Panels', 'v_backdropBlur', 1, 0, 3,
          'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.'),

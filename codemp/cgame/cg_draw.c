@@ -7052,6 +7052,13 @@ static void CG_DrawVote(void) {
 CG_DrawTeamVote
 =================
 */
+// does the team of the player vote
+static qboolean CG_TeamVoteShown( void ) {
+	const int team = cgs.clientinfo[cg.clientNum].team;
+
+	return (qboolean)( ( team == TEAM_RED && cgs.teamVoteTime[0] ) || ( team == TEAM_BLUE && cgs.teamVoteTime[1] ) );
+}
+
 static void CG_DrawTeamVote(void) {
 	char	*s;
 	int		sec, cs_offset;
@@ -8591,6 +8598,13 @@ static void CG_Draw2D( void ) {
 	}
 
 	CG_Place2D( PLACE_LEFT );
+	CG_HudFeedPoll();
+	// the one feed at the upper left; a vote stands there first, and the feed under it
+	{
+		const int votes = ( cgs.voteTime ? 1 : 0 ) + ( CG_TeamVoteShown() ? 1 : 0 );
+
+		CG_HudFeedDraw( votes ? 64.0f + votes * 56.0f : HUD_EDGE_Y );
+	}
 	CG_DrawVote();
 	CG_DrawTeamVote();
 	CG_VoiceDraw();

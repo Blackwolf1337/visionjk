@@ -2066,6 +2066,8 @@ void CL_BindCGame( void ) {
 		cgi.ext.G2_SetBonesWorld				= re->ext.G2_SetBonesWorld;
 		cgi.ext.R_DrawBackdrop					= CL_DrawBackdrop;
 		cgi.ext.R_EmitSparks					= re->ext.EmitSparks;
+		cgi.ext.Con_FeedRead					= Con_FeedRead;
+		cgi.ext.Con_FeedNewest					= Con_FeedNewest;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

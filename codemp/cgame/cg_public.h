@@ -850,6 +850,12 @@ typedef struct cgameImport_s {
 		// before. Only where the ROM cvar v_cgameSparks is 1, an older engine ends this table before; NULL: the
 		// renderer has none.
 		qboolean		(*R_EmitSparks)							( const sparkBurst_t *burst );
+		// Only where the ROM cvar v_cgameFeed is 1, an older engine ends this table before. The lines the engine
+		// would write at the top of the game window (client/cl_console.cpp, "The feed"): Con_FeedRead gives the
+		// line after number `after` with its colours and its level (0 a line, 1 a warning, 2 an error) and returns
+		// its number, 0: none; Con_FeedNewest the number of the newest. A cgame that draws them sets v_feedHandler.
+		int				(*Con_FeedRead)							( int after, int *level, char *out, int outSize );
+		int				(*Con_FeedNewest)						( void );
 	} ext;
 } cgameImport_t;
 

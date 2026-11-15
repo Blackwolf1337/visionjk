@@ -1964,6 +1964,14 @@ qhandle_t CG_WidePicture( const char *name, const char *wideName );
 // hud/cg_killfeed.c
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
 float CG_KillfeedDraw( float y );
+#define FEED_KILL	0		// what a line of the feed is (hud/cg_killfeed.c)
+#define FEED_INFO	1
+#define FEED_ALERT	2
+#define FEED_ERROR	3
+qboolean CG_HudFeedActive( void );
+void CG_HudFeedAdd( int level, const char *text );
+void CG_HudFeedPoll( void );
+void CG_HudFeedDraw( float y );
 
 // hud/cg_notify.c
 typedef enum {

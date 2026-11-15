@@ -56,6 +56,11 @@ void CG_NotifyAdd( notifyKind_t kind, const char *text ) {
 	if ( !v_notify.integer || !text || !text[0] ) {
 		return;
 	}
+	// with the one feed it is a line of it (hud/cg_killfeed.c)
+	if ( CG_HudFeedActive() ) {
+		CG_HudFeedAdd( kind == NOTIFY_IDS ? FEED_ERROR : FEED_ALERT, text );
+		return;
+	}
 	if ( notifyCount == NOTIFY_MAX ) {
 		memmove( notify, notify + 1, sizeof( notify[0] ) * ( NOTIFY_MAX - 1 ) );
 		notifyCount--;

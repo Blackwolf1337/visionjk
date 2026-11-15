@@ -446,6 +446,8 @@ MORE = {
     # interface
     'New HUD': ('Nouveau HUD', 'Nuevo HUD'),
     'Match Card': ('Carte du match', 'Tarjeta de partida'),
+    'One Feed': ('Un seul fil', 'Un solo feed'),
+    'The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD.': ('Les lignes de la console, les notifications et les kills dans un seul fil en haut à gauche. Désactivé : chacun à sa place. Nécessite le nouveau HUD.', 'Las líneas de la consola, los avisos y las bajas como un solo feed arriba a la izquierda. Desactivado: cada uno en su sitio. Necesita el nuevo HUD.'),
     'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': ('La carte en haut à droite avec le mode de jeu, l\'horloge, votre place et le premier. Nécessite le nouveau HUD.', 'La tarjeta arriba a la derecha con el modo de juego, el reloj, tu puesto y el líder. Necesita el nuevo HUD.'),
     'The HUD of VisionJK. Off: the HUD of the game.': ('Le HUD de VisionJK. Désactivé : le HUD du jeu.', 'El HUD de VisionJK. Desactivado: el HUD del juego.'),
     'Classic Menus': ('Menus classiques', 'Menús clásicos'),

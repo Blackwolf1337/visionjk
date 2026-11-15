@@ -23,6 +23,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // lines at the upper right that fade out. The icons are the weapon icons of the game, so nothing has to be
 // downloaded. A death without a weapon to show (a fall, lava, a telefrag) is the sentence of the console, in the
 // language of the game. The obituary line in the console stays as it was.
+//
+// The feed (v_hudFeed, 2026-11-15): with the HUD of the new look and an engine of this tree (ext.Con_FeedRead)
+// these lines, the lines the engine would write at the top of the window and the notices (hud/cg_notify.c) are
+// one feed at the upper left: a kill with its icon, a line of the console as it is, a warning with an amber
+// rim, an error with a red one. The engine draws no lines of its own then (v_feedHandler), and the sentence of
+// a death goes to the console only, since the feed has the kill.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -30,9 +36,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_hudkit.h"
 
 #define KILLFEED_MAX		8
+#define FEED_WIDTH			300.0f		// a line of text is cut at this
 #define KILLFEED_FADE		1000		// the last milliseconds of a line fade it out
 
 typedef struct {
+	int			level;				// FEED_KILL, or what a line of text is
 	int			killer;				// ENTITYNUM_WORLD: nobody, the line is `text`
 	int			victim;
 	qhandle_t	icon;
@@ -129,6 +137,19 @@ From CG_Obituary: killer ENTITYNUM_WORLD (or the victim itself) and the sentence
 somebody who killed, else the sentence for when there is no icon for what killed
 =================
 */
+static killfeedLine_t *Killfeed_NewLine( void ) {
+	killfeedLine_t *line;
+
+	if ( killfeedCount == KILLFEED_MAX ) {
+		memmove( killfeed, killfeed + 1, sizeof( killfeed[0] ) * ( KILLFEED_MAX - 1 ) );
+		killfeedCount--;
+	}
+	line = &killfeed[killfeedCount++];
+	memset( line, 0, sizeof( *line ) );
+	line->time = cg.time;
+	return line;
+}
+
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text ) {
 	killfeedLine_t *line;
 
@@ -141,16 +162,93 @@ void CG_KillfeedAdd( int killer, int victim, int mod, const char *text ) {
 	if ( !tay_killfeed.integer || victim < 0 || victim >= MAX_CLIENTS ) {
 		return;
 	}
-	if ( killfeedCount == KILLFEED_MAX ) {
-		memmove( killfeed, killfeed + 1, sizeof( killfeed[0] ) * ( KILLFEED_MAX - 1 ) );
-		killfeedCount--;
-	}
-	line = &killfeed[killfeedCount++];
+	line = Killfeed_NewLine();
+	line->level = FEED_KILL;
 	line->killer = ( killer >= 0 && killer < MAX_CLIENTS && killer != victim ) ? killer : ENTITYNUM_WORLD;
 	line->victim = victim;
 	line->icon = line->killer != ENTITYNUM_WORLD ? Killfeed_Icon( mod ) : 0;
 	Q_strncpyz( line->text, text ? text : "", sizeof( line->text ) );
-	line->time = cg.time;
+}
+
+/*
+===============================================================================
+
+The feed
+
+===============================================================================
+*/
+
+/*
+=================
+CG_HudFeedActive
+
+Are the lines of the console, the notices and the kills one feed: the new look, v_hudFeed, and an engine that
+hands its lines over.
+=================
+*/
+qboolean CG_HudFeedActive( void ) {
+	static int has = -1;
+
+	if ( has < 0 ) {
+		char value[8];
+
+		// (the ROM cvar first: an older engine ends the table of ext before Con_FeedRead)
+		trap->Cvar_VariableStringBuffer( "v_cgameFeed", value, sizeof( value ) );
+		has = ( atoi( value ) && trap->ext.Con_FeedRead && trap->ext.Con_FeedNewest ) ? 1 : 0;
+	}
+	return (qboolean)( has > 0 && v_hudFeed.integer && CG_HudNewLook() );
+}
+
+// a line of text for the feed: colour codes stay, a line break ends it
+void CG_HudFeedAdd( int level, const char *text ) {
+	killfeedLine_t	*line;
+	char			*c;
+
+	if ( !text || !text[0] ) {
+		return;
+	}
+	line = Killfeed_NewLine();
+	line->level = level;
+	line->killer = ENTITYNUM_WORLD;
+	line->victim = -1;
+	Q_strncpyz( line->text, text, sizeof( line->text ) );
+	for ( c = line->text; *c; c++ ) {
+		if ( *c == '\n' || *c == '\r' ) {
+			*c = ' ';
+		}
+	}
+}
+
+/*
+=================
+CG_HudFeedPoll
+
+Every frame: tells the engine whether the cgame draws its lines, and takes the new ones.
+=================
+*/
+void CG_HudFeedPoll( void ) {
+	static int	handler = -1, seq = -1;
+	const int	on = CG_HudFeedActive() ? 1 : 0;
+	char		text[256];
+	int			level, next;
+
+	if ( on != handler ) {
+		// (also after a new cgame: the engine cleared it)
+		trap->Cvar_Set( "v_feedHandler", on ? "1" : "0" );
+		handler = on;
+		seq = -1;
+	}
+	if ( !on ) {
+		return;
+	}
+	if ( seq < 0 ) {
+		// what was printed before is not news
+		seq = trap->ext.Con_FeedNewest();
+	}
+	while ( ( next = trap->ext.Con_FeedRead( seq, &level, text, sizeof( text ) ) ) != 0 ) {
+		seq = next;
+		CG_HudFeedAdd( level == 2 ? FEED_ERROR : level == 1 ? FEED_ALERT : FEED_INFO, text );
+	}
 }
 
 // the box behind a name: its team, oneself in green, else grey
@@ -203,7 +301,7 @@ The lines in the new look: one glass panel each, killer, icon, victim. A kill of
 of the accent and a +1, his death a red rim, a death without a killer a cross and the sentence, fainter.
 =================
 */
-static float Killfeed_DrawNew( float y, float size, int life ) {
+static float Killfeed_DrawNew( float y, float size, int life, qboolean atLeft ) {
 	const float	lineH = 15.0f * size, pad = 5.0f * size, scale = HUD_BODY * size;
 	const int	self = cg.snap->ps.clientNum;
 	int			i;
@@ -217,11 +315,24 @@ static float Killfeed_DrawNew( float y, float size, int life ) {
 		const float				*rim = line->killer == self ? hudAccent : line->victim == self ? hudRed : NULL;
 		float					w, x;
 
-		if ( world ) {
+		if ( line->level != FEED_KILL ) {
+			// a line of the console or a notice: as it is, a warning amber, an error red, each with its mark
+			const float	*tint = line->level == FEED_ERROR ? hudRed : line->level == FEED_ALERT ? hudWarm : NULL;
+			const float	mark = tint ? lineH * 0.6f + 2.0f : 0.0f;
+			const float	tw = Q_min( FEED_WIDTH, Hud_TextWidth( line->text, scale ) );
+
+			w = mark + tw + 2.0f * pad;
+			x = atLeft ? HUD_EDGE : right - w;
+			Hud_Glass( x, y, w, lineH, 3.5f, alpha * ( tint ? 1.0f : 0.8f ), tint, qtrue );
+			if ( tint ) {
+				Hud_TextMid( x + pad, mid, scale, tint, alpha, HUD_LEFT, "!", 0.0f );
+			}
+			Hud_TextMid( x + pad + mark, mid, scale, hudText, alpha, HUD_LEFT, line->text, FEED_WIDTH );
+		} else if ( world ) {
 			const char *text = line->text[0] ? line->text : cgs.clientinfo[line->victim].name;
 
 			w = lineH * 0.6f + 4.0f + Hud_TextWidth( text, scale ) + 2.0f * pad;
-			x = right - w;
+			x = atLeft ? HUD_EDGE : right - w;
 			Hud_Glass( x, y, w, lineH, 3.5f, alpha * 0.8f, rim, qtrue );
 			Hud_TextMid( x + pad, mid, scale * 0.9f, hudDim, alpha, HUD_LEFT, "x", 0.0f );
 			Hud_TextMid( x + pad + lineH * 0.6f + 4.0f, mid, scale, hudDim, alpha, HUD_LEFT, text, 0.0f );
@@ -233,7 +344,7 @@ static float Killfeed_DrawNew( float y, float size, int life ) {
 			vec4_t		white;
 
 			w = kw + vw + iconW + 8.0f + pw + 2.0f * pad;
-			x = right - w;
+			x = atLeft ? HUD_EDGE : right - w;
 			Hud_Glass( x, y, w, lineH, 3.5f, alpha, rim, qtrue );
 			Hud_TextMid( x + pad, mid, scale, Killfeed_NameTint( line->killer ), alpha, HUD_LEFT, killer, 0.0f );
 			Hud_Color( white, colorWhite, alpha );
@@ -250,6 +361,35 @@ static float Killfeed_DrawNew( float y, float size, int life ) {
 	return y;
 }
 
+// what is over goes
+static void Killfeed_Expire( int life ) {
+	int i, keep;
+
+	for ( i = keep = 0; i < killfeedCount; i++ ) {
+		if ( cg.time >= killfeed[i].time && cg.time - killfeed[i].time < life ) {
+			killfeed[keep++] = killfeed[i];
+		}
+	}
+	killfeedCount = keep;
+}
+
+/*
+=================
+CG_HudFeedDraw
+
+The one feed at the left edge (CG_Place2D( PLACE_LEFT ) is set) from y down.
+=================
+*/
+void CG_HudFeedDraw( float y ) {
+	const int life = Q_max( 1000, tay_killfeedTime.integer );
+
+	if ( !cg.snap || !CG_HudFeedActive() ) {
+		return;
+	}
+	Killfeed_Expire( life );
+	Killfeed_DrawNew( y, Com_Clamp( 0.5f, 2.0f, tay_killfeedSize.value ), life, qtrue );
+}
+
 /*
 =================
 CG_KillfeedDraw
@@ -263,23 +403,17 @@ float CG_KillfeedDraw( float y ) {
 	const float	lineH = 16.0f * size, pad = 3.0f * size, scale = 0.6f * size;
 	const int	life = Q_max( 1000, tay_killfeedTime.integer );
 	vec4_t		color, box;
-	int			i, keep;
+	int			i;
 
-	if ( !tay_killfeed.integer || !cg.snap ) {
+	// (as one feed it stands at the upper left, CG_HudFeedDraw)
+	if ( !tay_killfeed.integer || !cg.snap || CG_HudFeedActive() ) {
 		return y;
 	}
-
-	// what is over goes
-	for ( i = keep = 0; i < killfeedCount; i++ ) {
-		if ( cg.time >= killfeed[i].time && cg.time - killfeed[i].time < life ) {
-			killfeed[keep++] = killfeed[i];
-		}
-	}
-	killfeedCount = keep;
+	Killfeed_Expire( life );
 
 	y += 4.0f + tay_killfeedY.value;
 	if ( CG_HudNewLook() ) {
-		return Killfeed_DrawNew( y, size, life );
+		return Killfeed_DrawNew( y, size, life, qfalse );
 	}
 	for ( i = 0; i < killfeedCount; i++ ) {
 		const killfeedLine_t	*line = &killfeed[i];

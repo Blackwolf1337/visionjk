@@ -2982,6 +2982,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameBackdrop", "1", CVAR_ROM, "" );
 	// ext.R_EmitSparks: sparks the renderer simulates (cgame/cg_effects.c CG_GpuSparks)
 	Cvar_Get( "v_cgameSparks", "1", CVAR_ROM, "" );
+	// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
+	Cvar_Get( "v_cgameFeed", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)

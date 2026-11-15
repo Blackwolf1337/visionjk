@@ -380,6 +380,8 @@ TR = {
     # interface
     'New HUD': 'Neues HUD',
     'Match Card': 'Spielkarte',
+    'One Feed': 'Ein Feed',
+    'The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD.': 'Konsolenzeilen, Hinweise und Kills als ein Feed oben links. Aus: jedes an seinem eigenen Platz. Braucht das neue HUD.',
     'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.': 'Die Karte oben rechts mit Spielmodus, Uhr, deinem Platz und dem Führenden. Braucht das neue HUD.',
     'The HUD of VisionJK. Off: the HUD of the game.': 'Das HUD von VisionJK. Aus: das HUD des Originalspiels.',
     'Classic Menus': 'Klassische Menüs',

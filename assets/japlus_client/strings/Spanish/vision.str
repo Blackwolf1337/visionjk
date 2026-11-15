@@ -1201,6 +1201,14 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_SPANISH        "El HUD de VisionJK. Desactivado: el HUD del juego."
 
+REFERENCE           ONE_FEED
+LANG_ENGLISH        "One Feed"
+LANG_SPANISH        "Un solo feed"
+
+REFERENCE           THE_LINES_OF_THE_CONSOLE_THE_NOTICES
+LANG_ENGLISH        "The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD."
+LANG_SPANISH        "Las líneas de la consola, los avisos y las bajas como un solo feed arriba a la izquierda. Desactivado: cada uno en su sitio. Necesita el nuevo HUD."
+
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 LANG_SPANISH        "Tarjeta de partida"
@@ -2241,18 +2249,6 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_SPANISH        "Lo que muestra la pantalla alrededor del nivel, la vista y la mira."
 
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-LANG_SPANISH        "Mira"
-
-REFERENCE           KILLFEED_AND_TEAM
-LANG_ENGLISH        "Killfeed and Team"
-LANG_SPANISH        "Registro de muertes y equipo"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_SPANISH        "Vista"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 LANG_SPANISH        "En pantalla"
@@ -2260,6 +2256,18 @@ LANG_SPANISH        "En pantalla"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_SPANISH        "Consola"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_SPANISH        "Vista"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_SPANISH        "Mira"
+
+REFERENCE           KILLFEED_AND_TEAM
+LANG_ENGLISH        "Killfeed and Team"
+LANG_SPANISH        "Registro de muertes y equipo"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"

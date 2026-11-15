@@ -1201,6 +1201,14 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Originalspiels."
 
+REFERENCE           ONE_FEED
+LANG_ENGLISH        "One Feed"
+LANG_GERMAN         "Ein Feed"
+
+REFERENCE           THE_LINES_OF_THE_CONSOLE_THE_NOTICES
+LANG_ENGLISH        "The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD."
+LANG_GERMAN         "Konsolenzeilen, Hinweise und Kills als ein Feed oben links. Aus: jedes an seinem eigenen Platz. Braucht das neue HUD."
+
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 LANG_GERMAN         "Spielkarte"
@@ -2241,18 +2249,6 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_GERMAN         "Was der Bildschirm um den Level herum zeigt, die Sicht und das Fadenkreuz."
 
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-LANG_GERMAN         "Fadenkreuz"
-
-REFERENCE           KILLFEED_AND_TEAM
-LANG_ENGLISH        "Killfeed and Team"
-LANG_GERMAN         "Killfeed und Team"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-LANG_GERMAN         "Sicht"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 LANG_GERMAN         "Auf dem Bildschirm"
@@ -2260,6 +2256,18 @@ LANG_GERMAN         "Auf dem Bildschirm"
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_GERMAN         "Konsole"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+LANG_GERMAN         "Sicht"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+LANG_GERMAN         "Fadenkreuz"
+
+REFERENCE           KILLFEED_AND_TEAM
+LANG_ENGLISH        "Killfeed and Team"
+LANG_GERMAN         "Killfeed und Team"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"

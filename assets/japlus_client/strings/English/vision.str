@@ -902,6 +902,12 @@ LANG_ENGLISH        "New HUD"
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 
+REFERENCE           ONE_FEED
+LANG_ENGLISH        "One Feed"
+
+REFERENCE           THE_LINES_OF_THE_CONSOLE_THE_NOTICES
+LANG_ENGLISH        "The lines of the console, the notices and the kills as one feed at the upper left. Off: each in its own place. Needs the new HUD."
+
 REFERENCE           MATCH_CARD
 LANG_ENGLISH        "Match Card"
 
@@ -1682,20 +1688,20 @@ LANG_ENGLISH        "HUD"
 REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 
-REFERENCE           CROSSHAIR
-LANG_ENGLISH        "Crosshair"
-
-REFERENCE           KILLFEED_AND_TEAM
-LANG_ENGLISH        "Killfeed and Team"
-
-REFERENCE           VIEW
-LANG_ENGLISH        "View"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+
+REFERENCE           CROSSHAIR
+LANG_ENGLISH        "Crosshair"
+
+REFERENCE           KILLFEED_AND_TEAM
+LANG_ENGLISH        "Killfeed and Team"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
