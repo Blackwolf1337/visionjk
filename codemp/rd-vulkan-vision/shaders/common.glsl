@@ -57,8 +57,8 @@ struct Draw {
 							//	cut down to, the most pieces an edge is cut into
 	uint	cutBones;		// skinned, a part of a body a saber cut through: where its cut is in the bones, in rows, 0: none
 	float	brighten;		// the colour times this after the texture, past white (a lamp panel's glow map), 0: as it is
-	float	towardEye;		// VKP_TESS: units a new vertex moves toward the eye (its depth alone), 0: none
-	uint	pad2;
+	uint	decals;			// DECALS: where the marks start in the bones, in rows (four a mark)
+	uint	numDecals;		//	and how many
 };
 
 BINDING( 0, 0 ) uniform Globals {
@@ -118,6 +118,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define DEFORM( flags )		( ( ( flags ) >> 24 ) & 7u )
 #define MATERIAL( flags )	( ( ( flags ) & 0x08000000u ) != 0u )
 #define PBR( flags )		( ( ( flags ) & 0x10000000u ) != 0u )
+#define DECALS( flags )		( ( ( flags ) & 0x20000000u ) != 0u )
 
 // Draw.pbrFlags (VKP_* of vk_local.h)
 #define PBR_NORMAL		0x01u

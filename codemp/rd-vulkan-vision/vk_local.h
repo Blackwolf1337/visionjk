@@ -116,6 +116,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
 #define VKD_MATERIAL		0x08000000u		// lit per pixel with material (normal map in tex1, shine), see generic.frag
 #define VKD_PBR				0x10000000u		// lit per pixel with a material of GGX (VKP_*), see generic.frag PbrStage
+#define VKD_DECALS			0x20000000u		// marks painted onto a tessellated surface (VK_PaintMarks), see generic.frag
 
 // vkDraw_t.pbrFlags: what a stage with VKD_PBR has and how it is lit
 #define VKP_NORMAL			0x01u			// a normal map in tex2
@@ -176,9 +177,8 @@ typedef struct vkDraw_s {		// once per draw
 									//	frame, in rows (VK_CutBones), 0: none
 	float		brighten;			// the colour of the stage times this after its texture, past white (the glow map of
 									//	a lamp panel, v_panelGlow); 0: as it is
-	float		towardEye;			// VKP_TESS: units each new vertex moves toward the eye, which changes its depth and not
-									//	where it is on the screen (marks on a tessellated surface); 0: none
-	uint32_t	pad;
+	uint32_t	decals;				// VKD_DECALS: where the marks start in the bones of the frame, in rows (four a mark)
+	uint32_t	numDecals;			//	and how many
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -398,7 +398,8 @@ void		VK_QuadRecord( vec4_t *row, int kind, const vec3_t a, float aw, const vec3
 				const float *st, const float *color, const vec3_t d );
 void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
 qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
-qboolean	VK_TessBorders( uint32_t *bones, qboolean none );
+qboolean	VK_TessBorders( uint32_t *bones );
+float		*VK_FrameRows( int rows, uint32_t *first );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;

@@ -1296,11 +1296,10 @@ meet with vertices of their own (their normals differ, one edge may meet two), a
 another shader. generic.tese lets the bumps go down to nothing toward those, so the two sides stay on their polygons
 and no gap opens; the marks of the vertices let a triangle fade along its inner edges exactly as its neighbour on
 that edge does. bones: where the floats start, in rows. qfalse: not a batch of the level, or no room in the frame.
-none: no border at all, for any batch (marks on a tessellated surface: they follow its bumps up to their edges).
 ===============
 */
 #define VK_TESS_EDGE_HASH	16384		// a power of two over the edges of a batch (SHADER_MAX_INDEXES)
-qboolean VK_TessBorders( uint32_t *bones, qboolean none ) {
+qboolean VK_TessBorders( uint32_t *bones ) {
 	static uint64_t	keys[VK_TESS_EDGE_HASH];
 	static uint32_t	stamps[VK_TESS_EDGE_HASH];
 	static byte		counts[VK_TESS_EDGE_HASH];
@@ -1314,14 +1313,8 @@ qboolean VK_TessBorders( uint32_t *bones, qboolean none ) {
 	const int		count = ( rows + 2 ) / 3;		// the buffer counts in bones of three rows
 	int				slots[SHADER_MAX_INDEXES];
 
-	if ( ( vk_batchMode != 1 && !none ) || !frame || !numTriangles || first + count > VK_MAX_BONES ) {
+	if ( vk_batchMode != 1 || !frame || !numTriangles || first + count > VK_MAX_BONES ) {
 		return qfalse;
-	}
-	if ( none ) {
-		memset( frame->bones.mapped + sizeof( float ) * 12 * first, 0, sizeof( float ) * 12 * count );
-		frame->numBones = first + count;
-		*bones = (uint32_t)first * 3;
-		return qtrue;
 	}
 	if ( ++stamp == 0 ) {
 		memset( stamps, 0, sizeof( stamps ) );
@@ -1387,6 +1380,27 @@ qboolean VK_TessBorders( uint32_t *bones, qboolean none ) {
 	frame->numBones = first + count;
 	*bones = (uint32_t)first * 3;
 	return qtrue;
+}
+
+/*
+===============
+VK_FrameRows
+
+Room for rows of four floats in the bone buffer of the frame, for a draw to read (vkDraw_t decals). first: where
+they start, in rows. NULL: no room left in the frame.
+===============
+*/
+float *VK_FrameRows( int rows, uint32_t *first ) {
+	vkFrame_t	*frame = vk.frame;
+	const int	start = ( frame ? frame->numBones + VK_BONE_ALIGN - 1 : 0 ) / VK_BONE_ALIGN * VK_BONE_ALIGN;
+	const int	count = ( rows + 2 ) / 3;		// the buffer counts in bones of three rows
+
+	if ( !frame || rows <= 0 || start + count > VK_MAX_BONES ) {
+		return NULL;
+	}
+	frame->numBones = start + count;
+	*first = (uint32_t)start * 3;
+	return (float *)( frame->bones.mapped + sizeof( float ) * 12 * start );
 }
 
 /*

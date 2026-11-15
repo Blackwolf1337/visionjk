@@ -979,7 +979,6 @@ static vkProgram_t VK_TessPass( vkDraw_t *draw, const vkDraw_t *from, vkProgram_
 	draw->bones = from->bones;
 	VectorCopy4( from->tess, draw->tess );
 	draw->tess[3] = -fabsf( from->tess[3] );
-	draw->towardEye = from->towardEye;
 	draw->flags = ( draw->flags & ~( 15u << VKD_TCGEN1_SHIFT ) ) | ( ( ( from->flags >> VKD_TCGEN0_SHIFT ) & 15u ) << VKD_TCGEN1_SHIFT );
 	memcpy( draw->texMat1, from->texMat0, sizeof( draw->texMat1 ) );
 	memcpy( draw->texTurb1, from->texTurb0, sizeof( draw->texTurb1 ) );
@@ -1184,6 +1183,135 @@ static void VK_DrawGrass( uint32_t transform ) {
 
 /*
 ===============
+VK_SurfaceTessellated
+
+VisionJK: whether a surface with a tessellated stage (R_TessStage) is drawn with its bumps in this view, as the
+stage loop of RB_StageIteratorGeneric decides it; then its marks are painted onto it (VK_PaintMarks) and not drawn
+as polys of their own.
+===============
+*/
+static qboolean VK_SurfaceTessellated( const shader_t *surface ) {
+	const shaderStage_t *stage = R_TessStage( surface );
+	vkDraw_t draw;
+
+	if ( !stage || !vk.tessellation || !v_tessellation->integer || backEnd.viewParms.probeFace ) {
+		return qfalse;
+	}
+	VK_InitDraw( &draw, 0, 0 );
+	return (qboolean)( VK_PbrDraw( stage, surface->remappedShader ? surface->remappedShader : surface, qfalse, &draw )
+		&& ( draw.pbrFlags & VKP_HEIGHT ) );
+}
+
+/*
+===============
+VK_PaintMarks
+
+VisionJK: the marks on the tessellated surface of this batch (srfPoly_t tessShader, tr_marks.cpp) painted onto
+its bumps. A mark laid flat as its polys lies under the bumps, and a poly cut into other triangles than the
+surface never follows them exactly. So the surface itself is drawn again, through the same tessellation as its
+stage (VK_TessPass, depth EQUAL), once for each shader of marks on it, and generic.frag Decals() works out
+which marks a pixel lies in from their mappings. Only the first stage of a mark's shader, with its blend.
+===============
+*/
+#define VK_MAX_PAINTED_MARKS	512
+static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
+	static const srfPoly_t	*marks[VK_MAX_PAINTED_MARKS];
+	const shader_t			*surface = tess.shader;
+	int						numMarks = 0;
+
+	for ( int i = 0; i < backEnd.refdef.numPolys && numMarks < VK_MAX_PAINTED_MARKS; i++ ) {
+		const srfPoly_t *poly = &backEnd.refdef.polys[i];
+		int j;
+
+		if ( !poly->tessShader || ( poly->tessShader != surface && poly->tessShader->remappedShader != surface ) ) {
+			continue;
+		}
+		// a mark is a poly for each triangle of the surface it was cut on, all with the same mapping: once
+		for ( j = 0; j < numMarks; j++ ) {
+			const srfPoly_t *other = marks[j];
+			int k;
+
+			if ( other->hShader != poly->hShader ) {
+				continue;
+			}
+			// (the offsets of the texture coordinates to a hundredth of the mark, the plane to half a unit)
+			for ( k = 0; k < 16; k++ ) {
+				const float most = ( k == 3 || k == 7 ) ? 1e-2f : ( k == 11 ? 0.5f : 1e-3f );
+
+				if ( fabsf( other->decal[k] - poly->decal[k] ) > most ) {
+					break;
+				}
+			}
+			if ( k == 16 ) {
+				break;
+			}
+		}
+		if ( j == numMarks ) {
+			marks[numMarks++] = poly;
+		}
+	}
+
+	for ( int i = 0; i < numMarks; i++ ) {
+		if ( !marks[i] ) {
+			continue;
+		}
+		const qhandle_t hShader = marks[i]->hShader;
+		const shader_t *markShader = R_GetShaderByHandle( hShader );
+		const shaderStage_t *stage;
+		int count = 0;
+
+		if ( markShader->remappedShader ) {
+			markShader = markShader->remappedShader;
+		}
+		stage = &markShader->stages[0];
+		for ( int j = i; j < numMarks; j++ ) {
+			count += ( marks[j] && marks[j]->hShader == hShader );
+		}
+		uint32_t first;
+		float *out = ( stage->active && stage->bundle[0].image ) ? VK_FrameRows( count * 4, &first ) : NULL;
+		for ( int j = i; j < numMarks; j++ ) {
+			if ( marks[j] && marks[j]->hShader == hShader ) {
+				if ( out ) {
+					memcpy( out, marks[j]->decal, sizeof( marks[j]->decal ) );
+					out += 16;
+				}
+				marks[j] = NULL;
+			}
+		}
+		if ( !out ) {
+			continue;
+		}
+
+		// how the marks of a pass are put together in generic.frag Decals(), from the blend of the stage:
+		// 0 the colour takes away (filter), 1 times (modulate), 2 over by alpha, 3 added
+		const uint32_t blend = stage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS );
+		const uint32_t src = blend & GLS_SRCBLEND_BITS, dst = blend & GLS_DSTBLEND_BITS;
+		float kind = 2.0f;
+		if ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+			kind = 0.0f;
+		} else if ( ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ZERO ) || ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_SRC_COLOR ) ) {
+			kind = 1.0f;
+		} else if ( src == GLS_SRCBLEND_ONE && dst == GLS_DSTBLEND_ONE ) {
+			kind = 3.0f;
+		}
+
+		vkDraw_t draw;
+		VK_InitDraw( &draw, transform, bones );
+		const vkProgram_t passProgram = VK_TessPass( &draw, tessFrom, program );
+		draw.flags |= VKD_DECALS;
+		draw.tex0 = draw.tex1 = VK_BundleTexture( &stage->bundle[0] );
+		draw.decals = first;
+		draw.numDecals = (uint32_t)count;
+		draw.parm[0] = kind;
+		// how far from the plane of a mark the bumps reach, so a mark does not paint another floor below it
+		draw.parm[1] = tessFrom->tess[0] + 4.0f;
+		VK_DrawTess( &draw, passProgram, ( blend ? blend : ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
+			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)surface->polygonOffset );
+	}
+}
+
+/*
+===============
 RB_StageIteratorGeneric
 
 The stages of tess.shader on the geometry in tess
@@ -1193,6 +1321,11 @@ void RB_StageIteratorGeneric( void ) {
 	const shader_t *shader = tess.shader;
 	uint32_t transform;
 	int cullMode;
+
+	// VisionJK: marks on a tessellated surface are painted by it (VK_PaintMarks)
+	if ( tess.markTess && VK_SurfaceTessellated( tess.markTess ) ) {
+		return;
+	}
 
 	const qboolean isStatic = VK_BatchIsStatic();
 	float colorScale[3] = { 1.0f, 1.0f, 1.0f };
@@ -1241,39 +1374,6 @@ void RB_StageIteratorGeneric( void ) {
 	// the tessellated stage of the batch, for the passes after the stages (VK_TessPass)
 	vkDraw_t tessDraw;
 	qboolean haveTessDraw = qfalse;
-	// VisionJK: a batch of marks on a tessellated surface (tess.markTess, tr_marks.cpp): the height of that surface
-	// as VK_TessPass takes it, so the stages of the marks are cut and moved as the surface is and lie on its bumps.
-	// Their texture coordinates on the surface are in the second ones of the vertices (TCGEN_LIGHTMAP), and they
-	// have no borders: a mark follows the bumps up to its edges.
-	vkDraw_t markFrom;
-	qboolean haveMarkFrom = qfalse;
-	if ( tess.markTess && program == VKP_GENERIC && vk.tessellation && v_tessellation->integer && !backEnd.viewParms.probeFace
-		&& !rb_dlightsOnly ) {
-		const shaderStage_t *surfStage = R_TessStage( tess.markTess );
-		const shader_t *surfShader = tess.markTess->remappedShader ? tess.markTess->remappedShader : tess.markTess;
-		uint32_t noBorders;
-
-		if ( surfStage && surfStage->bundle[0].tcGen == TCGEN_TEXTURE ) {
-			VK_InitDraw( &markFrom, transform, bones );
-			if ( VK_PbrDraw( surfStage, surfShader, qfalse, &markFrom ) && ( markFrom.pbrFlags & VKP_HEIGHT )
-				&& VK_TessBorders( &noBorders, qtrue ) ) {
-				const stageMaterial_t *mat = surfStage->mat;
-
-				VK_BundleTexCoords( &surfStage->bundle[0], markFrom.texMat0, markFrom.texTurb0 );
-				memset( markFrom.tcGenVec0, 0, sizeof( markFrom.tcGenVec0 ) );
-				markFrom.flags = ( markFrom.flags & ~( 15u << VKD_TCGEN0_SHIFT ) ) | ( (uint32_t)TCGEN_LIGHTMAP << VKD_TCGEN0_SHIFT );
-				markFrom.bones = noBorders;
-				markFrom.tess[0] = mat->tessHeight;
-				markFrom.tess[1] = mat->tessPlane;
-				// the mark is cut into other triangles than the surface under it, so the two follow the height a little
-				// differently: nearer to the eye by a third of the bumps it wins the depth test where they differ
-				markFrom.towardEye = 1.0f + mat->tessHeight / 3.0f;
-				markFrom.tess[2] = mat->tessDensity;
-				markFrom.tess[3] = 64.0f;
-				haveMarkFrom = qtrue;
-			}
-		}
-	}
 
 	for ( int stage = 0; stage < shader->numUnfoggedPasses; stage++ ) {
 		const shaderStage_t *pStage = &tess.xstages[stage];
@@ -1385,7 +1485,7 @@ void RB_StageIteratorGeneric( void ) {
 			// the level.
 			uint32_t borders = 0;
 			if ( mat->tessHeight > 0.0f && program == VKP_GENERIC && vk.tessellation && v_tessellation->integer
-				&& ( draw.pbrFlags & VKP_HEIGHT ) && !backEnd.viewParms.probeFace && VK_TessBorders( &borders, qfalse ) ) {
+				&& ( draw.pbrFlags & VKP_HEIGHT ) && !backEnd.viewParms.probeFace && VK_TessBorders( &borders ) ) {
 				stageProgram = VKP_TESS;
 				draw.bones = borders;
 				draw.pbr[2] = 0.0f;
@@ -1404,13 +1504,6 @@ void RB_StageIteratorGeneric( void ) {
 				draw.tex1 = mat->normalMap->texnum;
 				draw.material[3] = 1.0f;
 			}
-		}
-		// a mark on a tessellated surface: cut and moved as the surface under it; the normal map of the mark's own
-		// material gives way to the height of the surface (both would be the third texture)
-		if ( haveMarkFrom && stageProgram == program && !pStage->bundle[1].image ) {
-			draw.pbrFlags &= ~( VKP_NORMAL | VKP_HEIGHT );
-			draw.pbr[2] = 0.0f;
-			stageProgram = VK_TessPass( &draw, &markFrom, program );
 		}
 		draw.flags |= VK_AlphaTest( stateBits );
 		// VisionJK: the glow map of a lamp panel (a stage added onto it) shines brighter than its texture (v_panelGlow)
@@ -1470,15 +1563,19 @@ void RB_StageIteratorGeneric( void ) {
 	// (the first run of the list leaves them to the run of the light passes after the shadows, rb_deferDlights)
 	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
 		&& ( rb_dlightsOnly || g_bRenderGlowingObjects || !rb_deferDlights ) ) {
-		VK_DynamicLights( transform, cullMode, program, bones, haveMarkFrom ? &markFrom : ( haveTessDraw ? &tessDraw : NULL ) );
+		VK_DynamicLights( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
 	}
 	if ( rb_dlightsOnly ) {
 		return;
 	}
+	// VisionJK: the marks on a tessellated surface, painted onto its bumps
+	if ( haveTessDraw && !g_bRenderGlowingObjects && backEnd.refdef.numPolys ) {
+		VK_PaintMarks( transform, cullMode, program, bones, &tessDraw );
+	}
 	// now do fog
 	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum
 		&& shader->fogPass ) {
-		VK_FogPass( transform, cullMode, program, bones, haveMarkFrom ? &markFrom : ( haveTessDraw ? &tessDraw : NULL ) );
+		VK_FogPass( transform, cullMode, program, bones, haveTessDraw ? &tessDraw : NULL );
 	}
 	// draw debugging stuff: the triangles of the batch as white lines over everything (DrawTris of rd-vanilla)
 	if ( r_showtris->integer && vk.wireframe ) {

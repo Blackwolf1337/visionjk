@@ -930,6 +930,62 @@ vec4 SafeColor( vec4 c ) {
 	return clamp( c, vec4( 0.0 ), vec4( 64.0 ) );
 }
 
+#ifndef VK_GLES
+// the marks of DECALS, four rows each from d.decals on (vk_shade.cpp VK_PaintMarks)
+layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
+	vec4	bones[];
+};
+
+// DECALS: the marks on a tessellated surface, painted onto its bumps in a pass over the surface (depth EQUAL). Each
+// mark gives its texture coordinates from the place of the pixel, the same along its normal, so it lies on the
+// bumps as if seen from above; a pixel outside its square, or further from its plane than the bumps reach
+// (d.parm.y), has nothing of it. The marks of the pass are put together as their blend would have put them over
+// each other, by d.parm.x: 0 the colour takes away (one minus the product of what each leaves), 1 times, 2 over by
+// alpha, 3 added. A pixel with no mark is left alone.
+vec4 Decals( Draw d ) {
+	uint kind = uint( d.parm.x + 0.5 );
+	vec3 p = v_position;
+	// (the gradients for the texture come from the place, outside the loop: inside it they are not defined)
+	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
+	vec4 sum = ( kind == 1u ) ? vec4( 1.0 ) : vec4( 0.0 );
+	bool hit = false;
+
+	for ( uint i = 0u; i < d.numDecals; i++ ) {
+		uint r = d.decals + i * 4u;
+		vec4 S = bones[r], T = bones[r + 1u], P = bones[r + 2u], C = bones[r + 3u];
+
+		if ( abs( dot( P.xyz, p ) - P.w ) > d.parm.y ) {
+			continue;
+		}
+		vec2 st = vec2( dot( S.xyz, p ) + S.w, dot( T.xyz, p ) + T.w );
+		if ( any( lessThan( st, vec2( 0.0 ) ) ) || any( greaterThan( st, vec2( 1.0 ) ) ) ) {
+			continue;
+		}
+		vec4 c = textureGrad( TEX0( d ), st, vec2( dot( S.xyz, dpdx ), dot( T.xyz, dpdx ) ),
+			vec2( dot( S.xyz, dpdy ), dot( T.xyz, dpdy ) ) ) * C;
+		hit = true;
+		if ( kind == 0u ) {
+			sum.rgb = 1.0 - ( 1.0 - sum.rgb ) * ( 1.0 - c.rgb );
+			sum.a = 1.0;
+		} else if ( kind == 1u ) {
+			sum *= c;
+		} else if ( kind == 3u ) {
+			sum += c;
+		} else {
+			sum.rgb = c.rgb * c.a + sum.rgb * ( 1.0 - c.a );
+			sum.a = c.a + sum.a * ( 1.0 - c.a );
+		}
+	}
+	if ( !hit ) {
+		discard;
+	}
+	if ( kind == 2u ) {
+		sum.rgb = ( sum.a > 0.0 ) ? sum.rgb / sum.a : vec3( 0.0 );
+	}
+	return sum;
+}
+#endif
+
 void main() {
 	Draw d = DRAWS( v_draw );
 
@@ -943,6 +999,12 @@ void main() {
 		o_color = SafeColor( DynamicLight( d ) );
 		return;
 	}
+#ifndef VK_GLES
+	if ( DECALS( d.flags ) ) {
+		o_color = SafeColor( Decals( d ) );
+		return;
+	}
+#endif
 
 	vec4 color;
 	uint env = TEXENV( d.flags );

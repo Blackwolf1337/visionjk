@@ -782,13 +782,13 @@ typedef struct srfPoly_s {
 	int				fogIndex;
 	int				numVerts;
 	polyVert_t		*verts;
-	// VisionJK: a mark on a tessellated surface of the level (R_MarkTessFind): that surface's shader, and for each
-	// vertex its texture coordinates and normal there (POLY_TESS_FLOATS), so the mark follows the bumps; else NULL
+	// VisionJK: a mark on a tessellated surface of the level (R_MarkTessFind): that surface's shader, else NULL.
+	// Such a mark is not drawn itself, the surface paints it onto its bumps (vk_shade.cpp VK_PaintMarks) from
+	// decal: s = dot( decal[0..2], xyz ) + decal[3], t from decal[4..7], the plane of the mark in decal[8..11]
+	// (normal, distance), its colour 0 to 1 in decal[12..15]
 	struct shader_s	*tessShader;
-	float			*tessVerts;
+	float			decal[16];
 } srfPoly_t;
-
-#define POLY_TESS_FLOATS	5		// s, t, normal
 
 typedef struct srfDisplayList_s {
 	surfaceType_t	surfaceType;
@@ -1672,8 +1672,7 @@ struct shaderCommands_s
 	//rww - doing a fade, don't compute shader color/alpha overrides
 	bool		fading;
 
-	// VisionJK: a batch of marks on a tessellated surface (srfPoly_t tessShader): that surface's shader, the texture
-	// coordinates there in texCoords[][1] and its normals in normal
+	// VisionJK: a batch of marks on a tessellated surface (srfPoly_t tessShader): that surface's shader
 	shader_t	*markTess;
 };
 
@@ -2061,7 +2060,6 @@ typedef struct backEndData_s {
 	trMiniRefEntity_t	miniEntities[MAX_MINI_ENTITIES];
 	srfPoly_t	*polys;//[MAX_POLYS];
 	polyVert_t	*polyVerts;//[MAX_POLYVERTS];
-	float		*polyTessVerts;		// POLY_TESS_FLOATS for each of polyVerts
 	renderCommandList_t	commands;
 } backEndData_t;
 
