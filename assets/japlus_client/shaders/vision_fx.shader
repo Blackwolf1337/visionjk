@@ -100,15 +100,16 @@ gfx/vision/saberhalo
 	}
 }
 
-// a drop of melt running down a wall (the cgame moves its texture coordinates), and what it leaves
-gfx/vision/saberdrip
+// a bead of slag that sags down a wall from a cut and the smear it leaves (the cgame moves their texture
+// coordinates), and what stays of them; four outlines
+gfx/vision/saberbead0
 {
 	polygonOffset
 	surfaceparm	nomarks
 	surfaceparm	trans
 	q3map_nolightmap
 	{
-		clampmap gfx/vision/saberdrip
+		clampmap gfx/vision/saberbead0
 		blendFunc GL_SRC_ALPHA GL_ONE
 		rgbGen vertex
 		alphaGen vertex
@@ -116,14 +117,130 @@ gfx/vision/saberdrip
 	}
 }
 
-gfx/vision/saberdrip_scar
+gfx/vision/saberbead0_scar
 {
 	polygonOffset
 	surfaceparm	nomarks
 	surfaceparm	trans
 	q3map_nolightmap
 	{
-		clampmap gfx/vision/saberdrip_scar
+		clampmap gfx/vision/saberbead0_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/saberbead1
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberbead1
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen vertex
+		alphaGen vertex
+		glow
+	}
+}
+
+gfx/vision/saberbead1_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberbead1_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/saberbead2
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberbead2
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen vertex
+		alphaGen vertex
+		glow
+	}
+}
+
+gfx/vision/saberbead2_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberbead2_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/saberbead3
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberbead3
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen vertex
+		alphaGen vertex
+		glow
+	}
+}
+
+gfx/vision/saberbead3_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/saberbead3_scar
+		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
+		rgbGen vertex
+		alphaGen vertex
+	}
+}
+
+gfx/vision/sabertrail
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/sabertrail
+		blendFunc GL_SRC_ALPHA GL_ONE
+		rgbGen vertex
+		alphaGen vertex
+		glow
+	}
+}
+
+gfx/vision/sabertrail_scar
+{
+	polygonOffset
+	surfaceparm	nomarks
+	surfaceparm	trans
+	q3map_nolightmap
+	{
+		clampmap gfx/vision/sabertrail_scar
 		blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA
 		rgbGen vertex
 		alphaGen vertex
