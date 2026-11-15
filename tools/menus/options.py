@@ -122,6 +122,8 @@ SETUP = [
         ('slider', 'Exposure', 'v_exposure', 1.0, 0.5, 2, 'How bright the level is before it is tone mapped. 1 as it is.'),
         ('multi', 'Eye Adaptation', 'v_autoExposure', (('Off', 0), ('Gentle', 1), ('Strong', 2)),
          'The picture adapts like an eye: dark corridors brighten a little, bright yards darken, over a moment. Gentle: up to one stop. Vulkan only.'),
+        ('slider', 'Haze', 'v_volumetric', 0.25, 0, 1,
+         'Haze in the air, lit by the light that reaches it: soft beams where the sun or a lamp shines in, a glow round sabers and shots, far halls fading. 0: off. Vulkan only.'),
         ('yesno', 'Level Colour Look', 'v_colorGrade', 'Levels can come with a colour look of their own: contrast, saturation, warmth and the tint of shadows and highlights. Off: the colours as they are. Vulkan only.'),
         ('head', 'Bloom'),
         ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),

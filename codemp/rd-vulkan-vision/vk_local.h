@@ -218,6 +218,8 @@ typedef enum {
 									// of the level, RB_DepthPrepass); Vulkan only
 	VKP_SPARKS,						// no vertices: the sparks of v_gpuSparks from their ring on the device, six vertices
 									// each without indexes (shaders/sparks.vert, vk_sparks.cpp); Vulkan only
+	VKP_VOLUME,						// no vertices: one triangle over the view, the haze of v_volumetric (shaders/volume.vert
+									// and .frag, vk_post.cpp VK_Volumetric); Vulkan only
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -466,6 +468,8 @@ void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
 void		VK_SoftDepth( void );
+extern cvar_t	*v_volumetric;		// vk_post.cpp
+void		VK_Volumetric( uint32_t transform );
 
 // vk_sparks.cpp (v_gpuSparks)
 extern cvar_t	*v_gpuSparks;

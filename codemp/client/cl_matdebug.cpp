@@ -1229,6 +1229,7 @@ static void MatDebug_DrawLook( void ) {
 	MatDebug_LookSlider( "Tint", "v_lookTint", -1.0f, 1.0f, "-1 green to 1 magenta" );
 	MatDebug_LookColor( "Shadows", "v_lookShadows", -0.2f, 0.2f, "Red, green, blue added where it is dark (lift). 0 0 0: as they are" );
 	MatDebug_LookColor( "Highlights", "v_lookHighlights", 0.5f, 1.5f, "Red, green, blue times where it is bright (gain). 1 1 1: as they are" );
+	MatDebug_LookSlider( "Haze", "v_lookHaze", 0.0f, 4.0f, "How thick the lit haze of this level is, times v_volumetric. 1: as it is, 0: none" );
 	if ( ImGui::Button( "Save" ) ) {
 		char	shadows[64], highlights[64];
 		const char *text;
@@ -1236,9 +1237,9 @@ static void MatDebug_DrawLook( void ) {
 		Cvar_VariableStringBuffer( "v_lookShadows", shadows, sizeof( shadows ) );
 		Cvar_VariableStringBuffer( "v_lookHighlights", highlights, sizeof( highlights ) );
 		text = va( "// the colour look of this level (rd-vulkan-vision v_colorGrade), made in the Material Lab\n"
-			"contrast %.3f\nsaturation %.3f\nwarmth %.3f\ntint %.3f\nshadows %s\nhighlights %s\n",
+			"contrast %.3f\nsaturation %.3f\nwarmth %.3f\ntint %.3f\nshadows %s\nhighlights %s\nhaze %.3f\n",
 			Cvar_VariableValue( "v_lookContrast" ), Cvar_VariableValue( "v_lookSaturation" ), Cvar_VariableValue( "v_lookWarmth" ),
-			Cvar_VariableValue( "v_lookTint" ), shadows, highlights );
+			Cvar_VariableValue( "v_lookTint" ), shadows, highlights, Cvar_VariableValue( "v_lookHaze" ) );
 		FS_WriteFile( path, text, (int)strlen( text ) );
 		MatDebug_Message( qfalse, "Saved %s", path );
 	}
@@ -1250,6 +1251,7 @@ static void MatDebug_DrawLook( void ) {
 		Cvar_Set( "v_lookTint", "0" );
 		Cvar_Set( "v_lookShadows", "0 0 0" );
 		Cvar_Set( "v_lookHighlights", "1 1 1" );
+		Cvar_Set( "v_lookHaze", "1" );
 	}
 	ImGui::SetItemTooltip( "Everything as the game is; Save then writes a file that changes nothing" );
 	ImGui::End();

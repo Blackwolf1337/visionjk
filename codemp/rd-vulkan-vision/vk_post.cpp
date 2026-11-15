@@ -43,6 +43,8 @@ cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
 cvar_t	*v_autoExposure;
 cvar_t	*v_colorGrade;
+cvar_t	*v_volumetric;
+static cvar_t	*v_lookHaze;
 static cvar_t	*v_lookContrast, *v_lookSaturation, *v_lookWarmth, *v_lookTint, *v_lookShadows, *v_lookHighlights;
 
 void VK_InitPost( void ) {
@@ -73,6 +75,9 @@ void VK_InitPost( void ) {
 	v_lookTint = ri.Cvar_Get( "v_lookTint", "0", CVAR_TEMP, "The look of this level (v_colorGrade): -1 green to 1 magenta" );
 	v_lookShadows = ri.Cvar_Get( "v_lookShadows", "0 0 0", CVAR_TEMP, "The look of this level (v_colorGrade): red green blue added to the shadows, 0 0 0 as they are" );
 	v_lookHighlights = ri.Cvar_Get( "v_lookHighlights", "1 1 1", CVAR_TEMP, "The look of this level (v_colorGrade): red green blue the highlights are multiplied with, 1 1 1 as they are" );
+	v_volumetric = ri.Cvar_Get( "v_volumetric", "0.25", CVAR_ARCHIVE_ND,
+		"Haze in the air, lit by the light that reaches it: soft beams where the sun or a lamp shines through a window or a door, a glow round sabers and shots, the far end of a hall fading. 0 to 1: how thick. A level's look can make it thicker or thinner. Vulkan only. 0: off" );
+	v_lookHaze = ri.Cvar_Get( "v_lookHaze", "1", CVAR_TEMP, "The look of this level: how thick its haze is, times v_volumetric, 1 as it is" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
 }
@@ -104,6 +109,7 @@ void VK_LoadLook( const char *mapName ) {
 	ri.Cvar_Set( "v_lookTint", "0" );
 	ri.Cvar_Set( "v_lookShadows", "0 0 0" );
 	ri.Cvar_Set( "v_lookHighlights", "1 1 1" );
+	ri.Cvar_Set( "v_lookHaze", "1" );
 	COM_StripExtension( mapName, path, sizeof( path ) );
 	Q_strcat( path, sizeof( path ), ".look" );
 	if ( ri.FS_ReadFile( path, (void **)&text ) <= 0 || !text ) {
@@ -137,6 +143,8 @@ void VK_LoadLook( const char *mapName ) {
 			ri.Cvar_Set( "v_lookShadows", value );
 		} else if ( !Q_stricmp( key, "highlights" ) ) {
 			ri.Cvar_Set( "v_lookHighlights", value );
+		} else if ( !Q_stricmp( key, "haze" ) ) {
+			ri.Cvar_Set( "v_lookHaze", value );
 		}
 	}
 	ri.FS_FreeFile( text );
@@ -209,6 +217,77 @@ static float VK_AutoExposure( void ) {
 	}
 	lastTime = now;
 	return powf( 2.0f, stops );
+}
+
+/*
+===============
+VK_Volumetric
+
+v_volumetric, for the view of the level, over its solid surfaces once their distance is in vk.softDepth (vk_backend.cpp
+RB_DrawWet): the haze of shaders/volume.frag over the whole view, the frame times what of it still shows plus the
+light gathered. transform: the one of the level. The light of the cells from tr.volumeGrid, the moving lights of the
+scene in rows of the frame. About 0.3 ms at 1080p with 20 steps.
+===============
+*/
+void VK_Volumetric( uint32_t transform ) {
+#ifndef RD_VISION_GLES
+	const float	density = Com_Clamp( 0.0f, 1.0f, v_volumetric->value ) * Com_Clamp( 0.0f, 4.0f, v_lookHaze->value ) * 0.0012f;
+	float		rows[VK_WET_HEADER][4];
+	int			viewport[4];
+	vkDraw_t	draw;
+
+	if ( !vk.frame || density <= 0.0f || !vk.softReady || !tr.volumeGrid || !tr.world || !tr.softDepthImage ) {
+		return;
+	}
+	VK_ViewRows( rows, viewport );
+	memset( &draw, 0, sizeof( draw ) );
+	draw.transform = transform;
+	draw.tex4 = tr.volumeGrid->texnum;
+	draw.tex5 = tr.softDepthImage->texnum;
+	VectorCopy( tr.world->lightGridOrigin, draw.grid0 );
+	draw.grid0[3] = (float)tr.pbrGridTiles;
+	VectorCopy( tr.world->lightGridInverseSize, draw.grid1 );
+	draw.grid1[3] = (float)tr.volumeGrid->height;
+	for ( int i = 0; i < 3; i++ ) {
+		draw.grid2[i] = (float)tr.world->lightGridBounds[i];
+	}
+	draw.grid2[3] = (float)tr.volumeGrid->width;
+	// forward, left, up with the tangents of the view (VK_ViewRows), the density and how it thins up from the bottom
+	// of the light grid, how far, the steps
+	VectorCopy( rows[5], draw.texMat0 );		draw.texMat0[3] = rows[4][3];
+	VectorCopy( rows[6], draw.texMat0 + 4 );	draw.texMat0[7] = rows[5][3];
+	VectorCopy( rows[7], draw.texMat1 );		draw.texMat1[3] = density;
+	draw.texMat1[4] = 1.0f / 700.0f;
+	draw.texMat1[5] = tr.world->lightGridOrigin[2] + 64.0f;
+	draw.texMat1[6] = 2400.0f;
+	draw.texMat1[7] = 20.0f;
+	VectorSet4( draw.fogColor, 1.0f, 0.96f, 0.9f, 1.0f );
+	VectorCopy4( rows[8], draw.parm );
+	// the moving lights: origin and reach, colour
+	if ( backEnd.refdef.num_dlights ) {
+		uint32_t first;
+		const int count = Q_min( backEnd.refdef.num_dlights, 32 );
+		float *out = VK_FrameRows( count * 2, &first );
+
+		if ( out ) {
+			for ( int i = 0; i < count; i++, out += 8 ) {
+				const dlight_t *dl = &backEnd.refdef.dlights[i];
+
+				VectorCopy( dl->origin, out );
+				out[3] = Q_max( dl->radius, 1.0f );
+				VectorScale( dl->color, Com_Clamp( 0.0f, 3.0f, v_dlightScale->value ), out + 4 );
+				out[7] = 0.0f;
+			}
+			draw.decals = first;
+			draw.numDecals = (uint32_t)count;
+		}
+	}
+	vk.drawVertices = 3;
+	VK_DrawTess( &draw, VKP_VOLUME, GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_SRC_ALPHA, VKC_NONE, qfalse );
+	vk.drawVertices = 0;
+#else
+	(void)transform;
+#endif
 }
 
 /*

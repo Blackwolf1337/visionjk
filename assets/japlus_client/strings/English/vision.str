@@ -398,6 +398,12 @@ LANG_ENGLISH        "Gentle"
 REFERENCE           STRONG
 LANG_ENGLISH        "Strong"
 
+REFERENCE           HAZE
+LANG_ENGLISH        "Haze"
+
+REFERENCE           HAZE_IN_THE_AIR_LIT_BY_THE_LIGHT_THA
+LANG_ENGLISH        "Haze in the air, lit by the light that reaches it: soft beams where the sun or a lamp shines in, a glow round sabers and shots, far halls fading. 0: off. Vulkan only."
+
 REFERENCE           LEVEL_COLOUR_LOOK
 LANG_ENGLISH        "Level Colour Look"
 

@@ -529,6 +529,14 @@ REFERENCE           STRONG
 LANG_ENGLISH        "Strong"
 LANG_FRENCH         "Forte"
 
+REFERENCE           HAZE
+LANG_ENGLISH        "Haze"
+LANG_FRENCH         "Brume"
+
+REFERENCE           HAZE_IN_THE_AIR_LIT_BY_THE_LIGHT_THA
+LANG_ENGLISH        "Haze in the air, lit by the light that reaches it: soft beams where the sun or a lamp shines in, a glow round sabers and shots, far halls fading. 0: off. Vulkan only."
+LANG_FRENCH         "Une brume dans l'air, éclairée par la lumière qui l'atteint : des rayons doux là où le soleil ou une lampe entre, un halo autour des sabres et des tirs, les salles lointaines qui s'estompent. 0 : désactivé. Vulkan uniquement."
+
 REFERENCE           LEVEL_COLOUR_LOOK
 LANG_ENGLISH        "Level Colour Look"
 LANG_FRENCH         "Ambiance colorée du niveau"

@@ -139,6 +139,12 @@ static const uint32_t vk_softDepthFrag[] =
 static const uint32_t vk_sparksVert[] =
 #include "shaders/sparks_vert.inc"
 ;
+static const uint32_t vk_volumeVert[] =
+#include "shaders/volume_vert.inc"
+;
+static const uint32_t vk_volumeFrag[] =
+#include "shaders/volume_frag.inc"
+;
 static const uint32_t vk_lumDownFrag[] =
 #include "shaders/lumdown_frag.inc"
 ;
@@ -401,7 +407,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		tessellation.patchControlPoints = 3;
 	}
 
-	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID || program == VKP_SPARKS ) ) {
+	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID || program == VKP_SPARKS || program == VKP_VOLUME ) ) {
 		// nothing comes from a vertex buffer, see shaders/sprite.vert and liquid.vert
 	} else if ( !post && program == VKP_GRASS ) {
 		// vkGrassVertex_t, three vec4
@@ -760,6 +766,8 @@ void VK_InitPipelines( void ) {
 	vk.vertexShaders[VKP_DEPTH] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
 	vk.vertexShaders[VKP_SPARKS] = VK_CreateShader( vk_sparksVert, sizeof( vk_sparksVert ) );
 	vk.fragmentShaders[VKP_SPARKS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
+	vk.vertexShaders[VKP_VOLUME] = VK_CreateShader( vk_volumeVert, sizeof( vk_volumeVert ) );
+	vk.fragmentShaders[VKP_VOLUME] = VK_CreateShader( vk_volumeFrag, sizeof( vk_volumeFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );

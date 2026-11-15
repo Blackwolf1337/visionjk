@@ -237,6 +237,8 @@ set(MPVulkanVisionRTShaders
 	rtskin.comp
 	sparks.comp
 	sparks.vert
+	volume.vert
+	volume.frag
 	smdepth.vert
 	rtlightmask.frag
 	smlights.frag
