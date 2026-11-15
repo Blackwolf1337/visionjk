@@ -2106,16 +2106,22 @@ void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, 
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 qboolean CG_DrawBackdrop( float x, float y, float width, float height, float radius );
 
-// hud/cg_select3d.c: the weapon and item selection of the new HUD as glass cards with 3D models (issue #17)
+// hud/cg_select3d.c: the weapon, item and force power selection of the new HUD as glass cards with 3D models (issue #17)
 typedef struct select3dItem_s {
-	const gitem_t	*item;
-	qboolean		dim;		// out of ammo: the card darkened
-	int				count;		// the ammo under the selected card, -1: none
-	qhandle_t		icon;		// a picture in place of the model (melee), 0: the model
+	const gitem_t	*item;		// NULL: no item (a force power), its picture and name given here
+	qboolean		dim;		// out of ammo, too little force: the card darkened
+	int				count;		// the ammo (the force it costs) under the selected card, -1: none
+	qhandle_t		icon;		// a picture in place of the model (melee, a force power), 0: the model
+	qboolean		disc;		// the picture on a disc that turns as a model does, not flat
+	const char		*name;		// under the selected card in place of the name of the item, NULL: that one
+	const float		*tint;		// rgb of the rim, the glow and the count, NULL: the accent
+	int				pips, pipsMax;	// pips along the bottom of the card (the rank of a force power), pipsMax 0: none
+	qboolean		active;		// running right now: the card glows
 } select3dItem_t;
 #define SELECT3D_WEAPONS	0			// the rows, each with a carousel of its own
 #define SELECT3D_ITEMS		1
-#define SELECT3D_ROWS		2
+#define SELECT3D_FORCE		2
+#define SELECT3D_ROWS		3
 void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since );
 void CG_Select3DPreload( void );
 void CG_Select3DShutdown( void );

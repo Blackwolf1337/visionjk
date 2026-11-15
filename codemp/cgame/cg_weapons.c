@@ -1156,6 +1156,7 @@ void CG_DrawWeaponSelect( void ) {
 				if ( weap == cg.weaponSelect ) {
 					selected = n;
 				}
+				memset( &list[n], 0, sizeof( list[n] ) );
 				list[n].item = item;
 				list[n].dim = (qboolean)!CG_WeaponCheck( weap );
 				list[n].count = weaponData[weap].ammoIndex != AMMO_NONE

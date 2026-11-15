@@ -1589,6 +1589,9 @@ void CG_DrawHUD(centity_t	*cent)
 
 #define MAX_SHOWPOWERS NUM_FORCE_POWERS
 
+// what using a power costs at each rank (bg_pmove.c)
+extern int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS];
+
 qboolean ForcePower_Valid(int i)
 {
 	if (i == FP_LEVITATION ||
@@ -1636,6 +1639,49 @@ void CG_DrawForceSelect( void )
 
 	if (!cg.snap->ps.fd.forcePowersKnown)
 	{
+		return;
+	}
+
+	if ( CG_HudNewLook() ) {
+		// VisionJK: glass cards as for the weapons (hud/cg_select3d.c), the picture of each power on a disc, in the
+		// order forcenext goes through them (BG_CycleForce): the card in the colour of its side, its rank as pips,
+		// what using it costs at that rank, darkened while the force is too low for it, glowing while it runs
+		static const vec3_t		light = { 0.36f, 0.78f, 0.96f }, dark = { 1.0f, 0.32f, 0.26f }, neutral = { 0.88f, 0.92f, 1.0f };
+		const playerState_t		*ps = &cg.predictedPlayerState;
+		const int				wanted = ( cg.forceSelect >= 0 && cg.forceSelect < NUM_FORCE_POWERS && ForcePower_Valid( cg.forceSelect ) )
+									? cg.forceSelect : cg.snap->ps.fd.forcePowerSelected;
+		select3dItem_t			list[NUM_FORCE_POWERS];
+		int						n = 0, selected = -1;
+
+		for ( i = 0; i < NUM_FORCE_POWERS; i++ ) {
+			const int	fp = forcePowerSorted[i];
+			int			level, cost;
+
+			if ( !ForcePower_Valid( fp ) ) {
+				continue;
+			}
+			level = ps->fd.forcePowerLevel[fp];
+			if ( level < 0 || level >= NUM_FORCE_POWER_LEVELS ) {
+				level = 0;
+			}
+			cost = forcePowerNeeded[level][fp];
+			memset( &list[n], 0, sizeof( list[n] ) );
+			list[n].icon = cgs.media.forcePowerIcons[fp];
+			list[n].disc = qtrue;
+			list[n].count = cost > 0 ? cost : -1;
+			list[n].dim = (qboolean)( ps->fd.forcePower < cost );
+			list[n].pips = level;
+			list[n].pipsMax = NUM_FORCE_POWER_LEVELS - 1;
+			list[n].active = (qboolean)( ( ps->fd.forcePowersActive & ( 1 << fp ) ) != 0 );
+			list[n].tint = forcePowerDarkLight[fp] == FORCE_LIGHTSIDE ? light
+				: forcePowerDarkLight[fp] == FORCE_DARKSIDE ? dark : neutral;
+			if ( fp == wanted ) {
+				selected = n;
+				list[n].name = showPowersName[fp] ? CG_GetStringEdString( "SP_INGAME", showPowersName[fp] ) : "";
+			}
+			n++;
+		}
+		CG_Select3D( SELECT3D_FORCE, list, n, selected, cg.forceSelectTime );
 		return;
 	}
 
@@ -1807,6 +1853,7 @@ void CG_DrawInvenSelect( void )
 			if ( i == cg.itemSelect ) {
 				selected = n;
 			}
+			memset( &list[n], 0, sizeof( list[n] ) );
 			list[n].item = &bg_itemlist[index];
 			list[n].dim = qfalse;
 			list[n].count = -1;

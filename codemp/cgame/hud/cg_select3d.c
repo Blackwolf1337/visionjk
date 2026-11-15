@@ -18,11 +18,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cg_select3d.c -- VisionJK (issue #17): the selection of a weapon or an item of the inventory with the new HUD as a
-// carousel of frosted glass cards, each with the 3D model of what it is: the cards stand on a ring, the selected one
-// in front, biggest, its model turning, its name and ammo under it; the ring turns to a new selection the shortest way
-// round. In the order of the stock row (CG_DrawWeaponSelect, CG_DrawInvenSelect), which stays for the HUD of the game
-// (v_hud 0). The models are loaded with the level (CG_Select3DPreload). Not from JA+.
+// cg_select3d.c -- VisionJK (issue #17): the selection of a weapon, an item of the inventory or a force power with the
+// new HUD as a carousel of frosted glass cards, each with the 3D model of what it is: the cards stand on a ring, the
+// selected one in front, biggest, its model turning, its name and ammo under it; the ring turns to a new selection the
+// shortest way round. A force power has no model: its picture on a disc that turns, the card in the colour of its
+// side, with its rank as pips, what it costs under it, darkened while the force is too low for it and glowing while
+// it runs. In the order of the stock row (CG_DrawWeaponSelect, CG_DrawInvenSelect, CG_DrawForceSelect), which stays
+// for the HUD of the game (v_hud 0). The models are loaded with the level (CG_Select3DPreload). Not from JA+.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -41,6 +43,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SELECT_TURN_MSEC	6000.0f		// one turn of the model of the selected card
 #define SELECT_IN_MSEC		120.0f
 #define SELECT_OUT_MSEC		200.0f
+#define SELECT_DISC_RADIUS	10.0f		// the disc of a force power, in units of its scene
+#define SELECT_DISC_THICK	1.2f
+#define SELECT_DISC_SIDES	24
+#define SELECT_PULSE_MSEC	1100.0f		// one pulse of the glow of a power that runs
 
 static const vec4_t selectGlass = { 0.035f, 0.07f, 0.12f, 0.78f };
 static const vec4_t selectRim = { 0.43f, 0.83f, 1.0f, 0.25f };
@@ -108,6 +114,23 @@ void CG_Select3DShutdown( void ) {
 	selectNumModels = 0;
 }
 
+// the scene that was put together, in the rect (pixels): the camera at the origin looking along x
+static void Select3D_Render( float x, float y, float w, float h ) {
+	refdef_t refdef;
+
+	memset( &refdef, 0, sizeof( refdef ) );
+	refdef.rdflags = RDF_NOWORLDMODEL;
+	AxisClear( refdef.viewaxis );
+	refdef.fov_x = SELECT_FOV;
+	refdef.fov_y = SELECT_FOV * h / w;
+	refdef.x = (int)x;
+	refdef.y = (int)y;
+	refdef.width = (int)w;
+	refdef.height = (int)h;
+	refdef.time = cg.time;
+	trap->R_RenderScene( &refdef );
+}
+
 /*
 =================
 Select3D_DrawModel
@@ -118,7 +141,6 @@ A white key light and one in the colour of the accent from behind.
 =================
 */
 static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float w, float h, float yaw, float pitch ) {
-	refdef_t	refdef;
 	refEntity_t	ent;
 	vec3_t		angles, mid, light, axis[3];
 	float		radius, dist;
@@ -158,17 +180,6 @@ static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float 
 	ent.radius = (int)( radius * 2.0f );
 	ent.renderfx = RF_NOSHADOW;
 
-	memset( &refdef, 0, sizeof( refdef ) );
-	refdef.rdflags = RDF_NOWORLDMODEL;
-	AxisClear( refdef.viewaxis );
-	refdef.fov_x = SELECT_FOV;
-	refdef.fov_y = SELECT_FOV * h / w;
-	refdef.x = (int)x;
-	refdef.y = (int)y;
-	refdef.width = (int)w;
-	refdef.height = (int)h;
-	refdef.time = cg.time;
-
 	trap->R_ClearScene();
 	trap->R_AddRefEntityToScene( &ent );
 	// a white key light in front and above, the accent from behind its left side
@@ -176,7 +187,97 @@ static void Select3D_DrawModel( const selectModel_t *m, float x, float y, float 
 	trap->R_AddLightToScene( light, radius * 12.0f, 1.0f, 1.0f, 1.0f );
 	VectorSet( light, dist + radius, 1.5f * radius, radius );
 	trap->R_AddLightToScene( light, radius * 8.0f, selectAccent[0], selectAccent[1], selectAccent[2] );
-	trap->R_RenderScene( &refdef );
+	Select3D_Render( x, y, w, h );
+}
+
+// a quad of the scene, wound both ways: seen from either side whichever side the shader culls
+static void Select3D_Quad( qhandle_t shader, vec3_t corners[4], const float s[4], const float t[4], const byte *rgba ) {
+	polyVert_t	verts[4];
+	int			i, pass;
+
+	for ( pass = 0; pass < 2; pass++ ) {
+		for ( i = 0; i < 4; i++ ) {
+			const int from = pass ? 3 - i : i;
+
+			VectorCopy( corners[from], verts[i].xyz );
+			verts[i].st[0] = s[from];
+			verts[i].st[1] = t[from];
+			memcpy( verts[i].modulate, rgba, sizeof( verts[i].modulate ) );
+		}
+		trap->R_AddPolysToScene( shader, 4, verts, 1 );
+	}
+}
+
+/*
+=================
+Select3D_DrawDisc
+
+What has no model (a force power): its picture on a disc in the rect (units of the screen), a scene of its own as
+Select3D_DrawModel, turned by yaw about its upright axis, at 0 facing the viewer. The picture reads the right way
+round from behind too (it is mirrored while the back is seen). A ring round it and the edge of the disc in the tint,
+so there is something to see while it stands edge on.
+=================
+*/
+static void Select3D_DrawDisc( qhandle_t icon, const float *tint, float alpha, float x, float y, float w, float h, float yaw ) {
+	const float		rad = DEG2RAD( yaw ), cy = cosf( rad ), sy = sinf( rad );
+	const float		dist = SELECT_DISC_RADIUS / tanf( DEG2RAD( SELECT_FOV * 0.5f ) ) * 1.08f;
+	const float		pic = SELECT_DISC_RADIUS * 0.74f, inner = SELECT_DISC_RADIUS * 0.9f;
+	const qboolean	facing = (qboolean)( cy >= 0.0f );
+	// the camera looks along x, y is to its left, z up: across the disc (to the right of the viewer at yaw 0), and
+	// out of its face
+	const vec3_t	across = { sy, -cy, 0.0f }, out = { -cy, -sy, 0.0f }, middle = { dist, 0.0f, 0.0f };
+	const float		st0[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	vec3_t			corners[4];
+	float			s[4], t[4];
+	byte			rgba[4];
+	int				i, k;
+
+	CG_AdjustFrom640( &x, &y, &w, &h );
+	trap->R_ClearScene();
+
+	// the picture
+	for ( i = 0; i < 4; i++ ) {
+		const float right = ( i == 1 || i == 2 ) ? 1.0f : -1.0f, up = i < 2 ? 1.0f : -1.0f;
+
+		VectorMA( middle, right * pic, across, corners[i] );
+		corners[i][2] += up * pic;
+		s[i] = ( right > 0.0f ) == facing ? 1.0f : 0.0f;
+		t[i] = up > 0.0f ? 0.0f : 1.0f;
+	}
+	rgba[0] = rgba[1] = rgba[2] = 255;
+	rgba[3] = (byte)( 255.0f * alpha );
+	Select3D_Quad( icon, corners, s, t, rgba );
+
+	// the ring on its face and its edge
+	for ( k = 0; k < 3; k++ ) {
+		rgba[k] = (byte)( 255.0f * Com_Clamp( 0.0f, 1.0f, tint[k] ) );
+	}
+	rgba[3] = (byte)( 220.0f * alpha );
+	for ( i = 0; i < SELECT_DISC_SIDES; i++ ) {
+		const float a0 = (float)i * 2.0f * M_PI / SELECT_DISC_SIDES, a1 = (float)( i + 1 ) * 2.0f * M_PI / SELECT_DISC_SIDES;
+		const float c0 = cosf( a0 ), s0 = sinf( a0 ), c1 = cosf( a1 ), s1 = sinf( a1 );
+		vec3_t		rim0, rim1;
+
+		VectorMA( middle, SELECT_DISC_RADIUS * c0, across, rim0 );
+		rim0[2] += SELECT_DISC_RADIUS * s0;
+		VectorMA( middle, SELECT_DISC_RADIUS * c1, across, rim1 );
+		rim1[2] += SELECT_DISC_RADIUS * s1;
+
+		VectorMA( middle, inner * c0, across, corners[0] );
+		corners[0][2] += inner * s0;
+		VectorCopy( rim0, corners[1] );
+		VectorCopy( rim1, corners[2] );
+		VectorMA( middle, inner * c1, across, corners[3] );
+		corners[3][2] += inner * s1;
+		Select3D_Quad( cgs.media.whiteShader, corners, st0, st0, rgba );
+
+		VectorMA( rim0, SELECT_DISC_THICK * 0.5f, out, corners[0] );
+		VectorMA( rim0, -SELECT_DISC_THICK * 0.5f, out, corners[1] );
+		VectorMA( rim1, -SELECT_DISC_THICK * 0.5f, out, corners[2] );
+		VectorMA( rim1, SELECT_DISC_THICK * 0.5f, out, corners[3] );
+		Select3D_Quad( cgs.media.whiteShader, corners, st0, st0, rgba );
+	}
+	Select3D_Render( x, y, w, h );
 }
 
 // the name of an item as the string package of the game has it (SP_INGAME_<CLASSNAME>), as the stock row shows it
@@ -199,14 +300,18 @@ degrees (its model turns with it). turn: the turn of the model in front, in degr
 */
 static void Select3D_Card( const select3dItem_t *it, float x, float y, float size, float front, float alpha, float appear, float ringYaw,
 		float turn ) {
-	const selectModel_t	*m = Select3D_Model( it->item );
+	const selectModel_t	*m = it->item ? Select3D_Model( it->item ) : NULL;
+	const float			*accent = it->tint ? it->tint : selectAccent;
 	const float			inset = size * 0.08f;
 	vec4_t				glass, rim;
 	int					i;
 
 	memcpy( glass, selectGlass, sizeof( glass ) );
 	for ( i = 0; i < 3; i++ ) {
-		rim[i] = selectRim[i] + ( selectAccent[i] - selectRim[i] ) * front;
+		// (a card with a tint has it in its rim beside the front too: the side of a power is seen along the row)
+		const float base = it->tint ? it->tint[i] : selectRim[i];
+
+		rim[i] = base + ( accent[i] - base ) * front;
 	}
 	rim[3] = ( selectRim[3] + ( 0.9f - selectRim[3] ) * front ) * alpha;
 	// frosted glass behind it once the row is there (not by its place on the ring: the glass can not fade, it
@@ -216,13 +321,25 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 	}
 	glass[3] *= alpha;
 	if ( front > 0.01f ) {
-		const vec4_t glow = { selectAccent[0], selectAccent[1], selectAccent[2], 0.3f * alpha * front };
+		const vec4_t glow = { accent[0], accent[1], accent[2], 0.3f * alpha * front };
 
 		Skin_Soft( x, y, size, size, 8.0f, glow );
 	}
+	if ( it->active ) {
+		// running right now: a glow of its own that pulses, in front and beside it
+		const float		pulse = 0.5f + 0.5f * sinf( (float)cg.time * 2.0f * M_PI / SELECT_PULSE_MSEC );
+		const vec4_t	glow = { accent[0], accent[1], accent[2], ( 0.3f + 0.3f * pulse ) * alpha };
+
+		Skin_Soft( x, y, size, size, 6.0f, glow );
+		rim[3] = Com_Clamp( 0.0f, 1.0f, rim[3] + ( 0.3f + 0.3f * pulse ) * alpha );
+	}
 	Skin_Panel( x, y, size, size, SELECT_RADIUS, glass, rim );
 
-	if ( it->icon && alpha > 0.2f ) {
+	if ( it->icon && it->disc && alpha > 0.2f ) {
+		// the one in front turns, the others face the viewer, turned a little with the ring
+		Select3D_DrawDisc( it->icon, accent, alpha, x + inset, y + inset, size - 2.0f * inset, size - 2.0f * inset,
+			-0.6f * ringYaw + front * turn );
+	} else if ( it->icon && alpha > 0.2f ) {
 		// no model of its own (melee, which the item list gives the model of the stun baton): its picture
 		const float s = size * 0.62f;
 
@@ -241,13 +358,25 @@ static void Select3D_Card( const select3dItem_t *it, float x, float y, float siz
 
 		Skin_Panel( x, y, size, size, SELECT_RADIUS, shade, NULL );
 	}
+	if ( it->pipsMax > 0 ) {
+		// pips along the bottom, over the shade: the ones reached in the accent, the rest faint
+		const float		pip = size * 0.07f, gap = pip * 0.7f;
+		const float		px = x + ( size - ( it->pipsMax * pip + ( it->pipsMax - 1 ) * gap ) ) * 0.5f;
+		const float		py = y + size - pip - size * 0.07f;
+
+		for ( i = 0; i < it->pipsMax; i++ ) {
+			const vec4_t fill = { accent[0], accent[1], accent[2], ( i < it->pips ? 0.95f : 0.2f ) * alpha };
+
+			Skin_Panel( px + i * ( pip + gap ), py, pip, pip, pip * 0.5f, fill, NULL );
+		}
+	}
 }
 
 /*
 =================
 CG_Select3D
 
-The carousel of row (SELECT3D_WEAPONS, SELECT3D_ITEMS): count items, selected the index of the one that is
+The carousel of row (SELECT3D_WEAPONS, SELECT3D_ITEMS, SELECT3D_FORCE): count items, selected the index of the one that is
 selected, since the time the row was asked for (cg.weaponSelectTime, cg.invenSelectTime). Each card stands on a ring
 at its place from the front; where the front is follows the selection (pos of the row), turning the shortest way
 round, also when the row comes up again; a list that changed starts at the selection. Drawn from the back to the
@@ -351,7 +480,8 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 
 	// the name and the ammo of the selection under the front of the ring
 	{
-		const char	*name = Select3D_Name( items[selected].item );
+		const char	*name = items[selected].name ? items[selected].name
+			: items[selected].item ? Select3D_Name( items[selected].item ) : "";
 		const float	scale = 0.32f;
 		vec4_t		text = { 0.92f, 0.95f, 1.0f, alpha };
 		float		ty = SELECT_MIDDLE_Y + SELECT_BIG * 0.5f + 4.0f + rise;
@@ -360,7 +490,7 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 		if ( items[selected].count >= 0 ) {
 			const char *ammo = va( "%i", items[selected].count );
 
-			memcpy( text, selectAccent, sizeof( text ) );
+			VectorCopy( items[selected].tint ? items[selected].tint : selectAccent, text );
 			text[3] = alpha;
 			ty += 10.0f;
 			CG_Text_Paint( 320.0f - CG_Text_Width( ammo, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, ammo, 0, 0, 0, SKIN_FONT_SANS );
