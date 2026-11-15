@@ -1295,13 +1295,59 @@ them there, moved as the stage says (tcMod), coloured as the stage says (rgbGen,
 the stage is one; generic.tesc leaves out the triangles no poly reaches.
 ===============
 */
-#define VK_MAX_PAINTED_MARKS	1024
-static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
+#define VK_MAX_PAINTED_MARKS	4096
+#define VK_PAINT_CHUNK			24		// polys of marks one pass looks through: a pixel looked through all of a long saber
+										// scar (hundreds of polys), on every surface triangle that any of them reached
+#define VK_PAINT_SURFACES		16		// tessellated surfaces with marks in one scene
+#define VK_PAINT_GROUPS			32		// shaders of marks on one surface
+#define VK_PAINT_CHUNKS			512		// runs of polys on one surface
+
+typedef struct {
+	uint32_t	row;					// where its polys begin in the bones of the frame, in rows
+	int			count;
+	vec3_t		lo, hi;					// the box round them
+} vkPaintChunk_t;
+
+typedef struct {
+	const shader_t	*shader;			// of the marks
+	int				firstChunk, numChunks;
+} vkPaintGroup_t;
+
+// The marks on one tessellated surface in one scene, laid into the frame once: a large surface is drawn in several
+// batches, and each of them wrote all the marks again (the bones of the frame ran out, and marks went missing) and
+// drew all their passes again.
+typedef struct {
+	const shader_t	*surface;
+	int				frameCount, frameSceneNum;
+	float			reach;
+	int				numGroups, numChunks;
+	vkPaintGroup_t	groups[VK_PAINT_GROUPS];
+	vkPaintChunk_t	chunks[VK_PAINT_CHUNKS];
+} vkPaintSurface_t;
+
+static const vkPaintSurface_t *VK_PaintBuild( const shader_t *surface, float reach ) {
+	static vkPaintSurface_t	cache[VK_PAINT_SURFACES];
+	static int				nextCache;
 	static const srfPoly_t	*marks[VK_MAX_PAINTED_MARKS];
-	const shader_t			*surface = tess.shader;
-	// how far from the plane of a poly the bumps reach, so it does not paint another floor above or below it
-	const float				reach = tessFrom->tess[0] + 4.0f;
+	static uint32_t			polyRow[VK_MAX_PAINTED_MARKS];
+	static vec4_t			polySphere[VK_MAX_PAINTED_MARKS];
+	vkPaintSurface_t		*ps;
 	int						numMarks = 0;
+
+	for ( int i = 0; i < VK_PAINT_SURFACES; i++ ) {
+		ps = &cache[i];
+		if ( ps->surface == surface && ps->frameCount == backEnd.viewParms.frameCount
+			&& ps->frameSceneNum == backEnd.viewParms.frameSceneNum && ps->reach == reach ) {
+			return ps;
+		}
+	}
+	ps = &cache[nextCache];
+	nextCache = ( nextCache + 1 ) % VK_PAINT_SURFACES;
+	ps->surface = surface;
+	ps->frameCount = backEnd.viewParms.frameCount;
+	ps->frameSceneNum = backEnd.viewParms.frameSceneNum;
+	ps->reach = reach;
+	ps->numGroups = ps->numChunks = 0;
 
 	for ( int i = 0; i < backEnd.refdef.numPolys && numMarks < VK_MAX_PAINTED_MARKS; i++ ) {
 		const srfPoly_t *poly = &backEnd.refdef.polys[i];
@@ -1310,8 +1356,7 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 			marks[numMarks++] = poly;
 		}
 	}
-
-	for ( int i = 0; i < numMarks; i++ ) {
+	for ( int i = 0; i < numMarks && ps->numGroups < VK_PAINT_GROUPS; i++ ) {
 		if ( !marks[i] ) {
 			continue;
 		}
@@ -1327,15 +1372,21 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 				rows += VK_MarkRows( marks[j], reach, NULL );
 			}
 		}
+		// the rows of every poly of this shader, and where each one begins and the sphere round it
 		uint32_t first;
 		float *out = ( rows && markShader->stages[0].active ) ? VK_FrameRows( rows, &first ) : NULL;
+		const float *base = out;
 		for ( int j = i; j < numMarks; j++ ) {
 			if ( marks[j] && marks[j]->hShader == hShader ) {
 				if ( out ) {
 					const int n = VK_MarkRows( marks[j], reach, out );
 
+					if ( n > 0 ) {
+						polyRow[count] = first + (uint32_t)( ( out - base ) / 4 );
+						VectorCopy4( out + 16, polySphere[count] );
+						count++;
+					}
 					out += 4 * n;
-					count += ( n > 0 );
 				}
 				marks[j] = NULL;
 			}
@@ -1343,6 +1394,42 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 		if ( !count ) {
 			continue;
 		}
+		// The polys in runs of VK_PAINT_CHUNK, in the order they came, which for a saber scar is along the cut, so a run
+		// covers a short stretch of it: a pass for each run and each stage, with the box round the run, so generic.tesc
+		// leaves out the triangles outside it and generic.frag Decals() the pixels outside it at once.
+		vkPaintGroup_t *group = &ps->groups[ps->numGroups++];
+		group->shader = markShader;
+		group->firstChunk = ps->numChunks;
+		group->numChunks = 0;
+		for ( int c0 = 0; c0 < count && ps->numChunks < VK_PAINT_CHUNKS; c0 += VK_PAINT_CHUNK ) {
+			vkPaintChunk_t *chunk = &ps->chunks[ps->numChunks++];
+
+			chunk->row = polyRow[c0];
+			chunk->count = Q_min( VK_PAINT_CHUNK, count - c0 );
+			ClearBounds( chunk->lo, chunk->hi );
+			for ( int k = c0; k < c0 + chunk->count; k++ ) {
+				for ( int a = 0; a < 3; a++ ) {
+					chunk->lo[a] = Q_min( chunk->lo[a], polySphere[k][a] - polySphere[k][3] );
+					chunk->hi[a] = Q_max( chunk->hi[a], polySphere[k][a] + polySphere[k][3] );
+				}
+			}
+			group->numChunks++;
+		}
+	}
+	return ps;
+}
+
+static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom ) {
+	const shader_t			*surface = tess.shader;
+	// how far from the plane of a poly the bumps reach, so it does not paint another floor above or below it
+	const float				reach = tessFrom->tess[0] + 4.0f;
+	const vkPaintSurface_t	*ps = VK_PaintBuild( surface, reach );
+
+	for ( int g = 0; g < ps->numGroups; g++ ) {
+		const shader_t *markShader = ps->groups[g].shader;
+
+		for ( int c = 0; c < ps->groups[g].numChunks; c++ ) {
+		const vkPaintChunk_t *chunk = &ps->chunks[ps->groups[g].firstChunk + c];
 
 		// a pass for each stage of the shader of the marks
 		for ( int st = 0; st < markShader->numUnfoggedPasses && markShader->stages[st].active; st++ ) {
@@ -1379,10 +1466,13 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 			draw.tex0 = draw.tex1 = VK_BundleTexture( &pass->bundle[0] );
 			// its texture moving as the stage says (tcMod), read by Decals() from texMat0 and texTurb0
 			VK_BundleTexCoords( &pass->bundle[0], draw.texMat0, draw.texTurb0 );
-			draw.decals = first;
-			draw.numDecals = (uint32_t)count;
+			draw.decals = chunk->row;
+			draw.numDecals = (uint32_t)chunk->count;
 			draw.parm[0] = kind;
 			draw.parm[1] = reach;
+			// the box round the run (Decals() and generic.tesc)
+			VectorCopy( chunk->lo, draw.material );
+			VectorCopy( chunk->hi, draw.material2 );
 			// a groove (stageMaterial_t groove): its height map in tex3 (tex2 is the height of the surface), lit by the grid
 			if ( pass->mat && pass->mat->groove > 0.0f && kind == 4.0f && v_pbr->integer && VK_GridDraw( &draw ) ) {
 				draw.parm[2] = pass->mat->groove;
@@ -1391,6 +1481,7 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 			}
 			VK_DrawTess( &draw, passProgram, ( blend ? blend : ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
 				| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)surface->polygonOffset );
+		}
 		}
 	}
 }

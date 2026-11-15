@@ -75,10 +75,13 @@ void main() {
 		if ( DECALS( d.flags ) ) {
 			vec3 lo = min( v_position[0], min( v_position[1], v_position[2] ) ) - vec3( d.tess.x );
 			vec3 hi = max( v_position[0], max( v_position[1], v_position[2] ) ) + vec3( d.tess.x );
-			bool reached = false;
+			// first the box round all marks of the pass (material, material2), then each of them
+			bool reached = all( lessThanEqual( lo, d.material2.xyz ) ) && all( greaterThanEqual( hi, d.material.xyz ) );
+			uint count = reached ? d.numDecals : 0u;
+			reached = false;
 			uint r = d.decals;
 
-			for ( uint i = 0u; i < d.numDecals && !reached; i++ ) {
+			for ( uint i = 0u; i < count && !reached; i++ ) {
 				vec4 sphere = bones[r + 4u];
 
 				reached = distance( clamp( sphere.xyz, lo, hi ), sphere.xyz ) <= sphere.w;

@@ -63,7 +63,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_DWELL_MOVE		0.75f		// a blade moving less than this a frame rests in the wall
 #define SCAR_DWELL_POOL		120			// msec of rest before the pool begins
 #define SCAR_POOL_GROW		1500		// msec until the pool is as large as it gets
-#define SCAR_POLYS			2400		// polys of the scars in a frame at most, the newest first
+#define SCAR_SHARE			0.4f		// of the polys and their corners a scene may have (r_maxpolys, r_maxpolyverts), what the
+										//	scars take at most, the newest first: past those limits the renderer drops polys without
+										//	a word, and it was the newest marks and the effects that went missing
 #define SCAR_DRAW_RANGE		3000.0f		// units from the eye beyond which no scar is drawn
 #define SCAR_HEAT_ID		( 1 << 22 )	// the ids of the heat haze (CG_ScreenFxEmit), above those of the entities
 
@@ -924,7 +926,7 @@ Drawing
 ===============================================================================
 */
 
-static int scarPolys;
+static int scarPolys, scarVerts, scarMaxPolys, scarMaxVerts;
 
 static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, const byte color[4], float dripRun ) {
 	polyVert_t verts[MAX_VERTS_ON_POLY];
@@ -936,7 +938,7 @@ static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, cons
 	if ( scar.nextFrag - piece->firstFrag[band] > SCAR_FRAG_RING ) {
 		return;
 	}
-	for ( int f = 0; f < piece->numFrags[band] && scarPolys < SCAR_POLYS; f++ ) {
+	for ( int f = 0; f < piece->numFrags[band] && scarPolys < scarMaxPolys; f++ ) {
 		const scarFrag_t *frag = &scar.frags[( piece->firstFrag[band] + f ) % SCAR_FRAG_RING];
 		const int numVerts = frag->numVerts;
 
@@ -952,8 +954,13 @@ static void Scar_Add( const scarPiece_t *piece, int band, qhandle_t shader, cons
 			verts[v].st[1] = dripRun > 0.0f ? in->st[1] / dripRun : in->st[1];
 			memcpy( verts[v].modulate, color, 4 );
 		}
+		if ( scarVerts + numVerts > scarMaxVerts ) {
+			scarPolys = scarMaxPolys;
+			return;
+		}
 		trap->R_AddPolysToScene( shader, numVerts, verts, 1 );
 		scarPolys++;
+		scarVerts += numVerts;
 	}
 }
 
@@ -968,7 +975,7 @@ static void Scar_Color( byte out[4], const vec3_t rgb, float alpha ) {
 =================
 CG_SaberScarsAdd
 
-The scars into the scene with the colours of their age, the newest first (SCAR_POLYS at most), and for each blade
+The scars into the scene with the colours of their age, the newest first (SCAR_SHARE of the limits), and for each blade
 that cut a moment ago the shimmer of the hot air over it.
 =================
 */
@@ -998,8 +1005,16 @@ void CG_SaberScarsAdd( void ) {
 		return;
 	}
 
-	scarPolys = 0;
-	for ( int k = 0; k < SCAR_PIECES && scarPolys < SCAR_POLYS; k++ ) {
+	scarPolys = scarVerts = 0;
+	{
+		char value[16];
+
+		trap->Cvar_VariableStringBuffer( "r_maxpolys", value, sizeof( value ) );
+		scarMaxPolys = (int)( SCAR_SHARE * Q_max( atoi( value ), 600 ) );
+		trap->Cvar_VariableStringBuffer( "r_maxpolyverts", value, sizeof( value ) );
+		scarMaxVerts = (int)( SCAR_SHARE * Q_max( atoi( value ), 3000 ) );
+	}
+	for ( int k = 0; k < SCAR_PIECES && scarPolys < scarMaxPolys; k++ ) {
 		scarPiece_t *piece = &scar.pieces[( scar.next - 1 - k + SCAR_PIECES ) % SCAR_PIECES];
 		const int age = cg.time - piece->born;
 		vec3_t core, halo;

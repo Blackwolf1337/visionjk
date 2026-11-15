@@ -995,6 +995,10 @@ layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 vec4 Decals( Draw d ) {
 	uint kind = uint( d.parm.x + 0.5 );
 	vec3 p = v_position;
+	// outside the box round the marks of this pass (vk_shade.cpp VK_PaintMarks): nothing, at once
+	if ( any( lessThan( p, d.material.xyz ) ) || any( greaterThan( p, d.material2.xyz ) ) ) {
+		discard;
+	}
 	// (the gradients for the texture come from the place, outside the loop: inside it they are not defined)
 	vec3 dpdx = dFdx( p ), dpdy = dFdy( p );
 	mat2 texLinear = mat2( d.texMat0[0].x, d.texMat0[1].x, d.texMat0[0].y, d.texMat0[1].y );
