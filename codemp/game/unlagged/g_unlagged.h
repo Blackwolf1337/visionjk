@@ -52,4 +52,5 @@ void		G_UnlaggedStore( gentity_t *ent );
 void		G_UnlaggedClear( gentity_t *ent );
 int			G_UnlaggedLag( const gentity_t *shooter );
 qboolean	G_UnlaggedShift( gentity_t *shooter, int what );
+void		G_UnlaggedOrigin( const gentity_t *ent, int time, vec3_t origin );
 void		G_UnlaggedRestore( gentity_t *shooter );
