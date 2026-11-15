@@ -22,17 +22,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // above the panel of the health (ui/vision/hud.menu) in place of the icons of the game (CG_DrawActivePowers, which
 // stays for v_hud 0): the picture of the power, the rim in the colour of its side, pulsing; a chip slides in when
 // its power starts and fades away when it ends. The recovery after rage is a chip with a bar that runs down (the
-// server sends when it ends; how long another power still runs it does not send). Not from JA+.
+// server sends when it ends; how long another power still runs it does not send). The strip also has the tags of
+// the player's state after the powers: whom one watches (first), the alternate dimension of JA+, the flag one
+// carries. It stands above the panel where the menu file puts it. Not from JA+.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "cg_hudkit.h"
 
 #define CHIP_SIZE		17.0f		// in units of the 640 x 480 screen
 #define CHIP_GAP		3.0f
-#define CHIP_LEFT		10.0f		// the left edge of the panel of the health
-#define CHIP_BOTTOM		428.0f		// a little above its top (432)
-#define CHIP_LINE		13.0f		// the line of the alternate dimension above the panel (altdim, 418 to 430)
 #define CHIP_RADIUS		4.0f
 #define CHIP_MSEC		160.0f		// a chip comes and goes in this time
 #define CHIP_PULSE_MSEC	1100.0f
@@ -87,7 +87,8 @@ void CG_PowerChips( void ) {
 	static int			lastDraw, rageStart, rageEnd;
 	const playerState_t	*ps = &cg.snap->ps;
 	const float			step = (float)cg.frametime / CHIP_MSEC;
-	float				x = CHIP_LEFT, bottom = CHIP_BOTTOM, value, most;
+	rectDef_t			panel;
+	float				x, bottom, value, most;
 	int					i;
 
 	// not drawn for a while (another level, the scope, watching): nothing left over from then
@@ -98,9 +99,12 @@ void CG_PowerChips( void ) {
 		return;
 	}
 	lastDraw = cg.time;
-	// above the line of the alternate dimension while that one is there
-	if ( CG_StatValue( "altdim", &value, &most ) && value > 0.0f ) {
-		bottom -= CHIP_LINE;
+	Hud_PanelRect( qfalse, &panel );
+	x = panel.x;
+	bottom = panel.y - HUD_GAP;
+	// whom one watches, before what runs on him
+	if ( ps->pm_flags & PMF_FOLLOW ) {
+		x += Hud_Chip( x, bottom - CHIP_SIZE, CHIP_SIZE, 0, cgs.clientinfo[ps->clientNum].name, hudWarm, 1.0f, HUD_LEFT, -1.0f ) + CHIP_GAP;
 	}
 	if ( ps->fd.forceRageRecoveryTime > cg.time && ps->fd.forceRageRecoveryTime != rageEnd ) {
 		rageEnd = ps->fd.forceRageRecoveryTime;
@@ -127,5 +131,23 @@ void CG_PowerChips( void ) {
 		Powers_Chip( x, bottom - CHIP_SIZE + ( 1.0f - ease ) * 5.0f, shown[i],
 			rage ? cgs.media.rageRecShader : cgs.media.forcePowerIcons[fp], CG_ForceSideColor( fp ), left );
 		x += ( CHIP_SIZE + CHIP_GAP ) * ease;
+	}
+
+	// the tags of the state, while the player lives
+	if ( !CG_StatValue( "alive", &value, &most ) || value <= 0.0f ) {
+		return;
+	}
+	if ( CG_StatValue( "altdim", &value, &most ) && value > 0.0f ) {
+		x += Hud_Chip( x, bottom - CHIP_SIZE, CHIP_SIZE, 0, CG_VisionText( "Alternate Dimension" ), hudWarm, 1.0f, HUD_LEFT, -1.0f )
+			+ CHIP_GAP;
+	}
+	for ( i = 0; i < 3; i++ ) {
+		static const int	flagPowerup[3] = { PW_REDFLAG, PW_BLUEFLAG, PW_NEUTRALFLAG };
+		static const char	*flagText[3] = { "You carry the red flag", "You carry the blue flag", "You carry the flag" };
+
+		if ( ps->powerups[flagPowerup[i]] ) {
+			x += Hud_Chip( x, bottom - CHIP_SIZE, CHIP_SIZE, 0, CG_VisionText( flagText[i] ),
+				i == 0 ? hudRed : i == 1 ? hudBlue : hudText, 1.0f, HUD_LEFT, -1.0f ) + CHIP_GAP;
+		}
 	}
 }

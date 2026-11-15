@@ -785,6 +785,18 @@ TR = {
 # It asks for a text by its English (CG_VisionText() of cgame/hud/cg_hud.c makes the key from it as key_of() does
 # here), so none of these may need a number behind its key.
 CGAME = {
+    # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Cloak': 'Tarnung',
+    'At base': 'In der Basis',
+    'Dropped': 'Liegt am Boden',
+    'Carried by %s': 'Bei %s',
+    'Taken': 'Genommen',
+    'First to': 'Gewonnen bei',
+    'Lead': 'Vorsprung',
+    'of %i': 'von %i',
+    'You carry the red flag': 'Du trägst die rote Flagge',
+    'You carry the blue flag': 'Du trägst die blaue Flagge',
+    'You carry the flag': 'Du trägst die Flagge',
     # the photo mode
     'Picture saved to the screenshots folder.': 'Foto im Screenshot-Ordner gespeichert.',
     'Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave.':

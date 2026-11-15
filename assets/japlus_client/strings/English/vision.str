@@ -1862,6 +1862,39 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           CLOAK
+LANG_ENGLISH        "Cloak"
+
+REFERENCE           AT_BASE
+LANG_ENGLISH        "At base"
+
+REFERENCE           DROPPED
+LANG_ENGLISH        "Dropped"
+
+REFERENCE           CARRIED_BY_S
+LANG_ENGLISH        "Carried by %s"
+
+REFERENCE           TAKEN
+LANG_ENGLISH        "Taken"
+
+REFERENCE           FIRST_TO
+LANG_ENGLISH        "First to"
+
+REFERENCE           LEAD
+LANG_ENGLISH        "Lead"
+
+REFERENCE           OF_I
+LANG_ENGLISH        "of %i"
+
+REFERENCE           YOU_CARRY_THE_RED_FLAG
+LANG_ENGLISH        "You carry the red flag"
+
+REFERENCE           YOU_CARRY_THE_BLUE_FLAG
+LANG_ENGLISH        "You carry the blue flag"
+
+REFERENCE           YOU_CARRY_THE_FLAG
+LANG_ENGLISH        "You carry the flag"
+
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
 

@@ -2481,6 +2481,50 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           CLOAK
+LANG_ENGLISH        "Cloak"
+LANG_SPANISH        "Camuflaje"
+
+REFERENCE           AT_BASE
+LANG_ENGLISH        "At base"
+LANG_SPANISH        "En la base"
+
+REFERENCE           DROPPED
+LANG_ENGLISH        "Dropped"
+LANG_SPANISH        "En el suelo"
+
+REFERENCE           CARRIED_BY_S
+LANG_ENGLISH        "Carried by %s"
+LANG_SPANISH        "Lo lleva %s"
+
+REFERENCE           TAKEN
+LANG_ENGLISH        "Taken"
+LANG_SPANISH        "Tomada"
+
+REFERENCE           FIRST_TO
+LANG_ENGLISH        "First to"
+LANG_SPANISH        "Gana con"
+
+REFERENCE           LEAD
+LANG_ENGLISH        "Lead"
+LANG_SPANISH        "Ventaja"
+
+REFERENCE           OF_I
+LANG_ENGLISH        "of %i"
+LANG_SPANISH        "de %i"
+
+REFERENCE           YOU_CARRY_THE_RED_FLAG
+LANG_ENGLISH        "You carry the red flag"
+LANG_SPANISH        "Llevas la bandera roja"
+
+REFERENCE           YOU_CARRY_THE_BLUE_FLAG
+LANG_ENGLISH        "You carry the blue flag"
+LANG_SPANISH        "Llevas la bandera azul"
+
+REFERENCE           YOU_CARRY_THE_FLAG
+LANG_ENGLISH        "You carry the flag"
+LANG_SPANISH        "Llevas la bandera"
+
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
 LANG_SPANISH        "Interfaz"

@@ -281,7 +281,7 @@ static void Select3D_DrawDisc( qhandle_t icon, const float *tint, float alpha, f
 }
 
 // the name of an item as the string package of the game has it (SP_INGAME_<CLASSNAME>), as the stock row shows it
-static const char *Select3D_Name( const gitem_t *item ) {
+const char *CG_ItemName( const gitem_t *item ) {
 	static char	text[256];
 	char		key[256];
 
@@ -484,7 +484,7 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 	// the name and the ammo of the selection under the front of the ring
 	{
 		const char	*name = items[selected].name ? items[selected].name
-			: items[selected].item ? Select3D_Name( items[selected].item ) : "";
+			: items[selected].item ? CG_ItemName( items[selected].item ) : "";
 		const float	scale = 0.32f;
 		vec4_t		text = { 0.92f, 0.95f, 1.0f, alpha };
 		float		ty = SELECT_MIDDLE_Y + SELECT_BIG * 0.5f + 4.0f + rise;

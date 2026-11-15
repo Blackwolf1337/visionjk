@@ -2481,6 +2481,50 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           CLOAK
+LANG_ENGLISH        "Cloak"
+LANG_FRENCH         "Camouflage"
+
+REFERENCE           AT_BASE
+LANG_ENGLISH        "At base"
+LANG_FRENCH         "À la base"
+
+REFERENCE           DROPPED
+LANG_ENGLISH        "Dropped"
+LANG_FRENCH         "Au sol"
+
+REFERENCE           CARRIED_BY_S
+LANG_ENGLISH        "Carried by %s"
+LANG_FRENCH         "Porté par %s"
+
+REFERENCE           TAKEN
+LANG_ENGLISH        "Taken"
+LANG_FRENCH         "Prise"
+
+REFERENCE           FIRST_TO
+LANG_ENGLISH        "First to"
+LANG_FRENCH         "Victoire à"
+
+REFERENCE           LEAD
+LANG_ENGLISH        "Lead"
+LANG_FRENCH         "Avance"
+
+REFERENCE           OF_I
+LANG_ENGLISH        "of %i"
+LANG_FRENCH         "sur %i"
+
+REFERENCE           YOU_CARRY_THE_RED_FLAG
+LANG_ENGLISH        "You carry the red flag"
+LANG_FRENCH         "Tu portes le drapeau rouge"
+
+REFERENCE           YOU_CARRY_THE_BLUE_FLAG
+LANG_ENGLISH        "You carry the blue flag"
+LANG_FRENCH         "Tu portes le drapeau bleu"
+
+REFERENCE           YOU_CARRY_THE_FLAG
+LANG_ENGLISH        "You carry the flag"
+LANG_FRENCH         "Tu portes le drapeau"
+
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
 LANG_FRENCH         "#same"

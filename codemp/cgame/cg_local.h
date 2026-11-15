@@ -2129,6 +2129,15 @@ void CG_Select3DShutdown( void );
 const float *CG_ForceSideColor( int fp );
 void CG_PowerChips( void );
 qboolean CG_IsDurationPower( int power );
+// the new HUD beyond its menus: hud/cg_hudpanels.c, hud/cg_matchcard.c (the pieces: hud/cg_hudkit.h)
+#define HUD_EDGE_Y			10.0f		// the top of what stands at the upper edge
+void CG_HudPanelsDraw( void );
+void CG_HudRightStrip( void );
+float CG_MatchCardDraw( float y );
+qboolean ForcePower_Valid( int i );
+int CG_ForceSelectRank( int fp );
+const char *CG_ItemName( const gitem_t *item );
+extern int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS];
 void CG_FillRect( float x, float y, float width, float height, const float *color );
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader );
 void CG_DrawRotatePic( float x, float y, float width, float height,float angle, qhandle_t hShader );

@@ -15,7 +15,7 @@
 		itemDef
 		{
 			name				panel
-			rect				10 432 172 38
+			rect				10 426 178 44
 			style				WINDOW_STYLE_PANEL
 			backcolor			0.035 0.07 0.12 0.62
 			bordercolor			0.43 0.83 1 0.22
@@ -31,7 +31,7 @@
 		{
 			name				health_value
 			type				ITEM_TYPE_VALUE
-			rect				18 435 40 20
+			rect				14 429 40 20
 			stat				health
 			showStat			alive
 			font				5
@@ -41,6 +41,7 @@
 			textaligny			0
 			forecolor			1 1 1 1
 			addColorRange		0 25 1 0.38 0.33 1
+			addColorRange		26 50 1 0.74 0.30 1
 			visible				1
 			decoration
 		}
@@ -48,7 +49,7 @@
 		{
 			name				health_bar
 			type				ITEM_TYPE_BAR
-			rect				62 440 110 6
+			rect				58 435 124 6
 			stat				health
 			showStat			alive
 			forecolor			0.42 0.90 0.62 1
@@ -63,7 +64,7 @@
 		{
 			name				armor_value
 			type				ITEM_TYPE_VALUE
-			rect				18 453 40 12
+			rect				14 448 40 12
 			stat				armor
 			showStat			alive
 			font				5
@@ -79,25 +80,11 @@
 		{
 			name				armor_bar
 			type				ITEM_TYPE_BAR
-			rect				62 456 110 4
+			rect				58 451 124 4
 			stat				armor
 			showStat			alive
 			forecolor			0.43 0.83 1 1
 			backcolor			1 1 1 0.10
-			visible				1
-			decoration
-		}
-		// JA+: the alternate dimension
-		itemDef
-		{
-			name				altdim
-			rect				12 418 120 12
-			text				@VISION_ALTERNATE_DIMENSION
-			caps				1
-			showStat			altdim
-			font				5
-			textscale			0.5
-			forecolor			1 0.74 0.30 1
 			visible				1
 			decoration
 		}
@@ -114,7 +101,7 @@
 		itemDef
 		{
 			name				panel
-			rect				458 432 172 38
+			rect				452 426 178 44
 			style				WINDOW_STYLE_PANEL
 			backcolor			0.035 0.07 0.12 0.62
 			bordercolor			0.43 0.83 1 0.22
@@ -125,12 +112,28 @@
 			visible				1
 			decoration
 		}
+		// where C draws (hud/cg_hudpanels.c): the slot of the selected force power (the weapon without force), and
+		// the name of the weapon under its bar
+		itemDef
+		{
+			name				force_slot
+			rect				456 430 36 36
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				weapon_label
+			rect				498 457 90 9
+			visible				1
+			decoration
+		}
 		// the force: a bar that is filled from the right
 		itemDef
 		{
 			name				force_bar
 			type				ITEM_TYPE_BAR
-			rect				468 440 110 6
+			rect				498 436 90 6
 			stat				force
 			showStat			alive
 			align				ITEM_ALIGN_RIGHT
@@ -143,7 +146,7 @@
 		{
 			name				force_value
 			type				ITEM_TYPE_VALUE
-			rect				584 435 40 20
+			rect				593 429 34 20
 			stat				force
 			showStat			alive
 			font				5
@@ -160,7 +163,7 @@
 		{
 			name				ammo_bar
 			type				ITEM_TYPE_BAR
-			rect				468 456 110 4
+			rect				498 451 90 4
 			stat				ammo
 			showStat			ammo
 			align				ITEM_ALIGN_RIGHT
@@ -173,7 +176,7 @@
 		{
 			name				ammo_value
 			type				ITEM_TYPE_VALUE
-			rect				584 453 40 12
+			rect				593 448 34 12
 			stat				ammo
 			showStat			ammo
 			font				5
@@ -189,7 +192,7 @@
 		{
 			name				style_bar
 			type				ITEM_TYPE_BAR
-			rect				468 456 110 4
+			rect				498 451 90 4
 			stat				saberstyle
 			showStat			saberstyle
 			align				ITEM_ALIGN_RIGHT
@@ -204,7 +207,7 @@
 		itemDef
 		{
 			name				style_label
-			rect				584 453 44 12
+			rect				593 448 34 12
 			text				@VISION_SABER
 			caps				1
 			showStat			saberstyle
@@ -212,37 +215,6 @@
 			textscale			0.5
 			textaligny			1
 			forecolor			0.60 0.69 0.78 1
-			visible				1
-			decoration
-		}
-		// the score of the player
-		itemDef
-		{
-			name				score_label
-			rect				560 418 40 12
-			text				@MP_INGAME_SCORE
-			caps				1
-			font				5
-			textscale			0.5
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			36
-			textaligny			1
-			forecolor			0.60 0.69 0.78 1
-			visible				1
-			decoration
-		}
-		itemDef
-		{
-			name				score_value
-			type				ITEM_TYPE_VALUE
-			rect				600 416 30 14
-			stat				score
-			font				5
-			textscale			0.72
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			2
-			textaligny			0
-			forecolor			0.86 0.92 0.97 1
 			visible				1
 			decoration
 		}

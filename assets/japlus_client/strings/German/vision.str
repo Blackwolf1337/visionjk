@@ -2481,6 +2481,50 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           CLOAK
+LANG_ENGLISH        "Cloak"
+LANG_GERMAN         "Tarnung"
+
+REFERENCE           AT_BASE
+LANG_ENGLISH        "At base"
+LANG_GERMAN         "In der Basis"
+
+REFERENCE           DROPPED
+LANG_ENGLISH        "Dropped"
+LANG_GERMAN         "Liegt am Boden"
+
+REFERENCE           CARRIED_BY_S
+LANG_ENGLISH        "Carried by %s"
+LANG_GERMAN         "Bei %s"
+
+REFERENCE           TAKEN
+LANG_ENGLISH        "Taken"
+LANG_GERMAN         "Genommen"
+
+REFERENCE           FIRST_TO
+LANG_ENGLISH        "First to"
+LANG_GERMAN         "Gewonnen bei"
+
+REFERENCE           LEAD
+LANG_ENGLISH        "Lead"
+LANG_GERMAN         "Vorsprung"
+
+REFERENCE           OF_I
+LANG_ENGLISH        "of %i"
+LANG_GERMAN         "von %i"
+
+REFERENCE           YOU_CARRY_THE_RED_FLAG
+LANG_ENGLISH        "You carry the red flag"
+LANG_GERMAN         "Du trägst die rote Flagge"
+
+REFERENCE           YOU_CARRY_THE_BLUE_FLAG
+LANG_ENGLISH        "You carry the blue flag"
+LANG_GERMAN         "Du trägst die blaue Flagge"
+
+REFERENCE           YOU_CARRY_THE_FLAG
+LANG_ENGLISH        "You carry the flag"
+LANG_GERMAN         "Du trägst die Flagge"
+
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
 LANG_GERMAN         "Oberfläche"

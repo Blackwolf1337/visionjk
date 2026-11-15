@@ -5,6 +5,18 @@ as a first language having read it: whoever does is welcome to change what sound
 """
 
 MORE = {
+    # the new HUD beyond its menus
+    'Cloak': ('Camouflage', 'Camuflaje'),
+    'At base': ('À la base', 'En la base'),
+    'Dropped': ('Au sol', 'En el suelo'),
+    'Carried by %s': ('Porté par %s', 'Lo lleva %s'),
+    'Taken': ('Prise', 'Tomada'),
+    'First to': ('Victoire à', 'Gana con'),
+    'Lead': ('Avance', 'Ventaja'),
+    'of %i': ('sur %i', 'de %i'),
+    'You carry the red flag': ('Tu portes le drapeau rouge', 'Llevas la bandera roja'),
+    'You carry the blue flag': ('Tu portes le drapeau bleu', 'Llevas la bandera azul'),
+    'You carry the flag': ('Tu portes le drapeau', 'Llevas la bandera'),
     # the pages of Setup and Controls
     'Interface': ('Interface', 'Interfaz'),
     'How menus, HUD and camera look.': ("L'apparence des menus, du HUD et de la caméra.", 'El aspecto de los menús, el HUD y la cámara.'),

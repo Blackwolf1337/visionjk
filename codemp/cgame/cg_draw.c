@@ -1589,8 +1589,6 @@ void CG_DrawHUD(centity_t	*cent)
 
 #define MAX_SHOWPOWERS NUM_FORCE_POWERS
 
-// what using a power costs at each rank (bg_pmove.c)
-extern int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS];
 
 qboolean ForcePower_Valid(int i)
 {
@@ -1616,7 +1614,7 @@ jump and seeing only (msg.cpp), so the rest is what the client can know by itsel
 holocron held, else what the own forcepowers string asked for. A server may have lowered that (its rank limit), so
 it is the best guess, and there is none for a player followed.
 */
-static int CG_ForceSelectRank( int fp ) {
+int CG_ForceSelectRank( int fp ) {
 	const playerState_t	*ps = &cg.snap->ps;
 	char				powers[128];
 	const char			*digits;
@@ -4306,6 +4304,36 @@ static void CG_DrawUpperRight( void ) {
 	float	y = 0;
 
 	trap->R_SetColor( colorTable[CT_WHITE] );
+
+	if ( CG_HudNewLook() ) {
+		// VisionJK: the card of the match first (hud/cg_matchcard.c), what else stands here under it; the leader of
+		// the enemy info and the score line are on the card
+		y = CG_MatchCardDraw( HUD_EDGE_Y );
+		if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
+			y = CG_DrawTeamOverlay( y, qtrue, qtrue );
+		}
+		if ( cg_drawSnapshot.integer ) {
+			y = CG_DrawSnapshot( y );
+		}
+		if ( cg_drawFPS.integer ) {
+			y = CG_DrawFPS( y );
+		}
+		if ( cg_drawTimer.integer ) {
+			y = CG_DrawTimer( y );
+		}
+		if ( ( cgs.gametype >= GT_TEAM || cg.predictedPlayerState.m_iVehicleNum ) && cg_drawRadar.integer ) {
+			y = CG_DrawRadar( y );
+		}
+		if ( CG_SpecHudShown() ) {
+			y = CG_SpecHudDraw( y );
+		} else if ( cg.snap->ps.duelInProgress || ( ( cgs.gametype == GT_DUEL || cgs.gametype == GT_JEDIMASTER )
+			&& cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR ) ) {
+			y = CG_DrawEnemyInfo( y );
+		}
+		y = CG_KillfeedDraw( y );
+		CG_DrawPowerupIcons( y );
+		return;
+	}
 
 	if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
 		y = CG_DrawTeamOverlay( y, qtrue, qtrue );
@@ -8262,6 +8290,16 @@ static void CG_Draw2D( void ) {
 		CG_Place2D( PLACE_CENTER );
 	}
 
+	if ( CG_HudNewLook() )
+	{
+		// VisionJK: whom one watches, the e-web, the cloak and the jetpack as chips above the right panel
+		// (hud/cg_hudpanels.c)
+		CG_Place2D( PLACE_RIGHT );
+		CG_HudRightStrip();
+		CG_Place2D( PLACE_CENTER );
+	}
+	else
+	{
 	if (cg.snap->ps.jetpackFuel < 100)
 	{ //draw it as long as it isn't full
         CG_Place2D( PLACE_RIGHT );
@@ -8284,6 +8322,7 @@ static void CG_Draw2D( void ) {
 			CG_DrawEWebHealth();
 			CG_Place2D( PLACE_CENTER );
 		}
+	}
 	}
 
 	// Draw this before the text so that any text won't get clipped off
