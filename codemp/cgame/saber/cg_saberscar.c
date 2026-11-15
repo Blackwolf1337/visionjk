@@ -60,6 +60,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCAR_HALO			6000		// msec of the heat around a fresh cut
 #define SCAR_DRIP_RUN		900			// msec a drop takes to run its length
 #define SCAR_DRIP_HOT		8000		// msec until a drop has cooled
+#define SCAR_DRIP_AFTER		8.0f		// units a cut must have gone before it drips
 #define SCAR_DWELL_MOVE		0.75f		// a blade moving less than this a frame rests in the wall
 #define SCAR_DWELL_POOL		120			// msec of rest before the pool begins
 #define SCAR_POOL_GROW		1500		// msec until the pool is as large as it gets
@@ -127,6 +128,7 @@ typedef struct {
 	float		poolRadius;
 	// a drop of melt every so many units on a steep wall
 	float		dripLength, nextDrip;
+	float		run;						// units the cut has gone since the blade went in
 	// smoke, embers and heat haze while it is hot
 	int			nextSmoke, nextEmbers;
 	vec3_t		hotAt, hotNormal;
@@ -600,8 +602,10 @@ static void Scar_Piece( scarStream_t *s, const vec3_t p0, const vec3_t p1, const
 		s->length = fmodf( s->length + len, SCAR_REPEAT_NARROW * SCAR_REPEAT_WIDE * 8.0f );
 		VectorCopy( cur, s->hotAt );
 
-		// a drop of melt on a steep wall, every 5 to 12 units
-		if ( steep ) {
+		// a drop of melt on a steep wall, every 5 to 12 units; none where the cut is still opening or closes (a blade
+		// that only brushed the wall left a drop under a cut too thin to see)
+		s->run += len;
+		if ( steep && !end && s->run >= SCAR_DRIP_AFTER ) {
 			s->dripLength += len;
 			if ( s->dripLength >= s->nextDrip ) {
 				s->dripLength = 0.0f;
