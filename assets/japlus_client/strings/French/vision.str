@@ -2489,6 +2489,22 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           YOU_PLAY_FOR_S
+LANG_ENGLISH        "You play for %s"
+LANG_FRENCH         "Vous jouez pour %s"
+
+REFERENCE           TWICE_PICK_A_PLAYER
+LANG_ENGLISH        "twice: pick a player"
+LANG_FRENCH         "deux fois : choisir un joueur"
+
+REFERENCE           WAITING
+LANG_ENGLISH        "Waiting"
+LANG_FRENCH         "En attente"
+
+REFERENCE           DEATHS
+LANG_ENGLISH        "Deaths"
+LANG_FRENCH         "Morts"
+
 REFERENCE           ZOOM
 LANG_ENGLISH        "Zoom"
 LANG_FRENCH         "#same"

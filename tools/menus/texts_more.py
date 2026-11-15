@@ -6,6 +6,10 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'You play for %s': ('Vous jouez pour %s', 'Juegas para %s'),
+    'twice: pick a player': ('deux fois : choisir un joueur', 'dos veces: elegir un jugador'),
+    'Waiting': ('En attente', 'Esperando'),
+    'Deaths': ('Morts', 'Muertes'),
     'Zoom': ('Zoom', 'Zoom'),
     'Range': ('Distance', 'Distancia'),
     'Ammo': ('Munitions', 'Munición'),

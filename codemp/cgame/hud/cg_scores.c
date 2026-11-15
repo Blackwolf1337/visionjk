@@ -37,6 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "game/bg/bg_saga.h"
+#include "cg_hudkit.h"
 
 #define SCORES_W			470.0f
 #define SCORES_CARD_GAP		6.0f		// between the board and the card of a player that was clicked on it,
@@ -48,28 +49,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCORES_ROW_MAX		17.0f		// a row of a player, with few of them
 #define SCORES_ROW_MIN		9.5f		//	and with many
 #define SCORES_TEAM_H		17.0f		// the line of a team
-#define SCORES_WATCH_H		14.0f		// the line above who watches
+#define SCORES_FOOT_H		15.0f		// the line of who watches
 #define SCORES_PAD			6.0f
 #define SCORES_TAP_MSEC		350			// the key twice within this keeps the board
 #define SCORES_ASK_MSEC		2000		// while it is kept the scores are asked for this often
 #define SCORES_LINE			18.0f		// a line of text of the new look is this high at a scale of 1
 
-// the columns, from the left edge of the panel: where a number ends
-#define SCORES_COL_SCORE	( SCORES_W - 150.0f )
-#define SCORES_COL_PING		( SCORES_W - 82.0f )
-#define SCORES_COL_TIME		( SCORES_W - 18.0f )
-
-typedef enum {
-	LINE_PLAYER,
-	LINE_TEAM,
-	LINE_WATCH
-} lineKind_t;
-
 typedef struct scoreLine_s {
-	lineKind_t		kind;
-	int				client;				// LINE_PLAYER
-	const score_t	*score;				//	what the server said of him, NULL: nothing
-	team_t			team;				// LINE_TEAM
+	int				client;
+	const score_t	*score;				// what the server said of him, NULL: nothing
 } scoreLine_t;
 
 static struct {
@@ -83,8 +71,8 @@ static struct {
 	float		x, y, w, h;				//	the panel there,
 	struct {
 		int		client;
-		float	y, h;
-	} rows[MAX_CLIENTS];				//	and its rows, for the pointer
+		float	x, y, w, h;
+	} rows[MAX_CLIENTS];				//	and its rows and names, for the pointer
 	int			numRows;
 } scores;
 
@@ -173,41 +161,10 @@ static void Scores_AddTeam( scoreLine_t *lines, int *count, team_t team ) {
 			continue;
 		}
 		listed[n] = qtrue;
-		lines[*count].kind = LINE_PLAYER;
 		lines[*count].client = n;
 		lines[*count].score = score;
 		( *count )++;
 	}
-}
-
-static int Scores_Lines( scoreLine_t *lines ) {
-	int count = 0, before;
-
-	if ( cgs.gametype >= GT_TEAM ) {
-		// the team that leads first
-		const team_t	first = ( cg.teamScores[1] > cg.teamScores[0] ) ? TEAM_BLUE : TEAM_RED;
-		const team_t	second = ( first == TEAM_RED ) ? TEAM_BLUE : TEAM_RED;
-
-		lines[count].kind = LINE_TEAM;
-		lines[count++].team = first;
-		Scores_AddTeam( lines, &count, first );
-		lines[count].kind = LINE_TEAM;
-		lines[count++].team = second;
-		Scores_AddTeam( lines, &count, second );
-	} else {
-		Scores_AddTeam( lines, &count, TEAM_FREE );
-	}
-	before = count;
-	lines[count++].kind = LINE_WATCH;
-	Scores_AddTeam( lines, &count, TEAM_SPECTATOR );
-	if ( count == before + 1 ) {
-		count = before;		// nobody watches
-	}
-	return count;
-}
-
-static float Scores_LineHeight( const scoreLine_t *line, float rowH ) {
-	return ( line->kind == LINE_TEAM ) ? SCORES_TEAM_H : ( line->kind == LINE_WATCH ) ? SCORES_WATCH_H : rowH;
 }
 
 /*
@@ -237,12 +194,11 @@ static void Scores_Standing( char *out, int outSize ) {
 			cg.numScores, with, cg.snap->ps.persistant[PERS_SCORE] );
 		Q_StripColor( out );
 	} else if ( cgs.gametype != GT_SIEGE ) {
-		if ( cg.teamScores[0] == cg.teamScores[1] ) {
-			Com_sprintf( out, outSize, "%s %i", CG_GetStringEdString( "MP_INGAME", "TIEDAT" ), cg.teamScores[0] );
-		} else if ( cg.teamScores[0] >= cg.teamScores[1] ) {
-			Com_sprintf( out, outSize, "%s, %i / %i", CG_GetStringEdString( "MP_INGAME", "RED_LEADS" ), cg.teamScores[0], cg.teamScores[1] );
-		} else {
-			Com_sprintf( out, outSize, "%s, %i / %i", CG_GetStringEdString( "MP_INGAME", "BLUE_LEADS" ), cg.teamScores[1], cg.teamScores[0] );
+		// (what each team has is on its band)
+		const int team = cg.snap->ps.persistant[PERS_TEAM];
+
+		if ( team == TEAM_RED || team == TEAM_BLUE ) {
+			Q_strncpyz( out, CG_VisionTextWith( "You play for %s", CG_GetStringEdString( "MP_INGAME", team == TEAM_RED ? "RED" : "BLUE" ) ), outSize );
 		}
 	} else if ( cg_siegeWinTeam == 1 || cg_siegeWinTeam == 2 ) {
 		Q_strncpyz( out, CG_GetStringEdString( "MP_INGAME", cg_siegeWinTeam == 1 ? "SIEGETEAM1WIN" : "SIEGETEAM2WIN" ), outSize );
@@ -281,41 +237,20 @@ static void Scores_Pill( float x, float y, float scale, const vec4_t color, floa
 	Scores_Text( x, y, h, scale, color, fade, 2, text );
 }
 
-// the head of the panel: the server, the game and the level, and at the right who leads and how the mouse gets
-// onto the board, or how it lets go of it
+// the head of the panel: the server, the game and the level, and at the right where one stands or for whom one plays
 static void Scores_Head( float x, float y, float fade ) {
 	const char	*info = CG_ConfigString( CS_SERVERINFO );
-	const char	*hint = "";
 	char		host[128], about[128], standing[256];
-	float		room = SCORES_W - 24.0f, right = 0.0f;
+	float		room = SCORES_W - 24.0f;
 	vec4_t		line;
 
-	if ( v_selectPlayers.integer && !cg.demoPlayback ) {
-		if ( scores.kept ) {
-			hint = CG_VisionTextWith( "Click a player. %s or Esc closes.", Scores_KeyName() );
-		} else if ( v_scoresPick.integer ) {
-			hint = CG_VisionTextWith( "%s twice: pick a player", Scores_KeyName() );
-		}
-	}
 	Scores_Standing( standing, sizeof( standing ) );
 	if ( standing[0] ) {
 		const float scale = 0.54f;
 		const float w = Q_min( Scores_Width( standing, scale ), SCORES_W * 0.5f );
 
-		// (alone it stands in the middle of the head, with the hint under it in its upper half)
-		Scores_TextFit( x + SCORES_W - 12.0f - w, y + ( hint[0] ? 5.0f : 0.0f ), hint[0] ? 14.0f : SCORES_HEAD_H - 2.0f, scale, scoresText, fade, standing, SCORES_W * 0.5f );
-		right = w;
-	}
-	if ( hint[0] ) {
-		const float scale = 0.44f;
-		const float w = Q_min( Scores_Width( hint, scale ), SCORES_W * 0.5f );
-
-		Scores_TextFit( x + SCORES_W - 12.0f - w, y + ( standing[0] ? 19.0f : 0.0f ), standing[0] ? 11.0f : SCORES_HEAD_H - 2.0f, scale,
-			scores.kept ? scoresAccent : scoresDim, fade, hint, SCORES_W * 0.5f );
-		right = Q_max( right, w );
-	}
-	if ( right > 0.0f ) {
-		room -= right + 14.0f;
+		Scores_TextFit( x + SCORES_W - 12.0f - w, y, SCORES_HEAD_H - 2.0f, scale, scoresText, fade, standing, SCORES_W * 0.5f );
+		room -= w + 14.0f;
 	}
 	Q_strncpyz( host, Info_ValueForKey( info, "sv_hostname" ), sizeof( host ) );
 	Q_StripColor( host );
@@ -335,38 +270,92 @@ static void Scores_Head( float x, float y, float fade ) {
 	Skin_Line( x + 8.0f, y + SCORES_HEAD_H - 1.0f, SCORES_W - 16.0f, line );
 }
 
-// the names of the columns
-static void Scores_Columns( float x, float y, float nameX, float fade ) {
-	const qboolean	duel = (qboolean)( cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL );
-	const float		scale = 0.44f;
-	char			word[64];
+// Where the parts of a row stand in a part of the board that begins at x and is w wide: the whole board, or the
+// half of a team (compact: no place number, no last column). A column that is not there is 0.
+typedef struct {
+	float		x, w;
+	float		rank, picture, name, nameEnd;
+	float		score, deaths, ping, last;		// where the number ends
+	qboolean	ready;							// the last column says who is ready for the next level, not the time
+} scoreCols_t;
 
+static void Scores_Cols( float x, float w, float rowH, qboolean compact, scoreCols_t *cols ) {
+	const qboolean	duel = (qboolean)( cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL );
+	const float		step = compact ? 34.0f : 54.0f;
+	float			at = x + w - ( compact ? 10.0f : 18.0f );
+
+	memset( cols, 0, sizeof( *cols ) );
+	cols->x = x;
+	cols->w = w;
+	if ( !compact ) {
+		cols->last = at;
+		cols->ready = (qboolean)( cg.predictedPlayerState.pm_type == PM_INTERMISSION );
+		at -= 62.0f;
+	}
+	cols->ping = at;
+	at -= step;
+	// (JA+ servers from 2.1 on send the deaths)
+	if ( !duel && cgs.jpVersion >= 2.1f ) {
+		cols->deaths = at;
+		at -= step;
+	}
+	cols->score = at;
+	cols->nameEnd = at - ( compact ? 28.0f : 44.0f );
+	at = x + 10.0f;
+	if ( !compact ) {
+		cols->rank = at + 10.0f;
+		at += 15.0f;
+	}
+	cols->picture = at;
+	cols->name = at + ( rowH - 3.0f ) + 5.0f;
+}
+
+// the names of the columns, on a band
+static void Scores_Columns( const scoreCols_t *cols, float y, float fade ) {
+	const vec4_t	band = { 0.43f, 0.83f, 1.0f, 0.08f };
+	const qboolean	duel = (qboolean)( cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL );
+	const float		scale = 0.42f;
+	char			word[64];
+	vec4_t			c;
+
+	Skin_Color( c, band, fade );
+	Skin_Panel( cols->x + 4.0f, y + 1.0f, cols->w - 8.0f, SCORES_COLS_H - 2.0f, 3.0f, c, NULL );
+	if ( cols->rank ) {
+		Scores_Text( cols->rank, y, SCORES_COLS_H, scale, scoresDim, fade, 1, "#" );
+	}
 	Q_strncpyz( word, CG_GetStringEdString( "MP_INGAME", "NAME" ), sizeof( word ) );
-	Scores_Text( nameX, y, SCORES_COLS_H, scale, scoresDim, fade, 0, Q_strupr( word ) );
+	Scores_Text( cols->name, y, SCORES_COLS_H, scale, scoresDim, fade, 0, Q_strupr( word ) );
 	if ( duel ) {
 		trap->SE_GetStringTextString( "MP_INGAME_W_L", word, sizeof( word ) );
 	} else {
 		Q_strncpyz( word, CG_GetStringEdString( "MP_INGAME", "SCORE" ), sizeof( word ) );
 	}
-	Scores_Text( x + SCORES_COL_SCORE, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
+	Scores_Text( cols->score, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
+	if ( cols->deaths ) {
+		Q_strncpyz( word, CG_VisionText( "Deaths" ), sizeof( word ) );
+		Scores_Text( cols->deaths, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
+	}
 	Q_strncpyz( word, CG_GetStringEdString( "MP_INGAME", "PING" ), sizeof( word ) );
-	Scores_Text( x + SCORES_COL_PING, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
-	Q_strncpyz( word, CG_GetStringEdString( "MP_INGAME", "TIME" ), sizeof( word ) );
-	Scores_Text( x + SCORES_COL_TIME, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
+	Scores_Text( cols->ping, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
+	if ( cols->last ) {
+		Q_strncpyz( word, CG_GetStringEdString( "MP_INGAME", cols->ready ? "READY" : "TIME" ), sizeof( word ) );
+		Scores_Text( cols->last, y, SCORES_COLS_H, scale, scoresDim, fade, 1, Q_strupr( word ) );
+	}
 }
 
-// the line of a team: its name and what it has
-static void Scores_TeamLine( float x, float y, team_t team, float fade ) {
-	const vec4_t	red = { 0.86f, 0.22f, 0.18f, 0.24f }, blue = { 0.2f, 0.42f, 0.95f, 0.24f };
+// the band of a team over its half: its name and what it has
+static void Scores_TeamLine( float x, float w, float y, team_t team, float fade ) {
+	const vec4_t	red = { 0.86f, 0.22f, 0.18f, 0.26f }, blue = { 0.2f, 0.42f, 0.95f, 0.26f };
+	const vec4_t	redText = { 1.0f, 0.62f, 0.59f, 1.0f }, blueText = { 0.66f, 0.78f, 1.0f, 1.0f };
 	char			word[64];
 	vec4_t			c;
 
 	Skin_Color( c, team == TEAM_RED ? red : blue, fade );
-	Skin_Panel( x + 4.0f, y + 2.0f, SCORES_W - 8.0f, SCORES_TEAM_H - 3.0f, 3.0f, c, NULL );
+	Skin_Panel( x + 4.0f, y + 1.0f, w - 8.0f, SCORES_TEAM_H - 2.0f, 3.0f, c, NULL );
 	Q_strncpyz( word, CG_GetStringEdString( "MP_INGAME", team == TEAM_RED ? "RED" : "BLUE" ), sizeof( word ) );
-	Scores_Text( x + 12.0f, y + 1.0f, SCORES_TEAM_H - 1.0f, 0.5f, colorWhite, fade, 0, Q_strupr( word ) );
+	Scores_Text( x + 12.0f, y, SCORES_TEAM_H, 0.48f, team == TEAM_RED ? redText : blueText, fade, 0, Q_strupr( word ) );
 	if ( cgs.gametype != GT_SIEGE ) {
-		Scores_Text( x + SCORES_COL_SCORE, y + 1.0f, SCORES_TEAM_H - 1.0f, 0.6f, colorWhite, fade, 1, va( "%i", cg.teamScores[team == TEAM_RED ? 0 : 1] ) );
+		Scores_Text( x + w - 12.0f, y, SCORES_TEAM_H, 0.66f, colorWhite, fade, 1, va( "%i", cg.teamScores[team == TEAM_RED ? 0 : 1] ) );
 	}
 }
 
@@ -374,33 +363,34 @@ static void Scores_TeamLine( float x, float y, team_t team, float fade ) {
 =================
 Scores_PlayerLine
 
-The row of one player: the picture of his model (or what he carries), the icon of the game if he plays with a
-client of this tree, his name with what stands above his head after it, and his numbers.
+The row of one player: his place (rank > 0), the picture of his model (or what he carries), the icon of the game
+if he plays with a client of this tree, his name with what stands above his head after it, and his numbers.
 =================
 */
-static void Scores_PlayerLine( float x, float y, float h, const scoreLine_t *line, int index, qboolean pointed, float fade ) {
+static void Scores_PlayerLine( const scoreCols_t *cols, float y, float h, const scoreLine_t *line, int index, int rank, qboolean pointed, float fade ) {
 	const vec4_t		own = { 0.43f, 0.83f, 1.0f, 0.17f }, lit = { 0.43f, 0.83f, 1.0f, 0.12f }, litEdge = { 0.43f, 0.83f, 1.0f, 0.45f };
 	const vec4_t		stripe = { 1.0f, 1.0f, 1.0f, 0.025f };
 	const int			n = line->client;
 	const clientInfo_t	*ci = &cgs.clientinfo[n];
 	const score_t		*score = line->score;
 	const qboolean		duel = (qboolean)( cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL );
+	const qboolean		self = (qboolean)( n == cg.snap->ps.clientNum );
 	const float			scale = Com_Clamp( 0.42f, 0.62f, h * 0.62f / 16.0f ), small = scale * 0.8f;
 	const float			icon = h - 3.0f, iconY = y + 1.5f;
-	const float			nameEnd = x + SCORES_COL_SCORE - 44.0f;
-	float				at = x + 10.0f, drawn;
+	const float			x = cols->x, w = cols->w, nameEnd = cols->nameEnd;
+	float				at = cols->picture, drawn;
 	char				text[128];
 	vec4_t				c;
 
 	// the own row, and every other row a little lighter
-	if ( n == cg.snap->ps.clientNum ) {
+	if ( self ) {
 		Skin_Color( c, own, fade );
-		Skin_Panel( x + 4.0f, y, SCORES_W - 8.0f, h - 1.0f, 3.0f, c, NULL );
+		Skin_Panel( x + 4.0f, y, w - 8.0f, h - 1.0f, 3.0f, c, NULL );
 		Skin_Color( c, scoresAccent, fade );
 		Skin_Panel( x + 4.0f, y + 2.0f, 1.5f, h - 5.0f, 0.75f, c, NULL );
 	} else if ( index & 1 ) {
 		Skin_Color( c, stripe, fade );
-		Skin_Panel( x + 4.0f, y, SCORES_W - 8.0f, h - 1.0f, 3.0f, c, NULL );
+		Skin_Panel( x + 4.0f, y, w - 8.0f, h - 1.0f, 3.0f, c, NULL );
 	}
 	// the row under the pointer, while the mouse is free: lit, with a rim
 	if ( pointed ) {
@@ -408,7 +398,10 @@ static void Scores_PlayerLine( float x, float y, float h, const scoreLine_t *lin
 
 		Skin_Color( c, lit, fade );
 		Skin_Color( rim, litEdge, fade );
-		Skin_Panel( x + 4.0f, y, SCORES_W - 8.0f, h - 1.0f, 3.0f, c, rim );
+		Skin_Panel( x + 4.0f, y, w - 8.0f, h - 1.0f, 3.0f, c, rim );
+	}
+	if ( cols->rank && rank > 0 ) {
+		Scores_Text( cols->rank, y, h - 1.0f, small, self ? scoresAccent : scoresDim, fade, 1, va( "%i", rank ) );
 	}
 
 	// a flag he carries, his side of a power duel, his class in a siege, or the picture of his model
@@ -445,9 +438,10 @@ static void Scores_PlayerLine( float x, float y, float h, const scoreLine_t *lin
 	drawn = Scores_TextFit( at, y, h - 1.0f, scale, colorWhite, fade, ci->name, nameEnd - at );
 	at += drawn + 8.0f;
 
-	// after the name: that he is ready for the next level, that he is on his way in, or what stands above his head
+	// after the name: that he is ready for the next level (where no column says so), that he is on his way in, or
+	// what stands above his head
 	text[0] = '\0';
-	if ( cg.snap->ps.stats[STAT_CLIENTS_READY] & ( 1 << n ) ) {
+	if ( !cols->ready && ( cg.snap->ps.stats[STAT_CLIENTS_READY] & ( 1 << n ) ) ) {
 		Q_strncpyz( text, CG_GetStringEdString( "MP_INGAME", "READY" ), sizeof( text ) );
 		Scores_TextFit( at, y, h - 1.0f, small, scoresAccent, fade, text, nameEnd - at );
 	} else if ( score && score->ping == -1 ) {
@@ -457,24 +451,125 @@ static void Scores_PlayerLine( float x, float y, float h, const scoreLine_t *lin
 	}
 
 	if ( !score || score->ping == -1 ) {
-		Scores_Text( x + SCORES_COL_SCORE, y, h - 1.0f, scale, scoresDim, fade, 1, "-" );
-		Scores_Text( x + SCORES_COL_PING, y, h - 1.0f, scale, scoresDim, fade, 1, "-" );
-		Scores_Text( x + SCORES_COL_TIME, y, h - 1.0f, scale, scoresDim, fade, 1, "-" );
+		Scores_Text( cols->score, y, h - 1.0f, scale, scoresDim, fade, 1, "-" );
+		Scores_Text( cols->ping, y, h - 1.0f, scale, scoresDim, fade, 1, "-" );
 		return;
 	}
 	if ( duel ) {
-		Scores_Text( x + SCORES_COL_SCORE, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i/%i", ci->wins, ci->losses ) );
-	} else if ( ci->team != TEAM_SPECTATOR ) {
-		// score/deaths on JA+ servers from 2.1 on
-		Scores_Text( x + SCORES_COL_SCORE, y, h - 1.0f, scale, scoresText, fade, 1,
-			( cgs.jpVersion >= 2.1f ) ? va( "%i/%i", score->score, score->deaths ) : va( "%i", score->score ) );
+		Scores_Text( cols->score, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i/%i", ci->wins, ci->losses ) );
+	} else {
+		Scores_Text( cols->score, y, h - 1.0f, scale, self ? colorWhite : scoresText, fade, 1, va( "%i", score->score ) );
+		if ( cols->deaths ) {
+			Scores_Text( cols->deaths, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i", score->deaths ) );
+		}
 	}
 	if ( cg_scoreboardBots.integer && ci->botSkill != -1 ) {
-		Scores_Text( x + SCORES_COL_PING, y, h - 1.0f, small, scoresDim, fade, 1, "BOT" );
+		Scores_Text( cols->ping, y, h - 1.0f, small, scoresDim, fade, 1, "BOT" );
 	} else {
-		Scores_Text( x + SCORES_COL_PING, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i", score->ping ) );
+		Scores_Text( cols->ping, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i", score->ping ) );
 	}
-	Scores_Text( x + SCORES_COL_TIME, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i", score->time ) );
+	if ( cols->ready ) {
+		// who is ready for the next level; a bot is not asked
+		if ( cg.snap->ps.stats[STAT_CLIENTS_READY] & ( 1 << n ) ) {
+			Q_strncpyz( text, CG_GetStringEdString( "MP_INGAME", "READY" ), sizeof( text ) );
+			Scores_Text( cols->last, y, h - 1.0f, small, scoresAccent, fade, 1, Q_strupr( text ) );
+		} else if ( ci->botSkill == -1 ) {
+			Q_strncpyz( text, CG_VisionText( "Waiting" ), sizeof( text ) );
+			Scores_Text( cols->last, y, h - 1.0f, small, scoresDim, fade, 1, Q_strupr( text ) );
+		}
+	} else if ( cols->last ) {
+		Scores_Text( cols->last, y, h - 1.0f, scale, scoresText, fade, 1, va( "%i", score->time ) );
+	}
+}
+
+// a place on the board that stands for a player, for the pointer
+static void Scores_Mark( int client, float x, float y, float w, float h ) {
+	if ( scores.numRows < (int)ARRAY_LEN( scores.rows ) ) {
+		scores.rows[scores.numRows].client = client;
+		scores.rows[scores.numRows].x = x;
+		scores.rows[scores.numRows].y = y;
+		scores.rows[scores.numRows].w = w;
+		scores.rows[scores.numRows].h = h;
+		scores.numRows++;
+	}
+}
+
+static qboolean Scores_PointerIn( qboolean pointer, float x, float y, float w, float h ) {
+	return (qboolean)( pointer && cgs.cursorX >= x && cgs.cursorX < x + w && cgs.cursorY >= y && cgs.cursorY < y + h );
+}
+
+// The rows of a group of players from y on, `fit` of them at most: what does not fit is a line that says how many.
+static void Scores_Group( const scoreCols_t *cols, float y, float rowH, const scoreLine_t *lines, int count, int fit, qboolean ranked,
+	qboolean pointer, float fade ) {
+	const int	shown = ( count > fit ) ? Q_max( 0, fit - 1 ) : count;
+	int			i;
+
+	for ( i = 0; i < shown; i++, y += rowH ) {
+		Scores_PlayerLine( cols, y, rowH, &lines[i], i, ranked ? i + 1 : 0, Scores_PointerIn( pointer, cols->x, y, cols->w, rowH ), fade );
+		Scores_Mark( lines[i].client, cols->x, y, cols->w, rowH );
+	}
+	if ( count > shown ) {
+		Scores_Text( cols->name, y, rowH, 0.46f, scoresDim, fade, 0, CG_VisionTextWith( "and %i more", va( "%i", count - shown ) ) );
+	}
+}
+
+/*
+=================
+Scores_Foot
+
+The line at the end of the board: who watches, each name a place to click, and at the right how the mouse gets
+onto the board or lets go of it.
+=================
+*/
+static void Scores_Foot( float x, float y, const scoreLine_t *watch, int count, qboolean pointer, float fade ) {
+	const float	scale = 0.46f, mid = y + SCORES_FOOT_H * 0.5f + 1.0f;
+	float		right = x + SCORES_W - 12.0f, at = x + 12.0f;
+	char		word[64];
+	vec4_t		c;
+	int			i;
+
+	Skin_Color( c, scoresEdge, fade * 0.6f );
+	Skin_Line( x + 8.0f, y + 1.0f, SCORES_W - 16.0f, c );
+	if ( v_selectPlayers.integer && !cg.demoPlayback ) {
+		if ( scores.kept ) {
+			const char *hint = CG_VisionTextWith( "Click a player. %s or Esc closes.", Scores_KeyName() );
+
+			right -= Scores_Width( hint, 0.42f );
+			Scores_Text( right, y + 2.0f, SCORES_FOOT_H - 2.0f, 0.42f, scoresAccent, fade, 0, hint );
+		} else if ( v_scoresPick.integer ) {
+			char key[32];
+
+			Q_strncpyz( key, Scores_KeyName(), sizeof( key ) );
+			right -= Hud_KeyHintWidth( key, CG_VisionText( "twice: pick a player" ) );
+			Hud_KeyHint( right, mid, key, CG_VisionText( "twice: pick a player" ), fade );
+		}
+		right -= 10.0f;
+	}
+	if ( !count ) {
+		return;
+	}
+	Q_strncpyz( word, CG_VisionText( "Spectators" ), sizeof( word ) );
+	Scores_Text( at, y + 2.0f, SCORES_FOOT_H - 2.0f, 0.42f, scoresDim, fade, 0, Q_strupr( word ) );
+	at += Scores_Width( word, 0.42f ) + 8.0f;
+	for ( i = 0; i < count; i++ ) {
+		const char	*name = cgs.clientinfo[watch[i].client].name;
+		const float	w = Scores_Width( name, scale );
+
+		// (what does not fit any more is a number)
+		if ( at + w > right - ( i < count - 1 ? 22.0f : 0.0f ) ) {
+			Scores_Text( at, y + 2.0f, SCORES_FOOT_H - 2.0f, scale, scoresDim, fade, 0, va( "+%i", count - i ) );
+			break;
+		}
+		if ( Scores_PointerIn( pointer, at - 2.0f, y + 2.0f, w + 4.0f, SCORES_FOOT_H - 2.0f ) ) {
+			const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.16f };
+
+			Skin_Color( c, lit, fade );
+			Skin_Panel( at - 2.0f, y + 3.0f, w + 4.0f, SCORES_FOOT_H - 4.0f, 2.0f, c, NULL );
+		}
+		Scores_Text( at, y + 2.0f, SCORES_FOOT_H - 2.0f, scale, scoresText, fade, 0, name );
+		Scores_Mark( watch[i].client, at - 2.0f, y + 2.0f, w + 4.0f, SCORES_FOOT_H - 2.0f );
+		at += w + 8.0f;
+	}
 }
 
 /*
@@ -483,17 +578,21 @@ CG_ScoresDraw
 
 The scoreboard, when the one of the game would be drawn: while its key is held or it is kept, while the own
 player is dead, at the end of a level, and fading out afterwards. qtrue: it was drawn.
+
+Without teams one list with the place of each; with teams a half for each, red at the left, under a band with
+what the team has. Who watches is the line at the end.
 =================
 */
 qboolean CG_ScoresDraw( void ) {
 	const vec4_t	shade = { 0.0f, 0.0f, 0.0f, 0.42f };
-	const float		avail = SCORES_BOTTOM - SCORES_TOP - SCORES_HEAD_H - SCORES_COLS_H - SCORES_PAD;
+	const qboolean	teams = (qboolean)( cgs.gametype >= GT_TEAM );
 	float			x = ( SCREEN_WIDTH - SCORES_W ) * 0.5f;
-	scoreLine_t		lines[MAX_CLIENTS + 3];
+	scoreLine_t		first[MAX_CLIENTS], second[MAX_CLIENTS], watch[MAX_CLIENTS];
+	scoreCols_t		cols;
 	char			text[256];
-	float			fade, rowH, fixed = 0.0f, content = 0.0f, y, height, nameX;
-	int				numLines, players = 0, shown, hidden = 0, i, index = 0;
-	qboolean		pointer;
+	float			fade, rowH, avail, top, y, height;
+	int				numFirst = 0, numSecond = 0, numWatch = 0, most, fit;
+	qboolean		pointer, foot;
 	vec4_t			c;
 
 	scores.shown = qfalse;
@@ -533,30 +632,23 @@ qboolean CG_ScoresDraw( void ) {
 		fade = color[3];
 	}
 
+	if ( teams ) {
+		Scores_AddTeam( first, &numFirst, TEAM_RED );
+		Scores_AddTeam( second, &numSecond, TEAM_BLUE );
+	} else {
+		Scores_AddTeam( first, &numFirst, TEAM_FREE );
+	}
+	Scores_AddTeam( watch, &numWatch, TEAM_SPECTATOR );
+	foot = (qboolean)( numWatch > 0 || ( v_selectPlayers.integer && !cg.demoPlayback && ( scores.kept || v_scoresPick.integer ) ) );
+
 	// How high a row is: as high as there is room, within its limits. What still does not fit is left out, with
 	// a line that says how many.
-	numLines = Scores_Lines( lines );
-	for ( i = 0; i < numLines; i++ ) {
-		if ( lines[i].kind == LINE_PLAYER ) {
-			players++;
-		} else {
-			fixed += Scores_LineHeight( &lines[i], 0.0f );
-		}
-	}
-	rowH = players ? Com_Clamp( SCORES_ROW_MIN, SCORES_ROW_MAX, ( avail - fixed ) / players ) : SCORES_ROW_MAX;
-	shown = numLines;
-	if ( fixed + players * rowH > avail ) {
-		for ( shown = 0; shown < numLines && content + Scores_LineHeight( &lines[shown], rowH ) + rowH <= avail; shown++ ) {
-			content += Scores_LineHeight( &lines[shown], rowH );
-		}
-		for ( i = shown; i < numLines; i++ ) {
-			hidden += ( lines[i].kind == LINE_PLAYER );
-		}
-		content += rowH;
-	} else {
-		content = fixed + players * rowH;
-	}
-	height = SCORES_HEAD_H + SCORES_COLS_H + content + SCORES_PAD;
+	top = SCORES_TOP + SCORES_HEAD_H + ( teams ? SCORES_TEAM_H : 0.0f ) + SCORES_COLS_H;
+	avail = SCORES_BOTTOM - top - SCORES_PAD - ( foot ? SCORES_FOOT_H : 0.0f );
+	most = Q_max( 1, Q_max( numFirst, numSecond ) );
+	rowH = Com_Clamp( SCORES_ROW_MIN, SCORES_ROW_MAX, avail / most );
+	fit = (int)( avail / rowH );
+	height = top - SCORES_TOP + Q_min( most, fit ) * rowH + ( foot ? SCORES_FOOT_H : 0.0f ) + SCORES_PAD * ( foot ? 0.5f : 1.0f );
 
 	// While it is kept for the pointer the card of a player opens at its right. Where the screen has no room
 	// for that (a window of 4:3), the board stands as far to the left as the card needs, from the moment it is
@@ -584,37 +676,32 @@ qboolean CG_ScoresDraw( void ) {
 		Skin_Panel( x, SCORES_TOP, SCORES_W, height, 8.0f, c, edge );
 	}
 	Scores_Head( x, SCORES_TOP, fade );
-	// (the names begin after the picture of a row)
-	nameX = x + 10.0f + ( rowH - 3.0f ) + 5.0f;
-	Scores_Columns( x, SCORES_TOP + SCORES_HEAD_H, nameX, fade );
 
 	// is there a pointer on the screen: the board is kept, or the mouse is free for another reason
 	pointer = (qboolean)( ( trap->Key_GetCatcher() & KEYCATCH_CGAME ) != 0 && v_selectPlayers.integer );
-	y = SCORES_TOP + SCORES_HEAD_H + SCORES_COLS_H;
-	for ( i = 0; i < shown; i++ ) {
-		const float h = Scores_LineHeight( &lines[i], rowH );
+	y = SCORES_TOP + SCORES_HEAD_H;
+	if ( teams ) {
+		const float half = SCORES_W * 0.5f;
 
-		if ( lines[i].kind == LINE_TEAM ) {
-			Scores_TeamLine( x, y, lines[i].team, fade );
-			index = 0;
-		} else if ( lines[i].kind == LINE_WATCH ) {
-			Q_strncpyz( text, CG_VisionText( "Spectators" ), sizeof( text ) );
-			Scores_Text( x + 12.0f, y + 2.0f, SCORES_WATCH_H - 2.0f, 0.44f, scoresDim, fade, 0, Q_strupr( text ) );
-			Skin_Color( c, scoresEdge, fade * 0.6f );
-			Skin_Line( x + 8.0f, y + 1.0f, SCORES_W - 16.0f, c );
-			index = 0;
-		} else {
-			Scores_PlayerLine( x, y, h, &lines[i], index++, (qboolean)( pointer && cgs.cursorX >= x && cgs.cursorX < x + SCORES_W
-				&& cgs.cursorY >= y && cgs.cursorY < y + h ), fade );
-			scores.rows[scores.numRows].client = lines[i].client;
-			scores.rows[scores.numRows].y = y;
-			scores.rows[scores.numRows].h = h;
-			scores.numRows++;
-		}
-		y += h;
+		Scores_TeamLine( x, half, y, TEAM_RED, fade );
+		Scores_TeamLine( x + half, half, y, TEAM_BLUE, fade );
+		y += SCORES_TEAM_H;
+		Scores_Cols( x, half, rowH, qtrue, &cols );
+		Scores_Columns( &cols, y, fade );
+		Scores_Group( &cols, y + SCORES_COLS_H, rowH, first, numFirst, fit, qfalse, pointer, fade );
+		Scores_Cols( x + half, half, rowH, qtrue, &cols );
+		Scores_Columns( &cols, y, fade );
+		Scores_Group( &cols, y + SCORES_COLS_H, rowH, second, numSecond, fit, qfalse, pointer, fade );
+		// the line between the halves
+		Skin_Color( c, scoresEdge, fade * 0.5f );
+		Skin_Panel( x + half - 0.25f, y - SCORES_TEAM_H + 2.0f, 0.5f, SCORES_TEAM_H + SCORES_COLS_H + Q_min( most, fit ) * rowH - 2.0f, 0.0f, c, NULL );
+	} else {
+		Scores_Cols( x, SCORES_W, rowH, qfalse, &cols );
+		Scores_Columns( &cols, y, fade );
+		Scores_Group( &cols, y + SCORES_COLS_H, rowH, first, numFirst, fit, qtrue, pointer, fade );
 	}
-	if ( hidden ) {
-		Scores_Text( x + 12.0f, y, rowH, 0.46f, scoresDim, fade, 0, CG_VisionTextWith( "and %i more", va( "%i", hidden ) ) );
+	if ( foot ) {
+		Scores_Foot( x, top + Q_min( most, fit ) * rowH, watch, numWatch, pointer, fade );
 	}
 
 	trap->R_SetColor( NULL );
@@ -675,7 +762,8 @@ int CG_ScoresClientAt( float *cardX, float *cardY ) {
 		return -1;
 	}
 	for ( i = 0; i < scores.numRows; i++ ) {
-		if ( cgs.cursorY >= scores.rows[i].y && cgs.cursorY < scores.rows[i].y + scores.rows[i].h ) {
+		if ( cgs.cursorX >= scores.rows[i].x && cgs.cursorX < scores.rows[i].x + scores.rows[i].w
+			&& cgs.cursorY >= scores.rows[i].y && cgs.cursorY < scores.rows[i].y + scores.rows[i].h ) {
 			if ( cardX && cardY ) {
 				*cardX = scores.x + scores.w + SCORES_CARD_GAP;
 				*cardY = scores.rows[i].y - 4.0f;
