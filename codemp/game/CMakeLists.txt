@@ -300,6 +300,14 @@ set(MPGamePropsFiles
 source_group("game/props" FILES ${MPGamePropsFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})
 
+# moves no hand makes: the cap of a single move and the wiggle bot
+set(MPGameAntiCheatFiles
+	"${MPDir}/game/anticheat/g_anticheat.c"
+	"${MPDir}/game/anticheat/g_anticheat.h"
+	)
+source_group("game/anticheat" FILES ${MPGameAntiCheatFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameAntiCheatFiles})
+
 # what an admin does to one player, and the emote ampoop
 set(MPGameFunFiles
 	"${MPDir}/game/fun/g_disorient.c"

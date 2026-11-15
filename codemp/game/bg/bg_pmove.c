@@ -6291,6 +6291,15 @@ void PM_FinishWeaponChange( void ) {
 		weapon = WP_NONE;
 	}
 
+	// A change only starts towards a weapon that is owned (PM_BeginWeaponChange), so a cmd that names
+	// no weapon or one not owned by the time the old one is down did not come from the selection of a
+	// stock client: the old h_weaponbug cheat starts a change and sends WP_NONE one frame later to end
+	// up holding nothing. Keep the old weapon while it is still owned.
+	if ( weapon == WP_NONE && pm->ps->weapon > WP_NONE && pm->ps->weapon < WP_NUM_WEAPONS
+		&& (pm->ps->stats[STAT_WEAPONS] & ( 1 << pm->ps->weapon )) ) {
+		weapon = pm->ps->weapon;
+	}
+
 	if (weapon == WP_SABER)
 	{
 		PM_SetSaberMove(LS_DRAW);
@@ -11328,16 +11337,18 @@ void PmoveSingle (pmove_t *pmove) {
 
 	PM_CmdForSaberMoves(&pm->cmd);
 
+	// make sure walking button is clear if they are running, to avoid
+	// proxy no-footsteps cheats. Before BG_AdjustClientSpeed: a client sending the walking flag
+	// with a full move (the old h_walk 127 cheat) skipped the backwards penalty there and ran
+	// backwards at full speed. A stock client never sends the flag with a move above 64.
+	if ( abs( pm->cmd.forwardmove ) > 64 || abs( pm->cmd.rightmove ) > 64 ) {
+		pm->cmd.buttons &= ~BUTTON_WALKING;
+	}
+
 	BG_AdjustClientSpeed(pm->ps, &pm->cmd, pm->cmd.serverTime);
 
 	if ( pm->ps->stats[STAT_HEALTH] <= 0 ) {
 		pm->tracemask &= ~CONTENTS_BODY;	// corpses can fly through bodies
-	}
-
-	// make sure walking button is clear if they are running, to avoid
-	// proxy no-footsteps cheats
-	if ( abs( pm->cmd.forwardmove ) > 64 || abs( pm->cmd.rightmove ) > 64 ) {
-		pm->cmd.buttons &= ~BUTTON_WALKING;
 	}
 
 	// set the talk balloon flag

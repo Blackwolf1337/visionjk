@@ -46,7 +46,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // it, a few frames ahead at most, and the game cuts a move back to 200 msec ahead anyway (ClientThink_real). So
 // the hack gains nothing in this game and there is nothing to catch. What such a count does catch is every
 // player after the server stood still for a moment: their moves of that moment are all ahead of its time.
-// vs_antiWallhack is in sv_snapshot.cpp.
+// What a stock client never does with the timing of its moves (a warp, packets without moves) is noted by
+// sv_movecheck.cpp. vs_antiWallhack is in sv_snapshot.cpp.
 
 #include "server.h"
 
@@ -98,6 +99,8 @@ static const struct {
 	{ "a path that goes up, in a command",				20 },	// IDS_TEXT_PATH
 	{ "a run of bytes that is no text",					35 },	// IDS_TEXT_BINARY
 	{ "a userinfo that is too long",					25 },	// IDS_USERINFO
+	{ "moves far ahead of the time that passed",		0 },	// IDS_CMD_WARP, sv_movecheck.cpp: noted, never blocked
+	{ "packets without moves",							0 },	// IDS_CMD_NOMOVE, sv_movecheck.cpp: noted, never blocked
 };
 
 static cvar_t		*vs_ids;

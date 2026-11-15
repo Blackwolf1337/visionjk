@@ -358,6 +358,7 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/server/sv_ids.cpp"
 		"${MPDir}/server/sv_init.cpp"
 		"${MPDir}/server/sv_main.cpp"
+		"${MPDir}/server/sv_movecheck.cpp"
 		"${MPDir}/server/sv_net_chan.cpp"
 		"${MPDir}/server/sv_snapshot.cpp"
 		"${MPDir}/server/sv_tv.cpp"
