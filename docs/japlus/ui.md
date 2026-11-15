@@ -137,6 +137,13 @@ Both are in Setup, HUD, under Menus and HUD.
   siege, rank 3 for a held holocron, otherwise the `forcepowers` setting of the player. A server that lowered
   the ranks is not noticed. When following another player there is no rank, so a card has no pips, no cost and
   is not darkened. Only the client changes: the selection is sent as before, so it works on every server.
+- The force powers that run right now (`v_hud 1`) are a row of small glass chips just above the health panel at
+  the left, in place of the icons of the game (`CG_PowerChips` in `cgame/hud/cg_powers.c`; `v_hud 0` keeps the
+  icons, `CG_DrawActivePowers`). A chip shows the picture of the power. Its rim has the colour of the side of
+  the power (blue for light, red for dark, pale for neutral) and pulses. A chip slides in when its power starts
+  and fades away when it ends. The recovery after rage is a chip with a bar that runs down. The other chips have
+  no countdown, because the server does not send how long a power still runs. The row moves up above the line
+  of the alternate dimension while that line is shown.
 - Setup has seven pages in place of eleven tabs, by topic: Video, Sound (with the 3D sound and the voice chat),
   Game (with the language), HUD, Chat & Social, Network and Mods. See "The Setup screen" below. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
