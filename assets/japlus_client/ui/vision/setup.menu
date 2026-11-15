@@ -1771,6 +1771,90 @@
 		itemDef
 		{
 			name					vision_head
+			rect					296 674 452 100
+			visible					1
+			text					@VISION_SABER_SCARS
+			font					7
+			textscale				0.89
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				54.5
+			caps					1
+			fold					8
+			page					3
+			scroll					1
+			column					0
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_saberscars
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SABER_SCARS
+			descText				@VISION_A_BLADE_MELTS_A_GLOWING_CUT_INTO_WAL
+			cvar					"v_saberScars"
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 774 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_saberscartime
+			type					ITEM_TYPE_MULTI
+			text					@VISION_SCARS_STAY
+			descText				@VISION_HOW_LONG_THE_CHARRED_CUTS_STAY_BEFOR
+			cvar					"v_saberScarTime"
+			cvarFloatList { @VISION_AFTER_10_S 10 @VISION_AFTER_30_S 30 @VISION_AFTER_60_S 60 @VISION_AFTER_2_MIN 120 }
+			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"v_saberScars"
+			disableCvar { "0" }
+			rect					306 826 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_saberscarfx
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SMOKE_AND_EMBERS
+			descText				@VISION_SMOKE_RISES_EMBERS_FALL_AND_THE_AIR
+			cvar					"v_saberScarFx"
+			action { play "sound/interface/button1.wav" ; }
+			cvarTest				"v_saberScars"
+			disableCvar { "0" }
+			rect					306 878 432 52
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					772 192 452 66
 			visible					1
 			text					@VISION_SLICING
@@ -1781,7 +1865,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					8
+			fold					9
 			page					3
 			scroll					1
 			column					1
@@ -1866,7 +1950,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					9
+			fold					10
 			page					3
 			scroll					1
 			column					1
@@ -1896,11 +1980,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_litparticles
+			name					vision_yesno_v_gpusparks
 			type					ITEM_TYPE_YESNO
-			text					@VISION_LIT_PARTICLES
-			descText				@VISION_SMOKE_DUST_AND_STEAM_TAKE_THE_LIGHT
-			cvar					"v_litParticles"
+			text					@VISION_GPU_SPARKS
+			descText				@VISION_SABER_HITS_CLASHES_SHOTS_AND_EXPLOSI
+			cvar					"v_gpuSparks"
 			action { play "sound/interface/button1.wav" ; }
 			rect					782 566 432 52
 			page					3
@@ -1915,78 +1999,13 @@
 
 		itemDef
 		{
-			name					vision_head
-			rect					772 618 452 100
-			visible					1
-			text					@VISION_SABER_SCARS
-			font					7
-			textscale				0.89
-			forecolor				0.56 0.64 0.74 1
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				22
-			textaligny				54.5
-			caps					1
-			fold					10
-			page					3
-			scroll					1
-			column					1
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_saberscars
+			name					vision_yesno_v_litparticles
 			type					ITEM_TYPE_YESNO
-			text					@VISION_SABER_SCARS
-			descText				@VISION_A_BLADE_MELTS_A_GLOWING_CUT_INTO_WAL
-			cvar					"v_saberScars"
+			text					@VISION_LIT_PARTICLES
+			descText				@VISION_SMOKE_DUST_AND_STEAM_TAKE_THE_LIGHT
+			cvar					"v_litParticles"
 			action { play "sound/interface/button1.wav" ; }
-			rect					782 718 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_multi_v_saberscartime
-			type					ITEM_TYPE_MULTI
-			text					@VISION_SCARS_STAY
-			descText				@VISION_HOW_LONG_THE_CHARRED_CUTS_STAY_BEFOR
-			cvar					"v_saberScarTime"
-			cvarFloatList { @VISION_AFTER_10_S 10 @VISION_AFTER_30_S 30 @VISION_AFTER_60_S 60 @VISION_AFTER_2_MIN 120 }
-			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"v_saberScars"
-			disableCvar { "0" }
-			rect					782 770 432 52
-			page					3
-			scroll					1
-			row						1
-			font					5
-			textscale				0.94
-			forecolor				0.86 0.90 0.945 1
-			visible					1
-			column					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_saberscarfx
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SMOKE_AND_EMBERS
-			descText				@VISION_SMOKE_RISES_EMBERS_FALL_AND_THE_AIR
-			cvar					"v_saberScarFx"
-			action { play "sound/interface/button1.wav" ; }
-			cvarTest				"v_saberScars"
-			disableCvar { "0" }
-			rect					782 822 432 52
+			rect					782 618 432 52
 			page					3
 			scroll					1
 			row						1

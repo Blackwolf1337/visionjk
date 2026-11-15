@@ -512,6 +512,12 @@ LANG_ENGLISH        "Soft Particles"
 REFERENCE           SMOKE_DUST_AND_FIRE_FADE_OUT_WHERE_T
 LANG_ENGLISH        "Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only."
 
+REFERENCE           GPU_SPARKS
+LANG_ENGLISH        "GPU Sparks"
+
+REFERENCE           SABER_HITS_CLASHES_SHOTS_AND_EXPLOSI
+LANG_ENGLISH        "Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only."
+
 REFERENCE           LIT_PARTICLES
 LANG_ENGLISH        "Lit Particles"
 

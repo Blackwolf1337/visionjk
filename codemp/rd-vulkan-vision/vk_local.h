@@ -216,6 +216,8 @@ typedef enum {
 									// tessellation, shaders/generic.tesc and .tese); Vulkan only, never sent to GLES
 	VKP_DEPTH,						// as VKP_GENERIC, depth alone: no fragment shader, no colour (the depth pre-pass
 									// of the level, RB_DepthPrepass); Vulkan only
+	VKP_SPARKS,						// no vertices: the sparks of v_gpuSparks from their ring on the device, six vertices
+									// each without indexes (shaders/sparks.vert, vk_sparks.cpp); Vulkan only
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -318,6 +320,7 @@ typedef struct vkState_s : vkDeviceState_t {
 	const vkStencil_t			*stencil;			// of the draws that follow, NULL: no stencil test, depth as the state bits say
 	const vkIndexRange_t		*ranges;			// or, for surfaces of models, the runs of indexes to draw
 	int							numRanges;			// 0: numBoundIndexes from firstIndex
+	uint32_t					drawVertices;		// or this many vertices without indexes (the sparks, VKP_SPARKS), 0: not
 	int							viewport[4];		// x, y, width, height as OpenGL counts them, in pixels of the window
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
@@ -463,6 +466,15 @@ void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
 void		VK_SoftDepth( void );
+
+// vk_sparks.cpp (v_gpuSparks)
+extern cvar_t	*v_gpuSparks;
+void		VK_SparksInit( void );
+void		VK_SparksShutdown( void );
+void		VK_SparksView( void );
+void		VK_SparksSimulate( void );
+void		VK_SparksDraw( uint32_t transform );
+qboolean	RE_EmitSparks( const sparkBurst_t *burst );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );

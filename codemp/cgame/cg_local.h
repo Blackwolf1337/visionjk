@@ -2526,3 +2526,11 @@ extern cgameImport_t *trap;
 // v_fxTest <effect> [msec] [x y z] (cg_effects.c): an effect where the view looks, again and again
 void CG_FxTest_f( void );
 void CG_FxTestFrame( void );
+// CG_GpuSparks (cg_effects.c): sparks the renderer simulates; qfalse: play the effect as before
+typedef enum {
+	GPUSPARKS_SABER,
+	GPUSPARKS_CLASH,
+	GPUSPARKS_BLASTER,
+	GPUSPARKS_EXPLOSION
+} gpuSparks_t;
+qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, float scale );

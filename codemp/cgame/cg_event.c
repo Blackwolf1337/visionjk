@@ -2385,6 +2385,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					}
 					trap->S_StartSound(es->origin, es->number, CHAN_AUTO, blockSound );
 					trap->FX_PlayEffectID( blockFXID, es->origin, fxDir, -1, -1, qfalse );
+					// VisionJK: a burst of sparks where the renderer simulates them (v_gpuSparks)
+					CG_GpuSparks( es->origin, fxDir, GPUSPARKS_CLASH, 1.0f );
 
 					if ( !noFlare )
 					{

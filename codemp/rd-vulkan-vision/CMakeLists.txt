@@ -108,6 +108,7 @@ set(MPVulkanVisionVulkanFiles
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_rt.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_sparks.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	)
 source_group("vulkan" FILES ${MPVulkanVisionVulkanFiles})
@@ -234,6 +235,8 @@ set(MPVulkanVisionRTShaders
 	rtresolve.frag
 	rtshadow.frag
 	rtskin.comp
+	sparks.comp
+	sparks.vert
 	smdepth.vert
 	rtlightmask.frag
 	smlights.frag

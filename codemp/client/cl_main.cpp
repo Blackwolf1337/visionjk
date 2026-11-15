@@ -2980,6 +2980,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameSetBones", "1", CVAR_ROM, "" );
 	// ext.R_DrawBackdrop: frosted glass behind the HUD panels and the chat box
 	Cvar_Get( "v_cgameBackdrop", "1", CVAR_ROM, "" );
+	// ext.R_EmitSparks: sparks the renderer simulates (cgame/cg_effects.c CG_GpuSparks)
+	Cvar_Get( "v_cgameSparks", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)

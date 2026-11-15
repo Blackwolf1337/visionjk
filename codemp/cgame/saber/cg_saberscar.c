@@ -891,7 +891,10 @@ void CG_SaberScarContact( const void *key, int index, const vec3_t pos, const ve
 			s->nextSmoke = cg.time + 70;
 		}
 		if ( cg.time >= s->nextEmbers && scar.embersFx ) {
-			trap->FX_PlayEffectID( scar.embersFx, (float *)pos, (float *)normal, -1, -1, qfalse );
+			// (the sparks the renderer simulates where it can, else the embers of the effect)
+			if ( !CG_GpuSparks( pos, normal, GPUSPARKS_SABER, 1.0f ) ) {
+				trap->FX_PlayEffectID( scar.embersFx, (float *)pos, (float *)normal, -1, -1, qfalse );
+			}
 			s->nextEmbers = cg.time + Q_irand( 40, 90 );
 		}
 	}

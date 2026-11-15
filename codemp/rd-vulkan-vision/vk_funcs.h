@@ -70,6 +70,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdBlitImage ) \
 	X( vkCmdClearAttachments ) \
 	X( vkCmdCopyBuffer ) \
+	X( vkCmdFillBuffer ) \
 	X( vkCmdCopyBufferToImage ) \
 	X( vkCmdCopyImage ) \
 	X( vkCmdCopyImageToBuffer ) \

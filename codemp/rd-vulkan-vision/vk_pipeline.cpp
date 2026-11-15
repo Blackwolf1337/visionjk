@@ -136,6 +136,9 @@ static const uint32_t vk_ssrPrepFrag[] =
 static const uint32_t vk_softDepthFrag[] =
 #include "shaders/softdepth_frag.inc"
 ;
+static const uint32_t vk_sparksVert[] =
+#include "shaders/sparks_vert.inc"
+;
 static const uint32_t vk_lumDownFrag[] =
 #include "shaders/lumdown_frag.inc"
 ;
@@ -216,10 +219,11 @@ static void VK_CreateLayouts( void ) {
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of v_menuBlur,
 	// the two of the smoke of the screen effects, the copy of the frame the scope reads, the mirror of the puddles,
-	// the depth, and the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures)
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 16;
+	// the depth, the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures), and the distance
+	// of the level of v_softParticles that the sparks of v_gpuSparks bounce off
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 17;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 17;
+	pool.maxSets = VK_FRAMES + 18;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -397,7 +401,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		tessellation.patchControlPoints = 3;
 	}
 
-	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID ) ) {
+	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID || program == VKP_SPARKS ) ) {
 		// nothing comes from a vertex buffer, see shaders/sprite.vert and liquid.vert
 	} else if ( !post && program == VKP_GRASS ) {
 		// vkGrassVertex_t, three vec4
@@ -754,6 +758,8 @@ void VK_InitPipelines( void ) {
 		vk.tessEvalShader = VK_CreateShader( vk_genericTese, sizeof( vk_genericTese ) );
 	}
 	vk.vertexShaders[VKP_DEPTH] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
+	vk.vertexShaders[VKP_SPARKS] = VK_CreateShader( vk_sparksVert, sizeof( vk_sparksVert ) );
+	vk.fragmentShaders[VKP_SPARKS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );

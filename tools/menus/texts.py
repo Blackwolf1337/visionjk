@@ -575,6 +575,8 @@ TR = {
     'Level Colour Look': 'Farblook des Levels',
     'Levels can come with a colour look of their own: contrast, saturation, warmth and the tint of shadows and highlights. Off: the colours as they are. Vulkan only.': 'Levels können einen eigenen Farblook mitbringen: Kontrast, Sättigung, Wärme und die Tönung von Schatten und Lichtern. Aus: die Farben wie sie sind. Nur Vulkan.',
     'Particles': 'Partikel',
+    'GPU Sparks': 'GPU-Funken',
+    'Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only.': 'Lichtschwert-Treffer, Klingenkontakte, Schüsse und Explosionen sprühen Funken, die die Grafikkarte berechnet: Hunderte auf einmal, glühend, abkühlend und von Wänden und Böden abprallend. Nur Vulkan.',
     'Soft Particles': 'Weiche Partikel',
     'Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only.': 'Rauch, Staub und Feuer blenden dort weich aus, wo sie auf Wände und Boden treffen, statt mit harter Kante hineinzuschneiden. Nur Vulkan.',
     'Lit Particles': 'Beleuchtete Partikel',

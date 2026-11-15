@@ -2203,6 +2203,8 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 
 	case WP_THERMAL:
 		trap->FX_PlayEffectID( cgs.effects.thermalExplosionEffect, origin, dir, -1, -1, qfalse );
+		// VisionJK: burning bits thrown out, where the renderer simulates sparks (v_gpuSparks)
+		CG_GpuSparks( origin, dir, GPUSPARKS_EXPLOSION, 1.2f );
 		trap->FX_PlayEffectID( cgs.effects.thermalShockwaveEffect, origin, up, -1, -1, qfalse );
 		break;
 
@@ -2330,6 +2332,8 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 
 	case WP_THERMAL:
 		trap->FX_PlayEffectID( cgs.effects.thermalExplosionEffect, origin, dir, -1, -1, qfalse );
+		// VisionJK: burning bits thrown out, where the renderer simulates sparks (v_gpuSparks)
+		CG_GpuSparks( origin, dir, GPUSPARKS_EXPLOSION, 1.2f );
 		trap->FX_PlayEffectID( cgs.effects.thermalShockwaveEffect, origin, up, -1, -1, qfalse );
 		break;
 	case WP_EMPLACED_GUN:

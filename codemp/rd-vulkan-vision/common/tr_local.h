@@ -1733,6 +1733,8 @@ void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori );
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
 // VisionJK: the colour look of a level from maps/<level>.look (vk_post.cpp, v_colorGrade), when it is loaded
 void VK_LoadLook( const char *mapName );
+// VisionJK: a burst of sparks the device simulates (vk_sparks.cpp, v_gpuSparks), ext.EmitSparks
+qboolean RE_EmitSparks( const sparkBurst_t *burst );
 
 
 /*

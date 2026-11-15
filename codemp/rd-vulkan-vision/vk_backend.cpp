@@ -1000,6 +1000,19 @@ static void RB_DrawWet( int depthRange ) {
 		VK_SoftDepth();
 		VK_GpuMark( "soft particles" );
 	}
+	// v_gpuSparks: the sparks the device moved, over the solid level, in the frame of the level
+	{
+		trRefEntity_t *entity = backEnd.currentEntity;
+		const orientationr_t ori = backEnd.ori;
+
+		backEnd.currentEntity = &tr.worldEntity;
+		backEnd.ori = backEnd.viewParms.world;
+		VK_SparksDraw( VK_CurrentTransform() );
+		backEnd.currentEntity = entity;
+		backEnd.ori = ori;
+		rb_entityReset = qtrue;
+	}
+	VK_GpuMark( "sparks" );
 #endif
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
@@ -1360,7 +1373,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 #ifdef RD_VISION_GLES
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
-	rb_softLater = (qboolean)( levelView && v_softParticles->integer && vk.depthReadable && !probeFace && !puddle );
+	// (the sparks bounce off it: v_gpuSparks wants it too)
+	rb_softLater = (qboolean)( levelView && ( v_softParticles->integer || v_gpuSparks->integer ) && vk.depthReadable && !probeFace && !puddle );
 	vk.softReady = qfalse;
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 || rb_softLater ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)

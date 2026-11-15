@@ -845,7 +845,10 @@ void VK_Draw( vkProgram_t program, uint32_t stateBits, uint32_t state, uint32_t 
 	}
 
 	// the shaders learn which draw this is from the first instance of the call
-	if ( vk.numRanges ) {
+	if ( vk.drawVertices ) {
+		// no indexes: the vertex shader makes each vertex from its number (the sparks)
+		qvkCmdDraw( cmd, vk.drawVertices, 1, 0, drawIndex );
+	} else if ( vk.numRanges ) {
 		// surfaces of models: their triangles are in an index buffer on the device
 		for ( int i = 0; i < vk.numRanges; i++ ) {
 			qvkCmdDrawIndexed( cmd, vk.ranges[i].count, 1, vk.ranges[i].first, 0, drawIndex );

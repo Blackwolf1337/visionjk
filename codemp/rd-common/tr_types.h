@@ -529,6 +529,22 @@ typedef struct saberBlade3D_s {
 	int			renderfx;			// RF_THIRD_PERSON: only in mirrors and portals, RF_FIRST_PERSON: not in them
 } saberBlade3D_t;
 
+// VisionJK: a burst of sparks the renderer simulates on the device (refexport_t ext.EmitSparks, v_gpuSparks)
+typedef struct sparkBurst_s {
+	vec3_t		origin;
+	vec3_t		dir;				// the way they fly, need not be normalized
+	int			count;
+	float		speed;				// units a second, each 35 to 100% of it
+	float		spread;				// 0: all along dir, 1: the half sphere round it, 2: all round
+	float		life;				// seconds, each 45 to 100% of it
+	float		size;				// half the width of a streak, in units
+	float		gravity;			// units a second a second down (800: the game's)
+	float		drag;				// how fast the air slows them, a second (1: to a third in a second)
+	float		bounce;				// the speed kept off a surface, 0 to 1
+	float		cooling;			// 1: they cool over their life, above 1 sooner, below later
+	vec3_t		color;				// hot, may be above 1 for the bloom of HDR
+} sparkBurst_t;
+
 typedef struct refEntity_s {
 	// this stucture must remain identical as the miniRefEntity_t
 	//

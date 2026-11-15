@@ -51,6 +51,8 @@ FX_RocketHitWall
 void FX_RocketHitWall( vec3_t origin, vec3_t normal )
 {
 	trap->FX_PlayEffectID( cgs.effects.rocketExplosionEffect, origin, normal, -1, -1, qfalse );
+	// VisionJK: burning bits thrown out, where the renderer simulates sparks (v_gpuSparks)
+	CG_GpuSparks( origin, normal, GPUSPARKS_EXPLOSION, 1.0f );
 }
 
 /*
@@ -62,6 +64,7 @@ FX_RocketHitPlayer
 void FX_RocketHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid )
 {
 	trap->FX_PlayEffectID( cgs.effects.rocketExplosionEffect, origin, normal, -1, -1, qfalse );
+	CG_GpuSparks( origin, normal, GPUSPARKS_EXPLOSION, 0.7f );
 }
 
 /*

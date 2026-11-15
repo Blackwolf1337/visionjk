@@ -518,6 +518,8 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_CreateTarget( &vk.softDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	vk.softShown = -1;
 	vk.softReady = qfalse;
+	VK_PostSetOnce( &vk.softSet );
+	VK_WriteSet( vk.softSet, vk.postSampler, vk.softDepth.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_CreateTarget( &vk.lum, VK_LUM_WIDTH, VK_LUM_HEIGHT, VK_FORMAT_R32_SFLOAT, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {

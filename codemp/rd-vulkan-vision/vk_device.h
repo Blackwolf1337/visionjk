@@ -230,6 +230,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	// v_softParticles (vk_post.cpp VK_SoftDepth): how far the solid level of the view is at each pixel, shown in the
 	// texture table (tr.softDepthImage) for the sprites drawn after it
 	vkTarget_t					softDepth;
+	VkDescriptorSet				softSet;			// it as a post set (the bounces of the sparks, vk_sparks.cpp)
 	VkShaderModule				softDepthShader;
 	VkPipeline					softDepthPipeline;
 	qboolean					softReady;			// drawn for the view that is being drawn

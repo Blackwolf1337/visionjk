@@ -681,6 +681,14 @@ REFERENCE           SMOKE_DUST_AND_FIRE_FADE_OUT_WHERE_T
 LANG_ENGLISH        "Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only."
 LANG_GERMAN         "Rauch, Staub und Feuer blenden dort weich aus, wo sie auf Wände und Boden treffen, statt mit harter Kante hineinzuschneiden. Nur Vulkan."
 
+REFERENCE           GPU_SPARKS
+LANG_ENGLISH        "GPU Sparks"
+LANG_GERMAN         "GPU-Funken"
+
+REFERENCE           SABER_HITS_CLASHES_SHOTS_AND_EXPLOSI
+LANG_ENGLISH        "Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only."
+LANG_GERMAN         "Lichtschwert-Treffer, Klingenkontakte, Schüsse und Explosionen sprühen Funken, die die Grafikkarte berechnet: Hunderte auf einmal, glühend, abkühlend und von Wänden und Böden abprallend. Nur Vulkan."
+
 REFERENCE           LIT_PARTICLES
 LANG_ENGLISH        "Lit Particles"
 LANG_GERMAN         "Beleuchtete Partikel"

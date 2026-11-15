@@ -846,6 +846,10 @@ typedef struct cgameImport_s {
 		// frosted glass behind a panel drawn next (ext.DrawBackdrop of the renderer): qtrue when it is drawn. Only
 		// where the ROM cvar v_cgameBackdrop is 1, an older engine ends this table before.
 		qboolean		(*R_DrawBackdrop)						( float x, float y, float w, float h, float radius );
+		// sparks simulated by the renderer (ext.EmitSparks, sparkBurst_t): qtrue when taken, else play the effect as
+		// before. Only where the ROM cvar v_cgameSparks is 1, an older engine ends this table before; NULL: the
+		// renderer has none.
+		qboolean		(*R_EmitSparks)							( const sparkBurst_t *burst );
 	} ext;
 } cgameImport_t;
 

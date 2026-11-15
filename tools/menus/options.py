@@ -146,6 +146,7 @@ SETUP = [
          'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
         ('head', 'Particles'),
         ('yesno', 'Soft Particles', 'v_softParticles', 'Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only.'),
+        ('yesno', 'GPU Sparks', 'v_gpuSparks', 'Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only.'),
         ('yesno', 'Lit Particles', 'v_litParticles', 'Smoke, dust and steam take the light of the place they are in: dark in a dark corridor, bright next to a saber. Fire and sparks glow as they are. Vulkan only.'),
         ('head', 'Saber Scars'),
         ('yesno', 'Saber Scars', 'v_saberScars', 'A blade melts a glowing cut into walls and floors. It cools from white to red and leaves a charred groove. Off: the marks of the game.'),

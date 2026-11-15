@@ -236,6 +236,7 @@ void VK_SoftDepth( void ) {
 	parm[2] = parm[3] = 0.0f;
 	VK_EndTarget();
 	VK_SoftDepthPass( parm );
+	VK_SparksView();
 	if ( vk.softShown != (int)tr.softDepthImage->texnum ) {
 		VK_ShowTarget( (int)tr.softDepthImage->texnum, &vk.softDepth );
 		vk.softShown = (int)tr.softDepthImage->texnum;

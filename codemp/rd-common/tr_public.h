@@ -359,6 +359,9 @@ typedef struct refexport_s {
 		// rounded corners in the same units) is drawn back blurred, as the backdrop of a panel drawn next. qtrue: it
 		// will be (v_backdropBlur above 0 and a device that can), the caller may make its panel more transparent.
 		qboolean			(*DrawBackdrop)							( float x, float y, float w, float h, float radius );
+		// A burst of sparks simulated on the device (sparkBurst_t, v_gpuSparks) for the next frame. qfalse: not taken,
+		// the caller plays its effect as before; NULL: the renderer has none.
+		qboolean			(*EmitSparks)							( const sparkBurst_t *burst );
 	} ext;
 
 } refexport_t;
