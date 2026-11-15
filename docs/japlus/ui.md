@@ -29,7 +29,8 @@ HUD of its own gets them drawn as it always did, see "For mods".
 | `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
 | `v_hud` | 1 | 0: the HUD of the game |
 | `v_hudFeedLines` | 6 | how many lines the feed at the upper left shows at most, 1 to 12 |
-| `v_hudMatchCard` | 1 | 0: no card of the match at the upper right (the clock moves into the line of frames and ping) |
+| `v_hudMatchCard` | 1 | 0: no card of the match at the upper right. The clock of the card follows `cg_drawTimer` and the settings beside it (count down, milliseconds) and is not shown with `cg_drawTimer 0`. With the card off the clock is in the line of frames and ping |
+| `v_remaps` | 1 | 0: none of the texture swaps of the server are done |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 
 Both are in Setup, HUD, under Menus and HUD.
@@ -127,9 +128,20 @@ Both are in Setup, HUD, under Menus and HUD.
   nothing) and hands them
   to the cgame through `ext.Con_FeedRead` and `ext.Con_FeedNewest` (ROM cvar `v_cgameFeed`). The cgame sets
   `v_feedHandler`, and the engine then draws no notify lines of its own. A warning has an amber rim, an error a
-  red one. The sentence of a kill goes to the console only, the feed has the kill. A vote panel stands above the
+  red one. The sentence of a kill goes to the console only, the feed has the kill. `v_hudFeedLines` sets how many lines it shows. A line without a letter or digit (the rows
+  of stars round a banner) stays in the console. What was picked up and who killed the own player are not repeated
+  in it: the pickup has its card and is no feed line, the killer is on the card of the death and no longer above
+  the scoreboard. A vote panel stands above the
   feed while it runs. It has no switch of its own and a line stays 6 seconds; `v_hud 0` puts everything back. A kill shows
   the model of the weapon between the two names. The old killfeed is described in client.md.
+- Texture swaps of a server (shader remaps): a server can swap a shader for another for everybody, also to hide
+  something (remap to a shader that draws nothing, a sky). `v_remaps 0` does none of them. The window
+  `v_remaps_window` (button "List of Texture Swaps ..." in Setup, Video, Detail, next to the switch) lists every
+  swap with what is swapped for what and a switch for each. What is switched off is kept by the name of the
+  swapped shader in the file `remaps_off.txt` in the home folder of the game, so it holds on every server that
+  swaps the same shader. Client only, nobody else sees a difference. Code in `cgame/look/cg_remaps.c`. In
+  rd-vulkan-vision a surface of the level whose texture is remapped to a shader without stages is invisible as in
+  rd-vanilla; before, the depth pre-pass still drew it and it stood there in black.
 - `Com_PrintWarning` and `Com_PrintError` (`qcommon/q_shared.h`) are for code in this tree. They write "WARNING: " in
   yellow or "ERROR: " in red themselves, so the call passes only the message. They mark the line with a tag that
   `Com_Printf` of the engine takes off again. A module writes the tag only where the engine sets the ROM cvar
