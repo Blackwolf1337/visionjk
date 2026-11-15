@@ -1807,6 +1807,47 @@ static void VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program
 
 /*
 ===============
+VK_SoftDraw
+
+v_softParticles: a sprite of an effect drawn after the solid level of the view (vk_post.cpp VK_SoftDepth) fades where it
+nears it, and right in front of the eye. How it fades follows its blend, so that it goes to what is behind it:
+0 by its alpha, 1 its colour to black (added, or taken away), 2 both (added by premultiplied alpha), 3 its colour
+to white (multiplied). Nothing that writes the depth or is not blended.
+===============
+*/
+static void VK_SoftDraw( vkDraw_t *draw, uint32_t stateBits ) {
+#ifndef RD_VISION_GLES
+	const uint32_t src = stateBits & GLS_SRCBLEND_BITS, dst = stateBits & GLS_DSTBLEND_BITS;
+	float mode;
+
+	if ( !vk.softReady || ( stateBits & GLS_DEPTHMASK_TRUE ) || !( stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) )
+		|| ( draw->flags & ( VKD_PBR | VKD_MATERIAL ) ) ) {
+		return;
+	}
+	if ( dst == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) {
+		mode = ( src == GLS_SRCBLEND_ONE ) ? 2.0f : 0.0f;
+	} else if ( dst == GLS_DSTBLEND_ONE ) {
+		mode = ( src == GLS_SRCBLEND_SRC_ALPHA ) ? 0.0f : 1.0f;
+	} else if ( dst == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) {
+		mode = 1.0f;
+	} else if ( ( src == GLS_SRCBLEND_DST_COLOR && dst == GLS_DSTBLEND_ZERO ) || ( src == GLS_SRCBLEND_ZERO && dst == GLS_DSTBLEND_SRC_COLOR ) ) {
+		mode = 3.0f;
+	} else {
+		return;
+	}
+	draw->flags |= VKD_SOFT;
+	draw->tex5 = tr.softDepthImage->texnum;
+	// the units in front of the level over which it fades in: 10, or as many as v_softParticles says above 1
+	draw->pbr[0] = ( v_softParticles->value > 1.0f ) ? v_softParticles->value : 10.0f;
+	draw->pbr[1] = mode;
+#else
+	(void)draw;
+	(void)stateBits;
+#endif
+}
+
+/*
+===============
 RB_StageIteratorGeneric
 
 The stages of tess.shader on the geometry in tess
@@ -2053,6 +2094,9 @@ void RB_StageIteratorGeneric( void ) {
 		}
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
+		}
+		if ( stageProgram == VKP_SPRITE ) {
+			VK_SoftDraw( &draw, stateBits );
 		}
 		VK_DrawTess( &draw, stageProgram, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );

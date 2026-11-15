@@ -515,6 +515,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_CreateTarget( &vk.ssrColor, vk.width, vk.height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	vk.ssrShown = -1;
 	vk.ssrReady = qfalse;
+	VK_CreateTarget( &vk.softDepth, vk.width, vk.height, VK_FORMAT_R32_SFLOAT, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	vk.softShown = -1;
+	vk.softReady = qfalse;
 	VK_CreateTarget( &vk.screen, vk.width, vk.height, vk.color.format,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
@@ -664,6 +667,8 @@ void VK_CreateSmaaTargets( void ) {
 void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.ssrColor );
 	vk.ssrReady = qfalse;
+	VK_DestroyTarget( &vk.softDepth );
+	vk.softReady = qfalse;
 	VK_DestroyTarget( &vk.probeColor );
 	VK_DestroyTarget( &vk.probeColorMS );
 	VK_DestroyTarget( &vk.probeDepth );

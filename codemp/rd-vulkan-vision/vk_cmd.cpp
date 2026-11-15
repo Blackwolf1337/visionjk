@@ -1046,6 +1046,10 @@ void VK_SsrPrepPass( const float *parm ) {
 	VK_DepthPass( vk.ssrPrepPipeline, &vk.color, &vk.ssrColor, parm );
 }
 
+void VK_SoftDepthPass( const float *parm ) {
+	VK_DepthPass( vk.softDepthPipeline, &vk.color, &vk.softDepth, parm );
+}
+
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_DepthPass( vk.focusPipeline, source, target, parm );
 }

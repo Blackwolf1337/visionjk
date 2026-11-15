@@ -846,6 +846,8 @@ static qboolean	rb_overLater, rb_sawOver;
 // transparent is drawn, which leaves no depth: a cloaked or faded player and effects stay on top of the wet ground.
 // rb_wetLater: this run of the list still has to draw them.
 static qboolean	rb_wetLater;
+// v_softParticles: the distance of the solid level is wanted there for this view (VK_SoftDepth)
+static qboolean	rb_softLater;
 
 // VisionJK: the moving lights of the solid surfaces wait for the shadows of the players (vk_rt.cpp): those multiply
 // into the frame, which darkened the light of a saber as well where a player stood between the light of the level
@@ -992,6 +994,13 @@ static void RB_DrawWet( int depthRange ) {
 	// the saber blades over the solid level, under the sparks and flashes of their clashes (shaders/saber.glsl)
 	VK_SaberBlades( qfalse );
 	VK_GpuMark( "saber blades" );
+	// v_softParticles: the distance of the solid level for the sprites that come now
+#ifndef RD_VISION_GLES
+	if ( rb_softLater ) {
+		VK_SoftDepth();
+		VK_GpuMark( "soft particles" );
+	}
+#endif
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
 		RB_SetDepthRange( depthRange );
@@ -1351,7 +1360,9 @@ static const void *RB_DrawSurfs( const void *data ) {
 #ifdef RD_VISION_GLES
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
-	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 ) );
+	rb_softLater = (qboolean)( levelView && v_softParticles->integer && vk.depthReadable && !probeFace && !puddle );
+	vk.softReady = qfalse;
+	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 || rb_softLater ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)
 	rb_deferDlights = (qboolean)( levelView && VK_RT_Wanted() );
 	rb_sweepSurfs = cmd->drawSurfs;
@@ -1366,6 +1377,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_prepassWanted = qfalse;
 	VK_LevelFragments( qfalse );
 	rb_wetLater = qfalse;
+	rb_softLater = qfalse;
+#ifndef RD_VISION_GLES
+	vk.softReady = qfalse;
+#endif
 	rb_deferDlights = qfalse;
 	if ( levelView && r_numLiquids ) {
 		VK_DrawLiquids();

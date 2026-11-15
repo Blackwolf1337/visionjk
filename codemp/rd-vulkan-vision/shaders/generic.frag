@@ -978,6 +978,30 @@ vec4 Groove( Draw d, vec4 c ) {
 	return TimesSurface( f * clamp( bentLit / flatLit, 0.5, 1.4 ) );
 }
 
+#ifndef VK_GLES
+// SOFT (v_softParticles, vk_shade.cpp VK_SoftDraw): a sprite fades over d.pbr.x units in front of the solid level
+// behind it (its distance in tex5, vk_post.cpp VK_SoftDepth) and over the last units in front of the eye, toward what
+// its blend leaves behind it (d.pbr.y: 0 alpha, 1 colour to black, 2 both, 3 colour to white). The fade is smoothed,
+// so the edge where it meets a wall is a soft line, not a ramp that ends in a crease.
+vec4 SoftFade( Draw d, vec4 color ) {
+	float scene = texelFetch( TEX5( d ), ivec2( gl_FragCoord.xy ), 0 ).r;
+	float f = smoothstep( 0.0, 1.0, clamp( ( scene - v_depth ) / max( d.pbr.x, 0.01 ), 0.0, 1.0 ) )
+		* smoothstep( 4.0, 24.0, v_depth );
+	uint mode = uint( d.pbr.y + 0.5 );
+
+	if ( mode == 0u ) {
+		color.a *= f;
+	} else if ( mode == 1u ) {
+		color.rgb *= f;
+	} else if ( mode == 2u ) {
+		color *= f;
+	} else {
+		color.rgb = mix( vec3( 1.0 ), color.rgb, f );
+	}
+	return color;
+}
+#endif
+
 // the rows of DECALS from d.decals on (vk_shade.cpp VK_PaintMarks)
 layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 	vec4	bones[];
@@ -1265,5 +1289,10 @@ void main() {
 		}
 		color.rgb = mix( d.fogColor.rgb, color.rgb, clamp( f, 0.0, 1.0 ) );
 	}
+#ifndef VK_GLES
+	if ( SOFT( d.flags ) ) {
+		color = SoftFade( d, color );
+	}
+#endif
 	o_color = SafeColor( color );
 }

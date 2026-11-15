@@ -649,6 +649,22 @@ REFERENCE           AFTER_60_S
 LANG_ENGLISH        "After 60 s"
 LANG_SPANISH        "Tras 60 s"
 
+REFERENCE           SOFT_PARTICLES
+LANG_ENGLISH        "Soft Particles"
+LANG_SPANISH        "Partículas suaves"
+
+REFERENCE           SMOKE_DUST_AND_FIRE_FADE_OUT_WHERE_T
+LANG_ENGLISH        "Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only."
+LANG_SPANISH        "El humo, el polvo y el fuego se desvanecen donde tocan paredes y suelo, en lugar de cortarlos con un borde duro. Solo Vulkan."
+
+REFERENCE           LIT_PARTICLES
+LANG_ENGLISH        "Lit Particles"
+LANG_SPANISH        "Partículas iluminadas"
+
+REFERENCE           SMOKE_DUST_AND_STEAM_TAKE_THE_LIGHT
+LANG_ENGLISH        "Smoke, dust and steam take the light of the place they are in: dark in a dark corridor, bright next to a saber. Fire and sparks glow as they are. Vulkan only."
+LANG_SPANISH        "El humo, el polvo y el vapor toman la luz del lugar: oscuros en un pasillo oscuro, claros junto a un sable. El fuego y las chispas brillan como antes. Solo Vulkan."
+
 REFERENCE           SABER_SCARS
 LANG_ENGLISH        "Saber Scars"
 LANG_SPANISH        "Cicatrices de sable"
@@ -2124,6 +2140,10 @@ LANG_SPANISH        "Efectos de pantalla, cortes con el sable y sangre."
 REFERENCE           SLICING
 LANG_ENGLISH        "Slicing"
 LANG_SPANISH        "Cortes"
+
+REFERENCE           PARTICLES
+LANG_ENGLISH        "Particles"
+LANG_SPANISH        "Partículas"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"

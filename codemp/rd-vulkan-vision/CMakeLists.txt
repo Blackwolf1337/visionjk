@@ -259,6 +259,7 @@ set(MPVulkanVisionVulkanShaders
 	smaa_blend.frag
 	tonemap.frag
 	ssrprep.frag
+	softdepth.frag
 	saber.frag
 	saberportal.frag
 	saberglow.frag

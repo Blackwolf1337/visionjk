@@ -118,6 +118,8 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_PBR				0x10000000u		// lit per pixel with a material of GGX (VKP_*), see generic.frag PbrStage
 #define VKD_DECALS			0x20000000u		// marks painted onto a tessellated surface (VK_PaintMarks), see generic.frag
 #define VKD_GROOVE			0x40000000u		// a burn mark lit as a groove (stageMaterial_t groove), see generic.frag Groove()
+#define VKD_SOFT			0x80000000u		// a sprite that fades where it nears the solid level (v_softParticles): its distance
+											//	in tex5, pbr.x the units it fades over, pbr.y how (generic.frag SoftFade)
 
 // vkDraw_t.pbrFlags: what a stage with VKD_PBR has and how it is lit
 #define VKP_NORMAL			0x01u			// a normal map in tex2
@@ -383,6 +385,8 @@ void		RB_MarkPrepassed( const shader_t *shader );
 extern cvar_t	*v_tonemap;			// vk_post.cpp
 extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
+extern cvar_t	*v_softParticles;	// vk_post.cpp
+extern cvar_t	*v_litParticles;	// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -456,6 +460,7 @@ void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
+void		VK_SoftDepth( void );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
@@ -624,6 +629,8 @@ void		VK_TonemapPass( const float *parm );
 // v_ssr: vk.color and its depth into vk.ssrColor (shaders/ssrprep.frag), parm: the depth to the distance. No target is
 // begun before and after.
 void		VK_SsrPrepPass( const float *parm );
+// v_softParticles: the distance of the solid level into vk.softDepth (shaders/softdepth.frag), parm as VK_SsrPrepPass
+void		VK_SoftDepthPass( const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

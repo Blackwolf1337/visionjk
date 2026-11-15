@@ -1322,6 +1322,7 @@ void R_CreateBuiltinImages( void ) {
 
 	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
 	tr.ssrImage = R_CreateImage("*ssr", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.softDepthImage = R_CreateImage("*softdepth", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
 	tr.rtLightImage[0] = R_CreateImage("*rtlights0", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
 	tr.rtLightImage[1] = R_CreateImage("*rtlights1", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
 	// VisionJK: the place of the faces of the reflection probes in the texture table (VK_EndProbe)

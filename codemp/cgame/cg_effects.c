@@ -1252,3 +1252,51 @@ void CG_LaunchGib( vec3_t origin, vec3_t velocity, qhandle_t hModel ) {
 	le->leBounceSoundType = LEBS_BLOOD;
 	le->leMarkType = LEMT_BLOOD;
 }
+
+/*
+=================
+CG_FxTest_f / CG_FxTestFrame
+
+VisionJK: v_fxTest <effect> [msec] [x y z]: the effect (a path under effects/, e.g. explosions/explosion1) where the
+view looks (or at x y z), along the normal of what it hits, again every msec (1500) until v_fxTest without a name. To look at effects,
+at what the renderer does with them, without a fight. Only on this screen.
+=================
+*/
+static struct {
+	fxHandle_t	fx;
+	int			msec, next;
+	vec3_t		at, normal;
+} fxTest;
+
+void CG_FxTest_f( void ) {
+	trace_t	tr;
+	vec3_t	end;
+
+	if ( trap->Cmd_Argc() < 2 ) {
+		fxTest.fx = 0;
+		return;
+	}
+	VectorMA( cg.refdef.vieworg, 2048.0f, cg.refdef.viewaxis[0], end );
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.snap ? cg.snap->ps.clientNum : 0, MASK_SOLID );
+	fxTest.fx = trap->FX_RegisterEffect( CG_Argv( 1 ) );
+	if ( !fxTest.fx ) {
+		Com_Printf( "v_fxTest: no effect %s\n", CG_Argv( 1 ) );
+		return;
+	}
+	fxTest.msec = trap->Cmd_Argc() > 2 ? Q_max( atoi( CG_Argv( 2 ) ), 50 ) : 1500;
+	fxTest.next = cg.time;
+	VectorCopy( tr.endpos, fxTest.at );
+	VectorCopy( tr.fraction < 1.0f ? tr.plane.normal : axisDefault[2], fxTest.normal );
+	// or at a place given, standing up
+	if ( trap->Cmd_Argc() > 5 ) {
+		VectorSet( fxTest.at, atof( CG_Argv( 3 ) ), atof( CG_Argv( 4 ) ), atof( CG_Argv( 5 ) ) );
+		VectorCopy( axisDefault[2], fxTest.normal );
+	}
+}
+
+void CG_FxTestFrame( void ) {
+	if ( fxTest.fx && cg.time >= fxTest.next ) {
+		trap->FX_PlayEffectID( fxTest.fx, fxTest.at, fxTest.normal, -1, -1, qfalse );
+		fxTest.next = cg.time + fxTest.msec;
+	}
+}

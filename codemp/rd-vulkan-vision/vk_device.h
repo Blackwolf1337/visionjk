@@ -227,6 +227,13 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	qboolean					ssrReady;
 	int							ssrShown;			// the slot of the texture table it was written into, -1: none
 	VkShaderModule				ssrPrepShader;
+	// v_softParticles (vk_post.cpp VK_SoftDepth): how far the solid level of the view is at each pixel, shown in the
+	// texture table (tr.softDepthImage) for the sprites drawn after it
+	vkTarget_t					softDepth;
+	VkShaderModule				softDepthShader;
+	VkPipeline					softDepthPipeline;
+	qboolean					softReady;			// drawn for the view that is being drawn
+	int							softShown;			// the slot of the texture table it was written into, -1: none
 	VkPipeline					ssrPrepPipeline;
 	VkShaderModule				saberShader;		// the saber blades in 3D (VK_SaberBlades)
 	VkPipeline					saberPipeline;

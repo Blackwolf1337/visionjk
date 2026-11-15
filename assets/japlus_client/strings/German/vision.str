@@ -649,6 +649,22 @@ REFERENCE           AFTER_60_S
 LANG_ENGLISH        "After 60 s"
 LANG_GERMAN         "Nach 60 s"
 
+REFERENCE           SOFT_PARTICLES
+LANG_ENGLISH        "Soft Particles"
+LANG_GERMAN         "Weiche Partikel"
+
+REFERENCE           SMOKE_DUST_AND_FIRE_FADE_OUT_WHERE_T
+LANG_ENGLISH        "Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only."
+LANG_GERMAN         "Rauch, Staub und Feuer blenden dort weich aus, wo sie auf Wände und Boden treffen, statt mit harter Kante hineinzuschneiden. Nur Vulkan."
+
+REFERENCE           LIT_PARTICLES
+LANG_ENGLISH        "Lit Particles"
+LANG_GERMAN         "Beleuchtete Partikel"
+
+REFERENCE           SMOKE_DUST_AND_STEAM_TAKE_THE_LIGHT
+LANG_ENGLISH        "Smoke, dust and steam take the light of the place they are in: dark in a dark corridor, bright next to a saber. Fire and sparks glow as they are. Vulkan only."
+LANG_GERMAN         "Rauch, Staub und Dampf nehmen das Licht ihrer Umgebung an: dunkel in einem dunklen Gang, hell neben einem Lichtschwert. Feuer und Funken leuchten wie bisher. Nur Vulkan."
+
 REFERENCE           SABER_SCARS
 LANG_ENGLISH        "Saber Scars"
 LANG_GERMAN         "Lichtschwert-Narben"
@@ -2124,6 +2140,10 @@ LANG_GERMAN         "Bildschirmeffekte, Zerteilen mit dem Saber und Blut."
 REFERENCE           SLICING
 LANG_ENGLISH        "Slicing"
 LANG_GERMAN         "Zerteilen"
+
+REFERENCE           PARTICLES
+LANG_ENGLISH        "Particles"
+LANG_GERMAN         "Partikel"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"

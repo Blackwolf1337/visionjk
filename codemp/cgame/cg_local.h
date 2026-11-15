@@ -2523,3 +2523,6 @@ Ghoul2 Insert End
 #include "cgame/boombox/cg_boombox.h"
 
 extern cgameImport_t *trap;
+// v_fxTest <effect> [msec] [x y z] (cg_effects.c): an effect where the view looks, again and again
+void CG_FxTest_f( void );
+void CG_FxTestFrame( void );

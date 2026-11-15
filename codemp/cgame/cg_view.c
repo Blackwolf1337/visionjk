@@ -2716,6 +2716,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 		CG_SaberScarsAdd();
+		CG_FxTestFrame();
 		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
 		CG_BoomboxScene();
 		// the snowballs in the air, which are no entities either (toys/cg_toys.c)
