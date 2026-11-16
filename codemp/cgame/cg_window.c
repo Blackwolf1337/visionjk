@@ -75,11 +75,12 @@ void Win_Panel( float x, float y, float w, float h, float radius, const vec4_t f
 void Win_Glass( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge ) {
 	vec4_t thin;
 
-	if ( fill && Skin_Ready() && CG_DrawBackdrop( x, y, w, h, radius ) ) {
+	if ( fill && Skin_Ready() ) {
 		memcpy( thin, fill, sizeof( thin ) );
-		thin[3] *= 0.65f;
-		Win_Panel( x, y, w, h, radius, thin, edge );
-		return;
+		if ( CG_DrawFrost( x, y, w, h, radius, thin, 0.65f ) ) {
+			Win_Panel( x, y, w, h, radius, thin, edge );
+			return;
+		}
 	}
 	Win_Panel( x, y, w, h, radius, fill, edge );
 }

@@ -237,6 +237,16 @@ qboolean CG_DrawBackdrop( float x, float y, float width, float height, float rad
 	return (qboolean)( has > 0 && trap->ext.R_DrawBackdrop( x + cgs.shift2D, y, width, height, radius ) );
 }
 
+// frosted glass behind a panel that is drawn next: when the blur is drawn, the alpha of color (the fill of the
+// panel) is multiplied by thin, so the fill is thinner over the glass. qfalse: no glass, color as it was.
+qboolean CG_DrawFrost( float x, float y, float width, float height, float radius, vec4_t color, float thin ) {
+	if ( !CG_DrawBackdrop( x, y, width, height, radius ) ) {
+		return qfalse;
+	}
+	color[3] *= thin;
+	return qtrue;
+}
+
 /*
 ================
 CG_FillRect

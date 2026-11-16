@@ -2126,6 +2126,7 @@ void CG_SpecHudDrawAt( float x, float y, float radius );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 qboolean CG_DrawBackdrop( float x, float y, float width, float height, float radius );
+qboolean CG_DrawFrost( float x, float y, float width, float height, float radius, vec4_t color, float thin );
 
 // hud/cg_select3d.c: the weapon, item and force power selection of the new HUD as glass cards with 3D models (issue #17)
 typedef struct select3dItem_s {
