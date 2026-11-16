@@ -52,7 +52,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VIDEO_JOBS			( VIDEO_STREAMS * 2 )	// threads that fetch, those that were let go and still end among them
 #define VIDEO_JOB_BYTES		( 2 * 1024 * 1024 )		// what came and the game has not taken yet, at most
 #define VIDEO_URL			256
-#define VIDEO_SERVICE		"https://jka.vision/tv/"
 
 typedef struct {
 	plm_buffer_t	*buffer;
@@ -216,7 +215,7 @@ qboolean CL_VideoOpen( int stream, const char *video, int second ) {
 		job->data = (byte *)Z_Malloc( VIDEO_JOB_BYTES, TAG_CLIENTS, qfalse );
 	Q_strncpyz( service, Cvar_VariableString( "v_tvService" ), sizeof( service ) );
 	if ( Q_strncmp( service, "https://", 8 ) && Q_strncmp( service, "http://127.0.0.1", 16 ) )
-		Q_strncpyz( service, VIDEO_SERVICE, sizeof( service ) );
+		Q_strncpyz( service, CL_TV_SERVICE, sizeof( service ) );
 	Com_sprintf( job->url, sizeof( job->url ), "%s%s%s?t=%i", service, service[strlen( service ) - 1] == '/' ? "" : "/",
 		video, second );
 	job->cancel = 0;
