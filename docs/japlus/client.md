@@ -310,6 +310,11 @@ calls them `delay`, `waitf`, `ifCvar`, `strSub` ..., so a script of TaystJK need
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
 
+With the new HUD (2026-11-16) the open box looks as on the design board: the tabs are words in capitals on pills,
+the private tab carries the number of private lines not read yet, and the line to type in is a field with a rim:
+to whom it goes in capitals at its left, the button of the emoji picker and "Enter Send" at its right. Emoji
+codes are their pictures in that line too. "@" and the start of a name lists the players whose names fit (Tab
+or Enter takes one): "@Name" goes in without colours, so the line is marked for that player.
 The emoji picker (2026-11-16): with `tay_chatEmoji 1` the line to type in has a smiling face at its end. A click
 opens a grid of every emoji beside the box (the wheel turns its rows, the code of the one under the pointer stands
 under it); a click on one puts its code at the cursor. A click on the face or Escape closes it.

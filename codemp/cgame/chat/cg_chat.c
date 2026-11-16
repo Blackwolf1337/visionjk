@@ -49,6 +49,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "cgame/boombox/cg_boombox.h"
+#include "cgame/hud/cg_hudkit.h"
 
 extern displayContextDef_t cgDC;
 
@@ -100,6 +101,7 @@ typedef struct chatRow_s {
 #define CHAT_SUGGEST		8			// emoji in the list of the word being typed
 #define CHAT_PICK_COLS		8			// the emoji picker: a grid of so many columns
 #define CHAT_PICK_ROWS		6			//	and rows at once, the wheel turns the rest in
+#define SCORES_LINE_H		18.0f		// a line of the font of the new look is this high at a scale of 1
 #define CHAT_EMOJI_WORD		40
 
 static struct {
@@ -139,7 +141,8 @@ static struct {
 	char		url[256];					// a link was clicked: the question whether to open it stands there
 
 	// the emoji that fit the word being typed (Chat_Suggest): a list above the line to type in
-	int			suggest[CHAT_SUGGEST];		// indexes of chatEmoji
+	int			suggest[CHAT_SUGGEST];		// indexes of chatEmoji, or players (suggestPlayers)
+	qboolean	suggestPlayers;				// the word begins with @: the players whose names fit
 	int			numSuggest;
 	int			suggestSel;
 	int			suggestFrom;				// the byte where the word begins
@@ -148,6 +151,7 @@ static struct {
 
 	// the emoji picker: a button at the end of the line to type in opens a grid of every emoji beside the box
 	qboolean	picker;
+	int			privateSeen;				// chat.count when the tab of the private lines was last open
 	int			pickerFirst;				// the row of the grid at the top
 	int			pickerHover;				// the emoji under the pointer, -1 none
 	float		pickerX, pickerY, pickerCell;	// where the grid is, from the last draw
@@ -432,17 +436,6 @@ TEXT
 
 static float Chat_TextWidth( const char *text ) {
 	return trap->ext.R_Font_StrLenPixels( text, chat.skin ? Skin_FontHandle( SKIN_FONT_SANS ) : cgDC.Assets.qhSmallFont, Chat_Scale() );
-}
-
-// the width of text from the byte `from` up to the byte `to`, as plain text: the line to type in shows the codes
-static float Chat_TextWidthOf( const char *text, int from, int to ) {
-	char part[CHAT_TEXT];
-
-	if ( to <= from ) {
-		return 0.0f;
-	}
-	Q_strncpyz( part, text + from, Q_min( (int)sizeof( part ), to - from + 1 ) );
-	return Chat_TextWidth( part );
 }
 
 // with the emoji as wide as they are drawn
@@ -1167,6 +1160,34 @@ static void Chat_Suggest( void ) {
 		start--;
 	}
 	len = chat.cursor - start;
+	// @ and the start of a name: the players whose names (without their colours) begin with it, oneself left out
+	if ( !chat.url[0] && chat.input[start] == '@' && len >= 1 && len < (int)sizeof( word ) ) {
+		Q_strncpyz( word, chat.input + start, len + 1 );
+		if ( strcmp( word, chat.suggestWord ) ) {
+			Q_strncpyz( chat.suggestWord, word, sizeof( chat.suggestWord ) );
+			chat.suggestSel = 0;
+		}
+		chat.suggestFrom = start;
+		chat.suggestPlayers = qtrue;
+		chat.numSuggest = 0;
+		for ( i = 0; i < MAX_CLIENTS && chat.numSuggest < CHAT_SUGGEST; i++ ) {
+			char name[MAX_NETNAME];
+
+			if ( !cgs.clientinfo[i].infoValid || ( cg.snap && i == cg.snap->ps.clientNum ) ) {
+				continue;
+			}
+			Q_strncpyz( name, cgs.clientinfo[i].name, sizeof( name ) );
+			Q_StripColor( name );
+			if ( name[0] && !Q_stricmpn( name, word + 1, len - 1 ) ) {
+				chat.suggest[chat.numSuggest++] = i;
+			}
+		}
+		if ( chat.suggestSel >= chat.numSuggest ) {
+			chat.suggestSel = 0;
+		}
+		return;
+	}
+	chat.suggestPlayers = qfalse;
 	if ( !tay_chatEmoji.integer || chat.url[0] || chat.input[start] != ':' || len < 2 || len >= (int)sizeof( word )
 		|| memchr( chat.input + start + 1, ':', len - 1 ) ) {
 		chat.numSuggest = 0;
@@ -1191,10 +1212,21 @@ static void Chat_Suggest( void ) {
 	}
 }
 
-// the chosen code in place of the word, and a blank after it
+// the chosen code (or @name) in place of the word, and a blank after it
 static void Chat_SuggestTake( void ) {
-	const char	*code = chatEmoji[chat.suggest[chat.suggestSel]].code;
-	const int	codeLen = strlen( code ), rest = strlen( chat.input + chat.cursor );
+	char		mention[MAX_NETNAME + 2];
+	const char	*code;
+	int			codeLen, rest = strlen( chat.input + chat.cursor );
+
+	// a player: @ and his name without its colours, which is what marks the line for him (Chat_Mentions)
+	if ( chat.suggestPlayers ) {
+		Com_sprintf( mention, sizeof( mention ), "@%s", cgs.clientinfo[chat.suggest[chat.suggestSel]].name );
+		Q_StripColor( mention );
+		code = mention;
+	} else {
+		code = chatEmoji[chat.suggest[chat.suggestSel]].code;
+	}
+	codeLen = strlen( code );
 
 	if ( chat.suggestFrom + codeLen + 1 + rest >= (int)sizeof( chat.input ) ) {
 		return;
@@ -1565,20 +1597,48 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		CG_DrawRect( boxX, boxY, boxW, boxH, 1.0f, frameColor );
 	}
 
-	// the tabs: a filled one for the open tab, or in the new look its word bright with a line under it
+	// the tabs: a filled one for the open tab; in the new look words in capitals on pills, the private lines that
+	// were not read yet as a number on theirs
 	chat.tabY = boxY + 1.0f;
 	tx = x;
+	if ( chat.tab == CHAT_TELL ) {
+		chat.privateSeen = chat.count;
+	}
 	for ( i = 0; i < CHAT_NUM_KINDS; i++ ) {
 		const char		*name = Chat_TabName( i );
-		const float		w = Chat_Width( name ) + 2.0f * CHAT_PAD;
 		const qboolean	open = (qboolean)( chat.tab == (chatKind_t)i );
+		int				unread = 0, n;
+		char			badge[16];
+		float			w, badgeW = 0.0f;
 
+		if ( chat.skin && i == CHAT_TELL && !open ) {
+			for ( n = Q_max( first, chat.privateSeen ); n < chat.count; n++ ) {
+				unread += ( Chat_Msg( n )->kind == CHAT_TELL );
+			}
+		}
+		Com_sprintf( badge, sizeof( badge ), "%i", unread );
+		if ( unread ) {
+			badgeW = Chat_TextWidth( badge ) * 0.85f + 2.0f * CHAT_PAD + CHAT_PAD;
+		}
+		w = Chat_Width( name ) * ( chat.skin ? 0.85f : 1.0f ) + 2.0f * CHAT_PAD + ( chat.skin ? 2.0f * CHAT_PAD : 0.0f ) + badgeW;
 		chat.tabX[i] = tx;
 		if ( chat.skin ) {
+			const vec4_t	lit = { 0.43f, 0.83f, 1.0f, 0.16f };
+			const float		pillY = chat.tabY + 2.0f, pillH = tabH - 2.0f;
+
 			if ( open ) {
-				Skin_Panel( tx + CHAT_PAD, chat.tabY + tabH - 1.5f, w - 2.0f * CHAT_PAD, 1.3f, 0.65f, chatAccent, NULL );
+				Skin_Panel( tx, pillY, w, pillH, 3.0f, lit, NULL );
 			}
-			CG_Text_Paint( tx + CHAT_PAD, chat.tabY + chat.size, Chat_Scale(), (float *)( open ? colorWhite : chatDim ), name, 0, 0, 0, Chat_Font() );
+			CG_Text_Paint( tx + 2.0f * CHAT_PAD, pillY + ( pillH - SCORES_LINE_H * Chat_Scale() * 0.85f ) * 0.5f, Chat_Scale() * 0.85f,
+				(float *)( open ? colorWhite : chatDim ), name, 0, 0, 0, Chat_Font() );
+			if ( unread ) {
+				const float	bh = pillH * 0.62f, bx = tx + w - CHAT_PAD - badgeW + CHAT_PAD, by = pillY + ( pillH - bh ) * 0.5f;
+				const vec4_t dark = { 0.02f, 0.07f, 0.12f, 1.0f };
+
+				Skin_Panel( bx, by, badgeW - CHAT_PAD, bh, bh * 0.5f, chatAccent, NULL );
+				CG_Text_Paint( bx + CHAT_PAD, by + ( bh - SCORES_LINE_H * Chat_Scale() * 0.85f ) * 0.5f, Chat_Scale() * 0.85f, (float *)dark,
+					badge, 0, 0, 0, Chat_Font() );
+			}
 		} else {
 			if ( open ) {
 				CG_FillRect( tx, chat.tabY, w, tabH, tabColor );
@@ -1657,9 +1717,11 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		}
 	}
 
-	// the line to type in, or the question about a link
+	// the line to type in, or the question about a link: in the new look a field of its own with a rim
 	if ( chat.skin ) {
-		Skin_Line( boxX + 4.0f, inputY - 1.0f, boxW - 8.0f, chatRim );
+		const vec4_t field = { 0.0f, 0.0f, 0.0f, 0.3f };
+
+		Skin_Panel( boxX + CHAT_PAD, inputY - 2.0f, boxW - 2.0f * CHAT_PAD, inputH + 2.0f, 4.0f, field, chat.url[0] ? chatRim : chatAccent );
 	} else {
 		CG_FillRect( boxX + 1.0f, inputY - 1.0f, boxW - 2.0f, 1.0f, frameColor );
 	}
@@ -1679,26 +1741,51 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		int			start = 0;
 		char		shown[MAX_SAY_TEXT];
 
-		if ( chat.mode == 3 ) {
-			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( "Boombox, link or song" ) );
-		} else if ( chat.mode == 2 ) {
-			Com_sprintf( prompt, sizeof( prompt ), "%s^7: ", CG_VisionTextWith( "To %s", cgs.clientinfo[chat.target].name ) );
+		float		room, right = boxX + boxW - CHAT_PAD - 6.0f;
+
+		if ( chat.skin ) {
+			// to whom it goes, in capitals in the accent, and at the right how it is sent
+			const char *hint = CG_VisionText( "Send" );
+
+			if ( chat.mode == 3 ) {
+				Q_strncpyz( prompt, CG_VisionText( "Boombox, link or song" ), sizeof( prompt ) );
+			} else if ( chat.mode == 2 ) {
+				Q_strncpyz( prompt, CG_VisionTextWith( "To %s", cgs.clientinfo[chat.target].name ), sizeof( prompt ) );
+				Q_StripColor( prompt );
+			} else {
+				Q_strncpyz( prompt, CG_VisionText( chat.mode == 1 ? "Team" : "All" ), sizeof( prompt ) );
+			}
+			Q_strupr( prompt );
+			promptW = Chat_TextWidth( prompt ) * 0.8f + 3.0f * CHAT_PAD;
+			CG_Text_Paint( x + CHAT_PAD, inputY + ( chat.rowH - SCORES_LINE_H * Chat_Scale() * 0.8f ) * 0.5f, Chat_Scale() * 0.8f, (float *)chatAccent, prompt,
+				0, 0, 0, Chat_Font() );
+			right -= Hud_KeyHintWidth( "Enter", hint );
+			Hud_KeyHint( right, inputY + chat.rowH * 0.5f, "Enter", hint, 1.0f );
+			right -= 6.0f;
 		} else {
-			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( chat.mode == 1 ? "Team" : "Say" ) );
+			if ( chat.mode == 3 ) {
+				Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( "Boombox, link or song" ) );
+			} else if ( chat.mode == 2 ) {
+				Com_sprintf( prompt, sizeof( prompt ), "%s^7: ", CG_VisionTextWith( "To %s", cgs.clientinfo[chat.target].name ) );
+			} else {
+				Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( chat.mode == 1 ? "Team" : "Say" ) );
+			}
+			promptW = Chat_TextWidth( prompt );
+			CG_Text_Paint( x, inputY + down, Chat_Scale(), (float *)dimColor, prompt, 0, 0, 0, Chat_Font() );
 		}
-		promptW = Chat_TextWidth( prompt );
-		// the button of the emoji picker at the end of the line (a smiling face, or its code where the picture is
-		// missing); the text keeps clear of it
+		// the button of the emoji picker before that (a smiling face, or its code where the picture is missing)
 		chat.pickBtnW = 0.0f;
 		if ( tay_chatEmoji.integer && chat.mode != 3 ) {
-			const int	face = Chat_FindEmoji( "slightsmile" );
-			const float	btn = Chat_EmojiWidth();
-			const qboolean over = (qboolean)( cgs.cursorX >= boxX + boxW - CHAT_PAD - btn - 2.0f && cgs.cursorX < boxX + boxW - CHAT_PAD + 2.0f
-				&& cgs.cursorY >= inputY && cgs.cursorY < inputY + chat.rowH );
+			const int		face = Chat_FindEmoji( "slightsmile" );
+			const float		btn = Chat_EmojiWidth();
+			qboolean		over;
 
 			chat.pickBtnW = btn + 4.0f;
-			chat.pickBtnX = boxX + boxW - CHAT_PAD - btn - 2.0f;
+			chat.pickBtnX = right - chat.pickBtnW;
 			chat.pickBtnY = inputY;
+			right = chat.pickBtnX - 4.0f;
+			over = (qboolean)( cgs.cursorX >= chat.pickBtnX && cgs.cursorX < chat.pickBtnX + chat.pickBtnW
+				&& cgs.cursorY >= inputY && cgs.cursorY < inputY + chat.rowH );
 			if ( chat.skin && ( over || chat.picker ) ) {
 				const vec4_t lit = { 0.43f, 0.83f, 1.0f, chat.picker ? 0.3f : 0.18f };
 
@@ -1714,19 +1801,19 @@ static void Chat_DrawOpen( float x, float bottom ) {
 				CG_Text_Paint( chat.pickBtnX + 2.0f, inputY + down, Chat_Scale(), (float *)chatDim, ":)", 0, 0, 0, Chat_Font() );
 			}
 		}
-		CG_Text_Paint( x, inputY + down, Chat_Scale(), (float *)( chat.skin ? chatDim : dimColor ), prompt, 0, 0, 0, Chat_Font() );
+		room = right - ( x + promptW );
 
-		// a text that is wider than the line is shown from where the cursor still fits (the codes of emoji as text)
-		while ( start < chat.cursor && Chat_TextWidthOf( chat.input, start, chat.cursor ) > chat.width - promptW - chat.pickBtnW - 6.0f ) {
+		// a text that is wider than the line is shown from where the cursor still fits; emoji are their pictures
+		while ( start < chat.cursor && Chat_WidthOf( chat.input, start, chat.cursor ) > room - 6.0f ) {
 			start += Chat_CharLen( chat.input + start );
 		}
 		Q_strncpyz( shown, chat.input + start, sizeof( shown ) );
-		for ( i = strlen( shown ); i > 0 && Chat_TextWidth( shown ) > chat.width - promptW - chat.pickBtnW; i = strlen( shown ) ) {
+		for ( i = strlen( shown ); i > 0 && Chat_Width( shown ) > room; i = strlen( shown ) ) {
 			shown[Chat_PrevChar( start + i ) - start] = '\0';
 		}
 		// a ^ with a digit colours what follows while it is typed, as the line will look when it is sent
-		textW = Chat_TextWidthOf( chat.input, start, chat.cursor );
-		CG_Text_Paint( x + promptW, inputY + down, Chat_Scale(), colorWhite, shown, 0, 0, 0, Chat_Font() );
+		textW = Chat_WidthOf( chat.input, start, chat.cursor );
+		Chat_Paint( x + promptW, inputY, colorWhite, shown, 0 );
 		if ( ( trap->Milliseconds() >> 8 ) & 1 ) {
 			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, chat.rowH - 2.0f, (float *)( chat.skin ? chatAccent : colorWhite ) );
 		}
@@ -1735,14 +1822,14 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		Chat_Suggest();
 		if ( chat.numSuggest ) {
 			const float	emojiW = Chat_EmojiWidth();
-			const float	wordX = x + promptW + ( chat.suggestFrom > start ? Chat_TextWidthOf( chat.input, start, chat.suggestFrom ) : 0.0f );
+			const float	wordX = x + promptW + ( chat.suggestFrom > start ? Chat_WidthOf( chat.input, start, chat.suggestFrom ) : 0.0f );
 			float		w = 0.0f;
 			int			n;
 
 			for ( n = 0; n < chat.numSuggest; n++ ) {
-				w = Q_max( w, Chat_TextWidth( chatEmoji[chat.suggest[n]].code ) );
+				w = Q_max( w, Chat_TextWidth( chat.suggestPlayers ? cgs.clientinfo[chat.suggest[n]].name : chatEmoji[chat.suggest[n]].code ) );
 			}
-			chat.suggestW = emojiW + w + 3.0f * CHAT_PAD;
+			chat.suggestW = emojiW + w + 3.0f * CHAT_PAD + ( chat.skin ? Hud_TextWidth( "TAB", HUD_CAPS ) + 2.0f * CHAT_PAD : 0.0f );
 			chat.suggestX = Q_min( wordX, boxX + boxW - chat.suggestW );
 			chat.suggestY = inputY - 2.0f - chat.numSuggest * chat.rowH;
 			if ( chat.skin ) {
@@ -1759,12 +1846,24 @@ static void Chat_DrawOpen( float x, float bottom ) {
 
 					CG_FillRect( chat.suggestX + 2.0f, rowY, chat.suggestW - 4.0f, chat.rowH, chat.skin ? sel : selOld );
 				}
-				if ( Chat_EmojiShader( e ) ) {
-					trap->R_SetColor( NULL );
-					CG_DrawPic( chat.suggestX + CHAT_PAD, rowY + ( chat.rowH - emojiW ) * 0.5f, emojiW, emojiW, Chat_EmojiShader( e ) );
+				if ( chat.suggestPlayers ) {
+					// a player: the picture of his model and his name in its colours
+					if ( cgs.clientinfo[e].modelIcon ) {
+						trap->R_SetColor( NULL );
+						CG_DrawPic( chat.suggestX + CHAT_PAD, rowY + ( chat.rowH - emojiW ) * 0.5f, emojiW, emojiW, cgs.clientinfo[e].modelIcon );
+					}
+					CG_Text_Paint( chat.suggestX + 2.0f * CHAT_PAD + emojiW, rowY + down, Chat_Scale(), colorWhite, cgs.clientinfo[e].name, 0, 0, 0, Chat_Font() );
+				} else {
+					if ( Chat_EmojiShader( e ) ) {
+						trap->R_SetColor( NULL );
+						CG_DrawPic( chat.suggestX + CHAT_PAD, rowY + ( chat.rowH - emojiW ) * 0.5f, emojiW, emojiW, Chat_EmojiShader( e ) );
+					}
+					CG_Text_Paint( chat.suggestX + 2.0f * CHAT_PAD + emojiW, rowY + down, Chat_Scale(),
+						(float *)( n == chat.suggestSel ? colorWhite : ( chat.skin ? chatDim : dimColor ) ), chatEmoji[e].code, 0, 0, 0, Chat_Font() );
 				}
-				CG_Text_Paint( chat.suggestX + 2.0f * CHAT_PAD + emojiW, rowY + down, Chat_Scale(),
-					(float *)( n == chat.suggestSel ? colorWhite : ( chat.skin ? chatDim : dimColor ) ), chatEmoji[e].code, 0, 0, 0, Chat_Font() );
+				if ( n == chat.suggestSel && chat.skin ) {
+					Hud_Caps( chat.suggestX + chat.suggestW - CHAT_PAD, rowY + chat.rowH * 0.5f, hudDim, 1.0f, HUD_RIGHT, "TAB" );
+				}
 			}
 		}
 	}

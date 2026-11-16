@@ -2433,6 +2433,10 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "Étuis"
 
+REFERENCE           SEND
+LANG_ENGLISH        "Send"
+LANG_FRENCH         "Envoyer"
+
 REFERENCE           CLICK_TO_INSERT_WHEEL_TO_SCROLL
 LANG_ENGLISH        "Click to insert, wheel to scroll"
 LANG_FRENCH         "Clic pour insérer, molette pour défiler"

@@ -797,6 +797,7 @@ TR = {
 # here), so none of these may need a number behind its key.
 CGAME = {
     # the new HUD beyond its menus (cgame/hud/cg_hudpanels.c, cg_matchcard.c, cg_powers.c)
+    'Send': 'Senden',
     'Click to insert, wheel to scroll': 'Klick fügt ein, Mausrad blättert',
     'Write a message': 'Nachricht schreiben',
     'Limit reached after %s': 'Limit erreicht nach %s',
