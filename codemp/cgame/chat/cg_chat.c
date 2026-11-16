@@ -169,8 +169,8 @@ static struct {
 
 static const char *chatTabNames[CHAT_NUM_KINDS] = { "All", "Team", "Private" };
 
-static const vec4_t chatGlass = { 0.035f, 0.07f, 0.12f, 0.84f }, chatRim = { 0.43f, 0.83f, 1.0f, 0.35f };
-static const vec4_t chatAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, chatDim = { 0.60f, 0.69f, 0.78f, 1.0f };
+static const vec4_t chatGlass = { SKIN_RGB_GLASS, 0.84f }, chatRim = { SKIN_RGB_ACCENT, 0.35f };
+static const vec4_t chatAccent = { SKIN_RGB_ACCENT, 1.0f }, chatDim = { SKIN_RGB_DIM, 1.0f };
 
 // the letters of the box: the small font of the game, or the font of the new look
 static int Chat_Font( void ) {
@@ -1496,7 +1496,7 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 	}
 
 	if ( open && Chat_Selection( &start, &end ) && index >= start.msg && index <= end.msg ) {
-		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f }, selSkin = { 0.43f, 0.83f, 1.0f, 0.32f };
+		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f }, selSkin = { SKIN_RGB_ACCENT, 0.32f };
 		const int		a = Q_max( from, ( index == start.msg ) ? start.offset : 0 );
 		const int		b = Q_min( to, ( index == end.msg ) ? end.offset : to );
 
@@ -1631,7 +1631,7 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		w = Chat_Width( name ) * ( chat.skin ? 0.85f : 1.0f ) + 2.0f * CHAT_PAD + ( chat.skin ? 2.0f * CHAT_PAD : 0.0f ) + badgeW;
 		chat.tabX[i] = tx;
 		if ( chat.skin ) {
-			const vec4_t	lit = { 0.43f, 0.83f, 1.0f, 0.16f };
+			const vec4_t	lit = { SKIN_RGB_ACCENT, 0.16f };
 			const float		pillY = chat.tabY + 2.0f, pillH = tabH - 2.0f;
 
 			if ( open ) {
@@ -1795,7 +1795,7 @@ static void Chat_DrawOpen( float x, float bottom ) {
 			over = (qboolean)( cgs.cursorX >= chat.pickBtnX && cgs.cursorX < chat.pickBtnX + chat.pickBtnW
 				&& cgs.cursorY >= inputY && cgs.cursorY < inputY + chat.rowH );
 			if ( chat.skin && ( over || chat.picker ) ) {
-				const vec4_t lit = { 0.43f, 0.83f, 1.0f, chat.picker ? 0.3f : 0.18f };
+				const vec4_t lit = { SKIN_RGB_ACCENT, chat.picker ? 0.3f : 0.18f };
 
 				Skin_Panel( chat.pickBtnX, chat.pickBtnY, chat.pickBtnW, chat.rowH, 3.0f, lit, NULL );
 			}
@@ -1850,7 +1850,7 @@ static void Chat_DrawOpen( float x, float bottom ) {
 				const int	e = chat.suggest[n];
 
 				if ( n == chat.suggestSel ) {
-					static vec4_t sel = { 0.43f, 0.83f, 1.0f, 0.32f }, selOld = { 0.25f, 0.45f, 0.85f, 0.65f };
+					static vec4_t sel = { SKIN_RGB_ACCENT, 0.32f }, selOld = { 0.25f, 0.45f, 0.85f, 0.65f };
 
 					CG_FillRect( chat.suggestX + 2.0f, rowY, chat.suggestW - 4.0f, chat.rowH, chat.skin ? sel : selOld );
 				}
@@ -1912,7 +1912,7 @@ static void Chat_DrawOpen( float x, float bottom ) {
 				const float	pic = cell * 0.72f;
 
 				if ( cgs.cursorX >= cx && cgs.cursorX < cx + cell && cgs.cursorY >= cy && cgs.cursorY < cy + cell ) {
-					const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.25f };
+					const vec4_t lit = { SKIN_RGB_ACCENT, 0.25f };
 
 					chat.pickerHover = n;
 					Skin_Panel( cx, cy, cell, cell, 3.0f, lit, NULL );

@@ -918,9 +918,9 @@ static void Skin_LoadLine( float y, float scale, const vec4_t color, const char 
 }
 
 void Skin_LoadPanel( const char *title, const char *about, const char *now, float fraction ) {
-	static const vec4_t	fill = { 0.035f, 0.07f, 0.12f, 0.80f }, edge = { 0.43f, 0.83f, 1.0f, 0.28f }, dark = { 0.0f, 0.0f, 0.0f, 0.45f };
-	static const vec4_t	bar = { 0.43f, 0.83f, 1.0f, 1.0f }, track = { 1.0f, 1.0f, 1.0f, 0.10f };
-	static const vec4_t	bright = { 1.0f, 1.0f, 1.0f, 1.0f }, text = { 0.86f, 0.92f, 0.97f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f };
+	static const vec4_t	fill = { SKIN_RGB_GLASS, 0.80f }, edge = { SKIN_RGB_ACCENT, 0.28f }, dark = { 0.0f, 0.0f, 0.0f, 0.45f };
+	static const vec4_t	bar = { SKIN_RGB_ACCENT, 1.0f }, track = { 1.0f, 1.0f, 1.0f, 0.10f };
+	static const vec4_t	bright = { 1.0f, 1.0f, 1.0f, 1.0f }, text = { SKIN_RGB_TEXT, 1.0f }, dim = { SKIN_RGB_DIM, 1.0f };
 
 	if ( !Skin_Ready() ) {
 		return;

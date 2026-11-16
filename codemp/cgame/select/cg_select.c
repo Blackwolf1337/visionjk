@@ -179,8 +179,8 @@ static struct {
 
 static int selectHeldTime;			// trap->Milliseconds() when the key of +v_cursor went down
 
-static const vec4_t selectText = { 0.86f, 0.92f, 0.97f, 1.0f }, selectDim = { 0.60f, 0.69f, 0.78f, 1.0f };
-static const vec4_t selectAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, selectGold = { 0.89f, 0.84f, 0.36f, 1.0f };
+static const vec4_t selectText = { SKIN_RGB_TEXT, 1.0f }, selectDim = { SKIN_RGB_DIM, 1.0f };
+static const vec4_t selectAccent = { SKIN_RGB_ACCENT, 1.0f }, selectGold = { 0.89f, 0.84f, 0.36f, 1.0f };
 
 void CG_SelectInit( void ) {
 	memset( &sel, 0, sizeof( sel ) );
@@ -1235,8 +1235,8 @@ static qboolean selectCardFrosted;
 
 // the card of the player that was clicked, on its board
 static void Select_DrawCard( const selectBoard_t *b ) {
-	const vec4_t		fill = { 0.035f, 0.07f, 0.12f, 0.88f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f };
-	const vec4_t		lit = { 0.43f, 0.83f, 1.0f, 0.15f };
+	const vec4_t		fill = { SKIN_RGB_GLASS, 0.88f }, edge = { SKIN_RGB_ACCENT, 0.35f };
+	const vec4_t		lit = { SKIN_RGB_ACCENT, 0.15f };
 	const int			n = sel.selected;
 	const float			height = sel.headH + sel.numRows * SELECT_ROW_H + ( sel.numRows ? 5.0f : 0.0f );
 	const int			over = Select_RowAt();
@@ -1482,7 +1482,7 @@ void CG_SelectOverScene( void ) {
 
 // four corners around a player, for an engine and a server that leave no shader for the outline
 static void Select_DrawCorners( int clientNum ) {
-	const vec4_t	color = { 0.43f, 0.83f, 1.0f, 0.9f };
+	const vec4_t	color = { SKIN_RGB_ACCENT, 0.9f };
 	vec3_t			top, bottom;
 	float			x0, y0, x1, y1, half, scale;
 

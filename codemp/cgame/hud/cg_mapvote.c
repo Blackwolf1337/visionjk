@@ -179,7 +179,7 @@ void CG_HudIntermission( void ) {
 		for ( i = 0; i < state.count; i++ ) {
 			const float		bx = x + 8.0f + i * ( bw + gap ), by = y + 15.0f, bh = 36.0f;
 			const qboolean	mine = (qboolean)( myVote == i + 1 );
-			const vec4_t	fill = { 0.0f, 0.0f, 0.0f, 0.3f }, mineFill = { 0.43f, 0.83f, 1.0f, 0.14f };
+			const vec4_t	fill = { 0.0f, 0.0f, 0.0f, 0.3f }, mineFill = { SKIN_RGB_ACCENT, 0.14f };
 			vec4_t			edge;
 			char			label[64];
 

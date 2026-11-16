@@ -28,12 +28,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "cg_hudkit.h"
 
-const vec4_t hudFill = { 0.035f, 0.07f, 0.12f, 0.80f };
-const vec4_t hudSoftFill = { 0.035f, 0.07f, 0.12f, 0.62f };
-const vec4_t hudText = { 0.86f, 0.92f, 0.97f, 1.0f };
+const vec4_t hudFill = { SKIN_RGB_GLASS, 0.80f };
+const vec4_t hudSoftFill = { SKIN_RGB_GLASS, 0.62f };
+const vec4_t hudText = { SKIN_RGB_TEXT, 1.0f };
 const vec4_t hudBright = { 1.0f, 1.0f, 1.0f, 1.0f };
-const vec4_t hudDim = { 0.60f, 0.69f, 0.78f, 1.0f };
-const vec4_t hudAccent = { 0.43f, 0.83f, 1.0f, 1.0f };
+const vec4_t hudDim = { SKIN_RGB_DIM, 1.0f };
+const vec4_t hudAccent = { SKIN_RGB_ACCENT, 1.0f };
 const vec4_t hudWarm = { 1.0f, 0.74f, 0.30f, 1.0f };
 const vec4_t hudRed = { 1.0f, 0.62f, 0.59f, 1.0f };
 const vec4_t hudBlue = { 0.66f, 0.78f, 1.0f, 1.0f };
@@ -327,7 +327,7 @@ the map of a spectator (hud/cg_spechud.c).
 */
 void Hud_RadarDisc( float x, float y, float r ) {
 	const float		cx = x + r, cy = y + r;
-	const vec4_t	line = { 0.43f, 0.83f, 1.0f, 0.14f };
+	const vec4_t	line = { SKIN_RGB_ACCENT, 0.14f };
 	vec3_t			look;
 	float			north;
 

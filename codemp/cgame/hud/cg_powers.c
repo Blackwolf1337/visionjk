@@ -50,7 +50,7 @@ const float *CG_ForceSideColor( int fp ) {
 static void Powers_Chip( float x, float y, float shown, qhandle_t icon, const float *tint, float left ) {
 	const float		pulse = 0.5f + 0.5f * sinf( (float)cg.time * 2.0f * M_PI / CHIP_PULSE_MSEC );
 	const float		inset = CHIP_SIZE * 0.15f;
-	vec4_t			glass = { 0.035f, 0.07f, 0.12f, 0.62f };
+	vec4_t			glass = { SKIN_RGB_GLASS, 0.62f };
 	const vec4_t	rim = { tint[0], tint[1], tint[2], ( 0.45f + 0.35f * pulse ) * shown };
 	const vec4_t	glow = { tint[0], tint[1], tint[2], ( 0.14f + 0.14f * pulse ) * shown };
 	const vec4_t	picture = { 1.0f, 1.0f, 1.0f, shown };

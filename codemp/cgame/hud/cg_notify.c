@@ -129,7 +129,7 @@ static void Notify_CheckEngine( void ) {
 // the bar at the left of a line: what kind of line it is
 static const float *Notify_Accent( notifyKind_t kind ) {
 	static const vec4_t tell = { 0.85f, 0.45f, 1.0f, 1.0f }, mention = { 1.0f, 0.8f, 0.25f, 1.0f };
-	static const vec4_t event = { 0.43f, 0.83f, 1.0f, 1.0f }, ids = { 1.0f, 0.25f, 0.2f, 1.0f };
+	static const vec4_t event = { SKIN_RGB_ACCENT, 1.0f }, ids = { 1.0f, 0.25f, 0.2f, 1.0f };
 
 	switch ( kind ) {
 	case NOTIFY_TELL:		return tell;
@@ -147,7 +147,7 @@ At the left edge (CG_Place2D( PLACE_LEFT ) is set)
 =================
 */
 void CG_NotifyDraw( void ) {
-	static const vec4_t	fill = { 0.05f, 0.08f, 0.12f, 0.6f }, rim = { 0.43f, 0.83f, 1.0f, 0.25f };
+	static const vec4_t	fill = { 0.05f, 0.08f, 0.12f, 0.6f }, rim = { SKIN_RGB_ACCENT, 0.25f };
 	const float			size = Com_Clamp( 0.5f, 2.0f, v_notifyScale.value );
 	const float			lineH = 16.0f * size, pad = 4.0f * size, bar = 3.0f * size, scale = 0.6f * size;
 	const int			life = Q_max( 1000, v_notifyTime.integer );

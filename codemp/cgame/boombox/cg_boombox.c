@@ -1187,7 +1187,7 @@ one the pointer is on or whose card is open: the pointer names that one itself.
 // carries one of them, as near as the titles are shown and when nothing of the level is in the way: which one plays
 // the left channel and which the right one.
 static void Box_DrawSides( int font ) {
-	const vec4_t	back = { 0.02f, 0.05f, 0.09f, 0.72f }, accent = { 0.43f, 0.83f, 1.0f, 1.0f };
+	const vec4_t	back = { 0.02f, 0.05f, 0.09f, 0.72f }, accent = { SKIN_RGB_ACCENT, 1.0f };
 	const int		hovered = CG_SelectHoveredPiece();
 	int				i, part;
 

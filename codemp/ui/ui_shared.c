@@ -8158,7 +8158,7 @@ static void Item_Fold_Paint( itemDef_t *item ) {
 
 // in the window of the list, while a search found nothing
 static void Menu_SearchEmpty_Paint( menuDef_t *menu ) {
-	vec4_t		color = { 0.60f, 0.69f, 0.78f, 1.0f };
+	vec4_t		color = { SKIN_RGB_DIM, 1.0f };
 	rectDef_t	list;
 	int			i;
 

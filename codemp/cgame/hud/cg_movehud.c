@@ -321,7 +321,7 @@ static void MoveHud_Speedometer( const playerState_t *ps ) {
 
 // One key of tay_movementKeys: lit while it is held
 static void MoveHud_Key( float x, float y, float w, float h, const char *label, qboolean held ) {
-	const vec4_t	litFill = { 0.43f, 0.83f, 1.0f, 0.75f }, dimFill = { 0.0f, 0.0f, 0.0f, 0.35f };
+	const vec4_t	litFill = { SKIN_RGB_ACCENT, 0.75f }, dimFill = { 0.0f, 0.0f, 0.0f, 0.35f };
 	const vec4_t	edge = { 1.0f, 1.0f, 1.0f, 0.35f };
 	const vec4_t	litText = { 0.02f, 0.06f, 0.1f, 1.0f }, dimText = { 1.0f, 1.0f, 1.0f, 0.55f };
 	const float		scale = h / 34.0f;
@@ -330,7 +330,7 @@ static void MoveHud_Key( float x, float y, float w, float h, const char *label, 
 	VectorCopy4( held ? litText : dimText, text );
 	if ( CG_HudNewLook() ) {
 		// VisionJK: rounded glass, the accent while held
-		const vec4_t glassEdge = { 0.43f, 0.83f, 1.0f, 0.3f };
+		const vec4_t glassEdge = { SKIN_RGB_ACCENT, 0.3f };
 
 		Skin_Panel( x, y, w, h, h * 0.18f, held ? hudAccent : hudSoftFill, held ? hudAccent : glassEdge );
 		Hud_TextMid( x + w * 0.5f, y + h * 0.5f, HUD_BODY * h / 16.0f, held ? text : hudDim, 1.0f, HUD_CENTER, label, 0.0f );

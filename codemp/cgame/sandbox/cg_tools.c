@@ -43,8 +43,8 @@ static vmCvar_t	v_tool, v_toolColor, v_toolMaterial, v_toolPhys;
 static char		held[MAX_STRING_CHARS];		// what the server said it holds, "": nothing yet
 static int		sentTime;					// cg.time when the last one went
 
-static const vec4_t toolName = { 0.43f, 0.83f, 1.0f, 1.0f }, toolDim = { 0.86f, 0.92f, 0.97f, 0.85f };
-static const vec4_t toolShade = { 0.035f, 0.07f, 0.12f, 0.6f };
+static const vec4_t toolName = { SKIN_RGB_ACCENT, 1.0f }, toolDim = { SKIN_RGB_TEXT, 0.85f };
+static const vec4_t toolShade = { SKIN_RGB_GLASS, 0.6f };
 
 void CG_ToolsInit( void ) {
 	trap->Cvar_Register( &v_tool, "v_tool", "remover", 0 );

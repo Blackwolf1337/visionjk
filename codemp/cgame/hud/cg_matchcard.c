@@ -204,7 +204,7 @@ float CG_MatchCardDraw( float y ) {
 	}
 
 	if ( bottom ) {
-		const vec4_t rule = { 0.43f, 0.83f, 1.0f, 0.16f };
+		const vec4_t rule = { SKIN_RGB_ACCENT, 0.16f };
 
 		cy += 4.5f;
 		Skin_Line( x + CARD_PAD, cy, inner, rule );
@@ -216,7 +216,7 @@ float CG_MatchCardDraw( float y ) {
 		cy += CARD_ROW * 0.5f;
 	}
 	if ( CG_HudPerfAny() ) {
-		const vec4_t rule = { 0.43f, 0.83f, 1.0f, 0.16f };
+		const vec4_t rule = { SKIN_RGB_ACCENT, 0.16f };
 
 		cy += 4.5f;
 		Skin_Line( x + CARD_PAD, cy, inner, rule );

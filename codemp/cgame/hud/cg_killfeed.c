@@ -282,7 +282,7 @@ static void Killfeed_NameColor( int client, float alpha, vec4_t out ) {
 }
 
 static void Killfeed_Box( float x, float y, float w, float h, const vec4_t fill ) {
-	static const vec4_t rim = { 0.43f, 0.83f, 1.0f, 0.25f };
+	static const vec4_t rim = { SKIN_RGB_ACCENT, 0.25f };
 
 	if ( CG_HudNewLook() ) {
 		vec4_t edge;

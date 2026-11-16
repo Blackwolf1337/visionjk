@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // console.c
 
 #include "client.h"
+#include "ui/ui_palette.h"
 #include "cl_cgameapi.h"
 #include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/game_version.h"
@@ -1324,7 +1325,7 @@ void Con_DrawSolidConsole( float frac ) {
 		lines = cls.glconfig.vidHeight;
 
 	// draw the background
-	const vec4_t	themeLine = { 0.43f, 0.83f, 1.0f, 0.9f };
+	const vec4_t	themeLine = { SKIN_RGB_ACCENT, 0.9f };
 	qboolean		themed = qfalse;
 
 	// in units of the grid, which begins at -bias2DY on a narrow window: the console comes down over the window

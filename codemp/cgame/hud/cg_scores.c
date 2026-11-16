@@ -76,9 +76,9 @@ static struct {
 	int			numRows;
 } scores;
 
-static const vec4_t scoresFill = { 0.035f, 0.07f, 0.12f, 0.86f }, scoresEdge = { 0.43f, 0.83f, 1.0f, 0.35f };
-static const vec4_t scoresText = { 0.86f, 0.92f, 0.97f, 1.0f }, scoresDim = { 0.60f, 0.69f, 0.78f, 1.0f };
-static const vec4_t scoresAccent = { 0.43f, 0.83f, 1.0f, 1.0f };
+static const vec4_t scoresFill = { SKIN_RGB_GLASS, 0.86f }, scoresEdge = { SKIN_RGB_ACCENT, 0.35f };
+static const vec4_t scoresText = { SKIN_RGB_TEXT, 1.0f }, scoresDim = { SKIN_RGB_DIM, 1.0f };
+static const vec4_t scoresAccent = { SKIN_RGB_ACCENT, 1.0f };
 
 extern int cg_siegeWinTeam;		// cg_scoreboard.c
 
@@ -311,7 +311,7 @@ static void Scores_Cols( float x, float w, float rowH, qboolean compact, scoreCo
 
 // the names of the columns, on a band
 static void Scores_Columns( const scoreCols_t *cols, float y, float fade ) {
-	const vec4_t	band = { 0.43f, 0.83f, 1.0f, 0.08f };
+	const vec4_t	band = { SKIN_RGB_ACCENT, 0.08f };
 	const qboolean	duel = (qboolean)( cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL );
 	const float		scale = 0.42f;
 	char			word[64];
@@ -367,7 +367,7 @@ if he plays with a client of this tree, his name with what stands above his head
 =================
 */
 static void Scores_PlayerLine( const scoreCols_t *cols, float y, float h, const scoreLine_t *line, int index, int rank, qboolean pointed, float fade ) {
-	const vec4_t		own = { 0.43f, 0.83f, 1.0f, 0.17f }, lit = { 0.43f, 0.83f, 1.0f, 0.12f }, litEdge = { 0.43f, 0.83f, 1.0f, 0.45f };
+	const vec4_t		own = { SKIN_RGB_ACCENT, 0.17f }, lit = { SKIN_RGB_ACCENT, 0.12f }, litEdge = { SKIN_RGB_ACCENT, 0.45f };
 	const vec4_t		stripe = { 1.0f, 1.0f, 1.0f, 0.025f };
 	const int			n = line->client;
 	const clientInfo_t	*ci = &cgs.clientinfo[n];
@@ -560,7 +560,7 @@ static void Scores_Foot( float x, float y, const scoreLine_t *watch, int count, 
 			break;
 		}
 		if ( Scores_PointerIn( pointer, at - 2.0f, y + 2.0f, w + 4.0f, SCORES_FOOT_H - 2.0f ) ) {
-			const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.16f };
+			const vec4_t lit = { SKIN_RGB_ACCENT, 0.16f };
 
 			Skin_Color( c, lit, fade );
 			Skin_Panel( at - 2.0f, y + 3.0f, w + 4.0f, SCORES_FOOT_H - 4.0f, 2.0f, c, NULL );
