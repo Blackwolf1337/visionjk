@@ -357,12 +357,17 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCommonSafeFiles})
 
 set(MPCGameUiFiles
 	"${MPDir}/ui/ui_shared.c"
+	"${MPDir}/ui/ui_canvas.c"
+	"${MPDir}/ui/ui_pages.c"
+	"${MPDir}/ui/ui_changes.c"
+	"${MPDir}/ui/ui_dump.c"
 	"${MPDir}/ui/ui_skin.c"
 	"${MPDir}/ui/ui_saberfx.c"
 	"${MPDir}/ui/ui_music.c"
 	"${MPDir}/ui/keycodes.h"
 	"${MPDir}/ui/menudef.h"
 	"${MPDir}/ui/ui_shared.h"
+	"${MPDir}/ui/ui_shared_local.h"
 	"${MPDir}/ui/ui_skin.h"
 	"${MPDir}/ui/ui_saberfx.h"
 	"${MPDir}/ui/ui_music.h"
