@@ -320,6 +320,8 @@ void		VK_InitPipelines( void );
 void		VK_ShutdownPipelines( void );
 VkPipeline	VK_FindPipeline( vkProgram_t program, uint32_t stateBits );
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size );
+VkPipelineLayout VK_CreateComputeLayout( uint32_t pushBytes, const VkDescriptorSetLayout *setLayout );
+VkPipeline VK_CreateComputePipeline( VkShaderModule module, VkPipelineLayout layout );
 // post: 0 a stage of the level, else one of the passes (see there); layout: one of its own instead of the one post has
 VkPipeline	VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program,
 				VkPipelineLayout layout = VK_NULL_HANDLE );
