@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/images/logo.svg" width="112" alt="VisionJK logo">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/images/logo-light.svg">
+    <img src="docs/images/logo.svg" width="112" alt="VisionJK logo">
+  </picture>
 </p>
 
 <h1 align="center">VisionJK</h1>
@@ -10,16 +13,16 @@
 </p>
 
 <p align="center">
-  <a href="https://jka.vision"><img alt="Version 0.2.8" src="https://img.shields.io/badge/version-0.2.8-e3d75c?style=flat-square"></a>
-  <img alt="Linux, Windows, 64 bit" src="https://img.shields.io/badge/Linux%20%C2%B7%20Windows-24242a?style=flat-square">
+  <a href="https://jka.vision/download.html"><img alt="download | jka.vision" src="https://img.shields.io/badge/download-jka.vision-e3d75c?style=flat-square"></a>
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-24242a?style=flat-square&logo=linux&logoColor=white">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-24242a?style=flat-square&logo=windows&logoColor=white">
   <a href="LICENSE.txt"><img alt="License GPL-2.0" src="https://img.shields.io/badge/license-GPL--2.0-5aa64a?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> ·
   <a href="#features">Features</a> ·
-  <a href="#getting-started">Getting started</a> ·
-  <a href="#controls-and-commands">Controls</a> ·
+  <a href="#download">Download</a> ·
+  <a href="#building">Building</a> ·
   <a href="#documentation">Docs</a>
 </p>
 
@@ -31,96 +34,32 @@ VisionJK is the engine and the game code for Jedi Academy multiplayer. It is bas
 
 The tree is built for 64 bit only. Single player and Jedi Outcast are still in the source but are not built.
 
-The game, Jedi Academy, has to be installed. Not affiliated with Raven Software, Activision, Lucasfilm or Disney.
+> [!IMPORTANT]
+> The game, Jedi Academy, has to be installed.
+
+> [!NOTE]
+> Not affiliated with Raven Software, Activision, Lucasfilm or Disney.
 
 ## Features
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3><img src="docs/images/icons/saber.svg" width="22" alt=""> JA+</h3>
-      The features of the JA+ mod v2.4 Build 7, on the server and in the client. Duels, emotes, the grappling hook, the jetpack and sabers in any color. No extra mod to install.
-    </td>
-    <td width="50%" valign="top">
-      <h3><img src="docs/images/icons/monitor.svg" width="22" alt=""> Renderer</h3>
-      One renderer, <code>rd-vulkan-vision</code>, with a Vulkan device and an OpenGL ES device for the browser. When it can not run, the game stops with a message that says why. On a wide window the menus and the HUD keep their shape.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3><img src="docs/images/icons/mic.svg" width="22" alt=""> Voice chat</h3>
-      Push to talk or voice activation. Each voice comes from where its player stands. A clan radio reaches the clan anywhere on the map. Servers without the game module use the masterserver.
-    </td>
-    <td valign="top">
-      <h3><img src="docs/images/icons/volume.svg" width="22" alt=""> 3D sound</h3>
-      Sound with Steam Audio (<code>v_spatial</code>). Walls muffle, rooms ring and sounds come round corners. Sound is heard from the head of the player, not from the camera.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3><img src="docs/images/icons/music.svg" width="22" alt=""> Boombox</h3>
-      Boxes in the level that play songs of YouTube and YouTube Music for everybody near them. A sound system with two speakers plays one song in stereo. A quick wheel places them. Only VisionJK players see and hear them.
-    </td>
-    <td valign="top">
-      <h3><img src="docs/images/icons/download.svg" width="22" alt=""> Updater</h3>
-      The client updates itself from the website when the player says so. It also repairs a game file that is missing or from another version.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3><img src="docs/images/icons/panel.svg" width="22" alt=""> Web admin panel</h3>
-      A panel in the game module: a live map with all players, accounts with three roles and a second login step, and an editor for the objects in a level. Admins can log in with an Ed25519 key.
-    </td>
-    <td valign="top">
-      <h3><img src="docs/images/icons/chat.svg" width="22" alt=""> Chat</h3>
-      A chat box with 256 lines of history, text that can be marked and copied, and links. Speech bubbles over the heads. Text is UTF-8, and Chinese, Japanese and Korean are drawn.
-    </td>
-  </tr>
-</table>
+- JA+ (v2.4 Build 7) built into the server and the client
+- Renderer `rd-vulkan-vision` (Vulkan)
+- Voice chat in the client module, relayed by the game module or by the masterserver
+- 3D sound with Steam Audio (`v_spatial`)
+- Boombox
+- Updater
+- Web admin panel in the game module
+- Chat with history, UTF-8 and CJK text
 
-More is in the section "VisionJK" at the top of [CHANGELOG.md](CHANGELOG.md): new menus and HUD with the old ones one cvar away (`v_classic 1`, `v_hud 0`), clickable players and scoreboard rows, notifications, a blade style and duel effects, and a review window for downloads from a server. Intrusion detection and the key login for admins are in [docs/japlus/security.md](docs/japlus/security.md).
+Players find the features with pictures on [jka.vision](https://jka.vision/features.html) and the [screenshots](https://jka.vision/screenshots.html). More is in the section "VisionJK" at the top of [CHANGELOG.md](CHANGELOG.md). Intrusion detection and the key login for admins are in [docs/japlus/security.md](docs/japlus/security.md).
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/images/menu-main.jpg" alt="The main menu"></td>
-    <td width="50%"><img src="docs/images/options.jpg" alt="The video page of Setup"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Main menu</sub></td>
-    <td align="center"><sub>Setup, Video: the renderer is a switch between Vulkan and OpenGL</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/player-hud.jpg" alt="Four players with lightsabers and the new HUD"></td>
-    <td width="50%"><img src="docs/images/speech-bubbles.jpg" alt="A speech bubble and a music status over the heads of players"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>The new HUD, with a status over a player's head</sub></td>
-    <td align="center"><sub>A speech bubble and the music a player listens to</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/lightsaber.jpg" alt="The lightsaber page of the profile"></td>
-    <td width="50%"><img src="docs/images/panel-admin-overview.jpg" alt="The web admin panel with the map and the player list"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Profile, Lightsaber: hilt and blade color</sub></td>
-    <td align="center"><sub>The web admin panel</sub></td>
-  </tr>
-</table>
+## Download
 
-## Install
+Releases and system requirements are on [jka.vision](https://jka.vision/download.html#requirements). The [player guide](https://jka.vision/guide/getting-started.html) and [troubleshooting](https://jka.vision/guide/troubleshooting.html) are there too.
 
-Releases are on [jka.vision](https://jka.vision). The version now is 0.2.8.
+For server operators: the dedicated server `visionjkded.x86_64` is in the Linux release only. The engine starts in the mod folder `japlus` by itself. Settings are written to `~/.local/share/visionjk` on Linux and to `My Games\VisionJK` in the documents folder on Windows, as `visionjk.cfg` (client) and `visionjk_server.cfg` (dedicated server).
 
-| System | Needs | |
-|---|---|---|
-| Windows | Windows 10 or newer, 64 bit | Run `visionjk.x86_64.exe`. The dedicated server is in the Linux release only. |
-| Linux | 64 bit, glibc 2.34 or newer, SDL2 | Run `visionjk.x86_64`. The dedicated server is `visionjkded.x86_64`. |
-
-Jedi Academy has to be installed. Put the content of the release folder into its `GameData` folder and run the program from there.
-
-The engine starts in the mod folder `japlus` by itself. Settings are written to `~/.local/share/visionjk` on Linux and to `My Games\VisionJK` in the documents folder on Windows, as `visionjk.cfg` (client) and `visionjk_server.cfg` (dedicated server).
-
-### Building
+## Building
 
 ```
 cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release
@@ -130,85 +69,9 @@ cmake --install build64 --prefix release
 
 `release/JediAcademy` is then a complete game folder. More, also the Windows cross build with mingw-w64, is in [BUILDING.md](BUILDING.md).
 
-## Getting started
-
-Start `visionjk.x86_64` (Linux) or `visionjk.x86_64.exe` (Windows) in `GameData`. The main menu comes up with JA+ already active.
-
-Choose Play, then Join a Game, pick a server and join. VisionJK works with normal Jedi Academy servers, also ones that run other mods. On a server that runs VisionJK you get everything, voice chat and the extras included. On other servers you play by their rules.
-
-Open Controls, then Extras, and give keys to the grappling hook, the jetpack, the full force duel and the voice chat. The server decides what is allowed. If the hook or the jetpack do nothing, the server has switched them off.
-
-Setup has the video, sound, game, HUD, chat and network options, in tabs by topic. Headings in the lists fold, and a search field at the top finds a setting by its name. Setup, Video has the renderer: Vulkan is the new one, OpenGL the classic one. Setup, Sound has 3D sound and the voice chat settings.
-
-The client tells you when a new version is out: a line appears at the bottom of the main menu, and a click updates the game. To do this it asks the website once at every start. `v_updateCheck 0` switches that off.
-
-Hold the left Alt key and the mouse is free. Point at a player and he gets a glowing outline. A click opens a card with his voice, his chat lines, a whisper and a vote. Press the scoreboard key twice quickly to keep the board open and click a row.
-
-## Controls and commands
-
-Keys are set under Controls, Extras. Commands go into the console.
-
-| Key or command | Action |
-|---|---|
-| Grapple Hook | hold to shoot the hook, use key to drop off |
-| JetPack | pick up a jetpack, then jump and press use in the air |
-| Voice Chat (Talk) | hold to talk |
-| Clan Radio (Talk), `+v_voiceclan` | talk to the clan with the same clan password |
-| Free the Mouse (Select Players), `+v_cursor` | free the mouse to click players, left Alt by default |
-| Quick Wheel (Boombox), `+v_radial` | a ring to place a boombox or a sound system, not bound by default |
-| Command Menu, `v_commandmenu` | lists of what VisionJK can do, a number key or a click picks one, not bound by default |
-| Scoreboard key twice | keep the scoreboard open with the mouse free |
-| `v_voice_mute <name>` | mute a player, `v_voice_unmute <name>` or `all` undoes it |
-| `v_voice_status` | show if the voice chat is connected |
-| `boombox play <link or words>` | play a song in a box near you or in a new one |
-| `boombox place`, `boombox system` | put down a boombox or a sound system where the crosshair points |
-| `amsit`, `amhello`, `amkneel`, `amvictory` | emotes, all 27 are in [docs/japlus/server.md](docs/japlus/server.md) |
-| `amflip`, `amaltdim`, `toggleflame` | a flip, the alternate dimension, a flamethrower for force lightning |
-| `v_saberStyle 1` | thin white core with a glow for lightsaber blades |
-
-## Troubleshooting
-
-<details>
-<summary>The game does not start or says files are missing</summary>
-
-Check that the VisionJK files are directly inside `GameData`, next to the folder `base`, and not one folder deeper.
-</details>
-
-<details>
-<summary>The picture looks wrong</summary>
-
-VisionJK switches to the classic renderer by itself when the new one can not run. You can choose it under Setup, Video, Renderer.
-</details>
-
-<details>
-<summary>Nobody hears you in the voice chat</summary>
-
-Set a key for Voice Chat (Talk) under Controls, Extras. Use headphones, or the others hear themselves through your microphone. `v_voice_status` shows if the chat is connected.
-</details>
-
-<details>
-<summary>The hook or the jetpack do nothing</summary>
-
-The server has switched them off.
-</details>
-
-<details>
-<summary>The left Alt key does not free the mouse</summary>
-
-If the left Alt key already does something else for you, choose another key for Free the Mouse (Select Players) under Controls, Extras.
-</details>
-
-<details>
-<summary>Version 0.1.1 on Windows says the update failed</summary>
-
-That version can not update itself. Download the current version once and copy it over the game folder.
-</details>
-
 ## Privacy
 
-The client has no `ja_guid`. OpenJK makes a key file (`jakey`) and sends an identifier made from it to every server it joins. VisionJK does neither. A server sees it like the original game, without a GUID.
-
-The client does not ask any update server for a welcome text. `cl_motd` and the cvars of its servers are gone (2026-11-02): Raven's and JKHub's servers got the name and vendor of the graphics card, the version and the joystick setting with that request.
+The client sends no identifier made from a key file and asks no update server for a welcome text. More is on [jka.vision](https://jka.vision/privacy.html).
 
 ## Documentation
 
@@ -235,7 +98,7 @@ What this tree adds, in [docs/japlus/](docs/japlus):
 | [security.md](docs/japlus/security.md) | Security pass over the network code: findings, fixes, build hardening, server settings |
 | [threading.md](docs/japlus/threading.md) | How a frame runs, why server and client share one thread, timing numbers |
 | [windows.md](docs/japlus/windows.md) | The Windows client run as a whole on Windows 11: what ran, what it found, what is still unchecked |
-| [web.md](docs/japlus/web.md) | The client in a browser, built as WebAssembly and handed out by the dedicated server |
+| [web.md](docs/japlus/web.md) | The client in a browser, built as WebAssembly and handed out by the dedicated server (switched off for now) |
 | [testing.md](docs/japlus/testing.md) | The test scripts of `tools/test/`: smoke test of the zips, sanitizers, unit tests, static checks, the release flow |
 
 Notes on the engine that come from OpenJK, in [docs/](docs):
