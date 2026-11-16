@@ -30,6 +30,18 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   skipped, the player stays where the server had him. The engine writes down the same moves (sv_movecheck.cpp).
 //   A clock that runs fast gains nothing here, see the note at the top of server/sv_ids.cpp.
 //
+// - The input of one move (G_AC_MoveInput, vs_antiSpeed as well). Two ways to run faster than the game allows:
+//   A rolled view (the old h_speedhack cheat sends a roll angle): the sideways direction of a move comes from the
+//   view, and rolled far enough it points forwards, so a strafe key adds to the run, up to 1.41 times the speed.
+//   The engine drops the roll of every move with sv_legacyFixes 1; this is the same in the game module, so it holds
+//   with that cvar off and on another engine. No stock client sends a roll on foot.
+//   The zigzag: the strafe key flipped with every move while running. The acceleration of the game (Quake 3) adds
+//   speed along the wish direction until the part of the velocity along it reaches the limit, so two wish
+//   directions that take turns 45 degrees left and right of the run carry it past the limit: measured 285 in
+//   place of 250 forwards, 212 in place of 188 backwards. A hand changes direction a few times a second, a script
+//   does it a hundred times. More than AC_FLIP_MAX changes in AC_FLIP_WINDOW: with vs_antiSpeed 2 the strafe of
+//   his moves does not count for AC_FLIP_BLOCK, so the run goes straight at the speed of the game.
+//
 // - The wiggle bot (G_AC_Think, vs_antiWiggle). With the single player saber damage (d_saberSPStyleDamage 1)
 //   a swing hurts on every server frame its blade crosses a body, more for a longer sweep, so turning the view
 //   back and forth fast during a swing deals more. Players do it by hand, a bot does it faster and evenly. The
@@ -60,6 +72,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AC_WARP_LOG_MSEC		250		// a cut move this much longer than the time that passed is written down
 #define AC_WARP_KICK_CUTS		5		// vs_antiSpeed 3: cut moves of that length in AC_WARP_KICK_MSEC
 #define AC_WARP_KICK_MSEC		60000
+
+#define AC_FLIP_WINDOW			1000	// msec
+#define AC_FLIP_MAX				24		// changes of direction from one move to the next in that time: a hand makes 10 to 15
+#define AC_FLIP_BLOCK			3000	// msec the strafe does not count after that
+#define AC_INPUT_LOG_MSEC		5000	// at most one line a player in this time
 
 #define AC_WIGGLE_REACH			128.0f	// an enemy closer than this counts as in reach of the saber
 #define AC_WIGGLE_TURN			150.0f	// degrees per second: slower turns are not counted as wiggling
@@ -188,6 +205,68 @@ int G_AC_MoveTime( gentity_t *ent, usercmd_t *ucmd, int msec ) {
 	}
 	client->ps.commandTime = ucmd->serverTime - cap;
 	return cap;
+}
+
+/*
+=================
+G_AC_MoveInput
+
+ClientThink_real, for a move a client sent (not bots or NPCs), before it is run: the roll of the view and the
+zigzag, see the top of the file. Changes the move.
+=================
+*/
+void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd ) {
+	gclient_t	*client = ent->client;
+	anticheat_t	*ac = &client->pers.anticheat;
+	const int	mode = vs_antiSpeed.integer;
+
+	if ( mode <= 0 || ( ent->r.svFlags & SVF_BOT ) || client->sess.sessionTeam == TEAM_SPECTATOR ) {
+		return;
+	}
+
+	if ( ucmd->angles[ROLL] && !client->ps.m_iVehicleNum ) {
+		if ( !ac->rollLogTime || level.time - ac->rollLogTime >= AC_INPUT_LOG_MSEC || level.time < ac->rollLogTime ) {
+			ac->rollLogTime = level.time;
+			G_AC_Log( ent, va( "sent a view rolled by %i degrees on foot%s", (int)SHORT2ANGLE( ucmd->angles[ROLL] ),
+				mode >= 2 ? ", ignored" : "" ) );
+		}
+		if ( mode >= 2 ) {
+			ucmd->angles[ROLL] = 0;
+		}
+	}
+
+	// a change of direction: the strafe or the run goes the other way than it last went (a move of rest between
+	// the two does not hide it)
+	if ( ( ucmd->rightmove > 0 && ac->lastRight < 0 ) || ( ucmd->rightmove < 0 && ac->lastRight > 0 )
+		|| ( ucmd->forwardmove > 0 && ac->lastForward < 0 ) || ( ucmd->forwardmove < 0 && ac->lastForward > 0 ) ) {
+		if ( !ac->flipsStart || level.time - ac->flipsStart > AC_FLIP_WINDOW || level.time < ac->flipsStart ) {
+			ac->flipsStart = level.time;
+			ac->flips = 0;
+		}
+		if ( ++ac->flips > AC_FLIP_MAX ) {
+			if ( !ac->flipLogTime || level.time - ac->flipLogTime >= AC_INPUT_LOG_MSEC || level.time < ac->flipLogTime ) {
+				ac->flipLogTime = level.time;
+				G_AC_Log( ent, va( "changed the direction of his moves %i times in %i ms (zigzag for speed)%s", ac->flips,
+					level.time - ac->flipsStart, mode >= 2 ? ", his strafe does not count for a moment" : "" ) );
+			}
+			ac->flipBlockUntil = level.time + AC_FLIP_BLOCK;
+		}
+	}
+	if ( ucmd->forwardmove ) {
+		ac->lastForward = ucmd->forwardmove;
+	}
+	if ( ucmd->rightmove ) {
+		ac->lastRight = ucmd->rightmove;
+	}
+
+	if ( mode >= 2 && ac->flipBlockUntil > level.time && level.time + AC_FLIP_BLOCK >= ac->flipBlockUntil ) {
+		// the axis he is not running along: for a zigzag of the strafe the strafe, for one of the run the run
+		if ( ucmd->forwardmove ) {
+			ucmd->rightmove = 0;
+		} else {
+			ucmd->forwardmove = 0;
+		}
+	}
 }
 
 /*

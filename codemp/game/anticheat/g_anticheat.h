@@ -41,6 +41,13 @@ typedef struct anticheat_s {
 	int			warpLogTime;		// level.time of the last line about a cut move
 	int			warpCuts;			// cuts of a long move since warpCutsStart
 	int			warpCutsStart;
+	// the input of a move (G_AC_MoveInput)
+	signed char	lastForward, lastRight;	// of the last move that had one
+	int			flips;				// changes of direction from one move to the next since flipsStart
+	int			flipsStart;
+	int			flipBlockUntil;		// strafing does not count until then
+	int			flipLogTime;
+	int			rollLogTime;
 	int			lastMoveLevelTime;	// level.time of the last move the client sent
 
 	// the wiggle (G_AC_Think)
@@ -84,5 +91,6 @@ typedef struct anticheat_s {
 } anticheat_t;
 
 int			G_AC_MoveTime( gentity_t *ent, usercmd_t *ucmd, int msec );
+void		G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd );
 void		G_AC_Think( gentity_t *ent, const usercmd_t *ucmd );
 qboolean	G_AC_SaberBlocked( const gentity_t *attacker, const gentity_t *victim );
