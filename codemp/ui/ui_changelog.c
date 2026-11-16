@@ -73,10 +73,10 @@ typedef struct {
 enum { LC_TEXT, LC_BRIGHT, LC_DIM, LC_ACCENT, LC_WARM, LC_NUM };
 
 static const vec4_t logColors[LC_NUM] = {
-	{ 0.86f, 0.92f, 0.97f, 1.0f },		// TEXT of tools/menus/theme.py
+	{ SKIN_RGB_TEXT, 1.0f },		// TEXT of tools/menus/theme.py
 	{ 1.0f, 1.0f, 1.0f, 1.0f },
-	{ 0.60f, 0.69f, 0.78f, 1.0f },		// DIM
-	{ 0.43f, 0.83f, 1.0f, 1.0f },		// the light blue of the look
+	{ SKIN_RGB_DIM, 1.0f },		// DIM
+	{ SKIN_RGB_ACCENT, 1.0f },		// the light blue of the look
 	{ 1.0f, 0.74f, 0.30f, 1.0f }		// WARM
 };
 // the menus of the game: white, the gold of their titles, grey, a light blue
@@ -587,11 +587,11 @@ static void Log_DrawPiece( const logPiece_t *piece, float x, float y, float h, q
 		VectorCopy4( newLook ? logColors[LC_BRIGHT] : logClassic[LC_TEXT], color );
 
 	if ( newLook && piece->style == LS_CODE ) {
-		const vec4_t fill = { 0.0f, 0.0f, 0.0f, 0.35f }, edge = { 0.43f, 0.83f, 1.0f, 0.16f };
+		const vec4_t fill = { 0.0f, 0.0f, 0.0f, 0.35f }, edge = { SKIN_RGB_ACCENT, 0.16f };
 
 		Skin_Panel( x + piece->x - 2.0f, top - 1.0f, piece->w + 4.0f, textH + 2.0f, 2.5f, fill, edge );
 	} else if ( newLook && ( piece->style == LS_TAG || piece->style == LS_TAG_WARM ) ) {
-		vec4_t fill = { 0.035f, 0.07f, 0.12f, 0.86f }, edge;
+		vec4_t fill = { SKIN_RGB_GLASS, 0.86f }, edge;
 
 		VectorCopy4( color, edge );
 		edge[3] = 0.6f;

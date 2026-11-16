@@ -51,8 +51,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SELECT_DISC_SIDES	24
 #define SELECT_PULSE_MSEC	1100.0f		// one pulse of the glow of a power that runs
 
-static const vec4_t selectGlass = { 0.035f, 0.07f, 0.12f, 0.78f };
-static const vec4_t selectRim = { 0.43f, 0.83f, 1.0f, 0.25f };
+static const vec4_t selectGlass = { SKIN_RGB_GLASS, 0.78f };
+static const vec4_t selectRim = { SKIN_RGB_ACCENT, 0.25f };
 static const vec4_t selectAccent = { 0.36f, 0.78f, 0.96f, 1.0f };
 
 // the models of the cards: a ghoul2 instance of its own for a .glm (the instances of CG_InitG2Weapons are made to be

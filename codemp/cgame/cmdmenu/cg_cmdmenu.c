@@ -72,9 +72,9 @@ static struct {
 	int			pointerX, pointerY;			// where the pointer was in the frame before
 } cmd;
 
-static const vec4_t cmdRow = { 0.03f, 0.06f, 0.10f, 0.82f }, cmdEdge = { 0.43f, 0.83f, 1.0f, 0.22f };
-static const vec4_t cmdLit = { 0.43f, 0.83f, 1.0f, 0.30f }, cmdText = { 0.86f, 0.92f, 0.97f, 1.0f };
-static const vec4_t cmdKey = { 0.43f, 0.83f, 1.0f, 1.0f };
+static const vec4_t cmdRow = { 0.03f, 0.06f, 0.10f, 0.82f }, cmdEdge = { SKIN_RGB_ACCENT, 0.22f };
+static const vec4_t cmdLit = { SKIN_RGB_ACCENT, 0.30f }, cmdText = { SKIN_RGB_TEXT, 1.0f };
+static const vec4_t cmdKey = { SKIN_RGB_ACCENT, 1.0f };
 
 /*
 ===============================================================================
@@ -335,7 +335,7 @@ static void Cmd_DrawList( int column, float x, float y, float rowH, float width,
 			const float mid = top + rowH * 0.5f;
 
 			if ( under || opened ) {
-				const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.16f };
+				const vec4_t lit = { SKIN_RGB_ACCENT, 0.16f };
 
 				Skin_Panel( x + CMD_PAD, top + 0.5f, width - 2.0f * CMD_PAD, rowH - 1.0f, 3.0f, lit, NULL );
 			}

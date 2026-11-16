@@ -25,9 +25,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "cg_window.h"
 
-const vec4_t winFill = { 0.035f, 0.07f, 0.12f, 0.9f }, winEdge = { 0.43f, 0.83f, 1.0f, 0.35f };
-const vec4_t winText = { 0.86f, 0.92f, 0.97f, 1.0f }, winDim = { 0.60f, 0.69f, 0.78f, 1.0f };
-const vec4_t winAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, winGold = { 0.89f, 0.84f, 0.36f, 1.0f };
+const vec4_t winFill = { SKIN_RGB_GLASS, 0.9f }, winEdge = { SKIN_RGB_ACCENT, 0.35f };
+const vec4_t winText = { SKIN_RGB_TEXT, 1.0f }, winDim = { SKIN_RGB_DIM, 1.0f };
+const vec4_t winAccent = { SKIN_RGB_ACCENT, 1.0f }, winGold = { 0.89f, 0.84f, 0.36f, 1.0f };
 const vec4_t winRed = { 1.0f, 0.42f, 0.36f, 1.0f };
 
 int Win_Font( void ) {
@@ -123,7 +123,7 @@ int Win_HitAt( const winHits_t *hits ) {
 
 // a button: a pill with its text in the middle, lit under the pointer. Not usable: dim and nothing to click.
 void Win_Button( winHits_t *hits, int part, int arg, float x, float y, float w, const char *text, const vec4_t color, qboolean usable ) {
-	const vec4_t	back = { 1.0f, 1.0f, 1.0f, 0.06f }, lit = { 0.43f, 0.83f, 1.0f, 0.22f };
+	const vec4_t	back = { 1.0f, 1.0f, 1.0f, 0.06f }, lit = { SKIN_RGB_ACCENT, 0.22f };
 	const qboolean	over = (qboolean)( usable && Win_Over( x, y, w, WIN_BUTTON_H ) );
 
 	Win_Panel( x, y, w, WIN_BUTTON_H, WIN_BUTTON_H * 0.5f, over ? lit : back, over ? winEdge : NULL );

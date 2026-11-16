@@ -29,6 +29,8 @@ drawn as it always was. The file is built into the ui module and into the cgame,
 
 #pragma once
 
+#include "ui_palette.h"
+
 #define SKIN_FONT_SANS		5		// "font 5" of a menu file: Noto Sans, every letter from the TrueType font
 #define SKIN_FONT_MONO		6		// "font 6": DejaVu Sans Mono
 #define SKIN_FONT_BOLD		7		// "font 7": Noto Sans Bold

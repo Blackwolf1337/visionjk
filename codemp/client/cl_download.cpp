@@ -37,6 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (see "Over the web" below), through both windows the same way.
 
 #include "client.h"
+#include "ui/ui_palette.h"
 #include "qcommon/stringed/stringed_ingame.h"
 #include "web/web_missing.h"
 #include <minizip/unzip.h>
@@ -117,9 +118,9 @@ static cvar_t *v_downloadReview;
 static cvar_t *v_downloadKeep;
 static cvar_t *v_downloadHttp;
 
-static const vec4_t dlFill = { 0.035f, 0.07f, 0.12f, 0.94f }, dlEdge = { 0.43f, 0.83f, 1.0f, 0.45f };
-static const vec4_t dlText = { 0.86f, 0.92f, 0.97f, 1.0f }, dlDim = { 0.60f, 0.69f, 0.78f, 1.0f };
-static const vec4_t dlAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, dlRed = { 1.0f, 0.42f, 0.36f, 1.0f };
+static const vec4_t dlFill = { SKIN_RGB_GLASS, 0.94f }, dlEdge = { SKIN_RGB_ACCENT, 0.45f };
+static const vec4_t dlText = { SKIN_RGB_TEXT, 1.0f }, dlDim = { SKIN_RGB_DIM, 1.0f };
+static const vec4_t dlAccent = { SKIN_RGB_ACCENT, 1.0f }, dlRed = { 1.0f, 0.42f, 0.36f, 1.0f };
 static const vec4_t dlGold = { 0.89f, 0.84f, 0.36f, 1.0f };
 
 static void	DL_Start( void );
@@ -1136,7 +1137,7 @@ static void DL_Print( float x, float y, float scale, const vec4_t color, const c
 
 // a box that is ticked or not, and the text after it, the whole row to click
 static void DL_Tick( dlHitKind_t kind, int arg, float x, float y, float w, qboolean on, const vec4_t color, const char *text ) {
-	const vec4_t	lit = { 0.43f, 0.83f, 1.0f, 0.12f };
+	const vec4_t	lit = { SKIN_RGB_ACCENT, 0.12f };
 	const float		box = 10.0f;
 
 	if ( DL_Over( x, y, w, DL_ROW ) ) {
@@ -1152,7 +1153,7 @@ static void DL_Tick( dlHitKind_t kind, int arg, float x, float y, float w, qbool
 
 // a button: its text in the middle, lit under the pointer. Not usable: dim, nothing to click.
 static void DL_Button( dlHitKind_t kind, float x, float y, float w, const char *text, qboolean usable ) {
-	const vec4_t	back = { 1.0f, 1.0f, 1.0f, 0.07f }, lit = { 0.43f, 0.83f, 1.0f, 0.3f };
+	const vec4_t	back = { 1.0f, 1.0f, 1.0f, 0.07f }, lit = { SKIN_RGB_ACCENT, 0.3f };
 	const float		h = 20.0f, scale = 0.68f;
 	const qboolean	over = (qboolean)( usable && DL_Over( x, y, w, h ) );
 
@@ -1320,7 +1321,7 @@ static void DL_DrawReview( void ) {
 	}
 	if ( rows > DL_ROWS_SHOWN ) {
 		const float track = DL_ROWS_SHOWN * DL_ROW;
-		const vec4_t thumb = { 0.43f, 0.83f, 1.0f, 0.6f };
+		const vec4_t thumb = { SKIN_RGB_ACCENT, 0.6f };
 
 		DL_Rect( x + DL_W - 5.0f, listTop + track * dl.scroll / rows, 3.0f, track * DL_ROWS_SHOWN / rows, thumb, NULL );
 	}

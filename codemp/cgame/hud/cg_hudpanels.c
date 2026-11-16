@@ -128,7 +128,7 @@ static void Panels_WeaponName( const rectDef_t *r ) {
 // The stance of the saber as three steps from the left, so many lit as it is heavy (fast, medium, strong), in the
 // colour of the stance; the stances beyond those (two blades, a staff, the ones of Desann and Tavion) light all.
 static void Panels_SaberSteps( const rectDef_t *r ) {
-	static const vec4_t	fast = { 0.43f, 0.83f, 1.0f, 1.0f }, medium = { 1.0f, 0.92f, 0.45f, 1.0f }, strong = { 1.0f, 0.38f, 0.33f, 1.0f };
+	static const vec4_t	fast = { SKIN_RGB_ACCENT, 1.0f }, medium = { 1.0f, 0.92f, 0.45f, 1.0f }, strong = { 1.0f, 0.38f, 0.33f, 1.0f };
 	static const vec4_t	off = { 1.0f, 1.0f, 1.0f, 0.10f };
 	const playerState_t	*ps = &cg.predictedPlayerState;
 	const int			level = ps->fd.saberDrawAnimLevel, lit = Q_min( 3, level );
@@ -312,7 +312,7 @@ void CG_HudCorner( void ) {
 			const float		sx = x + 4.0f + i * ( CORNER_SLOT + gap ), sy = y + 4.0f;
 			const char		*cmd = Corner_ItemCommand( tags[i] );
 			const char		*key = cmd ? Hud_KeyFor( cmd, NULL ) : NULL;
-			const vec4_t	inside = { 0.0f, 0.0f, 0.0f, 0.3f }, lit = { 0.43f, 0.83f, 1.0f, 0.14f };
+			const vec4_t	inside = { 0.0f, 0.0f, 0.0f, 0.3f }, lit = { SKIN_RGB_ACCENT, 0.14f };
 			vec4_t			rim;
 
 			Hud_Color( rim, hudAccent, tags[i] == selected ? 0.95f : 0.25f );

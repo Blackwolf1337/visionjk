@@ -78,8 +78,8 @@ static struct {
 	int			openTime;			// trap->Milliseconds() when it opened
 } rad;
 
-static const vec4_t radialText = { 0.86f, 0.92f, 0.97f, 1.0f }, radialDim = { 0.42f, 0.48f, 0.55f, 1.0f };
-static const vec4_t radialAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, radialGold = { 0.89f, 0.84f, 0.36f, 1.0f };
+static const vec4_t radialText = { SKIN_RGB_TEXT, 1.0f }, radialDim = { 0.42f, 0.48f, 0.55f, 1.0f };
+static const vec4_t radialAccent = { SKIN_RGB_ACCENT, 1.0f }, radialGold = { 0.89f, 0.84f, 0.36f, 1.0f };
 
 // the choices, made anew every frame: the box may have changed meanwhile, or be gone
 static void Radial_Build( void ) {
@@ -434,8 +434,8 @@ slice does under it. In the 2D of the pointer (PLACE_CENTER).
 =================
 */
 void CG_RadialDraw( void ) {
-	const vec4_t	ring = { 0.03f, 0.06f, 0.10f, 0.82f }, hole = { 0.01f, 0.02f, 0.04f, 0.90f }, edge = { 0.43f, 0.83f, 1.0f, 0.22f };
-	const vec4_t	lit = { 0.43f, 0.83f, 1.0f, 0.30f }, litEdge = { 0.43f, 0.83f, 1.0f, 0.95f };
+	const vec4_t	ring = { 0.03f, 0.06f, 0.10f, 0.82f }, hole = { 0.01f, 0.02f, 0.04f, 0.90f }, edge = { SKIN_RGB_ACCENT, 0.22f };
+	const vec4_t	lit = { SKIN_RGB_ACCENT, 0.30f }, litEdge = { SKIN_RGB_ACCENT, 0.95f };
 	const int		font = Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
 	const float		cx = SCREEN_WIDTH * 0.5f, cy = SCREEN_HEIGHT * 0.5f, mid = 0.5f * ( RADIAL_INNER + RADIAL_OUTER );
 	const char		*title;
