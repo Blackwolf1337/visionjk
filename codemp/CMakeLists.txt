@@ -578,6 +578,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_console_local.h"
 		"${MPDir}/client/cl_confeed.cpp"
 		"${MPDir}/client/cl_conselect.cpp"
+		"${MPDir}/client/cl_discord.cpp"
 		"${MPDir}/client/cl_font.cpp"
 		"${MPDir}/client/cl_ids.cpp"
 		"${MPDir}/client/cl_memwatch.cpp"

@@ -278,6 +278,11 @@ static qboolean MDL_Url( const char *path, char *out, int outSize ) {
 	return qtrue;
 }
 
+// the same for the other parts of the client that use the store (the map pictures of client/cl_discord.cpp)
+qboolean CL_ModelsStoreURL( const char *path, char *out, int outSize ) {
+	return MDL_Url( path, out, outSize );
+}
+
 // Starts the fetch of the pak of model, of its icon (icon "jpg" or "png"), or with model NULL of the list.
 // The thread of a job that was set up starts. qfalse: it did not, the slot is free again.
 static qboolean MDL_Launch( mdlJob_t *job ) {
