@@ -133,6 +133,8 @@ static qboolean SV_IsBanned( const netadr_t *from, qboolean isexception )
 	return qfalse;
 }
 
+const char *SV_GetStringEdString(char *refSection, char *refName);
+
 /*
 ==================
 SV_DirectConnect
@@ -241,6 +243,13 @@ void SV_DirectConnect( const netadr_t *from ) {
 			|| from->port == cl->netchan.remoteAddress.port ) ) {
 			Com_Printf ("%s:reconnect\n", NET_AdrToString (from));
 			newcl = cl;
+			// VisionJK: the others see that he left, as SV_DropClient tells them. Stock JKA said nothing here,
+			// so a player who reconnects under another name seemed to turn into somebody new. A zombie was
+			// told about already when it was dropped.
+			if ( cl->state >= CS_CONNECTED ) {
+				SV_SendServerCommand( NULL, "print \"%s" S_COLOR_WHITE " %s\n\"", cl->name,
+					SV_GetStringEdString( "MP_SVGAME", "DISCONNECTED" ) );
+			}
 			// VVFIXME - both SOF2 and Wolf remove this call, claiming it blows away the user's info
 			// disconnect the client from the game first so any flags the
 			// player might have are dropped
@@ -921,7 +930,6 @@ SV_Disconnect_f
 The client is going to disconnect, so remove the connection immediately  FIXME: move to game?
 =================
 */
-const char *SV_GetStringEdString(char *refSection, char *refName);
 static void SV_Disconnect_f( client_t *cl ) {
 //	SV_DropClient( cl, "disconnected" );
 	SV_DropClient( cl, SV_GetStringEdString("MP_SVGAME","DISCONNECTED") );
