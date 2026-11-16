@@ -247,6 +247,8 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/ball.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/geom.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/grid.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/lightmask.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"

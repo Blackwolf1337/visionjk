@@ -348,11 +348,7 @@ vec3 SurfaceLight( Surface s, vec3 l, vec3 radiance, float minRoughness, inout v
 	return radiance * ( shine * nl * ( 1.0 - coatFresnel ) + coat );
 }
 
-// the point of the segment from a to b nearest p
-vec3 NearestOnSegment( vec3 a, vec3 b, vec3 p ) {
-	vec3 ab = b - a;
-	return a + ab * clamp( dot( p - a, ab ) / max( dot( ab, ab ), 1e-4 ), 0.0, 1.0 );
-}
+#include "geom.glsl"
 
 // the point of the segment from a to b nearest the ray from p along r (Karis 2013, the representative point of a
 // tube light for its shine)
