@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "ui/ui_palette.h"
+#include "cl_console_local.h"
 #include "cl_cgameapi.h"
 #include "qcommon/stringed/stringed_ingame.h"
 #include "qcommon/game_version.h"
@@ -47,14 +48,11 @@ cvar_t		*tay_consoleClock;
 
 #define	DEFAULT_CONSOLE_WIDTH	78
 
-#define CON_BLANK_CHAR			' '
 #define CON_SCROLL_L_CHAR		'$'
 #define CON_SCROLL_R_CHAR		'$'
-#define CON_TIMESTAMP_LEN		11 // "[13:37:00] "
 #define CON_MIN_WIDTH			20
 
 
-static const conChar_t CON_WRAP = { { ColorIndex(COLOR_GREY), '\\' } };
 static const conChar_t CON_BLANK = { { ColorIndex(COLOR_WHITE), CON_BLANK_CHAR } };
 
 vec4_t	console_color = {0.509f, 0.609f, 0.847f, 1.0f};
@@ -626,85 +624,6 @@ static void Con_Linefeed (qboolean skipnotify)
 
 /*
 ================
-The feed
-
-VisionJK: every line that would stand at the top of the game window (the notify lines) is kept here whole, with
-its colours and a level: 0 a line, 1 a warning, 2 an error, as Com_PrintWarning and Com_PrintError said it
-(com_printLevel; the colour of a line says nothing). A cgame of this tree draws them itself, in one feed
-with its kills (cgame/hud/cg_killfeed.c): it reads them with ext.Con_FeedRead and says so by setting
-v_feedHandler, which the engine clears whenever a cgame is loaded. Con_DrawNotify leaves the lines out then.
-================
-*/
-#define CON_FEED_LINES	32
-#define CON_FEED_TEXT	256
-
-static struct {
-	int		seq;							// of the newest line, 0: none yet
-	struct {
-		int		level;
-		char	text[CON_FEED_TEXT];
-	} lines[CON_FEED_LINES];
-	char	pending[CON_FEED_TEXT];			// the line that has no end yet
-	int		pendingLen;
-	qboolean pendingSkip;					//	and something of it is not for the notify lines
-	int		pendingLevel;					//	the highest level of what it was printed with
-} conFeed;
-
-static void Con_FeedAdd( const char *txt, qboolean skipnotify ) {
-	for ( ; *txt; txt++ ) {
-		if ( *txt == '\n' ) {
-			conFeed.pending[conFeed.pendingLen] = '\0';
-			if ( !conFeed.pendingSkip && conFeed.pendingLen > 0 ) {
-				const int slot = ++conFeed.seq % CON_FEED_LINES;
-
-				conFeed.lines[slot].level = conFeed.pendingLevel;
-				Q_strncpyz( conFeed.lines[slot].text, conFeed.pending, sizeof( conFeed.lines[0].text ) );
-			}
-			conFeed.pendingLen = 0;
-			conFeed.pendingSkip = qfalse;
-			conFeed.pendingLevel = 0;
-			continue;
-		}
-		if ( skipnotify ) {
-			conFeed.pendingSkip = qtrue;
-		}
-		if ( com_printLevel > conFeed.pendingLevel ) {
-			conFeed.pendingLevel = com_printLevel;
-		}
-		if ( *txt != '\r' && conFeed.pendingLen < CON_FEED_TEXT - 1 ) {
-			conFeed.pending[conFeed.pendingLen++] = *txt;
-		}
-	}
-}
-
-// ext.Con_FeedRead: the line after number `after` (0: from the oldest kept), its number returned, 0: none
-int Con_FeedRead( int after, int *level, char *out, int outSize ) {
-	int next = after + 1;
-
-	if ( after < 0 || after >= conFeed.seq ) {
-		return 0;
-	}
-	if ( next <= conFeed.seq - CON_FEED_LINES ) {
-		next = conFeed.seq - CON_FEED_LINES + 1;
-	}
-	if ( level ) {
-		*level = conFeed.lines[next % CON_FEED_LINES].level;
-	}
-	Q_strncpyz( out, conFeed.lines[next % CON_FEED_LINES].text, outSize );
-	return next;
-}
-
-// the number of the newest line: a cgame that starts reads from here on
-int Con_FeedNewest( void ) {
-	return conFeed.seq;
-}
-
-static qboolean Con_FeedByCgame( void ) {
-	return (qboolean)( cls.cgameStarted && cls.state == CA_ACTIVE && Cvar_VariableIntegerValue( "v_feedHandler" ) );
-}
-
-/*
-================
 CL_ConsolePrint
 
 Handles cursor positioning, line wrapping, etc
@@ -797,321 +716,6 @@ void CL_ConsolePrint( const char *txt) {
 	}
 }
 
-
-/*
-==============================================================================
-
-SELECTION
-
-The mouse belongs to the console while it is down. In a window the system draws its cursor and says where it is
-(IN_MousePosition), in fullscreen the game holds the mouse and the console moves a cursor of its own by what the
-mouse moved (Con_MouseEvent). Holding the left button and moving marks text, from the place the button went down
-to the place the cursor is at; past the upper or lower edge the text scrolls. A double click marks a word, a
-third click the line. Shift and a click move the end of what is marked. Ctrl+A marks everything. Ctrl+C or the
-right button put the marked text on the clipboard: without the colours, and with lines the console wrapped put
-together again.
-
-A place in the scrollback is a line, counted the way con.current counts them, and a column of the text in it:
-0 is before the first cell after the timestamp. What is marked runs from one place up to another.
-
-==============================================================================
-*/
-
-typedef struct conPos_s {
-	int		line;
-	int		column;
-} conPos_t;
-
-static struct {
-	qboolean	active;			// text is marked: anchor and caret differ
-	qboolean	dragging;		// the left button went down in the text and is held
-	conPos_t	anchor;			// where the marking began
-	conPos_t	caret;			// where it ends
-	int			mouseX, mouseY;	// the cursor, pixels of the window
-	qboolean	ownCursor;		// the game holds the mouse: the console draws the cursor
-	int			clickTime;		// of the last press of the button, for double and triple clicks
-	int			clickCount;
-	conPos_t	clickPos;
-	int			scrollTime;		// when marking past an edge scrolls the next step
-	// where the text is on the screen, from the last frame that drew the console
-	int			bottomY;		// top pixel of the lowest row of text
-	int			bottomLine;		// the line in that row
-	int			numRows;		// rows of text
-} conSel;
-
-#define CON_DOUBLE_CLICK_MSEC	400
-#define CON_DRAG_SCROLL_MSEC	50
-
-// cells of text in a row, without the timestamp and the mark of a wrapped line
-static int Con_TextCells( void ) {
-	return con.rowwidth - 1 - CON_TIMESTAMP_LEN;
-}
-
-static conChar_t *Con_LineText( int line ) {
-	return con.text + ( line % con.totallines ) * con.rowwidth + CON_TIMESTAMP_LEN;
-}
-
-// whether the scrollback still has that line
-static qboolean Con_LineValid( int line ) {
-	return (qboolean)( line >= 0 && line <= con.current && con.current - line < con.totallines );
-}
-
-// the cells of a line up to its last one that is not blank
-static int Con_LineLength( int line ) {
-	const conChar_t	*text = Con_LineText( line );
-	int				len = Con_TextCells();
-
-	while ( len > 0 && text[len - 1].f.character == CON_BLANK_CHAR ) {
-		len--;
-	}
-	return len;
-}
-
-// whether the console broke the line there because it was too long: the next row goes on with it
-static qboolean Con_LineWrapped( int line ) {
-	return (qboolean)( Con_LineText( line )[Con_TextCells()].compare == CON_WRAP.compare );
-}
-
-static int Con_ComparePos( const conPos_t *a, const conPos_t *b ) {
-	return ( a->line != b->line ) ? a->line - b->line : a->column - b->column;
-}
-
-void Con_ClearSelection( void ) {
-	conSel.active = conSel.dragging = qfalse;
-}
-
-// what is marked, in order. qfalse when nothing is, or when its lines have left the scrollback.
-static qboolean Con_SelectionRange( conPos_t *start, conPos_t *end ) {
-	if ( !conSel.active ) {
-		return qfalse;
-	}
-	if ( Con_ComparePos( &conSel.anchor, &conSel.caret ) <= 0 ) {
-		*start = conSel.anchor;
-		*end = conSel.caret;
-	} else {
-		*start = conSel.caret;
-		*end = conSel.anchor;
-	}
-	if ( !Con_LineValid( end->line ) ) {
-		Con_ClearSelection();
-		return qfalse;
-	}
-	if ( !Con_LineValid( start->line ) ) {
-		start->line = Q_max( 0, con.current - con.totallines + 1 );
-		start->column = 0;
-	}
-	return qtrue;
-}
-
-// the columns of a line that are marked, qfalse when none are
-static qboolean Con_SelectedColumns( const conPos_t *start, const conPos_t *end, int line, int *from, int *to ) {
-	if ( line < start->line || line > end->line ) {
-		return qfalse;
-	}
-	*from = ( line == start->line ) ? start->column : 0;
-	*to = ( line == end->line ) ? end->column : Con_TextCells();
-	return (qboolean)( *to > *from );
-}
-
-// The place in the text the cursor is at: the line of the row it is in (the top or bottom row when it is above or
-// below the text) and the gap between two cells it is nearest to. cell: the cell it is in, may be outside the row.
-static void Con_MousePos( conPos_t *pos, int *cell ) {
-	const int	shown = con_timestamps->integer ? CON_TIMESTAMP_LEN : 0;	// cells of the timestamp left of the text
-	const int	fromBottom = conSel.bottomY + con.charHeight - 1 - conSel.mouseY;
-	int			row = ( fromBottom > 0 ) ? fromBottom / con.charHeight : 0;
-
-	if ( row > conSel.numRows - 1 ) {
-		row = conSel.numRows - 1;
-	}
-	pos->line = Com_Clampi( Q_max( 0, con.current - con.totallines + 1 ), con.current, conSel.bottomLine - Q_max( 0, row ) );
-	pos->column = Com_Clampi( 0, Con_TextCells(), ( conSel.mouseX + con.charWidth / 2 ) / con.charWidth - 1 - shown );
-	if ( cell ) {
-		*cell = conSel.mouseX / con.charWidth - 1 - shown;
-	}
-}
-
-/*
-================
-Con_MouseEvent
-
-The mouse moved while the console is down and the game holds the mouse (fullscreen): the console has a cursor of
-its own then. In a window the place comes from the system, see Con_SelectionFrame().
-================
-*/
-void Con_MouseEvent( int dx, int dy ) {
-	conSel.mouseX = Com_Clampi( 0, cls.glconfig.vidWidth - 1, conSel.mouseX + dx );
-	conSel.mouseY = Com_Clampi( 0, cls.glconfig.vidHeight - 1, conSel.mouseY + dy );
-}
-
-/*
-================
-Con_MouseDown
-
-The left button went down
-================
-*/
-void Con_MouseDown( void ) {
-	conPos_t	pos;
-	int			cell;
-
-	// the rows of an Asian language are drawn as strings of another height, a place on screen is no cell there
-	if ( conSel.numRows < 1 || re->Language_IsAsian() ) {
-		return;
-	}
-	if ( conSel.mouseY >= conSel.bottomY + con.charHeight ) {
-		// below the text, at the input line
-		Con_ClearSelection();
-		return;
-	}
-	Con_MousePos( &pos, &cell );
-
-	if ( cls.realtime - conSel.clickTime < CON_DOUBLE_CLICK_MSEC && pos.line == conSel.clickPos.line
-		&& abs( pos.column - conSel.clickPos.column ) <= 1 ) {
-		conSel.clickCount++;
-	} else {
-		conSel.clickCount = 1;
-	}
-	conSel.clickTime = cls.realtime;
-	conSel.clickPos = pos;
-	conSel.dragging = qfalse;
-
-	if ( conSel.clickCount == 2 ) {
-		// the word under the cursor
-		const conChar_t *text = Con_LineText( pos.line );
-
-		if ( cell < 0 || cell >= Con_TextCells() || text[cell].f.character == CON_BLANK_CHAR ) {
-			return;
-		}
-		conSel.anchor.line = conSel.caret.line = pos.line;
-		for ( conSel.anchor.column = cell; conSel.anchor.column > 0 && text[conSel.anchor.column - 1].f.character != CON_BLANK_CHAR; conSel.anchor.column-- ) {
-		}
-		for ( conSel.caret.column = cell + 1; conSel.caret.column < Con_TextCells() && text[conSel.caret.column].f.character != CON_BLANK_CHAR; conSel.caret.column++ ) {
-		}
-		conSel.active = qtrue;
-	} else if ( conSel.clickCount >= 3 ) {
-		// the line, with the rows before and after it when the console wrapped it
-		conSel.anchor.line = conSel.caret.line = pos.line;
-		while ( Con_LineValid( conSel.anchor.line - 1 ) && Con_LineWrapped( conSel.anchor.line - 1 ) ) {
-			conSel.anchor.line--;
-		}
-		while ( Con_LineWrapped( conSel.caret.line ) && Con_LineValid( conSel.caret.line + 1 ) ) {
-			conSel.caret.line++;
-		}
-		conSel.anchor.column = 0;
-		conSel.caret.column = Con_TextCells();
-		conSel.active = qtrue;
-	} else if ( kg.keys[A_SHIFT].down && conSel.active ) {
-		conSel.caret = pos;
-		conSel.dragging = qtrue;
-	} else {
-		conSel.anchor = conSel.caret = pos;
-		conSel.active = qfalse;
-		conSel.dragging = qtrue;
-	}
-}
-
-/*
-================
-Con_SelectAll
-================
-*/
-void Con_SelectAll( void ) {
-	conSel.anchor.line = Q_max( 0, con.current - con.totallines + 1 );
-	conSel.anchor.column = 0;
-	// not the rows nothing was printed to yet
-	while ( conSel.anchor.line < con.current && !Con_LineLength( conSel.anchor.line ) ) {
-		conSel.anchor.line++;
-	}
-	conSel.caret.line = con.current;
-	conSel.caret.column = Con_LineLength( con.current );
-	conSel.dragging = qfalse;
-	conSel.active = (qboolean)( Con_ComparePos( &conSel.anchor, &conSel.caret ) != 0 );
-}
-
-/*
-================
-Con_CopySelection
-
-Puts what is marked on the clipboard. qfalse: nothing is marked.
-================
-*/
-qboolean Con_CopySelection( void ) {
-	conPos_t	start, end;
-	char		*text;
-	int			len = 0;
-
-	if ( !Con_SelectionRange( &start, &end ) ) {
-		return qfalse;
-	}
-	// a cell is a character of four bytes at most, a row ends with two at most
-	text = (char *)Z_Malloc( ( end.line - start.line + 1 ) * ( Con_TextCells() * 4 + 2 ) + 1, TAG_TEMP_WORKSPACE, qfalse );
-
-	for ( int line = start.line; line <= end.line; line++ ) {
-		const conChar_t	*cell = Con_LineText( line );
-		const qboolean	goesOn = (qboolean)( line != end.line && Con_LineWrapped( line ) );
-		int				from, to;
-
-		if ( !Con_SelectedColumns( &start, &end, line, &from, &to ) ) {
-			from = to = 0;
-		}
-		// the blanks a row is filled up with are no text. A row that goes on in the next one is full.
-		if ( !goesOn ) {
-			while ( to > from && cell[to - 1].f.character == CON_BLANK_CHAR ) {
-				to--;
-			}
-		}
-		for ( int i = from; i < to; i++ ) {
-			// the clipboard is UTF-8: a byte of a code page goes there as the character it is in Windows-1252
-			len += Q_UTF8_Encode( CL_UTF8() ? cell[i].f.character : Q_CP1252ToUnicode( (int)cell[i].f.character ), text + len );
-		}
-		if ( line != end.line && !goesOn ) {
-#ifdef _WIN32
-			text[len++] = '\r';
-#endif
-			text[len++] = '\n';
-		}
-	}
-	text[len] = '\0';
-	Sys_SetClipboardData( text );
-	Z_Free( text );
-	return qtrue;
-}
-
-// once a frame while the console is drawn: where the cursor is, and what a held button marks
-static void Con_SelectionFrame( void ) {
-	static qboolean	placed = qfalse;
-	int				x, y;
-
-	conSel.ownCursor = (qboolean)!IN_MousePosition( &x, &y );
-	if ( !conSel.ownCursor ) {
-		conSel.mouseX = x;
-		conSel.mouseY = y;
-	} else if ( !placed ) {
-		// the cursor of the console starts in the middle of its text
-		conSel.mouseX = cls.glconfig.vidWidth / 2;
-		conSel.mouseY = Q_max( 0, conSel.bottomY / 2 );
-	}
-	placed = qtrue;
-	if ( !conSel.dragging ) {
-		return;
-	}
-	if ( !kg.keys[A_MOUSE1].down || conSel.numRows < 1 ) {
-		conSel.dragging = qfalse;
-		return;
-	}
-	// past the upper or lower edge of the text it scrolls
-	if ( cls.realtime >= conSel.scrollTime ) {
-		if ( conSel.mouseY < conSel.bottomY - ( conSel.numRows - 1 ) * con.charHeight ) {
-			Con_PageUp();
-			conSel.scrollTime = cls.realtime + CON_DRAG_SCROLL_MSEC;
-		} else if ( conSel.mouseY >= conSel.bottomY + con.charHeight ) {
-			Con_PageDown();
-			conSel.scrollTime = cls.realtime + CON_DRAG_SCROLL_MSEC;
-		}
-	}
-	Con_MousePos( &conSel.caret, NULL );
-	conSel.active = (qboolean)( Con_ComparePos( &conSel.anchor, &conSel.caret ) != 0 );
-}
 
 /*
 ==============================================================================
@@ -1313,8 +917,8 @@ void Con_DrawSolidConsole( float frac ) {
 	int				lines;
 //	qhandle_t		conShader;
 	int				currentColor;
-	conPos_t		selStart, selEnd;
 	qboolean		haveSelection;
+	int				cursorX, cursorY;
 	static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f };
 
 	lines = (int) (cls.glconfig.vidHeight * frac);
@@ -1421,12 +1025,8 @@ void Con_DrawSolidConsole( float frac ) {
 		row--;
 	}
 
-	// where the text is, for the mouse (Con_MousePos), then what the mouse does this frame
-	conSel.bottomY = y;
-	conSel.bottomLine = row;
-	conSel.numRows = rows;
-	Con_SelectionFrame();
-	haveSelection = Con_SelectionRange( &selStart, &selEnd );
+	// where the text is, for the mouse, then what the mouse does this frame
+	haveSelection = Con_SelectionBegin( y, row, rows );
 
 	currentColor = 7;
 	re->SetColor( g_color_table[currentColor] );
@@ -1484,13 +1084,9 @@ void Con_DrawSolidConsole( float frac ) {
 			int from, to;
 
 			// what is marked in this row, behind its text
-			if ( haveSelection && Con_SelectedColumns( &selStart, &selEnd, row, &from, &to ) ) {
+			if ( haveSelection && Con_SelectionRow( row, &from, &to ) ) {
 				const int shown = con_timestamps->integer ? CON_TIMESTAMP_LEN : 0;
 
-				if ( row != selEnd.line ) {
-					// up to the end of the text, and a cell at least so an empty line shows that it is marked
-					to = Q_max( Q_min( to, Con_LineLength( row ) ), from + 1 );
-				}
 				SCR_FillRect( ( from + shown + 1 ) * con.charWidth * con.xadjust - cls.bias2D, y * con.yadjust - cls.bias2DY,
 					( to - from ) * con.charWidth * con.xadjust, con.charHeight * con.yadjust, selColor );
 				re->SetColor( g_color_table[currentColor] );
@@ -1513,8 +1109,8 @@ void Con_DrawSolidConsole( float frac ) {
 	re->SetColor( NULL );
 
 	// the cursor of the console, where the system does not draw one
-	if ( conSel.ownCursor ) {
-		re->DrawStretchPic( conSel.mouseX * con.xadjust - cls.bias2D, conSel.mouseY * con.yadjust - cls.bias2DY, 24, 24, 0, 0, 1, 1, cls.cursorShader );
+	if ( Con_SelectionCursor( &cursorX, &cursorY ) ) {
+		re->DrawStretchPic( cursorX * con.xadjust - cls.bias2D, cursorY * con.yadjust - cls.bias2DY, 24, 24, 0, 0, 1, 1, cls.cursorShader );
 	}
 }
 
