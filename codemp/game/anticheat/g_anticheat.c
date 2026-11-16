@@ -38,9 +38,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   The zigzag: the strafe key flipped with every move while running. The acceleration of the game (Quake 3) adds
 //   speed along the wish direction until the part of the velocity along it reaches the limit, so two wish
 //   directions that take turns 45 degrees left and right of the run carry it past the limit: measured 285 in
-//   place of 250 forwards, 212 in place of 188 backwards. A hand changes direction a few times a second, a script
-//   does it a hundred times. More than AC_FLIP_MAX changes in AC_FLIP_WINDOW: with vs_antiSpeed 2 the strafe of
-//   his moves does not count for AC_FLIP_BLOCK, so the run goes straight at the speed of the game.
+//   place of 250 forwards, 212 in place of 188 backwards, with a change every move and just the same with one
+//   every 40 ms; with one every 160 ms nothing is gained. So counting the changes alone does not tell it from a
+//   hand that taps left and right: what is looked at is the changes together with what they gained. At least
+//   AC_FLIP_MIN changes in AC_FLIP_WINDOW while the player ran on the ground faster than his speed allows for
+//   AC_FLIP_FAST_MSEC of it: with vs_antiSpeed 2 the strafe of his moves does not count for AC_FLIP_BLOCK, so the
+//   run goes straight at the speed of the game. A slower zigzag (under ten changes a second) still gains a few
+//   percent.
 //
 // - The wiggle bot (G_AC_Think, vs_antiWiggle). With the single player saber damage (d_saberSPStyleDamage 1)
 //   a swing hurts on every server frame its blade crosses a body, more for a longer sweep, so turning the view
@@ -74,7 +78,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AC_WARP_KICK_MSEC		60000
 
 #define AC_FLIP_WINDOW			1000	// msec
-#define AC_FLIP_MAX				24		// changes of direction from one move to the next in that time: a hand makes 10 to 15
+#define AC_FLIP_MIN				10		// changes of direction in that time
+#define AC_FLIP_FAST_MSEC		300		// of it on the ground faster than AC_FLIP_FAST times his speed
+#define AC_FLIP_FAST			1.06f
 #define AC_FLIP_BLOCK			3000	// msec the strafe does not count after that
 #define AC_INPUT_LOG_MSEC		5000	// at most one line a player in this time
 
@@ -215,7 +221,7 @@ ClientThink_real, for a move a client sent (not bots or NPCs), before it is run:
 zigzag, see the top of the file. Changes the move.
 =================
 */
-void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd ) {
+void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd, int msec ) {
 	gclient_t	*client = ent->client;
 	anticheat_t	*ac = &client->pers.anticheat;
 	const int	mode = vs_antiSpeed.integer;
@@ -235,6 +241,15 @@ void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd ) {
 		}
 	}
 
+	// What the move before left: on the ground, in control, and faster than the speed the game gave him (which
+	// has the slower run backwards, rage and the rest in it). A landing or a push is faster for a moment too, that
+	// is why it has to last.
+	if ( client->ps.groundEntityNum != ENTITYNUM_NONE && client->ps.pm_type == PM_NORMAL && !( client->ps.pm_flags & PMF_TIME_KNOCKBACK )
+		&& !client->ps.m_iVehicleNum && client->ps.speed > 0
+		&& VectorLength2( client->ps.velocity ) > client->ps.speed * AC_FLIP_FAST + 4.0f ) {
+		ac->flipFastMsec += msec;
+	}
+
 	// a change of direction: the strafe or the run goes the other way than it last went (a move of rest between
 	// the two does not hide it)
 	if ( ( ucmd->rightmove > 0 && ac->lastRight < 0 ) || ( ucmd->rightmove < 0 && ac->lastRight > 0 )
@@ -242,12 +257,13 @@ void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd ) {
 		if ( !ac->flipsStart || level.time - ac->flipsStart > AC_FLIP_WINDOW || level.time < ac->flipsStart ) {
 			ac->flipsStart = level.time;
 			ac->flips = 0;
+			ac->flipFastMsec = 0;
 		}
-		if ( ++ac->flips > AC_FLIP_MAX ) {
+		if ( ++ac->flips >= AC_FLIP_MIN && ac->flipFastMsec >= AC_FLIP_FAST_MSEC ) {
 			if ( !ac->flipLogTime || level.time - ac->flipLogTime >= AC_INPUT_LOG_MSEC || level.time < ac->flipLogTime ) {
 				ac->flipLogTime = level.time;
-				G_AC_Log( ent, va( "changed the direction of his moves %i times in %i ms (zigzag for speed)%s", ac->flips,
-					level.time - ac->flipsStart, mode >= 2 ? ", his strafe does not count for a moment" : "" ) );
+				G_AC_Log( ent, va( "changed the direction of his moves %i times in %i ms and ran faster than his speed allows for %i ms of it (zigzag)%s",
+					ac->flips, level.time - ac->flipsStart, ac->flipFastMsec, mode >= 2 ? ", his strafe does not count for a moment" : "" ) );
 			}
 			ac->flipBlockUntil = level.time + AC_FLIP_BLOCK;
 		}
