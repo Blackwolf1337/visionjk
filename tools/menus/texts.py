@@ -785,6 +785,12 @@ TR = {
     'Above the Heads': 'Über den Köpfen',
     'My Music': 'Meine Musik',
     'Clicking Players': 'Spieler anklicken',
+    'Discord': 'Discord',
+    'Discord Profile': 'Discord-Profil',
+    'Everything': 'Alles',
+    'Minimal': 'Minimal',
+    'What your Discord profile shows while the Discord app runs. Everything: server, map, score, players and the song near you, and friends can join you. Minimal: only that you are in a game.':
+        'Was dein Discord-Profil zeigt, während die Discord-App läuft. Alles: Server, Karte, Punkte, Spieler und das Lied in deiner Nähe, und Freunde können dir beitreten. Minimal: nur, dass du in einem Spiel bist.',
     'A chat line with your name or one of the words below is marked gold.': 'Eine Chatzeile mit deinem Namen oder einem der Wörter darunter wird golden markiert.',
     'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.': 'Die Bewegungswerkzeuge von TaystJK: Tachometer, Strafe-Hilfe, Spuren und Ziele.',
     'Team': 'Team',
