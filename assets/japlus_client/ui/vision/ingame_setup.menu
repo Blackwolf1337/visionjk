@@ -4182,6 +4182,48 @@
 		itemDef
 		{
 			name					vision_head
+			rect					296 854 412 100
+			visible					1
+			text					@VISION_DISCORD
+			font					7
+			textscale				0.89
+			forecolor				0.56 0.64 0.74 1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				22
+			textaligny				54.5
+			caps					1
+			fold					31
+			page					7
+			scroll					1
+			column					0
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_discord
+			type					ITEM_TYPE_MULTI
+			text					@VISION_DISCORD_PROFILE
+			descText				@VISION_WHAT_YOUR_DISCORD_PROFILE_SHOWS_WHIL
+			cvar					"v_discord"
+			cvarFloatList { @VISION_OFF 0 @VISION_EVERYTHING 1 @VISION_MINIMAL 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 954 392 52
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					732 120 412 66
 			visible					1
 			text					@VISION_ALERTS
@@ -4192,7 +4234,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					31
+			fold					32
 			page					7
 			scroll					1
 			column					1
@@ -4296,7 +4338,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					32
+			fold					33
 			page					7
 			scroll					1
 			column					1
@@ -4403,7 +4445,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					33
+			fold					34
 			page					7
 			scroll					1
 			column					1
@@ -4486,7 +4528,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					34
+			fold					35
 			page					8
 			scroll					1
 			column					0
@@ -4655,7 +4697,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					35
+			fold					36
 			page					8
 			scroll					1
 			column					0
@@ -4738,7 +4780,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					36
+			fold					37
 			page					8
 			scroll					1
 			column					1
@@ -4823,7 +4865,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					37
+			fold					38
 			page					8
 			scroll					1
 			column					1
@@ -4929,7 +4971,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					38
+			fold					39
 			page					9
 			scroll					1
 			column					0
@@ -5171,7 +5213,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					39
+			fold					40
 			page					9
 			scroll					1
 			column					1
@@ -5235,7 +5277,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					40
+			fold					41
 			page					10
 			scroll					1
 			column					0
@@ -5320,7 +5362,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					41
+			fold					42
 			page					10
 			scroll					1
 			column					1
@@ -5362,7 +5404,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					42
+			fold					43
 			page					10
 			scroll					1
 			column					1
@@ -5443,7 +5485,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					43
+			fold					44
 			page					11
 			scroll					1
 			column					0
@@ -5522,7 +5564,7 @@
 			textalignx				22
 			textaligny				20.5
 			caps					1
-			fold					44
+			fold					45
 			page					11
 			scroll					1
 			column					1
@@ -5580,7 +5622,7 @@
 			textalignx				22
 			textaligny				54.5
 			caps					1
-			fold					45
+			fold					46
 			page					11
 			scroll					1
 			column					1

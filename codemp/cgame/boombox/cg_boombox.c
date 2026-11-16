@@ -850,6 +850,41 @@ static void Box_Forget( void ) {
 	bx.asks = 0;
 }
 
+// The song this player hears, for the profile in Discord (client/cl_discord.cpp reads v_discordSong): the title of
+// the nearest box that plays and reaches this far, "" for none. Looked at once a second, set only when it changed.
+static void Box_DiscordSong( int now ) {
+	static int		lastLook;
+	static qboolean	sent;
+	static char		last[BOX_TITLE];
+	const char		*title = "";
+	float			best = 0.0f;
+	int				i;
+
+	if ( sent && now - lastLook >= 0 && now - lastLook < 1000 )
+		return;
+	lastLook = now;
+	if ( v_boomboxes.integer && v_boomboxVolume.value > 0.0f && !cg.demoPlayback ) {
+		for ( i = 0; i < BOX_MAX; i++ ) {
+			const cgBox_t	*b = &cgBoxes[i];
+			float			range, dist;
+
+			if ( !b->inuse || !( b->flags & BOX_PLAYING ) || ( b->flags & BOX_PAUSED ) || !b->title[0] || CG_VoiceBoxMuted( i ) )
+				continue;
+			range = CG_BoomboxRange() * ( b->kind == BOX_KIND_SYSTEM ? SYS_RANGE_SCALE : 1.0f );
+			dist = Distance( b->place[BOX_PART_BODY].origin, cg.predictedPlayerState.origin );
+			if ( dist < range && ( !title[0] || dist < best ) ) {
+				title = b->title;
+				best = dist;
+			}
+		}
+	}
+	if ( !sent || strcmp( title, last ) ) {
+		trap->Cvar_Set( "v_discordSong", title );
+		Q_strncpyz( last, title, sizeof( last ) );
+		sent = qtrue;
+	}
+}
+
 void CG_BoomboxFrame( void ) {
 	const int		now = trap->Milliseconds();
 	const qboolean	wanted = ( v_boomboxes.integer && !cg.demoPlayback ) ? qtrue : qfalse;
@@ -874,6 +909,7 @@ void CG_BoomboxFrame( void ) {
 	Box_SendPending();
 	// a box synced with a music player here (cg_boombox_sync.c)
 	CG_BoxSyncFrame();
+	Box_DiscordSong( now );
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		cgBox_t	*b = &cgBoxes[i];

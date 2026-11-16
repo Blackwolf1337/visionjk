@@ -2235,6 +2235,7 @@ void CL_Frame ( int msec ) {
 	CL_MemWatchFrame();
 	CL_MasterFrame();
 	CL_RepFrame();
+	CL_DiscordFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
@@ -2960,6 +2961,7 @@ void CL_Init( void ) {
 	CL_ClipboardInit();
 	CL_MatDebug_Init();
 	CL_Profiler_Init();
+	CL_DiscordInit();
 
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 
@@ -2993,6 +2995,7 @@ void CL_Shutdown( void ) {
 	CL_Disconnect( qtrue );
 
 	CL_UpdateShutdown();
+	CL_DiscordShutdown();
 	CL_ModelsShutdown();
 	CL_IDS_Shutdown();
 	CL_MemWatchShutdown();

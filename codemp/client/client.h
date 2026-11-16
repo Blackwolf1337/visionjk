@@ -585,6 +585,17 @@ static inline void CL_TVFrame( void ) {}
 static inline void CL_TVClose( void ) {}
 #endif
 
+// cl_discord.cpp: Discord Rich Presence over the local IPC of the Discord app (issue #14), not in the browser client
+#ifndef __EMSCRIPTEN__
+void CL_DiscordInit( void );
+void CL_DiscordFrame( void );
+void CL_DiscordShutdown( void );
+#else
+static inline void CL_DiscordInit( void ) {}
+static inline void CL_DiscordFrame( void ) {}
+static inline void CL_DiscordShutdown( void ) {}
+#endif
+
 void CL_InitDownloads(void);
 void CL_NetStatsPacket( int bytes );
 void CL_NetStatsSnapshot( void );
@@ -634,6 +645,7 @@ void		CL_ModelsInit( void );
 void		CL_ModelsFrame( void );
 void		CL_ModelsShutdown( void );
 qboolean	CL_ModelsAsking( void );
+qboolean	CL_ModelsStoreURL( const char *path, char *out, int outSize );	// the https address of path in the store
 qboolean	CL_ModelsWatching( void );
 void		CL_ModelsStoreChanged( const char *store );
 

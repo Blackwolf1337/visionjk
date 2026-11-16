@@ -294,6 +294,11 @@ const char *Sys_ProgramFolder( void ) {
 	return sysRestart.folder;
 }
 
+// the program file itself, a whole path, "" if the system does not say (the launch entry of Discord, cl_discord.cpp)
+const char *Sys_ProgramFile( void ) {
+	return sysRestart.program;
+}
+
 // Are these two the same folder? Each is made a whole path first, so "." and a path with other slashes count.
 qboolean Sys_SameFolder( const char *a, const char *b ) {
 	char	wholeA[ MAX_OSPATH ], wholeB[ MAX_OSPATH ];

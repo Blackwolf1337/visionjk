@@ -123,6 +123,7 @@ char	*Sys_GetCurrentUser( void );
 void	NORETURN QDECL Sys_Error( const char *error, ... );
 void	NORETURN Sys_Quit (void);
 void	Sys_RestartOnExit( void );		// client: when the program has ended it starts itself again, with the same arguments
+const char *Sys_ProgramFile( void );		// client: the program file, a whole path, "" if the system does not say
 const char *Sys_ProgramFolder( void );	// client: the folder the program file is in, as the system names it
 qboolean Sys_SameFolder( const char *a, const char *b );
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...

@@ -1729,6 +1729,22 @@ REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
 LANG_GERMAN         "Zweimal schnell die Scoreboard-Taste drücken hält es offen. So kannst du mit der Maus einen Spieler anklicken."
 
+REFERENCE           DISCORD_PROFILE
+LANG_ENGLISH        "Discord Profile"
+LANG_GERMAN         "Discord-Profil"
+
+REFERENCE           WHAT_YOUR_DISCORD_PROFILE_SHOWS_WHIL
+LANG_ENGLISH        "What your Discord profile shows while the Discord app runs. Everything: server, map, score, players and the song near you, and friends can join you. Minimal: only that you are in a game."
+LANG_GERMAN         "Was dein Discord-Profil zeigt, während die Discord-App läuft. Alles: Server, Karte, Punkte, Spieler und das Lied in deiner Nähe, und Freunde können dir beitreten. Minimal: nur, dass du in einem Spiel bist."
+
+REFERENCE           EVERYTHING
+LANG_ENGLISH        "Everything"
+LANG_GERMAN         "Alles"
+
+REFERENCE           MINIMAL
+LANG_ENGLISH        "Minimal"
+LANG_GERMAN         "#same"
+
 REFERENCE           NEW_DRAIN_EFFECT
 LANG_ENGLISH        "New Drain Effect"
 LANG_GERMAN         "Neuer Drain-Effekt"
@@ -2244,6 +2260,10 @@ LANG_GERMAN         "Über den Köpfen"
 REFERENCE           MY_MUSIC
 LANG_ENGLISH        "My Music"
 LANG_GERMAN         "Meine Musik"
+
+REFERENCE           DISCORD
+LANG_ENGLISH        "Discord"
+LANG_GERMAN         "#same"
 
 REFERENCE           ALERTS
 LANG_ENGLISH        "Alerts"

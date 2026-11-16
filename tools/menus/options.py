@@ -303,6 +303,9 @@ SETUP = [
         ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
         ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
          'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
+        ('head', 'Discord'),
+        ('multi', 'Discord Profile', 'v_discord', (('Off', 0), ('Everything', 1), ('Minimal', 2)),
+         'What your Discord profile shows while the Discord app runs. Everything: server, map, score, players and the song near you, and friends can join you. Minimal: only that you are in a game.'),
     ]),
     ('JA+', 'The features of the JA+ client plugin, clan and admin login.', [
         ('head', 'Looks'),
