@@ -1,0 +1,17 @@
+name: Feature request
+description: An idea for VisionJK
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
