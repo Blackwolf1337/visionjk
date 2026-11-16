@@ -211,9 +211,23 @@ Both are in Setup, HUD, under Menus and HUD.
   with what, or the sentence of the console, and the keys to respawn and to the scores.
 - Kill feed lines are one glass panel each. The player's own kill has an accent rim and +1, his death a red rim.
   A death without a killer is fainter, with a cross.
-- Under the crosshair is the target name in the colour the game gives it, with a health bar for team mates and
-  duelists. Hacking and other timed actions are cards with a bar and a percentage. A caption sits under the
+- Under the crosshair is the target name in the colour the game gives it, in large text, with a health bar for
+  team mates and duelists. It gives way to the name tag of that player (see below). Hacking and other timed
+  actions are cards with a bar and a percentage. A caption sits under the
   lock-on brackets. The item picked up last is a card at the right edge for three seconds.
+- Name tags (`v_nameTags`: 0 off, 1 near the crosshair, 2 always; `Tag_*` and `CG_BubbleDraw` in
+  `cg_bubble.c`) are the player's name on a small glass chip right above the head, in the 3D scene like the chat
+  bubbles and status lines (needs an engine of this tree, 3D text). From the head up: name tag, status line, chat
+  bubble. Tags of players standing close are lifted so they do not overlap. Mode 1 shows the player near the
+  crosshair (full within 60 HUD units, fading over 50 more) and team mates within 1400 units in team modes,
+  mode 2 every visible player. Range is 2000 units, fading over the last quarter, and a tag fades in and out in
+  160 ms. A tag keeps one size on screen at any distance (letter height 9 HUD units, clamped between 2.6 and 32
+  level units). Only players one can see get one: a trace from the view to the head (solid and terrain), not in
+  fog, not cloaked, not dead, never the own player. The colour is the one of the name under the crosshair: green
+  team mate, red enemy, dim for players out of reach in a duel, in FFA the name in its own colours. The player
+  under the crosshair gets a larger tag (12 HUD units) with a tinted border and, where the client knows the
+  health (team mates, duel healths), a thin health bar; then the name under the crosshair is not drawn. Vehicle
+  pilots and players without a drawn tag keep the name under the crosshair.
 - Vote panels are glass with a box for yes and no, each with its key (bound to vote yes and vote no), the count
   and a time bar. Team votes look the same, in the team colour.
 - With `tay_speedometer` and `tay_movementKeys` there is a glass speed card with a bar towards `tay_startGoal`
@@ -607,7 +621,7 @@ of the menus.
 | Sound | Room Reflections (`v_spatialReflections`), Sound Around Corners (`v_spatialPaths`), Doppler Effect (`s_doppler`) |
 | HUD | New HUD (`v_hud`), Classic Menus (`v_classic`), 3D Menu (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
 | Game | under the heading Weapons: Scope Lens (`v_scope`), Zoom with Mouse Wheel (`v_scopeWheelZoom`), Motion Tracker Speed (`v_motionThreshold`, the speed for the tracker, slider, 10 to 200, default 40) |
-| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
+| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Name Tags (`v_nameTags`, Off, Near the Crosshair, Always), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`) |
 | Controls, Extras | Free the Mouse (`+v_cursor`), Scoreboard with Mouse (`v_scores_pick`) |
 
