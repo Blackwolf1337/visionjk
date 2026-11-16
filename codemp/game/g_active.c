@@ -2061,6 +2061,7 @@ void ClientThink_real( gentity_t *ent ) {
 		if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED ) {
 			return;		// kicked
 		}
+		G_AC_MoveInput( ent, ucmd, msec );	// a rolled view, a zigzag of the strafe key
 	}
 
 	if ( msec > 200 ) {
