@@ -347,7 +347,9 @@ void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 		|| !Q_stricmpn( text, "ampsay", 6 ) || !Q_stricmpn( text, "clansay", 7 ) || !Q_stricmpn( text, "vsay", 4 ) || !Q_stricmpn( text, "vs_status", 8 ) ) );
 
 	for ( i = 0; s[i]; i++ ) {
-		if ( s[i] == '\n' || s[i] == '\r' ) {
+		// every client ends a chat line with one: the console line of cl_keys.cpp is sent as it is ("say \"%s\"\n"),
+		// stock clients do the same. Only a break with more text after it is unusual.
+		if ( ( s[i] == '\n' || s[i] == '\r' ) && s[i + strspn( (const char *)s + i, "\r\n" )] ) {
 			lineBreak = qtrue;
 		}
 		if ( !chat && s[i] == '.' && s[i + 1] == '.' && ( s[i + 2] == '/' || s[i + 2] == '\\' ) ) {
