@@ -242,7 +242,9 @@ static int Corner_Items( int *tags ) {
 		return 0;
 	}
 	for ( i = 0; i < HI_NUM_HOLDABLE; i++ ) {
-		if ( ( cg.snap->ps.stats[STAT_HOLDABLE_ITEMS] & ( 1 << i ) ) && BG_GetItemIndexByTag( i, IT_HOLDABLE ) > 0 ) {
+		// (not the dispensers of health and ammo: they are not used by a key, and the game has no picture of them)
+		if ( ( cg.snap->ps.stats[STAT_HOLDABLE_ITEMS] & ( 1 << i ) ) && BG_GetItemIndexByTag( i, IT_HOLDABLE ) > 0
+			&& i != HI_HEALTHDISP && i != HI_AMMODISP ) {
 			tags[n++] = i;
 		}
 	}
@@ -297,7 +299,6 @@ void CG_HudCorner( void ) {
 		Hud_Glass( x, y, w, h, 6.0f, 1.0f, NULL, qfalse );
 		for ( i = 0; i < n; i++ ) {
 			const int		index = BG_GetItemIndexByTag( tags[i], IT_HOLDABLE );
-			const gitem_t	*item = &bg_itemlist[index];
 			const float		sx = x + 4.0f + i * ( CORNER_SLOT + gap ), sy = y + 4.0f;
 			const char		*cmd = Corner_ItemCommand( tags[i] );
 			const char		*key = cmd ? Hud_KeyFor( cmd, NULL ) : NULL;
@@ -306,12 +307,12 @@ void CG_HudCorner( void ) {
 
 			Hud_Color( rim, hudAccent, tags[i] == selected ? 0.95f : 0.25f );
 			Skin_Panel( sx, sy, CORNER_SLOT, CORNER_SLOT, 3.0f, tags[i] == selected ? lit : inside, rim );
+			// (the picture, not the model: the selection row shows the same models while one cycles, and the same
+			// model in two scenes of a frame swapped between the slots, it flickered)
 			trap->R_SetColor( NULL );
-			if ( !CG_Select3DModelFor( item ) || !CG_Select3DIcon( sx + 1.0f, sy + 1.0f, CORNER_SLOT - 2.0f, CORNER_SLOT - 2.0f, item, 0, NULL, qtrue, 1.0f ) ) {
-				CG_RegisterItemVisuals( index );
-				if ( cg_items[index].icon ) {
-					CG_DrawPic( sx + 3.0f, sy + 3.0f, CORNER_SLOT - 6.0f, CORNER_SLOT - 6.0f, cg_items[index].icon );
-				}
+			CG_RegisterItemVisuals( index );
+			if ( cg_items[index].icon ) {
+				CG_DrawPic( sx + 2.0f, sy + 2.0f, CORNER_SLOT - 4.0f, CORNER_SLOT - 4.0f, cg_items[index].icon );
 			}
 			if ( key ) {
 				Hud_Key( sx + CORNER_SLOT * 0.5f, sy + CORNER_SLOT + CORNER_KEY_H * 0.5f + 1.0f, key, 1.0f, HUD_CENTER );

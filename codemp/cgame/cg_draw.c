@@ -4346,7 +4346,10 @@ static void CG_DrawUpperRight( void ) {
 
 		y = CG_HudPowerups( cardY );
 		y = CG_HudAttacker( y );
-		y = CG_HudPerfLine( y, (qboolean)( cardY == HUD_EDGE_Y ) );	// the card has the clock
+		// (the card has the clock and the frames and ping; without it they are a line of their own)
+		if ( cardY == HUD_EDGE_Y ) {
+			y = CG_HudPerfLine( y, qtrue );
+		}
 		if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
 			y = CG_HudTeamList( y );
 		}

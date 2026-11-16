@@ -150,6 +150,10 @@ float CG_MatchCardDraw( float y ) {
 	if ( bottom ) {
 		h += 9.0f + CARD_ROW;
 	}
+	// the frames, the ping and its course as the last row (hud/cg_hudcombat.c), not as a line of their own
+	if ( CG_HudPerfAny() ) {
+		h += 9.0f + CARD_ROW;
+	}
 	Hud_Glass( x, y, CARD_W, h, 6.0f, 1.0f, NULL, qfalse );
 
 	cy = y + CARD_PAD + CARD_ROW * 0.5f;
@@ -209,6 +213,15 @@ float CG_MatchCardDraw( float y ) {
 		if ( bottomValue ) {
 			Hud_TextMid( x + CARD_W - CARD_PAD, cy, HUD_SMALL, hudText, 1.0f, HUD_RIGHT, bottomValue, inner * 0.55f );
 		}
+		cy += CARD_ROW * 0.5f;
+	}
+	if ( CG_HudPerfAny() ) {
+		const vec4_t rule = { 0.43f, 0.83f, 1.0f, 0.16f };
+
+		cy += 4.5f;
+		Skin_Line( x + CARD_PAD, cy, inner, rule );
+		cy += 4.5f + CARD_ROW * 0.5f;
+		CG_HudPerfRow( x + CARD_PAD, cy, inner );
 	}
 	return y + h + HUD_GAP;
 }

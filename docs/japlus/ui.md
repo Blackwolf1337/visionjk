@@ -29,7 +29,7 @@ HUD of its own gets them drawn as it always did, see "For mods".
 | `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
 | `v_hud` | 1 | 0: the HUD of the game |
 | `v_hudFeedLines` | 6 | how many lines the feed at the upper left shows at most, 1 to 16 |
-| `v_hudMatchCard` | 1 | 0: no card of the match at the upper right. The clock of the card follows `cg_drawTimer` and the settings beside it (count down, milliseconds) and is not shown with `cg_drawTimer 0`. With the card off the clock is in the line of frames and ping |
+| `v_hudMatchCard` | 1 | 0: no card of the match at the upper right. With the card the frames, the ping and its course are its last row, not a line of their own. The clock of the card follows `cg_drawTimer` and the settings beside it (count down, milliseconds) and is not shown with `cg_drawTimer 0`. With the card off the clock is in the line of frames and ping |
 | `v_remaps` | 1 | 0: none of the texture swaps of the server are done |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 
@@ -159,8 +159,9 @@ Both are in Setup, HUD, under Menus and HUD.
   for fast, two for medium, three for strong, all three for the other stances); at its foot the name of the weapon,
   for the saber with its stance. The health bar turns amber below half and red below a quarter.
 - The corner at the bottom right (2026-11-16, `hud/cg_hudpanels.c` CG_HudCorner): the radar where the game shows
-  one (team games, vehicles) with its legend under it, and left of it a bar of the items the player carries, the
-  one the item key uses lit, each with the key bound to its use command. The chips of jetpack, cloak and e-web
+  one (team games, vehicles) with its legend under it, and left of it a bar of the items the player carries (as
+  their pictures; the dispensers are left out), the one the item key uses lit, each with the key bound to its use
+  command. The chips of jetpack, cloak and e-web
   stand above that. The selection rows of weapons, items and powers come up at the bottom right too
   (`hud/cg_select3d.c`); while one is there the corner slides up to make room and comes down after.
 - The selection of a weapon, of an inventory item and of a force power (`v_hud 1`, Vulkan renderer

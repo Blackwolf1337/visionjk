@@ -2176,6 +2176,8 @@ float CG_HudPowerups( float y );
 float CG_HudAttacker( float y );
 void CG_HudPickup( void );
 float CG_HudPerfLine( float y, qboolean clock );
+qboolean CG_HudPerfAny( void );
+void CG_HudPerfRow( float x, float midY, float w );
 const char *CG_HudAmmoWarning( void );
 extern int cg_hudSiegeTime;
 extern qboolean cg_hudSiegeMine;

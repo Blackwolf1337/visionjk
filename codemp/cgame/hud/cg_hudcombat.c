@@ -269,19 +269,9 @@ static void Combat_PingGraph( float x, float y, float h ) {
 	}
 }
 
-/*
-=================
-CG_HudPerfLine
-
-The frames, the ping with its course, the clock and the snapshot numbers that are switched on, as one glass line at the right edge
-from y. Returns the y under it. clock qfalse: the card of the match over it shows the clock already.
-=================
-*/
-float CG_HudPerfLine( float y, qboolean clock ) {
-	const float	h = 14.0f, gap = 8.0f;
-	char		parts[4][2][64];
-	int			count = 0, i;
-	float		w = 12.0f, x;
+// the parts of the line of frames and ping that are switched on: a number and its word; clock: the timer too
+static int Perf_Parts( char parts[4][2][64], qboolean clock ) {
+	int count = 0;
 
 	if ( cg_drawFPS.integer ) {
 		Com_sprintf( parts[count][0], sizeof( parts[0][0] ), "%i", CG_FpsValue() );
@@ -297,6 +287,45 @@ float CG_HudPerfLine( float y, qboolean clock ) {
 		Com_sprintf( parts[count][0], sizeof( parts[0][0] ), "%i", cg.latestSnapshotNum );
 		Q_strncpyz( parts[count++][1], "SNAP", sizeof( parts[0][1] ) );
 	}
+	return count;
+}
+
+// the parts from x on, their middle at midY; the course of the ping after the ping, or ending at graphRight (> 0)
+static float Perf_Draw( char parts[4][2][64], int count, float x, float midY, float h, float graphRight ) {
+	const float	gap = 8.0f, start = x;
+	int			i;
+
+	for ( i = 0; i < count; i++ ) {
+		x += Hud_TextMid( x, midY, HUD_SMALL, hudBright, 1.0f, HUD_LEFT, parts[i][0], 0.0f );
+		if ( parts[i][1][0] ) {
+			x += 3.0f + Hud_Caps( x + 3.0f, midY, hudDim, 1.0f, HUD_LEFT, parts[i][1] );
+		}
+		x += gap;
+		if ( cg_drawFPS.integer && i == 1 ) {
+			Combat_PingGraph( graphRight > 0.0f ? graphRight - PERF_GRAPH_W : x, midY - h * 0.5f, h );
+			if ( graphRight <= 0.0f ) {
+				x += PERF_GRAPH_W + gap;
+			}
+		}
+	}
+	return x - start;
+}
+
+/*
+=================
+CG_HudPerfLine
+
+The frames, the ping with its course, the clock and the snapshot numbers that are switched on, as one glass line at
+the right edge from y, where the card of the match is not there to take them (CG_HudPerfRow). Returns the y under it.
+=================
+*/
+float CG_HudPerfLine( float y, qboolean clock ) {
+	const float	h = 14.0f, gap = 8.0f;
+	char		parts[4][2][64];
+	const int	count = Perf_Parts( parts, clock );
+	float		w = 12.0f;
+	int			i;
+
 	if ( !count ) {
 		return y;
 	}
@@ -306,22 +335,25 @@ float CG_HudPerfLine( float y, qboolean clock ) {
 	for ( i = 0; i < count; i++ ) {
 		w += Hud_TextWidth( parts[i][0], HUD_SMALL ) + ( parts[i][1][0] ? Hud_TextWidth( parts[i][1], HUD_CAPS ) + 3.0f : 0.0f ) + ( i ? gap : 0.0f );
 	}
-	x = SCREEN_WIDTH - HUD_EDGE - w;
-	Hud_Glass( x, y, w, h, 3.5f, 1.0f, NULL, qtrue );
-	x += 6.0f;
-	for ( i = 0; i < count; i++ ) {
-		x += Hud_TextMid( x, y + h * 0.5f, HUD_SMALL, hudBright, 1.0f, HUD_LEFT, parts[i][0], 0.0f );
-		if ( parts[i][1][0] ) {
-			x += 3.0f + Hud_Caps( x + 3.0f, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, parts[i][1] );
-		}
-		x += gap;
-		// (after the ping, its course)
-		if ( cg_drawFPS.integer && i == 1 ) {
-			Combat_PingGraph( x, y + 3.0f, h - 6.0f );
-			x += PERF_GRAPH_W + gap;
-		}
-	}
+	Hud_Glass( SCREEN_WIDTH - HUD_EDGE - w, y, w, h, 3.5f, 1.0f, NULL, qtrue );
+	Perf_Draw( parts, count, SCREEN_WIDTH - HUD_EDGE - w + 6.0f, y + h * 0.5f, h - 6.0f, 0.0f );
 	return y + h + HUD_GAP;
+}
+
+// is there anything for the row of frames and ping in the card of the match (the clock is on the card already)
+qboolean CG_HudPerfAny( void ) {
+	return (qboolean)( cg_drawFPS.integer || cg_drawSnapshot.integer );
+}
+
+// that row in the card, from x for w units, its middle at midY: the numbers from the left, the course of the ping
+// at the right end
+void CG_HudPerfRow( float x, float midY, float w ) {
+	char		parts[4][2][64];
+	const int	count = Perf_Parts( parts, qfalse );
+
+	if ( count ) {
+		Perf_Draw( parts, count, x, midY, 8.0f, x + w );
+	}
 }
 
 // the warning of the ammo as a chip, NULL when there is nothing to warn of
