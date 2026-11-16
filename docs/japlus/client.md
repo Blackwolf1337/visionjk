@@ -310,6 +310,9 @@ calls them `delay`, `waitf`, `ifCvar`, `strSub` ..., so a script of TaystJK need
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
 
+The emoji picker (2026-11-16): with `tay_chatEmoji 1` the line to type in has a smiling face at its end. A click
+opens a grid of every emoji beside the box (the wheel turns its rows, the code of the one under the pointer stands
+under it); a click on one puts its code at the cursor. A click on the face or Escape closes it.
 The size of the box is set by hand while it is open (its three rows left Setup on 2026-11-16, the cvars remain):
 its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
 wider, upwards it gets more rows), and Ctrl with the wheel makes the box and its letters larger or smaller in

@@ -6,6 +6,7 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Click to insert, wheel to scroll': ('Clic pour insérer, molette pour défiler', 'Clic para insertar, rueda para desplazar'),
     'Write a message': ('Écrire un message', 'Escribir un mensaje'),
     'Limit reached after %s': ('Limite atteinte après %s', 'Límite alcanzado tras %s'),
     'Enemy': ('Ennemi', 'Enemigo'),

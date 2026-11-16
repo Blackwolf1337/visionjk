@@ -98,6 +98,8 @@ typedef struct chatRow_s {
 } chatRow_t;
 
 #define CHAT_SUGGEST		8			// emoji in the list of the word being typed
+#define CHAT_PICK_COLS		8			// the emoji picker: a grid of so many columns
+#define CHAT_PICK_ROWS		6			//	and rows at once, the wheel turns the rest in
 #define CHAT_EMOJI_WORD		40
 
 static struct {
@@ -143,6 +145,13 @@ static struct {
 	int			suggestFrom;				// the byte where the word begins
 	char		suggestWord[CHAT_EMOJI_WORD];	// the word the list was made for
 	float		suggestX, suggestY, suggestW;	// where the list is, from the last draw
+
+	// the emoji picker: a button at the end of the line to type in opens a grid of every emoji beside the box
+	qboolean	picker;
+	int			pickerFirst;				// the row of the grid at the top
+	int			pickerHover;				// the emoji under the pointer, -1 none
+	float		pickerX, pickerY, pickerCell;	// where the grid is, from the last draw
+	float		pickBtnX, pickBtnY, pickBtnW;	// where the button is
 
 	// where things are on the screen, from the last draw, for the mouse
 	chatRow_t	rows[CHAT_MAX_OPEN_ROWS];
@@ -969,6 +978,19 @@ static void Chat_Insert( int ch ) {
 	chat.input[chat.cursor++] = (char)ch;
 }
 
+// an emoji of the picker at the cursor, with a blank before it where the text goes on without one, and one after it
+static void Chat_InsertCode( const char *code ) {
+	const char *c;
+
+	if ( chat.cursor > 0 && chat.input[chat.cursor - 1] != ' ' ) {
+		Chat_Insert( ' ' );
+	}
+	for ( c = code; *c; c++ ) {
+		Chat_Insert( (unsigned char)*c );
+	}
+	Chat_Insert( ' ' );
+}
+
 static int Chat_PrevChar( int pos ) {
 	if ( pos <= 0 ) {
 		return 0;
@@ -986,6 +1008,7 @@ void CG_ChatClose( void ) {
 		return;
 	}
 	chat.open = qfalse;
+	chat.picker = qfalse;
 	chat.selecting = chat.selected = chat.resizing = qfalse;
 	chat.url[0] = '\0';
 	chat.scroll = 0;
@@ -1223,6 +1246,35 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		}
 		chat.url[0] = '\0';
 		return qtrue;
+	}
+
+	// the button of the emoji picker, and the picker while it is open
+	if ( key == A_MOUSE1 && chat.pickBtnW > 0.0f && cgs.cursorX >= chat.pickBtnX && cgs.cursorX < chat.pickBtnX + chat.pickBtnW
+		&& cgs.cursorY >= chat.pickBtnY && cgs.cursorY < chat.pickBtnY + chat.rowH ) {
+		chat.picker = (qboolean)!chat.picker;
+		chat.pickerFirst = 0;
+		return qtrue;
+	}
+	if ( chat.picker ) {
+		const float	w = CHAT_PICK_COLS * chat.pickerCell, h = CHAT_PICK_ROWS * chat.pickerCell;
+		const int	rows = ( chatNumEmoji + CHAT_PICK_COLS - 1 ) / CHAT_PICK_COLS;
+		const qboolean over = (qboolean)( cgs.cursorX >= chat.pickerX && cgs.cursorX < chat.pickerX + w
+			&& cgs.cursorY >= chat.pickerY && cgs.cursorY < chat.pickerY + h );
+
+		if ( over && ( key == A_MWHEELUP || key == A_MWHEELDOWN ) ) {
+			chat.pickerFirst = Com_Clampi( 0, Q_max( 0, rows - CHAT_PICK_ROWS ), chat.pickerFirst + ( key == A_MWHEELDOWN ? 1 : -1 ) );
+			return qtrue;
+		}
+		if ( over && key == A_MOUSE1 ) {
+			if ( chat.pickerHover >= 0 && chat.pickerHover < chatNumEmoji ) {
+				Chat_InsertCode( chatEmoji[chat.pickerHover].code );
+			}
+			return qtrue;
+		}
+		if ( key == A_ESCAPE ) {
+			chat.picker = qfalse;
+			return qtrue;
+		}
 	}
 
 	// the list of emoji for the word being typed takes the keys that choose from it
@@ -1635,14 +1687,41 @@ static void Chat_DrawOpen( float x, float bottom ) {
 			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( chat.mode == 1 ? "Team" : "Say" ) );
 		}
 		promptW = Chat_TextWidth( prompt );
+		// the button of the emoji picker at the end of the line (a smiling face, or its code where the picture is
+		// missing); the text keeps clear of it
+		chat.pickBtnW = 0.0f;
+		if ( tay_chatEmoji.integer && chat.mode != 3 ) {
+			const int	face = Chat_FindEmoji( "slightsmile" );
+			const float	btn = Chat_EmojiWidth();
+			const qboolean over = (qboolean)( cgs.cursorX >= boxX + boxW - CHAT_PAD - btn - 2.0f && cgs.cursorX < boxX + boxW - CHAT_PAD + 2.0f
+				&& cgs.cursorY >= inputY && cgs.cursorY < inputY + chat.rowH );
+
+			chat.pickBtnW = btn + 4.0f;
+			chat.pickBtnX = boxX + boxW - CHAT_PAD - btn - 2.0f;
+			chat.pickBtnY = inputY;
+			if ( chat.skin && ( over || chat.picker ) ) {
+				const vec4_t lit = { 0.43f, 0.83f, 1.0f, chat.picker ? 0.3f : 0.18f };
+
+				Skin_Panel( chat.pickBtnX, chat.pickBtnY, chat.pickBtnW, chat.rowH, 3.0f, lit, NULL );
+			}
+			if ( face >= 0 && Chat_EmojiShader( face ) ) {
+				const vec4_t tone = { 1.0f, 1.0f, 1.0f, ( over || chat.picker ) ? 1.0f : 0.6f };
+
+				trap->R_SetColor( tone );
+				CG_DrawPic( chat.pickBtnX + 2.0f, inputY + ( chat.rowH - btn ) * 0.5f, btn, btn, Chat_EmojiShader( face ) );
+				trap->R_SetColor( NULL );
+			} else {
+				CG_Text_Paint( chat.pickBtnX + 2.0f, inputY + down, Chat_Scale(), (float *)chatDim, ":)", 0, 0, 0, Chat_Font() );
+			}
+		}
 		CG_Text_Paint( x, inputY + down, Chat_Scale(), (float *)( chat.skin ? chatDim : dimColor ), prompt, 0, 0, 0, Chat_Font() );
 
 		// a text that is wider than the line is shown from where the cursor still fits (the codes of emoji as text)
-		while ( start < chat.cursor && Chat_TextWidthOf( chat.input, start, chat.cursor ) > chat.width - promptW - 6.0f ) {
+		while ( start < chat.cursor && Chat_TextWidthOf( chat.input, start, chat.cursor ) > chat.width - promptW - chat.pickBtnW - 6.0f ) {
 			start += Chat_CharLen( chat.input + start );
 		}
 		Q_strncpyz( shown, chat.input + start, sizeof( shown ) );
-		for ( i = strlen( shown ); i > 0 && Chat_TextWidth( shown ) > chat.width - promptW; i = strlen( shown ) ) {
+		for ( i = strlen( shown ); i > 0 && Chat_TextWidth( shown ) > chat.width - promptW - chat.pickBtnW; i = strlen( shown ) ) {
 			shown[Chat_PrevChar( start + i ) - start] = '\0';
 		}
 		// a ^ with a digit colours what follows while it is typed, as the line will look when it is sent
@@ -1686,6 +1765,60 @@ static void Chat_DrawOpen( float x, float bottom ) {
 				}
 				CG_Text_Paint( chat.suggestX + 2.0f * CHAT_PAD + emojiW, rowY + down, Chat_Scale(),
 					(float *)( n == chat.suggestSel ? colorWhite : ( chat.skin ? chatDim : dimColor ) ), chatEmoji[e].code, 0, 0, 0, Chat_Font() );
+			}
+		}
+	}
+	// the emoji picker: beside the box, its foot at the line to type in
+	chat.pickerHover = -1;
+	if ( chat.picker && chat.pickBtnW > 0.0f ) {
+		Chat_EmojiReady();
+		chat.pickerCell = Chat_EmojiWidth() * 1.5f;
+		{
+			const float	cell = chat.pickerCell, w = CHAT_PICK_COLS * cell, h = CHAT_PICK_ROWS * cell;
+			const float	px = boxX + boxW + 6.0f, foot = 14.0f * chat.size;
+			const int	rows = ( chatNumEmoji + CHAT_PICK_COLS - 1 ) / CHAT_PICK_COLS;
+			int			n;
+
+			chat.pickerX = px + CHAT_PAD;
+			chat.pickerY = boxY + boxH - h - foot - CHAT_PAD;
+			chat.pickerFirst = Com_Clampi( 0, Q_max( 0, rows - CHAT_PICK_ROWS ), chat.pickerFirst );
+			if ( chat.skin ) {
+				const vec4_t shade = { 0.0f, 0.0f, 0.0f, 0.4f };
+
+				Skin_Soft( px, chat.pickerY - CHAT_PAD + 3.0f, w + 2.0f * CHAT_PAD, h + foot + 2.0f * CHAT_PAD, 10.0f, shade );
+				if ( CG_DrawBackdrop( px, chat.pickerY - CHAT_PAD, w + 2.0f * CHAT_PAD, h + foot + 2.0f * CHAT_PAD, 6.0f ) ) {
+					const vec4_t frosted = { chatGlass[0], chatGlass[1], chatGlass[2], 0.45f };
+
+					Skin_Panel( px, chat.pickerY - CHAT_PAD, w + 2.0f * CHAT_PAD, h + foot + 2.0f * CHAT_PAD, 6.0f, frosted, chatRim );
+				} else {
+					Skin_Panel( px, chat.pickerY - CHAT_PAD, w + 2.0f * CHAT_PAD, h + foot + 2.0f * CHAT_PAD, 6.0f, chatGlass, chatRim );
+				}
+			} else {
+				CG_FillRect( px, chat.pickerY - CHAT_PAD, w + 2.0f * CHAT_PAD, h + foot + 2.0f * CHAT_PAD, backColor );
+				CG_DrawRect( px, chat.pickerY - CHAT_PAD, w + 2.0f * CHAT_PAD, h + foot + 2.0f * CHAT_PAD, 1.0f, frameColor );
+			}
+			for ( n = chat.pickerFirst * CHAT_PICK_COLS; n < chatNumEmoji && n < ( chat.pickerFirst + CHAT_PICK_ROWS ) * CHAT_PICK_COLS; n++ ) {
+				const int	at = n - chat.pickerFirst * CHAT_PICK_COLS;
+				const float	cx = chat.pickerX + ( at % CHAT_PICK_COLS ) * cell, cy = chat.pickerY + ( at / CHAT_PICK_COLS ) * cell;
+				const float	pic = cell * 0.72f;
+
+				if ( cgs.cursorX >= cx && cgs.cursorX < cx + cell && cgs.cursorY >= cy && cgs.cursorY < cy + cell ) {
+					const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.25f };
+
+					chat.pickerHover = n;
+					Skin_Panel( cx, cy, cell, cell, 3.0f, lit, NULL );
+				}
+				if ( Chat_EmojiShader( n ) ) {
+					trap->R_SetColor( NULL );
+					CG_DrawPic( cx + ( cell - pic ) * 0.5f, cy + ( cell - pic ) * 0.5f, pic, pic, Chat_EmojiShader( n ) );
+				}
+			}
+			// under the grid: the code of the one under the pointer, or how to use it
+			CG_Text_Paint( chat.pickerX, chat.pickerY + h + 1.0f, Chat_Scale() * 0.9f, (float *)( chat.pickerHover >= 0 ? colorWhite : chatDim ),
+				chat.pickerHover >= 0 ? chatEmoji[chat.pickerHover].code : CG_VisionText( "Click to insert, wheel to scroll" ), 0, 0, 0, Chat_Font() );
+			// where in the list the grid is
+			if ( rows > CHAT_PICK_ROWS && chat.skin ) {
+				Skin_ScrollBar( chat.pickerX + w + 1.0f, chat.pickerY, 2.0f, h, (float)chat.pickerFirst / rows, (float)CHAT_PICK_ROWS / rows, qfalse, chatAccent );
 			}
 		}
 	}

@@ -1826,6 +1826,9 @@ LANG_ENGLISH        "Player"
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           CLICK_TO_INSERT_WHEEL_TO_SCROLL
+LANG_ENGLISH        "Click to insert, wheel to scroll"
+
 REFERENCE           WRITE_A_MESSAGE
 LANG_ENGLISH        "Write a message"
 
