@@ -157,8 +157,12 @@ Both are in Setup, HUD, under Menus and HUD.
   of the selected force power (the weapon in hand when the player knows no force) over its full height; beside it
   health and shield, a line, the force, and the ammo of the weapon or the stance of the saber (three steps: one lit
   for fast, two for medium, three for strong, all three for the other stances); at its foot the name of the weapon,
-  for the saber with its stance. The bottom right stays free (the chips of jetpack, cloak and e-web stand in that
-  corner). The health bar turns amber below half and red below a quarter.
+  for the saber with its stance. The health bar turns amber below half and red below a quarter.
+- The corner at the bottom right (2026-11-16, `hud/cg_hudpanels.c` CG_HudCorner): the radar where the game shows
+  one (team games, vehicles) with its legend under it, and left of it a bar of the items the player carries, the
+  one the item key uses lit, each with the key bound to its use command. The chips of jetpack, cloak and e-web
+  stand above that. The selection rows of weapons, items and powers come up at the bottom right too
+  (`hud/cg_select3d.c`); while one is there the corner slides up to make room and comes down after.
 - The selection of a weapon, of an inventory item and of a force power (`v_hud 1`, Vulkan renderer
   rd-vulkan-vision) is a carousel of frosted glass cards at the bottom of the screen: the cards stand on a ring,
   the selected one in front and the biggest, and the ring turns the shortest way to a new selection

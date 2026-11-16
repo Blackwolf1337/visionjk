@@ -188,6 +188,140 @@ void CG_HudPanelsDraw( void ) {
 }
 
 /*
+===============================================================================
+
+The corner at the bottom right
+
+The radar in the corner (where the game shows one: team games and vehicles) with its legend, the items the player
+carries left of it, each with its key; when a selection row of weapons, items or powers comes up there
+(hud/cg_select3d.c) both slide up to make room for it, and come down again when it is gone.
+
+===============================================================================
+*/
+
+#define CORNER_LIFT			82.0f		// how far the corner goes up for a selection row
+#define CORNER_LIFT_MSEC	70.0f		// how fast (time constant)
+#define CORNER_SLOT			20.0f		// a slot of an item
+#define CORNER_KEY_H		10.0f		// the row of keys under the slots
+#define CORNER_RADAR		120.0f		// the radar of the game (cg_draw.c RADAR_RADIUS * 2)
+#define CORNER_LEGEND_H		13.0f
+
+static float	cornerLift;
+
+// the key the player uses an item with
+static const char *Corner_ItemCommand( int tag ) {
+	switch ( tag ) {
+	case HI_SEEKER:			return "use_seeker";
+	case HI_SHIELD:			return "use_field";
+	case HI_MEDPAC:			return "use_bacta";
+	case HI_MEDPAC_BIG:		return "use_bactabig";
+	case HI_BINOCULARS:		return "use_electrobinoculars";
+	case HI_SENTRY_GUN:		return "use_sentry";
+	case HI_JETPACK:		return "use_jetpack";
+	case HI_HEALTHDISP:		return "use_healthdisp";
+	case HI_AMMODISP:		return "use_ammodisp";
+	case HI_EWEB:			return "use_eweb";
+	case HI_CLOAK:			return "use_cloak";
+	default:				return NULL;
+	}
+}
+
+// does the game show the radar now (CG_DrawRadar draws nothing otherwise)
+static qboolean Corner_Radar( void ) {
+	const playerState_t *ps = &cg.predictedPlayerState;
+
+	return (qboolean)( cg_drawRadar.integer && ( cgs.gametype >= GT_TEAM || ps->m_iVehicleNum ) && cg.snap && cg.snap->ps.stats[STAT_HEALTH] > 0
+		&& !( ps->pm_flags & PMF_FOLLOW ) && ps->persistant[PERS_TEAM] != TEAM_SPECTATOR );
+}
+
+// the items the player carries, in the order of the game; returns how many
+static int Corner_Items( int *tags ) {
+	int n = 0, i;
+
+	if ( !cg.snap || cg.snap->ps.stats[STAT_HEALTH] <= 0 || ( cg.snap->ps.pm_flags & PMF_FOLLOW ) ) {
+		return 0;
+	}
+	for ( i = 0; i < HI_NUM_HOLDABLE; i++ ) {
+		if ( ( cg.snap->ps.stats[STAT_HOLDABLE_ITEMS] & ( 1 << i ) ) && BG_GetItemIndexByTag( i, IT_HOLDABLE ) > 0 ) {
+			tags[n++] = i;
+		}
+	}
+	return n;
+}
+
+// the top of what stands in the corner now (the chips of jetpack, cloak and e-web go above it), its bottom where
+// there is nothing
+static float Corner_Top( void ) {
+	int			tags[HI_NUM_HOLDABLE];
+	const float	bottom = SCREEN_HEIGHT - HUD_EDGE - cornerLift;
+	float		top = SCREEN_HEIGHT - HUD_EDGE;
+
+	if ( Corner_Radar() ) {
+		top = bottom - CORNER_LEGEND_H - CORNER_RADAR;
+	} else if ( Corner_Items( tags ) ) {
+		top = bottom - CORNER_SLOT - CORNER_KEY_H - 8.0f;
+	}
+	return top;
+}
+
+/*
+=================
+CG_HudCorner
+
+From the upper right of the new HUD (cg_draw.c), after the selection rows were drawn this frame.
+=================
+*/
+void CG_HudCorner( void ) {
+	const float	target = CG_Select3DShown() > 0.0f ? CORNER_LIFT : 0.0f;
+	int			tags[HI_NUM_HOLDABLE], n, i;
+	float		bottom, right = SCREEN_WIDTH - HUD_EDGE;
+
+	cornerLift += ( target - cornerLift ) * ( 1.0f - expf( -(float)cg.frametime / CORNER_LIFT_MSEC ) );
+	if ( fabsf( target - cornerLift ) < 0.2f ) {
+		cornerLift = target;
+	}
+	bottom = SCREEN_HEIGHT - HUD_EDGE - cornerLift;
+	CG_Place2D( PLACE_RIGHT );
+	if ( Corner_Radar() ) {
+		CG_DrawRadarAt( right - CORNER_RADAR, bottom - CORNER_LEGEND_H - CORNER_RADAR );
+		CG_HudRadarLegend( bottom - CORNER_LEGEND_H );
+		right -= CORNER_RADAR + 6.0f;
+	}
+	// the items: a slot each, the one the item key uses lit, its key under it
+	n = Corner_Items( tags );
+	if ( n ) {
+		const int	selected = cg.snap->ps.stats[STAT_HOLDABLE_ITEM] > 0 ? bg_itemlist[cg.snap->ps.stats[STAT_HOLDABLE_ITEM]].giTag : -1;
+		const float	gap = 3.0f, w = n * CORNER_SLOT + ( n - 1 ) * gap + 8.0f, h = CORNER_SLOT + CORNER_KEY_H + 8.0f;
+		const float	x = right - w, y = bottom - h;
+
+		Hud_Glass( x, y, w, h, 6.0f, 1.0f, NULL, qfalse );
+		for ( i = 0; i < n; i++ ) {
+			const int		index = BG_GetItemIndexByTag( tags[i], IT_HOLDABLE );
+			const gitem_t	*item = &bg_itemlist[index];
+			const float		sx = x + 4.0f + i * ( CORNER_SLOT + gap ), sy = y + 4.0f;
+			const char		*cmd = Corner_ItemCommand( tags[i] );
+			const char		*key = cmd ? Hud_KeyFor( cmd, NULL ) : NULL;
+			const vec4_t	inside = { 0.0f, 0.0f, 0.0f, 0.3f }, lit = { 0.43f, 0.83f, 1.0f, 0.14f };
+			vec4_t			rim;
+
+			Hud_Color( rim, hudAccent, tags[i] == selected ? 0.95f : 0.25f );
+			Skin_Panel( sx, sy, CORNER_SLOT, CORNER_SLOT, 3.0f, tags[i] == selected ? lit : inside, rim );
+			trap->R_SetColor( NULL );
+			if ( !CG_Select3DModelFor( item ) || !CG_Select3DIcon( sx + 1.0f, sy + 1.0f, CORNER_SLOT - 2.0f, CORNER_SLOT - 2.0f, item, 0, NULL, qtrue, 1.0f ) ) {
+				CG_RegisterItemVisuals( index );
+				if ( cg_items[index].icon ) {
+					CG_DrawPic( sx + 3.0f, sy + 3.0f, CORNER_SLOT - 6.0f, CORNER_SLOT - 6.0f, cg_items[index].icon );
+				}
+			}
+			if ( key ) {
+				Hud_Key( sx + CORNER_SLOT * 0.5f, sy + CORNER_SLOT + CORNER_KEY_H * 0.5f + 1.0f, key, 1.0f, HUD_CENTER );
+			}
+		}
+	}
+	CG_Place2D( PLACE_CENTER );
+}
+
+/*
 =================
 CG_HudRightStrip
 
@@ -208,8 +342,9 @@ void CG_HudRightStrip( void ) {
 		x = panel.x + panel.w;
 		y = panel.y - HUD_GAP - STRIP_H;
 	} else {
+		// (above what stands in the corner: the radar and the items)
 		x = SCREEN_WIDTH - HUD_EDGE;
-		y = SCREEN_HEIGHT - HUD_EDGE - STRIP_H;
+		y = Corner_Top() - HUD_GAP - STRIP_H;
 	}
 	if ( CG_HudAmmoWarning() ) {
 		x -= Hud_Chip( x, y, STRIP_H, 0, CG_HudAmmoWarning(), cg.lowAmmoWarning == 2 ? hudRed : hudWarm, 1.0f, HUD_RIGHT, -1.0f ) + HUD_GAP;

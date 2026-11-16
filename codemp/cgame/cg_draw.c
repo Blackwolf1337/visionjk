@@ -3461,6 +3461,19 @@ static int impactSoundDebounceTime = 0;
 #define	RADAR_ASTEROID_RANGE				10000.0f
 #define	RADAR_MIN_ASTEROID_SURF_WARN_DIST	1200.0f
 
+static int radarShiftX;		// VisionJK: CG_DrawRadarAt draws it this far right of RADAR_X
+float CG_DrawRadar( float y );
+
+// the radar with its left edge at x (in the 2D that is set), its top at y
+float CG_DrawRadarAt( float x, float y ) {
+	float bottom;
+
+	radarShiftX = (int)( x - RADAR_X );
+	bottom = CG_DrawRadar( y );
+	radarShiftX = 0;
+	return bottom;
+}
+
 float CG_DrawRadar ( float y )
 {
 	vec4_t			color;
@@ -3472,7 +3485,7 @@ float CG_DrawRadar ( float y )
 	int				i;
 	float			arrowBaseScale;
 	float			zScale;
-	int				xOffset = 0;
+	int				xOffset = radarShiftX;
 
 	if (!cg.snap)
 	{
@@ -4337,14 +4350,8 @@ static void CG_DrawUpperRight( void ) {
 		if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
 			y = CG_HudTeamList( y );
 		}
-		if ( ( cgs.gametype >= GT_TEAM || cg.predictedPlayerState.m_iVehicleNum ) && cg_drawRadar.integer ) {
-			const float before = y;
-
-			y = CG_DrawRadar( y );
-			if ( y != before ) {
-				y = CG_HudRadarLegend( y );
-			}
-		}
+		// (the radar is in the corner at the bottom right, with the items: CG_HudCorner)
+		CG_HudCorner();
 		// (the other duelist is in the header of the duel, CG_HudTopDraw, the jedi master on the card)
 		if ( CG_SpecHudShown() ) {
 			y = CG_SpecHudDraw( y );

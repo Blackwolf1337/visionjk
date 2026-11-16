@@ -32,9 +32,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define SELECT_SMALL		28.0f		// a card beside the front one, in units of the 640 x 480 screen
 #define SELECT_BIG			50.0f		// the card in front
-#define SELECT_MIDDLE_Y		420.0f		// the middle of the row, at the bottom of the screen between the panels of the HUD
-										// (ui/vision/hud.menu, at the edges), the name and ammo under it
+#define SELECT_MIDDLE_Y		420.0f		// the middle of the row, at the bottom right of the screen (2026-11-16: the HUD is
+										// one block at the left, ui/vision/hud.menu), the name and ammo under it
 #define SELECT_RADIUS		6.0f
+#define SELECT_CENTER_X		( SCREEN_WIDTH - 10.0f - 110.0f - 25.0f )	// the middle of the ring (PLACE_RIGHT): its
+										// edge, half its width and half the front card from the right edge
 #define SELECT_RING			110.0f		// half the width of the ring, in units of the screen
 #define SELECT_STEP			27.0f		// degrees of the ring between two cards
 #define SELECT_REACH		3.4f		// cards shown at most this many places from the front
@@ -63,6 +65,8 @@ typedef struct {
 } selectModel_t;
 
 static selectModel_t	selectModels[64];
+static float			selectShown;		// how far a row was shown in the frame selectShownTime (CG_Select3DShown)
+static int				selectShownTime;
 static int				selectNumModels;
 
 static const selectModel_t *Select3D_Model( const gitem_t *item ) {
@@ -519,6 +523,9 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 		return;
 	}
 	rise = ( 1.0f - appear ) * 8.0f;
+	selectShown = Q_max( selectShownTime == cg.time ? selectShown : 0.0f, alpha );
+	selectShownTime = cg.time;
+	CG_Place2D( PLACE_RIGHT );
 	// the turn of the model in front goes on while the row is there, between -180 and 180 degrees: a card that leaves
 	// the front turns back to the side by the shorter way
 	turn[row] = fmodf( turn[row] + 360.0f * (float)cg.frametime / SELECT_TURN_MSEC + 180.0f, 360.0f ) - 180.0f;
@@ -572,7 +579,7 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 		const float	depth = cosf( angle );		// 1 in front, less round the ring
 		const float	front = Com_Clamp( 0.0f, 1.0f, 1.0f - fabsf( o ) );
 		const float	size = ( SELECT_SMALL + ( SELECT_BIG - SELECT_SMALL ) * front ) * ( 0.8f + 0.2f * depth );
-		const float	x = 320.0f + SELECT_RING * sinf( angle ) - size * 0.5f;
+		const float	x = SELECT_CENTER_X + SELECT_RING * sinf( angle ) - size * 0.5f;
 		// (all on one line: the ring is seen from its side, nothing stands higher, their word 2026-11-14)
 		const float	y = SELECT_MIDDLE_Y - size * 0.5f + rise;
 		const float	fade = alpha * Com_Clamp( 0.0f, 1.0f, ( SELECT_REACH - fabsf( o ) ) * 1.2f ) * ( 0.55f + 0.45f * depth );
@@ -591,16 +598,25 @@ void CG_Select3D( int row, const select3dItem_t *items, int count, int selected,
 		const float	scale = 0.32f;
 		vec4_t		text = { 0.92f, 0.95f, 1.0f, alpha };
 		float		ty = SELECT_MIDDLE_Y + SELECT_BIG * 0.5f + 4.0f + rise;
+		// (under the front card, as far left as a long name needs to end before the edge)
+		const float	nx = Q_min( SELECT_CENTER_X - CG_Text_Width( name, scale, SKIN_FONT_SANS ) * 0.5f,
+			SCREEN_WIDTH - 10.0f - CG_Text_Width( name, scale, SKIN_FONT_SANS ) );
 
-		CG_Text_Paint( 320.0f - CG_Text_Width( name, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, name, 0, 0, 0, SKIN_FONT_SANS );
+		CG_Text_Paint( nx, ty, scale, text, name, 0, 0, 0, SKIN_FONT_SANS );
 		if ( items[selected].count >= 0 ) {
 			const char *ammo = va( "%i", items[selected].count );
 
 			VectorCopy( items[selected].tint ? items[selected].tint : selectAccent, text );
 			text[3] = alpha;
 			ty += 10.0f;
-			CG_Text_Paint( 320.0f - CG_Text_Width( ammo, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, ammo, 0, 0, 0, SKIN_FONT_SANS );
+			CG_Text_Paint( SELECT_CENTER_X - CG_Text_Width( ammo, scale, SKIN_FONT_SANS ) * 0.5f, ty, scale, text, ammo, 0, 0, 0, SKIN_FONT_SANS );
 		}
 	}
 	trap->R_SetColor( NULL );
+	CG_Place2D( PLACE_CENTER );
+}
+
+// how far a selection row is shown right now, 0 to 1: the corner of the HUD makes room for it (hud/cg_hudpanels.c)
+float CG_Select3DShown( void ) {
+	return ( selectShownTime == cg.time || selectShownTime == cg.time - cg.frametime ) ? selectShown : 0.0f;
 }

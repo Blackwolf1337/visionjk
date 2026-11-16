@@ -2144,6 +2144,9 @@ typedef struct select3dItem_s {
 void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since );
 qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still, float alpha );
 qboolean CG_Select3DModelFor( const gitem_t *item );
+float CG_Select3DShown( void );
+void CG_HudCorner( void );
+float CG_DrawRadarAt( float x, float y );
 qboolean CG_Select3DHead( float x, float y, float w, float h, int client );
 void CG_Select3DPreload( void );
 void CG_Select3DShutdown( void );
