@@ -2115,8 +2115,16 @@ void CG_VoiceSendLook( const char *text );
 // hud/cg_movehud.c
 void CG_MoveHudDraw( void );
 
-// cg_players.c: JA+, the player is in the other alternate dimension (shots pass through him)
-qboolean CG_JPOtherDimension( int clientNum );
+// cg_jpplayer.c: what JA+ does to a player cg_players.c draws
+qboolean CG_JPOtherDimension( int clientNum );	// in the other alternate dimension (shots pass through him)
+qboolean CG_JPFadePlayer( centity_t *cent, int minAlpha );
+void CG_JPHolsterTrackAnim( const centity_t *cent, const clientInfo_t *ci );
+qboolean CG_JPStaffOffHand( const centity_t *cent, const clientInfo_t *ci );
+qboolean CG_JPSaberOffHand( const centity_t *cent );
+void CG_JPHolster( centity_t *cent, clientInfo_t *ci );
+qboolean CG_JPForceFxVisible( const centity_t *cent );
+void CG_JPForceEffects( centity_t *cent, clientInfo_t *ci );
+void CG_DuelLook( refEntity_t *ent );
 
 // hud/cg_lead.c, hud/cg_spechud.c
 void CG_LeadDraw( void );
