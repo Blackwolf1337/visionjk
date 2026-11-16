@@ -42,6 +42,13 @@ cvar_t	*v_ssr;
 cvar_t	*v_softParticles;
 cvar_t	*v_litParticles;
 
+// after a pass of its own in the middle of a view: the sets of the frame, the state and the viewport of the scene again
+static void VK_ResumeScene( void ) {
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
@@ -97,9 +104,7 @@ void VK_SoftDepth( void ) {
 
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 #endif
 }
 
@@ -159,9 +164,7 @@ void VK_EndGlow( void ) {
 	VK_AddTarget( source, r_DynamicGlowSoft->integer ? VKA_ADD_SOFT : VKA_ADD );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 }
 
 /*
@@ -227,9 +230,7 @@ void VK_BlurFrame( float amount, float focus ) {
 	}
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 }
 
 /*
@@ -274,9 +275,7 @@ void VK_Bloom( void ) {
 	VK_AddTarget( source, VKA_ADD );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 }
 
 /*
@@ -298,9 +297,7 @@ void VK_Smaa( void ) {
 	VK_SmaaPass( 0.1f / (float)( 1 << tr.overbrightBits ) );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 #endif
 }
 
@@ -329,9 +326,7 @@ void VK_Tonemap( void ) {
 	VK_TonemapPass( parm );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 #endif
 }
 
@@ -376,9 +371,7 @@ void VK_SsrPrep( void ) {
 
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 #endif
 }
 
@@ -540,9 +533,7 @@ void VK_SaberBlades( qboolean portal, qboolean glow ) {
 
 	VK_BeginTarget( glow ? &vk.glow : &vk.color, &vk.depth, 2, qtrue );
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 	VK_InvalidateTransform();
 #endif
 }
@@ -658,9 +649,7 @@ void VK_Scope( const scopeEffect_t *fx, qboolean boxes ) {
 	VK_ScopePass( source, prep, &vk.glow, parm );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 }
 
 /*
@@ -797,9 +786,7 @@ void VK_ScreenFx( const screenEffect_t *fx ) {
 	VK_ScreenFxPass( prep, &vk.soft[1], &vk.smoke[vk.smokeIndex], parm[0] );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 }
 
 /*
@@ -1140,9 +1127,7 @@ void VK_DrawWet( void ) {
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 
 	// the shaders that draw geometry have other sets and other state
-	VK_BindFrameSets();
-	vk.stateValid = qfalse;
-	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	VK_ResumeScene();
 	VK_InvalidateTransform();
 #endif
 }

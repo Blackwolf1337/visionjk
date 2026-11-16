@@ -449,6 +449,16 @@ void		VK_TransformChanged( void );
 uint32_t	VK_CurrentTransform( void );
 void		VK_SetRefraction( qboolean on, int x, int y, int size );
 void		VK_SetProjection( const float *projection );
+// (and for the draws of vk_paint.cpp)
+uint32_t	VK_BundleTexture( const textureBundle_t *bundle );
+void		VK_BundleTexCoords( const textureBundle_t *bundle, float *mat, float *turb );
+qboolean	VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vkDraw_t *draw );
+void		VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones );
+qboolean	VK_GridDraw( vkDraw_t *draw );
+vkProgram_t	VK_TessPass( vkDraw_t *draw, const vkDraw_t *from, vkProgram_t program );
+
+// vk_paint.cpp
+void		VK_PaintMarks( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones, const vkDraw_t *tessFrom );
 
 // vk_backend.cpp
 qboolean	VK_InitShared( void );
