@@ -521,6 +521,18 @@
 
 		itemDef
 		{
+			name					vision_table
+			rect					36 254 1128 554
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.031 0.055 0.11 0.78
+			bordercolor				0.11 0.18 0.29 1
+			radius					10
+			decoration
+		}
+
+		itemDef
+		{
 			name					server
 			group					grpTabs
 			text					@MENUS_SERVER_NAME
@@ -714,18 +726,6 @@
 			}
 			font					7
 			caps					1
-		}
-
-		itemDef
-		{
-			name					vision_table
-			rect					36 254 1128 554
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.031 0.055 0.11 0.78
-			bordercolor				0.11 0.18 0.29 1
-			radius					10
-			decoration
 		}
 
 		itemDef

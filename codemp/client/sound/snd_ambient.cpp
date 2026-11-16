@@ -288,7 +288,7 @@ static void AS_GetTimeBetweenWaves( ambientSet_t &set )
 	if ( startTime > endTime )
 	{
 		#ifndef FINAL_BUILD
-		Com_Printf(S_COLOR_YELLOW"WARNING: Corrected swapped start / end times in a \"timeBetweenWaves\" keyword\n");
+		Com_PrintWarning( "Corrected swapped start / end times in a \"timeBetweenWaves\" keyword\n");
 		#endif
 
 		int swap = startTime;
@@ -330,7 +330,7 @@ static void AS_GetSubWaves( ambientSet_t &set )
 		if ( set.numSubWaves >= MAX_WAVES_PER_GROUP )
 		{
 			#ifndef FINAL_BUILD
-			Com_Printf(S_COLOR_YELLOW"WARNING: Too many subwaves on set \"%s\"\n", set.name );
+			Com_PrintWarning( "Too many subwaves on set \"%s\"\n", set.name );
 			#endif
 		}
 		else
@@ -344,7 +344,7 @@ static void AS_GetSubWaves( ambientSet_t &set )
 			if ( ( set.subWaves[set.numSubWaves++] = S_RegisterSound( waveName ) ) <= 0 )
 			{
 				#ifndef FINAL_BUILD
-				Com_Printf(S_COLOR_YELLOW"WARNING: Unable to load ambient sound \"%s\"\n", waveName);
+				Com_PrintWarning( "Unable to load ambient sound \"%s\"\n", waveName);
 				#endif
 			}
 		}
@@ -381,7 +381,7 @@ static void AS_GetLoopedWave( ambientSet_t &set )
 	if ( ( set.loopedWave = S_RegisterSound( waveName ) ) <= 0 )
 	{
 		#ifndef FINAL_BUILD
-		Com_Printf(S_COLOR_YELLOW"WARNING: Unable to load ambient sound \"%s\"\n", waveName);
+		Com_PrintWarning( "Unable to load ambient sound \"%s\"\n", waveName);
 		#endif
 	}
 
@@ -405,7 +405,7 @@ static void AS_GetVolumeRange( ambientSet_t &set )
 	if ( min > max )
 	{
 		#ifndef FINAL_BUILD
-		Com_Printf(S_COLOR_YELLOW"WARNING: Corrected swapped min / max range in a \"volRange\" keyword\n");
+		Com_PrintWarning( "Corrected swapped min / max range in a \"volRange\" keyword\n");
 		#endif
 
 		int swap =	min;
@@ -483,7 +483,7 @@ static void AS_GetGeneralSet( ambientSet_t &set )
 
 				//This wasn't a set name, so it's an error
 				#ifndef FINAL_BUILD
-				Com_Printf( S_COLOR_YELLOW"WARNING: Unknown ambient set keyword \"%s\"\n", tempBuffer );
+				Com_PrintWarning( "Unknown ambient set keyword \"%s\"\n", tempBuffer );
 				#endif
 			}
 
@@ -546,7 +546,7 @@ static void AS_GetLocalSet( ambientSet_t &set )
 
 				//This wasn't a set name, so it's an error
 				#ifndef FINAL_BUILD
-				Com_Printf( S_COLOR_YELLOW"WARNING: Unknown ambient set keyword \"%s\"\n", tempBuffer );
+				Com_PrintWarning( "Unknown ambient set keyword \"%s\"\n", tempBuffer );
 				#endif
 			}
 
@@ -593,7 +593,7 @@ static void AS_GetBModelSet( ambientSet_t &set )
 
 				//This wasn't a set name, so it's an error
 				#ifndef FINAL_BUILD
-				Com_Printf( S_COLOR_YELLOW"WARNING: Unknown ambient set keyword \"%s\"\n", tempBuffer );
+				Com_PrintWarning( "Unknown ambient set keyword \"%s\"\n", tempBuffer );
 				#endif
 			}
 
@@ -828,7 +828,7 @@ void AS_ParseSets( void )
 		if (!aSet)
 		{
 			// I print these red instead of yellow because they're going to cause an ERR_DROP if they occur
-			Com_Printf( S_COLOR_RED"ERROR: AS_ParseSets: Unable to find ambient soundset \"%s\"!\n",str);
+			Com_PrintError( "AS_ParseSets: Unable to find ambient soundset \"%s\"!\n",str);
 			iErrorsOccured++;
 		}
 	}

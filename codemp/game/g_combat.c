@@ -4079,7 +4079,7 @@ qboolean G_GetHitLocFromSurfName( gentity_t *ent, const char *surfName, int *hit
 #ifdef _DEBUG
 	else
 	{
-		Com_Printf( "ERROR: surface %s does not belong to any hitLocation!!!\n", surfName );
+		Com_PrintError( "surface %s does not belong to any hitLocation!!!\n", surfName );
 	}
 #endif //_DEBUG
 	*/

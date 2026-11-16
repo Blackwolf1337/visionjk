@@ -54,7 +54,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // a state bit next to the GLS_* ones of rd-vanilla, which have no such thing: the indexes are pairs, each a line
 #define VK_GLS_LINES		0x00002000
-#define VK_MAX_BONES		16384		// bones of all skeletons of one frame
+#define VK_MAX_BONES		65536		// bones of all skeletons of one frame (and the marks painted onto tessellated surfaces)
 #define VK_MODEL_BYTES		( 32 << 20 )	// vertices of the Ghoul2 models of a level
 #define VK_MODEL_INDEX_BYTES	( 16 << 20 )	// and their triangles
 #define VK_MAX_BATCH_RANGES	64				// runs of indexes a batch of model surfaces can have
@@ -116,6 +116,10 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
 #define VKD_MATERIAL		0x08000000u		// lit per pixel with material (normal map in tex1, shine), see generic.frag
 #define VKD_PBR				0x10000000u		// lit per pixel with a material of GGX (VKP_*), see generic.frag PbrStage
+#define VKD_DECALS			0x20000000u		// marks painted onto a tessellated surface (VK_PaintMarks), see generic.frag
+#define VKD_GROOVE			0x40000000u		// a burn mark lit as a groove (stageMaterial_t groove), see generic.frag Groove()
+#define VKD_SOFT			0x80000000u		// a sprite that fades where it nears the solid level (v_softParticles): its distance
+											//	in tex5, pbr.x the units it fades over, pbr.y how (generic.frag SoftFade)
 
 // vkDraw_t.pbrFlags: what a stage with VKD_PBR has and how it is lit
 #define VKP_NORMAL			0x01u			// a normal map in tex2
@@ -176,7 +180,8 @@ typedef struct vkDraw_s {		// once per draw
 									//	frame, in rows (VK_CutBones), 0: none
 	float		brighten;			// the colour of the stage times this after its texture, past white (the glow map of
 									//	a lamp panel, v_panelGlow); 0: as it is
-	uint32_t	pad[2];
+	uint32_t	decals;				// VKD_DECALS: where the marks start in the bones of the frame, in rows (four a mark)
+	uint32_t	numDecals;			//	and how many
 } vkDraw_t;
 
 typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
@@ -211,6 +216,8 @@ typedef enum {
 									// tessellation, shaders/generic.tesc and .tese); Vulkan only, never sent to GLES
 	VKP_DEPTH,						// as VKP_GENERIC, depth alone: no fragment shader, no colour (the depth pre-pass
 									// of the level, RB_DepthPrepass); Vulkan only
+	VKP_SPARKS,						// no vertices: the sparks of v_gpuSparks from their ring on the device, six vertices
+									// each without indexes (shaders/sparks.vert, vk_sparks.cpp); Vulkan only
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -313,6 +320,7 @@ typedef struct vkState_s : vkDeviceState_t {
 	const vkStencil_t			*stencil;			// of the draws that follow, NULL: no stencil test, depth as the state bits say
 	const vkIndexRange_t		*ranges;			// or, for surfaces of models, the runs of indexes to draw
 	int							numRanges;			// 0: numBoundIndexes from firstIndex
+	uint32_t					drawVertices;		// or this many vertices without indexes (the sparks, VKP_SPARKS), 0: not
 	int							viewport[4];		// x, y, width, height as OpenGL counts them, in pixels of the window
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
@@ -380,6 +388,8 @@ void		RB_MarkPrepassed( const shader_t *shader );
 extern cvar_t	*v_tonemap;			// vk_post.cpp
 extern cvar_t	*v_exposure;		// vk_post.cpp
 extern cvar_t	*v_ssr;				// vk_post.cpp
+extern cvar_t	*v_softParticles;	// vk_post.cpp
+extern cvar_t	*v_litParticles;	// vk_post.cpp
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -397,6 +407,7 @@ void		VK_QuadRecord( vec4_t *row, int kind, const vec3_t a, float aw, const vec3
 void		VK_QuadIndexes( glIndex_t *out, glIndex_t first );
 qboolean	VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones );
 qboolean	VK_TessBorders( uint32_t *bones );
+float		*VK_FrameRows( int rows, uint32_t *first );
 extern cvar_t	*v_vkSprites;
 extern cvar_t	*v_pbr;			// vk_shade.cpp
 extern cvar_t	*v_pbrProbes;
@@ -452,6 +463,16 @@ void		VK_BlurFrame( float amount, float focus );
 void		VK_Smaa( void );
 void		VK_Tonemap( void );
 void		VK_SsrPrep( void );
+void		VK_SoftDepth( void );
+
+// vk_sparks.cpp (v_gpuSparks)
+extern cvar_t	*v_gpuSparks;
+void		VK_SparksInit( void );
+void		VK_SparksShutdown( void );
+void		VK_SparksView( void );
+void		VK_SparksSimulate( void );
+void		VK_SparksDraw( uint32_t transform );
+qboolean	RE_EmitSparks( const sparkBurst_t *burst );
 void		VK_SaberBlades( qboolean portal, qboolean glow = qfalse );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
@@ -582,6 +603,10 @@ void		VK_GpuTimes_f( void );
 // One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
 // before and after.
 void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// Frosted glass behind a panel: the frame blurred and laid back over it inside the rect x0 y0 x1 y1 (pixels of the
+// frame), rounded by radius pixels; strength as v_backdropBlur. Not on the OpenGL ES device. vk.color is begun
+// before and after (with vk.depth), the caller sets its 2D state again.
+void		VK_BackdropPass( int x0, int y0, int x1, int y1, float radius, float strength );
 // The same with shaders/focus.frag, which reads the depth of the scene (vk.depth) next to source. Only with
 // vk.depthReadable.
 void		VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
@@ -616,6 +641,8 @@ void		VK_TonemapPass( const float *parm );
 // v_ssr: vk.color and its depth into vk.ssrColor (shaders/ssrprep.frag), parm: the depth to the distance. No target is
 // begun before and after.
 void		VK_SsrPrepPass( const float *parm );
+// v_softParticles: the distance of the solid level into vk.softDepth (shaders/softdepth.frag), parm as VK_SsrPrepPass
+void		VK_SoftDepthPass( const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

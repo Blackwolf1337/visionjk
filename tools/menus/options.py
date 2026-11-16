@@ -19,6 +19,7 @@ HEAD_SIZE = 16              # the heading of a card on a canvas, in its pixels (
 ROWS = 16                   # rows the window of a list shows
 RAIL_ROWS = 17              #	and with the pages at the left
 ROW_SCALE = 0.7
+PAGE_SEARCH = 23            # the page of an item that shows while a search is on (PAGE_SEARCH of codemp/ui/ui_shared.h)
 CLICK = ['play', '"sound/interface/button1.wav"', ';']
 WINDOW = ['0.031', '0.055', '0.11', '0.97']
 BAND = ['0.02', '0.04', '0.08', '0.50']         # the row of tabs and the bar at the bottom, as pages.FOOT
@@ -72,12 +73,17 @@ class Layout:
 #   ('multistr', name, cvar, ((name, text), ...), what for)  the same for a cvar that holds a text
 #   ('edit' | 'secret', name, cvar, letters, what for)
 #   ('bind', name, command, what for)
+#   ('bit', name, cvar, bit, what for)           on while that bit of the cvar is clear (the JA+ cp_pluginDisable)
 #   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
 #   ('menu', name, menu, what for)                a button that opens a window of its own (a menu of the lists)
+#   ('exec', name, command, what for)             a button that runs a command of the game and closes the menus (in a level)
 #   ('pick', name, cvar, what for)                a button that shows a model the cvar holds and opens the model picker
 #                                               (modelpick.menu), which writes the model it is given into that cvar
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
+        ('head', 'Quality'),
+        ('multi', 'Quality', 'v_quality', (('Low', 0), ('Medium', 1), ('High', 2), ('Ultra', 3), ('Custom', 4)),
+         'Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself.'),
         ('head', 'Screen'),
         ('old', 'video', ('ui_r_resolution', 'ui_r_displaymode', 'ui_r_ext_multisample')),
         ('yesno', 'SMAA', 'v_smaa',
@@ -89,10 +95,16 @@ SETUP = [
         ('head', 'Detail'),
         ('old', 'video2', ('r_ext_texture_filter_anisotropic',)),
         ('yesno', 'Dynamic Glow', 'r_DynamicGlow', 'Lightsabers and lights glow.'),
+        ('yesno', 'Texture Swaps of the Server', 'v_remaps', 'A server can swap a texture of the level for another one, or hide something that way. Off: none of that, you see the level as it is.'),
+        ('exec', 'List of Texture Swaps ...', 'v_remaps_window', 'In a level: every texture the server swaps, each with its own switch.'),
         ('old', 'video2', ('advancedvideo',)),
-        ('head', 'Lighting'),
+    ]),
+    ('Lighting', 'Shadows, materials, reflections, HDR and bloom.', [
+        ('head', 'Shadows and Materials'),
         ('multi', 'Shadows', 'cg_shadows', (('Off', 0), ('Blob', 1), ('Real', 2)),
          'Real: the players cast shadows from the light of the level and from sabers and shots (traced rays where the graphics card has them, else shadow maps). Blob: a dark spot under them.'),
+        ('yesno', 'Ray Tracing', 'v_rayTracing',
+         'Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video.'),
         ('yesno', 'Materials', 'v_pbr',
          'Surfaces with a material are lit with their bumps, roughness and metal: they shine, and smooth ones mirror the room.'),
         ('slider', 'Moving Lights', 'v_dlightScale', 1.0, 0, 3,
@@ -103,8 +115,13 @@ SETUP = [
          'How brightly the lamp panels of a level glow as light sources. With HDR they glow out past white. 0: as their texture.'),
         ('yesno', 'Panel Light on Players', 'v_panelLight',
          'Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing.'),
+        ('yesno', 'Tessellation', 'v_tessellation',
+         'Materials with a height in their bump map get real bumps: the graphics card cuts their surfaces finer and lifts them. Off: they look carved by parallax instead, which costs less. Needs a graphics card with tessellation.'),
+        ('yesno', 'Parallax', 'v_parallax',
+         'Surfaces with a material and a height in their bump map look carved. Off: flat, faster.'),
         ('yesno', 'Automatic Materials', 'v_autoMaterials',
          'Levels without materials get them made from their textures, so every level shows them. Needs a restart of the video.'),
+        ('head', 'HDR'),
         ('yesno', 'HDR', 'v_hdr',
          'Light brighter than white is kept: sabers, glows and lamps glow out instead of clipping. Needs a restart of the video. Costs a little speed.'),
         ('multi', 'Tone Mapping', 'v_tonemap', (('Off', 0), ('Original Look', 1), ('Filmic', 2)),
@@ -114,6 +131,8 @@ SETUP = [
         ('yesno', 'Bloom', 'tay_bloom', 'Bright parts of the level shine over their surroundings.'),
         ('slider', 'Bloom Strength', 'tay_bloomIntensity', 0.6, 0, 2, 'How strongly the bright parts shine.'),
         ('slider', 'Bloom Threshold', 'tay_bloomThreshold', 0.5, 0, 0.95, 'How bright a part has to be to shine.'),
+    ]),
+    ('Effects', 'Screen effects, saber slicing and blood.', [
         ('head', 'Screen Effects'),
         ('yesno', 'Screen Effects', 'v_screenFx', 'Master switch for all screen effects.'),
         ('yesno', 'Explosion Waves', 'v_fxBlast', 'Explosions send a wave through the air that bends the picture. Close by, the colours split.'),
@@ -123,6 +142,24 @@ SETUP = [
         ('yesno', 'Under Water', 'v_fxWater', 'Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface.'),
         ('yesno', 'Force Looks', 'v_fxForce', 'Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound.'),
         ('yesno', 'Saber Clash and Heat', 'v_fxSaber', 'Clashing blades flash. The air around a lit blade is hot.'),
+        ('head', 'Slicing'),
+        ('multi', 'Slice Bodies', 'v_slice', (('Off', 0), ('On, Lying Bodies Often', 1), ('On, Lying Bodies Once', 2), ('On, Not Lying Bodies', 3)),
+         'A saber kill cuts the body through along the swing, with a burnt, glowing cut. A body that lies on the ground can be cut again by a swing through it: several times, once, or not at all. Needs the Vulkan renderer.'),
+        ('multi', 'Blood', 'v_gore', (('Off', 0), ('Screen and Ground', 1), ('Ground Only', 2)),
+         'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.'),
+        ('multi', 'Remove Cut Parts', 'v_sliceTime', (('As Long as the Body', 0), ('After 15 s', 15), ('After 30 s', 30), ('After 60 s', 60)),
+         'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
+        ('head', 'Particles'),
+        ('yesno', 'Soft Particles', 'v_softParticles', 'Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only.'),
+        ('yesno', 'GPU Sparks', 'v_gpuSparks', 'Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only.'),
+        ('slider', 'Spark Embers', 'v_gpuSparksEmbers', 1.0, 0, 3,
+         'How long sparks that land on the floor lie there glowing as embers before they go out. 1 as meant, 0 not at all. Vulkan only.'),
+        ('yesno', 'Lit Particles', 'v_litParticles', 'Smoke, dust and steam take the light of the place they are in: dark in a dark corridor, bright next to a saber. Fire and sparks glow as they are. Vulkan only.'),
+        ('head', 'Saber Scars'),
+        ('yesno', 'Saber Scars', 'v_saberScars', 'A blade melts a glowing cut into walls and floors. It cools from white to red and leaves a charred groove. Off: the marks of the game.'),
+        ('multi', 'Scars Stay', 'v_saberScarTime', (('After 10 s', 10), ('After 30 s', 30), ('After 60 s', 60), ('After 2 min', 120)),
+         'How long the charred cuts stay before they fade.'),
+        ('yesno', 'Smoke and Embers', 'v_saberScarFx', 'Smoke rises, embers fall and the air shimmers over a fresh cut.'),
     ]),
     ('@MENUS_SOUND', '@MENUS_CONFIGURE_SOUND_SETTINGS', [
         ('head', 'Volume'),
@@ -160,11 +197,6 @@ SETUP = [
         ('multi', 'Blade Look', 'v_saberStyle', (('Classic', 0), ('SFX', 1)),
          'SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic.'),
         ('yesno', '3D Blades', 'v_saber3D', 'Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above.'),
-        ('yesno', 'Slice Bodies', 'v_slice', 'A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer.'),
-        ('multi', 'Blood', 'v_gore', (('Off', 0), ('Screen and Ground', 1), ('Ground Only', 2)),
-         'Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays.'),
-        ('multi', 'Remove Cut Parts', 'v_sliceTime', (('As Long as the Body', 0), ('After 15 s', 15), ('After 30 s', 30), ('After 60 s', 60)),
-         'When the parts of a cut body and their blood fade. Sooner helps on busy servers.'),
         ('slider', 'Trail Length', 'v_saberTrailLength', 1, 0, 4, 'How long the trail behind a swinging blade is.'),
         ('slider', 'Blade Core', 'v_saberCoreScale', 1, 0.25, 3, 'How thick the white core of a blade is.'),
         ('slider', 'Blade Glow', 'v_saberGlowScale', 1, 0.25, 3, 'How wide the glow around a blade is.'),
@@ -182,6 +214,9 @@ SETUP = [
         ('head', 'Weapons'),
         ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
         ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
+        ('multistr', 'Disruptor Colour', 'tay_disruptorColor',
+         (('Cyan', ''), ('White', '1 1 1'), ('Red', '1 0.2 0.2'), ('Green', '0.2 1 0.3'), ('Yellow', '1 0.9 0.2'), ('Purple', '0.7 0.3 1')),
+         'The colour of the disruptor shot. In team games the colour of the team.'),
         ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask.'),
         ('yesno', 'Zoom with Mouse Wheel', 'v_scopeWheelZoom', 'While the disruptor zoom is locked, the mouse wheel zooms in and out.'),
         ('slider', 'Motion Tracker Speed', 'v_motionThreshold', 40, 10, 200, 'The speed a player needs before the tracker of the disruptor scope picks him up.'),
@@ -189,12 +224,12 @@ SETUP = [
         ('yesno', 'Rocket Lock-On', 'v_lockOn', 'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.'),
     ]),
     ('HUD', 'What the screen shows around the level, the view and the crosshair.', [
-        ('head', 'Menus and HUD'),
+        ('head', 'HUD'),
         ('yesno', 'New HUD', 'v_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
-        ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
-        ('yesno', '3D Menu', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
-        ('slider', 'Menu Blur', 'v_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
-        ('slider', 'Menu Size', 'v_menu3dScale', 1, 0.5, 1.5, 'How big the menu is that stands in the level.'),
+        ('slider', 'Feed Lines', 'v_hudFeedLines', 6, 1, 16, 'How many lines the feed at the upper left shows at most. Needs the new HUD.'),
+        ('yesno', 'Match Card', 'v_hudMatchCard', 'The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD.'),
+        ('slider', 'Blur Behind Panels', 'v_backdropBlur', 1, 0, 3,
+         'Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer.'),
         ('head', 'View'),
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
         ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
@@ -209,38 +244,39 @@ SETUP = [
         ('multi', 'Lead Indicator', 'tay_leadIndicator', (('Off', 0), ('On', 1), ('With Own Ping', 2)),
          'Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid.'),
         ('head', 'On Screen'),
-        ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second in the corner of the screen.'),
+        ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second, the ping and its course in the corner of the screen.'),
         ('yesno', 'Show Timer', 'cg_drawTimer', 'The time of the level in the corner of the screen.'),
         ('yesno', 'Timer Milliseconds', 'tay_timerMsec', 'The timer of the level with milliseconds.'),
         ('yesno', 'Timer Counts Down', 'tay_timerCountdown', 'The timer shows what is left of the time limit, if there is one.'),
-        ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
-        ('yesno', 'Killfeed', 'tay_killfeed', 'Who killed whom with what, at the upper right.'),
+        ('head', 'Team'),
         ('slider', 'Team Overlay Size', 'tay_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
-        ('yesno', 'Spectator Map', 'tay_specHud', 'While you watch, a map of the players around at the upper right.'),
-        ('head', 'Movement'),
-        ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
-        ('yesno', 'Strafe Helper', 'tay_strafeHelper', 'A bar under the crosshair that shows where to turn to gain speed.'),
-        ('yesno', 'Snap HUD', 'tay_snapHud', 'In the air, the angles where the rounding of the game gives a little more speed.'),
-        ('yesno', 'Pitch HUD', 'tay_pitchHud', 'A mark where your view would be at a chosen pitch.'),
-        ('multi', 'Strafe Trails', 'tay_strafeTrail', (('Off', 0), ('Mine', 1), ('Everybody', 2)),
-         'A fading line on the ground along where players ran.'),
-        ('yesno', 'Movement Keys', 'tay_movementKeys', 'The keys you move with on the screen, lit while held.'),
-        ('slider', 'Start Goal', 'tay_startGoal', 0, 0, 1500, 'The speedometer turns gold from this speed on. 0: off.'),
-        ('slider', 'Jump Goal', 'tay_jumpGoal', 0, 0, 1500, 'Jumps at least this fast are gold in the list of jumps. 0: off.'),
+        ('yesno', 'Team Overlay Weapons', 'tay_teamOverlayWeapons', 'The weapon each team mate holds, after the numbers.'),
+        ('yesno', 'Team Overlay Bars', 'tay_teamOverlayBar', 'Health and armour of team mates as a thin bar under the numbers.'),
+        ('yesno', 'Spectator Map', 'tay_specHud', 'While you watch, a map of the players around: with the new HUD in the corner at the bottom right, in the look of its radar.'),
+        ('slider', 'Spectator Map Size', 'tay_specHudScale', 1, 0.5, 2, 'How large the map of the players is while you watch (the HUD of the game; the new HUD has it at one size).'),
+        ('head', 'Console'),
+        ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
+        ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
+        ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
     ]),
-    ('Chat & Social', 'The chat box, bubbles and what stands above the heads.', [
-        ('head', 'Players'),
+    ('Chat & Social', 'The chat box, alerts, what stands above the heads, your music and clicking players.', [
+        ('head', 'Chat Box'),
+        ('yesno', 'Own Chat Line', 'v_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
+        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
+        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
+        ('head', 'Alerts'),
+        ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
+        ('multi', 'Name Alert', 'tay_notify', (('Off', 0), ('Marked', 1), ('Marked and Sound', 2)),
+         'A chat line with your name or one of the words below is marked gold.'),
+        ('edit', 'Name Alert Words', 'tay_notifyWords', 64, 'More words that mark a chat line gold, besides your name. Separated by blanks or commas.'),
+        ('multi', 'Notifications', 'v_notify', (('Off', 0), ('Shown', 1), ('Shown and Sound', 2)),
+         'Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left.'),
+        ('head', 'Above the Heads'),
         ('yesno', 'Chat Bubbles', 'v_chatBubbles', 'What a player says stands above his head.'),
         ('slider', 'Bubble Range', 'v_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
         ('yesno', 'Player Statuses', 'v_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
-        ('yesno', 'Show My Music', 'v_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
-        ('open', 'Choose Players of My Music ...', 'musicplayers',
-         'Which players of music may be told: only the songs of the ones you tick are shown to the others.'),
-        ('yesno', 'Select Players', 'v_selectPlayers',
-         'With the mouse free, a click on a player opens a card with what you can do with him.'),
-        ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
-        ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
-         'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
+        ('multi', 'Name Tags', 'v_nameTags', (('Off', 0), ('Near the Crosshair', 1), ('Always', 2)),
+         'Names above the heads of the players you can see: of who is near your crosshair and of your team mates, or of everyone. The one under the crosshair gets a larger tag with his health.'),
         ('head', 'Hats and Capes'),
         ('multistr', 'Hat', 'tay_hat',
          (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),
@@ -257,39 +293,61 @@ SETUP = [
         ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
          'What players wear on their heads and backs. Only players of VisionJK wear them.'),
         ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
-        ('head', 'Chat'),
-        ('yesno', 'Own Chat Line', 'v_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
-        ('slider', 'Chat Box Size', 'v_chatBoxScale', 0.85, 0.6, 1.6,
-         'How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too.'),
-        ('slider', 'Chat Box Width', 'v_chatBoxWidth', 380, 200, 600, 'How wide the chat box is.'),
-        ('slider', 'Chat Box Rows', 'v_chatBoxRows', 10, 4, 24,
-         'How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse.'),
-        ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
-        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
-        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
-        ('multi', 'Name Alert', 'tay_notify', (('Off', 0), ('Marked', 1), ('Marked and Sound', 2)),
-         'A chat line with your name is marked gold. More words with tay_notifyWords in the console.'),
-        ('head', 'Notifications'),
-        ('multi', 'Notifications', 'v_notify', (('Off', 0), ('Shown', 1), ('Shown and Sound', 2)),
-         'Tells, your name in the chat, boombox lines and new versions slide in at the left.'),
-        ('slider', 'Notification Time', 'v_notifyTime', 6000, 2000, 20000, 'How many milliseconds a notification stays.'),
-        ('slider', 'Notification Size', 'v_notifyScale', 1, 0.5, 2, 'How large the notifications are.'),
-        ('head', 'Console'),
-        ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
-        ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
-        ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
-        ('head', 'Clan'),
+        ('head', 'My Music'),
+        ('yesno', 'Show My Music', 'v_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
+        ('open', 'Choose Players of My Music ...', 'musicplayers',
+         'Which players of music may be told: only the songs of the ones you tick are shown to the others.'),
+        ('head', 'Clicking Players'),
+        ('yesno', 'Select Players', 'v_selectPlayers',
+         'With the mouse free, a click on a player opens a card with what you can do with him.'),
+        ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
+        ('yesno', 'Keep Scoreboard on Double Tap', 'v_scoresPick',
+         'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
+    ]),
+    ('JA+', 'The features of the JA+ client plugin, clan and admin login.', [
+        ('head', 'Looks'),
+        ('bit', 'New Drain Effect', 'cp_pluginDisable', 0, 'Force drain shows the wide new effect. Off: the effect of the game.'),
+        ('bit', 'New Force Effects', 'cp_pluginDisable', 5, 'The effects of the single player force animations and of the grabs.'),
+        ('bit', 'New Force Sight', 'cp_pluginDisable', 7, 'The look of Force Sight of the plugin.'),
+        ('bit', 'New Other Dimension Look', 'cp_pluginDisable', 8, 'The look of the other dimension of the plugin. Off: a plain overlay over the screen.'),
+        ('bit', 'See Black Sabers', 'cp_pluginDisable', 3, 'Black blades are shown black. Off: they are shown red.'),
+        ('bit', 'Sabers on the Body', 'cp_pluginDisable', 9, 'Sabers that are not drawn hang on the body.'),
+        ('bit', 'New Death Messages', 'cp_pluginDisable', 6, 'Off: the messages of the game for deaths in water, lava and falls.'),
+        ('head', 'Duels'),
+        ('bit', 'Hide Players of Other Duels', 'cp_pluginDisable', 1, 'Players in a duel you are not part of fade out and your crosshair ignores them.'),
+        ('bit', 'Camera Turn After a Duel', 'cp_pluginDisable', 2, 'When your private duel ends the camera turns around you.'),
+        ('bit', 'Auto Replier', 'cp_pluginDisable', 4, 'Answers tells with the texts of the auto replier file while you are away.'),
+        ('head', 'Movement'),
+        ('bit', 'Ledge Grab', 'cp_pluginDisable', 10, 'Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it.'),
+        ('bit', 'New DFA Primary', 'cp_pluginDisable', 11, 'Primary attack: the death from above of the plugin. Only on JA+ servers that allow it.'),
+        ('bit', 'New DFA Secondary', 'cp_pluginDisable', 12, 'Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it.'),
+        ('bit', 'No Single Player Cartwheel', 'cp_pluginDisable', 13, 'The cartwheel without the single player move. Only on JA+ servers that allow it.'),
+        ('head', 'Clan and Admin'),
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
+        ('secret', 'Admin Password', 'cp_login', 32, 'Sent to a JA+ server when you join, to log you in as admin.'),
+        ('slider', 'Other Dimension Players', 'cp_altDimAlpha', 40, 0, 255, 'How visible players of the other dimension are.'),
     ]),
-    ('Network', 'Updates, downloads and security.', [
-        ('head', 'Updates and Downloads'),
-        ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
-        ('multistr', 'Update Channel', 'v_updateChannel', (('Stable', 'stable'), ('Development', 'dev')),
-         'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
-        ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
-        ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings no code used for a month, from older versions and other mods.'),
-        ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
+    ('TaystJK', 'The movement tools of TaystJK: speedometer, strafe helper, trails and goals.', [
+        ('head', 'Movement'),
+        ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
+        ('slider', 'Speedometer Size', 'tay_speedometerSize', 1, 0.5, 2, 'How large the speedometer is.'),
+        ('slider', 'Jumps Shown', 'tay_speedometerJumps', 5, 0, 16, 'How many of your last jumps the speedometer lists with their speed.'),
+        ('yesno', 'Strafe Helper', 'tay_strafeHelper', 'A bar under the crosshair that shows where to turn to gain speed.'),
+        ('yesno', 'Snap HUD', 'tay_snapHud', 'In the air, the angles where the rounding of the game gives a little more speed.'),
+        ('yesno', 'Pitch HUD', 'tay_pitchHud', 'A mark where your view would be at a chosen pitch.'),
+        ('slider', 'Pitch HUD Angle', 'tay_pitchHudAngle', 15, -90, 90, 'The pitch the mark of the pitch HUD stands at.'),
+        ('multi', 'Strafe Trails', 'tay_strafeTrail', (('Off', 0), ('Mine', 1), ('Everybody', 2)),
+         'A fading line on the ground along where players ran.'),
+        ('slider', 'Strafe Trail Time', 'tay_strafeTrailLife', 3, 0.5, 30, 'How many seconds a strafe trail takes to fade.'),
+        ('yesno', 'Movement Keys', 'tay_movementKeys', 'The keys you move with on the screen, lit while held.'),
+        ('slider', 'Movement Keys Size', 'tay_movementKeysSize', 1, 0.5, 2, 'How large the movement keys on the screen are.'),
+        ('head', 'Goals'),
+        ('slider', 'Start Goal', 'tay_startGoal', 0, 0, 1500, 'The speedometer turns gold from this speed on. 0: off.'),
+        ('slider', 'Jump Goal', 'tay_jumpGoal', 0, 0, 1500, 'Jumps at least this fast are gold in the list of jumps. 0: off.'),
+    ]),
+    ('Network', 'Downloads, the connection and security.', [
+        ('head', 'Downloads'),
         ('old', 'options', ('cl_allowdownload',)),
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),
@@ -304,6 +362,21 @@ SETUP = [
          'Write down what a server sends that no server of the game does, and leave one that keeps at it.'),
         ('yesno', 'Key Login by Agent', 'v_authAgent', 'The admin login asks your ssh-agent for the key (1Password, OpenSSH).'),
         ('edit', 'Key File', 'v_authKeyFile', 120, 'The file with the key for the admin login, where no agent has it.'),
+    ]),
+    ('VisionJK', 'Updates, the changelog, cleaning up and the menus.', [
+        ('head', 'Updates'),
+        ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
+        ('multistr', 'Update Channel', 'v_updateChannel', (('Stable', 'stable'), ('Development', 'dev')),
+         'Stable: the releases. Development: early test builds, and the releases when they are newer.'),
+        ('menu', 'Changelog', 'changelog_popmenu', 'What changed in each version, and what a new version brings.'),
+        ('head', 'Maintenance'),
+        ('menu', 'Clean Up Settings', 'cvarclean_popmenu', 'Settings this version does not have, old names of settings, and settings no code used for a month.'),
+        ('menu', 'Clear Caches', 'cacheclean_popmenu', 'Free disk space: textures, materials, sounds and sound paths the game keeps.'),
+        ('head', 'Menus'),
+        ('yesno', 'Classic Menus', 'v_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
+        ('yesno', '3D Menu', 'v_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
+        ('slider', 'Menu Blur', 'v_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
+        ('slider', 'Menu Size', 'v_menu3dScale', 1, 0.5, 1.5, 'How big the menu is that stands in the level.'),
     ]),
     ('@MENUS_MODS', 'Game folders with other mods.', [('mods',)]),
 ]
@@ -450,6 +523,21 @@ def centered(rect, scale):
             ('textaligny', mf.fmt((rect[3] - 18.0 * scale) / 2)))
 
 
+def no_video_warning(words):
+    """A script without "defer VideoSetup videowarningMenu": the screen of the redesign throws away what Apply did not
+    keep when it closes (Menu_ChangesClose in ui_shared.c), so there is nothing to ask about."""
+    out, i = [], 0
+    while i < len(words):
+        if words[i].lower() == 'defer' and i + 2 < len(words) and words[i + 1].lower() == 'videosetup':
+            i += 3
+            while i < len(words) and words[i] in (mf.NL, ';'):
+                i += 1
+            continue
+        out.append(words[i])
+        i += 1
+    return out
+
+
 def clean(words):
     """A script without the commands that showed, hid and marked the tabs of the old menu."""
     out, i = [], 0
@@ -515,6 +603,10 @@ def as_row(block, page, y, L):
 
 
 def old_rows(m, group, only=None, skip=()):
+    return [needs(b) for b in _old_rows(m, group, only, skip)]
+
+
+def _old_rows(m, group, only=None, skip=()):
     """The settings of a group of the old menu, as new items."""
     found = []
     for e in items(m):
@@ -545,8 +637,12 @@ PAGE_MARK = '@@PAGE_%s@@'
 def open_row(spec):
     """A button among the rows that opens a page of its own (PAGES)."""
     _, text, page, about = spec
-    return [Entry('name', ['vision_open_' + page]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
-            Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['setpage', PAGE_MARK % page, ';'])]
+    b = [Entry('name', ['vision_open_' + page]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+         Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['setpage', PAGE_MARK % page, ';'])]
+    need = OPEN_NEEDS.get(page)
+    if need:
+        b += [Entry('cvarTest', [quoted(need[0])]), Entry('disableCvar', [], [quoted(v) for v in need[1]])]
+    return b
 
 
 def music_page(page, back, L):
@@ -579,6 +675,13 @@ def menu_row(spec):
             Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['open', menu, ';'])]
 
 
+def exec_row(spec):
+    """A button among the rows that runs a console command and closes the in-game menus: a window of the cgame."""
+    _, text, command, about = spec
+    return [Entry('name', ['vision_exec_' + command.lower()]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+            Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['exec', quoted(command), ';', 'uiScript', 'closeingame', ';'])]
+
+
 def pick_row(spec):
     """A button among the rows that shows the model its cvar holds and opens the model picker for that cvar."""
     _, text, cvar, about = spec
@@ -587,8 +690,76 @@ def pick_row(spec):
             Entry('action', [], list(CLICK) + ['setcvar', 'ui_modelPickTarget', cvar, ';', 'open', 'modelpick_popmenu', ';'])]
 
 
+# Rows that do nothing while another setting is off: greyed out (cvarTest and disableCvar, Item_Off in
+# codemp/ui/ui_shared.c), and the pane says which row they need. By the cvar of the row: the cvar it hangs on and the
+# values of that one that grey it out.
+NEEDS = {
+    'tay_bloomintensity': ('tay_bloom', ('0',)),
+    'tay_bloomthreshold': ('tay_bloom', ('0',)),
+    'v_panellight': ('cg_shadows', ('0', '1')),
+    'v_raytracing': ('cg_shadows', ('0', '1')),
+    'v_ssr': ('v_pbr', ('0',)),
+    'v_automaterials': ('v_pbr', ('0',)),
+    'v_tessellation': ('v_pbr', ('0',)),
+    'v_parallax': ('v_pbr', ('0',)),
+    'v_exposure': ('v_tonemap', ('0',)),
+    'v_fxblast': ('v_screenFx', ('0',)),
+    'v_soundtinnitus': ('v_screenFx', ('0',)),
+    'v_fxheat': ('v_screenFx', ('0',)),
+    'v_fxhit': ('v_screenFx', ('0',)),
+    'v_fxwater': ('v_screenFx', ('0',)),
+    'v_fxforce': ('v_screenFx', ('0',)),
+    'v_fxsaber': ('v_screenFx', ('0',)),
+    'v_gore': ('v_slice', ('0',)),
+    'v_slicetime': ('v_slice', ('0',)),
+    'v_saberscartime': ('v_saberScars', ('0',)),
+    'v_saberscarfx': ('v_saberScars', ('0',)),
+    'v_spatialgpu': ('v_spatialEcho', ('1',)),
+    'v_spatialsources': ('v_spatialEcho', ('1',)),
+    'v_boomboxvolume': ('v_boomboxes', ('0',)),
+    'v_downloadreview': ('cl_allowDownload', ('0',)),
+    'v_downloadkeep': ('cl_allowDownload', ('0',)),
+    'v_downloadhttp': ('cl_allowDownload', ('0',)),
+    'v_bubblerange': ('v_chatBubbles', ('0',)),
+    'v_selectoutline': ('v_selectPlayers', ('0',)),
+    'v_scorespick': ('v_selectPlayers', ('0',)),
+    'tay_notifywords': ('tay_notify', ('0',)),
+    'v_menu3dscale': ('v_immersiveMenu', ('0',)),
+    'tay_timermsec': ('cg_drawTimer', ('0',)),
+    'tay_timercountdown': ('cg_drawTimer', ('0',)),
+    'v_scopewheelzoom': ('v_scope', ('0',)),
+    'v_motionthreshold': ('v_scope', ('0',)),
+    'tay_startgoal': ('tay_speedometer', ('0',)),
+    'tay_speedometersize': ('tay_speedometer', ('0',)),
+    'tay_speedometerjumps': ('tay_speedometer', ('0',)),
+    'tay_spechudscale': ('tay_specHud', ('0',)),
+    'tay_pitchhudangle': ('tay_pitchHud', ('0',)),
+    'tay_strafetraillife': ('tay_strafeTrail', ('0',)),
+    'tay_movementkeyssize': ('tay_movementKeys', ('0',)),
+    'tay_jumpgoal': ('tay_speedometer', ('0',)),
+}
+
+
+# the same for a button that opens a page of its own (it has no cvar), by that page
+OPEN_NEEDS = {'musicplayers': ('v_shareMusic', ('0',))}
+
+
+def needs(b):
+    """The row greyed out while the setting it hangs on is off (NEEDS)."""
+    need = NEEDS.get(cvar_of(b))
+    if need and not mf.get(b, 'cvartest'):
+        parent, off = need
+        b.append(Entry('cvarTest', [quoted(parent)]))
+        b.append(Entry('disableCvar', [], [quoted(v) for v in off]))
+    return b
+
+
 def new_row(spec):
     """A setting the old menus did not have."""
+    return needs(_new_row(spec))
+
+
+def _new_row(spec):
     kind, text, cvar = spec[:3]
     if kind == 'open':
         return open_row(spec)
@@ -596,6 +767,13 @@ def new_row(spec):
         return menu_row(spec)
     if kind == 'pick':
         return pick_row(spec)
+    if kind == 'exec':
+        return exec_row(spec)
+    if kind == 'bit':
+        # one bit of the cvar, on while the bit is clear (cp_pluginDisable: a set bit turns a feature off)
+        return [Entry('name', ['vision_bit_%s_%d' % (cvar.lower(), spec[3])]), Entry('type', ['ITEM_TYPE_YESNO']),
+                Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])]), Entry('cvar', [quoted(cvar)]),
+                Entry('cvarBit', [str(spec[3])]), Entry('invertyesno', ['1']), Entry('action', [], list(CLICK))]
     b = [Entry('name', ['vision_%s_%s' % (kind, cvar.lower().replace(' ', '_').replace('+', ''))]), Entry('type', [TYPES[kind]]),
          Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])])]
     if kind == 'slider':
@@ -618,6 +796,9 @@ def new_row(spec):
     if cvar.lower() in SOUND_PRESET_CVARS:
         # the row "3D Sound" says which preset the cvars are (UI_GetSoundSetup), also after this one changed
         action += ['uiScript', 'getsoundsetup', ';']
+    if cvar == 'v_quality':
+        # the preset sets its settings (UI_Update in codemp/ui/ui_main.c)
+        action += ['uiScript', 'update', 'v_quality', ';']
     if cvar == 'v_updateChannel':
         # the development builds only after the warning of channel_page (UI_RunMenuScript sets it back and opens it)
         action += ['uiScript', 'updateChannel', PAGE_MARK % 'updatechannel', ';']
@@ -808,10 +989,12 @@ def build(m, name, ingame, nav):
     # the pages of their own that buttons among the rows open: after the tabs and the page of the defaults
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
+        # (two pages of their own follow: the last must stay under PAGE_SEARCH)
+        assert first + 1 < PAGE_SEARCH, 'Setup has %d pages, page %d is the search' % (first + 1, PAGE_SEARCH)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
-        network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
+        updates = next(n for n, (title, _, _) in enumerate(pages) if title == 'VisionJK') + 1
         new.extend(music_page(first, chat, L))
-        new.extend(channel_page(first + 1, network, L))
+        new.extend(channel_page(first + 1, updates, L))
         marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
         for e in new:
             act = mf.find(e.block, 'action') if e.k == 'itemdef' else None
@@ -857,9 +1040,10 @@ def window_frame(m, L):
 # ---- the redesign of 2026-11-02: Setup and Controls as the board "Setup, decluttered" of the canvas VisionJK Settings,
 # in the pixels of the canvas (canvas.py, "canvas" of the menu)
 
-# parts whose settings are shown only with all settings ("advanced 1", the switch Essentials / All Settings)
-ADVANCED_HEADS = {'Screen Effects', '3D Sound', 'Hits', 'Movement', 'Console', 'Clan', 'Connection', 'Security'}
-ADVANCED_CVARS = {'r_ext_texture_filter_anisotropic', 'tay_bloomintensity', 'tay_bloomthreshold', 'v_dlightscale', 'v_exposure'}
+# parts whose settings were shown only with all settings ("advanced 1"). The switch Essentials / All Settings went
+# on their word of 2026-11-14 ("its just confusing"): every setting shows, these stay empty
+ADVANCED_HEADS = set()
+ADVANCED_CVARS = set()
 
 
 def page_sections(m, content, folds):
@@ -948,7 +1132,7 @@ def build_canvas(m, name, ingame):
     setup = screen is SETUP
     old = list(m)
     esc = mf.find(m, 'onesc')
-    back = clean(list(esc.block)) if esc and isinstance(esc.block, list) else list(CLICK)
+    back = no_video_warning(clean(list(esc.block))) if esc and isinstance(esc.block, list) else list(CLICK)
     w = cv.IN_W - 80 if ingame else cv.W
     top = 0 if ingame else cv.HEAD_H
     bottom = (cv.IN_H - 110 - cv.FOOT_H) if ingame else cv.H - cv.FOOT_H
@@ -979,7 +1163,7 @@ def build_canvas(m, name, ingame):
     tabs_y = top + 92
     # over the list while a search is on: "Search" (the titles of the pages are on their pages, which a search leaves)
     new.append(cv.text('vision_search_title', (main_x + 36, top + 28, main_w - 380, 41), ref('Search'), 30, BRIGHT, 'left', 0, FONT,
-                       ('caps', 1), ('decoration',), ('page', 15)))  # (PAGE_SEARCH of ui_shared.h)
+                       ('caps', 1), ('decoration',), ('page', PAGE_SEARCH)))
 
     pages, folds, made_pages = [], [], []
     for title, about, content in screen:
@@ -1079,12 +1263,6 @@ def build_canvas(m, name, ingame):
                 made_pages.append(canvas_row(b, page, (x + cv.CARD_PAD - 12, cursor[col], col_w - 2 * (cv.CARD_PAD - 12), cv.ROW), col, adv))
                 cursor[col] += cv.ROW
 
-    # the switch between the settings that matter and all of them, over the list (a row without a name is its widget)
-    if setup:
-        new.append(cv.item('vision_all', (main_x + main_w - 36 - 270, top + 36, 270, 40), ('type', 'ITEM_TYPE_MULTI'),
-                           ('text', '""'), ('cvar', quoted('v_setupAll')), ('row', 1), ('font', FONT), ('textscale', cv.scale(17)),
-                           ('forecolor', *TEXT), ('cvarFloatList', [ref('Essentials'), '0', ref('All Settings'), '1']),
-                           ('descText', ref('Shows the settings that matter, or all of them.')), ('action', list(CLICK))))
     new += made_pages
     # (the bar in the margin beside the cards, clear of their edge)
     new.append(cv.item('vision_scroll', (list_x + list_w + 15, list_y, 6, list_h), ('type', 'ITEM_TYPE_PAGESCROLL')))
@@ -1107,7 +1285,17 @@ def build_canvas(m, name, ingame):
     # the bar at the bottom
     new += cv.footer(bottom, w, not ingame)
     fy = bottom + 12
-    new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK'))
+    if setup:
+        # (closing the screen throws away what Apply did not keep, Menu_ChangesClose: while something is changed the
+        # button says so)
+        changed = (('cvarTest', 'v_setupChangesState'),)
+        new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK', *changed,
+                             ('showCvar', [], ['"0"'])))
+        new.append(cv.button('vision_discard', (32, fy, 100, 44), ref('Discard'), back, 18, 'plain',
+                             ref('Closes the settings and sets back what you changed. Apply keeps it.'), *changed,
+                             ('hideCvar', [], ['"0"'])))
+    else:
+        new.append(cv.button('vision_back', (32, fy, 100, 44), '@MENUS_BACK', back, 18, 'plain', '@MENUS_BACK'))
     made = defaults_page(old, len(pages) + 1, Layout(ingame)) if setup else []
     if setup:
         if made:
@@ -1120,25 +1308,34 @@ def build_canvas(m, name, ingame):
                              None, [('default_no', '@MENUS_NO', list(CLICK), '@MENUS_DO_NOT_RESET_DEFAULT', False, (('tab', 1),)),
                                     ('default_yes', '@MENUS_YES', clean(mf.find(yes.block, 'action').block) if yes else list(CLICK),
                                      '@MENUS_USE_DEFAULT_SETTINGS', True, ())])
-        new.append(cv.item('vision_dot', (310, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 3),
+        new.append(cv.button('vision_resetpage', (284, fy, 150, 44), ref('Reset Page'), list(CLICK) + ['uiScript', 'resetPage', ';'],
+                             18, 'plain', ref('Sets the settings of this page to their defaults. Revert brings them back.')))
+        new.append(cv.item('vision_dot', (454, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 3),
                            ('decoration',)))
-        new.append(cv.text('vision_dot_text', (324, fy, 300, 44), ref('Changed from default'), 13, cv.MUTED, 'left', 0, FONT,
-                           ('decoration',)))
+        new.append(cv.text('vision_dot_text', (468, fy, 360, 44), ref('Changed from default, click the dot to reset'), 13, cv.MUTED,
+                           'left', 0, FONT, ('decoration',)))
+        # (the dot in the colour of the warning before the widget of a row, Item_Row_Paint; hidden while the warning of
+        # the bar shows, which stands where it would)
+        new.append(cv.item('vision_rdot', (836, fy + 19, 6, 6), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *cv.WARN), ('radius', 3),
+                           ('decoration',), ('cvarTest', 'v_setupChangesState'), ('hideCvar', [], ['"2"'])))
+        new.append(cv.text('vision_rdot_text', (850, fy, 260, 44), ref('Takes effect after a restart'), 13, cv.MUTED, 'left', 0, FONT,
+                           ('decoration',), ('cvarTest', 'v_setupChangesState'), ('hideCvar', [], ['"2"'])))
         # Revert and Apply, which the state of the changes shows and hides (changesCvar: v_setupChangesState 0 none,
         # 1 changed, 2 changed and a restart needed)
-        apply_x, revert_x = w - 48 - 150, w - 48 - 150 - 14 - 120
+        apply_w = 210
+        apply_x, revert_x = w - 48 - apply_w, w - 48 - apply_w - 14 - 120
         state = (('cvarTest', 'v_setupChangesState'),)
-        new.append(cv.text('vision_restart', (revert_x - 420, fy, 400, 44), ref('Some changes apply after a restart'), 14, cv.WARN,
+        new.append(cv.text('vision_restart', (revert_x - 320, fy, 300, 44), ref('Some changes apply after a restart'), 14, cv.WARN,
                            'right', 0, FONT, ('decoration',), *state, ('showCvar', [], ['"2"'])))
         new.append(cv.button('vision_revert', (revert_x, fy, 120, 44), ref('Revert'), list(CLICK) + ['uiScript', 'changesRevert', ';'],
                              15, 'outline', None, *state, ('hideCvar', [], ['"0"'])))
         yes = next((e for e in items(old) if name_of(e.block) == 'vidrestart_yes'), None)
         restart = clean(list(mf.find(yes.block, 'action').block)) if yes else CLICK + ['uiScript', 'updatevideosetup', ';']
-        new.append(cv.button('vision_apply', (apply_x, fy, 150, 44), ref('Apply'), list(CLICK) + ['uiScript', 'changesApply', ';'], 15,
+        new.append(cv.button('vision_apply', (apply_x, fy, apply_w, 44), ref('Apply'), list(CLICK) + ['uiScript', 'changesApply', ';'], 15,
                              'primary', None, *state, ('showCvar', [], ['"1"'])))
-        new.append(cv.button('vision_apply_restart', (apply_x, fy, 150, 44), ref('Apply'),
+        new.append(cv.button('vision_apply_restart', (apply_x, fy, apply_w, 44), ref('Apply and Restart'),
                              ['uiScript', 'changesApply', ';'] + restart, 15, 'primary', None, *state, ('showCvar', [], ['"2"'])))
-        off = cv.button('vision_apply_off', (apply_x, fy, 150, 44), ref('Apply'), list(CLICK), 15, 'outline', None, *state,
+        off = cv.button('vision_apply_off', (apply_x, fy, apply_w, 44), ref('Apply'), list(CLICK), 15, 'outline', None, *state,
                         ('showCvar', [], ['"0"']), ('decoration',))
         mf.put(off.block, 'forecolor', *cv.MUTED)
         new.append(off)
@@ -1152,8 +1349,10 @@ def build_canvas(m, name, ingame):
     # the pages of their own that buttons among the rows open, after the tabs and the page of the defaults
     if setup:
         first = len(pages) + 1 + (1 if made else 0)
+        # (two pages of their own follow: the last must stay under PAGE_SEARCH)
+        assert first + 1 < PAGE_SEARCH, 'Setup has %d pages, page %d is the search' % (first + 1, PAGE_SEARCH)
         chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
-        network = next(n for n, (title, _, _) in enumerate(pages) if title == 'Network') + 1
+        updates = next(n for n, (title, _, _) in enumerate(pages) if title == 'VisionJK') + 1
         L0 = Layout(ingame)
         music = cv.item('vision_music_list', (0, 0, 1, 1), ('type', 'ITEM_TYPE_LISTBOX'), ('style', 'WINDOW_STYLE_PANEL'),
                         ('elementwidth', 120), ('elementheight', 40), ('font', FONT), ('textscale', cv.scale(16)),
@@ -1170,10 +1369,10 @@ def build_canvas(m, name, ingame):
                           (ref('They can crash, corrupt your configs or not work on some servers.'), False),
                           (ref('You can switch back to Stable at any time.'), True)],
                          None,
-                         [('vision_channel_no', ref('Stay on Stable'), list(CLICK) + ['setpage', str(network), ';'], ref('Keep the releases.'),
+                         [('vision_channel_no', ref('Stay on Stable'), list(CLICK) + ['setpage', str(updates), ';'], ref('Keep the releases.'),
                            False, ()),
                           ('vision_channel_yes', ref('Switch to Development'),
-                           list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(network), ';'],
+                           list(CLICK) + ['setcvar', 'v_updateChannel', 'dev', ';', 'setpage', str(updates), ';'],
                            ref('Update to the development builds from now on.'), True, ())])
         marks = {PAGE_MARK % 'musicplayers': str(first), PAGE_MARK % 'updatechannel': str(first + 1)}
         for e in new:
@@ -1185,7 +1384,7 @@ def build_canvas(m, name, ingame):
     for key in ('onopen', 'onclose', 'onesc'):
         e = mf.find(m, key)
         if e and isinstance(e.block, list):
-            e.block = clean(e.block)
+            e.block = no_video_warning(clean(e.block)) if key == 'onesc' and setup else clean(e.block)
     if setup:
         e = mf.find(m, 'onopen')
         if e and isinstance(e.block, list):
@@ -1210,5 +1409,4 @@ def build_canvas(m, name, ingame):
         mf.put(m, 'foldCvar', 'v_setupFolds' if setup else 'v_controlsFolds')
     mf.put(m, 'searchCvar', search_cvar)
     if setup:
-        mf.put(m, 'advancedCvar', 'v_setupAll')
         mf.put(m, 'changesCvar', 'v_setupChanges')

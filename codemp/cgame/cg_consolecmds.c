@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "game/bg/bg_saga.h"
 #include "ui/ui_shared.h"
+#include "cgame/saber/cg_saberscar.h"
 
 /*
 =================
@@ -463,6 +464,7 @@ static consoleCommand_t	commands[] = {
 	{ "v_chatOpen",				CG_ChatOpen_f },
 	{ "v_commandmenu",				CG_CmdMenu_f },
 	{ "v_tools",						CG_ToolWindow_f },
+	{ "v_remaps_window",			CG_RemapsWindow_f },
 	{ "v_cgKey",						CG_Key_f },
 	{ "v_cgMouse",					CG_Mouse_f },
 	{ "clientlist",					CG_ClientList_f },
@@ -515,6 +517,8 @@ static consoleCommand_t	commands[] = {
 	{ "v_levelDump",				CG_LevelDump_f },
 	{ "v_project",					CG_Project_f },
 	{ "v_sliceTest",				CG_SliceTest_f },
+	{ "v_saberScarTest",			CG_SaberScarTest_f },
+	{ "v_fxTest",					CG_FxTest_f },
 	{ "v_ragDump",				CG_RagDump_f },
 	{ "v_voice_devices",				CG_VoiceDevices_f },
 	{ "v_voice_mute",					CG_VoiceMute_f },

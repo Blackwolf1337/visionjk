@@ -129,6 +129,16 @@ int BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d ) {
 		Box_PutPlace( out + len + 1, d->origin, d->yaw );
 		len += 15;
 		break;
+	case BOX_DO_SYNC:
+	case BOX_DO_SYNCTITLE: {
+		const int textLen = Q_min( (int)strlen( d->text ), BOX_TITLE - 1 );
+
+		if ( !textLen || len + textLen > outSize )
+			return 0;
+		memcpy( out + len, d->text, textLen );
+		len += textLen;
+		break;
+	}
 	case BOX_DO_PLAY: {
 		const int textLen = (int)strlen( d->text );
 
@@ -199,6 +209,12 @@ qboolean BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d ) {
 			return qfalse;
 		Box_GetText( in + at, len - at, d->text, sizeof( d->text ) );
 		return d->text[0] ? qtrue : qfalse;
+	case BOX_DO_SYNC:
+	case BOX_DO_SYNCTITLE:
+		if ( len <= at || len - at >= BOX_TITLE )
+			return qfalse;
+		Box_GetText( in + at, len - at, d->text, BOX_TITLE );
+		return d->text[0] ? qtrue : qfalse;
 	case BOX_DO_VOLUME:
 		if ( len != at + 1 )
 			return qfalse;
@@ -220,6 +236,7 @@ qboolean BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d ) {
 	case BOX_DO_STOP:
 	case BOX_DO_REMOVE:
 	case BOX_DO_WATCH:
+	case BOX_DO_UNSYNC:
 		return ( len == at ) ? qtrue : qfalse;
 	default:
 		return qfalse;

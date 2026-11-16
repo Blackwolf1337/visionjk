@@ -873,6 +873,7 @@ typedef struct cg_s {
 	int			centerPrintY;
 	char		centerPrint[1024];
 	int			centerPrintLines;
+	int			centerPrintRepeats;		// VisionJK: how often it was printed again soon after the last one
 
 	int			oldammo;
 	int			oldAmmoTime;
@@ -1870,6 +1871,7 @@ void		CG_CmdMenuDraw( void );
 void		CG_SelectCursor_f( void );
 // what the card of a player uses of the chat box, the voice chat and the key login
 qboolean	CG_ChatIsOpen( void );
+qboolean	CG_ChatPointerOver( void );
 qboolean	CG_ChatHidden( int clientNum );
 void		CG_ChatHide( int clientNum, qboolean hide );
 qboolean	CG_VoiceMuted( int clientNum );
@@ -1900,6 +1902,16 @@ qboolean	CG_ToolWindowShown( void );
 qboolean	CG_ToolWindowPointerOver( void );
 void		CG_ToolWindowDraw( void );
 qboolean	CG_ToolWindowKey( int key, qboolean down );
+// look/cg_remaps.c: the texture swaps of the server, and the window that lists them
+void		CG_RemapsChanged( void );
+void		CG_RemapsFrame( void );
+void		CG_RemapsInit( void );
+void		CG_RemapsWindow_f( void );				// v_remaps_window
+void		CG_RemapsWindowClose( void );
+qboolean	CG_RemapsWindowShown( void );
+qboolean	CG_RemapsWindowPointerOver( void );
+void		CG_RemapsWindowDraw( void );
+qboolean	CG_RemapsWindowKey( int key, qboolean down );
 // modelstore/cg_modelstore.c: the window of the model store of the site
 void		CG_ModelStore_f( void );				// v_modelbrowser
 void		CG_ModelStoreClose( void );
@@ -1963,6 +1975,14 @@ qhandle_t CG_WidePicture( const char *name, const char *wideName );
 // hud/cg_killfeed.c
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
 float CG_KillfeedDraw( float y );
+#define FEED_KILL	0		// what a line of the feed is (hud/cg_killfeed.c)
+#define FEED_INFO	1
+#define FEED_ALERT	2
+#define FEED_ERROR	3
+qboolean CG_HudFeedActive( void );
+void CG_HudFeedAdd( int level, const char *text );
+void CG_HudFeedPoll( void );
+void CG_HudFeedDraw( float y );
 
 // hud/cg_notify.c
 typedef enum {
@@ -1997,6 +2017,8 @@ void CG_LookInit( void );
 // cg_slice.c: a saber kill cuts the body through along the killing swing
 void CG_SliceInit( void );
 void CG_SliceKill( int victim, int killer );
+void CG_SliceBlastKill( int victim, int mod );
+void CG_SliceExplosion( const vec3_t origin );
 qboolean CG_GoreAir( void );
 qboolean CG_GoreGround( void );
 void CG_SliceStep( centity_t *cent, const vec3_t at, const vec3_t normal, float yaw, qboolean right );
@@ -2015,9 +2037,14 @@ void CG_RagFrame( void );
 int CG_RagParts( int handle );
 qboolean CG_RagPart( int handle, int n, void **ghoul2, vec3_t origin, vec4_t plane );
 void CG_RagExplosion( const vec3_t origin, float radius );
+void CG_RagExplosionScaled( const vec3_t origin, float radius, float strength );
 void CG_RagDump_f( void );
 qboolean CG_RagBleed( int handle, int n, vec3_t cutCentre, vec3_t velocity, vec3_t floorAt, float *slide );
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep );
+qboolean CG_SaberCutNearWithin( clientInfo_t *ci, const vec3_t point, float reach, int msec, vec3_t base, vec3_t tip, vec3_t sweep );
+qboolean CG_RagJoint( int handle, int j, vec3_t at, int *partNum );
+int CG_RagJoints( void );
+int CG_RagCutJoint( int handle, int j, const vec3_t dir, float speed );
 void CG_LookFrame( void );
 void CG_LookServerCommand( void );
 // toys/cg_toys.c: the snowball and the other toys of issue #9
@@ -2095,8 +2122,81 @@ qboolean CG_JPOtherDimension( int clientNum );
 void CG_LeadDraw( void );
 qboolean CG_SpecHudShown( void );
 float CG_SpecHudDraw( float y );
+void CG_SpecHudDrawAt( float x, float y, float radius );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
+qboolean CG_DrawBackdrop( float x, float y, float width, float height, float radius );
+
+// hud/cg_select3d.c: the weapon, item and force power selection of the new HUD as glass cards with 3D models (issue #17)
+typedef struct select3dItem_s {
+	const gitem_t	*item;		// NULL: no item (a force power), its picture and name given here
+	qboolean		dim;		// out of ammo, too little force: the card darkened
+	int				count;		// the ammo (the force it costs) under the selected card, -1: none
+	qhandle_t		icon;		// a picture in place of the model (melee, a force power), 0: the model
+	qboolean		disc;		// the picture on a disc that turns as a model does, not flat
+	const char		*name;		// under the selected card in place of the name of the item, NULL: that one
+	const float		*tint;		// rgb of the rim, the glow and the count, NULL: the accent
+	int				pips, pipsMax;	// pips along the bottom of the card (the rank of a force power), pipsMax 0: none
+	qboolean		active;		// running right now: the card glows
+} select3dItem_t;
+#define SELECT3D_WEAPONS	0			// the rows, each with a carousel of its own
+#define SELECT3D_ITEMS		1
+#define SELECT3D_FORCE		2
+#define SELECT3D_ROWS		3
+void CG_Select3D( int row, const select3dItem_t *items, int count, int selected, int since );
+qboolean CG_Select3DIcon( float x, float y, float w, float h, const gitem_t *item, qhandle_t disc, const float *tint, qboolean still, float alpha );
+qboolean CG_Select3DModelFor( const gitem_t *item );
+float CG_Select3DShown( void );
+void CG_HudCorner( void );
+float CG_DrawRadarAt( float x, float y );
+qboolean CG_Select3DHead( float x, float y, float w, float h, int client );
+void CG_Select3DPreload( void );
+void CG_Select3DShutdown( void );
+// hud/cg_powers.c: the powers that run as glass chips above the panel of the health
+const float *CG_ForceSideColor( int fp );
+void CG_PowerChips( void );
+qboolean CG_IsDurationPower( int power );
+// the new HUD beyond its menus: hud/cg_hudpanels.c, hud/cg_matchcard.c (the pieces: hud/cg_hudkit.h)
+#define HUD_EDGE_Y			10.0f		// the top of what stands at the upper edge
+void CG_HudPanelsDraw( void );
+void CG_HudRightStrip( void );
+float CG_MatchCardDraw( float y );
+void CG_HudTopDraw( void );
+void CG_HudCenterString( void );
+void CG_HudDeathCard( void );
+float CG_HudNoticeCard( float y, const char *caption, const char *text, const float *tint, qhandle_t icon, qboolean blink );
+void CG_DrawDisconnectAt( float cardY );
+int CG_WarmupTick( void );
+int CG_FpsValue( void );
+const char *CG_TimerText( void );
+void CG_HudTargetName( const char *name, qboolean pilot, const float *tint, float alpha, int client );
+int CG_HudKnownHealth( int client );
+qboolean CG_NameTagShown( int clientNum );
+void CG_HudProgress( int slot, qhandle_t icon, const char *caption, float fraction, const float *rgb );
+float CG_HudRadarLegend( float y );
+int CG_LagSnapshot( int back, int *flags );
+void CG_HudLockOn( float cx, float cy, float hw, float hh, float fraction, qboolean locked );
+float CG_HudPowerups( float y );
+float CG_HudAttacker( float y );
+void CG_HudPickup( void );
+float CG_HudPerfLine( float y, qboolean clock );
+qboolean CG_HudPerfAny( void );
+void CG_HudPerfRow( float x, float midY, float w );
+const char *CG_HudAmmoWarning( void );
+extern int cg_hudSiegeTime;
+extern qboolean cg_hudSiegeMine;
+float CG_HudSiegeTop( float y );
+void CG_HudIntermission( void );
+void CG_HudScopeReadouts( float radius, float times, int meters );
+void CG_HudPhotoLine( const char *text );
+qboolean CG_MapVoteKey( int n );
+float CG_HudTeamList( float y );
+qboolean CG_HudVehicle( const centity_t *veh );
+qboolean CG_KillfeedLastDeath( int *killer, int *weapon, const char **text, int *time );
+qboolean ForcePower_Valid( int i );
+int CG_ForceSelectRank( int fp );
+const char *CG_ItemName( const gitem_t *item );
+extern int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS];
 void CG_FillRect( float x, float y, float width, float height, const float *color );
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader );
 void CG_DrawRotatePic( float x, float y, float width, float height,float angle, qhandle_t hShader );
@@ -2508,3 +2608,14 @@ Ghoul2 Insert End
 #include "cgame/boombox/cg_boombox.h"
 
 extern cgameImport_t *trap;
+// v_fxTest <effect> [msec] [x y z] (cg_effects.c): an effect where the view looks, again and again
+void CG_FxTest_f( void );
+void CG_FxTestFrame( void );
+// CG_GpuSparks (cg_effects.c): sparks the renderer simulates; qfalse: play the effect as before
+typedef enum {
+	GPUSPARKS_SABER,
+	GPUSPARKS_CLASH,
+	GPUSPARKS_BLASTER,
+	GPUSPARKS_EXPLOSION
+} gpuSparks_t;
+qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, float scale );

@@ -247,7 +247,7 @@ int G_ModelIndex( const char *name ) {
 		trap->FS_Open(va("models/%s", name), &fh, FS_READ);
 		if (!fh)
 		{
-			Com_Printf("ERROR: Server tried to modelindex %s but it doesn't exist.\n", name);
+			Com_PrintError( "Server tried to modelindex %s but it doesn't exist.\n", name);
 		}
 	}
 
@@ -701,7 +701,7 @@ void G_UseTargets2( gentity_t *ent, gentity_t *activator, const char *string ) {
 	t = NULL;
 	while ( (t = G_Find (t, FOFS(targetname), string)) != NULL ) {
 		if ( t == ent ) {
-			trap->Print ("WARNING: Entity used itself.\n");
+			Com_PrintWarning( "Entity used itself.\n");
 		} else {
 			if ( t->use ) {
 				WebAdmin_Used( ent, t );
@@ -1025,7 +1025,7 @@ void G_KillG2Queue(int entNum)
 	if (gG2KillNum >= MAX_G2_KILL_QUEUE)
 	{ //This would be considered a Bad Thing.
 #ifdef _DEBUG
-		Com_Printf("WARNING: Exceeded the MAX_G2_KILL_QUEUE count for this frame!\n");
+		Com_PrintWarning( "Exceeded the MAX_G2_KILL_QUEUE count for this frame!\n");
 #endif
 		//Since we're out of queue slots, just send it now as a seperate command (eats more bandwidth, but we have no choice)
 		trap->SendServerCommand(-1, va("kg2 %i", entNum));

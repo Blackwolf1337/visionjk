@@ -118,6 +118,9 @@ static const uint32_t vk_smaaBlendFrag[] =
 static const uint32_t vk_tonemapFrag[] =
 #include "shaders/tonemap_frag.inc"
 ;
+static const uint32_t vk_backdropFrag[] =
+#include "shaders/backdrop_frag.inc"
+;
 static const uint32_t vk_saberFrag[] =
 #include "shaders/saber_frag.inc"
 ;
@@ -129,6 +132,12 @@ static const uint32_t vk_saberglowFrag[] =
 ;
 static const uint32_t vk_ssrPrepFrag[] =
 #include "shaders/ssrprep_frag.inc"
+;
+static const uint32_t vk_softDepthFrag[] =
+#include "shaders/softdepth_frag.inc"
+;
+static const uint32_t vk_sparksVert[] =
+#include "shaders/sparks_vert.inc"
 ;
 
 VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
@@ -190,11 +199,12 @@ static void VK_CreateLayouts( void ) {
 	info.pBindings = &texture;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.textureSetLayout ) );
 
-	// the frame as a texture for the gamma pass
+	// the frame as a texture for the gamma pass (and a target for a compute shader: the distance of the level for the
+	// sparks, vk_sparks.cpp; a set its stage is not named for reads nothing there)
 	memset( &post, 0, sizeof( post ) );
 	post.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	post.descriptorCount = 1;
-	post.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	post.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 	info.pNext = NULL;
 	info.flags = 0;
 	info.pBindings = &post;
@@ -207,10 +217,11 @@ static void VK_CreateLayouts( void ) {
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of v_menuBlur,
 	// the two of the smoke of the screen effects, the copy of the frame the scope reads, the mirror of the puddles,
-	// the depth, and the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures)
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 16;
+	// the depth, the five of v_smaa (edges, weights, the copy of the frame, the two lookup textures), and the distance
+	// of the level of v_softParticles that the sparks of v_gpuSparks bounce off
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 17;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 17;
+	pool.maxSets = VK_FRAMES + 18;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -331,7 +342,8 @@ frame while it is being drawn, blended as the state bits say (the glow). 3 as 1,
 scene too (the depth of field). 4 as 2 with the four sets and sixteen numbers of the scope. 5 as 2 with the sets
 of the screen effects. 6 as 1 with the sets of their mist. 7 as 1 with the sets of the screen effects (their
 smoke). 8 as 5, quads of its own over the view of the level (the wet places). 9 as 8 with the table of the
-textures as the fourth set (the sprayed pictures).
+textures as the fourth set (the sprayed pictures). 12 as 3 into a target in the format of the frame (v_ssr), 13 into one
+float a pixel (v_softParticles).
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, vkProgram_t program, VkPipelineLayout layout ) {
@@ -360,7 +372,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
 	VkPipeline pipeline;
 	// a pass into a target of its own: one sample a pixel, no depth, nothing blended
-	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 || post == 10 || post == 12 );
+	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 || post == 10 || post == 12 || post == 13 );
+	static const VkFormat distanceFormat = VK_FORMAT_R32_SFLOAT;
 
 	memset( stages, 0, sizeof( stages ) );
 	stages[0].sType = stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -385,7 +398,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		tessellation.patchControlPoints = 3;
 	}
 
-	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID ) ) {
+	if ( !post && ( program == VKP_SPRITE || program == VKP_LIQUID || program == VKP_SPARKS ) ) {
 		// nothing comes from a vertex buffer, see shaders/sprite.vert and liquid.vert
 	} else if ( !post && program == VKP_GRASS ) {
 		// vkGrassVertex_t, three vec4
@@ -486,7 +499,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 
 	rendering.colorAttachmentCount = 1;
 	// (12: a target of its own in the format of the frame, the picture of v_ssr)
-	rendering.pColorAttachmentFormats = ( alone && post != 12 ) ? &vk.final.format : &vk.color.format;
+	// (13: as 12 into one float a pixel, the distance of v_softParticles)
+	rendering.pColorAttachmentFormats = ( post == 13 ) ? &distanceFormat : ( alone && post != 12 ) ? &vk.final.format : &vk.color.format;
 	if ( !alone ) {
 		rendering.depthAttachmentFormat = vk.depth.format;
 		rendering.stencilAttachmentFormat = vk.depth.format;
@@ -517,7 +531,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		// v_smaa: its first two passes into targets of their own, its last one into the frame
 		info.layout = vk.smaaPipelineLayout;
 	} else {
-		info.layout = ( post == 3 || post == 12 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
+		info.layout = ( post == 3 || post == 12 || post == 13 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	}
 	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &pipeline ) );
 	return pipeline;
@@ -741,6 +755,8 @@ void VK_InitPipelines( void ) {
 		vk.tessEvalShader = VK_CreateShader( vk_genericTese, sizeof( vk_genericTese ) );
 	}
 	vk.vertexShaders[VKP_DEPTH] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
+	vk.vertexShaders[VKP_SPARKS] = VK_CreateShader( vk_sparksVert, sizeof( vk_sparksVert ) );
+	vk.fragmentShaders[VKP_SPARKS] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
 	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, VKP_GENERIC );
@@ -787,10 +803,17 @@ void VK_InitPipelines( void ) {
 	// v_tonemap: the copy of the frame back over it, as the last pass of SMAA (the same layout, one set)
 	vk.tonemapShader = VK_CreateShader( vk_tonemapFrag, sizeof( vk_tonemapFrag ) );
 	vk.tonemapPipeline = VK_CreatePipeline( vk.postVertexShader, vk.tonemapShader, 0, 11, VKP_GENERIC );
+	// frosted glass behind a panel: the blurred frame laid over the frame by the alpha of its rounded rect
+	vk.backdropShader = VK_CreateShader( vk_backdropFrag, sizeof( vk_backdropFrag ) );
+	vk.backdropPipeline = VK_CreatePipeline( vk.postVertexShader, vk.backdropShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA,
+		11, VKP_GENERIC );
 	// v_ssr: the frame and its depth into the picture of the screen reflections (12: a target of its own, the format of
 	// the frame, the frame and the depth as the depth of field reads them)
 	vk.ssrPrepShader = VK_CreateShader( vk_ssrPrepFrag, sizeof( vk_ssrPrepFrag ) );
 	vk.ssrPrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.ssrPrepShader, 0, 12, VKP_GENERIC );
+	// v_softParticles: the distance of the solid level, one float a pixel (13)
+	vk.softDepthShader = VK_CreateShader( vk_softDepthFrag, sizeof( vk_softDepthFrag ) );
+	vk.softDepthPipeline = VK_CreatePipeline( vk.postVertexShader, vk.softDepthShader, 0, 13, VKP_GENERIC );
 	// the saber blades in 3D, added onto the frame over the level (8: with the samples of the frame)
 	vk.saberShader = VK_CreateShader( vk_saberFrag, sizeof( vk_saberFrag ) );
 	vk.saberPipeline = VK_CreatePipeline( vk.postVertexShader, vk.saberShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 8, VKP_GENERIC );
@@ -840,7 +863,9 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyShaderModule( vk.device, vk.smaaWeightShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.smaaBlendShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.tonemapPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.backdropPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.ssrPrepPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.softDepthPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.saberShader, NULL );
 	qvkDestroyPipeline( vk.device, vk.saberPortalPipeline, NULL );
@@ -852,7 +877,9 @@ void VK_ShutdownPipelines( void ) {
 		vk.pipelineCache = VK_NULL_HANDLE;
 	}
 	qvkDestroyShaderModule( vk.device, vk.ssrPrepShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.softDepthShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.tonemapShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.backdropShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {

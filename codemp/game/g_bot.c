@@ -842,7 +842,7 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 	// get the botinfo from bots.txt
 	botinfo = G_GetBotInfoByName( name );
 	if ( !botinfo ) {
-		trap->Print( S_COLOR_RED "Error: Bot '%s' not defined\n", name );
+		Com_PrintError( "Bot '%s' not defined\n", name );
 		trap->BotFreeClient( clientNum );
 		return;
 	}

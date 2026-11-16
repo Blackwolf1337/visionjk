@@ -46,6 +46,8 @@ int			Win_Font( void );
 float		Win_Width( const char *text, float scale );
 void		Win_Text( float x, float y, float scale, const vec4_t color, int align, const char *text, float most );
 void		Win_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge );
+// the same with frosted glass behind it (the big windows of the cgame)
+void		Win_Glass( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge );
 void		Win_Line( float x, float y, float w );
 qboolean	Win_Over( float x, float y, float w, float h );
 void		Win_Hit( winHits_t *hits, int part, int arg, float x, float y, float w, float h );

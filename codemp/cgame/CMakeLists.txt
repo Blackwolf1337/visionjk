@@ -147,6 +147,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCgameFiles})
 set(MPCGameVoiceFiles
 	"${MPDir}/cgame/voice/cg_voice.c"
 	"${MPDir}/cgame/voice/cg_voice_audio.c"
+	"${MPDir}/cgame/voice/cg_voice_feed.c"
 	"${MPDir}/cgame/voice/cg_voice.h"
 	)
 if(BuildJPVoice AND NOT EMSCRIPTEN)
@@ -240,6 +241,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCmdMenuFiles})
 set(MPCGameSandboxFiles
 	"${MPDir}/cgame/sandbox/cg_tools.c"
 	"${MPDir}/cgame/sandbox/cg_tools_ui.c"
+	"${MPDir}/cgame/look/cg_remaps.c"
 	)
 source_group("cgame/sandbox" FILES ${MPCGameSandboxFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSandboxFiles})
@@ -271,6 +273,9 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameToysFiles})
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
+	"${MPDir}/cgame/saber/cg_saberscar.c"
+	"${MPDir}/cgame/saber/cg_saberscar.h"
+	"${MPDir}/cgame/boombox/cg_boombox_sync.c"
 	"${MPDir}/cgame/boombox/cg_tv.c"
 	"${MPDir}/cgame/boombox/cg_boombox_ui.c"
 	"${MPDir}/cgame/boombox/cg_boombox.h"
@@ -284,6 +289,15 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameBoomboxFiles})
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"
 	"${MPDir}/cgame/hud/cg_killfeed.c"
+	"${MPDir}/cgame/hud/cg_hudcombat.c"
+	"${MPDir}/cgame/hud/cg_hudkit.c"
+	"${MPDir}/cgame/hud/cg_hudpanels.c"
+	"${MPDir}/cgame/hud/cg_hudsiege.c"
+	"${MPDir}/cgame/hud/cg_hudtop.c"
+	"${MPDir}/cgame/hud/cg_mapvote.c"
+	"${MPDir}/cgame/hud/cg_matchcard.c"
+	"${MPDir}/cgame/hud/cg_powers.c"
+	"${MPDir}/cgame/hud/cg_select3d.c"
 	"${MPDir}/cgame/hud/cg_notify.c"
 	"${MPDir}/cgame/hud/cg_movehud.c"
 	"${MPDir}/cgame/hud/cg_lead.c"

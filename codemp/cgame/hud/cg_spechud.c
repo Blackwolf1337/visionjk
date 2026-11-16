@@ -28,6 +28,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // works out the distance is commented out there); here they are where they are.
 
 #include "cgame/cg_local.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
+#include "cg_hudkit.h"
 
 #define SPEC_RANGE		1500.0f		// what the edge of the map is away (the radar of siege has 2500: near players met in its middle)
 
@@ -38,29 +41,21 @@ qboolean CG_SpecHudShown( void ) {
 		&& ( ( ps->pm_flags & PMF_FOLLOW ) || ps->persistant[PERS_TEAM] == TEAM_SPECTATOR ) );
 }
 
-/*
-=================
-CG_SpecHudDraw
-
-From CG_DrawUpperRight, with the 2D at the right edge (PLACE_RIGHT): y is where it starts, the return where the
-next part goes
-=================
-*/
-float CG_SpecHudDraw( float y ) {
+// the map with its left upper corner at left, top and the radius; newLook: the disc of the new HUD with dots
+static void Spec_Draw( float left, float top, float radius, qboolean newLook ) {
 	const playerState_t	*ps = &cg.predictedPlayerState;
-	const float			radius = 60.0f * Com_Clamp( 0.5f, 2.0f, tay_specHudScale.value );
-	const float			left = SCREEN_WIDTH - 2.0f * radius;
-	const float			cx = left + radius, cy = y + radius;
+	const float			cx = left + radius, cy = top + radius;
 	const vec4_t		back = { 1.0f, 1.0f, 1.0f, 0.6f };
 	vec3_t				look;
 	float				lookAngle, size;
 	int					i;
 
-	if ( !CG_SpecHudShown() ) {
-		return y;
+	if ( newLook ) {
+		Hud_RadarDisc( left, top, radius );
+	} else {
+		trap->R_SetColor( back );
+		CG_DrawPic( left, top, radius * 2.0f, radius * 2.0f, cgs.media.radarShader );
 	}
-	trap->R_SetColor( back );
-	CG_DrawPic( left, y, radius * 2.0f, radius * 2.0f, cgs.media.radarShader );
 
 	AngleVectors( ps->viewangles, look, NULL, NULL );
 	look[2] = 0.0f;
@@ -91,8 +86,14 @@ float CG_SpecHudDraw( float y ) {
 		}
 		// up to half again as large 512 units above, down to half 512 units below
 		scale += Com_Clamp( -0.5f, 0.5f, ( cent->lerpOrigin[2] - ps->origin[2] ) / 1024.0f );
-		size = 12.0f * scale * radius / 128.0f;
+		if ( newLook ) {
+			// a dot in the colour of the team, as the radar of the new HUD draws players
+			const float dot = 3.2f * scale;
 
+			Skin_Panel( cx + sinf( angle ) * distance - dot * 0.5f, cy + cosf( angle ) * distance - dot * 0.5f, dot, dot, dot * 0.5f, color, NULL );
+			continue;
+		}
+		size = 12.0f * scale * radius / 128.0f;
 		trap->R_SetColor( color );
 		CG_DrawRotatePic2( cx + sinf( angle ) * distance, cy + cosf( angle ) * distance, size, size,
 			( 360.0f - cent->lerpAngles[YAW] ) + ps->viewangles[YAW], cgs.media.mAutomapPlayerIcon );
@@ -103,6 +104,30 @@ float CG_SpecHudDraw( float y ) {
 	trap->R_SetColor( colorWhite );
 	CG_DrawRotatePic2( cx, cy, size, size, 0.0f, cgs.media.mAutomapPlayerIcon );
 	trap->R_SetColor( NULL );
+}
 
+/*
+=================
+CG_SpecHudDraw
+
+From CG_DrawUpperRight, with the 2D at the right edge (PLACE_RIGHT): y is where it starts, the return where the
+next part goes. With the new HUD it is not here but in the corner at the bottom right, in the look of its radar
+(CG_SpecHudDrawAt from hud/cg_hudpanels.c).
+=================
+*/
+float CG_SpecHudDraw( float y ) {
+	const float radius = 60.0f * Com_Clamp( 0.5f, 2.0f, tay_specHudScale.value );
+
+	if ( !CG_SpecHudShown() || CG_HudNewLook() ) {
+		return y;
+	}
+	Spec_Draw( SCREEN_WIDTH - 2.0f * radius, y, radius, qfalse );
 	return y + radius * 2.0f;
+}
+
+// the map in the corner of the new HUD, its left upper corner at x, y
+void CG_SpecHudDrawAt( float x, float y, float radius ) {
+	if ( CG_SpecHudShown() ) {
+		Spec_Draw( x, y, radius, qtrue );
+	}
 }

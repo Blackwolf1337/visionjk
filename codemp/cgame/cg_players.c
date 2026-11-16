@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_players.c -- handle the media and animation for player entities
 #include "cg_local.h"
 #include "ui/ui_saberfx.h"
+#include "cgame/saber/cg_saberscar.h"
 #include "ghoul2/G2.h"
 #include "game/bg/bg_saga.h"
 
@@ -462,7 +463,7 @@ retryModel:
 	{
 		if (modelName && modelName[0])
 		{
-			Com_Printf("WARNING: Attempted to load an unsupported multiplayer model %s! (bad or missing bone, or missing animation sequence)\n", modelName);
+			Com_PrintWarning( "Attempted to load an unsupported multiplayer model %s! (bad or missing bone, or missing animation sequence)\n", modelName);
 		}
 
 		modelName = DEFAULT_MODEL;
@@ -3167,7 +3168,7 @@ static void CG_SetLerpFrameAnimation( centity_t *cent, clientInfo_t *ci, lerpFra
 				if (!trap->G2API_RemoveBone(cent->ghoul2, "lhumerus", 0))
 				{
 					assert(0);
-					Com_Printf("WARNING: Failed to remove lhumerus\n");
+					Com_PrintWarning( "Failed to remove lhumerus\n");
 				}
 			}
 
@@ -3188,7 +3189,7 @@ static void CG_SetLerpFrameAnimation( centity_t *cent, clientInfo_t *ci, lerpFra
 				if (!trap->G2API_RemoveBone(cent->ghoul2, brokenBone, 0))
 				{
 					assert(0);
-					Com_Printf("WARNING: Failed to remove %s\n", brokenBone);
+					Com_PrintWarning( "Failed to remove %s\n", brokenBone);
 				}
 				ci->brokenLimbs &= ~broken;
 			}
@@ -5666,6 +5667,13 @@ static qboolean CG_SaberPastAt( const saberPast_t *p, int time, vec3_t base, vec
 // none of his blades came that near (or none was drawn, the history knows only drawn blades).
 qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec3_t base, vec3_t tip, vec3_t sweep )
 {
+	// (the kill message comes a ping and the delay of the snapshots after the hit)
+	return CG_SaberCutNearWithin( ci, point, reach, 600, base, tip, sweep );
+}
+
+// as CG_SaberCutNear, the blade looked at only for the last msec (a cut of a body that lies there, cg_slice.c)
+qboolean CG_SaberCutNearWithin( clientInfo_t *ci, const vec3_t point, float reach, int msec, vec3_t base, vec3_t tip, vec3_t sweep )
+{
 	qboolean	found = qfalse;
 	float		best = reach;
 	int			s, b, i, k;
@@ -5690,8 +5698,7 @@ qboolean CG_SaberCutNear( clientInfo_t *ci, const vec3_t point, float reach, vec
 				vec3_t		seg, rel, nearest;
 				float		u, len2, d;
 
-				// (the kill message comes a ping and the delay of the snapshots after the hit)
-				if ( cg.time - p->time[a] > 600 )
+				if ( cg.time - p->time[a] > msec )
 					break;
 				VectorSubtract( p->tip[a], p->base[a], seg );
 				VectorSubtract( point, p->base[a], rel );
@@ -6956,14 +6963,26 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 				}
 				else
 				{//draw marks if we hit a wall
+					const qboolean architecture = (qboolean)( trace.entityNum == ENTITYNUM_WORLD
+						|| cg_entities[trace.entityNum].currentState.eType == ET_TERRAIN || (cg_entities[trace.entityNum].currentState.eFlags & EF_PERMANENT) );
+
+					// VisionJK: the scars that melt into the wall, one curve a contact (saber/cg_saberscar.c)
+					if ( v_saberScars.integer && architecture )
+					{
+						CG_SaberScarContact( &client->saber[saberNum].blade[bladeNum].trail, i, trace.endpos, trace.plane.normal,
+							client->saber[saberNum].blade[bladeNum].radius );
+					}
 					// All I need is a bool to mark whether I have a previous point to work with.
 					//....come up with something better..
 					if ( client->saber[saberNum].blade[bladeNum].trail.haveOldPos[i] )
 					{
-						if ( trace.entityNum == ENTITYNUM_WORLD || cg_entities[trace.entityNum].currentState.eType == ET_TERRAIN || (cg_entities[trace.entityNum].currentState.eFlags & EF_PERMANENT) )
+						if ( architecture )
 						{//only put marks on architecture
 							// Let's do some cool burn/glowing mark bits!!!
-							CG_CreateSaberMarks( client->saber[saberNum].blade[bladeNum].trail.oldPos[i], trace.endpos, trace.plane.normal );
+							if ( !v_saberScars.integer )
+							{
+								CG_CreateSaberMarks( client->saber[saberNum].blade[bladeNum].trail.oldPos[i], trace.endpos, trace.plane.normal );
+							}
 
 							//make a sound
 							if ( cg.time - client->saber[saberNum].blade[bladeNum].hitWallDebounceTime >= 100 )
@@ -6999,6 +7018,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 
 				// we aren't impacting, so turn off our mark tracking mechanism
 				client->saber[saberNum].blade[bladeNum].trail.haveOldPos[i] = qfalse;
+				CG_SaberScarRelease( &client->saber[saberNum].blade[bladeNum].trail, i );
 			}
 		}
 	}
@@ -10058,7 +10078,7 @@ void CG_Player( centity_t *cent ) {
 	if (!cent->ghoul2)
 	{ //not ready yet?
 #ifdef _DEBUG
-		Com_Printf("WARNING: Client %i has a null ghoul2 instance\n", cent->currentState.number);
+		Com_PrintWarning( "Client %i has a null ghoul2 instance\n", cent->currentState.number);
 #endif
 		trap->G2API_ClearAttachedInstance(cent->currentState.number);
 

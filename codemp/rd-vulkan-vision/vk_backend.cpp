@@ -277,6 +277,33 @@ static const void *RB_StretchPic( const void *data ) {
 	return (const void *)( cmd + 1 );
 }
 
+// VisionJK: frosted glass behind a panel (RE_DrawBackdrop): the rect of the 2D in pixels of the frame, as the
+// projection of RB_SetGL2D() puts it there, and the frame blurred inside it. Not on a 2D plane in the level.
+static const void *RB_Backdrop( const void *data ) {
+	const backdropCommand_t *cmd = (const backdropCommand_t *)data;
+#ifndef RD_VISION_GLES
+	const float bias = R_2DBias(), biasY = R_2DBiasY();
+	const float sx = vk.color.width / ( 640.0f + 2.0f * bias ), sy = vk.color.height / ( 480.0f + 2.0f * biasY );
+
+	VK_BeginFrame();
+	if ( backEnd.plane2D ) {
+		return (const void *)( cmd + 1 );
+	}
+	// what waits to be drawn is behind the panel
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	VK_BackdropPass( (int)floorf( ( cmd->x + bias ) * sx ), (int)floorf( ( cmd->y + biasY ) * sy ),
+		(int)ceilf( ( cmd->x + cmd->w + bias ) * sx ), (int)ceilf( ( cmd->y + cmd->h + biasY ) * sy ), cmd->radius * sx,
+		Com_Clamp( 0.0f, 3.0f, v_backdropBlur->value ) );
+	// the 2D goes on with its own state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	RB_SetGL2D();
+#endif
+	return (const void *)( cmd + 1 );
+}
+
 // a picture turned around its upper right corner (centered: around its middle)
 static const void *RB_RotatePic( const void *data, qboolean centered ) {
 	const rotatePicCommand_t *cmd = (const rotatePicCommand_t *)data;
@@ -819,6 +846,8 @@ static qboolean	rb_overLater, rb_sawOver;
 // transparent is drawn, which leaves no depth: a cloaked or faded player and effects stay on top of the wet ground.
 // rb_wetLater: this run of the list still has to draw them.
 static qboolean	rb_wetLater;
+// v_softParticles: the distance of the solid level is wanted there for this view (VK_SoftDepth)
+static qboolean	rb_softLater;
 
 // VisionJK: the moving lights of the solid surfaces wait for the shadows of the players (vk_rt.cpp): those multiply
 // into the frame, which darkened the light of a saber as well where a player stood between the light of the level
@@ -900,7 +929,10 @@ static void RB_DepthPrepass( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	rb_depthPrepass = qtrue;
 	for ( int i = 0; i < numDrawSurfs; i++ ) {
 		R_DecomposeSort( drawSurfs[i].sort, &entityNum, &shader, &fogNum, &dlighted );
-		if ( entityNum != REFENTITYNUM_WORLD || !RB_PrepassShader( shader ) ) {
+		// (what the shader is remapped to decides, as it is what gets drawn: a server that remaps a texture to a
+		// shader without stages, a sky, makes the surface invisible, and its depth alone would leave it standing
+		// there in black)
+		if ( entityNum != REFENTITYNUM_WORLD || !RB_PrepassShader( shader->remappedShader ? shader->remappedShader : shader ) ) {
 			continue;
 		}
 		if ( shader != oldShader ) {
@@ -965,6 +997,26 @@ static void RB_DrawWet( int depthRange ) {
 	// the saber blades over the solid level, under the sparks and flashes of their clashes (shaders/saber.glsl)
 	VK_SaberBlades( qfalse );
 	VK_GpuMark( "saber blades" );
+	// v_softParticles: the distance of the solid level for the sprites that come now
+#ifndef RD_VISION_GLES
+	if ( rb_softLater ) {
+		VK_SoftDepth();
+		VK_GpuMark( "soft particles" );
+	}
+	// v_gpuSparks: the sparks the device moved, over the solid level, in the frame of the level
+	{
+		trRefEntity_t *entity = backEnd.currentEntity;
+		const orientationr_t ori = backEnd.ori;
+
+		backEnd.currentEntity = &tr.worldEntity;
+		backEnd.ori = backEnd.viewParms.world;
+		VK_SparksDraw( VK_CurrentTransform() );
+		backEnd.currentEntity = entity;
+		backEnd.ori = ori;
+		rb_entityReset = qtrue;
+	}
+	VK_GpuMark( "sparks" );
+#endif
 	// it leaves the viewport with the whole depth
 	if ( depthRange ) {
 		RB_SetDepthRange( depthRange );
@@ -1034,7 +1086,10 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	backEnd.currentEntity = &tr.worldEntity;
 
 	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
-		if ( drawSurf->sort == oldSort ) {
+		// VisionJK: marks on a tessellated surface are a batch of their own for each such surface (srfPoly_t tessShader)
+		shader_t *markTess = ( *drawSurf->surface == SF_POLY ) ? ( (srfPoly_t *)drawSurf->surface )->tessShader : NULL;
+
+		if ( drawSurf->sort == oldSort && markTess == tess.markTess ) {
 			// fast path, same as previous sort
 			RB_AddDrawSurf( drawSurf );
 			continue;
@@ -1118,7 +1173,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		// change the tess parameters if needed. A "entityMergable" shader is a shader that can have surfaces
 		// from separate entities merged into a single batch, like smoke and blood puff sprites
 		if ( shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
-			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) ) {
+			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) || markTess != tess.markTess ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
 				if ( shader->sort > SS_BANNER ) {
@@ -1142,6 +1197,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			}
 #endif
 			RB_BeginSurface( shader, fogNum );
+			tess.markTess = markTess;
 			oldShader = shader;
 			oldFogNum = fogNum;
 			oldDlighted = dlighted;
@@ -1320,7 +1376,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 #ifdef RD_VISION_GLES
 	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint ) );
 #else
-	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 ) );
+	// (the sparks bounce off it: v_gpuSparks wants it too)
+	rb_softLater = (qboolean)( levelView && ( v_softParticles->integer || v_gpuSparks->integer ) && vk.depthReadable && !probeFace && !puddle );
+	vk.softReady = qfalse;
+	rb_wetLater = (qboolean)( levelView && ( r_numWet || r_numPaint || VK_RT_Wanted() || backEnd.refdef.numSaberBlades > 0 || rb_softLater ) );
 	// the moving lights after the shadows of the players (RB_DrawWet)
 	rb_deferDlights = (qboolean)( levelView && VK_RT_Wanted() );
 	rb_sweepSurfs = cmd->drawSurfs;
@@ -1335,6 +1394,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	rb_prepassWanted = qfalse;
 	VK_LevelFragments( qfalse );
 	rb_wetLater = qfalse;
+	rb_softLater = qfalse;
+#ifndef RD_VISION_GLES
+	vk.softReady = qfalse;
+#endif
 	rb_deferDlights = qfalse;
 	if ( levelView && r_numLiquids ) {
 		VK_DrawLiquids();
@@ -1558,6 +1621,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
+			break;
+		case RC_BACKDROP:
+			data = RB_Backdrop( data );
 			break;
 		case RC_ROTATE_PIC:
 			data = RB_RotatePic( data, qfalse );

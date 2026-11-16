@@ -159,6 +159,9 @@ typedef struct windowDef_s {
   float shadow;
   float sheen;
   vec4_t glowColor;
+  // VisionJK "frosted <alpha scale>" of an item: frosted glass behind the panel (DC->drawBackdrop), and its own colour
+  // this much as opaque while the glass is drawn. 0: none. (Not "backdrop", which is the sky behind a whole menu.)
+  float frosted;
   qboolean wide;					// "wide 1": reaches the sides of a screen that is wider than the 640 units of a menu
 } windowDef_t;
 
@@ -326,6 +329,7 @@ typedef struct itemDef_s {
 	int			iMenuFont;					// FONT_SMALL,FONT_MEDIUM,FONT_LARGE	// changed from 'font' so I could see what didn't compile, and differentiate between font handles returned from RegisterFont -ste
 	qboolean	disabled;					// Does this item ignore mouse and keyboard focus
 	int			invertYesNo;
+	int			cvarBit;					// VisionJK: a yes/no on bit cvarBit - 1 of its cvar, 0: the whole cvar
 	int			xoffset;
 
 	qboolean disabledHidden;				// hide the item when 'disabled' is true (for generic image items)
@@ -383,8 +387,8 @@ typedef struct itemDef_s {
 	} canvas;
 } itemDef_t;
 
-#define MENU_PAGES		16					// pages of a menu, counted from 1
-#define PAGE_SEARCH		( MENU_PAGES - 1 )	// "page 15": an item that shows while a search of the menu is on
+#define MENU_PAGES		24					// pages of a menu, counted from 1 (VisionJK: 16 until Setup got its 12th page)
+#define PAGE_SEARCH		( MENU_PAGES - 1 )	// "page 23": an item that shows while a search of the menu is on (PAGE_SEARCH of tools/menus/options.py)
 
 typedef struct menuDef_s {
 	windowDef_t window;
@@ -614,6 +618,12 @@ typedef struct displayContextDef_s {
 		// qfalse for a font of the game: not known.
 		qboolean		(*textInk)							( const char *text, float scale, int iMenuFont, float *box );
 	} ext;
+	// VisionJK: frosted glass behind a panel drawn next (the cgame: ext.R_DrawBackdrop). qtrue: it is drawn. NULL in the
+	// ui module, whose menus in the level have the menu blur.
+	qboolean		(*drawBackdrop)						( float x, float y, float w, float h, float radius );
+	// every translucent WINDOW_STYLE_PANEL gets frosted glass, not only those with "frosted" (the ui module: all
+	// panels of the menus when they are flat, their word of 2026-11-14)
+	qboolean		frostPanels;
 } displayContextDef_t;
 
 
@@ -630,6 +640,7 @@ void Menu_ChangesRevert( void );
 void Menus_Dump( void );
 qboolean Item_Dumped( const itemDef_t *item );
 void Menu_ChangesApply( void );
+void Menu_ResetPage( menuDef_t *menu );
 float Menu_Unit( const menuDef_t *menu );
 qboolean Text_InkAt( const char *text, float scale, int font, int align, float x, float y, float h, float *tx, float *ty );
 void Menu_SetPage( menuDef_t *menu, int page );

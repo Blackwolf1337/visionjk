@@ -38,7 +38,7 @@
 		rect					160 0 1280 960
 		focusColor				0.36 0.78 0.96 1
 		disableColor			0.40 0.47 0.56 1
-		onOpen { uiScript setBotButton }
+		onOpen { uiScript setBotButton ; open ingame_about }
 		skin					1
 		openSlide				8
 
@@ -49,6 +49,7 @@
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.016 0.031 0.063 0.8
+			frosted					0.6
 			wide					1
 			decoration
 		}
@@ -126,37 +127,8 @@
 
 		itemDef
 		{
-			name					vote
-			text					@MENUS_VOTE
-			type					1
-			style					WINDOW_STYLE_EMPTY
-			cvarTest				"ui_singleplayeractive"
-			disableCvar { "1" }
-			rect					16 0 104 52
-			font					5
-			textscale				1.12
-			textstyle				0
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				52
-			textaligny				15.92
-			forecolor				0.86 0.90 0.945 1
-			backcolor				0 0 0 0
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				open ingame_vote
-			}
-			mouseenter { show voteButton }
-			mouseexit { hide voteButton }
-			caps					1
-			flow					1
-		}
-
-		itemDef
-		{
 			name					callvote
-			text					@MENUS_CALL_VOTE
+			text					@MENUS_VOTE
 			type					1
 			style					WINDOW_STYLE_EMPTY
 			cvarTest				"ui_singleplayeractive"
@@ -372,33 +344,6 @@
 			textaligny				15.92
 			caps					1
 			style					WINDOW_STYLE_EMPTY
-			flow					1
-		}
-
-		itemdef
-		{
-			name					about
-			text					@MENUS_ABOUT
-			rect					16 0 104 52
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			font					5
-			textscale				1.12
-			textstyle				0
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				52
-			textaligny				15.92
-			forecolor				0.86 0.90 0.945 1
-			backcolor				0 0 0 0
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				open ingame_about
-			}
-			mouseenter { show aboutButton }
-			mouseexit { hide aboutButton }
-			caps					1
 			flow					1
 		}
 

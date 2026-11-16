@@ -1,0 +1,44 @@
+Particle
+{
+	name				scorch_smoke
+
+	count				1 2
+
+	life				1100 1700
+
+	cullrange			1200
+
+	origin				0 -1 -1 0.5 1 1
+
+	velocity			3 -3 -3 8 3 3
+
+	gravity				10 22
+
+	rotation			0 360
+
+	rotationDelta		-25 25
+
+	rgb
+	{
+		start			0.32 0.29 0.26
+	}
+
+	alpha
+	{
+		start			0.12 0.2
+		end				0
+		flags			linear
+	}
+
+	size
+	{
+		start			1.2 2.2
+		end				7 12
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/misc/steam
+	]
+}

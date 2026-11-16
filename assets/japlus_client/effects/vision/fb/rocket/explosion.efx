@@ -1,0 +1,248 @@
+// VisionJK: rocket/explosion of the game for rd-vulkan-vision (client/fx/FxScheduler.cpp RegisterEffect takes
+// effects/vision/fb first): its parts as they were, a ball of fire from a flipbook added and its smoke rolling.
+
+// VisionJK (rd-vulkan-vision): a ball of fire from the flipbook (tools/materials/flipbooks.py)
+Particle
+{
+	name				Fireball
+	count				2
+	life				650 850
+	delay				0 60
+	origin				6 -12 -12 16 12 12
+	rotation			0 360
+	rotationDelta		-1 1
+	velocity			10 -18 -18 30 18 18
+	frames				8 8
+	size
+	{
+		start			26 34
+		end				58 72
+		flags			linear
+	}
+	shaders
+	[
+		gfx/vision/fb/fireball
+	]
+}
+
+Particle
+{
+	name				OrangeGlow
+	flags				setShaderTime
+	count				8
+	life				1300
+	delay				0 200
+	origin				4 -30 -30 20 30 30
+	rotation			0 360
+	rotationDelta		-2 2
+	velocity			5 -10 -10 10 10 10
+	size
+	{
+		start			2 8
+		end				35 60
+		parm			5 25
+		flags			linear clamp
+	}
+
+	shaders
+	[
+		gfx/exp/slower_rocket_explosion
+		gfx/exp/rocket_explosion
+		gfx/exp/explosion1
+	]
+}
+
+// VisionJK (rd-vulkan-vision): rolling smoke from the flipbook instead of the added steam of the game, blended and
+// lit by the level (v_litParticles), fading softly into the walls (v_softParticles)
+Particle
+{
+	name				LingeringSmoke
+	flags				useAlpha
+	count				7
+	life				2200 3400
+	delay				150 450
+	cullrange			1600
+	origin				4 -24 -24 24 24 24
+	rotation			0 360
+	rotationDelta		-4 4
+	velocity			8 -22 -22 26 22 22
+	acceleration		-4 -6 -6 4 6 6
+	gravity				10 28
+	frames				8 8
+	rgb
+	{
+		start			0.42 0.40 0.38 0.55 0.52 0.48
+	}
+	alpha
+	{
+		start			0.85 1.0
+		end				0
+		parm			60 75
+		flags			nonlinear
+	}
+	size
+	{
+		start			16 24
+		end				70 95
+		flags			linear
+	}
+	shaders
+	[
+		gfx/vision/fb/smoke
+	]
+}
+
+Light
+{
+	name				Flash
+
+	life				950
+
+	alpha
+	{
+		end				0
+		flags			random linear
+	}
+
+	size
+	{
+		start			350
+		end				100
+		flags			linear
+	}
+}
+
+Particle
+{
+	name				Dust
+
+	flags				useAlpha
+
+	spawnFlags			evenDistribution
+
+	count				3
+
+	life				900 1400
+
+	delay				250 500
+
+	cullrange			1000
+
+	origin				5 -25 -25 15 25 25
+
+	rotation			-180 180
+
+	rotationDelta		-3 3
+
+	velocity			20 -20 -20 40 20 20
+
+	acceleration		-5 -5 -5 5 5 5
+
+	gravity				-50 -30
+
+	rgb
+	{
+		start			1 1 0.4353 0.9451 0.4078 0.01176
+	}
+
+	alpha
+	{
+		end				0
+		parm			50 70
+		flags			linear nonlinear
+	}
+
+	size
+	{
+		start			1 6
+		end				30 50
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/misc/dotfill_a
+	]
+}
+
+CameraShake
+{
+	name				Shake
+
+	flags				usePhysics
+
+	life				500 800
+
+	bounce				1 2
+
+	radius				300 400
+}
+
+Sound
+{
+	name				Boom
+
+	count				2
+
+	sounds
+	[
+		sound/weapons/rocket/hit_wall.wav
+	]
+}
+
+Decal
+{
+	size
+	{
+		start			20 30
+	}
+
+	shaders
+	[
+		gfx/damage/burnmark4
+	]
+}
+
+Flash
+{
+	life				200
+
+	cullrange			600
+
+	rgb
+	{
+		start			0 0 0
+		end				0.6 0.5 0.4
+		parm			5.5
+		flags			wave
+	}
+
+	shaders
+	[
+		gfx/effects/whiteFlash
+	]
+}
+
+Flash
+{
+	count				0 1
+
+	life				150
+
+	delay				100 150
+
+	cullrange			400
+
+	rgb
+	{
+		start			0 0 0
+		end				0.6 0.5 0.4
+		parm			5.5
+		flags			wave
+	}
+
+	shaders
+	[
+		gfx/effects/whiteFlash
+	]
+}

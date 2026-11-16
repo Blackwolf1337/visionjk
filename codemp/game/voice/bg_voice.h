@@ -88,6 +88,17 @@ themselves, so no client from before ever gets the type:
 
 to the master	"VO" version 7 client token[4] sequence[2]							text
 to a client		"VO" version 7 client token[4] sequence[2] flags distance			text
+
+Sync audioplayer (2026-11-14, bg_boombox.h): a player whose box is synced with the music player on his computer
+sends what that player plays, coded as a box codes a song, and the relay (or the master) hands every frame on as
+the song of that box. Only to a relay that said BOX_CAP_SYNC (game module) or VOICE_FLAG_SYNC (master):
+
+to the server	"VO" version 9 client token[4] sequence[2]							which[1] frame
+to the master	"VO" version 9 client token[4] sequence[2]							which[1] frame
+
+which: the box in the low four bits, the channel (1: the right one of a sound system) in the high four. The
+relay takes it only from the player the box is synced with, and sends it on as RELAY_AUDIO of the speaker of that
+box and channel, with the sequence number it came with.
 */
 
 #pragma once
@@ -115,6 +126,7 @@ to a client		"VO" version 7 client token[4] sequence[2] flags distance			text
 #define RELAY_BOX				6		// through the masterserver only: a box of the boombox (bg_boombox.h)
 #define RELAY_LOOK				7		// through the masterserver only: the hat and the cape of a player
 #define RELAY_TOY				8		// through the masterserver only: a toy is thrown (game/toys/bg_toys.h)
+#define RELAY_FEED				9		// to the relay or the master only: a frame of the music player a box is synced with
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a RELAY_STATE to the master carries after its head
@@ -134,11 +146,15 @@ to a client		"VO" version 7 client token[4] sequence[2] flags distance			text
 #define VOICE_FLAG_BOXES		32		// the answer of the master: it plays boxes, it knows RELAY_BOX and the state with the boxes
 #define VOICE_FLAG_BOXLIST		64		//	and what came for them after 0.1.8: BOX_DO_SEEK, BOX_DO_DROP, BOX_DO_WATCH (bg_boombox.h)
 #define VOICE_FLAG_LOOKS		128		// the answer of the master: it hands on RELAY_LOOK
+#define VOICE_FLAG_SYNC			VOICE_FLAG_UNSEEN	// the answer of the master, with VOICE_FLAG_BOXES: it takes RELAY_FEED
+								//	(an answer to a RELAY_STATE is never about a speaker, so the bit is free there)
 #define VOICE_CAP_RADIO			1		// in the answer to "vs_voiceLink hello": the relay knows RELAY_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
 #define VOICE_MAX_PPS			60		// what the relay takes from one speaker in a second: datagrams
 #define VOICE_MAX_BPS			14000	//	and bytes. 50 frames a second at 20 kbit are 50 and about 3500
+#define VOICE_FEED_PPS			110		// what it takes of RELAY_FEED from one player: two channels of 50 frames,
+#define VOICE_FEED_BPS			22000	//	64 kbit each, are 100 datagrams and about 18000 bytes
 #define VOICE_QUEUE				16		// frames a listener keeps of one speaker until they are played
 
 #define VOICE_MUFFLE_FADE		0.15f	// seconds from clear to muffled and back
@@ -210,6 +226,7 @@ int			BG_VoiceQueueSpan( const voiceQueue_t *q );
 int			BG_VoiceQueueGet( voiceQueue_t *q, const byte **data, const byte **after, int *afterLen );
 
 qboolean	BG_VoiceLimit( voiceLimit_t *l, int msec, int bytes );
+qboolean	BG_VoiceLimitTo( voiceLimit_t *l, int msec, int bytes, int maxPackets, int maxBytes );
 qboolean	BG_VoiceHears( const voiceEar_t *speaker, const voiceEar_t *listener, float range, qboolean teamOnly, float *distance );
 void		BG_VoiceMuffle( voiceFilter_t *f, float *samples, int count, float target );
 void		BG_VoiceRadio( voiceRadio_t *r, short *samples, int count );

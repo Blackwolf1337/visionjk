@@ -124,6 +124,7 @@ static struct {
 	qboolean	more;			// the server or the master knows what came after 0.1.8 (BOX_CAP_MORE, VOICE_FLAG_BOXLIST)
 	qboolean	systems;		// and sound systems (BOX_CAP_SYSTEM, BOX_SAY_HELLO)
 	qboolean	tvs;			// and TVs (BOX_CAP_TV)
+	qboolean	sync;			// and RELAY_FEED, Sync audioplayer (BOX_CAP_SYNC; the master says VOICE_FLAG_SYNC)
 	int			watch;			// the box whose line was asked for, -1: none
 	char		pending[BOX_PENDING][BOX_ASK + 64];
 	int			numPending;
@@ -244,7 +245,7 @@ static qboolean Box_Valid( int box ) {
 
 // the words of the client command boombox, by BOX_DO_*
 static const char *const boxVerbs[] = { "", "play", "place", "move", "pause", "resume", "skip", "stop", "remove", "volume", "seek", "drop",
-	"watch", "system", "part" };
+	"watch", "system", "part", "tv", "sync", "synctitle", "unsync" };
 
 /*
 =================
@@ -306,6 +307,14 @@ static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, co
 	case BOX_DO_WATCH:
 		Box_Send( va( "vs_boxaction watch %i", ( box == 255 ) ? -1 : box ), (int)strlen( "vs_boxaction watch " ) );
 		break;
+	case BOX_DO_SYNC:
+	case BOX_DO_SYNCTITLE: {
+		// (a new title takes the place of one that waits)
+		const char *verb = ( what == BOX_DO_SYNC ) ? "sync" : "synctitle";
+
+		Box_Send( va( "vs_boxaction %s %i \"%s\"", verb, box, text ), ( what == BOX_DO_SYNCTITLE ) ? (int)strlen( va( "vs_boxaction %s %i ", verb, box ) ) : 0 );
+		break;
+	}
 	default:
 		Box_Send( va( "vs_boxaction %s %i", boxVerbs[what], box ), 0 );
 		break;
@@ -348,12 +357,30 @@ void CG_BoomboxDo( int box, const char *what ) {
 	for ( i = 1; i < (int)ARRAY_LEN( boxVerbs ); i++ ) {
 		if ( !Q_stricmp( what, boxVerbs[i] ) ) {
 			// (these need a place or a text, which a card does not have)
-			if ( i == BOX_DO_PLAY || i == BOX_DO_PLACE || i == BOX_DO_MOVE || i == BOX_DO_SYSTEM || i == BOX_DO_PART )
+			if ( i == BOX_DO_PLAY || i == BOX_DO_PLACE || i == BOX_DO_MOVE || i == BOX_DO_SYSTEM || i == BOX_DO_PART || i == BOX_DO_TV
+				|| i == BOX_DO_SYNC || i == BOX_DO_SYNCTITLE )
 				return;
 			Box_Do( i, box, NULL, 0.0f, 0, NULL );
 			return;
 		}
 	}
+}
+
+// Sync audioplayer (cg_boombox_sync.c): the box plays the music player of this player (BOX_DO_SYNC), plays
+// something else (BOX_DO_SYNCTITLE) or no longer (BOX_DO_UNSYNC). title: what it plays, without quotes.
+void CG_BoomboxSyncSend( int what, int box, const char *title ) {
+	char text[BOX_TITLE];
+
+	if ( !Box_Valid( box ) || ( what != BOX_DO_SYNC && what != BOX_DO_SYNCTITLE && what != BOX_DO_UNSYNC ) )
+		return;
+	Q_strncpyz( text, ( title && title[0] ) ? title : "Music", sizeof( text ) );
+	Q_strstrip( text, "\"\n\r", "'  " );
+	Box_Do( what, box, NULL, 0.0f, 0, text );
+}
+
+// the server or the master takes the music player a box is synced with
+qboolean CG_BoomboxSyncs( void ) {
+	return ( bx.on && ( bx.viaMaster ? CG_VoiceMasterSync() : bx.sync ) ) ? qtrue : qfalse;
 }
 
 // louder or quieter for everybody by a tenth a step. Shown at once, the server says it to the others.
@@ -644,6 +671,7 @@ void CG_BoomboxServerCommand( void ) {
 		bx.more = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_MORE ) ? qtrue : qfalse;
 		bx.systems = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_SYSTEM ) ? qtrue : qfalse;
 		bx.tvs = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_TV ) ? qtrue : qfalse;
+		bx.sync = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_SYNC ) ? qtrue : qfalse;
 		return;
 	}
 	if ( !Q_stricmp( what, "note" ) ) {
@@ -844,6 +872,8 @@ void CG_BoomboxFrame( void ) {
 		bx.asks++;
 	}
 	Box_SendPending();
+	// a box synced with a music player here (cg_boombox_sync.c)
+	CG_BoxSyncFrame();
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		cgBox_t	*b = &cgBoxes[i];
@@ -1224,7 +1254,9 @@ void CG_BoomboxDraw( void ) {
 		if ( !b->inuse || i == bx.held || CG_SelectBoxOutlined( i ) ) {
 			continue;
 		}
-		if ( b->flags & BOX_LOADING ) {
+		if ( b->flags & BOX_SYNCED ) {
+			Com_sprintf( text, sizeof( text ), "%s  (%s)", b->title, CG_VisionText( "Synced" ) );
+		} else if ( b->flags & BOX_LOADING ) {
 			Q_strncpyz( text, CG_VisionText( "Loading ..." ), sizeof( text ) );
 		} else if ( b->flags & BOX_PLAYING ) {
 			Q_strncpyz( text, b->title, sizeof( text ) );
@@ -1482,6 +1514,8 @@ qboolean CG_BoomboxInfo( int box, boomboxInfo_t *info ) {
 	info->owner = b->owner;
 	info->by = b->by;
 	info->muted = CG_VoiceBoxMuted( box );
+	info->synced = ( b->flags & BOX_SYNCED ) ? qtrue : qfalse;
+	info->syncedHere = ( info->synced && CG_BoxSyncBox() == box ) ? qtrue : qfalse;
 	// the last line for this player, while it is new
 	info->note = ( bx.noteTime && cg.time - bx.noteTime < BOX_NOTE_MSEC && ( bx.noteBox < 0 || bx.noteBox == box ) ) ? bx.note : "";
 	return qtrue;
@@ -1865,6 +1899,23 @@ void CG_Boombox_f( void ) {
 		CG_BoomboxDo( box, what );
 		return;
 	}
-	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | system | tv | pause | resume | skip | stop | remove | volume <0 to 100> | window | list\n"
+	// Sync audioplayer: the box near with the music player that plays (of several the first), or no more
+	if ( !Q_stricmp( what, "sync" ) || !Q_stricmp( what, "unsync" ) ) {
+		box = CG_Argv( 2 )[0] ? atoi( CG_Argv( 2 ) ) : CG_BoomboxNear();
+		if ( !Box_Valid( box ) ) {
+			trap->Print( "Boombox: there is no boombox near you\n" );
+			return;
+		}
+		if ( !Q_stricmp( what, "unsync" ) ) {
+			CG_BoxSyncStop( box );
+		} else if ( !CG_BoxSyncOffered( box ) ) {
+			trap->Print( CG_BoomboxSyncs() ? "Boombox: the sound of a music player can not be taken on this computer\n"
+				: "Boombox: this server or masterserver can not sync a box\n" );
+		} else {
+			CG_BoxSyncChoose( box, qtrue );
+		}
+		return;
+	}
+	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | system | tv | pause | resume | skip | stop | remove | volume <0 to 100> | window | list | sync | unsync\n"
 		"Hold the key of the pointer (+v_cursor) and click a boombox for its card, or drag it somewhere else.\n" );
 }

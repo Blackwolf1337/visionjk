@@ -536,7 +536,7 @@ void UseSiegeTarget(gentity_t *other, gentity_t *en, char *target)
 	{
 		if ( t == ent )
 		{
-			trap->Print ("WARNING: Entity used itself.\n");
+			Com_PrintWarning( "Entity used itself.\n");
 		}
 		else
 		{
@@ -1182,7 +1182,7 @@ void SP_info_siege_objective (gentity_t *ent)
 	if (!ent->objective || !ent->side)
 	{ //j00 fux0red something up
 		G_FreeEntity(ent);
-		trap->Print("ERROR: info_siege_objective without an objective or side value\n");
+		Com_PrintError( "info_siege_objective without an objective or side value\n");
 		return;
 	}
 
@@ -1342,7 +1342,7 @@ void SP_info_siege_decomplete (gentity_t *ent)
 	if (!ent->objective || !ent->side)
 	{ //j00 fux0red something up
 		G_FreeEntity(ent);
-		trap->Print("ERROR: info_siege_objective_decomplete without an objective or side value\n");
+		Com_PrintError( "info_siege_objective_decomplete without an objective or side value\n");
 		return;
 	}
 }

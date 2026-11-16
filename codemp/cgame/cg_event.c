@@ -117,6 +117,12 @@ const char	*CG_PlaceString( int rank ) {
 
 qboolean CG_ThereIsAMaster(void);
 
+// VisionJK: with the one feed (hud/cg_killfeed.c) a kill is a line of it, so its sentence goes to the console only.
+// The same for what was picked up: the new HUD has a card for it.
+static const char *CG_ObituaryPrefix( void ) {
+	return CG_HudFeedActive() ? "[skipnotify]" : "";
+}
+
 /*
 =============
 CG_Obituary
@@ -148,6 +154,8 @@ static void CG_Obituary( entityState_t *ent ) {
 	if ( mod == MOD_SABER ) {
 		CG_SliceKill( target, attacker );
 	}
+	// and a kill by an explosion right at the body bursts it into pieces
+	CG_SliceBlastKill( target, mod );
 
 	// tay_killSound, as jaPRO's cg_killSounds: the own player killed somebody else
 	if ( tay_killSound.integer && cg.snap && !( cg.snap->ps.pm_flags & PMF_FOLLOW ) && attacker == cg.snap->ps.clientNum && target != attacker ) {
@@ -290,7 +298,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		}
 		message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
-		trap->Print( "%s %s\n", targetName, message);
+		trap->Print( "%s%s %s\n", CG_ObituaryPrefix(), targetName, message);
 		CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, message ) );
 		return;
 	}
@@ -469,7 +477,7 @@ clientkilled:
 		if (message) {
 			message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
-			trap->Print( "%s %s %s\n",
+			trap->Print( "%s%s %s %s\n", CG_ObituaryPrefix(),
 				targetName, message, attackerName);
 			CG_KillfeedAdd( attacker, target, mod, va( "%s %s %s", targetName, message, attackerName ) );
 			return;
@@ -477,7 +485,7 @@ clientkilled:
 	}
 
 	// we don't know what it was
-	trap->Print( "%s %s\n", targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
+	trap->Print( "%s%s %s\n", CG_ObituaryPrefix(), targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
 	CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, CG_GetStringEdString( "MP_INGAME", "DIED_GENERIC" ) ) );
 }
 
@@ -694,11 +702,11 @@ static void CG_ItemPickup( int itemNum ) {
 
 		if ( trap->SE_GetStringTextString( va("SP_INGAME_%s",Q_strupr(upperKey)), text, sizeof( text )))
 		{
-			Com_Printf("%s %s\n", CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), text);
+			Com_Printf("%s%s %s\n", CG_ObituaryPrefix(), CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), text);
 		}
 		else
 		{
-			Com_Printf("%s %s\n", CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), bg_itemlist[itemNum].classname);
+			Com_Printf("%s%s %s\n", CG_ObituaryPrefix(), CG_GetStringEdString("MP_INGAME", "PICKUPLINE"), bg_itemlist[itemNum].classname);
 		}
 	}
 }
@@ -2385,6 +2393,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					}
 					trap->S_StartSound(es->origin, es->number, CHAN_AUTO, blockSound );
 					trap->FX_PlayEffectID( blockFXID, es->origin, fxDir, -1, -1, qfalse );
+					// VisionJK: a burst of sparks where the renderer simulates them (v_gpuSparks)
+					CG_GpuSparks( es->origin, fxDir, GPUSPARKS_CLASH, 1.0f );
 
 					if ( !noFlare )
 					{
@@ -2853,7 +2863,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			if (es->eventParm < MAX_CLIENTS)
 			{ //You try to do very bad thing!
 #ifdef _DEBUG
-				Com_Printf("WARNING: Tried to kill a client ghoul2 instance with a server event!\n");
+				Com_PrintWarning( "Tried to kill a client ghoul2 instance with a server event!\n");
 #endif
 				break;
 			}

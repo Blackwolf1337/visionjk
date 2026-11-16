@@ -138,6 +138,23 @@ Game modes and rules
   userinfo flood protection, auto quit at a time of day (`jp_autoQUIT`), fake clients, download redirect URL,
   logging of plugin versions and IPs.
 
+### Map vote (not from JA+)
+
+`game/g_mapvote.c`, the client part is in [ui.md](ui.md).
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `vs_mapVote` | 1 | 1 runs the map vote at the end of a level, 0 off |
+| `vs_mapVoteCount` | 3 | how many maps are offered |
+| `vs_mapVoteTime` | 15 | seconds the vote runs, 5 to 60 |
+
+The server picks maps from its arena files that support the game type, not the one just played, plus the next map
+of the rotation as the last choice. The intermission lasts until the time is over or every player who is not a
+bot has voted. Most votes win, the first on a tie, without votes the rotation goes on. The state is the
+configstring 33 (`CS_VISION_MAPVOTE`), which clients of the game ignore. They get the choices as a print line and
+can vote with the console command `vs_mapvote <n>`. There is no vote in duels, power duels or siege with
+switching teams.
+
 ### Statuses (not from JA+)
 
 `game/status/g_status.c`, the client part is in [client.md](client.md).

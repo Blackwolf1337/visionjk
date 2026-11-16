@@ -321,6 +321,34 @@ REFERENCE           SHOWS_THE_SETTINGS_OF_ALL_PAGES_WHOS
 LANG_ENGLISH        "Shows the settings of all pages whose name or description has these words."
 LANG_SPANISH        "Muestra los ajustes de todas las páginas cuyo nombre o descripción tiene estas palabras."
 
+REFERENCE           QUALITY
+LANG_ENGLISH        "Quality"
+LANG_SPANISH        "Calidad"
+
+REFERENCE           SETS_ANTI_ALIASING_SHADOWS_MATERIALS
+LANG_ENGLISH        "Sets anti-aliasing, shadows, materials, reflections and bloom at once. Low is the quietest for the graphics card. Custom: what you set yourself."
+LANG_SPANISH        "Ajusta el antialiasing, las sombras, los materiales, los reflejos y el bloom de una vez. Bajo es lo más silencioso para la tarjeta gráfica. Personalizado: lo que ajustaste tú."
+
+REFERENCE           LOW
+LANG_ENGLISH        "Low"
+LANG_SPANISH        "Bajo"
+
+REFERENCE           MEDIUM
+LANG_ENGLISH        "Medium"
+LANG_SPANISH        "Medio"
+
+REFERENCE           HIGH
+LANG_ENGLISH        "High"
+LANG_SPANISH        "Alto"
+
+REFERENCE           ULTRA
+LANG_ENGLISH        "Ultra"
+LANG_SPANISH        "#same"
+
+REFERENCE           CUSTOM
+LANG_ENGLISH        "Custom"
+LANG_SPANISH        "Personalizado"
+
 REFERENCE           DISPLAY_MODE
 LANG_ENGLISH        "Display Mode"
 LANG_SPANISH        "Modo de pantalla"
@@ -377,6 +405,22 @@ REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
 LANG_SPANISH        "Los sables de luz y las luces brillan."
 
+REFERENCE           TEXTURE_SWAPS_OF_THE_SERVER
+LANG_ENGLISH        "Texture Swaps of the Server"
+LANG_SPANISH        "Cambios de texturas del servidor"
+
+REFERENCE           A_SERVER_CAN_SWAP_A_TEXTURE_OF_THE_L
+LANG_ENGLISH        "A server can swap a texture of the level for another one, or hide something that way. Off: none of that, you see the level as it is."
+LANG_SPANISH        "Un servidor puede cambiar una textura del nivel por otra, u ocultar algo así. Desactivado: nada de eso, ves el nivel tal como es."
+
+REFERENCE           LIST_OF_TEXTURE_SWAPS
+LANG_ENGLISH        "List of Texture Swaps ..."
+LANG_SPANISH        "Lista de cambios de texturas ..."
+
+REFERENCE           IN_A_LEVEL_EVERY_TEXTURE_THE_SERVER
+LANG_ENGLISH        "In a level: every texture the server swaps, each with its own switch."
+LANG_SPANISH        "En un nivel: cada textura que cambia el servidor, cada una con su interruptor."
+
 REFERENCE           SHADOWS
 LANG_ENGLISH        "Shadows"
 LANG_SPANISH        "Sombras"
@@ -396,6 +440,14 @@ LANG_SPANISH        "Mancha"
 REFERENCE           REAL
 LANG_ENGLISH        "Real"
 LANG_SPANISH        "Reales"
+
+REFERENCE           RAY_TRACING
+LANG_ENGLISH        "Ray Tracing"
+LANG_SPANISH        "Trazado de rayos"
+
+REFERENCE           SHADOWS_OF_THE_PLAYERS_TRACED_BY_RAY
+LANG_ENGLISH        "Shadows of the players traced by rays where the graphics card can do it. Off: shadow maps, which cost less. Needs a restart of the video."
+LANG_SPANISH        "Sombras de los jugadores trazadas por rayos donde la tarjeta gráfica puede. Desactivado: mapas de sombras, que cuestan menos. Necesita reiniciar el vídeo."
 
 REFERENCE           MATERIALS
 LANG_ENGLISH        "Materials"
@@ -436,6 +488,22 @@ LANG_SPANISH        "Luz de las lámparas en los jugadores"
 REFERENCE           PLAYERS_NEAR_LAMP_PANELS_ARE_LIT_FRO
 LANG_ENGLISH        "Players near lamp panels are lit from them, from the same side their shadow falls away from. Needs real shadows with ray tracing."
 LANG_SPANISH        "Los jugadores cerca de las lámparas reciben su luz, desde el lado contrario a su sombra. Requiere sombras reales con trazado de rayos."
+
+REFERENCE           TESSELLATION
+LANG_ENGLISH        "Tessellation"
+LANG_SPANISH        "Teselado"
+
+REFERENCE           MATERIALS_WITH_A_HEIGHT_IN_THEIR_BUM
+LANG_ENGLISH        "Materials with a height in their bump map get real bumps: the graphics card cuts their surfaces finer and lifts them. Off: they look carved by parallax instead, which costs less. Needs a graphics card with tessellation."
+LANG_SPANISH        "Los materiales con altura en su mapa de relieve reciben relieve real: la tarjeta gráfica divide sus superficies más finamente y las eleva. Desactivado: parecen tallados por paralaje, que cuesta menos. Necesita una tarjeta gráfica con teselado."
+
+REFERENCE           PARALLAX
+LANG_ENGLISH        "Parallax"
+LANG_SPANISH        "Paralaje"
+
+REFERENCE           SURFACES_WITH_A_MATERIAL_AND_A_HEIGH
+LANG_ENGLISH        "Surfaces with a material and a height in their bump map look carved. Off: flat, faster."
+LANG_SPANISH        "Las superficies con material y altura en su mapa de relieve parecen talladas. Desactivado: planas, más rápido."
 
 REFERENCE           AUTOMATIC_MATERIALS
 LANG_ENGLISH        "Automatic Materials"
@@ -564,6 +632,130 @@ LANG_SPANISH        "Choque y calor del sable"
 REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
 LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
 LANG_SPANISH        "Las hojas que chocan destellan. El aire alrededor de una hoja encendida está caliente."
+
+REFERENCE           SLICE_BODIES
+LANG_ENGLISH        "Slice Bodies"
+LANG_SPANISH        "Cortar cuerpos"
+
+REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
+LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. A body that lies on the ground can be cut again by a swing through it: several times, once, or not at all. Needs the Vulkan renderer."
+LANG_SPANISH        "Un golpe de sable mortal corta el cuerpo a lo largo del golpe, con un corte quemado que brilla. Un cuerpo tendido en el suelo puede cortarse de nuevo con un golpe que lo atraviese: varias veces, una vez o nunca. Necesita el renderizador Vulkan."
+
+REFERENCE           ON_LYING_BODIES_OFTEN
+LANG_ENGLISH        "On, Lying Bodies Often"
+LANG_SPANISH        "Sí, cuerpos en el suelo varias veces"
+
+REFERENCE           ON_LYING_BODIES_ONCE
+LANG_ENGLISH        "On, Lying Bodies Once"
+LANG_SPANISH        "Sí, cuerpos en el suelo una vez"
+
+REFERENCE           ON_NOT_LYING_BODIES
+LANG_ENGLISH        "On, Not Lying Bodies"
+LANG_SPANISH        "Sí, no los cuerpos en el suelo"
+
+REFERENCE           BLOOD
+LANG_ENGLISH        "Blood"
+LANG_SPANISH        "Sangre"
+
+REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
+LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
+LANG_SPANISH        "La sangre de un cuerpo cortado. Solo suelo: charcos y regueros, sin salpicaduras ni sangre en la pantalla. Desactivado: el corte queda."
+
+REFERENCE           SCREEN_AND_GROUND
+LANG_ENGLISH        "Screen and Ground"
+LANG_SPANISH        "Pantalla y suelo"
+
+REFERENCE           GROUND_ONLY
+LANG_ENGLISH        "Ground Only"
+LANG_SPANISH        "Solo suelo"
+
+REFERENCE           REMOVE_CUT_PARTS
+LANG_ENGLISH        "Remove Cut Parts"
+LANG_SPANISH        "Quitar las partes"
+
+REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
+LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
+LANG_SPANISH        "Cuándo desaparecen las partes de un cuerpo cortado y su sangre. Antes ayuda en servidores llenos."
+
+REFERENCE           AS_LONG_AS_THE_BODY
+LANG_ENGLISH        "As Long as the Body"
+LANG_SPANISH        "Mientras quede el cuerpo"
+
+REFERENCE           AFTER_15_S
+LANG_ENGLISH        "After 15 s"
+LANG_SPANISH        "Tras 15 s"
+
+REFERENCE           AFTER_30_S
+LANG_ENGLISH        "After 30 s"
+LANG_SPANISH        "Tras 30 s"
+
+REFERENCE           AFTER_60_S
+LANG_ENGLISH        "After 60 s"
+LANG_SPANISH        "Tras 60 s"
+
+REFERENCE           SOFT_PARTICLES
+LANG_ENGLISH        "Soft Particles"
+LANG_SPANISH        "Partículas suaves"
+
+REFERENCE           SMOKE_DUST_AND_FIRE_FADE_OUT_WHERE_T
+LANG_ENGLISH        "Smoke, dust and fire fade out where they meet walls and the floor, instead of cutting into them with a hard edge. Vulkan only."
+LANG_SPANISH        "El humo, el polvo y el fuego se desvanecen donde tocan paredes y suelo, en lugar de cortarlos con un borde duro. Solo Vulkan."
+
+REFERENCE           GPU_SPARKS
+LANG_ENGLISH        "GPU Sparks"
+LANG_SPANISH        "Chispas por GPU"
+
+REFERENCE           SABER_HITS_CLASHES_SHOTS_AND_EXPLOSI
+LANG_ENGLISH        "Saber hits, clashes, shots and explosions throw sparks the graphics card simulates: hundreds at once, glowing, cooling and bouncing off walls and floors. Vulkan only."
+LANG_SPANISH        "Los golpes de sable, los choques de hojas, los disparos y las explosiones lanzan chispas que calcula la tarjeta gráfica: cientos a la vez, incandescentes, que se enfrían y rebotan en paredes y suelos. Solo Vulkan."
+
+REFERENCE           SPARK_EMBERS
+LANG_ENGLISH        "Spark Embers"
+LANG_SPANISH        "Brasas de las chispas"
+
+REFERENCE           HOW_LONG_SPARKS_THAT_LAND_ON_THE_FLO
+LANG_ENGLISH        "How long sparks that land on the floor lie there glowing as embers before they go out. 1 as meant, 0 not at all. Vulkan only."
+LANG_SPANISH        "Cuánto tiempo las chispas que caen al suelo quedan allí como brasas encendidas antes de apagarse. 1 como está pensado, 0 nada. Solo Vulkan."
+
+REFERENCE           LIT_PARTICLES
+LANG_ENGLISH        "Lit Particles"
+LANG_SPANISH        "Partículas iluminadas"
+
+REFERENCE           SMOKE_DUST_AND_STEAM_TAKE_THE_LIGHT
+LANG_ENGLISH        "Smoke, dust and steam take the light of the place they are in: dark in a dark corridor, bright next to a saber. Fire and sparks glow as they are. Vulkan only."
+LANG_SPANISH        "El humo, el polvo y el vapor toman la luz del lugar: oscuros en un pasillo oscuro, claros junto a un sable. El fuego y las chispas brillan como antes. Solo Vulkan."
+
+REFERENCE           SABER_SCARS
+LANG_ENGLISH        "Saber Scars"
+LANG_SPANISH        "Cicatrices de sable"
+
+REFERENCE           A_BLADE_MELTS_A_GLOWING_CUT_INTO_WAL
+LANG_ENGLISH        "A blade melts a glowing cut into walls and floors. It cools from white to red and leaves a charred groove. Off: the marks of the game."
+LANG_SPANISH        "Una hoja funde un corte incandescente en paredes y suelos. Se enfría del blanco al rojo y deja un surco carbonizado. Desactivado: las marcas del juego."
+
+REFERENCE           SCARS_STAY
+LANG_ENGLISH        "Scars Stay"
+LANG_SPANISH        "Duración de las cicatrices"
+
+REFERENCE           HOW_LONG_THE_CHARRED_CUTS_STAY_BEFOR
+LANG_ENGLISH        "How long the charred cuts stay before they fade."
+LANG_SPANISH        "Cuánto tiempo quedan los cortes carbonizados antes de desaparecer."
+
+REFERENCE           AFTER_10_S
+LANG_ENGLISH        "After 10 s"
+LANG_SPANISH        "Tras 10 s"
+
+REFERENCE           AFTER_2_MIN
+LANG_ENGLISH        "After 2 min"
+LANG_SPANISH        "Tras 2 min"
+
+REFERENCE           SMOKE_AND_EMBERS
+LANG_ENGLISH        "Smoke and Embers"
+LANG_SPANISH        "Humo y brasas"
+
+REFERENCE           SMOKE_RISES_EMBERS_FALL_AND_THE_AIR
+LANG_ENGLISH        "Smoke rises, embers fall and the air shimmers over a fresh cut."
+LANG_SPANISH        "Sube humo, caen brasas y el aire tiembla sobre un corte reciente."
 
 REFERENCE           SOUND_IN_THE_BACKGROUND
 LANG_ENGLISH        "Sound in the Background"
@@ -821,54 +1013,6 @@ REFERENCE           BLADES_AS_3D_LIGHT_WITH_THE_VULKAN_R
 LANG_ENGLISH        "Blades as 3D light with the Vulkan renderer, ending at walls and glowing over the swing. Off: the flat blade of the look above."
 LANG_SPANISH        "Hojas como luz 3D con el renderizador Vulkan, se detienen en las paredes y brillan sobre el golpe. Desactivado: la hoja plana del aspecto de arriba."
 
-REFERENCE           SLICE_BODIES
-LANG_ENGLISH        "Slice Bodies"
-LANG_SPANISH        "Cortar cuerpos"
-
-REFERENCE           A_SABER_KILL_CUTS_THE_BODY_THROUGH_A
-LANG_ENGLISH        "A saber kill cuts the body through along the swing, with a burnt, glowing cut. Needs the Vulkan renderer."
-LANG_SPANISH        "Un golpe de sable mortal corta el cuerpo a lo largo del golpe, con un corte quemado que brilla. Necesita el renderizador Vulkan."
-
-REFERENCE           BLOOD
-LANG_ENGLISH        "Blood"
-LANG_SPANISH        "Sangre"
-
-REFERENCE           BLOOD_OF_A_BODY_THAT_WAS_CUT_GROUND
-LANG_ENGLISH        "Blood of a body that was cut. Ground Only: pools and streaks, no spray and no blood on your view. Off: the cut stays."
-LANG_SPANISH        "La sangre de un cuerpo cortado. Solo suelo: charcos y regueros, sin salpicaduras ni sangre en la pantalla. Desactivado: el corte queda."
-
-REFERENCE           SCREEN_AND_GROUND
-LANG_ENGLISH        "Screen and Ground"
-LANG_SPANISH        "Pantalla y suelo"
-
-REFERENCE           GROUND_ONLY
-LANG_ENGLISH        "Ground Only"
-LANG_SPANISH        "Solo suelo"
-
-REFERENCE           REMOVE_CUT_PARTS
-LANG_ENGLISH        "Remove Cut Parts"
-LANG_SPANISH        "Quitar las partes"
-
-REFERENCE           WHEN_THE_PARTS_OF_A_CUT_BODY_AND_THE
-LANG_ENGLISH        "When the parts of a cut body and their blood fade. Sooner helps on busy servers."
-LANG_SPANISH        "Cuándo desaparecen las partes de un cuerpo cortado y su sangre. Antes ayuda en servidores llenos."
-
-REFERENCE           AS_LONG_AS_THE_BODY
-LANG_ENGLISH        "As Long as the Body"
-LANG_SPANISH        "Mientras quede el cuerpo"
-
-REFERENCE           AFTER_15_S
-LANG_ENGLISH        "After 15 s"
-LANG_SPANISH        "Tras 15 s"
-
-REFERENCE           AFTER_30_S
-LANG_ENGLISH        "After 30 s"
-LANG_SPANISH        "Tras 30 s"
-
-REFERENCE           AFTER_60_S
-LANG_ENGLISH        "After 60 s"
-LANG_SPANISH        "Tras 60 s"
-
 REFERENCE           TRAIL_LENGTH
 LANG_ENGLISH        "Trail Length"
 LANG_SPANISH        "Longitud de la estela"
@@ -1001,6 +1145,30 @@ REFERENCE           SPIRAL
 LANG_ENGLISH        "Spiral"
 LANG_SPANISH        "Espiral"
 
+REFERENCE           DISRUPTOR_COLOUR
+LANG_ENGLISH        "Disruptor Colour"
+LANG_SPANISH        "Color del disruptor"
+
+REFERENCE           THE_COLOUR_OF_THE_DISRUPTOR_SHOT_IN
+LANG_ENGLISH        "The colour of the disruptor shot. In team games the colour of the team."
+LANG_SPANISH        "El color del disparo del disruptor. En partidas por equipos, el color del equipo."
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+LANG_SPANISH        "Cian"
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+LANG_SPANISH        "Blanco"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+LANG_SPANISH        "Amarillo"
+
+REFERENCE           PURPLE
+LANG_ENGLISH        "Purple"
+LANG_SPANISH        "Morado"
+
 REFERENCE           SCOPE_LENS
 LANG_ENGLISH        "Scope Lens"
 LANG_SPANISH        "Lente de mira"
@@ -1049,37 +1217,29 @@ REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
 LANG_SPANISH        "El HUD de VisionJK. Desactivado: el HUD del juego."
 
-REFERENCE           CLASSIC_MENUS
-LANG_ENGLISH        "Classic Menus"
-LANG_SPANISH        "Menús clásicos"
+REFERENCE           FEED_LINES
+LANG_ENGLISH        "Feed Lines"
+LANG_SPANISH        "Líneas del feed"
 
-REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
-LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
-LANG_SPANISH        "Los menús originales del juego. Se aplica en el próximo inicio."
+REFERENCE           HOW_MANY_LINES_THE_FEED_AT_THE_UPPER
+LANG_ENGLISH        "How many lines the feed at the upper left shows at most. Needs the new HUD."
+LANG_SPANISH        "Cuántas líneas muestra como máximo el feed arriba a la izquierda. Necesita el nuevo HUD."
 
-REFERENCE           3D_MENU
-LANG_ENGLISH        "3D Menu"
-LANG_SPANISH        "Menú 3D"
+REFERENCE           MATCH_CARD
+LANG_ENGLISH        "Match Card"
+LANG_SPANISH        "Tarjeta de partida"
 
-REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
-LANG_ENGLISH        "In a game an open menu stands in the level next to you."
-LANG_SPANISH        "Durante la partida, un menú abierto aparece en el nivel junto a ti."
+REFERENCE           THE_CARD_AT_THE_UPPER_RIGHT_WITH_THE
+LANG_ENGLISH        "The card at the upper right with the game type, the clock, your place and the leader. Needs the new HUD."
+LANG_SPANISH        "La tarjeta arriba a la derecha con el modo de juego, el reloj, tu puesto y el líder. Necesita el nuevo HUD."
 
-REFERENCE           MENU_BLUR
-LANG_ENGLISH        "Menu Blur"
-LANG_SPANISH        "Desenfoque del menú"
+REFERENCE           BLUR_BEHIND_PANELS
+LANG_ENGLISH        "Blur Behind Panels"
+LANG_SPANISH        "Desenfoque tras los paneles"
 
-REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
-LANG_ENGLISH        "How far the level behind an open menu is out of focus."
-LANG_SPANISH        "Cuánto se desenfoca el nivel detrás de un menú abierto."
-
-REFERENCE           MENU_SIZE
-LANG_ENGLISH        "Menu Size"
-LANG_SPANISH        "Tamaño del menú"
-
-REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
-LANG_ENGLISH        "How big the menu is that stands in the level."
-LANG_SPANISH        "Qué tan grande es el menú dentro del nivel."
+REFERENCE           FROSTED_GLASS_WHAT_IS_BEHIND_THE_HUD
+LANG_ENGLISH        "Frosted glass: what is behind the HUD panels, the chat box and the console is blurred. 0: off. Needs the Vulkan renderer."
+LANG_SPANISH        "Cristal esmerilado: lo que hay detrás de los paneles del HUD, la ventana de chat y la consola se desenfoca. 0: desactivado. Necesita el renderizador Vulkan."
 
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
@@ -1121,18 +1281,6 @@ REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
 LANG_ENGLISH        "The colour of the crosshair with nothing under it."
 LANG_SPANISH        "El color de la mira cuando no hay nada debajo."
 
-REFERENCE           WHITE
-LANG_ENGLISH        "White"
-LANG_SPANISH        "Blanco"
-
-REFERENCE           CYAN
-LANG_ENGLISH        "Cyan"
-LANG_SPANISH        "Cian"
-
-REFERENCE           YELLOW
-LANG_ENGLISH        "Yellow"
-LANG_SPANISH        "Amarillo"
-
 REFERENCE           ORANGE
 LANG_ENGLISH        "Orange"
 LANG_SPANISH        "Naranja"
@@ -1165,9 +1313,9 @@ REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
 LANG_SPANISH        "Mostrar FPS"
 
-REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
-LANG_ENGLISH        "Frames a second in the corner of the screen."
-LANG_SPANISH        "Fotogramas por segundo en la esquina de la pantalla."
+REFERENCE           FRAMES_A_SECOND_THE_PING_AND_ITS_COU
+LANG_ENGLISH        "Frames a second, the ping and its course in the corner of the screen."
+LANG_SPANISH        "Fotogramas por segundo, el ping y su evolución en la esquina de la pantalla."
 
 REFERENCE           SHOW_TIMER
 LANG_ENGLISH        "Show Timer"
@@ -1193,22 +1341,6 @@ REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
 LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
 LANG_SPANISH        "El temporizador muestra el tiempo que queda hasta el límite, si lo hay."
 
-REFERENCE           SHOW_LAGOMETER
-LANG_ENGLISH        "Show Lagometer"
-LANG_SPANISH        "Mostrar lagómetro"
-
-REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
-LANG_ENGLISH        "A graph of your connection."
-LANG_SPANISH        "Un gráfico de tu conexión."
-
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-LANG_SPANISH        "#same"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-LANG_SPANISH        "Quién eliminó a quién y con qué, arriba a la derecha."
-
 REFERENCE           TEAM_OVERLAY_SIZE
 LANG_ENGLISH        "Team Overlay Size"
 LANG_SPANISH        "Tamaño de la lista del equipo"
@@ -1217,85 +1349,141 @@ REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 LANG_ENGLISH        "How large the list of your team mates is."
 LANG_SPANISH        "Tamaño de la lista de tus compañeros."
 
+REFERENCE           TEAM_OVERLAY_WEAPONS
+LANG_ENGLISH        "Team Overlay Weapons"
+LANG_SPANISH        "Armas en la lista del equipo"
+
+REFERENCE           THE_WEAPON_EACH_TEAM_MATE_HOLDS_AFTE
+LANG_ENGLISH        "The weapon each team mate holds, after the numbers."
+LANG_SPANISH        "El arma que lleva cada compañero, tras los números."
+
+REFERENCE           TEAM_OVERLAY_BARS
+LANG_ENGLISH        "Team Overlay Bars"
+LANG_SPANISH        "Barras en la lista del equipo"
+
+REFERENCE           HEALTH_AND_ARMOUR_OF_TEAM_MATES_AS_A
+LANG_ENGLISH        "Health and armour of team mates as a thin bar under the numbers."
+LANG_SPANISH        "La salud y la armadura de los compañeros como una barra fina bajo los números."
+
 REFERENCE           SPECTATOR_MAP
 LANG_ENGLISH        "Spectator Map"
 LANG_SPANISH        "Mapa del espectador"
 
 REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-LANG_SPANISH        "Al observar, muestra arriba a la derecha un mapa de los jugadores cercanos."
+LANG_ENGLISH        "While you watch, a map of the players around: with the new HUD in the corner at the bottom right, in the look of its radar."
+LANG_SPANISH        "Al mirar, un mapa de los jugadores cercanos: con el nuevo HUD en la esquina inferior derecha, con el aspecto de su radar."
 
-REFERENCE           SPEEDOMETER
-LANG_ENGLISH        "Speedometer"
-LANG_SPANISH        "Velocímetro"
+REFERENCE           SPECTATOR_MAP_SIZE
+LANG_ENGLISH        "Spectator Map Size"
+LANG_SPANISH        "Tamaño del mapa de espectador"
 
-REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
-LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
-LANG_SPANISH        "Tu velocidad bajo la mira y la de tus últimos saltos."
+REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
+LANG_ENGLISH        "How large the map of the players is while you watch (the HUD of the game; the new HUD has it at one size)."
+LANG_SPANISH        "El tamaño del mapa de jugadores al mirar (HUD del juego; el nuevo HUD tiene un tamaño fijo)."
 
-REFERENCE           STRAFE_HELPER
-LANG_ENGLISH        "Strafe Helper"
-LANG_SPANISH        "Ayuda de strafe"
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+LANG_SPANISH        "Tamaño del texto de la consola"
 
-REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
-LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
-LANG_SPANISH        "Una barra bajo la mira que muestra hacia dónde girar para ganar velocidad."
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+LANG_SPANISH        "El tamaño del texto de la consola."
 
-REFERENCE           SNAP_HUD
-LANG_ENGLISH        "Snap HUD"
-LANG_SPANISH        "Indicador de snap"
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+LANG_SPANISH        "Opacidad de la consola"
 
-REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
-LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
-LANG_SPANISH        "En el aire, los ángulos en los que el redondeo del juego da algo más de velocidad."
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+LANG_SPANISH        "Cuánto del juego se ve a través de la consola."
 
-REFERENCE           PITCH_HUD
-LANG_ENGLISH        "Pitch HUD"
-LANG_SPANISH        "Indicador de inclinación"
+REFERENCE           CONSOLE_CLOCK
+LANG_ENGLISH        "Console Clock"
+LANG_SPANISH        "Reloj de la consola"
 
-REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
-LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
-LANG_SPANISH        "Una marca donde estaría tu vista con una inclinación elegida."
+REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+LANG_ENGLISH        "A clock in the corner of the console."
+LANG_SPANISH        "Un reloj en la esquina de la consola."
 
-REFERENCE           STRAFE_TRAILS
-LANG_ENGLISH        "Strafe Trails"
-LANG_SPANISH        "Rastros de carrera"
+REFERENCE           TIME
+LANG_ENGLISH        "Time"
+LANG_SPANISH        "Hora"
 
-REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
-LANG_ENGLISH        "A fading line on the ground along where players ran."
-LANG_SPANISH        "Una línea que se desvanece en el suelo por donde corrieron los jugadores."
+REFERENCE           DATE_AND_TIME
+LANG_ENGLISH        "Date and Time"
+LANG_SPANISH        "Fecha y hora"
 
-REFERENCE           MINE
-LANG_ENGLISH        "Mine"
-LANG_SPANISH        "Solo yo"
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+LANG_SPANISH        "Entrada de chat propia"
 
-REFERENCE           EVERYBODY
-LANG_ENGLISH        "Everybody"
-LANG_SPANISH        "Todos"
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+LANG_SPANISH        "Escribe en el chat de VisionJK, con historial y enlaces."
 
-REFERENCE           MOVEMENT_KEYS
-LANG_ENGLISH        "Movement Keys"
-LANG_SPANISH        "Teclas de movimiento"
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+LANG_SPANISH        "Emojis del chat"
 
-REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
-LANG_ENGLISH        "The keys you move with on the screen, lit while held."
-LANG_SPANISH        "Muestra en pantalla las teclas de movimiento, iluminadas mientras se pulsan."
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+LANG_SPANISH        "Los códigos como :smile: se muestran como imágenes en el chat."
 
-REFERENCE           START_GOAL
-LANG_ENGLISH        "Start Goal"
-LANG_SPANISH        "Objetivo de salida"
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+LANG_SPANISH        "Registro del chat"
 
-REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
-LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
-LANG_SPANISH        "El velocímetro se vuelve dorado a partir de esta velocidad. 0: apagado."
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+LANG_SPANISH        "Cada línea del chat se escribe en la carpeta chatlogs, con la hora."
 
-REFERENCE           JUMP_GOAL
-LANG_ENGLISH        "Jump Goal"
-LANG_SPANISH        "Objetivo de salto"
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+LANG_SPANISH        "Pitido del chat"
 
-REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
-LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
-LANG_SPANISH        "Los saltos al menos así de rápidos aparecen dorados en la lista de saltos. 0: apagado."
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+LANG_SPANISH        "Un sonido cuando alguien dice algo."
+
+REFERENCE           NAME_ALERT
+LANG_ENGLISH        "Name Alert"
+LANG_SPANISH        "Aviso de mención"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_OR_ONE_OF
+LANG_ENGLISH        "A chat line with your name or one of the words below is marked gold."
+LANG_SPANISH        "Una línea del chat con tu nombre o una de las palabras de abajo se marca en dorado."
+
+REFERENCE           MARKED
+LANG_ENGLISH        "Marked"
+LANG_SPANISH        "Marcada"
+
+REFERENCE           MARKED_AND_SOUND
+LANG_ENGLISH        "Marked and Sound"
+LANG_SPANISH        "Marcada con sonido"
+
+REFERENCE           NAME_ALERT_WORDS
+LANG_ENGLISH        "Name Alert Words"
+LANG_SPANISH        "Palabras de la alerta de nombre"
+
+REFERENCE           MORE_WORDS_THAT_MARK_A_CHAT_LINE_GOL
+LANG_ENGLISH        "More words that mark a chat line gold, besides your name. Separated by blanks or commas."
+LANG_SPANISH        "Más palabras, además de tu nombre, que marcan una línea del chat en dorado. Separadas por espacios o comas."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_SPANISH        "Notificaciones"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions show in the feed at the upper left."
+LANG_SPANISH        "Los mensajes privados, tu nombre en el chat, las líneas de la boombox y las nuevas versiones aparecen en el feed arriba a la izquierda."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_SPANISH        "Mostradas"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_SPANISH        "Mostradas con sonido"
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
@@ -1321,45 +1509,17 @@ REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
 LANG_SPANISH        "Ausencia y música sobre la cabeza de los demás."
 
-REFERENCE           SHOW_MY_MUSIC
-LANG_ENGLISH        "Show My Music"
-LANG_SPANISH        "Mostrar mi música"
+REFERENCE           NAME_TAGS
+LANG_ENGLISH        "Name Tags"
+LANG_SPANISH        "Nombres encima"
 
-REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
-LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
-LANG_SPANISH        "Muestra a los demás lo que escuchas. Todo el servidor puede leerlo."
+REFERENCE           NAMES_ABOVE_THE_HEADS_OF_THE_PLAYERS
+LANG_ENGLISH        "Names above the heads of the players you can see: of who is near your crosshair and of your team mates, or of everyone. The one under the crosshair gets a larger tag with his health."
+LANG_SPANISH        "Nombres sobre las cabezas de los jugadores que ves: de quien está cerca de la mira y de tus compañeros, o de todos. El que está bajo la mira tiene una etiqueta más grande con su salud."
 
-REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
-LANG_ENGLISH        "Choose Players of My Music ..."
-LANG_SPANISH        "Elegir mis reproductores de música ..."
-
-REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
-LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
-LANG_SPANISH        "Qué reproductores se pueden mostrar: solo se ven las canciones de los marcados."
-
-REFERENCE           SELECT_PLAYERS
-LANG_ENGLISH        "Select Players"
-LANG_SPANISH        "Seleccionar jugadores"
-
-REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
-LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
-LANG_SPANISH        "Con el ratón libre, un clic en un jugador abre una tarjeta con lo que puedes hacer con él."
-
-REFERENCE           SELECTION_OUTLINE
-LANG_ENGLISH        "Selection Outline"
-LANG_SPANISH        "Contorno de selección"
-
-REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
-LANG_ENGLISH        "A glowing outline around the player under the mouse."
-LANG_SPANISH        "Un contorno brillante alrededor del jugador bajo el ratón."
-
-REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
-LANG_ENGLISH        "Keep Scoreboard on Double Tap"
-LANG_SPANISH        "Marcador fijo (doble pulsación)"
-
-REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
-LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-LANG_SPANISH        "Pulsar dos veces rápido la tecla del marcador lo mantiene abierto, con el ratón libre para hacer clic en un jugador."
+REFERENCE           NEAR_THE_CROSSHAIR
+LANG_ENGLISH        "Near the Crosshair"
+LANG_SPANISH        "Cerca de la mira"
 
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
@@ -1529,141 +1689,157 @@ REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 LANG_SPANISH        "Un gorro de Papá Noel en Navidad y una calabaza en Halloween para quien no lleve sombrero."
 
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-LANG_SPANISH        "Entrada de chat propia"
+REFERENCE           SHOW_MY_MUSIC
+LANG_ENGLISH        "Show My Music"
+LANG_SPANISH        "Mostrar mi música"
 
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_SPANISH        "Escribe en el chat de VisionJK, con historial y enlaces."
+REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
+LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
+LANG_SPANISH        "Muestra a los demás lo que escuchas. Todo el servidor puede leerlo."
 
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_SPANISH        "Tamaño del chat"
+REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Choose Players of My Music ..."
+LANG_SPANISH        "Elegir mis reproductores de música ..."
 
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_SPANISH        "Tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda del ratón también lo cambian."
+REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
+LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
+LANG_SPANISH        "Qué reproductores se pueden mostrar: solo se ven las canciones de los marcados."
 
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_SPANISH        "Anchura del chat"
+REFERENCE           SELECT_PLAYERS
+LANG_ENGLISH        "Select Players"
+LANG_SPANISH        "Seleccionar jugadores"
 
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_SPANISH        "La anchura del chat."
+REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
+LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
+LANG_SPANISH        "Con el ratón libre, un clic en un jugador abre una tarjeta con lo que puedes hacer con él."
 
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_SPANISH        "Líneas del chat"
+REFERENCE           SELECTION_OUTLINE
+LANG_ENGLISH        "Selection Outline"
+LANG_SPANISH        "Contorno de selección"
 
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_SPANISH        "Cuántas líneas muestra el chat abierto. También puedes arrastrar su esquina superior derecha con el ratón."
+REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
+LANG_ENGLISH        "A glowing outline around the player under the mouse."
+LANG_SPANISH        "Un contorno brillante alrededor del jugador bajo el ratón."
 
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-LANG_SPANISH        "Pitido del chat"
+REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
+LANG_ENGLISH        "Keep Scoreboard on Double Tap"
+LANG_SPANISH        "Marcador fijo (doble pulsación)"
 
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-LANG_SPANISH        "Un sonido cuando alguien dice algo."
+REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
+LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+LANG_SPANISH        "Pulsar dos veces rápido la tecla del marcador lo mantiene abierto, con el ratón libre para hacer clic en un jugador."
 
-REFERENCE           CHAT_EMOJI
-LANG_ENGLISH        "Chat Emoji"
-LANG_SPANISH        "Emojis del chat"
+REFERENCE           NEW_DRAIN_EFFECT
+LANG_ENGLISH        "New Drain Effect"
+LANG_SPANISH        "Nuevo efecto de drenaje"
 
-REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
-LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
-LANG_SPANISH        "Los códigos como :smile: se muestran como imágenes en el chat."
+REFERENCE           FORCE_DRAIN_SHOWS_THE_WIDE_NEW_EFFEC
+LANG_ENGLISH        "Force drain shows the wide new effect. Off: the effect of the game."
+LANG_SPANISH        "El drenaje de la Fuerza muestra el nuevo efecto amplio. Desactivado: el efecto del juego."
 
-REFERENCE           CHAT_LOG
-LANG_ENGLISH        "Chat Log"
-LANG_SPANISH        "Registro del chat"
+REFERENCE           NEW_FORCE_EFFECTS
+LANG_ENGLISH        "New Force Effects"
+LANG_SPANISH        "Nuevos efectos de la Fuerza"
 
-REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
-LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
-LANG_SPANISH        "Cada línea del chat se escribe en la carpeta chatlogs, con la hora."
+REFERENCE           THE_EFFECTS_OF_THE_SINGLE_PLAYER_FOR
+LANG_ENGLISH        "The effects of the single player force animations and of the grabs."
+LANG_SPANISH        "Los efectos de las animaciones de la Fuerza del modo un jugador y de los agarres."
 
-REFERENCE           NAME_ALERT
-LANG_ENGLISH        "Name Alert"
-LANG_SPANISH        "Aviso de mención"
+REFERENCE           NEW_FORCE_SIGHT
+LANG_ENGLISH        "New Force Sight"
+LANG_SPANISH        "Nueva visión de la Fuerza"
 
-REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
-LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
-LANG_SPANISH        "Una línea del chat con tu nombre se marca en dorado. Más palabras con tay_notifyWords en la consola."
+REFERENCE           THE_LOOK_OF_FORCE_SIGHT_OF_THE_PLUGI
+LANG_ENGLISH        "The look of Force Sight of the plugin."
+LANG_SPANISH        "El aspecto de la visión de la Fuerza del plugin."
 
-REFERENCE           MARKED
-LANG_ENGLISH        "Marked"
-LANG_SPANISH        "Marcada"
+REFERENCE           NEW_OTHER_DIMENSION_LOOK
+LANG_ENGLISH        "New Other Dimension Look"
+LANG_SPANISH        "Nueva otra dimensión"
 
-REFERENCE           MARKED_AND_SOUND
-LANG_ENGLISH        "Marked and Sound"
-LANG_SPANISH        "Marcada con sonido"
+REFERENCE           THE_LOOK_OF_THE_OTHER_DIMENSION_OF_T
+LANG_ENGLISH        "The look of the other dimension of the plugin. Off: a plain overlay over the screen."
+LANG_SPANISH        "El aspecto de la otra dimensión del plugin. Desactivado: una capa simple sobre la pantalla."
 
-REFERENCE           NOTIFICATIONS
-LANG_ENGLISH        "Notifications"
-LANG_SPANISH        "Notificaciones"
+REFERENCE           SEE_BLACK_SABERS
+LANG_ENGLISH        "See Black Sabers"
+LANG_SPANISH        "Ver sables negros"
 
-REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
-LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_SPANISH        "Mensajes privados, tu nombre en el chat, líneas de la boombox y nuevas versiones aparecen a la izquierda."
+REFERENCE           BLACK_BLADES_ARE_SHOWN_BLACK_OFF_THE
+LANG_ENGLISH        "Black blades are shown black. Off: they are shown red."
+LANG_SPANISH        "Las hojas negras se ven negras. Desactivado: se ven rojas."
 
-REFERENCE           SHOWN
-LANG_ENGLISH        "Shown"
-LANG_SPANISH        "Mostradas"
+REFERENCE           SABERS_ON_THE_BODY
+LANG_ENGLISH        "Sabers on the Body"
+LANG_SPANISH        "Sables en el cuerpo"
 
-REFERENCE           SHOWN_AND_SOUND
-LANG_ENGLISH        "Shown and Sound"
-LANG_SPANISH        "Mostradas con sonido"
+REFERENCE           SABERS_THAT_ARE_NOT_DRAWN_HANG_ON_TH
+LANG_ENGLISH        "Sabers that are not drawn hang on the body."
+LANG_SPANISH        "Los sables guardados cuelgan del cuerpo."
 
-REFERENCE           NOTIFICATION_TIME
-LANG_ENGLISH        "Notification Time"
-LANG_SPANISH        "Duración del aviso"
+REFERENCE           NEW_DEATH_MESSAGES
+LANG_ENGLISH        "New Death Messages"
+LANG_SPANISH        "Nuevos mensajes de muerte"
 
-REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
-LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_SPANISH        "Cuántos milisegundos permanece visible una notificación."
+REFERENCE           OFF_THE_MESSAGES_OF_THE_GAME_FOR_DEA
+LANG_ENGLISH        "Off: the messages of the game for deaths in water, lava and falls."
+LANG_SPANISH        "Desactivado: los mensajes del juego para muertes en agua, lava y caídas."
 
-REFERENCE           NOTIFICATION_SIZE
-LANG_ENGLISH        "Notification Size"
-LANG_SPANISH        "Tamaño de las notificaciones"
+REFERENCE           HIDE_PLAYERS_OF_OTHER_DUELS
+LANG_ENGLISH        "Hide Players of Other Duels"
+LANG_SPANISH        "Ocultar jugadores de otros duelos"
 
-REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
-LANG_ENGLISH        "How large the notifications are."
-LANG_SPANISH        "Tamaño de las notificaciones."
+REFERENCE           PLAYERS_IN_A_DUEL_YOU_ARE_NOT_PART_O
+LANG_ENGLISH        "Players in a duel you are not part of fade out and your crosshair ignores them."
+LANG_SPANISH        "Los jugadores en un duelo en el que no participas se desvanecen y tu mira los ignora."
 
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-LANG_SPANISH        "Tamaño del texto de la consola"
+REFERENCE           CAMERA_TURN_AFTER_A_DUEL
+LANG_ENGLISH        "Camera Turn After a Duel"
+LANG_SPANISH        "Giro de cámara tras un duelo"
 
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-LANG_SPANISH        "El tamaño del texto de la consola."
+REFERENCE           WHEN_YOUR_PRIVATE_DUEL_ENDS_THE_CAME
+LANG_ENGLISH        "When your private duel ends the camera turns around you."
+LANG_SPANISH        "Cuando tu duelo privado termina, la cámara gira a tu alrededor."
 
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-LANG_SPANISH        "Opacidad de la consola"
+REFERENCE           AUTO_REPLIER
+LANG_ENGLISH        "Auto Replier"
+LANG_SPANISH        "Respuesta automática"
 
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
-LANG_SPANISH        "Cuánto del juego se ve a través de la consola."
+REFERENCE           ANSWERS_TELLS_WITH_THE_TEXTS_OF_THE
+LANG_ENGLISH        "Answers tells with the texts of the auto replier file while you are away."
+LANG_SPANISH        "Responde a los mensajes privados con los textos del archivo de respuestas mientras estás ausente."
 
-REFERENCE           CONSOLE_CLOCK
-LANG_ENGLISH        "Console Clock"
-LANG_SPANISH        "Reloj de la consola"
+REFERENCE           LEDGE_GRAB
+LANG_ENGLISH        "Ledge Grab"
+LANG_SPANISH        "Agarrar bordes"
 
-REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
-LANG_ENGLISH        "A clock in the corner of the console."
-LANG_SPANISH        "Un reloj en la esquina de la consola."
+REFERENCE           GRAB_LEDGES_YOU_JUMP_AT_AND_PULL_YOU
+LANG_ENGLISH        "Grab ledges you jump at and pull yourself up. Only on JA+ servers that allow it."
+LANG_SPANISH        "Agarra los bordes hacia los que saltas y te sube. Solo en servidores JA+ que lo permiten."
 
-REFERENCE           TIME
-LANG_ENGLISH        "Time"
-LANG_SPANISH        "Hora"
+REFERENCE           NEW_DFA_PRIMARY
+LANG_ENGLISH        "New DFA Primary"
+LANG_SPANISH        "Nuevo DFA primario"
 
-REFERENCE           DATE_AND_TIME
-LANG_ENGLISH        "Date and Time"
-LANG_SPANISH        "Fecha y hora"
+REFERENCE           PRIMARY_ATTACK_THE_DEATH_FROM_ABOVE
+LANG_ENGLISH        "Primary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_SPANISH        "El death from above del plugin con el ataque primario. Solo en servidores JA+ que lo permiten."
+
+REFERENCE           NEW_DFA_SECONDARY
+LANG_ENGLISH        "New DFA Secondary"
+LANG_SPANISH        "Nuevo DFA secundario"
+
+REFERENCE           SECONDARY_ATTACK_THE_DEATH_FROM_ABOV
+LANG_ENGLISH        "Secondary attack: the death from above of the plugin. Only on JA+ servers that allow it."
+LANG_SPANISH        "El death from above del plugin con el ataque secundario. Solo en servidores JA+ que lo permiten."
+
+REFERENCE           NO_SINGLE_PLAYER_CARTWHEEL
+LANG_ENGLISH        "No Single Player Cartwheel"
+LANG_SPANISH        "Sin voltereta del modo un jugador"
+
+REFERENCE           THE_CARTWHEEL_WITHOUT_THE_SINGLE_PLA
+LANG_ENGLISH        "The cartwheel without the single player move. Only on JA+ servers that allow it."
+LANG_SPANISH        "La voltereta sin el movimiento del modo un jugador. Solo en servidores JA+ que lo permiten."
 
 REFERENCE           CLAN_PASSWORD
 LANG_ENGLISH        "Clan Password"
@@ -1673,53 +1849,133 @@ REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_SPANISH        "El chat y la radio del clan llegan a todos en el servidor que tengan la misma. El servidor la ve."
 
-REFERENCE           CHECK_FOR_UPDATES
-LANG_ENGLISH        "Check for Updates"
-LANG_SPANISH        "Buscar actualizaciones"
+REFERENCE           ADMIN_PASSWORD
+LANG_ENGLISH        "Admin Password"
+LANG_SPANISH        "Contraseña de admin"
 
-REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
-LANG_ENGLISH        "Ask at every start whether a newer version is out."
-LANG_SPANISH        "Preguntar en cada inicio si hay una versión más nueva."
+REFERENCE           SENT_TO_A_JA_SERVER_WHEN_YOU_JOIN_TO
+LANG_ENGLISH        "Sent to a JA+ server when you join, to log you in as admin."
+LANG_SPANISH        "Se envía a un servidor JA+ al unirte, para iniciar sesión como admin."
 
-REFERENCE           UPDATE_CHANNEL
-LANG_ENGLISH        "Update Channel"
-LANG_SPANISH        "Canal de actualización"
+REFERENCE           OTHER_DIMENSION_PLAYERS
+LANG_ENGLISH        "Other Dimension Players"
+LANG_SPANISH        "Jugadores de la otra dimensión"
 
-REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
-LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
-LANG_SPANISH        "Estable: las versiones publicadas. Desarrollo: versiones de prueba tempranas, y las publicadas cuando son más nuevas."
+REFERENCE           HOW_VISIBLE_PLAYERS_OF_THE_OTHER_DIM
+LANG_ENGLISH        "How visible players of the other dimension are."
+LANG_SPANISH        "Lo visibles que son los jugadores de la otra dimensión."
 
-REFERENCE           STABLE
-LANG_ENGLISH        "Stable"
-LANG_SPANISH        "Estable"
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+LANG_SPANISH        "Velocímetro"
 
-REFERENCE           DEVELOPMENT
-LANG_ENGLISH        "Development"
-LANG_SPANISH        "Desarrollo"
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+LANG_SPANISH        "Tu velocidad bajo la mira y la de tus últimos saltos."
 
-REFERENCE           CHANGELOG
-LANG_ENGLISH        "Changelog"
-LANG_SPANISH        "Registro de cambios"
+REFERENCE           SPEEDOMETER_SIZE
+LANG_ENGLISH        "Speedometer Size"
+LANG_SPANISH        "Tamaño del velocímetro"
 
-REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
-LANG_ENGLISH        "What changed in each version, and what a new version brings."
-LANG_SPANISH        "Qué cambió en cada versión y qué trae una versión nueva."
+REFERENCE           HOW_LARGE_THE_SPEEDOMETER_IS
+LANG_ENGLISH        "How large the speedometer is."
+LANG_SPANISH        "El tamaño del velocímetro."
 
-REFERENCE           CLEAN_UP_SETTINGS
-LANG_ENGLISH        "Clean Up Settings"
-LANG_SPANISH        "Limpiar ajustes"
+REFERENCE           JUMPS_SHOWN
+LANG_ENGLISH        "Jumps Shown"
+LANG_SPANISH        "Saltos mostrados"
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_FR
-LANG_ENGLISH        "Settings no code used for a month, from older versions and other mods."
-LANG_SPANISH        "Ajustes que ningún código ha usado en un mes, de versiones anteriores y de otros mods."
+REFERENCE           HOW_MANY_OF_YOUR_LAST_JUMPS_THE_SPEE
+LANG_ENGLISH        "How many of your last jumps the speedometer lists with their speed."
+LANG_SPANISH        "Cuántos de tus últimos saltos muestra el velocímetro con su velocidad."
 
-REFERENCE           CLEAR_CACHES
-LANG_ENGLISH        "Clear Caches"
-LANG_SPANISH        "Vaciar cachés"
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+LANG_SPANISH        "Ayuda de strafe"
 
-REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
-LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
-LANG_SPANISH        "Liberar espacio en disco: texturas, materiales, sonidos y rutas de sonido que el juego guarda."
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+LANG_SPANISH        "Una barra bajo la mira que muestra hacia dónde girar para ganar velocidad."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+LANG_SPANISH        "Indicador de snap"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+LANG_SPANISH        "En el aire, los ángulos en los que el redondeo del juego da algo más de velocidad."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+LANG_SPANISH        "Indicador de inclinación"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+LANG_SPANISH        "Una marca donde estaría tu vista con una inclinación elegida."
+
+REFERENCE           PITCH_HUD_ANGLE
+LANG_ENGLISH        "Pitch HUD Angle"
+LANG_SPANISH        "Ángulo del HUD de inclinación"
+
+REFERENCE           THE_PITCH_THE_MARK_OF_THE_PITCH_HUD
+LANG_ENGLISH        "The pitch the mark of the pitch HUD stands at."
+LANG_SPANISH        "La inclinación en la que está la marca del HUD de inclinación."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+LANG_SPANISH        "Rastros de carrera"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+LANG_SPANISH        "Una línea que se desvanece en el suelo por donde corrieron los jugadores."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+LANG_SPANISH        "Solo yo"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+LANG_SPANISH        "Todos"
+
+REFERENCE           STRAFE_TRAIL_TIME
+LANG_ENGLISH        "Strafe Trail Time"
+LANG_SPANISH        "Duración de las estelas de strafe"
+
+REFERENCE           HOW_MANY_SECONDS_A_STRAFE_TRAIL_TAKE
+LANG_ENGLISH        "How many seconds a strafe trail takes to fade."
+LANG_SPANISH        "Cuántos segundos tarda en desvanecerse una estela de strafe."
+
+REFERENCE           MOVEMENT_KEYS
+LANG_ENGLISH        "Movement Keys"
+LANG_SPANISH        "Teclas de movimiento"
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
+LANG_ENGLISH        "The keys you move with on the screen, lit while held."
+LANG_SPANISH        "Muestra en pantalla las teclas de movimiento, iluminadas mientras se pulsan."
+
+REFERENCE           MOVEMENT_KEYS_SIZE
+LANG_ENGLISH        "Movement Keys Size"
+LANG_SPANISH        "Tamaño de las teclas de movimiento"
+
+REFERENCE           HOW_LARGE_THE_MOVEMENT_KEYS_ON_THE_S
+LANG_ENGLISH        "How large the movement keys on the screen are."
+LANG_SPANISH        "El tamaño de las teclas de movimiento en pantalla."
+
+REFERENCE           START_GOAL
+LANG_ENGLISH        "Start Goal"
+LANG_SPANISH        "Objetivo de salida"
+
+REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
+LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
+LANG_SPANISH        "El velocímetro se vuelve dorado a partir de esta velocidad. 0: apagado."
+
+REFERENCE           JUMP_GOAL
+LANG_ENGLISH        "Jump Goal"
+LANG_SPANISH        "Objetivo de salto"
+
+REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
+LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
+LANG_SPANISH        "Los saltos al menos así de rápidos aparecen dorados en la lista de saltos. 0: apagado."
 
 REFERENCE           CHOOSE_DOWNLOADS
 LANG_ENGLISH        "Choose Downloads"
@@ -1789,17 +2045,121 @@ REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
 LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
 LANG_SPANISH        "El archivo con la clave para el inicio de admin, si ningún agente la tiene."
 
-REFERENCE           SCREEN
-LANG_ENGLISH        "Screen"
-LANG_SPANISH        "Pantalla"
+REFERENCE           CHECK_FOR_UPDATES
+LANG_ENGLISH        "Check for Updates"
+LANG_SPANISH        "Buscar actualizaciones"
+
+REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
+LANG_ENGLISH        "Ask at every start whether a newer version is out."
+LANG_SPANISH        "Preguntar en cada inicio si hay una versión más nueva."
+
+REFERENCE           UPDATE_CHANNEL
+LANG_ENGLISH        "Update Channel"
+LANG_SPANISH        "Canal de actualización"
+
+REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
+LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
+LANG_SPANISH        "Estable: las versiones publicadas. Desarrollo: versiones de prueba tempranas, y las publicadas cuando son más nuevas."
+
+REFERENCE           STABLE
+LANG_ENGLISH        "Stable"
+LANG_SPANISH        "Estable"
+
+REFERENCE           DEVELOPMENT
+LANG_ENGLISH        "Development"
+LANG_SPANISH        "Desarrollo"
+
+REFERENCE           CHANGELOG
+LANG_ENGLISH        "Changelog"
+LANG_SPANISH        "Registro de cambios"
+
+REFERENCE           WHAT_CHANGED_IN_EACH_VERSION_AND_WHA
+LANG_ENGLISH        "What changed in each version, and what a new version brings."
+LANG_SPANISH        "Qué cambió en cada versión y qué trae una versión nueva."
+
+REFERENCE           CLEAN_UP_SETTINGS
+LANG_ENGLISH        "Clean Up Settings"
+LANG_SPANISH        "Limpiar ajustes"
+
+REFERENCE           SETTINGS_THIS_VERSION_DOES_NOT_HAVE
+LANG_ENGLISH        "Settings this version does not have, old names of settings, and settings no code used for a month."
+LANG_SPANISH        "Ajustes que esta versión no tiene, nombres antiguos de ajustes y ajustes que ningún código ha usado en un mes."
+
+REFERENCE           CLEAR_CACHES
+LANG_ENGLISH        "Clear Caches"
+LANG_SPANISH        "Vaciar cachés"
+
+REFERENCE           FREE_DISK_SPACE_TEXTURES_MATERIALS_S
+LANG_ENGLISH        "Free disk space: textures, materials, sounds and sound paths the game keeps."
+LANG_SPANISH        "Liberar espacio en disco: texturas, materiales, sonidos y rutas de sonido que el juego guarda."
+
+REFERENCE           CLASSIC_MENUS
+LANG_ENGLISH        "Classic Menus"
+LANG_SPANISH        "Menús clásicos"
+
+REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
+LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
+LANG_SPANISH        "Los menús originales del juego. Se aplica en el próximo inicio."
+
+REFERENCE           3D_MENU
+LANG_ENGLISH        "3D Menu"
+LANG_SPANISH        "Menú 3D"
+
+REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
+LANG_ENGLISH        "In a game an open menu stands in the level next to you."
+LANG_SPANISH        "Durante la partida, un menú abierto aparece en el nivel junto a ti."
+
+REFERENCE           MENU_BLUR
+LANG_ENGLISH        "Menu Blur"
+LANG_SPANISH        "Desenfoque del menú"
+
+REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
+LANG_ENGLISH        "How far the level behind an open menu is out of focus."
+LANG_SPANISH        "Cuánto se desenfoca el nivel detrás de un menú abierto."
+
+REFERENCE           MENU_SIZE
+LANG_ENGLISH        "Menu Size"
+LANG_SPANISH        "Tamaño del menú"
+
+REFERENCE           HOW_BIG_THE_MENU_IS_THAT_STANDS_IN_T
+LANG_ENGLISH        "How big the menu is that stands in the level."
+LANG_SPANISH        "Qué tan grande es el menú dentro del nivel."
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
 LANG_SPANISH        "Detalles"
 
+REFERENCE           SCREEN
+LANG_ENGLISH        "Screen"
+LANG_SPANISH        "Pantalla"
+
 REFERENCE           LIGHTING
 LANG_ENGLISH        "Lighting"
 LANG_SPANISH        "Iluminación"
+
+REFERENCE           SHADOWS_MATERIALS_REFLECTIONS_HDR_AN
+LANG_ENGLISH        "Shadows, materials, reflections, HDR and bloom."
+LANG_SPANISH        "Sombras, materiales, reflejos, HDR y bloom."
+
+REFERENCE           SHADOWS_AND_MATERIALS
+LANG_ENGLISH        "Shadows and Materials"
+LANG_SPANISH        "Sombras y materiales"
+
+REFERENCE           EFFECTS
+LANG_ENGLISH        "Effects"
+LANG_SPANISH        "Efectos"
+
+REFERENCE           SCREEN_EFFECTS_SABER_SLICING_AND_BLO
+LANG_ENGLISH        "Screen effects, saber slicing and blood."
+LANG_SPANISH        "Efectos de pantalla, cortes con el sable y sangre."
+
+REFERENCE           SLICING
+LANG_ENGLISH        "Slicing"
+LANG_SPANISH        "Cortes"
+
+REFERENCE           PARTICLES
+LANG_ENGLISH        "Particles"
+LANG_SPANISH        "Partículas"
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
@@ -1845,13 +2205,13 @@ REFERENCE           WHAT_THE_SCREEN_SHOWS_AROUND_THE_LEV
 LANG_ENGLISH        "What the screen shows around the level, the view and the crosshair."
 LANG_SPANISH        "Lo que muestra la pantalla alrededor del nivel, la vista y la mira."
 
-REFERENCE           MENUS_AND_HUD
-LANG_ENGLISH        "Menus and HUD"
-LANG_SPANISH        "Menús y HUD"
-
 REFERENCE           ON_SCREEN
 LANG_ENGLISH        "On Screen"
 LANG_SPANISH        "En pantalla"
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_SPANISH        "Consola"
 
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
@@ -1861,45 +2221,85 @@ REFERENCE           CROSSHAIR
 LANG_ENGLISH        "Crosshair"
 LANG_SPANISH        "Mira"
 
-REFERENCE           MOVEMENT
-LANG_ENGLISH        "Movement"
-LANG_SPANISH        "Movimiento"
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+LANG_SPANISH        "Equipo"
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
 LANG_SPANISH        "Chat y social"
 
-REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
-LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
-LANG_SPANISH        "Chat, bocadillos e información sobre las cabezas."
+REFERENCE           THE_CHAT_BOX_ALERTS_WHAT_STANDS_ABOV
+LANG_ENGLISH        "The chat box, alerts, what stands above the heads, your music and clicking players."
+LANG_SPANISH        "El chat, los avisos, lo que aparece sobre las cabezas, tu música y hacer clic en jugadores."
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_SPANISH        "Consola"
+REFERENCE           CHAT_BOX
+LANG_ENGLISH        "Chat Box"
+LANG_SPANISH        "Ventana de chat"
+
+REFERENCE           ABOVE_THE_HEADS
+LANG_ENGLISH        "Above the Heads"
+LANG_SPANISH        "Sobre las cabezas"
+
+REFERENCE           MY_MUSIC
+LANG_ENGLISH        "My Music"
+LANG_SPANISH        "Mi música"
+
+REFERENCE           ALERTS
+LANG_ENGLISH        "Alerts"
+LANG_SPANISH        "Avisos"
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 LANG_SPANISH        "Sombreros y capas"
 
-REFERENCE           CHAT
-LANG_ENGLISH        "Chat"
+REFERENCE           CLICKING_PLAYERS
+LANG_ENGLISH        "Clicking Players"
+LANG_SPANISH        "Clic en jugadores"
+
+REFERENCE           JA
+LANG_ENGLISH        "JA+"
 LANG_SPANISH        "#same"
 
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
+REFERENCE           THE_FEATURES_OF_THE_JA_CLIENT_PLUGIN
+LANG_ENGLISH        "The features of the JA+ client plugin, clan and admin login."
+LANG_SPANISH        "Las funciones del plugin de cliente JA+, clan e inicio de sesión de admin."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_SPANISH        "Apariencia"
+
+REFERENCE           CLAN_AND_ADMIN
+LANG_ENGLISH        "Clan and Admin"
+LANG_SPANISH        "Clan y admin"
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+LANG_SPANISH        "Movimiento"
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
 LANG_SPANISH        "#same"
+
+REFERENCE           THE_MOVEMENT_TOOLS_OF_TAYSTJK_SPEEDO
+LANG_ENGLISH        "The movement tools of TaystJK: speedometer, strafe helper, trails and goals."
+LANG_SPANISH        "Las herramientas de movimiento de TaystJK: velocímetro, ayuda de strafe, estelas y objetivos."
+
+REFERENCE           GOALS
+LANG_ENGLISH        "Goals"
+LANG_SPANISH        "Objetivos"
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
 LANG_SPANISH        "Red"
 
-REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
-LANG_ENGLISH        "Updates, downloads and security."
-LANG_SPANISH        "Actualizaciones, descargas y seguridad."
+REFERENCE           DOWNLOADS_THE_CONNECTION_AND_SECURIT
+LANG_ENGLISH        "Downloads, the connection and security."
+LANG_SPANISH        "Descargas, conexión y seguridad."
 
-REFERENCE           UPDATES_AND_DOWNLOADS
-LANG_ENGLISH        "Updates and Downloads"
-LANG_SPANISH        "Actualizaciones y descargas"
+REFERENCE           DOWNLOADS
+LANG_ENGLISH        "Downloads"
+LANG_SPANISH        "Descargas"
 
 REFERENCE           CONNECTION
 LANG_ENGLISH        "Connection"
@@ -1909,25 +2309,53 @@ REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_SPANISH        "Seguridad"
 
+REFERENCE           VISIONJK
+LANG_ENGLISH        "VisionJK"
+LANG_SPANISH        "#same"
+
+REFERENCE           UPDATES_THE_CHANGELOG_CLEANING_UP_AN
+LANG_ENGLISH        "Updates, the changelog, cleaning up and the menus."
+LANG_SPANISH        "Actualizaciones, registro de cambios, limpieza y menús."
+
+REFERENCE           UPDATES
+LANG_ENGLISH        "Updates"
+LANG_SPANISH        "Actualizaciones"
+
+REFERENCE           MAINTENANCE
+LANG_ENGLISH        "Maintenance"
+LANG_SPANISH        "Mantenimiento"
+
+REFERENCE           MENUS
+LANG_ENGLISH        "Menus"
+LANG_SPANISH        "Menús"
+
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
 LANG_SPANISH        "Carpetas del juego con otros mods."
 
-REFERENCE           ESSENTIALS
-LANG_ENGLISH        "Essentials"
-LANG_SPANISH        "Esenciales"
+REFERENCE           DISCARD
+LANG_ENGLISH        "Discard"
+LANG_SPANISH        "Descartar"
 
-REFERENCE           ALL_SETTINGS
-LANG_ENGLISH        "All Settings"
-LANG_SPANISH        "Todos los ajustes"
+REFERENCE           CLOSES_THE_SETTINGS_AND_SETS_BACK_WH
+LANG_ENGLISH        "Closes the settings and sets back what you changed. Apply keeps it."
+LANG_SPANISH        "Cierra los ajustes y deshace lo que cambiaste. Aplicar lo conserva."
 
-REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
-LANG_ENGLISH        "Shows the settings that matter, or all of them."
-LANG_SPANISH        "Muestra los ajustes importantes o todos."
+REFERENCE           RESET_PAGE
+LANG_ENGLISH        "Reset Page"
+LANG_SPANISH        "Restablecer página"
 
-REFERENCE           CHANGED_FROM_DEFAULT
-LANG_ENGLISH        "Changed from default"
-LANG_SPANISH        "Cambiado respecto al valor predeterminado"
+REFERENCE           SETS_THE_SETTINGS_OF_THIS_PAGE_TO_TH
+LANG_ENGLISH        "Sets the settings of this page to their defaults. Revert brings them back."
+LANG_SPANISH        "Pone los ajustes de esta página por defecto. Revertir los recupera."
+
+REFERENCE           CHANGED_FROM_DEFAULT_CLICK_THE_DOT_T
+LANG_ENGLISH        "Changed from default, click the dot to reset"
+LANG_SPANISH        "Cambiado, haz clic en el punto para restablecer"
+
+REFERENCE           TAKES_EFFECT_AFTER_A_RESTART
+LANG_ENGLISH        "Takes effect after a restart"
+LANG_SPANISH        "Se aplica tras reiniciar"
 
 REFERENCE           SOME_CHANGES_APPLY_AFTER_A_RESTART
 LANG_ENGLISH        "Some changes apply after a restart"
@@ -1940,6 +2368,10 @@ LANG_SPANISH        "Revertir"
 REFERENCE           APPLY
 LANG_ENGLISH        "Apply"
 LANG_SPANISH        "Aplicar"
+
+REFERENCE           APPLY_AND_RESTART
+LANG_ENGLISH        "Apply and Restart"
+LANG_SPANISH        "Aplicar y reiniciar"
 
 REFERENCE           PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Players of My Music"
@@ -2013,6 +2445,254 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_SPANISH        "Fundas"
 
+REFERENCE           SEND
+LANG_ENGLISH        "Send"
+LANG_SPANISH        "Enviar"
+
+REFERENCE           CLICK_TO_INSERT_WHEEL_TO_SCROLL
+LANG_ENGLISH        "Click to insert, wheel to scroll"
+LANG_SPANISH        "Clic para insertar, rueda para desplazar"
+
+REFERENCE           WRITE_A_MESSAGE
+LANG_ENGLISH        "Write a message"
+LANG_SPANISH        "Escribir un mensaje"
+
+REFERENCE           LIMIT_REACHED_AFTER_S
+LANG_ENGLISH        "Limit reached after %s"
+LANG_SPANISH        "Límite alcanzado tras %s"
+
+REFERENCE           ENEMY
+LANG_ENGLISH        "Enemy"
+LANG_SPANISH        "Enemigo"
+
+REFERENCE           COMMANDS
+LANG_ENGLISH        "Commands"
+LANG_SPANISH        "Comandos"
+
+REFERENCE           READY
+LANG_ENGLISH        "Ready"
+LANG_SPANISH        "Listo"
+
+REFERENCE           STAFF
+LANG_ENGLISH        "Staff"
+LANG_SPANISH        "Bastón"
+
+REFERENCE           DUAL
+LANG_ENGLISH        "Dual"
+LANG_SPANISH        "Doble"
+
+REFERENCE           TAVION
+LANG_ENGLISH        "Tavion"
+LANG_SPANISH        "#same"
+
+REFERENCE           DESANN
+LANG_ENGLISH        "Desann"
+LANG_SPANISH        "#same"
+
+REFERENCE           STRONG
+LANG_ENGLISH        "Strong"
+LANG_SPANISH        "Fuerte"
+
+REFERENCE           FAST
+LANG_ENGLISH        "Fast"
+LANG_SPANISH        "Rápido"
+
+REFERENCE           YOU_PLAY_FOR_S
+LANG_ENGLISH        "You play for %s"
+LANG_SPANISH        "Juegas para %s"
+
+REFERENCE           TWICE_PICK_A_PLAYER
+LANG_ENGLISH        "twice: pick a player"
+LANG_SPANISH        "dos veces: elegir un jugador"
+
+REFERENCE           WAITING
+LANG_ENGLISH        "Waiting"
+LANG_SPANISH        "Esperando"
+
+REFERENCE           DEATHS
+LANG_ENGLISH        "Deaths"
+LANG_SPANISH        "Muertes"
+
+REFERENCE           ZOOM
+LANG_ENGLISH        "Zoom"
+LANG_SPANISH        "#same"
+
+REFERENCE           RANGE
+LANG_ENGLISH        "Range"
+LANG_SPANISH        "Distancia"
+
+REFERENCE           AMMO
+LANG_ENGLISH        "Ammo"
+LANG_SPANISH        "Munición"
+
+REFERENCE           HEALTH
+LANG_ENGLISH        "Health"
+LANG_SPANISH        "Salud"
+
+REFERENCE           DRAW
+LANG_ENGLISH        "Draw"
+LANG_SPANISH        "Empate"
+
+REFERENCE           S_WINS
+LANG_ENGLISH        "%s wins"
+LANG_SPANISH        "%s gana"
+
+REFERENCE           MATCH_OVER
+LANG_ENGLISH        "Match over"
+LANG_SPANISH        "Partida terminada"
+
+REFERENCE           NEXT_MAP
+LANG_ENGLISH        "Next map"
+LANG_SPANISH        "Siguiente mapa"
+
+REFERENCE           NEXT_IN_ROTATION
+LANG_ENGLISH        "Next in rotation"
+LANG_SPANISH        "Siguiente de la lista"
+
+REFERENCE           YOUR_VOTE
+LANG_ENGLISH        "Your vote"
+LANG_SPANISH        "Tu voto"
+
+REFERENCE           OBJECTIVE
+LANG_ENGLISH        "Objective"
+LANG_SPANISH        "Objetivo"
+
+REFERENCE           ALL_OBJECTIVES_DONE
+LANG_ENGLISH        "All objectives done"
+LANG_SPANISH        "Todos los objetivos cumplidos"
+
+REFERENCE           ROUND_TIME
+LANG_ENGLISH        "Round time"
+LANG_SPANISH        "Tiempo de ronda"
+
+REFERENCE           RESPAWN_IN_I_S
+LANG_ENGLISH        "Respawn in %i s"
+LANG_SPANISH        "Reaparición en %i s"
+
+REFERENCE           SPEED
+LANG_ENGLISH        "Speed"
+LANG_SPANISH        "Velocidad"
+
+REFERENCE           TEAM_VOTE
+LANG_ENGLISH        "Team vote"
+LANG_SPANISH        "Votación de equipo"
+
+REFERENCE           MAKE_S_THE_TEAM_LEADER
+LANG_ENGLISH        "Make %s the team leader"
+LANG_SPANISH        "Hacer a %s líder del equipo"
+
+REFERENCE           U_S
+LANG_ENGLISH        "u/s"
+LANG_SPANISH        "#same"
+
+REFERENCE           HACKING
+LANG_ENGLISH        "Hacking"
+LANG_SPANISH        "Hackeo"
+
+REFERENCE           LOCKED
+LANG_ENGLISH        "Locked"
+LANG_SPANISH        "Fijado"
+
+REFERENCE           LOCKING_I
+LANG_ENGLISH        "Locking %i %%"
+LANG_SPANISH        "Fijando %i %%"
+
+REFERENCE           LAST_HIT_BY
+LANG_ENGLISH        "Last hit by"
+LANG_SPANISH        "Último golpe de"
+
+REFERENCE           OUT_OF_AMMO
+LANG_ENGLISH        "Out of ammo"
+LANG_SPANISH        "Sin munición"
+
+REFERENCE           LOW_AMMO
+LANG_ENGLISH        "Low ammo"
+LANG_SPANISH        "Poca munición"
+
+REFERENCE           CLOAK
+LANG_ENGLISH        "Cloak"
+LANG_SPANISH        "Camuflaje"
+
+REFERENCE           AT_BASE
+LANG_ENGLISH        "At base"
+LANG_SPANISH        "En la base"
+
+REFERENCE           DROPPED
+LANG_ENGLISH        "Dropped"
+LANG_SPANISH        "En el suelo"
+
+REFERENCE           CARRIED_BY_S
+LANG_ENGLISH        "Carried by %s"
+LANG_SPANISH        "Lo lleva %s"
+
+REFERENCE           TAKEN
+LANG_ENGLISH        "Taken"
+LANG_SPANISH        "Tomada"
+
+REFERENCE           FIRST_TO
+LANG_ENGLISH        "First to"
+LANG_SPANISH        "Gana con"
+
+REFERENCE           LEAD
+LANG_ENGLISH        "Lead"
+LANG_SPANISH        "Ventaja"
+
+REFERENCE           OF_I
+LANG_ENGLISH        "of %i"
+LANG_SPANISH        "de %i"
+
+REFERENCE           YOU_CARRY_THE_RED_FLAG
+LANG_ENGLISH        "You carry the red flag"
+LANG_SPANISH        "Llevas la bandera roja"
+
+REFERENCE           YOU_CARRY_THE_BLUE_FLAG
+LANG_ENGLISH        "You carry the blue flag"
+LANG_SPANISH        "Llevas la bandera azul"
+
+REFERENCE           YOU_CARRY_THE_FLAG
+LANG_ENGLISH        "You carry the flag"
+LANG_SPANISH        "Llevas la bandera"
+
+REFERENCE           ATTACK
+LANG_ENGLISH        "Attack"
+LANG_SPANISH        "Ataque"
+
+REFERENCE           NEXT_PLAYER
+LANG_ENGLISH        "Next player"
+LANG_SPANISH        "Siguiente jugador"
+
+REFERENCE           JUMP
+LANG_ENGLISH        "Jump"
+LANG_SPANISH        "Saltar"
+
+REFERENCE           FLY_FREE
+LANG_ENGLISH        "Fly free"
+LANG_SPANISH        "Vuelo libre"
+
+REFERENCE           FLYING_FREE
+LANG_ENGLISH        "Flying free"
+LANG_SPANISH        "Volando libre"
+
+REFERENCE           FOLLOW_A_PLAYER
+LANG_ENGLISH        "Follow a player"
+LANG_SPANISH        "Seguir a un jugador"
+
+REFERENCE           WARMUP
+LANG_ENGLISH        "Warmup"
+LANG_SPANISH        "Calentamiento"
+
+REFERENCE           KILLED_BY
+LANG_ENGLISH        "Killed by"
+LANG_SPANISH        "Muerto por"
+
+REFERENCE           YOU_DIED
+LANG_ENGLISH        "You died"
+LANG_SPANISH        "Has muerto"
+
+REFERENCE           RESPAWN
+LANG_ENGLISH        "Respawn"
+LANG_SPANISH        "Reaparecer"
+
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
 LANG_SPANISH        "Interfaz"
@@ -2020,6 +2700,30 @@ LANG_SPANISH        "Interfaz"
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
 LANG_SPANISH        "El aspecto de los menús, el HUD y la cámara."
+
+REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
+LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+LANG_SPANISH        "Chat, bocadillos e información sobre las cabezas."
+
+REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
+LANG_ENGLISH        "Updates, downloads and security."
+LANG_SPANISH        "Actualizaciones, descargas y seguridad."
+
+REFERENCE           MENUS_AND_HUD
+LANG_ENGLISH        "Menus and HUD"
+LANG_SPANISH        "Menús y HUD"
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+LANG_SPANISH        "#same"
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_SPANISH        "#same"
+
+REFERENCE           UPDATES_AND_DOWNLOADS
+LANG_ENGLISH        "Updates and Downloads"
+LANG_SPANISH        "Actualizaciones y descargas"
 
 REFERENCE           TEXT
 LANG_ENGLISH        "Text"
@@ -2045,6 +2749,22 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_SPANISH        "Reiniciar los gráficos con estos ajustes."
 
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_SPANISH        "Tamaño del chat"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_SPANISH        "Tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda del ratón también lo cambian."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_SPANISH        "Líneas del chat"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_SPANISH        "Cuántas líneas muestra el chat abierto. También puedes arrastrar su esquina superior derecha con el ratón."
+
 REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
 LANG_ENGLISH        "Picture saved to the screenshots folder."
 LANG_SPANISH        "Foto guardada en la carpeta de capturas."
@@ -2057,10 +2777,6 @@ REFERENCE           DEFAULT
 LANG_ENGLISH        "Default"
 LANG_SPANISH        "Predeterminado"
 
-REFERENCE           TAYSTJK
-LANG_ENGLISH        "TaystJK"
-LANG_SPANISH        "#same"
-
 REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
 LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
 LANG_SPANISH        "Funciones del cliente TaystJK: HUD, movimiento, sombreros, capas y más."
@@ -2069,9 +2785,17 @@ REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_SPANISH        "Chat y consola"
 
-REFERENCE           LOOKS
-LANG_ENGLISH        "Looks"
-LANG_SPANISH        "Apariencia"
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_SPANISH        "#same"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_SPANISH        "Quién eliminó a quién y con qué, arriba a la derecha."
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
+LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
+LANG_SPANISH        "Una línea del chat con tu nombre se marca en dorado. Más palabras con tay_notifyWords en la consola."
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."
@@ -2205,6 +2929,74 @@ REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
 LANG_SPANISH        "Activar sonido"
 
+REFERENCE           SYNC_AUDIOPLAYER
+LANG_ENGLISH        "Sync audioplayer ..."
+LANG_SPANISH        "Sincronizar el reproductor ..."
+
+REFERENCE           LOOKING_FOR_MUSIC_PLAYERS
+LANG_ENGLISH        "Looking for music players ..."
+LANG_SPANISH        "Buscando reproductores de música ..."
+
+REFERENCE           PAUSE_OR_PLAY_S
+LANG_ENGLISH        "Pause or play %s"
+LANG_SPANISH        "Pausar o reproducir %s"
+
+REFERENCE           NEXT_SONG
+LANG_ENGLISH        "Next song"
+LANG_SPANISH        "Siguiente canción"
+
+REFERENCE           HEAR_IT_FROM_THE_BOX
+LANG_ENGLISH        "Hear it from the box"
+LANG_SPANISH        "Oírlo desde la boombox"
+
+REFERENCE           HEAR_YOUR_PLAYER_AGAIN_NOT_THE_BOX
+LANG_ENGLISH        "Hear your player again, not the box"
+LANG_SPANISH        "Volver a oír tu reproductor, no la boombox"
+
+REFERENCE           STOP_SYNC
+LANG_ENGLISH        "Stop sync"
+LANG_SPANISH        "Parar la sincronización"
+
+REFERENCE           CANCEL
+LANG_ENGLISH        "Cancel"
+LANG_SPANISH        "Cancelar"
+
+REFERENCE           SYNC
+LANG_ENGLISH        "Sync"
+LANG_SPANISH        "Sincronizar"
+
+REFERENCE           SYNCED
+LANG_ENGLISH        "Synced"
+LANG_SPANISH        "Sincronizado"
+
+REFERENCE           FROM_YOUR_MUSIC_PLAYER
+LANG_ENGLISH        "From your music player"
+LANG_SPANISH        "Desde tu reproductor de música"
+
+REFERENCE           FROM_THE_MUSIC_PLAYER_OF_S
+LANG_ENGLISH        "From the music player of %s"
+LANG_SPANISH        "Desde el reproductor de música de %s"
+
+REFERENCE           WAITS_S
+LANG_ENGLISH        "Waits: %s"
+LANG_SPANISH        "En espera: %s"
+
+REFERENCE           NO_MUSIC_PLAYER_PLAYS_ANYTHING_RIGHT
+LANG_ENGLISH        "No music player plays anything right now. Start a song and try again."
+LANG_SPANISH        "Ningún reproductor de música suena ahora. Pon una canción y vuelve a intentarlo."
+
+REFERENCE           THE_SOUND_OF_YOUR_MUSIC_PLAYER_CAN_N
+LANG_ENGLISH        "The sound of your music player can not be taken (no PulseAudio or PipeWire)"
+LANG_SPANISH        "No se puede tomar el sonido de tu reproductor (sin PulseAudio ni PipeWire)"
+
+REFERENCE           THE_SOUND_OF_S_WAS_NOT_FOUND_THE_SYN
+LANG_ENGLISH        "The sound of %s was not found, the sync ends"
+LANG_SPANISH        "No se encontró el sonido de %s, la sincronización termina"
+
+REFERENCE           S_IS_GONE_THE_SYNC_ENDS
+LANG_ENGLISH        "%s is gone, the sync ends"
+LANG_SPANISH        "%s ya no está, la sincronización termina"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 LANG_SPANISH        "Archivos del servidor"
@@ -2313,6 +3105,18 @@ REFERENCE           JEDI_MASTER
 LANG_ENGLISH        "Jedi Master"
 LANG_SPANISH        "Maestro Jedi"
 
+REFERENCE           TEXTURE_SWAPS
+LANG_ENGLISH        "Texture Swaps"
+LANG_SPANISH        "Cambios de texturas"
+
+REFERENCE           SWAPS_OF_THIS_SERVER
+LANG_ENGLISH        "Swaps of this server"
+LANG_SPANISH        "Cambios de este servidor"
+
+REFERENCE           THIS_SERVER_SWAPS_NO_TEXTURES
+LANG_ENGLISH        "This server swaps no textures."
+LANG_SPANISH        "Este servidor no cambia ninguna textura."
+
 REFERENCE           DISRUPTOR
 LANG_ENGLISH        "Disruptor"
 LANG_SPANISH        "#same"
@@ -2320,6 +3124,22 @@ LANG_SPANISH        "#same"
 REFERENCE           BINOCULARS_AND_ROCKETS
 LANG_ENGLISH        "Binoculars and Rockets"
 LANG_SPANISH        "Prismáticos y cohetes"
+
+REFERENCE           SHOW_LAGOMETER
+LANG_ENGLISH        "Show Lagometer"
+LANG_SPANISH        "Mostrar lagómetro"
+
+REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
+LANG_ENGLISH        "A graph of your connection."
+LANG_SPANISH        "Un gráfico de tu conexión."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_SPANISH        "Anchura del chat"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_SPANISH        "La anchura del chat."
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"
@@ -2469,10 +3289,6 @@ REFERENCE           ALL
 LANG_ENGLISH        "All"
 LANG_SPANISH        "Todos"
 
-REFERENCE           TEAM
-LANG_ENGLISH        "Team"
-LANG_SPANISH        "Equipo"
-
 REFERENCE           PRIVATE
 LANG_ENGLISH        "Private"
 LANG_SPANISH        "Privado"
@@ -2561,6 +3377,22 @@ REFERENCE           NOT_RUNNING
 LANG_ENGLISH        "not running"
 LANG_SPANISH        "cerrado"
 
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_SPANISH        "Duración del aviso"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_SPANISH        "Cuántos milisegundos permanece visible una notificación."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_SPANISH        "Tamaño de las notificaciones"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_SPANISH        "Tamaño de las notificaciones."
+
 REFERENCE           INTRUSIONS
 LANG_ENGLISH        "Intrusions"
 LANG_SPANISH        "Intrusiones"
@@ -2613,9 +3445,9 @@ REFERENCE           NOTHING_TO_CLEAN_UP
 LANG_ENGLISH        "Nothing to clean up."
 LANG_SPANISH        "Nada que limpiar."
 
-REFERENCE           SETTINGS_NO_CODE_USED_FOR_A_MONTH_LE
-LANG_ENGLISH        "Settings no code used for a month: left from older versions and other mods. Remove takes one out of the config."
-LANG_SPANISH        "Ajustes que ningún código ha usado en un mes: restos de versiones anteriores y de otros mods. Quitar saca uno de la configuración."
+REFERENCE           REMOVE_TAKES_A_SETTING_OUT_OF_THE_CO
+LANG_ENGLISH        "Remove takes a setting out of the config: ones this version does not have, old names, and ones no code used for a month."
+LANG_SPANISH        "Eliminar quita un ajuste de la configuración: los que esta versión no tiene, los nombres antiguos y los que ningún código ha usado en un mes."
 
 REFERENCE           REMOVE_ALL
 LANG_ENGLISH        "Remove All"
@@ -2664,6 +3496,22 @@ LANG_SPANISH        "Nunca usado"
 REFERENCE           I_DAYS_AGO
 LANG_ENGLISH        "%i days ago"
 LANG_SPANISH        "hace %i días"
+
+REFERENCE           ESSENTIALS
+LANG_ENGLISH        "Essentials"
+LANG_SPANISH        "Esenciales"
+
+REFERENCE           SHOWS_THE_SETTINGS_THAT_MATTER_OR_AL
+LANG_ENGLISH        "Shows the settings that matter, or all of them."
+LANG_SPANISH        "Muestra los ajustes importantes o todos."
+
+REFERENCE           ALL_SETTINGS
+LANG_ENGLISH        "All Settings"
+LANG_SPANISH        "Todos los ajustes"
+
+REFERENCE           CHANGED_FROM_DEFAULT
+LANG_ENGLISH        "Changed from default"
+LANG_SPANISH        "Cambiado respecto al valor predeterminado"
 
 REFERENCE           NO_SETTING_HAS_THESE_WORDS
 LANG_ENGLISH        "No setting has these words."
@@ -3124,6 +3972,50 @@ LANG_SPANISH        "Su elección"
 REFERENCE           PICK_A_MODEL
 LANG_ENGLISH        "Pick a Model"
 LANG_SPANISH        "Elegir modelo"
+
+REFERENCE           NEEDS_S
+LANG_ENGLISH        "Needs %s"
+LANG_SPANISH        "Necesita %s"
+
+REFERENCE           NOT_IN_THIS_VERSION
+LANG_ENGLISH        "Not in this version"
+LANG_SPANISH        "No está en esta versión"
+
+REFERENCE           RENAMED_TO_S
+LANG_ENGLISH        "Renamed to %s"
+LANG_SPANISH        "Renombrado a %s"
+
+REFERENCE           WHAT_COMES_FROM_TAYSTJK_HITS_SABERS
+LANG_ENGLISH        "What comes from TaystJK: hits, sabers, HUD, movement, cosmetics and chat."
+LANG_SPANISH        "Lo que viene de TaystJK: impactos, sables, HUD, movimiento, cosméticos y chat."
+
+REFERENCE           SABERS
+LANG_ENGLISH        "Sabers"
+LANG_SPANISH        "Sables"
+
+REFERENCE           KILLFEED_SIZE
+LANG_ENGLISH        "Killfeed Size"
+LANG_SPANISH        "Tamaño del registro de muertes"
+
+REFERENCE           HOW_LARGE_THE_KILLFEED_IS
+LANG_ENGLISH        "How large the killfeed is."
+LANG_SPANISH        "El tamaño del registro de muertes."
+
+REFERENCE           KILLFEED_TIME
+LANG_ENGLISH        "Killfeed Time"
+LANG_SPANISH        "Duración del registro de muertes"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_LINE_OF_THE
+LANG_ENGLISH        "How many milliseconds a line of the killfeed stays."
+LANG_SPANISH        "Cuántos milisegundos permanece una línea del registro de muertes."
+
+REFERENCE           CURRENT_VOTE
+LANG_ENGLISH        "Current Vote"
+LANG_SPANISH        "Votación actual"
+
+REFERENCE           VOTES_ON_THE_VOTE_THAT_RUNS_NOW
+LANG_ENGLISH        "Votes on the vote that runs now."
+LANG_SPANISH        "Vota en la votación en curso."
 
 
 ENDMARKER

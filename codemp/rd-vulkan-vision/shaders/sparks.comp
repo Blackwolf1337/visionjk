@@ -1,0 +1,220 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+
+// v_gpuSparks (vk_sparks.cpp): the sparks, embers and bits of the effects, simulated on the device once a frame. Each
+// is five rows in a ring of VK_SPARKS: place and life left (seconds), velocity and its whole life, its hot colour and
+// size, its gravity, drag, bounce and how fast it cools, and the surface it lies on (while it flies x: how often it hit
+// a floor) with w: minus the seconds it will lie glowing once it lands (0: it never does), plus its whole time there
+// once it lies (an ember: then the life left is the time left there and the velocity row's x its heat when it landed).
+// Those that the bursts of this frame give (the frame buffer, after the view) are made anew; the rest fall, slow and
+// bounce off the scene where the distance of the level of the frame before (vk.softDepth, VK_SoftDepth) says there is a
+// surface: the surface from three of its pixels, the speed reflected off it. A spark that may lie and comes down on a
+// floor flat or a second time becomes an ember: it stays where it landed, cools and goes out (shaders/sparks.vert draws
+// it as a glowing dot and its glow on the floor).
+//   frame rows 0-10: the view of that depth as VK_ViewRows has it; 11: seconds since the last frame, 1 when the depth
+//   is there, the number of bursts, a seed; 12-43: the bodies of the frame (VK_SparksView: the middle of a character
+//   and how far round, 0 for none), nothing lies on them; then five rows a burst: origin and first slot, direction and count, colour
+//   and life, speed spread size gravity, drag bounce cooling rest (seconds an ember lies, v_gpuSparksEmbers applied)
+
+layout( local_size_x = 256 ) in;
+
+layout( buffer_reference, std430, buffer_reference_align = 16 ) buffer Sparks {
+	vec4	rows[];
+};
+layout( buffer_reference, std430, buffer_reference_align = 16 ) readonly buffer Frame {
+	vec4	rows[];
+};
+
+layout( push_constant ) uniform Push {
+	Sparks	sparks;
+	Frame	frame;
+	uint	count;			// slots in the ring, a power of two
+} u;
+
+layout( set = 0, binding = 0 ) uniform sampler2D u_distance;
+
+#define W( i )	u.frame.rows[i]
+
+uint Hash( uint x ) {
+	x ^= x >> 16;
+	x *= 0x7feb352du;
+	x ^= x >> 15;
+	x *= 0x846ca68bu;
+	x ^= x >> 16;
+	return x;
+}
+
+float Random( inout uint state ) {
+	state = Hash( state );
+	return float( state & 0xffffffu ) / 16777215.0;
+}
+
+// a place of the level as a pixel of the target and its distance in front of the eye (OnTarget of scene.glsl)
+vec3 OnTarget( vec3 p ) {
+	vec4 clip = mat4( W( 0 ), W( 1 ), W( 2 ), W( 3 ) ) * vec4( p, 1.0 );
+	vec4 rect = W( 8 );
+
+	if ( clip.w < 1.0 ) {
+		return vec3( 0.0, 0.0, -1.0 );
+	}
+	vec2 ndc = clip.xy / clip.w;
+	return vec3( rect.x + ( ndc.x * 0.5 + 0.5 ) * rect.z, rect.y + ( 0.5 - ndc.y * 0.5 ) * rect.w, dot( p - W( 4 ).xyz, W( 5 ).xyz ) );
+}
+
+// the point of the level at a pixel, from the distance there (ScenePoint of scene.glsl)
+vec3 ScenePoint( vec2 pixel, out float dist ) {
+	vec4 rect = W( 8 );
+	ivec2 size = textureSize( u_distance, 0 );
+	dist = texelFetch( u_distance, clamp( ivec2( pixel ), ivec2( 0 ), size - 1 ), 0 ).r;
+	vec2 ndc = vec2( ( pixel.x - rect.x ) / rect.z * 2.0 - 1.0, 1.0 - ( pixel.y - rect.y ) / rect.w * 2.0 );
+	vec3 ray = W( 5 ).xyz - W( 6 ).xyz * ( ndc.x * W( 4 ).w ) + W( 7 ).xyz * ( ndc.y * W( 5 ).w );
+
+	return W( 4 ).xyz + ray * dist;
+}
+
+#define BODIES		12u
+#define NUM_BODIES	32u
+#define BURSTS		( BODIES + NUM_BODIES )
+
+// on or in a character (a player, a bot, a part of a cut body): they move away, so nothing may lie there
+bool OnBody( vec3 p ) {
+	for ( uint k = 0u; k < NUM_BODIES; k++ ) {
+		vec4 b = W( BODIES + k );
+		if ( b.w > 0.0 && distance( p.xy, b.xy ) < b.w && p.z > b.z - 48.0 && p.z < b.z + 72.0 ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void main() {
+	uint i = gl_GlobalInvocationID.x;
+	if ( i >= u.count ) {
+		return;
+	}
+	vec4 parm = W( 11 );
+	uint bursts = uint( parm.z + 0.5 );
+	uint row = i * 5u;
+
+	// made by a burst of this frame
+	for ( uint b = 0u; b < bursts; b++ ) {
+		uint e = BURSTS + b * 5u;
+		vec4 e0 = W( e ), e1 = W( e + 1u ), e2 = W( e + 2u ), e3 = W( e + 3u ), e4 = W( e + 4u );
+		uint first = uint( e0.w + 0.5 ), made = uint( e1.w + 0.5 );
+
+		if ( ( ( i + u.count - first ) & ( u.count - 1u ) ) >= made ) {
+			continue;
+		}
+		uint state = Hash( i * 747796405u + uint( parm.w ) );
+		// a direction in the cone round the burst's (spread 0: along it, 1: the half sphere, 2: all round)
+		vec3 axis = normalize( e1.xyz );
+		vec3 side = normalize( abs( axis.z ) < 0.9 ? cross( axis, vec3( 0.0, 0.0, 1.0 ) ) : cross( axis, vec3( 1.0, 0.0, 0.0 ) ) );
+		vec3 up = cross( axis, side );
+		float cosine = 1.0 - e3.y * Random( state );
+		float sine = sqrt( max( 0.0, 1.0 - cosine * cosine ) );
+		float turn = 6.2831853 * Random( state );
+		vec3 dir = axis * cosine + ( side * cos( turn ) + up * sin( turn ) ) * sine;
+		float life = e2.w * ( 0.45 + 0.55 * Random( state ) );
+		// (a few units off the surface it came from: on a tessellated floor the bumps stand above the point of the hit)
+		vec3 at = e0.xyz + axis * 3.0 + ( vec3( Random( state ), Random( state ), Random( state ) ) - 0.5 ) * 2.0;
+
+		u.sparks.rows[row] = vec4( at, life );
+		u.sparks.rows[row + 1u] = vec4( dir * e3.x * ( 0.35 + 0.65 * Random( state ) ), life );
+		u.sparks.rows[row + 2u] = vec4( e2.rgb, e3.z * ( 0.6 + 0.8 * Random( state ) ) );
+		u.sparks.rows[row + 3u] = vec4( e3.w, e4.x, e4.y, e4.z );
+		u.sparks.rows[row + 4u] = vec4( 0.0, 0.0, 0.0, -e4.w * ( 0.5 + 0.5 * Random( state ) ) );
+		return;
+	}
+
+	vec4 a = u.sparks.rows[row];
+	if ( a.w <= 0.0 ) {
+		return;
+	}
+	vec4 lie = u.sparks.rows[row + 4u];
+	float dt = parm.x;
+
+	vec4 v = u.sparks.rows[row + 1u];
+	vec4 m = u.sparks.rows[row + 3u];
+
+	// an ember: its time runs out; where what it lies on is gone (a body that walked off, a door, a lift: a character
+	// there, or the distance behind it well below the surface it lay on) it falls again, cooling on from its heat
+	if ( lie.w > 0.0 ) {
+		a.w -= dt;
+		bool fall = OnBody( a.xyz );
+		if ( !fall && parm.y > 0.5 ) {
+			vec3 t = OnTarget( a.xyz );
+			vec4 rect = W( 8 );
+			if ( t.z > 0.0 && t.x >= rect.x && t.y >= rect.y && t.x < rect.x + rect.z && t.y < rect.y + rect.w ) {
+				float d0;
+				vec3 behind = ScenePoint( t.xy, d0 );
+				fall = d0 > t.z - 1.0 && dot( behind - a.xyz, lie.xyz ) < -3.0;
+			}
+		}
+		if ( fall && a.w > 0.1 ) {
+			float left = min( a.w, 1.5 );
+			u.sparks.rows[row] = vec4( a.xyz, left );
+			u.sparks.rows[row + 1u] = vec4( 0.0, 0.0, 0.0, left / max( pow( v.x, 1.0 / max( m.w, 0.1 ) ), 0.05 ) );
+			u.sparks.rows[row + 4u] = vec4( 0.0, 0.0, 0.0, -a.w );
+			return;
+		}
+		u.sparks.rows[row].w = a.w;
+		return;
+	}
+
+	a.w -= dt;
+	v.z -= m.x * dt;
+	v.xyz *= exp( -m.y * dt );
+	vec3 next = a.xyz + v.xyz * dt;
+
+	// off the scene: where the step goes behind the surface the depth shows, and not far behind it (else it is only
+	// hidden by something in front)
+	// (not in its first 60 msec: it may start below the bumps of a tessellated floor, the depth of the frame before)
+	if ( parm.y > 0.5 && v.w - a.w > 0.06 ) {
+		vec3 t = OnTarget( next );
+		vec4 rect = W( 8 );
+		if ( t.z > 0.0 && t.x >= rect.x && t.y >= rect.y && t.x < rect.x + rect.z && t.y < rect.y + rect.w ) {
+			float d0, d1, d2;
+			vec3 p0 = ScenePoint( t.xy, d0 );
+			if ( t.z > d0 && t.z < d0 + 8.0 ) {
+				vec3 p1 = ScenePoint( t.xy + vec2( 2.0, 0.0 ), d1 );
+				vec3 p2 = ScenePoint( t.xy + vec2( 0.0, 2.0 ), d2 );
+				vec3 n = cross( p1 - p0, p2 - p0 );
+				if ( dot( n, n ) > 1e-8 && abs( d1 - d0 ) < 6.0 && abs( d2 - d0 ) < 6.0 ) {
+					n = normalize( n );
+					if ( dot( n, W( 4 ).xyz - p0 ) < 0.0 ) {
+						n = -n;
+					}
+					bool floor = n.z > 0.6;
+					v.xyz = reflect( v.xyz, n ) * m.z;
+					// (along the surface it keeps more of its speed than off it, but a floor rubs it: it slides a little)
+					v.xyz -= n * dot( v.xyz, n ) * 0.3;
+					if ( floor ) {
+						vec3 off = n * dot( v.xyz, n );
+						v.xyz = off + ( v.xyz - off ) * 0.55;
+					}
+					next = p0 + n * 0.5;
+					// (lying down after a flat landing or the second bounce on a floor: few live long enough to slow to a
+					// stop on their own)
+					if ( floor && lie.w < 0.0 ) {
+						lie.x += 1.0;
+						u.sparks.rows[row + 4u].x = lie.x;
+					}
+					if ( floor && lie.w < 0.0 && ( lie.x >= 2.0 || dot( v.xyz, n ) < 90.0 ) && !OnBody( p0 ) ) {
+						// it lies down: as hot as it still is, but glowing at least orange red
+						float heat = pow( clamp( a.w / max( v.w, 0.001 ), 0.0, 1.0 ), max( m.w, 0.1 ) );
+						u.sparks.rows[row] = vec4( p0 + n * 0.4, -lie.w );
+						u.sparks.rows[row + 1u] = vec4( max( heat, 0.45 ), 0.0, 0.0, v.w );
+						u.sparks.rows[row + 4u] = vec4( n, -lie.w );
+						return;
+					}
+					if ( dot( v.xyz, v.xyz ) < 400.0 ) {
+						a.w = min( a.w, 0.25 );
+					}
+				}
+			}
+		}
+	}
+	a.xyz = next;
+	u.sparks.rows[row] = a;
+	u.sparks.rows[row + 1u] = v;
+}

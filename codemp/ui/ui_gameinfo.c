@@ -171,7 +171,7 @@ void UI_LoadArenas( void ) {
 	}
 //	trap->Print( "%i arenas parsed\n", ui_numArenas );
 	if (UI_OutOfMemory()) {
-		trap->Print(S_COLOR_YELLOW"WARNING: not anough memory in pool to load all arenas\n");
+		Com_PrintWarning( "not anough memory in pool to load all arenas\n");
 	}
 
 	for( n = 0; n < ui_numArenas; n++ ) {

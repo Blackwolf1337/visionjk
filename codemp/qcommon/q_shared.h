@@ -683,6 +683,19 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value );
 qboolean Info_Validate( const char *s );
 qboolean Info_NextPair( const char **s, char *key, char *value );
 
+// VisionJK: a warning and an error as prints of their own, in place of Com_Printf with a colour and the word in
+// front. They write the word and the colour themselves ("WARNING: " in yellow, "ERROR: " in red) and tell the
+// engine what the line is with a tag in front of it, which Com_Printf of the engine takes off again: so the
+// console, the log and the feed of the HUD (client/cl_console.cpp, "The feed") know a warning and an error
+// without reading colours. Com_PrintError prints, it ends nothing: Com_Error is the one that stops.
+// com_printTags: are the tags written. Always in the engine and its renderer; a module sets it when the engine
+// says it reads them (ROM cvar v_printLevels), any other engine would print the tag.
+#define PRINT_TAG_WARNING	"[warning]"
+#define PRINT_TAG_ERROR		"[error]"
+extern qboolean com_printTags;
+void QDECL Com_PrintWarning( const char *fmt, ... );
+void QDECL Com_PrintError( const char *fmt, ... );
+
 // this is only here so the functions in q_shared.c and bg_*.c can link
 #if defined( _GAME ) || defined( _CGAME ) || defined( UI_BUILD )
 	extern NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );

@@ -160,7 +160,7 @@ void CG_ModelStoreDraw( void ) {
 	ms.x = x = ( SCREEN_WIDTH - MS_W ) * 0.5f;
 	ms.y = y = MS_TOP;
 
-	Win_Panel( x, y, MS_W, MS_H, 6.0f, winFill, winEdge );
+	Win_Glass( x, y, MS_W, MS_H, 6.0f, winFill, winEdge );
 	Win_Hit( &ms.hits, -1, 0, x, y, MS_W, MS_H );
 	Win_Text( x + MS_PAD, y + 8.0f, 0.7f, winAccent, 0, CG_VisionText( "Model Store" ), 0.0f );
 	if ( ms.numModels ) {

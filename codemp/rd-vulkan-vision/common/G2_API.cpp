@@ -754,7 +754,7 @@ void SaveGhoul2InfoArray()
 #endif
 	if ( !ri.PD_Store (PERSISTENT_G2DATA, data, size) )
 	{
-		Com_Printf (S_COLOR_RED "ERROR: Failed to store persistent renderer data.\n");
+		Com_PrintError( "Failed to store persistent renderer data.\n" );
 	}
 }
 
@@ -1638,6 +1638,7 @@ qboolean G2API_SetBoneAnglesMatrix(CGhoul2Info *ghlInfo, const char *boneName, c
 int G2_Add_Bone( const model_t *mod, boneInfo_v &blist, const char *boneName );
 float G2_VJK_BoneScale( CGhoul2Info &ghoul2, int boneNum );
 void G2_VJK_StoreCut( CGhoul2Info &ghoul2, const float *plane, const unsigned char *hidden );
+void G2_VJK_StoreHidden( CGhoul2Info &ghoul2, const unsigned char *hidden );
 float G2_VJK_KeptScale( CGhoul2Info &ghoul2, int boneNum );
 void G2_VJK_KeepScale( CGhoul2Info &ghoul2, int boneNum, float scale );
 void G2_ConstructGhoulSkeleton( CGhoul2Info_v &ghoul2, const int frameNum, bool checkForNewOrigin, const vec3_t scale );
@@ -1810,7 +1811,30 @@ qboolean G2API_VJK_SetBonesWorld( void *ghoul2, int modelIndex, const vec3_t ang
 
 	// the cut, in the pose just placed: into model space (the part is drawn at origin, turned by angles, its axes
 	// scaled by scale as ScaleModelAxis does), each bone of the skeleton marked when it or the listed bone above it
-	// belongs to another part
+	// belongs to another part. A later call with a cut: only which bones belong to another part (a part that lost a
+	// limb at a joint, cg_ragdoll.c CG_RagCutJoint), the cut itself stays as it was taken.
+	if ( cut && !first && hidden )
+	{
+		const int		numBones = ghlInfo->aHeader->numBones;
+		unsigned char	mask[256];
+		signed char		listed[256];
+
+		memset( listed, -1, sizeof( listed ) );
+		for ( int n = 0; n < count; n++ )
+		{
+			if ( bones[n] >= 0 && bones[n] < 256 )
+			{
+				listed[bones[n]] = hidden[n] ? 1 : 0;
+			}
+		}
+		for ( int b = 0; b < numBones && b < 256; b++ )
+		{
+			const int parent = G2_VJK_Skel( ghlInfo, b )->parent;
+
+			mask[b] = listed[b] >= 0 ? (unsigned char)listed[b] : ( parent >= 0 && parent < b ) ? mask[parent] : 0;
+		}
+		G2_VJK_StoreHidden( *ghlInfo, mask );
+	}
 	if ( cut && first )
 	{
 		const vec3_t	one = { 1.0f, 1.0f, 1.0f };

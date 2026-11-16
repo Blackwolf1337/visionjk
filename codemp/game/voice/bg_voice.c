@@ -66,6 +66,9 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	case RELAY_LOOK:
 		// a text, both ways: "<hat> <cape>"
 		return ( bodyLen >= 1 && bodyLen < VOICE_STATUS_TEXT ) ? qtrue : qfalse;
+	case RELAY_FEED:
+		// only ever to the relay: which, and a frame
+		return ( !toClient && bodyLen > 1 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
 	case RELAY_TOY:
 		// a throw, both ways, or to the master the hello of a cgame that draws toys
 		return ( bodyLen == TOY_BYTES || ( !toClient && bodyLen == TOY_HELLO_BYTES ) ) ? qtrue : qfalse;
@@ -349,6 +352,11 @@ The relay: how much it takes from one speaker, and who hears him
 // A datagram of this size at this time (milliseconds): is it within what a speaker may send in a second?
 // A sound card sends 50 a second. What is over the limit is somebody who floods the relay.
 qboolean BG_VoiceLimit( voiceLimit_t *l, int msec, int bytes ) {
+	return BG_VoiceLimitTo( l, msec, bytes, VOICE_MAX_PPS, VOICE_MAX_BPS );
+}
+
+// the same with other limits (VOICE_FEED_PPS and VOICE_FEED_BPS of a synced music player)
+qboolean BG_VoiceLimitTo( voiceLimit_t *l, int msec, int bytes, int maxPackets, int maxBytes ) {
 	const int second = msec / 1000;
 
 	if ( second != l->second ) {
@@ -356,7 +364,7 @@ qboolean BG_VoiceLimit( voiceLimit_t *l, int msec, int bytes ) {
 		l->packets = 0;
 		l->bytes = 0;
 	}
-	if ( l->packets >= VOICE_MAX_PPS || l->bytes + bytes > VOICE_MAX_BPS )
+	if ( l->packets >= maxPackets || l->bytes + bytes > maxBytes )
 		return qfalse;
 	l->packets++;
 	l->bytes += bytes;

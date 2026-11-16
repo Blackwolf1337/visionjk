@@ -39,6 +39,8 @@ cvar_t	*v_smaa;
 cvar_t	*v_tonemap;
 cvar_t	*v_exposure;
 cvar_t	*v_ssr;
+cvar_t	*v_softParticles;
+cvar_t	*v_litParticles;
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
@@ -53,8 +55,52 @@ void VK_InitPost( void ) {
 		"Smooth surfaces with a material mirror what is on the screen (screen space reflections, from the frame before), over what the reflection probes give. 0: the probes alone" );
 	v_smaa = ri.Cvar_Get( "v_smaa", "0", CVAR_ARCHIVE_ND,
 		"Smooths the edges of the level after it is drawn (SMAA 1x), far cheaper than r_ext_multisample and sharper than a blur; with r_ext_multisample 2 it also catches thin lines. Vulkan only. 0: off" );
+	v_softParticles = ri.Cvar_Get( "v_softParticles", "1", CVAR_ARCHIVE_ND,
+		"Smoke, dust and fire of the effects fade out where they meet walls and the floor and right in front of the eye, instead of cutting into them with a hard edge. Vulkan only. 0: off. Above 1: the units over which they fade (1: 10)" );
+	v_litParticles = ri.Cvar_Get( "v_litParticles", "1", CVAR_ARCHIVE_ND,
+		"Smoke, dust and steam of the effects take the light of the place they are in (the light of the level, sabers, shots), dark in a dark corridor. Fire and sparks glow as they are. Vulkan only. 0: always as bright as their picture" );
 	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
+}
+
+/*
+===============
+VK_SoftDepth
+
+v_softParticles, for the view of the level only, once its solid surfaces are drawn (vk_backend.cpp RB_DrawWet): how
+far each pixel of them is from the eye into vk.softDepth, shown in the texture table (tr.softDepthImage). The
+sprites drawn after it in this view read it (generic.frag SoftFade, the draws vk_shade.cpp VK_SoftDraw makes).
+===============
+*/
+void VK_SoftDepth( void ) {
+#ifndef RD_VISION_GLES
+	float	rows[VK_WET_HEADER][4];
+	float	parm[4];
+	int		viewport[4];
+
+	vk.softReady = qfalse;
+	if ( !vk.frame || !v_softParticles->integer || !vk.depthReadable || !vk.softDepth.image || !tr.softDepthImage ) {
+		return;
+	}
+	VK_ViewRows( rows, viewport );
+	parm[0] = rows[6][3];
+	parm[1] = rows[7][3];
+	parm[2] = parm[3] = 0.0f;
+	VK_EndTarget();
+	VK_SoftDepthPass( parm );
+	VK_SparksView();
+	if ( vk.softShown != (int)tr.softDepthImage->texnum ) {
+		VK_ShowTarget( (int)tr.softDepthImage->texnum, &vk.softDepth );
+		vk.softShown = (int)tr.softDepthImage->texnum;
+	}
+	vk.softReady = qtrue;
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+#endif
 }
 
 /*

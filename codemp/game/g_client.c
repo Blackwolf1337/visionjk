@@ -1002,6 +1002,8 @@ BODYQUE
 */
 
 #define BODY_SINK_TIME		30000//45000
+// VisionJK: from the start of its fade (EV_BODYFADE) until the body has faded (2.5 s) and its burn has eaten it (cg_ents.c)
+#define BODY_GONE_MSEC		6000
 
 /*
 ===============
@@ -1039,8 +1041,11 @@ void BodySink( gentity_t *ent ) {
 //	ent->s.pos.trBase[2] -= 1;
 
 	G_AddEvent(ent, EV_BODYFADE, 0);
-	ent->nextthink = level.time + 18000;
+	// VisionJK: once it fades a body is hit by nothing any more (a saber hit made sparks on what nobody could see), and it
+	// goes when it has burnt away instead of lying there unseen for 18 s
+	ent->nextthink = level.time + BODY_GONE_MSEC;
 	ent->takedamage = qfalse;
+	ent->r.contents = 0;
 }
 
 /*

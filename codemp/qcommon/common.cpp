@@ -127,15 +127,29 @@ to the appropriate place.
 A raw string should NEVER be passed as fmt, because of "%f" type crashers.
 =============
 */
+int com_printLevel;		// of what Com_Printf hands to the console right now: 0 a line, 1 a warning, 2 an error
+
 void QDECL Com_Printf( const char *fmt, ... ) {
 	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	char		full[MAXPRINTMSG];
 	static qboolean opening_qconsole = qfalse;
 	const char *p;
+	char		*msg = full;
+	int			level = 0;
 
 	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
+	Q_vsnprintf (full, sizeof(full), fmt, argptr);
 	va_end (argptr);
+
+	// VisionJK: what Com_PrintWarning and Com_PrintError put in front (q_shared.h) says what the line is and
+	// goes no further
+	if ( !Q_strncmp( msg, PRINT_TAG_WARNING, sizeof( PRINT_TAG_WARNING ) - 1 ) ) {
+		msg += sizeof( PRINT_TAG_WARNING ) - 1;
+		level = 1;
+	} else if ( !Q_strncmp( msg, PRINT_TAG_ERROR, sizeof( PRINT_TAG_ERROR ) - 1 ) ) {
+		msg += sizeof( PRINT_TAG_ERROR ) - 1;
+		level = 2;
+	}
 
 	if ( rd_buffer ) {
 		if ((strlen (msg) + strlen(rd_buffer)) > (size_t)(rd_buffersize - 1)) {
@@ -150,7 +164,9 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	}
 
 #ifndef DEDICATED
+	com_printLevel = level;
 	CL_ConsolePrint( msg );
+	com_printLevel = 0;
 #endif
 
 	p = msg;
@@ -895,7 +911,7 @@ void Com_PushEvent( sysEvent_t *event ) {
 		// don't print the warning constantly, or it can give time for more...
 		if ( !printedWarning ) {
 			printedWarning = qtrue;
-			Com_Printf( "WARNING: Com_PushEvent overflow\n" );
+			Com_PrintWarning( "Com_PushEvent overflow\n" );
 		}
 
 		if ( ev->evPtr ) {
@@ -1383,6 +1399,8 @@ void Com_Init( char *commandLine ) {
 		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE_ND, "Show intro movies" );
 
 		com_timestamps = Cvar_Get( "com_timestamps", "1", CVAR_ARCHIVE_ND, "Show timestamps in terminal and qconsole.log" );
+		// Com_Printf takes the tags of Com_PrintWarning and Com_PrintError off (q_shared.h): modules may write them
+		Cvar_Get( "v_printLevels", "1", CVAR_ROM, "" );
 
 		com_version = Cvar_Get ("version", JK_VERSION " " PLATFORM_STRING " " SOURCE_DATE, CVAR_ROM | CVAR_SERVERINFO );
 

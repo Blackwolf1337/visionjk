@@ -68,6 +68,9 @@ XCVAR_DEF( duel_fraglimit,				"10",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CV
 XCVAR_DEF( fraglimit,					"20",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 XCVAR_DEF( g_adaptRespawn,				"1",			NULL,						CVAR_NONE,										qtrue )
 // seconds without a key or a turn after which a player counts as away (status/g_status.c), 0: never
+XCVAR_DEF( vs_mapVote,					"1",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_mapVoteCount,				"3",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( vs_mapVoteTime,				"15",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_antiAim,					"2",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_antiSpeed,				"2",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_antiWiggle,				"2",			NULL,						CVAR_ARCHIVE,									qfalse )

@@ -1913,7 +1913,7 @@ void ParseAnimationEvtBlock(const char *aeb_filename, animevent_t *animEvents, a
 		animNum = GetIDForString(animTable, token);
 		if(animNum == -1)
 		{//Unrecognized ANIM ENUM name, or we're skipping this line, keep going till you get a good one
-			Com_Printf(S_COLOR_YELLOW"WARNING: Unknown token %s in animEvent file %s\n", token, aeb_filename );
+			Com_PrintWarning( "Unknown token %s in animEvent file %s\n", token, aeb_filename );
 			while (token[0])
 			{
 				token = COM_ParseExt( text_p, qfalse );	//returns empty string when next token is EOL
@@ -1923,7 +1923,7 @@ void ParseAnimationEvtBlock(const char *aeb_filename, animevent_t *animEvents, a
 
 		if ( animations[animNum].numFrames == 0 )
 		{//we don't use this anim
-			Com_Printf(S_COLOR_YELLOW"WARNING: %s animevents.cfg: anim %s not used by this model\n", aeb_filename, token);
+			Com_PrintWarning( "%s animevents.cfg: anim %s not used by this model\n", aeb_filename, token);
 			//skip this entry
 			SkipRestOfLine( text_p );
 			continue;
@@ -1933,7 +1933,7 @@ void ParseAnimationEvtBlock(const char *aeb_filename, animevent_t *animEvents, a
 		eventType = (animEventType_t)GetIDForString(animEventTypeTable, token);
 		if ( eventType == AEV_NONE || eventType == (animEventType_t)-1 )
 		{//Unrecognized ANIM EVENT TYOE, or we're skipping this line, keep going till you get a good one
-			//Com_Printf(S_COLOR_YELLOW"WARNING: Unknown token %s in animEvent file %s\n", token, aeb_filename );
+			//Com_PrintWarning( "Unknown token %s in animEvent file %s\n", token, aeb_filename );
 			continue;
 		}
 
@@ -2520,7 +2520,7 @@ int BG_ParseAnimationFile(const char *filename, animation_t *animset, qboolean i
 #ifdef _DEBUG
 			if (strcmp(token,"ROOT"))
 			{
-				Com_Printf(S_COLOR_RED"WARNING: Unknown token %s in %s\n", token, filename);
+				Com_PrintWarning( "Unknown token %s in %s\n", token, filename);
 			}
 			while (token[0])
 			{

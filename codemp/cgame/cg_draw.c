@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "hud/cg_hudkit.h"
 #include "ui/ui_public.h"
 
 extern float CG_RadiusForCent( centity_t *cent );
@@ -1589,6 +1590,7 @@ void CG_DrawHUD(centity_t	*cent)
 
 #define MAX_SHOWPOWERS NUM_FORCE_POWERS
 
+
 qboolean ForcePower_Valid(int i)
 {
 	if (i == FP_LEVITATION ||
@@ -1605,6 +1607,47 @@ qboolean ForcePower_Valid(int i)
 	}
 
 	return qfalse;
+}
+
+/*
+The rank of a power of the player, for the cards of the selection, -1: not known. The server sends the ranks of
+jump and seeing only (msg.cpp), so the rest is what the client can know by itself: the class in siege, rank 3 for a
+holocron held, else what the own forcepowers string asked for. A server may have lowered that (its rank limit), so
+it is the best guess, and there is none for a player followed.
+*/
+int CG_ForceSelectRank( int fp ) {
+	const playerState_t	*ps = &cg.snap->ps;
+	char				powers[128];
+	const char			*digits;
+
+	if ( fp == FP_SEE || fp == FP_LEVITATION ) {
+		return ps->fd.forcePowerLevel[fp];
+	}
+	if ( cgs.gametype == GT_SIEGE ) {
+		const int index = cgs.clientinfo[ps->clientNum].siegeIndex;
+
+		if ( index >= 0 && index < bgNumSiegeClasses && bgSiegeClasses[index].forcePowerLevels[fp] > 0 ) {
+			return bgSiegeClasses[index].forcePowerLevels[fp];
+		}
+		return -1;
+	}
+	if ( cgs.gametype == GT_HOLOCRON ) {
+		return ( ps->holocronBits & ( 1 << fp ) ) ? FORCE_LEVEL_3 : -1;
+	}
+	if ( ps->clientNum != cg.clientNum ) {
+		return -1;
+	}
+	// "rank-side-digits", a digit for each power
+	trap->Cvar_VariableStringBuffer( "forcepowers", powers, sizeof( powers ) );
+	digits = strchr( powers, '-' );
+	digits = digits ? strchr( digits + 1, '-' ) : NULL;
+	if ( !digits || (int)strlen( digits + 1 ) <= fp ) {
+		return -1;
+	}
+	if ( digits[1 + fp] >= '1' && digits[1 + fp] <= '0' + FORCE_LEVEL_3 ) {
+		return digits[1 + fp] - '0';
+	}
+	return -1;
 }
 
 /*
@@ -1636,6 +1679,47 @@ void CG_DrawForceSelect( void )
 
 	if (!cg.snap->ps.fd.forcePowersKnown)
 	{
+		return;
+	}
+
+	if ( CG_HudNewLook() ) {
+		// VisionJK: glass cards as for the weapons (hud/cg_select3d.c), the picture of each power on a disc, in the
+		// order forcenext goes through them (BG_CycleForce): the card in the colour of its side, glowing while it
+		// runs, and where the rank is known (CG_ForceSelectRank) the rank as pips, what using it costs at that rank
+		// and the card darkened while the force is too low for it
+		const playerState_t		*ps = &cg.predictedPlayerState;
+		const int				wanted = ( cg.forceSelect >= 0 && cg.forceSelect < NUM_FORCE_POWERS && ForcePower_Valid( cg.forceSelect ) )
+									? cg.forceSelect : cg.snap->ps.fd.forcePowerSelected;
+		select3dItem_t			list[NUM_FORCE_POWERS];
+		int						n = 0, selected = -1;
+
+		for ( i = 0; i < NUM_FORCE_POWERS; i++ ) {
+			const int	fp = forcePowerSorted[i];
+			int			level, cost;
+
+			if ( !ForcePower_Valid( fp ) ) {
+				continue;
+			}
+			level = CG_ForceSelectRank( fp );
+			cost = level > 0 ? forcePowerNeeded[level][fp] : 0;
+			memset( &list[n], 0, sizeof( list[n] ) );
+			list[n].icon = cgs.media.forcePowerIcons[fp];
+			list[n].disc = qtrue;
+			list[n].count = cost > 0 ? cost : -1;
+			list[n].dim = (qboolean)( ps->fd.forcePower < cost );
+			if ( level > 0 ) {
+				list[n].pips = level;
+				list[n].pipsMax = FORCE_LEVEL_3;
+			}
+			list[n].active = (qboolean)( ( ps->fd.forcePowersActive & ( 1 << fp ) ) != 0 );
+			list[n].tint = CG_ForceSideColor( fp );
+			if ( fp == wanted ) {
+				selected = n;
+				list[n].name = showPowersName[fp] ? CG_GetStringEdString( "SP_INGAME", showPowersName[fp] ) : "";
+			}
+			n++;
+		}
+		CG_Select3D( SELECT3D_FORCE, list, n, selected, cg.forceSelectTime );
 		return;
 	}
 
@@ -1790,6 +1874,32 @@ void CG_DrawInvenSelect( void )
 	if (cg.itemSelect == -1)
 	{
 		cg.itemSelect = bg_itemlist[cg.snap->ps.stats[STAT_HOLDABLE_ITEM]].giTag;
+	}
+
+	if ( CG_HudNewLook() ) {
+		// VisionJK: glass cards with the 3D models of the items (hud/cg_select3d.c)
+		select3dItem_t	list[HI_NUM_HOLDABLE];
+		int				n = 0, selected = -1;
+
+		for ( i = 0; i < HI_NUM_HOLDABLE; i++ ) {
+			const int index = BG_GetItemIndexByTag( i, IT_HOLDABLE );
+
+			if ( !( cg.snap->ps.stats[STAT_HOLDABLE_ITEMS] & ( 1 << i ) ) || !BG_IsItemSelectable( &cg.predictedPlayerState, i )
+				|| index <= 0 ) {
+				continue;
+			}
+			if ( i == cg.itemSelect ) {
+				selected = n;
+			}
+			memset( &list[n], 0, sizeof( list[n] ) );
+			list[n].item = &bg_itemlist[index];
+			list[n].dim = qfalse;
+			list[n].count = -1;
+			list[n].icon = 0;
+			n++;
+		}
+		CG_Select3D( SELECT3D_ITEMS, list, n, selected, cg.invenSelectTime );
+		return;
 	}
 
 //const int bits = cg.snap->ps.stats[ STAT_ITEMS ];
@@ -2775,6 +2885,12 @@ qboolean CG_DrawVehicleHud( const centity_t *cent )
 		return qtrue;	// Draw player HUD
 	}
 
+	// VisionJK: panels of the vehicle in the new look (hud/cg_hudsiege.c)
+	if ( CG_HudNewLook() )
+	{
+		return CG_HudVehicle( veh );
+	}
+
 	CG_DrawVehicleTurboRecharge( menuHUD, veh );
 	CG_DrawVehicleWeaponsLinked( menuHUD, veh );
 
@@ -3237,16 +3353,19 @@ CG_DrawFPS
 ==================
 */
 #define	FPS_FRAMES	16
-static float CG_DrawFPS( float y ) {
-	char		*s;
-	int			w;
+/*
+=================
+CG_FpsValue
+
+The frames a second, averaged over the last few (sampled every 50 ms at most). Once a frame by whoever shows it.
+=================
+*/
+int CG_FpsValue( void ) {
 	static unsigned short previousTimes[FPS_FRAMES];
 	static unsigned short index;
 	static int	previous, lastupdate;
-	int		t, i, fps, total;
+	int		t, i, total;
 	unsigned short frameTime;
-	const int		xOffset = 0;
-
 
 	// don't use serverTime, because that will be drifting to
 	// correct for internet lag changes, timescales, timedemos, etc
@@ -3259,6 +3378,7 @@ static float CG_DrawFPS( float y ) {
 		previousTimes[index % FPS_FRAMES] = frameTime;
 		index++;
 	}
+
 	// average multiple frames together to smooth changes out a bit
 	total = 0;
 	for ( i = 0 ; i < FPS_FRAMES ; i++ ) {
@@ -3267,12 +3387,14 @@ static float CG_DrawFPS( float y ) {
 	if ( !total ) {
 		total = 1;
 	}
-	fps = 1000 * FPS_FRAMES / total;
+	return 1000 * FPS_FRAMES / total;
+}
 
-	s = va( "%ifps", fps );
-	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
+static float CG_DrawFPS( float y ) {
+	const char	*s = va( "%ifps", CG_FpsValue() );
+	const int	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 
-	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
+	CG_DrawBigString( 635 - w, y + 2, s, 1.0F);
 
 	return y + BIGCHAR_HEIGHT + 4;
 }
@@ -3331,6 +3453,7 @@ CG_DrawRadar
 float	cg_radarRange = 2500.0f;
 
 #define RADAR_RADIUS			60
+#define RADAR_NEW_RADIUS		46.0f		// VisionJK: of the radar of the new HUD
 #define RADAR_X					(580 - RADAR_RADIUS)
 #define RADAR_CHAT_DURATION		6000
 static int radarLockSoundDebounceTime = 0;
@@ -3338,6 +3461,19 @@ static int impactSoundDebounceTime = 0;
 #define	RADAR_MISSILE_RANGE					3000.0f
 #define	RADAR_ASTEROID_RANGE				10000.0f
 #define	RADAR_MIN_ASTEROID_SURF_WARN_DIST	1200.0f
+
+static int radarShiftX;		// VisionJK: CG_DrawRadarAt draws it this far right of RADAR_X
+float CG_DrawRadar( float y );
+
+// the radar with its left edge at x (in the 2D that is set), its top at y
+float CG_DrawRadarAt( float x, float y ) {
+	float bottom;
+
+	radarShiftX = (int)( x - RADAR_X );
+	bottom = CG_DrawRadar( y );
+	radarShiftX = 0;
+	return bottom;
+}
 
 float CG_DrawRadar ( float y )
 {
@@ -3350,7 +3486,10 @@ float CG_DrawRadar ( float y )
 	int				i;
 	float			arrowBaseScale;
 	float			zScale;
-	int				xOffset = 0;
+	int				xOffset = radarShiftX;
+	// VisionJK: the radar of the new HUD is smaller, a disc of glass with its own marks (see below)
+	const float		radarR = CG_HudNewLook() ? RADAR_NEW_RADIUS : RADAR_RADIUS;
+	const qboolean	newLook = CG_HudNewLook();
 
 	if (!cg.snap)
 	{
@@ -3374,11 +3513,16 @@ float CG_DrawRadar ( float y )
 		return y;
 	}
 
-	// Draw the radar background image
-	color[0] = color[1] = color[2] = 1.0f;
-	color[3] = 0.6f;
-	trap->R_SetColor ( color );
-	CG_DrawPic( RADAR_X + xOffset, y, RADAR_RADIUS*2, RADAR_RADIUS*2, cgs.media.radarShader );
+	// VisionJK: the disc of the new HUD, as the design board has it (hud/cg_hudkit.c)
+	if ( newLook ) {
+		Hud_RadarDisc( RADAR_X + xOffset, y, radarR );
+	} else {
+		// Draw the radar background image
+		color[0] = color[1] = color[2] = 1.0f;
+		color[3] = 0.6f;
+		trap->R_SetColor ( color );
+		CG_DrawPic( RADAR_X + xOffset, y, radarR*2, radarR*2, cgs.media.radarShader );
+	}
 
 	//Always green for your own team.
 	VectorCopy ( g_color_table[ColorIndex(COLOR_GREEN)], teamColor );
@@ -3418,7 +3562,7 @@ float CG_DrawRadar ( float y )
 		}
 
 		distance  = distance / cg_radarRange;
-		distance *= RADAR_RADIUS;
+		distance *= radarR;
 
 		AngleVectors ( cg.predictedPlayerState.viewangles, dirLook, NULL, NULL );
 
@@ -3437,8 +3581,8 @@ float CG_DrawRadar ( float y )
 					qhandle_t shader;
 					vec4_t    color;
 
-					x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-					ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+					x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+					ly = y + (float)radarR + (float)cos (angle) * distance;
 
 					arrowBaseScale = 9.0f;
 					shader = 0;
@@ -3526,6 +3670,22 @@ float CG_DrawRadar ( float y )
 
 					}
 
+					// VisionJK: an objective in the new look is a frame in amber, anything else its picture, smaller
+					if ( shader && newLook && cent->currentState.brokenLimbs ) {
+						vec4_t frame;
+
+						Hud_Color( frame, hudWarm, ( ( cent->currentState.time2 && cg.time - cent->currentState.time2 < 5000 ) && ( ( cg.time / 200 ) & 1 ) ) ? 0.4f : 1.0f );
+						Skin_Panel( x + xOffset - 3.0f, ly - 3.0f, 6.0f, 6.0f, 1.0f, NULL, frame );
+						shader = 0;
+					} else if ( shader && newLook ) {
+						// (anything else on the radar, a turret, a vehicle standing: a small dim dot, the radar of the
+						// design has dots, squares and frames only)
+						vec4_t dim;
+
+						Hud_Color( dim, hudDim, 0.9f );
+						Skin_Panel( x + xOffset - 1.6f, ly - 1.6f, 3.2f, 3.2f, 1.6f, dim, NULL );
+						shader = 0;
+					}
 					if ( shader )
 					{
 						// Pulse the alpha if time2 is set.  time2 gets set when the entity takes pain
@@ -3557,8 +3717,8 @@ float CG_DrawRadar ( float y )
 						float  x;
 						float  ly;
 
-						x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-						ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+						x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+						ly = y + (float)radarR + (float)cos (angle) * distance;
 
 						arrowBaseScale = 9.0f;
 						zScale = 1.0f;
@@ -3657,10 +3817,10 @@ float CG_DrawRadar ( float y )
 						{
 							actualDist = RADAR_ASTEROID_RANGE;
 						}
-						distance = (actualDist/RADAR_ASTEROID_RANGE)*RADAR_RADIUS;
+						distance = (actualDist/RADAR_ASTEROID_RANGE)*radarR;
 
-						x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-						ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+						x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+						ly = y + (float)radarR + (float)cos (angle) * distance;
 
 						if ( asteroidScale > 3.0f )
 						{
@@ -3722,8 +3882,8 @@ float CG_DrawRadar ( float y )
 					float  x;
 					float  ly;
 
-					x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-					ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+					x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+					ly = y + (float)radarR + (float)cos (angle) * distance;
 
 					arrowBaseScale = 3.0f;
 					if ( cg.predictedPlayerState.m_iVehicleNum )
@@ -3872,11 +4032,23 @@ float CG_DrawRadar ( float y )
 
 				arrowBaseScale *= zScale;
 
-				arrow_w = arrowBaseScale * RADAR_RADIUS / 128;
-				arrow_h = arrowBaseScale * RADAR_RADIUS / 128;
+				arrow_w = arrowBaseScale * radarR / 128;
+				arrow_h = arrowBaseScale * radarR / 128;
 
-				CG_DrawRotatePic2( RADAR_X + RADAR_RADIUS + sin (angle) * distance + xOffset,
-								   y + RADAR_RADIUS + cos (angle) * distance,
+				// VisionJK: in the new look a team mate is a round dot (an enemy a square), larger above, smaller below
+				if ( newLook ) {
+					const float		dot = 3.2f * zScale;
+					const qboolean	mate = (qboolean)( cl->team == local->team );
+					vec4_t			c;
+
+					Hud_Color( c, mate ? hudGreen : hudRed, color[3] );
+					Skin_Panel( RADAR_X + radarR + sinf( angle ) * distance + xOffset - dot * 0.5f, y + radarR + cosf( angle ) * distance - dot * 0.5f,
+						dot, dot, mate ? dot * 0.5f : 0.6f, c, NULL );
+					trap->R_SetColor( NULL );
+					break;
+				}
+				CG_DrawRotatePic2( RADAR_X + radarR + sin (angle) * distance + xOffset,
+								   y + radarR + cos (angle) * distance,
 								   arrow_w, arrow_h,
 								   (360 - cent->lerpAngles[YAW]) + cg.predictedPlayerState.viewangles[YAW], cgs.media.mAutomapPlayerIcon );
 				break;
@@ -3886,14 +4058,14 @@ float CG_DrawRadar ( float y )
 
 	arrowBaseScale = 16.0f;
 
-	arrow_w = arrowBaseScale * RADAR_RADIUS / 128;
-	arrow_h = arrowBaseScale * RADAR_RADIUS / 128;
+	arrow_w = arrowBaseScale * radarR / 128;
+	arrow_h = arrowBaseScale * radarR / 128;
 
 	trap->R_SetColor ( colorWhite );
-	CG_DrawRotatePic2( RADAR_X + RADAR_RADIUS + xOffset, y + RADAR_RADIUS, arrow_w, arrow_h,
+	CG_DrawRotatePic2( RADAR_X + radarR + xOffset, y + radarR, arrow_w, arrow_h,
 					   0, cgs.media.mAutomapPlayerIcon );
 
-	return y+(RADAR_RADIUS*2);
+	return y+(radarR*2);
 }
 
 /*
@@ -3901,33 +4073,35 @@ float CG_DrawRadar ( float y )
 CG_DrawTimer
 =================
 */
-static float CG_DrawTimer( float y ) {
-	char		*s;
-	int			w;
-	int			mins, seconds, tens;
-	int			msec;
-	int			xOffset = 0;
+/*
+=================
+CG_TimerText
 
-	msec = cg.time - cgs.levelStartTime;
+The clock of cg_drawTimer: how long the level runs, with tay_timerCountdown what is left of its time limit, with
+tay_timerMsec to the millisecond
+=================
+*/
+const char *CG_TimerText( void ) {
+	int msec = cg.time - cgs.levelStartTime, seconds, mins;
+
 	// tay_timerCountdown: what is left of the time limit, when there is one
 	if ( tay_timerCountdown.integer && cgs.timelimit > 0 ) {
 		msec = Q_max( 0, cgs.timelimit * 60000 - msec );
 	}
-
 	seconds = msec / 1000;
 	mins = seconds / 60;
 	seconds -= mins * 60;
-	tens = seconds / 10;
-	seconds -= tens * 10;
-
 	if ( tay_timerMsec.integer ) {
-		s = va( "%i:%i%i.%03i", mins, tens, seconds, msec % 1000 );
-	} else {
-		s = va( "%i:%i%i", mins, tens, seconds );
+		return va( "%i:%02i.%03i", mins, seconds, msec % 1000 );
 	}
-	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
+	return va( "%i:%02i", mins, seconds );
+}
 
-	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
+static float CG_DrawTimer( float y ) {
+	const char	*s = CG_TimerText();
+	const int	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
+
+	CG_DrawBigString( 635 - w, y + 2, s, 1.0F);
 
 	return y + BIGCHAR_HEIGHT + 4;
 }
@@ -4196,6 +4370,30 @@ static void CG_DrawUpperRight( void ) {
 
 	trap->R_SetColor( colorTable[CT_WHITE] );
 
+	if ( CG_HudNewLook() ) {
+		// VisionJK: the card of the match first (hud/cg_matchcard.c), what else stands here under it; the leader of
+		// the enemy info and the score line are on the card
+		const float cardY = CG_MatchCardDraw( HUD_EDGE_Y );
+
+		y = CG_HudPowerups( cardY );
+		y = CG_HudAttacker( y );
+		// (the card has the clock and the frames and ping; without it they are a line of their own)
+		if ( cardY == HUD_EDGE_Y ) {
+			y = CG_HudPerfLine( y, qtrue );
+		}
+		if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
+			y = CG_HudTeamList( y );
+		}
+		// (the radar is in the corner at the bottom right, with the items: CG_HudCorner)
+		CG_HudCorner();
+		// (the other duelist is in the header of the duel, CG_HudTopDraw, the jedi master on the card)
+		if ( CG_SpecHudShown() ) {
+			y = CG_SpecHudDraw( y );
+		}
+		CG_KillfeedDraw( y );
+		return;
+	}
+
 	if ( cgs.gametype >= GT_TEAM && cg_drawTeamOverlay.integer == 1 ) {
 		y = CG_DrawTeamOverlay( y, qtrue, qtrue );
 	}
@@ -4371,6 +4569,21 @@ Should we draw something different for long lag vs no packets?
 ==============
 */
 static void CG_DrawDisconnect( void ) {
+	// (the new HUD has it as a card at the top, CG_HudTopDraw)
+	if ( !CG_HudNewLook() ) {
+		CG_DrawDisconnectAt( 0.0f );
+	}
+}
+
+/*
+=================
+CG_DrawDisconnectAt
+
+That the level changes or the connection is lost: in the new HUD a card at the top with its top at y, else the
+text and the blinking icon of the game
+=================
+*/
+void CG_DrawDisconnectAt( float cardY ) {
 	float		x, y;
 	int			cmdNum;
 	usercmd_t	cmd;
@@ -4379,6 +4592,13 @@ static void CG_DrawDisconnect( void ) {
 
 	if (cg.mMapChange)
 	{
+		if ( CG_HudNewLook() ) {
+			char caption[128];
+
+			Q_strncpyz( caption, CG_GetStringEdString( "MP_INGAME", "SERVER_CHANGING_MAPS" ), sizeof( caption ) );
+			CG_HudNoticeCard( cardY, caption, CG_GetStringEdString( "MP_INGAME", "PLEASE_WAIT" ), hudAccent, 0, qfalse );
+			return;
+		}
 		s = CG_GetStringEdString("MP_INGAME", "SERVER_CHANGING_MAPS");	// s = "Server Changing Maps";
 		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString( 320 - w/2, 100, s, 1.0F);
@@ -4397,6 +4617,11 @@ static void CG_DrawDisconnect( void ) {
 		return;
 	}
 
+	if ( CG_HudNewLook() ) {
+		CG_HudNoticeCard( cardY, CG_VisionText( "Connection" ), CG_GetStringEdString( "MP_INGAME", "CONNECTION_INTERRUPTED" ),
+			hudRed, trap->R_RegisterShader( "gfx/2d/net.tga" ), qtrue );
+		return;
+	}
 	// also add text in center of screen
 	s = CG_GetStringEdString("MP_INGAME", "CONNECTION_INTERRUPTED"); // s = "Connection Interrupted"; // bk 010215 - FIXME
 	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
@@ -4424,6 +4649,18 @@ static void CG_DrawDisconnect( void ) {
 CG_DrawLagometer
 ==============
 */
+// VisionJK: a snapshot of the lagometer, `back` snapshots before the newest: its ping, -1 one that never came,
+// -2 there is none that far back; flags its SNAPFLAG_ bits. For the line of the ping in the new HUD.
+int CG_LagSnapshot( int back, int *flags ) {
+	const int i = ( lagometer.snapshotCount - 1 - back ) & ( LAG_SAMPLES - 1 );
+
+	if ( back < 0 || back >= LAG_SAMPLES || back >= lagometer.snapshotCount ) {
+		return -2;
+	}
+	*flags = lagometer.snapshotFlags[i];
+	return lagometer.snapshotSamples[i];
+}
+
 static void CG_DrawLagometer( void ) {
 	int		a, x, y, i;
 	float	v;
@@ -4431,7 +4668,9 @@ static void CG_DrawLagometer( void ) {
 	int		color;
 	float	vscale;
 
-	if ( !cg_lagometer.integer || cgs.localServer ) {
+	// (the new HUD has the course of the ping in its line of frames and ping, hud/cg_hudcombat.c, and a card for
+	// a connection that broke)
+	if ( !cg_lagometer.integer || cgs.localServer || CG_HudNewLook() ) {
 		CG_DrawDisconnect();
 		return;
 	}
@@ -4580,6 +4819,9 @@ void CG_CenterPrint( const char *str, int y, int charWidth ) {
 
 	Q_strncpyz( cg.centerPrint, str, sizeof(cg.centerPrint) );
 
+	// VisionJK: printed again soon after the last one (a server that counts down in its message, every frame of a
+	// countdown): the card of the new HUD shows no bar of its time then
+	cg.centerPrintRepeats = ( cg.centerPrintTime && cg.time - cg.centerPrintTime < 1500 ) ? cg.centerPrintRepeats + 1 : 0;
 	cg.centerPrintTime = cg.time;
 	cg.centerPrintY = y;
 	cg.centerPrintCharWidth = charWidth;
@@ -4626,6 +4868,11 @@ static void CG_DrawCenterString( void ) {
 	const float scale = 1.0; //0.5
 
 	if ( !cg.centerPrintTime ) {
+		return;
+	}
+	// VisionJK: as a card in the new HUD (hud/cg_hudtop.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudCenterString();
 		return;
 	}
 
@@ -4853,6 +5100,16 @@ void CG_DrawHealthBar(centity_t *cent, float chX, float chY, float chW, float ch
 	float percent = ((float)cent->currentState.health/(float)cent->currentState.maxhealth)*HEALTH_WIDTH;
 	if (percent <= 0)
 	{
+		return;
+	}
+
+	// VisionJK: in the new HUD a slim bar as the one under a name has it: amber for what belongs to nobody, green
+	// for what is the own team's, red for the other one's (an objective of a siege, a turret, a vehicle)
+	if ( CG_HudNewLook() ) {
+		const float	*tint = ( !cent->currentState.teamowner || cgs.gametype < GT_TEAM ) ? hudWarm
+			: cent->currentState.teamowner == cg.predictedPlayerState.persistant[PERS_TEAM] ? hudGreen : hudRed;
+
+		Hud_Bar( chX + chW * 0.5f - 34.0f, y, 68.0f, 2.6f, (float)cent->currentState.health / (float)cent->currentState.maxhealth, tint, 1.0f, qfalse );
 		return;
 	}
 
@@ -5402,6 +5659,23 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 		}
 	}
 
+	if ( CG_HudNewLook() )
+	{
+		// VisionJK: as cards under the crosshair (hud/cg_hudcombat.c)
+		int slot = 0;
+
+		if ( cg.predictedPlayerState.hackingTime > cg.time && cg.predictedPlayerState.hackingBaseTime > 0 )
+		{
+			CG_HudProgress( slot++, cgs.media.hackerIconShader, CG_VisionText( "Hacking" ),
+				1.0f - (float)( cg.predictedPlayerState.hackingTime - cg.time ) / cg.predictedPlayerState.hackingBaseTime, NULL );
+		}
+		if ( cg_genericTimerBar > cg.time && cg_genericTimerDur > 0 )
+		{
+			CG_HudProgress( slot, 0, NULL, (float)( cg_genericTimerBar - cg.time ) / cg_genericTimerDur, cg_genericTimerColor );
+		}
+	}
+	else
+	{
 	if (cg.predictedPlayerState.hackingTime)
 	{ //hacking something
 		CG_DrawHaqrBar(chX, chY, w, h);
@@ -5412,6 +5686,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 		CG_Place2D( PLACE_RIGHT );
 		CG_DrawGenericTimerBar();
 		CG_Place2D( PLACE_CENTER );
+	}
 	}
 
 	if ( corona ) // drawing extra bits
@@ -5838,7 +6113,7 @@ static void CG_DrawHolocronIcons(void)
 	}
 }
 
-static qboolean CG_IsDurationPower(int power)
+qboolean CG_IsDurationPower(int power)
 {
 	if (power == FP_HEAL ||
 		power == FP_SPEED ||
@@ -5852,6 +6127,15 @@ static qboolean CG_IsDurationPower(int power)
 	}
 
 	return qfalse;
+}
+
+// the picture over the screen while seeing runs
+static void CG_DrawSightOverlay( void )
+{
+	if ( !(cp_pluginDisable.integer & (1 << 7)) )
+	{ // JA+ client plugin: Plugin_NewForceSight_effect
+		CG_DrawPicWide( cgs.media.jpSense );
+	}
 }
 
 //--------------------------------------------------------------
@@ -5883,9 +6167,9 @@ static void CG_DrawActivePowers(void)
 		if ((cg.snap->ps.fd.forcePowersActive & (1 << forcePowerSorted[i])) &&
 			CG_IsDurationPower(forcePowerSorted[i]))
 		{
-			if ( forcePowerSorted[i] == FP_SEE && !(cp_pluginDisable.integer & (1 << 7)) )
-			{ // JA+ client plugin: Plugin_NewForceSight_effect
-				CG_DrawPicWide( cgs.media.jpSense );
+			if ( forcePowerSorted[i] == FP_SEE )
+			{
+				CG_DrawSightOverlay();
 			}
 			CG_DrawPic( startx, starty, endx, endy, cgs.media.forcePowerIcons[forcePowerSorted[i]]);
 			startx += (icon_size+2); //+2 for spacing
@@ -6496,6 +6780,11 @@ static void CG_DrawCrosshairNames( void ) {
 		return;
 	}
 
+	// VisionJK: his name tag above his head shows it already, larger and with his health (bubble/cg_bubble.c)
+	if ( !isVeh && CG_NameTagShown( cg.crosshairClientNum ) ) {
+		return;
+	}
+
 	// draw the name of the player being looked at
 	color = CG_FadeColor( cg.crosshairClientTime, 1000 );
 	if ( !color ) {
@@ -6570,6 +6859,16 @@ static void CG_DrawCrosshairNames( void ) {
 	tcolor[1] = colorTable[baseColor][1];
 	tcolor[2] = colorTable[baseColor][2];
 	tcolor[3] = color[3] * Com_Clamp( 0.0f, 1.0f, tay_crosshairNamesOpacity.value );	// the game had 0.5
+
+	// VisionJK: under the crosshair, in the font of the new HUD, with the health where it is known (hud/cg_hudcombat.c)
+	if ( CG_HudNewLook() ) {
+		const float *tint = baseColor == CT_GREEN ? hudGreen : baseColor == CT_RED ? hudRed : baseColor == CT_BLACK ? hudDim : hudBright;
+
+		CG_HudTargetName( name, isVeh, tint, color[3] * Com_Clamp( 0.0f, 1.0f, tay_crosshairNamesOpacity.value * 2.0f ),
+			isVeh ? -1 : cg.crosshairClientNum );
+		trap->R_SetColor( NULL );
+		return;
+	}
 
 	if (isVeh)
 	{
@@ -6689,10 +6988,6 @@ static void CG_DrawSpectator(void)
 CG_DrawVote
 =================
 */
-static float CG_VoteWidth( const char *text, void *arg ) {
-	return (float)CG_Text_Width( text, *(const float *)arg, SKIN_FONT_SANS );
-}
-
 /*
 =================
 CG_DrawVotePanel
@@ -6701,28 +6996,96 @@ A vote as a panel of the new look, at the left edge: what it is about, how it st
 that is said, and a bar that empties with the time it still runs.
 =================
 */
-static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no, const char *hint ) {
-	static const vec4_t	fill = { 0.035f, 0.07f, 0.12f, 0.82f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f }, track = { 1.0f, 1.0f, 1.0f, 0.08f };
-	static vec4_t		accent = { 0.43f, 0.83f, 1.0f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f }, bright = { 0.86f, 0.92f, 0.97f, 1.0f };
-	const float			x = 6.0f, most = 300.0f, h = ( hint && hint[0] ) ? 50.0f : 41.0f;
-	float				headScale = 0.46f, askScale = 0.6f, countScale = 0.5f, hintScale = 0.42f, w;
-	char				head[64], ask[160], counts[96], say[160];
+static qboolean CG_TeamVoteShown( void );
 
-	Com_sprintf( head, sizeof( head ), "%s   %i s", title, sec );
-	Q_strupr( head );
-	Com_sprintf( counts, sizeof( counts ), "%s %i      %s %i", yesWord, yes, noWord, no );
-	CG_TextCut( question, most, CG_VoteWidth, &askScale, ask, sizeof( ask ) );
-	CG_TextCut( ( hint && hint[0] ) ? hint : "", most, CG_VoteWidth, &hintScale, say, sizeof( say ) );
-	w = Q_max( Q_max( CG_VoteWidth( head, &headScale ), CG_VoteWidth( ask, &askScale ) ), Q_max( CG_VoteWidth( counts, &countScale ), CG_VoteWidth( say, &hintScale ) ) ) + 18.0f;
+/*
+=================
+CG_VoteKeys
 
-	Skin_Panel( x, y, w, h, 5.0f, fill, edge );
-	CG_Text_Paint( x + 9.0f, y + 4.0f, headScale, accent, head, 0, 0, 0, SKIN_FONT_SANS );
-	CG_Text_Paint( x + 9.0f, y + 13.0f, askScale, colorWhite, ask, 0, 0, 0, SKIN_FONT_SANS );
-	CG_Text_Paint( x + 9.0f, y + 25.5f, countScale, bright, counts, 0, 0, 0, SKIN_FONT_SANS );
-	if ( say[0] ) {
-		CG_Text_Paint( x + 9.0f, y + 35.5f, hintScale, dim, say, 0, 0, 0, SKIN_FONT_SANS );
+Does the engine take F1 and F2 for the answer to a vote right now (v_voteKeys, client/cl_keys.cpp): 1 for the vote,
+2 for the vote of the team, 0 neither. While a vote runs that the player has not answered with them, with an
+engine of this tree; what is bound to the two keys rests for that long. Every frame, from CG_Draw2D.
+=================
+*/
+static int CG_VoteKeys( void ) {
+	static int	has = -1, told = -1, answeredVote, answeredTeam;
+	const int	team = cgs.clientinfo[cg.clientNum].team == TEAM_BLUE ? 1 : 0;
+	int			want = 0;
+
+	if ( has < 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameVoteKeys", value, sizeof( value ) );
+		has = atoi( value ) ? 1 : 0;
 	}
-	Skin_Bar( x + 9.0f, y + h - 4.5f, w - 18.0f, 1.5f, Com_Clamp( 0.0f, 1.0f, sec * 1000.0f / VOTE_TIME ), accent, track );
+	if ( !has ) {
+		return 0;
+	}
+	// The server does not say whether the player voted: the engine clears v_voteKeys when a key answered, and
+	// that vote (by the time it began) counts as answered here.
+	if ( told > 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_voteKeys", value, sizeof( value ) );
+		if ( !atoi( value ) ) {
+			if ( told == 1 ) {
+				answeredVote = cgs.voteTime;
+			} else {
+				answeredTeam = cgs.teamVoteTime[team];
+			}
+			told = 0;
+		}
+	}
+	if ( cg.snap && !cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR ) {
+		if ( cgs.voteTime && cgs.voteTime != answeredVote ) {
+			want = 1;
+		} else if ( CG_TeamVoteShown() && cgs.teamVoteTime[team] != answeredTeam ) {
+			want = 2;
+		}
+	}
+	if ( want != told ) {
+		trap->Cvar_Set( "v_voteKeys", va( "%i", want ) );
+		told = want;
+	}
+	return want;
+}
+
+static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no,
+	const char *hint, const float *tint ) {
+	const float	x = 6.0f, w = 170.0f, box = ( w - 18.0f - 4.0f ) * 0.5f;
+	// (F1 and F2 while the engine takes them for the vote, CG_VoteKeys; else what is bound to a vote)
+	const qboolean	fkeys = (qboolean)( CG_VoteKeys() != 0 );
+	const char	*yesKey = fkeys ? "F1" : CG_KeyLabel( trap->Key_GetKey( "vote yes" ) ), *noKey = fkeys ? "F2" : CG_KeyLabel( trap->Key_GetKey( "vote no" ) );
+	// (the hint of the game, "or press ESC then click Vote", only when no key is bound to a vote)
+	const char	*say = ( hint && hint[0] && ( !yesKey || !noKey ) ) ? hint : NULL;
+	const float	h = say ? 60.0f : 50.0f;
+	vec4_t		fill, edge;
+	int			i;
+
+	Hud_Glass( x, y, w, h, 6.0f, 1.0f, tint, qfalse );
+	Hud_Caps( x + 9.0f, y + 7.0f, tint ? tint : hudAccent, 1.0f, HUD_LEFT, title );
+	Hud_Caps( x + w - 9.0f, y + 7.0f, hudDim, 1.0f, HUD_RIGHT, va( "%i s", sec ) );
+	Hud_TextMid( x + 9.0f, y + 17.0f, HUD_BODY, hudBright, 1.0f, HUD_LEFT, question, w - 18.0f );
+	// the two answers: their key, their word, how many said so
+	for ( i = 0; i < 2; i++ ) {
+		const float	bx = x + 9.0f + i * ( box + 4.0f ), by = y + 24.0f;
+		const float	*rgb = i ? hudRed : hudGreen;
+		const char	*key = i ? noKey : yesKey;
+		float		tx = bx + 5.0f;
+
+		Hud_Color( fill, rgb, 0.13f );
+		Hud_Color( edge, rgb, 0.55f );
+		Skin_Panel( bx, by, box, 17.0f, 3.0f, fill, edge );
+		if ( key ) {
+			tx += Hud_Key( tx, by + 8.5f, key, 1.0f, HUD_LEFT ) + 4.0f;
+		}
+		Hud_TextMid( tx, by + 8.5f, HUD_SMALL, hudText, 1.0f, HUD_LEFT, i ? noWord : yesWord, box - ( tx - bx ) - 16.0f );
+		Hud_TextMid( bx + box - 5.0f, by + 8.5f, HUD_BODY, hudBright, 1.0f, HUD_RIGHT, va( "%i", i ? no : yes ), 0.0f );
+	}
+	if ( say ) {
+		Hud_TextMid( x + 9.0f, y + 49.0f, HUD_CAPS, hudDim, 1.0f, HUD_LEFT, say, w - 18.0f );
+	}
+	Hud_Bar( x + 6.0f, y + h - 3.0f, w - 12.0f, 1.5f, Com_Clamp( 0.0f, 1.0f, sec * 1000.0f / VOTE_TIME ), tint ? tint : hudAccent, 1.0f, qfalse );
 	trap->R_SetColor( NULL );
 }
 
@@ -6801,7 +7164,7 @@ static void CG_DrawVote(void) {
 
 		Q_strncpyz( ask, ( sParm && sParm[0] ) ? va( "%s %s", sCmd, sParm ) : sCmd, sizeof( ask ) );
 		CG_DrawVotePanel( 56.0f, sVote, ask, sec, sYes, cgs.voteYes, sNo, cgs.voteNo,
-			( cgs.clientinfo[cg.clientNum].team != TEAM_SPECTATOR ) ? CG_GetStringEdString( "MP_INGAME", "OR_PRESS_ESC_THEN_CLICK_VOTE" ) : "" );
+			( cgs.clientinfo[cg.clientNum].team != TEAM_SPECTATOR ) ? CG_GetStringEdString( "MP_INGAME", "OR_PRESS_ESC_THEN_CLICK_VOTE" ) : "", NULL );
 		return;
 	}
 	if (sParm && sParm[0])
@@ -6820,6 +7183,13 @@ static void CG_DrawVote(void) {
 CG_DrawTeamVote
 =================
 */
+// does the team of the player vote
+static qboolean CG_TeamVoteShown( void ) {
+	const int team = cgs.clientinfo[cg.clientNum].team;
+
+	return (qboolean)( ( team == TEAM_RED && cgs.teamVoteTime[0] ) || ( team == TEAM_BLUE && cgs.teamVoteTime[1] ) );
+}
+
 static void CG_DrawTeamVote(void) {
 	char	*s;
 	int		sec, cs_offset;
@@ -6871,6 +7241,18 @@ static void CG_DrawTeamVote(void) {
 
 			voteIndex = atoi(voteIndexStr);
 
+			if ( CG_HudNewLook() )
+			{
+				// VisionJK: the panel of the vote, under it, in the colour of the team
+				char yesWord[20], noWord[20];
+
+				trap->SE_GetStringTextString( "MENUS_YES", yesWord, sizeof( yesWord ) );
+				trap->SE_GetStringTextString( "MENUS_NO", noWord, sizeof( noWord ) );
+				CG_DrawVotePanel( cgs.voteTime ? 112.0f : 56.0f, CG_VisionText( "Team vote" ),
+					CG_VisionTextWith( "Make %s the team leader", cgs.clientinfo[voteIndex].name ), sec, yesWord,
+					cgs.teamVoteYes[cs_offset], noWord, cgs.teamVoteNo[cs_offset], NULL, Hud_TeamColor( cgs.clientinfo[cg.clientNum].team ) );
+				return;
+			}
 			s = va("TEAMVOTE(%i):(Make %s the new team leader) yes:%i no:%i", sec, cgs.clientinfo[voteIndex].name,
 									cgs.teamVoteYes[cs_offset], cgs.teamVoteNo[cs_offset] );
 		}
@@ -6884,6 +7266,16 @@ static void CG_DrawTeamVote(void) {
 	{
 		s = va("TEAMVOTE(%i):%s yes:%i no:%i", sec, cgs.teamVoteString[cs_offset],
 								cgs.teamVoteYes[cs_offset], cgs.teamVoteNo[cs_offset] );
+	}
+	if ( CG_HudNewLook() )
+	{
+		char yesWord[20], noWord[20];
+
+		trap->SE_GetStringTextString( "MENUS_YES", yesWord, sizeof( yesWord ) );
+		trap->SE_GetStringTextString( "MENUS_NO", noWord, sizeof( noWord ) );
+		CG_DrawVotePanel( cgs.voteTime ? 112.0f : 56.0f, CG_VisionText( "Team vote" ), cgs.teamVoteString[cs_offset], sec, yesWord,
+			cgs.teamVoteYes[cs_offset], noWord, cgs.teamVoteNo[cs_offset], NULL, Hud_TeamColor( cgs.clientinfo[cg.clientNum].team ) );
+		return;
 	}
 	CG_DrawSmallString( 4, 90, s, 1.0F );
 }
@@ -6909,6 +7301,10 @@ static void CG_DrawIntermission( void ) {
 	//}
 	cg.scoreFadeTime = cg.time;
 	cg.scoreBoardShowing = CG_DrawScoreboard();
+	// VisionJK: who won and the vote for the next map (hud/cg_mapvote.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudIntermission();
+	}
 }
 
 /*
@@ -7024,22 +7420,65 @@ static void CG_DrawAmmoWarning( void ) {
 CG_DrawWarmup
 =================
 */
+/*
+=================
+CG_WarmupTick
+
+The seconds of the warmup until the match starts, with the count of the announcer at the last three: -1 while it
+waits for players, -2 without a warmup. Once a frame, by the stock warmup or the card of the new HUD.
+=================
+*/
+int CG_WarmupTick( void ) {
+	int sec = cg.warmup;
+
+	if ( !sec ) {
+		return -2;
+	}
+	if ( sec < 0 ) {
+		cg.warmupCount = 0;
+		return -1;
+	}
+	sec = ( sec - cg.time ) / 1000;
+	if ( sec < 0 ) {
+		cg.warmup = 0;
+		sec = 0;
+	}
+	if ( sec != cg.warmupCount ) {
+		cg.warmupCount = sec;
+		if ( cgs.gametype != GT_SIEGE ) {
+			switch ( sec ) {
+			case 0:
+				trap->S_StartLocalSound( cgs.media.count1Sound, CHAN_ANNOUNCER );
+				break;
+			case 1:
+				trap->S_StartLocalSound( cgs.media.count2Sound, CHAN_ANNOUNCER );
+				break;
+			case 2:
+				trap->S_StartLocalSound( cgs.media.count3Sound, CHAN_ANNOUNCER );
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	return sec;
+}
+
 static void CG_DrawWarmup( void ) {
 	int			w, sec, i;
 	float		scale;
 	const char	*s;
 
-	sec = cg.warmup;
-	if ( !sec ) {
+	sec = CG_WarmupTick();
+	if ( sec == -2 ) {
 		return;
 	}
 
-	if ( sec < 0 ) {
+	if ( sec == -1 ) {
 //		s = "Waiting for players";
 		s = CG_GetStringEdString("MP_INGAME", "WAITING_FOR_PLAYERS");
 		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString(320 - w / 2, 24, s, 1.0F);
-		cg.warmupCount = 0;
 		return;
 	}
 
@@ -7106,33 +7545,8 @@ static void CG_DrawWarmup( void ) {
 		CG_Text_Paint(320 - w / 2, 90, 1.5f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE,FONT_MEDIUM);
 	}
 
-	sec = ( sec - cg.time ) / 1000;
-	if ( sec < 0 ) {
-		cg.warmup = 0;
-		sec = 0;
-	}
-//	s = va( "Starts in: %i", sec + 1 );
 	s = va( "%s: %i",CG_GetStringEdString("MP_INGAME", "STARTS_IN"), sec + 1 );
-	if ( sec != cg.warmupCount ) {
-		cg.warmupCount = sec;
 
-		if (cgs.gametype != GT_SIEGE)
-		{
-			switch ( sec ) {
-			case 0:
-				trap->S_StartLocalSound( cgs.media.count1Sound, CHAN_ANNOUNCER );
-				break;
-			case 1:
-				trap->S_StartLocalSound( cgs.media.count2Sound, CHAN_ANNOUNCER );
-				break;
-			case 2:
-				trap->S_StartLocalSound( cgs.media.count3Sound, CHAN_ANNOUNCER );
-				break;
-			default:
-				break;
-			}
-		}
-	}
 	scale = 0.45f;
 	switch ( cg.warmupCount ) {
 	case 0:
@@ -8122,13 +8536,36 @@ static void CG_Draw2D( void ) {
 		CG_DrawHolocronIcons();
 		CG_Place2D( PLACE_CENTER );
 	}
-	if (cg.snap->ps.fd.forcePowersActive || cg.snap->ps.fd.forceRageRecoveryTime > cg.time)
+	if ( CG_HudNewLook() )
+	{
+		// VisionJK: glass chips above the panel of the health (hud/cg_powers.c), every frame: a chip fades away
+		// after its power ended
+		if ( ( cg.snap->ps.fd.forcePowersActive & ( 1 << FP_SEE ) ) && !cg.snap->ps.zoomMode
+			&& cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR )
+		{
+			CG_DrawSightOverlay();
+		}
+		CG_Place2D( PLACE_LEFT );
+		CG_PowerChips();
+		CG_Place2D( PLACE_CENTER );
+	}
+	else if (cg.snap->ps.fd.forcePowersActive || cg.snap->ps.fd.forceRageRecoveryTime > cg.time)
 	{
 		CG_Place2D( PLACE_LEFT );
 		CG_DrawActivePowers();
 		CG_Place2D( PLACE_CENTER );
 	}
 
+	if ( CG_HudNewLook() )
+	{
+		// VisionJK: whom one watches, the e-web, the cloak and the jetpack as chips above the right panel
+		// (hud/cg_hudpanels.c)
+		CG_Place2D( PLACE_RIGHT );
+		CG_HudRightStrip();
+		CG_Place2D( PLACE_CENTER );
+	}
+	else
+	{
 	if (cg.snap->ps.jetpackFuel < 100)
 	{ //draw it as long as it isn't full
         CG_Place2D( PLACE_RIGHT );
@@ -8152,6 +8589,7 @@ static void CG_Draw2D( void ) {
 			CG_Place2D( PLACE_CENTER );
 		}
 	}
+	}
 
 	// Draw this before the text so that any text won't get clipped off
 	CG_DrawZoomMask();
@@ -8162,11 +8600,18 @@ static void CG_Draw2D( void ) {
 	}
 */
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
-		CG_DrawSpectator();
+		// (the new HUD says it in the bar at the top, CG_HudTopDraw)
+		if ( !CG_HudNewLook() ) {
+			CG_DrawSpectator();
+		}
 		CG_DrawCrosshair(NULL, 0);
 		CG_DrawCrosshairNames();
 		CG_SaberClashFlare();
 	} else {
+		// VisionJK: the panels of the new HUD stay where they are under its scoreboard
+		if ( cg.showScores && cg.snap->ps.stats[STAT_HEALTH] > 0 && cg_drawStatus.integer && CG_HudNewLook() ) {
+			CG_DrawStats();
+		}
 		// don't draw any status if dead or the scoreboard is being explicitly shown
 		if ( !cg.showScores && cg.snap->ps.stats[STAT_HEALTH] > 0 ) {
 
@@ -8236,7 +8681,11 @@ static void CG_Draw2D( void ) {
 			}
 
 			CG_Place2D( PLACE_RIGHT );
-			CG_DrawPickupItem();
+			if ( CG_HudNewLook() ) {
+				CG_HudPickup();
+			} else {
+				CG_DrawPickupItem();
+			}
 			CG_Place2D( PLACE_CENTER );
 			//Do we want to use this system again at some point?
 			//CG_DrawReward();
@@ -8284,6 +8733,14 @@ static void CG_Draw2D( void ) {
 	}
 
 	CG_Place2D( PLACE_LEFT );
+	CG_VoteKeys();
+	CG_HudFeedPoll();
+	// the one feed at the upper left; a vote stands there first, and the feed under it
+	{
+		const int votes = ( cgs.voteTime ? 1 : 0 ) + ( CG_TeamVoteShown() ? 1 : 0 );
+
+		CG_HudFeedDraw( votes ? 64.0f + votes * 56.0f : HUD_EDGE_Y );
+	}
 	CG_DrawVote();
 	CG_DrawTeamVote();
 	CG_VoiceDraw();
@@ -8317,10 +8774,14 @@ static void CG_Draw2D( void ) {
 		CG_Place2D( PLACE_CENTER );
 	}
 
-	if ( !CG_DrawFollow() ) {
+	if ( CG_HudNewLook() ) {
+		// VisionJK: whom one watches, a duel, the warmup, a lost connection as cards at the top (hud/cg_hudtop.c)
+		CG_HudTopDraw();
+	} else if ( !CG_DrawFollow() ) {
 		CG_DrawWarmup();
 	}
 
+	cg_hudSiegeTime = -1;
 	if (cgSiegeRoundState)
 	{
 		char pStr[1024];
@@ -8464,10 +8925,19 @@ static void CG_Draw2D( void ) {
 				isMyTeam = qtrue;
 			}
 
+			if ( CG_HudNewLook() )
+			{
+				// VisionJK: on the card of the objective at the top (hud/cg_hudsiege.c)
+				cg_hudSiegeTime = timeRemaining;
+				cg_hudSiegeMine = isMyTeam;
+			}
+			else
+			{
 			// the timer of the HUD file stands at the right edge of the 640, on a wide window it goes to the edge
 			CG_Place2D( PLACE_RIGHT );
 			CG_DrawSiegeTimer(timeRemaining, isMyTeam);
 			CG_Place2D( PLACE_CENTER );
+			}
 		}
 	}
 	else
@@ -8490,15 +8960,23 @@ static void CG_Draw2D( void ) {
 			timeRemaining /= 1000;
 		}
 
-		CG_Place2D( PLACE_RIGHT );
-		CG_DrawSiegeDeathTimer( timeRemaining );
-		CG_Place2D( PLACE_CENTER );
+		// (the new HUD has it as a card at the top, CG_HudSiegeTop)
+		if ( !CG_HudNewLook() )
+		{
+			CG_Place2D( PLACE_RIGHT );
+			CG_DrawSiegeDeathTimer( timeRemaining );
+			CG_Place2D( PLACE_CENTER );
+		}
 	}
 
 	// don't draw center string if scoreboard is up
 	cg.scoreBoardShowing = CG_DrawScoreboard();
 	if ( !cg.scoreBoardShowing) {
 		CG_DrawCenterString();
+	}
+	// VisionJK: who killed one while one is dead, under the scoreboard that opens then (hud/cg_hudtop.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudDeathCard();
 	}
 
 	// always draw chat

@@ -328,9 +328,9 @@ qboolean WP_UseFirstValidSaberStyle( saberInfo_t *saber1, saberInfo_t *saber2, i
 
 	if ( !validStyles ) {
 		if ( dualSabers )
-			Com_Printf( "WARNING: No valid saber styles for %s/%s", saber1->name, saber2->name );
+			Com_PrintWarning( "No valid saber styles for %s/%s", saber1->name, saber2->name );
 		else
-			Com_Printf( "WARNING: No valid saber styles for %s", saber1->name );
+			Com_PrintWarning( "No valid saber styles for %s", saber1->name );
 	}
 
 	//using an invalid style and have at least one valid style to use, so switch to it
@@ -2110,7 +2110,7 @@ qboolean WP_SaberParseParms( const char *saberName, saberInfo_t *saber ) {
 	while ( 1 ) {
 		token = COM_ParseExt( &p, qtrue );
 		if ( !token[0] ) {
-			Com_Printf( S_COLOR_RED"ERROR: unexpected EOF while parsing '%s' (WP_SaberParseParms)\n", useSaber );
+			Com_PrintError( "unexpected EOF while parsing '%s' (WP_SaberParseParms)\n", useSaber );
 			return qfalse;
 		}
 
@@ -2123,7 +2123,7 @@ qboolean WP_SaberParseParms( const char *saberName, saberInfo_t *saber ) {
 			continue;
 		}
 
-		Com_Printf( "WARNING: unknown keyword '%s' while parsing saber '%s'\n", token, useSaber );
+		Com_PrintWarning( "unknown keyword '%s' while parsing saber '%s'\n", token, useSaber );
 		SkipRestOfLine( &p );
 	}
 
@@ -2179,7 +2179,7 @@ qboolean WP_SaberParseParm( const char *saberName, const char *parmname, char *s
 		token = COM_ParseExt( &p, qtrue );
 		if ( !token[0] )
 		{
-			Com_Printf( S_COLOR_RED"ERROR: unexpected EOF while parsing '%s'\n", saberName );
+			Com_PrintError( "unexpected EOF while parsing '%s'\n", saberName );
 			return qfalse;
 		}
 
@@ -2474,7 +2474,7 @@ void WP_SaberGetHiltInfo( const char *singleHilts[MAX_SABER_HILTS], const char *
 			}
 			else
 			{
-				Com_Printf( "WARNING: too many two-handed sabers, ignoring saber '%s'\n", saberName );
+				Com_PrintWarning( "too many two-handed sabers, ignoring saber '%s'\n", saberName );
 			}
 		}
 		else
@@ -2485,7 +2485,7 @@ void WP_SaberGetHiltInfo( const char *singleHilts[MAX_SABER_HILTS], const char *
 			}
 			else
 			{
-				Com_Printf( "WARNING: too many one-handed sabers, ignoring saber '%s'\n", saberName );
+				Com_PrintWarning( "too many one-handed sabers, ignoring saber '%s'\n", saberName );
 			}
 		}
 		//skip the whole braced section and move on to the next entry

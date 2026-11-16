@@ -400,6 +400,9 @@ typedef struct uiImport_s {
 		// length; and a kind emptied by its id, or all of them with "all" (ui_cacheclean.c).
 		int				(*Cache_List)							( char *buf, int size );
 		qboolean		(*Cache_Clear)							( const char *id );
+		// Only an engine that sets the cvar v_uiBackdrop to 1 has this, after ext.Cache_Clear: frosted glass behind a
+		// panel drawn next (ext.DrawBackdrop of the renderer), qtrue when it is drawn.
+		qboolean		(*R_DrawBackdrop)						( float x, float y, float w, float h, float radius );
 	} ext;
 } uiImport_t;
 

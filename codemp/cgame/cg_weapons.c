@@ -1126,6 +1126,49 @@ void CG_DrawWeaponSelect( void ) {
 
 	bits = cg.predictedPlayerState.stats[ STAT_WEAPONS ];
 
+	if ( CG_HudNewLook() ) {
+		// VisionJK: glass cards with the 3D models (hud/cg_select3d.c), in the order of the stock row: the
+		// concussion rifle between the flechette and the rocket launcher, thermals and trip mines only while there
+		// are some, unless one of them is the selected one
+		select3dItem_t	list[WP_NUM_WEAPONS];
+		int				n = 0, selected = -1, w;
+
+		for ( w = 1; w <= LAST_USEABLE_WEAPON; w++ ) {
+			const int	order[2] = { w, w == WP_FLECHETTE ? WP_CONCUSSION : 0 };
+			int			k;
+
+			if ( w == WP_CONCUSSION ) {
+				continue;
+			}
+			for ( k = 0; k < 2; k++ ) {
+				const int		weap = order[k];
+				const gitem_t	*item = weap ? BG_FindItemForWeapon( (weapon_t)weap ) : NULL;
+
+				// (the item of the list, not cg_weapons[].item: that one is only there once the weapon was
+				// registered, and a card of a weapon not yet held left out was what the first version did)
+				if ( !item || !( bits & ( 1 << weap ) ) ) {
+					continue;
+				}
+				if ( !CG_WeaponSelectable( weap ) && ( weap == WP_THERMAL || weap == WP_TRIP_MINE ) && weap != cg.weaponSelect ) {
+					continue;
+				}
+				CG_RegisterWeapon( weap );
+				if ( weap == cg.weaponSelect ) {
+					selected = n;
+				}
+				memset( &list[n], 0, sizeof( list[n] ) );
+				list[n].item = item;
+				list[n].dim = (qboolean)!CG_WeaponCheck( weap );
+				list[n].count = weaponData[weap].ammoIndex != AMMO_NONE
+					? cg.predictedPlayerState.ammo[weaponData[weap].ammoIndex] : -1;
+				list[n].icon = weap == WP_MELEE ? cgs.media.weaponIcons[WP_MELEE] : 0;
+				n++;
+			}
+		}
+		CG_Select3D( SELECT3D_WEAPONS, list, n, selected, cg.weaponSelectTime );
+		return;
+	}
+
 	// count the number of weapons owned
 	count = 0;
 
@@ -1548,6 +1591,10 @@ void CG_Weapon_f( void ) {
 	int		num;
 
 	if ( !cg.snap ) {
+		return;
+	}
+	// VisionJK: at the end of a level the keys of the weapons vote for the next map (hud/cg_mapvote.c)
+	if ( cg.snap->ps.pm_type == PM_INTERMISSION && CG_MapVoteKey( atoi( CG_Argv( 1 ) ) ) ) {
 		return;
 	}
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
@@ -2068,8 +2115,10 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
-	if ( CG_BlastRadius( weapon, altFire ) > 0.0f )
+	if ( CG_BlastRadius( weapon, altFire ) > 0.0f ) {
 		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
+		CG_SliceExplosion( origin );
+	}
 	// VisionJK: into standing water of the water gun (toys/cg_water.c), explosives harder
 	CG_WaterImpact( origin, ( weapon == WP_ROCKET_LAUNCHER || weapon == WP_THERMAL || weapon == WP_CONCUSSION
 		|| weapon == WP_DET_PACK || weapon == WP_TRIP_MINE ) ? 1.0f : 0.5f );
@@ -2161,6 +2210,8 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 
 	case WP_THERMAL:
 		trap->FX_PlayEffectID( cgs.effects.thermalExplosionEffect, origin, dir, -1, -1, qfalse );
+		// VisionJK: burning bits thrown out, where the renderer simulates sparks (v_gpuSparks)
+		CG_GpuSparks( origin, dir, GPUSPARKS_EXPLOSION, 1.2f );
 		trap->FX_PlayEffectID( cgs.effects.thermalShockwaveEffect, origin, up, -1, -1, qfalse );
 		break;
 
@@ -2186,8 +2237,10 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 	if ( CG_JPInSeparatedDuel() )
 		return;
 	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
-	if ( CG_BlastRadius( weapon, altFire ) > 0.0f )
+	if ( CG_BlastRadius( weapon, altFire ) > 0.0f ) {
 		CG_RagExplosion( origin, CG_BlastRadius( weapon, altFire ) );
+		CG_SliceExplosion( origin );
+	}
 
 	/*
 	// NOTENOTE Non-portable code from single player
@@ -2288,6 +2341,8 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 
 	case WP_THERMAL:
 		trap->FX_PlayEffectID( cgs.effects.thermalExplosionEffect, origin, dir, -1, -1, qfalse );
+		// VisionJK: burning bits thrown out, where the renderer simulates sparks (v_gpuSparks)
+		CG_GpuSparks( origin, dir, GPUSPARKS_EXPLOSION, 1.2f );
 		trap->FX_PlayEffectID( cgs.effects.thermalShockwaveEffect, origin, up, -1, -1, qfalse );
 		break;
 	case WP_EMPLACED_GUN:

@@ -24,8 +24,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_music.h"
+#include "cgame/boombox/cg_boombox.h"
 
+// (Sync audioplayer asks every player, boombox/cg_boombox_sync.c)
 void CG_MusicFrame( void ) {
+	Music_SyncScan( CG_BoxSyncWantsMusic() );
 	Music_Frame( trap->Milliseconds(), (qboolean)( v_shareMusic.integer != 0 ), qfalse, v_shareMusicPlayers.string );
 }
 

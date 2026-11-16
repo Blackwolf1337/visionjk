@@ -206,10 +206,13 @@ column as OpenGL has them. A module makes it from where the plane is and from th
 again. The engine sets it around the menus when the cgame shows them in the level.
 =============
 */
+static qboolean	r_plane2D;	// the 2D goes onto a plane in the level now (RE_DrawBackdrop draws nothing then)
+
 void	RE_Set2DPlane( const float *matrix ) {
 	set2DPlaneCommand_t	*cmd;
 
 	R_FontTTF_Plane( matrix );
+	r_plane2D = matrix ? qtrue : qfalse;
 	if ( !tr.registered ) {
 		return;
 	}
@@ -408,6 +411,40 @@ void RE_StretchPic ( float x, float y, float w, float h,
 
 /*
 =============
+RE_DrawBackdrop
+
+VisionJK (ext.DrawBackdrop): frosted glass behind a panel. What the frame holds at this point of the 2D, the level
+and what was drawn before, is blurred inside the rect and drawn back with rounded corners (RB_Backdrop). Not on
+the OpenGL ES device, not on a 2D plane in the level.
+=============
+*/
+qboolean RE_DrawBackdrop( float x, float y, float w, float h, float radius ) {
+#ifdef RD_VISION_GLES
+	(void)x; (void)y; (void)w; (void)h; (void)radius;
+	return qfalse;
+#else
+	backdropCommand_t *cmd;
+
+	// (not on a plane in the level, the menus of the 3D menu: there the caller keeps its panel as it is)
+	if ( !tr.registered || v_backdropBlur->value <= 0.0f || w <= 0.0f || h <= 0.0f || r_plane2D ) {
+		return qfalse;
+	}
+	cmd = (backdropCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return qfalse;
+	}
+	cmd->commandId = RC_BACKDROP;
+	cmd->x = x;
+	cmd->y = y;
+	cmd->w = w;
+	cmd->h = h;
+	cmd->radius = radius;
+	return qtrue;
+#endif
+}
+
+/*
+=============
 RE_DrawTriangles2D
 
 VisionJK: triangles in pixels of the window, x to the right and y down, with the picture of hShader and the
@@ -576,7 +613,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	{
 		if ( glConfig.stencilBits < 4 )
 		{
-			ri.Printf( PRINT_ALL, "Warning: not enough stencil bits to measure overdraw: %d\n", glConfig.stencilBits );
+			ri.Printf( PRINT_WARNING, "WARNING: not enough stencil bits to measure overdraw: %d\n", glConfig.stencilBits );
 			ri.Cvar_Set( "r_measureOverdraw", "0" );
 			r_measureOverdraw->modified = qfalse;
 		}

@@ -351,7 +351,7 @@ void CL_Record_f( void ) {
 
 	// sync 0 doesn't prevent recording, so not forcing it off .. everyone does g_sync 1 ; record ; g_sync 0 ..
 	if ( NET_IsLocalAddress( &clc.serverAddress ) && !Cvar_VariableValue( "g_synchronousClients" ) ) {
-		Com_Printf (S_COLOR_YELLOW "WARNING: You should set 'g_synchronousClients 1' for smoother demo recording\n");
+		Com_PrintWarning( "You should set 'g_synchronousClients 1' for smoother demo recording\n");
 	}
 
 	if ( Cmd_Argc() == 2 ) {
@@ -375,7 +375,7 @@ void CL_Record_f( void ) {
 	Com_Printf ("recording to %s.\n", name);
 	clc.demofile = FS_FOpenFileWrite( name );
 	if ( !clc.demofile ) {
-		Com_Printf ("ERROR: couldn't open.\n");
+		Com_PrintError( "couldn't open.\n");
 		return;
 	}
 	clc.demorecording = qtrue;
@@ -2447,7 +2447,9 @@ void QDECL CL_RefPrintf( int print_level, const char *fmt, ...) {
 	if ( print_level == PRINT_ALL ) {
 		Com_Printf ("%s", msg);
 	} else if ( print_level == PRINT_WARNING ) {
-		Com_Printf (S_COLOR_YELLOW "%s", msg);		// yellow
+		Com_Printf( PRINT_TAG_WARNING S_COLOR_YELLOW "%s", msg );		// yellow
+	} else if ( print_level == PRINT_ERROR ) {
+		Com_Printf( PRINT_TAG_ERROR S_COLOR_RED "%s", msg );
 	} else if ( print_level == PRINT_DEVELOPER ) {
 		Com_DPrintf (S_COLOR_RED "%s", msg);		// red
 	}
@@ -2978,6 +2980,14 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameCutEntity", "1", CVAR_ROM, "" );
 	// ext.G2_BoneNumber and ext.G2_SetBonesWorld: the ragdoll of cut bodies (cgame/cg_ragdoll.c)
 	Cvar_Get( "v_cgameSetBones", "1", CVAR_ROM, "" );
+	// ext.R_DrawBackdrop: frosted glass behind the HUD panels and the chat box
+	Cvar_Get( "v_cgameBackdrop", "1", CVAR_ROM, "" );
+	// ext.R_EmitSparks: sparks the renderer simulates (cgame/cg_effects.c CG_GpuSparks)
+	Cvar_Get( "v_cgameSparks", "1", CVAR_ROM, "" );
+	// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
+	Cvar_Get( "v_cgameFeed", "1", CVAR_ROM, "" );
+	// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
+	Cvar_Get( "v_cgameVoteKeys", "1", CVAR_ROM, "" );
 	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
 	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
 	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)
@@ -3006,6 +3016,8 @@ void CL_Init( void ) {
 	Cvar_Get( "v_uiFontInk", "1", CVAR_ROM, "" );
 	// and ext.Cache_List and ext.Cache_Clear after that
 	Cvar_Get( "v_uiCache", "1", CVAR_ROM, "" );
+	// and ext.R_DrawBackdrop after them: frosted glass behind the panels of the menus
+	Cvar_Get( "v_uiBackdrop", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );
@@ -3109,7 +3121,7 @@ void CL_Shutdown( void ) {
 	//Com_Printf( "----- CL_Shutdown -----\n" );
 
 	if ( recursive ) {
-		Com_Printf ("WARNING: Recursive CL_Shutdown called!\n");
+		Com_PrintWarning( "Recursive CL_Shutdown called!\n");
 		return;
 	}
 	recursive = qtrue;

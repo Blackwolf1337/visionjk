@@ -393,7 +393,7 @@ void CreateNewWP(vec3_t origin, int flags)
 	{
 		if (!RMG.integer)
 		{
-			trap->Print(S_COLOR_YELLOW "Warning: Waypoint limit hit (%i)\n", MAX_WPARRAY_SIZE);
+			Com_PrintWarning( "Waypoint limit hit (%i)\n", MAX_WPARRAY_SIZE);
 		}
 		return;
 	}
@@ -405,7 +405,7 @@ void CreateNewWP(vec3_t origin, int flags)
 
 	if (!gWPArray[gWPNum])
 	{
-		trap->Print(S_COLOR_RED "ERROR: Could not allocated memory for waypoint\n");
+		Com_PrintError( "Could not allocated memory for waypoint\n");
 	}
 
 	gWPArray[gWPNum]->flags = flags;
@@ -435,7 +435,7 @@ void CreateNewWP_FromObject(wpobject_t *wp)
 
 	if (!gWPArray[gWPNum])
 	{
-		trap->Print(S_COLOR_RED "ERROR: Could not allocated memory for waypoint\n");
+		Com_PrintError( "Could not allocated memory for waypoint\n");
 	}
 
 	gWPArray[gWPNum]->flags = wp->flags;
@@ -589,7 +589,7 @@ int CreateNewWP_InTrail(vec3_t origin, int flags, int afterindex)
 	{
 		if (!RMG.integer)
 		{
-			trap->Print(S_COLOR_YELLOW "Warning: Waypoint limit hit (%i)\n", MAX_WPARRAY_SIZE);
+			Com_PrintWarning( "Waypoint limit hit (%i)\n", MAX_WPARRAY_SIZE);
 		}
 		return 0;
 	}
@@ -667,7 +667,7 @@ int CreateNewWP_InsertUnder(vec3_t origin, int flags, int afterindex)
 	{
 		if (!RMG.integer)
 		{
-			trap->Print(S_COLOR_YELLOW "Warning: Waypoint limit hit (%i)\n", MAX_WPARRAY_SIZE);
+			Com_PrintWarning( "Waypoint limit hit (%i)\n", MAX_WPARRAY_SIZE);
 		}
 		return 0;
 	}
@@ -2407,7 +2407,7 @@ int SavePathData(const char *filename)
 
 	if (!f)
 	{
-		trap->Print(S_COLOR_RED "ERROR: Could not open file to write path data\n");
+		Com_PrintError( "Could not open file to write path data\n");
 		return 0;
 	}
 
@@ -3028,7 +3028,7 @@ void G_RMGPathing(void)
 
 	if (!terrain || !terrain->inuse || terrain->s.eType != ET_TERRAIN)
 	{
-		trap->Print("Error: RMG with no terrain!\n");
+		Com_PrintError( "RMG with no terrain!\n");
 		return;
 	}
 

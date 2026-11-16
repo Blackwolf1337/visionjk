@@ -648,7 +648,7 @@ static void CMod_LoadVisibility( const lump_t *l, clipMap_t &cm ) {
 
 		if ( numClusters < 0 || numClusters > cm.numClusters || clusterBytes < ( numClusters + 7 ) / 8
 			|| (long long)numClusters * clusterBytes > len - VIS_HEADER ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: the visibility data of %s does not fit its lump, it is not used\n", cm.name );
+			Com_PrintWarning( "the visibility data of %s does not fit its lump, it is not used\n", cm.name );
 			len = 0;
 		}
 	}

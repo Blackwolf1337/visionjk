@@ -1584,7 +1584,7 @@ void EWeb_SetBoneAngles(gentity_t *ent, char *bone, vec3_t angles)
 	{ //didn't find it, create it
 		if (!firstFree)
 		{ //no free bones.. can't do a thing then.
-			Com_Printf("WARNING: E-Web has no free bone indexes\n");
+			Com_PrintWarning( "E-Web has no free bone indexes\n");
 			return;
 		}
 
@@ -3034,11 +3034,11 @@ void G_CheckTeamItems( void ) {
 		// check for the two flags
 		item = BG_FindItem( "team_CTF_redflag" );
 		if ( !item || !itemRegistered[ item - bg_itemlist ] ) {
-			trap->Print( S_COLOR_YELLOW "WARNING: No team_CTF_redflag in map\n" );
+			Com_PrintWarning( "No team_CTF_redflag in map\n" );
 		}
 		item = BG_FindItem( "team_CTF_blueflag" );
 		if ( !item || !itemRegistered[ item - bg_itemlist ] ) {
-			trap->Print( S_COLOR_YELLOW "WARNING: No team_CTF_blueflag in map\n" );
+			Com_PrintWarning( "No team_CTF_blueflag in map\n" );
 		}
 	}
 }

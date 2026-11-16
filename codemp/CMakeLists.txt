@@ -190,6 +190,31 @@ if(BuildMPEngine OR BuildMPDed)
 	list(APPEND MPEngineAndDedIncludeDirectories ${ZLIB_INCLUDE_DIR})
 	list(APPEND MPEngineAndDedLibraries          ${ZLIB_LIBRARIES})
 
+	# the names of the cvars this build can use, for cvar_cleanup (tools/cvars/known.py); without Python an empty
+	# list, and the cleanup goes by the days a cvar was not used alone
+	set(MPCvarKnownDir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+	set(MPCvarKnown "${MPCvarKnownDir}/cvar_known.h")
+	list(APPEND MPEngineAndDedIncludeDirectories ${MPCvarKnownDir})
+	if(CMAKE_VERSION VERSION_LESS 3.12)
+		find_program(MPCvarKnownPython NAMES python3 python)
+	else()
+		find_package(Python3 COMPONENTS Interpreter QUIET)
+		set(MPCvarKnownPython "${Python3_EXECUTABLE}")
+	endif()
+	if(MPCvarKnownPython)
+		file(GLOB_RECURSE MPCvarKnownInputs "${MPDir}/*.c" "${MPDir}/*.cpp" "${MPDir}/*.h"
+			"${CMAKE_SOURCE_DIR}/assets/*.menu" "${CMAKE_SOURCE_DIR}/assets/*.cfg")
+		add_custom_command(OUTPUT "${MPCvarKnown}"
+			COMMAND "${MPCvarKnownPython}" "${CMAKE_SOURCE_DIR}/tools/cvars/known.py" "${CMAKE_SOURCE_DIR}" "${MPCvarKnown}"
+			DEPENDS "${CMAKE_SOURCE_DIR}/tools/cvars/known.py" ${MPCvarKnownInputs}
+			COMMENT "Listing the cvars of this build"
+			VERBATIM)
+		# (one target makes it: as a source of the engine and the servers each of them ran the script at once)
+		add_custom_target(MPCvarKnownList DEPENDS "${MPCvarKnown}")
+	else()
+		file(WRITE "${MPCvarKnown}" "#define CVAR_KNOWN_COUNT 0\n")
+	endif()
+
 	set(MPEngineAndDedCgameFiles
 		"${MPDir}/cgame/cg_public.h"
 		)
@@ -808,6 +833,9 @@ if(BuildMPEngine)
 			add_executable(${MPEngine} ${MPEngineFiles})
 		endif(MakeApplicationBundles)
 	endif(WIN32)
+	if(TARGET MPCvarKnownList)
+		add_dependencies(${MPEngine} MPCvarKnownList)
+	endif()
 
 	if(MakeApplicationBundles)
 		install(CODE "
@@ -944,6 +972,9 @@ if(BuildMPDed)
 	include("${MPDir}/server/web/sources.cmake" OPTIONAL)
 
 	add_executable(${MPDed} ${MPDedFiles})
+	if(TARGET MPCvarKnownList)
+		add_dependencies(${MPDed} MPCvarKnownList)
+	endif()
 	install(TARGETS ${MPDed}
 		RUNTIME
 		DESTINATION ${JKAInstallDir}
@@ -962,6 +993,9 @@ if(BuildMPDed)
 	# what no server of the game does (server/sv_idstest.cpp). For tools/test/ids-test.sh, never installed.
 	if(BuildDevIdsTest)
 		add_executable(${IdsTestServer} ${MPDedFiles} "${MPDir}/server/sv_idstest.cpp")
+		if(TARGET MPCvarKnownList)
+			add_dependencies(${IdsTestServer} MPCvarKnownList)
+		endif()
 		set_target_properties(${IdsTestServer} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines};VISIONJK_IDS_TEST")
 		set_property(TARGET ${IdsTestServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 		set_target_properties(${IdsTestServer} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")

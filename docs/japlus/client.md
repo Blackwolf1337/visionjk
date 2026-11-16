@@ -310,8 +310,16 @@ calls them `delay`, `waitf`, `ifCvar`, `strSub` ..., so a script of TaystJK need
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
 
-The size of the box is set in Setup (Chat & Social: Chat Box Size, Width and Rows) and by hand while it is
-open: its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
+With the new HUD (2026-11-16) the open box looks as on the design board: the tabs are words in capitals on pills,
+the private tab carries the number of private lines not read yet, and the line to type in is a field with a rim:
+to whom it goes in capitals at its left, the button of the emoji picker and "Enter Send" at its right. Emoji
+codes are their pictures in that line too. "@" and the start of a name lists the players whose names fit (Tab
+or Enter takes one): "@Name" goes in without colours, so the line is marked for that player.
+The emoji picker (2026-11-16): with `tay_chatEmoji 1` the line to type in has a smiling face at its end. A click
+opens a grid of every emoji beside the box (the wheel turns its rows, the code of the one under the pointer stands
+under it); a click on one puts its code at the cursor. A click on the face or Escape closes it.
+The size of the box is set by hand while it is open (its three rows left Setup on 2026-11-16, the cvars remain):
+its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
 wider, upwards it gets more rows), and Ctrl with the wheel makes the box and its letters larger or smaller in
 steps of 5 %. Both write the three cvars. `v_chatDrag <dx> <dy>` moves the corner for a script. The box is
 never wider than the screen, whatever width and size say together.
@@ -365,7 +373,9 @@ Taken over from TaystJK on 2026-10-17. They are drawn by this tree's cgame, so t
 on, and nobody has to download anything for them.
 
 The killfeed (`cgame/hud/cg_killfeed.c`, after TaystJK's `hud_obituary.c`) is at the right edge, under the FPS,
-the timer and the team overlay. Each line shows who killed whom with what, and fades out. The icons are the weapon
+the timer and the team overlay. With the new HUD it is part of the one feed at the upper left
+(see ui.md), always on and without settings: the `tay_killfeed` cvars below are for the killfeed at the right
+edge of the HUD of the game (`v_hud 0`), and have no rows in Setup any more (2026-11-15). Each line shows who killed whom with what, and fades out. The icons are the weapon
 icons of the game, plus the sentry and the dark force. A death without a weapon to show (a fall, lava, a
 telefrag, a death by oneself) is the console's sentence, in the language of the game. The box behind a name has
 the team colour, green for oneself and grey for everyone else. The obituary line in the console stays as it was.
@@ -1201,15 +1211,21 @@ The days are in `cvarseen.txt` in `fs_homepath`, for all mods together: `start <
 saved once a minute at most, when something changed, and at shutdown. It keeps 8192 names, and when it is full the
 oldest eighth is dropped.
 
-A cvar is unused when you made it and no code used it for 30 days, or when no code ever used it and the tracking has
-run 30 days. So nothing is offered in the first month. A name that stands behind `vstr` in any cvar value or key
+Since 2026-11-14 the build also lists every cvar name it can use: `tools/cvars/known.py` reads the string literals and
+`XCVAR_DEF` names of all sources in `codemp/`, the cvar words of the menus and the `seta` lines of the asset configs,
+and writes `cvar_known.h` into the build folder (CMake target `MPCvarKnownList`, needs Python 3; without it the list is
+empty and only the days count). The old names of `cvar_renames.h` are left out. In a folder of VisionJK itself
+(`base`, `japlus`) a cvar you made that a config stores is offered at once when it is an old name ("renamed to") or
+none of the names of the list ("not in this version"); a name of the list is never offered. In the folder of another
+mod the list says nothing about that mod's code, there the days alone count: a cvar is unused when you made it and
+no code used it for 30 days, or when no code ever used it and the tracking has run 30 days. A name that stands behind `vstr` in any cvar value or key
 binding is never offered, it is a script.
 
-`cvar_cleanup` lists name, value and last used. `cvar_cleanup remove <name ...|all>` unsets them (cvars made by the
+`cvar_cleanup` lists name, value and why (renamed to, not in this version, or last used). `cvar_cleanup remove <name ...|all>` unsets them (cvars made by the
 user only) and writes `visionjk.cfg` again. `autoexec.cfg` and other files you wrote are not edited.
 
-Setup, Network has a row "Clean Up Settings" that opens a window, in the classic menus and in the new look
-(`ui/jamp/cvarclean.menu`, `ui_cvarclean.c`, `FEEDER_CVARCLEAN`). The list has name, value and last used, and the
+Setup, VisionJK has a row "Clean Up Settings" that opens a window, in the classic menus and in the new look
+(`ui/jamp/cvarclean.menu`, `ui_cvarclean.c`, `FEEDER_CVARCLEAN`). The list has name, value and why, and the
 buttons are Remove (the selected row), Remove All and Done. The texts are in English, German, French and Spanish. It
 needs the import `ext.Cvar_UnusedList` of the engine (ROM cvar `v_uiCvarClean` 1). Tested headless: the command lists
 and removes, a name in a binding behind `vstr` is kept, the window opens, lists, and Remove takes the selected row

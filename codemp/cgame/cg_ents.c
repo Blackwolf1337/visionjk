@@ -834,7 +834,7 @@ void CG_AddRadarEnt(centity_t *cent)
 	if (cg.radarEntityCount >= numRadarEnts)
 	{
 #ifdef _DEBUG
-		Com_Printf("^3Warning: CG_AddRadarEnt full. (%d max)\n", numRadarEnts);
+		Com_PrintWarning( "CG_AddRadarEnt full. (%d max)\n", numRadarEnts);
 #endif
 		return;
 	}
@@ -847,7 +847,7 @@ void CG_AddBracketedEnt(centity_t *cent)
 	if (cg.bracketedEntityCount >= numBracketEnts)
 	{
 #ifdef _DEBUG
-		Com_Printf("^3Warning: CG_AddBracketedEnt full. (%d max)\n", numBracketEnts);
+		Com_PrintWarning( "CG_AddBracketedEnt full. (%d max)\n", numBracketEnts);
 #endif
 		return;
 	}
@@ -1538,6 +1538,14 @@ Ghoul2 Insert End
 			float tempLength;
 			int curTimeDif = ((cg.time + 60000) - cent->bodyFadeTime);
 			int tMult = curTimeDif*0.08;
+
+			// VisionJK: the body is faded and burnt away (BODY_GONE_MSEC of g_client.c BodySink), nothing of it is left
+			// to draw. A server without that change keeps the entity 18 s more: drawn it still showed in passes that
+			// take every model of the frame.
+			if ( curTimeDif > 6000 )
+			{
+				return;
+			}
 
 			ent.renderfx |= RF_FORCE_ENT_ALPHA;
 
@@ -3893,11 +3901,11 @@ defaultoffsetposition:
 	{
 		if (type[0])
 		{
-			Com_Printf("^3Warning: \"%s\" is an invalid ROFF notetrack function\n", type);
+			Com_PrintWarning( "\"%s\" is an invalid ROFF notetrack function\n", type);
 		}
 		else
 		{
-			Com_Printf("^3Warning: Notetrack is missing function and/or arguments\n");
+			Com_PrintWarning( "Notetrack is missing function and/or arguments\n");
 		}
 	}
 

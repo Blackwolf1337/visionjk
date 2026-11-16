@@ -160,6 +160,11 @@ typedef struct box_s {
 	int			restarts;		// times its fetch broke off and was begun again further in
 	int			seq;			// of the datagrams of this box, one up with every frame
 	int			touched;		// when a player last skipped or moved in its song (Box_Touch)
+	// Sync audioplayer: the music player of a player plays, the line waits
+	int			syncWith;		// his client number plus one, 0: not synced
+	char		syncName[BOX_NAME];	// as he was called when he synced it
+	char		syncTitle[BOX_TITLE];	// what his player plays, as his cgame says it
+	int			syncLast;		// when his last frame came (or the sync began)
 } box_t;
 
 typedef struct boxHost_s boxHost_t;
@@ -168,7 +173,8 @@ typedef struct boxHost_s boxHost_t;
 // particular) and, when box is not -1, for everybody near that box. Only what went wrong is said to everybody:
 // what a box does now is in what the clients are told of it.
 struct boxHost_s {
-	box_t		*boxes;			// BOX_MAX of them
+	box_t		*boxes;			// numBoxes of them, BOX_MAX at most
+	int			numBoxes;
 	int			queueMax;		// songs in the line of one box at most
 	int			maxSeconds;		// the longest song, 0: any length
 	void		(*tools)( boxTools_t *out );
@@ -236,6 +242,16 @@ qboolean	Box_Ask( boxHost_t *host, boxLookup_t *lookups, int numLookups, int box
 void		Box_Lookups( boxLookup_t *lookups, int numLookups, int now );
 void		Box_DropLookups( boxLookup_t *lookups, int numLookups, const boxHost_t *host );
 const char	*Box_Length( int seconds );
+const char	*Box_Title( const box_t *box );
+const char	*Box_NextTitle( const box_t *box );
+const char	*Box_By( const box_t *box );
+int			Box_Seconds( const box_t *box );
+qboolean	Box_Sync( boxHost_t *host, int box, int client, const char *name, const char *title, int now, char *why, int whySize );
+void		Box_SyncTitle( boxHost_t *host, int box, int client, const char *title );
+void		Box_Unsync( boxHost_t *host, int box, const char *why );
+void		Box_UnsyncClient( boxHost_t *host, int client );
+qboolean	Box_SyncRefuses( boxHost_t *host, int box, int client );
+qboolean	Box_Feed( boxHost_t *host, int box, int client, int channel, int seq, const byte *frame, int len, int now );
 
 #ifdef __cplusplus
 }

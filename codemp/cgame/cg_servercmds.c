@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // be a valid snapshot this frame
 
 #include "cg_local.h"
+#include "cgame/saber/cg_saberscar.h"
 #include "game/bg/bg_public.h"
 #include "ui/menudef.h"
 #include "ghoul2/G2.h"
@@ -344,45 +345,8 @@ CG_ShaderStateChanged
 =====================
 */
 void CG_ShaderStateChanged(void) {
-	char originalShader[MAX_QPATH];
-	char newShader[MAX_QPATH];
-	char timeOffset[16];
-	const char *o;
-	char *n,*t;
-
-	o = CG_ConfigString( CS_SHADERSTATE );
-	while (o && *o) {
-		n = strstr(o, "=");
-		if (n && *n) {
-			// (the lengths are distances in a configstring of the server: what does not fit ends the list)
-			if ( n - o >= (int)sizeof( originalShader ) ) {
-				break;
-			}
-			Q_strncpyz( originalShader, o, (int)( n - o ) + 1 );
-			n++;
-			t = strstr(n, ":");
-			if (t && *t) {
-				if ( t - n >= (int)sizeof( newShader ) ) {
-					break;
-				}
-				Q_strncpyz( newShader, n, (int)( t - n ) + 1 );
-			} else {
-				break;
-			}
-			t++;
-			o = strstr(t, "@");
-			if (o) {
-				if ( o - t >= (int)sizeof( timeOffset ) ) {
-					break;
-				}
-				Q_strncpyz( timeOffset, t, (int)( o - t ) + 1 );
-				o++;
-				trap->R_RemapShader( originalShader, newShader, timeOffset );
-			}
-		} else {
-			break;
-		}
-	}
+	// VisionJK: the swaps go through a list the player decides about (look/cg_remaps.c)
+	CG_RemapsChanged();
 }
 
 extern char *cg_customSoundNames[MAX_CUSTOM_SOUNDS];
@@ -983,6 +947,7 @@ static void CG_MapRestart( void ) {
 
 	CG_InitLocalEntities();
 	CG_InitMarkPolys();
+	CG_SaberScarsInit();
 	CG_KillCEntityInstances();
 
 	// make sure the "3 frags left" warnings play again
@@ -1195,7 +1160,7 @@ static void CG_NewForceRank_f( void ) {
 
 	if ( trap->Cmd_Argc() < 3 ) {
 #ifdef _DEBUG
-		trap->Print("WARNING: Invalid newForceRank string\n");
+		Com_PrintWarning( "Invalid newForceRank string\n");
 #endif
 		return;
 	}
@@ -1233,7 +1198,7 @@ static void CG_KillGhoul2_f( void ) {
 		if ( cg_entities[indexNum].ghoul2 && trap->G2_HaveWeGhoul2Models( cg_entities[indexNum].ghoul2 ) ) {
 			if ( indexNum < MAX_CLIENTS ) { //You try to do very bad thing!
 #ifdef _DEBUG
-				Com_Printf("WARNING: Tried to kill a client ghoul2 instance with a kg2 command!\n");
+				Com_PrintWarning( "Tried to kill a client ghoul2 instance with a kg2 command!\n");
 #endif
 				return;
 			}

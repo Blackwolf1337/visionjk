@@ -37,6 +37,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "cgame/boombox/cg_boombox.h"
 
+extern displayContextDef_t cgDC;
+
 #define RADIAL_SLICES		9
 #define RADIAL_OUTER		124.0f		// the ring, from the middle, in units of the HUD
 #define RADIAL_INNER		48.0f		//	and its hole
@@ -59,7 +61,8 @@ typedef enum {
 	RAD_PLACE_SYSTEM,			// the slice above it: or RAD_REMOVE on a box
 	RAD_MOVE,
 	RAD_REMOVE,
-	RAD_PLACE_TV				// the slice after it, with nothing on a box
+	RAD_PLACE_TV,				// the slice after it: or RAD_SYNC on a box
+	RAD_SYNC					// Sync audioplayer, or Stop sync (boombox/cg_boombox_sync.c)
 } radialAct_t;
 
 static struct {
@@ -101,7 +104,7 @@ static void Radial_Build( void ) {
 	if ( rad.piece >= 0 ) {
 		rad.acts[6] = RAD_MOVE;		rad.usable[6] = qtrue;
 		rad.acts[7] = RAD_REMOVE;	rad.usable[7] = qtrue;
-		rad.acts[8] = RAD_PLACE_TV;	rad.usable[8] = qfalse;
+		rad.acts[8] = RAD_SYNC;		rad.usable[8] = (qboolean)( have && ( info.synced || CG_BoxSyncOffered( rad.box ) ) );
 	} else {
 		rad.acts[6] = RAD_PLACE_BOX;	rad.usable[6] = on;
 		rad.acts[7] = RAD_PLACE_SYSTEM;	rad.usable[7] = CG_BoomboxSystems();
@@ -128,6 +131,7 @@ static const char *Radial_Short( radialAct_t act ) {
 	case RAD_PLACE_TV:		return CG_VisionText( "TV" );
 	case RAD_MOVE:			return CG_VisionText( "Move it" );
 	case RAD_REMOVE:		return CG_VisionText( "Remove" );
+	case RAD_SYNC:			return CG_VisionText( info.synced ? "Stop sync" : "Sync" );
 	}
 	return "";
 }
@@ -152,6 +156,7 @@ static const char *Radial_Long( radialAct_t act ) {
 	case RAD_MOVE:			return CG_VisionText( "Move it" );
 	case RAD_REMOVE:		return CG_VisionText( ( rad.confirmTime && cg.time - rad.confirmTime < RADIAL_CONFIRM_MSEC )
 								? "Click again to take it away" : "Take it away" );
+	case RAD_SYNC:			return CG_VisionText( info.synced ? "Stop sync" : "Sync audioplayer ..." );
 	}
 	return "";
 }
@@ -232,6 +237,13 @@ static qboolean Radial_Run( radialAct_t act ) {
 			return qfalse;
 		}
 		CG_BoomboxDo( box, "remove" );
+		break;
+	case RAD_SYNC:
+		// (of several players the wheel takes the first that plays: the card offers the choice)
+		if ( CG_BoomboxInfo( box, &info ) && info.synced )
+			CG_BoxSyncStop( box );
+		else
+			CG_BoxSyncChoose( box, qtrue );
 		break;
 	}
 	return qtrue;
@@ -322,12 +334,80 @@ static void Radial_Bar( float cx, float cy, float angle, float r0, float r1, flo
 	CG_DrawRotatePic2( cx + mid * cosf( angle ), cy + mid * sinf( angle ), r1 - r0, thick, RAD2DEG( angle ), cgs.media.whiteShader );
 }
 
-// a slice filled with a fan of bars, as thick as it is at its outer edge, so they meet there and overlap inside
+#define RADIAL_PICS			4			// pictures of a slice kept: the lit one and its rim, at one size of the window
+#define RADIAL_PIC_MAX		256
+
+typedef struct {
+	float		r0, r1, scale;			// units of the HUD, pixels of the window for one unit
+	float		near, far, side;		// the box of the picture around the slice that points right (x out, y across)
+	qhandle_t	shader;
+} radialPic_t;
+
+static radialPic_t	radialPics[RADIAL_PICS];
+static int			radialNumPics;
+static byte			radialPixels[RADIAL_PIC_MAX * RADIAL_PIC_MAX * 4];
+
+// A picture of one slice from r0 to r1, white with the shape in the alpha and soft by one pixel at its edges, for
+// the slice that points right; turned to any slice when it is drawn. 0 when the renderer can't make pictures.
+static const radialPic_t *Radial_Pic( float r0, float r1 ) {
+	const float	half = M_PI / RADIAL_SLICES, cs = cosf( half ), sn = sinf( half );
+	const float	scale = cgs.glconfig.vidHeight / (float)SCREEN_HEIGHT;
+	radialPic_t	*pic;
+	int			i, x, y, size;
+
+	for ( i = 0; i < radialNumPics; i++ ) {
+		pic = &radialPics[i];
+		if ( pic->r0 == r0 && pic->r1 == r1 && pic->scale == scale ) {
+			return pic->shader ? pic : NULL;
+		}
+	}
+	if ( !cgDC.registerShaderRGBA ) {
+		return NULL;
+	}
+	pic = &radialPics[radialNumPics < RADIAL_PICS ? radialNumPics++ : RADIAL_PICS - 1];
+	pic->r0 = r0;
+	pic->r1 = r1;
+	pic->scale = scale;
+	pic->near = r0 * cs - 1.0f / scale;
+	pic->far = r1 + 1.0f / scale;
+	pic->side = r1 * sn + 1.0f / scale;
+	for ( size = 16; size < RADIAL_PIC_MAX && size < ( pic->far - pic->near ) * scale; size *= 2 )
+		;
+	for ( y = 0; y < size; y++ ) {
+		for ( x = 0; x < size; x++ ) {
+			const float	u = pic->near + ( x + 0.5f ) / size * ( pic->far - pic->near );
+			const float	v = fabsf( -pic->side + ( y + 0.5f ) / size * 2.0f * pic->side );
+			const float	d = sqrtf( u * u + v * v );
+			// inside the rim, outside the hole, and on this side of the edge line to the middle
+			const float	alpha = Com_Clamp( 0.0f, 1.0f, ( r1 - d ) * scale + 0.5f )
+								* Com_Clamp( 0.0f, 1.0f, ( d - r0 ) * scale + 0.5f )
+								* Com_Clamp( 0.0f, 1.0f, ( sn * u - cs * v ) * scale + 0.5f );
+			byte		*out = &radialPixels[( y * size + x ) * 4];
+
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( alpha * 255.0f + 0.5f );
+		}
+	}
+	pic->shader = cgDC.registerShaderRGBA( va( "radial_slice_%i_%i_%i", (int)( r0 * 10.0f ), (int)( r1 * 10.0f ), (int)( scale * 100.0f ) ),
+		radialPixels, size, size, RGBA_SHADER_OVER );
+	return pic->shader ? pic : NULL;
+}
+
+// a slice from radius r0 to r1: the picture turned to it, or without pictures a fan of bars, as thick as the
+// slice is at its outer edge, so they meet there and overlap inside
 static void Radial_Slice( float cx, float cy, int k, float r0, float r1, const vec4_t color ) {
-	const float	half = M_PI / RADIAL_SLICES, step = 2.0f * half / RADIAL_FAN;
-	int			i;
+	const float			half = M_PI / RADIAL_SLICES, step = 2.0f * half / RADIAL_FAN;
+	const radialPic_t	*pic = Radial_Pic( r0, r1 );
+	int					i;
 
 	trap->R_SetColor( color );
+	if ( pic ) {
+		const float angle = Radial_Angle( k ), mid = 0.5f * ( pic->near + pic->far );
+
+		CG_DrawRotatePic2( cx + mid * cosf( angle ), cy + mid * sinf( angle ), pic->far - pic->near, 2.0f * pic->side, RAD2DEG( angle ), pic->shader );
+		trap->R_SetColor( NULL );
+		return;
+	}
 	for ( i = 0; i < RADIAL_FAN; i++ ) {
 		Radial_Bar( cx, cy, Radial_Angle( k ) - half + ( i + 0.5f ) * step, r0, r1, r1 * step + 0.6f );
 	}
@@ -377,8 +457,19 @@ void CG_RadialDraw( void ) {
 
 	// the ring and its hole
 	if ( Skin_Ready() ) {
-		Skin_Soft( cx - RADIAL_OUTER - 24.0f, cy - RADIAL_OUTER - 24.0f, 2.0f * RADIAL_OUTER + 48.0f, 2.0f * RADIAL_OUTER + 48.0f, 24.0f, hole );
-		Skin_Disc( cx, cy, RADIAL_OUTER, ring );
+		// frosted glass behind the ring: a rounded rect as round as it is wide is a disc. With the glass no shadow,
+		// as Win_Glass: a dark shadow under the thinner ring made the wheel black.
+		if ( CG_DrawBackdrop( cx - RADIAL_OUTER, cy - RADIAL_OUTER, 2.0f * RADIAL_OUTER, 2.0f * RADIAL_OUTER, RADIAL_OUTER ) ) {
+			vec4_t thin;
+
+			memcpy( thin, ring, sizeof( thin ) );
+			thin[3] *= 0.65f;
+			Skin_Disc( cx, cy, RADIAL_OUTER, thin );
+		} else {
+			// a box of no size: the whole soft light, a round shadow (with a size it is a square one)
+			Skin_Soft( cx, cy, 0.0f, 0.0f, RADIAL_OUTER + 32.0f, hole );
+			Skin_Disc( cx, cy, RADIAL_OUTER, ring );
+		}
 		Skin_Disc( cx, cy, RADIAL_INNER, hole );
 	} else {
 		for ( k = 0; k < RADIAL_SLICES; k++ ) {

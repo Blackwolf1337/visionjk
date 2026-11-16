@@ -28,6 +28,9 @@ HUD of its own gets them drawn as it always did, see "For mods".
 |------|---------|---------|
 | `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
 | `v_hud` | 1 | 0: the HUD of the game |
+| `v_hudFeedLines` | 6 | how many lines the feed at the upper left shows at most, 1 to 16 |
+| `v_hudMatchCard` | 1 | 0: no card of the match at the upper right. With the card the frames, the ping and its course are its last row, not a line of their own. The clock of the card follows `cg_drawTimer` and the settings beside it (count down, milliseconds) and is not shown with `cg_drawTimer 0`. With the card off the clock is in the line of frames and ping |
+| `v_remaps` | 1 | 0: none of the texture swaps of the server are done |
 | `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 
 Both are in Setup, HUD, under Menus and HUD.
@@ -95,10 +98,12 @@ Both are in Setup, HUD, under Menus and HUD.
   three sliders is moved it gets the plain style of a mixed blade (`UI_SaberMixFrame`), so no slider of the
   page is without effect, and a click on one of the seven colours makes it a fixed one again.
 - The scoreboard (`v_hud 1`, since 2026-10-12): one panel in the middle of the screen. At its head the server,
-  the kind of game and the level, at the right who leads or where one stands. Then a row for every player with
-  the picture of his model (or the flag he carries, his class in a siege), his name, score (with deaths on a
-  JA+ server), ping and time, by team in a team game with a line for each team and what it has, and who
-  watches at the end. The own row is marked. Before the name of a player with a client of this tree stands the
+  the kind of game and the level, at the right who leads or where one stands (in a team game: for which team one
+  plays). Then a row for every player with his place number, the picture of his model (or the flag he carries,
+  his class in a siege), his name, score, deaths (a column of its own, where the server sends them, JA+ 2.1 on),
+  ping and time. At the end of a level the last column says Ready or Waiting instead of the time. With teams red
+  and blue stand side by side, each half under a band with the score of the team. Spectators are one line at the
+  bottom, each name still clickable, with the key hint for picking a player beside it. The own row is marked. Before the name of a player with a client of this tree stands the
   icon of the game, and what stands above his head is written after his name. Rows are as high as there is
   room, down to a limit, and everybody the server knows is listed, also who is not in the scores it sends. The
   rows can be clicked: see client.md, "Clickable players". The score of the leader at the upper right has the
@@ -114,15 +119,128 @@ Both are in Setup, HUD, under Menus and HUD.
   the bars, the flags, the radar, the health of a duel, everything of siege) are the pictures of the game.
 - A vote is a panel at the left edge: what it is about, how it stands, how to answer, and a bar that empties
   with the time it still runs. The team vote is a line in the new letters.
-- The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do.
+- The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do. With the
+  new HUD it is a glass pill per talker, the own one with the accent rim.
+- One feed (since 2026-11-15, always with the new HUD): the lines of the console, the notices of `v_notify` and the kills are
+  one list at the upper left (`hud/cg_killfeed.c`). The engine keeps every notify line whole with a level (line,
+  warning, error: a line is a warning or an error when it was printed with `Com_PrintWarning` or `Com_PrintError`
+  (`qcommon/q_shared.c`), or by the renderer with `PRINT_WARNING` or `PRINT_ERROR`. The colour of a line says
+  nothing) and hands them
+  to the cgame through `ext.Con_FeedRead` and `ext.Con_FeedNewest` (ROM cvar `v_cgameFeed`). The cgame sets
+  `v_feedHandler`, and the engine then draws no notify lines of its own. A warning has an amber rim, an error a
+  red one. The sentence of a kill goes to the console only, the feed has the kill. `v_hudFeedLines` sets how many lines it shows. A line without a letter or digit (the rows
+  of stars round a banner) stays in the console. What was picked up and who killed the own player are not repeated
+  in it: the pickup has its card and is no feed line, the killer is on the card of the death and no longer above
+  the scoreboard. A vote panel stands above the
+  feed while it runs. It has no switch of its own and a line stays 6 seconds; `v_hud 0` puts everything back. A kill shows
+  the model of the weapon between the two names. The old killfeed is described in client.md.
+- Texture swaps of a server (shader remaps): a server can swap a shader for another for everybody, also to hide
+  something (remap to a shader that draws nothing, a sky). `v_remaps 0` does none of them. The window
+  `v_remaps_window` (button "List of Texture Swaps ..." in Setup, Video, Detail, next to the switch) lists every
+  swap with what is swapped for what and a switch for each. What is switched off is kept by the name of the
+  swapped shader in the file `remaps_off.txt` in the home folder of the game, so it holds on every server that
+  swaps the same shader. Client only, nobody else sees a difference. Code in `cgame/look/cg_remaps.c`. In
+  rd-vulkan-vision a surface of the level whose texture is remapped to a shader without stages is invisible as in
+  rd-vanilla; before, the depth pre-pass still drew it and it stood there in black.
+- `Com_PrintWarning` and `Com_PrintError` (`qcommon/q_shared.h`) are for code in this tree. They write "WARNING: " in
+  yellow or "ERROR: " in red themselves, so the call passes only the message. They mark the line with a tag that
+  `Com_Printf` of the engine takes off again. A module writes the tag only where the engine sets the ROM cvar
+  `v_printLevels`, so in another engine the line is just the coloured text. `Com_PrintError` only prints,
+  `Com_Error` is still the one that stops. A new warning or error should use them, not `Com_Printf` with a colour
+  and the word.
 - The line on the first page that says a new version is out, and the button for what is new beside it, are boxes like the outlined buttons, lit with the accent under the mouse (`ui_update.c`), in the middle of the bar at the bottom.
 - Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
 - The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `v_classic` off
   and `v_hud` on and restarts the video. Without it the way back was the console.
-- The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
-  stance of the saber under it, the score above. The health bar turns amber below half and red below a
-  quarter.
+- The HUD (since 2026-11-16, prototype B of the design canvas): one block at the bottom left. At its left the slot
+  of the selected force power (the weapon in hand when the player knows no force) over its full height; beside it
+  health and shield, a line, the force, and the ammo of the weapon or the stance of the saber (three steps: one lit
+  for fast, two for medium, three for strong, all three for the other stances); at its foot the name of the weapon,
+  for the saber with its stance. The health bar turns amber below half and red below a quarter.
+- The corner at the bottom right (2026-11-16, `hud/cg_hudpanels.c` CG_HudCorner): the radar where the game shows
+  one (team games, vehicles) with its legend under it, in the look of the design board (`Hud_RadarDisc`: a disc
+  of glass with a thin cross, a ring at half the range and N at the rim; a team mate a round dot, an enemy a
+  square, an objective a frame in amber, anything else a small dim dot); while one watches the map of the players
+  around in the same disc (`tay_specHud`, on by default since then, players as dots in their team colour), and left of it a bar of the items the player carries (their
+  models, the selected one turning; the dispensers are left out), the one the item key uses lit, each with the key bound to its use
+  command. The chips of jetpack, cloak and e-web
+  stand above that. The selection rows of weapons, items and powers come up at the bottom right too
+  (`hud/cg_select3d.c`); while one is there the corner slides up to make room and comes down after.
+- The selection of a weapon, of an inventory item and of a force power (`v_hud 1`, Vulkan renderer
+  rd-vulkan-vision) is a carousel of frosted glass cards at the bottom of the screen: the cards stand on a ring,
+  the selected one in front and the biggest, and the ring turns the shortest way to a new selection
+  (`CG_Select3D` in `cgame/hud/cg_select3d.c`, called from `CG_DrawWeaponSelect`, `CG_DrawInvenSelect` and
+  `CG_DrawForceSelect`). `v_hud 0` keeps the icon rows of the game. It has no cvar or Setup row of its own.
+  Weapons and items show their 3D model, the one in front turning, with the name and the ammo under it. A weapon
+  without ammo is darkened. A force power (selected with `forcenext` and `forceprev`) has no model: its picture
+  stands on a disc that turns. The card has the colour of the side of the power (blue for light, red for dark,
+  pale for neutral), glows while the power runs, and shows the rank as up to three pips and under the name what
+  the power costs at that rank. It is darkened while the force is too low for it. The server sends the client
+  only the ranks of jump and seeing. For the other powers the client knows the rank by itself: the class in a
+  siege, rank 3 for a held holocron, otherwise the `forcepowers` setting of the player. A server that lowered
+  the ranks is not noticed. When following another player there is no rank, so a card has no pips, no cost and
+  is not darkened. Only the client changes: the selection is sent as before, so it works on every server.
+- The force powers that run right now (`v_hud 1`) are a row of small glass chips just above the health panel at
+  the left, in place of the icons of the game (`CG_PowerChips` in `cgame/hud/cg_powers.c`; `v_hud 0` keeps the
+  icons, `CG_DrawActivePowers`). A chip shows the picture of the power. Its rim has the colour of the side of
+  the power (blue for light, red for dark, pale for neutral) and pulses. A chip slides in when its power starts
+  and fades away when it ends. The recovery after rage is a chip with a bar that runs down. The other chips have
+  no countdown, because the server does not send how long a power still runs. The row moves up above the line
+  of the alternate dimension while that line is shown.
+- The panels of `ui/vision/hud.menu` were laid out anew (`v_hud 1`, Vulkan renderer). C draws extra parts at the
+  rects of items of that menu file: `force_slot`, `saber_steps` and `weapon_label` (`hud/cg_hudpanels.c`), all in
+  the menu `visionhud_left`; `visionhud_right` is empty and may get a panel of its own. In team games the panels
+  get a rim in the team colour. The health number turns amber below 51 and red below 26.
+- Above the left panel the strip of running powers also has tags for whom one watches, the JA+ alternate
+  dimension and a carried flag. Above the right panel are chips for low or no ammo, the e-web, the cloak and the
+  jetpack while not full.
+- A match card at the upper right (`hud/cg_matchcard.c`) shows game type, clock, place, points and the leader. In
+  team games it shows both teams with their score and where their flag is, in duels the two duelists. Under it
+  are the powerups with seconds left, a card of who hit the player last (`cg_drawEnemyInfo`, 10 seconds), and
+  one glass line with frames, ping, clock and snapshot numbers (`cg_drawFPS`, `cg_drawTimer`,
+  `cg_drawSnapshot`). The team overlay (`cg_drawTeamOverlay`) is a glass list with name, location and health.
+  All of it is hidden in siege and while the scoreboard shows.
+- The top centre has cards one under the other (`hud/cg_hudtop.c`): whom one watches with the keys to the next
+  player and to flying free, or the spectator with the key to follow. The siege objective has a step per
+  objective and the round time, and the respawn countdown (`hud/cg_hudsiege.c`). The two fighters of a duel
+  show health and shield as far as the client knows them. Then come the warmup countdown and a lost connection
+  or a map change.
+- Center prints (server messages, MOTD) are glass cards with a bar of their time. There is no bar when the
+  server prints the same text again every second. While dead, a card at the bottom says who killed the player
+  with what, or the sentence of the console, and the keys to respawn and to the scores.
+- Kill feed lines are one glass panel each. The player's own kill has an accent rim and +1, his death a red rim.
+  A death without a killer is fainter, with a cross.
+- Under the crosshair is the target name in the colour the game gives it, in large text, with a health bar for
+  team mates and duelists. It gives way to the name tag of that player (see below). Hacking and other timed
+  actions are cards with a bar and a percentage. A caption sits under the
+  lock-on brackets. The item picked up last is a card at the right edge for three seconds.
+- Name tags (`v_nameTags`: 0 off, 1 near the crosshair, 2 always; `Tag_*` and `CG_BubbleDraw` in
+  `cg_bubble.c`) are the player's name on a small glass chip right above the head, in the 3D scene like the chat
+  bubbles and status lines (needs an engine of this tree, 3D text). From the head up: name tag, status line, chat
+  bubble. Tags of players standing close are lifted so they do not overlap. Mode 1 shows the player near the
+  crosshair (full within 60 HUD units, fading over 50 more) and team mates within 1400 units in team modes,
+  mode 2 every visible player. Range is 2000 units, fading over the last quarter, and a tag fades in and out in
+  160 ms. A tag keeps one size on screen at any distance (letter height 9 HUD units, clamped between 2.6 and 32
+  level units). Only players one can see get one: a trace from the view to the head (solid and terrain), not in
+  fog, not cloaked, not dead, never the own player. The colour is the one of the name under the crosshair: green
+  team mate, red enemy, dim for players out of reach in a duel, in FFA the name in its own colours. The player
+  under the crosshair gets a larger tag (12 HUD units) with a tinted border and, where the client knows the
+  health (team mates, duel healths), a thin health bar; then the name under the crosshair is not drawn. Vehicle
+  pilots and players without a drawn tag keep the name under the crosshair.
+- Vote panels are glass with a box for yes and no, each with its key (bound to vote yes and vote no), the count
+  and a time bar. Team votes look the same, in the team colour.
+- With `tay_speedometer` and `tay_movementKeys` there is a glass speed card with a bar towards `tay_startGoal`
+  (else twice the running speed) and the last jumps. The movement keys are rounded glass keys lit in the accent.
+- In a vehicle that hides its rider, two panels replace the player's: hull and shields, speed, turbo and ammo. On
+  a swoop or an animal a small card above the selection row shows hull and speed. The disruptor scope shows the
+  zoom with a bar and the range to the target at the left of the lens, ammo and health with shield at the right.
+  Photo mode has its key line on a glass strip.
+- At the end of a level the scoreboard has who won over it (best player, better team, or a draw). Under it is the
+  vote for the next map (`hud/cg_mapvote.c`): a box per map with its long name, votes, bar and key, the own vote
+  marked, and the time left. The keys 1 to 4 (the weapon keys) vote. A key hint says how to report ready, shown until
+  one has, and the caption over the winner names the level too. The server side is in
+  [server.md](server.md), "Map vote".
 - Setup has seven pages in place of eleven tabs, by topic: Video, Sound (with the 3D sound and the voice chat),
   Game (with the language), HUD, Chat & Social, Network and Mods. See "The Setup screen" below. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
@@ -428,6 +546,7 @@ A menu like the one of Half-Life and the AG mod: numbered lists at the left of t
 (issue #2). `v_commandmenu` opens it, or closes it when it is open. Controls, Extras has a row "Command Menu" for
 its key, which is not bound by default.
 
+- With the new HUD every list is one glass panel, the first with a caption, and each number is a key cap.
 - The first list stands at the left of the screen. An entry that opens a list has an arrow at its right, and its list
   stands beside it, at the height of that entry. A number key (the keypad too) picks the entry with that number in the
   last list that is open.
@@ -502,7 +621,7 @@ of the menus.
 | Sound | Room Reflections (`v_spatialReflections`), Sound Around Corners (`v_spatialPaths`), Doppler Effect (`s_doppler`) |
 | HUD | New HUD (`v_hud`), Classic Menus (`v_classic`), 3D Menu (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
 | Game | under the heading Weapons: Scope Lens (`v_scope`), Zoom with Mouse Wheel (`v_scopeWheelZoom`), Motion Tracker Speed (`v_motionThreshold`, the speed for the tracker, slider, 10 to 200, default 40) |
-| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
+| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Name Tags (`v_nameTags`, Off, Near the Crosshair, Always), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`) |
 | Controls, Extras | Free the Mouse (`+v_cursor`), Scoreboard with Mouse (`v_scores_pick`) |
 

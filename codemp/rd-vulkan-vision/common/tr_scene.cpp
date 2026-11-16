@@ -124,6 +124,39 @@ void R_AddPolygonSurfaces( void ) {
 
 /*
 =====================
+R_TessMark
+
+VisionJK: a poly of a mark whose points all lie on one tessellated surface (R_MarkTessFind) gets that surface, which
+paints it onto its bumps (vk_shade.cpp VK_PaintMarks).
+=====================
+*/
+static void R_TessMark( srfPoly_t *poly ) {
+	const shader_t	*sh;
+	shader_t		*surface = NULL;
+	float			st[2];
+	vec3_t			normal;
+
+	poly->tessShader = NULL;
+	if ( !tr.world || poly->numVerts < 3 ) {
+		return;
+	}
+	sh = R_GetShaderByHandle( poly->hShader );
+	if ( !sh->polygonOffset && sh->sort != SS_DECAL ) {
+		return;
+	}
+	for ( int i = 0; i < poly->numVerts; i++ ) {
+		shader_t *found;
+
+		if ( !R_MarkTessFind( poly->verts[i].xyz, &found, st, normal ) || ( surface && found != surface ) ) {
+			return;
+		}
+		surface = found;
+	}
+	poly->tessShader = surface;
+}
+
+/*
+=====================
 RE_AddPolyToScene
 
 =====================
@@ -140,7 +173,7 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 	}
 
 	if ( !hShader ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: RE_AddPolyToScene: NULL poly shader\n");
+		ri.Printf( PRINT_WARNING, "WARNING: RE_AddPolyToScene: NULL poly shader\n");
 		return;
 	}
 
@@ -163,6 +196,9 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 		poly->verts = &backEndData->polyVerts[r_numpolyverts];
 
 		memcpy( poly->verts, &verts[numVerts*j], numVerts * sizeof( *verts ) );
+
+		// VisionJK: a mark whose points R_MarkFragments gave out on a tessellated surface is painted by it
+		R_TessMark( poly );
 
 		// done.
 		r_numpolys++;

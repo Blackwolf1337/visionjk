@@ -4674,7 +4674,7 @@ static qboolean Jedi_Jump( vec3_t dest, int goalEntNum )
 		time = sqrt( height / ( .5 * NPCS.NPC->client->ps.gravity ) );//was 0.5, but didn't work well for very long jumps
 		if ( !time )
 		{
-			//Com_Printf( S_COLOR_RED"ERROR: no time in jump\n" );
+			//Com_PrintError( "no time in jump\n" );
 			return qfalse;
 		}
 

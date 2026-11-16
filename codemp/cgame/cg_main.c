@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
 #include "ui/ui_saberfx.h"
+#include "cgame/saber/cg_saberscar.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -1508,6 +1509,7 @@ Ghoul2 Insert Start
 //	CG_LoadingString("weapons");
 
 	CG_InitG2Weapons();
+	CG_Select3DPreload();
 
 /*
 Ghoul2 Insert End
@@ -2334,6 +2336,7 @@ static void CG_DisplaySetup( void )
 	cgDC.registerModel					= trap->R_RegisterModel;
 	cgDC.modelBounds					= trap->R_ModelBounds;
 	cgDC.fillRect						= &CG_FillRect;
+	cgDC.drawBackdrop					= &CG_DrawBackdrop;
 	cgDC.drawRect						= &CG_DrawRect;
 	cgDC.drawSides						= &CG_DrawSides;
 	cgDC.drawTopBottom					= &CG_DrawTopBottom;
@@ -2681,6 +2684,7 @@ Ghoul2 Insert End
 	cgs.media.bdecal_saberglow = trap->R_RegisterShader("gfx/damage/saberglowmark");
 	cgs.media.bdecal_burn1 = trap->R_RegisterShader("gfx/damage/bodybigburnmark1");
 	cgs.media.mSaberDamageGlow = trap->R_RegisterShader("gfx/effects/saberDamageGlow");
+	CG_SaberScarsRegister();
 
 	CG_RegisterCvars();
 
@@ -2718,6 +2722,7 @@ Ghoul2 Insert End
 	CG_BoomboxInit();	//	and boxes of the boombox
 	CG_ChatInit();
 	CG_NotifyInit();
+	CG_RemapsInit();
 	CG_BubbleInit();
 	CG_StatusInit();
 	CG_LookInit();
@@ -2764,6 +2769,7 @@ Ghoul2 Insert End
 	CG_InitLocalEntities();
 
 	CG_InitMarkPolys();
+	CG_SaberScarsInit();
 
 	// remove the last loading update
 	cg.infoScreenText[0] = 0;
@@ -2823,6 +2829,7 @@ void CG_DestroyAllGhoul2(void)
 
 	//Clean the weapon instances
 	CG_ShutDownG2Weapons();
+	CG_Select3DShutdown();
 	CG_JPHolsterShutdown();
 
 	//and now for items
@@ -2843,6 +2850,7 @@ void CG_Shutdown( void )
 {
 	// first of all: the threads of the voice chat run code of this module
 	CG_VoiceShutdown();
+	CG_BoxSyncShutdown();		// (the thread of the sound server too, boombox/cg_boombox_sync.c)
 	CG_MusicShutdown();
 
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine
@@ -3116,6 +3124,13 @@ Q_EXPORT cgameExport_t* QDECL GetModuleAPI( int apiVersion, cgameImport_t *impor
 	trap = import;
 	Com_Printf	= trap->Print;
 	Com_Error	= trap->Error;
+	// does the engine read the tags of Com_PrintWarning and Com_PrintError (q_shared.h)
+	{
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_printLevels", value, sizeof( value ) );
+		com_printTags = (qboolean)( atoi( value ) != 0 );
+	}
 
 	memset( &cge, 0, sizeof( cge ) );
 

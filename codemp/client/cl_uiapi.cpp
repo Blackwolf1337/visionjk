@@ -34,6 +34,11 @@ extern IHeapAllocator *G2VertSpaceClient;
 extern botlib_export_t *botlib_export;
 
 // ui interface
+// frosted glass behind a panel of the ui; a renderer without it draws none
+static qboolean CL_UI_DrawBackdrop( float x, float y, float w, float h, float radius ) {
+	return (qboolean)( re && re->ext.DrawBackdrop && re->ext.DrawBackdrop( x, y, w, h, radius ) );
+}
+
 static uiExport_t *uie; // ui export table
 static vm_t *uivm; // ui vm, valid for legacy and new api
 
@@ -1516,6 +1521,7 @@ void CL_BindUI( void ) {
 		uii.ext.R_Font_InkBox					= re->ext.Font_InkBox;
 		uii.ext.Cache_List						= Cache_List;
 		uii.ext.Cache_Clear						= Cache_Clear;
+		uii.ext.R_DrawBackdrop					= CL_UI_DrawBackdrop;
 
 		GetUIAPI = (GetUIAPI_t)uivm->GetModuleAPI;
 		ret = GetUIAPI( UI_API_VERSION, &uii );

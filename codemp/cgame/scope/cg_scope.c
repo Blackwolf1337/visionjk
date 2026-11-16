@@ -827,7 +827,17 @@ void CG_ScopeDrawHUD( void ) {
 	vec4_t		color;
 	int			i;
 
-	if ( scope.drawn ) {
+	if ( scope.drawn && CG_HudNewLook() ) {
+		// VisionJK: in the new HUD readouts on the dark beside the lens (hud/cg_hudcombat.c)
+		const float times = tanf( DEG2RAD( cg_fov.value * 0.5f ) ) / tanf( DEG2RAD( Q_max( zoomFov, 1.0f ) * 0.5f ) );
+		trace_t		tr;
+		vec3_t		end;
+
+		VectorMA( cg.refdef.vieworg, 16384.0f, cg.refdef.viewaxis[0], end );
+		CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.predictedPlayerState.clientNum, MASK_SHOT );
+		CG_HudScopeReadouts( radius, times, ( tr.fraction < 1.0f && !( tr.surfaceFlags & SURF_SKY ) )
+			? (int)( tr.fraction * 16384.0f / UNITS_PER_METER + 0.5f ) : -1 );
+	} else if ( scope.drawn ) {
 		// how many times larger than without the zoom, next to the arc of the zoom on the left
 		const float	times = tanf( DEG2RAD( cg_fov.value * 0.5f ) ) / tanf( DEG2RAD( Q_max( zoomFov, 1.0f ) * 0.5f ) );
 		const char	*text = va( "%.1fx", times );
@@ -942,6 +952,13 @@ void CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep ) {
 
 		memset( &box, 0, sizeof( box ) );
 		VectorSet4( box.rect, cx - hw, cy - hh, cx + hw, cy + hh );
+	}
+	// the new HUD has its own: brackets on the target, a ring that closes, the caption (hud/cg_hudcombat.c)
+	if ( CG_HudNewLook() ) {
+		CG_HudLockOn( ( rect[0] + rect[2] ) * 0.5f, ( rect[1] + rect[3] ) * 0.5f, Q_max( 8.0f, ( rect[2] - rect[0] ) * 0.5f ),
+			Q_max( 10.0f, ( rect[3] - rect[1] ) * 0.5f ), t, locked );
+		trap->R_SetColor( NULL );
+		return;
 	}
 	box.alpha = locked ? 0.7f + 0.3f * sinf( cg.time * 0.03f ) : 0.5f + 0.5f * t;
 	box.locked = locked;

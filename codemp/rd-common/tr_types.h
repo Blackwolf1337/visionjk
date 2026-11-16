@@ -84,6 +84,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // r = shaderTexCoord[0], and it shows what the screen has there: where a vertex was moved, the picture under it
 // moves with it (the shockwave of the boombox, sound_wave.md3). shaderTexCoord[1]: how many times as far, 0 is 1.
 #define RF_REFRACT_REST		0x800000
+// VisionJK: a sprite or oriented quad shows one tile of its texture, a sheet of cols x rows tiles left to right, top to
+// bottom (the flipbooks of the effects, keyword frames). frame holds the tile, the columns and the rows (RF_FLIPBOOK_*).
+// rd-vulkan-vision only: the effects that use it are loaded only with that renderer (FxScheduler.cpp RegisterEffect).
+#define RF_FLIPBOOK			0x1000000
+#define RF_FLIPBOOK_FRAME( tile, cols, rows )	( ( tile ) | ( ( cols ) << 12 ) | ( ( rows ) << 20 ) )
+#define RF_FLIPBOOK_TILE( frame )			( ( frame ) & 0xfff )
+#define RF_FLIPBOOK_COLS( frame )			( ( ( frame ) >> 12 ) & 0xff )
+#define RF_FLIPBOOK_ROWS( frame )			( ( ( frame ) >> 20 ) & 0xff )
 
 // refdef flags
 // what a shader for a picture a module made is like (RE_RegisterShaderRGBA). The first one is the qtrue the
@@ -520,6 +528,23 @@ typedef struct saberBlade3D_s {
 	vec3_t		rgb;				// 0 to 1
 	int			renderfx;			// RF_THIRD_PERSON: only in mirrors and portals, RF_FIRST_PERSON: not in them
 } saberBlade3D_t;
+
+// VisionJK: a burst of sparks the renderer simulates on the device (refexport_t ext.EmitSparks, v_gpuSparks)
+typedef struct sparkBurst_s {
+	vec3_t		origin;
+	vec3_t		dir;				// the way they fly, need not be normalized
+	int			count;
+	float		speed;				// units a second, each 35 to 100% of it
+	float		spread;				// 0: all along dir, 1: the half sphere round it, 2: all round
+	float		life;				// seconds, each 45 to 100% of it
+	float		size;				// half the width of a streak, in units
+	float		gravity;			// units a second a second down (800: the game's)
+	float		drag;				// how fast the air slows them, a second (1: to a third in a second)
+	float		bounce;				// the speed kept off a surface, 0 to 1
+	float		cooling;			// 1: they cool over their life, above 1 sooner, below later
+	vec3_t		color;				// hot, may be above 1 for the bloom of HDR
+	float		rest;				// seconds those that land on a floor lie there glowing, each 50 to 100% of it, 0: none
+} sparkBurst_t;
 
 typedef struct refEntity_s {
 	// this stucture must remain identical as the miniRefEntity_t

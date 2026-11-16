@@ -121,6 +121,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define CS_CLIENT_DUELHEALTHS	31		// nmckenzie: DUEL_HEALTH.  Hopefully adding this cs is safe and good?
 #define CS_GLOBAL_AMBIENT_SET	32
 
+#define CS_VISION_MAPVOTE		33		// VisionJK: the vote for the next map at the end of a level (g_mapvote.c)
+
 #define CS_LEGACY_FIXES			36
 
 #define CS_AMBIENT_SET			37

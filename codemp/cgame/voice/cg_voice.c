@@ -39,6 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "cgame/hud/cg_hudkit.h"
 #include "game/voice/bg_voice.h"
 #include "cg_voice.h"
 #include "cgame/boombox/cg_boombox.h"
@@ -158,6 +159,7 @@ static struct {
 	byte				clan[VOICE_CLAN_BYTES];	//	and this is what it is told as the clan of this client, all zero: none
 	qboolean			boxes;			// the master plays boxes of the boombox (VOICE_FLAG_BOXES),
 	qboolean			boxList;		//	it knows what came for them after 0.1.8 (VOICE_FLAG_BOXLIST),
+	qboolean			boxSync;		//	it takes RELAY_FEED, Sync audioplayer (VOICE_FLAG_SYNC),
 	int					boxHear;		//	and this is what it is told of the boxes this client hears, a bit each
 	qboolean			asked;			// "vs_voiceLink hello" went to the server,
 	int					asks;			//	this many times
@@ -616,7 +618,7 @@ Out: the microphone
 ===============================================================================
 */
 
-static void Voice_Send( int type, const byte *frame, int frameLen ) {
+static void Voice_SendSeq( int type, int seq, const byte *frame, int frameLen ) {
 	voicePacket_t	p;
 	byte			datagram[VOICE_MAX_DATAGRAM];
 	int				len;
@@ -625,7 +627,7 @@ static void Voice_Send( int type, const byte *frame, int frameLen ) {
 	p.type = type;
 	p.client = cg.clientNum;
 	p.token = voice.token;
-	p.seq = voice.seq;
+	p.seq = seq;
 	p.data = frame;
 	p.dataLen = frameLen;
 	len = BG_VoicePack( datagram, sizeof( datagram ), &p, qfalse );
@@ -635,6 +637,10 @@ static void Voice_Send( int type, const byte *frame, int frameLen ) {
 #else
 		sendto( voice.sock, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&voice.server, sizeof( voice.server ) );
 #endif
+}
+
+static void Voice_Send( int type, const byte *frame, int frameLen ) {
+	Voice_SendSeq( type, voice.seq, frame, frameLen );
 }
 
 // The engine of this tree says in a cvar what its sound (v_spatial) takes from the voice chat. Only when the
@@ -946,6 +952,7 @@ static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 	if ( p->token == voice.token )
 		voice.tokenAnswered = now ? now : 1;
 	voice.boxList = ( boxes && ( p->flags & VOICE_FLAG_BOXLIST ) ) ? qtrue : qfalse;
+	voice.boxSync = ( boxes && ( p->flags & VOICE_FLAG_SYNC ) ) ? qtrue : qfalse;
 	voice.looks = ( social && ( p->flags & VOICE_FLAG_LOOKS ) ) ? qtrue : qfalse;
 	// A master that knows the radio is told the clan of this client from now on, in the long state
 	if ( social != voice.social ) {
@@ -1509,19 +1516,26 @@ static qhandle_t Voice_RadioShader( void ) {
 }
 
 // one line of the list of who talks: the picture of the voice chat or of the radio, and the name. With the HUD of
-// the new look it lies on a dark strip, as the lines of the chat do.
-static void Voice_DrawTalker( int x, int y, qhandle_t picture, const char *text ) {
+// the new look it is a pill of glass, the own one with the rim of the accent. Returns the height it took.
+static int Voice_DrawTalker( int x, int y, qhandle_t picture, const char *text, qboolean own ) {
 	if ( CG_HudNewLook() ) {
-		const vec4_t strip = { 0.02f, 0.04f, 0.08f, 0.46f };
+		const float h = 14.0f, w = h + 2.0f + Hud_TextWidth( text, HUD_SMALL ) + 6.0f;
+		vec4_t		white = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-		Skin_Panel( x - 3.0f, y - 1.0f, SMALLCHAR_HEIGHT + 4.0f + CG_StringWidth( text, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT ) + 8.0f, SMALLCHAR_HEIGHT + 1.0f, 3.0f, strip, NULL );
+		Hud_Glass( HUD_EDGE, y, w, h, 3.5f, 1.0f, own ? hudAccent : NULL, qtrue );
+		trap->R_SetColor( white );
+		CG_DrawPic( HUD_EDGE + 2.5f, y + 2.5f, h - 5.0f, h - 5.0f, picture );
+		trap->R_SetColor( NULL );
+		Hud_TextMid( HUD_EDGE + h + 1.0f, y + h * 0.5f, HUD_SMALL, hudText, 1.0f, HUD_LEFT, text, 0.0f );
+		return (int)h + 3;
 	}
 	CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, picture );
 	CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, text, 1.0f );
+	return SMALLCHAR_HEIGHT + 2;
 }
 
 void CG_VoiceDraw( void ) {
-	const int	x = 8, height = SMALLCHAR_HEIGHT + 2;
+	const int	x = 8;
 	int			y = 232, i;
 
 	if ( !voice.answered || !v_voiceDrawTalkers.integer )
@@ -1529,9 +1543,8 @@ void CG_VoiceDraw( void ) {
 	if ( voice.sending && cgs.clientinfo[cg.clientNum].infoValid ) {
 		const qhandle_t radio = voice.sendingRadio ? Voice_RadioShader() : 0;
 
-		Voice_DrawTalker( x, y, radio ? radio : cgs.media.vchatShader, va( "%s ^7(%s)", cgs.clientinfo[cg.clientNum].name,
-			CG_VisionText( voice.sendingRadio ? "You, clan radio" : "You" ) ) );
-		y += height;
+		y += Voice_DrawTalker( x, y, radio ? radio : cgs.media.vchatShader, va( "%s ^7(%s)", cgs.clientinfo[cg.clientNum].name,
+			CG_VisionText( voice.sendingRadio ? "You, clan radio" : "You" ) ), qtrue );
 	}
 	for ( i = 0; i < MAX_CLIENTS && y < 400; i++ ) {
 		const qhandle_t radio = voiceSpeakers[i].radio ? Voice_RadioShader() : 0;
@@ -1539,9 +1552,8 @@ void CG_VoiceDraw( void ) {
 		if ( !voiceSpeakers[i].playing || !cgs.clientinfo[i].infoValid )
 			continue;
 		// without the picture the line says it
-		Voice_DrawTalker( x, y, radio ? radio : cgs.media.vchatShader, ( voiceSpeakers[i].radio && !radio )
-			? va( "%s ^7(%s)", cgs.clientinfo[i].name, CG_VisionText( "radio" ) ) : cgs.clientinfo[i].name );
-		y += height;
+		y += Voice_DrawTalker( x, y, radio ? radio : cgs.media.vchatShader, ( voiceSpeakers[i].radio && !radio )
+			? va( "%s ^7(%s)", cgs.clientinfo[i].name, CG_VisionText( "radio" ) ) : cgs.clientinfo[i].name, qfalse );
 	}
 }
 
@@ -1892,6 +1904,55 @@ qboolean CG_VoiceBoxSend( const boxDo_t *d ) {
 #endif
 }
 
+// and it takes the music player a box is synced with (VOICE_FLAG_SYNC)
+qboolean CG_VoiceMasterSync( void ) {
+	return ( voice.boxes && voice.boxSync ) ? qtrue : qfalse;
+}
+
+/*
+=================
+CG_VoiceFeedSend
+
+A frame of the music player a box is synced with (boombox/cg_boombox_sync.c), to the relay of the server or to
+the master: RELAY_FEED, the box and the channel in front of the frame. qfalse: there is no way there now.
+=================
+*/
+qboolean CG_VoiceFeedSend( int box, int channel, int seq, const byte *frame, int len ) {
+	byte body[VOICE_MAX_FRAME];
+
+	if ( !voice.sockOpen || !voice.linked || ( voice.master && !voice.boxSync ) || box < 0 || box > 15 || channel < 0 || channel > 1
+		|| len <= 0 || len >= VOICE_MAX_FRAME )
+		return qfalse;
+#ifndef __EMSCRIPTEN__
+	body[0] = (byte)( box | ( channel << 4 ) );
+	memcpy( body + 1, frame, len );
+	Voice_SendSeq( RELAY_FEED, seq, body, len + 1 );
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
+// The same frame for the box here, as if the server had sent it: who syncs hears his player from the box, without
+// the way to the server and back (v_boxSyncHear). The server sends him none.
+void CG_VoiceFeedLocal( int box, int channel, int seq, const byte *frame, int len ) {
+	voiceSpeaker_t	*sp;
+	const int		speaker = MAX_CLIENTS + box + channel * BOX_RIGHT;
+
+	if ( box < 0 || box >= BOX_MAX || channel < 0 || channel > 1 || !CG_BoomboxHears( speaker - MAX_CLIENTS ) )
+		return;
+	sp = &voiceSpeakers[speaker];
+	if ( sp->muted || !sp->decoderOk )
+		return;
+	if ( !BG_VoiceQueueSpan( &sp->queue ) )
+		sp->waitSince = trap->Milliseconds();
+	if ( BG_VoiceQueuePut( &sp->queue, seq, frame, len ) ) {
+		sp->lastHeard = trap->Milliseconds();
+		sp->flags = 0;
+		sp->distance = 0;
+	}
+}
+
 qboolean CG_VoiceBoxMuted( int box ) {
 	return ( box >= 0 && box < BOX_MAX && voiceSpeakers[MAX_CLIENTS + box].muted ) ? qtrue : qfalse;
 }
@@ -2098,6 +2159,23 @@ void CG_VoiceStatus_f( void ) {
 				( voiceSpeakers[i].playing && voiceSpeakers[i].radio ) ? " over the radio" : "",
 				voiceSpeakers[i].muted ? " (muted by you)" : "", voiceSpeakers[i].heard );
 	}
+	// a box synced with a music player of this computer (boombox/cg_boombox_sync.c)
+	if ( CG_BoxSyncBox() >= 0 ) {
+		int sound, quiet, peak;
+
+		CG_FeedCounts( &sound, &quiet, &peak );
+		trap->Print( "Sync audioplayer: box %i plays %s, %s%s, %i frames of sound and %i of silence sent\n", CG_BoxSyncBox(), CG_BoxSyncPlayerName(),
+			CG_FeedFound() ? "its sound is found" : "its sound is not found (yet)", CG_FeedRouted() ? ", heard only from the box" : "", sound, quiet );
+		trap->Print( "  its level now: %.0f dB\n", peak > 0 ? 20.0 * log10( peak / 32767.0 ) : -99.0 );
+	}
+	// the songs of the boxes of the boombox, a channel each
+	for ( i = 0; i < BOX_CHANNELS; i++ ) {
+		const voiceSpeaker_t *sp = &voiceSpeakers[MAX_CLIENTS + i];
+
+		if ( sp->playing || sp->muted || sp->heard )
+			trap->Print( "  box %i%s%s%s, %i frames heard\n", i % BOX_RIGHT, ( i >= BOX_RIGHT ) ? " right" : "", sp->playing ? " plays" : "",
+				sp->muted ? " (muted by you)" : "", sp->heard );
+	}
 }
 
 // v_voice_mute <player>, v_voice_unmute <player or all>: this player does not want to hear that one
@@ -2204,6 +2282,9 @@ int CG_VoiceLouder( int clientNum, int steps ) { (void)clientNum; (void)steps; r
 void CG_VoiceSendStatus( qboolean away, const char *text ) { (void)away; (void)text; }
 qboolean CG_VoiceLooks( void ) { return qfalse; }
 void CG_VoiceSendLook( const char *text ) { (void)text; }
+qboolean CG_VoiceMasterSync( void ) { return qfalse; }
+qboolean CG_VoiceFeedSend( int box, int channel, int seq, const byte *frame, int len ) { (void)box; (void)channel; (void)seq; (void)frame; (void)len; return qfalse; }
+void CG_VoiceFeedLocal( int box, int channel, int seq, const byte *frame, int len ) { (void)box; (void)channel; (void)seq; (void)frame; (void)len; }
 qboolean CG_VoiceToys( void ) { return qfalse; }
 void CG_VoiceSendToy( const byte *data, int len ) { (void)data; (void)len; }
 

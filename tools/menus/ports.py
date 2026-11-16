@@ -233,7 +233,9 @@ def join(m):
             old_words(e)
     table = (36, y0 + 106, 1128, FOOT_Y - 24 - (y0 + 106))
     tx, ty, tw, th = table
-    m.insert(next(i for i, e in enumerate(m) if e.k == 'itemdef' and (mf.get(e.block, 'name') or [''])[0] == 'serverlist'),
+    # (before the headings that stand on it, not before the list: its frosted glass blurs what was drawn before it)
+    m.insert(next(i for i, e in enumerate(m) if e.k == 'itemdef'
+                  and (mf.get(e.block, 'name') or [''])[0].lower() in ('server', 'map', 'players', 'type', 'ping', 'serverlist')),
              cv.panel('vision_table', table, cv.CARD, cv.CARD_EDGE, 10))
     # the columns from the left of the list (10 into the table), the headings over them at the same places; the last
     # one ends inside the filled row (which stops before the bar of the list)
@@ -1167,8 +1169,10 @@ def callvote(m):
     new = [cv.panel('vision_window', (0, 0, w, h), cv.CARD, cv.CARD_EDGE, 16),
            cv.panel('vision_rail', (pad, top, rail_w, h - top - pad), cv.FIELD, cv.EDGE, 10),
            cv.panel('vision_pane', (px_, py_, pw_, ph_), cv.FIELD, cv.EDGE, 10)]
+    # (the vote that runs is answered with F1 and F2 on its panel in the level, cgame CG_VoteKeys: no buttons here)
+    vote_w = 0
     for e in its.get('playerconfigtitle', []):
-        middle(e, (pad + 4, 20, w - 2 * pad, 52), 22, 'left')
+        middle(e, (pad + 4, 20, w - 2 * pad - 2 * vote_w - 12 - 270, 52), 22, 'left')
         mf.put(e.block, 'font', cv.BOLD)
         mf.put(e.block, 'forecolor', *cv.MUTED)
         mf.put(e.block, 'caps', 1)
@@ -1240,7 +1244,8 @@ def about(m):
         for key in ('textalign', 'textalignx', 'textaligny', 'style', 'border', 'bordersize', 'background', 'backcolor'):
             mf.drop(b, key)
         new.append(e)
-    _ingame_window(m, cv.IN_W / 2.0 + (mr[0] - 320) * cv.IN_K, w, h, new)
+    # (in the middle of the panel: it opens with the menu, it has no tab of its own any more)
+    _ingame_window(m, 192.0 + ( 1216.0 - w ) / 2.0, w, h, new)
     return True
 
 

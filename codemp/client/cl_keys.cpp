@@ -1761,6 +1761,20 @@ void CL_KeyDownEvent( int key, unsigned time )
 		return;
 	}
 
+	// VisionJK: while a vote waits for the answer of the player, F1 and F2 give it and do not run what is bound to
+	// them. The cgame says so with v_voteKeys (1 a vote, 2 a vote of the team), which the engine clears whenever
+	// a cgame is loaded.
+	if ( ( key == A_F1 || key == A_F2 ) && cls.state == CA_ACTIVE && !Key_GetCatcher() ) {
+		const int vote = Cvar_VariableIntegerValue( "v_voteKeys" );
+
+		if ( vote == 1 || vote == 2 ) {
+			Cbuf_AddText( va( "%s %s\n", vote == 2 ? "teamvote" : "vote", key == A_F1 ? "yes" : "no" ) );
+			// (answered: the keys are the player's again, and the cgame sees that this vote is done)
+			Cvar_Set( "v_voteKeys", "0" );
+			return;
+		}
+	}
+
 	// send the bound action
 	if ( !cls.cursorActive ) CL_ParseBinding( bound, qtrue, time );
 

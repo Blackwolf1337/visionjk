@@ -671,11 +671,11 @@ void Q3_DebugPrint( int level, const char *format, ... )
 	switch ( level )
 	{
 		case WL_ERROR:
-			Com_Printf ( S_COLOR_RED"ERROR: %s", text );
+			Com_PrintError( "%s", text );
 			break;
 
 		case WL_WARNING:
-			Com_Printf ( S_COLOR_YELLOW"WARNING: %s", text );
+			Com_PrintWarning( "%s", text );
 			break;
 
 		case WL_DEBUG:

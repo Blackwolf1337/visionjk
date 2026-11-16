@@ -7,7 +7,7 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					192 80 900 688
+		rect					350 80 900 688
 		focusColor				0.36 0.78 0.96 1
 		style					WINDOW_STYLE_EMPTY
 		skin					1
@@ -250,7 +250,7 @@
 			stack					1
 		}
 		canvas					1600 1200
-		descX					642
+		descX					800
 		descY					784
 		descAlignment			ITEM_ALIGN_CENTER
 		descScale				1.33

@@ -167,14 +167,14 @@ static void Box_TellTo( int b, int clientNum ) {
 	}
 	if ( !Box_For( b, clientNum ) )
 		return;
-	Box_TextFor( clientNum, box->numSongs ? box->songs[0].title : "", title, sizeof( title ) );
-	Box_TextFor( clientNum, box->numSongs > 1 ? box->songs[1].title : "", next, sizeof( next ) );
+	Box_TextFor( clientNum, Box_Title( box ), title, sizeof( title ) );
+	Box_TextFor( clientNum, Box_NextTitle( box ), next, sizeof( next ) );
 	Box_TextFor( clientNum, box->owner, owner, sizeof( owner ) );
-	Box_TextFor( clientNum, box->numSongs ? box->songs[0].by : "", by, sizeof( by ) );
+	Box_TextFor( clientNum, Box_By( box ), by, sizeof( by ) );
 	// (who put it down and who asked for the song at the end: a cgame of 0.1.7 or 0.1.8 reads no further than next)
 	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\" \"%s\" \"%s\"%s", b, box->rev,
 		(int)box->origin[0], (int)box->origin[1], (int)box->origin[2], (int)box->yaw, box->volume, flags,
-		Box_Msec( box ), box->numSongs ? box->songs[0].seconds : 0, Box_Waiting( box ),
+		Box_Msec( box ), Box_Seconds( box ), Box_Waiting( box ),
 		title, next, owner, by,
 		// (the speakers of a sound system after them, which only a cgame that draws them is sent)
 		( box->kind == BOX_KIND_SYSTEM ) ? va( " %i %i %i %i %i %i %i %i %i", box->kind, (int)box->parts[0][0], (int)box->parts[0][1],
@@ -266,7 +266,8 @@ static void G_BoxNote( boxHost_t *host, int b, int client, const char *text ) {
 }
 
 // One frame of a channel of a song to everybody in range. Of a sound system both channels go to who is in range
-// of either of its speakers, each with the distance to its own speaker.
+// of either of its speakers, each with the distance to its own speaker. Not to the player a box is synced with:
+// he hears his music player himself.
 static void G_BoxSend( boxHost_t *host, int b, int channel, const byte *frame, int len ) {
 	const box_t	*box = &boxes[b];
 	vec3_t		mouth, other;
@@ -278,7 +279,7 @@ static void G_BoxSend( boxHost_t *host, int b, int channel, const byte *frame, i
 	for ( i = 0; i < level.maxclients; i++ ) {
 		float distance;
 
-		if ( !Box_Hears( i ) || !G_VoiceReady( i ) || !Box_For( b, i ) )
+		if ( !Box_Hears( i ) || !G_VoiceReady( i ) || !Box_For( b, i ) || box->syncWith == i + 1 )
 			continue;
 		distance = Distance( g_entities[i].client->ps.origin, mouth );
 		if ( Q_min( distance, Distance( g_entities[i].client->ps.origin, other ) ) <= Box_RangeOf( box ) )
@@ -342,6 +343,7 @@ void G_BoomboxInit( qboolean restart ) {
 	G_BoomboxShutdown( qfalse );
 	memset( &boxHost, 0, sizeof( boxHost ) );
 	boxHost.boxes = boxes;
+	boxHost.numBoxes = BOX_MAX;
 	boxHost.tools = G_BoxTools;
 	boxHost.borrow = G_BoxBorrow;
 	boxHost.tell = G_BoxTell;
@@ -360,10 +362,27 @@ void G_BoomboxInit( qboolean restart ) {
 #endif
 }
 
-// he is gone, or somebody new has his number. What he asked for is still put on.
+// he is gone, or somebody new has his number. What he asked for is still put on, what he synced ends.
 void G_BoomboxClientGone( int clientNum ) {
-	if ( clientNum >= 0 && clientNum < MAX_CLIENTS )
-		memset( &boxClients[clientNum], 0, sizeof( boxClients[clientNum] ) );
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
+		return;
+	memset( &boxClients[clientNum], 0, sizeof( boxClients[clientNum] ) );
+	if ( boxOn )
+		Box_UnsyncClient( &boxHost, clientNum );
+}
+
+/*
+=================
+G_BoomboxFeed
+
+A RELAY_FEED of a client, which g_voice.c took as his (token, address, limit): a frame of the music player his
+box is synced with. qfalse: it is not.
+=================
+*/
+qboolean G_BoomboxFeed( int clientNum, int seq, const byte *data, int len ) {
+	if ( !boxOn || len < 2 || clientNum < 0 || clientNum >= MAX_CLIENTS || !boxClients[clientNum].hears )
+		return qfalse;
+	return Box_Feed( &boxHost, data[0] & 15, clientNum, data[0] >> 4, seq, data + 1, len - 1, trap->Milliseconds() );
 }
 
 /*
@@ -399,7 +418,7 @@ void Cmd_JPBox_f( gentity_t *ent ) {
 	trap->Argv( 3, arg, sizeof( arg ) );
 	boxClients[clientNum].systems = ( atoi( arg ) & BOX_CAP_SYSTEM ) ? qtrue : qfalse;
 	boxClients[clientNum].tvs = ( atoi( arg ) & BOX_CAP_TV ) ? qtrue : qfalse;
-	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE | BOX_CAP_SYSTEM | BOX_CAP_TV ) );
+	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE | BOX_CAP_SYSTEM | BOX_CAP_TV | BOX_CAP_SYNC ) );
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		if ( boxes[i].inuse )
 			Box_TellTo( i, clientNum );
@@ -658,6 +677,10 @@ boombox volume <box> <0 to 100>
 boombox seek <box> <second>				the song that plays goes on from there
 boombox drop <box> <place>				a song that waits is taken out of the line, 1: the next one
 boombox watch <box>						his cgame is sent the line of that box now and whenever it changes, -1: no more
+boombox sync <box> <title>				the box plays the music player on his computer (Sync audioplayer, his cgame
+										sends it as RELAY_FEED); title: what it plays
+boombox synctitle <box> <title>			his player plays something else
+boombox unsync <box>					the sync ends, whoever it is with
 boombox list
 =================
 */
@@ -665,7 +688,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	const int	clientNum = ent - g_entities;
 	char		what[16];
 	vec3_t		at, spot;
-	char		why[64];
+	char		why[128];
 	int			b;
 	box_t		*box;
 
@@ -730,6 +753,29 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		return;
 	}
 	box = &boxes[b];
+	if ( !Q_stricmp( what, "sync" ) || !Q_stricmp( what, "synctitle" ) ) {
+		char title[BOX_TITLE];
+
+		Q_strncpyz( title, ConcatArgs( 3 ), sizeof( title ) );
+		if ( !title[0] )
+			Q_strncpyz( title, "Music", sizeof( title ) );
+		if ( !Q_stricmp( what, "synctitle" ) ) {
+			Box_SyncTitle( &boxHost, b, clientNum, title );
+		} else if ( !Box_Sync( &boxHost, b, clientNum, ent->client->pers.netname, title, trap->Milliseconds(), why, sizeof( why ) ) ) {
+			Box_Note( clientNum, va( "^5Boombox^7: not synced, %s", why ) );
+		}
+		return;
+	}
+	if ( !Q_stricmp( what, "unsync" ) ) {
+		if ( box->syncWith && box->syncWith != clientNum + 1 )
+			Box_NoteNear( b, clientNum, va( "^5Boombox^7: %s^7 ended the sync with the player of %s", ent->client->pers.netname, box->syncName ) );
+		Box_Unsync( &boxHost, b, NULL );
+		return;
+	}
+	if ( ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) || !Q_stricmp( what, "skip" ) || !Q_stricmp( what, "stop" )
+		|| !Q_stricmp( what, "remove" ) || !Q_stricmp( what, "seek" ) ) && Box_SyncRefuses( &boxHost, b, clientNum ) ) {
+		return;
+	}
 	if ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) ) {
 		Box_Pause( &boxHost, b, (qboolean)!Q_stricmp( what, "pause" ), trap->Milliseconds() );
 	} else if ( !Q_stricmp( what, "skip" ) ) {
@@ -802,10 +848,10 @@ void Svcmd_Boombox_f( void ) {
 
 		if ( !box->inuse )
 			continue;
-		trap->Print( "%s %i at %i %i %i, volume %i%s%s%s\n", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : ( box->kind == BOX_KIND_TV ) ? "TV" : "Boombox", i,
+		trap->Print( "%s %i at %i %i %i, volume %i%s%s%s%s\n", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : ( box->kind == BOX_KIND_TV ) ? "TV" : "Boombox", i,
 			(int)box->origin[0], (int)box->origin[1], (int)box->origin[2],
 			box->volume, box->paused ? ", paused" : "", box->streaming && !box->started ? ", fetching" : "",
-			box->looking ? ", looking a song up" : "" );
+			box->looking ? ", looking a song up" : "", box->syncWith ? va( ", synced with the player of %s", box->syncName ) : "" );
 		for ( k = 0; k < box->numSongs; k++ ) {
 			trap->Print( "  %s %s %s (%s), from %s\n", k ? va( "%2i.", k ) : "now", box->songs[k].id, box->songs[k].title,
 				Box_Length( box->songs[k].seconds ), box->songs[k].by );

@@ -142,6 +142,10 @@ void VK_BeginFrame( void ) {
 #endif
 
 	vk.frame = frame;
+#ifndef RD_VISION_GLES
+	// v_gpuSparks: a step of the sparks before anything is drawn (outside a render pass)
+	VK_SparksSimulate();
+#endif
 	VK_BeginTarget( &vk.color, &vk.depth, 1, qfalse );
 	VK_BindFrameSets();
 	vk.rendering = qtrue;

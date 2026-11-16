@@ -38,6 +38,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "cgame/hud/cg_hudkit.h"
 
 #define CMD_FILE			"ui/vision/commandmenu.txt"
 #define CMD_FILE_MAX		( 32 * 1024 )
@@ -50,6 +51,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define CMD_ROW_H			24.0f		// an entry
 #define CMD_LIST_W			185.0f		// a list
 #define CMD_GAP				2.0f		// between two lists
+#define CMD_PAD				4.0f		// with the new look: inside the panel of a list,
+#define CMD_HEAD_H			12.0f		//	and the caption of the first
 
 typedef struct {
 	char	key;					// '0' to '9', or another letter of the file
@@ -293,17 +296,27 @@ Drawing
 
 // One list at x, its first entry at y: the number at the left, the name, and an arrow at the right where an entry
 // opens a list. The entry under the pointer is lit and, when the pointer moved onto it, opens its list. (A pointer
-// that stands still leaves the lists the number keys opened as they are.)
-static void Cmd_DrawList( int column, float x, float y, qboolean moved, float *openY ) {
-	const int	font = Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
-	const float	scale = 0.62f;
-	int			n, row = 0;
+// that stands still leaves the lists the number keys opened as they are.) With the HUD of the new look a list is
+// one panel of glass, the first with a caption, each number a key cap.
+static void Cmd_DrawList( int column, float x, float y, float rowH, float width, int rows, qboolean moved, float *openY ) {
+	const qboolean	glass = CG_HudNewLook();
+	const int		font = Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
+	const float		scale = 0.62f;
+	int				n, row = 0;
 
+	if ( glass ) {
+		const float head = column ? 0.0f : CMD_HEAD_H;
+
+		Hud_Glass( x, y - CMD_PAD - head, width, rows * rowH + 2.0f * CMD_PAD + head, 6.0f, 1.0f, NULL, qfalse );
+		if ( head ) {
+			Hud_Caps( x + CMD_PAD + 4.0f, y - head * 0.5f - 1.0f, hudAccent, 1.0f, HUD_LEFT, CG_VisionText( "Commands" ) );
+		}
+	}
 	for ( n = cmd.entries[Cmd_ListOf( column )].first; n >= 0; n = cmd.entries[n].next, row++ ) {
 		const cmdEntry_t	*e = &cmd.entries[n];
-		const float			top = y + row * CMD_ROW_H;
-		const qboolean		under = (qboolean)( cgs.cursorX >= x && cgs.cursorX < x + CMD_LIST_W
-								&& cgs.cursorY >= top && cgs.cursorY < top + CMD_ROW_H );
+		const float			top = y + row * rowH;
+		const qboolean		under = (qboolean)( cgs.cursorX >= x && cgs.cursorX < x + width
+								&& cgs.cursorY >= top && cgs.cursorY < top + rowH );
 		const qboolean		opened = (qboolean)( column < cmd.depth && cmd.path[column] == n );
 		char				key[2] = { e->key, '\0' };
 
@@ -318,15 +331,31 @@ static void Cmd_DrawList( int column, float x, float y, qboolean moved, float *o
 				cmd.depth = column;
 			}
 		}
-		if ( Skin_Ready() ) {
-			Skin_Panel( x, top, CMD_LIST_W, CMD_ROW_H - 1.0f, 2.0f, ( under || opened ) ? cmdLit : cmdRow, cmdEdge );
+		if ( glass ) {
+			const float mid = top + rowH * 0.5f;
+
+			if ( under || opened ) {
+				const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.16f };
+
+				Skin_Panel( x + CMD_PAD, top + 0.5f, width - 2.0f * CMD_PAD, rowH - 1.0f, 3.0f, lit, NULL );
+			}
+			Hud_Key( x + CMD_PAD + 4.0f, mid, key, 1.0f, HUD_LEFT );
+			Hud_TextMid( x + CMD_PAD + 20.0f, mid, HUD_BODY, ( under || opened ) ? hudBright : hudText, 1.0f, HUD_LEFT, CG_VisionText( e->name ),
+				width - 2.0f * CMD_PAD - 34.0f );
+			if ( !e->command[0] ) {
+				Skin_Arrow( x + width - CMD_PAD - 9.0f, mid - 3.0f, 3.5f, 6.0f, qfalse, hudDim );
+			}
 		} else {
-			CG_FillRect( x, top, CMD_LIST_W, CMD_ROW_H - 1.0f, ( under || opened ) ? cmdLit : cmdRow );
-		}
-		CG_Text_Paint( x + 8.0f, top + 4.0f, scale, (float *)cmdKey, key, 0, 0, 0, font );
-		CG_Text_Paint( x + 24.0f, top + 4.0f, scale, (float *)cmdText, CG_VisionText( e->name ), 0, 0, 0, font );
-		if ( !e->command[0] && Skin_Ready() ) {
-			Skin_Arrow( x + CMD_LIST_W - 12.0f, top + CMD_ROW_H * 0.5f - 4.5f, 5.0f, 8.0f, qfalse, cmdText );
+			if ( Skin_Ready() ) {
+				Skin_Panel( x, top, width, rowH - 1.0f, 2.0f, ( under || opened ) ? cmdLit : cmdRow, cmdEdge );
+			} else {
+				CG_FillRect( x, top, width, rowH - 1.0f, ( under || opened ) ? cmdLit : cmdRow );
+			}
+			CG_Text_Paint( x + 8.0f, top + 4.0f, scale, (float *)cmdKey, key, 0, 0, 0, font );
+			CG_Text_Paint( x + 24.0f, top + 4.0f, scale, (float *)cmdText, CG_VisionText( e->name ), 0, 0, 0, font );
+			if ( !e->command[0] && Skin_Ready() ) {
+				Skin_Arrow( x + width - 12.0f, top + rowH * 0.5f - 4.5f, 5.0f, 8.0f, qfalse, cmdText );
+			}
 		}
 		if ( opened ) {
 			*openY = top;
@@ -344,7 +373,9 @@ pointer (PLACE_CENTER).
 */
 void CG_CmdMenuDraw( void ) {
 	const qboolean	moved = (qboolean)( cgs.cursorX != cmd.pointerX || cgs.cursorY != cmd.pointerY );
-	float			x = CMD_LEFT, y = CMD_TOP;
+	const qboolean	glass = CG_HudNewLook();
+	const float		rowH = glass ? 17.0f : CMD_ROW_H, width = glass ? 150.0f : CMD_LIST_W, gap = glass ? 4.0f : CMD_GAP;
+	float			x = glass ? HUD_EDGE : CMD_LEFT, y = CMD_TOP;
 	int				column;
 
 	if ( !cmd.open ) {
@@ -361,10 +392,10 @@ void CG_CmdMenuDraw( void ) {
 		for ( n = cmd.entries[Cmd_ListOf( column )].first; n >= 0; n = cmd.entries[n].next ) {
 			rows++;
 		}
-		y = Q_min( y, SCREEN_HEIGHT - 8.0f - rows * CMD_ROW_H );
-		y = Q_max( y, 8.0f );
-		Cmd_DrawList( column, x, y, moved, &openY );
-		x += CMD_LIST_W + CMD_GAP;
+		y = Q_min( y, SCREEN_HEIGHT - 8.0f - CMD_PAD - rows * rowH );
+		y = Q_max( y, 8.0f + CMD_PAD + CMD_HEAD_H );
+		Cmd_DrawList( column, x, y, rowH, width, rows, moved, &openY );
+		x += width + gap;
 		y = openY;
 	}
 	CG_SelectDrawCursor();

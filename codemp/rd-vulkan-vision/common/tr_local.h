@@ -449,6 +449,12 @@ typedef struct stageMaterial_s {
 	// out of it, so nothing goes below what the player stands on and what the shadows are traced against. Vulkan
 	// only, the stage then has no parallax (vk_shade.cpp, shaders/generic.tesc and .tese).
 	float			tessHeight, tessPlane, tessDensity;
+	// a burn mark cut into the surface (groove <depth> [height map]): a stage of blendFunc GL_DST_COLOR
+	// GL_ONE_MINUS_SRC_ALPHA, a dent that deep in units, lit by the light grid of the level (VKD_GROOVE, generic.frag
+	// Groove()). Its height from the red of grooveMap (0.5 the surface, a lip above), else from how dark the stage is.
+	// Vulkan only; not a material of the surface (no pbr)
+	float			groove;
+	image_t			*grooveMap;
 
 	// glass (transmission > 0, VK_GlassDraw): the screen behind it shows through, bent by ior over thickness units (0:
 	// a thin pane), blurred by the roughness, coloured by absorption: what is left of each colour after
@@ -782,6 +788,9 @@ typedef struct srfPoly_s {
 	int				fogIndex;
 	int				numVerts;
 	polyVert_t		*verts;
+	// VisionJK: a mark on a tessellated surface of the level (R_MarkTessFind): that surface's shader, else NULL.
+	// Such a mark is not drawn itself, the surface paints it onto its bumps (vk_shade.cpp VK_PaintMarks)
+	struct shader_s	*tessShader;
 } srfPoly_t;
 
 typedef struct srfDisplayList_s {
@@ -1137,6 +1146,7 @@ typedef struct trGlobals_s {
 
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
 	image_t					*ssrImage;			// VisionJK: the slot of the texture table that shows the picture of v_ssr (vk_post.cpp)
+	image_t					*softDepthImage;	// VisionJK: and the one that shows the distance of v_softParticles
 	image_t					*rtLightImage[2];	// VisionJK: slots of the texture table that show the masks of the shadows from the moving lights (vk_rt.cpp)
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
@@ -1374,6 +1384,7 @@ extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
 extern	cvar_t	*v_menuBlur;
+extern	cvar_t	*v_backdropBlur;
 extern	cvar_t	*tay_bloom;
 extern	cvar_t	*tay_bloomIntensity;
 extern	cvar_t	*tay_bloomThreshold;
@@ -1664,6 +1675,9 @@ struct shaderCommands_s
 
 	//rww - doing a fade, don't compute shader color/alpha overrides
 	bool		fading;
+
+	// VisionJK: a batch of marks on a tessellated surface (srfPoly_t tessShader): that surface's shader
+	shader_t	*markTess;
 };
 
 #ifdef _MSC_VER
@@ -1717,6 +1731,8 @@ void R_CreateProbes( const char *mapName );
 void R_ProbeViews( const viewParms_t *main );
 void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori );
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
+// VisionJK: a burst of sparks the device simulates (vk_sparks.cpp, v_gpuSparks), ext.EmitSparks
+qboolean RE_EmitSparks( const sparkBurst_t *burst );
 
 
 /*
@@ -1772,6 +1788,8 @@ MARKERS, POLYGON PROJECTION ON WORLD POLYGONS
 */
 
 int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projection, int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer );
+qboolean R_MarkTessFind( const vec3_t xyz, shader_t **shader, float *st, vec3_t normal );
+const shaderStage_t *R_TessStage( const shader_t *shader );
 
 
 /*
@@ -2013,8 +2031,16 @@ typedef enum {
 	RC_AUTO_MAP,
 	RC_VIDEOFRAME,
 	RC_SET_2D_PLANE,
-	RC_DRAW_TRIS_2D
+	RC_DRAW_TRIS_2D,
+	RC_BACKDROP
 } renderCommand_t;
+
+// VisionJK: the frame blurred inside a rect, the backdrop of a panel (RE_DrawBackdrop, coordinates of RC_STRETCH_PIC)
+typedef struct backdropCommand_s {
+	int		commandId;
+	float	x, y, w, h;
+	float	radius;
+} backdropCommand_t;
 
 // VisionJK: triangles in pixels of the window (RE_DrawTriangles2D, the debug menu of the client); verts and
 // indexes are in the arena of the frame in tr_cmds.cpp
@@ -2058,6 +2084,7 @@ void R_AddDrawSurfCmd( drawSurf_t *drawSurfs, int numDrawSurfs );
 void RE_SetColor( const float *rgba );
 void RE_DrawTriangles2D( const polyVert_t *verts, int numVerts, const int *indexes, int numIndexes, qhandle_t hShader, const int *clip );
 qhandle_t RE_UiTexture( int slot, const byte *rgba, int width, int height );
+qboolean RE_DrawBackdrop( float x, float y, float w, float h, float radius );
 void RE_StretchPic ( float x, float y, float w, float h,
 					  float s1, float t1, float s2, float t2, qhandle_t hShader );
 void RE_RotatePic ( float x, float y, float w, float h,

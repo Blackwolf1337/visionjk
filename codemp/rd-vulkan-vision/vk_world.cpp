@@ -928,6 +928,107 @@ qboolean VK_QuadView( const vec4_t *records, int numQuads, uint32_t *bones ) {
 	return qtrue;
 }
 
+/*
+===============
+VK_SpriteLit / VK_SpriteLight
+
+v_litParticles: the sprites of a batch of smoke, dust or steam take the light of the place they are at: the light
+grid of the level there, as a model gets it, and the moving lights that reach it (sabers, shots, explosions). Which
+batches: those blended over what is behind them (not added) without a glow, and those added whose shader is named as
+smoke, steam, dust, mist or cloud (the steam and smoke trails of the game are added, and glowed in a dark room as if
+they burned). Fire, sparks and flashes glow as they are. light is what the colour of the sprite is multiplied with:
+about 1 in a lit room, down to a floor in the dark, above 1 next to a saber.
+===============
+*/
+static qboolean VK_SpriteLitShader( const shader_t *shader ) {
+	static const char	*smoky[] = { "smoke", "steam", "dust", "mist", "cloud", "fog" };
+	static const char	*hot[] = { "fire", "flame", "spark", "burn", "glow", "flare", "flash", "blast", "explo" };
+	const uint32_t		bits = shader->stages[0].stateBits;
+
+	if ( shader->hasGlow ) {
+		return qfalse;
+	}
+	if ( ( bits & GLS_DSTBLEND_BITS ) == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA && ( bits & GLS_SRCBLEND_BITS ) == GLS_SRCBLEND_SRC_ALPHA ) {
+		return qtrue;
+	}
+	if ( ( bits & GLS_DSTBLEND_BITS ) != GLS_DSTBLEND_ONE ) {
+		return qfalse;
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( hot ); i++ ) {
+		if ( Q_stristr( shader->name, hot[i] ) ) {
+			return qfalse;
+		}
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( smoky ); i++ ) {
+		if ( Q_stristr( shader->name, smoky[i] ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+static qboolean VK_SpriteLit( void ) {
+	static const shader_t	*last;
+	static qboolean			lastLit;
+	static int				lastFrame = -1;
+	const shader_t			*shader = tess.shader;
+
+	if ( !v_litParticles->integer || !shader || !tr.world || !tr.world->lightGridData
+		|| ( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) || !shader->stages[0].active ) {
+		return qfalse;
+	}
+	// (a batch is one shader: asked once for it, and anew each frame, the shaders may have been loaded again)
+	if ( shader != last || lastFrame != tr.frameCount ) {
+		lastFrame = tr.frameCount;
+		last = shader;
+		lastLit = VK_SpriteLitShader( shader );
+	}
+	return lastLit;
+}
+
+static void VK_SpriteLight( const vec3_t at, vec3_t light ) {
+	vec3_t ambient, directed, dir, point;
+
+	VectorCopy( at, point );
+	if ( !R_LightForPoint( point, ambient, directed, dir ) ) {
+		VectorSet( light, 1.0f, 1.0f, 1.0f );
+		return;
+	}
+	// (a sprite faces the eye, so half of the light from one side; a lit room of the game comes to about 160)
+	for ( int c = 0; c < 3; c++ ) {
+		light[c] = ( ambient[c] + 0.6f * directed[c] ) / 160.0f;
+	}
+	for ( int i = 0; i < backEnd.refdef.num_dlights; i++ ) {
+		const dlight_t *dl = &backEnd.refdef.dlights[i];
+		vec3_t nearest;
+		float reach = dl->radius, d, f;
+
+		if ( dl->lineRange > 0.0f ) {
+			// a tube of light: from the nearest point of its line
+			vec3_t line, toPoint;
+			float len2, t;
+
+			VectorSubtract( dl->lineEnd, dl->lineStart, line );
+			VectorSubtract( at, dl->lineStart, toPoint );
+			len2 = DotProduct( line, line );
+			t = len2 > 0.0f ? Com_Clamp( 0.0f, 1.0f, DotProduct( toPoint, line ) / len2 ) : 0.0f;
+			VectorMA( dl->lineStart, t, line, nearest );
+			reach = dl->lineRange;
+		} else {
+			VectorCopy( dl->origin, nearest );
+		}
+		d = Distance( at, nearest );
+		if ( reach <= 0.0f || d >= reach ) {
+			continue;
+		}
+		f = 1.0f - d / reach;
+		VectorMA( light, 1.2f * f * f, dl->color, light );
+	}
+	for ( int c = 0; c < 3; c++ ) {
+		light[c] = Com_Clamp( 0.4f, 1.6f, light[c] );
+	}
+}
+
 static void VK_AddQuad( int kind, const vec3_t a, float aw, const vec3_t b, float bw, const vec3_t c, const float *st,
 	const byte *color, const vec3_t d = vec3_origin ) {
 	const glIndex_t	first = (glIndex_t)( vk_numSprites * 4 );
@@ -943,22 +1044,47 @@ static void VK_AddQuad( int kind, const vec3_t a, float aw, const vec3_t b, floa
 		VK_AddQuad( kind, a, aw, b, bw, c, st, color, d );
 		return;
 	}
-	const vec4_t rgba = { color[0] / 255.0f, color[1] / 255.0f, color[2] / 255.0f, color[3] / 255.0f };
+	vec4_t rgba = { color[0] / 255.0f, color[1] / 255.0f, color[2] / 255.0f, color[3] / 255.0f };
 
+	// (a sprite or an oriented quad: a is its middle)
+	if ( ( kind == 0 || kind == 1 ) && VK_SpriteLit() ) {
+		vec3_t light;
+
+		VK_SpriteLight( a, light );
+		for ( int i = 0; i < 3; i++ ) {
+			rgba[i] *= light[i];
+		}
+	}
 	VK_QuadRecord( vk_sprites + vk_numSprites * VK_SPRITE_ROWS, kind, a, aw, b, bw, c, st, rgba, d );
 	vk_numSprites++;
 	VK_QuadIndexes( tess.indexes + tess.numIndexes, first );
 	tess.numIndexes += 6;
 }
 
-// a sprite as DoSprite() of rd-vanilla has it: turned by rotation degrees to the eye, the texture over all of it
-static void VK_AddSprite( const vec3_t origin, float radius, float rotation, const byte *color ) {
-	static const float	st[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+// a sprite as DoSprite() of rd-vanilla has it: turned by rotation degrees to the eye, the texture over all of it (or
+// the part st, a tile of a flipbook)
+static void VK_AddSprite( const vec3_t origin, float radius, float rotation, const byte *color, const float *st = NULL ) {
+	static const float	whole[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
 	const float			angle = (float)M_PI * rotation / 180.0f;
 	vec3_t				turn;
 
 	VectorSet( turn, rotation ? cosf( angle ) : 1.0f, rotation ? sinf( angle ) : 0.0f, 0.0f );
-	VK_AddQuad( 0, origin, radius, turn, 0.0f, vec3_origin, st, color );
+	VK_AddQuad( 0, origin, radius, turn, 0.0f, vec3_origin, st ? st : whole, color );
+}
+
+// RF_FLIPBOOK: the part of the texture its tile is, left to right and top to bottom; qfalse: the whole of it
+static qboolean VK_FlipbookTile( const refEntity_t *e, float *st ) {
+	const int cols = RF_FLIPBOOK_COLS( e->frame ), rows = RF_FLIPBOOK_ROWS( e->frame );
+
+	if ( !( e->renderfx & RF_FLIPBOOK ) || cols < 1 || rows < 1 ) {
+		return qfalse;
+	}
+	const int tile = RF_FLIPBOOK_TILE( e->frame ) % ( cols * rows );
+	st[0] = (float)( tile % cols ) / cols;
+	st[1] = (float)( tile / cols ) / rows;
+	st[2] = (float)( tile % cols + 1 ) / cols;
+	st[3] = (float)( tile / cols + 1 ) / rows;
+	return qtrue;
 }
 
 // the entities whose surface sprite.vert makes
@@ -975,7 +1101,7 @@ static void VK_AddEntityQuads( refEntity_t *e ) {
 
 	switch ( e->reType ) {
 	case RT_SPRITE:
-		VK_AddSprite( e->origin, e->radius, e->rotation, e->shaderRGBA );
+		VK_AddSprite( e->origin, e->radius, e->rotation, e->shaderRGBA, VK_FlipbookTile( e, st ) ? st : NULL );
 		break;
 	case RT_SABER_GLOW:
 		// the glow along the blade, from its tip down, and the halo of the hilt. The radius grows on the entity
@@ -1006,7 +1132,7 @@ static void VK_AddEntityQuads( refEntity_t *e ) {
 		if ( backEnd.viewParms.isMirror ) {
 			VectorSubtract( vec3_origin, left, left );
 		}
-		VK_AddQuad( 1, e->origin, 0.0f, left, 0.0f, up, whole, e->shaderRGBA );
+		VK_AddQuad( 1, e->origin, 0.0f, left, 0.0f, up, VK_FlipbookTile( e, st ) ? st : whole, e->shaderRGBA );
 		break;
 	case RT_LINE:
 		VK_AddQuad( 2, e->origin, e->radius, e->oldorigin, e->radius, vec3_origin, whole, e->shaderRGBA );
@@ -1380,6 +1506,27 @@ qboolean VK_TessBorders( uint32_t *bones ) {
 	frame->numBones = first + count;
 	*bones = (uint32_t)first * 3;
 	return qtrue;
+}
+
+/*
+===============
+VK_FrameRows
+
+Room for rows of four floats in the bone buffer of the frame, for a draw to read (vkDraw_t decals). first: where
+they start, in rows. NULL: no room left in the frame.
+===============
+*/
+float *VK_FrameRows( int rows, uint32_t *first ) {
+	vkFrame_t	*frame = vk.frame;
+	const int	start = ( frame ? frame->numBones + VK_BONE_ALIGN - 1 : 0 ) / VK_BONE_ALIGN * VK_BONE_ALIGN;
+	const int	count = ( rows + 2 ) / 3;		// the buffer counts in bones of three rows
+
+	if ( !frame || rows <= 0 || start + count > VK_MAX_BONES ) {
+		return NULL;
+	}
+	frame->numBones = start + count;
+	*first = (uint32_t)start * 3;
+	return (float *)( frame->bones.mapped + sizeof( float ) * 12 * start );
 }
 
 /*

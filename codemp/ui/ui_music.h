@@ -38,6 +38,20 @@ const char	*Music_NowPlaying( void );
 // the players there are, by their names in the list of v_shareMusicPlayers; how many
 int			Music_Players( char keys[MUSIC_MAX_PLAYERS][MUSIC_KEY] );
 
+// Sync audioplayer (cgame/boombox/cg_boombox_sync.c): every player on the bus, whatever v_shareMusicPlayers says,
+// with what it plays and its process. Only while it is switched on (Music_SyncScan) are all of them asked.
+typedef struct musicLive_s {
+	char		bus[128];			// its name on the bus, to send it commands
+	char		key[MUSIC_KEY];		// as the list of v_shareMusicPlayers names it
+	qboolean	playing;			// it said Playing at the last look
+	char		now[128];			// what it plays, UTF-8 ("Spotify: <artist> - <title>"), "": nothing known
+	int			pid;				// the process that owns the name on the bus, 0: not known
+} musicLive_t;
+
+void		Music_SyncScan( qboolean all );
+int			Music_Live( const musicLive_t **live );
+void		Music_Control( const char *bus, const char *method );	// "PlayPause", "Next" of MPRIS
+
 qboolean	Music_Allowed( const char *allow, const char *key );
 void		Music_Toggle( char *allow, int allowSize, const char *key );
 void		Music_PlayerName( const char *key, char *out, int outSize );

@@ -181,7 +181,7 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 		sh = R_GetShaderByHandle(h);
 	}
 	if (sh == NULL || sh == tr.defaultShader) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_RemapShader: shader %s not found\n", shaderName );
+		ri.Printf( PRINT_WARNING, "WARNING: R_RemapShader: shader %s not found\n", shaderName );
 		return;
 	}
 
@@ -192,7 +192,7 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 	}
 
 	if (sh2 == NULL || sh2 == tr.defaultShader) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_RemapShader: new shader %s not found\n", newShaderName );
+		ri.Printf( PRINT_WARNING, "WARNING: R_RemapShader: new shader %s not found\n", newShaderName );
 		return;
 	}
 
@@ -243,14 +243,14 @@ qboolean ParseVector( const char **text, int count, float *v ) {
 	// FIXME: spaces are currently required after parens, should change parseext...
 	token = COM_ParseExt( text, qfalse );
 	if ( strcmp( token, "(" ) ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parenthesis in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing parenthesis in shader '%s'\n", shader.name );
 		return qfalse;
 	}
 
 	for ( i = 0 ; i < count ; i++ ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( !token[0] ) {
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing vector element in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing vector element in shader '%s'\n", shader.name );
 			return qfalse;
 		}
 		v[i] = atof( token );
@@ -258,7 +258,7 @@ qboolean ParseVector( const char **text, int count, float *v ) {
 
 	token = COM_ParseExt( text, qfalse );
 	if ( strcmp( token, ")" ) ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parenthesis in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing parenthesis in shader '%s'\n", shader.name );
 		return qfalse;
 	}
 
@@ -290,7 +290,7 @@ static unsigned NameToAFunc( const char *funcname )
 		return GLS_ATEST_GE_C0;
 	}
 
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid alphaFunc name '%s' in shader '%s'\n", funcname, shader.name );
+	ri.Printf( PRINT_WARNING, "WARNING: invalid alphaFunc name '%s' in shader '%s'\n", funcname, shader.name );
 	return 0;
 }
 
@@ -339,7 +339,7 @@ static int NameToSrcBlendMode( const char *name )
 		return GLS_SRCBLEND_ALPHA_SATURATE;
 	}
 
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown blend mode '%s' in shader '%s', substituting GL_ONE\n", name, shader.name );
+	ri.Printf( PRINT_WARNING, "WARNING: unknown blend mode '%s' in shader '%s', substituting GL_ONE\n", name, shader.name );
 	return GLS_SRCBLEND_ONE;
 }
 
@@ -383,7 +383,7 @@ static int NameToDstBlendMode( const char *name )
 		return GLS_DSTBLEND_ONE_MINUS_SRC_COLOR;
 	}
 
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown blend mode '%s' in shader '%s', substituting GL_ONE\n", name, shader.name );
+	ri.Printf( PRINT_WARNING, "WARNING: unknown blend mode '%s' in shader '%s', substituting GL_ONE\n", name, shader.name );
 	return GLS_DSTBLEND_ONE;
 }
 
@@ -423,7 +423,7 @@ static genFunc_t NameToGenFunc( const char *funcname )
 		return GF_RAND;
 	}
 
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid genfunc name '%s' in shader '%s'\n", funcname, shader.name );
+	ri.Printf( PRINT_WARNING, "WARNING: invalid genfunc name '%s' in shader '%s'\n", funcname, shader.name );
 	return GF_SIN;
 }
 
@@ -440,7 +440,7 @@ static void ParseWaveForm( const char **text, waveForm_t *wave )
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing waveform parm in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing waveform parm in shader '%s'\n", shader.name );
 		return;
 	}
 	wave->func = NameToGenFunc( token );
@@ -449,7 +449,7 @@ static void ParseWaveForm( const char **text, waveForm_t *wave )
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing waveform parm in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing waveform parm in shader '%s'\n", shader.name );
 		return;
 	}
 	wave->base = atof( token );
@@ -457,7 +457,7 @@ static void ParseWaveForm( const char **text, waveForm_t *wave )
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing waveform parm in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing waveform parm in shader '%s'\n", shader.name );
 		return;
 	}
 	wave->amplitude = atof( token );
@@ -465,7 +465,7 @@ static void ParseWaveForm( const char **text, waveForm_t *wave )
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing waveform parm in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing waveform parm in shader '%s'\n", shader.name );
 		return;
 	}
 	wave->phase = atof( token );
@@ -473,7 +473,7 @@ static void ParseWaveForm( const char **text, waveForm_t *wave )
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing waveform parm in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing waveform parm in shader '%s'\n", shader.name );
 		return;
 	}
 	wave->frequency = atof( token );
@@ -509,28 +509,28 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing tcMod turb parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing tcMod turb parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.base = atof( token );
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing tcMod turb in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing tcMod turb in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.amplitude = atof( token );
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing tcMod turb in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing tcMod turb in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.phase = atof( token );
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing tcMod turb in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing tcMod turb in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.frequency = atof( token );
@@ -545,7 +545,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing scale parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing scale parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[0] = atof( token );	//scale unioned
@@ -553,7 +553,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing scale parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing scale parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[1] = atof( token );	//scale unioned
@@ -567,14 +567,14 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing scale scroll parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing scale scroll parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[0] = atof( token );	//scroll unioned
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing scale scroll parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing scale scroll parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[1] = atof( token );	//scroll unioned
@@ -588,7 +588,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing stretch parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing stretch parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.func = NameToGenFunc( token );
@@ -596,7 +596,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing stretch parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing stretch parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.base = atof( token );
@@ -604,7 +604,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing stretch parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing stretch parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.amplitude = atof( token );
@@ -612,7 +612,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing stretch parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing stretch parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.phase = atof( token );
@@ -620,7 +620,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing stretch parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing stretch parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->wave.frequency = atof( token );
@@ -635,7 +635,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing transform parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing transform parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->matrix[0][0] = atof( token );
@@ -643,7 +643,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing transform parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing transform parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->matrix[0][1] = atof( token );
@@ -651,7 +651,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing transform parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing transform parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->matrix[1][0] = atof( token );
@@ -659,7 +659,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing transform parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing transform parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->matrix[1][1] = atof( token );
@@ -667,7 +667,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing transform parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing transform parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[0] = atof( token );
@@ -675,7 +675,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing transform parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing transform parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[1] = atof( token );
@@ -690,7 +690,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing tcMod rotate parms in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing tcMod rotate parms in shader '%s'\n", shader.name );
 			return;
 		}
 		tmi->translate[0]= atof( token );	//rotateSpeed unioned
@@ -705,7 +705,7 @@ static void ParseTexMod( const char *_text, shaderStage_t *stage )
 	}
 	else
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown tcMod '%s' in shader '%s'\n", token, shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: unknown tcMod '%s' in shader '%s'\n", token, shader.name );
 	}
 }
 
@@ -735,7 +735,7 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 
 	if (token[0]==0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -757,7 +757,7 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	}
 	else
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid type in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: invalid type in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -767,13 +767,13 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	token = COM_ParseExt( text, qfalse );
 	if (token[0]==0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
 		return;
 	}
 	width=atof(token);
 	if (width <= 0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid width in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: invalid width in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -783,13 +783,13 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	token = COM_ParseExt( text, qfalse );
 	if (token[0]==0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
 		return;
 	}
 	height=atof(token);
 	if (height <= 0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid height in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: invalid height in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -799,13 +799,13 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	token = COM_ParseExt( text, qfalse );
 	if (token[0]==0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
 		return;
 	}
 	density=atof(token);
 	if (density <= 0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid density in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: invalid density in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -815,13 +815,13 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	token = COM_ParseExt( text, qfalse );
 	if (token[0]==0)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing surfaceSprites params in shader '%s'\n", shader.name );
 		return;
 	}
 	fadedist=atof(token);
 	if (fadedist < 32)
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid fadedist (%f < 32) in shader '%s'\n", fadedist, shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: invalid fadedist (%f < 32) in shader '%s'\n", fadedist, shader.name );
 		return;
 	}
 
@@ -901,13 +901,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite fademax in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite fademax in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value <= stage->ss->fadeDist)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite fademax (%.2f <= fadeDist(%.2f)) in shader '%s'\n", value, stage->ss->fadeDist, shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite fademax (%.2f <= fadeDist(%.2f)) in shader '%s'\n", value, stage->ss->fadeDist, shader.name );
 			return;
 		}
 		stage->ss->fadeMax=value;
@@ -922,7 +922,7 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite fadescale in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite fadescale in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
@@ -938,13 +938,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite variance width in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite variance width in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite variance width in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite variance width in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->variance[0]=value;
@@ -952,13 +952,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite variance height in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite variance height in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite variance height in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite variance height in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->variance[1]=value;
@@ -972,7 +972,7 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 	{
 		if (stage->ss->facing != SURFSPRITE_FACING_NORMAL)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: Hangdown facing overrides previous facing in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: Hangdown facing overrides previous facing in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->facing=SURFSPRITE_FACING_DOWN;
@@ -986,7 +986,7 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 	{
 		if (stage->ss->facing != SURFSPRITE_FACING_NORMAL)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: Anyangle facing overrides previous facing in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: Anyangle facing overrides previous facing in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->facing=SURFSPRITE_FACING_ANY;
@@ -1000,7 +1000,7 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 	{
 		if (stage->ss->facing != SURFSPRITE_FACING_NORMAL)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: Faceup facing overrides previous facing in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: Faceup facing overrides previous facing in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->facing=SURFSPRITE_FACING_UP;
@@ -1015,13 +1015,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite wind in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite wind in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0.0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite wind in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite wind in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->wind=value;
@@ -1040,13 +1040,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite windidle in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite windidle in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0.0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite windidle in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite windidle in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->windIdle=value;
@@ -1061,13 +1061,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite vertskew in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite vertskew in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0.0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite vertskew in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite vertskew in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->vertSkew=value;
@@ -1082,13 +1082,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite duration in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite duration in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value <= 0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite duration in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite duration in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->fxDuration=value;
@@ -1103,13 +1103,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite grow width in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite grow width in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite grow width in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite grow width in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->fxGrow[0]=value;
@@ -1117,13 +1117,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite grow height in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite grow height in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite grow height in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite grow height in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->fxGrow[1]=value;
@@ -1138,13 +1138,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite fxalpha start in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite fxalpha start in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0 || value > 1.0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite fxalpha start in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite fxalpha start in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->fxAlphaStart=value;
@@ -1152,13 +1152,13 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 		token = COM_ParseExt( text, qfalse);
 		if (token[0]==0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing surfacesprite fxalpha end in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing surfacesprite fxalpha end in shader '%s'\n", shader.name );
 			return;
 		}
 		value = atof(token);
 		if (value < 0 || value > 1.0)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid surfacesprite fxalpha end in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: invalid surfacesprite fxalpha end in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->fxAlphaEnd=value;
@@ -1172,7 +1172,7 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 	{
 		if (stage->ss->surfaceSpriteType != SURFSPRITE_EFFECT)
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: weather applied to non-effect surfacesprite in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: weather applied to non-effect surfacesprite in shader '%s'\n", shader.name );
 			return;
 		}
 		stage->ss->surfaceSpriteType = SURFSPRITE_WEATHERFX;
@@ -1182,7 +1182,7 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 	//
 	// invalid ss command.
 	//
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid optional surfacesprite param '%s' in shader '%s'\n", param, shader.name );
+	ri.Printf( PRINT_WARNING, "WARNING: invalid optional surfacesprite param '%s' in shader '%s'\n", param, shader.name );
 	return;
 }
 
@@ -1219,6 +1219,9 @@ and more of the surface:
 	sheen <r g b> [roughness]							the sheen of cloth at a flat angle
 	anisotropy <-1..1> [degrees]						shine drawn out along a direction: brushed metal
 	emission <r g b> <strength> [threshold]				the parts brighter than threshold give off light
+and a burn mark cut into the surface (Vulkan, blendFunc GL_DST_COLOR GL_ONE_MINUS_SRC_ALPHA, no material otherwise):
+	groove <depth> [height map]							a dent that many units deep, lit by the light grid: its height
+														the red of the map (0.5 the surface), else its darkness
 and real bumps in place of the parallax (Vulkan, a device with tessellation shaders, v_tessellation):
 	tessellation <units> [plane] [pixels]				the triangles cut until an edge is that many pixels (8),
 														each vertex moved by the height of normalHeight times units;
@@ -1366,6 +1369,21 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 			return 1;
 		}
 	}
+	// VisionJK: a burn mark as a groove (groove <depth> [height map]), not a material of the surface: no pbr
+	if ( !Q_stricmp( keyword, "groove" ) ) {
+		stageMaterial_t *mat = StageMaterial( stage );
+
+		token = COM_ParseExt( text, qfalse );
+		mat->groove = token[0] ? Com_Clamp( 0.0f, 16.0f, atof( token ) ) : 1.0f;
+		token = COM_ParseExt( text, qfalse );
+		if ( token[0] ) {
+			mat->grooveMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
+			if ( !mat->grooveMap ) {
+				ri.Printf( PRINT_WARNING, "WARNING: could not find groove height map '%s' in shader '%s'\n", token, shader.name );
+			}
+		}
+		return 1;
+	}
 	// rend2's cloth: a word alone, the sheen of the albedo
 	if ( !Q_stricmp( keyword, "cloth" ) ) {
 		stageMaterial_t *mat = StageMaterial( stage );
@@ -1396,14 +1414,14 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 	}
 	token = COM_ParseExt( text, qfalse );
 	if ( !token[0] ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: missing parameter for '%s' keyword in shader '%s'\n", keyword, shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing parameter for '%s' keyword in shader '%s'\n", keyword, shader.name );
 		return -1;
 	}
 	if ( !Q_stricmp( keyword, "normalHeightMap" ) || !Q_stricmp( keyword, "rmoMap" ) || !Q_stricmp( keyword, "ormMap" ) ) {
 		image_t *image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
 
 		if ( !image ) {
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 		} else if ( !Q_stricmp( keyword, "normalHeightMap" ) ) {
 			mat->normalMap = image;
 			mat->normalHeight = true;
@@ -1468,7 +1486,7 @@ static int ParseMaterialKeyword( const char *word, const char **text, shaderStag
 	} else if ( !Q_stricmp( keyword, "specMap" ) || !Q_stricmp( keyword, "specularMap" ) ) {
 		mat->specGlossMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
 		if ( !mat->specGlossMap ) {
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 		}
 	} else if ( !Q_stricmp( keyword, "specularReflectance" ) ) {
 		mat->specularReflectance = Com_Clamp( 0.0f, 1.0f, atof( token ) );
@@ -1520,7 +1538,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		token = COM_ParseExt( text, qtrue );
 		if ( !token[0] )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: no matching '}' found\n" );
+			ri.Printf( PRINT_WARNING, "WARNING: no matching '}' found\n" );
 			return qfalse;
 		}
 
@@ -1546,7 +1564,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'map' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'map' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
 
@@ -1576,7 +1594,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_REPEAT );
 				if ( !stage->bundle[0].image )
 				{
-					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+					ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 					return qfalse;
 				}
 			}
@@ -1589,13 +1607,13 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'normalMap' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'normalMap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
 			StageMaterial( stage )->normalMap = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, qfalse, GL_REPEAT );
 			if ( !stage->mat->normalMap )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 			}
 		}
 		//
@@ -1630,13 +1648,13 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'clampmap' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'clampmap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
 			stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_CLAMP );
 			if ( !stage->bundle[0].image )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 				return qfalse;
 			}
 		}
@@ -1653,7 +1671,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for '%s' keyword in shader '%s'\n", (bClamp ? "animMap":"clampanimMap"), shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for '%s' keyword in shader '%s'\n", (bClamp ? "animMap":"clampanimMap"), shader.name );
 				return qfalse;
 			}
 			stage->bundle[0].imageAnimationSpeed = atof( token );
@@ -1672,7 +1690,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 					images[num] = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT );
 					if ( !images[num] )
 					{
-						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+						ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 						return qfalse;
 					}
 					stage->bundle[0].numImageAnimations++;
@@ -1687,7 +1705,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'videoMap' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'videoMap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
 			stage->bundle[0].videoMapHandle = ri.CIN_PlayCinematic( token, 0, 0, 256, 256, (CIN_loop | CIN_silent | CIN_shader));
@@ -1706,7 +1724,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'alphaFunc' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'alphaFunc' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
 
@@ -1721,7 +1739,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'depthfunc' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameter for 'depthfunc' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
 
@@ -1739,7 +1757,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 			else
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown depthfunc '%s' in shader '%s'\n", token, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: unknown depthfunc '%s' in shader '%s'\n", token, shader.name );
 				continue;
 			}
 		}
@@ -1759,7 +1777,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( token[0] == 0 )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parm for blendFunc in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parm for blendFunc in shader '%s'\n", shader.name );
 				continue;
 			}
 			// check for "simple" blends first
@@ -1779,7 +1797,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				token = COM_ParseExt( text, qfalse );
 				if ( token[0] == 0 )
 				{
-					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parm for blendFunc in shader '%s'\n", shader.name );
+					ri.Printf( PRINT_WARNING, "WARNING: missing parm for blendFunc in shader '%s'\n", shader.name );
 					continue;
 				}
 				blendDstBits = NameToDstBlendMode( token );
@@ -1799,7 +1817,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( token[0] == 0 )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameters for rgbGen in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameters for rgbGen in shader '%s'\n", shader.name );
 				continue;
 			}
 
@@ -1857,7 +1875,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			{
 				if (shader.lightmapIndex[0] != LIGHTMAP_NONE)
 				{
-					ri.Printf( PRINT_ALL, S_COLOR_RED "ERROR: rgbGen lightingDiffuseEntity used on a misc_model! in shader '%s'\n", shader.name );
+					ri.Printf( PRINT_ERROR, "ERROR: rgbGen lightingDiffuseEntity used on a misc_model! in shader '%s'\n", shader.name );
 				}
 				stage->rgbGen = CGEN_LIGHTING_DIFFUSE_ENTITY;
 
@@ -1868,7 +1886,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 			else
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown rgbGen parameter '%s' in shader '%s'\n", token, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: unknown rgbGen parameter '%s' in shader '%s'\n", token, shader.name );
 				continue;
 			}
 		}
@@ -1880,7 +1898,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( token[0] == 0 )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameters for alphaGen in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parameters for alphaGen in shader '%s'\n", shader.name );
 				continue;
 			}
 
@@ -1934,7 +1952,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				if ( token[0] == 0 )
 				{
 					shader.portalRange = 256;
-					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing range parameter for alphaGen portal in shader '%s', defaulting to 256\n", shader.name );
+					ri.Printf( PRINT_WARNING, "WARNING: missing range parameter for alphaGen portal in shader '%s', defaulting to 256\n", shader.name );
 				}
 				else
 				{
@@ -1943,7 +1961,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 			else
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown alphaGen parameter '%s' in shader '%s'\n", token, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: unknown alphaGen parameter '%s' in shader '%s'\n", token, shader.name );
 				continue;
 			}
 		}
@@ -1955,7 +1973,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( token[0] == 0 )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing texgen parm in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing texgen parm in shader '%s'\n", shader.name );
 				continue;
 			}
 
@@ -1981,7 +1999,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 			else
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown texgen parm in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: unknown texgen parm in shader '%s'\n", shader.name );
 			}
 		}
 		//
@@ -2075,7 +2093,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		}
 		else
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown parameter '%s' in shader '%s'\n", token, shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: unknown parameter '%s' in shader '%s'\n", token, shader.name );
 			return qfalse;
 		}
 	}
@@ -2144,7 +2162,7 @@ static void ParseDeform( const char **text ) {
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deform parm in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing deform parm in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -2155,7 +2173,7 @@ static void ParseDeform( const char **text ) {
 	}
 
 	if ( shader.numDeforms == MAX_SHADER_DEFORMS ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: MAX_SHADER_DEFORMS in '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: MAX_SHADER_DEFORMS in '%s'\n", shader.name );
 		return;
 	}
 
@@ -2189,7 +2207,7 @@ static void ParseDeform( const char **text ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes bulge parm in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes bulge parm in shader '%s'\n", shader.name );
 			return;
 		}
 		ds->bulgeWidth = atof( token );
@@ -2197,7 +2215,7 @@ static void ParseDeform( const char **text ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes bulge parm in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes bulge parm in shader '%s'\n", shader.name );
 			return;
 		}
 		ds->bulgeHeight = atof( token );
@@ -2205,7 +2223,7 @@ static void ParseDeform( const char **text ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes bulge parm in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes bulge parm in shader '%s'\n", shader.name );
 			return;
 		}
 		ds->bulgeSpeed = atof( token );
@@ -2219,7 +2237,7 @@ static void ParseDeform( const char **text ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
 			return;
 		}
 
@@ -2230,7 +2248,7 @@ static void ParseDeform( const char **text ) {
 		else
 		{
 			ds->deformationSpread = 100.0f;
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: illegal div value of 0 in deformVertexes command for shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: illegal div value of 0 in deformVertexes command for shader '%s'\n", shader.name );
 		}
 
 		ParseWaveForm( text, &ds->deformationWave );
@@ -2243,7 +2261,7 @@ static void ParseDeform( const char **text ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
 			return;
 		}
 		ds->deformationWave.amplitude = atof( token );
@@ -2251,7 +2269,7 @@ static void ParseDeform( const char **text ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( token[0] == 0 )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
 			return;
 		}
 		ds->deformationWave.frequency = atof( token );
@@ -2266,7 +2284,7 @@ static void ParseDeform( const char **text ) {
 		for ( i = 0 ; i < 3 ; i++ ) {
 			token = COM_ParseExt( text, qfalse );
 			if ( token[0] == 0 ) {
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing deformVertexes parm in shader '%s'\n", shader.name );
 				return;
 			}
 			ds->moveVector[i] = atof( token );
@@ -2277,7 +2295,7 @@ static void ParseDeform( const char **text ) {
 		return;
 	}
 
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown deformVertexes subtype '%s' found in shader '%s'\n", token, shader.name );
+	ri.Printf( PRINT_WARNING, "WARNING: unknown deformVertexes subtype '%s' found in shader '%s'\n", token, shader.name );
 }
 
 
@@ -2299,7 +2317,7 @@ static void ParseSkyParms( const char **text ) {
 	// outerbox
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: 'skyParms' missing parameter in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: 'skyParms' missing parameter in shader '%s'\n", shader.name );
 		return;
 	}
 	if ( strcmp( token, "-" ) ) {
@@ -2319,7 +2337,7 @@ static void ParseSkyParms( const char **text ) {
 	// cloudheight
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: 'skyParms' missing cloudheight in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: 'skyParms' missing cloudheight in shader '%s'\n", shader.name );
 		return;
 	}
 	shader.sky->cloudHeight = atof( token );
@@ -2331,7 +2349,7 @@ static void ParseSkyParms( const char **text ) {
 	// innerbox
 	token = COM_ParseExt( text, qfalse );
 	if ( strcmp( token, "-" ) ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: in shader '%s' 'skyParms', innerbox is not supported!", shader.name);
+		ri.Printf( PRINT_WARNING, "WARNING: in shader '%s' 'skyParms', innerbox is not supported!", shader.name);
 	}
 }
 
@@ -2346,7 +2364,7 @@ static void ParseSort( const char **text ) {
 
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing sort parameter in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing sort parameter in shader '%s'\n", shader.name );
 		return;
 	}
 
@@ -2402,7 +2420,7 @@ void ParseMaterial( const char **text )
 	token = COM_ParseExt( text, qfalse );
 	if ( token[0] == 0 )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing material in shader '%s'\n", shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: missing material in shader '%s'\n", shader.name );
 		return;
 	}
 	for(i = 0; i < MATERIAL_LAST; i++)
@@ -2507,7 +2525,7 @@ static qboolean ParseShader( const char **text )
 	token = COM_ParseExt( text, qtrue );
 	if ( token[0] != '{' )
 	{
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: expecting '{', found '%s' instead in shader '%s'\n", token, shader.name );
+		ri.Printf( PRINT_WARNING, "WARNING: expecting '{', found '%s' instead in shader '%s'\n", token, shader.name );
 		return qfalse;
 	}
 
@@ -2516,7 +2534,7 @@ static qboolean ParseShader( const char **text )
 		token = COM_ParseExt( text, qtrue );
 		if ( !token[0] )
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: no concluding '}' in shader %s\n", shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: no concluding '}' in shader %s\n", shader.name );
 			return qfalse;
 		}
 
@@ -2560,7 +2578,7 @@ static qboolean ParseShader( const char **text )
 			COM_StripExtension( token[0] == '-' || !token[0] ? shader.name : token, name, sizeof( name ) );
 			image = R_FindImageFile( name, qtrue, qtrue, qtrue, GL_REPEAT );
 			if ( !image ) {
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", name, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", name, shader.name );
 				return qfalse;
 			}
 			if ( s + 2 > MAX_SHADER_STAGES ) {
@@ -2736,7 +2754,7 @@ static qboolean ParseShader( const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parm for 'fogParms' keyword in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing parm for 'fogParms' keyword in shader '%s'\n", shader.name );
 				continue;
 			}
 			shader.fogParms->depthForOpaque = atof( token );
@@ -2769,7 +2787,7 @@ static qboolean ParseShader( const char **text )
 			token = COM_ParseExt( text, qfalse );
 			if ( token[0] == 0 )
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing cull parms in shader '%s'\n", shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: missing cull parms in shader '%s'\n", shader.name );
 				continue;
 			}
 
@@ -2783,7 +2801,7 @@ static qboolean ParseShader( const char **text )
 			}
 			else
 			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid cull parm '%s' in shader '%s'\n", token, shader.name );
+				ri.Printf( PRINT_WARNING, "WARNING: invalid cull parm '%s' in shader '%s'\n", token, shader.name );
 			}
 			continue;
 		}
@@ -2795,7 +2813,7 @@ static qboolean ParseShader( const char **text )
 		}
 		else
 		{
-			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: unknown general shader parameter '%s' in '%s'\n", token, shader.name );
+			ri.Printf( PRINT_WARNING, "WARNING: unknown general shader parameter '%s' in '%s'\n", token, shader.name );
 			return qfalse;
 		}
 	}
@@ -3037,6 +3055,12 @@ static void FixRenderCommandList( int newShader ) {
 					curCmd = (const void *)(sp_cmd + 1);
 					break;
 					}
+				case RC_BACKDROP:
+					{
+					const backdropCommand_t *bd_cmd = (const backdropCommand_t *)curCmd;
+					curCmd = (const void *)(bd_cmd + 1);
+					break;
+					}
 				case RC_ROTATE_PIC:
 					{
 					const rotatePicCommand_t *sp_cmd = (const rotatePicCommand_t *)curCmd;
@@ -3147,8 +3171,8 @@ static shader_t *GeneratePermanentShader( void ) {
 	int			size;
 
 	if ( tr.numShaders == MAX_SHADERS ) {
-		//ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: GeneratePermanentShader - MAX_SHADERS hit\n");
-		ri.Printf( PRINT_ALL, "WARNING: GeneratePermanentShader - MAX_SHADERS hit\n");
+		//ri.Printf( PRINT_WARNING, "WARNING: GeneratePermanentShader - MAX_SHADERS hit\n");
+		ri.Printf( PRINT_WARNING, "WARNING: GeneratePermanentShader - MAX_SHADERS hit\n");
 		return tr.defaultShader;
 	}
 

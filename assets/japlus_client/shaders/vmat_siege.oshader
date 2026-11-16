@@ -1,0 +1,25 @@
+// materials of the material debug menu (v_matdebug) for siege.shader, read after the shader files
+
+textures/siege/siege2sand
+{
+	q3map_shadeangle 170
+	qer_editorimage textures/desert/sandfloor2old.tga
+	q3map_lightmapsamplesize 64
+	q3map_nonplanar
+	q3map_splotchfix
+	q3map_forcemeta
+	{
+		map $lightmap
+		rgbGen identity
+	}
+	{
+		map textures/desert/sandfloor2old
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+		normalGen 0.35 2 0.3 invert
+		roughness 0.95
+		metalness 0
+		parallaxDepth 0.008
+		parallaxPlane 0.5
+	}
+}

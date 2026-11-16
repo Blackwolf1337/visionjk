@@ -841,8 +841,21 @@ typedef struct cgameImport_s {
 		// back to the animation (the ragdoll of the cut bodies, cg_ragdoll.c). NULL: the renderer has none.
 		int				(*G2_BoneNumber)						( void *ghoul2, int modelIndex, const char *boneName, int *parent );
 		// cut (or NULL): on the first call the cut of the part in the world and hidden[count] the bones of another part;
-		// each vertex keeps the side it had in that first pose
+		// each vertex keeps the side it had in that first pose. A later call with a cut takes only hidden again.
 		qboolean		(*G2_SetBonesWorld)						( void *ghoul2, int modelIndex, const vec3_t angles, const vec3_t origin, const vec3_t scale, int count, const int *bones, const float *world, const float *cut, const int *hidden );
+		// frosted glass behind a panel drawn next (ext.DrawBackdrop of the renderer): qtrue when it is drawn. Only
+		// where the ROM cvar v_cgameBackdrop is 1, an older engine ends this table before.
+		qboolean		(*R_DrawBackdrop)						( float x, float y, float w, float h, float radius );
+		// sparks simulated by the renderer (ext.EmitSparks, sparkBurst_t): qtrue when taken, else play the effect as
+		// before. Only where the ROM cvar v_cgameSparks is 1, an older engine ends this table before; NULL: the
+		// renderer has none.
+		qboolean		(*R_EmitSparks)							( const sparkBurst_t *burst );
+		// Only where the ROM cvar v_cgameFeed is 1, an older engine ends this table before. The lines the engine
+		// would write at the top of the game window (client/cl_console.cpp, "The feed"): Con_FeedRead gives the
+		// line after number `after` with its colours and its level (0 a line, 1 a warning, 2 an error) and returns
+		// its number, 0: none; Con_FeedNewest the number of the newest. A cgame that draws them sets v_feedHandler.
+		int				(*Con_FeedRead)							( int after, int *level, char *out, int outSize );
+		int				(*Con_FeedNewest)						( void );
 	} ext;
 } cgameImport_t;
 

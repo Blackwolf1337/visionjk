@@ -100,6 +100,8 @@ qboolean CG_HudDraw( void ) {
 	CG_Place2D( PLACE_RIGHT );
 	Menu_Paint( right, qtrue );
 	CG_Place2D( PLACE_CENTER );
+	// what C adds to the panels: the slot of the force, the name of the weapon, the colour of the team
+	CG_HudPanelsDraw();
 	return qtrue;
 }
 

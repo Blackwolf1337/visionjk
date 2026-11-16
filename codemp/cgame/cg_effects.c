@@ -1252,3 +1252,124 @@ void CG_LaunchGib( vec3_t origin, vec3_t velocity, qhandle_t hModel ) {
 	le->leBounceSoundType = LEBS_BLOOD;
 	le->leMarkType = LEMT_BLOOD;
 }
+
+/*
+=================
+CG_FxTest_f / CG_FxTestFrame
+
+VisionJK: v_fxTest <effect> [msec] [x y z]: the effect (a path under effects/, e.g. explosions/explosion1) where the
+view looks (or at x y z), along the normal of what it hits, again every msec (1500) until v_fxTest without a name. To look at effects,
+at what the renderer does with them, without a fight. Only on this screen.
+=================
+*/
+static struct {
+	fxHandle_t	fx;
+	int			sparks;			// sparks:<kind> instead of an effect: GPUSPARKS_* + 1 (CG_GpuSparks)
+	int			msec, next;
+	vec3_t		at, normal;
+} fxTest;
+
+void CG_FxTest_f( void ) {
+	trace_t	tr;
+	vec3_t	end;
+
+	if ( trap->Cmd_Argc() < 2 ) {
+		fxTest.fx = 0;
+		fxTest.sparks = 0;
+		return;
+	}
+	VectorMA( cg.refdef.vieworg, 2048.0f, cg.refdef.viewaxis[0], end );
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.snap ? cg.snap->ps.clientNum : 0, MASK_SOLID );
+	// sparks:saber, sparks:clash, sparks:blaster, sparks:explosion: the sparks the renderer simulates
+	fxTest.sparks = 0;
+	if ( !Q_strncmp( CG_Argv( 1 ), "sparks:", 7 ) ) {
+		static const char *kinds[] = { "saber", "clash", "blaster", "explosion" };
+
+		for ( int k = 0; k < (int)ARRAY_LEN( kinds ); k++ ) {
+			if ( !Q_stricmp( CG_Argv( 1 ) + 7, kinds[k] ) ) {
+				fxTest.sparks = k + 1;
+			}
+		}
+	}
+	fxTest.fx = fxTest.sparks ? -1 : trap->FX_RegisterEffect( CG_Argv( 1 ) );
+	if ( !fxTest.fx ) {
+		Com_Printf( "v_fxTest: no effect %s\n", CG_Argv( 1 ) );
+		return;
+	}
+	fxTest.msec = trap->Cmd_Argc() > 2 ? Q_max( atoi( CG_Argv( 2 ) ), 50 ) : 1500;
+	fxTest.next = cg.time;
+	VectorCopy( tr.endpos, fxTest.at );
+	VectorCopy( tr.fraction < 1.0f ? tr.plane.normal : axisDefault[2], fxTest.normal );
+	// or at a place given, standing up
+	if ( trap->Cmd_Argc() > 5 ) {
+		VectorSet( fxTest.at, atof( CG_Argv( 3 ) ), atof( CG_Argv( 4 ) ), atof( CG_Argv( 5 ) ) );
+		VectorCopy( axisDefault[2], fxTest.normal );
+	}
+}
+
+void CG_FxTestFrame( void ) {
+	if ( fxTest.fx && cg.time >= fxTest.next ) {
+		if ( fxTest.sparks ) {
+			CG_GpuSparks( fxTest.at, fxTest.normal, (gpuSparks_t)( fxTest.sparks - 1 ), 1.0f );
+		} else {
+			trap->FX_PlayEffectID( fxTest.fx, fxTest.at, fxTest.normal, -1, -1, qfalse );
+		}
+		fxTest.next = cg.time + fxTest.msec;
+	}
+}
+
+/*
+=================
+CG_GpuSparks
+
+VisionJK: sparks the renderer simulates on the device (ext.R_EmitSparks, rd-vulkan-vision v_gpuSparks), for a kind
+of hit at origin flying along dir, scale times as many. qfalse where it cannot (an older engine, another renderer, the
+switch off): the caller plays its effect as before.
+=================
+*/
+qboolean CG_GpuSparks( const vec3_t origin, const vec3_t dir, gpuSparks_t kind, float scale ) {
+	static int		checked = -1;
+	sparkBurst_t	b;
+
+	if ( checked < 0 ) {
+		char value[8];
+
+		trap->Cvar_VariableStringBuffer( "v_cgameSparks", value, sizeof( value ) );
+		checked = atoi( value ) ? 1 : 0;
+	}
+	if ( !checked || !trap->ext.R_EmitSparks ) {
+		return qfalse;
+	}
+	memset( &b, 0, sizeof( b ) );
+	VectorCopy( origin, b.origin );
+	VectorCopy( dir, b.dir );
+	switch ( kind ) {
+	case GPUSPARKS_SABER:
+		// a blade cutting a wall: a spray of white hot bits off the cut, bouncing along the floor and lying there glowing
+		b.count = 16; b.speed = 280.0f; b.spread = 0.9f; b.life = 1.0f; b.size = 0.35f;
+		b.gravity = 700.0f; b.drag = 1.2f; b.bounce = 0.45f; b.cooling = 1.4f; b.rest = 2.5f;
+		VectorSet( b.color, 4.0f, 2.8f, 1.4f );
+		break;
+	case GPUSPARKS_CLASH:
+		// blades meeting: a burst all round, brighter and more
+		b.count = 80; b.speed = 420.0f; b.spread = 2.0f; b.life = 0.8f; b.size = 0.4f;
+		b.gravity = 650.0f; b.drag = 1.5f; b.bounce = 0.4f; b.cooling = 1.2f; b.rest = 3.0f;
+		VectorSet( b.color, 5.0f, 4.2f, 3.0f );
+		break;
+	case GPUSPARKS_BLASTER:
+		// a bolt on a wall: a few short hot bits
+		b.count = 16; b.speed = 230.0f; b.spread = 0.8f; b.life = 0.45f; b.size = 0.3f;
+		b.gravity = 600.0f; b.drag = 2.0f; b.bounce = 0.35f; b.cooling = 1.5f; b.rest = 1.2f;
+		VectorSet( b.color, 4.0f, 1.8f, 0.6f );
+		break;
+	case GPUSPARKS_EXPLOSION:
+	default:
+		// burning bits thrown out of a blast, raining down and bouncing
+		b.count = 150; b.speed = 520.0f; b.spread = 1.6f; b.life = 1.8f; b.size = 0.55f;
+		b.gravity = 500.0f; b.drag = 1.0f; b.bounce = 0.5f; b.cooling = 0.9f; b.rest = 5.0f;
+		VectorSet( b.color, 4.5f, 2.4f, 0.8f );
+		break;
+	}
+	b.count = (int)( b.count * scale + 0.5f );
+	return trap->ext.R_EmitSparks( &b );
+}

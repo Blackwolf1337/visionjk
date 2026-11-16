@@ -141,15 +141,17 @@ cvar_t	*r_marksOnTriangleMeshes;
 
 cvar_t	*r_aspectCorrectFonts;
 cvar_t	*v_menuBlur;
+cvar_t	*v_backdropBlur;
 cvar_t	*tay_bloom;
 cvar_t	*tay_bloomIntensity;
 cvar_t	*tay_bloomThreshold;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
-// were 600 and 3000. Text in the scene is a polygon a glyph (RE_Font_Text3D), next to the effects that take them.
-#define	DEFAULT_MAX_POLYS		4096
-#define	DEFAULT_MAX_POLYVERTS	16384
+// were 600 and 3000, then 4096 and 16384 (the scars of the sabers take a few thousand). Text in the scene is a
+// polygon a glyph (RE_Font_Text3D), next to the effects that take them.
+#define	DEFAULT_MAX_POLYS		16384
+#define	DEFAULT_MAX_POLYVERTS	81920
 cvar_t	*r_maxpolys;
 cvar_t	*r_maxpolyverts;
 int		max_polys;
@@ -741,6 +743,7 @@ void R_Register( void )
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()
 	v_menuBlur							= ri.Cvar_Get( "v_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus: 0 not at all, 1 normal, up to 4" );
+	v_backdropBlur						= ri.Cvar_Get( "v_backdropBlur",					"1",						CVAR_ARCHIVE, "Frosted glass behind the HUD panels, the chat box and the console: what is behind them is blurred. 0 off, 1 normal, up to 3" );
 	// what the Vulkan renderer of TaystJK has and rd-vulkan-vision took from it (2026-10-19)
 	tay_bloom							= ri.Cvar_Get( "tay_bloom",						"0",						CVAR_ARCHIVE, "Bright parts of the level shine over their surroundings" );
 	tay_bloomIntensity					= ri.Cvar_Get( "tay_bloomIntensity",				"0.6",						CVAR_ARCHIVE, "How strongly the bright parts shine with tay_bloom, 0 to 2" );
@@ -797,7 +800,7 @@ void R_Init( void ) {
 
 #ifndef FINAL_BUILD
 	if ( (intptr_t)tess.xyz & 15 ) {
-		ri.Printf( PRINT_ALL, "WARNING: tess.xyz not 16 byte aligned\n" );
+		ri.Printf( PRINT_WARNING, "WARNING: tess.xyz not 16 byte aligned\n" );
 	}
 #endif
 	//
@@ -1217,10 +1220,14 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.DrawTriangles2D					= RE_DrawTriangles2D;
 	re.ext.AddLineLightToScene				= RE_AddLineLightToScene;
 	re.ext.AddSaberBladeToScene				= RE_AddSaberBladeToScene;
+#ifndef RD_VISION_GLES
+	re.ext.EmitSparks						= RE_EmitSparks;
+#endif
 	re.ext.AddCutEntityToScene				= RE_AddCutEntityToScene;
 	re.ext.G2_BoneNumber					= G2API_VJK_BoneNumber;
 	re.ext.G2_SetBonesWorld					= G2API_VJK_SetBonesWorld;
 	re.ext.GpuProfile						= RE_GpuProfile;
+	re.ext.DrawBackdrop						= RE_DrawBackdrop;
 
 	return &re;
 }

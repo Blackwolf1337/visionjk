@@ -257,7 +257,7 @@ void Con_Dump_f (void)
 	f = FS_FOpenFileWrite( filename );
 	if (!f)
 	{
-		Com_Printf ("ERROR: couldn't open %s.\n", filename);
+		Com_PrintError( "couldn't open %s.\n", filename);
 		return;
 	}
 
@@ -625,6 +625,85 @@ static void Con_Linefeed (qboolean skipnotify)
 
 /*
 ================
+The feed
+
+VisionJK: every line that would stand at the top of the game window (the notify lines) is kept here whole, with
+its colours and a level: 0 a line, 1 a warning, 2 an error, as Com_PrintWarning and Com_PrintError said it
+(com_printLevel; the colour of a line says nothing). A cgame of this tree draws them itself, in one feed
+with its kills (cgame/hud/cg_killfeed.c): it reads them with ext.Con_FeedRead and says so by setting
+v_feedHandler, which the engine clears whenever a cgame is loaded. Con_DrawNotify leaves the lines out then.
+================
+*/
+#define CON_FEED_LINES	32
+#define CON_FEED_TEXT	256
+
+static struct {
+	int		seq;							// of the newest line, 0: none yet
+	struct {
+		int		level;
+		char	text[CON_FEED_TEXT];
+	} lines[CON_FEED_LINES];
+	char	pending[CON_FEED_TEXT];			// the line that has no end yet
+	int		pendingLen;
+	qboolean pendingSkip;					//	and something of it is not for the notify lines
+	int		pendingLevel;					//	the highest level of what it was printed with
+} conFeed;
+
+static void Con_FeedAdd( const char *txt, qboolean skipnotify ) {
+	for ( ; *txt; txt++ ) {
+		if ( *txt == '\n' ) {
+			conFeed.pending[conFeed.pendingLen] = '\0';
+			if ( !conFeed.pendingSkip && conFeed.pendingLen > 0 ) {
+				const int slot = ++conFeed.seq % CON_FEED_LINES;
+
+				conFeed.lines[slot].level = conFeed.pendingLevel;
+				Q_strncpyz( conFeed.lines[slot].text, conFeed.pending, sizeof( conFeed.lines[0].text ) );
+			}
+			conFeed.pendingLen = 0;
+			conFeed.pendingSkip = qfalse;
+			conFeed.pendingLevel = 0;
+			continue;
+		}
+		if ( skipnotify ) {
+			conFeed.pendingSkip = qtrue;
+		}
+		if ( com_printLevel > conFeed.pendingLevel ) {
+			conFeed.pendingLevel = com_printLevel;
+		}
+		if ( *txt != '\r' && conFeed.pendingLen < CON_FEED_TEXT - 1 ) {
+			conFeed.pending[conFeed.pendingLen++] = *txt;
+		}
+	}
+}
+
+// ext.Con_FeedRead: the line after number `after` (0: from the oldest kept), its number returned, 0: none
+int Con_FeedRead( int after, int *level, char *out, int outSize ) {
+	int next = after + 1;
+
+	if ( after < 0 || after >= conFeed.seq ) {
+		return 0;
+	}
+	if ( next <= conFeed.seq - CON_FEED_LINES ) {
+		next = conFeed.seq - CON_FEED_LINES + 1;
+	}
+	if ( level ) {
+		*level = conFeed.lines[next % CON_FEED_LINES].level;
+	}
+	Q_strncpyz( out, conFeed.lines[next % CON_FEED_LINES].text, outSize );
+	return next;
+}
+
+// the number of the newest line: a cgame that starts reads from here on
+int Con_FeedNewest( void ) {
+	return conFeed.seq;
+}
+
+static qboolean Con_FeedByCgame( void ) {
+	return (qboolean)( cls.cgameStarted && cls.state == CA_ACTIVE && Cvar_VariableIntegerValue( "v_feedHandler" ) );
+}
+
+/*
+================
 CL_ConsolePrint
 
 Handles cursor positioning, line wrapping, etc
@@ -654,6 +733,7 @@ void CL_ConsolePrint( const char *txt) {
 	if ( cl_noprint && cl_noprint->integer ) {
 		return;
 	}
+	Con_FeedAdd( txt, skipnotify );
 
 	if (!con.initialized) {
 		Con_Initialize();
@@ -1130,6 +1210,10 @@ void Con_DrawNotify (void)
 		if (cl.snap.ps.pm_type != PM_INTERMISSION && Key_GetCatcher( ) & (KEYCATCH_UI | KEYCATCH_CGAME) ) {
 			continue;
 		}
+		// VisionJK: the cgame draws them in its feed
+		if ( Con_FeedByCgame() ) {
+			continue;
+		}
 
 
 		if (!cl_conXOffset)
@@ -1253,7 +1337,10 @@ void Con_DrawSolidConsole( float frac ) {
 		// asked for the menus of before (v_classic 1)
 		if ( !Cvar_VariableIntegerValue( "v_classic" ) )
 		{
-			const vec4_t glass = { 0.02f, 0.04f, 0.08f, 0.94f * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
+			// frosted: what is behind the console blurred first (v_backdropBlur of the renderer), then thinner glass
+			const qboolean frosted = (qboolean)( frac < 1.0f && re->ext.DrawBackdrop
+				&& re->ext.DrawBackdrop( -cls.bias2D, -cls.bias2DY, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y + cls.bias2DY, 0.0f ) );
+			const vec4_t glass = { 0.02f, 0.04f, 0.08f, ( frosted ? 0.72f : 0.94f ) * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
 
 			SCR_FillRect( -cls.bias2D, -cls.bias2DY, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y + cls.bias2DY, glass );
 			themed = qtrue;

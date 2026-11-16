@@ -839,7 +839,7 @@ qboolean FS_CreatePath (char *OSPath) {
 	// make absolutely sure that it can't back up the path
 	// FIXME: is c: allowed???
 	if ( strstr( OSPath, ".." ) || strstr( OSPath, "::" ) ) {
-		Com_Printf( "WARNING: refusing to create relative path \"%s\"\n", OSPath );
+		Com_PrintWarning( "refusing to create relative path \"%s\"\n", OSPath );
 		return qtrue;
 	}
 
@@ -1824,7 +1824,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 						// Check for unprecached files when in game but not in the menus
 						if((cls.state == CA_ACTIVE) && !(Key_GetCatcher( ) & KEYCATCH_UI))
 						{
-							Com_Printf(S_COLOR_YELLOW "WARNING: File %s not precached\n", filename);
+							Com_PrintWarning( "File %s not precached\n", filename);
 						}
 	#endif
 	#endif // DEDICATED
@@ -1957,7 +1957,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 				// Check for unprecached files when in game but not in the menus
 				if((cls.state == CA_ACTIVE) && !(Key_GetCatcher( ) & KEYCATCH_UI))
 				{
-					Com_Printf(S_COLOR_YELLOW "WARNING: File %s not precached\n", filename);
+					Com_PrintWarning( "File %s not precached\n", filename);
 				}
 	#endif
 	#endif // dedicated
@@ -2413,7 +2413,7 @@ long FS_ReadFile( const char *qpath, void **buffer ) {
 
 	// (Z_Malloc takes an int: a size the pak claims near 4 GB gave a tiny block that the read below then filled)
 	if ( len < 0 || len > FS_ENTRY_MOST ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: %s is too large to read (%ld bytes)\n", qpath, len );
+		Com_PrintWarning( "%s is too large to read (%ld bytes)\n", qpath, len );
 		FS_FCloseFile( h );
 		*buffer = NULL;
 		return -1;
@@ -2527,7 +2527,7 @@ static char *FS_LoadBlocked( const char *zipfile ) {
 	}
 	if ( len < 0 || len > FS_BLOCKED_MAX ) {
 		fclose( f );
-		Com_Printf( S_COLOR_YELLOW "WARNING: %s can not be read, nothing of its pak is used\n", path );
+		Com_PrintWarning( "%s can not be read, nothing of its pak is used\n", path );
 		return fs_blockedAll;
 	}
 	list = (char *)Z_Malloc( len + 3, TAG_FILESYS, qtrue );
@@ -2767,7 +2767,7 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 	}
 	// (the count is the pak's word: the arrays below are made for it, and their sizes go through an int)
 	if ( gi.number_entry > FS_PAK_MOST_FILES ) {
-		Com_Printf( S_COLOR_YELLOW "WARNING: %s says it has %lu files, more than any pak of the game: not used\n", zipfile, (unsigned long)gi.number_entry );
+		Com_PrintWarning( "%s says it has %lu files, more than any pak of the game: not used\n", zipfile, (unsigned long)gi.number_entry );
 		unzClose( uf );
 		return NULL;
 	}
@@ -3710,7 +3710,7 @@ static qboolean FS_CanRestartInPlace( void ) {
 }
 static void FS_Restart_f( void ) {
 	if ( !FS_CanRestartInPlace() ) {
-		Com_Printf( "^3WARNING: Cannot restart file system due to active file handles for pk3 files inside of modules.\n" );
+		Com_PrintWarning( "Cannot restart file system due to active file handles for pk3 files inside of modules.\n" );
 		return;
 	}
 	FS_Restart( fs_checksumFeed, qtrue );
@@ -4122,7 +4122,7 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 		// Make sure the server cannot make us write to non-quake3 directories.
 		if(FS_CheckDirTraversal(fs_serverReferencedPakNames[i]))
 		{
-			Com_Printf("WARNING: Invalid download name %s\n", fs_serverReferencedPakNames[i]);
+			Com_PrintWarning( "Invalid download name %s\n", fs_serverReferencedPakNames[i]);
 			continue;
 		}
 
@@ -4138,7 +4138,7 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 			read = sscanf(fs_serverReferencedPakNames[i], "%255[^'/']/%255s", moddir, filename);
 
 			if ( read != 2 ) {
-				Com_Printf( "WARNING: Unable to parse pak name: %s\n", fs_serverReferencedPakNames[i] );
+				Com_PrintWarning( "Unable to parse pak name: %s\n", fs_serverReferencedPakNames[i] );
 				badname = qtrue;
 				continue;
 			}

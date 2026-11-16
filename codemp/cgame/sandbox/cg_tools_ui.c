@@ -175,7 +175,7 @@ void CG_ToolWindowDraw( void ) {
 		trap->Cvar_Set( "v_toolPhys", va( "%.2f %.2f %.2f", phys[0], phys[1], phys[2] ) );
 	}
 
-	Win_Panel( x, y, TW_W, TW_H, 6.0f, winFill, winEdge );
+	Win_Glass( x, y, TW_W, TW_H, 6.0f, winFill, winEdge );
 	Win_Hit( &tw.hits, -1, 0, x, y, TW_W, TW_H );
 	Win_Text( x + TW_PAD, y + 8.0f, 0.7f, winAccent, 0, CG_VisionText( "Tools" ), 0.0f );
 	Win_Button( &tw.hits, TW_CLOSE, 0, x + TW_W - TW_PAD - 18.0f, y + 8.0f, 18.0f, "x", winText, qtrue );
