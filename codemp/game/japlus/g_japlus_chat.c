@@ -404,8 +404,10 @@ qboolean JP_ChatCommand( gentity_t *ent, const char *cmd ) {
 
 /*
 =================
-Old player name system (jp_oldPlayerName): the first name seen for an IP is kept in ipname.txt,
-players who connect with another name from the same IP are reported
+Old player name system (jp_oldPlayerName): a name for each IP is kept in ipname.txt, players who connect with
+another name from the same IP are reported with it. JA+ kept the first name it ever saw and never changed it, so
+a player who had come once as "Padawan" was reported as "Padawan" for good, whatever he was called since.
+VisionJK keeps the last name instead: a rename and a connect under another name replace it (JP_AntiFakeRename).
 =================
 */
 #define ANTIFAKE_MAX	100
@@ -496,6 +498,21 @@ void JP_AntiFakeStore( void ) {
 	trap->FS_Close( f );
 }
 
+// the name an IP had last (rawIP may carry the port)
+void JP_AntiFakeRename( const char *rawIP, const char *name ) {
+	char	ip[24];
+	int		idx;
+
+	if ( jp_oldPlayerName.integer != 1 || !name[0] )
+		return;
+	JP_IPOnly( rawIP, ip, sizeof( ip ) );
+	idx = AntiFakeSearch( ip );
+	if ( idx == -1 )
+		AntiFakeAdd( ip, name );
+	else
+		Q_strncpyz( antiFakeName[idx], name, sizeof( antiFakeName[0] ) );
+}
+
 void JP_AntiFakeConnectMessage( gentity_t *ent, const char *rawIP ) {
 	const char *name = ent->client->pers.netname;
 	const char *connected = G_GetStringEdString( "MP_SVGAME", "PLCONNECT" );
@@ -512,6 +529,7 @@ void JP_AntiFakeConnectMessage( gentity_t *ent, const char *rawIP ) {
 	} else {
 		trap->SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE " %s ...^1Player with same IP " S_COLOR_WHITE "%s\n\"", name, connected, antiFakeName[idx] ) );
 		G_LogPrintf( "%s" S_COLOR_WHITE " %s ...^1Player with same IP " S_COLOR_WHITE "%s\n", name, connected, antiFakeName[idx] );
+		Q_strncpyz( antiFakeName[idx], name, sizeof( antiFakeName[0] ) );	// VisionJK: from now on the new name
 	}
 }
 

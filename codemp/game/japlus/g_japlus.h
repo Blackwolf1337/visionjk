@@ -229,6 +229,7 @@ void		JP_AntiHackModel( gentity_t *ent, char *model, size_t size );
 void		JP_AntiFakeLoad( void );
 void		JP_AntiFakeStore( void );
 void		JP_AntiFakeConnectMessage( gentity_t *ent, const char *ip );
+void		JP_AntiFakeRename( const char *ip, const char *name );
 void		JP_GodTalk( playerState_t *ps, qboolean talking );
 void		JP_ClientSpawnEnd( gentity_t *ent, int wDisable );
 void		JP_UpdateWeaponSwitchFlag( gclient_t *client );
