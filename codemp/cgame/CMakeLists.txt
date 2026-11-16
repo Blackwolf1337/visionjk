@@ -103,6 +103,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_localents.c"
 	"${MPDir}/cgame/cg_main.c"
 	"${MPDir}/cgame/cg_japlus.c"
+	"${MPDir}/cgame/cg_jpplayer.c"
 	"${MPDir}/cgame/cg_marks.c"
 	"${MPDir}/cgame/cg_newDraw.c"
 	"${MPDir}/cgame/cg_players.c"
