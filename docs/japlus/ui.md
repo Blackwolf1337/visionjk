@@ -153,10 +153,12 @@ Both are in Setup, HUD, under Menus and HUD.
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
 - The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `v_classic` off
   and `v_hud` on and restarts the video. Without it the way back was the console.
-- The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
-  stance of the saber under it (three steps: one lit for fast, two for medium, three for strong, all three for
-  the other stances, with the name of the stance under them), the score above. The health bar turns amber below half and red below a
-  quarter.
+- The HUD (since 2026-11-16, prototype B of the design canvas): one block at the bottom left. At its left the slot
+  of the selected force power (the weapon in hand when the player knows no force) over its full height; beside it
+  health and shield, a line, the force, and the ammo of the weapon or the stance of the saber (three steps: one lit
+  for fast, two for medium, three for strong, all three for the other stances); at its foot the name of the weapon,
+  for the saber with its stance. The bottom right stays free (the chips of jetpack, cloak and e-web stand in that
+  corner). The health bar turns amber below half and red below a quarter.
 - The selection of a weapon, of an inventory item and of a force power (`v_hud 1`, Vulkan renderer
   rd-vulkan-vision) is a carousel of frosted glass cards at the bottom of the screen: the cards stand on a ring,
   the selected one in front and the biggest, and the ring turns the shortest way to a new selection
@@ -179,10 +181,9 @@ Both are in Setup, HUD, under Menus and HUD.
   no countdown, because the server does not send how long a power still runs. The row moves up above the line
   of the alternate dimension while that line is shown.
 - The panels of `ui/vision/hud.menu` were laid out anew (`v_hud 1`, Vulkan renderer). C draws extra parts at the
-  rects of items of that menu file: `force_slot` and `weapon_label` (`hud/cg_hudpanels.c`). The right panel has
-  a slot with the selected force power, its cost and a dimmed card when the force is too low (the weapon when the
-  player knows no force), and the name of the weapon under the ammo bar. In team games both panels get a rim in
-  the team colour. The health number turns amber below 51 and red below 26.
+  rects of items of that menu file: `force_slot`, `saber_steps` and `weapon_label` (`hud/cg_hudpanels.c`), all in
+  the menu `visionhud_left`; `visionhud_right` is empty and may get a panel of its own. In team games the panels
+  get a rim in the team colour. The health number turns amber below 51 and red below 26.
 - Above the left panel the strip of running powers also has tags for whom one watches, the JA+ alternate
   dimension and a carried flag. Above the right panel are chips for low or no ammo, the e-web, the cloak and the
   jetpack while not full.

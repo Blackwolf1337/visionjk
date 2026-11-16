@@ -303,13 +303,17 @@ qboolean Hud_ItemRect( const char *menuName, const char *itemName, rectDef_t *ou
 }
 
 // the left and right panel of the HUD, with what they are in the menu file of 2026-11 when it has no such item
-void Hud_PanelRect( qboolean right, rectDef_t *out ) {
-	if ( !Hud_ItemRect( right ? "visionhud_right" : "visionhud_left", "panel", out ) ) {
-		out->x = right ? 452.0f : 10.0f;
-		out->y = 426.0f;
-		out->w = 178.0f;
-		out->h = 44.0f;
+// the panel of a side; qfalse: the HUD file has none there, out is where the panel of the old layout was (a
+// vehicle draws there)
+qboolean Hud_PanelRect( qboolean right, rectDef_t *out ) {
+	if ( Hud_ItemRect( right ? "visionhud_right" : "visionhud_left", "panel", out ) ) {
+		return qtrue;
 	}
+	out->x = right ? 452.0f : 10.0f;
+	out->y = 426.0f;
+	out->w = 178.0f;
+	out->h = 44.0f;
+	return qfalse;
 }
 
 // the colour of a team, NULL for none

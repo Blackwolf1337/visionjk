@@ -1,5 +1,8 @@
-// The HUD of the new look: two menus the cgame paints at the left and at the right edge of the window, made of
-// items that show a number of the game (ITEM_TYPE_BAR, ITEM_TYPE_VALUE, "stat", "showStat") and of panels.
+// The HUD of the new look: one block at the lower left (2026-11-16, prototype B of the design canvas) with the slot
+// of the force power or the weapon, health, shield, force and the ammo or the stance of the saber; the bottom right
+// stays free. Two menus the cgame paints at the left and at the right edge of the window (the right one is empty,
+// a mod or a player can put things there), made of items that show a number of the game (ITEM_TYPE_BAR,
+// ITEM_TYPE_VALUE, "stat", "showStat") and of panels.
 // Written by hand, not by tools/menus/build.py. Everything here can be moved, recoloured or taken out: the
 // names of the numbers are in docs/japlus/ui.md. v_hud 0 brings the HUD of the game back.
 #include "ui/jamp/menudef.h"
@@ -15,41 +18,46 @@
 		itemDef
 		{
 			name				panel
-			rect				10 426 178 44
+			rect				10 412 206 58
 			style				WINDOW_STYLE_PANEL
 			backcolor			0.035 0.07 0.12 0.62
 			bordercolor			0.43 0.83 1 0.22
-			radius				7
+			radius				8
 			frosted				0.65		// frosted glass behind it (v_backdropBlur), the panel this much as opaque then
 			shadow				8
 			showStat			alive
 			visible				1
 			decoration
 		}
-		// health: the number, and a bar that turns amber and then red
+		// where C draws (hud/cg_hudpanels.c): the slot of the selected force power (the weapon without force) over
+		// the full height at the left, the steps of the stance of the saber, and the name of the weapon at the foot
 		itemDef
 		{
-			name				health_value
-			type				ITEM_TYPE_VALUE
-			rect				14 429 40 20
-			stat				health
-			showStat			alive
-			font				5
-			textscale			1.05
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			36
-			textaligny			0
-			forecolor			1 1 1 1
-			addColorRange		0 25 1 0.38 0.33 1
-			addColorRange		26 50 1 0.74 0.30 1
+			name				force_slot
+			rect				15 417 42 48
 			visible				1
 			decoration
 		}
 		itemDef
 		{
+			name				saber_steps
+			rect				64 455 118 3
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				weapon_label
+			rect				64 461 146 7
+			visible				1
+			decoration
+		}
+		// health: the bar that turns amber and then red, the number at its right
+		itemDef
+		{
 			name				health_bar
 			type				ITEM_TYPE_BAR
-			rect				58 435 124 6
+			rect				64 421 118 5
 			stat				health
 			showStat			alive
 			forecolor			0.42 0.90 0.62 1
@@ -59,32 +67,119 @@
 			visible				1
 			decoration
 		}
+		itemDef
+		{
+			name				health_value
+			type				ITEM_TYPE_VALUE
+			rect				186 417 24 12
+			stat				health
+			showStat			alive
+			font				5
+			textscale			0.72
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			24
+			textaligny			0
+			forecolor			1 1 1 1
+			addColorRange		0 25 1 0.38 0.33 1
+			addColorRange		26 50 1 0.74 0.30 1
+			visible				1
+			decoration
+		}
 		// shield
 		itemDef
 		{
-			name				armor_value
-			type				ITEM_TYPE_VALUE
-			rect				14 448 40 12
+			name				armor_bar
+			type				ITEM_TYPE_BAR
+			rect				64 431 118 3
 			stat				armor
 			showStat			alive
-			font				5
-			textscale			0.62
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			36
-			textaligny			0
 			forecolor			0.43 0.83 1 1
+			backcolor			1 1 1 0.10
 			visible				1
 			decoration
 		}
 		itemDef
 		{
-			name				armor_bar
-			type				ITEM_TYPE_BAR
-			rect				58 451 124 4
+			name				armor_value
+			type				ITEM_TYPE_VALUE
+			rect				186 429.5 24 8
 			stat				armor
 			showStat			alive
+			font				5
+			textscale			0.5
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			24
+			textaligny			0
 			forecolor			0.43 0.83 1 1
+			visible				1
+			decoration
+		}
+		// a line between the body and what is in the hand
+		itemDef
+		{
+			name				divider
+			rect				64 438.5 146 0.5
+			style				WINDOW_STYLE_FILLED
+			backcolor			0.43 0.83 1 0.16
+			showStat			alive
+			visible				1
+			decoration
+		}
+		// the force
+		itemDef
+		{
+			name				force_bar
+			type				ITEM_TYPE_BAR
+			rect				64 443 118 5
+			stat				force
+			showStat			alive
+			forecolor			0.58 0.64 1 1
 			backcolor			1 1 1 0.10
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				force_value
+			type				ITEM_TYPE_VALUE
+			rect				186 439 24 12
+			stat				force
+			showStat			alive
+			font				5
+			textscale			0.72
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			24
+			textaligny			0
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		// what is in the weapon (the saber has its steps instead)
+		itemDef
+		{
+			name				ammo_bar
+			type				ITEM_TYPE_BAR
+			rect				64 455 118 3
+			stat				ammo
+			showStat			ammo
+			forecolor			1 0.74 0.30 1
+			backcolor			1 1 1 0.10
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				ammo_value
+			type				ITEM_TYPE_VALUE
+			rect				186 452 24 9
+			stat				ammo
+			showStat			ammo
+			font				5
+			textscale			0.5
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			24
+			textaligny			0
+			forecolor			1 0.74 0.30 1
 			visible				1
 			decoration
 		}
@@ -97,117 +192,5 @@
 		rect					0 0 640 480
 		visible					1
 		skin					1
-
-		itemDef
-		{
-			name				panel
-			rect				452 426 178 44
-			style				WINDOW_STYLE_PANEL
-			backcolor			0.035 0.07 0.12 0.62
-			bordercolor			0.43 0.83 1 0.22
-			radius				7
-			frosted				0.65		// frosted glass behind it (v_backdropBlur), the panel this much as opaque then
-			shadow				8
-			showStat			alive
-			visible				1
-			decoration
-		}
-		// where C draws (hud/cg_hudpanels.c): the slot of the selected force power (the weapon without force), and
-		// the name of the weapon under its bar
-		itemDef
-		{
-			name				force_slot
-			rect				456 430 36 36
-			visible				1
-			decoration
-		}
-		itemDef
-		{
-			name				weapon_label
-			rect				498 457 90 9
-			visible				1
-			decoration
-		}
-		// the force: a bar that is filled from the right
-		itemDef
-		{
-			name				force_bar
-			type				ITEM_TYPE_BAR
-			rect				498 436 90 6
-			stat				force
-			showStat			alive
-			align				ITEM_ALIGN_RIGHT
-			forecolor			0.58 0.64 1 1
-			backcolor			1 1 1 0.10
-			visible				1
-			decoration
-		}
-		itemDef
-		{
-			name				force_value
-			type				ITEM_TYPE_VALUE
-			rect				593 429 34 20
-			stat				force
-			showStat			alive
-			font				5
-			textscale			1.05
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			0
-			textaligny			0
-			forecolor			1 1 1 1
-			visible				1
-			decoration
-		}
-		// what is in the weapon, or how the saber is held
-		itemDef
-		{
-			name				ammo_bar
-			type				ITEM_TYPE_BAR
-			rect				498 451 90 4
-			stat				ammo
-			showStat			ammo
-			align				ITEM_ALIGN_RIGHT
-			forecolor			1 0.74 0.30 1
-			backcolor			1 1 1 0.10
-			visible				1
-			decoration
-		}
-		itemDef
-		{
-			name				ammo_value
-			type				ITEM_TYPE_VALUE
-			rect				593 448 34 12
-			stat				ammo
-			showStat			ammo
-			font				5
-			textscale			0.62
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			0
-			textaligny			0
-			forecolor			1 0.74 0.30 1
-			visible				1
-			decoration
-		}
-		itemDef
-		{
-			name				saber_steps
-			rect				498 451 90 4
-			visible				1
-			decoration
-		}
-		itemDef
-		{
-			name				style_label
-			rect				593 448 34 12
-			text				@VISION_SABER
-			caps				1
-			showStat			saberstyle
-			font				5
-			textscale			0.5
-			textaligny			1
-			forecolor			0.60 0.69 0.78 1
-			visible				1
-			decoration
-		}
 	}
 }

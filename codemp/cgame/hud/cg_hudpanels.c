@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_hudpanels.c -- VisionJK: what C adds to the two panels of the new HUD that its menus (ui/vision/hud.menu)
-// draw. In the right panel the slot of the force power that the key of the force uses (with what it costs), or
+// draw. In the block at the left the slot of the force power that the key of the force uses, or
 // the weapon where the player knows no force, and the name of the weapon; round both panels the colour of the
 // team; above the right panel a strip of chips: the fuel of the jetpack and of the cloak, the
 // e-web one stands at. The parts stand at the rects of items of the menu file (force_slot, weapon_label, panel),
@@ -48,7 +48,7 @@ static int Panels_SelectedPower( void ) {
 =================
 Panels_Slot
 
-The slot at the left of the right panel: the selected force power on dark glass in the middle of it, the rim in
+The slot at the left of the block: the selected force power on dark glass in the middle of it, the rim in
 the colour of its side, darkened while the force is too low for it, a glow while it runs. Without a force power
 the weapon in hand.
 =================
@@ -105,35 +105,27 @@ static void Panels_Slot( const rectDef_t *r ) {
 static void Panels_WeaponName( const rectDef_t *r ) {
 	const playerState_t	*ps = &cg.predictedPlayerState;
 	const gitem_t		*item;
+	char				name[160];
 
+	if ( ps->weapon <= WP_NONE || ps->weapon >= WP_NUM_WEAPONS || !( item = BG_FindItemForWeapon( (weapon_t)ps->weapon ) ) ) {
+		return;
+	}
+	// (in capitals as a caption, cut to the rect: some names of the game are long)
+	Q_strncpyz( name, CG_ItemName( item ), sizeof( name ) );
 	if ( ps->weapon == WP_SABER ) {
-		// how the saber is held, the steps over it say the same (Panels_SaberSteps)
+		// and how it is held, which the steps over it show
 		static const char *stances[] = { "", "Fast", "Medium", "Strong", "Desann", "Tavion", "Dual", "Staff" };
-		const int	level = ps->fd.saberDrawAnimLevel;
-		char		name[64];
+		const int level = ps->fd.saberDrawAnimLevel;
 
 		if ( level >= 1 && level < (int)ARRAY_LEN( stances ) ) {
-			Q_strncpyz( name, CG_VisionText( stances[level] ), sizeof( name ) );
-			Q_strupr( name );
-			Hud_TextMid( r->x + r->w, r->y + r->h * 0.5f, HUD_CAPS, hudDim, 1.0f, HUD_RIGHT, name, r->w );
+			Q_strcat( name, sizeof( name ), va( "  |  %s", CG_VisionText( stances[level] ) ) );
 		}
-		return;
 	}
-	if ( ps->weapon <= WP_NONE || ps->weapon >= WP_NUM_WEAPONS ) {
-		return;
-	}
-	item = BG_FindItemForWeapon( (weapon_t)ps->weapon );
-	if ( item ) {
-		char name[128];
-
-		// (in capitals as a caption, cut to the rect: some names of the game are long)
-		Q_strncpyz( name, CG_ItemName( item ), sizeof( name ) );
-		Q_strupr( name );
-		Hud_TextMid( r->x + r->w, r->y + r->h * 0.5f, HUD_CAPS, hudDim, 1.0f, HUD_RIGHT, name, r->w );
-	}
+	Q_strupr( name );
+	Hud_TextMid( r->x, r->y + r->h * 0.5f, HUD_CAPS, hudDim, 1.0f, HUD_LEFT, name, r->w );
 }
 
-// The stance of the saber as three steps from the right, so many lit as it is heavy (fast, medium, strong), in the
+// The stance of the saber as three steps from the left, so many lit as it is heavy (fast, medium, strong), in the
 // colour of the stance; the stances beyond those (two blades, a staff, the ones of Desann and Tavion) light all.
 static void Panels_SaberSteps( const rectDef_t *r ) {
 	static const vec4_t	fast = { 0.43f, 0.83f, 1.0f, 1.0f }, medium = { 1.0f, 0.92f, 0.45f, 1.0f }, strong = { 1.0f, 0.38f, 0.33f, 1.0f };
@@ -151,7 +143,7 @@ static void Panels_SaberSteps( const rectDef_t *r ) {
 		vec4_t c;
 
 		Hud_Color( c, i < lit ? tint : off, i < lit ? 1.0f : off[3] );
-		Skin_Panel( r->x + r->w - ( i + 1 ) * w - i * gap, r->y, w, r->h, r->h * 0.5f, c, NULL );
+		Skin_Panel( r->x + i * ( w + gap ), r->y, w, r->h, r->h * 0.5f, c, NULL );
 	}
 }
 
@@ -172,25 +164,25 @@ void CG_HudPanelsDraw( void ) {
 		return;
 	}
 	Hud_PanelRect( qfalse, &left );
-	Hud_PanelRect( qtrue, &right );
 	team = cgs.gametype >= GT_TEAM ? Hud_TeamColor( cgs.clientinfo[cg.snap->ps.clientNum].team ) : NULL;
 
 	CG_Place2D( PLACE_LEFT );
 	if ( team ) {
 		Hud_Rim( left.x, left.y, left.w, left.h, 7.0f, team, 0.7f );
 	}
-	CG_Place2D( PLACE_RIGHT );
-	if ( team ) {
-		Hud_Rim( right.x, right.y, right.w, right.h, 7.0f, team, 0.7f );
-	}
-	if ( Hud_ItemRect( "visionhud_right", "force_slot", &r ) ) {
+	if ( Hud_ItemRect( "visionhud_left", "force_slot", &r ) ) {
 		Panels_Slot( &r );
 	}
-	if ( Hud_ItemRect( "visionhud_right", "saber_steps", &r ) ) {
+	if ( Hud_ItemRect( "visionhud_left", "saber_steps", &r ) ) {
 		Panels_SaberSteps( &r );
 	}
-	if ( Hud_ItemRect( "visionhud_right", "weapon_label", &r ) ) {
+	if ( Hud_ItemRect( "visionhud_left", "weapon_label", &r ) ) {
 		Panels_WeaponName( &r );
+	}
+	// (a panel at the right only where the HUD file has one)
+	CG_Place2D( PLACE_RIGHT );
+	if ( team && Hud_PanelRect( qtrue, &right ) ) {
+		Hud_Rim( right.x, right.y, right.w, right.h, 7.0f, team, 0.7f );
 	}
 	CG_Place2D( PLACE_CENTER );
 }
@@ -211,9 +203,14 @@ void CG_HudRightStrip( void ) {
 	if ( !CG_StatValue( "alive", &alive, &most ) || alive <= 0.0f ) {
 		return;
 	}
-	Hud_PanelRect( qtrue, &panel );
-	x = panel.x + panel.w;
-	y = panel.y - HUD_GAP - STRIP_H;
+	// above the right panel, or in the corner where there is none
+	if ( Hud_PanelRect( qtrue, &panel ) ) {
+		x = panel.x + panel.w;
+		y = panel.y - HUD_GAP - STRIP_H;
+	} else {
+		x = SCREEN_WIDTH - HUD_EDGE;
+		y = SCREEN_HEIGHT - HUD_EDGE - STRIP_H;
+	}
 	if ( CG_HudAmmoWarning() ) {
 		x -= Hud_Chip( x, y, STRIP_H, 0, CG_HudAmmoWarning(), cg.lowAmmoWarning == 2 ? hudRed : hudWarm, 1.0f, HUD_RIGHT, -1.0f ) + HUD_GAP;
 	}
