@@ -57,5 +57,6 @@ float		Hud_ChipWidth( float h, qhandle_t icon, const char *text, float bar );
 float		Hud_Chip( float x, float y, float h, qhandle_t icon, const char *text, const float *rgb, float alpha, int align, float bar );
 qboolean	Hud_ItemRect( const char *menuName, const char *itemName, rectDef_t *out );
 qboolean	Hud_PanelRect( qboolean right, rectDef_t *out );
+void		Hud_RadarDisc( float x, float y, float r );
 const float	*Hud_TeamColor( int team );
 const char	*Hud_Clock( int msec );

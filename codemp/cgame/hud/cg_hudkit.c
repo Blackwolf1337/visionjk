@@ -316,6 +316,30 @@ qboolean Hud_PanelRect( qboolean right, rectDef_t *out ) {
 	return qfalse;
 }
 
+/*
+=================
+Hud_RadarDisc
+
+The disc of a radar of the new HUD, its left upper corner at x, y, radius r: glass, a thin cross, a ring at half the
+range, and N at the rim where north is as one looks now. For the radar of team games (cg_draw.c CG_DrawRadar) and
+the map of a spectator (hud/cg_spechud.c).
+=================
+*/
+void Hud_RadarDisc( float x, float y, float r ) {
+	const float		cx = x + r, cy = y + r;
+	const vec4_t	line = { 0.43f, 0.83f, 1.0f, 0.14f };
+	vec3_t			look;
+	float			north;
+
+	Hud_Glass( x, y, 2.0f * r, 2.0f * r, r, 1.0f, NULL, qfalse );
+	Skin_Panel( cx - 0.25f, y + 4.0f, 0.5f, 2.0f * r - 8.0f, 0.0f, line, NULL );
+	Skin_Panel( x + 4.0f, cy - 0.25f, 2.0f * r - 8.0f, 0.5f, 0.0f, line, NULL );
+	Skin_Panel( cx - r * 0.55f, cy - r * 0.55f, r * 1.1f, r * 1.1f, r * 0.55f, NULL, line );
+	AngleVectors( cg.predictedPlayerState.viewangles, look, NULL, NULL );
+	north = atan2f( look[0], look[1] ) - (float)M_PI;
+	Hud_TextMid( cx + sinf( north ) * ( r - 6.0f ), cy + cosf( north ) * ( r - 6.0f ), HUD_CAPS, hudDim, 1.0f, HUD_CENTER, "N", 0.0f );
+}
+
 // the colour of a team, NULL for none
 const float *Hud_TeamColor( int team ) {
 	return team == TEAM_RED ? hudRed : team == TEAM_BLUE ? hudBlue : NULL;

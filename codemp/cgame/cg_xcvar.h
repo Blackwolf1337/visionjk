@@ -243,7 +243,7 @@ XCVAR_DEF( tay_snapHudColor1,						"0 0.6 1 0.35",			NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_snapHudColor2,						"1 1 1 0.15",			NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_snapHudY,							"0",					NULL,					CVAR_ARCHIVE )
 // a map of the players around while one watches (TaystJK's cg_specHud), and its size
-XCVAR_DEF( tay_specHud,							"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( tay_specHud,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_specHudScale,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_speedometer,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_speedometerJumps,					"5",					NULL,					CVAR_ARCHIVE )

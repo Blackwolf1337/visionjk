@@ -192,7 +192,8 @@ void CG_HudPanelsDraw( void ) {
 
 The corner at the bottom right
 
-The radar in the corner (where the game shows one: team games and vehicles) with its legend, the items the player
+The radar in the corner (where the game shows one: team games and vehicles) with its legend, or while one watches
+the map of the players around in the same disc (tay_specHud), the items the player
 carries left of it, each with its key; when a selection row of weapons, items or powers comes up there
 (hud/cg_select3d.c) both slide up to make room for it, and come down again when it is gone.
 
@@ -203,7 +204,7 @@ carries left of it, each with its key; when a selection row of weapons, items or
 #define CORNER_LIFT_MSEC	70.0f		// how fast (time constant)
 #define CORNER_SLOT			20.0f		// a slot of an item
 #define CORNER_KEY_H		10.0f		// the row of keys under the slots
-#define CORNER_RADAR		120.0f		// the radar of the game (cg_draw.c RADAR_RADIUS * 2)
+#define CORNER_RADAR		92.0f		// the radar of the new HUD (cg_draw.c RADAR_NEW_RADIUS * 2)
 #define CORNER_LEGEND_H		13.0f
 
 static float	cornerLift;
@@ -260,6 +261,8 @@ static float Corner_Top( void ) {
 
 	if ( Corner_Radar() ) {
 		top = bottom - CORNER_LEGEND_H - CORNER_RADAR;
+	} else if ( CG_SpecHudShown() ) {
+		top = bottom - CORNER_RADAR;
 	} else if ( Corner_Items( tags ) ) {
 		top = bottom - CORNER_SLOT - CORNER_KEY_H - 8.0f;
 	}
@@ -287,6 +290,10 @@ void CG_HudCorner( void ) {
 	if ( Corner_Radar() ) {
 		CG_DrawRadarAt( right - CORNER_RADAR, bottom - CORNER_LEGEND_H - CORNER_RADAR );
 		CG_HudRadarLegend( bottom - CORNER_LEGEND_H );
+		right -= CORNER_RADAR + 6.0f;
+	} else if ( CG_SpecHudShown() ) {
+		// watching: the map of the players around in the same disc (hud/cg_spechud.c)
+		CG_SpecHudDrawAt( right - CORNER_RADAR, bottom - CORNER_RADAR, CORNER_RADAR * 0.5f );
 		right -= CORNER_RADAR + 6.0f;
 	}
 	// the items: a slot each, the one the item key uses lit, its key under it

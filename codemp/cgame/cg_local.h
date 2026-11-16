@@ -2122,6 +2122,7 @@ qboolean CG_JPOtherDimension( int clientNum );
 void CG_LeadDraw( void );
 qboolean CG_SpecHudShown( void );
 float CG_SpecHudDraw( float y );
+void CG_SpecHudDrawAt( float x, float y, float radius );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 qboolean CG_DrawBackdrop( float x, float y, float width, float height, float radius );

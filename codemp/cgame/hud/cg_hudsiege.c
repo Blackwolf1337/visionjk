@@ -190,30 +190,44 @@ static const float *Siege_HullColor( float f ) {
 =================
 CG_HudRadarLegend
 
-Under the radar, from the right edge: what its colours are. The radar marks the own team green and the other one
-red, whatever the colour of the team is; an objective has its own picture. Returns the y under it.
+Under the radar, from the right edge: what its marks are, as the radar of the new HUD draws them (cg_draw.c): a round
+dot the own team, a square the other one, in a siege a frame in amber an objective. Returns the y under it.
 =================
 */
 float CG_HudRadarLegend( float y ) {
-	const float	h = 11.0f, dot = 3.5f, gap = 9.0f;
-	const vec4_t green = { 0.2f, 1.0f, 0.3f, 1.0f }, red = { 1.0f, 0.25f, 0.2f, 1.0f };
-	char		team[48], enemy[48];
+	const float	h = 11.0f, dot = 3.5f, gap = 8.0f;
+	const qboolean siege = (qboolean)( cgs.gametype == GT_SIEGE );
+	char		team[48], enemy[48], goal[48];
 	float		w, x;
+	vec4_t		c;
 
 	Q_strncpyz( team, CG_VisionText( "Team" ), sizeof( team ) );
 	Q_strncpyz( enemy, CG_VisionText( "Enemy" ), sizeof( enemy ) );
+	Q_strncpyz( goal, CG_VisionText( "Objective" ), sizeof( goal ) );
 	Q_strupr( team );
 	Q_strupr( enemy );
+	Q_strupr( goal );
 	w = 6.0f + dot + 3.0f + Hud_TextWidth( team, HUD_CAPS ) + gap + dot + 3.0f + Hud_TextWidth( enemy, HUD_CAPS ) + 6.0f;
+	if ( siege ) {
+		w += gap + dot + 3.0f + Hud_TextWidth( goal, HUD_CAPS );
+	}
 	x = SCREEN_WIDTH - HUD_EDGE - w;
 	y += 2.0f;
 	Hud_Glass( x, y, w, h, 3.0f, 1.0f, NULL, qtrue );
 	x += 6.0f;
-	Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, dot * 0.5f, green, NULL );
+	Hud_Color( c, hudGreen, 1.0f );
+	Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, dot * 0.5f, c, NULL );
 	x += dot + 3.0f;
 	x += Hud_Caps( x, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, team ) + gap;
-	Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, dot * 0.5f, red, NULL );
-	Hud_Caps( x + dot + 3.0f, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, enemy );
+	Hud_Color( c, hudRed, 1.0f );
+	Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, 0.6f, c, NULL );
+	x += dot + 3.0f;
+	x += Hud_Caps( x, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, enemy ) + gap;
+	if ( siege ) {
+		Hud_Color( c, hudWarm, 1.0f );
+		Skin_Panel( x, y + ( h - dot ) * 0.5f, dot, dot, 0.6f, NULL, c );
+		Hud_Caps( x + dot + 3.0f, y + h * 0.5f, hudDim, 1.0f, HUD_LEFT, goal );
+	}
 	return y + h + HUD_GAP;
 }
 

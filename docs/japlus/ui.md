@@ -159,7 +159,10 @@ Both are in Setup, HUD, under Menus and HUD.
   for fast, two for medium, three for strong, all three for the other stances); at its foot the name of the weapon,
   for the saber with its stance. The health bar turns amber below half and red below a quarter.
 - The corner at the bottom right (2026-11-16, `hud/cg_hudpanels.c` CG_HudCorner): the radar where the game shows
-  one (team games, vehicles) with its legend under it, and left of it a bar of the items the player carries (their
+  one (team games, vehicles) with its legend under it, in the look of the design board (`Hud_RadarDisc`: a disc
+  of glass with a thin cross, a ring at half the range and N at the rim; a team mate a round dot, an enemy a
+  square, an objective a frame in amber, anything else a small dim dot); while one watches the map of the players
+  around in the same disc (`tay_specHud`, on by default since then, players as dots in their team colour), and left of it a bar of the items the player carries (their
   models, the selected one turning; the dispensers are left out), the one the item key uses lit, each with the key bound to its use
   command. The chips of jetpack, cloak and e-web
   stand above that. The selection rows of weapons, items and powers come up at the bottom right too

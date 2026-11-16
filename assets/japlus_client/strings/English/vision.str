@@ -1029,13 +1029,13 @@ REFERENCE           SPECTATOR_MAP
 LANG_ENGLISH        "Spectator Map"
 
 REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
+LANG_ENGLISH        "While you watch, a map of the players around: with the new HUD in the corner at the bottom right, in the look of its radar."
 
 REFERENCE           SPECTATOR_MAP_SIZE
 LANG_ENGLISH        "Spectator Map Size"
 
 REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
-LANG_ENGLISH        "How large the map of the players is while you watch."
+LANG_ENGLISH        "How large the map of the players is while you watch (the HUD of the game; the new HUD has it at one size)."
 
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"

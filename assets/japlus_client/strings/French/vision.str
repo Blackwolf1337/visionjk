@@ -1370,16 +1370,16 @@ LANG_ENGLISH        "Spectator Map"
 LANG_FRENCH         "Carte du spectateur"
 
 REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
-LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-LANG_FRENCH         "En spectateur, affiche en haut à droite une carte des joueurs proches."
+LANG_ENGLISH        "While you watch, a map of the players around: with the new HUD in the corner at the bottom right, in the look of its radar."
+LANG_FRENCH         "En spectateur, une carte des joueurs proches : avec le nouveau HUD dans le coin en bas à droite, avec l'aspect de son radar."
 
 REFERENCE           SPECTATOR_MAP_SIZE
 LANG_ENGLISH        "Spectator Map Size"
 LANG_FRENCH         "Taille de la carte spectateur"
 
 REFERENCE           HOW_LARGE_THE_MAP_OF_THE_PLAYERS_IS
-LANG_ENGLISH        "How large the map of the players is while you watch."
-LANG_FRENCH         "La taille de la carte des joueurs quand vous regardez."
+LANG_ENGLISH        "How large the map of the players is while you watch (the HUD of the game; the new HUD has it at one size)."
+LANG_FRENCH         "La taille de la carte des joueurs en spectateur (HUD du jeu ; le nouveau HUD a une taille fixe)."
 
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"

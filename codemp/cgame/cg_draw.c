@@ -3453,6 +3453,7 @@ CG_DrawRadar
 float	cg_radarRange = 2500.0f;
 
 #define RADAR_RADIUS			60
+#define RADAR_NEW_RADIUS		46.0f		// VisionJK: of the radar of the new HUD
 #define RADAR_X					(580 - RADAR_RADIUS)
 #define RADAR_CHAT_DURATION		6000
 static int radarLockSoundDebounceTime = 0;
@@ -3486,6 +3487,9 @@ float CG_DrawRadar ( float y )
 	float			arrowBaseScale;
 	float			zScale;
 	int				xOffset = radarShiftX;
+	// VisionJK: the radar of the new HUD is smaller, a disc of glass with its own marks (see below)
+	const float		radarR = CG_HudNewLook() ? RADAR_NEW_RADIUS : RADAR_RADIUS;
+	const qboolean	newLook = CG_HudNewLook();
 
 	if (!cg.snap)
 	{
@@ -3509,17 +3513,16 @@ float CG_DrawRadar ( float y )
 		return y;
 	}
 
-	// VisionJK: a round glass under it in the new HUD
-	if ( CG_HudNewLook() )
-	{
-		Hud_Glass( RADAR_X + xOffset, y, RADAR_RADIUS*2, RADAR_RADIUS*2, RADAR_RADIUS, 1.0f, NULL, qfalse );
+	// VisionJK: the disc of the new HUD, as the design board has it (hud/cg_hudkit.c)
+	if ( newLook ) {
+		Hud_RadarDisc( RADAR_X + xOffset, y, radarR );
+	} else {
+		// Draw the radar background image
+		color[0] = color[1] = color[2] = 1.0f;
+		color[3] = 0.6f;
+		trap->R_SetColor ( color );
+		CG_DrawPic( RADAR_X + xOffset, y, radarR*2, radarR*2, cgs.media.radarShader );
 	}
-
-	// Draw the radar background image
-	color[0] = color[1] = color[2] = 1.0f;
-	color[3] = 0.6f;
-	trap->R_SetColor ( color );
-	CG_DrawPic( RADAR_X + xOffset, y, RADAR_RADIUS*2, RADAR_RADIUS*2, cgs.media.radarShader );
 
 	//Always green for your own team.
 	VectorCopy ( g_color_table[ColorIndex(COLOR_GREEN)], teamColor );
@@ -3559,7 +3562,7 @@ float CG_DrawRadar ( float y )
 		}
 
 		distance  = distance / cg_radarRange;
-		distance *= RADAR_RADIUS;
+		distance *= radarR;
 
 		AngleVectors ( cg.predictedPlayerState.viewangles, dirLook, NULL, NULL );
 
@@ -3578,8 +3581,8 @@ float CG_DrawRadar ( float y )
 					qhandle_t shader;
 					vec4_t    color;
 
-					x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-					ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+					x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+					ly = y + (float)radarR + (float)cos (angle) * distance;
 
 					arrowBaseScale = 9.0f;
 					shader = 0;
@@ -3667,6 +3670,22 @@ float CG_DrawRadar ( float y )
 
 					}
 
+					// VisionJK: an objective in the new look is a frame in amber, anything else its picture, smaller
+					if ( shader && newLook && cent->currentState.brokenLimbs ) {
+						vec4_t frame;
+
+						Hud_Color( frame, hudWarm, ( ( cent->currentState.time2 && cg.time - cent->currentState.time2 < 5000 ) && ( ( cg.time / 200 ) & 1 ) ) ? 0.4f : 1.0f );
+						Skin_Panel( x + xOffset - 3.0f, ly - 3.0f, 6.0f, 6.0f, 1.0f, NULL, frame );
+						shader = 0;
+					} else if ( shader && newLook ) {
+						// (anything else on the radar, a turret, a vehicle standing: a small dim dot, the radar of the
+						// design has dots, squares and frames only)
+						vec4_t dim;
+
+						Hud_Color( dim, hudDim, 0.9f );
+						Skin_Panel( x + xOffset - 1.6f, ly - 1.6f, 3.2f, 3.2f, 1.6f, dim, NULL );
+						shader = 0;
+					}
 					if ( shader )
 					{
 						// Pulse the alpha if time2 is set.  time2 gets set when the entity takes pain
@@ -3698,8 +3717,8 @@ float CG_DrawRadar ( float y )
 						float  x;
 						float  ly;
 
-						x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-						ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+						x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+						ly = y + (float)radarR + (float)cos (angle) * distance;
 
 						arrowBaseScale = 9.0f;
 						zScale = 1.0f;
@@ -3798,10 +3817,10 @@ float CG_DrawRadar ( float y )
 						{
 							actualDist = RADAR_ASTEROID_RANGE;
 						}
-						distance = (actualDist/RADAR_ASTEROID_RANGE)*RADAR_RADIUS;
+						distance = (actualDist/RADAR_ASTEROID_RANGE)*radarR;
 
-						x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-						ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+						x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+						ly = y + (float)radarR + (float)cos (angle) * distance;
 
 						if ( asteroidScale > 3.0f )
 						{
@@ -3863,8 +3882,8 @@ float CG_DrawRadar ( float y )
 					float  x;
 					float  ly;
 
-					x = (float)RADAR_X + (float)RADAR_RADIUS + (float)sin (angle) * distance;
-					ly = y + (float)RADAR_RADIUS + (float)cos (angle) * distance;
+					x = (float)RADAR_X + (float)radarR + (float)sin (angle) * distance;
+					ly = y + (float)radarR + (float)cos (angle) * distance;
 
 					arrowBaseScale = 3.0f;
 					if ( cg.predictedPlayerState.m_iVehicleNum )
@@ -4013,11 +4032,23 @@ float CG_DrawRadar ( float y )
 
 				arrowBaseScale *= zScale;
 
-				arrow_w = arrowBaseScale * RADAR_RADIUS / 128;
-				arrow_h = arrowBaseScale * RADAR_RADIUS / 128;
+				arrow_w = arrowBaseScale * radarR / 128;
+				arrow_h = arrowBaseScale * radarR / 128;
 
-				CG_DrawRotatePic2( RADAR_X + RADAR_RADIUS + sin (angle) * distance + xOffset,
-								   y + RADAR_RADIUS + cos (angle) * distance,
+				// VisionJK: in the new look a team mate is a round dot (an enemy a square), larger above, smaller below
+				if ( newLook ) {
+					const float		dot = 3.2f * zScale;
+					const qboolean	mate = (qboolean)( cl->team == local->team );
+					vec4_t			c;
+
+					Hud_Color( c, mate ? hudGreen : hudRed, color[3] );
+					Skin_Panel( RADAR_X + radarR + sinf( angle ) * distance + xOffset - dot * 0.5f, y + radarR + cosf( angle ) * distance - dot * 0.5f,
+						dot, dot, mate ? dot * 0.5f : 0.6f, c, NULL );
+					trap->R_SetColor( NULL );
+					break;
+				}
+				CG_DrawRotatePic2( RADAR_X + radarR + sin (angle) * distance + xOffset,
+								   y + radarR + cos (angle) * distance,
 								   arrow_w, arrow_h,
 								   (360 - cent->lerpAngles[YAW]) + cg.predictedPlayerState.viewangles[YAW], cgs.media.mAutomapPlayerIcon );
 				break;
@@ -4027,14 +4058,14 @@ float CG_DrawRadar ( float y )
 
 	arrowBaseScale = 16.0f;
 
-	arrow_w = arrowBaseScale * RADAR_RADIUS / 128;
-	arrow_h = arrowBaseScale * RADAR_RADIUS / 128;
+	arrow_w = arrowBaseScale * radarR / 128;
+	arrow_h = arrowBaseScale * radarR / 128;
 
 	trap->R_SetColor ( colorWhite );
-	CG_DrawRotatePic2( RADAR_X + RADAR_RADIUS + xOffset, y + RADAR_RADIUS, arrow_w, arrow_h,
+	CG_DrawRotatePic2( RADAR_X + radarR + xOffset, y + radarR, arrow_w, arrow_h,
 					   0, cgs.media.mAutomapPlayerIcon );
 
-	return y+(RADAR_RADIUS*2);
+	return y+(radarR*2);
 }
 
 /*
