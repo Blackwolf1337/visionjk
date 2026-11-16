@@ -106,6 +106,7 @@ typedef struct jpClient_s {
 	qboolean	balanceSpawn;			// came over a map change in a team: the next spawn does not balance the teams
 	qboolean	cheatGod;				// god mode comes from the "god" cheat, jp_allowGodTalk leaves it alone
 	qboolean	godTalkDenied;			// a force power was used under the chat bubble, no god mode until it is gone
+	int	godTalkSince;		// level.time the talk button went down and stayed down, 0 while it is up
 	int			siegeItemDeadline;		// jp_siegeItemTime: the carried item goes back at this level.time, 0 none
 	qboolean	flame;					// toggleFlame: flamethrower instead of force lightning
 	qboolean	forcesChanged;

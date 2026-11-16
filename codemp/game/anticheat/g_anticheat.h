@@ -49,6 +49,7 @@ typedef struct anticheat_s {
 	int			flipBlockUntil;		// strafing does not count until then
 	int			flipLogTime;
 	int			rollLogTime;
+	int			forceselLogTime;
 	int			lastMoveLevelTime;	// level.time of the last move the client sent
 
 	// the wiggle (G_AC_Think)

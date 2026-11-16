@@ -513,8 +513,14 @@ JP_GodTalk
 
 jp_allowGodTalk: god mode while the chat bubble is shown, FFA only and not while fighting. Called from
 PmoveSingle like in the original, talking: the talk button of the command.
+
+VisionJK: the protection starts once the button was down for JP_GODTALK_HOLD without a break. JA+ gave it with
+the first move that had the button, and took the moves of that one command only: a client that sent the button
+with every other move (the last of each packet) walked about and could not be hurt. A move without the button
+starts the count again, so that client is never protected, and who really types is after half a second.
 =================
 */
+#define JP_GODTALK_HOLD		500		// msec
 void JP_GodTalk( playerState_t *ps, qboolean talking ) {
 	const qboolean ffa = level.gametype == GT_FFA && jp_highlander.integer != 1;
 	gentity_t *ent;
@@ -534,6 +540,14 @@ void JP_GodTalk( playerState_t *ps, qboolean talking ) {
 		if ( ffa && !jp->sleeping && !jp->isGhost && !jp->down && !jp->mindtricked && !jp->cheatGod )
 			ent->flags &= ~FL_GODMODE;
 		jp->godTalkDenied = qfalse;
+		jp->godTalkSince = 0;
+		return;
+	}
+
+	if ( !jp->godTalkSince || level.time < jp->godTalkSince ) {
+		jp->godTalkSince = level.time;
+	}
+	if ( level.time - jp->godTalkSince < JP_GODTALK_HOLD ) {
 		return;
 	}
 

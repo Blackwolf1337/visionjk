@@ -45,6 +45,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   AC_FLIP_FAST_MSEC of it: with vs_antiSpeed 2 the strafe of his moves does not count for AC_FLIP_BLOCK, so the
 //   run goes straight at the speed of the game. A slower zigzag (under ten changes a second) still gains a few
 //   percent.
+//   The force power a move selects: the jump (the old charge jump) and numbers past the last power are taken out.
 //
 // - The wiggle bot (G_AC_Think, vs_antiWiggle). With the single player saber damage (d_saberSPStyleDamage 1)
 //   a swing hurts on every server frame its blade crosses a body, more for a longer sweep, so turning the view
@@ -238,6 +239,19 @@ void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd, int msec ) {
 		}
 		if ( mode >= 2 ) {
 			ucmd->angles[ROLL] = 0;
+		}
+	}
+
+	// The force power a move selects: the jump is none to select. With it selected the force button charges a
+	// jump far higher than the game allows (the old charge jump). The engine takes it out with sv_legacyFixes 1,
+	// this holds without it. 0xFF is what a client sends for none.
+	if ( ucmd->forcesel == FP_LEVITATION || ( ucmd->forcesel >= NUM_FORCE_POWERS && ucmd->forcesel != 0xFFu ) ) {
+		if ( !ac->forceselLogTime || level.time - ac->forceselLogTime >= AC_INPUT_LOG_MSEC || level.time < ac->forceselLogTime ) {
+			ac->forceselLogTime = level.time;
+			G_AC_Log( ent, va( "selected force power %i, which no client selects%s", ucmd->forcesel, mode >= 2 ? ", ignored" : "" ) );
+		}
+		if ( mode >= 2 ) {
+			ucmd->forcesel = 0xFFu;
 		}
 	}
 
