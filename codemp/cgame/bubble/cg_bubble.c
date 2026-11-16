@@ -34,6 +34,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Private lines never get one. Only the clients of this tree draw them: a legacy client sees the balloon.
 
 #include "cgame/cg_local.h"
+#include "ui/ui_shared.h"
+#include "cgame/hud/cg_hudkit.h"
 
 #define BUBBLE_MAX_LINES	3
 #define BUBBLE_LINE_BYTES	128
@@ -492,6 +494,186 @@ static float Bubble_LiftLine( const vec3_t center, float halfW, float halfH ) {
 	return lift;
 }
 
+// The name tags (v_nameTags): the name of a player on a chip right above his head, under his status line and
+// his bubble. 1: of who is near the crosshair and of the team mates, 2: of everyone in sight. Unlike a bubble a
+// tag keeps one size on the screen at any distance (up to TAG_MAX_LETTER in the level), and only players one
+// can see get one: a trace to the head, so no name stands over a wall. The one under the crosshair has a larger
+// tag with his health where the client knows it, and the name under the crosshair goes (CG_DrawCrosshairNames).
+#define TAG_RANGE		2000.0f
+#define TAG_TEAM_RANGE	1400.0f
+#define TAG_NEAR		60.0f		// around the crosshair, in units of the HUD: the tag is there in full
+#define TAG_NEAR_FADE	50.0f		// and fades out over this much more
+#define TAG_SCREEN		9.0f		// how tall a letter is on the screen, in units of the HUD
+#define TAG_SCREEN_AIM	12.0f		// of the one under the crosshair
+#define TAG_MIN_LETTER	2.6f		// in units of the level, up close
+#define TAG_MAX_LETTER	32.0f		// far away
+#define TAG_FADE_MSEC	160
+#define TAG_BELOW		12.0f		// the tag starts this much lower than a bubble would, right over the hair
+
+static struct {
+	float	alpha;
+	int		seen;			// cg.time it was last asked for: a player out of view starts again from nothing
+	int		drawnFrame;		// cg.clientFrame it was drawn in
+} nameTags[MAX_CLIENTS];
+
+qboolean CG_NameTagShown( int clientNum ) {
+	return (qboolean)( clientNum >= 0 && clientNum < MAX_CLIENTS && nameTags[clientNum].drawnFrame == cg.clientFrame );
+}
+
+static qboolean Tag_Aimed( int clientNum ) {
+	return (qboolean)( cg_drawCrosshair.integer && cg_drawCrosshairNames.integer && clientNum == cg.crosshairClientNum
+		&& cg.time - cg.crosshairClientTime < 1000 );
+}
+
+// how near the crosshair a player stands on the screen, 1 on him to 0 away
+static float Tag_Near( const centity_t *cent, float scale ) {
+	const float	cx = SCREEN_WIDTH * 0.5f + cg_crosshairX.value, cy = SCREEN_HEIGHT * 0.5f + cg_crosshairY.value;
+	vec3_t		top, bottom;
+	float		tx, ty, bx, by, dx, dy;
+
+	VectorCopy( cent->lerpOrigin, top );
+	VectorCopy( cent->lerpOrigin, bottom );
+	top[2] += 40.0f * scale;
+	bottom[2] -= 24.0f * scale;
+	if ( !CG_WorldCoordToScreenCoordFloat( top, &tx, &ty ) || !CG_WorldCoordToScreenCoordFloat( bottom, &bx, &by ) ) {
+		return 0.0f;
+	}
+	dx = fabsf( cx - ( tx + bx ) * 0.5f );
+	dy = ( cy < ty ) ? ty - cy : ( cy > by ) ? cy - by : 0.0f;
+	return 1.0f - Com_Clamp( 0.0f, 1.0f, ( sqrtf( dx * dx + dy * dy ) - TAG_NEAR ) / TAG_NEAR_FADE );
+}
+
+// How much of the tag of a player is to be seen this frame, with its fade. aimed: he is under the crosshair.
+static float Tag_Alpha( const centity_t *cent, int clientNum, float dist, float scale, qboolean *aimed ) {
+	const clientInfo_t	*ci = &cgs.clientinfo[clientNum];
+	const int			mode = v_nameTags.integer;
+	const int			team = cg.snap->ps.persistant[PERS_TEAM];
+	float				target = 0.0f, step;
+
+	*aimed = (qboolean)( mode && Tag_Aimed( clientNum ) );
+	if ( mode && ci->infoValid && clientNum != cg.snap->ps.clientNum && dist < TAG_RANGE ) {
+		if ( *aimed || mode >= 2 ) {
+			target = 1.0f;
+		} else {
+			if ( cgs.gametype >= GT_TEAM && team != TEAM_SPECTATOR && ci->team == team && dist < TAG_TEAM_RANGE ) {
+				target = 1.0f;
+			}
+			if ( target < 1.0f ) {
+				target = Q_max( target, Tag_Near( cent, scale ) );
+			}
+		}
+		if ( dist > TAG_RANGE * 0.75f ) {
+			target *= ( TAG_RANGE - dist ) / ( TAG_RANGE * 0.25f );
+		}
+		if ( target > 0.0f ) {
+			// only who can be seen: his head from the eye, not in fog (as the name under the crosshair)
+			trace_t	tr;
+			vec3_t	eyes;
+
+			VectorCopy( cent->lerpOrigin, eyes );
+			eyes[2] += 30.0f * scale;
+			CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, eyes, cg.snap->ps.clientNum, CONTENTS_SOLID | CONTENTS_TERRAIN );
+			if ( tr.fraction < 1.0f || ( CG_PointContents( eyes, 0 ) & CONTENTS_FOG ) ) {
+				target = 0.0f;
+			}
+		}
+	}
+
+	if ( cg.time - nameTags[clientNum].seen > 300 ) {
+		nameTags[clientNum].alpha = 0.0f;
+	}
+	nameTags[clientNum].seen = cg.time;
+	step = (float)cg.frametime / TAG_FADE_MSEC;
+	if ( nameTags[clientNum].alpha < target ) {
+		nameTags[clientNum].alpha = Q_min( target, nameTags[clientNum].alpha + step );
+	} else {
+		nameTags[clientNum].alpha = Q_max( target, nameTags[clientNum].alpha - step );
+	}
+	return nameTags[clientNum].alpha;
+}
+
+// the name on the tag and its colour, as the name under the crosshair has them
+static const char *Tag_Name( const centity_t *cent, int clientNum, const float **tint ) {
+	const clientInfo_t *ci = &cgs.clientinfo[clientNum];
+
+	if ( cg.snap->ps.duelInProgress ? clientNum != cg.snap->ps.duelIndex : cent->currentState.bolt1 != 0 ) {
+		*tint = hudDim;		// out of reach in a duel
+	} else if ( cgs.gametype >= GT_TEAM ) {
+		*tint = ( ci->team == cg.predictedPlayerState.persistant[PERS_TEAM] ) ? hudGreen : hudRed;
+	} else if ( cgs.gametype == GT_POWERDUEL && cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR
+		&& ci->duelTeam == cgs.clientinfo[cg.predictedPlayerState.clientNum].duelTeam ) {
+		*tint = hudGreen;
+	} else if ( cgs.gametype == GT_FFA ) {
+		*tint = hudBright;
+		return ci->name;	// JA+: in FFA the name in its own colours
+	} else {
+		*tint = hudRed;
+	}
+	return ci->cleanname;
+}
+
+// the tag over head; how much higher what stands above it has to start
+static float Tag_Draw( const centity_t *cent, int clientNum, bubbleView_t *view, const vec3_t head, float scale, float alpha, qboolean aimed ) {
+	const float			below = TAG_BELOW * scale;
+	static const vec4_t	track = { 1.0f, 1.0f, 1.0f, 0.16f };
+	const float			*tint;
+	const char			*name = Tag_Name( cent, clientNum, &tint );
+	vec3_t				to, origin;
+	float				z, letter, width, halfW, halfH, lift, depth, textY;
+	int					health;
+	vec4_t				fill = { 0.04f, 0.06f, 0.1f, 0.0f }, edge, ink;
+
+	VectorSubtract( head, cg.refdef.vieworg, to );
+	z = DotProduct( to, cg.refdef.viewaxis[0] );
+	if ( z < 8.0f ) {
+		return 0.0f;
+	}
+	// a letter as tall in the level as TAG_SCREEN units of the HUD are on the screen at this distance
+	letter = ( aimed ? TAG_SCREEN_AIM : TAG_SCREEN ) * z * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ) / ( SCREEN_HEIGHT * 0.5f );
+	letter = Com_Clamp( TAG_MIN_LETTER, TAG_MAX_LETTER, letter );
+	health = aimed ? CG_HudKnownHealth( clientNum ) : -1;
+	width = trap->ext.R_Text3DWidth( name, letter );
+	depth = letter * 0.025f;
+	halfW = width * 0.5f + letter * 0.55f;
+	halfH = letter * 0.72f + ( health >= 0 ? letter * 0.28f : 0.0f );
+
+	VectorCopy( head, view->center );
+	view->center[2] += halfH - below;
+	lift = Bubble_LiftLine( view->center, halfW, halfH );
+	view->center[2] += lift;
+
+	fill[3] = aimed ? 0.74f : 0.52f;
+	VectorCopy( tint, edge );
+	edge[3] = aimed ? 0.85f : 0.3f;
+	Bubble_Panel( bubbleArt.fill, view, halfW, halfH, letter * 0.6f, depth, fill, alpha );
+	Bubble_Panel( bubbleArt.border, view, halfW, halfH, letter * 0.6f, depth * 2.0f, edge, alpha );
+
+	textY = ( health >= 0 ) ? letter * 0.24f : 0.0f;
+	VectorCopy( tint, ink );
+	ink[3] = alpha;
+	VectorMA( view->center, -width * 0.5f, view->right, origin );
+	VectorMA( origin, textY - letter * 0.36f, view->up, origin );
+	VectorMA( origin, depth * 4.0f, view->toward, origin );
+	trap->ext.R_Text3D( origin, view->right, view->up, letter, name, ink );
+
+	if ( health >= 0 ) {
+		// his health as a thin bar under the name
+		const float		barHalfW = halfW - letter * 0.6f, barHalfH = letter * 0.08f;
+		const float		frac = Com_Clamp( 0.0f, 1.0f, health / 100.0f );
+		bubbleView_t	bar = *view;
+
+		VectorMA( view->center, -halfH + letter * 0.38f, view->up, bar.center );
+		Bubble_Panel( bubbleArt.fill, &bar, barHalfW, barHalfH, barHalfH, depth * 3.0f, track, alpha );
+		if ( frac > 0.0f ) {
+			VectorMA( bar.center, -barHalfW * ( 1.0f - frac ), view->right, bar.center );
+			Bubble_Panel( bubbleArt.fill, &bar, barHalfW * frac, barHalfH, barHalfH, depth * 3.5f,
+				health <= 25 ? hudRed : health <= 50 ? hudWarm : hudGreen, alpha );
+		}
+	}
+	nameTags[clientNum].drawnFrame = cg.clientFrame;
+	return lift + 2.0f * halfH + letter * 0.3f - below;
+}
+
 qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	static vec4_t	fillColor = { 0.04f, 0.06f, 0.1f, 0.78f };
 	static vec4_t	borderColor = { 0.55f, 0.75f, 1.0f, 0.95f };
@@ -503,8 +685,8 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	vec3_t			head, delta;
 	vec4_t			border, glow, color;
 	float			dist, range, height, alpha = 1.0f, grow = 1.0f, rise = 0.0f;
-	float			halfW, halfH, pad, tail, scale, stack = 0.0f;
-	qboolean		talking, typing, hasStatus;
+	float			halfW, halfH, pad, tail, scale, stack = 0.0f, tagAlpha = 0.0f;
+	qboolean		talking, typing, hasStatus, tagged, aimed = qfalse;
 	char			statusLine[128];
 	int				i;
 
@@ -517,7 +699,8 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	// Away, or the music he listens to (status/cg_status.c). Not of the player the view is behind: his line
 	// stood right before the camera, as large as a wall, and he knows what it says.
 	hasStatus = (qboolean)( clientNum != cg.snap->ps.clientNum && CG_StatusLine( clientNum, statusLine, sizeof( statusLine ) ) );
-	if ( !talking && !typing && !hasStatus ) {
+	tagged = (qboolean)( clientNum != cg.snap->ps.clientNum && ( v_nameTags.integer || nameTags[clientNum].alpha > 0.0f ) );
+	if ( !talking && !typing && !hasStatus && !tagged ) {
 		return qfalse;
 	}
 	if ( !bubbleArt.tried ) {
@@ -539,10 +722,15 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	dist = VectorLength( delta );
 	range = Q_max( 100.0f, v_bubbleRange.value );
 	if ( dist > range ) {
-		return qfalse;
-	}
-	if ( dist > range * 0.75f ) {
+		talking = typing = hasStatus = qfalse;
+	} else if ( dist > range * 0.75f ) {
 		alpha = ( range - dist ) / ( range * 0.25f );
+	}
+	if ( tagged ) {
+		tagAlpha = Tag_Alpha( cent, clientNum, dist, scale, &aimed );
+	}
+	if ( !talking && !typing && !hasStatus && tagAlpha <= 0.0f ) {
+		return qfalse;
 	}
 
 	// A bubble is a thing in the level: its letters are as tall there at any distance, so it is small far away
@@ -563,6 +751,9 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	}
 	CrossProduct( view.right, view.up, view.toward );
 
+	if ( tagAlpha > 0.0f ) {
+		stack = Tag_Draw( cent, clientNum, &view, head, scale, tagAlpha, aimed );
+	}
 	if ( hasStatus ) {
 		// one line in smaller letters right above the head, the bubble stands on top of it
 		static vec4_t	statusFill = { 0.04f, 0.06f, 0.1f, 0.6f };
@@ -576,7 +767,7 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		halfW = width * 0.5f + letter * 0.6f;
 		halfH = letter * 0.75f;
 		VectorCopy( head, view.center );
-		view.center[2] += halfH;
+		view.center[2] += stack + halfH;
 		// (above the line of somebody who stands close, where it would lie on it)
 		lift = Bubble_LiftLine( view.center, halfW, halfH );
 		view.center[2] += lift;
@@ -589,7 +780,7 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		VectorMA( origin, 0.4f, view.toward, origin );
 		trap->ext.R_Text3D( origin, view.right, view.up, letter, statusLine, color );
 
-		stack = lift + 2.0f * halfH + letter * 0.3f;
+		stack += lift + 2.0f * halfH + letter * 0.3f;
 	}
 	if ( !talking && !typing ) {
 		return qfalse;		// the caller may still have a sprite to show

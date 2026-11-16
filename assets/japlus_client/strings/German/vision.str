@@ -1509,6 +1509,18 @@ REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
 LANG_GERMAN         "Zeigt Abwesenheit und Musik über den Köpfen der anderen."
 
+REFERENCE           NAME_TAGS
+LANG_ENGLISH        "Name Tags"
+LANG_GERMAN         "Namensschilder"
+
+REFERENCE           NAMES_ABOVE_THE_HEADS_OF_THE_PLAYERS
+LANG_ENGLISH        "Names above the heads of the players you can see: of who is near your crosshair and of your team mates, or of everyone. The one under the crosshair gets a larger tag with his health."
+LANG_GERMAN         "Namen über den Köpfen der Spieler, die du sehen kannst: von wem nahe am Fadenkreuz steht und von deinen Teamkameraden, oder von allen. Wer unter dem Fadenkreuz ist, bekommt ein größeres Schild mit seiner Gesundheit."
+
+REFERENCE           NEAR_THE_CROSSHAIR
+LANG_ENGLISH        "Near the Crosshair"
+LANG_GERMAN         "Nahe am Fadenkreuz"
+
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
 LANG_GERMAN         "Hut"

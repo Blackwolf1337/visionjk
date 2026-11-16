@@ -6780,6 +6780,11 @@ static void CG_DrawCrosshairNames( void ) {
 		return;
 	}
 
+	// VisionJK: his name tag above his head shows it already, larger and with his health (bubble/cg_bubble.c)
+	if ( !isVeh && CG_NameTagShown( cg.crosshairClientNum ) ) {
+		return;
+	}
+
 	// draw the name of the player being looked at
 	color = CG_FadeColor( cg.crosshairClientTime, 1000 );
 	if ( !color ) {

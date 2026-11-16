@@ -275,6 +275,8 @@ SETUP = [
         ('yesno', 'Chat Bubbles', 'v_chatBubbles', 'What a player says stands above his head.'),
         ('slider', 'Bubble Range', 'v_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
         ('yesno', 'Player Statuses', 'v_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
+        ('multi', 'Name Tags', 'v_nameTags', (('Off', 0), ('Near the Crosshair', 1), ('Always', 2)),
+         'Names above the heads of the players you can see: of who is near your crosshair and of your team mates, or of everyone. The one under the crosshair gets a larger tag with his health.'),
         ('head', 'Hats and Capes'),
         ('multistr', 'Hat', 'tay_hat',
          (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),

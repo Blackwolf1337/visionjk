@@ -32,8 +32,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define CROSS_Y			( SCREEN_HEIGHT * 0.5f )
 
 // the health of a player as far as the client knows it, -1 not: a team mate (the team info), a duelist (the
-// duel healths the server sends)
-static int Combat_KnownHealth( int client ) {
+// duel healths the server sends). Also for the name tags above the heads (bubble/cg_bubble.c).
+int CG_HudKnownHealth( int client ) {
 	if ( cgs.gametype >= GT_TEAM && cgs.clientinfo[client].team == cgs.clientinfo[cg.snap->ps.clientNum].team
 		&& cgs.clientinfo[client].health > 0 ) {
 		return cgs.clientinfo[client].health;
@@ -58,17 +58,17 @@ duel), alpha its fade. A bar of his health where the client knows it.
 =================
 */
 void CG_HudTargetName( const char *name, qboolean pilot, const float *tint, float alpha, int client ) {
-	const float	y = CROSS_Y + 18.0f + cg_crosshairY.value;
-	const int	health = ( client >= 0 && client < MAX_CLIENTS ) ? Combat_KnownHealth( client ) : -1;
+	const float	y = CROSS_Y + 24.0f + cg_crosshairY.value;
+	const int	health = ( client >= 0 && client < MAX_CLIENTS ) ? CG_HudKnownHealth( client ) : -1;
 	char		text[MAX_STRING_CHARS];
 
 	if ( alpha <= 0.0f ) {
 		return;
 	}
 	Com_sprintf( text, sizeof( text ), pilot ? "%s (pilot)" : "%s", name );
-	Hud_TextMid( SCREEN_WIDTH * 0.5f + cg_crosshairX.value, y, HUD_BODY, tint, alpha, HUD_CENTER, text, 200.0f );
+	Hud_TextMid( SCREEN_WIDTH * 0.5f + cg_crosshairX.value, y, HUD_LARGE, tint, alpha, HUD_CENTER, text, 280.0f );
 	if ( health >= 0 ) {
-		Hud_Bar( SCREEN_WIDTH * 0.5f + cg_crosshairX.value - 27.0f, y + 6.0f, 54.0f, 2.2f, health / 100.0f,
+		Hud_Bar( SCREEN_WIDTH * 0.5f + cg_crosshairX.value - 36.0f, y + 9.0f, 72.0f, 3.0f, health / 100.0f,
 			health <= 25 ? hudRed : health <= 50 ? hudWarm : hudGreen, alpha, qfalse );
 	}
 }

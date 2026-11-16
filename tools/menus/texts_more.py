@@ -6,6 +6,9 @@ as a first language having read it: whoever does is welcome to change what sound
 
 MORE = {
     # the new HUD beyond its menus
+    'Names above the heads of the players you can see: of who is near your crosshair and of your team mates, or of everyone. The one under the crosshair gets a larger tag with his health.': ('Les noms au-dessus des joueurs que vous voyez : de celui qui est près du réticule et de vos coéquipiers, ou de tous. Celui sous le réticule a une étiquette plus grande avec sa santé.', 'Nombres sobre las cabezas de los jugadores que ves: de quien está cerca de la mira y de tus compañeros, o de todos. El que está bajo la mira tiene una etiqueta más grande con su salud.'),
+    'Near the Crosshair': ('Près du réticule', 'Cerca de la mira'),
+    'Name Tags': ('Noms au-dessus', 'Nombres encima'),
     'Send': ('Envoyer', 'Enviar'),
     'Click to insert, wheel to scroll': ('Clic pour insérer, molette pour défiler', 'Clic para insertar, rueda para desplazar'),
     'Write a message': ('Écrire un message', 'Escribir un mensaje'),

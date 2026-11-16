@@ -4100,8 +4100,28 @@
 
 		itemDef
 		{
+			name					vision_multi_v_nametags
+			type					ITEM_TYPE_MULTI
+			text					@VISION_NAME_TAGS
+			descText				@VISION_NAMES_ABOVE_THE_HEADS_OF_THE_PLAYERS
+			cvar					"v_nameTags"
+			cvarFloatList { @VISION_OFF 0 @VISION_NEAR_THE_CROSSHAIR 1 "Always" 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					306 598 392 52
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.94
+			forecolor				0.86 0.90 0.945 1
+			visible					1
+			column					0
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					296 598 412 100
+			rect					296 650 412 100
 			visible					1
 			text					@VISION_MY_MUSIC
 			font					7
@@ -4128,7 +4148,7 @@
 			descText				@VISION_TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 			cvar					"v_shareMusic"
 			action { play "sound/interface/button1.wav" ; }
-			rect					306 698 392 52
+			rect					306 750 392 52
 			page					7
 			scroll					1
 			row						1
@@ -4148,7 +4168,7 @@
 			action { play "sound/interface/button1.wav" ; setpage 14 ; }
 			cvarTest				"v_shareMusic"
 			disableCvar { "0" }
-			rect					306 750 392 52
+			rect					306 802 392 52
 			page					7
 			scroll					1
 			row						1

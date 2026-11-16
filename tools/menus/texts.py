@@ -449,6 +449,9 @@ TR = {
     'Bubble Range': 'Sprechblasen-Reichweite',
     'How far away a bubble is still drawn.': 'Bis zu welcher Entfernung Sprechblasen angezeigt werden.',
     'Player Statuses': 'Spielerstatus',
+    'Names above the heads of the players you can see: of who is near your crosshair and of your team mates, or of everyone. The one under the crosshair gets a larger tag with his health.': 'Namen über den Köpfen der Spieler, die du sehen kannst: von wem nahe am Fadenkreuz steht und von deinen Teamkameraden, oder von allen. Wer unter dem Fadenkreuz ist, bekommt ein größeres Schild mit seiner Gesundheit.',
+    'Near the Crosshair': 'Nahe am Fadenkreuz',
+    'Name Tags': 'Namensschilder',
     'Away from keyboard and music above the heads of the others.': 'Zeigt Abwesenheit und Musik über den Köpfen der anderen.',
     'Show My Music': 'Meine Musik zeigen',
     'Tell the others what you listen to. Everybody on the server reads it.':

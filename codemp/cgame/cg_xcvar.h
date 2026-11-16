@@ -78,6 +78,7 @@ XCVAR_DEF( v_menu3dScale,						"1",					NULL,					CVAR_ARCHIVE )
 // chat bubbles above the heads (bubble/cg_bubble.c), and how far away one still sees them
 XCVAR_DEF( v_chatBubbles,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_bubbleRange,						"1200",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_nameTags,							"1",					NULL,					CVAR_ARCHIVE )
 // statuses above the heads (status/cg_status.c): show the ones of the others, and tell them what music plays here
 XCVAR_DEF( v_playerStatuses,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_shareMusic,						"0",					NULL,					CVAR_ARCHIVE )
