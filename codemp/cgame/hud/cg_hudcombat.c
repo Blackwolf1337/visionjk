@@ -236,36 +236,38 @@ void CG_HudPickup( void ) {
 	Hud_TextMid( x + h + 2.0f, y + h * 0.5f, HUD_BODY, hudBright, fade[3], HUD_LEFT, name, w - h - 8.0f );
 }
 
-// The course of the ping in the line of frames and ping, in place of the lagometer: the newest snapshots from the
-// right, each a dot as high as its ping; one the server held back for the rate an amber tick, one that never came
-// a red one.
-#define PERF_GRAPH_W	34.0f
+// The course of the ping in the line of frames and ping, in place of the lagometer: a track as the bars of the HUD
+// have, w units wide, the newest snapshot at the right, each a thin bar from the bottom as high as its ping (in the
+// colour of how good it is); one the server held back for the rate amber, one that never came red to the top.
+#define PERF_GRAPH_W	34.0f		// in the line of its own; in the card it fills the row
 
-static void Combat_PingGraph( float x, float y, float h ) {
-	const int	samples = (int)PERF_GRAPH_W;
-	int			i, flags, most = 80;
+static void Combat_PingGraph( float x, float y, float w, float h ) {
+	const vec4_t	track = { 1.0f, 1.0f, 1.0f, 0.06f };
+	const float		step = 1.5f, inner = h - 2.0f;
+	const int		samples = (int)( ( w - 2.0f ) / step );
+	int				i, flags, most = 100;
 
+	Skin_Panel( x, y, w, h, Q_min( 3.0f, h * 0.5f ), track, NULL );
 	for ( i = 0; i < samples; i++ ) {
 		most = Q_max( most, CG_LagSnapshot( i, &flags ) );
 	}
 	for ( i = 0; i < samples; i++ ) {
 		const int	ping = CG_LagSnapshot( i, &flags );
-		const float	sx = x + PERF_GRAPH_W - 1.0f - i;
+		const float	sx = x + w - 1.0f - ( i + 1 ) * step;
+		float		bh;
 		vec4_t		c;
 
 		if ( ping == -2 ) {
 			break;
 		}
 		if ( ping < 0 ) {
-			Hud_Color( c, hudRed, 1.0f );
-			Skin_Panel( sx, y, 1.0f, h, 0.0f, c, NULL );
-		} else if ( flags & SNAPFLAG_RATE_DELAYED ) {
-			Hud_Color( c, hudWarm, 1.0f );
-			Skin_Panel( sx, y + h * 0.25f, 1.0f, h * 0.75f, 0.0f, c, NULL );
+			Hud_Color( c, hudRed, 0.9f );
+			bh = inner;
 		} else {
-			Hud_Color( c, hudGreen, 0.9f );
-			Skin_Panel( sx, y + ( h - 1.2f ) * ( 1.0f - (float)ping / most ), 1.0f, 1.2f, 0.0f, c, NULL );
+			Hud_Color( c, ( flags & SNAPFLAG_RATE_DELAYED ) ? hudWarm : ping >= 150 ? hudRed : ping >= 80 ? hudWarm : hudGreen, 0.85f );
+			bh = Q_max( 0.8f, inner * (float)ping / most );
 		}
+		Skin_Panel( sx, y + 1.0f + inner - bh, step - 0.4f, bh, 0.0f, c, NULL );
 	}
 }
 
@@ -301,11 +303,19 @@ static float Perf_Draw( char parts[4][2][64], int count, float x, float midY, fl
 			x += 3.0f + Hud_Caps( x + 3.0f, midY, hudDim, 1.0f, HUD_LEFT, parts[i][1] );
 		}
 		x += gap;
+		// (after the ping its course: in the card from there to the end of the row)
 		if ( cg_drawFPS.integer && i == 1 ) {
-			Combat_PingGraph( graphRight > 0.0f ? graphRight - PERF_GRAPH_W : x, midY - h * 0.5f, h );
-			if ( graphRight <= 0.0f ) {
-				x += PERF_GRAPH_W + gap;
+			float	rest = 0.0f, gw;
+			int		k;
+
+			// (the parts after it, the snapshot number, keep their room at the end)
+			for ( k = i + 1; k < count; k++ ) {
+				rest += gap + Hud_TextWidth( parts[k][0], HUD_SMALL ) + ( parts[k][1][0] ? Hud_TextWidth( parts[k][1], HUD_CAPS ) + 3.0f : 0.0f );
 			}
+			gw = graphRight > 0.0f ? Q_max( PERF_GRAPH_W, graphRight - rest - x ) : PERF_GRAPH_W;
+
+			Combat_PingGraph( x, midY - h * 0.5f, gw, h );
+			x += gw + gap;
 		}
 	}
 	return x - start;
@@ -352,7 +362,7 @@ void CG_HudPerfRow( float x, float midY, float w ) {
 	const int	count = Perf_Parts( parts, qfalse );
 
 	if ( count ) {
-		Perf_Draw( parts, count, x, midY, 8.0f, x + w );
+		Perf_Draw( parts, count, x, midY, 7.0f, x + w );
 	}
 }
 
