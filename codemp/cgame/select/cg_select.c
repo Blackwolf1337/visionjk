@@ -44,6 +44,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "cgame/cg_window.h"
 #include "cgame/boombox/cg_boombox.h"
 
 qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y );		// cg_draw.c
@@ -710,13 +711,8 @@ static void Board_Panel( const selectBoard_t *b, float x, float y, float w, floa
 
 		Board_Point( b, x + w * 0.5f, y + h * 0.5f, center );
 		CG_BubbleBoard( center, b->right, b->up, w * 0.5f * u, h * 0.5f * u, Q_min( radius, Q_min( w, h ) * 0.5f ) * u, fill, edge );
-	} else if ( Skin_Ready() ) {
-		Skin_Panel( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, radius * u, fill, edge );
 	} else {
-		CG_FillRect( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, (float *)fill );
-		if ( edge ) {
-			CG_DrawRect( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, 1.0f, (float *)edge );
-		}
+		Win_Panel( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, radius * u, fill, edge );
 	}
 }
 
@@ -1249,15 +1245,18 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 	}
 	// frosted glass behind the card, its fill thinner over it: the flat card here, the one in the level before its
 	// scene (CG_SelectOverScene)
-	if ( ( b->world && selectCardFrosted ) || ( !b->world && Skin_Ready()
-		&& CG_DrawBackdrop( b->corner[0], b->corner[1], SELECT_CARD_W * b->unit, height * b->unit, 6.0f * b->unit ) ) ) {
+	{
 		vec4_t thin;
 
 		memcpy( thin, fill, sizeof( thin ) );
-		thin[3] *= 0.65f;
+		if ( b->world ) {
+			if ( selectCardFrosted ) {
+				thin[3] *= 0.65f;
+			}
+		} else if ( Skin_Ready() ) {
+			CG_DrawFrost( b->corner[0], b->corner[1], SELECT_CARD_W * b->unit, height * b->unit, 6.0f * b->unit, thin, 0.65f );
+		}
 		Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, thin, edge );
-	} else {
-		Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, fill, edge );
 	}
 	Board_TextFit( b, 8.0f, 5.0f, 0.78f, colorWhite, Select_Name( n ), SELECT_CARD_W - 16.0f );
 	for ( i = 0; i < sel.numHead; i++ ) {

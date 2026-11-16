@@ -62,8 +62,8 @@ void Hud_Glass( float x, float y, float w, float h, float radius, float alpha, c
 		return;
 	}
 	memcpy( fill, soft ? hudSoftFill : hudFill, sizeof( fill ) );
-	if ( alpha > 0.6f && CG_DrawBackdrop( x, y, w, h, radius ) ) {
-		fill[3] *= soft ? 0.7f : 0.6f;
+	if ( alpha > 0.6f ) {
+		CG_DrawFrost( x, y, w, h, radius, fill, soft ? 0.7f : 0.6f );
 	}
 	fill[3] *= alpha;
 	if ( edge ) {
