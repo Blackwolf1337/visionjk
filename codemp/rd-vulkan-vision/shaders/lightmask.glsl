@@ -22,10 +22,7 @@ layout( location = 0 ) out vec4 o_color;
 
 #include "scene.glsl"
 
-vec3 NearestOnSegment( vec3 a, vec3 b, vec3 p ) {
-	vec3 ab = b - a;
-	return a + ab * clamp( dot( p - a, ab ) / max( dot( ab, ab ), 1e-4 ), 0.0, 1.0 );
-}
+#include "geom.glsl"
 
 // how much of a cube (its six tiles from first on, around center) lies in front of the point q, 3 x 3 pixels
 float CubeShadow( int first, vec3 center, vec3 q ) {
