@@ -532,6 +532,22 @@ void CL_RepPacket( const netadr_t *from, const char *command );
 int CL_RepNetworks( const netadr_t *adr );
 
 //
+// cl_vision.cpp
+//
+const char *CL_HomeOSPath( const char *local );
+void CL_VisionCapabilities( void );
+
+#define CL_TV_SERVICE	"https://jka.vision/tv/"	// default of v_tvService, where the TV of the boombox fetches its pictures
+
+//
+// cl_cgame.cpp: a text of the server with its #references of the string files expanded
+//
+#ifndef MAX_STRINGED_SV_STRING
+	#define MAX_STRINGED_SV_STRING 1024
+#endif
+void CL_CheckSVStringEdRef( char *buf, const char *str );	// buf has MAX_STRINGED_SV_STRING bytes
+
+//
 // cl_master.cpp
 //
 void CL_MasterInit( void );

@@ -257,25 +257,17 @@ static dlCat_t DL_Kind( const char *entryName ) {
 	return CAT_OTHER;
 }
 
-// where a pak of the home folder lies on the disk
-static const char *DL_Path( const char *local ) {
-	char *path = FS_BuildOSPath( Cvar_VariableString( "fs_homepath" ), local, "" );
-
-	path[strlen( path ) - 1] = '\0';
-	return path;
-}
-
 // the .tmp of the pak that is downloaded now, of a download that does not go on
 void CL_DownloadRemoveTemp( void ) {
 	if ( *clc.downloadTempName ) {
-		FS_Remove( DL_Path( clc.downloadTempName ) );
+		FS_Remove( CL_HomeOSPath( clc.downloadTempName ) );
 	}
 }
 
 // Goes through the files of a pak: counts them by kind (count), or writes those of the kinds the player does not
 // want to the list next to the pak (block). qfalse: it is no pak that can be read.
 static qboolean DL_Files( dlPak_t *pak, qboolean count, fileHandle_t block ) {
-	unzFile			uf = unzOpen( DL_Path( pak->local ) );
+	unzFile			uf = unzOpen( CL_HomeOSPath( pak->local ) );
 	unz_global_info	gi;
 	unz_file_info	info;
 	char			name[DL_NAME];
@@ -901,7 +893,7 @@ qboolean CL_DownloadWebStart( void ) {
 		return qfalse;
 	}
 	FS_FCloseFile( f );
-	Q_strncpyz( job->osTemp, DL_Path( clc.downloadTempName ), sizeof( job->osTemp ) );
+	Q_strncpyz( job->osTemp, CL_HomeOSPath( clc.downloadTempName ), sizeof( job->osTemp ) );
 	clc.downloadSize = 0;		// (not known before it is here: the overlay says so)
 	Cvar_Set( "cl_downloadSize", "0" );
 	SDL_AtomicSet( &job->state, WEBJOB_WAITING );
@@ -972,7 +964,7 @@ void CL_DownloadWebFrame( void ) {
 	}
 	// Checked before it is a pak: a wrong file of the web address is not the server's fault (CL_NextDownload would
 	// drop the connection for it), and the engine deletes no file named .pk3.
-	if ( !FS_CompareZipChecksum( DL_Path( clc.downloadTempName ) ) ) {
+	if ( !FS_CompareZipChecksum( CL_HomeOSPath( clc.downloadTempName ) ) ) {
 		DL_WebFailed( "it is not the pak the server has (another checksum)" );
 		return;
 	}

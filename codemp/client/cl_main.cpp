@@ -1907,18 +1907,6 @@ void CL_ServersResponsePacket( const netadr_t *from, msg_t *msg ) {
 	Com_Printf("%d servers parsed (total %d)\n", numservers, total);
 }
 
-#ifndef MAX_STRINGED_SV_STRING
-#define MAX_STRINGED_SV_STRING 1024
-#endif
-static const char *CL_SVStringEdOOB( const char *ref ) {
-	return SE_GetString( va( "MP_SVGAME_%s", ref ) );
-}
-
-// buf has MAX_STRINGED_SV_STRING bytes
-static void CL_CheckSVStringEdRef( char *buf, const char *str ) {
-	Q_StringEdExpand( buf, MAX_STRINGED_SV_STRING, str ? str : "", CL_SVStringEdOOB );
-}
-
 
 /*
 =================
@@ -2948,54 +2936,9 @@ void CL_Init( void ) {
 	CL_MasterInit();
 	CL_RepInit();
 	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
-	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
-	Cvar_Get( "v_cgameChat", "1", CVAR_ROM, "" );
-	// and the calls for text and pictures of its own in the scene
-	Cvar_Get( "v_cgameScene", "1", CVAR_ROM, "" );
-	Cvar_Get( "v_cgameSpatialDebug", "1", CVAR_ROM, "" );
-	Cvar_Get( "v_cgameSpatialMovers", "1", CVAR_ROM, "" );
-	// the menus on a plane in the level, and the blur of the scene around a distance
-	Cvar_Get( "v_cgameUIPlane", "1", CVAR_ROM, "" );
-	Cvar_Get( "v_cgameDoF", "1", CVAR_ROM, "" );
-	// and the view through the scope of a weapon (R_SetScopeEffect), and the screen effects (R_SetScreenEffect)
-	Cvar_Get( "v_cgameScope", "1", CVAR_ROM, "" );
-	Cvar_Get( "v_cgameScreenFx", "1", CVAR_ROM, "" );
-	// and the videos on the screens of the level (ext.Video_*, cl_video.cpp)
-	Cvar_Get( "v_cgameVideo", "1", CVAR_ROM, "" );
-	// and picture files for the cgame (ext.R_LoadImageFit, the drawing board)
-	Cvar_Get( "v_cgameImage", "1", CVAR_ROM, "" );
-	// and the water of the toys drawn by the renderer (ext.R_AddLiquid)
-	Cvar_Get( "v_cgameLiquid", "1", CVAR_ROM, "" );
-	// and the puddles and wet patches of the toys drawn by the renderer (ext.R_AddWet)
-	Cvar_Get( "v_cgameWet", "1", CVAR_ROM, "" );
-	// and the sprays as paint and their pictures (ext.R_PaintPicture, ext.R_AddPaint, cl_sprays.cpp)
-	Cvar_Get( "v_cgamePaint", "1", CVAR_ROM, "" );
-	// and looping sounds at a volume of their own (ext.S_AddLoopingSoundVolume, the motor of the RC car)
-	Cvar_Get( "v_cgameLoopVolume", "1", CVAR_ROM, "" );
-	// and tubes of light for the saber blades (ext.R_AddLineLight)
-	Cvar_Get( "v_cgameLineLight", "1", CVAR_ROM, "" );
-	// and saber blades drawn by the renderer in 3D (ext.R_AddSaberBlade; NULL with a renderer that has none)
-	Cvar_Get( "v_cgameSaberBlade", "1", CVAR_ROM, "" );
-	// ext.R_AddCutEntity: a body drawn cut by a plane (cgame/cg_slice.c)
-	Cvar_Get( "v_cgameCutEntity", "1", CVAR_ROM, "" );
-	// ext.G2_BoneNumber and ext.G2_SetBonesWorld: the ragdoll of cut bodies (cgame/cg_ragdoll.c)
-	Cvar_Get( "v_cgameSetBones", "1", CVAR_ROM, "" );
-	// ext.R_DrawBackdrop: frosted glass behind the HUD panels and the chat box
-	Cvar_Get( "v_cgameBackdrop", "1", CVAR_ROM, "" );
-	// ext.R_EmitSparks: sparks the renderer simulates (cgame/cg_effects.c CG_GpuSparks)
-	Cvar_Get( "v_cgameSparks", "1", CVAR_ROM, "" );
-	// ext.Con_FeedRead and ext.Con_FeedNewest: the notify lines for the feed of the cgame (cl_console.cpp)
-	Cvar_Get( "v_cgameFeed", "1", CVAR_ROM, "" );
-	// F1 and F2 answer a vote while the cgame sets v_voteKeys (cl_keys.cpp CL_KeyDownEvent)
-	Cvar_Get( "v_cgameVoteKeys", "1", CVAR_ROM, "" );
-	// and drops of water on the view (SCREENFX_DROP of re.ext.SetScreenEffect)
-	Cvar_Get( "v_screenFxDrops", "1", CVAR_ROM, "" );
-	// and clumps of snow on the view (SCREENFX_SNOW, the snowball)
-	Cvar_Get( "v_screenFxSnow", "1", CVAR_ROM, "" );
-	// SCREENFX_BLOOD: blood on the view (cgame/screenfx/cg_screenfx.c, a cut close by)
-	Cvar_Get( "v_screenFxBlood", "1", CVAR_ROM, "" );
+	CL_VisionCapabilities();
 	// where the TV of the boombox fetches its pictures (cl_video.cpp): https, or http to 127.0.0.1 for a test
-	Cvar_Get( "v_tvService", "https://jka.vision/tv/", CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
+	Cvar_Get( "v_tvService", CL_TV_SERVICE, CVAR_ARCHIVE_ND | CVAR_PROTECTED, "where the TV of the boombox fetches its pictures" );
 	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())
 	Cvar_Get( "v_scopeWheel", "0", 0, "" );
 	// set by a cgame and a ui of this tree, which follow a new size of the window without a vid_restart

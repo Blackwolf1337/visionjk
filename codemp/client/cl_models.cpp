@@ -212,13 +212,6 @@ static const char *MDL_IconLocal( const char *model, const char *icon, qboolean 
 	return va( "%s/%s/icons/%s.%s", BASEGAME, FS_MODELSTORE, model, temp ? "tmp" : icon );
 }
 
-static const char *MDL_OSPath( const char *local ) {
-	char *path = FS_BuildOSPath( Cvar_VariableString( "fs_homepath" ), local, "" );
-
-	path[strlen( path ) - 1] = '\0';
-	return path;
-}
-
 static qboolean MDL_Sink( void *ctx, const void *data, size_t len ) {
 	mdlJob_t *job = (mdlJob_t *)ctx;
 
@@ -314,7 +307,7 @@ static void MDL_Start( const char *model, const char *icon ) {
 			return;
 		}
 		FS_FCloseFile( f );
-		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_IconLocal( model, icon, qtrue ) ), sizeof( job->osTemp ) );
+		Q_strncpyz( job->osTemp, CL_HomeOSPath( MDL_IconLocal( model, icon, qtrue ) ), sizeof( job->osTemp ) );
 		Q_strncpyz( job->model, model, sizeof( job->model ) );
 		Q_strncpyz( job->icon, icon, sizeof( job->icon ) );
 		job->most = MDL_ICON_MOST;
@@ -333,7 +326,7 @@ static void MDL_Start( const char *model, const char *icon ) {
 			return;
 		}
 		FS_FCloseFile( f );
-		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_Local( model, qtrue ) ), sizeof( job->osTemp ) );
+		Q_strncpyz( job->osTemp, CL_HomeOSPath( MDL_Local( model, qtrue ) ), sizeof( job->osTemp ) );
 		Q_strncpyz( job->model, model, sizeof( job->model ) );
 		Web_SHA256Init( &job->sha );
 	} else {
@@ -356,7 +349,7 @@ static void MDL_Start( const char *model, const char *icon ) {
 static void MDL_Arrived( const char *model ) {
 	FS_SV_Rename( MDL_Local( model, qtrue ), MDL_Local( model, qfalse ), qfalse );
 	if ( !MDL_Use( model ) ) {
-		remove( MDL_OSPath( MDL_Local( model, qfalse ) ) );
+		remove( CL_HomeOSPath( MDL_Local( model, qfalse ) ) );
 	}
 }
 
@@ -433,7 +426,7 @@ static const char *MDL_NamedLocal( int store, const char *name, qboolean temp ) 
 // the size of a file of the home folder, -1 when there is none. (Not FS_SV_FOpenFileRead: that clears the buffer of
 // the sound each time, and this is asked in the game.)
 static long long MDL_LocalSize( const char *local ) {
-	FILE		*f = fopen( MDL_OSPath( local ), "rb" );
+	FILE		*f = fopen( CL_HomeOSPath( local ), "rb" );
 	long long	size;
 
 	if ( !f ) {
@@ -509,7 +502,7 @@ static void MDL_StartNamed( int store, const char *name ) {
 			return;
 		}
 		FS_FCloseFile( f );
-		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_NamedLocal( store, name, qtrue ) ), sizeof( job->osTemp ) );
+		Q_strncpyz( job->osTemp, CL_HomeOSPath( MDL_NamedLocal( store, name, qtrue ) ), sizeof( job->osTemp ) );
 		Q_strncpyz( job->emoji, name, sizeof( job->emoji ) );
 		Web_SHA256Init( &job->sha );
 	} else {
@@ -575,7 +568,7 @@ static void MDL_NamedDone( mdlJob_t *job ) {
 		MDL_NamedRecordRead( store );
 		for ( i = here->num - 1; i >= 0; i-- ) {
 			if ( !WEB_ModelIndexFind( mdlNamed[store].index, here->name[i], &size, want ) ) {
-				remove( MDL_OSPath( MDL_NamedLocal( store, here->name[i], qfalse ) ) );
+				remove( CL_HomeOSPath( MDL_NamedLocal( store, here->name[i], qfalse ) ) );
 				memmove( &here->name[i], &here->name[i + 1], ( here->num - i - 1 ) * sizeof( here->name[0] ) );
 				here->num--;
 				changed = qtrue;
@@ -782,7 +775,7 @@ static void MDL_StartPicture( int kind, int get ) {
 			return;
 		}
 		FS_FCloseFile( f );
-		Q_strncpyz( job->osTemp, MDL_OSPath( MDL_PictureLocal( kind, get, qtrue ) ), sizeof( job->osTemp ) );
+		Q_strncpyz( job->osTemp, CL_HomeOSPath( MDL_PictureLocal( kind, get, qtrue ) ), sizeof( job->osTemp ) );
 		job->picture = get;
 		job->most = k->most;
 		Web_SHA256Init( &job->sha );

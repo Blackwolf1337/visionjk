@@ -292,9 +292,6 @@ void CL_ConfigstringModified( void ) {
 	}
 
 }
-#ifndef MAX_STRINGED_SV_STRING
-	#define MAX_STRINGED_SV_STRING 1024
-#endif
 // just copied it from CG_CheckSVStringEdRef(
 static const char *CL_SVStringEd( const char *ref ) {
 	return SE_GetString( va( "MP_SVGAME_%s", ref ) );
