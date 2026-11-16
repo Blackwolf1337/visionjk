@@ -1871,6 +1871,7 @@ void		CG_CmdMenuDraw( void );
 void		CG_SelectCursor_f( void );
 // what the card of a player uses of the chat box, the voice chat and the key login
 qboolean	CG_ChatIsOpen( void );
+qboolean	CG_ChatPointerOver( void );
 qboolean	CG_ChatHidden( int clientNum );
 void		CG_ChatHide( int clientNum, qboolean hide );
 qboolean	CG_VoiceMuted( int clientNum );

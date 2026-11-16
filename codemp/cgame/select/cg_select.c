@@ -1604,7 +1604,7 @@ void CG_SelectDraw( void ) {
 		Select_LetBoxGo( qfalse );
 	}
 	// (nobody is picked in the level through the card, the scoreboard or the window of a box, or while a box is carried)
-	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || CG_BoomboxWindowPointerOver() || CG_ToolWindowPointerOver() || CG_RemapsWindowPointerOver()
+	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || CG_BoomboxWindowPointerOver() || CG_ToolWindowPointerOver() || CG_RemapsWindowPointerOver() || CG_ChatPointerOver()
 		|| CG_ModelStorePointerOver() || CG_BoardPointerOver() || Select_Held() >= 0 ) ? -1 : Select_Pick();
 	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
 		Select_Hull();
@@ -1684,6 +1684,10 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 			Select_LetBoxGo( qfalse );
 		}
 		return qtrue;
+	}
+	// a click on the open chat box or its emoji picker is the chat's (chat/cg_chat.c), not one on what is behind it
+	if ( ( key == A_MOUSE1 || key == A_MOUSE2 ) && CG_ChatPointerOver() ) {
+		return qfalse;
 	}
 	if ( key == A_MOUSE1 ) {
 		const int row = Select_RowAt();

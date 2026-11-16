@@ -292,7 +292,10 @@ void CG_HudCorner( void ) {
 	// the items: a slot each, the one the item key uses lit, its key under it
 	n = Corner_Items( tags );
 	if ( n ) {
-		const int	selected = cg.snap->ps.stats[STAT_HOLDABLE_ITEM] > 0 ? bg_itemlist[cg.snap->ps.stats[STAT_HOLDABLE_ITEM]].giTag : -1;
+		// the selection of the client, as the selection row has it: what the snapshots say lags behind a press and
+		// went back to the item before for a moment, the light jumped between the two
+		const int	selected = cg.itemSelect >= 0 ? cg.itemSelect
+			: cg.snap->ps.stats[STAT_HOLDABLE_ITEM] > 0 ? bg_itemlist[cg.snap->ps.stats[STAT_HOLDABLE_ITEM]].giTag : -1;
 		const float	gap = 3.0f, w = n * CORNER_SLOT + ( n - 1 ) * gap + 8.0f, h = CORNER_SLOT + CORNER_KEY_H + 8.0f;
 		const float	x = right - w, y = bottom - h;
 
@@ -307,12 +310,15 @@ void CG_HudCorner( void ) {
 
 			Hud_Color( rim, hudAccent, tags[i] == selected ? 0.95f : 0.25f );
 			Skin_Panel( sx, sy, CORNER_SLOT, CORNER_SLOT, 3.0f, tags[i] == selected ? lit : inside, rim );
-			// (the picture, not the model: the selection row shows the same models while one cycles, and the same
-			// model in two scenes of a frame swapped between the slots, it flickered)
+			// the model as the selection row shows it (hud/cg_select3d.c): the selected one turning, the others still;
+			// the picture where there is no model
 			trap->R_SetColor( NULL );
-			CG_RegisterItemVisuals( index );
-			if ( cg_items[index].icon ) {
-				CG_DrawPic( sx + 2.0f, sy + 2.0f, CORNER_SLOT - 4.0f, CORNER_SLOT - 4.0f, cg_items[index].icon );
+			if ( !CG_Select3DModelFor( &bg_itemlist[index] ) || !CG_Select3DIcon( sx + 1.0f, sy + 1.0f, CORNER_SLOT - 2.0f, CORNER_SLOT - 2.0f,
+				&bg_itemlist[index], 0, NULL, (qboolean)( tags[i] != selected ), 1.0f ) ) {
+				CG_RegisterItemVisuals( index );
+				if ( cg_items[index].icon ) {
+					CG_DrawPic( sx + 2.0f, sy + 2.0f, CORNER_SLOT - 4.0f, CORNER_SLOT - 4.0f, cg_items[index].icon );
+				}
 			}
 			if ( key ) {
 				Hud_Key( sx + CORNER_SLOT * 0.5f, sy + CORNER_SLOT + CORNER_KEY_H * 0.5f + 1.0f, key, 1.0f, HUD_CENTER );

@@ -156,6 +156,8 @@ static struct {
 	int			pickerHover;				// the emoji under the pointer, -1 none
 	float		pickerX, pickerY, pickerCell;	// where the grid is, from the last draw
 	float		pickBtnX, pickBtnY, pickBtnW;	// where the button is
+	float		boxX, boxY, boxW, boxH;		// the open box, from the last draw
+	float		pickerW, pickerH;			// the panel of the picker beside it (pickerX, pickerY its grid)
 
 	// where things are on the screen, from the last draw, for the mouse
 	chatRow_t	rows[CHAT_MAX_OPEN_ROWS];
@@ -1571,6 +1573,12 @@ static void Chat_DrawOpen( float x, float bottom ) {
 	float			y = bottom, tx;
 	char			prompt[MAX_NETNAME + 48];
 
+	chat.boxX = boxX;
+	chat.boxY = boxY;
+	chat.boxW = boxW;
+	chat.boxH = boxH;
+	chat.pickerW = 0.0f;
+
 	// the corner is dragged, as far as the pointer went since the button was pressed on it
 	if ( chat.resizing ) {
 		if ( !trap->Key_IsDown( A_MOUSE1 ) ) {
@@ -1880,6 +1888,8 @@ static void Chat_DrawOpen( float x, float bottom ) {
 
 			chat.pickerX = px + CHAT_PAD;
 			chat.pickerY = boxY + boxH - h - foot - CHAT_PAD;
+			chat.pickerW = w + 2.0f * CHAT_PAD;
+			chat.pickerH = h + foot + 2.0f * CHAT_PAD;
 			chat.pickerFirst = Com_Clampi( 0, Q_max( 0, rows - CHAT_PICK_ROWS ), chat.pickerFirst );
 			if ( chat.skin ) {
 				const vec4_t shade = { 0.0f, 0.0f, 0.0f, 0.4f };
@@ -1939,6 +1949,25 @@ void CG_ChatHide( int clientNum, qboolean hide ) {
 
 qboolean CG_ChatIsOpen( void ) {
 	return chat.open;
+}
+
+// is the pointer on the open box, its emoji picker or its list of suggestions: a click there is the chat's, not one
+// on a player or a box behind it (select/cg_select.c)
+qboolean CG_ChatPointerOver( void ) {
+	const float mx = cgs.cursorX, my = cgs.cursorY;
+
+	if ( !chat.open ) {
+		return qfalse;
+	}
+	if ( mx >= chat.boxX && mx < chat.boxX + chat.boxW && my >= chat.boxY && my < chat.boxY + chat.boxH ) {
+		return qtrue;
+	}
+	if ( chat.picker && chat.pickerW > 0.0f && mx >= chat.pickerX - CHAT_PAD && mx < chat.pickerX - CHAT_PAD + chat.pickerW
+		&& my >= chat.pickerY - CHAT_PAD && my < chat.pickerY - CHAT_PAD + chat.pickerH ) {
+		return qtrue;
+	}
+	return (qboolean)( chat.numSuggest && mx >= chat.suggestX && mx < chat.suggestX + chat.suggestW
+		&& my >= chat.suggestY - 2.0f && my < chat.suggestY + chat.numSuggest * chat.rowH + 2.0f );
 }
 
 /*
