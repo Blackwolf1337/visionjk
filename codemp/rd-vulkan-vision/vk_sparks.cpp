@@ -80,10 +80,6 @@ static VkDeviceAddress VK_SparksAddress( const vkBuffer_t *buf ) {
 }
 
 void VK_SparksInit( void ) {
-	VkPushConstantRange				push;
-	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-
 	v_gpuSparks = ri.Cvar_Get( "v_gpuSparks", "1", CVAR_ARCHIVE_ND,
 		"Sparks, embers and bits of saber hits, clashes, shots and explosions simulated by the graphics card: thousands of them, glowing, cooling and bouncing off walls and floors. Vulkan only. 0: the sparks of the effects as before" );
 	v_gpuSparksAmount = ri.Cvar_Get( "v_gpuSparksAmount", "1", CVAR_ARCHIVE_ND, "How many of them (v_gpuSparks), 1 as meant, 0.25 to 3" );
@@ -102,21 +98,9 @@ void VK_SparksInit( void ) {
 		sp.frameAddress[i] = VK_SparksAddress( &sp.frame[i] );
 	}
 	// the distance of the level as a post set, the ring and the frame by address
-	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-	push.offset = 0;
-	push.size = sizeof( uint32_t ) * 8;
-	layout.setLayoutCount = 1;
-	layout.pSetLayouts = &vk.postSetLayout;
-	layout.pushConstantRangeCount = 1;
-	layout.pPushConstantRanges = &push;
-	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &sp.layout ) );
+	sp.layout = VK_CreateComputeLayout( sizeof( uint32_t ) * 8, &vk.postSetLayout );
 	sp.shader = VK_CreateShader( vk_sparksComp, sizeof( vk_sparksComp ) );
-	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-	info.stage.module = sp.shader;
-	info.stage.pName = "main";
-	info.layout = sp.layout;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &sp.pipeline ) );
+	sp.pipeline = VK_CreateComputePipeline( sp.shader, sp.layout );
 	sp.ready = qtrue;
 }
 

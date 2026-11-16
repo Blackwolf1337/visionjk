@@ -150,6 +150,39 @@ VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	return module;
 }
 
+// the layout of a compute pipeline: push constants of pushBytes for the compute stage, and the set layout if one is given
+VkPipelineLayout VK_CreateComputeLayout( uint32_t pushBytes, const VkDescriptorSetLayout *setLayout ) {
+	VkPushConstantRange			push;
+	VkPipelineLayoutCreateInfo	info = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkPipelineLayout			layout;
+
+	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+	push.offset = 0;
+	push.size = pushBytes;
+	if ( setLayout ) {
+		info.setLayoutCount = 1;
+		info.pSetLayouts = setLayout;
+	}
+	info.pushConstantRangeCount = 1;
+	info.pPushConstantRanges = &push;
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &info, NULL, &layout ) );
+	return layout;
+}
+
+// a compute pipeline of the entry "main" of a shader module (the module and the layout stay the caller's)
+VkPipeline VK_CreateComputePipeline( VkShaderModule module, VkPipelineLayout layout ) {
+	VkComputePipelineCreateInfo	info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+	VkPipeline					pipeline;
+
+	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+	info.stage.module = module;
+	info.stage.pName = "main";
+	info.layout = layout;
+	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &pipeline ) );
+	return pipeline;
+}
+
 static void VK_CreateLayouts( void ) {
 	VkDescriptorSetLayoutBinding frame[4];
 	VkDescriptorSetLayoutBinding texture;

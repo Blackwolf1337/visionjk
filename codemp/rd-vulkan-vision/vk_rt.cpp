@@ -1352,9 +1352,6 @@ static void VK_RT_CreateCasters( void ) {
 	// (the shadow maps draw the positions with the triangles of localIndexes)
 	const VkBufferUsageFlags		input = ( rt.maps ? 0 : VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR )
 		| VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	VkPushConstantRange				push;
-	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
 
 	rt.localFirst = new std::unordered_map<const void *, uint32_t>;
 	VK_CreateBuffer( &rt.localIndexes, sizeof( uint32_t ) * VK_RT_LOCAL_INDEXES, input, qtrue );
@@ -1367,50 +1364,23 @@ static void VK_RT_CreateCasters( void ) {
 	}
 
 	// shaders/rtskin.comp finds everything by its address, the push constants hold them
-	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-	push.offset = 0;
-	push.size = sizeof( uint32_t ) * 8;
-	layout.pushConstantRangeCount = 1;
-	layout.pPushConstantRanges = &push;
-	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.skinLayout ) );
+	rt.skinLayout = VK_CreateComputeLayout( sizeof( uint32_t ) * 8, NULL );
 	rt.skinShader = VK_CreateShader( vk_rtSkinComp, sizeof( vk_rtSkinComp ) );
-	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-	info.stage.module = rt.skinShader;
-	info.stage.pName = "main";
-	info.layout = rt.skinLayout;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.skinPipeline ) );
+	rt.skinPipeline = VK_CreateComputePipeline( rt.skinShader, rt.skinLayout );
 }
 
 // shaders/rtcells.comp
 static void VK_RT_CreateLights( void ) {
-	VkPushConstantRange				push;
-	VkPipelineLayoutCreateInfo		layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	VkComputePipelineCreateInfo		info = { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
-
 	vk_patches = new std::vector<vkPatch_t>;
 
 	// the top level from the set of the frame, the rest by address and in numbers in the push constants
-	push.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-	push.offset = 0;
-	push.size = sizeof( uint32_t ) * 24;
-	layout.setLayoutCount = 1;
-	layout.pSetLayouts = &rt.setLayout;
-	layout.pushConstantRangeCount = 1;
-	layout.pPushConstantRanges = &push;
-	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &rt.cellsLayout ) );
+	rt.cellsLayout = VK_CreateComputeLayout( sizeof( uint32_t ) * 24, &rt.setLayout );
 	rt.cellsShader = VK_CreateShader( vk_rtCellsComp, sizeof( vk_rtCellsComp ) );
-	info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-	info.stage.module = rt.cellsShader;
-	info.stage.pName = "main";
-	info.layout = rt.cellsLayout;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.cellsPipeline ) );
+	rt.cellsPipeline = VK_CreateComputePipeline( rt.cellsShader, rt.cellsLayout );
 
 	// shaders/rtlamps.comp in the same layout
 	rt.lampsShader = VK_CreateShader( vk_rtLampsComp, sizeof( vk_rtLampsComp ) );
-	info.stage.module = rt.lampsShader;
-	VK_CHECK( qvkCreateComputePipelines( vk.device, vk.pipelineCache, 1, &info, NULL, &rt.lampsPipeline ) );
+	rt.lampsPipeline = VK_CreateComputePipeline( rt.lampsShader, rt.cellsLayout );
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		VK_CreateBuffer( &rt.lampRays[i], ( sizeof( float ) * 12 + sizeof( float ) ) * VK_RT_LAMP_RAYS,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, qtrue );
