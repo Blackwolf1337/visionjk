@@ -246,7 +246,7 @@ void G_AC_MoveInput( gentity_t *ent, usercmd_t *ucmd, int msec ) {
 	// is why it has to last.
 	if ( client->ps.groundEntityNum != ENTITYNUM_NONE && client->ps.pm_type == PM_NORMAL && !( client->ps.pm_flags & PMF_TIME_KNOCKBACK )
 		&& !client->ps.m_iVehicleNum && client->ps.speed > 0
-		&& VectorLength2( client->ps.velocity ) > client->ps.speed * AC_FLIP_FAST + 4.0f ) {
+		&& sqrtf( client->ps.velocity[0] * client->ps.velocity[0] + client->ps.velocity[1] * client->ps.velocity[1] ) > client->ps.speed * AC_FLIP_FAST + 4.0f ) {
 		ac->flipFastMsec += msec;
 	}
 
