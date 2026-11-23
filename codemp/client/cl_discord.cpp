@@ -34,6 +34,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // together (error 5005), so the button to jka.vision is left out then. The secret comes from another player's
 // game: only four numbers and a port are taken from it, and the connect command is written anew from them.
 //
+// Ask to Join: a friend's request comes as the event ACTIVITY_JOIN_REQUEST. The cgame shows it like a vote
+// (CG_DrawDiscordAsk, through the cvar v_discordAsk), F1 sends the invite and F2 declines (CL_DiscordAnswer). The keys
+// count only once the cgame has drawn that request (v_discordAskSeen) and DISCORD_ASK_ARM_MSEC later, so a player
+// does not answer one unseen. A vote that waits for its answer has the keys first.
+//
 // The picture of the map is the address of its level shot in the store of jka.vision (maps/files/<map>.jpg, the
 // map name with / as _), which Discord fetches itself. The game reads the list of the store (maps/index.txt) when
 // it meets a map it has no picture for; a map the store does not have yet gets the levelshots/<map>.jpg of the
@@ -89,6 +94,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define DISCORD_IN_BYTES		16384	// READY, the largest frame that comes, has about 1 KB
 #define DISCORD_OUT_BYTES		4096
 #define DISCORD_TEXT_BYTES		127		// Discord takes 128 characters in a field at most
+#define DISCORD_ASK_MOST		4		// requests to join that wait, one is shown at a time
+#define DISCORD_ASK_MSEC		30000	// a request nobody answered is declined after this long, the time of a vote
+#define DISCORD_ASK_ARM_MSEC	500		// F1 and F2 answer a request shown for at least this long
+#define DISCORD_USER_ID			24		// a user id of Discord: a number of up to 20 digits
+#define DISCORD_ASK_NAME		64
 
 enum {
 	DISCORD_OP_HANDSHAKE,
@@ -107,6 +117,22 @@ enum {
 
 static cvar_t	*v_discord;
 static cvar_t	*v_discordSong;
+static cvar_t	*v_discordAsk;
+static cvar_t	*v_discordAskSeen;
+
+typedef struct {
+	char	user[DISCORD_USER_ID];
+	char	name[DISCORD_ASK_NAME];
+	int		until;						// Sys_Milliseconds
+	qboolean accepted;					// F1 came before Discord had the join secret again (after a map change)
+} dcAsk_t;
+
+static dcAsk_t	dcAsks[DISCORD_ASK_MOST];		// the first one is the one shown
+static int		dcAskCount;
+static int		dcAskId;						// counts the requests shown, for v_discordAskSeen
+static qboolean	dcAskSeen;						// the cgame has drawn the one shown
+static int		dcAskArmed;						// from then on the keys answer it
+static char		dcAskServer[MAX_OSPATH];		// the server the requests are for
 
 static qboolean	dcOpen;
 static qboolean	dcReady;						// READY came, activities can be sent
@@ -136,6 +162,47 @@ static void DC_JsonEscape( const char *in, char *out, int outSize ) {
 		out[len++] = *in;
 	}
 	out[len] = '\0';
+}
+
+// text without colors and control characters in UTF-8 (names of legacy servers are Windows-1252, Q_UTF8_Decode reads
+// both), without spaces around it, cut to most bytes; its length
+static int DC_CleanText( const char *text, char *out, int outSize, int most ) {
+	char		clean[MAX_STRING_CHARS];
+	const char	*p;
+	int			len = 0, start, end;
+
+	Q_strncpyz( clean, text, sizeof( clean ) );
+	Q_StripColor( clean );
+	for ( p = clean; *p; ) {
+		unsigned int	codePoint;
+		char			bytes[4];
+		const int		used = Q_UTF8_Decode( p, &codePoint );
+		int				count;
+
+		if ( !used ) {
+			break;
+		}
+		p += used;
+		if ( codePoint < 0x20 ) {
+			continue;
+		}
+		count = Q_UTF8_Encode( codePoint, bytes );
+		if ( len + count >= outSize ) {
+			break;
+		}
+		Com_Memcpy( out + len, bytes, count );
+		len += count;
+	}
+	out[len] = '\0';
+
+	for ( start = 0; out[start] == ' '; start++ ) {
+	}
+	Q_UTF8_Truncate( out + start, most );
+	for ( end = start + (int)strlen( out + start ); end > start && out[end - 1] == ' '; end-- ) {
+	}
+	out[end] = '\0';
+	memmove( out, out + start, end - start + 1 );
+	return end - start;
 }
 
 /*
@@ -471,6 +538,21 @@ static void DC_SysFrame( void ) {
 
 #endif
 
+// what the cgame shows (CG_DrawDiscordAsk): "<number of the request> <seconds left> <name>", "" while nobody asks
+static void DC_AskPublish( int now ) {
+	char text[128];
+
+	text[0] = '\0';
+	if ( dcAskCount ) {
+		const int left = dcAsks[0].until - now;
+
+		Com_sprintf( text, sizeof( text ), "%d %d %s", dcAskId, left > 0 ? ( left + 999 ) / 1000 : 0, dcAsks[0].name );
+	}
+	if ( v_discordAsk && strcmp( text, v_discordAsk->string ) ) {
+		Cvar_Set( "v_discordAsk", text );
+	}
+}
+
 static void DC_Close( const char *why ) {
 	if ( dcOpen && why ) {
 		Com_DPrintf( "Discord: %s\n", why );
@@ -480,6 +562,8 @@ static void DC_Close( const char *why ) {
 	dcReady = qfalse;
 	dcInLen = 0;
 	dcSent[0] = '\0';
+	dcAskCount = 0;		// (Discord ends the requests with the connection)
+	DC_AskPublish( 0 );
 }
 
 static qboolean DC_Send( int op, const char *json ) {
@@ -506,22 +590,41 @@ static unsigned int DC_GetU32( const byte *b ) {
 	return b[0] | ( b[1] << 8 ) | ( b[2] << 16 ) | ( (unsigned int)b[3] << 24 );
 }
 
-// the string value of key in the JSON, qfalse: not there, or one with an escape (no value this file reads has one)
-static qboolean DC_JsonString( const char *json, const char *key, char *out, int outSize ) {
+// where the value of key starts in the JSON, NULL: no such key. A name can hold the text of a key: its quotes have a
+// backslash before them, and a value that is the word itself has no colon after it.
+static const char *DC_JsonKey( const char *json, const char *key ) {
 	char		quoted[64];
 	const char	*p;
-	int			len = 0;
 
 	Com_sprintf( quoted, sizeof( quoted ), "\"%s\"", key );
-	p = strstr( json, quoted );
-	if ( !p ) {
-		return qfalse;
+	for ( p = strstr( json, quoted ); p; p = strstr( p + 1, quoted ) ) {
+		const char *value = p + strlen( quoted );
+
+		if ( p > json && p[-1] == '\\' ) {
+			continue;
+		}
+		while ( *value == ' ' ) {
+			value++;
+		}
+		if ( *value != ':' ) {
+			continue;
+		}
+		value++;
+		while ( *value == ' ' ) {
+			value++;
+		}
+		return value;
 	}
-	p += strlen( quoted );
-	while ( *p == ' ' || *p == ':' ) {
-		p++;
-	}
-	if ( *p++ != '"' ) {
+	return NULL;
+}
+
+// the string value of key in the JSON, qfalse: not there, or one with an escape (a display name with one falls back
+// to the user name, no other value this file reads has one)
+static qboolean DC_JsonString( const char *json, const char *key, char *out, int outSize ) {
+	const char	*p = DC_JsonKey( json, key );
+	int			len = 0;
+
+	if ( !p || *p++ != '"' ) {
 		return qfalse;
 	}
 	for ( ; *p != '"'; p++ ) {
@@ -562,6 +665,116 @@ static void DC_Join( const char *secret ) {
 	Cbuf_AddText( va( "connect %d.%d.%d.%d:%d\n", ip[0], ip[1], ip[2], ip[3], port ) );
 }
 
+// does the activity Discord has carry a join secret (its texts are escaped, so none of them can look like this)
+static qboolean DC_JoinOffered( void ) {
+	return (qboolean)( strstr( dcSent, ",\"secrets\":{" ) != NULL );
+}
+
+static void DC_AskReply( const char *user, qboolean invite ) {
+	DC_Send( DISCORD_OP_FRAME, va( "{\"cmd\":\"%s\",\"args\":{\"user_id\":\"%s\"},\"nonce\":\"%d\"}",
+		invite ? "SEND_ACTIVITY_JOIN_INVITE" : "CLOSE_ACTIVITY_JOIN_REQUEST", user, ++dcNonce ) );
+}
+
+// answers the request shown; the next one, if any, is a new one for the keys
+static void DC_AskAnswer( qboolean yes ) {
+	const dcAsk_t	ask = dcAsks[0];
+	const qboolean	invite = (qboolean)( yes && DC_JoinOffered() );
+
+	dcAskCount--;
+	memmove( dcAsks, dcAsks + 1, dcAskCount * sizeof( dcAsks[0] ) );
+	dcAskId++;
+	dcAskSeen = qfalse;
+	DC_AskReply( ask.user, invite );
+	if ( invite ) {
+		Com_Printf( "Discord: %s was invited\n", ask.name );
+	} else if ( yes ) {
+		Com_Printf( "Discord: this game can not be joined right now, %s was not invited\n", ask.name );
+	}
+}
+
+// A friend asks to join: {"cmd":"DISPATCH","data":{"user":{"id":"...","username":"...","global_name":...}},"evt":...}
+static void DC_AskTake( const char *json ) {
+	const char	*user = DC_JsonKey( json, "user" );
+	char		id[DISCORD_USER_ID], raw[256], name[DISCORD_ASK_NAME];
+	int			i;
+
+	if ( !user || !DC_JsonString( user, "id", id, sizeof( id ) ) || !id[0] ) {
+		return;
+	}
+	for ( i = 0; id[i]; i++ ) {
+		if ( id[i] < '0' || id[i] > '9' ) {
+			return;
+		}
+	}
+
+	name[0] = '\0';
+	if ( DC_JsonString( user, "global_name", raw, sizeof( raw ) ) ) {
+		DC_CleanText( raw, name, sizeof( name ), sizeof( name ) - 1 );
+	}
+	// (the user name is plain ASCII, the only thing a game on a legacy server draws for sure)
+	if ( !Cvar_VariableIntegerValue( "v_utf8Text" ) ) {
+		for ( i = 0; name[i]; i++ ) {
+			if ( (unsigned char)name[i] >= 0x80 ) {
+				name[0] = '\0';
+				break;
+			}
+		}
+	}
+	if ( !name[0] && DC_JsonString( user, "username", raw, sizeof( raw ) ) ) {
+		DC_CleanText( raw, name, sizeof( name ), sizeof( name ) - 1 );
+	}
+	if ( !name[0] ) {
+		Q_strncpyz( name, "A Discord user", sizeof( name ) );
+	}
+
+	// (not by the activity Discord has: for some seconds after a map change it has no secret, and the request stands)
+	if ( cls.state < CA_CONNECTED || clc.demoplaying || v_discord->integer != 1 ) {
+		DC_AskReply( id, qfalse );
+		return;
+	}
+	for ( i = 0; i < dcAskCount; i++ ) {
+		if ( !strcmp( dcAsks[i].user, id ) ) {
+			Q_strncpyz( dcAsks[i].name, name, sizeof( dcAsks[i].name ) );
+			dcAsks[i].until = Sys_Milliseconds() + DISCORD_ASK_MSEC;
+			return;
+		}
+	}
+	if ( dcAskCount >= DISCORD_ASK_MOST ) {
+		DC_AskReply( id, qfalse );
+		return;
+	}
+	if ( !dcAskCount ) {
+		Q_strncpyz( dcAskServer, cls.servername, sizeof( dcAskServer ) );
+		dcAskId++;
+		dcAskSeen = qfalse;
+	}
+	Q_strncpyz( dcAsks[dcAskCount].user, id, sizeof( dcAsks[0].user ) );
+	Q_strncpyz( dcAsks[dcAskCount].name, name, sizeof( dcAsks[0].name ) );
+	dcAsks[dcAskCount].until = Sys_Milliseconds() + DISCORD_ASK_MSEC;
+	dcAsks[dcAskCount].accepted = qfalse;
+	dcAskCount++;
+}
+
+// every frame: requests of a server the player left and ones nobody answered are declined
+static void DC_AskFrame( int now ) {
+	if ( dcAskCount && ( cls.state < CA_CONNECTED || v_discord->integer != 1 || Q_stricmp( dcAskServer, cls.servername ) ) ) {
+		while ( dcOpen && dcAskCount ) {
+			DC_AskAnswer( qfalse );
+		}
+	}
+	if ( dcOpen && dcAskCount && dcAsks[0].accepted && DC_JoinOffered() ) {
+		DC_AskAnswer( qtrue );
+	}
+	while ( dcOpen && dcAskCount && dcAsks[0].until - now <= 0 ) {
+		DC_AskAnswer( dcAsks[0].accepted );		// (accepted and still no secret: says that it did not work)
+	}
+	if ( dcAskCount && !dcAskSeen && v_discordAskSeen->integer == dcAskId ) {
+		dcAskSeen = qtrue;
+		dcAskArmed = now + DISCORD_ASK_ARM_MSEC;
+	}
+	DC_AskPublish( now );
+}
+
 static void DC_TakeFrame( int op, const byte *data, int len ) {
 	char json[DISCORD_IN_BYTES];
 	char secret[128];
@@ -577,6 +790,7 @@ static void DC_TakeFrame( int op, const byte *data, int len ) {
 			dcSent[0] = '\0';
 			dcNextSend = Sys_Milliseconds();
 			DC_Send( DISCORD_OP_FRAME, va( "{\"cmd\":\"SUBSCRIBE\",\"evt\":\"ACTIVITY_JOIN\",\"nonce\":\"%d\"}", ++dcNonce ) );
+			DC_Send( DISCORD_OP_FRAME, va( "{\"cmd\":\"SUBSCRIBE\",\"evt\":\"ACTIVITY_JOIN_REQUEST\",\"nonce\":\"%d\"}", ++dcNonce ) );
 			if ( !dcRegistered ) {
 				DC_SysRegister( Sys_ProgramFile() );
 				dcRegistered = qtrue;
@@ -585,6 +799,8 @@ static void DC_TakeFrame( int op, const byte *data, int len ) {
 			if ( DC_JsonString( json, "secret", secret, sizeof( secret ) ) ) {
 				DC_Join( secret );
 			}
+		} else if ( DC_IsEvent( json, "ACTIVITY_JOIN_REQUEST" ) ) {
+			DC_AskTake( json );
 		} else if ( DC_IsEvent( json, "ERROR" ) ) {
 			Com_DPrintf( "Discord: %s\n", json );
 		}
@@ -655,51 +871,16 @@ The activity
 ===============================================================================
 */
 
-// "key":"text" at the end of out, the text without colors, in UTF-8 (names of legacy servers are Windows-1252,
-// Q_UTF8_Decode reads both), cut to what Discord takes and escaped for JSON. qfalse: shorter than the two characters
-// Discord asks for, nothing written.
+// "key":"text" at the end of out, cleaned, cut to what Discord takes and escaped for JSON. qfalse: shorter than the
+// two characters Discord asks for, nothing written.
 static qboolean DC_AddText( char *out, int outSize, const char *key, const char *text ) {
-	char		clean[MAX_STRING_CHARS];
-	char		utf8[MAX_STRING_CHARS];
-	char		json[MAX_STRING_CHARS];
-	const char	*p;
-	int			len = 0, start, end;
+	char	utf8[MAX_STRING_CHARS];
+	char	json[MAX_STRING_CHARS];
 
-	Q_strncpyz( clean, text, sizeof( clean ) );
-	Q_StripColor( clean );
-	for ( p = clean; *p; ) {
-		unsigned int	codePoint;
-		char			bytes[4];
-		const int		used = Q_UTF8_Decode( p, &codePoint );
-		int				count;
-
-		if ( !used ) {
-			break;
-		}
-		p += used;
-		if ( codePoint < 0x20 ) {
-			continue;
-		}
-		count = Q_UTF8_Encode( codePoint, bytes );
-		if ( len + count >= (int)sizeof( utf8 ) ) {
-			break;
-		}
-		Com_Memcpy( utf8 + len, bytes, count );
-		len += count;
-	}
-	utf8[len] = '\0';
-
-	for ( start = 0; utf8[start] == ' '; start++ ) {
-	}
-	Q_UTF8_Truncate( utf8 + start, DISCORD_TEXT_BYTES );
-	for ( end = (int)strlen( utf8 ); end > start && utf8[end - 1] == ' '; end-- ) {
-	}
-	utf8[end] = '\0';
-	if ( end - start < 2 ) {
+	if ( DC_CleanText( text, utf8, sizeof( utf8 ), DISCORD_TEXT_BYTES ) < 2 ) {
 		return qfalse;
 	}
-
-	DC_JsonEscape( utf8 + start, json, sizeof( json ) );
+	DC_JsonEscape( utf8, json, sizeof( json ) );
 	Q_strcat( out, outSize, va( "%s\"%s\":\"%s\"", out[0] && out[strlen( out ) - 1] != '{' ? "," : "", key, json ) );
 	return qtrue;
 }
@@ -1122,6 +1303,10 @@ void CL_DiscordFrame( void ) {
 		return;
 	}
 
+	DC_AskFrame( now );
+	if ( !dcOpen ) {
+		return;
+	}
 	if ( now - dcNextLook < 0 || now - dcNextSend < 0 ) {
 		return;
 	}
@@ -1137,10 +1322,27 @@ void CL_DiscordFrame( void ) {
 	}
 }
 
+// F1 (yes) or F2 in a game, with no menu open and no vote that waits (CL_KeyDownEvent). qfalse: no request the player
+// has seen, the key does what it is bound to.
+qboolean CL_DiscordAnswer( qboolean yes ) {
+	if ( !dcAskCount || !dcAskSeen || Sys_Milliseconds() - dcAskArmed < 0 ) {
+		return qfalse;
+	}
+	if ( yes && !DC_JoinOffered() ) {
+		dcAsks[0].accepted = qtrue;				// DC_AskFrame sends the invite when the secret is back
+		return qtrue;
+	}
+	DC_AskAnswer( yes );
+	return qtrue;
+}
+
 void CL_DiscordInit( void ) {
 	v_discord = Cvar_Get( "v_discord", "1", CVAR_ARCHIVE_ND, "Discord profile while the Discord app runs. 1: server, map, score, players, song nearby, friends can join. 2: only \"In a game\". 0: off" );
 	// set by the cgame (boombox/cg_boombox.c), a server can not set a v_ cvar
 	v_discordSong = Cvar_Get( "v_discordSong", "", CVAR_TEMP, "The song of the boombox this player hears, for the Discord profile" );
+	// the request to join the cgame shows, and the number of the last one it has drawn
+	v_discordAsk = Cvar_Get( "v_discordAsk", "", CVAR_ROM, "The friend who asks on Discord to join: number, seconds left, name" );
+	v_discordAskSeen = Cvar_Get( "v_discordAskSeen", "0", CVAR_TEMP, "The last request to join the HUD has shown" );
 	dcNextTry = Sys_Milliseconds();
 }
 

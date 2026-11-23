@@ -1952,6 +1952,18 @@ LANG_ENGLISH        "Team vote"
 REFERENCE           MAKE_S_THE_TEAM_LEADER
 LANG_ENGLISH        "Make %s the team leader"
 
+REFERENCE           S_WANTS_TO_JOIN
+LANG_ENGLISH        "%s wants to join"
+
+REFERENCE           ACCEPT
+LANG_ENGLISH        "Accept"
+
+REFERENCE           DECLINE
+LANG_ENGLISH        "Decline"
+
+REFERENCE           ANSWER_THE_VOTE_FIRST
+LANG_ENGLISH        "Answer the vote first"
+
 REFERENCE           U_S
 LANG_ENGLISH        "u/s"
 

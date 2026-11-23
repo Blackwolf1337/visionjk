@@ -7050,14 +7050,11 @@ static int CG_VoteKeys( void ) {
 	return want;
 }
 
-static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no,
-	const char *hint, const float *tint ) {
+// A question with two answers: their keys (NULL: none), their words, how many said so (below 0: no number), a line
+// under them (NULL: none) and a bar that empties with the time.
+static void CG_DrawAnswerPanel( float y, const char *title, const char *question, int sec, const char *yesKey, const char *yesWord, int yes,
+	const char *noKey, const char *noWord, int no, const char *say, const float *tint ) {
 	const float	x = 6.0f, w = 170.0f, box = ( w - 18.0f - 4.0f ) * 0.5f;
-	// (F1 and F2 while the engine takes them for the vote, CG_VoteKeys; else what is bound to a vote)
-	const qboolean	fkeys = (qboolean)( CG_VoteKeys() != 0 );
-	const char	*yesKey = fkeys ? "F1" : CG_KeyLabel( trap->Key_GetKey( "vote yes" ) ), *noKey = fkeys ? "F2" : CG_KeyLabel( trap->Key_GetKey( "vote no" ) );
-	// (the hint of the game, "or press ESC then click Vote", only when no key is bound to a vote)
-	const char	*say = ( hint && hint[0] && ( !yesKey || !noKey ) ) ? hint : NULL;
 	const float	h = say ? 60.0f : 50.0f;
 	vec4_t		fill, edge;
 	int			i;
@@ -7080,13 +7077,26 @@ static void CG_DrawVotePanel( float y, const char *title, const char *question, 
 			tx += Hud_Key( tx, by + 8.5f, key, 1.0f, HUD_LEFT ) + 4.0f;
 		}
 		Hud_TextMid( tx, by + 8.5f, HUD_SMALL, hudText, 1.0f, HUD_LEFT, i ? noWord : yesWord, box - ( tx - bx ) - 16.0f );
-		Hud_TextMid( bx + box - 5.0f, by + 8.5f, HUD_BODY, hudBright, 1.0f, HUD_RIGHT, va( "%i", i ? no : yes ), 0.0f );
+		if ( ( i ? no : yes ) >= 0 ) {
+			Hud_TextMid( bx + box - 5.0f, by + 8.5f, HUD_BODY, hudBright, 1.0f, HUD_RIGHT, va( "%i", i ? no : yes ), 0.0f );
+		}
 	}
 	if ( say ) {
 		Hud_TextMid( x + 9.0f, y + 49.0f, HUD_CAPS, hudDim, 1.0f, HUD_LEFT, say, w - 18.0f );
 	}
 	Hud_Bar( x + 6.0f, y + h - 3.0f, w - 12.0f, 1.5f, Com_Clamp( 0.0f, 1.0f, sec * 1000.0f / VOTE_TIME ), tint ? tint : hudAccent, 1.0f, qfalse );
 	trap->R_SetColor( NULL );
+}
+
+static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no,
+	const char *hint, const float *tint ) {
+	// (F1 and F2 while the engine takes them for the vote, CG_VoteKeys; else what is bound to a vote)
+	const qboolean	fkeys = (qboolean)( CG_VoteKeys() != 0 );
+	const char	*yesKey = fkeys ? "F1" : CG_KeyLabel( trap->Key_GetKey( "vote yes" ) ), *noKey = fkeys ? "F2" : CG_KeyLabel( trap->Key_GetKey( "vote no" ) );
+	// (the hint of the game, "or press ESC then click Vote", only when no key is bound to a vote)
+	const char	*say = ( hint && hint[0] && ( !yesKey || !noKey ) ) ? hint : NULL;
+
+	CG_DrawAnswerPanel( y, title, question, sec, yesKey, yesWord, yes, noKey, noWord, no, say, tint );
 }
 
 static void CG_DrawVote(void) {
@@ -7188,6 +7198,70 @@ static qboolean CG_TeamVoteShown( void ) {
 	const int team = cgs.clientinfo[cg.clientNum].team;
 
 	return (qboolean)( ( team == TEAM_RED && cgs.teamVoteTime[0] ) || ( team == TEAM_BLUE && cgs.teamVoteTime[1] ) );
+}
+
+/*
+=================
+CG_DiscordAskRead
+
+The friend who asks on Discord to join, from the engine (client/cl_discord.cpp): v_discordAsk is "<number> <seconds
+left> <name>", empty while nobody asks.
+=================
+*/
+static qboolean CG_DiscordAskRead( int *id, int *sec, char *name, int nameSize ) {
+	char		value[128];
+	const char	*p;
+
+	trap->Cvar_VariableStringBuffer( "v_discordAsk", value, sizeof( value ) );
+	*id = atoi( value );
+	p = strchr( value, ' ' );
+	if ( *id <= 0 || !p ) {
+		return qfalse;
+	}
+	*sec = atoi( ++p );
+	p = strchr( p, ' ' );
+	if ( !p ) {
+		return qfalse;
+	}
+	Q_strncpyz( name, p + 1, nameSize );
+	return qtrue;
+}
+
+/*
+=================
+CG_DrawDiscordAsk
+
+The request as a panel like a vote. F1 and F2 answer it in the engine once it was drawn here (v_discordAskSeen), and
+after a vote that waits for its answer.
+=================
+*/
+static void CG_DrawDiscordAsk( float y ) {
+	static int	seen;
+	char		name[64];
+	int			id, sec;
+	qboolean	keys;
+	const char	*ask, *accept, *decline, *wait;
+
+	if ( !CG_DiscordAskRead( &id, &sec, name, sizeof( name ) ) ) {
+		return;
+	}
+	if ( id != seen ) {
+		seen = id;
+		trap->Cvar_Set( "v_discordAskSeen", va( "%i", id ) );
+		trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
+	}
+	keys = (qboolean)!CG_VoteKeys();
+	ask = CG_VisionTextWith( "%s wants to join", name );
+	accept = CG_VisionText( "Accept" );
+	decline = CG_VisionText( "Decline" );
+	wait = keys ? NULL : CG_VisionText( "Answer the vote first" );
+
+	if ( CG_HudNewLook() ) {
+		CG_DrawAnswerPanel( y, "Discord", ask, sec, keys ? "F1" : NULL, accept, -1, keys ? "F2" : NULL, decline, -1, wait, NULL );
+		return;
+	}
+	CG_DrawSmallString( 4, y + 2.0f, va( "Discord(%i): %s", sec, ask ), 1.0f );
+	CG_DrawSmallString( 4, y + 2.0f + SMALLCHAR_HEIGHT + 2, wait ? wait : va( "F1: %s  F2: %s", accept, decline ), 1.0f );
 }
 
 static void CG_DrawTeamVote(void) {
@@ -8517,6 +8591,9 @@ static void CG_Draw2D( void ) {
 
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
 		CG_DrawIntermission();
+		CG_Place2D( PLACE_LEFT );
+		CG_DrawDiscordAsk( 56.0f );
+		CG_Place2D( PLACE_CENTER );
 		CG_ChatDraw();
 		// (the rows of the scoreboard can be clicked at the end of a level too)
 		CG_SelectDraw();
@@ -8737,12 +8814,16 @@ static void CG_Draw2D( void ) {
 	CG_HudFeedPoll();
 	// the one feed at the upper left; a vote stands there first, and the feed under it
 	{
-		const int votes = ( cgs.voteTime ? 1 : 0 ) + ( CG_TeamVoteShown() ? 1 : 0 );
+		const int	votes = ( cgs.voteTime ? 1 : 0 ) + ( CG_TeamVoteShown() ? 1 : 0 );
+		char		askName[64];
+		int			askId, askSec;
+		const int	panels = votes + ( CG_DiscordAskRead( &askId, &askSec, askName, sizeof( askName ) ) ? 1 : 0 );
 
-		CG_HudFeedDraw( votes ? 64.0f + votes * 56.0f : HUD_EDGE_Y );
+		CG_HudFeedDraw( panels ? 64.0f + panels * 56.0f : HUD_EDGE_Y );
+		CG_DrawVote();
+		CG_DrawTeamVote();
+		CG_DrawDiscordAsk( 56.0f + votes * 56.0f );
 	}
-	CG_DrawVote();
-	CG_DrawTeamVote();
 	CG_VoiceDraw();
 	CG_NotifyDraw();
 	CG_Place2D( PLACE_CENTER );
